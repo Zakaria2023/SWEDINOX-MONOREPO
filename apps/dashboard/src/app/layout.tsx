@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ReactNode } from "react";
+import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -12,9 +13,11 @@ type Props = {
 };
 
 const RootLayout = ({ children }: Props) => (
-  <html lang="en">
-    <body className="antialiased">{children}</body>
-  </html>
+  <ClerkProvider>
+    <html lang="en">
+      <body className="antialiased">{children}</body>
+    </html>
+  </ClerkProvider>
 );
 
 export default RootLayout;
