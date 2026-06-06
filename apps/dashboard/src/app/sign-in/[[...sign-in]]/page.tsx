@@ -1,19 +1,12 @@
 ﻿import { SignIn } from "@clerk/nextjs";
+import { Layers } from "lucide-react";
 
 const SignInPage = () => (
   <main className="flex min-h-screen items-center justify-center bg-white">
     <div className="flex w-full max-w-105 flex-col items-center gap-6 px-4">
       <div className="text-center">
         <div className="mb-3.5 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gray-900">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"
-              stroke="white"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
+          <Layers size={24} color="white" />
         </div>
         <h1 className="mb-1 text-[22px] font-bold tracking-[-0.4px] text-gray-900">
           Swedinox

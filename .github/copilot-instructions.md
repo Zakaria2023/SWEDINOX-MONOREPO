@@ -64,6 +64,21 @@
   );
   ```
 
+## Icons
+
+- Never use inline `<svg>` elements for icons. Always use [`lucide-react`](https://lucide.dev) instead.
+
+  ```tsx
+  // ❌ Bad
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+    <path d="..." stroke="currentColor" />
+  </svg>;
+
+  // ✅ Good
+  import { Layers } from "lucide-react";
+  <Layers size={24} />;
+  ```
+
 ## Exports
 
 - Regular components use **named exports** — inline on the declaration is fine, just never `export default`.
