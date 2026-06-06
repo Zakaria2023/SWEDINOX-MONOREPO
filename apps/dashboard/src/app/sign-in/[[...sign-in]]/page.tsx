@@ -8,9 +8,7 @@ const SignInPage = () => (
         <div className="mb-3.5 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gray-900">
           <Layers size={24} color="white" />
         </div>
-        <h1 className="mb-1 text-[22px] font-bold tracking-[-0.4px] text-gray-900">
-          Swedinox
-        </h1>
+        <h1 className="mb-1 text-2xl font-bold text-gray-900">Swedinox</h1>
         <p className="m-0 text-sm text-gray-500">
           Welcome back — sign in to continue
         </p>
