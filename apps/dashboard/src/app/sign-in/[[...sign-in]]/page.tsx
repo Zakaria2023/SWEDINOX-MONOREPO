@@ -1,40 +1,10 @@
 ﻿import { SignIn } from "@clerk/nextjs";
 
 const SignInPage = () => (
-  <main
-    style={{
-      minHeight: "100vh",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      backgroundColor: "#ffffff",
-      fontFamily: "'Inter', 'Segoe UI', sans-serif",
-    }}
-  >
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        gap: "24px",
-        width: "100%",
-        maxWidth: "420px",
-        padding: "0 16px",
-      }}
-    >
-      <div style={{ textAlign: "center" }}>
-        <div
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            width: "48px",
-            height: "48px",
-            borderRadius: "12px",
-            backgroundColor: "#111827",
-            marginBottom: "14px",
-          }}
-        >
+  <main className="flex min-h-screen items-center justify-center bg-white">
+    <div className="flex w-full max-w-105 flex-col items-center gap-6 px-4">
+      <div className="text-center">
+        <div className="mb-3.5 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gray-900">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
             <path
               d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"
@@ -45,18 +15,10 @@ const SignInPage = () => (
             />
           </svg>
         </div>
-        <h1
-          style={{
-            fontSize: "22px",
-            fontWeight: "700",
-            color: "#111827",
-            margin: "0 0 4px",
-            letterSpacing: "-0.4px",
-          }}
-        >
+        <h1 className="mb-1 text-[22px] font-bold tracking-[-0.4px] text-gray-900">
           Swedinox
         </h1>
-        <p style={{ fontSize: "14px", color: "#6b7280", margin: 0 }}>
+        <p className="m-0 text-sm text-gray-500">
           Welcome back — sign in to continue
         </p>
       </div>
