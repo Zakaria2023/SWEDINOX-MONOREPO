@@ -64,6 +64,33 @@
   );
   ```
 
+## Icons
+
+- Never use inline `<svg>` elements for icons. Always use [`lucide-react`](https://lucide.dev) instead.
+
+  ```tsx
+  // ❌ Bad
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+    <path d="..." stroke="currentColor" />
+  </svg>;
+
+  // ✅ Good
+  import { Layers } from "lucide-react";
+  <Layers size={24} />;
+  ```
+
+## Tailwind CSS
+
+- Never use arbitrary value syntax for spacing, sizing, or typography when a built-in Tailwind scale exists. Always prefer Tailwind's design tokens.
+
+  ```tsx
+  // ❌ Bad
+  <p className="text-[22px] mt-[12px] w-[300px]" />
+
+  // ✅ Good
+  <p className="text-2xl mt-3 w-72" />
+  ```
+
 ## Exports
 
 - Regular components use **named exports** — inline on the declaration is fine, just never `export default`.
