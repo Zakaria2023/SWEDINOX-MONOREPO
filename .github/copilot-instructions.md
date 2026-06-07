@@ -79,6 +79,18 @@
   <Layers size={24} />;
   ```
 
+## Tailwind CSS
+
+- Never use arbitrary value syntax for spacing, sizing, or typography when a built-in Tailwind scale exists. Always prefer Tailwind's design tokens.
+
+  ```tsx
+  // ❌ Bad
+  <p className="text-[22px] mt-[12px] w-[300px]" />
+
+  // ✅ Good
+  <p className="text-2xl mt-3 w-72" />
+  ```
+
 ## Exports
 
 - Regular components use **named exports** — inline on the declaration is fine, just never `export default`.
