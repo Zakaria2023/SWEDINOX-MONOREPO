@@ -113,3 +113,16 @@
 
   export default DashboardPage
   ```
+
+## TypeScript
+
+- Never use the non-null assertion operator (`!`). Always handle the missing case explicitly by throwing an error or returning early.
+
+  ```ts
+  // ❌ Bad
+  const value = process.env.API_KEY!;
+
+  // ✅ Good
+  const value = process.env.API_KEY;
+  if (!value) throw new Error("Missing required environment variable: API_KEY");
+  ```
