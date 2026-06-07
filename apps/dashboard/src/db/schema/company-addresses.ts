@@ -13,7 +13,7 @@ import {
   varchar,
 } from "drizzle-orm/mysql-core";
 import { Companies } from "./companies";
-import { addressCategories, availableAtOptions } from "../enums";
+import { addressCategories, availableAtOptions } from "../../lib/enums";
 
 export const CompanyAddresses = mysqlTable(
   "CompanyAddresses",
