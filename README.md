@@ -1,14 +1,13 @@
 # SWEDINOX-MONOREPO
 
-A pnpm + Turborepo monorepo containing two Next.js 16 applications.
+A pnpm + Turborepo monorepo powering the Swedinox admin dashboard.
 
 ## Structure
 
 ```
 SWEDINOX-MONOREPO/
 ├── apps/
-│   ├── dashboard/        # Admin dashboard  → http://localhost:3000
-│   └── marketing/        # Marketing page   → http://localhost:3001
+│   └── dashboard/        # Admin dashboard  → http://localhost:3000
 ├── packages/             # Shared packages (add as needed)
 ├── turbo.json
 ├── pnpm-workspace.yaml
@@ -34,25 +33,14 @@ pnpm install
 
 ### Development
 
-Run both apps at the same time:
-
 ```bash
-pnpm dev
-```
-
-Run a single app:
-
-```bash
-pnpm dev:dashboard   # http://localhost:3000
-pnpm dev:marketing   # http://localhost:3001
+pnpm dev        # http://localhost:3000
 ```
 
 ### Build
 
 ```bash
-pnpm build                  # Build all apps
-pnpm build:dashboard        # Build dashboard only
-pnpm build:marketing        # Build marketing only
+pnpm build
 ```
 
 ### Lint & Format
@@ -60,11 +48,5 @@ pnpm build:marketing        # Build marketing only
 ```bash
 pnpm lint
 pnpm format
+pnpm format:check
 ```
-
-## Apps
-
-| App         | Port | Package name           |
-| ----------- | ---- | ---------------------- |
-| `dashboard` | 3000 | `@swedinox/dashboard`  |
-| `marketing` | 3001 | `@swedinox/marketing`  |

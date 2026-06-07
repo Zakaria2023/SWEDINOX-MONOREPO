@@ -2,13 +2,9 @@
   "name": "swedinox-monorepo",
   "private": true,
   "scripts": {
-    "dev": "turbo run dev",
-    "dev:dashboard": "turbo run dev --filter=@swedinox/dashboard",
-    "dev:marketing": "turbo run dev --filter=@swedinox/marketing",
-    "build": "turbo run build",
-    "build:dashboard": "turbo run build --filter=@swedinox/dashboard",
-    "build:marketing": "turbo run build --filter=@swedinox/marketing",
-    "lint": "turbo run lint",
+    "dev": "turbo run dev --filter=@swedinox/dashboard",
+    "build": "turbo run build --filter=@swedinox/dashboard",
+    "lint": "turbo run lint --filter=@swedinox/dashboard",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,css}\" --ignore-path .gitignore",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,css}\" --ignore-path .gitignore",
     "clean": "turbo run clean && rm -rf node_modules"
