@@ -126,3 +126,29 @@
   const value = process.env.API_KEY;
   if (!value) throw new Error("Missing required environment variable: API_KEY");
   ```
+
+## Next.js Server Actions
+
+- Always use Next.js Server Actions for data mutations and queries. Never create Next.js route handlers (route.ts files in the app directory).
+- Server Actions should be defined in `actions.ts` files within feature directories.
+- All Server Actions must have the `"use server"` directive at the top of the file.
+
+  ```ts
+  // ❌ Bad — using route handlers
+  // app/api/addresses/route.ts
+  export async function POST(request: Request) {
+    const data = await request.json();
+    // ...
+  }
+
+  // ✅ Good — using Server Actions
+  // app/(dashboard)/addresses/actions.ts
+  ("use server");
+
+  export const createAddress = async (
+    _prevState: ActionResult,
+    data: CreateAddressInput,
+  ): Promise<ActionResult> => {
+    // ...
+  };
+  ```
