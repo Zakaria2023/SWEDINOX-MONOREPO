@@ -17,12 +17,15 @@ export const useAddressSubmit = () => {
     defaultValues: {
       companyUuid: "",
       category: [],
+      availableAt: "",
       poBox: false,
       needCrane: false,
       canopyRequired: false,
       bundleSeparately: false,
       addressComplete: false,
       specialTransport: false,
+      unloadingStartTime: "",
+      unloadingEndTime: "",
     },
   });
 
@@ -38,7 +41,11 @@ export const useAddressSubmit = () => {
       sequenceNumber: data.sequenceNumber
         ? parseInt(data.sequenceNumber, 10)
         : undefined,
-      availableAt: (data.availableAt as AvailableAt) || undefined,
+      availableAt: data.availableAt
+        ? (data.availableAt as AvailableAt)
+        : undefined,
+      unloadingStartTime: data.unloadingStartTime || undefined,
+      unloadingEndTime: data.unloadingEndTime || undefined,
     } as CreateAddressInput);
   });
 

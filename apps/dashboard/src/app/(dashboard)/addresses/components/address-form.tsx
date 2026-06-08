@@ -4,7 +4,13 @@ import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/shadcn/button";
 import { Input } from "@/components/shadcn/input";
+import {
+  Select,
+  type SelectOption,
+} from "@/components/shadcn/select";
+import { cn } from "@/lib/helpers";
 import { addressCategories, availableAtOptions } from "@/lib/enums";
+import { Controller } from "react-hook-form";
 import { useAddressSubmit } from "../hooks/use-address-submit";
 
 type LabelProps = {
@@ -30,10 +36,33 @@ type FieldErrorProps = {
 const FieldError = ({ message }: FieldErrorProps) =>
   message ? <p className="text-sm text-red-600 mt-1">{message}</p> : null;
 
-const SELECT_CLASS =
-  "h-8 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
-
 const CHECKBOX_CLASS = "h-4 w-4 rounded border-gray-300 accent-primary";
+const EMPTY_SELECT_VALUE = "__none__";
+
+const formatOptionLabel = (value: string) =>
+  value
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+
+const AVAILABLE_AT_SELECT_OPTIONS: SelectOption[] = [
+  { label: "None", value: EMPTY_SELECT_VALUE },
+  ...availableAtOptions.map((option) => ({
+    label: formatOptionLabel(option),
+    value: option,
+  })),
+];
+
+const TIME_SELECT_OPTIONS: SelectOption[] = [
+  { label: "None", value: EMPTY_SELECT_VALUE },
+  ...Array.from({ length: 48 }, (_, index) => {
+    const hours = String(Math.floor(index / 2)).padStart(2, "0");
+    const minutes = index % 2 === 0 ? "00" : "30";
+    const value = `${hours}:${minutes}`;
+
+    return { label: value, value };
+  }),
+];
 
 const BOOLEAN_FIELDS = [
   { name: "needCrane", label: "Need Crane" },
@@ -47,13 +76,16 @@ export const AddressForm = () => {
   const router = useRouter();
   const { form, onSubmit, isPending, state } = useAddressSubmit();
   const {
+    control,
     register,
+    watch,
     formState: { errors },
   } = form;
 
   const categoryError =
     errors.category?.root?.message ??
     (errors.category as { message?: string } | undefined)?.message;
+  const selectedCategories = watch("category") ?? [];
 
   return (
     <form onSubmit={onSubmit} className="space-y-8">
@@ -180,34 +212,72 @@ export const AddressForm = () => {
         <h2 className="text-lg font-semibold text-gray-800 border-b pb-2">
           Logistics
         </h2>
-        <div>
-          <Label required>Category</Label>
-          <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {addressCategories.map((cat) => (
-              <label key={cat} className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  value={cat}
-                  {...register("category")}
-                  className={CHECKBOX_CLASS}
-                />
-                <span className="text-sm text-gray-700 capitalize">{cat}</span>
-              </label>
-            ))}
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+          <div className="space-y-4 rounded-2xl border border-border bg-muted/20 p-4">
+            <div className="space-y-1">
+              <Label required>Category</Label>
+              <p className="text-sm text-muted-foreground">
+                Choose how this address is used across the business flow.
+              </p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {addressCategories.map((cat) => (
+                <label
+                  key={cat}
+                  className={cn(
+                    "flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-3 transition-colors",
+                    selectedCategories.includes(cat)
+                      ? "border-primary bg-primary/5"
+                      : "border-border bg-background hover:bg-accent/40",
+                  )}
+                >
+                  <input
+                    type="checkbox"
+                    value={cat}
+                    {...register("category")}
+                    className={`${CHECKBOX_CLASS} mt-0.5`}
+                  />
+                  <span className="text-sm font-medium text-foreground">
+                    {formatOptionLabel(cat)}
+                  </span>
+                </label>
+              ))}
+            </div>
+            <FieldError message={categoryError} />
           </div>
-          <FieldError message={categoryError} />
-        </div>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {BOOLEAN_FIELDS.map(({ name, label }) => (
-            <label key={name} className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                {...register(name)}
-                className={CHECKBOX_CLASS}
-              />
-              <span className="text-sm text-gray-700">{label}</span>
-            </label>
-          ))}
+
+          <div className="space-y-4 rounded-2xl border border-border bg-muted/20 p-4">
+            <div className="space-y-1">
+              <h3 className="text-sm font-medium text-foreground">
+                Handling Options
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Mark any special delivery or unloading requirements.
+              </p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {BOOLEAN_FIELDS.map(({ name, label }) => (
+                <label
+                  key={name}
+                  className={cn(
+                    "flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-3 transition-colors",
+                    watch(name)
+                      ? "border-primary bg-primary/5"
+                      : "border-border bg-background hover:bg-accent/40",
+                  )}
+                >
+                  <input
+                    type="checkbox"
+                    {...register(name)}
+                    className={`${CHECKBOX_CLASS} mt-0.5`}
+                  />
+                  <span className="text-sm font-medium text-foreground">
+                    {label}
+                  </span>
+                </label>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 
@@ -216,36 +286,65 @@ export const AddressForm = () => {
         <h2 className="text-lg font-semibold text-gray-800 border-b pb-2">
           Unloading
         </h2>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 rounded-2xl border border-border bg-muted/20 p-4 sm:grid-cols-3">
           <div>
             <Label htmlFor="availableAt">Available At</Label>
-            <select
-              id="availableAt"
-              {...register("availableAt")}
-              className={SELECT_CLASS}
-            >
-              <option value="">None</option>
-              {availableAtOptions.map((opt) => (
-                <option key={opt} value={opt}>
-                  {opt.replace(/_/g, " ")}
-                </option>
-              ))}
-            </select>
+            <Controller
+              control={control}
+              name="availableAt"
+              render={({ field }) => (
+                <Select
+                  id="availableAt"
+                  name={field.name}
+                  value={field.value || EMPTY_SELECT_VALUE}
+                  options={AVAILABLE_AT_SELECT_OPTIONS}
+                  onValueChange={(value) =>
+                    field.onChange(
+                      value === EMPTY_SELECT_VALUE ? "" : value,
+                    )
+                  }
+                />
+              )}
+            />
           </div>
           <div>
             <Label htmlFor="unloadingStartTime">Start Time</Label>
-            <Input
-              id="unloadingStartTime"
-              type="time"
-              {...register("unloadingStartTime")}
+            <Controller
+              control={control}
+              name="unloadingStartTime"
+              render={({ field }) => (
+                <Select
+                  id="unloadingStartTime"
+                  name={field.name}
+                  value={field.value || EMPTY_SELECT_VALUE}
+                  options={TIME_SELECT_OPTIONS}
+                  onValueChange={(value) =>
+                    field.onChange(
+                      value === EMPTY_SELECT_VALUE ? "" : value,
+                    )
+                  }
+                />
+              )}
             />
           </div>
           <div>
             <Label htmlFor="unloadingEndTime">End Time</Label>
-            <Input
-              id="unloadingEndTime"
-              type="time"
-              {...register("unloadingEndTime")}
+            <Controller
+              control={control}
+              name="unloadingEndTime"
+              render={({ field }) => (
+                <Select
+                  id="unloadingEndTime"
+                  name={field.name}
+                  value={field.value || EMPTY_SELECT_VALUE}
+                  options={TIME_SELECT_OPTIONS}
+                  onValueChange={(value) =>
+                    field.onChange(
+                      value === EMPTY_SELECT_VALUE ? "" : value,
+                    )
+                  }
+                />
+              )}
             />
           </div>
         </div>
