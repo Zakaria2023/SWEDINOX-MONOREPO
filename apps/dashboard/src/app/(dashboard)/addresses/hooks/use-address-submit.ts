@@ -5,17 +5,29 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import type { AvailableAt } from "@/lib/enums";
-import { createAddress, type CreateAddressInput } from "../actions";
+import {
+  createAddress,
+  type AddressActionResult,
+  type CreateAddressInput,
+} from "../actions";
 import { addressSchema, type AddressFormValues } from "../schema";
 
-export const useAddressSubmit = () => {
+type UseAddressSubmitOptions = {
+  companyUuid?: string;
+  onSuccess?: (state: AddressActionResult) => void | Promise<void>;
+};
+
+export const useAddressSubmit = ({
+  companyUuid,
+  onSuccess,
+}: UseAddressSubmitOptions = {}) => {
   const router = useRouter();
   const [state, dispatch, isPending] = useActionState(createAddress, {});
 
   const form = useForm<AddressFormValues>({
     resolver: zodResolver(addressSchema),
     defaultValues: {
-      companyUuid: "",
+      companyUuid: companyUuid ?? "",
       category: [],
       availableAt: "",
       poBox: false,
@@ -30,8 +42,17 @@ export const useAddressSubmit = () => {
   });
 
   useEffect(() => {
-    if (state.success) router.push("/addresses");
-  }, [state.success, router]);
+    if (!state.success) {
+      return;
+    }
+
+    if (onSuccess) {
+      void onSuccess(state);
+      return;
+    }
+
+    router.push("/addresses");
+  }, [onSuccess, router, state]);
 
   const onSubmit = form.handleSubmit((data) => {
     dispatch({

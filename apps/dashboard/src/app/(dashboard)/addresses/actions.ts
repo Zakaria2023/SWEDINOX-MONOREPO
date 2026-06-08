@@ -7,6 +7,7 @@ import type { AddressCategory, AvailableAt } from "@/lib/enums";
 import { and, count, eq, like, or } from "drizzle-orm";
 
 export interface AddressActionResult {
+  addressId?: number;
   error?: string;
   success?: boolean;
 }
@@ -215,7 +216,9 @@ export const createAddress = async (
     return { error: "Address category is required" };
   }
 
-  await db.insert(CompanyAddresses).values({
+  const [createdAddress] = await db
+    .insert(CompanyAddresses)
+    .values({
     companyUuid: data.companyUuid,
     altName: data.altName || null,
     poBox: data.poBox ?? false,
@@ -242,9 +245,10 @@ export const createAddress = async (
     maxLength: data.maxLength || null,
     maxBundleWeight: data.maxBundleWeight || null,
     loadingInstructions: data.loadingInstructions || null,
-  });
+    })
+    .$returningId();
 
-  return { success: true };
+  return { addressId: createdAddress?.id, success: true };
 };
 
 export const updateAddress = async (

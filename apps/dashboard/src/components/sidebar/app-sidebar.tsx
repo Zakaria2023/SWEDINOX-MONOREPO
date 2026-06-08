@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronRight, Users } from "lucide-react";
+import { Building2, ChevronRight } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -22,17 +22,15 @@ import { cn } from "@/lib/helpers";
 
 export const AppSidebar = () => {
   const pathname = usePathname();
-  const isCustomersActive =
-    pathname.startsWith("/customers") ||
-    pathname.startsWith("/companies") ||
-    pathname.startsWith("/addresses");
-  const [isCustomersOpen, setIsCustomersOpen] = useState(isCustomersActive);
+  const isCompanyActive =
+    pathname.startsWith("/companies") || pathname.startsWith("/addresses");
+  const [isCompanyOpen, setIsCompanyOpen] = useState(isCompanyActive);
 
   useEffect(() => {
-    if (isCustomersActive) {
-      setIsCustomersOpen(true);
+    if (isCompanyActive) {
+      setIsCompanyOpen(true);
     }
-  }, [isCustomersActive]);
+  }, [isCompanyActive]);
 
   return (
     <Sidebar>
@@ -47,19 +45,19 @@ export const AppSidebar = () => {
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  aria-expanded={isCustomersOpen}
-                  isActive={isCustomersActive}
-                  onClick={() => setIsCustomersOpen((isOpen) => !isOpen)}
+                  aria-expanded={isCompanyOpen}
+                  isActive={isCompanyActive}
+                  onClick={() => setIsCompanyOpen((isOpen) => !isOpen)}
                 >
-                  <Users />
-                  <span>Customers</span>
+                  <Building2 />
+                  <span>Company</span>
                   <ChevronRight
                     className={cn("ml-auto transition-transform", {
-                      "rotate-90": isCustomersOpen,
+                      "rotate-90": isCompanyOpen,
                     })}
                   />
                 </SidebarMenuButton>
-                {isCustomersOpen && (
+                {isCompanyOpen && (
                   <SidebarMenuSub>
                     <SidebarMenuSubItem>
                       <SidebarMenuSubButton

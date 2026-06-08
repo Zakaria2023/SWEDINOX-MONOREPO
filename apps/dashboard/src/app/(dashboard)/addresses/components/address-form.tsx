@@ -4,7 +4,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Controller } from "react-hook-form";
 import { Button } from "@/components/shadcn/button";
 import { Input } from "@/components/shadcn/input";
@@ -12,7 +12,19 @@ import { Select, type SelectOption } from "@/components/shadcn/select";
 import { cn } from "@/lib/helpers";
 import { addressCategories, availableAtOptions } from "@/lib/enums";
 import { getCompanyOptions } from "../../companies/actions";
+import {
+  type AddressActionResult,
+} from "../actions";
 import { useAddressSubmit } from "../hooks/use-address-submit";
+
+type AddressFormProps = {
+  cancelLabel?: string;
+  companyUuid?: string;
+  lockCompany?: boolean;
+  onCancel?: () => void;
+  onSuccess?: (state: AddressActionResult) => void | Promise<void>;
+  submitLabel?: string;
+};
 
 type LabelProps = {
   children: ReactNode;
@@ -73,12 +85,20 @@ const BOOLEAN_FIELDS = [
   { name: "specialTransport", label: "Special Transport" },
 ] as const;
 
-export const AddressForm = () => {
+export const AddressForm = ({
+  cancelLabel = "Cancel",
+  companyUuid,
+  lockCompany = false,
+  onCancel,
+  onSuccess,
+  submitLabel = "Create Address",
+}: AddressFormProps) => {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const companyUuidFromQuery = searchParams.get("companyUuid");
-  const isCompanyLocked = Boolean(companyUuidFromQuery);
-  const { form, onSubmit, isPending, state } = useAddressSubmit();
+  const isCompanyLocked = lockCompany && Boolean(companyUuid);
+  const { form, onSubmit, isPending, state } = useAddressSubmit({
+    companyUuid,
+    onSuccess,
+  });
   const {
     control,
     register,
@@ -96,23 +116,26 @@ export const AddressForm = () => {
   });
 
   useEffect(() => {
-    if (companyUuidFromQuery) {
-      setValue("companyUuid", companyUuidFromQuery, {
-        shouldDirty: false,
-        shouldValidate: true,
-      });
+    if (!companyUuid) {
+      return;
     }
-  }, [companyUuidFromQuery, setValue]);
+
+    setValue("companyUuid", companyUuid, {
+      shouldDirty: false,
+      shouldValidate: true,
+    });
+  }, [companyUuid, setValue]);
 
   const categoryError =
     errors.category?.root?.message ??
     (errors.category as { message?: string } | undefined)?.message;
   const selectedCategories = watch("category") ?? [];
-  const companyOptions: SelectOption[] = (companyOptionsResult?.data ?? [])
-    .map((company) => ({
+  const companyOptions: SelectOption[] = (companyOptionsResult?.data ?? []).map(
+    (company) => ({
       label: company.companyName,
       value: company.uuid,
-    }));
+    }),
+  );
   const selectedCompanyName =
     companyOptions.find((company) => company.value === watch("companyUuid"))
       ?.label ?? "";
@@ -128,6 +151,15 @@ export const AddressForm = () => {
       : companyOptions.length > 0
         ? "Select a company"
         : "No companies available";
+
+  const handleCancel = () => {
+    if (onCancel) {
+      onCancel();
+      return;
+    }
+
+    router.push("/addresses");
+  };
 
   return (
     <form onSubmit={onSubmit} className="space-y-8">
@@ -157,9 +189,7 @@ export const AddressForm = () => {
                     companyOptions.length === 0
                   }
                   onValueChange={(value) =>
-                    field.onChange(
-                      value === EMPTY_SELECT_VALUE ? "" : value,
-                    )
+                    field.onChange(value === EMPTY_SELECT_VALUE ? "" : value)
                   }
                 />
               )}
@@ -373,9 +403,7 @@ export const AddressForm = () => {
                   value={field.value || EMPTY_SELECT_VALUE}
                   options={AVAILABLE_AT_SELECT_OPTIONS}
                   onValueChange={(value) =>
-                    field.onChange(
-                      value === EMPTY_SELECT_VALUE ? "" : value,
-                    )
+                    field.onChange(value === EMPTY_SELECT_VALUE ? "" : value)
                   }
                 />
               )}
@@ -393,9 +421,7 @@ export const AddressForm = () => {
                   value={field.value || EMPTY_SELECT_VALUE}
                   options={TIME_SELECT_OPTIONS}
                   onValueChange={(value) =>
-                    field.onChange(
-                      value === EMPTY_SELECT_VALUE ? "" : value,
-                    )
+                    field.onChange(value === EMPTY_SELECT_VALUE ? "" : value)
                   }
                 />
               )}
@@ -413,9 +439,7 @@ export const AddressForm = () => {
                   value={field.value || EMPTY_SELECT_VALUE}
                   options={TIME_SELECT_OPTIONS}
                   onValueChange={(value) =>
-                    field.onChange(
-                      value === EMPTY_SELECT_VALUE ? "" : value,
-                    )
+                    field.onChange(value === EMPTY_SELECT_VALUE ? "" : value)
                   }
                 />
               )}
@@ -469,14 +493,10 @@ export const AddressForm = () => {
 
       <div className="flex gap-3 pb-6">
         <Button type="submit" disabled={isPending}>
-          {isPending ? "Saving..." : "Create Address"}
+          {isPending ? "Saving..." : submitLabel}
         </Button>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => router.push("/addresses")}
-        >
-          Cancel
+        <Button type="button" variant="outline" onClick={handleCancel}>
+          {cancelLabel}
         </Button>
       </div>
     </form>

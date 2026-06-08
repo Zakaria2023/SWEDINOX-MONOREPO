@@ -6,7 +6,7 @@ export const companySchema = z.object({
     .trim()
     .min(1, "Company name is required")
     .max(255, "Company name must be 255 characters or less"),
-  addressAction: z.enum(["none", "add_address"]),
+  addressId: z.string().optional(),
 });
 
 export type CompanyFormValues = z.infer<typeof companySchema>;
