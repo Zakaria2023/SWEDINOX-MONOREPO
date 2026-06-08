@@ -152,3 +152,32 @@
     // ...
   };
   ```
+
+## Form Submissions
+
+- Always use `useActionState` from `react` when a form submits to a server action.
+- Always pair it with `react-hook-form` and `zodResolver` for client-side validation.
+- Call `dispatch(validatedData)` inside `handleSubmit` — never call the server action directly.
+- Use `isPending` to disable the submit button, `state.success` to redirect, and `state.error` to display server errors.
+
+  ```tsx
+  // ❌ Bad — calling server action directly
+  const onSubmit = handleSubmit(async (data) => {
+    await createAddress({}, data);
+  });
+
+  // ✅ Good — routing through useActionState
+  const [state, dispatch, isPending] = useActionState(createAddress, {});
+
+  const { handleSubmit } = useForm<FormValues>({
+    resolver: zodResolver(schema),
+  });
+
+  const onSubmit = handleSubmit((data) => {
+    dispatch(data);
+  });
+
+  useEffect(() => {
+    if (state.success) router.push("/addresses");
+  }, [state.success, router]);
+  ```

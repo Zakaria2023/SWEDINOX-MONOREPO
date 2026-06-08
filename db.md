@@ -126,3 +126,188 @@ notes text
 created_at timestamp
 updated_at timestamp
 }
+
+/_ =========================
+CUSTOMER GROUPS
+========================= _/
+
+Table customer_groups {
+id int [pk, increment]
+
+code varchar(100) [not null, unique]
+name varchar(255) [not null]
+description text
+
+is_active boolean [default: true]
+
+created_at timestamp
+updated_at timestamp
+}
+
+/_ =========================
+REGIONS
+========================= _/
+
+Table regions {
+id int [pk, increment]
+
+code varchar(100) [not null, unique]
+name varchar(255) [not null]
+description text
+
+is_active boolean [default: true]
+
+created_at timestamp
+updated_at timestamp
+}
+
+/_ =========================
+INDUSTRIES
+========================= _/
+
+Table industries {
+id int [pk, increment]
+
+industry_code varchar(100) [not null, unique]
+name varchar(255) [not null]
+description text
+
+is_active boolean [default: true]
+
+created_at timestamp
+updated_at timestamp
+}
+
+/_ =========================
+CLASSIFICATIONS
+========================= _/
+
+Table classifications {
+id int [pk, increment]
+
+classification_code varchar(100) [not null, unique]
+name varchar(255) [not null]
+description text
+
+is_active boolean [default: true]
+
+created_at timestamp
+updated_at timestamp
+}
+
+/_ =========================
+SALES REPRESENTATIVES
+========================= _/
+
+Table sales_representatives {
+id int [pk, increment]
+
+code varchar(100)
+name varchar(255) [not null]
+email varchar(255)
+phone varchar(100)
+
+is_active boolean [default: true]
+
+created_at timestamp
+updated_at timestamp
+}
+
+/_ =========================
+CONTACT SALUTATIONS
+========================= _/
+
+Table contact_salutations {
+id int [pk, increment]
+
+name varchar(50) [not null] // Mr, Mrs, Ms, Dr
+description text
+
+is_active boolean [default: true]
+
+created_at timestamp
+updated_at timestamp
+}
+
+/_ =========================
+CONTACT CATEGORIES
+========================= _/
+
+Table contact_categories {
+id int [pk, increment]
+
+name varchar(255) [not null]
+description text
+
+is_active boolean [default: true]
+
+created_at timestamp
+updated_at timestamp
+}
+
+/_ =========================
+CONTACTS
+========================= _/
+
+Table contacts {
+id int [pk, increment]
+
+// Main contact info
+salutation_id int [ref: > contact_salutations.id]
+
+title varchar(100)
+name varchar(255)
+initials varchar(50)
+first_name varchar(255)
+last_name varchar(255)
+full_name varchar(255) [not null]
+
+telephone varchar(100)
+mobile varchar(100)
+fax varchar(100)
+email varchar(255)
+
+btw_number varchar(100) // VAT / BTW number
+category_addition text
+
+// Address relation
+address_id int [ref: > addresses.id]
+
+// Address snapshot / direct contact address fields
+location_id int [ref: > locations.id]
+country_id int [ref: > countries.id]
+city_id int [ref: > cities.id]
+
+postal_code varchar(100)
+region varchar(255)
+
+street_and_number varchar(255)
+house varchar(100)
+po_box varchar(100)
+annex varchar(255)
+alternative_name varchar(255)
+
+website varchar(255)
+sequence_number int
+
+is_active boolean [default: true]
+
+notes text
+
+created_at timestamp
+updated_at timestamp
+}
+
+/_ =========================
+CONTACT CATEGORY LINKS
+========================= _/
+
+Table contact_category_links {
+id int [pk, increment]
+
+contact_id int [ref: > contacts.id]
+contact_category_id int [ref: > contact_categories.id]
+
+created_at timestamp
+updated_at timestamp
+}
