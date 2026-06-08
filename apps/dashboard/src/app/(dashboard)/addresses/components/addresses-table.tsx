@@ -1,5 +1,9 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { ChevronDown, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/shadcn/button";
 import { Input } from "@/components/shadcn/input";
 import {
@@ -10,12 +14,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ErrorMessage } from "@/components/ui/error-message";
-import { useQuery } from "@tanstack/react-query";
-import { ChevronDown } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
 import type { AddressListItem } from "../actions";
-import { getAddresses } from "../actions";
+import { deleteAddress, getAddresses } from "../actions";
 
 const ALL_COLUMNS = [
   { key: "id", label: "Code", defaultVisible: true },
@@ -70,11 +72,18 @@ const BoolCell = ({ value }: { value: boolean | null }) =>
   );
 
 export const AddressesTable = () => {
+  const router = useRouter();
+  const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [columnVisibility, setColumnVisibility] =
     useState<Record<ColumnKey, boolean>>(initialVisibility);
   const [columnsOpen, setColumnsOpen] = useState(false);
+  const [addressToDelete, setAddressToDelete] = useState<AddressListItem | null>(
+    null,
+  );
+  const [isDeletePending, setIsDeletePending] = useState(false);
+  const [actionError, setActionError] = useState("");
   const columnsRef = useRef<HTMLDivElement>(null);
   const pageSize = 10;
 
@@ -104,23 +113,51 @@ export const AddressesTable = () => {
 
   const totalPages = data ? Math.ceil(data.total / pageSize) : 0;
   const errorMessage =
-    data?.error ??
+    actionError ||
+    data?.error ||
     (isError ? "Failed to load addresses. Please try again." : "");
 
-  if (errorMessage) {
-    return <ErrorMessage message={errorMessage} />;
-  }
+  const handleDeleteAddress = async () => {
+    if (!addressToDelete) {
+      return;
+    }
+
+    setIsDeletePending(true);
+    setActionError("");
+
+    try {
+      const result = await deleteAddress(addressToDelete.id);
+
+      if (!result.success) {
+        setActionError(result.error ?? "Failed to delete address.");
+        return;
+      }
+
+      setAddressToDelete(null);
+      await queryClient.invalidateQueries({ queryKey: ["addresses"] });
+    } finally {
+      setIsDeletePending(false);
+    }
+  };
 
   const renderCell = (address: AddressListItem, key: ColumnKey) => {
     switch (key) {
       case "id":
-        return <TableCell key={key} className="font-medium">{address.id}</TableCell>;
+        return (
+          <TableCell key={key} className="font-medium">
+            {address.id}
+          </TableCell>
+        );
       case "companyName":
         return <TableCell key={key}>{address.companyName || "-"}</TableCell>;
       case "altName":
         return <TableCell key={key}>{address.altName || "-"}</TableCell>;
       case "poBox":
-        return <TableCell key={key}><BoolCell value={address.poBox} /></TableCell>;
+        return (
+          <TableCell key={key}>
+            <BoolCell value={address.poBox} />
+          </TableCell>
+        );
       case "streetAndNo":
         return <TableCell key={key}>{address.streetAndNo || "-"}</TableCell>;
       case "postalCode":
@@ -159,11 +196,23 @@ export const AddressesTable = () => {
           </TableCell>
         );
       case "needCrane":
-        return <TableCell key={key}><BoolCell value={address.needCrane} /></TableCell>;
+        return (
+          <TableCell key={key}>
+            <BoolCell value={address.needCrane} />
+          </TableCell>
+        );
       case "canopyRequired":
-        return <TableCell key={key}><BoolCell value={address.canopyRequired} /></TableCell>;
+        return (
+          <TableCell key={key}>
+            <BoolCell value={address.canopyRequired} />
+          </TableCell>
+        );
       case "bundleSeparately":
-        return <TableCell key={key}><BoolCell value={address.bundleSeparately} /></TableCell>;
+        return (
+          <TableCell key={key}>
+            <BoolCell value={address.bundleSeparately} />
+          </TableCell>
+        );
       case "addressComplete":
         return (
           <TableCell key={key}>
@@ -179,17 +228,27 @@ export const AddressesTable = () => {
           </TableCell>
         );
       case "specialTransport":
-        return <TableCell key={key}><BoolCell value={address.specialTransport} /></TableCell>;
+        return (
+          <TableCell key={key}>
+            <BoolCell value={address.specialTransport} />
+          </TableCell>
+        );
       case "availableAt":
         return <TableCell key={key}>{address.availableAt || "-"}</TableCell>;
       case "unloadingStartTime":
-        return <TableCell key={key}>{address.unloadingStartTime || "-"}</TableCell>;
+        return (
+          <TableCell key={key}>{address.unloadingStartTime || "-"}</TableCell>
+        );
       case "unloadingEndTime":
-        return <TableCell key={key}>{address.unloadingEndTime || "-"}</TableCell>;
+        return (
+          <TableCell key={key}>{address.unloadingEndTime || "-"}</TableCell>
+        );
       case "maxLength":
         return <TableCell key={key}>{address.maxLength || "-"}</TableCell>;
       case "maxBundleWeight":
-        return <TableCell key={key}>{address.maxBundleWeight || "-"}</TableCell>;
+        return (
+          <TableCell key={key}>{address.maxBundleWeight || "-"}</TableCell>
+        );
       case "loadingInstructions":
         return (
           <TableCell key={key} className="max-w-48 truncate">
@@ -197,152 +256,202 @@ export const AddressesTable = () => {
           </TableCell>
         );
       case "createdAt":
-        return <TableCell key={key}>{address.createdAt.toLocaleDateString()}</TableCell>;
+        return (
+          <TableCell key={key}>{address.createdAt.toLocaleDateString()}</TableCell>
+        );
       case "updatedAt":
-        return <TableCell key={key}>{address.updatedAt.toLocaleDateString()}</TableCell>;
+        return (
+          <TableCell key={key}>{address.updatedAt.toLocaleDateString()}</TableCell>
+        );
     }
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-4">
-        <Input
-          type="text"
-          placeholder="Search addresses or companies..."
-          value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setPage(1);
-          }}
-          className="max-w-sm"
-        />
+    <>
+      <div className="space-y-4">
+        {errorMessage && <ErrorMessage message={errorMessage} />}
 
-        <div ref={columnsRef} className="relative ml-auto">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setColumnsOpen((o) => !o)}
-          >
-            Columns <ChevronDown className="ml-2 h-4 w-4" />
-          </Button>
+        <div className="flex items-center gap-4">
+          <Input
+            type="text"
+            placeholder="Search addresses or companies..."
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+            className="max-w-sm"
+          />
 
-          {columnsOpen && (
-            <div className="absolute right-0 z-10 mt-1 min-w-40 rounded-md border bg-white p-2 shadow-md max-h-80 overflow-y-auto">
-              {ALL_COLUMNS.map((col) => (
-                <label
-                  key={col.key}
-                  className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-gray-50"
-                >
-                  <input
-                    type="checkbox"
-                    checked={columnVisibility[col.key]}
-                    onChange={() => toggleColumn(col.key)}
-                    className="h-4 w-4 rounded border-gray-300"
-                  />
-                  {col.label}
-                </label>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
+          <div ref={columnsRef} className="relative ml-auto">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setColumnsOpen((o) => !o)}
+            >
+              Columns <ChevronDown className="ml-2 h-4 w-4" />
+            </Button>
 
-      <div className="rounded-lg border overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              {visibleColumns.map((col) => (
-                <TableHead key={col.key}>{col.label}</TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell
-                  colSpan={visibleColumns.length}
-                  className="h-24 text-center"
-                >
-                  Loading...
-                </TableCell>
-              </TableRow>
-            ) : data?.data.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={visibleColumns.length}
-                  className="h-24 text-center"
-                >
-                  No addresses found
-                </TableCell>
-              </TableRow>
-            ) : (
-              data?.data.map((address) => (
-                <TableRow key={address.id}>
-                  {visibleColumns.map((col) => renderCell(address, col.key))}
-                </TableRow>
-              ))
+            {columnsOpen && (
+              <div className="absolute right-0 z-10 mt-1 max-h-80 min-w-40 overflow-y-auto rounded-md border bg-white p-2 shadow-md">
+                {ALL_COLUMNS.map((col) => (
+                  <label
+                    key={col.key}
+                    className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-gray-50"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={columnVisibility[col.key]}
+                      onChange={() => toggleColumn(col.key)}
+                      className="h-4 w-4 rounded border-gray-300"
+                    />
+                    {col.label}
+                  </label>
+                ))}
+              </div>
             )}
-          </TableBody>
-        </Table>
-      </div>
-
-      <div className="flex items-center justify-between">
-        <div className="text-sm text-muted-foreground">
-          Showing {data?.data.length || 0} of {data?.total || 0} addresses
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page === 1 || isLoading}
-            variant="outline"
-            size="sm"
-          >
-            Previous
-          </Button>
+        <div className="overflow-x-auto rounded-lg border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                {visibleColumns.map((col) => (
+                  <TableHead key={col.key}>{col.label}</TableHead>
+                ))}
+                <TableHead className="w-28 text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={visibleColumns.length + 1}
+                    className="h-24 text-center"
+                  >
+                    Loading...
+                  </TableCell>
+                </TableRow>
+              ) : data?.data.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={visibleColumns.length + 1}
+                    className="h-24 text-center"
+                  >
+                    No addresses found
+                  </TableCell>
+                </TableRow>
+              ) : (
+                data?.data.map((address) => (
+                  <TableRow key={address.id}>
+                    {visibleColumns.map((col) => renderCell(address, col.key))}
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={() =>
+                            router.push(`/addresses/${address.id}/edit`)
+                          }
+                        >
+                          <Pencil />
+                          <span className="sr-only">Edit address</span>
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={() => setAddressToDelete(address)}
+                        >
+                          <Trash2 className="text-destructive" />
+                          <span className="sr-only">Delete address</span>
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
 
-          <div className="flex items-center gap-1">
-            {Array.from({ length: totalPages }, (_, i) => i + 1)
-              .filter((p) => {
-                if (totalPages <= 7) return true;
-                if (p === 1 || p === totalPages) return true;
-                if (p >= page - 1 && p <= page + 1) return true;
-                return false;
-              })
-              .map((p, i, arr) => {
-                const prev = arr[i - 1];
-                const showDots = prev && p - prev > 1;
-
-                return (
-                  <div key={p} className="flex items-center gap-1">
-                    {showDots && (
-                      <span className="px-2 text-muted-foreground">...</span>
-                    )}
-                    <Button
-                      onClick={() => setPage(p)}
-                      variant={page === p ? "default" : "outline"}
-                      size="sm"
-                      className="min-w-10"
-                    >
-                      {p}
-                    </Button>
-                  </div>
-                );
-              })}
+        <div className="flex items-center justify-between">
+          <div className="text-sm text-muted-foreground">
+            Showing {data?.data.length || 0} of {data?.total || 0} addresses
           </div>
 
-          <Button
-            onClick={() =>
-              setPage((p) => Math.min(Math.max(totalPages, 1), p + 1))
-            }
-            disabled={totalPages <= 1 || page === totalPages || isLoading}
-            variant="outline"
-            size="sm"
-          >
-            Next
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1 || isLoading}
+              variant="outline"
+              size="sm"
+            >
+              Previous
+            </Button>
+
+            <div className="flex items-center gap-1">
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter((p) => {
+                  if (totalPages <= 7) return true;
+                  if (p === 1 || p === totalPages) return true;
+                  if (p >= page - 1 && p <= page + 1) return true;
+                  return false;
+                })
+                .map((p, i, arr) => {
+                  const prev = arr[i - 1];
+                  const showDots = prev && p - prev > 1;
+
+                  return (
+                    <div key={p} className="flex items-center gap-1">
+                      {showDots && (
+                        <span className="px-2 text-muted-foreground">...</span>
+                      )}
+                      <Button
+                        onClick={() => setPage(p)}
+                        variant={page === p ? "default" : "outline"}
+                        size="sm"
+                        className="min-w-10"
+                      >
+                        {p}
+                      </Button>
+                    </div>
+                  );
+                })}
+            </div>
+
+            <Button
+              onClick={() =>
+                setPage((p) => Math.min(Math.max(totalPages, 1), p + 1))
+              }
+              disabled={totalPages <= 1 || page === totalPages || isLoading}
+              variant="outline"
+              size="sm"
+            >
+              Next
+            </Button>
+          </div>
         </div>
       </div>
-    </div>
+
+      <ConfirmDialog
+        open={Boolean(addressToDelete)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setAddressToDelete(null);
+          }
+        }}
+        title="Delete Address"
+        description={
+          addressToDelete
+            ? `Delete address "${addressToDelete.altName || addressToDelete.streetAndNo || `#${addressToDelete.id}`}"? This cannot be undone.`
+            : ""
+        }
+        onConfirm={handleDeleteAddress}
+        isPending={isDeletePending}
+      />
+    </>
   );
 };

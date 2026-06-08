@@ -1,9 +1,10 @@
 "use server";
 
 import { db } from "@/db";
+import { CompanyAddresses } from "@/db/schema/company-addresses";
 import { Companies } from "@/db/schema/companies";
 import { generateUuid } from "@/lib/helpers";
-import { count, desc, like } from "drizzle-orm";
+import { count, desc, eq, like } from "drizzle-orm";
 
 export interface CompanyActionResult {
   companyUuid?: string;
@@ -16,6 +17,10 @@ export interface CompanyListItem {
   companyName: string;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface CompanyDetail extends CompanyListItem {
+  uuid: string;
 }
 
 export interface PaginatedCompanies {
@@ -38,6 +43,10 @@ export interface CompanyOptionsResult {
 
 export interface CreateCompanyInput {
   companyName: string;
+}
+
+export interface UpdateCompanyInput extends CreateCompanyInput {
+  id: number;
 }
 
 const getCompanyQueryErrorMessage = (error: unknown) => {
@@ -125,6 +134,24 @@ export const getCompanyOptions = async (): Promise<CompanyOptionsResult> => {
   }
 };
 
+export const getCompanyById = async (
+  id: number,
+): Promise<CompanyDetail | null> => {
+  const [company] = await db
+    .select({
+      id: Companies.id,
+      uuid: Companies.uuid,
+      companyName: Companies.companyName,
+      createdAt: Companies.createdAt,
+      updatedAt: Companies.updatedAt,
+    })
+    .from(Companies)
+    .where(eq(Companies.id, id))
+    .limit(1);
+
+  return company ?? null;
+};
+
 export const createCompany = async (
   _prevState: CompanyActionResult,
   data: CreateCompanyInput,
@@ -143,4 +170,71 @@ export const createCompany = async (
   });
 
   return { companyUuid, success: true };
+};
+
+export const updateCompany = async (
+  _prevState: CompanyActionResult,
+  data: UpdateCompanyInput,
+): Promise<CompanyActionResult> => {
+  const companyName = data.companyName.trim();
+
+  if (!companyName) {
+    return { error: "Company name is required" };
+  }
+
+  const [existing] = await db
+    .select({
+      id: Companies.id,
+      uuid: Companies.uuid,
+    })
+    .from(Companies)
+    .where(eq(Companies.id, data.id))
+    .limit(1);
+
+  if (!existing) {
+    return { error: "Company not found" };
+  }
+
+  await db
+    .update(Companies)
+    .set({ companyName })
+    .where(eq(Companies.id, data.id));
+
+  return {
+    companyUuid: existing.uuid,
+    success: true,
+  };
+};
+
+export const deleteCompany = async (
+  id: number,
+): Promise<CompanyActionResult> => {
+  const [company] = await db
+    .select({
+      id: Companies.id,
+      uuid: Companies.uuid,
+    })
+    .from(Companies)
+    .where(eq(Companies.id, id))
+    .limit(1);
+
+  if (!company) {
+    return { error: "Company not found" };
+  }
+
+  const [linkedAddress] = await db
+    .select({ id: CompanyAddresses.id })
+    .from(CompanyAddresses)
+    .where(eq(CompanyAddresses.companyUuid, company.uuid))
+    .limit(1);
+
+  if (linkedAddress) {
+    return {
+      error: "Delete the company addresses before deleting this company.",
+    };
+  }
+
+  await db.delete(Companies).where(eq(Companies.id, id));
+
+  return { success: true };
 };

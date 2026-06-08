@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Building2, ChevronRight } from "lucide-react";
+import { Building2, ChevronRight, Users } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -22,9 +22,16 @@ import { cn } from "@/lib/helpers";
 
 export const AppSidebar = () => {
   const pathname = usePathname();
-  const isCompanyActive =
-    pathname.startsWith("/companies") || pathname.startsWith("/addresses");
+  const isCustomersActive = pathname.startsWith("/addresses");
+  const isCompanyActive = pathname.startsWith("/companies");
+  const [isCustomersOpen, setIsCustomersOpen] = useState(isCustomersActive);
   const [isCompanyOpen, setIsCompanyOpen] = useState(isCompanyActive);
+
+  useEffect(() => {
+    if (isCustomersActive) {
+      setIsCustomersOpen(true);
+    }
+  }, [isCustomersActive]);
 
   useEffect(() => {
     if (isCompanyActive) {
@@ -43,6 +50,34 @@ export const AppSidebar = () => {
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  aria-expanded={isCustomersOpen}
+                  isActive={isCustomersActive}
+                  onClick={() => setIsCustomersOpen((isOpen) => !isOpen)}
+                >
+                  <Users />
+                  <span>Customers</span>
+                  <ChevronRight
+                    className={cn("ml-auto transition-transform", {
+                      "rotate-90": isCustomersOpen,
+                    })}
+                  />
+                </SidebarMenuButton>
+                {isCustomersOpen && (
+                  <SidebarMenuSub>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/addresses" />}
+                        isActive={pathname.startsWith("/addresses")}
+                      >
+                        <span>Addresses</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                  </SidebarMenuSub>
+                )}
+              </SidebarMenuItem>
+
               <SidebarMenuItem>
                 <SidebarMenuButton
                   aria-expanded={isCompanyOpen}
@@ -65,14 +100,6 @@ export const AppSidebar = () => {
                         isActive={pathname.startsWith("/companies")}
                       >
                         <span>Companies</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/addresses" />}
-                        isActive={pathname.startsWith("/addresses")}
-                      >
-                        <span>Addresses</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                   </SidebarMenuSub>

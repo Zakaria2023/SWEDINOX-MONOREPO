@@ -1,20 +1,37 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   createCompany,
+  updateCompany,
   type CompanyActionResult,
   type CreateCompanyInput,
 } from "../actions";
 import { companySchema, type CompanyFormValues } from "../schema";
 
-export const useCompanySubmit = () => {
+type CompanyFormMode = "add" | "edit";
+
+type UseCompanySubmitOptions = {
+  companyId?: number;
+  companyUuid?: string;
+  mode?: CompanyFormMode;
+  onSuccess?: (state: CompanyActionResult) => void | Promise<void>;
+};
+
+export const useCompanySubmit = ({
+  companyId,
+  companyUuid: initialCompanyUuid,
+  mode = "add",
+  onSuccess,
+}: UseCompanySubmitOptions = {}) => {
   const router = useRouter();
   const [state, setState] = useState<CompanyActionResult>({});
-  const [companyUuid, setCompanyUuid] = useState<string>();
+  const [companyUuid, setCompanyUuid] = useState<string | undefined>(
+    initialCompanyUuid,
+  );
   const [isPending, setIsPending] = useState(false);
 
   const form = useForm<CompanyFormValues>({
@@ -25,11 +42,21 @@ export const useCompanySubmit = () => {
     },
   });
 
-  const saveCompany = async (input: CreateCompanyInput) => {
+  useEffect(() => {
+    if (initialCompanyUuid) {
+      setCompanyUuid(initialCompanyUuid);
+    }
+  }, [initialCompanyUuid]);
+
+  const persistCompany = async (input: CreateCompanyInput) => {
     setIsPending(true);
 
     try {
-      const nextState: CompanyActionResult = await createCompany({}, input);
+      const nextState: CompanyActionResult =
+        mode === "edit" && companyId
+          ? await updateCompany({}, { id: companyId, ...input })
+          : await createCompany({}, input);
+
       setState(nextState);
 
       if (nextState.success && nextState.companyUuid) {
@@ -38,10 +65,10 @@ export const useCompanySubmit = () => {
 
       return nextState;
     } catch (error) {
-      console.error("Failed to create company", error);
+      console.error("Failed to persist company", error);
 
       const nextState: CompanyActionResult = {
-        error: "Unable to create company right now.",
+        error: "Unable to save company right now.",
       };
       setState(nextState);
       return nextState;
@@ -62,20 +89,25 @@ export const useCompanySubmit = () => {
     }
 
     const companyName = form.getValues("companyName").trim();
-    return saveCompany({ companyName });
+    return persistCompany({ companyName });
   };
 
   const onSubmit = form.handleSubmit(async (data) => {
-    if (companyUuid) {
+    if (mode === "add" && companyUuid) {
       router.push("/companies");
       return;
     }
 
-    const nextState = await saveCompany({
+    const nextState = await persistCompany({
       companyName: data.companyName,
     });
 
     if (!nextState.success) {
+      return;
+    }
+
+    if (onSuccess) {
+      void onSuccess(nextState);
       return;
     }
 
@@ -87,8 +119,9 @@ export const useCompanySubmit = () => {
     ensureCompanyCreated,
     form,
     isPending,
-    isSaved: Boolean(companyUuid),
+    isPersisted: Boolean(companyUuid),
     onSubmit,
+    setCompanyUuid,
     state,
   };
 };

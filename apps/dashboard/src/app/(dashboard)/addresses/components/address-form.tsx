@@ -9,18 +9,23 @@ import { Controller } from "react-hook-form";
 import { Button } from "@/components/shadcn/button";
 import { Input } from "@/components/shadcn/input";
 import { Select, type SelectOption } from "@/components/shadcn/select";
+import { ErrorMessage } from "@/components/ui/error-message";
 import { cn } from "@/lib/helpers";
 import { addressCategories, availableAtOptions } from "@/lib/enums";
 import { getCompanyOptions } from "../../companies/actions";
 import {
+  getAddressById,
   type AddressActionResult,
+  type AddressDetail,
 } from "../actions";
 import { useAddressSubmit } from "../hooks/use-address-submit";
 
 type AddressFormProps = {
+  addressId?: number;
   cancelLabel?: string;
   companyUuid?: string;
   lockCompany?: boolean;
+  mode?: "add" | "edit";
   onCancel?: () => void;
   onSuccess?: (state: AddressActionResult) => void | Promise<void>;
   submitLabel?: string;
@@ -85,27 +90,71 @@ const BOOLEAN_FIELDS = [
   { name: "specialTransport", label: "Special Transport" },
 ] as const;
 
+const mapAddressToFormValues = (address: AddressDetail) => ({
+  addressComplete: address.addressComplete ?? false,
+  altName: address.altName ?? "",
+  availableAt: address.availableAt ?? "",
+  bundleSeparately: address.bundleSeparately ?? false,
+  canopyRequired: address.canopyRequired ?? false,
+  category: address.category,
+  city: address.city ?? "",
+  companyUuid: address.companyUuid,
+  country: address.country ?? "",
+  email: address.email ?? "",
+  fax: address.fax ?? "",
+  house: address.house ?? "",
+  loadingInstructions: address.loadingInstructions ?? "",
+  maxBundleWeight: address.maxBundleWeight ?? "",
+  maxLength: address.maxLength ?? "",
+  needCrane: address.needCrane ?? false,
+  poBox: address.poBox ?? false,
+  postalCode: address.postalCode ?? "",
+  region: address.region ?? "",
+  sequenceNumber:
+    address.sequenceNumber === null ? "" : String(address.sequenceNumber),
+  specialTransport: address.specialTransport ?? false,
+  streetAndNo: address.streetAndNo ?? "",
+  telephone: address.telephone ?? "",
+  unloadingEndTime: address.unloadingEndTime ?? "",
+  unloadingStartTime: address.unloadingStartTime ?? "",
+  website: address.website ?? "",
+});
+
 export const AddressForm = ({
+  addressId,
   cancelLabel = "Cancel",
   companyUuid,
   lockCompany = false,
+  mode = "add",
   onCancel,
   onSuccess,
-  submitLabel = "Create Address",
+  submitLabel,
 }: AddressFormProps) => {
   const router = useRouter();
   const isCompanyLocked = lockCompany && Boolean(companyUuid);
   const { form, onSubmit, isPending, state } = useAddressSubmit({
+    addressId,
     companyUuid,
+    mode,
     onSuccess,
   });
   const {
     control,
     register,
+    reset,
     setValue,
     watch,
     formState: { errors },
   } = form;
+  const {
+    data: addressDetail,
+    isLoading: isAddressLoading,
+    isError: isAddressError,
+  } = useQuery({
+    queryKey: ["address", addressId],
+    queryFn: () => getAddressById(addressId!),
+    enabled: mode === "edit" && Boolean(addressId),
+  });
   const {
     data: companyOptionsResult,
     isLoading: isCompaniesLoading,
@@ -125,6 +174,22 @@ export const AddressForm = ({
       shouldValidate: true,
     });
   }, [companyUuid, setValue]);
+
+  useEffect(() => {
+    if (!addressDetail) {
+      return;
+    }
+
+    reset(mapAddressToFormValues(addressDetail));
+  }, [addressDetail, reset]);
+
+  if (mode === "edit" && isAddressLoading) {
+    return <p className="text-sm text-muted-foreground">Loading address...</p>;
+  }
+
+  if (mode === "edit" && (isAddressError || !addressDetail)) {
+    return <ErrorMessage message="Address not found." />;
+  }
 
   const categoryError =
     errors.category?.root?.message ??
@@ -493,7 +558,10 @@ export const AddressForm = ({
 
       <div className="flex gap-3 pb-6">
         <Button type="submit" disabled={isPending}>
-          {isPending ? "Saving..." : submitLabel}
+          {isPending
+            ? "Saving..."
+            : (submitLabel ??
+              (mode === "edit" ? "Save Changes" : "Create Address"))}
         </Button>
         <Button type="button" variant="outline" onClick={handleCancel}>
           {cancelLabel}

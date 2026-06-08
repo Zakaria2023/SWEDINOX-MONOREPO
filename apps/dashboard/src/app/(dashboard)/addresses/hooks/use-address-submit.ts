@@ -1,28 +1,37 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import type { AvailableAt } from "@/lib/enums";
 import {
   createAddress,
+  updateAddress,
   type AddressActionResult,
   type CreateAddressInput,
+  type UpdateAddressInput,
 } from "../actions";
 import { addressSchema, type AddressFormValues } from "../schema";
 
+type AddressFormMode = "add" | "edit";
+
 type UseAddressSubmitOptions = {
+  addressId?: number;
   companyUuid?: string;
+  mode?: AddressFormMode;
   onSuccess?: (state: AddressActionResult) => void | Promise<void>;
 };
 
 export const useAddressSubmit = ({
+  addressId,
   companyUuid,
+  mode = "add",
   onSuccess,
 }: UseAddressSubmitOptions = {}) => {
   const router = useRouter();
-  const [state, dispatch, isPending] = useActionState(createAddress, {});
+  const [state, setState] = useState<AddressActionResult>({});
+  const [isPending, setIsPending] = useState(false);
 
   const form = useForm<AddressFormValues>({
     resolver: zodResolver(addressSchema),
@@ -41,21 +50,45 @@ export const useAddressSubmit = ({
     },
   });
 
-  useEffect(() => {
-    if (!state.success) {
-      return;
+  const persistAddress = async (
+    payload: CreateAddressInput | UpdateAddressInput,
+  ) => {
+    setIsPending(true);
+
+    try {
+      const nextState =
+        mode === "edit" && addressId
+          ? await updateAddress({}, payload as UpdateAddressInput)
+          : await createAddress({}, payload as CreateAddressInput);
+
+      setState(nextState);
+
+      if (!nextState.success) {
+        return nextState;
+      }
+
+      if (onSuccess) {
+        await onSuccess(nextState);
+      } else {
+        router.push("/addresses");
+      }
+
+      return nextState;
+    } catch (error) {
+      console.error("Failed to persist address", error);
+
+      const nextState: AddressActionResult = {
+        error: "Unable to save address right now.",
+      };
+      setState(nextState);
+      return nextState;
+    } finally {
+      setIsPending(false);
     }
+  };
 
-    if (onSuccess) {
-      void onSuccess(state);
-      return;
-    }
-
-    router.push("/addresses");
-  }, [onSuccess, router, state]);
-
-  const onSubmit = form.handleSubmit((data) => {
-    dispatch({
+  const onSubmit = form.handleSubmit(async (data) => {
+    const payload = {
       ...data,
       email: data.email || undefined,
       website: data.website || undefined,
@@ -67,7 +100,17 @@ export const useAddressSubmit = ({
         : undefined,
       unloadingStartTime: data.unloadingStartTime || undefined,
       unloadingEndTime: data.unloadingEndTime || undefined,
-    } as CreateAddressInput);
+    };
+
+    if (mode === "edit" && addressId) {
+      await persistAddress({
+        ...payload,
+        id: addressId,
+      } as UpdateAddressInput);
+      return;
+    }
+
+    await persistAddress(payload as CreateAddressInput);
   });
 
   return { form, onSubmit, isPending, state };

@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Controller } from "react-hook-form";
@@ -16,15 +16,20 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/shadcn/sheet";
-import {
-  AddressForm,
-} from "../../addresses/components/address-form";
+import { ErrorMessage } from "@/components/ui/error-message";
+import { AddressForm } from "../../addresses/components/address-form";
 import {
   getAddressesByCompany,
   type AddressActionResult,
   type AddressListItem,
 } from "../../addresses/actions";
+import { getCompanyById } from "../actions";
 import { useCompanySubmit } from "../hooks/use-company-submit";
+
+type CompanyFormProps = {
+  companyId?: number;
+  mode?: "add" | "edit";
+};
 
 type LabelProps = {
   children: ReactNode;
@@ -66,7 +71,10 @@ const formatAddressLabel = (address: AddressListItem) => {
     : primaryLabel;
 };
 
-export const CompanyForm = () => {
+export const CompanyForm = ({
+  companyId,
+  mode = "add",
+}: CompanyFormProps) => {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [isAddressSheetOpen, setIsAddressSheetOpen] = useState(false);
@@ -75,16 +83,27 @@ export const CompanyForm = () => {
     ensureCompanyCreated,
     form,
     isPending,
-    isSaved,
+    isPersisted,
     onSubmit,
+    setCompanyUuid,
     state,
-  } = useCompanySubmit();
+  } = useCompanySubmit({ companyId, mode });
   const {
     control,
     register,
+    reset,
     setValue,
     formState: { errors },
   } = form;
+  const {
+    data: companyDetail,
+    isLoading: isCompanyLoading,
+    isError: isCompanyError,
+  } = useQuery({
+    queryKey: ["company", companyId],
+    queryFn: () => getCompanyById(companyId!),
+    enabled: mode === "edit" && Boolean(companyId),
+  });
   const {
     data: addresses = [],
     isLoading: isAddressesLoading,
@@ -94,6 +113,26 @@ export const CompanyForm = () => {
     queryFn: () => getAddressesByCompany(companyUuid!),
     enabled: Boolean(companyUuid),
   });
+
+  useEffect(() => {
+    if (!companyDetail) {
+      return;
+    }
+
+    reset({
+      addressId: "",
+      companyName: companyDetail.companyName,
+    });
+    setCompanyUuid(companyDetail.uuid);
+  }, [companyDetail, reset, setCompanyUuid]);
+
+  if (mode === "edit" && isCompanyLoading) {
+    return <p className="text-sm text-muted-foreground">Loading company...</p>;
+  }
+
+  if (mode === "edit" && (isCompanyError || !companyDetail)) {
+    return <ErrorMessage message="Company not found." />;
+  }
 
   const addressOptions: SelectOption[] = [
     ...addresses.map((address) => ({
@@ -107,6 +146,11 @@ export const CompanyForm = () => {
   ];
 
   const handleOpenAddressSheet = async () => {
+    if (companyUuid) {
+      setIsAddressSheetOpen(true);
+      return;
+    }
+
     const result = await ensureCompanyCreated();
 
     if (!result.success || !result.companyUuid) {
@@ -153,7 +197,7 @@ export const CompanyForm = () => {
                 {...register("companyName")}
                 aria-invalid={!!errors.companyName}
                 placeholder="Enter the company name"
-                disabled={isSaved || isPending}
+                disabled={isPending}
               />
               <FieldError message={errors.companyName?.message} />
             </div>
@@ -198,7 +242,13 @@ export const CompanyForm = () => {
 
         <div className="flex gap-3 pb-6">
           <Button type="submit" disabled={isPending}>
-            {isPending ? "Saving..." : isSaved ? "Done" : "Create Company"}
+            {isPending
+              ? "Saving..."
+              : mode === "edit"
+                ? "Save Changes"
+                : isPersisted
+                  ? "Done"
+                  : "Create Company"}
           </Button>
           <Button
             type="button"
@@ -221,7 +271,7 @@ export const CompanyForm = () => {
               New Address
             </SheetTitle>
             <SheetDescription>
-              Add an address for the company you just created.
+              Add an address for this company.
             </SheetDescription>
           </SheetHeader>
 
