@@ -2,7 +2,7 @@ import { z } from "zod";
 import { addressCategories, availableAtOptions } from "@/lib/enums";
 
 export const addressSchema = z.object({
-  companyUuid: z.string().min(1, "Company UUID is required"),
+  companyUuid: z.string().min(1, "Company is required"),
   altName: z.string().optional(),
   // Booleans use z.boolean() (no .default) so z.input = z.output = boolean.
   // Defaults are set in useAddressSubmit's defaultValues instead.

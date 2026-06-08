@@ -3,16 +3,16 @@
 import { db } from "@/db";
 import { Companies } from "@/db/schema/companies";
 import { generateUuid } from "@/lib/helpers";
-import { count, desc, like, or } from "drizzle-orm";
+import { count, desc, like } from "drizzle-orm";
 
 export interface CompanyActionResult {
+  companyUuid?: string;
   error?: string;
   success?: boolean;
 }
 
 export interface CompanyListItem {
   id: number;
-  uuid: string;
   companyName: string;
   createdAt: Date;
   updatedAt: Date;
@@ -23,6 +23,16 @@ export interface PaginatedCompanies {
   total: number;
   page: number;
   pageSize: number;
+  error?: string;
+}
+
+export interface CompanyOption {
+  companyName: string;
+  uuid: string;
+}
+
+export interface CompanyOptionsResult {
+  data: CompanyOption[];
   error?: string;
 }
 
@@ -56,17 +66,13 @@ export const getCompanies = async (
     const offset = (page - 1) * pageSize;
     const searchTerm = search.trim();
     const whereClause = searchTerm
-      ? or(
-          like(Companies.companyName, `%${searchTerm}%`),
-          like(Companies.uuid, `%${searchTerm}%`),
-        )
+      ? like(Companies.companyName, `%${searchTerm}%`)
       : undefined;
 
     const [results, countResult] = await Promise.all([
       db
         .select({
           id: Companies.id,
-          uuid: Companies.uuid,
           companyName: Companies.companyName,
           createdAt: Companies.createdAt,
           updatedAt: Companies.updatedAt,
@@ -98,6 +104,27 @@ export const getCompanies = async (
   }
 };
 
+export const getCompanyOptions = async (): Promise<CompanyOptionsResult> => {
+  try {
+    const results = await db
+      .select({
+        companyName: Companies.companyName,
+        uuid: Companies.uuid,
+      })
+      .from(Companies)
+      .orderBy(Companies.companyName);
+
+    return { data: results };
+  } catch (error) {
+    console.error("Failed to load company options", error);
+
+    return {
+      data: [],
+      error: getCompanyQueryErrorMessage(error),
+    };
+  }
+};
+
 export const createCompany = async (
   _prevState: CompanyActionResult,
   data: CreateCompanyInput,
@@ -108,10 +135,12 @@ export const createCompany = async (
     return { error: "Company name is required" };
   }
 
+  const companyUuid = generateUuid();
+
   await db.insert(Companies).values({
-    uuid: generateUuid(),
+    uuid: companyUuid,
     companyName,
   });
 
-  return { success: true };
+  return { companyUuid, success: true };
 };

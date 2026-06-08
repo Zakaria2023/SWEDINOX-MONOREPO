@@ -6,9 +6,7 @@ const CompaniesPage = () => (
     <div className="flex items-start justify-between">
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Companies</h1>
-        <p className="mt-2 text-gray-600">
-          Manage company records and copy their UUIDs for related addresses.
-        </p>
+        <p className="mt-2 text-gray-600">Manage company records</p>
       </div>
       <Link
         href="/companies/add"

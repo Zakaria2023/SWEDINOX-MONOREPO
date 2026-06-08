@@ -1,16 +1,17 @@
 "use client";
 
+import Link from "next/link";
 import type { ReactNode } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Controller } from "react-hook-form";
 import { Button } from "@/components/shadcn/button";
 import { Input } from "@/components/shadcn/input";
-import {
-  Select,
-  type SelectOption,
-} from "@/components/shadcn/select";
+import { Select, type SelectOption } from "@/components/shadcn/select";
 import { cn } from "@/lib/helpers";
 import { addressCategories, availableAtOptions } from "@/lib/enums";
-import { Controller } from "react-hook-form";
+import { getCompanyOptions } from "../../companies/actions";
 import { useAddressSubmit } from "../hooks/use-address-submit";
 
 type LabelProps = {
@@ -19,22 +20,22 @@ type LabelProps = {
   required?: boolean;
 };
 
-const Label = ({ children, htmlFor, required }: LabelProps) => (
-  <label
-    htmlFor={htmlFor}
-    className="block text-sm font-medium text-gray-700 mb-1"
-  >
-    {children}
-    {required && <span className="text-red-500 ml-1">*</span>}
-  </label>
-);
-
 type FieldErrorProps = {
   message?: string;
 };
 
+const Label = ({ children, htmlFor, required }: LabelProps) => (
+  <label
+    htmlFor={htmlFor}
+    className="mb-1 block text-sm font-medium text-gray-700"
+  >
+    {children}
+    {required && <span className="ml-1 text-red-500">*</span>}
+  </label>
+);
+
 const FieldError = ({ message }: FieldErrorProps) =>
-  message ? <p className="text-sm text-red-600 mt-1">{message}</p> : null;
+  message ? <p className="mt-1 text-sm text-red-600">{message}</p> : null;
 
 const CHECKBOX_CLASS = "h-4 w-4 rounded border-gray-300 accent-primary";
 const EMPTY_SELECT_VALUE = "__none__";
@@ -74,38 +75,115 @@ const BOOLEAN_FIELDS = [
 
 export const AddressForm = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const companyUuidFromQuery = searchParams.get("companyUuid");
+  const isCompanyLocked = Boolean(companyUuidFromQuery);
   const { form, onSubmit, isPending, state } = useAddressSubmit();
   const {
     control,
     register,
+    setValue,
     watch,
     formState: { errors },
   } = form;
+  const {
+    data: companyOptionsResult,
+    isLoading: isCompaniesLoading,
+    isError: isCompaniesError,
+  } = useQuery({
+    queryKey: ["company-options"],
+    queryFn: () => getCompanyOptions(),
+  });
+
+  useEffect(() => {
+    if (companyUuidFromQuery) {
+      setValue("companyUuid", companyUuidFromQuery, {
+        shouldDirty: false,
+        shouldValidate: true,
+      });
+    }
+  }, [companyUuidFromQuery, setValue]);
 
   const categoryError =
     errors.category?.root?.message ??
     (errors.category as { message?: string } | undefined)?.message;
   const selectedCategories = watch("category") ?? [];
+  const companyOptions: SelectOption[] = (companyOptionsResult?.data ?? [])
+    .map((company) => ({
+      label: company.companyName,
+      value: company.uuid,
+    }));
+  const selectedCompanyName =
+    companyOptions.find((company) => company.value === watch("companyUuid"))
+      ?.label ?? "";
+  const companyErrorMessage =
+    companyOptionsResult?.error ??
+    (isCompaniesError ? "Failed to load companies." : "");
+  const companyPlaceholder = isCompanyLocked
+    ? isCompaniesLoading
+      ? "Loading company..."
+      : "Selected company"
+    : isCompaniesLoading
+      ? "Loading companies..."
+      : companyOptions.length > 0
+        ? "Select a company"
+        : "No companies available";
 
   return (
     <form onSubmit={onSubmit} className="space-y-8">
-      {/* Basic Info */}
       <section className="space-y-4">
-        <h2 className="text-lg font-semibold text-gray-800 border-b pb-2">
+        <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
           Basic Info
         </h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <Label htmlFor="companyUuid" required>
-              Company UUID
+              Company
             </Label>
-            <Input
-              id="companyUuid"
-              {...register("companyUuid")}
-              placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-              aria-invalid={!!errors.companyUuid}
+            <Controller
+              control={control}
+              name="companyUuid"
+              render={({ field }) => (
+                <Select
+                  id="companyUuid"
+                  name={field.name}
+                  value={field.value || EMPTY_SELECT_VALUE}
+                  options={companyOptions}
+                  placeholder={companyPlaceholder}
+                  invalid={!!errors.companyUuid}
+                  disabled={
+                    isCompanyLocked ||
+                    isCompaniesLoading ||
+                    companyOptions.length === 0
+                  }
+                  onValueChange={(value) =>
+                    field.onChange(
+                      value === EMPTY_SELECT_VALUE ? "" : value,
+                    )
+                  }
+                />
+              )}
             />
             <FieldError message={errors.companyUuid?.message} />
+            {companyErrorMessage ? (
+              <FieldError message={companyErrorMessage} />
+            ) : isCompanyLocked ? (
+              <p className="mt-1 text-sm text-muted-foreground">
+                This address will be linked to{" "}
+                <span className="font-medium text-foreground">
+                  {selectedCompanyName || "the selected company"}
+                </span>
+                .
+              </p>
+            ) : (
+              <p className="mt-1 text-sm text-muted-foreground">
+                Don&apos;t see the company? Create it first in{" "}
+                <Link href="/companies" className="font-medium text-primary">
+                  Companies
+                </Link>
+                .
+              </p>
+            )}
           </div>
           <div>
             <Label htmlFor="altName">Alternative Name</Label>
@@ -137,9 +215,8 @@ export const AddressForm = () => {
         </div>
       </section>
 
-      {/* Address */}
       <section className="space-y-4">
-        <h2 className="text-lg font-semibold text-gray-800 border-b pb-2">
+        <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
           Address
         </h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -170,9 +247,8 @@ export const AddressForm = () => {
         </div>
       </section>
 
-      {/* Contact */}
       <section className="space-y-4">
-        <h2 className="text-lg font-semibold text-gray-800 border-b pb-2">
+        <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
           Contact
         </h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -207,9 +283,8 @@ export const AddressForm = () => {
         </div>
       </section>
 
-      {/* Logistics */}
       <section className="space-y-4">
-        <h2 className="text-lg font-semibold text-gray-800 border-b pb-2">
+        <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
           Logistics
         </h2>
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
@@ -281,9 +356,8 @@ export const AddressForm = () => {
         </div>
       </section>
 
-      {/* Unloading */}
       <section className="space-y-4">
-        <h2 className="text-lg font-semibold text-gray-800 border-b pb-2">
+        <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
           Unloading
         </h2>
         <div className="grid gap-4 rounded-2xl border border-border bg-muted/20 p-4 sm:grid-cols-3">
@@ -350,9 +424,8 @@ export const AddressForm = () => {
         </div>
       </section>
 
-      {/* Constraints */}
       <section className="space-y-4">
-        <h2 className="text-lg font-semibold text-gray-800 border-b pb-2">
+        <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
           Constraints
         </h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -382,7 +455,7 @@ export const AddressForm = () => {
               id="loadingInstructions"
               {...register("loadingInstructions")}
               rows={4}
-              className="w-full rounded-lg border border-input bg-transparent px-2.5 py-1.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 placeholder:text-muted-foreground resize-y"
+              className="w-full resize-y rounded-lg border border-input bg-transparent px-2.5 py-1.5 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
             />
           </div>
         </div>

@@ -19,7 +19,7 @@ import { getAddresses } from "../actions";
 
 const ALL_COLUMNS = [
   { key: "id", label: "Code", defaultVisible: true },
-  { key: "companyUuid", label: "Company UUID", defaultVisible: false },
+  { key: "companyName", label: "Company", defaultVisible: true },
   { key: "altName", label: "Alt Name", defaultVisible: true },
   { key: "poBox", label: "PO Box", defaultVisible: false },
   { key: "streetAndNo", label: "Street & No", defaultVisible: true },
@@ -115,8 +115,8 @@ export const AddressesTable = () => {
     switch (key) {
       case "id":
         return <TableCell key={key} className="font-medium">{address.id}</TableCell>;
-      case "companyUuid":
-        return <TableCell key={key} className="font-mono text-xs">{address.companyUuid}</TableCell>;
+      case "companyName":
+        return <TableCell key={key}>{address.companyName || "-"}</TableCell>;
       case "altName":
         return <TableCell key={key}>{address.altName || "-"}</TableCell>;
       case "poBox":
@@ -208,7 +208,7 @@ export const AddressesTable = () => {
       <div className="flex items-center gap-4">
         <Input
           type="text"
-          placeholder="Search addresses..."
+          placeholder="Search addresses or companies..."
           value={search}
           onChange={(e) => {
             setSearch(e.target.value);
@@ -332,8 +332,10 @@ export const AddressesTable = () => {
           </div>
 
           <Button
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            disabled={page === totalPages || isLoading}
+            onClick={() =>
+              setPage((p) => Math.min(Math.max(totalPages, 1), p + 1))
+            }
+            disabled={totalPages <= 1 || page === totalPages || isLoading}
             variant="outline"
             size="sm"
           >

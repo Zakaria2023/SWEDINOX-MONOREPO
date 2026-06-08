@@ -1,9 +1,14 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { Controller } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/shadcn/button";
 import { Input } from "@/components/shadcn/input";
+import {
+  Select,
+  type SelectOption,
+} from "@/components/shadcn/select";
 import { useCompanySubmit } from "../hooks/use-company-submit";
 
 type LabelProps = {
@@ -15,6 +20,11 @@ type LabelProps = {
 type FieldErrorProps = {
   message?: string;
 };
+
+const ADDRESS_ACTION_OPTIONS: SelectOption[] = [
+  { label: "Create later", value: "none" },
+  { label: "Open address page after save", value: "add_address" },
+];
 
 const Label = ({ children, htmlFor, required }: LabelProps) => (
   <label
@@ -33,6 +43,7 @@ export const CompanyForm = () => {
   const router = useRouter();
   const { form, isPending, onSubmit, state } = useCompanySubmit();
   const {
+    control,
     register,
     formState: { errors },
   } = form;
@@ -41,7 +52,7 @@ export const CompanyForm = () => {
     <form onSubmit={onSubmit} className="space-y-8">
       <section className="space-y-4">
         <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
-          Company Info
+          Company Details
         </h2>
         <div className="grid gap-4 rounded-2xl border border-border bg-muted/20 p-4 lg:grid-cols-3">
           <div className="lg:col-span-2">
@@ -57,14 +68,24 @@ export const CompanyForm = () => {
             <FieldError message={errors.companyName?.message} />
           </div>
 
-          <div className="rounded-xl border border-dashed border-border bg-background/80 p-4">
-            <h3 className="text-sm font-medium text-foreground">
-              UUID Handling
-            </h3>
+          <div>
+            <Label htmlFor="addressAction">Address Setup</Label>
+            <Controller
+              control={control}
+              name="addressAction"
+              render={({ field }) => (
+                <Select
+                  id="addressAction"
+                  name={field.name}
+                  value={field.value}
+                  options={ADDRESS_ACTION_OPTIONS}
+                  onValueChange={field.onChange}
+                />
+              )}
+            />
             <p className="mt-2 text-sm text-muted-foreground">
-              A company UUID will be generated automatically when the company is
-              created. You can copy it later from the companies table and use it
-              when creating addresses.
+              Choose whether to open the separate address page after this
+              company is saved.
             </p>
           </div>
         </div>

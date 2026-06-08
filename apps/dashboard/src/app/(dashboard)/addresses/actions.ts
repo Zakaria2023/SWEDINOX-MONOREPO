@@ -2,8 +2,9 @@
 
 import { db } from "@/db";
 import { CompanyAddresses } from "@/db/schema/company-addresses";
+import { Companies } from "@/db/schema/companies";
 import type { AddressCategory, AvailableAt } from "@/lib/enums";
-import { and, count, eq, like } from "drizzle-orm";
+import { and, count, eq, like, or } from "drizzle-orm";
 
 export interface AddressActionResult {
   error?: string;
@@ -13,6 +14,7 @@ export interface AddressActionResult {
 export interface AddressListItem {
   id: number;
   companyUuid: string;
+  companyName: string | null;
   altName: string | null;
   poBox: boolean | null;
   streetAndNo: string | null;
@@ -85,6 +87,46 @@ export interface UpdateAddressInput extends CreateAddressInput {
   id: number;
 }
 
+const addressSelection = {
+  id: CompanyAddresses.id,
+  companyUuid: CompanyAddresses.companyUuid,
+  companyName: Companies.companyName,
+  altName: CompanyAddresses.altName,
+  poBox: CompanyAddresses.poBox,
+  streetAndNo: CompanyAddresses.streetAndNo,
+  postalCode: CompanyAddresses.postalCode,
+  country: CompanyAddresses.country,
+  city: CompanyAddresses.city,
+  region: CompanyAddresses.region,
+  house: CompanyAddresses.house,
+  telephone: CompanyAddresses.telephone,
+  fax: CompanyAddresses.fax,
+  email: CompanyAddresses.email,
+  website: CompanyAddresses.website,
+  sequenceNumber: CompanyAddresses.sequenceNumber,
+  category: CompanyAddresses.category,
+  needCrane: CompanyAddresses.needCrane,
+  canopyRequired: CompanyAddresses.canopyRequired,
+  bundleSeparately: CompanyAddresses.bundleSeparately,
+  addressComplete: CompanyAddresses.addressComplete,
+  specialTransport: CompanyAddresses.specialTransport,
+  availableAt: CompanyAddresses.availableAt,
+  unloadingStartTime: CompanyAddresses.unloadingStartTime,
+  unloadingEndTime: CompanyAddresses.unloadingEndTime,
+  maxLength: CompanyAddresses.maxLength,
+  maxBundleWeight: CompanyAddresses.maxBundleWeight,
+  loadingInstructions: CompanyAddresses.loadingInstructions,
+  createdAt: CompanyAddresses.createdAt,
+  updatedAt: CompanyAddresses.updatedAt,
+};
+
+const mapAddress = (
+  item: Omit<AddressListItem, "category"> & { category: string },
+): AddressListItem => ({
+  ...item,
+  category: [item.category] as AddressCategory[],
+});
+
 // Queries
 
 export const getAddresses = async (
@@ -94,34 +136,39 @@ export const getAddresses = async (
   companyUuid?: string,
 ): Promise<PaginatedAddresses> => {
   const offset = (page - 1) * pageSize;
-
-  const whereClauses = [];
-  if (search.trim()) {
-    whereClauses.push(like(CompanyAddresses.altName, `%${search.trim()}%`));
-  }
-  if (companyUuid) {
-    whereClauses.push(eq(CompanyAddresses.companyUuid, companyUuid));
-  }
-
+  const trimmedSearch = search.trim();
+  const searchClause = trimmedSearch
+    ? or(
+        like(CompanyAddresses.altName, `%${trimmedSearch}%`),
+        like(Companies.companyName, `%${trimmedSearch}%`),
+      )
+    : undefined;
+  const companyClause = companyUuid
+    ? eq(CompanyAddresses.companyUuid, companyUuid)
+    : undefined;
   const whereClause =
-    whereClauses.length > 0 ? and(...whereClauses) : undefined;
+    searchClause && companyClause
+      ? and(searchClause, companyClause)
+      : searchClause ?? companyClause;
 
   const [results, [{ total }]] = await Promise.all([
     db
-      .select()
+      .select(addressSelection)
       .from(CompanyAddresses)
+      .leftJoin(Companies, eq(CompanyAddresses.companyUuid, Companies.uuid))
       .where(whereClause)
       .orderBy(CompanyAddresses.createdAt)
       .limit(pageSize)
       .offset(offset),
 
-    db.select({ total: count() }).from(CompanyAddresses).where(whereClause),
+    db
+      .select({ total: count() })
+      .from(CompanyAddresses)
+      .leftJoin(Companies, eq(CompanyAddresses.companyUuid, Companies.uuid))
+      .where(whereClause),
   ]);
 
-  const data: AddressListItem[] = results.map((item) => ({
-    ...item,
-    category: item.category.split(",") as AddressCategory[],
-  }));
+  const data: AddressListItem[] = results.map(mapAddress);
 
   return { data, total, page, pageSize };
 };
@@ -130,32 +177,28 @@ export const getAddressById = async (
   id: number,
 ): Promise<AddressDetail | null> => {
   const [address] = await db
-    .select()
+    .select(addressSelection)
     .from(CompanyAddresses)
+    .leftJoin(Companies, eq(CompanyAddresses.companyUuid, Companies.uuid))
     .where(eq(CompanyAddresses.id, id))
     .limit(1);
 
   if (!address) return null;
 
-  return {
-    ...address,
-    category: address.category.split(",") as AddressCategory[],
-  };
+  return mapAddress(address);
 };
 
 export const getAddressesByCompany = async (
   companyUuid: string,
 ): Promise<AddressListItem[]> => {
   const results = await db
-    .select()
+    .select(addressSelection)
     .from(CompanyAddresses)
+    .leftJoin(Companies, eq(CompanyAddresses.companyUuid, Companies.uuid))
     .where(eq(CompanyAddresses.companyUuid, companyUuid))
     .orderBy(CompanyAddresses.sequenceNumber, CompanyAddresses.createdAt);
 
-  return results.map((item) => ({
-    ...item,
-    category: item.category.split(",") as AddressCategory[],
-  }));
+  return results.map(mapAddress);
 };
 
 // Mutations
@@ -165,11 +208,11 @@ export const createAddress = async (
   data: CreateAddressInput,
 ): Promise<AddressActionResult> => {
   if (!data.companyUuid) {
-    return { error: "Company UUID is required" };
+    return { error: "Company is required" };
   }
 
   if (!data.category || data.category.length === 0) {
-    return { error: "At least one address category is required" };
+    return { error: "Address category is required" };
   }
 
   await db.insert(CompanyAddresses).values({
@@ -187,7 +230,7 @@ export const createAddress = async (
     email: data.email || null,
     website: data.website || null,
     sequenceNumber: data.sequenceNumber || null,
-    category: data.category.join(",") as AddressCategory,
+    category: data.category[0],
     needCrane: data.needCrane ?? false,
     canopyRequired: data.canopyRequired ?? false,
     bundleSeparately: data.bundleSeparately ?? false,
@@ -209,11 +252,11 @@ export const updateAddress = async (
   data: UpdateAddressInput,
 ): Promise<AddressActionResult> => {
   if (!data.companyUuid) {
-    return { error: "Company UUID is required" };
+    return { error: "Company is required" };
   }
 
   if (!data.category || data.category.length === 0) {
-    return { error: "At least one address category is required" };
+    return { error: "Address category is required" };
   }
 
   const [existing] = await db
@@ -243,7 +286,7 @@ export const updateAddress = async (
       email: data.email || null,
       website: data.website || null,
       sequenceNumber: data.sequenceNumber || null,
-      category: data.category.join(",") as AddressCategory,
+      category: data.category[0],
       needCrane: data.needCrane ?? false,
       canopyRequired: data.canopyRequired ?? false,
       bundleSeparately: data.bundleSeparately ?? false,

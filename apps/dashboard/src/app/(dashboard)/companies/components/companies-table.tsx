@@ -20,7 +20,6 @@ import { getCompanies } from "../actions";
 const ALL_COLUMNS = [
   { key: "id", label: "Code", defaultVisible: true },
   { key: "companyName", label: "Company Name", defaultVisible: true },
-  { key: "uuid", label: "UUID", defaultVisible: true },
   { key: "createdAt", label: "Created At", defaultVisible: false },
   { key: "updatedAt", label: "Updated At", defaultVisible: false },
 ] as const;
@@ -82,12 +81,6 @@ export const CompaniesTable = () => {
         );
       case "companyName":
         return <TableCell key={key}>{company.companyName}</TableCell>;
-      case "uuid":
-        return (
-          <TableCell key={key} className="font-mono text-xs">
-            {company.uuid}
-          </TableCell>
-        );
       case "createdAt":
         return (
           <TableCell key={key}>
