@@ -57,6 +57,7 @@ export interface PaginatedAddresses {
   total: number;
   page: number;
   pageSize: number;
+  error?: string;
 }
 
 export interface CreateAddressInput {
