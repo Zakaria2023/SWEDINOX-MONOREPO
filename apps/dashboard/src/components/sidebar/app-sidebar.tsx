@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronRight, Users } from "lucide-react";
@@ -22,8 +22,17 @@ import { cn } from "@/lib/helpers";
 
 export const AppSidebar = () => {
   const pathname = usePathname();
-  const isCustomersActive = pathname.startsWith("/customers");
+  const isCustomersActive =
+    pathname.startsWith("/customers") ||
+    pathname.startsWith("/companies") ||
+    pathname.startsWith("/addresses");
   const [isCustomersOpen, setIsCustomersOpen] = useState(isCustomersActive);
+
+  useEffect(() => {
+    if (isCustomersActive) {
+      setIsCustomersOpen(true);
+    }
+  }, [isCustomersActive]);
 
   return (
     <Sidebar>
@@ -54,8 +63,16 @@ export const AppSidebar = () => {
                   <SidebarMenuSub>
                     <SidebarMenuSubItem>
                       <SidebarMenuSubButton
+                        render={<Link href="/companies" />}
+                        isActive={pathname.startsWith("/companies")}
+                      >
+                        <span>Companies</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
                         render={<Link href="/addresses" />}
-                        isActive={pathname === "/addresses"}
+                        isActive={pathname.startsWith("/addresses")}
                       >
                         <span>Addresses</span>
                       </SidebarMenuSubButton>
