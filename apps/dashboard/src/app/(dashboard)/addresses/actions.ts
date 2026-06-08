@@ -14,18 +14,6 @@ export interface AddressListItem {
   id: number;
   companyUuid: string;
   altName: string | null;
-  streetAndNo: string | null;
-  city: string | null;
-  country: string | null;
-  category: AddressCategory[];
-  addressComplete: boolean | null;
-  createdAt: Date;
-}
-
-export interface AddressDetail {
-  id: number;
-  companyUuid: string;
-  altName: string | null;
   poBox: boolean | null;
   streetAndNo: string | null;
   postalCode: string | null;
@@ -50,7 +38,11 @@ export interface AddressDetail {
   maxLength: string | null;
   maxBundleWeight: string | null;
   loadingInstructions: string | null;
+  createdAt: Date;
+  updatedAt: Date;
 }
+
+export type AddressDetail = AddressListItem;
 
 export interface PaginatedAddresses {
   data: AddressListItem[];
@@ -116,17 +108,7 @@ export const getAddresses = async (
 
   const [results, [{ total }]] = await Promise.all([
     db
-      .select({
-        id: CompanyAddresses.id,
-        companyUuid: CompanyAddresses.companyUuid,
-        altName: CompanyAddresses.altName,
-        streetAndNo: CompanyAddresses.streetAndNo,
-        city: CompanyAddresses.city,
-        country: CompanyAddresses.country,
-        category: CompanyAddresses.category,
-        addressComplete: CompanyAddresses.addressComplete,
-        createdAt: CompanyAddresses.createdAt,
-      })
+      .select()
       .from(CompanyAddresses)
       .where(whereClause)
       .orderBy(CompanyAddresses.createdAt)
@@ -136,7 +118,7 @@ export const getAddresses = async (
     db.select({ total: count() }).from(CompanyAddresses).where(whereClause),
   ]);
 
-  const data = results.map((item) => ({
+  const data: AddressListItem[] = results.map((item) => ({
     ...item,
     category: item.category.split(",") as AddressCategory[],
   }));
@@ -165,17 +147,7 @@ export const getAddressesByCompany = async (
   companyUuid: string,
 ): Promise<AddressListItem[]> => {
   const results = await db
-    .select({
-      id: CompanyAddresses.id,
-      companyUuid: CompanyAddresses.companyUuid,
-      altName: CompanyAddresses.altName,
-      streetAndNo: CompanyAddresses.streetAndNo,
-      city: CompanyAddresses.city,
-      country: CompanyAddresses.country,
-      category: CompanyAddresses.category,
-      addressComplete: CompanyAddresses.addressComplete,
-      createdAt: CompanyAddresses.createdAt,
-    })
+    .select()
     .from(CompanyAddresses)
     .where(eq(CompanyAddresses.companyUuid, companyUuid))
     .orderBy(CompanyAddresses.sequenceNumber, CompanyAddresses.createdAt);
