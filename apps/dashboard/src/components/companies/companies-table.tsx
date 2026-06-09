@@ -72,14 +72,23 @@ export const CompaniesTable = () => {
 
   const visibleColumns = ALL_COLUMNS.filter((col) => columnVisibility[col.key]);
   const { data, isError, isLoading } = useQuery({
-    queryKey: ["companies", page, search],
-    queryFn: () => getCompanies(page, pageSize, search),
+    queryKey: ["companies"],
+    queryFn: () => getCompanies(),
   });
-  const totalPages = data ? Math.ceil(data.total / pageSize) : 0;
+  const companies = data ?? [];
+  const trimmedSearch = search.trim().toLowerCase();
+  const filteredCompanies = trimmedSearch
+    ? companies.filter((company) =>
+        company.companyName.toLowerCase().includes(trimmedSearch),
+      )
+    : companies;
+  const totalPages = Math.ceil(filteredCompanies.length / pageSize);
+  const paginatedCompanies = filteredCompanies.slice(
+    (page - 1) * pageSize,
+    page * pageSize,
+  );
   const errorMessage =
-    actionError ||
-    data?.error ||
-    (isError ? "Failed to load companies. Please try again." : "");
+    actionError || (isError ? "Failed to load companies. Please try again." : "");
 
   const handleDeleteCompany = async () => {
     if (!companyToDelete) {
@@ -196,7 +205,7 @@ export const CompaniesTable = () => {
                     Loading...
                   </TableCell>
                 </TableRow>
-              ) : data?.data.length === 0 ? (
+              ) : paginatedCompanies.length === 0 ? (
                 <TableRow>
                   <TableCell
                     colSpan={visibleColumns.length + 1}
@@ -206,7 +215,7 @@ export const CompaniesTable = () => {
                   </TableCell>
                 </TableRow>
               ) : (
-                data?.data.map((company) => (
+                paginatedCompanies.map((company) => (
                   <TableRow key={company.id}>
                     {visibleColumns.map((column) =>
                       renderCell(company, column.key),
@@ -244,7 +253,7 @@ export const CompaniesTable = () => {
 
         <div className="flex items-center justify-between">
           <div className="text-sm text-muted-foreground">
-            Showing {data?.data.length || 0} of {data?.total || 0} companies
+            Showing {paginatedCompanies.length} of {filteredCompanies.length} companies
           </div>
 
           <div className="flex items-center gap-2">
