@@ -1,11 +1,13 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Controller } from "react-hook-form";
-import { Plus } from "lucide-react";
+import {
+  getAddressesByCompany,
+  type AddressActionResult,
+  type AddressListItem,
+} from "@/app/(dashboard)/addresses/actions";
+import { getCompanyById } from "@/app/(dashboard)/companies/actions";
+import { useCompanySubmit } from "@/app/(dashboard)/companies/use-company-submit";
+import { AddressForm } from "@/components/addresses/address-form";
 import { Button } from "@/components/shadcn/button";
 import {
   Dialog,
@@ -17,16 +19,12 @@ import {
 import { Input } from "@/components/shadcn/input";
 import { Select, type SelectOption } from "@/components/shadcn/select";
 import { ErrorMessage } from "@/components/ui/error-message";
-import {
-  getCompanyById,
-} from "@/app/(dashboard)/companies/actions";
-import { useCompanySubmit } from "@/app/(dashboard)/companies/hooks/use-company-submit";
-import {
-  getAddressesByCompany,
-  type AddressActionResult,
-  type AddressListItem,
-} from "@/app/(dashboard)/addresses/actions";
-import { AddressForm } from "@/components/addresses/address-form";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
+import type { ReactNode } from "react";
+import { useEffect, useState } from "react";
+import { Controller } from "react-hook-form";
 
 type CompanyFormProps = {
   companyId?: number;
@@ -73,10 +71,7 @@ const formatAddressLabel = (address: AddressListItem) => {
     : primaryLabel;
 };
 
-export const CompanyForm = ({
-  companyId,
-  mode = "add",
-}: CompanyFormProps) => {
+export const CompanyForm = ({ companyId, mode = "add" }: CompanyFormProps) => {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [isAddressDialogOpen, setIsAddressDialogOpen] = useState(false);
@@ -105,10 +100,7 @@ export const CompanyForm = ({
     queryFn: () => getCompanyById(companyId!),
     enabled: mode === "edit" && Boolean(companyId),
   });
-  const {
-    data: addresses = [],
-    isLoading: isAddressesLoading,
-  } = useQuery({
+  const { data: addresses = [], isLoading: isAddressesLoading } = useQuery({
     queryKey: ["company-addresses", companyUuid],
     queryFn: () => getAddressesByCompany(companyUuid!),
     enabled: Boolean(companyUuid),

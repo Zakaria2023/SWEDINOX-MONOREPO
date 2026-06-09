@@ -1,16 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
 import {
   createCompany,
   updateCompany,
   type CompanyActionResult,
   type CreateCompanyInput,
-} from "../actions";
-import { companySchema, type CompanyFormValues } from "../schema";
+} from "./actions";
+import { companySchema, type CompanyFormValues } from "./schema";
 
 type CompanyFormMode = "add" | "edit";
 
