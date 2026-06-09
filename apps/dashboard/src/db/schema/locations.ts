@@ -12,6 +12,15 @@ import {
 import { CompanyAddresses } from "./company-addresses";
 import { locationAdoptPositions, locationTypes } from "../../lib/enums";
 
+export const LoadingLocations = mysqlTable("loading_locations", {
+  id: int("id").primaryKey().autoincrement(),
+
+  name: varchar("name", { length: 255 }).notNull(),
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+});
+
 export const Locations = mysqlTable("locations", {
   id: int("id").primaryKey().autoincrement(),
 
@@ -40,7 +49,7 @@ export const Locations = mysqlTable("locations", {
   foreignKey({
     name: "fk_locations_loading_location",
     columns: [table.loadingLocationId],
-    foreignColumns: [table.id],
+    foreignColumns: [LoadingLocations.id],
   }),
   foreignKey({
     name: "fk_locations_address",
