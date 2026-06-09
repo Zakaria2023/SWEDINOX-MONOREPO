@@ -1,4 +1,4 @@
-import { CompanyForm } from "../../components/company-form";
+import { CompanyForm } from "@/components/companies/company-form";
 
 type Params = Promise<{ id: string }>;
 

@@ -17,14 +17,16 @@ import {
 import { Input } from "@/components/shadcn/input";
 import { Select, type SelectOption } from "@/components/shadcn/select";
 import { ErrorMessage } from "@/components/ui/error-message";
-import { AddressForm } from "@/components/addresses/address-form";
+import {
+  getCompanyById,
+} from "@/app/(dashboard)/companies/actions";
+import { useCompanySubmit } from "@/app/(dashboard)/companies/hooks/use-company-submit";
 import {
   getAddressesByCompany,
   type AddressActionResult,
   type AddressListItem,
-} from "../../addresses/actions";
-import { getCompanyById } from "../actions";
-import { useCompanySubmit } from "../hooks/use-company-submit";
+} from "@/app/(dashboard)/addresses/actions";
+import { AddressForm } from "@/components/addresses/address-form";
 
 type CompanyFormProps = {
   companyId?: number;

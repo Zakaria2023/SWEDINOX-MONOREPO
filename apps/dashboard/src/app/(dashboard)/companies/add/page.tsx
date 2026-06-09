@@ -1,4 +1,4 @@
-import { CompanyForm } from "../components/company-form";
+import { CompanyForm } from "@/components/companies/company-form";
 
 const AddCompanyPage = () => (
   <div className="max-w-4xl space-y-6 p-6">

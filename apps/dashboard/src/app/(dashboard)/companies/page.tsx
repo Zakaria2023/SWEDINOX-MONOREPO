@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CompaniesTable } from "./components/companies-table";
+import { CompaniesTable } from "@/components/companies/companies-table";
 
 const CompaniesPage = () => (
   <div className="space-y-6 p-6">
