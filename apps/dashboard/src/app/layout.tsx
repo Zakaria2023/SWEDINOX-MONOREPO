@@ -1,4 +1,3 @@
-import { QueryProvider } from "@/providers/query-provider";
 import { ClerkProvider } from "@clerk/nextjs";
 import type { Metadata } from "next";
 import { ReactNode } from "react";
@@ -16,9 +15,7 @@ type Props = {
 const RootLayout = ({ children }: Props) => (
   <ClerkProvider>
     <html lang="en">
-      <body className="antialiased">
-        <QueryProvider>{children}</QueryProvider>
-      </body>
+      <body className="antialiased">{children}</body>
     </html>
   </ClerkProvider>
 );

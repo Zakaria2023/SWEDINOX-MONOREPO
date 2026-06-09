@@ -5,7 +5,7 @@ import {
   type AddressActionResult,
   type AddressListItem,
 } from "@/app/(dashboard)/addresses/actions";
-import { getCompanyById } from "@/app/(dashboard)/companies/actions";
+import { type CompanyDetail } from "@/app/(dashboard)/companies/actions";
 import { useCompanySubmit } from "@/app/(dashboard)/companies/use-company-submit";
 import { AddressForm } from "@/components/addresses/address-form";
 import { Button } from "@/components/shadcn/button";
@@ -19,7 +19,6 @@ import {
 import { Input } from "@/components/shadcn/input";
 import { Select, type SelectOption } from "@/components/shadcn/select";
 import { ErrorMessage } from "@/components/ui/error-message";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
@@ -28,6 +27,8 @@ import { Controller } from "react-hook-form";
 
 type CompanyFormProps = {
   companyId?: number;
+  initialAddresses?: AddressListItem[];
+  initialCompany?: CompanyDetail | null;
   mode?: "add" | "edit";
 };
 
@@ -76,12 +77,20 @@ const formatAddressLabel = (address: AddressListItem) => {
     : primaryLabel;
 };
 
-export const CompanyForm = ({ companyId, mode = "add" }: CompanyFormProps) => {
+export const CompanyForm = ({
+  companyId,
+  initialAddresses = [],
+  initialCompany,
+  mode = "add",
+}: CompanyFormProps) => {
   const router = useRouter();
-  const queryClient = useQueryClient();
+  const [addresses, setAddresses] = useState(initialAddresses);
+  const [addressLoadError, setAddressLoadError] = useState("");
   const [isAddressDialogOpen, setIsAddressDialogOpen] = useState(false);
+  const [isAddressesLoading, setIsAddressesLoading] = useState(false);
   const {
     companyUuid,
+    ensureCompanyCreated,
     form,
     isPending,
     isPersisted,
@@ -94,40 +103,27 @@ export const CompanyForm = ({ companyId, mode = "add" }: CompanyFormProps) => {
     register,
     reset,
     setValue,
+    watch,
     formState: { errors },
   } = form;
-  const {
-    data: companyDetail,
-    isLoading: isCompanyLoading,
-    isError: isCompanyError,
-  } = useQuery({
-    queryKey: ["company", companyId],
-    queryFn: () => getCompanyById(companyId!),
-    enabled: mode === "edit" && Boolean(companyId),
-  });
-  const { data: addresses = [], isLoading: isAddressesLoading } = useQuery({
-    queryKey: ["company-addresses", companyUuid],
-    queryFn: () => getAddressesByCompany(companyUuid!),
-    enabled: Boolean(companyUuid),
-  });
 
   useEffect(() => {
-    if (!companyDetail) {
+    if (!initialCompany) {
       return;
     }
 
     reset({
       addressId: "",
-      companyName: companyDetail.companyName,
+      companyName: initialCompany.companyName,
     });
-    setCompanyUuid(companyDetail.uuid);
-  }, [companyDetail, reset, setCompanyUuid]);
+    setCompanyUuid(initialCompany.uuid);
+  }, [initialCompany, reset, setCompanyUuid]);
 
-  if (mode === "edit" && isCompanyLoading) {
-    return <p className="text-sm text-muted-foreground">Loading company...</p>;
-  }
+  useEffect(() => {
+    setAddresses(initialAddresses);
+  }, [initialAddresses]);
 
-  if (mode === "edit" && (isCompanyError || !companyDetail)) {
+  if (mode === "edit" && !initialCompany) {
     return <ErrorMessage message="Company not found." />;
   }
 
@@ -142,7 +138,19 @@ export const CompanyForm = ({ companyId, mode = "add" }: CompanyFormProps) => {
     },
   ];
 
-  const handleOpenAddressDialog = () => {
+  const handleOpenAddressDialog = async () => {
+    setAddressLoadError("");
+
+    const result = await ensureCompanyCreated();
+
+    if (!result.success || !result.companyUuid) {
+      return;
+    }
+
+    if (!companyUuid) {
+      setCompanyUuid(result.companyUuid);
+    }
+
     setIsAddressDialogOpen(true);
   };
 
@@ -158,14 +166,23 @@ export const CompanyForm = ({ companyId, mode = "add" }: CompanyFormProps) => {
       setCompanyUuid(result.companyUuid);
     }
 
-    await queryClient.invalidateQueries({
-      queryKey: ["company-addresses", effectiveCompanyUuid],
-    });
+    setIsAddressesLoading(true);
+    setAddressLoadError("");
 
-    if (result.addressId) {
-      setValue("addressId", String(result.addressId), {
-        shouldDirty: true,
-      });
+    try {
+      const nextAddresses = await getAddressesByCompany(effectiveCompanyUuid);
+      setAddresses(nextAddresses);
+
+      if (result.addressId) {
+        setValue("addressId", String(result.addressId), {
+          shouldDirty: true,
+        });
+      }
+    } catch (error) {
+      console.error("Failed to refresh company addresses", error);
+      setAddressLoadError("Address saved, but the list could not be refreshed.");
+    } finally {
+      setIsAddressesLoading(false);
     }
 
     setIsAddressDialogOpen(false);
@@ -212,7 +229,7 @@ export const CompanyForm = ({ companyId, mode = "add" }: CompanyFormProps) => {
                     disabled={isPending}
                     onValueChange={(value) => {
                       if (value === NEW_ADDRESS_VALUE) {
-                        handleOpenAddressDialog();
+                        void handleOpenAddressDialog();
                         return;
                       }
 
@@ -230,6 +247,8 @@ export const CompanyForm = ({ companyId, mode = "add" }: CompanyFormProps) => {
             <p className="text-sm text-red-600">{state.error}</p>
           </div>
         )}
+
+        {addressLoadError && <ErrorMessage message={addressLoadError} />}
 
         <div className="flex gap-3 pb-6">
           <Button type="submit" disabled={isPending}>
@@ -267,6 +286,7 @@ export const CompanyForm = ({ companyId, mode = "add" }: CompanyFormProps) => {
             <AddressForm
               companyUuid={companyUuid}
               lockCompany={Boolean(companyUuid)}
+              lockedCompanyName={watch("companyName")}
               cancelLabel="Close"
               submitLabel="Save Address"
               onCancel={() => setIsAddressDialogOpen(false)}

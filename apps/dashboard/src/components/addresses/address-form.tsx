@@ -1,19 +1,16 @@
 "use client";
 
 import {
-  getAddressById,
   type AddressActionResult,
   type AddressDetail,
 } from "@/app/(dashboard)/addresses/actions";
 import { useAddressSubmit } from "@/app/(dashboard)/addresses/use-address-submit";
-import { getCompanyOptions } from "@/app/(dashboard)/companies/actions";
 import { Button } from "@/components/shadcn/button";
 import { Input } from "@/components/shadcn/input";
 import { Select, type SelectOption } from "@/components/shadcn/select";
 import { ErrorMessage } from "@/components/ui/error-message";
 import { addressCategories, availableAtOptions } from "@/lib/enums";
 import { cn } from "@/lib/helpers";
-import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
@@ -23,8 +20,12 @@ import { Controller } from "react-hook-form";
 type AddressFormProps = {
   addressId?: number;
   cancelLabel?: string;
+  companyOptions?: SelectOption[];
+  companyOptionsError?: string;
   companyUuid?: string;
+  initialAddress?: AddressDetail | null;
   lockCompany?: boolean;
+  lockedCompanyName?: string;
   mode?: "add" | "edit";
   onCancel?: () => void;
   onSuccess?: (state: AddressActionResult) => void | Promise<void>;
@@ -128,8 +129,12 @@ const mapAddressToFormValues = (address: AddressDetail) => ({
 export const AddressForm = ({
   addressId,
   cancelLabel = "Cancel",
+  companyOptions = [],
+  companyOptionsError,
   companyUuid,
+  initialAddress,
   lockCompany = false,
+  lockedCompanyName,
   mode = "add",
   onCancel,
   onSuccess,
@@ -151,23 +156,6 @@ export const AddressForm = ({
     watch,
     formState: { errors },
   } = form;
-  const {
-    data: addressDetail,
-    isLoading: isAddressLoading,
-    isError: isAddressError,
-  } = useQuery({
-    queryKey: ["address", addressId],
-    queryFn: () => getAddressById(addressId!),
-    enabled: mode === "edit" && Boolean(addressId),
-  });
-  const {
-    data: companyOptionsResult,
-    isLoading: isCompaniesLoading,
-    isError: isCompaniesError,
-  } = useQuery({
-    queryKey: ["company-options"],
-    queryFn: () => getCompanyOptions(),
-  });
 
   useEffect(() => {
     if (!companyUuid) {
@@ -181,18 +169,14 @@ export const AddressForm = ({
   }, [companyUuid, setValue]);
 
   useEffect(() => {
-    if (!addressDetail) {
+    if (!initialAddress) {
       return;
     }
 
-    reset(mapAddressToFormValues(addressDetail));
-  }, [addressDetail, reset]);
+    reset(mapAddressToFormValues(initialAddress));
+  }, [initialAddress, reset]);
 
-  if (mode === "edit" && isAddressLoading) {
-    return <p className="text-sm text-muted-foreground">Loading address...</p>;
-  }
-
-  if (mode === "edit" && (isAddressError || !addressDetail)) {
+  if (mode === "edit" && !initialAddress) {
     return <ErrorMessage message="Address not found." />;
   }
 
@@ -202,27 +186,19 @@ export const AddressForm = ({
   const selectedCategories = watch("category") ?? [];
   const showBillingSettings = selectedCategories.includes("invoice");
   const showDeliverySettings = selectedCategories.includes("delivery");
-  const companyOptions: SelectOption[] = (companyOptionsResult?.data ?? []).map(
-    (company) => ({
-      label: company.companyName,
-      value: company.uuid,
-    }),
-  );
+  const selectedCompanyUuid = watch("companyUuid");
   const selectedCompanyName =
-    companyOptions.find((company) => company.value === watch("companyUuid"))
-      ?.label ?? "";
-  const companyErrorMessage =
-    companyOptionsResult?.error ??
-    (isCompaniesError ? "Failed to load companies." : "");
+    companyOptions.find((company) => company.value === selectedCompanyUuid)
+      ?.label ??
+    lockedCompanyName ??
+    initialAddress?.Companies?.companyName ??
+    "";
+  const companyErrorMessage = companyOptionsError ?? "";
   const companyPlaceholder = isCompanyLocked
-    ? isCompaniesLoading
-      ? "Loading company..."
-      : "Selected company"
-    : isCompaniesLoading
-      ? "Loading companies..."
-      : companyOptions.length > 0
-        ? "Select a company"
-        : "No companies available";
+    ? "Selected company"
+    : companyOptions.length > 0
+      ? "Select a company"
+      : "No companies available";
 
   const handleCancel = () => {
     if (onCancel) {
@@ -244,28 +220,34 @@ export const AddressForm = ({
             <Label htmlFor="companyUuid" required>
               Company
             </Label>
-            <Controller
-              control={control}
-              name="companyUuid"
-              render={({ field }) => (
-                <Select
-                  id="companyUuid"
-                  name={field.name}
-                  value={field.value || EMPTY_SELECT_VALUE}
-                  options={companyOptions}
-                  placeholder={companyPlaceholder}
-                  invalid={!!errors.companyUuid}
-                  disabled={
-                    isCompanyLocked ||
-                    isCompaniesLoading ||
-                    companyOptions.length === 0
-                  }
-                  onValueChange={(value) =>
-                    field.onChange(value === EMPTY_SELECT_VALUE ? "" : value)
-                  }
-                />
-              )}
-            />
+            {isCompanyLocked ? (
+              <Input
+                id="companyUuid"
+                value={selectedCompanyName}
+                placeholder={companyPlaceholder}
+                readOnly
+                disabled
+              />
+            ) : (
+              <Controller
+                control={control}
+                name="companyUuid"
+                render={({ field }) => (
+                  <Select
+                    id="companyUuid"
+                    name={field.name}
+                    value={field.value || EMPTY_SELECT_VALUE}
+                    options={companyOptions}
+                    placeholder={companyPlaceholder}
+                    invalid={!!errors.companyUuid}
+                    disabled={companyOptions.length === 0}
+                    onValueChange={(value) =>
+                      field.onChange(value === EMPTY_SELECT_VALUE ? "" : value)
+                    }
+                  />
+                )}
+              />
+            )}
             <FieldError message={errors.companyUuid?.message} />
             {companyErrorMessage ? (
               <FieldError message={companyErrorMessage} />
