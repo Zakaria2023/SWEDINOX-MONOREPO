@@ -5,32 +5,38 @@ import { Companies } from "@/db/schema/companies";
 import { generateUuid } from "@/lib/helpers";
 import { desc, eq } from "drizzle-orm";
 
-export interface CompanyActionResult {
+export type CompanyActionResult = {
   companyUuid?: string;
   error?: string;
   success?: boolean;
-}
+};
 
 export type CompanyListItem = SelectCompanies;
 export type CompanyDetail = CompanyListItem;
 
-export interface CompanyOption {
+export type CompanyOption = {
   companyName: string;
   uuid: string;
-}
+};
 
-export interface CompanyOptionsResult {
+export type CompanyOptionsResult = {
   data: CompanyOption[];
   error?: string;
-}
+};
 
-export type CreateCompanyInput = Pick<InsertCompanies, "addressId" | "companyName">;
+export type CreateCompanyInput = Pick<
+  InsertCompanies,
+  "addressId" | "companyName"
+>;
 
-export interface UpdateCompanyInput extends CreateCompanyInput {
+export type UpdateCompanyInput = CreateCompanyInput & {
   id: number;
-}
+};
 export const getCompanies = async (): Promise<CompanyListItem[]> => {
-  const results = await db.select().from(Companies).orderBy(desc(Companies.createdAt));
+  const results = await db
+    .select()
+    .from(Companies)
+    .orderBy(desc(Companies.createdAt));
 
   return results as CompanyListItem[];
 };
@@ -59,7 +65,11 @@ export const getCompanyOptions = async (): Promise<CompanyOptionsResult> => {
 export const getCompanyById = async (
   id: number,
 ): Promise<CompanyDetail | null> => {
-  const [company] = await db.select().from(Companies).where(eq(Companies.id, id)).limit(1);
+  const [company] = await db
+    .select()
+    .from(Companies)
+    .where(eq(Companies.id, id))
+    .limit(1);
 
   return (company as CompanyDetail | undefined) ?? null;
 };

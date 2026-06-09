@@ -22,9 +22,9 @@ export type AddressListItem = SelectCompanyAddresses & {
 
 export type AddressDetail = SelectCompanyAddresses;
 
-export interface UpdateAddressInput extends InsertCompanyAddresses {
+export type UpdateAddressInput = InsertCompanyAddresses & {
   id: number;
-}
+};
 
 // Queries
 
