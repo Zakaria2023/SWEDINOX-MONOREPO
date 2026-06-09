@@ -14,6 +14,7 @@ import { locationAdoptPositions, locationTypes } from "../../lib/enums";
 
 export const LoadingLocations = mysqlTable("loading_locations", {
   id: int("id").primaryKey().autoincrement(),
+  uuid: char("uuid", { length: 36 }).notNull().unique(),
 
   name: varchar("name", { length: 255 }).notNull(),
 
@@ -23,10 +24,11 @@ export const LoadingLocations = mysqlTable("loading_locations", {
 
 export const Locations = mysqlTable("locations", {
   id: int("id").primaryKey().autoincrement(),
+  uuid: char("uuid", { length: 36 }).notNull().unique(),
 
   name: varchar("name", { length: 255 }).notNull(),
   locationType: mysqlEnum("location_type", locationTypes).notNull(),
-  loadingLocationId: int("loading_location_id"),
+  loadingLocationUuid: char("loading_location_uuid", { length: 36 }),
   addressUuid: char("address_uuid", { length: 36 }),
 
   isBlocked: boolean("is_blocked").default(false),
@@ -44,12 +46,12 @@ export const Locations = mysqlTable("locations", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
 }, (table) => [
-  index("idx_locations_loading_location_id").on(table.loadingLocationId),
+  index("idx_locations_loading_location_uuid").on(table.loadingLocationUuid),
   index("idx_locations_address_uuid").on(table.addressUuid),
   foreignKey({
     name: "fk_locations_loading_location",
-    columns: [table.loadingLocationId],
-    foreignColumns: [LoadingLocations.id],
+    columns: [table.loadingLocationUuid],
+    foreignColumns: [LoadingLocations.uuid],
   }),
   foreignKey({
     name: "fk_locations_address",

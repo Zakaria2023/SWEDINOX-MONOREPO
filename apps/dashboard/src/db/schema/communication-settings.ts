@@ -9,6 +9,7 @@ import {
   varchar,
 } from "drizzle-orm/mysql-core";
 import { Companies } from "./companies";
+import { Contacts } from "./contacts";
 import {
   communicationSettingDocumentTypes,
   communicationSettingShapes,
@@ -31,8 +32,7 @@ export const CommunicationSettings = mysqlTable(
     ).notNull(),
     shape: mysqlEnum("shape", communicationSettingShapes),
 
-    // TODO: Connect this to the contacts schema later when the UI supports selecting an existing contact.
-    contact: varchar("contact", { length: 255 }),
+    contactUuid: char("contact_uuid", { length: 36 }),
     // Used when communicationType = "email".
     email: varchar("email", { length: 255 }),
     // Used when communicationType = "fax".
@@ -47,6 +47,7 @@ export const CommunicationSettings = mysqlTable(
   },
   (table) => [
     index("idx_communication_settings_company_uuid").on(table.companyUuid),
+    index("idx_communication_settings_contact_uuid").on(table.contactUuid),
     index("idx_communication_settings_document_type").on(table.documentType),
     index("idx_communication_settings_communication_type").on(
       table.communicationType,
@@ -55,6 +56,11 @@ export const CommunicationSettings = mysqlTable(
       name: "fk_communication_settings_company",
       columns: [table.companyUuid],
       foreignColumns: [Companies.uuid],
+    }),
+    foreignKey({
+      name: "fk_communication_settings_contact",
+      columns: [table.contactUuid],
+      foreignColumns: [Contacts.uuid],
     }),
   ],
 );
