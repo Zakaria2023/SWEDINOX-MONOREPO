@@ -31,6 +31,8 @@ export const addressSchema = z.object({
       (v) => !v || /^https?:\/\/.+/.test(v),
       "Invalid website URL",
     ),
+  billingAttention: z.string().optional(),
+  billingAttentionAdditional: z.string().optional(),
 
   // Kept as string to match the text input; converted to number in useAddressSubmit
   sequenceNumber: z

@@ -36,6 +36,10 @@ export const CompanyAddresses = mysqlTable(
     fax: varchar("fax", { length: 100 }),
     email: varchar("email", { length: 255 }),
     website: varchar("website", { length: 255 }),
+    billingAttention: varchar("billing_attention", { length: 255 }),
+    billingAttentionAdditional: varchar("billing_attention_additional", {
+      length: 255,
+    }),
 
     sequenceNumber: int("sequence_number"),
 

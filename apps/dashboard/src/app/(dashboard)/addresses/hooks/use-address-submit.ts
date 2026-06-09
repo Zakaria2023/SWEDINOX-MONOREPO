@@ -39,6 +39,8 @@ export const useAddressSubmit = ({
       companyUuid: companyUuid ?? "",
       category: [],
       availableAt: "",
+      billingAttention: "",
+      billingAttentionAdditional: "",
       poBox: false,
       needCrane: false,
       canopyRequired: false,

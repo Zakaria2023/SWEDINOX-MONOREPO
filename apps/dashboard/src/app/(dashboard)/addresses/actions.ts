@@ -28,6 +28,8 @@ export interface AddressListItem {
   fax: string | null;
   email: string | null;
   website: string | null;
+  billingAttention: string | null;
+  billingAttentionAdditional: string | null;
   sequenceNumber: number | null;
   category: AddressCategory[];
   needCrane: boolean | null;
@@ -69,6 +71,8 @@ export interface CreateAddressInput {
   fax?: string;
   email?: string;
   website?: string;
+  billingAttention?: string;
+  billingAttentionAdditional?: string;
   sequenceNumber?: number;
   category: AddressCategory[];
   needCrane?: boolean;
@@ -104,6 +108,8 @@ const addressSelection = {
   fax: CompanyAddresses.fax,
   email: CompanyAddresses.email,
   website: CompanyAddresses.website,
+  billingAttention: CompanyAddresses.billingAttention,
+  billingAttentionAdditional: CompanyAddresses.billingAttentionAdditional,
   sequenceNumber: CompanyAddresses.sequenceNumber,
   category: CompanyAddresses.category,
   needCrane: CompanyAddresses.needCrane,
@@ -232,6 +238,8 @@ export const createAddress = async (
     fax: data.fax || null,
     email: data.email || null,
     website: data.website || null,
+    billingAttention: data.billingAttention || null,
+    billingAttentionAdditional: data.billingAttentionAdditional || null,
     sequenceNumber: data.sequenceNumber || null,
     category: data.category[0],
     needCrane: data.needCrane ?? false,
@@ -289,6 +297,8 @@ export const updateAddress = async (
       fax: data.fax || null,
       email: data.email || null,
       website: data.website || null,
+      billingAttention: data.billingAttention || null,
+      billingAttentionAdditional: data.billingAttentionAdditional || null,
       sequenceNumber: data.sequenceNumber || null,
       category: data.category[0],
       needCrane: data.needCrane ?? false,

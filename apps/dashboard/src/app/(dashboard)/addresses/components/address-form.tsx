@@ -94,6 +94,8 @@ const mapAddressToFormValues = (address: AddressDetail) => ({
   addressComplete: address.addressComplete ?? false,
   altName: address.altName ?? "",
   availableAt: address.availableAt ?? "",
+  billingAttention: address.billingAttention ?? "",
+  billingAttentionAdditional: address.billingAttentionAdditional ?? "",
   bundleSeparately: address.bundleSeparately ?? false,
   canopyRequired: address.canopyRequired ?? false,
   category: address.category,
@@ -195,6 +197,8 @@ export const AddressForm = ({
     errors.category?.root?.message ??
     (errors.category as { message?: string } | undefined)?.message;
   const selectedCategories = watch("category") ?? [];
+  const showBillingSettings = selectedCategories.includes("invoice");
+  const showDeliverySettings = selectedCategories.includes("delivery");
   const companyOptions: SelectOption[] = (companyOptionsResult?.data ?? []).map(
     (company) => ({
       label: company.companyName,
@@ -380,175 +384,209 @@ export const AddressForm = ({
 
       <section className="space-y-4">
         <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
-          Logistics
+          Category
         </h2>
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+        <div className="space-y-4 rounded-2xl border border-border bg-muted/20 p-4">
+          <div className="space-y-1">
+            <Label required>Category</Label>
+            <p className="text-sm text-muted-foreground">
+              Choose how this address is used across the business flow.
+            </p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {addressCategories.map((cat) => (
+              <label
+                key={cat}
+                className={cn(
+                  "flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-3 transition-colors",
+                  selectedCategories.includes(cat)
+                    ? "border-primary bg-primary/5"
+                    : "border-border bg-background hover:bg-accent/40",
+                )}
+              >
+                <input
+                  type="checkbox"
+                  value={cat}
+                  {...register("category")}
+                  className={`${CHECKBOX_CLASS} mt-0.5`}
+                />
+                <span className="text-sm font-medium text-foreground">
+                  {formatOptionLabel(cat)}
+                </span>
+              </label>
+            ))}
+          </div>
+          <FieldError message={categoryError} />
+        </div>
+      </section>
+
+      {showBillingSettings && (
+        <section className="space-y-4">
+          <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
+            Billing Address Settings
+          </h2>
           <div className="space-y-4 rounded-2xl border border-border bg-muted/20 p-4">
-            <div className="space-y-1">
-              <Label required>Category</Label>
-              <p className="text-sm text-muted-foreground">
-                Choose how this address is used across the business flow.
-              </p>
+            <div>
+              <Label htmlFor="billingAttention">To The Attention Of</Label>
+              <Input id="billingAttention" {...register("billingAttention")} />
             </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {addressCategories.map((cat) => (
-                <label
-                  key={cat}
-                  className={cn(
-                    "flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-3 transition-colors",
-                    selectedCategories.includes(cat)
-                      ? "border-primary bg-primary/5"
-                      : "border-border bg-background hover:bg-accent/40",
-                  )}
-                >
-                  <input
-                    type="checkbox"
-                    value={cat}
-                    {...register("category")}
-                    className={`${CHECKBOX_CLASS} mt-0.5`}
+            <div>
+              <Input
+                id="billingAttentionAdditional"
+                {...register("billingAttentionAdditional")}
+                placeholder="Additional billing line"
+              />
+            </div>
+          </div>
+        </section>
+      )}
+
+      {showDeliverySettings && (
+        <section className="space-y-4">
+          <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
+            Delivery Address Settings
+          </h2>
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
+            <div className="space-y-4 rounded-2xl border border-border bg-muted/20 p-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <Label htmlFor="unloadingStartTime">Unloading Start Time</Label>
+                  <Controller
+                    control={control}
+                    name="unloadingStartTime"
+                    render={({ field }) => (
+                      <Select
+                        id="unloadingStartTime"
+                        name={field.name}
+                        value={field.value || EMPTY_SELECT_VALUE}
+                        options={TIME_SELECT_OPTIONS}
+                        onValueChange={(value) =>
+                          field.onChange(
+                            value === EMPTY_SELECT_VALUE ? "" : value,
+                          )
+                        }
+                      />
+                    )}
                   />
-                  <span className="text-sm font-medium text-foreground">
-                    {formatOptionLabel(cat)}
-                  </span>
-                </label>
-              ))}
-            </div>
-            <FieldError message={categoryError} />
-          </div>
-
-          <div className="space-y-4 rounded-2xl border border-border bg-muted/20 p-4">
-            <div className="space-y-1">
-              <h3 className="text-sm font-medium text-foreground">
-                Handling Options
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                Mark any special delivery or unloading requirements.
-              </p>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {BOOLEAN_FIELDS.map(({ name, label }) => (
-                <label
-                  key={name}
-                  className={cn(
-                    "flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-3 transition-colors",
-                    watch(name)
-                      ? "border-primary bg-primary/5"
-                      : "border-border bg-background hover:bg-accent/40",
-                  )}
-                >
-                  <input
-                    type="checkbox"
-                    {...register(name)}
-                    className={`${CHECKBOX_CLASS} mt-0.5`}
+                </div>
+                <div>
+                  <Label htmlFor="unloadingEndTime">Unloading End Time</Label>
+                  <Controller
+                    control={control}
+                    name="unloadingEndTime"
+                    render={({ field }) => (
+                      <Select
+                        id="unloadingEndTime"
+                        name={field.name}
+                        value={field.value || EMPTY_SELECT_VALUE}
+                        options={TIME_SELECT_OPTIONS}
+                        onValueChange={(value) =>
+                          field.onChange(
+                            value === EMPTY_SELECT_VALUE ? "" : value,
+                          )
+                        }
+                      />
+                    )}
                   />
-                  <span className="text-sm font-medium text-foreground">
-                    {label}
-                  </span>
-                </label>
-              ))}
+                </div>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <Label htmlFor="maxLength">Max Length</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="maxLength"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      {...register("maxLength")}
+                    />
+                    <span className="text-sm text-muted-foreground">mm</span>
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="maxBundleWeight">Max Bundle Weight</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="maxBundleWeight"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      {...register("maxBundleWeight")}
+                    />
+                    <span className="text-sm text-muted-foreground">kg</span>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="loadingInstructions">Loading Instructions</Label>
+                <textarea
+                  id="loadingInstructions"
+                  {...register("loadingInstructions")}
+                  rows={4}
+                  className="w-full resize-y rounded-lg border border-input bg-transparent px-2.5 py-1.5 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="availableAt">Available At</Label>
+                <Controller
+                  control={control}
+                  name="availableAt"
+                  render={({ field }) => (
+                    <Select
+                      id="availableAt"
+                      name={field.name}
+                      value={field.value || EMPTY_SELECT_VALUE}
+                      options={AVAILABLE_AT_SELECT_OPTIONS}
+                      onValueChange={(value) =>
+                        field.onChange(
+                          value === EMPTY_SELECT_VALUE ? "" : value,
+                        )
+                      }
+                    />
+                  )}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-4 rounded-2xl border border-border bg-muted/20 p-4">
+              <div className="space-y-1">
+                <h3 className="text-sm font-medium text-foreground">
+                  Handling Options
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Mark any special delivery or unloading requirements.
+                </p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {BOOLEAN_FIELDS.map(({ name, label }) => (
+                  <label
+                    key={name}
+                    className={cn(
+                      "flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-3 transition-colors",
+                      watch(name)
+                        ? "border-primary bg-primary/5"
+                        : "border-border bg-background hover:bg-accent/40",
+                    )}
+                  >
+                    <input
+                      type="checkbox"
+                      {...register(name)}
+                      className={`${CHECKBOX_CLASS} mt-0.5`}
+                    />
+                    <span className="text-sm font-medium text-foreground">
+                      {label}
+                    </span>
+                  </label>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
-      </section>
-
-      <section className="space-y-4">
-        <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
-          Unloading
-        </h2>
-        <div className="grid gap-4 rounded-2xl border border-border bg-muted/20 p-4 sm:grid-cols-3">
-          <div>
-            <Label htmlFor="availableAt">Available At</Label>
-            <Controller
-              control={control}
-              name="availableAt"
-              render={({ field }) => (
-                <Select
-                  id="availableAt"
-                  name={field.name}
-                  value={field.value || EMPTY_SELECT_VALUE}
-                  options={AVAILABLE_AT_SELECT_OPTIONS}
-                  onValueChange={(value) =>
-                    field.onChange(value === EMPTY_SELECT_VALUE ? "" : value)
-                  }
-                />
-              )}
-            />
-          </div>
-          <div>
-            <Label htmlFor="unloadingStartTime">Start Time</Label>
-            <Controller
-              control={control}
-              name="unloadingStartTime"
-              render={({ field }) => (
-                <Select
-                  id="unloadingStartTime"
-                  name={field.name}
-                  value={field.value || EMPTY_SELECT_VALUE}
-                  options={TIME_SELECT_OPTIONS}
-                  onValueChange={(value) =>
-                    field.onChange(value === EMPTY_SELECT_VALUE ? "" : value)
-                  }
-                />
-              )}
-            />
-          </div>
-          <div>
-            <Label htmlFor="unloadingEndTime">End Time</Label>
-            <Controller
-              control={control}
-              name="unloadingEndTime"
-              render={({ field }) => (
-                <Select
-                  id="unloadingEndTime"
-                  name={field.name}
-                  value={field.value || EMPTY_SELECT_VALUE}
-                  options={TIME_SELECT_OPTIONS}
-                  onValueChange={(value) =>
-                    field.onChange(value === EMPTY_SELECT_VALUE ? "" : value)
-                  }
-                />
-              )}
-            />
-          </div>
-        </div>
-      </section>
-
-      <section className="space-y-4">
-        <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
-          Constraints
-        </h2>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div>
-            <Label htmlFor="maxLength">Max Length (m)</Label>
-            <Input
-              id="maxLength"
-              type="number"
-              step="0.01"
-              min="0"
-              {...register("maxLength")}
-            />
-          </div>
-          <div>
-            <Label htmlFor="maxBundleWeight">Max Bundle Weight (kg)</Label>
-            <Input
-              id="maxBundleWeight"
-              type="number"
-              step="0.01"
-              min="0"
-              {...register("maxBundleWeight")}
-            />
-          </div>
-          <div className="sm:col-span-2">
-            <Label htmlFor="loadingInstructions">Loading Instructions</Label>
-            <textarea
-              id="loadingInstructions"
-              {...register("loadingInstructions")}
-              rows={4}
-              className="w-full resize-y rounded-lg border border-input bg-transparent px-2.5 py-1.5 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-            />
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {state.error && (
         <div className="rounded-lg border border-red-200 bg-red-50 p-3">
