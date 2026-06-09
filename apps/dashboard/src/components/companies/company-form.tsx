@@ -33,6 +33,7 @@ type CompanyFormProps = {
   mode?: "add" | "edit";
 };
 
+const EMPTY_ADDRESSES: AddressListItem[] = [];
 const NEW_ADDRESS_VALUE = "__new_address__";
 
 const formatAddressLabel = (address: AddressListItem) => {
@@ -50,7 +51,7 @@ const formatAddressLabel = (address: AddressListItem) => {
 
 export const CompanyForm = ({
   companyId,
-  initialAddresses = [],
+  initialAddresses = EMPTY_ADDRESSES,
   initialCompany,
   mode = "add",
 }: CompanyFormProps) => {
