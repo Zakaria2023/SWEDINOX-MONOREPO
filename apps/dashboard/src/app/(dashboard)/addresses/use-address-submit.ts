@@ -1,5 +1,6 @@
 "use client";
 
+import type { InsertCompanyAddresses } from "@/db";
 import type { AvailableAt } from "@/lib/enums";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
@@ -9,7 +10,6 @@ import {
   createAddress,
   updateAddress,
   type AddressActionResult,
-  type CreateAddressInput,
   type UpdateAddressInput,
 } from "./actions";
 import { addressSchema, type AddressFormValues } from "./validation";
@@ -53,7 +53,7 @@ export const useAddressSubmit = ({
   });
 
   const persistAddress = async (
-    payload: CreateAddressInput | UpdateAddressInput,
+    payload: InsertCompanyAddresses | UpdateAddressInput,
   ) => {
     setIsPending(true);
 
@@ -61,7 +61,7 @@ export const useAddressSubmit = ({
       const nextState =
         mode === "edit" && addressId
           ? await updateAddress({}, payload as UpdateAddressInput)
-          : await createAddress({}, payload as CreateAddressInput);
+          : await createAddress({}, payload as InsertCompanyAddresses);
 
       setState(nextState);
 
@@ -112,7 +112,7 @@ export const useAddressSubmit = ({
       return;
     }
 
-    await persistAddress(payload as CreateAddressInput);
+    await persistAddress(payload as InsertCompanyAddresses);
   });
 
   return { form, onSubmit, isPending, state };

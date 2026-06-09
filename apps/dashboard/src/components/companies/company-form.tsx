@@ -58,11 +58,16 @@ const FieldError = ({ message }: FieldErrorProps) =>
 
 const formatAddressLabel = (address: AddressListItem) => {
   const primaryLabel =
-    address.altName ||
-    address.streetAndNo ||
-    [address.postalCode, address.city].filter(Boolean).join(" ") ||
-    `Address #${address.id}`;
-  const secondaryLabel = [address.city, address.country]
+    address.CompanyAddresses.altName ||
+    address.CompanyAddresses.streetAndNo ||
+    [address.CompanyAddresses.postalCode, address.CompanyAddresses.city]
+      .filter(Boolean)
+      .join(" ") ||
+    `Address #${address.CompanyAddresses.id}`;
+  const secondaryLabel = [
+    address.CompanyAddresses.city,
+    address.CompanyAddresses.country,
+  ]
     .filter(Boolean)
     .join(", ");
 
@@ -129,7 +134,7 @@ export const CompanyForm = ({ companyId, mode = "add" }: CompanyFormProps) => {
   const addressOptions: SelectOption[] = [
     ...addresses.map((address) => ({
       label: formatAddressLabel(address),
-      value: String(address.id),
+      value: String(address.CompanyAddresses.id),
     })),
     {
       label: "+ Add new address",

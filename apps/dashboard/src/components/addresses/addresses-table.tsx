@@ -110,15 +110,35 @@ export const AddressesTable = () => {
   const visibleColumns = ALL_COLUMNS.filter((col) => columnVisibility[col.key]);
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["addresses", page, search],
-    queryFn: () => getAddresses(page, pageSize, search),
+    queryKey: ["addresses"],
+    queryFn: () => getAddresses(),
   });
 
-  const totalPages = data ? Math.ceil(data.total / pageSize) : 0;
+  const addresses = data ?? [];
+  const trimmedSearch = search.trim().toLowerCase();
+  const filteredAddresses = trimmedSearch
+    ? addresses.filter(({ CompanyAddresses, Companies }) => {
+        const searchableValues = [
+          Companies?.companyName,
+          CompanyAddresses.altName,
+          CompanyAddresses.streetAndNo,
+          CompanyAddresses.city,
+          CompanyAddresses.country,
+          CompanyAddresses.postalCode,
+        ];
+
+        return searchableValues.some((value) =>
+          value?.toLowerCase().includes(trimmedSearch),
+        );
+      })
+    : addresses;
+  const totalPages = Math.ceil(filteredAddresses.length / pageSize);
+  const paginatedAddresses = filteredAddresses.slice(
+    (page - 1) * pageSize,
+    page * pageSize,
+  );
   const errorMessage =
-    actionError ||
-    data?.error ||
-    (isError ? "Failed to load addresses. Please try again." : "");
+    actionError || (isError ? "Failed to load addresses. Please try again." : "");
 
   const handleDeleteAddress = async () => {
     if (!addressToDelete) {
@@ -129,7 +149,7 @@ export const AddressesTable = () => {
     setActionError("");
 
     try {
-      const result = await deleteAddress(addressToDelete.id);
+      const result = await deleteAddress(addressToDelete.CompanyAddresses.id);
 
       if (!result.success) {
         setActionError(result.error ?? "Failed to delete address.");
@@ -144,50 +164,53 @@ export const AddressesTable = () => {
   };
 
   const renderCell = (address: AddressListItem, key: ColumnKey) => {
+    const company = address.Companies;
+    const companyAddress = address.CompanyAddresses;
+
     switch (key) {
       case "id":
         return (
           <TableCell key={key} className="font-medium">
-            {address.id}
+            {companyAddress.id}
           </TableCell>
         );
       case "companyName":
-        return <TableCell key={key}>{address.companyName || "-"}</TableCell>;
+        return <TableCell key={key}>{company?.companyName || "-"}</TableCell>;
       case "altName":
-        return <TableCell key={key}>{address.altName || "-"}</TableCell>;
+        return <TableCell key={key}>{companyAddress.altName || "-"}</TableCell>;
       case "poBox":
         return (
           <TableCell key={key}>
-            <BoolCell value={address.poBox} />
+            <BoolCell value={companyAddress.poBox} />
           </TableCell>
         );
       case "streetAndNo":
-        return <TableCell key={key}>{address.streetAndNo || "-"}</TableCell>;
+        return <TableCell key={key}>{companyAddress.streetAndNo || "-"}</TableCell>;
       case "postalCode":
-        return <TableCell key={key}>{address.postalCode || "-"}</TableCell>;
+        return <TableCell key={key}>{companyAddress.postalCode || "-"}</TableCell>;
       case "city":
-        return <TableCell key={key}>{address.city || "-"}</TableCell>;
+        return <TableCell key={key}>{companyAddress.city || "-"}</TableCell>;
       case "region":
-        return <TableCell key={key}>{address.region || "-"}</TableCell>;
+        return <TableCell key={key}>{companyAddress.region || "-"}</TableCell>;
       case "country":
-        return <TableCell key={key}>{address.country || "-"}</TableCell>;
+        return <TableCell key={key}>{companyAddress.country || "-"}</TableCell>;
       case "house":
-        return <TableCell key={key}>{address.house || "-"}</TableCell>;
+        return <TableCell key={key}>{companyAddress.house || "-"}</TableCell>;
       case "telephone":
-        return <TableCell key={key}>{address.telephone || "-"}</TableCell>;
+        return <TableCell key={key}>{companyAddress.telephone || "-"}</TableCell>;
       case "fax":
-        return <TableCell key={key}>{address.fax || "-"}</TableCell>;
+        return <TableCell key={key}>{companyAddress.fax || "-"}</TableCell>;
       case "email":
-        return <TableCell key={key}>{address.email || "-"}</TableCell>;
+        return <TableCell key={key}>{companyAddress.email || "-"}</TableCell>;
       case "website":
-        return <TableCell key={key}>{address.website || "-"}</TableCell>;
+        return <TableCell key={key}>{companyAddress.website || "-"}</TableCell>;
       case "sequenceNumber":
-        return <TableCell key={key}>{address.sequenceNumber ?? "-"}</TableCell>;
+        return <TableCell key={key}>{companyAddress.sequenceNumber ?? "-"}</TableCell>;
       case "category":
         return (
           <TableCell key={key}>
             <div className="flex flex-wrap gap-1">
-              {address.category.map((cat) => (
+              {companyAddress.category.map((cat: string) => (
                 <span
                   key={cat}
                   className="rounded-full bg-blue-100 px-2 py-1 text-xs text-blue-700"
@@ -201,19 +224,19 @@ export const AddressesTable = () => {
       case "needCrane":
         return (
           <TableCell key={key}>
-            <BoolCell value={address.needCrane} />
+            <BoolCell value={companyAddress.needCrane} />
           </TableCell>
         );
       case "canopyRequired":
         return (
           <TableCell key={key}>
-            <BoolCell value={address.canopyRequired} />
+            <BoolCell value={companyAddress.canopyRequired} />
           </TableCell>
         );
       case "bundleSeparately":
         return (
           <TableCell key={key}>
-            <BoolCell value={address.bundleSeparately} />
+            <BoolCell value={companyAddress.bundleSeparately} />
           </TableCell>
         );
       case "addressComplete":
@@ -221,50 +244,56 @@ export const AddressesTable = () => {
           <TableCell key={key}>
             <span
               className={`rounded-full px-2 py-1 text-xs ${
-                address.addressComplete
+                companyAddress.addressComplete
                   ? "bg-green-100 text-green-700"
                   : "bg-yellow-100 text-yellow-700"
               }`}
             >
-              {address.addressComplete ? "Complete" : "Incomplete"}
+              {companyAddress.addressComplete ? "Complete" : "Incomplete"}
             </span>
           </TableCell>
         );
       case "specialTransport":
         return (
           <TableCell key={key}>
-            <BoolCell value={address.specialTransport} />
+            <BoolCell value={companyAddress.specialTransport} />
           </TableCell>
         );
       case "availableAt":
-        return <TableCell key={key}>{address.availableAt || "-"}</TableCell>;
+        return <TableCell key={key}>{companyAddress.availableAt || "-"}</TableCell>;
       case "unloadingStartTime":
         return (
-          <TableCell key={key}>{address.unloadingStartTime || "-"}</TableCell>
+          <TableCell key={key}>
+            {companyAddress.unloadingStartTime || "-"}
+          </TableCell>
         );
       case "unloadingEndTime":
         return (
-          <TableCell key={key}>{address.unloadingEndTime || "-"}</TableCell>
+          <TableCell key={key}>{companyAddress.unloadingEndTime || "-"}</TableCell>
         );
       case "maxLength":
-        return <TableCell key={key}>{address.maxLength || "-"}</TableCell>;
+        return <TableCell key={key}>{companyAddress.maxLength || "-"}</TableCell>;
       case "maxBundleWeight":
         return (
-          <TableCell key={key}>{address.maxBundleWeight || "-"}</TableCell>
+          <TableCell key={key}>{companyAddress.maxBundleWeight || "-"}</TableCell>
         );
       case "loadingInstructions":
         return (
           <TableCell key={key} className="max-w-48 truncate">
-            {address.loadingInstructions || "-"}
+            {companyAddress.loadingInstructions || "-"}
           </TableCell>
         );
       case "createdAt":
         return (
-          <TableCell key={key}>{address.createdAt.toLocaleDateString()}</TableCell>
+          <TableCell key={key}>
+            {companyAddress.createdAt.toLocaleDateString()}
+          </TableCell>
         );
       case "updatedAt":
         return (
-          <TableCell key={key}>{address.updatedAt.toLocaleDateString()}</TableCell>
+          <TableCell key={key}>
+            {companyAddress.updatedAt.toLocaleDateString()}
+          </TableCell>
         );
     }
   };
@@ -336,7 +365,7 @@ export const AddressesTable = () => {
                     Loading...
                   </TableCell>
                 </TableRow>
-              ) : data?.data.length === 0 ? (
+              ) : paginatedAddresses.length === 0 ? (
                 <TableRow>
                   <TableCell
                     colSpan={visibleColumns.length + 1}
@@ -346,8 +375,8 @@ export const AddressesTable = () => {
                   </TableCell>
                 </TableRow>
               ) : (
-                data?.data.map((address) => (
-                  <TableRow key={address.id}>
+                paginatedAddresses.map((address) => (
+                  <TableRow key={address.CompanyAddresses.id}>
                     {visibleColumns.map((col) => renderCell(address, col.key))}
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
@@ -356,7 +385,9 @@ export const AddressesTable = () => {
                           variant="ghost"
                           size="icon-sm"
                           onClick={() =>
-                            router.push(`/addresses/${address.id}/edit`)
+                            router.push(
+                              `/addresses/${address.CompanyAddresses.id}/edit`,
+                            )
                           }
                         >
                           <Pencil />
@@ -382,7 +413,7 @@ export const AddressesTable = () => {
 
         <div className="flex items-center justify-between">
           <div className="text-sm text-muted-foreground">
-            Showing {data?.data.length || 0} of {data?.total || 0} addresses
+            Showing {paginatedAddresses.length} of {filteredAddresses.length} addresses
           </div>
 
           <div className="flex items-center gap-2">
@@ -449,7 +480,7 @@ export const AddressesTable = () => {
         title="Delete Address"
         description={
           addressToDelete
-            ? `Delete address "${addressToDelete.altName || addressToDelete.streetAndNo || `#${addressToDelete.id}`}"? This cannot be undone.`
+            ? `Delete address "${addressToDelete.CompanyAddresses.altName || addressToDelete.CompanyAddresses.streetAndNo || `#${addressToDelete.CompanyAddresses.id}`}"? This cannot be undone.`
             : ""
         }
         onConfirm={handleDeleteAddress}

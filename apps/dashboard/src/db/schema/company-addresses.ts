@@ -5,6 +5,7 @@ import {
   foreignKey,
   index,
   int,
+  json,
   mysqlEnum,
   mysqlTable,
   text,
@@ -13,7 +14,10 @@ import {
   varchar,
 } from "drizzle-orm/mysql-core";
 import { Companies } from "./companies";
-import { addressCategories, availableAtOptions } from "../../lib/enums";
+import {
+  availableAtOptions,
+  type AddressCategory,
+} from "../../lib/enums";
 import { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const CompanyAddresses = mysqlTable(
@@ -44,7 +48,7 @@ export const CompanyAddresses = mysqlTable(
 
     sequenceNumber: int("sequence_number"),
 
-    category: mysqlEnum(addressCategories).notNull(),
+    category: json("category").$type<AddressCategory[]>().notNull(),
 
     needCrane: boolean("need_crane").default(false),
     canopyRequired: boolean("canopy_required").default(false),
