@@ -8,7 +8,6 @@ import {
 import { type CompanyDetail } from "@/app/(dashboard)/companies/actions";
 import { useCompanySubmit } from "@/app/(dashboard)/companies/use-company-submit";
 import { AddressForm } from "@/components/addresses/address-form";
-import { Button } from "@/components/shadcn/button";
 import {
   Dialog,
   DialogContent,
@@ -17,13 +16,15 @@ import {
   DialogTitle,
 } from "@/components/shadcn/dialog";
 import { Input } from "@/components/shadcn/input";
-import { Select, type SelectOption } from "@/components/shadcn/select";
+import { type SelectOption } from "@/components/shadcn/select";
+import { FormActions } from "@/components/ui/form-actions";
 import { ErrorMessage } from "@/components/ui/error-message";
+import { FormFieldError, FormLabel } from "@/components/ui/form-field";
+import { FormSelectField } from "@/components/ui/form-select-field";
 import { Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
-import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
-import { Controller } from "react-hook-form";
+import { FormError } from "../ui/form-error";
 
 type CompanyFormProps = {
   companyId?: number;
@@ -32,30 +33,7 @@ type CompanyFormProps = {
   mode?: "add" | "edit";
 };
 
-type LabelProps = {
-  children: ReactNode;
-  htmlFor?: string;
-  required?: boolean;
-};
-
-type FieldErrorProps = {
-  message?: string;
-};
-
 const NEW_ADDRESS_VALUE = "__new_address__";
-
-const Label = ({ children, htmlFor, required }: LabelProps) => (
-  <label
-    htmlFor={htmlFor}
-    className="mb-1 block text-sm font-medium text-gray-700"
-  >
-    {children}
-    {required && <span className="ml-1 text-red-500">*</span>}
-  </label>
-);
-
-const FieldError = ({ message }: FieldErrorProps) =>
-  message ? <p className="mt-1 text-sm text-red-600">{message}</p> : null;
 
 const formatAddressLabel = (address: AddressListItem) => {
   const primaryLabel =
@@ -180,7 +158,9 @@ export const CompanyForm = ({
       }
     } catch (error) {
       console.error("Failed to refresh company addresses", error);
-      setAddressLoadError("Address saved, but the list could not be refreshed.");
+      setAddressLoadError(
+        "Address saved, but the list could not be refreshed.",
+      );
     } finally {
       setIsAddressesLoading(false);
     }
@@ -197,9 +177,9 @@ export const CompanyForm = ({
           </h2>
           <div className="grid gap-4 rounded-2xl border border-border bg-muted/20 p-4 lg:grid-cols-3">
             <div className="lg:col-span-2">
-              <Label htmlFor="companyName" required>
+              <FormLabel htmlFor="companyName" required>
                 Company Name
-              </Label>
+              </FormLabel>
               <Input
                 id="companyName"
                 {...register("companyName")}
@@ -207,67 +187,50 @@ export const CompanyForm = ({
                 placeholder="Enter the company name"
                 disabled={isPending}
               />
-              <FieldError message={errors.companyName?.message} />
+              <FormFieldError message={errors.companyName?.message} />
             </div>
 
             <div>
-              <Label htmlFor="addressId">Address</Label>
-              <Controller
+              <FormSelectField
                 control={control}
+                id="addressId"
+                label="Address"
                 name="addressId"
-                render={({ field }) => (
-                  <Select
-                    id="addressId"
-                    name={field.name}
-                    value={field.value || undefined}
-                    options={addressOptions}
-                    placeholder={
-                      isAddressesLoading
-                        ? "Loading addresses..."
-                        : "Select or add an address"
-                    }
-                    disabled={isPending}
-                    onValueChange={(value) => {
-                      if (value === NEW_ADDRESS_VALUE) {
-                        void handleOpenAddressDialog();
-                        return;
-                      }
+                options={addressOptions}
+                placeholder={
+                  isAddressesLoading
+                    ? "Loading addresses..."
+                    : "Select or add an address"
+                }
+                disabled={isPending}
+                onValueChange={(value, fieldOnChange) => {
+                  if (value === NEW_ADDRESS_VALUE) {
+                    void handleOpenAddressDialog();
+                    return;
+                  }
 
-                      field.onChange(value);
-                    }}
-                  />
-                )}
+                  fieldOnChange(value);
+                }}
               />
             </div>
           </div>
         </section>
 
-        {state.error && (
-          <div className="rounded-lg border border-red-200 bg-red-50 p-3">
-            <p className="text-sm text-red-600">{state.error}</p>
-          </div>
-        )}
+        <FormError>{state.error}</FormError>
 
         {addressLoadError && <ErrorMessage message={addressLoadError} />}
 
-        <div className="flex gap-3 pb-6">
-          <Button type="submit" disabled={isPending}>
-            {isPending
-              ? "Saving..."
-              : mode === "edit"
-                ? "Save Changes"
-                : isPersisted
-                  ? "Done"
-                  : "Create Company"}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => router.push("/companies")}
-          >
-            Cancel
-          </Button>
-        </div>
+        <FormActions
+          isPending={isPending}
+          onCancel={() => router.push("/companies")}
+          submitLabel={
+            mode === "edit"
+              ? "Save Changes"
+              : isPersisted
+                ? "Done"
+                : "Create Company"
+          }
+        />
       </form>
 
       <Dialog open={isAddressDialogOpen} onOpenChange={setIsAddressDialogOpen}>

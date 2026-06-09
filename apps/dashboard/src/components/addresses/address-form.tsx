@@ -5,17 +5,18 @@ import {
   type AddressDetail,
 } from "@/app/(dashboard)/addresses/actions";
 import { useAddressSubmit } from "@/app/(dashboard)/addresses/use-address-submit";
-import { Button } from "@/components/shadcn/button";
 import { Input } from "@/components/shadcn/input";
-import { Select, type SelectOption } from "@/components/shadcn/select";
+import { type SelectOption } from "@/components/shadcn/select";
+import { FormActions } from "@/components/ui/form-actions";
+import { FormCheckboxCard } from "@/components/ui/form-checkbox-card";
 import { ErrorMessage } from "@/components/ui/error-message";
+import { FormFieldError, FormLabel } from "@/components/ui/form-field";
+import { FormSelectField } from "@/components/ui/form-select-field";
 import { addressCategories, availableAtOptions } from "@/lib/enums";
-import { cn } from "@/lib/helpers";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { ReactNode } from "react";
 import { useEffect } from "react";
-import { Controller } from "react-hook-form";
+import { FormError } from "../ui/form-error";
 
 type AddressFormProps = {
   addressId?: number;
@@ -32,31 +33,7 @@ type AddressFormProps = {
   submitLabel?: string;
 };
 
-type LabelProps = {
-  children: ReactNode;
-  htmlFor?: string;
-  required?: boolean;
-};
-
-type FieldErrorProps = {
-  message?: string;
-};
-
-const Label = ({ children, htmlFor, required }: LabelProps) => (
-  <label
-    htmlFor={htmlFor}
-    className="mb-1 block text-sm font-medium text-gray-700"
-  >
-    {children}
-    {required && <span className="ml-1 text-red-500">*</span>}
-  </label>
-);
-
-const FieldError = ({ message }: FieldErrorProps) =>
-  message ? <p className="mt-1 text-sm text-red-600">{message}</p> : null;
-
-const CHECKBOX_CLASS = "h-4 w-4 rounded border-gray-300 accent-primary";
-const EMPTY_SELECT_VALUE = "__none__";
+const EMPTY_SELECT_VALUE = "none";
 
 const formatOptionLabel = (value: string) =>
   value
@@ -217,40 +194,36 @@ export const AddressForm = ({
         </h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <Label htmlFor="companyUuid" required>
-              Company
-            </Label>
             {isCompanyLocked ? (
-              <Input
-                id="companyUuid"
-                value={selectedCompanyName}
-                placeholder={companyPlaceholder}
-                readOnly
-                disabled
-              />
+              <>
+                <FormLabel htmlFor="companyUuid" required>
+                  Company
+                </FormLabel>
+                <Input
+                  id="companyUuid"
+                  value={selectedCompanyName}
+                  placeholder={companyPlaceholder}
+                  readOnly
+                  disabled
+                />
+              </>
             ) : (
-              <Controller
+              <FormSelectField
                 control={control}
+                id="companyUuid"
+                invalid={!!errors.companyUuid}
+                label="Company"
                 name="companyUuid"
-                render={({ field }) => (
-                  <Select
-                    id="companyUuid"
-                    name={field.name}
-                    value={field.value || EMPTY_SELECT_VALUE}
-                    options={companyOptions}
-                    placeholder={companyPlaceholder}
-                    invalid={!!errors.companyUuid}
-                    disabled={companyOptions.length === 0}
-                    onValueChange={(value) =>
-                      field.onChange(value === EMPTY_SELECT_VALUE ? "" : value)
-                    }
-                  />
-                )}
+                options={companyOptions}
+                placeholder={companyPlaceholder}
+                required
+                disabled={companyOptions.length === 0}
+                emptyValue={EMPTY_SELECT_VALUE}
+                errorMessage={errors.companyUuid?.message}
               />
             )}
-            <FieldError message={errors.companyUuid?.message} />
             {companyErrorMessage ? (
-              <FieldError message={companyErrorMessage} />
+              <FormFieldError message={companyErrorMessage} />
             ) : isCompanyLocked ? (
               <p className="mt-1 text-sm text-muted-foreground">
                 This address will be linked to{" "}
@@ -270,11 +243,11 @@ export const AddressForm = ({
             )}
           </div>
           <div>
-            <Label htmlFor="altName">Alternative Name</Label>
+            <FormLabel htmlFor="altName">Alternative Name</FormLabel>
             <Input id="altName" {...register("altName")} />
           </div>
           <div>
-            <Label htmlFor="sequenceNumber">Sequence Number</Label>
+            <FormLabel htmlFor="sequenceNumber">Sequence Number</FormLabel>
             <Input
               id="sequenceNumber"
               type="number"
@@ -283,14 +256,14 @@ export const AddressForm = ({
               {...register("sequenceNumber")}
               aria-invalid={!!errors.sequenceNumber}
             />
-            <FieldError message={errors.sequenceNumber?.message} />
+            <FormFieldError message={errors.sequenceNumber?.message} />
           </div>
           <div className="flex items-center gap-2 pt-6">
             <input
               type="checkbox"
               id="poBox"
               {...register("poBox")}
-              className={CHECKBOX_CLASS}
+              className="h-4 w-4 rounded border-gray-300 accent-primary"
             />
             <label htmlFor="poBox" className="text-sm text-gray-700">
               PO Box
@@ -305,27 +278,27 @@ export const AddressForm = ({
         </h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
-            <Label htmlFor="streetAndNo">Street & Number</Label>
+            <FormLabel htmlFor="streetAndNo">Street & Number</FormLabel>
             <Input id="streetAndNo" {...register("streetAndNo")} />
           </div>
           <div>
-            <Label htmlFor="postalCode">Postal Code</Label>
+            <FormLabel htmlFor="postalCode">Postal Code</FormLabel>
             <Input id="postalCode" {...register("postalCode")} />
           </div>
           <div>
-            <Label htmlFor="city">City</Label>
+            <FormLabel htmlFor="city">City</FormLabel>
             <Input id="city" {...register("city")} />
           </div>
           <div>
-            <Label htmlFor="region">Region</Label>
+            <FormLabel htmlFor="region">Region</FormLabel>
             <Input id="region" {...register("region")} />
           </div>
           <div>
-            <Label htmlFor="country">Country</Label>
+            <FormLabel htmlFor="country">Country</FormLabel>
             <Input id="country" {...register("country")} />
           </div>
           <div>
-            <Label htmlFor="house">House</Label>
+            <FormLabel htmlFor="house">House</FormLabel>
             <Input id="house" {...register("house")} />
           </div>
         </div>
@@ -337,32 +310,32 @@ export const AddressForm = ({
         </h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <Label htmlFor="telephone">Telephone</Label>
+            <FormLabel htmlFor="telephone">Telephone</FormLabel>
             <Input id="telephone" type="tel" {...register("telephone")} />
           </div>
           <div>
-            <Label htmlFor="fax">Fax</Label>
+            <FormLabel htmlFor="fax">Fax</FormLabel>
             <Input id="fax" {...register("fax")} />
           </div>
           <div>
-            <Label htmlFor="email">Email</Label>
+            <FormLabel htmlFor="email">Email</FormLabel>
             <Input
               id="email"
               type="email"
               {...register("email")}
               aria-invalid={!!errors.email}
             />
-            <FieldError message={errors.email?.message} />
+            <FormFieldError message={errors.email?.message} />
           </div>
           <div>
-            <Label htmlFor="website">Website</Label>
+            <FormLabel htmlFor="website">Website</FormLabel>
             <Input
               id="website"
               type="url"
               {...register("website")}
               aria-invalid={!!errors.website}
             />
-            <FieldError message={errors.website?.message} />
+            <FormFieldError message={errors.website?.message} />
           </div>
         </div>
       </section>
@@ -373,35 +346,23 @@ export const AddressForm = ({
         </h2>
         <div className="space-y-4 rounded-2xl border border-border bg-muted/20 p-4">
           <div className="space-y-1">
-            <Label required>Category</Label>
+            <FormLabel required>Category</FormLabel>
             <p className="text-sm text-muted-foreground">
               Choose how this address is used across the business flow.
             </p>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             {addressCategories.map((cat) => (
-              <label
+              <FormCheckboxCard
                 key={cat}
-                className={cn(
-                  "flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-3 transition-colors",
-                  selectedCategories.includes(cat)
-                    ? "border-primary bg-primary/5"
-                    : "border-border bg-background hover:bg-accent/40",
-                )}
-              >
-                <input
-                  type="checkbox"
-                  value={cat}
-                  {...register("category")}
-                  className={`${CHECKBOX_CLASS} mt-0.5`}
-                />
-                <span className="text-sm font-medium text-foreground">
-                  {formatOptionLabel(cat)}
-                </span>
-              </label>
+                active={selectedCategories.includes(cat)}
+                label={formatOptionLabel(cat)}
+                value={cat}
+                {...register("category")}
+              />
             ))}
           </div>
-          <FieldError message={categoryError} />
+          <FormFieldError message={categoryError} />
         </div>
       </section>
 
@@ -412,7 +373,9 @@ export const AddressForm = ({
           </h2>
           <div className="space-y-4 rounded-2xl border border-border bg-muted/20 p-4">
             <div>
-              <Label htmlFor="billingAttention">To The Attention Of</Label>
+              <FormLabel htmlFor="billingAttention">
+                To The Attention Of
+              </FormLabel>
               <Input id="billingAttention" {...register("billingAttention")} />
             </div>
             <div>
@@ -434,53 +397,27 @@ export const AddressForm = ({
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
             <div className="space-y-4 rounded-2xl border border-border bg-muted/20 p-4">
               <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <Label htmlFor="unloadingStartTime">
-                    Unloading Start Time
-                  </Label>
-                  <Controller
-                    control={control}
-                    name="unloadingStartTime"
-                    render={({ field }) => (
-                      <Select
-                        id="unloadingStartTime"
-                        name={field.name}
-                        value={field.value || EMPTY_SELECT_VALUE}
-                        options={TIME_SELECT_OPTIONS}
-                        onValueChange={(value) =>
-                          field.onChange(
-                            value === EMPTY_SELECT_VALUE ? "" : value,
-                          )
-                        }
-                      />
-                    )}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="unloadingEndTime">Unloading End Time</Label>
-                  <Controller
-                    control={control}
-                    name="unloadingEndTime"
-                    render={({ field }) => (
-                      <Select
-                        id="unloadingEndTime"
-                        name={field.name}
-                        value={field.value || EMPTY_SELECT_VALUE}
-                        options={TIME_SELECT_OPTIONS}
-                        onValueChange={(value) =>
-                          field.onChange(
-                            value === EMPTY_SELECT_VALUE ? "" : value,
-                          )
-                        }
-                      />
-                    )}
-                  />
-                </div>
+                <FormSelectField
+                  control={control}
+                  id="unloadingStartTime"
+                  label="Unloading Start Time"
+                  name="unloadingStartTime"
+                  options={TIME_SELECT_OPTIONS}
+                  emptyValue={EMPTY_SELECT_VALUE}
+                />
+                <FormSelectField
+                  control={control}
+                  id="unloadingEndTime"
+                  label="Unloading End Time"
+                  name="unloadingEndTime"
+                  options={TIME_SELECT_OPTIONS}
+                  emptyValue={EMPTY_SELECT_VALUE}
+                />
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <Label htmlFor="maxLength">Max Length</Label>
+                  <FormLabel htmlFor="maxLength">Max Length</FormLabel>
                   <div className="flex items-center gap-2">
                     <Input
                       id="maxLength"
@@ -493,7 +430,9 @@ export const AddressForm = ({
                   </div>
                 </div>
                 <div>
-                  <Label htmlFor="maxBundleWeight">Max Bundle Weight</Label>
+                  <FormLabel htmlFor="maxBundleWeight">
+                    Max Bundle Weight
+                  </FormLabel>
                   <div className="flex items-center gap-2">
                     <Input
                       id="maxBundleWeight"
@@ -508,9 +447,9 @@ export const AddressForm = ({
               </div>
 
               <div>
-                <Label htmlFor="loadingInstructions">
+                <FormLabel htmlFor="loadingInstructions">
                   Loading Instructions
-                </Label>
+                </FormLabel>
                 <textarea
                   id="loadingInstructions"
                   {...register("loadingInstructions")}
@@ -519,26 +458,14 @@ export const AddressForm = ({
                 />
               </div>
 
-              <div>
-                <Label htmlFor="availableAt">Available At</Label>
-                <Controller
-                  control={control}
-                  name="availableAt"
-                  render={({ field }) => (
-                    <Select
-                      id="availableAt"
-                      name={field.name}
-                      value={field.value || EMPTY_SELECT_VALUE}
-                      options={AVAILABLE_AT_SELECT_OPTIONS}
-                      onValueChange={(value) =>
-                        field.onChange(
-                          value === EMPTY_SELECT_VALUE ? "" : value,
-                        )
-                      }
-                    />
-                  )}
-                />
-              </div>
+              <FormSelectField
+                control={control}
+                id="availableAt"
+                label="Available At"
+                name="availableAt"
+                options={AVAILABLE_AT_SELECT_OPTIONS}
+                emptyValue={EMPTY_SELECT_VALUE}
+              />
             </div>
 
             <div className="space-y-4 rounded-2xl border border-border bg-muted/20 p-4">
@@ -552,24 +479,12 @@ export const AddressForm = ({
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 {BOOLEAN_FIELDS.map(({ name, label }) => (
-                  <label
+                  <FormCheckboxCard
                     key={name}
-                    className={cn(
-                      "flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-3 transition-colors",
-                      watch(name)
-                        ? "border-primary bg-primary/5"
-                        : "border-border bg-background hover:bg-accent/40",
-                    )}
-                  >
-                    <input
-                      type="checkbox"
-                      {...register(name)}
-                      className={`${CHECKBOX_CLASS} mt-0.5`}
-                    />
-                    <span className="text-sm font-medium text-foreground">
-                      {label}
-                    </span>
-                  </label>
+                    active={watch(name)}
+                    label={label}
+                    {...register(name)}
+                  />
                 ))}
               </div>
             </div>
@@ -577,23 +492,16 @@ export const AddressForm = ({
         </section>
       )}
 
-      {state.error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-3">
-          <p className="text-sm text-red-600">{state.error}</p>
-        </div>
-      )}
+      <FormError>{state.error}</FormError>
 
-      <div className="flex gap-3 pb-6">
-        <Button type="submit" disabled={isPending}>
-          {isPending
-            ? "Saving..."
-            : (submitLabel ??
-              (mode === "edit" ? "Save Changes" : "Create Address"))}
-        </Button>
-        <Button type="button" variant="outline" onClick={handleCancel}>
-          {cancelLabel}
-        </Button>
-      </div>
+      <FormActions
+        cancelLabel={cancelLabel}
+        isPending={isPending}
+        onCancel={handleCancel}
+        submitLabel={
+          submitLabel ?? (mode === "edit" ? "Save Changes" : "Create Address")
+        }
+      />
     </form>
   );
 };
