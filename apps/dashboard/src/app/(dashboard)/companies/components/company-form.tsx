@@ -7,15 +7,15 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Controller } from "react-hook-form";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/shadcn/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/shadcn/dialog";
 import { Input } from "@/components/shadcn/input";
 import { Select, type SelectOption } from "@/components/shadcn/select";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/shadcn/sheet";
 import { ErrorMessage } from "@/components/ui/error-message";
 import { AddressForm } from "../../addresses/components/address-form";
 import {
@@ -77,10 +77,9 @@ export const CompanyForm = ({
 }: CompanyFormProps) => {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [isAddressSheetOpen, setIsAddressSheetOpen] = useState(false);
+  const [isAddressDialogOpen, setIsAddressDialogOpen] = useState(false);
   const {
     companyUuid,
-    ensureCompanyCreated,
     form,
     isPending,
     isPersisted,
@@ -107,7 +106,6 @@ export const CompanyForm = ({
   const {
     data: addresses = [],
     isLoading: isAddressesLoading,
-    refetch: refetchAddresses,
   } = useQuery({
     queryKey: ["company-addresses", companyUuid],
     queryFn: () => getAddressesByCompany(companyUuid!),
@@ -145,31 +143,25 @@ export const CompanyForm = ({
     },
   ];
 
-  const handleOpenAddressSheet = async () => {
-    if (companyUuid) {
-      setIsAddressSheetOpen(true);
-      return;
-    }
-
-    const result = await ensureCompanyCreated();
-
-    if (!result.success || !result.companyUuid) {
-      return;
-    }
-
-    setIsAddressSheetOpen(true);
+  const handleOpenAddressDialog = () => {
+    setIsAddressDialogOpen(true);
   };
 
   const handleAddressCreated = async (result: AddressActionResult) => {
-    if (!companyUuid) {
-      setIsAddressSheetOpen(false);
+    const effectiveCompanyUuid = companyUuid ?? result.companyUuid;
+
+    if (!effectiveCompanyUuid) {
+      setIsAddressDialogOpen(false);
       return;
     }
 
+    if (!companyUuid && result.companyUuid) {
+      setCompanyUuid(result.companyUuid);
+    }
+
     await queryClient.invalidateQueries({
-      queryKey: ["company-addresses", companyUuid],
+      queryKey: ["company-addresses", effectiveCompanyUuid],
     });
-    await refetchAddresses();
 
     if (result.addressId) {
       setValue("addressId", String(result.addressId), {
@@ -177,7 +169,7 @@ export const CompanyForm = ({
       });
     }
 
-    setIsAddressSheetOpen(false);
+    setIsAddressDialogOpen(false);
   };
 
   return (
@@ -221,7 +213,7 @@ export const CompanyForm = ({
                     disabled={isPending}
                     onValueChange={(value) => {
                       if (value === NEW_ADDRESS_VALUE) {
-                        void handleOpenAddressSheet();
+                        handleOpenAddressDialog();
                         return;
                       }
 
@@ -260,35 +252,30 @@ export const CompanyForm = ({
         </div>
       </form>
 
-      <Sheet open={isAddressSheetOpen} onOpenChange={setIsAddressSheetOpen}>
-        <SheetContent
-          side="right"
-          className="w-full overflow-y-auto p-0 data-[side=right]:sm:max-w-4xl"
-        >
-          <SheetHeader className="border-b bg-background px-6 py-5">
-            <SheetTitle className="flex items-center gap-2">
+      <Dialog open={isAddressDialogOpen} onOpenChange={setIsAddressDialogOpen}>
+        <DialogContent className="flex h-[85dvh] max-w-3xl flex-col gap-0 p-0">
+          <DialogHeader className="shrink-0 border-b bg-background px-6 py-5">
+            <DialogTitle className="flex items-center gap-2">
               <Plus className="size-4" />
               New Address
-            </SheetTitle>
-            <SheetDescription>
+            </DialogTitle>
+            <DialogDescription>
               Add an address for this company.
-            </SheetDescription>
-          </SheetHeader>
+            </DialogDescription>
+          </DialogHeader>
 
-          <div className="p-6">
-            {companyUuid ? (
-              <AddressForm
-                companyUuid={companyUuid}
-                lockCompany
-                cancelLabel="Close"
-                submitLabel="Save Address"
-                onCancel={() => setIsAddressSheetOpen(false)}
-                onSuccess={handleAddressCreated}
-              />
-            ) : null}
+          <div className="flex-1 overflow-y-auto p-6">
+            <AddressForm
+              companyUuid={companyUuid}
+              lockCompany={Boolean(companyUuid)}
+              cancelLabel="Close"
+              submitLabel="Save Address"
+              onCancel={() => setIsAddressDialogOpen(false)}
+              onSuccess={handleAddressCreated}
+            />
           </div>
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };

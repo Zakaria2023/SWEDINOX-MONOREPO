@@ -8,6 +8,7 @@ import { and, count, eq, like, or } from "drizzle-orm";
 
 export interface AddressActionResult {
   addressId?: number;
+  companyUuid?: string;
   error?: string;
   success?: boolean;
 }
@@ -256,7 +257,7 @@ export const createAddress = async (
     })
     .$returningId();
 
-  return { addressId: createdAddress?.id, success: true };
+  return { addressId: createdAddress?.id, companyUuid: data.companyUuid, success: true };
 };
 
 export const updateAddress = async (
