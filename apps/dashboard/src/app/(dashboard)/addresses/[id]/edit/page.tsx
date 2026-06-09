@@ -1,4 +1,4 @@
-import { AddressForm } from "../../components/address-form";
+import { AddressForm } from "@/components/addresses/address-form";
 
 type Params = Promise<{ id: string }>;
 

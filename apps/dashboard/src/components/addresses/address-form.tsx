@@ -10,15 +10,15 @@ import { Button } from "@/components/shadcn/button";
 import { Input } from "@/components/shadcn/input";
 import { Select, type SelectOption } from "@/components/shadcn/select";
 import { ErrorMessage } from "@/components/ui/error-message";
-import { cn } from "@/lib/helpers";
-import { addressCategories, availableAtOptions } from "@/lib/enums";
-import { getCompanyOptions } from "../../companies/actions";
 import {
   getAddressById,
   type AddressActionResult,
   type AddressDetail,
-} from "../actions";
-import { useAddressSubmit } from "../hooks/use-address-submit";
+} from "@/app/(dashboard)/addresses/actions";
+import { useAddressSubmit } from "@/app/(dashboard)/addresses/hooks/use-address-submit";
+import { getCompanyOptions } from "@/app/(dashboard)/companies/actions";
+import { cn } from "@/lib/helpers";
+import { addressCategories, availableAtOptions } from "@/lib/enums";
 
 type AddressFormProps = {
   addressId?: number;

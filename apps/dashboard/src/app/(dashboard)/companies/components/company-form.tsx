@@ -17,7 +17,7 @@ import {
 import { Input } from "@/components/shadcn/input";
 import { Select, type SelectOption } from "@/components/shadcn/select";
 import { ErrorMessage } from "@/components/ui/error-message";
-import { AddressForm } from "../../addresses/components/address-form";
+import { AddressForm } from "@/components/addresses/address-form";
 import {
   getAddressesByCompany,
   type AddressActionResult,

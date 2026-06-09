@@ -16,8 +16,11 @@ import {
 } from "@/components/shadcn/table";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ErrorMessage } from "@/components/ui/error-message";
-import type { AddressListItem } from "../actions";
-import { deleteAddress, getAddresses } from "../actions";
+import {
+  deleteAddress,
+  getAddresses,
+  type AddressListItem,
+} from "@/app/(dashboard)/addresses/actions";
 
 const ALL_COLUMNS = [
   { key: "id", label: "Code", defaultVisible: true },

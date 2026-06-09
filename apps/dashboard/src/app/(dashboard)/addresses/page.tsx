@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AddressesTable } from "./components/addresses-table";
+import { AddressesTable } from "@/components/addresses/addresses-table";
 
 const AddressesPage = () => (
   <div className="space-y-6 p-6">
