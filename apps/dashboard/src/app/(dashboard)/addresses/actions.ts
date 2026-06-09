@@ -157,7 +157,7 @@ export const getAddresses = async (
   const whereClause =
     searchClause && companyClause
       ? and(searchClause, companyClause)
-      : searchClause ?? companyClause;
+      : (searchClause ?? companyClause);
 
   const [results, [{ total }]] = await Promise.all([
     db
@@ -226,38 +226,42 @@ export const createAddress = async (
   const [createdAddress] = await db
     .insert(CompanyAddresses)
     .values({
-    companyUuid: data.companyUuid,
-    altName: data.altName || null,
-    poBox: data.poBox ?? false,
-    streetAndNo: data.streetAndNo || null,
-    postalCode: data.postalCode || null,
-    country: data.country || null,
-    city: data.city || null,
-    region: data.region || null,
-    house: data.house || null,
-    telephone: data.telephone || null,
-    fax: data.fax || null,
-    email: data.email || null,
-    website: data.website || null,
-    billingAttention: data.billingAttention || null,
-    billingAttentionAdditional: data.billingAttentionAdditional || null,
-    sequenceNumber: data.sequenceNumber || null,
-    category: data.category[0],
-    needCrane: data.needCrane ?? false,
-    canopyRequired: data.canopyRequired ?? false,
-    bundleSeparately: data.bundleSeparately ?? false,
-    addressComplete: data.addressComplete ?? false,
-    specialTransport: data.specialTransport ?? false,
-    availableAt: data.availableAt || null,
-    unloadingStartTime: data.unloadingStartTime || null,
-    unloadingEndTime: data.unloadingEndTime || null,
-    maxLength: data.maxLength || null,
-    maxBundleWeight: data.maxBundleWeight || null,
-    loadingInstructions: data.loadingInstructions || null,
+      companyUuid: data.companyUuid,
+      altName: data.altName || null,
+      poBox: data.poBox ?? false,
+      streetAndNo: data.streetAndNo || null,
+      postalCode: data.postalCode || null,
+      country: data.country || null,
+      city: data.city || null,
+      region: data.region || null,
+      house: data.house || null,
+      telephone: data.telephone || null,
+      fax: data.fax || null,
+      email: data.email || null,
+      website: data.website || null,
+      billingAttention: data.billingAttention || null,
+      billingAttentionAdditional: data.billingAttentionAdditional || null,
+      sequenceNumber: data.sequenceNumber || null,
+      category: data.category[0],
+      needCrane: data.needCrane ?? false,
+      canopyRequired: data.canopyRequired ?? false,
+      bundleSeparately: data.bundleSeparately ?? false,
+      addressComplete: data.addressComplete ?? false,
+      specialTransport: data.specialTransport ?? false,
+      availableAt: data.availableAt || null,
+      unloadingStartTime: data.unloadingStartTime || null,
+      unloadingEndTime: data.unloadingEndTime || null,
+      maxLength: data.maxLength || null,
+      maxBundleWeight: data.maxBundleWeight || null,
+      loadingInstructions: data.loadingInstructions || null,
     })
     .$returningId();
 
-  return { addressId: createdAddress?.id, companyUuid: data.companyUuid, success: true };
+  return {
+    addressId: createdAddress?.id,
+    companyUuid: data.companyUuid,
+    success: true,
+  };
 };
 
 export const updateAddress = async (

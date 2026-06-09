@@ -1,3 +1,4 @@
+import { InferInsertModel, InferSelectModel } from "drizzle-orm";
 import {
   char,
   int,
@@ -13,3 +14,6 @@ export const Companies = mysqlTable("Companies", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
 });
+
+export type SelectCompanies = InferSelectModel<typeof Companies>;
+export type InsertCompanies = InferInsertModel<typeof Companies>;

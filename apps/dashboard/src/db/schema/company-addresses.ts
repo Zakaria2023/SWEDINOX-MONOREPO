@@ -14,6 +14,7 @@ import {
 } from "drizzle-orm/mysql-core";
 import { Companies } from "./companies";
 import { addressCategories, availableAtOptions } from "../../lib/enums";
+import { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const CompanyAddresses = mysqlTable(
   "CompanyAddresses",
@@ -73,3 +74,6 @@ export const CompanyAddresses = mysqlTable(
     }),
   ],
 );
+
+export type SelectCompanyAddresses = InferSelectModel<typeof CompanyAddresses>;
+export type InsertCompanyAddresses = InferInsertModel<typeof CompanyAddresses>;
