@@ -10,7 +10,7 @@ import {
   type CompanyActionResult,
   type CreateCompanyInput,
 } from "./actions";
-import { companySchema, type CompanyFormValues } from "./schema";
+import { companySchema, type CompanyFormValues } from "./validation";
 
 type CompanyFormMode = "add" | "edit";
 

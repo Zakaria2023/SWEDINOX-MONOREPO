@@ -12,7 +12,7 @@ import {
   type CreateAddressInput,
   type UpdateAddressInput,
 } from "./actions";
-import { addressSchema, type AddressFormValues } from "./schema";
+import { addressSchema, type AddressFormValues } from "./validation";
 
 type AddressFormMode = "add" | "edit";
 
