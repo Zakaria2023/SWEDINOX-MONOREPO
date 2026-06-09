@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { CompanyAddresses } from "@/db/schema/company-addresses";
 import { Companies } from "@/db/schema/companies";
 import type { AddressCategory, AvailableAt } from "@/lib/enums";
+import { generateUuid } from "@/lib/helpers";
 import { and, count, eq, like, or } from "drizzle-orm";
 
 export interface AddressActionResult {
@@ -226,6 +227,7 @@ export const createAddress = async (
   const [createdAddress] = await db
     .insert(CompanyAddresses)
     .values({
+    uuid: generateUuid(),
     companyUuid: data.companyUuid,
     altName: data.altName || null,
     poBox: data.poBox ?? false,
