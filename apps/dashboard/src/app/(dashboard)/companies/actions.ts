@@ -32,6 +32,7 @@ export type CreateCompanyInput = Pick<
 export type UpdateCompanyInput = CreateCompanyInput & {
   id: number;
 };
+
 export const getCompanies = async (): Promise<CompanyListItem[]> => {
   const results = await db
     .select()
@@ -74,81 +75,22 @@ export const getCompanyById = async (
   return (company as CompanyDetail | undefined) ?? null;
 };
 
-export const createCompany = async (
-  _prevState: CompanyActionResult,
-  data: CreateCompanyInput,
-): Promise<CompanyActionResult> => {
-  const companyName = data.companyName.trim();
+// input for the createCompany: {
+//  companyName: "New Company",
+//  address: {
+//    street: "123 Main St",
+//    city: "Anytown",
+//    state: "CA",
+//    zip: "12345"
+//  }
+// }
 
-  if (!companyName) {
-    return { error: "Company name is required" };
-  }
-
-  const companyUuid = generateUuid();
-
-  await db.insert(Companies).values({
-    addressId: data.addressId ?? null,
-    uuid: companyUuid,
-    companyName,
-  });
-
-  return { companyUuid, success: true };
-};
-
-export const updateCompany = async (
-  _prevState: CompanyActionResult,
-  data: UpdateCompanyInput,
-): Promise<CompanyActionResult> => {
-  const companyName = data.companyName.trim();
-
-  if (!companyName) {
-    return { error: "Company name is required" };
-  }
-
-  const [existing] = await db
-    .select({
-      id: Companies.id,
-      uuid: Companies.uuid,
-    })
-    .from(Companies)
-    .where(eq(Companies.id, data.id))
-    .limit(1);
-
-  if (!existing) {
-    return { error: "Company not found" };
-  }
-
-  await db
-    .update(Companies)
-    .set({
-      addressId: data.addressId ?? null,
-      companyName,
-    })
-    .where(eq(Companies.id, data.id));
-
-  return {
-    companyUuid: existing.uuid,
-    success: true,
-  };
-};
-
-export const deleteCompany = async (
-  id: number,
-): Promise<CompanyActionResult> => {
-  const [company] = await db
-    .select({
-      id: Companies.id,
-      uuid: Companies.uuid,
-    })
-    .from(Companies)
-    .where(eq(Companies.id, id))
-    .limit(1);
-
-  if (!company) {
-    return { error: "Company not found" };
-  }
-
-  await db.delete(Companies).where(eq(Companies.id, id));
-
-  return { success: true };
+export const createCompany = {
+  // 1. First we pull the company name from the input
+  // 2. We pull the provided address fields from the input
+  // 3. We generate the uuid
+  // 4. We make a transaction
+  // 5. First we insert the company with the genreated uuid
+  // 6. Second we insert the address with generated uuid
+  // 7. This way we can make sure that both of them have the same uuid
 };
