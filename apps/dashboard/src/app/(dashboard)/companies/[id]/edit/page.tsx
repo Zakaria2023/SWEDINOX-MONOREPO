@@ -1,4 +1,4 @@
-import { getAddressesByCompany } from "@/app/(dashboard)/addresses/actions";
+import { getAddresses } from "@/app/(dashboard)/addresses/actions";
 import { getCompanyById } from "@/app/(dashboard)/companies/actions";
 import { CompanyForm } from "@/components/companies/company-form";
 import { unstable_noStore as noStore } from "next/cache";
@@ -11,9 +11,7 @@ const EditCompanyPage = async ({ params }: { params: Params }) => {
   const { id } = await params;
   const companyId = Number(id);
   const initialCompany = await getCompanyById(companyId);
-  const initialAddresses = initialCompany
-    ? await getAddressesByCompany(initialCompany.uuid)
-    : [];
+  const initialAddresses = await getAddresses();
 
   return (
     <div className="max-w-4xl space-y-6 p-6">

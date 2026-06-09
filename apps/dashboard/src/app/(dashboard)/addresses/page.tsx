@@ -5,10 +5,8 @@ const AddressesPage = () => (
   <div className="space-y-6 p-6">
     <div className="flex items-start justify-between">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Company Addresses</h1>
-        <p className="mt-2 text-gray-600">
-          Manage company addresses and their details
-        </p>
+        <h1 className="text-3xl font-bold text-gray-900">Addresses</h1>
+        <p className="mt-2 text-gray-600">Manage address records and details</p>
       </div>
       <Link
         href="/addresses/add"

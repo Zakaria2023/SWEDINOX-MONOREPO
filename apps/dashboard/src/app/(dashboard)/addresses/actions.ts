@@ -3,26 +3,24 @@
 import {
   db,
   type InsertCompanyAddresses,
-  type SelectCompanies,
   type SelectCompanyAddresses,
 } from "@/db";
 import { Companies } from "@/db/schema/companies";
 import { CompanyAddresses } from "@/db/schema/company-addresses";
-import { eq } from "drizzle-orm";
+import { desc, eq, getTableColumns } from "drizzle-orm";
 
 export type AddressActionResult = {
   addressId?: number;
-  companyUuid?: string;
   error?: string;
   success?: boolean;
 };
 
-export type AddressListItem = {
-  CompanyAddresses: SelectCompanyAddresses;
-  Companies: SelectCompanies | null;
+export type AddressListItem = SelectCompanyAddresses & {
+  companyCode: number | null;
+  companyName: string | null;
 };
 
-export type AddressDetail = AddressListItem;
+export type AddressDetail = SelectCompanyAddresses;
 
 export interface UpdateAddressInput extends InsertCompanyAddresses {
   id: number;
@@ -30,14 +28,18 @@ export interface UpdateAddressInput extends InsertCompanyAddresses {
 
 // Queries
 
-export const getAddresses = async () => {
-  const address = await db
-    .select()
+export const getAddresses = async (): Promise<AddressListItem[]> => {
+  const addresses = await db
+    .select({
+      ...getTableColumns(CompanyAddresses),
+      companyCode: Companies.id,
+      companyName: Companies.companyName,
+    })
     .from(CompanyAddresses)
-    .leftJoin(Companies, eq(CompanyAddresses.companyUuid, Companies.uuid))
-    .orderBy(CompanyAddresses.createdAt);
+    .leftJoin(Companies, eq(Companies.addressId, CompanyAddresses.id))
+    .orderBy(desc(CompanyAddresses.createdAt));
 
-  return address as AddressListItem[];
+  return addresses as AddressListItem[];
 };
 
 export const getAddressById = async (
@@ -46,7 +48,6 @@ export const getAddressById = async (
   const [address] = await db
     .select()
     .from(CompanyAddresses)
-    .leftJoin(Companies, eq(CompanyAddresses.companyUuid, Companies.uuid))
     .where(eq(CompanyAddresses.id, id))
     .limit(1);
 
@@ -55,29 +56,12 @@ export const getAddressById = async (
   return address as AddressDetail;
 };
 
-export const getAddressesByCompany = async (
-  companyUuid: string,
-): Promise<AddressListItem[]> => {
-  const addressesByCompany = await db
-    .select()
-    .from(CompanyAddresses)
-    .leftJoin(Companies, eq(CompanyAddresses.companyUuid, Companies.uuid))
-    .where(eq(CompanyAddresses.companyUuid, companyUuid))
-    .orderBy(CompanyAddresses.sequenceNumber, CompanyAddresses.createdAt);
-
-  return addressesByCompany as AddressListItem[];
-};
-
 // Mutations
 
 export const createAddress = async (
   _prevState: AddressActionResult,
   data: InsertCompanyAddresses,
 ): Promise<AddressActionResult> => {
-  if (!data.companyUuid) {
-    return { error: "Company is required" };
-  }
-
   if (!data.category.length) {
     return { error: "Address category is required" };
   }
@@ -85,7 +69,7 @@ export const createAddress = async (
   const [createdAddress] = await db
     .insert(CompanyAddresses)
     .values({
-      companyUuid: data.companyUuid,
+      companyUuid: data.companyUuid || null,
       altName: data.altName || null,
       poBox: data.poBox ?? false,
       streetAndNo: data.streetAndNo || null,
@@ -118,7 +102,6 @@ export const createAddress = async (
 
   return {
     addressId: createdAddress?.id,
-    companyUuid: data.companyUuid,
     success: true,
   };
 };
@@ -127,10 +110,6 @@ export const updateAddress = async (
   _prevState: AddressActionResult,
   data: UpdateAddressInput,
 ): Promise<AddressActionResult> => {
-  if (!data.companyUuid) {
-    return { error: "Company is required" };
-  }
-
   if (!data.category.length) {
     return { error: "Address category is required" };
   }
@@ -148,7 +127,7 @@ export const updateAddress = async (
   await db
     .update(CompanyAddresses)
     .set({
-      companyUuid: data.companyUuid,
+      companyUuid: data.companyUuid || null,
       altName: data.altName || null,
       poBox: data.poBox ?? false,
       streetAndNo: data.streetAndNo || null,

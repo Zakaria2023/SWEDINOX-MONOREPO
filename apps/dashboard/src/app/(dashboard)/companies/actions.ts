@@ -1,7 +1,6 @@
 "use server";
 
 import { db, type InsertCompanies, type SelectCompanies } from "@/db";
-import { CompanyAddresses } from "@/db/schema/company-addresses";
 import { Companies } from "@/db/schema/companies";
 import { generateUuid } from "@/lib/helpers";
 import { desc, eq } from "drizzle-orm";
@@ -25,7 +24,7 @@ export interface CompanyOptionsResult {
   error?: string;
 }
 
-export type CreateCompanyInput = Pick<InsertCompanies, "companyName">;
+export type CreateCompanyInput = Pick<InsertCompanies, "addressId" | "companyName">;
 
 export interface UpdateCompanyInput extends CreateCompanyInput {
   id: number;
@@ -78,6 +77,7 @@ export const createCompany = async (
   const companyUuid = generateUuid();
 
   await db.insert(Companies).values({
+    addressId: data.addressId ?? null,
     uuid: companyUuid,
     companyName,
   });
@@ -110,7 +110,10 @@ export const updateCompany = async (
 
   await db
     .update(Companies)
-    .set({ companyName })
+    .set({
+      addressId: data.addressId ?? null,
+      companyName,
+    })
     .where(eq(Companies.id, data.id));
 
   return {
@@ -133,18 +136,6 @@ export const deleteCompany = async (
 
   if (!company) {
     return { error: "Company not found" };
-  }
-
-  const [linkedAddress] = await db
-    .select({ id: CompanyAddresses.id })
-    .from(CompanyAddresses)
-    .where(eq(CompanyAddresses.companyUuid, company.uuid))
-    .limit(1);
-
-  if (linkedAddress) {
-    return {
-      error: "Delete the company addresses before deleting this company.",
-    };
   }
 
   await db.delete(Companies).where(eq(Companies.id, id));

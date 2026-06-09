@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  getAddressesByCompany,
+  getAddresses,
   type AddressActionResult,
   type AddressListItem,
 } from "@/app/(dashboard)/addresses/actions";
@@ -37,18 +37,11 @@ const NEW_ADDRESS_VALUE = "__new_address__";
 
 const formatAddressLabel = (address: AddressListItem) => {
   const primaryLabel =
-    address.CompanyAddresses.altName ||
-    address.CompanyAddresses.streetAndNo ||
-    [address.CompanyAddresses.postalCode, address.CompanyAddresses.city]
-      .filter(Boolean)
-      .join(" ") ||
-    `Address #${address.CompanyAddresses.id}`;
-  const secondaryLabel = [
-    address.CompanyAddresses.city,
-    address.CompanyAddresses.country,
-  ]
-    .filter(Boolean)
-    .join(", ");
+    address.altName ||
+    address.streetAndNo ||
+    [address.postalCode, address.city].filter(Boolean).join(" ") ||
+    `Address #${address.id}`;
+  const secondaryLabel = [address.city, address.country].filter(Boolean).join(", ");
 
   return secondaryLabel && secondaryLabel !== primaryLabel
     ? `${primaryLabel} - ${secondaryLabel}`
@@ -67,13 +60,9 @@ export const CompanyForm = ({
   const [isAddressDialogOpen, setIsAddressDialogOpen] = useState(false);
   const [isAddressesLoading, setIsAddressesLoading] = useState(false);
   const {
-    companyUuid,
-    ensureCompanyCreated,
     form,
     isPending,
-    isPersisted,
     onSubmit,
-    setCompanyUuid,
     state,
   } = useCompanySubmit({ companyId, mode });
   const {
@@ -81,7 +70,6 @@ export const CompanyForm = ({
     register,
     reset,
     setValue,
-    watch,
     formState: { errors },
   } = form;
 
@@ -91,11 +79,10 @@ export const CompanyForm = ({
     }
 
     reset({
-      addressId: "",
+      addressId: initialCompany.addressId ? String(initialCompany.addressId) : "",
       companyName: initialCompany.companyName,
     });
-    setCompanyUuid(initialCompany.uuid);
-  }, [initialCompany, reset, setCompanyUuid]);
+  }, [initialCompany, reset]);
 
   useEffect(() => {
     setAddresses(initialAddresses);
@@ -108,7 +95,7 @@ export const CompanyForm = ({
   const addressOptions: SelectOption[] = [
     ...addresses.map((address) => ({
       label: formatAddressLabel(address),
-      value: String(address.CompanyAddresses.id),
+      value: String(address.id),
     })),
     {
       label: "+ Add new address",
@@ -118,37 +105,15 @@ export const CompanyForm = ({
 
   const handleOpenAddressDialog = async () => {
     setAddressLoadError("");
-
-    const result = await ensureCompanyCreated();
-
-    if (!result.success || !result.companyUuid) {
-      return;
-    }
-
-    if (!companyUuid) {
-      setCompanyUuid(result.companyUuid);
-    }
-
     setIsAddressDialogOpen(true);
   };
 
   const handleAddressCreated = async (result: AddressActionResult) => {
-    const effectiveCompanyUuid = companyUuid ?? result.companyUuid;
-
-    if (!effectiveCompanyUuid) {
-      setIsAddressDialogOpen(false);
-      return;
-    }
-
-    if (!companyUuid && result.companyUuid) {
-      setCompanyUuid(result.companyUuid);
-    }
-
     setIsAddressesLoading(true);
     setAddressLoadError("");
 
     try {
-      const nextAddresses = await getAddressesByCompany(effectiveCompanyUuid);
+      const nextAddresses = await getAddresses();
       setAddresses(nextAddresses);
 
       if (result.addressId) {
@@ -157,7 +122,7 @@ export const CompanyForm = ({
         });
       }
     } catch (error) {
-      console.error("Failed to refresh company addresses", error);
+      console.error("Failed to refresh addresses", error);
       setAddressLoadError(
         "Address saved, but the list could not be refreshed.",
       );
@@ -223,13 +188,7 @@ export const CompanyForm = ({
         <FormActions
           isPending={isPending}
           onCancel={() => router.push("/companies")}
-          submitLabel={
-            mode === "edit"
-              ? "Save Changes"
-              : isPersisted
-                ? "Done"
-                : "Create Company"
-          }
+          submitLabel={mode === "edit" ? "Save Changes" : "Create Company"}
         />
       </form>
 
@@ -240,16 +199,11 @@ export const CompanyForm = ({
               <Plus className="size-4" />
               New Address
             </DialogTitle>
-            <DialogDescription>
-              Add an address for this company.
-            </DialogDescription>
+            <DialogDescription>Add an address.</DialogDescription>
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto p-6">
             <AddressForm
-              companyUuid={companyUuid}
-              lockCompany={Boolean(companyUuid)}
-              lockedCompanyName={watch("companyName")}
               cancelLabel="Close"
               submitLabel="Save Address"
               onCancel={() => setIsAddressDialogOpen(false)}

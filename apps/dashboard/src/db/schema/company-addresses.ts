@@ -25,7 +25,7 @@ export const CompanyAddresses = mysqlTable(
   {
     id: int("id").primaryKey().autoincrement(),
 
-    companyUuid: char("company_uuid", { length: 36 }).notNull(),
+    companyUuid: char("company_uuid", { length: 36 }),
 
     altName: varchar("alt_name", { length: 255 }),
     poBox: boolean("po_box").default(false),

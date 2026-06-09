@@ -18,14 +18,12 @@ type AddressFormMode = "add" | "edit";
 
 type UseAddressSubmitOptions = {
   addressId?: number;
-  companyUuid?: string;
   mode?: AddressFormMode;
   onSuccess?: (state: AddressActionResult) => void | Promise<void>;
 };
 
 export const useAddressSubmit = ({
   addressId,
-  companyUuid,
   mode = "add",
   onSuccess,
 }: UseAddressSubmitOptions = {}) => {
@@ -36,7 +34,6 @@ export const useAddressSubmit = ({
   const form = useForm<AddressFormValues>({
     resolver: zodResolver(addressSchema),
     defaultValues: {
-      companyUuid: companyUuid ?? "",
       category: [],
       availableAt: "",
       billingAttention: "",

@@ -13,7 +13,6 @@ import { ErrorMessage } from "@/components/ui/error-message";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import { FormSelectField } from "@/components/ui/form-select-field";
 import { addressCategories, availableAtOptions } from "@/lib/enums";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { FormError } from "../ui/form-error";
@@ -21,12 +20,7 @@ import { FormError } from "../ui/form-error";
 type AddressFormProps = {
   addressId?: number;
   cancelLabel?: string;
-  companyOptions?: SelectOption[];
-  companyOptionsError?: string;
-  companyUuid?: string;
   initialAddress?: AddressDetail | null;
-  lockCompany?: boolean;
-  lockedCompanyName?: string;
   mode?: "add" | "edit";
   onCancel?: () => void;
   onSuccess?: (state: AddressActionResult) => void | Promise<void>;
@@ -69,59 +63,50 @@ const BOOLEAN_FIELDS = [
 ] as const;
 
 const mapAddressToFormValues = (address: AddressDetail) => ({
-  addressComplete: address.CompanyAddresses.addressComplete ?? false,
-  altName: address.CompanyAddresses.altName ?? "",
-  availableAt: address.CompanyAddresses.availableAt ?? "",
-  billingAttention: address.CompanyAddresses.billingAttention ?? "",
-  billingAttentionAdditional:
-    address.CompanyAddresses.billingAttentionAdditional ?? "",
-  bundleSeparately: address.CompanyAddresses.bundleSeparately ?? false,
-  canopyRequired: address.CompanyAddresses.canopyRequired ?? false,
-  category: address.CompanyAddresses.category,
-  city: address.CompanyAddresses.city ?? "",
-  companyUuid: address.CompanyAddresses.companyUuid,
-  country: address.CompanyAddresses.country ?? "",
-  email: address.CompanyAddresses.email ?? "",
-  fax: address.CompanyAddresses.fax ?? "",
-  house: address.CompanyAddresses.house ?? "",
-  loadingInstructions: address.CompanyAddresses.loadingInstructions ?? "",
-  maxBundleWeight: address.CompanyAddresses.maxBundleWeight ?? "",
-  maxLength: address.CompanyAddresses.maxLength ?? "",
-  needCrane: address.CompanyAddresses.needCrane ?? false,
-  poBox: address.CompanyAddresses.poBox ?? false,
-  postalCode: address.CompanyAddresses.postalCode ?? "",
-  region: address.CompanyAddresses.region ?? "",
+  addressComplete: address.addressComplete ?? false,
+  altName: address.altName ?? "",
+  availableAt: address.availableAt ?? "",
+  billingAttention: address.billingAttention ?? "",
+  billingAttentionAdditional: address.billingAttentionAdditional ?? "",
+  bundleSeparately: address.bundleSeparately ?? false,
+  canopyRequired: address.canopyRequired ?? false,
+  category: address.category,
+  city: address.city ?? "",
+  country: address.country ?? "",
+  email: address.email ?? "",
+  fax: address.fax ?? "",
+  house: address.house ?? "",
+  loadingInstructions: address.loadingInstructions ?? "",
+  maxBundleWeight: address.maxBundleWeight ?? "",
+  maxLength: address.maxLength ?? "",
+  needCrane: address.needCrane ?? false,
+  poBox: address.poBox ?? false,
+  postalCode: address.postalCode ?? "",
+  region: address.region ?? "",
   sequenceNumber:
-    address.CompanyAddresses.sequenceNumber === null
+    address.sequenceNumber === null
       ? ""
-      : String(address.CompanyAddresses.sequenceNumber),
-  specialTransport: address.CompanyAddresses.specialTransport ?? false,
-  streetAndNo: address.CompanyAddresses.streetAndNo ?? "",
-  telephone: address.CompanyAddresses.telephone ?? "",
-  unloadingEndTime: address.CompanyAddresses.unloadingEndTime ?? "",
-  unloadingStartTime: address.CompanyAddresses.unloadingStartTime ?? "",
-  website: address.CompanyAddresses.website ?? "",
+      : String(address.sequenceNumber),
+  specialTransport: address.specialTransport ?? false,
+  streetAndNo: address.streetAndNo ?? "",
+  telephone: address.telephone ?? "",
+  unloadingEndTime: address.unloadingEndTime ?? "",
+  unloadingStartTime: address.unloadingStartTime ?? "",
+  website: address.website ?? "",
 });
 
 export const AddressForm = ({
   addressId,
   cancelLabel = "Cancel",
-  companyOptions = [],
-  companyOptionsError,
-  companyUuid,
   initialAddress,
-  lockCompany = false,
-  lockedCompanyName,
   mode = "add",
   onCancel,
   onSuccess,
   submitLabel,
 }: AddressFormProps) => {
   const router = useRouter();
-  const isCompanyLocked = lockCompany && Boolean(companyUuid);
   const { form, onSubmit, isPending, state } = useAddressSubmit({
     addressId,
-    companyUuid,
     mode,
     onSuccess,
   });
@@ -129,21 +114,9 @@ export const AddressForm = ({
     control,
     register,
     reset,
-    setValue,
     watch,
     formState: { errors },
   } = form;
-
-  useEffect(() => {
-    if (!companyUuid) {
-      return;
-    }
-
-    setValue("companyUuid", companyUuid, {
-      shouldDirty: false,
-      shouldValidate: true,
-    });
-  }, [companyUuid, setValue]);
 
   useEffect(() => {
     if (!initialAddress) {
@@ -163,19 +136,6 @@ export const AddressForm = ({
   const selectedCategories = watch("category") ?? [];
   const showBillingSettings = selectedCategories.includes("invoice");
   const showDeliverySettings = selectedCategories.includes("delivery");
-  const selectedCompanyUuid = watch("companyUuid");
-  const selectedCompanyName =
-    companyOptions.find((company) => company.value === selectedCompanyUuid)
-      ?.label ??
-    lockedCompanyName ??
-    initialAddress?.Companies?.companyName ??
-    "";
-  const companyErrorMessage = companyOptionsError ?? "";
-  const companyPlaceholder = isCompanyLocked
-    ? "Selected company"
-    : companyOptions.length > 0
-      ? "Select a company"
-      : "No companies available";
 
   const handleCancel = () => {
     if (onCancel) {
@@ -193,55 +153,6 @@ export const AddressForm = ({
           Basic Info
         </h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div>
-            {isCompanyLocked ? (
-              <>
-                <FormLabel htmlFor="companyUuid" required>
-                  Company
-                </FormLabel>
-                <Input
-                  id="companyUuid"
-                  value={selectedCompanyName}
-                  placeholder={companyPlaceholder}
-                  readOnly
-                  disabled
-                />
-              </>
-            ) : (
-              <FormSelectField
-                control={control}
-                id="companyUuid"
-                invalid={!!errors.companyUuid}
-                label="Company"
-                name="companyUuid"
-                options={companyOptions}
-                placeholder={companyPlaceholder}
-                required
-                disabled={companyOptions.length === 0}
-                emptyValue={EMPTY_SELECT_VALUE}
-                errorMessage={errors.companyUuid?.message}
-              />
-            )}
-            {companyErrorMessage ? (
-              <FormFieldError message={companyErrorMessage} />
-            ) : isCompanyLocked ? (
-              <p className="mt-1 text-sm text-muted-foreground">
-                This address will be linked to{" "}
-                <span className="font-medium text-foreground">
-                  {selectedCompanyName || "the selected company"}
-                </span>
-                .
-              </p>
-            ) : (
-              <p className="mt-1 text-sm text-muted-foreground">
-                Don&apos;t see the company? Create it first in{" "}
-                <Link href="/companies" className="font-medium text-primary">
-                  Companies
-                </Link>
-                .
-              </p>
-            )}
-          </div>
           <div>
             <FormLabel htmlFor="altName">Alternative Name</FormLabel>
             <Input id="altName" {...register("altName")} />

@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import {
   createCompany,
@@ -16,22 +16,17 @@ type CompanyFormMode = "add" | "edit";
 
 type UseCompanySubmitOptions = {
   companyId?: number;
-  companyUuid?: string;
   mode?: CompanyFormMode;
   onSuccess?: (state: CompanyActionResult) => void | Promise<void>;
 };
 
 export const useCompanySubmit = ({
   companyId,
-  companyUuid: initialCompanyUuid,
   mode = "add",
   onSuccess,
 }: UseCompanySubmitOptions = {}) => {
   const router = useRouter();
   const [state, setState] = useState<CompanyActionResult>({});
-  const [companyUuid, setCompanyUuid] = useState<string | undefined>(
-    initialCompanyUuid,
-  );
   const [isPending, setIsPending] = useState(false);
 
   const form = useForm<CompanyFormValues>({
@@ -41,12 +36,6 @@ export const useCompanySubmit = ({
       companyName: "",
     },
   });
-
-  useEffect(() => {
-    if (initialCompanyUuid) {
-      setCompanyUuid(initialCompanyUuid);
-    }
-  }, [initialCompanyUuid]);
 
   const persistCompany = async (input: CreateCompanyInput) => {
     setIsPending(true);
@@ -58,10 +47,6 @@ export const useCompanySubmit = ({
           : await createCompany({}, input);
 
       setState(nextState);
-
-      if (nextState.success && nextState.companyUuid) {
-        setCompanyUuid(nextState.companyUuid);
-      }
 
       return nextState;
     } catch (error) {
@@ -77,29 +62,10 @@ export const useCompanySubmit = ({
     }
   };
 
-  const ensureCompanyCreated = async () => {
-    if (companyUuid) {
-      return { companyUuid, success: true };
-    }
-
-    const isValid = await form.trigger("companyName");
-
-    if (!isValid) {
-      return { error: "Company name is required" };
-    }
-
-    const companyName = form.getValues("companyName").trim();
-    return persistCompany({ companyName });
-  };
-
   const onSubmit = form.handleSubmit(async (data) => {
-    if (mode === "add" && companyUuid) {
-      router.push("/companies");
-      return;
-    }
-
     const nextState = await persistCompany({
       companyName: data.companyName,
+      addressId: data.addressId ? parseInt(data.addressId, 10) : undefined,
     });
 
     if (!nextState.success) {
@@ -115,13 +81,9 @@ export const useCompanySubmit = ({
   });
 
   return {
-    companyUuid,
-    ensureCompanyCreated,
     form,
     isPending,
-    isPersisted: Boolean(companyUuid),
     onSubmit,
-    setCompanyUuid,
     state,
   };
 };
