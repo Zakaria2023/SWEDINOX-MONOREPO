@@ -61,6 +61,33 @@ export const communicationSettingShapes = [
 export type CommunicationSettingShape =
   (typeof communicationSettingShapes)[number];
 
+export const companyDocumentTypes = [
+  "contract",
+  "certificate",
+  "invoice",
+  "tax_document",
+  "identity_document",
+  "bank_document",
+  "legal_document",
+  "other",
+] as const satisfies readonly string[];
+
+export type CompanyDocumentType = (typeof companyDocumentTypes)[number];
+
+export const companyRoleTypes = [
+  "customer",
+  "supplier",
+  "prospect",
+  "creditor",
+  "debtor",
+  "processor",
+  "transporter",
+  "agent",
+  "other",
+] as const satisfies readonly string[];
+
+export type CompanyRoleType = (typeof companyRoleTypes)[number];
+
 export const locationTypes = [
   "pick",
   "bulk",
