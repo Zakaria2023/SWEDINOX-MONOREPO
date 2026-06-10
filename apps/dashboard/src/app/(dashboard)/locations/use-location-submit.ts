@@ -43,7 +43,7 @@ export const useLocationSubmit = () => {
         blockedForOptimization: values.blockedForOptimization,
         limitedDimensions: values.limitedDimensions,
         adoptFrom: values.adoptFrom || undefined,
-        adoptPosition: values.adoptPosition,
+        adoptPosition: values.adoptPosition ?? "below",
       });
       setState(result);
     });

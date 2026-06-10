@@ -6,13 +6,15 @@ export const locationSchema = z.object({
   locationType: z.enum(locationTypes, { error: "Location type is required" }),
   loadingLocationUuid: z.string().optional(),
   addressUuid: z.string().optional(),
-  pickingSequence: z.union([z.coerce.number().int().nonnegative(), z.literal(""), z.undefined()]),
-  isBlocked: z.boolean().default(false),
+  // Keep as string; submit handler calls Number() — avoids z.coerce input/output divergence
+  pickingSequence: z.union([z.string(), z.literal(""), z.undefined()]),
+  isBlocked: z.boolean(),
   blockedReason: z.string().optional(),
-  blockedForOptimization: z.boolean().default(false),
-  limitedDimensions: z.boolean().default(false),
+  blockedForOptimization: z.boolean(),
+  limitedDimensions: z.boolean(),
   adoptFrom: z.string().optional(),
-  adoptPosition: z.enum(locationAdoptPositions).default("below"),
+  // No .default(); default lives in useForm's defaultValues
+  adoptPosition: z.enum(locationAdoptPositions).optional(),
 });
 
 export type LocationFormValues = z.infer<typeof locationSchema>;
