@@ -1,3 +1,4 @@
+import { InferInsertModel, InferSelectModel } from "drizzle-orm";
 import {
   boolean,
   char,
@@ -13,12 +14,8 @@ import {
   timestamp,
   varchar,
 } from "drizzle-orm/mysql-core";
+import { availableAtOptions, type AddressCategory } from "../../lib/enums";
 import { Companies } from "./companies";
-import {
-  availableAtOptions,
-  type AddressCategory,
-} from "../../lib/enums";
-import { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const CompanyAddresses = mysqlTable(
   "CompanyAddresses",
@@ -46,6 +43,9 @@ export const CompanyAddresses = mysqlTable(
     billingAttentionAdditional: varchar("billing_attention_additional", {
       length: 255,
     }),
+
+    gln: varchar("gln", { length: 13 }),
+    peopleId: varchar("gln", { length: 13 }),
 
     sequenceNumber: int("sequence_number"),
 
