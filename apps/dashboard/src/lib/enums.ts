@@ -122,6 +122,20 @@ export const bankAccountTypes = [
 
 export type BankAccountType = (typeof bankAccountTypes)[number];
 
+export const companyCertificateTypes = [
+  "quality",
+  "safety",
+  "tax",
+  "vat",
+  "iso",
+  "insurance",
+  "compliance",
+  "other",
+] as const satisfies readonly string[];
+
+export type CompanyCertificateType =
+  (typeof companyCertificateTypes)[number];
+
 export const locationTypes = [
   "pick",
   "bulk",
