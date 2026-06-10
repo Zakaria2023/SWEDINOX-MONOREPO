@@ -1,10 +1,10 @@
 "use server";
 
 import {
-  db,
+  CommunicationSettings,
   Companies,
   Contacts,
-  CommunicationSettings,
+  db,
   type InsertCommunicationSettings,
 } from "@/db";
 import { requireAuth } from "@/lib/auth";
@@ -42,10 +42,13 @@ export type CompanyOption = {
 
 export type ContactOption = {
   uuid: string;
-  fullName: string;
+  code: string;
+  description: string;
 };
 
-export const getCommunicationSettings = async (): Promise<CommunicationSettingListItem[]> => {
+export const getCommunicationSettings = async (): Promise<
+  CommunicationSettingListItem[]
+> => {
   const rows = await db
     .select({
       id: CommunicationSettings.id,
@@ -75,21 +78,29 @@ export const getCompaniesForSelect = async (): Promise<CompanyOption[]> =>
 
 export const getContactsForSelect = async (): Promise<ContactOption[]> =>
   db
-    .select({ uuid: Contacts.uuid, fullName: Contacts.fullName })
+    .select({
+      uuid: Contacts.uuid,
+      code: Contacts.code,
+      description: Contacts.description,
+    })
     .from(Contacts)
-    .orderBy(Contacts.fullName);
+    .orderBy(Contacts.code);
 
 export const createCommunicationSetting = async (
   input: CommunicationSettingInput,
 ): Promise<CommunicationSettingActionResult> => {
   try {
     const modifiedByUserId = await requireAuth();
-    await db.insert(CommunicationSettings).values({ ...input, modifiedByUserId });
+    await db
+      .insert(CommunicationSettings)
+      .values({ ...input, modifiedByUserId });
     return { success: true };
   } catch (error) {
     return {
       error:
-        error instanceof Error ? error.message : "Failed to create communication setting",
+        error instanceof Error
+          ? error.message
+          : "Failed to create communication setting",
     };
   }
 };

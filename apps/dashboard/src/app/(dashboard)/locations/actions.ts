@@ -2,8 +2,6 @@
 
 import {
   db,
-  Companies,
-  CompanyAddresses,
   LoadingLocations,
   Locations,
   type InsertLocations,
@@ -11,7 +9,7 @@ import {
   type SelectLoadingLocations,
 } from "@/db";
 import { generateUuid } from "@/lib/helpers";
-import { desc, eq } from "drizzle-orm";
+import { desc } from "drizzle-orm";
 
 export type LocationInput = Omit<
   InsertLocations,
@@ -28,11 +26,9 @@ export type LocationListItem = SelectLocations;
 
 export type LoadingLocationOption = Pick<SelectLoadingLocations, "uuid" | "name">;
 
-export type AddressOption = {
+export type LocationSelectOption = {
   uuid: string;
-  companyName: string;
-  streetAndNo: string | null;
-  city: string | null;
+  name: string;
 };
 
 export const getLocations = async (): Promise<LocationListItem[]> =>
@@ -44,19 +40,11 @@ export const getLoadingLocations = async (): Promise<LoadingLocationOption[]> =>
     .from(LoadingLocations)
     .orderBy(LoadingLocations.name);
 
-export const getAddressesForSelect = async (): Promise<AddressOption[]> => {
-  const rows = await db
-    .select({
-      uuid: CompanyAddresses.uuid,
-      companyName: Companies.companyName,
-      streetAndNo: CompanyAddresses.streetAndNo,
-      city: CompanyAddresses.city,
-    })
-    .from(CompanyAddresses)
-    .innerJoin(Companies, eq(Companies.uuid, CompanyAddresses.companyUuid))
-    .orderBy(Companies.companyName);
-  return rows;
-};
+export const getLocationsForSelect = async (): Promise<LocationSelectOption[]> =>
+  db
+    .select({ uuid: Locations.uuid, name: Locations.name })
+    .from(Locations)
+    .orderBy(Locations.name);
 
 export const createLocation = async (
   input: LocationInput,

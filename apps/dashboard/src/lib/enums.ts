@@ -48,6 +48,50 @@ export const contactSalutations = [
 
 export type ContactSalutation = (typeof contactSalutations)[number];
 
+export const companyLangs = [
+  "dutch",
+  "arabic",
+  "english",
+] as const satisfies readonly string[];
+
+export type CompanyLang = (typeof companyLangs)[number];
+
+export const companyRoles = [
+  "customer",
+  "prospect",
+  "supplier",
+  "processor",
+  "transporter",
+  "agent",
+  "purchasing_org",
+  "other",
+  "internal",
+] as const satisfies readonly string[];
+
+export type CompanyRole = (typeof companyRoles)[number];
+
+export const contactTypes = [
+  "gross_prices",
+  "options",
+  "net_prices",
+  "cost_price",
+  "surcharges",
+  "toeslagen",
+] as const satisfies readonly string[];
+
+export type ContactType = (typeof contactTypes)[number];
+
+export const companyContactCategories = [
+  "procurement",
+  "sales",
+  "warehouse",
+  "management",
+  "bookkeeping",
+  "certificates",
+] as const satisfies readonly string[];
+
+export type CompanyContactCategory = (typeof companyContactCategories)[number];
+
 export const communicationSettingDocumentTypes = [
   "order_status_message",
   "bill_of_lading",

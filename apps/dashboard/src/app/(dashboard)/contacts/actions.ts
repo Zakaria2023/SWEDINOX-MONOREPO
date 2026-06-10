@@ -2,23 +2,16 @@
 
 import {
   db,
-  Companies,
-  CompanyAddresses,
-  ContactCategories,
-  ContactCategoryLinks,
+  ContactGroups,
   Contacts,
-  Locations,
   type InsertContacts,
-  type SelectContactCategories,
+  type SelectContactGroups,
   type SelectContacts,
 } from "@/db";
 import { generateUuid } from "@/lib/helpers";
-import { desc, eq } from "drizzle-orm";
+import { desc } from "drizzle-orm";
 
-export type ContactInput = Omit<
-  InsertContacts,
-  "id" | "uuid" | "createdAt" | "updatedAt"
->;
+export type ContactInput = Omit<InsertContacts, "id" | "uuid" | "createdAt" | "updatedAt">;
 
 export type ContactActionResult = {
   contactUuid?: string;
@@ -27,73 +20,29 @@ export type ContactActionResult = {
 };
 
 export type ContactListItem = SelectContacts;
-export type ContactCategoryOption = Pick<SelectContactCategories, "uuid" | "name">;
+export type ContactGroupOption = Pick<SelectContactGroups, "uuid" | "name">;
 
-export type AddressOption = {
-  uuid: string;
-  companyName: string;
-  streetAndNo: string | null;
-  city: string | null;
-};
-
-export type LocationOption = {
-  uuid: string;
-  name: string;
-};
-
-export const getContacts = async (): Promise<ContactListItem[]> =>
-  db.select().from(Contacts).orderBy(desc(Contacts.createdAt));
-
-export const getContactCategories = async (): Promise<ContactCategoryOption[]> =>
-  db
-    .select({ uuid: ContactCategories.uuid, name: ContactCategories.name })
-    .from(ContactCategories)
-    .where(eq(ContactCategories.isActive, true))
-    .orderBy(ContactCategories.name);
-
-export const getAddressesForSelect = async (): Promise<AddressOption[]> => {
-  const rows = await db
-    .select({
-      uuid: CompanyAddresses.uuid,
-      companyName: Companies.companyName,
-      streetAndNo: CompanyAddresses.streetAndNo,
-      city: CompanyAddresses.city,
-    })
-    .from(CompanyAddresses)
-    .innerJoin(Companies, eq(Companies.uuid, CompanyAddresses.companyUuid))
-    .orderBy(Companies.companyName);
+export const getContacts = async (): Promise<ContactListItem[]> => {
+  const rows = await db.select().from(Contacts).orderBy(desc(Contacts.createdAt));
   return rows;
 };
 
-export const getLocationsForSelect = async (): Promise<LocationOption[]> =>
-  db
-    .select({ uuid: Locations.uuid, name: Locations.name })
-    .from(Locations)
-    .orderBy(Locations.name);
+export const getContactGroups = async (): Promise<ContactGroupOption[]> => {
+  const rows = await db
+    .select({ uuid: ContactGroups.uuid, name: ContactGroups.name })
+    .from(ContactGroups)
+    .orderBy(ContactGroups.name);
+  return rows;
+};
 
-export const createContact = async (
-  input: ContactInput,
-  categoryUuids: string[] = [],
-): Promise<ContactActionResult> => {
-  const contactUuid = generateUuid();
-
+export const createContact = async (input: ContactInput): Promise<ContactActionResult> => {
+  const uuid = generateUuid();
   try {
-    await db.transaction(async (tx) => {
-      await tx.insert(Contacts).values({ ...input, uuid: contactUuid });
-
-      for (const categoryUuid of categoryUuids) {
-        await tx.insert(ContactCategoryLinks).values({
-          contactUuid,
-          contactCategoryUuid: categoryUuid,
-        });
-      }
-    });
-
-    return { success: true, contactUuid };
+    await db.insert(Contacts).values({ ...input, uuid });
+    return { success: true, contactUuid: uuid };
   } catch (error) {
     return {
-      error:
-        error instanceof Error ? error.message : "Failed to create contact",
+      error: error instanceof Error ? error.message : "Failed to create contact",
     };
   }
 };

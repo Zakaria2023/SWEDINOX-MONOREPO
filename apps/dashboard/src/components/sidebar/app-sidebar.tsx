@@ -22,10 +22,17 @@ import { cn } from "@/lib/helpers";
 
 export const AppSidebar = () => {
   const pathname = usePathname();
+
   const isCustomersActive = pathname.startsWith("/addresses");
-  const isCompanyActive = pathname.startsWith("/companies");
+  const isCompanyActive =
+    pathname.startsWith("/companies") ||
+    pathname.startsWith("/company-contacts") ||
+    pathname.startsWith("/contacts") ||
+    pathname.startsWith("/contact-groups");
+
   const [isCustomersOpen, setIsCustomersOpen] = useState(false);
   const [isCompanyOpen, setIsCompanyOpen] = useState(false);
+
   const isCustomersExpanded = isCustomersOpen || isCustomersActive;
   const isCompanyExpanded = isCompanyOpen || isCompanyActive;
 
@@ -40,10 +47,12 @@ export const AppSidebar = () => {
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
+
+              {/* ── Customers ── */}
               <SidebarMenuItem>
                 <SidebarMenuButton
                   aria-expanded={isCustomersExpanded}
-                  onClick={() => setIsCustomersOpen((isOpen) => !isOpen)}
+                  onClick={() => setIsCustomersOpen((o) => !o)}
                 >
                   <Users />
                   <span>Customers</span>
@@ -67,10 +76,11 @@ export const AppSidebar = () => {
                 )}
               </SidebarMenuItem>
 
+              {/* ── Company ── */}
               <SidebarMenuItem>
                 <SidebarMenuButton
                   aria-expanded={isCompanyExpanded}
-                  onClick={() => setIsCompanyOpen((isOpen) => !isOpen)}
+                  onClick={() => setIsCompanyOpen((o) => !o)}
                 >
                   <Building2 />
                   <span>Company</span>
@@ -85,14 +95,42 @@ export const AppSidebar = () => {
                     <SidebarMenuSubItem>
                       <SidebarMenuSubButton
                         render={<Link href="/companies" />}
-                        isActive={pathname.startsWith("/companies")}
+                        isActive={
+                          pathname === "/companies" ||
+                          pathname.startsWith("/companies/")
+                        }
                       >
                         <span>Companies</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/company-contacts" />}
+                        isActive={pathname.startsWith("/company-contacts")}
+                      >
+                        <span>Company Contacts</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/contacts" />}
+                        isActive={pathname.startsWith("/contacts")}
+                      >
+                        <span>Contacts</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/contact-groups" />}
+                        isActive={pathname.startsWith("/contact-groups")}
+                      >
+                        <span>Contact Groups</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                   </SidebarMenuSub>
                 )}
               </SidebarMenuItem>
+
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

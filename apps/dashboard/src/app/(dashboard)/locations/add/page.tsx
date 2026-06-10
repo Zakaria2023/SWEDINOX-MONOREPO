@@ -1,4 +1,5 @@
-import { getAddressesForSelect, getLoadingLocations } from "@/app/(dashboard)/locations/actions";
+import { getLoadingLocations } from "@/app/(dashboard)/locations/actions";
+import { getAddressesForSelect } from "@/app/(dashboard)/addresses/actions";
 import { LocationForm } from "@/components/locations/location-form";
 
 const AddLocationPage = async () => {

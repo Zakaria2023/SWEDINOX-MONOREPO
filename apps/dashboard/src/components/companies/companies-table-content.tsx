@@ -47,7 +47,9 @@ export const CompaniesTableContent = ({
       case "id":
         return <TableCell key={key} className="font-medium">{company.id}</TableCell>;
       case "companyName":
-        return <TableCell key={key}>{company.companyName}</TableCell>;
+        return (
+          <TableCell key={key} className="font-medium">{company.companyName}</TableCell>
+        );
       case "createdAt":
         return <TableCell key={key}>{new Date(company.createdAt).toLocaleDateString()}</TableCell>;
       case "updatedAt":

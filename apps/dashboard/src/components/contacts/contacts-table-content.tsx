@@ -12,18 +12,26 @@ import {
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { useState } from "react";
 
+const CONTACT_TYPE_LABELS: Record<string, string> = {
+  gross_prices: "Gross prices",
+  options: "Options",
+  net_prices: "Net prices",
+  cost_price: "Cost price",
+  surcharges: "Surcharges",
+  toeslagen: "Toeslagen",
+};
+
 const ALL_COLUMNS = [
-  { key: "id",        label: "Code",       defaultVisible: true  },
-  { key: "fullName",  label: "Full Name",  defaultVisible: true  },
-  { key: "salutation",label: "Salutation", defaultVisible: true  },
-  { key: "email",     label: "Email",      defaultVisible: true  },
-  { key: "telephone", label: "Telephone",  defaultVisible: true  },
-  { key: "mobile",    label: "Mobile",     defaultVisible: false },
-  { key: "city",      label: "City",       defaultVisible: true  },
-  { key: "country",   label: "Country",    defaultVisible: false },
-  { key: "isActive",  label: "Active",     defaultVisible: true  },
-  { key: "createdAt", label: "Created At", defaultVisible: false },
-  { key: "updatedAt", label: "Updated At", defaultVisible: false },
+  { key: "id",           label: "Code",            defaultVisible: true  },
+  { key: "contactType",  label: "Contact Type",     defaultVisible: true  },
+  { key: "code",         label: "Reference Code",   defaultVisible: true  },
+  { key: "description",  label: "Description",      defaultVisible: true  },
+  { key: "searchCode1",  label: "Search Code 1",    defaultVisible: false },
+  { key: "searchCode2",  label: "Search Code 2",    defaultVisible: false },
+  { key: "searchCode3",  label: "Search Code 3",    defaultVisible: false },
+  { key: "websiteSorting", label: "Website Sort",   defaultVisible: false },
+  { key: "hideOnWebsite",  label: "Hide on Website",defaultVisible: false },
+  { key: "createdAt",    label: "Created At",       defaultVisible: false },
 ] as const;
 
 type ColumnKey = (typeof ALL_COLUMNS)[number]["key"];
@@ -36,17 +44,6 @@ const initialVisibility = ALL_COLUMNS.reduce(
 type ContactsTableContentProps = {
   contacts: SelectContacts[];
 };
-
-const activeBadge = (value: boolean | null) =>
-  value ? (
-    <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
-      Yes
-    </span>
-  ) : (
-    <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
-      No
-    </span>
-  );
 
 export const ContactsTableContent = ({ contacts }: ContactsTableContentProps) => {
   const [columnVisibility, setColumnVisibility] =
@@ -61,30 +58,36 @@ export const ContactsTableContent = ({ contacts }: ContactsTableContentProps) =>
     switch (key) {
       case "id":
         return <TableCell key={key} className="font-medium">{contact.id}</TableCell>;
-      case "fullName":
-        return <TableCell key={key}>{contact.fullName}</TableCell>;
-      case "salutation":
+      case "contactType":
         return (
-          <TableCell key={key} className="capitalize">
-            {contact.salutation ?? "—"}
+          <TableCell key={key}>
+            {contact.contactType ? CONTACT_TYPE_LABELS[contact.contactType] : "—"}
           </TableCell>
         );
-      case "email":
-        return <TableCell key={key}>{contact.email ?? "—"}</TableCell>;
-      case "telephone":
-        return <TableCell key={key}>{contact.telephone ?? "—"}</TableCell>;
-      case "mobile":
-        return <TableCell key={key}>{contact.mobile ?? "—"}</TableCell>;
-      case "city":
-        return <TableCell key={key}>{contact.city ?? "—"}</TableCell>;
-      case "country":
-        return <TableCell key={key}>{contact.country ?? "—"}</TableCell>;
-      case "isActive":
-        return <TableCell key={key}>{activeBadge(contact.isActive)}</TableCell>;
+      case "code":
+        return <TableCell key={key} className="font-medium">{contact.code}</TableCell>;
+      case "description":
+        return <TableCell key={key}>{contact.description}</TableCell>;
+      case "searchCode1":
+        return <TableCell key={key}>{contact.searchCode1 ?? "—"}</TableCell>;
+      case "searchCode2":
+        return <TableCell key={key}>{contact.searchCode2 ?? "—"}</TableCell>;
+      case "searchCode3":
+        return <TableCell key={key}>{contact.searchCode3 ?? "—"}</TableCell>;
+      case "websiteSorting":
+        return <TableCell key={key}>{contact.websiteSorting ?? "—"}</TableCell>;
+      case "hideOnWebsite":
+        return (
+          <TableCell key={key}>
+            {contact.hideOnWebsite ? (
+              <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">Yes</span>
+            ) : (
+              <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">No</span>
+            )}
+          </TableCell>
+        );
       case "createdAt":
         return <TableCell key={key}>{new Date(contact.createdAt).toLocaleDateString()}</TableCell>;
-      case "updatedAt":
-        return <TableCell key={key}>{new Date(contact.updatedAt).toLocaleDateString()}</TableCell>;
     }
   };
 

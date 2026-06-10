@@ -1,4 +1,4 @@
-import { addressCategories, availableAtOptions } from "@/lib/enums";
+import { addressCategories, availableAtOptions, companyLangs, companyRoles } from "@/lib/enums";
 import { z } from "zod";
 
 const optionalEmail = z.union([
@@ -62,6 +62,13 @@ export const addressSchema = z.object({
 
 export const companySchema = z.object({
   companyName: z.string().min(1, "Company name is required"),
+  correspName: z.string().optional(),
+  remarks: z.string().optional(),
+  lang: z.union([z.enum(companyLangs), z.literal(""), z.undefined()]),
+  roles: z.array(z.enum(companyRoles)),
+  searchCode1: z.string().optional(),
+  searchCode2: z.string().optional(),
+  searchCode3: z.string().optional(),
   address: addressSchema,
 });
 

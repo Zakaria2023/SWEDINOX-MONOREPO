@@ -1,12 +1,12 @@
 "use client";
 
-import type { AddressOption } from "@/app/(dashboard)/locations/actions";
+import type { AddressSelectOption } from "@/app/(dashboard)/addresses/actions";
 import { Select as SelectPrimitive } from "@base-ui/react/select";
 import { Check, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/helpers";
 
 type AddressSelectProps = {
-  addresses: AddressOption[];
+  addresses: AddressSelectOption[];
   disabled?: boolean;
   id?: string;
   invalid?: boolean;

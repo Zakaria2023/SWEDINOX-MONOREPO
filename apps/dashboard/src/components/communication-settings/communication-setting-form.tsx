@@ -65,7 +65,7 @@ export const CommunicationSettingForm = ({
 
   const contactOptions = [
     { value: "", label: "-empty-" },
-    ...contacts.map((c) => ({ value: c.uuid, label: c.fullName })),
+    ...contacts.map((c) => ({ value: c.uuid, label: c.code })),
   ];
 
   return (

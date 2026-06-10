@@ -1,7 +1,8 @@
 "use client";
 
 import { useLocationSubmit } from "@/app/(dashboard)/locations/use-location-submit";
-import { type AddressOption, type LoadingLocationOption } from "@/app/(dashboard)/locations/actions";
+import { type LoadingLocationOption } from "@/app/(dashboard)/locations/actions";
+import { type AddressSelectOption } from "@/app/(dashboard)/addresses/actions";
 import { locationAdoptPositions, locationTypes } from "@/lib/enums";
 import { Input } from "@/components/shadcn/input";
 import { FormActions } from "@/components/ui/form-actions";
@@ -25,7 +26,7 @@ const adoptPositionOptions = locationAdoptPositions.map((p) => ({
 
 type LocationFormProps = {
   loadingLocations: LoadingLocationOption[];
-  addresses: AddressOption[];
+  addresses: AddressSelectOption[];
 };
 
 export const LocationForm = ({ loadingLocations, addresses }: LocationFormProps) => {

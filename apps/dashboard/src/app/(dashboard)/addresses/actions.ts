@@ -11,10 +11,31 @@ export type AddressListItem = {
   Companies: SelectCompanies | null;
 };
 
+export type AddressSelectOption = {
+  uuid: string;
+  companyName: string;
+  streetAndNo: string | null;
+  city: string | null;
+};
+
 export const getAddresses = async (): Promise<AddressListItem[]> => {
   return db
     .select()
     .from(CompanyAddresses)
     .leftJoin(Companies, eq(Companies.uuid, CompanyAddresses.companyUuid))
     .orderBy(desc(CompanyAddresses.createdAt));
+};
+
+export const getAddressesForSelect = async (): Promise<AddressSelectOption[]> => {
+  const rows = await db
+    .select({
+      uuid: CompanyAddresses.uuid,
+      companyName: Companies.companyName,
+      streetAndNo: CompanyAddresses.streetAndNo,
+      city: CompanyAddresses.city,
+    })
+    .from(CompanyAddresses)
+    .innerJoin(Companies, eq(Companies.uuid, CompanyAddresses.companyUuid))
+    .orderBy(Companies.companyName);
+  return rows;
 };
