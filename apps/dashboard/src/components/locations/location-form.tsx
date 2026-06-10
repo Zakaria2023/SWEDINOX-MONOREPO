@@ -1,12 +1,15 @@
 "use client";
 
 import { useLocationSubmit } from "@/app/(dashboard)/locations/use-location-submit";
+import { type AddressOption, type LoadingLocationOption } from "@/app/(dashboard)/locations/actions";
 import { locationAdoptPositions, locationTypes } from "@/lib/enums";
 import { Input } from "@/components/shadcn/input";
 import { FormActions } from "@/components/ui/form-actions";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import { FormSelectField } from "@/components/ui/form-select-field";
 import { FormError } from "@/components/ui/form-error";
+import { AddressSelect } from "@/components/locations/address-select";
+import { Controller } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
@@ -20,7 +23,12 @@ const adoptPositionOptions = locationAdoptPositions.map((p) => ({
   label: p.charAt(0).toUpperCase() + p.slice(1),
 }));
 
-export const LocationForm = () => {
+type LocationFormProps = {
+  loadingLocations: LoadingLocationOption[];
+  addresses: AddressOption[];
+};
+
+export const LocationForm = ({ loadingLocations, addresses }: LocationFormProps) => {
   const router = useRouter();
   const { form, isPending, onSubmit, state } = useLocationSubmit();
   const {
@@ -35,6 +43,11 @@ export const LocationForm = () => {
   useEffect(() => {
     if (state.success) router.push("/locations");
   }, [state.success, router]);
+
+  const loadingLocationOptions = [
+    { value: "", label: "-empty-" },
+    ...loadingLocations.map((ll) => ({ value: ll.uuid, label: ll.name })),
+  ];
 
   return (
     <form onSubmit={onSubmit} className="space-y-8">
@@ -69,6 +82,36 @@ export const LocationForm = () => {
             invalid={!!errors.locationType}
             disabled={isPending}
           />
+
+          <FormSelectField
+            control={control}
+            id="loadingLocationUuid"
+            name="loadingLocationUuid"
+            label="Loading Location"
+            options={loadingLocationOptions}
+            emptyValue=""
+            disabled={isPending}
+          />
+
+          <div>
+            <FormLabel htmlFor="addressUuid">Address</FormLabel>
+            <Controller
+              control={control}
+              name="addressUuid"
+              render={({ field }) => (
+                <AddressSelect
+                  id="addressUuid"
+                  name={field.name}
+                  addresses={addresses}
+                  value={field.value ?? ""}
+                  onValueChange={field.onChange}
+                  disabled={isPending}
+                  invalid={!!errors.addressUuid}
+                />
+              )}
+            />
+            <FormFieldError message={errors.addressUuid?.message} />
+          </div>
 
           <div>
             <FormLabel htmlFor="pickingSequence">Picking Sequence</FormLabel>

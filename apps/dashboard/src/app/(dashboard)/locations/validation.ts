@@ -4,6 +4,8 @@ import { z } from "zod";
 export const locationSchema = z.object({
   name: z.string().min(1, "Location name is required"),
   locationType: z.enum(locationTypes, { error: "Location type is required" }),
+  loadingLocationUuid: z.string().optional(),
+  addressUuid: z.string().optional(),
   pickingSequence: z.union([z.coerce.number().int().nonnegative(), z.literal(""), z.undefined()]),
   isBlocked: z.boolean().default(false),
   blockedReason: z.string().optional(),

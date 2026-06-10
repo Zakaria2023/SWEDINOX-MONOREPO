@@ -15,6 +15,8 @@ export const useLocationSubmit = () => {
     defaultValues: {
       name: "",
       locationType: undefined,
+      loadingLocationUuid: "",
+      addressUuid: "",
       pickingSequence: "",
       isBlocked: false,
       blockedReason: "",
@@ -30,6 +32,8 @@ export const useLocationSubmit = () => {
       const result = await createLocation({
         name: values.name,
         locationType: values.locationType,
+        loadingLocationUuid: values.loadingLocationUuid || undefined,
+        addressUuid: values.addressUuid || undefined,
         pickingSequence:
           values.pickingSequence !== "" && values.pickingSequence !== undefined
             ? Number(values.pickingSequence)
