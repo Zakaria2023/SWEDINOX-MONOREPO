@@ -36,3 +36,14 @@ export const locationAdoptPositions = [
 ] as const satisfies readonly string[];
 
 export type LocationAdoptPosition = (typeof locationAdoptPositions)[number];
+
+export const contactSalutations = [
+  "mr",
+  "mrs",
+  "ms",
+  "dr",
+  "engineer",
+  "professor",
+] as const satisfies readonly string[];
+
+export type ContactSalutation = (typeof contactSalutations)[number];

@@ -11,7 +11,8 @@ import { Select, type SelectOption } from "@/components/shadcn/select";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 
 type FormSelectFieldProps<TFieldValues extends FieldValues> = {
-  control: Control<TFieldValues>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  control: Control<TFieldValues, any, any>;
   disabled?: boolean;
   emptyValue?: string;
   errorMessage?: string;
