@@ -167,6 +167,36 @@ export const companyVisitResults = [
 
 export type CompanyVisitResult = (typeof companyVisitResults)[number];
 
+export const companyTaskTypes = [
+  "follow_up",
+  "call",
+  "visit",
+  "email",
+  "meeting",
+  "other",
+] as const satisfies readonly string[];
+
+export type CompanyTaskType = (typeof companyTaskTypes)[number];
+
+export const companyTaskStatuses = [
+  "open",
+  "in_progress",
+  "completed",
+  "cancelled",
+  "on_hold",
+] as const satisfies readonly string[];
+
+export type CompanyTaskStatus = (typeof companyTaskStatuses)[number];
+
+export const companyTaskPriorities = [
+  "low",
+  "normal",
+  "high",
+  "urgent",
+] as const satisfies readonly string[];
+
+export type CompanyTaskPriority = (typeof companyTaskPriorities)[number];
+
 export const locationTypes = [
   "pick",
   "bulk",
