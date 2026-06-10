@@ -1,11 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, Pencil } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { type AddressListItem } from "@/app/(dashboard)/addresses/actions";
-import { DeleteAddressButton } from "@/components/addresses/delete-address-button";
-import { Button, buttonVariants } from "@/components/shadcn/button";
+import { Button } from "@/components/shadcn/button";
 import {
   Table,
   TableBody,
@@ -14,7 +12,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
-import { cn } from "@/lib/helpers";
 
 const ALL_COLUMNS = [
   { key: "id", label: "Code", defaultVisible: true },
@@ -25,6 +22,8 @@ const ALL_COLUMNS = [
   { key: "postalCode", label: "Postal Code", defaultVisible: true },
   { key: "city", label: "City", defaultVisible: true },
   { key: "country", label: "Country", defaultVisible: true },
+  { key: "gln", label: "GLN", defaultVisible: true },
+  { key: "peopleId", label: "People ID", defaultVisible: true },
   { key: "category", label: "Category", defaultVisible: true },
   { key: "status", label: "Status", defaultVisible: true },
 ] as const;
@@ -39,9 +38,6 @@ const initialVisibility = ALL_COLUMNS.reduce(
 type AddressesTableContentProps = {
   addresses: AddressListItem[];
 };
-
-const formatAddressLabel = (address: AddressListItem) =>
-  address.altName || address.streetAndNo || `${address.id}`;
 
 const formatCategoryLabel = (value: string) =>
   value
@@ -72,7 +68,9 @@ export const AddressesTableContent = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const visibleColumns = ALL_COLUMNS.filter((column) => columnVisibility[column.key]);
+  const visibleColumns = ALL_COLUMNS.filter(
+    (column) => columnVisibility[column.key],
+  );
 
   const toggleColumn = (key: ColumnKey) => {
     setColumnVisibility((current) => ({
@@ -81,34 +79,41 @@ export const AddressesTableContent = ({
     }));
   };
 
-  const renderCell = (address: AddressListItem, key: ColumnKey) => {
+  const renderCell = (item: AddressListItem, key: ColumnKey) => {
+    const addr = item.CompanyAddresses;
+    const company = item.Companies;
+
     switch (key) {
       case "id":
         return (
           <TableCell key={key} className="font-medium">
-            {address.id}
+            {addr.id}
           </TableCell>
         );
       case "companyCode":
-        return <TableCell key={key}>{address.companyCode ?? "-"}</TableCell>;
+        return <TableCell key={key}>{company?.id ?? "-"}</TableCell>;
       case "companyName":
-        return <TableCell key={key}>{address.companyName ?? "-"}</TableCell>;
+        return <TableCell key={key}>{company?.companyName ?? "-"}</TableCell>;
       case "altName":
-        return <TableCell key={key}>{address.altName || "-"}</TableCell>;
+        return <TableCell key={key}>{addr.altName || "-"}</TableCell>;
       case "streetAndNo":
-        return <TableCell key={key}>{address.streetAndNo || "-"}</TableCell>;
+        return <TableCell key={key}>{addr.streetAndNo || "-"}</TableCell>;
       case "postalCode":
-        return <TableCell key={key}>{address.postalCode || "-"}</TableCell>;
+        return <TableCell key={key}>{addr.postalCode || "-"}</TableCell>;
       case "city":
-        return <TableCell key={key}>{address.city || "-"}</TableCell>;
+        return <TableCell key={key}>{addr.city || "-"}</TableCell>;
       case "country":
-        return <TableCell key={key}>{address.country || "-"}</TableCell>;
+        return <TableCell key={key}>{addr.country || "-"}</TableCell>;
+      case "gln":
+        return <TableCell key={key}>{addr.gln || "-"}</TableCell>;
+      case "peopleId":
+        return <TableCell key={key}>{addr.peopleId || "-"}</TableCell>;
       case "category":
         return (
           <TableCell key={key}>
             <div className="flex flex-wrap gap-1">
-              {address.category.length > 0 ? (
-                address.category.map((category) => (
+              {addr.category.length > 0 ? (
+                addr.category.map((category) => (
                   <span
                     key={category}
                     className="rounded-full bg-blue-100 px-2 py-1 text-xs text-blue-700"
@@ -127,12 +132,12 @@ export const AddressesTableContent = ({
           <TableCell key={key}>
             <span
               className={`rounded-full px-2 py-1 text-xs ${
-                address.addressComplete
+                addr.addressComplete
                   ? "bg-green-100 text-green-700"
                   : "bg-yellow-100 text-yellow-700"
               }`}
             >
-              {address.addressComplete ? "Complete" : "Incomplete"}
+              {addr.addressComplete ? "Complete" : "Incomplete"}
             </span>
           </TableCell>
         );
@@ -180,43 +185,24 @@ export const AddressesTableContent = ({
               {visibleColumns.map((column) => (
                 <TableHead key={column.key}>{column.label}</TableHead>
               ))}
-              <TableHead className="w-28 text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {addresses.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={visibleColumns.length + 1}
+                  colSpan={visibleColumns.length}
                   className="h-24 text-center"
                 >
                   No addresses found
                 </TableCell>
               </TableRow>
             ) : (
-              addresses.map((address) => (
-                <TableRow key={address.id}>
-                  {visibleColumns.map((column) => renderCell(address, column.key))}
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
-                      <Link
-                        href={`/addresses/${address.id}/edit`}
-                        className={cn(
-                          buttonVariants({
-                            size: "icon-sm",
-                            variant: "ghost",
-                          }),
-                        )}
-                      >
-                        <Pencil />
-                        <span className="sr-only">Edit address</span>
-                      </Link>
-                      <DeleteAddressButton
-                        addressId={address.id}
-                        label={formatAddressLabel(address)}
-                      />
-                    </div>
-                  </TableCell>
+              addresses.map((item) => (
+                <TableRow key={item.CompanyAddresses.id}>
+                  {visibleColumns.map((column) =>
+                    renderCell(item, column.key),
+                  )}
                 </TableRow>
               ))
             )}
