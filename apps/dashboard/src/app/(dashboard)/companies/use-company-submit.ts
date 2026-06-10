@@ -6,6 +6,38 @@ import { useForm } from "react-hook-form";
 import { createCompany, type CompanyActionResult } from "./actions";
 import { companySchema, type CompanyFormValues } from "./validation";
 
+const mapAddress = (address: CompanyFormValues["address"]) => ({
+  altName: address.altName || undefined,
+  poBox: address.poBox,
+  streetAndNo: address.streetAndNo || undefined,
+  postalCode: address.postalCode || undefined,
+  country: address.country || undefined,
+  city: address.city || undefined,
+  region: address.region || undefined,
+  house: address.house || undefined,
+  telephone: address.telephone || undefined,
+  fax: address.fax || undefined,
+  email: address.email || undefined,
+  website: address.website || undefined,
+  billingAttention: address.billingAttention || undefined,
+  billingAttentionAdditional: address.billingAttentionAdditional || undefined,
+  gln: address.gln || undefined,
+  peppolId: address.peppolId || undefined,
+  sequenceNumber: address.sequenceNumber ? Number(address.sequenceNumber) : undefined,
+  category: address.category,
+  needCrane: address.needCrane,
+  canopyRequired: address.canopyRequired,
+  bundleSeparately: address.bundleSeparately,
+  addressComplete: address.addressComplete,
+  specialTransport: address.specialTransport,
+  availableAt: address.availableAt || undefined,
+  unloadingStartTime: address.unloadingStartTime || undefined,
+  unloadingEndTime: address.unloadingEndTime || undefined,
+  maxLength: address.maxLength || undefined,
+  maxBundleWeight: address.maxBundleWeight || undefined,
+  loadingInstructions: address.loadingInstructions || undefined,
+});
+
 export const useCompanySubmit = () => {
   const [isPending, startTransition] = useTransition();
   const [state, setState] = useState<CompanyActionResult>({});
@@ -48,47 +80,18 @@ export const useCompanySubmit = () => {
     },
   });
 
-  const onSubmit = form.handleSubmit((values) => {
-    startTransition(async () => {
-      const { companyName, address } = values;
-
-      const result = await createCompany(companyName, {
-        altName: address.altName || undefined,
-        poBox: address.poBox,
-        streetAndNo: address.streetAndNo || undefined,
-        postalCode: address.postalCode || undefined,
-        country: address.country || undefined,
-        city: address.city || undefined,
-        region: address.region || undefined,
-        house: address.house || undefined,
-        telephone: address.telephone || undefined,
-        fax: address.fax || undefined,
-        email: address.email || undefined,
-        website: address.website || undefined,
-        billingAttention: address.billingAttention || undefined,
-        billingAttentionAdditional: address.billingAttentionAdditional || undefined,
-        gln: address.gln || undefined,
-        peppolId: address.peppolId || undefined,
-        sequenceNumber: address.sequenceNumber
-          ? Number(address.sequenceNumber)
-          : undefined,
-        category: address.category,
-        needCrane: address.needCrane,
-        canopyRequired: address.canopyRequired,
-        bundleSeparately: address.bundleSeparately,
-        addressComplete: address.addressComplete,
-        specialTransport: address.specialTransport,
-        availableAt: address.availableAt || undefined,
-        unloadingStartTime: address.unloadingStartTime || undefined,
-        unloadingEndTime: address.unloadingEndTime || undefined,
-        maxLength: address.maxLength || undefined,
-        maxBundleWeight: address.maxBundleWeight || undefined,
-        loadingInstructions: address.loadingInstructions || undefined,
+  const onSubmit = (additionalAddresses: CompanyFormValues["address"][]) =>
+    form.handleSubmit((values) => {
+      startTransition(async () => {
+        const { companyName, address } = values;
+        const result = await createCompany(
+          companyName,
+          mapAddress(address),
+          additionalAddresses.map(mapAddress),
+        );
+        setState(result);
       });
-
-      setState(result);
     });
-  });
 
   return { form, isPending, onSubmit, state };
 };

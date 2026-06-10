@@ -1,14 +1,15 @@
 "use server";
 
 import { db, InsertCompanyAddresses, type SelectCompanies } from "@/db";
-
-export type AddressInput = Omit<InsertCompanyAddresses, "uuid" | "companyUuid">;
 import { Companies } from "@/db/schema/companies";
 import { CompanyAddresses } from "@/db/schema/company-addresses";
 import { generateUuid } from "@/lib/helpers";
-import { desc } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
+
+export type AddressInput = Omit<InsertCompanyAddresses, "uuid" | "companyUuid">;
 
 export type CompanyActionResult = {
+  addressUuid?: string;
   companyUuid?: string;
   error?: string;
   success?: boolean;
@@ -29,26 +30,42 @@ export const getCompanies = async (): Promise<SelectCompanies[]> => {
 
 export const createCompany = async (
   companyName: string,
-  address: AddressInput,
+  firstAddress: AddressInput,
+  additionalAddresses: AddressInput[] = [],
 ): Promise<CompanyActionResult> => {
+  const existing = await db
+    .select({ id: Companies.id })
+    .from(Companies)
+    .where(eq(Companies.companyName, companyName))
+    .limit(1);
+
+  if (existing.length > 0) {
+    return { error: "A company with this name already exists." };
+  }
+
   const uuid = generateUuid();
-  const addressUuid = generateUuid();
 
   try {
     await db.transaction(async (tx) => {
       await tx.insert(Companies).values({ uuid, companyName });
       await tx.insert(CompanyAddresses).values({
-        ...address,
-        uuid: addressUuid,
+        ...firstAddress,
+        uuid: generateUuid(),
         companyUuid: uuid,
       });
+      for (const addr of additionalAddresses) {
+        await tx.insert(CompanyAddresses).values({
+          ...addr,
+          uuid: generateUuid(),
+          companyUuid: uuid,
+        });
+      }
     });
 
     return { success: true, companyUuid: uuid };
   } catch (error) {
     return {
-      error:
-        error instanceof Error ? error.message : "Failed to create company",
+      error: error instanceof Error ? error.message : "Failed to create company",
     };
   }
 };

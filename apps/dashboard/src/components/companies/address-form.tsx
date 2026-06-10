@@ -15,6 +15,7 @@ type AddressFormProps = {
   errors: FieldErrors<CompanyFormValues["address"]> | undefined;
   register: UseFormRegister<CompanyFormValues>;
   watch: UseFormWatch<CompanyFormValues>;
+  deliveryOnly?: boolean;
 };
 
 const EMPTY_SELECT_VALUE = "none";
@@ -56,12 +57,16 @@ export const AddressForm = ({
   errors,
   register,
   watch,
+  deliveryOnly = false,
 }: AddressFormProps) => {
   const peppolPrevLengthRef = useRef(0);
 
   const selectedCategories = watch("address.category") ?? [];
   const showBillingSettings = selectedCategories.includes("invoice");
-  const showDeliverySettings = selectedCategories.includes("delivery");
+  const showDeliverySettings = deliveryOnly || selectedCategories.includes("delivery");
+  const visibleCategories: Array<(typeof addressCategories)[number]> = deliveryOnly
+    ? ["delivery"]
+    : [...addressCategories];
 
   const categoryError =
     errors?.category?.root?.message ??
@@ -223,7 +228,7 @@ export const AddressForm = ({
             </p>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
-            {addressCategories.map((cat) => (
+            {visibleCategories.map((cat) => (
               <FormCheckboxCard
                 key={cat}
                 active={selectedCategories.includes(cat)}
