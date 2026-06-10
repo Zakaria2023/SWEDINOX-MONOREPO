@@ -24,6 +24,7 @@ export const CompanyAddresses = mysqlTable(
   "CompanyAddresses",
   {
     id: int("id").primaryKey().autoincrement(),
+    uuid: char("uuid", { length: 36 }).notNull().unique(),
 
     companyUuid: char("company_uuid", { length: 36 }),
 
