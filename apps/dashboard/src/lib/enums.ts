@@ -112,6 +112,16 @@ export const invoiceDeliveryMethods = [
 export type InvoiceDeliveryMethod =
   (typeof invoiceDeliveryMethods)[number];
 
+export const bankAccountTypes = [
+  "main",
+  "invoice",
+  "refund",
+  "salary",
+  "other",
+] as const satisfies readonly string[];
+
+export type BankAccountType = (typeof bankAccountTypes)[number];
+
 export const locationTypes = [
   "pick",
   "bulk",
