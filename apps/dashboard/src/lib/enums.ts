@@ -197,6 +197,37 @@ export const companyTaskPriorities = [
 
 export type CompanyTaskPriority = (typeof companyTaskPriorities)[number];
 
+export const companyActivityTypes = [
+  "created",
+  "updated",
+  "deleted",
+  "status_changed",
+  "assigned",
+  "completed",
+  "uploaded",
+  "visited",
+  "called",
+] as const satisfies readonly string[];
+
+export type CompanyActivityType = (typeof companyActivityTypes)[number];
+
+export const companyActivityEntities = [
+  "company",
+  "contact",
+  "address",
+  "document",
+  "certificate",
+  "bank_account",
+  "financial_setting",
+  "visit_setting",
+  "visit_report",
+  "task",
+  "communication_setting",
+] as const satisfies readonly string[];
+
+export type CompanyActivityEntity =
+  (typeof companyActivityEntities)[number];
+
 export const locationTypes = [
   "pick",
   "bulk",

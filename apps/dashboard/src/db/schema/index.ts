@@ -1,4 +1,5 @@
 export * from "./companies";
+export * from "./company-activity";
 export * from "./company-addresses";
 export * from "./company-bank-accounts";
 export * from "./company-certificates";
