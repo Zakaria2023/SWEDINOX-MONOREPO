@@ -4,6 +4,7 @@ export * from "./company-bank-accounts";
 export * from "./company-certificates";
 export * from "./company-documents";
 export * from "./company-financial-settings";
+export * from "./company-visit-settings";
 export * from "./communication-settings";
 export * from "./contacts";
 export * from "./locations";

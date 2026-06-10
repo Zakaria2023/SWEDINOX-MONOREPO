@@ -136,6 +136,17 @@ export const companyCertificateTypes = [
 export type CompanyCertificateType =
   (typeof companyCertificateTypes)[number];
 
+export const visitFrequencies = [
+  "weekly",
+  "monthly",
+  "quarterly",
+  "twice_per_year",
+  "yearly",
+  "custom",
+] as const satisfies readonly string[];
+
+export type VisitFrequency = (typeof visitFrequencies)[number];
+
 export const locationTypes = [
   "pick",
   "bulk",
