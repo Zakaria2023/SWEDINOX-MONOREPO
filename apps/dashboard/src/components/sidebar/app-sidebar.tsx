@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronRight, Users } from "lucide-react";
+import { Building2, ChevronRight, Users } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -22,8 +22,12 @@ import { cn } from "@/lib/helpers";
 
 export const AppSidebar = () => {
   const pathname = usePathname();
-  const isCustomersActive = pathname.startsWith("/customers");
-  const [isCustomersOpen, setIsCustomersOpen] = useState(isCustomersActive);
+  const isCustomersActive = pathname.startsWith("/addresses");
+  const isCompanyActive = pathname.startsWith("/companies");
+  const [isCustomersOpen, setIsCustomersOpen] = useState(false);
+  const [isCompanyOpen, setIsCompanyOpen] = useState(false);
+  const isCustomersExpanded = isCustomersOpen || isCustomersActive;
+  const isCompanyExpanded = isCompanyOpen || isCompanyActive;
 
   return (
     <Sidebar>
@@ -38,26 +42,52 @@ export const AppSidebar = () => {
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  aria-expanded={isCustomersOpen}
-                  isActive={isCustomersActive}
+                  aria-expanded={isCustomersExpanded}
                   onClick={() => setIsCustomersOpen((isOpen) => !isOpen)}
                 >
                   <Users />
                   <span>Customers</span>
                   <ChevronRight
                     className={cn("ml-auto transition-transform", {
-                      "rotate-90": isCustomersOpen,
+                      "rotate-90": isCustomersExpanded,
                     })}
                   />
                 </SidebarMenuButton>
-                {isCustomersOpen && (
+                {isCustomersExpanded && (
                   <SidebarMenuSub>
                     <SidebarMenuSubItem>
                       <SidebarMenuSubButton
                         render={<Link href="/addresses" />}
-                        isActive={pathname === "/addresses"}
+                        isActive={pathname.startsWith("/addresses")}
                       >
                         <span>Addresses</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                  </SidebarMenuSub>
+                )}
+              </SidebarMenuItem>
+
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  aria-expanded={isCompanyExpanded}
+                  onClick={() => setIsCompanyOpen((isOpen) => !isOpen)}
+                >
+                  <Building2 />
+                  <span>Company</span>
+                  <ChevronRight
+                    className={cn("ml-auto transition-transform", {
+                      "rotate-90": isCompanyExpanded,
+                    })}
+                  />
+                </SidebarMenuButton>
+                {isCompanyExpanded && (
+                  <SidebarMenuSub>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/companies" />}
+                        isActive={pathname.startsWith("/companies")}
+                      >
+                        <span>Companies</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                   </SidebarMenuSub>

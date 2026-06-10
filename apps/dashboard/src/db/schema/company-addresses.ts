@@ -1,3 +1,4 @@
+import { InferInsertModel, InferSelectModel } from "drizzle-orm";
 import {
   boolean,
   char,
@@ -5,6 +6,7 @@ import {
   foreignKey,
   index,
   int,
+  json,
   mysqlEnum,
   mysqlTable,
   text,
@@ -12,15 +14,16 @@ import {
   timestamp,
   varchar,
 } from "drizzle-orm/mysql-core";
+import { availableAtOptions, type AddressCategory } from "../../lib/enums";
 import { Companies } from "./companies";
-import { addressCategories, availableAtOptions } from "../../lib/enums";
 
 export const CompanyAddresses = mysqlTable(
   "CompanyAddresses",
   {
     id: int("id").primaryKey().autoincrement(),
+    uuid: char("uuid", { length: 36 }).notNull().unique(),
 
-    companyUuid: char("company_uuid", { length: 36 }).notNull(),
+    companyUuid: char("company_uuid", { length: 36 }),
 
     altName: varchar("alt_name", { length: 255 }),
     poBox: boolean("po_box").default(false),
@@ -36,10 +39,17 @@ export const CompanyAddresses = mysqlTable(
     fax: varchar("fax", { length: 100 }),
     email: varchar("email", { length: 255 }),
     website: varchar("website", { length: 255 }),
+    billingAttention: varchar("billing_attention", { length: 255 }),
+    billingAttentionAdditional: varchar("billing_attention_additional", {
+      length: 255,
+    }),
+
+    gln: varchar("gln", { length: 13 }),
+    peppolId: varchar("peppol_id", { length: 255 }),
 
     sequenceNumber: int("sequence_number"),
 
-    category: mysqlEnum(addressCategories).notNull(),
+    category: json("category").$type<AddressCategory[]>().notNull(),
 
     needCrane: boolean("need_crane").default(false),
     canopyRequired: boolean("canopy_required").default(false),
@@ -69,3 +79,6 @@ export const CompanyAddresses = mysqlTable(
     }),
   ],
 );
+
+export type SelectCompanyAddresses = InferSelectModel<typeof CompanyAddresses>;
+export type InsertCompanyAddresses = InferInsertModel<typeof CompanyAddresses>;

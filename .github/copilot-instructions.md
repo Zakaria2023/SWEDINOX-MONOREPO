@@ -126,3 +126,58 @@
   const value = process.env.API_KEY;
   if (!value) throw new Error("Missing required environment variable: API_KEY");
   ```
+
+## Next.js Server Actions
+
+- Always use Next.js Server Actions for data mutations and queries. Never create Next.js route handlers (route.ts files in the app directory).
+- Server Actions should be defined in `actions.ts` files within feature directories.
+- All Server Actions must have the `"use server"` directive at the top of the file.
+
+  ```ts
+  // ❌ Bad — using route handlers
+  // app/api/addresses/route.ts
+  export async function POST(request: Request) {
+    const data = await request.json();
+    // ...
+  }
+
+  // ✅ Good — using Server Actions
+  // app/(dashboard)/addresses/actions.ts
+  ("use server");
+
+  export const createAddress = async (
+    _prevState: ActionResult,
+    data: CreateAddressInput,
+  ): Promise<ActionResult> => {
+    // ...
+  };
+  ```
+
+## Form Submissions
+
+- Always use `useActionState` from `react` when a form submits to a server action.
+- Always pair it with `react-hook-form` and `zodResolver` for client-side validation.
+- Call `dispatch(validatedData)` inside `handleSubmit` — never call the server action directly.
+- Use `isPending` to disable the submit button, `state.success` to redirect, and `state.error` to display server errors.
+
+  ```tsx
+  // ❌ Bad — calling server action directly
+  const onSubmit = handleSubmit(async (data) => {
+    await createAddress({}, data);
+  });
+
+  // ✅ Good — routing through useActionState
+  const [state, dispatch, isPending] = useActionState(createAddress, {});
+
+  const { handleSubmit } = useForm<FormValues>({
+    resolver: zodResolver(schema),
+  });
+
+  const onSubmit = handleSubmit((data) => {
+    dispatch(data);
+  });
+
+  useEffect(() => {
+    if (state.success) router.push("/addresses");
+  }, [state.success, router]);
+  ```
