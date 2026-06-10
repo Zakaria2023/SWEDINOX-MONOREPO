@@ -10,7 +10,7 @@ import {
 export const Companies = mysqlTable("Companies", {
   id: int("id").primaryKey().autoincrement(),
   uuid: char("uuid", { length: 36 }).notNull().unique(),
-  companyName: varchar("company_name", { length: 255 }).notNull().unique(),
+  companyName: varchar("company_name", { length: 255 }).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
 });

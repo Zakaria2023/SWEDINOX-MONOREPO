@@ -4,7 +4,7 @@ import { db, InsertCompanyAddresses, type SelectCompanies } from "@/db";
 import { Companies } from "@/db/schema/companies";
 import { CompanyAddresses } from "@/db/schema/company-addresses";
 import { generateUuid } from "@/lib/helpers";
-import { desc, eq } from "drizzle-orm";
+import { desc } from "drizzle-orm";
 
 export type AddressInput = Omit<InsertCompanyAddresses, "uuid" | "companyUuid">;
 
@@ -33,16 +33,6 @@ export const createCompany = async (
   firstAddress: AddressInput,
   additionalAddresses: AddressInput[] = [],
 ): Promise<CompanyActionResult> => {
-  const existing = await db
-    .select({ id: Companies.id })
-    .from(Companies)
-    .where(eq(Companies.companyName, companyName))
-    .limit(1);
-
-  if (existing.length > 0) {
-    return { error: "A company with this name already exists." };
-  }
-
   const uuid = generateUuid();
 
   try {
