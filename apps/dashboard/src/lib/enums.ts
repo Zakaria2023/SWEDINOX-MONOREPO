@@ -147,6 +147,26 @@ export const visitFrequencies = [
 
 export type VisitFrequency = (typeof visitFrequencies)[number];
 
+export const companyVisitTypes = [
+  "visit",
+  "call",
+  "meeting",
+  "online",
+  "other",
+] as const satisfies readonly string[];
+
+export type CompanyVisitType = (typeof companyVisitTypes)[number];
+
+export const companyVisitResults = [
+  "planned",
+  "completed",
+  "cancelled",
+  "postponed",
+  "no_show",
+] as const satisfies readonly string[];
+
+export type CompanyVisitResult = (typeof companyVisitResults)[number];
+
 export const locationTypes = [
   "pick",
   "bulk",
