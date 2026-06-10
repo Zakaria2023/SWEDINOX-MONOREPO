@@ -56,7 +56,7 @@ export const createCompany = async (
       for (const addr of additionalAddresses) {
         await tx.insert(CompanyAddresses).values({
           ...addr,
-          uuid: generateUuid(),
+          uuid: uuid,
           companyUuid: uuid,
         });
       }
@@ -65,7 +65,8 @@ export const createCompany = async (
     return { success: true, companyUuid: uuid };
   } catch (error) {
     return {
-      error: error instanceof Error ? error.message : "Failed to create company",
+      error:
+        error instanceof Error ? error.message : "Failed to create company",
     };
   }
 };
