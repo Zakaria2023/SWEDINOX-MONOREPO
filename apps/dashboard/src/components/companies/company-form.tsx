@@ -1,13 +1,7 @@
 "use client";
 
-import {
-  getAddresses,
-  type AddressActionResult,
-  type AddressListItem,
-} from "@/app/(dashboard)/addresses/actions";
-import { type CompanyDetail } from "@/app/(dashboard)/companies/actions";
 import { useCompanySubmit } from "@/app/(dashboard)/companies/use-company-submit";
-import { AddressForm } from "@/components/addresses/address-form";
+import { AddressForm } from "@/components/companies/address-form";
 import {
   Dialog,
   DialogContent,
@@ -15,123 +9,38 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/shadcn/dialog";
+import { Button } from "@/components/shadcn/button";
 import { Input } from "@/components/shadcn/input";
-import { type SelectOption } from "@/components/shadcn/select";
 import { FormActions } from "@/components/ui/form-actions";
-import { ErrorMessage } from "@/components/ui/error-message";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
-import { FormSelectField } from "@/components/ui/form-select-field";
-import { Plus } from "lucide-react";
+import { MapPin, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { FormError } from "../ui/form-error";
 
-type CompanyFormProps = {
-  companyId?: number;
-  initialAddresses?: AddressListItem[];
-  initialCompany?: CompanyDetail | null;
-  mode?: "add" | "edit";
-};
-
-const EMPTY_ADDRESSES: AddressListItem[] = [];
-const NEW_ADDRESS_VALUE = "__new_address__";
-
-const formatAddressLabel = (address: AddressListItem) => {
-  const primaryLabel =
-    address.altName ||
-    address.streetAndNo ||
-    [address.postalCode, address.city].filter(Boolean).join(" ") ||
-    `Address #${address.id}`;
-  const secondaryLabel = [address.city, address.country].filter(Boolean).join(", ");
-
-  return secondaryLabel && secondaryLabel !== primaryLabel
-    ? `${primaryLabel} - ${secondaryLabel}`
-    : primaryLabel;
-};
-
-export const CompanyForm = ({
-  companyId,
-  initialAddresses = EMPTY_ADDRESSES,
-  initialCompany,
-  mode = "add",
-}: CompanyFormProps) => {
+export const CompanyForm = () => {
   const router = useRouter();
-  const [addresses, setAddresses] = useState(initialAddresses);
-  const [addressLoadError, setAddressLoadError] = useState("");
   const [isAddressDialogOpen, setIsAddressDialogOpen] = useState(false);
-  const [isAddressesLoading, setIsAddressesLoading] = useState(false);
-  const {
-    form,
-    isPending,
-    onSubmit,
-    state,
-  } = useCompanySubmit({ companyId, mode });
+  const { form, isPending, onSubmit, state } = useCompanySubmit();
   const {
     control,
     register,
-    reset,
-    setValue,
+    watch,
+    trigger,
     formState: { errors },
   } = form;
 
-  useEffect(() => {
-    if (!initialCompany) {
-      return;
-    }
+  const addressValues = watch("address");
+  const hasAddress = !!(
+    addressValues.streetAndNo ||
+    addressValues.city ||
+    addressValues.altName ||
+    addressValues.postalCode
+  );
 
-    reset({
-      addressId: initialCompany.addressId ? String(initialCompany.addressId) : "",
-      companyName: initialCompany.companyName,
-    });
-  }, [initialCompany, reset]);
-
-  useEffect(() => {
-    setAddresses(initialAddresses);
-  }, [initialAddresses]);
-
-  if (mode === "edit" && !initialCompany) {
-    return <ErrorMessage message="Company not found." />;
-  }
-
-  const addressOptions: SelectOption[] = [
-    ...addresses.map((address) => ({
-      label: formatAddressLabel(address),
-      value: String(address.id),
-    })),
-    {
-      label: "+ Add new address",
-      value: NEW_ADDRESS_VALUE,
-    },
-  ];
-
-  const handleOpenAddressDialog = async () => {
-    setAddressLoadError("");
-    setIsAddressDialogOpen(true);
-  };
-
-  const handleAddressCreated = async (result: AddressActionResult) => {
-    setIsAddressesLoading(true);
-    setAddressLoadError("");
-
-    try {
-      const nextAddresses = await getAddresses();
-      setAddresses(nextAddresses);
-
-      if (result.addressId) {
-        setValue("addressId", String(result.addressId), {
-          shouldDirty: true,
-        });
-      }
-    } catch (error) {
-      console.error("Failed to refresh addresses", error);
-      setAddressLoadError(
-        "Address saved, but the list could not be refreshed.",
-      );
-    } finally {
-      setIsAddressesLoading(false);
-    }
-
-    setIsAddressDialogOpen(false);
+  const handleSaveAddress = async () => {
+    const isValid = await trigger("address");
+    if (isValid) setIsAddressDialogOpen(false);
   };
 
   return (
@@ -156,40 +65,47 @@ export const CompanyForm = ({
               <FormFieldError message={errors.companyName?.message} />
             </div>
 
-            <div>
-              <FormSelectField
-                control={control}
-                id="addressId"
-                label="Address"
-                name="addressId"
-                options={addressOptions}
-                placeholder={
-                  isAddressesLoading
-                    ? "Loading addresses..."
-                    : "Select or add an address"
-                }
-                disabled={isPending}
-                onValueChange={(value, fieldOnChange) => {
-                  if (value === NEW_ADDRESS_VALUE) {
-                    void handleOpenAddressDialog();
-                    return;
-                  }
-
-                  fieldOnChange(value);
-                }}
-              />
+            <div className="flex flex-col justify-end">
+              {hasAddress ? (
+                <div className="flex items-center justify-between gap-2 rounded-lg border border-border bg-background px-3 py-2">
+                  <div className="flex min-w-0 items-center gap-2 text-sm">
+                    <MapPin className="size-4 shrink-0 text-muted-foreground" />
+                    <span className="truncate text-muted-foreground">
+                      {[addressValues.streetAndNo, addressValues.city]
+                        .filter(Boolean)
+                        .join(", ") || addressValues.altName}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsAddressDialogOpen(true)}
+                    className="shrink-0 text-xs text-primary hover:underline"
+                    disabled={isPending}
+                  >
+                    Edit
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setIsAddressDialogOpen(true)}
+                  className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-dashed border-border px-3 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+                  disabled={isPending}
+                >
+                  <Plus className="size-4" />
+                  Add Address
+                </button>
+              )}
             </div>
           </div>
         </section>
 
         <FormError>{state.error}</FormError>
 
-        {addressLoadError && <ErrorMessage message={addressLoadError} />}
-
         <FormActions
           isPending={isPending}
           onCancel={() => router.push("/companies")}
-          submitLabel={mode === "edit" ? "Save Changes" : "Create Company"}
+          submitLabel="Create Company"
         />
       </form>
 
@@ -197,19 +113,36 @@ export const CompanyForm = ({
         <DialogContent className="flex h-[85dvh] max-w-3xl flex-col gap-0 p-0">
           <DialogHeader className="shrink-0 border-b bg-background px-6 py-5">
             <DialogTitle className="flex items-center gap-2">
-              <Plus className="size-4" />
-              New Address
+              <MapPin className="size-4" />
+              Address
             </DialogTitle>
-            <DialogDescription>Add an address.</DialogDescription>
+            <DialogDescription>
+              Fill in the address details for this company.
+            </DialogDescription>
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto p-6">
             <AddressForm
-              cancelLabel="Close"
-              submitLabel="Save Address"
-              onCancel={() => setIsAddressDialogOpen(false)}
-              onSuccess={handleAddressCreated}
+              control={control}
+              errors={errors.address}
+              register={register}
+              watch={watch}
             />
+          </div>
+
+          <div className="shrink-0 border-t bg-background px-6 py-4">
+            <div className="flex justify-end gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsAddressDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="button" onClick={handleSaveAddress}>
+                Save Address
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

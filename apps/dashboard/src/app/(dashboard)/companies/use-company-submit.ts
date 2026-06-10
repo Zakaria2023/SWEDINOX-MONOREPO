@@ -1,89 +1,94 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
-import {
-  createCompany,
-  updateCompany,
-  type CompanyActionResult,
-  type CreateCompanyInput,
-} from "./actions";
+import { createCompany, type CompanyActionResult } from "./actions";
 import { companySchema, type CompanyFormValues } from "./validation";
 
-type CompanyFormMode = "add" | "edit";
-
-type UseCompanySubmitOptions = {
-  companyId?: number;
-  mode?: CompanyFormMode;
-  onSuccess?: (state: CompanyActionResult) => void | Promise<void>;
-};
-
-export const useCompanySubmit = ({
-  companyId,
-  mode = "add",
-  onSuccess,
-}: UseCompanySubmitOptions = {}) => {
-  const router = useRouter();
+export const useCompanySubmit = () => {
+  const [isPending, startTransition] = useTransition();
   const [state, setState] = useState<CompanyActionResult>({});
-  const [isPending, setIsPending] = useState(false);
 
   const form = useForm<CompanyFormValues>({
     resolver: zodResolver(companySchema),
     defaultValues: {
-      addressId: "",
       companyName: "",
+      address: {
+        category: [],
+        poBox: false,
+        needCrane: false,
+        canopyRequired: false,
+        bundleSeparately: false,
+        addressComplete: false,
+        specialTransport: false,
+        altName: "",
+        streetAndNo: "",
+        postalCode: "",
+        country: "",
+        city: "",
+        region: "",
+        house: "",
+        telephone: "",
+        fax: "",
+        email: "",
+        website: "",
+        billingAttention: "",
+        billingAttentionAdditional: "",
+        gln: "",
+        peppolId: "",
+        sequenceNumber: "",
+        availableAt: "",
+        unloadingStartTime: "",
+        unloadingEndTime: "",
+        maxLength: "",
+        maxBundleWeight: "",
+        loadingInstructions: "",
+      },
     },
   });
 
-  const persistCompany = async (input: CreateCompanyInput) => {
-    setIsPending(true);
+  const onSubmit = form.handleSubmit((values) => {
+    startTransition(async () => {
+      const { companyName, address } = values;
 
-    try {
-      const nextState: CompanyActionResult =
-        mode === "edit" && companyId
-          ? await updateCompany({}, { id: companyId, ...input })
-          : await createCompany({}, input);
+      const result = await createCompany(companyName, {
+        altName: address.altName || undefined,
+        poBox: address.poBox,
+        streetAndNo: address.streetAndNo || undefined,
+        postalCode: address.postalCode || undefined,
+        country: address.country || undefined,
+        city: address.city || undefined,
+        region: address.region || undefined,
+        house: address.house || undefined,
+        telephone: address.telephone || undefined,
+        fax: address.fax || undefined,
+        email: address.email || undefined,
+        website: address.website || undefined,
+        billingAttention: address.billingAttention || undefined,
+        billingAttentionAdditional: address.billingAttentionAdditional || undefined,
+        gln: address.gln || undefined,
+        peppolId: address.peppolId || undefined,
+        sequenceNumber: address.sequenceNumber
+          ? Number(address.sequenceNumber)
+          : undefined,
+        category: address.category,
+        needCrane: address.needCrane,
+        canopyRequired: address.canopyRequired,
+        bundleSeparately: address.bundleSeparately,
+        addressComplete: address.addressComplete,
+        specialTransport: address.specialTransport,
+        availableAt: address.availableAt || undefined,
+        unloadingStartTime: address.unloadingStartTime || undefined,
+        unloadingEndTime: address.unloadingEndTime || undefined,
+        maxLength: address.maxLength || undefined,
+        maxBundleWeight: address.maxBundleWeight || undefined,
+        loadingInstructions: address.loadingInstructions || undefined,
+      });
 
-      setState(nextState);
-
-      return nextState;
-    } catch (error) {
-      console.error("Failed to persist company", error);
-
-      const nextState: CompanyActionResult = {
-        error: "Unable to save company right now.",
-      };
-      setState(nextState);
-      return nextState;
-    } finally {
-      setIsPending(false);
-    }
-  };
-
-  const onSubmit = form.handleSubmit(async (data) => {
-    const nextState = await persistCompany({
-      companyName: data.companyName,
-      addressId: data.addressId ? parseInt(data.addressId, 10) : undefined,
+      setState(result);
     });
-
-    if (!nextState.success) {
-      return;
-    }
-
-    if (onSuccess) {
-      void onSuccess(nextState);
-      return;
-    }
-
-    router.push("/companies");
   });
 
-  return {
-    form,
-    isPending,
-    onSubmit,
-    state,
-  };
+  return { form, isPending, onSubmit, state };
 };

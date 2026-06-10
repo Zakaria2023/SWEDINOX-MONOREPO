@@ -45,7 +45,7 @@ export const CompanyAddresses = mysqlTable(
     }),
 
     gln: varchar("gln", { length: 13 }),
-    peopleId: varchar("gln", { length: 13 }),
+    peppolId: varchar("peppol_id", { length: 255 }),
 
     sequenceNumber: int("sequence_number"),
 

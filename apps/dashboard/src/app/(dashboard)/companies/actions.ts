@@ -1,6 +1,8 @@
 "use server";
 
 import { db, InsertCompanyAddresses, type SelectCompanies } from "@/db";
+
+export type AddressInput = Omit<InsertCompanyAddresses, "uuid" | "companyUuid">;
 import { Companies } from "@/db/schema/companies";
 import { CompanyAddresses } from "@/db/schema/company-addresses";
 import { generateUuid } from "@/lib/helpers";
@@ -27,7 +29,7 @@ export const getCompanies = async (): Promise<SelectCompanies[]> => {
 
 export const createCompany = async (
   companyName: string,
-  address: InsertCompanyAddresses,
+  address: AddressInput,
 ): Promise<CompanyActionResult> => {
   const uuid = generateUuid();
   const addressUuid = generateUuid();
@@ -35,9 +37,8 @@ export const createCompany = async (
   try {
     await db.transaction(async (tx) => {
       await tx.insert(Companies).values({ uuid, companyName });
-      const { uuid: _ignored, ...addressFields } = address;
       await tx.insert(CompanyAddresses).values({
-        ...addressFields,
+        ...address,
         uuid: addressUuid,
         companyUuid: uuid,
       });

@@ -5,7 +5,7 @@ import { unstable_noStore as noStore } from "next/cache";
 export const CompaniesTable = async () => {
   noStore();
 
-  const initialCompanies = await getCompanies();
+  const companies = await getCompanies();
 
-  return <CompaniesTableContent initialCompanies={initialCompanies} />;
+  return <CompaniesTableContent companies={companies} />;
 };
