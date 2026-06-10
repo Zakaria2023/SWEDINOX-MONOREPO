@@ -50,7 +50,7 @@ export const createCompany = async (
       await tx.insert(Companies).values({ uuid, companyName });
       await tx.insert(CompanyAddresses).values({
         ...firstAddress,
-        uuid: generateUuid(),
+        uuid: uuid,
         companyUuid: uuid,
       });
       for (const addr of additionalAddresses) {
