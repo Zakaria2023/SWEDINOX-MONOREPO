@@ -88,6 +88,30 @@ export const companyRoleTypes = [
 
 export type CompanyRoleType = (typeof companyRoleTypes)[number];
 
+export const paymentTermTypes = [
+  "cash",
+  "net_7",
+  "net_14",
+  "net_30",
+  "net_45",
+  "net_60",
+  "advance_payment",
+  "custom",
+] as const satisfies readonly string[];
+
+export type PaymentTermType = (typeof paymentTermTypes)[number];
+
+export const invoiceDeliveryMethods = [
+  "email",
+  "print",
+  "portal",
+  "edi",
+  "manual",
+] as const satisfies readonly string[];
+
+export type InvoiceDeliveryMethod =
+  (typeof invoiceDeliveryMethods)[number];
+
 export const locationTypes = [
   "pick",
   "bulk",
