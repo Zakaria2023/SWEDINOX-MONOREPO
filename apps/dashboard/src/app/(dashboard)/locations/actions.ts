@@ -34,11 +34,16 @@ export type LocationSelectOption = {
 export const getLocations = async (): Promise<LocationListItem[]> =>
   db.select().from(Locations).orderBy(desc(Locations.createdAt));
 
-export const getLoadingLocations = async (): Promise<LoadingLocationOption[]> =>
-  db
-    .select({ uuid: LoadingLocations.uuid, name: LoadingLocations.name })
-    .from(LoadingLocations)
-    .orderBy(LoadingLocations.name);
+export const getLoadingLocations = async (): Promise<LoadingLocationOption[]> => {
+  try {
+    return await db
+      .select({ uuid: LoadingLocations.uuid, name: LoadingLocations.name })
+      .from(LoadingLocations)
+      .orderBy(LoadingLocations.name);
+  } catch {
+    return [];
+  }
+};
 
 export const getLocationsForSelect = async (): Promise<LocationSelectOption[]> =>
   db
@@ -47,15 +52,31 @@ export const getLocationsForSelect = async (): Promise<LocationSelectOption[]> =
     .orderBy(Locations.name);
 
 export const createLocation = async (
-  input: LocationInput,
+  input: LocationInput & { newLoadingLocationName?: string },
 ): Promise<LocationActionResult> => {
+  const { newLoadingLocationName, ...locationInput } = input;
   const locationUuid = generateUuid();
 
   try {
-    await db.insert(Locations).values({
-      ...input,
-      uuid: locationUuid,
-    });
+    if (newLoadingLocationName?.trim()) {
+      const llUuid = generateUuid();
+      await db.transaction(async (tx) => {
+        await tx.insert(LoadingLocations).values({
+          uuid: llUuid,
+          name: newLoadingLocationName.trim(),
+        });
+        await tx.insert(Locations).values({
+          ...locationInput,
+          uuid: locationUuid,
+          loadingLocationUuid: llUuid,
+        });
+      });
+    } else {
+      await db.insert(Locations).values({
+        ...locationInput,
+        uuid: locationUuid,
+      });
+    }
 
     return { success: true, locationUuid };
   } catch (error) {

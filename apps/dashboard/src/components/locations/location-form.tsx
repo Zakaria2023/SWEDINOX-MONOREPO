@@ -12,7 +12,10 @@ import { FormError } from "@/components/ui/form-error";
 import { AddressSelect } from "@/components/locations/address-select";
 import { Controller } from "react-hook-form";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { X } from "lucide-react";
+
+const ADD_NEW_VALUE = "__add_new__";
 
 const locationTypeOptions = locationTypes.map((t) => ({
   value: t,
@@ -31,11 +34,17 @@ type LocationFormProps = {
 
 export const LocationForm = ({ loadingLocations, addresses }: LocationFormProps) => {
   const router = useRouter();
-  const { form, isPending, onSubmit, state } = useLocationSubmit();
+  const [pendingLoadingLocationName, setPendingLoadingLocationName] = useState("");
+  const [isAddingNewLoadingLocation, setIsAddingNewLoadingLocation] = useState(false);
+
+  const { form, isPending, onSubmit, state } = useLocationSubmit(
+    isAddingNewLoadingLocation ? pendingLoadingLocationName : undefined,
+  );
   const {
     control,
     register,
     watch,
+    setValue,
     formState: { errors },
   } = form;
 
@@ -48,6 +57,7 @@ export const LocationForm = ({ loadingLocations, addresses }: LocationFormProps)
   const loadingLocationOptions = [
     { value: "", label: "-empty-" },
     ...loadingLocations.map((ll) => ({ value: ll.uuid, label: ll.name })),
+    { value: ADD_NEW_VALUE, label: "+ Add new loading location" },
   ];
 
   return (
@@ -84,15 +94,51 @@ export const LocationForm = ({ loadingLocations, addresses }: LocationFormProps)
             disabled={isPending}
           />
 
-          <FormSelectField
-            control={control}
-            id="loadingLocationUuid"
-            name="loadingLocationUuid"
-            label="Loading Location"
-            options={loadingLocationOptions}
-            emptyValue=""
-            disabled={isPending}
-          />
+          <div>
+            <FormSelectField
+              control={control}
+              id="loadingLocationUuid"
+              name="loadingLocationUuid"
+              label="Loading Location"
+              options={loadingLocationOptions}
+              emptyValue=""
+              disabled={isPending}
+              onValueChange={(value, fieldOnChange) => {
+                if (value === ADD_NEW_VALUE) {
+                  setIsAddingNewLoadingLocation(true);
+                  fieldOnChange(ADD_NEW_VALUE);
+                } else {
+                  setIsAddingNewLoadingLocation(false);
+                  setPendingLoadingLocationName("");
+                  fieldOnChange(value);
+                }
+              }}
+            />
+            {isAddingNewLoadingLocation && (
+              <div className="mt-2 flex items-center gap-2">
+                <Input
+                  placeholder="New loading location name"
+                  value={pendingLoadingLocationName}
+                  onChange={(e) => setPendingLoadingLocationName(e.target.value)}
+                  disabled={isPending}
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsAddingNewLoadingLocation(false);
+                    setPendingLoadingLocationName("");
+                    setValue("loadingLocationUuid", "");
+                  }}
+                  className="shrink-0 rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                  disabled={isPending}
+                >
+                  <X className="size-4" />
+                  <span className="sr-only">Cancel</span>
+                </button>
+              </div>
+            )}
+          </div>
 
           <div>
             <FormLabel htmlFor="addressUuid">Address</FormLabel>

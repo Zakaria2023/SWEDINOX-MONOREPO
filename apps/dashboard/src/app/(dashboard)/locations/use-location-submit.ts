@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import { createLocation, type LocationActionResult } from "./actions";
 import { locationSchema, type LocationFormValues } from "./validation";
 
-export const useLocationSubmit = () => {
+export const useLocationSubmit = (pendingLoadingLocationName?: string) => {
   const [isPending, startTransition] = useTransition();
   const [state, setState] = useState<LocationActionResult>({});
 
@@ -32,7 +32,10 @@ export const useLocationSubmit = () => {
       const result = await createLocation({
         name: values.name,
         locationType: values.locationType,
-        loadingLocationUuid: values.loadingLocationUuid || undefined,
+        loadingLocationUuid:
+          pendingLoadingLocationName || values.loadingLocationUuid?.startsWith("__")
+            ? undefined
+            : values.loadingLocationUuid || undefined,
         addressUuid: values.addressUuid || undefined,
         pickingSequence:
           values.pickingSequence !== "" && values.pickingSequence !== undefined
@@ -44,6 +47,7 @@ export const useLocationSubmit = () => {
         limitedDimensions: values.limitedDimensions,
         adoptFrom: values.adoptFrom || undefined,
         adoptPosition: values.adoptPosition ?? "below",
+        newLoadingLocationName: pendingLoadingLocationName || undefined,
       });
       setState(result);
     });
