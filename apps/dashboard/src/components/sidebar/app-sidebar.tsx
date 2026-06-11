@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Building2, ChevronRight, ContactRound, Users } from "lucide-react";
+import { Building2, ChevronRight, ContactRound, MapPin, MessageSquare, Settings, Users } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -26,18 +26,22 @@ export const AppSidebar = () => {
   const isCustomersActive = pathname.startsWith("/addresses");
   const isCompanyActive =
     pathname.startsWith("/companies") ||
-    pathname.startsWith("/company-contacts");
-  const isContactsActive =
+    pathname.startsWith("/company-contacts") ||
+    pathname.startsWith("/communication-settings");
+  const isSalesActive =
     pathname.startsWith("/contacts") ||
     pathname.startsWith("/contact-groups");
+  const isConfigActive = pathname.startsWith("/locations");
 
   const [isCustomersOpen, setIsCustomersOpen] = useState(false);
   const [isCompanyOpen, setIsCompanyOpen] = useState(false);
-  const [isContactsOpen, setIsContactsOpen] = useState(false);
+  const [isSalesOpen, setIsSalesOpen] = useState(false);
+  const [isConfigOpen, setIsConfigOpen] = useState(false);
 
   const isCustomersExpanded = isCustomersOpen || isCustomersActive;
   const isCompanyExpanded = isCompanyOpen || isCompanyActive;
-  const isContactsExpanded = isContactsOpen || isContactsActive;
+  const isSalesExpanded = isSalesOpen || isSalesActive;
+  const isConfigExpanded = isConfigOpen || isConfigActive;
 
   return (
     <Sidebar>
@@ -114,25 +118,33 @@ export const AppSidebar = () => {
                         <span>Company Contacts</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/communication-settings" />}
+                        isActive={pathname.startsWith("/communication-settings")}
+                      >
+                        <span>Communication Settings</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
                   </SidebarMenuSub>
                 )}
               </SidebarMenuItem>
 
-              {/* ── Contacts ── */}
+              {/* ── Sales ── */}
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  aria-expanded={isContactsExpanded}
-                  onClick={() => setIsContactsOpen((o) => !o)}
+                  aria-expanded={isSalesExpanded}
+                  onClick={() => setIsSalesOpen((o) => !o)}
                 >
                   <ContactRound />
-                  <span>Contacts</span>
+                  <span>Sales</span>
                   <ChevronRight
                     className={cn("ml-auto transition-transform", {
-                      "rotate-90": isContactsExpanded,
+                      "rotate-90": isSalesExpanded,
                     })}
                   />
                 </SidebarMenuButton>
-                {isContactsExpanded && (
+                {isSalesExpanded && (
                   <SidebarMenuSub>
                     <SidebarMenuSubItem>
                       <SidebarMenuSubButton
@@ -148,6 +160,34 @@ export const AppSidebar = () => {
                         isActive={pathname.startsWith("/contact-groups")}
                       >
                         <span>Contact Groups</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                  </SidebarMenuSub>
+                )}
+              </SidebarMenuItem>
+
+              {/* ── Configuration ── */}
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  aria-expanded={isConfigExpanded}
+                  onClick={() => setIsConfigOpen((o) => !o)}
+                >
+                  <Settings />
+                  <span>Configuration</span>
+                  <ChevronRight
+                    className={cn("ml-auto transition-transform", {
+                      "rotate-90": isConfigExpanded,
+                    })}
+                  />
+                </SidebarMenuButton>
+                {isConfigExpanded && (
+                  <SidebarMenuSub>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/locations" />}
+                        isActive={pathname.startsWith("/locations")}
+                      >
+                        <span>Locations</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                   </SidebarMenuSub>
