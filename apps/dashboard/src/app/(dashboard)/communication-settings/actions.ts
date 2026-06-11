@@ -42,7 +42,6 @@ export type CompanyOption = {
 
 export type ContactOption = {
   uuid: string;
-  code: string;
   description: string;
 };
 
@@ -80,11 +79,10 @@ export const getContactsForSelect = async (): Promise<ContactOption[]> =>
   db
     .select({
       uuid: Contacts.uuid,
-      code: Contacts.code,
       description: Contacts.description,
     })
     .from(Contacts)
-    .orderBy(Contacts.code);
+    .orderBy(Contacts.description);
 
 export const createCommunicationSetting = async (
   input: CommunicationSettingInput,
