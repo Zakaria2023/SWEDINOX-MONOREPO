@@ -7,13 +7,17 @@ import {
   type SelectContactGroups,
 } from "@/db";
 import { generateUuid } from "@/lib/helpers";
+import { alias } from "drizzle-orm/mysql-core";
 import { desc, eq } from "drizzle-orm";
 
-export type ContactGroupItem = SelectContactGroups;
+export type ContactGroupItem = SelectContactGroups & { subgroupName: string | null };
 
 export type ContactGroupInput = {
   name: string;
   description?: string;
+  contractSubgroupUuid?: string;
+  sequenceWithinSubgroup: number;
+  quicklyChangeSequenceNumber?: string;
   isActive: boolean;
 };
 
@@ -22,8 +26,15 @@ export type ContactGroupActionResult = {
   error?: string;
 };
 
-export const getContactGroupsList = async (): Promise<ContactGroupItem[]> =>
-  db.select().from(ContactGroups).orderBy(desc(ContactGroups.createdAt));
+export const getContactGroupsList = async (): Promise<ContactGroupItem[]> => {
+  const Subgroup = alias(ContactGroups, "subgroup");
+  const rows = await db
+    .select({ group: ContactGroups, subgroupName: Subgroup.name })
+    .from(ContactGroups)
+    .leftJoin(Subgroup, eq(Subgroup.uuid, ContactGroups.contractSubgroupUuid))
+    .orderBy(desc(ContactGroups.createdAt));
+  return rows.map((r) => ({ ...r.group, subgroupName: r.subgroupName ?? null }));
+};
 
 export const createContactGroup = async (
   input: ContactGroupInput,
@@ -33,6 +44,9 @@ export const createContactGroup = async (
       uuid: generateUuid(),
       name: input.name,
       description: input.description || null,
+      contractSubgroupUuid: input.contractSubgroupUuid || null,
+      sequenceWithinSubgroup: input.sequenceWithinSubgroup,
+      quicklyChangeSequenceNumber: input.quicklyChangeSequenceNumber || null,
       isActive: input.isActive,
     });
     return { success: true };
@@ -53,6 +67,9 @@ export const updateContactGroup = async (
       .set({
         name: input.name,
         description: input.description || null,
+        contractSubgroupUuid: input.contractSubgroupUuid || null,
+        sequenceWithinSubgroup: input.sequenceWithinSubgroup,
+        quicklyChangeSequenceNumber: input.quicklyChangeSequenceNumber || null,
         isActive: input.isActive,
       })
       .where(eq(ContactGroups.uuid, uuid));

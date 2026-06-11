@@ -9,7 +9,7 @@ import {
   type SelectContacts,
 } from "@/db";
 import { generateUuid } from "@/lib/helpers";
-import { desc } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 
 export type ContactInput = Omit<InsertContacts, "id" | "uuid" | "createdAt" | "updatedAt">;
 
@@ -19,12 +19,20 @@ export type ContactActionResult = {
   success?: boolean;
 };
 
-export type ContactListItem = SelectContacts;
+export type ContactListItem = SelectContacts & { contactGroupName: string | null };
 export type ContactGroupOption = Pick<SelectContactGroups, "uuid" | "name">;
 
 export const getContacts = async (): Promise<ContactListItem[]> => {
-  const rows = await db.select().from(Contacts).orderBy(desc(Contacts.createdAt));
-  return rows;
+  const rows = await db
+    .select({
+      contact: Contacts,
+      contactGroupName: ContactGroups.name,
+    })
+    .from(Contacts)
+    .leftJoin(ContactGroups, eq(ContactGroups.uuid, Contacts.contactGroupUuid))
+    .orderBy(desc(Contacts.createdAt));
+
+  return rows.map((r) => ({ ...r.contact, contactGroupName: r.contactGroupName ?? null }));
 };
 
 export const getContactGroups = async (): Promise<ContactGroupOption[]> => {

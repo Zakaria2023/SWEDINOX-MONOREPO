@@ -12,18 +12,33 @@ import {
 } from "drizzle-orm/mysql-core";
 import { contactTypes } from "../../lib/enums";
 
-export const ContactGroups = mysqlTable("contact_groups", {
-  id: int("id").primaryKey().autoincrement(),
-  uuid: char("uuid", { length: 36 }).notNull().unique(),
+export const ContactGroups = mysqlTable(
+  "contact_groups",
+  {
+    id: int("id").primaryKey().autoincrement(),
+    uuid: char("uuid", { length: 36 }).notNull().unique(),
 
-  name: varchar("name", { length: 255 }).notNull(),
-  description: varchar("description", { length: 255 }),
+    name: varchar("name", { length: 255 }).notNull(),
+    description: varchar("description", { length: 255 }),
 
-  isActive: boolean("is_active").default(true),
+    contractSubgroupUuid: char("contract_subgroup_uuid", { length: 36 }),
+    sequenceWithinSubgroup: int("sequence_within_subgroup").default(0).notNull(),
+    quicklyChangeSequenceNumber: varchar("quickly_change_sequence_number", { length: 100 }),
 
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
-});
+    isActive: boolean("is_active").default(true),
+
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+  },
+  (table) => [
+    index("idx_contact_groups_subgroup_uuid").on(table.contractSubgroupUuid),
+    foreignKey({
+      name: "fk_contact_groups_subgroup",
+      columns: [table.contractSubgroupUuid],
+      foreignColumns: [table.uuid],
+    }),
+  ],
+);
 
 export const Contacts = mysqlTable(
   "contacts",

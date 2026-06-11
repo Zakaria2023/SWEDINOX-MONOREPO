@@ -1,6 +1,6 @@
 "use client";
 
-import { type SelectContacts } from "@/db";
+import { type ContactListItem } from "@/app/(dashboard)/contacts/actions";
 import {
   Table,
   TableBody,
@@ -22,16 +22,16 @@ const CONTACT_TYPE_LABELS: Record<string, string> = {
 };
 
 const ALL_COLUMNS = [
-  { key: "id",           label: "Code",            defaultVisible: true  },
-  { key: "contactType",  label: "Contact Type",     defaultVisible: true  },
-  { key: "code",         label: "Reference Code",   defaultVisible: true  },
-  { key: "description",  label: "Description",      defaultVisible: true  },
-  { key: "searchCode1",  label: "Search Code 1",    defaultVisible: false },
-  { key: "searchCode2",  label: "Search Code 2",    defaultVisible: false },
-  { key: "searchCode3",  label: "Search Code 3",    defaultVisible: false },
-  { key: "websiteSorting", label: "Website Sort",   defaultVisible: false },
-  { key: "hideOnWebsite",  label: "Hide on Website",defaultVisible: false },
-  { key: "createdAt",    label: "Created At",       defaultVisible: false },
+  { key: "id",               label: "Code",            defaultVisible: true  },
+  { key: "contactType",      label: "Contact Type",    defaultVisible: true  },
+  { key: "contactGroupName", label: "Contact Group",   defaultVisible: true  },
+  { key: "description",      label: "Description",     defaultVisible: true  },
+  { key: "searchCode1",      label: "Search Code 1",   defaultVisible: false },
+  { key: "searchCode2",      label: "Search Code 2",   defaultVisible: false },
+  { key: "searchCode3",      label: "Search Code 3",   defaultVisible: false },
+  { key: "websiteSorting",   label: "Website Sort",    defaultVisible: false },
+  { key: "hideOnWebsite",    label: "Hide on Website", defaultVisible: false },
+  { key: "createdAt",        label: "Created At",      defaultVisible: false },
 ] as const;
 
 type ColumnKey = (typeof ALL_COLUMNS)[number]["key"];
@@ -42,7 +42,7 @@ const initialVisibility = ALL_COLUMNS.reduce(
 );
 
 type ContactsTableContentProps = {
-  contacts: SelectContacts[];
+  contacts: ContactListItem[];
 };
 
 export const ContactsTableContent = ({ contacts }: ContactsTableContentProps) => {
@@ -54,7 +54,7 @@ export const ContactsTableContent = ({ contacts }: ContactsTableContentProps) =>
 
   const visibleColumns = ALL_COLUMNS.filter((col) => columnVisibility[col.key]);
 
-  const renderCell = (contact: SelectContacts, key: ColumnKey) => {
+  const renderCell = (contact: ContactListItem, key: ColumnKey) => {
     switch (key) {
       case "id":
         return <TableCell key={key} className="font-medium">{contact.id}</TableCell>;
@@ -64,8 +64,8 @@ export const ContactsTableContent = ({ contacts }: ContactsTableContentProps) =>
             {contact.contactType ? CONTACT_TYPE_LABELS[contact.contactType] : "—"}
           </TableCell>
         );
-      case "code":
-        return <TableCell key={key} className="font-medium">{contact.code}</TableCell>;
+      case "contactGroupName":
+        return <TableCell key={key}>{contact.contactGroupName ?? "—"}</TableCell>;
       case "description":
         return <TableCell key={key}>{contact.description}</TableCell>;
       case "searchCode1":

@@ -6,6 +6,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Controller } from "react-hook-form";
+import { Select } from "@/components/shadcn/select";
 import {
   Dialog,
   DialogContent,
@@ -36,6 +38,9 @@ import {
 const groupSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
+  contractSubgroupUuid: z.string().optional(),
+  sequenceWithinSubgroup: z.number().int().min(0).default(0),
+  quicklyChangeSequenceNumber: z.string().optional(),
   isActive: z.boolean(),
 });
 
@@ -44,6 +49,9 @@ type GroupFormValues = z.infer<typeof groupSchema>;
 const DEFAULT_VALUES: GroupFormValues = {
   name: "",
   description: "",
+  contractSubgroupUuid: "",
+  sequenceWithinSubgroup: 0,
+  quicklyChangeSequenceNumber: "",
   isActive: true,
 };
 
@@ -62,7 +70,7 @@ export const ContactGroupsClient = ({ groups }: Props) => {
     defaultValues: DEFAULT_VALUES,
   });
 
-  const { register, formState: { errors }, reset, handleSubmit } = form;
+  const { register, control, formState: { errors }, reset, handleSubmit } = form;
 
   const openCreate = () => {
     setEditTarget(null);
@@ -76,6 +84,9 @@ export const ContactGroupsClient = ({ groups }: Props) => {
     reset({
       name: group.name,
       description: group.description ?? "",
+      contractSubgroupUuid: group.contractSubgroupUuid ?? "",
+      sequenceWithinSubgroup: group.sequenceWithinSubgroup ?? 0,
+      quicklyChangeSequenceNumber: group.quicklyChangeSequenceNumber ?? "",
       isActive: group.isActive ?? true,
     });
     setFormError(undefined);
@@ -94,8 +105,16 @@ export const ContactGroupsClient = ({ groups }: Props) => {
   const onSubmit = handleSubmit((values) => {
     startTransition(async () => {
       const result = editTarget
-        ? await updateContactGroup(editTarget.uuid, values)
-        : await createContactGroup(values);
+        ? await updateContactGroup(editTarget.uuid, {
+            ...values,
+            contractSubgroupUuid: values.contractSubgroupUuid || undefined,
+            quicklyChangeSequenceNumber: values.quicklyChangeSequenceNumber || undefined,
+          })
+        : await createContactGroup({
+            ...values,
+            contractSubgroupUuid: values.contractSubgroupUuid || undefined,
+            quicklyChangeSequenceNumber: values.quicklyChangeSequenceNumber || undefined,
+          });
 
       if (result.success) {
         setDialogOpen(false);
@@ -144,7 +163,7 @@ export const ContactGroupsClient = ({ groups }: Props) => {
               <TableRow>
                 <TableHead>Code</TableHead>
                 <TableHead>Name</TableHead>
-                <TableHead>Description</TableHead>
+                <TableHead>Subgroup</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Created At</TableHead>
                 <TableHead className="w-24" />
@@ -163,7 +182,7 @@ export const ContactGroupsClient = ({ groups }: Props) => {
                     <TableCell className="font-medium">{group.id}</TableCell>
                     <TableCell className="font-medium">{group.name}</TableCell>
                     <TableCell className="text-muted-foreground">
-                      {group.description ?? "—"}
+                      {group.subgroupName ?? "—"}
                     </TableCell>
                     <TableCell>{activeBadge(group.isActive)}</TableCell>
                     <TableCell>
@@ -199,7 +218,7 @@ export const ContactGroupsClient = ({ groups }: Props) => {
 
       {/* Create / Edit dialog */}
       <Dialog open={dialogOpen} onOpenChange={handleDialogClose}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>
               {editTarget ? "Edit Contact Group" : "New Contact Group"}
@@ -225,13 +244,47 @@ export const ContactGroupsClient = ({ groups }: Props) => {
             </div>
 
             <div>
-              <FormLabel htmlFor="description">Description</FormLabel>
-              <Input
-                id="description"
-                {...register("description")}
-                placeholder="Optional description"
-                disabled={isPending}
+              <FormLabel htmlFor="contractSubgroupUuid">Contract subgroup</FormLabel>
+              <Controller
+                name="contractSubgroupUuid"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    id="contractSubgroupUuid"
+                    options={[
+                      { value: "", label: "-empty-" },
+                      ...groups
+                        .filter((g) => g.uuid !== editTarget?.uuid)
+                        .map((g) => ({ value: g.uuid, label: g.name })),
+                    ]}
+                    value={field.value ?? ""}
+                    onValueChange={field.onChange}
+                    placeholder="-empty-"
+                    disabled={isPending}
+                  />
+                )}
               />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <FormLabel htmlFor="sequenceWithinSubgroup">Sequence within subgroup</FormLabel>
+                <Input
+                  id="sequenceWithinSubgroup"
+                  type="number"
+                  min={0}
+                  {...register("sequenceWithinSubgroup", { valueAsNumber: true })}
+                  disabled={isPending}
+                />
+              </div>
+              <div>
+                <FormLabel htmlFor="quicklyChangeSequenceNumber">Quickly change seq. no.</FormLabel>
+                <Input
+                  id="quicklyChangeSequenceNumber"
+                  {...register("quicklyChangeSequenceNumber")}
+                  disabled={isPending}
+                />
+              </div>
             </div>
 
             <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-border bg-muted/20 px-4 py-3 transition-colors hover:bg-muted/40">
