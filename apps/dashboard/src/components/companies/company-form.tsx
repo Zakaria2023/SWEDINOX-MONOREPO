@@ -93,14 +93,7 @@ export const CompanyForm = () => {
   const [contacts, setContacts] = useState<ContactInput[]>([]);
 
   const { form, isPending, onSubmit, state } = useCompanySubmit();
-  const {
-    control,
-    register,
-    watch,
-    setValue,
-    trigger,
-    formState: { errors },
-  } = form;
+  const { control, register, watch, setValue, trigger, formState: { errors } } = form;
 
   const additionalForm = useForm<CompanyFormValues>({
     resolver: zodResolver(companySchema),
@@ -121,9 +114,7 @@ export const CompanyForm = () => {
   const selectedRoles = watch("roles") ?? [];
 
   useEffect(() => {
-    if (state.success) {
-      router.push("/companies");
-    }
+    if (state.success) router.push("/companies");
   }, [state.success, router]);
 
   const hasFirstAddress = !!(
@@ -143,13 +134,16 @@ export const CompanyForm = () => {
     if (!isValid) return;
     const values = additionalForm.getValues("address");
     setAdditionalAddresses((prev) => [...prev, values]);
-    additionalForm.reset({ companyName: "", correspName: "", remarks: "", lang: "", roles: [], searchCode1: "", searchCode2: "", searchCode3: "", address: { ...DEFAULT_ADDRESS, category: ["delivery"] } });
+    additionalForm.reset({
+      companyName: "", correspName: "", remarks: "", lang: "", roles: [],
+      searchCode1: "", searchCode2: "", searchCode3: "",
+      address: { ...DEFAULT_ADDRESS, category: ["delivery"] },
+    });
     setIsAdditionalAddressDialogOpen(false);
   };
 
-  const removeAdditionalAddress = (index: number) => {
+  const removeAdditionalAddress = (index: number) =>
     setAdditionalAddresses((prev) => prev.filter((_, i) => i !== index));
-  };
 
   const toggleRole = (role: string) => {
     const current = selectedRoles;
@@ -168,35 +162,40 @@ export const CompanyForm = () => {
         {/* ── Company Details ───────────────────────────────────── */}
         <section className="space-y-4">
           <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">Company Details</h2>
-          <div className="grid gap-4 rounded-2xl border border-border bg-muted/20 p-4 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="sm:col-span-2">
-              <FormLabel htmlFor="companyName" required>Company Name</FormLabel>
-              <Input
-                id="companyName"
-                {...register("companyName")}
-                aria-invalid={!!errors.companyName}
-                placeholder="Enter the company name"
+          <div className="rounded-2xl border border-border bg-muted/20 p-4 space-y-4">
+
+            {/* Name / Lang / Corresp — 3 cols on lg */}
+            <div className="grid gap-4 lg:grid-cols-3">
+              <div>
+                <FormLabel htmlFor="companyName" required>Company Name</FormLabel>
+                <Input
+                  id="companyName"
+                  {...register("companyName")}
+                  aria-invalid={!!errors.companyName}
+                  placeholder="Enter the company name"
+                  disabled={isPending}
+                />
+                <FormFieldError message={errors.companyName?.message} />
+              </div>
+
+              <FormSelectField
+                control={control}
+                id="lang"
+                name="lang"
+                label="Language"
+                options={langOptions}
+                emptyValue=""
                 disabled={isPending}
               />
-              <FormFieldError message={errors.companyName?.message} />
+
+              <div>
+                <FormLabel htmlFor="correspName">Corresp. Name</FormLabel>
+                <Input id="correspName" {...register("correspName")} disabled={isPending} />
+              </div>
             </div>
 
-            <FormSelectField
-              control={control}
-              id="lang"
-              name="lang"
-              label="Language"
-              options={langOptions}
-              emptyValue=""
-              disabled={isPending}
-            />
-
-            <div className="sm:col-span-2">
-              <FormLabel htmlFor="correspName">Corresp. Name</FormLabel>
-              <Input id="correspName" {...register("correspName")} disabled={isPending} />
-            </div>
-
-            <div className="sm:col-span-2 lg:col-span-3">
+            {/* Remarks */}
+            <div>
               <FormLabel htmlFor="remarks">Remarks</FormLabel>
               <textarea
                 id="remarks"
@@ -208,14 +207,14 @@ export const CompanyForm = () => {
               />
             </div>
 
-            <div className="sm:col-span-2 lg:col-span-3">
+            {/* ── Addresses ── */}
+            <div className="space-y-2">
+              {/* First address */}
               {hasFirstAddress ? (
                 <div className="flex items-center justify-between gap-2 rounded-lg border border-border bg-background px-3 py-2">
                   <div className="flex min-w-0 items-center gap-2 text-sm">
                     <MapPin className="size-4 shrink-0 text-muted-foreground" />
-                    <span className="truncate text-muted-foreground">
-                      {addressLabel(addressValues)}
-                    </span>
+                    <span className="truncate text-muted-foreground">{addressLabel(addressValues)}</span>
                   </div>
                   <button
                     type="button"
@@ -237,69 +236,47 @@ export const CompanyForm = () => {
                   Add Address
                 </button>
               )}
-            </div>
-          </div>
-        </section>
 
-        {/* ── Roles ─────────────────────────────────────────────── */}
-        <section className="space-y-4">
-          <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">Roles</h2>
-          <div className="grid gap-3 rounded-2xl border border-border bg-muted/20 p-4 sm:grid-cols-2 lg:grid-cols-3">
-            {companyRoles.map((role) => (
-              <label
-                key={role}
-                className="flex cursor-pointer items-center gap-3 rounded-lg border border-border bg-background px-4 py-3 transition-colors hover:bg-muted/40"
-              >
-                <input
-                  type="checkbox"
-                  className="size-4 rounded border-border accent-primary"
-                  checked={selectedRoles.includes(role as never)}
-                  onChange={() => toggleRole(role)}
+              {/* Additional delivery addresses */}
+              {additionalAddresses.map((addr, index) => (
+                <div
+                  key={index}
+                  className="flex items-center justify-between rounded-lg border border-border bg-background px-3 py-2"
+                >
+                  <div className="flex min-w-0 items-center gap-2 text-sm">
+                    <MapPin className="size-4 shrink-0 text-muted-foreground" />
+                    <span className="truncate text-muted-foreground">{addressLabel(addr)}</span>
+                    <span className="shrink-0 rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700">
+                      Delivery
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeAdditionalAddress(index)}
+                    className="shrink-0 text-muted-foreground hover:text-destructive"
+                    disabled={isPending}
+                  >
+                    <X className="size-4" />
+                    <span className="sr-only">Remove address</span>
+                  </button>
+                </div>
+              ))}
+
+              {/* Add delivery address — only after first address is set */}
+              {hasFirstAddress && (
+                <button
+                  type="button"
+                  onClick={() => setIsAdditionalAddressDialogOpen(true)}
+                  className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg border border-dashed border-border px-3 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary"
                   disabled={isPending}
-                />
-                <span className="text-sm font-medium text-gray-700">{ROLE_LABELS[role]}</span>
-              </label>
-            ))}
-          </div>
-        </section>
-
-        {/* ── Search Codes ──────────────────────────────────────── */}
-        <section className="space-y-4">
-          <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">Search Codes</h2>
-          <div className="grid gap-3 rounded-2xl border border-border bg-muted/20 p-4">
-            <div>
-              <FormLabel htmlFor="searchCode1">Search code</FormLabel>
-              <Input id="searchCode1" {...register("searchCode1")} disabled={isPending} />
+                >
+                  <Plus className="size-4" />
+                  Add Delivery Address
+                </button>
+              )}
             </div>
-            <div>
-              <FormLabel htmlFor="searchCode2">Search code</FormLabel>
-              <Input id="searchCode2" {...register("searchCode2")} disabled={isPending} />
-            </div>
-            <div>
-              <FormLabel htmlFor="searchCode3">Search code</FormLabel>
-              <Input id="searchCode3" {...register("searchCode3")} disabled={isPending} />
-            </div>
-          </div>
-        </section>
 
-        {/* ── Company Contacts ──────────────────────────────────── */}
-        <section className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
-              Company Contacts
-            </h2>
-            <button
-              type="button"
-              onClick={() => setIsContactDialogOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary"
-              disabled={isPending}
-            >
-              <Plus className="size-4" />
-              Add Contact
-            </button>
-          </div>
-
-          {contacts.length > 0 && (
+            {/* ── Contacts ── */}
             <div className="space-y-2">
               {contacts.map((contact, index) => (
                 <div
@@ -327,59 +304,60 @@ export const CompanyForm = () => {
                   </button>
                 </div>
               ))}
-            </div>
-          )}
-        </section>
 
-        {/* ── Additional Delivery Addresses ─────────────────────── */}
-        {hasFirstAddress && (
-          <section className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
-                Additional Delivery Addresses
-              </h2>
               <button
                 type="button"
-                onClick={() => setIsAdditionalAddressDialogOpen(true)}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+                onClick={() => setIsContactDialogOpen(true)}
+                className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg border border-dashed border-border px-3 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary"
                 disabled={isPending}
               >
                 <Plus className="size-4" />
-                Add Delivery Address
+                Add Contact
               </button>
             </div>
+          </div>
+        </section>
 
-            {additionalAddresses.length > 0 && (
-              <div className="space-y-2">
-                {additionalAddresses.map((addr, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between rounded-lg border border-border bg-background px-3 py-2"
-                  >
-                    <div className="flex min-w-0 items-center gap-2 text-sm">
-                      <MapPin className="size-4 shrink-0 text-muted-foreground" />
-                      <span className="truncate text-muted-foreground">
-                        {addressLabel(addr)}
-                      </span>
-                      <span className="shrink-0 rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700">
-                        Delivery
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => removeAdditionalAddress(index)}
-                      className="shrink-0 text-muted-foreground hover:text-destructive"
-                      disabled={isPending}
-                    >
-                      <X className="size-4" />
-                      <span className="sr-only">Remove address</span>
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-        )}
+        {/* ── Roles ─────────────────────────────────────────────── */}
+        <section className="space-y-4">
+          <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">Roles</h2>
+          <div className="grid gap-3 rounded-2xl border border-border bg-muted/20 p-4 sm:grid-cols-2 lg:grid-cols-4">
+            {companyRoles.map((role) => (
+              <label
+                key={role}
+                className="flex cursor-pointer items-center gap-3 rounded-lg border border-border bg-background px-4 py-3 transition-colors hover:bg-muted/40"
+              >
+                <input
+                  type="checkbox"
+                  className="size-4 rounded border-border accent-primary"
+                  checked={selectedRoles.includes(role as never)}
+                  onChange={() => toggleRole(role)}
+                  disabled={isPending}
+                />
+                <span className="text-sm font-medium text-gray-700">{ROLE_LABELS[role]}</span>
+              </label>
+            ))}
+          </div>
+        </section>
+
+        {/* ── Search Codes ──────────────────────────────────────── */}
+        <section className="space-y-4">
+          <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">Search Codes</h2>
+          <div className="grid gap-3 rounded-2xl border border-border bg-muted/20 p-4 sm:grid-cols-3">
+            <div>
+              <FormLabel htmlFor="searchCode1">Search code</FormLabel>
+              <Input id="searchCode1" {...register("searchCode1")} disabled={isPending} />
+            </div>
+            <div>
+              <FormLabel htmlFor="searchCode2">Search code</FormLabel>
+              <Input id="searchCode2" {...register("searchCode2")} disabled={isPending} />
+            </div>
+            <div>
+              <FormLabel htmlFor="searchCode3">Search code</FormLabel>
+              <Input id="searchCode3" {...register("searchCode3")} disabled={isPending} />
+            </div>
+          </div>
+        </section>
 
         <FormError>{state.error}</FormError>
 
@@ -398,39 +376,32 @@ export const CompanyForm = () => {
               <MapPin className="size-4" />
               Address
             </DialogTitle>
-            <DialogDescription>
-              Fill in the address details for this company.
-            </DialogDescription>
+            <DialogDescription>Fill in the address details for this company.</DialogDescription>
           </DialogHeader>
-
           <div className="flex-1 overflow-y-auto p-6">
-            <AddressForm
-              control={control}
-              errors={errors.address}
-              register={register}
-              watch={watch}
-            />
+            <AddressForm control={control} errors={errors.address} register={register} watch={watch} />
           </div>
-
           <div className="shrink-0 border-t bg-background px-6 py-4">
             <div className="flex justify-end gap-3">
               <Button type="button" variant="outline" onClick={() => setIsFirstAddressDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button type="button" onClick={handleSaveFirstAddress}>
-                Save Address
-              </Button>
+              <Button type="button" onClick={handleSaveFirstAddress}>Save Address</Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Additional address dialog — delivery only */}
+      {/* Additional delivery address dialog */}
       <Dialog
         open={isAdditionalAddressDialogOpen}
         onOpenChange={(open) => {
           if (!open) {
-            additionalForm.reset({ companyName: "", correspName: "", remarks: "", lang: "", roles: [], searchCode1: "", searchCode2: "", searchCode3: "", address: { ...DEFAULT_ADDRESS, category: ["delivery"] } });
+            additionalForm.reset({
+              companyName: "", correspName: "", remarks: "", lang: "", roles: [],
+              searchCode1: "", searchCode2: "", searchCode3: "",
+              address: { ...DEFAULT_ADDRESS, category: ["delivery"] },
+            });
           }
           setIsAdditionalAddressDialogOpen(open);
         }}
@@ -439,13 +410,12 @@ export const CompanyForm = () => {
           <DialogHeader className="shrink-0 border-b bg-background px-6 py-5">
             <DialogTitle className="flex items-center gap-2">
               <MapPin className="size-4" />
-              Additional Delivery Address
+              Delivery Address
             </DialogTitle>
             <DialogDescription>
               Additional addresses are restricted to the delivery category.
             </DialogDescription>
           </DialogHeader>
-
           <div className="flex-1 overflow-y-auto p-6">
             <AddressForm
               control={additionalForm.control}
@@ -455,22 +425,23 @@ export const CompanyForm = () => {
               deliveryOnly
             />
           </div>
-
           <div className="shrink-0 border-t bg-background px-6 py-4">
             <div className="flex justify-end gap-3">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => {
-                  additionalForm.reset({ companyName: "", correspName: "", remarks: "", lang: "", roles: [], searchCode1: "", searchCode2: "", searchCode3: "", address: { ...DEFAULT_ADDRESS, category: ["delivery"] } });
+                  additionalForm.reset({
+                    companyName: "", correspName: "", remarks: "", lang: "", roles: [],
+                    searchCode1: "", searchCode2: "", searchCode3: "",
+                    address: { ...DEFAULT_ADDRESS, category: ["delivery"] },
+                  });
                   setIsAdditionalAddressDialogOpen(false);
                 }}
               >
                 Cancel
               </Button>
-              <Button type="button" onClick={handleSaveAdditionalAddress}>
-                Save Address
-              </Button>
+              <Button type="button" onClick={handleSaveAdditionalAddress}>Save Address</Button>
             </div>
           </div>
         </DialogContent>
