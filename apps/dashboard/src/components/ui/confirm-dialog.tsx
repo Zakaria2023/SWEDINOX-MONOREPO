@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/shadcn/button";
 import {
   Dialog,
@@ -21,38 +22,44 @@ type ConfirmDialogProps = {
 };
 
 export const ConfirmDialog = ({
-  confirmLabel = "Delete",
+  confirmLabel,
   description,
   isPending = false,
   onConfirm,
   onOpenChange,
   open,
   title,
-}: ConfirmDialogProps) => (
-  <Dialog open={open} onOpenChange={onOpenChange}>
-    <DialogContent showCloseButton={!isPending}>
-      <DialogHeader>
-        <DialogTitle>{title}</DialogTitle>
-        <DialogDescription>{description}</DialogDescription>
-      </DialogHeader>
-      <DialogFooter className="pt-4">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => onOpenChange(false)}
-          disabled={isPending}
-        >
-          Cancel
-        </Button>
-        <Button
-          type="button"
-          variant="destructive"
-          onClick={onConfirm}
-          disabled={isPending}
-        >
-          {isPending ? "Deleting..." : confirmLabel}
-        </Button>
-      </DialogFooter>
-    </DialogContent>
-  </Dialog>
-);
+}: ConfirmDialogProps) => {
+  const { t } = useTranslation();
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent showCloseButton={!isPending}>
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="pt-4">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={isPending}
+          >
+            {t("confirm-dialog.cancel")}
+          </Button>
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={onConfirm}
+            disabled={isPending}
+          >
+            {isPending
+              ? t("confirm-dialog.pending")
+              : confirmLabel ?? t("confirm-dialog.confirm")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};

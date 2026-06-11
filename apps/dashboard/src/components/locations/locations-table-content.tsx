@@ -1,32 +1,49 @@
 "use client";
 
-import { type SelectLocations } from "@/db";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/shadcn/table";
-import { ColumnSelector } from "@/components/ui/column-selector";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { type SelectLocations } from "@/db";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/shadcn/table";
+import { ColumnSelector } from "@/components/ui/column-selector";
 
-const ALL_COLUMNS = [
-  { key: "id",                     label: "Code",                    defaultVisible: true  },
-  { key: "name",                   label: "Name",                    defaultVisible: true  },
-  { key: "locationType",           label: "Type",                    defaultVisible: true  },
-  { key: "pickingSequence",        label: "Picking Seq.",            defaultVisible: true  },
-  { key: "isBlocked",              label: "Blocked",                 defaultVisible: true  },
-  { key: "blockedForOptimization", label: "Blocked for Optim.",      defaultVisible: false },
-  { key: "limitedDimensions",     label: "Limited Dim.",            defaultVisible: false },
-  { key: "adoptFrom",              label: "Adopt From",              defaultVisible: false },
-  { key: "adoptPosition",          label: "Adopt Position",          defaultVisible: false },
-  { key: "createdAt",              label: "Created At",              defaultVisible: false },
-  { key: "updatedAt",              label: "Updated At",              defaultVisible: false },
-] as const;
+type ColumnKey =
+  | "id"
+  | "name"
+  | "locationType"
+  | "pickingSequence"
+  | "isBlocked"
+  | "blockedForOptimization"
+  | "limitedDimensions"
+  | "adoptFrom"
+  | "adoptPosition"
+  | "createdAt"
+  | "updatedAt";
 
-type ColumnKey = (typeof ALL_COLUMNS)[number]["key"];
+const ALL_COLUMNS: Array<{
+  defaultVisible: boolean;
+  key: ColumnKey;
+  labelKey: string;
+}> = [
+  { key: "id", labelKey: "locations-table-content.columns.id", defaultVisible: true },
+  { key: "name", labelKey: "locations-table-content.columns.name", defaultVisible: true },
+  { key: "locationType", labelKey: "locations-table-content.columns.location-type", defaultVisible: true },
+  { key: "pickingSequence", labelKey: "locations-table-content.columns.picking-sequence", defaultVisible: true },
+  { key: "isBlocked", labelKey: "locations-table-content.columns.is-blocked", defaultVisible: true },
+  {
+    key: "blockedForOptimization",
+    labelKey: "locations-table-content.columns.blocked-for-optimization",
+    defaultVisible: false,
+  },
+  {
+    key: "limitedDimensions",
+    labelKey: "locations-table-content.columns.limited-dimensions",
+    defaultVisible: false,
+  },
+  { key: "adoptFrom", labelKey: "locations-table-content.columns.adopt-from", defaultVisible: false },
+  { key: "adoptPosition", labelKey: "locations-table-content.columns.adopt-position", defaultVisible: false },
+  { key: "createdAt", labelKey: "locations-table-content.columns.created-at", defaultVisible: false },
+  { key: "updatedAt", labelKey: "locations-table-content.columns.updated-at", defaultVisible: false },
+];
 
 const initialVisibility = ALL_COLUMNS.reduce(
   (acc, column) => ({ ...acc, [column.key]: column.defaultVisible }),
@@ -37,24 +54,8 @@ type LocationsTableContentProps = {
   locations: SelectLocations[];
 };
 
-const booleanBadge = (value: boolean | null) =>
-  value ? (
-    <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
-      Yes
-    </span>
-  ) : (
-    <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
-      No
-    </span>
-  );
-
-const typeBadge = (value: string) => (
-  <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 capitalize">
-    {value.replace(/_/g, " ")}
-  </span>
-);
-
 export const LocationsTableContent = ({ locations }: LocationsTableContentProps) => {
+  const { t } = useTranslation();
   const [columnVisibility, setColumnVisibility] =
     useState<Record<ColumnKey, boolean>>(initialVisibility);
 
@@ -62,7 +63,25 @@ export const LocationsTableContent = ({ locations }: LocationsTableContentProps)
     setColumnVisibility((prev) => ({ ...prev, [key]: !prev[key as ColumnKey] }));
   };
 
-  const visibleColumns = ALL_COLUMNS.filter((col) => columnVisibility[col.key]);
+  const visibleColumns = ALL_COLUMNS.filter((column) => columnVisibility[column.key]);
+  const fallbackValue = t("common.not-available");
+
+  const booleanBadge = (value: boolean | null) =>
+    value ? (
+      <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
+        {t("common.yes")}
+      </span>
+    ) : (
+      <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+        {t("common.no")}
+      </span>
+    );
+
+  const typeBadge = (value: string) => (
+    <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
+      {t(`location-form.location-type-options.${value}`)}
+    </span>
+  );
 
   const renderCell = (location: SelectLocations, key: ColumnKey) => {
     switch (key) {
@@ -73,21 +92,43 @@ export const LocationsTableContent = ({ locations }: LocationsTableContentProps)
       case "locationType":
         return <TableCell key={key}>{typeBadge(location.locationType)}</TableCell>;
       case "pickingSequence":
-        return <TableCell key={key}>{location.pickingSequence ?? "—"}</TableCell>;
+        return <TableCell key={key}>{location.pickingSequence ?? fallbackValue}</TableCell>;
       case "isBlocked":
         return <TableCell key={key}>{booleanBadge(location.isBlocked)}</TableCell>;
       case "blockedForOptimization":
-        return <TableCell key={key}>{booleanBadge(location.blockedForOptimization)}</TableCell>;
+        return (
+          <TableCell key={key}>
+            {booleanBadge(location.blockedForOptimization)}
+          </TableCell>
+        );
       case "limitedDimensions":
-        return <TableCell key={key}>{booleanBadge(location.limitedDimensions)}</TableCell>;
+        return (
+          <TableCell key={key}>
+            {booleanBadge(location.limitedDimensions)}
+          </TableCell>
+        );
       case "adoptFrom":
-        return <TableCell key={key}>{location.adoptFrom ?? "—"}</TableCell>;
+        return <TableCell key={key}>{location.adoptFrom ?? fallbackValue}</TableCell>;
       case "adoptPosition":
-        return <TableCell key={key} className="capitalize">{location.adoptPosition ?? "—"}</TableCell>;
+        return (
+          <TableCell key={key}>
+            {location.adoptPosition
+              ? t(`location-form.adopt-position-options.${location.adoptPosition}`)
+              : fallbackValue}
+          </TableCell>
+        );
       case "createdAt":
-        return <TableCell key={key}>{new Date(location.createdAt).toLocaleDateString()}</TableCell>;
+        return (
+          <TableCell key={key}>
+            {new Date(location.createdAt).toLocaleDateString()}
+          </TableCell>
+        );
       case "updatedAt":
-        return <TableCell key={key}>{new Date(location.updatedAt).toLocaleDateString()}</TableCell>;
+        return (
+          <TableCell key={key}>
+            {new Date(location.updatedAt).toLocaleDateString()}
+          </TableCell>
+        );
     }
   };
 
@@ -95,7 +136,10 @@ export const LocationsTableContent = ({ locations }: LocationsTableContentProps)
     <div className="space-y-4">
       <div className="flex justify-end">
         <ColumnSelector
-          columns={ALL_COLUMNS}
+          columns={ALL_COLUMNS.map((column) => ({
+            key: column.key,
+            label: t(column.labelKey),
+          }))}
           visibility={columnVisibility}
           onToggle={toggleColumn}
         />
@@ -106,7 +150,7 @@ export const LocationsTableContent = ({ locations }: LocationsTableContentProps)
           <TableHeader>
             <TableRow>
               {visibleColumns.map((column) => (
-                <TableHead key={column.key}>{column.label}</TableHead>
+                <TableHead key={column.key}>{t(column.labelKey)}</TableHead>
               ))}
             </TableRow>
           </TableHeader>
@@ -114,7 +158,7 @@ export const LocationsTableContent = ({ locations }: LocationsTableContentProps)
             {locations.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={visibleColumns.length} className="h-24 text-center">
-                  No locations found
+                  {t("locations-table-content.empty")}
                 </TableCell>
               </TableRow>
             ) : (

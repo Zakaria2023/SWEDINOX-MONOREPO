@@ -1,9 +1,10 @@
 "use client";
 
-import { useClickOutside } from "@/hooks/use-click-outside";
-import { Button } from "@/components/shadcn/button";
 import { ChevronDown } from "lucide-react";
 import { useCallback, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { Button } from "@/components/shadcn/button";
+import { useClickOutside } from "@/hooks/use-click-outside";
 
 type Column = {
   key: string;
@@ -21,6 +22,7 @@ export const ColumnSelector = ({
   visibility,
   onToggle,
 }: ColumnSelectorProps) => {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const close = useCallback(() => setIsOpen(false), []);
   const ref = useClickOutside<HTMLDivElement>(close);
@@ -33,11 +35,12 @@ export const ColumnSelector = ({
         size="sm"
         onClick={() => setIsOpen((open) => !open)}
       >
-        Columns <ChevronDown className="ml-2 h-4 w-4" />
+        {t("column-selector.button")}
+        <ChevronDown className="ms-2 h-4 w-4" />
       </Button>
 
       {isOpen && (
-        <div className="absolute right-0 z-10 mt-1 max-h-80 min-w-44 overflow-y-auto rounded-md border bg-background p-2 shadow-md">
+        <div className="absolute end-0 z-10 mt-1 max-h-80 min-w-44 overflow-y-auto rounded-md border bg-background p-2 shadow-md">
           {columns.map((column) => (
             <label
               key={column.key}

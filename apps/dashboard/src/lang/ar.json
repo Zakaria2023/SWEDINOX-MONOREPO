@@ -1,0 +1,588 @@
+{
+  "common": {
+    "yes": "نعم",
+    "no": "لا",
+    "not-available": "غير متوفر",
+    "select-option": "اختر",
+    "empty-option": "فارغ",
+    "none": "لا شيء",
+    "cancel": "إلغاء",
+    "close": "إغلاق",
+    "edit": "تعديل",
+    "delete": "حذف",
+    "saving": "جارٍ الحفظ..."
+  },
+  "form-actions": {
+    "cancel": "إلغاء",
+    "pending": "جارٍ الحفظ..."
+  },
+  "confirm-dialog": {
+    "cancel": "إلغاء",
+    "pending": "جارٍ الحذف...",
+    "confirm": "حذف"
+  },
+  "column-selector": {
+    "button": "الأعمدة"
+  },
+  "select": {
+    "placeholder": "اختر خيارًا"
+  },
+  "date-picker": {
+    "placeholder": "اختر تاريخًا",
+    "previous-month": "الشهر السابق",
+    "next-month": "الشهر التالي"
+  },
+  "shadcn-sidebar": {
+    "title": "الشريط الجانبي",
+    "description": "يعرض الشريط الجانبي على الجوال.",
+    "toggle": "تبديل الشريط الجانبي"
+  },
+  "language-switcher": {
+    "label": "اللغة",
+    "languages": {
+      "ar": "العربية",
+      "en": "الإنجليزية",
+      "nl": "الهولندية"
+    }
+  },
+  "dashboard-header": {
+    "logout": "تسجيل الخروج"
+  },
+  "app-sidebar": {
+    "brand": "Swedinox",
+    "navigation": "التنقل",
+    "groups": {
+      "customers": "العملاء",
+      "company": "الشركة",
+      "sales": "المبيعات",
+      "configuration": "الإعدادات"
+    },
+    "items": {
+      "addresses": "العناوين",
+      "companies": "الشركات",
+      "company-contacts": "جهات اتصال الشركة",
+      "communication-settings": "إعدادات التواصل",
+      "contacts": "جهات الاتصال",
+      "contact-groups": "مجموعات الاتصال",
+      "locations": "المواقع"
+    }
+  },
+  "dashboard-page": {
+    "title": "لوحة التحكم",
+    "description": "مرحبًا بك في لوحة تحكم Swedinox."
+  },
+  "addresses-page": {
+    "title": "العناوين",
+    "description": "سجلات العناوين وتفاصيلها"
+  },
+  "communication-settings-page": {
+    "title": "إعدادات التواصل",
+    "description": "إدارة إعدادات التواصل لكل شركة ونوع مستند",
+    "new-setting": "إعداد جديد"
+  },
+  "communication-settings-add-page": {
+    "title": "إضافة إعداد تواصل",
+    "description": "إنشاء إعداد تواصل جديد"
+  },
+  "companies-page": {
+    "title": "الشركات",
+    "description": "إدارة سجلات الشركات",
+    "new-company": "شركة جديدة"
+  },
+  "companies-add-page": {
+    "title": "إضافة شركة",
+    "description": "إنشاء سجل شركة جديد"
+  },
+  "company-contacts-page": {
+    "title": "جهات اتصال الشركة"
+  },
+  "contact-groups-page": {
+    "title": "مجموعات الاتصال",
+    "description": "إدارة المجموعات التي يمكن تعيينها لجهات الاتصال."
+  },
+  "contacts-page": {
+    "title": "جهات الاتصال",
+    "description": "سجلات جهات الاتصال المستقلة.",
+    "new-contact": "جهة اتصال جديدة"
+  },
+  "contacts-add-page": {
+    "back-link": "جهات الاتصال",
+    "title": "جهة اتصال جديدة"
+  },
+  "locations-page": {
+    "title": "المواقع",
+    "description": "إدارة سجلات مواقع المستودع",
+    "new-location": "موقع جديد"
+  },
+  "locations-add-page": {
+    "title": "إضافة موقع",
+    "description": "إنشاء سجل موقع مستودع جديد"
+  },
+  "sign-in-page": {
+    "title": "Swedinox",
+    "description": "مرحبًا بعودتك، سجّل الدخول للمتابعة"
+  },
+  "addresses-table-content": {
+    "columns": {
+      "id": "الرمز",
+      "company-code": "رمز الشركة",
+      "company-name": "اسم الشركة",
+      "alt-name": "الاسم البديل",
+      "street-and-no": "الشارع والرقم",
+      "postal-code": "الرمز البريدي",
+      "city": "المدينة",
+      "region": "المنطقة",
+      "country": "الدولة",
+      "house": "المنزل",
+      "po-box": "صندوق بريد",
+      "gln": "GLN",
+      "peppol-id": "معرّف Peppol",
+      "telephone": "الهاتف",
+      "fax": "الفاكس",
+      "email": "البريد الإلكتروني",
+      "website": "الموقع الإلكتروني",
+      "billing-attention": "لعناية",
+      "billing-attention-additional": "سطر الفوترة 2",
+      "sequence-number": "رقم التسلسل",
+      "category": "الفئة",
+      "address-complete": "العنوان مكتمل",
+      "need-crane": "يحتاج رافعة",
+      "canopy-required": "مطلوب مظلة",
+      "bundle-separately": "تجميع بشكل منفصل",
+      "special-transport": "نقل خاص",
+      "available-at": "متاح عند",
+      "unloading-start-time": "بداية التفريغ",
+      "unloading-end-time": "نهاية التفريغ",
+      "max-length": "الطول الأقصى (مم)",
+      "max-bundle-weight": "الوزن الأقصى للحزمة (كغ)",
+      "loading-instructions": "تعليمات التحميل",
+      "created-at": "تاريخ الإنشاء",
+      "updated-at": "تاريخ التحديث"
+    },
+    "empty": "لا توجد عناوين"
+  },
+  "communication-settings-table-content": {
+    "columns": {
+      "id": "الرمز",
+      "company-name": "الشركة",
+      "document-type": "نوع المستند",
+      "communication-type": "نوع التواصل",
+      "shape": "التنسيق",
+      "email": "البريد الإلكتروني",
+      "fax": "الفاكس",
+      "created-at": "تاريخ الإنشاء",
+      "updated-at": "تاريخ التحديث"
+    },
+    "empty": "لا توجد إعدادات تواصل"
+  },
+  "companies-table-content": {
+    "columns": {
+      "id": "الرمز",
+      "company-name": "اسم الشركة",
+      "created-at": "تاريخ الإنشاء",
+      "updated-at": "تاريخ التحديث"
+    },
+    "empty": "لا توجد شركات"
+  },
+  "company-contacts-list": {
+    "columns": {
+      "id": "الرمز",
+      "company-name": "الشركة",
+      "full-name": "الاسم الكامل",
+      "salutation": "اللقب",
+      "telephone": "الهاتف",
+      "mobile": "الجوال",
+      "fax": "الفاكس",
+      "email": "البريد الإلكتروني",
+      "city": "المدينة",
+      "country": "الدولة",
+      "category-addition": "إضافة الفئة",
+      "is-active": "نشط",
+      "created-at": "تاريخ الإنشاء"
+    },
+    "empty": "لا توجد جهات اتصال للشركة"
+  },
+  "contact-groups-client": {
+    "status": {
+      "active": "نشط",
+      "inactive": "غير نشط"
+    },
+    "new-group": "مجموعة جديدة",
+    "columns": {
+      "id": "الرمز",
+      "name": "الاسم",
+      "subgroup": "المجموعة الفرعية",
+      "status": "الحالة",
+      "created-at": "تاريخ الإنشاء"
+    },
+    "empty": "لا توجد مجموعات اتصال بعد",
+    "actions": {
+      "edit": "تعديل",
+      "delete": "حذف"
+    },
+    "dialog": {
+      "edit-title": "تعديل مجموعة الاتصال",
+      "create-title": "مجموعة اتصال جديدة",
+      "edit-description": "حدّث اسم هذه المجموعة وإعداداتها.",
+      "create-description": "أنشئ مجموعة جديدة يمكن ربطها بجهات الاتصال."
+    },
+    "fields": {
+      "name": "الاسم",
+      "contract-subgroup": "المجموعة الفرعية للعقد",
+      "sequence-within-subgroup": "التسلسل داخل المجموعة الفرعية",
+      "quickly-change-sequence-number": "تغيير رقم التسلسل السريع",
+      "is-active": "نشط"
+    },
+    "placeholders": {
+      "name": "مثال: المشتريات"
+    },
+    "save-changes": "حفظ التغييرات",
+    "create-group": "إنشاء المجموعة",
+    "delete-dialog": {
+      "title": "حذف مجموعة الاتصال",
+      "description": "هل أنت متأكد من حذف \"{{name}}\"؟ سيتم أيضًا إزالتها من جميع جهات الاتصال المرتبطة."
+    }
+  },
+  "contacts-table-content": {
+    "columns": {
+      "id": "الرمز",
+      "contact-type": "نوع جهة الاتصال",
+      "contact-group-name": "مجموعة الاتصال",
+      "description": "الوصف",
+      "search-code-1": "رمز البحث 1",
+      "search-code-2": "رمز البحث 2",
+      "search-code-3": "رمز البحث 3",
+      "website-sorting": "ترتيب الموقع",
+      "hide-on-website": "إخفاء في الموقع",
+      "created-at": "تاريخ الإنشاء"
+    },
+    "empty": "لا توجد جهات اتصال"
+  },
+  "locations-table-content": {
+    "columns": {
+      "id": "الرمز",
+      "name": "الاسم",
+      "location-type": "النوع",
+      "picking-sequence": "تسلسل الالتقاط",
+      "is-blocked": "محظور",
+      "blocked-for-optimization": "محظور للتحسين",
+      "limited-dimensions": "أبعاد محدودة",
+      "adopt-from": "الاعتماد من",
+      "adopt-position": "موضع الاعتماد",
+      "created-at": "تاريخ الإنشاء",
+      "updated-at": "تاريخ التحديث"
+    },
+    "empty": "لا توجد مواقع"
+  },
+  "communication-setting-form": {
+    "sections": {
+      "setting": "الإعداد",
+      "contact-details": "جهة الاتصال والتفاصيل"
+    },
+    "fields": {
+      "company": "الشركة",
+      "document-type": "نوع المستند",
+      "communication-type": "نوع التواصل",
+      "shape": "التنسيق",
+      "contact": "جهة الاتصال",
+      "email": "البريد الإلكتروني",
+      "fax": "الفاكس"
+    },
+    "submit": "إنشاء الإعداد",
+    "document-type-options": {
+      "order_status_message": "رسالة حالة الطلب",
+      "bill_of_lading": "بوليصة الشحن",
+      "order_confirmation": "تأكيد الطلب",
+      "quote": "عرض سعر",
+      "purchase_request": "طلب شراء",
+      "purchase_return": "إرجاع شراء",
+      "purchase_order": "أمر شراء",
+      "consignment_consumption_confirmation": "تأكيد استهلاك الشحنة",
+      "call_off_confirmation": "تأكيد الاستدعاء",
+      "return_order_confirmation": "تأكيد طلب الإرجاع",
+      "pro_forma_invoice": "فاتورة مبدئية",
+      "certificate_email": "بريد الشهادة",
+      "invoice": "فاتورة",
+      "price_catalogue": "كتالوج الأسعار",
+      "eta": "موعد الوصول المتوقع",
+      "eta_delayed": "تأخر موعد الوصول المتوقع",
+      "checklist": "قائمة التحقق"
+    },
+    "communication-type-options": {
+      "email": "بريد إلكتروني",
+      "fax": "فاكس",
+      "printing": "طباعة",
+      "edi_ftp": "EDI FTP",
+      "edi_http": "EDI HTTP",
+      "edi_https": "EDI HTTPS"
+    },
+    "shape-options": {
+      "pdf": "PDF",
+      "scsn": "SCSN",
+      "sales_in_the_construction": "المبيعات في قطاع البناء",
+      "edi4steel": "EDI4Steel",
+      "text": "نص",
+      "peppol": "Peppol"
+    }
+  },
+  "contact-form": {
+    "sections": {
+      "contact-type": "نوع جهة الاتصال",
+      "contact": "جهة الاتصال",
+      "search-codes": "أكواد البحث",
+      "website": "الموقع الإلكتروني"
+    },
+    "contact-types": {
+      "gross_prices": "الأسعار الإجمالية",
+      "options": "الخيارات",
+      "net_prices": "الأسعار الصافية",
+      "cost_price": "سعر التكلفة",
+      "surcharges": "الرسوم الإضافية",
+      "toeslagen": "الرسوم الإضافية"
+    },
+    "fields": {
+      "description": "الوصف",
+      "contact-group": "مجموعة الاتصال",
+      "quickly-change-order": "تغيير الترتيب السريع",
+      "price-date": "تاريخ السعر",
+      "link-to-new-customer": "ربط جهة الاتصال هذه بعميل جديد",
+      "search-code": "رمز البحث",
+      "website-sorting": "ترتيب الموقع",
+      "hide-on-website": "إخفاء في الموقع"
+    },
+    "submit": "إنشاء جهة الاتصال"
+  },
+  "address-select": {
+    "empty": "فارغ"
+  },
+  "location-form": {
+    "add-new-loading-location": "إضافة موقع تحميل جديد",
+    "cancel-new-loading-location": "إلغاء موقع التحميل الجديد",
+    "sections": {
+      "location-details": "تفاصيل الموقع",
+      "flags": "الإشارات"
+    },
+    "fields": {
+      "name": "الاسم",
+      "location-type": "نوع الموقع",
+      "loading-location": "موقع التحميل",
+      "address": "العنوان",
+      "picking-sequence": "تسلسل الالتقاط",
+      "adopt-from": "الاعتماد من",
+      "adopt-position": "موضع الاعتماد",
+      "blocked-reason": "سبب الحظر"
+    },
+    "placeholders": {
+      "name": "أدخل اسم الموقع",
+      "select-type": "اختر النوع",
+      "new-loading-location-name": "اسم موقع التحميل الجديد",
+      "picking-sequence": "مثال: 10",
+      "adopt-from": "الموقع الذي يتم الاعتماد عليه",
+      "blocked-reason": "سبب حظر هذا الموقع"
+    },
+    "flags": {
+      "is-blocked": "محظور",
+      "blocked-for-optimization": "محظور للتحسين",
+      "limited-dimensions": "أبعاد محدودة"
+    },
+    "location-type-options": {
+      "pick": "التقاط",
+      "bulk": "جملة",
+      "production": "إنتاج",
+      "scrap": "خردة",
+      "loading": "تحميل",
+      "inspection": "فحص",
+      "putaway": "إيداع",
+      "sorting": "فرز",
+      "processor": "معالجة",
+      "pickup": "استلام",
+      "call_off": "استدعاء"
+    },
+    "adopt-position-options": {
+      "next": "التالي",
+      "below": "أسفل"
+    },
+    "submit": "إنشاء الموقع"
+  },
+  "address-form": {
+    "sections": {
+      "basic-info": "المعلومات الأساسية",
+      "address": "العنوان",
+      "contact": "التواصل",
+      "category": "الفئة",
+      "billing-address-settings": "إعدادات عنوان الفوترة",
+      "delivery-address-settings": "إعدادات عنوان التسليم",
+      "handling-options": "خيارات المناولة"
+    },
+    "fields": {
+      "alt-name": "الاسم البديل",
+      "sequence-number": "رقم التسلسل",
+      "gln": "GLN",
+      "peppol-id": "معرّف Peppol",
+      "po-box": "صندوق بريد",
+      "street-and-number": "الشارع والرقم",
+      "postal-code": "الرمز البريدي",
+      "city": "المدينة",
+      "region": "المنطقة",
+      "country": "الدولة",
+      "house": "المنزل",
+      "telephone": "الهاتف",
+      "fax": "الفاكس",
+      "email": "البريد الإلكتروني",
+      "website": "الموقع الإلكتروني",
+      "category": "الفئة",
+      "billing-attention": "لعناية",
+      "unloading-start-time": "وقت بدء التفريغ",
+      "unloading-end-time": "وقت انتهاء التفريغ",
+      "max-length": "الطول الأقصى",
+      "max-bundle-weight": "الوزن الأقصى للحزمة",
+      "loading-instructions": "تعليمات التحميل",
+      "available-at": "متاح عند"
+    },
+    "placeholders": {
+      "gln": "1234567890123",
+      "peppol-id": "1204:identifier",
+      "billing-attention-additional": "سطر فوترة إضافي"
+    },
+    "category-description": "اختر كيفية استخدام هذا العنوان ضمن سير العمل.",
+    "handling-options-description": "حدّد أي متطلبات خاصة للتسليم أو التفريغ.",
+    "categories": {
+      "invoice": "فاتورة",
+      "visit": "زيارة",
+      "correspondence": "مراسلات",
+      "delivery": "تسليم"
+    },
+    "available-at-options": {
+      "crane_unloading": "تفريغ بالرافعة",
+      "forklift_unloading": "تفريغ بالرافعة الشوكية"
+    },
+    "boolean-fields": {
+      "need-crane": "يحتاج رافعة",
+      "canopy-required": "مطلوب مظلة",
+      "bundle-separately": "تجميع بشكل منفصل",
+      "address-complete": "العنوان مكتمل",
+      "special-transport": "نقل خاص"
+    },
+    "units": {
+      "mm": "مم",
+      "kg": "كغ"
+    }
+  },
+  "contact-dialog": {
+    "title": "جهة اتصال الشركة",
+    "description": "أضف شخص اتصال لهذه الشركة.",
+    "default-full-name": "جهة اتصال",
+    "sections": {
+      "contact-person": "شخص الاتصال",
+      "address": "العنوان",
+      "categories": "الفئات"
+    },
+    "fields": {
+      "salutation": "اللقب",
+      "first-name": "الاسم الأول",
+      "initials": "الأحرف الأولى",
+      "last-name": "اسم العائلة",
+      "telephone": "الهاتف",
+      "mobile": "الجوال",
+      "fax": "الفاكس",
+      "email": "البريد الإلكتروني",
+      "category-addition": "إضافة الفئة",
+      "btw-number": "الرقم الضريبي",
+      "country": "الدولة",
+      "postal-code": "الرمز البريدي",
+      "house": "المنزل",
+      "po-box": "صندوق بريد",
+      "street-and-number": "الشارع + الرقم",
+      "annex": "ملحق",
+      "city": "المدينة",
+      "region": "المنطقة",
+      "website": "الموقع الإلكتروني",
+      "sequence-number": "رقم التسلسل"
+    },
+    "salutations": {
+      "mr": "السيد",
+      "mrs": "السيدة",
+      "ms": "الآنسة",
+      "dr": "د.",
+      "engineer": "م.",
+      "professor": "أ."
+    },
+    "categories": {
+      "procurement": "المشتريات",
+      "sales": "المبيعات",
+      "warehouse": "المستودع",
+      "management": "الإدارة",
+      "bookkeeping": "المحاسبة",
+      "certificates": "الشهادات"
+    },
+    "submit": "حفظ جهة الاتصال"
+  },
+  "company-form": {
+    "sections": {
+      "company-details": "تفاصيل الشركة",
+      "roles": "الأدوار",
+      "search-codes": "أكواد البحث"
+    },
+    "fields": {
+      "company-name": "اسم الشركة",
+      "language": "اللغة",
+      "corresp-name": "اسم المراسلة",
+      "remarks": "ملاحظات",
+      "search-code": "رمز البحث"
+    },
+    "placeholders": {
+      "company-name": "أدخل اسم الشركة",
+      "remarks": "أي ملاحظات إضافية..."
+    },
+    "languages": {
+      "dutch": "الهولندية",
+      "arabic": "العربية",
+      "english": "الإنجليزية"
+    },
+    "address-fallback": "العنوان",
+    "add-address": "إضافة عنوان",
+    "delivery-badge": "تسليم",
+    "remove-address": "إزالة العنوان",
+    "add-delivery-address": "إضافة عنوان تسليم",
+    "remove-contact": "إزالة جهة الاتصال",
+    "add-contact": "إضافة جهة اتصال",
+    "roles": {
+      "customer": "عميل",
+      "prospect": "عميل محتمل",
+      "supplier": "مورد",
+      "processor": "معالج",
+      "transporter": "ناقل",
+      "agent": "وكيل",
+      "purchasing_org": "جهة الشراء",
+      "other": "أخرى",
+      "internal": "داخلي"
+    },
+    "submit": "إنشاء الشركة",
+    "dialogs": {
+      "primary-address": {
+        "title": "العنوان",
+        "description": "أدخل تفاصيل عنوان هذه الشركة."
+      },
+      "delivery-address": {
+        "title": "عنوان التسليم",
+        "description": "العناوين الإضافية تقتصر على فئة التسليم."
+      }
+    },
+    "save-address": "حفظ العنوان"
+  },
+  "validation": {
+    "invalid-email-address": "عنوان البريد الإلكتروني غير صالح",
+    "invalid-website-url": "رابط الموقع الإلكتروني غير صالح",
+    "gln-too-long": "يجب أن يكون GLN مكوّنًا من 13 حرفًا أو أقل",
+    "peppol-format": "يجب أن يكون التنسيق 4 أرقام ثم نقطتين ثم معرّفًا، مثل 1204:identifier",
+    "at-least-one-category": "يجب اختيار فئة واحدة على الأقل",
+    "company-name-required": "اسم الشركة مطلوب",
+    "description-required": "الوصف مطلوب",
+    "location-name-required": "اسم الموقع مطلوب",
+    "location-type-required": "نوع الموقع مطلوب",
+    "company-required": "الشركة مطلوبة",
+    "document-type-required": "نوع المستند مطلوب",
+    "communication-type-required": "نوع التواصل مطلوب",
+    "name-required": "الاسم مطلوب"
+  }
+}

@@ -1,61 +1,74 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { type CompanyContactWithCompany } from "@/app/(dashboard)/company-contacts/actions";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/shadcn/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
 
-const ALL_COLUMNS = [
-  { key: "id",               label: "Code",              defaultVisible: true  },
-  { key: "companyName",      label: "Company",           defaultVisible: true  },
-  { key: "fullName",         label: "Full Name",         defaultVisible: true  },
-  { key: "salutation",       label: "Salutation",        defaultVisible: false },
-  { key: "telephone",        label: "Telephone",         defaultVisible: true  },
-  { key: "mobile",           label: "Mobile",            defaultVisible: true  },
-  { key: "fax",              label: "Fax",               defaultVisible: false },
-  { key: "email",            label: "Email",             defaultVisible: true  },
-  { key: "city",             label: "City",              defaultVisible: false },
-  { key: "country",          label: "Country",           defaultVisible: false },
-  { key: "categoryAddition", label: "Category Addition", defaultVisible: false },
-  { key: "isActive",         label: "Active",            defaultVisible: true  },
-  { key: "createdAt",        label: "Created At",        defaultVisible: false },
-] as const;
+type ColumnKey =
+  | "id"
+  | "companyName"
+  | "fullName"
+  | "salutation"
+  | "telephone"
+  | "mobile"
+  | "fax"
+  | "email"
+  | "city"
+  | "country"
+  | "categoryAddition"
+  | "isActive"
+  | "createdAt";
 
-type ColumnKey = (typeof ALL_COLUMNS)[number]["key"];
+const ALL_COLUMNS: Array<{
+  defaultVisible: boolean;
+  key: ColumnKey;
+  labelKey: string;
+}> = [
+  { key: "id", labelKey: "company-contacts-list.columns.id", defaultVisible: true },
+  { key: "companyName", labelKey: "company-contacts-list.columns.company-name", defaultVisible: true },
+  { key: "fullName", labelKey: "company-contacts-list.columns.full-name", defaultVisible: true },
+  { key: "salutation", labelKey: "company-contacts-list.columns.salutation", defaultVisible: false },
+  { key: "telephone", labelKey: "company-contacts-list.columns.telephone", defaultVisible: true },
+  { key: "mobile", labelKey: "company-contacts-list.columns.mobile", defaultVisible: true },
+  { key: "fax", labelKey: "company-contacts-list.columns.fax", defaultVisible: false },
+  { key: "email", labelKey: "company-contacts-list.columns.email", defaultVisible: true },
+  { key: "city", labelKey: "company-contacts-list.columns.city", defaultVisible: false },
+  { key: "country", labelKey: "company-contacts-list.columns.country", defaultVisible: false },
+  { key: "categoryAddition", labelKey: "company-contacts-list.columns.category-addition", defaultVisible: false },
+  { key: "isActive", labelKey: "company-contacts-list.columns.is-active", defaultVisible: true },
+  { key: "createdAt", labelKey: "company-contacts-list.columns.created-at", defaultVisible: false },
+];
 
 const initialVisibility = ALL_COLUMNS.reduce(
-  (acc, col) => ({ ...acc, [col.key]: col.defaultVisible }),
+  (acc, column) => ({ ...acc, [column.key]: column.defaultVisible }),
   {} as Record<ColumnKey, boolean>,
 );
-
-const activeBadge = (value: boolean | null) =>
-  value ? (
-    <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
-      Yes
-    </span>
-  ) : (
-    <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
-      No
-    </span>
-  );
 
 type Props = { contacts: CompanyContactWithCompany[] };
 
 export const CompanyContactsList = ({ contacts }: Props) => {
+  const { t } = useTranslation();
   const [columnVisibility, setColumnVisibility] =
     useState<Record<ColumnKey, boolean>>(initialVisibility);
 
   const toggleColumn = (key: string) =>
     setColumnVisibility((prev) => ({ ...prev, [key]: !prev[key as ColumnKey] }));
 
-  const visibleColumns = ALL_COLUMNS.filter((col) => columnVisibility[col.key]);
+  const visibleColumns = ALL_COLUMNS.filter((column) => columnVisibility[column.key]);
+  const fallbackValue = t("common.not-available");
+
+  const activeBadge = (value: boolean | null) =>
+    value ? (
+      <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+        {t("common.yes")}
+      </span>
+    ) : (
+      <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
+        {t("common.no")}
+      </span>
+    );
 
   const renderCell = (contact: CompanyContactWithCompany, key: ColumnKey) => {
     switch (key) {
@@ -68,7 +81,7 @@ export const CompanyContactsList = ({ contacts }: Props) => {
               href={`/companies/${contact.companyUuid}/contacts`}
               className="text-primary hover:underline"
             >
-              {contact.companyName || "—"}
+              {contact.companyName || fallbackValue}
             </a>
           </TableCell>
         );
@@ -76,24 +89,26 @@ export const CompanyContactsList = ({ contacts }: Props) => {
         return <TableCell key={key} className="font-medium">{contact.fullName}</TableCell>;
       case "salutation":
         return (
-          <TableCell key={key} className="capitalize">
-            {contact.salutation ?? "—"}
+          <TableCell key={key}>
+            {contact.salutation
+              ? t(`contact-dialog.salutations.${contact.salutation}`)
+              : fallbackValue}
           </TableCell>
         );
       case "telephone":
-        return <TableCell key={key}>{contact.telephone ?? "—"}</TableCell>;
+        return <TableCell key={key}>{contact.telephone ?? fallbackValue}</TableCell>;
       case "mobile":
-        return <TableCell key={key}>{contact.mobile ?? "—"}</TableCell>;
+        return <TableCell key={key}>{contact.mobile ?? fallbackValue}</TableCell>;
       case "fax":
-        return <TableCell key={key}>{contact.fax ?? "—"}</TableCell>;
+        return <TableCell key={key}>{contact.fax ?? fallbackValue}</TableCell>;
       case "email":
-        return <TableCell key={key}>{contact.email ?? "—"}</TableCell>;
+        return <TableCell key={key}>{contact.email ?? fallbackValue}</TableCell>;
       case "city":
-        return <TableCell key={key}>{contact.city ?? "—"}</TableCell>;
+        return <TableCell key={key}>{contact.city ?? fallbackValue}</TableCell>;
       case "country":
-        return <TableCell key={key}>{contact.country ?? "—"}</TableCell>;
+        return <TableCell key={key}>{contact.country ?? fallbackValue}</TableCell>;
       case "categoryAddition":
-        return <TableCell key={key}>{contact.categoryAddition ?? "—"}</TableCell>;
+        return <TableCell key={key}>{contact.categoryAddition ?? fallbackValue}</TableCell>;
       case "isActive":
         return <TableCell key={key}>{activeBadge(contact.isActive)}</TableCell>;
       case "createdAt":
@@ -109,7 +124,10 @@ export const CompanyContactsList = ({ contacts }: Props) => {
     <div className="space-y-4">
       <div className="flex justify-end">
         <ColumnSelector
-          columns={ALL_COLUMNS}
+          columns={ALL_COLUMNS.map((column) => ({
+            key: column.key,
+            label: t(column.labelKey),
+          }))}
           visibility={columnVisibility}
           onToggle={toggleColumn}
         />
@@ -119,8 +137,8 @@ export const CompanyContactsList = ({ contacts }: Props) => {
         <Table>
           <TableHeader>
             <TableRow>
-              {visibleColumns.map((col) => (
-                <TableHead key={col.key}>{col.label}</TableHead>
+              {visibleColumns.map((column) => (
+                <TableHead key={column.key}>{t(column.labelKey)}</TableHead>
               ))}
             </TableRow>
           </TableHeader>
@@ -131,13 +149,13 @@ export const CompanyContactsList = ({ contacts }: Props) => {
                   colSpan={visibleColumns.length}
                   className="h-24 text-center text-muted-foreground"
                 >
-                  No company contacts found
+                  {t("company-contacts-list.empty")}
                 </TableCell>
               </TableRow>
             ) : (
               contacts.map((contact) => (
                 <TableRow key={contact.id}>
-                  {visibleColumns.map((col) => renderCell(contact, col.key))}
+                  {visibleColumns.map((column) => renderCell(contact, column.key))}
                 </TableRow>
               ))
             )}

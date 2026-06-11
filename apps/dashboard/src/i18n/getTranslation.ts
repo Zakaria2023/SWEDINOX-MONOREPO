@@ -1,11 +1,10 @@
 "use server";
 
+import { getLang } from "@/i18n/getServerLang";
 import initI18next from "@/i18n/i18nextServer";
-import { cookies } from "next/headers";
 
 export const getTranslation = async (ns: string = "translation") => {
-  const cookieStore = await cookies();
-  const lang = cookieStore.get("lang")?.value || "ar";
+  const lang = await getLang();
 
   const i18nextInstance = await initI18next(lang, ns);
 

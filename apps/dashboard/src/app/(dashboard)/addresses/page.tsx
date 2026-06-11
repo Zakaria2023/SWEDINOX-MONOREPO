@@ -1,14 +1,16 @@
 import { AddressesTable } from "@/components/addresses/addresses-table";
+import { PageHeading } from "@/components/layout/page-heading";
 
-const AddressesPage = () => (
-  <div className="space-y-6 p-6">
-    <div>
-      <h1 className="text-3xl font-bold text-gray-900">Addresses</h1>
-      <p className="mt-2 text-gray-600">Address records and details</p>
+const AddressesPage = () => {
+  return (
+    <div className="space-y-6 p-6">
+      <PageHeading
+        titleKey="addresses-page.title"
+        descriptionKey="addresses-page.description"
+      />
+      <AddressesTable />
     </div>
-
-    <AddressesTable />
-  </div>
-);
+  );
+};
 
 export default AddressesPage;

@@ -1,12 +1,13 @@
 import { CompanyForm } from "@/components/companies/company-form";
+import { PageHeading } from "@/components/layout/page-heading";
 
 const AddCompanyPage = () => {
   return (
     <div className="max-w-4xl space-y-6 p-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Add Company</h1>
-        <p className="mt-2 text-gray-600">Create a new company record</p>
-      </div>
+      <PageHeading
+        titleKey="companies-add-page.title"
+        descriptionKey="companies-add-page.description"
+      />
       <CompanyForm />
     </div>
   );

@@ -1,9 +1,16 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Building2, ChevronRight, ContactRound, MapPin, MessageSquare, Settings, Users } from "lucide-react";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import {
+  Building2,
+  ChevronRight,
+  ContactRound,
+  Settings,
+  Users,
+} from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -19,9 +26,19 @@ import {
   SidebarMenuSubItem,
 } from "@/components/shadcn/sidebar";
 import { cn } from "@/lib/helpers";
+import { useI18nContext } from "@/providers/I18NextProvider";
 
 export const AppSidebar = () => {
   const pathname = usePathname();
+  const { t } = useTranslation();
+  const { dir } = useI18nContext();
+  const isRtl = dir === "rtl";
+
+  const chevronClass = (isExpanded: boolean) =>
+    cn("ms-auto transition-transform", {
+      "rotate-90": isExpanded,
+      "rotate-180": !isExpanded && isRtl,
+    });
 
   const isCustomersActive = pathname.startsWith("/addresses");
   const isCompanyActive =
@@ -44,30 +61,26 @@ export const AppSidebar = () => {
   const isConfigExpanded = isConfigOpen || isConfigActive;
 
   return (
-    <Sidebar>
+    <Sidebar side={isRtl ? "right" : "left"}>
       <SidebarHeader className="px-4 py-5">
-        <span className="text-lg font-semibold tracking-tight">Swedinox</span>
+        <span className="text-lg font-semibold tracking-tight">
+          {t("app-sidebar.brand")}
+        </span>
       </SidebarHeader>
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+          <SidebarGroupLabel>{t("app-sidebar.navigation")}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-
-              {/* ── Customers ── */}
               <SidebarMenuItem>
                 <SidebarMenuButton
                   aria-expanded={isCustomersExpanded}
-                  onClick={() => setIsCustomersOpen((o) => !o)}
+                  onClick={() => setIsCustomersOpen((open) => !open)}
                 >
                   <Users />
-                  <span>Customers</span>
-                  <ChevronRight
-                    className={cn("ml-auto transition-transform", {
-                      "rotate-90": isCustomersExpanded,
-                    })}
-                  />
+                  <span>{t("app-sidebar.groups.customers")}</span>
+                  <ChevronRight className={chevronClass(isCustomersExpanded)} />
                 </SidebarMenuButton>
                 {isCustomersExpanded && (
                   <SidebarMenuSub>
@@ -76,26 +89,21 @@ export const AppSidebar = () => {
                         render={<Link href="/addresses" />}
                         isActive={pathname.startsWith("/addresses")}
                       >
-                        <span>Addresses</span>
+                        <span>{t("app-sidebar.items.addresses")}</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                   </SidebarMenuSub>
                 )}
               </SidebarMenuItem>
 
-              {/* ── Company ── */}
               <SidebarMenuItem>
                 <SidebarMenuButton
                   aria-expanded={isCompanyExpanded}
-                  onClick={() => setIsCompanyOpen((o) => !o)}
+                  onClick={() => setIsCompanyOpen((open) => !open)}
                 >
                   <Building2 />
-                  <span>Company</span>
-                  <ChevronRight
-                    className={cn("ml-auto transition-transform", {
-                      "rotate-90": isCompanyExpanded,
-                    })}
-                  />
+                  <span>{t("app-sidebar.groups.company")}</span>
+                  <ChevronRight className={chevronClass(isCompanyExpanded)} />
                 </SidebarMenuButton>
                 {isCompanyExpanded && (
                   <SidebarMenuSub>
@@ -107,7 +115,7 @@ export const AppSidebar = () => {
                           pathname.startsWith("/companies/")
                         }
                       >
-                        <span>Companies</span>
+                        <span>{t("app-sidebar.items.companies")}</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                     <SidebarMenuSubItem>
@@ -115,7 +123,7 @@ export const AppSidebar = () => {
                         render={<Link href="/company-contacts" />}
                         isActive={pathname.startsWith("/company-contacts")}
                       >
-                        <span>Company Contacts</span>
+                        <span>{t("app-sidebar.items.company-contacts")}</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                     <SidebarMenuSubItem>
@@ -123,26 +131,23 @@ export const AppSidebar = () => {
                         render={<Link href="/communication-settings" />}
                         isActive={pathname.startsWith("/communication-settings")}
                       >
-                        <span>Communication Settings</span>
+                        <span>
+                          {t("app-sidebar.items.communication-settings")}
+                        </span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                   </SidebarMenuSub>
                 )}
               </SidebarMenuItem>
 
-              {/* ── Sales ── */}
               <SidebarMenuItem>
                 <SidebarMenuButton
                   aria-expanded={isSalesExpanded}
-                  onClick={() => setIsSalesOpen((o) => !o)}
+                  onClick={() => setIsSalesOpen((open) => !open)}
                 >
                   <ContactRound />
-                  <span>Sales</span>
-                  <ChevronRight
-                    className={cn("ml-auto transition-transform", {
-                      "rotate-90": isSalesExpanded,
-                    })}
-                  />
+                  <span>{t("app-sidebar.groups.sales")}</span>
+                  <ChevronRight className={chevronClass(isSalesExpanded)} />
                 </SidebarMenuButton>
                 {isSalesExpanded && (
                   <SidebarMenuSub>
@@ -151,7 +156,7 @@ export const AppSidebar = () => {
                         render={<Link href="/contacts" />}
                         isActive={pathname.startsWith("/contacts")}
                       >
-                        <span>Contacts</span>
+                        <span>{t("app-sidebar.items.contacts")}</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                     <SidebarMenuSubItem>
@@ -159,26 +164,21 @@ export const AppSidebar = () => {
                         render={<Link href="/contact-groups" />}
                         isActive={pathname.startsWith("/contact-groups")}
                       >
-                        <span>Contact Groups</span>
+                        <span>{t("app-sidebar.items.contact-groups")}</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                   </SidebarMenuSub>
                 )}
               </SidebarMenuItem>
 
-              {/* ── Configuration ── */}
               <SidebarMenuItem>
                 <SidebarMenuButton
                   aria-expanded={isConfigExpanded}
-                  onClick={() => setIsConfigOpen((o) => !o)}
+                  onClick={() => setIsConfigOpen((open) => !open)}
                 >
                   <Settings />
-                  <span>Configuration</span>
-                  <ChevronRight
-                    className={cn("ml-auto transition-transform", {
-                      "rotate-90": isConfigExpanded,
-                    })}
-                  />
+                  <span>{t("app-sidebar.groups.configuration")}</span>
+                  <ChevronRight className={chevronClass(isConfigExpanded)} />
                 </SidebarMenuButton>
                 {isConfigExpanded && (
                   <SidebarMenuSub>
@@ -187,13 +187,12 @@ export const AppSidebar = () => {
                         render={<Link href="/locations" />}
                         isActive={pathname.startsWith("/locations")}
                       >
-                        <span>Locations</span>
+                        <span>{t("app-sidebar.items.locations")}</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                   </SidebarMenuSub>
                 )}
               </SidebarMenuItem>
-
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

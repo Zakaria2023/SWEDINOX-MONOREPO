@@ -1,3 +1,5 @@
+import { getLanguageDirection } from "@/i18n/config";
+import { getLang } from "@/i18n/getServerLang";
 import I18nProvider from "@/providers/I18NextProvider";
 import { ClerkProvider } from "@clerk/nextjs";
 import type { Metadata } from "next";
@@ -13,14 +15,20 @@ type Props = {
   children: ReactNode;
 };
 
-const RootLayout = ({ children }: Props) => (
-  <ClerkProvider>
-    <html lang="en">
-      <body className="antialiased">
-        <I18nProvider>{children}</I18nProvider>
-      </body>
-    </html>
-  </ClerkProvider>
-);
+const RootLayout = async ({ children }: Props) => {
+  const lang = await getLang();
+
+  return (
+    <ClerkProvider>
+      <html lang={lang} dir={getLanguageDirection(lang)} suppressHydrationWarning>
+        <body className="antialiased">
+          <I18nProvider key={lang} initialLang={lang}>
+            {children}
+          </I18nProvider>
+        </body>
+      </html>
+    </ClerkProvider>
+  );
+};
 
 export default RootLayout;

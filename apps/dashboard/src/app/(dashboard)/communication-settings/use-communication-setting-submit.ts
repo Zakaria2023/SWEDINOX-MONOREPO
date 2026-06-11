@@ -3,21 +3,23 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
+import { useTranslation } from "react-i18next";
 import {
   createCommunicationSetting,
   type CommunicationSettingActionResult,
 } from "./actions";
 import {
-  communicationSettingSchema,
+  createCommunicationSettingSchema,
   type CommunicationSettingFormValues,
 } from "./validation";
 
 export const useCommunicationSettingSubmit = () => {
+  const { t } = useTranslation();
   const [isPending, startTransition] = useTransition();
   const [state, setState] = useState<CommunicationSettingActionResult>({});
 
   const form = useForm<CommunicationSettingFormValues>({
-    resolver: zodResolver(communicationSettingSchema),
+    resolver: zodResolver(createCommunicationSettingSchema(t)),
     defaultValues: {
       companyUuid: "",
       documentType: undefined,

@@ -1,15 +1,12 @@
 "use client";
 
-import { useState } from "react";
 import { Popover as PopoverPrimitive } from "@base-ui/react/popover";
 import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { languageLocales } from "@/i18n/config";
+import { useI18nContext } from "@/providers/I18NextProvider";
 import { cn } from "@/lib/helpers";
-
-const DAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
-const MONTHS = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
-];
 
 type DatePickerProps = {
   value?: string;
@@ -23,43 +20,77 @@ export const DatePicker = ({
   value,
   onChange,
   disabled,
-  placeholder = "Pick a date",
+  placeholder,
   className,
 }: DatePickerProps) => {
+  const { language } = useI18nContext();
+  const { t } = useTranslation();
+  const locale = languageLocales[language];
   const today = new Date();
   const parsed = value ? new Date(value + "T00:00:00") : null;
 
-  const [viewYear, setViewYear] = useState(parsed?.getFullYear() ?? today.getFullYear());
-  const [viewMonth, setViewMonth] = useState(parsed?.getMonth() ?? today.getMonth());
+  const [viewYear, setViewYear] = useState(
+    parsed?.getFullYear() ?? today.getFullYear(),
+  );
+  const [viewMonth, setViewMonth] = useState(
+    parsed?.getMonth() ?? today.getMonth(),
+  );
 
   const displayValue = parsed
-    ? parsed.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
+    ? parsed.toLocaleDateString(locale, {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      })
     : "";
+  const days = Array.from({ length: 7 }, (_, index) =>
+    new Intl.DateTimeFormat(locale, { weekday: "short" }).format(
+      new Date(2026, 0, 4 + index),
+    ),
+  );
+  const monthLabel = new Intl.DateTimeFormat(locale, {
+    month: "long",
+    year: "numeric",
+  }).format(new Date(viewYear, viewMonth, 1));
 
   const firstDayOfMonth = new Date(viewYear, viewMonth, 1).getDay();
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
 
   const cells: (number | null)[] = [
     ...Array.from({ length: firstDayOfMonth }, () => null),
-    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+    ...Array.from({ length: daysInMonth }, (_, index) => index + 1),
   ];
-  while (cells.length % 7 !== 0) cells.push(null);
+
+  while (cells.length % 7 !== 0) {
+    cells.push(null);
+  }
 
   const prevMonth = () => {
-    if (viewMonth === 0) { setViewYear((y) => y - 1); setViewMonth(11); }
-    else setViewMonth((m) => m - 1);
+    if (viewMonth === 0) {
+      setViewYear((year) => year - 1);
+      setViewMonth(11);
+      return;
+    }
+
+    setViewMonth((month) => month - 1);
   };
 
   const nextMonth = () => {
-    if (viewMonth === 11) { setViewYear((y) => y + 1); setViewMonth(0); }
-    else setViewMonth((m) => m + 1);
+    if (viewMonth === 11) {
+      setViewYear((year) => year + 1);
+      setViewMonth(0);
+      return;
+    }
+
+    setViewMonth((month) => month + 1);
   };
 
   const selectDay = (day: number) => {
-    const d = new Date(viewYear, viewMonth, day);
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, "0");
-    const dd = String(d.getDate()).padStart(2, "0");
+    const nextDate = new Date(viewYear, viewMonth, day);
+    const yyyy = nextDate.getFullYear();
+    const mm = String(nextDate.getMonth() + 1).padStart(2, "0");
+    const dd = String(nextDate.getDate()).padStart(2, "0");
+
     onChange?.(`${yyyy}-${mm}-${dd}`);
   };
 
@@ -87,47 +118,47 @@ export const DatePicker = ({
           className,
         )}
       >
-        <span>{displayValue || placeholder}</span>
+        <span>{displayValue || placeholder || t("date-picker.placeholder")}</span>
         <Calendar className="size-4 shrink-0 text-muted-foreground" />
       </PopoverPrimitive.Trigger>
 
       <PopoverPrimitive.Portal>
         <PopoverPrimitive.Positioner sideOffset={6} className="z-50 outline-none">
           <PopoverPrimitive.Popup className="rounded-xl border border-border bg-popover p-3 shadow-lg outline-none">
-            {/* Month/year navigation */}
             <div className="mb-3 flex items-center justify-between gap-2">
               <button
                 type="button"
                 onClick={prevMonth}
                 className="rounded-lg p-1 hover:bg-muted"
+                aria-label={t("date-picker.previous-month")}
               >
                 <ChevronLeft className="size-4" />
               </button>
-              <span className="text-sm font-medium">
-                {MONTHS[viewMonth]} {viewYear}
-              </span>
+              <span className="text-sm font-medium">{monthLabel}</span>
               <button
                 type="button"
                 onClick={nextMonth}
                 className="rounded-lg p-1 hover:bg-muted"
+                aria-label={t("date-picker.next-month")}
               >
                 <ChevronRight className="size-4" />
               </button>
             </div>
 
-            {/* Day headers */}
             <div className="mb-1 grid grid-cols-7 text-center">
-              {DAYS.map((d) => (
-                <span key={d} className="py-1 text-xs font-medium text-muted-foreground">
-                  {d}
+              {days.map((dayLabel) => (
+                <span
+                  key={dayLabel}
+                  className="py-1 text-xs font-medium text-muted-foreground"
+                >
+                  {dayLabel}
                 </span>
               ))}
             </div>
 
-            {/* Day cells */}
             <div className="grid grid-cols-7">
-              {cells.map((day, i) => (
-                <div key={i} className="flex items-center justify-center p-0.5">
+              {cells.map((day, index) => (
+                <div key={index} className="flex items-center justify-center p-0.5">
                   {day !== null && (
                     <button
                       type="button"
@@ -137,8 +168,8 @@ export const DatePicker = ({
                         isSelected(day)
                           ? "bg-primary text-primary-foreground"
                           : isToday(day)
-                          ? "border border-primary font-semibold"
-                          : "hover:bg-muted",
+                            ? "border border-primary font-semibold"
+                            : "hover:bg-muted",
                       )}
                     >
                       {day}

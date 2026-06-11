@@ -1,12 +1,22 @@
 "use client";
 
-import { useCompanySubmit } from "@/app/(dashboard)/companies/use-company-submit";
+import { MapPin, Plus, User, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useRouter } from "next/navigation";
+import { useTranslation } from "react-i18next";
+import type { ContactInput } from "@/app/(dashboard)/companies/actions";
 import {
-  companySchema,
+  createCompanySchema,
   type AddressFormValues,
   type CompanyFormValues,
 } from "@/app/(dashboard)/companies/validation";
+import { useCompanySubmit } from "@/app/(dashboard)/companies/use-company-submit";
+import { companyLangs, companyRoles } from "@/lib/enums";
 import { AddressForm } from "@/components/companies/address-form";
+import { ContactDialog } from "@/components/companies/contact-dialog";
+import { Button } from "@/components/shadcn/button";
 import {
   Dialog,
   DialogContent,
@@ -14,40 +24,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/shadcn/dialog";
-import { Button } from "@/components/shadcn/button";
 import { Input } from "@/components/shadcn/input";
 import { FormActions } from "@/components/ui/form-actions";
+import { FormError } from "@/components/ui/form-error";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import { FormSelectField } from "@/components/ui/form-select-field";
-import { FormError } from "../ui/form-error";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { MapPin, Plus, User, X } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
-import { companyLangs, companyRoles } from "@/lib/enums";
-import type { ContactInput } from "@/app/(dashboard)/companies/actions";
-import { ContactDialog } from "./contact-dialog";
-
-const ROLE_LABELS: Record<string, string> = {
-  customer: "Customer",
-  prospect: "Prospect",
-  supplier: "Supplier",
-  processor: "Processor",
-  transporter: "Transporter",
-  agent: "Agent",
-  purchasing_org: "Purchasing org.",
-  other: "Other",
-  internal: "Internal",
-};
-
-const langOptions = [
-  { value: "", label: "—" },
-  ...companyLangs.map((l) => ({
-    value: l,
-    label: l.charAt(0).toUpperCase() + l.slice(1),
-  })),
-];
 
 const DEFAULT_ADDRESS: CompanyFormValues["address"] = {
   category: [],
@@ -81,22 +62,22 @@ const DEFAULT_ADDRESS: CompanyFormValues["address"] = {
   loadingInstructions: "",
 };
 
-const addressLabel = (addr: { streetAndNo?: string; city?: string; altName?: string }) =>
-  [addr.streetAndNo, addr.city].filter(Boolean).join(", ") || addr.altName || "Address";
-
 export const CompanyForm = () => {
+  const { t } = useTranslation();
   const router = useRouter();
   const [isFirstAddressDialogOpen, setIsFirstAddressDialogOpen] = useState(false);
-  const [isAdditionalAddressDialogOpen, setIsAdditionalAddressDialogOpen] = useState(false);
+  const [isAdditionalAddressDialogOpen, setIsAdditionalAddressDialogOpen] =
+    useState(false);
   const [additionalAddresses, setAdditionalAddresses] = useState<AddressFormValues[]>([]);
   const [isContactDialogOpen, setIsContactDialogOpen] = useState(false);
   const [contacts, setContacts] = useState<ContactInput[]>([]);
 
   const { form, isPending, onSubmit, state } = useCompanySubmit();
-  const { control, register, watch, setValue, trigger, formState: { errors } } = form;
+  const { control, register, watch, setValue, trigger, formState: { errors } } =
+    form;
 
   const additionalForm = useForm<CompanyFormValues>({
-    resolver: zodResolver(companySchema),
+    resolver: zodResolver(createCompanySchema(t)),
     defaultValues: {
       companyName: "",
       correspName: "",
@@ -114,8 +95,10 @@ export const CompanyForm = () => {
   const selectedRoles = watch("roles") ?? [];
 
   useEffect(() => {
-    if (state.success) router.push("/companies");
-  }, [state.success, router]);
+    if (state.success) {
+      router.push("/companies");
+    }
+  }, [router, state.success]);
 
   const hasFirstAddress = !!(
     addressValues.streetAndNo ||
@@ -124,33 +107,66 @@ export const CompanyForm = () => {
     addressValues.postalCode
   );
 
+  const langOptions = [
+    { value: "", label: t("common.empty-option") },
+    ...companyLangs.map((language) => ({
+      value: language,
+      label: t(`company-form.languages.${language}`),
+    })),
+  ];
+
+  const resetAdditionalForm = () => {
+    additionalForm.reset({
+      companyName: "",
+      correspName: "",
+      remarks: "",
+      lang: "",
+      roles: [],
+      searchCode1: "",
+      searchCode2: "",
+      searchCode3: "",
+      address: { ...DEFAULT_ADDRESS, category: ["delivery"] },
+    });
+  };
+
+  const addressLabel = (address: {
+    streetAndNo?: string;
+    city?: string;
+    altName?: string;
+  }) =>
+    [address.streetAndNo, address.city].filter(Boolean).join(", ") ||
+    address.altName ||
+    t("company-form.address-fallback");
+
   const handleSaveFirstAddress = async () => {
     const isValid = await trigger("address");
-    if (isValid) setIsFirstAddressDialogOpen(false);
+    if (isValid) {
+      setIsFirstAddressDialogOpen(false);
+    }
   };
 
   const handleSaveAdditionalAddress = async () => {
     const isValid = await additionalForm.trigger("address");
-    if (!isValid) return;
+    if (!isValid) {
+      return;
+    }
+
     const values = additionalForm.getValues("address");
     setAdditionalAddresses((prev) => [...prev, values]);
-    additionalForm.reset({
-      companyName: "", correspName: "", remarks: "", lang: "", roles: [],
-      searchCode1: "", searchCode2: "", searchCode3: "",
-      address: { ...DEFAULT_ADDRESS, category: ["delivery"] },
-    });
+    resetAdditionalForm();
     setIsAdditionalAddressDialogOpen(false);
   };
 
-  const removeAdditionalAddress = (index: number) =>
-    setAdditionalAddresses((prev) => prev.filter((_, i) => i !== index));
+  const removeAdditionalAddress = (index: number) => {
+    setAdditionalAddresses((prev) => prev.filter((_, itemIndex) => itemIndex !== index));
+  };
 
   const toggleRole = (role: string) => {
     const current = selectedRoles;
     setValue(
       "roles",
       current.includes(role as never)
-        ? current.filter((r) => r !== role)
+        ? current.filter((item) => item !== role)
         : [...current, role as never],
     );
   };
@@ -158,21 +174,21 @@ export const CompanyForm = () => {
   return (
     <>
       <form onSubmit={onSubmit(additionalAddresses, contacts)} className="space-y-8">
-
-        {/* ── Company Details ───────────────────────────────────── */}
         <section className="space-y-4">
-          <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">Company Details</h2>
-          <div className="rounded-2xl border border-border bg-muted/20 p-4 space-y-4">
-
-            {/* Name / Lang / Corresp — 3 cols on lg */}
+          <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
+            {t("company-form.sections.company-details")}
+          </h2>
+          <div className="space-y-4 rounded-2xl border border-border bg-muted/20 p-4">
             <div className="grid gap-4 lg:grid-cols-3">
               <div>
-                <FormLabel htmlFor="companyName" required>Company Name</FormLabel>
+                <FormLabel htmlFor="companyName" required>
+                  {t("company-form.fields.company-name")}
+                </FormLabel>
                 <Input
                   id="companyName"
                   {...register("companyName")}
                   aria-invalid={!!errors.companyName}
-                  placeholder="Enter the company name"
+                  placeholder={t("company-form.placeholders.company-name")}
                   disabled={isPending}
                 />
                 <FormFieldError message={errors.companyName?.message} />
@@ -182,39 +198,42 @@ export const CompanyForm = () => {
                 control={control}
                 id="lang"
                 name="lang"
-                label="Language"
+                label={t("company-form.fields.language")}
                 options={langOptions}
                 emptyValue=""
                 disabled={isPending}
               />
 
               <div>
-                <FormLabel htmlFor="correspName">Corresp. Name</FormLabel>
+                <FormLabel htmlFor="correspName">
+                  {t("company-form.fields.corresp-name")}
+                </FormLabel>
                 <Input id="correspName" {...register("correspName")} disabled={isPending} />
               </div>
             </div>
 
-            {/* Remarks */}
             <div>
-              <FormLabel htmlFor="remarks">Remarks</FormLabel>
+              <FormLabel htmlFor="remarks">
+                {t("company-form.fields.remarks")}
+              </FormLabel>
               <textarea
                 id="remarks"
                 {...register("remarks")}
                 rows={3}
-                className="w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
-                placeholder="Any additional remarks..."
+                className="w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-50"
+                placeholder={t("company-form.placeholders.remarks")}
                 disabled={isPending}
               />
             </div>
 
-            {/* ── Addresses ── */}
             <div className="space-y-2">
-              {/* First address */}
               {hasFirstAddress ? (
                 <div className="flex items-center justify-between gap-2 rounded-lg border border-border bg-background px-3 py-2">
                   <div className="flex min-w-0 items-center gap-2 text-sm">
                     <MapPin className="size-4 shrink-0 text-muted-foreground" />
-                    <span className="truncate text-muted-foreground">{addressLabel(addressValues)}</span>
+                    <span className="truncate text-muted-foreground">
+                      {addressLabel(addressValues)}
+                    </span>
                   </div>
                   <button
                     type="button"
@@ -222,7 +241,7 @@ export const CompanyForm = () => {
                     className="shrink-0 text-xs text-primary hover:underline"
                     disabled={isPending}
                   >
-                    Edit
+                    {t("common.edit")}
                   </button>
                 </div>
               ) : (
@@ -233,21 +252,22 @@ export const CompanyForm = () => {
                   disabled={isPending}
                 >
                   <Plus className="size-4" />
-                  Add Address
+                  {t("company-form.add-address")}
                 </button>
               )}
 
-              {/* Additional delivery addresses */}
-              {additionalAddresses.map((addr, index) => (
+              {additionalAddresses.map((address, index) => (
                 <div
                   key={index}
                   className="flex items-center justify-between rounded-lg border border-border bg-background px-3 py-2"
                 >
                   <div className="flex min-w-0 items-center gap-2 text-sm">
                     <MapPin className="size-4 shrink-0 text-muted-foreground" />
-                    <span className="truncate text-muted-foreground">{addressLabel(addr)}</span>
+                    <span className="truncate text-muted-foreground">
+                      {addressLabel(address)}
+                    </span>
                     <span className="shrink-0 rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700">
-                      Delivery
+                      {t("company-form.delivery-badge")}
                     </span>
                   </div>
                   <button
@@ -257,12 +277,13 @@ export const CompanyForm = () => {
                     disabled={isPending}
                   >
                     <X className="size-4" />
-                    <span className="sr-only">Remove address</span>
+                    <span className="sr-only">
+                      {t("company-form.remove-address")}
+                    </span>
                   </button>
                 </div>
               ))}
 
-              {/* Add delivery address — only after first address is set */}
               {hasFirstAddress && (
                 <button
                   type="button"
@@ -271,12 +292,11 @@ export const CompanyForm = () => {
                   disabled={isPending}
                 >
                   <Plus className="size-4" />
-                  Add Delivery Address
+                  {t("company-form.add-delivery-address")}
                 </button>
               )}
             </div>
 
-            {/* ── Contacts ── */}
             <div className="space-y-2">
               {contacts.map((contact, index) => (
                 <div
@@ -287,20 +307,30 @@ export const CompanyForm = () => {
                     <User className="size-4 shrink-0 text-muted-foreground" />
                     <span className="truncate font-medium">{contact.fullName}</span>
                     {contact.email && (
-                      <span className="truncate text-muted-foreground">{contact.email}</span>
+                      <span className="truncate text-muted-foreground">
+                        {contact.email}
+                      </span>
                     )}
                     {contact.telephone && (
-                      <span className="shrink-0 text-muted-foreground">{contact.telephone}</span>
+                      <span className="shrink-0 text-muted-foreground">
+                        {contact.telephone}
+                      </span>
                     )}
                   </div>
                   <button
                     type="button"
-                    onClick={() => setContacts((prev) => prev.filter((_, i) => i !== index))}
+                    onClick={() =>
+                      setContacts((prev) =>
+                        prev.filter((_, itemIndex) => itemIndex !== index),
+                      )
+                    }
                     className="shrink-0 text-muted-foreground hover:text-destructive"
                     disabled={isPending}
                   >
                     <X className="size-4" />
-                    <span className="sr-only">Remove contact</span>
+                    <span className="sr-only">
+                      {t("company-form.remove-contact")}
+                    </span>
                   </button>
                 </div>
               ))}
@@ -312,15 +342,16 @@ export const CompanyForm = () => {
                 disabled={isPending}
               >
                 <Plus className="size-4" />
-                Add Contact
+                {t("company-form.add-contact")}
               </button>
             </div>
           </div>
         </section>
 
-        {/* ── Roles ─────────────────────────────────────────────── */}
         <section className="space-y-4">
-          <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">Roles</h2>
+          <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
+            {t("company-form.sections.roles")}
+          </h2>
           <div className="grid gap-3 rounded-2xl border border-border bg-muted/20 p-4 sm:grid-cols-2 lg:grid-cols-4">
             {companyRoles.map((role) => (
               <label
@@ -334,26 +365,35 @@ export const CompanyForm = () => {
                   onChange={() => toggleRole(role)}
                   disabled={isPending}
                 />
-                <span className="text-sm font-medium text-gray-700">{ROLE_LABELS[role]}</span>
+                <span className="text-sm font-medium text-gray-700">
+                  {t(`company-form.roles.${role}`)}
+                </span>
               </label>
             ))}
           </div>
         </section>
 
-        {/* ── Search Codes ──────────────────────────────────────── */}
         <section className="space-y-4">
-          <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">Search Codes</h2>
+          <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
+            {t("company-form.sections.search-codes")}
+          </h2>
           <div className="grid gap-3 rounded-2xl border border-border bg-muted/20 p-4 sm:grid-cols-3">
             <div>
-              <FormLabel htmlFor="searchCode1">Search code</FormLabel>
+              <FormLabel htmlFor="searchCode1">
+                {t("company-form.fields.search-code")}
+              </FormLabel>
               <Input id="searchCode1" {...register("searchCode1")} disabled={isPending} />
             </div>
             <div>
-              <FormLabel htmlFor="searchCode2">Search code</FormLabel>
+              <FormLabel htmlFor="searchCode2">
+                {t("company-form.fields.search-code")}
+              </FormLabel>
               <Input id="searchCode2" {...register("searchCode2")} disabled={isPending} />
             </div>
             <div>
-              <FormLabel htmlFor="searchCode3">Search code</FormLabel>
+              <FormLabel htmlFor="searchCode3">
+                {t("company-form.fields.search-code")}
+              </FormLabel>
               <Input id="searchCode3" {...register("searchCode3")} disabled={isPending} />
             </div>
           </div>
@@ -364,44 +404,54 @@ export const CompanyForm = () => {
         <FormActions
           isPending={isPending}
           onCancel={() => router.push("/companies")}
-          submitLabel="Create Company"
+          submitLabel={t("company-form.submit")}
         />
       </form>
 
-      {/* First address dialog */}
-      <Dialog open={isFirstAddressDialogOpen} onOpenChange={setIsFirstAddressDialogOpen}>
+      <Dialog
+        open={isFirstAddressDialogOpen}
+        onOpenChange={setIsFirstAddressDialogOpen}
+      >
         <DialogContent className="flex h-[85dvh] max-w-3xl flex-col gap-0 p-0">
           <DialogHeader className="shrink-0 border-b bg-background px-6 py-5">
             <DialogTitle className="flex items-center gap-2">
               <MapPin className="size-4" />
-              Address
+              {t("company-form.dialogs.primary-address.title")}
             </DialogTitle>
-            <DialogDescription>Fill in the address details for this company.</DialogDescription>
+            <DialogDescription>
+              {t("company-form.dialogs.primary-address.description")}
+            </DialogDescription>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto p-6">
-            <AddressForm control={control} errors={errors.address} register={register} watch={watch} />
+            <AddressForm
+              control={control}
+              errors={errors.address}
+              register={register}
+              watch={watch}
+            />
           </div>
           <div className="shrink-0 border-t bg-background px-6 py-4">
             <div className="flex justify-end gap-3">
-              <Button type="button" variant="outline" onClick={() => setIsFirstAddressDialogOpen(false)}>
-                Cancel
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsFirstAddressDialogOpen(false)}
+              >
+                {t("common.cancel")}
               </Button>
-              <Button type="button" onClick={handleSaveFirstAddress}>Save Address</Button>
+              <Button type="button" onClick={handleSaveFirstAddress}>
+                {t("company-form.save-address")}
+              </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Additional delivery address dialog */}
       <Dialog
         open={isAdditionalAddressDialogOpen}
         onOpenChange={(open) => {
           if (!open) {
-            additionalForm.reset({
-              companyName: "", correspName: "", remarks: "", lang: "", roles: [],
-              searchCode1: "", searchCode2: "", searchCode3: "",
-              address: { ...DEFAULT_ADDRESS, category: ["delivery"] },
-            });
+            resetAdditionalForm();
           }
           setIsAdditionalAddressDialogOpen(open);
         }}
@@ -410,10 +460,10 @@ export const CompanyForm = () => {
           <DialogHeader className="shrink-0 border-b bg-background px-6 py-5">
             <DialogTitle className="flex items-center gap-2">
               <MapPin className="size-4" />
-              Delivery Address
+              {t("company-form.dialogs.delivery-address.title")}
             </DialogTitle>
             <DialogDescription>
-              Additional addresses are restricted to the delivery category.
+              {t("company-form.dialogs.delivery-address.description")}
             </DialogDescription>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto p-6">
@@ -431,23 +481,20 @@ export const CompanyForm = () => {
                 type="button"
                 variant="outline"
                 onClick={() => {
-                  additionalForm.reset({
-                    companyName: "", correspName: "", remarks: "", lang: "", roles: [],
-                    searchCode1: "", searchCode2: "", searchCode3: "",
-                    address: { ...DEFAULT_ADDRESS, category: ["delivery"] },
-                  });
+                  resetAdditionalForm();
                   setIsAdditionalAddressDialogOpen(false);
                 }}
               >
-                Cancel
+                {t("common.cancel")}
               </Button>
-              <Button type="button" onClick={handleSaveAdditionalAddress}>Save Address</Button>
+              <Button type="button" onClick={handleSaveAdditionalAddress}>
+                {t("company-form.save-address")}
+              </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Company contact dialog */}
       <ContactDialog
         open={isContactDialogOpen}
         onOpenChange={setIsContactDialogOpen}

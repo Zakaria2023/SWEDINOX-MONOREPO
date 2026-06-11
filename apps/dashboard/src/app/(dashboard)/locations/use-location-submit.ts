@@ -3,15 +3,17 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
+import { useTranslation } from "react-i18next";
 import { createLocation, type LocationActionResult } from "./actions";
-import { locationSchema, type LocationFormValues } from "./validation";
+import { createLocationSchema, type LocationFormValues } from "./validation";
 
 export const useLocationSubmit = (pendingLoadingLocationName?: string) => {
+  const { t } = useTranslation();
   const [isPending, startTransition] = useTransition();
   const [state, setState] = useState<LocationActionResult>({});
 
   const form = useForm<LocationFormValues>({
-    resolver: zodResolver(locationSchema),
+    resolver: zodResolver(createLocationSchema(t)),
     defaultValues: {
       name: "",
       locationType: undefined,

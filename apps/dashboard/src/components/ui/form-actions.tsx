@@ -1,3 +1,6 @@
+"use client";
+
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/shadcn/button";
 
 type FormActionsProps = {
@@ -9,18 +12,22 @@ type FormActionsProps = {
 };
 
 export const FormActions = ({
-  cancelLabel = "Cancel",
+  cancelLabel,
   isPending = false,
   onCancel,
-  pendingLabel = "Saving...",
+  pendingLabel,
   submitLabel,
-}: FormActionsProps) => (
-  <div className="flex gap-3 pb-6">
-    <Button type="submit" disabled={isPending}>
-      {isPending ? pendingLabel : submitLabel}
-    </Button>
-    <Button type="button" variant="outline" onClick={onCancel}>
-      {cancelLabel}
-    </Button>
-  </div>
-);
+}: FormActionsProps) => {
+  const { t } = useTranslation();
+
+  return (
+    <div className="flex gap-3 pb-6">
+      <Button type="submit" disabled={isPending}>
+        {isPending ? pendingLabel ?? t("form-actions.pending") : submitLabel}
+      </Button>
+      <Button type="button" variant="outline" onClick={onCancel}>
+        {cancelLabel ?? t("form-actions.cancel")}
+      </Button>
+    </div>
+  );
+};

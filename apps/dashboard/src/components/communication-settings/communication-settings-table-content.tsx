@@ -1,38 +1,42 @@
 "use client";
 
-import type { CommunicationSettingListItem } from "@/app/(dashboard)/communication-settings/actions";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/shadcn/table";
-import { ColumnSelector } from "@/components/ui/column-selector";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import type { CommunicationSettingListItem } from "@/app/(dashboard)/communication-settings/actions";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/shadcn/table";
+import { ColumnSelector } from "@/components/ui/column-selector";
 
-const ALL_COLUMNS = [
-  { key: "id",                label: "Code",          defaultVisible: true  },
-  { key: "companyName",       label: "Company",       defaultVisible: true  },
-  { key: "documentType",      label: "Document Type", defaultVisible: true  },
-  { key: "communicationType", label: "Comm. Type",    defaultVisible: true  },
-  { key: "shape",             label: "Shape",         defaultVisible: true  },
-  { key: "email",             label: "Email",         defaultVisible: true  },
-  { key: "fax",               label: "Fax",           defaultVisible: false },
-  { key: "createdAt",         label: "Created At",    defaultVisible: false },
-  { key: "updatedAt",         label: "Updated At",    defaultVisible: false },
-] as const;
+type ColumnKey =
+  | "id"
+  | "companyName"
+  | "documentType"
+  | "communicationType"
+  | "shape"
+  | "email"
+  | "fax"
+  | "createdAt"
+  | "updatedAt";
 
-type ColumnKey = (typeof ALL_COLUMNS)[number]["key"];
+const ALL_COLUMNS: Array<{
+  defaultVisible: boolean;
+  key: ColumnKey;
+  labelKey: string;
+}> = [
+  { key: "id", labelKey: "communication-settings-table-content.columns.id", defaultVisible: true },
+  { key: "companyName", labelKey: "communication-settings-table-content.columns.company-name", defaultVisible: true },
+  { key: "documentType", labelKey: "communication-settings-table-content.columns.document-type", defaultVisible: true },
+  { key: "communicationType", labelKey: "communication-settings-table-content.columns.communication-type", defaultVisible: true },
+  { key: "shape", labelKey: "communication-settings-table-content.columns.shape", defaultVisible: true },
+  { key: "email", labelKey: "communication-settings-table-content.columns.email", defaultVisible: true },
+  { key: "fax", labelKey: "communication-settings-table-content.columns.fax", defaultVisible: false },
+  { key: "createdAt", labelKey: "communication-settings-table-content.columns.created-at", defaultVisible: false },
+  { key: "updatedAt", labelKey: "communication-settings-table-content.columns.updated-at", defaultVisible: false },
+];
 
 const initialVisibility = ALL_COLUMNS.reduce(
-  (acc, col) => ({ ...acc, [col.key]: col.defaultVisible }),
+  (acc, column) => ({ ...acc, [column.key]: column.defaultVisible }),
   {} as Record<ColumnKey, boolean>,
 );
-
-const formatEnum = (val: string) =>
-  val.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
 type CommunicationSettingsTableContentProps = {
   settings: CommunicationSettingListItem[];
@@ -41,34 +45,58 @@ type CommunicationSettingsTableContentProps = {
 export const CommunicationSettingsTableContent = ({
   settings,
 }: CommunicationSettingsTableContentProps) => {
+  const { t } = useTranslation();
   const [columnVisibility, setColumnVisibility] =
     useState<Record<ColumnKey, boolean>>(initialVisibility);
 
   const toggleColumn = (key: string) =>
     setColumnVisibility((prev) => ({ ...prev, [key]: !prev[key as ColumnKey] }));
 
-  const visibleColumns = ALL_COLUMNS.filter((col) => columnVisibility[col.key]);
+  const visibleColumns = ALL_COLUMNS.filter((column) => columnVisibility[column.key]);
+  const fallbackValue = t("common.not-available");
 
   const renderCell = (setting: CommunicationSettingListItem, key: ColumnKey) => {
     switch (key) {
       case "id":
         return <TableCell key={key} className="font-medium">{setting.id}</TableCell>;
       case "companyName":
-        return <TableCell key={key}>{setting.companyName ?? "—"}</TableCell>;
+        return <TableCell key={key}>{setting.companyName ?? fallbackValue}</TableCell>;
       case "documentType":
-        return <TableCell key={key}>{formatEnum(setting.documentType)}</TableCell>;
+        return (
+          <TableCell key={key}>
+            {t(`communication-setting-form.document-type-options.${setting.documentType}`)}
+          </TableCell>
+        );
       case "communicationType":
-        return <TableCell key={key}>{formatEnum(setting.communicationType)}</TableCell>;
+        return (
+          <TableCell key={key}>
+            {t(`communication-setting-form.communication-type-options.${setting.communicationType}`)}
+          </TableCell>
+        );
       case "shape":
-        return <TableCell key={key}>{setting.shape ? formatEnum(setting.shape) : "—"}</TableCell>;
+        return (
+          <TableCell key={key}>
+            {setting.shape
+              ? t(`communication-setting-form.shape-options.${setting.shape}`)
+              : fallbackValue}
+          </TableCell>
+        );
       case "email":
-        return <TableCell key={key}>{setting.email ?? "—"}</TableCell>;
+        return <TableCell key={key}>{setting.email ?? fallbackValue}</TableCell>;
       case "fax":
-        return <TableCell key={key}>{setting.fax ?? "—"}</TableCell>;
+        return <TableCell key={key}>{setting.fax ?? fallbackValue}</TableCell>;
       case "createdAt":
-        return <TableCell key={key}>{new Date(setting.createdAt).toLocaleDateString()}</TableCell>;
+        return (
+          <TableCell key={key}>
+            {new Date(setting.createdAt).toLocaleDateString()}
+          </TableCell>
+        );
       case "updatedAt":
-        return <TableCell key={key}>{new Date(setting.updatedAt).toLocaleDateString()}</TableCell>;
+        return (
+          <TableCell key={key}>
+            {new Date(setting.updatedAt).toLocaleDateString()}
+          </TableCell>
+        );
     }
   };
 
@@ -76,7 +104,10 @@ export const CommunicationSettingsTableContent = ({
     <div className="space-y-4">
       <div className="flex justify-end">
         <ColumnSelector
-          columns={ALL_COLUMNS}
+          columns={ALL_COLUMNS.map((column) => ({
+            key: column.key,
+            label: t(column.labelKey),
+          }))}
           visibility={columnVisibility}
           onToggle={toggleColumn}
         />
@@ -86,8 +117,8 @@ export const CommunicationSettingsTableContent = ({
         <Table>
           <TableHeader>
             <TableRow>
-              {visibleColumns.map((col) => (
-                <TableHead key={col.key}>{col.label}</TableHead>
+              {visibleColumns.map((column) => (
+                <TableHead key={column.key}>{t(column.labelKey)}</TableHead>
               ))}
             </TableRow>
           </TableHeader>
@@ -95,13 +126,13 @@ export const CommunicationSettingsTableContent = ({
             {settings.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={visibleColumns.length} className="h-24 text-center">
-                  No communication settings found
+                  {t("communication-settings-table-content.empty")}
                 </TableCell>
               </TableRow>
             ) : (
               settings.map((setting) => (
                 <TableRow key={setting.id}>
-                  {visibleColumns.map((col) => renderCell(setting, col.key))}
+                  {visibleColumns.map((column) => renderCell(setting, column.key))}
                 </TableRow>
               ))
             )}

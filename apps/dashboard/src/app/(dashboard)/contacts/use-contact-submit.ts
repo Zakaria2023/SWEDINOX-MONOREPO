@@ -3,15 +3,17 @@
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { contactSchema, type ContactFormValues } from "./validation";
+import { useTranslation } from "react-i18next";
 import { createContact, type ContactActionResult } from "./actions";
+import { createContactSchema, type ContactFormValues } from "./validation";
 
 export const useContactSubmit = () => {
+  const { t } = useTranslation();
   const [isPending, startTransition] = useTransition();
   const [state, setState] = useState<ContactActionResult>({});
 
   const form = useForm<ContactFormValues>({
-    resolver: zodResolver(contactSchema),
+    resolver: zodResolver(createContactSchema(t)),
     defaultValues: {
       contactType: undefined,
       description: "",

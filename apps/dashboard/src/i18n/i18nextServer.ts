@@ -1,8 +1,9 @@
 import { createInstance, i18n as I18nType } from "i18next";
 import resourcesToBackend from "i18next-resources-to-backend";
+import { defaultLanguage, normalizeLanguage, supportedLanguages } from "@/i18n/config";
 
 const loadLocale = (language: string) => {
-  switch (language) {
+  switch (normalizeLanguage(language)) {
     case "en":
       return import("@/lang/en.json");
     case "ar":
@@ -21,9 +22,10 @@ const initI18next = async (
   const i18nInstance = createInstance();
 
   await i18nInstance.use(resourcesToBackend(loadLocale)).init({
-    lng,
-    fallbackLng: "ar",
+    lng: normalizeLanguage(lng),
+    fallbackLng: defaultLanguage,
     ns,
+    supportedLngs: supportedLanguages,
     interpolation: { escapeValue: false },
   });
 

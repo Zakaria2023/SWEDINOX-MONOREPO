@@ -1,23 +1,24 @@
-import Link from "next/link";
 import { CompaniesTable } from "@/components/companies/companies-table";
+import { PageHeading } from "@/components/layout/page-heading";
+import { TranslatedLink } from "@/components/layout/translated-link";
 
-const CompaniesPage = () => (
-  <div className="space-y-6 p-6">
-    <div className="flex items-start justify-between">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Companies</h1>
-        <p className="mt-2 text-gray-600">Manage company records</p>
+const CompaniesPage = () => {
+  return (
+    <div className="space-y-6 p-6">
+      <div className="flex items-start justify-between">
+        <PageHeading
+          titleKey="companies-page.title"
+          descriptionKey="companies-page.description"
+        />
+        <TranslatedLink
+          href="/companies/add"
+          labelKey="companies-page.new-company"
+          className="inline-flex h-8 items-center justify-center rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/80"
+        />
       </div>
-      <Link
-        href="/companies/add"
-        className="inline-flex h-8 items-center justify-center rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/80"
-      >
-        New Company
-      </Link>
+      <CompaniesTable />
     </div>
-
-    <CompaniesTable />
-  </div>
-);
+  );
+};
 
 export default CompaniesPage;
