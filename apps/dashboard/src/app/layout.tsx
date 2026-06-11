@@ -1,3 +1,4 @@
+import I18nProvider from "@/providers/I18NextProvider";
 import { ClerkProvider } from "@clerk/nextjs";
 import type { Metadata } from "next";
 import { ReactNode } from "react";
@@ -15,7 +16,9 @@ type Props = {
 const RootLayout = ({ children }: Props) => (
   <ClerkProvider>
     <html lang="en">
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">
+        <I18nProvider>{children}</I18nProvider>
+      </body>
     </html>
   </ClerkProvider>
 );
