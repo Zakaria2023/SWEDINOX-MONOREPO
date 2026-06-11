@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Building2, ChevronRight, Users } from "lucide-react";
+import { Building2, ChevronRight, ContactRound, Users } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -26,15 +26,18 @@ export const AppSidebar = () => {
   const isCustomersActive = pathname.startsWith("/addresses");
   const isCompanyActive =
     pathname.startsWith("/companies") ||
-    pathname.startsWith("/company-contacts") ||
+    pathname.startsWith("/company-contacts");
+  const isContactsActive =
     pathname.startsWith("/contacts") ||
     pathname.startsWith("/contact-groups");
 
   const [isCustomersOpen, setIsCustomersOpen] = useState(false);
   const [isCompanyOpen, setIsCompanyOpen] = useState(false);
+  const [isContactsOpen, setIsContactsOpen] = useState(false);
 
   const isCustomersExpanded = isCustomersOpen || isCustomersActive;
   const isCompanyExpanded = isCompanyOpen || isCompanyActive;
+  const isContactsExpanded = isContactsOpen || isContactsActive;
 
   return (
     <Sidebar>
@@ -111,6 +114,26 @@ export const AppSidebar = () => {
                         <span>Company Contacts</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
+                  </SidebarMenuSub>
+                )}
+              </SidebarMenuItem>
+
+              {/* ── Contacts ── */}
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  aria-expanded={isContactsExpanded}
+                  onClick={() => setIsContactsOpen((o) => !o)}
+                >
+                  <ContactRound />
+                  <span>Contacts</span>
+                  <ChevronRight
+                    className={cn("ml-auto transition-transform", {
+                      "rotate-90": isContactsExpanded,
+                    })}
+                  />
+                </SidebarMenuButton>
+                {isContactsExpanded && (
+                  <SidebarMenuSub>
                     <SidebarMenuSubItem>
                       <SidebarMenuSubButton
                         render={<Link href="/contacts" />}

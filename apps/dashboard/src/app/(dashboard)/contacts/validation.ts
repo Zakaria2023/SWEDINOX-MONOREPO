@@ -4,7 +4,6 @@ import { z } from "zod";
 export const contactSchema = z.object({
   contactType: z.enum(contactTypes).optional(),
 
-  code: z.string().min(1, "Code is required"),
   description: z.string().min(1, "Description is required"),
 
   contactGroupUuid: z.string().optional(),

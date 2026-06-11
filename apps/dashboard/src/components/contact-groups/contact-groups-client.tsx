@@ -211,7 +211,7 @@ export const ContactGroupsClient = ({ groups }: Props) => {
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={onSubmit} className="mt-2 space-y-4">
+          <form onSubmit={onSubmit} className="mt-2 space-y-4 px-6 pb-6">
             <div>
               <FormLabel htmlFor="name" required>Name</FormLabel>
               <Input

@@ -14,7 +14,6 @@ export const useContactSubmit = () => {
     resolver: zodResolver(contactSchema),
     defaultValues: {
       contactType: undefined,
-      code: "",
       description: "",
       contactGroupUuid: "",
       quicklyChangeOrder: "",
@@ -33,7 +32,6 @@ export const useContactSubmit = () => {
     startTransition(async () => {
       const result = await createContact({
         contactType: values.contactType ?? null,
-        code: values.code,
         description: values.description,
         contactGroupUuid: values.contactGroupUuid || undefined,
         quicklyChangeOrder: values.quicklyChangeOrder || undefined,

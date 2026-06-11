@@ -2,10 +2,13 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { Controller } from "react-hook-form";
 import { useContactSubmit } from "@/app/(dashboard)/contacts/use-contact-submit";
 import { type ContactGroupOption } from "@/app/(dashboard)/contacts/actions";
 import { contactTypes } from "@/lib/enums";
 import { Input } from "@/components/shadcn/input";
+import { Select } from "@/components/shadcn/select";
+import { DatePicker } from "@/components/shadcn/date-picker";
 import { FormActions } from "@/components/ui/form-actions";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import { FormError } from "@/components/ui/form-error";
@@ -26,7 +29,7 @@ type ContactFormProps = {
 export const ContactForm = ({ groups }: ContactFormProps) => {
   const router = useRouter();
   const { form, isPending, onSubmit, state } = useContactSubmit();
-  const { register, watch, setValue, formState: { errors } } = form;
+  const { register, watch, setValue, control, formState: { errors } } = form;
 
   const contactType = watch("contactType");
   const hasPriceDate = watch("hasPriceDate");
@@ -72,17 +75,6 @@ export const ContactForm = ({ groups }: ContactFormProps) => {
           </h2>
           <div className="grid gap-4">
             <div>
-              <FormLabel htmlFor="code" required>Code</FormLabel>
-              <Input
-                id="code"
-                {...register("code")}
-                aria-invalid={!!errors.code}
-                disabled={isPending}
-              />
-              <FormFieldError message={errors.code?.message} />
-            </div>
-
-            <div>
               <FormLabel htmlFor="description" required>Description</FormLabel>
               <Input
                 id="description"
@@ -95,16 +87,20 @@ export const ContactForm = ({ groups }: ContactFormProps) => {
 
             <div>
               <FormLabel htmlFor="contactGroupUuid">Contact group</FormLabel>
-              <select
-                id="contactGroupUuid"
-                {...register("contactGroupUuid")}
-                disabled={isPending}
-                className="w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
-              >
-                {groupOptions.map((opt) => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
+              <Controller
+                name="contactGroupUuid"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    id="contactGroupUuid"
+                    options={groupOptions}
+                    value={field.value ?? ""}
+                    onValueChange={field.onChange}
+                    placeholder="-empty-"
+                    disabled={isPending}
+                  />
+                )}
+              />
             </div>
 
             <div className="flex items-center gap-3">
@@ -131,11 +127,17 @@ export const ContactForm = ({ groups }: ContactFormProps) => {
                 Price date
               </label>
               {hasPriceDate && (
-                <Input
-                  type="date"
-                  {...register("priceDate")}
-                  disabled={isPending}
-                  className="w-40"
+                <Controller
+                  name="priceDate"
+                  control={control}
+                  render={({ field }) => (
+                    <DatePicker
+                      value={field.value ?? ""}
+                      onChange={field.onChange}
+                      disabled={isPending}
+                      className="w-44"
+                    />
+                  )}
                 />
               )}
             </div>

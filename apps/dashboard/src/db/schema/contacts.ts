@@ -33,7 +33,6 @@ export const Contacts = mysqlTable(
 
     contactType: mysqlEnum("contact_type", contactTypes),
 
-    code: varchar("code", { length: 100 }).notNull(),
     description: varchar("description", { length: 255 }).notNull(),
 
     contactGroupUuid: char("contact_group_uuid", { length: 36 }),
