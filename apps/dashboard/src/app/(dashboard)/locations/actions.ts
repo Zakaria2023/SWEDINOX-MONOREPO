@@ -55,30 +55,29 @@ export const createLocation = async (
   input: LocationInput & { newLoadingLocationName?: string },
 ): Promise<LocationActionResult> => {
   const { newLoadingLocationName, ...locationInput } = input;
-  const locationUuid = generateUuid();
+  const uuid = generateUuid();
 
   try {
     if (newLoadingLocationName?.trim()) {
-      const llUuid = generateUuid();
       await db.transaction(async (tx) => {
         await tx.insert(LoadingLocations).values({
-          uuid: llUuid,
+          uuid: uuid,
           name: newLoadingLocationName.trim(),
         });
         await tx.insert(Locations).values({
           ...locationInput,
-          uuid: locationUuid,
-          loadingLocationUuid: llUuid,
+          uuid: uuid,
+          loadingLocationUuid: uuid,
         });
       });
     } else {
       await db.insert(Locations).values({
         ...locationInput,
-        uuid: locationUuid,
+        uuid: uuid,
       });
     }
 
-    return { success: true, locationUuid };
+    return { success: true, locationUuid: uuid };
   } catch (error) {
     return {
       error:
