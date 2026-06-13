@@ -8,7 +8,6 @@ import {
 } from "@/db/schema/company-addresses";
 import { CompanyRoleLinks } from "@/db/schema/company-role-links";
 import { CommunicationSettings } from "@/db/schema/communication-settings";
-import { Contracts } from "@/db/schema/contracts";
 import type {
   CommunicationSettingDocumentType,
   CommunicationSettingShape,
@@ -26,15 +25,10 @@ export type CommSettingInput = {
   documentType: CommunicationSettingDocumentType;
   communicationType: CommunicationSettingType;
   shape?: CommunicationSettingShape;
-  contractUuid?: string;
   email?: string;
   fax?: string;
 };
 
-export type ContractOption = {
-  uuid: string;
-  description: string;
-};
 
 export type CompanyFields = {
   companyName: string;
@@ -60,11 +54,6 @@ export const getCompanies = async (): Promise<SelectCompanies[]> => {
   }
 };
 
-export const getContractsForCompanyForm = async (): Promise<ContractOption[]> =>
-  db
-    .select({ uuid: Contracts.uuid, description: Contracts.description })
-    .from(Contracts)
-    .orderBy(Contracts.description);
 
 export const createCompany = async (
   companyFields: CompanyFields,
