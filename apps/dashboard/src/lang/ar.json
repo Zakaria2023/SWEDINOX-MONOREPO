@@ -663,8 +663,9 @@
     "delivery-badge": "تسليم",
     "remove-address": "إزالة العنوان",
     "add-delivery-address": "إضافة عنوان تسليم",
-    "remove-contact": "إزالة جهة الاتصال",
-    "add-contact": "إضافة جهة اتصال",
+    "add-communication-setting": "إضافة إعداد تواصل",
+    "remove-communication-setting": "إزالة إعداد التواصل",
+    "save-communication-setting": "إضافة الإعداد",
     "roles": {
       "customer": "عميل",
       "prospect": "عميل محتمل",
@@ -685,6 +686,10 @@
       "delivery-address": {
         "title": "عنوان التسليم",
         "description": "العناوين الإضافية تقتصر على فئة التسليم."
+      },
+      "communication-setting": {
+        "title": "إعداد التواصل",
+        "description": "أضف إعداد تواصل لهذه الشركة."
       }
     },
     "save-address": "حفظ العنوان"

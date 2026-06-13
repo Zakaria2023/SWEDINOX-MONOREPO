@@ -663,8 +663,9 @@
     "delivery-badge": "Levering",
     "remove-address": "Adres verwijderen",
     "add-delivery-address": "Afleveradres toevoegen",
-    "remove-contact": "Contact verwijderen",
-    "add-contact": "Contact toevoegen",
+    "add-communication-setting": "Communicatie-instelling toevoegen",
+    "remove-communication-setting": "Communicatie-instelling verwijderen",
+    "save-communication-setting": "Instelling toevoegen",
     "roles": {
       "customer": "Klant",
       "prospect": "Prospect",
@@ -685,6 +686,10 @@
       "delivery-address": {
         "title": "Afleveradres",
         "description": "Extra adressen zijn beperkt tot de leveringscategorie."
+      },
+      "communication-setting": {
+        "title": "Communicatie-instelling",
+        "description": "Voeg een communicatie-instelling toe voor dit bedrijf."
       }
     },
     "save-address": "Adres opslaan"

@@ -7,11 +7,34 @@ import {
   type InsertCompanyAddresses,
 } from "@/db/schema/company-addresses";
 import { CompanyRoleLinks } from "@/db/schema/company-role-links";
-import type { CompanyLang, CompanyRole } from "@/lib/enums";
+import { CommunicationSettings } from "@/db/schema/communication-settings";
+import { Contracts } from "@/db/schema/contracts";
+import type {
+  CommunicationSettingDocumentType,
+  CommunicationSettingShape,
+  CommunicationSettingType,
+  CompanyLang,
+  CompanyRole,
+} from "@/lib/enums";
 import { generateUuid } from "@/lib/helpers";
+import { requireAuth } from "@/lib/auth";
 import { desc } from "drizzle-orm";
 
 export type AddressInput = Omit<InsertCompanyAddresses, "uuid" | "companyUuid">;
+
+export type CommSettingInput = {
+  documentType: CommunicationSettingDocumentType;
+  communicationType: CommunicationSettingType;
+  shape?: CommunicationSettingShape;
+  contactUuid?: string;
+  email?: string;
+  fax?: string;
+};
+
+export type ContractOption = {
+  uuid: string;
+  description: string;
+};
 
 export type CompanyFields = {
   companyName: string;
@@ -37,18 +60,27 @@ export const getCompanies = async (): Promise<SelectCompanies[]> => {
   }
 };
 
+export const getContractsForCompanyForm = async (): Promise<ContractOption[]> =>
+  db
+    .select({ uuid: Contracts.uuid, description: Contracts.description })
+    .from(Contracts)
+    .orderBy(Contracts.description);
+
 export const createCompany = async (
   companyFields: CompanyFields,
   firstAddress: AddressInput,
   additionalAddresses: AddressInput[] = [],
   roles: CompanyRole[] = [],
+  communicationSettings: CommSettingInput[] = [],
 ): Promise<CompanyActionResult> => {
   const uuid = generateUuid();
 
   try {
+    const modifiedByUserId = await requireAuth();
+
     await db.transaction(async (tx) => {
       await tx.insert(Companies).values({
-        uuid: uuid,
+        uuid,
         companyName: companyFields.companyName,
         correspName: companyFields.correspName || undefined,
         remarks: companyFields.remarks || undefined,
@@ -60,14 +92,14 @@ export const createCompany = async (
 
       await tx.insert(CompanyAddresses).values({
         ...firstAddress,
-        uuid: uuid,
+        uuid,
         companyUuid: uuid,
       });
 
       for (const addr of additionalAddresses) {
         await tx.insert(CompanyAddresses).values({
           ...addr,
-          uuid: uuid,
+          uuid,
           companyUuid: uuid,
         });
       }
@@ -75,13 +107,25 @@ export const createCompany = async (
       for (const role of roles) {
         await tx.insert(CompanyRoleLinks).values({ companyUuid: uuid, role });
       }
+
+      for (const setting of communicationSettings) {
+        await tx.insert(CommunicationSettings).values({
+          companyUuid: uuid,
+          documentType: setting.documentType,
+          communicationType: setting.communicationType,
+          shape: setting.shape || undefined,
+          contactUuid: setting.contactUuid || undefined,
+          email: setting.email || undefined,
+          fax: setting.fax || undefined,
+          modifiedByUserId,
+        });
+      }
     });
 
     return { success: true, companyUuid: uuid };
   } catch (error) {
     return {
-      error:
-        error instanceof Error ? error.message : "Failed to create company",
+      error: error instanceof Error ? error.message : "Failed to create company",
     };
   }
 };

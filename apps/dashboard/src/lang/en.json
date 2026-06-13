@@ -663,8 +663,9 @@
     "delivery-badge": "Delivery",
     "remove-address": "Remove address",
     "add-delivery-address": "Add Delivery Address",
-    "remove-contact": "Remove contact",
-    "add-contact": "Add Contact",
+    "add-communication-setting": "Add Communication Setting",
+    "remove-communication-setting": "Remove communication setting",
+    "save-communication-setting": "Add Setting",
     "roles": {
       "customer": "Customer",
       "prospect": "Prospect",
@@ -685,6 +686,10 @@
       "delivery-address": {
         "title": "Delivery Address",
         "description": "Additional addresses are restricted to the delivery category."
+      },
+      "communication-setting": {
+        "title": "Communication Setting",
+        "description": "Add a communication setting for this company."
       }
     },
     "save-address": "Save Address"

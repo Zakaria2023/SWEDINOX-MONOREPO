@@ -1,18 +1,24 @@
 "use client";
 
-import { MapPin, Plus, X } from "lucide-react";
+import { MapPin, MessageSquare, Plus, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
+import { z } from "zod";
+import type { CommSettingInput, ContractOption } from "@/app/(dashboard)/companies/actions";
 import {
   createCompanySchema,
   type AddressFormValues,
   type CompanyFormValues,
 } from "@/app/(dashboard)/companies/validation";
 import { useCompanySubmit } from "@/app/(dashboard)/companies/use-company-submit";
-import { companyLangs, companyRoles } from "@/lib/enums";
+import {
+  communicationSettingDocumentTypes,
+  communicationSettingShapes,
+  communicationSettingTypes,
+} from "@/lib/enums";
 import { AddressForm } from "@/components/companies/address-form";
 import { Button } from "@/components/shadcn/button";
 import {
@@ -23,10 +29,12 @@ import {
   DialogTitle,
 } from "@/components/shadcn/dialog";
 import { Input } from "@/components/shadcn/input";
+import { Select } from "@/components/shadcn/select";
 import { FormActions } from "@/components/ui/form-actions";
 import { FormError } from "@/components/ui/form-error";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import { FormSelectField } from "@/components/ui/form-select-field";
+import { companyLangs, companyRoles } from "@/lib/enums";
 
 const DEFAULT_ADDRESS: CompanyFormValues["address"] = {
   category: [],
@@ -60,12 +68,38 @@ const DEFAULT_ADDRESS: CompanyFormValues["address"] = {
   loadingInstructions: "",
 };
 
-export const CompanyForm = () => {
+const commSettingSchema = z.object({
+  documentType: z.string().min(1),
+  communicationType: z.string().min(1),
+  shape: z.string().optional(),
+  contactUuid: z.string().optional(),
+  email: z.string().optional(),
+  fax: z.string().optional(),
+});
+
+type CommSettingFormValues = z.infer<typeof commSettingSchema>;
+
+const DEFAULT_COMM_SETTING: CommSettingFormValues = {
+  documentType: "",
+  communicationType: "",
+  shape: "",
+  contactUuid: "",
+  email: "",
+  fax: "",
+};
+
+type CompanyFormProps = {
+  contracts: ContractOption[];
+};
+
+export const CompanyForm = ({ contracts }: CompanyFormProps) => {
   const { t } = useTranslation();
   const router = useRouter();
   const [isFirstAddressDialogOpen, setIsFirstAddressDialogOpen] = useState(false);
   const [isAdditionalAddressDialogOpen, setIsAdditionalAddressDialogOpen] = useState(false);
   const [additionalAddresses, setAdditionalAddresses] = useState<AddressFormValues[]>([]);
+  const [isCommSettingDialogOpen, setIsCommSettingDialogOpen] = useState(false);
+  const [communicationSettings, setCommunicationSettings] = useState<CommSettingInput[]>([]);
 
   const { form, isPending, onSubmit, state } = useCompanySubmit();
   const {
@@ -92,6 +126,11 @@ export const CompanyForm = () => {
     },
   });
 
+  const commSettingForm = useForm<CommSettingFormValues>({
+    resolver: zodResolver(commSettingSchema),
+    defaultValues: DEFAULT_COMM_SETTING,
+  });
+
   const addressValues = watch("address");
   const selectedRoles = watch("roles") ?? [];
 
@@ -110,10 +149,39 @@ export const CompanyForm = () => {
 
   const langOptions = [
     { value: "", label: t("common.empty-option") },
-    ...companyLangs.map((language) => ({
-      value: language,
-      label: t(`company-form.languages.${language}`),
+    ...companyLangs.map((lang) => ({
+      value: lang,
+      label: t(`company-form.languages.${lang}`),
     })),
+  ];
+
+  const documentTypeOptions = [
+    { value: "", label: t("common.select-option") },
+    ...communicationSettingDocumentTypes.map((dt) => ({
+      value: dt,
+      label: t(`communication-setting-form.document-type-options.${dt}`),
+    })),
+  ];
+
+  const communicationTypeOptions = [
+    { value: "", label: t("common.select-option") },
+    ...communicationSettingTypes.map((ct) => ({
+      value: ct,
+      label: t(`communication-setting-form.communication-type-options.${ct}`),
+    })),
+  ];
+
+  const shapeOptions = [
+    { value: "", label: t("common.empty-option") },
+    ...communicationSettingShapes.map((s) => ({
+      value: s,
+      label: t(`communication-setting-form.shape-options.${s}`),
+    })),
+  ];
+
+  const contractOptions = [
+    { value: "", label: t("common.empty-option") },
+    ...contracts.map((c) => ({ value: c.uuid, label: c.description })),
   ];
 
   const resetAdditionalForm = () => {
@@ -130,34 +198,38 @@ export const CompanyForm = () => {
     });
   };
 
-  const addressLabel = (address: {
-    streetAndNo?: string;
-    city?: string;
-    altName?: string;
-  }) =>
+  const addressLabel = (address: { streetAndNo?: string; city?: string; altName?: string }) =>
     [address.streetAndNo, address.city].filter(Boolean).join(", ") ||
     address.altName ||
     t("company-form.address-fallback");
 
   const handleSaveFirstAddress = async () => {
-    const isValid = await trigger("address");
-    if (isValid) {
-      setIsFirstAddressDialogOpen(false);
-    }
+    if (await trigger("address")) setIsFirstAddressDialogOpen(false);
   };
 
   const handleSaveAdditionalAddress = async () => {
-    const isValid = await additionalForm.trigger("address");
-    if (!isValid) return;
+    if (!(await additionalForm.trigger("address"))) return;
     const values = additionalForm.getValues("address");
     setAdditionalAddresses((prev) => [...prev, values]);
     resetAdditionalForm();
     setIsAdditionalAddressDialogOpen(false);
   };
 
-  const removeAdditionalAddress = (index: number) => {
-    setAdditionalAddresses((prev) => prev.filter((_, i) => i !== index));
-  };
+  const handleSaveCommSetting = commSettingForm.handleSubmit((values) => {
+    setCommunicationSettings((prev) => [
+      ...prev,
+      {
+        documentType: values.documentType as CommSettingInput["documentType"],
+        communicationType: values.communicationType as CommSettingInput["communicationType"],
+        shape: (values.shape || undefined) as CommSettingInput["shape"],
+        contactUuid: values.contactUuid || undefined,
+        email: values.email || undefined,
+        fax: values.fax || undefined,
+      },
+    ]);
+    commSettingForm.reset(DEFAULT_COMM_SETTING);
+    setIsCommSettingDialogOpen(false);
+  });
 
   const toggleRole = (role: string) => {
     const current = selectedRoles;
@@ -169,9 +241,15 @@ export const CompanyForm = () => {
     );
   };
 
+  const commSettingLabel = (setting: CommSettingInput) =>
+    [
+      t(`communication-setting-form.document-type-options.${setting.documentType}`),
+      t(`communication-setting-form.communication-type-options.${setting.communicationType}`),
+    ].join(" — ");
+
   return (
     <>
-      <form onSubmit={onSubmit(additionalAddresses)} className="space-y-8">
+      <form onSubmit={onSubmit(additionalAddresses, communicationSettings)} className="space-y-8">
         <section className="space-y-4">
           <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
             {t("company-form.sections.company-details")}
@@ -206,18 +284,12 @@ export const CompanyForm = () => {
                 <FormLabel htmlFor="correspName">
                   {t("company-form.fields.corresp-name")}
                 </FormLabel>
-                <Input
-                  id="correspName"
-                  {...register("correspName")}
-                  disabled={isPending}
-                />
+                <Input id="correspName" {...register("correspName")} disabled={isPending} />
               </div>
             </div>
 
             <div>
-              <FormLabel htmlFor="remarks">
-                {t("company-form.fields.remarks")}
-              </FormLabel>
+              <FormLabel htmlFor="remarks">{t("company-form.fields.remarks")}</FormLabel>
               <textarea
                 id="remarks"
                 {...register("remarks")}
@@ -228,14 +300,13 @@ export const CompanyForm = () => {
               />
             </div>
 
+            {/* Addresses */}
             <div className="space-y-2">
               {hasFirstAddress ? (
                 <div className="flex items-center justify-between gap-2 rounded-lg border border-border bg-background px-3 py-2">
                   <div className="flex min-w-0 items-center gap-2 text-sm">
                     <MapPin className="size-4 shrink-0 text-muted-foreground" />
-                    <span className="truncate text-muted-foreground">
-                      {addressLabel(addressValues)}
-                    </span>
+                    <span className="truncate text-muted-foreground">{addressLabel(addressValues)}</span>
                   </div>
                   <button
                     type="button"
@@ -259,22 +330,17 @@ export const CompanyForm = () => {
               )}
 
               {additionalAddresses.map((address, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between rounded-lg border border-border bg-background px-3 py-2"
-                >
+                <div key={index} className="flex items-center justify-between rounded-lg border border-border bg-background px-3 py-2">
                   <div className="flex min-w-0 items-center gap-2 text-sm">
                     <MapPin className="size-4 shrink-0 text-muted-foreground" />
-                    <span className="truncate text-muted-foreground">
-                      {addressLabel(address)}
-                    </span>
+                    <span className="truncate text-muted-foreground">{addressLabel(address)}</span>
                     <span className="shrink-0 rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700">
                       {t("company-form.delivery-badge")}
                     </span>
                   </div>
                   <button
                     type="button"
-                    onClick={() => removeAdditionalAddress(index)}
+                    onClick={() => setAdditionalAddresses((prev) => prev.filter((_, i) => i !== index))}
                     className="shrink-0 text-muted-foreground hover:text-destructive"
                     disabled={isPending}
                   >
@@ -295,6 +361,45 @@ export const CompanyForm = () => {
                   {t("company-form.add-delivery-address")}
                 </button>
               )}
+            </div>
+
+            {/* Communication Settings */}
+            <div className="space-y-2">
+              {communicationSettings.map((setting, index) => (
+                <div key={index} className="flex items-center justify-between rounded-lg border border-border bg-background px-3 py-2">
+                  <div className="flex min-w-0 items-center gap-2 text-sm">
+                    <MessageSquare className="size-4 shrink-0 text-muted-foreground" />
+                    <span className="truncate text-muted-foreground">{commSettingLabel(setting)}</span>
+                    {setting.shape && (
+                      <span className="shrink-0 rounded-full bg-purple-100 px-2 py-0.5 text-xs text-purple-700">
+                        {t(`communication-setting-form.shape-options.${setting.shape}`)}
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setCommunicationSettings((prev) => prev.filter((_, i) => i !== index))}
+                    className="shrink-0 text-muted-foreground hover:text-destructive"
+                    disabled={isPending}
+                  >
+                    <X className="size-4" />
+                    <span className="sr-only">{t("company-form.remove-communication-setting")}</span>
+                  </button>
+                </div>
+              ))}
+
+              <button
+                type="button"
+                onClick={() => {
+                  commSettingForm.reset(DEFAULT_COMM_SETTING);
+                  setIsCommSettingDialogOpen(true);
+                }}
+                className="inline-flex cursor-pointer h-9 w-full items-center justify-center gap-2 rounded-lg border border-dashed border-border px-3 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+                disabled={isPending}
+              >
+                <Plus className="size-4" />
+                {t("company-form.add-communication-setting")}
+              </button>
             </div>
           </div>
         </section>
@@ -330,21 +435,15 @@ export const CompanyForm = () => {
           </h2>
           <div className="grid gap-3 rounded-2xl border border-border bg-muted/20 p-4 sm:grid-cols-3">
             <div>
-              <FormLabel htmlFor="searchCode1">
-                {t("company-form.fields.search-code")}
-              </FormLabel>
+              <FormLabel htmlFor="searchCode1">{t("company-form.fields.search-code")}</FormLabel>
               <Input id="searchCode1" {...register("searchCode1")} disabled={isPending} />
             </div>
             <div>
-              <FormLabel htmlFor="searchCode2">
-                {t("company-form.fields.search-code")}
-              </FormLabel>
+              <FormLabel htmlFor="searchCode2">{t("company-form.fields.search-code")}</FormLabel>
               <Input id="searchCode2" {...register("searchCode2")} disabled={isPending} />
             </div>
             <div>
-              <FormLabel htmlFor="searchCode3">
-                {t("company-form.fields.search-code")}
-              </FormLabel>
+              <FormLabel htmlFor="searchCode3">{t("company-form.fields.search-code")}</FormLabel>
               <Input id="searchCode3" {...register("searchCode3")} disabled={isPending} />
             </div>
           </div>
@@ -359,6 +458,7 @@ export const CompanyForm = () => {
         />
       </form>
 
+      {/* Primary Address Dialog */}
       <Dialog open={isFirstAddressDialogOpen} onOpenChange={setIsFirstAddressDialogOpen}>
         <DialogContent className="flex h-[85dvh] max-w-3xl flex-col gap-0 p-0">
           <DialogHeader className="shrink-0 border-b bg-background px-6 py-5">
@@ -371,12 +471,7 @@ export const CompanyForm = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto p-6">
-            <AddressForm
-              control={control}
-              errors={errors.address}
-              register={register}
-              watch={watch}
-            />
+            <AddressForm control={control} errors={errors.address} register={register} watch={watch} />
           </div>
           <div className="shrink-0 border-t bg-background px-6 py-4">
             <div className="flex justify-end gap-3">
@@ -391,6 +486,7 @@ export const CompanyForm = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Additional Address Dialog */}
       <Dialog
         open={isAdditionalAddressDialogOpen}
         onOpenChange={(open) => {
@@ -434,6 +530,137 @@ export const CompanyForm = () => {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Communication Setting Dialog */}
+      <Dialog
+        open={isCommSettingDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) commSettingForm.reset(DEFAULT_COMM_SETTING);
+          setIsCommSettingDialogOpen(open);
+        }}
+      >
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MessageSquare className="size-4" />
+              {t("company-form.dialogs.communication-setting.title")}
+            </DialogTitle>
+            <DialogDescription>
+              {t("company-form.dialogs.communication-setting.description")}
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleSaveCommSetting} className="mt-2 space-y-4 px-6 pb-6">
+            <div>
+              <FormLabel htmlFor="cs-documentType" required>
+                {t("communication-setting-form.fields.document-type")}
+              </FormLabel>
+              <Controller
+                name="documentType"
+                control={commSettingForm.control}
+                render={({ field }) => (
+                  <Select
+                    id="cs-documentType"
+                    options={documentTypeOptions}
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    placeholder={t("common.select-option")}
+                  />
+                )}
+              />
+              <FormFieldError message={commSettingForm.formState.errors.documentType?.message} />
+            </div>
+
+            <div>
+              <FormLabel htmlFor="cs-communicationType" required>
+                {t("communication-setting-form.fields.communication-type")}
+              </FormLabel>
+              <Controller
+                name="communicationType"
+                control={commSettingForm.control}
+                render={({ field }) => (
+                  <Select
+                    id="cs-communicationType"
+                    options={communicationTypeOptions}
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    placeholder={t("common.select-option")}
+                  />
+                )}
+              />
+              <FormFieldError message={commSettingForm.formState.errors.communicationType?.message} />
+            </div>
+
+            <div>
+              <FormLabel htmlFor="cs-shape">
+                {t("communication-setting-form.fields.shape")}
+              </FormLabel>
+              <Controller
+                name="shape"
+                control={commSettingForm.control}
+                render={({ field }) => (
+                  <Select
+                    id="cs-shape"
+                    options={shapeOptions}
+                    value={field.value ?? ""}
+                    onValueChange={field.onChange}
+                    placeholder={t("common.empty-option")}
+                  />
+                )}
+              />
+            </div>
+
+            <div>
+              <FormLabel htmlFor="cs-contactUuid">
+                {t("communication-setting-form.fields.contact")}
+              </FormLabel>
+              <Controller
+                name="contactUuid"
+                control={commSettingForm.control}
+                render={({ field }) => (
+                  <Select
+                    id="cs-contactUuid"
+                    options={contractOptions}
+                    value={field.value ?? ""}
+                    onValueChange={field.onChange}
+                    placeholder={t("common.empty-option")}
+                  />
+                )}
+              />
+            </div>
+
+            <div>
+              <FormLabel htmlFor="cs-email">
+                {t("communication-setting-form.fields.email")}
+              </FormLabel>
+              <Input id="cs-email" type="email" {...commSettingForm.register("email")} />
+            </div>
+
+            <div>
+              <FormLabel htmlFor="cs-fax">
+                {t("communication-setting-form.fields.fax")}
+              </FormLabel>
+              <Input id="cs-fax" {...commSettingForm.register("fax")} />
+            </div>
+
+            <div className="flex justify-end gap-3 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  commSettingForm.reset(DEFAULT_COMM_SETTING);
+                  setIsCommSettingDialogOpen(false);
+                }}
+              >
+                {t("common.cancel")}
+              </Button>
+              <Button type="submit">
+                {t("company-form.save-communication-setting")}
+              </Button>
+            </div>
+          </form>
         </DialogContent>
       </Dialog>
     </>
