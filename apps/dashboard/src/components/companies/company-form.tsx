@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 import type { CommSettingInput, CompanyContractInput } from "@/app/(dashboard)/companies/actions";
+import type { ContractListItem } from "@/app/(dashboard)/contracts/actions";
 import {
   createCompanySchema,
   type AddressFormValues,
@@ -36,7 +37,6 @@ import {
   companyLangs,
   companyRoles,
   contractableRoles,
-  contractTypes,
   type AddressCategory,
   type CompanyRole,
   type ContractableRole,
@@ -131,23 +131,23 @@ const DEFAULT_COMM_SETTING: CommSettingFormValues = {
   fax: "",
 };
 
-const contractSchema = z.object({
+const contractSelectionSchema = z.object({
+  contractUuid: z.string().min(1, "Please select a contract"),
   role: z.enum(contractableRoles, { error: "Role is required" }),
-  code: z.string().min(1, "Code is required"),
-  contractType: z.enum(contractTypes, { error: "Contract type is required" }),
-  description: z.string().optional(),
 });
 
-type ContractFormValues = z.infer<typeof contractSchema>;
+type ContractSelectionValues = z.infer<typeof contractSelectionSchema>;
 
-const DEFAULT_CONTRACT: ContractFormValues = {
+const DEFAULT_CONTRACT_SELECTION: ContractSelectionValues = {
+  contractUuid: "",
   role: "" as ContractableRole,
-  code: "",
-  contractType: "" as (typeof contractTypes)[number],
-  description: "",
 };
 
-export const CompanyForm = () => {
+type CompanyFormProps = {
+  availableContracts: ContractListItem[];
+};
+
+export const CompanyForm = ({ availableContracts }: CompanyFormProps) => {
   const router = useRouter();
   const [isFirstAddressDialogOpen, setIsFirstAddressDialogOpen] =
     useState(false);
@@ -195,9 +195,9 @@ export const CompanyForm = () => {
     defaultValues: DEFAULT_COMM_SETTING,
   });
 
-  const contractForm = useForm<ContractFormValues>({
-    resolver: zodResolver(contractSchema),
-    defaultValues: DEFAULT_CONTRACT,
+  const contractSelectionForm = useForm<ContractSelectionValues>({
+    resolver: zodResolver(contractSelectionSchema),
+    defaultValues: DEFAULT_CONTRACT_SELECTION,
   });
 
   const addressValues = watch("address");
@@ -326,17 +326,29 @@ export const CompanyForm = () => {
     setIsCommSettingDialogOpen(false);
   });
 
-  const handleSaveContract = contractForm.handleSubmit((values) => {
+  const handleSaveContract = contractSelectionForm.handleSubmit((values) => {
+    const selected = availableContracts.find((c) => c.uuid === values.contractUuid);
+    if (!selected) return;
     setContracts((prev) => [
       ...prev,
       {
         role: values.role,
-        code: values.code.toUpperCase(),
-        contractType: values.contractType,
-        description: values.description || undefined,
+        code: selected.code,
+        contractType: selected.contractType,
+        description: selected.description,
+        contractGroupUuid: selected.contractGroupUuid ?? undefined,
+        quicklyChangeOrder: selected.quicklyChangeOrder ?? undefined,
+        hasPriceDate: selected.hasPriceDate ?? false,
+        priceDate: selected.priceDate ?? undefined,
+        linkToNewCustomer: selected.linkToNewCustomer ?? false,
+        searchCode1: selected.searchCode1 ?? undefined,
+        searchCode2: selected.searchCode2 ?? undefined,
+        searchCode3: selected.searchCode3 ?? undefined,
+        websiteSorting: selected.websiteSorting ?? 10,
+        hideOnWebsite: selected.hideOnWebsite ?? false,
       },
     ]);
-    contractForm.reset(DEFAULT_CONTRACT);
+    contractSelectionForm.reset(DEFAULT_CONTRACT_SELECTION);
     setIsContractDialogOpen(false);
   });
 
@@ -588,17 +600,21 @@ export const CompanyForm = () => {
                     <span className="font-mono font-medium text-foreground">
                       {contract.code}
                     </span>
-                    <span className="text-muted-foreground">
-                      {CONTRACT_TYPE_LABELS[contract.contractType]}
-                    </span>
+                    {contract.contractType && (
+                      <span className="text-muted-foreground">
+                        {CONTRACT_TYPE_LABELS[contract.contractType]}
+                      </span>
+                    )}
                     {contract.description && (
                       <span className="truncate text-muted-foreground">
                         — {contract.description}
                       </span>
                     )}
-                    <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">
-                      {CONTRACTABLE_ROLE_LABELS[contract.role]}
-                    </span>
+                    {contract.role && (
+                      <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">
+                        {CONTRACTABLE_ROLE_LABELS[contract.role]}
+                      </span>
+                    )}
                   </div>
                   <button
                     type="button"
@@ -618,7 +634,7 @@ export const CompanyForm = () => {
               <button
                 type="button"
                 onClick={() => {
-                  contractForm.reset(DEFAULT_CONTRACT);
+                  contractSelectionForm.reset(DEFAULT_CONTRACT_SELECTION);
                   setIsContractDialogOpen(true);
                 }}
                 className="inline-flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-border px-3 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary"
@@ -892,7 +908,7 @@ export const CompanyForm = () => {
       <Dialog
         open={isContractDialogOpen}
         onOpenChange={(open) => {
-          if (!open) contractForm.reset(DEFAULT_CONTRACT);
+          if (!open) contractSelectionForm.reset(DEFAULT_CONTRACT_SELECTION);
           setIsContractDialogOpen(open);
         }}
       >
@@ -900,10 +916,10 @@ export const CompanyForm = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="size-4" />
-              Contract
+              Add Contract
             </DialogTitle>
             <DialogDescription>
-              Add a contract for this company.
+              Select an existing contract and assign a role for this company.
             </DialogDescription>
           </DialogHeader>
 
@@ -912,12 +928,38 @@ export const CompanyForm = () => {
             className="mt-2 space-y-4 px-6 pb-6"
           >
             <div>
+              <FormLabel htmlFor="ct-contract" required>
+                Contract
+              </FormLabel>
+              <Controller
+                name="contractUuid"
+                control={contractSelectionForm.control}
+                render={({ field }) => (
+                  <Select
+                    id="ct-contract"
+                    options={[
+                      { value: "", label: COMMON_TEXT.selectOption },
+                      ...availableContracts.map((c) => ({
+                        value: c.uuid,
+                        label: `${c.code}${c.description ? ` — ${c.description}` : ""}`,
+                      })),
+                    ]}
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    placeholder={COMMON_TEXT.selectOption}
+                  />
+                )}
+              />
+              <FormFieldError message={contractSelectionForm.formState.errors.contractUuid?.message} />
+            </div>
+
+            <div>
               <FormLabel htmlFor="ct-role" required>
                 Role
               </FormLabel>
               <Controller
                 name="role"
-                control={contractForm.control}
+                control={contractSelectionForm.control}
                 render={({ field }) => (
                   <Select
                     id="ct-role"
@@ -934,56 +976,7 @@ export const CompanyForm = () => {
                   />
                 )}
               />
-              <FormFieldError message={contractForm.formState.errors.role?.message} />
-            </div>
-
-            <div>
-              <FormLabel htmlFor="ct-code" required>
-                Code
-              </FormLabel>
-              <Input
-                id="ct-code"
-                placeholder="e.g. BB"
-                {...contractForm.register("code")}
-                onChange={(e) =>
-                  contractForm.setValue("code", e.target.value.toUpperCase())
-                }
-              />
-              <FormFieldError message={contractForm.formState.errors.code?.message} />
-            </div>
-
-            <div>
-              <FormLabel htmlFor="ct-type" required>
-                Contract Type
-              </FormLabel>
-              <Controller
-                name="contractType"
-                control={contractForm.control}
-                render={({ field }) => (
-                  <Select
-                    id="ct-type"
-                    options={[
-                      { value: "", label: COMMON_TEXT.selectOption },
-                      ...contractTypes.map((t) => ({
-                        value: t,
-                        label: CONTRACT_TYPE_LABELS[t],
-                      })),
-                    ]}
-                    value={field.value}
-                    onValueChange={field.onChange}
-                    placeholder={COMMON_TEXT.selectOption}
-                  />
-                )}
-              />
-              <FormFieldError message={contractForm.formState.errors.contractType?.message} />
-            </div>
-
-            <div>
-              <FormLabel htmlFor="ct-description">Description</FormLabel>
-              <Input
-                id="ct-description"
-                {...contractForm.register("description")}
-              />
+              <FormFieldError message={contractSelectionForm.formState.errors.role?.message} />
             </div>
 
             <div className="flex justify-end gap-3 pt-2">
@@ -991,7 +984,7 @@ export const CompanyForm = () => {
                 type="button"
                 variant="outline"
                 onClick={() => {
-                  contractForm.reset(DEFAULT_CONTRACT);
+                  contractSelectionForm.reset(DEFAULT_CONTRACT_SELECTION);
                   setIsContractDialogOpen(false);
                 }}
               >

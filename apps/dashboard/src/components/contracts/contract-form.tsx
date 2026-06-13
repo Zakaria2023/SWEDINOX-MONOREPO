@@ -71,13 +71,20 @@ export const ContractForm = ({ groups }: ContractFormProps) => {
               <FormLabel htmlFor="code" required>
                 Code
               </FormLabel>
-              <Input
-                id="code"
-                placeholder="e.g. BB"
-                {...register("code")}
-                aria-invalid={!!errors.code}
-                disabled={isPending}
-                onChange={(e) => setValue("code", e.target.value.toUpperCase())}
+              <Controller
+                name="code"
+                control={control}
+                render={({ field }) => (
+                  <Input
+                    id="code"
+                    placeholder="e.g. BB"
+                    value={field.value}
+                    aria-invalid={!!errors.code}
+                    disabled={isPending}
+                    onChange={(e) => field.onChange(e.target.value.toUpperCase())}
+                    onBlur={field.onBlur}
+                  />
+                )}
               />
               <FormFieldError message={errors.code?.message} />
             </div>
