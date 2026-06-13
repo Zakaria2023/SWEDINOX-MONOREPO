@@ -390,12 +390,12 @@
       "bulk": "Bulk",
       "production": "Productie",
       "scrap": "Schroot",
-      "loading": "Laden",
+      "loading": "Laad",
       "inspection": "Inspectie",
-      "putaway": "Opslag",
-      "sorting": "Sorteren",
-      "processor": "Verwerker",
-      "pickup": "Afhalen",
+      "putaway": "Inruim",
+      "sorting": "Uitsorteer",
+      "processor": "Bewerker",
+      "pickup": "Afhaal",
       "call_off": "Afroep"
     },
     "adopt-position-options": {
