@@ -17,8 +17,8 @@ import type {
   CompanyRole,
 } from "@/lib/enums";
 import { generateUuid } from "@/lib/helpers";
-import { requireAuth } from "@/lib/auth";
 import { desc } from "drizzle-orm";
+import { currentUser } from "@clerk/nextjs/server";
 
 export type AddressInput = Omit<InsertCompanyAddresses, "uuid" | "companyUuid">;
 
@@ -40,7 +40,7 @@ export type CompanyFields = {
   companyName: string;
   correspName?: string;
   remarks?: string;
-  lang?: string;
+  lang?: CompanyLang;
   searchCode1?: string;
   searchCode2?: string;
   searchCode3?: string;
@@ -76,18 +76,17 @@ export const createCompany = async (
   const uuid = generateUuid();
 
   try {
-    const modifiedByUserId = await requireAuth();
+    const user = await currentUser();
+    const userId = user?.id;
+
+    if (!userId) {
+      return { error: "User not authenticated" };
+    }
 
     await db.transaction(async (tx) => {
       await tx.insert(Companies).values({
+        ...companyFields,
         uuid,
-        companyName: companyFields.companyName,
-        correspName: companyFields.correspName || undefined,
-        remarks: companyFields.remarks || undefined,
-        lang: (companyFields.lang as CompanyLang) || undefined,
-        searchCode1: companyFields.searchCode1 || undefined,
-        searchCode2: companyFields.searchCode2 || undefined,
-        searchCode3: companyFields.searchCode3 || undefined,
       });
 
       await tx.insert(CompanyAddresses).values({
@@ -110,14 +109,9 @@ export const createCompany = async (
 
       for (const setting of communicationSettings) {
         await tx.insert(CommunicationSettings).values({
+          ...setting,
           companyUuid: uuid,
-          documentType: setting.documentType,
-          communicationType: setting.communicationType,
-          shape: setting.shape || undefined,
-          contractUuid: setting.contractUuid || undefined,
-          email: setting.email || undefined,
-          fax: setting.fax || undefined,
-          modifiedByUserId,
+          modifiedByUserId: userId,
         });
       }
     });
@@ -125,7 +119,8 @@ export const createCompany = async (
     return { success: true, companyUuid: uuid };
   } catch (error) {
     return {
-      error: error instanceof Error ? error.message : "Failed to create company",
+      error:
+        error instanceof Error ? error.message : "Failed to create company",
     };
   }
 };
