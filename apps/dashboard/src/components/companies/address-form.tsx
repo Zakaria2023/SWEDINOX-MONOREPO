@@ -8,7 +8,7 @@ import { type SelectOption } from "@/components/shadcn/select";
 import { FormCheckboxCard } from "@/components/ui/form-checkbox-card";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import { FormSelectField } from "@/components/ui/form-select-field";
-import { addressCategories, availableAtOptions } from "@/lib/enums";
+import { addressCategories, availableAtOptions, type AddressCategory } from "@/lib/enums";
 import {
   ADDRESS_CATEGORY_LABELS,
   AVAILABLE_AT_LABELS,
@@ -20,7 +20,7 @@ type AddressFormProps = {
   errors: FieldErrors<CompanyFormValues["address"]> | undefined;
   register: UseFormRegister<CompanyFormValues>;
   watch: UseFormWatch<CompanyFormValues>;
-  deliveryOnly?: boolean;
+  availableCategories?: AddressCategory[];
 };
 
 const EMPTY_SELECT_VALUE = "none";
@@ -50,16 +50,14 @@ export const AddressForm = ({
   errors,
   register,
   watch,
-  deliveryOnly = false,
+  availableCategories,
 }: AddressFormProps) => {
   const peppolPrevLengthRef = useRef(0);
 
   const selectedCategories = watch("address.category") ?? [];
   const showBillingSettings = selectedCategories.includes("invoice");
-  const showDeliverySettings = deliveryOnly || selectedCategories.includes("delivery");
-  const visibleCategories: Array<(typeof addressCategories)[number]> = deliveryOnly
-    ? ["delivery"]
-    : [...addressCategories];
+  const showDeliverySettings = selectedCategories.includes("delivery");
+  const visibleCategories: AddressCategory[] = availableCategories ?? [...addressCategories];
 
   const categoryError =
     errors?.category?.root?.message ??

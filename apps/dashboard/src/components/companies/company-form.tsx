@@ -29,13 +29,16 @@ import { FormError } from "@/components/ui/form-error";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import { FormSelectField } from "@/components/ui/form-select-field";
 import {
+  addressCategories,
   communicationSettingDocumentTypes,
   communicationSettingShapes,
   communicationSettingTypes,
   companyLangs,
   companyRoles,
+  type AddressCategory,
 } from "@/lib/enums";
 import {
+  ADDRESS_CATEGORY_LABELS,
   COMMON_TEXT,
   COMMUNICATION_SETTING_DOCUMENT_TYPE_LABELS,
   COMMUNICATION_SETTING_SHAPE_LABELS,
@@ -131,7 +134,7 @@ export const CompanyForm = () => {
       searchCode1: "",
       searchCode2: "",
       searchCode3: "",
-      address: { ...DEFAULT_ADDRESS, category: ["delivery"] },
+      address: { ...DEFAULT_ADDRESS, category: [] },
     },
   });
 
@@ -142,6 +145,16 @@ export const CompanyForm = () => {
 
   const addressValues = watch("address");
   const selectedRoles = watch("roles") ?? [];
+
+  const usedCategories = new Set<AddressCategory>([
+    ...(addressValues.category ?? []),
+    ...additionalAddresses.flatMap((a) => a.category),
+  ]);
+  const NON_DELIVERY: AddressCategory[] = addressCategories.filter((c) => c !== "delivery");
+  const availableForNext: AddressCategory[] = [
+    ...NON_DELIVERY.filter((c) => !usedCategories.has(c)),
+    "delivery",
+  ];
 
   useEffect(() => {
     if (state.success) {
@@ -198,7 +211,7 @@ export const CompanyForm = () => {
       searchCode1: "",
       searchCode2: "",
       searchCode3: "",
-      address: { ...DEFAULT_ADDRESS, category: ["delivery"] },
+      address: { ...DEFAULT_ADDRESS, category: [] },
     });
   };
 
@@ -366,9 +379,11 @@ export const CompanyForm = () => {
                     <span className="truncate text-muted-foreground">
                       {addressLabel(address)}
                     </span>
-                    <span className="shrink-0 rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700">
-                      Delivery
-                    </span>
+                    {address.category.map((cat) => (
+                      <span key={cat} className="shrink-0 rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700">
+                        {ADDRESS_CATEGORY_LABELS[cat]}
+                      </span>
+                    ))}
                   </div>
                   <button
                     type="button"
@@ -394,7 +409,7 @@ export const CompanyForm = () => {
                   disabled={isPending}
                 >
                   <Plus className="size-4" />
-                  Add Delivery Address
+                  Add Address
                 </button>
               )}
             </div>
@@ -570,10 +585,10 @@ export const CompanyForm = () => {
           <DialogHeader className="shrink-0 border-b bg-background px-6 py-5">
             <DialogTitle className="flex items-center gap-2">
               <MapPin className="size-4" />
-              Delivery Address
+              Address
             </DialogTitle>
             <DialogDescription>
-              Additional addresses are restricted to the delivery category.
+              Fill in the address details. Categories already assigned to another address are not available.
             </DialogDescription>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto p-6">
@@ -582,7 +597,7 @@ export const CompanyForm = () => {
               errors={additionalForm.formState.errors.address}
               register={additionalForm.register}
               watch={additionalForm.watch}
-              deliveryOnly
+              availableCategories={availableForNext}
             />
           </div>
           <div className="shrink-0 border-t bg-background px-6 py-4">
