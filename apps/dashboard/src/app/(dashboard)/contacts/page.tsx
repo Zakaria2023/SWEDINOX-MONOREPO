@@ -1,7 +1,9 @@
+import { Suspense } from "react";
 import { Plus } from "lucide-react";
 import { ContactsTable } from "@/components/contacts/contacts-table";
 import { PageHeading } from "@/components/layout/page-heading";
 import { TranslatedLink } from "@/components/layout/translated-link";
+import { DataTableFallback } from "@/components/ui/data-table-fallback";
 
 const ContactsPage = () => {
   return (
@@ -18,7 +20,9 @@ const ContactsPage = () => {
           icon={<Plus className="size-4" />}
         />
       </div>
-      <ContactsTable />
+      <Suspense fallback={<DataTableFallback columnCount={4} />}>
+        <ContactsTable />
+      </Suspense>
     </div>
   );
 };

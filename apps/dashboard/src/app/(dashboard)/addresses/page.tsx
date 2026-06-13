@@ -1,5 +1,7 @@
+import { Suspense } from "react";
 import { AddressesTable } from "@/components/addresses/addresses-table";
 import { PageHeading } from "@/components/layout/page-heading";
+import { DataTableFallback } from "@/components/ui/data-table-fallback";
 
 const AddressesPage = () => {
   return (
@@ -8,7 +10,9 @@ const AddressesPage = () => {
         titleKey="addresses-page.title"
         descriptionKey="addresses-page.description"
       />
-      <AddressesTable />
+      <Suspense fallback={<DataTableFallback columnCount={13} />}>
+        <AddressesTable />
+      </Suspense>
     </div>
   );
 };

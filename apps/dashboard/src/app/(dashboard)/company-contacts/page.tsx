@@ -1,17 +1,15 @@
-import { unstable_noStore as noStore } from "next/cache";
-import { CompanyContactsList } from "@/components/company-contacts/company-contacts-list";
+import { Suspense } from "react";
+import { CompanyContactsTable } from "@/components/company-contacts/company-contacts-table";
 import { PageHeading } from "@/components/layout/page-heading";
-import { getCompanyContacts } from "./actions";
+import { DataTableFallback } from "@/components/ui/data-table-fallback";
 
-const CompanyContactsPage = async () => {
-  noStore();
-
-  const contacts = await getCompanyContacts();
-
+const CompanyContactsPage = () => {
   return (
     <div className="space-y-6 p-6">
       <PageHeading titleKey="company-contacts-page.title" />
-      <CompanyContactsList contacts={contacts} />
+      <Suspense fallback={<DataTableFallback columnCount={7} />}>
+        <CompanyContactsTable />
+      </Suspense>
     </div>
   );
 };

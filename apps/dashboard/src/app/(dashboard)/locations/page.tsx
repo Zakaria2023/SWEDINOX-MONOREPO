@@ -1,6 +1,8 @@
+import { Suspense } from "react";
 import { LocationsTable } from "@/components/locations/locations-table";
 import { PageHeading } from "@/components/layout/page-heading";
 import { TranslatedLink } from "@/components/layout/translated-link";
+import { DataTableFallback } from "@/components/ui/data-table-fallback";
 
 const LocationsPage = () => {
   return (
@@ -23,7 +25,9 @@ const LocationsPage = () => {
           />
         </div>
       </div>
-      <LocationsTable />
+      <Suspense fallback={<DataTableFallback columnCount={5} />}>
+        <LocationsTable />
+      </Suspense>
     </div>
   );
 };

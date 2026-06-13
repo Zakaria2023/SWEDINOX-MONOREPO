@@ -1,20 +1,20 @@
-import { unstable_noStore as noStore } from "next/cache";
-import { ContactGroupsClient } from "@/components/contact-groups/contact-groups-client";
+import { Suspense } from "react";
+import { ContactGroupsTable } from "@/components/contact-groups/contact-groups-table";
 import { PageHeading } from "@/components/layout/page-heading";
-import { getContactGroupsList } from "./actions";
+import { DataTableFallback } from "@/components/ui/data-table-fallback";
 
-const ContactGroupsPage = async () => {
-  noStore();
-
-  const groups = await getContactGroupsList();
-
+const ContactGroupsPage = () => {
   return (
     <div className="space-y-6 p-6">
       <PageHeading
         titleKey="contact-groups-page.title"
         descriptionKey="contact-groups-page.description"
       />
-      <ContactGroupsClient groups={groups} />
+      <Suspense
+        fallback={<DataTableFallback columnCount={6} toolbarWidthClassName="w-32" />}
+      >
+        <ContactGroupsTable />
+      </Suspense>
     </div>
   );
 };

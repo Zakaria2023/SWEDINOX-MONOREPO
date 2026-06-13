@@ -1,6 +1,8 @@
+import { Suspense } from "react";
 import { CommunicationSettingsTable } from "@/components/communication-settings/communication-settings-table";
 import { PageHeading } from "@/components/layout/page-heading";
 import { TranslatedLink } from "@/components/layout/translated-link";
+import { DataTableFallback } from "@/components/ui/data-table-fallback";
 
 const CommunicationSettingsPage = () => {
   return (
@@ -16,7 +18,9 @@ const CommunicationSettingsPage = () => {
           className="inline-flex h-8 shrink-0 items-center justify-center whitespace-nowrap rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/80"
         />
       </div>
-      <CommunicationSettingsTable />
+      <Suspense fallback={<DataTableFallback columnCount={6} />}>
+        <CommunicationSettingsTable />
+      </Suspense>
     </div>
   );
 };
