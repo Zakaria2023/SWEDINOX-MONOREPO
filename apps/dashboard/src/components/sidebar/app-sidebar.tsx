@@ -8,7 +8,6 @@ import {
   Building2,
   ChevronRight,
   ContactRound,
-  Settings,
   Users,
 } from "lucide-react";
 import {
@@ -48,19 +47,13 @@ export const AppSidebar = () => {
   const isSalesActive =
     pathname.startsWith("/contracts") ||
     pathname.startsWith("/contract-groups");
-  const isConfigActive =
-    pathname.startsWith("/locations/add-sub") ||
-    (pathname.startsWith("/locations") && !pathname.startsWith("/locations/add-sub"));
-
   const [isCustomersOpen, setIsCustomersOpen] = useState(false);
   const [isCompanyOpen, setIsCompanyOpen] = useState(false);
   const [isSalesOpen, setIsSalesOpen] = useState(false);
-  const [isConfigOpen, setIsConfigOpen] = useState(false);
 
   const isCustomersExpanded = isCustomersOpen || isCustomersActive;
   const isCompanyExpanded = isCompanyOpen || isCompanyActive;
   const isSalesExpanded = isSalesOpen || isSalesActive;
-  const isConfigExpanded = isConfigOpen || isConfigActive;
 
   return (
     <Sidebar side={isRtl ? "right" : "left"}>
@@ -173,40 +166,6 @@ export const AppSidebar = () => {
                 )}
               </SidebarMenuItem>
 
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  aria-expanded={isConfigExpanded}
-                  onClick={() => setIsConfigOpen((open) => !open)}
-                >
-                  <Settings />
-                  <span>{t("app-sidebar.groups.configuration")}</span>
-                  <ChevronRight className={chevronClass(isConfigExpanded)} />
-                </SidebarMenuButton>
-                {isConfigExpanded && (
-                  <SidebarMenuSub>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/locations" />}
-                        isActive={
-                          pathname === "/locations" ||
-                          (pathname.startsWith("/locations") &&
-                            !pathname.startsWith("/locations/add-sub"))
-                        }
-                      >
-                        <span>{t("app-sidebar.items.locations")}</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/locations/add-sub" />}
-                        isActive={pathname.startsWith("/locations/add-sub")}
-                      >
-                        <span>{t("app-sidebar.items.sub-locations")}</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                  </SidebarMenuSub>
-                )}
-              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
