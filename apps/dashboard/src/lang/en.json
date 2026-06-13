@@ -187,6 +187,7 @@
     "columns": {
       "id": "Code",
       "company-name": "Company",
+      "company-code": "Company Code",
       "document-type": "Document Type",
       "communication-type": "Communication Type",
       "shape": "Shape",

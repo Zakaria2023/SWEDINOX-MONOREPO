@@ -187,6 +187,7 @@
     "columns": {
       "id": "Code",
       "company-name": "Bedrijf",
+      "company-code": "Bedrijfscode",
       "document-type": "Documenttype",
       "communication-type": "Communicatietype",
       "shape": "Formaat",

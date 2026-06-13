@@ -187,6 +187,7 @@
     "columns": {
       "id": "الرمز",
       "company-name": "الشركة",
+      "company-code": "رمز الشركة",
       "document-type": "نوع المستند",
       "communication-type": "نوع التواصل",
       "shape": "التنسيق",
