@@ -105,9 +105,9 @@ export const useCompanySubmit = () => {
             searchCode1: searchCode1 || undefined,
             searchCode2: searchCode2 || undefined,
             searchCode3: searchCode3 || undefined,
+            roles: (roles ?? []) as CompanyRole[],
           },
           allAddresses,
-          (roles ?? []) as CompanyRole[],
           communicationSettings,
         );
         setState(result);

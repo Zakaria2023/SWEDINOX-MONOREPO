@@ -6,12 +6,10 @@ import {
   CompanyAddresses,
   type InsertCompanyAddresses,
 } from "@/db/schema/company-addresses";
-import { CompanyRoleLinks } from "@/db/schema/company-role-links";
 import {
   CommunicationSettings,
   type InsertCommunicationSettings,
 } from "@/db/schema/communication-settings";
-import type { CompanyRole } from "@/lib/enums";
 import { generateUuid } from "@/lib/helpers";
 import { desc } from "drizzle-orm";
 import { currentUser } from "@clerk/nextjs/server";
@@ -46,7 +44,6 @@ export const getCompanies = async (): Promise<SelectCompanies[]> => {
 export const createCompany = async (
   companyFields: CompanyFields,
   addresses: AddressInput[] = [],
-  roles: CompanyRole[] = [],
   communicationSettings: CommSettingInput[] = [],
 ): Promise<CompanyActionResult> => {
   const uuid = generateUuid();
@@ -68,10 +65,6 @@ export const createCompany = async (
           uuid: generateUuid(),
           companyUuid: uuid,
         });
-      }
-
-      for (const role of roles) {
-        await tx.insert(CompanyRoleLinks).values({ companyUuid: uuid, role });
       }
 
       for (const setting of communicationSettings) {

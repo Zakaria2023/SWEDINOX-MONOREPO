@@ -2,13 +2,14 @@ import { InferInsertModel, InferSelectModel } from "drizzle-orm";
 import {
   char,
   int,
+  json,
   mysqlEnum,
   mysqlTable,
   text,
   timestamp,
   varchar,
 } from "drizzle-orm/mysql-core";
-import { companyLangs } from "../../lib/enums";
+import { companyLangs, type CompanyRole } from "../../lib/enums";
 
 export const Companies = mysqlTable("Companies", {
   id: int("id").primaryKey().autoincrement(),
@@ -20,6 +21,7 @@ export const Companies = mysqlTable("Companies", {
   searchCode1: varchar("search_code_1", { length: 100 }),
   searchCode2: varchar("search_code_2", { length: 100 }),
   searchCode3: varchar("search_code_3", { length: 100 }),
+  roles: json("roles").$type<CompanyRole[]>().default([]).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
 });
