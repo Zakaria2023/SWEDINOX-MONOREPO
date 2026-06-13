@@ -1,8 +1,7 @@
 "use server";
 
 import { db, type SelectCompanyAddresses } from "@/db";
-import { type SelectCompanies } from "@/db/schema/companies";
-import { Companies } from "@/db/schema/companies";
+import { Companies, type SelectCompanies } from "@/db/schema/companies";
 import { CompanyAddresses } from "@/db/schema/company-addresses";
 import { desc, eq } from "drizzle-orm";
 
@@ -11,12 +10,10 @@ export type AddressListItem = {
   Companies: SelectCompanies | null;
 };
 
-export type AddressSelectOption = {
-  uuid: string;
-  companyName: string;
-  streetAndNo: string | null;
-  city: string | null;
-};
+export type AddressSelectOption = Pick<
+  SelectCompanyAddresses,
+  "uuid" | "streetAndNo" | "city"
+>;
 
 export const getAddresses = async (): Promise<AddressListItem[]> => {
   return db
@@ -26,11 +23,12 @@ export const getAddresses = async (): Promise<AddressListItem[]> => {
     .orderBy(desc(CompanyAddresses.createdAt));
 };
 
-export const getAddressesForSelect = async (): Promise<AddressSelectOption[]> => {
+export const getAddressesForSelect = async (): Promise<
+  AddressSelectOption[]
+> => {
   const rows = await db
     .select({
       uuid: CompanyAddresses.uuid,
-      companyName: Companies.companyName,
       streetAndNo: CompanyAddresses.streetAndNo,
       city: CompanyAddresses.city,
     })
