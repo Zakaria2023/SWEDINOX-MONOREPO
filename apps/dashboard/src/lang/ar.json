@@ -65,6 +65,8 @@
       "communication-settings": "إعدادات التواصل",
       "contacts": "جهات الاتصال",
       "contact-groups": "مجموعات الاتصال",
+      "contracts": "العقود",
+      "contract-groups": "مجموعات العقود",
       "locations": "المواقع",
       "sub-locations": "المواقع الفرعية"
     }
@@ -110,6 +112,19 @@
   "contacts-add-page": {
     "back-link": "جهات الاتصال",
     "title": "جهة اتصال جديدة"
+  },
+  "contract-groups-page": {
+    "title": "مجموعات العقود",
+    "description": "إدارة المجموعات التي يمكن تعيينها للعقود."
+  },
+  "contracts-page": {
+    "title": "العقود",
+    "description": "سجلات العقود المستقلة.",
+    "new-contract": "عقد جديد"
+  },
+  "contracts-add-page": {
+    "back-link": "العقود",
+    "title": "عقد جديد"
   },
   "locations-page": {
     "title": "المواقع",
@@ -250,6 +265,47 @@
       "description": "هل أنت متأكد من حذف \"{{name}}\"؟ سيتم أيضًا إزالتها من جميع جهات الاتصال المرتبطة."
     }
   },
+  "contract-groups-client": {
+    "status": {
+      "active": "نشط",
+      "inactive": "غير نشط"
+    },
+    "new-group": "مجموعة جديدة",
+    "columns": {
+      "id": "الرمز",
+      "name": "الاسم",
+      "subgroup": "المجموعة الفرعية",
+      "status": "الحالة",
+      "created-at": "تاريخ الإنشاء"
+    },
+    "empty": "لا توجد مجموعات عقود بعد",
+    "actions": {
+      "edit": "تعديل",
+      "delete": "حذف"
+    },
+    "dialog": {
+      "edit-title": "تعديل مجموعة العقود",
+      "create-title": "مجموعة عقود جديدة",
+      "edit-description": "حدّث اسم هذه المجموعة وإعداداتها.",
+      "create-description": "أنشئ مجموعة جديدة يمكن ربطها بالعقود."
+    },
+    "fields": {
+      "name": "الاسم",
+      "contract-subgroup": "المجموعة الفرعية للعقد",
+      "sequence-within-subgroup": "التسلسل داخل المجموعة الفرعية",
+      "quickly-change-sequence-number": "تغيير رقم التسلسل السريع",
+      "is-active": "نشط"
+    },
+    "placeholders": {
+      "name": "مثال: المشتريات"
+    },
+    "save-changes": "حفظ التغييرات",
+    "create-group": "إنشاء المجموعة",
+    "delete-dialog": {
+      "title": "حذف مجموعة العقود",
+      "description": "هل أنت متأكد من حذف \"{{name}}\"؟ سيتم أيضًا إزالتها من جميع العقود المرتبطة."
+    }
+  },
   "contacts-table-content": {
     "columns": {
       "id": "الرمز",
@@ -264,6 +320,21 @@
       "created-at": "تاريخ الإنشاء"
     },
     "empty": "لا توجد جهات اتصال"
+  },
+  "contracts-table-content": {
+    "columns": {
+      "id": "الرمز",
+      "contract-type": "نوع العقد",
+      "contract-group-name": "مجموعة العقود",
+      "description": "الوصف",
+      "search-code-1": "رمز البحث 1",
+      "search-code-2": "رمز البحث 2",
+      "search-code-3": "رمز البحث 3",
+      "website-sorting": "ترتيب الموقع",
+      "hide-on-website": "إخفاء في الموقع",
+      "created-at": "تاريخ الإنشاء"
+    },
+    "empty": "لا توجد عقود"
   },
   "locations-table-content": {
     "columns": {
@@ -358,6 +429,33 @@
       "hide-on-website": "إخفاء في الموقع"
     },
     "submit": "إنشاء جهة الاتصال"
+  },
+  "contract-form": {
+    "sections": {
+      "contract-type": "نوع العقد",
+      "contract": "العقد",
+      "search-codes": "أكواد البحث",
+      "website": "الموقع الإلكتروني"
+    },
+    "contract-types": {
+      "gross_prices": "الأسعار الإجمالية",
+      "options": "الخيارات",
+      "net_prices": "الأسعار الصافية",
+      "cost_price": "سعر التكلفة",
+      "surcharges": "الرسوم الإضافية",
+      "toeslagen": "الرسوم الإضافية"
+    },
+    "fields": {
+      "description": "الوصف",
+      "contract-group": "مجموعة العقود",
+      "quickly-change-order": "تغيير الترتيب السريع",
+      "price-date": "تاريخ السعر",
+      "link-to-new-customer": "ربط هذا العقد بعميل جديد",
+      "search-code": "رمز البحث",
+      "website-sorting": "ترتيب الموقع",
+      "hide-on-website": "إخفاء في الموقع"
+    },
+    "submit": "إنشاء العقد"
   },
   "address-select": {
     "empty": "فارغ"

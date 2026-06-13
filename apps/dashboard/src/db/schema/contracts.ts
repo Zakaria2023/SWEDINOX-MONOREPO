@@ -10,10 +10,10 @@ import {
   timestamp,
   varchar,
 } from "drizzle-orm/mysql-core";
-import { contactTypes } from "../../lib/enums";
+import { contractTypes } from "../../lib/enums";
 
-export const ContactGroups = mysqlTable(
-  "contact_groups",
+export const ContractGroups = mysqlTable(
+  "contract_groups",
   {
     id: int("id").primaryKey().autoincrement(),
     uuid: char("uuid", { length: 36 }).notNull().unique(),
@@ -31,26 +31,26 @@ export const ContactGroups = mysqlTable(
     updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
   },
   (table) => [
-    index("idx_contact_groups_subgroup_uuid").on(table.contractSubgroupUuid),
+    index("idx_contract_groups_subgroup_uuid").on(table.contractSubgroupUuid),
     foreignKey({
-      name: "fk_contact_groups_subgroup",
+      name: "fk_contract_groups_subgroup",
       columns: [table.contractSubgroupUuid],
       foreignColumns: [table.uuid],
     }),
   ],
 );
 
-export const Contacts = mysqlTable(
-  "contacts",
+export const Contracts = mysqlTable(
+  "contracts",
   {
     id: int("id").primaryKey().autoincrement(),
     uuid: char("uuid", { length: 36 }).notNull().unique(),
 
-    contactType: mysqlEnum("contact_type", contactTypes),
+    contractType: mysqlEnum("contract_type", contractTypes),
 
     description: varchar("description", { length: 255 }).notNull(),
 
-    contactGroupUuid: char("contact_group_uuid", { length: 36 }),
+    contractGroupUuid: char("contract_group_uuid", { length: 36 }),
 
     quicklyChangeOrder: varchar("quickly_change_order", { length: 100 }),
     hasPriceDate: boolean("has_price_date").default(false),
@@ -68,16 +68,16 @@ export const Contacts = mysqlTable(
     updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
   },
   (table) => [
-    index("idx_contacts_contact_group_uuid").on(table.contactGroupUuid),
+    index("idx_contracts_contract_group_uuid").on(table.contractGroupUuid),
     foreignKey({
-      name: "fk_contacts_contact_group",
-      columns: [table.contactGroupUuid],
-      foreignColumns: [ContactGroups.uuid],
+      name: "fk_contracts_contract_group",
+      columns: [table.contractGroupUuid],
+      foreignColumns: [ContractGroups.uuid],
     }),
   ],
 );
 
-export type SelectContactGroups = InferSelectModel<typeof ContactGroups>;
-export type InsertContactGroups = InferInsertModel<typeof ContactGroups>;
-export type SelectContacts = InferSelectModel<typeof Contacts>;
-export type InsertContacts = InferInsertModel<typeof Contacts>;
+export type SelectContractGroups = InferSelectModel<typeof ContractGroups>;
+export type InsertContractGroups = InferInsertModel<typeof ContractGroups>;
+export type SelectContracts = InferSelectModel<typeof Contracts>;
+export type InsertContracts = InferInsertModel<typeof Contracts>;

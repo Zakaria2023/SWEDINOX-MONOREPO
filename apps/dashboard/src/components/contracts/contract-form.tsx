@@ -4,9 +4,9 @@ import { useEffect } from "react";
 import { Controller } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
-import { type ContactGroupOption } from "@/app/(dashboard)/contacts/actions";
-import { useContactSubmit } from "@/app/(dashboard)/contacts/use-contact-submit";
-import { contactTypes } from "@/lib/enums";
+import { type ContractGroupOption } from "@/app/(dashboard)/contracts/actions";
+import { useContractSubmit } from "@/app/(dashboard)/contracts/use-contract-submit";
+import { contractTypes } from "@/lib/enums";
 import { DatePicker } from "@/components/shadcn/date-picker";
 import { Input } from "@/components/shadcn/input";
 import { Select } from "@/components/shadcn/select";
@@ -14,22 +14,22 @@ import { FormActions } from "@/components/ui/form-actions";
 import { FormError } from "@/components/ui/form-error";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 
-type ContactFormProps = {
-  groups: ContactGroupOption[];
+type ContractFormProps = {
+  groups: ContractGroupOption[];
 };
 
-export const ContactForm = ({ groups }: ContactFormProps) => {
+export const ContractForm = ({ groups }: ContractFormProps) => {
   const { t } = useTranslation();
   const router = useRouter();
-  const { form, isPending, onSubmit, state } = useContactSubmit();
+  const { form, isPending, onSubmit, state } = useContractSubmit();
   const { register, watch, setValue, control, formState: { errors } } = form;
 
-  const contactType = watch("contactType");
+  const contractType = watch("contractType");
   const hasPriceDate = watch("hasPriceDate");
 
   useEffect(() => {
     if (state.success) {
-      router.push("/contacts");
+      router.push("/contracts");
     }
   }, [router, state.success]);
 
@@ -43,20 +43,20 @@ export const ContactForm = ({ groups }: ContactFormProps) => {
       <div className="grid gap-8 lg:grid-cols-[200px_1fr_200px_200px]">
         <section className="space-y-3">
           <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-gray-700">
-            {t("contact-form.sections.contact-type")}
+            {t("contract-form.sections.contract-type")}
           </h2>
           <div className="space-y-2">
-            {contactTypes.map((type) => (
+            {contractTypes.map((type) => (
               <label key={type} className="flex cursor-pointer items-center gap-2.5">
                 <input
                   type="radio"
                   className="size-4 accent-primary"
-                  checked={contactType === type}
-                  onChange={() => setValue("contactType", type)}
+                  checked={contractType === type}
+                  onChange={() => setValue("contractType", type)}
                   disabled={isPending}
                 />
                 <span className="text-sm text-gray-700">
-                  {t(`contact-form.contact-types.${type}`)}
+                  {t(`contract-form.contract-types.${type}`)}
                 </span>
               </label>
             ))}
@@ -65,12 +65,12 @@ export const ContactForm = ({ groups }: ContactFormProps) => {
 
         <section className="space-y-4">
           <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-gray-700">
-            {t("contact-form.sections.contact")}
+            {t("contract-form.sections.contract")}
           </h2>
           <div className="grid gap-4">
             <div>
               <FormLabel htmlFor="description" required>
-                {t("contact-form.fields.description")}
+                {t("contract-form.fields.description")}
               </FormLabel>
               <Input
                 id="description"
@@ -82,15 +82,15 @@ export const ContactForm = ({ groups }: ContactFormProps) => {
             </div>
 
             <div>
-              <FormLabel htmlFor="contactGroupUuid">
-                {t("contact-form.fields.contact-group")}
+              <FormLabel htmlFor="contractGroupUuid">
+                {t("contract-form.fields.contract-group")}
               </FormLabel>
               <Controller
-                name="contactGroupUuid"
+                name="contractGroupUuid"
                 control={control}
                 render={({ field }) => (
                   <Select
-                    id="contactGroupUuid"
+                    id="contractGroupUuid"
                     options={groupOptions}
                     value={field.value ?? ""}
                     onValueChange={field.onChange}
@@ -106,7 +106,7 @@ export const ContactForm = ({ groups }: ContactFormProps) => {
                 htmlFor="quicklyChangeOrder"
                 className="shrink-0 text-sm font-medium text-gray-700"
               >
-                {t("contact-form.fields.quickly-change-order")}
+                {t("contract-form.fields.quickly-change-order")}
               </label>
               <Input
                 id="quicklyChangeOrder"
@@ -128,7 +128,7 @@ export const ContactForm = ({ groups }: ContactFormProps) => {
                 htmlFor="hasPriceDate"
                 className="shrink-0 text-sm font-medium text-gray-700"
               >
-                {t("contact-form.fields.price-date")}
+                {t("contract-form.fields.price-date")}
               </label>
               {hasPriceDate && (
                 <Controller
@@ -155,7 +155,7 @@ export const ContactForm = ({ groups }: ContactFormProps) => {
                 disabled={isPending}
               />
               <label htmlFor="linkToNewCustomer" className="text-sm font-medium text-gray-700">
-                {t("contact-form.fields.link-to-new-customer")}
+                {t("contract-form.fields.link-to-new-customer")}
               </label>
             </div>
           </div>
@@ -163,24 +163,24 @@ export const ContactForm = ({ groups }: ContactFormProps) => {
 
         <section className="space-y-4">
           <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-gray-700">
-            {t("contact-form.sections.search-codes")}
+            {t("contract-form.sections.search-codes")}
           </h2>
           <div className="space-y-3">
             <div>
               <FormLabel htmlFor="searchCode1">
-                {t("contact-form.fields.search-code")}
+                {t("contract-form.fields.search-code")}
               </FormLabel>
               <Input id="searchCode1" {...register("searchCode1")} disabled={isPending} />
             </div>
             <div>
               <FormLabel htmlFor="searchCode2">
-                {t("contact-form.fields.search-code")}
+                {t("contract-form.fields.search-code")}
               </FormLabel>
               <Input id="searchCode2" {...register("searchCode2")} disabled={isPending} />
             </div>
             <div>
               <FormLabel htmlFor="searchCode3">
-                {t("contact-form.fields.search-code")}
+                {t("contract-form.fields.search-code")}
               </FormLabel>
               <Input id="searchCode3" {...register("searchCode3")} disabled={isPending} />
             </div>
@@ -189,12 +189,12 @@ export const ContactForm = ({ groups }: ContactFormProps) => {
 
         <section className="space-y-4">
           <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-gray-700">
-            {t("contact-form.sections.website")}
+            {t("contract-form.sections.website")}
           </h2>
           <div className="space-y-3">
             <div>
               <FormLabel htmlFor="websiteSorting">
-                {t("contact-form.fields.website-sorting")}
+                {t("contract-form.fields.website-sorting")}
               </FormLabel>
               <Input
                 id="websiteSorting"
@@ -214,7 +214,7 @@ export const ContactForm = ({ groups }: ContactFormProps) => {
                 disabled={isPending}
               />
               <label htmlFor="hideOnWebsite" className="text-sm font-medium text-gray-700">
-                {t("contact-form.fields.hide-on-website")}
+                {t("contract-form.fields.hide-on-website")}
               </label>
             </div>
           </div>
@@ -225,8 +225,8 @@ export const ContactForm = ({ groups }: ContactFormProps) => {
 
       <FormActions
         isPending={isPending}
-        onCancel={() => router.push("/contacts")}
-        submitLabel={t("contact-form.submit")}
+        onCancel={() => router.push("/contracts")}
+        submitLabel={t("contract-form.submit")}
       />
     </form>
   );

@@ -3,7 +3,7 @@
 import {
   CommunicationSettings,
   Companies,
-  Contacts,
+  Contracts,
   db,
   type InsertCommunicationSettings,
 } from "@/db";
@@ -75,14 +75,14 @@ export const getCompaniesForSelect = async (): Promise<CompanyOption[]> =>
     .from(Companies)
     .orderBy(Companies.companyName);
 
-export const getContactsForSelect = async (): Promise<ContactOption[]> =>
+export const getContractsForSelect = async (): Promise<ContactOption[]> =>
   db
     .select({
-      uuid: Contacts.uuid,
-      description: Contacts.description,
+      uuid: Contracts.uuid,
+      description: Contracts.description,
     })
-    .from(Contacts)
-    .orderBy(Contacts.description);
+    .from(Contracts)
+    .orderBy(Contracts.description);
 
 export const createCommunicationSetting = async (
   input: CommunicationSettingInput,

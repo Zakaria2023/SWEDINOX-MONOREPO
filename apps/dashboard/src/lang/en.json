@@ -65,6 +65,8 @@
       "communication-settings": "Communication Settings",
       "contacts": "Contacts",
       "contact-groups": "Contact Groups",
+      "contracts": "Contracts",
+      "contract-groups": "Contract Groups",
       "locations": "Locations",
       "sub-locations": "Sub-locations"
     }
@@ -110,6 +112,19 @@
   "contacts-add-page": {
     "back-link": "Contacts",
     "title": "New Contact"
+  },
+  "contract-groups-page": {
+    "title": "Contract Groups",
+    "description": "Manage groups that can be assigned to contracts."
+  },
+  "contracts-page": {
+    "title": "Contracts",
+    "description": "Standalone contract records.",
+    "new-contract": "New Contract"
+  },
+  "contracts-add-page": {
+    "back-link": "Contracts",
+    "title": "New Contract"
   },
   "locations-page": {
     "title": "Locations",
@@ -250,6 +265,47 @@
       "description": "Are you sure you want to delete \"{{name}}\"? This will also remove it from all linked contacts."
     }
   },
+  "contract-groups-client": {
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "new-group": "New Group",
+    "columns": {
+      "id": "Code",
+      "name": "Name",
+      "subgroup": "Subgroup",
+      "status": "Status",
+      "created-at": "Created At"
+    },
+    "empty": "No contract groups yet",
+    "actions": {
+      "edit": "Edit",
+      "delete": "Delete"
+    },
+    "dialog": {
+      "edit-title": "Edit Contract Group",
+      "create-title": "New Contract Group",
+      "edit-description": "Update the name and settings of this group.",
+      "create-description": "Create a new group that can be linked to contracts."
+    },
+    "fields": {
+      "name": "Name",
+      "contract-subgroup": "Contract subgroup",
+      "sequence-within-subgroup": "Sequence within subgroup",
+      "quickly-change-sequence-number": "Quickly change seq. no.",
+      "is-active": "Active"
+    },
+    "placeholders": {
+      "name": "e.g. Procurement"
+    },
+    "save-changes": "Save Changes",
+    "create-group": "Create Group",
+    "delete-dialog": {
+      "title": "Delete Contract Group",
+      "description": "Are you sure you want to delete \"{{name}}\"? This will also remove it from all linked contracts."
+    }
+  },
   "contacts-table-content": {
     "columns": {
       "id": "Code",
@@ -264,6 +320,21 @@
       "created-at": "Created At"
     },
     "empty": "No contacts found"
+  },
+  "contracts-table-content": {
+    "columns": {
+      "id": "Code",
+      "contract-type": "Contract Type",
+      "contract-group-name": "Contract Group",
+      "description": "Description",
+      "search-code-1": "Search Code 1",
+      "search-code-2": "Search Code 2",
+      "search-code-3": "Search Code 3",
+      "website-sorting": "Website Sort",
+      "hide-on-website": "Hide on Website",
+      "created-at": "Created At"
+    },
+    "empty": "No contracts found"
   },
   "locations-table-content": {
     "columns": {
@@ -358,6 +429,33 @@
       "hide-on-website": "Hide on Website"
     },
     "submit": "Create Contact"
+  },
+  "contract-form": {
+    "sections": {
+      "contract-type": "Contract Type",
+      "contract": "Contract",
+      "search-codes": "Search Codes",
+      "website": "Website"
+    },
+    "contract-types": {
+      "gross_prices": "Gross Prices",
+      "options": "Options",
+      "net_prices": "Net Prices",
+      "cost_price": "Cost Price",
+      "surcharges": "Surcharges",
+      "toeslagen": "Toeslagen"
+    },
+    "fields": {
+      "description": "Description",
+      "contract-group": "Contract Group",
+      "quickly-change-order": "Quickly Change Order",
+      "price-date": "Price Date",
+      "link-to-new-customer": "Link this contract to a new customer",
+      "search-code": "Search Code",
+      "website-sorting": "Website Sorting",
+      "hide-on-website": "Hide on Website"
+    },
+    "submit": "Create Contract"
   },
   "address-select": {
     "empty": "Empty"

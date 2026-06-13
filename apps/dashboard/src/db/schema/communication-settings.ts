@@ -10,7 +10,7 @@ import {
   varchar,
 } from "drizzle-orm/mysql-core";
 import { Companies } from "./companies";
-import { Contacts } from "./contacts";
+import { Contracts } from "./contracts";
 import {
   communicationSettingDocumentTypes,
   communicationSettingShapes,
@@ -53,7 +53,7 @@ export const CommunicationSettings = mysqlTable(
     foreignKey({
       name: "fk_communication_settings_contact",
       columns: [table.contactUuid],
-      foreignColumns: [Contacts.uuid],
+      foreignColumns: [Contracts.uuid],
     }),
   ],
 );

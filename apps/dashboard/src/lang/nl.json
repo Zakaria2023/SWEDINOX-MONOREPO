@@ -65,6 +65,8 @@
       "communication-settings": "Communicatie-instellingen",
       "contacts": "Contacten",
       "contact-groups": "Contactgroepen",
+      "contracts": "Contracten",
+      "contract-groups": "Contractgroepen",
       "locations": "Locaties",
       "sub-locations": "Sublocaties"
     }
@@ -110,6 +112,19 @@
   "contacts-add-page": {
     "back-link": "Contacten",
     "title": "Nieuw contact"
+  },
+  "contract-groups-page": {
+    "title": "Contractgroepen",
+    "description": "Beheer groepen die aan contracten kunnen worden gekoppeld."
+  },
+  "contracts-page": {
+    "title": "Contracten",
+    "description": "Losse contractrecords.",
+    "new-contract": "Nieuw contract"
+  },
+  "contracts-add-page": {
+    "back-link": "Contracten",
+    "title": "Nieuw contract"
   },
   "locations-page": {
     "title": "Locaties",
@@ -250,6 +265,47 @@
       "description": "Weet je zeker dat je \"{{name}}\" wilt verwijderen? Deze wordt ook verwijderd uit alle gekoppelde contacten."
     }
   },
+  "contract-groups-client": {
+    "status": {
+      "active": "Actief",
+      "inactive": "Inactief"
+    },
+    "new-group": "Nieuwe groep",
+    "columns": {
+      "id": "Code",
+      "name": "Naam",
+      "subgroup": "Subgroep",
+      "status": "Status",
+      "created-at": "Aangemaakt op"
+    },
+    "empty": "Nog geen contractgroepen",
+    "actions": {
+      "edit": "Bewerken",
+      "delete": "Verwijderen"
+    },
+    "dialog": {
+      "edit-title": "Contractgroep bewerken",
+      "create-title": "Nieuwe contractgroep",
+      "edit-description": "Werk de naam en instellingen van deze groep bij.",
+      "create-description": "Maak een nieuwe groep die aan contracten kan worden gekoppeld."
+    },
+    "fields": {
+      "name": "Naam",
+      "contract-subgroup": "Contractsubgroep",
+      "sequence-within-subgroup": "Volgorde binnen subgroep",
+      "quickly-change-sequence-number": "Snel volgnummer wijzigen",
+      "is-active": "Actief"
+    },
+    "placeholders": {
+      "name": "bijv. Inkoop"
+    },
+    "save-changes": "Wijzigingen opslaan",
+    "create-group": "Groep aanmaken",
+    "delete-dialog": {
+      "title": "Contractgroep verwijderen",
+      "description": "Weet je zeker dat je \"{{name}}\" wilt verwijderen? Deze wordt ook verwijderd uit alle gekoppelde contracten."
+    }
+  },
   "contacts-table-content": {
     "columns": {
       "id": "Code",
@@ -264,6 +320,21 @@
       "created-at": "Aangemaakt op"
     },
     "empty": "Geen contacten gevonden"
+  },
+  "contracts-table-content": {
+    "columns": {
+      "id": "Code",
+      "contract-type": "Contracttype",
+      "contract-group-name": "Contractgroep",
+      "description": "Omschrijving",
+      "search-code-1": "Zoekcode 1",
+      "search-code-2": "Zoekcode 2",
+      "search-code-3": "Zoekcode 3",
+      "website-sorting": "Website sortering",
+      "hide-on-website": "Verbergen op website",
+      "created-at": "Aangemaakt op"
+    },
+    "empty": "Geen contracten gevonden"
   },
   "locations-table-content": {
     "columns": {
@@ -358,6 +429,33 @@
       "hide-on-website": "Verbergen op website"
     },
     "submit": "Contact aanmaken"
+  },
+  "contract-form": {
+    "sections": {
+      "contract-type": "Contracttype",
+      "contract": "Contract",
+      "search-codes": "Zoekcodes",
+      "website": "Website"
+    },
+    "contract-types": {
+      "gross_prices": "Brutoprijzen",
+      "options": "Opties",
+      "net_prices": "Nettoprijzen",
+      "cost_price": "Kostprijs",
+      "surcharges": "Toeslagen",
+      "toeslagen": "Toeslagen"
+    },
+    "fields": {
+      "description": "Omschrijving",
+      "contract-group": "Contractgroep",
+      "quickly-change-order": "Snel volgorde wijzigen",
+      "price-date": "Prijsdatum",
+      "link-to-new-customer": "Koppel dit contract aan een nieuwe klant",
+      "search-code": "Zoekcode",
+      "website-sorting": "Website sortering",
+      "hide-on-website": "Verbergen op website"
+    },
+    "submit": "Contract aanmaken"
   },
   "address-select": {
     "empty": "Leeg"

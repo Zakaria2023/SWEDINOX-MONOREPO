@@ -8,11 +8,11 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import {
-  createContactGroup,
-  deleteContactGroup,
-  updateContactGroup,
-  type ContactGroupItem,
-} from "@/app/(dashboard)/contact-groups/actions";
+  createContractGroup,
+  deleteContractGroup,
+  updateContractGroup,
+  type ContractGroupItem,
+} from "@/app/(dashboard)/contract-groups/actions";
 import { Button } from "@/components/shadcn/button";
 import {
   Dialog,
@@ -49,15 +49,15 @@ const DEFAULT_VALUES: GroupFormValues = {
   isActive: true,
 };
 
-type Props = { groups: ContactGroupItem[] };
+type Props = { groups: ContractGroupItem[] };
 
-export const ContactGroupsClient = ({ groups }: Props) => {
+export const ContractGroupsClient = ({ groups }: Props) => {
   const { t } = useTranslation();
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editTarget, setEditTarget] = useState<ContactGroupItem | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<ContactGroupItem | null>(null);
+  const [editTarget, setEditTarget] = useState<ContractGroupItem | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ContractGroupItem | null>(null);
   const [formError, setFormError] = useState<string | undefined>();
 
   const form = useForm<GroupFormValues>({
@@ -66,6 +66,7 @@ export const ContactGroupsClient = ({ groups }: Props) => {
   });
 
   const { register, control, formState: { errors }, reset, handleSubmit } = form;
+
   const subgroupOptions = [
     { value: "", label: t("common.empty-option") },
     ...groups
@@ -80,7 +81,7 @@ export const ContactGroupsClient = ({ groups }: Props) => {
     setDialogOpen(true);
   };
 
-  const openEdit = (group: ContactGroupItem) => {
+  const openEdit = (group: ContractGroupItem) => {
     setEditTarget(group);
     reset({
       name: group.name,
@@ -100,24 +101,21 @@ export const ContactGroupsClient = ({ groups }: Props) => {
       setFormError(undefined);
       setEditTarget(null);
     }
-
     setDialogOpen(open);
   };
 
   const onSubmit = handleSubmit((values) => {
     startTransition(async () => {
       const result = editTarget
-        ? await updateContactGroup(editTarget.uuid, {
+        ? await updateContractGroup(editTarget.uuid, {
             ...values,
             contractSubgroupUuid: values.contractSubgroupUuid || undefined,
-            quicklyChangeSequenceNumber:
-              values.quicklyChangeSequenceNumber || undefined,
+            quicklyChangeSequenceNumber: values.quicklyChangeSequenceNumber || undefined,
           })
-        : await createContactGroup({
+        : await createContractGroup({
             ...values,
             contractSubgroupUuid: values.contractSubgroupUuid || undefined,
-            quicklyChangeSequenceNumber:
-              values.quicklyChangeSequenceNumber || undefined,
+            quicklyChangeSequenceNumber: values.quicklyChangeSequenceNumber || undefined,
           });
 
       if (result.success) {
@@ -131,12 +129,10 @@ export const ContactGroupsClient = ({ groups }: Props) => {
   });
 
   const handleDelete = () => {
-    if (!deleteTarget) {
-      return;
-    }
+    if (!deleteTarget) return;
 
     startTransition(async () => {
-      const result = await deleteContactGroup(deleteTarget.uuid);
+      const result = await deleteContractGroup(deleteTarget.uuid);
       if (result.success) {
         setDeleteTarget(null);
         router.refresh();
@@ -147,11 +143,11 @@ export const ContactGroupsClient = ({ groups }: Props) => {
   const activeBadge = (value: boolean | null) =>
     value ? (
       <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
-        {t("contact-groups-client.status.active")}
+        {t("contract-groups-client.status.active")}
       </span>
     ) : (
       <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
-        {t("contact-groups-client.status.inactive")}
+        {t("contract-groups-client.status.inactive")}
       </span>
     );
 
@@ -161,7 +157,7 @@ export const ContactGroupsClient = ({ groups }: Props) => {
         <div className="flex justify-end">
           <Button type="button" onClick={openCreate} className="gap-2">
             <Plus className="size-4" />
-            {t("contact-groups-client.new-group")}
+            {t("contract-groups-client.new-group")}
           </Button>
         </div>
 
@@ -169,11 +165,11 @@ export const ContactGroupsClient = ({ groups }: Props) => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>{t("contact-groups-client.columns.id")}</TableHead>
-                <TableHead>{t("contact-groups-client.columns.name")}</TableHead>
-                <TableHead>{t("contact-groups-client.columns.subgroup")}</TableHead>
-                <TableHead>{t("contact-groups-client.columns.status")}</TableHead>
-                <TableHead>{t("contact-groups-client.columns.created-at")}</TableHead>
+                <TableHead>{t("contract-groups-client.columns.id")}</TableHead>
+                <TableHead>{t("contract-groups-client.columns.name")}</TableHead>
+                <TableHead>{t("contract-groups-client.columns.subgroup")}</TableHead>
+                <TableHead>{t("contract-groups-client.columns.status")}</TableHead>
+                <TableHead>{t("contract-groups-client.columns.created-at")}</TableHead>
                 <TableHead className="w-24" />
               </TableRow>
             </TableHeader>
@@ -181,7 +177,7 @@ export const ContactGroupsClient = ({ groups }: Props) => {
               {groups.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
-                    {t("contact-groups-client.empty")}
+                    {t("contract-groups-client.empty")}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -202,7 +198,7 @@ export const ContactGroupsClient = ({ groups }: Props) => {
                           type="button"
                           onClick={() => openEdit(group)}
                           className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
-                          title={t("contact-groups-client.actions.edit")}
+                          title={t("contract-groups-client.actions.edit")}
                         >
                           <Pencil className="size-3.5" />
                         </button>
@@ -210,7 +206,7 @@ export const ContactGroupsClient = ({ groups }: Props) => {
                           type="button"
                           onClick={() => setDeleteTarget(group)}
                           className="rounded p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                          title={t("contact-groups-client.actions.delete")}
+                          title={t("contract-groups-client.actions.delete")}
                         >
                           <Trash2 className="size-3.5" />
                         </button>
@@ -229,26 +225,26 @@ export const ContactGroupsClient = ({ groups }: Props) => {
           <DialogHeader>
             <DialogTitle>
               {editTarget
-                ? t("contact-groups-client.dialog.edit-title")
-                : t("contact-groups-client.dialog.create-title")}
+                ? t("contract-groups-client.dialog.edit-title")
+                : t("contract-groups-client.dialog.create-title")}
             </DialogTitle>
             <DialogDescription>
               {editTarget
-                ? t("contact-groups-client.dialog.edit-description")
-                : t("contact-groups-client.dialog.create-description")}
+                ? t("contract-groups-client.dialog.edit-description")
+                : t("contract-groups-client.dialog.create-description")}
             </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={onSubmit} className="mt-2 space-y-4 px-6 pb-6">
             <div>
               <FormLabel htmlFor="name" required>
-                {t("contact-groups-client.fields.name")}
+                {t("contract-groups-client.fields.name")}
               </FormLabel>
               <Input
                 id="name"
                 {...register("name")}
                 aria-invalid={!!errors.name}
-                placeholder={t("contact-groups-client.placeholders.name")}
+                placeholder={t("contract-groups-client.placeholders.name")}
                 disabled={isPending}
               />
               <FormFieldError message={errors.name?.message} />
@@ -256,7 +252,7 @@ export const ContactGroupsClient = ({ groups }: Props) => {
 
             <div>
               <FormLabel htmlFor="contractSubgroupUuid">
-                {t("contact-groups-client.fields.contract-subgroup")}
+                {t("contract-groups-client.fields.contract-subgroup")}
               </FormLabel>
               <Controller
                 name="contractSubgroupUuid"
@@ -277,7 +273,7 @@ export const ContactGroupsClient = ({ groups }: Props) => {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <FormLabel htmlFor="sequenceWithinSubgroup">
-                  {t("contact-groups-client.fields.sequence-within-subgroup")}
+                  {t("contract-groups-client.fields.sequence-within-subgroup")}
                 </FormLabel>
                 <Input
                   id="sequenceWithinSubgroup"
@@ -289,7 +285,7 @@ export const ContactGroupsClient = ({ groups }: Props) => {
               </div>
               <div>
                 <FormLabel htmlFor="quicklyChangeSequenceNumber">
-                  {t("contact-groups-client.fields.quickly-change-sequence-number")}
+                  {t("contract-groups-client.fields.quickly-change-sequence-number")}
                 </FormLabel>
                 <Input
                   id="quicklyChangeSequenceNumber"
@@ -307,7 +303,7 @@ export const ContactGroupsClient = ({ groups }: Props) => {
                 disabled={isPending}
               />
               <span className="text-sm font-medium text-gray-700">
-                {t("contact-groups-client.fields.is-active")}
+                {t("contract-groups-client.fields.is-active")}
               </span>
             </label>
 
@@ -326,8 +322,8 @@ export const ContactGroupsClient = ({ groups }: Props) => {
                 {isPending
                   ? t("common.saving")
                   : editTarget
-                    ? t("contact-groups-client.save-changes")
-                    : t("contact-groups-client.create-group")}
+                    ? t("contract-groups-client.save-changes")
+                    : t("contract-groups-client.create-group")}
               </Button>
             </div>
           </form>
@@ -337,12 +333,10 @@ export const ContactGroupsClient = ({ groups }: Props) => {
       <ConfirmDialog
         open={!!deleteTarget}
         onOpenChange={(open) => {
-          if (!open) {
-            setDeleteTarget(null);
-          }
+          if (!open) setDeleteTarget(null);
         }}
-        title={t("contact-groups-client.delete-dialog.title")}
-        description={t("contact-groups-client.delete-dialog.description", {
+        title={t("contract-groups-client.delete-dialog.title")}
+        description={t("contract-groups-client.delete-dialog.description", {
           name: deleteTarget?.name ?? "",
         })}
         confirmLabel={t("common.delete")}

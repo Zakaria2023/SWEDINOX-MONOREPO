@@ -4,20 +4,20 @@ import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslation } from "react-i18next";
-import { createContact, type ContactActionResult } from "./actions";
-import { createContactSchema, type ContactFormValues } from "./validation";
+import { createContract, type ContractActionResult } from "./actions";
+import { createContractSchema, type ContractFormValues } from "./validation";
 
-export const useContactSubmit = () => {
+export const useContractSubmit = () => {
   const { t } = useTranslation();
   const [isPending, startTransition] = useTransition();
-  const [state, setState] = useState<ContactActionResult>({});
+  const [state, setState] = useState<ContractActionResult>({});
 
-  const form = useForm<ContactFormValues>({
-    resolver: zodResolver(createContactSchema(t)),
+  const form = useForm<ContractFormValues>({
+    resolver: zodResolver(createContractSchema(t)),
     defaultValues: {
-      contactType: undefined,
+      contractType: undefined,
       description: "",
-      contactGroupUuid: "",
+      contractGroupUuid: "",
       quicklyChangeOrder: "",
       hasPriceDate: false,
       priceDate: "",
@@ -32,10 +32,10 @@ export const useContactSubmit = () => {
 
   const onSubmit = form.handleSubmit((values) => {
     startTransition(async () => {
-      const result = await createContact({
-        contactType: values.contactType ?? null,
+      const result = await createContract({
+        contractType: values.contractType ?? null,
         description: values.description,
-        contactGroupUuid: values.contactGroupUuid || undefined,
+        contractGroupUuid: values.contractGroupUuid || undefined,
         quicklyChangeOrder: values.quicklyChangeOrder || undefined,
         hasPriceDate: values.hasPriceDate,
         priceDate: values.hasPriceDate && values.priceDate ? values.priceDate : undefined,

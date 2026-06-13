@@ -2,14 +2,14 @@
 
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { type ContactListItem } from "@/app/(dashboard)/contacts/actions";
+import { type ContractListItem } from "@/app/(dashboard)/contracts/actions";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
 
 type ColumnKey =
   | "id"
-  | "contactType"
-  | "contactGroupName"
+  | "contractType"
+  | "contractGroupName"
   | "description"
   | "searchCode1"
   | "searchCode2"
@@ -23,16 +23,16 @@ const ALL_COLUMNS: Array<{
   key: ColumnKey;
   labelKey: string;
 }> = [
-  { key: "id", labelKey: "contacts-table-content.columns.id", defaultVisible: true },
-  { key: "contactType", labelKey: "contacts-table-content.columns.contact-type", defaultVisible: true },
-  { key: "contactGroupName", labelKey: "contacts-table-content.columns.contact-group-name", defaultVisible: true },
-  { key: "description", labelKey: "contacts-table-content.columns.description", defaultVisible: true },
-  { key: "searchCode1", labelKey: "contacts-table-content.columns.search-code-1", defaultVisible: false },
-  { key: "searchCode2", labelKey: "contacts-table-content.columns.search-code-2", defaultVisible: false },
-  { key: "searchCode3", labelKey: "contacts-table-content.columns.search-code-3", defaultVisible: false },
-  { key: "websiteSorting", labelKey: "contacts-table-content.columns.website-sorting", defaultVisible: false },
-  { key: "hideOnWebsite", labelKey: "contacts-table-content.columns.hide-on-website", defaultVisible: false },
-  { key: "createdAt", labelKey: "contacts-table-content.columns.created-at", defaultVisible: false },
+  { key: "id", labelKey: "contracts-table-content.columns.id", defaultVisible: true },
+  { key: "contractType", labelKey: "contracts-table-content.columns.contract-type", defaultVisible: true },
+  { key: "contractGroupName", labelKey: "contracts-table-content.columns.contract-group-name", defaultVisible: true },
+  { key: "description", labelKey: "contracts-table-content.columns.description", defaultVisible: true },
+  { key: "searchCode1", labelKey: "contracts-table-content.columns.search-code-1", defaultVisible: false },
+  { key: "searchCode2", labelKey: "contracts-table-content.columns.search-code-2", defaultVisible: false },
+  { key: "searchCode3", labelKey: "contracts-table-content.columns.search-code-3", defaultVisible: false },
+  { key: "websiteSorting", labelKey: "contracts-table-content.columns.website-sorting", defaultVisible: false },
+  { key: "hideOnWebsite", labelKey: "contracts-table-content.columns.hide-on-website", defaultVisible: false },
+  { key: "createdAt", labelKey: "contracts-table-content.columns.created-at", defaultVisible: false },
 ];
 
 const initialVisibility = ALL_COLUMNS.reduce(
@@ -40,11 +40,11 @@ const initialVisibility = ALL_COLUMNS.reduce(
   {} as Record<ColumnKey, boolean>,
 );
 
-type ContactsTableContentProps = {
-  contacts: ContactListItem[];
+type ContractsTableContentProps = {
+  contracts: ContractListItem[];
 };
 
-export const ContactsTableContent = ({ contacts }: ContactsTableContentProps) => {
+export const ContractsTableContent = ({ contracts }: ContractsTableContentProps) => {
   const { t } = useTranslation();
   const [columnVisibility, setColumnVisibility] =
     useState<Record<ColumnKey, boolean>>(initialVisibility);
@@ -55,34 +55,34 @@ export const ContactsTableContent = ({ contacts }: ContactsTableContentProps) =>
   const visibleColumns = ALL_COLUMNS.filter((column) => columnVisibility[column.key]);
   const fallbackValue = t("common.not-available");
 
-  const renderCell = (contact: ContactListItem, key: ColumnKey) => {
+  const renderCell = (contract: ContractListItem, key: ColumnKey) => {
     switch (key) {
       case "id":
-        return <TableCell key={key} className="font-medium">{contact.id}</TableCell>;
-      case "contactType":
+        return <TableCell key={key} className="font-medium">{contract.id}</TableCell>;
+      case "contractType":
         return (
           <TableCell key={key}>
-            {contact.contactType
-              ? t(`contact-form.contact-types.${contact.contactType}`)
+            {contract.contractType
+              ? t(`contract-form.contract-types.${contract.contractType}`)
               : fallbackValue}
           </TableCell>
         );
-      case "contactGroupName":
-        return <TableCell key={key}>{contact.contactGroupName ?? fallbackValue}</TableCell>;
+      case "contractGroupName":
+        return <TableCell key={key}>{contract.contractGroupName ?? fallbackValue}</TableCell>;
       case "description":
-        return <TableCell key={key}>{contact.description}</TableCell>;
+        return <TableCell key={key}>{contract.description}</TableCell>;
       case "searchCode1":
-        return <TableCell key={key}>{contact.searchCode1 ?? fallbackValue}</TableCell>;
+        return <TableCell key={key}>{contract.searchCode1 ?? fallbackValue}</TableCell>;
       case "searchCode2":
-        return <TableCell key={key}>{contact.searchCode2 ?? fallbackValue}</TableCell>;
+        return <TableCell key={key}>{contract.searchCode2 ?? fallbackValue}</TableCell>;
       case "searchCode3":
-        return <TableCell key={key}>{contact.searchCode3 ?? fallbackValue}</TableCell>;
+        return <TableCell key={key}>{contract.searchCode3 ?? fallbackValue}</TableCell>;
       case "websiteSorting":
-        return <TableCell key={key}>{contact.websiteSorting ?? fallbackValue}</TableCell>;
+        return <TableCell key={key}>{contract.websiteSorting ?? fallbackValue}</TableCell>;
       case "hideOnWebsite":
         return (
           <TableCell key={key}>
-            {contact.hideOnWebsite ? (
+            {contract.hideOnWebsite ? (
               <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
                 {t("common.yes")}
               </span>
@@ -96,7 +96,7 @@ export const ContactsTableContent = ({ contacts }: ContactsTableContentProps) =>
       case "createdAt":
         return (
           <TableCell key={key}>
-            {new Date(contact.createdAt).toLocaleDateString()}
+            {new Date(contract.createdAt).toLocaleDateString()}
           </TableCell>
         );
     }
@@ -125,16 +125,16 @@ export const ContactsTableContent = ({ contacts }: ContactsTableContentProps) =>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {contacts.length === 0 ? (
+            {contracts.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={visibleColumns.length} className="h-24 text-center">
-                  {t("contacts-table-content.empty")}
+                  {t("contracts-table-content.empty")}
                 </TableCell>
               </TableRow>
             ) : (
-              contacts.map((contact) => (
-                <TableRow key={contact.id}>
-                  {visibleColumns.map((column) => renderCell(contact, column.key))}
+              contracts.map((contract) => (
+                <TableRow key={contract.id}>
+                  {visibleColumns.map((column) => renderCell(contract, column.key))}
                 </TableRow>
               ))
             )}

@@ -2,17 +2,17 @@
 
 import {
   db,
-  ContactGroups,
-  type InsertContactGroups,
-  type SelectContactGroups,
+  ContractGroups,
+  type InsertContractGroups,
+  type SelectContractGroups,
 } from "@/db";
 import { generateUuid } from "@/lib/helpers";
 import { alias } from "drizzle-orm/mysql-core";
 import { desc, eq } from "drizzle-orm";
 
-export type ContactGroupItem = SelectContactGroups & { subgroupName: string | null };
+export type ContractGroupItem = SelectContractGroups & { subgroupName: string | null };
 
-export type ContactGroupInput = {
+export type ContractGroupInput = {
   name: string;
   description?: string;
   contractSubgroupUuid?: string;
@@ -21,26 +21,26 @@ export type ContactGroupInput = {
   isActive: boolean;
 };
 
-export type ContactGroupActionResult = {
+export type ContractGroupActionResult = {
   success?: boolean;
   error?: string;
 };
 
-export const getContactGroupsList = async (): Promise<ContactGroupItem[]> => {
-  const Subgroup = alias(ContactGroups, "subgroup");
+export const getContractGroupsList = async (): Promise<ContractGroupItem[]> => {
+  const Subgroup = alias(ContractGroups, "subgroup");
   const rows = await db
-    .select({ group: ContactGroups, subgroupName: Subgroup.name })
-    .from(ContactGroups)
-    .leftJoin(Subgroup, eq(Subgroup.uuid, ContactGroups.contractSubgroupUuid))
-    .orderBy(desc(ContactGroups.createdAt));
+    .select({ group: ContractGroups, subgroupName: Subgroup.name })
+    .from(ContractGroups)
+    .leftJoin(Subgroup, eq(Subgroup.uuid, ContractGroups.contractSubgroupUuid))
+    .orderBy(desc(ContractGroups.createdAt));
   return rows.map((r) => ({ ...r.group, subgroupName: r.subgroupName ?? null }));
 };
 
-export const createContactGroup = async (
-  input: ContactGroupInput,
-): Promise<ContactGroupActionResult> => {
+export const createContractGroup = async (
+  input: ContractGroupInput,
+): Promise<ContractGroupActionResult> => {
   try {
-    await db.insert(ContactGroups).values({
+    await db.insert(ContractGroups).values({
       uuid: generateUuid(),
       name: input.name,
       description: input.description || null,
@@ -57,13 +57,13 @@ export const createContactGroup = async (
   }
 };
 
-export const updateContactGroup = async (
+export const updateContractGroup = async (
   uuid: string,
-  input: ContactGroupInput,
-): Promise<ContactGroupActionResult> => {
+  input: ContractGroupInput,
+): Promise<ContractGroupActionResult> => {
   try {
     await db
-      .update(ContactGroups)
+      .update(ContractGroups)
       .set({
         name: input.name,
         description: input.description || null,
@@ -72,7 +72,7 @@ export const updateContactGroup = async (
         quicklyChangeSequenceNumber: input.quicklyChangeSequenceNumber || null,
         isActive: input.isActive,
       })
-      .where(eq(ContactGroups.uuid, uuid));
+      .where(eq(ContractGroups.uuid, uuid));
     return { success: true };
   } catch (error) {
     return {
@@ -81,11 +81,11 @@ export const updateContactGroup = async (
   }
 };
 
-export const deleteContactGroup = async (
+export const deleteContractGroup = async (
   uuid: string,
-): Promise<ContactGroupActionResult> => {
+): Promise<ContractGroupActionResult> => {
   try {
-    await db.delete(ContactGroups).where(eq(ContactGroups.uuid, uuid));
+    await db.delete(ContractGroups).where(eq(ContractGroups.uuid, uuid));
     return { success: true };
   } catch (error) {
     return {

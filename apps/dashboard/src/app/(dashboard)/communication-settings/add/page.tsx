@@ -1,6 +1,6 @@
 import {
   getCompaniesForSelect,
-  getContactsForSelect,
+  getContractsForSelect,
 } from "@/app/(dashboard)/communication-settings/actions";
 import { CommunicationSettingForm } from "@/components/communication-settings/communication-setting-form";
 import { PageHeading } from "@/components/layout/page-heading";
@@ -8,7 +8,7 @@ import { PageHeading } from "@/components/layout/page-heading";
 const AddCommunicationSettingPage = async () => {
   const [companies, contacts] = await Promise.all([
     getCompaniesForSelect(),
-    getContactsForSelect(),
+    getContractsForSelect(),
   ]);
 
   return (

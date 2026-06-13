@@ -70,7 +70,7 @@ export const companyRoles = [
 
 export type CompanyRole = (typeof companyRoles)[number];
 
-export const contactTypes = [
+export const contractTypes = [
   "gross_prices",
   "options",
   "net_prices",
@@ -79,7 +79,7 @@ export const contactTypes = [
   "toeslagen",
 ] as const satisfies readonly string[];
 
-export type ContactType = (typeof contactTypes)[number];
+export type ContractType = (typeof contractTypes)[number];
 
 export const companyContactCategories = [
   "procurement",

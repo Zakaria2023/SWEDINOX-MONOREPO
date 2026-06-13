@@ -1,12 +1,12 @@
 import type { TFunction } from "i18next";
 import { z } from "zod";
-import { contactTypes } from "@/lib/enums";
+import { contractTypes } from "@/lib/enums";
 
-export const createContactSchema = (t: TFunction) =>
+export const createContractSchema = (t: TFunction) =>
   z.object({
-    contactType: z.enum(contactTypes).optional(),
+    contractType: z.enum(contractTypes).optional(),
     description: z.string().min(1, t("validation.description-required")),
-    contactGroupUuid: z.string().optional(),
+    contractGroupUuid: z.string().optional(),
     quicklyChangeOrder: z.string().optional(),
     hasPriceDate: z.boolean(),
     priceDate: z.string().optional(),
@@ -18,4 +18,4 @@ export const createContactSchema = (t: TFunction) =>
     hideOnWebsite: z.boolean(),
   });
 
-export type ContactFormValues = z.infer<ReturnType<typeof createContactSchema>>;
+export type ContractFormValues = z.infer<ReturnType<typeof createContractSchema>>;
