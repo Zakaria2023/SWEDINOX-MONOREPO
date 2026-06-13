@@ -7,6 +7,7 @@
     "empty-option": "Leeg",
     "none": "Geen",
     "cancel": "Annuleren",
+    "ok": "OK",
     "close": "Sluiten",
     "edit": "Bewerken",
     "delete": "Verwijderen",
@@ -64,7 +65,8 @@
       "communication-settings": "Communicatie-instellingen",
       "contacts": "Contacten",
       "contact-groups": "Contactgroepen",
-      "locations": "Locaties"
+      "locations": "Locaties",
+      "sub-locations": "Sublocaties"
     }
   },
   "dashboard-page": {
@@ -112,11 +114,16 @@
   "locations-page": {
     "title": "Locaties",
     "description": "Beheer magazijnlocaties",
-    "new-location": "Nieuwe locatie"
+    "new-location": "Nieuwe locatie",
+    "new-sub-location": "Nieuwe sublocatie"
   },
   "locations-add-page": {
     "title": "Locatie toevoegen",
-    "description": "Maak een nieuwe magazijnlocatie aan"
+    "description": "Maak een nieuwe hoofdlocatie aan"
+  },
+  "locations-add-sub-page": {
+    "title": "Sublocatie toevoegen",
+    "description": "Maak een nieuwe onderliggende locatie aan"
   },
   "sign-in-page": {
     "title": "Swedinox",
@@ -402,7 +409,21 @@
       "next": "Volgende",
       "below": "Onder"
     },
+    "adopt-from-address-inherited": "Adres wordt overgenomen van bovenliggende locatie",
     "submit": "Locatie aanmaken"
+  },
+  "location-tree-dialog": {
+    "title": "Locatie selecteren",
+    "empty": "Geen locaties beschikbaar"
+  },
+  "sub-location-form": {
+    "fields": {
+      "parent-location": "Bovenliggende locatie"
+    },
+    "placeholders": {
+      "parent-location": "Selecteer een bovenliggende locatie"
+    },
+    "submit": "Sublocatie aanmaken"
   },
   "address-form": {
     "sections": {
@@ -580,6 +601,7 @@
     "description-required": "Omschrijving is verplicht",
     "location-name-required": "Locatienaam is verplicht",
     "location-type-required": "Locatietype is verplicht",
+    "adopt-from-required": "Bovenliggende locatie is verplicht",
     "company-required": "Bedrijf is verplicht",
     "document-type-required": "Documenttype is verplicht",
     "communication-type-required": "Communicatietype is verplicht",

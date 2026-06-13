@@ -40,8 +40,7 @@ export const Locations = mysqlTable(
     blockedForOptimization: boolean("blocked_for_optimization").default(false),
     limitedDimensions: boolean("limited_dimensions").default(false),
 
-    // TODO: Later this should come from the warehouses table.
-    adoptFrom: varchar("adopt_from", { length: 255 }),
+    adoptFrom: char("adopt_from", { length: 36 }),
     // Controls whether the adopted location is placed next to or below this location.
     adoptPosition: mysqlEnum("adopt_position", locationAdoptPositions).default(
       "below",
@@ -62,6 +61,11 @@ export const Locations = mysqlTable(
       name: "fk_locations_address",
       columns: [table.addressUuid],
       foreignColumns: [CompanyAddresses.uuid],
+    }),
+    foreignKey({
+      name: "fk_locations_adopt_from",
+      columns: [table.adoptFrom],
+      foreignColumns: [table.uuid],
     }),
   ],
 );

@@ -20,3 +20,20 @@ export const createLocationSchema = (t: TFunction) =>
   });
 
 export type LocationFormValues = z.infer<ReturnType<typeof createLocationSchema>>;
+
+export const createSubLocationSchema = (t: TFunction) =>
+  z.object({
+    name: z.string().min(1, t("validation.location-name-required")),
+    locationType: z.enum(locationTypes, {
+      error: t("validation.location-type-required"),
+    }),
+    adoptFrom: z.string().min(1, t("validation.adopt-from-required")),
+    adoptPosition: z.enum(locationAdoptPositions).optional(),
+    pickingSequence: z.union([z.string(), z.literal(""), z.undefined()]),
+    isBlocked: z.boolean(),
+    blockedReason: z.string().optional(),
+    blockedForOptimization: z.boolean(),
+    limitedDimensions: z.boolean(),
+  });
+
+export type SubLocationFormValues = z.infer<ReturnType<typeof createSubLocationSchema>>;

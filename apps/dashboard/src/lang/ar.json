@@ -7,6 +7,7 @@
     "empty-option": "فارغ",
     "none": "لا شيء",
     "cancel": "إلغاء",
+    "ok": "موافق",
     "close": "إغلاق",
     "edit": "تعديل",
     "delete": "حذف",
@@ -64,7 +65,8 @@
       "communication-settings": "إعدادات التواصل",
       "contacts": "جهات الاتصال",
       "contact-groups": "مجموعات الاتصال",
-      "locations": "المواقع"
+      "locations": "المواقع",
+      "sub-locations": "المواقع الفرعية"
     }
   },
   "dashboard-page": {
@@ -112,11 +114,16 @@
   "locations-page": {
     "title": "المواقع",
     "description": "إدارة سجلات مواقع المستودع",
-    "new-location": "موقع جديد"
+    "new-location": "موقع جديد",
+    "new-sub-location": "موقع فرعي جديد"
   },
   "locations-add-page": {
     "title": "إضافة موقع",
-    "description": "إنشاء سجل موقع مستودع جديد"
+    "description": "إنشاء موقع رئيسي جديد في المستودع"
+  },
+  "locations-add-sub-page": {
+    "title": "إضافة موقع فرعي",
+    "description": "إنشاء موقع فرعي تابع لموقع موجود"
   },
   "sign-in-page": {
     "title": "Swedinox",
@@ -402,7 +409,21 @@
       "next": "التالي",
       "below": "أسفل"
     },
+    "adopt-from-address-inherited": "العنوان موروث من الموقع الأصلي",
     "submit": "إنشاء الموقع"
+  },
+  "location-tree-dialog": {
+    "title": "اختر موقعاً",
+    "empty": "لا توجد مواقع متاحة"
+  },
+  "sub-location-form": {
+    "fields": {
+      "parent-location": "الموقع الأصلي"
+    },
+    "placeholders": {
+      "parent-location": "اختر موقعاً أصلياً"
+    },
+    "submit": "إنشاء موقع فرعي"
   },
   "address-form": {
     "sections": {
@@ -580,6 +601,7 @@
     "description-required": "الوصف مطلوب",
     "location-name-required": "اسم الموقع مطلوب",
     "location-type-required": "نوع الموقع مطلوب",
+    "adopt-from-required": "الموقع الأصلي مطلوب",
     "company-required": "الشركة مطلوبة",
     "document-type-required": "نوع المستند مطلوب",
     "communication-type-required": "نوع التواصل مطلوب",

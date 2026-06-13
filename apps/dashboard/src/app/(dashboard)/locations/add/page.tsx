@@ -1,12 +1,13 @@
 import { getAddressesForSelect } from "@/app/(dashboard)/addresses/actions";
-import { getLoadingLocations } from "@/app/(dashboard)/locations/actions";
+import { getLoadingLocations, getRootLocations } from "@/app/(dashboard)/locations/actions";
 import { LocationForm } from "@/components/locations/location-form";
 import { PageHeading } from "@/components/layout/page-heading";
 
 const AddLocationPage = async () => {
-  const [loadingLocations, addresses] = await Promise.all([
+  const [loadingLocations, addresses, rootLocations] = await Promise.all([
     getLoadingLocations(),
     getAddressesForSelect(),
+    getRootLocations(),
   ]);
 
   return (
@@ -15,7 +16,7 @@ const AddLocationPage = async () => {
         titleKey="locations-add-page.title"
         descriptionKey="locations-add-page.description"
       />
-      <LocationForm loadingLocations={loadingLocations} addresses={addresses} />
+      <LocationForm loadingLocations={loadingLocations} addresses={addresses} rootLocations={rootLocations} />
     </div>
   );
 };

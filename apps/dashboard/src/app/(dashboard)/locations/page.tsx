@@ -10,11 +10,18 @@ const LocationsPage = () => {
           titleKey="locations-page.title"
           descriptionKey="locations-page.description"
         />
-        <TranslatedLink
-          href="/locations/add"
-          labelKey="locations-page.new-location"
-          className="inline-flex h-8 items-center justify-center rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/80"
-        />
+        <div className="flex gap-2">
+          <TranslatedLink
+            href="/locations/add"
+            labelKey="locations-page.new-location"
+            className="inline-flex h-8 items-center justify-center rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/80"
+          />
+          <TranslatedLink
+            href="/locations/add-sub"
+            labelKey="locations-page.new-sub-location"
+            className="inline-flex h-8 items-center justify-center rounded-lg border border-border bg-background px-3 text-sm font-medium transition-colors hover:bg-muted"
+          />
+        </div>
       </div>
       <LocationsTable />
     </div>

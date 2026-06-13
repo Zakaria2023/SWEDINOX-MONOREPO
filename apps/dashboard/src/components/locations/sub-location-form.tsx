@@ -1,15 +1,12 @@
 "use client";
 
 import { X, Search } from "lucide-react";
-import { Controller } from "react-hook-form";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
-import { type AddressSelectOption } from "@/app/(dashboard)/addresses/actions";
-import { type LoadingLocationOption, type LocationForTree } from "@/app/(dashboard)/locations/actions";
-import { useLocationSubmit } from "@/app/(dashboard)/locations/use-location-submit";
+import { type LocationForTree } from "@/app/(dashboard)/locations/actions";
+import { useSubLocationSubmit } from "@/app/(dashboard)/locations/use-sub-location-submit";
 import { locationAdoptPositions, locationTypes } from "@/lib/enums";
-import { AddressSelect } from "@/components/locations/address-select";
 import { LocationTreeDialog } from "@/components/locations/location-tree-dialog";
 import { Button } from "@/components/shadcn/button";
 import { Input } from "@/components/shadcn/input";
@@ -18,25 +15,17 @@ import { FormError } from "@/components/ui/form-error";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import { FormSelectField } from "@/components/ui/form-select-field";
 
-const ADD_NEW_VALUE = "__add_new__";
-
-type LocationFormProps = {
-  addresses: AddressSelectOption[];
-  loadingLocations: LoadingLocationOption[];
-  /** Only root locations (adoptFrom IS NULL) shown in the adopt-from picker */
-  rootLocations: LocationForTree[];
+type SubLocationFormProps = {
+  /** All locations — any level can be picked as parent */
+  locations: LocationForTree[];
 };
 
-export const LocationForm = ({ addresses, loadingLocations, rootLocations }: LocationFormProps) => {
+export const SubLocationForm = ({ locations }: SubLocationFormProps) => {
   const { t } = useTranslation();
   const router = useRouter();
-  const [pendingLoadingLocationName, setPendingLoadingLocationName] = useState("");
-  const [isAddingNewLoadingLocation, setIsAddingNewLoadingLocation] = useState(false);
   const [treeOpen, setTreeOpen] = useState(false);
 
-  const { form, isPending, onSubmit, state } = useLocationSubmit(
-    isAddingNewLoadingLocation ? pendingLoadingLocationName : undefined,
-  );
+  const { form, isPending, onSubmit, state } = useSubLocationSubmit();
   const {
     control,
     register,
@@ -47,19 +36,13 @@ export const LocationForm = ({ addresses, loadingLocations, rootLocations }: Loc
 
   const isBlocked = watch("isBlocked");
   const adoptFrom = watch("adoptFrom");
-  const adoptFromName = rootLocations.find((l) => l.uuid === adoptFrom)?.name ?? "";
+  const adoptFromName = locations.find((l) => l.uuid === adoptFrom)?.name ?? "";
 
   useEffect(() => {
     if (state.success) {
       router.push("/locations");
     }
   }, [router, state.success]);
-
-  const loadingLocationOptions = [
-    { value: "", label: t("common.empty-option") },
-    ...loadingLocations.map((ll) => ({ value: ll.uuid, label: ll.name })),
-    { value: ADD_NEW_VALUE, label: t("location-form.add-new-loading-location") },
-  ];
 
   const locationTypeOptions = locationTypes.map((lt) => ({
     value: lt,
@@ -111,103 +94,19 @@ export const LocationForm = ({ addresses, loadingLocations, rootLocations }: Loc
             disabled={isPending}
           />
 
-          <div>
-            <FormSelectField
-              control={control}
-              id="loadingLocationUuid"
-              name="loadingLocationUuid"
-              label={t("location-form.fields.loading-location")}
-              options={loadingLocationOptions}
-              emptyValue=""
-              disabled={isPending}
-              onValueChange={(value, fieldOnChange) => {
-                if (value === ADD_NEW_VALUE) {
-                  setIsAddingNewLoadingLocation(true);
-                  fieldOnChange(ADD_NEW_VALUE);
-                  return;
-                }
-                setIsAddingNewLoadingLocation(false);
-                setPendingLoadingLocationName("");
-                fieldOnChange(value);
-              }}
-            />
-            {isAddingNewLoadingLocation && (
-              <div className="mt-2 flex items-center gap-2">
-                <Input
-                  placeholder={t("location-form.placeholders.new-loading-location-name")}
-                  value={pendingLoadingLocationName}
-                  onChange={(e) => setPendingLoadingLocationName(e.target.value)}
-                  disabled={isPending}
-                  autoFocus
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsAddingNewLoadingLocation(false);
-                    setPendingLoadingLocationName("");
-                    setValue("loadingLocationUuid", "");
-                  }}
-                  className="shrink-0 rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
-                  disabled={isPending}
-                >
-                  <X className="size-4" />
-                  <span className="sr-only">{t("location-form.cancel-new-loading-location")}</span>
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Address — always shown for top-level locations */}
-          <div>
-            <FormLabel htmlFor="addressUuid">
-              {t("location-form.fields.address")}
-            </FormLabel>
-            <Controller
-              control={control}
-              name="addressUuid"
-              render={({ field }) => (
-                <AddressSelect
-                  id="addressUuid"
-                  name={field.name}
-                  addresses={addresses}
-                  value={field.value ?? ""}
-                  onValueChange={field.onChange}
-                  disabled={isPending}
-                  invalid={!!errors.addressUuid}
-                />
-              )}
-            />
-            <FormFieldError message={errors.addressUuid?.message} />
-          </div>
-
-          <div>
-            <FormLabel htmlFor="pickingSequence">
-              {t("location-form.fields.picking-sequence")}
-            </FormLabel>
-            <Input
-              id="pickingSequence"
-              type="number"
-              min={0}
-              {...register("pickingSequence")}
-              aria-invalid={!!errors.pickingSequence}
-              placeholder={t("location-form.placeholders.picking-sequence")}
-              disabled={isPending}
-            />
-            <FormFieldError message={errors.pickingSequence?.message as string | undefined} />
-          </div>
-
-          {/* Adopt from — only root locations shown */}
-          <div>
-            <FormLabel htmlFor="adoptFrom">
-              {t("location-form.fields.adopt-from")}
+          {/* Parent location — required, shows full tree */}
+          <div className="lg:col-span-2">
+            <FormLabel htmlFor="adoptFrom" required>
+              {t("sub-location-form.fields.parent-location")}
             </FormLabel>
             <div className="flex gap-2">
               <Input
                 id="adoptFrom"
                 value={adoptFromName}
                 readOnly
-                placeholder={t("location-form.placeholders.adopt-from")}
+                placeholder={t("sub-location-form.placeholders.parent-location")}
                 disabled={isPending}
+                aria-invalid={!!errors.adoptFrom}
                 className="flex-1 cursor-default"
               />
               <Button
@@ -232,8 +131,14 @@ export const LocationForm = ({ addresses, loadingLocations, rootLocations }: Loc
                 </Button>
               )}
             </div>
+            <FormFieldError message={errors.adoptFrom?.message} />
+            {adoptFrom && (
+              <p className="mt-1 text-xs text-muted-foreground">
+                {t("location-form.adopt-from-address-inherited")}
+              </p>
+            )}
             <LocationTreeDialog
-              locations={rootLocations}
+              locations={locations}
               open={treeOpen}
               onOpenChange={setTreeOpen}
               value={adoptFrom ?? ""}
@@ -249,6 +154,22 @@ export const LocationForm = ({ addresses, loadingLocations, rootLocations }: Loc
             options={adoptPositionOptions}
             disabled={isPending}
           />
+
+          <div>
+            <FormLabel htmlFor="pickingSequence">
+              {t("location-form.fields.picking-sequence")}
+            </FormLabel>
+            <Input
+              id="pickingSequence"
+              type="number"
+              min={0}
+              {...register("pickingSequence")}
+              aria-invalid={!!errors.pickingSequence}
+              placeholder={t("location-form.placeholders.picking-sequence")}
+              disabled={isPending}
+            />
+            <FormFieldError message={errors.pickingSequence?.message as string | undefined} />
+          </div>
         </div>
       </section>
 
@@ -293,7 +214,7 @@ export const LocationForm = ({ addresses, loadingLocations, rootLocations }: Loc
       <FormActions
         isPending={isPending}
         onCancel={() => router.push("/locations")}
-        submitLabel={t("location-form.submit")}
+        submitLabel={t("sub-location-form.submit")}
       />
     </form>
   );

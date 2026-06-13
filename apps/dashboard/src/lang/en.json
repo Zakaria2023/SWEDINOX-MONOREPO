@@ -7,6 +7,7 @@
     "empty-option": "Empty",
     "none": "None",
     "cancel": "Cancel",
+    "ok": "OK",
     "close": "Close",
     "edit": "Edit",
     "delete": "Delete",
@@ -64,7 +65,8 @@
       "communication-settings": "Communication Settings",
       "contacts": "Contacts",
       "contact-groups": "Contact Groups",
-      "locations": "Locations"
+      "locations": "Locations",
+      "sub-locations": "Sub-locations"
     }
   },
   "dashboard-page": {
@@ -112,11 +114,16 @@
   "locations-page": {
     "title": "Locations",
     "description": "Manage warehouse location records",
-    "new-location": "New Location"
+    "new-location": "New Location",
+    "new-sub-location": "New Sub-location"
   },
   "locations-add-page": {
     "title": "Add Location",
-    "description": "Create a new warehouse location record"
+    "description": "Create a new top-level warehouse location"
+  },
+  "locations-add-sub-page": {
+    "title": "Add Sub-location",
+    "description": "Create a new child location under an existing location"
   },
   "sign-in-page": {
     "title": "Swedinox",
@@ -402,7 +409,21 @@
       "next": "Next",
       "below": "Below"
     },
+    "adopt-from-address-inherited": "Address is inherited from the parent location",
     "submit": "Create Location"
+  },
+  "location-tree-dialog": {
+    "title": "Select Location",
+    "empty": "No locations available"
+  },
+  "sub-location-form": {
+    "fields": {
+      "parent-location": "Parent Location"
+    },
+    "placeholders": {
+      "parent-location": "Select a parent location"
+    },
+    "submit": "Create Sub-location"
   },
   "address-form": {
     "sections": {
@@ -580,6 +601,7 @@
     "description-required": "Description is required",
     "location-name-required": "Location name is required",
     "location-type-required": "Location type is required",
+    "adopt-from-required": "Parent location is required",
     "company-required": "Company is required",
     "document-type-required": "Document type is required",
     "communication-type-required": "Communication type is required",

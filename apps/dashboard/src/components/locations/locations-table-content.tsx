@@ -50,6 +50,35 @@ const initialVisibility = ALL_COLUMNS.reduce(
   {} as Record<ColumnKey, boolean>,
 );
 
+type LocationRow = SelectLocations & { depth: number };
+
+function buildTreeRows(locations: SelectLocations[]): LocationRow[] {
+  const byUuid = new Map<string, SelectLocations & { children: SelectLocations[] }>();
+  for (const loc of locations) {
+    byUuid.set(loc.uuid, { ...loc, children: [] });
+  }
+
+  const roots: Array<SelectLocations & { children: SelectLocations[] }> = [];
+  for (const node of byUuid.values()) {
+    if (node.adoptFrom && byUuid.has(node.adoptFrom)) {
+      byUuid.get(node.adoptFrom)!.children.push(node);
+    } else {
+      roots.push(node);
+    }
+  }
+
+  const result: LocationRow[] = [];
+  const traverse = (node: SelectLocations & { children: SelectLocations[] }, depth: number) => {
+    result.push({ ...node, depth });
+    const children = byUuid.get(node.uuid)?.children ?? [];
+    for (const child of children) {
+      traverse(byUuid.get(child.uuid)!, depth + 1);
+    }
+  };
+  for (const root of roots) traverse(root, 0);
+  return result;
+}
+
 type LocationsTableContentProps = {
   locations: SelectLocations[];
 };
@@ -65,6 +94,7 @@ export const LocationsTableContent = ({ locations }: LocationsTableContentProps)
 
   const visibleColumns = ALL_COLUMNS.filter((column) => columnVisibility[column.key]);
   const fallbackValue = t("common.not-available");
+  const treeRows = buildTreeRows(locations);
 
   const booleanBadge = (value: boolean | null) =>
     value ? (
@@ -83,12 +113,24 @@ export const LocationsTableContent = ({ locations }: LocationsTableContentProps)
     </span>
   );
 
-  const renderCell = (location: SelectLocations, key: ColumnKey) => {
+  const renderCell = (location: LocationRow, key: ColumnKey) => {
     switch (key) {
       case "id":
         return <TableCell key={key} className="font-medium">{location.id}</TableCell>;
       case "name":
-        return <TableCell key={key}>{location.name}</TableCell>;
+        return (
+          <TableCell key={key}>
+            <span
+              className="flex items-center gap-1"
+              style={{ paddingLeft: `${location.depth * 20}px` }}
+            >
+              {location.depth > 0 && (
+                <span className="text-muted-foreground">└</span>
+              )}
+              {location.name}
+            </span>
+          </TableCell>
+        );
       case "locationType":
         return <TableCell key={key}>{typeBadge(location.locationType)}</TableCell>;
       case "pickingSequence":
@@ -155,14 +197,14 @@ export const LocationsTableContent = ({ locations }: LocationsTableContentProps)
             </TableRow>
           </TableHeader>
           <TableBody>
-            {locations.length === 0 ? (
+            {treeRows.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={visibleColumns.length} className="h-24 text-center">
                   {t("locations-table-content.empty")}
                 </TableCell>
               </TableRow>
             ) : (
-              locations.map((location) => (
+              treeRows.map((location) => (
                 <TableRow key={location.id}>
                   {visibleColumns.map((column) => renderCell(location, column.key))}
                 </TableRow>

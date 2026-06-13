@@ -9,7 +9,7 @@ import {
   type SelectLoadingLocations,
 } from "@/db";
 import { generateUuid } from "@/lib/helpers";
-import { desc } from "drizzle-orm";
+import { desc, isNull } from "drizzle-orm";
 
 export type LocationInput = Omit<
   InsertLocations,
@@ -31,8 +31,27 @@ export type LocationSelectOption = {
   name: string;
 };
 
+export type LocationForTree = {
+  uuid: string;
+  name: string;
+  adoptFrom: string | null;
+};
+
 export const getLocations = async (): Promise<LocationListItem[]> =>
   db.select().from(Locations).orderBy(desc(Locations.createdAt));
+
+export const getLocationsForTree = async (): Promise<LocationForTree[]> =>
+  db
+    .select({ uuid: Locations.uuid, name: Locations.name, adoptFrom: Locations.adoptFrom })
+    .from(Locations)
+    .orderBy(Locations.name);
+
+export const getRootLocations = async (): Promise<LocationForTree[]> =>
+  db
+    .select({ uuid: Locations.uuid, name: Locations.name, adoptFrom: Locations.adoptFrom })
+    .from(Locations)
+    .where(isNull(Locations.adoptFrom))
+    .orderBy(Locations.name);
 
 export const getLoadingLocations = async (): Promise<LoadingLocationOption[]> => {
   try {
