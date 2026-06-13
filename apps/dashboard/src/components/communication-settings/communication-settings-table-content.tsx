@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   Table,
   TableBody,
@@ -9,14 +10,18 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
+import {
+  COMMON_TEXT,
+  COMMUNICATION_SETTING_DOCUMENT_TYPE_LABELS,
+  COMMUNICATION_SETTING_SHAPE_LABELS,
+  COMMUNICATION_SETTING_TYPE_LABELS,
+} from "@/lib/labels";
 import { SelectCommunicationSettings } from "@/db";
 
 type SettingRow = SelectCommunicationSettings & {
   companyName: string | null;
   searchCode1: string | null;
 };
-import { useState } from "react";
-import { useTranslation } from "react-i18next";
 
 type ColumnKey =
   | "id"
@@ -33,56 +38,56 @@ type ColumnKey =
 const ALL_COLUMNS: Array<{
   defaultVisible: boolean;
   key: ColumnKey;
-  labelKey: string;
+  label: string;
 }> = [
   {
     key: "id",
-    labelKey: "communication-settings-table-content.columns.id",
+    label: "Code",
     defaultVisible: true,
   },
   {
     key: "companyName",
-    labelKey: "communication-settings-table-content.columns.company-name",
+    label: "Company",
     defaultVisible: true,
   },
   {
     key: "companyCode",
-    labelKey: "communication-settings-table-content.columns.company-code",
+    label: "Company Code",
     defaultVisible: true,
   },
   {
     key: "documentType",
-    labelKey: "communication-settings-table-content.columns.document-type",
+    label: "Document Type",
     defaultVisible: true,
   },
   {
     key: "communicationType",
-    labelKey: "communication-settings-table-content.columns.communication-type",
+    label: "Communication Type",
     defaultVisible: true,
   },
   {
     key: "shape",
-    labelKey: "communication-settings-table-content.columns.shape",
+    label: "Shape",
     defaultVisible: true,
   },
   {
     key: "email",
-    labelKey: "communication-settings-table-content.columns.email",
+    label: "Email",
     defaultVisible: true,
   },
   {
     key: "fax",
-    labelKey: "communication-settings-table-content.columns.fax",
+    label: "Fax",
     defaultVisible: false,
   },
   {
     key: "createdAt",
-    labelKey: "communication-settings-table-content.columns.created-at",
+    label: "Created At",
     defaultVisible: false,
   },
   {
     key: "updatedAt",
-    labelKey: "communication-settings-table-content.columns.updated-at",
+    label: "Updated At",
     defaultVisible: false,
   },
 ];
@@ -99,7 +104,6 @@ type CommunicationSettingsTableContentProps = {
 export const CommunicationSettingsTableContent = ({
   settings,
 }: CommunicationSettingsTableContentProps) => {
-  const { t } = useTranslation();
   const [columnVisibility, setColumnVisibility] =
     useState<Record<ColumnKey, boolean>>(initialVisibility);
 
@@ -112,7 +116,7 @@ export const CommunicationSettingsTableContent = ({
   const visibleColumns = ALL_COLUMNS.filter(
     (column) => columnVisibility[column.key],
   );
-  const fallbackValue = t("common.not-available");
+  const fallbackValue = COMMON_TEXT.notAvailable;
 
   const renderCell = (setting: SettingRow, key: ColumnKey) => {
     switch (key) {
@@ -137,24 +141,20 @@ export const CommunicationSettingsTableContent = ({
       case "documentType":
         return (
           <TableCell key={key}>
-            {t(
-              `communication-setting-form.document-type-options.${setting.documentType}`,
-            )}
+            {COMMUNICATION_SETTING_DOCUMENT_TYPE_LABELS[setting.documentType]}
           </TableCell>
         );
       case "communicationType":
         return (
           <TableCell key={key}>
-            {t(
-              `communication-setting-form.communication-type-options.${setting.communicationType}`,
-            )}
+            {COMMUNICATION_SETTING_TYPE_LABELS[setting.communicationType]}
           </TableCell>
         );
       case "shape":
         return (
           <TableCell key={key}>
             {setting.shape
-              ? t(`communication-setting-form.shape-options.${setting.shape}`)
+              ? COMMUNICATION_SETTING_SHAPE_LABELS[setting.shape]
               : fallbackValue}
           </TableCell>
         );
@@ -185,7 +185,7 @@ export const CommunicationSettingsTableContent = ({
         <ColumnSelector
           columns={ALL_COLUMNS.map((column) => ({
             key: column.key,
-            label: t(column.labelKey),
+            label: column.label,
           }))}
           visibility={columnVisibility}
           onToggle={toggleColumn}
@@ -197,7 +197,7 @@ export const CommunicationSettingsTableContent = ({
           <TableHeader>
             <TableRow>
               {visibleColumns.map((column) => (
-                <TableHead key={column.key}>{t(column.labelKey)}</TableHead>
+                <TableHead key={column.key}>{column.label}</TableHead>
               ))}
             </TableRow>
           </TableHeader>
@@ -208,7 +208,7 @@ export const CommunicationSettingsTableContent = ({
                   colSpan={visibleColumns.length}
                   className="h-24 text-center"
                 >
-                  {t("communication-settings-table-content.empty")}
+                  No communication settings found
                 </TableCell>
               </TableRow>
             ) : (

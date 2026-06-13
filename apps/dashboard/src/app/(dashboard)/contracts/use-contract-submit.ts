@@ -3,17 +3,15 @@
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useTranslation } from "react-i18next";
 import { createContract, type ContractActionResult } from "./actions";
 import { createContractSchema, type ContractFormValues } from "./validation";
 
 export const useContractSubmit = () => {
-  const { t } = useTranslation();
   const [isPending, startTransition] = useTransition();
   const [state, setState] = useState<ContractActionResult>({});
 
   const form = useForm<ContractFormValues>({
-    resolver: zodResolver(createContractSchema(t)),
+    resolver: zodResolver(createContractSchema()),
     defaultValues: {
       contractType: undefined,
       description: "",

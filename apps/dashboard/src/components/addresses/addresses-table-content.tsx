@@ -1,10 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { useTranslation } from "react-i18next";
 import { type AddressListItem } from "@/app/(dashboard)/addresses/actions";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
+import {
+  ADDRESS_CATEGORY_LABELS,
+  AVAILABLE_AT_LABELS,
+  COMMON_TEXT,
+} from "@/lib/labels";
 
 type ColumnKey =
   | "id"
@@ -45,46 +49,46 @@ type ColumnKey =
 const ALL_COLUMNS: Array<{
   defaultVisible: boolean;
   key: ColumnKey;
-  labelKey: string;
+  label: string;
 }> = [
-  { key: "id", labelKey: "addresses-table-content.columns.id", defaultVisible: true },
-  { key: "companyCode", labelKey: "addresses-table-content.columns.company-code", defaultVisible: true },
-  { key: "companyName", labelKey: "addresses-table-content.columns.company-name", defaultVisible: true },
-  { key: "altName", labelKey: "addresses-table-content.columns.alt-name", defaultVisible: true },
-  { key: "streetAndNo", labelKey: "addresses-table-content.columns.street-and-no", defaultVisible: true },
-  { key: "postalCode", labelKey: "addresses-table-content.columns.postal-code", defaultVisible: true },
-  { key: "city", labelKey: "addresses-table-content.columns.city", defaultVisible: true },
-  { key: "region", labelKey: "addresses-table-content.columns.region", defaultVisible: true },
-  { key: "country", labelKey: "addresses-table-content.columns.country", defaultVisible: true },
-  { key: "house", labelKey: "addresses-table-content.columns.house", defaultVisible: false },
-  { key: "poBox", labelKey: "addresses-table-content.columns.po-box", defaultVisible: false },
-  { key: "gln", labelKey: "addresses-table-content.columns.gln", defaultVisible: true },
-  { key: "peppolId", labelKey: "addresses-table-content.columns.peppol-id", defaultVisible: true },
-  { key: "telephone", labelKey: "addresses-table-content.columns.telephone", defaultVisible: false },
-  { key: "fax", labelKey: "addresses-table-content.columns.fax", defaultVisible: false },
-  { key: "email", labelKey: "addresses-table-content.columns.email", defaultVisible: false },
-  { key: "website", labelKey: "addresses-table-content.columns.website", defaultVisible: false },
-  { key: "billingAttention", labelKey: "addresses-table-content.columns.billing-attention", defaultVisible: false },
+  { key: "id", label: "Code", defaultVisible: true },
+  { key: "companyCode", label: "Company Code", defaultVisible: true },
+  { key: "companyName", label: "Company Name", defaultVisible: true },
+  { key: "altName", label: "Alt Name", defaultVisible: true },
+  { key: "streetAndNo", label: "Street & No.", defaultVisible: true },
+  { key: "postalCode", label: "Postal Code", defaultVisible: true },
+  { key: "city", label: "City", defaultVisible: true },
+  { key: "region", label: "Region", defaultVisible: true },
+  { key: "country", label: "Country", defaultVisible: true },
+  { key: "house", label: "House", defaultVisible: false },
+  { key: "poBox", label: "PO Box", defaultVisible: false },
+  { key: "gln", label: "GLN", defaultVisible: true },
+  { key: "peppolId", label: "Peppol ID", defaultVisible: true },
+  { key: "telephone", label: "Telephone", defaultVisible: false },
+  { key: "fax", label: "Fax", defaultVisible: false },
+  { key: "email", label: "Email", defaultVisible: false },
+  { key: "website", label: "Website", defaultVisible: false },
+  { key: "billingAttention", label: "Billing Attention", defaultVisible: false },
   {
     key: "billingAttentionAdditional",
-    labelKey: "addresses-table-content.columns.billing-attention-additional",
+    label: "Billing Attention 2",
     defaultVisible: false,
   },
-  { key: "sequenceNumber", labelKey: "addresses-table-content.columns.sequence-number", defaultVisible: false },
-  { key: "category", labelKey: "addresses-table-content.columns.category", defaultVisible: true },
-  { key: "addressComplete", labelKey: "addresses-table-content.columns.address-complete", defaultVisible: true },
-  { key: "needCrane", labelKey: "addresses-table-content.columns.need-crane", defaultVisible: false },
-  { key: "canopyRequired", labelKey: "addresses-table-content.columns.canopy-required", defaultVisible: false },
-  { key: "bundleSeparately", labelKey: "addresses-table-content.columns.bundle-separately", defaultVisible: false },
-  { key: "specialTransport", labelKey: "addresses-table-content.columns.special-transport", defaultVisible: false },
-  { key: "availableAt", labelKey: "addresses-table-content.columns.available-at", defaultVisible: false },
-  { key: "unloadingStartTime", labelKey: "addresses-table-content.columns.unloading-start-time", defaultVisible: false },
-  { key: "unloadingEndTime", labelKey: "addresses-table-content.columns.unloading-end-time", defaultVisible: false },
-  { key: "maxLength", labelKey: "addresses-table-content.columns.max-length", defaultVisible: false },
-  { key: "maxBundleWeight", labelKey: "addresses-table-content.columns.max-bundle-weight", defaultVisible: false },
-  { key: "loadingInstructions", labelKey: "addresses-table-content.columns.loading-instructions", defaultVisible: false },
-  { key: "createdAt", labelKey: "addresses-table-content.columns.created-at", defaultVisible: false },
-  { key: "updatedAt", labelKey: "addresses-table-content.columns.updated-at", defaultVisible: false },
+  { key: "sequenceNumber", label: "Sequence No.", defaultVisible: false },
+  { key: "category", label: "Category", defaultVisible: true },
+  { key: "addressComplete", label: "Address Complete", defaultVisible: true },
+  { key: "needCrane", label: "Need Crane", defaultVisible: false },
+  { key: "canopyRequired", label: "Canopy Required", defaultVisible: false },
+  { key: "bundleSeparately", label: "Bundle Separately", defaultVisible: false },
+  { key: "specialTransport", label: "Special Transport", defaultVisible: false },
+  { key: "availableAt", label: "Available At", defaultVisible: false },
+  { key: "unloadingStartTime", label: "Unloading Start", defaultVisible: false },
+  { key: "unloadingEndTime", label: "Unloading End", defaultVisible: false },
+  { key: "maxLength", label: "Max Length (mm)", defaultVisible: false },
+  { key: "maxBundleWeight", label: "Max Bundle Weight (kg)", defaultVisible: false },
+  { key: "loadingInstructions", label: "Loading Instructions", defaultVisible: false },
+  { key: "createdAt", label: "Created At", defaultVisible: false },
+  { key: "updatedAt", label: "Updated At", defaultVisible: false },
 ];
 
 const initialVisibility = ALL_COLUMNS.reduce(
@@ -99,7 +103,6 @@ type AddressesTableContentProps = {
 export const AddressesTableContent = ({
   addresses,
 }: AddressesTableContentProps) => {
-  const { t } = useTranslation();
   const [columnVisibility, setColumnVisibility] =
     useState<Record<ColumnKey, boolean>>(initialVisibility);
 
@@ -108,7 +111,7 @@ export const AddressesTableContent = ({
   };
 
   const visibleColumns = ALL_COLUMNS.filter((column) => columnVisibility[column.key]);
-  const fallbackValue = t("common.not-available");
+  const fallbackValue = COMMON_TEXT.notAvailable;
 
   const boolCell = (value: boolean | null) => (
     <span
@@ -116,7 +119,7 @@ export const AddressesTableContent = ({
         value ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
       }`}
     >
-      {value ? t("common.yes") : t("common.no")}
+      {value ? COMMON_TEXT.yes : COMMON_TEXT.no}
     </span>
   );
 
@@ -179,7 +182,7 @@ export const AddressesTableContent = ({
                     key={category}
                     className="rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700"
                   >
-                    {t(`address-form.categories.${category}`)}
+                    {ADDRESS_CATEGORY_LABELS[category]}
                   </span>
                 ))
               ) : (
@@ -202,7 +205,7 @@ export const AddressesTableContent = ({
         return (
           <TableCell key={key}>
             {address.availableAt
-              ? t(`address-form.available-at-options.${address.availableAt}`)
+              ? AVAILABLE_AT_LABELS[address.availableAt]
               : fallbackValue}
           </TableCell>
         );
@@ -241,7 +244,7 @@ export const AddressesTableContent = ({
         <ColumnSelector
           columns={ALL_COLUMNS.map((column) => ({
             key: column.key,
-            label: t(column.labelKey),
+            label: column.label,
           }))}
           visibility={columnVisibility}
           onToggle={toggleColumn}
@@ -253,7 +256,7 @@ export const AddressesTableContent = ({
           <TableHeader>
             <TableRow>
               {visibleColumns.map((column) => (
-                <TableHead key={column.key}>{t(column.labelKey)}</TableHead>
+                <TableHead key={column.key}>{column.label}</TableHead>
               ))}
             </TableRow>
           </TableHeader>
@@ -261,7 +264,7 @@ export const AddressesTableContent = ({
             {addresses.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={visibleColumns.length} className="h-24 text-center">
-                  {t("addresses-table-content.empty")}
+                  No addresses found
                 </TableCell>
               </TableRow>
             ) : (

@@ -1,4 +1,3 @@
-import type { TFunction } from "i18next";
 import { z } from "zod";
 import {
   addressCategories,
@@ -6,22 +5,23 @@ import {
   companyLangs,
   companyRoles,
 } from "@/lib/enums";
+import { VALIDATION_MESSAGES } from "@/lib/validation-messages";
 
-const createOptionalEmailSchema = (t: TFunction) =>
+const createOptionalEmailSchema = () =>
   z.union([
-    z.email({ error: t("validation.invalid-email-address") }),
+    z.email({ error: VALIDATION_MESSAGES.invalidEmailAddress }),
     z.literal(""),
     z.undefined(),
   ]);
 
-const createOptionalUrlSchema = (t: TFunction) =>
+const createOptionalUrlSchema = () =>
   z.union([
-    z.url({ error: t("validation.invalid-website-url") }),
+    z.url({ error: VALIDATION_MESSAGES.invalidWebsiteUrl }),
     z.literal(""),
     z.undefined(),
   ]);
 
-export const createAddressSchema = (t: TFunction) =>
+export const createAddressSchema = () =>
   z.object({
     altName: z.string().optional(),
     poBox: z.boolean().optional(),
@@ -33,26 +33,26 @@ export const createAddressSchema = (t: TFunction) =>
     house: z.string().optional(),
     telephone: z.string().optional(),
     fax: z.string().optional(),
-    email: createOptionalEmailSchema(t),
-    website: createOptionalUrlSchema(t),
+    email: createOptionalEmailSchema(),
+    website: createOptionalUrlSchema(),
     billingAttention: z.string().optional(),
     billingAttentionAdditional: z.string().optional(),
     gln: z.union([
-      z.string().max(13, t("validation.gln-too-long")),
+      z.string().max(13, VALIDATION_MESSAGES.glnTooLong),
       z.literal(""),
       z.undefined(),
     ]),
     peppolId: z.union([
       z
         .string()
-        .regex(/^\d{4}:.+$/, t("validation.peppol-format")),
+        .regex(/^\d{4}:.+$/, VALIDATION_MESSAGES.peppolFormat),
       z.literal(""),
       z.undefined(),
     ]),
     sequenceNumber: z.string().optional(),
     category: z
       .array(z.enum(addressCategories))
-      .min(1, t("validation.at-least-one-category")),
+      .min(1, VALIDATION_MESSAGES.atLeastOneCategory),
     needCrane: z.boolean().optional(),
     canopyRequired: z.boolean().optional(),
     bundleSeparately: z.boolean().optional(),
@@ -70,9 +70,11 @@ export const createAddressSchema = (t: TFunction) =>
     loadingInstructions: z.string().optional(),
   });
 
-export const createCompanySchema = (t: TFunction) =>
+export const createCompanySchema = () =>
   z.object({
-    companyName: z.string().min(1, t("validation.company-name-required")),
+    companyName: z
+      .string()
+      .min(1, VALIDATION_MESSAGES.companyNameRequired),
     correspName: z.string().optional(),
     remarks: z.string().optional(),
     lang: z.union([z.enum(companyLangs), z.literal(""), z.undefined()]),
@@ -80,7 +82,7 @@ export const createCompanySchema = (t: TFunction) =>
     searchCode1: z.string().optional(),
     searchCode2: z.string().optional(),
     searchCode3: z.string().optional(),
-    address: createAddressSchema(t),
+    address: createAddressSchema(),
   });
 
 export type AddressFormValues = z.infer<ReturnType<typeof createAddressSchema>>;

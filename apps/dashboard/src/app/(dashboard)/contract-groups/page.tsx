@@ -7,8 +7,8 @@ const ContractGroupsPage = () => {
   return (
     <div className="space-y-6 p-6">
       <PageHeading
-        titleKey="contract-groups-page.title"
-        descriptionKey="contract-groups-page.description"
+        title="Contract Groups"
+        description="Manage groups that can be assigned to contracts."
       />
       <Suspense
         fallback={<DataTableFallback columnCount={6} toolbarWidthClassName="w-32" />}

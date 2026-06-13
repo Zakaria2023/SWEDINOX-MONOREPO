@@ -1,6 +1,5 @@
 import { currentUser } from "@clerk/nextjs/server";
 import { SidebarTrigger } from "@/components/shadcn/sidebar";
-import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { SignOutButton } from "@clerk/nextjs";
 
 export const DashboardHeader = async () => {
@@ -15,8 +14,6 @@ export const DashboardHeader = async () => {
       <SidebarTrigger />
 
       <div className="ms-auto flex items-center gap-3">
-        <LanguageSwitcher />
-
         <SignOutButton>
           <button className="text-sm text-muted-foreground cursor-pointer">
             Logout

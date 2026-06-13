@@ -2,8 +2,8 @@
 
 import { Select as SelectPrimitive } from "@base-ui/react/select";
 import { Check, ChevronDown } from "lucide-react";
-import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/helpers";
+import { COMMON_TEXT } from "@/lib/labels";
 
 export type SelectOption = {
   label: string;
@@ -34,8 +34,6 @@ export const Select = ({
   placeholder,
   value,
 }: SelectProps) => {
-  const { t } = useTranslation();
-
   return (
     <SelectPrimitive.Root
       disabled={disabled}
@@ -56,7 +54,7 @@ export const Select = ({
           {(selectedValue) =>
             options.find((option) => option.value === selectedValue)?.label ??
             placeholder ??
-            t("select.placeholder")
+            COMMON_TEXT.selectPlaceholder
           }
         </SelectPrimitive.Value>
         <SelectPrimitive.Icon className="text-muted-foreground transition-transform data-[open]:rotate-180">

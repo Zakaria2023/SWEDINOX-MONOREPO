@@ -2,7 +2,6 @@
 
 import { useRef } from "react";
 import { Controller, type Control, type FieldErrors, type UseFormRegister, type UseFormWatch } from "react-hook-form";
-import { useTranslation } from "react-i18next";
 import { type CompanyFormValues } from "@/app/(dashboard)/companies/validation";
 import { Input } from "@/components/shadcn/input";
 import { type SelectOption } from "@/components/shadcn/select";
@@ -10,6 +9,11 @@ import { FormCheckboxCard } from "@/components/ui/form-checkbox-card";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import { FormSelectField } from "@/components/ui/form-select-field";
 import { addressCategories, availableAtOptions } from "@/lib/enums";
+import {
+  ADDRESS_CATEGORY_LABELS,
+  AVAILABLE_AT_LABELS,
+  COMMON_TEXT,
+} from "@/lib/labels";
 
 type AddressFormProps = {
   control: Control<CompanyFormValues>;
@@ -22,22 +26,22 @@ type AddressFormProps = {
 const EMPTY_SELECT_VALUE = "none";
 
 const BOOLEAN_FIELDS = [
-  { name: "needCrane", labelKey: "address-form.boolean-fields.need-crane" },
+  { name: "needCrane", label: "Need Crane" },
   {
     name: "canopyRequired",
-    labelKey: "address-form.boolean-fields.canopy-required",
+    label: "Canopy Required",
   },
   {
     name: "bundleSeparately",
-    labelKey: "address-form.boolean-fields.bundle-separately",
+    label: "Bundle Separately",
   },
   {
     name: "addressComplete",
-    labelKey: "address-form.boolean-fields.address-complete",
+    label: "Address Complete",
   },
   {
     name: "specialTransport",
-    labelKey: "address-form.boolean-fields.special-transport",
+    label: "Special Transport",
   },
 ] as const;
 
@@ -48,7 +52,6 @@ export const AddressForm = ({
   watch,
   deliveryOnly = false,
 }: AddressFormProps) => {
-  const { t } = useTranslation();
   const peppolPrevLengthRef = useRef(0);
 
   const selectedCategories = watch("address.category") ?? [];
@@ -63,15 +66,15 @@ export const AddressForm = ({
     (errors?.category as { message?: string } | undefined)?.message;
 
   const availableAtOptionsForSelect: SelectOption[] = [
-    { label: t("common.none"), value: EMPTY_SELECT_VALUE },
+    { label: COMMON_TEXT.none, value: EMPTY_SELECT_VALUE },
     ...availableAtOptions.map((option) => ({
-      label: t(`address-form.available-at-options.${option}`),
+      label: AVAILABLE_AT_LABELS[option],
       value: option,
     })),
   ];
 
   const timeSelectOptions: SelectOption[] = [
-    { label: t("common.none"), value: EMPTY_SELECT_VALUE },
+    { label: COMMON_TEXT.none, value: EMPTY_SELECT_VALUE },
     ...Array.from({ length: 48 }, (_, index) => {
       const hours = String(Math.floor(index / 2)).padStart(2, "0");
       const minutes = index % 2 === 0 ? "00" : "30";
@@ -84,18 +87,18 @@ export const AddressForm = ({
     <div className="space-y-8">
       <section className="space-y-4">
         <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
-          {t("address-form.sections.basic-info")}
+          Basic Info
         </h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <FormLabel htmlFor="altName">
-              {t("address-form.fields.alt-name")}
+              Alternative Name
             </FormLabel>
             <Input id="altName" {...register("address.altName")} />
           </div>
           <div>
             <FormLabel htmlFor="sequenceNumber">
-              {t("address-form.fields.sequence-number")}
+              Sequence Number
             </FormLabel>
             <Input
               id="sequenceNumber"
@@ -108,11 +111,11 @@ export const AddressForm = ({
             <FormFieldError message={errors?.sequenceNumber?.message} />
           </div>
           <div>
-            <FormLabel htmlFor="gln">{t("address-form.fields.gln")}</FormLabel>
+            <FormLabel htmlFor="gln">GLN</FormLabel>
             <Input
               id="gln"
               maxLength={13}
-              placeholder={t("address-form.placeholders.gln")}
+              placeholder="1234567890123"
               {...register("address.gln")}
               aria-invalid={!!errors?.gln}
             />
@@ -120,7 +123,7 @@ export const AddressForm = ({
           </div>
           <div>
             <FormLabel htmlFor="peppolId">
-              {t("address-form.fields.peppol-id")}
+              Peppol ID
             </FormLabel>
             <Controller
               control={control}
@@ -128,7 +131,7 @@ export const AddressForm = ({
               render={({ field }) => (
                 <Input
                   id="peppolId"
-                  placeholder={t("address-form.placeholders.peppol-id")}
+                  placeholder="1204:identifier"
                   value={field.value ?? ""}
                   aria-invalid={!!errors?.peppolId}
                   onChange={(event) => {
@@ -157,7 +160,7 @@ export const AddressForm = ({
               className="h-4 w-4 rounded border-gray-300 accent-primary"
             />
             <label htmlFor="poBox" className="text-sm text-gray-700">
-              {t("address-form.fields.po-box")}
+              PO Box
             </label>
           </div>
         </div>
@@ -165,39 +168,39 @@ export const AddressForm = ({
 
       <section className="space-y-4">
         <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
-          {t("address-form.sections.address")}
+          Address
         </h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
             <FormLabel htmlFor="streetAndNo">
-              {t("address-form.fields.street-and-number")}
+              Street & Number
             </FormLabel>
             <Input id="streetAndNo" {...register("address.streetAndNo")} />
           </div>
           <div>
             <FormLabel htmlFor="postalCode">
-              {t("address-form.fields.postal-code")}
+              Postal Code
             </FormLabel>
             <Input id="postalCode" {...register("address.postalCode")} />
           </div>
           <div>
-            <FormLabel htmlFor="city">{t("address-form.fields.city")}</FormLabel>
+            <FormLabel htmlFor="city">City</FormLabel>
             <Input id="city" {...register("address.city")} />
           </div>
           <div>
             <FormLabel htmlFor="region">
-              {t("address-form.fields.region")}
+              Region
             </FormLabel>
             <Input id="region" {...register("address.region")} />
           </div>
           <div>
             <FormLabel htmlFor="country">
-              {t("address-form.fields.country")}
+              Country
             </FormLabel>
             <Input id="country" {...register("address.country")} />
           </div>
           <div>
-            <FormLabel htmlFor="house">{t("address-form.fields.house")}</FormLabel>
+            <FormLabel htmlFor="house">House</FormLabel>
             <Input id="house" {...register("address.house")} />
           </div>
         </div>
@@ -205,21 +208,21 @@ export const AddressForm = ({
 
       <section className="space-y-4">
         <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
-          {t("address-form.sections.contact")}
+          Contact
         </h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <FormLabel htmlFor="telephone">
-              {t("address-form.fields.telephone")}
+              Telephone
             </FormLabel>
             <Input id="telephone" type="tel" {...register("address.telephone")} />
           </div>
           <div>
-            <FormLabel htmlFor="fax">{t("address-form.fields.fax")}</FormLabel>
+            <FormLabel htmlFor="fax">Fax</FormLabel>
             <Input id="fax" {...register("address.fax")} />
           </div>
           <div>
-            <FormLabel htmlFor="email">{t("address-form.fields.email")}</FormLabel>
+            <FormLabel htmlFor="email">Email</FormLabel>
             <Input
               id="email"
               type="email"
@@ -230,7 +233,7 @@ export const AddressForm = ({
           </div>
           <div>
             <FormLabel htmlFor="website">
-              {t("address-form.fields.website")}
+              Website
             </FormLabel>
             <Input
               id="website"
@@ -245,13 +248,13 @@ export const AddressForm = ({
 
       <section className="space-y-4">
         <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
-          {t("address-form.sections.category")}
+          Category
         </h2>
         <div className="space-y-4 rounded-2xl border border-border bg-muted/20 p-4">
           <div className="space-y-1">
-            <FormLabel required>{t("address-form.fields.category")}</FormLabel>
+            <FormLabel required>Category</FormLabel>
             <p className="text-sm text-muted-foreground">
-              {t("address-form.category-description")}
+              Choose how this address is used across the business flow.
             </p>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -259,7 +262,7 @@ export const AddressForm = ({
               <FormCheckboxCard
                 key={category}
                 active={selectedCategories.includes(category)}
-                label={t(`address-form.categories.${category}`)}
+                label={ADDRESS_CATEGORY_LABELS[category]}
                 value={category}
                 {...register("address.category")}
               />
@@ -272,12 +275,12 @@ export const AddressForm = ({
       {showBillingSettings && (
         <section className="space-y-4">
           <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
-            {t("address-form.sections.billing-address-settings")}
+            Billing Address Settings
           </h2>
           <div className="space-y-4 rounded-2xl border border-border bg-muted/20 p-4">
             <div>
               <FormLabel htmlFor="billingAttention">
-                {t("address-form.fields.billing-attention")}
+                To the Attention Of
               </FormLabel>
               <Input
                 id="billingAttention"
@@ -288,7 +291,7 @@ export const AddressForm = ({
               <Input
                 id="billingAttentionAdditional"
                 {...register("address.billingAttentionAdditional")}
-                placeholder={t("address-form.placeholders.billing-attention-additional")}
+                placeholder="Additional billing line"
               />
             </div>
           </div>
@@ -298,7 +301,7 @@ export const AddressForm = ({
       {showDeliverySettings && (
         <section className="space-y-4">
           <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
-            {t("address-form.sections.delivery-address-settings")}
+            Delivery Address Settings
           </h2>
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
             <div className="space-y-4 rounded-2xl border border-border bg-muted/20 p-4">
@@ -306,7 +309,7 @@ export const AddressForm = ({
                 <FormSelectField
                   control={control}
                   id="unloadingStartTime"
-                  label={t("address-form.fields.unloading-start-time")}
+                  label="Unloading Start Time"
                   name="address.unloadingStartTime"
                   options={timeSelectOptions}
                   emptyValue={EMPTY_SELECT_VALUE}
@@ -314,7 +317,7 @@ export const AddressForm = ({
                 <FormSelectField
                   control={control}
                   id="unloadingEndTime"
-                  label={t("address-form.fields.unloading-end-time")}
+                  label="Unloading End Time"
                   name="address.unloadingEndTime"
                   options={timeSelectOptions}
                   emptyValue={EMPTY_SELECT_VALUE}
@@ -324,7 +327,7 @@ export const AddressForm = ({
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <FormLabel htmlFor="maxLength">
-                    {t("address-form.fields.max-length")}
+                    Max Length
                   </FormLabel>
                   <div className="flex items-center gap-2">
                     <Input
@@ -335,13 +338,13 @@ export const AddressForm = ({
                       {...register("address.maxLength")}
                     />
                     <span className="text-sm text-muted-foreground">
-                      {t("address-form.units.mm")}
+                      mm
                     </span>
                   </div>
                 </div>
                 <div>
                   <FormLabel htmlFor="maxBundleWeight">
-                    {t("address-form.fields.max-bundle-weight")}
+                    Max Bundle Weight
                   </FormLabel>
                   <div className="flex items-center gap-2">
                     <Input
@@ -352,7 +355,7 @@ export const AddressForm = ({
                       {...register("address.maxBundleWeight")}
                     />
                     <span className="text-sm text-muted-foreground">
-                      {t("address-form.units.kg")}
+                      kg
                     </span>
                   </div>
                 </div>
@@ -360,7 +363,7 @@ export const AddressForm = ({
 
               <div>
                 <FormLabel htmlFor="loadingInstructions">
-                  {t("address-form.fields.loading-instructions")}
+                  Loading Instructions
                 </FormLabel>
                 <textarea
                   id="loadingInstructions"
@@ -373,7 +376,7 @@ export const AddressForm = ({
               <FormSelectField
                 control={control}
                 id="availableAt"
-                label={t("address-form.fields.available-at")}
+                label="Available At"
                 name="address.availableAt"
                 options={availableAtOptionsForSelect}
                 emptyValue={EMPTY_SELECT_VALUE}
@@ -383,18 +386,18 @@ export const AddressForm = ({
             <div className="space-y-4 rounded-2xl border border-border bg-muted/20 p-4">
               <div className="space-y-1">
                 <h3 className="text-sm font-medium text-foreground">
-                  {t("address-form.sections.handling-options")}
+                  Handling Options
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  {t("address-form.handling-options-description")}
+                  Mark any special delivery or unloading requirements.
                 </p>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
-                {BOOLEAN_FIELDS.map(({ name, labelKey }) => (
+                {BOOLEAN_FIELDS.map(({ name, label }) => (
                   <FormCheckboxCard
                     key={name}
                     active={watch(`address.${name}`)}
-                    label={t(labelKey)}
+                    label={label}
                     {...register(`address.${name}`)}
                   />
                 ))}

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useTranslation } from "react-i18next";
 import { type SelectCompanies } from "@/db";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
@@ -11,12 +10,12 @@ type ColumnKey = "id" | "companyName" | "createdAt" | "updatedAt";
 const ALL_COLUMNS: Array<{
   defaultVisible: boolean;
   key: ColumnKey;
-  labelKey: string;
+  label: string;
 }> = [
-  { key: "id", labelKey: "companies-table-content.columns.id", defaultVisible: true },
-  { key: "companyName", labelKey: "companies-table-content.columns.company-name", defaultVisible: true },
-  { key: "createdAt", labelKey: "companies-table-content.columns.created-at", defaultVisible: false },
-  { key: "updatedAt", labelKey: "companies-table-content.columns.updated-at", defaultVisible: false },
+  { key: "id", label: "Code", defaultVisible: true },
+  { key: "companyName", label: "Company Name", defaultVisible: true },
+  { key: "createdAt", label: "Created At", defaultVisible: false },
+  { key: "updatedAt", label: "Updated At", defaultVisible: false },
 ];
 
 const initialVisibility = ALL_COLUMNS.reduce(
@@ -31,7 +30,6 @@ type CompaniesTableContentProps = {
 export const CompaniesTableContent = ({
   companies,
 }: CompaniesTableContentProps) => {
-  const { t } = useTranslation();
   const [columnVisibility, setColumnVisibility] =
     useState<Record<ColumnKey, boolean>>(initialVisibility);
 
@@ -72,7 +70,7 @@ export const CompaniesTableContent = ({
         <ColumnSelector
           columns={ALL_COLUMNS.map((column) => ({
             key: column.key,
-            label: t(column.labelKey),
+            label: column.label,
           }))}
           visibility={columnVisibility}
           onToggle={toggleColumn}
@@ -84,7 +82,7 @@ export const CompaniesTableContent = ({
           <TableHeader>
             <TableRow>
               {visibleColumns.map((column) => (
-                <TableHead key={column.key}>{t(column.labelKey)}</TableHead>
+                <TableHead key={column.key}>{column.label}</TableHead>
               ))}
             </TableRow>
           </TableHeader>
@@ -92,7 +90,7 @@ export const CompaniesTableContent = ({
             {companies.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={visibleColumns.length} className="h-24 text-center">
-                  {t("companies-table-content.empty")}
+                  No companies found
                 </TableCell>
               </TableRow>
             ) : (

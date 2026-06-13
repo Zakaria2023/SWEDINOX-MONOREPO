@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { useTranslation } from "react-i18next";
 import {
   Building2,
   ChevronRight,
@@ -25,18 +24,13 @@ import {
   SidebarMenuSubItem,
 } from "@/components/shadcn/sidebar";
 import { cn } from "@/lib/helpers";
-import { useI18nContext } from "@/providers/I18NextProvider";
 
 export const AppSidebar = () => {
   const pathname = usePathname();
-  const { t } = useTranslation();
-  const { dir } = useI18nContext();
-  const isRtl = dir === "rtl";
 
   const chevronClass = (isExpanded: boolean) =>
     cn("ms-auto transition-transform", {
       "rotate-90": isExpanded,
-      "rotate-180": !isExpanded && isRtl,
     });
 
   const isCustomersActive = pathname.startsWith("/addresses");
@@ -55,16 +49,16 @@ export const AppSidebar = () => {
   const isSalesExpanded = isSalesOpen || isSalesActive;
 
   return (
-    <Sidebar side={isRtl ? "right" : "left"}>
+    <Sidebar>
       <SidebarHeader className="px-4 py-5">
         <span className="text-lg font-semibold tracking-tight">
-          {t("app-sidebar.brand")}
+          Swedinox
         </span>
       </SidebarHeader>
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>{t("app-sidebar.navigation")}</SidebarGroupLabel>
+          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
@@ -73,7 +67,7 @@ export const AppSidebar = () => {
                   onClick={() => setIsCustomersOpen((open) => !open)}
                 >
                   <Users />
-                  <span>{t("app-sidebar.groups.customers")}</span>
+                  <span>Customers</span>
                   <ChevronRight className={chevronClass(isCustomersExpanded)} />
                 </SidebarMenuButton>
                 {isCustomersExpanded && (
@@ -83,7 +77,7 @@ export const AppSidebar = () => {
                         render={<Link href="/addresses" />}
                         isActive={pathname.startsWith("/addresses")}
                       >
-                        <span>{t("app-sidebar.items.addresses")}</span>
+                        <span>Addresses</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                   </SidebarMenuSub>
@@ -96,7 +90,7 @@ export const AppSidebar = () => {
                   onClick={() => setIsCompanyOpen((open) => !open)}
                 >
                   <Building2 />
-                  <span>{t("app-sidebar.groups.company")}</span>
+                  <span>Company</span>
                   <ChevronRight className={chevronClass(isCompanyExpanded)} />
                 </SidebarMenuButton>
                 {isCompanyExpanded && (
@@ -109,7 +103,7 @@ export const AppSidebar = () => {
                           pathname.startsWith("/companies/")
                         }
                       >
-                        <span>{t("app-sidebar.items.companies")}</span>
+                        <span>Companies</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                     <SidebarMenuSubItem>
@@ -117,9 +111,7 @@ export const AppSidebar = () => {
                         render={<Link href="/communication-settings" />}
                         isActive={pathname.startsWith("/communication-settings")}
                       >
-                        <span>
-                          {t("app-sidebar.items.communication-settings")}
-                        </span>
+                        <span>Communication Settings</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                   </SidebarMenuSub>
@@ -132,7 +124,7 @@ export const AppSidebar = () => {
                   onClick={() => setIsSalesOpen((open) => !open)}
                 >
                   <ContactRound />
-                  <span>{t("app-sidebar.groups.sales")}</span>
+                  <span>Sales</span>
                   <ChevronRight className={chevronClass(isSalesExpanded)} />
                 </SidebarMenuButton>
                 {isSalesExpanded && (
@@ -142,7 +134,7 @@ export const AppSidebar = () => {
                         render={<Link href="/contracts" />}
                         isActive={pathname.startsWith("/contracts")}
                       >
-                        <span>{t("app-sidebar.items.contracts")}</span>
+                        <span>Contracts</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                     <SidebarMenuSubItem>
@@ -150,7 +142,7 @@ export const AppSidebar = () => {
                         render={<Link href="/contract-groups" />}
                         isActive={pathname.startsWith("/contract-groups")}
                       >
-                        <span>{t("app-sidebar.items.contract-groups")}</span>
+                        <span>Contract Groups</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                   </SidebarMenuSub>

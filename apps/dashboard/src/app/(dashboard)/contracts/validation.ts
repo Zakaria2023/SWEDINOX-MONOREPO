@@ -1,11 +1,13 @@
-import type { TFunction } from "i18next";
 import { z } from "zod";
 import { contractTypes } from "@/lib/enums";
+import { VALIDATION_MESSAGES } from "@/lib/validation-messages";
 
-export const createContractSchema = (t: TFunction) =>
+export const createContractSchema = () =>
   z.object({
     contractType: z.enum(contractTypes).optional(),
-    description: z.string().min(1, t("validation.description-required")),
+    description: z
+      .string()
+      .min(1, VALIDATION_MESSAGES.descriptionRequired),
     contractGroupUuid: z.string().optional(),
     quicklyChangeOrder: z.string().optional(),
     hasPriceDate: z.boolean(),

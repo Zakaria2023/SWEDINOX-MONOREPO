@@ -7,8 +7,8 @@ const CommunicationSettingsPage = () => {
   return (
     <div className="space-y-6 p-6">
       <PageHeading
-        titleKey="communication-settings-page.title"
-        descriptionKey="communication-settings-page.description"
+        title="Communication Settings"
+        description="Manage communication settings per company and document type"
       />
       <Suspense fallback={<DataTableFallback columnCount={6} />}>
         <CommunicationSettingsTable />

@@ -3,7 +3,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
-import { useTranslation } from "react-i18next";
 import { createCompany, type CommSettingInput, type CompanyActionResult } from "./actions";
 import { createCompanySchema, type CompanyFormValues } from "./validation";
 import type { CompanyRole } from "@/lib/enums";
@@ -41,12 +40,11 @@ const mapAddress = (address: CompanyFormValues["address"]) => ({
 });
 
 export const useCompanySubmit = () => {
-  const { t } = useTranslation();
   const [isPending, startTransition] = useTransition();
   const [state, setState] = useState<CompanyActionResult>({});
 
   const form = useForm<CompanyFormValues>({
-    resolver: zodResolver(createCompanySchema(t)),
+    resolver: zodResolver(createCompanySchema()),
     defaultValues: {
       companyName: "",
       correspName: "",

@@ -1,10 +1,7 @@
 import { SignIn } from "@clerk/nextjs";
 import { Layers } from "lucide-react";
-import { getTranslation } from "@/i18n/getTranslation";
 
-const SignInPage = async () => {
-  const { t } = await getTranslation();
-
+const SignInPage = () => {
   return (
     <main className="flex min-h-screen items-center justify-center bg-white">
       <div className="flex w-full max-w-105 flex-col items-center gap-6 px-4">
@@ -13,10 +10,10 @@ const SignInPage = async () => {
             <Layers size={24} color="white" />
           </div>
           <h1 className="mb-1 text-2xl font-bold text-gray-900">
-            {t("sign-in-page.title")}
+            Swedinox
           </h1>
           <p className="m-0 text-sm text-gray-500">
-            {t("sign-in-page.description")}
+            Welcome back, sign in to continue
           </p>
         </div>
 

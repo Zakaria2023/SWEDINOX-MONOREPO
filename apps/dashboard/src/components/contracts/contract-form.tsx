@@ -3,7 +3,6 @@
 import { useEffect } from "react";
 import { Controller } from "react-hook-form";
 import { useRouter } from "next/navigation";
-import { useTranslation } from "react-i18next";
 import { type ContractGroupOption } from "@/app/(dashboard)/contracts/actions";
 import { useContractSubmit } from "@/app/(dashboard)/contracts/use-contract-submit";
 import { contractTypes } from "@/lib/enums";
@@ -13,13 +12,13 @@ import { Select } from "@/components/shadcn/select";
 import { FormActions } from "@/components/ui/form-actions";
 import { FormError } from "@/components/ui/form-error";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
+import { COMMON_TEXT, CONTRACT_TYPE_LABELS } from "@/lib/labels";
 
 type ContractFormProps = {
   groups: ContractGroupOption[];
 };
 
 export const ContractForm = ({ groups }: ContractFormProps) => {
-  const { t } = useTranslation();
   const router = useRouter();
   const { form, isPending, onSubmit, state } = useContractSubmit();
   const { register, watch, setValue, control, formState: { errors } } = form;
@@ -34,7 +33,7 @@ export const ContractForm = ({ groups }: ContractFormProps) => {
   }, [router, state.success]);
 
   const groupOptions = [
-    { value: "", label: t("common.empty-option") },
+    { value: "", label: COMMON_TEXT.emptyOption },
     ...groups.map((group) => ({ value: group.uuid, label: group.name })),
   ];
 
@@ -43,7 +42,7 @@ export const ContractForm = ({ groups }: ContractFormProps) => {
       <div className="grid gap-8 lg:grid-cols-[200px_1fr_200px_200px]">
         <section className="space-y-3">
           <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-gray-700">
-            {t("contract-form.sections.contract-type")}
+            Contract Type
           </h2>
           <div className="space-y-2">
             {contractTypes.map((type) => (
@@ -56,7 +55,7 @@ export const ContractForm = ({ groups }: ContractFormProps) => {
                   disabled={isPending}
                 />
                 <span className="text-sm text-gray-700">
-                  {t(`contract-form.contract-types.${type}`)}
+                  {CONTRACT_TYPE_LABELS[type]}
                 </span>
               </label>
             ))}
@@ -65,12 +64,12 @@ export const ContractForm = ({ groups }: ContractFormProps) => {
 
         <section className="space-y-4">
           <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-gray-700">
-            {t("contract-form.sections.contract")}
+            Contract
           </h2>
           <div className="grid gap-4">
             <div>
               <FormLabel htmlFor="description" required>
-                {t("contract-form.fields.description")}
+                Description
               </FormLabel>
               <Input
                 id="description"
@@ -83,7 +82,7 @@ export const ContractForm = ({ groups }: ContractFormProps) => {
 
             <div>
               <FormLabel htmlFor="contractGroupUuid">
-                {t("contract-form.fields.contract-group")}
+                Contract Group
               </FormLabel>
               <Controller
                 name="contractGroupUuid"
@@ -94,7 +93,7 @@ export const ContractForm = ({ groups }: ContractFormProps) => {
                     options={groupOptions}
                     value={field.value ?? ""}
                     onValueChange={field.onChange}
-                    placeholder={t("common.empty-option")}
+                    placeholder={COMMON_TEXT.emptyOption}
                     disabled={isPending}
                   />
                 )}
@@ -106,7 +105,7 @@ export const ContractForm = ({ groups }: ContractFormProps) => {
                 htmlFor="quicklyChangeOrder"
                 className="shrink-0 text-sm font-medium text-gray-700"
               >
-                {t("contract-form.fields.quickly-change-order")}
+                Quickly Change Order
               </label>
               <Input
                 id="quicklyChangeOrder"
@@ -128,7 +127,7 @@ export const ContractForm = ({ groups }: ContractFormProps) => {
                 htmlFor="hasPriceDate"
                 className="shrink-0 text-sm font-medium text-gray-700"
               >
-                {t("contract-form.fields.price-date")}
+                Price Date
               </label>
               {hasPriceDate && (
                 <Controller
@@ -155,7 +154,7 @@ export const ContractForm = ({ groups }: ContractFormProps) => {
                 disabled={isPending}
               />
               <label htmlFor="linkToNewCustomer" className="text-sm font-medium text-gray-700">
-                {t("contract-form.fields.link-to-new-customer")}
+                Link this contract to a new customer
               </label>
             </div>
           </div>
@@ -163,24 +162,24 @@ export const ContractForm = ({ groups }: ContractFormProps) => {
 
         <section className="space-y-4">
           <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-gray-700">
-            {t("contract-form.sections.search-codes")}
+            Search Codes
           </h2>
           <div className="space-y-3">
             <div>
               <FormLabel htmlFor="searchCode1">
-                {t("contract-form.fields.search-code")}
+                Search Code
               </FormLabel>
               <Input id="searchCode1" {...register("searchCode1")} disabled={isPending} />
             </div>
             <div>
               <FormLabel htmlFor="searchCode2">
-                {t("contract-form.fields.search-code")}
+                Search Code
               </FormLabel>
               <Input id="searchCode2" {...register("searchCode2")} disabled={isPending} />
             </div>
             <div>
               <FormLabel htmlFor="searchCode3">
-                {t("contract-form.fields.search-code")}
+                Search Code
               </FormLabel>
               <Input id="searchCode3" {...register("searchCode3")} disabled={isPending} />
             </div>
@@ -189,12 +188,12 @@ export const ContractForm = ({ groups }: ContractFormProps) => {
 
         <section className="space-y-4">
           <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-gray-700">
-            {t("contract-form.sections.website")}
+            Website
           </h2>
           <div className="space-y-3">
             <div>
               <FormLabel htmlFor="websiteSorting">
-                {t("contract-form.fields.website-sorting")}
+                Website Sorting
               </FormLabel>
               <Input
                 id="websiteSorting"
@@ -214,7 +213,7 @@ export const ContractForm = ({ groups }: ContractFormProps) => {
                 disabled={isPending}
               />
               <label htmlFor="hideOnWebsite" className="text-sm font-medium text-gray-700">
-                {t("contract-form.fields.hide-on-website")}
+                Hide on Website
               </label>
             </div>
           </div>
@@ -226,7 +225,7 @@ export const ContractForm = ({ groups }: ContractFormProps) => {
       <FormActions
         isPending={isPending}
         onCancel={() => router.push("/contracts")}
-        submitLabel={t("contract-form.submit")}
+        submitLabel="Create Contract"
       />
     </form>
   );

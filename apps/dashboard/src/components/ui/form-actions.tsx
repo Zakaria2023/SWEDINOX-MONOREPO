@@ -1,7 +1,7 @@
 "use client";
 
-import { useTranslation } from "react-i18next";
 import { Button } from "@/components/shadcn/button";
+import { COMMON_TEXT } from "@/lib/labels";
 
 type FormActionsProps = {
   cancelLabel?: string;
@@ -18,15 +18,13 @@ export const FormActions = ({
   pendingLabel,
   submitLabel,
 }: FormActionsProps) => {
-  const { t } = useTranslation();
-
   return (
     <div className="flex gap-3 pb-6">
       <Button type="submit" disabled={isPending}>
-        {isPending ? pendingLabel ?? t("form-actions.pending") : submitLabel}
+        {isPending ? pendingLabel ?? COMMON_TEXT.saving : submitLabel}
       </Button>
       <Button type="button" variant="outline" onClick={onCancel}>
-        {cancelLabel ?? t("form-actions.cancel")}
+        {cancelLabel ?? COMMON_TEXT.cancel}
       </Button>
     </div>
   );

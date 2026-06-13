@@ -1,8 +1,8 @@
+import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { getContractGroups } from "@/app/(dashboard)/contracts/actions";
 import { ContractForm } from "@/components/contracts/contract-form";
 import { PageHeading } from "@/components/layout/page-heading";
-import { TranslatedLink } from "@/components/layout/translated-link";
 
 const AddContractPage = async () => {
   const groups = await getContractGroups();
@@ -10,14 +10,15 @@ const AddContractPage = async () => {
   return (
     <div className="space-y-6 p-6">
       <div>
-        <TranslatedLink
+        <Link
           href="/contracts"
-          labelKey="contracts-add-page.back-link"
           className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-          icon={<ChevronLeft className="size-4" />}
-        />
+        >
+          <ChevronLeft className="size-4" />
+          Contracts
+        </Link>
       </div>
-      <PageHeading titleKey="contracts-add-page.title" />
+      <PageHeading title="New Contract" />
       <ContractForm groups={groups} />
     </div>
   );

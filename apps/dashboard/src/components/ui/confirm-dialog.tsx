@@ -1,6 +1,5 @@
 "use client";
 
-import { useTranslation } from "react-i18next";
 import { Button } from "@/components/shadcn/button";
 import {
   Dialog,
@@ -10,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/shadcn/dialog";
+import { COMMON_TEXT } from "@/lib/labels";
 
 type ConfirmDialogProps = {
   confirmLabel?: string;
@@ -30,8 +30,6 @@ export const ConfirmDialog = ({
   open,
   title,
 }: ConfirmDialogProps) => {
-  const { t } = useTranslation();
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent showCloseButton={!isPending}>
@@ -46,7 +44,7 @@ export const ConfirmDialog = ({
             onClick={() => onOpenChange(false)}
             disabled={isPending}
           >
-            {t("confirm-dialog.cancel")}
+            {COMMON_TEXT.cancel}
           </Button>
           <Button
             type="button"
@@ -55,8 +53,8 @@ export const ConfirmDialog = ({
             disabled={isPending}
           >
             {isPending
-              ? t("confirm-dialog.pending")
-              : confirmLabel ?? t("confirm-dialog.confirm")}
+              ? COMMON_TEXT.deleting
+              : confirmLabel ?? COMMON_TEXT.confirmDelete}
           </Button>
         </DialogFooter>
       </DialogContent>

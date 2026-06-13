@@ -6,7 +6,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslation } from "react-i18next";
 import {
   createContractGroup,
   deleteContractGroup,
@@ -27,6 +26,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FormError } from "@/components/ui/form-error";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
+import { COMMON_TEXT } from "@/lib/labels";
+import { VALIDATION_MESSAGES } from "@/lib/validation-messages";
 
 const createGroupSchema = (nameRequiredMessage: string) =>
   z.object({
@@ -52,7 +53,6 @@ const DEFAULT_VALUES: GroupFormValues = {
 type Props = { groups: ContractGroupItem[] };
 
 export const ContractGroupsClient = ({ groups }: Props) => {
-  const { t } = useTranslation();
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -61,14 +61,14 @@ export const ContractGroupsClient = ({ groups }: Props) => {
   const [formError, setFormError] = useState<string | undefined>();
 
   const form = useForm<GroupFormValues>({
-    resolver: zodResolver(createGroupSchema(t("validation.name-required"))),
+    resolver: zodResolver(createGroupSchema(VALIDATION_MESSAGES.nameRequired)),
     defaultValues: DEFAULT_VALUES,
   });
 
   const { register, control, formState: { errors }, reset, handleSubmit } = form;
 
   const subgroupOptions = [
-    { value: "", label: t("common.empty-option") },
+    { value: "", label: COMMON_TEXT.emptyOption },
     ...groups
       .filter((group) => group.uuid !== editTarget?.uuid)
       .map((group) => ({ value: group.uuid, label: group.name })),
@@ -143,11 +143,11 @@ export const ContractGroupsClient = ({ groups }: Props) => {
   const activeBadge = (value: boolean | null) =>
     value ? (
       <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
-        {t("contract-groups-client.status.active")}
+        Active
       </span>
     ) : (
       <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
-        {t("contract-groups-client.status.inactive")}
+        Inactive
       </span>
     );
 
@@ -157,7 +157,7 @@ export const ContractGroupsClient = ({ groups }: Props) => {
         <div className="flex justify-end">
           <Button type="button" onClick={openCreate} className="gap-2">
             <Plus className="size-4" />
-            {t("contract-groups-client.new-group")}
+            New Group
           </Button>
         </div>
 
@@ -165,11 +165,11 @@ export const ContractGroupsClient = ({ groups }: Props) => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>{t("contract-groups-client.columns.id")}</TableHead>
-                <TableHead>{t("contract-groups-client.columns.name")}</TableHead>
-                <TableHead>{t("contract-groups-client.columns.subgroup")}</TableHead>
-                <TableHead>{t("contract-groups-client.columns.status")}</TableHead>
-                <TableHead>{t("contract-groups-client.columns.created-at")}</TableHead>
+                <TableHead>Code</TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead>Subgroup</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Created At</TableHead>
                 <TableHead className="w-24" />
               </TableRow>
             </TableHeader>
@@ -177,7 +177,7 @@ export const ContractGroupsClient = ({ groups }: Props) => {
               {groups.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
-                    {t("contract-groups-client.empty")}
+                    No contract groups yet
                   </TableCell>
                 </TableRow>
               ) : (
@@ -186,7 +186,7 @@ export const ContractGroupsClient = ({ groups }: Props) => {
                     <TableCell className="font-medium">{group.id}</TableCell>
                     <TableCell className="font-medium">{group.name}</TableCell>
                     <TableCell className="text-muted-foreground">
-                      {group.subgroupName ?? t("common.not-available")}
+                      {group.subgroupName ?? COMMON_TEXT.notAvailable}
                     </TableCell>
                     <TableCell>{activeBadge(group.isActive)}</TableCell>
                     <TableCell>
@@ -198,7 +198,7 @@ export const ContractGroupsClient = ({ groups }: Props) => {
                           type="button"
                           onClick={() => openEdit(group)}
                           className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
-                          title={t("contract-groups-client.actions.edit")}
+                          title={COMMON_TEXT.edit}
                         >
                           <Pencil className="size-3.5" />
                         </button>
@@ -206,7 +206,7 @@ export const ContractGroupsClient = ({ groups }: Props) => {
                           type="button"
                           onClick={() => setDeleteTarget(group)}
                           className="rounded p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                          title={t("contract-groups-client.actions.delete")}
+                          title={COMMON_TEXT.delete}
                         >
                           <Trash2 className="size-3.5" />
                         </button>
@@ -225,26 +225,26 @@ export const ContractGroupsClient = ({ groups }: Props) => {
           <DialogHeader>
             <DialogTitle>
               {editTarget
-                ? t("contract-groups-client.dialog.edit-title")
-                : t("contract-groups-client.dialog.create-title")}
+                ? "Edit Contract Group"
+                : "New Contract Group"}
             </DialogTitle>
             <DialogDescription>
               {editTarget
-                ? t("contract-groups-client.dialog.edit-description")
-                : t("contract-groups-client.dialog.create-description")}
+                ? "Update the name and settings of this group."
+                : "Create a new group that can be linked to contracts."}
             </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={onSubmit} className="mt-2 space-y-4 px-6 pb-6">
             <div>
               <FormLabel htmlFor="name" required>
-                {t("contract-groups-client.fields.name")}
+                Name
               </FormLabel>
               <Input
                 id="name"
                 {...register("name")}
                 aria-invalid={!!errors.name}
-                placeholder={t("contract-groups-client.placeholders.name")}
+                placeholder="e.g. Procurement"
                 disabled={isPending}
               />
               <FormFieldError message={errors.name?.message} />
@@ -252,7 +252,7 @@ export const ContractGroupsClient = ({ groups }: Props) => {
 
             <div>
               <FormLabel htmlFor="contractSubgroupUuid">
-                {t("contract-groups-client.fields.contract-subgroup")}
+                Contract subgroup
               </FormLabel>
               <Controller
                 name="contractSubgroupUuid"
@@ -263,7 +263,7 @@ export const ContractGroupsClient = ({ groups }: Props) => {
                     options={subgroupOptions}
                     value={field.value ?? ""}
                     onValueChange={field.onChange}
-                    placeholder={t("common.empty-option")}
+                    placeholder={COMMON_TEXT.emptyOption}
                     disabled={isPending}
                   />
                 )}
@@ -273,7 +273,7 @@ export const ContractGroupsClient = ({ groups }: Props) => {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <FormLabel htmlFor="sequenceWithinSubgroup">
-                  {t("contract-groups-client.fields.sequence-within-subgroup")}
+                  Sequence within subgroup
                 </FormLabel>
                 <Input
                   id="sequenceWithinSubgroup"
@@ -285,7 +285,7 @@ export const ContractGroupsClient = ({ groups }: Props) => {
               </div>
               <div>
                 <FormLabel htmlFor="quicklyChangeSequenceNumber">
-                  {t("contract-groups-client.fields.quickly-change-sequence-number")}
+                  Quickly change seq. no.
                 </FormLabel>
                 <Input
                   id="quicklyChangeSequenceNumber"
@@ -303,7 +303,7 @@ export const ContractGroupsClient = ({ groups }: Props) => {
                 disabled={isPending}
               />
               <span className="text-sm font-medium text-gray-700">
-                {t("contract-groups-client.fields.is-active")}
+                Active
               </span>
             </label>
 
@@ -316,14 +316,14 @@ export const ContractGroupsClient = ({ groups }: Props) => {
                 onClick={() => handleDialogClose(false)}
                 disabled={isPending}
               >
-                {t("common.cancel")}
+                {COMMON_TEXT.cancel}
               </Button>
               <Button type="submit" disabled={isPending}>
                 {isPending
-                  ? t("common.saving")
+                  ? COMMON_TEXT.saving
                   : editTarget
-                    ? t("contract-groups-client.save-changes")
-                    : t("contract-groups-client.create-group")}
+                    ? "Save Changes"
+                    : "Create Group"}
               </Button>
             </div>
           </form>
@@ -335,11 +335,9 @@ export const ContractGroupsClient = ({ groups }: Props) => {
         onOpenChange={(open) => {
           if (!open) setDeleteTarget(null);
         }}
-        title={t("contract-groups-client.delete-dialog.title")}
-        description={t("contract-groups-client.delete-dialog.description", {
-          name: deleteTarget?.name ?? "",
-        })}
-        confirmLabel={t("common.delete")}
+        title="Delete Contract Group"
+        description={`Are you sure you want to delete "${deleteTarget?.name ?? ""}"? This will also remove it from all linked contracts.`}
+        confirmLabel={COMMON_TEXT.delete}
         isPending={isPending}
         onConfirm={handleDelete}
       />

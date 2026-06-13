@@ -3,10 +3,8 @@
 import { Popover as PopoverPrimitive } from "@base-ui/react/popover";
 import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 import { useState } from "react";
-import { useTranslation } from "react-i18next";
-import { languageLocales } from "@/i18n/config";
-import { useI18nContext } from "@/providers/I18NextProvider";
 import { cn } from "@/lib/helpers";
+import { COMMON_TEXT } from "@/lib/labels";
 
 type DatePickerProps = {
   value?: string;
@@ -23,9 +21,7 @@ export const DatePicker = ({
   placeholder,
   className,
 }: DatePickerProps) => {
-  const { language } = useI18nContext();
-  const { t } = useTranslation();
-  const locale = languageLocales[language];
+  const locale = "en-US";
   const today = new Date();
   const parsed = value ? new Date(value + "T00:00:00") : null;
 
@@ -118,7 +114,7 @@ export const DatePicker = ({
           className,
         )}
       >
-        <span>{displayValue || placeholder || t("date-picker.placeholder")}</span>
+        <span>{displayValue || placeholder || COMMON_TEXT.datePlaceholder}</span>
         <Calendar className="size-4 shrink-0 text-muted-foreground" />
       </PopoverPrimitive.Trigger>
 
@@ -130,7 +126,7 @@ export const DatePicker = ({
                 type="button"
                 onClick={prevMonth}
                 className="rounded-lg p-1 hover:bg-muted"
-                aria-label={t("date-picker.previous-month")}
+                aria-label={COMMON_TEXT.previousMonth}
               >
                 <ChevronLeft className="size-4" />
               </button>
@@ -139,7 +135,7 @@ export const DatePicker = ({
                 type="button"
                 onClick={nextMonth}
                 className="rounded-lg p-1 hover:bg-muted"
-                aria-label={t("date-picker.next-month")}
+                aria-label={COMMON_TEXT.nextMonth}
               >
                 <ChevronRight className="size-4" />
               </button>

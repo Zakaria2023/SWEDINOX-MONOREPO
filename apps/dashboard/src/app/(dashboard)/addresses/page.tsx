@@ -7,8 +7,8 @@ const AddressesPage = () => {
   return (
     <div className="space-y-6 p-6">
       <PageHeading
-        titleKey="addresses-page.title"
-        descriptionKey="addresses-page.description"
+        title="Addresses"
+        description="Address records and details"
       />
       <Suspense fallback={<DataTableFallback columnCount={13} />}>
         <AddressesTable />

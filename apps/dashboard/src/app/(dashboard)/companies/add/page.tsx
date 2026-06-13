@@ -5,8 +5,8 @@ const AddCompanyPage = () => {
   return (
     <div className="max-w-4xl space-y-6 p-6">
       <PageHeading
-        titleKey="companies-add-page.title"
-        descriptionKey="companies-add-page.description"
+        title="Add Company"
+        description="Create a new company record"
       />
       <CompanyForm />
     </div>
