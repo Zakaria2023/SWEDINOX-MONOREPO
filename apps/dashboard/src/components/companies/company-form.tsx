@@ -1,12 +1,11 @@
 "use client";
 
-import { MapPin, Plus, User, X } from "lucide-react";
+import { MapPin, Plus, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
-import type { ContactInput } from "@/app/(dashboard)/companies/actions";
 import {
   createCompanySchema,
   type AddressFormValues,
@@ -15,7 +14,6 @@ import {
 import { useCompanySubmit } from "@/app/(dashboard)/companies/use-company-submit";
 import { companyLangs, companyRoles } from "@/lib/enums";
 import { AddressForm } from "@/components/companies/address-form";
-import { ContactDialog } from "@/components/companies/contact-dialog";
 import { Button } from "@/components/shadcn/button";
 import {
   Dialog,
@@ -65,15 +63,9 @@ const DEFAULT_ADDRESS: CompanyFormValues["address"] = {
 export const CompanyForm = () => {
   const { t } = useTranslation();
   const router = useRouter();
-  const [isFirstAddressDialogOpen, setIsFirstAddressDialogOpen] =
-    useState(false);
-  const [isAdditionalAddressDialogOpen, setIsAdditionalAddressDialogOpen] =
-    useState(false);
-  const [additionalAddresses, setAdditionalAddresses] = useState<
-    AddressFormValues[]
-  >([]);
-  const [isContactDialogOpen, setIsContactDialogOpen] = useState(false);
-  const [contacts, setContacts] = useState<ContactInput[]>([]);
+  const [isFirstAddressDialogOpen, setIsFirstAddressDialogOpen] = useState(false);
+  const [isAdditionalAddressDialogOpen, setIsAdditionalAddressDialogOpen] = useState(false);
+  const [additionalAddresses, setAdditionalAddresses] = useState<AddressFormValues[]>([]);
 
   const { form, isPending, onSubmit, state } = useCompanySubmit();
   const {
@@ -156,10 +148,7 @@ export const CompanyForm = () => {
 
   const handleSaveAdditionalAddress = async () => {
     const isValid = await additionalForm.trigger("address");
-    if (!isValid) {
-      return;
-    }
-
+    if (!isValid) return;
     const values = additionalForm.getValues("address");
     setAdditionalAddresses((prev) => [...prev, values]);
     resetAdditionalForm();
@@ -167,9 +156,7 @@ export const CompanyForm = () => {
   };
 
   const removeAdditionalAddress = (index: number) => {
-    setAdditionalAddresses((prev) =>
-      prev.filter((_, itemIndex) => itemIndex !== index),
-    );
+    setAdditionalAddresses((prev) => prev.filter((_, i) => i !== index));
   };
 
   const toggleRole = (role: string) => {
@@ -184,10 +171,7 @@ export const CompanyForm = () => {
 
   return (
     <>
-      <form
-        onSubmit={onSubmit(additionalAddresses, contacts)}
-        className="space-y-8"
-      >
+      <form onSubmit={onSubmit(additionalAddresses)} className="space-y-8">
         <section className="space-y-4">
           <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
             {t("company-form.sections.company-details")}
@@ -295,9 +279,7 @@ export const CompanyForm = () => {
                     disabled={isPending}
                   >
                     <X className="size-4" />
-                    <span className="sr-only">
-                      {t("company-form.remove-address")}
-                    </span>
+                    <span className="sr-only">{t("company-form.remove-address")}</span>
                   </button>
                 </div>
               ))}
@@ -313,57 +295,6 @@ export const CompanyForm = () => {
                   {t("company-form.add-delivery-address")}
                 </button>
               )}
-            </div>
-
-            <div className="space-y-2">
-              {contacts.map((contact, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between rounded-lg border border-border bg-background px-3 py-2"
-                >
-                  <div className="flex min-w-0 items-center gap-2 text-sm">
-                    <User className="size-4 shrink-0 text-muted-foreground" />
-                    <span className="truncate font-medium">
-                      {contact.fullName}
-                    </span>
-                    {contact.email && (
-                      <span className="truncate text-muted-foreground">
-                        {contact.email}
-                      </span>
-                    )}
-                    {contact.telephone && (
-                      <span className="shrink-0 text-muted-foreground">
-                        {contact.telephone}
-                      </span>
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setContacts((prev) =>
-                        prev.filter((_, itemIndex) => itemIndex !== index),
-                      )
-                    }
-                    className="shrink-0 text-muted-foreground hover:text-destructive"
-                    disabled={isPending}
-                  >
-                    <X className="size-4" />
-                    <span className="sr-only">
-                      {t("company-form.remove-contact")}
-                    </span>
-                  </button>
-                </div>
-              ))}
-
-              <button
-                type="button"
-                onClick={() => setIsContactDialogOpen(true)}
-                className="inline-flex cursor-pointer h-9 w-full items-center justify-center gap-2 rounded-lg border border-dashed border-border px-3 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary"
-                disabled={isPending}
-              >
-                <Plus className="size-4" />
-                {t("company-form.add-contact")}
-              </button>
             </div>
           </div>
         </section>
@@ -402,31 +333,19 @@ export const CompanyForm = () => {
               <FormLabel htmlFor="searchCode1">
                 {t("company-form.fields.search-code")}
               </FormLabel>
-              <Input
-                id="searchCode1"
-                {...register("searchCode1")}
-                disabled={isPending}
-              />
+              <Input id="searchCode1" {...register("searchCode1")} disabled={isPending} />
             </div>
             <div>
               <FormLabel htmlFor="searchCode2">
                 {t("company-form.fields.search-code")}
               </FormLabel>
-              <Input
-                id="searchCode2"
-                {...register("searchCode2")}
-                disabled={isPending}
-              />
+              <Input id="searchCode2" {...register("searchCode2")} disabled={isPending} />
             </div>
             <div>
               <FormLabel htmlFor="searchCode3">
                 {t("company-form.fields.search-code")}
               </FormLabel>
-              <Input
-                id="searchCode3"
-                {...register("searchCode3")}
-                disabled={isPending}
-              />
+              <Input id="searchCode3" {...register("searchCode3")} disabled={isPending} />
             </div>
           </div>
         </section>
@@ -440,10 +359,7 @@ export const CompanyForm = () => {
         />
       </form>
 
-      <Dialog
-        open={isFirstAddressDialogOpen}
-        onOpenChange={setIsFirstAddressDialogOpen}
-      >
+      <Dialog open={isFirstAddressDialogOpen} onOpenChange={setIsFirstAddressDialogOpen}>
         <DialogContent className="flex h-[85dvh] max-w-3xl flex-col gap-0 p-0">
           <DialogHeader className="shrink-0 border-b bg-background px-6 py-5">
             <DialogTitle className="flex items-center gap-2">
@@ -464,11 +380,7 @@ export const CompanyForm = () => {
           </div>
           <div className="shrink-0 border-t bg-background px-6 py-4">
             <div className="flex justify-end gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setIsFirstAddressDialogOpen(false)}
-              >
+              <Button type="button" variant="outline" onClick={() => setIsFirstAddressDialogOpen(false)}>
                 {t("common.cancel")}
               </Button>
               <Button type="button" onClick={handleSaveFirstAddress}>
@@ -482,9 +394,7 @@ export const CompanyForm = () => {
       <Dialog
         open={isAdditionalAddressDialogOpen}
         onOpenChange={(open) => {
-          if (!open) {
-            resetAdditionalForm();
-          }
+          if (!open) resetAdditionalForm();
           setIsAdditionalAddressDialogOpen(open);
         }}
       >
@@ -526,15 +436,6 @@ export const CompanyForm = () => {
           </div>
         </DialogContent>
       </Dialog>
-
-      <ContactDialog
-        open={isContactDialogOpen}
-        onOpenChange={setIsContactDialogOpen}
-        onAdd={(contact) => {
-          setContacts((prev) => [...prev, contact]);
-          setIsContactDialogOpen(false);
-        }}
-      />
     </>
   );
 };

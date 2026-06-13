@@ -6,21 +6,12 @@ import {
   CompanyAddresses,
   type InsertCompanyAddresses,
 } from "@/db/schema/company-addresses";
-import {
-  CompanyContacts,
-  type InsertCompanyContacts,
-} from "@/db/schema/company-contacts";
 import { CompanyRoleLinks } from "@/db/schema/company-role-links";
 import type { CompanyLang, CompanyRole } from "@/lib/enums";
 import { generateUuid } from "@/lib/helpers";
 import { desc } from "drizzle-orm";
 
 export type AddressInput = Omit<InsertCompanyAddresses, "uuid" | "companyUuid">;
-
-export type ContactInput = Omit<
-  InsertCompanyContacts,
-  "id" | "companyUuid" | "createdAt" | "updatedAt"
->;
 
 export type CompanyFields = {
   companyName: string;
@@ -51,7 +42,6 @@ export const createCompany = async (
   firstAddress: AddressInput,
   additionalAddresses: AddressInput[] = [],
   roles: CompanyRole[] = [],
-  contacts: ContactInput[] = [],
 ): Promise<CompanyActionResult> => {
   const uuid = generateUuid();
 
@@ -84,13 +74,6 @@ export const createCompany = async (
 
       for (const role of roles) {
         await tx.insert(CompanyRoleLinks).values({ companyUuid: uuid, role });
-      }
-
-      for (const contact of contacts) {
-        await tx.insert(CompanyContacts).values({
-          ...contact,
-          companyUuid: uuid,
-        });
       }
     });
 

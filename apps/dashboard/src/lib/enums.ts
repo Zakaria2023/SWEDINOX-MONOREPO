@@ -14,17 +14,6 @@ export const availableAtOptions = [
 
 export type AvailableAt = (typeof availableAtOptions)[number];
 
-export const contactSalutations = [
-  "mr",
-  "mrs",
-  "ms",
-  "dr",
-  "engineer",
-  "professor",
-] as const satisfies readonly string[];
-
-export type ContactSalutation = (typeof contactSalutations)[number];
-
 export const companyLangs = [
   "dutch",
   "arabic",
@@ -57,17 +46,6 @@ export const contractTypes = [
 ] as const satisfies readonly string[];
 
 export type ContractType = (typeof contractTypes)[number];
-
-export const companyContactCategories = [
-  "procurement",
-  "sales",
-  "warehouse",
-  "management",
-  "bookkeeping",
-  "certificates",
-] as const satisfies readonly string[];
-
-export type CompanyContactCategory = (typeof companyContactCategories)[number];
 
 export const communicationSettingDocumentTypes = [
   "order_status_message",

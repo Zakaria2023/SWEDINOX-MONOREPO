@@ -42,7 +42,6 @@ export const AppSidebar = () => {
   const isCustomersActive = pathname.startsWith("/addresses");
   const isCompanyActive =
     pathname.startsWith("/companies") ||
-    pathname.startsWith("/company-contacts") ||
     pathname.startsWith("/communication-settings");
   const isSalesActive =
     pathname.startsWith("/contracts") ||
@@ -111,14 +110,6 @@ export const AppSidebar = () => {
                         }
                       >
                         <span>{t("app-sidebar.items.companies")}</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/company-contacts" />}
-                        isActive={pathname.startsWith("/company-contacts")}
-                      >
-                        <span>{t("app-sidebar.items.company-contacts")}</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                     <SidebarMenuSubItem>
