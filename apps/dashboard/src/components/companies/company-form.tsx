@@ -65,16 +65,25 @@ const DEFAULT_ADDRESS: CompanyFormValues["address"] = {
 export const CompanyForm = () => {
   const { t } = useTranslation();
   const router = useRouter();
-  const [isFirstAddressDialogOpen, setIsFirstAddressDialogOpen] = useState(false);
+  const [isFirstAddressDialogOpen, setIsFirstAddressDialogOpen] =
+    useState(false);
   const [isAdditionalAddressDialogOpen, setIsAdditionalAddressDialogOpen] =
     useState(false);
-  const [additionalAddresses, setAdditionalAddresses] = useState<AddressFormValues[]>([]);
+  const [additionalAddresses, setAdditionalAddresses] = useState<
+    AddressFormValues[]
+  >([]);
   const [isContactDialogOpen, setIsContactDialogOpen] = useState(false);
   const [contacts, setContacts] = useState<ContactInput[]>([]);
 
   const { form, isPending, onSubmit, state } = useCompanySubmit();
-  const { control, register, watch, setValue, trigger, formState: { errors } } =
-    form;
+  const {
+    control,
+    register,
+    watch,
+    setValue,
+    trigger,
+    formState: { errors },
+  } = form;
 
   const additionalForm = useForm<CompanyFormValues>({
     resolver: zodResolver(createCompanySchema(t)),
@@ -158,7 +167,9 @@ export const CompanyForm = () => {
   };
 
   const removeAdditionalAddress = (index: number) => {
-    setAdditionalAddresses((prev) => prev.filter((_, itemIndex) => itemIndex !== index));
+    setAdditionalAddresses((prev) =>
+      prev.filter((_, itemIndex) => itemIndex !== index),
+    );
   };
 
   const toggleRole = (role: string) => {
@@ -173,7 +184,10 @@ export const CompanyForm = () => {
 
   return (
     <>
-      <form onSubmit={onSubmit(additionalAddresses, contacts)} className="space-y-8">
+      <form
+        onSubmit={onSubmit(additionalAddresses, contacts)}
+        className="space-y-8"
+      >
         <section className="space-y-4">
           <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
             {t("company-form.sections.company-details")}
@@ -208,7 +222,11 @@ export const CompanyForm = () => {
                 <FormLabel htmlFor="correspName">
                   {t("company-form.fields.corresp-name")}
                 </FormLabel>
-                <Input id="correspName" {...register("correspName")} disabled={isPending} />
+                <Input
+                  id="correspName"
+                  {...register("correspName")}
+                  disabled={isPending}
+                />
               </div>
             </div>
 
@@ -248,7 +266,7 @@ export const CompanyForm = () => {
                 <button
                   type="button"
                   onClick={() => setIsFirstAddressDialogOpen(true)}
-                  className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg border border-dashed border-border px-3 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+                  className="inline-flex cursor-pointer h-9 w-full items-center justify-center gap-2 rounded-lg border border-dashed border-border px-3 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary"
                   disabled={isPending}
                 >
                   <Plus className="size-4" />
@@ -305,7 +323,9 @@ export const CompanyForm = () => {
                 >
                   <div className="flex min-w-0 items-center gap-2 text-sm">
                     <User className="size-4 shrink-0 text-muted-foreground" />
-                    <span className="truncate font-medium">{contact.fullName}</span>
+                    <span className="truncate font-medium">
+                      {contact.fullName}
+                    </span>
                     {contact.email && (
                       <span className="truncate text-muted-foreground">
                         {contact.email}
@@ -338,7 +358,7 @@ export const CompanyForm = () => {
               <button
                 type="button"
                 onClick={() => setIsContactDialogOpen(true)}
-                className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg border border-dashed border-border px-3 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+                className="inline-flex cursor-pointer h-9 w-full items-center justify-center gap-2 rounded-lg border border-dashed border-border px-3 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary"
                 disabled={isPending}
               >
                 <Plus className="size-4" />
@@ -382,19 +402,31 @@ export const CompanyForm = () => {
               <FormLabel htmlFor="searchCode1">
                 {t("company-form.fields.search-code")}
               </FormLabel>
-              <Input id="searchCode1" {...register("searchCode1")} disabled={isPending} />
+              <Input
+                id="searchCode1"
+                {...register("searchCode1")}
+                disabled={isPending}
+              />
             </div>
             <div>
               <FormLabel htmlFor="searchCode2">
                 {t("company-form.fields.search-code")}
               </FormLabel>
-              <Input id="searchCode2" {...register("searchCode2")} disabled={isPending} />
+              <Input
+                id="searchCode2"
+                {...register("searchCode2")}
+                disabled={isPending}
+              />
             </div>
             <div>
               <FormLabel htmlFor="searchCode3">
                 {t("company-form.fields.search-code")}
               </FormLabel>
-              <Input id="searchCode3" {...register("searchCode3")} disabled={isPending} />
+              <Input
+                id="searchCode3"
+                {...register("searchCode3")}
+                disabled={isPending}
+              />
             </div>
           </div>
         </section>
