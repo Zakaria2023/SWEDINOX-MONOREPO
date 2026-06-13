@@ -3,6 +3,8 @@
 import { CommunicationSettings, Companies, db } from "@/db";
 import { desc, eq } from "drizzle-orm";
 
+// Handle pagination and filtering in the future if needed
+
 export const getCommunicationSettings = async () => {
   return await db
     .select()
