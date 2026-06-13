@@ -95,6 +95,7 @@ export const useCompanySubmit = () => {
     form.handleSubmit((values) => {
       startTransition(async () => {
         const { companyName, correspName, remarks, lang, roles, searchCode1, searchCode2, searchCode3, address } = values;
+        const allAddresses = [address, ...additionalAddresses].map(mapAddress);
         const result = await createCompany(
           {
             companyName,
@@ -105,8 +106,7 @@ export const useCompanySubmit = () => {
             searchCode2: searchCode2 || undefined,
             searchCode3: searchCode3 || undefined,
           },
-          mapAddress(address),
-          additionalAddresses.map(mapAddress),
+          allAddresses,
           (roles ?? []) as CompanyRole[],
           communicationSettings,
         );

@@ -1,44 +1,32 @@
 "use server";
 
 import { db, type SelectCompanies } from "@/db";
-import { Companies } from "@/db/schema/companies";
+import { Companies, type InsertCompanies } from "@/db/schema/companies";
 import {
   CompanyAddresses,
   type InsertCompanyAddresses,
 } from "@/db/schema/company-addresses";
 import { CompanyRoleLinks } from "@/db/schema/company-role-links";
-import { CommunicationSettings } from "@/db/schema/communication-settings";
-import type {
-  CommunicationSettingDocumentType,
-  CommunicationSettingShape,
-  CommunicationSettingType,
-  CompanyLang,
-  CompanyRole,
-} from "@/lib/enums";
+import {
+  CommunicationSettings,
+  type InsertCommunicationSettings,
+} from "@/db/schema/communication-settings";
+import type { CompanyRole } from "@/lib/enums";
 import { generateUuid } from "@/lib/helpers";
 import { desc } from "drizzle-orm";
 import { currentUser } from "@clerk/nextjs/server";
 
-export type AddressInput = Omit<InsertCompanyAddresses, "uuid" | "companyUuid">;
+export type AddressInput = Omit<InsertCompanyAddresses, "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt">;
 
-export type CommSettingInput = {
-  documentType: CommunicationSettingDocumentType;
-  communicationType: CommunicationSettingType;
-  shape?: CommunicationSettingShape;
-  email?: string;
-  fax?: string;
-};
+export type CommSettingInput = Omit<
+  InsertCommunicationSettings,
+  "id" | "companyUuid" | "modifiedByUserId" | "createdAt" | "updatedAt"
+>;
 
-
-export type CompanyFields = {
-  companyName: string;
-  correspName?: string;
-  remarks?: string;
-  lang?: CompanyLang;
-  searchCode1?: string;
-  searchCode2?: string;
-  searchCode3?: string;
-};
+export type CompanyFields = Omit<
+  InsertCompanies,
+  "id" | "uuid" | "createdAt" | "updatedAt"
+>;
 
 export type CompanyActionResult = {
   companyUuid?: string;
@@ -57,8 +45,7 @@ export const getCompanies = async (): Promise<SelectCompanies[]> => {
 
 export const createCompany = async (
   companyFields: CompanyFields,
-  firstAddress: AddressInput,
-  additionalAddresses: AddressInput[] = [],
+  addresses: AddressInput[] = [],
   roles: CompanyRole[] = [],
   communicationSettings: CommSettingInput[] = [],
 ): Promise<CompanyActionResult> => {
@@ -73,21 +60,12 @@ export const createCompany = async (
     }
 
     await db.transaction(async (tx) => {
-      await tx.insert(Companies).values({
-        ...companyFields,
-        uuid,
-      });
+      await tx.insert(Companies).values({ ...companyFields, uuid });
 
-      await tx.insert(CompanyAddresses).values({
-        ...firstAddress,
-        uuid,
-        companyUuid: uuid,
-      });
-
-      for (const addr of additionalAddresses) {
+      for (const address of addresses) {
         await tx.insert(CompanyAddresses).values({
-          ...addr,
-          uuid,
+          ...address,
+          uuid: generateUuid(),
           companyUuid: uuid,
         });
       }
