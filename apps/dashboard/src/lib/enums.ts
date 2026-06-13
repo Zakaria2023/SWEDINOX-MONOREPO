@@ -36,6 +36,15 @@ export const companyRoles = [
 
 export type CompanyRole = (typeof companyRoles)[number];
 
+export const contractableRoles = [
+  "customer",
+  "prospect",
+  "supplier",
+  "processor",
+] as const satisfies readonly string[];
+
+export type ContractableRole = (typeof contractableRoles)[number];
+
 export const contractTypes = [
   "gross_prices",
   "options",

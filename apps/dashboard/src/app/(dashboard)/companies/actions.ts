@@ -6,10 +6,13 @@ import {
   CompanyAddresses,
   type InsertCompanyAddresses,
 } from "@/db/schema/company-addresses";
+import { CompanyContractLinks } from "@/db/schema/company-contract-links";
 import {
   CommunicationSettings,
   type InsertCommunicationSettings,
 } from "@/db/schema/communication-settings";
+import { Contracts } from "@/db/schema/contracts";
+import { type ContractableRole, contractTypes } from "@/lib/enums";
 import { generateUuid } from "@/lib/helpers";
 import { desc } from "drizzle-orm";
 import { currentUser } from "@clerk/nextjs/server";
@@ -25,6 +28,13 @@ export type CompanyFields = Omit<
   InsertCompanies,
   "id" | "uuid" | "createdAt" | "updatedAt"
 >;
+
+export type CompanyContractInput = {
+  role: ContractableRole;
+  code: string;
+  contractType: (typeof contractTypes)[number];
+  description?: string;
+};
 
 export type CompanyActionResult = {
   companyUuid?: string;
@@ -45,6 +55,7 @@ export const createCompany = async (
   companyFields: CompanyFields,
   addresses: AddressInput[] = [],
   communicationSettings: CommSettingInput[] = [],
+  contracts: CompanyContractInput[] = [],
 ): Promise<CompanyActionResult> => {
   const uuid = generateUuid();
 
@@ -72,6 +83,22 @@ export const createCompany = async (
           ...setting,
           companyUuid: uuid,
           modifiedByUserId: userId,
+        });
+      }
+
+      for (const contract of contracts) {
+        const contractUuid = generateUuid();
+        await tx.insert(Contracts).values({
+          uuid: contractUuid,
+          code: contract.code.toUpperCase(),
+          contractType: contract.contractType,
+          description: contract.description ?? "",
+        });
+        await tx.insert(CompanyContractLinks).values({
+          uuid: generateUuid(),
+          companyUuid: uuid,
+          contractUuid,
+          role: contract.role,
         });
       }
     });

@@ -46,6 +46,8 @@ export const Contracts = mysqlTable(
     id: int("id").primaryKey().autoincrement(),
     uuid: char("uuid", { length: 36 }).notNull().unique(),
 
+    code: varchar("code", { length: 50 }).notNull(),
+
     contractType: mysqlEnum("contract_type", contractTypes),
 
     description: varchar("description", { length: 255 }).notNull(),

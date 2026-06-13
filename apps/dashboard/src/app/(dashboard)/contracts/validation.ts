@@ -4,6 +4,7 @@ import { VALIDATION_MESSAGES } from "@/lib/validation-messages";
 
 export const createContractSchema = () =>
   z.object({
+    code: z.string().min(1, "Code is required"),
     contractType: z.enum(contractTypes).optional(),
     description: z
       .string()

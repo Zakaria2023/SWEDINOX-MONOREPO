@@ -6,6 +6,7 @@ import type {
   CommunicationSettingType,
   CompanyLang,
   CompanyRole,
+  ContractableRole,
   ContractType,
 } from "@/lib/enums";
 
@@ -61,6 +62,13 @@ export const COMPANY_ROLE_LABELS: Record<CompanyRole, string> = {
   purchasing_org: "Purchasing Org.",
   other: "Other",
   internal: "Internal",
+};
+
+export const CONTRACTABLE_ROLE_LABELS: Record<ContractableRole, string> = {
+  customer: "Customer",
+  prospect: "Prospect",
+  supplier: "Supplier",
+  processor: "Processor",
 };
 
 export const CONTRACT_TYPE_LABELS: Record<ContractType, string> = {

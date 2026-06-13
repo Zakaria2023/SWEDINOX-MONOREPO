@@ -68,6 +68,21 @@ export const ContractForm = ({ groups }: ContractFormProps) => {
           </h2>
           <div className="grid gap-4">
             <div>
+              <FormLabel htmlFor="code" required>
+                Code
+              </FormLabel>
+              <Input
+                id="code"
+                placeholder="e.g. BB"
+                {...register("code")}
+                aria-invalid={!!errors.code}
+                disabled={isPending}
+                onChange={(e) => setValue("code", e.target.value.toUpperCase())}
+              />
+              <FormFieldError message={errors.code?.message} />
+            </div>
+
+            <div>
               <FormLabel htmlFor="description" required>
                 Description
               </FormLabel>

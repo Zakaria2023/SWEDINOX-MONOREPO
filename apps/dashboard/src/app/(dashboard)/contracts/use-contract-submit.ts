@@ -13,6 +13,7 @@ export const useContractSubmit = () => {
   const form = useForm<ContractFormValues>({
     resolver: zodResolver(createContractSchema()),
     defaultValues: {
+      code: "",
       contractType: undefined,
       description: "",
       contractGroupUuid: "",
@@ -31,6 +32,7 @@ export const useContractSubmit = () => {
   const onSubmit = form.handleSubmit((values) => {
     startTransition(async () => {
       const result = await createContract({
+        code: values.code.toUpperCase(),
         contractType: values.contractType ?? null,
         description: values.description,
         contractGroupUuid: values.contractGroupUuid || undefined,
