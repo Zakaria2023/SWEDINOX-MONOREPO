@@ -36,7 +36,9 @@ import {
   companyLangs,
   companyRoles,
   type AddressCategory,
+  type CompanyRole,
 } from "@/lib/enums";
+import { cn } from "@/lib/helpers";
 import {
   ADDRESS_CATEGORY_LABELS,
   COMMON_TEXT,
@@ -77,6 +79,33 @@ const DEFAULT_ADDRESS: CompanyFormValues["address"] = {
   maxLength: "",
   maxBundleWeight: "",
   loadingInstructions: "",
+};
+
+const AGENT_ALLOWED = new Set<CompanyRole>(["agent", "other", "internal"]);
+const PURCHASING_ORG_ALLOWED = new Set<CompanyRole>(["purchasing_org", "other"]);
+
+const getDisabledRoles = (selected: CompanyRole[]): Set<CompanyRole> => {
+  const disabled = new Set<CompanyRole>();
+
+  if (selected.includes("customer")) disabled.add("prospect");
+  if (selected.includes("prospect")) disabled.add("customer");
+
+  if (selected.includes("agent")) {
+    for (const r of companyRoles) {
+      if (!AGENT_ALLOWED.has(r)) disabled.add(r);
+    }
+  }
+
+  if (selected.includes("purchasing_org")) {
+    for (const r of companyRoles) {
+      if (!PURCHASING_ORG_ALLOWED.has(r)) disabled.add(r);
+    }
+  }
+
+  if (selected.some((r) => !AGENT_ALLOWED.has(r))) disabled.add("agent");
+  if (selected.some((r) => !PURCHASING_ORG_ALLOWED.has(r))) disabled.add("purchasing_org");
+
+  return disabled;
 };
 
 const commSettingSchema = z.object({
@@ -144,7 +173,8 @@ export const CompanyForm = () => {
   });
 
   const addressValues = watch("address");
-  const selectedRoles = watch("roles") ?? [];
+  const selectedRoles: CompanyRole[] = watch("roles") ?? [];
+  const disabledRoles = getDisabledRoles(selectedRoles);
 
   const usedCategories = new Set<AddressCategory>([
     ...(addressValues.category ?? []),
@@ -265,13 +295,13 @@ export const CompanyForm = () => {
     setIsCommSettingDialogOpen(false);
   });
 
-  const toggleRole = (role: string) => {
-    const current = selectedRoles;
+  const toggleRole = (role: CompanyRole) => {
+    if (!selectedRoles.includes(role) && disabledRoles.has(role)) return;
     setValue(
       "roles",
-      current.includes(role as never)
-        ? current.filter((item) => item !== role)
-        : [...current, role as never],
+      selectedRoles.includes(role)
+        ? selectedRoles.filter((r) => r !== role)
+        : [...selectedRoles, role],
     );
   };
 
@@ -471,23 +501,29 @@ export const CompanyForm = () => {
             Roles
           </h2>
           <div className="grid gap-3 rounded-2xl border border-border bg-muted/20 p-4 sm:grid-cols-2 lg:grid-cols-4">
-            {companyRoles.map((role) => (
-              <label
-                key={role}
-                className="flex cursor-pointer items-center gap-3 rounded-lg border border-border bg-background px-4 py-3 transition-colors hover:bg-muted/40"
-              >
-                <input
-                  type="checkbox"
-                  className="size-4 rounded border-border accent-primary"
-                  checked={selectedRoles.includes(role as never)}
-                  onChange={() => toggleRole(role)}
-                  disabled={isPending}
-                />
-                <span className="text-sm font-medium text-gray-700">
-                  {COMPANY_ROLE_LABELS[role]}
-                </span>
-              </label>
-            ))}
+            {companyRoles.map((role) => {
+              const isDisabled = isPending || disabledRoles.has(role);
+              return (
+                <label
+                  key={role}
+                  className={cn(
+                    "flex items-center gap-3 rounded-lg border border-border bg-background px-4 py-3 transition-colors",
+                    isDisabled ? "cursor-not-allowed opacity-40" : "cursor-pointer hover:bg-muted/40",
+                  )}
+                >
+                  <input
+                    type="checkbox"
+                    className="size-4 rounded border-border accent-primary"
+                    checked={selectedRoles.includes(role)}
+                    onChange={() => toggleRole(role)}
+                    disabled={isDisabled}
+                  />
+                  <span className="text-sm font-medium text-gray-700">
+                    {COMPANY_ROLE_LABELS[role]}
+                  </span>
+                </label>
+              );
+            })}
           </div>
         </section>
 
