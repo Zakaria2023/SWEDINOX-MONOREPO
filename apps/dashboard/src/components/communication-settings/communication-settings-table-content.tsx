@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import type { CommunicationSettingListItem } from "@/app/(dashboard)/communication-settings/actions";
 import {
   Table,
   TableBody,
@@ -16,17 +17,10 @@ import {
   COMMUNICATION_SETTING_SHAPE_LABELS,
   COMMUNICATION_SETTING_TYPE_LABELS,
 } from "@/lib/labels";
-import { SelectCommunicationSettings } from "@/db";
-
-type SettingRow = SelectCommunicationSettings & {
-  companyName: string | null;
-  searchCode1: string | null;
-};
 
 type ColumnKey =
   | "id"
   | "companyName"
-  | "companyCode"
   | "documentType"
   | "communicationType"
   | "shape"
@@ -48,11 +42,6 @@ const ALL_COLUMNS: Array<{
   {
     key: "companyName",
     label: "Company",
-    defaultVisible: true,
-  },
-  {
-    key: "companyCode",
-    label: "Company Code",
     defaultVisible: true,
   },
   {
@@ -98,7 +87,7 @@ const initialVisibility = ALL_COLUMNS.reduce(
 );
 
 type CommunicationSettingsTableContentProps = {
-  settings: SettingRow[];
+  settings: CommunicationSettingListItem[];
 };
 
 export const CommunicationSettingsTableContent = ({
@@ -118,7 +107,7 @@ export const CommunicationSettingsTableContent = ({
   );
   const fallbackValue = COMMON_TEXT.notAvailable;
 
-  const renderCell = (setting: SettingRow, key: ColumnKey) => {
+  const renderCell = (setting: CommunicationSettingListItem, key: ColumnKey) => {
     switch (key) {
       case "id":
         return (
@@ -130,12 +119,6 @@ export const CommunicationSettingsTableContent = ({
         return (
           <TableCell key={key}>
             {setting.companyName ?? fallbackValue}
-          </TableCell>
-        );
-      case "companyCode":
-        return (
-          <TableCell key={key}>
-            {setting.searchCode1 ?? fallbackValue}
           </TableCell>
         );
       case "documentType":
