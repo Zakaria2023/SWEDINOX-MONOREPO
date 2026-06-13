@@ -10,7 +10,7 @@ export type CommunicationSettingListItem = {
   documentType: string;
   communicationType: string;
   shape: string | null;
-  contactUuid: string | null;
+  contractUuid: string | null;
   email: string | null;
   fax: string | null;
   modifiedByUserId: string;
@@ -18,7 +18,9 @@ export type CommunicationSettingListItem = {
   updatedAt: Date;
 };
 
-export const getCommunicationSettings = async (): Promise<CommunicationSettingListItem[]> => {
+export const getCommunicationSettings = async (): Promise<
+  CommunicationSettingListItem[]
+> => {
   const rows = await db
     .select({
       id: CommunicationSettings.id,
@@ -27,7 +29,7 @@ export const getCommunicationSettings = async (): Promise<CommunicationSettingLi
       documentType: CommunicationSettings.documentType,
       communicationType: CommunicationSettings.communicationType,
       shape: CommunicationSettings.shape,
-      contactUuid: CommunicationSettings.contactUuid,
+      contractUuid: CommunicationSettings.contractUuid,
       email: CommunicationSettings.email,
       fax: CommunicationSettings.fax,
       modifiedByUserId: CommunicationSettings.modifiedByUserId,

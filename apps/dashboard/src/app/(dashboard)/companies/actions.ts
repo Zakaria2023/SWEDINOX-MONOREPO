@@ -26,7 +26,7 @@ export type CommSettingInput = {
   documentType: CommunicationSettingDocumentType;
   communicationType: CommunicationSettingType;
   shape?: CommunicationSettingShape;
-  contactUuid?: string;
+  contractUuid?: string;
   email?: string;
   fax?: string;
 };
@@ -114,7 +114,7 @@ export const createCompany = async (
           documentType: setting.documentType,
           communicationType: setting.communicationType,
           shape: setting.shape || undefined,
-          contactUuid: setting.contactUuid || undefined,
+          contractUuid: setting.contractUuid || undefined,
           email: setting.email || undefined,
           fax: setting.fax || undefined,
           modifiedByUserId,

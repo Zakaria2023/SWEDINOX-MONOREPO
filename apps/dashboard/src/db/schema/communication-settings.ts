@@ -31,7 +31,7 @@ export const CommunicationSettings = mysqlTable(
       communicationSettingTypes,
     ).notNull(),
     shape: mysqlEnum("shape", communicationSettingShapes),
-    contactUuid: char("contact_uuid", { length: 36 }),
+    contractUuid: char("contract_uuid", { length: 36 }),
     email: varchar("email", { length: 255 }),
     fax: varchar("fax", { length: 100 }),
     modifiedByUserId: varchar("modified_by_user_id", { length: 255 }).notNull(),
@@ -40,7 +40,7 @@ export const CommunicationSettings = mysqlTable(
   },
   (table) => [
     index("idx_communication_settings_company_uuid").on(table.companyUuid),
-    index("idx_communication_settings_contact_uuid").on(table.contactUuid),
+    index("idx_communication_settings_contract_uuid").on(table.contractUuid),
     index("idx_communication_settings_document_type").on(table.documentType),
     index("idx_communication_settings_communication_type").on(
       table.communicationType,
@@ -51,8 +51,8 @@ export const CommunicationSettings = mysqlTable(
       foreignColumns: [Companies.uuid],
     }),
     foreignKey({
-      name: "fk_communication_settings_contact",
-      columns: [table.contactUuid],
+      name: "fk_communication_settings_contract",
+      columns: [table.contractUuid],
       foreignColumns: [Contracts.uuid],
     }),
   ],

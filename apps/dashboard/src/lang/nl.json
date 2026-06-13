@@ -362,7 +362,7 @@
       "document-type": "Documenttype",
       "communication-type": "Communicatietype",
       "shape": "Formaat",
-      "contact": "Contact",
+      "contract": "Contract",
       "email": "E-mail",
       "fax": "Fax"
     },

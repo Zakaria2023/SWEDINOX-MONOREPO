@@ -72,7 +72,7 @@ const commSettingSchema = z.object({
   documentType: z.string().min(1),
   communicationType: z.string().min(1),
   shape: z.string().optional(),
-  contactUuid: z.string().optional(),
+  contractUuid: z.string().optional(),
   email: z.string().optional(),
   fax: z.string().optional(),
 });
@@ -83,7 +83,7 @@ const DEFAULT_COMM_SETTING: CommSettingFormValues = {
   documentType: "",
   communicationType: "",
   shape: "",
-  contactUuid: "",
+  contractUuid: "",
   email: "",
   fax: "",
 };
@@ -100,6 +100,8 @@ export const CompanyForm = ({ contracts }: CompanyFormProps) => {
   const [additionalAddresses, setAdditionalAddresses] = useState<AddressFormValues[]>([]);
   const [isCommSettingDialogOpen, setIsCommSettingDialogOpen] = useState(false);
   const [communicationSettings, setCommunicationSettings] = useState<CommSettingInput[]>([]);
+  const [useContractLink, setUseContractLink] = useState(false);
+  const [selectedCommType, setSelectedCommType] = useState<string>("");
 
   const { form, isPending, onSubmit, state } = useCompanySubmit();
   const {
@@ -222,12 +224,14 @@ export const CompanyForm = ({ contracts }: CompanyFormProps) => {
         documentType: values.documentType as CommSettingInput["documentType"],
         communicationType: values.communicationType as CommSettingInput["communicationType"],
         shape: (values.shape || undefined) as CommSettingInput["shape"],
-        contactUuid: values.contactUuid || undefined,
-        email: values.email || undefined,
-        fax: values.fax || undefined,
+        contractUuid: useContractLink ? (values.contractUuid || undefined) : undefined,
+        email: !useContractLink && values.communicationType === "email" ? (values.email || undefined) : undefined,
+        fax: !useContractLink && values.communicationType === "fax" ? (values.fax || undefined) : undefined,
       },
     ]);
     commSettingForm.reset(DEFAULT_COMM_SETTING);
+    setUseContractLink(false);
+    setSelectedCommType("");
     setIsCommSettingDialogOpen(false);
   });
 
@@ -392,6 +396,8 @@ export const CompanyForm = ({ contracts }: CompanyFormProps) => {
                 type="button"
                 onClick={() => {
                   commSettingForm.reset(DEFAULT_COMM_SETTING);
+                  setSelectedCommType("");
+                  setUseContractLink(false);
                   setIsCommSettingDialogOpen(true);
                 }}
                 className="inline-flex cursor-pointer h-9 w-full items-center justify-center gap-2 rounded-lg border border-dashed border-border px-3 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary"
@@ -537,7 +543,11 @@ export const CompanyForm = ({ contracts }: CompanyFormProps) => {
       <Dialog
         open={isCommSettingDialogOpen}
         onOpenChange={(open) => {
-          if (!open) commSettingForm.reset(DEFAULT_COMM_SETTING);
+          if (!open) {
+            commSettingForm.reset(DEFAULT_COMM_SETTING);
+            setUseContractLink(false);
+            setSelectedCommType("");
+          }
           setIsCommSettingDialogOpen(open);
         }}
       >
@@ -585,7 +595,12 @@ export const CompanyForm = ({ contracts }: CompanyFormProps) => {
                     id="cs-communicationType"
                     options={communicationTypeOptions}
                     value={field.value}
-                    onValueChange={field.onChange}
+                    onValueChange={(val) => {
+                      field.onChange(val);
+                      setSelectedCommType(val);
+                      commSettingForm.setValue("email", "");
+                      commSettingForm.setValue("fax", "");
+                    }}
                     placeholder={t("common.select-option")}
                   />
                 )}
@@ -612,38 +627,56 @@ export const CompanyForm = ({ contracts }: CompanyFormProps) => {
               />
             </div>
 
-            <div>
-              <FormLabel htmlFor="cs-contactUuid">
-                {t("communication-setting-form.fields.contact")}
-              </FormLabel>
-              <Controller
-                name="contactUuid"
-                control={commSettingForm.control}
-                render={({ field }) => (
-                  <Select
-                    id="cs-contactUuid"
-                    options={contractOptions}
-                    value={field.value ?? ""}
-                    onValueChange={field.onChange}
-                    placeholder={t("common.empty-option")}
-                  />
-                )}
-              />
+            {/* Contract — optional checkbox toggle */}
+            <div className="space-y-2">
+              <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-foreground">
+                <input
+                  type="checkbox"
+                  className="size-4 rounded border-border accent-primary"
+                  checked={useContractLink}
+                  onChange={(e) => {
+                    setUseContractLink(e.target.checked);
+                    if (!e.target.checked) commSettingForm.setValue("contractUuid", "");
+                  }}
+                />
+                {t("communication-setting-form.fields.contract")}
+              </label>
+              {useContractLink && (
+                <Controller
+                  name="contractUuid"
+                  control={commSettingForm.control}
+                  render={({ field }) => (
+                    <Select
+                      id="cs-contractUuid"
+                      options={contractOptions}
+                      value={field.value ?? ""}
+                      onValueChange={field.onChange}
+                      placeholder={t("common.empty-option")}
+                    />
+                  )}
+                />
+              )}
             </div>
 
-            <div>
-              <FormLabel htmlFor="cs-email">
-                {t("communication-setting-form.fields.email")}
-              </FormLabel>
-              <Input id="cs-email" type="email" {...commSettingForm.register("email")} />
-            </div>
+            {/* Email — only when communicationType is "email" and contract is not selected */}
+            {!useContractLink && selectedCommType === "email" && (
+              <div>
+                <FormLabel htmlFor="cs-email">
+                  {t("communication-setting-form.fields.email")}
+                </FormLabel>
+                <Input id="cs-email" type="email" {...commSettingForm.register("email")} />
+              </div>
+            )}
 
-            <div>
-              <FormLabel htmlFor="cs-fax">
-                {t("communication-setting-form.fields.fax")}
-              </FormLabel>
-              <Input id="cs-fax" {...commSettingForm.register("fax")} />
-            </div>
+            {/* Fax — only when communicationType is "fax" and contract is not selected */}
+            {!useContractLink && selectedCommType === "fax" && (
+              <div>
+                <FormLabel htmlFor="cs-fax">
+                  {t("communication-setting-form.fields.fax")}
+                </FormLabel>
+                <Input id="cs-fax" {...commSettingForm.register("fax")} />
+              </div>
+            )}
 
             <div className="flex justify-end gap-3 pt-2">
               <Button
@@ -651,6 +684,8 @@ export const CompanyForm = ({ contracts }: CompanyFormProps) => {
                 variant="outline"
                 onClick={() => {
                   commSettingForm.reset(DEFAULT_COMM_SETTING);
+                  setUseContractLink(false);
+                  setSelectedCommType("");
                   setIsCommSettingDialogOpen(false);
                 }}
               >
