@@ -33,7 +33,9 @@ export const AppSidebar = () => {
       "rotate-90": isExpanded,
     });
 
-  const isCustomersActive = pathname.startsWith("/addresses");
+  const isCustomersActive =
+    pathname.startsWith("/addresses") ||
+    pathname.startsWith("/contracts-per-customer");
   const isCompanyActive =
     pathname.startsWith("/companies") ||
     pathname.startsWith("/communication-settings");
@@ -78,6 +80,14 @@ export const AppSidebar = () => {
                         isActive={pathname.startsWith("/addresses")}
                       >
                         <span>Addresses</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/contracts-per-customer" />}
+                        isActive={pathname.startsWith("/contracts-per-customer")}
+                      >
+                        <span>Contracts per Customer</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                   </SidebarMenuSub>

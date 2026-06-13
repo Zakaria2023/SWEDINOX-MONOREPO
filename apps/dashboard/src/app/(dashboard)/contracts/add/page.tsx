@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
-import { getContractGroups } from "@/app/(dashboard)/contracts/actions";
+import { getCompaniesForSelect, getContractGroups } from "@/app/(dashboard)/contracts/actions";
 import { ContractForm } from "@/components/contracts/contract-form";
 import { PageHeading } from "@/components/layout/page-heading";
 
 const AddContractPage = async () => {
-  const groups = await getContractGroups();
+  const [groups, companies] = await Promise.all([
+    getContractGroups(),
+    getCompaniesForSelect(),
+  ]);
 
   return (
     <div className="space-y-6 p-6">
@@ -19,7 +22,7 @@ const AddContractPage = async () => {
         </Link>
       </div>
       <PageHeading title="New Contract" />
-      <ContractForm groups={groups} />
+      <ContractForm groups={groups} companies={companies} />
     </div>
   );
 };

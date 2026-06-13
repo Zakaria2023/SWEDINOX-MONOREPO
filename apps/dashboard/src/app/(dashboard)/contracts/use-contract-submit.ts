@@ -3,10 +3,10 @@
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { createContract, type ContractActionResult } from "./actions";
+import { createContract, type ContractActionResult, type ContractCompanyLinkInput } from "./actions";
 import { createContractSchema, type ContractFormValues } from "./validation";
 
-export const useContractSubmit = () => {
+export const useContractSubmit = (companyLinks: ContractCompanyLinkInput[]) => {
   const [isPending, startTransition] = useTransition();
   const [state, setState] = useState<ContractActionResult>({});
 
@@ -31,24 +31,27 @@ export const useContractSubmit = () => {
 
   const onSubmit = form.handleSubmit((values) => {
     startTransition(async () => {
-      const result = await createContract({
-        code: values.code.toUpperCase(),
-        contractType: values.contractType ?? null,
-        description: values.description,
-        contractGroupUuid: values.contractGroupUuid || undefined,
-        quicklyChangeOrder: values.quicklyChangeOrder || undefined,
-        hasPriceDate: values.hasPriceDate,
-        priceDate: values.hasPriceDate && values.priceDate ? values.priceDate : undefined,
-        linkToNewCustomer: values.linkToNewCustomer,
-        searchCode1: values.searchCode1 || undefined,
-        searchCode2: values.searchCode2 || undefined,
-        searchCode3: values.searchCode3 || undefined,
-        websiteSorting:
-          values.websiteSorting !== "" && values.websiteSorting !== undefined
-            ? Number(values.websiteSorting)
-            : 10,
-        hideOnWebsite: values.hideOnWebsite,
-      });
+      const result = await createContract(
+        {
+          code: values.code.toUpperCase(),
+          contractType: values.contractType ?? null,
+          description: values.description,
+          contractGroupUuid: values.contractGroupUuid || undefined,
+          quicklyChangeOrder: values.quicklyChangeOrder || undefined,
+          hasPriceDate: values.hasPriceDate,
+          priceDate: values.hasPriceDate && values.priceDate ? values.priceDate : undefined,
+          linkToNewCustomer: values.linkToNewCustomer,
+          searchCode1: values.searchCode1 || undefined,
+          searchCode2: values.searchCode2 || undefined,
+          searchCode3: values.searchCode3 || undefined,
+          websiteSorting:
+            values.websiteSorting !== "" && values.websiteSorting !== undefined
+              ? Number(values.websiteSorting)
+              : 10,
+          hideOnWebsite: values.hideOnWebsite,
+        },
+        companyLinks,
+      );
       setState(result);
     });
   });
