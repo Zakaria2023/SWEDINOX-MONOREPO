@@ -33,10 +33,18 @@ type I18nProviderProps = {
 };
 
 const I18nProvider = ({ children, initialLang }: I18nProviderProps) => {
+  const normalizedInitialLang = normalizeLanguage(initialLang ?? defaultLanguage);
+
+  // The i18n singleton initializes at module load time. On the server,
+  // document is undefined so getStoredLang() always returns the default language,
+  // ignoring the cookie. Sync it to the server-provided initialLang here so
+  // both server and client render the same translations and hydration matches.
+  if (i18n.language !== normalizedInitialLang) {
+    void i18n.changeLanguage(normalizedInitialLang);
+  }
+
   const router = useRouter();
-  const [language, setLanguage] = useState<AppLanguage>(
-    normalizeLanguage(initialLang ?? defaultLanguage),
-  );
+  const [language, setLanguage] = useState<AppLanguage>(normalizedInitialLang);
 
   useEffect(() => {
     document.documentElement.lang = language;
