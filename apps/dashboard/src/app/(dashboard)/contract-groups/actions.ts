@@ -3,23 +3,17 @@
 import {
   db,
   ContractGroups,
+  Contracts,
   type InsertContractGroups,
   type SelectContractGroups,
 } from "@/db";
 import { generateUuid } from "@/lib/helpers";
 import { alias } from "drizzle-orm/mysql-core";
-import { desc, eq } from "drizzle-orm";
+import { count, desc, eq } from "drizzle-orm";
 
 export type ContractGroupItem = SelectContractGroups & { subgroupName: string | null };
 
-export type ContractGroupInput = {
-  name: string;
-  description?: string;
-  contractSubgroupUuid?: string;
-  sequenceWithinSubgroup: number;
-  quicklyChangeSequenceNumber?: string;
-  isActive: boolean;
-};
+export type ContractGroupInput = Omit<InsertContractGroups, "id" | "uuid" | "createdAt" | "updatedAt">;
 
 export type ContractGroupActionResult = {
   success?: boolean;
@@ -40,15 +34,7 @@ export const createContractGroup = async (
   input: ContractGroupInput,
 ): Promise<ContractGroupActionResult> => {
   try {
-    await db.insert(ContractGroups).values({
-      uuid: generateUuid(),
-      name: input.name,
-      description: input.description || null,
-      contractSubgroupUuid: input.contractSubgroupUuid || null,
-      sequenceWithinSubgroup: input.sequenceWithinSubgroup,
-      quicklyChangeSequenceNumber: input.quicklyChangeSequenceNumber || null,
-      isActive: input.isActive,
-    });
+    await db.insert(ContractGroups).values({ ...input, uuid: generateUuid() });
     return { success: true };
   } catch (error) {
     return {
@@ -62,17 +48,7 @@ export const updateContractGroup = async (
   input: ContractGroupInput,
 ): Promise<ContractGroupActionResult> => {
   try {
-    await db
-      .update(ContractGroups)
-      .set({
-        name: input.name,
-        description: input.description || null,
-        contractSubgroupUuid: input.contractSubgroupUuid || null,
-        sequenceWithinSubgroup: input.sequenceWithinSubgroup,
-        quicklyChangeSequenceNumber: input.quicklyChangeSequenceNumber || null,
-        isActive: input.isActive,
-      })
-      .where(eq(ContractGroups.uuid, uuid));
+    await db.update(ContractGroups).set(input).where(eq(ContractGroups.uuid, uuid));
     return { success: true };
   } catch (error) {
     return {
@@ -85,6 +61,15 @@ export const deleteContractGroup = async (
   uuid: string,
 ): Promise<ContractGroupActionResult> => {
   try {
+    const [{ total }] = await db
+      .select({ total: count() })
+      .from(Contracts)
+      .where(eq(Contracts.contractGroupUuid, uuid));
+
+    if (total > 0) {
+      return { error: "Cannot delete a contract group that has contracts assigned to it." };
+    }
+
     await db.delete(ContractGroups).where(eq(ContractGroups.uuid, uuid));
     return { success: true };
   } catch (error) {
