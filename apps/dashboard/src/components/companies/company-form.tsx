@@ -634,7 +634,12 @@ export const CompanyForm = ({ availableContracts }: CompanyFormProps) => {
               <button
                 type="button"
                 onClick={() => {
-                  contractSelectionForm.reset(DEFAULT_CONTRACT_SELECTION);
+                  contractSelectionForm.reset({
+                    contractUuid: "",
+                    role: activeContractableRoles.length === 1
+                      ? activeContractableRoles[0]
+                      : ("" as ContractableRole),
+                  });
                   setIsContractDialogOpen(true);
                 }}
                 className="inline-flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-border px-3 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary"
@@ -909,6 +914,12 @@ export const CompanyForm = ({ availableContracts }: CompanyFormProps) => {
         open={isContractDialogOpen}
         onOpenChange={(open) => {
           if (!open) contractSelectionForm.reset(DEFAULT_CONTRACT_SELECTION);
+          else contractSelectionForm.reset({
+            contractUuid: "",
+            role: activeContractableRoles.length === 1
+              ? activeContractableRoles[0]
+              : ("" as ContractableRole),
+          });
           setIsContractDialogOpen(open);
         }}
       >
@@ -954,28 +965,34 @@ export const CompanyForm = ({ availableContracts }: CompanyFormProps) => {
             </div>
 
             <div>
-              <FormLabel htmlFor="ct-role" required>
-                Role
-              </FormLabel>
-              <Controller
-                name="role"
-                control={contractSelectionForm.control}
-                render={({ field }) => (
-                  <Select
-                    id="ct-role"
-                    options={[
-                      { value: "", label: COMMON_TEXT.selectOption },
-                      ...activeContractableRoles.map((r) => ({
-                        value: r,
-                        label: CONTRACTABLE_ROLE_LABELS[r],
-                      })),
-                    ]}
-                    value={field.value}
-                    onValueChange={field.onChange}
-                    placeholder={COMMON_TEXT.selectOption}
-                  />
-                )}
-              />
+              <FormLabel htmlFor="ct-role" required>Role</FormLabel>
+              {activeContractableRoles.length === 1 ? (
+                <div className="mt-1.5 flex items-center gap-1.5">
+                  <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                    {CONTRACTABLE_ROLE_LABELS[activeContractableRoles[0]]}
+                  </span>
+                </div>
+              ) : (
+                <Controller
+                  name="role"
+                  control={contractSelectionForm.control}
+                  render={({ field }) => (
+                    <Select
+                      id="ct-role"
+                      options={[
+                        { value: "", label: COMMON_TEXT.selectOption },
+                        ...activeContractableRoles.map((r) => ({
+                          value: r,
+                          label: CONTRACTABLE_ROLE_LABELS[r],
+                        })),
+                      ]}
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      placeholder={COMMON_TEXT.selectOption}
+                    />
+                  )}
+                />
+              )}
               <FormFieldError message={contractSelectionForm.formState.errors.role?.message} />
             </div>
 

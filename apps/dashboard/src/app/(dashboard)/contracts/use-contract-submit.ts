@@ -36,7 +36,7 @@ export const useContractSubmit = (companies: ContractCompanyEntry[]) => {
           code: values.code.toUpperCase(),
           contractType: values.contractType ?? null,
           description: values.description,
-          contractGroupUuid: values.contractGroupUuid || undefined,
+          contractGroupUuid: values.contractGroupUuid,
           quicklyChangeOrder: values.quicklyChangeOrder || undefined,
           hasPriceDate: values.hasPriceDate,
           priceDate: values.hasPriceDate && values.priceDate ? values.priceDate : undefined,

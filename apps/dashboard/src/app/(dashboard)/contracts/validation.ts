@@ -9,7 +9,7 @@ export const createContractSchema = () =>
     description: z
       .string()
       .min(1, VALIDATION_MESSAGES.descriptionRequired),
-    contractGroupUuid: z.string().optional(),
+    contractGroupUuid: z.string().min(1, "Contract Group is required"),
     quicklyChangeOrder: z.string().optional(),
     hasPriceDate: z.boolean(),
     priceDate: z.string().optional(),

@@ -35,7 +35,7 @@ export type CompanyOption = Pick<SelectCompanies, "uuid" | "searchCode1" | "comp
 export type ContractPerCustomerRow =
   Pick<SelectContracts, "description" | "priceDate"> & {
     role: "customer" | "prospect";
-    customerCode: SelectCompanies["searchCode1"];
+    customerCode: SelectCompanies["id"];
     customerName: SelectCompanies["companyName"];
     city: string | null;
     contractCode: SelectContracts["code"];
@@ -44,7 +44,7 @@ export type ContractPerCustomerRow =
 
 export type ContractPerSupplierRow =
   Pick<SelectContracts, "description" | "startingDate" | "endDate"> & {
-    supplierCode: SelectCompanies["searchCode1"];
+    supplierCode: SelectCompanies["id"];
     supplierName: SelectCompanies["companyName"];
     city: string | null;
     contractCode: SelectContracts["code"];
@@ -84,7 +84,7 @@ export const getContractsPerCustomer = async (): Promise<ContractPerCustomerRow[
   const rows = await db
     .select({
       role: Contracts.role,
-      customerCode: Companies.searchCode1,
+      customerCode: Companies.id,
       customerName: Companies.companyName,
       city: sql<string | null>`(
         SELECT ca.city
@@ -122,7 +122,7 @@ export const getContractsPerCustomer = async (): Promise<ContractPerCustomerRow[
 export const getContractsPerSupplier = async (): Promise<ContractPerSupplierRow[]> => {
   const rows = await db
     .select({
-      supplierCode: Companies.searchCode1,
+      supplierCode: Companies.id,
       supplierName: Companies.companyName,
       city: sql<string | null>`(
         SELECT ca.city

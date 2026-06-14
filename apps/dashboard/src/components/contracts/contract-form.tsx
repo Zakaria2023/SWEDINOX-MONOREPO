@@ -188,7 +188,7 @@ export const ContractForm = ({ groups, availableCompanies }: ContractFormProps) 
               </div>
 
               <div>
-                <FormLabel htmlFor="contractGroupUuid">Contract Group</FormLabel>
+                <FormLabel htmlFor="contractGroupUuid" required>Contract Group</FormLabel>
                 <Controller
                   name="contractGroupUuid"
                   control={control}
@@ -203,6 +203,7 @@ export const ContractForm = ({ groups, availableCompanies }: ContractFormProps) 
                     />
                   )}
                 />
+                <FormFieldError message={errors.contractGroupUuid?.message} />
               </div>
 
               <div className="flex items-center gap-3">
