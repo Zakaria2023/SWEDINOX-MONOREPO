@@ -3,15 +3,17 @@
 import {
   db,
   Companies,
+  CompanyAddresses,
   ContractGroups,
   Contracts,
   SelectContracts,
   SelectContractGroups,
   SelectCompanies,
   InsertContracts,
+  SelectCompanyAddresses,
 } from "@/db";
 import { generateUuid } from "@/lib/helpers";
-import { and, desc, eq, inArray, isNotNull, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull } from "drizzle-orm";
 
 export type ContractInput = Omit<
   InsertContracts,
@@ -32,7 +34,7 @@ export type ContractActionResult = {
 };
 
 export type ContractListItem = SelectContracts & {
-  contractGroupName: string | null;
+  contractGroupName: SelectContractGroups["name"] | null;
 };
 
 export type ContractPerCustomerRow = Pick<
@@ -40,7 +42,7 @@ export type ContractPerCustomerRow = Pick<
   "role" | "code" | "description" | "priceDate"
 > &
   Pick<SelectCompanies, "id" | "companyName"> & {
-    city: string | null;
+    city: SelectCompanyAddresses["city"] | null;
     contractGroupName: SelectContractGroups["name"] | null;
   };
 
@@ -49,7 +51,7 @@ export type ContractPerSupplierRow = Pick<
   "code" | "description" | "startingDate" | "endDate"
 > &
   Pick<SelectCompanies, "id" | "companyName"> & {
-    city: string | null;
+    city: SelectCompanyAddresses["city"] | null;
     contractGroupName: SelectContractGroups["name"] | null;
   };
 
@@ -80,12 +82,7 @@ export const getContractsPerCustomer = async (): Promise<
       role: Contracts.role,
       id: Companies.id,
       companyName: Companies.companyName,
-      city: sql<string | null>`(
-        SELECT ca.city
-        FROM CompanyAddresses ca
-        WHERE ca.company_uuid = ${Companies.uuid}
-        LIMIT 1
-      )`,
+      city: CompanyAddresses.city,
       code: Contracts.code,
       description: Contracts.description,
       contractGroupName: ContractGroups.name,
@@ -93,6 +90,10 @@ export const getContractsPerCustomer = async (): Promise<
     })
     .from(Contracts)
     .innerJoin(Companies, eq(Companies.uuid, Contracts.companyUuid))
+    .leftJoin(
+      CompanyAddresses,
+      eq(CompanyAddresses.companyUuid, Companies.uuid),
+    )
     .leftJoin(
       ContractGroups,
       eq(ContractGroups.uuid, Contracts.contractGroupUuid),
@@ -123,12 +124,7 @@ export const getContractsPerSupplier = async (): Promise<
     .select({
       id: Companies.id,
       companyName: Companies.companyName,
-      city: sql<string | null>`(
-        SELECT ca.city
-        FROM CompanyAddresses ca
-        WHERE ca.company_uuid = ${Companies.uuid}
-        LIMIT 1
-      )`,
+      city: CompanyAddresses.city,
       code: Contracts.code,
       description: Contracts.description,
       contractGroupName: ContractGroups.name,
@@ -137,6 +133,10 @@ export const getContractsPerSupplier = async (): Promise<
     })
     .from(Contracts)
     .innerJoin(Companies, eq(Companies.uuid, Contracts.companyUuid))
+    .leftJoin(
+      CompanyAddresses,
+      eq(CompanyAddresses.companyUuid, Companies.uuid),
+    )
     .leftJoin(
       ContractGroups,
       eq(ContractGroups.uuid, Contracts.contractGroupUuid),
@@ -162,12 +162,13 @@ export const createContract = async (
   companies: ContractCompanyEntry[] = [],
 ): Promise<ContractActionResult> => {
   try {
+    // If no companies are provided, create a standalone contract without a company association
     if (companies.length === 0) {
       const uuid = generateUuid();
       await db.insert(Contracts).values({ ...input, uuid });
       return { success: true, contractUuid: uuid };
     }
-
+    // If companies are provided, create a contract for each company association
     await db.transaction(async (tx) => {
       await tx.insert(Contracts).values(
         companies.map((c) => ({
@@ -175,6 +176,8 @@ export const createContract = async (
           uuid: generateUuid(),
           companyUuid: c.companyUuid,
           role: c.role,
+          // TODO: Revisit the below logic for the date fields.
+          // This is just a placeholder to ensure the code runs without errors. We might want to handle this differently based on the use case.
           startingDate: c.startingDate ?? null,
           endDate: c.endDate ?? null,
           salesKg: 0,
