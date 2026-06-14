@@ -106,7 +106,6 @@ export const createCompany = async (
           ...contract,
           uuid: generateUuid(),
           companyUuid: uuid,
-          code: contract.code?.toUpperCase() ?? "",
         });
       }
     });
