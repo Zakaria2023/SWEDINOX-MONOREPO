@@ -3,8 +3,9 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
-import { createCompany, type CompanyActionResult } from "./actions";
-import { companySchema, type CompanyFormValues } from "./validation";
+import { createCompany, type CommSettingInput, type CompanyActionResult, type CompanyContractInput } from "./actions";
+import { createCompanySchema, type CompanyFormValues } from "./validation";
+import type { CompanyRole } from "@/lib/enums";
 
 const mapAddress = (address: CompanyFormValues["address"]) => ({
   altName: address.altName || undefined,
@@ -43,9 +44,16 @@ export const useCompanySubmit = () => {
   const [state, setState] = useState<CompanyActionResult>({});
 
   const form = useForm<CompanyFormValues>({
-    resolver: zodResolver(companySchema),
+    resolver: zodResolver(createCompanySchema()),
     defaultValues: {
       companyName: "",
+      correspName: "",
+      remarks: "",
+      lang: "",
+      roles: [],
+      searchCode1: "",
+      searchCode2: "",
+      searchCode3: "",
       address: {
         category: [],
         poBox: false,
@@ -80,14 +88,29 @@ export const useCompanySubmit = () => {
     },
   });
 
-  const onSubmit = (additionalAddresses: CompanyFormValues["address"][]) =>
+  const onSubmit = (
+    additionalAddresses: CompanyFormValues["address"][],
+    communicationSettings: CommSettingInput[] = [],
+    contracts: CompanyContractInput[] = [],
+  ) =>
     form.handleSubmit((values) => {
       startTransition(async () => {
-        const { companyName, address } = values;
+        const { companyName, correspName, remarks, lang, roles, searchCode1, searchCode2, searchCode3, address } = values;
+        const allAddresses = [address, ...additionalAddresses].map(mapAddress);
         const result = await createCompany(
-          companyName,
-          mapAddress(address),
-          additionalAddresses.map(mapAddress),
+          {
+            companyName,
+            correspName: correspName || undefined,
+            remarks: remarks || undefined,
+            lang: lang || undefined,
+            searchCode1: searchCode1 || undefined,
+            searchCode2: searchCode2 || undefined,
+            searchCode3: searchCode3 || undefined,
+            roles: (roles ?? []) as CompanyRole[],
+          },
+          allAddresses,
+          communicationSettings,
+          contracts,
         );
         setState(result);
       });

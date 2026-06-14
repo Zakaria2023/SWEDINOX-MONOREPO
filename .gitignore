@@ -36,3 +36,6 @@ pnpm-debug.log*
 # Misc
 *.tsbuildinfo
 next-env.d.ts
+.claude
+drizzle
+scripts

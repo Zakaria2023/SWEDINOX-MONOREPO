@@ -1,0 +1,120 @@
+"use client";
+
+import { useState } from "react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/shadcn/table";
+import { ColumnSelector } from "@/components/ui/column-selector";
+import { COMMON_TEXT } from "@/lib/labels";
+import type { ContractPerSupplierRow } from "@/app/(dashboard)/contracts/actions";
+
+type ColumnKey =
+  | "id"
+  | "companyName"
+  | "city"
+  | "code"
+  | "description"
+  | "contractGroupName"
+  | "startingDate"
+  | "endDate"
+  | "preference";
+
+const ALL_COLUMNS: Array<{ key: ColumnKey; label: string; defaultVisible: boolean }> = [
+  { key: "id",              label: "Supplier Code",    defaultVisible: true },
+  { key: "companyName",    label: "Supplier",          defaultVisible: true },
+  { key: "city",            label: "City",             defaultVisible: true },
+  { key: "code",            label: "Contract Code",    defaultVisible: true },
+  { key: "description",     label: "Contract",         defaultVisible: true },
+  { key: "contractGroupName", label: "Contract Group", defaultVisible: true },
+  { key: "startingDate",    label: "Starting Date",    defaultVisible: true },
+  { key: "endDate",         label: "End Date",         defaultVisible: true },
+  { key: "preference",      label: "Preference",       defaultVisible: true },
+];
+
+const initialVisibility = ALL_COLUMNS.reduce(
+  (acc, col) => ({ ...acc, [col.key]: col.defaultVisible }),
+  {} as Record<ColumnKey, boolean>,
+);
+
+type Props = { rows: ContractPerSupplierRow[] };
+
+export const ContractsPerSupplierTableContent = ({ rows }: Props) => {
+  const [columnVisibility, setColumnVisibility] =
+    useState<Record<ColumnKey, boolean>>(initialVisibility);
+
+  const toggleColumn = (key: string) =>
+    setColumnVisibility((prev) => ({
+      ...prev,
+      [key]: !prev[key as ColumnKey],
+    }));
+
+  const visibleColumns = ALL_COLUMNS.filter((col) => columnVisibility[col.key]);
+  const na = COMMON_TEXT.notAvailable;
+
+  const renderCell = (row: ContractPerSupplierRow, key: ColumnKey) => {
+    switch (key) {
+      case "id":
+        return <TableCell key={key}>{row.id}</TableCell>;
+      case "companyName":
+        return <TableCell key={key} className="font-medium">{row.companyName}</TableCell>;
+      case "city":
+        return <TableCell key={key}>{row.city ?? na}</TableCell>;
+      case "code":
+        return <TableCell key={key} className="font-mono font-medium">{row.code}</TableCell>;
+      case "description":
+        return <TableCell key={key}>{row.description || na}</TableCell>;
+      case "contractGroupName":
+        return <TableCell key={key}>{row.contractGroupName ?? na}</TableCell>;
+      case "startingDate":
+        return <TableCell key={key}>{row.startingDate ?? na}</TableCell>;
+      case "endDate":
+        return <TableCell key={key}>{row.endDate ?? na}</TableCell>;
+      case "preference":
+        return <TableCell key={key} className="text-right">0</TableCell>;
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <ColumnSelector
+          columns={ALL_COLUMNS.map((col) => ({ key: col.key, label: col.label }))}
+          visibility={columnVisibility}
+          onToggle={toggleColumn}
+        />
+      </div>
+
+      <div className="overflow-x-auto rounded-lg border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              {visibleColumns.map((col) => (
+                <TableHead key={col.key}>{col.label}</TableHead>
+              ))}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={visibleColumns.length} className="h-24 text-center">
+                  No contracts found for suppliers.
+                </TableCell>
+              </TableRow>
+            ) : (
+              rows.map((row, index) => (
+                <TableRow key={index}>
+                  {visibleColumns.map((col) => renderCell(row, col.key))}
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+};

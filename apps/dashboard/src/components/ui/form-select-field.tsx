@@ -11,7 +11,7 @@ import { Select, type SelectOption } from "@/components/shadcn/select";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 
 type FormSelectFieldProps<TFieldValues extends FieldValues> = {
-  control: Control<TFieldValues>;
+  control: Control<TFieldValues, unknown, TFieldValues>;
   disabled?: boolean;
   emptyValue?: string;
   errorMessage?: string;

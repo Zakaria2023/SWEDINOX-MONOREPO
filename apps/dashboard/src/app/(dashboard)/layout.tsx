@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
-import { SidebarProvider, SidebarTrigger } from "@/components/shadcn/sidebar";
+import { SidebarProvider } from "@/components/shadcn/sidebar";
 import { TooltipProvider } from "@/components/shadcn/tooltip";
 import { AppSidebar } from "@/components/sidebar/app-sidebar";
+import { DashboardHeader } from "@/components/layout/dashboard-header";
 
 type Props = {
   children: ReactNode;
@@ -12,9 +13,7 @@ const DashboardLayout = ({ children }: Props) => (
     <SidebarProvider>
       <AppSidebar />
       <main className="flex flex-1 flex-col">
-        <header className="flex h-12 items-center border-b px-4">
-          <SidebarTrigger />
-        </header>
+        <DashboardHeader />
         <div className="flex-1 p-6">{children}</div>
       </main>
     </SidebarProvider>

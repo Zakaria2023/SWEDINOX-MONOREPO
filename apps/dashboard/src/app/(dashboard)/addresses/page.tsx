@@ -1,14 +1,20 @@
+import { Suspense } from "react";
 import { AddressesTable } from "@/components/addresses/addresses-table";
+import { PageHeading } from "@/components/layout/page-heading";
+import { DataTableFallback } from "@/components/ui/data-table-fallback";
 
-const AddressesPage = () => (
-  <div className="space-y-6 p-6">
-    <div>
-      <h1 className="text-3xl font-bold text-gray-900">Addresses</h1>
-      <p className="mt-2 text-gray-600">Address records and details</p>
+const AddressesPage = () => {
+  return (
+    <div className="space-y-6 p-6">
+      <PageHeading
+        title="Addresses"
+        description="Address records and details"
+      />
+      <Suspense fallback={<DataTableFallback columnCount={13} />}>
+        <AddressesTable />
+      </Suspense>
     </div>
-
-    <AddressesTable />
-  </div>
-);
+  );
+};
 
 export default AddressesPage;

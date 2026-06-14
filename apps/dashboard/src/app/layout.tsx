@@ -14,7 +14,7 @@ type Props = {
 
 const RootLayout = ({ children }: Props) => (
   <ClerkProvider>
-    <html lang="en">
+    <html lang="en" dir="ltr">
       <body className="antialiased">{children}</body>
     </html>
   </ClerkProvider>

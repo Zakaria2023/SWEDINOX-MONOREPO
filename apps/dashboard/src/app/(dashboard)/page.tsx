@@ -1,10 +1,16 @@
-const DashboardPage = () => (
-  <div>
-    <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
-    <p className="mt-2 text-sm text-muted-foreground">
-      Welcome to the Swedinox dashboard.
-    </p>
-  </div>
-);
+import { PageHeading } from "@/components/layout/page-heading";
+
+const DashboardPage = () => {
+  return (
+    <div>
+      <PageHeading
+        title="Dashboard"
+        description="Welcome to the Swedinox dashboard."
+        titleClassName="text-2xl font-semibold tracking-tight"
+        descriptionClassName="mt-2 text-sm text-muted-foreground"
+      />
+    </div>
+  );
+};
 
 export default DashboardPage;
