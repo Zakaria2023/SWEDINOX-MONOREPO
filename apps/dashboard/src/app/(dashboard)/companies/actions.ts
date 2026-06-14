@@ -13,11 +13,17 @@ import {
 import { Contracts, type InsertContracts } from "@/db/schema/contracts";
 import { generateUuid } from "@/lib/helpers";
 import { asc, desc } from "drizzle-orm";
-
-export type CompanyOption = Pick<SelectCompanies, "uuid" | "searchCode1" | "companyName" | "roles">;
 import { currentUser } from "@clerk/nextjs/server";
 
-export type AddressInput = Omit<InsertCompanyAddresses, "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt">;
+export type CompanyOption = Pick<
+  SelectCompanies,
+  "uuid" | "searchCode1" | "companyName" | "roles"
+>;
+
+export type AddressInput = Omit<
+  InsertCompanyAddresses,
+  "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt"
+>;
 
 export type CommSettingInput = Omit<
   InsertCommunicationSettings,
@@ -29,7 +35,10 @@ export type CompanyFields = Omit<
   "id" | "uuid" | "createdAt" | "updatedAt"
 >;
 
-export type CompanyContractInput = Omit<InsertContracts, "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt">;
+export type CompanyContractInput = Omit<
+  InsertContracts,
+  "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt"
+>;
 
 export type CompanyActionResult = {
   companyUuid?: string;
@@ -39,7 +48,12 @@ export type CompanyActionResult = {
 
 export const getCompaniesForSelect = async (): Promise<CompanyOption[]> => {
   return db
-    .select({ uuid: Companies.uuid, searchCode1: Companies.searchCode1, companyName: Companies.companyName, roles: Companies.roles })
+    .select({
+      uuid: Companies.uuid,
+      searchCode1: Companies.searchCode1,
+      companyName: Companies.companyName,
+      roles: Companies.roles,
+    })
     .from(Companies)
     .orderBy(asc(Companies.companyName));
 };
@@ -51,7 +65,6 @@ export const getCompanies = async (): Promise<SelectCompanies[]> => {
     throw new Error("Failed to fetch companies");
   }
 };
-
 
 export const createCompany = async (
   companyFields: CompanyFields,
