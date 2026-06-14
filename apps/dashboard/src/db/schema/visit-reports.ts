@@ -5,12 +5,14 @@ import {
   foreignKey,
   index,
   int,
+  mysqlEnum,
   mysqlTable,
   text,
   timestamp,
   varchar,
 } from "drizzle-orm/mysql-core";
 import { Companies } from "./companies";
+import { visitReportContactMethodValues } from "./visit-report-contact-method";
 
 export const VisitReports = mysqlTable(
   "VisitReports",
@@ -29,7 +31,7 @@ export const VisitReports = mysqlTable(
     fax: varchar("fax", { length: 100 }),
     contact: varchar("contact", { length: 255 }),
 
-    contactMethod: varchar("contact_method", { length: 100 }),
+    contactMethod: mysqlEnum("contact_method", visitReportContactMethodValues),
     visitDate: varchar("visit_date", { length: 10 }),
     visitTime: varchar("visit_time", { length: 8 }),
     hasTakenPlace: boolean("has_taken_place").default(false).notNull(),
