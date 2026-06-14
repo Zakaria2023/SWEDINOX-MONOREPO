@@ -17,7 +17,7 @@ import {
 } from "../../lib/enums";
 
 export const CommunicationSettings = mysqlTable(
-  "communication_settings",
+  "CommunicationSettings",
   {
     id: int("id").primaryKey().autoincrement(),
     companyUuid: char("company_uuid", { length: 36 }).notNull(),
@@ -39,7 +39,9 @@ export const CommunicationSettings = mysqlTable(
   (table) => [
     index("idx_communication_settings_company_uuid").on(table.companyUuid),
     index("idx_communication_settings_document_type").on(table.documentType),
-    index("idx_communication_settings_communication_type").on(table.communicationType),
+    index("idx_communication_settings_communication_type").on(
+      table.communicationType,
+    ),
     foreignKey({
       name: "fk_communication_settings_company",
       columns: [table.companyUuid],
@@ -48,5 +50,9 @@ export const CommunicationSettings = mysqlTable(
   ],
 );
 
-export type SelectCommunicationSettings = InferSelectModel<typeof CommunicationSettings>;
-export type InsertCommunicationSettings = InferInsertModel<typeof CommunicationSettings>;
+export type SelectCommunicationSettings = InferSelectModel<
+  typeof CommunicationSettings
+>;
+export type InsertCommunicationSettings = InferInsertModel<
+  typeof CommunicationSettings
+>;

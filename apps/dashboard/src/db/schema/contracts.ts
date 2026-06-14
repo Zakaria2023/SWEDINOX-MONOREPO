@@ -15,7 +15,7 @@ import { contractableRoles, contractTypes } from "../../lib/enums";
 import { Companies } from "./companies";
 
 export const ContractGroups = mysqlTable(
-  "contract_groups",
+  "ContractGroups",
   {
     id: int("id").primaryKey().autoincrement(),
     uuid: char("uuid", { length: 36 }).notNull().unique(),
@@ -24,8 +24,12 @@ export const ContractGroups = mysqlTable(
     description: varchar("description", { length: 255 }),
 
     contractSubgroupUuid: char("contract_subgroup_uuid", { length: 36 }),
-    sequenceWithinSubgroup: int("sequence_within_subgroup").default(0).notNull(),
-    quicklyChangeSequenceNumber: varchar("quickly_change_sequence_number", { length: 100 }),
+    sequenceWithinSubgroup: int("sequence_within_subgroup")
+      .default(0)
+      .notNull(),
+    quicklyChangeSequenceNumber: varchar("quickly_change_sequence_number", {
+      length: 100,
+    }),
 
     isActive: boolean("is_active").default(true),
 
@@ -43,7 +47,7 @@ export const ContractGroups = mysqlTable(
 );
 
 export const Contracts = mysqlTable(
-  "contracts",
+  "Contracts",
   {
     id: int("id").primaryKey().autoincrement(),
     uuid: char("uuid", { length: 36 }).notNull().unique(),
