@@ -11,12 +11,12 @@ import {
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { COMMON_TEXT, COMPANY_ROLE_LABELS } from "@/lib/labels";
-import type { ContractPerCustomerRow } from "@/app/(dashboard)/contracts-per-customer/actions";
+import type { ContractPerCustomerRow } from "@/app/(dashboard)/contracts/actions";
 
 type ColumnKey =
   | "role"
-  | "companyCode"
-  | "companyName"
+  | "customerCode"
+  | "customerName"
   | "city"
   | "representative"
   | "customerGroup"
@@ -35,8 +35,8 @@ type ColumnKey =
 
 const ALL_COLUMNS: Array<{ key: ColumnKey; label: string; defaultVisible: boolean }> = [
   { key: "role",                  label: "Role",                    defaultVisible: true },
-  { key: "companyCode",           label: "Company Code",            defaultVisible: true },
-  { key: "companyName",           label: "Company",                 defaultVisible: true },
+  { key: "customerCode",          label: "Customer Code",           defaultVisible: true },
+  { key: "customerName",          label: "Customer",                defaultVisible: true },
   { key: "city",                  label: "City",                    defaultVisible: true },
   { key: "representative",        label: "Representative",          defaultVisible: true },
   { key: "customerGroup",         label: "Customer Group",          defaultVisible: true },
@@ -84,10 +84,10 @@ export const ContractsPerCustomerTableContent = ({ rows }: Props) => {
             </span>
           </TableCell>
         );
-      case "companyCode":
-        return <TableCell key={key}>{row.companyCode ?? na}</TableCell>;
-      case "companyName":
-        return <TableCell key={key} className="font-medium">{row.companyName}</TableCell>;
+      case "customerCode":
+        return <TableCell key={key}>{row.customerCode ?? na}</TableCell>;
+      case "customerName":
+        return <TableCell key={key} className="font-medium">{row.customerName}</TableCell>;
       case "city":
         return <TableCell key={key}>{row.city ?? na}</TableCell>;
       case "representative":

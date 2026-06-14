@@ -7,6 +7,7 @@ import {
   Building2,
   ChevronRight,
   ContactRound,
+  Truck,
   Users,
 } from "lucide-react";
 import {
@@ -40,15 +41,20 @@ export const AppSidebar = () => {
     pathname.startsWith("/companies") ||
     pathname.startsWith("/communication-settings");
   const isSalesActive =
-    pathname.startsWith("/contracts") ||
+    pathname === "/contracts" ||
+    pathname.startsWith("/contracts/") ||
     pathname.startsWith("/contract-groups");
+  const isSupplierActive = pathname.startsWith("/contracts-per-supplier");
+
   const [isCustomersOpen, setIsCustomersOpen] = useState(false);
   const [isCompanyOpen, setIsCompanyOpen] = useState(false);
   const [isSalesOpen, setIsSalesOpen] = useState(false);
+  const [isSupplierOpen, setIsSupplierOpen] = useState(false);
 
   const isCustomersExpanded = isCustomersOpen || isCustomersActive;
   const isCompanyExpanded = isCompanyOpen || isCompanyActive;
   const isSalesExpanded = isSalesOpen || isSalesActive;
+  const isSupplierExpanded = isSupplierOpen || isSupplierActive;
 
   return (
     <Sidebar>
@@ -153,6 +159,29 @@ export const AppSidebar = () => {
                         isActive={pathname.startsWith("/contract-groups")}
                       >
                         <span>Contract Groups</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                  </SidebarMenuSub>
+                )}
+              </SidebarMenuItem>
+
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  aria-expanded={isSupplierExpanded}
+                  onClick={() => setIsSupplierOpen((open) => !open)}
+                >
+                  <Truck />
+                  <span>Supplier</span>
+                  <ChevronRight className={chevronClass(isSupplierExpanded)} />
+                </SidebarMenuButton>
+                {isSupplierExpanded && (
+                  <SidebarMenuSub>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/contracts-per-supplier" />}
+                        isActive={pathname.startsWith("/contracts-per-supplier")}
+                      >
+                        <span>Contracts per Supplier</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                   </SidebarMenuSub>

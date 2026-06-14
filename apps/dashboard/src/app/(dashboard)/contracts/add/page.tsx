@@ -22,7 +22,7 @@ const AddContractPage = async () => {
         </Link>
       </div>
       <PageHeading title="New Contract" />
-      <ContractForm groups={groups} companies={companies} />
+      <ContractForm groups={groups} availableCompanies={companies} />
     </div>
   );
 };

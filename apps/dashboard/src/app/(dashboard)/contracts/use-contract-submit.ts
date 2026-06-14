@@ -3,10 +3,10 @@
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { createContract, type ContractActionResult, type ContractCompanyLinkInput } from "./actions";
+import { createContract, type ContractActionResult, type ContractCompanyEntry } from "./actions";
 import { createContractSchema, type ContractFormValues } from "./validation";
 
-export const useContractSubmit = (companyLinks: ContractCompanyLinkInput[]) => {
+export const useContractSubmit = (companies: ContractCompanyEntry[]) => {
   const [isPending, startTransition] = useTransition();
   const [state, setState] = useState<ContractActionResult>({});
 
@@ -50,7 +50,7 @@ export const useContractSubmit = (companyLinks: ContractCompanyLinkInput[]) => {
               : 10,
           hideOnWebsite: values.hideOnWebsite,
         },
-        companyLinks,
+        companies,
       );
       setState(result);
     });

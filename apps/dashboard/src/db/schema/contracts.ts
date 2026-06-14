@@ -64,6 +64,12 @@ export const Contracts = mysqlTable(
     priceDate: varchar("price_date", { length: 10 }),
     linkToNewCustomer: boolean("link_to_new_customer").default(false),
 
+    startingDate: varchar("starting_date", { length: 10 }),
+    endDate: varchar("end_date", { length: 10 }),
+    salesKg: float("sales_kg").default(0),
+    revenue: float("revenue").default(0),
+    maxWeightKg: float("max_weight_kg").default(0),
+
     searchCode1: varchar("search_code_1", { length: 100 }),
     searchCode2: varchar("search_code_2", { length: 100 }),
     searchCode3: varchar("search_code_3", { length: 100 }),
@@ -90,45 +96,7 @@ export const Contracts = mysqlTable(
   ],
 );
 
-export const ContractCompanyLinks = mysqlTable(
-  "contract_company_links",
-  {
-    id: int("id").primaryKey().autoincrement(),
-    uuid: char("uuid", { length: 36 }).notNull().unique(),
-
-    contractUuid: char("contract_uuid", { length: 36 }).notNull(),
-    companyUuid: char("company_uuid", { length: 36 }).notNull(),
-
-    role: mysqlEnum("role", contractableRoles),
-
-    startingDate: varchar("starting_date", { length: 10 }),
-    endDate: varchar("end_date", { length: 10 }),
-    salesKg: float("sales_kg"),
-    revenue: float("revenue"),
-    maxWeightKg: float("max_weight_kg"),
-
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
-  },
-  (table) => [
-    index("idx_ccl_contract_uuid").on(table.contractUuid),
-    index("idx_ccl_company_uuid").on(table.companyUuid),
-    foreignKey({
-      name: "fk_ccl_contract",
-      columns: [table.contractUuid],
-      foreignColumns: [Contracts.uuid],
-    }),
-    foreignKey({
-      name: "fk_ccl_company",
-      columns: [table.companyUuid],
-      foreignColumns: [Companies.uuid],
-    }),
-  ],
-);
-
 export type SelectContractGroups = InferSelectModel<typeof ContractGroups>;
 export type InsertContractGroups = InferInsertModel<typeof ContractGroups>;
 export type SelectContracts = InferSelectModel<typeof Contracts>;
 export type InsertContracts = InferInsertModel<typeof Contracts>;
-export type SelectContractCompanyLinks = InferSelectModel<typeof ContractCompanyLinks>;
-export type InsertContractCompanyLinks = InferInsertModel<typeof ContractCompanyLinks>;

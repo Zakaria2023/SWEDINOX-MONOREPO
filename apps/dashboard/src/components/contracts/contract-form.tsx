@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { Plus, X } from "lucide-react";
 import { z } from "zod";
-import type { CompanyOption, ContractCompanyLinkInput, ContractGroupOption } from "@/app/(dashboard)/contracts/actions";
+import type { CompanyOption, ContractCompanyEntry, ContractGroupOption } from "@/app/(dashboard)/contracts/actions";
 import { useContractSubmit } from "@/app/(dashboard)/contracts/use-contract-submit";
 import { contractableRoles, contractTypes, type ContractableRole } from "@/lib/enums";
 import { DatePicker } from "@/components/shadcn/date-picker";
@@ -34,16 +34,13 @@ import { COMMON_TEXT, CONTRACTABLE_ROLE_LABELS, CONTRACT_TYPE_LABELS } from "@/l
 
 type ContractFormProps = {
   groups: ContractGroupOption[];
-  companies: CompanyOption[];
+  availableCompanies: CompanyOption[];
 };
 
 const companyLinkSchema = z.object({
   companyUuid: z.string().min(1, "Company is required"),
   startingDate: z.string().optional(),
   endDate: z.string().optional(),
-  salesKg: z.string().optional(),
-  revenue: z.string().optional(),
-  maxWeightKg: z.string().optional(),
 });
 type CompanyLinkFormValues = z.infer<typeof companyLinkSchema>;
 
@@ -52,12 +49,12 @@ const contractableRoleSet = new Set(contractableRoles as readonly string[]);
 const getContractableRole = (company: CompanyOption): ContractableRole | null =>
   (company.roles.find((r) => contractableRoleSet.has(r)) as ContractableRole) ?? null;
 
-export const ContractForm = ({ groups, companies }: ContractFormProps) => {
+export const ContractForm = ({ groups, availableCompanies }: ContractFormProps) => {
   const router = useRouter();
-  const [companyLinks, setCompanyLinks] = useState<ContractCompanyLinkInput[]>([]);
+  const [companies, setCompanies] = useState<ContractCompanyEntry[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  const { form, isPending, onSubmit, state } = useContractSubmit(companyLinks);
+  const { form, isPending, onSubmit, state } = useContractSubmit(companies);
   const { register, watch, setValue, control, formState: { errors } } = form;
 
   const contractType = watch("contractType");
@@ -70,7 +67,7 @@ export const ContractForm = ({ groups, companies }: ContractFormProps) => {
   }, [router, state.success]);
 
   // Only companies that carry at least one contractable role
-  const contractableCompanies = companies.filter((c) =>
+  const contractableCompanies = availableCompanies.filter((c) =>
     c.roles.some((r) => contractableRoleSet.has(r)),
   );
 
@@ -93,9 +90,6 @@ export const ContractForm = ({ groups, companies }: ContractFormProps) => {
       companyUuid: "",
       startingDate: "",
       endDate: "",
-      salesKg: "",
-      revenue: "",
-      maxWeightKg: "",
     },
   });
 
@@ -111,25 +105,22 @@ export const ContractForm = ({ groups, companies }: ContractFormProps) => {
   const handleSaveCompanyLink = linkForm.handleSubmit((values) => {
     const company = contractableCompanies.find((c) => c.uuid === values.companyUuid);
     const role = company ? getContractableRole(company) : null;
-    const link: ContractCompanyLinkInput = {
+    const entry: ContractCompanyEntry = {
       companyUuid: values.companyUuid,
       role,
       startingDate: values.startingDate || undefined,
       endDate: values.endDate || undefined,
-      salesKg: values.salesKg ? Number(values.salesKg) : undefined,
-      revenue: values.revenue ? Number(values.revenue) : undefined,
-      maxWeightKg: values.maxWeightKg ? Number(values.maxWeightKg) : undefined,
     };
-    setCompanyLinks((prev) => [...prev, link]);
+    setCompanies((prev) => [...prev, entry]);
     setIsDialogOpen(false);
   });
 
-  const removeCompanyLink = (index: number) => {
-    setCompanyLinks((prev) => prev.filter((_, i) => i !== index));
+  const removeCompany = (index: number) => {
+    setCompanies((prev) => prev.filter((_, i) => i !== index));
   };
 
   const getCompanyLabel = (uuid: string) => {
-    const c = companies.find((c) => c.uuid === uuid);
+    const c = availableCompanies.find((c) => c.uuid === uuid);
     if (!c) return uuid;
     return [c.searchCode1, c.companyName].filter(Boolean).join(" — ");
   };
@@ -326,7 +317,7 @@ export const ContractForm = ({ groups, companies }: ContractFormProps) => {
             <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-700">
               Companies{" "}
               <span className="ml-1 text-xs font-normal text-muted-foreground">
-                {companyLinks.length} {companyLinks.length === 1 ? "company" : "companies"}
+                {companies.length} {companies.length === 1 ? "company" : "companies"}
               </span>
             </h2>
             <Button type="button" variant="outline" size="sm" onClick={openDialog} disabled={isPending}>
@@ -335,7 +326,7 @@ export const ContractForm = ({ groups, companies }: ContractFormProps) => {
             </Button>
           </div>
 
-          {companyLinks.length > 0 && (
+          {companies.length > 0 && (
             <div className="rounded-lg border">
               <Table>
                 <TableHeader>
@@ -344,32 +335,26 @@ export const ContractForm = ({ groups, companies }: ContractFormProps) => {
                     <TableHead>Role</TableHead>
                     <TableHead>Starting Date</TableHead>
                     <TableHead>End Date</TableHead>
-                    <TableHead className="text-right">Sales (kg)</TableHead>
-                    <TableHead className="text-right">Revenue</TableHead>
-                    <TableHead className="text-right">Max Weight (kg)</TableHead>
                     <TableHead className="w-10" />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {companyLinks.map((link, index) => (
+                  {companies.map((entry, index) => (
                     <TableRow key={index}>
-                      <TableCell className="font-medium">{getCompanyLabel(link.companyUuid)}</TableCell>
+                      <TableCell className="font-medium">{getCompanyLabel(entry.companyUuid)}</TableCell>
                       <TableCell>
-                        {link.role ? (
+                        {entry.role ? (
                           <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
-                            {CONTRACTABLE_ROLE_LABELS[link.role]}
+                            {CONTRACTABLE_ROLE_LABELS[entry.role]}
                           </span>
                         ) : na}
                       </TableCell>
-                      <TableCell>{link.startingDate ?? na}</TableCell>
-                      <TableCell>{link.endDate ?? na}</TableCell>
-                      <TableCell className="text-right">{link.salesKg ?? na}</TableCell>
-                      <TableCell className="text-right">{link.revenue ?? na}</TableCell>
-                      <TableCell className="text-right">{link.maxWeightKg ?? na}</TableCell>
+                      <TableCell>{entry.startingDate ?? na}</TableCell>
+                      <TableCell>{entry.endDate ?? na}</TableCell>
                       <TableCell>
                         <button
                           type="button"
-                          onClick={() => removeCompanyLink(index)}
+                          onClick={() => removeCompany(index)}
                           className="text-muted-foreground hover:text-destructive"
                         >
                           <X className="size-4" />
@@ -444,21 +429,6 @@ export const ContractForm = ({ groups, companies }: ContractFormProps) => {
                     <DatePicker value={field.value ?? ""} onChange={field.onChange} />
                   )}
                 />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <FormLabel htmlFor="linkSalesKg">Sales (kg)</FormLabel>
-                <Input id="linkSalesKg" type="number" min={0} step="any" {...linkForm.register("salesKg")} />
-              </div>
-              <div>
-                <FormLabel htmlFor="linkRevenue">Revenue</FormLabel>
-                <Input id="linkRevenue" type="number" min={0} step="any" {...linkForm.register("revenue")} />
-              </div>
-              <div>
-                <FormLabel htmlFor="linkMaxWeightKg">Max Weight (kg)</FormLabel>
-                <Input id="linkMaxWeightKg" type="number" min={0} step="any" {...linkForm.register("maxWeightKg")} />
               </div>
             </div>
 
