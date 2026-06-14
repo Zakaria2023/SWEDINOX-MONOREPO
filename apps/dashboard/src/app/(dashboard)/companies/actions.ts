@@ -11,7 +11,6 @@ import {
   InsertCommunicationSettings,
 } from "@/db/schema/communication-settings";
 import { Contracts, InsertContracts } from "@/db/schema/contracts";
-import { VisitReports, InsertVisitReports } from "@/db/schema/visit-reports";
 import { generateUuid } from "@/lib/helpers";
 import { asc, desc } from "drizzle-orm";
 import { currentUser } from "@clerk/nextjs/server";
@@ -41,10 +40,6 @@ export type CompanyContractInput = Omit<
   "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt"
 >;
 
-export type CompanyVisitReportInput = Omit<
-  InsertVisitReports,
-  "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt"
->;
 
 export type CompanyActionResult = {
   companyUuid?: string;
@@ -77,7 +72,6 @@ export const createCompany = async (
   addresses: AddressInput[] = [],
   communicationSettings: CommSettingInput[] = [],
   contracts: CompanyContractInput[] = [],
-  visitReports: CompanyVisitReportInput[] = [],
 ): Promise<CompanyActionResult> => {
   const uuid = generateUuid();
 
@@ -116,13 +110,6 @@ export const createCompany = async (
         });
       }
 
-      for (const visitReport of visitReports) {
-        await tx.insert(VisitReports).values({
-          ...visitReport,
-          uuid: generateUuid(),
-          companyUuid: uuid,
-        });
-      }
     });
 
     return { success: true, companyUuid: uuid };

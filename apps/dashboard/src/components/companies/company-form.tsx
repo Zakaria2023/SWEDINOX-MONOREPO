@@ -3,7 +3,6 @@
 import type {
   CommSettingInput,
   CompanyContractInput,
-  CompanyVisitReportInput,
 } from "@/app/(dashboard)/companies/actions";
 import { useCompanySubmit } from "@/app/(dashboard)/companies/use-company-submit";
 import {
@@ -14,7 +13,6 @@ import {
 import type { ContractListItem } from "@/app/(dashboard)/contracts/actions";
 import { AddressForm } from "@/components/companies/address-form";
 import { Button } from "@/components/shadcn/button";
-import { DatePicker } from "@/components/shadcn/date-picker";
 import {
   Dialog,
   DialogContent,
@@ -36,8 +34,6 @@ import {
   companyLangs,
   companyRoles,
   contractableRoles,
-  visitReportContactMethods,
-  visitReportReasons,
   type AddressCategory,
   type CompanyRole,
   type ContractableRole,
@@ -53,18 +49,10 @@ import {
   COMPANY_ROLE_LABELS,
   CONTRACT_TYPE_LABELS,
   CONTRACTABLE_ROLE_LABELS,
-  VISIT_REPORT_CONTACT_METHOD_LABELS,
-  VISIT_REPORT_REASON_LABELS,
 } from "@/lib/labels";
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  ClipboardList,
-  FileText,
-  MapPin,
-  MessageSquare,
-  Plus,
-  X,
-} from "lucide-react";
+import { FileText, MapPin, MessageSquare, Plus, X } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
@@ -163,28 +151,6 @@ const DEFAULT_CONTRACT_SELECTION: ContractSelectionValues = {
   role: "" as ContractableRole,
 };
 
-const visitReportDialogSchema = z.object({
-  contactMethod: z.enum(visitReportContactMethods).optional(),
-  visitDate: z.string().optional(),
-  visitTime: z.string().optional(),
-  hasTakenPlace: z.boolean(),
-  visitReason: z.enum(visitReportReasons).optional(),
-  attentionPoint: z.string().optional(),
-  remarks: z.string().optional(),
-});
-
-type VisitReportDialogValues = z.infer<typeof visitReportDialogSchema>;
-
-const DEFAULT_VISIT_REPORT: VisitReportDialogValues = {
-  contactMethod: undefined,
-  visitDate: "",
-  visitTime: "",
-  hasTakenPlace: false,
-  visitReason: undefined,
-  attentionPoint: "",
-  remarks: "",
-};
-
 type CompanyFormProps = {
   availableContracts: ContractListItem[];
 };
@@ -205,11 +171,6 @@ export const CompanyForm = ({ availableContracts }: CompanyFormProps) => {
   const [selectedCommType, setSelectedCommType] = useState("");
   const [isContractDialogOpen, setIsContractDialogOpen] = useState(false);
   const [contracts, setContracts] = useState<CompanyContractInput[]>([]);
-  const [isVisitReportDialogOpen, setIsVisitReportDialogOpen] = useState(false);
-  const [visitReports, setVisitReports] = useState<CompanyVisitReportInput[]>(
-    [],
-  );
-
   const { form, isPending, onSubmit, state } = useCompanySubmit();
   const {
     control,
@@ -243,11 +204,6 @@ export const CompanyForm = ({ availableContracts }: CompanyFormProps) => {
   const contractSelectionForm = useForm<ContractSelectionValues>({
     resolver: zodResolver(contractSelectionSchema),
     defaultValues: DEFAULT_CONTRACT_SELECTION,
-  });
-
-  const visitReportForm = useForm<VisitReportDialogValues>({
-    resolver: zodResolver(visitReportDialogSchema),
-    defaultValues: DEFAULT_VISIT_REPORT,
   });
 
   const addressValues = watch("address");
@@ -407,31 +363,6 @@ export const CompanyForm = ({ availableContracts }: CompanyFormProps) => {
     setIsContractDialogOpen(false);
   });
 
-  const handleSaveVisitReport = visitReportForm.handleSubmit((values) => {
-    setVisitReports((prev) => [
-      ...prev,
-      {
-        contactMethod: values.contactMethod ?? null,
-        visitDate: values.visitDate || null,
-        visitTime: values.visitTime || null,
-        hasTakenPlace: values.hasTakenPlace,
-        visitReason: values.visitReason ?? null,
-        attentionPoint: values.attentionPoint || null,
-        remarks: values.remarks || null,
-        representative: null,
-        visitedBy: null,
-        address: null,
-        postalCode: null,
-        city: null,
-        telephone: null,
-        fax: null,
-        contact: null,
-      },
-    ]);
-    visitReportForm.reset(DEFAULT_VISIT_REPORT);
-    setIsVisitReportDialogOpen(false);
-  });
-
   const toggleRole = (role: CompanyRole) => {
     if (!selectedRoles.includes(role) && disabledRoles.has(role)) return;
     setValue(
@@ -455,7 +386,6 @@ export const CompanyForm = ({ availableContracts }: CompanyFormProps) => {
           additionalAddresses,
           communicationSettings,
           contracts,
-          visitReports,
         )}
         className="space-y-8"
       >
@@ -745,62 +675,14 @@ export const CompanyForm = ({ availableContracts }: CompanyFormProps) => {
           <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
             Visit Reports
           </h2>
-          <div className="space-y-2 rounded-2xl border border-border bg-muted/20 p-4">
-            {visitReports.map((vr, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between rounded-lg border border-border bg-background px-3 py-2"
-              >
-                <div className="flex min-w-0 items-center gap-2 text-sm">
-                  <ClipboardList className="size-4 shrink-0 text-muted-foreground" />
-                  {vr.visitDate && (
-                    <span className="text-muted-foreground">
-                      {vr.visitDate}
-                    </span>
-                  )}
-                  {vr.contactMethod && (
-                    <span className="shrink-0 rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700">
-                      {VISIT_REPORT_CONTACT_METHOD_LABELS[vr.contactMethod]}
-                    </span>
-                  )}
-                  {vr.visitReason && (
-                    <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">
-                      {VISIT_REPORT_REASON_LABELS[vr.visitReason]}
-                    </span>
-                  )}
-                  {vr.remarks && (
-                    <span className="truncate text-muted-foreground">
-                      — {vr.remarks}
-                    </span>
-                  )}
-                </div>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setVisitReports((prev) =>
-                      prev.filter((_, i) => i !== index),
-                    )
-                  }
-                  className="shrink-0 text-muted-foreground hover:text-destructive"
-                  disabled={isPending}
-                >
-                  <X className="size-4" />
-                  <span className="sr-only">Remove visit report</span>
-                </button>
-              </div>
-            ))}
-            <button
-              type="button"
-              onClick={() => {
-                visitReportForm.reset(DEFAULT_VISIT_REPORT);
-                setIsVisitReportDialogOpen(true);
-              }}
-              className="inline-flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-border px-3 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary"
-              disabled={isPending}
+          <div className="rounded-2xl border border-border bg-muted/20 p-4">
+            <Link
+              href="/visit-reports/add"
+              className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg border border-dashed border-border px-3 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary"
             >
               <Plus className="size-4" />
               Add Visit Report
-            </button>
+            </Link>
           </div>
         </section>
 
@@ -1176,122 +1058,6 @@ export const CompanyForm = ({ availableContracts }: CompanyFormProps) => {
         </DialogContent>
       </Dialog>
 
-      <Dialog
-        open={isVisitReportDialogOpen}
-        onOpenChange={(open) => {
-          if (!open) visitReportForm.reset(DEFAULT_VISIT_REPORT);
-          setIsVisitReportDialogOpen(open);
-        }}
-      >
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <ClipboardList className="size-4" />
-              Add Visit Report
-            </DialogTitle>
-          </DialogHeader>
-          <form
-            onSubmit={handleSaveVisitReport}
-            className="mt-2 space-y-4 px-6 pb-6"
-          >
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <FormLabel>Contact Method</FormLabel>
-                <Controller
-                  name="contactMethod"
-                  control={visitReportForm.control}
-                  render={({ field }) => (
-                    <Select
-                      options={[
-                        { value: "", label: COMMON_TEXT.emptyOption },
-                        ...visitReportContactMethods.map((m) => ({
-                          value: m,
-                          label: VISIT_REPORT_CONTACT_METHOD_LABELS[m],
-                        })),
-                      ]}
-                      value={field.value ?? ""}
-                      onValueChange={(v) => field.onChange(v || undefined)}
-                    />
-                  )}
-                />
-              </div>
-              <div>
-                <FormLabel>Visit Reason</FormLabel>
-                <Controller
-                  name="visitReason"
-                  control={visitReportForm.control}
-                  render={({ field }) => (
-                    <Select
-                      options={[
-                        { value: "", label: COMMON_TEXT.emptyOption },
-                        ...visitReportReasons.map((r) => ({
-                          value: r,
-                          label: VISIT_REPORT_REASON_LABELS[r],
-                        })),
-                      ]}
-                      value={field.value ?? ""}
-                      onValueChange={(v) => field.onChange(v || undefined)}
-                    />
-                  )}
-                />
-              </div>
-              <div>
-                <FormLabel>Visit Date</FormLabel>
-                <Controller
-                  name="visitDate"
-                  control={visitReportForm.control}
-                  render={({ field }) => (
-                    <DatePicker
-                      value={field.value ?? ""}
-                      onChange={field.onChange}
-                    />
-                  )}
-                />
-              </div>
-              <div>
-                <FormLabel>Visit Time</FormLabel>
-                <Input type="time" {...visitReportForm.register("visitTime")} />
-              </div>
-            </div>
-            <label className="flex items-center gap-3 rounded-lg border border-border bg-muted/20 px-4 py-3">
-              <input
-                type="checkbox"
-                className="size-4 rounded border-border accent-primary"
-                {...visitReportForm.register("hasTakenPlace")}
-              />
-              <span className="text-sm font-medium text-gray-700">
-                Visit / telephone contact has taken place
-              </span>
-            </label>
-            <div>
-              <FormLabel>Attention Point</FormLabel>
-              <textarea
-                {...visitReportForm.register("attentionPoint")}
-                rows={3}
-                className="w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
-              />
-            </div>
-            <div>
-              <FormLabel>Remarks</FormLabel>
-              <textarea
-                {...visitReportForm.register("remarks")}
-                rows={3}
-                className="w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
-              />
-            </div>
-            <div className="flex justify-end gap-3 pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setIsVisitReportDialogOpen(false)}
-              >
-                {COMMON_TEXT.cancel}
-              </Button>
-              <Button type="submit">Add Visit Report</Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
     </>
   );
 };
