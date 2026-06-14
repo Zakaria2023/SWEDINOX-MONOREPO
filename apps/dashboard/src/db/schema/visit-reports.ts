@@ -11,8 +11,8 @@ import {
   timestamp,
   varchar,
 } from "drizzle-orm/mysql-core";
+import { visitReportContactMethods, visitReportReasons } from "@/lib/enums";
 import { Companies } from "./companies";
-import { visitReportContactMethodValues } from "./visit-report-contact-method";
 
 export const VisitReports = mysqlTable(
   "VisitReports",
@@ -31,12 +31,12 @@ export const VisitReports = mysqlTable(
     fax: varchar("fax", { length: 100 }),
     contact: varchar("contact", { length: 255 }),
 
-    contactMethod: mysqlEnum("contact_method", visitReportContactMethodValues),
+    contactMethod: mysqlEnum("contact_method", visitReportContactMethods),
     visitDate: varchar("visit_date", { length: 10 }),
     visitTime: varchar("visit_time", { length: 8 }),
     hasTakenPlace: boolean("has_taken_place").default(false).notNull(),
 
-    visitReason: varchar("visit_reason", { length: 255 }),
+    visitReason: mysqlEnum("visit_reason", visitReportReasons),
     attentionPoint: text("attention_point"),
     remarks: text("remarks"),
 

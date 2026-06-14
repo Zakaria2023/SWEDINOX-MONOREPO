@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { type VisitReportListItem } from "@/app/(dashboard)/visit-reports/actions";
-import { VISIT_REPORT_CONTACT_METHOD_LABELS } from "@/db/schema/visit-report-contact-method";
+import { VISIT_REPORT_CONTACT_METHOD_LABELS } from "@/lib/labels";
 import {
   Table,
   TableBody,

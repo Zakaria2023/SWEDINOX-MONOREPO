@@ -3,6 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
+import { type VisitReportReason } from "@/lib/enums";
 import { createVisitReport, type VisitReportActionResult } from "./actions";
 import {
   createVisitReportSchema,
@@ -51,7 +52,7 @@ export const useVisitReportSubmit = () => {
         visitDate: values.visitDate || undefined,
         visitTime: values.visitTime || undefined,
         hasTakenPlace: values.hasTakenPlace,
-        visitReason: values.visitReason || undefined,
+        visitReason: (values.visitReason as VisitReportReason) || undefined,
         attentionPoint: values.attentionPoint || undefined,
         remarks: values.remarks || undefined,
       });

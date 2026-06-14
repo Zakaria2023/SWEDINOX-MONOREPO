@@ -6,10 +6,8 @@ import { useRouter } from "next/navigation";
 import type { CompanyOption } from "@/app/(dashboard)/companies/actions";
 import type { DashboardUserOption } from "@/app/(dashboard)/users/actions";
 import { useVisitReportSubmit } from "@/app/(dashboard)/visit-reports/use-visit-report-submit";
-import {
-  VISIT_REPORT_CONTACT_METHOD_LABELS,
-  visitReportContactMethodValues,
-} from "@/db/schema/visit-report-contact-method";
+import { visitReportContactMethods } from "@/lib/enums";
+import { VISIT_REPORT_CONTACT_METHOD_LABELS } from "@/lib/labels";
 import { DatePicker } from "@/components/shadcn/date-picker";
 import { Input } from "@/components/shadcn/input";
 import { FormActions } from "@/components/ui/form-actions";
@@ -61,7 +59,7 @@ export const VisitReportForm = ({
 
   const contactMethodOptions = [
     { value: "", label: COMMON_TEXT.selectPlaceholder },
-    ...visitReportContactMethodValues.map((method) => ({
+    ...visitReportContactMethods.map((method) => ({
       value: method,
       label: VISIT_REPORT_CONTACT_METHOD_LABELS[method],
     })),

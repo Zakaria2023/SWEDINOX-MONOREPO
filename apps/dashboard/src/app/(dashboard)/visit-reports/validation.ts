@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { visitReportContactMethodValues } from "@/db/schema/visit-report-contact-method";
+import { visitReportContactMethods } from "@/lib/enums";
 
 export const createVisitReportSchema = () =>
   z.object({
@@ -13,7 +13,7 @@ export const createVisitReportSchema = () =>
     fax: z.string().optional(),
     contact: z.string().optional(),
     contactMethod: z
-      .union([z.enum(visitReportContactMethodValues), z.literal("")])
+      .union([z.enum(visitReportContactMethods), z.literal("")])
       .optional(),
     visitDate: z.string().optional(),
     visitTime: z.string().optional(),

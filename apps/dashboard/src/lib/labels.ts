@@ -8,6 +8,8 @@ import type {
   CompanyRole,
   ContractableRole,
   ContractType,
+  VisitReportContactMethod,
+  VisitReportReason,
 } from "@/lib/enums";
 
 export const COMMON_TEXT = {
@@ -125,4 +127,18 @@ export const COMMUNICATION_SETTING_SHAPE_LABELS: Record<
   edi4steel: "EDI4Steel",
   text: "Text",
   peppol: "Peppol",
+};
+
+export const VISIT_REPORT_CONTACT_METHOD_LABELS: Record<VisitReportContactMethod, string> = {
+  visit: "Visit",
+  telephone_contact: "Telephone Contact",
+};
+
+export const VISIT_REPORT_REASON_LABELS: Record<VisitReportReason, string> = {
+  visit_frequency: "Visit frequency",
+  turnover_is_lagging_behind: "Turnover is lagging behind",
+  complaint: "Complaint",
+  quotation_follow_up: "Quotation follow-up",
+  at_customers_request: "At customer's request",
+  introduction: "Introduction",
 };
