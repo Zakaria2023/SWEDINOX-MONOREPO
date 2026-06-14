@@ -122,6 +122,9 @@ const getDisabledRoles = (selected: CompanyRole[]): Set<CompanyRole> => {
   return disabled;
 };
 
+const isContractableRole = (role: CompanyRole): role is ContractableRole =>
+  (contractableRoles as readonly string[]).includes(role);
+
 const commSettingSchema = z.object({
   documentType: z.string().min(1),
   communicationType: z.string().min(1),
@@ -151,6 +154,11 @@ const DEFAULT_CONTRACT_SELECTION: ContractSelectionValues = {
   contractUuid: "",
   role: "" as ContractableRole,
 };
+
+const getDefaultContractRole = (
+  roles: ContractableRole[],
+): ContractSelectionValues["role"] =>
+  roles.length === 1 ? roles[0] : ("" as ContractSelectionValues["role"]);
 
 type CompanyFormProps = {
   availableContracts: ContractListItem[];
@@ -211,10 +219,7 @@ export const CompanyForm = ({ availableContracts }: CompanyFormProps) => {
   const addressValues = watch("address");
   const selectedRoles: CompanyRole[] = watch("roles") ?? [];
   const disabledRoles = getDisabledRoles(selectedRoles);
-  const activeContractableRoles = selectedRoles.filter(
-    (r): r is ContractableRole =>
-      (contractableRoles as readonly string[]).includes(r),
-  );
+  const activeContractableRoles = selectedRoles.filter(isContractableRole);
 
   const usedCategories = new Set<AddressCategory>([
     ...(addressValues.category ?? []),
@@ -366,13 +371,48 @@ export const CompanyForm = ({ availableContracts }: CompanyFormProps) => {
   });
 
   const toggleRole = (role: CompanyRole) => {
-    if (!selectedRoles.includes(role) && disabledRoles.has(role)) return;
-    setValue(
-      "roles",
-      selectedRoles.includes(role)
-        ? selectedRoles.filter((r) => r !== role)
-        : [...selectedRoles, role],
-    );
+    const isSelected = selectedRoles.includes(role);
+
+    if (!isSelected && disabledRoles.has(role)) return;
+
+    const nextRoles = isSelected
+      ? selectedRoles.filter((r) => r !== role)
+      : [...selectedRoles, role];
+
+    setValue("roles", nextRoles);
+
+    if (!isSelected || !isContractableRole(role)) {
+      return;
+    }
+
+    const nextContractableRoles = nextRoles.filter(isContractableRole);
+    const allowedRoles = new Set(nextContractableRoles);
+
+    setContracts((prev) => {
+      const nextContracts = prev.filter((contract) => {
+        const contractRole = contract.role;
+        return contractRole != null && allowedRoles.has(contractRole);
+      });
+      return nextContracts.length === prev.length ? prev : nextContracts;
+    });
+
+    if (nextContractableRoles.length === 0) {
+      contractSelectionForm.reset(DEFAULT_CONTRACT_SELECTION);
+      setIsContractDialogOpen(false);
+      return;
+    }
+
+    const currentDialogRole = contractSelectionForm.getValues("role");
+    const nextDialogRole = getDefaultContractRole(nextContractableRoles);
+
+    if (
+      currentDialogRole !== nextDialogRole &&
+      (!currentDialogRole ||
+        !allowedRoles.has(currentDialogRole) ||
+        nextContractableRoles.length === 1)
+    ) {
+      contractSelectionForm.setValue("role", nextDialogRole);
+    }
   };
 
   const commSettingLabel = (setting: CommSettingInput) =>
@@ -656,10 +696,7 @@ export const CompanyForm = ({ availableContracts }: CompanyFormProps) => {
                 onClick={() => {
                   contractSelectionForm.reset({
                     contractUuid: "",
-                    role:
-                      activeContractableRoles.length === 1
-                        ? activeContractableRoles[0]
-                        : ("" as ContractableRole),
+                    role: getDefaultContractRole(activeContractableRoles),
                   });
                   setIsContractDialogOpen(true);
                 }}
@@ -939,10 +976,7 @@ export const CompanyForm = ({ availableContracts }: CompanyFormProps) => {
           else
             contractSelectionForm.reset({
               contractUuid: "",
-              role:
-                activeContractableRoles.length === 1
-                  ? activeContractableRoles[0]
-                  : ("" as ContractableRole),
+              role: getDefaultContractRole(activeContractableRoles),
             });
           setIsContractDialogOpen(open);
         }}
