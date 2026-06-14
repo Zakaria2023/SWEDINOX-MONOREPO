@@ -11,7 +11,7 @@ const ContractGroupsPage = () => {
         description="Manage groups that can be assigned to contracts."
       />
       <Suspense
-        fallback={<DataTableFallback columnCount={6} toolbarWidthClassName="w-32" />}
+        fallback={<DataTableFallback columnCount={5} toolbarWidthClassName="w-32" />}
       >
         <ContractGroupsTable />
       </Suspense>

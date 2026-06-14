@@ -3,13 +3,11 @@
 import { z } from "zod";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   createContractGroup,
-  deleteContractGroup,
-  updateContractGroup,
   type ContractGroupItem,
 } from "@/app/(dashboard)/contract-groups/actions";
 import { Button } from "@/components/shadcn/button";
@@ -23,7 +21,6 @@ import {
 import { Input } from "@/components/shadcn/input";
 import { Select } from "@/components/shadcn/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/shadcn/table";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FormError } from "@/components/ui/form-error";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import { COMMON_TEXT } from "@/lib/labels";
@@ -56,8 +53,6 @@ export const ContractGroupsClient = ({ groups }: Props) => {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editTarget, setEditTarget] = useState<ContractGroupItem | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<ContractGroupItem | null>(null);
   const [formError, setFormError] = useState<string | undefined>();
 
   const form = useForm<GroupFormValues>({
@@ -69,28 +64,11 @@ export const ContractGroupsClient = ({ groups }: Props) => {
 
   const subgroupOptions = [
     { value: "", label: COMMON_TEXT.emptyOption },
-    ...groups
-      .filter((group) => group.uuid !== editTarget?.uuid)
-      .map((group) => ({ value: group.uuid, label: group.name })),
+    ...groups.map((group) => ({ value: group.uuid, label: group.name })),
   ];
 
   const openCreate = () => {
-    setEditTarget(null);
     reset(DEFAULT_VALUES);
-    setFormError(undefined);
-    setDialogOpen(true);
-  };
-
-  const openEdit = (group: ContractGroupItem) => {
-    setEditTarget(group);
-    reset({
-      name: group.name,
-      description: group.description ?? "",
-      contractSubgroupUuid: group.contractSubgroupUuid ?? "",
-      sequenceWithinSubgroup: group.sequenceWithinSubgroup ?? 0,
-      quicklyChangeSequenceNumber: group.quicklyChangeSequenceNumber ?? "",
-      isActive: group.isActive ?? true,
-    });
     setFormError(undefined);
     setDialogOpen(true);
   };
@@ -99,24 +77,17 @@ export const ContractGroupsClient = ({ groups }: Props) => {
     if (!open) {
       reset(DEFAULT_VALUES);
       setFormError(undefined);
-      setEditTarget(null);
     }
     setDialogOpen(open);
   };
 
   const onSubmit = handleSubmit((values) => {
     startTransition(async () => {
-      const result = editTarget
-        ? await updateContractGroup(editTarget.uuid, {
-            ...values,
-            contractSubgroupUuid: values.contractSubgroupUuid || undefined,
-            quicklyChangeSequenceNumber: values.quicklyChangeSequenceNumber || undefined,
-          })
-        : await createContractGroup({
-            ...values,
-            contractSubgroupUuid: values.contractSubgroupUuid || undefined,
-            quicklyChangeSequenceNumber: values.quicklyChangeSequenceNumber || undefined,
-          });
+      const result = await createContractGroup({
+        ...values,
+        contractSubgroupUuid: values.contractSubgroupUuid || undefined,
+        quicklyChangeSequenceNumber: values.quicklyChangeSequenceNumber || undefined,
+      });
 
       if (result.success) {
         setDialogOpen(false);
@@ -127,18 +98,6 @@ export const ContractGroupsClient = ({ groups }: Props) => {
       setFormError(result.error);
     });
   });
-
-  const handleDelete = () => {
-    if (!deleteTarget) return;
-
-    startTransition(async () => {
-      const result = await deleteContractGroup(deleteTarget.uuid);
-      if (result.success) {
-        setDeleteTarget(null);
-        router.refresh();
-      }
-    });
-  };
 
   const activeBadge = (value: boolean | null) =>
     value ? (
@@ -170,13 +129,12 @@ export const ContractGroupsClient = ({ groups }: Props) => {
                 <TableHead>Subgroup</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Created At</TableHead>
-                <TableHead className="w-24" />
               </TableRow>
             </TableHeader>
             <TableBody>
               {groups.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                  <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
                     No contract groups yet
                   </TableCell>
                 </TableRow>
@@ -192,26 +150,6 @@ export const ContractGroupsClient = ({ groups }: Props) => {
                     <TableCell>
                       {new Date(group.createdAt).toLocaleDateString()}
                     </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => openEdit(group)}
-                          className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
-                          title={COMMON_TEXT.edit}
-                        >
-                          <Pencil className="size-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setDeleteTarget(group)}
-                          className="rounded p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                          title={COMMON_TEXT.delete}
-                        >
-                          <Trash2 className="size-3.5" />
-                        </button>
-                      </div>
-                    </TableCell>
                   </TableRow>
                 ))
               )}
@@ -223,15 +161,9 @@ export const ContractGroupsClient = ({ groups }: Props) => {
       <Dialog open={dialogOpen} onOpenChange={handleDialogClose}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>
-              {editTarget
-                ? "Edit Contract Group"
-                : "New Contract Group"}
-            </DialogTitle>
+            <DialogTitle>New Contract Group</DialogTitle>
             <DialogDescription>
-              {editTarget
-                ? "Update the name and settings of this group."
-                : "Create a new group that can be linked to contracts."}
+              Create a new group that can be linked to contracts.
             </DialogDescription>
           </DialogHeader>
 
@@ -319,28 +251,12 @@ export const ContractGroupsClient = ({ groups }: Props) => {
                 {COMMON_TEXT.cancel}
               </Button>
               <Button type="submit" disabled={isPending}>
-                {isPending
-                  ? COMMON_TEXT.saving
-                  : editTarget
-                    ? "Save Changes"
-                    : "Create Group"}
+                {isPending ? COMMON_TEXT.saving : "Create Group"}
               </Button>
             </div>
           </form>
         </DialogContent>
       </Dialog>
-
-      <ConfirmDialog
-        open={!!deleteTarget}
-        onOpenChange={(open) => {
-          if (!open) setDeleteTarget(null);
-        }}
-        title="Delete Contract Group"
-        description={`Are you sure you want to delete "${deleteTarget?.name ?? ""}"? This will also remove it from all linked contracts.`}
-        confirmLabel={COMMON_TEXT.delete}
-        isPending={isPending}
-        onConfirm={handleDelete}
-      />
     </>
   );
 };
