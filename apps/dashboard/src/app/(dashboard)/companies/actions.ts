@@ -1,16 +1,16 @@
 "use server";
 
-import { db, type SelectCompanies } from "@/db";
-import { Companies, type InsertCompanies } from "@/db/schema/companies";
+import { db, SelectCompanies } from "@/db";
+import { Companies, InsertCompanies } from "@/db/schema/companies";
 import {
   CompanyAddresses,
-  type InsertCompanyAddresses,
+  InsertCompanyAddresses,
 } from "@/db/schema/company-addresses";
 import {
   CommunicationSettings,
-  type InsertCommunicationSettings,
+  InsertCommunicationSettings,
 } from "@/db/schema/communication-settings";
-import { Contracts, type InsertContracts } from "@/db/schema/contracts";
+import { Contracts, InsertContracts } from "@/db/schema/contracts";
 import { generateUuid } from "@/lib/helpers";
 import { asc, desc } from "drizzle-orm";
 import { currentUser } from "@clerk/nextjs/server";

@@ -5,20 +5,25 @@ import {
   Companies,
   ContractGroups,
   Contracts,
-  type InsertContracts,
-  type SelectCompanies,
-  type SelectContractGroups,
-  type SelectContracts,
+  SelectContracts,
+  SelectContractGroups,
+  SelectCompanies,
+  InsertContracts,
 } from "@/db";
 import { generateUuid } from "@/lib/helpers";
 import { and, desc, eq, inArray, isNotNull, sql } from "drizzle-orm";
 
-export type ContractInput = Omit<InsertContracts, "id" | "uuid" | "createdAt" | "updatedAt">;
+export type ContractInput = Omit<
+  InsertContracts,
+  "id" | "uuid" | "createdAt" | "updatedAt"
+>;
 
-export type ContractCompanyEntry =
-  Pick<SelectContracts, "role" | "startingDate" | "endDate"> & {
-    companyUuid: SelectCompanies["uuid"];
-  };
+export type ContractCompanyEntry = Pick<
+  SelectContracts,
+  "role" | "startingDate" | "endDate"
+> & {
+  companyUuid: SelectCompanies["uuid"];
+};
 
 export type ContractActionResult = {
   contractUuid?: string;
@@ -26,17 +31,23 @@ export type ContractActionResult = {
   success?: boolean;
 };
 
-export type ContractListItem = SelectContracts & { contractGroupName: string | null };
+export type ContractListItem = SelectContracts & {
+  contractGroupName: string | null;
+};
 
-export type ContractPerCustomerRow =
-  Pick<SelectContracts, "role" | "code" | "description" | "priceDate"> &
+export type ContractPerCustomerRow = Pick<
+  SelectContracts,
+  "role" | "code" | "description" | "priceDate"
+> &
   Pick<SelectCompanies, "id" | "companyName"> & {
     city: string | null;
     contractGroupName: SelectContractGroups["name"] | null;
   };
 
-export type ContractPerSupplierRow =
-  Pick<SelectContracts, "code" | "description" | "startingDate" | "endDate"> &
+export type ContractPerSupplierRow = Pick<
+  SelectContracts,
+  "code" | "description" | "startingDate" | "endDate"
+> &
   Pick<SelectCompanies, "id" | "companyName"> & {
     city: string | null;
     contractGroupName: SelectContractGroups["name"] | null;
@@ -49,14 +60,21 @@ export const getContracts = async (): Promise<ContractListItem[]> => {
       contractGroupName: ContractGroups.name,
     })
     .from(Contracts)
-    .leftJoin(ContractGroups, eq(ContractGroups.uuid, Contracts.contractGroupUuid))
+    .leftJoin(
+      ContractGroups,
+      eq(ContractGroups.uuid, Contracts.contractGroupUuid),
+    )
     .orderBy(desc(Contracts.createdAt));
 
-  return rows.map((r) => ({ ...r.contract, contractGroupName: r.contractGroupName ?? null }));
+  return rows.map((r) => ({
+    ...r.contract,
+    contractGroupName: r.contractGroupName ?? null,
+  }));
 };
 
-
-export const getContractsPerCustomer = async (): Promise<ContractPerCustomerRow[]> => {
+export const getContractsPerCustomer = async (): Promise<
+  ContractPerCustomerRow[]
+> => {
   const rows = await db
     .select({
       role: Contracts.role,
@@ -75,7 +93,10 @@ export const getContractsPerCustomer = async (): Promise<ContractPerCustomerRow[
     })
     .from(Contracts)
     .innerJoin(Companies, eq(Companies.uuid, Contracts.companyUuid))
-    .leftJoin(ContractGroups, eq(ContractGroups.uuid, Contracts.contractGroupUuid))
+    .leftJoin(
+      ContractGroups,
+      eq(ContractGroups.uuid, Contracts.contractGroupUuid),
+    )
     .where(
       and(
         inArray(Contracts.role, ["customer", "prospect"]),
@@ -95,7 +116,9 @@ export const getContractsPerCustomer = async (): Promise<ContractPerCustomerRow[
   }));
 };
 
-export const getContractsPerSupplier = async (): Promise<ContractPerSupplierRow[]> => {
+export const getContractsPerSupplier = async (): Promise<
+  ContractPerSupplierRow[]
+> => {
   const rows = await db
     .select({
       id: Companies.id,
@@ -114,12 +137,12 @@ export const getContractsPerSupplier = async (): Promise<ContractPerSupplierRow[
     })
     .from(Contracts)
     .innerJoin(Companies, eq(Companies.uuid, Contracts.companyUuid))
-    .leftJoin(ContractGroups, eq(ContractGroups.uuid, Contracts.contractGroupUuid))
+    .leftJoin(
+      ContractGroups,
+      eq(ContractGroups.uuid, Contracts.contractGroupUuid),
+    )
     .where(
-      and(
-        eq(Contracts.role, "supplier"),
-        isNotNull(Contracts.companyUuid),
-      ),
+      and(eq(Contracts.role, "supplier"), isNotNull(Contracts.companyUuid)),
     );
 
   return rows.map((r) => ({
@@ -163,7 +186,8 @@ export const createContract = async (
     return { success: true };
   } catch (error) {
     return {
-      error: error instanceof Error ? error.message : "Failed to create contract",
+      error:
+        error instanceof Error ? error.message : "Failed to create contract",
     };
   }
 };

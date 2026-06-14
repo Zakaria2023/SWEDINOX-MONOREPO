@@ -3,17 +3,22 @@
 import {
   db,
   ContractGroups,
-  type InsertContractGroups,
-  type SelectContractGroups,
+  InsertContractGroups,
+  SelectContractGroups,
 } from "@/db";
 import { generateUuid } from "@/lib/helpers";
 import { alias } from "drizzle-orm/mysql-core";
 import { desc, eq } from "drizzle-orm";
 
-export type ContractGroupItem = SelectContractGroups & { subgroupName: string | null };
+export type ContractGroupItem = SelectContractGroups & {
+  subgroupName: string | null;
+};
 export type ContractGroupOption = Pick<SelectContractGroups, "uuid" | "name">;
 
-export type ContractGroupInput = Omit<InsertContractGroups, "id" | "uuid" | "createdAt" | "updatedAt">;
+export type ContractGroupInput = Omit<
+  InsertContractGroups,
+  "id" | "uuid" | "createdAt" | "updatedAt"
+>;
 
 export type ContractGroupActionResult = {
   success?: boolean;
@@ -34,7 +39,10 @@ export const getContractGroupsList = async (): Promise<ContractGroupItem[]> => {
     .from(ContractGroups)
     .leftJoin(Subgroup, eq(Subgroup.uuid, ContractGroups.contractSubgroupUuid))
     .orderBy(desc(ContractGroups.createdAt));
-  return rows.map((r) => ({ ...r.group, subgroupName: r.subgroupName ?? null }));
+  return rows.map((r) => ({
+    ...r.group,
+    subgroupName: r.subgroupName ?? null,
+  }));
 };
 
 export const createContractGroup = async (

@@ -1,7 +1,7 @@
 "use server";
 
-import { db, type SelectCompanyAddresses } from "@/db";
-import { Companies, type SelectCompanies } from "@/db/schema/companies";
+import { db, SelectCompanyAddresses } from "@/db";
+import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { CompanyAddresses } from "@/db/schema/company-addresses";
 import { desc, eq } from "drizzle-orm";
 
