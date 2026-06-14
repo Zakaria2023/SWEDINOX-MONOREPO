@@ -1,15 +1,5 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useState } from "react";
-import {
-  Building2,
-  ChevronRight,
-  ContactRound,
-  Truck,
-  Users,
-} from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -25,6 +15,16 @@ import {
   SidebarMenuSubItem,
 } from "@/components/shadcn/sidebar";
 import { cn } from "@/lib/helpers";
+import {
+  Building2,
+  ChevronRight,
+  ContactRound,
+  Truck,
+  Users,
+} from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useState } from "react";
 
 export const AppSidebar = () => {
   const pathname = usePathname();
@@ -59,9 +59,7 @@ export const AppSidebar = () => {
   return (
     <Sidebar>
       <SidebarHeader className="px-4 py-5">
-        <span className="text-lg font-semibold tracking-tight">
-          Swedinox
-        </span>
+        <span className="text-lg font-semibold tracking-tight">Swedinox</span>
       </SidebarHeader>
 
       <SidebarContent>
@@ -91,9 +89,11 @@ export const AppSidebar = () => {
                     <SidebarMenuSubItem>
                       <SidebarMenuSubButton
                         render={<Link href="/contracts-per-customer" />}
-                        isActive={pathname.startsWith("/contracts-per-customer")}
+                        isActive={pathname.startsWith(
+                          "/contracts-per-customer",
+                        )}
                       >
-                        <span>Contracts per Customer</span>
+                        <span>Contracts per Customer / Prospect</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                   </SidebarMenuSub>
@@ -125,7 +125,9 @@ export const AppSidebar = () => {
                     <SidebarMenuSubItem>
                       <SidebarMenuSubButton
                         render={<Link href="/communication-settings" />}
-                        isActive={pathname.startsWith("/communication-settings")}
+                        isActive={pathname.startsWith(
+                          "/communication-settings",
+                        )}
                       >
                         <span>Communication Settings</span>
                       </SidebarMenuSubButton>
@@ -179,7 +181,9 @@ export const AppSidebar = () => {
                     <SidebarMenuSubItem>
                       <SidebarMenuSubButton
                         render={<Link href="/contracts-per-supplier" />}
-                        isActive={pathname.startsWith("/contracts-per-supplier")}
+                        isActive={pathname.startsWith(
+                          "/contracts-per-supplier",
+                        )}
                       >
                         <span>Contracts per Supplier</span>
                       </SidebarMenuSubButton>
@@ -187,7 +191,6 @@ export const AppSidebar = () => {
                   </SidebarMenuSub>
                 )}
               </SidebarMenuItem>
-
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
