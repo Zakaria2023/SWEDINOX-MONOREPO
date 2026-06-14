@@ -15,12 +15,12 @@ import type { ContractPerCustomerRow } from "@/app/(dashboard)/contracts/actions
 
 type ColumnKey =
   | "role"
-  | "customerCode"
-  | "customerName"
+  | "id"
+  | "companyName"
   | "city"
   | "representative"
   | "customerGroup"
-  | "contractCode"
+  | "code"
   | "description"
   | "contractGroupName"
   | "priceDate"
@@ -35,12 +35,12 @@ type ColumnKey =
 
 const ALL_COLUMNS: Array<{ key: ColumnKey; label: string; defaultVisible: boolean }> = [
   { key: "role",                  label: "Role",                    defaultVisible: true },
-  { key: "customerCode",          label: "Customer Code",           defaultVisible: true },
-  { key: "customerName",          label: "Customer",                defaultVisible: true },
+  { key: "id",                     label: "Customer Code",           defaultVisible: true },
+  { key: "companyName",           label: "Customer",                defaultVisible: true },
   { key: "city",                  label: "City",                    defaultVisible: true },
   { key: "representative",        label: "Representative",          defaultVisible: true },
   { key: "customerGroup",         label: "Customer Group",          defaultVisible: true },
-  { key: "contractCode",          label: "Contract Code",           defaultVisible: true },
+  { key: "code",                   label: "Contract Code",           defaultVisible: true },
   { key: "description",           label: "Description",             defaultVisible: true },
   { key: "contractGroupName",     label: "Contract Group",          defaultVisible: true },
   { key: "priceDate",             label: "Price Date",              defaultVisible: true },
@@ -80,22 +80,22 @@ export const ContractsPerCustomerTableContent = ({ rows }: Props) => {
         return (
           <TableCell key={key}>
             <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
-              {COMPANY_ROLE_LABELS[row.role]}
+              {row.role ? COMPANY_ROLE_LABELS[row.role as keyof typeof COMPANY_ROLE_LABELS] : na}
             </span>
           </TableCell>
         );
-      case "customerCode":
-        return <TableCell key={key}>{row.customerCode ?? na}</TableCell>;
-      case "customerName":
-        return <TableCell key={key} className="font-medium">{row.customerName}</TableCell>;
+      case "id":
+        return <TableCell key={key}>{row.id}</TableCell>;
+      case "companyName":
+        return <TableCell key={key} className="font-medium">{row.companyName}</TableCell>;
       case "city":
         return <TableCell key={key}>{row.city ?? na}</TableCell>;
       case "representative":
         return <TableCell key={key}>{na}</TableCell>;
       case "customerGroup":
         return <TableCell key={key}>{na}</TableCell>;
-      case "contractCode":
-        return <TableCell key={key} className="font-mono font-medium">{row.contractCode}</TableCell>;
+      case "code":
+        return <TableCell key={key} className="font-mono font-medium">{row.code}</TableCell>;
       case "description":
         return <TableCell key={key}>{row.description || na}</TableCell>;
       case "contractGroupName":

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
-import { getCompaniesForSelect, getContractGroups } from "@/app/(dashboard)/contracts/actions";
+import { getContractGroups } from "@/app/(dashboard)/contract-groups/actions";
+import { getCompaniesForSelect } from "@/app/(dashboard)/companies/actions";
 import { ContractForm } from "@/components/contracts/contract-form";
 import { PageHeading } from "@/components/layout/page-heading";
 

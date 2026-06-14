@@ -14,10 +14,10 @@ import { COMMON_TEXT } from "@/lib/labels";
 import type { ContractPerSupplierRow } from "@/app/(dashboard)/contracts/actions";
 
 type ColumnKey =
-  | "supplierCode"
-  | "supplierName"
+  | "id"
+  | "companyName"
   | "city"
-  | "contractCode"
+  | "code"
   | "description"
   | "contractGroupName"
   | "startingDate"
@@ -25,10 +25,10 @@ type ColumnKey =
   | "preference";
 
 const ALL_COLUMNS: Array<{ key: ColumnKey; label: string; defaultVisible: boolean }> = [
-  { key: "supplierCode",    label: "Supplier Code",    defaultVisible: true },
-  { key: "supplierName",    label: "Supplier",         defaultVisible: true },
+  { key: "id",              label: "Supplier Code",    defaultVisible: true },
+  { key: "companyName",    label: "Supplier",          defaultVisible: true },
   { key: "city",            label: "City",             defaultVisible: true },
-  { key: "contractCode",    label: "Contract Code",    defaultVisible: true },
+  { key: "code",            label: "Contract Code",    defaultVisible: true },
   { key: "description",     label: "Contract",         defaultVisible: true },
   { key: "contractGroupName", label: "Contract Group", defaultVisible: true },
   { key: "startingDate",    label: "Starting Date",    defaultVisible: true },
@@ -58,14 +58,14 @@ export const ContractsPerSupplierTableContent = ({ rows }: Props) => {
 
   const renderCell = (row: ContractPerSupplierRow, key: ColumnKey) => {
     switch (key) {
-      case "supplierCode":
-        return <TableCell key={key}>{row.supplierCode ?? na}</TableCell>;
-      case "supplierName":
-        return <TableCell key={key} className="font-medium">{row.supplierName}</TableCell>;
+      case "id":
+        return <TableCell key={key}>{row.id}</TableCell>;
+      case "companyName":
+        return <TableCell key={key} className="font-medium">{row.companyName}</TableCell>;
       case "city":
         return <TableCell key={key}>{row.city ?? na}</TableCell>;
-      case "contractCode":
-        return <TableCell key={key} className="font-mono font-medium">{row.contractCode}</TableCell>;
+      case "code":
+        return <TableCell key={key} className="font-mono font-medium">{row.code}</TableCell>;
       case "description":
         return <TableCell key={key}>{row.description || na}</TableCell>;
       case "contractGroupName":

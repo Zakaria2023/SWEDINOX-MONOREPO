@@ -12,12 +12,20 @@ import { alias } from "drizzle-orm/mysql-core";
 import { count, desc, eq } from "drizzle-orm";
 
 export type ContractGroupItem = SelectContractGroups & { subgroupName: string | null };
+export type ContractGroupOption = Pick<SelectContractGroups, "uuid" | "name">;
 
 export type ContractGroupInput = Omit<InsertContractGroups, "id" | "uuid" | "createdAt" | "updatedAt">;
 
 export type ContractGroupActionResult = {
   success?: boolean;
   error?: string;
+};
+
+export const getContractGroups = async (): Promise<ContractGroupOption[]> => {
+  return db
+    .select({ uuid: ContractGroups.uuid, name: ContractGroups.name })
+    .from(ContractGroups)
+    .orderBy(ContractGroups.name);
 };
 
 export const getContractGroupsList = async (): Promise<ContractGroupItem[]> => {

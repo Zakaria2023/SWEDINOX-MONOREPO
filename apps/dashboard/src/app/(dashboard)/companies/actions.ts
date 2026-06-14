@@ -12,7 +12,9 @@ import {
 } from "@/db/schema/communication-settings";
 import { Contracts, type InsertContracts } from "@/db/schema/contracts";
 import { generateUuid } from "@/lib/helpers";
-import { desc } from "drizzle-orm";
+import { asc, desc } from "drizzle-orm";
+
+export type CompanyOption = Pick<SelectCompanies, "uuid" | "searchCode1" | "companyName" | "roles">;
 import { currentUser } from "@clerk/nextjs/server";
 
 export type AddressInput = Omit<InsertCompanyAddresses, "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt">;
@@ -33,6 +35,13 @@ export type CompanyActionResult = {
   companyUuid?: string;
   error?: string;
   success?: boolean;
+};
+
+export const getCompaniesForSelect = async (): Promise<CompanyOption[]> => {
+  return db
+    .select({ uuid: Companies.uuid, searchCode1: Companies.searchCode1, companyName: Companies.companyName, roles: Companies.roles })
+    .from(Companies)
+    .orderBy(asc(Companies.companyName));
 };
 
 export const getCompanies = async (): Promise<SelectCompanies[]> => {

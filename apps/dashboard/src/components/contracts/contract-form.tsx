@@ -6,7 +6,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { Plus, X } from "lucide-react";
 import { z } from "zod";
-import type { CompanyOption, ContractCompanyEntry, ContractGroupOption } from "@/app/(dashboard)/contracts/actions";
+import type { ContractGroupOption } from "@/app/(dashboard)/contract-groups/actions";
+import type { CompanyOption } from "@/app/(dashboard)/companies/actions";
+import type { ContractCompanyEntry } from "@/app/(dashboard)/contracts/actions";
 import { useContractSubmit } from "@/app/(dashboard)/contracts/use-contract-submit";
 import { contractableRoles, contractTypes, type ContractableRole } from "@/lib/enums";
 import { DatePicker } from "@/components/shadcn/date-picker";
@@ -108,8 +110,8 @@ export const ContractForm = ({ groups, availableCompanies }: ContractFormProps) 
     const entry: ContractCompanyEntry = {
       companyUuid: values.companyUuid,
       role,
-      startingDate: values.startingDate || undefined,
-      endDate: values.endDate || undefined,
+      startingDate: values.startingDate || null,
+      endDate: values.endDate || null,
     };
     setCompanies((prev) => [...prev, entry]);
     setIsDialogOpen(false);

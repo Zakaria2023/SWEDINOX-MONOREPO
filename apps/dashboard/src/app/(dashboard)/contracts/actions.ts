@@ -11,16 +11,14 @@ import {
   type SelectContracts,
 } from "@/db";
 import { generateUuid } from "@/lib/helpers";
-import { and, asc, desc, eq, inArray, isNotNull, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, sql } from "drizzle-orm";
 
 export type ContractInput = Omit<InsertContracts, "id" | "uuid" | "createdAt" | "updatedAt">;
 
-export type ContractCompanyEntry = {
-  companyUuid: string;
-  role: SelectContracts["role"];
-  startingDate?: string;
-  endDate?: string;
-};
+export type ContractCompanyEntry =
+  Pick<SelectContracts, "role" | "startingDate" | "endDate"> & {
+    companyUuid: SelectCompanies["uuid"];
+  };
 
 export type ContractActionResult = {
   contractUuid?: string;
@@ -29,25 +27,18 @@ export type ContractActionResult = {
 };
 
 export type ContractListItem = SelectContracts & { contractGroupName: string | null };
-export type ContractGroupOption = Pick<SelectContractGroups, "uuid" | "name">;
-export type CompanyOption = Pick<SelectCompanies, "uuid" | "searchCode1" | "companyName" | "roles">;
 
 export type ContractPerCustomerRow =
-  Pick<SelectContracts, "description" | "priceDate"> & {
-    role: "customer" | "prospect";
-    customerCode: SelectCompanies["id"];
-    customerName: SelectCompanies["companyName"];
+  Pick<SelectContracts, "role" | "code" | "description" | "priceDate"> &
+  Pick<SelectCompanies, "id" | "companyName"> & {
     city: string | null;
-    contractCode: SelectContracts["code"];
     contractGroupName: SelectContractGroups["name"] | null;
   };
 
 export type ContractPerSupplierRow =
-  Pick<SelectContracts, "description" | "startingDate" | "endDate"> & {
-    supplierCode: SelectCompanies["id"];
-    supplierName: SelectCompanies["companyName"];
+  Pick<SelectContracts, "code" | "description" | "startingDate" | "endDate"> &
+  Pick<SelectCompanies, "id" | "companyName"> & {
     city: string | null;
-    contractCode: SelectContracts["code"];
     contractGroupName: SelectContractGroups["name"] | null;
   };
 
@@ -64,35 +55,20 @@ export const getContracts = async (): Promise<ContractListItem[]> => {
   return rows.map((r) => ({ ...r.contract, contractGroupName: r.contractGroupName ?? null }));
 };
 
-export const getContractGroups = async (): Promise<ContractGroupOption[]> => {
-  const rows = await db
-    .select({ uuid: ContractGroups.uuid, name: ContractGroups.name })
-    .from(ContractGroups)
-    .orderBy(ContractGroups.name);
-  return rows;
-};
-
-export const getCompaniesForSelect = async (): Promise<CompanyOption[]> => {
-  const rows = await db
-    .select({ uuid: Companies.uuid, searchCode1: Companies.searchCode1, companyName: Companies.companyName, roles: Companies.roles })
-    .from(Companies)
-    .orderBy(asc(Companies.companyName));
-  return rows;
-};
 
 export const getContractsPerCustomer = async (): Promise<ContractPerCustomerRow[]> => {
   const rows = await db
     .select({
       role: Contracts.role,
-      customerCode: Companies.id,
-      customerName: Companies.companyName,
+      id: Companies.id,
+      companyName: Companies.companyName,
       city: sql<string | null>`(
         SELECT ca.city
         FROM CompanyAddresses ca
         WHERE ca.company_uuid = ${Companies.uuid}
         LIMIT 1
       )`,
-      contractCode: Contracts.code,
+      code: Contracts.code,
       description: Contracts.description,
       contractGroupName: ContractGroups.name,
       priceDate: Contracts.priceDate,
@@ -108,11 +84,11 @@ export const getContractsPerCustomer = async (): Promise<ContractPerCustomerRow[
     );
 
   return rows.map((r) => ({
-    role: r.role as "customer" | "prospect",
-    customerCode: r.customerCode,
-    customerName: r.customerName,
+    role: r.role,
+    id: r.id,
+    companyName: r.companyName,
     city: r.city,
-    contractCode: r.contractCode,
+    code: r.code,
     description: r.description,
     contractGroupName: r.contractGroupName ?? null,
     priceDate: r.priceDate,
@@ -122,15 +98,15 @@ export const getContractsPerCustomer = async (): Promise<ContractPerCustomerRow[
 export const getContractsPerSupplier = async (): Promise<ContractPerSupplierRow[]> => {
   const rows = await db
     .select({
-      supplierCode: Companies.id,
-      supplierName: Companies.companyName,
+      id: Companies.id,
+      companyName: Companies.companyName,
       city: sql<string | null>`(
         SELECT ca.city
         FROM CompanyAddresses ca
         WHERE ca.company_uuid = ${Companies.uuid}
         LIMIT 1
       )`,
-      contractCode: Contracts.code,
+      code: Contracts.code,
       description: Contracts.description,
       contractGroupName: ContractGroups.name,
       startingDate: Contracts.startingDate,
@@ -147,10 +123,10 @@ export const getContractsPerSupplier = async (): Promise<ContractPerSupplierRow[
     );
 
   return rows.map((r) => ({
-    supplierCode: r.supplierCode,
-    supplierName: r.supplierName,
+    id: r.id,
+    companyName: r.companyName,
     city: r.city,
-    contractCode: r.contractCode,
+    code: r.code,
     description: r.description,
     contractGroupName: r.contractGroupName ?? null,
     startingDate: r.startingDate,
