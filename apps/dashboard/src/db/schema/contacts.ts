@@ -2,6 +2,7 @@ import { InferInsertModel, InferSelectModel } from "drizzle-orm";
 import {
   boolean,
   char,
+  decimal,
   foreignKey,
   index,
   int,
@@ -48,6 +49,29 @@ export const Contacts = mysqlTable(
     addressFax: varchar("address_fax", { length: 100 }),
     addressEmail: varchar("address_email", { length: 255 }),
     website: varchar("website", { length: 255 }),
+
+    purchaser: varchar("purchaser", { length: 255 }),
+    searchCode1: varchar("search_code_1", { length: 100 }),
+    searchCode2: varchar("search_code_2", { length: 100 }),
+    searchCode3: varchar("search_code_3", { length: 100 }),
+
+    revenueLastYear: decimal("revenue_last_year", { precision: 15, scale: 2 }),
+    revenueThisYear: decimal("revenue_this_year", { precision: 15, scale: 2 }),
+
+    isCustomer: boolean("is_customer").default(false).notNull(),
+    isProspect: boolean("is_prospect").default(false).notNull(),
+    isSupplier: boolean("is_supplier").default(false).notNull(),
+    isProcessor: boolean("is_processor").default(false).notNull(),
+    isTransporter: boolean("is_transporter").default(false).notNull(),
+    isAgent: boolean("is_agent").default(false).notNull(),
+    isOther: boolean("is_other").default(false).notNull(),
+
+    visitStreetAndNo: varchar("visit_street_and_no", { length: 255 }),
+    visitPostalCode: varchar("visit_postal_code", { length: 50 }),
+    visitCity: varchar("visit_city", { length: 150 }),
+    visitCountry: varchar("visit_country", { length: 100 }),
+    visitTelephone: varchar("visit_telephone", { length: 100 }),
+    visitFax: varchar("visit_fax", { length: 100 }),
 
     categories: json("categories").$type<ContactCategory[]>().default([]).notNull(),
     sequenceNumber: int("sequence_number").default(1).notNull(),

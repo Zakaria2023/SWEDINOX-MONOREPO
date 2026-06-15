@@ -176,6 +176,12 @@ const contactDialogSchema = z.object({
   website: z.string().optional(),
   categories: z.array(z.string()),
   sequenceNumber: z.number().int().min(1),
+  purchaser: z.string().optional(),
+  searchCode1: z.string().optional(),
+  searchCode2: z.string().optional(),
+  searchCode3: z.string().optional(),
+  revenueLastYear: z.string().optional(),
+  revenueThisYear: z.string().optional(),
 });
 
 type ContactDialogValues = z.infer<typeof contactDialogSchema>;
@@ -208,6 +214,12 @@ const DEFAULT_CONTACT: ContactDialogValues = {
   website: "",
   categories: [],
   sequenceNumber: 1,
+  purchaser: "",
+  searchCode1: "",
+  searchCode2: "",
+  searchCode3: "",
+  revenueLastYear: "",
+  revenueThisYear: "",
 };
 
 type CompanyFormProps = {
@@ -427,6 +439,9 @@ export const CompanyForm = ({ availableContracts }: CompanyFormProps) => {
   });
 
   const handleSaveContact = contactForm.handleSubmit((values) => {
+    const companyValues = form.getValues();
+    const isSupplier = selectedRoles.includes("supplier");
+
     setContacts((prev) => [
       ...prev,
       {
@@ -457,6 +472,25 @@ export const CompanyForm = ({ availableContracts }: CompanyFormProps) => {
         website: values.website || undefined,
         categories: values.categories as ContactCategory[],
         sequenceNumber: values.sequenceNumber,
+        purchaser: undefined,
+        searchCode1: isSupplier ? (companyValues.searchCode1 || undefined) : undefined,
+        searchCode2: isSupplier ? (companyValues.searchCode2 || undefined) : undefined,
+        searchCode3: isSupplier ? (companyValues.searchCode3 || undefined) : undefined,
+        revenueLastYear: isSupplier ? "0.00" : undefined,
+        revenueThisYear: isSupplier ? "0.00" : undefined,
+        isCustomer: selectedRoles.includes("customer"),
+        isProspect: selectedRoles.includes("prospect"),
+        isSupplier: selectedRoles.includes("supplier"),
+        isProcessor: selectedRoles.includes("processor"),
+        isTransporter: selectedRoles.includes("transporter"),
+        isAgent: selectedRoles.includes("agent"),
+        isOther: selectedRoles.includes("other"),
+        visitStreetAndNo: undefined,
+        visitPostalCode: undefined,
+        visitCity: undefined,
+        visitCountry: undefined,
+        visitTelephone: undefined,
+        visitFax: undefined,
       },
     ]);
     contactForm.reset(DEFAULT_CONTACT);
