@@ -6,6 +6,8 @@ import type {
   CommunicationSettingType,
   CompanyLang,
   CompanyRole,
+  ContactCategory,
+  ContactSalutation,
   ContractableRole,
   ContractType,
 } from "@/lib/enums";
@@ -125,4 +127,18 @@ export const COMMUNICATION_SETTING_SHAPE_LABELS: Record<
   edi4steel: "EDI4Steel",
   text: "Text",
   peppol: "Peppol",
+};
+
+export const CONTACT_SALUTATION_LABELS: Record<ContactSalutation, string> = {
+  mr: "Mr.",
+  mrs: "Mrs.",
+};
+
+export const CONTACT_CATEGORY_LABELS: Record<ContactCategory, string> = {
+  procurement: "Procurement",
+  sales: "Sales",
+  warehouse: "Warehouse",
+  management: "Management",
+  bookkeeping: "Bookkeeping",
+  certificates: "Certificates",
 };

@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
-import { createCompany, type CommSettingInput, type CompanyActionResult, type CompanyContractInput } from "./actions";
+import { createCompany, type CommSettingInput, type CompanyActionResult, type CompanyContractInput, type CompanyContactInput } from "./actions";
 import { createCompanySchema, type CompanyFormValues } from "./validation";
 import type { CompanyRole } from "@/lib/enums";
 
@@ -92,6 +92,7 @@ export const useCompanySubmit = () => {
     additionalAddresses: CompanyFormValues["address"][],
     communicationSettings: CommSettingInput[] = [],
     contracts: CompanyContractInput[] = [],
+    contacts: CompanyContactInput[] = [],
   ) =>
     form.handleSubmit((values) => {
       startTransition(async () => {
@@ -111,6 +112,7 @@ export const useCompanySubmit = () => {
           allAddresses,
           communicationSettings,
           contracts,
+          contacts,
         );
         setState(result);
       });
