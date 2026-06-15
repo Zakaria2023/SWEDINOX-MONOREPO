@@ -14,25 +14,22 @@ import { ColumnSelector } from "@/components/ui/column-selector";
 import { type TextUsageCategory } from "@/lib/enums";
 import { COMMON_TEXT, TEXT_USAGE_CATEGORY_LABELS } from "@/lib/labels";
 
-type UsageCategoryField =
-  | "visitReport"
-  | "purchaseQuoteRequest"
-  | "purchaseOrder"
-  | "purchaseOrderToolTip"
-  | "purchaseReturnOrder"
-  | "salesQuote"
-  | "salesOrder"
-  | "salesOrderToolTip"
-  | "salesInvoice"
-  | "warehouseOrder"
-  | "productionOrder"
-  | "loadlist"
-  | "waybill"
-  | "rideList"
-  | "customerLabel"
-  | "transportPlanning"
-  | "websiteInAdvance"
-  | "websiteAfter";
+import type { SelectTexts } from "@/db";
+
+type UsageCategoryField = keyof Omit<
+  SelectTexts,
+  | "id"
+  | "uuid"
+  | "companyUuid"
+  | "textCategoryUuid"
+  | "title"
+  | "textBlock"
+  | "sequenceNumber"
+  | "isActive"
+  | "createdByUserId"
+  | "createdAt"
+  | "updatedAt"
+>;
 
 const USAGE_CATEGORY_MAP: Array<{
   field: UsageCategoryField;
