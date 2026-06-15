@@ -4,11 +4,13 @@ import {
   char,
   index,
   int,
+  json,
   mysqlTable,
   text,
   timestamp,
   varchar,
 } from "drizzle-orm/mysql-core";
+import { type TextUsageCategory } from "../../lib/enums";
 
 export const TextCategories = mysqlTable(
   "TextCategories",
@@ -20,6 +22,10 @@ export const TextCategories = mysqlTable(
 
     name: varchar("name", { length: 255 }).notNull(),
     description: text("description"),
+    usageCategoriesJson: json("usage_categories_json")
+      .$type<TextUsageCategory[]>()
+      .default([])
+      .notNull(),
     sequenceNumber: int("sequence_number").default(0).notNull(),
     isActive: boolean("is_active").default(true).notNull(),
 

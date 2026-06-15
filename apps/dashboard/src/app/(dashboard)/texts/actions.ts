@@ -2,56 +2,47 @@
 
 import {
   db,
+  Companies,
+  CompanyAddresses,
   TextCategories,
   Texts,
-  type InsertTexts,
   type SelectTexts,
+  type SelectCompanies,
+  type SelectCompanyAddresses,
+  type SelectTextCategories,
 } from "@/db";
-import { generateUuid } from "@/lib/helpers";
 import { desc, eq } from "drizzle-orm";
 
-export type TextInput = Omit<
-  InsertTexts,
-  "id" | "uuid" | "createdAt" | "updatedAt"
->;
-
-export type TextActionResult = {
-  error?: string;
-  success?: boolean;
-  textUuid?: string;
-};
-
 export type TextListItem = SelectTexts & {
-  textCategoryName: string | null;
+  companyId: SelectCompanies["id"] | null;
+  companyName: SelectCompanies["companyName"] | null;
+  roles: SelectCompanies["roles"] | null;
+  city: SelectCompanyAddresses["city"] | null;
+  textCategoryName: SelectTextCategories["name"] | null;
 };
 
 export const getTexts = async (): Promise<TextListItem[]> => {
   const rows = await db
     .select({
       text: Texts,
+      companyId: Companies.id,
+      companyName: Companies.companyName,
+      roles: Companies.roles,
+      city: CompanyAddresses.city,
       textCategoryName: TextCategories.name,
     })
     .from(Texts)
+    .leftJoin(Companies, eq(Companies.uuid, Texts.companyUuid))
+    .leftJoin(CompanyAddresses, eq(CompanyAddresses.companyUuid, Texts.companyUuid))
     .leftJoin(TextCategories, eq(TextCategories.uuid, Texts.textCategoryUuid))
     .orderBy(desc(Texts.createdAt));
 
-  return rows.map((row) => ({
-    ...row.text,
-    textCategoryName: row.textCategoryName ?? null,
+  return rows.map((r) => ({
+    ...r.text,
+    companyId: r.companyId,
+    companyName: r.companyName,
+    roles: r.roles,
+    city: r.city,
+    textCategoryName: r.textCategoryName,
   }));
-};
-
-export const createText = async (
-  input: TextInput,
-): Promise<TextActionResult> => {
-  const uuid = generateUuid();
-
-  try {
-    await db.insert(Texts).values({ ...input, uuid });
-    return { success: true, textUuid: uuid };
-  } catch (error) {
-    return {
-      error: error instanceof Error ? error.message : "Failed to create text",
-    };
-  }
 };

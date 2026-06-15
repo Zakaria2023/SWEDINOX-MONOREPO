@@ -10,6 +10,9 @@ import { FormError } from "@/components/ui/form-error";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import { FormSelectField } from "@/components/ui/form-select-field";
 import { buildTextCategorySelectOptions } from "@/components/text-categories/text-category-tree";
+import { cn } from "@/lib/helpers";
+import { textUsageCategories, type TextUsageCategory } from "@/lib/enums";
+import { TEXT_USAGE_CATEGORY_LABELS } from "@/lib/labels";
 
 type TextCategoryFormProps = {
   categories: TextCategoryOption[];
@@ -21,8 +24,22 @@ export const TextCategoryForm = ({ categories }: TextCategoryFormProps) => {
   const {
     control,
     register,
+    watch,
+    setValue,
     formState: { errors },
   } = form;
+
+  const selectedUsageCategories = watch("usageCategoriesJson") ?? [];
+
+  const toggleUsageCategory = (category: TextUsageCategory) => {
+    setValue(
+      "usageCategoriesJson",
+      selectedUsageCategories.includes(category)
+        ? selectedUsageCategories.filter((item) => item !== category)
+        : [...selectedUsageCategories, category],
+      { shouldValidate: true },
+    );
+  };
 
   useEffect(() => {
     if (state.success) {
@@ -80,6 +97,38 @@ export const TextCategoryForm = ({ categories }: TextCategoryFormProps) => {
               disabled={isPending}
             />
             <FormFieldError message={errors.description?.message} />
+          </div>
+
+          <div className="md:col-span-2">
+            <FormLabel>Usage Categories</FormLabel>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {textUsageCategories.map((category) => {
+                const isSelected = selectedUsageCategories.includes(category);
+                return (
+                  <label
+                    key={category}
+                    className={cn(
+                      "flex items-center gap-3 rounded-lg border border-border bg-background px-4 py-3 transition-colors",
+                      isPending
+                        ? "cursor-not-allowed opacity-50"
+                        : "cursor-pointer hover:bg-muted/40",
+                    )}
+                  >
+                    <input
+                      type="checkbox"
+                      className="size-4 rounded border-border accent-primary"
+                      checked={isSelected}
+                      onChange={() => toggleUsageCategory(category)}
+                      disabled={isPending}
+                    />
+                    <span className="text-sm font-medium text-gray-700">
+                      {TEXT_USAGE_CATEGORY_LABELS[category]}
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+            <FormFieldError message={errors.usageCategoriesJson?.message} />
           </div>
 
           <div className="md:col-span-2">

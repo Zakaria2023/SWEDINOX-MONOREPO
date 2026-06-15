@@ -19,6 +19,7 @@ export const useTextCategorySubmit = () => {
       parentUuid: "",
       name: "",
       description: "",
+      usageCategoriesJson: [],
       sequenceNumber: "0",
       isActive: true,
     },
@@ -30,6 +31,7 @@ export const useTextCategorySubmit = () => {
         parentUuid: values.parentUuid || undefined,
         name: values.name,
         description: values.description || undefined,
+        usageCategoriesJson: values.usageCategoriesJson,
         sequenceNumber:
           values.sequenceNumber !== "" && values.sequenceNumber !== undefined
             ? Number(values.sequenceNumber)
