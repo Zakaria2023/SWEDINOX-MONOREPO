@@ -11,6 +11,7 @@ import {
   InsertCommunicationSettings,
 } from "@/db/schema/communication-settings";
 import { Contracts, InsertContracts } from "@/db/schema/contracts";
+import { Texts, InsertTexts } from "@/db/schema/texts";
 import { generateUuid } from "@/lib/helpers";
 import { asc, desc } from "drizzle-orm";
 import { currentUser } from "@clerk/nextjs/server";
@@ -38,6 +39,11 @@ export type CompanyFields = Omit<
 export type CompanyContractInput = Omit<
   InsertContracts,
   "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt"
+>;
+
+export type CompanyTextInput = Omit<
+  InsertTexts,
+  "id" | "uuid" | "companyUuid" | "createdByUserId" | "createdAt" | "updatedAt"
 >;
 
 export type CompanyActionResult = {
@@ -71,6 +77,7 @@ export const createCompany = async (
   addresses: AddressInput[] = [],
   communicationSettings: CommSettingInput[] = [],
   contracts: CompanyContractInput[] = [],
+  texts: CompanyTextInput[] = [],
 ): Promise<CompanyActionResult> => {
   const uuid = generateUuid();
 
@@ -106,6 +113,15 @@ export const createCompany = async (
           ...contract,
           uuid: generateUuid(),
           companyUuid: uuid,
+        });
+      }
+
+      for (const text of texts) {
+        await tx.insert(Texts).values({
+          ...text,
+          uuid: generateUuid(),
+          companyUuid: uuid,
+          createdByUserId: userId,
         });
       }
     });

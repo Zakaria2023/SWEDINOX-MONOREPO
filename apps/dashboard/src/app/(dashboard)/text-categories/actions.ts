@@ -12,7 +12,7 @@ import { alias } from "drizzle-orm/mysql-core";
 
 export type TextCategoryOption = Pick<
   SelectTextCategories,
-  "uuid" | "parentUuid" | "name" | "sequenceNumber" | "isActive"
+  "uuid" | "parentUuid" | "name" | "sequenceNumber" | "isActive" | "usageCategoriesJson"
 >;
 
 export type TextCategoryListItem = SelectTextCategories & {
@@ -40,6 +40,7 @@ export const getTextCategoriesForSelect = async (): Promise<
       name: TextCategories.name,
       sequenceNumber: TextCategories.sequenceNumber,
       isActive: TextCategories.isActive,
+      usageCategoriesJson: TextCategories.usageCategoriesJson,
     })
     .from(TextCategories)
     .orderBy(TextCategories.sequenceNumber, TextCategories.name);
