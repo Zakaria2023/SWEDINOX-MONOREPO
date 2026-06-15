@@ -441,6 +441,8 @@ export const CompanyForm = ({ availableContracts }: CompanyFormProps) => {
   const handleSaveContact = contactForm.handleSubmit((values) => {
     const companyValues = form.getValues();
     const isSupplier = selectedRoles.includes("supplier");
+    const isCustomerOrProspect =
+      selectedRoles.includes("customer") || selectedRoles.includes("prospect");
 
     setContacts((prev) => [
       ...prev,
@@ -473,11 +475,11 @@ export const CompanyForm = ({ availableContracts }: CompanyFormProps) => {
         categories: values.categories as ContactCategory[],
         sequenceNumber: values.sequenceNumber,
         purchaser: undefined,
-        searchCode1: isSupplier ? (companyValues.searchCode1 || undefined) : undefined,
-        searchCode2: isSupplier ? (companyValues.searchCode2 || undefined) : undefined,
-        searchCode3: isSupplier ? (companyValues.searchCode3 || undefined) : undefined,
-        revenueLastYear: isSupplier ? "0.00" : undefined,
-        revenueThisYear: isSupplier ? "0.00" : undefined,
+        searchCode1: (isSupplier || isCustomerOrProspect) ? (companyValues.searchCode1 || undefined) : undefined,
+        searchCode2: (isSupplier || isCustomerOrProspect) ? (companyValues.searchCode2 || undefined) : undefined,
+        searchCode3: (isSupplier || isCustomerOrProspect) ? (companyValues.searchCode3 || undefined) : undefined,
+        revenueLastYear: (isSupplier || isCustomerOrProspect) ? "0.00" : undefined,
+        revenueThisYear: (isSupplier || isCustomerOrProspect) ? "0.00" : undefined,
         isCustomer: selectedRoles.includes("customer"),
         isProspect: selectedRoles.includes("prospect"),
         isSupplier: selectedRoles.includes("supplier"),
@@ -491,6 +493,19 @@ export const CompanyForm = ({ availableContracts }: CompanyFormProps) => {
         visitCountry: undefined,
         visitTelephone: undefined,
         visitFax: undefined,
+        accountManager: undefined,
+        representative: undefined,
+        customerGroup: undefined,
+        industryCode: undefined,
+        industry: undefined,
+        classificationCode: undefined,
+        classification: undefined,
+        creditLimit: undefined,
+        competitors: undefined,
+        customerRegionCode: undefined,
+        customerRegion: undefined,
+        targetYearRevenue: isCustomerOrProspect ? "0.00" : undefined,
+        targetAnnualSales: isCustomerOrProspect ? "0.00" : undefined,
       },
     ]);
     contactForm.reset(DEFAULT_CONTACT);
