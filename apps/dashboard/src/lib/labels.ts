@@ -8,6 +8,16 @@ import type {
   CompanyRole,
   ContractableRole,
   ContractType,
+  DevTheorWt,
+  EdiOption,
+  GroupLinesByDescription,
+  MiscellaneousOption,
+  OrderOption,
+  PrintProductCodes,
+  QuoteOption,
+  QuoteOrderInvoiceOption,
+  QuoteOrderOption,
+  SalesRepresentative,
 } from "@/lib/enums";
 
 export const COMMON_TEXT = {
@@ -125,4 +135,81 @@ export const COMMUNICATION_SETTING_SHAPE_LABELS: Record<
   edi4steel: "EDI4Steel",
   text: "Text",
   peppol: "Peppol",
+};
+
+export const SALES_REPRESENTATIVE_LABELS: Record<SalesRepresentative, string> = {
+  arian_bloks: "Arian Bloks",
+  bnl: "BNL",
+  cherice_van_rooyen: "Cherice van Rooyen",
+  export: "Export",
+  guy_mambourg: "Guy Mambourg",
+  hego: "Hego",
+};
+
+export const DEV_THEOR_WT_LABELS: Record<DevTheorWt, string> = {
+  theoretical_weight: "Theoretical weight",
+  trade_weight: "Trade weight",
+  german_trade_weight: "German trade weight",
+  weighed: "Weighed",
+};
+
+export const GROUP_LINES_BY_DESCRIPTION_LABELS: Record<GroupLinesByDescription, string> = {
+  order_of_order_lines: "Print in order of order lines, without titles",
+  alphabetical_order: "Group by description, alphabetical order",
+  lowest_order_line: "Group by description, order of lowest order line",
+  print_group_titles: "Print group titles in order of order lines",
+};
+
+export const PRINT_PRODUCT_CODES_LABELS: Record<PrintProductCodes, string> = {
+  do_not_print: "Do not print product code",
+  print_easy2trade: "Print easy2trade product code",
+  print_company: "Print company product code",
+};
+
+export const MISCELLANEOUS_OPTION_LABELS: Record<MiscellaneousOption, string> = {
+  occasional_customer: "Occasional customer",
+  customer_has_login_code: "Customer has login code for website",
+  bill_of_ladings_per_order: "Bill of ladings per order",
+  vrachtbrieven_afdrukken: "Vrachtbrieven afdrukken",
+  consignment_customer: "Consignment customer",
+  neutral_labels: "Neutral labels",
+  label_per_sawed_piece: "Label per sawed piece",
+};
+
+export const QUOTE_ORDER_OPTION_LABELS: Record<QuoteOrderOption, string> = {
+  reference_required: "Reference required",
+  complete_delivery: "Complete delivery",
+  round_weight_per_piece_up: "Round weight per piece up",
+  certificaat: "Certificaat",
+  overlengte: "Overlengte",
+  default_pickup: "Default pickup",
+};
+
+export const QUOTE_ORDER_INVOICE_OPTION_LABELS: Record<QuoteOrderInvoiceOption, string> = {
+  do_not_print_prices: "Do not print prices",
+  total_amount_per_line: "Total amount per line",
+  condensing_options: "Condensing options",
+  include_option_prices_in_material_prices: "Include option prices in material prices",
+};
+
+export const ORDER_OPTION_LABELS: Record<OrderOption, string> = {
+  net_prices_only: "Net prices only",
+  scrap_surcharge_separately: "Scrap surcharge separately",
+  no_commercial_blocking: "No commercial blocking",
+  no_financial_blockage: "No financial blockage",
+  call_off_quantities_on_call_off_confirmation: "Call-off quantities on call-off confirmation",
+  backorders_on_order_confirmation: "Backorders on the order confirmation",
+};
+
+export const QUOTE_OPTION_LABELS: Record<QuoteOption, string> = {
+  net_prices_only: "Net prices only",
+  scrap_surcharge_separate: "Scrap surcharge separate",
+  no_commercial_blocking: "No commercial blocking",
+  no_financial_blockage: "No financial blockage",
+  dont_show_at_all: "Don't show at all",
+};
+
+export const EDI_OPTION_LABELS: Record<EdiOption, string> = {
+  product_features: "Product features",
+  send_pdf: "Send PDF",
 };
