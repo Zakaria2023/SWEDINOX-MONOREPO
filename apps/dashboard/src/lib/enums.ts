@@ -102,3 +102,41 @@ export const communicationSettingShapes = [
 
 export type CommunicationSettingShape =
   (typeof communicationSettingShapes)[number];
+
+export const salesRepresentatives = [
+  "arian_bloks",
+  "bnl",
+  "cherice_van_rooyen",
+  "export",
+  "guy_mambourg",
+  "hego",
+] as const satisfies readonly string[];
+
+export type SalesRepresentative = (typeof salesRepresentatives)[number];
+
+export const devTheorWtOptions = [
+  "theoretical_weight",
+  "trade_weight",
+  "german_trade_weight",
+  "weighed",
+] as const satisfies readonly string[];
+
+export type DevTheorWt = (typeof devTheorWtOptions)[number];
+
+export const groupLinesByDescriptionOptions = [
+  "order_of_order_lines",
+  "alphabetical_order",
+  "lowest_order_line",
+  "print_group_titles",
+] as const satisfies readonly string[];
+
+export type GroupLinesByDescription =
+  (typeof groupLinesByDescriptionOptions)[number];
+
+export const printProductCodesOptions = [
+  "do_not_print",
+  "print_easy2trade",
+  "print_company",
+] as const satisfies readonly string[];
+
+export type PrintProductCodes = (typeof printProductCodesOptions)[number];
