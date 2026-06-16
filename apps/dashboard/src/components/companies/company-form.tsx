@@ -1,13 +1,13 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { FileText, MapPin, MessageSquare, Plus, X } from "lucide-react";
+import { FileText, FolderOpen, MapPin, MessageSquare, Plus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
-import type { CommSettingInput, CompanyContractInput } from "@/app/(dashboard)/companies/actions";
-import type { ContractListItem } from "@/app/(dashboard)/contracts/actions";
+import type { CommSettingInput, CompanyContractInput, CustomerProjectInput } from "@/app/(dashboard)/companies/actions";
+import type { ContractForProjectOption, ContractListItem } from "@/app/(dashboard)/contracts/actions";
 import {
   createCompanySchema,
   type AddressFormValues,
@@ -143,11 +143,30 @@ const DEFAULT_CONTRACT_SELECTION: ContractSelectionValues = {
   role: "" as ContractableRole,
 };
 
-type CompanyFormProps = {
-  availableContracts: ContractListItem[];
+const projectSchema = z.object({
+  projectName: z.string().optional(),
+  startingDate: z.string().optional(),
+  endDate: z.string().optional(),
+  revenue: z.string().optional(),
+  contractUuid: z.string().optional(),
+});
+
+type ProjectFormValues = z.infer<typeof projectSchema>;
+
+const DEFAULT_PROJECT: ProjectFormValues = {
+  projectName: "",
+  startingDate: "",
+  endDate: "",
+  revenue: "",
+  contractUuid: "",
 };
 
-export const CompanyForm = ({ availableContracts }: CompanyFormProps) => {
+type CompanyFormProps = {
+  availableContracts: ContractListItem[];
+  projectContracts: ContractForProjectOption[];
+};
+
+export const CompanyForm = ({ availableContracts, projectContracts }: CompanyFormProps) => {
   const router = useRouter();
   const [isFirstAddressDialogOpen, setIsFirstAddressDialogOpen] =
     useState(false);
@@ -164,6 +183,8 @@ export const CompanyForm = ({ availableContracts }: CompanyFormProps) => {
   const [selectedCommType, setSelectedCommType] = useState("");
   const [isContractDialogOpen, setIsContractDialogOpen] = useState(false);
   const [contracts, setContracts] = useState<CompanyContractInput[]>([]);
+  const [isProjectDialogOpen, setIsProjectDialogOpen] = useState(false);
+  const [projects, setProjects] = useState<CustomerProjectInput[]>([]);
 
   const { form, isPending, onSubmit, state } = useCompanySubmit();
   const {
@@ -200,9 +221,17 @@ export const CompanyForm = ({ availableContracts }: CompanyFormProps) => {
     defaultValues: DEFAULT_CONTRACT_SELECTION,
   });
 
+  const projectForm = useForm<ProjectFormValues>({
+    resolver: zodResolver(projectSchema),
+    defaultValues: DEFAULT_PROJECT,
+  });
+
   const addressValues = watch("address");
   const selectedRoles: CompanyRole[] = watch("roles") ?? [];
   const disabledRoles = getDisabledRoles(selectedRoles);
+  const isCustomerOrProspect =
+    selectedRoles.includes("customer") || selectedRoles.includes("prospect");
+
   const activeContractableRoles = selectedRoles.filter((r): r is ContractableRole =>
     (contractableRoles as readonly string[]).includes(r),
   );
@@ -352,6 +381,23 @@ export const CompanyForm = ({ availableContracts }: CompanyFormProps) => {
     setIsContractDialogOpen(false);
   });
 
+  const handleSaveProject = projectForm.handleSubmit((values) => {
+    const today = new Date().toISOString().split("T")[0];
+    setProjects((prev) => [
+      ...prev,
+      {
+        projectName: values.projectName || undefined,
+        startingDate: today,
+        endDate: values.endDate || undefined,
+        revenue: values.revenue || undefined,
+        contractUuid: values.contractUuid || undefined,
+        daysInSystem: 0,
+      },
+    ]);
+    projectForm.reset(DEFAULT_PROJECT);
+    setIsProjectDialogOpen(false);
+  });
+
   const toggleRole = (role: CompanyRole) => {
     if (!selectedRoles.includes(role) && disabledRoles.has(role)) return;
     setValue(
@@ -371,7 +417,7 @@ export const CompanyForm = ({ availableContracts }: CompanyFormProps) => {
   return (
     <>
       <form
-        onSubmit={onSubmit(additionalAddresses, communicationSettings, contracts)}
+        onSubmit={onSubmit(additionalAddresses, communicationSettings, contracts, projects)}
         className="space-y-8"
       >
         <section className="space-y-4">
@@ -647,6 +693,61 @@ export const CompanyForm = ({ availableContracts }: CompanyFormProps) => {
               >
                 <Plus className="size-4" />
                 Add Contract
+              </button>
+            </div>
+          </section>
+        )}
+
+        {isCustomerOrProspect && (
+          <section className="space-y-4">
+            <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
+              Projects
+            </h2>
+            <div className="space-y-2 rounded-2xl border border-border bg-muted/20 p-4">
+              {projects.map((project, index) => (
+                <div
+                  key={index}
+                  className="flex items-center justify-between rounded-lg border border-border bg-background px-3 py-2"
+                >
+                  <div className="flex min-w-0 items-center gap-2 text-sm">
+                    <FolderOpen className="size-4 shrink-0 text-muted-foreground" />
+                    <span className="truncate text-muted-foreground">
+                      {project.projectName || "Project"}
+                    </span>
+                    {project.startingDate && (
+                      <span className="shrink-0 text-xs text-muted-foreground">
+                        {project.startingDate}
+                        {project.endDate ? ` → ${project.endDate}` : ""}
+                      </span>
+                    )}
+                    {project.contractUuid && (
+                      <span className="shrink-0 rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">
+                        {projectContracts.find((c) => c.uuid === project.contractUuid)?.code ?? "Contract"}
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setProjects((prev) => prev.filter((_, i) => i !== index))}
+                    className="shrink-0 text-muted-foreground hover:text-destructive"
+                    disabled={isPending}
+                  >
+                    <X className="size-4" />
+                    <span className="sr-only">Remove project</span>
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => {
+                  projectForm.reset(DEFAULT_PROJECT);
+                  setIsProjectDialogOpen(true);
+                }}
+                className="inline-flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-border px-3 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+                disabled={isPending}
+              >
+                <Plus className="size-4" />
+                Add Project
               </button>
             </div>
           </section>
@@ -1008,6 +1109,80 @@ export const CompanyForm = ({ availableContracts }: CompanyFormProps) => {
                 {COMMON_TEXT.cancel}
               </Button>
               <Button type="submit">Add Contract</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={isProjectDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) projectForm.reset(DEFAULT_PROJECT);
+          setIsProjectDialogOpen(open);
+        }}
+      >
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FolderOpen className="size-4" />
+              Add Project
+            </DialogTitle>
+            <DialogDescription>
+              Add a project for this customer / prospect.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleSaveProject} className="mt-2 space-y-4 px-6 pb-6">
+            <div>
+              <FormLabel htmlFor="proj-name">Project name</FormLabel>
+              <Input id="proj-name" {...projectForm.register("projectName")} placeholder="Enter project name" />
+            </div>
+
+            <div>
+              <FormLabel htmlFor="proj-end">End date</FormLabel>
+              <Input id="proj-end" type="date" {...projectForm.register("endDate")} />
+            </div>
+
+            <div>
+              <FormLabel htmlFor="proj-revenue">Revenue</FormLabel>
+              <Input id="proj-revenue" type="number" step="0.01" placeholder="0.00" {...projectForm.register("revenue")} />
+            </div>
+
+            <div>
+              <FormLabel htmlFor="proj-contract">Contract</FormLabel>
+              <Controller
+                name="contractUuid"
+                control={projectForm.control}
+                render={({ field }) => (
+                  <Select
+                    id="proj-contract"
+                    options={[
+                      { value: "", label: COMMON_TEXT.emptyOption },
+                      ...projectContracts.map((c) => ({
+                        value: c.uuid,
+                        label: `${c.code}${c.description ? ` — ${c.description}` : ""}`,
+                      })),
+                    ]}
+                    value={field.value ?? ""}
+                    onValueChange={field.onChange}
+                    placeholder={COMMON_TEXT.emptyOption}
+                  />
+                )}
+              />
+            </div>
+
+            <div className="flex justify-end gap-3 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  projectForm.reset(DEFAULT_PROJECT);
+                  setIsProjectDialogOpen(false);
+                }}
+              >
+                {COMMON_TEXT.cancel}
+              </Button>
+              <Button type="submit">Add Project</Button>
             </div>
           </form>
         </DialogContent>

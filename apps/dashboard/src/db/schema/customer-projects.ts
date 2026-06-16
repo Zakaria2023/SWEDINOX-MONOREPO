@@ -23,8 +23,8 @@ export const CustomerProjects = mysqlTable(
     contractUuid: char("contract_uuid", { length: 36 }),
 
     projectName: varchar("project_name", { length: 255 }),
-    startingDate: date("starting_date"),
-    endDate: date("end_date"),
+    startingDate: date("starting_date", { mode: "string" }),
+    endDate: date("end_date", { mode: "string" }),
     revenue: decimal("revenue", { precision: 15, scale: 2 }).default("0.00").notNull(),
     daysInSystem: int("days_in_system").default(0).notNull(),
 
