@@ -6,6 +6,7 @@ import {
   foreignKey,
   index,
   int,
+  json,
   mysqlEnum,
   mysqlTable,
   timestamp,
@@ -16,6 +17,12 @@ import {
   groupLinesByDescriptionOptions,
   printProductCodesOptions,
   salesRepresentatives,
+  type EdiOption,
+  type MiscellaneousOption,
+  type OrderOption,
+  type QuoteOption,
+  type QuoteOrderInvoiceOption,
+  type QuoteOrderOption,
 } from "../../lib/enums";
 import { Companies } from "./companies";
 import { CustomerGroups } from "./customer-groups";
@@ -35,48 +42,46 @@ export const CustomerSales = mysqlTable(
     region: varchar("region", { length: 255 }),
 
     // Miscellaneous
-    occasionalCustomer: boolean("occasional_customer").default(false).notNull(),
     memberOf: varchar("member_of", { length: 255 }),
-    customerHasLoginCode: boolean("customer_has_login_code").default(false).notNull(),
-    billOfLadingsPerOrder: boolean("bill_of_ladings_per_order").default(false).notNull(),
-    vrachtbrievenAfdrukken: boolean("vrachtbrieven_afdrukken").default(false).notNull(),
-    consignmentCustomer: boolean("consignment_customer").default(false).notNull(),
-    neutralLabels: boolean("neutral_labels").default(false).notNull(),
-    labelPerSawedPiece: boolean("label_per_sawed_piece").default(false).notNull(),
+    miscellaneousSettings: json("miscellaneous_settings")
+      .$type<MiscellaneousOption[]>()
+      .default([])
+      .notNull(),
 
     // Quote/Order
     deliveryCondition: varchar("delivery_condition", { length: 255 }),
     devTheorWt: mysqlEnum("dev_theor_wt", devTheorWtOptions),
     defTransport: varchar("def_transport", { length: 255 }),
-    referenceRequired: boolean("reference_required").default(false).notNull(),
-    completeDelivery: boolean("complete_delivery").default(false).notNull(),
-    roundWeightPerPieceUp: boolean("round_weight_per_piece_up").default(false).notNull(),
-    certificaat: boolean("certificaat").default(false).notNull(),
-    overlengte: boolean("overlengte").default(false).notNull(),
-    defaultPickup: boolean("default_pickup").default(false).notNull(),
+    quoteOrderSettings: json("quote_order_settings")
+      .$type<QuoteOrderOption[]>()
+      .default([])
+      .notNull(),
 
     // Quote/Order/Invoice
-    doNotPrintPrices: boolean("do_not_print_prices").default(false).notNull(),
-    totalAmountPerLine: boolean("total_amount_per_line").default(false).notNull(),
-    condensingOptions: boolean("condensing_options").default(false).notNull(),
-    includeOptionPricesInMaterialPrices: boolean("include_option_prices_in_material_prices").default(false).notNull(),
-    groupLinesByLongProductGroupDescription: mysqlEnum("group_lines_by_long_product_group_description", groupLinesByDescriptionOptions),
-    printProductCodesOnOutgoingDocuments: mysqlEnum("print_product_codes_on_outgoing_documents", printProductCodesOptions),
+    groupLinesByLongProductGroupDescription: mysqlEnum(
+      "group_lines_by_long_product_group_description",
+      groupLinesByDescriptionOptions,
+    ),
+    printProductCodesOnOutgoingDocuments: mysqlEnum(
+      "print_product_codes_on_outgoing_documents",
+      printProductCodesOptions,
+    ),
+    quoteOrderInvoiceSettings: json("quote_order_invoice_settings")
+      .$type<QuoteOrderInvoiceOption[]>()
+      .default([])
+      .notNull(),
 
     // Order
-    orderNetPricesOnly: boolean("order_net_prices_only").default(false).notNull(),
-    orderScrapSurchargeSeparately: boolean("order_scrap_surcharge_separately").default(false).notNull(),
-    orderNoCommercialBlocking: boolean("order_no_commercial_blocking").default(false).notNull(),
-    orderNoFinancialBlockage: boolean("order_no_financial_blockage").default(false).notNull(),
-    callOffQuantitiesOnCallOffConfirmation: boolean("call_off_quantities_on_call_off_confirmation").default(false).notNull(),
-    backordersOnOrderConfirmation: boolean("backorders_on_order_confirmation").default(false).notNull(),
+    orderSettings: json("order_settings")
+      .$type<OrderOption[]>()
+      .default([])
+      .notNull(),
 
     // Quote
-    quoteNetPricesOnly: boolean("quote_net_prices_only").default(false).notNull(),
-    quoteScrapSurchargeSeparate: boolean("quote_scrap_surcharge_separate").default(false).notNull(),
-    quoteNoCommercialBlocking: boolean("quote_no_commercial_blocking").default(false).notNull(),
-    quoteNoFinancialBlockage: boolean("quote_no_financial_blockage").default(false).notNull(),
-    quoteDontShowAtAll: boolean("quote_dont_show_at_all").default(false).notNull(),
+    quoteSettings: json("quote_settings")
+      .$type<QuoteOption[]>()
+      .default([])
+      .notNull(),
 
     // Website-quote
     websiteQuoteMustBeApproved: boolean("website_quote_must_be_approved").default(false).notNull(),
@@ -97,8 +102,10 @@ export const CustomerSales = mysqlTable(
     actionFaxTo: varchar("action_fax_to", { length: 255 }),
 
     // EDI
-    ediProductFeatures: boolean("edi_product_features").default(false).notNull(),
-    ediSendPdf: boolean("edi_send_pdf").default(false).notNull(),
+    ediSettings: json("edi_settings")
+      .$type<EdiOption[]>()
+      .default([])
+      .notNull(),
 
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),

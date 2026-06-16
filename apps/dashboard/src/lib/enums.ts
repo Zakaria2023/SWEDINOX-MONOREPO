@@ -140,3 +140,63 @@ export const printProductCodesOptions = [
 ] as const satisfies readonly string[];
 
 export type PrintProductCodes = (typeof printProductCodesOptions)[number];
+
+export const miscellaneousOptions = [
+  "occasional_customer",
+  "customer_has_login_code",
+  "bill_of_ladings_per_order",
+  "vrachtbrieven_afdrukken",
+  "consignment_customer",
+  "neutral_labels",
+  "label_per_sawed_piece",
+] as const satisfies readonly string[];
+
+export type MiscellaneousOption = (typeof miscellaneousOptions)[number];
+
+export const quoteOrderOptions = [
+  "reference_required",
+  "complete_delivery",
+  "round_weight_per_piece_up",
+  "certificaat",
+  "overlengte",
+  "default_pickup",
+] as const satisfies readonly string[];
+
+export type QuoteOrderOption = (typeof quoteOrderOptions)[number];
+
+export const quoteOrderInvoiceOptions = [
+  "do_not_print_prices",
+  "total_amount_per_line",
+  "condensing_options",
+  "include_option_prices_in_material_prices",
+] as const satisfies readonly string[];
+
+export type QuoteOrderInvoiceOption = (typeof quoteOrderInvoiceOptions)[number];
+
+export const orderOptions = [
+  "net_prices_only",
+  "scrap_surcharge_separately",
+  "no_commercial_blocking",
+  "no_financial_blockage",
+  "call_off_quantities_on_call_off_confirmation",
+  "backorders_on_order_confirmation",
+] as const satisfies readonly string[];
+
+export type OrderOption = (typeof orderOptions)[number];
+
+export const quoteOptions = [
+  "net_prices_only",
+  "scrap_surcharge_separate",
+  "no_commercial_blocking",
+  "no_financial_blockage",
+  "dont_show_at_all",
+] as const satisfies readonly string[];
+
+export type QuoteOption = (typeof quoteOptions)[number];
+
+export const ediOptions = [
+  "product_features",
+  "send_pdf",
+] as const satisfies readonly string[];
+
+export type EdiOption = (typeof ediOptions)[number];
