@@ -8,7 +8,7 @@ export const createTextCategorySchema = () =>
     name: z.string().min(1, VALIDATION_MESSAGES.nameRequired),
     description: z.string().optional(),
     usageCategoriesJson: z.array(z.enum(textUsageCategories)),
-    sequenceNumber: z.union([z.string(), z.literal(""), z.undefined()]),
+    sequenceNumber: z.number().int().min(0).optional(),
     isActive: z.boolean(),
   });
 

@@ -81,7 +81,10 @@ export const TextCategoryForm = ({ categories }: TextCategoryFormProps) => {
               id="sequenceNumber"
               type="number"
               min={0}
-              {...register("sequenceNumber")}
+              {...register("sequenceNumber", {
+                setValueAs: (value) =>
+                  value === "" ? undefined : Number(value),
+              })}
               disabled={isPending}
             />
             <FormFieldError message={errors.sequenceNumber?.message} />

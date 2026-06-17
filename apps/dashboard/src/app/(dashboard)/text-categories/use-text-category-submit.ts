@@ -20,7 +20,7 @@ export const useTextCategorySubmit = () => {
       name: "",
       description: "",
       usageCategoriesJson: [],
-      sequenceNumber: "0",
+      sequenceNumber: undefined,
       isActive: true,
     },
   });
@@ -28,14 +28,11 @@ export const useTextCategorySubmit = () => {
   const onSubmit = form.handleSubmit((values) => {
     startTransition(async () => {
       const result = await createTextCategory({
-        parentUuid: values.parentUuid || undefined,
+        parentUuid: values.parentUuid,
         name: values.name,
-        description: values.description || undefined,
+        description: values.description,
         usageCategoriesJson: values.usageCategoriesJson,
-        sequenceNumber:
-          values.sequenceNumber !== "" && values.sequenceNumber !== undefined
-            ? Number(values.sequenceNumber)
-            : 0,
+        sequenceNumber: values.sequenceNumber,
         isActive: values.isActive,
       });
 
