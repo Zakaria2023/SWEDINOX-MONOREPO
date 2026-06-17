@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { TextCategoryOption } from "@/app/(dashboard)/text-categories/actions";
 import { useTextCategorySubmit } from "@/app/(dashboard)/text-categories/use-text-category-submit";
@@ -40,12 +39,6 @@ export const TextCategoryForm = ({ categories }: TextCategoryFormProps) => {
       { shouldValidate: true },
     );
   };
-
-  useEffect(() => {
-    if (state.success) {
-      router.push("/text-categories");
-    }
-  }, [router, state.success]);
 
   const categoryOptions = buildTextCategorySelectOptions(categories);
 

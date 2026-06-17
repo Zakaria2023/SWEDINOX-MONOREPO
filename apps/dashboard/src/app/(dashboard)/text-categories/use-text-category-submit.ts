@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { createTextCategory, type TextCategoryActionResult } from "./actions";
@@ -10,6 +11,7 @@ import {
 } from "./validation";
 
 export const useTextCategorySubmit = () => {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [state, setState] = useState<TextCategoryActionResult>({});
 
@@ -37,6 +39,9 @@ export const useTextCategorySubmit = () => {
       });
 
       setState(result);
+      if (result.success) {
+        router.push("/text-categories");
+      }
     });
   });
 
