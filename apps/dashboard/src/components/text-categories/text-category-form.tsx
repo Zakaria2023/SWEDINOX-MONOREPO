@@ -145,7 +145,7 @@ export const TextCategoryForm = ({ categories }: TextCategoryFormProps) => {
 
       <FormActions
         isPending={isPending}
-        onCancel={() => router.push("/text-categories")}
+        onCancel={() => router.back()}
         submitLabel="Create Text Category"
       />
     </form>
