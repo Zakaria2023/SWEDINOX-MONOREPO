@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { TextListItem } from "@/app/(dashboard)/texts/actions";
+import { TextListItem } from "@/app/(dashboard)/texts/actions";
 import {
   Table,
   TableBody,
@@ -11,10 +11,9 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
-import { type TextUsageCategory } from "@/lib/enums";
+import { TextUsageCategory } from "@/lib/enums";
 import { COMMON_TEXT, TEXT_USAGE_CATEGORY_LABELS } from "@/lib/labels";
-
-import type { SelectTexts } from "@/db";
+import { SelectTexts } from "@/db";
 
 type UsageCategoryField = keyof Omit<
   SelectTexts,
@@ -69,7 +68,11 @@ type ColumnKey =
   | "createdAt"
   | UsageCategoryField;
 
-const BASE_COLUMNS: Array<{ defaultVisible: boolean; key: ColumnKey; label: string }> = [
+const BASE_COLUMNS: Array<{
+  defaultVisible: boolean;
+  key: ColumnKey;
+  label: string;
+}> = [
   { key: "companyId", label: "Company code", defaultVisible: true },
   { key: "companyName", label: "Customer", defaultVisible: true },
   { key: "city", label: "City", defaultVisible: true },
@@ -83,12 +86,15 @@ const BASE_COLUMNS: Array<{ defaultVisible: boolean; key: ColumnKey; label: stri
   { key: "createdAt", label: "Created", defaultVisible: true },
 ];
 
-const USAGE_COLUMNS: Array<{ defaultVisible: boolean; key: ColumnKey; label: string }> =
-  USAGE_CATEGORY_MAP.map(({ key, field }) => ({
-    key: field as ColumnKey,
-    label: TEXT_USAGE_CATEGORY_LABELS[key],
-    defaultVisible: true,
-  }));
+const USAGE_COLUMNS: Array<{
+  defaultVisible: boolean;
+  key: ColumnKey;
+  label: string;
+}> = USAGE_CATEGORY_MAP.map(({ key, field }) => ({
+  key: field as ColumnKey,
+  label: TEXT_USAGE_CATEGORY_LABELS[key],
+  defaultVisible: true,
+}));
 
 const ALL_COLUMNS = [...BASE_COLUMNS, ...USAGE_COLUMNS];
 
@@ -152,23 +158,31 @@ export const TextsTableContent = ({ texts }: TextsTableContentProps) => {
       case "customer":
         return (
           <TableCell key={key} className="text-center">
-            <BooleanCheckbox checked={text.roles?.includes("customer") ?? false} />
+            <BooleanCheckbox
+              checked={text.roles?.includes("customer") ?? false}
+            />
           </TableCell>
         );
       case "supplier":
         return (
           <TableCell key={key} className="text-center">
-            <BooleanCheckbox checked={text.roles?.includes("supplier") ?? false} />
+            <BooleanCheckbox
+              checked={text.roles?.includes("supplier") ?? false}
+            />
           </TableCell>
         );
       case "processor":
         return (
           <TableCell key={key} className="text-center">
-            <BooleanCheckbox checked={text.roles?.includes("processor") ?? false} />
+            <BooleanCheckbox
+              checked={text.roles?.includes("processor") ?? false}
+            />
           </TableCell>
         );
       case "textCategoryName":
-        return <TableCell key={key}>{text.textCategoryName ?? fallback}</TableCell>;
+        return (
+          <TableCell key={key}>{text.textCategoryName ?? fallback}</TableCell>
+        );
       case "textBlock":
         return (
           <TableCell key={key} className="max-w-xs truncate">
@@ -176,9 +190,9 @@ export const TextsTableContent = ({ texts }: TextsTableContentProps) => {
           </TableCell>
         );
       case "categories": {
-        const enabled = USAGE_CATEGORY_MAP.filter(({ field }) => text[field]).map(
-          ({ key: cat }) => TEXT_USAGE_CATEGORY_LABELS[cat],
-        );
+        const enabled = USAGE_CATEGORY_MAP.filter(
+          ({ field }) => text[field],
+        ).map(({ key: cat }) => TEXT_USAGE_CATEGORY_LABELS[cat]);
         return (
           <TableCell key={key}>
             {enabled.length > 0 ? enabled.join(", ") : fallback}
@@ -204,7 +218,10 @@ export const TextsTableContent = ({ texts }: TextsTableContentProps) => {
     <div className="space-y-4">
       <div className="flex justify-end">
         <ColumnSelector
-          columns={ALL_COLUMNS.map((col) => ({ key: col.key, label: col.label }))}
+          columns={ALL_COLUMNS.map((col) => ({
+            key: col.key,
+            label: col.label,
+          }))}
           visibility={columnVisibility}
           onToggle={toggleColumn}
         />
