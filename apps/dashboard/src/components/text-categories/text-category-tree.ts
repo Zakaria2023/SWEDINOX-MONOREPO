@@ -1,5 +1,5 @@
-import type { SelectOption } from "@/components/shadcn/select";
-import type { TextCategoryOption } from "@/app/(dashboard)/text-categories/actions";
+import { SelectOption } from "@/components/shadcn/select";
+import { TextCategoryOption } from "@/app/(dashboard)/text-categories/actions";
 import { COMMON_TEXT } from "@/lib/labels";
 
 const sortCategories = (a: TextCategoryOption, b: TextCategoryOption) => {
