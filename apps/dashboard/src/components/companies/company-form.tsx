@@ -13,13 +13,13 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
-import {
+import { TextCategoryOption } from "@/app/(dashboard)/text-categories/actions";
+import type {
+  CompanyTextInput,
   CommSettingInput,
   CompanyContractInput,
-  CompanyTextInput,
 } from "@/app/(dashboard)/companies/actions";
-import { TextCategoryOption } from "@/app/(dashboard)/text-categories/actions";
-import { ContractListItem } from "@/app/(dashboard)/contracts/actions";
+import type { ContractListItem } from "@/app/(dashboard)/contracts/actions";
 import {
   createCompanySchema,
   AddressFormValues,
@@ -30,8 +30,10 @@ import { AddressForm } from "@/components/companies/address-form";
 import { Button } from "@/components/shadcn/button";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/shadcn/dialog";
@@ -130,6 +132,9 @@ const getDisabledRoles = (selected: CompanyRole[]): Set<CompanyRole> => {
 
   return disabled;
 };
+
+const isContractableRole = (role: CompanyRole): role is ContractableRole =>
+  (contractableRoles as readonly string[]).includes(role);
 
 const commSettingSchema = z.object({
   documentType: z.string().min(1),
@@ -236,6 +241,10 @@ const DEFAULT_TEXT: TextDialogValues = {
   websiteInAdvance: false,
   websiteAfter: false,
 };
+const getDefaultContractRole = (
+  roles: ContractableRole[],
+): ContractSelectionValues["role"] =>
+  roles.length === 1 ? roles[0] : ("" as ContractSelectionValues["role"]);
 
 type CompanyFormProps = {
   availableContracts: ContractListItem[];
@@ -307,10 +316,7 @@ export const CompanyForm = ({
   const addressValues = watch("address");
   const selectedRoles: CompanyRole[] = watch("roles") ?? [];
   const disabledRoles = getDisabledRoles(selectedRoles);
-  const activeContractableRoles = selectedRoles.filter(
-    (r): r is ContractableRole =>
-      (contractableRoles as readonly string[]).includes(r),
-  );
+  const activeContractableRoles = selectedRoles.filter(isContractableRole);
 
   const usedCategories = new Set<AddressCategory>([
     ...(addressValues.category ?? []),
@@ -507,13 +513,48 @@ export const CompanyForm = ({
   });
 
   const toggleRole = (role: CompanyRole) => {
-    if (!selectedRoles.includes(role) && disabledRoles.has(role)) return;
-    setValue(
-      "roles",
-      selectedRoles.includes(role)
-        ? selectedRoles.filter((r) => r !== role)
-        : [...selectedRoles, role],
-    );
+    const isSelected = selectedRoles.includes(role);
+
+    if (!isSelected && disabledRoles.has(role)) return;
+
+    const nextRoles = isSelected
+      ? selectedRoles.filter((r) => r !== role)
+      : [...selectedRoles, role];
+
+    setValue("roles", nextRoles);
+
+    if (!isSelected || !isContractableRole(role)) {
+      return;
+    }
+
+    const nextContractableRoles = nextRoles.filter(isContractableRole);
+    const allowedRoles = new Set(nextContractableRoles);
+
+    setContracts((prev) => {
+      const nextContracts = prev.filter((contract) => {
+        const contractRole = contract.role;
+        return contractRole != null && allowedRoles.has(contractRole);
+      });
+      return nextContracts.length === prev.length ? prev : nextContracts;
+    });
+
+    if (nextContractableRoles.length === 0) {
+      contractSelectionForm.reset(DEFAULT_CONTRACT_SELECTION);
+      setIsContractDialogOpen(false);
+      return;
+    }
+
+    const currentDialogRole = contractSelectionForm.getValues("role");
+    const nextDialogRole = getDefaultContractRole(nextContractableRoles);
+
+    if (
+      currentDialogRole !== nextDialogRole &&
+      (!currentDialogRole ||
+        !allowedRoles.has(currentDialogRole) ||
+        nextContractableRoles.length === 1)
+    ) {
+      contractSelectionForm.setValue("role", nextDialogRole);
+    }
   };
 
   const commSettingLabel = (setting: CommSettingInput) =>
@@ -798,10 +839,7 @@ export const CompanyForm = ({
                 onClick={() => {
                   contractSelectionForm.reset({
                     contractUuid: "",
-                    role:
-                      activeContractableRoles.length === 1
-                        ? activeContractableRoles[0]
-                        : ("" as ContractableRole),
+                    role: getDefaultContractRole(activeContractableRoles),
                   });
                   setIsContractDialogOpen(true);
                 }}
@@ -1033,97 +1071,97 @@ export const CompanyForm = ({
             </DialogDescription>
           </DialogHeader>
 
-          <form
-            onSubmit={handleSaveCommSetting}
-            className="mt-2 space-y-4 px-6 pb-6"
-          >
-            <div>
-              <FormLabel htmlFor="cs-documentType" required>
-                Document Type
-              </FormLabel>
-              <Controller
-                name="documentType"
-                control={commSettingForm.control}
-                render={({ field }) => (
-                  <Select
-                    id="cs-documentType"
-                    options={documentTypeOptions}
-                    value={field.value}
-                    onValueChange={field.onChange}
-                    placeholder={COMMON_TEXT.selectOption}
-                  />
-                )}
-              />
-              <FormFieldError
-                message={commSettingForm.formState.errors.documentType?.message}
-              />
-            </div>
-
-            <div>
-              <FormLabel htmlFor="cs-communicationType" required>
-                Communication Type
-              </FormLabel>
-              <Controller
-                name="communicationType"
-                control={commSettingForm.control}
-                render={({ field }) => (
-                  <Select
-                    id="cs-communicationType"
-                    options={communicationTypeOptions}
-                    value={field.value}
-                    onValueChange={(value) => {
-                      field.onChange(value);
-                      setSelectedCommType(value);
-                      commSettingForm.setValue("email", "");
-                      commSettingForm.setValue("fax", "");
-                    }}
-                    placeholder={COMMON_TEXT.selectOption}
-                  />
-                )}
-              />
-              <FormFieldError
-                message={
-                  commSettingForm.formState.errors.communicationType?.message
-                }
-              />
-            </div>
-
-            <div>
-              <FormLabel htmlFor="cs-shape">Shape</FormLabel>
-              <Controller
-                name="shape"
-                control={commSettingForm.control}
-                render={({ field }) => (
-                  <Select
-                    id="cs-shape"
-                    options={shapeOptions}
-                    value={field.value ?? ""}
-                    onValueChange={field.onChange}
-                    placeholder={COMMON_TEXT.emptyOption}
-                  />
-                )}
-              />
-            </div>
-
-            {selectedCommType === "email" && (
+          <form onSubmit={handleSaveCommSetting}>
+            <DialogBody className="space-y-4">
               <div>
-                <FormLabel htmlFor="cs-email">Email</FormLabel>
-                <Input
-                  id="cs-email"
-                  type="email"
-                  {...commSettingForm.register("email")}
+                <FormLabel htmlFor="cs-documentType" required>
+                  Document Type
+                </FormLabel>
+                <Controller
+                  name="documentType"
+                  control={commSettingForm.control}
+                  render={({ field }) => (
+                    <Select
+                      id="cs-documentType"
+                      options={documentTypeOptions}
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      placeholder={COMMON_TEXT.selectOption}
+                    />
+                  )}
+                />
+                <FormFieldError
+                  message={
+                    commSettingForm.formState.errors.documentType?.message
+                  }
                 />
               </div>
-            )}
 
-            {selectedCommType === "fax" && (
               <div>
-                <FormLabel htmlFor="cs-fax">Fax</FormLabel>
-                <Input id="cs-fax" {...commSettingForm.register("fax")} />
+                <FormLabel htmlFor="cs-communicationType" required>
+                  Communication Type
+                </FormLabel>
+                <Controller
+                  name="communicationType"
+                  control={commSettingForm.control}
+                  render={({ field }) => (
+                    <Select
+                      id="cs-communicationType"
+                      options={communicationTypeOptions}
+                      value={field.value}
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        setSelectedCommType(value);
+                        commSettingForm.setValue("email", "");
+                        commSettingForm.setValue("fax", "");
+                      }}
+                      placeholder={COMMON_TEXT.selectOption}
+                    />
+                  )}
+                />
+                <FormFieldError
+                  message={
+                    commSettingForm.formState.errors.communicationType?.message
+                  }
+                />
               </div>
-            )}
 
-            <div className="flex justify-end gap-3 pt-2">
+              <div>
+                <FormLabel htmlFor="cs-shape">Shape</FormLabel>
+                <Controller
+                  name="shape"
+                  control={commSettingForm.control}
+                  render={({ field }) => (
+                    <Select
+                      id="cs-shape"
+                      options={shapeOptions}
+                      value={field.value ?? ""}
+                      onValueChange={field.onChange}
+                      placeholder={COMMON_TEXT.emptyOption}
+                    />
+                  )}
+                />
+              </div>
+
+              {selectedCommType === "email" && (
+                <div>
+                  <FormLabel htmlFor="cs-email">Email</FormLabel>
+                  <Input
+                    id="cs-email"
+                    type="email"
+                    {...commSettingForm.register("email")}
+                  />
+                </div>
+              )}
+
+              {selectedCommType === "fax" && (
+                <div>
+                  <FormLabel htmlFor="cs-fax">Fax</FormLabel>
+                  <Input id="cs-fax" {...commSettingForm.register("fax")} />
+                </div>
+              )}
+            </DialogBody>
+            <DialogFooter>
               <Button
                 type="button"
                 variant="outline"
@@ -1136,7 +1174,7 @@ export const CompanyForm = ({
                 {COMMON_TEXT.cancel}
               </Button>
               <Button type="submit">Add Setting</Button>
-            </div>
+            </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
@@ -1147,10 +1185,7 @@ export const CompanyForm = ({
           else
             contractSelectionForm.reset({
               contractUuid: "",
-              role:
-                activeContractableRoles.length === 1
-                  ? activeContractableRoles[0]
-                  : ("" as ContractableRole),
+              role: getDefaultContractRole(activeContractableRoles),
             });
           setIsContractDialogOpen(open);
         }}
@@ -1166,62 +1201,23 @@ export const CompanyForm = ({
             </DialogDescription>
           </DialogHeader>
 
-          <form
-            onSubmit={handleSaveContract}
-            className="mt-2 space-y-4 px-6 pb-6"
-          >
-            <div>
-              <FormLabel htmlFor="ct-contract" required>
-                Contract
-              </FormLabel>
-              <Controller
-                name="contractUuid"
-                control={contractSelectionForm.control}
-                render={({ field }) => (
-                  <Select
-                    id="ct-contract"
-                    options={[
-                      { value: "", label: COMMON_TEXT.selectOption },
-                      ...availableContracts.map((c) => ({
-                        value: c.uuid,
-                        label: `${c.code}${c.description ? ` — ${c.description}` : ""}`,
-                      })),
-                    ]}
-                    value={field.value}
-                    onValueChange={field.onChange}
-                    placeholder={COMMON_TEXT.selectOption}
-                  />
-                )}
-              />
-              <FormFieldError
-                message={
-                  contractSelectionForm.formState.errors.contractUuid?.message
-                }
-              />
-            </div>
-
-            <div>
-              <FormLabel htmlFor="ct-role" required>
-                Role
-              </FormLabel>
-              {activeContractableRoles.length === 1 ? (
-                <div className="mt-1.5 flex items-center gap-1.5">
-                  <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
-                    {CONTRACTABLE_ROLE_LABELS[activeContractableRoles[0]]}
-                  </span>
-                </div>
-              ) : (
+          <form onSubmit={handleSaveContract}>
+            <DialogBody className="space-y-4">
+              <div>
+                <FormLabel htmlFor="ct-contract" required>
+                  Contract
+                </FormLabel>
                 <Controller
-                  name="role"
+                  name="contractUuid"
                   control={contractSelectionForm.control}
                   render={({ field }) => (
                     <Select
-                      id="ct-role"
+                      id="ct-contract"
                       options={[
                         { value: "", label: COMMON_TEXT.selectOption },
-                        ...activeContractableRoles.map((r) => ({
-                          value: r,
-                          label: CONTRACTABLE_ROLE_LABELS[r],
+                        ...availableContracts.map((c) => ({
+                          value: c.uuid,
+                          label: `${c.code}${c.description ? ` — ${c.description}` : ""}`,
                         })),
                       ]}
                       value={field.value}
@@ -1230,13 +1226,51 @@ export const CompanyForm = ({
                     />
                   )}
                 />
-              )}
-              <FormFieldError
-                message={contractSelectionForm.formState.errors.role?.message}
-              />
-            </div>
+                <FormFieldError
+                  message={
+                    contractSelectionForm.formState.errors.contractUuid?.message
+                  }
+                />
+              </div>
 
-            <div className="flex justify-end gap-3 pt-2">
+              <div>
+                <FormLabel htmlFor="ct-role" required>
+                  Role
+                </FormLabel>
+                {activeContractableRoles.length === 1 ? (
+                  <div className="mt-1.5 flex items-center gap-1.5">
+                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                      {CONTRACTABLE_ROLE_LABELS[activeContractableRoles[0]]}
+                    </span>
+                  </div>
+                ) : (
+                  <Controller
+                    name="role"
+                    control={contractSelectionForm.control}
+                    render={({ field }) => (
+                      <Select
+                        id="ct-role"
+                        options={[
+                          { value: "", label: COMMON_TEXT.selectOption },
+                          ...activeContractableRoles.map((r) => ({
+                            value: r,
+                            label: CONTRACTABLE_ROLE_LABELS[r],
+                          })),
+                        ]}
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        placeholder={COMMON_TEXT.selectOption}
+                      />
+                    )}
+                  />
+                )}
+                <FormFieldError
+                  message={contractSelectionForm.formState.errors.role?.message}
+                />
+              </div>
+            </DialogBody>
+
+            <DialogFooter>
               <Button
                 type="button"
                 variant="outline"
@@ -1248,7 +1282,7 @@ export const CompanyForm = ({
                 {COMMON_TEXT.cancel}
               </Button>
               <Button type="submit">Add Contract</Button>
-            </div>
+            </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>

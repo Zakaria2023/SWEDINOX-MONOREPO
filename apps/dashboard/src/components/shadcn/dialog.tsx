@@ -89,6 +89,16 @@ function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
+function DialogBody({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="dialog-body"
+      className={cn("px-6 pt-2 pb-6", className)}
+      {...props}
+    />
+  );
+}
+
 function DialogFooter({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
@@ -123,6 +133,7 @@ function DialogDescription({
 }
 
 export {
+  DialogBody,
   Dialog,
   DialogClose,
   DialogContent,

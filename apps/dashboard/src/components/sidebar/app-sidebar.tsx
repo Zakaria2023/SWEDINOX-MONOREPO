@@ -1,15 +1,5 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useState } from "react";
-import {
-  Building2,
-  ChevronRight,
-  ContactRound,
-  Truck,
-  Users,
-} from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -25,6 +15,16 @@ import {
   SidebarMenuSubItem,
 } from "@/components/shadcn/sidebar";
 import { cn } from "@/lib/helpers";
+import {
+  Building2,
+  ChevronRight,
+  ContactRound,
+  Truck,
+  Users,
+} from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useState } from "react";
 
 export const AppSidebar = () => {
   const pathname = usePathname();
@@ -95,7 +95,7 @@ export const AppSidebar = () => {
                           "/contracts-per-customer",
                         )}
                       >
-                        <span>Contracts per Customer</span>
+                        <span>Contracts per Customer / Prospect</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                   </SidebarMenuSub>
