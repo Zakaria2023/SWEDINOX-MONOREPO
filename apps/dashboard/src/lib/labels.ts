@@ -77,7 +77,7 @@ export const CONTRACT_TYPE_LABELS: Record<ContractType, string> = {
   net_prices: "Net Prices",
   cost_price: "Cost Price",
   surcharges: "Surcharges",
-  toeslagen: "Toeslagen",
+  toeslagen: "Allowances",
 };
 
 export const COMMUNICATION_SETTING_DOCUMENT_TYPE_LABELS: Record<
