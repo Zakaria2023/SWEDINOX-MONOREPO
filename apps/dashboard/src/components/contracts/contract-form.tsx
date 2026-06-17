@@ -1,35 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Controller, useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
-import { Plus, X } from "lucide-react";
-import { z } from "zod";
-import type { ContractGroupOption } from "@/app/(dashboard)/contract-groups/actions";
 import type { CompanyOption } from "@/app/(dashboard)/companies/actions";
+import type { ContractGroupOption } from "@/app/(dashboard)/contract-groups/actions";
 import type { ContractCompanyEntry } from "@/app/(dashboard)/contracts/actions";
 import { useContractSubmit } from "@/app/(dashboard)/contracts/use-contract-submit";
-import {
-  contractableRoles,
-  contractTypes,
-  type ContractableRole,
-} from "@/lib/enums";
-import { DatePicker } from "@/components/shadcn/date-picker";
-import { Input } from "@/components/shadcn/input";
-import { Select } from "@/components/shadcn/select";
 import { Button } from "@/components/shadcn/button";
+import { DatePicker } from "@/components/shadcn/date-picker";
 import {
-  DialogBody,
   Dialog,
+  DialogBody,
   DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/shadcn/dialog";
-import { FormActions } from "@/components/ui/form-actions";
-import { FormError } from "@/components/ui/form-error";
-import { FormFieldError, FormLabel } from "@/components/ui/form-field";
+import { Input } from "@/components/shadcn/input";
+import { Select } from "@/components/shadcn/select";
 import {
   Table,
   TableBody,
@@ -38,11 +24,26 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { FormActions } from "@/components/ui/form-actions";
+import { FormError } from "@/components/ui/form-error";
+import { FormFieldError, FormLabel } from "@/components/ui/form-field";
+import {
+  contractableRoles,
+  contractTypes,
+  type ContractableRole,
+} from "@/lib/enums";
+import { pluralize } from "@/lib/helpers";
 import {
   COMMON_TEXT,
-  CONTRACTABLE_ROLE_LABELS,
   CONTRACT_TYPE_LABELS,
+  CONTRACTABLE_ROLE_LABELS,
 } from "@/lib/labels";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Plus, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { Controller, useForm } from "react-hook-form";
+import { z } from "zod";
 
 type ContractFormProps = {
   groups: ContractGroupOption[];
@@ -152,8 +153,6 @@ export const ContractForm = ({
     if (!c) return uuid;
     return [c.searchCode1, c.companyName].filter(Boolean).join(" — ");
   };
-
-  const na = COMMON_TEXT.notAvailable;
 
   return (
     <>
@@ -384,7 +383,7 @@ export const ContractForm = ({
               Companies{" "}
               <span className="ml-1 text-xs font-normal text-muted-foreground">
                 {companies.length}{" "}
-                {companies.length === 1 ? "company" : "companies"}
+                {pluralize(companies.length, "company", "companies")}
               </span>
             </h2>
             <Button
@@ -423,11 +422,11 @@ export const ContractForm = ({
                             {CONTRACTABLE_ROLE_LABELS[entry.role]}
                           </span>
                         ) : (
-                          na
+                          "N/A"
                         )}
                       </TableCell>
-                      <TableCell>{entry.startingDate ?? na}</TableCell>
-                      <TableCell>{entry.endDate ?? na}</TableCell>
+                      <TableCell>{entry.startingDate ?? "N/A"}</TableCell>
+                      <TableCell>{entry.endDate ?? "N/A"}</TableCell>
                       <TableCell>
                         <button
                           type="button"
