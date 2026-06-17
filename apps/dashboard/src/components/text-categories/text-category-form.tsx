@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import type { TextCategoryOption } from "@/app/(dashboard)/text-categories/actions";
+import { TextCategoryOption } from "@/app/(dashboard)/text-categories/actions";
 import { useTextCategorySubmit } from "@/app/(dashboard)/text-categories/use-text-category-submit";
 import { Input } from "@/components/shadcn/input";
 import { FormActions } from "@/components/ui/form-actions";
@@ -11,7 +11,7 @@ import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import { FormSelectField } from "@/components/ui/form-select-field";
 import { buildTextCategorySelectOptions } from "@/components/text-categories/text-category-tree";
 import { cn } from "@/lib/helpers";
-import { textUsageCategories, type TextUsageCategory } from "@/lib/enums";
+import { textUsageCategories, TextUsageCategory } from "@/lib/enums";
 import { TEXT_USAGE_CATEGORY_LABELS } from "@/lib/labels";
 
 type TextCategoryFormProps = {
