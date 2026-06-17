@@ -1,27 +1,36 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { FileText, MapPin, MessageSquare, Plus, X } from "lucide-react";
+import {
+  AlignLeft,
+  FileText,
+  MapPin,
+  MessageSquare,
+  Plus,
+  X,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
+import { TextCategoryOption } from "@/app/(dashboard)/text-categories/actions";
 import type {
+  CompanyTextInput,
   CommSettingInput,
   CompanyContractInput,
 } from "@/app/(dashboard)/companies/actions";
 import type { ContractListItem } from "@/app/(dashboard)/contracts/actions";
 import {
   createCompanySchema,
-  type AddressFormValues,
-  type CompanyFormValues,
+  AddressFormValues,
+  CompanyFormValues,
 } from "@/app/(dashboard)/companies/validation";
 import { useCompanySubmit } from "@/app/(dashboard)/companies/use-company-submit";
 import { AddressForm } from "@/components/companies/address-form";
 import { Button } from "@/components/shadcn/button";
 import {
-  DialogBody,
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -42,9 +51,10 @@ import {
   companyLangs,
   companyRoles,
   contractableRoles,
-  type AddressCategory,
-  type CompanyRole,
-  type ContractableRole,
+  AddressCategory,
+  CompanyRole,
+  ContractableRole,
+  TextUsageCategory,
 } from "@/lib/enums";
 import { cn } from "@/lib/helpers";
 import {
@@ -57,6 +67,7 @@ import {
   COMPANY_ROLE_LABELS,
   CONTRACT_TYPE_LABELS,
   CONTRACTABLE_ROLE_LABELS,
+  TEXT_USAGE_CATEGORY_LABELS,
 } from "@/lib/labels";
 
 const DEFAULT_ADDRESS: CompanyFormValues["address"] = {
@@ -155,6 +166,81 @@ const DEFAULT_CONTRACT_SELECTION: ContractSelectionValues = {
   role: "" as ContractableRole,
 };
 
+const textDialogSchema = z.object({
+  textCategoryUuid: z.string().min(1, "Please select a text category"),
+  textBlock: z.string().min(1, "Text block is required"),
+  visitReport: z.boolean(),
+  purchaseQuoteRequest: z.boolean(),
+  purchaseOrder: z.boolean(),
+  purchaseOrderToolTip: z.boolean(),
+  purchaseReturnOrder: z.boolean(),
+  salesQuote: z.boolean(),
+  salesOrder: z.boolean(),
+  salesOrderToolTip: z.boolean(),
+  salesInvoice: z.boolean(),
+  warehouseOrder: z.boolean(),
+  productionOrder: z.boolean(),
+  loadlist: z.boolean(),
+  waybill: z.boolean(),
+  rideList: z.boolean(),
+  customerLabel: z.boolean(),
+  transportPlanning: z.boolean(),
+  websiteInAdvance: z.boolean(),
+  websiteAfter: z.boolean(),
+});
+
+type TextDialogValues = z.infer<typeof textDialogSchema>;
+type TextBooleanField = keyof Omit<
+  TextDialogValues,
+  "textCategoryUuid" | "textBlock"
+>;
+
+const USAGE_CATEGORY_FIELDS: Array<{
+  key: TextUsageCategory;
+  field: TextBooleanField;
+}> = [
+  { key: "visit_report", field: "visitReport" },
+  { key: "purchase_quote_request", field: "purchaseQuoteRequest" },
+  { key: "purchase_order", field: "purchaseOrder" },
+  { key: "purchase_order_tool_tip", field: "purchaseOrderToolTip" },
+  { key: "purchase_return_order", field: "purchaseReturnOrder" },
+  { key: "sales_quote", field: "salesQuote" },
+  { key: "sales_order", field: "salesOrder" },
+  { key: "sales_order_tool_tip", field: "salesOrderToolTip" },
+  { key: "sales_invoice", field: "salesInvoice" },
+  { key: "warehouse_order", field: "warehouseOrder" },
+  { key: "production_order", field: "productionOrder" },
+  { key: "loadlist", field: "loadlist" },
+  { key: "waybill", field: "waybill" },
+  { key: "ride_list", field: "rideList" },
+  { key: "customer_label", field: "customerLabel" },
+  { key: "transport_planning", field: "transportPlanning" },
+  { key: "website_in_advance", field: "websiteInAdvance" },
+  { key: "website_after", field: "websiteAfter" },
+];
+
+const DEFAULT_TEXT: TextDialogValues = {
+  textCategoryUuid: "",
+  textBlock: "",
+  visitReport: false,
+  purchaseQuoteRequest: false,
+  purchaseOrder: false,
+  purchaseOrderToolTip: false,
+  purchaseReturnOrder: false,
+  salesQuote: false,
+  salesOrder: false,
+  salesOrderToolTip: false,
+  salesInvoice: false,
+  warehouseOrder: false,
+  productionOrder: false,
+  loadlist: false,
+  waybill: false,
+  rideList: false,
+  customerLabel: false,
+  transportPlanning: false,
+  websiteInAdvance: false,
+  websiteAfter: false,
+};
 const getDefaultContractRole = (
   roles: ContractableRole[],
 ): ContractSelectionValues["role"] =>
@@ -162,9 +248,13 @@ const getDefaultContractRole = (
 
 type CompanyFormProps = {
   availableContracts: ContractListItem[];
+  textCategories: TextCategoryOption[];
 };
 
-export const CompanyForm = ({ availableContracts }: CompanyFormProps) => {
+export const CompanyForm = ({
+  availableContracts,
+  textCategories,
+}: CompanyFormProps) => {
   const router = useRouter();
   const [isFirstAddressDialogOpen, setIsFirstAddressDialogOpen] =
     useState(false);
@@ -180,6 +270,8 @@ export const CompanyForm = ({ availableContracts }: CompanyFormProps) => {
   const [selectedCommType, setSelectedCommType] = useState("");
   const [isContractDialogOpen, setIsContractDialogOpen] = useState(false);
   const [contracts, setContracts] = useState<CompanyContractInput[]>([]);
+  const [isTextDialogOpen, setIsTextDialogOpen] = useState(false);
+  const [texts, setTexts] = useState<CompanyTextInput[]>([]);
 
   const { form, isPending, onSubmit, state } = useCompanySubmit();
   const {
@@ -214,6 +306,11 @@ export const CompanyForm = ({ availableContracts }: CompanyFormProps) => {
   const contractSelectionForm = useForm<ContractSelectionValues>({
     resolver: zodResolver(contractSelectionSchema),
     defaultValues: DEFAULT_CONTRACT_SELECTION,
+  });
+
+  const textForm = useForm<TextDialogValues>({
+    resolver: zodResolver(textDialogSchema),
+    defaultValues: DEFAULT_TEXT,
   });
 
   const addressValues = watch("address");
@@ -370,6 +467,51 @@ export const CompanyForm = ({ availableContracts }: CompanyFormProps) => {
     setIsContractDialogOpen(false);
   });
 
+  const handleCategorySelect = (uuid: string) => {
+    textForm.setValue("textCategoryUuid", uuid);
+    const cat = textCategories.find((c) => c.uuid === uuid);
+    if (cat) {
+      const enabled = new Set(cat.usageCategoriesJson ?? []);
+      USAGE_CATEGORY_FIELDS.forEach(({ key, field }) => {
+        textForm.setValue(field, enabled.has(key));
+      });
+    }
+  };
+
+  const handleSaveText = textForm.handleSubmit((values) => {
+    const categoryName =
+      textCategories.find((c) => c.uuid === values.textCategoryUuid)?.name ??
+      "";
+    setTexts((prev) => [
+      ...prev,
+      {
+        textCategoryUuid: values.textCategoryUuid || undefined,
+        title: categoryName,
+        textBlock: values.textBlock,
+        visitReport: values.visitReport,
+        purchaseQuoteRequest: values.purchaseQuoteRequest,
+        purchaseOrder: values.purchaseOrder,
+        purchaseOrderToolTip: values.purchaseOrderToolTip,
+        purchaseReturnOrder: values.purchaseReturnOrder,
+        salesQuote: values.salesQuote,
+        salesOrder: values.salesOrder,
+        salesOrderToolTip: values.salesOrderToolTip,
+        salesInvoice: values.salesInvoice,
+        warehouseOrder: values.warehouseOrder,
+        productionOrder: values.productionOrder,
+        loadlist: values.loadlist,
+        waybill: values.waybill,
+        rideList: values.rideList,
+        customerLabel: values.customerLabel,
+        transportPlanning: values.transportPlanning,
+        websiteInAdvance: values.websiteInAdvance,
+        websiteAfter: values.websiteAfter,
+      },
+    ]);
+    textForm.reset(DEFAULT_TEXT);
+    setIsTextDialogOpen(false);
+  });
+
   const toggleRole = (role: CompanyRole) => {
     const isSelected = selectedRoles.includes(role);
 
@@ -428,6 +570,7 @@ export const CompanyForm = ({ availableContracts }: CompanyFormProps) => {
           additionalAddresses,
           communicationSettings,
           contracts,
+          texts,
         )}
         className="space-y-8"
       >
@@ -709,6 +852,72 @@ export const CompanyForm = ({ availableContracts }: CompanyFormProps) => {
             </div>
           </section>
         )}
+
+        <section className="space-y-4">
+          <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
+            Texts
+          </h2>
+          <div className="space-y-2 rounded-2xl border border-border bg-muted/20 p-4">
+            {texts.map((text, index) => (
+              <div
+                key={index}
+                className="flex items-center justify-between rounded-lg border border-border bg-background px-3 py-2"
+              >
+                <div className="flex min-w-0 items-center gap-2 text-sm">
+                  <AlignLeft className="size-4 shrink-0 text-muted-foreground" />
+                  <span className="font-medium text-foreground truncate">
+                    {text.title}
+                  </span>
+                  {(() => {
+                    const cat = textCategories.find(
+                      (c) => c.uuid === text.textCategoryUuid,
+                    );
+                    return cat ? (
+                      <span className="shrink-0 rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">
+                        {cat.name}
+                      </span>
+                    ) : null;
+                  })()}
+                  {USAGE_CATEGORY_FIELDS.filter(
+                    ({ field }) => text[field as keyof typeof text],
+                  )
+                    .slice(0, 3)
+                    .map(({ key }) => (
+                      <span
+                        key={key}
+                        className="shrink-0 rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700"
+                      >
+                        {TEXT_USAGE_CATEGORY_LABELS[key]}
+                      </span>
+                    ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setTexts((prev) => prev.filter((_, i) => i !== index))
+                  }
+                  className="shrink-0 text-muted-foreground hover:text-destructive"
+                  disabled={isPending}
+                >
+                  <X className="size-4" />
+                  <span className="sr-only">Remove text</span>
+                </button>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={() => {
+                textForm.reset(DEFAULT_TEXT);
+                setIsTextDialogOpen(true);
+              }}
+              className="inline-flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-border px-3 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+              disabled={isPending}
+            >
+              <Plus className="size-4" />
+              Add Text
+            </button>
+          </div>
+        </section>
 
         <section className="space-y-4">
           <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
@@ -1074,6 +1283,131 @@ export const CompanyForm = ({ availableContracts }: CompanyFormProps) => {
               </Button>
               <Button type="submit">Add Contract</Button>
             </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={isTextDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) textForm.reset(DEFAULT_TEXT);
+          setIsTextDialogOpen(open);
+        }}
+      >
+        <DialogContent className="flex h-[85dvh] max-w-5xl flex-col gap-0 p-0">
+          <DialogHeader className="shrink-0 border-b bg-background px-6 py-5">
+            <DialogTitle className="flex items-center gap-2">
+              <AlignLeft className="size-4" />
+              Add Text
+            </DialogTitle>
+            <DialogDescription>
+              Select a category to auto-fill the usage checkboxes, then fill in
+              the title and text block.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form
+            onSubmit={handleSaveText}
+            className="flex min-h-0 flex-1 flex-col"
+          >
+            <div className="flex min-h-0 flex-1 gap-0">
+              {/* Left column: category + title */}
+              <div className="flex w-64 shrink-0 flex-col gap-4 overflow-y-auto border-r p-6">
+                <div>
+                  <FormLabel htmlFor="txt-category" required>
+                    Text Category
+                  </FormLabel>
+                  <Controller
+                    name="textCategoryUuid"
+                    control={textForm.control}
+                    render={({ field }) => (
+                      <Select
+                        id="txt-category"
+                        options={[
+                          { value: "", label: COMMON_TEXT.selectOption },
+                          ...textCategories.map((c) => ({
+                            value: c.uuid,
+                            label: c.name,
+                          })),
+                        ]}
+                        value={field.value}
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          handleCategorySelect(value);
+                        }}
+                        placeholder={COMMON_TEXT.selectOption}
+                      />
+                    )}
+                  />
+                  <FormFieldError
+                    message={
+                      textForm.formState.errors.textCategoryUuid?.message
+                    }
+                  />
+                </div>
+              </div>
+
+              {/* Center column: text block */}
+              <div className="flex flex-1 flex-col gap-4 overflow-y-auto border-r p-6">
+                <div className="flex flex-1 flex-col">
+                  <FormLabel htmlFor="txt-textBlock" required>
+                    Text Block
+                  </FormLabel>
+                  <textarea
+                    id="txt-textBlock"
+                    {...textForm.register("textBlock")}
+                    className="mt-1 flex-1 w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+                    placeholder="Enter the text content..."
+                    style={{ minHeight: "200px" }}
+                  />
+                  <FormFieldError
+                    message={textForm.formState.errors.textBlock?.message}
+                  />
+                </div>
+              </div>
+
+              {/* Right column: 18 boolean checkboxes */}
+              <div className="flex w-60 shrink-0 flex-col gap-1 overflow-y-auto p-6">
+                <p className="mb-2 text-sm font-medium text-gray-700">
+                  Usage Categories
+                </p>
+                {USAGE_CATEGORY_FIELDS.map(({ key, field }) => (
+                  <Controller
+                    key={field}
+                    name={field}
+                    control={textForm.control}
+                    render={({ field: f }) => (
+                      <label className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 hover:bg-muted/40">
+                        <input
+                          type="checkbox"
+                          className="size-4 rounded border-border accent-primary"
+                          checked={!!f.value}
+                          onChange={(e) => f.onChange(e.target.checked)}
+                        />
+                        <span className="text-sm text-gray-700">
+                          {TEXT_USAGE_CATEGORY_LABELS[key]}
+                        </span>
+                      </label>
+                    )}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div className="shrink-0 border-t bg-background px-6 py-4">
+              <div className="flex justify-end gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    textForm.reset(DEFAULT_TEXT);
+                    setIsTextDialogOpen(false);
+                  }}
+                >
+                  {COMMON_TEXT.cancel}
+                </Button>
+                <Button type="submit">Add Text</Button>
+              </div>
+            </div>
           </form>
         </DialogContent>
       </Dialog>
