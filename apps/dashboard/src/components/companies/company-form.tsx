@@ -1,18 +1,29 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AlignLeft, FileText, MapPin, MessageSquare, Plus, X } from "lucide-react";
+import {
+  AlignLeft,
+  FileText,
+  MapPin,
+  MessageSquare,
+  Plus,
+  X,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
-import type { CommSettingInput, CompanyContractInput, CompanyTextInput } from "@/app/(dashboard)/companies/actions";
-import type { TextCategoryOption } from "@/app/(dashboard)/text-categories/actions";
-import type { ContractListItem } from "@/app/(dashboard)/contracts/actions";
+import {
+  CommSettingInput,
+  CompanyContractInput,
+  CompanyTextInput,
+} from "@/app/(dashboard)/companies/actions";
+import { TextCategoryOption } from "@/app/(dashboard)/text-categories/actions";
+import { ContractListItem } from "@/app/(dashboard)/contracts/actions";
 import {
   createCompanySchema,
-  type AddressFormValues,
-  type CompanyFormValues,
+  AddressFormValues,
+  CompanyFormValues,
 } from "@/app/(dashboard)/companies/validation";
 import { useCompanySubmit } from "@/app/(dashboard)/companies/use-company-submit";
 import { AddressForm } from "@/components/companies/address-form";
@@ -38,10 +49,10 @@ import {
   companyLangs,
   companyRoles,
   contractableRoles,
-  type AddressCategory,
-  type CompanyRole,
-  type ContractableRole,
-  type TextUsageCategory,
+  AddressCategory,
+  CompanyRole,
+  ContractableRole,
+  TextUsageCategory,
 } from "@/lib/enums";
 import { cn } from "@/lib/helpers";
 import {
@@ -90,7 +101,10 @@ const DEFAULT_ADDRESS: CompanyFormValues["address"] = {
 };
 
 const AGENT_ALLOWED = new Set<CompanyRole>(["agent", "other", "internal"]);
-const PURCHASING_ORG_ALLOWED = new Set<CompanyRole>(["purchasing_org", "other"]);
+const PURCHASING_ORG_ALLOWED = new Set<CompanyRole>([
+  "purchasing_org",
+  "other",
+]);
 
 const getDisabledRoles = (selected: CompanyRole[]): Set<CompanyRole> => {
   const disabled = new Set<CompanyRole>();
@@ -111,7 +125,8 @@ const getDisabledRoles = (selected: CompanyRole[]): Set<CompanyRole> => {
   }
 
   if (selected.some((r) => !AGENT_ALLOWED.has(r))) disabled.add("agent");
-  if (selected.some((r) => !PURCHASING_ORG_ALLOWED.has(r))) disabled.add("purchasing_org");
+  if (selected.some((r) => !PURCHASING_ORG_ALLOWED.has(r)))
+    disabled.add("purchasing_org");
 
   return disabled;
 };
@@ -170,9 +185,15 @@ const textDialogSchema = z.object({
 });
 
 type TextDialogValues = z.infer<typeof textDialogSchema>;
-type TextBooleanField = keyof Omit<TextDialogValues, "textCategoryUuid" | "textBlock">;
+type TextBooleanField = keyof Omit<
+  TextDialogValues,
+  "textCategoryUuid" | "textBlock"
+>;
 
-const USAGE_CATEGORY_FIELDS: Array<{ key: TextUsageCategory; field: TextBooleanField }> = [
+const USAGE_CATEGORY_FIELDS: Array<{
+  key: TextUsageCategory;
+  field: TextBooleanField;
+}> = [
   { key: "visit_report", field: "visitReport" },
   { key: "purchase_quote_request", field: "purchaseQuoteRequest" },
   { key: "purchase_order", field: "purchaseOrder" },
@@ -221,7 +242,10 @@ type CompanyFormProps = {
   textCategories: TextCategoryOption[];
 };
 
-export const CompanyForm = ({ availableContracts, textCategories }: CompanyFormProps) => {
+export const CompanyForm = ({
+  availableContracts,
+  textCategories,
+}: CompanyFormProps) => {
   const router = useRouter();
   const [isFirstAddressDialogOpen, setIsFirstAddressDialogOpen] =
     useState(false);
@@ -230,8 +254,7 @@ export const CompanyForm = ({ availableContracts, textCategories }: CompanyFormP
   const [additionalAddresses, setAdditionalAddresses] = useState<
     AddressFormValues[]
   >([]);
-  const [isCommSettingDialogOpen, setIsCommSettingDialogOpen] =
-    useState(false);
+  const [isCommSettingDialogOpen, setIsCommSettingDialogOpen] = useState(false);
   const [communicationSettings, setCommunicationSettings] = useState<
     CommSettingInput[]
   >([]);
@@ -284,15 +307,18 @@ export const CompanyForm = ({ availableContracts, textCategories }: CompanyFormP
   const addressValues = watch("address");
   const selectedRoles: CompanyRole[] = watch("roles") ?? [];
   const disabledRoles = getDisabledRoles(selectedRoles);
-  const activeContractableRoles = selectedRoles.filter((r): r is ContractableRole =>
-    (contractableRoles as readonly string[]).includes(r),
+  const activeContractableRoles = selectedRoles.filter(
+    (r): r is ContractableRole =>
+      (contractableRoles as readonly string[]).includes(r),
   );
 
   const usedCategories = new Set<AddressCategory>([
     ...(addressValues.category ?? []),
     ...additionalAddresses.flatMap((a) => a.category),
   ]);
-  const NON_DELIVERY: AddressCategory[] = addressCategories.filter((c) => c !== "delivery");
+  const NON_DELIVERY: AddressCategory[] = addressCategories.filter(
+    (c) => c !== "delivery",
+  );
   const availableForNext: AddressCategory[] = [
     ...NON_DELIVERY.filter((c) => !usedCategories.has(c)),
     "delivery",
@@ -393,11 +419,11 @@ export const CompanyForm = ({ availableContracts, textCategories }: CompanyFormP
         shape: (values.shape || undefined) as CommSettingInput["shape"],
         email:
           values.communicationType === "email"
-            ? (values.email || undefined)
+            ? values.email || undefined
             : undefined,
         fax:
           values.communicationType === "fax"
-            ? (values.fax || undefined)
+            ? values.fax || undefined
             : undefined,
       },
     ]);
@@ -408,7 +434,9 @@ export const CompanyForm = ({ availableContracts, textCategories }: CompanyFormP
   });
 
   const handleSaveContract = contractSelectionForm.handleSubmit((values) => {
-    const selected = availableContracts.find((c) => c.uuid === values.contractUuid);
+    const selected = availableContracts.find(
+      (c) => c.uuid === values.contractUuid,
+    );
     if (!selected) return;
     setContracts((prev) => [
       ...prev,
@@ -445,7 +473,9 @@ export const CompanyForm = ({ availableContracts, textCategories }: CompanyFormP
   };
 
   const handleSaveText = textForm.handleSubmit((values) => {
-    const categoryName = textCategories.find((c) => c.uuid === values.textCategoryUuid)?.name ?? "";
+    const categoryName =
+      textCategories.find((c) => c.uuid === values.textCategoryUuid)?.name ??
+      "";
     setTexts((prev) => [
       ...prev,
       {
@@ -495,7 +525,12 @@ export const CompanyForm = ({ availableContracts, textCategories }: CompanyFormP
   return (
     <>
       <form
-        onSubmit={onSubmit(additionalAddresses, communicationSettings, contracts, texts)}
+        onSubmit={onSubmit(
+          additionalAddresses,
+          communicationSettings,
+          contracts,
+          texts,
+        )}
         className="space-y-8"
       >
         <section className="space-y-4">
@@ -591,7 +626,10 @@ export const CompanyForm = ({ availableContracts, textCategories }: CompanyFormP
                       {addressLabel(address)}
                     </span>
                     {address.category.map((cat) => (
-                      <span key={cat} className="shrink-0 rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700">
+                      <span
+                        key={cat}
+                        className="shrink-0 rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700"
+                      >
                         {ADDRESS_CATEGORY_LABELS[cat]}
                       </span>
                     ))}
@@ -689,7 +727,9 @@ export const CompanyForm = ({ availableContracts, textCategories }: CompanyFormP
                   key={role}
                   className={cn(
                     "flex items-center gap-3 rounded-lg border border-border bg-background px-4 py-3 transition-colors",
-                    isDisabled ? "cursor-not-allowed opacity-40" : "cursor-pointer hover:bg-muted/40",
+                    isDisabled
+                      ? "cursor-not-allowed opacity-40"
+                      : "cursor-pointer hover:bg-muted/40",
                   )}
                 >
                   <input
@@ -743,9 +783,7 @@ export const CompanyForm = ({ availableContracts, textCategories }: CompanyFormP
                   <button
                     type="button"
                     onClick={() =>
-                      setContracts((prev) =>
-                        prev.filter((_, i) => i !== index),
-                      )
+                      setContracts((prev) => prev.filter((_, i) => i !== index))
                     }
                     className="shrink-0 text-muted-foreground hover:text-destructive"
                     disabled={isPending}
@@ -760,9 +798,10 @@ export const CompanyForm = ({ availableContracts, textCategories }: CompanyFormP
                 onClick={() => {
                   contractSelectionForm.reset({
                     contractUuid: "",
-                    role: activeContractableRoles.length === 1
-                      ? activeContractableRoles[0]
-                      : ("" as ContractableRole),
+                    role:
+                      activeContractableRoles.length === 1
+                        ? activeContractableRoles[0]
+                        : ("" as ContractableRole),
                   });
                   setIsContractDialogOpen(true);
                 }}
@@ -788,24 +827,37 @@ export const CompanyForm = ({ availableContracts, textCategories }: CompanyFormP
               >
                 <div className="flex min-w-0 items-center gap-2 text-sm">
                   <AlignLeft className="size-4 shrink-0 text-muted-foreground" />
-                  <span className="font-medium text-foreground truncate">{text.title}</span>
+                  <span className="font-medium text-foreground truncate">
+                    {text.title}
+                  </span>
                   {(() => {
-                    const cat = textCategories.find((c) => c.uuid === text.textCategoryUuid);
+                    const cat = textCategories.find(
+                      (c) => c.uuid === text.textCategoryUuid,
+                    );
                     return cat ? (
                       <span className="shrink-0 rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">
                         {cat.name}
                       </span>
                     ) : null;
                   })()}
-                  {USAGE_CATEGORY_FIELDS.filter(({ field }) => text[field as keyof typeof text]).slice(0, 3).map(({ key }) => (
-                    <span key={key} className="shrink-0 rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700">
-                      {TEXT_USAGE_CATEGORY_LABELS[key]}
-                    </span>
-                  ))}
+                  {USAGE_CATEGORY_FIELDS.filter(
+                    ({ field }) => text[field as keyof typeof text],
+                  )
+                    .slice(0, 3)
+                    .map(({ key }) => (
+                      <span
+                        key={key}
+                        className="shrink-0 rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700"
+                      >
+                        {TEXT_USAGE_CATEGORY_LABELS[key]}
+                      </span>
+                    ))}
                 </div>
                 <button
                   type="button"
-                  onClick={() => setTexts((prev) => prev.filter((_, i) => i !== index))}
+                  onClick={() =>
+                    setTexts((prev) => prev.filter((_, i) => i !== index))
+                  }
                   className="shrink-0 text-muted-foreground hover:text-destructive"
                   disabled={isPending}
                 >
@@ -926,7 +978,8 @@ export const CompanyForm = ({ availableContracts, textCategories }: CompanyFormP
               Address
             </DialogTitle>
             <DialogDescription>
-              Fill in the address details. Categories already assigned to another address are not available.
+              Fill in the address details. Categories already assigned to
+              another address are not available.
             </DialogDescription>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto p-6">
@@ -1091,12 +1144,14 @@ export const CompanyForm = ({ availableContracts, textCategories }: CompanyFormP
         open={isContractDialogOpen}
         onOpenChange={(open) => {
           if (!open) contractSelectionForm.reset(DEFAULT_CONTRACT_SELECTION);
-          else contractSelectionForm.reset({
-            contractUuid: "",
-            role: activeContractableRoles.length === 1
-              ? activeContractableRoles[0]
-              : ("" as ContractableRole),
-          });
+          else
+            contractSelectionForm.reset({
+              contractUuid: "",
+              role:
+                activeContractableRoles.length === 1
+                  ? activeContractableRoles[0]
+                  : ("" as ContractableRole),
+            });
           setIsContractDialogOpen(open);
         }}
       >
@@ -1138,11 +1193,17 @@ export const CompanyForm = ({ availableContracts, textCategories }: CompanyFormP
                   />
                 )}
               />
-              <FormFieldError message={contractSelectionForm.formState.errors.contractUuid?.message} />
+              <FormFieldError
+                message={
+                  contractSelectionForm.formState.errors.contractUuid?.message
+                }
+              />
             </div>
 
             <div>
-              <FormLabel htmlFor="ct-role" required>Role</FormLabel>
+              <FormLabel htmlFor="ct-role" required>
+                Role
+              </FormLabel>
               {activeContractableRoles.length === 1 ? (
                 <div className="mt-1.5 flex items-center gap-1.5">
                   <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
@@ -1170,7 +1231,9 @@ export const CompanyForm = ({ availableContracts, textCategories }: CompanyFormP
                   )}
                 />
               )}
-              <FormFieldError message={contractSelectionForm.formState.errors.role?.message} />
+              <FormFieldError
+                message={contractSelectionForm.formState.errors.role?.message}
+              />
             </div>
 
             <div className="flex justify-end gap-3 pt-2">
@@ -1203,7 +1266,8 @@ export const CompanyForm = ({ availableContracts, textCategories }: CompanyFormP
               Add Text
             </DialogTitle>
             <DialogDescription>
-              Select a category to auto-fill the usage checkboxes, then fill in the title and text block.
+              Select a category to auto-fill the usage checkboxes, then fill in
+              the title and text block.
             </DialogDescription>
           </DialogHeader>
 
@@ -1240,9 +1304,12 @@ export const CompanyForm = ({ availableContracts, textCategories }: CompanyFormP
                       />
                     )}
                   />
-                  <FormFieldError message={textForm.formState.errors.textCategoryUuid?.message} />
+                  <FormFieldError
+                    message={
+                      textForm.formState.errors.textCategoryUuid?.message
+                    }
+                  />
                 </div>
-
               </div>
 
               {/* Center column: text block */}
@@ -1258,13 +1325,17 @@ export const CompanyForm = ({ availableContracts, textCategories }: CompanyFormP
                     placeholder="Enter the text content..."
                     style={{ minHeight: "200px" }}
                   />
-                  <FormFieldError message={textForm.formState.errors.textBlock?.message} />
+                  <FormFieldError
+                    message={textForm.formState.errors.textBlock?.message}
+                  />
                 </div>
               </div>
 
               {/* Right column: 18 boolean checkboxes */}
               <div className="flex w-60 shrink-0 flex-col gap-1 overflow-y-auto p-6">
-                <p className="mb-2 text-sm font-medium text-gray-700">Usage Categories</p>
+                <p className="mb-2 text-sm font-medium text-gray-700">
+                  Usage Categories
+                </p>
                 {USAGE_CATEGORY_FIELDS.map(({ key, field }) => (
                   <Controller
                     key={field}

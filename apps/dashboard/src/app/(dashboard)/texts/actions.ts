@@ -6,10 +6,10 @@ import {
   CompanyAddresses,
   TextCategories,
   Texts,
-  type SelectTexts,
-  type SelectCompanies,
-  type SelectCompanyAddresses,
-  type SelectTextCategories,
+  SelectTexts,
+  SelectCompanies,
+  SelectCompanyAddresses,
+  SelectTextCategories,
 } from "@/db";
 import { desc, eq } from "drizzle-orm";
 
@@ -33,7 +33,10 @@ export const getTexts = async (): Promise<TextListItem[]> => {
     })
     .from(Texts)
     .leftJoin(Companies, eq(Companies.uuid, Texts.companyUuid))
-    .leftJoin(CompanyAddresses, eq(CompanyAddresses.companyUuid, Texts.companyUuid))
+    .leftJoin(
+      CompanyAddresses,
+      eq(CompanyAddresses.companyUuid, Texts.companyUuid),
+    )
     .leftJoin(TextCategories, eq(TextCategories.uuid, Texts.textCategoryUuid))
     .orderBy(desc(Texts.createdAt));
 

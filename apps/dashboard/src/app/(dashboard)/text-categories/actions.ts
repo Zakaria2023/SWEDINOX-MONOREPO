@@ -3,8 +3,8 @@
 import {
   db,
   TextCategories,
-  type InsertTextCategories,
-  type SelectTextCategories,
+  InsertTextCategories,
+  SelectTextCategories,
 } from "@/db";
 import { generateUuid } from "@/lib/helpers";
 import { desc, eq } from "drizzle-orm";
