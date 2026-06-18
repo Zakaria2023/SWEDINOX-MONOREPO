@@ -4,10 +4,12 @@ import {
   db,
   Invoices,
   InsertInvoices,
+  SelectInvoices,
   InvoiceSurcharges,
   InsertInvoiceSurcharges,
 } from "@/db";
 import { generateUuid } from "@/lib/helpers";
+import { desc, eq } from "drizzle-orm";
 
 export type InvoiceFields = Omit<
   InsertInvoices,
@@ -18,6 +20,41 @@ export type InvoiceSurchargeInput = Omit<
   InsertInvoiceSurcharges,
   "id" | "uuid" | "invoiceUuid" | "createdAt" | "updatedAt"
 >;
+
+export type InvoiceListItem = Pick<
+  SelectInvoices,
+  | "uuid"
+  | "invoiceNumber"
+  | "invoiceDate"
+  | "invoiceAmountExclVat"
+  | "invoiceAmountInclVat"
+  | "invoiceTotal"
+  | "outstanding"
+  | "paymentTerms"
+  | "printed"
+  | "mailed"
+>;
+
+export const getInvoicesByCompanyUuid = async (
+  companyUuid: string,
+): Promise<InvoiceListItem[]> => {
+  return db
+    .select({
+      uuid: Invoices.uuid,
+      invoiceNumber: Invoices.invoiceNumber,
+      invoiceDate: Invoices.invoiceDate,
+      invoiceAmountExclVat: Invoices.invoiceAmountExclVat,
+      invoiceAmountInclVat: Invoices.invoiceAmountInclVat,
+      invoiceTotal: Invoices.invoiceTotal,
+      outstanding: Invoices.outstanding,
+      paymentTerms: Invoices.paymentTerms,
+      printed: Invoices.printed,
+      mailed: Invoices.mailed,
+    })
+    .from(Invoices)
+    .where(eq(Invoices.companyUuid, companyUuid))
+    .orderBy(desc(Invoices.createdAt));
+};
 
 export type InvoiceActionResult = {
   invoiceUuid?: string;
