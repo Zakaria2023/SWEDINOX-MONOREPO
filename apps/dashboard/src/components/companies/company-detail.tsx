@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import type { CompanyDetail } from "@/app/(dashboard)/companies/actions";
-import type { InvoiceListItem } from "@/app/(dashboard)/invoices/actions";
+import type { SelectInvoices } from "@/db";
 import {
   Table,
   TableBody,
@@ -15,11 +15,12 @@ import {
   COMPANY_LANGUAGE_LABELS,
   COMPANY_ROLE_LABELS,
   INVOICE_PAYMENT_TERM_LABELS,
+  INVOICE_VAT_SCENARIO_LABELS,
 } from "@/lib/labels";
 
 type Props = {
   company: CompanyDetail;
-  invoices?: InvoiceListItem[];
+  invoices?: SelectInvoices[];
 };
 
 const Field = ({ label, value }: { label: string; value?: string | null }) => (
@@ -31,6 +32,7 @@ const Field = ({ label, value }: { label: string; value?: string | null }) => (
 
 export const CompanyDetailView = ({ company, invoices }: Props) => {
   const isCustomer = company.roles.includes("customer");
+  const na = COMMON_TEXT.notAvailable;
 
   return (
     <div className="space-y-8">
@@ -63,7 +65,7 @@ export const CompanyDetailView = ({ company, invoices }: Props) => {
                   </span>
                 ))
               ) : (
-                <span className="text-sm text-muted-foreground">{COMMON_TEXT.notAvailable}</span>
+                <span className="text-sm text-muted-foreground">{na}</span>
               )}
             </dd>
           </div>
@@ -84,7 +86,7 @@ export const CompanyDetailView = ({ company, invoices }: Props) => {
               {company.addresses.length}
             </span>
           </h2>
-          <div className="rounded-lg border">
+          <div className="overflow-x-auto rounded-lg border">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -99,12 +101,12 @@ export const CompanyDetailView = ({ company, invoices }: Props) => {
               <TableBody>
                 {company.addresses.map((addr) => (
                   <TableRow key={addr.uuid}>
-                    <TableCell>{addr.streetAndNo ?? COMMON_TEXT.notAvailable}</TableCell>
-                    <TableCell>{addr.city ?? COMMON_TEXT.notAvailable}</TableCell>
-                    <TableCell>{addr.postalCode ?? COMMON_TEXT.notAvailable}</TableCell>
-                    <TableCell>{addr.country ?? COMMON_TEXT.notAvailable}</TableCell>
-                    <TableCell>{addr.telephone ?? COMMON_TEXT.notAvailable}</TableCell>
-                    <TableCell>{addr.email ?? COMMON_TEXT.notAvailable}</TableCell>
+                    <TableCell>{addr.streetAndNo ?? na}</TableCell>
+                    <TableCell>{addr.city ?? na}</TableCell>
+                    <TableCell>{addr.postalCode ?? na}</TableCell>
+                    <TableCell>{addr.country ?? na}</TableCell>
+                    <TableCell>{addr.telephone ?? na}</TableCell>
+                    <TableCell>{addr.email ?? na}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -133,16 +135,20 @@ export const CompanyDetailView = ({ company, invoices }: Props) => {
           </div>
 
           {invoices && invoices.length > 0 ? (
-            <div className="rounded-lg border">
+            <div className="overflow-x-auto rounded-lg border">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Invoice No.</TableHead>
-                    <TableHead>Date</TableHead>
+                    <TableHead>Debtor No</TableHead>
+                    <TableHead>Invoice Date</TableHead>
+                    <TableHead>Expiration Date</TableHead>
                     <TableHead className="text-right">Excl. VAT</TableHead>
                     <TableHead className="text-right">Incl. VAT</TableHead>
+                    <TableHead className="text-right">Credit Restriction</TableHead>
                     <TableHead className="text-right">Total</TableHead>
                     <TableHead className="text-right">Outstanding</TableHead>
+                    <TableHead>VAT Scenario</TableHead>
                     <TableHead>Payment Terms</TableHead>
                     <TableHead>Status</TableHead>
                   </TableRow>
@@ -150,19 +156,48 @@ export const CompanyDetailView = ({ company, invoices }: Props) => {
                 <TableBody>
                   {invoices.map((inv) => (
                     <TableRow key={inv.uuid}>
-                      <TableCell className="font-medium">{inv.invoiceNumber}</TableCell>
-                      <TableCell>{inv.invoiceDate ?? COMMON_TEXT.notAvailable}</TableCell>
-                      <TableCell className="text-right">€ {inv.invoiceAmountExclVat}</TableCell>
-                      <TableCell className="text-right">€ {inv.invoiceAmountInclVat}</TableCell>
-                      <TableCell className="text-right">€ {inv.invoiceTotal}</TableCell>
-                      <TableCell className="text-right">€ {inv.outstanding}</TableCell>
-                      <TableCell>
+                      <TableCell className="font-medium whitespace-nowrap">
+                        {inv.id}
+                      </TableCell>
+                      <TableCell>{inv.debtorNo ?? na}</TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {inv.invoiceDate ?? na}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {inv.expirationDate ?? na}
+                      </TableCell>
+                      <TableCell className="text-right whitespace-nowrap">
+                        € {inv.invoiceAmountExclVat}
+                      </TableCell>
+                      <TableCell className="text-right whitespace-nowrap">
+                        € {inv.invoiceAmountInclVat}
+                      </TableCell>
+                      <TableCell className="text-right whitespace-nowrap">
+                        € {inv.creditRestriction}
+                      </TableCell>
+                      <TableCell className="text-right whitespace-nowrap">
+                        € {inv.invoiceTotal}
+                      </TableCell>
+                      <TableCell className="text-right whitespace-nowrap">
+                        € {inv.outstanding}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {inv.vatScenario
+                          ? INVOICE_VAT_SCENARIO_LABELS[inv.vatScenario]
+                          : na}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
                         {inv.paymentTerms
                           ? INVOICE_PAYMENT_TERM_LABELS[inv.paymentTerms]
-                          : COMMON_TEXT.notAvailable}
+                          : na}
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-1">
+                          {inv.calculateVat && (
+                            <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-700">
+                              VAT
+                            </span>
+                          )}
                           {inv.printed && (
                             <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
                               Printed
@@ -173,7 +208,7 @@ export const CompanyDetailView = ({ company, invoices }: Props) => {
                               Mailed
                             </span>
                           )}
-                          {!inv.printed && !inv.mailed && (
+                          {!inv.calculateVat && !inv.printed && !inv.mailed && (
                             <span className="text-xs text-muted-foreground">—</span>
                           )}
                         </div>

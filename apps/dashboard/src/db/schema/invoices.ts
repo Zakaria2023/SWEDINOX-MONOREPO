@@ -22,7 +22,6 @@ export const Invoices = mysqlTable(
     id: int("id").primaryKey().autoincrement(),
     uuid: char("uuid", { length: 36 }).notNull().unique(),
 
-    invoiceNumber: varchar("invoice_number", { length: 50 }).notNull(),
     companyUuid: char("company_uuid", { length: 36 }),
     debtorNo: varchar("debtor_no", { length: 100 }),
 
@@ -48,7 +47,6 @@ export const Invoices = mysqlTable(
   },
   (table) => [
     index("idx_invoices_company_uuid").on(table.companyUuid),
-    index("idx_invoices_invoice_number").on(table.invoiceNumber),
     foreignKey({
       name: "fk_invoices_company",
       columns: [table.companyUuid],

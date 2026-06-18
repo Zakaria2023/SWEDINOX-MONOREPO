@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { Eye } from "lucide-react";
 import { type SelectCompanies } from "@/db";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
@@ -84,12 +86,13 @@ export const CompaniesTableContent = ({
               {visibleColumns.map((column) => (
                 <TableHead key={column.key}>{column.label}</TableHead>
               ))}
+              <TableHead className="w-16" />
             </TableRow>
           </TableHeader>
           <TableBody>
             {companies.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={visibleColumns.length} className="h-24 text-center">
+                <TableCell colSpan={visibleColumns.length + 1} className="h-24 text-center">
                   No companies found
                 </TableCell>
               </TableRow>
@@ -97,6 +100,14 @@ export const CompaniesTableContent = ({
               companies.map((company) => (
                 <TableRow key={company.id}>
                   {visibleColumns.map((column) => renderCell(company, column.key))}
+                  <TableCell>
+                    <Link
+                      href={`/companies/${company.uuid}`}
+                      className="inline-flex text-muted-foreground hover:text-foreground"
+                    >
+                      <Eye className="size-4" />
+                    </Link>
+                  </TableCell>
                 </TableRow>
               ))
             )}

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { Plus, X } from "lucide-react";
+import { Pencil, Plus, X } from "lucide-react";
 import { z } from "zod";
 import type { CompanyOption } from "@/app/(dashboard)/companies/actions";
 import type { InvoiceSurchargeInput } from "@/app/(dashboard)/invoices/actions";
@@ -15,7 +15,9 @@ import { Select } from "@/components/shadcn/select";
 import { Button } from "@/components/shadcn/button";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/shadcn/dialog";
@@ -48,7 +50,7 @@ type InvoiceFormProps = {
 
 const surchargeSchema = z.object({
   order: z.coerce.number().int().min(0).optional(),
-  description: z.enum(invoiceSurchargeDescriptions).optional(),
+  description: z.enum(invoiceSurchargeDescriptions, { required_error: "Description is required" }),
   surcharge: z.string().optional(),
   unit: z.string().optional(),
   surchargePercentage: z.string().optional(),
@@ -70,9 +72,21 @@ export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
   const router = useRouter();
   const [surcharges, setSurcharges] = useState<InvoiceSurchargeInput[]>([]);
   const [isSurchargeDialogOpen, setIsSurchargeDialogOpen] = useState(false);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [surchargeError, setSurchargeError] = useState<string | null>(null);
 
-  const { form, isPending, onSubmit, state } = useInvoiceSubmit(surcharges);
-  const { register, watch, setValue, control, formState: { errors } } = form;
+  const { form, isPending, onSubmit: submitForm, state } = useInvoiceSubmit(surcharges);
+
+  const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    if (surcharges.length === 0) {
+      setSurchargeError("At least one surcharge is required.");
+      e.preventDefault();
+      return;
+    }
+    setSurchargeError(null);
+    submitForm(e);
+  };
+  const { register, watch, setValue, control } = form;
 
   const calculateVat = watch("calculateVat");
   const vatScenario = watch("vatScenario");
@@ -122,22 +136,40 @@ export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
   ];
 
   const openSurchargeDialog = () => {
-    surchargeForm.reset(DEFAULT_SURCHARGE);
+    setEditingIndex(null);
+    surchargeForm.reset({ ...DEFAULT_SURCHARGE, order: surcharges.length });
+    setIsSurchargeDialogOpen(true);
+  };
+
+  const openEditSurcharge = (index: number) => {
+    setEditingIndex(index);
+    const s = surcharges[index];
+    surchargeForm.reset({
+      order: s.order ?? 0,
+      description: s.description ?? undefined,
+      surcharge: s.surcharge ?? "",
+      unit: s.unit ?? "Euro",
+      surchargePercentage: s.surchargePercentage ?? "0.00",
+      amount: s.amount ?? "",
+    });
     setIsSurchargeDialogOpen(true);
   };
 
   const handleSaveSurcharge = surchargeForm.handleSubmit((values) => {
-    setSurcharges((prev) => [
-      ...prev,
-      {
-        order: values.order ?? 0,
-        description: values.description ?? null,
-        surcharge: values.surcharge || "0.00",
-        unit: values.unit || undefined,
-        surchargePercentage: values.surchargePercentage || "0.00",
-        amount: values.amount || "0.00",
-      },
-    ]);
+    const entry: InvoiceSurchargeInput = {
+      order: values.order ?? 0,
+      description: values.description,
+      surcharge: values.surcharge || "0.00",
+      unit: values.unit || undefined,
+      surchargePercentage: values.surchargePercentage || "0.00",
+      amount: values.amount || "0.00",
+    };
+    if (editingIndex !== null) {
+      setSurcharges((prev) => prev.map((s, i) => (i === editingIndex ? entry : s)));
+    } else {
+      setSurcharges((prev) => [...prev, entry]);
+    }
+    setSurchargeError(null);
     setIsSurchargeDialogOpen(false);
   });
 
@@ -157,16 +189,6 @@ export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
             <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-gray-700">
               Invoice
             </h2>
-            <div>
-              <FormLabel htmlFor="invoiceNumber" required>Invoice Number</FormLabel>
-              <Input
-                id="invoiceNumber"
-                {...register("invoiceNumber")}
-                aria-invalid={!!errors.invoiceNumber}
-                disabled={isPending}
-              />
-              <FormFieldError message={errors.invoiceNumber?.message} />
-            </div>
             <div>
               <FormLabel htmlFor="companyUuid">Customer</FormLabel>
               <Controller
@@ -216,66 +238,6 @@ export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
             <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-gray-700">
               Amounts
             </h2>
-            <div>
-              <FormLabel htmlFor="invoiceAmountExclVat">Amount Excl. VAT</FormLabel>
-              <Input
-                id="invoiceAmountExclVat"
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="0.00"
-                {...register("invoiceAmountExclVat")}
-                disabled={isPending}
-              />
-            </div>
-            <div>
-              <FormLabel htmlFor="invoiceAmountInclVat">Amount Incl. VAT</FormLabel>
-              <Input
-                id="invoiceAmountInclVat"
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="0.00"
-                {...register("invoiceAmountInclVat")}
-                disabled={isPending}
-              />
-            </div>
-            <div>
-              <FormLabel htmlFor="creditRestriction">Credit Restriction</FormLabel>
-              <Input
-                id="creditRestriction"
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="0.00"
-                {...register("creditRestriction")}
-                disabled={isPending}
-              />
-            </div>
-            <div>
-              <FormLabel htmlFor="invoiceTotal">Invoice Total</FormLabel>
-              <Input
-                id="invoiceTotal"
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="0.00"
-                {...register("invoiceTotal")}
-                disabled={isPending}
-              />
-            </div>
-            <div>
-              <FormLabel htmlFor="outstanding">Outstanding</FormLabel>
-              <Input
-                id="outstanding"
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="0.00"
-                {...register("outstanding")}
-                disabled={isPending}
-              />
-            </div>
             <div className="space-y-2 pt-1">
               <label className="flex cursor-pointer items-center gap-2">
                 <input
@@ -390,7 +352,7 @@ export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
                     <TableHead className="w-24">Unit</TableHead>
                     <TableHead className="text-right">Surcharge %</TableHead>
                     <TableHead className="text-right">Amount</TableHead>
-                    <TableHead className="w-10" />
+                    <TableHead className="w-16" />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -407,19 +369,31 @@ export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
                       <TableCell className="text-right">{s.surchargePercentage}</TableCell>
                       <TableCell className="text-right">{s.amount}</TableCell>
                       <TableCell>
-                        <button
-                          type="button"
-                          onClick={() => removeSurcharge(index)}
-                          className="text-muted-foreground hover:text-destructive"
-                        >
-                          <X className="size-4" />
-                        </button>
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => openEditSurcharge(index)}
+                            className="text-muted-foreground hover:text-foreground"
+                          >
+                            <Pencil className="size-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => removeSurcharge(index)}
+                            className="text-muted-foreground hover:text-destructive"
+                          >
+                            <X className="size-4" />
+                          </button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
             </div>
+          )}
+          {surchargeError && (
+            <p className="text-sm font-medium text-destructive">{surchargeError}</p>
           )}
         </section>
 
@@ -436,82 +410,85 @@ export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
       <Dialog open={isSurchargeDialogOpen} onOpenChange={setIsSurchargeDialogOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Add Surcharge</DialogTitle>
+            <DialogTitle>{editingIndex !== null ? "Edit Surcharge" : "Add Surcharge"}</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSaveSurcharge} className="space-y-4 pt-2">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <FormLabel htmlFor="surchargeOrder">Order</FormLabel>
-                <Input
-                  id="surchargeOrder"
-                  type="number"
-                  min={0}
-                  {...surchargeForm.register("order")}
-                />
+          <form onSubmit={handleSaveSurcharge}>
+            <DialogBody className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <FormLabel htmlFor="surchargeOrder">Order</FormLabel>
+                  <Input
+                    id="surchargeOrder"
+                    type="number"
+                    min={0}
+                    {...surchargeForm.register("order")}
+                  />
+                </div>
+                <div>
+                  <FormLabel required>Description</FormLabel>
+                  <Controller
+                    name="description"
+                    control={surchargeForm.control}
+                    render={({ field }) => (
+                      <Select
+                        options={surchargeDescriptionOptions}
+                        value={field.value ?? ""}
+                        onValueChange={(v) => field.onChange(v || undefined)}
+                      />
+                    )}
+                  />
+                  <FormFieldError message={surchargeForm.formState.errors.description?.message} />
+                </div>
               </div>
-              <div>
-                <FormLabel>Description</FormLabel>
-                <Controller
-                  name="description"
-                  control={surchargeForm.control}
-                  render={({ field }) => (
-                    <Select
-                      options={surchargeDescriptionOptions}
-                      value={field.value ?? ""}
-                      onValueChange={(v) => field.onChange(v || undefined)}
-                    />
-                  )}
-                />
-              </div>
-            </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <FormLabel htmlFor="surchargeAmount">Surcharge</FormLabel>
-                <Input
-                  id="surchargeAmount"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="0.00"
-                  {...surchargeForm.register("surcharge")}
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <FormLabel htmlFor="surchargeAmount">Surcharge</FormLabel>
+                  <Input
+                    id="surchargeAmount"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0.00"
+                    {...surchargeForm.register("surcharge")}
+                  />
+                </div>
+                <div>
+                  <FormLabel htmlFor="surchargeUnit">Unit</FormLabel>
+                  <Input
+                    id="surchargeUnit"
+                    placeholder="Euro"
+                    {...surchargeForm.register("unit")}
+                  />
+                </div>
               </div>
-              <div>
-                <FormLabel htmlFor="surchargeUnit">Unit</FormLabel>
-                <Input
-                  id="surchargeUnit"
-                  placeholder="Euro"
-                  {...surchargeForm.register("unit")}
-                />
-              </div>
-            </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <FormLabel htmlFor="surchargePercentage">Surcharge %</FormLabel>
-                <Input
-                  id="surchargePercentage"
-                  type="number"
-                  step="0.01"
-                  placeholder="0.00"
-                  {...surchargeForm.register("surchargePercentage")}
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <FormLabel htmlFor="surchargePercentage">Surcharge %</FormLabel>
+                  <Input
+                    id="surchargePercentage"
+                    type="number"
+                    step="0.01"
+                    placeholder="0.00"
+                    {...surchargeForm.register("surchargePercentage")}
+                  />
+                </div>
+                <div>
+                  <FormLabel htmlFor="surchargeLineAmount">Amount</FormLabel>
+                  <Input
+                    id="surchargeLineAmount"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0.00"
+                    {...surchargeForm.register("amount")}
+                  />
+                </div>
               </div>
-              <div>
-                <FormLabel htmlFor="surchargeLineAmount">Amount</FormLabel>
-                <Input
-                  id="surchargeLineAmount"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="0.00"
-                  {...surchargeForm.register("amount")}
-                />
-              </div>
-            </div>
+            </DialogBody>
 
-            <div className="flex justify-end gap-2 pt-2">
+            <DialogFooter>
               <Button
                 type="button"
                 variant="outline"
@@ -519,8 +496,8 @@ export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
               >
                 {COMMON_TEXT.cancel}
               </Button>
-              <Button type="submit">Add</Button>
-            </div>
+              <Button type="submit">{editingIndex !== null ? "Save" : "Add"}</Button>
+            </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
