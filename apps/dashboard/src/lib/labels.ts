@@ -10,6 +10,7 @@ import type {
   ContactSalutation,
   ContractableRole,
   ContractType,
+  TextUsageCategory,
 } from "@/lib/enums";
 
 export const COMMON_TEXT = {
@@ -79,7 +80,7 @@ export const CONTRACT_TYPE_LABELS: Record<ContractType, string> = {
   net_prices: "Net Prices",
   cost_price: "Cost Price",
   surcharges: "Surcharges",
-  toeslagen: "Toeslagen",
+  toeslagen: "Allowances",
 };
 
 export const COMMUNICATION_SETTING_DOCUMENT_TYPE_LABELS: Record<
@@ -141,4 +142,23 @@ export const CONTACT_CATEGORY_LABELS: Record<ContactCategory, string> = {
   management: "Management",
   bookkeeping: "Bookkeeping",
   certificates: "Certificates",
+export const TEXT_USAGE_CATEGORY_LABELS: Record<TextUsageCategory, string> = {
+  purchase_quote_request: "Purchase Quote Request",
+  purchase_order: "Purchase Order",
+  purchase_order_tool_tip: "Purchase Order Tool Tip",
+  purchase_return_order: "Purchase Return Order",
+  sales_quote: "Sales Quote",
+  sales_order: "Sales Order",
+  sales_order_tool_tip: "Sales Order Tool Tip",
+  sales_invoice: "Sales Invoice",
+  warehouse_order: "Warehouse Order",
+  production_order: "Production Order",
+  loadlist: "Loadlist",
+  waybill: "Waybill",
+  ride_list: "Ride List",
+  customer_label: "Customer Label",
+  visit_report: "Visit Report",
+  transport_planning: "Transport Planning",
+  website_in_advance: "Website In Advance",
+  website_after: "Website After",
 };

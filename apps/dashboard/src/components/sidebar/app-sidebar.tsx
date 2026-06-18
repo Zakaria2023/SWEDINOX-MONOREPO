@@ -1,15 +1,5 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useState } from "react";
-import {
-  Building2,
-  ChevronRight,
-  ContactRound,
-  Truck,
-  Users,
-} from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -25,6 +15,16 @@ import {
   SidebarMenuSubItem,
 } from "@/components/shadcn/sidebar";
 import { cn } from "@/lib/helpers";
+import {
+  Building2,
+  ChevronRight,
+  ContactRound,
+  Truck,
+  Users,
+} from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useState } from "react";
 
 export const AppSidebar = () => {
   const pathname = usePathname();
@@ -40,7 +40,9 @@ export const AppSidebar = () => {
     pathname.startsWith("/contact-persons-customers-and-prospects");
   const isCompanyActive =
     pathname.startsWith("/companies") ||
-    pathname.startsWith("/communication-settings");
+    pathname.startsWith("/communication-settings") ||
+    pathname.startsWith("/text-categories") ||
+    pathname.startsWith("/texts");
   const isSalesActive =
     pathname === "/contracts" ||
     pathname.startsWith("/contracts/") ||
@@ -62,9 +64,7 @@ export const AppSidebar = () => {
   return (
     <Sidebar>
       <SidebarHeader className="px-4 py-5">
-        <span className="text-lg font-semibold tracking-tight">
-          Swedinox
-        </span>
+        <span className="text-lg font-semibold tracking-tight">Swedinox</span>
       </SidebarHeader>
 
       <SidebarContent>
@@ -94,9 +94,11 @@ export const AppSidebar = () => {
                     <SidebarMenuSubItem>
                       <SidebarMenuSubButton
                         render={<Link href="/contracts-per-customer" />}
-                        isActive={pathname.startsWith("/contracts-per-customer")}
+                        isActive={pathname.startsWith(
+                          "/contracts-per-customer",
+                        )}
                       >
-                        <span>Contracts per Customer</span>
+                        <span>Contracts per Customer / Prospect</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                     <SidebarMenuSubItem>
@@ -136,9 +138,27 @@ export const AppSidebar = () => {
                     <SidebarMenuSubItem>
                       <SidebarMenuSubButton
                         render={<Link href="/communication-settings" />}
-                        isActive={pathname.startsWith("/communication-settings")}
+                        isActive={pathname.startsWith(
+                          "/communication-settings",
+                        )}
                       >
                         <span>Communication Settings</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/text-categories" />}
+                        isActive={pathname.startsWith("/text-categories")}
+                      >
+                        <span>Text Categories</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/texts" />}
+                        isActive={pathname.startsWith("/texts")}
+                      >
+                        <span>Texts</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                   </SidebarMenuSub>
@@ -190,7 +210,9 @@ export const AppSidebar = () => {
                     <SidebarMenuSubItem>
                       <SidebarMenuSubButton
                         render={<Link href="/contracts-per-supplier" />}
-                        isActive={pathname.startsWith("/contracts-per-supplier")}
+                        isActive={pathname.startsWith(
+                          "/contracts-per-supplier",
+                        )}
                       >
                         <span>Contracts per Supplier</span>
                       </SidebarMenuSubButton>
@@ -206,7 +228,6 @@ export const AppSidebar = () => {
                   </SidebarMenuSub>
                 )}
               </SidebarMenuItem>
-
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

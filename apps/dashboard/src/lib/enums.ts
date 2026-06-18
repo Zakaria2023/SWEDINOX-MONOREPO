@@ -120,3 +120,25 @@ export const contactCategories = [
 ] as const satisfies readonly string[];
 
 export type ContactCategory = (typeof contactCategories)[number];
+export const textUsageCategories = [
+  "purchase_quote_request",
+  "purchase_order",
+  "purchase_order_tool_tip",
+  "purchase_return_order",
+  "sales_quote",
+  "sales_order",
+  "sales_order_tool_tip",
+  "sales_invoice",
+  "warehouse_order",
+  "production_order",
+  "loadlist",
+  "waybill",
+  "ride_list",
+  "customer_label",
+  "visit_report",
+  "transport_planning",
+  "website_in_advance",
+  "website_after",
+] as const satisfies readonly string[];
+
+export type TextUsageCategory = (typeof textUsageCategories)[number];

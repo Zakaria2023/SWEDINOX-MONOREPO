@@ -12,6 +12,9 @@ import {
   createCompany,
 } from "./actions";
 import { CompanyFormValues, createCompanySchema } from "./validation";
+import { createCompany, type CommSettingInput, type CompanyActionResult, type CompanyContractInput, type CompanyTextInput } from "./actions";
+import { createCompanySchema, type CompanyFormValues } from "./validation";
+import { CompanyRole } from "@/lib/enums";
 
 const mapAddress = (address: CompanyFormValues["address"]) => ({
   altName: address.altName || undefined,
@@ -101,6 +104,7 @@ export const useCompanySubmit = () => {
     communicationSettings: CommSettingInput[] = [],
     contracts: CompanyContractInput[] = [],
     contacts: CompanyContactInput[] = [],
+    texts: CompanyTextInput[] = [],
   ) =>
     form.handleSubmit((values) => {
       startTransition(async () => {
@@ -131,6 +135,7 @@ export const useCompanySubmit = () => {
           communicationSettings,
           contracts,
           contacts,
+          texts,
         );
         setState(result);
       });

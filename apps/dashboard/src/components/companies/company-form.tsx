@@ -2,24 +2,40 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FileText, MapPin, MessageSquare, Plus, User, X } from "lucide-react";
+import {
+  AlignLeft,
+  FileText,
+  MapPin,
+  MessageSquare,
+  Plus,
+  X,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
-import type { CommSettingInput, CompanyContactInput, CompanyContractInput } from "@/app/(dashboard)/companies/actions";
-import type { ContractListItem } from "@/app/(dashboard)/contracts/actions";
+import { CommSettingInput, CompanyContactInput, CompanyContractInput } from "@/app/(dashboard)/companies/actions";
+import { TextCategoryOption } from "@/app/(dashboard)/text-categories/actions";
+import {
+  CompanyTextInput,
+  CommSettingInput,
+  CompanyContractInput,
+} from "@/app/(dashboard)/companies/actions";
+import { ContractListItem } from "@/app/(dashboard)/contracts/actions";
 import {
   createCompanySchema,
-  type AddressFormValues,
-  type CompanyFormValues,
+  AddressFormValues,
+  CompanyFormValues,
 } from "@/app/(dashboard)/companies/validation";
 import { useCompanySubmit } from "@/app/(dashboard)/companies/use-company-submit";
 import { AddressForm } from "@/components/companies/address-form";
 import { Button } from "@/components/shadcn/button";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/shadcn/dialog";
@@ -43,6 +59,10 @@ import {
   type CompanyRole,
   type ContactCategory,
   type ContractableRole,
+  AddressCategory,
+  CompanyRole,
+  ContractableRole,
+  TextUsageCategory,
 } from "@/lib/enums";
 import { cn } from "@/lib/helpers";
 import {
@@ -57,6 +77,7 @@ import {
   CONTACT_SALUTATION_LABELS,
   CONTRACT_TYPE_LABELS,
   CONTRACTABLE_ROLE_LABELS,
+  TEXT_USAGE_CATEGORY_LABELS,
 } from "@/lib/labels";
 
 const DEFAULT_ADDRESS: CompanyFormValues["address"] = {
@@ -92,7 +113,10 @@ const DEFAULT_ADDRESS: CompanyFormValues["address"] = {
 };
 
 const AGENT_ALLOWED = new Set<CompanyRole>(["agent", "other", "internal"]);
-const PURCHASING_ORG_ALLOWED = new Set<CompanyRole>(["purchasing_org", "other"]);
+const PURCHASING_ORG_ALLOWED = new Set<CompanyRole>([
+  "purchasing_org",
+  "other",
+]);
 
 const getDisabledRoles = (selected: CompanyRole[]): Set<CompanyRole> => {
   const disabled = new Set<CompanyRole>();
@@ -113,10 +137,14 @@ const getDisabledRoles = (selected: CompanyRole[]): Set<CompanyRole> => {
   }
 
   if (selected.some((r) => !AGENT_ALLOWED.has(r))) disabled.add("agent");
-  if (selected.some((r) => !PURCHASING_ORG_ALLOWED.has(r))) disabled.add("purchasing_org");
+  if (selected.some((r) => !PURCHASING_ORG_ALLOWED.has(r)))
+    disabled.add("purchasing_org");
 
   return disabled;
 };
+
+const isContractableRole = (role: CompanyRole): role is ContractableRole =>
+  (contractableRoles as readonly string[]).includes(role);
 
 const commSettingSchema = z.object({
   documentType: z.string().min(1),
@@ -221,12 +249,95 @@ const DEFAULT_CONTACT: ContactDialogValues = {
   revenueLastYear: "",
   revenueThisYear: "",
 };
+const textDialogSchema = z.object({
+  textCategoryUuid: z.string().min(1, "Please select a text category"),
+  textBlock: z.string().min(1, "Text block is required"),
+  visitReport: z.boolean(),
+  purchaseQuoteRequest: z.boolean(),
+  purchaseOrder: z.boolean(),
+  purchaseOrderToolTip: z.boolean(),
+  purchaseReturnOrder: z.boolean(),
+  salesQuote: z.boolean(),
+  salesOrder: z.boolean(),
+  salesOrderToolTip: z.boolean(),
+  salesInvoice: z.boolean(),
+  warehouseOrder: z.boolean(),
+  productionOrder: z.boolean(),
+  loadlist: z.boolean(),
+  waybill: z.boolean(),
+  rideList: z.boolean(),
+  customerLabel: z.boolean(),
+  transportPlanning: z.boolean(),
+  websiteInAdvance: z.boolean(),
+  websiteAfter: z.boolean(),
+});
+
+type TextDialogValues = z.infer<typeof textDialogSchema>;
+type TextBooleanField = keyof Omit<
+  TextDialogValues,
+  "textCategoryUuid" | "textBlock"
+>;
+
+const USAGE_CATEGORY_FIELDS: Array<{
+  key: TextUsageCategory;
+  field: TextBooleanField;
+}> = [
+  { key: "visit_report", field: "visitReport" },
+  { key: "purchase_quote_request", field: "purchaseQuoteRequest" },
+  { key: "purchase_order", field: "purchaseOrder" },
+  { key: "purchase_order_tool_tip", field: "purchaseOrderToolTip" },
+  { key: "purchase_return_order", field: "purchaseReturnOrder" },
+  { key: "sales_quote", field: "salesQuote" },
+  { key: "sales_order", field: "salesOrder" },
+  { key: "sales_order_tool_tip", field: "salesOrderToolTip" },
+  { key: "sales_invoice", field: "salesInvoice" },
+  { key: "warehouse_order", field: "warehouseOrder" },
+  { key: "production_order", field: "productionOrder" },
+  { key: "loadlist", field: "loadlist" },
+  { key: "waybill", field: "waybill" },
+  { key: "ride_list", field: "rideList" },
+  { key: "customer_label", field: "customerLabel" },
+  { key: "transport_planning", field: "transportPlanning" },
+  { key: "website_in_advance", field: "websiteInAdvance" },
+  { key: "website_after", field: "websiteAfter" },
+];
+
+const DEFAULT_TEXT: TextDialogValues = {
+  textCategoryUuid: "",
+  textBlock: "",
+  visitReport: false,
+  purchaseQuoteRequest: false,
+  purchaseOrder: false,
+  purchaseOrderToolTip: false,
+  purchaseReturnOrder: false,
+  salesQuote: false,
+  salesOrder: false,
+  salesOrderToolTip: false,
+  salesInvoice: false,
+  warehouseOrder: false,
+  productionOrder: false,
+  loadlist: false,
+  waybill: false,
+  rideList: false,
+  customerLabel: false,
+  transportPlanning: false,
+  websiteInAdvance: false,
+  websiteAfter: false,
+};
+const getDefaultContractRole = (
+  roles: ContractableRole[],
+): ContractSelectionValues["role"] =>
+  roles.length === 1 ? roles[0] : ("" as ContractSelectionValues["role"]);
 
 type CompanyFormProps = {
   availableContracts: ContractListItem[];
+  textCategories: TextCategoryOption[];
 };
 
-export const CompanyForm = ({ availableContracts }: CompanyFormProps) => {
+export const CompanyForm = ({
+  availableContracts,
+  textCategories,
+}: CompanyFormProps) => {
   const router = useRouter();
   const [isFirstAddressDialogOpen, setIsFirstAddressDialogOpen] =
     useState(false);
@@ -235,8 +346,7 @@ export const CompanyForm = ({ availableContracts }: CompanyFormProps) => {
   const [additionalAddresses, setAdditionalAddresses] = useState<
     AddressFormValues[]
   >([]);
-  const [isCommSettingDialogOpen, setIsCommSettingDialogOpen] =
-    useState(false);
+  const [isCommSettingDialogOpen, setIsCommSettingDialogOpen] = useState(false);
   const [communicationSettings, setCommunicationSettings] = useState<
     CommSettingInput[]
   >([]);
@@ -245,6 +355,8 @@ export const CompanyForm = ({ availableContracts }: CompanyFormProps) => {
   const [contracts, setContracts] = useState<CompanyContractInput[]>([]);
   const [isContactDialogOpen, setIsContactDialogOpen] = useState(false);
   const [contacts, setContacts] = useState<CompanyContactInput[]>([]);
+  const [isTextDialogOpen, setIsTextDialogOpen] = useState(false);
+  const [texts, setTexts] = useState<CompanyTextInput[]>([]);
 
   const { form, isPending, onSubmit, state } = useCompanySubmit();
   const {
@@ -284,20 +396,23 @@ export const CompanyForm = ({ availableContracts }: CompanyFormProps) => {
   const contactForm = useForm<ContactDialogValues>({
     resolver: zodResolver(contactDialogSchema),
     defaultValues: DEFAULT_CONTACT,
+  const textForm = useForm<TextDialogValues>({
+    resolver: zodResolver(textDialogSchema),
+    defaultValues: DEFAULT_TEXT,
   });
 
   const addressValues = watch("address");
   const selectedRoles: CompanyRole[] = watch("roles") ?? [];
   const disabledRoles = getDisabledRoles(selectedRoles);
-  const activeContractableRoles = selectedRoles.filter((r): r is ContractableRole =>
-    (contractableRoles as readonly string[]).includes(r),
-  );
+  const activeContractableRoles = selectedRoles.filter(isContractableRole);
 
   const usedCategories = new Set<AddressCategory>([
     ...(addressValues.category ?? []),
     ...additionalAddresses.flatMap((a) => a.category),
   ]);
-  const NON_DELIVERY: AddressCategory[] = addressCategories.filter((c) => c !== "delivery");
+  const NON_DELIVERY: AddressCategory[] = addressCategories.filter(
+    (c) => c !== "delivery",
+  );
   const availableForNext: AddressCategory[] = [
     ...NON_DELIVERY.filter((c) => !usedCategories.has(c)),
     "delivery",
@@ -398,11 +513,11 @@ export const CompanyForm = ({ availableContracts }: CompanyFormProps) => {
         shape: (values.shape || undefined) as CommSettingInput["shape"],
         email:
           values.communicationType === "email"
-            ? (values.email || undefined)
+            ? values.email || undefined
             : undefined,
         fax:
           values.communicationType === "fax"
-            ? (values.fax || undefined)
+            ? values.fax || undefined
             : undefined,
       },
     ]);
@@ -413,7 +528,9 @@ export const CompanyForm = ({ availableContracts }: CompanyFormProps) => {
   });
 
   const handleSaveContract = contractSelectionForm.handleSubmit((values) => {
-    const selected = availableContracts.find((c) => c.uuid === values.contractUuid);
+    const selected = availableContracts.find(
+      (c) => c.uuid === values.contractUuid,
+    );
     if (!selected) return;
     setContracts((prev) => [
       ...prev,
@@ -522,14 +639,94 @@ export const CompanyForm = ({ availableContracts }: CompanyFormProps) => {
     );
   };
 
+  const handleCategorySelect = (uuid: string) => {
+    textForm.setValue("textCategoryUuid", uuid);
+    const cat = textCategories.find((c) => c.uuid === uuid);
+    if (cat) {
+      const enabled = new Set(cat.usageCategoriesJson ?? []);
+      USAGE_CATEGORY_FIELDS.forEach(({ key, field }) => {
+        textForm.setValue(field, enabled.has(key));
+      });
+    }
+  };
+
+  const handleSaveText = textForm.handleSubmit((values) => {
+    const categoryName =
+      textCategories.find((c) => c.uuid === values.textCategoryUuid)?.name ??
+      "";
+    setTexts((prev) => [
+      ...prev,
+      {
+        textCategoryUuid: values.textCategoryUuid || undefined,
+        title: categoryName,
+        textBlock: values.textBlock,
+        visitReport: values.visitReport,
+        purchaseQuoteRequest: values.purchaseQuoteRequest,
+        purchaseOrder: values.purchaseOrder,
+        purchaseOrderToolTip: values.purchaseOrderToolTip,
+        purchaseReturnOrder: values.purchaseReturnOrder,
+        salesQuote: values.salesQuote,
+        salesOrder: values.salesOrder,
+        salesOrderToolTip: values.salesOrderToolTip,
+        salesInvoice: values.salesInvoice,
+        warehouseOrder: values.warehouseOrder,
+        productionOrder: values.productionOrder,
+        loadlist: values.loadlist,
+        waybill: values.waybill,
+        rideList: values.rideList,
+        customerLabel: values.customerLabel,
+        transportPlanning: values.transportPlanning,
+        websiteInAdvance: values.websiteInAdvance,
+        websiteAfter: values.websiteAfter,
+      },
+    ]);
+    textForm.reset(DEFAULT_TEXT);
+    setIsTextDialogOpen(false);
+  });
+
   const toggleRole = (role: CompanyRole) => {
-    if (!selectedRoles.includes(role) && disabledRoles.has(role)) return;
-    setValue(
-      "roles",
-      selectedRoles.includes(role)
-        ? selectedRoles.filter((r) => r !== role)
-        : [...selectedRoles, role],
-    );
+    const isSelected = selectedRoles.includes(role);
+
+    if (!isSelected && disabledRoles.has(role)) return;
+
+    const nextRoles = isSelected
+      ? selectedRoles.filter((r) => r !== role)
+      : [...selectedRoles, role];
+
+    setValue("roles", nextRoles);
+
+    if (!isSelected || !isContractableRole(role)) {
+      return;
+    }
+
+    const nextContractableRoles = nextRoles.filter(isContractableRole);
+    const allowedRoles = new Set(nextContractableRoles);
+
+    setContracts((prev) => {
+      const nextContracts = prev.filter((contract) => {
+        const contractRole = contract.role;
+        return contractRole != null && allowedRoles.has(contractRole);
+      });
+      return nextContracts.length === prev.length ? prev : nextContracts;
+    });
+
+    if (nextContractableRoles.length === 0) {
+      contractSelectionForm.reset(DEFAULT_CONTRACT_SELECTION);
+      setIsContractDialogOpen(false);
+      return;
+    }
+
+    const currentDialogRole = contractSelectionForm.getValues("role");
+    const nextDialogRole = getDefaultContractRole(nextContractableRoles);
+
+    if (
+      currentDialogRole !== nextDialogRole &&
+      (!currentDialogRole ||
+        !allowedRoles.has(currentDialogRole) ||
+        nextContractableRoles.length === 1)
+    ) {
+      contractSelectionForm.setValue("role", nextDialogRole);
+    }
   };
 
   const commSettingLabel = (setting: CommSettingInput) =>
@@ -541,7 +738,13 @@ export const CompanyForm = ({ availableContracts }: CompanyFormProps) => {
   return (
     <>
       <form
-        onSubmit={onSubmit(additionalAddresses, communicationSettings, contracts, contacts)}
+        onSubmit={onSubmit(
+          additionalAddresses,
+          communicationSettings,
+          contracts,
+          texts,
+          contacts
+        )}
         className="space-y-8"
       >
         <section className="space-y-4">
@@ -637,7 +840,10 @@ export const CompanyForm = ({ availableContracts }: CompanyFormProps) => {
                       {addressLabel(address)}
                     </span>
                     {address.category.map((cat) => (
-                      <span key={cat} className="shrink-0 rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700">
+                      <span
+                        key={cat}
+                        className="shrink-0 rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700"
+                      >
                         {ADDRESS_CATEGORY_LABELS[cat]}
                       </span>
                     ))}
@@ -735,7 +941,9 @@ export const CompanyForm = ({ availableContracts }: CompanyFormProps) => {
                   key={role}
                   className={cn(
                     "flex items-center gap-3 rounded-lg border border-border bg-background px-4 py-3 transition-colors",
-                    isDisabled ? "cursor-not-allowed opacity-40" : "cursor-pointer hover:bg-muted/40",
+                    isDisabled
+                      ? "cursor-not-allowed opacity-40"
+                      : "cursor-pointer hover:bg-muted/40",
                   )}
                 >
                   <input
@@ -789,9 +997,7 @@ export const CompanyForm = ({ availableContracts }: CompanyFormProps) => {
                   <button
                     type="button"
                     onClick={() =>
-                      setContracts((prev) =>
-                        prev.filter((_, i) => i !== index),
-                      )
+                      setContracts((prev) => prev.filter((_, i) => i !== index))
                     }
                     className="shrink-0 text-muted-foreground hover:text-destructive"
                     disabled={isPending}
@@ -806,9 +1012,7 @@ export const CompanyForm = ({ availableContracts }: CompanyFormProps) => {
                 onClick={() => {
                   contractSelectionForm.reset({
                     contractUuid: "",
-                    role: activeContractableRoles.length === 1
-                      ? activeContractableRoles[0]
-                      : ("" as ContractableRole),
+                    role: getDefaultContractRole(activeContractableRoles),
                   });
                   setIsContractDialogOpen(true);
                 }}
@@ -821,6 +1025,72 @@ export const CompanyForm = ({ availableContracts }: CompanyFormProps) => {
             </div>
           </section>
         )}
+
+        <section className="space-y-4">
+          <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
+            Texts
+          </h2>
+          <div className="space-y-2 rounded-2xl border border-border bg-muted/20 p-4">
+            {texts.map((text, index) => (
+              <div
+                key={index}
+                className="flex items-center justify-between rounded-lg border border-border bg-background px-3 py-2"
+              >
+                <div className="flex min-w-0 items-center gap-2 text-sm">
+                  <AlignLeft className="size-4 shrink-0 text-muted-foreground" />
+                  <span className="font-medium text-foreground truncate">
+                    {text.title}
+                  </span>
+                  {(() => {
+                    const cat = textCategories.find(
+                      (c) => c.uuid === text.textCategoryUuid,
+                    );
+                    return cat ? (
+                      <span className="shrink-0 rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">
+                        {cat.name}
+                      </span>
+                    ) : null;
+                  })()}
+                  {USAGE_CATEGORY_FIELDS.filter(
+                    ({ field }) => text[field as keyof typeof text],
+                  )
+                    .slice(0, 3)
+                    .map(({ key }) => (
+                      <span
+                        key={key}
+                        className="shrink-0 rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700"
+                      >
+                        {TEXT_USAGE_CATEGORY_LABELS[key]}
+                      </span>
+                    ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setTexts((prev) => prev.filter((_, i) => i !== index))
+                  }
+                  className="shrink-0 text-muted-foreground hover:text-destructive"
+                  disabled={isPending}
+                >
+                  <X className="size-4" />
+                  <span className="sr-only">Remove text</span>
+                </button>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={() => {
+                textForm.reset(DEFAULT_TEXT);
+                setIsTextDialogOpen(true);
+              }}
+              className="inline-flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-border px-3 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+              disabled={isPending}
+            >
+              <Plus className="size-4" />
+              Add Text
+            </button>
+          </div>
+        </section>
 
         <section className="space-y-4">
           <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
@@ -968,7 +1238,8 @@ export const CompanyForm = ({ availableContracts }: CompanyFormProps) => {
               Address
             </DialogTitle>
             <DialogDescription>
-              Fill in the address details. Categories already assigned to another address are not available.
+              Fill in the address details. Categories already assigned to
+              another address are not available.
             </DialogDescription>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto p-6">
@@ -1022,97 +1293,97 @@ export const CompanyForm = ({ availableContracts }: CompanyFormProps) => {
             </DialogDescription>
           </DialogHeader>
 
-          <form
-            onSubmit={handleSaveCommSetting}
-            className="mt-2 space-y-4 px-6 pb-6"
-          >
-            <div>
-              <FormLabel htmlFor="cs-documentType" required>
-                Document Type
-              </FormLabel>
-              <Controller
-                name="documentType"
-                control={commSettingForm.control}
-                render={({ field }) => (
-                  <Select
-                    id="cs-documentType"
-                    options={documentTypeOptions}
-                    value={field.value}
-                    onValueChange={field.onChange}
-                    placeholder={COMMON_TEXT.selectOption}
-                  />
-                )}
-              />
-              <FormFieldError
-                message={commSettingForm.formState.errors.documentType?.message}
-              />
-            </div>
-
-            <div>
-              <FormLabel htmlFor="cs-communicationType" required>
-                Communication Type
-              </FormLabel>
-              <Controller
-                name="communicationType"
-                control={commSettingForm.control}
-                render={({ field }) => (
-                  <Select
-                    id="cs-communicationType"
-                    options={communicationTypeOptions}
-                    value={field.value}
-                    onValueChange={(value) => {
-                      field.onChange(value);
-                      setSelectedCommType(value);
-                      commSettingForm.setValue("email", "");
-                      commSettingForm.setValue("fax", "");
-                    }}
-                    placeholder={COMMON_TEXT.selectOption}
-                  />
-                )}
-              />
-              <FormFieldError
-                message={
-                  commSettingForm.formState.errors.communicationType?.message
-                }
-              />
-            </div>
-
-            <div>
-              <FormLabel htmlFor="cs-shape">Shape</FormLabel>
-              <Controller
-                name="shape"
-                control={commSettingForm.control}
-                render={({ field }) => (
-                  <Select
-                    id="cs-shape"
-                    options={shapeOptions}
-                    value={field.value ?? ""}
-                    onValueChange={field.onChange}
-                    placeholder={COMMON_TEXT.emptyOption}
-                  />
-                )}
-              />
-            </div>
-
-            {selectedCommType === "email" && (
+          <form onSubmit={handleSaveCommSetting}>
+            <DialogBody className="space-y-4">
               <div>
-                <FormLabel htmlFor="cs-email">Email</FormLabel>
-                <Input
-                  id="cs-email"
-                  type="email"
-                  {...commSettingForm.register("email")}
+                <FormLabel htmlFor="cs-documentType" required>
+                  Document Type
+                </FormLabel>
+                <Controller
+                  name="documentType"
+                  control={commSettingForm.control}
+                  render={({ field }) => (
+                    <Select
+                      id="cs-documentType"
+                      options={documentTypeOptions}
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      placeholder={COMMON_TEXT.selectOption}
+                    />
+                  )}
+                />
+                <FormFieldError
+                  message={
+                    commSettingForm.formState.errors.documentType?.message
+                  }
                 />
               </div>
-            )}
 
-            {selectedCommType === "fax" && (
               <div>
-                <FormLabel htmlFor="cs-fax">Fax</FormLabel>
-                <Input id="cs-fax" {...commSettingForm.register("fax")} />
+                <FormLabel htmlFor="cs-communicationType" required>
+                  Communication Type
+                </FormLabel>
+                <Controller
+                  name="communicationType"
+                  control={commSettingForm.control}
+                  render={({ field }) => (
+                    <Select
+                      id="cs-communicationType"
+                      options={communicationTypeOptions}
+                      value={field.value}
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        setSelectedCommType(value);
+                        commSettingForm.setValue("email", "");
+                        commSettingForm.setValue("fax", "");
+                      }}
+                      placeholder={COMMON_TEXT.selectOption}
+                    />
+                  )}
+                />
+                <FormFieldError
+                  message={
+                    commSettingForm.formState.errors.communicationType?.message
+                  }
+                />
               </div>
-            )}
 
-            <div className="flex justify-end gap-3 pt-2">
+              <div>
+                <FormLabel htmlFor="cs-shape">Shape</FormLabel>
+                <Controller
+                  name="shape"
+                  control={commSettingForm.control}
+                  render={({ field }) => (
+                    <Select
+                      id="cs-shape"
+                      options={shapeOptions}
+                      value={field.value ?? ""}
+                      onValueChange={field.onChange}
+                      placeholder={COMMON_TEXT.emptyOption}
+                    />
+                  )}
+                />
+              </div>
+
+              {selectedCommType === "email" && (
+                <div>
+                  <FormLabel htmlFor="cs-email">Email</FormLabel>
+                  <Input
+                    id="cs-email"
+                    type="email"
+                    {...commSettingForm.register("email")}
+                  />
+                </div>
+              )}
+
+              {selectedCommType === "fax" && (
+                <div>
+                  <FormLabel htmlFor="cs-fax">Fax</FormLabel>
+                  <Input id="cs-fax" {...commSettingForm.register("fax")} />
+                </div>
+              )}
+            </DialogBody>
+            <DialogFooter>
               <Button
                 type="button"
                 variant="outline"
@@ -1125,7 +1396,7 @@ export const CompanyForm = ({ availableContracts }: CompanyFormProps) => {
                 {COMMON_TEXT.cancel}
               </Button>
               <Button type="submit">Add Setting</Button>
-            </div>
+            </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
@@ -1133,12 +1404,11 @@ export const CompanyForm = ({ availableContracts }: CompanyFormProps) => {
         open={isContractDialogOpen}
         onOpenChange={(open) => {
           if (!open) contractSelectionForm.reset(DEFAULT_CONTRACT_SELECTION);
-          else contractSelectionForm.reset({
-            contractUuid: "",
-            role: activeContractableRoles.length === 1
-              ? activeContractableRoles[0]
-              : ("" as ContractableRole),
-          });
+          else
+            contractSelectionForm.reset({
+              contractUuid: "",
+              role: getDefaultContractRole(activeContractableRoles),
+            });
           setIsContractDialogOpen(open);
         }}
       >
@@ -1153,56 +1423,23 @@ export const CompanyForm = ({ availableContracts }: CompanyFormProps) => {
             </DialogDescription>
           </DialogHeader>
 
-          <form
-            onSubmit={handleSaveContract}
-            className="mt-2 space-y-4 px-6 pb-6"
-          >
-            <div>
-              <FormLabel htmlFor="ct-contract" required>
-                Contract
-              </FormLabel>
-              <Controller
-                name="contractUuid"
-                control={contractSelectionForm.control}
-                render={({ field }) => (
-                  <Select
-                    id="ct-contract"
-                    options={[
-                      { value: "", label: COMMON_TEXT.selectOption },
-                      ...availableContracts.map((c) => ({
-                        value: c.uuid,
-                        label: `${c.code}${c.description ? ` — ${c.description}` : ""}`,
-                      })),
-                    ]}
-                    value={field.value}
-                    onValueChange={field.onChange}
-                    placeholder={COMMON_TEXT.selectOption}
-                  />
-                )}
-              />
-              <FormFieldError message={contractSelectionForm.formState.errors.contractUuid?.message} />
-            </div>
-
-            <div>
-              <FormLabel htmlFor="ct-role" required>Role</FormLabel>
-              {activeContractableRoles.length === 1 ? (
-                <div className="mt-1.5 flex items-center gap-1.5">
-                  <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
-                    {CONTRACTABLE_ROLE_LABELS[activeContractableRoles[0]]}
-                  </span>
-                </div>
-              ) : (
+          <form onSubmit={handleSaveContract}>
+            <DialogBody className="space-y-4">
+              <div>
+                <FormLabel htmlFor="ct-contract" required>
+                  Contract
+                </FormLabel>
                 <Controller
-                  name="role"
+                  name="contractUuid"
                   control={contractSelectionForm.control}
                   render={({ field }) => (
                     <Select
-                      id="ct-role"
+                      id="ct-contract"
                       options={[
                         { value: "", label: COMMON_TEXT.selectOption },
-                        ...activeContractableRoles.map((r) => ({
-                          value: r,
-                          label: CONTRACTABLE_ROLE_LABELS[r],
+                        ...availableContracts.map((c) => ({
+                          value: c.uuid,
+                          label: `${c.code}${c.description ? ` — ${c.description}` : ""}`,
                         })),
                       ]}
                       value={field.value}
@@ -1211,11 +1448,51 @@ export const CompanyForm = ({ availableContracts }: CompanyFormProps) => {
                     />
                   )}
                 />
-              )}
-              <FormFieldError message={contractSelectionForm.formState.errors.role?.message} />
-            </div>
+                <FormFieldError
+                  message={
+                    contractSelectionForm.formState.errors.contractUuid?.message
+                  }
+                />
+              </div>
 
-            <div className="flex justify-end gap-3 pt-2">
+              <div>
+                <FormLabel htmlFor="ct-role" required>
+                  Role
+                </FormLabel>
+                {activeContractableRoles.length === 1 ? (
+                  <div className="mt-1.5 flex items-center gap-1.5">
+                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                      {CONTRACTABLE_ROLE_LABELS[activeContractableRoles[0]]}
+                    </span>
+                  </div>
+                ) : (
+                  <Controller
+                    name="role"
+                    control={contractSelectionForm.control}
+                    render={({ field }) => (
+                      <Select
+                        id="ct-role"
+                        options={[
+                          { value: "", label: COMMON_TEXT.selectOption },
+                          ...activeContractableRoles.map((r) => ({
+                            value: r,
+                            label: CONTRACTABLE_ROLE_LABELS[r],
+                          })),
+                        ]}
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        placeholder={COMMON_TEXT.selectOption}
+                      />
+                    )}
+                  />
+                )}
+                <FormFieldError
+                  message={contractSelectionForm.formState.errors.role?.message}
+                />
+              </div>
+            </DialogBody>
+
+            <DialogFooter>
               <Button
                 type="button"
                 variant="outline"
@@ -1227,6 +1504,131 @@ export const CompanyForm = ({ availableContracts }: CompanyFormProps) => {
                 {COMMON_TEXT.cancel}
               </Button>
               <Button type="submit">Add Contract</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={isTextDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) textForm.reset(DEFAULT_TEXT);
+          setIsTextDialogOpen(open);
+        }}
+      >
+        <DialogContent className="flex h-[85dvh] max-w-5xl flex-col gap-0 p-0">
+          <DialogHeader className="shrink-0 border-b bg-background px-6 py-5">
+            <DialogTitle className="flex items-center gap-2">
+              <AlignLeft className="size-4" />
+              Add Text
+            </DialogTitle>
+            <DialogDescription>
+              Select a category to auto-fill the usage checkboxes, then fill in
+              the title and text block.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form
+            onSubmit={handleSaveText}
+            className="flex min-h-0 flex-1 flex-col"
+          >
+            <div className="flex min-h-0 flex-1 gap-0">
+              {/* Left column: category + title */}
+              <div className="flex w-64 shrink-0 flex-col gap-4 overflow-y-auto border-r p-6">
+                <div>
+                  <FormLabel htmlFor="txt-category" required>
+                    Text Category
+                  </FormLabel>
+                  <Controller
+                    name="textCategoryUuid"
+                    control={textForm.control}
+                    render={({ field }) => (
+                      <Select
+                        id="txt-category"
+                        options={[
+                          { value: "", label: COMMON_TEXT.selectOption },
+                          ...textCategories.map((c) => ({
+                            value: c.uuid,
+                            label: c.name,
+                          })),
+                        ]}
+                        value={field.value}
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          handleCategorySelect(value);
+                        }}
+                        placeholder={COMMON_TEXT.selectOption}
+                      />
+                    )}
+                  />
+                  <FormFieldError
+                    message={
+                      textForm.formState.errors.textCategoryUuid?.message
+                    }
+                  />
+                </div>
+              </div>
+
+              {/* Center column: text block */}
+              <div className="flex flex-1 flex-col gap-4 overflow-y-auto border-r p-6">
+                <div className="flex flex-1 flex-col">
+                  <FormLabel htmlFor="txt-textBlock" required>
+                    Text Block
+                  </FormLabel>
+                  <textarea
+                    id="txt-textBlock"
+                    {...textForm.register("textBlock")}
+                    className="mt-1 flex-1 w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+                    placeholder="Enter the text content..."
+                    style={{ minHeight: "200px" }}
+                  />
+                  <FormFieldError
+                    message={textForm.formState.errors.textBlock?.message}
+                  />
+                </div>
+              </div>
+
+              {/* Right column: 18 boolean checkboxes */}
+              <div className="flex w-60 shrink-0 flex-col gap-1 overflow-y-auto p-6">
+                <p className="mb-2 text-sm font-medium text-gray-700">
+                  Usage Categories
+                </p>
+                {USAGE_CATEGORY_FIELDS.map(({ key, field }) => (
+                  <Controller
+                    key={field}
+                    name={field}
+                    control={textForm.control}
+                    render={({ field: f }) => (
+                      <label className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 hover:bg-muted/40">
+                        <input
+                          type="checkbox"
+                          className="size-4 rounded border-border accent-primary"
+                          checked={!!f.value}
+                          onChange={(e) => f.onChange(e.target.checked)}
+                        />
+                        <span className="text-sm text-gray-700">
+                          {TEXT_USAGE_CATEGORY_LABELS[key]}
+                        </span>
+                      </label>
+                    )}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div className="shrink-0 border-t bg-background px-6 py-4">
+              <div className="flex justify-end gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    textForm.reset(DEFAULT_TEXT);
+                    setIsTextDialogOpen(false);
+                  }}
+                >
+                  {COMMON_TEXT.cancel}
+                </Button>
+                <Button type="submit">Add Text</Button>
+              </div>
             </div>
           </form>
         </DialogContent>
