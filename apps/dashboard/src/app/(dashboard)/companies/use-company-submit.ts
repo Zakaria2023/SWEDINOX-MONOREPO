@@ -1,11 +1,17 @@
 "use client";
 
+import { CompanyRole } from "@/lib/enums";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
-import { createCompany, type CommSettingInput, type CompanyActionResult, type CompanyContractInput, type CompanyContactInput } from "./actions";
-import { createCompanySchema, type CompanyFormValues } from "./validation";
-import type { CompanyRole } from "@/lib/enums";
+import {
+  CommSettingInput,
+  CompanyActionResult,
+  CompanyContactInput,
+  CompanyContractInput,
+  createCompany,
+} from "./actions";
+import { CompanyFormValues, createCompanySchema } from "./validation";
 
 const mapAddress = (address: CompanyFormValues["address"]) => ({
   altName: address.altName || undefined,
@@ -24,7 +30,9 @@ const mapAddress = (address: CompanyFormValues["address"]) => ({
   billingAttentionAdditional: address.billingAttentionAdditional || undefined,
   gln: address.gln || undefined,
   peppolId: address.peppolId || undefined,
-  sequenceNumber: address.sequenceNumber ? Number(address.sequenceNumber) : undefined,
+  sequenceNumber: address.sequenceNumber
+    ? Number(address.sequenceNumber)
+    : undefined,
   category: address.category,
   needCrane: address.needCrane,
   canopyRequired: address.canopyRequired,
@@ -96,7 +104,17 @@ export const useCompanySubmit = () => {
   ) =>
     form.handleSubmit((values) => {
       startTransition(async () => {
-        const { companyName, correspName, remarks, lang, roles, searchCode1, searchCode2, searchCode3, address } = values;
+        const {
+          companyName,
+          correspName,
+          remarks,
+          lang,
+          roles,
+          searchCode1,
+          searchCode2,
+          searchCode3,
+          address,
+        } = values;
         const allAddresses = [address, ...additionalAddresses].map(mapAddress);
         const result = await createCompany(
           {
