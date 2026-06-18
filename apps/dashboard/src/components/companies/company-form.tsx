@@ -1,33 +1,16 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import { FileText, MapPin, MessageSquare, Plus, User, X } from "lucide-react";
-import {
-  AlignLeft,
-  FileText,
-  MapPin,
-  MessageSquare,
-  Plus,
-  X,
-} from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useRouter } from "next/navigation";
+import { AlignLeft, FileText, MapPin, MessageSquare, Plus, User, X } from "lucide-react";
 import { z } from "zod";
-import { CommSettingInput, CompanyContactInput, CompanyContractInput } from "@/app/(dashboard)/companies/actions";
-import { TextCategoryOption } from "@/app/(dashboard)/text-categories/actions";
-import {
-  CompanyTextInput,
-  CommSettingInput,
-  CompanyContractInput,
-} from "@/app/(dashboard)/companies/actions";
-import { ContractListItem } from "@/app/(dashboard)/contracts/actions";
-import {
-  createCompanySchema,
-  AddressFormValues,
-  CompanyFormValues,
-} from "@/app/(dashboard)/companies/validation";
+import type { CommSettingInput, CompanyContactInput, CompanyContractInput, CompanyTextInput } from "@/app/(dashboard)/companies/actions";
 import { useCompanySubmit } from "@/app/(dashboard)/companies/use-company-submit";
+import { type AddressFormValues, type CompanyFormValues, createCompanySchema } from "@/app/(dashboard)/companies/validation";
+import type { ContractListItem } from "@/app/(dashboard)/contracts/actions";
+import type { TextCategoryOption } from "@/app/(dashboard)/text-categories/actions";
 import { AddressForm } from "@/components/companies/address-form";
 import { Button } from "@/components/shadcn/button";
 import {
@@ -41,30 +24,26 @@ import {
 } from "@/components/shadcn/dialog";
 import { Input } from "@/components/shadcn/input";
 import { Select } from "@/components/shadcn/select";
+import { FormSelectField } from "@/components/ui/form-select-field";
 import { FormActions } from "@/components/ui/form-actions";
 import { FormError } from "@/components/ui/form-error";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
-import { FormSelectField } from "@/components/ui/form-select-field";
 import {
+  type AddressCategory,
   addressCategories,
   communicationSettingDocumentTypes,
   communicationSettingShapes,
   communicationSettingTypes,
   companyLangs,
+  type CompanyRole,
   companyRoles,
   contactCategories,
-  contactSalutations,
-  contractableRoles,
-  type AddressCategory,
-  type CompanyRole,
   type ContactCategory,
+  contactSalutations,
   type ContractableRole,
-  AddressCategory,
-  CompanyRole,
-  ContractableRole,
-  TextUsageCategory,
+  contractableRoles,
+  type TextUsageCategory,
 } from "@/lib/enums";
-import { cn } from "@/lib/helpers";
 import {
   ADDRESS_CATEGORY_LABELS,
   COMMON_TEXT,
@@ -75,10 +54,12 @@ import {
   COMPANY_ROLE_LABELS,
   CONTACT_CATEGORY_LABELS,
   CONTACT_SALUTATION_LABELS,
-  CONTRACT_TYPE_LABELS,
   CONTRACTABLE_ROLE_LABELS,
+  CONTRACT_TYPE_LABELS,
   TEXT_USAGE_CATEGORY_LABELS,
 } from "@/lib/labels";
+import { cn } from "@/lib/helpers";
+
 
 const DEFAULT_ADDRESS: CompanyFormValues["address"] = {
   category: [],
@@ -396,6 +377,8 @@ export const CompanyForm = ({
   const contactForm = useForm<ContactDialogValues>({
     resolver: zodResolver(contactDialogSchema),
     defaultValues: DEFAULT_CONTACT,
+  });
+
   const textForm = useForm<TextDialogValues>({
     resolver: zodResolver(textDialogSchema),
     defaultValues: DEFAULT_TEXT,
@@ -742,8 +725,8 @@ export const CompanyForm = ({
           additionalAddresses,
           communicationSettings,
           contracts,
-          texts,
-          contacts
+          contacts,
+          texts
         )}
         className="space-y-8"
       >

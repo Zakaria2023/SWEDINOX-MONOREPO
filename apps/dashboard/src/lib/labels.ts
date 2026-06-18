@@ -142,6 +142,8 @@ export const CONTACT_CATEGORY_LABELS: Record<ContactCategory, string> = {
   management: "Management",
   bookkeeping: "Bookkeeping",
   certificates: "Certificates",
+};
+
 export const TEXT_USAGE_CATEGORY_LABELS: Record<TextUsageCategory, string> = {
   purchase_quote_request: "Purchase Quote Request",
   purchase_order: "Purchase Order",

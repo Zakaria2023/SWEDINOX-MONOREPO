@@ -1,25 +1,25 @@
 "use server";
 
 import { db, SelectCompanies } from "@/db";
+import {
+    CommunicationSettings,
+    InsertCommunicationSettings,
+} from "@/db/schema/communication-settings";
 import { Companies, InsertCompanies } from "@/db/schema/companies";
 import {
-  CompanyAddresses,
-  InsertCompanyAddresses,
+    CompanyAddresses,
+    InsertCompanyAddresses,
 } from "@/db/schema/company-addresses";
-import {
-  CommunicationSettings,
-  InsertCommunicationSettings,
-} from "@/db/schema/communication-settings";
-import { Contracts, InsertContracts } from "@/db/schema/contracts";
 import { Contacts, InsertContacts } from "@/db/schema/contacts";
-import { Texts, InsertTexts } from "@/db/schema/texts";
+import { Contracts, InsertContracts } from "@/db/schema/contracts";
+import { InsertTexts, Texts } from "@/db/schema/texts";
 import { generateUuid } from "@/lib/helpers";
-import { asc, desc } from "drizzle-orm";
 import { currentUser } from "@clerk/nextjs/server";
+import { asc, desc } from "drizzle-orm";
 
 export type CompanyOption = Pick<
   SelectCompanies,
-  "uuid" | "searchCode1" | "companyName" | "roles"
+  "uuid" | "searchCode1" | "companyName" | "roles" | "debtorNo"
 >;
 
 export type AddressInput = Omit<
@@ -44,7 +44,8 @@ export type CompanyContractInput = Omit<
 
 export type CompanyContactInput = Omit<
   InsertContacts,
-  "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt"
+  "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt">
+  
 export type CompanyTextInput = Omit<
   InsertTexts,
   "id" | "uuid" | "companyUuid" | "createdByUserId" | "createdAt" | "updatedAt"
@@ -60,6 +61,7 @@ export const getCompaniesForSelect = async (): Promise<CompanyOption[]> => {
   return db
     .select({
       uuid: Companies.uuid,
+      debtorNo: Companies.debtorNo,
       searchCode1: Companies.searchCode1,
       companyName: Companies.companyName,
       roles: Companies.roles,
@@ -126,6 +128,9 @@ export const createCompany = async (
           ...contact,
           uuid: generateUuid(),
           companyUuid: uuid,
+        });
+      }
+
       for (const text of texts) {
         await tx.insert(Texts).values({
           ...text,
