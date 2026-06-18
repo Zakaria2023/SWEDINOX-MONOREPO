@@ -4,3 +4,4 @@ export * from "./contracts";
 export * from "./communication-settings";
 export * from "./text-categories";
 export * from "./texts";
+export * from "./invoices";
