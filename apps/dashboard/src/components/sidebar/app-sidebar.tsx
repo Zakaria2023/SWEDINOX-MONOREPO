@@ -36,7 +36,8 @@ export const AppSidebar = () => {
 
   const isCustomersActive =
     pathname.startsWith("/addresses") ||
-    pathname.startsWith("/contracts-per-customer");
+    pathname.startsWith("/contracts-per-customer") ||
+    pathname.startsWith("/contact-persons-customers-and-prospects");
   const isCompanyActive =
     pathname.startsWith("/companies") ||
     pathname.startsWith("/communication-settings") ||
@@ -46,7 +47,9 @@ export const AppSidebar = () => {
     pathname === "/contracts" ||
     pathname.startsWith("/contracts/") ||
     pathname.startsWith("/contract-groups");
-  const isSupplierActive = pathname.startsWith("/contracts-per-supplier");
+  const isSupplierActive =
+    pathname.startsWith("/contracts-per-supplier") ||
+    pathname.startsWith("/contact-persons-suppliers");
 
   const [isCustomersOpen, setIsCustomersOpen] = useState(false);
   const [isCompanyOpen, setIsCompanyOpen] = useState(false);
@@ -96,6 +99,14 @@ export const AppSidebar = () => {
                         )}
                       >
                         <span>Contracts per Customer / Prospect</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/contact-persons-customers-and-prospects" />}
+                        isActive={pathname.startsWith("/contact-persons-customers-and-prospects")}
+                      >
+                        <span>Contact Persons Customers and Prospects</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                   </SidebarMenuSub>
@@ -204,6 +215,14 @@ export const AppSidebar = () => {
                         )}
                       >
                         <span>Contracts per Supplier</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/contact-persons-suppliers" />}
+                        isActive={pathname.startsWith("/contact-persons-suppliers")}
+                      >
+                        <span>Contact Persons Suppliers</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                   </SidebarMenuSub>

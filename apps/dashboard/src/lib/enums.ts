@@ -103,6 +103,23 @@ export const communicationSettingShapes = [
 export type CommunicationSettingShape =
   (typeof communicationSettingShapes)[number];
 
+export const contactSalutations = [
+  "mr",
+  "mrs",
+] as const satisfies readonly string[];
+
+export type ContactSalutation = (typeof contactSalutations)[number];
+
+export const contactCategories = [
+  "procurement",
+  "sales",
+  "warehouse",
+  "management",
+  "bookkeeping",
+  "certificates",
+] as const satisfies readonly string[];
+
+export type ContactCategory = (typeof contactCategories)[number];
 export const textUsageCategories = [
   "purchase_quote_request",
   "purchase_order",

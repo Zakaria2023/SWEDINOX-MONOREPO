@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { FileText, MapPin, MessageSquare, Plus, User, X } from "lucide-react";
 import {
   AlignLeft,
   FileText,
@@ -13,13 +14,14 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
+import { CommSettingInput, CompanyContactInput, CompanyContractInput } from "@/app/(dashboard)/companies/actions";
 import { TextCategoryOption } from "@/app/(dashboard)/text-categories/actions";
-import type {
+import {
   CompanyTextInput,
   CommSettingInput,
   CompanyContractInput,
 } from "@/app/(dashboard)/companies/actions";
-import type { ContractListItem } from "@/app/(dashboard)/contracts/actions";
+import { ContractListItem } from "@/app/(dashboard)/contracts/actions";
 import {
   createCompanySchema,
   AddressFormValues,
@@ -50,7 +52,13 @@ import {
   communicationSettingTypes,
   companyLangs,
   companyRoles,
+  contactCategories,
+  contactSalutations,
   contractableRoles,
+  type AddressCategory,
+  type CompanyRole,
+  type ContactCategory,
+  type ContractableRole,
   AddressCategory,
   CompanyRole,
   ContractableRole,
@@ -65,6 +73,8 @@ import {
   COMMUNICATION_SETTING_TYPE_LABELS,
   COMPANY_LANGUAGE_LABELS,
   COMPANY_ROLE_LABELS,
+  CONTACT_CATEGORY_LABELS,
+  CONTACT_SALUTATION_LABELS,
   CONTRACT_TYPE_LABELS,
   CONTRACTABLE_ROLE_LABELS,
   TEXT_USAGE_CATEGORY_LABELS,
@@ -166,6 +176,79 @@ const DEFAULT_CONTRACT_SELECTION: ContractSelectionValues = {
   role: "" as ContractableRole,
 };
 
+const contactDialogSchema = z.object({
+  salutation: z.string().optional(),
+  firstName: z.string().optional(),
+  initials: z.string().optional(),
+  lastName: z.string().optional(),
+  telephone: z.string().optional(),
+  mobile: z.string().optional(),
+  fax: z.string().optional(),
+  email: z.string().optional(),
+  address: z.string().optional(),
+  categoryAddition: z.string().optional(),
+  btwNumber: z.string().optional(),
+  country: z.string().optional(),
+  postal: z.string().optional(),
+  house: z.string().optional(),
+  poBox: z.boolean(),
+  streetAndNo: z.string().optional(),
+  annex: z.string().optional(),
+  postalCode: z.string().optional(),
+  city: z.string().optional(),
+  region: z.string().optional(),
+  addressCountry: z.string().optional(),
+  addressTelephone: z.string().optional(),
+  addressFax: z.string().optional(),
+  addressEmail: z.string().optional(),
+  website: z.string().optional(),
+  categories: z.array(z.string()),
+  sequenceNumber: z.number().int().min(1),
+  purchaser: z.string().optional(),
+  searchCode1: z.string().optional(),
+  searchCode2: z.string().optional(),
+  searchCode3: z.string().optional(),
+  revenueLastYear: z.string().optional(),
+  revenueThisYear: z.string().optional(),
+});
+
+type ContactDialogValues = z.infer<typeof contactDialogSchema>;
+
+const DEFAULT_CONTACT: ContactDialogValues = {
+  salutation: "",
+  firstName: "",
+  initials: "",
+  lastName: "",
+  telephone: "",
+  mobile: "",
+  fax: "",
+  email: "",
+  address: "",
+  categoryAddition: "",
+  btwNumber: "",
+  country: "",
+  postal: "",
+  house: "",
+  poBox: false,
+  streetAndNo: "",
+  annex: "",
+  postalCode: "",
+  city: "",
+  region: "",
+  addressCountry: "",
+  addressTelephone: "",
+  addressFax: "",
+  addressEmail: "",
+  website: "",
+  categories: [],
+  sequenceNumber: 1,
+  purchaser: "",
+  searchCode1: "",
+  searchCode2: "",
+  searchCode3: "",
+  revenueLastYear: "",
+  revenueThisYear: "",
+};
 const textDialogSchema = z.object({
   textCategoryUuid: z.string().min(1, "Please select a text category"),
   textBlock: z.string().min(1, "Text block is required"),
@@ -270,6 +353,8 @@ export const CompanyForm = ({
   const [selectedCommType, setSelectedCommType] = useState("");
   const [isContractDialogOpen, setIsContractDialogOpen] = useState(false);
   const [contracts, setContracts] = useState<CompanyContractInput[]>([]);
+  const [isContactDialogOpen, setIsContactDialogOpen] = useState(false);
+  const [contacts, setContacts] = useState<CompanyContactInput[]>([]);
   const [isTextDialogOpen, setIsTextDialogOpen] = useState(false);
   const [texts, setTexts] = useState<CompanyTextInput[]>([]);
 
@@ -308,6 +393,9 @@ export const CompanyForm = ({
     defaultValues: DEFAULT_CONTRACT_SELECTION,
   });
 
+  const contactForm = useForm<ContactDialogValues>({
+    resolver: zodResolver(contactDialogSchema),
+    defaultValues: DEFAULT_CONTACT,
   const textForm = useForm<TextDialogValues>({
     resolver: zodResolver(textDialogSchema),
     defaultValues: DEFAULT_TEXT,
@@ -467,6 +555,90 @@ export const CompanyForm = ({
     setIsContractDialogOpen(false);
   });
 
+  const handleSaveContact = contactForm.handleSubmit((values) => {
+    const companyValues = form.getValues();
+    const isSupplier = selectedRoles.includes("supplier");
+    const isCustomerOrProspect =
+      selectedRoles.includes("customer") || selectedRoles.includes("prospect");
+
+    setContacts((prev) => [
+      ...prev,
+      {
+        salutation: (values.salutation || undefined) as CompanyContactInput["salutation"],
+        firstName: values.firstName || undefined,
+        initials: values.initials || undefined,
+        lastName: values.lastName || undefined,
+        telephone: values.telephone || undefined,
+        mobile: values.mobile || undefined,
+        fax: values.fax || undefined,
+        email: values.email || undefined,
+        address: values.address || undefined,
+        categoryAddition: values.categoryAddition || undefined,
+        btwNumber: values.btwNumber || undefined,
+        country: values.country || undefined,
+        postal: values.postal || undefined,
+        house: values.house || undefined,
+        poBox: values.poBox,
+        streetAndNo: values.streetAndNo || undefined,
+        annex: values.annex || undefined,
+        postalCode: values.postalCode || undefined,
+        city: values.city || undefined,
+        region: values.region || undefined,
+        addressCountry: values.addressCountry || undefined,
+        addressTelephone: values.addressTelephone || undefined,
+        addressFax: values.addressFax || undefined,
+        addressEmail: values.addressEmail || undefined,
+        website: values.website || undefined,
+        categories: values.categories as ContactCategory[],
+        sequenceNumber: values.sequenceNumber,
+        purchaser: undefined,
+        searchCode1: (isSupplier || isCustomerOrProspect) ? (companyValues.searchCode1 || undefined) : undefined,
+        searchCode2: (isSupplier || isCustomerOrProspect) ? (companyValues.searchCode2 || undefined) : undefined,
+        searchCode3: (isSupplier || isCustomerOrProspect) ? (companyValues.searchCode3 || undefined) : undefined,
+        revenueLastYear: (isSupplier || isCustomerOrProspect) ? "0.00" : undefined,
+        revenueThisYear: (isSupplier || isCustomerOrProspect) ? "0.00" : undefined,
+        isCustomer: selectedRoles.includes("customer"),
+        isProspect: selectedRoles.includes("prospect"),
+        isSupplier: selectedRoles.includes("supplier"),
+        isProcessor: selectedRoles.includes("processor"),
+        isTransporter: selectedRoles.includes("transporter"),
+        isAgent: selectedRoles.includes("agent"),
+        isOther: selectedRoles.includes("other"),
+        visitStreetAndNo: undefined,
+        visitPostalCode: undefined,
+        visitCity: undefined,
+        visitCountry: undefined,
+        visitTelephone: undefined,
+        visitFax: undefined,
+        accountManager: undefined,
+        representative: undefined,
+        customerGroup: undefined,
+        industryCode: undefined,
+        industry: undefined,
+        classificationCode: undefined,
+        classification: undefined,
+        creditLimit: undefined,
+        competitors: undefined,
+        customerRegionCode: undefined,
+        customerRegion: undefined,
+        targetYearRevenue: isCustomerOrProspect ? "0.00" : undefined,
+        targetAnnualSales: isCustomerOrProspect ? "0.00" : undefined,
+      },
+    ]);
+    contactForm.reset(DEFAULT_CONTACT);
+    setIsContactDialogOpen(false);
+  });
+
+  const toggleContactCategory = (category: ContactCategory) => {
+    const current = contactForm.getValues("categories") as ContactCategory[];
+    contactForm.setValue(
+      "categories",
+      current.includes(category)
+        ? current.filter((c) => c !== category)
+        : [...current, category],
+    );
+  };
+
   const handleCategorySelect = (uuid: string) => {
     textForm.setValue("textCategoryUuid", uuid);
     const cat = textCategories.find((c) => c.uuid === uuid);
@@ -571,6 +743,7 @@ export const CompanyForm = ({
           communicationSettings,
           contracts,
           texts,
+          contacts
         )}
         className="space-y-8"
       >
@@ -948,6 +1121,55 @@ export const CompanyForm = ({
                 disabled={isPending}
               />
             </div>
+          </div>
+        </section>
+
+        <section className="space-y-4">
+          <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
+            Contacts
+          </h2>
+          <div className="space-y-2 rounded-2xl border border-border bg-muted/20 p-4">
+            {contacts.map((contact, index) => (
+              <div
+                key={index}
+                className="flex items-center justify-between rounded-lg border border-border bg-background px-3 py-2"
+              >
+                <div className="flex min-w-0 items-center gap-2 text-sm">
+                  <User className="size-4 shrink-0 text-muted-foreground" />
+                  <span className="truncate text-muted-foreground">
+                    {[contact.firstName, contact.lastName].filter(Boolean).join(" ") || "Contact"}
+                  </span>
+                  {contact.categories?.map((cat) => (
+                    <span key={cat} className="shrink-0 rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">
+                      {CONTACT_CATEGORY_LABELS[cat]}
+                    </span>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setContacts((prev) => prev.filter((_, i) => i !== index))
+                  }
+                  className="shrink-0 text-muted-foreground hover:text-destructive"
+                  disabled={isPending}
+                >
+                  <X className="size-4" />
+                  <span className="sr-only">Remove contact</span>
+                </button>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={() => {
+                contactForm.reset(DEFAULT_CONTACT);
+                setIsContactDialogOpen(true);
+              }}
+              className="inline-flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-border px-3 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+              disabled={isPending}
+            >
+              <Plus className="size-4" />
+              Add Contact
+            </button>
           </div>
         </section>
 
@@ -1406,6 +1628,241 @@ export const CompanyForm = ({
                   {COMMON_TEXT.cancel}
                 </Button>
                 <Button type="submit">Add Text</Button>
+              </div>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={isContactDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) contactForm.reset(DEFAULT_CONTACT);
+          setIsContactDialogOpen(open);
+        }}
+      >
+        <DialogContent className="flex h-[85dvh] max-w-3xl flex-col gap-0 p-0">
+          <DialogHeader className="shrink-0 border-b bg-background px-6 py-5">
+            <DialogTitle className="flex items-center gap-2">
+              <User className="size-4" />
+              Contact
+            </DialogTitle>
+            <DialogDescription>
+              Add a contact person for this company.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form
+            onSubmit={handleSaveContact}
+            className="flex flex-1 flex-col overflow-hidden"
+          >
+            <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-gray-700">Contact Person</h3>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div>
+                    <FormLabel htmlFor="co-salutation">Salutation</FormLabel>
+                    <Controller
+                      name="salutation"
+                      control={contactForm.control}
+                      render={({ field }) => (
+                        <Select
+                          id="co-salutation"
+                          options={[
+                            { value: "", label: COMMON_TEXT.emptyOption },
+                            ...contactSalutations.map((s) => ({
+                              value: s,
+                              label: CONTACT_SALUTATION_LABELS[s],
+                            })),
+                          ]}
+                          value={field.value ?? ""}
+                          onValueChange={field.onChange}
+                          placeholder={COMMON_TEXT.emptyOption}
+                        />
+                      )}
+                    />
+                  </div>
+                  <div>
+                    <FormLabel htmlFor="co-firstName">First Name</FormLabel>
+                    <Input id="co-firstName" {...contactForm.register("firstName")} />
+                  </div>
+                  <div>
+                    <FormLabel htmlFor="co-initials">Initials</FormLabel>
+                    <Input id="co-initials" {...contactForm.register("initials")} />
+                  </div>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div>
+                    <FormLabel htmlFor="co-lastName">Last Name</FormLabel>
+                    <Input id="co-lastName" {...contactForm.register("lastName")} />
+                  </div>
+                  <div>
+                    <FormLabel htmlFor="co-telephone">Telephone</FormLabel>
+                    <Input id="co-telephone" {...contactForm.register("telephone")} />
+                  </div>
+                  <div>
+                    <FormLabel htmlFor="co-mobile">Mobile</FormLabel>
+                    <Input id="co-mobile" {...contactForm.register("mobile")} />
+                  </div>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div>
+                    <FormLabel htmlFor="co-fax">Fax</FormLabel>
+                    <Input id="co-fax" {...contactForm.register("fax")} />
+                  </div>
+                  <div>
+                    <FormLabel htmlFor="co-email">Email</FormLabel>
+                    <Input id="co-email" type="email" {...contactForm.register("email")} />
+                  </div>
+                  <div>
+                    <FormLabel htmlFor="co-address">Address</FormLabel>
+                    <Input id="co-address" {...contactForm.register("address")} />
+                  </div>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div>
+                    <FormLabel htmlFor="co-categoryAddition">Category Addition</FormLabel>
+                    <Input id="co-categoryAddition" {...contactForm.register("categoryAddition")} />
+                  </div>
+                  <div>
+                    <FormLabel htmlFor="co-btwNumber">BTW Number</FormLabel>
+                    <Input id="co-btwNumber" {...contactForm.register("btwNumber")} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-gray-700">Address</h3>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div>
+                    <FormLabel htmlFor="co-country">Country</FormLabel>
+                    <Input id="co-country" {...contactForm.register("country")} />
+                  </div>
+                  <div>
+                    <FormLabel htmlFor="co-postal">Postal</FormLabel>
+                    <Input id="co-postal" {...contactForm.register("postal")} />
+                  </div>
+                  <div>
+                    <FormLabel htmlFor="co-house">House</FormLabel>
+                    <Input id="co-house" {...contactForm.register("house")} />
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Controller
+                    name="poBox"
+                    control={contactForm.control}
+                    render={({ field }) => (
+                      <input
+                        type="checkbox"
+                        id="co-poBox"
+                        className="size-4 rounded border-border accent-primary"
+                        checked={field.value}
+                        onChange={field.onChange}
+                      />
+                    )}
+                  />
+                  <FormLabel htmlFor="co-poBox">PO Box</FormLabel>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div>
+                    <FormLabel htmlFor="co-streetAndNo">Street & No</FormLabel>
+                    <Input id="co-streetAndNo" {...contactForm.register("streetAndNo")} />
+                  </div>
+                  <div>
+                    <FormLabel htmlFor="co-annex">Annex</FormLabel>
+                    <Input id="co-annex" {...contactForm.register("annex")} />
+                  </div>
+                  <div>
+                    <FormLabel htmlFor="co-postalCode">Postal Code</FormLabel>
+                    <Input id="co-postalCode" {...contactForm.register("postalCode")} />
+                  </div>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div>
+                    <FormLabel htmlFor="co-city">City</FormLabel>
+                    <Input id="co-city" {...contactForm.register("city")} />
+                  </div>
+                  <div>
+                    <FormLabel htmlFor="co-region">Region</FormLabel>
+                    <Input id="co-region" {...contactForm.register("region")} />
+                  </div>
+                  <div>
+                    <FormLabel htmlFor="co-addressCountry">Country</FormLabel>
+                    <Input id="co-addressCountry" {...contactForm.register("addressCountry")} />
+                  </div>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div>
+                    <FormLabel htmlFor="co-addressTelephone">Telephone</FormLabel>
+                    <Input id="co-addressTelephone" {...contactForm.register("addressTelephone")} />
+                  </div>
+                  <div>
+                    <FormLabel htmlFor="co-addressFax">Fax</FormLabel>
+                    <Input id="co-addressFax" {...contactForm.register("addressFax")} />
+                  </div>
+                  <div>
+                    <FormLabel htmlFor="co-addressEmail">Email</FormLabel>
+                    <Input id="co-addressEmail" type="email" {...contactForm.register("addressEmail")} />
+                  </div>
+                </div>
+                <div>
+                  <FormLabel htmlFor="co-website">Website</FormLabel>
+                  <Input id="co-website" {...contactForm.register("website")} />
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-gray-700">Categories</h3>
+                <Controller
+                  name="categories"
+                  control={contactForm.control}
+                  render={({ field }) => (
+                    <div className="grid gap-2 sm:grid-cols-3">
+                      {contactCategories.map((cat) => (
+                        <label
+                          key={cat}
+                          className="flex cursor-pointer items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 hover:bg-muted/40"
+                        >
+                          <input
+                            type="checkbox"
+                            className="size-4 rounded border-border accent-primary"
+                            checked={(field.value as string[]).includes(cat)}
+                            onChange={() => toggleContactCategory(cat)}
+                          />
+                          <span className="text-sm text-gray-700">
+                            {CONTACT_CATEGORY_LABELS[cat]}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="text-sm font-semibold text-gray-700">Sequence Number</h3>
+                <div className="w-32">
+                  <Input
+                    type="number"
+                    min={1}
+                    {...contactForm.register("sequenceNumber")}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="shrink-0 border-t bg-background px-6 py-4">
+              <div className="flex justify-end gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    contactForm.reset(DEFAULT_CONTACT);
+                    setIsContactDialogOpen(false);
+                  }}
+                >
+                  {COMMON_TEXT.cancel}
+                </Button>
+                <Button type="submit">Add Contact</Button>
               </div>
             </div>
           </form>

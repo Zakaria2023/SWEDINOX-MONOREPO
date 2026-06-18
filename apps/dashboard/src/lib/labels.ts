@@ -6,6 +6,8 @@ import type {
   CommunicationSettingType,
   CompanyLang,
   CompanyRole,
+  ContactCategory,
+  ContactSalutation,
   ContractableRole,
   ContractType,
   TextUsageCategory,
@@ -128,6 +130,18 @@ export const COMMUNICATION_SETTING_SHAPE_LABELS: Record<
   peppol: "Peppol",
 };
 
+export const CONTACT_SALUTATION_LABELS: Record<ContactSalutation, string> = {
+  mr: "Mr.",
+  mrs: "Mrs.",
+};
+
+export const CONTACT_CATEGORY_LABELS: Record<ContactCategory, string> = {
+  procurement: "Procurement",
+  sales: "Sales",
+  warehouse: "Warehouse",
+  management: "Management",
+  bookkeeping: "Bookkeeping",
+  certificates: "Certificates",
 export const TEXT_USAGE_CATEGORY_LABELS: Record<TextUsageCategory, string> = {
   purchase_quote_request: "Purchase Quote Request",
   purchase_order: "Purchase Order",
