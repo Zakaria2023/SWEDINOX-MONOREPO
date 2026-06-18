@@ -5,10 +5,10 @@ import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { Pencil, Plus, X } from "lucide-react";
-import { z } from "zod";
 import type { CompanyOption } from "@/app/(dashboard)/companies/actions";
 import type { InvoiceSurchargeInput } from "@/app/(dashboard)/invoices/actions";
 import { useInvoiceSubmit } from "@/app/(dashboard)/invoices/use-invoice-submit";
+import { surchargeSchema, type SurchargeFormValues } from "@/app/(dashboard)/invoices/validation";
 import { DatePicker } from "@/components/shadcn/date-picker";
 import { Input } from "@/components/shadcn/input";
 import { Select } from "@/components/shadcn/select";
@@ -48,24 +48,11 @@ type InvoiceFormProps = {
   availableCompanies: CompanyOption[];
 };
 
-const surchargeSchema = z.object({
-  order: z.coerce.number().int().min(0).optional(),
-  description: z.enum(invoiceSurchargeDescriptions, { required_error: "Description is required" }),
-  surcharge: z.string().optional(),
-  unit: z.string().optional(),
-  surchargePercentage: z.string().optional(),
-  amount: z.string().optional(),
-});
-
-type SurchargeFormValues = z.infer<typeof surchargeSchema>;
-
-const DEFAULT_SURCHARGE: SurchargeFormValues = {
+const DEFAULT_SURCHARGE = {
   order: 0,
   description: undefined,
   surcharge: "",
   unit: "Euro",
-  surchargePercentage: "0.00",
-  amount: "",
 };
 
 export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
@@ -149,20 +136,19 @@ export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
       description: s.description ?? undefined,
       surcharge: s.surcharge ?? "",
       unit: s.unit ?? "Euro",
-      surchargePercentage: s.surchargePercentage ?? "0.00",
-      amount: s.amount ?? "",
     });
     setIsSurchargeDialogOpen(true);
   };
 
   const handleSaveSurcharge = surchargeForm.handleSubmit((values) => {
+    const surchargeVal = values.surcharge || "0.00";
     const entry: InvoiceSurchargeInput = {
       order: values.order ?? 0,
       description: values.description,
-      surcharge: values.surcharge || "0.00",
+      surcharge: surchargeVal,
       unit: values.unit || undefined,
-      surchargePercentage: values.surchargePercentage || "0.00",
-      amount: values.amount || "0.00",
+      surchargePercentage: "0.00",
+      amount: surchargeVal,
     };
     if (editingIndex !== null) {
       setSurcharges((prev) => prev.map((s, i) => (i === editingIndex ? entry : s)));
@@ -421,7 +407,7 @@ export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
                     id="surchargeOrder"
                     type="number"
                     min={0}
-                    {...surchargeForm.register("order")}
+                    {...surchargeForm.register("order", { valueAsNumber: true })}
                   />
                 </div>
                 <div>
@@ -463,29 +449,6 @@ export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <FormLabel htmlFor="surchargePercentage">Surcharge %</FormLabel>
-                  <Input
-                    id="surchargePercentage"
-                    type="number"
-                    step="0.01"
-                    placeholder="0.00"
-                    {...surchargeForm.register("surchargePercentage")}
-                  />
-                </div>
-                <div>
-                  <FormLabel htmlFor="surchargeLineAmount">Amount</FormLabel>
-                  <Input
-                    id="surchargeLineAmount"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    placeholder="0.00"
-                    {...surchargeForm.register("amount")}
-                  />
-                </div>
-              </div>
             </DialogBody>
 
             <DialogFooter>

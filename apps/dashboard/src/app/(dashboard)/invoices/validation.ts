@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { invoicePaymentTerms, invoiceVatScenarios } from "@/lib/enums";
+import { invoicePaymentTerms, invoiceSurchargeDescriptions, invoiceVatScenarios } from "@/lib/enums";
 
 export const createInvoiceSchema = () =>
   z.object({
@@ -16,3 +16,12 @@ export const createInvoiceSchema = () =>
   });
 
 export type InvoiceFormValues = z.infer<ReturnType<typeof createInvoiceSchema>>;
+
+export const surchargeSchema = z.object({
+  order: z.number().int().min(0).optional(),
+  description: z.enum(invoiceSurchargeDescriptions),
+  surcharge: z.string().optional(),
+  unit: z.string().optional(),
+});
+
+export type SurchargeFormValues = z.infer<typeof surchargeSchema>;

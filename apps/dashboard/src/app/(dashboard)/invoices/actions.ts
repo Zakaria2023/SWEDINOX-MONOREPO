@@ -85,22 +85,11 @@ export const createInvoice = async (
   surcharges: InvoiceSurchargeInput[] = [],
 ): Promise<InvoiceActionResult> => {
   const uuid = generateUuid();
-  const reverseChargeScenarios = [
-    "domestic_purchase_vat_shifted",
-    "purchase_within_eu_with_reverse_charge",
-    "purchase_outside_eu_with_reverse_charge",
-    "sales_within_eu_with_reverse_charge",
-    "sales_outside_eu_with_reverse_charge",
-  ];
   const exclVat = surcharges.reduce(
-    (sum, s) => sum + parseFloat(s.surcharge ?? "0"),
+    (sum, s) => sum + parseFloat(s.amount ?? "0"),
     0,
   );
-  const vatRate =
-    fields.vatScenario && !reverseChargeScenarios.includes(fields.vatScenario)
-      ? 0.21
-      : 0;
-  const invoiceAmountInclVat = (exclVat * (1 + vatRate)).toFixed(2);
+  const invoiceAmountInclVat = (exclVat * 1.21).toFixed(2);
   const creditRestriction = "0.00";
   const invoiceTotal = invoiceAmountInclVat;
   const outstanding = invoiceTotal;
