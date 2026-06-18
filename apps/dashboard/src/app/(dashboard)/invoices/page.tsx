@@ -75,7 +75,7 @@ const InvoicesPage = async () => {
                   <TableCell className="whitespace-nowrap">
                     {inv.companyCode ?? na}
                   </TableCell>
-                  <TableCell>{inv.companyDebtorNo ?? na}</TableCell>
+                  <TableCell>{inv.debtorNo ?? na}</TableCell>
                   <TableCell className="whitespace-nowrap">
                     {inv.invoiceDate ?? na}
                   </TableCell>

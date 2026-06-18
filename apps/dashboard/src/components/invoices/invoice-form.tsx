@@ -61,6 +61,7 @@ export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
   const [isSurchargeDialogOpen, setIsSurchargeDialogOpen] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [surchargeError, setSurchargeError] = useState<string | null>(null);
+  const [debtorCompanyUuid, setDebtorCompanyUuid] = useState("");
 
   const { form, isPending, onSubmit: submitForm, state } = useInvoiceSubmit(surcharges);
 
@@ -78,6 +79,13 @@ export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
   const calculateVat = watch("calculateVat");
   const vatScenario = watch("vatScenario");
   const paymentTerms = watch("paymentTerms");
+  const companyUuid = watch("companyUuid");
+
+  useEffect(() => {
+    const company = availableCompanies.find((c) => c.uuid === companyUuid);
+    setDebtorCompanyUuid(company?.uuid ?? "");
+    setValue("debtorNo", company?.debtorNo ?? "");
+  }, [companyUuid, availableCompanies, setValue]);
 
   useEffect(() => {
     if (state.success) {
@@ -91,6 +99,14 @@ export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
   });
 
   const companyOptions = [
+    { value: "", label: COMMON_TEXT.emptyOption },
+    ...availableCompanies.map((c) => ({
+      value: c.uuid,
+      label: [c.searchCode1, c.companyName].filter(Boolean).join(" — "),
+    })),
+  ];
+
+  const debtorOptions = [
     { value: "", label: COMMON_TEXT.emptyOption },
     ...availableCompanies.map((c) => ({
       value: c.uuid,
@@ -189,6 +205,20 @@ export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
                     disabled={isPending}
                   />
                 )}
+              />
+            </div>
+            <div>
+              <FormLabel htmlFor="debtorNo">Debtor No.</FormLabel>
+              <Select
+                id="debtorNo"
+                options={debtorOptions}
+                value={debtorCompanyUuid}
+                onValueChange={(uuid) => {
+                  setDebtorCompanyUuid(uuid);
+                  const company = availableCompanies.find((c) => c.uuid === uuid);
+                  setValue("debtorNo", company?.debtorNo ?? "");
+                }}
+                disabled={isPending}
               />
             </div>
             <div className="grid grid-cols-2 gap-3">

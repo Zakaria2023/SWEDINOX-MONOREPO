@@ -18,7 +18,7 @@ import { currentUser } from "@clerk/nextjs/server";
 
 export type CompanyOption = Pick<
   SelectCompanies,
-  "uuid" | "searchCode1" | "companyName" | "roles"
+  "uuid" | "searchCode1" | "companyName" | "roles" | "debtorNo"
 >;
 
 export type AddressInput = Omit<
@@ -77,6 +77,7 @@ export const getCompaniesForSelect = async (): Promise<CompanyOption[]> => {
       searchCode1: Companies.searchCode1,
       companyName: Companies.companyName,
       roles: Companies.roles,
+      debtorNo: Companies.debtorNo,
     })
     .from(Companies)
     .orderBy(asc(Companies.companyName));

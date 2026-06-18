@@ -23,6 +23,7 @@ export const Invoices = mysqlTable(
     uuid: char("uuid", { length: 36 }).notNull().unique(),
 
     companyUuid: char("company_uuid", { length: 36 }),
+    debtorNo: varchar("debtor_no", { length: 100 }),
 
     invoiceDate: date("invoice_date", { mode: "string" }),
     expirationDate: date("expiration_date", { mode: "string" }),

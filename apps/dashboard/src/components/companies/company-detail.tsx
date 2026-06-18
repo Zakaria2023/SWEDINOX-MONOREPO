@@ -141,6 +141,7 @@ export const CompanyDetailView = ({ company, invoices }: Props) => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Invoice No.</TableHead>
+                    <TableHead>Debtor No.</TableHead>
                     <TableHead>Invoice Date</TableHead>
                     <TableHead>Expiration Date</TableHead>
                     <TableHead className="text-right">Excl. VAT</TableHead>
@@ -159,6 +160,7 @@ export const CompanyDetailView = ({ company, invoices }: Props) => {
                       <TableCell className="font-medium whitespace-nowrap">
                         {inv.id}
                       </TableCell>
+                      <TableCell>{inv.debtorNo ?? na}</TableCell>
                       <TableCell className="whitespace-nowrap">
                         {inv.invoiceDate ?? na}
                       </TableCell>
