@@ -4,7 +4,6 @@ import { invoicePaymentTerms, invoiceSurchargeDescriptions, invoiceVatScenarios 
 export const createInvoiceSchema = () =>
   z.object({
     companyUuid: z.string().optional(),
-    debtorNo: z.string().optional(),
     invoiceDate: z.string().optional(),
     expirationDate: z.string().optional(),
     calculateVat: z.boolean(),

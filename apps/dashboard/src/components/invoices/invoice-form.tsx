@@ -191,10 +191,6 @@ export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
                 )}
               />
             </div>
-            <div>
-              <FormLabel htmlFor="debtorNo">Debtor No</FormLabel>
-              <Input id="debtorNo" {...register("debtorNo")} disabled={isPending} />
-            </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <FormLabel>Invoice Date</FormLabel>

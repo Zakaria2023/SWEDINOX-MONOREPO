@@ -18,7 +18,6 @@ export const useInvoiceSubmit = (surcharges: InvoiceSurchargeInput[]) => {
     resolver: zodResolver(createInvoiceSchema()),
     defaultValues: {
       companyUuid: "",
-      debtorNo: "",
       invoiceDate: "",
       expirationDate: "",
       calculateVat: false,
@@ -35,7 +34,6 @@ export const useInvoiceSubmit = (surcharges: InvoiceSurchargeInput[]) => {
       const result = await createInvoice(
         {
           companyUuid: values.companyUuid || undefined,
-          debtorNo: values.debtorNo || undefined,
           invoiceDate: values.invoiceDate || undefined,
           expirationDate: values.expirationDate || undefined,
           calculateVat: values.calculateVat,

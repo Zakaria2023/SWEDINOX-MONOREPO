@@ -39,6 +39,7 @@ export type InvoiceSurchargeInput = Omit<
 export type InvoiceWithCompany = SelectInvoices & {
   companyName: string | null;
   companyCode: number | null;
+  companyDebtorNo: string | null;
 };
 
 export const getInvoices = async (): Promise<InvoiceWithCompany[]> => {
@@ -54,6 +55,7 @@ export const getInvoices = async (): Promise<InvoiceWithCompany[]> => {
       uuid: Companies.uuid,
       id: Companies.id,
       companyName: Companies.companyName,
+      debtorNo: Companies.debtorNo,
     })
     .from(Companies);
 
@@ -67,6 +69,7 @@ export const getInvoices = async (): Promise<InvoiceWithCompany[]> => {
       ...inv,
       companyName: company?.companyName ?? null,
       companyCode: company?.id ?? null,
+      companyDebtorNo: company?.debtorNo ?? null,
     };
   });
 };
