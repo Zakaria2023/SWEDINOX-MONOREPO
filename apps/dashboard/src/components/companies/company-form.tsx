@@ -29,13 +29,12 @@ import {
 import { ContractListItem } from "@/app/(dashboard)/contracts/actions";
 import { TextCategoryOption } from "@/app/(dashboard)/text-categories/actions";
 import { AddressForm } from "@/components/companies/address-form";
-import { Button } from "@/components/shadcn/button";
+import { DialogFormFooter } from "@/components/companies/dialog-form-footer";
 import {
   Dialog,
   DialogBody,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/shadcn/dialog";
@@ -1015,20 +1014,11 @@ export const CompanyForm = ({
               watch={watch}
             />
           </div>
-          <div className="shrink-0 border-t bg-background px-6 py-4">
-            <div className="flex justify-end gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setIsFirstAddressDialogOpen(false)}
-              >
-                {COMMON_TEXT.cancel}
-              </Button>
-              <Button type="button" onClick={handleSaveFirstAddress}>
-                Save Address
-              </Button>
-            </div>
-          </div>
+          <DialogFormFooter
+            onCancel={() => setIsFirstAddressDialogOpen(false)}
+            submitLabel="Save Address"
+            onSubmit={handleSaveFirstAddress}
+          />
         </DialogContent>
       </Dialog>
 
@@ -1062,23 +1052,14 @@ export const CompanyForm = ({
               availableCategories={availableForNext}
             />
           </div>
-          <div className="shrink-0 border-t bg-background px-6 py-4">
-            <div className="flex justify-end gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  resetAdditionalForm();
-                  setIsAdditionalAddressDialogOpen(false);
-                }}
-              >
-                {COMMON_TEXT.cancel}
-              </Button>
-              <Button type="button" onClick={handleSaveAdditionalAddress}>
-                Save Address
-              </Button>
-            </div>
-          </div>
+          <DialogFormFooter
+            onCancel={() => {
+              resetAdditionalForm();
+              setIsAdditionalAddressDialogOpen(false);
+            }}
+            submitLabel="Save Address"
+            onSubmit={handleSaveAdditionalAddress}
+          />
         </DialogContent>
       </Dialog>
 
@@ -1194,20 +1175,14 @@ export const CompanyForm = ({
                 </div>
               )}
             </DialogBody>
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  commSettingForm.reset(DEFAULT_COMM_SETTING);
-                  setSelectedCommType("");
-                  setIsCommSettingDialogOpen(false);
-                }}
-              >
-                {COMMON_TEXT.cancel}
-              </Button>
-              <Button type="submit">Add Setting</Button>
-            </DialogFooter>
+            <DialogFormFooter
+              onCancel={() => {
+                commSettingForm.reset(DEFAULT_COMM_SETTING);
+                setSelectedCommType("");
+                setIsCommSettingDialogOpen(false);
+              }}
+              submitLabel="Add Setting"
+            />
           </form>
         </DialogContent>
       </Dialog>
@@ -1303,19 +1278,13 @@ export const CompanyForm = ({
               </div>
             </DialogBody>
 
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  contractSelectionForm.reset(DEFAULT_CONTRACT_SELECTION);
-                  setIsContractDialogOpen(false);
-                }}
-              >
-                {COMMON_TEXT.cancel}
-              </Button>
-              <Button type="submit">Add Contract</Button>
-            </DialogFooter>
+            <DialogFormFooter
+              onCancel={() => {
+                contractSelectionForm.reset(DEFAULT_CONTRACT_SELECTION);
+                setIsContractDialogOpen(false);
+              }}
+              submitLabel="Add Contract"
+            />
           </form>
         </DialogContent>
       </Dialog>
@@ -1424,21 +1393,13 @@ export const CompanyForm = ({
               </div>
             </div>
 
-            <div className="shrink-0 border-t bg-background px-6 py-4">
-              <div className="flex justify-end gap-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    textForm.reset(DEFAULT_TEXT);
-                    setIsTextDialogOpen(false);
-                  }}
-                >
-                  {COMMON_TEXT.cancel}
-                </Button>
-                <Button type="submit">Add Text</Button>
-              </div>
-            </div>
+            <DialogFormFooter
+              onCancel={() => {
+                textForm.reset(DEFAULT_TEXT);
+                setIsTextDialogOpen(false);
+              }}
+              submitLabel="Add Text"
+            />
           </form>
         </DialogContent>
       </Dialog>
@@ -1712,21 +1673,13 @@ export const CompanyForm = ({
               </div>
             </div>
 
-            <div className="shrink-0 border-t bg-background px-6 py-4">
-              <div className="flex justify-end gap-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    contactForm.reset(DEFAULT_CONTACT);
-                    setIsContactDialogOpen(false);
-                  }}
-                >
-                  {COMMON_TEXT.cancel}
-                </Button>
-                <Button type="submit">Add Contact</Button>
-              </div>
-            </div>
+            <DialogFormFooter
+              onCancel={() => {
+                contactForm.reset(DEFAULT_CONTACT);
+                setIsContactDialogOpen(false);
+              }}
+              submitLabel="Add Contact"
+            />
           </form>
         </DialogContent>
       </Dialog>
