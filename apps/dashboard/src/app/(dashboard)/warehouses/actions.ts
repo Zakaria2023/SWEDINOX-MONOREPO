@@ -4,7 +4,7 @@ import { db } from "@/db";
 import { InsertWarehouses, Warehouses } from "@/db/schema/warehouses";
 import { generateUuid } from "@/lib/helpers";
 import { asc, desc, isNull } from "drizzle-orm";
-import type { SelectWarehouses } from "@/db/schema/warehouses";
+import { SelectWarehouses } from "@/db/schema/warehouses";
 
 export type WarehouseOption = Pick<
   SelectWarehouses,
