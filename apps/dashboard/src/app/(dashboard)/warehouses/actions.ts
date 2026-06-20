@@ -17,6 +17,12 @@ export type WarehouseOption = Pick<
   | "blockReason"
   | "blockedForOptimization"
   | "limitedDimensions"
+  | "minLength"
+  | "maxLength"
+  | "maxWidth"
+  | "maxWeight"
+  | "productTypes"
+  | "loadLocations"
 >;
 
 export type WarehouseItemOption = Pick<
@@ -30,6 +36,11 @@ export type WarehouseItemOption = Pick<
   | "blockReason"
   | "blockedForOptimization"
   | "limitedDimensions"
+  | "minLength"
+  | "maxLength"
+  | "maxWidth"
+  | "maxWeight"
+  | "productTypes"
 >;
 
 export type WarehouseFields = Omit<
@@ -56,6 +67,12 @@ export const getWarehousesForSelect = async (): Promise<WarehouseOption[]> => {
       blockReason: Warehouses.blockReason,
       blockedForOptimization: Warehouses.blockedForOptimization,
       limitedDimensions: Warehouses.limitedDimensions,
+      minLength: Warehouses.minLength,
+      maxLength: Warehouses.maxLength,
+      maxWidth: Warehouses.maxWidth,
+      maxWeight: Warehouses.maxWeight,
+      productTypes: Warehouses.productTypes,
+      loadLocations: Warehouses.loadLocations,
     })
     .from(Warehouses)
     .where(isNull(Warehouses.parentUuid))
@@ -77,6 +94,11 @@ export const getAllWarehouseItemsForSelect = async (): Promise<
       blockReason: Warehouses.blockReason,
       blockedForOptimization: Warehouses.blockedForOptimization,
       limitedDimensions: Warehouses.limitedDimensions,
+      minLength: Warehouses.minLength,
+      maxLength: Warehouses.maxLength,
+      maxWidth: Warehouses.maxWidth,
+      maxWeight: Warehouses.maxWeight,
+      productTypes: Warehouses.productTypes,
     })
     .from(Warehouses)
     .orderBy(asc(Warehouses.name));

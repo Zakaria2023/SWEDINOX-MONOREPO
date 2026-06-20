@@ -8,6 +8,7 @@ import {
   WarehouseBlockReason,
   WarehouseLoadingLocation,
   WarehouseLocationType,
+  WarehouseProductType,
 } from "@/lib/enums";
 import {
   COMMON_TEXT,
@@ -129,6 +130,11 @@ export const useWarehouseSubSectionSubmit = ({
       blockReason: source.blockReason ?? "",
       blockedForOptimization: source.blockedForOptimization,
       limitedDimensions: source.limitedDimensions,
+      minLength: source.minLength ?? "",
+      maxLength: source.maxLength ?? "",
+      maxWidth: source.maxWidth ?? "",
+      maxWeight: source.maxWeight ?? "",
+      productTypes: (source.productTypes ?? []) as WarehouseProductType[],
       pickingSequence: currentPickingSequence,
     });
   };
@@ -163,6 +169,24 @@ export const useWarehouseSubSectionSubmit = ({
           : undefined,
         blockedForOptimization: values.blockedForOptimization,
         limitedDimensions: values.limitedDimensions,
+        minLength:
+          values.minLength !== "" && values.minLength !== undefined
+            ? Number(values.minLength)
+            : undefined,
+        maxLength:
+          values.maxLength !== "" && values.maxLength !== undefined
+            ? Number(values.maxLength)
+            : undefined,
+        maxWidth:
+          values.maxWidth !== "" && values.maxWidth !== undefined
+            ? Number(values.maxWidth)
+            : undefined,
+        maxWeight:
+          values.maxWeight !== "" && values.maxWeight !== undefined
+            ? Number(values.maxWeight)
+            : undefined,
+        productTypes:
+          values.productTypes.length > 0 ? values.productTypes : undefined,
         pickingSequence:
           values.pickingSequence !== "" && values.pickingSequence !== undefined
             ? Number(values.pickingSequence)

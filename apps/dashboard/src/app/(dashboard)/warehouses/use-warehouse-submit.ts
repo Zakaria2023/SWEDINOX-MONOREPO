@@ -10,6 +10,8 @@ import {
   WarehouseBlockReason,
   WarehouseLoadingLocation,
   WarehouseLocationType,
+  WarehouseProductType,
+  WarehouseTransportRegion,
 } from "@/lib/enums";
 import {
   COMMON_TEXT,
@@ -96,6 +98,15 @@ export const useWarehouseSubmit = ({
       blockReason: source.blockReason ?? "",
       blockedForOptimization: source.blockedForOptimization,
       limitedDimensions: source.limitedDimensions,
+      minLength: source.minLength ?? "",
+      maxLength: source.maxLength ?? "",
+      maxWidth: source.maxWidth ?? "",
+      maxWeight: source.maxWeight ?? "",
+      productTypes: (source.productTypes ?? []) as WarehouseProductType[],
+      loadLocations: (source.loadLocations ?? []) as Array<{
+        transportRegion: WarehouseTransportRegion;
+        loadLocation: WarehouseLoadingLocation;
+      }>,
     });
   };
 
@@ -126,6 +137,26 @@ export const useWarehouseSubmit = ({
           : undefined,
         blockedForOptimization: values.blockedForOptimization,
         limitedDimensions: values.limitedDimensions,
+        minLength:
+          values.minLength !== "" && values.minLength !== undefined
+            ? Number(values.minLength)
+            : undefined,
+        maxLength:
+          values.maxLength !== "" && values.maxLength !== undefined
+            ? Number(values.maxLength)
+            : undefined,
+        maxWidth:
+          values.maxWidth !== "" && values.maxWidth !== undefined
+            ? Number(values.maxWidth)
+            : undefined,
+        maxWeight:
+          values.maxWeight !== "" && values.maxWeight !== undefined
+            ? Number(values.maxWeight)
+            : undefined,
+        productTypes:
+          values.productTypes.length > 0 ? values.productTypes : undefined,
+        loadLocations:
+          values.loadLocations.length > 0 ? values.loadLocations : undefined,
       });
       setState(result);
       if (result.success) router.push("/warehouses");
