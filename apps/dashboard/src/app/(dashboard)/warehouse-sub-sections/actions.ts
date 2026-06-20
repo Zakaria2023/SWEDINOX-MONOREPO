@@ -7,24 +7,12 @@ import {
 } from "@/db/schema/warehouse-sub-sections";
 import { generateUuid } from "@/lib/helpers";
 import { asc, desc } from "drizzle-orm";
-import type { SelectWarehouseSubSections } from "@/db/schema/warehouse-sub-sections";
+import { SelectWarehouseSubSections } from "@/db/schema/warehouse-sub-sections";
 
 export type WarehouseSubSectionOption = Pick<
   SelectWarehouseSubSections,
   "uuid" | "name" | "warehouseUuid"
 >;
-
-export const getWarehouseSubSectionsForSelect =
-  async (): Promise<WarehouseSubSectionOption[]> => {
-    return db
-      .select({
-        uuid: WarehouseSubSections.uuid,
-        name: WarehouseSubSections.name,
-        warehouseUuid: WarehouseSubSections.warehouseUuid,
-      })
-      .from(WarehouseSubSections)
-      .orderBy(asc(WarehouseSubSections.name));
-  };
 
 export type WarehouseSubSectionFields = Omit<
   InsertWarehouseSubSections,
@@ -35,6 +23,19 @@ export type WarehouseSubSectionActionResult = {
   subSectionUuid?: string;
   error?: string;
   success?: boolean;
+};
+
+export const getWarehouseSubSectionsForSelect = async (): Promise<
+  WarehouseSubSectionOption[]
+> => {
+  return db
+    .select({
+      uuid: WarehouseSubSections.uuid,
+      name: WarehouseSubSections.name,
+      warehouseUuid: WarehouseSubSections.warehouseUuid,
+    })
+    .from(WarehouseSubSections)
+    .orderBy(asc(WarehouseSubSections.name));
 };
 
 export const getWarehouseSubSections = async () => {

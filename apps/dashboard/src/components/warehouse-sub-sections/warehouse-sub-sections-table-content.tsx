@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { SelectWarehouseSubSections } from "@/db";
+import { SelectWarehouseSubSections } from "@/db";
 import {
   Table,
   TableBody,
@@ -16,7 +16,7 @@ import {
   WAREHOUSE_LOADING_LOCATION_LABELS,
   WAREHOUSE_LOCATION_TYPE_LABELS,
 } from "@/lib/labels";
-import type {
+import {
   WarehouseBlockReason,
   WarehouseLoadingLocation,
   WarehouseLocationType,
@@ -124,9 +124,7 @@ export const WarehouseSubSectionsTableContent = ({ subSections }: Props) => {
         );
       case "blocked":
         return (
-          <TableCell key={key}>
-            {subSection.blocked ? "Yes" : "No"}
-          </TableCell>
+          <TableCell key={key}>{subSection.blocked ? "Yes" : "No"}</TableCell>
         );
       case "blockReason":
         return (

@@ -5,9 +5,9 @@ import {
   warehouseBlockReasons,
   warehouseLoadingLocations,
   warehouseLocationTypes,
-  type WarehouseBlockReason,
-  type WarehouseLoadingLocation,
-  type WarehouseLocationType,
+  WarehouseBlockReason,
+  WarehouseLoadingLocation,
+  WarehouseLocationType,
 } from "@/lib/enums";
 import {
   COMMON_TEXT,
@@ -18,16 +18,16 @@ import {
 import { useRouter } from "next/navigation";
 import { useTransition, useState } from "react";
 import { useForm } from "react-hook-form";
-import type { WarehouseOption } from "@/app/(dashboard)/warehouses/actions";
+import { WarehouseOption } from "@/app/(dashboard)/warehouses/actions";
 import {
   createWarehouseSubSection,
-  type WarehouseSubSectionActionResult,
-  type WarehouseSubSectionOption,
+  WarehouseSubSectionActionResult,
+  WarehouseSubSectionOption,
 } from "./actions";
 import {
   createWarehouseSubSectionSchema,
   DEFAULT_WAREHOUSE_SUB_SECTION,
-  type WarehouseSubSectionFormValues,
+  WarehouseSubSectionFormValues,
 } from "./validation";
 
 type UseWarehouseSubSectionSubmitParams = {
@@ -120,14 +120,17 @@ export const useWarehouseSubSectionSubmit = ({
       const result = await createWarehouseSubSection({
         warehouseUuid: values.warehouseUuid,
         name: values.name,
-        locationType: (values.locationType ||
-          undefined) as WarehouseLocationType | undefined,
-        loadingLocation: (values.loadingLocation ||
-          undefined) as WarehouseLoadingLocation | undefined,
+        locationType: (values.locationType || undefined) as
+          | WarehouseLocationType
+          | undefined,
+        loadingLocation: (values.loadingLocation || undefined) as
+          | WarehouseLoadingLocation
+          | undefined,
         blocked: values.blocked,
         blockReason: values.blocked
-          ? ((values.blockReason ||
-              undefined) as WarehouseBlockReason | undefined)
+          ? ((values.blockReason || undefined) as
+              | WarehouseBlockReason
+              | undefined)
           : undefined,
         blockedForOptimization: values.blockedForOptimization,
         limitedDimensions: values.limitedDimensions,

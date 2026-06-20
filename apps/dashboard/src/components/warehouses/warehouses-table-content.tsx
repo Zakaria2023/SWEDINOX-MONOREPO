@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { SelectWarehouses } from "@/db";
+import { SelectWarehouses } from "@/db";
 import {
   Table,
   TableBody,
@@ -17,7 +17,7 @@ import {
   WAREHOUSE_LOADING_LOCATION_LABELS,
   WAREHOUSE_LOCATION_TYPE_LABELS,
 } from "@/lib/labels";
-import type {
+import {
   WarehouseAddress,
   WarehouseBlockReason,
   WarehouseLoadingLocation,

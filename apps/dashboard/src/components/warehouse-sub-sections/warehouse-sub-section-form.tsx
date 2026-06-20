@@ -1,8 +1,8 @@
 "use client";
 
 import { useWarehouseSubSectionSubmit } from "@/app/(dashboard)/warehouse-sub-sections/use-warehouse-sub-section-submit";
-import type { WarehouseOption } from "@/app/(dashboard)/warehouses/actions";
-import type { WarehouseSubSectionOption } from "@/app/(dashboard)/warehouse-sub-sections/actions";
+import { WarehouseOption } from "@/app/(dashboard)/warehouses/actions";
+import { WarehouseSubSectionOption } from "@/app/(dashboard)/warehouse-sub-sections/actions";
 import { Checkbox } from "@/components/shadcn/checkbox";
 import { Input } from "@/components/shadcn/input";
 import { FormActions } from "@/components/ui/form-actions";
@@ -165,7 +165,9 @@ export const WarehouseSubSectionForm = ({ warehouses, subSections }: Props) => {
                 setValue("blockedForOptimization", e.target.checked)
               }
             />
-            <span className="text-sm font-medium">Blocked for Optimization</span>
+            <span className="text-sm font-medium">
+              Blocked for Optimization
+            </span>
           </label>
 
           <label className="flex cursor-pointer items-center gap-3">
