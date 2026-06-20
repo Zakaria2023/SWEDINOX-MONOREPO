@@ -39,6 +39,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/shadcn/dialog";
+import { Checkbox } from "@/components/shadcn/checkbox";
 import { Input } from "@/components/shadcn/input";
 import { Select } from "@/components/shadcn/select";
 import { FormActions } from "@/components/ui/form-actions";
@@ -753,9 +754,7 @@ export const CompanyForm = ({
                       : "cursor-pointer hover:bg-muted/40",
                   )}
                 >
-                  <input
-                    type="checkbox"
-                    className="size-4 rounded border-border accent-primary"
+                  <Checkbox
                     checked={selectedRoles.includes(role)}
                     onChange={() => toggleRole(role)}
                     disabled={isDisabled}
@@ -1411,9 +1410,7 @@ export const CompanyForm = ({
                     control={textForm.control}
                     render={({ field: f }) => (
                       <label className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 hover:bg-muted/40">
-                        <input
-                          type="checkbox"
-                          className="size-4 rounded border-border accent-primary"
+                        <Checkbox
                           checked={!!f.value}
                           onChange={(e) => f.onChange(e.target.checked)}
                         />
@@ -1595,10 +1592,8 @@ export const CompanyForm = ({
                     name="poBox"
                     control={contactForm.control}
                     render={({ field }) => (
-                      <input
-                        type="checkbox"
+                      <Checkbox
                         id="co-poBox"
-                        className="size-4 rounded border-border accent-primary"
                         checked={field.value}
                         onChange={field.onChange}
                       />
@@ -1689,9 +1684,7 @@ export const CompanyForm = ({
                           key={cat}
                           className="flex cursor-pointer items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 hover:bg-muted/40"
                         >
-                          <input
-                            type="checkbox"
-                            className="size-4 rounded border-border accent-primary"
+                          <Checkbox
                             checked={(field.value as string[]).includes(cat)}
                             onChange={() => toggleContactCategory(cat)}
                           />
