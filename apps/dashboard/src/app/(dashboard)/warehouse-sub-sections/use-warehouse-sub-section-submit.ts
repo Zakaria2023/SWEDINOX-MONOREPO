@@ -2,18 +2,15 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  warehouseAddresses,
   warehouseBlockReasons,
   warehouseLoadingLocations,
   warehouseLocationTypes,
-  type WarehouseAddress,
   type WarehouseBlockReason,
   type WarehouseLoadingLocation,
   type WarehouseLocationType,
 } from "@/lib/enums";
 import {
   COMMON_TEXT,
-  WAREHOUSE_ADDRESS_LABELS,
   WAREHOUSE_BLOCK_REASON_LABELS,
   WAREHOUSE_LOADING_LOCATION_LABELS,
   WAREHOUSE_LOCATION_TYPE_LABELS,
@@ -21,37 +18,52 @@ import {
 import { useRouter } from "next/navigation";
 import { useTransition, useState } from "react";
 import { useForm } from "react-hook-form";
+import type { WarehouseOption } from "@/app/(dashboard)/warehouses/actions";
 import {
-  createWarehouse,
-  type WarehouseActionResult,
-  type WarehouseOption,
+  createWarehouseSubSection,
+  type WarehouseSubSectionActionResult,
+  type WarehouseSubSectionOption,
 } from "./actions";
-import type { WarehouseSubSectionOption } from "@/app/(dashboard)/warehouse-sub-sections/actions";
 import {
-  createWarehouseSchema,
-  DEFAULT_WAREHOUSE,
-  type WarehouseFormValues,
+  createWarehouseSubSectionSchema,
+  DEFAULT_WAREHOUSE_SUB_SECTION,
+  type WarehouseSubSectionFormValues,
 } from "./validation";
 
-type UseWarehouseSubmitParams = {
-  existingWarehouses: WarehouseOption[];
+type UseWarehouseSubSectionSubmitParams = {
+  warehouses: WarehouseOption[];
   subSections: WarehouseSubSectionOption[];
 };
 
-export const useWarehouseSubmit = ({
-  existingWarehouses,
+export const useWarehouseSubSectionSubmit = ({
+  warehouses,
   subSections,
-}: UseWarehouseSubmitParams) => {
+}: UseWarehouseSubSectionSubmitParams) => {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [state, setState] = useState<WarehouseActionResult>({});
+  const [state, setState] = useState<WarehouseSubSectionActionResult>({});
 
-  const form = useForm<WarehouseFormValues>({
-    resolver: zodResolver(createWarehouseSchema()),
-    defaultValues: DEFAULT_WAREHOUSE,
+  const form = useForm<WarehouseSubSectionFormValues>({
+    resolver: zodResolver(createWarehouseSubSectionSchema()),
+    defaultValues: DEFAULT_WAREHOUSE_SUB_SECTION,
   });
 
   const blocked = form.watch("blocked");
+
+  const warehouseOptions = [
+    { value: "", label: COMMON_TEXT.selectPlaceholder },
+    ...warehouses.flatMap((w) => {
+      const children = subSections.filter((s) => s.warehouseUuid === w.uuid);
+      return [
+        { value: w.uuid, label: w.name, disabled: false },
+        ...children.map((s) => ({
+          value: s.uuid,
+          label: `  └ ${s.name}`,
+          disabled: true,
+        })),
+      ];
+    }),
+  ];
 
   const locationTypeOptions = [
     { value: "", label: COMMON_TEXT.emptyOption },
@@ -77,58 +89,41 @@ export const useWarehouseSubmit = ({
     })),
   ];
 
-  const adaptFromOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
-    ...existingWarehouses.flatMap((w) => {
-      const children = subSections.filter((s) => s.warehouseUuid === w.uuid);
-      return [
-        { value: w.uuid, label: w.name, disabled: false },
-        ...children.map((s) => ({
-          value: s.uuid,
-          label: `  └ ${s.name}`,
-          disabled: true,
-        })),
-      ];
-    }),
-  ];
-
   const handleAdaptFrom = (uuid: string) => {
     const currentName = form.getValues("name");
+    const currentPickingSequence = form.getValues("pickingSequence");
     if (!uuid) {
-      form.reset({ ...DEFAULT_WAREHOUSE, name: currentName });
+      form.reset({
+        ...DEFAULT_WAREHOUSE_SUB_SECTION,
+        name: currentName,
+        pickingSequence: currentPickingSequence,
+      });
       return;
     }
-    const source = existingWarehouses.find((w) => w.uuid === uuid);
+    const source = warehouses.find((w) => w.uuid === uuid);
     if (!source) return;
     form.reset({
+      warehouseUuid: uuid,
       name: currentName,
       locationType: source.locationType ?? "",
       loadingLocation: source.loadingLocation ?? "",
-      address: source.address ?? "",
       blocked: source.blocked,
       blockReason: source.blockReason ?? "",
       blockedForOptimization: source.blockedForOptimization,
       limitedDimensions: source.limitedDimensions,
+      pickingSequence: currentPickingSequence,
     });
   };
 
-  const addressOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
-    ...warehouseAddresses.map((a) => ({
-      value: a,
-      label: WAREHOUSE_ADDRESS_LABELS[a as WarehouseAddress],
-    })),
-  ];
-
   const onSubmit = form.handleSubmit((values) => {
     startTransition(async () => {
-      const result = await createWarehouse({
+      const result = await createWarehouseSubSection({
+        warehouseUuid: values.warehouseUuid,
         name: values.name,
         locationType: (values.locationType ||
           undefined) as WarehouseLocationType | undefined,
         loadingLocation: (values.loadingLocation ||
           undefined) as WarehouseLoadingLocation | undefined,
-        address: (values.address || undefined) as WarehouseAddress | undefined,
         blocked: values.blocked,
         blockReason: values.blocked
           ? ((values.blockReason ||
@@ -136,13 +131,17 @@ export const useWarehouseSubmit = ({
           : undefined,
         blockedForOptimization: values.blockedForOptimization,
         limitedDimensions: values.limitedDimensions,
+        pickingSequence:
+          values.pickingSequence !== "" && values.pickingSequence !== undefined
+            ? Number(values.pickingSequence)
+            : undefined,
       });
       setState(result);
-      if (result.success) router.push("/warehouses");
+      if (result.success) router.push("/warehouse-sub-sections");
     });
   });
 
-  const handleCancel = () => router.push("/warehouses");
+  const handleCancel = () => router.push("/warehouse-sub-sections");
 
   return {
     form,
@@ -150,11 +149,10 @@ export const useWarehouseSubmit = ({
     onSubmit,
     state,
     blocked,
+    warehouseOptions,
     locationTypeOptions,
     loadingLocationOptions,
     blockReasonOptions,
-    addressOptions,
-    adaptFromOptions,
     handleAdaptFrom,
     handleCancel,
   };

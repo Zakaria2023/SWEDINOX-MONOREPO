@@ -6,3 +6,4 @@ export * from "./contacts";
 export * from "./text-categories";
 export * from "./texts";
 export * from "./warehouses";
+export * from "./warehouse-sub-sections";
