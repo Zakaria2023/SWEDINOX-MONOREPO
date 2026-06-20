@@ -1,35 +1,12 @@
 "use client";
 
-import {
-  CommSettingInput,
-  CompanyContactInput,
-  CompanyContractInput,
-  CompanyTextInput,
-} from "@/app/(dashboard)/companies/actions";
 import { useCompanySubmit } from "@/app/(dashboard)/companies/use-company-submit";
-import {
-  AddressFormValues,
-  CommSettingFormValues,
-  commSettingSchema,
-  CompanyFormValues,
-  contactDialogSchema,
-  ContactDialogValues,
-  contractSelectionSchema,
-  ContractSelectionValues,
-  createCompanySchema,
-  DEFAULT_ADDRESS,
-  DEFAULT_COMM_SETTING,
-  DEFAULT_CONTACT,
-  DEFAULT_CONTRACT_SELECTION,
-  DEFAULT_TEXT,
-  textDialogSchema,
-  TextDialogValues,
-  USAGE_CATEGORY_FIELDS,
-} from "@/app/(dashboard)/companies/validation";
-import { ContractListItem } from "@/app/(dashboard)/contracts/actions";
-import { TextCategoryOption } from "@/app/(dashboard)/text-categories/actions";
+import { USAGE_CATEGORY_FIELDS } from "@/app/(dashboard)/companies/validation";
+import { type ContractListItem } from "@/app/(dashboard)/contracts/actions";
+import { type TextCategoryOption } from "@/app/(dashboard)/text-categories/actions";
 import { AddressForm } from "@/components/companies/address-form";
 import { DialogFormFooter } from "@/components/companies/dialog-form-footer";
+import { Checkbox } from "@/components/shadcn/checkbox";
 import {
   Dialog,
   DialogBody,
@@ -38,37 +15,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/shadcn/dialog";
-import { Checkbox } from "@/components/shadcn/checkbox";
 import { Input } from "@/components/shadcn/input";
-import { Textarea } from "@/components/shadcn/textarea";
 import { Select } from "@/components/shadcn/select";
+import { Textarea } from "@/components/shadcn/textarea";
 import { FormActions } from "@/components/ui/form-actions";
 import { FormError } from "@/components/ui/form-error";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import { FormSelectField } from "@/components/ui/form-select-field";
-import {
-  addressCategories,
-  AddressCategory,
-  communicationSettingDocumentTypes,
-  communicationSettingShapes,
-  communicationSettingTypes,
-  companyLangs,
-  CompanyRole,
-  companyRoles,
-  contactCategories,
-  ContactCategory,
-  contactSalutations,
-  ContractableRole,
-  contractableRoles,
-} from "@/lib/enums";
+import { companyRoles, contactCategories, contactSalutations } from "@/lib/enums";
 import { cn } from "@/lib/helpers";
 import {
   ADDRESS_CATEGORY_LABELS,
   COMMON_TEXT,
-  COMMUNICATION_SETTING_DOCUMENT_TYPE_LABELS,
   COMMUNICATION_SETTING_SHAPE_LABELS,
-  COMMUNICATION_SETTING_TYPE_LABELS,
-  COMPANY_LANGUAGE_LABELS,
   COMPANY_ROLE_LABELS,
   CONTACT_CATEGORY_LABELS,
   CONTACT_SALUTATION_LABELS,
@@ -76,7 +35,6 @@ import {
   CONTRACTABLE_ROLE_LABELS,
   TEXT_USAGE_CATEGORY_LABELS,
 } from "@/lib/labels";
-import { zodResolver } from "@hookform/resolvers/zod";
 import {
   AlignLeft,
   FileText,
@@ -87,47 +45,7 @@ import {
   X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { Controller, useForm } from "react-hook-form";
-
-const AGENT_ALLOWED = new Set<CompanyRole>(["agent", "other", "internal"]);
-const PURCHASING_ORG_ALLOWED = new Set<CompanyRole>([
-  "purchasing_org",
-  "other",
-]);
-
-const getDisabledRoles = (selected: CompanyRole[]): Set<CompanyRole> => {
-  const disabled = new Set<CompanyRole>();
-
-  if (selected.includes("customer")) disabled.add("prospect");
-  if (selected.includes("prospect")) disabled.add("customer");
-
-  if (selected.includes("agent")) {
-    for (const r of companyRoles) {
-      if (!AGENT_ALLOWED.has(r)) disabled.add(r);
-    }
-  }
-
-  if (selected.includes("purchasing_org")) {
-    for (const r of companyRoles) {
-      if (!PURCHASING_ORG_ALLOWED.has(r)) disabled.add(r);
-    }
-  }
-
-  if (selected.some((r) => !AGENT_ALLOWED.has(r))) disabled.add("agent");
-  if (selected.some((r) => !PURCHASING_ORG_ALLOWED.has(r)))
-    disabled.add("purchasing_org");
-
-  return disabled;
-};
-
-const isContractableRole = (role: CompanyRole): role is ContractableRole =>
-  (contractableRoles as readonly string[]).includes(role);
-
-const getDefaultContractRole = (
-  roles: ContractableRole[],
-): ContractSelectionValues["role"] =>
-  roles.length === 1 ? roles[0] : ("" as ContractSelectionValues["role"]);
+import { Controller } from "react-hook-form";
 
 type CompanyFormProps = {
   availableContracts: ContractListItem[];
@@ -139,422 +57,83 @@ export const CompanyForm = ({
   textCategories,
 }: CompanyFormProps) => {
   const router = useRouter();
-  const [isFirstAddressDialogOpen, setIsFirstAddressDialogOpen] =
-    useState(false);
-  const [isAdditionalAddressDialogOpen, setIsAdditionalAddressDialogOpen] =
-    useState(false);
-  const [additionalAddresses, setAdditionalAddresses] = useState<
-    AddressFormValues[]
-  >([]);
-  const [isCommSettingDialogOpen, setIsCommSettingDialogOpen] = useState(false);
-  const [communicationSettings, setCommunicationSettings] = useState<
-    CommSettingInput[]
-  >([]);
-  const [selectedCommType, setSelectedCommType] = useState("");
-  const [isContractDialogOpen, setIsContractDialogOpen] = useState(false);
-  const [contracts, setContracts] = useState<CompanyContractInput[]>([]);
-  const [isContactDialogOpen, setIsContactDialogOpen] = useState(false);
-  const [contacts, setContacts] = useState<CompanyContactInput[]>([]);
-  const [isTextDialogOpen, setIsTextDialogOpen] = useState(false);
-  const [texts, setTexts] = useState<CompanyTextInput[]>([]);
+  const {
+    form,
+    isPending,
+    onSubmit,
+    state,
+    selectedRoles,
+    disabledRoles,
+    activeContractableRoles,
+    hasFirstAddress,
+    addressValues,
+    availableForNext,
+    langOptions,
+    documentTypeOptions,
+    communicationTypeOptions,
+    shapeOptions,
+    additionalForm,
+    additionalAddresses,
+    isFirstAddressDialogOpen,
+    setIsFirstAddressDialogOpen,
+    isAdditionalAddressDialogOpen,
+    handleAdditionalAddressOpenChange,
+    handleCancelFirstAddress,
+    handleCancelAdditionalAddress,
+    handleSaveFirstAddress,
+    handleSaveAdditionalAddress,
+    removeAdditionalAddress,
+    addressLabel,
+    commSettingForm,
+    communicationSettings,
+    selectedCommType,
+    setSelectedCommType,
+    isCommSettingDialogOpen,
+    handleCommSettingOpenChange,
+    handleOpenCommSetting,
+    handleCancelCommSetting,
+    handleSaveCommSetting,
+    removeCommSetting,
+    commSettingLabel,
+    contractSelectionForm,
+    contracts,
+    isContractDialogOpen,
+    handleContractOpenChange,
+    handleOpenContract,
+    handleCancelContract,
+    handleSaveContract,
+    removeContract,
+    contactForm,
+    contacts,
+    isContactDialogOpen,
+    handleContactOpenChange,
+    handleOpenContact,
+    handleCancelContact,
+    handleSaveContact,
+    toggleContactCategory,
+    removeContact,
+    textForm,
+    texts,
+    isTextDialogOpen,
+    handleTextOpenChange,
+    handleOpenText,
+    handleCancelText,
+    handleSaveText,
+    handleCategorySelect,
+    removeText,
+    toggleRole,
+  } = useCompanySubmit({ availableContracts, textCategories });
 
-  const { form, isPending, onSubmit, state } = useCompanySubmit();
   const {
     control,
     register,
     watch,
-    setValue,
-    trigger,
     formState: { errors },
   } = form;
 
-  const additionalForm = useForm<CompanyFormValues>({
-    resolver: zodResolver(createCompanySchema()),
-    defaultValues: {
-      companyName: "",
-      correspName: "",
-      remarks: "",
-      lang: "",
-      roles: [],
-      searchCode1: "",
-      searchCode2: "",
-      searchCode3: "",
-      address: { ...DEFAULT_ADDRESS, category: [] },
-    },
-  });
-
-  const commSettingForm = useForm<CommSettingFormValues>({
-    resolver: zodResolver(commSettingSchema),
-    defaultValues: DEFAULT_COMM_SETTING,
-  });
-
-  const contractSelectionForm = useForm<ContractSelectionValues>({
-    resolver: zodResolver(contractSelectionSchema),
-    defaultValues: DEFAULT_CONTRACT_SELECTION,
-  });
-
-  const contactForm = useForm<ContactDialogValues>({
-    resolver: zodResolver(contactDialogSchema),
-    defaultValues: DEFAULT_CONTACT,
-  });
-
-  const textForm = useForm<TextDialogValues>({
-    resolver: zodResolver(textDialogSchema),
-    defaultValues: DEFAULT_TEXT,
-  });
-
-  const addressValues = watch("address");
-  const selectedRoles: CompanyRole[] = watch("roles") ?? [];
-  const disabledRoles = getDisabledRoles(selectedRoles);
-  const activeContractableRoles = selectedRoles.filter(isContractableRole);
-
-  const usedCategories = new Set<AddressCategory>([
-    ...(addressValues.category ?? []),
-    ...additionalAddresses.flatMap((a) => a.category),
-  ]);
-  const NON_DELIVERY: AddressCategory[] = addressCategories.filter(
-    (c) => c !== "delivery",
-  );
-  const availableForNext: AddressCategory[] = [
-    ...NON_DELIVERY.filter((c) => !usedCategories.has(c)),
-    "delivery",
-  ];
-
-  const hasFirstAddress = !!(
-    addressValues.streetAndNo ||
-    addressValues.city ||
-    addressValues.altName ||
-    addressValues.postalCode
-  );
-
-  const langOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
-    ...companyLangs.map((lang) => ({
-      value: lang,
-      label: COMPANY_LANGUAGE_LABELS[lang],
-    })),
-  ];
-
-  const documentTypeOptions = [
-    { value: "", label: COMMON_TEXT.selectOption },
-    ...communicationSettingDocumentTypes.map((documentType) => ({
-      value: documentType,
-      label: COMMUNICATION_SETTING_DOCUMENT_TYPE_LABELS[documentType],
-    })),
-  ];
-
-  const communicationTypeOptions = [
-    { value: "", label: COMMON_TEXT.selectOption },
-    ...communicationSettingTypes.map((communicationType) => ({
-      value: communicationType,
-      label: COMMUNICATION_SETTING_TYPE_LABELS[communicationType],
-    })),
-  ];
-
-  const shapeOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
-    ...communicationSettingShapes.map((shape) => ({
-      value: shape,
-      label: COMMUNICATION_SETTING_SHAPE_LABELS[shape],
-    })),
-  ];
-
-  const resetAdditionalForm = () => {
-    additionalForm.reset({
-      companyName: "",
-      correspName: "",
-      remarks: "",
-      lang: "",
-      roles: [],
-      searchCode1: "",
-      searchCode2: "",
-      searchCode3: "",
-      address: { ...DEFAULT_ADDRESS, category: [] },
-    });
-  };
-
-  const addressLabel = (address: {
-    streetAndNo?: string;
-    city?: string;
-    altName?: string;
-  }) =>
-    [address.streetAndNo, address.city].filter(Boolean).join(", ") ||
-    address.altName ||
-    "Address";
-
-  const handleSaveFirstAddress = async () => {
-    if (await trigger("address")) {
-      setIsFirstAddressDialogOpen(false);
-    }
-  };
-
-  const handleSaveAdditionalAddress = async () => {
-    if (!(await additionalForm.trigger("address"))) {
-      return;
-    }
-
-    const values = additionalForm.getValues("address");
-    setAdditionalAddresses((prev) => [...prev, values]);
-    resetAdditionalForm();
-    setIsAdditionalAddressDialogOpen(false);
-  };
-
-  const handleSaveCommSetting = commSettingForm.handleSubmit((values) => {
-    setCommunicationSettings((prev) => [
-      ...prev,
-      {
-        documentType: values.documentType as CommSettingInput["documentType"],
-        communicationType:
-          values.communicationType as CommSettingInput["communicationType"],
-        shape: (values.shape || undefined) as CommSettingInput["shape"],
-        email:
-          values.communicationType === "email"
-            ? values.email || undefined
-            : undefined,
-        fax:
-          values.communicationType === "fax"
-            ? values.fax || undefined
-            : undefined,
-      },
-    ]);
-
-    commSettingForm.reset(DEFAULT_COMM_SETTING);
-    setSelectedCommType("");
-    setIsCommSettingDialogOpen(false);
-  });
-
-  const handleSaveContract = contractSelectionForm.handleSubmit((values) => {
-    const selected = availableContracts.find(
-      (c) => c.uuid === values.contractUuid,
-    );
-    if (!selected) return;
-    setContracts((prev) => [
-      ...prev,
-      {
-        role: values.role,
-        code: selected.code,
-        contractType: selected.contractType,
-        description: selected.description,
-        contractGroupUuid: selected.contractGroupUuid ?? undefined,
-        quicklyChangeOrder: selected.quicklyChangeOrder ?? undefined,
-        hasPriceDate: selected.hasPriceDate ?? false,
-        priceDate: selected.priceDate ?? undefined,
-        linkToNewCustomer: selected.linkToNewCustomer ?? false,
-        searchCode1: selected.searchCode1 ?? undefined,
-        searchCode2: selected.searchCode2 ?? undefined,
-        searchCode3: selected.searchCode3 ?? undefined,
-        websiteSorting: selected.websiteSorting ?? 10,
-        hideOnWebsite: selected.hideOnWebsite ?? false,
-      },
-    ]);
-    contractSelectionForm.reset(DEFAULT_CONTRACT_SELECTION);
-    setIsContractDialogOpen(false);
-  });
-
-  const handleSaveContact = contactForm.handleSubmit((values) => {
-    const companyValues = form.getValues();
-    const isSupplier = selectedRoles.includes("supplier");
-    const isCustomerOrProspect =
-      selectedRoles.includes("customer") || selectedRoles.includes("prospect");
-
-    setContacts((prev) => [
-      ...prev,
-      {
-        salutation: (values.salutation ||
-          undefined) as CompanyContactInput["salutation"],
-        firstName: values.firstName || undefined,
-        initials: values.initials || undefined,
-        lastName: values.lastName || undefined,
-        telephone: values.telephone || undefined,
-        mobile: values.mobile || undefined,
-        fax: values.fax || undefined,
-        email: values.email || undefined,
-        address: values.address || undefined,
-        categoryAddition: values.categoryAddition || undefined,
-        btwNumber: values.btwNumber || undefined,
-        country: values.country || undefined,
-        postal: values.postal || undefined,
-        house: values.house || undefined,
-        poBox: values.poBox,
-        streetAndNo: values.streetAndNo || undefined,
-        annex: values.annex || undefined,
-        postalCode: values.postalCode || undefined,
-        city: values.city || undefined,
-        region: values.region || undefined,
-        addressCountry: values.addressCountry || undefined,
-        addressTelephone: values.addressTelephone || undefined,
-        addressFax: values.addressFax || undefined,
-        addressEmail: values.addressEmail || undefined,
-        website: values.website || undefined,
-        categories: values.categories as ContactCategory[],
-        sequenceNumber: values.sequenceNumber,
-        purchaser: undefined,
-        searchCode1:
-          isSupplier || isCustomerOrProspect
-            ? companyValues.searchCode1 || undefined
-            : undefined,
-        searchCode2:
-          isSupplier || isCustomerOrProspect
-            ? companyValues.searchCode2 || undefined
-            : undefined,
-        searchCode3:
-          isSupplier || isCustomerOrProspect
-            ? companyValues.searchCode3 || undefined
-            : undefined,
-        revenueLastYear:
-          isSupplier || isCustomerOrProspect ? "0.00" : undefined,
-        revenueThisYear:
-          isSupplier || isCustomerOrProspect ? "0.00" : undefined,
-        isCustomer: selectedRoles.includes("customer"),
-        isProspect: selectedRoles.includes("prospect"),
-        isSupplier: selectedRoles.includes("supplier"),
-        isProcessor: selectedRoles.includes("processor"),
-        isTransporter: selectedRoles.includes("transporter"),
-        isAgent: selectedRoles.includes("agent"),
-        isOther: selectedRoles.includes("other"),
-        visitStreetAndNo: undefined,
-        visitPostalCode: undefined,
-        visitCity: undefined,
-        visitCountry: undefined,
-        visitTelephone: undefined,
-        visitFax: undefined,
-        accountManager: undefined,
-        representative: undefined,
-        customerGroup: undefined,
-        industryCode: undefined,
-        industry: undefined,
-        classificationCode: undefined,
-        classification: undefined,
-        creditLimit: undefined,
-        competitors: undefined,
-        customerRegionCode: undefined,
-        customerRegion: undefined,
-        targetYearRevenue: isCustomerOrProspect ? "0.00" : undefined,
-        targetAnnualSales: isCustomerOrProspect ? "0.00" : undefined,
-      },
-    ]);
-    contactForm.reset(DEFAULT_CONTACT);
-    setIsContactDialogOpen(false);
-  });
-
-  const toggleContactCategory = (category: ContactCategory) => {
-    const current = contactForm.getValues("categories") as ContactCategory[];
-    contactForm.setValue(
-      "categories",
-      current.includes(category)
-        ? current.filter((c) => c !== category)
-        : [...current, category],
-    );
-  };
-
-  const handleCategorySelect = (uuid: string) => {
-    textForm.setValue("textCategoryUuid", uuid);
-    const cat = textCategories.find((c) => c.uuid === uuid);
-    if (cat) {
-      const enabled = new Set(cat.usageCategoriesJson ?? []);
-      USAGE_CATEGORY_FIELDS.forEach(({ key, field }) => {
-        textForm.setValue(field, enabled.has(key));
-      });
-    }
-  };
-
-  const handleSaveText = textForm.handleSubmit((values) => {
-    const categoryName =
-      textCategories.find((c) => c.uuid === values.textCategoryUuid)?.name ??
-      "";
-    setTexts((prev) => [
-      ...prev,
-      {
-        textCategoryUuid: values.textCategoryUuid || undefined,
-        title: categoryName,
-        textBlock: values.textBlock,
-        visitReport: values.visitReport,
-        purchaseQuoteRequest: values.purchaseQuoteRequest,
-        purchaseOrder: values.purchaseOrder,
-        purchaseOrderToolTip: values.purchaseOrderToolTip,
-        purchaseReturnOrder: values.purchaseReturnOrder,
-        salesQuote: values.salesQuote,
-        salesOrder: values.salesOrder,
-        salesOrderToolTip: values.salesOrderToolTip,
-        salesInvoice: values.salesInvoice,
-        warehouseOrder: values.warehouseOrder,
-        productionOrder: values.productionOrder,
-        loadlist: values.loadlist,
-        waybill: values.waybill,
-        rideList: values.rideList,
-        customerLabel: values.customerLabel,
-        transportPlanning: values.transportPlanning,
-        websiteInAdvance: values.websiteInAdvance,
-        websiteAfter: values.websiteAfter,
-      },
-    ]);
-    textForm.reset(DEFAULT_TEXT);
-    setIsTextDialogOpen(false);
-  });
-
-  const toggleRole = (role: CompanyRole) => {
-    const isSelected = selectedRoles.includes(role);
-
-    if (!isSelected && disabledRoles.has(role)) return;
-
-    const nextRoles = isSelected
-      ? selectedRoles.filter((r) => r !== role)
-      : [...selectedRoles, role];
-
-    setValue("roles", nextRoles);
-
-    if (!isSelected || !isContractableRole(role)) {
-      return;
-    }
-
-    const nextContractableRoles = nextRoles.filter(isContractableRole);
-    const allowedRoles = new Set(nextContractableRoles);
-
-    setContracts((prev) => {
-      const nextContracts = prev.filter((contract) => {
-        const contractRole = contract.role;
-        return contractRole != null && allowedRoles.has(contractRole);
-      });
-      return nextContracts.length === prev.length ? prev : nextContracts;
-    });
-
-    if (nextContractableRoles.length === 0) {
-      contractSelectionForm.reset(DEFAULT_CONTRACT_SELECTION);
-      setIsContractDialogOpen(false);
-      return;
-    }
-
-    const currentDialogRole = contractSelectionForm.getValues("role");
-    const nextDialogRole = getDefaultContractRole(nextContractableRoles);
-
-    if (
-      currentDialogRole !== nextDialogRole &&
-      (!currentDialogRole ||
-        !allowedRoles.has(currentDialogRole) ||
-        nextContractableRoles.length === 1)
-    ) {
-      contractSelectionForm.setValue("role", nextDialogRole);
-    }
-  };
-
-  const commSettingLabel = (setting: CommSettingInput) =>
-    [
-      COMMUNICATION_SETTING_DOCUMENT_TYPE_LABELS[setting.documentType],
-      COMMUNICATION_SETTING_TYPE_LABELS[setting.communicationType],
-    ].join(" - ");
-
   return (
     <>
-      <form
-        onSubmit={onSubmit(
-          additionalAddresses,
-          communicationSettings,
-          contracts,
-          contacts,
-          texts,
-        )}
-        className="space-y-8"
-      >
+      <form onSubmit={onSubmit} className="space-y-8">
         <section className="space-y-4">
           <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
             Company Details
@@ -657,11 +236,7 @@ export const CompanyForm = ({
                   </div>
                   <button
                     type="button"
-                    onClick={() =>
-                      setAdditionalAddresses((prev) =>
-                        prev.filter((_, itemIndex) => itemIndex !== index),
-                      )
-                    }
+                    onClick={() => removeAdditionalAddress(index)}
                     className="shrink-0 text-muted-foreground hover:text-destructive"
                     disabled={isPending}
                   >
@@ -674,7 +249,7 @@ export const CompanyForm = ({
               {hasFirstAddress && (
                 <button
                   type="button"
-                  onClick={() => setIsAdditionalAddressDialogOpen(true)}
+                  onClick={() => handleAdditionalAddressOpenChange(true)}
                   className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg border border-dashed border-border px-3 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary"
                   disabled={isPending}
                 >
@@ -703,29 +278,19 @@ export const CompanyForm = ({
                   </div>
                   <button
                     type="button"
-                    onClick={() =>
-                      setCommunicationSettings((prev) =>
-                        prev.filter((_, itemIndex) => itemIndex !== index),
-                      )
-                    }
+                    onClick={() => removeCommSetting(index)}
                     className="shrink-0 text-muted-foreground hover:text-destructive"
                     disabled={isPending}
                   >
                     <X className="size-4" />
-                    <span className="sr-only">
-                      Remove communication setting
-                    </span>
+                    <span className="sr-only">Remove communication setting</span>
                   </button>
                 </div>
               ))}
 
               <button
                 type="button"
-                onClick={() => {
-                  commSettingForm.reset(DEFAULT_COMM_SETTING);
-                  setSelectedCommType("");
-                  setIsCommSettingDialogOpen(true);
-                }}
+                onClick={handleOpenCommSetting}
                 className="inline-flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-border px-3 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary"
                 disabled={isPending}
               >
@@ -801,9 +366,7 @@ export const CompanyForm = ({
                   </div>
                   <button
                     type="button"
-                    onClick={() =>
-                      setContracts((prev) => prev.filter((_, i) => i !== index))
-                    }
+                    onClick={() => removeContract(index)}
                     className="shrink-0 text-muted-foreground hover:text-destructive"
                     disabled={isPending}
                   >
@@ -814,13 +377,7 @@ export const CompanyForm = ({
               ))}
               <button
                 type="button"
-                onClick={() => {
-                  contractSelectionForm.reset({
-                    contractUuid: "",
-                    role: getDefaultContractRole(activeContractableRoles),
-                  });
-                  setIsContractDialogOpen(true);
-                }}
+                onClick={handleOpenContract}
                 className="inline-flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-border px-3 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary"
                 disabled={isPending}
               >
@@ -871,9 +428,7 @@ export const CompanyForm = ({
                 </div>
                 <button
                   type="button"
-                  onClick={() =>
-                    setTexts((prev) => prev.filter((_, i) => i !== index))
-                  }
+                  onClick={() => removeText(index)}
                   className="shrink-0 text-muted-foreground hover:text-destructive"
                   disabled={isPending}
                 >
@@ -884,10 +439,7 @@ export const CompanyForm = ({
             ))}
             <button
               type="button"
-              onClick={() => {
-                textForm.reset(DEFAULT_TEXT);
-                setIsTextDialogOpen(true);
-              }}
+              onClick={handleOpenText}
               className="inline-flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-border px-3 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary"
               disabled={isPending}
             >
@@ -957,9 +509,7 @@ export const CompanyForm = ({
                 </div>
                 <button
                   type="button"
-                  onClick={() =>
-                    setContacts((prev) => prev.filter((_, i) => i !== index))
-                  }
+                  onClick={() => removeContact(index)}
                   className="shrink-0 text-muted-foreground hover:text-destructive"
                   disabled={isPending}
                 >
@@ -970,10 +520,7 @@ export const CompanyForm = ({
             ))}
             <button
               type="button"
-              onClick={() => {
-                contactForm.reset(DEFAULT_CONTACT);
-                setIsContactDialogOpen(true);
-              }}
+              onClick={handleOpenContact}
               className="inline-flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-border px-3 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary"
               disabled={isPending}
             >
@@ -1015,7 +562,7 @@ export const CompanyForm = ({
             />
           </div>
           <DialogFormFooter
-            onCancel={() => setIsFirstAddressDialogOpen(false)}
+            onCancel={handleCancelFirstAddress}
             submitLabel="Save Address"
             onSubmit={handleSaveFirstAddress}
           />
@@ -1024,13 +571,7 @@ export const CompanyForm = ({
 
       <Dialog
         open={isAdditionalAddressDialogOpen}
-        onOpenChange={(open) => {
-          if (!open) {
-            resetAdditionalForm();
-          }
-
-          setIsAdditionalAddressDialogOpen(open);
-        }}
+        onOpenChange={handleAdditionalAddressOpenChange}
       >
         <DialogContent className="flex h-[85dvh] max-w-3xl flex-col gap-0 p-0">
           <DialogHeader className="shrink-0 border-b bg-background px-6 py-5">
@@ -1053,10 +594,7 @@ export const CompanyForm = ({
             />
           </div>
           <DialogFormFooter
-            onCancel={() => {
-              resetAdditionalForm();
-              setIsAdditionalAddressDialogOpen(false);
-            }}
+            onCancel={handleCancelAdditionalAddress}
             submitLabel="Save Address"
             onSubmit={handleSaveAdditionalAddress}
           />
@@ -1065,14 +603,7 @@ export const CompanyForm = ({
 
       <Dialog
         open={isCommSettingDialogOpen}
-        onOpenChange={(open) => {
-          if (!open) {
-            commSettingForm.reset(DEFAULT_COMM_SETTING);
-            setSelectedCommType("");
-          }
-
-          setIsCommSettingDialogOpen(open);
-        }}
+        onOpenChange={handleCommSettingOpenChange}
       >
         <DialogContent className="max-w-lg">
           <DialogHeader>
@@ -1176,27 +707,16 @@ export const CompanyForm = ({
               )}
             </DialogBody>
             <DialogFormFooter
-              onCancel={() => {
-                commSettingForm.reset(DEFAULT_COMM_SETTING);
-                setSelectedCommType("");
-                setIsCommSettingDialogOpen(false);
-              }}
+              onCancel={handleCancelCommSetting}
               submitLabel="Add Setting"
             />
           </form>
         </DialogContent>
       </Dialog>
+
       <Dialog
         open={isContractDialogOpen}
-        onOpenChange={(open) => {
-          if (!open) contractSelectionForm.reset(DEFAULT_CONTRACT_SELECTION);
-          else
-            contractSelectionForm.reset({
-              contractUuid: "",
-              role: getDefaultContractRole(activeContractableRoles),
-            });
-          setIsContractDialogOpen(open);
-        }}
+        onOpenChange={handleContractOpenChange}
       >
         <DialogContent className="max-w-lg">
           <DialogHeader>
@@ -1279,22 +799,14 @@ export const CompanyForm = ({
             </DialogBody>
 
             <DialogFormFooter
-              onCancel={() => {
-                contractSelectionForm.reset(DEFAULT_CONTRACT_SELECTION);
-                setIsContractDialogOpen(false);
-              }}
+              onCancel={handleCancelContract}
               submitLabel="Add Contract"
             />
           </form>
         </DialogContent>
       </Dialog>
-      <Dialog
-        open={isTextDialogOpen}
-        onOpenChange={(open) => {
-          if (!open) textForm.reset(DEFAULT_TEXT);
-          setIsTextDialogOpen(open);
-        }}
-      >
+
+      <Dialog open={isTextDialogOpen} onOpenChange={handleTextOpenChange}>
         <DialogContent className="flex h-[85dvh] max-w-5xl flex-col gap-0 p-0">
           <DialogHeader className="shrink-0 border-b bg-background px-6 py-5">
             <DialogTitle className="flex items-center gap-2">
@@ -1312,7 +824,6 @@ export const CompanyForm = ({
             className="flex min-h-0 flex-1 flex-col"
           >
             <div className="flex min-h-0 flex-1 gap-0">
-              {/* Left column: category + title */}
               <div className="flex w-64 shrink-0 flex-col gap-4 overflow-y-auto border-r p-6">
                 <div>
                   <FormLabel htmlFor="txt-category" required>
@@ -1348,7 +859,6 @@ export const CompanyForm = ({
                 </div>
               </div>
 
-              {/* Center column: text block */}
               <div className="flex flex-1 flex-col gap-4 overflow-y-auto border-r p-6">
                 <div className="flex flex-1 flex-col">
                   <FormLabel htmlFor="txt-textBlock" required>
@@ -1367,7 +877,6 @@ export const CompanyForm = ({
                 </div>
               </div>
 
-              {/* Right column: 18 boolean checkboxes */}
               <div className="flex w-60 shrink-0 flex-col gap-1 overflow-y-auto p-6">
                 <p className="mb-2 text-sm font-medium text-gray-700">
                   Usage Categories
@@ -1394,22 +903,14 @@ export const CompanyForm = ({
             </div>
 
             <DialogFormFooter
-              onCancel={() => {
-                textForm.reset(DEFAULT_TEXT);
-                setIsTextDialogOpen(false);
-              }}
+              onCancel={handleCancelText}
               submitLabel="Add Text"
             />
           </form>
         </DialogContent>
       </Dialog>
-      <Dialog
-        open={isContactDialogOpen}
-        onOpenChange={(open) => {
-          if (!open) contactForm.reset(DEFAULT_CONTACT);
-          setIsContactDialogOpen(open);
-        }}
-      >
+
+      <Dialog open={isContactDialogOpen} onOpenChange={handleContactOpenChange}>
         <DialogContent className="flex h-[85dvh] max-w-3xl flex-col gap-0 p-0">
           <DialogHeader className="shrink-0 border-b bg-background px-6 py-5">
             <DialogTitle className="flex items-center gap-2">
@@ -1485,7 +986,10 @@ export const CompanyForm = ({
                   </div>
                   <div>
                     <FormLabel htmlFor="co-mobile">Mobile</FormLabel>
-                    <Input id="co-mobile" {...contactForm.register("mobile")} />
+                    <Input
+                      id="co-mobile"
+                      {...contactForm.register("mobile")}
+                    />
                   </div>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-3">
@@ -1541,7 +1045,10 @@ export const CompanyForm = ({
                   </div>
                   <div>
                     <FormLabel htmlFor="co-postal">Postal</FormLabel>
-                    <Input id="co-postal" {...contactForm.register("postal")} />
+                    <Input
+                      id="co-postal"
+                      {...contactForm.register("postal")}
+                    />
                   </div>
                   <div>
                     <FormLabel htmlFor="co-house">House</FormLabel>
@@ -1589,7 +1096,10 @@ export const CompanyForm = ({
                   </div>
                   <div>
                     <FormLabel htmlFor="co-region">Region</FormLabel>
-                    <Input id="co-region" {...contactForm.register("region")} />
+                    <Input
+                      id="co-region"
+                      {...contactForm.register("region")}
+                    />
                   </div>
                   <div>
                     <FormLabel htmlFor="co-addressCountry">Country</FormLabel>
@@ -1627,7 +1137,10 @@ export const CompanyForm = ({
                 </div>
                 <div>
                   <FormLabel htmlFor="co-website">Website</FormLabel>
-                  <Input id="co-website" {...contactForm.register("website")} />
+                  <Input
+                    id="co-website"
+                    {...contactForm.register("website")}
+                  />
                 </div>
               </div>
 
@@ -1674,10 +1187,7 @@ export const CompanyForm = ({
             </div>
 
             <DialogFormFooter
-              onCancel={() => {
-                contactForm.reset(DEFAULT_CONTACT);
-                setIsContactDialogOpen(false);
-              }}
+              onCancel={handleCancelContact}
               submitLabel="Add Contact"
             />
           </form>
