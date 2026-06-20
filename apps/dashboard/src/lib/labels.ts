@@ -202,22 +202,40 @@ export const WAREHOUSE_PRODUCT_TYPE_LABELS: Record<
   bar: "Bar",
 };
 
+export const WAREHOUSE_TRANSPORT_REGION_CODES: Record<
+  WarehouseTransportRegion,
+  string
+> = {
+  azie: "AZIE",
+  bal: "BAL",
+  bel: "BEL",
+  dui: "DUI",
+  eng: "ENG",
+  fra: "FRA",
+  ita: "ITA",
+  lux: "LUX",
+  ned: "NED",
+  oe: "OE",
+  sp_po: "SP/PO",
+  zd_am: "ZD-AM",
+};
+
 export const WAREHOUSE_TRANSPORT_REGION_LABELS: Record<
   WarehouseTransportRegion,
   string
 > = {
-  azie: "Asia (AZIE)",
-  bal: "Baltic States (BAL)",
-  bel: "Belgium (BEL)",
-  dui: "Germany (DUI)",
-  eng: "UK (ENG)",
-  fra: "France (FRA)",
-  ita: "Italy (ITA)",
-  lux: "Luxembourg (LUX)",
-  ned: "Netherlands (NED)",
-  oe: "Eastern Europe (OE)",
-  sp_po: "Spain/Portugal (SP/PO)",
-  zd_am: "South America (ZD-AM)",
+  azie: "Asia",
+  bal: "Baltic States",
+  bel: "Belgium",
+  dui: "Germany",
+  eng: "UK",
+  fra: "France",
+  ita: "Italy",
+  lux: "Luxembourg",
+  ned: "Netherlands",
+  oe: "Eastern Europe",
+  sp_po: "Spain/Portugal",
+  zd_am: "South America",
 };
 
 export const TEXT_USAGE_CATEGORY_LABELS: Record<TextUsageCategory, string> = {

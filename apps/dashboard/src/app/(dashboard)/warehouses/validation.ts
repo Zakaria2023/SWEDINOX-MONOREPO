@@ -43,7 +43,11 @@ export const createWarehouseSchema = () =>
     loadLocations: z.array(
       z.object({
         transportRegion: z.enum(warehouseTransportRegions),
-        loadLocation: z.enum(warehouseLoadingLocations),
+        loadLocation: z.union([
+          z.enum(warehouseLoadingLocations),
+          z.literal(""),
+          z.undefined(),
+        ]),
       }),
     ),
   });

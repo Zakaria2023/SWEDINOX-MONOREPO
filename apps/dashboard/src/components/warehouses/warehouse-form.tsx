@@ -18,8 +18,10 @@ import {
   WarehouseTransportRegion,
 } from "@/lib/enums";
 import {
+  COMMON_TEXT,
   WAREHOUSE_LOADING_LOCATION_LABELS,
   WAREHOUSE_PRODUCT_TYPE_LABELS,
+  WAREHOUSE_TRANSPORT_REGION_CODES,
   WAREHOUSE_TRANSPORT_REGION_LABELS,
 } from "@/lib/labels";
 import { cn } from "@/lib/helpers";
@@ -31,13 +33,17 @@ type Props = {
 
 const transportRegionOptions = warehouseTransportRegions.map((r) => ({
   value: r,
-  label: WAREHOUSE_TRANSPORT_REGION_LABELS[r as WarehouseTransportRegion],
+  label: WAREHOUSE_TRANSPORT_REGION_CODES[r as WarehouseTransportRegion],
+  description: WAREHOUSE_TRANSPORT_REGION_LABELS[r as WarehouseTransportRegion],
 }));
 
-const loadLocationOptions = warehouseLoadingLocations.map((l) => ({
-  value: l,
-  label: WAREHOUSE_LOADING_LOCATION_LABELS[l as WarehouseLoadingLocation],
-}));
+const loadLocationOptions = [
+  { value: "", label: COMMON_TEXT.emptyOption },
+  ...warehouseLoadingLocations.map((l) => ({
+    value: l,
+    label: WAREHOUSE_LOADING_LOCATION_LABELS[l as WarehouseLoadingLocation],
+  })),
+];
 
 export const WarehouseForm = ({ existingWarehouses }: Props) => {
   const {
@@ -346,6 +352,7 @@ export const WarehouseForm = ({ existingWarehouses }: Props) => {
                       id={`loadLocations.${index}.transportRegion`}
                       name={`loadLocations.${index}.transportRegion`}
                       options={transportRegionOptions}
+                      columnHeaders={{ left: "Code", right: "Description" }}
                       value={loadLocations[index]?.transportRegion ?? ""}
                       onValueChange={(val) =>
                         setValue(
@@ -389,7 +396,7 @@ export const WarehouseForm = ({ existingWarehouses }: Props) => {
           onClick={() =>
             append({
               transportRegion: warehouseTransportRegions[0],
-              loadLocation: warehouseLoadingLocations[0],
+              loadLocation: "",
             })
           }
           className="text-sm font-medium text-foreground underline-offset-4 hover:underline"
