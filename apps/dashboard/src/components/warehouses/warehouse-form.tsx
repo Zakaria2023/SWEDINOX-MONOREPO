@@ -2,7 +2,6 @@
 
 import { useWarehouseSubmit } from "@/app/(dashboard)/warehouses/use-warehouse-submit";
 import { WarehouseOption } from "@/app/(dashboard)/warehouses/actions";
-import { WarehouseSubSectionOption } from "@/app/(dashboard)/warehouse-sub-sections/actions";
 import { Checkbox } from "@/components/shadcn/checkbox";
 import { Input } from "@/components/shadcn/input";
 import { Select } from "@/components/shadcn/select";
@@ -14,10 +13,9 @@ import { cn } from "@/lib/helpers";
 
 type Props = {
   existingWarehouses: WarehouseOption[];
-  subSections: WarehouseSubSectionOption[];
 };
 
-export const WarehouseForm = ({ existingWarehouses, subSections }: Props) => {
+export const WarehouseForm = ({ existingWarehouses }: Props) => {
   const {
     form,
     isPending,
@@ -31,7 +29,7 @@ export const WarehouseForm = ({ existingWarehouses, subSections }: Props) => {
     adaptFromOptions,
     handleAdaptFrom,
     handleCancel,
-  } = useWarehouseSubmit({ existingWarehouses, subSections });
+  } = useWarehouseSubmit({ existingWarehouses });
 
   const {
     register,

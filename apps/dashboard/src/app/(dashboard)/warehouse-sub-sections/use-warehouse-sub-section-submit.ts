@@ -18,11 +18,11 @@ import {
 import { useRouter } from "next/navigation";
 import { useTransition, useState } from "react";
 import { useForm } from "react-hook-form";
-import { WarehouseOption } from "@/app/(dashboard)/warehouses/actions";
+import { WarehouseItemOption } from "@/app/(dashboard)/warehouses/actions";
+import { SelectOption } from "@/components/shadcn/select";
 import {
   createWarehouseSubSection,
   WarehouseSubSectionActionResult,
-  WarehouseSubSectionOption,
 } from "./actions";
 import {
   createWarehouseSubSectionSchema,
@@ -31,17 +31,31 @@ import {
 } from "./validation";
 
 type UseWarehouseSubSectionSubmitParams = {
-  warehouses: WarehouseOption[];
-  subSections: WarehouseSubSectionOption[];
+  allItems: WarehouseItemOption[];
+};
+
+const buildHierarchicalOptions = (
+  items: WarehouseItemOption[],
+  parentUuid: string | null = null,
+  depth = 0,
+): SelectOption[] => {
+  return items
+    .filter((i) => i.parentUuid === parentUuid)
+    .flatMap((item) => [
+      { value: item.uuid, label: item.name, depth },
+      ...buildHierarchicalOptions(items, item.uuid, depth + 1),
+    ]);
 };
 
 export const useWarehouseSubSectionSubmit = ({
-  warehouses,
-  subSections,
+  allItems,
 }: UseWarehouseSubSectionSubmitParams) => {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [state, setState] = useState<WarehouseSubSectionActionResult>({});
+  const [selectedItem, setSelectedItem] = useState<WarehouseItemOption | null>(
+    null,
+  );
 
   const form = useForm<WarehouseSubSectionFormValues>({
     resolver: zodResolver(createWarehouseSubSectionSchema()),
@@ -49,20 +63,11 @@ export const useWarehouseSubSectionSubmit = ({
   });
 
   const blocked = form.watch("blocked");
+  const placement = form.watch("placement");
 
-  const warehouseOptions = [
+  const adaptFromOptions = [
     { value: "", label: COMMON_TEXT.selectPlaceholder },
-    ...warehouses.flatMap((w) => {
-      const children = subSections.filter((s) => s.warehouseUuid === w.uuid);
-      return [
-        { value: w.uuid, label: w.name, disabled: false },
-        ...children.map((s) => ({
-          value: s.uuid,
-          label: `  └ ${s.name}`,
-          disabled: true,
-        })),
-      ];
-    }),
+    ...buildHierarchicalOptions(allItems),
   ];
 
   const locationTypeOptions = [
@@ -92,7 +97,9 @@ export const useWarehouseSubSectionSubmit = ({
   const handleAdaptFrom = (uuid: string) => {
     const currentName = form.getValues("name");
     const currentPickingSequence = form.getValues("pickingSequence");
+
     if (!uuid) {
+      setSelectedItem(null);
       form.reset({
         ...DEFAULT_WAREHOUSE_SUB_SECTION,
         name: currentName,
@@ -100,10 +107,21 @@ export const useWarehouseSubSectionSubmit = ({
       });
       return;
     }
-    const source = warehouses.find((w) => w.uuid === uuid);
+
+    const source = allItems.find((i) => i.uuid === uuid);
     if (!source) return;
+
+    setSelectedItem(source);
+
+    // Root warehouses can only be placed "below" (Next would create another root)
+    const isRoot = source.parentUuid === null;
+    const currentPlacement = form.getValues("placement");
+    const nextPlacement =
+      isRoot && currentPlacement === "next" ? "below" : currentPlacement;
+
     form.reset({
-      warehouseUuid: uuid,
+      adaptFromUuid: uuid,
+      placement: nextPlacement,
       name: currentName,
       locationType: source.locationType ?? "",
       loadingLocation: source.loadingLocation ?? "",
@@ -115,10 +133,21 @@ export const useWarehouseSubSectionSubmit = ({
     });
   };
 
+  // "Next" is only valid when the selected item is not a root warehouse
+  const isNextDisabled = !selectedItem || selectedItem.parentUuid === null;
+
+  const computedParentUuid = (): string | null => {
+    if (!selectedItem) return null;
+    return placement === "next" ? selectedItem.parentUuid : selectedItem.uuid;
+  };
+
   const onSubmit = form.handleSubmit((values) => {
+    const parentUuid = computedParentUuid();
+    if (!parentUuid) return;
+
     startTransition(async () => {
       const result = await createWarehouseSubSection({
-        warehouseUuid: values.warehouseUuid,
+        parentUuid,
         name: values.name,
         locationType: (values.locationType || undefined) as
           | WarehouseLocationType
@@ -152,7 +181,10 @@ export const useWarehouseSubSectionSubmit = ({
     onSubmit,
     state,
     blocked,
-    warehouseOptions,
+    placement,
+    selectedItem,
+    isNextDisabled,
+    adaptFromOptions,
     locationTypeOptions,
     loadingLocationOptions,
     blockReasonOptions,

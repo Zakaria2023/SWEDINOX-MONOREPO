@@ -1,8 +1,7 @@
 "use client";
 
 import { useWarehouseSubSectionSubmit } from "@/app/(dashboard)/warehouse-sub-sections/use-warehouse-sub-section-submit";
-import { WarehouseOption } from "@/app/(dashboard)/warehouses/actions";
-import { WarehouseSubSectionOption } from "@/app/(dashboard)/warehouse-sub-sections/actions";
+import { WarehouseItemOption } from "@/app/(dashboard)/warehouses/actions";
 import { Checkbox } from "@/components/shadcn/checkbox";
 import { Input } from "@/components/shadcn/input";
 import { FormActions } from "@/components/ui/form-actions";
@@ -12,24 +11,25 @@ import { FormSelectField } from "@/components/ui/form-select-field";
 import { cn } from "@/lib/helpers";
 
 type Props = {
-  warehouses: WarehouseOption[];
-  subSections: WarehouseSubSectionOption[];
+  allItems: WarehouseItemOption[];
 };
 
-export const WarehouseSubSectionForm = ({ warehouses, subSections }: Props) => {
+export const WarehouseSubSectionForm = ({ allItems }: Props) => {
   const {
     form,
     isPending,
     onSubmit,
     state,
     blocked,
-    warehouseOptions,
+    placement,
+    isNextDisabled,
+    adaptFromOptions,
     locationTypeOptions,
     loadingLocationOptions,
     blockReasonOptions,
     handleAdaptFrom,
     handleCancel,
-  } = useWarehouseSubSectionSubmit({ warehouses, subSections });
+  } = useWarehouseSubSectionSubmit({ allItems });
 
   const {
     register,
@@ -50,23 +50,61 @@ export const WarehouseSubSectionForm = ({ warehouses, subSections }: Props) => {
         </h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormSelectField
-            id="warehouseUuid"
-            name="warehouseUuid"
+            id="adaptFromUuid"
+            name="adaptFromUuid"
             control={control}
-            label="Warehouse"
-            options={warehouseOptions}
+            label="Warehouse / Sub Section"
+            options={adaptFromOptions}
             emptyValue=""
             required
-            errorMessage={errors.warehouseUuid?.message}
+            errorMessage={errors.adaptFromUuid?.message}
             onValueChange={(value, fieldOnChange) => {
               fieldOnChange(value);
               handleAdaptFrom(value);
             }}
           />
+
+          {/* Next / Below placement toggle */}
+          <div>
+            <FormLabel htmlFor="placement">Placement</FormLabel>
+            <div className="mt-1 flex overflow-hidden rounded-md border">
+              <button
+                type="button"
+                disabled={isNextDisabled}
+                onClick={() => setValue("placement", "next")}
+                className={cn(
+                  "flex-1 px-4 py-2 text-sm font-medium transition-colors",
+                  placement === "next"
+                    ? "bg-foreground text-background"
+                    : "bg-background text-muted-foreground hover:bg-muted",
+                  isNextDisabled && "cursor-not-allowed opacity-40",
+                )}
+              >
+                Next
+              </button>
+              <button
+                type="button"
+                onClick={() => setValue("placement", "below")}
+                className={cn(
+                  "flex-1 border-l px-4 py-2 text-sm font-medium transition-colors",
+                  placement === "below"
+                    ? "bg-foreground text-background"
+                    : "bg-background text-muted-foreground hover:bg-muted",
+                )}
+              >
+                Below
+              </button>
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {placement === "next"
+                ? "New sub section will be a sibling of the selected item"
+                : "New sub section will be a child of the selected item"}
+            </p>
+          </div>
         </div>
         <p className="text-xs text-muted-foreground">
-          All fields are inherited from the selected warehouse. You can adjust
-          any field before saving.
+          All fields are inherited from the selected item. You can adjust any
+          field before saving.
         </p>
       </section>
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { Select as SelectPrimitive } from "@base-ui/react/select";
-import { Check, ChevronDown } from "lucide-react";
+import { Check, ChevronDown, CornerDownRight } from "lucide-react";
 import { cn } from "@/lib/helpers";
 import { COMMON_TEXT } from "@/lib/labels";
 
@@ -9,6 +9,7 @@ export type SelectOption = {
   label: string;
   value: string;
   disabled?: boolean;
+  depth?: number;
 };
 
 type SelectProps = {
@@ -57,7 +58,7 @@ export const Select = ({
             COMMON_TEXT.selectPlaceholder
           }
         </SelectPrimitive.Value>
-        <SelectPrimitive.Icon className="text-muted-foreground transition-transform data-[open]:rotate-180">
+        <SelectPrimitive.Icon className="text-muted-foreground transition-transform data-open:rotate-180">
           <ChevronDown className="size-4" />
         </SelectPrimitive.Icon>
       </SelectPrimitive.Trigger>
@@ -66,7 +67,7 @@ export const Select = ({
         <SelectPrimitive.Positioner
           align="start"
           sideOffset={6}
-          className="z-50 min-w-[var(--anchor-width)] outline-none"
+          className="z-50 min-w-(--anchor-width) outline-none"
         >
           <SelectPrimitive.Popup
             data-slot="select-popup"
@@ -78,9 +79,17 @@ export const Select = ({
                   key={option.value}
                   value={option.value}
                   disabled={option.disabled}
-                  className="flex cursor-default items-center gap-2 rounded-lg px-2.5 py-2 text-sm outline-none select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+                  style={
+                    option.depth
+                      ? { paddingLeft: `${option.depth * 16 + 10}px` }
+                      : undefined
+                  }
+                  className="flex cursor-default items-center gap-2 rounded-lg px-2.5 py-2 text-sm outline-none select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50"
                 >
-                  <SelectPrimitive.ItemText className="flex-1">
+                  <SelectPrimitive.ItemText className="flex flex-1 items-center gap-1.5">
+                    {option.depth ? (
+                      <CornerDownRight className="size-3 shrink-0 text-muted-foreground" />
+                    ) : null}
                     {option.label}
                   </SelectPrimitive.ItemText>
                   <SelectPrimitive.ItemIndicator className="flex size-4 items-center justify-center text-primary">

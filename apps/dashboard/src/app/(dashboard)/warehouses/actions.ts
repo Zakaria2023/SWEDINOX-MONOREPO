@@ -3,19 +3,8 @@
 import { db } from "@/db";
 import { InsertWarehouses, Warehouses } from "@/db/schema/warehouses";
 import { generateUuid } from "@/lib/helpers";
-import { asc, desc } from "drizzle-orm";
+import { asc, desc, isNull } from "drizzle-orm";
 import { SelectWarehouses } from "@/db/schema/warehouses";
-
-export type WarehouseFields = Omit<
-  InsertWarehouses,
-  "id" | "uuid" | "createdAt" | "updatedAt"
->;
-
-export type WarehouseActionResult = {
-  warehouseUuid?: string;
-  error?: string;
-  success?: boolean;
-};
 
 export type WarehouseOption = Pick<
   SelectWarehouses,
@@ -30,6 +19,31 @@ export type WarehouseOption = Pick<
   | "limitedDimensions"
 >;
 
+export type WarehouseItemOption = Pick<
+  SelectWarehouses,
+  | "uuid"
+  | "name"
+  | "parentUuid"
+  | "locationType"
+  | "loadingLocation"
+  | "blocked"
+  | "blockReason"
+  | "blockedForOptimization"
+  | "limitedDimensions"
+>;
+
+export type WarehouseFields = Omit<
+  InsertWarehouses,
+  "id" | "uuid" | "createdAt" | "updatedAt"
+>;
+
+export type WarehouseActionResult = {
+  warehouseUuid?: string;
+  error?: string;
+  success?: boolean;
+};
+
+/** Root-level warehouses only — for the warehouse adapt-from dropdown */
 export const getWarehousesForSelect = async (): Promise<WarehouseOption[]> => {
   return db
     .select({
@@ -44,14 +58,36 @@ export const getWarehousesForSelect = async (): Promise<WarehouseOption[]> => {
       limitedDimensions: Warehouses.limitedDimensions,
     })
     .from(Warehouses)
+    .where(isNull(Warehouses.parentUuid))
     .orderBy(asc(Warehouses.name));
 };
 
-export const getWarehouses = async () => {
+/** All items (root + children) — for the sub-section adapt-from dropdown */
+export const getAllWarehouseItemsForSelect = async (): Promise<
+  WarehouseItemOption[]
+> => {
+  return db
+    .select({
+      uuid: Warehouses.uuid,
+      name: Warehouses.name,
+      parentUuid: Warehouses.parentUuid,
+      locationType: Warehouses.locationType,
+      loadingLocation: Warehouses.loadingLocation,
+      blocked: Warehouses.blocked,
+      blockReason: Warehouses.blockReason,
+      blockedForOptimization: Warehouses.blockedForOptimization,
+      limitedDimensions: Warehouses.limitedDimensions,
+    })
+    .from(Warehouses)
+    .orderBy(asc(Warehouses.name));
+};
+
+export const getWarehouses = async (): Promise<SelectWarehouses[]> => {
   try {
     return await db
       .select()
       .from(Warehouses)
+      .where(isNull(Warehouses.parentUuid))
       .orderBy(desc(Warehouses.createdAt));
   } catch {
     throw new Error("Failed to fetch warehouses");

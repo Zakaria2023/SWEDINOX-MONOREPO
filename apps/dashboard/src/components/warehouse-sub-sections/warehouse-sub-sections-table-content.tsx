@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { SelectWarehouseSubSections } from "@/db";
+import { SelectWarehouses } from "@/db";
 import {
   Table,
   TableBody,
@@ -63,7 +63,7 @@ const initialVisibility = ALL_COLUMNS.reduce(
 );
 
 type Props = {
-  subSections: SelectWarehouseSubSections[];
+  subSections: SelectWarehouses[];
 };
 
 export const WarehouseSubSectionsTableContent = ({ subSections }: Props) => {
@@ -82,7 +82,7 @@ export const WarehouseSubSectionsTableContent = ({ subSections }: Props) => {
   );
 
   const renderCell = (
-    subSection: SelectWarehouseSubSections,
+    subSection: SelectWarehouses,
     key: ColumnKey,
   ) => {
     switch (key) {

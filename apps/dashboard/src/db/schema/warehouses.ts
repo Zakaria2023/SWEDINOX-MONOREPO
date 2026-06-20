@@ -2,6 +2,8 @@ import { InferInsertModel, InferSelectModel } from "drizzle-orm";
 import {
   boolean,
   char,
+  foreignKey,
+  index,
   int,
   mysqlEnum,
   mysqlTable,
@@ -15,22 +17,37 @@ import {
   warehouseLocationTypes,
 } from "../../lib/enums";
 
-export const Warehouses = mysqlTable("Warehouses", {
-  id: int("id").primaryKey().autoincrement(),
-  uuid: char("uuid", { length: 36 }).notNull().unique(),
-  name: varchar("name", { length: 255 }).notNull(),
-  locationType: mysqlEnum("location_type", warehouseLocationTypes),
-  loadingLocation: mysqlEnum("loading_location", warehouseLoadingLocations),
-  address: mysqlEnum("address", warehouseAddresses),
-  blocked: boolean("blocked").notNull().default(false),
-  blockReason: mysqlEnum("block_reason", warehouseBlockReasons),
-  blockedForOptimization: boolean("blocked_for_optimization")
-    .notNull()
-    .default(false),
-  limitedDimensions: boolean("limited_dimensions").notNull().default(false),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
-});
+export const Warehouses = mysqlTable(
+  "Warehouses",
+  {
+    id: int("id").primaryKey().autoincrement(),
+    uuid: char("uuid", { length: 36 }).notNull().unique(),
+    parentUuid: char("parent_uuid", { length: 36 }),
+    name: varchar("name", { length: 255 }).notNull(),
+    locationType: mysqlEnum("location_type", warehouseLocationTypes),
+    loadingLocation: mysqlEnum("loading_location", warehouseLoadingLocations),
+    // Only populated for root-level rows (parentUuid IS NULL)
+    address: mysqlEnum("address", warehouseAddresses),
+    blocked: boolean("blocked").notNull().default(false),
+    blockReason: mysqlEnum("block_reason", warehouseBlockReasons),
+    blockedForOptimization: boolean("blocked_for_optimization")
+      .notNull()
+      .default(false),
+    limitedDimensions: boolean("limited_dimensions").notNull().default(false),
+    // Only populated for non-root rows (parentUuid IS NOT NULL)
+    pickingSequence: int("picking_sequence"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+  },
+  (table) => [
+    index("idx_warehouses_parent_uuid").on(table.parentUuid),
+    foreignKey({
+      name: "fk_warehouses_parent",
+      columns: [table.parentUuid],
+      foreignColumns: [table.uuid],
+    }),
+  ],
+);
 
 export type SelectWarehouses = InferSelectModel<typeof Warehouses>;
 export type InsertWarehouses = InferInsertModel<typeof Warehouses>;
