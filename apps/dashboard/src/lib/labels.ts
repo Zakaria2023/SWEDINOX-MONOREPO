@@ -11,6 +11,10 @@ import type {
   ContractableRole,
   ContractType,
   TextUsageCategory,
+  WarehouseAddress,
+  WarehouseBlockReason,
+  WarehouseLoadingLocation,
+  WarehouseLocationType,
 } from "@/lib/enums";
 
 export const COMMON_TEXT = {
@@ -142,6 +146,47 @@ export const CONTACT_CATEGORY_LABELS: Record<ContactCategory, string> = {
   management: "Management",
   bookkeeping: "Bookkeeping",
   certificates: "Certificates",
+};
+
+export const WAREHOUSE_ADDRESS_LABELS: Record<WarehouseAddress, string> = {
+  hego_almere: "Bolderweg 10, 1332AT, Almere",
+  port_of_rotterdam: "Wilhelminakade 909, 3072AP, Rotterdam",
+  port_of_antwerp: "Zaha Hadidplein 1, 2030, Antwerpen",
+};
+
+export const WAREHOUSE_LOCATION_TYPE_LABELS: Record<
+  WarehouseLocationType,
+  string
+> = {
+  pick: "Pick",
+  bulk: "Bulk",
+  production: "Production",
+  scrap: "Scrap",
+  load: "Load",
+  inspection: "Inspection",
+  put_away: "Put-away",
+  sorting: "Sorting",
+  processing: "Processing",
+  collection: "Collection",
+  call_off: "Call-off",
+};
+
+export const WAREHOUSE_LOADING_LOCATION_LABELS: Record<
+  WarehouseLoadingLocation,
+  string
+> = {
+  load: "Load",
+};
+
+export const WAREHOUSE_BLOCK_REASON_LABELS: Record<
+  WarehouseBlockReason,
+  string
+> = {
+  disapproval: "Disapproval",
+  reserved_for_customer: "Reserved for Customer",
+  other: "Other",
+  consignment: "Consignment",
+  location_type_setting: "Location Type Setting",
 };
 
 export const TEXT_USAGE_CATEGORY_LABELS: Record<TextUsageCategory, string> = {

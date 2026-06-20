@@ -121,6 +121,47 @@ export const contactCategories = [
 
 export type ContactCategory = (typeof contactCategories)[number];
 
+export const warehouseAddresses = [
+  "hego_almere",
+  "port_of_rotterdam",
+  "port_of_antwerp",
+] as const satisfies readonly string[];
+
+export type WarehouseAddress = (typeof warehouseAddresses)[number];
+
+export const warehouseLocationTypes = [
+  "pick",
+  "bulk",
+  "production",
+  "scrap",
+  "load",
+  "inspection",
+  "put_away",
+  "sorting",
+  "processing",
+  "collection",
+  "call_off",
+] as const satisfies readonly string[];
+
+export type WarehouseLocationType = (typeof warehouseLocationTypes)[number];
+
+export const warehouseLoadingLocations = [
+  "load",
+] as const satisfies readonly string[];
+
+export type WarehouseLoadingLocation =
+  (typeof warehouseLoadingLocations)[number];
+
+export const warehouseBlockReasons = [
+  "disapproval",
+  "reserved_for_customer",
+  "other",
+  "consignment",
+  "location_type_setting",
+] as const satisfies readonly string[];
+
+export type WarehouseBlockReason = (typeof warehouseBlockReasons)[number];
+
 export const textUsageCategories = [
   "purchase_quote_request",
   "purchase_order",
