@@ -40,6 +40,7 @@ import {
 } from "@/components/shadcn/dialog";
 import { Checkbox } from "@/components/shadcn/checkbox";
 import { Input } from "@/components/shadcn/input";
+import { Textarea } from "@/components/shadcn/textarea";
 import { Select } from "@/components/shadcn/select";
 import { FormActions } from "@/components/ui/form-actions";
 import { FormError } from "@/components/ui/form-error";
@@ -596,11 +597,10 @@ export const CompanyForm = ({
 
             <div>
               <FormLabel htmlFor="remarks">Remarks</FormLabel>
-              <textarea
+              <Textarea
                 id="remarks"
                 {...register("remarks")}
                 rows={3}
-                className="w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-50"
                 placeholder="Any additional remarks..."
                 disabled={isPending}
               />
@@ -1354,10 +1354,10 @@ export const CompanyForm = ({
                   <FormLabel htmlFor="txt-textBlock" required>
                     Text Block
                   </FormLabel>
-                  <textarea
+                  <Textarea
                     id="txt-textBlock"
                     {...textForm.register("textBlock")}
-                    className="mt-1 flex-1 w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+                    className="mt-1 flex-1"
                     placeholder="Enter the text content..."
                     style={{ minHeight: "200px" }}
                   />
