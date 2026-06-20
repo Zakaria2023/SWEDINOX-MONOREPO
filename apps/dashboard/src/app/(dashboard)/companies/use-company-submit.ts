@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { CompanyRole } from "@/lib/enums";
@@ -49,6 +50,7 @@ const mapAddress = (address: CompanyFormValues["address"]) => ({
 });
 
 export const useCompanySubmit = () => {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [state, setState] = useState<CompanyActionResult>({});
 
@@ -136,6 +138,7 @@ export const useCompanySubmit = () => {
           texts,
         );
         setState(result);
+        if (result.success) router.push("/companies");
       });
     });
 

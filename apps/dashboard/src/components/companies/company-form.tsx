@@ -9,8 +9,22 @@ import {
 import { useCompanySubmit } from "@/app/(dashboard)/companies/use-company-submit";
 import {
   AddressFormValues,
+  CommSettingFormValues,
+  commSettingSchema,
   CompanyFormValues,
+  contactDialogSchema,
+  ContactDialogValues,
+  contractSelectionSchema,
+  ContractSelectionValues,
   createCompanySchema,
+  DEFAULT_ADDRESS,
+  DEFAULT_COMM_SETTING,
+  DEFAULT_CONTACT,
+  DEFAULT_CONTRACT_SELECTION,
+  DEFAULT_TEXT,
+  textDialogSchema,
+  TextDialogValues,
+  USAGE_CATEGORY_FIELDS,
 } from "@/app/(dashboard)/companies/validation";
 import { ContractListItem } from "@/app/(dashboard)/contracts/actions";
 import { TextCategoryOption } from "@/app/(dashboard)/text-categories/actions";
@@ -45,7 +59,6 @@ import {
   contactSalutations,
   ContractableRole,
   contractableRoles,
-  TextUsageCategory,
 } from "@/lib/enums";
 import { cn } from "@/lib/helpers";
 import {
@@ -73,41 +86,8 @@ import {
   X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
-import { z } from "zod";
-
-const DEFAULT_ADDRESS: CompanyFormValues["address"] = {
-  category: [],
-  poBox: false,
-  needCrane: false,
-  canopyRequired: false,
-  bundleSeparately: false,
-  addressComplete: false,
-  specialTransport: false,
-  altName: "",
-  streetAndNo: "",
-  postalCode: "",
-  country: "",
-  city: "",
-  region: "",
-  house: "",
-  telephone: "",
-  fax: "",
-  email: "",
-  website: "",
-  billingAttention: "",
-  billingAttentionAdditional: "",
-  gln: "",
-  peppolId: "",
-  sequenceNumber: "",
-  availableAt: "",
-  unloadingStartTime: "",
-  unloadingEndTime: "",
-  maxLength: "",
-  maxBundleWeight: "",
-  loadingInstructions: "",
-};
 
 const AGENT_ALLOWED = new Set<CompanyRole>(["agent", "other", "internal"]);
 const PURCHASING_ORG_ALLOWED = new Set<CompanyRole>([
@@ -143,184 +123,6 @@ const getDisabledRoles = (selected: CompanyRole[]): Set<CompanyRole> => {
 const isContractableRole = (role: CompanyRole): role is ContractableRole =>
   (contractableRoles as readonly string[]).includes(role);
 
-const commSettingSchema = z.object({
-  documentType: z.string().min(1),
-  communicationType: z.string().min(1),
-  shape: z.string().optional(),
-  email: z.string().optional(),
-  fax: z.string().optional(),
-});
-
-type CommSettingFormValues = z.infer<typeof commSettingSchema>;
-
-const DEFAULT_COMM_SETTING: CommSettingFormValues = {
-  documentType: "",
-  communicationType: "",
-  shape: "",
-  email: "",
-  fax: "",
-};
-
-const contractSelectionSchema = z.object({
-  contractUuid: z.string().min(1, "Please select a contract"),
-  role: z.enum(contractableRoles, { error: "Role is required" }),
-});
-
-type ContractSelectionValues = z.infer<typeof contractSelectionSchema>;
-
-const DEFAULT_CONTRACT_SELECTION: ContractSelectionValues = {
-  contractUuid: "",
-  role: "" as ContractableRole,
-};
-
-const contactDialogSchema = z.object({
-  salutation: z.string().optional(),
-  firstName: z.string().optional(),
-  initials: z.string().optional(),
-  lastName: z.string().optional(),
-  telephone: z.string().optional(),
-  mobile: z.string().optional(),
-  fax: z.string().optional(),
-  email: z.string().optional(),
-  address: z.string().optional(),
-  categoryAddition: z.string().optional(),
-  btwNumber: z.string().optional(),
-  country: z.string().optional(),
-  postal: z.string().optional(),
-  house: z.string().optional(),
-  poBox: z.boolean(),
-  streetAndNo: z.string().optional(),
-  annex: z.string().optional(),
-  postalCode: z.string().optional(),
-  city: z.string().optional(),
-  region: z.string().optional(),
-  addressCountry: z.string().optional(),
-  addressTelephone: z.string().optional(),
-  addressFax: z.string().optional(),
-  addressEmail: z.string().optional(),
-  website: z.string().optional(),
-  categories: z.array(z.string()),
-  sequenceNumber: z.number().int().min(1),
-  purchaser: z.string().optional(),
-  searchCode1: z.string().optional(),
-  searchCode2: z.string().optional(),
-  searchCode3: z.string().optional(),
-  revenueLastYear: z.string().optional(),
-  revenueThisYear: z.string().optional(),
-});
-
-type ContactDialogValues = z.infer<typeof contactDialogSchema>;
-
-const DEFAULT_CONTACT: ContactDialogValues = {
-  salutation: "",
-  firstName: "",
-  initials: "",
-  lastName: "",
-  telephone: "",
-  mobile: "",
-  fax: "",
-  email: "",
-  address: "",
-  categoryAddition: "",
-  btwNumber: "",
-  country: "",
-  postal: "",
-  house: "",
-  poBox: false,
-  streetAndNo: "",
-  annex: "",
-  postalCode: "",
-  city: "",
-  region: "",
-  addressCountry: "",
-  addressTelephone: "",
-  addressFax: "",
-  addressEmail: "",
-  website: "",
-  categories: [],
-  sequenceNumber: 1,
-  purchaser: "",
-  searchCode1: "",
-  searchCode2: "",
-  searchCode3: "",
-  revenueLastYear: "",
-  revenueThisYear: "",
-};
-const textDialogSchema = z.object({
-  textCategoryUuid: z.string().min(1, "Please select a text category"),
-  textBlock: z.string().min(1, "Text block is required"),
-  visitReport: z.boolean(),
-  purchaseQuoteRequest: z.boolean(),
-  purchaseOrder: z.boolean(),
-  purchaseOrderToolTip: z.boolean(),
-  purchaseReturnOrder: z.boolean(),
-  salesQuote: z.boolean(),
-  salesOrder: z.boolean(),
-  salesOrderToolTip: z.boolean(),
-  salesInvoice: z.boolean(),
-  warehouseOrder: z.boolean(),
-  productionOrder: z.boolean(),
-  loadlist: z.boolean(),
-  waybill: z.boolean(),
-  rideList: z.boolean(),
-  customerLabel: z.boolean(),
-  transportPlanning: z.boolean(),
-  websiteInAdvance: z.boolean(),
-  websiteAfter: z.boolean(),
-});
-
-type TextDialogValues = z.infer<typeof textDialogSchema>;
-type TextBooleanField = keyof Omit<
-  TextDialogValues,
-  "textCategoryUuid" | "textBlock"
->;
-
-const USAGE_CATEGORY_FIELDS: Array<{
-  key: TextUsageCategory;
-  field: TextBooleanField;
-}> = [
-  { key: "visit_report", field: "visitReport" },
-  { key: "purchase_quote_request", field: "purchaseQuoteRequest" },
-  { key: "purchase_order", field: "purchaseOrder" },
-  { key: "purchase_order_tool_tip", field: "purchaseOrderToolTip" },
-  { key: "purchase_return_order", field: "purchaseReturnOrder" },
-  { key: "sales_quote", field: "salesQuote" },
-  { key: "sales_order", field: "salesOrder" },
-  { key: "sales_order_tool_tip", field: "salesOrderToolTip" },
-  { key: "sales_invoice", field: "salesInvoice" },
-  { key: "warehouse_order", field: "warehouseOrder" },
-  { key: "production_order", field: "productionOrder" },
-  { key: "loadlist", field: "loadlist" },
-  { key: "waybill", field: "waybill" },
-  { key: "ride_list", field: "rideList" },
-  { key: "customer_label", field: "customerLabel" },
-  { key: "transport_planning", field: "transportPlanning" },
-  { key: "website_in_advance", field: "websiteInAdvance" },
-  { key: "website_after", field: "websiteAfter" },
-];
-
-const DEFAULT_TEXT: TextDialogValues = {
-  textCategoryUuid: "",
-  textBlock: "",
-  visitReport: false,
-  purchaseQuoteRequest: false,
-  purchaseOrder: false,
-  purchaseOrderToolTip: false,
-  purchaseReturnOrder: false,
-  salesQuote: false,
-  salesOrder: false,
-  salesOrderToolTip: false,
-  salesInvoice: false,
-  warehouseOrder: false,
-  productionOrder: false,
-  loadlist: false,
-  waybill: false,
-  rideList: false,
-  customerLabel: false,
-  transportPlanning: false,
-  websiteInAdvance: false,
-  websiteAfter: false,
-};
 const getDefaultContractRole = (
   roles: ContractableRole[],
 ): ContractSelectionValues["role"] =>
@@ -416,12 +218,6 @@ export const CompanyForm = ({
     ...NON_DELIVERY.filter((c) => !usedCategories.has(c)),
     "delivery",
   ];
-
-  useEffect(() => {
-    if (state.success) {
-      router.push("/companies");
-    }
-  }, [router, state.success]);
 
   const hasFirstAddress = !!(
     addressValues.streetAndNo ||
