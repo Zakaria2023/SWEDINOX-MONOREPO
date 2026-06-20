@@ -1,33 +1,19 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import { FileText, MapPin, MessageSquare, Plus, User, X } from "lucide-react";
 import {
-  AlignLeft,
-  FileText,
-  MapPin,
-  MessageSquare,
-  Plus,
-  X,
-} from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { Controller, useForm } from "react-hook-form";
-import { z } from "zod";
-import { CommSettingInput, CompanyContactInput, CompanyContractInput } from "@/app/(dashboard)/companies/actions";
-import { TextCategoryOption } from "@/app/(dashboard)/text-categories/actions";
-import {
-  CompanyTextInput,
   CommSettingInput,
+  CompanyContactInput,
   CompanyContractInput,
+  CompanyTextInput,
 } from "@/app/(dashboard)/companies/actions";
-import { ContractListItem } from "@/app/(dashboard)/contracts/actions";
+import { useCompanySubmit } from "@/app/(dashboard)/companies/use-company-submit";
 import {
-  createCompanySchema,
   AddressFormValues,
   CompanyFormValues,
+  createCompanySchema,
 } from "@/app/(dashboard)/companies/validation";
-import { useCompanySubmit } from "@/app/(dashboard)/companies/use-company-submit";
+import { ContractListItem } from "@/app/(dashboard)/contracts/actions";
+import { TextCategoryOption } from "@/app/(dashboard)/text-categories/actions";
 import { AddressForm } from "@/components/companies/address-form";
 import { Button } from "@/components/shadcn/button";
 import {
@@ -47,21 +33,18 @@ import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import { FormSelectField } from "@/components/ui/form-select-field";
 import {
   addressCategories,
+  AddressCategory,
   communicationSettingDocumentTypes,
   communicationSettingShapes,
   communicationSettingTypes,
   companyLangs,
+  CompanyRole,
   companyRoles,
   contactCategories,
+  ContactCategory,
   contactSalutations,
-  contractableRoles,
-  type AddressCategory,
-  type CompanyRole,
-  type ContactCategory,
-  type ContractableRole,
-  AddressCategory,
-  CompanyRole,
   ContractableRole,
+  contractableRoles,
   TextUsageCategory,
 } from "@/lib/enums";
 import { cn } from "@/lib/helpers";
@@ -79,6 +62,20 @@ import {
   CONTRACTABLE_ROLE_LABELS,
   TEXT_USAGE_CATEGORY_LABELS,
 } from "@/lib/labels";
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  AlignLeft,
+  FileText,
+  MapPin,
+  MessageSquare,
+  Plus,
+  User,
+  X,
+} from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { Controller, useForm } from "react-hook-form";
+import { z } from "zod";
 
 const DEFAULT_ADDRESS: CompanyFormValues["address"] = {
   category: [],
@@ -396,6 +393,8 @@ export const CompanyForm = ({
   const contactForm = useForm<ContactDialogValues>({
     resolver: zodResolver(contactDialogSchema),
     defaultValues: DEFAULT_CONTACT,
+  });
+
   const textForm = useForm<TextDialogValues>({
     resolver: zodResolver(textDialogSchema),
     defaultValues: DEFAULT_TEXT,
@@ -564,7 +563,8 @@ export const CompanyForm = ({
     setContacts((prev) => [
       ...prev,
       {
-        salutation: (values.salutation || undefined) as CompanyContactInput["salutation"],
+        salutation: (values.salutation ||
+          undefined) as CompanyContactInput["salutation"],
         firstName: values.firstName || undefined,
         initials: values.initials || undefined,
         lastName: values.lastName || undefined,
@@ -592,11 +592,22 @@ export const CompanyForm = ({
         categories: values.categories as ContactCategory[],
         sequenceNumber: values.sequenceNumber,
         purchaser: undefined,
-        searchCode1: (isSupplier || isCustomerOrProspect) ? (companyValues.searchCode1 || undefined) : undefined,
-        searchCode2: (isSupplier || isCustomerOrProspect) ? (companyValues.searchCode2 || undefined) : undefined,
-        searchCode3: (isSupplier || isCustomerOrProspect) ? (companyValues.searchCode3 || undefined) : undefined,
-        revenueLastYear: (isSupplier || isCustomerOrProspect) ? "0.00" : undefined,
-        revenueThisYear: (isSupplier || isCustomerOrProspect) ? "0.00" : undefined,
+        searchCode1:
+          isSupplier || isCustomerOrProspect
+            ? companyValues.searchCode1 || undefined
+            : undefined,
+        searchCode2:
+          isSupplier || isCustomerOrProspect
+            ? companyValues.searchCode2 || undefined
+            : undefined,
+        searchCode3:
+          isSupplier || isCustomerOrProspect
+            ? companyValues.searchCode3 || undefined
+            : undefined,
+        revenueLastYear:
+          isSupplier || isCustomerOrProspect ? "0.00" : undefined,
+        revenueThisYear:
+          isSupplier || isCustomerOrProspect ? "0.00" : undefined,
         isCustomer: selectedRoles.includes("customer"),
         isProspect: selectedRoles.includes("prospect"),
         isSupplier: selectedRoles.includes("supplier"),
@@ -742,8 +753,8 @@ export const CompanyForm = ({
           additionalAddresses,
           communicationSettings,
           contracts,
+          contacts,
           texts,
-          contacts
         )}
         className="space-y-8"
       >
@@ -1137,10 +1148,15 @@ export const CompanyForm = ({
                 <div className="flex min-w-0 items-center gap-2 text-sm">
                   <User className="size-4 shrink-0 text-muted-foreground" />
                   <span className="truncate text-muted-foreground">
-                    {[contact.firstName, contact.lastName].filter(Boolean).join(" ") || "Contact"}
+                    {[contact.firstName, contact.lastName]
+                      .filter(Boolean)
+                      .join(" ") || "Contact"}
                   </span>
                   {contact.categories?.map((cat) => (
-                    <span key={cat} className="shrink-0 rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">
+                    <span
+                      key={cat}
+                      className="shrink-0 rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700"
+                    >
                       {CONTACT_CATEGORY_LABELS[cat]}
                     </span>
                   ))}
@@ -1657,7 +1673,9 @@ export const CompanyForm = ({
           >
             <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
               <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-gray-700">Contact Person</h3>
+                <h3 className="text-sm font-semibold text-gray-700">
+                  Contact Person
+                </h3>
                 <div className="grid gap-3 sm:grid-cols-3">
                   <div>
                     <FormLabel htmlFor="co-salutation">Salutation</FormLabel>
@@ -1683,21 +1701,33 @@ export const CompanyForm = ({
                   </div>
                   <div>
                     <FormLabel htmlFor="co-firstName">First Name</FormLabel>
-                    <Input id="co-firstName" {...contactForm.register("firstName")} />
+                    <Input
+                      id="co-firstName"
+                      {...contactForm.register("firstName")}
+                    />
                   </div>
                   <div>
                     <FormLabel htmlFor="co-initials">Initials</FormLabel>
-                    <Input id="co-initials" {...contactForm.register("initials")} />
+                    <Input
+                      id="co-initials"
+                      {...contactForm.register("initials")}
+                    />
                   </div>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-3">
                   <div>
                     <FormLabel htmlFor="co-lastName">Last Name</FormLabel>
-                    <Input id="co-lastName" {...contactForm.register("lastName")} />
+                    <Input
+                      id="co-lastName"
+                      {...contactForm.register("lastName")}
+                    />
                   </div>
                   <div>
                     <FormLabel htmlFor="co-telephone">Telephone</FormLabel>
-                    <Input id="co-telephone" {...contactForm.register("telephone")} />
+                    <Input
+                      id="co-telephone"
+                      {...contactForm.register("telephone")}
+                    />
                   </div>
                   <div>
                     <FormLabel htmlFor="co-mobile">Mobile</FormLabel>
@@ -1711,21 +1741,36 @@ export const CompanyForm = ({
                   </div>
                   <div>
                     <FormLabel htmlFor="co-email">Email</FormLabel>
-                    <Input id="co-email" type="email" {...contactForm.register("email")} />
+                    <Input
+                      id="co-email"
+                      type="email"
+                      {...contactForm.register("email")}
+                    />
                   </div>
                   <div>
                     <FormLabel htmlFor="co-address">Address</FormLabel>
-                    <Input id="co-address" {...contactForm.register("address")} />
+                    <Input
+                      id="co-address"
+                      {...contactForm.register("address")}
+                    />
                   </div>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-3">
                   <div>
-                    <FormLabel htmlFor="co-categoryAddition">Category Addition</FormLabel>
-                    <Input id="co-categoryAddition" {...contactForm.register("categoryAddition")} />
+                    <FormLabel htmlFor="co-categoryAddition">
+                      Category Addition
+                    </FormLabel>
+                    <Input
+                      id="co-categoryAddition"
+                      {...contactForm.register("categoryAddition")}
+                    />
                   </div>
                   <div>
                     <FormLabel htmlFor="co-btwNumber">BTW Number</FormLabel>
-                    <Input id="co-btwNumber" {...contactForm.register("btwNumber")} />
+                    <Input
+                      id="co-btwNumber"
+                      {...contactForm.register("btwNumber")}
+                    />
                   </div>
                 </div>
               </div>
@@ -1735,7 +1780,10 @@ export const CompanyForm = ({
                 <div className="grid gap-3 sm:grid-cols-3">
                   <div>
                     <FormLabel htmlFor="co-country">Country</FormLabel>
-                    <Input id="co-country" {...contactForm.register("country")} />
+                    <Input
+                      id="co-country"
+                      {...contactForm.register("country")}
+                    />
                   </div>
                   <div>
                     <FormLabel htmlFor="co-postal">Postal</FormLabel>
@@ -1765,7 +1813,10 @@ export const CompanyForm = ({
                 <div className="grid gap-3 sm:grid-cols-3">
                   <div>
                     <FormLabel htmlFor="co-streetAndNo">Street & No</FormLabel>
-                    <Input id="co-streetAndNo" {...contactForm.register("streetAndNo")} />
+                    <Input
+                      id="co-streetAndNo"
+                      {...contactForm.register("streetAndNo")}
+                    />
                   </div>
                   <div>
                     <FormLabel htmlFor="co-annex">Annex</FormLabel>
@@ -1773,7 +1824,10 @@ export const CompanyForm = ({
                   </div>
                   <div>
                     <FormLabel htmlFor="co-postalCode">Postal Code</FormLabel>
-                    <Input id="co-postalCode" {...contactForm.register("postalCode")} />
+                    <Input
+                      id="co-postalCode"
+                      {...contactForm.register("postalCode")}
+                    />
                   </div>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-3">
@@ -1787,21 +1841,36 @@ export const CompanyForm = ({
                   </div>
                   <div>
                     <FormLabel htmlFor="co-addressCountry">Country</FormLabel>
-                    <Input id="co-addressCountry" {...contactForm.register("addressCountry")} />
+                    <Input
+                      id="co-addressCountry"
+                      {...contactForm.register("addressCountry")}
+                    />
                   </div>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-3">
                   <div>
-                    <FormLabel htmlFor="co-addressTelephone">Telephone</FormLabel>
-                    <Input id="co-addressTelephone" {...contactForm.register("addressTelephone")} />
+                    <FormLabel htmlFor="co-addressTelephone">
+                      Telephone
+                    </FormLabel>
+                    <Input
+                      id="co-addressTelephone"
+                      {...contactForm.register("addressTelephone")}
+                    />
                   </div>
                   <div>
                     <FormLabel htmlFor="co-addressFax">Fax</FormLabel>
-                    <Input id="co-addressFax" {...contactForm.register("addressFax")} />
+                    <Input
+                      id="co-addressFax"
+                      {...contactForm.register("addressFax")}
+                    />
                   </div>
                   <div>
                     <FormLabel htmlFor="co-addressEmail">Email</FormLabel>
-                    <Input id="co-addressEmail" type="email" {...contactForm.register("addressEmail")} />
+                    <Input
+                      id="co-addressEmail"
+                      type="email"
+                      {...contactForm.register("addressEmail")}
+                    />
                   </div>
                 </div>
                 <div>
@@ -1811,7 +1880,9 @@ export const CompanyForm = ({
               </div>
 
               <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-gray-700">Categories</h3>
+                <h3 className="text-sm font-semibold text-gray-700">
+                  Categories
+                </h3>
                 <Controller
                   name="categories"
                   control={contactForm.control}
@@ -1839,7 +1910,9 @@ export const CompanyForm = ({
               </div>
 
               <div className="space-y-2">
-                <h3 className="text-sm font-semibold text-gray-700">Sequence Number</h3>
+                <h3 className="text-sm font-semibold text-gray-700">
+                  Sequence Number
+                </h3>
                 <div className="w-32">
                   <Input
                     type="number"

@@ -120,6 +120,7 @@ export const contactCategories = [
 ] as const satisfies readonly string[];
 
 export type ContactCategory = (typeof contactCategories)[number];
+
 export const textUsageCategories = [
   "purchase_quote_request",
   "purchase_order",

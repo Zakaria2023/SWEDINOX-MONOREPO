@@ -45,6 +45,8 @@ export type CompanyContractInput = Omit<
 export type CompanyContactInput = Omit<
   InsertContacts,
   "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt"
+>;
+
 export type CompanyTextInput = Omit<
   InsertTexts,
   "id" | "uuid" | "companyUuid" | "createdByUserId" | "createdAt" | "updatedAt"
@@ -126,6 +128,9 @@ export const createCompany = async (
           ...contact,
           uuid: generateUuid(),
           companyUuid: uuid,
+        });
+      }
+
       for (const text of texts) {
         await tx.insert(Texts).values({
           ...text,

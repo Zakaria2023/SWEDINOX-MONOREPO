@@ -12,7 +12,7 @@ import {
   timestamp,
   varchar,
 } from "drizzle-orm/mysql-core";
-import { contactSalutations, contactCategories, type ContactCategory } from "../../lib/enums";
+import { ContactCategory, contactSalutations } from "../../lib/enums";
 import { Companies } from "./companies";
 
 export const Contacts = mysqlTable(
@@ -69,8 +69,14 @@ export const Contacts = mysqlTable(
     competitors: varchar("competitors", { length: 500 }),
     customerRegionCode: varchar("customer_region_code", { length: 100 }),
     customerRegion: varchar("customer_region", { length: 255 }),
-    targetYearRevenue: decimal("target_year_revenue", { precision: 15, scale: 2 }),
-    targetAnnualSales: decimal("target_annual_sales", { precision: 15, scale: 2 }),
+    targetYearRevenue: decimal("target_year_revenue", {
+      precision: 15,
+      scale: 2,
+    }),
+    targetAnnualSales: decimal("target_annual_sales", {
+      precision: 15,
+      scale: 2,
+    }),
 
     isCustomer: boolean("is_customer").default(false).notNull(),
     isProspect: boolean("is_prospect").default(false).notNull(),
@@ -87,7 +93,10 @@ export const Contacts = mysqlTable(
     visitTelephone: varchar("visit_telephone", { length: 100 }),
     visitFax: varchar("visit_fax", { length: 100 }),
 
-    categories: json("categories").$type<ContactCategory[]>().default([]).notNull(),
+    categories: json("categories")
+      .$type<ContactCategory[]>()
+      .default([])
+      .notNull(),
     sequenceNumber: int("sequence_number").default(1).notNull(),
 
     createdAt: timestamp("created_at").defaultNow().notNull(),
