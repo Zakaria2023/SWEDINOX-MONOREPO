@@ -26,7 +26,6 @@ import {
   WarehouseActionResult,
   WarehouseOption,
 } from "./actions";
-import { WarehouseSubSectionOption } from "@/app/(dashboard)/warehouse-sub-sections/actions";
 import {
   createWarehouseSchema,
   DEFAULT_WAREHOUSE,
@@ -35,12 +34,10 @@ import {
 
 type UseWarehouseSubmitParams = {
   existingWarehouses: WarehouseOption[];
-  subSections: WarehouseSubSectionOption[];
 };
 
 export const useWarehouseSubmit = ({
   existingWarehouses,
-  subSections,
 }: UseWarehouseSubmitParams) => {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -79,17 +76,7 @@ export const useWarehouseSubmit = ({
 
   const adaptFromOptions = [
     { value: "", label: COMMON_TEXT.emptyOption },
-    ...existingWarehouses.flatMap((w) => {
-      const children = subSections.filter((s) => s.warehouseUuid === w.uuid);
-      return [
-        { value: w.uuid, label: w.name, disabled: false },
-        ...children.map((s) => ({
-          value: s.uuid,
-          label: `  └ ${s.name}`,
-          disabled: true,
-        })),
-      ];
-    }),
+    ...existingWarehouses.map((w) => ({ value: w.uuid, label: w.name })),
   ];
 
   const handleAdaptFrom = (uuid: string) => {

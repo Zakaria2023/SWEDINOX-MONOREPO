@@ -1,23 +1,15 @@
 "use server";
 
 import { db } from "@/db";
-import {
-  InsertWarehouseSubSections,
-  WarehouseSubSections,
-} from "@/db/schema/warehouse-sub-sections";
+import { InsertWarehouses, Warehouses } from "@/db/schema/warehouses";
 import { generateUuid } from "@/lib/helpers";
-import { asc, desc } from "drizzle-orm";
-import { SelectWarehouseSubSections } from "@/db/schema/warehouse-sub-sections";
-
-export type WarehouseSubSectionOption = Pick<
-  SelectWarehouseSubSections,
-  "uuid" | "name" | "warehouseUuid"
->;
+import { desc, isNotNull } from "drizzle-orm";
+import type { SelectWarehouses } from "@/db/schema/warehouses";
 
 export type WarehouseSubSectionFields = Omit<
-  InsertWarehouseSubSections,
+  InsertWarehouses,
   "id" | "uuid" | "createdAt" | "updatedAt"
->;
+> & { parentUuid: string };
 
 export type WarehouseSubSectionActionResult = {
   subSectionUuid?: string;
@@ -25,25 +17,13 @@ export type WarehouseSubSectionActionResult = {
   success?: boolean;
 };
 
-export const getWarehouseSubSectionsForSelect = async (): Promise<
-  WarehouseSubSectionOption[]
-> => {
-  return db
-    .select({
-      uuid: WarehouseSubSections.uuid,
-      name: WarehouseSubSections.name,
-      warehouseUuid: WarehouseSubSections.warehouseUuid,
-    })
-    .from(WarehouseSubSections)
-    .orderBy(asc(WarehouseSubSections.name));
-};
-
-export const getWarehouseSubSections = async () => {
+export const getWarehouseSubSections = async (): Promise<SelectWarehouses[]> => {
   try {
     return await db
       .select()
-      .from(WarehouseSubSections)
-      .orderBy(desc(WarehouseSubSections.createdAt));
+      .from(Warehouses)
+      .where(isNotNull(Warehouses.parentUuid))
+      .orderBy(desc(Warehouses.createdAt));
   } catch {
     throw new Error("Failed to fetch warehouse sub sections");
   }
@@ -54,7 +34,7 @@ export const createWarehouseSubSection = async (
 ): Promise<WarehouseSubSectionActionResult> => {
   const uuid = generateUuid();
   try {
-    await db.insert(WarehouseSubSections).values({ ...fields, uuid });
+    await db.insert(Warehouses).values({ ...fields, uuid });
     return { success: true, subSectionUuid: uuid };
   } catch (error) {
     return {

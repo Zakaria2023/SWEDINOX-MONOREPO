@@ -8,7 +8,8 @@ import { z } from "zod";
 
 export const createWarehouseSubSectionSchema = () =>
   z.object({
-    warehouseUuid: z.string().min(1, "Please select a warehouse to adapt from"),
+    adaptFromUuid: z.string().min(1, "Please select a warehouse to adapt from"),
+    placement: z.enum(["next", "below"]),
     name: z.string().min(1, VALIDATION_MESSAGES.nameRequired),
     locationType: z.union([
       z.enum(warehouseLocationTypes),
@@ -40,7 +41,8 @@ export type WarehouseSubSectionFormValues = z.infer<
 >;
 
 export const DEFAULT_WAREHOUSE_SUB_SECTION: WarehouseSubSectionFormValues = {
-  warehouseUuid: "",
+  adaptFromUuid: "",
+  placement: "below",
   name: "",
   locationType: "",
   loadingLocation: "",
