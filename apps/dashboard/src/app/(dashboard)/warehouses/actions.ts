@@ -3,7 +3,7 @@
 import { db } from "@/db";
 import { InsertWarehouses, Warehouses } from "@/db/schema/warehouses";
 import { generateUuid } from "@/lib/helpers";
-import { asc, desc, isNull } from "drizzle-orm";
+import { asc, desc, eq, isNull } from "drizzle-orm";
 import { SelectWarehouses } from "@/db/schema/warehouses";
 
 export type WarehouseOption = Pick<
@@ -17,6 +17,12 @@ export type WarehouseOption = Pick<
   | "blockReason"
   | "blockedForOptimization"
   | "limitedDimensions"
+  | "minLength"
+  | "maxLength"
+  | "maxWidth"
+  | "maxWeight"
+  | "productTypes"
+  | "loadLocations"
 >;
 
 export type WarehouseItemOption = Pick<
@@ -30,6 +36,11 @@ export type WarehouseItemOption = Pick<
   | "blockReason"
   | "blockedForOptimization"
   | "limitedDimensions"
+  | "minLength"
+  | "maxLength"
+  | "maxWidth"
+  | "maxWeight"
+  | "productTypes"
 >;
 
 export type WarehouseFields = Omit<
@@ -56,6 +67,12 @@ export const getWarehousesForSelect = async (): Promise<WarehouseOption[]> => {
       blockReason: Warehouses.blockReason,
       blockedForOptimization: Warehouses.blockedForOptimization,
       limitedDimensions: Warehouses.limitedDimensions,
+      minLength: Warehouses.minLength,
+      maxLength: Warehouses.maxLength,
+      maxWidth: Warehouses.maxWidth,
+      maxWeight: Warehouses.maxWeight,
+      productTypes: Warehouses.productTypes,
+      loadLocations: Warehouses.loadLocations,
     })
     .from(Warehouses)
     .where(isNull(Warehouses.parentUuid))
@@ -77,6 +94,11 @@ export const getAllWarehouseItemsForSelect = async (): Promise<
       blockReason: Warehouses.blockReason,
       blockedForOptimization: Warehouses.blockedForOptimization,
       limitedDimensions: Warehouses.limitedDimensions,
+      minLength: Warehouses.minLength,
+      maxLength: Warehouses.maxLength,
+      maxWidth: Warehouses.maxWidth,
+      maxWeight: Warehouses.maxWeight,
+      productTypes: Warehouses.productTypes,
     })
     .from(Warehouses)
     .orderBy(asc(Warehouses.name));
@@ -92,6 +114,16 @@ export const getWarehouses = async (): Promise<SelectWarehouses[]> => {
   } catch {
     throw new Error("Failed to fetch warehouses");
   }
+};
+
+export const updateWarehouseDocuments = async (
+  warehouseUuid: string,
+  documents: Array<{ id: string; fileName: string }>,
+): Promise<void> => {
+  await db
+    .update(Warehouses)
+    .set({ documents })
+    .where(eq(Warehouses.uuid, warehouseUuid));
 };
 
 export const createWarehouse = async (

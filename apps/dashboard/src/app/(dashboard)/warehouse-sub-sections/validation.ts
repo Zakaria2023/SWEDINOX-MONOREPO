@@ -2,6 +2,7 @@ import {
   warehouseBlockReasons,
   warehouseLoadingLocations,
   warehouseLocationTypes,
+  warehouseProductTypes,
 } from "@/lib/enums";
 import { VALIDATION_MESSAGES } from "@/lib/validation-messages";
 import { z } from "zod";
@@ -29,6 +30,11 @@ export const createWarehouseSubSectionSchema = () =>
     ]),
     blockedForOptimization: z.boolean(),
     limitedDimensions: z.boolean(),
+    minLength: z.union([z.number().int().min(0), z.literal(""), z.undefined()]),
+    maxLength: z.union([z.number().int().min(0), z.literal(""), z.undefined()]),
+    maxWidth: z.union([z.number().int().min(0), z.literal(""), z.undefined()]),
+    maxWeight: z.union([z.number().int().min(0), z.literal(""), z.undefined()]),
+    productTypes: z.array(z.enum(warehouseProductTypes)),
     pickingSequence: z.union([
       z.number().int().min(1),
       z.literal(""),
@@ -50,5 +56,10 @@ export const DEFAULT_WAREHOUSE_SUB_SECTION: WarehouseSubSectionFormValues = {
   blockReason: "",
   blockedForOptimization: false,
   limitedDimensions: false,
+  minLength: "",
+  maxLength: "",
+  maxWidth: "",
+  maxWeight: "",
+  productTypes: [],
   pickingSequence: "",
 };

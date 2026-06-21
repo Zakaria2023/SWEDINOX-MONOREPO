@@ -3,6 +3,8 @@ import {
   warehouseBlockReasons,
   warehouseLoadingLocations,
   warehouseLocationTypes,
+  warehouseProductTypes,
+  warehouseTransportRegions,
 } from "@/lib/enums";
 import { VALIDATION_MESSAGES } from "@/lib/validation-messages";
 import { z } from "zod";
@@ -33,6 +35,22 @@ export const createWarehouseSchema = () =>
     ]),
     blockedForOptimization: z.boolean(),
     limitedDimensions: z.boolean(),
+    minLength: z.union([z.number().int().min(0), z.literal(""), z.undefined()]),
+    maxLength: z.union([z.number().int().min(0), z.literal(""), z.undefined()]),
+    maxWidth: z.union([z.number().int().min(0), z.literal(""), z.undefined()]),
+    maxWeight: z.union([z.number().int().min(0), z.literal(""), z.undefined()]),
+    productTypes: z.array(z.enum(warehouseProductTypes)),
+    loadLocations: z.array(
+      z.object({
+        transportRegion: z.enum(warehouseTransportRegions),
+        loadLocation: z.union([
+          z.enum(warehouseLoadingLocations),
+          z.literal(""),
+          z.undefined(),
+        ]),
+      }),
+    ),
+    documents: z.array(z.object({ id: z.string(), fileName: z.string() })),
   });
 
 export type WarehouseFormValues = z.infer<
@@ -48,4 +66,11 @@ export const DEFAULT_WAREHOUSE: WarehouseFormValues = {
   blockReason: "",
   blockedForOptimization: false,
   limitedDimensions: false,
+  minLength: "",
+  maxLength: "",
+  maxWidth: "",
+  maxWeight: "",
+  productTypes: [],
+  loadLocations: [],
+  documents: [],
 };

@@ -5,6 +5,7 @@ import {
   foreignKey,
   index,
   int,
+  json,
   mysqlEnum,
   mysqlTable,
   timestamp,
@@ -34,6 +35,15 @@ export const Warehouses = mysqlTable(
       .notNull()
       .default(false),
     limitedDimensions: boolean("limited_dimensions").notNull().default(false),
+    minLength: int("min_length"),
+    maxLength: int("max_length"),
+    maxWidth: int("max_width"),
+    maxWeight: int("max_weight"),
+    productTypes: json("product_types").$type<string[]>(),
+    loadLocations: json("load_locations").$type<
+      Array<{ transportRegion: string; loadLocation?: string }>
+    >(),
+    documents: json("documents").$type<Array<{ id: string; fileName: string }>>(),
     // Only populated for non-root rows (parentUuid IS NOT NULL)
     pickingSequence: int("picking_sequence"),
     createdAt: timestamp("created_at").defaultNow().notNull(),

@@ -162,6 +162,34 @@ export const warehouseBlockReasons = [
 
 export type WarehouseBlockReason = (typeof warehouseBlockReasons)[number];
 
+export const warehouseProductTypes = [
+  "beam",
+  "tube",
+  "sheet",
+  "profile",
+  "bar",
+] as const satisfies readonly string[];
+
+export type WarehouseProductType = (typeof warehouseProductTypes)[number];
+
+export const warehouseTransportRegions = [
+  "azie",
+  "bal",
+  "bel",
+  "dui",
+  "eng",
+  "fra",
+  "ita",
+  "lux",
+  "ned",
+  "oe",
+  "sp_po",
+  "zd_am",
+] as const satisfies readonly string[];
+
+export type WarehouseTransportRegion =
+  (typeof warehouseTransportRegions)[number];
+
 export const textUsageCategories = [
   "purchase_quote_request",
   "purchase_order",

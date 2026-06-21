@@ -15,6 +15,8 @@ import type {
   WarehouseBlockReason,
   WarehouseLoadingLocation,
   WarehouseLocationType,
+  WarehouseProductType,
+  WarehouseTransportRegion,
 } from "@/lib/enums";
 
 export const COMMON_TEXT = {
@@ -187,6 +189,53 @@ export const WAREHOUSE_BLOCK_REASON_LABELS: Record<
   other: "Other",
   consignment: "Consignment",
   location_type_setting: "Location Type Setting",
+};
+
+export const WAREHOUSE_PRODUCT_TYPE_LABELS: Record<
+  WarehouseProductType,
+  string
+> = {
+  beam: "Beam",
+  tube: "Tube",
+  sheet: "Sheet",
+  profile: "Profile",
+  bar: "Bar",
+};
+
+export const WAREHOUSE_TRANSPORT_REGION_CODES: Record<
+  WarehouseTransportRegion,
+  string
+> = {
+  azie: "AZIE",
+  bal: "BAL",
+  bel: "BEL",
+  dui: "DUI",
+  eng: "ENG",
+  fra: "FRA",
+  ita: "ITA",
+  lux: "LUX",
+  ned: "NED",
+  oe: "OE",
+  sp_po: "SP/PO",
+  zd_am: "ZD-AM",
+};
+
+export const WAREHOUSE_TRANSPORT_REGION_LABELS: Record<
+  WarehouseTransportRegion,
+  string
+> = {
+  azie: "Asia",
+  bal: "Baltic States",
+  bel: "Belgium",
+  dui: "Germany",
+  eng: "UK",
+  fra: "France",
+  ita: "Italy",
+  lux: "Luxembourg",
+  ned: "Netherlands",
+  oe: "Eastern Europe",
+  sp_po: "Spain/Portugal",
+  zd_am: "South America",
 };
 
 export const TEXT_USAGE_CATEGORY_LABELS: Record<TextUsageCategory, string> = {

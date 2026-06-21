@@ -6,7 +6,7 @@ const AddWarehousePage = async () => {
   const existingWarehouses = await getWarehousesForSelect();
 
   return (
-    <div className="max-w-2xl space-y-6 p-6">
+    <div className="max-w-4xl space-y-6 p-6">
       <PageHeading
         title="Add Warehouse"
         description="Create a new warehouse location"
