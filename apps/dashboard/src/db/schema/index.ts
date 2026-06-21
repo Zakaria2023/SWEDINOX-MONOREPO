@@ -5,4 +5,5 @@ export * from "./communication-settings";
 export * from "./contacts";
 export * from "./text-categories";
 export * from "./texts";
+export * from "./invoices";
 export * from "./warehouses";

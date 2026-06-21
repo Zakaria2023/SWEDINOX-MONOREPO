@@ -47,10 +47,11 @@ export const AppSidebar = () => {
   const isSalesActive =
     pathname === "/contracts" ||
     pathname.startsWith("/contracts/") ||
-    pathname.startsWith("/contract-groups");
-  const isSupplierActive =
-    pathname.startsWith("/contracts-per-supplier") ||
-    pathname.startsWith("/contact-persons-suppliers");
+    pathname.startsWith("/contract-groups") ||
+    pathname.startsWith("/invoices");
+  const isSupplierActive = pathname.startsWith("/contracts-per-supplier");
+  pathname.startsWith("/contract-groups");
+  pathname.startsWith("/contact-persons-suppliers");
   const isWarehouseActive =
     pathname.startsWith("/warehouses") ||
     pathname.startsWith("/warehouse-sub-sections");
@@ -109,8 +110,12 @@ export const AppSidebar = () => {
                     </SidebarMenuSubItem>
                     <SidebarMenuSubItem>
                       <SidebarMenuSubButton
-                        render={<Link href="/contact-persons-customers-and-prospects" />}
-                        isActive={pathname.startsWith("/contact-persons-customers-and-prospects")}
+                        render={
+                          <Link href="/contact-persons-customers-and-prospects" />
+                        }
+                        isActive={pathname.startsWith(
+                          "/contact-persons-customers-and-prospects",
+                        )}
                       >
                         <span>Contact Persons Customers and Prospects</span>
                       </SidebarMenuSubButton>
@@ -198,6 +203,14 @@ export const AppSidebar = () => {
                         <span>Contract Groups</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/invoices" />}
+                        isActive={pathname.startsWith("/invoices")}
+                      >
+                        <span>Invoices</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
                   </SidebarMenuSub>
                 )}
               </SidebarMenuItem>
@@ -226,7 +239,9 @@ export const AppSidebar = () => {
                     <SidebarMenuSubItem>
                       <SidebarMenuSubButton
                         render={<Link href="/contact-persons-suppliers" />}
-                        isActive={pathname.startsWith("/contact-persons-suppliers")}
+                        isActive={pathname.startsWith(
+                          "/contact-persons-suppliers",
+                        )}
                       >
                         <span>Contact Persons Suppliers</span>
                       </SidebarMenuSubButton>
