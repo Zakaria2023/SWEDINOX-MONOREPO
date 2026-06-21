@@ -19,6 +19,7 @@ import {
   Building2,
   ChevronRight,
   ContactRound,
+  MapPin,
   Truck,
   Users,
   Warehouse,
@@ -55,18 +56,21 @@ export const AppSidebar = () => {
   const isWarehouseActive =
     pathname.startsWith("/warehouses") ||
     pathname.startsWith("/warehouse-sub-sections");
+  const isLocationsActive = pathname.startsWith("/locations");
 
   const [isCustomersOpen, setIsCustomersOpen] = useState(false);
   const [isCompanyOpen, setIsCompanyOpen] = useState(false);
   const [isSalesOpen, setIsSalesOpen] = useState(false);
   const [isSupplierOpen, setIsSupplierOpen] = useState(false);
   const [isWarehouseOpen, setIsWarehouseOpen] = useState(false);
+  const [isLocationsOpen, setIsLocationsOpen] = useState(false);
 
   const isCustomersExpanded = isCustomersOpen || isCustomersActive;
   const isCompanyExpanded = isCompanyOpen || isCompanyActive;
   const isSalesExpanded = isSalesOpen || isSalesActive;
   const isSupplierExpanded = isSupplierOpen || isSupplierActive;
   const isWarehouseExpanded = isWarehouseOpen || isWarehouseActive;
+  const isLocationsExpanded = isLocationsOpen || isLocationsActive;
 
   return (
     <Sidebar>
@@ -280,6 +284,29 @@ export const AppSidebar = () => {
                         )}
                       >
                         <span>Warehouse Sub Sections</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                  </SidebarMenuSub>
+                )}
+              </SidebarMenuItem>
+
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  aria-expanded={isLocationsExpanded}
+                  onClick={() => setIsLocationsOpen((open) => !open)}
+                >
+                  <MapPin />
+                  <span>Locations</span>
+                  <ChevronRight className={chevronClass(isLocationsExpanded)} />
+                </SidebarMenuButton>
+                {isLocationsExpanded && (
+                  <SidebarMenuSub>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/locations" />}
+                        isActive={pathname.startsWith("/locations")}
+                      >
+                        <span>Locations</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                   </SidebarMenuSub>

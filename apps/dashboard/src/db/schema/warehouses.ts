@@ -16,6 +16,7 @@ import {
   warehouseBlockReasons,
   warehouseLoadingLocations,
   warehouseLocationTypes,
+  warehouseTypes,
 } from "../../lib/enums";
 
 export const Warehouses = mysqlTable(
@@ -24,6 +25,7 @@ export const Warehouses = mysqlTable(
     id: int("id").primaryKey().autoincrement(),
     uuid: char("uuid", { length: 36 }).notNull().unique(),
     parentUuid: char("parent_uuid", { length: 36 }),
+    type: mysqlEnum("type", warehouseTypes).notNull().default("warehouse"),
     name: varchar("name", { length: 255 }).notNull(),
     locationType: mysqlEnum("location_type", warehouseLocationTypes),
     loadingLocation: mysqlEnum("loading_location", warehouseLoadingLocations),
