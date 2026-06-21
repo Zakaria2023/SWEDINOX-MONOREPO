@@ -3,8 +3,10 @@
 import { useRef, useState } from "react";
 import { Paperclip, Upload, X } from "lucide-react";
 
+type UploadedFile = { documentId: string; fileName: string };
+
 type DocumentUploaderProps = {
-  onSuccess?: (documentId: string, fileName: string) => void;
+  onSuccess?: (uploads: UploadedFile[]) => void;
 };
 
 export const DocumentUploader = ({ onSuccess }: DocumentUploaderProps) => {
@@ -12,30 +14,36 @@ export const DocumentUploader = ({ onSuccess }: DocumentUploaderProps) => {
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const uploadDocument = async (file: File) => {
+  const uploadFiles = async (files: FileList) => {
     setIsUploading(true);
     setError(null);
 
     try {
-      const formData = new FormData();
-      formData.append("file", file);
+      const results = await Promise.all(
+        Array.from(files).map(async (file) => {
+          const formData = new FormData();
+          formData.append("file", file);
 
-      const response = await fetch("/api/documents/upload", {
-        method: "POST",
-        body: formData,
-      });
+          const response = await fetch("/api/documents/upload", {
+            method: "POST",
+            body: formData,
+          });
 
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(data.error ?? `Upload failed (${response.status})`);
-      }
+          if (!response.ok) {
+            const data = await response.json().catch(() => ({}));
+            throw new Error(data.error ?? `Upload failed (${response.status})`);
+          }
 
-      const { documentId, fileName } = await response.json();
-      onSuccess?.(documentId, fileName);
+          return response.json() as Promise<{ documentId: string; fileName: string }>;
+        }),
+      );
+
+      onSuccess?.(results);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
     } finally {
       setIsUploading(false);
+      if (inputRef.current) inputRef.current.value = "";
     }
   };
 
@@ -44,12 +52,12 @@ export const DocumentUploader = ({ onSuccess }: DocumentUploaderProps) => {
       <input
         ref={inputRef}
         type="file"
+        multiple
         accept=".pdf,application/pdf,.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
         disabled={isUploading}
         className="hidden"
         onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) uploadDocument(file);
+          if (e.target.files?.length) uploadFiles(e.target.files);
         }}
       />
       <button

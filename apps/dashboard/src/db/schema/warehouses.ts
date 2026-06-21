@@ -43,8 +43,7 @@ export const Warehouses = mysqlTable(
     loadLocations: json("load_locations").$type<
       Array<{ transportRegion: string; loadLocation?: string }>
     >(),
-    documentId: char("document_id", { length: 36 }),
-    documentFileName: varchar("document_file_name", { length: 500 }),
+    documents: json("documents").$type<Array<{ id: string; fileName: string }>>(),
     // Only populated for non-root rows (parentUuid IS NOT NULL)
     pickingSequence: int("picking_sequence"),
     createdAt: timestamp("created_at").defaultNow().notNull(),

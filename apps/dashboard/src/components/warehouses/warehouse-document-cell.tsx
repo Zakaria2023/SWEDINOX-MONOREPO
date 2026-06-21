@@ -6,18 +6,26 @@ type Props = {
 };
 
 export const WarehouseDocumentCell = ({ warehouse }: Props) => {
-  if (warehouse.documentId && warehouse.documentFileName) {
-    return (
-      <Link
-        href={`/api/documents/${warehouse.documentId}/download?fileName=${encodeURIComponent(warehouse.documentFileName)}`}
-        className="text-sm underline hover:no-underline"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        {warehouse.documentFileName}
-      </Link>
-    );
+  const docs = warehouse.documents;
+
+  if (!docs || docs.length === 0) {
+    return <span className="text-muted-foreground">—</span>;
   }
 
-  return <span className="text-muted-foreground">—</span>;
+  return (
+    <div className="space-y-1">
+      {docs.map((doc) => (
+        <div key={doc.id}>
+          <Link
+            href={`/api/documents/${doc.id}/download?fileName=${encodeURIComponent(doc.fileName)}`}
+            className="text-sm underline hover:no-underline"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {doc.fileName}
+          </Link>
+        </div>
+      ))}
+    </div>
+  );
 };

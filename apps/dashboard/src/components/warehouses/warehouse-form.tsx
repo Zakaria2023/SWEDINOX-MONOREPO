@@ -406,33 +406,42 @@ export const WarehouseForm = ({ existingWarehouses }: Props) => {
         </button>
       </section>
 
-      {/* Document */}
+      {/* Documents */}
       <section className="space-y-4">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          Document
+          Documents
         </h2>
-        {watch("documentId") && watch("documentFileName") ? (
-          <div className="flex items-center gap-4">
-            <span className="text-sm">{watch("documentFileName")}</span>
-            <button
-              type="button"
-              onClick={() => {
-                setValue("documentId", undefined);
-                setValue("documentFileName", undefined);
-              }}
-              className="text-xs text-muted-foreground underline-offset-4 hover:underline"
-            >
-              Replace
-            </button>
-          </div>
-        ) : (
-          <DocumentUploader
-            onSuccess={(documentId, fileName) => {
-              setValue("documentId", documentId);
-              setValue("documentFileName", fileName);
-            }}
-          />
-        )}
+        <div className="space-y-2">
+          {watch("documents").map((doc, index) => (
+            <div key={doc.id} className="flex items-center gap-3 text-sm">
+              <span className="flex-1">{doc.fileName}</span>
+              <button
+                type="button"
+                onClick={async () => {
+                  await fetch(`/api/documents/${doc.id}/delete`, { method: "DELETE" });
+                  const current = watch("documents");
+                  setValue(
+                    "documents",
+                    current.filter((_, i) => i !== index),
+                  );
+                }}
+                className="text-muted-foreground hover:text-destructive"
+                aria-label="Remove"
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
+        <DocumentUploader
+          onSuccess={(uploads) => {
+            const current = watch("documents");
+            setValue("documents", [
+              ...current,
+              ...uploads.map((u) => ({ id: u.documentId, fileName: u.fileName })),
+            ]);
+          }}
+        />
       </section>
 
       <FormActions

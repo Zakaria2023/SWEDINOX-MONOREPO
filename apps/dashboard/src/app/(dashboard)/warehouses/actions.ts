@@ -116,14 +116,13 @@ export const getWarehouses = async (): Promise<SelectWarehouses[]> => {
   }
 };
 
-export const updateWarehouseDocument = async (
+export const updateWarehouseDocuments = async (
   warehouseUuid: string,
-  documentId: string,
-  documentFileName: string,
+  documents: Array<{ id: string; fileName: string }>,
 ): Promise<void> => {
   await db
     .update(Warehouses)
-    .set({ documentId, documentFileName })
+    .set({ documents })
     .where(eq(Warehouses.uuid, warehouseUuid));
 };
 
