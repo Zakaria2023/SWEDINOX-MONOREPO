@@ -6,12 +6,20 @@ import type {
   CommunicationSettingType,
   CompanyLang,
   CompanyRole,
+  ContactCategory,
+  ContactSalutation,
   ContractableRole,
   ContractType,
   InvoicePaymentTerm,
   InvoiceSurchargeDescription,
   InvoiceVatScenario,
   TextUsageCategory,
+  WarehouseAddress,
+  WarehouseBlockReason,
+  WarehouseLoadingLocation,
+  WarehouseLocationType,
+  WarehouseProductType,
+  WarehouseTransportRegion,
 } from "@/lib/enums";
 
 export const COMMON_TEXT = {
@@ -129,6 +137,108 @@ export const COMMUNICATION_SETTING_SHAPE_LABELS: Record<
   edi4steel: "EDI4Steel",
   text: "Text",
   peppol: "Peppol",
+};
+
+export const CONTACT_SALUTATION_LABELS: Record<ContactSalutation, string> = {
+  mr: "Mr.",
+  mrs: "Mrs.",
+};
+
+export const CONTACT_CATEGORY_LABELS: Record<ContactCategory, string> = {
+  procurement: "Procurement",
+  sales: "Sales",
+  warehouse: "Warehouse",
+  management: "Management",
+  bookkeeping: "Bookkeeping",
+  certificates: "Certificates",
+};
+
+export const WAREHOUSE_ADDRESS_LABELS: Record<WarehouseAddress, string> = {
+  hego_almere: "Bolderweg 10, 1332AT, Almere",
+  port_of_rotterdam: "Wilhelminakade 909, 3072AP, Rotterdam",
+  port_of_antwerp: "Zaha Hadidplein 1, 2030, Antwerpen",
+};
+
+export const WAREHOUSE_LOCATION_TYPE_LABELS: Record<
+  WarehouseLocationType,
+  string
+> = {
+  pick: "Pick",
+  bulk: "Bulk",
+  production: "Production",
+  scrap: "Scrap",
+  load: "Load",
+  inspection: "Inspection",
+  put_away: "Put-away",
+  sorting: "Sorting",
+  processing: "Processing",
+  collection: "Collection",
+  call_off: "Call-off",
+};
+
+export const WAREHOUSE_LOADING_LOCATION_LABELS: Record<
+  WarehouseLoadingLocation,
+  string
+> = {
+  load: "Load",
+};
+
+export const WAREHOUSE_BLOCK_REASON_LABELS: Record<
+  WarehouseBlockReason,
+  string
+> = {
+  disapproval: "Disapproval",
+  reserved_for_customer: "Reserved for Customer",
+  other: "Other",
+  consignment: "Consignment",
+  location_type_setting: "Location Type Setting",
+};
+
+export const WAREHOUSE_PRODUCT_TYPE_LABELS: Record<
+  WarehouseProductType,
+  string
+> = {
+  beam: "Beam",
+  tube: "Tube",
+  sheet: "Sheet",
+  profile: "Profile",
+  bar: "Bar",
+};
+
+export const WAREHOUSE_TRANSPORT_REGION_CODES: Record<
+  WarehouseTransportRegion,
+  string
+> = {
+  azie: "AZIE",
+  bal: "BAL",
+  bel: "BEL",
+  dui: "DUI",
+  eng: "ENG",
+  fra: "FRA",
+  ita: "ITA",
+  lux: "LUX",
+  ned: "NED",
+  oe: "OE",
+  sp_po: "SP/PO",
+  zd_am: "ZD-AM",
+};
+
+export const WAREHOUSE_TRANSPORT_REGION_LABELS: Record<
+  WarehouseTransportRegion,
+  string
+> = {
+  azie: "Asia",
+  bal: "Baltic States",
+  bel: "Belgium",
+  dui: "Germany",
+  eng: "UK",
+  fra: "France",
+  ita: "Italy",
+  lux: "Luxembourg",
+  ned: "Netherlands",
+  oe: "Eastern Europe",
+  sp_po: "Spain/Portugal",
+  zd_am: "South America",
 };
 
 export const TEXT_USAGE_CATEGORY_LABELS: Record<TextUsageCategory, string> = {

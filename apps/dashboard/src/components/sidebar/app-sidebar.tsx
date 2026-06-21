@@ -21,6 +21,7 @@ import {
   ContactRound,
   Truck,
   Users,
+  Warehouse,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -36,7 +37,8 @@ export const AppSidebar = () => {
 
   const isCustomersActive =
     pathname.startsWith("/addresses") ||
-    pathname.startsWith("/contracts-per-customer");
+    pathname.startsWith("/contracts-per-customer") ||
+    pathname.startsWith("/contact-persons-customers-and-prospects");
   const isCompanyActive =
     pathname.startsWith("/companies") ||
     pathname.startsWith("/communication-settings") ||
@@ -48,16 +50,23 @@ export const AppSidebar = () => {
     pathname.startsWith("/contract-groups") ||
     pathname.startsWith("/invoices");
   const isSupplierActive = pathname.startsWith("/contracts-per-supplier");
+  pathname.startsWith("/contract-groups");
+  pathname.startsWith("/contact-persons-suppliers");
+  const isWarehouseActive =
+    pathname.startsWith("/warehouses") ||
+    pathname.startsWith("/warehouse-sub-sections");
 
   const [isCustomersOpen, setIsCustomersOpen] = useState(false);
   const [isCompanyOpen, setIsCompanyOpen] = useState(false);
   const [isSalesOpen, setIsSalesOpen] = useState(false);
   const [isSupplierOpen, setIsSupplierOpen] = useState(false);
+  const [isWarehouseOpen, setIsWarehouseOpen] = useState(false);
 
   const isCustomersExpanded = isCustomersOpen || isCustomersActive;
   const isCompanyExpanded = isCompanyOpen || isCompanyActive;
   const isSalesExpanded = isSalesOpen || isSalesActive;
   const isSupplierExpanded = isSupplierOpen || isSupplierActive;
+  const isWarehouseExpanded = isWarehouseOpen || isWarehouseActive;
 
   return (
     <Sidebar>
@@ -97,6 +106,18 @@ export const AppSidebar = () => {
                         )}
                       >
                         <span>Contracts per Customer / Prospect</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={
+                          <Link href="/contact-persons-customers-and-prospects" />
+                        }
+                        isActive={pathname.startsWith(
+                          "/contact-persons-customers-and-prospects",
+                        )}
+                      >
+                        <span>Contact Persons Customers and Prospects</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                   </SidebarMenuSub>
@@ -213,6 +234,52 @@ export const AppSidebar = () => {
                         )}
                       >
                         <span>Contracts per Supplier</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/contact-persons-suppliers" />}
+                        isActive={pathname.startsWith(
+                          "/contact-persons-suppliers",
+                        )}
+                      >
+                        <span>Contact Persons Suppliers</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                  </SidebarMenuSub>
+                )}
+              </SidebarMenuItem>
+
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  aria-expanded={isWarehouseExpanded}
+                  onClick={() => setIsWarehouseOpen((open) => !open)}
+                >
+                  <Warehouse />
+                  <span>Warehouse</span>
+                  <ChevronRight className={chevronClass(isWarehouseExpanded)} />
+                </SidebarMenuButton>
+                {isWarehouseExpanded && (
+                  <SidebarMenuSub>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/warehouses" />}
+                        isActive={
+                          pathname === "/warehouses" ||
+                          pathname.startsWith("/warehouses/")
+                        }
+                      >
+                        <span>Warehouses</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/warehouse-sub-sections" />}
+                        isActive={pathname.startsWith(
+                          "/warehouse-sub-sections",
+                        )}
+                      >
+                        <span>Warehouse Sub Sections</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                   </SidebarMenuSub>

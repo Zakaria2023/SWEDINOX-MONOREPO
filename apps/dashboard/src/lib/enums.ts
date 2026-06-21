@@ -103,6 +103,93 @@ export const communicationSettingShapes = [
 export type CommunicationSettingShape =
   (typeof communicationSettingShapes)[number];
 
+export const contactSalutations = [
+  "mr",
+  "mrs",
+] as const satisfies readonly string[];
+
+export type ContactSalutation = (typeof contactSalutations)[number];
+
+export const contactCategories = [
+  "procurement",
+  "sales",
+  "warehouse",
+  "management",
+  "bookkeeping",
+  "certificates",
+] as const satisfies readonly string[];
+
+export type ContactCategory = (typeof contactCategories)[number];
+
+export const warehouseAddresses = [
+  "hego_almere",
+  "port_of_rotterdam",
+  "port_of_antwerp",
+] as const satisfies readonly string[];
+
+export type WarehouseAddress = (typeof warehouseAddresses)[number];
+
+export const warehouseLocationTypes = [
+  "pick",
+  "bulk",
+  "production",
+  "scrap",
+  "load",
+  "inspection",
+  "put_away",
+  "sorting",
+  "processing",
+  "collection",
+  "call_off",
+] as const satisfies readonly string[];
+
+export type WarehouseLocationType = (typeof warehouseLocationTypes)[number];
+
+export const warehouseLoadingLocations = [
+  "load",
+] as const satisfies readonly string[];
+
+export type WarehouseLoadingLocation =
+  (typeof warehouseLoadingLocations)[number];
+
+export const warehouseBlockReasons = [
+  "disapproval",
+  "reserved_for_customer",
+  "other",
+  "consignment",
+  "location_type_setting",
+] as const satisfies readonly string[];
+
+export type WarehouseBlockReason = (typeof warehouseBlockReasons)[number];
+
+export const warehouseProductTypes = [
+  "beam",
+  "tube",
+  "sheet",
+  "profile",
+  "bar",
+] as const satisfies readonly string[];
+
+export type WarehouseProductType = (typeof warehouseProductTypes)[number];
+
+export const warehouseTransportRegions = [
+  "azie",
+  "bal",
+  "bel",
+  "dui",
+  "eng",
+  "fra",
+  "ita",
+  "lux",
+  "ned",
+  "oe",
+  "sp_po",
+  "zd_am",
+] as const satisfies readonly string[];
+
+export type WarehouseTransportRegion =
+  (typeof warehouseTransportRegions)[number];
+
 export const textUsageCategories = [
   "purchase_quote_request",
   "purchase_order",

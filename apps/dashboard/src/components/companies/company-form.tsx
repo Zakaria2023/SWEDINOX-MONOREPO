@@ -1,250 +1,51 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useCompanySubmit } from "@/app/(dashboard)/companies/use-company-submit";
+import { USAGE_CATEGORY_FIELDS } from "@/app/(dashboard)/companies/validation";
+import { type ContractListItem } from "@/app/(dashboard)/contracts/actions";
+import { type TextCategoryOption } from "@/app/(dashboard)/text-categories/actions";
+import { AddressForm } from "@/components/companies/address-form";
+import { DialogFormFooter } from "@/components/companies/dialog-form-footer";
+import { Checkbox } from "@/components/shadcn/checkbox";
+import {
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/shadcn/dialog";
+import { Input } from "@/components/shadcn/input";
+import { Select } from "@/components/shadcn/select";
+import { Textarea } from "@/components/shadcn/textarea";
+import { FormActions } from "@/components/ui/form-actions";
+import { FormError } from "@/components/ui/form-error";
+import { FormFieldError, FormLabel } from "@/components/ui/form-field";
+import { FormSelectField } from "@/components/ui/form-select-field";
+import { companyRoles, contactCategories, contactSalutations } from "@/lib/enums";
+import { cn } from "@/lib/helpers";
+import {
+  ADDRESS_CATEGORY_LABELS,
+  COMMON_TEXT,
+  COMMUNICATION_SETTING_SHAPE_LABELS,
+  COMPANY_ROLE_LABELS,
+  CONTACT_CATEGORY_LABELS,
+  CONTACT_SALUTATION_LABELS,
+  CONTRACT_TYPE_LABELS,
+  CONTRACTABLE_ROLE_LABELS,
+  TEXT_USAGE_CATEGORY_LABELS,
+} from "@/lib/labels";
 import {
   AlignLeft,
   FileText,
   MapPin,
   MessageSquare,
   Plus,
+  User,
   X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { Controller, useForm } from "react-hook-form";
-import { z } from "zod";
-import { TextCategoryOption } from "@/app/(dashboard)/text-categories/actions";
-import type {
-  CompanyTextInput,
-  CommSettingInput,
-  CompanyContractInput,
-} from "@/app/(dashboard)/companies/actions";
-import type { ContractListItem } from "@/app/(dashboard)/contracts/actions";
-import {
-  createCompanySchema,
-  AddressFormValues,
-  CompanyFormValues,
-} from "@/app/(dashboard)/companies/validation";
-import { useCompanySubmit } from "@/app/(dashboard)/companies/use-company-submit";
-import { AddressForm } from "@/components/companies/address-form";
-import { Button } from "@/components/shadcn/button";
-import {
-  Dialog,
-  DialogBody,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/shadcn/dialog";
-import { Input } from "@/components/shadcn/input";
-import { Select } from "@/components/shadcn/select";
-import { FormActions } from "@/components/ui/form-actions";
-import { FormError } from "@/components/ui/form-error";
-import { FormFieldError, FormLabel } from "@/components/ui/form-field";
-import { FormSelectField } from "@/components/ui/form-select-field";
-import {
-  addressCategories,
-  communicationSettingDocumentTypes,
-  communicationSettingShapes,
-  communicationSettingTypes,
-  companyLangs,
-  companyRoles,
-  contractableRoles,
-  AddressCategory,
-  CompanyRole,
-  ContractableRole,
-  TextUsageCategory,
-} from "@/lib/enums";
-import { cn } from "@/lib/helpers";
-import {
-  ADDRESS_CATEGORY_LABELS,
-  COMMON_TEXT,
-  COMMUNICATION_SETTING_DOCUMENT_TYPE_LABELS,
-  COMMUNICATION_SETTING_SHAPE_LABELS,
-  COMMUNICATION_SETTING_TYPE_LABELS,
-  COMPANY_LANGUAGE_LABELS,
-  COMPANY_ROLE_LABELS,
-  CONTRACT_TYPE_LABELS,
-  CONTRACTABLE_ROLE_LABELS,
-  TEXT_USAGE_CATEGORY_LABELS,
-} from "@/lib/labels";
-
-const DEFAULT_ADDRESS: CompanyFormValues["address"] = {
-  category: [],
-  poBox: false,
-  needCrane: false,
-  canopyRequired: false,
-  bundleSeparately: false,
-  addressComplete: false,
-  specialTransport: false,
-  altName: "",
-  streetAndNo: "",
-  postalCode: "",
-  country: "",
-  city: "",
-  region: "",
-  house: "",
-  telephone: "",
-  fax: "",
-  email: "",
-  website: "",
-  billingAttention: "",
-  billingAttentionAdditional: "",
-  gln: "",
-  peppolId: "",
-  sequenceNumber: "",
-  availableAt: "",
-  unloadingStartTime: "",
-  unloadingEndTime: "",
-  maxLength: "",
-  maxBundleWeight: "",
-  loadingInstructions: "",
-};
-
-const AGENT_ALLOWED = new Set<CompanyRole>(["agent", "other", "internal"]);
-const PURCHASING_ORG_ALLOWED = new Set<CompanyRole>([
-  "purchasing_org",
-  "other",
-]);
-
-const getDisabledRoles = (selected: CompanyRole[]): Set<CompanyRole> => {
-  const disabled = new Set<CompanyRole>();
-
-  if (selected.includes("customer")) disabled.add("prospect");
-  if (selected.includes("prospect")) disabled.add("customer");
-
-  if (selected.includes("agent")) {
-    for (const r of companyRoles) {
-      if (!AGENT_ALLOWED.has(r)) disabled.add(r);
-    }
-  }
-
-  if (selected.includes("purchasing_org")) {
-    for (const r of companyRoles) {
-      if (!PURCHASING_ORG_ALLOWED.has(r)) disabled.add(r);
-    }
-  }
-
-  if (selected.some((r) => !AGENT_ALLOWED.has(r))) disabled.add("agent");
-  if (selected.some((r) => !PURCHASING_ORG_ALLOWED.has(r)))
-    disabled.add("purchasing_org");
-
-  return disabled;
-};
-
-const isContractableRole = (role: CompanyRole): role is ContractableRole =>
-  (contractableRoles as readonly string[]).includes(role);
-
-const commSettingSchema = z.object({
-  documentType: z.string().min(1),
-  communicationType: z.string().min(1),
-  shape: z.string().optional(),
-  email: z.string().optional(),
-  fax: z.string().optional(),
-});
-
-type CommSettingFormValues = z.infer<typeof commSettingSchema>;
-
-const DEFAULT_COMM_SETTING: CommSettingFormValues = {
-  documentType: "",
-  communicationType: "",
-  shape: "",
-  email: "",
-  fax: "",
-};
-
-const contractSelectionSchema = z.object({
-  contractUuid: z.string().min(1, "Please select a contract"),
-  role: z.enum(contractableRoles, { error: "Role is required" }),
-});
-
-type ContractSelectionValues = z.infer<typeof contractSelectionSchema>;
-
-const DEFAULT_CONTRACT_SELECTION: ContractSelectionValues = {
-  contractUuid: "",
-  role: "" as ContractableRole,
-};
-
-const textDialogSchema = z.object({
-  textCategoryUuid: z.string().min(1, "Please select a text category"),
-  textBlock: z.string().min(1, "Text block is required"),
-  visitReport: z.boolean(),
-  purchaseQuoteRequest: z.boolean(),
-  purchaseOrder: z.boolean(),
-  purchaseOrderToolTip: z.boolean(),
-  purchaseReturnOrder: z.boolean(),
-  salesQuote: z.boolean(),
-  salesOrder: z.boolean(),
-  salesOrderToolTip: z.boolean(),
-  salesInvoice: z.boolean(),
-  warehouseOrder: z.boolean(),
-  productionOrder: z.boolean(),
-  loadlist: z.boolean(),
-  waybill: z.boolean(),
-  rideList: z.boolean(),
-  customerLabel: z.boolean(),
-  transportPlanning: z.boolean(),
-  websiteInAdvance: z.boolean(),
-  websiteAfter: z.boolean(),
-});
-
-type TextDialogValues = z.infer<typeof textDialogSchema>;
-type TextBooleanField = keyof Omit<
-  TextDialogValues,
-  "textCategoryUuid" | "textBlock"
->;
-
-const USAGE_CATEGORY_FIELDS: Array<{
-  key: TextUsageCategory;
-  field: TextBooleanField;
-}> = [
-  { key: "visit_report", field: "visitReport" },
-  { key: "purchase_quote_request", field: "purchaseQuoteRequest" },
-  { key: "purchase_order", field: "purchaseOrder" },
-  { key: "purchase_order_tool_tip", field: "purchaseOrderToolTip" },
-  { key: "purchase_return_order", field: "purchaseReturnOrder" },
-  { key: "sales_quote", field: "salesQuote" },
-  { key: "sales_order", field: "salesOrder" },
-  { key: "sales_order_tool_tip", field: "salesOrderToolTip" },
-  { key: "sales_invoice", field: "salesInvoice" },
-  { key: "warehouse_order", field: "warehouseOrder" },
-  { key: "production_order", field: "productionOrder" },
-  { key: "loadlist", field: "loadlist" },
-  { key: "waybill", field: "waybill" },
-  { key: "ride_list", field: "rideList" },
-  { key: "customer_label", field: "customerLabel" },
-  { key: "transport_planning", field: "transportPlanning" },
-  { key: "website_in_advance", field: "websiteInAdvance" },
-  { key: "website_after", field: "websiteAfter" },
-];
-
-const DEFAULT_TEXT: TextDialogValues = {
-  textCategoryUuid: "",
-  textBlock: "",
-  visitReport: false,
-  purchaseQuoteRequest: false,
-  purchaseOrder: false,
-  purchaseOrderToolTip: false,
-  purchaseReturnOrder: false,
-  salesQuote: false,
-  salesOrder: false,
-  salesOrderToolTip: false,
-  salesInvoice: false,
-  warehouseOrder: false,
-  productionOrder: false,
-  loadlist: false,
-  waybill: false,
-  rideList: false,
-  customerLabel: false,
-  transportPlanning: false,
-  websiteInAdvance: false,
-  websiteAfter: false,
-};
-const getDefaultContractRole = (
-  roles: ContractableRole[],
-): ContractSelectionValues["role"] =>
-  roles.length === 1 ? roles[0] : ("" as ContractSelectionValues["role"]);
+import { Controller } from "react-hook-form";
 
 type CompanyFormProps = {
   availableContracts: ContractListItem[];
@@ -256,324 +57,83 @@ export const CompanyForm = ({
   textCategories,
 }: CompanyFormProps) => {
   const router = useRouter();
-  const [isFirstAddressDialogOpen, setIsFirstAddressDialogOpen] =
-    useState(false);
-  const [isAdditionalAddressDialogOpen, setIsAdditionalAddressDialogOpen] =
-    useState(false);
-  const [additionalAddresses, setAdditionalAddresses] = useState<
-    AddressFormValues[]
-  >([]);
-  const [isCommSettingDialogOpen, setIsCommSettingDialogOpen] = useState(false);
-  const [communicationSettings, setCommunicationSettings] = useState<
-    CommSettingInput[]
-  >([]);
-  const [selectedCommType, setSelectedCommType] = useState("");
-  const [isContractDialogOpen, setIsContractDialogOpen] = useState(false);
-  const [contracts, setContracts] = useState<CompanyContractInput[]>([]);
-  const [isTextDialogOpen, setIsTextDialogOpen] = useState(false);
-  const [texts, setTexts] = useState<CompanyTextInput[]>([]);
+  const {
+    form,
+    isPending,
+    onSubmit,
+    state,
+    selectedRoles,
+    disabledRoles,
+    activeContractableRoles,
+    hasFirstAddress,
+    addressValues,
+    availableForNext,
+    langOptions,
+    documentTypeOptions,
+    communicationTypeOptions,
+    shapeOptions,
+    additionalForm,
+    additionalAddresses,
+    isFirstAddressDialogOpen,
+    setIsFirstAddressDialogOpen,
+    isAdditionalAddressDialogOpen,
+    handleAdditionalAddressOpenChange,
+    handleCancelFirstAddress,
+    handleCancelAdditionalAddress,
+    handleSaveFirstAddress,
+    handleSaveAdditionalAddress,
+    removeAdditionalAddress,
+    addressLabel,
+    commSettingForm,
+    communicationSettings,
+    selectedCommType,
+    setSelectedCommType,
+    isCommSettingDialogOpen,
+    handleCommSettingOpenChange,
+    handleOpenCommSetting,
+    handleCancelCommSetting,
+    handleSaveCommSetting,
+    removeCommSetting,
+    commSettingLabel,
+    contractSelectionForm,
+    contracts,
+    isContractDialogOpen,
+    handleContractOpenChange,
+    handleOpenContract,
+    handleCancelContract,
+    handleSaveContract,
+    removeContract,
+    contactForm,
+    contacts,
+    isContactDialogOpen,
+    handleContactOpenChange,
+    handleOpenContact,
+    handleCancelContact,
+    handleSaveContact,
+    toggleContactCategory,
+    removeContact,
+    textForm,
+    texts,
+    isTextDialogOpen,
+    handleTextOpenChange,
+    handleOpenText,
+    handleCancelText,
+    handleSaveText,
+    handleCategorySelect,
+    removeText,
+    toggleRole,
+  } = useCompanySubmit({ availableContracts, textCategories });
 
-  const { form, isPending, onSubmit, state } = useCompanySubmit();
   const {
     control,
     register,
     watch,
-    setValue,
-    trigger,
     formState: { errors },
   } = form;
 
-  const additionalForm = useForm<CompanyFormValues>({
-    resolver: zodResolver(createCompanySchema()),
-    defaultValues: {
-      companyName: "",
-      correspName: "",
-      remarks: "",
-      lang: "",
-      roles: [],
-      searchCode1: "",
-      searchCode2: "",
-      searchCode3: "",
-      address: { ...DEFAULT_ADDRESS, category: [] },
-    },
-  });
-
-  const commSettingForm = useForm<CommSettingFormValues>({
-    resolver: zodResolver(commSettingSchema),
-    defaultValues: DEFAULT_COMM_SETTING,
-  });
-
-  const contractSelectionForm = useForm<ContractSelectionValues>({
-    resolver: zodResolver(contractSelectionSchema),
-    defaultValues: DEFAULT_CONTRACT_SELECTION,
-  });
-
-  const textForm = useForm<TextDialogValues>({
-    resolver: zodResolver(textDialogSchema),
-    defaultValues: DEFAULT_TEXT,
-  });
-
-  const addressValues = watch("address");
-  const selectedRoles: CompanyRole[] = watch("roles") ?? [];
-  const disabledRoles = getDisabledRoles(selectedRoles);
-  const activeContractableRoles = selectedRoles.filter(isContractableRole);
-
-  const usedCategories = new Set<AddressCategory>([
-    ...(addressValues.category ?? []),
-    ...additionalAddresses.flatMap((a) => a.category),
-  ]);
-  const NON_DELIVERY: AddressCategory[] = addressCategories.filter(
-    (c) => c !== "delivery",
-  );
-  const availableForNext: AddressCategory[] = [
-    ...NON_DELIVERY.filter((c) => !usedCategories.has(c)),
-    "delivery",
-  ];
-
-  useEffect(() => {
-    if (state.success) {
-      router.push("/companies");
-    }
-  }, [router, state.success]);
-
-  const hasFirstAddress = !!(
-    addressValues.streetAndNo ||
-    addressValues.city ||
-    addressValues.altName ||
-    addressValues.postalCode
-  );
-
-  const langOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
-    ...companyLangs.map((lang) => ({
-      value: lang,
-      label: COMPANY_LANGUAGE_LABELS[lang],
-    })),
-  ];
-
-  const documentTypeOptions = [
-    { value: "", label: COMMON_TEXT.selectOption },
-    ...communicationSettingDocumentTypes.map((documentType) => ({
-      value: documentType,
-      label: COMMUNICATION_SETTING_DOCUMENT_TYPE_LABELS[documentType],
-    })),
-  ];
-
-  const communicationTypeOptions = [
-    { value: "", label: COMMON_TEXT.selectOption },
-    ...communicationSettingTypes.map((communicationType) => ({
-      value: communicationType,
-      label: COMMUNICATION_SETTING_TYPE_LABELS[communicationType],
-    })),
-  ];
-
-  const shapeOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
-    ...communicationSettingShapes.map((shape) => ({
-      value: shape,
-      label: COMMUNICATION_SETTING_SHAPE_LABELS[shape],
-    })),
-  ];
-
-  const resetAdditionalForm = () => {
-    additionalForm.reset({
-      companyName: "",
-      correspName: "",
-      remarks: "",
-      lang: "",
-      roles: [],
-      searchCode1: "",
-      searchCode2: "",
-      searchCode3: "",
-      address: { ...DEFAULT_ADDRESS, category: [] },
-    });
-  };
-
-  const addressLabel = (address: {
-    streetAndNo?: string;
-    city?: string;
-    altName?: string;
-  }) =>
-    [address.streetAndNo, address.city].filter(Boolean).join(", ") ||
-    address.altName ||
-    "Address";
-
-  const handleSaveFirstAddress = async () => {
-    if (await trigger("address")) {
-      setIsFirstAddressDialogOpen(false);
-    }
-  };
-
-  const handleSaveAdditionalAddress = async () => {
-    if (!(await additionalForm.trigger("address"))) {
-      return;
-    }
-
-    const values = additionalForm.getValues("address");
-    setAdditionalAddresses((prev) => [...prev, values]);
-    resetAdditionalForm();
-    setIsAdditionalAddressDialogOpen(false);
-  };
-
-  const handleSaveCommSetting = commSettingForm.handleSubmit((values) => {
-    setCommunicationSettings((prev) => [
-      ...prev,
-      {
-        documentType: values.documentType as CommSettingInput["documentType"],
-        communicationType:
-          values.communicationType as CommSettingInput["communicationType"],
-        shape: (values.shape || undefined) as CommSettingInput["shape"],
-        email:
-          values.communicationType === "email"
-            ? values.email || undefined
-            : undefined,
-        fax:
-          values.communicationType === "fax"
-            ? values.fax || undefined
-            : undefined,
-      },
-    ]);
-
-    commSettingForm.reset(DEFAULT_COMM_SETTING);
-    setSelectedCommType("");
-    setIsCommSettingDialogOpen(false);
-  });
-
-  const handleSaveContract = contractSelectionForm.handleSubmit((values) => {
-    const selected = availableContracts.find(
-      (c) => c.uuid === values.contractUuid,
-    );
-    if (!selected) return;
-    setContracts((prev) => [
-      ...prev,
-      {
-        role: values.role,
-        code: selected.code,
-        contractType: selected.contractType,
-        description: selected.description,
-        contractGroupUuid: selected.contractGroupUuid ?? undefined,
-        quicklyChangeOrder: selected.quicklyChangeOrder ?? undefined,
-        hasPriceDate: selected.hasPriceDate ?? false,
-        priceDate: selected.priceDate ?? undefined,
-        linkToNewCustomer: selected.linkToNewCustomer ?? false,
-        searchCode1: selected.searchCode1 ?? undefined,
-        searchCode2: selected.searchCode2 ?? undefined,
-        searchCode3: selected.searchCode3 ?? undefined,
-        websiteSorting: selected.websiteSorting ?? 10,
-        hideOnWebsite: selected.hideOnWebsite ?? false,
-      },
-    ]);
-    contractSelectionForm.reset(DEFAULT_CONTRACT_SELECTION);
-    setIsContractDialogOpen(false);
-  });
-
-  const handleCategorySelect = (uuid: string) => {
-    textForm.setValue("textCategoryUuid", uuid);
-    const cat = textCategories.find((c) => c.uuid === uuid);
-    if (cat) {
-      const enabled = new Set(cat.usageCategoriesJson ?? []);
-      USAGE_CATEGORY_FIELDS.forEach(({ key, field }) => {
-        textForm.setValue(field, enabled.has(key));
-      });
-    }
-  };
-
-  const handleSaveText = textForm.handleSubmit((values) => {
-    const categoryName =
-      textCategories.find((c) => c.uuid === values.textCategoryUuid)?.name ??
-      "";
-    setTexts((prev) => [
-      ...prev,
-      {
-        textCategoryUuid: values.textCategoryUuid || undefined,
-        title: categoryName,
-        textBlock: values.textBlock,
-        visitReport: values.visitReport,
-        purchaseQuoteRequest: values.purchaseQuoteRequest,
-        purchaseOrder: values.purchaseOrder,
-        purchaseOrderToolTip: values.purchaseOrderToolTip,
-        purchaseReturnOrder: values.purchaseReturnOrder,
-        salesQuote: values.salesQuote,
-        salesOrder: values.salesOrder,
-        salesOrderToolTip: values.salesOrderToolTip,
-        salesInvoice: values.salesInvoice,
-        warehouseOrder: values.warehouseOrder,
-        productionOrder: values.productionOrder,
-        loadlist: values.loadlist,
-        waybill: values.waybill,
-        rideList: values.rideList,
-        customerLabel: values.customerLabel,
-        transportPlanning: values.transportPlanning,
-        websiteInAdvance: values.websiteInAdvance,
-        websiteAfter: values.websiteAfter,
-      },
-    ]);
-    textForm.reset(DEFAULT_TEXT);
-    setIsTextDialogOpen(false);
-  });
-
-  const toggleRole = (role: CompanyRole) => {
-    const isSelected = selectedRoles.includes(role);
-
-    if (!isSelected && disabledRoles.has(role)) return;
-
-    const nextRoles = isSelected
-      ? selectedRoles.filter((r) => r !== role)
-      : [...selectedRoles, role];
-
-    setValue("roles", nextRoles);
-
-    if (!isSelected || !isContractableRole(role)) {
-      return;
-    }
-
-    const nextContractableRoles = nextRoles.filter(isContractableRole);
-    const allowedRoles = new Set(nextContractableRoles);
-
-    setContracts((prev) => {
-      const nextContracts = prev.filter((contract) => {
-        const contractRole = contract.role;
-        return contractRole != null && allowedRoles.has(contractRole);
-      });
-      return nextContracts.length === prev.length ? prev : nextContracts;
-    });
-
-    if (nextContractableRoles.length === 0) {
-      contractSelectionForm.reset(DEFAULT_CONTRACT_SELECTION);
-      setIsContractDialogOpen(false);
-      return;
-    }
-
-    const currentDialogRole = contractSelectionForm.getValues("role");
-    const nextDialogRole = getDefaultContractRole(nextContractableRoles);
-
-    if (
-      currentDialogRole !== nextDialogRole &&
-      (!currentDialogRole ||
-        !allowedRoles.has(currentDialogRole) ||
-        nextContractableRoles.length === 1)
-    ) {
-      contractSelectionForm.setValue("role", nextDialogRole);
-    }
-  };
-
-  const commSettingLabel = (setting: CommSettingInput) =>
-    [
-      COMMUNICATION_SETTING_DOCUMENT_TYPE_LABELS[setting.documentType],
-      COMMUNICATION_SETTING_TYPE_LABELS[setting.communicationType],
-    ].join(" - ");
-
   return (
     <>
-      <form
-        onSubmit={onSubmit(
-          additionalAddresses,
-          communicationSettings,
-          contracts,
-          texts,
-        )}
-        className="space-y-8"
-      >
+      <form onSubmit={onSubmit} className="space-y-8">
         <section className="space-y-4">
           <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
             Company Details
@@ -616,11 +176,10 @@ export const CompanyForm = ({
 
             <div>
               <FormLabel htmlFor="remarks">Remarks</FormLabel>
-              <textarea
+              <Textarea
                 id="remarks"
                 {...register("remarks")}
                 rows={3}
-                className="w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-50"
                 placeholder="Any additional remarks..."
                 disabled={isPending}
               />
@@ -677,11 +236,7 @@ export const CompanyForm = ({
                   </div>
                   <button
                     type="button"
-                    onClick={() =>
-                      setAdditionalAddresses((prev) =>
-                        prev.filter((_, itemIndex) => itemIndex !== index),
-                      )
-                    }
+                    onClick={() => removeAdditionalAddress(index)}
                     className="shrink-0 text-muted-foreground hover:text-destructive"
                     disabled={isPending}
                   >
@@ -694,7 +249,7 @@ export const CompanyForm = ({
               {hasFirstAddress && (
                 <button
                   type="button"
-                  onClick={() => setIsAdditionalAddressDialogOpen(true)}
+                  onClick={() => handleAdditionalAddressOpenChange(true)}
                   className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg border border-dashed border-border px-3 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary"
                   disabled={isPending}
                 >
@@ -723,29 +278,19 @@ export const CompanyForm = ({
                   </div>
                   <button
                     type="button"
-                    onClick={() =>
-                      setCommunicationSettings((prev) =>
-                        prev.filter((_, itemIndex) => itemIndex !== index),
-                      )
-                    }
+                    onClick={() => removeCommSetting(index)}
                     className="shrink-0 text-muted-foreground hover:text-destructive"
                     disabled={isPending}
                   >
                     <X className="size-4" />
-                    <span className="sr-only">
-                      Remove communication setting
-                    </span>
+                    <span className="sr-only">Remove communication setting</span>
                   </button>
                 </div>
               ))}
 
               <button
                 type="button"
-                onClick={() => {
-                  commSettingForm.reset(DEFAULT_COMM_SETTING);
-                  setSelectedCommType("");
-                  setIsCommSettingDialogOpen(true);
-                }}
+                onClick={handleOpenCommSetting}
                 className="inline-flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-border px-3 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary"
                 disabled={isPending}
               >
@@ -773,9 +318,7 @@ export const CompanyForm = ({
                       : "cursor-pointer hover:bg-muted/40",
                   )}
                 >
-                  <input
-                    type="checkbox"
-                    className="size-4 rounded border-border accent-primary"
+                  <Checkbox
                     checked={selectedRoles.includes(role)}
                     onChange={() => toggleRole(role)}
                     disabled={isDisabled}
@@ -823,9 +366,7 @@ export const CompanyForm = ({
                   </div>
                   <button
                     type="button"
-                    onClick={() =>
-                      setContracts((prev) => prev.filter((_, i) => i !== index))
-                    }
+                    onClick={() => removeContract(index)}
                     className="shrink-0 text-muted-foreground hover:text-destructive"
                     disabled={isPending}
                   >
@@ -836,13 +377,7 @@ export const CompanyForm = ({
               ))}
               <button
                 type="button"
-                onClick={() => {
-                  contractSelectionForm.reset({
-                    contractUuid: "",
-                    role: getDefaultContractRole(activeContractableRoles),
-                  });
-                  setIsContractDialogOpen(true);
-                }}
+                onClick={handleOpenContract}
                 className="inline-flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-border px-3 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary"
                 disabled={isPending}
               >
@@ -893,9 +428,7 @@ export const CompanyForm = ({
                 </div>
                 <button
                   type="button"
-                  onClick={() =>
-                    setTexts((prev) => prev.filter((_, i) => i !== index))
-                  }
+                  onClick={() => removeText(index)}
                   className="shrink-0 text-muted-foreground hover:text-destructive"
                   disabled={isPending}
                 >
@@ -906,10 +439,7 @@ export const CompanyForm = ({
             ))}
             <button
               type="button"
-              onClick={() => {
-                textForm.reset(DEFAULT_TEXT);
-                setIsTextDialogOpen(true);
-              }}
+              onClick={handleOpenText}
               className="inline-flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-border px-3 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary"
               disabled={isPending}
             >
@@ -951,6 +481,55 @@ export const CompanyForm = ({
           </div>
         </section>
 
+        <section className="space-y-4">
+          <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
+            Contacts
+          </h2>
+          <div className="space-y-2 rounded-2xl border border-border bg-muted/20 p-4">
+            {contacts.map((contact, index) => (
+              <div
+                key={index}
+                className="flex items-center justify-between rounded-lg border border-border bg-background px-3 py-2"
+              >
+                <div className="flex min-w-0 items-center gap-2 text-sm">
+                  <User className="size-4 shrink-0 text-muted-foreground" />
+                  <span className="truncate text-muted-foreground">
+                    {[contact.firstName, contact.lastName]
+                      .filter(Boolean)
+                      .join(" ") || "Contact"}
+                  </span>
+                  {contact.categories?.map((cat) => (
+                    <span
+                      key={cat}
+                      className="shrink-0 rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700"
+                    >
+                      {CONTACT_CATEGORY_LABELS[cat]}
+                    </span>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => removeContact(index)}
+                  className="shrink-0 text-muted-foreground hover:text-destructive"
+                  disabled={isPending}
+                >
+                  <X className="size-4" />
+                  <span className="sr-only">Remove contact</span>
+                </button>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={handleOpenContact}
+              className="inline-flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-border px-3 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+              disabled={isPending}
+            >
+              <Plus className="size-4" />
+              Add Contact
+            </button>
+          </div>
+        </section>
+
         <FormError>{state.error}</FormError>
 
         <FormActions
@@ -982,32 +561,17 @@ export const CompanyForm = ({
               watch={watch}
             />
           </div>
-          <div className="shrink-0 border-t bg-background px-6 py-4">
-            <div className="flex justify-end gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setIsFirstAddressDialogOpen(false)}
-              >
-                {COMMON_TEXT.cancel}
-              </Button>
-              <Button type="button" onClick={handleSaveFirstAddress}>
-                Save Address
-              </Button>
-            </div>
-          </div>
+          <DialogFormFooter
+            onCancel={handleCancelFirstAddress}
+            submitLabel="Save Address"
+            onSubmit={handleSaveFirstAddress}
+          />
         </DialogContent>
       </Dialog>
 
       <Dialog
         open={isAdditionalAddressDialogOpen}
-        onOpenChange={(open) => {
-          if (!open) {
-            resetAdditionalForm();
-          }
-
-          setIsAdditionalAddressDialogOpen(open);
-        }}
+        onOpenChange={handleAdditionalAddressOpenChange}
       >
         <DialogContent className="flex h-[85dvh] max-w-3xl flex-col gap-0 p-0">
           <DialogHeader className="shrink-0 border-b bg-background px-6 py-5">
@@ -1029,36 +593,17 @@ export const CompanyForm = ({
               availableCategories={availableForNext}
             />
           </div>
-          <div className="shrink-0 border-t bg-background px-6 py-4">
-            <div className="flex justify-end gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  resetAdditionalForm();
-                  setIsAdditionalAddressDialogOpen(false);
-                }}
-              >
-                {COMMON_TEXT.cancel}
-              </Button>
-              <Button type="button" onClick={handleSaveAdditionalAddress}>
-                Save Address
-              </Button>
-            </div>
-          </div>
+          <DialogFormFooter
+            onCancel={handleCancelAdditionalAddress}
+            submitLabel="Save Address"
+            onSubmit={handleSaveAdditionalAddress}
+          />
         </DialogContent>
       </Dialog>
 
       <Dialog
         open={isCommSettingDialogOpen}
-        onOpenChange={(open) => {
-          if (!open) {
-            commSettingForm.reset(DEFAULT_COMM_SETTING);
-            setSelectedCommType("");
-          }
-
-          setIsCommSettingDialogOpen(open);
-        }}
+        onOpenChange={handleCommSettingOpenChange}
       >
         <DialogContent className="max-w-lg">
           <DialogHeader>
@@ -1161,34 +706,17 @@ export const CompanyForm = ({
                 </div>
               )}
             </DialogBody>
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  commSettingForm.reset(DEFAULT_COMM_SETTING);
-                  setSelectedCommType("");
-                  setIsCommSettingDialogOpen(false);
-                }}
-              >
-                {COMMON_TEXT.cancel}
-              </Button>
-              <Button type="submit">Add Setting</Button>
-            </DialogFooter>
+            <DialogFormFooter
+              onCancel={handleCancelCommSetting}
+              submitLabel="Add Setting"
+            />
           </form>
         </DialogContent>
       </Dialog>
+
       <Dialog
         open={isContractDialogOpen}
-        onOpenChange={(open) => {
-          if (!open) contractSelectionForm.reset(DEFAULT_CONTRACT_SELECTION);
-          else
-            contractSelectionForm.reset({
-              contractUuid: "",
-              role: getDefaultContractRole(activeContractableRoles),
-            });
-          setIsContractDialogOpen(open);
-        }}
+        onOpenChange={handleContractOpenChange}
       >
         <DialogContent className="max-w-lg">
           <DialogHeader>
@@ -1270,29 +798,15 @@ export const CompanyForm = ({
               </div>
             </DialogBody>
 
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  contractSelectionForm.reset(DEFAULT_CONTRACT_SELECTION);
-                  setIsContractDialogOpen(false);
-                }}
-              >
-                {COMMON_TEXT.cancel}
-              </Button>
-              <Button type="submit">Add Contract</Button>
-            </DialogFooter>
+            <DialogFormFooter
+              onCancel={handleCancelContract}
+              submitLabel="Add Contract"
+            />
           </form>
         </DialogContent>
       </Dialog>
-      <Dialog
-        open={isTextDialogOpen}
-        onOpenChange={(open) => {
-          if (!open) textForm.reset(DEFAULT_TEXT);
-          setIsTextDialogOpen(open);
-        }}
-      >
+
+      <Dialog open={isTextDialogOpen} onOpenChange={handleTextOpenChange}>
         <DialogContent className="flex h-[85dvh] max-w-5xl flex-col gap-0 p-0">
           <DialogHeader className="shrink-0 border-b bg-background px-6 py-5">
             <DialogTitle className="flex items-center gap-2">
@@ -1310,7 +824,6 @@ export const CompanyForm = ({
             className="flex min-h-0 flex-1 flex-col"
           >
             <div className="flex min-h-0 flex-1 gap-0">
-              {/* Left column: category + title */}
               <div className="flex w-64 shrink-0 flex-col gap-4 overflow-y-auto border-r p-6">
                 <div>
                   <FormLabel htmlFor="txt-category" required>
@@ -1346,16 +859,15 @@ export const CompanyForm = ({
                 </div>
               </div>
 
-              {/* Center column: text block */}
               <div className="flex flex-1 flex-col gap-4 overflow-y-auto border-r p-6">
                 <div className="flex flex-1 flex-col">
                   <FormLabel htmlFor="txt-textBlock" required>
                     Text Block
                   </FormLabel>
-                  <textarea
+                  <Textarea
                     id="txt-textBlock"
                     {...textForm.register("textBlock")}
-                    className="mt-1 flex-1 w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+                    className="mt-1 flex-1"
                     placeholder="Enter the text content..."
                     style={{ minHeight: "200px" }}
                   />
@@ -1365,7 +877,6 @@ export const CompanyForm = ({
                 </div>
               </div>
 
-              {/* Right column: 18 boolean checkboxes */}
               <div className="flex w-60 shrink-0 flex-col gap-1 overflow-y-auto p-6">
                 <p className="mb-2 text-sm font-medium text-gray-700">
                   Usage Categories
@@ -1377,9 +888,7 @@ export const CompanyForm = ({
                     control={textForm.control}
                     render={({ field: f }) => (
                       <label className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 hover:bg-muted/40">
-                        <input
-                          type="checkbox"
-                          className="size-4 rounded border-border accent-primary"
+                        <Checkbox
                           checked={!!f.value}
                           onChange={(e) => f.onChange(e.target.checked)}
                         />
@@ -1393,21 +902,294 @@ export const CompanyForm = ({
               </div>
             </div>
 
-            <div className="shrink-0 border-t bg-background px-6 py-4">
-              <div className="flex justify-end gap-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    textForm.reset(DEFAULT_TEXT);
-                    setIsTextDialogOpen(false);
-                  }}
-                >
-                  {COMMON_TEXT.cancel}
-                </Button>
-                <Button type="submit">Add Text</Button>
+            <DialogFormFooter
+              onCancel={handleCancelText}
+              submitLabel="Add Text"
+            />
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isContactDialogOpen} onOpenChange={handleContactOpenChange}>
+        <DialogContent className="flex h-[85dvh] max-w-3xl flex-col gap-0 p-0">
+          <DialogHeader className="shrink-0 border-b bg-background px-6 py-5">
+            <DialogTitle className="flex items-center gap-2">
+              <User className="size-4" />
+              Contact
+            </DialogTitle>
+            <DialogDescription>
+              Add a contact person for this company.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form
+            onSubmit={handleSaveContact}
+            className="flex flex-1 flex-col overflow-hidden"
+          >
+            <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-gray-700">
+                  Contact Person
+                </h3>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div>
+                    <FormLabel htmlFor="co-salutation">Salutation</FormLabel>
+                    <Controller
+                      name="salutation"
+                      control={contactForm.control}
+                      render={({ field }) => (
+                        <Select
+                          id="co-salutation"
+                          options={[
+                            { value: "", label: COMMON_TEXT.emptyOption },
+                            ...contactSalutations.map((s) => ({
+                              value: s,
+                              label: CONTACT_SALUTATION_LABELS[s],
+                            })),
+                          ]}
+                          value={field.value ?? ""}
+                          onValueChange={field.onChange}
+                          placeholder={COMMON_TEXT.emptyOption}
+                        />
+                      )}
+                    />
+                  </div>
+                  <div>
+                    <FormLabel htmlFor="co-firstName">First Name</FormLabel>
+                    <Input
+                      id="co-firstName"
+                      {...contactForm.register("firstName")}
+                    />
+                  </div>
+                  <div>
+                    <FormLabel htmlFor="co-initials">Initials</FormLabel>
+                    <Input
+                      id="co-initials"
+                      {...contactForm.register("initials")}
+                    />
+                  </div>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div>
+                    <FormLabel htmlFor="co-lastName">Last Name</FormLabel>
+                    <Input
+                      id="co-lastName"
+                      {...contactForm.register("lastName")}
+                    />
+                  </div>
+                  <div>
+                    <FormLabel htmlFor="co-telephone">Telephone</FormLabel>
+                    <Input
+                      id="co-telephone"
+                      {...contactForm.register("telephone")}
+                    />
+                  </div>
+                  <div>
+                    <FormLabel htmlFor="co-mobile">Mobile</FormLabel>
+                    <Input
+                      id="co-mobile"
+                      {...contactForm.register("mobile")}
+                    />
+                  </div>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div>
+                    <FormLabel htmlFor="co-fax">Fax</FormLabel>
+                    <Input id="co-fax" {...contactForm.register("fax")} />
+                  </div>
+                  <div>
+                    <FormLabel htmlFor="co-email">Email</FormLabel>
+                    <Input
+                      id="co-email"
+                      type="email"
+                      {...contactForm.register("email")}
+                    />
+                  </div>
+                  <div>
+                    <FormLabel htmlFor="co-address">Address</FormLabel>
+                    <Input
+                      id="co-address"
+                      {...contactForm.register("address")}
+                    />
+                  </div>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div>
+                    <FormLabel htmlFor="co-categoryAddition">
+                      Category Addition
+                    </FormLabel>
+                    <Input
+                      id="co-categoryAddition"
+                      {...contactForm.register("categoryAddition")}
+                    />
+                  </div>
+                  <div>
+                    <FormLabel htmlFor="co-btwNumber">BTW Number</FormLabel>
+                    <Input
+                      id="co-btwNumber"
+                      {...contactForm.register("btwNumber")}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-gray-700">Address</h3>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div>
+                    <FormLabel htmlFor="co-country">Country</FormLabel>
+                    <Input
+                      id="co-country"
+                      {...contactForm.register("country")}
+                    />
+                  </div>
+                  <div>
+                    <FormLabel htmlFor="co-postal">Postal</FormLabel>
+                    <Input
+                      id="co-postal"
+                      {...contactForm.register("postal")}
+                    />
+                  </div>
+                  <div>
+                    <FormLabel htmlFor="co-house">House</FormLabel>
+                    <Input id="co-house" {...contactForm.register("house")} />
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Controller
+                    name="poBox"
+                    control={contactForm.control}
+                    render={({ field }) => (
+                      <Checkbox
+                        id="co-poBox"
+                        checked={field.value}
+                        onChange={field.onChange}
+                      />
+                    )}
+                  />
+                  <FormLabel htmlFor="co-poBox">PO Box</FormLabel>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div>
+                    <FormLabel htmlFor="co-streetAndNo">Street & No</FormLabel>
+                    <Input
+                      id="co-streetAndNo"
+                      {...contactForm.register("streetAndNo")}
+                    />
+                  </div>
+                  <div>
+                    <FormLabel htmlFor="co-annex">Annex</FormLabel>
+                    <Input id="co-annex" {...contactForm.register("annex")} />
+                  </div>
+                  <div>
+                    <FormLabel htmlFor="co-postalCode">Postal Code</FormLabel>
+                    <Input
+                      id="co-postalCode"
+                      {...contactForm.register("postalCode")}
+                    />
+                  </div>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div>
+                    <FormLabel htmlFor="co-city">City</FormLabel>
+                    <Input id="co-city" {...contactForm.register("city")} />
+                  </div>
+                  <div>
+                    <FormLabel htmlFor="co-region">Region</FormLabel>
+                    <Input
+                      id="co-region"
+                      {...contactForm.register("region")}
+                    />
+                  </div>
+                  <div>
+                    <FormLabel htmlFor="co-addressCountry">Country</FormLabel>
+                    <Input
+                      id="co-addressCountry"
+                      {...contactForm.register("addressCountry")}
+                    />
+                  </div>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div>
+                    <FormLabel htmlFor="co-addressTelephone">
+                      Telephone
+                    </FormLabel>
+                    <Input
+                      id="co-addressTelephone"
+                      {...contactForm.register("addressTelephone")}
+                    />
+                  </div>
+                  <div>
+                    <FormLabel htmlFor="co-addressFax">Fax</FormLabel>
+                    <Input
+                      id="co-addressFax"
+                      {...contactForm.register("addressFax")}
+                    />
+                  </div>
+                  <div>
+                    <FormLabel htmlFor="co-addressEmail">Email</FormLabel>
+                    <Input
+                      id="co-addressEmail"
+                      type="email"
+                      {...contactForm.register("addressEmail")}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <FormLabel htmlFor="co-website">Website</FormLabel>
+                  <Input
+                    id="co-website"
+                    {...contactForm.register("website")}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-gray-700">
+                  Categories
+                </h3>
+                <Controller
+                  name="categories"
+                  control={contactForm.control}
+                  render={({ field }) => (
+                    <div className="grid gap-2 sm:grid-cols-3">
+                      {contactCategories.map((cat) => (
+                        <label
+                          key={cat}
+                          className="flex cursor-pointer items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 hover:bg-muted/40"
+                        >
+                          <Checkbox
+                            checked={(field.value as string[]).includes(cat)}
+                            onChange={() => toggleContactCategory(cat)}
+                          />
+                          <span className="text-sm text-gray-700">
+                            {CONTACT_CATEGORY_LABELS[cat]}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="text-sm font-semibold text-gray-700">
+                  Sequence Number
+                </h3>
+                <div className="w-32">
+                  <Input
+                    type="number"
+                    min={1}
+                    {...contactForm.register("sequenceNumber")}
+                  />
+                </div>
               </div>
             </div>
+
+            <DialogFormFooter
+              onCancel={handleCancelContact}
+              submitLabel="Add Contact"
+            />
           </form>
         </DialogContent>
       </Dialog>
