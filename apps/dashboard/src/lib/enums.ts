@@ -121,6 +121,13 @@ export const contactCategories = [
 
 export type ContactCategory = (typeof contactCategories)[number];
 
+export const warehouseTypes = [
+  "warehouse",
+  "location",
+] as const satisfies readonly string[];
+
+export type WarehouseType = (typeof warehouseTypes)[number];
+
 export const warehouseAddresses = [
   "hego_almere",
   "port_of_rotterdam",

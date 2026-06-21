@@ -3,13 +3,13 @@
 import { db } from "@/db";
 import { InsertWarehouses, Warehouses } from "@/db/schema/warehouses";
 import { generateUuid } from "@/lib/helpers";
-import { desc, isNotNull } from "drizzle-orm";
+import { and, desc, eq, isNotNull } from "drizzle-orm";
 import type { SelectWarehouses } from "@/db/schema/warehouses";
 
 export type WarehouseSubSectionFields = Omit<
   InsertWarehouses,
   "id" | "uuid" | "createdAt" | "updatedAt"
-> & { parentUuid: string };
+>;
 
 export type WarehouseSubSectionActionResult = {
   subSectionUuid?: string;
@@ -22,7 +22,7 @@ export const getWarehouseSubSections = async (): Promise<SelectWarehouses[]> => 
     return await db
       .select()
       .from(Warehouses)
-      .where(isNotNull(Warehouses.parentUuid))
+      .where(and(isNotNull(Warehouses.parentUuid), eq(Warehouses.type, "warehouse")))
       .orderBy(desc(Warehouses.createdAt));
   } catch {
     throw new Error("Failed to fetch warehouse sub sections");
