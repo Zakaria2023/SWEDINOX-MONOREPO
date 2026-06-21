@@ -3,7 +3,7 @@
 import { db } from "@/db";
 import { InsertWarehouses, Warehouses } from "@/db/schema/warehouses";
 import { generateUuid } from "@/lib/helpers";
-import { asc, desc, isNull } from "drizzle-orm";
+import { asc, desc, eq, isNull } from "drizzle-orm";
 import { SelectWarehouses } from "@/db/schema/warehouses";
 
 export type WarehouseOption = Pick<
@@ -114,6 +114,17 @@ export const getWarehouses = async (): Promise<SelectWarehouses[]> => {
   } catch {
     throw new Error("Failed to fetch warehouses");
   }
+};
+
+export const updateWarehouseDocument = async (
+  warehouseUuid: string,
+  documentId: string,
+  documentFileName: string,
+): Promise<void> => {
+  await db
+    .update(Warehouses)
+    .set({ documentId, documentFileName })
+    .where(eq(Warehouses.uuid, warehouseUuid));
 };
 
 export const createWarehouse = async (

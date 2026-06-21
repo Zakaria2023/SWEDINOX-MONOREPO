@@ -50,6 +50,8 @@ export const createWarehouseSchema = () =>
         ]),
       }),
     ),
+    documentId: z.string().optional(),
+    documentFileName: z.string().optional(),
   });
 
 export type WarehouseFormValues = z.infer<
@@ -71,4 +73,6 @@ export const DEFAULT_WAREHOUSE: WarehouseFormValues = {
   maxWeight: "",
   productTypes: [],
   loadLocations: [],
+  documentId: undefined,
+  documentFileName: undefined,
 };

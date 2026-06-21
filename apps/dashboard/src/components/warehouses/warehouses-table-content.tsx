@@ -23,6 +23,7 @@ import {
   WarehouseLoadingLocation,
   WarehouseLocationType,
 } from "@/lib/enums";
+import { WarehouseDocumentCell } from "@/components/warehouses/warehouse-document-cell";
 
 type ColumnKey =
   | "id"
@@ -33,7 +34,8 @@ type ColumnKey =
   | "blocked"
   | "blockReason"
   | "blockedForOptimization"
-  | "limitedDimensions";
+  | "limitedDimensions"
+  | "document";
 
 const ALL_COLUMNS: Array<{
   defaultVisible: boolean;
@@ -57,6 +59,7 @@ const ALL_COLUMNS: Array<{
     label: "Limited Dimensions",
     defaultVisible: false,
   },
+  { key: "document", label: "Document", defaultVisible: true },
 ];
 
 const initialVisibility = ALL_COLUMNS.reduce(
@@ -149,6 +152,12 @@ export const WarehousesTableContent = ({ warehouses }: Props) => {
         return (
           <TableCell key={key}>
             {warehouse.limitedDimensions ? "Yes" : "No"}
+          </TableCell>
+        );
+      case "document":
+        return (
+          <TableCell key={key}>
+            <WarehouseDocumentCell warehouse={warehouse} />
           </TableCell>
         );
     }

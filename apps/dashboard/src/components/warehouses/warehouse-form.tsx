@@ -5,6 +5,7 @@ import { WarehouseOption } from "@/app/(dashboard)/warehouses/actions";
 import { Checkbox } from "@/components/shadcn/checkbox";
 import { Input } from "@/components/shadcn/input";
 import { Select } from "@/components/shadcn/select";
+import { DocumentUploader } from "@/components/document-uploader";
 import { FormActions } from "@/components/ui/form-actions";
 import { FormError } from "@/components/ui/form-error";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
@@ -403,6 +404,35 @@ export const WarehouseForm = ({ existingWarehouses }: Props) => {
         >
           + Add Load Location
         </button>
+      </section>
+
+      {/* Document */}
+      <section className="space-y-4">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+          Document
+        </h2>
+        {watch("documentId") && watch("documentFileName") ? (
+          <div className="flex items-center gap-4">
+            <span className="text-sm">{watch("documentFileName")}</span>
+            <button
+              type="button"
+              onClick={() => {
+                setValue("documentId", undefined);
+                setValue("documentFileName", undefined);
+              }}
+              className="text-xs text-muted-foreground underline-offset-4 hover:underline"
+            >
+              Replace
+            </button>
+          </div>
+        ) : (
+          <DocumentUploader
+            onSuccess={(documentId, fileName) => {
+              setValue("documentId", documentId);
+              setValue("documentFileName", fileName);
+            }}
+          />
+        )}
       </section>
 
       <FormActions
