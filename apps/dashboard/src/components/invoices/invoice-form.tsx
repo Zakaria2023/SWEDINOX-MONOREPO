@@ -8,7 +8,10 @@ import { Pencil, Plus, X } from "lucide-react";
 import type { CompanyOption } from "@/app/(dashboard)/companies/actions";
 import type { InvoiceSurchargeInput } from "@/app/(dashboard)/invoices/actions";
 import { useInvoiceSubmit } from "@/app/(dashboard)/invoices/use-invoice-submit";
-import { surchargeSchema, type SurchargeFormValues } from "@/app/(dashboard)/invoices/validation";
+import {
+  surchargeSchema,
+  type SurchargeFormValues,
+} from "@/app/(dashboard)/invoices/validation";
 import { DatePicker } from "@/components/shadcn/date-picker";
 import { Input } from "@/components/shadcn/input";
 import { Select } from "@/components/shadcn/select";
@@ -61,9 +64,13 @@ export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
   const [isSurchargeDialogOpen, setIsSurchargeDialogOpen] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [surchargeError, setSurchargeError] = useState<string | null>(null);
-  const [debtorCompanyUuid, setDebtorCompanyUuid] = useState("");
 
-  const { form, isPending, onSubmit: submitForm, state } = useInvoiceSubmit(surcharges);
+  const {
+    form,
+    isPending,
+    onSubmit: submitForm,
+    state,
+  } = useInvoiceSubmit(surcharges);
 
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     if (surcharges.length === 0) {
@@ -74,19 +81,11 @@ export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
     setSurchargeError(null);
     submitForm(e);
   };
-  const { register, watch, setValue, control } = form;
+  const { register, watch, control } = form;
 
   const calculateVat = watch("calculateVat");
   const vatScenario = watch("vatScenario");
   const paymentTerms = watch("paymentTerms");
-  const companyUuid = watch("companyUuid");
-
-  useEffect(() => {
-    const company = availableCompanies.find((c) => c.uuid === companyUuid);
-    setDebtorCompanyUuid(company?.uuid ?? "");
-    setValue("debtorNo", company?.debtorNo ?? "");
-  }, [companyUuid, availableCompanies, setValue]);
-
   useEffect(() => {
     if (state.success) {
       router.push("/invoices");
@@ -99,14 +98,6 @@ export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
   });
 
   const companyOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
-    ...availableCompanies.map((c) => ({
-      value: c.uuid,
-      label: [c.searchCode1, c.companyName].filter(Boolean).join(" — "),
-    })),
-  ];
-
-  const debtorOptions = [
     { value: "", label: COMMON_TEXT.emptyOption },
     ...availableCompanies.map((c) => ({
       value: c.uuid,
@@ -167,7 +158,9 @@ export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
       amount: surchargeVal,
     };
     if (editingIndex !== null) {
-      setSurcharges((prev) => prev.map((s, i) => (i === editingIndex ? entry : s)));
+      setSurcharges((prev) =>
+        prev.map((s, i) => (i === editingIndex ? entry : s)),
+      );
     } else {
       setSurcharges((prev) => [...prev, entry]);
     }
@@ -184,7 +177,6 @@ export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
   return (
     <>
       <form onSubmit={onSubmit} className="space-y-8">
-
         {/* Header fields */}
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="space-y-4">
@@ -207,20 +199,6 @@ export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
                 )}
               />
             </div>
-            <div>
-              <FormLabel htmlFor="debtorNo">Debtor No.</FormLabel>
-              <Select
-                id="debtorNo"
-                options={debtorOptions}
-                value={debtorCompanyUuid}
-                onValueChange={(uuid) => {
-                  setDebtorCompanyUuid(uuid);
-                  const company = availableCompanies.find((c) => c.uuid === uuid);
-                  setValue("debtorNo", company?.debtorNo ?? "");
-                }}
-                disabled={isPending}
-              />
-            </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <FormLabel>Invoice Date</FormLabel>
@@ -228,7 +206,11 @@ export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
                   name="invoiceDate"
                   control={control}
                   render={({ field }) => (
-                    <DatePicker value={field.value ?? ""} onChange={field.onChange} disabled={isPending} />
+                    <DatePicker
+                      value={field.value ?? ""}
+                      onChange={field.onChange}
+                      disabled={isPending}
+                    />
                   )}
                 />
               </div>
@@ -238,7 +220,11 @@ export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
                   name="expirationDate"
                   control={control}
                   render={({ field }) => (
-                    <DatePicker value={field.value ?? ""} onChange={field.onChange} disabled={isPending} />
+                    <DatePicker
+                      value={field.value ?? ""}
+                      onChange={field.onChange}
+                      disabled={isPending}
+                    />
                   )}
                 />
               </div>
@@ -259,7 +245,9 @@ export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
                   className="size-4 accent-primary"
                   disabled={isPending}
                 />
-                <span className="text-sm font-medium text-gray-700">Calculate VAT</span>
+                <span className="text-sm font-medium text-gray-700">
+                  Calculate VAT
+                </span>
               </label>
               <label className="flex cursor-pointer items-center gap-2">
                 <input
@@ -269,7 +257,9 @@ export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
                   className="size-4 accent-primary"
                   disabled={isPending}
                 />
-                <span className="text-sm font-medium text-gray-700">Printed</span>
+                <span className="text-sm font-medium text-gray-700">
+                  Printed
+                </span>
               </label>
               <label className="flex cursor-pointer items-center gap-2">
                 <input
@@ -279,7 +269,9 @@ export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
                   className="size-4 accent-primary"
                   disabled={isPending}
                 />
-                <span className="text-sm font-medium text-gray-700">Mailed</span>
+                <span className="text-sm font-medium text-gray-700">
+                  Mailed
+                </span>
               </label>
             </div>
           </div>
@@ -338,7 +330,8 @@ export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
             <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-700">
               Surcharges{" "}
               <span className="ml-1 text-xs font-normal text-muted-foreground">
-                {surcharges.length} {surcharges.length === 1 ? "surcharge" : "surcharges"}
+                {surcharges.length}{" "}
+                {surcharges.length === 1 ? "surcharge" : "surcharges"}
               </span>
             </h2>
             <Button
@@ -376,9 +369,13 @@ export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
                           ? INVOICE_SURCHARGE_DESCRIPTION_LABELS[s.description]
                           : na}
                       </TableCell>
-                      <TableCell className="text-right">{s.surcharge}</TableCell>
+                      <TableCell className="text-right">
+                        {s.surcharge}
+                      </TableCell>
                       <TableCell>{s.unit ?? na}</TableCell>
-                      <TableCell className="text-right">{s.surchargePercentage}</TableCell>
+                      <TableCell className="text-right">
+                        {s.surchargePercentage}
+                      </TableCell>
                       <TableCell className="text-right">{s.amount}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
@@ -405,7 +402,9 @@ export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
             </div>
           )}
           {surchargeError && (
-            <p className="text-sm font-medium text-destructive">{surchargeError}</p>
+            <p className="text-sm font-medium text-destructive">
+              {surchargeError}
+            </p>
           )}
         </section>
 
@@ -419,10 +418,15 @@ export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
       </form>
 
       {/* Surcharge dialog */}
-      <Dialog open={isSurchargeDialogOpen} onOpenChange={setIsSurchargeDialogOpen}>
+      <Dialog
+        open={isSurchargeDialogOpen}
+        onOpenChange={setIsSurchargeDialogOpen}
+      >
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>{editingIndex !== null ? "Edit Surcharge" : "Add Surcharge"}</DialogTitle>
+            <DialogTitle>
+              {editingIndex !== null ? "Edit Surcharge" : "Add Surcharge"}
+            </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSaveSurcharge}>
             <DialogBody className="space-y-4">
@@ -433,7 +437,9 @@ export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
                     id="surchargeOrder"
                     type="number"
                     min={0}
-                    {...surchargeForm.register("order", { valueAsNumber: true })}
+                    {...surchargeForm.register("order", {
+                      valueAsNumber: true,
+                    })}
                   />
                 </div>
                 <div>
@@ -449,7 +455,11 @@ export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
                       />
                     )}
                   />
-                  <FormFieldError message={surchargeForm.formState.errors.description?.message} />
+                  <FormFieldError
+                    message={
+                      surchargeForm.formState.errors.description?.message
+                    }
+                  />
                 </div>
               </div>
 
@@ -474,7 +484,6 @@ export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
                   />
                 </div>
               </div>
-
             </DialogBody>
 
             <DialogFooter>
@@ -485,7 +494,9 @@ export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
               >
                 {COMMON_TEXT.cancel}
               </Button>
-              <Button type="submit">{editingIndex !== null ? "Save" : "Add"}</Button>
+              <Button type="submit">
+                {editingIndex !== null ? "Save" : "Add"}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>

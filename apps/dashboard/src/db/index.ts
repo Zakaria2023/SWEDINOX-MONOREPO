@@ -12,24 +12,15 @@ if (
   throw new Error("Database credentials are not set in environment variables.");
 }
 
-const globalForDb = globalThis as unknown as {
-  pool: ReturnType<typeof mysql.createPool> | undefined;
-};
+const pool = mysql.createPool({
+  host: process.env.DB_HOST,
+  port: Number(process.env.DB_PORT),
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+  ssl: { rejectUnauthorized: false },
+});
 
-if (!globalForDb.pool) {
-  globalForDb.pool = mysql.createPool({
-    host: process.env.DB_HOST,
-    port: Number(process.env.DB_PORT),
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    ssl: { rejectUnauthorized: false },
-    connectionLimit: 1,
-    waitForConnections: true,
-    queueLimit: 0,
-  });
-}
-
-export const db = drizzle(globalForDb.pool, { schema, mode: "default" });
+export const db = drizzle(pool, { schema, mode: "default" });
 
 export * from "./schema";

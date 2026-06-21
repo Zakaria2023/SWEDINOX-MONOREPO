@@ -49,7 +49,6 @@ export const CompanyDetailView = ({ company, invoices }: Props) => {
             label="Language"
             value={company.lang ? COMPANY_LANGUAGE_LABELS[company.lang] : null}
           />
-          <Field label="Debtor No." value={company.debtorNo} />
           <Field label="Search Code 1" value={company.searchCode1} />
           <Field label="Search Code 2" value={company.searchCode2} />
           <Field label="Search Code 3" value={company.searchCode3} />
@@ -141,7 +140,6 @@ export const CompanyDetailView = ({ company, invoices }: Props) => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Invoice No.</TableHead>
-                    <TableHead>Debtor No.</TableHead>
                     <TableHead>Invoice Date</TableHead>
                     <TableHead>Expiration Date</TableHead>
                     <TableHead className="text-right">Excl. VAT</TableHead>
@@ -160,12 +158,11 @@ export const CompanyDetailView = ({ company, invoices }: Props) => {
                       <TableCell className="font-medium whitespace-nowrap">
                         {inv.id}
                       </TableCell>
-                      <TableCell>{inv.debtorNo ?? na}</TableCell>
                       <TableCell className="whitespace-nowrap">
-                        {inv.invoiceDate ?? na}
+                        {inv.invoiceDate?.toLocaleDateString() ?? na}
                       </TableCell>
                       <TableCell className="whitespace-nowrap">
-                        {inv.expirationDate ?? na}
+                        {inv.expirationDate?.toLocaleDateString() ?? na}
                       </TableCell>
                       <TableCell className="text-right whitespace-nowrap">
                         € {inv.invoiceAmountExclVat}

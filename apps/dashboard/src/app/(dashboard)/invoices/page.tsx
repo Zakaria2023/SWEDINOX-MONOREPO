@@ -40,7 +40,6 @@ const InvoicesPage = async () => {
               <TableHead>Invoice No.</TableHead>
               <TableHead>Customer</TableHead>
               <TableHead>Customer Code</TableHead>
-              <TableHead>Debtor No.</TableHead>
               <TableHead>Invoice Date</TableHead>
               <TableHead>Expiration Date</TableHead>
               <TableHead className="text-right">Excl. VAT</TableHead>
@@ -75,12 +74,11 @@ const InvoicesPage = async () => {
                   <TableCell className="whitespace-nowrap">
                     {inv.companyCode ?? na}
                   </TableCell>
-                  <TableCell>{inv.debtorNo ?? na}</TableCell>
                   <TableCell className="whitespace-nowrap">
-                    {inv.invoiceDate ?? na}
+                    {inv.invoiceDate?.toLocaleDateString() ?? na}
                   </TableCell>
                   <TableCell className="whitespace-nowrap">
-                    {inv.expirationDate ?? na}
+                    {inv.expirationDate?.toLocaleDateString() ?? na}
                   </TableCell>
                   <TableCell className="text-right whitespace-nowrap">
                     € {inv.invoiceAmountExclVat}

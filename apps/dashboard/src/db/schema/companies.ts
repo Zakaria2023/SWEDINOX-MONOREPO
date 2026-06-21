@@ -18,7 +18,6 @@ export const Companies = mysqlTable("Companies", {
   correspName: varchar("corresp_name", { length: 255 }),
   lang: mysqlEnum("lang", companyLangs),
   remarks: text("remarks"),
-  debtorNo: varchar("debtor_no", { length: 100 }),
   searchCode1: varchar("search_code_1", { length: 100 }),
   searchCode2: varchar("search_code_2", { length: 100 }),
   searchCode3: varchar("search_code_3", { length: 100 }),

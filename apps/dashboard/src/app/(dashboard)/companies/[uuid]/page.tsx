@@ -15,12 +15,19 @@ const CompanyDetailPage = async ({ params }: Props) => {
   const { uuid } = await params;
 
   const company = await getCompanyDetail(uuid);
-  if (!company) notFound();
+
+  if (!company) {
+    notFound();
+  }
 
   const isCustomer = company.roles.includes("customer");
-  const invoices = isCustomer ? await getInvoicesByCompanyUuid(uuid) : undefined;
+  const invoices = isCustomer
+    ? await getInvoicesByCompanyUuid(uuid)
+    : undefined;
 
-  const roleLabels = company.roles.map((r) => COMPANY_ROLE_LABELS[r]).join(", ");
+  const roleLabels = company.roles
+    .map((r) => COMPANY_ROLE_LABELS[r])
+    .join(", ");
 
   return (
     <div className="space-y-6 p-6">
@@ -33,10 +40,7 @@ const CompanyDetailPage = async ({ params }: Props) => {
           Companies
         </Link>
       </div>
-      <PageHeading
-        title={company.companyName}
-        description={roleLabels}
-      />
+      <PageHeading title={company.companyName} description={roleLabels} />
       <CompanyDetailView company={company} invoices={invoices} />
     </div>
   );

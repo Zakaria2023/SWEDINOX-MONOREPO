@@ -7,10 +7,11 @@ import {
   InsertInvoiceSurcharges,
   Invoices,
   InvoiceSurcharges,
+  SelectCompanies,
   SelectInvoices,
 } from "@/db";
 import { generateUuid } from "@/lib/helpers";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, getTableColumns } from "drizzle-orm";
 
 export type InvoiceActionResult = {
   invoiceUuid?: string;
@@ -37,38 +38,26 @@ export type InvoiceSurchargeInput = Omit<
 >;
 
 export type InvoiceWithCompany = SelectInvoices & {
-  companyName: string | null;
-  companyCode: number | null;
+  companyName: SelectCompanies["companyName"] | null;
+  companyCode: SelectCompanies["id"] | null;
 };
 
 export const getInvoices = async (): Promise<InvoiceWithCompany[]> => {
-  const invoices = await db
-    .select()
+  const rows = await db
+    .select({
+      ...getTableColumns(Invoices),
+      companyName: Companies.companyName,
+      companyCode: Companies.id,
+    })
     .from(Invoices)
+    .leftJoin(Companies, eq(Invoices.companyUuid, Companies.uuid))
     .orderBy(desc(Invoices.createdAt));
 
-  if (invoices.length === 0) return [];
-
-  const companies = await db
-    .select({
-      uuid: Companies.uuid,
-      id: Companies.id,
-      companyName: Companies.companyName,
-    })
-    .from(Companies);
-
-  const companyMap = new Map(companies.map((c) => [c.uuid, c]));
-
-  return invoices.map((inv) => {
-    const company = inv.companyUuid
-      ? companyMap.get(inv.companyUuid)
-      : undefined;
-    return {
-      ...inv,
-      companyName: company?.companyName ?? null,
-      companyCode: company?.id ?? null,
-    };
-  });
+  return rows.map((row) => ({
+    ...row,
+    companyName: row.companyName ?? null,
+    companyCode: row.companyCode ?? null,
+  }));
 };
 
 export const getInvoicesByCompanyUuid = async (
