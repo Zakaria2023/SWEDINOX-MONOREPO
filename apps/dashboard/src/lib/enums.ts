@@ -197,6 +197,68 @@ export const warehouseTransportRegions = [
 export type WarehouseTransportRegion =
   (typeof warehouseTransportRegions)[number];
 
+export const machineOptionTypes = [
+  "decoilen",
+  "grinding",
+  "shear_cut",
+  "laser",
+  "duplo",
+  "brushing",
+  "blue_foil",
+  "laser_foil",
+  "uv_foil",
+  "remove_foil",
+  "anodizing",
+  "pickling",
+  "coating",
+  "embossing",
+  "perforate",
+  "kanten",
+  "polished",
+  "punching",
+  "slitting",
+  "rolling",
+  "stempelen",
+  "zagen",
+] as const satisfies readonly string[];
+
+export type MachineOptionType = (typeof machineOptionTypes)[number];
+
+export const machineProductionTypes = [
+  "decoiler",
+  "interne_wzh",
+  "knip",
+  "laser_1",
+  "laser_2",
+  "slijpen_folien",
+] as const satisfies readonly string[];
+
+export type MachineProductionType = (typeof machineProductionTypes)[number];
+
+export const machineLoadingTypes = [
+  "load",
+] as const satisfies readonly string[];
+
+export type MachineLoadingType = (typeof machineLoadingTypes)[number];
+
+export const machineCapacityUnits = [
+  "percent",
+  "amount",
+  "hk",
+  "hm",
+  "hs",
+  "kg",
+  "m1",
+  "m2",
+  "m3",
+  "mm",
+  "regel",
+  "st",
+  "tn",
+] as const satisfies readonly string[];
+
+export type MachineCapacityUnit = (typeof machineCapacityUnits)[number];
+
 export const textUsageCategories = [
   "purchase_quote_request",
   "purchase_order",

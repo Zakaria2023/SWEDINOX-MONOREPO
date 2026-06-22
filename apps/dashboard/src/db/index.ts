@@ -1,6 +1,7 @@
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
 import * as schema from "./schema";
+import * as relations from "./relations";
 
 if (
   !process.env.DB_HOST ||
@@ -21,6 +22,6 @@ const pool = mysql.createPool({
   ssl: { rejectUnauthorized: false },
 });
 
-export const db = drizzle(pool, { schema, mode: "default" });
+export const db = drizzle(pool, { schema: { ...schema, ...relations }, mode: "default" });
 
 export * from "./schema";

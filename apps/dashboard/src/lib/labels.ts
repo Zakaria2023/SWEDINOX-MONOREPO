@@ -4,6 +4,10 @@ import type {
   CommunicationSettingDocumentType,
   CommunicationSettingShape,
   CommunicationSettingType,
+  MachineCapacityUnit,
+  MachineLoadingType,
+  MachineOptionType,
+  MachineProductionType,
   CompanyLang,
   CompanyRole,
   ContactCategory,
@@ -239,6 +243,76 @@ export const WAREHOUSE_TRANSPORT_REGION_LABELS: Record<
   oe: "Eastern Europe",
   sp_po: "Spain/Portugal",
   zd_am: "South America",
+};
+
+export const MACHINE_OPTION_LABELS: Record<MachineOptionType, string> = {
+  decoilen: "Decoilen",
+  grinding: "Grinding",
+  shear_cut: "ShearCut",
+  laser: "Laser",
+  duplo: "Duplo",
+  brushing: "Brushing",
+  blue_foil: "Blue Foil",
+  laser_foil: "Laser Foil",
+  uv_foil: "UV Foil",
+  remove_foil: "Remove Foil",
+  anodizing: "Anodizing",
+  pickling: "Pickling",
+  coating: "Coating",
+  embossing: "Embossing",
+  perforate: "Perforate",
+  kanten: "Kanten",
+  polished: "Polished",
+  punching: "Punching",
+  slitting: "Slitting",
+  rolling: "Rolling",
+  stempelen: "Stempelen",
+  zagen: "Zagen",
+};
+
+export const MACHINE_PRODUCTION_LABELS: Record<MachineProductionType, string> = {
+  decoiler: "Decoiler",
+  interne_wzh: "Interne wzh",
+  knip: "Knip",
+  laser_1: "Laser 1",
+  laser_2: "Laser 2",
+  slijpen_folien: "Slijpen/Folien",
+};
+
+export const MACHINE_LOADING_LABELS: Record<MachineLoadingType, string> = {
+  load: "Load",
+};
+
+export const MACHINE_CAPACITY_UNIT_CODES: Record<MachineCapacityUnit, string> = {
+  percent: "%",
+  amount: "Amount",
+  hk: "HK",
+  hm: "HM",
+  hs: "HS",
+  kg: "KG",
+  m1: "M1",
+  m2: "M2",
+  m3: "M3",
+  mm: "MM",
+  regel: "Regel",
+  st: "ST",
+  tn: "TN",
+};
+
+export const MACHINE_CAPACITY_UNIT_LABELS: Record<MachineCapacityUnit, string> = {
+  percent: "Percent",
+  amount: "Amount",
+  hk: "One hundred kilograms",
+  hm: "One hundred meters",
+  hs: "One hundred pieces",
+  kg: "Kilogram",
+  m1: "Meter",
+  m2: "Square meters",
+  m3: "Cubic meters",
+  mm: "Millimeter",
+  regel: "Line",
+  st: "Pieces",
+  tn: "Tonnage",
 };
 
 export const TEXT_USAGE_CATEGORY_LABELS: Record<TextUsageCategory, string> = {

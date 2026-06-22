@@ -23,7 +23,7 @@ import {
   WarehouseLoadingLocation,
   WarehouseLocationType,
 } from "@/lib/enums";
-import { WarehouseDocumentCell } from "@/components/warehouses/warehouse-document-cell";
+import { DocumentCell } from "@/components/ui/document-cell";
 
 type ColumnKey =
   | "id"
@@ -157,7 +157,7 @@ export const WarehousesTableContent = ({ warehouses }: Props) => {
       case "document":
         return (
           <TableCell key={key}>
-            <WarehouseDocumentCell warehouse={warehouse} />
+            <DocumentCell documents={warehouse.documents} />
           </TableCell>
         );
     }
