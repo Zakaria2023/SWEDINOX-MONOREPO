@@ -17,6 +17,7 @@ export const Texts = mysqlTable(
     uuid: char("uuid", { length: 36 }).notNull().unique(),
 
     companyUuid: char("company_uuid", { length: 36 }),
+    productGroupUuid: char("product_group_uuid", { length: 36 }),
     textCategoryUuid: char("text_category_uuid", { length: 36 }),
 
     title: varchar("title", { length: 255 }).notNull(),
@@ -50,6 +51,7 @@ export const Texts = mysqlTable(
   },
   (table) => [
     index("idx_texts_company_uuid").on(table.companyUuid),
+    index("idx_texts_product_group_uuid").on(table.productGroupUuid),
     index("idx_texts_text_category_uuid").on(table.textCategoryUuid),
   ],
 );

@@ -20,6 +20,7 @@ import {
   ChevronRight,
   ContactRound,
   MapPin,
+  Package,
   Truck,
   Users,
   Warehouse,
@@ -57,6 +58,7 @@ export const AppSidebar = () => {
     pathname.startsWith("/warehouses") ||
     pathname.startsWith("/warehouse-sub-sections");
   const isLocationsActive = pathname.startsWith("/locations");
+  const isLogisticsActive = pathname.startsWith("/product-groups");
 
   const [isCustomersOpen, setIsCustomersOpen] = useState(false);
   const [isCompanyOpen, setIsCompanyOpen] = useState(false);
@@ -64,6 +66,7 @@ export const AppSidebar = () => {
   const [isSupplierOpen, setIsSupplierOpen] = useState(false);
   const [isWarehouseOpen, setIsWarehouseOpen] = useState(false);
   const [isLocationsOpen, setIsLocationsOpen] = useState(false);
+  const [isLogisticsOpen, setIsLogisticsOpen] = useState(false);
 
   const isCustomersExpanded = isCustomersOpen || isCustomersActive;
   const isCompanyExpanded = isCompanyOpen || isCompanyActive;
@@ -71,6 +74,7 @@ export const AppSidebar = () => {
   const isSupplierExpanded = isSupplierOpen || isSupplierActive;
   const isWarehouseExpanded = isWarehouseOpen || isWarehouseActive;
   const isLocationsExpanded = isLocationsOpen || isLocationsActive;
+  const isLogisticsExpanded = isLogisticsOpen || isLogisticsActive;
 
   return (
     <Sidebar>
@@ -307,6 +311,29 @@ export const AppSidebar = () => {
                         isActive={pathname.startsWith("/locations")}
                       >
                         <span>Locations</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                  </SidebarMenuSub>
+                )}
+              </SidebarMenuItem>
+
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  aria-expanded={isLogisticsExpanded}
+                  onClick={() => setIsLogisticsOpen((open) => !open)}
+                >
+                  <Package />
+                  <span>Logistics</span>
+                  <ChevronRight className={chevronClass(isLogisticsExpanded)} />
+                </SidebarMenuButton>
+                {isLogisticsExpanded && (
+                  <SidebarMenuSub>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/product-groups" />}
+                        isActive={pathname.startsWith("/product-groups")}
+                      >
+                        <span>Product Groups</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                   </SidebarMenuSub>
