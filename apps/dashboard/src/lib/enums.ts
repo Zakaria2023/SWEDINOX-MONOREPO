@@ -303,3 +303,21 @@ export const invoicePaymentTerms = [
 ] as const satisfies readonly string[];
 
 export type InvoicePaymentTerm = (typeof invoicePaymentTerms)[number];
+
+export const purchaseInvoiceBlockReasons = [
+  "price_mismatch",
+  "awaiting_goods_receipt",
+  "awaiting_approval",
+  "duplicate",
+  "disputed",
+  "other",
+] as const satisfies readonly string[];
+
+export type PurchaseInvoiceBlockReason = (typeof purchaseInvoiceBlockReasons)[number];
+
+export const purchaseInvoiceFiscalBases = [
+  "booking_date",
+  "document_date",
+] as const satisfies readonly string[];
+
+export type PurchaseInvoiceFiscalBase = (typeof purchaseInvoiceFiscalBases)[number];

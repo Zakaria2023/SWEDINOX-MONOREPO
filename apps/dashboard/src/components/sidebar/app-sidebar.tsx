@@ -20,6 +20,7 @@ import {
   ChevronRight,
   ContactRound,
   MapPin,
+  ShoppingCart,
   Truck,
   Users,
   Warehouse,
@@ -50,9 +51,10 @@ export const AppSidebar = () => {
     pathname.startsWith("/contracts/") ||
     pathname.startsWith("/contract-groups") ||
     pathname.startsWith("/invoices");
-  const isSupplierActive = pathname.startsWith("/contracts-per-supplier");
-  pathname.startsWith("/contract-groups");
-  pathname.startsWith("/contact-persons-suppliers");
+  const isSupplierActive =
+    pathname.startsWith("/contracts-per-supplier") ||
+    pathname.startsWith("/contact-persons-suppliers");
+  const isPurchasesActive = pathname.startsWith("/purchase-invoices");
   const isWarehouseActive =
     pathname.startsWith("/warehouses") ||
     pathname.startsWith("/warehouse-sub-sections");
@@ -62,6 +64,7 @@ export const AppSidebar = () => {
   const [isCompanyOpen, setIsCompanyOpen] = useState(false);
   const [isSalesOpen, setIsSalesOpen] = useState(false);
   const [isSupplierOpen, setIsSupplierOpen] = useState(false);
+  const [isPurchasesOpen, setIsPurchasesOpen] = useState(false);
   const [isWarehouseOpen, setIsWarehouseOpen] = useState(false);
   const [isLocationsOpen, setIsLocationsOpen] = useState(false);
 
@@ -69,6 +72,7 @@ export const AppSidebar = () => {
   const isCompanyExpanded = isCompanyOpen || isCompanyActive;
   const isSalesExpanded = isSalesOpen || isSalesActive;
   const isSupplierExpanded = isSupplierOpen || isSupplierActive;
+  const isPurchasesExpanded = isPurchasesOpen || isPurchasesActive;
   const isWarehouseExpanded = isWarehouseOpen || isWarehouseActive;
   const isLocationsExpanded = isLocationsOpen || isLocationsActive;
 
@@ -248,6 +252,29 @@ export const AppSidebar = () => {
                         )}
                       >
                         <span>Contact Persons Suppliers</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                  </SidebarMenuSub>
+                )}
+              </SidebarMenuItem>
+
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  aria-expanded={isPurchasesExpanded}
+                  onClick={() => setIsPurchasesOpen((open) => !open)}
+                >
+                  <ShoppingCart />
+                  <span>Purchases</span>
+                  <ChevronRight className={chevronClass(isPurchasesExpanded)} />
+                </SidebarMenuButton>
+                {isPurchasesExpanded && (
+                  <SidebarMenuSub>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/purchase-invoices" />}
+                        isActive={pathname.startsWith("/purchase-invoices")}
+                      >
+                        <span>Purchase Invoices</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                   </SidebarMenuSub>

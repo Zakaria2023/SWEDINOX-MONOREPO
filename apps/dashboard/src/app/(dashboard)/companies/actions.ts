@@ -11,7 +11,7 @@ import {
   InsertCommunicationSettings,
 } from "@/db/schema/communication-settings";
 import { Contracts, InsertContracts } from "@/db/schema/contracts";
-import { Contacts, InsertContacts } from "@/db/schema/contacts";
+import { Contacts, InsertContacts, SelectContacts } from "@/db/schema/contacts";
 import { Texts, InsertTexts } from "@/db/schema/texts";
 import { generateUuid } from "@/lib/helpers";
 import { asc, desc, eq } from "drizzle-orm";
@@ -86,6 +86,34 @@ export const getCompaniesForSelect = async (): Promise<CompanyOption[]> => {
     })
     .from(Companies)
     .orderBy(asc(Companies.companyName));
+};
+
+export const getSuppliersForSelect = async (): Promise<CompanyOption[]> => {
+  const all = await db
+    .select({
+      uuid: Companies.uuid,
+      searchCode1: Companies.searchCode1,
+      companyName: Companies.companyName,
+      roles: Companies.roles,
+    })
+    .from(Companies)
+    .orderBy(asc(Companies.companyName));
+  return all.filter((c) => Array.isArray(c.roles) && c.roles.includes("supplier"));
+};
+
+export type ContactOption = Pick<SelectContacts, "uuid" | "id" | "companyUuid" | "firstName" | "lastName">;
+
+export const getContactsForSuppliers = async (): Promise<ContactOption[]> => {
+  return db
+    .select({
+      uuid: Contacts.uuid,
+      id: Contacts.id,
+      companyUuid: Contacts.companyUuid,
+      firstName: Contacts.firstName,
+      lastName: Contacts.lastName,
+    })
+    .from(Contacts)
+    .orderBy(asc(Contacts.firstName));
 };
 
 export const getCompanies = async (): Promise<SelectCompanies[]> => {
