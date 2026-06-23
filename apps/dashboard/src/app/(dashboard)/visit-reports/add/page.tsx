@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
-import { getCompaniesForSelect } from "@/app/(dashboard)/companies/actions";
+import { getCustomerAndProspectCompaniesForSelect } from "@/app/(dashboard)/companies/actions";
 import { getAdminUsers } from "@/app/(dashboard)/users/actions";
 import { VisitReportForm } from "@/components/visit-reports/visit-report-form";
 import { PageHeading } from "@/components/layout/page-heading";
 
 const AddVisitReportPage = async () => {
   const [companies, adminUsers] = await Promise.all([
-    getCompaniesForSelect(),
+    getCustomerAndProspectCompaniesForSelect(),
     getAdminUsers(),
   ]);
 

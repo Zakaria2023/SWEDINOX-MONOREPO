@@ -1219,7 +1219,14 @@ export const CompanyForm = ({
                   <Input
                     type="number"
                     min={1}
-                    {...contactForm.register("sequenceNumber")}
+                    {...contactForm.register("sequenceNumber", {
+                      valueAsNumber: true,
+                    })}
+                  />
+                  <FormFieldError
+                    message={
+                      contactForm.formState.errors.sequenceNumber?.message
+                    }
                   />
                 </div>
               </div>

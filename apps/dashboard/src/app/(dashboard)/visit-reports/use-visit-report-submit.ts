@@ -52,7 +52,7 @@ export const useVisitReportSubmit = () => {
         visitDate: values.visitDate,
         visitTime: values.visitTime,
         hasTakenPlace: values.hasTakenPlace,
-        visitReason: values.visitReason as VisitReportReason,
+        visitReason: (values.visitReason as VisitReportReason) || undefined,
         attentionPoint: values.attentionPoint,
         remarks: values.remarks,
       });

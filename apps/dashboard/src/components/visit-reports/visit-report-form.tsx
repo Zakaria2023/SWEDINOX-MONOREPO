@@ -10,8 +10,11 @@ import {
   type ContactOption,
 } from "@/app/(dashboard)/visit-reports/actions";
 import { useVisitReportSubmit } from "@/app/(dashboard)/visit-reports/use-visit-report-submit";
-import { visitReportContactMethods } from "@/lib/enums";
-import { VISIT_REPORT_CONTACT_METHOD_LABELS } from "@/lib/labels";
+import { visitReportContactMethods, visitReportReasons } from "@/lib/enums";
+import {
+  VISIT_REPORT_CONTACT_METHOD_LABELS,
+  VISIT_REPORT_REASON_LABELS,
+} from "@/lib/labels";
 import { DatePicker } from "@/components/shadcn/date-picker";
 import { Input } from "@/components/shadcn/input";
 import { FormActions } from "@/components/ui/form-actions";
@@ -247,15 +250,22 @@ export const VisitReportForm = ({
           Details
         </h2>
         <div className="grid gap-4 rounded-2xl border border-border bg-muted/20 p-4">
-          <div>
-            <FormLabel htmlFor="visitReason">Visit Reason</FormLabel>
-            <Input
-              id="visitReason"
-              {...register("visitReason")}
-              disabled={isPending}
-            />
-            <FormFieldError message={errors.visitReason?.message} />
-          </div>
+          <FormSelectField
+            control={control}
+            id="visitReason"
+            name="visitReason"
+            label="Visit Reason"
+            options={[
+              { value: "", label: COMMON_TEXT.selectPlaceholder },
+              ...visitReportReasons.map((reason) => ({
+                value: reason,
+                label: VISIT_REPORT_REASON_LABELS[reason],
+              })),
+            ]}
+            emptyValue=""
+            disabled={isPending}
+            errorMessage={errors.visitReason?.message}
+          />
 
           <div>
             <FormLabel htmlFor="attentionPoint">Attention Point</FormLabel>
