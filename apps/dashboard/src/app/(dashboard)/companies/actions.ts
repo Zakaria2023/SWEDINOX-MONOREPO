@@ -12,6 +12,7 @@ import {
 } from "@/db/schema/communication-settings";
 import { Contracts, InsertContracts } from "@/db/schema/contracts";
 import { Contacts, InsertContacts } from "@/db/schema/contacts";
+import { CustomerProjects, InsertCustomerProjects } from "@/db/schema/customer-projects";
 import { Texts, InsertTexts } from "@/db/schema/texts";
 import { generateUuid } from "@/lib/helpers";
 import { asc, desc, eq, or, sql } from "drizzle-orm";
@@ -39,6 +40,11 @@ export type CompanyFields = Omit<
 
 export type CompanyContractInput = Omit<
   InsertContracts,
+  "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt"
+>;
+
+export type CustomerProjectInput = Omit<
+  InsertCustomerProjects,
   "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt"
 >;
 
@@ -131,6 +137,7 @@ export const createCompany = async (
   contracts: CompanyContractInput[] = [],
   contacts: CompanyContactInput[] = [],
   texts: CompanyTextInput[] = [],
+  projects: CustomerProjectInput[] = [],
 ): Promise<CompanyActionResult> => {
   const uuid = generateUuid();
 
@@ -183,6 +190,14 @@ export const createCompany = async (
           uuid: generateUuid(),
           companyUuid: uuid,
           createdByUserId: userId,
+        });
+      }
+
+      for (const project of projects) {
+        await tx.insert(CustomerProjects).values({
+          ...project,
+          uuid: generateUuid(),
+          companyUuid: uuid,
         });
       }
     });

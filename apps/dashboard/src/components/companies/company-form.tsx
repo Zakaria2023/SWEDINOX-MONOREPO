@@ -2,7 +2,7 @@
 
 import { useCompanySubmit } from "@/app/(dashboard)/companies/use-company-submit";
 import { USAGE_CATEGORY_FIELDS } from "@/app/(dashboard)/companies/validation";
-import { type ContractListItem } from "@/app/(dashboard)/contracts/actions";
+import { type ContractForProjectOption, type ContractListItem } from "@/app/(dashboard)/contracts/actions";
 import { type TextCategoryOption } from "@/app/(dashboard)/text-categories/actions";
 import { DocumentUploader } from "@/components/document-uploader";
 import { AddressForm } from "@/components/companies/address-form";
@@ -42,6 +42,7 @@ import {
   MapPin,
   MessageSquare,
   Plus,
+  FolderOpen,
   User,
   X,
 } from "lucide-react";
@@ -50,11 +51,13 @@ import { Controller } from "react-hook-form";
 
 type CompanyFormProps = {
   availableContracts: ContractListItem[];
+  projectContracts: ContractForProjectOption[];
   textCategories: TextCategoryOption[];
 };
 
 export const CompanyForm = ({
   availableContracts,
+  projectContracts,
   textCategories,
 }: CompanyFormProps) => {
   const router = useRouter();
@@ -122,8 +125,16 @@ export const CompanyForm = ({
     handleSaveText,
     handleCategorySelect,
     removeText,
+    projectForm,
+    projects,
+    isProjectDialogOpen,
+    handleProjectOpenChange,
+    handleOpenProject,
+    handleCancelProject,
+    handleSaveProject,
+    removeProject,
     toggleRole,
-  } = useCompanySubmit({ availableContracts, textCategories });
+  } = useCompanySubmit({ availableContracts, projectContracts, textCategories });
 
   const {
     control,
@@ -133,9 +144,10 @@ export const CompanyForm = ({
     formState: { errors },
   } = form;
 
+  const isCustomerOrProspect =
+    selectedRoles.includes("customer") || selectedRoles.includes("prospect");
+
   return (
-    <>
-      <form onSubmit={onSubmit} className="space-y-8">
         <section className="space-y-4">
           <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
             Company Details
@@ -450,6 +462,58 @@ export const CompanyForm = ({
             </button>
           </div>
         </section>
+
+        {isCustomerOrProspect && (
+          <section className="space-y-4">
+            <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
+              Projects
+            </h2>
+            <div className="space-y-2 rounded-2xl border border-border bg-muted/20 p-4">
+              {projects.map((project, index) => (
+                <div
+                  key={index}
+                  className="flex items-center justify-between rounded-lg border border-border bg-background px-3 py-2"
+                >
+                  <div className="flex min-w-0 items-center gap-2 text-sm">
+                    <FolderOpen className="size-4 shrink-0 text-muted-foreground" />
+                    <span className="truncate text-muted-foreground">
+                      {project.projectName || "Project"}
+                    </span>
+                    {project.startingDate && (
+                      <span className="shrink-0 text-xs text-muted-foreground">
+                        {project.startingDate}
+                        {project.endDate ? ` → ${project.endDate}` : ""}
+                      </span>
+                    )}
+                    {project.contractUuid && (
+                      <span className="shrink-0 rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">
+                        {projectContracts.find((c) => c.uuid === project.contractUuid)?.code ?? "Contract"}
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeProject(index)}
+                    className="shrink-0 text-muted-foreground hover:text-destructive"
+                    disabled={isPending}
+                  >
+                    <X className="size-4" />
+                    <span className="sr-only">Remove project</span>
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={handleOpenProject}
+                className="inline-flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-border px-3 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+                disabled={isPending}
+              >
+                <Plus className="size-4" />
+                Add Project
+              </button>
+            </div>
+          </section>
+        )}
 
         <section className="space-y-4">
           <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
@@ -1235,6 +1299,75 @@ export const CompanyForm = ({
             <DialogFormFooter
               onCancel={handleCancelContact}
               submitLabel="Add Contact"
+            />
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={isProjectDialogOpen}
+        onOpenChange={handleProjectOpenChange}
+      >
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FolderOpen className="size-4" />
+              Add Project
+            </DialogTitle>
+            <DialogDescription>
+              Add a project for this customer / prospect.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleSaveProject} className="space-y-4">
+            <div>
+              <FormLabel htmlFor="proj-name">Project Name</FormLabel>
+              <Input
+                id="proj-name"
+                {...projectForm.register("projectName")}
+                placeholder="Project name"
+              />
+            </div>
+            <div>
+              <FormLabel htmlFor="proj-end">End Date</FormLabel>
+              <Input
+                id="proj-end"
+                type="date"
+                {...projectForm.register("endDate")}
+              />
+            </div>
+            <div>
+              <FormLabel htmlFor="proj-revenue">Revenue</FormLabel>
+              <Input
+                id="proj-revenue"
+                {...projectForm.register("revenue")}
+                placeholder="Revenue"
+              />
+            </div>
+            <div>
+              <FormLabel htmlFor="proj-contract">Contract</FormLabel>
+              <Controller
+                name="contractUuid"
+                control={projectForm.control}
+                render={({ field }) => (
+                  <Select
+                    id="proj-contract"
+                    options={[
+                      { value: "", label: COMMON_TEXT.emptyOption },
+                      ...projectContracts.map((c) => ({
+                        value: c.uuid,
+                        label: `${c.code}${c.description ? ` – ${c.description}` : ""}`,
+                      })),
+                    ]}
+                    value={field.value ?? ""}
+                    onValueChange={field.onChange}
+                    placeholder={COMMON_TEXT.selectOption}
+                  />
+                )}
+              />
+            </div>
+            <DialogFormFooter
+              onCancel={handleCancelProject}
+              submitLabel="Add Project"
             />
           </form>
         </DialogContent>

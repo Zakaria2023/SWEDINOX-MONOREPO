@@ -3,6 +3,7 @@ export * from "./company-addresses";
 export * from "./contracts";
 export * from "./communication-settings";
 export * from "./contacts";
+export * from "./customer-projects";
 export * from "./text-categories";
 export * from "./texts";
 export * from "./invoices";
