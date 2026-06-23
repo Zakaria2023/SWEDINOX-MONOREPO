@@ -1,6 +1,5 @@
 "use server";
 
-import { requireAdmin } from "@/lib/auth";
 import { clerkClient } from "@clerk/nextjs/server";
 
 type ClerkUserMetadata = {
@@ -16,10 +15,8 @@ export type DashboardUserOption = {
 };
 
 export const getUsers = async (): Promise<DashboardUserOption[]> => {
-  await requireAdmin();
-
   const client = await clerkClient();
-  const response = await client.users.getUserList({ limit: 100 });
+  const response = await client.users.getUserList({ limit: 20 });
 
   return response.data
     .map((user) => {
