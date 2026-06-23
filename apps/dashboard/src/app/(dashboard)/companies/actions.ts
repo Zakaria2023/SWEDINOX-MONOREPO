@@ -14,7 +14,7 @@ import { Contracts, InsertContracts } from "@/db/schema/contracts";
 import { Contacts, InsertContacts } from "@/db/schema/contacts";
 import { Texts, InsertTexts } from "@/db/schema/texts";
 import { generateUuid } from "@/lib/helpers";
-import { asc, desc, eq } from "drizzle-orm";
+import { asc, desc, eq, or, sql } from "drizzle-orm";
 import { currentUser } from "@clerk/nextjs/server";
 
 export type CompanyOption = Pick<
@@ -95,6 +95,24 @@ export const getCompaniesForSelect = async (): Promise<CompanyOption[]> => {
       roles: Companies.roles,
     })
     .from(Companies)
+    .orderBy(asc(Companies.companyName));
+};
+
+export const getCustomerAndProspectCompaniesForSelect = async (): Promise<CompanyOption[]> => {
+  return db
+    .select({
+      uuid: Companies.uuid,
+      searchCode1: Companies.searchCode1,
+      companyName: Companies.companyName,
+      roles: Companies.roles,
+    })
+    .from(Companies)
+    .where(
+      or(
+        sql`JSON_CONTAINS(${Companies.roles}, '"customer"')`,
+        sql`JSON_CONTAINS(${Companies.roles}, '"prospect"')`,
+      ),
+    )
     .orderBy(asc(Companies.companyName));
 };
 
