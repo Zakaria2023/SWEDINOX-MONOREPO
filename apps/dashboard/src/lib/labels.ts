@@ -23,6 +23,7 @@ import type {
   OrderMethod,
   DeliveryTerm,
   OrderWeightType,
+  PurchaseOrderType,
 } from "@/lib/enums";
 
 export const COMMON_TEXT = {
@@ -372,4 +373,10 @@ export const ORDER_WEIGHT_TYPE_LABELS: Record<OrderWeightType, string> = {
   trade_weight: "Trade weight",
   german_trade_weight: "German trade weight",
   weighed: "Weighed",
+};
+
+export const PURCHASE_ORDER_TYPE_LABELS: Record<PurchaseOrderType, string> = {
+  materials: "Materials",
+  processing: "Processing",
+  customer_materials: "Customer Materials",
 };

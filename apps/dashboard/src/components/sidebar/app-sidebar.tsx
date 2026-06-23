@@ -20,6 +20,7 @@ import {
   ChevronRight,
   ContactRound,
   MapPin,
+  ShoppingCart,
   Truck,
   Users,
   Warehouse,
@@ -52,6 +53,7 @@ export const AppSidebar = () => {
     pathname.startsWith("/contract-groups") ||
     pathname.startsWith("/invoices");
   const isSupplierActive = pathname.startsWith("/contracts-per-supplier");
+  const isPurchaseActive = pathname.startsWith("/purchase-orders");
   pathname.startsWith("/contract-groups");
   pathname.startsWith("/contact-persons-suppliers");
   const isWarehouseActive =
@@ -63,6 +65,7 @@ export const AppSidebar = () => {
   const [isCompanyOpen, setIsCompanyOpen] = useState(false);
   const [isSalesOpen, setIsSalesOpen] = useState(false);
   const [isSupplierOpen, setIsSupplierOpen] = useState(false);
+  const [isPurchaseOpen, setIsPurchaseOpen] = useState(false);
   const [isWarehouseOpen, setIsWarehouseOpen] = useState(false);
   const [isLocationsOpen, setIsLocationsOpen] = useState(false);
 
@@ -70,6 +73,7 @@ export const AppSidebar = () => {
   const isCompanyExpanded = isCompanyOpen || isCompanyActive;
   const isSalesExpanded = isSalesOpen || isSalesActive;
   const isSupplierExpanded = isSupplierOpen || isSupplierActive;
+  const isPurchaseExpanded = isPurchaseOpen || isPurchaseActive;
   const isWarehouseExpanded = isWarehouseOpen || isWarehouseActive;
   const isLocationsExpanded = isLocationsOpen || isLocationsActive;
 
@@ -257,6 +261,29 @@ export const AppSidebar = () => {
                         )}
                       >
                         <span>Contact Persons Suppliers</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                  </SidebarMenuSub>
+                )}
+              </SidebarMenuItem>
+
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  aria-expanded={isPurchaseExpanded}
+                  onClick={() => setIsPurchaseOpen((open) => !open)}
+                >
+                  <ShoppingCart />
+                  <span>Purchase</span>
+                  <ChevronRight className={chevronClass(isPurchaseExpanded)} />
+                </SidebarMenuButton>
+                {isPurchaseExpanded && (
+                  <SidebarMenuSub>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/purchase-orders" />}
+                        isActive={pathname.startsWith("/purchase-orders")}
+                      >
+                        <span>Purchase Orders</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                   </SidebarMenuSub>

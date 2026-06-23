@@ -344,3 +344,11 @@ export type OrderWeightType = (typeof orderWeightTypes)[number];
 export const deliveryTypes = ["date", "week"] as const satisfies readonly string[];
 
 export type DeliveryType = (typeof deliveryTypes)[number];
+
+export const purchaseOrderTypes = [
+  "materials",
+  "processing",
+  "customer_materials",
+] as const satisfies readonly string[];
+
+export type PurchaseOrderType = (typeof purchaseOrderTypes)[number];
