@@ -12,15 +12,24 @@ import {
 } from "@/app/(dashboard)/contract-groups/actions";
 import { Button } from "@/components/shadcn/button";
 import {
+  DialogBody,
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/shadcn/dialog";
 import { Input } from "@/components/shadcn/input";
 import { Select } from "@/components/shadcn/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/shadcn/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/shadcn/table";
 import { FormError } from "@/components/ui/form-error";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import { COMMON_TEXT } from "@/lib/labels";
@@ -60,7 +69,13 @@ export const ContractGroupsClient = ({ groups }: Props) => {
     defaultValues: DEFAULT_VALUES,
   });
 
-  const { register, control, formState: { errors }, reset, handleSubmit } = form;
+  const {
+    register,
+    control,
+    formState: { errors },
+    reset,
+    handleSubmit,
+  } = form;
 
   const subgroupOptions = [
     { value: "", label: COMMON_TEXT.emptyOption },
@@ -86,7 +101,8 @@ export const ContractGroupsClient = ({ groups }: Props) => {
       const result = await createContractGroup({
         ...values,
         contractSubgroupUuid: values.contractSubgroupUuid || undefined,
-        quicklyChangeSequenceNumber: values.quicklyChangeSequenceNumber || undefined,
+        quicklyChangeSequenceNumber:
+          values.quicklyChangeSequenceNumber || undefined,
       });
 
       if (result.success) {
@@ -134,7 +150,10 @@ export const ContractGroupsClient = ({ groups }: Props) => {
             <TableBody>
               {groups.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                  <TableCell
+                    colSpan={5}
+                    className="h-24 text-center text-muted-foreground"
+                  >
                     No contract groups yet
                   </TableCell>
                 </TableRow>
@@ -167,81 +186,84 @@ export const ContractGroupsClient = ({ groups }: Props) => {
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={onSubmit} className="mt-2 space-y-4 px-6 pb-6">
-            <div>
-              <FormLabel htmlFor="name" required>
-                Name
-              </FormLabel>
-              <Input
-                id="name"
-                {...register("name")}
-                aria-invalid={!!errors.name}
-                placeholder="e.g. Procurement"
-                disabled={isPending}
-              />
-              <FormFieldError message={errors.name?.message} />
-            </div>
+          <form onSubmit={onSubmit}>
+            <DialogBody className="space-y-4">
+              <div>
+                <FormLabel htmlFor="name" required>
+                  Name
+                </FormLabel>
+                <Input
+                  id="name"
+                  {...register("name")}
+                  aria-invalid={!!errors.name}
+                  placeholder="e.g. Procurement"
+                  disabled={isPending}
+                />
+                <FormFieldError message={errors.name?.message} />
+              </div>
 
-            <div>
-              <FormLabel htmlFor="contractSubgroupUuid">
-                Contract subgroup
-              </FormLabel>
-              <Controller
-                name="contractSubgroupUuid"
-                control={control}
-                render={({ field }) => (
-                  <Select
-                    id="contractSubgroupUuid"
-                    options={subgroupOptions}
-                    value={field.value ?? ""}
-                    onValueChange={field.onChange}
-                    placeholder={COMMON_TEXT.emptyOption}
+              <div>
+                <FormLabel htmlFor="contractSubgroupUuid">
+                  Contract subgroup
+                </FormLabel>
+                <Controller
+                  name="contractSubgroupUuid"
+                  control={control}
+                  render={({ field }) => (
+                    <Select
+                      id="contractSubgroupUuid"
+                      options={subgroupOptions}
+                      value={field.value ?? ""}
+                      onValueChange={field.onChange}
+                      placeholder={COMMON_TEXT.emptyOption}
+                      disabled={isPending}
+                    />
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <FormLabel htmlFor="sequenceWithinSubgroup">
+                    Sequence within subgroup
+                  </FormLabel>
+                  <Input
+                    id="sequenceWithinSubgroup"
+                    type="number"
+                    min={0}
+                    {...register("sequenceWithinSubgroup", {
+                      valueAsNumber: true,
+                    })}
                     disabled={isPending}
                   />
-                )}
-              />
-            </div>
+                </div>
+                <div>
+                  <FormLabel htmlFor="quicklyChangeSequenceNumber">
+                    Quickly change seq. no.
+                  </FormLabel>
+                  <Input
+                    id="quicklyChangeSequenceNumber"
+                    {...register("quicklyChangeSequenceNumber")}
+                    disabled={isPending}
+                  />
+                </div>
+              </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <FormLabel htmlFor="sequenceWithinSubgroup">
-                  Sequence within subgroup
-                </FormLabel>
-                <Input
-                  id="sequenceWithinSubgroup"
-                  type="number"
-                  min={0}
-                  {...register("sequenceWithinSubgroup", { valueAsNumber: true })}
+              <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-border bg-muted/20 px-4 py-3 transition-colors hover:bg-muted/40">
+                <input
+                  type="checkbox"
+                  className="size-4 rounded border-border accent-primary"
+                  {...register("isActive")}
                   disabled={isPending}
                 />
-              </div>
-              <div>
-                <FormLabel htmlFor="quicklyChangeSequenceNumber">
-                  Quickly change seq. no.
-                </FormLabel>
-                <Input
-                  id="quicklyChangeSequenceNumber"
-                  {...register("quicklyChangeSequenceNumber")}
-                  disabled={isPending}
-                />
-              </div>
-            </div>
+                <span className="text-sm font-medium text-gray-700">
+                  Active
+                </span>
+              </label>
 
-            <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-border bg-muted/20 px-4 py-3 transition-colors hover:bg-muted/40">
-              <input
-                type="checkbox"
-                className="size-4 rounded border-border accent-primary"
-                {...register("isActive")}
-                disabled={isPending}
-              />
-              <span className="text-sm font-medium text-gray-700">
-                Active
-              </span>
-            </label>
-
-            <FormError>{formError}</FormError>
-
-            <div className="flex justify-end gap-3 pt-2">
+              <FormError>{formError}</FormError>
+            </DialogBody>
+            <DialogFooter>
               <Button
                 type="button"
                 variant="outline"
@@ -253,7 +275,7 @@ export const ContractGroupsClient = ({ groups }: Props) => {
               <Button type="submit" disabled={isPending}>
                 {isPending ? COMMON_TEXT.saving : "Create Group"}
               </Button>
-            </div>
+            </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>

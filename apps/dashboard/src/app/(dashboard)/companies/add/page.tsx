@@ -1,11 +1,13 @@
 import { getContracts, getContractsForProjects } from "@/app/(dashboard)/contracts/actions";
+import { getTextCategoriesForSelect } from "@/app/(dashboard)/text-categories/actions";
 import { CompanyForm } from "@/components/companies/company-form";
 import { PageHeading } from "@/components/layout/page-heading";
 
 const AddCompanyPage = async () => {
-  const [availableContracts, projectContracts] = await Promise.all([
+  const [availableContracts, projectContracts, textCategories] = await Promise.all([
     getContracts(),
     getContractsForProjects(),
+    getTextCategoriesForSelect(),
   ]);
 
   return (
@@ -14,7 +16,11 @@ const AddCompanyPage = async () => {
         title="Add Company"
         description="Create a new company record"
       />
-      <CompanyForm availableContracts={availableContracts} projectContracts={projectContracts} />
+      <CompanyForm
+        availableContracts={availableContracts}
+        projectContracts={projectContracts}
+        textCategories={textCategories}
+      />
     </div>
   );
 };
