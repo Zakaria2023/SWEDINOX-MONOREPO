@@ -1,9 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import { Controller } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import type { CompanyOption } from "@/app/(dashboard)/companies/actions";
 import type { DashboardUserOption } from "@/app/(dashboard)/users/actions";
+import {
+  getContactsByCompanyUuid,
+  type ContactOption,
+} from "@/app/(dashboard)/visit-reports/actions";
 import { useVisitReportSubmit } from "@/app/(dashboard)/visit-reports/use-visit-report-submit";
 import { visitReportContactMethods } from "@/lib/enums";
 import { VISIT_REPORT_CONTACT_METHOD_LABELS } from "@/lib/labels";
@@ -29,8 +34,28 @@ export const VisitReportForm = ({
   const {
     control,
     register,
+    setValue,
     formState: { errors },
   } = form;
+
+  const [contacts, setContacts] = useState<ContactOption[]>([]);
+  const [loadingContacts, setLoadingContacts] = useState(false);
+
+  const handleCompanyChange = async (
+    value: string,
+    fieldOnChange: (value: string) => void,
+  ) => {
+    fieldOnChange(value);
+    setValue("contactUuid", "");
+    setContacts([]);
+
+    if (value) {
+      setLoadingContacts(true);
+      const result = await getContactsByCompanyUuid(value);
+      setContacts(result);
+      setLoadingContacts(false);
+    }
+  };
 
   const companyOptions = [
     { value: "", label: COMMON_TEXT.selectPlaceholder },
@@ -75,6 +100,7 @@ export const VisitReportForm = ({
             disabled={isPending}
             required
             errorMessage={errors.companyUuid?.message}
+            onValueChange={handleCompanyChange}
           />
 
           <div>
@@ -196,9 +222,22 @@ export const VisitReportForm = ({
           </div>
 
           <div className="md:col-span-2">
-            <FormLabel htmlFor="contact">Contact</FormLabel>
-            <Input id="contact" {...register("contact")} disabled={isPending} />
-            <FormFieldError message={errors.contact?.message} />
+            <FormSelectField
+              control={control}
+              id="contactUuid"
+              name="contactUuid"
+              label="Contact"
+              options={[
+                { value: "", label: COMMON_TEXT.selectPlaceholder },
+                ...contacts.map((c) => ({
+                  value: c.uuid,
+                  label: [c.firstName, c.lastName].filter(Boolean).join(" "),
+                })),
+              ]}
+              emptyValue=""
+              disabled={isPending || loadingContacts || contacts.length === 0}
+              errorMessage={errors.contactUuid?.message}
+            />
           </div>
         </div>
       </section>

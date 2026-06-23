@@ -11,7 +11,7 @@ export const createVisitReportSchema = () =>
     city: z.string().optional(),
     telephone: z.string().optional(),
     fax: z.string().optional(),
-    contact: z.string().optional(),
+    contactUuid: z.string().optional(),
     contactMethod: z
       .union([z.enum(visitReportContactMethods), z.literal("")])
       .optional(),

@@ -2,14 +2,16 @@
 
 import {
   Companies,
+  Contacts,
   db,
   InsertVisitReports,
   SelectCompanies,
+  SelectContacts,
   SelectVisitReports,
   VisitReports,
 } from "@/db";
 import { generateUuid } from "@/lib/helpers";
-import { desc, eq } from "drizzle-orm";
+import { asc, desc, eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 
 export type VisitReportInput = Omit<
@@ -39,6 +41,25 @@ export const getVisitReports = async (): Promise<VisitReportListItem[]> => {
     ...row.visitReport,
     companyName: row.companyName,
   }));
+};
+
+export type ContactOption = Pick<
+  SelectContacts,
+  "uuid" | "firstName" | "lastName"
+>;
+
+export const getContactsByCompanyUuid = async (
+  companyUuid: string,
+): Promise<ContactOption[]> => {
+  return db
+    .select({
+      uuid: Contacts.uuid,
+      firstName: Contacts.firstName,
+      lastName: Contacts.lastName,
+    })
+    .from(Contacts)
+    .where(eq(Contacts.companyUuid, companyUuid))
+    .orderBy(asc(Contacts.lastName));
 };
 
 export const createVisitReport = async (

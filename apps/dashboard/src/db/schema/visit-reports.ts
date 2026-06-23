@@ -13,6 +13,7 @@ import {
 } from "drizzle-orm/mysql-core";
 import { visitReportContactMethods, visitReportReasons } from "@/lib/enums";
 import { Companies } from "./companies";
+import { Contacts } from "./contacts";
 
 export const VisitReports = mysqlTable(
   "VisitReports",
@@ -29,7 +30,7 @@ export const VisitReports = mysqlTable(
     city: varchar("city", { length: 150 }),
     telephone: varchar("telephone", { length: 100 }),
     fax: varchar("fax", { length: 100 }),
-    contact: varchar("contact", { length: 255 }),
+    contactUuid: char("contact_uuid", { length: 36 }),
 
     contactMethod: mysqlEnum("contact_method", visitReportContactMethods),
     visitDate: varchar("visit_date", { length: 10 }),
@@ -49,6 +50,11 @@ export const VisitReports = mysqlTable(
       name: "fk_visit_reports_company",
       columns: [table.companyUuid],
       foreignColumns: [Companies.uuid],
+    }),
+    foreignKey({
+      name: "fk_visit_reports_contact",
+      columns: [table.contactUuid],
+      foreignColumns: [Contacts.uuid],
     }),
   ],
 );

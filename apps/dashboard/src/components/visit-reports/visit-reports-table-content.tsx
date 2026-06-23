@@ -24,7 +24,7 @@ type ColumnKey =
   | "visitTime"
   | "hasTakenPlace"
   | "visitReason"
-  | "contact"
+  | "contactUuid"
   | "city"
   | "postalCode"
   | "telephone"
@@ -48,7 +48,7 @@ const ALL_COLUMNS: Array<{
   { key: "visitReason", label: "Visit Reason", defaultVisible: true },
   { key: "representative", label: "Representative", defaultVisible: false },
   { key: "visitTime", label: "Visit Time", defaultVisible: false },
-  { key: "contact", label: "Contact", defaultVisible: false },
+  { key: "contactUuid", label: "Contact", defaultVisible: false },
   { key: "city", label: "City", defaultVisible: false },
   { key: "postalCode", label: "Postal Code", defaultVisible: false },
   { key: "telephone", label: "Telephone", defaultVisible: false },
@@ -151,10 +151,10 @@ export const VisitReportsTableContent = ({
             {visitReport.visitReason ?? fallbackValue}
           </TableCell>
         );
-      case "contact":
+      case "contactUuid":
         return (
           <TableCell key={key}>
-            {visitReport.contact ?? fallbackValue}
+            {visitReport.contactUuid ?? fallbackValue}
           </TableCell>
         );
       case "city":
