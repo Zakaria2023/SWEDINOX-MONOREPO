@@ -303,3 +303,26 @@ export const invoicePaymentTerms = [
 ] as const satisfies readonly string[];
 
 export type InvoicePaymentTerm = (typeof invoicePaymentTerms)[number];
+
+export const warehouseWorkOrderStatuses = [
+  "new",
+  "in_progress",
+  "completed",
+  "cancelled",
+] as const satisfies readonly string[];
+
+export type WarehouseWorkOrderStatus =
+  (typeof warehouseWorkOrderStatuses)[number];
+
+export const warehouseWorkOrderLineTypes = [
+  "unloading",
+  "loading",
+  "transfer",
+  "processing",
+  "inspection",
+  "put_away",
+  "picking",
+] as const satisfies readonly string[];
+
+export type WarehouseWorkOrderLineType =
+  (typeof warehouseWorkOrderLineTypes)[number];

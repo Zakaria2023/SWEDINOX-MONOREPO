@@ -20,6 +20,8 @@ import type {
   WarehouseLocationType,
   WarehouseProductType,
   WarehouseTransportRegion,
+  WarehouseWorkOrderLineType,
+  WarehouseWorkOrderStatus,
 } from "@/lib/enums";
 
 export const COMMON_TEXT = {
@@ -288,6 +290,29 @@ export const INVOICE_VAT_SCENARIO_LABELS: Record<InvoiceVatScenario, string> = {
   domestic_sales: "Domestic sales",
   sales_within_eu_with_reverse_charge: "Sales within EU with reverse charge",
   sales_outside_eu_with_reverse_charge: "Sales outside the EU with a reverse charge",
+};
+
+export const WAREHOUSE_WORK_ORDER_STATUS_LABELS: Record<
+  WarehouseWorkOrderStatus,
+  string
+> = {
+  new: "New",
+  in_progress: "In Progress",
+  completed: "Completed",
+  cancelled: "Cancelled",
+};
+
+export const WAREHOUSE_WORK_ORDER_LINE_TYPE_LABELS: Record<
+  WarehouseWorkOrderLineType,
+  string
+> = {
+  unloading: "Unloading",
+  loading: "Loading",
+  transfer: "Transfer",
+  processing: "Processing",
+  inspection: "Inspection",
+  put_away: "Put Away",
+  picking: "Picking",
 };
 
 export const INVOICE_PAYMENT_TERM_LABELS: Record<InvoicePaymentTerm, string> = {

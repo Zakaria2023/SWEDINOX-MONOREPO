@@ -2,6 +2,7 @@
 
 import { db } from "@/db";
 import { InsertWarehouses, Warehouses } from "@/db/schema/warehouses";
+import { WarehouseWorkOrders } from "@/db/schema/warehouse-work-orders";
 import { generateUuid } from "@/lib/helpers";
 import { asc, desc, eq, isNull } from "drizzle-orm";
 import { SelectWarehouses } from "@/db/schema/warehouses";
@@ -130,8 +131,15 @@ export const createWarehouse = async (
   fields: WarehouseFields,
 ): Promise<WarehouseActionResult> => {
   const uuid = generateUuid();
+  const workOrderUuid = generateUuid();
   try {
-    await db.insert(Warehouses).values({ ...fields, uuid });
+    await db.transaction(async (tx) => {
+      await tx.insert(Warehouses).values({ ...fields, uuid });
+      await tx.insert(WarehouseWorkOrders).values({
+        uuid: workOrderUuid,
+        warehouseUuid: uuid,
+      });
+    });
     return { success: true, warehouseUuid: uuid };
   } catch (error) {
     return {
