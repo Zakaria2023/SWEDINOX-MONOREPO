@@ -3,10 +3,10 @@
 import {
   Companies,
   db,
+  InsertVisitReports,
+  SelectCompanies,
+  SelectVisitReports,
   VisitReports,
-  type InsertVisitReports,
-  type SelectCompanies,
-  type SelectVisitReports,
 } from "@/db";
 import { generateUuid } from "@/lib/helpers";
 import { desc, eq } from "drizzle-orm";
