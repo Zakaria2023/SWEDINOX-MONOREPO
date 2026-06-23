@@ -1,11 +1,11 @@
 "use server";
 
 import {
-  db,
   AddressDistances,
   Companies,
-  type SelectAddressDistances,
-  type SelectCompanies,
+  db,
+  SelectAddressDistances,
+  SelectCompanies,
 } from "@/db";
 import { desc, eq } from "drizzle-orm";
 
@@ -13,7 +13,9 @@ export type AddressDistanceListItem = SelectAddressDistances & {
   companyName: SelectCompanies["companyName"] | null;
 };
 
-export const getAddressDistances = async (): Promise<AddressDistanceListItem[]> => {
+export const getAddressDistances = async (): Promise<
+  AddressDistanceListItem[]
+> => {
   const rows = await db
     .select({
       addressDistance: AddressDistances,

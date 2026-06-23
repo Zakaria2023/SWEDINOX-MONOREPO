@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { type AddressDistanceListItem } from "@/app/(dashboard)/address-distances/actions";
+import { AddressDistanceListItem } from "@/app/(dashboard)/address-distances/actions";
 import {
   Table,
   TableBody,
@@ -12,10 +11,22 @@ import {
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { COMMON_TEXT } from "@/lib/labels";
+import { useState } from "react";
 
-type ColumnKey = "companyName" | "country" | "city" | "street" | "postalCode" | "km" | "createdAt";
+type ColumnKey =
+  | "companyName"
+  | "country"
+  | "city"
+  | "street"
+  | "postalCode"
+  | "km"
+  | "createdAt";
 
-const ALL_COLUMNS: Array<{ key: ColumnKey; label: string; defaultVisible: boolean }> = [
+const ALL_COLUMNS: Array<{
+  key: ColumnKey;
+  label: string;
+  defaultVisible: boolean;
+}> = [
   { key: "companyName", label: "Company", defaultVisible: true },
   { key: "country", label: "Country", defaultVisible: true },
   { key: "city", label: "City", defaultVisible: true },
@@ -39,7 +50,10 @@ export const AddressDistancesTableContent = ({ addressDistances }: Props) => {
     useState<Record<ColumnKey, boolean>>(initialVisibility);
 
   const toggleColumn = (key: string) =>
-    setColumnVisibility((prev) => ({ ...prev, [key]: !prev[key as ColumnKey] }));
+    setColumnVisibility((prev) => ({
+      ...prev,
+      [key]: !prev[key as ColumnKey],
+    }));
 
   const visibleColumns = ALL_COLUMNS.filter((col) => columnVisibility[col.key]);
   const fallback = COMMON_TEXT.notAvailable;
@@ -71,7 +85,10 @@ export const AddressDistancesTableContent = ({ addressDistances }: Props) => {
     <div className="space-y-4">
       <div className="flex justify-end">
         <ColumnSelector
-          columns={ALL_COLUMNS.map((col) => ({ key: col.key, label: col.label }))}
+          columns={ALL_COLUMNS.map((col) => ({
+            key: col.key,
+            label: col.label,
+          }))}
           visibility={columnVisibility}
           onToggle={toggleColumn}
         />
@@ -89,7 +106,10 @@ export const AddressDistancesTableContent = ({ addressDistances }: Props) => {
           <TableBody>
             {addressDistances.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={visibleColumns.length} className="h-24 text-center">
+                <TableCell
+                  colSpan={visibleColumns.length}
+                  className="h-24 text-center"
+                >
                   No address distances found
                 </TableCell>
               </TableRow>
