@@ -4,6 +4,7 @@ import { useCompanySubmit } from "@/app/(dashboard)/companies/use-company-submit
 import { USAGE_CATEGORY_FIELDS } from "@/app/(dashboard)/companies/validation";
 import { type ContractListItem } from "@/app/(dashboard)/contracts/actions";
 import { type TextCategoryOption } from "@/app/(dashboard)/text-categories/actions";
+import { DocumentUploader } from "@/components/document-uploader";
 import { AddressForm } from "@/components/companies/address-form";
 import { DialogFormFooter } from "@/components/companies/dialog-form-footer";
 import { Checkbox } from "@/components/shadcn/checkbox";
@@ -128,6 +129,7 @@ export const CompanyForm = ({
     control,
     register,
     watch,
+    setValue,
     formState: { errors },
   } = form;
 
@@ -446,6 +448,43 @@ export const CompanyForm = ({
               <Plus className="size-4" />
               Add Text
             </button>
+          </div>
+        </section>
+
+        <section className="space-y-4">
+          <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
+            Documents
+          </h2>
+          <div className="space-y-2 rounded-2xl border border-border bg-muted/20 p-4">
+            {watch("documents").map((doc, index) => (
+              <div key={doc.id} className="flex items-center gap-3 text-sm">
+                <span className="flex-1">{doc.fileName}</span>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await fetch(`/api/documents/${doc.id}/delete`, { method: "DELETE" });
+                    const current = watch("documents");
+                    setValue(
+                      "documents",
+                      current.filter((_, i) => i !== index),
+                    );
+                  }}
+                  className="text-muted-foreground hover:text-destructive"
+                  aria-label="Remove"
+                >
+                  <X className="size-4" />
+                </button>
+              </div>
+            ))}
+            <DocumentUploader
+              onSuccess={(uploads) => {
+                const current = watch("documents");
+                setValue("documents", [
+                  ...current,
+                  ...uploads.map((u) => ({ id: u.documentId, fileName: u.fileName })),
+                ]);
+              }}
+            />
           </div>
         </section>
 

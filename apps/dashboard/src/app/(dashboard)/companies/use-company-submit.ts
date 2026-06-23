@@ -162,6 +162,7 @@ export const useCompanySubmit = ({
       searchCode1: "",
       searchCode2: "",
       searchCode3: "",
+      documents: [],
       address: {
         category: [],
         poBox: false,
@@ -686,6 +687,7 @@ export const useCompanySubmit = ({
         searchCode1,
         searchCode2,
         searchCode3,
+        documents,
         address,
       } = values;
       const allAddresses = [address, ...additionalAddresses].map(mapAddress);
@@ -699,6 +701,7 @@ export const useCompanySubmit = ({
           searchCode2: searchCode2 || undefined,
           searchCode3: searchCode3 || undefined,
           roles: (roles ?? []) as CompanyRole[],
+          documents: documents.length > 0 ? documents : undefined,
         },
         allAddresses,
         communicationSettings,
