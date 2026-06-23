@@ -1,6 +1,6 @@
 "use server";
 
-import { db, SelectCompanies } from "@/db";
+import { db, SelectCompanies, SelectCompanyAddresses } from "@/db";
 import { Companies, InsertCompanies } from "@/db/schema/companies";
 import {
   CompanyAddresses,
@@ -11,8 +11,10 @@ import {
   InsertCommunicationSettings,
 } from "@/db/schema/communication-settings";
 import { Contracts, InsertContracts } from "@/db/schema/contracts";
+import { Contacts, InsertContacts } from "@/db/schema/contacts";
+import { Texts, InsertTexts } from "@/db/schema/texts";
 import { generateUuid } from "@/lib/helpers";
-import { asc, desc } from "drizzle-orm";
+import { asc, desc, eq } from "drizzle-orm";
 import { currentUser } from "@clerk/nextjs/server";
 
 export type CompanyOption = Pick<
@@ -40,11 +42,48 @@ export type CompanyContractInput = Omit<
   "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt"
 >;
 
+export type CompanyContactInput = Omit<
+  InsertContacts,
+  "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt"
+>;
+
+export type CompanyTextInput = Omit<
+  InsertTexts,
+  "id" | "uuid" | "companyUuid" | "createdByUserId" | "createdAt" | "updatedAt"
+>;
 
 export type CompanyActionResult = {
   companyUuid?: string;
   error?: string;
   success?: boolean;
+};
+
+export type CompanyDetail = SelectCompanies & {
+  addresses: SelectCompanyAddresses[];
+};
+
+export const updateCompanyDocuments = async (
+  companyUuid: string,
+  documents: Array<{ id: string; fileName: string }>,
+): Promise<void> => {
+  await db
+    .update(Companies)
+    .set({ documents })
+    .where(eq(Companies.uuid, companyUuid));
+};
+
+export const getCompanyDetail = async (uuid: string): Promise<CompanyDetail | null> => {
+  const [company] = await db
+    .select()
+    .from(Companies)
+    .where(eq(Companies.uuid, uuid))
+    .limit(1);
+  if (!company) return null;
+  const addresses = await db
+    .select()
+    .from(CompanyAddresses)
+    .where(eq(CompanyAddresses.companyUuid, uuid));
+  return { ...company, addresses };
 };
 
 export const getCompaniesForSelect = async (): Promise<CompanyOption[]> => {
@@ -72,6 +111,8 @@ export const createCompany = async (
   addresses: AddressInput[] = [],
   communicationSettings: CommSettingInput[] = [],
   contracts: CompanyContractInput[] = [],
+  contacts: CompanyContactInput[] = [],
+  texts: CompanyTextInput[] = [],
 ): Promise<CompanyActionResult> => {
   const uuid = generateUuid();
 
@@ -110,6 +151,22 @@ export const createCompany = async (
         });
       }
 
+      for (const contact of contacts) {
+        await tx.insert(Contacts).values({
+          ...contact,
+          uuid: generateUuid(),
+          companyUuid: uuid,
+        });
+      }
+
+      for (const text of texts) {
+        await tx.insert(Texts).values({
+          ...text,
+          uuid: generateUuid(),
+          companyUuid: uuid,
+          createdByUserId: userId,
+        });
+      }
     });
 
     return { success: true, companyUuid: uuid };
