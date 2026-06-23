@@ -1,11 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { Eye } from "lucide-react";
 import { type SelectCompanies } from "@/db";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
+import { CompanyDocumentCell } from "@/components/companies/company-document-cell";
 
-type ColumnKey = "id" | "companyName" | "createdAt" | "updatedAt";
+type ColumnKey = "id" | "companyName" | "documents" | "createdAt" | "updatedAt";
 
 const ALL_COLUMNS: Array<{
   defaultVisible: boolean;
@@ -14,6 +17,7 @@ const ALL_COLUMNS: Array<{
 }> = [
   { key: "id", label: "Code", defaultVisible: true },
   { key: "companyName", label: "Company Name", defaultVisible: true },
+  { key: "documents", label: "Documents", defaultVisible: true },
   { key: "createdAt", label: "Created At", defaultVisible: false },
   { key: "updatedAt", label: "Updated At", defaultVisible: false },
 ];
@@ -55,6 +59,12 @@ export const CompaniesTableContent = ({
             {new Date(company.createdAt).toLocaleDateString()}
           </TableCell>
         );
+      case "documents":
+        return (
+          <TableCell key={key}>
+            <CompanyDocumentCell company={company} />
+          </TableCell>
+        );
       case "updatedAt":
         return (
           <TableCell key={key}>
@@ -84,12 +94,13 @@ export const CompaniesTableContent = ({
               {visibleColumns.map((column) => (
                 <TableHead key={column.key}>{column.label}</TableHead>
               ))}
+              <TableHead className="w-16" />
             </TableRow>
           </TableHeader>
           <TableBody>
             {companies.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={visibleColumns.length} className="h-24 text-center">
+                <TableCell colSpan={visibleColumns.length + 1} className="h-24 text-center">
                   No companies found
                 </TableCell>
               </TableRow>
@@ -97,6 +108,14 @@ export const CompaniesTableContent = ({
               companies.map((company) => (
                 <TableRow key={company.id}>
                   {visibleColumns.map((column) => renderCell(company, column.key))}
+                  <TableCell>
+                    <Link
+                      href={`/companies/${company.uuid}`}
+                      className="inline-flex text-muted-foreground hover:text-foreground"
+                    >
+                      <Eye className="size-4" />
+                    </Link>
+                  </TableCell>
                 </TableRow>
               ))
             )}
