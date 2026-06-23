@@ -10,9 +10,13 @@ import type {
   ContactSalutation,
   ContractableRole,
   ContractType,
+  CountWorkorderMethod,
   InvoicePaymentTerm,
   InvoiceSurchargeDescription,
   InvoiceVatScenario,
+  PrinterEntry,
+  PrinterName,
+  StickerPerPickWorkorderType,
   TextUsageCategory,
   WarehouseAddress,
   WarehouseBlockReason,
@@ -22,6 +26,10 @@ import type {
   WarehouseTransportRegion,
   WarehouseWorkOrderLineType,
   WarehouseWorkOrderStatus,
+  WorkorderPrintMethod,
+  WorkorderProcessingMethod,
+  WorkorderReleaseMethod,
+  WorkorderSlipType,
 } from "@/lib/enums";
 
 export const COMMON_TEXT = {
@@ -290,6 +298,81 @@ export const INVOICE_VAT_SCENARIO_LABELS: Record<InvoiceVatScenario, string> = {
   domestic_sales: "Domestic sales",
   sales_within_eu_with_reverse_charge: "Sales within EU with reverse charge",
   sales_outside_eu_with_reverse_charge: "Sales outside the EU with a reverse charge",
+};
+
+export const STICKER_PER_PICK_WORKORDER_LABELS: Record<
+  StickerPerPickWorkorderType,
+  string
+> = {
+  no_customer_label: "No Customer Label",
+  sticker_per_workorder_600dpi: "Sticker per workorder (600dpi)",
+  sticker_per_workorder_line_600dpi: "Sticker per workorder line (600dpi)",
+};
+
+export const PRINTER_NAME_LABELS: Record<PrinterName, string> = {
+  microsoft_print_to_pdf_8_omgeleid: "Microsoft Print to PDF (8 omgeleid)",
+  onenote_desktop_8_omgeleid: "OneNote (Desktop) (8 omgeleid)",
+  verzenden_naar_onenote_16: "Verzenden naar OneNote 16",
+  verkoop_zwart: "Verkoop zwart",
+  verkoop_kleur: "Verkoop kleur",
+  sato_cl4nx_203dpi: "SATO CL4NX 203dpi",
+  sato_cl408e_logistiek: "SATO CL408e - Logistiek",
+  onenote_desktop: "OneNote (Desktop)",
+  microsoft_print_to_pdf: "Microsoft Print to PDF",
+  logistiek_zwart: "Logistiek zwart",
+  logistiek_kleur: "Logistiek kleur",
+  administratie_zwart: "Administratie zwart",
+  administratie_kleur: "Administratie kleur",
+};
+
+export const PRINTER_ENTRY_LABELS: Record<PrinterEntry, string> = {
+  automatisch_selecteren: "Automatisch selecteren",
+  handmatige_invoer: "Handmatige invoer",
+  lade_1: "Lade 1",
+  lade_2: "Lade 2",
+  lade_3: "Lade 3",
+  lade_4: "Lade 4",
+  lade_5: "Lade 5",
+};
+
+export const COUNT_WORKORDER_METHOD_LABELS: Record<
+  CountWorkorderMethod,
+  string
+> = {
+  counting_locations: "Counting Locations",
+  products_counting: "Products Counting",
+};
+
+export const WORKORDER_RELEASE_METHOD_LABELS: Record<
+  WorkorderReleaseMethod,
+  string
+> = {
+  direct: "Direct",
+  according_to_schedule: "According to Schedule",
+  manual: "Manual",
+};
+
+export const WORKORDER_PRINT_METHOD_LABELS: Record<
+  WorkorderPrintMethod,
+  string
+> = {
+  manual: "Manual",
+  automatic: "Automatic",
+  do_not_print: "Do Not Print",
+};
+
+export const WORKORDER_SLIP_TYPE_LABELS: Record<WorkorderSlipType, string> = {
+  a4_landscape: "A4 Landscape",
+  a4_portrait: "A4 Portrait",
+  label: "Label",
+  label_via_csv: "Label (via CSV file)",
+};
+
+export const WORKORDER_PROCESSING_METHOD_LABELS: Record<
+  WorkorderProcessingMethod,
+  string
+> = {
+  order_picking: "Order Picking",
 };
 
 export const WAREHOUSE_WORK_ORDER_STATUS_LABELS: Record<

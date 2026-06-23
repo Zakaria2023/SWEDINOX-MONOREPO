@@ -2,6 +2,7 @@
 
 import { useWarehouseSubmit } from "@/app/(dashboard)/warehouses/use-warehouse-submit";
 import { WarehouseOption } from "@/app/(dashboard)/warehouses/actions";
+import { CompanyOption } from "@/app/(dashboard)/companies/actions";
 import { Checkbox } from "@/components/shadcn/checkbox";
 import { Input } from "@/components/shadcn/input";
 import { Select } from "@/components/shadcn/select";
@@ -28,8 +29,12 @@ import {
 import { cn } from "@/lib/helpers";
 import { useFieldArray } from "react-hook-form";
 
+import { WarehouseLocationOption } from "@/app/(dashboard)/warehouses/actions";
+
 type Props = {
   existingWarehouses: WarehouseOption[];
+  companies: CompanyOption[];
+  warehouseLocations: WarehouseLocationOption[];
 };
 
 const transportRegionOptions = warehouseTransportRegions.map((r) => ({
@@ -46,7 +51,11 @@ const loadLocationOptions = [
   })),
 ];
 
-export const WarehouseForm = ({ existingWarehouses }: Props) => {
+export const WarehouseForm = ({
+  existingWarehouses,
+  companies,
+  warehouseLocations,
+}: Props) => {
   const {
     form,
     isPending,
@@ -60,7 +69,17 @@ export const WarehouseForm = ({ existingWarehouses }: Props) => {
     adaptFromOptions,
     handleAdaptFrom,
     handleCancel,
-  } = useWarehouseSubmit({ existingWarehouses });
+    countMethodOptions,
+    releaseMethodOptions,
+    printMethodOptions,
+    workorderSlipOptions,
+    processingMethodOptions,
+    companyOptions,
+    warehouseLocationOptions,
+    printerNameOptions,
+    printerEntryOptions,
+    stickerPerPickOptions,
+  } = useWarehouseSubmit({ existingWarehouses, companies, warehouseLocations });
 
   const {
     register,
@@ -404,6 +423,574 @@ export const WarehouseForm = ({ existingWarehouses }: Props) => {
         >
           + Add Load Location
         </button>
+      </section>
+
+      {/* Count Workorders */}
+      <section className="space-y-4">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+          Count Workorders
+        </h2>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <FormSelectField
+            id="countMethod"
+            name="countMethod"
+            control={control}
+            label="Count Method"
+            options={countMethodOptions}
+            emptyValue=""
+          />
+          <div>
+            <FormLabel htmlFor="countMaxLinesPerCommand">
+              Max. # Lines / Command
+            </FormLabel>
+            <Input
+              id="countMaxLinesPerCommand"
+              type="number"
+              min={0}
+              {...register("countMaxLinesPerCommand", {
+                setValueAs: (v) => (v === "" ? "" : Number(v)),
+              })}
+            />
+          </div>
+          <FormSelectField
+            id="countReleaseMethod"
+            name="countReleaseMethod"
+            control={control}
+            label="Release Method"
+            options={releaseMethodOptions}
+            emptyValue=""
+          />
+          <FormSelectField
+            id="countPrintMethod"
+            name="countPrintMethod"
+            control={control}
+            label="Print Method"
+            options={printMethodOptions}
+            emptyValue=""
+          />
+        </div>
+        <label className="flex cursor-pointer items-center gap-3">
+          <Checkbox
+            id="countPrintStockOnSlip"
+            checked={watch("countPrintStockOnSlip")}
+            onChange={(e) => setValue("countPrintStockOnSlip", e.target.checked)}
+          />
+          <span className="text-sm font-medium">
+            Print stock on count workorder slip
+          </span>
+        </label>
+      </section>
+
+      {/* Miscellaneous */}
+      <section className="space-y-4">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+          Miscellaneous
+        </h2>
+        <div className="space-y-3">
+          <label className="flex cursor-pointer items-center gap-3">
+            <Checkbox
+              id="makeWorkordersPerSubsection"
+              checked={watch("makeWorkordersPerSubsection")}
+              onChange={(e) =>
+                setValue("makeWorkordersPerSubsection", e.target.checked)
+              }
+            />
+            <span className="text-sm font-medium">
+              Make workorders per subsection
+            </span>
+          </label>
+          <label className="flex cursor-pointer items-center gap-3">
+            <Checkbox
+              id="capacityPerResource"
+              checked={watch("capacityPerResource")}
+              onChange={(e) =>
+                setValue("capacityPerResource", e.target.checked)
+              }
+            />
+            <span className="text-sm font-medium">Capacity per resource</span>
+          </label>
+          <label className="flex cursor-pointer items-center gap-3">
+            <Checkbox
+              id="sortLinesByWidthProductCodeLength"
+              checked={watch("sortLinesByWidthProductCodeLength")}
+              onChange={(e) =>
+                setValue("sortLinesByWidthProductCodeLength", e.target.checked)
+              }
+            />
+            <span className="text-sm font-medium">
+              Sort lines on pick- and fetch workorders by width (descending),
+              product code (ascending), length (descending)
+            </span>
+          </label>
+          <label className="flex cursor-pointer items-center gap-3">
+            <Checkbox
+              id="printAllLocationsOnSlip"
+              checked={watch("printAllLocationsOnSlip")}
+              onChange={(e) =>
+                setValue("printAllLocationsOnSlip", e.target.checked)
+              }
+            />
+            <span className="text-sm font-medium">
+              Print all locations where product stock is located on the
+              unloading and picking workorder slip
+            </span>
+          </label>
+          <label className="flex cursor-pointer items-center gap-3">
+            <Checkbox
+              id="addSectionToCsvFileName"
+              checked={watch("addSectionToCsvFileName")}
+              onChange={(e) =>
+                setValue("addSectionToCsvFileName", e.target.checked)
+              }
+            />
+            <span className="text-sm font-medium">
+              Add section to CSV file name
+            </span>
+          </label>
+          <label className="flex cursor-pointer items-center gap-3">
+            <Checkbox
+              id="addSubsectionToCsvFileName"
+              checked={watch("addSubsectionToCsvFileName")}
+              onChange={(e) =>
+                setValue("addSubsectionToCsvFileName", e.target.checked)
+              }
+            />
+            <span className="text-sm font-medium">
+              Add subsection to CSV file name
+            </span>
+          </label>
+          <label className="flex cursor-pointer items-center gap-3">
+            <Checkbox
+              id="addProductTypeToCsvFileName"
+              checked={watch("addProductTypeToCsvFileName")}
+              onChange={(e) =>
+                setValue("addProductTypeToCsvFileName", e.target.checked)
+              }
+            />
+            <span className="text-sm font-medium">
+              Add product type to CSV file name
+            </span>
+          </label>
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <FormLabel htmlFor="orderEntryDeadlineForInternal">
+              Order Entry Deadline for Internal
+            </FormLabel>
+            <Input
+              id="orderEntryDeadlineForInternal"
+              placeholder="00:00"
+              maxLength={5}
+              {...register("orderEntryDeadlineForInternal")}
+            />
+          </div>
+          <FormSelectField
+            id="workorderSlip"
+            name="workorderSlip"
+            control={control}
+            label="Workorder Slip"
+            options={workorderSlipOptions}
+            emptyValue=""
+          />
+          <div>
+            <FormLabel htmlFor="callOffLocation">Call-off Location</FormLabel>
+            <Input
+              id="callOffLocation"
+              {...register("callOffLocation")}
+            />
+          </div>
+          <FormSelectField
+            id="transportByCompanyUuid"
+            name="transportByCompanyUuid"
+            control={control}
+            label="Transport By"
+            options={companyOptions}
+            emptyValue=""
+          />
+        </div>
+      </section>
+
+      {/* Picking Workorders */}
+      <section className="space-y-4">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+          Picking Workorders
+        </h2>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <FormSelectField
+            id="pickingProcessingMethod"
+            name="pickingProcessingMethod"
+            control={control}
+            label="Processing Method"
+            options={processingMethodOptions}
+            emptyValue=""
+          />
+          <FormSelectField
+            id="pickingReleaseMethod"
+            name="pickingReleaseMethod"
+            control={control}
+            label="Release Method"
+            options={releaseMethodOptions}
+            emptyValue=""
+          />
+          <FormSelectField
+            id="pickingPrintingMethod"
+            name="pickingPrintingMethod"
+            control={control}
+            label="Printing Method"
+            options={printMethodOptions}
+            emptyValue=""
+          />
+        </div>
+        <div className="space-y-3">
+          <label className="flex cursor-pointer items-center gap-3">
+            <Checkbox
+              id="packagingMandatoryOnCompletion"
+              checked={watch("packagingMandatoryOnCompletion")}
+              onChange={(e) =>
+                setValue("packagingMandatoryOnCompletion", e.target.checked)
+              }
+            />
+            <span className="text-sm font-medium">
+              Packaging mandatory when reporting completion of picking or last
+              production
+            </span>
+          </label>
+          <label className="flex cursor-pointer items-center gap-3">
+            <Checkbox
+              id="packagingDialogueOnCompletion"
+              checked={watch("packagingDialogueOnCompletion")}
+              onChange={(e) =>
+                setValue("packagingDialogueOnCompletion", e.target.checked)
+              }
+            />
+            <span className="text-sm font-medium">
+              Packaging dialogue when reporting completion of picking or last
+              production workorder
+            </span>
+          </label>
+        </div>
+      </section>
+
+      {/* Fetch Workorders for Surface Treatment */}
+      <section className="space-y-4">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+          Fetch Workorders for Surface Treatment
+        </h2>
+        <label className="flex cursor-pointer items-center gap-3">
+          <Checkbox
+            id="surfaceTreatmentMakePerSubsection"
+            checked={watch("surfaceTreatmentMakePerSubsection")}
+            onChange={(e) =>
+              setValue("surfaceTreatmentMakePerSubsection", e.target.checked)
+            }
+          />
+          <span className="text-sm font-medium">
+            Make workorders per subsection
+          </span>
+        </label>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <FormSelectField
+            id="surfaceTreatmentProcessingMethod"
+            name="surfaceTreatmentProcessingMethod"
+            control={control}
+            label="Processing Method"
+            options={processingMethodOptions}
+            emptyValue=""
+          />
+          <FormSelectField
+            id="surfaceTreatmentReleaseMethod"
+            name="surfaceTreatmentReleaseMethod"
+            control={control}
+            label="Release Method"
+            options={releaseMethodOptions}
+            emptyValue=""
+          />
+          <FormSelectField
+            id="surfaceTreatmentPrintingMethod"
+            name="surfaceTreatmentPrintingMethod"
+            control={control}
+            label="Printing Method"
+            options={printMethodOptions}
+            emptyValue=""
+          />
+        </div>
+      </section>
+
+      {/* Fetch Workorders for Sawing */}
+      <section className="space-y-4">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+          Fetch Workorders for Sawing
+        </h2>
+        <label className="flex cursor-pointer items-center gap-3">
+          <Checkbox
+            id="sawingMakePerSubsection"
+            checked={watch("sawingMakePerSubsection")}
+            onChange={(e) =>
+              setValue("sawingMakePerSubsection", e.target.checked)
+            }
+          />
+          <span className="text-sm font-medium">
+            Make workorders per subsection
+          </span>
+        </label>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <FormSelectField
+            id="sawingProcessingMethod"
+            name="sawingProcessingMethod"
+            control={control}
+            label="Processing Method"
+            options={processingMethodOptions}
+            emptyValue=""
+          />
+          <FormSelectField
+            id="sawingReleaseMethod"
+            name="sawingReleaseMethod"
+            control={control}
+            label="Release Method"
+            options={releaseMethodOptions}
+            emptyValue=""
+          />
+          <FormSelectField
+            id="sawingPrintingMethod"
+            name="sawingPrintingMethod"
+            control={control}
+            label="Printing Method"
+            options={printMethodOptions}
+            emptyValue=""
+          />
+        </div>
+      </section>
+
+      {/* Print Settings */}
+      <section className="space-y-6">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+          Print Settings
+        </h2>
+
+        {/* A4 Printers */}
+        <div className="space-y-3">
+          <h3 className="text-sm font-medium text-muted-foreground">
+            A4 Printers
+          </h3>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <FormSelectField
+              id="a4PrinterOriginal"
+              name="a4PrinterOriginal"
+              control={control}
+              label="Original"
+              options={printerNameOptions}
+              emptyValue=""
+            />
+            <FormSelectField
+              id="a4PrinterCopy1"
+              name="a4PrinterCopy1"
+              control={control}
+              label="Copy 1"
+              options={printerNameOptions}
+              emptyValue=""
+            />
+            <FormSelectField
+              id="a4PrinterCopy2"
+              name="a4PrinterCopy2"
+              control={control}
+              label="Copy 2"
+              options={printerNameOptions}
+              emptyValue=""
+            />
+          </div>
+        </div>
+
+        {/* A4 Printers small material */}
+        <div className="space-y-3">
+          <h3 className="text-sm font-medium text-muted-foreground">
+            A4 Printers Small Material
+          </h3>
+          <div className="flex items-center gap-2">
+            <span className="text-sm">
+              Use these printers if the material is smaller than
+            </span>
+            <Input
+              id="a4SmallMaterialThresholdMm"
+              type="number"
+              min={0}
+              className="w-24"
+              {...register("a4SmallMaterialThresholdMm", {
+                setValueAs: (v) => (v === "" ? "" : Number(v)),
+              })}
+            />
+            <span className="text-sm text-muted-foreground">mm</span>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <FormSelectField
+              id="a4SmallPrinterOriginal"
+              name="a4SmallPrinterOriginal"
+              control={control}
+              label="Original"
+              options={printerNameOptions}
+              emptyValue=""
+            />
+            <FormSelectField
+              id="a4SmallPrinterCopy1"
+              name="a4SmallPrinterCopy1"
+              control={control}
+              label="Copy 1"
+              options={printerNameOptions}
+              emptyValue=""
+            />
+            <FormSelectField
+              id="a4SmallPrinterCopy2"
+              name="a4SmallPrinterCopy2"
+              control={control}
+              label="Copy 2"
+              options={printerNameOptions}
+              emptyValue=""
+            />
+          </div>
+        </div>
+
+        {/* Sticker per pick + Other printers */}
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+          <div className="space-y-4">
+            <FormSelectField
+              id="stickerPerPickWorkorder"
+              name="stickerPerPickWorkorder"
+              control={control}
+              label="Sticker per Pick / Last Production Workorder"
+              options={stickerPerPickOptions}
+              emptyValue=""
+            />
+          </div>
+          <div className="space-y-3">
+            <h3 className="text-sm font-medium text-muted-foreground">
+              Other Printers
+            </h3>
+            <FormSelectField
+              id="labelPrinter"
+              name="labelPrinter"
+              control={control}
+              label="Label Printer"
+              options={printerNameOptions}
+              emptyValue=""
+            />
+            <FormSelectField
+              id="stickerPrinter"
+              name="stickerPrinter"
+              control={control}
+              label="Sticker Printer"
+              options={printerNameOptions}
+              emptyValue=""
+            />
+          </div>
+        </div>
+
+        {/* CSV files for customer labels */}
+        <div className="space-y-3">
+          <h3 className="text-sm font-medium text-muted-foreground">
+            CSV Files for Customer Labels
+          </h3>
+          <div className="flex items-center gap-2">
+            <FormLabel htmlFor="csvCustomerLabelFileName">
+              File name for CSV file for customer labels
+            </FormLabel>
+            <div className="flex items-center gap-1">
+              <Input
+                id="csvCustomerLabelFileName"
+                className="w-36"
+                {...register("csvCustomerLabelFileName")}
+              />
+              <span className="text-sm text-muted-foreground">.txt</span>
+            </div>
+          </div>
+          <div className="space-y-3">
+            <label className="flex cursor-pointer items-center gap-3">
+              <Checkbox
+                id="csvCustomerLabelAddSection"
+                checked={watch("csvCustomerLabelAddSection")}
+                onChange={(e) =>
+                  setValue("csvCustomerLabelAddSection", e.target.checked)
+                }
+              />
+              <span className="text-sm font-medium">
+                Add section to CSV file name
+              </span>
+            </label>
+            <label className="flex cursor-pointer items-center gap-3">
+              <Checkbox
+                id="csvCustomerLabelAddSubsection"
+                checked={watch("csvCustomerLabelAddSubsection")}
+                onChange={(e) =>
+                  setValue("csvCustomerLabelAddSubsection", e.target.checked)
+                }
+              />
+              <span className="text-sm font-medium">
+                Add subsection to CSV file name
+              </span>
+            </label>
+            <label className="flex cursor-pointer items-center gap-3">
+              <Checkbox
+                id="csvCustomerLabelAddProductType"
+                checked={watch("csvCustomerLabelAddProductType")}
+                onChange={(e) =>
+                  setValue("csvCustomerLabelAddProductType", e.target.checked)
+                }
+              />
+              <span className="text-sm font-medium">
+                Add product type to CSV file name
+              </span>
+            </label>
+          </div>
+        </div>
+      </section>
+
+      {/* Pick-up Workorders */}
+      <section className="space-y-4">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+          Pick-up Workorders
+        </h2>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <FormSelectField
+            id="pickupDefaultLocationUuid"
+            name="pickupDefaultLocationUuid"
+            control={control}
+            label="Standard Pick-up Location"
+            options={warehouseLocationOptions}
+            emptyValue=""
+          />
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <FormSelectField
+            id="pickupSlipPrinter"
+            name="pickupSlipPrinter"
+            control={control}
+            label="Printer for Pick-up Slip"
+            options={printerNameOptions}
+            emptyValue=""
+          />
+          <FormSelectField
+            id="pickupSlipPrinterEntry"
+            name="pickupSlipPrinterEntry"
+            control={control}
+            label="Entry (Pick-up Slip)"
+            options={printerEntryOptions}
+            emptyValue=""
+          />
+          <FormSelectField
+            id="pickupOrderPrinter"
+            name="pickupOrderPrinter"
+            control={control}
+            label="Printer for Pick-up Order"
+            options={printerNameOptions}
+            emptyValue=""
+          />
+          <FormSelectField
+            id="pickupOrderPrinterEntry"
+            name="pickupOrderPrinterEntry"
+            control={control}
+            label="Entry (Pick-up Order)"
+            options={printerEntryOptions}
+            emptyValue=""
+          />
+        </div>
       </section>
 
       {/* Documents */}

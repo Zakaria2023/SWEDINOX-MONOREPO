@@ -7,10 +7,15 @@ import { generateUuid } from "@/lib/helpers";
 import { asc, desc, eq, isNull } from "drizzle-orm";
 import { SelectWarehouses } from "@/db/schema/warehouses";
 
-export type WarehouseOption = Pick<
+export type WarehouseOption = Pick<SelectWarehouses, "uuid" | "name">;
+
+export type WarehouseItemOption = Pick<
   SelectWarehouses,
-  | "uuid"
-  | "name"
+  "uuid" | "name" | "parentUuid"
+>;
+
+export type WarehouseAdaptData = Pick<
+  SelectWarehouses,
   | "locationType"
   | "loadingLocation"
   | "address"
@@ -26,24 +31,6 @@ export type WarehouseOption = Pick<
   | "loadLocations"
 >;
 
-export type WarehouseItemOption = Pick<
-  SelectWarehouses,
-  | "uuid"
-  | "name"
-  | "parentUuid"
-  | "locationType"
-  | "loadingLocation"
-  | "blocked"
-  | "blockReason"
-  | "blockedForOptimization"
-  | "limitedDimensions"
-  | "minLength"
-  | "maxLength"
-  | "maxWidth"
-  | "maxWeight"
-  | "productTypes"
->;
-
 export type WarehouseFields = Omit<
   InsertWarehouses,
   "id" | "uuid" | "createdAt" | "updatedAt"
@@ -55,12 +42,48 @@ export type WarehouseActionResult = {
   success?: boolean;
 };
 
+export type WarehouseLocationOption = Pick<SelectWarehouses, "uuid" | "name">;
+
+/** Warehouses of type "location" — for the pick-up default location dropdown */
+export const getWarehouseLocationsForSelect = async (): Promise<
+  WarehouseLocationOption[]
+> => {
+  return db
+    .select({ uuid: Warehouses.uuid, name: Warehouses.name })
+    .from(Warehouses)
+    .where(eq(Warehouses.type, "location"))
+    .orderBy(asc(Warehouses.name));
+};
+
 /** Root-level warehouses only — for the warehouse adapt-from dropdown */
 export const getWarehousesForSelect = async (): Promise<WarehouseOption[]> => {
+  return db
+    .select({ uuid: Warehouses.uuid, name: Warehouses.name })
+    .from(Warehouses)
+    .where(isNull(Warehouses.parentUuid))
+    .orderBy(asc(Warehouses.name));
+};
+
+/** All items (root + children) — for the sub-section adapt-from dropdown */
+export const getAllWarehouseItemsForSelect = async (): Promise<
+  WarehouseItemOption[]
+> => {
   return db
     .select({
       uuid: Warehouses.uuid,
       name: Warehouses.name,
+      parentUuid: Warehouses.parentUuid,
+    })
+    .from(Warehouses)
+    .orderBy(asc(Warehouses.name));
+};
+
+/** Fetch full settings for a single warehouse — used by the Adapt From feature */
+export const getWarehouseByUuid = async (
+  uuid: string,
+): Promise<WarehouseAdaptData | null> => {
+  const rows = await db
+    .select({
       locationType: Warehouses.locationType,
       loadingLocation: Warehouses.loadingLocation,
       address: Warehouses.address,
@@ -76,33 +99,9 @@ export const getWarehousesForSelect = async (): Promise<WarehouseOption[]> => {
       loadLocations: Warehouses.loadLocations,
     })
     .from(Warehouses)
-    .where(isNull(Warehouses.parentUuid))
-    .orderBy(asc(Warehouses.name));
-};
-
-/** All items (root + children) — for the sub-section adapt-from dropdown */
-export const getAllWarehouseItemsForSelect = async (): Promise<
-  WarehouseItemOption[]
-> => {
-  return db
-    .select({
-      uuid: Warehouses.uuid,
-      name: Warehouses.name,
-      parentUuid: Warehouses.parentUuid,
-      locationType: Warehouses.locationType,
-      loadingLocation: Warehouses.loadingLocation,
-      blocked: Warehouses.blocked,
-      blockReason: Warehouses.blockReason,
-      blockedForOptimization: Warehouses.blockedForOptimization,
-      limitedDimensions: Warehouses.limitedDimensions,
-      minLength: Warehouses.minLength,
-      maxLength: Warehouses.maxLength,
-      maxWidth: Warehouses.maxWidth,
-      maxWeight: Warehouses.maxWeight,
-      productTypes: Warehouses.productTypes,
-    })
-    .from(Warehouses)
-    .orderBy(asc(Warehouses.name));
+    .where(eq(Warehouses.uuid, uuid))
+    .limit(1);
+  return rows[0] ?? null;
 };
 
 export const getWarehouses = async (): Promise<SelectWarehouses[]> => {

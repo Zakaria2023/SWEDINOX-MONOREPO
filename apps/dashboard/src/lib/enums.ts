@@ -304,6 +304,84 @@ export const invoicePaymentTerms = [
 
 export type InvoicePaymentTerm = (typeof invoicePaymentTerms)[number];
 
+export const countWorkorderMethods = [
+  "counting_locations",
+  "products_counting",
+] as const satisfies readonly string[];
+
+export type CountWorkorderMethod = (typeof countWorkorderMethods)[number];
+
+export const workorderReleaseMethods = [
+  "direct",
+  "according_to_schedule",
+  "manual",
+] as const satisfies readonly string[];
+
+export type WorkorderReleaseMethod = (typeof workorderReleaseMethods)[number];
+
+export const workorderPrintMethods = [
+  "manual",
+  "automatic",
+  "do_not_print",
+] as const satisfies readonly string[];
+
+export type WorkorderPrintMethod = (typeof workorderPrintMethods)[number];
+
+export const workorderSlipTypes = [
+  "a4_landscape",
+  "a4_portrait",
+  "label",
+  "label_via_csv",
+] as const satisfies readonly string[];
+
+export type WorkorderSlipType = (typeof workorderSlipTypes)[number];
+
+export const workorderProcessingMethods = [
+  "order_picking",
+] as const satisfies readonly string[];
+
+export type WorkorderProcessingMethod =
+  (typeof workorderProcessingMethods)[number];
+
+export const stickerPerPickWorkorderTypes = [
+  "no_customer_label",
+  "sticker_per_workorder_600dpi",
+  "sticker_per_workorder_line_600dpi",
+] as const satisfies readonly string[];
+
+export type StickerPerPickWorkorderType =
+  (typeof stickerPerPickWorkorderTypes)[number];
+
+export const printerNames = [
+  "microsoft_print_to_pdf_8_omgeleid",
+  "onenote_desktop_8_omgeleid",
+  "verzenden_naar_onenote_16",
+  "verkoop_zwart",
+  "verkoop_kleur",
+  "sato_cl4nx_203dpi",
+  "sato_cl408e_logistiek",
+  "onenote_desktop",
+  "microsoft_print_to_pdf",
+  "logistiek_zwart",
+  "logistiek_kleur",
+  "administratie_zwart",
+  "administratie_kleur",
+] as const satisfies readonly string[];
+
+export type PrinterName = (typeof printerNames)[number];
+
+export const printerEntries = [
+  "automatisch_selecteren",
+  "handmatige_invoer",
+  "lade_1",
+  "lade_2",
+  "lade_3",
+  "lade_4",
+  "lade_5",
+] as const satisfies readonly string[];
+
+export type PrinterEntry = (typeof printerEntries)[number];
+
 export const warehouseWorkOrderStatuses = [
   "new",
   "in_progress",
