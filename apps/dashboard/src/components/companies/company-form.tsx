@@ -99,8 +99,13 @@ const PURCHASING_ORG_ALLOWED = new Set<CompanyRole>([
 const getDisabledRoles = (selected: CompanyRole[]): Set<CompanyRole> => {
   const disabled = new Set<CompanyRole>();
 
-  if (selected.includes("customer")) disabled.add("prospect");
-  if (selected.includes("prospect")) disabled.add("customer");
+  if (selected.includes("customer")) {
+    disabled.add("prospect");
+  }
+
+  if (selected.includes("prospect")) {
+    disabled.add("customer");
+  }
 
   if (selected.includes("agent")) {
     for (const r of companyRoles) {
@@ -114,9 +119,12 @@ const getDisabledRoles = (selected: CompanyRole[]): Set<CompanyRole> => {
     }
   }
 
-  if (selected.some((r) => !AGENT_ALLOWED.has(r))) disabled.add("agent");
-  if (selected.some((r) => !PURCHASING_ORG_ALLOWED.has(r)))
+  if (selected.some((r) => !AGENT_ALLOWED.has(r))) {
+    disabled.add("agent");
+  }
+  if (selected.some((r) => !PURCHASING_ORG_ALLOWED.has(r))) {
     disabled.add("purchasing_org");
+  }
 
   return disabled;
 };
