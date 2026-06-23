@@ -20,6 +20,9 @@ import type {
   WarehouseLocationType,
   WarehouseProductType,
   WarehouseTransportRegion,
+  OrderMethod,
+  DeliveryTerm,
+  OrderWeightType,
 } from "@/lib/enums";
 
 export const COMMON_TEXT = {
@@ -338,4 +341,35 @@ export const INVOICE_PAYMENT_TERM_LABELS: Record<InvoicePaymentTerm, string> = {
   immediately_after_receipt_of_goods: "Immediately after receipt of goods",
   payment_in_settlement: "Payment in settlement",
   direct_debit: "Direct Debit",
+};
+
+export const ORDER_METHOD_LABELS: Record<OrderMethod, string> = {
+  telephone: "Telephone",
+  email: "E-Mail",
+  counter: "Counter",
+  representative: "Representative",
+  oral: "Oral",
+  website: "Website",
+  edi: "EDI",
+  ai_ingelezen_email: "AI ingelezen Email",
+};
+
+export const DELIVERY_TERM_LABELS: Record<DeliveryTerm, string> = {
+  exw: "(EXW) Ex works",
+  fca: "(FCA) Free carrier",
+  fob: "(FOB) Free on board",
+  cfr: "(CFR) Cost and freight",
+  cif: "(CIF) Cost, insurance and freight",
+  cpt: "(CPT) Carriage paid to",
+  cip: "(CIP) Carriage and insurance paid to",
+  dap: "(DAP) Delivery at place",
+  dpu: "(DPU) Delivered at Place Unloaded",
+  ddp: "(DDP) Delivery duty paid",
+};
+
+export const ORDER_WEIGHT_TYPE_LABELS: Record<OrderWeightType, string> = {
+  theoretical_weight: "Theoretical weight",
+  trade_weight: "Trade weight",
+  german_trade_weight: "German trade weight",
+  weighed: "Weighed",
 };

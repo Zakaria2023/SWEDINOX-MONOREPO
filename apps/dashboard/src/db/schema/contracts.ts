@@ -13,6 +13,7 @@ import {
 } from "drizzle-orm/mysql-core";
 import { contractableRoles, contractTypes } from "../../lib/enums";
 import { Companies } from "./companies";
+import { Orders } from "./orders";
 
 export const ContractGroups = mysqlTable(
   "ContractGroups",
@@ -53,6 +54,7 @@ export const Contracts = mysqlTable(
     uuid: char("uuid", { length: 36 }).notNull().unique(),
 
     companyUuid: char("company_uuid", { length: 36 }),
+    orderUuid: char("order_uuid", { length: 36 }),
     role: mysqlEnum("role", contractableRoles),
 
     code: varchar("code", { length: 50 }).notNull(),
@@ -86,11 +88,17 @@ export const Contracts = mysqlTable(
   },
   (table) => [
     index("idx_contracts_company_uuid").on(table.companyUuid),
+    index("idx_contracts_order_uuid").on(table.orderUuid),
     index("idx_contracts_contract_group_uuid").on(table.contractGroupUuid),
     foreignKey({
       name: "fk_contracts_company",
       columns: [table.companyUuid],
       foreignColumns: [Companies.uuid],
+    }),
+    foreignKey({
+      name: "fk_contracts_order",
+      columns: [table.orderUuid],
+      foreignColumns: [Orders.uuid],
     }),
     foreignKey({
       name: "fk_contracts_contract_group",

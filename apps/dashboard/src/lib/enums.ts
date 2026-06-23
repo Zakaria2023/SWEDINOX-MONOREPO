@@ -303,3 +303,44 @@ export const invoicePaymentTerms = [
 ] as const satisfies readonly string[];
 
 export type InvoicePaymentTerm = (typeof invoicePaymentTerms)[number];
+
+export const orderMethods = [
+  "telephone",
+  "email",
+  "counter",
+  "representative",
+  "oral",
+  "website",
+  "edi",
+  "ai_ingelezen_email",
+] as const satisfies readonly string[];
+
+export type OrderMethod = (typeof orderMethods)[number];
+
+export const deliveryTerms = [
+  "exw",
+  "fca",
+  "fob",
+  "cfr",
+  "cif",
+  "cpt",
+  "cip",
+  "dap",
+  "dpu",
+  "ddp",
+] as const satisfies readonly string[];
+
+export type DeliveryTerm = (typeof deliveryTerms)[number];
+
+export const orderWeightTypes = [
+  "theoretical_weight",
+  "trade_weight",
+  "german_trade_weight",
+  "weighed",
+] as const satisfies readonly string[];
+
+export type OrderWeightType = (typeof orderWeightTypes)[number];
+
+export const deliveryTypes = ["date", "week"] as const satisfies readonly string[];
+
+export type DeliveryType = (typeof deliveryTypes)[number];
