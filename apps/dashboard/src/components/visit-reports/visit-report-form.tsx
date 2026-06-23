@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect } from "react";
 import { Controller } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import type { CompanyOption } from "@/app/(dashboard)/companies/actions";
@@ -32,12 +31,6 @@ export const VisitReportForm = ({
     register,
     formState: { errors },
   } = form;
-
-  useEffect(() => {
-    if (state.success) {
-      router.push("/visit-reports");
-    }
-  }, [router, state.success]);
 
   const companyOptions = [
     { value: "", label: COMMON_TEXT.selectPlaceholder },

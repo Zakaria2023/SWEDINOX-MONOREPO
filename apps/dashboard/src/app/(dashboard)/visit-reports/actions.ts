@@ -10,6 +10,7 @@ import {
 } from "@/db";
 import { generateUuid } from "@/lib/helpers";
 import { desc, eq } from "drizzle-orm";
+import { redirect } from "next/navigation";
 
 export type VisitReportInput = Omit<
   InsertVisitReports,
@@ -18,8 +19,6 @@ export type VisitReportInput = Omit<
 
 export type VisitReportActionResult = {
   error?: string;
-  success?: boolean;
-  visitReportUuid?: string;
 };
 
 export type VisitReportListItem = SelectVisitReports & {
@@ -49,7 +48,6 @@ export const createVisitReport = async (
 
   try {
     await db.insert(VisitReports).values({ ...input, uuid });
-    return { success: true, visitReportUuid: uuid };
   } catch (error) {
     return {
       error:
@@ -58,4 +56,6 @@ export const createVisitReport = async (
           : "Failed to create visit report",
     };
   }
+
+  redirect("/visit-reports");
 };
