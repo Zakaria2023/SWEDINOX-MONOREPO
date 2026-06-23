@@ -62,6 +62,16 @@ export type CompanyDetail = SelectCompanies & {
   addresses: SelectCompanyAddresses[];
 };
 
+export const updateCompanyDocuments = async (
+  companyUuid: string,
+  documents: Array<{ id: string; fileName: string }>,
+): Promise<void> => {
+  await db
+    .update(Companies)
+    .set({ documents })
+    .where(eq(Companies.uuid, companyUuid));
+};
+
 export const getCompanyDetail = async (uuid: string): Promise<CompanyDetail | null> => {
   const [company] = await db
     .select()
