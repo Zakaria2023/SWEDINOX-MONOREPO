@@ -1,16 +1,16 @@
 "use client";
 
-import type {
+import {
   CommSettingInput,
   CompanyContractInput,
 } from "@/app/(dashboard)/companies/actions";
 import { useCompanySubmit } from "@/app/(dashboard)/companies/use-company-submit";
 import {
+  AddressFormValues,
+  CompanyFormValues,
   createCompanySchema,
-  type AddressFormValues,
-  type CompanyFormValues,
 } from "@/app/(dashboard)/companies/validation";
-import type { ContractListItem } from "@/app/(dashboard)/contracts/actions";
+import { ContractListItem } from "@/app/(dashboard)/contracts/actions";
 import { AddressForm } from "@/components/companies/address-form";
 import { Button } from "@/components/shadcn/button";
 import {
@@ -28,15 +28,15 @@ import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import { FormSelectField } from "@/components/ui/form-select-field";
 import {
   addressCategories,
+  AddressCategory,
   communicationSettingDocumentTypes,
   communicationSettingShapes,
   communicationSettingTypes,
   companyLangs,
+  CompanyRole,
   companyRoles,
+  ContractableRole,
   contractableRoles,
-  type AddressCategory,
-  type CompanyRole,
-  type ContractableRole,
 } from "@/lib/enums";
 import { cn } from "@/lib/helpers";
 import {
@@ -1057,7 +1057,6 @@ export const CompanyForm = ({ availableContracts }: CompanyFormProps) => {
           </form>
         </DialogContent>
       </Dialog>
-
     </>
   );
 };
