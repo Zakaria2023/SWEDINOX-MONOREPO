@@ -37,6 +37,9 @@ import type {
   WarehouseLocationType,
   WarehouseProductType,
   WarehouseTransportRegion,
+  ComplaintType,
+  ComplaintCategory,
+  ComplaintReport,
 } from "@/lib/enums";
 
 export const COMMON_TEXT = {
@@ -673,4 +676,35 @@ export const FEATURES_QUALITY_LABELS: Record<FeaturesQuality, string> = {
   "Rg12": "Rg12",
   "Rg7": "Rg7",
   "S195T": "S195T",
+};
+
+export const COMPLAINT_TYPE_LABELS: Record<ComplaintType, string> = {
+  counter_order: "Counter order",
+  general: "General",
+  order: "Order",
+  purchase_order: "Purchase order",
+  purchase_quote: "Purchase quote",
+  quote: "Quote",
+  return_order: "Return Order",
+};
+
+export const COMPLAINT_CATEGORY_LABELS: Record<ComplaintCategory, string> = {
+  damaged: "Damaged",
+  wrong_price_calculated: "Wrong price calculated",
+  wrong_quantity: "Wrong quantity",
+  wrong_material_delivered: "Wrong material delivered",
+  delivered_too_late: "Delivered too late",
+  transport_damage: "Transport damage",
+  incorrect_delivery_address: "Incorrect delivery address",
+};
+
+export const COMPLAINT_REPORT_LABELS: Record<ComplaintReport, string> = {
+  telephone: "Telephone",
+  email: "E-Mail",
+  counter: "Counter",
+  representative: "Representative",
+  oral: "Oral",
+  website: "Website",
+  edi: "EDI",
+  ai_ingelezen_email: "AI ingelezen Email",
 };

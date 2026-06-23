@@ -1,4 +1,5 @@
 export * from "./companies";
+export * from "./complaints";
 export * from "./company-addresses";
 export * from "./contracts";
 export * from "./communication-settings";
