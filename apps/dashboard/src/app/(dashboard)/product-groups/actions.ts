@@ -9,6 +9,7 @@ import {
 } from "@/db/schema/product-groups";
 import { generateUuid } from "@/lib/helpers";
 import { asc, desc, eq, getTableColumns, isNull } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
 
 export type ProductGroupFields = Omit<
   InsertProductGroups,
@@ -70,6 +71,7 @@ export const createProductGroup = async (
   const uuid = generateUuid();
   try {
     await db.insert(ProductGroups).values({ ...fields, uuid });
+    revalidatePath("/product-groups");
     return { success: true, productGroupUuid: uuid };
   } catch (error) {
     return {
