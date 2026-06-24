@@ -16,6 +16,8 @@ import type {
   PurchaseInvoiceBlockReason,
   PurchaseInvoiceFiscalBase,
   TextUsageCategory,
+  VisitReportContactMethod,
+  VisitReportReason,
   WarehouseAddress,
   WarehouseBlockReason,
   WarehouseLoadingLocation,
@@ -141,6 +143,19 @@ export const COMMUNICATION_SETTING_SHAPE_LABELS: Record<
   peppol: "Peppol",
 };
 
+export const VISIT_REPORT_CONTACT_METHOD_LABELS: Record<VisitReportContactMethod, string> = {
+  visit: "Visit",
+  telephone_contact: "Telephone Contact",
+};
+
+export const VISIT_REPORT_REASON_LABELS: Record<VisitReportReason, string> = {
+  visit_frequency: "Visit frequency",
+  turnover_is_lagging_behind: "Turnover is lagging behind",
+  complaint: "Complaint",
+  quotation_follow_up: "Quotation follow-up",
+  at_customers_request: "At customer's request",
+  introduction: "Introduction",
+};
 export const CONTACT_SALUTATION_LABELS: Record<ContactSalutation, string> = {
   mr: "Mr.",
   mrs: "Mrs.",
