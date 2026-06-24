@@ -148,6 +148,8 @@ export const CompanyForm = ({
     selectedRoles.includes("customer") || selectedRoles.includes("prospect");
 
   return (
+    <>
+      <form onSubmit={onSubmit} className="space-y-8">
         <section className="space-y-4">
           <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
             Company Details
