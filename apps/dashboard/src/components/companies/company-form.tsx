@@ -1,6 +1,12 @@
 "use client";
 
+import { useCompanySubmit } from "@/app/(dashboard)/companies/use-company-submit";
 import { USAGE_CATEGORY_FIELDS } from "@/app/(dashboard)/companies/validation";
+import {
+  ContractForProjectOption,
+  ContractListItem,
+} from "@/app/(dashboard)/contracts/actions";
+import { TextCategoryOption } from "@/app/(dashboard)/text-categories/actions";
 import { AddressForm } from "@/components/companies/address-form";
 import { DialogFormFooter } from "@/components/companies/dialog-form-footer";
 import { DocumentUploader } from "@/components/document-uploader";
@@ -20,11 +26,11 @@ import { FormActions } from "@/components/ui/form-actions";
 import { FormError } from "@/components/ui/form-error";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import { FormSelectField } from "@/components/ui/form-select-field";
-import { SelectCustomerGroups } from "@/db";
 import {
   companyRoles,
   contactCategories,
   contactSalutations,
+  customerGroups,
   devTheorWtOptions,
   ediOptions,
   groupLinesByDescriptionOptions,
@@ -35,6 +41,7 @@ import {
   quoteOrderInvoiceOptions,
   quoteOrderOptions,
   salesRepresentatives,
+  type CustomerGroup,
   type DevTheorWt,
   type EdiOption,
   type GroupLinesByDescription,
@@ -56,6 +63,7 @@ import {
   CONTACT_SALUTATION_LABELS,
   CONTRACT_TYPE_LABELS,
   CONTRACTABLE_ROLE_LABELS,
+  CUSTOMER_GROUP_LABELS,
   DEV_THEOR_WT_LABELS,
   EDI_OPTION_LABELS,
   GROUP_LINES_BY_DESCRIPTION_LABELS,
@@ -86,7 +94,7 @@ import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 
 const salesSchema = z.object({
-  customerGroupUuid: z.string().optional(),
+  customerGroup: z.string().optional(),
   representative: z.string().optional(),
   accountManager: z.string().optional(),
   region: z.string().optional(),
@@ -119,7 +127,7 @@ const salesSchema = z.object({
 type SalesFormValues = z.infer<typeof salesSchema>;
 
 const DEFAULT_SALES: SalesFormValues = {
-  customerGroupUuid: "",
+  customerGroup: "",
   representative: "",
   accountManager: "",
   region: "",
@@ -153,14 +161,12 @@ type CompanyFormProps = {
   availableContracts: ContractListItem[];
   projectContracts: ContractForProjectOption[];
   textCategories: TextCategoryOption[];
-  customerGroups: SelectCustomerGroups[];
 };
 
 export const CompanyForm = ({
   availableContracts,
   projectContracts,
   textCategories,
-  customerGroups,
 }: CompanyFormProps) => {
   const router = useRouter();
   const [isSalesDialogOpen, setIsSalesDialogOpen] = useState(false);
@@ -261,7 +267,7 @@ export const CompanyForm = ({
 
   const handleSaveSales = salesForm.handleSubmit((values) => {
     setSalesData({
-      customerGroupUuid: values.customerGroupUuid || undefined,
+      customerGroup: (values.customerGroup as CustomerGroup) || undefined,
       representative:
         (values.representative as SalesRepresentative) || undefined,
       accountManager:
@@ -1620,7 +1626,7 @@ export const CompanyForm = ({
                       Customer group
                     </FormLabel>
                     <Controller
-                      name="customerGroupUuid"
+                      name="customerGroup"
                       control={salesForm.control}
                       render={({ field }) => (
                         <Select
@@ -1628,8 +1634,8 @@ export const CompanyForm = ({
                           options={[
                             { value: "", label: COMMON_TEXT.emptyOption },
                             ...customerGroups.map((g) => ({
-                              value: g.uuid,
-                              label: g.name,
+                              value: g,
+                              label: CUSTOMER_GROUP_LABELS[g],
                             })),
                           ]}
                           value={field.value ?? ""}
@@ -1980,7 +1986,7 @@ export const CompanyForm = ({
                     <label className="flex cursor-pointer items-center gap-2 text-sm">
                       <input
                         type="checkbox"
-                        className="size-4 rounded border-border accent-primary"
+                        className="size-4 shrink-0 rounded border-border accent-primary"
                         {...salesForm.register("releaseActionPrint")}
                       />
                       Print
@@ -1988,40 +1994,40 @@ export const CompanyForm = ({
                     <div className="flex items-center gap-2">
                       <input
                         type="checkbox"
-                        className="size-4 rounded border-border accent-primary"
+                        className="size-4 shrink-0 rounded border-border accent-primary"
                         {...salesForm.register("releaseActionEmailEnabled")}
                       />
-                      <span className="text-sm">E-mail to:</span>
+                      <span className="shrink-0 whitespace-nowrap text-sm">E-mail to:</span>
                       <Input
                         placeholder="Contact person"
                         {...salesForm.register("releaseActionEmailTo")}
-                        className="h-7 text-xs"
+                        className="h-7 min-w-0 text-xs"
                       />
                     </div>
                     <div className="flex items-center gap-2">
                       <input
                         type="checkbox"
-                        className="size-4 rounded border-border accent-primary"
+                        className="size-4 shrink-0 rounded border-border accent-primary"
                         {...salesForm.register("releaseActionFaxEnabled")}
                       />
-                      <span className="text-sm">Fax to:</span>
+                      <span className="shrink-0 whitespace-nowrap text-sm">Fax to:</span>
                       <Input
                         placeholder="Contact person"
                         {...salesForm.register("releaseActionFaxTo")}
-                        className="h-7 text-xs"
+                        className="h-7 min-w-0 text-xs"
                       />
                     </div>
                   </div>
                 </div>
                 <div>
                   <h3 className="mb-3 text-sm font-semibold text-gray-700">
-                    Actions upon
+                    Actions upon (quote/order confirmation)
                   </h3>
                   <div className="space-y-2">
                     <label className="flex cursor-pointer items-center gap-2 text-sm">
                       <input
                         type="checkbox"
-                        className="size-4 rounded border-border accent-primary"
+                        className="size-4 shrink-0 rounded border-border accent-primary"
                         {...salesForm.register("actionPrint")}
                       />
                       Print
@@ -2029,27 +2035,27 @@ export const CompanyForm = ({
                     <div className="flex items-center gap-2">
                       <input
                         type="checkbox"
-                        className="size-4 rounded border-border accent-primary"
+                        className="size-4 shrink-0 rounded border-border accent-primary"
                         {...salesForm.register("actionEmailEnabled")}
                       />
-                      <span className="text-sm">E-mail to:</span>
+                      <span className="shrink-0 whitespace-nowrap text-sm">E-mail to:</span>
                       <Input
                         placeholder="Contact person"
                         {...salesForm.register("actionEmailTo")}
-                        className="h-7 text-xs"
+                        className="h-7 min-w-0 text-xs"
                       />
                     </div>
                     <div className="flex items-center gap-2">
                       <input
                         type="checkbox"
-                        className="size-4 rounded border-border accent-primary"
+                        className="size-4 shrink-0 rounded border-border accent-primary"
                         {...salesForm.register("actionFaxEnabled")}
                       />
-                      <span className="text-sm">Fax to:</span>
+                      <span className="shrink-0 whitespace-nowrap text-sm">Fax to:</span>
                       <Input
                         placeholder="Contact person"
                         {...salesForm.register("actionFaxTo")}
-                        className="h-7 text-xs"
+                        className="h-7 min-w-0 text-xs"
                       />
                     </div>
                   </div>

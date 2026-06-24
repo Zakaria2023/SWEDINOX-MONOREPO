@@ -11,7 +11,6 @@ import {
   InsertCommunicationSettings,
 } from "@/db/schema/communication-settings";
 import { Contracts, InsertContracts } from "@/db/schema/contracts";
-import { CustomerSales, InsertCustomerSales } from "@/db/schema/customer-sales";
 import { Contacts, InsertContacts } from "@/db/schema/contacts";
 import { CustomerProjects, InsertCustomerProjects } from "@/db/schema/customer-projects";
 import { Texts, InsertTexts } from "@/db/schema/texts";
@@ -44,9 +43,36 @@ export type CompanyContractInput = Omit<
   "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt"
 >;
 
-export type CustomerSalesInput = Omit<
-  InsertCustomerSales,
-  "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt"
+export type CustomerSalesInput = Pick<
+  InsertCompanies,
+  | "customerGroup"
+  | "representative"
+  | "accountManager"
+  | "region"
+  | "memberOf"
+  | "miscellaneousSettings"
+  | "deliveryCondition"
+  | "devTheorWt"
+  | "defTransport"
+  | "quoteOrderSettings"
+  | "groupLinesByLongProductGroupDescription"
+  | "printProductCodesOnOutgoingDocuments"
+  | "quoteOrderInvoiceSettings"
+  | "orderSettings"
+  | "quoteSettings"
+  | "websiteQuoteMustBeApproved"
+  | "websiteQuoteApprovalAmount"
+  | "releaseActionPrint"
+  | "releaseActionEmailEnabled"
+  | "releaseActionEmailTo"
+  | "releaseActionFaxEnabled"
+  | "releaseActionFaxTo"
+  | "actionPrint"
+  | "actionEmailEnabled"
+  | "actionEmailTo"
+  | "actionFaxEnabled"
+  | "actionFaxTo"
+  | "ediSettings"
 >;
 
 export type CustomerProjectInput = Omit<
@@ -141,7 +167,6 @@ export const createCompany = async (
   addresses: AddressInput[] = [],
   communicationSettings: CommSettingInput[] = [],
   contracts: CompanyContractInput[] = [],
-  customerSales: CustomerSalesInput | null = null,
   contacts: CompanyContactInput[] = [],
   texts: CompanyTextInput[] = [],
   projects: CustomerProjectInput[] = [],
@@ -178,14 +203,6 @@ export const createCompany = async (
       for (const contract of contracts) {
         await tx.insert(Contracts).values({
           ...contract,
-          uuid: generateUuid(),
-          companyUuid: uuid,
-        });
-      }
-
-      if (customerSales) {
-        await tx.insert(CustomerSales).values({
-          ...customerSales,
           uuid: generateUuid(),
           companyUuid: uuid,
         });

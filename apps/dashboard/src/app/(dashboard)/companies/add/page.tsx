@@ -1,15 +1,13 @@
 import { getContracts, getContractsForProjects } from "@/app/(dashboard)/contracts/actions";
-import { getCustomerGroups } from "@/app/(dashboard)/customer-groups/actions";
 import { getTextCategoriesForSelect } from "@/app/(dashboard)/text-categories/actions";
 import { CompanyForm } from "@/components/companies/company-form";
 import { PageHeading } from "@/components/layout/page-heading";
 
 const AddCompanyPage = async () => {
-  const [availableContracts, projectContracts, textCategories, customerGroups] = await Promise.all([
+  const [availableContracts, projectContracts, textCategories] = await Promise.all([
     getContracts(),
     getContractsForProjects(),
     getTextCategoriesForSelect(),
-    getCustomerGroups(),
   ]);
 
   return (
@@ -22,7 +20,6 @@ const AddCompanyPage = async () => {
         availableContracts={availableContracts}
         projectContracts={projectContracts}
         textCategories={textCategories}
-        customerGroups={customerGroups}
       />
     </div>
   );
