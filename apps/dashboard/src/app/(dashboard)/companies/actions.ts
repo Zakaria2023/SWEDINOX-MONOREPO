@@ -12,9 +12,10 @@ import {
 } from "@/db/schema/communication-settings";
 import { Contracts, InsertContracts } from "@/db/schema/contracts";
 import { Contacts, InsertContacts } from "@/db/schema/contacts";
+import { CustomerProjects, InsertCustomerProjects } from "@/db/schema/customer-projects";
 import { Texts, InsertTexts } from "@/db/schema/texts";
 import { generateUuid } from "@/lib/helpers";
-import { asc, desc, eq } from "drizzle-orm";
+import { asc, desc, eq, or, sql } from "drizzle-orm";
 import { currentUser } from "@clerk/nextjs/server";
 
 export type CompanyOption = Pick<
@@ -42,6 +43,11 @@ export type CompanyContractInput = Omit<
   "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt"
 >;
 
+export type CustomerProjectInput = Omit<
+  InsertCustomerProjects,
+  "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt"
+>;
+
 export type CompanyContactInput = Omit<
   InsertContacts,
   "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt"
@@ -60,6 +66,16 @@ export type CompanyActionResult = {
 
 export type CompanyDetail = SelectCompanies & {
   addresses: SelectCompanyAddresses[];
+};
+
+export const updateCompanyDocuments = async (
+  companyUuid: string,
+  documents: Array<{ id: string; fileName: string }>,
+): Promise<void> => {
+  await db
+    .update(Companies)
+    .set({ documents })
+    .where(eq(Companies.uuid, companyUuid));
 };
 
 export const getCompanyDetail = async (uuid: string): Promise<CompanyDetail | null> => {
@@ -88,6 +104,24 @@ export const getCompaniesForSelect = async (): Promise<CompanyOption[]> => {
     .orderBy(asc(Companies.companyName));
 };
 
+export const getCustomerAndProspectCompaniesForSelect = async (): Promise<CompanyOption[]> => {
+  return db
+    .select({
+      uuid: Companies.uuid,
+      searchCode1: Companies.searchCode1,
+      companyName: Companies.companyName,
+      roles: Companies.roles,
+    })
+    .from(Companies)
+    .where(
+      or(
+        sql`JSON_CONTAINS(${Companies.roles}, '"customer"')`,
+        sql`JSON_CONTAINS(${Companies.roles}, '"prospect"')`,
+      ),
+    )
+    .orderBy(asc(Companies.companyName));
+};
+
 export const getCompanies = async (): Promise<SelectCompanies[]> => {
   try {
     return await db.select().from(Companies).orderBy(desc(Companies.createdAt));
@@ -103,6 +137,7 @@ export const createCompany = async (
   contracts: CompanyContractInput[] = [],
   contacts: CompanyContactInput[] = [],
   texts: CompanyTextInput[] = [],
+  projects: CustomerProjectInput[] = [],
 ): Promise<CompanyActionResult> => {
   const uuid = generateUuid();
 
@@ -155,6 +190,14 @@ export const createCompany = async (
           uuid: generateUuid(),
           companyUuid: uuid,
           createdByUserId: userId,
+        });
+      }
+
+      for (const project of projects) {
+        await tx.insert(CustomerProjects).values({
+          ...project,
+          uuid: generateUuid(),
+          companyUuid: uuid,
         });
       }
     });
