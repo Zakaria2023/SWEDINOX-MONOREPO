@@ -6,8 +6,22 @@ import type {
   CommunicationSettingType,
   CompanyLang,
   CompanyRole,
+  ContactCategory,
+  ContactSalutation,
   ContractableRole,
   ContractType,
+  InvoicePaymentTerm,
+  InvoiceSurchargeDescription,
+  InvoiceVatScenario,
+  TextUsageCategory,
+  VisitReportContactMethod,
+  VisitReportReason,
+  WarehouseAddress,
+  WarehouseBlockReason,
+  WarehouseLoadingLocation,
+  WarehouseLocationType,
+  WarehouseProductType,
+  WarehouseTransportRegion,
 } from "@/lib/enums";
 
 export const COMMON_TEXT = {
@@ -125,4 +139,218 @@ export const COMMUNICATION_SETTING_SHAPE_LABELS: Record<
   edi4steel: "EDI4Steel",
   text: "Text",
   peppol: "Peppol",
+};
+
+export const VISIT_REPORT_CONTACT_METHOD_LABELS: Record<VisitReportContactMethod, string> = {
+  visit: "Visit",
+  telephone_contact: "Telephone Contact",
+};
+
+export const VISIT_REPORT_REASON_LABELS: Record<VisitReportReason, string> = {
+  visit_frequency: "Visit frequency",
+  turnover_is_lagging_behind: "Turnover is lagging behind",
+  complaint: "Complaint",
+  quotation_follow_up: "Quotation follow-up",
+  at_customers_request: "At customer's request",
+  introduction: "Introduction",
+};
+export const CONTACT_SALUTATION_LABELS: Record<ContactSalutation, string> = {
+  mr: "Mr.",
+  mrs: "Mrs.",
+};
+
+export const CONTACT_CATEGORY_LABELS: Record<ContactCategory, string> = {
+  procurement: "Procurement",
+  sales: "Sales",
+  warehouse: "Warehouse",
+  management: "Management",
+  bookkeeping: "Bookkeeping",
+  certificates: "Certificates",
+};
+
+export const WAREHOUSE_ADDRESS_LABELS: Record<WarehouseAddress, string> = {
+  hego_almere: "Bolderweg 10, 1332AT, Almere",
+  port_of_rotterdam: "Wilhelminakade 909, 3072AP, Rotterdam",
+  port_of_antwerp: "Zaha Hadidplein 1, 2030, Antwerpen",
+};
+
+export const WAREHOUSE_LOCATION_TYPE_LABELS: Record<
+  WarehouseLocationType,
+  string
+> = {
+  pick: "Pick",
+  bulk: "Bulk",
+  production: "Production",
+  scrap: "Scrap",
+  load: "Load",
+  inspection: "Inspection",
+  put_away: "Put-away",
+  sorting: "Sorting",
+  processing: "Processing",
+  collection: "Collection",
+  call_off: "Call-off",
+};
+
+export const WAREHOUSE_LOADING_LOCATION_LABELS: Record<
+  WarehouseLoadingLocation,
+  string
+> = {
+  load: "Load",
+};
+
+export const WAREHOUSE_BLOCK_REASON_LABELS: Record<
+  WarehouseBlockReason,
+  string
+> = {
+  disapproval: "Disapproval",
+  reserved_for_customer: "Reserved for Customer",
+  other: "Other",
+  consignment: "Consignment",
+  location_type_setting: "Location Type Setting",
+};
+
+export const WAREHOUSE_PRODUCT_TYPE_LABELS: Record<
+  WarehouseProductType,
+  string
+> = {
+  beam: "Beam",
+  tube: "Tube",
+  sheet: "Sheet",
+  profile: "Profile",
+  bar: "Bar",
+};
+
+export const WAREHOUSE_TRANSPORT_REGION_CODES: Record<
+  WarehouseTransportRegion,
+  string
+> = {
+  azie: "AZIE",
+  bal: "BAL",
+  bel: "BEL",
+  dui: "DUI",
+  eng: "ENG",
+  fra: "FRA",
+  ita: "ITA",
+  lux: "LUX",
+  ned: "NED",
+  oe: "OE",
+  sp_po: "SP/PO",
+  zd_am: "ZD-AM",
+};
+
+export const WAREHOUSE_TRANSPORT_REGION_LABELS: Record<
+  WarehouseTransportRegion,
+  string
+> = {
+  azie: "Asia",
+  bal: "Baltic States",
+  bel: "Belgium",
+  dui: "Germany",
+  eng: "UK",
+  fra: "France",
+  ita: "Italy",
+  lux: "Luxembourg",
+  ned: "Netherlands",
+  oe: "Eastern Europe",
+  sp_po: "Spain/Portugal",
+  zd_am: "South America",
+};
+
+export const TEXT_USAGE_CATEGORY_LABELS: Record<TextUsageCategory, string> = {
+  purchase_quote_request: "Purchase Quote Request",
+  purchase_order: "Purchase Order",
+  purchase_order_tool_tip: "Purchase Order Tool Tip",
+  purchase_return_order: "Purchase Return Order",
+  sales_quote: "Sales Quote",
+  sales_order: "Sales Order",
+  sales_order_tool_tip: "Sales Order Tool Tip",
+  sales_invoice: "Sales Invoice",
+  warehouse_order: "Warehouse Order",
+  production_order: "Production Order",
+  loadlist: "Loadlist",
+  waybill: "Waybill",
+  ride_list: "Ride List",
+  customer_label: "Customer Label",
+  visit_report: "Visit Report",
+  transport_planning: "Transport Planning",
+  website_in_advance: "Website In Advance",
+  website_after: "Website After",
+};
+
+export const INVOICE_SURCHARGE_DESCRIPTION_LABELS: Record<InvoiceSurchargeDescription, string> = {
+  project_discount: "Project discount",
+  certificate_costs: "Certificate costs",
+  order_surcharge: "Order surcharge",
+  packaging_surcharge: "Packaging surcharge",
+  pallet_surcharge: "Pallet surcharge",
+  administration_costs: "Administration costs",
+  transport_costs: "Transport costs",
+  transport_costs_internal: "Transport costs Internal",
+  maut_costs: "Maut costs",
+  import_costs: "Import costs",
+  costs: "Costs",
+  other: "Other",
+  purchasing_rounding_differences: "Purchasing rounding differences",
+  price_differences: "Price differences",
+  external_transport: "External transport",
+};
+
+export const INVOICE_VAT_SCENARIO_LABELS: Record<InvoiceVatScenario, string> = {
+  purchase_domestically: "Purchase domestically",
+  domestic_purchase_vat_shifted: "Domestic purchase VAT shifted",
+  purchase_within_eu_with_reverse_charge: "Purchase within EU with reverse charge",
+  purchase_outside_eu_with_reverse_charge: "Purchase outside the EU with reverse charge",
+  domestic_sales: "Domestic sales",
+  sales_within_eu_with_reverse_charge: "Sales within EU with reverse charge",
+  sales_outside_eu_with_reverse_charge: "Sales outside the EU with a reverse charge",
+};
+
+export const INVOICE_PAYMENT_TERM_LABELS: Record<InvoicePaymentTerm, string> = {
+  prepayment: "Prepayment",
+  cash: "Cash",
+  within_7_days_after_invoice_date: "Within 7 days after invoice date",
+  within_8_days_from_date_of_invoice: "Within 8 days from date of invoice",
+  within_10_days_from_date_of_invoice: "Within 10 days from date of invoice",
+  within_14_days_from_date_of_invoice: "Within 14 days from date of invoice",
+  within_21_days_after_invoice_date: "Within 21 days after invoice date",
+  within_30_days_from_date_of_invoice: "Within 30 days from date of invoice",
+  within_30_days_end_of_month: "Within 30 days end of month",
+  within_45_days_from_date_of_invoice: "Within 45 days from date of invoice",
+  within_60_days_from_date_of_invoice: "Within 60 days from date of invoice",
+  within_90_days_after_invoice_date: "Within 90 days after invoice date",
+  prepayment_minus1pct_discount: "Prepayment -1% Discount",
+  within_8_days_minus1pct_30_days_net: "Within 8 days -1%, 30 days net",
+  within_8_days_minus1_5pct_30_days_net: "Within 8 days -1,5%, 30 days net",
+  within_8_days_minus2pct_30_days_net: "Within 8 days -2%, 30 days net",
+  "5pct_prepayment_balance_cad": "5% Prepayment, balance CAD",
+  "10pct_prepayment_balance_cad": "10% Prepayment, balance CAD",
+  "15pct_prepayment_balance_cad": "15% Prepayment, balance CAD",
+  "20pct_prepayment_balance_cad": "20% Prepayment, balance CAD",
+  "25pct_prepayment_balance_cad": "25% Prepayment, balance CAD",
+  "30pct_prepayment_balance_cad": "30% Prepayment, balance CAD",
+  "50pct_prepayment_balance_cad": "50% Prepayment, balance CAD",
+  cash_against_documents: "Cash against documents",
+  lc_at_sight: "L/C at sight",
+  within_10_days_1_5pct_30_days_net: "Within 10 days 1.5% 30 days Net",
+  within_14_days_minus2pct_30_days_net: "Within 14 days -2%, 30 days net",
+  within_10_days_minus1pct_30_days_net: "Within 10 days -1.0%, 30 days Net",
+  within_14_days_minus1pct_30_days_net: "Within 14 days -1.0%. 30 days net",
+  within_14_days_minus3pct_30_days_net: "Within 14 days -3.0%, 30 days net",
+  within_10_days_minus3pct_30_days_net: "Within 10 days -3.0%. 30 days Net",
+  lc_120_days: "L/C 120 days",
+  "20pct_prepayment_rest_before_shipping": "20% Prepayment, Rest Before Shipping",
+  "25pct_prepayment_rest_before_shipping": "25% Prepayment, Rest Before Shipping",
+  "20pct_advance_payment_remainder_copy_bl": "20% advance payment, remainder copy BL",
+  "30pct_advance_payment_remainder_copy_bl": "30% advance payment, remainder copy BL",
+  "5pct_prepayment_balance_30_days_copy_bl": "5% Prepayment, balance 30 days copy BL",
+  "50pct_in_advance_remainder_14_days_after_arrival_at_port": "50% in advance, remainder 14 days after arrival at port",
+  "5pct_prepayment_balance_60_days_copy_bl": "5% Prepayment, balance 60 days copy BL",
+  "50pct_prepayment_remaining_15_days_after_shipment": "50% Prepayment, Remaining 15 days after shipment",
+  prepayment_minus2pct_discount: "Prepayment -2% Discount",
+  lc_180_days: "L/C 180 days",
+  lc_90_days: "L/C 90 days",
+  to_be_determined: "To be determined",
+  immediately_after_receipt_of_goods: "Immediately after receipt of goods",
+  payment_in_settlement: "Payment in settlement",
+  direct_debit: "Direct Debit",
 };

@@ -22,6 +22,7 @@ export const Companies = mysqlTable("Companies", {
   searchCode2: varchar("search_code_2", { length: 100 }),
   searchCode3: varchar("search_code_3", { length: 100 }),
   roles: json("roles").$type<CompanyRole[]>().default([]).notNull(),
+  documents: json("documents").$type<Array<{ id: string; fileName: string }>>(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
 });
