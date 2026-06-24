@@ -1,7 +1,11 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { type ContractListItem } from "@/app/(dashboard)/contracts/actions";
+import { z } from "zod";
+import {
+  type ContractForProjectOption,
+  type ContractListItem,
+} from "@/app/(dashboard)/contracts/actions";
 import { type TextCategoryOption } from "@/app/(dashboard)/text-categories/actions";
 import {
   addressCategories,
@@ -33,6 +37,7 @@ import {
   type CompanyContactInput,
   type CompanyContractInput,
   type CompanyTextInput,
+  type CustomerProjectInput,
 } from "./actions";
 import {
   type AddressFormValues,
@@ -119,13 +124,31 @@ const mapAddress = (address: CompanyFormValues["address"]) => ({
   loadingInstructions: address.loadingInstructions || undefined,
 });
 
+const projectSchema = z.object({
+  projectName: z.string().optional(),
+  endDate: z.string().optional(),
+  revenue: z.string().optional(),
+  contractUuid: z.string().optional(),
+});
+
+type ProjectFormValues = z.infer<typeof projectSchema>;
+
+const DEFAULT_PROJECT: ProjectFormValues = {
+  projectName: "",
+  endDate: "",
+  revenue: "",
+  contractUuid: "",
+};
+
 type UseCompanySubmitParams = {
   availableContracts: ContractListItem[];
+  projectContracts: ContractForProjectOption[];
   textCategories: TextCategoryOption[];
 };
 
 export const useCompanySubmit = ({
   availableContracts,
+  projectContracts,
   textCategories,
 }: UseCompanySubmitParams) => {
   const router = useRouter();
@@ -150,6 +173,8 @@ export const useCompanySubmit = ({
   const [contacts, setContacts] = useState<CompanyContactInput[]>([]);
   const [isTextDialogOpen, setIsTextDialogOpen] = useState(false);
   const [texts, setTexts] = useState<CompanyTextInput[]>([]);
+  const [isProjectDialogOpen, setIsProjectDialogOpen] = useState(false);
+  const [projects, setProjects] = useState<CustomerProjectInput[]>([]);
 
   const form = useForm<CompanyFormValues>({
     resolver: zodResolver(createCompanySchema()),
@@ -162,6 +187,7 @@ export const useCompanySubmit = ({
       searchCode1: "",
       searchCode2: "",
       searchCode3: "",
+      documents: [],
       address: {
         category: [],
         poBox: false,
@@ -229,6 +255,11 @@ export const useCompanySubmit = ({
   const textForm = useForm<TextDialogValues>({
     resolver: zodResolver(textDialogSchema),
     defaultValues: DEFAULT_TEXT,
+  });
+
+  const projectForm = useForm<ProjectFormValues>({
+    resolver: zodResolver(projectSchema),
+    defaultValues: DEFAULT_PROJECT,
   });
 
   const addressValues = form.watch("address");
@@ -629,6 +660,43 @@ export const useCompanySubmit = ({
   const removeText = (index: number) =>
     setTexts((prev) => prev.filter((_, i) => i !== index));
 
+  // ── Project handlers ───────────────────────────────────────────────────────
+
+  const handleProjectOpenChange = (open: boolean) => {
+    if (!open) projectForm.reset(DEFAULT_PROJECT);
+    setIsProjectDialogOpen(open);
+  };
+
+  const handleOpenProject = () => {
+    projectForm.reset(DEFAULT_PROJECT);
+    setIsProjectDialogOpen(true);
+  };
+
+  const handleCancelProject = () => {
+    projectForm.reset(DEFAULT_PROJECT);
+    setIsProjectDialogOpen(false);
+  };
+
+  const handleSaveProject = projectForm.handleSubmit((values) => {
+    const today = new Date().toISOString().split("T")[0];
+    setProjects((prev) => [
+      ...prev,
+      {
+        projectName: values.projectName || undefined,
+        startingDate: today,
+        endDate: values.endDate || undefined,
+        revenue: values.revenue || undefined,
+        contractUuid: values.contractUuid || undefined,
+        daysInSystem: 0,
+      },
+    ]);
+    projectForm.reset(DEFAULT_PROJECT);
+    setIsProjectDialogOpen(false);
+  });
+
+  const removeProject = (index: number) =>
+    setProjects((prev) => prev.filter((_, i) => i !== index));
+
   // ── Role handler ─────────────────────────────────────────────────────────────
 
   const toggleRole = (role: CompanyRole) => {
@@ -686,6 +754,7 @@ export const useCompanySubmit = ({
         searchCode1,
         searchCode2,
         searchCode3,
+        documents,
         address,
       } = values;
       const allAddresses = [address, ...additionalAddresses].map(mapAddress);
@@ -699,12 +768,14 @@ export const useCompanySubmit = ({
           searchCode2: searchCode2 || undefined,
           searchCode3: searchCode3 || undefined,
           roles: (roles ?? []) as CompanyRole[],
+          documents: documents.length > 0 ? documents : undefined,
         },
         allAddresses,
         communicationSettings,
         contracts,
         contacts,
         texts,
+        projects,
       );
       setState(result);
       if (result.success) router.push("/companies");
@@ -783,9 +854,19 @@ export const useCompanySubmit = ({
     handleCategorySelect,
     removeText,
 
+    projectForm,
+    projects,
+    isProjectDialogOpen,
+    handleProjectOpenChange,
+    handleOpenProject,
+    handleCancelProject,
+    handleSaveProject,
+    removeProject,
+
     toggleRole,
 
     availableContracts,
+    projectContracts,
     textCategories,
   };
 };
