@@ -1,54 +1,54 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import {
-  type ContractForProjectOption,
-  type ContractListItem,
+  ContractForProjectOption,
+  ContractListItem,
 } from "@/app/(dashboard)/contracts/actions";
-import { type TextCategoryOption } from "@/app/(dashboard)/text-categories/actions";
+import { TextCategoryOption } from "@/app/(dashboard)/text-categories/actions";
 import {
   addressCategories,
-  type AddressCategory,
+  AddressCategory,
   communicationSettingDocumentTypes,
   communicationSettingShapes,
   communicationSettingTypes,
-  type CompanyRole,
   companyLangs,
+  CompanyRole,
   companyRoles,
-  type ContactCategory,
+  ContactCategory,
+  ContractableRole,
   contractableRoles,
-  type ContractableRole,
 } from "@/lib/enums";
 import {
+  COMMON_TEXT,
   COMMUNICATION_SETTING_DOCUMENT_TYPE_LABELS,
   COMMUNICATION_SETTING_SHAPE_LABELS,
   COMMUNICATION_SETTING_TYPE_LABELS,
   COMPANY_LANGUAGE_LABELS,
-  COMMON_TEXT,
 } from "@/lib/labels";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
+import { z } from "zod";
 import {
+  CommSettingInput,
+  CompanyActionResult,
+  CompanyContactInput,
+  CompanyContractInput,
+  CompanyTextInput,
   createCompany,
-  type CommSettingInput,
-  type CompanyActionResult,
-  type CompanyContactInput,
-  type CompanyContractInput,
-  type CompanyTextInput,
-  type CustomerProjectInput,
-  type CustomerSalesInput,
+  CustomerProjectInput,
+  CustomerSalesInput,
 } from "./actions";
 import {
-  type AddressFormValues,
-  type CommSettingFormValues,
+  AddressFormValues,
+  CommSettingFormValues,
   commSettingSchema,
-  type CompanyFormValues,
+  CompanyFormValues,
   contactDialogSchema,
-  type ContactDialogValues,
+  ContactDialogValues,
   contractSelectionSchema,
-  type ContractSelectionValues,
+  ContractSelectionValues,
   createCompanySchema,
   DEFAULT_ADDRESS,
   DEFAULT_COMM_SETTING,
@@ -56,12 +56,15 @@ import {
   DEFAULT_CONTRACT_SELECTION,
   DEFAULT_TEXT,
   textDialogSchema,
-  type TextDialogValues,
+  TextDialogValues,
   USAGE_CATEGORY_FIELDS,
 } from "./validation";
 
 const AGENT_ALLOWED = new Set<CompanyRole>(["agent", "other", "internal"]);
-const PURCHASING_ORG_ALLOWED = new Set<CompanyRole>(["purchasing_org", "other"]);
+const PURCHASING_ORG_ALLOWED = new Set<CompanyRole>([
+  "purchasing_org",
+  "other",
+]);
 
 const getDisabledRoles = (selected: CompanyRole[]): Set<CompanyRole> => {
   const disabled = new Set<CompanyRole>();

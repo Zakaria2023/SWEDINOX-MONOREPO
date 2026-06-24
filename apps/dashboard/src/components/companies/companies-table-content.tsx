@@ -1,12 +1,19 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
-import { Eye } from "lucide-react";
-import { type SelectCompanies } from "@/db";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/shadcn/table";
-import { ColumnSelector } from "@/components/ui/column-selector";
 import { CompanyDocumentCell } from "@/components/companies/company-document-cell";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/shadcn/table";
+import { ColumnSelector } from "@/components/ui/column-selector";
+import { SelectCompanies } from "@/db";
+import { Eye } from "lucide-react";
+import Link from "next/link";
+import { useState } from "react";
 
 type ColumnKey = "id" | "companyName" | "documents" | "createdAt" | "updatedAt";
 
@@ -38,15 +45,24 @@ export const CompaniesTableContent = ({
     useState<Record<ColumnKey, boolean>>(initialVisibility);
 
   const toggleColumn = (key: string) => {
-    setColumnVisibility((prev) => ({ ...prev, [key]: !prev[key as ColumnKey] }));
+    setColumnVisibility((prev) => ({
+      ...prev,
+      [key]: !prev[key as ColumnKey],
+    }));
   };
 
-  const visibleColumns = ALL_COLUMNS.filter((column) => columnVisibility[column.key]);
+  const visibleColumns = ALL_COLUMNS.filter(
+    (column) => columnVisibility[column.key],
+  );
 
   const renderCell = (company: SelectCompanies, key: ColumnKey) => {
     switch (key) {
       case "id":
-        return <TableCell key={key} className="font-medium">{company.id}</TableCell>;
+        return (
+          <TableCell key={key} className="font-medium">
+            {company.id}
+          </TableCell>
+        );
       case "companyName":
         return (
           <TableCell key={key} className="font-medium">
@@ -100,14 +116,19 @@ export const CompaniesTableContent = ({
           <TableBody>
             {companies.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={visibleColumns.length + 1} className="h-24 text-center">
+                <TableCell
+                  colSpan={visibleColumns.length + 1}
+                  className="h-24 text-center"
+                >
                   No companies found
                 </TableCell>
               </TableRow>
             ) : (
               companies.map((company) => (
                 <TableRow key={company.id}>
-                  {visibleColumns.map((column) => renderCell(company, column.key))}
+                  {visibleColumns.map((column) =>
+                    renderCell(company, column.key),
+                  )}
                   <TableCell>
                     <Link
                       href={`/companies/${company.uuid}`}

@@ -14,7 +14,7 @@ import {
   timestamp,
   varchar,
 } from "drizzle-orm/mysql-core";
-import { availableAtOptions, type AddressCategory } from "../../lib/enums";
+import { AddressCategory, availableAtOptions } from "../../lib/enums";
 import { Companies } from "./companies";
 
 export const CompanyAddresses = mysqlTable(

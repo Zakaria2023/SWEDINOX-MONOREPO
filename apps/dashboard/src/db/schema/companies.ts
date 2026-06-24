@@ -9,7 +9,7 @@ import {
   timestamp,
   varchar,
 } from "drizzle-orm/mysql-core";
-import { companyLangs, type CompanyRole } from "../../lib/enums";
+import { companyLangs, CompanyRole } from "../../lib/enums";
 
 export const Companies = mysqlTable("Companies", {
   id: int("id").primaryKey().autoincrement(),

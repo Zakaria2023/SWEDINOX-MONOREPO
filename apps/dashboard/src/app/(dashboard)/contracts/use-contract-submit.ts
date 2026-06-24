@@ -1,10 +1,14 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { createContract, type ContractActionResult, type ContractCompanyEntry } from "./actions";
-import { createContractSchema, type ContractFormValues } from "./validation";
+import {
+  ContractActionResult,
+  ContractCompanyEntry,
+  createContract,
+} from "./actions";
+import { ContractFormValues, createContractSchema } from "./validation";
 
 export const useContractSubmit = (companies: ContractCompanyEntry[]) => {
   const [isPending, startTransition] = useTransition();
@@ -39,7 +43,10 @@ export const useContractSubmit = (companies: ContractCompanyEntry[]) => {
           contractGroupUuid: values.contractGroupUuid,
           quicklyChangeOrder: values.quicklyChangeOrder || undefined,
           hasPriceDate: values.hasPriceDate,
-          priceDate: values.hasPriceDate && values.priceDate ? values.priceDate : undefined,
+          priceDate:
+            values.hasPriceDate && values.priceDate
+              ? values.priceDate
+              : undefined,
           linkToNewCustomer: values.linkToNewCustomer,
           searchCode1: values.searchCode1 || undefined,
           searchCode2: values.searchCode2 || undefined,
