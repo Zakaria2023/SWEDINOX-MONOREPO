@@ -91,6 +91,24 @@ export const communicationSettingTypes = [
 export type CommunicationSettingType =
   (typeof communicationSettingTypes)[number];
 
+export const visitReportContactMethods = [
+  "visit",
+  "telephone_contact",
+] as const satisfies readonly string[];
+
+export type VisitReportContactMethod = (typeof visitReportContactMethods)[number];
+
+export const visitReportReasons = [
+  "visit_frequency",
+  "turnover_is_lagging_behind",
+  "complaint",
+  "quotation_follow_up",
+  "at_customers_request",
+  "introduction",
+] as const satisfies readonly string[];
+
+export type VisitReportReason = (typeof visitReportReasons)[number];
+
 export const communicationSettingShapes = [
   "pdf",
   "scsn",

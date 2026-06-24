@@ -115,6 +115,7 @@ export const createCompanySchema = () =>
     searchCode2: z.string().optional(),
     searchCode3: z.string().optional(),
     address: createAddressSchema(),
+    documents: z.array(z.object({ id: z.string(), fileName: z.string() })),
   });
 
 export type AddressFormValues = z.infer<ReturnType<typeof createAddressSchema>>;
