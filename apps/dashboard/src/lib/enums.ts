@@ -321,3 +321,12 @@ export const invoicePaymentTerms = [
 ] as const satisfies readonly string[];
 
 export type InvoicePaymentTerm = (typeof invoicePaymentTerms)[number];
+
+export const currencies = [
+  "eur",
+  "usd",
+  "gbp",
+  "hkd",
+] as const satisfies readonly string[];
+
+export type Currency = (typeof currencies)[number];

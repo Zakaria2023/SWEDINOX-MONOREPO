@@ -10,6 +10,7 @@ import type {
   ContactSalutation,
   ContractableRole,
   ContractType,
+  Currency,
   InvoicePaymentTerm,
   InvoiceSurchargeDescription,
   InvoiceVatScenario,
@@ -353,4 +354,11 @@ export const INVOICE_PAYMENT_TERM_LABELS: Record<InvoicePaymentTerm, string> = {
   immediately_after_receipt_of_goods: "Immediately after receipt of goods",
   payment_in_settlement: "Payment in settlement",
   direct_debit: "Direct Debit",
+};
+
+export const CURRENCY_LABELS: Record<Currency, string> = {
+  eur: "Euro",
+  usd: "Dollar",
+  gbp: "Pond",
+  hkd: "HK-Dollar",
 };
