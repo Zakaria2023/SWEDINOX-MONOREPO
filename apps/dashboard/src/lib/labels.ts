@@ -17,6 +17,8 @@ import type {
   InvoicePaymentTerm,
   InvoiceSurchargeDescription,
   InvoiceVatScenario,
+  PurchaseInvoiceBlockReason,
+  PurchaseInvoiceFiscalBase,
   TextUsageCategory,
   VisitReportContactMethod,
   VisitReportReason,
@@ -373,6 +375,20 @@ export const INVOICE_PAYMENT_TERM_LABELS: Record<InvoicePaymentTerm, string> = {
   immediately_after_receipt_of_goods: "Immediately after receipt of goods",
   payment_in_settlement: "Payment in settlement",
   direct_debit: "Direct Debit",
+};
+
+export const PURCHASE_INVOICE_BLOCK_REASON_LABELS: Record<PurchaseInvoiceBlockReason, string> = {
+  price_mismatch: "Price Mismatch",
+  awaiting_goods_receipt: "Awaiting Goods Receipt",
+  awaiting_approval: "Awaiting Approval",
+  duplicate: "Duplicate",
+  disputed: "Disputed",
+  other: "Other",
+};
+
+export const PURCHASE_INVOICE_FISCAL_BASE_LABELS: Record<PurchaseInvoiceFiscalBase, string> = {
+  booking_date: "Booking Date",
+  document_date: "Document Date",
 };
 
 export const CURRENCY_LABELS: Record<Currency, string> = {
