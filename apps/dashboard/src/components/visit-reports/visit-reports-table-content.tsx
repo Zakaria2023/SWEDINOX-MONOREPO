@@ -68,7 +68,7 @@ type VisitReportsTableContentProps = {
   visitReports: VisitReportListItem[];
 };
 
-export const VisitReportsTableContent = ({
+export const VisitReportsTable = ({
   visitReports,
 }: VisitReportsTableContentProps) => {
   const [columnVisibility, setColumnVisibility] =
