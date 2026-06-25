@@ -1,12 +1,16 @@
 "use client";
 
+import { DebtorCompanyOption } from "@/app/(dashboard)/companies/actions";
 import { useCompanySubmit } from "@/app/(dashboard)/companies/use-company-submit";
 import { USAGE_CATEGORY_FIELDS } from "@/app/(dashboard)/companies/validation";
-import { type ContractForProjectOption, type ContractListItem } from "@/app/(dashboard)/contracts/actions";
-import { type TextCategoryOption } from "@/app/(dashboard)/text-categories/actions";
-import { DocumentUploader } from "@/components/document-uploader";
+import {
+  ContractForProjectOption,
+  ContractListItem,
+} from "@/app/(dashboard)/contracts/actions";
+import { TextCategoryOption } from "@/app/(dashboard)/text-categories/actions";
 import { AddressForm } from "@/components/companies/address-form";
 import { DialogFormFooter } from "@/components/companies/dialog-form-footer";
+import { DocumentUploader } from "@/components/document-uploader";
 import { Checkbox } from "@/components/shadcn/checkbox";
 import {
   Dialog,
@@ -24,7 +28,11 @@ import { FormActions } from "@/components/ui/form-actions";
 import { FormError } from "@/components/ui/form-error";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import { FormSelectField } from "@/components/ui/form-select-field";
-import { companyRoles, contactCategories, contactSalutations } from "@/lib/enums";
+import {
+  companyRoles,
+  contactCategories,
+  contactSalutations,
+} from "@/lib/enums";
 import { cn } from "@/lib/helpers";
 import {
   ADDRESS_CATEGORY_LABELS,
@@ -54,12 +62,16 @@ type CompanyFormProps = {
   availableContracts: ContractListItem[];
   projectContracts: ContractForProjectOption[];
   textCategories: TextCategoryOption[];
+  debtorCompanies: DebtorCompanyOption[];
+  purchaseOrgCompanies: DebtorCompanyOption[];
 };
 
 export const CompanyForm = ({
   availableContracts,
   projectContracts,
   textCategories,
+  debtorCompanies,
+  purchaseOrgCompanies,
 }: CompanyFormProps) => {
   const router = useRouter();
   const {
@@ -77,6 +89,10 @@ export const CompanyForm = ({
     documentTypeOptions,
     communicationTypeOptions,
     shapeOptions,
+    paymentTermOptions,
+    currencyOptions,
+    debtorCompanyOptions,
+    purchaseOrgOptions,
     additionalForm,
     additionalAddresses,
     isFirstAddressDialogOpen,
@@ -135,7 +151,13 @@ export const CompanyForm = ({
     handleSaveProject,
     removeProject,
     toggleRole,
-  } = useCompanySubmit({ availableContracts, projectContracts, textCategories });
+  } = useCompanySubmit({
+    availableContracts,
+    projectContracts,
+    textCategories,
+    debtorCompanies,
+    purchaseOrgCompanies,
+  });
 
   const {
     control,
@@ -300,7 +322,9 @@ export const CompanyForm = ({
                     disabled={isPending}
                   >
                     <X className="size-4" />
-                    <span className="sr-only">Remove communication setting</span>
+                    <span className="sr-only">
+                      Remove communication setting
+                    </span>
                   </button>
                 </div>
               ))}
@@ -405,6 +429,307 @@ export const CompanyForm = ({
           </section>
         )}
 
+        {(selectedRoles.includes("customer") ||
+          selectedRoles.includes("prospect") ||
+          selectedRoles.includes("purchasing_org")) && (
+          <section className="space-y-4">
+            <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
+              Debtor
+            </h2>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <FormSelectField
+                control={form.control}
+                name="debtorCompanyUuid"
+                id="debtorCompanyUuid"
+                label="Debtor number"
+                options={debtorCompanyOptions}
+                disabled={isPending}
+              />
+
+              {(selectedRoles.includes("customer") ||
+                selectedRoles.includes("prospect")) && (
+                <>
+                  <FormSelectField
+                    control={form.control}
+                    name="purchaseOrgCompanyUuid"
+                    id="purchaseOrgCompanyUuid"
+                    label="Purchase org."
+                    options={purchaseOrgOptions}
+                    disabled={isPending}
+                  />
+
+                  <div className="space-y-2">
+                    <FormLabel htmlFor="memberNumberPurchaseOrg">
+                      Mem. no. Pur. Org.
+                    </FormLabel>
+                    <Input
+                      id="memberNumberPurchaseOrg"
+                      {...form.register("memberNumberPurchaseOrg")}
+                      disabled={isPending}
+                    />
+                    <FormFieldError
+                      message={
+                        form.formState.errors.memberNumberPurchaseOrg?.message
+                      }
+                    />
+                  </div>
+                </>
+              )}
+
+              <FormSelectField
+                control={form.control}
+                name="paymentTerms"
+                id="paymentTerms"
+                label="Payment terms"
+                options={paymentTermOptions}
+                disabled={isPending}
+              />
+
+              <FormSelectField
+                control={form.control}
+                name="differentPaymentTermsExWorks"
+                id="differentPaymentTermsExWorks"
+                label="Different payment terms ex works"
+                options={paymentTermOptions}
+                disabled={isPending}
+              />
+
+              <FormSelectField
+                control={form.control}
+                name="currency"
+                id="currency"
+                label="Currency"
+                options={currencyOptions}
+                disabled={isPending}
+              />
+
+              <div className="space-y-2">
+                <FormLabel htmlFor="iban">IBAN</FormLabel>
+                <Input
+                  id="iban"
+                  {...form.register("iban")}
+                  disabled={isPending}
+                />
+                <FormFieldError message={form.formState.errors.iban?.message} />
+              </div>
+
+              <div className="space-y-2">
+                <FormLabel htmlFor="bic">BIC</FormLabel>
+                <Input
+                  id="bic"
+                  {...form.register("bic")}
+                  disabled={isPending}
+                />
+                <FormFieldError message={form.formState.errors.bic?.message} />
+              </div>
+
+              <div className="space-y-2">
+                <FormLabel htmlFor="bankAccount">Bank account</FormLabel>
+                <Input
+                  id="bankAccount"
+                  {...form.register("bankAccount")}
+                  disabled={isPending}
+                />
+                <FormFieldError
+                  message={form.formState.errors.bankAccount?.message}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <FormLabel htmlFor="postbankAccount">
+                  Postbank account
+                </FormLabel>
+                <Input
+                  id="postbankAccount"
+                  {...form.register("postbankAccount")}
+                  disabled={isPending}
+                />
+                <FormFieldError
+                  message={form.formState.errors.postbankAccount?.message}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <FormLabel htmlFor="vatNumber">VAT number</FormLabel>
+                <Input
+                  id="vatNumber"
+                  {...form.register("vatNumber")}
+                  disabled={isPending}
+                />
+                <FormFieldError
+                  message={form.formState.errors.vatNumber?.message}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <FormLabel htmlFor="cocNumber">COC number</FormLabel>
+                <Input
+                  id="cocNumber"
+                  {...form.register("cocNumber")}
+                  disabled={isPending}
+                />
+                <FormFieldError
+                  message={form.formState.errors.cocNumber?.message}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <FormLabel htmlFor="journalCode">Journal code</FormLabel>
+                <Input
+                  id="journalCode"
+                  type="number"
+                  {...form.register("journalCode")}
+                  disabled={isPending}
+                />
+                <FormFieldError
+                  message={form.formState.errors.journalCode?.message}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <FormLabel htmlFor="creditLimit">Credit limit</FormLabel>
+                <Input
+                  id="creditLimit"
+                  type="number"
+                  step="0.01"
+                  {...form.register("creditLimit")}
+                  disabled={isPending}
+                />
+                <FormFieldError
+                  message={form.formState.errors.creditLimit?.message}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <FormLabel htmlFor="creditLimitInsurance">
+                  Credit limit insurance
+                </FormLabel>
+                <Input
+                  id="creditLimitInsurance"
+                  type="number"
+                  step="0.01"
+                  {...form.register("creditLimitInsurance")}
+                  disabled={isPending}
+                />
+                <FormFieldError
+                  message={form.formState.errors.creditLimitInsurance?.message}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <FormLabel htmlFor="creditLimitUninsured">
+                  Credit limit uninsured
+                </FormLabel>
+                <Input
+                  id="creditLimitUninsured"
+                  type="number"
+                  step="0.01"
+                  {...form.register("creditLimitUninsured")}
+                  disabled={isPending}
+                />
+                <FormFieldError
+                  message={form.formState.errors.creditLimitUninsured?.message}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <FormLabel htmlFor="insuranceValidUntil">
+                  Insurance valid until
+                </FormLabel>
+                <Input
+                  id="insuranceValidUntil"
+                  type="date"
+                  {...form.register("insuranceValidUntil")}
+                  disabled={isPending}
+                />
+                <FormFieldError
+                  message={form.formState.errors.insuranceValidUntil?.message}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <FormLabel htmlFor="creditLimitUninsuredDate">
+                  Credit limit uninsured date
+                </FormLabel>
+                <Input
+                  id="creditLimitUninsuredDate"
+                  type="date"
+                  {...form.register("creditLimitUninsuredDate")}
+                  disabled={isPending}
+                />
+                <FormFieldError
+                  message={
+                    form.formState.errors.creditLimitUninsuredDate?.message
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-6">
+              <label className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked={form.watch("calculateVat")}
+                  onChange={() =>
+                    form.setValue(
+                      "calculateVat",
+                      !form.getValues("calculateVat"),
+                    )
+                  }
+                  disabled={isPending}
+                />
+                Calculate VAT
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked={form.watch("reminder")}
+                  onChange={() =>
+                    form.setValue("reminder", !form.getValues("reminder"))
+                  }
+                  disabled={isPending}
+                />
+                Reminder
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked={form.watch("collectInvoicesInMandate")}
+                  onChange={() =>
+                    form.setValue(
+                      "collectInvoicesInMandate",
+                      !form.getValues("collectInvoicesInMandate"),
+                    )
+                  }
+                  disabled={isPending}
+                />
+                Collect invoices in mandate
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked={form.watch("blocked")}
+                  onChange={() =>
+                    form.setValue("blocked", !form.getValues("blocked"))
+                  }
+                  disabled={isPending}
+                />
+                Blocked
+              </label>
+            </div>
+
+            {form.watch("blocked") && (
+              <div className="space-y-2">
+                <FormLabel htmlFor="blockedByNote">Blocked by note</FormLabel>
+                <Input
+                  id="blockedByNote"
+                  {...form.register("blockedByNote")}
+                  disabled={isPending}
+                />
+                <FormFieldError
+                  message={form.formState.errors.blockedByNote?.message}
+                />
+              </div>
+            )}
+          </section>
+        )}
+
         <section className="space-y-4">
           <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
             Texts
@@ -490,7 +815,9 @@ export const CompanyForm = ({
                     )}
                     {project.contractUuid && (
                       <span className="shrink-0 rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">
-                        {projectContracts.find((c) => c.uuid === project.contractUuid)?.code ?? "Contract"}
+                        {projectContracts.find(
+                          (c) => c.uuid === project.contractUuid,
+                        )?.code ?? "Contract"}
                       </span>
                     )}
                   </div>
@@ -529,7 +856,9 @@ export const CompanyForm = ({
                 <button
                   type="button"
                   onClick={async () => {
-                    await fetch(`/api/documents/${doc.id}/delete`, { method: "DELETE" });
+                    await fetch(`/api/documents/${doc.id}/delete`, {
+                      method: "DELETE",
+                    });
                     const current = watch("documents");
                     setValue(
                       "documents",
@@ -548,7 +877,10 @@ export const CompanyForm = ({
                 const current = watch("documents");
                 setValue("documents", [
                   ...current,
-                  ...uploads.map((u) => ({ id: u.documentId, fileName: u.fileName })),
+                  ...uploads.map((u) => ({
+                    id: u.documentId,
+                    fileName: u.fileName,
+                  })),
                 ]);
               }}
             />
@@ -1092,10 +1424,7 @@ export const CompanyForm = ({
                   </div>
                   <div>
                     <FormLabel htmlFor="co-mobile">Mobile</FormLabel>
-                    <Input
-                      id="co-mobile"
-                      {...contactForm.register("mobile")}
-                    />
+                    <Input id="co-mobile" {...contactForm.register("mobile")} />
                   </div>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-3">
@@ -1151,10 +1480,7 @@ export const CompanyForm = ({
                   </div>
                   <div>
                     <FormLabel htmlFor="co-postal">Postal</FormLabel>
-                    <Input
-                      id="co-postal"
-                      {...contactForm.register("postal")}
-                    />
+                    <Input id="co-postal" {...contactForm.register("postal")} />
                   </div>
                   <div>
                     <FormLabel htmlFor="co-house">House</FormLabel>
@@ -1202,10 +1528,7 @@ export const CompanyForm = ({
                   </div>
                   <div>
                     <FormLabel htmlFor="co-region">Region</FormLabel>
-                    <Input
-                      id="co-region"
-                      {...contactForm.register("region")}
-                    />
+                    <Input id="co-region" {...contactForm.register("region")} />
                   </div>
                   <div>
                     <FormLabel htmlFor="co-addressCountry">Country</FormLabel>
@@ -1243,10 +1566,7 @@ export const CompanyForm = ({
                 </div>
                 <div>
                   <FormLabel htmlFor="co-website">Website</FormLabel>
-                  <Input
-                    id="co-website"
-                    {...contactForm.register("website")}
-                  />
+                  <Input id="co-website" {...contactForm.register("website")} />
                 </div>
               </div>
 
@@ -1307,10 +1627,7 @@ export const CompanyForm = ({
         </DialogContent>
       </Dialog>
 
-      <Dialog
-        open={isProjectDialogOpen}
-        onOpenChange={handleProjectOpenChange}
-      >
+      <Dialog open={isProjectDialogOpen} onOpenChange={handleProjectOpenChange}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
