@@ -91,6 +91,22 @@ export const communicationSettingTypes = [
 export type CommunicationSettingType =
   (typeof communicationSettingTypes)[number];
 
+export const contractTierUnits = ["TN", "Euro"] as const satisfies readonly string[];
+export type ContractTierUnit = (typeof contractTierUnits)[number];
+
+export const contractSurchargePerTypes = [
+  "order_line",
+  "group_product",
+  "product_group",
+] as const satisfies readonly string[];
+export type ContractSurchargePerType = (typeof contractSurchargePerTypes)[number];
+
+export const contractDiscountBasedOnTypes = [
+  "group_product",
+  "product_group",
+] as const satisfies readonly string[];
+export type ContractDiscountBasedOnType = (typeof contractDiscountBasedOnTypes)[number];
+
 export const visitReportContactMethods = [
   "visit",
   "telephone_contact",
@@ -339,3 +355,12 @@ export const purchaseInvoiceFiscalBases = [
 ] as const satisfies readonly string[];
 
 export type PurchaseInvoiceFiscalBase = (typeof purchaseInvoiceFiscalBases)[number];
+
+export const currencies = [
+  "eur",
+  "usd",
+  "gbp",
+  "hkd",
+] as const satisfies readonly string[];
+
+export type Currency = (typeof currencies)[number];

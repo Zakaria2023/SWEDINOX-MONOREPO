@@ -58,6 +58,8 @@ export type CompanyTextInput = Omit<
   "id" | "uuid" | "companyUuid" | "createdByUserId" | "createdAt" | "updatedAt"
 >;
 
+export type DebtorCompanyOption = Pick<SelectCompanies, "uuid" | "companyName">;
+
 export type CompanyActionResult = {
   companyUuid?: string;
   error?: string;
@@ -148,6 +150,26 @@ export const getContactsForSuppliers = async (): Promise<ContactOption[]> => {
     })
     .from(Contacts)
     .orderBy(asc(Contacts.firstName));
+};
+
+/** Companies with role customer or prospect — for the Debtor number dropdown */
+export const getDebtorCompaniesForSelect = async (): Promise<DebtorCompanyOption[]> => {
+  return db
+    .select({ uuid: Companies.uuid, companyName: Companies.companyName })
+    .from(Companies)
+    .where(
+      sql`JSON_CONTAINS(${Companies.roles}, '"customer"') OR JSON_CONTAINS(${Companies.roles}, '"prospect"')`,
+    )
+    .orderBy(asc(Companies.companyName));
+};
+
+/** Companies with role purchasing_org — for the Purchase Org dropdown */
+export const getPurchaseOrgCompaniesForSelect = async (): Promise<DebtorCompanyOption[]> => {
+  return db
+    .select({ uuid: Companies.uuid, companyName: Companies.companyName })
+    .from(Companies)
+    .where(sql`JSON_CONTAINS(${Companies.roles}, '"purchasing_org"')`)
+    .orderBy(asc(Companies.companyName));
 };
 
 export const getCompanies = async (): Promise<SelectCompanies[]> => {

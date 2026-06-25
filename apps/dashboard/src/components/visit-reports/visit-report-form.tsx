@@ -17,6 +17,7 @@ import {
 } from "@/lib/labels";
 import { DatePicker } from "@/components/shadcn/date-picker";
 import { Input } from "@/components/shadcn/input";
+import { TimePicker } from "@/components/shadcn/time-picker";
 import { FormActions } from "@/components/ui/form-actions";
 import { FormError } from "@/components/ui/form-error";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
@@ -156,11 +157,16 @@ export const VisitReportForm = ({
 
           <div>
             <FormLabel htmlFor="visitTime">Visit Time</FormLabel>
-            <Input
-              id="visitTime"
-              type="time"
-              {...register("visitTime")}
-              disabled={isPending}
+            <Controller
+              name="visitTime"
+              control={control}
+              render={({ field }) => (
+                <TimePicker
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                  disabled={isPending}
+                />
+              )}
             />
             <FormFieldError message={errors.visitTime?.message} />
           </div>

@@ -1,53 +1,61 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import {
-  type ContractForProjectOption,
-  type ContractListItem,
+  ContractForProjectOption,
+  ContractListItem,
 } from "@/app/(dashboard)/contracts/actions";
-import { type TextCategoryOption } from "@/app/(dashboard)/text-categories/actions";
+import { TextCategoryOption } from "@/app/(dashboard)/text-categories/actions";
+import { InsertCompanies } from "@/db/schema/companies";
 import {
   addressCategories,
-  type AddressCategory,
+  AddressCategory,
   communicationSettingDocumentTypes,
   communicationSettingShapes,
   communicationSettingTypes,
-  type CompanyRole,
   companyLangs,
+  CompanyRole,
   companyRoles,
-  type ContactCategory,
+  ContactCategory,
+  ContractableRole,
   contractableRoles,
-  type ContractableRole,
+  currencies,
+  Currency,
+  InvoicePaymentTerm,
+  invoicePaymentTerms,
 } from "@/lib/enums";
 import {
+  COMMON_TEXT,
   COMMUNICATION_SETTING_DOCUMENT_TYPE_LABELS,
   COMMUNICATION_SETTING_SHAPE_LABELS,
   COMMUNICATION_SETTING_TYPE_LABELS,
   COMPANY_LANGUAGE_LABELS,
-  COMMON_TEXT,
+  CURRENCY_LABELS,
+  INVOICE_PAYMENT_TERM_LABELS,
 } from "@/lib/labels";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
+import { z } from "zod";
 import {
+  CommSettingInput,
+  CompanyActionResult,
+  CompanyContactInput,
+  CompanyContractInput,
+  CompanyTextInput,
   createCompany,
-  type CommSettingInput,
-  type CompanyActionResult,
-  type CompanyContactInput,
-  type CompanyContractInput,
-  type CompanyTextInput,
-  type CustomerProjectInput,
+  CustomerProjectInput,
+  DebtorCompanyOption,
 } from "./actions";
 import {
-  type AddressFormValues,
-  type CommSettingFormValues,
+  AddressFormValues,
+  CommSettingFormValues,
   commSettingSchema,
-  type CompanyFormValues,
+  CompanyFormValues,
   contactDialogSchema,
-  type ContactDialogValues,
+  ContactDialogValues,
   contractSelectionSchema,
-  type ContractSelectionValues,
+  ContractSelectionValues,
   createCompanySchema,
   DEFAULT_ADDRESS,
   DEFAULT_COMM_SETTING,
@@ -55,12 +63,15 @@ import {
   DEFAULT_CONTRACT_SELECTION,
   DEFAULT_TEXT,
   textDialogSchema,
-  type TextDialogValues,
+  TextDialogValues,
   USAGE_CATEGORY_FIELDS,
 } from "./validation";
 
 const AGENT_ALLOWED = new Set<CompanyRole>(["agent", "other", "internal"]);
-const PURCHASING_ORG_ALLOWED = new Set<CompanyRole>(["purchasing_org", "other"]);
+const PURCHASING_ORG_ALLOWED = new Set<CompanyRole>([
+  "purchasing_org",
+  "other",
+]);
 
 const getDisabledRoles = (selected: CompanyRole[]): Set<CompanyRole> => {
   const disabled = new Set<CompanyRole>();
@@ -144,12 +155,16 @@ type UseCompanySubmitParams = {
   availableContracts: ContractListItem[];
   projectContracts: ContractForProjectOption[];
   textCategories: TextCategoryOption[];
+  debtorCompanies: DebtorCompanyOption[];
+  purchaseOrgCompanies: DebtorCompanyOption[];
 };
 
 export const useCompanySubmit = ({
   availableContracts,
   projectContracts,
   textCategories,
+  debtorCompanies,
+  purchaseOrgCompanies,
 }: UseCompanySubmitParams) => {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -188,6 +203,29 @@ export const useCompanySubmit = ({
       searchCode2: "",
       searchCode3: "",
       documents: [],
+      debtorCompanyUuid: "",
+      iban: "",
+      bic: "",
+      bankAccount: "",
+      postbankAccount: "",
+      purchaseOrgCompanyUuid: "",
+      memberNumberPurchaseOrg: "",
+      calculateVat: true,
+      reminder: true,
+      collectInvoicesInMandate: false,
+      insuranceValidUntil: "",
+      creditLimitInsurance: "",
+      creditLimit: "",
+      creditLimitUninsured: "",
+      creditLimitUninsuredDate: "",
+      paymentTerms: "",
+      differentPaymentTermsExWorks: "",
+      journalCode: "",
+      vatNumber: "",
+      cocNumber: "",
+      currency: "",
+      blocked: false,
+      blockedByNote: "",
       address: {
         category: [],
         poBox: false,
@@ -314,6 +352,35 @@ export const useCompanySubmit = ({
     ...communicationSettingShapes.map((shape) => ({
       value: shape,
       label: COMMUNICATION_SETTING_SHAPE_LABELS[shape],
+    })),
+  ];
+
+  const paymentTermOptions = [
+    { value: "", label: COMMON_TEXT.emptyOption },
+    ...invoicePaymentTerms.map((t) => ({
+      value: t,
+      label: INVOICE_PAYMENT_TERM_LABELS[t as InvoicePaymentTerm],
+    })),
+  ];
+
+  const currencyOptions = [
+    { value: "", label: COMMON_TEXT.emptyOption },
+    ...currencies.map((c) => ({
+      value: c,
+      label: CURRENCY_LABELS[c as Currency],
+    })),
+  ];
+
+  const debtorCompanyOptions = [
+    { value: "", label: COMMON_TEXT.emptyOption },
+    ...debtorCompanies.map((c) => ({ value: c.uuid, label: c.companyName })),
+  ];
+
+  const purchaseOrgOptions = [
+    { value: "", label: COMMON_TEXT.emptyOption },
+    ...purchaseOrgCompanies.map((c) => ({
+      value: c.uuid,
+      label: c.companyName,
     })),
   ];
 
@@ -756,7 +823,32 @@ export const useCompanySubmit = ({
         searchCode3,
         documents,
         address,
+        debtorCompanyUuid,
+        iban,
+        bic,
+        bankAccount,
+        postbankAccount,
+        purchaseOrgCompanyUuid,
+        memberNumberPurchaseOrg,
+        calculateVat,
+        reminder,
+        collectInvoicesInMandate,
+        insuranceValidUntil,
+        creditLimitInsurance,
+        creditLimit,
+        creditLimitUninsured,
+        creditLimitUninsuredDate,
+        paymentTerms,
+        differentPaymentTermsExWorks,
+        journalCode,
+        vatNumber,
+        cocNumber,
+        currency,
+        blocked,
+        blockedByNote,
       } = values;
+      const isCustomerOrProspect =
+        roles?.includes("customer") || roles?.includes("prospect");
       const allAddresses = [address, ...additionalAddresses].map(mapAddress);
       const result = await createCompany(
         {
@@ -769,6 +861,47 @@ export const useCompanySubmit = ({
           searchCode3: searchCode3 || undefined,
           roles: (roles ?? []) as CompanyRole[],
           documents: documents.length > 0 ? documents : undefined,
+          debtorCompanyUuid: debtorCompanyUuid || undefined,
+          iban: iban || undefined,
+          bic: bic || undefined,
+          bankAccount: bankAccount || undefined,
+          postbankAccount: postbankAccount || undefined,
+          purchaseOrgCompanyUuid: isCustomerOrProspect
+            ? purchaseOrgCompanyUuid || undefined
+            : undefined,
+          memberNumberPurchaseOrg: isCustomerOrProspect
+            ? memberNumberPurchaseOrg || undefined
+            : undefined,
+          calculateVat,
+          reminder,
+          collectInvoicesInMandate,
+          insuranceValidUntil: (insuranceValidUntil || undefined) as InsertCompanies["insuranceValidUntil"],
+          creditLimitInsurance:
+            creditLimitInsurance
+              ? String(creditLimitInsurance)
+              : undefined,
+          creditLimit:
+            creditLimit
+              ? String(creditLimit)
+              : undefined,
+          creditLimitUninsured:
+            creditLimitUninsured
+              ? String(creditLimitUninsured)
+              : undefined,
+          creditLimitUninsuredDate: (creditLimitUninsuredDate || undefined) as InsertCompanies["creditLimitUninsuredDate"],
+          paymentTerms: (paymentTerms ||
+            undefined) as InsertCompanies["paymentTerms"],
+          differentPaymentTermsExWorks: (differentPaymentTermsExWorks ||
+            undefined) as InsertCompanies["differentPaymentTermsExWorks"],
+          journalCode:
+            journalCode
+              ? Number(journalCode)
+              : undefined,
+          vatNumber: vatNumber || undefined,
+          cocNumber: cocNumber || undefined,
+          currency: (currency || undefined) as InsertCompanies["currency"],
+          blocked,
+          blockedByNote: blockedByNote || undefined,
         },
         allAddresses,
         communicationSettings,
@@ -799,6 +932,10 @@ export const useCompanySubmit = ({
     documentTypeOptions,
     communicationTypeOptions,
     shapeOptions,
+    paymentTermOptions,
+    currencyOptions,
+    debtorCompanyOptions,
+    purchaseOrgOptions,
 
     additionalForm,
     additionalAddresses,

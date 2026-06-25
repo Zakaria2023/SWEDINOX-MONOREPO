@@ -1,14 +1,18 @@
 import { getContracts, getContractsForProjects } from "@/app/(dashboard)/contracts/actions";
+import { getDebtorCompaniesForSelect, getPurchaseOrgCompaniesForSelect } from "@/app/(dashboard)/companies/actions";
 import { getTextCategoriesForSelect } from "@/app/(dashboard)/text-categories/actions";
 import { CompanyForm } from "@/components/companies/company-form";
 import { PageHeading } from "@/components/layout/page-heading";
 
 const AddCompanyPage = async () => {
-  const [availableContracts, projectContracts, textCategories] = await Promise.all([
-    getContracts(),
-    getContractsForProjects(),
-    getTextCategoriesForSelect(),
-  ]);
+  const [availableContracts, projectContracts, textCategories, debtorCompanies, purchaseOrgCompanies] =
+    await Promise.all([
+      getContracts(),
+      getContractsForProjects(),
+      getTextCategoriesForSelect(),
+      getDebtorCompaniesForSelect(),
+      getPurchaseOrgCompaniesForSelect(),
+    ]);
 
   return (
     <div className="max-w-4xl space-y-6 p-6">
@@ -20,6 +24,8 @@ const AddCompanyPage = async () => {
         availableContracts={availableContracts}
         projectContracts={projectContracts}
         textCategories={textCategories}
+        debtorCompanies={debtorCompanies}
+        purchaseOrgCompanies={purchaseOrgCompanies}
       />
     </div>
   );

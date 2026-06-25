@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { type VisitReportListItem } from "@/app/(dashboard)/visit-reports/actions";
-import { VISIT_REPORT_CONTACT_METHOD_LABELS } from "@/lib/labels";
+import { VISIT_REPORT_CONTACT_METHOD_LABELS, VISIT_REPORT_REASON_LABELS } from "@/lib/labels";
 import {
   Table,
   TableBody,
@@ -148,7 +148,9 @@ export const VisitReportsTableContent = ({
       case "visitReason":
         return (
           <TableCell key={key}>
-            {visitReport.visitReason ?? fallbackValue}
+            {visitReport.visitReason
+              ? VISIT_REPORT_REASON_LABELS[visitReport.visitReason]
+              : fallbackValue}
           </TableCell>
         );
       case "contactUuid":

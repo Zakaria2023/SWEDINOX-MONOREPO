@@ -9,7 +9,11 @@ import type {
   ContactCategory,
   ContactSalutation,
   ContractableRole,
+  ContractDiscountBasedOnType,
+  ContractSurchargePerType,
+  ContractTierUnit,
   ContractType,
+  Currency,
   InvoicePaymentTerm,
   InvoiceSurchargeDescription,
   InvoiceVatScenario,
@@ -129,6 +133,22 @@ export const COMMUNICATION_SETTING_TYPE_LABELS: Record<
   edi_ftp: "EDI FTP",
   edi_http: "EDI HTTP",
   edi_https: "EDI HTTPS",
+};
+
+export const CONTRACT_TIER_UNIT_LABELS: Record<ContractTierUnit, string> = {
+  TN: "TN (Tonnage)",
+  Euro: "Euro (Amount)",
+};
+
+export const CONTRACT_SURCHARGE_PER_TYPE_LABELS: Record<ContractSurchargePerType, string> = {
+  order_line: "Order Line",
+  group_product: "Group Product",
+  product_group: "Product Group",
+};
+
+export const CONTRACT_DISCOUNT_BASED_ON_LABELS: Record<ContractDiscountBasedOnType, string> = {
+  group_product: "Group Product",
+  product_group: "Product Group",
 };
 
 export const COMMUNICATION_SETTING_SHAPE_LABELS: Record<
@@ -369,4 +389,11 @@ export const PURCHASE_INVOICE_BLOCK_REASON_LABELS: Record<PurchaseInvoiceBlockRe
 export const PURCHASE_INVOICE_FISCAL_BASE_LABELS: Record<PurchaseInvoiceFiscalBase, string> = {
   booking_date: "Booking Date",
   document_date: "Document Date",
+};
+
+export const CURRENCY_LABELS: Record<Currency, string> = {
+  eur: "Euro",
+  usd: "Dollar",
+  gbp: "Pond",
+  hkd: "HK-Dollar",
 };
