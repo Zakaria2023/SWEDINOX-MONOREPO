@@ -54,6 +54,7 @@ export const Companies = mysqlTable(
     cocNumber: varchar("coc_number", { length: 50 }),
     currency: mysqlEnum("currency", currencies),
     blocked: boolean("blocked").notNull().default(false),
+    blockedByUserId: varchar("blocked_by_user_id", { length: 255 }),
     blockedByNote: varchar("blocked_by_note", { length: 500 }),
 
     createdAt: timestamp("created_at").defaultNow().notNull(),

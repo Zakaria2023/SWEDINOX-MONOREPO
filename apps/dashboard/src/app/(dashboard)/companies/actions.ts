@@ -200,7 +200,11 @@ export const createCompany = async (
     }
 
     await db.transaction(async (tx) => {
-      await tx.insert(Companies).values({ ...companyFields, uuid });
+      await tx.insert(Companies).values({
+        ...companyFields,
+        uuid,
+        blockedByUserId: companyFields.blocked ? userId : null,
+      });
 
       for (const address of addresses) {
         await tx.insert(CompanyAddresses).values({

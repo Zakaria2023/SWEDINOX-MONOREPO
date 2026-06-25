@@ -875,7 +875,7 @@ export const useCompanySubmit = ({
           calculateVat,
           reminder,
           collectInvoicesInMandate,
-          insuranceValidUntil: insuranceValidUntil || undefined,
+          insuranceValidUntil: insuranceValidUntil ? new Date(insuranceValidUntil) : null,
           creditLimitInsurance:
             creditLimitInsurance
               ? String(creditLimitInsurance)
@@ -888,7 +888,7 @@ export const useCompanySubmit = ({
             creditLimitUninsured
               ? String(creditLimitUninsured)
               : undefined,
-          creditLimitUninsuredDate: creditLimitUninsuredDate || undefined,
+          creditLimitUninsuredDate: creditLimitUninsuredDate ? new Date(creditLimitUninsuredDate) : null,
           paymentTerms: paymentTerms || undefined,
           differentPaymentTermsExWorks: differentPaymentTermsExWorks || undefined,
           journalCode: journalCode ?? undefined,

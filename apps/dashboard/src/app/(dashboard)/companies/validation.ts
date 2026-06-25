@@ -136,7 +136,7 @@ export const createCompanySchema = () =>
     creditLimitUninsuredDate: z.string().optional(),
     paymentTerms: z.union([z.enum(invoicePaymentTerms), z.literal(""), z.undefined()]),
     differentPaymentTermsExWorks: z.union([z.enum(invoicePaymentTerms), z.literal(""), z.undefined()]),
-    journalCode: z.coerce.number().int().optional(),
+    journalCode: z.number().int().optional(),
     vatNumber: z.string().optional(),
     cocNumber: z.string().optional(),
     currency: z.union([z.enum(currencies), z.literal(""), z.undefined()]),

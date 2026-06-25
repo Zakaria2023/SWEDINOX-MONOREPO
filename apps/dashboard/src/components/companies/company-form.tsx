@@ -578,7 +578,7 @@ export const CompanyForm = ({
                 <Input
                   id="journalCode"
                   type="number"
-                  {...form.register("journalCode")}
+                  {...form.register("journalCode", { valueAsNumber: true })}
                   disabled={isPending}
                 />
                 <FormFieldError
