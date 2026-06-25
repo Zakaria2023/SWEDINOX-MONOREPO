@@ -50,12 +50,6 @@ export const PurchaseInvoiceForm = ({
     setValue("documents", uploadedDocs);
   }, [uploadedDocs, setValue]);
 
-  useEffect(() => {
-    if (state.success) {
-      router.push("/purchase-invoices");
-    }
-  }, [router, state.success]);
-
   const selectedCompanyUuid = watch("companyUuid");
   const blocked = watch("blocked");
   const materials = watch("materials");

@@ -12,6 +12,7 @@ import {
 } from "@/db";
 import { generateUuid } from "@/lib/helpers";
 import { desc, eq, getTableColumns } from "drizzle-orm";
+import { redirect } from "next/navigation";
 
 export type PurchaseInvoiceActionResult = {
   purchaseInvoiceUuid?: string;
@@ -57,7 +58,7 @@ export const createPurchaseInvoice = async (
   const uuid = generateUuid();
   try {
     await db.insert(PurchaseInvoices).values({ ...fields, uuid });
-    return { success: true, purchaseInvoiceUuid: uuid };
+    redirect("/purchase-invoices");
   } catch (error) {
     return {
       error:
