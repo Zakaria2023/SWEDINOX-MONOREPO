@@ -44,7 +44,7 @@ type ContractsTableContentProps = {
   contracts: ContractListItem[];
 };
 
-export const ContractsTableContent = ({ contracts }: ContractsTableContentProps) => {
+export const ContractsTable = ({ contracts }: ContractsTableContentProps) => {
   const [columnVisibility, setColumnVisibility] =
     useState<Record<ColumnKey, boolean>>(initialVisibility);
 

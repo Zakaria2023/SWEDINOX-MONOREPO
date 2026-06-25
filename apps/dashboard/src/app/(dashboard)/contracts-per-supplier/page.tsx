@@ -1,18 +1,19 @@
-import { Suspense } from "react";
-import { ContractsPerSupplierTable } from "@/components/contracts-per-supplier/contracts-per-supplier-table";
+import { getContractsPerSupplier } from "@/app/(dashboard)/contracts/actions";
+import { ContractsPerSupplierTable } from "@/components/contracts-per-supplier/contracts-per-supplier-table-content";
 import { PageHeading } from "@/components/layout/page-heading";
-import { DataTableFallback } from "@/components/ui/data-table-fallback";
 
-const ContractsPerSupplierPage = () => (
-  <div className="space-y-6 p-6">
-    <PageHeading
-      title="Contracts per Supplier"
-      description="Overview of all contracts linked to suppliers"
-    />
-    <Suspense fallback={<DataTableFallback columnCount={9} />}>
-      <ContractsPerSupplierTable />
-    </Suspense>
-  </div>
-);
+const ContractsPerSupplierPage = async () => {
+  const rows = await getContractsPerSupplier();
+
+  return (
+    <div className="space-y-6 p-6">
+      <PageHeading
+        title="Contracts per Supplier"
+        description="Overview of all contracts linked to suppliers"
+      />
+      <ContractsPerSupplierTable rows={rows} />
+    </div>
+  );
+};
 
 export default ContractsPerSupplierPage;
