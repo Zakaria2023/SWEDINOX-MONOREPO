@@ -13,6 +13,7 @@ import {
   DialogBody,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/shadcn/dialog";
@@ -39,10 +40,10 @@ import {
 import {
   AlignLeft,
   FileText,
+  FolderOpen,
   MapPin,
   MessageSquare,
   Plus,
-  FolderOpen,
   User,
   X,
 } from "lucide-react";
