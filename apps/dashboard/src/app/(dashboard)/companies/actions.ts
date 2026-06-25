@@ -182,6 +182,7 @@ export const getCompanies = async (): Promise<SelectCompanies[]> => {
 
 export const createCompany = async (
   companyFields: CompanyFields,
+  isBlocked: boolean,
   addresses: AddressInput[] = [],
   communicationSettings: CommSettingInput[] = [],
   contracts: CompanyContractInput[] = [],
@@ -203,7 +204,7 @@ export const createCompany = async (
       await tx.insert(Companies).values({
         ...companyFields,
         uuid,
-        blockedByUserId: companyFields.blocked ? userId : null,
+        blockedByUserId: isBlocked ? userId : null,
       });
 
       for (const address of addresses) {

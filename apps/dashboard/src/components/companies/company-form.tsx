@@ -55,6 +55,7 @@ import {
   User,
   X,
 } from "lucide-react";
+import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { Controller } from "react-hook-form";
 
@@ -74,6 +75,8 @@ export const CompanyForm = ({
   purchaseOrgCompanies,
 }: CompanyFormProps) => {
   const router = useRouter();
+  const { user } = useUser();
+  const currentUserName = [user?.firstName, user?.lastName].filter(Boolean).join(" ") || user?.username || "";
   const {
     form,
     isPending,
@@ -704,17 +707,17 @@ export const CompanyForm = ({
               </label>
               <label className="flex items-center gap-2 text-sm">
                 <Checkbox
-                  checked={form.watch("blocked")}
+                  checked={form.watch("isBlocked")}
                   onChange={() =>
-                    form.setValue("blocked", !form.getValues("blocked"))
+                    form.setValue("isBlocked", !form.getValues("isBlocked"))
                   }
                   disabled={isPending}
                 />
-                Blocked
+                {form.watch("isBlocked") ? `Blocked by ${currentUserName}` : "Blocked by"}
               </label>
             </div>
 
-            {form.watch("blocked") && (
+            {form.watch("isBlocked") && (
               <div className="space-y-2">
                 <FormLabel htmlFor="blockedByNote">Blocked by note</FormLabel>
                 <Input

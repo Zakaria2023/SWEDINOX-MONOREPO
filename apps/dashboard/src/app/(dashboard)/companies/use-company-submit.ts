@@ -224,7 +224,7 @@ export const useCompanySubmit = ({
       vatNumber: "",
       cocNumber: "",
       currency: "",
-      blocked: false,
+      isBlocked: false,
       blockedByNote: "",
       address: {
         category: [],
@@ -844,7 +844,7 @@ export const useCompanySubmit = ({
         vatNumber,
         cocNumber,
         currency,
-        blocked,
+        isBlocked,
         blockedByNote,
       } = values;
       const isCustomerOrProspect =
@@ -895,9 +895,9 @@ export const useCompanySubmit = ({
           vatNumber: vatNumber || undefined,
           cocNumber: cocNumber || undefined,
           currency: (currency || undefined) as InsertCompanies["currency"],
-          blocked,
           blockedByNote: blockedByNote || undefined,
         },
+        isBlocked,
         allAddresses,
         communicationSettings,
         contracts,

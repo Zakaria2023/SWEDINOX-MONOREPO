@@ -140,7 +140,7 @@ export const createCompanySchema = () =>
     vatNumber: z.string().optional(),
     cocNumber: z.string().optional(),
     currency: z.union([z.enum(currencies), z.literal(""), z.undefined()]),
-    blocked: z.boolean(),
+    isBlocked: z.boolean(),
     blockedByNote: z.string().optional(),
   });
 
