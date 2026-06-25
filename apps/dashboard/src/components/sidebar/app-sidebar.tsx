@@ -115,7 +115,7 @@ export const AppSidebar = () => {
                           "/contracts-per-customer",
                         )}
                       >
-                        <span>Contracts per Customer / Prospect</span>
+                        <span>Customer/Prospect Contracts</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                     <SidebarMenuSubItem>
@@ -127,7 +127,7 @@ export const AppSidebar = () => {
                           "/contact-persons-customers-and-prospects",
                         )}
                       >
-                        <span>Contact Persons Customers and Prospects</span>
+                        <span>Customer/Prospect Contact Persons</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                   </SidebarMenuSub>

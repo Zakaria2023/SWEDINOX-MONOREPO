@@ -668,7 +668,7 @@ function SidebarMenuSubItem({
 
 function SidebarMenuSubButton({
   render,
-  size = "md",
+  size = "sm",
   isActive = false,
   className,
   ...props
