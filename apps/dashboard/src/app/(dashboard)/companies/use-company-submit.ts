@@ -220,7 +220,7 @@ export const useCompanySubmit = ({
       creditLimitUninsuredDate: "",
       paymentTerms: "",
       differentPaymentTermsExWorks: "",
-      journalCode: "",
+      journalCode: undefined,
       vatNumber: "",
       cocNumber: "",
       currency: "",
@@ -875,7 +875,7 @@ export const useCompanySubmit = ({
           calculateVat,
           reminder,
           collectInvoicesInMandate,
-          insuranceValidUntil: (insuranceValidUntil || undefined) as InsertCompanies["insuranceValidUntil"],
+          insuranceValidUntil: insuranceValidUntil || undefined,
           creditLimitInsurance:
             creditLimitInsurance
               ? String(creditLimitInsurance)
@@ -888,15 +888,10 @@ export const useCompanySubmit = ({
             creditLimitUninsured
               ? String(creditLimitUninsured)
               : undefined,
-          creditLimitUninsuredDate: (creditLimitUninsuredDate || undefined) as InsertCompanies["creditLimitUninsuredDate"],
-          paymentTerms: (paymentTerms ||
-            undefined) as InsertCompanies["paymentTerms"],
-          differentPaymentTermsExWorks: (differentPaymentTermsExWorks ||
-            undefined) as InsertCompanies["differentPaymentTermsExWorks"],
-          journalCode:
-            journalCode
-              ? Number(journalCode)
-              : undefined,
+          creditLimitUninsuredDate: creditLimitUninsuredDate || undefined,
+          paymentTerms: paymentTerms || undefined,
+          differentPaymentTermsExWorks: differentPaymentTermsExWorks || undefined,
+          journalCode: journalCode ?? undefined,
           vatNumber: vatNumber || undefined,
           cocNumber: cocNumber || undefined,
           currency: (currency || undefined) as InsertCompanies["currency"],
