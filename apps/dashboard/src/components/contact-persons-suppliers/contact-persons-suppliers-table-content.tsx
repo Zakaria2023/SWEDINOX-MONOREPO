@@ -70,7 +70,7 @@ const formatRevenue = (value: string | null) => {
   }).format(Number(value));
 };
 
-export const ContactPersonsSuppliersTableContent = ({ rows }: Props) => {
+export const ContactPersonsSuppliersTable = ({ rows }: Props) => {
   const [columnVisibility, setColumnVisibility] =
     useState<Record<ColumnKey, boolean>>(initialVisibility);
 

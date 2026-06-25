@@ -31,7 +31,7 @@ type CompaniesTableContentProps = {
   companies: SelectCompanies[];
 };
 
-export const CompaniesTableContent = ({
+export const CompaniesTable = ({
   companies,
 }: CompaniesTableContentProps) => {
   const [columnVisibility, setColumnVisibility] =

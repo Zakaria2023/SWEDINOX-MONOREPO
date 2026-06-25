@@ -79,7 +79,7 @@ const formatRevenue = (value: string | null) => {
 
 type Props = { rows: ContactPersonCustomerProspectRow[] };
 
-export const ContactPersonsCustomersAndProspectsTableContent = ({ rows }: Props) => {
+export const ContactPersonsCustomersAndProspectsTable = ({ rows }: Props) => {
   const [columnVisibility, setColumnVisibility] =
     useState<Record<ColumnKey, boolean>>(initialVisibility);
 
