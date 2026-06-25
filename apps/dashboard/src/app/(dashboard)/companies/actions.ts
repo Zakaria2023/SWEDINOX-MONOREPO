@@ -107,7 +107,7 @@ export const getCompaniesForSelect = async (): Promise<CompanyOption[]> => {
 };
 
 export const getSuppliersForSelect = async (): Promise<CompanyOption[]> => {
-  const all = await db
+  return db
     .select({
       uuid: Companies.uuid,
       searchCode1: Companies.searchCode1,
@@ -115,8 +115,8 @@ export const getSuppliersForSelect = async (): Promise<CompanyOption[]> => {
       roles: Companies.roles,
     })
     .from(Companies)
+    .where(sql`JSON_CONTAINS(${Companies.roles}, '"supplier"')`)
     .orderBy(asc(Companies.companyName));
-  return all.filter((c) => Array.isArray(c.roles) && c.roles.includes("supplier"));
 };
 
 export const getCustomerAndProspectCompaniesForSelect = async (): Promise<CompanyOption[]> => {
