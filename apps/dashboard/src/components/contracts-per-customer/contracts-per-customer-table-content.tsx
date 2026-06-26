@@ -69,7 +69,7 @@ const initialVisibility = ALL_COLUMNS.reduce(
 
 type Props = { rows: ContractPerCustomerRow[] };
 
-export const ContractsPerCustomerTableContent = ({ rows }: Props) => {
+export const ContractsPerCustomerTable = ({ rows }: Props) => {
   const [columnVisibility, setColumnVisibility] =
     useState<Record<ColumnKey, boolean>>(initialVisibility);
 

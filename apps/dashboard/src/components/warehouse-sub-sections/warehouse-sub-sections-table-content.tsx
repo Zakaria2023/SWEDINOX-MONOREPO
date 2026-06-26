@@ -66,7 +66,7 @@ type Props = {
   subSections: SelectWarehouses[];
 };
 
-export const WarehouseSubSectionsTableContent = ({ subSections }: Props) => {
+export const WarehouseSubSectionsTable = ({ subSections }: Props) => {
   const [columnVisibility, setColumnVisibility] =
     useState<Record<ColumnKey, boolean>>(initialVisibility);
 

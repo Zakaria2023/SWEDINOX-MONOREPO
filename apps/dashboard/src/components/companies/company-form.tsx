@@ -1,5 +1,6 @@
 "use client";
 
+import { DebtorCompanyOption } from "@/app/(dashboard)/companies/actions";
 import { useCompanySubmit } from "@/app/(dashboard)/companies/use-company-submit";
 import { USAGE_CATEGORY_FIELDS } from "@/app/(dashboard)/companies/validation";
 import {
@@ -16,6 +17,7 @@ import {
   DialogBody,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/shadcn/dialog";
@@ -88,6 +90,7 @@ import {
   User,
   X,
 } from "lucide-react";
+import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
@@ -161,12 +164,16 @@ type CompanyFormProps = {
   availableContracts: ContractListItem[];
   projectContracts: ContractForProjectOption[];
   textCategories: TextCategoryOption[];
+  debtorCompanies: DebtorCompanyOption[];
+  purchaseOrgCompanies: DebtorCompanyOption[];
 };
 
 export const CompanyForm = ({
   availableContracts,
   projectContracts,
   textCategories,
+  debtorCompanies,
+  purchaseOrgCompanies,
 }: CompanyFormProps) => {
   const router = useRouter();
   const [isSalesDialogOpen, setIsSalesDialogOpen] = useState(false);
@@ -176,6 +183,8 @@ export const CompanyForm = ({
     defaultValues: DEFAULT_SALES,
   });
 
+  const { user } = useUser();
+  const currentUserName = [user?.firstName, user?.lastName].filter(Boolean).join(" ") || user?.username || "";
   const {
     form,
     isPending,
@@ -191,6 +200,10 @@ export const CompanyForm = ({
     documentTypeOptions,
     communicationTypeOptions,
     shapeOptions,
+    paymentTermOptions,
+    currencyOptions,
+    debtorCompanyOptions,
+    purchaseOrgOptions,
     additionalForm,
     additionalAddresses,
     isFirstAddressDialogOpen,
@@ -255,6 +268,8 @@ export const CompanyForm = ({
     availableContracts,
     projectContracts,
     textCategories,
+    debtorCompanies,
+    purchaseOrgCompanies,
   });
 
   const {
@@ -580,6 +595,7 @@ export const CompanyForm = ({
           </section>
         )}
 
+
         {isCustomerOrProspect && (
           <section className="space-y-4">
             <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
@@ -626,6 +642,307 @@ export const CompanyForm = ({
                 </button>
               )}
             </div>
+          </section>
+        )}
+
+        {(selectedRoles.includes("customer") ||
+          selectedRoles.includes("prospect") ||
+          selectedRoles.includes("purchasing_org")) && (
+          <section className="space-y-4">
+            <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
+              Debtor
+            </h2>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <FormSelectField
+                control={form.control}
+                name="debtorCompanyUuid"
+                id="debtorCompanyUuid"
+                label="Debtor number"
+                options={debtorCompanyOptions}
+                disabled={isPending}
+              />
+
+              {(selectedRoles.includes("customer") ||
+                selectedRoles.includes("prospect")) && (
+                <>
+                  <FormSelectField
+                    control={form.control}
+                    name="purchaseOrgCompanyUuid"
+                    id="purchaseOrgCompanyUuid"
+                    label="Purchase org."
+                    options={purchaseOrgOptions}
+                    disabled={isPending}
+                  />
+
+                  <div className="space-y-2">
+                    <FormLabel htmlFor="memberNumberPurchaseOrg">
+                      Mem. no. Pur. Org.
+                    </FormLabel>
+                    <Input
+                      id="memberNumberPurchaseOrg"
+                      {...form.register("memberNumberPurchaseOrg")}
+                      disabled={isPending}
+                    />
+                    <FormFieldError
+                      message={
+                        form.formState.errors.memberNumberPurchaseOrg?.message
+                      }
+                    />
+                  </div>
+                </>
+              )}
+
+              <FormSelectField
+                control={form.control}
+                name="paymentTerms"
+                id="paymentTerms"
+                label="Payment terms"
+                options={paymentTermOptions}
+                disabled={isPending}
+              />
+
+              <FormSelectField
+                control={form.control}
+                name="differentPaymentTermsExWorks"
+                id="differentPaymentTermsExWorks"
+                label="Different payment terms ex works"
+                options={paymentTermOptions}
+                disabled={isPending}
+              />
+
+              <FormSelectField
+                control={form.control}
+                name="currency"
+                id="currency"
+                label="Currency"
+                options={currencyOptions}
+                disabled={isPending}
+              />
+
+              <div className="space-y-2">
+                <FormLabel htmlFor="iban">IBAN</FormLabel>
+                <Input
+                  id="iban"
+                  {...form.register("iban")}
+                  disabled={isPending}
+                />
+                <FormFieldError message={form.formState.errors.iban?.message} />
+              </div>
+
+              <div className="space-y-2">
+                <FormLabel htmlFor="bic">BIC</FormLabel>
+                <Input
+                  id="bic"
+                  {...form.register("bic")}
+                  disabled={isPending}
+                />
+                <FormFieldError message={form.formState.errors.bic?.message} />
+              </div>
+
+              <div className="space-y-2">
+                <FormLabel htmlFor="bankAccount">Bank account</FormLabel>
+                <Input
+                  id="bankAccount"
+                  {...form.register("bankAccount")}
+                  disabled={isPending}
+                />
+                <FormFieldError
+                  message={form.formState.errors.bankAccount?.message}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <FormLabel htmlFor="postbankAccount">
+                  Postbank account
+                </FormLabel>
+                <Input
+                  id="postbankAccount"
+                  {...form.register("postbankAccount")}
+                  disabled={isPending}
+                />
+                <FormFieldError
+                  message={form.formState.errors.postbankAccount?.message}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <FormLabel htmlFor="vatNumber">VAT number</FormLabel>
+                <Input
+                  id="vatNumber"
+                  {...form.register("vatNumber")}
+                  disabled={isPending}
+                />
+                <FormFieldError
+                  message={form.formState.errors.vatNumber?.message}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <FormLabel htmlFor="cocNumber">COC number</FormLabel>
+                <Input
+                  id="cocNumber"
+                  {...form.register("cocNumber")}
+                  disabled={isPending}
+                />
+                <FormFieldError
+                  message={form.formState.errors.cocNumber?.message}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <FormLabel htmlFor="journalCode">Journal code</FormLabel>
+                <Input
+                  id="journalCode"
+                  type="number"
+                  {...form.register("journalCode", { valueAsNumber: true })}
+                  disabled={isPending}
+                />
+                <FormFieldError
+                  message={form.formState.errors.journalCode?.message}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <FormLabel htmlFor="creditLimit">Credit limit</FormLabel>
+                <Input
+                  id="creditLimit"
+                  type="number"
+                  step="0.01"
+                  {...form.register("creditLimit")}
+                  disabled={isPending}
+                />
+                <FormFieldError
+                  message={form.formState.errors.creditLimit?.message}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <FormLabel htmlFor="creditLimitInsurance">
+                  Credit limit insurance
+                </FormLabel>
+                <Input
+                  id="creditLimitInsurance"
+                  type="number"
+                  step="0.01"
+                  {...form.register("creditLimitInsurance")}
+                  disabled={isPending}
+                />
+                <FormFieldError
+                  message={form.formState.errors.creditLimitInsurance?.message}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <FormLabel htmlFor="creditLimitUninsured">
+                  Credit limit uninsured
+                </FormLabel>
+                <Input
+                  id="creditLimitUninsured"
+                  type="number"
+                  step="0.01"
+                  {...form.register("creditLimitUninsured")}
+                  disabled={isPending}
+                />
+                <FormFieldError
+                  message={form.formState.errors.creditLimitUninsured?.message}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <FormLabel htmlFor="insuranceValidUntil">
+                  Insurance valid until
+                </FormLabel>
+                <Input
+                  id="insuranceValidUntil"
+                  type="date"
+                  {...form.register("insuranceValidUntil")}
+                  disabled={isPending}
+                />
+                <FormFieldError
+                  message={form.formState.errors.insuranceValidUntil?.message}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <FormLabel htmlFor="creditLimitUninsuredDate">
+                  Credit limit uninsured date
+                </FormLabel>
+                <Input
+                  id="creditLimitUninsuredDate"
+                  type="date"
+                  {...form.register("creditLimitUninsuredDate")}
+                  disabled={isPending}
+                />
+                <FormFieldError
+                  message={
+                    form.formState.errors.creditLimitUninsuredDate?.message
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-6">
+              <label className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked={form.watch("calculateVat")}
+                  onChange={() =>
+                    form.setValue(
+                      "calculateVat",
+                      !form.getValues("calculateVat"),
+                    )
+                  }
+                  disabled={isPending}
+                />
+                Calculate VAT
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked={form.watch("reminder")}
+                  onChange={() =>
+                    form.setValue("reminder", !form.getValues("reminder"))
+                  }
+                  disabled={isPending}
+                />
+                Reminder
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked={form.watch("collectInvoicesInMandate")}
+                  onChange={() =>
+                    form.setValue(
+                      "collectInvoicesInMandate",
+                      !form.getValues("collectInvoicesInMandate"),
+                    )
+                  }
+                  disabled={isPending}
+                />
+                Collect invoices in mandate
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked={form.watch("isBlocked")}
+                  onChange={() =>
+                    form.setValue("isBlocked", !form.getValues("isBlocked"))
+                  }
+                  disabled={isPending}
+                />
+                {form.watch("isBlocked") ? `Blocked by ${currentUserName}` : "Blocked by"}
+              </label>
+            </div>
+
+            {form.watch("isBlocked") && (
+              <div className="space-y-2">
+                <FormLabel htmlFor="blockedByNote">Blocked by note</FormLabel>
+                <Input
+                  id="blockedByNote"
+                  {...form.register("blockedByNote")}
+                  disabled={isPending}
+                />
+                <FormFieldError
+                  message={form.formState.errors.blockedByNote?.message}
+                />
+              </div>
+            )}
           </section>
         )}
 

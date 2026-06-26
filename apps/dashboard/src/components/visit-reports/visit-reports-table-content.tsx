@@ -1,6 +1,8 @@
 "use client";
 
-import { VisitReportListItem } from "@/app/(dashboard)/visit-reports/actions";
+import { useState } from "react";
+import { type VisitReportListItem } from "@/app/(dashboard)/visit-reports/actions";
+import { VISIT_REPORT_CONTACT_METHOD_LABELS, VISIT_REPORT_REASON_LABELS } from "@/lib/labels";
 import {
   Table,
   TableBody,
@@ -67,7 +69,7 @@ type VisitReportsTableContentProps = {
   visitReports: VisitReportListItem[];
 };
 
-export const VisitReportsTableContent = ({
+export const VisitReportsTable = ({
   visitReports,
 }: VisitReportsTableContentProps) => {
   const [columnVisibility, setColumnVisibility] =
@@ -147,7 +149,9 @@ export const VisitReportsTableContent = ({
       case "visitReason":
         return (
           <TableCell key={key}>
-            {visitReport.visitReason ?? fallbackValue}
+            {visitReport.visitReason
+              ? VISIT_REPORT_REASON_LABELS[visitReport.visitReason]
+              : fallbackValue}
           </TableCell>
         );
       case "contactUuid":

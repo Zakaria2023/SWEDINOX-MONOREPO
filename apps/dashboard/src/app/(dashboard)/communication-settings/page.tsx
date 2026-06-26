@@ -1,18 +1,17 @@
-import { Suspense } from "react";
-import { CommunicationSettingsTable } from "@/components/communication-settings/communication-settings-table";
+import { getCommunicationSettings } from "@/app/(dashboard)/communication-settings/actions";
+import { CommunicationSettingsTable } from "@/components/communication-settings/communication-settings-table-content";
 import { PageHeading } from "@/components/layout/page-heading";
-import { DataTableFallback } from "@/components/ui/data-table-fallback";
 
-const CommunicationSettingsPage = () => {
+const CommunicationSettingsPage = async () => {
+  const settings = await getCommunicationSettings();
+
   return (
     <div className="space-y-6 p-6">
       <PageHeading
         title="Communication Settings"
         description="Manage communication settings per company and document type"
       />
-      <Suspense fallback={<DataTableFallback columnCount={6} />}>
-        <CommunicationSettingsTable />
-      </Suspense>
+      <CommunicationSettingsTable settings={settings} />
     </div>
   );
 };

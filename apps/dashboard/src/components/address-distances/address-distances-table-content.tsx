@@ -45,7 +45,7 @@ type Props = {
   addressDistances: AddressDistanceListItem[];
 };
 
-export const AddressDistancesTableContent = ({ addressDistances }: Props) => {
+export const AddressDistancesTable = ({ addressDistances }: Props) => {
   const [columnVisibility, setColumnVisibility] =
     useState<Record<ColumnKey, boolean>>(initialVisibility);
 

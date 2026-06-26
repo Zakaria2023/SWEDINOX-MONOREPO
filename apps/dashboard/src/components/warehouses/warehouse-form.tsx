@@ -58,6 +58,7 @@ export const WarehouseForm = ({ existingWarehouses }: Props) => {
     blockReasonOptions,
     addressOptions,
     adaptFromOptions,
+    adaptFromValue,
     handleAdaptFrom,
     handleCancel,
   } = useWarehouseSubmit({ existingWarehouses });
@@ -92,6 +93,7 @@ export const WarehouseForm = ({ existingWarehouses }: Props) => {
               id="adaptFrom"
               name="adaptFrom"
               options={adaptFromOptions}
+              value={adaptFromValue}
               onValueChange={(value) => handleAdaptFrom(value)}
             />
           </div>
@@ -412,7 +414,7 @@ export const WarehouseForm = ({ existingWarehouses }: Props) => {
           Documents
         </h2>
         <div className="space-y-2">
-          {watch("documents").map((doc, index) => (
+          {(watch("documents") ?? []).map((doc, index) => (
             <div key={doc.id} className="flex items-center gap-3 text-sm">
               <span className="flex-1">{doc.fileName}</span>
               <button
