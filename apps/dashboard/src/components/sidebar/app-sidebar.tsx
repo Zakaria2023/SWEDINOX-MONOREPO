@@ -127,7 +127,7 @@ export const AppSidebar = () => {
                           "/contact-persons-customers-and-prospects",
                         )}
                       >
-                        <span>Customer/Prospect Contact Persons</span>
+                        <span>Customer/Prospect Contact</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                   </SidebarMenuSub>
