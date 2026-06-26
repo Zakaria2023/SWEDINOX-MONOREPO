@@ -6,8 +6,9 @@ import { Eye } from "lucide-react";
 import { type SelectCompanies } from "@/db";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
+import { CompanyDocumentCell } from "@/components/companies/company-document-cell";
 
-type ColumnKey = "id" | "companyName" | "createdAt" | "updatedAt";
+type ColumnKey = "id" | "companyName" | "documents" | "createdAt" | "updatedAt";
 
 const ALL_COLUMNS: Array<{
   defaultVisible: boolean;
@@ -16,6 +17,7 @@ const ALL_COLUMNS: Array<{
 }> = [
   { key: "id", label: "Code", defaultVisible: true },
   { key: "companyName", label: "Company Name", defaultVisible: true },
+  { key: "documents", label: "Documents", defaultVisible: true },
   { key: "createdAt", label: "Created At", defaultVisible: false },
   { key: "updatedAt", label: "Updated At", defaultVisible: false },
 ];
@@ -29,7 +31,7 @@ type CompaniesTableContentProps = {
   companies: SelectCompanies[];
 };
 
-export const CompaniesTableContent = ({
+export const CompaniesTable = ({
   companies,
 }: CompaniesTableContentProps) => {
   const [columnVisibility, setColumnVisibility] =
@@ -55,6 +57,12 @@ export const CompaniesTableContent = ({
         return (
           <TableCell key={key}>
             {new Date(company.createdAt).toLocaleDateString()}
+          </TableCell>
+        );
+      case "documents":
+        return (
+          <TableCell key={key}>
+            <CompanyDocumentCell company={company} />
           </TableCell>
         );
       case "updatedAt":

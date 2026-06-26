@@ -14,13 +14,19 @@ import type {
   ContactCategory,
   ContactSalutation,
   ContractableRole,
+  ContractDiscountBasedOnType,
+  ContractSurchargePerType,
+  ContractTierUnit,
   ContractType,
+  Currency,
   FeaturesQuality,
   InvoicePaymentTerm,
   InvoiceSurchargeDescription,
   InvoiceVatScenario,
   ProcessedOption,
   ProductQualityStandard,
+  PurchaseInvoiceBlockReason,
+  PurchaseInvoiceFiscalBase,
   PurchasingUnit,
   RevenueGroup,
   SalesUnit,
@@ -31,6 +37,8 @@ import type {
   StockLabelType,
   StockMode,
   TextUsageCategory,
+  VisitReportContactMethod,
+  VisitReportReason,
   WarehouseAddress,
   WarehouseBlockReason,
   WarehouseLoadingLocation,
@@ -144,6 +152,22 @@ export const COMMUNICATION_SETTING_TYPE_LABELS: Record<
   edi_https: "EDI HTTPS",
 };
 
+export const CONTRACT_TIER_UNIT_LABELS: Record<ContractTierUnit, string> = {
+  TN: "TN (Tonnage)",
+  Euro: "Euro (Amount)",
+};
+
+export const CONTRACT_SURCHARGE_PER_TYPE_LABELS: Record<ContractSurchargePerType, string> = {
+  order_line: "Order Line",
+  group_product: "Group Product",
+  product_group: "Product Group",
+};
+
+export const CONTRACT_DISCOUNT_BASED_ON_LABELS: Record<ContractDiscountBasedOnType, string> = {
+  group_product: "Group Product",
+  product_group: "Product Group",
+};
+
 export const COMMUNICATION_SETTING_SHAPE_LABELS: Record<
   CommunicationSettingShape,
   string
@@ -156,6 +180,19 @@ export const COMMUNICATION_SETTING_SHAPE_LABELS: Record<
   peppol: "Peppol",
 };
 
+export const VISIT_REPORT_CONTACT_METHOD_LABELS: Record<VisitReportContactMethod, string> = {
+  visit: "Visit",
+  telephone_contact: "Telephone Contact",
+};
+
+export const VISIT_REPORT_REASON_LABELS: Record<VisitReportReason, string> = {
+  visit_frequency: "Visit frequency",
+  turnover_is_lagging_behind: "Turnover is lagging behind",
+  complaint: "Complaint",
+  quotation_follow_up: "Quotation follow-up",
+  at_customers_request: "At customer's request",
+  introduction: "Introduction",
+};
 export const CONTACT_SALUTATION_LABELS: Record<ContactSalutation, string> = {
   mr: "Mr.",
   mrs: "Mrs.",
@@ -673,4 +710,25 @@ export const FEATURES_QUALITY_LABELS: Record<FeaturesQuality, string> = {
   "Rg12": "Rg12",
   "Rg7": "Rg7",
   "S195T": "S195T",
+};
+
+export const PURCHASE_INVOICE_BLOCK_REASON_LABELS: Record<PurchaseInvoiceBlockReason, string> = {
+  price_mismatch: "Price Mismatch",
+  awaiting_goods_receipt: "Awaiting Goods Receipt",
+  awaiting_approval: "Awaiting Approval",
+  duplicate: "Duplicate",
+  disputed: "Disputed",
+  other: "Other",
+};
+
+export const PURCHASE_INVOICE_FISCAL_BASE_LABELS: Record<PurchaseInvoiceFiscalBase, string> = {
+  booking_date: "Booking Date",
+  document_date: "Document Date",
+};
+
+export const CURRENCY_LABELS: Record<Currency, string> = {
+  eur: "Euro",
+  usd: "Dollar",
+  gbp: "Pond",
+  hkd: "HK-Dollar",
 };

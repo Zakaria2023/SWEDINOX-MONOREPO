@@ -100,7 +100,7 @@ type AddressesTableContentProps = {
   addresses: AddressListItem[];
 };
 
-export const AddressesTableContent = ({
+export const AddressesTable = ({
   addresses,
 }: AddressesTableContentProps) => {
   const [columnVisibility, setColumnVisibility] =

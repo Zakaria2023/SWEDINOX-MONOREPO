@@ -118,7 +118,7 @@ const BooleanCheckbox = ({ checked }: { checked: boolean }) => (
   />
 );
 
-export const TextsTableContent = ({ texts }: TextsTableContentProps) => {
+export const TextsTable = ({ texts }: TextsTableContentProps) => {
   const [columnVisibility, setColumnVisibility] =
     useState<Record<ColumnKey, boolean>>(initialVisibility);
 

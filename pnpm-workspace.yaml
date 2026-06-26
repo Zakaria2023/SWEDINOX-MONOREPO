@@ -1,3 +1,6 @@
 packages:
   - "apps/*"
   - "packages/*"
+
+overrides:
+  react-hook-form: "^7.78.0"

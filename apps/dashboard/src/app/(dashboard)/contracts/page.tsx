@@ -1,11 +1,12 @@
-import { Suspense } from "react";
 import Link from "next/link";
 import { Plus } from "lucide-react";
-import { ContractsTable } from "@/components/contracts/contracts-table";
+import { getContracts } from "@/app/(dashboard)/contracts/actions";
+import { ContractsTable } from "@/components/contracts/contracts-table-content";
 import { PageHeading } from "@/components/layout/page-heading";
-import { DataTableFallback } from "@/components/ui/data-table-fallback";
 
-const ContractsPage = () => {
+const ContractsPage = async () => {
+  const contracts = await getContracts();
+
   return (
     <div className="space-y-6 p-6">
       <div className="flex items-start justify-between">
@@ -21,9 +22,7 @@ const ContractsPage = () => {
           New Contract
         </Link>
       </div>
-      <Suspense fallback={<DataTableFallback columnCount={4} />}>
-        <ContractsTable />
-      </Suspense>
+      <ContractsTable contracts={contracts} />
     </div>
   );
 };

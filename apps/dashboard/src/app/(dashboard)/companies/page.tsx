@@ -1,10 +1,11 @@
-import { Suspense } from "react";
 import Link from "next/link";
-import { CompaniesTable } from "@/components/companies/companies-table";
+import { getCompanies } from "@/app/(dashboard)/companies/actions";
+import { CompaniesTable } from "@/components/companies/companies-table-content";
 import { PageHeading } from "@/components/layout/page-heading";
-import { DataTableFallback } from "@/components/ui/data-table-fallback";
 
-const CompaniesPage = () => {
+const CompaniesPage = async () => {
+  const companies = await getCompanies();
+
   return (
     <div className="space-y-6 p-6">
       <div className="flex items-start justify-between">
@@ -19,9 +20,7 @@ const CompaniesPage = () => {
           New Company
         </Link>
       </div>
-      <Suspense fallback={<DataTableFallback columnCount={2} />}>
-        <CompaniesTable />
-      </Suspense>
+      <CompaniesTable companies={companies} />
     </div>
   );
 };

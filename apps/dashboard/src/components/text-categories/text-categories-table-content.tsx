@@ -45,7 +45,7 @@ type TextCategoriesTableContentProps = {
   categories: TextCategoryListItem[];
 };
 
-export const TextCategoriesTableContent = ({
+export const TextCategoriesTable = ({
   categories,
 }: TextCategoriesTableContentProps) => {
   const [columnVisibility, setColumnVisibility] =
