@@ -1,10 +1,11 @@
-import { Suspense } from "react";
 import Link from "next/link";
-import { LocationsTable } from "@/components/locations/locations-table";
+import { getLocations } from "@/app/(dashboard)/locations/actions";
+import { LocationsTable } from "@/components/locations/locations-table-content";
 import { PageHeading } from "@/components/layout/page-heading";
-import { DataTableFallback } from "@/components/ui/data-table-fallback";
 
-const LocationsPage = () => {
+const LocationsPage = async () => {
+  const locations = await getLocations();
+
   return (
     <div className="space-y-6 p-6">
       <div className="flex items-start justify-between">
@@ -19,9 +20,7 @@ const LocationsPage = () => {
           New Location
         </Link>
       </div>
-      <Suspense fallback={<DataTableFallback columnCount={5} />}>
-        <LocationsTable />
-      </Suspense>
+      <LocationsTable locations={locations} />
     </div>
   );
 };

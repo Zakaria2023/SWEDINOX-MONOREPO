@@ -91,6 +91,40 @@ export const communicationSettingTypes = [
 export type CommunicationSettingType =
   (typeof communicationSettingTypes)[number];
 
+export const contractTierUnits = ["TN", "Euro"] as const satisfies readonly string[];
+export type ContractTierUnit = (typeof contractTierUnits)[number];
+
+export const contractSurchargePerTypes = [
+  "order_line",
+  "group_product",
+  "product_group",
+] as const satisfies readonly string[];
+export type ContractSurchargePerType = (typeof contractSurchargePerTypes)[number];
+
+export const contractDiscountBasedOnTypes = [
+  "group_product",
+  "product_group",
+] as const satisfies readonly string[];
+export type ContractDiscountBasedOnType = (typeof contractDiscountBasedOnTypes)[number];
+
+export const visitReportContactMethods = [
+  "visit",
+  "telephone_contact",
+] as const satisfies readonly string[];
+
+export type VisitReportContactMethod = (typeof visitReportContactMethods)[number];
+
+export const visitReportReasons = [
+  "visit_frequency",
+  "turnover_is_lagging_behind",
+  "complaint",
+  "quotation_follow_up",
+  "at_customers_request",
+  "introduction",
+] as const satisfies readonly string[];
+
+export type VisitReportReason = (typeof visitReportReasons)[number];
+
 export const communicationSettingShapes = [
   "pdf",
   "scsn",
@@ -696,3 +730,30 @@ export const complaintReports = [
 ] as const satisfies readonly string[];
 
 export type ComplaintReport = (typeof complaintReports)[number];
+
+export const purchaseInvoiceBlockReasons = [
+  "price_mismatch",
+  "awaiting_goods_receipt",
+  "awaiting_approval",
+  "duplicate",
+  "disputed",
+  "other",
+] as const satisfies readonly string[];
+
+export type PurchaseInvoiceBlockReason = (typeof purchaseInvoiceBlockReasons)[number];
+
+export const purchaseInvoiceFiscalBases = [
+  "booking_date",
+  "document_date",
+] as const satisfies readonly string[];
+
+export type PurchaseInvoiceFiscalBase = (typeof purchaseInvoiceFiscalBases)[number];
+
+export const currencies = [
+  "eur",
+  "usd",
+  "gbp",
+  "hkd",
+] as const satisfies readonly string[];
+
+export type Currency = (typeof currencies)[number];

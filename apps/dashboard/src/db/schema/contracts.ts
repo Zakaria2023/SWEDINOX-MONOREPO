@@ -2,17 +2,28 @@ import { InferInsertModel, InferSelectModel } from "drizzle-orm";
 import {
   boolean,
   char,
+  decimal,
   float,
   foreignKey,
   index,
   int,
+  json,
   mysqlEnum,
   mysqlTable,
   timestamp,
   varchar,
 } from "drizzle-orm/mysql-core";
-import { contractableRoles, contractTypes } from "../../lib/enums";
+import {
+  contractableRoles,
+  contractDiscountBasedOnTypes,
+  contractSurchargePerTypes,
+  contractTierUnits,
+  contractTypes,
+} from "../../lib/enums";
+
 import { Companies } from "./companies";
+
+type PriceTier = { from: number; percentage: number };
 
 export const ContractGroups = mysqlTable(
   "ContractGroups",
@@ -80,6 +91,44 @@ export const Contracts = mysqlTable(
 
     websiteSorting: int("website_sorting").default(10),
     hideOnWebsite: boolean("hide_on_website").default(false),
+
+    // Details tab — Gross prices
+    grossPrice: boolean("gross_price").default(false),
+    grossPriceValue: decimal("gross_price_value", { precision: 15, scale: 2 }),
+
+    // Details tab — Color surcharge
+    colorSurcharge: boolean("color_surcharge").default(false),
+    colorSurchargeValue: decimal("color_surcharge_value", { precision: 15, scale: 2 }),
+    colorSurchargeUnit: varchar("color_surcharge_unit", { length: 10 }),
+
+    // Details tab — Extra discount
+    extraDiscount: boolean("extra_discount").default(false),
+    extraDiscountValue: decimal("extra_discount_value", { precision: 15, scale: 2 }),
+    extraDiscountUnit: varchar("extra_discount_unit", { length: 10 }),
+    extraDiscountFromValue: decimal("extra_discount_from_value", { precision: 15, scale: 2 }),
+    extraDiscountFromUnit: varchar("extra_discount_from_unit", { length: 10 }),
+
+    // Details tab — Quantity surcharge (Hoeveelheidstoeslag)
+    quantitySurcharge: boolean("quantity_surcharge").default(false),
+    quantitySurchargeTierUnit: mysqlEnum("quantity_surcharge_tier_unit", contractTierUnits),
+    quantitySurchargeDiscountUnit: varchar("quantity_surcharge_discount_unit", { length: 10 }),
+    quantitySurchargeTiers: json("quantity_surcharge_tiers").$type<PriceTier[]>().default([]).notNull(),
+    quantitySurchargePerType: mysqlEnum("quantity_surcharge_per_type", contractSurchargePerTypes),
+    quantitySurchargeProductGroupUuid: char("quantity_surcharge_product_group_uuid", { length: 36 }),
+
+    // Details tab — Line discount (Regelkorting)
+    lineDiscount: boolean("line_discount").default(false),
+    lineDiscountTierUnit: mysqlEnum("line_discount_tier_unit", contractTierUnits),
+    lineDiscountDiscountUnit: varchar("line_discount_discount_unit", { length: 10 }),
+    lineDiscountTiers: json("line_discount_tiers").$type<PriceTier[]>().default([]).notNull(),
+
+    // Details tab — Group discount (Groepskorting)
+    groupDiscount: boolean("group_discount").default(false),
+    groupDiscountTierUnit: mysqlEnum("group_discount_tier_unit", contractTierUnits),
+    groupDiscountDiscountUnit: varchar("group_discount_discount_unit", { length: 10 }),
+    groupDiscountTiers: json("group_discount_tiers").$type<PriceTier[]>().default([]).notNull(),
+    groupDiscountBasedOn: mysqlEnum("group_discount_based_on", contractDiscountBasedOnTypes),
+    groupDiscountProductGroupUuid: char("group_discount_product_group_uuid", { length: 36 }),
 
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),

@@ -90,7 +90,7 @@ type CommunicationSettingsTableContentProps = {
   settings: CommunicationSettingListItem[];
 };
 
-export const CommunicationSettingsTableContent = ({
+export const CommunicationSettingsTable = ({
   settings,
 }: CommunicationSettingsTableContentProps) => {
   const [columnVisibility, setColumnVisibility] =

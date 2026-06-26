@@ -1,10 +1,11 @@
-import { Suspense } from "react";
 import Link from "next/link";
-import { WarehouseSubSectionsTable } from "@/components/warehouse-sub-sections/warehouse-sub-sections-table";
+import { getWarehouseSubSections } from "@/app/(dashboard)/warehouse-sub-sections/actions";
+import { WarehouseSubSectionsTable } from "@/components/warehouse-sub-sections/warehouse-sub-sections-table-content";
 import { PageHeading } from "@/components/layout/page-heading";
-import { DataTableFallback } from "@/components/ui/data-table-fallback";
 
-const WarehouseSubSectionsPage = () => {
+const WarehouseSubSectionsPage = async () => {
+  const subSections = await getWarehouseSubSections();
+
   return (
     <div className="space-y-6 p-6">
       <div className="flex items-start justify-between">
@@ -19,9 +20,7 @@ const WarehouseSubSectionsPage = () => {
           New Sub Section
         </Link>
       </div>
-      <Suspense fallback={<DataTableFallback columnCount={5} />}>
-        <WarehouseSubSectionsTable />
-      </Suspense>
+      <WarehouseSubSectionsTable subSections={subSections} />
     </div>
   );
 };

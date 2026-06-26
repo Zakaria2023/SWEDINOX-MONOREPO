@@ -1,48 +1,61 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import { type ContractListItem } from "@/app/(dashboard)/contracts/actions";
-import { type TextCategoryOption } from "@/app/(dashboard)/text-categories/actions";
+import {
+  ContractForProjectOption,
+  ContractListItem,
+} from "@/app/(dashboard)/contracts/actions";
+import { TextCategoryOption } from "@/app/(dashboard)/text-categories/actions";
+import { InsertCompanies } from "@/db/schema/companies";
 import {
   addressCategories,
-  type AddressCategory,
+  AddressCategory,
   communicationSettingDocumentTypes,
   communicationSettingShapes,
   communicationSettingTypes,
-  type CompanyRole,
   companyLangs,
+  CompanyRole,
   companyRoles,
-  type ContactCategory,
+  ContactCategory,
+  ContractableRole,
   contractableRoles,
-  type ContractableRole,
+  currencies,
+  Currency,
+  InvoicePaymentTerm,
+  invoicePaymentTerms,
 } from "@/lib/enums";
 import {
+  COMMON_TEXT,
   COMMUNICATION_SETTING_DOCUMENT_TYPE_LABELS,
   COMMUNICATION_SETTING_SHAPE_LABELS,
   COMMUNICATION_SETTING_TYPE_LABELS,
   COMPANY_LANGUAGE_LABELS,
-  COMMON_TEXT,
+  CURRENCY_LABELS,
+  INVOICE_PAYMENT_TERM_LABELS,
 } from "@/lib/labels";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
+import { z } from "zod";
 import {
+  CommSettingInput,
+  CompanyActionResult,
+  CompanyContactInput,
+  CompanyContractInput,
+  CompanyTextInput,
   createCompany,
-  type CommSettingInput,
-  type CompanyActionResult,
-  type CompanyContactInput,
-  type CompanyContractInput,
-  type CompanyTextInput,
+  CustomerProjectInput,
+  DebtorCompanyOption,
 } from "./actions";
 import {
-  type AddressFormValues,
-  type CommSettingFormValues,
+  AddressFormValues,
+  CommSettingFormValues,
   commSettingSchema,
-  type CompanyFormValues,
+  CompanyFormValues,
   contactDialogSchema,
-  type ContactDialogValues,
+  ContactDialogValues,
   contractSelectionSchema,
-  type ContractSelectionValues,
+  ContractSelectionValues,
   createCompanySchema,
   DEFAULT_ADDRESS,
   DEFAULT_COMM_SETTING,
@@ -50,12 +63,15 @@ import {
   DEFAULT_CONTRACT_SELECTION,
   DEFAULT_TEXT,
   textDialogSchema,
-  type TextDialogValues,
+  TextDialogValues,
   USAGE_CATEGORY_FIELDS,
 } from "./validation";
 
 const AGENT_ALLOWED = new Set<CompanyRole>(["agent", "other", "internal"]);
-const PURCHASING_ORG_ALLOWED = new Set<CompanyRole>(["purchasing_org", "other"]);
+const PURCHASING_ORG_ALLOWED = new Set<CompanyRole>([
+  "purchasing_org",
+  "other",
+]);
 
 const getDisabledRoles = (selected: CompanyRole[]): Set<CompanyRole> => {
   const disabled = new Set<CompanyRole>();
@@ -119,14 +135,36 @@ const mapAddress = (address: CompanyFormValues["address"]) => ({
   loadingInstructions: address.loadingInstructions || undefined,
 });
 
+const projectSchema = z.object({
+  projectName: z.string().optional(),
+  endDate: z.string().optional(),
+  revenue: z.string().optional(),
+  contractUuid: z.string().optional(),
+});
+
+type ProjectFormValues = z.infer<typeof projectSchema>;
+
+const DEFAULT_PROJECT: ProjectFormValues = {
+  projectName: "",
+  endDate: "",
+  revenue: "",
+  contractUuid: "",
+};
+
 type UseCompanySubmitParams = {
   availableContracts: ContractListItem[];
+  projectContracts: ContractForProjectOption[];
   textCategories: TextCategoryOption[];
+  debtorCompanies: DebtorCompanyOption[];
+  purchaseOrgCompanies: DebtorCompanyOption[];
 };
 
 export const useCompanySubmit = ({
   availableContracts,
+  projectContracts,
   textCategories,
+  debtorCompanies,
+  purchaseOrgCompanies,
 }: UseCompanySubmitParams) => {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -150,6 +188,8 @@ export const useCompanySubmit = ({
   const [contacts, setContacts] = useState<CompanyContactInput[]>([]);
   const [isTextDialogOpen, setIsTextDialogOpen] = useState(false);
   const [texts, setTexts] = useState<CompanyTextInput[]>([]);
+  const [isProjectDialogOpen, setIsProjectDialogOpen] = useState(false);
+  const [projects, setProjects] = useState<CustomerProjectInput[]>([]);
 
   const form = useForm<CompanyFormValues>({
     resolver: zodResolver(createCompanySchema()),
@@ -162,6 +202,30 @@ export const useCompanySubmit = ({
       searchCode1: "",
       searchCode2: "",
       searchCode3: "",
+      documents: [],
+      debtorCompanyUuid: "",
+      iban: "",
+      bic: "",
+      bankAccount: "",
+      postbankAccount: "",
+      purchaseOrgCompanyUuid: "",
+      memberNumberPurchaseOrg: "",
+      calculateVat: true,
+      reminder: true,
+      collectInvoicesInMandate: false,
+      insuranceValidUntil: "",
+      creditLimitInsurance: "",
+      creditLimit: "",
+      creditLimitUninsured: "",
+      creditLimitUninsuredDate: "",
+      paymentTerms: "",
+      differentPaymentTermsExWorks: "",
+      journalCode: undefined,
+      vatNumber: "",
+      cocNumber: "",
+      currency: "",
+      isBlocked: false,
+      blockedByNote: "",
       address: {
         category: [],
         poBox: false,
@@ -231,6 +295,11 @@ export const useCompanySubmit = ({
     defaultValues: DEFAULT_TEXT,
   });
 
+  const projectForm = useForm<ProjectFormValues>({
+    resolver: zodResolver(projectSchema),
+    defaultValues: DEFAULT_PROJECT,
+  });
+
   const addressValues = form.watch("address");
   const selectedRoles: CompanyRole[] = form.watch("roles") ?? [];
   const disabledRoles = getDisabledRoles(selectedRoles);
@@ -283,6 +352,35 @@ export const useCompanySubmit = ({
     ...communicationSettingShapes.map((shape) => ({
       value: shape,
       label: COMMUNICATION_SETTING_SHAPE_LABELS[shape],
+    })),
+  ];
+
+  const paymentTermOptions = [
+    { value: "", label: COMMON_TEXT.emptyOption },
+    ...invoicePaymentTerms.map((t) => ({
+      value: t,
+      label: INVOICE_PAYMENT_TERM_LABELS[t as InvoicePaymentTerm],
+    })),
+  ];
+
+  const currencyOptions = [
+    { value: "", label: COMMON_TEXT.emptyOption },
+    ...currencies.map((c) => ({
+      value: c,
+      label: CURRENCY_LABELS[c as Currency],
+    })),
+  ];
+
+  const debtorCompanyOptions = [
+    { value: "", label: COMMON_TEXT.emptyOption },
+    ...debtorCompanies.map((c) => ({ value: c.uuid, label: c.companyName })),
+  ];
+
+  const purchaseOrgOptions = [
+    { value: "", label: COMMON_TEXT.emptyOption },
+    ...purchaseOrgCompanies.map((c) => ({
+      value: c.uuid,
+      label: c.companyName,
     })),
   ];
 
@@ -629,6 +727,43 @@ export const useCompanySubmit = ({
   const removeText = (index: number) =>
     setTexts((prev) => prev.filter((_, i) => i !== index));
 
+  // ── Project handlers ───────────────────────────────────────────────────────
+
+  const handleProjectOpenChange = (open: boolean) => {
+    if (!open) projectForm.reset(DEFAULT_PROJECT);
+    setIsProjectDialogOpen(open);
+  };
+
+  const handleOpenProject = () => {
+    projectForm.reset(DEFAULT_PROJECT);
+    setIsProjectDialogOpen(true);
+  };
+
+  const handleCancelProject = () => {
+    projectForm.reset(DEFAULT_PROJECT);
+    setIsProjectDialogOpen(false);
+  };
+
+  const handleSaveProject = projectForm.handleSubmit((values) => {
+    const today = new Date().toISOString().split("T")[0];
+    setProjects((prev) => [
+      ...prev,
+      {
+        projectName: values.projectName || undefined,
+        startingDate: today,
+        endDate: values.endDate || undefined,
+        revenue: values.revenue || undefined,
+        contractUuid: values.contractUuid || undefined,
+        daysInSystem: 0,
+      },
+    ]);
+    projectForm.reset(DEFAULT_PROJECT);
+    setIsProjectDialogOpen(false);
+  });
+
+  const removeProject = (index: number) =>
+    setProjects((prev) => prev.filter((_, i) => i !== index));
+
   // ── Role handler ─────────────────────────────────────────────────────────────
 
   const toggleRole = (role: CompanyRole) => {
@@ -686,8 +821,34 @@ export const useCompanySubmit = ({
         searchCode1,
         searchCode2,
         searchCode3,
+        documents,
         address,
+        debtorCompanyUuid,
+        iban,
+        bic,
+        bankAccount,
+        postbankAccount,
+        purchaseOrgCompanyUuid,
+        memberNumberPurchaseOrg,
+        calculateVat,
+        reminder,
+        collectInvoicesInMandate,
+        insuranceValidUntil,
+        creditLimitInsurance,
+        creditLimit,
+        creditLimitUninsured,
+        creditLimitUninsuredDate,
+        paymentTerms,
+        differentPaymentTermsExWorks,
+        journalCode,
+        vatNumber,
+        cocNumber,
+        currency,
+        isBlocked,
+        blockedByNote,
       } = values;
+      const isCustomerOrProspect =
+        roles?.includes("customer") || roles?.includes("prospect");
       const allAddresses = [address, ...additionalAddresses].map(mapAddress);
       const result = await createCompany(
         {
@@ -699,12 +860,50 @@ export const useCompanySubmit = ({
           searchCode2: searchCode2 || undefined,
           searchCode3: searchCode3 || undefined,
           roles: (roles ?? []) as CompanyRole[],
+          documents: documents.length > 0 ? documents : undefined,
+          debtorCompanyUuid: debtorCompanyUuid || undefined,
+          iban: iban || undefined,
+          bic: bic || undefined,
+          bankAccount: bankAccount || undefined,
+          postbankAccount: postbankAccount || undefined,
+          purchaseOrgCompanyUuid: isCustomerOrProspect
+            ? purchaseOrgCompanyUuid || undefined
+            : undefined,
+          memberNumberPurchaseOrg: isCustomerOrProspect
+            ? memberNumberPurchaseOrg || undefined
+            : undefined,
+          calculateVat,
+          reminder,
+          collectInvoicesInMandate,
+          insuranceValidUntil: insuranceValidUntil ? new Date(insuranceValidUntil) : null,
+          creditLimitInsurance:
+            creditLimitInsurance
+              ? String(creditLimitInsurance)
+              : undefined,
+          creditLimit:
+            creditLimit
+              ? String(creditLimit)
+              : undefined,
+          creditLimitUninsured:
+            creditLimitUninsured
+              ? String(creditLimitUninsured)
+              : undefined,
+          creditLimitUninsuredDate: creditLimitUninsuredDate ? new Date(creditLimitUninsuredDate) : null,
+          paymentTerms: paymentTerms || undefined,
+          differentPaymentTermsExWorks: differentPaymentTermsExWorks || undefined,
+          journalCode: journalCode ?? undefined,
+          vatNumber: vatNumber || undefined,
+          cocNumber: cocNumber || undefined,
+          currency: (currency || undefined) as InsertCompanies["currency"],
+          blockedByNote: blockedByNote || undefined,
         },
+        isBlocked,
         allAddresses,
         communicationSettings,
         contracts,
         contacts,
         texts,
+        projects,
       );
       setState(result);
       if (result.success) router.push("/companies");
@@ -728,6 +927,10 @@ export const useCompanySubmit = ({
     documentTypeOptions,
     communicationTypeOptions,
     shapeOptions,
+    paymentTermOptions,
+    currencyOptions,
+    debtorCompanyOptions,
+    purchaseOrgOptions,
 
     additionalForm,
     additionalAddresses,
@@ -783,9 +986,19 @@ export const useCompanySubmit = ({
     handleCategorySelect,
     removeText,
 
+    projectForm,
+    projects,
+    isProjectDialogOpen,
+    handleProjectOpenChange,
+    handleOpenProject,
+    handleCancelProject,
+    handleSaveProject,
+    removeProject,
+
     toggleRole,
 
     availableContracts,
+    projectContracts,
     textCategories,
   };
 };
