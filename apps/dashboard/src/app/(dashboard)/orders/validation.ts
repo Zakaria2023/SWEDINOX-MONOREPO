@@ -6,6 +6,7 @@ import {
   orderMethods,
   orderWeightTypes,
 } from "@/lib/enums";
+import { todayDateString, currentYear } from "@/lib/helpers";
 
 export const orderSchema = z.object({
   // Header
@@ -39,8 +40,18 @@ export const orderSchema = z.object({
   deliveryAddressUuid: z.string().optional(),
   deliveryType: z.enum(deliveryTypes),
   deliveryDate: z.string().optional(),
-  deliveryWeek: z.string().optional(),
-  deliveryYear: z.string().optional(),
+  deliveryWeek: z
+    .number()
+    .int()
+    .min(1, "Week must be between 1 and 53")
+    .max(53, "Week must be between 1 and 53")
+    .optional(),
+  deliveryYear: z
+    .number()
+    .int()
+    .min(2000, "Enter a valid year")
+    .max(2099, "Enter a valid year")
+    .optional(),
   deliveryRemark: z.string().optional(),
 
   // Logistics
@@ -74,9 +85,6 @@ export const orderSchema = z.object({
 
 export type OrderFormValues = z.infer<typeof orderSchema>;
 
-const today = new Date().toISOString().split("T")[0];
-const currentYear = new Date().getFullYear();
-
 export const DEFAULT_ORDER: OrderFormValues = {
   companyUuid: "",
   contactUuid: "",
@@ -86,7 +94,7 @@ export const DEFAULT_ORDER: OrderFormValues = {
   ourReference: "",
   seller: "",
   project: "",
-  priceDate: today,
+  priceDate: todayDateString(),
   orderCategory: "",
   handlingBlocked: false,
 
@@ -105,9 +113,9 @@ export const DEFAULT_ORDER: OrderFormValues = {
   deliveryTerms: undefined,
   deliveryAddressUuid: "",
   deliveryType: "date",
-  deliveryDate: today,
-  deliveryWeek: "",
-  deliveryYear: String(currentYear),
+  deliveryDate: todayDateString(),
+  deliveryWeek: undefined,
+  deliveryYear: currentYear(),
   deliveryRemark: "",
 
   completeDelivery: false,

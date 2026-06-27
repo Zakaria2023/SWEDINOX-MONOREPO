@@ -44,8 +44,8 @@ export const Products = mysqlTable(
     }).default("0.0000"),
     weightUnit: mysqlEnum("weight_unit", salesUnitOptions),
 
-    createdAt: timestamp("created_at").defaultNow(),
-    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
   },
   (table) => [
     index("idx_products_product_group_uuid").on(table.productGroupUuid),

@@ -1,7 +1,7 @@
 "use client";
 
 import { CompanyOption } from "@/app/(dashboard)/companies/actions";
-import { DashboardUserOption } from "@/app/(dashboard)/users/actions";
+import { DashboardUserOption } from "@/lib/server/clerk";
 import {
   ContactOption,
   getContactsByCompanyUuid,

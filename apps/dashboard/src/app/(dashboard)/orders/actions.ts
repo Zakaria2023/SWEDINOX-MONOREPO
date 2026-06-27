@@ -3,12 +3,14 @@
 import { db } from "@/db";
 import { InsertOrders, Orders, SelectOrders } from "@/db/schema/orders";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
-import { CompanyAddresses, SelectCompanyAddresses } from "@/db/schema/company-addresses";
+import {
+  CompanyAddresses,
+  SelectCompanyAddresses,
+} from "@/db/schema/company-addresses";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
 import { generateUuid } from "@/lib/helpers";
 import { asc, desc, eq, getTableColumns } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-
 export type OrderFields = Omit<
   InsertOrders,
   "id" | "uuid" | "createdAt" | "updatedAt"

@@ -48,8 +48,8 @@ export const Texts = mysqlTable(
     websiteInAdvance: boolean("website_in_advance").default(false),
     websiteAfter: boolean("website_after").default(false),
 
-    createdAt: timestamp("created_at").defaultNow(),
-    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
   },
   (table) => [
     index("idx_texts_company_uuid").on(table.companyUuid),

@@ -6,6 +6,7 @@ import {
   orderWeightTypes,
   purchaseOrderTypes,
 } from "@/lib/enums";
+import { todayDateString, currentYear } from "@/lib/helpers";
 
 export const purchaseOrderSchema = z.object({
   // Header
@@ -61,9 +62,6 @@ export const purchaseOrderSchema = z.object({
 
 export type PurchaseOrderFormValues = z.infer<typeof purchaseOrderSchema>;
 
-const today = new Date().toISOString().split("T")[0];
-const currentYear = new Date().getFullYear();
-
 export const DEFAULT_PURCHASE_ORDER: PurchaseOrderFormValues = {
   supplierUuid: "",
   agentUuid: "",
@@ -90,9 +88,9 @@ export const DEFAULT_PURCHASE_ORDER: PurchaseOrderFormValues = {
   pickupDropoffCdPurchases: false,
   supplierAddressUuid: "",
   deliveryType: "date",
-  deliveryDate: today,
+  deliveryDate: todayDateString(),
   deliveryWeek: "",
-  deliveryYear: String(currentYear),
+  deliveryYear: String(currentYear()),
   deliveryRemark: "",
 
   completeDelivery: false,

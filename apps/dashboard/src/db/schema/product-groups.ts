@@ -360,8 +360,8 @@ export const ProductGroups = mysqlTable(
     supplierMoqUnit: mysqlEnum("supplier_moq_unit", purchasingUnits),
     supplierOrderSeries: int("supplier_order_series").default(0),
 
-    createdAt: timestamp("created_at").defaultNow(),
-    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
   },
   (table) => [
     index("idx_product_groups_parent_uuid").on(table.parentUuid),

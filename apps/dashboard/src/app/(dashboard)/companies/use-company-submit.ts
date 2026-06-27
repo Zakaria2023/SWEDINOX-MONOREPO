@@ -6,6 +6,7 @@ import {
 } from "@/app/(dashboard)/contracts/actions";
 import { TextCategoryOption } from "@/app/(dashboard)/text-categories/actions";
 import { InsertCompanies } from "@/db/schema/companies";
+import { todayDateString } from "@/lib/helpers";
 import {
   addressCategories,
   AddressCategory,
@@ -748,7 +749,7 @@ export const useCompanySubmit = ({
   };
 
   const handleSaveProject = projectForm.handleSubmit((values) => {
-    const today = new Date().toISOString().split("T")[0];
+    const today = todayDateString();
     setProjects((prev) => [
       ...prev,
       {
@@ -879,22 +880,22 @@ export const useCompanySubmit = ({
           calculateVat,
           reminder,
           collectInvoicesInMandate,
-          insuranceValidUntil: insuranceValidUntil ? new Date(insuranceValidUntil) : null,
-          creditLimitInsurance:
-            creditLimitInsurance
-              ? String(creditLimitInsurance)
-              : undefined,
-          creditLimit:
-            creditLimit
-              ? String(creditLimit)
-              : undefined,
-          creditLimitUninsured:
-            creditLimitUninsured
-              ? String(creditLimitUninsured)
-              : undefined,
-          creditLimitUninsuredDate: creditLimitUninsuredDate ? new Date(creditLimitUninsuredDate) : null,
+          insuranceValidUntil: insuranceValidUntil
+            ? new Date(insuranceValidUntil)
+            : null,
+          creditLimitInsurance: creditLimitInsurance
+            ? String(creditLimitInsurance)
+            : undefined,
+          creditLimit: creditLimit ? String(creditLimit) : undefined,
+          creditLimitUninsured: creditLimitUninsured
+            ? String(creditLimitUninsured)
+            : undefined,
+          creditLimitUninsuredDate: creditLimitUninsuredDate
+            ? new Date(creditLimitUninsuredDate)
+            : null,
           paymentTerms: paymentTerms || undefined,
-          differentPaymentTermsExWorks: differentPaymentTermsExWorks || undefined,
+          differentPaymentTermsExWorks:
+            differentPaymentTermsExWorks || undefined,
           journalCode: journalCode ?? undefined,
           vatNumber: vatNumber || undefined,
           cocNumber: cocNumber || undefined,

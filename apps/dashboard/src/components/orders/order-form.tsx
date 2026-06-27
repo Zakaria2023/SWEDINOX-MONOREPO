@@ -2,6 +2,7 @@
 
 import { Controller } from "react-hook-form";
 import { useOrderSubmit } from "@/app/(dashboard)/orders/use-order-submit";
+import { ClerkUserOption } from "@/lib/server/clerk";
 import { CompanyOption } from "@/app/(dashboard)/companies/actions";
 import { Input } from "@/components/shadcn/input";
 import { Textarea } from "@/components/shadcn/textarea";
@@ -14,9 +15,10 @@ import { FormCheckboxCard } from "@/components/ui/form-checkbox-card";
 
 type Props = {
   companies: CompanyOption[];
+  clerkUsers: ClerkUserOption[];
 };
 
-export const OrderForm = ({ companies }: Props) => {
+export const OrderForm = ({ companies, clerkUsers }: Props) => {
   const {
     form,
     isPending,
@@ -49,7 +51,9 @@ export const OrderForm = ({ companies }: Props) => {
 
       {/* ── Header ────────────────────────────────────────────────────── */}
       <section className="space-y-4">
-        <h2 className="border-b pb-2 text-base font-semibold">Order Information</h2>
+        <h2 className="border-b pb-2 text-base font-semibold">
+          Order Information
+        </h2>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -96,10 +100,14 @@ export const OrderForm = ({ companies }: Props) => {
             emptyValue=""
           />
 
-          <div>
-            <FormLabel htmlFor="seller">Seller</FormLabel>
-            <Input id="seller" {...register("seller")} />
-          </div>
+          <FormSelectField
+            control={control}
+            id="seller"
+            name="seller"
+            label="Seller"
+            options={clerkUsers}
+            emptyValue=""
+          />
 
           <div>
             <FormLabel htmlFor="customerRef">Customer Ref.</FormLabel>
@@ -328,17 +336,25 @@ export const OrderForm = ({ companies }: Props) => {
                   min={1}
                   max={53}
                   className="w-20"
-                  {...register("deliveryWeek")}
+                  {...register("deliveryWeek", {
+                    setValueAs: (v) => (v === "" ? undefined : parseInt(v, 10)),
+                  })}
                 />
+                <FormFieldError message={errors.deliveryWeek?.message} />
               </div>
               <div>
                 <FormLabel htmlFor="deliveryYear">Year</FormLabel>
                 <Input
                   id="deliveryYear"
                   type="number"
+                  min={2000}
+                  max={2099}
                   className="w-28"
-                  {...register("deliveryYear")}
+                  {...register("deliveryYear", {
+                    setValueAs: (v) => (v === "" ? undefined : parseInt(v, 10)),
+                  })}
                 />
+                <FormFieldError message={errors.deliveryYear?.message} />
               </div>
             </div>
           )}
@@ -424,10 +440,16 @@ export const OrderForm = ({ companies }: Props) => {
           </div>
           <div>
             <FormLabel htmlFor="maxLengthMm">Max. Length (mm)</FormLabel>
-            <Input id="maxLengthMm" type="number" {...register("maxLengthMm")} />
+            <Input
+              id="maxLengthMm"
+              type="number"
+              {...register("maxLengthMm")}
+            />
           </div>
           <div>
-            <FormLabel htmlFor="maxBundleWeightKg">Max. Bundle Weight (kg)</FormLabel>
+            <FormLabel htmlFor="maxBundleWeightKg">
+              Max. Bundle Weight (kg)
+            </FormLabel>
             <Input
               id="maxBundleWeightKg"
               type="number"
@@ -437,11 +459,19 @@ export const OrderForm = ({ companies }: Props) => {
           </div>
           <div>
             <FormLabel htmlFor="deliveryAfterTime">Delivery After</FormLabel>
-            <Input id="deliveryAfterTime" type="time" {...register("deliveryAfterTime")} />
+            <Input
+              id="deliveryAfterTime"
+              type="time"
+              {...register("deliveryAfterTime")}
+            />
           </div>
           <div>
             <FormLabel htmlFor="deliverForTime">Deliver For</FormLabel>
-            <Input id="deliverForTime" type="time" {...register("deliverForTime")} />
+            <Input
+              id="deliverForTime"
+              type="time"
+              {...register("deliverForTime")}
+            />
           </div>
           <div>
             <FormLabel htmlFor="transportMode">Transport Mode</FormLabel>

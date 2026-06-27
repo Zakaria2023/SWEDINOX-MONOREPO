@@ -4,11 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
-import {
-  AddressOption,
-  createOrder,
-  OrderActionResult,
-} from "./actions";
+import { AddressOption, createOrder, OrderActionResult } from "./actions";
 import { DEFAULT_ORDER, orderSchema, OrderFormValues } from "./validation";
 import { CompanyOption } from "@/app/(dashboard)/companies/actions";
 import {
@@ -50,9 +46,8 @@ const makeOptions = <T extends string>(
 ];
 
 const addressLabel = (a: AddressOption) =>
-  [a.altName, a.streetAndNo, a.postalCode, a.city]
-    .filter(Boolean)
-    .join(", ") || a.uuid;
+  [a.altName, a.streetAndNo, a.postalCode, a.city].filter(Boolean).join(", ") ||
+  a.uuid;
 
 export const useOrderSubmit = ({ companies }: UseOrderSubmitParams) => {
   const router = useRouter();
@@ -74,8 +69,7 @@ export const useOrderSubmit = ({ companies }: UseOrderSubmitParams) => {
 
   // Only show customer/prospect companies
   const customerCompanies = companies.filter(
-    (c) =>
-      c.roles.includes("customer") || c.roles.includes("prospect"),
+    (c) => c.roles.includes("customer") || c.roles.includes("prospect"),
   );
 
   const companyOptions: SelectOption[] = [
@@ -167,12 +161,16 @@ export const useOrderSubmit = ({ companies }: UseOrderSubmitParams) => {
         isMailed: values.isMailed,
         isFaxed: values.isFaxed,
 
-        deliveryTerms: values.isPickup ? null : (values.deliveryTerms || null),
-        deliveryAddressUuid: values.isPickup ? null : (values.deliveryAddressUuid || null),
+        deliveryTerms: values.isPickup ? null : values.deliveryTerms || null,
+        deliveryAddressUuid: values.isPickup
+          ? null
+          : values.deliveryAddressUuid || null,
         deliveryType: values.deliveryType,
-        deliveryDate: values.deliveryDate ? new Date(values.deliveryDate) : null,
-        deliveryWeek: values.deliveryWeek ? Number(values.deliveryWeek) : null,
-        deliveryYear: values.deliveryYear ? Number(values.deliveryYear) : null,
+        deliveryDate: values.deliveryDate
+          ? new Date(values.deliveryDate)
+          : null,
+        deliveryWeek: values.deliveryWeek ?? null,
+        deliveryYear: values.deliveryYear ?? null,
         deliveryRemark: values.deliveryRemark || null,
 
         completeDelivery: values.completeDelivery,
@@ -193,7 +191,8 @@ export const useOrderSubmit = ({ companies }: UseOrderSubmitParams) => {
         financialBlockage: values.financialBlockage,
         invoiceBlockage: values.invoiceBlockage,
         onlyTotalAmountOnInvoice: values.onlyTotalAmountOnInvoice,
-        includeOptionPricesInMaterialPrices: values.includeOptionPricesInMaterialPrices,
+        includeOptionPricesInMaterialPrices:
+          values.includeOptionPricesInMaterialPrices,
         paymentTerms: values.paymentTerms || null,
         billingAddressUuid: values.billingAddressUuid || null,
         blockingReason: values.blockingReason || null,
