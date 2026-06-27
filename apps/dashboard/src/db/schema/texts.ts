@@ -17,6 +17,7 @@ export const Texts = mysqlTable(
     uuid: char("uuid", { length: 36 }).notNull().unique(),
 
     companyUuid: char("company_uuid", { length: 36 }),
+    productGroupUuid: char("product_group_uuid", { length: 36 }),
     textCategoryUuid: char("text_category_uuid", { length: 36 }),
 
     title: varchar("title", { length: 255 }).notNull(),
@@ -27,10 +28,16 @@ export const Texts = mysqlTable(
     createdByUserId: varchar("created_by_user_id", { length: 255 }),
 
     visitReport: boolean("visit_report").default(false).notNull(),
-    purchaseQuoteRequest: boolean("purchase_quote_request").default(false).notNull(),
+    purchaseQuoteRequest: boolean("purchase_quote_request")
+      .default(false)
+      .notNull(),
     purchaseOrder: boolean("purchase_order").default(false).notNull(),
-    purchaseOrderToolTip: boolean("purchase_order_tool_tip").default(false).notNull(),
-    purchaseReturnOrder: boolean("purchase_return_order").default(false).notNull(),
+    purchaseOrderToolTip: boolean("purchase_order_tool_tip")
+      .default(false)
+      .notNull(),
+    purchaseReturnOrder: boolean("purchase_return_order")
+      .default(false)
+      .notNull(),
     salesQuote: boolean("sales_quote").default(false).notNull(),
     salesOrder: boolean("sales_order").default(false).notNull(),
     salesOrderToolTip: boolean("sales_order_tool_tip").default(false).notNull(),
@@ -50,6 +57,7 @@ export const Texts = mysqlTable(
   },
   (table) => [
     index("idx_texts_company_uuid").on(table.companyUuid),
+    index("idx_texts_product_group_uuid").on(table.productGroupUuid),
     index("idx_texts_text_category_uuid").on(table.textCategoryUuid),
   ],
 );
