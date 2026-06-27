@@ -1,4 +1,4 @@
-import { InferInsertModel, InferSelectModel } from "drizzle-orm";
+import { InferInsertModel, InferSelectModel, relations } from "drizzle-orm";
 import {
   boolean,
   char,
@@ -31,7 +31,9 @@ export const Machines = mysqlTable(
     name: varchar("name", { length: 255 }).notNull(),
     option: mysqlEnum("machine_option", machineOptionTypes).notNull(),
     production: mysqlEnum("production", machineProductionTypes).notNull(),
-    loading: mysqlEnum("loading", machineLoadingTypes).notNull().default("load"),
+    loading: mysqlEnum("loading", machineLoadingTypes)
+      .notNull()
+      .default("load"),
     stockLocationUuid: char("stock_location_uuid", { length: 36 }).notNull(),
     remarks: text("remarks"),
     minLengthMm: int("min_length_mm"),
@@ -45,7 +47,8 @@ export const Machines = mysqlTable(
       machineCapacityUnits,
     ),
     warningPercentage: int("warning_percentage"),
-    documents: json("documents").$type<Array<{ id: string; fileName: string }>>(),
+    documents:
+      json("documents").$type<Array<{ id: string; fileName: string }>>(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
   },
@@ -63,3 +66,10 @@ export const Machines = mysqlTable(
 
 export type SelectMachines = InferSelectModel<typeof Machines>;
 export type InsertMachines = InferInsertModel<typeof Machines>;
+
+export const machinesRelations = relations(Machines, ({ one }) => ({
+  stockLocation: one(Warehouses, {
+    fields: [Machines.stockLocationUuid],
+    references: [Warehouses.uuid],
+  }),
+}));
