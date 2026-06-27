@@ -13,3 +13,4 @@ export * from "./products";
 export * from "./purchase-invoices";
 export * from "./warehouses";
 export * from "./visit-reports";
+export * from "./machines";

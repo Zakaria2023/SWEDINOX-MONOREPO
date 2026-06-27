@@ -1,20 +1,17 @@
 import Link from "next/link";
-import { SelectWarehouses } from "@/db";
 
 type Props = {
-  warehouse: SelectWarehouses;
+  documents?: Array<{ id: string; fileName: string }> | null;
 };
 
-export const WarehouseDocumentCell = ({ warehouse }: Props) => {
-  const docs = warehouse.documents;
-
-  if (!docs || docs.length === 0) {
+export const DocumentCell = ({ documents }: Props) => {
+  if (!documents || documents.length === 0) {
     return <span className="text-muted-foreground">—</span>;
   }
 
   return (
     <div className="space-y-1">
-      {docs.map((doc) => (
+      {documents.map((doc) => (
         <div key={doc.id}>
           <Link
             href={`/api/documents/${doc.id}/download?fileName=${encodeURIComponent(doc.fileName)}`}
