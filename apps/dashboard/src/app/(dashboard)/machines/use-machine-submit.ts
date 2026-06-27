@@ -22,12 +22,12 @@ import {
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
-import { createMachine, type MachineActionResult } from "./actions";
-import { type MachineStockLocationOption } from "@/app/(dashboard)/warehouses/actions";
+import { createMachine, MachineActionResult } from "./actions";
+import { MachineStockLocationOption } from "@/app/(dashboard)/warehouses/actions";
 import {
   createMachineSchema,
   DEFAULT_MACHINE,
-  type MachineFormValues,
+  MachineFormValues,
 } from "./validation";
 
 type UseMachineSubmitParams = {
@@ -74,8 +74,7 @@ export const useMachineSubmit = ({
     ...machineCapacityUnits.map((unit) => ({
       value: unit,
       label: MACHINE_CAPACITY_UNIT_CODES[unit as MachineCapacityUnit],
-      description:
-        MACHINE_CAPACITY_UNIT_LABELS[unit as MachineCapacityUnit],
+      description: MACHINE_CAPACITY_UNIT_LABELS[unit as MachineCapacityUnit],
     })),
   ];
 
@@ -111,10 +110,8 @@ export const useMachineSubmit = ({
           values.averageDailyCapacity !== undefined
             ? Number(values.averageDailyCapacity)
             : undefined,
-        averageDailyCapacityUnit:
-          (values.averageDailyCapacityUnit || undefined) as
-            | MachineCapacityUnit
-            | undefined,
+        averageDailyCapacityUnit: (values.averageDailyCapacityUnit ||
+          undefined) as MachineCapacityUnit | undefined,
         warningPercentage:
           values.warningPercentage !== "" &&
           values.warningPercentage !== undefined
@@ -124,7 +121,9 @@ export const useMachineSubmit = ({
       });
 
       setState(result);
-      if (result.success) router.push("/machines");
+      if (result.success) {
+        router.push("/machines");
+      }
     });
   });
 

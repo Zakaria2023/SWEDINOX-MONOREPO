@@ -43,26 +43,33 @@ export const createMachine = async (
 ): Promise<MachineActionResult> => {
   const uuid = generateUuid();
   try {
-    await db.insert(Machines).values({ ...fields, uuid });
-    return { success: true, machineUuid: uuid };
-  } catch (error) {
-    const errMsg = [
-      error instanceof Error ? error.message : "",
-      error instanceof Error && error.cause instanceof Error
-        ? error.cause.message
-        : "",
-    ].join(" ");
+    const [existingCode] = await db
+      .select({ uuid: Machines.uuid })
+      .from(Machines)
+      .where(eq(Machines.code, fields.code))
+      .limit(1);
 
-    if (errMsg.includes("uniq_machines_code")) {
+    if (existingCode) {
       return { error: "Machine code already exists" };
     }
-    if (errMsg.includes("uniq_machines_production")) {
+
+    const [existingProduction] = await db
+      .select({ uuid: Machines.uuid })
+      .from(Machines)
+      .where(eq(Machines.production, fields.production))
+      .limit(1);
+
+    if (existingProduction) {
       return {
         error: `A machine already exists for production ${
           MACHINE_PRODUCTION_LABELS[fields.production as MachineProductionType]
         }`,
       };
     }
+
+    await db.insert(Machines).values({ ...fields, uuid });
+    return { success: true, machineUuid: uuid };
+  } catch {
     return { error: "Failed to create machine" };
   }
 };

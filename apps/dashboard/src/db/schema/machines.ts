@@ -31,14 +31,12 @@ export const Machines = mysqlTable(
     name: varchar("name", { length: 255 }).notNull(),
     option: mysqlEnum("machine_option", machineOptionTypes).notNull(),
     production: mysqlEnum("production", machineProductionTypes).notNull(),
-    loading: mysqlEnum("loading", machineLoadingTypes)
-      .notNull()
-      .default("load"),
+    loading: mysqlEnum("loading", machineLoadingTypes).default("load"),
     stockLocationUuid: char("stock_location_uuid", { length: 36 }).notNull(),
     remarks: text("remarks"),
     minLengthMm: int("min_length_mm"),
     maxLengthMm: int("max_length_mm"),
-    outOfBusiness: boolean("out_of_business").notNull().default(false),
+    outOfBusiness: boolean("out_of_business").default(false),
     outOfBusinessFrom: date("out_of_business_from"),
     outOfBusinessUntil: date("out_of_business_until"),
     averageDailyCapacity: int("average_daily_capacity"),
@@ -49,8 +47,8 @@ export const Machines = mysqlTable(
     warningPercentage: int("warning_percentage"),
     documents:
       json("documents").$type<Array<{ id: string; fileName: string }>>(),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
   },
   (table) => [
     uniqueIndex("uniq_machines_code").on(table.code),
