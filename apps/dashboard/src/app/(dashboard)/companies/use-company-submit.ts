@@ -45,6 +45,7 @@ import {
   CompanyTextInput,
   createCompany,
   CustomerProjectInput,
+  CustomerSalesInput,
   DebtorCompanyOption,
 } from "./actions";
 import {
@@ -259,6 +260,8 @@ export const useCompanySubmit = ({
       },
     },
   });
+
+  const [salesData, setSalesData] = useState<CustomerSalesInput | null>(null);
 
   const additionalForm = useForm<CompanyFormValues>({
     resolver: zodResolver(createCompanySchema()),
@@ -861,6 +864,7 @@ export const useCompanySubmit = ({
           searchCode3: searchCode3 || undefined,
           roles: (roles ?? []) as CompanyRole[],
           documents: documents.length > 0 ? documents : undefined,
+          ...(salesData ?? {}),
           debtorCompanyUuid: debtorCompanyUuid || undefined,
           iban: iban || undefined,
           bic: bic || undefined,
@@ -996,6 +1000,9 @@ export const useCompanySubmit = ({
     removeProject,
 
     toggleRole,
+
+    salesData,
+    setSalesData,
 
     availableContracts,
     projectContracts,

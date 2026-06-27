@@ -1,16 +1,16 @@
 import { InferInsertModel, InferSelectModel } from "drizzle-orm";
 import {
-  boolean,
-  char,
-  index,
-  int,
-  json,
-  mysqlTable,
-  text,
-  timestamp,
-  varchar,
+    boolean,
+    char,
+    index,
+    int,
+    json,
+    mysqlTable,
+    text,
+    timestamp,
+    varchar,
 } from "drizzle-orm/mysql-core";
-import { type TextUsageCategory } from "../../lib/enums";
+import { TextUsageCategory } from "../../lib/enums";
 
 export const TextCategories = mysqlTable(
   "TextCategories",

@@ -43,6 +43,38 @@ export type CompanyContractInput = Omit<
   "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt"
 >;
 
+export type CustomerSalesInput = Pick<
+  InsertCompanies,
+  | "customerGroup"
+  | "representative"
+  | "accountManager"
+  | "region"
+  | "memberOf"
+  | "miscellaneousSettings"
+  | "deliveryCondition"
+  | "devTheorWt"
+  | "defTransport"
+  | "quoteOrderSettings"
+  | "groupLinesByLongProductGroupDescription"
+  | "printProductCodesOnOutgoingDocuments"
+  | "quoteOrderInvoiceSettings"
+  | "orderSettings"
+  | "quoteSettings"
+  | "websiteQuoteMustBeApproved"
+  | "websiteQuoteApprovalAmount"
+  | "releaseActionPrint"
+  | "releaseActionEmailEnabled"
+  | "releaseActionEmailTo"
+  | "releaseActionFaxEnabled"
+  | "releaseActionFaxTo"
+  | "actionPrint"
+  | "actionEmailEnabled"
+  | "actionEmailTo"
+  | "actionFaxEnabled"
+  | "actionFaxTo"
+  | "ediSettings"
+>;
+
 export type CustomerProjectInput = Omit<
   InsertCustomerProjects,
   "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt"

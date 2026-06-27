@@ -2,7 +2,11 @@
 
 import { useState } from "react";
 import { type VisitReportListItem } from "@/app/(dashboard)/visit-reports/actions";
-import { VISIT_REPORT_CONTACT_METHOD_LABELS, VISIT_REPORT_REASON_LABELS } from "@/lib/labels";
+import {
+  VISIT_REPORT_CONTACT_METHOD_LABELS,
+  VISIT_REPORT_REASON_LABELS,
+  COMMON_TEXT,
+} from "@/lib/labels";
 import {
   Table,
   TableBody,
@@ -12,7 +16,6 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
-import { COMMON_TEXT } from "@/lib/labels";
 
 type ColumnKey =
   | "id"

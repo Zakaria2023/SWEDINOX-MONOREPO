@@ -8,6 +8,8 @@ export * from "./customer-projects";
 export * from "./text-categories";
 export * from "./texts";
 export * from "./invoices";
+export * from "./product-groups";
+export * from "./products";
 export * from "./purchase-invoices";
 export * from "./warehouses";
 export * from "./visit-reports";

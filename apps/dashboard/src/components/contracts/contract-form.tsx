@@ -1,8 +1,8 @@
 "use client";
 
-import type { CompanyOption } from "@/app/(dashboard)/companies/actions";
-import type { ContractGroupOption } from "@/app/(dashboard)/contract-groups/actions";
-import type { ContractCompanyEntry } from "@/app/(dashboard)/contracts/actions";
+import { CompanyOption } from "@/app/(dashboard)/companies/actions";
+import { ContractGroupOption } from "@/app/(dashboard)/contract-groups/actions";
+import { ContractCompanyEntry } from "@/app/(dashboard)/contracts/actions";
 import { useContractSubmit } from "@/app/(dashboard)/contracts/use-contract-submit";
 import { Button } from "@/components/shadcn/button";
 import { DatePicker } from "@/components/shadcn/date-picker";
@@ -28,12 +28,12 @@ import { FormActions } from "@/components/ui/form-actions";
 import { FormError } from "@/components/ui/form-error";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import {
+  ContractableRole,
   contractableRoles,
   contractDiscountBasedOnTypes,
   contractSurchargePerTypes,
   contractTierUnits,
   contractTypes,
-  type ContractableRole,
 } from "@/lib/enums";
 import { pluralize } from "@/lib/helpers";
 import {
