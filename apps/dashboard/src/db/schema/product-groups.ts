@@ -52,11 +52,11 @@ export const ProductGroups = mysqlTable(
     materialGroup: varchar("material_group", { length: 100 }),
     commodity: varchar("commodity", { length: 100 }),
 
-    scrap: boolean("scrap").default(false).notNull(),
-    packaging: boolean("packaging").default(false).notNull(),
-    descSalesPurchaseOverridable: boolean("desc_sales_purchase_overridable")
-      .default(false)
-      .notNull(),
+    scrap: boolean("scrap").default(false),
+    packaging: boolean("packaging").default(false),
+    descSalesPurchaseOverridable: boolean(
+      "desc_sales_purchase_overridable",
+    ).default(false),
 
     searchCode1: varchar("search_code_1", { length: 100 }),
     searchCode2: varchar("search_code_2", { length: 100 }),
@@ -70,10 +70,11 @@ export const ProductGroups = mysqlTable(
     thickness: decimal("thickness", { precision: 10, scale: 2 }),
 
     // View features
-    decimalPlaces: mysqlEnum("decimal_places", decimalPlacesOptions)
-      .default("0")
-      .notNull(),
-    printDimensions: boolean("print_dimensions").default(false).notNull(),
+    decimalPlaces: mysqlEnum("decimal_places", decimalPlacesOptions).default(
+      "0",
+    ),
+
+    printDimensions: boolean("print_dimensions").default(false),
 
     // Features
     weight: decimal("weight", { precision: 10, scale: 4 }),
@@ -84,15 +85,13 @@ export const ProductGroups = mysqlTable(
     weightTheoretical: decimal("weight_theoretical", {
       precision: 15,
       scale: 3,
-    })
-      .default("0.000")
-      .notNull(),
-    weightTrade: decimal("weight_trade", { precision: 15, scale: 3 })
-      .default("0.000")
-      .notNull(),
-    weightGerman: decimal("weight_german", { precision: 15, scale: 3 })
-      .default("0.000")
-      .notNull(),
+    }).default("0.000"),
+    weightTrade: decimal("weight_trade", { precision: 15, scale: 3 }).default(
+      "0.000",
+    ),
+    weightGerman: decimal("weight_german", { precision: 15, scale: 3 }).default(
+      "0.000",
+    ),
 
     // Standards
     standardsQuality: mysqlEnum("standards_quality", productQualityStandards),
@@ -115,44 +114,34 @@ export const ProductGroups = mysqlTable(
     // Purchase
     purchasingUnit: mysqlEnum("purchasing_unit", purchasingUnits),
     unitPrice: mysqlEnum("unit_price", purchasingUnits),
-    deliveryTime: int("delivery_time").default(0).notNull(),
+    deliveryTime: int("delivery_time").default(0),
     deliveryTimeUnit: mysqlEnum("delivery_time_unit", deliveryTimeUnits),
-    orderSeries: int("order_series").default(0).notNull(),
-    blockedForPurchasing: boolean("blocked_for_purchasing")
-      .default(false)
-      .notNull(),
-    makingOrderAdvices: boolean("making_order_advices")
-      .default(false)
-      .notNull(),
+    orderSeries: int("order_series").default(0),
+    blockedForPurchasing: boolean("blocked_for_purchasing").default(false),
+    makingOrderAdvices: boolean("making_order_advices").default(false),
     orderingAdviceNotes: varchar("ordering_advice_notes", { length: 500 }),
-    productCodeOnPurchase: boolean("product_code_on_purchase")
-      .default(false)
-      .notNull(),
-    maxLineQty: decimal("max_line_qty", { precision: 15, scale: 2 })
-      .default("0.00")
-      .notNull(),
-    maxNetPrice: decimal("max_net_price", { precision: 15, scale: 2 })
-      .default("0.00")
-      .notNull(),
+    productCodeOnPurchase: boolean("product_code_on_purchase").default(false),
+    maxLineQty: decimal("max_line_qty", { precision: 15, scale: 2 }).default(
+      "0.00",
+    ),
+    maxNetPrice: decimal("max_net_price", { precision: 15, scale: 2 }).default(
+      "0.00",
+    ),
 
     // Warehouse Control - Receipt and Dispatch
-    packagingMandatoryOnCompletion: boolean("packaging_mandatory_on_completion")
-      .default(false)
-      .notNull(),
+    packagingMandatoryOnCompletion: boolean(
+      "packaging_mandatory_on_completion",
+    ).default(false),
     receiptInLocationsWithLimitedDimensions: boolean(
       "receipt_in_locations_with_limited_dimensions",
-    )
-      .default(false)
-      .notNull(),
-    goodsReceiptTerm: int("goods_receipt_term").default(0).notNull(),
-    includeInCsvForStockLabels: boolean("include_in_csv_for_stock_labels")
-      .default(false)
-      .notNull(),
+    ).default(false),
+    goodsReceiptTerm: int("goods_receipt_term").default(0),
+    includeInCsvForStockLabels: boolean(
+      "include_in_csv_for_stock_labels",
+    ).default(false),
     suggestLastUsedChargeInScanner: boolean(
       "suggest_last_used_charge_in_scanner",
-    )
-      .default(false)
-      .notNull(),
+    ).default(false),
     stockLabelType: mysqlEnum("stock_label_type", stockLabelTypes),
     stockLabelPrinting: mysqlEnum(
       "stock_label_printing",
@@ -163,43 +152,31 @@ export const ProductGroups = mysqlTable(
     toleranceUnloadingQty: decimal("tolerance_unloading_qty", {
       precision: 5,
       scale: 2,
-    })
-      .default("0.00")
-      .notNull(),
+    }).default("0.00"),
     toleranceUnloadingKg: decimal("tolerance_unloading_kg", {
       precision: 5,
       scale: 2,
-    })
-      .default("0.00")
-      .notNull(),
+    }).default("0.00"),
     toleranceCountQty: decimal("tolerance_count_qty", {
       precision: 5,
       scale: 2,
-    })
-      .default("0.00")
-      .notNull(),
-    toleranceCountKg: decimal("tolerance_count_kg", { precision: 5, scale: 2 })
-      .default("0.00")
-      .notNull(),
+    }).default("0.00"),
+    toleranceCountKg: decimal("tolerance_count_kg", {
+      precision: 5,
+      scale: 2,
+    }).default("0.00"),
     tolerancePickingQty: decimal("tolerance_picking_qty", {
       precision: 5,
       scale: 2,
-    })
-      .default("0.00")
-      .notNull(),
+    }).default("0.00"),
     tolerancePickingKg: decimal("tolerance_picking_kg", {
       precision: 5,
       scale: 2,
-    })
-      .default("0.00")
-      .notNull(),
+    }).default("0.00"),
     toleranceProductionQty: decimal("tolerance_production_qty", {
       precision: 5,
       scale: 2,
-    })
-      .default("0.00")
-      .notNull(),
-
+    }).default("0.00"),
     // Warehouse Control - Customer Labels
     customerLabelForPickingSlip: mysqlEnum(
       "customer_label_picking_slip",
@@ -217,14 +194,10 @@ export const ProductGroups = mysqlTable(
     // Warehouse Control - Always Approve Manually
     alwaysApproveManuallyWarehouseWorkorderLine: boolean(
       "always_approve_manually_warehouse_wo_line",
-    )
-      .default(false)
-      .notNull(),
+    ).default(false),
     alwaysApproveManuallyProductionWorkorderLine: boolean(
       "always_approve_manually_production_wo_line",
-    )
-      .default(false)
-      .notNull(),
+    ).default(false),
 
     // Sales
     revenueGroup: mysqlEnum("revenue_group", revenueGroups),
@@ -233,203 +206,162 @@ export const ProductGroups = mysqlTable(
     salesUnit: mysqlEnum("sales_unit", salesUnitOptions),
     salesUnitPrice: mysqlEnum("sales_unit_price", purchasingUnits),
     vatCode: mysqlEnum("vat_code", vatCodes),
-    roundWeightPerPieceUp: boolean("round_weight_per_piece_up")
-      .default(false)
-      .notNull(),
-    benorProduct: boolean("benor_product").default(false).notNull(),
+    roundWeightPerPieceUp: boolean("round_weight_per_piece_up").default(false),
+    benorProduct: boolean("benor_product").default(false),
     productCodeOnQuoteOrderInvoice: boolean(
       "product_code_on_quote_order_invoice",
-    )
-      .default(false)
-      .notNull(),
+    ).default(false),
     certificaat: mysqlEnum("certificaat", certificaatOptions),
 
     // Sales - Website
-    websiteExport: boolean("website_export").default(false).notNull(),
-    websiteBlockedForSales: boolean("website_blocked_for_sales")
-      .default(false)
-      .notNull(),
-    descriptionProductShort: boolean("description_product_short")
-      .default(false)
-      .notNull(),
-    showWeightPerPiece: boolean("show_weight_per_piece")
-      .default(false)
-      .notNull(),
-    showPackagingPerPiece: boolean("show_packaging_per_piece")
-      .default(false)
-      .notNull(),
-    markProductGroup: boolean("mark_product_group").default(false).notNull(),
-    priceOnRequest: boolean("price_on_request").default(false).notNull(),
+    websiteExport: boolean("website_export").default(false),
+    websiteBlockedForSales: boolean("website_blocked_for_sales").default(false),
+    descriptionProductShort: boolean("description_product_short").default(
+      false,
+    ),
+    showWeightPerPiece: boolean("show_weight_per_piece").default(false),
+    showPackagingPerPiece: boolean("show_packaging_per_piece").default(false),
+    markProductGroup: boolean("mark_product_group").default(false),
+    priceOnRequest: boolean("price_on_request").default(false),
 
     // Sales - Minimum profit margins (%)
     minProfitMarginStock: decimal("min_profit_margin_stock", {
       precision: 5,
       scale: 2,
-    })
-      .default("0.00")
-      .notNull(),
+    }).default("0.00"),
     minProfitMarginExWorks: decimal("min_profit_margin_ex_works", {
       precision: 5,
       scale: 2,
-    })
-      .default("0.00")
-      .notNull(),
+    }).default("0.00"),
     minProfitMarginCrossDocking: decimal("min_profit_margin_cross_docking", {
       precision: 5,
       scale: 2,
-    })
-      .default("0.00")
-      .notNull(),
-
+    }).default("0.00"),
     // Sales - Several
-    severalBlockedForSales: boolean("several_blocked_for_sales")
-      .default(false)
-      .notNull(),
-    vehicleWithCraneRequired: boolean("vehicle_with_crane_required")
-      .default(false)
-      .notNull(),
-    vehicleWithCanopyRequired: boolean("vehicle_with_canopy_required")
-      .default(false)
-      .notNull(),
-    alwaysReserveStock: boolean("always_reserve_stock")
-      .default(false)
-      .notNull(),
-
+    severalBlockedForSales: boolean("several_blocked_for_sales").default(false),
+    vehicleWithCraneRequired: boolean("vehicle_with_crane_required").default(
+      false,
+    ),
+    vehicleWithCanopyRequired: boolean("vehicle_with_canopy_required").default(
+      false,
+    ),
+    alwaysReserveStock: boolean("always_reserve_stock").default(false),
     // Sales - Order
-    maxSalesLineQty: decimal("max_sales_line_qty", { precision: 15, scale: 3 })
-      .default("0.000")
-      .notNull(),
+    maxSalesLineQty: decimal("max_sales_line_qty", {
+      precision: 15,
+      scale: 3,
+    }).default("0.000"),
     maxSalesNetPrice: decimal("max_sales_net_price", {
       precision: 15,
       scale: 2,
-    })
-      .default("0.00")
-      .notNull(),
-    handlingCosts: decimal("handling_costs", { precision: 15, scale: 2 })
-      .default("0.00")
-      .notNull(),
-
+    }).default("0.00"),
+    handlingCosts: decimal("handling_costs", {
+      precision: 15,
+      scale: 2,
+    }).default("0.00"),
     // Stock Policy - Minimum Stock
-    minStockMode: mysqlEnum("min_stock_mode", stockModes)
-      .default("multiplier")
-      .notNull(),
+    minStockMode: mysqlEnum("min_stock_mode", stockModes).default("multiplier"),
     minStockMultiplier: decimal("min_stock_multiplier", {
       precision: 10,
       scale: 2,
-    })
-      .default("1.00")
-      .notNull(),
+    }).default("1.00"),
     minStockFixedValue: decimal("min_stock_fixed_value", {
       precision: 15,
       scale: 3,
-    })
-      .default("0.000")
-      .notNull(),
+    }).default("0.000"),
     minStockUnit: varchar("min_stock_unit", { length: 50 }),
 
     // Stock Policy - Maximum Stock
-    maxStockMode: mysqlEnum("max_stock_mode", stockModes)
-      .default("multiplier")
-      .notNull(),
+    maxStockMode: mysqlEnum("max_stock_mode", stockModes).default("multiplier"),
     maxStockMultiplier: decimal("max_stock_multiplier", {
       precision: 10,
       scale: 2,
-    })
-      .default("3.00")
-      .notNull(),
+    }).default("3.00"),
     maxStockFixedValue: decimal("max_stock_fixed_value", {
       precision: 15,
       scale: 3,
-    })
-      .default("0.000")
-      .notNull(),
+    }).default("0.000"),
     maxStockUnit: varchar("max_stock_unit", { length: 50 }),
 
     // StockOp Parameters
-    leadTimeMethod: mysqlEnum("lead_time_method", leadTimeMethods)
-      .default("manually")
-      .notNull(),
-    leadTime: int("lead_time").default(0).notNull(),
-    reviewPeriod: int("review_period").default(0).notNull(),
+    leadTimeMethod: mysqlEnum("lead_time_method", leadTimeMethods).default(
+      "manually",
+    ),
+    leadTime: int("lead_time").default(0),
+    reviewPeriod: int("review_period").default(0),
     orderCostsPurchasingSide: decimal("order_costs_purchasing_side", {
       precision: 10,
       scale: 2,
-    })
-      .default("0.00")
-      .notNull(),
+    }).default("0.00"),
     orderCostsLogistics: decimal("order_costs_logistics", {
       precision: 10,
       scale: 2,
-    })
-      .default("0.00")
-      .notNull(),
+    }).default("0.00"),
     stockOpOrderSeries: decimal("stock_op_order_series", {
       precision: 15,
       scale: 3,
-    })
-      .default("0.000")
-      .notNull(),
-    minOrderQty: decimal("min_order_qty", { precision: 15, scale: 3 })
-      .default("0.000")
-      .notNull(),
-
+    }).default("0.000"),
+    minOrderQty: decimal("min_order_qty", { precision: 15, scale: 3 }).default(
+      "0.000",
+    ),
     // StockOn Order Parameters
-    useStockOpForThisProduct: boolean("use_stock_op_for_this_product")
-      .default(false)
-      .notNull(),
-
+    useStockOpForThisProduct: boolean("use_stock_op_for_this_product").default(
+      false,
+    ),
     // StockOn Ordering/Evaluation days
-    orderOnMonday: boolean("order_on_monday").default(true).notNull(),
-    orderOnTuesday: boolean("order_on_tuesday").default(true).notNull(),
-    orderOnWednesday: boolean("order_on_wednesday").default(true).notNull(),
-    orderOnThursday: boolean("order_on_thursday").default(true).notNull(),
-    orderOnFriday: boolean("order_on_friday").default(true).notNull(),
+    orderOnMonday: boolean("order_on_monday").default(true),
+    orderOnTuesday: boolean("order_on_tuesday").default(true),
+    orderOnWednesday: boolean("order_on_wednesday").default(true),
+    orderOnThursday: boolean("order_on_thursday").default(true),
+    orderOnFriday: boolean("order_on_friday").default(true),
 
     // StockOp Simulation Parameters
-    capitalCost: decimal("capital_cost", { precision: 10, scale: 4 })
-      .default("0.0000")
-      .notNull(),
-    warehouseCost: decimal("warehouse_cost", { precision: 10, scale: 4 })
-      .default("0.0000")
-      .notNull(),
-    b2StockoutPct1: decimal("b2_stockout_pct1", { precision: 5, scale: 2 })
-      .default("0.00")
-      .notNull(),
-    b2StockoutPct2: decimal("b2_stockout_pct2", { precision: 5, scale: 2 })
-      .default("0.00")
-      .notNull(),
-    handling: decimal("handling", { precision: 10, scale: 4 })
-      .default("0.0000")
-      .notNull(),
-    transport: decimal("transport", { precision: 10, scale: 4 })
-      .default("0.0000")
-      .notNull(),
-
+    capitalCost: decimal("capital_cost", { precision: 10, scale: 4 }).default(
+      "0.0000",
+    ),
+    warehouseCost: decimal("warehouse_cost", {
+      precision: 10,
+      scale: 4,
+    }).default("0.0000"),
+    b2StockoutPct1: decimal("b2_stockout_pct1", {
+      precision: 5,
+      scale: 2,
+    }).default("0.00"),
+    b2StockoutPct2: decimal("b2_stockout_pct2", {
+      precision: 5,
+      scale: 2,
+    }).default("0.00"),
+    handling: decimal("handling", { precision: 10, scale: 4 }).default(
+      "0.0000",
+    ),
+    transport: decimal("transport", { precision: 10, scale: 4 }).default(
+      "0.0000",
+    ),
     // PAC / Order advice
     pacClassification: varchar("pac_classification", { length: 10 }),
     orderAdviceCode: varchar("order_advice_code", { length: 10 }),
 
     // Supplier
     supplierCompanyUuid: char("supplier_company_uuid", { length: 36 }),
-    supplierPreferred: boolean("supplier_preferred").default(false).notNull(),
+    supplierPreferred: boolean("supplier_preferred").default(false),
     supplierEan: varchar("supplier_ean", { length: 100 }),
     supplierExternalProductCode: varchar("supplier_external_product_code", {
       length: 100,
     }),
     supplierEditing: varchar("supplier_editing", { length: 100 }),
-    supplierDeliveryTime: int("supplier_delivery_time").default(0).notNull(),
+    supplierDeliveryTime: int("supplier_delivery_time").default(0),
     supplierDeliveryTimeUnit: mysqlEnum(
       "supplier_delivery_time_unit",
       deliveryTimeUnits,
     ),
-    supplierMoq: decimal("supplier_moq", { precision: 15, scale: 3 })
-      .default("0.000")
-      .notNull(),
+    supplierMoq: decimal("supplier_moq", { precision: 15, scale: 3 }).default(
+      "0.000",
+    ),
     supplierMoqUnit: mysqlEnum("supplier_moq_unit", purchasingUnits),
-    supplierOrderSeries: int("supplier_order_series").default(0).notNull(),
+    supplierOrderSeries: int("supplier_order_series").default(0),
 
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
   },
   (table) => [
     index("idx_product_groups_parent_uuid").on(table.parentUuid),

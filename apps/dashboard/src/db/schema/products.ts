@@ -25,28 +25,27 @@ export const Products = mysqlTable(
     productGroupUuid: char("product_group_uuid", { length: 36 }),
     name: varchar("name", { length: 255 }).notNull(),
 
-    stockProduct: boolean("stock_product").notNull().default(false),
-    standardProduct: boolean("standard_product").notNull().default(false),
+    stockProduct: boolean("stock_product").default(false),
+    standardProduct: boolean("standard_product").default(false),
 
     length: decimal("length", { precision: 10, scale: 2 }),
     widthDiameter: decimal("width_diameter", { precision: 10, scale: 2 }),
     thickness: decimal("thickness", { precision: 10, scale: 2 }),
 
-    technicalStock: decimal("technical_stock", { precision: 15, scale: 3 })
-      .notNull()
-      .default("0.000"),
+    technicalStock: decimal("technical_stock", {
+      precision: 15,
+      scale: 3,
+    }).default("0.000"),
     stockUnit: mysqlEnum("stock_unit", salesUnitOptions),
 
     theoreticalWeight: decimal("theoretical_weight", {
       precision: 15,
       scale: 4,
-    })
-      .notNull()
-      .default("0.0000"),
+    }).default("0.0000"),
     weightUnit: mysqlEnum("weight_unit", salesUnitOptions),
 
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
   },
   (table) => [
     index("idx_products_product_group_uuid").on(table.productGroupUuid),

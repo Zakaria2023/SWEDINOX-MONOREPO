@@ -43,17 +43,17 @@ import {
   quoteOrderInvoiceOptions,
   quoteOrderOptions,
   salesRepresentatives,
-  type CustomerGroup,
-  type DevTheorWt,
-  type EdiOption,
-  type GroupLinesByDescription,
-  type MiscellaneousOption,
-  type OrderOption,
-  type PrintProductCodes,
-  type QuoteOption,
-  type QuoteOrderInvoiceOption,
-  type QuoteOrderOption,
-  type SalesRepresentative,
+  CustomerGroup,
+  DevTheorWt,
+  EdiOption,
+  GroupLinesByDescription,
+  MiscellaneousOption,
+  OrderOption,
+  PrintProductCodes,
+  QuoteOption,
+  QuoteOrderInvoiceOption,
+  QuoteOrderOption,
+  SalesRepresentative,
 } from "@/lib/enums";
 import { cn } from "@/lib/helpers";
 import {
@@ -184,7 +184,7 @@ export const CompanyForm = ({
   });
 
   const { user } = useUser();
-  const currentUserName = [user?.firstName, user?.lastName].filter(Boolean).join(" ") || user?.username || "";
+  const currentUserName = user?.firstName && user?.lastName;
   const {
     form,
     isPending,
@@ -595,7 +595,6 @@ export const CompanyForm = ({
           </section>
         )}
 
-
         {isCustomerOrProspect && (
           <section className="space-y-4">
             <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
@@ -926,7 +925,9 @@ export const CompanyForm = ({
                   }
                   disabled={isPending}
                 />
-                {form.watch("isBlocked") ? `Blocked by ${currentUserName}` : "Blocked by"}
+                {form.watch("isBlocked")
+                  ? `Blocked by ${currentUserName}`
+                  : "Blocked by"}
               </label>
             </div>
 
@@ -2314,7 +2315,9 @@ export const CompanyForm = ({
                         className="size-4 shrink-0 rounded border-border accent-primary"
                         {...salesForm.register("releaseActionEmailEnabled")}
                       />
-                      <span className="shrink-0 whitespace-nowrap text-sm">E-mail to:</span>
+                      <span className="shrink-0 whitespace-nowrap text-sm">
+                        E-mail to:
+                      </span>
                       <Input
                         placeholder="Contact person"
                         {...salesForm.register("releaseActionEmailTo")}
@@ -2327,7 +2330,9 @@ export const CompanyForm = ({
                         className="size-4 shrink-0 rounded border-border accent-primary"
                         {...salesForm.register("releaseActionFaxEnabled")}
                       />
-                      <span className="shrink-0 whitespace-nowrap text-sm">Fax to:</span>
+                      <span className="shrink-0 whitespace-nowrap text-sm">
+                        Fax to:
+                      </span>
                       <Input
                         placeholder="Contact person"
                         {...salesForm.register("releaseActionFaxTo")}
@@ -2355,7 +2360,9 @@ export const CompanyForm = ({
                         className="size-4 shrink-0 rounded border-border accent-primary"
                         {...salesForm.register("actionEmailEnabled")}
                       />
-                      <span className="shrink-0 whitespace-nowrap text-sm">E-mail to:</span>
+                      <span className="shrink-0 whitespace-nowrap text-sm">
+                        E-mail to:
+                      </span>
                       <Input
                         placeholder="Contact person"
                         {...salesForm.register("actionEmailTo")}
@@ -2368,7 +2375,9 @@ export const CompanyForm = ({
                         className="size-4 shrink-0 rounded border-border accent-primary"
                         {...salesForm.register("actionFaxEnabled")}
                       />
-                      <span className="shrink-0 whitespace-nowrap text-sm">Fax to:</span>
+                      <span className="shrink-0 whitespace-nowrap text-sm">
+                        Fax to:
+                      </span>
                       <Input
                         placeholder="Contact person"
                         {...salesForm.register("actionFaxTo")}

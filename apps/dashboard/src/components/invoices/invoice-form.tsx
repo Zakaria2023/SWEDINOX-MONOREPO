@@ -83,9 +83,6 @@ export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
   };
   const { register, watch, control } = form;
 
-  const calculateVat = watch("calculateVat");
-  const vatScenario = watch("vatScenario");
-  const paymentTerms = watch("paymentTerms");
   useEffect(() => {
     if (state.success) {
       router.push("/invoices");

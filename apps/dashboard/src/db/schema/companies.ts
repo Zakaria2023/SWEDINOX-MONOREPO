@@ -23,13 +23,13 @@ import {
   invoicePaymentTerms,
   printProductCodesOptions,
   salesRepresentatives,
-  type CompanyRole,
-  type EdiOption,
-  type MiscellaneousOption,
-  type OrderOption,
-  type QuoteOption,
-  type QuoteOrderInvoiceOption,
-  type QuoteOrderOption,
+  CompanyRole,
+  EdiOption,
+  MiscellaneousOption,
+  OrderOption,
+  QuoteOption,
+  QuoteOrderInvoiceOption,
+  QuoteOrderOption,
 } from "../../lib/enums";
 
 export const Companies = mysqlTable(
@@ -45,7 +45,8 @@ export const Companies = mysqlTable(
     searchCode2: varchar("search_code_2", { length: 100 }),
     searchCode3: varchar("search_code_3", { length: 100 }),
     roles: json("roles").$type<CompanyRole[]>().default([]).notNull(),
-    documents: json("documents").$type<Array<{ id: string; fileName: string }>>(),
+    documents:
+      json("documents").$type<Array<{ id: string; fileName: string }>>(),
 
     // Sales settings
     customerGroup: mysqlEnum("customer_group", customerGroups),
@@ -76,21 +77,43 @@ export const Companies = mysqlTable(
       .$type<QuoteOrderInvoiceOption[]>()
       .default([])
       .notNull(),
-    orderSettings: json("order_settings").$type<OrderOption[]>().default([]).notNull(),
-    quoteSettings: json("quote_settings").$type<QuoteOption[]>().default([]).notNull(),
-    websiteQuoteMustBeApproved: boolean("website_quote_must_be_approved").default(false).notNull(),
-    websiteQuoteApprovalAmount: decimal("website_quote_approval_amount", { precision: 15, scale: 2 }),
-    releaseActionPrint: boolean("release_action_print").default(false).notNull(),
-    releaseActionEmailEnabled: boolean("release_action_email_enabled").default(false).notNull(),
+    orderSettings: json("order_settings")
+      .$type<OrderOption[]>()
+      .default([])
+      .notNull(),
+    quoteSettings: json("quote_settings")
+      .$type<QuoteOption[]>()
+      .default([])
+      .notNull(),
+    websiteQuoteMustBeApproved: boolean("website_quote_must_be_approved")
+      .default(false)
+      .notNull(),
+    websiteQuoteApprovalAmount: decimal("website_quote_approval_amount", {
+      precision: 15,
+      scale: 2,
+    }),
+    releaseActionPrint: boolean("release_action_print")
+      .default(false)
+      .notNull(),
+    releaseActionEmailEnabled: boolean("release_action_email_enabled")
+      .default(false)
+      .notNull(),
     releaseActionEmailTo: varchar("release_action_email_to", { length: 255 }),
-    releaseActionFaxEnabled: boolean("release_action_fax_enabled").default(false).notNull(),
+    releaseActionFaxEnabled: boolean("release_action_fax_enabled")
+      .default(false)
+      .notNull(),
     releaseActionFaxTo: varchar("release_action_fax_to", { length: 255 }),
     actionPrint: boolean("action_print").default(false).notNull(),
-    actionEmailEnabled: boolean("action_email_enabled").default(false).notNull(),
+    actionEmailEnabled: boolean("action_email_enabled")
+      .default(false)
+      .notNull(),
     actionEmailTo: varchar("action_email_to", { length: 255 }),
     actionFaxEnabled: boolean("action_fax_enabled").default(false).notNull(),
     actionFaxTo: varchar("action_fax_to", { length: 255 }),
-    ediSettings: json("edi_settings").$type<EdiOption[]>().default([]).notNull(),
+    ediSettings: json("edi_settings")
+      .$type<EdiOption[]>()
+      .default([])
+      .notNull(),
 
     // Debtor fields
     debtorCompanyUuid: char("debtor_company_uuid", { length: 36 }),
@@ -99,17 +122,30 @@ export const Companies = mysqlTable(
     bankAccount: varchar("bank_account", { length: 50 }),
     postbankAccount: varchar("postbank_account", { length: 50 }),
     purchaseOrgCompanyUuid: char("purchase_org_company_uuid", { length: 36 }),
-    memberNumberPurchaseOrg: varchar("member_number_purchase_org", { length: 100 }),
+    memberNumberPurchaseOrg: varchar("member_number_purchase_org", {
+      length: 100,
+    }),
     calculateVat: boolean("calculate_vat").notNull().default(true),
     reminder: boolean("reminder").notNull().default(true),
-    collectInvoicesInMandate: boolean("collect_invoices_in_mandate").notNull().default(false),
+    collectInvoicesInMandate: boolean("collect_invoices_in_mandate")
+      .notNull()
+      .default(false),
     insuranceValidUntil: date("insurance_valid_until"),
-    creditLimitInsurance: decimal("credit_limit_insurance", { precision: 15, scale: 2 }),
+    creditLimitInsurance: decimal("credit_limit_insurance", {
+      precision: 15,
+      scale: 2,
+    }),
     creditLimit: decimal("credit_limit", { precision: 15, scale: 2 }),
-    creditLimitUninsured: decimal("credit_limit_uninsured", { precision: 15, scale: 2 }),
+    creditLimitUninsured: decimal("credit_limit_uninsured", {
+      precision: 15,
+      scale: 2,
+    }),
     creditLimitUninsuredDate: date("credit_limit_uninsured_date"),
     paymentTerms: mysqlEnum("payment_terms", invoicePaymentTerms),
-    differentPaymentTermsExWorks: mysqlEnum("different_payment_terms_ex_works", invoicePaymentTerms),
+    differentPaymentTermsExWorks: mysqlEnum(
+      "different_payment_terms_ex_works",
+      invoicePaymentTerms,
+    ),
     journalCode: int("journal_code"),
     vatNumber: varchar("vat_number", { length: 50 }),
     cocNumber: varchar("coc_number", { length: 50 }),
@@ -122,7 +158,9 @@ export const Companies = mysqlTable(
   },
   (table) => [
     index("idx_companies_debtor_company_uuid").on(table.debtorCompanyUuid),
-    index("idx_companies_purchase_org_company_uuid").on(table.purchaseOrgCompanyUuid),
+    index("idx_companies_purchase_org_company_uuid").on(
+      table.purchaseOrgCompanyUuid,
+    ),
     foreignKey({
       name: "fk_companies_debtor_company",
       columns: [table.debtorCompanyUuid],
