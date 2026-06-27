@@ -1,11 +1,12 @@
-import { Suspense } from "react";
 import Link from "next/link";
 import { Plus } from "lucide-react";
-import { VisitReportsTable } from "@/components/visit-reports/visit-reports-table";
+import { getVisitReports } from "@/app/(dashboard)/visit-reports/actions";
+import { VisitReportsTable } from "@/components/visit-reports/visit-reports-table-content";
 import { PageHeading } from "@/components/layout/page-heading";
-import { DataTableFallback } from "@/components/ui/data-table-fallback";
 
-const VisitReportsPage = () => {
+const VisitReportsPage = async () => {
+  const visitReports = await getVisitReports();
+
   return (
     <div className="space-y-6 p-6">
       <div className="flex items-start justify-between">
@@ -21,9 +22,7 @@ const VisitReportsPage = () => {
           New Visit Report
         </Link>
       </div>
-      <Suspense fallback={<DataTableFallback columnCount={7} />}>
-        <VisitReportsTable />
-      </Suspense>
+      <VisitReportsTable visitReports={visitReports} />
     </div>
   );
 };

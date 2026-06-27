@@ -1,14 +1,11 @@
 "use client";
 
+import { VisitReportReason } from "@/lib/enums";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
-import { type VisitReportReason } from "@/lib/enums";
-import { createVisitReport, type VisitReportActionResult } from "./actions";
-import {
-  createVisitReportSchema,
-  type VisitReportFormValues,
-} from "./validation";
+import { createVisitReport, VisitReportActionResult } from "./actions";
+import { createVisitReportSchema, VisitReportFormValues } from "./validation";
 
 export const useVisitReportSubmit = () => {
   const [isPending, startTransition] = useTransition();

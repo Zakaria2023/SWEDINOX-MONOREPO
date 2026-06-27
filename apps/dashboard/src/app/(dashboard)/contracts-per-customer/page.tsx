@@ -1,18 +1,19 @@
-import { Suspense } from "react";
-import { ContractsPerCustomerTable } from "@/components/contracts-per-customer/contracts-per-customer-table";
+import { getContractsPerCustomer } from "@/app/(dashboard)/contracts/actions";
+import { ContractsPerCustomerTable } from "@/components/contracts-per-customer/contracts-per-customer-table-content";
 import { PageHeading } from "@/components/layout/page-heading";
-import { DataTableFallback } from "@/components/ui/data-table-fallback";
 
-const ContractsPerCustomerPage = () => (
-  <div className="space-y-6 p-6">
-    <PageHeading
-      title="Contracts per Customer / Prospect"
-      description="Overview of all contracts linked to customers and prospects"
-    />
-    <Suspense fallback={<DataTableFallback columnCount={14} />}>
-      <ContractsPerCustomerTable />
-    </Suspense>
-  </div>
-);
+const ContractsPerCustomerPage = async () => {
+  const rows = await getContractsPerCustomer();
+
+  return (
+    <div className="space-y-6 p-6">
+      <PageHeading
+        title="Contracts per Customer / Prospect"
+        description="Overview of all contracts linked to customers and prospects"
+      />
+      <ContractsPerCustomerTable rows={rows} />
+    </div>
+  );
+};
 
 export default ContractsPerCustomerPage;

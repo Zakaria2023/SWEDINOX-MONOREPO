@@ -76,12 +76,15 @@ export const useWarehouseSubmit = ({
     })),
   ];
 
+  const [adaptFromValue, setAdaptFromValue] = useState("");
+
   const adaptFromOptions = [
     { value: "", label: COMMON_TEXT.emptyOption },
     ...existingWarehouses.map((w) => ({ value: w.uuid, label: w.name })),
   ];
 
   const handleAdaptFrom = (uuid: string) => {
+    setAdaptFromValue(uuid);
     const currentName = form.getValues("name");
     if (!uuid) {
       form.reset({ ...DEFAULT_WAREHOUSE, name: currentName });
@@ -107,6 +110,7 @@ export const useWarehouseSubmit = ({
         transportRegion: WarehouseTransportRegion;
         loadLocation: WarehouseLoadingLocation;
       }>,
+      documents: [],
     });
   };
 
@@ -157,7 +161,7 @@ export const useWarehouseSubmit = ({
           values.productTypes.length > 0 ? values.productTypes : undefined,
         loadLocations:
           values.loadLocations.length > 0 ? values.loadLocations : undefined,
-        documents: values.documents.length > 0 ? values.documents : undefined,
+        documents: (values.documents ?? []).length > 0 ? values.documents : undefined,
       });
       setState(result);
       if (result.success) router.push("/warehouses");
@@ -177,6 +181,7 @@ export const useWarehouseSubmit = ({
     blockReasonOptions,
     addressOptions,
     adaptFromOptions,
+    adaptFromValue,
     handleAdaptFrom,
     handleCancel,
   };
