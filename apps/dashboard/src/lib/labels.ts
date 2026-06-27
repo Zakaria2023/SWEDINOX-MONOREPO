@@ -159,13 +159,19 @@ export const CONTRACT_TIER_UNIT_LABELS: Record<ContractTierUnit, string> = {
   Euro: "Euro (Amount)",
 };
 
-export const CONTRACT_SURCHARGE_PER_TYPE_LABELS: Record<ContractSurchargePerType, string> = {
+export const CONTRACT_SURCHARGE_PER_TYPE_LABELS: Record<
+  ContractSurchargePerType,
+  string
+> = {
   order_line: "Order Line",
   group_product: "Group Product",
   product_group: "Product Group",
 };
 
-export const CONTRACT_DISCOUNT_BASED_ON_LABELS: Record<ContractDiscountBasedOnType, string> = {
+export const CONTRACT_DISCOUNT_BASED_ON_LABELS: Record<
+  ContractDiscountBasedOnType,
+  string
+> = {
   group_product: "Group Product",
   product_group: "Product Group",
 };
@@ -182,14 +188,15 @@ export const COMMUNICATION_SETTING_SHAPE_LABELS: Record<
   peppol: "Peppol",
 };
 
-export const SALES_REPRESENTATIVE_LABELS: Record<SalesRepresentative, string> = {
-  arian_bloks: "Arian Bloks",
-  bnl: "BNL",
-  cherice_van_rooyen: "Cherice van Rooyen",
-  export: "Export",
-  guy_mambourg: "Guy Mambourg",
-  hego: "Hego",
-};
+export const SALES_REPRESENTATIVE_LABELS: Record<SalesRepresentative, string> =
+  {
+    arian_bloks: "Arian Bloks",
+    bnl: "BNL",
+    cherice_van_rooyen: "Cherice van Rooyen",
+    export: "Export",
+    guy_mambourg: "Guy Mambourg",
+    hego: "Hego",
+  };
 
 export const DEV_THEOR_WT_LABELS: Record<DevTheorWt, string> = {
   theoretical_weight: "Theoretical weight",
@@ -198,7 +205,10 @@ export const DEV_THEOR_WT_LABELS: Record<DevTheorWt, string> = {
   weighed: "Weighed",
 };
 
-export const GROUP_LINES_BY_DESCRIPTION_LABELS: Record<GroupLinesByDescription, string> = {
+export const GROUP_LINES_BY_DESCRIPTION_LABELS: Record<
+  GroupLinesByDescription,
+  string
+> = {
   order_of_order_lines: "Print in order of order lines, without titles",
   alphabetical_order: "Group by description, alphabetical order",
   lowest_order_line: "Group by description, order of lowest order line",
@@ -211,15 +221,16 @@ export const PRINT_PRODUCT_CODES_LABELS: Record<PrintProductCodes, string> = {
   print_company: "Print company product code",
 };
 
-export const MISCELLANEOUS_OPTION_LABELS: Record<MiscellaneousOption, string> = {
-  occasional_customer: "Occasional customer",
-  customer_has_login_code: "Customer has login code for website",
-  bill_of_ladings_per_order: "Bill of ladings per order",
-  vrachtbrieven_afdrukken: "Vrachtbrieven afdrukken",
-  consignment_customer: "Consignment customer",
-  neutral_labels: "Neutral labels",
-  label_per_sawed_piece: "Label per sawed piece",
-};
+export const MISCELLANEOUS_OPTION_LABELS: Record<MiscellaneousOption, string> =
+  {
+    occasional_customer: "Occasional customer",
+    customer_has_login_code: "Customer has login code for website",
+    bill_of_ladings_per_order: "Bill of ladings per order",
+    vrachtbrieven_afdrukken: "Vrachtbrieven afdrukken",
+    consignment_customer: "Consignment customer",
+    neutral_labels: "Neutral labels",
+    label_per_sawed_piece: "Label per sawed piece",
+  };
 
 export const QUOTE_ORDER_OPTION_LABELS: Record<QuoteOrderOption, string> = {
   reference_required: "Reference required",
@@ -230,11 +241,15 @@ export const QUOTE_ORDER_OPTION_LABELS: Record<QuoteOrderOption, string> = {
   default_pickup: "Default pickup",
 };
 
-export const QUOTE_ORDER_INVOICE_OPTION_LABELS: Record<QuoteOrderInvoiceOption, string> = {
+export const QUOTE_ORDER_INVOICE_OPTION_LABELS: Record<
+  QuoteOrderInvoiceOption,
+  string
+> = {
   do_not_print_prices: "Do not print prices",
   total_amount_per_line: "Total amount per line",
   condensing_options: "Condensing options",
-  include_option_prices_in_material_prices: "Include option prices in material prices",
+  include_option_prices_in_material_prices:
+    "Include option prices in material prices",
 };
 
 export const ORDER_OPTION_LABELS: Record<OrderOption, string> = {
@@ -242,7 +257,8 @@ export const ORDER_OPTION_LABELS: Record<OrderOption, string> = {
   scrap_surcharge_separately: "Scrap surcharge separately",
   no_commercial_blocking: "No commercial blocking",
   no_financial_blockage: "No financial blockage",
-  call_off_quantities_on_call_off_confirmation: "Call-off quantities on call-off confirmation",
+  call_off_quantities_on_call_off_confirmation:
+    "Call-off quantities on call-off confirmation",
   backorders_on_order_confirmation: "Backorders on the order confirmation",
 };
 
@@ -259,7 +275,10 @@ export const EDI_OPTION_LABELS: Record<EdiOption, string> = {
   send_pdf: "Send PDF",
 };
 
-export const VISIT_REPORT_CONTACT_METHOD_LABELS: Record<VisitReportContactMethod, string> = {
+export const VISIT_REPORT_CONTACT_METHOD_LABELS: Record<
+  VisitReportContactMethod,
+  string
+> = {
   visit: "Visit",
   telephone_contact: "Telephone Contact",
 };
@@ -399,50 +418,53 @@ export const MACHINE_OPTION_LABELS: Record<MachineOptionType, string> = {
   zagen: "Zagen",
 };
 
-export const MACHINE_PRODUCTION_LABELS: Record<MachineProductionType, string> = {
-  decoiler: "Decoiler",
-  interne_wzh: "Interne wzh",
-  knip: "Knip",
-  laser_1: "Laser 1",
-  laser_2: "Laser 2",
-  slijpen_folien: "Slijpen/Folien",
-};
+export const MACHINE_PRODUCTION_LABELS: Record<MachineProductionType, string> =
+  {
+    decoiler: "Decoiler",
+    interne_wzh: "Interne wzh",
+    knip: "Knip",
+    laser_1: "Laser 1",
+    laser_2: "Laser 2",
+    slijpen_folien: "Slijpen/Folien",
+  };
 
 export const MACHINE_LOADING_LABELS: Record<MachineLoadingType, string> = {
   load: "Load",
 };
 
-export const MACHINE_CAPACITY_UNIT_CODES: Record<MachineCapacityUnit, string> = {
-  percent: "%",
-  amount: "Amount",
-  hk: "HK",
-  hm: "HM",
-  hs: "HS",
-  kg: "KG",
-  m1: "M1",
-  m2: "M2",
-  m3: "M3",
-  mm: "MM",
-  regel: "Regel",
-  st: "ST",
-  tn: "TN",
-};
+export const MACHINE_CAPACITY_UNIT_CODES: Record<MachineCapacityUnit, string> =
+  {
+    percent: "%",
+    amount: "Amount",
+    hk: "HK",
+    hm: "HM",
+    hs: "HS",
+    kg: "KG",
+    m1: "M1",
+    m2: "M2",
+    m3: "M3",
+    mm: "MM",
+    regel: "Regel",
+    st: "ST",
+    tn: "TN",
+  };
 
-export const MACHINE_CAPACITY_UNIT_LABELS: Record<MachineCapacityUnit, string> = {
-  percent: "Percent",
-  amount: "Amount",
-  hk: "One hundred kilograms",
-  hm: "One hundred meters",
-  hs: "One hundred pieces",
-  kg: "Kilogram",
-  m1: "Meter",
-  m2: "Square meters",
-  m3: "Cubic meters",
-  mm: "Millimeter",
-  regel: "Line",
-  st: "Pieces",
-  tn: "Tonnage",
-};
+export const MACHINE_CAPACITY_UNIT_LABELS: Record<MachineCapacityUnit, string> =
+  {
+    percent: "Percent",
+    amount: "Amount",
+    hk: "One hundred kilograms",
+    hm: "One hundred meters",
+    hs: "One hundred pieces",
+    kg: "Kilogram",
+    m1: "Meter",
+    m2: "Square meters",
+    m3: "Cubic meters",
+    mm: "Millimeter",
+    regel: "Line",
+    st: "Pieces",
+    tn: "Tonnage",
+  };
 
 export const TEXT_USAGE_CATEGORY_LABELS: Record<TextUsageCategory, string> = {
   purchase_quote_request: "Purchase Quote Request",
@@ -465,7 +487,10 @@ export const TEXT_USAGE_CATEGORY_LABELS: Record<TextUsageCategory, string> = {
   website_after: "Website After",
 };
 
-export const INVOICE_SURCHARGE_DESCRIPTION_LABELS: Record<InvoiceSurchargeDescription, string> = {
+export const INVOICE_SURCHARGE_DESCRIPTION_LABELS: Record<
+  InvoiceSurchargeDescription,
+  string
+> = {
   project_discount: "Project discount",
   certificate_costs: "Certificate costs",
   order_surcharge: "Order surcharge",
@@ -486,11 +511,14 @@ export const INVOICE_SURCHARGE_DESCRIPTION_LABELS: Record<InvoiceSurchargeDescri
 export const INVOICE_VAT_SCENARIO_LABELS: Record<InvoiceVatScenario, string> = {
   purchase_domestically: "Purchase domestically",
   domestic_purchase_vat_shifted: "Domestic purchase VAT shifted",
-  purchase_within_eu_with_reverse_charge: "Purchase within EU with reverse charge",
-  purchase_outside_eu_with_reverse_charge: "Purchase outside the EU with reverse charge",
+  purchase_within_eu_with_reverse_charge:
+    "Purchase within EU with reverse charge",
+  purchase_outside_eu_with_reverse_charge:
+    "Purchase outside the EU with reverse charge",
   domestic_sales: "Domestic sales",
   sales_within_eu_with_reverse_charge: "Sales within EU with reverse charge",
-  sales_outside_eu_with_reverse_charge: "Sales outside the EU with a reverse charge",
+  sales_outside_eu_with_reverse_charge:
+    "Sales outside the EU with a reverse charge",
 };
 
 export const INVOICE_PAYMENT_TERM_LABELS: Record<InvoicePaymentTerm, string> = {
@@ -526,14 +554,22 @@ export const INVOICE_PAYMENT_TERM_LABELS: Record<InvoicePaymentTerm, string> = {
   within_14_days_minus3pct_30_days_net: "Within 14 days -3.0%, 30 days net",
   within_10_days_minus3pct_30_days_net: "Within 10 days -3.0%. 30 days Net",
   lc_120_days: "L/C 120 days",
-  "20pct_prepayment_rest_before_shipping": "20% Prepayment, Rest Before Shipping",
-  "25pct_prepayment_rest_before_shipping": "25% Prepayment, Rest Before Shipping",
-  "20pct_advance_payment_remainder_copy_bl": "20% advance payment, remainder copy BL",
-  "30pct_advance_payment_remainder_copy_bl": "30% advance payment, remainder copy BL",
-  "5pct_prepayment_balance_30_days_copy_bl": "5% Prepayment, balance 30 days copy BL",
-  "50pct_in_advance_remainder_14_days_after_arrival_at_port": "50% in advance, remainder 14 days after arrival at port",
-  "5pct_prepayment_balance_60_days_copy_bl": "5% Prepayment, balance 60 days copy BL",
-  "50pct_prepayment_remaining_15_days_after_shipment": "50% Prepayment, Remaining 15 days after shipment",
+  "20pct_prepayment_rest_before_shipping":
+    "20% Prepayment, Rest Before Shipping",
+  "25pct_prepayment_rest_before_shipping":
+    "25% Prepayment, Rest Before Shipping",
+  "20pct_advance_payment_remainder_copy_bl":
+    "20% advance payment, remainder copy BL",
+  "30pct_advance_payment_remainder_copy_bl":
+    "30% advance payment, remainder copy BL",
+  "5pct_prepayment_balance_30_days_copy_bl":
+    "5% Prepayment, balance 30 days copy BL",
+  "50pct_in_advance_remainder_14_days_after_arrival_at_port":
+    "50% in advance, remainder 14 days after arrival at port",
+  "5pct_prepayment_balance_60_days_copy_bl":
+    "5% Prepayment, balance 60 days copy BL",
+  "50pct_prepayment_remaining_15_days_after_shipment":
+    "50% Prepayment, Remaining 15 days after shipment",
   prepayment_minus2pct_discount: "Prepayment -2% Discount",
   lc_180_days: "L/C 180 days",
   lc_90_days: "L/C 90 days",
@@ -668,7 +704,10 @@ export const CUSTOMER_GROUP_LABELS: Record<CustomerGroup, string> = {
   care_homes: "Care Homes",
 };
 
-export const PURCHASE_INVOICE_BLOCK_REASON_LABELS: Record<PurchaseInvoiceBlockReason, string> = {
+export const PURCHASE_INVOICE_BLOCK_REASON_LABELS: Record<
+  PurchaseInvoiceBlockReason,
+  string
+> = {
   price_mismatch: "Price Mismatch",
   awaiting_goods_receipt: "Awaiting Goods Receipt",
   awaiting_approval: "Awaiting Approval",
@@ -677,7 +716,10 @@ export const PURCHASE_INVOICE_BLOCK_REASON_LABELS: Record<PurchaseInvoiceBlockRe
   other: "Other",
 };
 
-export const PURCHASE_INVOICE_FISCAL_BASE_LABELS: Record<PurchaseInvoiceFiscalBase, string> = {
+export const PURCHASE_INVOICE_FISCAL_BASE_LABELS: Record<
+  PurchaseInvoiceFiscalBase,
+  string
+> = {
   booking_date: "Booking Date",
   document_date: "Document Date",
 };

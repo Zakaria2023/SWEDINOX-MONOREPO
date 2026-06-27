@@ -903,7 +903,10 @@ export const orderWeightTypes = [
 
 export type OrderWeightType = (typeof orderWeightTypes)[number];
 
-export const deliveryTypes = ["date", "week"] as const satisfies readonly string[];
+export const deliveryTypes = [
+  "date",
+  "week",
+] as const satisfies readonly string[];
 
 export type DeliveryType = (typeof deliveryTypes)[number];
 
