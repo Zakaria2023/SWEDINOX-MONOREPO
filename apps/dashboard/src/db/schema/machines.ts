@@ -47,8 +47,8 @@ export const Machines = mysqlTable(
     warningPercentage: int("warning_percentage"),
     documents:
       json("documents").$type<Array<{ id: string; fileName: string }>>(),
-    createdAt: timestamp("created_at").defaultNow(),
-    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
   },
   (table) => [
     uniqueIndex("uniq_machines_code").on(table.code),

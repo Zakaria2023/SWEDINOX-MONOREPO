@@ -17,6 +17,8 @@ export const Texts = mysqlTable(
     uuid: char("uuid", { length: 36 }).notNull().unique(),
 
     companyUuid: char("company_uuid", { length: 36 }),
+    orderUuid: char("order_uuid", { length: 36 }),
+    purchaseOrderUuid: char("purchase_order_uuid", { length: 36 }),
     productGroupUuid: char("product_group_uuid", { length: 36 }),
     textCategoryUuid: char("text_category_uuid", { length: 36 }),
 
@@ -46,11 +48,13 @@ export const Texts = mysqlTable(
     websiteInAdvance: boolean("website_in_advance").default(false),
     websiteAfter: boolean("website_after").default(false),
 
-    createdAt: timestamp("created_at").defaultNow(),
-    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
   },
   (table) => [
     index("idx_texts_company_uuid").on(table.companyUuid),
+    index("idx_texts_order_uuid").on(table.orderUuid),
+    index("idx_texts_purchase_order_uuid").on(table.purchaseOrderUuid),
     index("idx_texts_product_group_uuid").on(table.productGroupUuid),
     index("idx_texts_text_category_uuid").on(table.textCategoryUuid),
   ],

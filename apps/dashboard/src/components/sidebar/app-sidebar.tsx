@@ -41,7 +41,8 @@ export const AppSidebar = () => {
   const isCustomersActive =
     pathname.startsWith("/addresses") ||
     pathname.startsWith("/contracts-per-customer") ||
-    pathname.startsWith("/contact-persons-customers-and-prospects");
+    pathname.startsWith("/contact-persons-customers-and-prospects") ||
+    pathname.startsWith("/orders");
   const isCompanyActive =
     pathname.startsWith("/companies") ||
     pathname.startsWith("/communication-settings") ||
@@ -57,7 +58,9 @@ export const AppSidebar = () => {
   const isSupplierActive =
     pathname.startsWith("/contracts-per-supplier") ||
     pathname.startsWith("/contact-persons-suppliers");
-  const isPurchasesActive = pathname.startsWith("/purchase-invoices");
+  const isPurchasesActive =
+    pathname.startsWith("/purchase-orders") ||
+    pathname.startsWith("/purchase-invoices");
   const isWarehouseActive =
     pathname.startsWith("/warehouses") ||
     pathname.startsWith("/warehouse-sub-sections");
@@ -104,6 +107,14 @@ export const AppSidebar = () => {
                 </SidebarMenuButton>
                 {isCustomersExpanded && (
                   <SidebarMenuSub>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/orders" />}
+                        isActive={pathname.startsWith("/orders")}
+                      >
+                        <span>Orders</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
                     <SidebarMenuSubItem>
                       <SidebarMenuSubButton
                         render={<Link href="/addresses" />}
@@ -291,6 +302,14 @@ export const AppSidebar = () => {
                 </SidebarMenuButton>
                 {isPurchasesExpanded && (
                   <SidebarMenuSub>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/purchase-orders" />}
+                        isActive={pathname.startsWith("/purchase-orders")}
+                      >
+                        <span>Purchase Orders</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
                     <SidebarMenuSubItem>
                       <SidebarMenuSubButton
                         render={<Link href="/purchase-invoices" />}
