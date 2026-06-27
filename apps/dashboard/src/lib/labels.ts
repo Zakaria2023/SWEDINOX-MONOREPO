@@ -4,15 +4,36 @@ import type {
   CommunicationSettingDocumentType,
   CommunicationSettingShape,
   CommunicationSettingType,
+  MachineCapacityUnit,
+  MachineLoadingType,
+  MachineOptionType,
+  MachineProductionType,
   CompanyLang,
   CompanyRole,
   ContactCategory,
   ContactSalutation,
   ContractableRole,
+  ContractDiscountBasedOnType,
+  ContractSurchargePerType,
+  ContractTierUnit,
   ContractType,
+  Currency,
+  CustomerGroup,
+  DevTheorWt,
+  EdiOption,
+  GroupLinesByDescription,
+  MiscellaneousOption,
+  OrderOption,
+  PrintProductCodes,
+  QuoteOption,
+  QuoteOrderInvoiceOption,
+  QuoteOrderOption,
+  SalesRepresentative,
   InvoicePaymentTerm,
   InvoiceSurchargeDescription,
   InvoiceVatScenario,
+  PurchaseInvoiceBlockReason,
+  PurchaseInvoiceFiscalBase,
   TextUsageCategory,
   VisitReportContactMethod,
   VisitReportReason,
@@ -133,6 +154,22 @@ export const COMMUNICATION_SETTING_TYPE_LABELS: Record<
   edi_https: "EDI HTTPS",
 };
 
+export const CONTRACT_TIER_UNIT_LABELS: Record<ContractTierUnit, string> = {
+  TN: "TN (Tonnage)",
+  Euro: "Euro (Amount)",
+};
+
+export const CONTRACT_SURCHARGE_PER_TYPE_LABELS: Record<ContractSurchargePerType, string> = {
+  order_line: "Order Line",
+  group_product: "Group Product",
+  product_group: "Product Group",
+};
+
+export const CONTRACT_DISCOUNT_BASED_ON_LABELS: Record<ContractDiscountBasedOnType, string> = {
+  group_product: "Group Product",
+  product_group: "Product Group",
+};
+
 export const COMMUNICATION_SETTING_SHAPE_LABELS: Record<
   CommunicationSettingShape,
   string
@@ -143,6 +180,83 @@ export const COMMUNICATION_SETTING_SHAPE_LABELS: Record<
   edi4steel: "EDI4Steel",
   text: "Text",
   peppol: "Peppol",
+};
+
+export const SALES_REPRESENTATIVE_LABELS: Record<SalesRepresentative, string> = {
+  arian_bloks: "Arian Bloks",
+  bnl: "BNL",
+  cherice_van_rooyen: "Cherice van Rooyen",
+  export: "Export",
+  guy_mambourg: "Guy Mambourg",
+  hego: "Hego",
+};
+
+export const DEV_THEOR_WT_LABELS: Record<DevTheorWt, string> = {
+  theoretical_weight: "Theoretical weight",
+  trade_weight: "Trade weight",
+  german_trade_weight: "German trade weight",
+  weighed: "Weighed",
+};
+
+export const GROUP_LINES_BY_DESCRIPTION_LABELS: Record<GroupLinesByDescription, string> = {
+  order_of_order_lines: "Print in order of order lines, without titles",
+  alphabetical_order: "Group by description, alphabetical order",
+  lowest_order_line: "Group by description, order of lowest order line",
+  print_group_titles: "Print group titles in order of order lines",
+};
+
+export const PRINT_PRODUCT_CODES_LABELS: Record<PrintProductCodes, string> = {
+  do_not_print: "Do not print product code",
+  print_easy2trade: "Print easy2trade product code",
+  print_company: "Print company product code",
+};
+
+export const MISCELLANEOUS_OPTION_LABELS: Record<MiscellaneousOption, string> = {
+  occasional_customer: "Occasional customer",
+  customer_has_login_code: "Customer has login code for website",
+  bill_of_ladings_per_order: "Bill of ladings per order",
+  vrachtbrieven_afdrukken: "Vrachtbrieven afdrukken",
+  consignment_customer: "Consignment customer",
+  neutral_labels: "Neutral labels",
+  label_per_sawed_piece: "Label per sawed piece",
+};
+
+export const QUOTE_ORDER_OPTION_LABELS: Record<QuoteOrderOption, string> = {
+  reference_required: "Reference required",
+  complete_delivery: "Complete delivery",
+  round_weight_per_piece_up: "Round weight per piece up",
+  certificaat: "Certificaat",
+  overlengte: "Overlengte",
+  default_pickup: "Default pickup",
+};
+
+export const QUOTE_ORDER_INVOICE_OPTION_LABELS: Record<QuoteOrderInvoiceOption, string> = {
+  do_not_print_prices: "Do not print prices",
+  total_amount_per_line: "Total amount per line",
+  condensing_options: "Condensing options",
+  include_option_prices_in_material_prices: "Include option prices in material prices",
+};
+
+export const ORDER_OPTION_LABELS: Record<OrderOption, string> = {
+  net_prices_only: "Net prices only",
+  scrap_surcharge_separately: "Scrap surcharge separately",
+  no_commercial_blocking: "No commercial blocking",
+  no_financial_blockage: "No financial blockage",
+  call_off_quantities_on_call_off_confirmation: "Call-off quantities on call-off confirmation",
+  backorders_on_order_confirmation: "Backorders on the order confirmation",
+};
+
+export const QUOTE_OPTION_LABELS: Record<QuoteOption, string> = {
+  net_prices_only: "Net prices only",
+  scrap_surcharge_separate: "Scrap surcharge separate",
+  no_commercial_blocking: "No commercial blocking",
+  no_financial_blockage: "No financial blockage",
+  dont_show_at_all: "Don't show at all",
+};
+
+export const EDI_OPTION_LABELS: Record<EdiOption, string> = {
+  product_features: "Product features",
+  send_pdf: "Send PDF",
 };
 
 export const VISIT_REPORT_CONTACT_METHOD_LABELS: Record<VisitReportContactMethod, string> = {
@@ -258,6 +372,76 @@ export const WAREHOUSE_TRANSPORT_REGION_LABELS: Record<
   oe: "Eastern Europe",
   sp_po: "Spain/Portugal",
   zd_am: "South America",
+};
+
+export const MACHINE_OPTION_LABELS: Record<MachineOptionType, string> = {
+  decoilen: "Decoilen",
+  grinding: "Grinding",
+  shear_cut: "ShearCut",
+  laser: "Laser",
+  duplo: "Duplo",
+  brushing: "Brushing",
+  blue_foil: "Blue Foil",
+  laser_foil: "Laser Foil",
+  uv_foil: "UV Foil",
+  remove_foil: "Remove Foil",
+  anodizing: "Anodizing",
+  pickling: "Pickling",
+  coating: "Coating",
+  embossing: "Embossing",
+  perforate: "Perforate",
+  kanten: "Kanten",
+  polished: "Polished",
+  punching: "Punching",
+  slitting: "Slitting",
+  rolling: "Rolling",
+  stempelen: "Stempelen",
+  zagen: "Zagen",
+};
+
+export const MACHINE_PRODUCTION_LABELS: Record<MachineProductionType, string> = {
+  decoiler: "Decoiler",
+  interne_wzh: "Interne wzh",
+  knip: "Knip",
+  laser_1: "Laser 1",
+  laser_2: "Laser 2",
+  slijpen_folien: "Slijpen/Folien",
+};
+
+export const MACHINE_LOADING_LABELS: Record<MachineLoadingType, string> = {
+  load: "Load",
+};
+
+export const MACHINE_CAPACITY_UNIT_CODES: Record<MachineCapacityUnit, string> = {
+  percent: "%",
+  amount: "Amount",
+  hk: "HK",
+  hm: "HM",
+  hs: "HS",
+  kg: "KG",
+  m1: "M1",
+  m2: "M2",
+  m3: "M3",
+  mm: "MM",
+  regel: "Regel",
+  st: "ST",
+  tn: "TN",
+};
+
+export const MACHINE_CAPACITY_UNIT_LABELS: Record<MachineCapacityUnit, string> = {
+  percent: "Percent",
+  amount: "Amount",
+  hk: "One hundred kilograms",
+  hm: "One hundred meters",
+  hs: "One hundred pieces",
+  kg: "Kilogram",
+  m1: "Meter",
+  m2: "Square meters",
+  m3: "Cubic meters",
+  mm: "Millimeter",
+  regel: "Line",
+  st: "Pieces",
+  tn: "Tonnage",
 };
 
 export const TEXT_USAGE_CATEGORY_LABELS: Record<TextUsageCategory, string> = {
@@ -394,4 +578,113 @@ export const PURCHASE_ORDER_TYPE_LABELS: Record<PurchaseOrderType, string> = {
   materials: "Materials",
   processing: "Processing",
   customer_materials: "Customer Materials",
+};
+
+export const CUSTOMER_GROUP_LABELS: Record<CustomerGroup, string> = {
+  warehouse_staff: "Warehouse Staff",
+  regional_trade: "Regional Trade",
+  commission_external: "Commission (External)",
+  maritime: "Maritime",
+  food_industry: "Food Industry",
+  agricultural: "Agricultural",
+  water_purification: "Water Purification",
+  dealer: "Dealer",
+  equipment_manufacturing_external: "Equipment Manufacturing (External)",
+  contract_work_external: "Contract Work (External)",
+  construction: "Construction",
+  building: "Building",
+  user_external: "User (External)",
+  tank_construction: "Tank Construction",
+  equipment_manufacturing: "Equipment Manufacturing",
+  service: "Service",
+  contract_work_internal: "Contract Work (Internal)",
+  cutting_company: "Cutting Company",
+  trade_external: "Trade (External)",
+  end_user: "End User",
+  consultancies: "Consultancies",
+  aluminium_processing: "Aluminium Processing",
+  auto_bicycle_garage: "Auto, Bicycle & Garage",
+  trailer_construction: "Trailer Construction",
+  tree_nurseries: "Tree Nurseries",
+  construction_contracting: "Construction & Contracting",
+  flower_growers: "Flower Growers",
+  building_materials_trade: "Building Materials Trade",
+  reinforcing_steel_bending: "Reinforcing Steel Bending",
+  camping_recreation: "Camping & Recreation",
+  caravan_camping_articles: "Caravan & Camping Articles",
+  bodywork_light: "Bodywork (Light)",
+  construction_companies_light: "Construction Companies (Light)",
+  construction_companies_heavy: "Construction Companies (Heavy)",
+  container_construction: "Container Construction",
+  cooperatives: "Cooperatives",
+  cultural_environmental_tech: "Cultural & Environmental Tech",
+  hvac_sanitary_air: "HVAC, Sanitary & Air",
+  roofing: "Roofing",
+  defense: "Defense",
+  animal_parks: "Animal Parks",
+  miscellaneous: "Miscellaneous",
+  electrotechnical: "Electrotechnical",
+  consumer_goods_manufacturers: "Consumer Goods Manufacturers",
+  various_manufacturers: "Various Manufacturers",
+  mink_farmers: "Mink Farmers",
+  government: "Government",
+  tool_makers: "Tool Makers",
+  technical_trading: "Technical Trading",
+  various_trading: "Various Trading",
+  fencing_industry: "Fencing Industry",
+  wood_industry_carpentry: "Wood Industry & Carpentry",
+  purchasing_combinations: "Purchasing Combinations",
+  installation_companies: "Installation Companies",
+  refrigeration_technology: "Refrigeration Technology",
+  agriculture_livestock: "Agriculture & Livestock",
+  agricultural_mechanization: "Agricultural Mechanization",
+  welding_companies: "Welding Companies",
+  contracting_companies: "Contracting Companies",
+  contract_sawing: "Contract Sawing",
+  machine_factories: "Machine Factories",
+  warehouse_fitters: "Warehouse Fitters",
+  market_stand_tent: "Market, Stand & Tent",
+  metal_furniture: "Metal Furniture",
+  assembly_companies: "Assembly Companies",
+  utilities: "Utilities",
+  private_individuals: "Private Individuals",
+  pipeline_companies: "Pipeline Companies",
+  sheet_metal_processing: "Sheet Metal Processing",
+  stainless_steel_processing: "Stainless Steel Processing",
+  gabion_baskets: "Gabion Baskets",
+  schools_training: "Schools & Training",
+  shipbuilding: "Shipbuilding",
+  smithies: "Smithies",
+  social_employment: "Social Employment",
+  steel_trade: "Steel Trade",
+  stable_construction: "Stable Construction",
+  blasting_coating: "Blasting & Coating",
+  transport_companies: "Transport Companies",
+  rental_companies: "Rental Companies",
+  horticulture: "Horticulture",
+  garden_centers: "Garden Centers",
+  road_water_construction: "Road & Water Construction",
+  hardware_stores: "Hardware Stores",
+  care_homes: "Care Homes",
+};
+
+export const PURCHASE_INVOICE_BLOCK_REASON_LABELS: Record<PurchaseInvoiceBlockReason, string> = {
+  price_mismatch: "Price Mismatch",
+  awaiting_goods_receipt: "Awaiting Goods Receipt",
+  awaiting_approval: "Awaiting Approval",
+  duplicate: "Duplicate",
+  disputed: "Disputed",
+  other: "Other",
+};
+
+export const PURCHASE_INVOICE_FISCAL_BASE_LABELS: Record<PurchaseInvoiceFiscalBase, string> = {
+  booking_date: "Booking Date",
+  document_date: "Document Date",
+};
+
+export const CURRENCY_LABELS: Record<Currency, string> = {
+  eur: "Euro",
+  usd: "Dollar",
+  gbp: "Pond",
+  hkd: "HK-Dollar",
 };

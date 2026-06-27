@@ -1,10 +1,11 @@
-import { Suspense } from "react";
 import Link from "next/link";
-import { WarehousesTable } from "@/components/warehouses/warehouses-table";
+import { getWarehouses } from "@/app/(dashboard)/warehouses/actions";
+import { WarehousesTable } from "@/components/warehouses/warehouses-table-content";
 import { PageHeading } from "@/components/layout/page-heading";
-import { DataTableFallback } from "@/components/ui/data-table-fallback";
 
-const WarehousesPage = () => {
+const WarehousesPage = async () => {
+  const warehouses = await getWarehouses();
+
   return (
     <div className="space-y-6 p-6">
       <div className="flex items-start justify-between">
@@ -19,9 +20,7 @@ const WarehousesPage = () => {
           New Warehouse
         </Link>
       </div>
-      <Suspense fallback={<DataTableFallback columnCount={4} />}>
-        <WarehousesTable />
-      </Suspense>
+      <WarehousesTable warehouses={warehouses} />
     </div>
   );
 };

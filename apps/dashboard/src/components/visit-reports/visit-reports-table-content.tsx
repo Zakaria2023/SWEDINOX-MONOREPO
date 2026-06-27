@@ -2,7 +2,11 @@
 
 import { useState } from "react";
 import { type VisitReportListItem } from "@/app/(dashboard)/visit-reports/actions";
-import { VISIT_REPORT_CONTACT_METHOD_LABELS } from "@/lib/labels";
+import {
+  VISIT_REPORT_CONTACT_METHOD_LABELS,
+  VISIT_REPORT_REASON_LABELS,
+  COMMON_TEXT,
+} from "@/lib/labels";
 import {
   Table,
   TableBody,
@@ -12,7 +16,6 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
-import { COMMON_TEXT } from "@/lib/labels";
 
 type ColumnKey =
   | "id"
@@ -68,7 +71,7 @@ type VisitReportsTableContentProps = {
   visitReports: VisitReportListItem[];
 };
 
-export const VisitReportsTableContent = ({
+export const VisitReportsTable = ({
   visitReports,
 }: VisitReportsTableContentProps) => {
   const [columnVisibility, setColumnVisibility] =
@@ -148,7 +151,9 @@ export const VisitReportsTableContent = ({
       case "visitReason":
         return (
           <TableCell key={key}>
-            {visitReport.visitReason ?? fallbackValue}
+            {visitReport.visitReason
+              ? VISIT_REPORT_REASON_LABELS[visitReport.visitReason]
+              : fallbackValue}
           </TableCell>
         );
       case "contactUuid":

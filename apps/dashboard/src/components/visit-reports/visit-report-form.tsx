@@ -1,27 +1,28 @@
 "use client";
 
-import { useState } from "react";
-import { Controller } from "react-hook-form";
-import { useRouter } from "next/navigation";
-import type { CompanyOption } from "@/app/(dashboard)/companies/actions";
-import type { DashboardUserOption } from "@/app/(dashboard)/users/actions";
+import { CompanyOption } from "@/app/(dashboard)/companies/actions";
+import { DashboardUserOption } from "@/app/(dashboard)/users/actions";
 import {
+  ContactOption,
   getContactsByCompanyUuid,
-  type ContactOption,
 } from "@/app/(dashboard)/visit-reports/actions";
 import { useVisitReportSubmit } from "@/app/(dashboard)/visit-reports/use-visit-report-submit";
-import { visitReportContactMethods, visitReportReasons } from "@/lib/enums";
-import {
-  VISIT_REPORT_CONTACT_METHOD_LABELS,
-  VISIT_REPORT_REASON_LABELS,
-} from "@/lib/labels";
 import { DatePicker } from "@/components/shadcn/date-picker";
 import { Input } from "@/components/shadcn/input";
+import { TimePicker } from "@/components/shadcn/time-picker";
 import { FormActions } from "@/components/ui/form-actions";
 import { FormError } from "@/components/ui/form-error";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import { FormSelectField } from "@/components/ui/form-select-field";
-import { COMMON_TEXT } from "@/lib/labels";
+import { visitReportContactMethods, visitReportReasons } from "@/lib/enums";
+import {
+  COMMON_TEXT,
+  VISIT_REPORT_CONTACT_METHOD_LABELS,
+  VISIT_REPORT_REASON_LABELS,
+} from "@/lib/labels";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { Controller } from "react-hook-form";
 
 type VisitReportFormProps = {
   companies: CompanyOption[];
@@ -156,11 +157,16 @@ export const VisitReportForm = ({
 
           <div>
             <FormLabel htmlFor="visitTime">Visit Time</FormLabel>
-            <Input
-              id="visitTime"
-              type="time"
-              {...register("visitTime")}
-              disabled={isPending}
+            <Controller
+              name="visitTime"
+              control={control}
+              render={({ field }) => (
+                <TimePicker
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                  disabled={isPending}
+                />
+              )}
             />
             <FormFieldError message={errors.visitTime?.message} />
           </div>
