@@ -18,6 +18,7 @@ const eslintConfig = [
         },
       ],
       'no-unused-vars': 'off',
+      '@typescript-eslint/no-explicit-any': 'error',
       // react-hook-form's watch() is a known incompatibility with React Compiler
       'react-hooks/incompatible-library': 'off',
       // shadcn-generated use-mobile.ts pattern — not our concern for now

@@ -31,9 +31,8 @@ export const useProductSubmit = ({ productGroups }: UseProductSubmitParams) => {
   const [isPending, startTransition] = useTransition();
   const [state, setState] = useState<ProductActionResult>({});
 
-  const form = useForm<ProductFormValues, unknown>({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    resolver: zodResolver(productSchema) as any,
+  const form = useForm<ProductFormValues>({
+    resolver: zodResolver(productSchema),
     defaultValues: DEFAULT_PRODUCT,
   });
 

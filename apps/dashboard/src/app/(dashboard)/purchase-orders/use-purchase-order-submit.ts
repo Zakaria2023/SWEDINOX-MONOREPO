@@ -68,9 +68,8 @@ export const usePurchaseOrderSubmit = ({
   const [supplierAddresses, setSupplierAddresses] = useState<AddressOption[]>([]);
   const [isLoadingSupplierData, setIsLoadingSupplierData] = useState(false);
 
-  const form = useForm<PurchaseOrderFormValues, unknown>({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    resolver: zodResolver(purchaseOrderSchema) as any,
+  const form = useForm<PurchaseOrderFormValues>({
+    resolver: zodResolver(purchaseOrderSchema),
     defaultValues: DEFAULT_PURCHASE_ORDER,
   });
 
