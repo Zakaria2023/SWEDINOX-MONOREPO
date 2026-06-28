@@ -25,6 +25,20 @@ const eslintConfig = [
       'react-hooks/set-state-in-effect': 'off',
       // postcss.config.mjs and other config files use anonymous default exports
       'import/no-anonymous-default-export': 'off',
+      // Components & Functions: always arrow functions, never function declarations/expressions
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'FunctionDeclaration:not([generator=true])',
+          message: 'Use arrow functions instead of function declarations.',
+        },
+        {
+          selector: 'FunctionExpression:not([generator=true])',
+          message: 'Use arrow functions instead of function expressions.',
+        },
+      ],
+      // Components & Functions: implicit return when function body is a single expression
+      'arrow-body-style': ['error', 'as-needed'],
     },
   },
 ]
