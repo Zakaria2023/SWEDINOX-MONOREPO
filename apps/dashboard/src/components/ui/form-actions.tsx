@@ -17,15 +17,13 @@ export const FormActions = ({
   onCancel,
   pendingLabel,
   submitLabel,
-}: FormActionsProps) => {
-  return (
-    <div className="flex gap-3 pb-6">
-      <Button type="submit" disabled={isPending}>
-        {isPending ? pendingLabel ?? COMMON_TEXT.saving : submitLabel}
-      </Button>
-      <Button type="button" variant="outline" onClick={onCancel}>
-        {cancelLabel ?? COMMON_TEXT.cancel}
-      </Button>
-    </div>
-  );
-};
+}: FormActionsProps) => (
+  <div className="flex gap-3 pb-6">
+    <Button type="submit" disabled={isPending}>
+      {isPending ? (pendingLabel ?? COMMON_TEXT.saving) : submitLabel}
+    </Button>
+    <Button type="button" variant="outline" onClick={onCancel}>
+      {cancelLabel ?? COMMON_TEXT.cancel}
+    </Button>
+  </div>
+);

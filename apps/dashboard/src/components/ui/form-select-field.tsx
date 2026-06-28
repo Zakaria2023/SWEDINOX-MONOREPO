@@ -28,7 +28,7 @@ type FormSelectFieldProps<TFieldValues extends FieldValues> = {
   required?: boolean;
 };
 
-export function FormSelectField<TFieldValues extends FieldValues>({
+export const FormSelectField = <TFieldValues extends FieldValues>({
   control,
   disabled,
   emptyValue,
@@ -41,45 +41,43 @@ export function FormSelectField<TFieldValues extends FieldValues>({
   options,
   placeholder,
   required,
-}: FormSelectFieldProps<TFieldValues>) {
-  return (
-    <div>
-      <FormLabel htmlFor={id} required={required}>
-        {label}
-      </FormLabel>
-      <Controller
-        control={control}
-        name={name}
-        render={({ field }) => (
-          <Select
-            id={id}
-            name={field.name}
-            value={
-              field.value === undefined ||
-              field.value === null ||
-              field.value === ""
-                ? emptyValue
-                : String(field.value)
+}: FormSelectFieldProps<TFieldValues>) => (
+  <div>
+    <FormLabel htmlFor={id} required={required}>
+      {label}
+    </FormLabel>
+    <Controller
+      control={control}
+      name={name}
+      render={({ field }) => (
+        <Select
+          id={id}
+          name={field.name}
+          value={
+            field.value === undefined ||
+            field.value === null ||
+            field.value === ""
+              ? emptyValue
+              : String(field.value)
+          }
+          options={options}
+          placeholder={placeholder}
+          invalid={invalid}
+          disabled={disabled}
+          onValueChange={(value) => {
+            const nextValue =
+              emptyValue !== undefined && value === emptyValue ? "" : value;
+
+            if (onValueChange) {
+              onValueChange(nextValue, field.onChange);
+              return;
             }
-            options={options}
-            placeholder={placeholder}
-            invalid={invalid}
-            disabled={disabled}
-            onValueChange={(value) => {
-              const nextValue =
-                emptyValue !== undefined && value === emptyValue ? "" : value;
 
-              if (onValueChange) {
-                onValueChange(nextValue, field.onChange);
-                return;
-              }
-
-              field.onChange(nextValue);
-            }}
-          />
-        )}
-      />
-      <FormFieldError message={errorMessage} />
-    </div>
-  );
-}
+            field.onChange(nextValue);
+          }}
+        />
+      )}
+    />
+    <FormFieldError message={errorMessage} />
+  </div>
+);

@@ -34,8 +34,8 @@ export type PurchaseInvoiceListItem = SelectPurchaseInvoices & {
 
 export const getPurchaseInvoices = async (): Promise<
   PurchaseInvoiceListItem[]
-> => {
-  return db
+> =>
+  db
     .select({
       ...getTableColumns(PurchaseInvoices),
       companyName: Companies.companyName,
@@ -50,7 +50,6 @@ export const getPurchaseInvoices = async (): Promise<
       eq(PurchaseInvoices.invoiceSentByContactUuid, Contacts.uuid),
     )
     .orderBy(desc(PurchaseInvoices.createdAt));
-};
 
 export const createPurchaseInvoice = async (
   fields: PurchaseInvoiceFields,

@@ -36,20 +36,21 @@ const buildHierarchicalOptions = (
   items: WarehouseItemOption[],
   parentUuid: string | null = null,
   depth = 0,
-): SelectOption[] => {
-  return items
+): SelectOption[] =>
+  items
     .filter((i) => i.parentUuid === parentUuid)
     .flatMap((item) => [
       { value: item.uuid, label: item.name, depth },
       ...buildHierarchicalOptions(items, item.uuid, depth + 1),
     ]);
-};
 
 export const useLocationSubmit = ({ allItems }: UseLocationSubmitParams) => {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [state, setState] = useState<LocationActionResult>({});
-  const [selectedItem, setSelectedItem] = useState<WarehouseItemOption | null>(null);
+  const [selectedItem, setSelectedItem] = useState<WarehouseItemOption | null>(
+    null,
+  );
 
   const form = useForm<LocationFormValues>({
     resolver: zodResolver(createLocationSchema()),
@@ -103,7 +104,9 @@ export const useLocationSubmit = ({ allItems }: UseLocationSubmitParams) => {
     }
 
     const source = allItems.find((i) => i.uuid === uuid);
-    if (!source) return;
+    if (!source) {
+      return;
+    }
 
     setSelectedItem(source);
 
@@ -118,10 +121,10 @@ export const useLocationSubmit = ({ allItems }: UseLocationSubmitParams) => {
       name: currentName,
       locationType: source.locationType ?? "",
       loadingLocation: source.loadingLocation ?? "",
-      blocked: source.blocked,
+      blocked: source.blocked ?? false,
       blockReason: source.blockReason ?? "",
-      blockedForOptimization: source.blockedForOptimization,
-      limitedDimensions: source.limitedDimensions,
+      blockedForOptimization: source.blockedForOptimization ?? false,
+      limitedDimensions: source.limitedDimensions ?? false,
       minLength: source.minLength ?? "",
       maxLength: source.maxLength ?? "",
       maxWidth: source.maxWidth ?? "",
@@ -134,13 +137,17 @@ export const useLocationSubmit = ({ allItems }: UseLocationSubmitParams) => {
   const isNextDisabled = !selectedItem || selectedItem.parentUuid === null;
 
   const computedParentUuid = (): string | null => {
-    if (!selectedItem) return null;
+    if (!selectedItem) {
+      return null;
+    }
     return placement === "next" ? selectedItem.parentUuid : selectedItem.uuid;
   };
 
   const onSubmit = form.handleSubmit((values) => {
     const parentUuid = computedParentUuid();
-    if (!parentUuid) return;
+    if (!parentUuid) {
+      return;
+    }
 
     startTransition(async () => {
       const result = await createLocation({
@@ -155,7 +162,9 @@ export const useLocationSubmit = ({ allItems }: UseLocationSubmitParams) => {
           | undefined,
         blocked: values.blocked,
         blockReason: values.blocked
-          ? ((values.blockReason || undefined) as WarehouseBlockReason | undefined)
+          ? ((values.blockReason || undefined) as
+              | WarehouseBlockReason
+              | undefined)
           : undefined,
         blockedForOptimization: values.blockedForOptimization,
         limitedDimensions: values.limitedDimensions,

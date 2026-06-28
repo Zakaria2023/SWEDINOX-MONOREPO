@@ -84,7 +84,10 @@ export type CustomerProjectInput = Omit<
   "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt"
 >;
 
-export type ProjectOption = Pick<SelectCustomerProjects, "uuid" | "projectName">;
+export type ProjectOption = Pick<
+  SelectCustomerProjects,
+  "uuid" | "projectName"
+>;
 
 export type CompanyContactInput = Omit<
   InsertContacts,
@@ -118,7 +121,9 @@ export const updateCompanyDocuments = async (
     .where(eq(Companies.uuid, companyUuid));
 };
 
-export const getCompanyDetail = async (uuid: string): Promise<CompanyDetail | null> => {
+export const getCompanyDetail = async (
+  uuid: string,
+): Promise<CompanyDetail | null> => {
   const [company] = await db
     .select()
     .from(Companies)
@@ -132,8 +137,8 @@ export const getCompanyDetail = async (uuid: string): Promise<CompanyDetail | nu
   return { ...company, addresses };
 };
 
-export const getCompaniesForSelect = async (): Promise<CompanyOption[]> => {
-  return db
+export const getCompaniesForSelect = async (): Promise<CompanyOption[]> =>
+  db
     .select({
       uuid: Companies.uuid,
       searchCode1: Companies.searchCode1,
@@ -142,10 +147,9 @@ export const getCompaniesForSelect = async (): Promise<CompanyOption[]> => {
     })
     .from(Companies)
     .orderBy(asc(Companies.companyName));
-};
 
-export const getSuppliersForSelect = async (): Promise<CompanyOption[]> => {
-  return db
+export const getSuppliersForSelect = async (): Promise<CompanyOption[]> =>
+  db
     .select({
       uuid: Companies.uuid,
       searchCode1: Companies.searchCode1,
@@ -155,10 +159,11 @@ export const getSuppliersForSelect = async (): Promise<CompanyOption[]> => {
     .from(Companies)
     .where(sql`JSON_CONTAINS(${Companies.roles}, '"supplier"')`)
     .orderBy(asc(Companies.companyName));
-};
 
-export const getCustomerAndProspectCompaniesForSelect = async (): Promise<CompanyOption[]> => {
-  return db
+export const getCustomerAndProspectCompaniesForSelect = async (): Promise<
+  CompanyOption[]
+> =>
+  db
     .select({
       uuid: Companies.uuid,
       searchCode1: Companies.searchCode1,
@@ -173,12 +178,14 @@ export const getCustomerAndProspectCompaniesForSelect = async (): Promise<Compan
       ),
     )
     .orderBy(asc(Companies.companyName));
-};
 
-export type ContactOption = Pick<SelectContacts, "uuid" | "id" | "companyUuid" | "firstName" | "lastName">;
+export type ContactOption = Pick<
+  SelectContacts,
+  "uuid" | "id" | "companyUuid" | "firstName" | "lastName"
+>;
 
-export const getContactsForSuppliers = async (): Promise<ContactOption[]> => {
-  return db
+export const getContactsForSuppliers = async (): Promise<ContactOption[]> =>
+  db
     .select({
       uuid: Contacts.uuid,
       id: Contacts.id,
@@ -188,32 +195,33 @@ export const getContactsForSuppliers = async (): Promise<ContactOption[]> => {
     })
     .from(Contacts)
     .orderBy(asc(Contacts.firstName));
-};
 
 /** Companies with role customer or prospect — for the Debtor number dropdown */
-export const getDebtorCompaniesForSelect = async (): Promise<DebtorCompanyOption[]> => {
-  return db
+export const getDebtorCompaniesForSelect = async (): Promise<
+  DebtorCompanyOption[]
+> =>
+  db
     .select({ uuid: Companies.uuid, companyName: Companies.companyName })
     .from(Companies)
     .where(
       sql`JSON_CONTAINS(${Companies.roles}, '"customer"') OR JSON_CONTAINS(${Companies.roles}, '"prospect"')`,
     )
     .orderBy(asc(Companies.companyName));
-};
 
 /** Companies with role purchasing_org — for the Purchase Org dropdown */
-export const getPurchaseOrgCompaniesForSelect = async (): Promise<DebtorCompanyOption[]> => {
-  return db
+export const getPurchaseOrgCompaniesForSelect = async (): Promise<
+  DebtorCompanyOption[]
+> =>
+  db
     .select({ uuid: Companies.uuid, companyName: Companies.companyName })
     .from(Companies)
     .where(sql`JSON_CONTAINS(${Companies.roles}, '"purchasing_org"')`)
     .orderBy(asc(Companies.companyName));
-};
 
 export const getProjectsForCompany = async (
   companyUuid: string,
-): Promise<ProjectOption[]> => {
-  return db
+): Promise<ProjectOption[]> =>
+  db
     .select({
       uuid: CustomerProjects.uuid,
       projectName: CustomerProjects.projectName,
@@ -221,7 +229,6 @@ export const getProjectsForCompany = async (
     .from(CustomerProjects)
     .where(eq(CustomerProjects.companyUuid, companyUuid))
     .orderBy(asc(CustomerProjects.projectName));
-};
 
 export const getCompanies = async (): Promise<SelectCompanies[]> => {
   try {

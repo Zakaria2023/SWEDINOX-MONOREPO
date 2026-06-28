@@ -29,35 +29,33 @@ export const ConfirmDialog = ({
   onOpenChange,
   open,
   title,
-}: ConfirmDialogProps) => {
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent showCloseButton={!isPending}>
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
-        </DialogHeader>
-        <DialogFooter className="pt-4">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={isPending}
-          >
-            {COMMON_TEXT.cancel}
-          </Button>
-          <Button
-            type="button"
-            variant="destructive"
-            onClick={onConfirm}
-            disabled={isPending}
-          >
-            {isPending
-              ? COMMON_TEXT.deleting
-              : confirmLabel ?? COMMON_TEXT.confirmDelete}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-};
+}: ConfirmDialogProps) => (
+  <Dialog open={open} onOpenChange={onOpenChange}>
+    <DialogContent showCloseButton={!isPending}>
+      <DialogHeader>
+        <DialogTitle>{title}</DialogTitle>
+        <DialogDescription>{description}</DialogDescription>
+      </DialogHeader>
+      <DialogFooter className="pt-4">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => onOpenChange(false)}
+          disabled={isPending}
+        >
+          {COMMON_TEXT.cancel}
+        </Button>
+        <Button
+          type="button"
+          variant="destructive"
+          onClick={onConfirm}
+          disabled={isPending}
+        >
+          {isPending
+            ? COMMON_TEXT.deleting
+            : (confirmLabel ?? COMMON_TEXT.confirmDelete)}
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
+);
