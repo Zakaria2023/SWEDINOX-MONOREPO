@@ -18,6 +18,12 @@ const eslintConfig = [
         },
       ],
       'no-unused-vars': 'off',
+      // react-hook-form's watch() is a known incompatibility with React Compiler
+      'react-hooks/incompatible-library': 'off',
+      // shadcn-generated use-mobile.ts pattern — not our concern for now
+      'react-hooks/set-state-in-effect': 'off',
+      // postcss.config.mjs and other config files use anonymous default exports
+      'import/no-anonymous-default-export': 'off',
     },
   },
 ]
