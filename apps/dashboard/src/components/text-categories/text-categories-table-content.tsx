@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import type { TextCategoryListItem } from "@/app/(dashboard)/text-categories/actions";
+import { TextCategoryListItem } from "@/app/(dashboard)/text-categories/actions";
 import {
   Table,
   TableBody,
@@ -12,6 +11,7 @@ import {
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { COMMON_TEXT } from "@/lib/labels";
+import { useState } from "react";
 
 type ColumnKey =
   | "id"

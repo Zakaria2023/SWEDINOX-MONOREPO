@@ -1,19 +1,29 @@
 "use client";
 
-import { useRef } from "react";
-import { Controller, type Control, type FieldErrors, type UseFormRegister, type UseFormWatch } from "react-hook-form";
-import { type CompanyFormValues } from "@/app/(dashboard)/companies/validation";
+import { CompanyFormValues } from "@/app/(dashboard)/companies/validation";
 import { Input } from "@/components/shadcn/input";
-import { type SelectOption } from "@/components/shadcn/select";
+import { SelectOption } from "@/components/shadcn/select";
 import { FormCheckboxCard } from "@/components/ui/form-checkbox-card";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import { FormSelectField } from "@/components/ui/form-select-field";
-import { addressCategories, availableAtOptions, type AddressCategory } from "@/lib/enums";
+import {
+  addressCategories,
+  AddressCategory,
+  availableAtOptions,
+} from "@/lib/enums";
 import {
   ADDRESS_CATEGORY_LABELS,
   AVAILABLE_AT_LABELS,
   COMMON_TEXT,
 } from "@/lib/labels";
+import { useRef } from "react";
+import {
+  Control,
+  Controller,
+  FieldErrors,
+  UseFormRegister,
+  UseFormWatch,
+} from "react-hook-form";
 
 type AddressFormProps = {
   control: Control<CompanyFormValues>;
@@ -57,7 +67,9 @@ export const AddressForm = ({
   const selectedCategories = watch("address.category") ?? [];
   const showBillingSettings = selectedCategories.includes("invoice");
   const showDeliverySettings = selectedCategories.includes("delivery");
-  const visibleCategories: AddressCategory[] = availableCategories ?? [...addressCategories];
+  const visibleCategories: AddressCategory[] = availableCategories ?? [
+    ...addressCategories,
+  ];
 
   const categoryError =
     errors?.category?.root?.message ??
@@ -89,15 +101,11 @@ export const AddressForm = ({
         </h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <FormLabel htmlFor="altName">
-              Alternative Name
-            </FormLabel>
+            <FormLabel htmlFor="altName">Alternative Name</FormLabel>
             <Input id="altName" {...register("address.altName")} />
           </div>
           <div>
-            <FormLabel htmlFor="sequenceNumber">
-              Sequence Number
-            </FormLabel>
+            <FormLabel htmlFor="sequenceNumber">Sequence Number</FormLabel>
             <Input
               id="sequenceNumber"
               type="number"
@@ -120,9 +128,7 @@ export const AddressForm = ({
             <FormFieldError message={errors?.gln?.message} />
           </div>
           <div>
-            <FormLabel htmlFor="peppolId">
-              Peppol ID
-            </FormLabel>
+            <FormLabel htmlFor="peppolId">Peppol ID</FormLabel>
             <Controller
               control={control}
               name="address.peppolId"
@@ -170,15 +176,11 @@ export const AddressForm = ({
         </h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
-            <FormLabel htmlFor="streetAndNo">
-              Street & Number
-            </FormLabel>
+            <FormLabel htmlFor="streetAndNo">Street & Number</FormLabel>
             <Input id="streetAndNo" {...register("address.streetAndNo")} />
           </div>
           <div>
-            <FormLabel htmlFor="postalCode">
-              Postal Code
-            </FormLabel>
+            <FormLabel htmlFor="postalCode">Postal Code</FormLabel>
             <Input id="postalCode" {...register("address.postalCode")} />
           </div>
           <div>
@@ -186,15 +188,11 @@ export const AddressForm = ({
             <Input id="city" {...register("address.city")} />
           </div>
           <div>
-            <FormLabel htmlFor="region">
-              Region
-            </FormLabel>
+            <FormLabel htmlFor="region">Region</FormLabel>
             <Input id="region" {...register("address.region")} />
           </div>
           <div>
-            <FormLabel htmlFor="country">
-              Country
-            </FormLabel>
+            <FormLabel htmlFor="country">Country</FormLabel>
             <Input id="country" {...register("address.country")} />
           </div>
           <div>
@@ -210,10 +208,12 @@ export const AddressForm = ({
         </h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <FormLabel htmlFor="telephone">
-              Telephone
-            </FormLabel>
-            <Input id="telephone" type="tel" {...register("address.telephone")} />
+            <FormLabel htmlFor="telephone">Telephone</FormLabel>
+            <Input
+              id="telephone"
+              type="tel"
+              {...register("address.telephone")}
+            />
           </div>
           <div>
             <FormLabel htmlFor="fax">Fax</FormLabel>
@@ -230,9 +230,7 @@ export const AddressForm = ({
             <FormFieldError message={errors?.email?.message} />
           </div>
           <div>
-            <FormLabel htmlFor="website">
-              Website
-            </FormLabel>
+            <FormLabel htmlFor="website">Website</FormLabel>
             <Input
               id="website"
               type="url"
@@ -324,9 +322,7 @@ export const AddressForm = ({
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <FormLabel htmlFor="maxLength">
-                    Max Length
-                  </FormLabel>
+                  <FormLabel htmlFor="maxLength">Max Length</FormLabel>
                   <div className="flex items-center gap-2">
                     <Input
                       id="maxLength"
@@ -335,9 +331,7 @@ export const AddressForm = ({
                       min="0"
                       {...register("address.maxLength")}
                     />
-                    <span className="text-sm text-muted-foreground">
-                      mm
-                    </span>
+                    <span className="text-sm text-muted-foreground">mm</span>
                   </div>
                 </div>
                 <div>
@@ -352,9 +346,7 @@ export const AddressForm = ({
                       min="0"
                       {...register("address.maxBundleWeight")}
                     />
-                    <span className="text-sm text-muted-foreground">
-                      kg
-                    </span>
+                    <span className="text-sm text-muted-foreground">kg</span>
                   </div>
                 </div>
               </div>

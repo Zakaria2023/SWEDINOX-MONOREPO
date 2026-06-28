@@ -1,21 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Controller, useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
-import { Pencil, Plus, X } from "lucide-react";
-import type { CompanyOption } from "@/app/(dashboard)/companies/actions";
-import type { InvoiceSurchargeInput } from "@/app/(dashboard)/invoices/actions";
+import { CompanyOption } from "@/app/(dashboard)/companies/actions";
+import { InvoiceSurchargeInput } from "@/app/(dashboard)/invoices/actions";
 import { useInvoiceSubmit } from "@/app/(dashboard)/invoices/use-invoice-submit";
 import {
+  SurchargeFormValues,
   surchargeSchema,
-  type SurchargeFormValues,
 } from "@/app/(dashboard)/invoices/validation";
-import { DatePicker } from "@/components/shadcn/date-picker";
-import { Input } from "@/components/shadcn/input";
-import { Select } from "@/components/shadcn/select";
 import { Button } from "@/components/shadcn/button";
+import { DatePicker } from "@/components/shadcn/date-picker";
 import {
   Dialog,
   DialogBody,
@@ -24,9 +17,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/shadcn/dialog";
-import { FormActions } from "@/components/ui/form-actions";
-import { FormError } from "@/components/ui/form-error";
-import { FormFieldError, FormLabel } from "@/components/ui/form-field";
+import { Input } from "@/components/shadcn/input";
+import { Select } from "@/components/shadcn/select";
 import {
   Table,
   TableBody,
@@ -35,6 +27,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { FormActions } from "@/components/ui/form-actions";
+import { FormError } from "@/components/ui/form-error";
+import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import {
   invoicePaymentTerms,
   invoiceSurchargeDescriptions,
@@ -46,6 +41,11 @@ import {
   INVOICE_SURCHARGE_DESCRIPTION_LABELS,
   INVOICE_VAT_SCENARIO_LABELS,
 } from "@/lib/labels";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Pencil, Plus, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { Controller, useForm } from "react-hook-form";
 
 type InvoiceFormProps = {
   availableCompanies: CompanyOption[];
@@ -83,9 +83,6 @@ export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
   };
   const { register, watch, control } = form;
 
-  const calculateVat = watch("calculateVat");
-  const vatScenario = watch("vatScenario");
-  const paymentTerms = watch("paymentTerms");
   useEffect(() => {
     if (state.success) {
       router.push("/invoices");

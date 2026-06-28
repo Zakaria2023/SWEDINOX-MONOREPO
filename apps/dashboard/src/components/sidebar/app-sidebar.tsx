@@ -19,8 +19,8 @@ import {
   Building2,
   ChevronRight,
   ContactRound,
+  Factory,
   MapPin,
-  Package,
   ShoppingCart,
   Truck,
   Users,
@@ -41,7 +41,8 @@ export const AppSidebar = () => {
   const isCustomersActive =
     pathname.startsWith("/addresses") ||
     pathname.startsWith("/contracts-per-customer") ||
-    pathname.startsWith("/contact-persons-customers-and-prospects");
+    pathname.startsWith("/contact-persons-customers-and-prospects") ||
+    pathname.startsWith("/orders");
   const isCompanyActive =
     pathname.startsWith("/companies") ||
     pathname.startsWith("/communication-settings") ||
@@ -57,12 +58,15 @@ export const AppSidebar = () => {
   const isSupplierActive =
     pathname.startsWith("/contracts-per-supplier") ||
     pathname.startsWith("/contact-persons-suppliers");
-  const isPurchasesActive = pathname.startsWith("/purchase-invoices");
+  const isPurchasesActive =
+    pathname.startsWith("/purchase-orders") ||
+    pathname.startsWith("/purchase-invoices");
   const isWarehouseActive =
     pathname.startsWith("/warehouses") ||
     pathname.startsWith("/warehouse-sub-sections");
   const isLocationsActive = pathname.startsWith("/locations");
   const isLogisticsActive =
+    pathname.startsWith("/machines") ||
     pathname.startsWith("/product-groups") ||
     pathname.startsWith("/products");
 
@@ -106,6 +110,14 @@ export const AppSidebar = () => {
                 </SidebarMenuButton>
                 {isCustomersExpanded && (
                   <SidebarMenuSub>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/orders" />}
+                        isActive={pathname.startsWith("/orders")}
+                      >
+                        <span>Orders</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
                     <SidebarMenuSubItem>
                       <SidebarMenuSubButton
                         render={<Link href="/addresses" />}
@@ -295,6 +307,14 @@ export const AppSidebar = () => {
                   <SidebarMenuSub>
                     <SidebarMenuSubItem>
                       <SidebarMenuSubButton
+                        render={<Link href="/purchase-orders" />}
+                        isActive={pathname.startsWith("/purchase-orders")}
+                      >
+                        <span>Purchase Orders</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
                         render={<Link href="/purchase-invoices" />}
                         isActive={pathname.startsWith("/purchase-invoices")}
                       >
@@ -369,12 +389,21 @@ export const AppSidebar = () => {
                   aria-expanded={isLogisticsExpanded}
                   onClick={() => setIsLogisticsOpen((open) => !open)}
                 >
-                  <Package />
+                  <Factory />
                   <span>Logistics</span>
                   <ChevronRight className={chevronClass(isLogisticsExpanded)} />
                 </SidebarMenuButton>
                 {isLogisticsExpanded && (
                   <SidebarMenuSub>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                      <SidebarMenuSubButton
+                        render={<Link href="/machines" />}
+                        isActive={pathname.startsWith("/machines")}
+                      >
+                        <span>Machines</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
                     <SidebarMenuSubItem>
                       <SidebarMenuSubButton
                         render={<Link href="/product-groups" />}

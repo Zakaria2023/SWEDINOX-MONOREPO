@@ -1,14 +1,21 @@
 "use client";
 
-import { useState } from "react";
-import { type AddressListItem } from "@/app/(dashboard)/addresses/actions";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/shadcn/table";
+import { AddressListItem } from "@/app/(dashboard)/addresses/actions";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
 import {
   ADDRESS_CATEGORY_LABELS,
   AVAILABLE_AT_LABELS,
   COMMON_TEXT,
 } from "@/lib/labels";
+import { useState } from "react";
 
 type ColumnKey =
   | "id"
@@ -68,7 +75,11 @@ const ALL_COLUMNS: Array<{
   { key: "fax", label: "Fax", defaultVisible: false },
   { key: "email", label: "Email", defaultVisible: false },
   { key: "website", label: "Website", defaultVisible: false },
-  { key: "billingAttention", label: "Billing Attention", defaultVisible: false },
+  {
+    key: "billingAttention",
+    label: "Billing Attention",
+    defaultVisible: false,
+  },
   {
     key: "billingAttentionAdditional",
     label: "Billing Attention 2",
@@ -79,14 +90,34 @@ const ALL_COLUMNS: Array<{
   { key: "addressComplete", label: "Address Complete", defaultVisible: true },
   { key: "needCrane", label: "Need Crane", defaultVisible: false },
   { key: "canopyRequired", label: "Canopy Required", defaultVisible: false },
-  { key: "bundleSeparately", label: "Bundle Separately", defaultVisible: false },
-  { key: "specialTransport", label: "Special Transport", defaultVisible: false },
+  {
+    key: "bundleSeparately",
+    label: "Bundle Separately",
+    defaultVisible: false,
+  },
+  {
+    key: "specialTransport",
+    label: "Special Transport",
+    defaultVisible: false,
+  },
   { key: "availableAt", label: "Available At", defaultVisible: false },
-  { key: "unloadingStartTime", label: "Unloading Start", defaultVisible: false },
+  {
+    key: "unloadingStartTime",
+    label: "Unloading Start",
+    defaultVisible: false,
+  },
   { key: "unloadingEndTime", label: "Unloading End", defaultVisible: false },
   { key: "maxLength", label: "Max Length (mm)", defaultVisible: false },
-  { key: "maxBundleWeight", label: "Max Bundle Weight (kg)", defaultVisible: false },
-  { key: "loadingInstructions", label: "Loading Instructions", defaultVisible: false },
+  {
+    key: "maxBundleWeight",
+    label: "Max Bundle Weight (kg)",
+    defaultVisible: false,
+  },
+  {
+    key: "loadingInstructions",
+    label: "Loading Instructions",
+    defaultVisible: false,
+  },
   { key: "createdAt", label: "Created At", defaultVisible: false },
   { key: "updatedAt", label: "Updated At", defaultVisible: false },
 ];
@@ -107,10 +138,15 @@ export const AddressesTable = ({
     useState<Record<ColumnKey, boolean>>(initialVisibility);
 
   const toggleColumn = (key: string) => {
-    setColumnVisibility((prev) => ({ ...prev, [key]: !prev[key as ColumnKey] }));
+    setColumnVisibility((prev) => ({
+      ...prev,
+      [key]: !prev[key as ColumnKey],
+    }));
   };
 
-  const visibleColumns = ALL_COLUMNS.filter((column) => columnVisibility[column.key]);
+  const visibleColumns = ALL_COLUMNS.filter(
+    (column) => columnVisibility[column.key],
+  );
   const fallbackValue = COMMON_TEXT.notAvailable;
 
   const boolCell = (value: boolean | null) => (
@@ -129,41 +165,77 @@ export const AddressesTable = ({
 
     switch (key) {
       case "id":
-        return <TableCell key={key} className="font-medium">{address.id}</TableCell>;
+        return (
+          <TableCell key={key} className="font-medium">
+            {address.id}
+          </TableCell>
+        );
       case "companyCode":
         return <TableCell key={key}>{company?.id ?? fallbackValue}</TableCell>;
       case "companyName":
-        return <TableCell key={key}>{company?.companyName ?? fallbackValue}</TableCell>;
+        return (
+          <TableCell key={key}>
+            {company?.companyName ?? fallbackValue}
+          </TableCell>
+        );
       case "altName":
-        return <TableCell key={key}>{address.altName || fallbackValue}</TableCell>;
+        return (
+          <TableCell key={key}>{address.altName || fallbackValue}</TableCell>
+        );
       case "streetAndNo":
-        return <TableCell key={key}>{address.streetAndNo || fallbackValue}</TableCell>;
+        return (
+          <TableCell key={key}>
+            {address.streetAndNo || fallbackValue}
+          </TableCell>
+        );
       case "postalCode":
-        return <TableCell key={key}>{address.postalCode || fallbackValue}</TableCell>;
+        return (
+          <TableCell key={key}>{address.postalCode || fallbackValue}</TableCell>
+        );
       case "city":
         return <TableCell key={key}>{address.city || fallbackValue}</TableCell>;
       case "region":
-        return <TableCell key={key}>{address.region || fallbackValue}</TableCell>;
+        return (
+          <TableCell key={key}>{address.region || fallbackValue}</TableCell>
+        );
       case "country":
-        return <TableCell key={key}>{address.country || fallbackValue}</TableCell>;
+        return (
+          <TableCell key={key}>{address.country || fallbackValue}</TableCell>
+        );
       case "house":
-        return <TableCell key={key}>{address.house || fallbackValue}</TableCell>;
+        return (
+          <TableCell key={key}>{address.house || fallbackValue}</TableCell>
+        );
       case "poBox":
-        return <TableCell key={key}>{boolCell(address.poBox ?? false)}</TableCell>;
+        return (
+          <TableCell key={key}>{boolCell(address.poBox ?? false)}</TableCell>
+        );
       case "gln":
         return <TableCell key={key}>{address.gln || fallbackValue}</TableCell>;
       case "peppolId":
-        return <TableCell key={key}>{address.peppolId || fallbackValue}</TableCell>;
+        return (
+          <TableCell key={key}>{address.peppolId || fallbackValue}</TableCell>
+        );
       case "telephone":
-        return <TableCell key={key}>{address.telephone || fallbackValue}</TableCell>;
+        return (
+          <TableCell key={key}>{address.telephone || fallbackValue}</TableCell>
+        );
       case "fax":
         return <TableCell key={key}>{address.fax || fallbackValue}</TableCell>;
       case "email":
-        return <TableCell key={key}>{address.email || fallbackValue}</TableCell>;
+        return (
+          <TableCell key={key}>{address.email || fallbackValue}</TableCell>
+        );
       case "website":
-        return <TableCell key={key}>{address.website || fallbackValue}</TableCell>;
+        return (
+          <TableCell key={key}>{address.website || fallbackValue}</TableCell>
+        );
       case "billingAttention":
-        return <TableCell key={key}>{address.billingAttention || fallbackValue}</TableCell>;
+        return (
+          <TableCell key={key}>
+            {address.billingAttention || fallbackValue}
+          </TableCell>
+        );
       case "billingAttentionAdditional":
         return (
           <TableCell key={key}>
@@ -171,7 +243,11 @@ export const AddressesTable = ({
           </TableCell>
         );
       case "sequenceNumber":
-        return <TableCell key={key}>{address.sequenceNumber ?? fallbackValue}</TableCell>;
+        return (
+          <TableCell key={key}>
+            {address.sequenceNumber ?? fallbackValue}
+          </TableCell>
+        );
       case "category":
         return (
           <TableCell key={key}>
@@ -192,15 +268,35 @@ export const AddressesTable = ({
           </TableCell>
         );
       case "addressComplete":
-        return <TableCell key={key}>{boolCell(address.addressComplete ?? false)}</TableCell>;
+        return (
+          <TableCell key={key}>
+            {boolCell(address.addressComplete ?? false)}
+          </TableCell>
+        );
       case "needCrane":
-        return <TableCell key={key}>{boolCell(address.needCrane ?? false)}</TableCell>;
+        return (
+          <TableCell key={key}>
+            {boolCell(address.needCrane ?? false)}
+          </TableCell>
+        );
       case "canopyRequired":
-        return <TableCell key={key}>{boolCell(address.canopyRequired ?? false)}</TableCell>;
+        return (
+          <TableCell key={key}>
+            {boolCell(address.canopyRequired ?? false)}
+          </TableCell>
+        );
       case "bundleSeparately":
-        return <TableCell key={key}>{boolCell(address.bundleSeparately ?? false)}</TableCell>;
+        return (
+          <TableCell key={key}>
+            {boolCell(address.bundleSeparately ?? false)}
+          </TableCell>
+        );
       case "specialTransport":
-        return <TableCell key={key}>{boolCell(address.specialTransport ?? false)}</TableCell>;
+        return (
+          <TableCell key={key}>
+            {boolCell(address.specialTransport ?? false)}
+          </TableCell>
+        );
       case "availableAt":
         return (
           <TableCell key={key}>
@@ -210,13 +306,27 @@ export const AddressesTable = ({
           </TableCell>
         );
       case "unloadingStartTime":
-        return <TableCell key={key}>{address.unloadingStartTime || fallbackValue}</TableCell>;
+        return (
+          <TableCell key={key}>
+            {address.unloadingStartTime || fallbackValue}
+          </TableCell>
+        );
       case "unloadingEndTime":
-        return <TableCell key={key}>{address.unloadingEndTime || fallbackValue}</TableCell>;
+        return (
+          <TableCell key={key}>
+            {address.unloadingEndTime || fallbackValue}
+          </TableCell>
+        );
       case "maxLength":
-        return <TableCell key={key}>{address.maxLength ?? fallbackValue}</TableCell>;
+        return (
+          <TableCell key={key}>{address.maxLength ?? fallbackValue}</TableCell>
+        );
       case "maxBundleWeight":
-        return <TableCell key={key}>{address.maxBundleWeight ?? fallbackValue}</TableCell>;
+        return (
+          <TableCell key={key}>
+            {address.maxBundleWeight ?? fallbackValue}
+          </TableCell>
+        );
       case "loadingInstructions":
         return (
           <TableCell key={key} className="max-w-48 truncate">
@@ -263,7 +373,10 @@ export const AddressesTable = ({
           <TableBody>
             {addresses.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={visibleColumns.length} className="h-24 text-center">
+                <TableCell
+                  colSpan={visibleColumns.length}
+                  className="h-24 text-center"
+                >
                   No addresses found
                 </TableCell>
               </TableRow>
