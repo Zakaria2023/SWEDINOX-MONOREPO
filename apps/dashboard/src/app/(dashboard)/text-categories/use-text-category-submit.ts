@@ -4,11 +4,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
-import { createTextCategory, type TextCategoryActionResult } from "./actions";
-import {
-  createTextCategorySchema,
-  type TextCategoryFormValues,
-} from "./validation";
+import { createTextCategory, TextCategoryActionResult } from "./actions";
+import { createTextCategorySchema, TextCategoryFormValues } from "./validation";
 
 export const useTextCategorySubmit = () => {
   const router = useRouter();

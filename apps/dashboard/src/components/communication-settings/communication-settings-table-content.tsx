@@ -1,22 +1,22 @@
 "use client";
 
-import { useState } from "react";
-import type { CommunicationSettingListItem } from "@/app/(dashboard)/communication-settings/actions";
+import { CommunicationSettingListItem } from "@/app/(dashboard)/communication-settings/actions";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
 import {
-  COMMON_TEXT,
-  COMMUNICATION_SETTING_DOCUMENT_TYPE_LABELS,
-  COMMUNICATION_SETTING_SHAPE_LABELS,
-  COMMUNICATION_SETTING_TYPE_LABELS,
+    COMMON_TEXT,
+    COMMUNICATION_SETTING_DOCUMENT_TYPE_LABELS,
+    COMMUNICATION_SETTING_SHAPE_LABELS,
+    COMMUNICATION_SETTING_TYPE_LABELS,
 } from "@/lib/labels";
+import { useState } from "react";
 
 type ColumnKey =
   | "id"

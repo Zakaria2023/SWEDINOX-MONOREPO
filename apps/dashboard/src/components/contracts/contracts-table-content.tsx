@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { type ContractListItem } from "@/app/(dashboard)/contracts/actions";
+import { ContractListItem } from "@/app/(dashboard)/contracts/actions";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { COMMON_TEXT, CONTRACT_TYPE_LABELS } from "@/lib/labels";
+import { useState } from "react";
 
 type ColumnKey =
   | "id"

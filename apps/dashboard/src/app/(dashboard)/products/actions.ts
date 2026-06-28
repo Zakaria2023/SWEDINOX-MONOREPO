@@ -22,7 +22,10 @@ export type ProductListItem = SelectProducts & {
   productGroupName: SelectProductGroups["name"] | null;
 };
 
-export type ProductOption = Pick<SelectProducts, "uuid" | "productCode" | "name">;
+export type ProductOption = Pick<
+  SelectProducts,
+  "uuid" | "productCode" | "name"
+>;
 
 export const getProducts = async (): Promise<ProductListItem[]> => {
   try {
@@ -32,15 +35,18 @@ export const getProducts = async (): Promise<ProductListItem[]> => {
         productGroupName: ProductGroups.name,
       })
       .from(Products)
-      .leftJoin(ProductGroups, eq(Products.productGroupUuid, ProductGroups.uuid))
+      .leftJoin(
+        ProductGroups,
+        eq(Products.productGroupUuid, ProductGroups.uuid),
+      )
       .orderBy(desc(Products.createdAt));
   } catch {
     throw new Error("Failed to fetch products");
   }
 };
 
-export const getProductsForSelect = async (): Promise<ProductOption[]> => {
-  return db
+export const getProductsForSelect = async (): Promise<ProductOption[]> =>
+  db
     .select({
       uuid: Products.uuid,
       productCode: Products.productCode,
@@ -48,7 +54,6 @@ export const getProductsForSelect = async (): Promise<ProductOption[]> => {
     })
     .from(Products)
     .orderBy(asc(Products.productCode));
-};
 
 export const createProduct = async (
   fields: ProductFields,

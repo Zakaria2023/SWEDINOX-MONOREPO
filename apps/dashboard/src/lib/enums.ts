@@ -91,7 +91,10 @@ export const communicationSettingTypes = [
 export type CommunicationSettingType =
   (typeof communicationSettingTypes)[number];
 
-export const contractTierUnits = ["TN", "Euro"] as const satisfies readonly string[];
+export const contractTierUnits = [
+  "TN",
+  "Euro",
+] as const satisfies readonly string[];
 export type ContractTierUnit = (typeof contractTierUnits)[number];
 
 export const contractSurchargePerTypes = [
@@ -99,20 +102,23 @@ export const contractSurchargePerTypes = [
   "group_product",
   "product_group",
 ] as const satisfies readonly string[];
-export type ContractSurchargePerType = (typeof contractSurchargePerTypes)[number];
+export type ContractSurchargePerType =
+  (typeof contractSurchargePerTypes)[number];
 
 export const contractDiscountBasedOnTypes = [
   "group_product",
   "product_group",
 ] as const satisfies readonly string[];
-export type ContractDiscountBasedOnType = (typeof contractDiscountBasedOnTypes)[number];
+export type ContractDiscountBasedOnType =
+  (typeof contractDiscountBasedOnTypes)[number];
 
 export const visitReportContactMethods = [
   "visit",
   "telephone_contact",
 ] as const satisfies readonly string[];
 
-export type VisitReportContactMethod = (typeof visitReportContactMethods)[number];
+export type VisitReportContactMethod =
+  (typeof visitReportContactMethods)[number];
 
 export const visitReportReasons = [
   "visit_frequency",
@@ -136,6 +142,104 @@ export const communicationSettingShapes = [
 
 export type CommunicationSettingShape =
   (typeof communicationSettingShapes)[number];
+
+export const salesRepresentatives = [
+  "arian_bloks",
+  "bnl",
+  "cherice_van_rooyen",
+  "export",
+  "guy_mambourg",
+  "hego",
+] as const satisfies readonly string[];
+
+export type SalesRepresentative = (typeof salesRepresentatives)[number];
+
+export const devTheorWtOptions = [
+  "theoretical_weight",
+  "trade_weight",
+  "german_trade_weight",
+  "weighed",
+] as const satisfies readonly string[];
+
+export type DevTheorWt = (typeof devTheorWtOptions)[number];
+
+export const groupLinesByDescriptionOptions = [
+  "order_of_order_lines",
+  "alphabetical_order",
+  "lowest_order_line",
+  "print_group_titles",
+] as const satisfies readonly string[];
+
+export type GroupLinesByDescription =
+  (typeof groupLinesByDescriptionOptions)[number];
+
+export const printProductCodesOptions = [
+  "do_not_print",
+  "print_easy2trade",
+  "print_company",
+] as const satisfies readonly string[];
+
+export type PrintProductCodes = (typeof printProductCodesOptions)[number];
+
+export const miscellaneousOptions = [
+  "occasional_customer",
+  "customer_has_login_code",
+  "bill_of_ladings_per_order",
+  "vrachtbrieven_afdrukken",
+  "consignment_customer",
+  "neutral_labels",
+  "label_per_sawed_piece",
+] as const satisfies readonly string[];
+
+export type MiscellaneousOption = (typeof miscellaneousOptions)[number];
+
+export const quoteOrderOptions = [
+  "reference_required",
+  "complete_delivery",
+  "round_weight_per_piece_up",
+  "certificaat",
+  "overlengte",
+  "default_pickup",
+] as const satisfies readonly string[];
+
+export type QuoteOrderOption = (typeof quoteOrderOptions)[number];
+
+export const quoteOrderInvoiceOptions = [
+  "do_not_print_prices",
+  "total_amount_per_line",
+  "condensing_options",
+  "include_option_prices_in_material_prices",
+] as const satisfies readonly string[];
+
+export type QuoteOrderInvoiceOption = (typeof quoteOrderInvoiceOptions)[number];
+
+export const orderOptions = [
+  "net_prices_only",
+  "scrap_surcharge_separately",
+  "no_commercial_blocking",
+  "no_financial_blockage",
+  "call_off_quantities_on_call_off_confirmation",
+  "backorders_on_order_confirmation",
+] as const satisfies readonly string[];
+
+export type OrderOption = (typeof orderOptions)[number];
+
+export const quoteOptions = [
+  "net_prices_only",
+  "scrap_surcharge_separate",
+  "no_commercial_blocking",
+  "no_financial_blockage",
+  "dont_show_at_all",
+] as const satisfies readonly string[];
+
+export type QuoteOption = (typeof quoteOptions)[number];
+
+export const ediOptions = [
+  "product_features",
+  "send_pdf",
+] as const satisfies readonly string[];
+
+export type EdiOption = (typeof ediOptions)[number];
 
 export const contactSalutations = [
   "mr",
@@ -227,116 +331,6 @@ export const warehouseTransportRegions = [
   "sp_po",
   "zd_am",
 ] as const satisfies readonly string[];
-
-export type WarehouseTransportRegion =
-  (typeof warehouseTransportRegions)[number];
-
-export const textUsageCategories = [
-  "purchase_quote_request",
-  "purchase_order",
-  "purchase_order_tool_tip",
-  "purchase_return_order",
-  "sales_quote",
-  "sales_order",
-  "sales_order_tool_tip",
-  "sales_invoice",
-  "warehouse_order",
-  "production_order",
-  "loadlist",
-  "waybill",
-  "ride_list",
-  "customer_label",
-  "visit_report",
-  "transport_planning",
-  "website_in_advance",
-  "website_after",
-] as const satisfies readonly string[];
-
-export type TextUsageCategory = (typeof textUsageCategories)[number];
-
-export const invoiceSurchargeDescriptions = [
-  "project_discount",
-  "certificate_costs",
-  "order_surcharge",
-  "packaging_surcharge",
-  "pallet_surcharge",
-  "administration_costs",
-  "transport_costs",
-  "transport_costs_internal",
-  "maut_costs",
-  "import_costs",
-  "costs",
-  "other",
-  "purchasing_rounding_differences",
-  "price_differences",
-  "external_transport",
-] as const satisfies readonly string[];
-
-export type InvoiceSurchargeDescription = (typeof invoiceSurchargeDescriptions)[number];
-
-export const invoiceVatScenarios = [
-  "purchase_domestically",
-  "domestic_purchase_vat_shifted",
-  "purchase_within_eu_with_reverse_charge",
-  "purchase_outside_eu_with_reverse_charge",
-  "domestic_sales",
-  "sales_within_eu_with_reverse_charge",
-  "sales_outside_eu_with_reverse_charge",
-] as const satisfies readonly string[];
-
-export type InvoiceVatScenario = (typeof invoiceVatScenarios)[number];
-
-export const invoicePaymentTerms = [
-  "prepayment",
-  "cash",
-  "within_7_days_after_invoice_date",
-  "within_8_days_from_date_of_invoice",
-  "within_10_days_from_date_of_invoice",
-  "within_14_days_from_date_of_invoice",
-  "within_21_days_after_invoice_date",
-  "within_30_days_from_date_of_invoice",
-  "within_30_days_end_of_month",
-  "within_45_days_from_date_of_invoice",
-  "within_60_days_from_date_of_invoice",
-  "within_90_days_after_invoice_date",
-  "prepayment_minus1pct_discount",
-  "within_8_days_minus1pct_30_days_net",
-  "within_8_days_minus1_5pct_30_days_net",
-  "within_8_days_minus2pct_30_days_net",
-  "5pct_prepayment_balance_cad",
-  "10pct_prepayment_balance_cad",
-  "15pct_prepayment_balance_cad",
-  "20pct_prepayment_balance_cad",
-  "25pct_prepayment_balance_cad",
-  "30pct_prepayment_balance_cad",
-  "50pct_prepayment_balance_cad",
-  "cash_against_documents",
-  "lc_at_sight",
-  "within_10_days_1_5pct_30_days_net",
-  "within_14_days_minus2pct_30_days_net",
-  "within_10_days_minus1pct_30_days_net",
-  "within_14_days_minus1pct_30_days_net",
-  "within_14_days_minus3pct_30_days_net",
-  "within_10_days_minus3pct_30_days_net",
-  "lc_120_days",
-  "20pct_prepayment_rest_before_shipping",
-  "25pct_prepayment_rest_before_shipping",
-  "20pct_advance_payment_remainder_copy_bl",
-  "30pct_advance_payment_remainder_copy_bl",
-  "5pct_prepayment_balance_30_days_copy_bl",
-  "50pct_in_advance_remainder_14_days_after_arrival_at_port",
-  "5pct_prepayment_balance_60_days_copy_bl",
-  "50pct_prepayment_remaining_15_days_after_shipment",
-  "prepayment_minus2pct_discount",
-  "lc_180_days",
-  "lc_90_days",
-  "to_be_determined",
-  "immediately_after_receipt_of_goods",
-  "payment_in_settlement",
-  "direct_debit",
-] as const satisfies readonly string[];
-
-export type InvoicePaymentTerm = (typeof invoicePaymentTerms)[number];
 
 export const productShapes = [
   "bar_steel",
@@ -472,7 +466,8 @@ export const stockLabelPrintingOptions = [
   "amount_per_line",
 ] as const satisfies readonly string[];
 
-export type StockLabelPrintingOption = (typeof stockLabelPrintingOptions)[number];
+export type StockLabelPrintingOption =
+  (typeof stockLabelPrintingOptions)[number];
 
 export const customerLabelOptions = [
   "csv_file",
@@ -485,7 +480,11 @@ export const customerLabelOptions = [
 
 export type CustomerLabelOption = (typeof customerLabelOptions)[number];
 
-export const decimalPlacesOptions = ["0", "1", "2"] as const satisfies readonly string[];
+export const decimalPlacesOptions = [
+  "0",
+  "1",
+  "2",
+] as const satisfies readonly string[];
 
 export type DecimalPlacesOption = (typeof decimalPlacesOptions)[number];
 
@@ -694,6 +693,232 @@ export const featuresQualities = [
 
 export type FeaturesQuality = (typeof featuresQualities)[number];
 
+export type WarehouseTransportRegion =
+  (typeof warehouseTransportRegions)[number];
+
+export const machineOptionTypes = [
+  "decoilen",
+  "grinding",
+  "shear_cut",
+  "laser",
+  "duplo",
+  "brushing",
+  "blue_foil",
+  "laser_foil",
+  "uv_foil",
+  "remove_foil",
+  "anodizing",
+  "pickling",
+  "coating",
+  "embossing",
+  "perforate",
+  "kanten",
+  "polished",
+  "punching",
+  "slitting",
+  "rolling",
+  "stempelen",
+  "zagen",
+] as const satisfies readonly string[];
+
+export type MachineOptionType = (typeof machineOptionTypes)[number];
+
+export const machineProductionTypes = [
+  "decoiler",
+  "interne_wzh",
+  "knip",
+  "laser_1",
+  "laser_2",
+  "slijpen_folien",
+] as const satisfies readonly string[];
+
+export type MachineProductionType = (typeof machineProductionTypes)[number];
+
+export const machineLoadingTypes = [
+  "load",
+] as const satisfies readonly string[];
+
+export type MachineLoadingType = (typeof machineLoadingTypes)[number];
+
+export const machineCapacityUnits = [
+  "percent",
+  "amount",
+  "hk",
+  "hm",
+  "hs",
+  "kg",
+  "m1",
+  "m2",
+  "m3",
+  "mm",
+  "regel",
+  "st",
+  "tn",
+] as const satisfies readonly string[];
+
+export type MachineCapacityUnit = (typeof machineCapacityUnits)[number];
+
+export const textUsageCategories = [
+  "purchase_quote_request",
+  "purchase_order",
+  "purchase_order_tool_tip",
+  "purchase_return_order",
+  "sales_quote",
+  "sales_order",
+  "sales_order_tool_tip",
+  "sales_invoice",
+  "warehouse_order",
+  "production_order",
+  "loadlist",
+  "waybill",
+  "ride_list",
+  "customer_label",
+  "visit_report",
+  "transport_planning",
+  "website_in_advance",
+  "website_after",
+] as const satisfies readonly string[];
+
+export type TextUsageCategory = (typeof textUsageCategories)[number];
+
+export const invoiceSurchargeDescriptions = [
+  "project_discount",
+  "certificate_costs",
+  "order_surcharge",
+  "packaging_surcharge",
+  "pallet_surcharge",
+  "administration_costs",
+  "transport_costs",
+  "transport_costs_internal",
+  "maut_costs",
+  "import_costs",
+  "costs",
+  "other",
+  "purchasing_rounding_differences",
+  "price_differences",
+  "external_transport",
+] as const satisfies readonly string[];
+
+export type InvoiceSurchargeDescription =
+  (typeof invoiceSurchargeDescriptions)[number];
+
+export const invoiceVatScenarios = [
+  "purchase_domestically",
+  "domestic_purchase_vat_shifted",
+  "purchase_within_eu_with_reverse_charge",
+  "purchase_outside_eu_with_reverse_charge",
+  "domestic_sales",
+  "sales_within_eu_with_reverse_charge",
+  "sales_outside_eu_with_reverse_charge",
+] as const satisfies readonly string[];
+
+export type InvoiceVatScenario = (typeof invoiceVatScenarios)[number];
+
+export const invoicePaymentTerms = [
+  "prepayment",
+  "cash",
+  "within_7_days_after_invoice_date",
+  "within_8_days_from_date_of_invoice",
+  "within_10_days_from_date_of_invoice",
+  "within_14_days_from_date_of_invoice",
+  "within_21_days_after_invoice_date",
+  "within_30_days_from_date_of_invoice",
+  "within_30_days_end_of_month",
+  "within_45_days_from_date_of_invoice",
+  "within_60_days_from_date_of_invoice",
+  "within_90_days_after_invoice_date",
+  "prepayment_minus1pct_discount",
+  "within_8_days_minus1pct_30_days_net",
+  "within_8_days_minus1_5pct_30_days_net",
+  "within_8_days_minus2pct_30_days_net",
+  "5pct_prepayment_balance_cad",
+  "10pct_prepayment_balance_cad",
+  "15pct_prepayment_balance_cad",
+  "20pct_prepayment_balance_cad",
+  "25pct_prepayment_balance_cad",
+  "30pct_prepayment_balance_cad",
+  "50pct_prepayment_balance_cad",
+  "cash_against_documents",
+  "lc_at_sight",
+  "within_10_days_1_5pct_30_days_net",
+  "within_14_days_minus2pct_30_days_net",
+  "within_10_days_minus1pct_30_days_net",
+  "within_14_days_minus1pct_30_days_net",
+  "within_14_days_minus3pct_30_days_net",
+  "within_10_days_minus3pct_30_days_net",
+  "lc_120_days",
+  "20pct_prepayment_rest_before_shipping",
+  "25pct_prepayment_rest_before_shipping",
+  "20pct_advance_payment_remainder_copy_bl",
+  "30pct_advance_payment_remainder_copy_bl",
+  "5pct_prepayment_balance_30_days_copy_bl",
+  "50pct_in_advance_remainder_14_days_after_arrival_at_port",
+  "5pct_prepayment_balance_60_days_copy_bl",
+  "50pct_prepayment_remaining_15_days_after_shipment",
+  "prepayment_minus2pct_discount",
+  "lc_180_days",
+  "lc_90_days",
+  "to_be_determined",
+  "immediately_after_receipt_of_goods",
+  "payment_in_settlement",
+  "direct_debit",
+] as const satisfies readonly string[];
+
+export type InvoicePaymentTerm = (typeof invoicePaymentTerms)[number];
+
+
+export const orderMethods = [
+  "telephone",
+  "email",
+  "counter",
+  "representative",
+  "oral",
+  "website",
+  "edi",
+  "ai_ingelezen_email",
+] as const satisfies readonly string[];
+
+export type OrderMethod = (typeof orderMethods)[number];
+
+export const deliveryTerms = [
+  "exw",
+  "fca",
+  "fob",
+  "cfr",
+  "cif",
+  "cpt",
+  "cip",
+  "dap",
+  "dpu",
+  "ddp",
+] as const satisfies readonly string[];
+
+export type DeliveryTerm = (typeof deliveryTerms)[number];
+
+export const orderWeightTypes = [
+  "theoretical_weight",
+  "trade_weight",
+  "german_trade_weight",
+  "weighed",
+] as const satisfies readonly string[];
+
+export type OrderWeightType = (typeof orderWeightTypes)[number];
+
+export const deliveryTypes = [
+  "date",
+  "week",
+] as const satisfies readonly string[];
+
+export type DeliveryType = (typeof deliveryTypes)[number];
+
+export const purchaseOrderTypes = [
+  "materials",
+  "processing",
+  "customer_materials",
+] as const satisfies readonly string[];
+
+export type PurchaseOrderType = (typeof purchaseOrderTypes)[number];
+
 export const complaintTypes = [
   "counter_order",
   "general",
@@ -731,6 +956,7 @@ export const complaintReports = [
 
 export type ComplaintReport = (typeof complaintReports)[number];
 
+
 export const purchaseInvoiceBlockReasons = [
   "price_mismatch",
   "awaiting_goods_receipt",
@@ -740,14 +966,16 @@ export const purchaseInvoiceBlockReasons = [
   "other",
 ] as const satisfies readonly string[];
 
-export type PurchaseInvoiceBlockReason = (typeof purchaseInvoiceBlockReasons)[number];
+export type PurchaseInvoiceBlockReason =
+  (typeof purchaseInvoiceBlockReasons)[number];
 
 export const purchaseInvoiceFiscalBases = [
   "booking_date",
   "document_date",
 ] as const satisfies readonly string[];
 
-export type PurchaseInvoiceFiscalBase = (typeof purchaseInvoiceFiscalBases)[number];
+export type PurchaseInvoiceFiscalBase =
+  (typeof purchaseInvoiceFiscalBases)[number];
 
 export const currencies = [
   "eur",
@@ -757,3 +985,93 @@ export const currencies = [
 ] as const satisfies readonly string[];
 
 export type Currency = (typeof currencies)[number];
+
+export const customerGroups = [
+  "warehouse_staff",
+  "regional_trade",
+  "commission_external",
+  "maritime",
+  "food_industry",
+  "agricultural",
+  "water_purification",
+  "dealer",
+  "equipment_manufacturing_external",
+  "contract_work_external",
+  "construction",
+  "building",
+  "user_external",
+  "tank_construction",
+  "equipment_manufacturing",
+  "service",
+  "contract_work_internal",
+  "cutting_company",
+  "trade_external",
+  "end_user",
+  "consultancies",
+  "aluminium_processing",
+  "auto_bicycle_garage",
+  "trailer_construction",
+  "tree_nurseries",
+  "construction_contracting",
+  "flower_growers",
+  "building_materials_trade",
+  "reinforcing_steel_bending",
+  "camping_recreation",
+  "caravan_camping_articles",
+  "bodywork_light",
+  "construction_companies_light",
+  "construction_companies_heavy",
+  "container_construction",
+  "cooperatives",
+  "cultural_environmental_tech",
+  "hvac_sanitary_air",
+  "roofing",
+  "defense",
+  "animal_parks",
+  "miscellaneous",
+  "electrotechnical",
+  "consumer_goods_manufacturers",
+  "various_manufacturers",
+  "mink_farmers",
+  "government",
+  "tool_makers",
+  "technical_trading",
+  "various_trading",
+  "fencing_industry",
+  "wood_industry_carpentry",
+  "purchasing_combinations",
+  "installation_companies",
+  "refrigeration_technology",
+  "agriculture_livestock",
+  "agricultural_mechanization",
+  "welding_companies",
+  "contracting_companies",
+  "contract_sawing",
+  "machine_factories",
+  "warehouse_fitters",
+  "market_stand_tent",
+  "metal_furniture",
+  "assembly_companies",
+  "utilities",
+  "private_individuals",
+  "pipeline_companies",
+  "sheet_metal_processing",
+  "stainless_steel_processing",
+  "gabion_baskets",
+  "schools_training",
+  "shipbuilding",
+  "smithies",
+  "social_employment",
+  "steel_trade",
+  "stable_construction",
+  "blasting_coating",
+  "transport_companies",
+  "rental_companies",
+  "horticulture",
+  "garden_centers",
+  "road_water_construction",
+  "hardware_stores",
+  "care_homes",
+] as const satisfies readonly string[];
+
+export type CustomerGroup = (typeof customerGroups)[number];
