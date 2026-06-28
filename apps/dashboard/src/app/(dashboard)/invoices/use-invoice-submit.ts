@@ -1,14 +1,14 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import {
   createInvoice,
-  type InvoiceActionResult,
-  type InvoiceSurchargeInput,
+  InvoiceActionResult,
+  InvoiceSurchargeInput,
 } from "./actions";
-import { createInvoiceSchema, type InvoiceFormValues } from "./validation";
+import { createInvoiceSchema, InvoiceFormValues } from "./validation";
 
 export const useInvoiceSubmit = (surcharges: InvoiceSurchargeInput[]) => {
   const [isPending, startTransition] = useTransition();
@@ -35,7 +35,9 @@ export const useInvoiceSubmit = (surcharges: InvoiceSurchargeInput[]) => {
         {
           companyUuid: values.companyUuid || undefined,
           invoiceDate: values.invoiceDate ? new Date(values.invoiceDate) : null,
-          expirationDate: values.expirationDate ? new Date(values.expirationDate) : null,
+          expirationDate: values.expirationDate
+            ? new Date(values.expirationDate)
+            : null,
           calculateVat: values.calculateVat,
           printed: values.printed,
           mailed: values.mailed,

@@ -1,10 +1,13 @@
 "use server";
 
 import { db } from "@/db";
-import { InsertWarehouses, Warehouses } from "@/db/schema/warehouses";
+import {
+  InsertWarehouses,
+  SelectWarehouses,
+  Warehouses,
+} from "@/db/schema/warehouses";
 import { generateUuid } from "@/lib/helpers";
 import { and, desc, eq, isNotNull } from "drizzle-orm";
-import type { SelectWarehouses } from "@/db/schema/warehouses";
 
 export type WarehouseSubSectionFields = Omit<
   InsertWarehouses,
@@ -17,12 +20,16 @@ export type WarehouseSubSectionActionResult = {
   success?: boolean;
 };
 
-export const getWarehouseSubSections = async (): Promise<SelectWarehouses[]> => {
+export const getWarehouseSubSections = async (): Promise<
+  SelectWarehouses[]
+> => {
   try {
     return await db
       .select()
       .from(Warehouses)
-      .where(and(isNotNull(Warehouses.parentUuid), eq(Warehouses.type, "warehouse")))
+      .where(
+        and(isNotNull(Warehouses.parentUuid), eq(Warehouses.type, "warehouse")),
+      )
       .orderBy(desc(Warehouses.createdAt));
   } catch {
     throw new Error("Failed to fetch warehouse sub sections");

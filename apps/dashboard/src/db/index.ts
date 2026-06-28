@@ -21,6 +21,9 @@ const pool = mysql.createPool({
   ssl: { rejectUnauthorized: false },
 });
 
-export const db = drizzle(pool, { schema, mode: "default" });
+export const db = drizzle(pool, {
+  schema,
+  mode: "default",
+});
 
 export * from "./schema";

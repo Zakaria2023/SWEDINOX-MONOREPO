@@ -107,6 +107,8 @@ export const useWarehouseSubmit = ({
     })),
   ];
 
+  const [adaptFromValue, setAdaptFromValue] = useState("");
+
   const adaptFromOptions = [
     { value: "", label: COMMON_TEXT.emptyOption },
     ...existingWarehouses.map((w) => ({ value: w.uuid, label: w.name })),
@@ -187,33 +189,33 @@ export const useWarehouseSubmit = ({
   ];
 
   const handleAdaptFrom = (uuid: string) => {
+    setAdaptFromValue(uuid);
     const currentName = form.getValues("name");
     if (!uuid) {
       form.reset({ ...DEFAULT_WAREHOUSE, name: currentName });
       return;
     }
-    startTransition(async () => {
-      const source = await getWarehouseByUuid(uuid);
-      if (!source) return;
-      form.reset({
-        name: currentName,
-        locationType: source.locationType ?? "",
-        loadingLocation: source.loadingLocation ?? "",
-        address: source.address ?? "",
-        blocked: source.blocked,
-        blockReason: source.blockReason ?? "",
-        blockedForOptimization: source.blockedForOptimization,
-        limitedDimensions: source.limitedDimensions,
-        minLength: source.minLength ?? "",
-        maxLength: source.maxLength ?? "",
-        maxWidth: source.maxWidth ?? "",
-        maxWeight: source.maxWeight ?? "",
-        productTypes: (source.productTypes ?? []) as WarehouseProductType[],
-        loadLocations: (source.loadLocations ?? []) as Array<{
-          transportRegion: WarehouseTransportRegion;
-          loadLocation: WarehouseLoadingLocation;
-        }>,
-      });
+    const source = existingWarehouses.find((w) => w.uuid === uuid);
+    if (!source) return;
+    form.reset({
+      name: currentName,
+      locationType: source.locationType ?? "",
+      loadingLocation: source.loadingLocation ?? "",
+      address: source.address ?? "",
+      blocked: source.blocked,
+      blockReason: source.blockReason ?? "",
+      blockedForOptimization: source.blockedForOptimization,
+      limitedDimensions: source.limitedDimensions,
+      minLength: source.minLength ?? "",
+      maxLength: source.maxLength ?? "",
+      maxWidth: source.maxWidth ?? "",
+      maxWeight: source.maxWeight ?? "",
+      productTypes: (source.productTypes ?? []) as WarehouseProductType[],
+      loadLocations: (source.loadLocations ?? []) as Array<{
+        transportRegion: WarehouseTransportRegion;
+        loadLocation: WarehouseLoadingLocation;
+      }>,
+      documents: [],
     });
   };
 
@@ -264,7 +266,8 @@ export const useWarehouseSubmit = ({
           values.productTypes.length > 0 ? values.productTypes : undefined,
         loadLocations:
           values.loadLocations.length > 0 ? values.loadLocations : undefined,
-        documents: values.documents.length > 0 ? values.documents : undefined,
+        documents:
+          (values.documents ?? []).length > 0 ? values.documents : undefined,
 
         // Count workorders
         countMethod: (values.countMethod || undefined) as
@@ -399,6 +402,7 @@ export const useWarehouseSubmit = ({
     blockReasonOptions,
     addressOptions,
     adaptFromOptions,
+    adaptFromValue,
     handleAdaptFrom,
     handleCancel,
     countMethodOptions,

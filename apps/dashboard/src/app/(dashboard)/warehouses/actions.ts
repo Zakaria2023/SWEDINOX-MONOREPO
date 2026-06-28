@@ -55,6 +55,21 @@ export const getWarehouseLocationsForSelect = async (): Promise<
     .orderBy(asc(Warehouses.name));
 };
 
+export type MachineStockLocationOption = Pick<
+  SelectWarehouses,
+  "uuid" | "name"
+>;
+
+export const getMachineStockLocationsForSelect = async (): Promise<
+  MachineStockLocationOption[]
+> => {
+  return db
+    .select({ uuid: Warehouses.uuid, name: Warehouses.name })
+    .from(Warehouses)
+    .where(eq(Warehouses.type, "location"))
+    .orderBy(asc(Warehouses.name));
+};
+
 /** Root-level warehouses only — for the warehouse adapt-from dropdown */
 export const getWarehousesForSelect = async (): Promise<WarehouseOption[]> => {
   return db

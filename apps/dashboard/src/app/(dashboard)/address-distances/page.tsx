@@ -1,18 +1,17 @@
-import { Suspense } from "react";
-import { AddressDistancesTable } from "@/components/address-distances/address-distances-table";
+import { getAddressDistances } from "@/app/(dashboard)/address-distances/actions";
+import { AddressDistancesTable } from "@/components/address-distances/address-distances-table-content";
 import { PageHeading } from "@/components/layout/page-heading";
-import { DataTableFallback } from "@/components/ui/data-table-fallback";
 
-const AddressDistancesPage = () => {
+const AddressDistancesPage = async () => {
+  const addressDistances = await getAddressDistances();
+
   return (
     <div className="space-y-6 p-6">
       <PageHeading
         title="Address Distances"
         description="Distance records between company addresses."
       />
-      <Suspense fallback={<DataTableFallback columnCount={6} />}>
-        <AddressDistancesTable />
-      </Suspense>
+      <AddressDistancesTable addressDistances={addressDistances} />
     </div>
   );
 };

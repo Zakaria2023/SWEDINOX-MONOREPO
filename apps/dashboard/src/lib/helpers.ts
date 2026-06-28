@@ -8,6 +8,16 @@ import { twMerge } from "tailwind-merge";
 export const cn = (...inputs: ClassValue[]) => twMerge(clsx(inputs));
 
 /**
+ * Returns today's date as a YYYY-MM-DD string.
+ */
+export const todayDateString = () => new Date().toISOString().split("T")[0];
+
+/**
+ * Returns the current calendar year.
+ */
+export const currentYear = () => new Date().getFullYear();
+
+/**
  * Generates a random UUID v4.
  */
 export const generateUuid = () => crypto.randomUUID();
@@ -20,3 +30,11 @@ export const pluralize = (
   singular: string,
   plural = `${singular}s`,
 ) => (count === 1 ? singular : plural);
+
+export const formatRevenue = (value: string | null) => {
+  if (!value) return "€ 0,00";
+  return new Intl.NumberFormat("nl-NL", {
+    style: "currency",
+    currency: "EUR",
+  }).format(Number(value));
+};

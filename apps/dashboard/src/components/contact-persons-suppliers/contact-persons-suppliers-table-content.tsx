@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { ContactPersonSupplierRow } from "@/app/(dashboard)/contact-persons-suppliers/actions";
 import {
   Table,
   TableBody,
@@ -10,49 +10,70 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
-import { COMMON_TEXT, CONTACT_CATEGORY_LABELS, CONTACT_SALUTATION_LABELS } from "@/lib/labels";
-import type { ContactPersonSupplierRow } from "@/app/(dashboard)/contact-persons-suppliers/actions";
-import type { ContactSalutation } from "@/lib/enums";
+import { ContactSalutation } from "@/lib/enums";
+import { formatRevenue } from "@/lib/helpers";
+import {
+  COMMON_TEXT,
+  CONTACT_CATEGORY_LABELS,
+  CONTACT_SALUTATION_LABELS,
+} from "@/lib/labels";
+import { useState } from "react";
 
 type ColumnKey = keyof ContactPersonSupplierRow | "contactPerson";
 
-const ALL_COLUMNS: Array<{ key: ColumnKey; label: string; defaultVisible: boolean }> = [
-  { key: "revenueLastYear",  label: "Revenue Last Year",           defaultVisible: true  },
-  { key: "revenueThisYear",  label: "Revenue This Year",           defaultVisible: true  },
-  { key: "contactPerson",    label: "Contact Person",              defaultVisible: true  },
-  { key: "categories",       label: "Contact Person Category",     defaultVisible: true  },
-  { key: "email",            label: "Contact Person E-mail",       defaultVisible: true  },
-  { key: "telephone",        label: "Contact Person Telephone",    defaultVisible: true  },
-  { key: "address",          label: "Correspondence Address",      defaultVisible: true  },
-  { key: "postalCode",       label: "Correspondence Postal Code",  defaultVisible: true  },
-  { key: "city",             label: "Correspondence City",         defaultVisible: true  },
-  { key: "addressCountry",   label: "Correspondence Country",      defaultVisible: true  },
-  { key: "addressTelephone", label: "Correspondence Telephone",    defaultVisible: true  },
-  { key: "addressFax",       label: "Correspondence Fax",          defaultVisible: true  },
-  { key: "purchaser",        label: "Purchaser",                   defaultVisible: true  },
-  { key: "searchCode2",      label: "Searchcode 2",                defaultVisible: true  },
-  { key: "searchCode1",      label: "Searchcode 1",                defaultVisible: true  },
-  { key: "companyId",        label: "Company",                     defaultVisible: true  },
-  { key: "salutation",       label: "Title",                       defaultVisible: true  },
-  { key: "initials",         label: "Initials",                    defaultVisible: true  },
-  { key: "firstName",        label: "First Name",                  defaultVisible: true  },
-  { key: "lastName",         label: "Last Name",                   defaultVisible: true  },
-  { key: "searchCode3",      label: "Searchcode 3",                defaultVisible: true  },
-  { key: "companyName",      label: "Company Name",                defaultVisible: true  },
-  { key: "isCustomer",       label: "Customer",                    defaultVisible: true  },
-  { key: "isProspect",       label: "Prospect",                    defaultVisible: true  },
-  { key: "isSupplier",       label: "Supplier",                    defaultVisible: true  },
-  { key: "isProcessor",      label: "Processor",                   defaultVisible: true  },
-  { key: "isTransporter",    label: "Transporter",                 defaultVisible: true  },
-  { key: "isAgent",          label: "Agent",                       defaultVisible: true  },
-  { key: "isOther",          label: "Other",                       defaultVisible: true  },
-  { key: "visitStreetAndNo", label: "Visiting Address",            defaultVisible: true  },
-  { key: "visitPostalCode",  label: "Visit-Postal Code",           defaultVisible: true  },
-  { key: "visitCity",        label: "Visit-City",                  defaultVisible: true  },
-  { key: "visitCountry",     label: "Visit-Country",               defaultVisible: true  },
-  { key: "visitTelephone",   label: "Visit-Telephone",             defaultVisible: true  },
-  { key: "visitFax",         label: "Visit-Fax",                   defaultVisible: true  },
-  { key: "mobile",           label: "Mobile",                      defaultVisible: false },
+const ALL_COLUMNS: Array<{
+  key: ColumnKey;
+  label: string;
+  defaultVisible: boolean;
+}> = [
+  { key: "revenueLastYear", label: "Revenue Last Year", defaultVisible: true },
+  { key: "revenueThisYear", label: "Revenue This Year", defaultVisible: true },
+  { key: "contactPerson", label: "Contact Person", defaultVisible: true },
+  { key: "categories", label: "Contact Person Category", defaultVisible: true },
+  { key: "email", label: "Contact Person E-mail", defaultVisible: true },
+  { key: "telephone", label: "Contact Person Telephone", defaultVisible: true },
+  { key: "address", label: "Correspondence Address", defaultVisible: true },
+  {
+    key: "postalCode",
+    label: "Correspondence Postal Code",
+    defaultVisible: true,
+  },
+  { key: "city", label: "Correspondence City", defaultVisible: true },
+  {
+    key: "addressCountry",
+    label: "Correspondence Country",
+    defaultVisible: true,
+  },
+  {
+    key: "addressTelephone",
+    label: "Correspondence Telephone",
+    defaultVisible: true,
+  },
+  { key: "addressFax", label: "Correspondence Fax", defaultVisible: true },
+  { key: "purchaser", label: "Purchaser", defaultVisible: true },
+  { key: "searchCode2", label: "Searchcode 2", defaultVisible: true },
+  { key: "searchCode1", label: "Searchcode 1", defaultVisible: true },
+  { key: "companyId", label: "Company", defaultVisible: true },
+  { key: "salutation", label: "Title", defaultVisible: true },
+  { key: "initials", label: "Initials", defaultVisible: true },
+  { key: "firstName", label: "First Name", defaultVisible: true },
+  { key: "lastName", label: "Last Name", defaultVisible: true },
+  { key: "searchCode3", label: "Searchcode 3", defaultVisible: true },
+  { key: "companyName", label: "Company Name", defaultVisible: true },
+  { key: "isCustomer", label: "Customer", defaultVisible: true },
+  { key: "isProspect", label: "Prospect", defaultVisible: true },
+  { key: "isSupplier", label: "Supplier", defaultVisible: true },
+  { key: "isProcessor", label: "Processor", defaultVisible: true },
+  { key: "isTransporter", label: "Transporter", defaultVisible: true },
+  { key: "isAgent", label: "Agent", defaultVisible: true },
+  { key: "isOther", label: "Other", defaultVisible: true },
+  { key: "visitStreetAndNo", label: "Visiting Address", defaultVisible: true },
+  { key: "visitPostalCode", label: "Visit-Postal Code", defaultVisible: true },
+  { key: "visitCity", label: "Visit-City", defaultVisible: true },
+  { key: "visitCountry", label: "Visit-Country", defaultVisible: true },
+  { key: "visitTelephone", label: "Visit-Telephone", defaultVisible: true },
+  { key: "visitFax", label: "Visit-Fax", defaultVisible: true },
+  { key: "mobile", label: "Mobile", defaultVisible: false },
 ];
 
 const initialVisibility = ALL_COLUMNS.reduce(
@@ -62,15 +83,8 @@ const initialVisibility = ALL_COLUMNS.reduce(
 
 type Props = { rows: ContactPersonSupplierRow[] };
 
-const formatRevenue = (value: string | null) => {
-  if (value === null) return "€ 0,00";
-  return new Intl.NumberFormat("nl-NL", {
-    style: "currency",
-    currency: "EUR",
-  }).format(Number(value));
-};
 
-export const ContactPersonsSuppliersTableContent = ({ rows }: Props) => {
+export const ContactPersonsSuppliersTable = ({ rows }: Props) => {
   const [columnVisibility, setColumnVisibility] =
     useState<Record<ColumnKey, boolean>>(initialVisibility);
 
@@ -86,13 +100,22 @@ export const ContactPersonsSuppliersTableContent = ({ rows }: Props) => {
   const renderCell = (row: ContactPersonSupplierRow, key: ColumnKey) => {
     switch (key) {
       case "revenueLastYear":
-        return <TableCell key={key} className="text-right">{formatRevenue(row.revenueLastYear)}</TableCell>;
+        return (
+          <TableCell key={key} className="text-right">
+            {formatRevenue(row.revenueLastYear)}
+          </TableCell>
+        );
       case "revenueThisYear":
-        return <TableCell key={key} className="text-right">{formatRevenue(row.revenueThisYear)}</TableCell>;
+        return (
+          <TableCell key={key} className="text-right">
+            {formatRevenue(row.revenueThisYear)}
+          </TableCell>
+        );
       case "contactPerson": {
         const parts = [
           row.salutation
-            ? (CONTACT_SALUTATION_LABELS[row.salutation as ContactSalutation] ?? row.salutation)
+            ? (CONTACT_SALUTATION_LABELS[row.salutation as ContactSalutation] ??
+              row.salutation)
             : null,
           row.firstName,
           row.lastName,
@@ -104,7 +127,12 @@ export const ContactPersonsSuppliersTableContent = ({ rows }: Props) => {
           <TableCell key={key}>
             {(row.categories as string[]).length > 0
               ? (row.categories as string[])
-                  .map((c) => CONTACT_CATEGORY_LABELS[c as keyof typeof CONTACT_CATEGORY_LABELS] ?? c)
+                  .map(
+                    (c) =>
+                      CONTACT_CATEGORY_LABELS[
+                        c as keyof typeof CONTACT_CATEGORY_LABELS
+                      ] ?? c,
+                  )
                   .join(", ")
               : na}
           </TableCell>
@@ -138,12 +166,18 @@ export const ContactPersonsSuppliersTableContent = ({ rows }: Props) => {
       case "companyId":
         return <TableCell key={key}>{row.companyId}</TableCell>;
       case "companyName":
-        return <TableCell key={key} className="font-medium">{row.companyName}</TableCell>;
+        return (
+          <TableCell key={key} className="font-medium">
+            {row.companyName}
+          </TableCell>
+        );
       case "salutation":
         return (
           <TableCell key={key}>
             {row.salutation
-              ? (CONTACT_SALUTATION_LABELS[row.salutation as ContactSalutation] ?? row.salutation)
+              ? (CONTACT_SALUTATION_LABELS[
+                  row.salutation as ContactSalutation
+                ] ?? row.salutation)
               : na}
           </TableCell>
         );
@@ -154,19 +188,47 @@ export const ContactPersonsSuppliersTableContent = ({ rows }: Props) => {
       case "lastName":
         return <TableCell key={key}>{row.lastName ?? na}</TableCell>;
       case "isCustomer":
-        return <TableCell key={key} className="text-center">{row.isCustomer ? "✓" : ""}</TableCell>;
+        return (
+          <TableCell key={key} className="text-center">
+            {row.isCustomer ? "✓" : ""}
+          </TableCell>
+        );
       case "isProspect":
-        return <TableCell key={key} className="text-center">{row.isProspect ? "✓" : ""}</TableCell>;
+        return (
+          <TableCell key={key} className="text-center">
+            {row.isProspect ? "✓" : ""}
+          </TableCell>
+        );
       case "isSupplier":
-        return <TableCell key={key} className="text-center">{row.isSupplier ? "✓" : ""}</TableCell>;
+        return (
+          <TableCell key={key} className="text-center">
+            {row.isSupplier ? "✓" : ""}
+          </TableCell>
+        );
       case "isProcessor":
-        return <TableCell key={key} className="text-center">{row.isProcessor ? "✓" : ""}</TableCell>;
+        return (
+          <TableCell key={key} className="text-center">
+            {row.isProcessor ? "✓" : ""}
+          </TableCell>
+        );
       case "isTransporter":
-        return <TableCell key={key} className="text-center">{row.isTransporter ? "✓" : ""}</TableCell>;
+        return (
+          <TableCell key={key} className="text-center">
+            {row.isTransporter ? "✓" : ""}
+          </TableCell>
+        );
       case "isAgent":
-        return <TableCell key={key} className="text-center">{row.isAgent ? "✓" : ""}</TableCell>;
+        return (
+          <TableCell key={key} className="text-center">
+            {row.isAgent ? "✓" : ""}
+          </TableCell>
+        );
       case "isOther":
-        return <TableCell key={key} className="text-center">{row.isOther ? "✓" : ""}</TableCell>;
+        return (
+          <TableCell key={key} className="text-center">
+            {row.isOther ? "✓" : ""}
+          </TableCell>
+        );
       case "visitStreetAndNo":
         return <TableCell key={key}>{row.visitStreetAndNo ?? na}</TableCell>;
       case "visitPostalCode":
@@ -186,7 +248,10 @@ export const ContactPersonsSuppliersTableContent = ({ rows }: Props) => {
     <div className="space-y-4">
       <div className="flex justify-end">
         <ColumnSelector
-          columns={ALL_COLUMNS.map((col) => ({ key: col.key, label: col.label }))}
+          columns={ALL_COLUMNS.map((col) => ({
+            key: col.key,
+            label: col.label,
+          }))}
           visibility={columnVisibility}
           onToggle={toggleColumn}
         />

@@ -11,8 +11,12 @@ import {
   InsertCommunicationSettings,
 } from "@/db/schema/communication-settings";
 import { Contracts, InsertContracts } from "@/db/schema/contracts";
-import { Contacts, InsertContacts } from "@/db/schema/contacts";
-import { CustomerProjects, InsertCustomerProjects } from "@/db/schema/customer-projects";
+import { Contacts, InsertContacts, SelectContacts } from "@/db/schema/contacts";
+import {
+  CustomerProjects,
+  InsertCustomerProjects,
+  SelectCustomerProjects,
+} from "@/db/schema/customer-projects";
 import { Texts, InsertTexts } from "@/db/schema/texts";
 import { generateUuid } from "@/lib/helpers";
 import { asc, desc, eq, or, sql } from "drizzle-orm";
@@ -43,10 +47,44 @@ export type CompanyContractInput = Omit<
   "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt"
 >;
 
+export type CustomerSalesInput = Pick<
+  InsertCompanies,
+  | "customerGroup"
+  | "representative"
+  | "accountManager"
+  | "region"
+  | "memberOf"
+  | "miscellaneousSettings"
+  | "deliveryCondition"
+  | "devTheorWt"
+  | "defTransport"
+  | "quoteOrderSettings"
+  | "groupLinesByLongProductGroupDescription"
+  | "printProductCodesOnOutgoingDocuments"
+  | "quoteOrderInvoiceSettings"
+  | "orderSettings"
+  | "quoteSettings"
+  | "websiteQuoteMustBeApproved"
+  | "websiteQuoteApprovalAmount"
+  | "releaseActionPrint"
+  | "releaseActionEmailEnabled"
+  | "releaseActionEmailTo"
+  | "releaseActionFaxEnabled"
+  | "releaseActionFaxTo"
+  | "actionPrint"
+  | "actionEmailEnabled"
+  | "actionEmailTo"
+  | "actionFaxEnabled"
+  | "actionFaxTo"
+  | "ediSettings"
+>;
+
 export type CustomerProjectInput = Omit<
   InsertCustomerProjects,
   "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt"
 >;
+
+export type ProjectOption = Pick<SelectCustomerProjects, "uuid" | "projectName">;
 
 export type CompanyContactInput = Omit<
   InsertContacts,
@@ -57,6 +95,8 @@ export type CompanyTextInput = Omit<
   InsertTexts,
   "id" | "uuid" | "companyUuid" | "createdByUserId" | "createdAt" | "updatedAt"
 >;
+
+export type DebtorCompanyOption = Pick<SelectCompanies, "uuid" | "companyName">;
 
 export type CompanyActionResult = {
   companyUuid?: string;
@@ -104,6 +144,19 @@ export const getCompaniesForSelect = async (): Promise<CompanyOption[]> => {
     .orderBy(asc(Companies.companyName));
 };
 
+export const getSuppliersForSelect = async (): Promise<CompanyOption[]> => {
+  return db
+    .select({
+      uuid: Companies.uuid,
+      searchCode1: Companies.searchCode1,
+      companyName: Companies.companyName,
+      roles: Companies.roles,
+    })
+    .from(Companies)
+    .where(sql`JSON_CONTAINS(${Companies.roles}, '"supplier"')`)
+    .orderBy(asc(Companies.companyName));
+};
+
 export const getCustomerAndProspectCompaniesForSelect = async (): Promise<CompanyOption[]> => {
   return db
     .select({
@@ -122,6 +175,54 @@ export const getCustomerAndProspectCompaniesForSelect = async (): Promise<Compan
     .orderBy(asc(Companies.companyName));
 };
 
+export type ContactOption = Pick<SelectContacts, "uuid" | "id" | "companyUuid" | "firstName" | "lastName">;
+
+export const getContactsForSuppliers = async (): Promise<ContactOption[]> => {
+  return db
+    .select({
+      uuid: Contacts.uuid,
+      id: Contacts.id,
+      companyUuid: Contacts.companyUuid,
+      firstName: Contacts.firstName,
+      lastName: Contacts.lastName,
+    })
+    .from(Contacts)
+    .orderBy(asc(Contacts.firstName));
+};
+
+/** Companies with role customer or prospect — for the Debtor number dropdown */
+export const getDebtorCompaniesForSelect = async (): Promise<DebtorCompanyOption[]> => {
+  return db
+    .select({ uuid: Companies.uuid, companyName: Companies.companyName })
+    .from(Companies)
+    .where(
+      sql`JSON_CONTAINS(${Companies.roles}, '"customer"') OR JSON_CONTAINS(${Companies.roles}, '"prospect"')`,
+    )
+    .orderBy(asc(Companies.companyName));
+};
+
+/** Companies with role purchasing_org — for the Purchase Org dropdown */
+export const getPurchaseOrgCompaniesForSelect = async (): Promise<DebtorCompanyOption[]> => {
+  return db
+    .select({ uuid: Companies.uuid, companyName: Companies.companyName })
+    .from(Companies)
+    .where(sql`JSON_CONTAINS(${Companies.roles}, '"purchasing_org"')`)
+    .orderBy(asc(Companies.companyName));
+};
+
+export const getProjectsForCompany = async (
+  companyUuid: string,
+): Promise<ProjectOption[]> => {
+  return db
+    .select({
+      uuid: CustomerProjects.uuid,
+      projectName: CustomerProjects.projectName,
+    })
+    .from(CustomerProjects)
+    .where(eq(CustomerProjects.companyUuid, companyUuid))
+    .orderBy(asc(CustomerProjects.projectName));
+};
+
 export const getCompanies = async (): Promise<SelectCompanies[]> => {
   try {
     return await db.select().from(Companies).orderBy(desc(Companies.createdAt));
@@ -132,6 +233,7 @@ export const getCompanies = async (): Promise<SelectCompanies[]> => {
 
 export const createCompany = async (
   companyFields: CompanyFields,
+  isBlocked: boolean,
   addresses: AddressInput[] = [],
   communicationSettings: CommSettingInput[] = [],
   contracts: CompanyContractInput[] = [],
@@ -150,7 +252,11 @@ export const createCompany = async (
     }
 
     await db.transaction(async (tx) => {
-      await tx.insert(Companies).values({ ...companyFields, uuid });
+      await tx.insert(Companies).values({
+        ...companyFields,
+        uuid,
+        blockedByUserId: isBlocked ? userId : null,
+      });
 
       for (const address of addresses) {
         await tx.insert(CompanyAddresses).values({

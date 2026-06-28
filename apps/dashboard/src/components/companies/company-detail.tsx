@@ -1,7 +1,4 @@
-import Link from "next/link";
-import { Plus } from "lucide-react";
-import type { CompanyDetail } from "@/app/(dashboard)/companies/actions";
-import type { SelectInvoices } from "@/db";
+import { CompanyDetail } from "@/app/(dashboard)/companies/actions";
 import {
   Table,
   TableBody,
@@ -10,6 +7,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { SelectInvoices } from "@/db";
 import {
   COMMON_TEXT,
   COMPANY_LANGUAGE_LABELS,
@@ -17,6 +15,8 @@ import {
   INVOICE_PAYMENT_TERM_LABELS,
   INVOICE_VAT_SCENARIO_LABELS,
 } from "@/lib/labels";
+import { Plus } from "lucide-react";
+import Link from "next/link";
 
 type Props = {
   company: CompanyDetail;
@@ -25,8 +25,12 @@ type Props = {
 
 const Field = ({ label, value }: { label: string; value?: string | null }) => (
   <div>
-    <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</dt>
-    <dd className="mt-0.5 text-sm text-gray-900">{value || COMMON_TEXT.notAvailable}</dd>
+    <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+      {label}
+    </dt>
+    <dd className="mt-0.5 text-sm text-gray-900">
+      {value || COMMON_TEXT.notAvailable}
+    </dd>
   </div>
 );
 
@@ -36,7 +40,6 @@ export const CompanyDetailView = ({ company, invoices }: Props) => {
 
   return (
     <div className="space-y-8">
-
       {/* General info */}
       <section className="space-y-4">
         <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-gray-700">
@@ -53,7 +56,9 @@ export const CompanyDetailView = ({ company, invoices }: Props) => {
           <Field label="Search Code 2" value={company.searchCode2} />
           <Field label="Search Code 3" value={company.searchCode3} />
           <div className="sm:col-span-2 lg:col-span-3">
-            <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Roles</dt>
+            <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Roles
+            </dt>
             <dd className="mt-1 flex flex-wrap gap-1.5">
               {company.roles.length > 0 ? (
                 company.roles.map((role) => (
@@ -144,7 +149,9 @@ export const CompanyDetailView = ({ company, invoices }: Props) => {
                     <TableHead>Expiration Date</TableHead>
                     <TableHead className="text-right">Excl. VAT</TableHead>
                     <TableHead className="text-right">Incl. VAT</TableHead>
-                    <TableHead className="text-right">Credit Restriction</TableHead>
+                    <TableHead className="text-right">
+                      Credit Restriction
+                    </TableHead>
                     <TableHead className="text-right">Total</TableHead>
                     <TableHead className="text-right">Outstanding</TableHead>
                     <TableHead>VAT Scenario</TableHead>
@@ -207,7 +214,9 @@ export const CompanyDetailView = ({ company, invoices }: Props) => {
                             </span>
                           )}
                           {!inv.calculateVat && !inv.printed && !inv.mailed && (
-                            <span className="text-xs text-muted-foreground">—</span>
+                            <span className="text-xs text-muted-foreground">
+                              —
+                            </span>
                           )}
                         </div>
                       </TableCell>
