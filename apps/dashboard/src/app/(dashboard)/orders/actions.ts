@@ -9,7 +9,7 @@ import {
 } from "@/db/schema/company-addresses";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
 import { generateUuid } from "@/lib/helpers";
-import { asc, desc, eq, getTableColumns } from "drizzle-orm";
+import { desc, eq, getTableColumns, asc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 export type OrderFields = Omit<
   InsertOrders,
@@ -35,7 +35,7 @@ export type AddressOption = Pick<
 
 export const getOrders = async (): Promise<OrderListItem[]> => {
   try {
-    return await db
+    const rows = await db
       .select({
         ...getTableColumns(Orders),
         companyName: Companies.companyName,
@@ -46,6 +46,7 @@ export const getOrders = async (): Promise<OrderListItem[]> => {
       .leftJoin(Companies, eq(Orders.companyUuid, Companies.uuid))
       .leftJoin(Contacts, eq(Orders.contactUuid, Contacts.uuid))
       .orderBy(desc(Orders.createdAt));
+    return rows as OrderListItem[];
   } catch {
     throw new Error("Failed to fetch orders");
   }

@@ -4,14 +4,22 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
-import { AddressOption, createOrder, OrderActionResult } from "./actions";
+import {
+  AddressOption,
+  createOrder,
+  getAddressesForCompany,
+  OrderActionResult,
+} from "./actions";
 import { DEFAULT_ORDER, orderSchema, OrderFormValues } from "./validation";
-import { CompanyOption } from "@/app/(dashboard)/companies/actions";
+import {
+  CompanyOption,
+  getProjectsForCompany,
+  ProjectOption,
+} from "@/app/(dashboard)/companies/actions";
 import {
   ContactOption,
   getContactsForCompany,
 } from "@/app/(dashboard)/contacts/actions";
-import { getAddressesForCompany } from "./actions";
 import { SelectOption } from "@/components/shadcn/select";
 import {
   deliveryTerms,
@@ -55,6 +63,7 @@ export const useOrderSubmit = ({ companies }: UseOrderSubmitParams) => {
   const [state, setState] = useState<OrderActionResult>({});
   const [contacts, setContacts] = useState<ContactOption[]>([]);
   const [addresses, setAddresses] = useState<AddressOption[]>([]);
+  const [projects, setProjects] = useState<ProjectOption[]>([]);
   const [isLoadingCompanyData, setIsLoadingCompanyData] = useState(false);
 
   const form = useForm<OrderFormValues, unknown>({
@@ -93,6 +102,14 @@ export const useOrderSubmit = ({ companies }: UseOrderSubmitParams) => {
     ...addresses.map((a) => ({ value: a.uuid, label: addressLabel(a) })),
   ];
 
+  const projectOptions: SelectOption[] = [
+    emptyOpt,
+    ...projects.map((p) => ({
+      value: p.uuid,
+      label: p.projectName ?? p.uuid,
+    })),
+  ];
+
   const orderMethodOptions = makeOptions(
     orderMethods,
     ORDER_METHOD_LABELS as Record<OrderMethod, string>,
@@ -116,17 +133,21 @@ export const useOrderSubmit = ({ companies }: UseOrderSubmitParams) => {
   const handleCompanyChange = (uuid: string) => {
     form.setValue("companyUuid", uuid);
     form.setValue("contactUuid", "");
+    form.setValue("projectUuid", "");
     form.setValue("deliveryAddressUuid", "");
     form.setValue("billingAddressUuid", "");
     setContacts([]);
+    setProjects([]);
     setAddresses([]);
     if (!uuid) return;
     setIsLoadingCompanyData(true);
     Promise.all([
       getContactsForCompany(uuid),
+      getProjectsForCompany(uuid),
       getAddressesForCompany(uuid),
-    ]).then(([newContacts, newAddresses]) => {
+    ]).then(([newContacts, newProjects, newAddresses]) => {
       setContacts(newContacts);
+      setProjects(newProjects);
       setAddresses(newAddresses);
       setIsLoadingCompanyData(false);
     });
@@ -144,7 +165,7 @@ export const useOrderSubmit = ({ companies }: UseOrderSubmitParams) => {
         leaveCustomer: values.leaveCustomer,
         ourReference: values.ourReference || null,
         seller: values.seller || null,
-        project: values.project || null,
+        projectUuid: values.projectUuid || null,
         priceDate: values.priceDate ? new Date(values.priceDate) : null,
         orderCategory: values.orderCategory || null,
         handlingBlocked: values.handlingBlocked,
@@ -218,6 +239,7 @@ export const useOrderSubmit = ({ companies }: UseOrderSubmitParams) => {
     deliveryType,
     companyOptions,
     contactOptions,
+    projectOptions,
     addressOptions,
     orderMethodOptions,
     deliveryTermOptions,

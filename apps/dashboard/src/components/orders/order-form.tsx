@@ -29,6 +29,7 @@ export const OrderForm = ({ companies, clerkUsers }: Props) => {
     deliveryType,
     companyOptions,
     contactOptions,
+    projectOptions,
     addressOptions,
     orderMethodOptions,
     deliveryTermOptions,
@@ -119,10 +120,15 @@ export const OrderForm = ({ companies, clerkUsers }: Props) => {
             <Input id="ourReference" {...register("ourReference")} />
           </div>
 
-          <div>
-            <FormLabel htmlFor="project">Project</FormLabel>
-            <Input id="project" {...register("project")} />
-          </div>
+          <FormSelectField
+            control={control}
+            id="projectUuid"
+            name="projectUuid"
+            label="Project"
+            options={projectOptions}
+            emptyValue=""
+            disabled={projectOptions.length <= 1}
+          />
 
           <div>
             <FormLabel htmlFor="priceDate">Price Date</FormLabel>

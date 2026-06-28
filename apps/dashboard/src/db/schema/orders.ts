@@ -39,7 +39,7 @@ export const Orders = mysqlTable(
     leaveCustomer: boolean("leave_customer").default(false),
     ourReference: varchar("our_reference", { length: 255 }),
     seller: varchar("seller", { length: 255 }),
-    project: varchar("project", { length: 255 }),
+    projectUuid: char("project_uuid", { length: 36 }),
     priceDate: date("price_date"),
     orderCategory: varchar("order_category", { length: 100 }),
     handlingBlocked: boolean("handling_blocked").default(false),
@@ -114,6 +114,7 @@ export const Orders = mysqlTable(
   (table) => [
     index("idx_orders_company_uuid").on(table.companyUuid),
     index("idx_orders_contact_uuid").on(table.contactUuid),
+    index("idx_orders_project_uuid").on(table.projectUuid),
     index("idx_orders_delivery_address_uuid").on(table.deliveryAddressUuid),
     index("idx_orders_billing_address_uuid").on(table.billingAddressUuid),
     foreignKey({
