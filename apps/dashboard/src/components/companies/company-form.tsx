@@ -409,15 +409,22 @@ export const CompanyForm = ({
                   </button>
                 </div>
               ) : (
-                <button
-                  type="button"
-                  onClick={() => setIsFirstAddressDialogOpen(true)}
-                  className="inline-flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-border px-3 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary"
-                  disabled={isPending}
-                >
-                  <Plus className="size-4" />
-                  Add Address
-                </button>
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setIsFirstAddressDialogOpen(true)}
+                    className="inline-flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-border px-3 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+                    disabled={isPending}
+                  >
+                    <Plus className="size-4" />
+                    Add Address
+                  </button>
+                  {errors.address && (
+                    <p className="text-sm text-destructive">
+                      Please add at least one address.
+                    </p>
+                  )}
+                </>
               )}
 
               {additionalAddresses.map((address, index) => (
