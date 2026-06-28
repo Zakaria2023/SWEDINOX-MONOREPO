@@ -29,24 +29,8 @@ import {
   stockLabelTypes,
   stockModes,
   vatCodes,
-  ArticleGroup,
-  CeStandard,
-  CertificaatOption,
-  CustomerLabelOption,
-  DecimalPlacesOption,
-  DeliveryTimeUnit,
-  FeaturesQuality,
   LeadTimeMethod,
-  ProcessedOption,
-  ProductQualityStandard,
-  ProductShape,
-  PurchasingUnit,
-  RevenueGroup,
-  SalesUnit,
-  StockLabelPrintingOption,
-  StockLabelType,
   StockMode,
-  VatCode,
 } from "@/lib/enums";
 import {
   ARTICLE_GROUP_LABELS,
@@ -81,21 +65,63 @@ const makeEnumOptions = <T extends string>(
   labels: Record<T, string>,
 ) => [emptyOption, ...values.map((v) => ({ value: v, label: labels[v] }))];
 
-const productShapeOptions = makeEnumOptions(productShapes, PRODUCT_SHAPE_LABELS);
-const articleGroupOptions = makeEnumOptions(articleGroups, ARTICLE_GROUP_LABELS);
-const processedOptionOptions = makeEnumOptions(processedOptions, PROCESSED_OPTION_LABELS);
+const productShapeOptions = makeEnumOptions(
+  productShapes,
+  PRODUCT_SHAPE_LABELS,
+);
+const articleGroupOptions = makeEnumOptions(
+  articleGroups,
+  ARTICLE_GROUP_LABELS,
+);
+const processedOptionOptions = makeEnumOptions(
+  processedOptions,
+  PROCESSED_OPTION_LABELS,
+);
 const ceOptions = makeEnumOptions(ceStandards, CE_STANDARD_LABELS);
-const standardsQualityOptions = makeEnumOptions(productQualityStandards, PRODUCT_QUALITY_STANDARD_LABELS);
-const featuresQualityOptions = makeEnumOptions(featuresQualities, FEATURES_QUALITY_LABELS);
-const decimalPlacesOpts = decimalPlacesOptions.map((v) => ({ value: v, label: v }));
-const purchasingUnitOptions = makeEnumOptions(purchasingUnits, PURCHASING_UNIT_LABELS);
-const deliveryTimeUnitOptions = makeEnumOptions(deliveryTimeUnits, DELIVERY_TIME_UNIT_LABELS);
-const stockLabelTypeOptions = makeEnumOptions(stockLabelTypes, STOCK_LABEL_TYPE_LABELS);
-const stockLabelPrintingOpts = makeEnumOptions(stockLabelPrintingOptions, STOCK_LABEL_PRINTING_LABELS);
-const customerLabelOpts = makeEnumOptions(customerLabelOptions, CUSTOMER_LABEL_OPTION_LABELS);
-const stockModeOpts = stockModes.map((v) => ({ value: v, label: STOCK_MODE_LABELS[v as StockMode] }));
-const leadTimeMethodOpts = leadTimeMethods.map((v) => ({ value: v, label: LEAD_TIME_METHOD_LABELS[v as LeadTimeMethod] }));
-const revenueGroupOptions = makeEnumOptions(revenueGroups, REVENUE_GROUP_LABELS);
+const standardsQualityOptions = makeEnumOptions(
+  productQualityStandards,
+  PRODUCT_QUALITY_STANDARD_LABELS,
+);
+const featuresQualityOptions = makeEnumOptions(
+  featuresQualities,
+  FEATURES_QUALITY_LABELS,
+);
+const decimalPlacesOpts = decimalPlacesOptions.map((v) => ({
+  value: v,
+  label: v,
+}));
+const purchasingUnitOptions = makeEnumOptions(
+  purchasingUnits,
+  PURCHASING_UNIT_LABELS,
+);
+const deliveryTimeUnitOptions = makeEnumOptions(
+  deliveryTimeUnits,
+  DELIVERY_TIME_UNIT_LABELS,
+);
+const stockLabelTypeOptions = makeEnumOptions(
+  stockLabelTypes,
+  STOCK_LABEL_TYPE_LABELS,
+);
+const stockLabelPrintingOpts = makeEnumOptions(
+  stockLabelPrintingOptions,
+  STOCK_LABEL_PRINTING_LABELS,
+);
+const customerLabelOpts = makeEnumOptions(
+  customerLabelOptions,
+  CUSTOMER_LABEL_OPTION_LABELS,
+);
+const stockModeOpts = stockModes.map((v) => ({
+  value: v,
+  label: STOCK_MODE_LABELS[v as StockMode],
+}));
+const leadTimeMethodOpts = leadTimeMethods.map((v) => ({
+  value: v,
+  label: LEAD_TIME_METHOD_LABELS[v as LeadTimeMethod],
+}));
+const revenueGroupOptions = makeEnumOptions(
+  revenueGroups,
+  REVENUE_GROUP_LABELS,
+);
 const salesUnitOpts = makeEnumOptions(salesUnitOptions, SALES_UNIT_LABELS);
 const vatCodeOptions = makeEnumOptions(vatCodes, VAT_CODE_LABELS);
 const certificaatOpts = makeEnumOptions(certificaatOptions, CERTIFICAAT_LABELS);
@@ -189,7 +215,9 @@ export const ProductGroupForm = ({ existingGroups, companies }: Props) => {
           </div>
 
           <div>
-            <FormLabel htmlFor="productShapeDesc">Product Shape Description</FormLabel>
+            <FormLabel htmlFor="productShapeDesc">
+              Product Shape Description
+            </FormLabel>
             <Input id="productShapeDesc" {...register("productShapeDesc")} />
           </div>
 
@@ -234,7 +262,9 @@ export const ProductGroupForm = ({ existingGroups, companies }: Props) => {
                 setValue("descSalesPurchaseOverridable", e.target.checked)
               }
             />
-            <span className="text-sm font-medium">Desc Sales/Purchase Overridable</span>
+            <span className="text-sm font-medium">
+              Desc Sales/Purchase Overridable
+            </span>
           </label>
         </div>
       </section>
@@ -291,7 +321,9 @@ export const ProductGroupForm = ({ existingGroups, companies }: Props) => {
             <Input id="paintSurface" {...register("paintSurface")} />
           </div>
           <div>
-            <FormLabel htmlFor="weightTheoretical">Weight Theoretical</FormLabel>
+            <FormLabel htmlFor="weightTheoretical">
+              Weight Theoretical
+            </FormLabel>
             <Input id="weightTheoretical" {...register("weightTheoretical")} />
           </div>
           <div>
@@ -387,7 +419,9 @@ export const ProductGroupForm = ({ existingGroups, companies }: Props) => {
               id="deliveryTime"
               type="number"
               min={0}
-              {...register("deliveryTime", { setValueAs: (v) => (v === "" ? 0 : Number(v)) })}
+              {...register("deliveryTime", {
+                setValueAs: (v) => (v === "" ? 0 : Number(v)),
+              })}
             />
           </div>
           <FormSelectField
@@ -404,7 +438,9 @@ export const ProductGroupForm = ({ existingGroups, companies }: Props) => {
               id="orderSeries"
               type="number"
               min={0}
-              {...register("orderSeries", { setValueAs: (v) => (v === "" ? 0 : Number(v)) })}
+              {...register("orderSeries", {
+                setValueAs: (v) => (v === "" ? 0 : Number(v)),
+              })}
             />
           </div>
           <div>
@@ -416,8 +452,13 @@ export const ProductGroupForm = ({ existingGroups, companies }: Props) => {
             <Input id="maxNetPrice" {...register("maxNetPrice")} />
           </div>
           <div>
-            <FormLabel htmlFor="orderingAdviceNotes">Ordering Advice Notes</FormLabel>
-            <Input id="orderingAdviceNotes" {...register("orderingAdviceNotes")} />
+            <FormLabel htmlFor="orderingAdviceNotes">
+              Ordering Advice Notes
+            </FormLabel>
+            <Input
+              id="orderingAdviceNotes"
+              {...register("orderingAdviceNotes")}
+            />
           </div>
         </div>
         <div className="flex flex-wrap gap-6">
@@ -425,7 +466,9 @@ export const ProductGroupForm = ({ existingGroups, companies }: Props) => {
             <Checkbox
               id="blockedForPurchasing"
               checked={watch("blockedForPurchasing")}
-              onChange={(e) => setValue("blockedForPurchasing", e.target.checked)}
+              onChange={(e) =>
+                setValue("blockedForPurchasing", e.target.checked)
+              }
             />
             <span className="text-sm font-medium">Blocked for Purchasing</span>
           </label>
@@ -441,9 +484,13 @@ export const ProductGroupForm = ({ existingGroups, companies }: Props) => {
             <Checkbox
               id="productCodeOnPurchase"
               checked={watch("productCodeOnPurchase")}
-              onChange={(e) => setValue("productCodeOnPurchase", e.target.checked)}
+              onChange={(e) =>
+                setValue("productCodeOnPurchase", e.target.checked)
+              }
             />
-            <span className="text-sm font-medium">Product Code on Purchase</span>
+            <span className="text-sm font-medium">
+              Product Code on Purchase
+            </span>
           </label>
         </div>
       </section>
@@ -460,7 +507,9 @@ export const ProductGroupForm = ({ existingGroups, companies }: Props) => {
               id="goodsReceiptTerm"
               type="number"
               min={0}
-              {...register("goodsReceiptTerm", { setValueAs: (v) => (v === "" ? 0 : Number(v)) })}
+              {...register("goodsReceiptTerm", {
+                setValueAs: (v) => (v === "" ? 0 : Number(v)),
+              })}
             />
           </div>
           <FormSelectField
@@ -486,27 +535,40 @@ export const ProductGroupForm = ({ existingGroups, companies }: Props) => {
             <Checkbox
               id="packagingMandatoryOnCompletion"
               checked={watch("packagingMandatoryOnCompletion")}
-              onChange={(e) => setValue("packagingMandatoryOnCompletion", e.target.checked)}
+              onChange={(e) =>
+                setValue("packagingMandatoryOnCompletion", e.target.checked)
+              }
             />
-            <span className="text-sm font-medium">Packaging Mandatory on Completion</span>
+            <span className="text-sm font-medium">
+              Packaging Mandatory on Completion
+            </span>
           </label>
           <label className="flex cursor-pointer items-center gap-3">
             <Checkbox
               id="receiptInLocationsWithLimitedDimensions"
               checked={watch("receiptInLocationsWithLimitedDimensions")}
               onChange={(e) =>
-                setValue("receiptInLocationsWithLimitedDimensions", e.target.checked)
+                setValue(
+                  "receiptInLocationsWithLimitedDimensions",
+                  e.target.checked,
+                )
               }
             />
-            <span className="text-sm font-medium">Receipt in Locations with Limited Dimensions</span>
+            <span className="text-sm font-medium">
+              Receipt in Locations with Limited Dimensions
+            </span>
           </label>
           <label className="flex cursor-pointer items-center gap-3">
             <Checkbox
               id="includeInCsvForStockLabels"
               checked={watch("includeInCsvForStockLabels")}
-              onChange={(e) => setValue("includeInCsvForStockLabels", e.target.checked)}
+              onChange={(e) =>
+                setValue("includeInCsvForStockLabels", e.target.checked)
+              }
             />
-            <span className="text-sm font-medium">Include in CSV for Stock Labels</span>
+            <span className="text-sm font-medium">
+              Include in CSV for Stock Labels
+            </span>
           </label>
           <label className="flex cursor-pointer items-center gap-3">
             <Checkbox
@@ -516,33 +578,47 @@ export const ProductGroupForm = ({ existingGroups, companies }: Props) => {
                 setValue("suggestLastUsedChargeInScanner", e.target.checked)
               }
             />
-            <span className="text-sm font-medium">Suggest Last Used Charge in Scanner</span>
+            <span className="text-sm font-medium">
+              Suggest Last Used Charge in Scanner
+            </span>
           </label>
           <label className="flex cursor-pointer items-center gap-3">
             <Checkbox
               id="alwaysApproveManuallyWarehouseWorkorderLine"
               checked={watch("alwaysApproveManuallyWarehouseWorkorderLine")}
               onChange={(e) =>
-                setValue("alwaysApproveManuallyWarehouseWorkorderLine", e.target.checked)
+                setValue(
+                  "alwaysApproveManuallyWarehouseWorkorderLine",
+                  e.target.checked,
+                )
               }
             />
-            <span className="text-sm font-medium">Always Approve Manually (Warehouse WO Line)</span>
+            <span className="text-sm font-medium">
+              Always Approve Manually (Warehouse WO Line)
+            </span>
           </label>
           <label className="flex cursor-pointer items-center gap-3">
             <Checkbox
               id="alwaysApproveManuallyProductionWorkorderLine"
               checked={watch("alwaysApproveManuallyProductionWorkorderLine")}
               onChange={(e) =>
-                setValue("alwaysApproveManuallyProductionWorkorderLine", e.target.checked)
+                setValue(
+                  "alwaysApproveManuallyProductionWorkorderLine",
+                  e.target.checked,
+                )
               }
             />
-            <span className="text-sm font-medium">Always Approve Manually (Production WO Line)</span>
+            <span className="text-sm font-medium">
+              Always Approve Manually (Production WO Line)
+            </span>
           </label>
         </div>
 
         {/* Tolerances */}
         <div>
-          <p className="mb-3 text-sm font-medium">Tolerances when Reporting as Completed (%)</p>
+          <p className="mb-3 text-sm font-medium">
+            Tolerances when Reporting as Completed (%)
+          </p>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {(
               [
@@ -612,11 +688,17 @@ export const ProductGroupForm = ({ existingGroups, companies }: Props) => {
             />
             <div>
               <FormLabel htmlFor="minStockMultiplier">Multiplier</FormLabel>
-              <Input id="minStockMultiplier" {...register("minStockMultiplier")} />
+              <Input
+                id="minStockMultiplier"
+                {...register("minStockMultiplier")}
+              />
             </div>
             <div>
               <FormLabel htmlFor="minStockFixedValue">Fixed Value</FormLabel>
-              <Input id="minStockFixedValue" {...register("minStockFixedValue")} />
+              <Input
+                id="minStockFixedValue"
+                {...register("minStockFixedValue")}
+              />
             </div>
             <div>
               <FormLabel htmlFor="minStockUnit">Unit</FormLabel>
@@ -637,11 +719,17 @@ export const ProductGroupForm = ({ existingGroups, companies }: Props) => {
             />
             <div>
               <FormLabel htmlFor="maxStockMultiplier">Multiplier</FormLabel>
-              <Input id="maxStockMultiplier" {...register("maxStockMultiplier")} />
+              <Input
+                id="maxStockMultiplier"
+                {...register("maxStockMultiplier")}
+              />
             </div>
             <div>
               <FormLabel htmlFor="maxStockFixedValue">Fixed Value</FormLabel>
-              <Input id="maxStockFixedValue" {...register("maxStockFixedValue")} />
+              <Input
+                id="maxStockFixedValue"
+                {...register("maxStockFixedValue")}
+              />
             </div>
             <div>
               <FormLabel htmlFor="maxStockUnit">Unit</FormLabel>
@@ -666,7 +754,9 @@ export const ProductGroupForm = ({ existingGroups, companies }: Props) => {
               id="leadTime"
               type="number"
               min={0}
-              {...register("leadTime", { setValueAs: (v) => (v === "" ? 0 : Number(v)) })}
+              {...register("leadTime", {
+                setValueAs: (v) => (v === "" ? 0 : Number(v)),
+              })}
             />
           </div>
           <div>
@@ -675,20 +765,35 @@ export const ProductGroupForm = ({ existingGroups, companies }: Props) => {
               id="reviewPeriod"
               type="number"
               min={0}
-              {...register("reviewPeriod", { setValueAs: (v) => (v === "" ? 0 : Number(v)) })}
+              {...register("reviewPeriod", {
+                setValueAs: (v) => (v === "" ? 0 : Number(v)),
+              })}
             />
           </div>
           <div>
-            <FormLabel htmlFor="orderCostsPurchasingSide">Order Costs Purchasing Side</FormLabel>
-            <Input id="orderCostsPurchasingSide" {...register("orderCostsPurchasingSide")} />
+            <FormLabel htmlFor="orderCostsPurchasingSide">
+              Order Costs Purchasing Side
+            </FormLabel>
+            <Input
+              id="orderCostsPurchasingSide"
+              {...register("orderCostsPurchasingSide")}
+            />
           </div>
           <div>
-            <FormLabel htmlFor="orderCostsLogistics">Order Costs Logistics</FormLabel>
-            <Input id="orderCostsLogistics" {...register("orderCostsLogistics")} />
+            <FormLabel htmlFor="orderCostsLogistics">
+              Order Costs Logistics
+            </FormLabel>
+            <Input
+              id="orderCostsLogistics"
+              {...register("orderCostsLogistics")}
+            />
           </div>
           <div>
             <FormLabel htmlFor="stockOpOrderSeries">Order Series</FormLabel>
-            <Input id="stockOpOrderSeries" {...register("stockOpOrderSeries")} />
+            <Input
+              id="stockOpOrderSeries"
+              {...register("stockOpOrderSeries")}
+            />
           </div>
           <div>
             <FormLabel htmlFor="minOrderQty">Min Order Qty</FormLabel>
@@ -719,7 +824,9 @@ export const ProductGroupForm = ({ existingGroups, companies }: Props) => {
             <Input id="transport" {...register("transport")} />
           </div>
           <div>
-            <FormLabel htmlFor="pacClassification">PAC Classification</FormLabel>
+            <FormLabel htmlFor="pacClassification">
+              PAC Classification
+            </FormLabel>
             <Input id="pacClassification" {...register("pacClassification")} />
           </div>
           <div>
@@ -733,23 +840,28 @@ export const ProductGroupForm = ({ existingGroups, companies }: Props) => {
             <Checkbox
               id="useStockOpForThisProduct"
               checked={watch("useStockOpForThisProduct")}
-              onChange={(e) => setValue("useStockOpForThisProduct", e.target.checked)}
+              onChange={(e) =>
+                setValue("useStockOpForThisProduct", e.target.checked)
+              }
             />
-            <span className="text-sm font-medium">Use StockOp for This Product</span>
+            <span className="text-sm font-medium">
+              Use StockOp for This Product
+            </span>
           </label>
           <div>
             <p className="mb-2 text-sm font-medium">Order on Days</p>
             <div className="flex flex-wrap gap-4">
-              {(
-                [
-                  { id: "orderOnMonday" as const, label: "Monday" },
-                  { id: "orderOnTuesday" as const, label: "Tuesday" },
-                  { id: "orderOnWednesday" as const, label: "Wednesday" },
-                  { id: "orderOnThursday" as const, label: "Thursday" },
-                  { id: "orderOnFriday" as const, label: "Friday" },
-                ]
-              ).map(({ id, label }) => (
-                <label key={id} className="flex cursor-pointer items-center gap-2">
+              {[
+                { id: "orderOnMonday" as const, label: "Monday" },
+                { id: "orderOnTuesday" as const, label: "Tuesday" },
+                { id: "orderOnWednesday" as const, label: "Wednesday" },
+                { id: "orderOnThursday" as const, label: "Thursday" },
+                { id: "orderOnFriday" as const, label: "Friday" },
+              ].map(({ id, label }) => (
+                <label
+                  key={id}
+                  className="flex cursor-pointer items-center gap-2"
+                >
                   <Checkbox
                     id={id}
                     checked={watch(id)}
@@ -810,23 +922,40 @@ export const ProductGroupForm = ({ existingGroups, companies }: Props) => {
             emptyValue=""
           />
           <div>
-            <FormLabel htmlFor="minProfitMarginStock">Min Profit Margin Stock (%)</FormLabel>
-            <Input id="minProfitMarginStock" {...register("minProfitMarginStock")} />
+            <FormLabel htmlFor="minProfitMarginStock">
+              Min Profit Margin Stock (%)
+            </FormLabel>
+            <Input
+              id="minProfitMarginStock"
+              {...register("minProfitMarginStock")}
+            />
           </div>
           <div>
-            <FormLabel htmlFor="minProfitMarginExWorks">Min Profit Margin Ex Works (%)</FormLabel>
-            <Input id="minProfitMarginExWorks" {...register("minProfitMarginExWorks")} />
+            <FormLabel htmlFor="minProfitMarginExWorks">
+              Min Profit Margin Ex Works (%)
+            </FormLabel>
+            <Input
+              id="minProfitMarginExWorks"
+              {...register("minProfitMarginExWorks")}
+            />
           </div>
           <div>
-            <FormLabel htmlFor="minProfitMarginCrossDocking">Min Profit Margin Cross-Docking (%)</FormLabel>
-            <Input id="minProfitMarginCrossDocking" {...register("minProfitMarginCrossDocking")} />
+            <FormLabel htmlFor="minProfitMarginCrossDocking">
+              Min Profit Margin Cross-Docking (%)
+            </FormLabel>
+            <Input
+              id="minProfitMarginCrossDocking"
+              {...register("minProfitMarginCrossDocking")}
+            />
           </div>
           <div>
             <FormLabel htmlFor="maxSalesLineQty">Max Sales Line Qty</FormLabel>
             <Input id="maxSalesLineQty" {...register("maxSalesLineQty")} />
           </div>
           <div>
-            <FormLabel htmlFor="maxSalesNetPrice">Max Sales Net Price</FormLabel>
+            <FormLabel htmlFor="maxSalesNetPrice">
+              Max Sales Net Price
+            </FormLabel>
             <Input id="maxSalesNetPrice" {...register("maxSalesNetPrice")} />
           </div>
           <div>
@@ -836,24 +965,52 @@ export const ProductGroupForm = ({ existingGroups, companies }: Props) => {
         </div>
 
         <div className="flex flex-wrap gap-x-6 gap-y-3">
-          {(
-            [
-              { id: "roundWeightPerPieceUp" as const, label: "Round Weight Per Piece Up" },
-              { id: "benorProduct" as const, label: "Benor Product" },
-              { id: "productCodeOnQuoteOrderInvoice" as const, label: "Product Code on Quote/Order/Invoice" },
-              { id: "websiteExport" as const, label: "Website Export" },
-              { id: "websiteBlockedForSales" as const, label: "Website Blocked for Sales" },
-              { id: "descriptionProductShort" as const, label: "Short Description" },
-              { id: "showWeightPerPiece" as const, label: "Show Weight Per Piece" },
-              { id: "showPackagingPerPiece" as const, label: "Show Packaging Per Piece" },
-              { id: "markProductGroup" as const, label: "Mark Product Group" },
-              { id: "priceOnRequest" as const, label: "Price on Request" },
-              { id: "severalBlockedForSales" as const, label: "Several Blocked for Sales" },
-              { id: "vehicleWithCraneRequired" as const, label: "Vehicle with Crane Required" },
-              { id: "vehicleWithCanopyRequired" as const, label: "Vehicle with Canopy Required" },
-              { id: "alwaysReserveStock" as const, label: "Always Reserve Stock" },
-            ]
-          ).map(({ id, label }) => (
+          {[
+            {
+              id: "roundWeightPerPieceUp" as const,
+              label: "Round Weight Per Piece Up",
+            },
+            { id: "benorProduct" as const, label: "Benor Product" },
+            {
+              id: "productCodeOnQuoteOrderInvoice" as const,
+              label: "Product Code on Quote/Order/Invoice",
+            },
+            { id: "websiteExport" as const, label: "Website Export" },
+            {
+              id: "websiteBlockedForSales" as const,
+              label: "Website Blocked for Sales",
+            },
+            {
+              id: "descriptionProductShort" as const,
+              label: "Short Description",
+            },
+            {
+              id: "showWeightPerPiece" as const,
+              label: "Show Weight Per Piece",
+            },
+            {
+              id: "showPackagingPerPiece" as const,
+              label: "Show Packaging Per Piece",
+            },
+            { id: "markProductGroup" as const, label: "Mark Product Group" },
+            { id: "priceOnRequest" as const, label: "Price on Request" },
+            {
+              id: "severalBlockedForSales" as const,
+              label: "Several Blocked for Sales",
+            },
+            {
+              id: "vehicleWithCraneRequired" as const,
+              label: "Vehicle with Crane Required",
+            },
+            {
+              id: "vehicleWithCanopyRequired" as const,
+              label: "Vehicle with Canopy Required",
+            },
+            {
+              id: "alwaysReserveStock" as const,
+              label: "Always Reserve Stock",
+            },
+          ].map(({ id, label }) => (
             <label key={id} className="flex cursor-pointer items-center gap-3">
               <Checkbox
                 id={id}
@@ -885,7 +1042,9 @@ export const ProductGroupForm = ({ existingGroups, companies }: Props) => {
             <Input id="supplierEan" {...register("supplierEan")} />
           </div>
           <div>
-            <FormLabel htmlFor="supplierExternalProductCode">External Product Code</FormLabel>
+            <FormLabel htmlFor="supplierExternalProductCode">
+              External Product Code
+            </FormLabel>
             <Input
               id="supplierExternalProductCode"
               {...register("supplierExternalProductCode")}
@@ -960,9 +1119,14 @@ export const ProductGroupForm = ({ existingGroups, companies }: Props) => {
               <button
                 type="button"
                 onClick={async () => {
-                  await fetch(`/api/documents/${doc.id}/delete`, { method: "DELETE" });
+                  await fetch(`/api/documents/${doc.id}/delete`, {
+                    method: "DELETE",
+                  });
                   const current = watch("documents") ?? [];
-                  setValue("documents", current.filter((_, i) => i !== index));
+                  setValue(
+                    "documents",
+                    current.filter((_, i) => i !== index),
+                  );
                 }}
                 className="text-muted-foreground hover:text-destructive"
                 aria-label="Remove"
@@ -977,7 +1141,10 @@ export const ProductGroupForm = ({ existingGroups, companies }: Props) => {
             const current = watch("documents") ?? [];
             setValue("documents", [
               ...current,
-              ...uploads.map((u) => ({ id: u.documentId, fileName: u.fileName })),
+              ...uploads.map((u) => ({
+                id: u.documentId,
+                fileName: u.fileName,
+              })),
             ]);
           }}
         />

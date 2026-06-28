@@ -52,8 +52,8 @@ export const getProductGroups = async (): Promise<ProductGroupListItem[]> => {
 
 export const getProductGroupsForSelect = async (): Promise<
   ProductGroupOption[]
-> => {
-  return db
+> =>
+  db
     .select({
       uuid: ProductGroups.uuid,
       name: ProductGroups.name,
@@ -63,7 +63,6 @@ export const getProductGroupsForSelect = async (): Promise<
     })
     .from(ProductGroups)
     .orderBy(asc(ProductGroups.name));
-};
 
 export const createProductGroup = async (
   fields: ProductGroupFields,

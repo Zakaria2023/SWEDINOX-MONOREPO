@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Resolver } from "react-hook-form";
 import {
   createProductGroup,
   ProductGroupActionResult,
@@ -29,9 +29,10 @@ export const useProductGroupSubmit = ({
   const [isPending, startTransition] = useTransition();
   const [state, setState] = useState<ProductGroupActionResult>({});
 
-  const form = useForm<ProductGroupFormValues, unknown>({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    resolver: zodResolver(productGroupSchema) as any,
+  const form = useForm<ProductGroupFormValues>({
+    resolver: zodResolver(
+      productGroupSchema,
+    ) as Resolver<ProductGroupFormValues>,
     defaultValues: DEFAULT_PRODUCT_GROUP,
   });
 
@@ -179,8 +180,7 @@ export const useProductGroupSubmit = ({
         supplierCompanyUuid: values.supplierCompanyUuid || null,
         supplierPreferred: values.supplierPreferred,
         supplierEan: values.supplierEan || null,
-        supplierExternalProductCode:
-          values.supplierExternalProductCode || null,
+        supplierExternalProductCode: values.supplierExternalProductCode || null,
         supplierEditing: values.supplierEditing || null,
         supplierDeliveryTime: values.supplierDeliveryTime,
         supplierDeliveryTimeUnit: values.supplierDeliveryTimeUnit || null,
