@@ -54,7 +54,10 @@ export type WarehouseActionResult = {
   success?: boolean;
 };
 
-export type MachineStockLocationOption = Pick<SelectWarehouses, "uuid" | "name">;
+export type MachineStockLocationOption = Pick<
+  SelectWarehouses,
+  "uuid" | "name"
+>;
 
 export const getMachineStockLocationsForSelect = async (): Promise<
   MachineStockLocationOption[]

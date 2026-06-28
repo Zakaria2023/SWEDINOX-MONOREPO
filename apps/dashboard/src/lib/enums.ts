@@ -866,6 +866,7 @@ export const invoicePaymentTerms = [
 
 export type InvoicePaymentTerm = (typeof invoicePaymentTerms)[number];
 
+
 export const orderMethods = [
   "telephone",
   "email",

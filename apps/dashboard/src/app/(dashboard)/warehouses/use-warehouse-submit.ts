@@ -161,7 +161,8 @@ export const useWarehouseSubmit = ({
           values.productTypes.length > 0 ? values.productTypes : undefined,
         loadLocations:
           values.loadLocations.length > 0 ? values.loadLocations : undefined,
-        documents: (values.documents ?? []).length > 0 ? values.documents : undefined,
+        documents:
+          (values.documents ?? []).length > 0 ? values.documents : undefined,
       });
       setState(result);
       if (result.success) router.push("/warehouses");

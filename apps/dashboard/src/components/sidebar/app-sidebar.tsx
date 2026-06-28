@@ -65,7 +65,10 @@ export const AppSidebar = () => {
     pathname.startsWith("/warehouses") ||
     pathname.startsWith("/warehouse-sub-sections");
   const isLocationsActive = pathname.startsWith("/locations");
-  const isLogisticsActive = pathname.startsWith("/machines");
+  const isLogisticsActive =
+    pathname.startsWith("/machines") ||
+    pathname.startsWith("/product-groups") ||
+    pathname.startsWith("/products");
 
   const [isCustomersOpen, setIsCustomersOpen] = useState(false);
   const [isCompanyOpen, setIsCompanyOpen] = useState(false);
@@ -398,6 +401,22 @@ export const AppSidebar = () => {
                         isActive={pathname.startsWith("/machines")}
                       >
                         <span>Machines</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/product-groups" />}
+                        isActive={pathname.startsWith("/product-groups")}
+                      >
+                        <span>Product Groups</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/products" />}
+                        isActive={pathname.startsWith("/products")}
+                      >
+                        <span>Products</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                   </SidebarMenuSub>
