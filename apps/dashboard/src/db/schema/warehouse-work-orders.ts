@@ -25,9 +25,7 @@ export const WarehouseWorkOrders = mysqlTable(
     id: int("id").primaryKey().autoincrement(),
     uuid: char("uuid", { length: 36 }).notNull().unique(),
     warehouseUuid: char("warehouse_uuid", { length: 36 }).notNull(),
-    status: mysqlEnum("status", warehouseWorkOrderStatuses)
-      .notNull()
-      .default("new"),
+    status: mysqlEnum("status", warehouseWorkOrderStatuses).default("new"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
   },

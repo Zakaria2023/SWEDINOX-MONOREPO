@@ -64,6 +64,16 @@ import type {
   DeliveryTerm,
   OrderWeightType,
   PurchaseOrderType,
+  StickerPerPickWorkorderType,
+  PrinterName,
+  PrinterEntry,
+  CountWorkorderMethod,
+  WorkorderReleaseMethod,
+  WorkorderPrintMethod,
+  WorkorderSlipType,
+  WorkorderProcessingMethod,
+  WarehouseWorkOrderStatus,
+  WarehouseWorkOrderLineType,
 } from "@/lib/enums";
 
 export const COMMON_TEXT = {
@@ -1143,7 +1153,6 @@ export const WAREHOUSE_WORK_ORDER_LINE_TYPE_LABELS: Record<
   put_away: "Put Away",
   picking: "Picking",
 };
-
 
 export const PURCHASE_INVOICE_BLOCK_REASON_LABELS: Record<
   PurchaseInvoiceBlockReason,

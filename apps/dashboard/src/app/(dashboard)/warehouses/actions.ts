@@ -47,13 +47,12 @@ export type WarehouseLocationOption = Pick<SelectWarehouses, "uuid" | "name">;
 /** Warehouses of type "location" — for the pick-up default location dropdown */
 export const getWarehouseLocationsForSelect = async (): Promise<
   WarehouseLocationOption[]
-> => {
-  return db
+> =>
+  db
     .select({ uuid: Warehouses.uuid, name: Warehouses.name })
     .from(Warehouses)
     .where(eq(Warehouses.type, "location"))
     .orderBy(asc(Warehouses.name));
-};
 
 export type MachineStockLocationOption = Pick<
   SelectWarehouses,
@@ -62,28 +61,26 @@ export type MachineStockLocationOption = Pick<
 
 export const getMachineStockLocationsForSelect = async (): Promise<
   MachineStockLocationOption[]
-> => {
-  return db
+> =>
+  db
     .select({ uuid: Warehouses.uuid, name: Warehouses.name })
     .from(Warehouses)
     .where(eq(Warehouses.type, "location"))
     .orderBy(asc(Warehouses.name));
-};
 
 /** Root-level warehouses only — for the warehouse adapt-from dropdown */
-export const getWarehousesForSelect = async (): Promise<WarehouseOption[]> => {
-  return db
+export const getWarehousesForSelect = async (): Promise<WarehouseOption[]> =>
+  db
     .select({ uuid: Warehouses.uuid, name: Warehouses.name })
     .from(Warehouses)
     .where(isNull(Warehouses.parentUuid))
     .orderBy(asc(Warehouses.name));
-};
 
 /** All items (root + children) — for the sub-section adapt-from dropdown */
 export const getAllWarehouseItemsForSelect = async (): Promise<
   WarehouseItemOption[]
-> => {
-  return db
+> =>
+  db
     .select({
       uuid: Warehouses.uuid,
       name: Warehouses.name,
@@ -91,7 +88,6 @@ export const getAllWarehouseItemsForSelect = async (): Promise<
     })
     .from(Warehouses)
     .orderBy(asc(Warehouses.name));
-};
 
 /** Fetch full settings for a single warehouse — used by the Adapt From feature */
 export const getWarehouseByUuid = async (
