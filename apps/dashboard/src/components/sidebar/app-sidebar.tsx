@@ -397,7 +397,6 @@ export const AppSidebar = () => {
                   <SidebarMenuSub>
                     <SidebarMenuSubItem>
                       <SidebarMenuSubButton
-                      <SidebarMenuSubButton
                         render={<Link href="/machines" />}
                         isActive={pathname.startsWith("/machines")}
                       >
