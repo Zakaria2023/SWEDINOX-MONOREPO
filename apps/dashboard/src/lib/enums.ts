@@ -919,6 +919,44 @@ export const purchaseOrderTypes = [
 
 export type PurchaseOrderType = (typeof purchaseOrderTypes)[number];
 
+export const complaintTypes = [
+  "counter_order",
+  "general",
+  "order",
+  "purchase_order",
+  "purchase_quote",
+  "quote",
+  "return_order",
+] as const satisfies readonly string[];
+
+export type ComplaintType = (typeof complaintTypes)[number];
+
+export const complaintCategories = [
+  "damaged",
+  "wrong_price_calculated",
+  "wrong_quantity",
+  "wrong_material_delivered",
+  "delivered_too_late",
+  "transport_damage",
+  "incorrect_delivery_address",
+] as const satisfies readonly string[];
+
+export type ComplaintCategory = (typeof complaintCategories)[number];
+
+export const complaintReports = [
+  "telephone",
+  "email",
+  "counter",
+  "representative",
+  "oral",
+  "website",
+  "edi",
+  "ai_ingelezen_email",
+] as const satisfies readonly string[];
+
+export type ComplaintReport = (typeof complaintReports)[number];
+
+
 export const purchaseInvoiceBlockReasons = [
   "price_mismatch",
   "awaiting_goods_receipt",
