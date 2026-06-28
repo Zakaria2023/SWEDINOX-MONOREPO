@@ -81,7 +81,7 @@ export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
     setSurchargeError(null);
     submitForm(e);
   };
-  const { register, watch, control } = form;
+  const { register, control } = form;
 
   useEffect(() => {
     if (state.success) {
