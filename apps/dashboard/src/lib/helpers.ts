@@ -30,3 +30,11 @@ export const pluralize = (
   singular: string,
   plural = `${singular}s`,
 ) => (count === 1 ? singular : plural);
+
+export const formatRevenue = (value: string | null) => {
+  if (!value) return "€ 0,00";
+  return new Intl.NumberFormat("nl-NL", {
+    style: "currency",
+    currency: "EUR",
+  }).format(Number(value));
+};

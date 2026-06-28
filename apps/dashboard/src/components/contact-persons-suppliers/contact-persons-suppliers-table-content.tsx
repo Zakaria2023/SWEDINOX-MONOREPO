@@ -11,6 +11,7 @@ import {
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { ContactSalutation } from "@/lib/enums";
+import { formatRevenue } from "@/lib/helpers";
 import {
   COMMON_TEXT,
   CONTACT_CATEGORY_LABELS,
@@ -82,13 +83,6 @@ const initialVisibility = ALL_COLUMNS.reduce(
 
 type Props = { rows: ContactPersonSupplierRow[] };
 
-const formatRevenue = (value: string | null) => {
-  if (value === null) return "€ 0,00";
-  return new Intl.NumberFormat("nl-NL", {
-    style: "currency",
-    currency: "EUR",
-  }).format(Number(value));
-};
 
 export const ContactPersonsSuppliersTable = ({ rows }: Props) => {
   const [columnVisibility, setColumnVisibility] =
