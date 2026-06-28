@@ -1,9 +1,17 @@
-import { getWarehousesForSelect } from "@/app/(dashboard)/warehouses/actions";
+import {
+  getWarehousesForSelect,
+  getWarehouseLocationsForSelect,
+} from "@/app/(dashboard)/warehouses/actions";
+import { getCompaniesForSelect } from "@/app/(dashboard)/companies/actions";
 import { WarehouseForm } from "@/components/warehouses/warehouse-form";
 import { PageHeading } from "@/components/layout/page-heading";
 
 const AddWarehousePage = async () => {
-  const existingWarehouses = await getWarehousesForSelect();
+  const [existingWarehouses, companies, warehouseLocations] = await Promise.all([
+    getWarehousesForSelect(),
+    getCompaniesForSelect(),
+    getWarehouseLocationsForSelect(),
+  ]);
 
   return (
     <div className="max-w-4xl space-y-6 p-6">
@@ -11,7 +19,11 @@ const AddWarehousePage = async () => {
         title="Add Warehouse"
         description="Create a new warehouse location"
       />
-      <WarehouseForm existingWarehouses={existingWarehouses} />
+      <WarehouseForm
+        existingWarehouses={existingWarehouses}
+        companies={companies}
+        warehouseLocations={warehouseLocations}
+      />
     </div>
   );
 };
