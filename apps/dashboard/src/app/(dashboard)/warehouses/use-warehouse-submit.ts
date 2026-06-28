@@ -184,7 +184,8 @@ export const useWarehouseSubmit = ({
     { value: "", label: COMMON_TEXT.emptyOption },
     ...stickerPerPickWorkorderTypes.map((s) => ({
       value: s,
-      label: STICKER_PER_PICK_WORKORDER_LABELS[s as StickerPerPickWorkorderType],
+      label:
+        STICKER_PER_PICK_WORKORDER_LABELS[s as StickerPerPickWorkorderType],
     })),
   ];
 
@@ -195,27 +196,29 @@ export const useWarehouseSubmit = ({
       form.reset({ ...DEFAULT_WAREHOUSE, name: currentName });
       return;
     }
-    const source = existingWarehouses.find((w) => w.uuid === uuid);
-    if (!source) return;
-    form.reset({
-      name: currentName,
-      locationType: source.locationType ?? "",
-      loadingLocation: source.loadingLocation ?? "",
-      address: source.address ?? "",
-      blocked: source.blocked,
-      blockReason: source.blockReason ?? "",
-      blockedForOptimization: source.blockedForOptimization,
-      limitedDimensions: source.limitedDimensions,
-      minLength: source.minLength ?? "",
-      maxLength: source.maxLength ?? "",
-      maxWidth: source.maxWidth ?? "",
-      maxWeight: source.maxWeight ?? "",
-      productTypes: (source.productTypes ?? []) as WarehouseProductType[],
-      loadLocations: (source.loadLocations ?? []) as Array<{
-        transportRegion: WarehouseTransportRegion;
-        loadLocation: WarehouseLoadingLocation;
-      }>,
-      documents: [],
+    startTransition(async () => {
+      const source = await getWarehouseByUuid(uuid);
+      if (!source) return;
+      form.reset({
+        name: currentName,
+        locationType: source.locationType ?? "",
+        loadingLocation: source.loadingLocation ?? "",
+        address: source.address ?? "",
+        blocked: source.blocked,
+        blockReason: source.blockReason ?? "",
+        blockedForOptimization: source.blockedForOptimization,
+        limitedDimensions: source.limitedDimensions,
+        minLength: source.minLength ?? "",
+        maxLength: source.maxLength ?? "",
+        maxWidth: source.maxWidth ?? "",
+        maxWeight: source.maxWeight ?? "",
+        productTypes: (source.productTypes ?? []) as WarehouseProductType[],
+        loadLocations: (source.loadLocations ?? []) as Array<{
+          transportRegion: WarehouseTransportRegion;
+          loadLocation: WarehouseLoadingLocation;
+        }>,
+        documents: [],
+      });
     });
   };
 
@@ -304,9 +307,8 @@ export const useWarehouseSubmit = ({
         transportByCompanyUuid: values.transportByCompanyUuid || null,
 
         // Picking workorders
-        pickingProcessingMethod: (
-          values.pickingProcessingMethod || undefined
-        ) as WorkorderProcessingMethod | undefined,
+        pickingProcessingMethod: (values.pickingProcessingMethod ||
+          undefined) as WorkorderProcessingMethod | undefined,
         pickingReleaseMethod: (values.pickingReleaseMethod || undefined) as
           | WorkorderReleaseMethod
           | undefined,
@@ -319,21 +321,22 @@ export const useWarehouseSubmit = ({
         // Fetch workorders for Surface Treatment
         surfaceTreatmentMakePerSubsection:
           values.surfaceTreatmentMakePerSubsection,
-        surfaceTreatmentProcessingMethod: (
-          values.surfaceTreatmentProcessingMethod || undefined
-        ) as WorkorderProcessingMethod | undefined,
-        surfaceTreatmentReleaseMethod: (
-          values.surfaceTreatmentReleaseMethod || undefined
-        ) as WorkorderReleaseMethod | undefined,
-        surfaceTreatmentPrintingMethod: (
-          values.surfaceTreatmentPrintingMethod || undefined
-        ) as WorkorderPrintMethod | undefined,
+        surfaceTreatmentProcessingMethod:
+          (values.surfaceTreatmentProcessingMethod || undefined) as
+            | WorkorderProcessingMethod
+            | undefined,
+        surfaceTreatmentReleaseMethod: (values.surfaceTreatmentReleaseMethod ||
+          undefined) as WorkorderReleaseMethod | undefined,
+        surfaceTreatmentPrintingMethod:
+          (values.surfaceTreatmentPrintingMethod || undefined) as
+            | WorkorderPrintMethod
+            | undefined,
 
         // Fetch workorders for Sawing
         sawingMakePerSubsection: values.sawingMakePerSubsection,
-        sawingProcessingMethod: (
-          values.sawingProcessingMethod || undefined
-        ) as WorkorderProcessingMethod | undefined,
+        sawingProcessingMethod: (values.sawingProcessingMethod || undefined) as
+          | WorkorderProcessingMethod
+          | undefined,
         sawingReleaseMethod: (values.sawingReleaseMethod || undefined) as
           | WorkorderReleaseMethod
           | undefined,
@@ -342,9 +345,15 @@ export const useWarehouseSubmit = ({
           | undefined,
 
         // Print settings — A4 Printers
-        a4PrinterOriginal: (values.a4PrinterOriginal || undefined) as PrinterName | undefined,
-        a4PrinterCopy1: (values.a4PrinterCopy1 || undefined) as PrinterName | undefined,
-        a4PrinterCopy2: (values.a4PrinterCopy2 || undefined) as PrinterName | undefined,
+        a4PrinterOriginal: (values.a4PrinterOriginal || undefined) as
+          | PrinterName
+          | undefined,
+        a4PrinterCopy1: (values.a4PrinterCopy1 || undefined) as
+          | PrinterName
+          | undefined,
+        a4PrinterCopy2: (values.a4PrinterCopy2 || undefined) as
+          | PrinterName
+          | undefined,
 
         // Print settings — A4 Printers small material
         a4SmallMaterialThresholdMm:
@@ -352,16 +361,27 @@ export const useWarehouseSubmit = ({
           values.a4SmallMaterialThresholdMm !== undefined
             ? Number(values.a4SmallMaterialThresholdMm)
             : undefined,
-        a4SmallPrinterOriginal: (values.a4SmallPrinterOriginal || undefined) as PrinterName | undefined,
-        a4SmallPrinterCopy1: (values.a4SmallPrinterCopy1 || undefined) as PrinterName | undefined,
-        a4SmallPrinterCopy2: (values.a4SmallPrinterCopy2 || undefined) as PrinterName | undefined,
+        a4SmallPrinterOriginal: (values.a4SmallPrinterOriginal || undefined) as
+          | PrinterName
+          | undefined,
+        a4SmallPrinterCopy1: (values.a4SmallPrinterCopy1 || undefined) as
+          | PrinterName
+          | undefined,
+        a4SmallPrinterCopy2: (values.a4SmallPrinterCopy2 || undefined) as
+          | PrinterName
+          | undefined,
 
         // Print settings — sticker per pick
-        stickerPerPickWorkorder: (values.stickerPerPickWorkorder || undefined) as StickerPerPickWorkorderType | undefined,
+        stickerPerPickWorkorder: (values.stickerPerPickWorkorder ||
+          undefined) as StickerPerPickWorkorderType | undefined,
 
         // Print settings — other printers
-        labelPrinter: (values.labelPrinter || undefined) as PrinterName | undefined,
-        stickerPrinter: (values.stickerPrinter || undefined) as PrinterName | undefined,
+        labelPrinter: (values.labelPrinter || undefined) as
+          | PrinterName
+          | undefined,
+        stickerPrinter: (values.stickerPrinter || undefined) as
+          | PrinterName
+          | undefined,
 
         // Print settings — CSV files for customer labels
         csvCustomerLabelFileName: values.csvCustomerLabelFileName || null,
@@ -380,9 +400,8 @@ export const useWarehouseSubmit = ({
         pickupOrderPrinter: (values.pickupOrderPrinter || undefined) as
           | PrinterName
           | undefined,
-        pickupOrderPrinterEntry: (
-          values.pickupOrderPrinterEntry || undefined
-        ) as PrinterEntry | undefined,
+        pickupOrderPrinterEntry: (values.pickupOrderPrinterEntry ||
+          undefined) as PrinterEntry | undefined,
       });
       setState(result);
       if (result.success) router.push("/warehouses");
