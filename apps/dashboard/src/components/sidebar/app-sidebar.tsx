@@ -401,7 +401,6 @@ export const AppSidebar = () => {
                   <SidebarMenuSub>
                     <SidebarMenuSubItem>
                       <SidebarMenuSubButton
-                      <SidebarMenuSubButton
                         render={<Link href="/machines" />}
                         isActive={pathname.startsWith("/machines")}
                       >
@@ -409,6 +408,7 @@ export const AppSidebar = () => {
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                     <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
                         render={<Link href="/product-groups" />}
                         isActive={pathname.startsWith("/product-groups")}
                       >
