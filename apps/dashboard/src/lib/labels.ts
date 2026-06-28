@@ -64,6 +64,9 @@ import type {
   DeliveryTerm,
   OrderWeightType,
   PurchaseOrderType,
+  ComplaintType,
+  ComplaintCategory,
+  ComplaintReport,
 } from "@/lib/enums";
 
 export const COMMON_TEXT = {
@@ -1076,7 +1079,6 @@ export const COMPLAINT_REPORT_LABELS: Record<ComplaintReport, string> = {
   edi: "EDI",
   ai_ingelezen_email: "AI ingelezen Email",
 };
-
 
 export const PURCHASE_INVOICE_BLOCK_REASON_LABELS: Record<
   PurchaseInvoiceBlockReason,

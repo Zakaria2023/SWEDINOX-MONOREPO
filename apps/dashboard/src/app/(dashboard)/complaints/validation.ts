@@ -4,6 +4,7 @@ import {
   complaintReports,
   complaintTypes,
 } from "@/lib/enums";
+import { todayDateString } from "@/lib/helpers";
 
 export const complaintSchema = z.object({
   companyUuid: z.string().min(1, "Company is required"),
@@ -21,14 +22,12 @@ export const complaintSchema = z.object({
 
 export type ComplaintFormValues = z.infer<typeof complaintSchema>;
 
-const today = new Date().toISOString().split("T")[0];
-
 export const DEFAULT_COMPLAINT: ComplaintFormValues = {
   companyUuid: "",
   contactUuid: "",
   complaintType: undefined,
   report: undefined,
-  reportDate: today,
+  reportDate: todayDateString(),
   description: "",
   category: undefined,
   productUuid: "",

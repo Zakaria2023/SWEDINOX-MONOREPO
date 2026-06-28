@@ -36,9 +36,9 @@ export const Complaints = mysqlTable(
     category: mysqlEnum("category", complaintCategories),
 
     productUuid: char("product_uuid", { length: 36 }),
-    qty: decimal("qty", { precision: 15, scale: 3 }).notNull().default("0.000"),
-    amount: decimal("amount", { precision: 15, scale: 2 }).notNull().default("0.00"),
-    weight: decimal("weight", { precision: 15, scale: 3 }).notNull().default("0.000"),
+    qty: decimal("qty", { precision: 15, scale: 3 }).default("0.000"),
+    amount: decimal("amount", { precision: 15, scale: 2 }).default("0.00"),
+    weight: decimal("weight", { precision: 15, scale: 3 }).default("0.000"),
 
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),

@@ -3,11 +3,8 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
-import {
-  ComplaintActionResult,
-  createComplaint,
-} from "./actions";
+import { useForm, Resolver } from "react-hook-form";
+import { ComplaintActionResult, createComplaint } from "./actions";
 import {
   ContactOption,
   getContactsForCompany,
@@ -60,9 +57,8 @@ export const useComplaintSubmit = ({
   const [contacts, setContacts] = useState<ContactOption[]>([]);
   const [isLoadingContacts, setIsLoadingContacts] = useState(false);
 
-  const form = useForm<ComplaintFormValues, unknown>({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    resolver: zodResolver(complaintSchema) as any,
+  const form = useForm<ComplaintFormValues>({
+    resolver: zodResolver(complaintSchema) as Resolver<ComplaintFormValues>,
     defaultValues: DEFAULT_COMPLAINT,
   });
 
@@ -109,7 +105,9 @@ export const useComplaintSubmit = ({
     form.setValue("companyUuid", uuid);
     form.setValue("contactUuid", "");
     setContacts([]);
-    if (!uuid) return;
+    if (!uuid) {
+      return;
+    }
     setIsLoadingContacts(true);
     getContactsForCompany(uuid).then((result) => {
       setContacts(result);
