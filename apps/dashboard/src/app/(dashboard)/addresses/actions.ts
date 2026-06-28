@@ -15,13 +15,12 @@ export type AddressSelectOption = Pick<
   "uuid" | "streetAndNo" | "city"
 >;
 
-export const getAddresses = async (): Promise<AddressListItem[]> => {
-  return db
+export const getAddresses = async (): Promise<AddressListItem[]> =>
+  db
     .select()
     .from(CompanyAddresses)
     .leftJoin(Companies, eq(Companies.uuid, CompanyAddresses.companyUuid))
     .orderBy(desc(CompanyAddresses.createdAt));
-};
 
 export const getAddressesForSelect = async (): Promise<
   AddressSelectOption[]

@@ -11,7 +11,20 @@ export type WarehouseOption = Pick<SelectWarehouses, "uuid" | "name">;
 
 export type WarehouseItemOption = Pick<
   SelectWarehouses,
-  "uuid" | "name" | "parentUuid"
+  | "uuid"
+  | "name"
+  | "parentUuid"
+  | "locationType"
+  | "loadingLocation"
+  | "blocked"
+  | "blockReason"
+  | "blockedForOptimization"
+  | "limitedDimensions"
+  | "minLength"
+  | "maxLength"
+  | "maxWidth"
+  | "maxWeight"
+  | "productTypes"
 >;
 
 export type WarehouseAdaptData = Pick<
@@ -85,6 +98,17 @@ export const getAllWarehouseItemsForSelect = async (): Promise<
       uuid: Warehouses.uuid,
       name: Warehouses.name,
       parentUuid: Warehouses.parentUuid,
+      locationType: Warehouses.locationType,
+      loadingLocation: Warehouses.loadingLocation,
+      blocked: Warehouses.blocked,
+      blockReason: Warehouses.blockReason,
+      blockedForOptimization: Warehouses.blockedForOptimization,
+      limitedDimensions: Warehouses.limitedDimensions,
+      minLength: Warehouses.minLength,
+      maxLength: Warehouses.maxLength,
+      maxWidth: Warehouses.maxWidth,
+      maxWeight: Warehouses.maxWeight,
+      productTypes: Warehouses.productTypes,
     })
     .from(Warehouses)
     .orderBy(asc(Warehouses.name));

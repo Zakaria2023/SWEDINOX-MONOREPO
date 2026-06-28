@@ -41,6 +41,13 @@ const eslintConfig = [
       'arrow-body-style': ['error', 'as-needed'],
     },
   },
+  {
+    files: ['src/components/shadcn/**'],
+    rules: {
+      'no-restricted-syntax': 'off',
+      'arrow-body-style': 'off',
+    },
+  },
 ]
 
 export default eslintConfig

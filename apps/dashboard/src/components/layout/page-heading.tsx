@@ -12,17 +12,15 @@ export const PageHeading = ({
   description,
   titleClassName,
   descriptionClassName,
-}: Props) => {
-  return (
-    <div>
-      <h1 className={cn("text-3xl font-bold text-gray-900", titleClassName)}>
-        {title}
-      </h1>
-      {description && (
-        <p className={cn("mt-2 text-gray-600", descriptionClassName)}>
-          {description}
-        </p>
-      )}
-    </div>
-  );
-};
+}: Props) => (
+  <div>
+    <h1 className={cn("text-3xl font-bold text-gray-900", titleClassName)}>
+      {title}
+    </h1>
+    {description && (
+      <p className={cn("mt-2 text-gray-600", descriptionClassName)}>
+        {description}
+      </p>
+    )}
+  </div>
+);

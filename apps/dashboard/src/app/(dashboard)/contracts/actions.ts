@@ -55,15 +55,23 @@ export type ContractPerSupplierRow = Pick<
     contractGroupName: SelectContractGroups["name"] | null;
   };
 
-export type ContractForProjectOption = Pick<SelectContracts, "uuid" | "code" | "description">;
+export type ContractForProjectOption = Pick<
+  SelectContracts,
+  "uuid" | "code" | "description"
+>;
 
-export const getContractsForProjects = async (): Promise<ContractForProjectOption[]> => {
-  return db
-    .select({ uuid: Contracts.uuid, code: Contracts.code, description: Contracts.description })
+export const getContractsForProjects = async (): Promise<
+  ContractForProjectOption[]
+> =>
+  db
+    .select({
+      uuid: Contracts.uuid,
+      code: Contracts.code,
+      description: Contracts.description,
+    })
     .from(Contracts)
     .where(inArray(Contracts.role, ["customer", "prospect"]))
     .orderBy(Contracts.code);
-};
 
 export const getContracts = async (): Promise<ContractListItem[]> => {
   const rows = await db

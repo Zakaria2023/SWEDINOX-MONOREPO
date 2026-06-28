@@ -50,8 +50,8 @@ export type ContactOption = Pick<
 
 export const getContactsByCompanyUuid = async (
   companyUuid: string,
-): Promise<ContactOption[]> => {
-  return db
+): Promise<ContactOption[]> =>
+  db
     .select({
       uuid: Contacts.uuid,
       firstName: Contacts.firstName,
@@ -60,7 +60,6 @@ export const getContactsByCompanyUuid = async (
     .from(Contacts)
     .where(eq(Contacts.companyUuid, companyUuid))
     .orderBy(asc(Contacts.lastName));
-};
 
 export const createVisitReport = async (
   input: VisitReportInput,
