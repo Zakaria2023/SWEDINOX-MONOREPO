@@ -1862,53 +1862,55 @@ export const CompanyForm = ({
               Add a project for this customer / prospect.
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleSaveProject} className="space-y-4">
-            <div>
-              <FormLabel htmlFor="proj-name">Project Name</FormLabel>
-              <Input
-                id="proj-name"
-                {...projectForm.register("projectName")}
-                placeholder="Project name"
-              />
-            </div>
-            <div>
-              <FormLabel htmlFor="proj-end">End Date</FormLabel>
-              <Input
-                id="proj-end"
-                type="date"
-                {...projectForm.register("endDate")}
-              />
-            </div>
-            <div>
-              <FormLabel htmlFor="proj-revenue">Revenue</FormLabel>
-              <Input
-                id="proj-revenue"
-                {...projectForm.register("revenue")}
-                placeholder="Revenue"
-              />
-            </div>
-            <div>
-              <FormLabel htmlFor="proj-contract">Contract</FormLabel>
-              <Controller
-                name="contractUuid"
-                control={projectForm.control}
-                render={({ field }) => (
-                  <Select
-                    id="proj-contract"
-                    options={[
-                      { value: "", label: COMMON_TEXT.emptyOption },
-                      ...projectContracts.map((c) => ({
-                        value: c.uuid,
-                        label: `${c.code}${c.description ? ` – ${c.description}` : ""}`,
-                      })),
-                    ]}
-                    value={field.value ?? ""}
-                    onValueChange={field.onChange}
-                    placeholder={COMMON_TEXT.selectOption}
-                  />
-                )}
-              />
-            </div>
+          <form onSubmit={handleSaveProject}>
+            <DialogBody className="space-y-4">
+              <div>
+                <FormLabel htmlFor="proj-name">Project Name</FormLabel>
+                <Input
+                  id="proj-name"
+                  {...projectForm.register("projectName")}
+                  placeholder="Project name"
+                />
+              </div>
+              <div>
+                <FormLabel htmlFor="proj-end">End Date</FormLabel>
+                <Input
+                  id="proj-end"
+                  type="date"
+                  {...projectForm.register("endDate")}
+                />
+              </div>
+              <div>
+                <FormLabel htmlFor="proj-revenue">Revenue</FormLabel>
+                <Input
+                  id="proj-revenue"
+                  {...projectForm.register("revenue")}
+                  placeholder="Revenue"
+                />
+              </div>
+              <div>
+                <FormLabel htmlFor="proj-contract">Contract</FormLabel>
+                <Controller
+                  name="contractUuid"
+                  control={projectForm.control}
+                  render={({ field }) => (
+                    <Select
+                      id="proj-contract"
+                      options={[
+                        { value: "", label: COMMON_TEXT.emptyOption },
+                        ...projectContracts.map((c) => ({
+                          value: c.uuid,
+                          label: `${c.code}${c.description ? ` – ${c.description}` : ""}`,
+                        })),
+                      ]}
+                      value={field.value ?? ""}
+                      onValueChange={field.onChange}
+                      placeholder={COMMON_TEXT.selectOption}
+                    />
+                  )}
+                />
+              </div>
+            </DialogBody>
             <DialogFormFooter
               onCancel={handleCancelProject}
               submitLabel="Add Project"
