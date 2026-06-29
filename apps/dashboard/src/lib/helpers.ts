@@ -31,6 +31,13 @@ export const pluralize = (
   plural = `${singular}s`,
 ) => (count === 1 ? singular : plural);
 
+export const buildColumnVisibility = <K extends string>(
+  columns: Array<{ key: K; defaultVisible: boolean }>,
+): Record<K, boolean> =>
+  Object.fromEntries(
+    columns.map((col) => [col.key, col.defaultVisible]),
+  ) as Record<K, boolean>;
+
 export const formatRevenue = (value: string | null) => {
   if (!value) return "€ 0,00";
   return new Intl.NumberFormat("nl-NL", {

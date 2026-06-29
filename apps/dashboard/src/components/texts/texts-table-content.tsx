@@ -11,6 +11,7 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
+import { buildColumnVisibility } from "@/lib/helpers";
 import { TextUsageCategory } from "@/lib/enums";
 import { COMMON_TEXT, TEXT_USAGE_CATEGORY_LABELS } from "@/lib/labels";
 import { SelectTexts } from "@/db";
@@ -98,11 +99,6 @@ const USAGE_COLUMNS: Array<{
 
 const ALL_COLUMNS = [...BASE_COLUMNS, ...USAGE_COLUMNS];
 
-const initialVisibility = ALL_COLUMNS.reduce(
-  (acc, col) => ({ ...acc, [col.key]: col.defaultVisible }),
-  {} as Record<ColumnKey, boolean>,
-);
-
 const USAGE_FIELD_SET = new Set<string>(USAGE_CATEGORY_MAP.map((m) => m.field));
 
 type TextsTableContentProps = {
@@ -120,7 +116,7 @@ const BooleanCheckbox = ({ checked }: { checked: boolean }) => (
 
 export const TextsTable = ({ texts }: TextsTableContentProps) => {
   const [columnVisibility, setColumnVisibility] =
-    useState<Record<ColumnKey, boolean>>(initialVisibility);
+    useState<Record<ColumnKey, boolean>>(buildColumnVisibility(ALL_COLUMNS));
 
   const toggleColumn = (key: string) =>
     setColumnVisibility((prev) => ({

@@ -10,6 +10,7 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
+import { buildColumnVisibility } from "@/lib/helpers";
 import { SelectCompanies } from "@/db";
 import { Eye } from "lucide-react";
 import Link from "next/link";
@@ -29,11 +30,6 @@ const ALL_COLUMNS: Array<{
   { key: "updatedAt", label: "Updated At", defaultVisible: false },
 ];
 
-const initialVisibility = ALL_COLUMNS.reduce(
-  (acc, column) => ({ ...acc, [column.key]: column.defaultVisible }),
-  {} as Record<ColumnKey, boolean>,
-);
-
 type CompaniesTableContentProps = {
   companies: SelectCompanies[];
 };
@@ -42,7 +38,7 @@ export const CompaniesTable = ({
   companies,
 }: CompaniesTableContentProps) => {
   const [columnVisibility, setColumnVisibility] =
-    useState<Record<ColumnKey, boolean>>(initialVisibility);
+    useState<Record<ColumnKey, boolean>>(buildColumnVisibility(ALL_COLUMNS));
 
   const toggleColumn = (key: string) => {
     setColumnVisibility((prev) => ({

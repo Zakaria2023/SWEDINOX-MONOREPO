@@ -10,6 +10,7 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
+import { buildColumnVisibility } from "@/lib/helpers";
 import { COMMON_TEXT, COMPANY_ROLE_LABELS } from "@/lib/labels";
 import { useState } from "react";
 
@@ -62,16 +63,11 @@ const ALL_COLUMNS: Array<{
   { key: "region", label: "Region", defaultVisible: false },
 ];
 
-const initialVisibility = ALL_COLUMNS.reduce(
-  (acc, col) => ({ ...acc, [col.key]: col.defaultVisible }),
-  {} as Record<ColumnKey, boolean>,
-);
-
 type Props = { rows: ContractPerCustomerRow[] };
 
 export const ContractsPerCustomerTable = ({ rows }: Props) => {
   const [columnVisibility, setColumnVisibility] =
-    useState<Record<ColumnKey, boolean>>(initialVisibility);
+    useState<Record<ColumnKey, boolean>>(buildColumnVisibility(ALL_COLUMNS));
 
   const toggleColumn = (key: string) =>
     setColumnVisibility((prev) => ({

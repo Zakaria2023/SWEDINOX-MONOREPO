@@ -10,6 +10,7 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
+import { buildColumnVisibility } from "@/lib/helpers";
 import {
   COMMON_TEXT,
   INVOICE_PAYMENT_TERM_LABELS,
@@ -42,16 +43,11 @@ const ALL_COLUMNS: Array<{ key: ColumnKey; label: string; defaultVisible: boolea
   { key: "blockReason", label: "Block Reason", defaultVisible: true },
 ];
 
-const initialVisibility = ALL_COLUMNS.reduce(
-  (acc, col) => ({ ...acc, [col.key]: col.defaultVisible }),
-  {} as Record<ColumnKey, boolean>,
-);
-
 type Props = { invoices: PurchaseInvoiceListItem[] };
 
 export const PurchaseInvoicesTable = ({ invoices }: Props) => {
   const [columnVisibility, setColumnVisibility] =
-    useState<Record<ColumnKey, boolean>>(initialVisibility);
+    useState<Record<ColumnKey, boolean>>(buildColumnVisibility(ALL_COLUMNS));
 
   const toggleColumn = (key: string) =>
     setColumnVisibility((prev) => ({ ...prev, [key]: !prev[key as ColumnKey] }));
