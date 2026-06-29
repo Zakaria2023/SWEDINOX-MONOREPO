@@ -75,7 +75,7 @@ type Props = {
   machines: MachineListItem[];
 };
 
-export const MachinesTableContent = ({ machines }: Props) => {
+export const MachinesTable = ({ machines }: Props) => {
   const [columnVisibility, setColumnVisibility] =
     useState<Record<ColumnKey, boolean>>(initialVisibility);
 
