@@ -8,7 +8,7 @@ import {
 } from "@/db";
 import { generateUuid } from "@/lib/helpers";
 import { alias } from "drizzle-orm/mysql-core";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, getTableColumns } from "drizzle-orm";
 
 export type ContractGroupItem = SelectContractGroups & {
   subgroupName: string | null;
@@ -33,15 +33,14 @@ export const getContractGroups = async (): Promise<ContractGroupOption[]> =>
 
 export const getContractGroupsList = async (): Promise<ContractGroupItem[]> => {
   const subgroup = alias(ContractGroups, "subgroup");
-  const rows = await db
-    .select({ group: ContractGroups, subgroupName: subgroup.name })
+  return db
+    .select({
+      ...getTableColumns(ContractGroups),
+      subgroupName: subgroup.name,
+    })
     .from(ContractGroups)
     .leftJoin(subgroup, eq(subgroup.uuid, ContractGroups.contractSubgroupUuid))
     .orderBy(desc(ContractGroups.createdAt));
-  return rows.map((r) => ({
-    ...r.group,
-    subgroupName: r.subgroupName ?? null,
-  }));
 };
 
 export const createContractGroup = async (
