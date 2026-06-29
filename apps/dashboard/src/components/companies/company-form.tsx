@@ -9,7 +9,7 @@ import {
 } from "@/app/(dashboard)/contracts/actions";
 import { TextCategoryOption } from "@/app/(dashboard)/text-categories/actions";
 import { AddressForm } from "@/components/companies/address-form";
-import { DialogFormFooter } from "@/components/companies/dialog-form-footer";
+import { DialogFormFooter } from "@/components/ui/dialog-form-footer";
 import { DocumentUploader } from "@/components/document-uploader";
 import { Checkbox } from "@/components/shadcn/checkbox";
 import {
