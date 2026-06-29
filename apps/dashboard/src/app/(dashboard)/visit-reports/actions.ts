@@ -11,7 +11,7 @@ import {
   VisitReports,
 } from "@/db";
 import { generateUuid } from "@/lib/helpers";
-import { asc, desc, eq } from "drizzle-orm";
+import { asc, desc, eq, getTableColumns } from "drizzle-orm";
 import { redirect } from "next/navigation";
 
 export type VisitReportInput = Omit<
@@ -27,26 +27,20 @@ export type VisitReportListItem = SelectVisitReports & {
   companyName: Pick<SelectCompanies, "companyName">["companyName"];
 };
 
-export const getVisitReports = async (): Promise<VisitReportListItem[]> => {
-  const rows = await db
+export type ContactOption = Pick<
+  SelectContacts,
+  "uuid" | "firstName" | "lastName"
+>;
+
+export const getVisitReports = async (): Promise<VisitReportListItem[]> =>
+  db
     .select({
-      visitReport: VisitReports,
+      ...getTableColumns(VisitReports),
       companyName: Companies.companyName,
     })
     .from(VisitReports)
     .innerJoin(Companies, eq(Companies.uuid, VisitReports.companyUuid))
     .orderBy(desc(VisitReports.createdAt));
-
-  return rows.map((row) => ({
-    ...row.visitReport,
-    companyName: row.companyName,
-  }));
-};
-
-export type ContactOption = Pick<
-  SelectContacts,
-  "uuid" | "firstName" | "lastName"
->;
 
 export const getContactsByCompanyUuid = async (
   companyUuid: string,
