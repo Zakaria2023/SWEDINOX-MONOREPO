@@ -22,10 +22,8 @@ export const getAddresses = async (): Promise<AddressListItem[]> =>
     .leftJoin(Companies, eq(Companies.uuid, CompanyAddresses.companyUuid))
     .orderBy(desc(CompanyAddresses.createdAt));
 
-export const getAddressesForSelect = async (): Promise<
-  AddressSelectOption[]
-> => {
-  const rows = await db
+export const getAddressesForSelect = async (): Promise<AddressSelectOption[]> =>
+  db
     .select({
       uuid: CompanyAddresses.uuid,
       streetAndNo: CompanyAddresses.streetAndNo,
@@ -34,5 +32,3 @@ export const getAddressesForSelect = async (): Promise<
     .from(CompanyAddresses)
     .innerJoin(Companies, eq(Companies.uuid, CompanyAddresses.companyUuid))
     .orderBy(Companies.companyName);
-  return rows;
-};
