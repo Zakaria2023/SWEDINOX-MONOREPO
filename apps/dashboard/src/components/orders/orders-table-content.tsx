@@ -17,7 +17,7 @@ type Props = {
   orders: OrderListItem[];
 };
 
-export const OrdersTableContent = ({ orders }: Props) => (
+export const OrdersTable = ({ orders }: Props) => (
   <div className="overflow-x-auto rounded-md border">
     <Table>
       <TableHeader>
