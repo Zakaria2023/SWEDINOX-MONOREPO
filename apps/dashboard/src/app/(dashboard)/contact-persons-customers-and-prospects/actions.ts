@@ -10,10 +10,8 @@ export type ContactPersonCustomerProspectRow = SelectContacts &
     companyId: SelectCompanies["id"];
   };
 
-export const getContactPersonsCustomersAndProspects = async (): Promise<
-  ContactPersonCustomerProspectRow[]
-> => {
-  const rows = await db
+export const getContactPersonsCustomersAndProspects = async (): Promise<ContactPersonCustomerProspectRow[]> =>
+  db
     .select({
       ...getTableColumns(Contacts),
       companyName: Companies.companyName,
@@ -27,10 +25,3 @@ export const getContactPersonsCustomersAndProspects = async (): Promise<
         sql`JSON_CONTAINS(${Companies.roles}, '"prospect"')`,
       ),
     );
-
-  return rows.map((r) => ({
-    ...r,
-    companyName: r.companyName,
-    companyId: r.companyId,
-  }));
-};
