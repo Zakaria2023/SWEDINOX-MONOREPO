@@ -10,10 +10,8 @@ export type ContactPersonSupplierRow = SelectContacts &
     companyId: SelectCompanies["id"];
   };
 
-export const getContactPersonsSuppliers = async (): Promise<
-  ContactPersonSupplierRow[]
-> => {
-  const rows = await db
+export const getContactPersonsSuppliers = async (): Promise<ContactPersonSupplierRow[]> =>
+  db
     .select({
       ...getTableColumns(Contacts),
       companyName: Companies.companyName,
@@ -22,10 +20,3 @@ export const getContactPersonsSuppliers = async (): Promise<
     .from(Contacts)
     .innerJoin(Companies, eq(Companies.uuid, Contacts.companyUuid))
     .where(sql`JSON_CONTAINS(${Companies.roles}, '"supplier"')`);
-
-  return rows.map((r) => ({
-    ...r,
-    companyName: r.companyName,
-    companyId: r.companyId,
-  }));
-};
