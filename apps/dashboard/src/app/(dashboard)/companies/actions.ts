@@ -1,26 +1,26 @@
 "use server";
 
 import { db, SelectCompanies, SelectCompanyAddresses } from "@/db";
+import {
+  CommunicationSettings,
+  InsertCommunicationSettings,
+} from "@/db/schema/communication-settings";
 import { Companies, InsertCompanies } from "@/db/schema/companies";
 import {
   CompanyAddresses,
   InsertCompanyAddresses,
 } from "@/db/schema/company-addresses";
-import {
-  CommunicationSettings,
-  InsertCommunicationSettings,
-} from "@/db/schema/communication-settings";
-import { Contracts, InsertContracts } from "@/db/schema/contracts";
 import { Contacts, InsertContacts, SelectContacts } from "@/db/schema/contacts";
+import { Contracts, InsertContracts } from "@/db/schema/contracts";
 import {
   CustomerProjects,
   InsertCustomerProjects,
   SelectCustomerProjects,
 } from "@/db/schema/customer-projects";
-import { Texts, InsertTexts } from "@/db/schema/texts";
+import { InsertTexts, Texts } from "@/db/schema/texts";
 import { generateUuid } from "@/lib/helpers";
-import { asc, desc, eq, or, sql } from "drizzle-orm";
 import { currentUser } from "@clerk/nextjs/server";
+import { asc, desc, eq, or, sql } from "drizzle-orm";
 
 export type CompanyOption = Pick<
   SelectCompanies,
@@ -111,6 +111,11 @@ export type CompanyDetail = SelectCompanies & {
   addresses: SelectCompanyAddresses[];
 };
 
+export type ContactOption = Pick<
+  SelectContacts,
+  "uuid" | "id" | "companyUuid" | "firstName" | "lastName"
+>;
+
 export const updateCompanyDocuments = async (
   companyUuid: string,
   documents: Array<{ id: string; fileName: string }>,
@@ -178,11 +183,6 @@ export const getCustomerAndProspectCompaniesForSelect = async (): Promise<
       ),
     )
     .orderBy(asc(Companies.companyName));
-
-export type ContactOption = Pick<
-  SelectContacts,
-  "uuid" | "id" | "companyUuid" | "firstName" | "lastName"
->;
 
 export const getContactsForSuppliers = async (): Promise<ContactOption[]> =>
   db
