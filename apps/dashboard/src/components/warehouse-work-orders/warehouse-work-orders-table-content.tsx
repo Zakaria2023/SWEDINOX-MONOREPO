@@ -38,7 +38,7 @@ type Props = {
   workOrders: WorkOrderListItem[];
 };
 
-export const WarehouseWorkOrdersTableContent = ({ workOrders }: Props) => {
+export const WarehouseWorkOrdersTable = ({ workOrders }: Props) => {
   const [columnVisibility, setColumnVisibility] =
     useState<Record<ColumnKey, boolean>>(initialVisibility);
 
