@@ -13,7 +13,7 @@ import {
   SelectCompanyAddresses,
 } from "@/db";
 import { generateUuid } from "@/lib/helpers";
-import { and, desc, eq, inArray, isNotNull } from "drizzle-orm";
+import { and, desc, eq, getTableColumns, inArray, isNotNull } from "drizzle-orm";
 
 export type ContractInput = Omit<
   InsertContracts,
@@ -73,10 +73,10 @@ export const getContractsForProjects = async (): Promise<
     .where(inArray(Contracts.role, ["customer", "prospect"]))
     .orderBy(Contracts.code);
 
-export const getContracts = async (): Promise<ContractListItem[]> => {
-  const rows = await db
+export const getContracts = async (): Promise<ContractListItem[]> =>
+  db
     .select({
-      contract: Contracts,
+      ...getTableColumns(Contracts),
       contractGroupName: ContractGroups.name,
     })
     .from(Contracts)
@@ -86,16 +86,8 @@ export const getContracts = async (): Promise<ContractListItem[]> => {
     )
     .orderBy(desc(Contracts.createdAt));
 
-  return rows.map((r) => ({
-    ...r.contract,
-    contractGroupName: r.contractGroupName ?? null,
-  }));
-};
-
-export const getContractsPerCustomer = async (): Promise<
-  ContractPerCustomerRow[]
-> => {
-  const rows = await db
+export const getContractsPerCustomer = async (): Promise<ContractPerCustomerRow[]> =>
+  db
     .select({
       role: Contracts.role,
       id: Companies.id,
@@ -123,22 +115,8 @@ export const getContractsPerCustomer = async (): Promise<
       ),
     );
 
-  return rows.map((r) => ({
-    role: r.role,
-    id: r.id,
-    companyName: r.companyName,
-    city: r.city,
-    code: r.code,
-    description: r.description,
-    contractGroupName: r.contractGroupName ?? null,
-    priceDate: r.priceDate,
-  }));
-};
-
-export const getContractsPerSupplier = async (): Promise<
-  ContractPerSupplierRow[]
-> => {
-  const rows = await db
+export const getContractsPerSupplier = async (): Promise<ContractPerSupplierRow[]> =>
+  db
     .select({
       id: Companies.id,
       companyName: Companies.companyName,
@@ -162,18 +140,6 @@ export const getContractsPerSupplier = async (): Promise<
     .where(
       and(eq(Contracts.role, "supplier"), isNotNull(Contracts.companyUuid)),
     );
-
-  return rows.map((r) => ({
-    id: r.id,
-    companyName: r.companyName,
-    city: r.city,
-    code: r.code,
-    description: r.description,
-    contractGroupName: r.contractGroupName ?? null,
-    startingDate: r.startingDate,
-    endDate: r.endDate,
-  }));
-};
 
 export const createContract = async (
   input: ContractInput,

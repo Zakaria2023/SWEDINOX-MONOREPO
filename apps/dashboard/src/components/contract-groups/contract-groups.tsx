@@ -1,19 +1,13 @@
 "use client";
 
-import { z } from "zod";
-import { Controller, useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus } from "lucide-react";
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import {
   createContractGroup,
   type ContractGroupItem,
 } from "@/app/(dashboard)/contract-groups/actions";
 import { Button } from "@/components/shadcn/button";
 import {
-  DialogBody,
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -34,6 +28,12 @@ import { FormError } from "@/components/ui/form-error";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import { COMMON_TEXT } from "@/lib/labels";
 import { VALIDATION_MESSAGES } from "@/lib/validation-messages";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
+import { Controller, useForm } from "react-hook-form";
+import { z } from "zod";
 
 const createGroupSchema = (nameRequiredMessage: string) =>
   z.object({
@@ -58,7 +58,7 @@ const DEFAULT_VALUES: GroupFormValues = {
 
 type Props = { groups: ContractGroupItem[] };
 
-export const ContractGroupsClient = ({ groups }: Props) => {
+export const ContractGroups = ({ groups }: Props) => {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [dialogOpen, setDialogOpen] = useState(false);
