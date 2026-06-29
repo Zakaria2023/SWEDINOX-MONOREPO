@@ -48,7 +48,7 @@ type Props = {
   productGroups: ProductGroupListItem[];
 };
 
-export const ProductGroupsTableContent = ({ productGroups }: Props) => {
+export const ProductGroupsTable = ({ productGroups }: Props) => {
   const [visibility, setVisibility] = useState<Record<string, boolean>>(
     Object.fromEntries(ALL_COLUMNS.map((c) => [c.key, c.defaultVisible])),
   );
