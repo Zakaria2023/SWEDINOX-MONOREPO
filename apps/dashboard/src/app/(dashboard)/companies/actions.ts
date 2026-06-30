@@ -1,26 +1,26 @@
 "use server";
 
 import { db, SelectCompanies, SelectCompanyAddresses } from "@/db";
+import {
+  CommunicationSettings,
+  InsertCommunicationSettings,
+} from "@/db/schema/communication-settings";
 import { Companies, InsertCompanies } from "@/db/schema/companies";
 import {
   CompanyAddresses,
   InsertCompanyAddresses,
 } from "@/db/schema/company-addresses";
-import {
-  CommunicationSettings,
-  InsertCommunicationSettings,
-} from "@/db/schema/communication-settings";
-import { Contracts, InsertContracts } from "@/db/schema/contracts";
 import { Contacts, InsertContacts, SelectContacts } from "@/db/schema/contacts";
+import { Contracts, InsertContracts } from "@/db/schema/contracts";
 import {
   CustomerProjects,
   InsertCustomerProjects,
   SelectCustomerProjects,
 } from "@/db/schema/customer-projects";
-import { Texts, InsertTexts } from "@/db/schema/texts";
+import { InsertTexts, Texts } from "@/db/schema/texts";
 import { generateUuid } from "@/lib/helpers";
-import { asc, desc, eq, or, sql } from "drizzle-orm";
 import { currentUser } from "@clerk/nextjs/server";
+import { asc, desc, eq, or, sql } from "drizzle-orm";
 
 export type CompanyOption = Pick<
   SelectCompanies,
@@ -107,6 +107,16 @@ export type CompanyActionResult = {
   success?: boolean;
 };
 
+export type AddressOption = Pick<
+  SelectCompanyAddresses,
+  "uuid" | "streetAndNo" | "city" | "postalCode" | "altName"
+>;
+
+export type ContactOption = Pick<
+  SelectContacts,
+  "uuid" | "id" | "companyUuid" | "firstName" | "lastName"
+>;
+
 export type CompanyDetail = SelectCompanies & {
   addresses: SelectCompanyAddresses[];
 };
@@ -136,6 +146,21 @@ export const getCompanyDetail = async (
     .where(eq(CompanyAddresses.companyUuid, uuid));
   return { ...company, addresses };
 };
+
+export const getAddressesForCompany = async (
+  companyUuid: string,
+): Promise<AddressOption[]> =>
+  db
+    .select({
+      uuid: CompanyAddresses.uuid,
+      streetAndNo: CompanyAddresses.streetAndNo,
+      city: CompanyAddresses.city,
+      postalCode: CompanyAddresses.postalCode,
+      altName: CompanyAddresses.altName,
+    })
+    .from(CompanyAddresses)
+    .where(eq(CompanyAddresses.companyUuid, companyUuid))
+    .orderBy(asc(CompanyAddresses.sequenceNumber));
 
 export const getCompaniesForSelect = async (): Promise<CompanyOption[]> =>
   db
@@ -178,11 +203,6 @@ export const getCustomerAndProspectCompaniesForSelect = async (): Promise<
       ),
     )
     .orderBy(asc(Companies.companyName));
-
-export type ContactOption = Pick<
-  SelectContacts,
-  "uuid" | "id" | "companyUuid" | "firstName" | "lastName"
->;
 
 export const getContactsForSuppliers = async (): Promise<ContactOption[]> =>
   db
