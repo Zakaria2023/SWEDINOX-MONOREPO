@@ -696,6 +696,31 @@ export type FeaturesQuality = (typeof featuresQualities)[number];
 export type WarehouseTransportRegion =
   (typeof warehouseTransportRegions)[number];
 
+export const transportModes = [
+  "sea_transport",
+  "rail_transport",
+  "road_transport",
+  "air_transport",
+  "postal_shipments",
+  "fixed_transport_facilities",
+  "inland_waterway_transport",
+  "own_power",
+] as const satisfies readonly string[];
+
+export type TransportMode = (typeof transportModes)[number];
+
+export const returnOrderReasons = [
+  "wrong_delivery",
+  "damaged_goods",
+  "quality_issue",
+  "wrong_order",
+  "excess_delivery",
+  "customer_changed_mind",
+  "other",
+] as const satisfies readonly string[];
+
+export type ReturnOrderReason = (typeof returnOrderReasons)[number];
+
 export const machineOptionTypes = [
   "decoilen",
   "grinding",

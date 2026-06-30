@@ -60,6 +60,8 @@ import type {
   WarehouseLocationType,
   WarehouseProductType,
   WarehouseTransportRegion,
+  TransportMode,
+  ReturnOrderReason,
   OrderMethod,
   DeliveryTerm,
   OrderWeightType,
@@ -418,6 +420,27 @@ export const WAREHOUSE_TRANSPORT_REGION_LABELS: Record<
   oe: "Eastern Europe",
   sp_po: "Spain/Portugal",
   zd_am: "South America",
+};
+
+export const TRANSPORT_MODE_LABELS: Record<TransportMode, string> = {
+  sea_transport: "Vervoer over zee",
+  rail_transport: "Vervoer per spoor",
+  road_transport: "Wegvervoer",
+  air_transport: "Luchtvervoer",
+  postal_shipments: "Postzendingen",
+  fixed_transport_facilities: "Vaste transportinrichtingen (leidingen)",
+  inland_waterway_transport: "Vervoer over binnenwateren",
+  own_power: "Eigen kracht",
+};
+
+export const RETURN_ORDER_REASON_LABELS: Record<ReturnOrderReason, string> = {
+  wrong_delivery: "Wrong delivery",
+  damaged_goods: "Damaged goods",
+  quality_issue: "Quality issue",
+  wrong_order: "Wrong order",
+  excess_delivery: "Excess delivery",
+  customer_changed_mind: "Customer changed mind",
+  other: "Other",
 };
 
 export const MACHINE_OPTION_LABELS: Record<MachineOptionType, string> = {

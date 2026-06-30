@@ -33,6 +33,17 @@ export type AddressOption = Pick<
   "uuid" | "streetAndNo" | "city" | "postalCode" | "altName"
 >;
 
+export type OrderOption = Pick<SelectOrders, "uuid" | "id">;
+
+export const getOrdersForCompany = async (
+  companyUuid: string,
+): Promise<OrderOption[]> =>
+  db
+    .select({ uuid: Orders.uuid, id: Orders.id })
+    .from(Orders)
+    .where(eq(Orders.companyUuid, companyUuid))
+    .orderBy(desc(Orders.createdAt));
+
 export const getOrders = async (): Promise<OrderListItem[]> => {
   try {
     const rows = await db
