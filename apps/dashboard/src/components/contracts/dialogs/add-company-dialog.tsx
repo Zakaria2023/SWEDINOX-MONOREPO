@@ -1,10 +1,6 @@
 "use client";
 
 import { CompanyOption } from "@/app/(dashboard)/companies/actions";
-import {
-  ContractableRole,
-  contractableRoles,
-} from "@/lib/enums";
 import { Button } from "@/components/shadcn/button";
 import { DatePicker } from "@/components/shadcn/date-picker";
 import {
@@ -17,11 +13,12 @@ import {
 } from "@/components/shadcn/dialog";
 import { Select } from "@/components/shadcn/select";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
+import { ContractableRole, contractableRoles } from "@/lib/enums";
 import { COMMON_TEXT, CONTRACTABLE_ROLE_LABELS } from "@/lib/labels";
 import { Controller, UseFormReturn } from "react-hook-form";
 import { z } from "zod";
 
-const companyLinkSchema = z.object({
+export const companyLinkSchema = z.object({
   companyUuid: z.string().min(1, "Company is required"),
   startingDate: z.string().optional(),
   endDate: z.string().optional(),

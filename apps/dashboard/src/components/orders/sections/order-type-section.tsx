@@ -1,19 +1,21 @@
 "use client";
 
-import { Controller, useFormContext } from "react-hook-form";
 import { OrderFormValues } from "@/app/(dashboard)/orders/validation";
 import { Input } from "@/components/shadcn/input";
-import { FormLabel } from "@/components/ui/form-field";
-import { FormSelectField } from "@/components/ui/form-select-field";
-import { FormCheckboxCard } from "@/components/ui/form-checkbox-card";
 import { SelectOption } from "@/components/shadcn/select";
+import { FormCheckboxCard } from "@/components/ui/form-checkbox-card";
+import { FormSelectField } from "@/components/ui/form-select-field";
+import { Controller, useFormContext } from "react-hook-form";
 
 type Props = {
   isConsignment: boolean;
   weightTypeOptions: SelectOption[];
 };
 
-export const OrderTypeSection = ({ isConsignment, weightTypeOptions }: Props) => {
+export const OrderTypeSection = ({
+  isConsignment,
+  weightTypeOptions,
+}: Props) => {
   const { register, control } = useFormContext<OrderFormValues>();
 
   return (

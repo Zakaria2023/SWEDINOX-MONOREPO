@@ -1,9 +1,7 @@
 "use client";
 
-import { AddressCategory } from "@/lib/enums";
 import { CompanyFormValues } from "@/app/(dashboard)/companies/validation";
 import { AddressForm } from "@/components/companies/address-form";
-import { DialogFormFooter } from "@/components/ui/dialog-form-footer";
 import {
   Dialog,
   DialogContent,
@@ -11,6 +9,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/shadcn/dialog";
+import { DialogFormFooter } from "@/components/ui/dialog-form-footer";
+import { AddressCategory } from "@/lib/enums";
 import { MapPin } from "lucide-react";
 import { UseFormReturn } from "react-hook-form";
 
@@ -30,35 +30,33 @@ export const AdditionalAddressDialog = ({
   onSave,
   form,
   availableForNext,
-}: Props) => {
-  return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="flex h-[85dvh] max-w-3xl flex-col gap-0 p-0">
-        <DialogHeader className="shrink-0 border-b bg-background px-6 py-5">
-          <DialogTitle className="flex items-center gap-2">
-            <MapPin className="size-4" />
-            Address
-          </DialogTitle>
-          <DialogDescription>
-            Fill in the address details. Categories already assigned to
-            another address are not available.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="flex-1 overflow-y-auto p-6">
-          <AddressForm
-            control={form.control}
-            errors={form.formState.errors.address}
-            register={form.register}
-            watch={form.watch}
-            availableCategories={availableForNext}
-          />
-        </div>
-        <DialogFormFooter
-          onCancel={onCancel}
-          submitLabel="Save Address"
-          onSubmit={onSave}
+}: Props) => (
+  <Dialog open={isOpen} onOpenChange={onOpenChange}>
+    <DialogContent className="flex h-[85dvh] max-w-3xl flex-col gap-0 p-0">
+      <DialogHeader className="shrink-0 border-b bg-background px-6 py-5">
+        <DialogTitle className="flex items-center gap-2">
+          <MapPin className="size-4" />
+          Address
+        </DialogTitle>
+        <DialogDescription>
+          Fill in the address details. Categories already assigned to another
+          address are not available.
+        </DialogDescription>
+      </DialogHeader>
+      <div className="flex-1 overflow-y-auto p-6">
+        <AddressForm
+          control={form.control}
+          errors={form.formState.errors.address}
+          register={form.register}
+          watch={form.watch}
+          availableCategories={availableForNext}
         />
-      </DialogContent>
-    </Dialog>
-  );
-};
+      </div>
+      <DialogFormFooter
+        onCancel={onCancel}
+        submitLabel="Save Address"
+        onSubmit={onSave}
+      />
+    </DialogContent>
+  </Dialog>
+);

@@ -179,7 +179,6 @@ export const CompanyForm = ({
             removeContract={removeContract}
             handleOpenContract={handleOpenContract}
             isPending={isPending}
-            activeContractableRoles={activeContractableRoles}
           />
         )}
 

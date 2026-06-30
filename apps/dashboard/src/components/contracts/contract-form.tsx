@@ -9,10 +9,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { FormProvider, useForm } from "react-hook-form";
-import { z } from "zod";
 import { FormActions } from "@/components/ui/form-actions";
 import { FormError } from "@/components/ui/form-error";
-import { AddCompanyDialog, CompanyLinkFormValues } from "./dialogs/add-company-dialog";
+import {
+  AddCompanyDialog,
+  companyLinkSchema,
+  CompanyLinkFormValues,
+} from "./dialogs/add-company-dialog";
 import { ContractTypeSection } from "./sections/contract-type-section";
 import { ContractDetailsSection } from "./sections/contract-details-section";
 import { ContractSearchCodesSection } from "./sections/contract-search-codes-section";
@@ -24,12 +27,6 @@ type ContractFormProps = {
   groups: ContractGroupOption[];
   availableCompanies: CompanyOption[];
 };
-
-const companyLinkSchema = z.object({
-  companyUuid: z.string().min(1, "Company is required"),
-  startingDate: z.string().optional(),
-  endDate: z.string().optional(),
-});
 
 const contractableRoleSet = new Set(contractableRoles as readonly string[]);
 

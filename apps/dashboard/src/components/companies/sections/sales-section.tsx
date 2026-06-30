@@ -1,11 +1,8 @@
 "use client";
 
 import { CustomerSalesInput } from "@/app/(dashboard)/companies/actions";
-import { DialogFormFooter } from "@/components/ui/dialog-form-footer";
-import { Checkbox } from "@/components/shadcn/checkbox";
 import {
   Dialog,
-  DialogBody,
   DialogContent,
   DialogDescription,
   DialogHeader,
@@ -13,34 +10,31 @@ import {
 } from "@/components/shadcn/dialog";
 import { Input } from "@/components/shadcn/input";
 import { Select } from "@/components/shadcn/select";
+import { DialogFormFooter } from "@/components/ui/dialog-form-footer";
 import { FormLabel } from "@/components/ui/form-field";
 import {
-  companyRoles,
-  contactCategories,
-  contactSalutations,
-  customerGroups,
-  devTheorWtOptions,
-  ediOptions,
-  groupLinesByDescriptionOptions,
-  miscellaneousOptions,
-  orderOptions,
-  printProductCodesOptions,
-  quoteOptions,
-  quoteOrderInvoiceOptions,
-  quoteOrderOptions,
-  quoteOrderOptions as _quoteOrderOptions,
-  salesRepresentatives,
   CustomerGroup,
+  customerGroups,
   DevTheorWt,
+  devTheorWtOptions,
   EdiOption,
+  ediOptions,
   GroupLinesByDescription,
+  groupLinesByDescriptionOptions,
   MiscellaneousOption,
+  miscellaneousOptions,
   OrderOption,
+  orderOptions,
   PrintProductCodes,
+  printProductCodesOptions,
   QuoteOption,
+  quoteOptions,
   QuoteOrderInvoiceOption,
+  quoteOrderInvoiceOptions,
   QuoteOrderOption,
+  quoteOrderOptions,
   SalesRepresentative,
+  salesRepresentatives,
 } from "@/lib/enums";
 import {
   COMMON_TEXT,
