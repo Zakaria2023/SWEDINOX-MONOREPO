@@ -16,4 +16,5 @@ export * from "./visit-reports";
 export * from "./warehouse-work-orders";
 export * from "./orders";
 export * from "./purchase-orders";
+export * from "./purchase-quotes";
 export * from "./machines";
