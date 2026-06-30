@@ -5,11 +5,7 @@ import { DocumentUploader } from "@/components/document-uploader";
 import { X } from "lucide-react";
 import { useFormContext } from "react-hook-form";
 
-type Props = {
-  isPending: boolean;
-};
-
-export const DocumentsSection = ({ isPending }: Props) => {
+export const DocumentsSection = () => {
   const { watch, setValue } = useFormContext<CompanyFormValues>();
 
   return (

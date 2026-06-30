@@ -219,7 +219,7 @@ export const CompanyForm = ({
           />
         )}
 
-        <DocumentsSection isPending={isPending} />
+        <DocumentsSection />
 
         <SearchCodesSection isPending={isPending} />
 
