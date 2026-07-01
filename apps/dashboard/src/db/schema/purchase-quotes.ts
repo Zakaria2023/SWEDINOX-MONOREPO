@@ -70,28 +70,31 @@ export const PurchaseQuotes = mysqlTable(
     deliveryRemark: varchar("delivery_remark", { length: 255 }),
 
     // ── Summary (computed snapshot, read-only in the UI) ─────────────────────
-    materials: decimal("materials", { precision: 15, scale: 2 })
-      .default("0.00")
-      .notNull(),
-    optionsAmount: decimal("options_amount", { precision: 15, scale: 2 })
-      .default("0.00")
-      .notNull(),
-    surcharges: decimal("surcharges", { precision: 15, scale: 2 })
-      .default("0.00")
-      .notNull(),
-    totalExclVat: decimal("total_excl_vat", { precision: 15, scale: 2 })
-      .default("0.00")
-      .notNull(),
-    vatAmount: decimal("vat_amount", { precision: 15, scale: 2 })
-      .default("0.00")
-      .notNull(),
-    totalInclVat: decimal("total_incl_vat", { precision: 15, scale: 2 })
-      .default("0.00")
-      .notNull(),
-    totalWeightKg: decimal("total_weight_kg", { precision: 10, scale: 2 })
-      .default("0.00")
-      .notNull(),
-
+    materials: decimal("materials", { precision: 15, scale: 2 }).default(
+      "0.00",
+    ),
+    optionsAmount: decimal("options_amount", {
+      precision: 15,
+      scale: 2,
+    }).default("0.00"),
+    surcharges: decimal("surcharges", { precision: 15, scale: 2 }).default(
+      "0.00",
+    ),
+    totalExclVat: decimal("total_excl_vat", {
+      precision: 15,
+      scale: 2,
+    }).default("0.00"),
+    vatAmount: decimal("vat_amount", { precision: 15, scale: 2 }).default(
+      "0.00",
+    ),
+    totalInclVat: decimal("total_incl_vat", {
+      precision: 15,
+      scale: 2,
+    }).default("0.00"),
+    totalWeightKg: decimal("total_weight_kg", {
+      precision: 10,
+      scale: 2,
+    }).default("0.00"),
     // ── Documents ─────────────────────────────────────────────────────────────
     documents:
       json("documents").$type<Array<{ id: string; fileName: string }>>(),
@@ -184,9 +187,7 @@ export const PurchaseQuoteSurcharges = mysqlTable(
     index("idx_purchase_quote_surcharges_purchase_quote_uuid").on(
       table.purchaseQuoteUuid,
     ),
-    index("idx_purchase_quote_surcharges_company_uuid").on(
-      table.companyUuid,
-    ),
+    index("idx_purchase_quote_surcharges_company_uuid").on(table.companyUuid),
     foreignKey({
       name: "fk_purchase_quote_surcharges_purchase_quote",
       columns: [table.purchaseQuoteUuid],
