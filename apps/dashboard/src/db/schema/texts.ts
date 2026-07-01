@@ -20,6 +20,8 @@ export const Texts = mysqlTable(
     orderUuid: char("order_uuid", { length: 36 }),
     quoteUuid: char("quote_uuid", { length: 36 }),
     purchaseOrderUuid: char("purchase_order_uuid", { length: 36 }),
+    purchaseQuoteUuid: char("purchase_quote_uuid", { length: 36 }),
+    purchaseRequestUuid: char("purchase_request_uuid", { length: 36 }),
     productGroupUuid: char("product_group_uuid", { length: 36 }),
     textCategoryUuid: char("text_category_uuid", { length: 36 }),
 
@@ -57,6 +59,8 @@ export const Texts = mysqlTable(
     index("idx_texts_order_uuid").on(table.orderUuid),
     index("idx_texts_quote_uuid").on(table.quoteUuid),
     index("idx_texts_purchase_order_uuid").on(table.purchaseOrderUuid),
+    index("idx_texts_purchase_quote_uuid").on(table.purchaseQuoteUuid),
+    index("idx_texts_purchase_request_uuid").on(table.purchaseRequestUuid),
     index("idx_texts_product_group_uuid").on(table.productGroupUuid),
     index("idx_texts_text_category_uuid").on(table.textCategoryUuid),
   ],

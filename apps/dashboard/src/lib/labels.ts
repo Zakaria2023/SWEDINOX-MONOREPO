@@ -64,6 +64,9 @@ import type {
   DeliveryTerm,
   OrderWeightType,
   PurchaseOrderType,
+  ComplaintType,
+  ComplaintCategory,
+  ComplaintReport,
   StickerPerPickWorkorderType,
   PrinterName,
   PrinterEntry,
@@ -1054,6 +1057,37 @@ export const CUSTOMER_GROUP_LABELS: Record<CustomerGroup, string> = {
   road_water_construction: "Road & Water Construction",
   hardware_stores: "Hardware Stores",
   care_homes: "Care Homes",
+};
+
+export const COMPLAINT_TYPE_LABELS: Record<ComplaintType, string> = {
+  counter_order: "Counter order",
+  general: "General",
+  order: "Order",
+  purchase_order: "Purchase order",
+  purchase_quote: "Purchase quote",
+  quote: "Quote",
+  return_order: "Return Order",
+};
+
+export const COMPLAINT_CATEGORY_LABELS: Record<ComplaintCategory, string> = {
+  damaged: "Damaged",
+  wrong_price_calculated: "Wrong price calculated",
+  wrong_quantity: "Wrong quantity",
+  wrong_material_delivered: "Wrong material delivered",
+  delivered_too_late: "Delivered too late",
+  transport_damage: "Transport damage",
+  incorrect_delivery_address: "Incorrect delivery address",
+};
+
+export const COMPLAINT_REPORT_LABELS: Record<ComplaintReport, string> = {
+  telephone: "Telephone",
+  email: "E-Mail",
+  counter: "Counter",
+  representative: "Representative",
+  oral: "Oral",
+  website: "Website",
+  edi: "EDI",
+  ai_ingelezen_email: "AI ingelezen Email",
 };
 
 export const STICKER_PER_PICK_WORKORDER_LABELS: Record<

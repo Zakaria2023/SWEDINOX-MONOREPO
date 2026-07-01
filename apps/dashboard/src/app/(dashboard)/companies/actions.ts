@@ -112,14 +112,14 @@ export type AddressOption = Pick<
   "uuid" | "streetAndNo" | "city" | "postalCode" | "altName"
 >;
 
+export type CompanyDetail = SelectCompanies & {
+  addresses: SelectCompanyAddresses[];
+};
+
 export type ContactOption = Pick<
   SelectContacts,
   "uuid" | "id" | "companyUuid" | "firstName" | "lastName"
 >;
-
-export type CompanyDetail = SelectCompanies & {
-  addresses: SelectCompanyAddresses[];
-};
 
 export const updateCompanyDocuments = async (
   companyUuid: string,

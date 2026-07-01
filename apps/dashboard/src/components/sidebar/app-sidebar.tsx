@@ -21,6 +21,7 @@ import {
   ContactRound,
   Factory,
   MapPin,
+  MessageSquareWarning,
   ShoppingCart,
   Truck,
   Users,
@@ -60,6 +61,8 @@ export const AppSidebar = () => {
     pathname.startsWith("/contracts-per-supplier") ||
     pathname.startsWith("/contact-persons-suppliers");
   const isPurchasesActive =
+    pathname.startsWith("/purchase-quotes") ||
+    pathname.startsWith("/purchase-requests") ||
     pathname.startsWith("/purchase-orders") ||
     pathname.startsWith("/purchase-invoices");
   const isWarehouseActive =
@@ -71,6 +74,7 @@ export const AppSidebar = () => {
     pathname.startsWith("/machines") ||
     pathname.startsWith("/product-groups") ||
     pathname.startsWith("/products");
+  const isOthersActive = pathname.startsWith("/complaints");
 
   const [isCustomersOpen, setIsCustomersOpen] = useState(false);
   const [isCompanyOpen, setIsCompanyOpen] = useState(false);
@@ -80,6 +84,7 @@ export const AppSidebar = () => {
   const [isWarehouseOpen, setIsWarehouseOpen] = useState(false);
   const [isLocationsOpen, setIsLocationsOpen] = useState(false);
   const [isLogisticsOpen, setIsLogisticsOpen] = useState(false);
+  const [isOthersOpen, setIsOthersOpen] = useState(false);
 
   const isCustomersExpanded = isCustomersOpen || isCustomersActive;
   const isCompanyExpanded = isCompanyOpen || isCompanyActive;
@@ -89,6 +94,7 @@ export const AppSidebar = () => {
   const isWarehouseExpanded = isWarehouseOpen || isWarehouseActive;
   const isLocationsExpanded = isLocationsOpen || isLocationsActive;
   const isLogisticsExpanded = isLogisticsOpen || isLogisticsActive;
+  const isOthersExpanded = isOthersOpen || isOthersActive;
 
   return (
     <Sidebar>
@@ -317,6 +323,22 @@ export const AppSidebar = () => {
                   <SidebarMenuSub>
                     <SidebarMenuSubItem>
                       <SidebarMenuSubButton
+                        render={<Link href="/purchase-quotes" />}
+                        isActive={pathname.startsWith("/purchase-quotes")}
+                      >
+                        <span>Purchase Quotes</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/purchase-requests" />}
+                        isActive={pathname.startsWith("/purchase-requests")}
+                      >
+                        <span>Purchase Requests</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
                         render={<Link href="/purchase-orders" />}
                         isActive={pathname.startsWith("/purchase-orders")}
                       >
@@ -435,6 +457,29 @@ export const AppSidebar = () => {
                         isActive={pathname.startsWith("/products")}
                       >
                         <span>Products</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                  </SidebarMenuSub>
+                )}
+              </SidebarMenuItem>
+
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  aria-expanded={isOthersExpanded}
+                  onClick={() => setIsOthersOpen((open) => !open)}
+                >
+                  <MessageSquareWarning />
+                  <span>Others</span>
+                  <ChevronRight className={chevronClass(isOthersExpanded)} />
+                </SidebarMenuButton>
+                {isOthersExpanded && (
+                  <SidebarMenuSub>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/complaints" />}
+                        isActive={pathname.startsWith("/complaints")}
+                      >
+                        <span>Complaints</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                   </SidebarMenuSub>
