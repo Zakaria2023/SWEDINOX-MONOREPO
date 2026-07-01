@@ -10,12 +10,14 @@ import { FormError } from "@/components/ui/form-error";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import { FormSelectField } from "@/components/ui/form-select-field";
 import { FormCheckboxCard } from "@/components/ui/form-checkbox-card";
+import { ClerkUserOption } from "@/lib/server/clerk";
 
 type Props = {
   companies: CompanyOption[];
+  clerkUsers: ClerkUserOption[];
 };
 
-export const PurchaseRequestForm = ({ companies }: Props) => {
+export const PurchaseRequestForm = ({ companies, clerkUsers }: Props) => {
   const {
     form,
     isPending,
@@ -31,10 +33,11 @@ export const PurchaseRequestForm = ({ companies }: Props) => {
     weightTypeOptions,
     deliveryTermOptions,
     paymentTermOptions,
+    purchaserOptions,
     isLoadingSupplierData,
     handleSupplierChange,
     handleCancel,
-  } = usePurchaseRequestSubmit({ companies });
+  } = usePurchaseRequestSubmit({ companies, clerkUsers });
 
   const {
     register,
@@ -97,10 +100,14 @@ export const PurchaseRequestForm = ({ companies }: Props) => {
             disabled={contactOptions.length <= 1}
           />
 
-          <div>
-            <FormLabel htmlFor="purchaser">Purchaser</FormLabel>
-            <Input id="purchaser" {...register("purchaser")} />
-          </div>
+          <FormSelectField
+            control={control}
+            id="purchaser"
+            name="purchaser"
+            label="Purchaser"
+            options={purchaserOptions}
+            emptyValue=""
+          />
 
           <div>
             <FormLabel htmlFor="orderCategory">Order Category</FormLabel>

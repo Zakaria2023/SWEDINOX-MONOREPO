@@ -20,6 +20,7 @@ import {
   ContactOption,
   getContactsForCompany,
 } from "@/app/(dashboard)/contacts/actions";
+import { ClerkUserOption } from "@/lib/server/clerk";
 import { SelectOption } from "@/components/shadcn/select";
 import {
   deliveryTerms,
@@ -41,6 +42,7 @@ import {
 
 type UsePurchaseRequestSubmitParams = {
   companies: CompanyOption[];
+  clerkUsers: ClerkUserOption[];
 };
 
 const emptyOpt = { value: "", label: COMMON_TEXT.emptyOption };
@@ -60,6 +62,7 @@ const addressLabel = (a: AddressOption) =>
 
 export const usePurchaseRequestSubmit = ({
   companies,
+  clerkUsers,
 }: UsePurchaseRequestSubmitParams) => {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -131,6 +134,8 @@ export const usePurchaseRequestSubmit = ({
     invoicePaymentTerms,
     INVOICE_PAYMENT_TERM_LABELS as Record<InvoicePaymentTerm, string>,
   );
+
+  const purchaserOptions: SelectOption[] = [emptyOpt, ...clerkUsers];
 
   const handleSupplierChange = (uuid: string) => {
     form.setValue("supplierUuid", uuid);
@@ -213,6 +218,7 @@ export const usePurchaseRequestSubmit = ({
     weightTypeOptions,
     deliveryTermOptions,
     paymentTermOptions,
+    purchaserOptions,
     isLoadingSupplierData,
     handleSupplierChange,
     handleCancel,

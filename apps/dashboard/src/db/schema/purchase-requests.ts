@@ -33,6 +33,7 @@ export const PurchaseRequests = mysqlTable(
     supplierUuid: char("supplier_uuid", { length: 36 }),
     agentUuid: char("agent_uuid", { length: 36 }),
     contactUuid: char("contact_uuid", { length: 36 }),
+    // Clerk user ID
     purchaser: varchar("purchaser", { length: 255 }),
     orderCategory: varchar("order_category", { length: 100 }),
     reference: varchar("reference", { length: 255 }),
