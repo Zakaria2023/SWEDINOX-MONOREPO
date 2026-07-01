@@ -25,19 +25,18 @@ export type ContractGroupActionResult = {
   error?: string;
 };
 
-export const getContractGroups = async (): Promise<ContractGroupOption[]> => {
-  return db
+export const getContractGroups = async (): Promise<ContractGroupOption[]> =>
+  db
     .select({ uuid: ContractGroups.uuid, name: ContractGroups.name })
     .from(ContractGroups)
     .orderBy(ContractGroups.name);
-};
 
 export const getContractGroupsList = async (): Promise<ContractGroupItem[]> => {
-  const Subgroup = alias(ContractGroups, "subgroup");
+  const subgroup = alias(ContractGroups, "subgroup");
   const rows = await db
-    .select({ group: ContractGroups, subgroupName: Subgroup.name })
+    .select({ group: ContractGroups, subgroupName: subgroup.name })
     .from(ContractGroups)
-    .leftJoin(Subgroup, eq(Subgroup.uuid, ContractGroups.contractSubgroupUuid))
+    .leftJoin(subgroup, eq(subgroup.uuid, ContractGroups.contractSubgroupUuid))
     .orderBy(desc(ContractGroups.createdAt));
   return rows.map((r) => ({
     ...r.group,

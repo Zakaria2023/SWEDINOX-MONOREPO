@@ -54,8 +54,8 @@ export const getOrders = async (): Promise<OrderListItem[]> => {
 
 export const getAddressesForCompany = async (
   companyUuid: string,
-): Promise<AddressOption[]> => {
-  return db
+): Promise<AddressOption[]> =>
+  db
     .select({
       uuid: CompanyAddresses.uuid,
       streetAndNo: CompanyAddresses.streetAndNo,
@@ -66,7 +66,6 @@ export const getAddressesForCompany = async (
     .from(CompanyAddresses)
     .where(eq(CompanyAddresses.companyUuid, companyUuid))
     .orderBy(asc(CompanyAddresses.sequenceNumber));
-};
 
 export const createOrder = async (
   fields: OrderFields,

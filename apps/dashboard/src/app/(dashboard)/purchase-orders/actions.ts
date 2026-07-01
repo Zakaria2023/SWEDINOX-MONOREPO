@@ -7,7 +7,10 @@ import {
   SelectPurchaseOrders,
 } from "@/db/schema/purchase-orders";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
-import { CompanyAddresses, SelectCompanyAddresses } from "@/db/schema/company-addresses";
+import {
+  CompanyAddresses,
+  SelectCompanyAddresses,
+} from "@/db/schema/company-addresses";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
 import { generateUuid } from "@/lib/helpers";
 import { asc, desc, eq, getTableColumns } from "drizzle-orm";
@@ -55,8 +58,8 @@ export const getPurchaseOrders = async (): Promise<PurchaseOrderListItem[]> => {
 
 export const getAddressesForCompany = async (
   companyUuid: string,
-): Promise<AddressOption[]> => {
-  return db
+): Promise<AddressOption[]> =>
+  db
     .select({
       uuid: CompanyAddresses.uuid,
       streetAndNo: CompanyAddresses.streetAndNo,
@@ -67,7 +70,6 @@ export const getAddressesForCompany = async (
     .from(CompanyAddresses)
     .where(eq(CompanyAddresses.companyUuid, companyUuid))
     .orderBy(asc(CompanyAddresses.sequenceNumber));
-};
 
 export const createPurchaseOrder = async (
   fields: PurchaseOrderFields,
@@ -80,7 +82,9 @@ export const createPurchaseOrder = async (
   } catch (error) {
     return {
       error:
-        error instanceof Error ? error.message : "Failed to create purchase order",
+        error instanceof Error
+          ? error.message
+          : "Failed to create purchase order",
     };
   }
 };

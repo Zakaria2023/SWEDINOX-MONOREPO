@@ -39,14 +39,13 @@ const buildHierarchicalOptions = (
   items: WarehouseItemOption[],
   parentUuid: string | null = null,
   depth = 0,
-): SelectOption[] => {
-  return items
+): SelectOption[] =>
+  items
     .filter((i) => i.parentUuid === parentUuid)
     .flatMap((item) => [
       { value: item.uuid, label: item.name, depth },
       ...buildHierarchicalOptions(items, item.uuid, depth + 1),
     ]);
-};
 
 export const useWarehouseSubSectionSubmit = ({
   allItems,
@@ -126,10 +125,10 @@ export const useWarehouseSubSectionSubmit = ({
       name: currentName,
       locationType: source.locationType ?? "",
       loadingLocation: source.loadingLocation ?? "",
-      blocked: source.blocked,
+      blocked: source.blocked ?? false,
       blockReason: source.blockReason ?? "",
-      blockedForOptimization: source.blockedForOptimization,
-      limitedDimensions: source.limitedDimensions,
+      blockedForOptimization: source.blockedForOptimization ?? false,
+      limitedDimensions: source.limitedDimensions ?? false,
       minLength: source.minLength ?? "",
       maxLength: source.maxLength ?? "",
       maxWidth: source.maxWidth ?? "",

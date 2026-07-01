@@ -66,9 +66,8 @@ export const useOrderSubmit = ({ companies }: UseOrderSubmitParams) => {
   const [projects, setProjects] = useState<ProjectOption[]>([]);
   const [isLoadingCompanyData, setIsLoadingCompanyData] = useState(false);
 
-  const form = useForm<OrderFormValues, unknown>({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    resolver: zodResolver(orderSchema) as any,
+  const form = useForm<OrderFormValues>({
+    resolver: zodResolver(orderSchema),
     defaultValues: DEFAULT_ORDER,
   });
 
