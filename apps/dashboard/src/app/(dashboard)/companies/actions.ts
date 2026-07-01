@@ -107,14 +107,14 @@ export type CompanyActionResult = {
   success?: boolean;
 };
 
-export type CompanyDetail = SelectCompanies & {
-  addresses: SelectCompanyAddresses[];
-};
-
 export type AddressOption = Pick<
   SelectCompanyAddresses,
   "uuid" | "streetAndNo" | "city" | "postalCode" | "altName"
 >;
+
+export type CompanyDetail = SelectCompanies & {
+  addresses: SelectCompanyAddresses[];
+};
 
 export type ContactOption = Pick<
   SelectContacts,
