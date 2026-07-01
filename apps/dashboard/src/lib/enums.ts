@@ -866,7 +866,6 @@ export const invoicePaymentTerms = [
 
 export type InvoicePaymentTerm = (typeof invoicePaymentTerms)[number];
 
-
 export const orderMethods = [
   "telephone",
   "email",
@@ -1056,7 +1055,6 @@ export const warehouseWorkOrderLineTypes = [
 
 export type WarehouseWorkOrderLineType =
   (typeof warehouseWorkOrderLineTypes)[number];
-
 
 export const purchaseInvoiceBlockReasons = [
   "price_mismatch",
