@@ -47,7 +47,7 @@ export const getReturnOrders = async (): Promise<ReturnOrderListItem[]> => {
       .leftJoin(Companies, eq(ReturnOrders.companyUuid, Companies.uuid))
       .leftJoin(Contacts, eq(ReturnOrders.contactUuid, Contacts.uuid))
       .orderBy(desc(ReturnOrders.createdAt));
-    return rows as ReturnOrderListItem[];
+    return rows;
   } catch {
     throw new Error("Failed to fetch return orders");
   }
