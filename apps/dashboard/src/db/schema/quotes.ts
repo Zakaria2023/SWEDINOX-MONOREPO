@@ -97,70 +97,73 @@ export const Quotes = mysqlTable(
     expired: boolean("expired").default(false),
 
     // ── Summary (computed snapshot, read-only in the UI) ─────────────────────
-    materialsRevenue: decimal("materials_revenue", { precision: 15, scale: 2 })
-      .default("0.00")
-      .notNull(),
-    materialsProfit: decimal("materials_profit", { precision: 15, scale: 2 })
-      .default("0.00")
-      .notNull(),
+    materialsRevenue: decimal("materials_revenue", {
+      precision: 15,
+      scale: 2,
+    }).default("0.00"),
+    materialsProfit: decimal("materials_profit", {
+      precision: 15,
+      scale: 2,
+    }).default("0.00"),
     materialsProfitReplPrice: decimal("materials_profit_repl_price", {
       precision: 15,
       scale: 2,
-    })
-      .default("0.00")
-      .notNull(),
-    optionsRevenue: decimal("options_revenue", { precision: 15, scale: 2 })
-      .default("0.00")
-      .notNull(),
-    optionsProfit: decimal("options_profit", { precision: 15, scale: 2 })
-      .default("0.00")
-      .notNull(),
+    }).default("0.00"),
+    optionsRevenue: decimal("options_revenue", {
+      precision: 15,
+      scale: 2,
+    }).default("0.00"),
+    optionsProfit: decimal("options_profit", {
+      precision: 15,
+      scale: 2,
+    }).default("0.00"),
     optionsProfitReplPrice: decimal("options_profit_repl_price", {
       precision: 15,
       scale: 2,
-    })
-      .default("0.00")
-      .notNull(),
+    }).default("0.00"),
     surchargesRevenue: decimal("surcharges_revenue", {
       precision: 15,
       scale: 2,
-    })
-      .default("0.00")
-      .notNull(),
-    surchargesProfit: decimal("surcharges_profit", { precision: 15, scale: 2 })
-      .default("0.00")
-      .notNull(),
+    }).default("0.00"),
+    surchargesProfit: decimal("surcharges_profit", {
+      precision: 15,
+      scale: 2,
+    }).default("0.00"),
     surchargesProfitReplPrice: decimal("surcharges_profit_repl_price", {
       precision: 15,
       scale: 2,
-    })
-      .default("0.00")
-      .notNull(),
-    transportCosts: decimal("transport_costs", { precision: 15, scale: 2 })
-      .default("0.00")
-      .notNull(),
-    handlingCosts: decimal("handling_costs", { precision: 15, scale: 2 })
-      .default("0.00")
-      .notNull(),
-    totalExclVat: decimal("total_excl_vat", { precision: 15, scale: 2 })
-      .default("0.00")
-      .notNull(),
-    vatAmount: decimal("vat_amount", { precision: 15, scale: 2 })
-      .default("0.00")
-      .notNull(),
-    totalInclVat: decimal("total_incl_vat", { precision: 15, scale: 2 })
-      .default("0.00")
-      .notNull(),
-    avgKiloPrice: decimal("avg_kilo_price", { precision: 15, scale: 2 })
-      .default("0.00")
-      .notNull(),
-    totalWeightKg: decimal("total_weight_kg", { precision: 10, scale: 2 })
-      .default("0.00")
-      .notNull(),
-    theorWeightKg: decimal("theor_weight_kg", { precision: 10, scale: 2 })
-      .default("0.00")
-      .notNull(),
-
+    }).default("0.00"),
+    transportCosts: decimal("transport_costs", {
+      precision: 15,
+      scale: 2,
+    }).default("0.00"),
+    handlingCosts: decimal("handling_costs", {
+      precision: 15,
+      scale: 2,
+    }).default("0.00"),
+    totalExclVat: decimal("total_excl_vat", {
+      precision: 15,
+      scale: 2,
+    }).default("0.00"),
+    vatAmount: decimal("vat_amount", { precision: 15, scale: 2 }).default(
+      "0.00",
+    ),
+    totalInclVat: decimal("total_incl_vat", {
+      precision: 15,
+      scale: 2,
+    }).default("0.00"),
+    avgKiloPrice: decimal("avg_kilo_price", {
+      precision: 15,
+      scale: 2,
+    }).default("0.00"),
+    totalWeightKg: decimal("total_weight_kg", {
+      precision: 10,
+      scale: 2,
+    }).default("0.00"),
+    theorWeightKg: decimal("theor_weight_kg", {
+      precision: 10,
+      scale: 2,
+    }).default("0.00"),
     // ── Remarks ───────────────────────────────────────────────────────────────
     remarks: text("remarks"),
 

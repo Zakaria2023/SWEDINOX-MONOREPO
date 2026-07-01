@@ -7,7 +7,6 @@ import { InsertQuotes, Quotes, SelectQuotes } from "@/db/schema/quotes";
 import { generateUuid } from "@/lib/helpers";
 import { desc, eq, getTableColumns } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-
 export { getAddressesForCompany } from "@/app/(dashboard)/companies/actions";
 export type { AddressOption } from "@/app/(dashboard)/companies/actions";
 
@@ -41,7 +40,7 @@ export const getQuotes = async (): Promise<QuoteListItem[]> => {
       .leftJoin(Companies, eq(Quotes.companyUuid, Companies.uuid))
       .leftJoin(Contacts, eq(Quotes.contactUuid, Contacts.uuid))
       .orderBy(desc(Quotes.createdAt));
-    return rows as QuoteListItem[];
+    return rows;
   } catch {
     throw new Error("Failed to fetch quotes");
   }
