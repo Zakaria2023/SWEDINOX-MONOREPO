@@ -3,6 +3,7 @@
 import { Controller } from "react-hook-form";
 import { usePurchaseRequestSubmit } from "@/app/(dashboard)/purchase-requests/use-purchase-request-submit";
 import { CompanyOption } from "@/app/(dashboard)/companies/actions";
+import { DatePicker } from "@/components/shadcn/date-picker";
 import { Input } from "@/components/shadcn/input";
 import { Select } from "@/components/shadcn/select";
 import { FormActions } from "@/components/ui/form-actions";
@@ -292,12 +293,21 @@ export const PurchaseRequestForm = ({ companies, clerkUsers }: Props) => {
           </div>
 
           {deliveryType === "date" ? (
-            <div className="flex items-center gap-3">
-              <Input
-                type="date"
-                className="w-48"
-                {...register("deliveryDate")}
-              />
+            <div className="flex items-end gap-3">
+              <div>
+                <FormLabel htmlFor="deliveryDate">Date</FormLabel>
+                <Controller
+                  control={control}
+                  name="deliveryDate"
+                  render={({ field }) => (
+                    <DatePicker
+                      value={field.value ?? ""}
+                      onChange={field.onChange}
+                      className="w-48"
+                    />
+                  )}
+                />
+              </div>
               <div>
                 <FormLabel htmlFor="deliveryRemark">Rem</FormLabel>
                 <Input
@@ -339,7 +349,13 @@ export const PurchaseRequestForm = ({ companies, clerkUsers }: Props) => {
         <h2 className="border-b pb-2 text-base font-semibold">Follow-up</h2>
         <div className="max-w-xs">
           <FormLabel htmlFor="deadline">Deadline</FormLabel>
-          <Input id="deadline" type="date" {...register("deadline")} />
+          <Controller
+            control={control}
+            name="deadline"
+            render={({ field }) => (
+              <DatePicker value={field.value ?? ""} onChange={field.onChange} />
+            )}
+          />
         </div>
       </section>
 
