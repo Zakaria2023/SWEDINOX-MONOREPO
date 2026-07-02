@@ -4,12 +4,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
+import { createPurchaseQuote, PurchaseQuoteActionResult } from "./actions";
 import {
   AddressOption,
-  createPurchaseQuote,
   getAddressesForCompany,
-  PurchaseQuoteActionResult,
-} from "./actions";
+} from "@/app/(dashboard)/addresses/actions";
 import {
   DEFAULT_PURCHASE_QUOTE,
   purchaseQuoteSchema,

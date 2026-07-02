@@ -107,11 +107,6 @@ export type CompanyActionResult = {
   success?: boolean;
 };
 
-export type AddressOption = Pick<
-  SelectCompanyAddresses,
-  "uuid" | "streetAndNo" | "city" | "postalCode" | "altName"
->;
-
 export type CompanyDetail = SelectCompanies & {
   addresses: SelectCompanyAddresses[];
 };
@@ -146,21 +141,6 @@ export const getCompanyDetail = async (
     .where(eq(CompanyAddresses.companyUuid, uuid));
   return { ...company, addresses };
 };
-
-export const getAddressesForCompany = async (
-  companyUuid: string,
-): Promise<AddressOption[]> =>
-  db
-    .select({
-      uuid: CompanyAddresses.uuid,
-      streetAndNo: CompanyAddresses.streetAndNo,
-      city: CompanyAddresses.city,
-      postalCode: CompanyAddresses.postalCode,
-      altName: CompanyAddresses.altName,
-    })
-    .from(CompanyAddresses)
-    .where(eq(CompanyAddresses.companyUuid, companyUuid))
-    .orderBy(asc(CompanyAddresses.sequenceNumber));
 
 export const getCompaniesForSelect = async (): Promise<CompanyOption[]> =>
   db
