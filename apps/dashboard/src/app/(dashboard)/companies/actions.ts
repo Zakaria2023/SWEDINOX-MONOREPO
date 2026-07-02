@@ -18,6 +18,7 @@ import {
   SelectCustomerProjects,
 } from "@/db/schema/customer-projects";
 import { InsertTexts, Texts } from "@/db/schema/texts";
+import { PurchaseCompanyType } from "@/lib/enums";
 import { generateUuid } from "@/lib/helpers";
 import { currentUser } from "@clerk/nextjs/server";
 import { asc, desc, eq, or, sql } from "drizzle-orm";
@@ -140,6 +141,23 @@ export const getCompanyDetail = async (
     .from(CompanyAddresses)
     .where(eq(CompanyAddresses.companyUuid, uuid));
   return { ...company, addresses };
+};
+
+// Derives whether a company acts as a supplier or an agent from its roles.
+// Used server-side so the frontend never has to send a company type.
+export const resolveCompanyType = async (
+  companyUuid: string | null | undefined,
+): Promise<PurchaseCompanyType | null> => {
+  if (!companyUuid) return null;
+  const [company] = await db
+    .select({ roles: Companies.roles })
+    .from(Companies)
+    .where(eq(Companies.uuid, companyUuid))
+    .limit(1);
+  if (!company) return null;
+  if (company.roles.includes("supplier")) return "supplier";
+  if (company.roles.includes("agent")) return "agent";
+  return null;
 };
 
 export const getCompaniesForSelect = async (): Promise<CompanyOption[]> =>

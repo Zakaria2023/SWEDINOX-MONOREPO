@@ -19,6 +19,7 @@ import {
   deliveryTypes,
   invoicePaymentTerms,
   orderWeightTypes,
+  purchaseCompanyTypes,
   purchaseOrderTypes,
 } from "../../lib/enums";
 import { Companies } from "./companies";
@@ -32,9 +33,9 @@ export const PurchaseQuotes = mysqlTable(
     uuid: char("uuid", { length: 36 }).notNull().unique(),
 
     // ── Header ────────────────────────────────────────────────────────────────
-    // Exactly one of supplierUuid / agentUuid is set (enforced in validation, not the DB)
-    supplierUuid: char("supplier_uuid", { length: 36 }),
-    agentUuid: char("agent_uuid", { length: 36 }),
+    // The company is either a supplier or an agent; companyType says which
+    companyUuid: char("company_uuid", { length: 36 }),
+    companyType: mysqlEnum("company_type", purchaseCompanyTypes),
     contactUuid: char("contact_uuid", { length: 36 }),
     // Clerk user ID
     purchaser: varchar("purchaser", { length: 255 }),
@@ -104,8 +105,7 @@ export const PurchaseQuotes = mysqlTable(
     updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
   },
   (table) => [
-    index("idx_purchase_quotes_supplier_uuid").on(table.supplierUuid),
-    index("idx_purchase_quotes_agent_uuid").on(table.agentUuid),
+    index("idx_purchase_quotes_company_uuid").on(table.companyUuid),
     index("idx_purchase_quotes_contact_uuid").on(table.contactUuid),
     index("idx_purchase_quotes_delivery_address_uuid").on(
       table.deliveryAddressUuid,
@@ -114,13 +114,8 @@ export const PurchaseQuotes = mysqlTable(
       table.supplierAddressUuid,
     ),
     foreignKey({
-      name: "fk_purchase_quotes_supplier",
-      columns: [table.supplierUuid],
-      foreignColumns: [Companies.uuid],
-    }),
-    foreignKey({
-      name: "fk_purchase_quotes_agent",
-      columns: [table.agentUuid],
+      name: "fk_purchase_quotes_company",
+      columns: [table.companyUuid],
       foreignColumns: [Companies.uuid],
     }),
     foreignKey({

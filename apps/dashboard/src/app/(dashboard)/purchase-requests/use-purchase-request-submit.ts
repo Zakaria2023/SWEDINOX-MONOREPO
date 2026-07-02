@@ -159,8 +159,7 @@ export const usePurchaseRequestSubmit = ({
   const onSubmit = form.handleSubmit((values) => {
     startTransition(async () => {
       const result = await createPurchaseRequest({
-        supplierUuid: values.supplierUuid || null,
-        agentUuid: values.agentUuid || null,
+        companyUuid: values.supplierUuid || values.agentUuid || null,
         contactUuid: values.contactUuid || null,
         purchaser: values.purchaser || null,
         orderCategory: values.orderCategory || null,

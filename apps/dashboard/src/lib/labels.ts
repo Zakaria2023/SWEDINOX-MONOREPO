@@ -65,6 +65,7 @@ import type {
   OrderMethod,
   DeliveryTerm,
   OrderWeightType,
+  PurchaseCompanyType,
   PurchaseOrderType,
   ComplaintType,
   ComplaintCategory,
@@ -992,6 +993,14 @@ export const PURCHASE_ORDER_TYPE_LABELS: Record<PurchaseOrderType, string> = {
   materials: "Materials",
   processing: "Processing",
   customer_materials: "Customer Materials",
+};
+
+export const PURCHASE_COMPANY_TYPE_LABELS: Record<
+  PurchaseCompanyType,
+  string
+> = {
+  supplier: "Supplier",
+  agent: "Agent",
 };
 
 export const CUSTOMER_GROUP_LABELS: Record<CustomerGroup, string> = {

@@ -24,7 +24,7 @@ export const PurchaseQuotesTable = ({ purchaseQuotes }: Props) => (
         <TableRow>
           <TableHead>#</TableHead>
           <TableHead>Quote No</TableHead>
-          <TableHead>Supplier / Agent</TableHead>
+          <TableHead>Company</TableHead>
           <TableHead>Contact</TableHead>
           <TableHead>Type</TableHead>
           <TableHead>Valid Until</TableHead>
@@ -53,9 +53,7 @@ export const PurchaseQuotesTable = ({ purchaseQuotes }: Props) => (
                 </Link>
               </TableCell>
               <TableCell>{row.quoteNumber ?? "—"}</TableCell>
-              <TableCell>
-                {row.supplierName ?? row.agentName ?? "—"}
-              </TableCell>
+              <TableCell>{row.companyName ?? "—"}</TableCell>
               <TableCell>
                 {[row.contactFirstName, row.contactLastName]
                   .filter(Boolean)

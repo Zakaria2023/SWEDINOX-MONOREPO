@@ -943,6 +943,13 @@ export const purchaseOrderTypes = [
 
 export type PurchaseOrderType = (typeof purchaseOrderTypes)[number];
 
+export const purchaseCompanyTypes = [
+  "supplier",
+  "agent",
+] as const satisfies readonly string[];
+
+export type PurchaseCompanyType = (typeof purchaseCompanyTypes)[number];
+
 export const complaintTypes = [
   "counter_order",
   "general",
