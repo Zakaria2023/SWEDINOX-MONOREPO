@@ -148,7 +148,7 @@ export const CONTRACT_TYPE_LABELS: Record<ContractType, string> = {
   net_prices: "Net Prices",
   cost_price: "Cost Price",
   surcharges: "Surcharges",
-  toeslagen: "Allowances",
+  allowances: "Allowances",
 };
 
 export const COMMUNICATION_SETTING_DOCUMENT_TYPE_LABELS: Record<
@@ -258,7 +258,7 @@ export const MISCELLANEOUS_OPTION_LABELS: Record<MiscellaneousOption, string> =
     occasional_customer: "Occasional customer",
     customer_has_login_code: "Customer has login code for website",
     bill_of_ladings_per_order: "Bill of ladings per order",
-    vrachtbrieven_afdrukken: "Vrachtbrieven afdrukken",
+    print_waybills: "Print waybills",
     consignment_customer: "Consignment customer",
     neutral_labels: "Neutral labels",
     label_per_sawed_piece: "Label per sawed piece",
@@ -268,8 +268,8 @@ export const QUOTE_ORDER_OPTION_LABELS: Record<QuoteOrderOption, string> = {
   reference_required: "Reference required",
   complete_delivery: "Complete delivery",
   round_weight_per_piece_up: "Round weight per piece up",
-  certificaat: "Certificaat",
-  overlengte: "Overlengte",
+  certificate: "Certificate",
+  overlength: "Overlength",
   default_pickup: "Default pickup",
 };
 
@@ -340,7 +340,7 @@ export const CONTACT_CATEGORY_LABELS: Record<ContactCategory, string> = {
 export const WAREHOUSE_ADDRESS_LABELS: Record<WarehouseAddress, string> = {
   hego_almere: "Bolderweg 10, 1332AT, Almere",
   port_of_rotterdam: "Wilhelminakade 909, 3072AP, Rotterdam",
-  port_of_antwerp: "Zaha Hadidplein 1, 2030, Antwerpen",
+  port_of_antwerp: "Zaha Hadidplein 1, 2030, Antwerp",
 };
 
 export const WAREHOUSE_LOCATION_TYPE_LABELS: Record<
@@ -426,14 +426,14 @@ export const WAREHOUSE_TRANSPORT_REGION_LABELS: Record<
 };
 
 export const TRANSPORT_MODE_LABELS: Record<TransportMode, string> = {
-  sea_transport: "Vervoer over zee",
-  rail_transport: "Vervoer per spoor",
-  road_transport: "Wegvervoer",
-  air_transport: "Luchtvervoer",
-  postal_shipments: "Postzendingen",
-  fixed_transport_facilities: "Vaste transportinrichtingen (leidingen)",
-  inland_waterway_transport: "Vervoer over binnenwateren",
-  own_power: "Eigen kracht",
+  sea_transport: "Sea transport",
+  rail_transport: "Rail transport",
+  road_transport: "Road transport",
+  air_transport: "Air transport",
+  postal_shipments: "Postal shipments",
+  fixed_transport_facilities: "Fixed transport facilities (pipelines)",
+  inland_waterway_transport: "Inland waterway transport",
+  own_power: "Own power",
 };
 
 export const RETURN_ORDER_REASON_LABELS: Record<ReturnOrderReason, string> = {
@@ -447,7 +447,7 @@ export const RETURN_ORDER_REASON_LABELS: Record<ReturnOrderReason, string> = {
 };
 
 export const MACHINE_OPTION_LABELS: Record<MachineOptionType, string> = {
-  decoilen: "Decoilen",
+  decoiling: "Decoiling",
   grinding: "Grinding",
   shear_cut: "ShearCut",
   laser: "Laser",
@@ -462,23 +462,23 @@ export const MACHINE_OPTION_LABELS: Record<MachineOptionType, string> = {
   coating: "Coating",
   embossing: "Embossing",
   perforate: "Perforate",
-  kanten: "Kanten",
+  bending: "Bending",
   polished: "Polished",
   punching: "Punching",
   slitting: "Slitting",
   rolling: "Rolling",
-  stempelen: "Stempelen",
-  zagen: "Zagen",
+  stamping: "Stamping",
+  sawing: "Sawing",
 };
 
 export const MACHINE_PRODUCTION_LABELS: Record<MachineProductionType, string> =
   {
     decoiler: "Decoiler",
-    interne_wzh: "Interne wzh",
-    knip: "Knip",
+    internal_processing: "Internal processing",
+    shearing: "Shearing",
     laser_1: "Laser 1",
     laser_2: "Laser 2",
-    slijpen_folien: "Slijpen/Folien",
+    grinding_foiling: "Grinding/Foiling",
   };
 
 export const MACHINE_LOADING_LABELS: Record<MachineLoadingType, string> = {
@@ -497,7 +497,7 @@ export const MACHINE_CAPACITY_UNIT_CODES: Record<MachineCapacityUnit, string> =
     m2: "M2",
     m3: "M3",
     mm: "MM",
-    regel: "Regel",
+    line: "Line",
     st: "ST",
     tn: "TN",
   };
@@ -514,7 +514,7 @@ export const MACHINE_CAPACITY_UNIT_LABELS: Record<MachineCapacityUnit, string> =
     m2: "Square meters",
     m3: "Cubic meters",
     mm: "Millimeter",
-    regel: "Line",
+    line: "Line",
     st: "Pieces",
     tn: "Tonnage",
   };
@@ -758,7 +758,7 @@ export const DELIVERY_TIME_UNIT_LABELS: Record<DeliveryTimeUnit, string> = {
 };
 
 export const PROCESSED_OPTION_LABELS: Record<ProcessedOption, string> = {
-  D: "Decoilen",
+  D: "Decoiling",
   SL: "Grinding",
   K: "ShearCut",
   LSR: "Laser",
@@ -773,13 +773,13 @@ export const PROCESSED_OPTION_LABELS: Record<ProcessedOption, string> = {
   COA: "Coating",
   SIC: "Embossing",
   PER: "Perforate",
-  KNT: "Kanten",
+  KNT: "Bending",
   POL: "Polished",
   PON: "Punching",
   SLI: "Slitting",
   WAL: "Rolling",
-  STP: "Stempelen",
-  Z: "Zagen",
+  STP: "Stamping",
+  Z: "Sawing",
 };
 
 export const CE_STANDARD_LABELS: Record<CeStandard, string> = {
@@ -801,7 +801,7 @@ export const FEATURES_QUALITY_LABELS: Record<FeaturesQuality, string> = {
   "115CrV3": "115CrV3",
   "11SMn30+C/SH": "11SMn30+C/SH",
   "11SMnPb30+C/SH": "11SMnPb30+C/SH",
-  "300-serie": "300-serie",
+  "300-serie": "300 series",
   "301": "EN 1.4310",
   "303": "EN 1.4305",
   "304": "EN 1.4301",
@@ -813,7 +813,7 @@ export const FEATURES_QUALITY_LABELS: Record<FeaturesQuality, string> = {
   "3044N": "EN 1.4301 4N",
   "304BA": "EN 1.4301 BA",
   "304DECO": "EN 1.4301 DECO",
-  "304DIV": "EN 1.4301 Diversen",
+  "304DIV": "EN 1.4301 Miscellaneous",
   "304L": "EN 1.4307",
   "304L1D": "EN 1.4307 1D",
   "304L2B": "EN 1.4307 2B",
@@ -824,9 +824,9 @@ export const FEATURES_QUALITY_LABELS: Record<FeaturesQuality, string> = {
   "304LBA": "EN 1.4307 BA",
   "304LNO4": "EN 1.4307 No4",
   "304LSB": "EN 1.4307 SB",
-  "304POL": "EN 1.4301 Gepoljst",
+  "304POL": "EN 1.4301 Polished",
   "304SB": "EN 1.4301 SB",
-  "304-serie": "304-serie",
+  "304-serie": "304 series",
   "309": "EN 1.4828",
   "3092B": "EN 1.4828 2B",
   "3092BB": "EN 1.4828 2BB",
@@ -847,22 +847,22 @@ export const FEATURES_QUALITY_LABELS: Record<FeaturesQuality, string> = {
   "316L2D": "EN 1.4404 2D",
   "316L2E": "EN 1.4404 2E",
   "316LBA": "EN 1.4404 BA",
-  "316LWGW": "EN 1.4404 Warmgewalst",
-  "316-serie": "316-serie",
+  "316LWGW": "EN 1.4404 Hot-rolled",
+  "316-serie": "316 series",
   "316T": "EN 1.4571",
   "316T1D": "EN 1.4571 1D",
   "316T2B": "EN 1.4571 2B",
   "316T2D": "EN 1.4571 2D",
   "316T2E": "EN 1.4571 2E",
   "316TBA": "EN 1.4571 BA",
-  "316TWGW": "EN 1.4571 Warmgewalst",
+  "316TWGW": "EN 1.4571 Hot-rolled",
   "321": "EN 1.4541",
   "3211D": "EN 1.4541 1D",
   "3212B": "EN 1.4541 2B",
-  "321WGW": "EN 1.4541 Warmgewalst",
+  "321WGW": "EN 1.4541 Hot-rolled",
   "34CrNiMo6+QT": "34CrNiMo6+QT",
   "40031D": "EN 1.4003 1D",
-  "400-serie": "400-serie",
+  "400-serie": "400 series",
   "409": "EN 1.4512",
   "4092B": "EN 1.4512 2B",
   "410S": "EN 1.4000",
@@ -944,7 +944,7 @@ export const FEATURES_QUALITY_LABELS: Record<FeaturesQuality, string> = {
   E195: "E195",
   E220: "E220",
   "E-Cu": "E-Cu",
-  "HA-serie": "HA-serie",
+  "HA-serie": "HA series",
   "Laserpress 240": "Laserpress 240",
   Ms58: "Ms58",
   Ms63: "Ms63",
@@ -965,7 +965,7 @@ export const ORDER_METHOD_LABELS: Record<OrderMethod, string> = {
   oral: "Oral",
   website: "Website",
   edi: "EDI",
-  ai_ingelezen_email: "AI ingelezen Email",
+  ai_read_email: "AI-read Email",
 };
 
 export const DELIVERY_TERM_LABELS: Record<DeliveryTerm, string> = {
@@ -1110,7 +1110,7 @@ export const COMPLAINT_REPORT_LABELS: Record<ComplaintReport, string> = {
   oral: "Oral",
   website: "Website",
   edi: "EDI",
-  ai_ingelezen_email: "AI ingelezen Email",
+  ai_read_email: "AI-read Email",
 };
 
 export const STICKER_PER_PICK_WORKORDER_LABELS: Record<
@@ -1123,29 +1123,29 @@ export const STICKER_PER_PICK_WORKORDER_LABELS: Record<
 };
 
 export const PRINTER_NAME_LABELS: Record<PrinterName, string> = {
-  microsoft_print_to_pdf_8_omgeleid: "Microsoft Print to PDF (8 omgeleid)",
-  onenote_desktop_8_omgeleid: "OneNote (Desktop) (8 omgeleid)",
-  verzenden_naar_onenote_16: "Verzenden naar OneNote 16",
-  verkoop_zwart: "Verkoop zwart",
-  verkoop_kleur: "Verkoop kleur",
+  microsoft_print_to_pdf_8_redirected: "Microsoft Print to PDF (8 redirected)",
+  onenote_desktop_8_redirected: "OneNote (Desktop) (8 redirected)",
+  send_to_onenote_16: "Send to OneNote 16",
+  sales_black: "Sales black",
+  sales_color: "Sales color",
   sato_cl4nx_203dpi: "SATO CL4NX 203dpi",
-  sato_cl408e_logistiek: "SATO CL408e - Logistiek",
+  sato_cl408e_logistics: "SATO CL408e - Logistics",
   onenote_desktop: "OneNote (Desktop)",
   microsoft_print_to_pdf: "Microsoft Print to PDF",
-  logistiek_zwart: "Logistiek zwart",
-  logistiek_kleur: "Logistiek kleur",
-  administratie_zwart: "Administratie zwart",
-  administratie_kleur: "Administratie kleur",
+  logistics_black: "Logistics black",
+  logistics_color: "Logistics color",
+  administration_black: "Administration black",
+  administration_color: "Administration color",
 };
 
 export const PRINTER_ENTRY_LABELS: Record<PrinterEntry, string> = {
-  automatisch_selecteren: "Automatisch selecteren",
-  handmatige_invoer: "Handmatige invoer",
-  lade_1: "Lade 1",
-  lade_2: "Lade 2",
-  lade_3: "Lade 3",
-  lade_4: "Lade 4",
-  lade_5: "Lade 5",
+  select_automatically: "Select automatically",
+  manual_feed: "Manual feed",
+  tray_1: "Tray 1",
+  tray_2: "Tray 2",
+  tray_3: "Tray 3",
+  tray_4: "Tray 4",
+  tray_5: "Tray 5",
 };
 
 export const COUNT_WORKORDER_METHOD_LABELS: Record<
@@ -1234,6 +1234,6 @@ export const PURCHASE_INVOICE_FISCAL_BASE_LABELS: Record<
 export const CURRENCY_LABELS: Record<Currency, string> = {
   eur: "Euro",
   usd: "Dollar",
-  gbp: "Pond",
+  gbp: "Pound",
   hkd: "HK-Dollar",
 };
