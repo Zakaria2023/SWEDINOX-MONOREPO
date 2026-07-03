@@ -13,9 +13,6 @@ import { desc, eq, getTableColumns } from "drizzle-orm";
 import { alias } from "drizzle-orm/mysql-core";
 import { revalidatePath } from "next/cache";
 
-export { getAddressesForCompany } from "@/app/(dashboard)/companies/actions";
-export type { AddressOption } from "@/app/(dashboard)/companies/actions";
-
 export type PurchaseQuoteFields = Omit<
   InsertPurchaseQuotes,
   "id" | "uuid" | "createdAt" | "updatedAt"

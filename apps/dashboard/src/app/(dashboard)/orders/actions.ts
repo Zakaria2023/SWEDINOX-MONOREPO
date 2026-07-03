@@ -9,7 +9,7 @@ import {
 } from "@/db/schema/company-addresses";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
 import { generateUuid } from "@/lib/helpers";
-import { desc, eq, getTableColumns, asc } from "drizzle-orm";
+import { asc, count, desc, eq, getTableColumns, max } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 export type OrderFields = Omit<
   InsertOrders,
@@ -77,6 +77,31 @@ export const getAddressesForCompany = async (
     .from(CompanyAddresses)
     .where(eq(CompanyAddresses.companyUuid, companyUuid))
     .orderBy(asc(CompanyAddresses.sequenceNumber));
+
+export const getOrderCountsByCompany = async (): Promise<
+  Map<string, number>
+> => {
+  const rows = await db
+    .select({ companyUuid: Orders.companyUuid, value: count() })
+    .from(Orders)
+    .groupBy(Orders.companyUuid);
+  return new Map(rows.map((row) => [row.companyUuid, row.value] as const));
+};
+
+/** Most recent order per company, regardless of order count. */
+export const getLastOrderDatesByCompany = async (): Promise<
+  Map<string, Date>
+> => {
+  const rows = await db
+    .select({ companyUuid: Orders.companyUuid, value: max(Orders.createdAt) })
+    .from(Orders)
+    .groupBy(Orders.companyUuid);
+  const map = new Map<string, Date>();
+  for (const row of rows) {
+    if (row.companyUuid && row.value) map.set(row.companyUuid, row.value);
+  }
+  return map;
+};
 
 export const createOrder = async (
   fields: OrderFields,

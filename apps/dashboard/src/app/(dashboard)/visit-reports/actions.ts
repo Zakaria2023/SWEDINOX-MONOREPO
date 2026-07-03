@@ -11,7 +11,7 @@ import {
   VisitReports,
 } from "@/db";
 import { generateUuid } from "@/lib/helpers";
-import { asc, desc, eq } from "drizzle-orm";
+import { asc, count, desc, eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 
 export type VisitReportInput = Omit<
@@ -60,6 +60,16 @@ export const getContactsByCompanyUuid = async (
     .from(Contacts)
     .where(eq(Contacts.companyUuid, companyUuid))
     .orderBy(asc(Contacts.lastName));
+
+export const getVisitCountsByCompany = async (): Promise<
+  Map<string, number>
+> => {
+  const rows = await db
+    .select({ companyUuid: VisitReports.companyUuid, value: count() })
+    .from(VisitReports)
+    .groupBy(VisitReports.companyUuid);
+  return new Map(rows.map((row) => [row.companyUuid, row.value] as const));
+};
 
 export const createVisitReport = async (
   input: VisitReportInput,

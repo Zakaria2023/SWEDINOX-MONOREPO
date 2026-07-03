@@ -4,18 +4,17 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
-import {
-  AddressOption,
-  createPurchaseQuote,
-  getAddressesForCompany,
-  PurchaseQuoteActionResult,
-} from "./actions";
+import { createPurchaseQuote, PurchaseQuoteActionResult } from "./actions";
 import {
   DEFAULT_PURCHASE_QUOTE,
   purchaseQuoteSchema,
   PurchaseQuoteFormValues,
 } from "./validation";
-import { CompanyOption } from "@/app/(dashboard)/companies/actions";
+import {
+  AddressOption,
+  CompanyOption,
+  getAddressesForCompany,
+} from "@/app/(dashboard)/companies/actions";
 import {
   ContactOption,
   getContactsForCompany,
@@ -56,9 +55,8 @@ const makeOptions = <T extends string>(
 ];
 
 const addressLabel = (a: AddressOption) =>
-  [a.altName, a.streetAndNo, a.postalCode, a.city]
-    .filter(Boolean)
-    .join(", ") || a.uuid;
+  [a.altName, a.streetAndNo, a.postalCode, a.city].filter(Boolean).join(", ") ||
+  a.uuid;
 
 export const usePurchaseQuoteSubmit = ({
   companies,

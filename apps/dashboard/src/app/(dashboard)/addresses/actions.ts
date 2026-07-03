@@ -3,7 +3,8 @@
 import { db, SelectCompanyAddresses } from "@/db";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { CompanyAddresses } from "@/db/schema/company-addresses";
-import { desc, eq } from "drizzle-orm";
+import { toMapByCompanyUuid } from "@/lib/helpers";
+import { and, desc, eq, min } from "drizzle-orm";
 
 export type AddressListItem = {
   CompanyAddresses: SelectCompanyAddresses;
@@ -35,4 +36,46 @@ export const getAddressesForSelect = async (): Promise<
     .innerJoin(Companies, eq(Companies.uuid, CompanyAddresses.companyUuid))
     .orderBy(Companies.companyName);
   return rows;
+};
+
+export type PrimaryAddress = Pick<
+  SelectCompanyAddresses,
+  "streetAndNo" | "city" | "postalCode" | "email"
+>;
+
+export const getPrimaryAddressesByCompany = async (): Promise<
+  Map<string, PrimaryAddress>
+> => {
+  const primaryAddressSeq = db
+    .select({
+      companyUuid: CompanyAddresses.companyUuid,
+      minSequenceNumber: min(CompanyAddresses.sequenceNumber).as(
+        "min_sequence_number",
+      ),
+    })
+    .from(CompanyAddresses)
+    .groupBy(CompanyAddresses.companyUuid)
+    .as("primary_address_seq");
+
+  const rows = await db
+    .select({
+      companyUuid: CompanyAddresses.companyUuid,
+      streetAndNo: CompanyAddresses.streetAndNo,
+      city: CompanyAddresses.city,
+      postalCode: CompanyAddresses.postalCode,
+      email: CompanyAddresses.email,
+    })
+    .from(CompanyAddresses)
+    .innerJoin(
+      primaryAddressSeq,
+      and(
+        eq(CompanyAddresses.companyUuid, primaryAddressSeq.companyUuid),
+        eq(
+          CompanyAddresses.sequenceNumber,
+          primaryAddressSeq.minSequenceNumber,
+        ),
+      ),
+    );
+
+  return toMapByCompanyUuid(rows);
 };

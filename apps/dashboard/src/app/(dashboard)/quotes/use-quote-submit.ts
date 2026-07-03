@@ -4,15 +4,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
-import {
-  AddressOption,
-  createQuote,
-  getAddressesForCompany,
-  QuoteActionResult,
-} from "./actions";
+import { createQuote, QuoteActionResult } from "./actions";
 import { DEFAULT_QUOTE, quoteSchema, QuoteFormValues } from "./validation";
 import {
+  AddressOption,
   CompanyOption,
+  getAddressesForCompany,
   getProjectsForCompany,
   ProjectOption,
 } from "@/app/(dashboard)/companies/actions";
