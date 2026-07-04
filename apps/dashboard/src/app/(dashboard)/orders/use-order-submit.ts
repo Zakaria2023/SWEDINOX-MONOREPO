@@ -4,12 +4,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
+import { createOrder, OrderActionResult } from "./actions";
 import {
   AddressOption,
-  createOrder,
   getAddressesForCompany,
-  OrderActionResult,
-} from "./actions";
+} from "@/app/(dashboard)/addresses/actions";
 import { DEFAULT_ORDER, orderSchema, OrderFormValues } from "./validation";
 import {
   CompanyOption,

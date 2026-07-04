@@ -4,12 +4,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
+import { createPurchaseQuote, PurchaseQuoteActionResult } from "./actions";
 import {
   AddressOption,
-  createPurchaseQuote,
   getAddressesForCompany,
-  PurchaseQuoteActionResult,
-} from "./actions";
+} from "@/app/(dashboard)/addresses/actions";
 import {
   DEFAULT_PURCHASE_QUOTE,
   purchaseQuoteSchema,
@@ -171,8 +170,7 @@ export const usePurchaseQuoteSubmit = ({
   const onSubmit = form.handleSubmit((values) => {
     startTransition(async () => {
       const result = await createPurchaseQuote({
-        supplierUuid: values.supplierUuid || null,
-        agentUuid: values.agentUuid || null,
+        companyUuid: values.supplierUuid || values.agentUuid || null,
         contactUuid: values.contactUuid || null,
         purchaser: values.purchaser || null,
         reference: values.reference || null,

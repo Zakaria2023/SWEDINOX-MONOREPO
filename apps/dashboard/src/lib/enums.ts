@@ -51,7 +51,7 @@ export const contractTypes = [
   "net_prices",
   "cost_price",
   "surcharges",
-  "toeslagen",
+  "allowances",
 ] as const satisfies readonly string[];
 
 export type ContractType = (typeof contractTypes)[number];
@@ -185,7 +185,7 @@ export const miscellaneousOptions = [
   "occasional_customer",
   "customer_has_login_code",
   "bill_of_ladings_per_order",
-  "vrachtbrieven_afdrukken",
+  "print_waybills",
   "consignment_customer",
   "neutral_labels",
   "label_per_sawed_piece",
@@ -197,8 +197,8 @@ export const quoteOrderOptions = [
   "reference_required",
   "complete_delivery",
   "round_weight_per_piece_up",
-  "certificaat",
-  "overlengte",
+  "certificate",
+  "overlength",
   "default_pickup",
 ] as const satisfies readonly string[];
 
@@ -722,7 +722,7 @@ export const returnOrderReasons = [
 export type ReturnOrderReason = (typeof returnOrderReasons)[number];
 
 export const machineOptionTypes = [
-  "decoilen",
+  "decoiling",
   "grinding",
   "shear_cut",
   "laser",
@@ -737,24 +737,24 @@ export const machineOptionTypes = [
   "coating",
   "embossing",
   "perforate",
-  "kanten",
+  "bending",
   "polished",
   "punching",
   "slitting",
   "rolling",
-  "stempelen",
-  "zagen",
+  "stamping",
+  "sawing",
 ] as const satisfies readonly string[];
 
 export type MachineOptionType = (typeof machineOptionTypes)[number];
 
 export const machineProductionTypes = [
   "decoiler",
-  "interne_wzh",
-  "knip",
+  "internal_processing",
+  "shearing",
   "laser_1",
   "laser_2",
-  "slijpen_folien",
+  "grinding_foiling",
 ] as const satisfies readonly string[];
 
 export type MachineProductionType = (typeof machineProductionTypes)[number];
@@ -776,7 +776,7 @@ export const machineCapacityUnits = [
   "m2",
   "m3",
   "mm",
-  "regel",
+  "line",
   "st",
   "tn",
 ] as const satisfies readonly string[];
@@ -899,7 +899,7 @@ export const orderMethods = [
   "oral",
   "website",
   "edi",
-  "ai_ingelezen_email",
+  "ai_read_email",
 ] as const satisfies readonly string[];
 
 export type OrderMethod = (typeof orderMethods)[number];
@@ -943,6 +943,13 @@ export const purchaseOrderTypes = [
 
 export type PurchaseOrderType = (typeof purchaseOrderTypes)[number];
 
+export const purchaseCompanyTypes = [
+  "supplier",
+  "agent",
+] as const satisfies readonly string[];
+
+export type PurchaseCompanyType = (typeof purchaseCompanyTypes)[number];
+
 export const complaintTypes = [
   "counter_order",
   "general",
@@ -975,7 +982,7 @@ export const complaintReports = [
   "oral",
   "website",
   "edi",
-  "ai_ingelezen_email",
+  "ai_read_email",
 ] as const satisfies readonly string[];
 
 export type ComplaintReport = (typeof complaintReports)[number];
@@ -1029,31 +1036,31 @@ export type StickerPerPickWorkorderType =
   (typeof stickerPerPickWorkorderTypes)[number];
 
 export const printerNames = [
-  "microsoft_print_to_pdf_8_omgeleid",
-  "onenote_desktop_8_omgeleid",
-  "verzenden_naar_onenote_16",
-  "verkoop_zwart",
-  "verkoop_kleur",
+  "microsoft_print_to_pdf_8_redirected",
+  "onenote_desktop_8_redirected",
+  "send_to_onenote_16",
+  "sales_black",
+  "sales_color",
   "sato_cl4nx_203dpi",
-  "sato_cl408e_logistiek",
+  "sato_cl408e_logistics",
   "onenote_desktop",
   "microsoft_print_to_pdf",
-  "logistiek_zwart",
-  "logistiek_kleur",
-  "administratie_zwart",
-  "administratie_kleur",
+  "logistics_black",
+  "logistics_color",
+  "administration_black",
+  "administration_color",
 ] as const satisfies readonly string[];
 
 export type PrinterName = (typeof printerNames)[number];
 
 export const printerEntries = [
-  "automatisch_selecteren",
-  "handmatige_invoer",
-  "lade_1",
-  "lade_2",
-  "lade_3",
-  "lade_4",
-  "lade_5",
+  "select_automatically",
+  "manual_feed",
+  "tray_1",
+  "tray_2",
+  "tray_3",
+  "tray_4",
+  "tray_5",
 ] as const satisfies readonly string[];
 
 export type PrinterEntry = (typeof printerEntries)[number];

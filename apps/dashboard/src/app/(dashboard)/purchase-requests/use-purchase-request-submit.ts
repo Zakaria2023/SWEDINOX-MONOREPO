@@ -4,12 +4,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
+import { createPurchaseRequest, PurchaseRequestActionResult } from "./actions";
 import {
   AddressOption,
-  createPurchaseRequest,
   getAddressesForCompany,
-  PurchaseRequestActionResult,
-} from "./actions";
+} from "@/app/(dashboard)/addresses/actions";
 import {
   DEFAULT_PURCHASE_REQUEST,
   purchaseRequestSchema,
@@ -20,6 +19,7 @@ import {
   ContactOption,
   getContactsForCompany,
 } from "@/app/(dashboard)/contacts/actions";
+import { ClerkUserOption } from "@/lib/server/clerk";
 import { SelectOption } from "@/components/shadcn/select";
 import {
   deliveryTerms,
@@ -41,6 +41,7 @@ import {
 
 type UsePurchaseRequestSubmitParams = {
   companies: CompanyOption[];
+  clerkUsers: ClerkUserOption[];
 };
 
 const emptyOpt = { value: "", label: COMMON_TEXT.emptyOption };
@@ -60,6 +61,7 @@ const addressLabel = (a: AddressOption) =>
 
 export const usePurchaseRequestSubmit = ({
   companies,
+  clerkUsers,
 }: UsePurchaseRequestSubmitParams) => {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -132,6 +134,8 @@ export const usePurchaseRequestSubmit = ({
     INVOICE_PAYMENT_TERM_LABELS as Record<InvoicePaymentTerm, string>,
   );
 
+  const purchaserOptions: SelectOption[] = [emptyOpt, ...clerkUsers];
+
   const handleSupplierChange = (uuid: string) => {
     form.setValue("supplierUuid", uuid);
     form.setValue("contactUuid", "");
@@ -155,8 +159,7 @@ export const usePurchaseRequestSubmit = ({
   const onSubmit = form.handleSubmit((values) => {
     startTransition(async () => {
       const result = await createPurchaseRequest({
-        supplierUuid: values.supplierUuid || null,
-        agentUuid: values.agentUuid || null,
+        companyUuid: values.supplierUuid || values.agentUuid || null,
         contactUuid: values.contactUuid || null,
         purchaser: values.purchaser || null,
         orderCategory: values.orderCategory || null,
@@ -213,6 +216,7 @@ export const usePurchaseRequestSubmit = ({
     weightTypeOptions,
     deliveryTermOptions,
     paymentTermOptions,
+    purchaserOptions,
     isLoadingSupplierData,
     handleSupplierChange,
     handleCancel,

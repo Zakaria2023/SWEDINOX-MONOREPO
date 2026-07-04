@@ -20,7 +20,7 @@ export const PurchaseRequestsTable = async () => {
         <TableHeader>
           <TableRow>
             <TableHead>#</TableHead>
-            <TableHead>Supplier</TableHead>
+            <TableHead>Company</TableHead>
             <TableHead>Contact</TableHead>
             <TableHead>Type</TableHead>
             <TableHead>Delivery Date</TableHead>
@@ -49,7 +49,7 @@ export const PurchaseRequestsTable = async () => {
                     {row.id}
                   </Link>
                 </TableCell>
-                <TableCell>{row.supplierName ?? "—"}</TableCell>
+                <TableCell>{row.companyName ?? "—"}</TableCell>
                 <TableCell>
                   {[row.contactFirstName, row.contactLastName]
                     .filter(Boolean)

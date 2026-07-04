@@ -7,13 +7,9 @@ import {
   SelectPurchaseOrders,
 } from "@/db/schema/purchase-orders";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
-import {
-  CompanyAddresses,
-  SelectCompanyAddresses,
-} from "@/db/schema/company-addresses";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
 import { generateUuid } from "@/lib/helpers";
-import { asc, desc, eq, getTableColumns } from "drizzle-orm";
+import { desc, eq, getTableColumns } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 export type PurchaseOrderFields = Omit<
@@ -33,11 +29,6 @@ export type PurchaseOrderListItem = SelectPurchaseOrders & {
   contactLastName: SelectContacts["lastName"] | null;
 };
 
-export type AddressOption = Pick<
-  SelectCompanyAddresses,
-  "uuid" | "streetAndNo" | "city" | "postalCode" | "altName"
->;
-
 export const getPurchaseOrders = async (): Promise<PurchaseOrderListItem[]> => {
   try {
     return await db
@@ -55,21 +46,6 @@ export const getPurchaseOrders = async (): Promise<PurchaseOrderListItem[]> => {
     throw new Error("Failed to fetch purchase orders");
   }
 };
-
-export const getAddressesForCompany = async (
-  companyUuid: string,
-): Promise<AddressOption[]> =>
-  db
-    .select({
-      uuid: CompanyAddresses.uuid,
-      streetAndNo: CompanyAddresses.streetAndNo,
-      city: CompanyAddresses.city,
-      postalCode: CompanyAddresses.postalCode,
-      altName: CompanyAddresses.altName,
-    })
-    .from(CompanyAddresses)
-    .where(eq(CompanyAddresses.companyUuid, companyUuid))
-    .orderBy(asc(CompanyAddresses.sequenceNumber));
 
 export const createPurchaseOrder = async (
   fields: PurchaseOrderFields,
