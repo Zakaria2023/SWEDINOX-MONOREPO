@@ -117,25 +117,6 @@ export type ContactOption = Pick<
   "uuid" | "id" | "companyUuid" | "firstName" | "lastName"
 >;
 
-export type CustomerOrProspectCompany = Pick<
-  SelectCompanies,
-  | "uuid"
-  | "id"
-  | "companyName"
-  | "searchCode1"
-  | "searchCode2"
-  | "searchCode3"
-  | "representative"
-  | "accountManager"
-  | "region"
-  | "customerGroup"
-  | "creditLimit"
-  | "cocNumber"
-  | "createdAt"
-  | "roles"
-  | "quoteOrderSettings"
->;
-
 export const updateCompanyDocuments = async (
   companyUuid: string,
   documents: Array<{ id: string; fileName: string }>,
@@ -219,36 +200,6 @@ export const getCustomerAndProspectCompaniesForSelect = async (): Promise<
       searchCode1: Companies.searchCode1,
       companyName: Companies.companyName,
       roles: Companies.roles,
-    })
-    .from(Companies)
-    .where(
-      or(
-        sql`JSON_CONTAINS(${Companies.roles}, '"customer"')`,
-        sql`JSON_CONTAINS(${Companies.roles}, '"prospect"')`,
-      ),
-    )
-    .orderBy(asc(Companies.companyName));
-
-export const getCustomerAndProspectCompaniesWithDetails = async (): Promise<
-  CustomerOrProspectCompany[]
-> =>
-  db
-    .select({
-      uuid: Companies.uuid,
-      id: Companies.id,
-      companyName: Companies.companyName,
-      searchCode1: Companies.searchCode1,
-      searchCode2: Companies.searchCode2,
-      searchCode3: Companies.searchCode3,
-      representative: Companies.representative,
-      accountManager: Companies.accountManager,
-      region: Companies.region,
-      customerGroup: Companies.customerGroup,
-      creditLimit: Companies.creditLimit,
-      cocNumber: Companies.cocNumber,
-      createdAt: Companies.createdAt,
-      roles: Companies.roles,
-      quoteOrderSettings: Companies.quoteOrderSettings,
     })
     .from(Companies)
     .where(

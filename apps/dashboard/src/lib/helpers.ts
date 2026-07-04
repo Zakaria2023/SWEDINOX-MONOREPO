@@ -38,22 +38,3 @@ export const formatRevenue = (value: string | null) => {
     currency: "EUR",
   }).format(Number(value));
 };
-
-/**
- * Reduces rows carrying a `companyUuid` into a lookup keyed by that uuid,
- * keeping the first row seen per company. Works both for pre-aggregated
- * rows (one row per company after a `GROUP BY`) and for ordered one-to-many
- * rows where the first row per company is the one you want (e.g. addresses
- * ordered by sequence number, to pick the primary one).
- */
-export const toMapByCompanyUuid = <T extends { companyUuid: string | null }>(
-  rows: T[],
-): Map<string, T> => {
-  const map = new Map<string, T>();
-  for (const row of rows) {
-    if (row.companyUuid && !map.has(row.companyUuid)) {
-      map.set(row.companyUuid, row);
-    }
-  }
-  return map;
-};
