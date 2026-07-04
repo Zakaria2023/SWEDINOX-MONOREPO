@@ -248,7 +248,7 @@ export const getCustomersWithCustomerRole = async (): Promise<
     })
     .from(Companies)
     .where(sql`JSON_CONTAINS(${Companies.roles}, '"customer"')`)
-    .orderBy(asc(Companies.companyName));
+    .orderBy(desc(Companies.id));
 
 export const getContactsForSuppliers = async (): Promise<ContactOption[]> =>
   db
