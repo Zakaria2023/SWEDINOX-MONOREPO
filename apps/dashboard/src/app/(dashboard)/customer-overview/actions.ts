@@ -15,7 +15,7 @@ import { Orders } from "@/db/schema/orders";
 import { Quotes } from "@/db/schema/quotes";
 import { ReturnOrders } from "@/db/schema/return-orders";
 import { VisitReports } from "@/db/schema/visit-reports";
-import { and, count, eq, max, min, sql, sum } from "drizzle-orm";
+import { count, eq, max, min, sql, sum } from "drizzle-orm";
 
 export type CustomerOverviewRow = Pick<
   SelectCompanies,
@@ -79,18 +79,16 @@ export const getCustomerOverview = async (): Promise<CustomerOverviewRow[]> => {
       )
       .as("primary_address");
 
-    // Contact with the lowest sequence number per company (sequence numbers
-    // are only unique within a company, so the join needs both columns).
-    const primaryContactSeq = db
+    // Contact with the lowest id per company (id is a global PK, so matching
+    // on it alone is enough to pick the right row).
+    const primaryContactId = db
       .select({
         companyUuid: Contacts.companyUuid,
-        minSequenceNumber: min(Contacts.sequenceNumber).as(
-          "min_sequence_number",
-        ),
+        minId: min(Contacts.id).as("min_id"),
       })
       .from(Contacts)
       .groupBy(Contacts.companyUuid)
-      .as("primary_contact_seq");
+      .as("primary_contact_id");
 
     const primaryContact = db
       .select({
@@ -100,19 +98,13 @@ export const getCustomerOverview = async (): Promise<CustomerOverviewRow[]> => {
         customerRegionCode: Contacts.customerRegionCode,
       })
       .from(Contacts)
-      .innerJoin(
-        primaryContactSeq,
-        and(
-          eq(Contacts.companyUuid, primaryContactSeq.companyUuid),
-          eq(Contacts.sequenceNumber, primaryContactSeq.minSequenceNumber),
-        ),
-      )
+      .innerJoin(primaryContactId, eq(Contacts.id, primaryContactId.minId))
       .as("primary_contact");
 
     const quoteCounts = db
       .select({
         companyUuid: Quotes.companyUuid,
-        value: count().as("value"),
+        value: count().as("quotes_count"),
       })
       .from(Quotes)
       .groupBy(Quotes.companyUuid)
@@ -121,7 +113,7 @@ export const getCustomerOverview = async (): Promise<CustomerOverviewRow[]> => {
     const orderStats = db
       .select({
         companyUuid: Orders.companyUuid,
-        value: count().as("value"),
+        value: count().as("orders_count"),
         lastOrderDate: max(Orders.createdAt).as("last_order_date"),
       })
       .from(Orders)
@@ -131,8 +123,8 @@ export const getCustomerOverview = async (): Promise<CustomerOverviewRow[]> => {
     const invoiceStats = db
       .select({
         companyUuid: Invoices.companyUuid,
-        value: count().as("value"),
-        revenue: sum(Invoices.invoiceAmountInclVat).as("revenue"),
+        value: count().as("invoices_count"),
+        revenue: sum(Invoices.invoiceAmountInclVat).as("invoices_revenue"),
       })
       .from(Invoices)
       .groupBy(Invoices.companyUuid)
@@ -141,7 +133,7 @@ export const getCustomerOverview = async (): Promise<CustomerOverviewRow[]> => {
     const visitCounts = db
       .select({
         companyUuid: VisitReports.companyUuid,
-        value: count().as("value"),
+        value: count().as("visits_count"),
       })
       .from(VisitReports)
       .groupBy(VisitReports.companyUuid)
@@ -150,7 +142,7 @@ export const getCustomerOverview = async (): Promise<CustomerOverviewRow[]> => {
     const returnOrderCounts = db
       .select({
         companyUuid: ReturnOrders.companyUuid,
-        value: count().as("value"),
+        value: count().as("return_orders_count"),
       })
       .from(ReturnOrders)
       .groupBy(ReturnOrders.companyUuid)
@@ -159,7 +151,7 @@ export const getCustomerOverview = async (): Promise<CustomerOverviewRow[]> => {
     const complaintCounts = db
       .select({
         companyUuid: Complaints.companyUuid,
-        value: count().as("value"),
+        value: count().as("complaints_count"),
       })
       .from(Complaints)
       .groupBy(Complaints.companyUuid)
@@ -255,7 +247,7 @@ export const getCustomerOverview = async (): Promise<CustomerOverviewRow[]> => {
             : 0,
       };
     });
-  } catch {
-    throw new Error("Failed to fetch customer overview");
+  } catch (error) {
+    throw new Error(`Failed to fetch customer overview: ${error}`);
   }
 };
