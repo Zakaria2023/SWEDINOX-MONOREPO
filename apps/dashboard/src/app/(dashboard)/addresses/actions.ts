@@ -4,7 +4,7 @@ import { db, SelectCompanyAddresses } from "@/db";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { CompanyAddresses } from "@/db/schema/company-addresses";
 import { toMapByCompanyUuid } from "@/lib/helpers";
-import { and, asc, desc, eq, min } from "drizzle-orm";
+import { asc, desc, eq } from "drizzle-orm";
 
 export type AddressListItem = {
   CompanyAddresses: SelectCompanyAddresses;
@@ -19,6 +19,11 @@ export type AddressSelectOption = Pick<
 export type AddressOption = Pick<
   SelectCompanyAddresses,
   "uuid" | "streetAndNo" | "city" | "postalCode" | "altName"
+>;
+
+export type PrimaryAddress = Pick<
+  SelectCompanyAddresses,
+  "streetAndNo" | "city" | "postalCode" | "email"
 >;
 
 export const getAddresses = async (): Promise<AddressListItem[]> =>
@@ -58,25 +63,9 @@ export const getAddressesForSelect = async (): Promise<
   return rows;
 };
 
-export type PrimaryAddress = Pick<
-  SelectCompanyAddresses,
-  "streetAndNo" | "city" | "postalCode" | "email"
->;
-
 export const getPrimaryAddressesByCompany = async (): Promise<
   Map<string, PrimaryAddress>
 > => {
-  const primaryAddressSeq = db
-    .select({
-      companyUuid: CompanyAddresses.companyUuid,
-      minSequenceNumber: min(CompanyAddresses.sequenceNumber).as(
-        "min_sequence_number",
-      ),
-    })
-    .from(CompanyAddresses)
-    .groupBy(CompanyAddresses.companyUuid)
-    .as("primary_address_seq");
-
   const rows = await db
     .select({
       companyUuid: CompanyAddresses.companyUuid,
@@ -86,16 +75,7 @@ export const getPrimaryAddressesByCompany = async (): Promise<
       email: CompanyAddresses.email,
     })
     .from(CompanyAddresses)
-    .innerJoin(
-      primaryAddressSeq,
-      and(
-        eq(CompanyAddresses.companyUuid, primaryAddressSeq.companyUuid),
-        eq(
-          CompanyAddresses.sequenceNumber,
-          primaryAddressSeq.minSequenceNumber,
-        ),
-      ),
-    );
+    .orderBy(asc(CompanyAddresses.id));
 
   return toMapByCompanyUuid(rows);
 };
