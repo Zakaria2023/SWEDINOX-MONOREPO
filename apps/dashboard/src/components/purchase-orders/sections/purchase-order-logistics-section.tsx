@@ -6,7 +6,7 @@ import { Input } from "@/components/shadcn/input";
 import { FormLabel } from "@/components/ui/form-field";
 import { FormCheckboxCard } from "@/components/ui/form-checkbox-card";
 
-export const POLogisticsSection = () => {
+export const PurchaseOrderLogisticsSection = () => {
   const { register, control } = useFormContext<PurchaseOrderFormValues>();
 
   return (
@@ -83,11 +83,7 @@ export const POLogisticsSection = () => {
         </div>
         <div>
           <FormLabel htmlFor="maxLengthMm">Max. Length (mm)</FormLabel>
-          <Input
-            id="maxLengthMm"
-            type="number"
-            {...register("maxLengthMm")}
-          />
+          <Input id="maxLengthMm" type="number" {...register("maxLengthMm")} />
         </div>
         <div>
           <FormLabel htmlFor="maxBundleWeightKg">

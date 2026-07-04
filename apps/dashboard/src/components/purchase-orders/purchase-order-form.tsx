@@ -7,10 +7,10 @@ import { FormActions } from "@/components/ui/form-actions";
 import { FormError } from "@/components/ui/form-error";
 import { PurchaseOrderInformationSection } from "./sections/purchase-order-information-section";
 import { PurchaseOrderTypeSection } from "./sections/purchase-order-type-section";
-import { POFinancesSection } from "./sections/po-finances-section";
-import { PODeliverySection } from "./sections/po-delivery-section";
-import { POLogisticsSection } from "./sections/po-logistics-section";
-import { PORemarksSection } from "./sections/po-remarks-section";
+import { PurchaseOrderFinancesSection } from "./sections/purchase-order-finances-section";
+import { PurchaseOrderDeliverySection } from "./sections/purchase-order-delivery-section";
+import { PurchaseOrderLogisticsSection } from "./sections/purchase-order-logistics-section";
+import { PurchaseOrderRemarksSection } from "./sections/purchase-order-remarks-section";
 import { ClerkUserOption } from "@/lib/server/clerk";
 
 type Props = {
@@ -59,18 +59,18 @@ export const PurchaseOrderForm = ({ companies, clerkUsers }: Props) => {
           weightTypeOptions={weightTypeOptions}
         />
 
-        <POFinancesSection paymentTermOptions={paymentTermOptions} />
+        <PurchaseOrderFinancesSection paymentTermOptions={paymentTermOptions} />
 
-        <PODeliverySection
+        <PurchaseOrderDeliverySection
           arrangeTransport={arrangeTransport}
           deliveryType={deliveryType}
           deliveryTermOptions={deliveryTermOptions}
           supplierAddressOptions={supplierAddressOptions}
         />
 
-        <POLogisticsSection />
+        <PurchaseOrderLogisticsSection />
 
-        <PORemarksSection />
+        <PurchaseOrderRemarksSection />
 
         <FormActions
           submitLabel="Create Purchase Order"

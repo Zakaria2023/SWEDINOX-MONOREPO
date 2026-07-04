@@ -4,7 +4,7 @@ import { useFormContext } from "react-hook-form";
 import { PurchaseOrderFormValues } from "@/app/(dashboard)/purchase-orders/validation";
 import { Textarea } from "@/components/shadcn/textarea";
 
-export const PORemarksSection = () => {
+export const PurchaseOrderRemarksSection = () => {
   const { register } = useFormContext<PurchaseOrderFormValues>();
 
   return (

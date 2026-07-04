@@ -14,7 +14,7 @@ type Props = {
   supplierAddressOptions: SelectOption[];
 };
 
-export const PODeliverySection = ({
+export const PurchaseOrderDeliverySection = ({
   arrangeTransport,
   deliveryType,
   deliveryTermOptions,

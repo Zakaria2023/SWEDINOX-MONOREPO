@@ -9,7 +9,7 @@ type Props = {
   paymentTermOptions: SelectOption[];
 };
 
-export const POFinancesSection = ({ paymentTermOptions }: Props) => {
+export const PurchaseOrderFinancesSection = ({ paymentTermOptions }: Props) => {
   const { control } = useFormContext<PurchaseOrderFormValues>();
 
   return (
