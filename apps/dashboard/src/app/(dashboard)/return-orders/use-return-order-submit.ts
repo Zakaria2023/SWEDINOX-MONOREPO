@@ -12,9 +12,9 @@ import {
 } from "./validation";
 import {
   AddressOption,
-  CompanyOption,
   getAddressesForCompany,
-} from "@/app/(dashboard)/companies/actions";
+} from "@/app/(dashboard)/addresses/actions";
+import { CompanyOption } from "@/app/(dashboard)/companies/actions";
 import {
   getOrdersForCompany,
   OrderOption,

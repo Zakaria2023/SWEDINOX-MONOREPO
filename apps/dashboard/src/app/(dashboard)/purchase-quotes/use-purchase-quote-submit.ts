@@ -12,9 +12,9 @@ import {
 } from "./validation";
 import {
   AddressOption,
-  CompanyOption,
   getAddressesForCompany,
-} from "@/app/(dashboard)/companies/actions";
+} from "@/app/(dashboard)/addresses/actions";
+import { CompanyOption } from "@/app/(dashboard)/companies/actions";
 import {
   ContactOption,
   getContactsForCompany,
@@ -169,8 +169,7 @@ export const usePurchaseQuoteSubmit = ({
   const onSubmit = form.handleSubmit((values) => {
     startTransition(async () => {
       const result = await createPurchaseQuote({
-        supplierUuid: values.supplierUuid || null,
-        agentUuid: values.agentUuid || null,
+        companyUuid: values.supplierUuid || values.agentUuid || null,
         contactUuid: values.contactUuid || null,
         purchaser: values.purchaser || null,
         reference: values.reference || null,

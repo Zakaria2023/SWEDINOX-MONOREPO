@@ -8,8 +8,10 @@ import { createQuote, QuoteActionResult } from "./actions";
 import { DEFAULT_QUOTE, quoteSchema, QuoteFormValues } from "./validation";
 import {
   AddressOption,
-  CompanyOption,
   getAddressesForCompany,
+} from "@/app/(dashboard)/addresses/actions";
+import {
+  CompanyOption,
   getProjectsForCompany,
   ProjectOption,
 } from "@/app/(dashboard)/companies/actions";

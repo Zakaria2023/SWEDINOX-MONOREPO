@@ -4,7 +4,7 @@ import { db, SelectCompanyAddresses } from "@/db";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { CompanyAddresses } from "@/db/schema/company-addresses";
 import { toMapByCompanyUuid } from "@/lib/helpers";
-import { and, desc, eq, min } from "drizzle-orm";
+import { and, asc, desc, eq, min } from "drizzle-orm";
 
 export type AddressListItem = {
   CompanyAddresses: SelectCompanyAddresses;
@@ -16,12 +16,32 @@ export type AddressSelectOption = Pick<
   "uuid" | "streetAndNo" | "city"
 >;
 
+export type AddressOption = Pick<
+  SelectCompanyAddresses,
+  "uuid" | "streetAndNo" | "city" | "postalCode" | "altName"
+>;
+
 export const getAddresses = async (): Promise<AddressListItem[]> =>
   db
     .select()
     .from(CompanyAddresses)
     .leftJoin(Companies, eq(Companies.uuid, CompanyAddresses.companyUuid))
     .orderBy(desc(CompanyAddresses.createdAt));
+
+export const getAddressesForCompany = async (
+  companyUuid: string,
+): Promise<AddressOption[]> =>
+  db
+    .select({
+      uuid: CompanyAddresses.uuid,
+      streetAndNo: CompanyAddresses.streetAndNo,
+      city: CompanyAddresses.city,
+      postalCode: CompanyAddresses.postalCode,
+      altName: CompanyAddresses.altName,
+    })
+    .from(CompanyAddresses)
+    .where(eq(CompanyAddresses.companyUuid, companyUuid))
+    .orderBy(asc(CompanyAddresses.sequenceNumber));
 
 export const getAddressesForSelect = async (): Promise<
   AddressSelectOption[]

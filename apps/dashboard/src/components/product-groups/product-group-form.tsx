@@ -917,7 +917,7 @@ export const ProductGroupForm = ({ existingGroups, companies }: Props) => {
             id="certificaat"
             name="certificaat"
             control={control}
-            label="Certificaat"
+            label="Certificate"
             options={certificaatOpts}
             emptyValue=""
           />
