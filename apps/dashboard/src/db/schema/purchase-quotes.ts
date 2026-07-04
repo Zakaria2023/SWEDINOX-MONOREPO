@@ -33,11 +33,11 @@ export const PurchaseQuotes = mysqlTable(
     uuid: char("uuid", { length: 36 }).notNull().unique(),
 
     // ── Header ────────────────────────────────────────────────────────────────
-    // The company is either a supplier or an agent; companyType says which
+    // The company is either a supplier or an agent; companyType says which one.
     companyUuid: char("company_uuid", { length: 36 }),
     companyType: mysqlEnum("company_type", purchaseCompanyTypes),
     contactUuid: char("contact_uuid", { length: 36 }),
-    // Clerk user ID
+    // Purchaser here is the Clerk user ID that is logged in to the system and is creating the purchase quote
     purchaser: varchar("purchaser", { length: 255 }),
     reference: varchar("reference", { length: 255 }),
     ourReference: varchar("our_reference", { length: 255 }),
