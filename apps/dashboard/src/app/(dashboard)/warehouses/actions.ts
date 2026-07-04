@@ -119,8 +119,8 @@ export const getAllWarehouseItemsForSelect = async (): Promise<
 /** Fetch full settings for a single warehouse — used by the Adapt From feature */
 export const getWarehouseByUuid = async (
   uuid: string,
-): Promise<WarehouseAdaptData | null> =>
-  db
+): Promise<WarehouseAdaptData | null> => {
+  const [row] = await db
     .select({
       locationType: Warehouses.locationType,
       loadingLocation: Warehouses.loadingLocation,
@@ -138,8 +138,9 @@ export const getWarehouseByUuid = async (
     })
     .from(Warehouses)
     .where(eq(Warehouses.uuid, uuid))
-    .limit(1)
-    .then(([row]) => row ?? null);
+    .limit(1);
+  return row ?? null;
+};
 
 export const getWarehouses = async (): Promise<SelectWarehouses[]> => {
   try {

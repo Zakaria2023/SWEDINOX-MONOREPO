@@ -21,7 +21,7 @@ import { SearchCodesSection } from "@/components/companies/sections/search-codes
 import { ContactsSection } from "@/components/companies/sections/contacts-section";
 import { FirstAddressDialog } from "@/components/companies/dialogs/first-address-dialog";
 import { AdditionalAddressDialog } from "@/components/companies/dialogs/additional-address-dialog";
-import { CommSettingDialog } from "@/components/companies/dialogs/comm-setting-dialog";
+import { CommunicationSettingDialog } from "@/components/companies/dialogs/communication-setting-dialog";
 import { ContractDialog } from "@/components/companies/dialogs/contract-dialog";
 import { TextDialog } from "@/components/companies/dialogs/text-dialog";
 import { ContactDialog } from "@/components/companies/dialogs/contact-dialog";
@@ -47,7 +47,7 @@ export const CompanyForm = ({
 }: CompanyFormProps) => {
   const router = useRouter();
   const { user } = useUser();
-  const currentUserName = user?.firstName && user?.lastName || undefined;
+  const currentUserName = (user?.firstName && user?.lastName) || undefined;
 
   const {
     form,
@@ -256,7 +256,7 @@ export const CompanyForm = ({
         availableForNext={availableForNext}
       />
 
-      <CommSettingDialog
+      <CommunicationSettingDialog
         isOpen={isCommSettingDialogOpen}
         onOpenChange={handleCommSettingOpenChange}
         onCancel={handleCancelCommSetting}

@@ -1,6 +1,6 @@
 "use client";
 
-import { CommSettingFormValues } from "@/app/(dashboard)/companies/validation";
+import { CommunicationSettingFormValues } from "@/app/(dashboard)/companies/validation";
 import {
   Dialog,
   DialogBody,
@@ -23,7 +23,7 @@ type Props = {
   onOpenChange: (open: boolean) => void;
   onCancel: () => void;
   onSave: FormEventHandler<HTMLFormElement>;
-  form: UseFormReturn<CommSettingFormValues>;
+  form: UseFormReturn<CommunicationSettingFormValues>;
   selectedCommType: string;
   setSelectedCommType: (type: string) => void;
   documentTypeOptions: { value: string; label: string }[];
@@ -31,7 +31,7 @@ type Props = {
   shapeOptions: { value: string; label: string }[];
 };
 
-export const CommSettingDialog = ({
+export const CommunicationSettingDialog = ({
   isOpen,
   onOpenChange,
   onCancel,

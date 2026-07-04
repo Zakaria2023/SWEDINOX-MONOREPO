@@ -7,8 +7,8 @@ import {
   contractableRoles,
   currencies,
   invoicePaymentTerms,
-  type ContractableRole,
-  type TextUsageCategory,
+  ContractableRole,
+  TextUsageCategory,
 } from "@/lib/enums";
 import { VALIDATION_MESSAGES } from "@/lib/validation-messages";
 import { z } from "zod";
@@ -165,9 +165,9 @@ export const commSettingSchema = z.object({
   fax: z.string().optional(),
 });
 
-export type CommSettingFormValues = z.infer<typeof commSettingSchema>;
+export type CommunicationSettingFormValues = z.infer<typeof commSettingSchema>;
 
-export const DEFAULT_COMM_SETTING: CommSettingFormValues = {
+export const DEFAULT_COMM_SETTING: CommunicationSettingFormValues = {
   documentType: "",
   communicationType: "",
   shape: "",
