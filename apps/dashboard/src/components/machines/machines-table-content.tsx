@@ -12,6 +12,7 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
+import { buildColumnVisibility } from "@/lib/helpers";
 import {
   MachineCapacityUnit,
   MachineLoadingType,
@@ -66,18 +67,13 @@ const ALL_COLUMNS: Array<{
   { key: "documents", label: "Documents", defaultVisible: true },
 ];
 
-const initialVisibility = ALL_COLUMNS.reduce(
-  (acc, column) => ({ ...acc, [column.key]: column.defaultVisible }),
-  {} as Record<ColumnKey, boolean>,
-);
-
 type Props = {
   machines: MachineListItem[];
 };
 
-export const MachinesTableContent = ({ machines }: Props) => {
+export const MachinesTable = ({ machines }: Props) => {
   const [columnVisibility, setColumnVisibility] =
-    useState<Record<ColumnKey, boolean>>(initialVisibility);
+    useState<Record<ColumnKey, boolean>>(buildColumnVisibility(ALL_COLUMNS));
 
   const toggleColumn = (key: string) => {
     setColumnVisibility((prev) => ({

@@ -51,7 +51,7 @@ import {
 } from "./actions";
 import {
   AddressFormValues,
-  CommSettingFormValues,
+  CommunicationSettingFormValues,
   commSettingSchema,
   CompanyFormValues,
   contactDialogSchema,
@@ -279,7 +279,7 @@ export const useCompanySubmit = ({
     },
   });
 
-  const commSettingForm = useForm<CommSettingFormValues>({
+  const commSettingForm = useForm<CommunicationSettingFormValues>({
     resolver: zodResolver(commSettingSchema),
     defaultValues: DEFAULT_COMM_SETTING,
   });

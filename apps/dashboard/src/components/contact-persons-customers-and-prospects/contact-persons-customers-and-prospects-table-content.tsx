@@ -11,7 +11,7 @@ import {
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { ContactSalutation } from "@/lib/enums";
-import { formatRevenue } from "@/lib/helpers";
+import { buildColumnVisibility, formatRevenue } from "@/lib/helpers";
 import {
   COMMON_TEXT,
   CONTACT_CATEGORY_LABELS,
@@ -100,17 +100,11 @@ const ALL_COLUMNS: Array<{
   { key: "mobile", label: "Mobile", defaultVisible: false },
 ];
 
-const initialVisibility = ALL_COLUMNS.reduce(
-  (acc, col) => ({ ...acc, [col.key]: col.defaultVisible }),
-  {} as Record<ColumnKey, boolean>,
-);
-
-
 type Props = { rows: ContactPersonCustomerProspectRow[] };
 
 export const ContactPersonsCustomersAndProspectsTable = ({ rows }: Props) => {
   const [columnVisibility, setColumnVisibility] =
-    useState<Record<ColumnKey, boolean>>(initialVisibility);
+    useState<Record<ColumnKey, boolean>>(buildColumnVisibility(ALL_COLUMNS));
 
   const toggleColumn = (key: string) =>
     setColumnVisibility((prev) => ({

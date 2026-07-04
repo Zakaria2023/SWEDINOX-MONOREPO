@@ -10,6 +10,7 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
+import { buildColumnVisibility } from "@/lib/helpers";
 import {
   ADDRESS_CATEGORY_LABELS,
   AVAILABLE_AT_LABELS,
@@ -122,11 +123,6 @@ const ALL_COLUMNS: Array<{
   { key: "updatedAt", label: "Updated At", defaultVisible: false },
 ];
 
-const initialVisibility = ALL_COLUMNS.reduce(
-  (acc, column) => ({ ...acc, [column.key]: column.defaultVisible }),
-  {} as Record<ColumnKey, boolean>,
-);
-
 type AddressesTableContentProps = {
   addresses: AddressListItem[];
 };
@@ -135,7 +131,7 @@ export const AddressesTable = ({
   addresses,
 }: AddressesTableContentProps) => {
   const [columnVisibility, setColumnVisibility] =
-    useState<Record<ColumnKey, boolean>>(initialVisibility);
+    useState<Record<ColumnKey, boolean>>(buildColumnVisibility(ALL_COLUMNS));
 
   const toggleColumn = (key: string) => {
     setColumnVisibility((prev) => ({

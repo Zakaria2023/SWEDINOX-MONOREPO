@@ -10,6 +10,7 @@ import {
     TableRow,
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
+import { buildColumnVisibility } from "@/lib/helpers";
 import {
     COMMON_TEXT,
     COMMUNICATION_SETTING_DOCUMENT_TYPE_LABELS,
@@ -81,11 +82,6 @@ const ALL_COLUMNS: Array<{
   },
 ];
 
-const initialVisibility = ALL_COLUMNS.reduce(
-  (acc, column) => ({ ...acc, [column.key]: column.defaultVisible }),
-  {} as Record<ColumnKey, boolean>,
-);
-
 type CommunicationSettingsTableContentProps = {
   settings: CommunicationSettingListItem[];
 };
@@ -94,7 +90,7 @@ export const CommunicationSettingsTable = ({
   settings,
 }: CommunicationSettingsTableContentProps) => {
   const [columnVisibility, setColumnVisibility] =
-    useState<Record<ColumnKey, boolean>>(initialVisibility);
+    useState<Record<ColumnKey, boolean>>(buildColumnVisibility(ALL_COLUMNS));
 
   const toggleColumn = (key: string) =>
     setColumnVisibility((prev) => ({

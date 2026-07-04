@@ -1,11 +1,14 @@
 "use server";
 
 import { db } from "@/db";
-import { InsertWarehouses, Warehouses } from "@/db/schema/warehouses";
 import { WarehouseWorkOrders } from "@/db/schema/warehouse-work-orders";
+import {
+  InsertWarehouses,
+  SelectWarehouses,
+  Warehouses,
+} from "@/db/schema/warehouses";
 import { generateUuid } from "@/lib/helpers";
 import { asc, desc, eq, isNull } from "drizzle-orm";
-import { SelectWarehouses } from "@/db/schema/warehouses";
 
 export type WarehouseOption = Pick<SelectWarehouses, "uuid" | "name">;
 
@@ -57,6 +60,11 @@ export type WarehouseActionResult = {
 
 export type WarehouseLocationOption = Pick<SelectWarehouses, "uuid" | "name">;
 
+export type MachineStockLocationOption = Pick<
+  SelectWarehouses,
+  "uuid" | "name"
+>;
+
 /** Warehouses of type "location" — for the pick-up default location dropdown */
 export const getWarehouseLocationsForSelect = async (): Promise<
   WarehouseLocationOption[]
@@ -66,11 +74,6 @@ export const getWarehouseLocationsForSelect = async (): Promise<
     .from(Warehouses)
     .where(eq(Warehouses.type, "location"))
     .orderBy(asc(Warehouses.name));
-
-export type MachineStockLocationOption = Pick<
-  SelectWarehouses,
-  "uuid" | "name"
->;
 
 export const getMachineStockLocationsForSelect = async (): Promise<
   MachineStockLocationOption[]
@@ -117,7 +120,7 @@ export const getAllWarehouseItemsForSelect = async (): Promise<
 export const getWarehouseByUuid = async (
   uuid: string,
 ): Promise<WarehouseAdaptData | null> => {
-  const rows = await db
+  const [row] = await db
     .select({
       locationType: Warehouses.locationType,
       loadingLocation: Warehouses.loadingLocation,
@@ -136,7 +139,7 @@ export const getWarehouseByUuid = async (
     .from(Warehouses)
     .where(eq(Warehouses.uuid, uuid))
     .limit(1);
-  return rows[0] ?? null;
+  return row ?? null;
 };
 
 export const getWarehouses = async (): Promise<SelectWarehouses[]> => {

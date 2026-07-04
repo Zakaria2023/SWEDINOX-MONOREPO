@@ -11,6 +11,7 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
+import { buildColumnVisibility } from "@/lib/helpers";
 import {
   WAREHOUSE_BLOCK_REASON_LABELS,
   WAREHOUSE_LOADING_LOCATION_LABELS,
@@ -57,18 +58,13 @@ const ALL_COLUMNS: Array<{
   },
 ];
 
-const initialVisibility = ALL_COLUMNS.reduce(
-  (acc, column) => ({ ...acc, [column.key]: column.defaultVisible }),
-  {} as Record<ColumnKey, boolean>,
-);
-
 type Props = {
   subSections: SelectWarehouses[];
 };
 
 export const WarehouseSubSectionsTable = ({ subSections }: Props) => {
   const [columnVisibility, setColumnVisibility] =
-    useState<Record<ColumnKey, boolean>>(initialVisibility);
+    useState<Record<ColumnKey, boolean>>(buildColumnVisibility(ALL_COLUMNS));
 
   const toggleColumn = (key: string) => {
     setColumnVisibility((prev) => ({

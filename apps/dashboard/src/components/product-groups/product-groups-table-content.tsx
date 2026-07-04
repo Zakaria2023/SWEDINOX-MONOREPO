@@ -12,6 +12,7 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
+import { buildColumnVisibility } from "@/lib/helpers";
 import {
   ARTICLE_GROUP_LABELS,
   PRODUCT_SHAPE_LABELS,
@@ -48,9 +49,9 @@ type Props = {
   productGroups: ProductGroupListItem[];
 };
 
-export const ProductGroupsTableContent = ({ productGroups }: Props) => {
+export const ProductGroupsTable = ({ productGroups }: Props) => {
   const [visibility, setVisibility] = useState<Record<string, boolean>>(
-    Object.fromEntries(ALL_COLUMNS.map((c) => [c.key, c.defaultVisible])),
+    buildColumnVisibility(ALL_COLUMNS),
   );
 
   const handleToggle = (key: string) =>

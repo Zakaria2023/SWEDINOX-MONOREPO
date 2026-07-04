@@ -11,7 +11,7 @@ import {
   SelectCompanyAddresses,
   SelectTextCategories,
 } from "@/db";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, getTableColumns } from "drizzle-orm";
 
 export type TextListItem = SelectTexts & {
   companyId: SelectCompanies["id"] | null;
@@ -21,10 +21,10 @@ export type TextListItem = SelectTexts & {
   textCategoryName: SelectTextCategories["name"] | null;
 };
 
-export const getTexts = async (): Promise<TextListItem[]> => {
-  const rows = await db
+export const getTexts = async (): Promise<TextListItem[]> =>
+  db
     .select({
-      text: Texts,
+      ...getTableColumns(Texts),
       companyId: Companies.id,
       companyName: Companies.companyName,
       roles: Companies.roles,
@@ -39,13 +39,3 @@ export const getTexts = async (): Promise<TextListItem[]> => {
     )
     .leftJoin(TextCategories, eq(TextCategories.uuid, Texts.textCategoryUuid))
     .orderBy(desc(Texts.createdAt));
-
-  return rows.map((r) => ({
-    ...r.text,
-    companyId: r.companyId,
-    companyName: r.companyName,
-    roles: r.roles,
-    city: r.city,
-    textCategoryName: r.textCategoryName,
-  }));
-};

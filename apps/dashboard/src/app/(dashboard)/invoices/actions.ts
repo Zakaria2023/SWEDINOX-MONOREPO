@@ -42,8 +42,8 @@ export type InvoiceWithCompany = SelectInvoices & {
   companyCode: SelectCompanies["id"] | null;
 };
 
-export const getInvoices = async (): Promise<InvoiceWithCompany[]> => {
-  const rows = await db
+export const getInvoices = async (): Promise<InvoiceWithCompany[]> =>
+  db
     .select({
       ...getTableColumns(Invoices),
       companyName: Companies.companyName,
@@ -52,13 +52,6 @@ export const getInvoices = async (): Promise<InvoiceWithCompany[]> => {
     .from(Invoices)
     .leftJoin(Companies, eq(Invoices.companyUuid, Companies.uuid))
     .orderBy(desc(Invoices.createdAt));
-
-  return rows.map((row) => ({
-    ...row,
-    companyName: row.companyName ?? null,
-    companyCode: row.companyCode ?? null,
-  }));
-};
 
 export const getInvoicesByCompanyUuid = async (
   companyUuid: string,

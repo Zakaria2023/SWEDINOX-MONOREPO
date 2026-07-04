@@ -1,5 +1,5 @@
 import { getContractGroupsList } from "@/app/(dashboard)/contract-groups/actions";
-import { ContractGroupsClient } from "@/components/contract-groups/contract-groups-client";
+import { ContractGroups } from "@/components/contract-groups/contract-groups";
 import { PageHeading } from "@/components/layout/page-heading";
 
 const ContractGroupsPage = async () => {
@@ -11,7 +11,7 @@ const ContractGroupsPage = async () => {
         title="Contract Groups"
         description="Manage groups that can be assigned to contracts."
       />
-      <ContractGroupsClient groups={groups} />
+      <ContractGroups groups={groups} />
     </div>
   );
 };
