@@ -11,12 +11,14 @@ import { POFinancesSection } from "./sections/po-finances-section";
 import { PODeliverySection } from "./sections/po-delivery-section";
 import { POLogisticsSection } from "./sections/po-logistics-section";
 import { PORemarksSection } from "./sections/po-remarks-section";
+import { ClerkUserOption } from "@/lib/server/clerk";
 
 type Props = {
   companies: CompanyOption[];
+  clerkUsers: ClerkUserOption[];
 };
 
-export const PurchaseOrderForm = ({ companies }: Props) => {
+export const PurchaseOrderForm = ({ companies, clerkUsers }: Props) => {
   const {
     form,
     isPending,
@@ -32,10 +34,11 @@ export const PurchaseOrderForm = ({ companies }: Props) => {
     weightTypeOptions,
     deliveryTermOptions,
     paymentTermOptions,
+    purchaserOptions,
     isLoadingSupplierData,
     handleSupplierChange,
     handleCancel,
-  } = usePurchaseOrderSubmit({ companies });
+  } = usePurchaseOrderSubmit({ companies, clerkUsers });
 
   return (
     <FormProvider {...form}>
@@ -46,6 +49,7 @@ export const PurchaseOrderForm = ({ companies }: Props) => {
           supplierOptions={supplierOptions}
           agentOptions={agentOptions}
           contactOptions={contactOptions}
+          purchaserOptions={purchaserOptions}
           isLoadingSupplierData={isLoadingSupplierData}
           handleSupplierChange={handleSupplierChange}
         />

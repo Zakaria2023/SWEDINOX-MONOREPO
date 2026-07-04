@@ -1,4 +1,5 @@
 export * from "./companies";
+export * from "./complaints";
 export * from "./company-addresses";
 export * from "./contracts";
 export * from "./communication-settings";
@@ -15,5 +16,9 @@ export * from "./warehouses";
 export * from "./visit-reports";
 export * from "./warehouse-work-orders";
 export * from "./orders";
+export * from "./return-orders";
+export * from "./quotes";
 export * from "./purchase-orders";
+export * from "./purchase-quotes";
+export * from "./purchase-requests";
 export * from "./machines";

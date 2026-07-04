@@ -11,6 +11,7 @@ type Props = {
   supplierOptions: SelectOption[];
   agentOptions: SelectOption[];
   contactOptions: SelectOption[];
+  purchaserOptions: SelectOption[];
   isLoadingSupplierData: boolean;
   handleSupplierChange: (uuid: string) => void;
 };
@@ -19,6 +20,7 @@ export const PurchaseOrderInformationSection = ({
   supplierOptions,
   agentOptions,
   contactOptions,
+  purchaserOptions,
   isLoadingSupplierData,
   handleSupplierChange,
 }: Props) => {
@@ -79,10 +81,14 @@ export const PurchaseOrderInformationSection = ({
           disabled={contactOptions.length <= 1}
         />
 
-        <div>
-          <FormLabel htmlFor="purchaser">Purchaser</FormLabel>
-          <Input id="purchaser" {...register("purchaser")} />
-        </div>
+        <FormSelectField
+          control={control}
+          id="purchaser"
+          name="purchaser"
+          label="Purchaser"
+          options={purchaserOptions}
+          emptyValue=""
+        />
 
         <div>
           <FormLabel htmlFor="reference">Reference</FormLabel>

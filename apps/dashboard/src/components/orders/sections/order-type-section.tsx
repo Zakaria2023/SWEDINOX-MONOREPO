@@ -76,7 +76,7 @@ export const OrderTypeSection = ({
           name="isOverlengte"
           render={({ field }) => (
             <FormCheckboxCard
-              label="Overlengte"
+              label="Overlength"
               checked={field.value}
               active={field.value}
               onChange={(e) => field.onChange(e.target.checked)}

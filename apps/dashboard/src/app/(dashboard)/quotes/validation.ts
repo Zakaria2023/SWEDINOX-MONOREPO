@@ -1,0 +1,132 @@
+import { z } from "zod";
+import {
+  deliveryTerms,
+  deliveryTypes,
+  invoicePaymentTerms,
+  orderMethods,
+  orderWeightTypes,
+} from "@/lib/enums";
+import { todayDateString, currentYear } from "@/lib/helpers";
+
+export const quoteSchema = z.object({
+  // Header
+  companyUuid: z.string().min(1, "Customer is required"),
+  contactUuid: z.string().optional(),
+  customerRef: z.string().optional(),
+  leaveCustomerRef: z.boolean(),
+  requestMethod: z.enum(orderMethods).optional(),
+  ourReference: z.string().optional(),
+  seller: z.string().optional(),
+  projectUuid: z.string().optional(),
+  contractUuid: z.string().optional(),
+  priceDate: z.string().optional(),
+  decisionDate: z.string().optional(),
+  quoteDate: z.string().optional(),
+  validityPeriodDays: z.string().optional(),
+  validUntil: z.string().optional(),
+  handlingBlocked: z.boolean(),
+
+  // Order type
+  isPickup: z.boolean(),
+  isIncidental: z.boolean(),
+  isConsignment: z.boolean(),
+  consignmentDuration: z.string().optional(),
+  consignmentDurationUnit: z.string().optional(),
+  isInternalProduction: z.boolean(),
+  isKlantMateriaal: z.boolean(),
+  weightType: z.enum(orderWeightTypes).optional(),
+  isOverlengte: z.boolean(),
+  isPrinted: z.boolean(),
+  isMailed: z.boolean(),
+  isFaxed: z.boolean(),
+
+  // Finances
+  showNetPrice: z.boolean(),
+  scrapSurchargeSeparate: z.boolean(),
+  calculateVatIfApplicable: z.boolean(),
+  financialBlockage: z.boolean(),
+  onlyTotalAmountOnInvoice: z.boolean(),
+  doNotShowTotalAmount: z.boolean(),
+  includeOptionPricesInMaterialPrices: z.boolean(),
+  paymentTerms: z.enum(invoicePaymentTerms).optional(),
+  billingAddressUuid: z.string().optional(),
+  blockingReason: z.string().optional(),
+
+  // Delivery
+  deliveryTerms: z.enum(deliveryTerms).optional(),
+  deliveryAddressUuid: z.string().optional(),
+  deliveryType: z.enum(deliveryTypes),
+  deliveryDate: z.string().optional(),
+  deliveryWeek: z.string().optional(),
+  deliveryYear: z.string().optional(),
+  deliveryRemark: z.string().optional(),
+
+  // Follow-up
+  expired: z.boolean(),
+
+  // Remarks
+  remarks: z.string().optional(),
+
+  // Documents
+  documents: z
+    .array(z.object({ id: z.string(), fileName: z.string() }))
+    .optional(),
+});
+
+export type QuoteFormValues = z.infer<typeof quoteSchema>;
+
+export const DEFAULT_QUOTE: QuoteFormValues = {
+  companyUuid: "",
+  contactUuid: "",
+  customerRef: "",
+  leaveCustomerRef: false,
+  requestMethod: undefined,
+  ourReference: "",
+  seller: "",
+  projectUuid: "",
+  contractUuid: "",
+  priceDate: todayDateString(),
+  decisionDate: "",
+  quoteDate: todayDateString(),
+  validityPeriodDays: "",
+  validUntil: "",
+  handlingBlocked: false,
+
+  isPickup: false,
+  isIncidental: false,
+  isConsignment: false,
+  consignmentDuration: "",
+  consignmentDurationUnit: "",
+  isInternalProduction: false,
+  isKlantMateriaal: false,
+  weightType: undefined,
+  isOverlengte: false,
+  isPrinted: false,
+  isMailed: false,
+  isFaxed: false,
+
+  showNetPrice: false,
+  scrapSurchargeSeparate: false,
+  calculateVatIfApplicable: false,
+  financialBlockage: false,
+  onlyTotalAmountOnInvoice: false,
+  doNotShowTotalAmount: false,
+  includeOptionPricesInMaterialPrices: false,
+  paymentTerms: undefined,
+  billingAddressUuid: "",
+  blockingReason: "",
+
+  deliveryTerms: undefined,
+  deliveryAddressUuid: "",
+  deliveryType: "date",
+  deliveryDate: todayDateString(),
+  deliveryWeek: "",
+  deliveryYear: String(currentYear()),
+  deliveryRemark: "",
+
+  expired: false,
+
+  remarks: "",
+
+  documents: [],
+};

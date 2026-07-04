@@ -113,12 +113,16 @@ export const PODeliverySection = ({
         </div>
 
         {deliveryType === "date" ? (
-          <div className="flex items-center gap-3">
-            <Input
-              type="date"
-              className="w-48"
-              {...register("deliveryDate")}
-            />
+          <div className="flex items-end gap-3">
+            <div>
+              <FormLabel htmlFor="deliveryDate">Date</FormLabel>
+              <Input
+                id="deliveryDate"
+                type="date"
+                className="w-48"
+                {...register("deliveryDate")}
+              />
+            </div>
             <div>
               <FormLabel htmlFor="deliveryRemark">Rem</FormLabel>
               <Input
