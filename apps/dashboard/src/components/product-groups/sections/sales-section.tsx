@@ -29,19 +29,21 @@ const makeEnumOptions = <T extends string>(
   labels: Record<T, string>,
 ) => [emptyOption, ...values.map((v) => ({ value: v, label: labels[v] }))];
 
-const revenueGroupOptions = makeEnumOptions(revenueGroups, REVENUE_GROUP_LABELS);
+const revenueGroupOptions = makeEnumOptions(
+  revenueGroups,
+  REVENUE_GROUP_LABELS,
+);
 const salesUnitOpts = makeEnumOptions(salesUnitOptions, SALES_UNIT_LABELS);
-const purchasingUnitOptions = makeEnumOptions(purchasingUnits, PURCHASING_UNIT_LABELS);
+const purchasingUnitOptions = makeEnumOptions(
+  purchasingUnits,
+  PURCHASING_UNIT_LABELS,
+);
 const vatCodeOptions = makeEnumOptions(vatCodes, VAT_CODE_LABELS);
 const certificaatOpts = makeEnumOptions(certificaatOptions, CERTIFICAAT_LABELS);
 
 export const SalesSection = () => {
-  const {
-    register,
-    control,
-    watch,
-    setValue,
-  } = useFormContext<ProductGroupFormValues>();
+  const { register, control, watch, setValue } =
+    useFormContext<ProductGroupFormValues>();
 
   return (
     <section className="space-y-4">
@@ -121,9 +123,7 @@ export const SalesSection = () => {
           <Input id="maxSalesLineQty" {...register("maxSalesLineQty")} />
         </div>
         <div>
-          <FormLabel htmlFor="maxSalesNetPrice">
-            Max Sales Net Price
-          </FormLabel>
+          <FormLabel htmlFor="maxSalesNetPrice">Max Sales Net Price</FormLabel>
           <Input id="maxSalesNetPrice" {...register("maxSalesNetPrice")} />
         </div>
         <div>
