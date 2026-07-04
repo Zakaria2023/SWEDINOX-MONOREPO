@@ -144,20 +144,28 @@ export const getCompanyDetail = async (
 };
 
 // Derives whether a company acts as a supplier or an agent from its roles.
-// Used server-side so the frontend never has to send a company type.
 export const resolveCompanyType = async (
   companyUuid: string | null | undefined,
 ): Promise<PurchaseCompanyType | null> => {
-  if (!companyUuid) return null;
+  if (!companyUuid) {
+    return null;
+  }
   const [company] = await db
     .select({ roles: Companies.roles })
     .from(Companies)
     .where(eq(Companies.uuid, companyUuid))
     .limit(1);
-  if (!company) return null;
-  if (company.roles.includes("supplier")) return "supplier";
-  if (company.roles.includes("agent")) return "agent";
-  return null;
+  if (!company) {
+    return null;
+  }
+  switch (true) {
+    case company.roles.includes("supplier"):
+      return "supplier";
+    case company.roles.includes("agent"):
+      return "agent";
+    default:
+      return null;
+  }
 };
 
 export const getCompaniesForSelect = async (): Promise<CompanyOption[]> =>
