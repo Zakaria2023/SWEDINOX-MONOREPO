@@ -4,17 +4,16 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
-import {
-  AddressOption,
-  createPurchaseQuote,
-  getAddressesForCompany,
-  PurchaseQuoteActionResult,
-} from "./actions";
+import { createPurchaseQuote, PurchaseQuoteActionResult } from "./actions";
 import {
   DEFAULT_PURCHASE_QUOTE,
   purchaseQuoteSchema,
   PurchaseQuoteFormValues,
 } from "./validation";
+import {
+  AddressOption,
+  getAddressesForCompany,
+} from "@/app/(dashboard)/addresses/actions";
 import { CompanyOption } from "@/app/(dashboard)/companies/actions";
 import {
   ContactOption,
@@ -56,9 +55,8 @@ const makeOptions = <T extends string>(
 ];
 
 const addressLabel = (a: AddressOption) =>
-  [a.altName, a.streetAndNo, a.postalCode, a.city]
-    .filter(Boolean)
-    .join(", ") || a.uuid;
+  [a.altName, a.streetAndNo, a.postalCode, a.city].filter(Boolean).join(", ") ||
+  a.uuid;
 
 export const usePurchaseQuoteSubmit = ({
   companies,
@@ -171,8 +169,7 @@ export const usePurchaseQuoteSubmit = ({
   const onSubmit = form.handleSubmit((values) => {
     startTransition(async () => {
       const result = await createPurchaseQuote({
-        supplierUuid: values.supplierUuid || null,
-        agentUuid: values.agentUuid || null,
+        companyUuid: values.supplierUuid || values.agentUuid || null,
         contactUuid: values.contactUuid || null,
         purchaser: values.purchaser || null,
         reference: values.reference || null,

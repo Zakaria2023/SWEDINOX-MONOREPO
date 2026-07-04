@@ -7,8 +7,6 @@ import { InsertQuotes, Quotes, SelectQuotes } from "@/db/schema/quotes";
 import { generateUuid } from "@/lib/helpers";
 import { desc, eq, getTableColumns } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-export { getAddressesForCompany } from "@/app/(dashboard)/companies/actions";
-export type { AddressOption } from "@/app/(dashboard)/companies/actions";
 
 export type QuoteFields = Omit<
   InsertQuotes,

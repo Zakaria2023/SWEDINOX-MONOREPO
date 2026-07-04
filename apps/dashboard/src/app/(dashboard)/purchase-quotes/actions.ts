@@ -8,17 +8,14 @@ import {
   PurchaseQuotes,
   SelectPurchaseQuotes,
 } from "@/db/schema/purchase-quotes";
+import { resolveCompanyType } from "@/app/(dashboard)/companies/actions";
 import { generateUuid } from "@/lib/helpers";
 import { desc, eq, getTableColumns } from "drizzle-orm";
-import { alias } from "drizzle-orm/mysql-core";
 import { revalidatePath } from "next/cache";
-
-export { getAddressesForCompany } from "@/app/(dashboard)/companies/actions";
-export type { AddressOption } from "@/app/(dashboard)/companies/actions";
 
 export type PurchaseQuoteFields = Omit<
   InsertPurchaseQuotes,
-  "id" | "uuid" | "createdAt" | "updatedAt"
+  "id" | "uuid" | "companyType" | "createdAt" | "updatedAt"
 >;
 
 export type PurchaseQuoteActionResult = {
@@ -28,27 +25,22 @@ export type PurchaseQuoteActionResult = {
 };
 
 export type PurchaseQuoteListItem = SelectPurchaseQuotes & {
-  supplierName: SelectCompanies["companyName"] | null;
-  agentName: SelectCompanies["companyName"] | null;
+  companyName: SelectCompanies["companyName"] | null;
   contactFirstName: SelectContacts["firstName"] | null;
   contactLastName: SelectContacts["lastName"] | null;
 };
 
 export const getPurchaseQuotes = async (): Promise<PurchaseQuoteListItem[]> => {
-  const suppliers = alias(Companies, "suppliers");
-  const agents = alias(Companies, "agents");
   try {
     return await db
       .select({
         ...getTableColumns(PurchaseQuotes),
-        supplierName: suppliers.companyName,
-        agentName: agents.companyName,
+        companyName: Companies.companyName,
         contactFirstName: Contacts.firstName,
         contactLastName: Contacts.lastName,
       })
       .from(PurchaseQuotes)
-      .leftJoin(suppliers, eq(PurchaseQuotes.supplierUuid, suppliers.uuid))
-      .leftJoin(agents, eq(PurchaseQuotes.agentUuid, agents.uuid))
+      .leftJoin(Companies, eq(PurchaseQuotes.companyUuid, Companies.uuid))
       .leftJoin(Contacts, eq(PurchaseQuotes.contactUuid, Contacts.uuid))
       .orderBy(desc(PurchaseQuotes.createdAt));
   } catch {
@@ -61,7 +53,8 @@ export const createPurchaseQuote = async (
 ): Promise<PurchaseQuoteActionResult> => {
   const uuid = generateUuid();
   try {
-    await db.insert(PurchaseQuotes).values({ ...fields, uuid });
+    const companyType = await resolveCompanyType(fields.companyUuid);
+    await db.insert(PurchaseQuotes).values({ ...fields, companyType, uuid });
     revalidatePath("/purchase-quotes");
     return { success: true, purchaseQuoteUuid: uuid };
   } catch (error) {

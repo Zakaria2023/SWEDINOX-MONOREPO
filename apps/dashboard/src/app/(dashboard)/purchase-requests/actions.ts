@@ -7,18 +7,15 @@ import {
   SelectPurchaseRequests,
 } from "@/db/schema/purchase-requests";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
-import {
-  CompanyAddresses,
-  SelectCompanyAddresses,
-} from "@/db/schema/company-addresses";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
+import { resolveCompanyType } from "@/app/(dashboard)/companies/actions";
 import { generateUuid } from "@/lib/helpers";
-import { asc, desc, eq, getTableColumns } from "drizzle-orm";
+import { desc, eq, getTableColumns } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 export type PurchaseRequestFields = Omit<
   InsertPurchaseRequests,
-  "id" | "uuid" | "createdAt" | "updatedAt"
+  "id" | "uuid" | "companyType" | "createdAt" | "updatedAt"
 >;
 
 export type PurchaseRequestActionResult = {
@@ -28,15 +25,10 @@ export type PurchaseRequestActionResult = {
 };
 
 export type PurchaseRequestListItem = SelectPurchaseRequests & {
-  supplierName: SelectCompanies["companyName"] | null;
+  companyName: SelectCompanies["companyName"] | null;
   contactFirstName: SelectContacts["firstName"] | null;
   contactLastName: SelectContacts["lastName"] | null;
 };
-
-export type AddressOption = Pick<
-  SelectCompanyAddresses,
-  "uuid" | "streetAndNo" | "city" | "postalCode" | "altName"
->;
 
 export const getPurchaseRequests = async (): Promise<
   PurchaseRequestListItem[]
@@ -45,12 +37,12 @@ export const getPurchaseRequests = async (): Promise<
     return (await db
       .select({
         ...getTableColumns(PurchaseRequests),
-        supplierName: Companies.companyName,
+        companyName: Companies.companyName,
         contactFirstName: Contacts.firstName,
         contactLastName: Contacts.lastName,
       })
       .from(PurchaseRequests)
-      .leftJoin(Companies, eq(PurchaseRequests.supplierUuid, Companies.uuid))
+      .leftJoin(Companies, eq(PurchaseRequests.companyUuid, Companies.uuid))
       .leftJoin(Contacts, eq(PurchaseRequests.contactUuid, Contacts.uuid))
       .orderBy(desc(PurchaseRequests.createdAt))) as PurchaseRequestListItem[];
   } catch {
@@ -58,27 +50,13 @@ export const getPurchaseRequests = async (): Promise<
   }
 };
 
-export const getAddressesForCompany = async (
-  companyUuid: string,
-): Promise<AddressOption[]> =>
-  db
-    .select({
-      uuid: CompanyAddresses.uuid,
-      streetAndNo: CompanyAddresses.streetAndNo,
-      city: CompanyAddresses.city,
-      postalCode: CompanyAddresses.postalCode,
-      altName: CompanyAddresses.altName,
-    })
-    .from(CompanyAddresses)
-    .where(eq(CompanyAddresses.companyUuid, companyUuid))
-    .orderBy(asc(CompanyAddresses.sequenceNumber));
-
 export const createPurchaseRequest = async (
   fields: PurchaseRequestFields,
 ): Promise<PurchaseRequestActionResult> => {
   const uuid = generateUuid();
   try {
-    await db.insert(PurchaseRequests).values({ ...fields, uuid });
+    const companyType = await resolveCompanyType(fields.companyUuid);
+    await db.insert(PurchaseRequests).values({ ...fields, companyType, uuid });
     revalidatePath("/purchase-requests");
     return { success: true, purchaseRequestUuid: uuid };
   } catch (error) {

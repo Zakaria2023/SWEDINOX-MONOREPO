@@ -4,20 +4,21 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
-import {
-  AddressOption,
-  createReturnOrder,
-  getAddressesForCompany,
-  getOrdersForCompany,
-  OrderOption,
-  ReturnOrderActionResult,
-} from "./actions";
+import { createReturnOrder, ReturnOrderActionResult } from "./actions";
 import {
   DEFAULT_RETURN_ORDER,
   returnOrderSchema,
   ReturnOrderFormValues,
 } from "./validation";
+import {
+  AddressOption,
+  getAddressesForCompany,
+} from "@/app/(dashboard)/addresses/actions";
 import { CompanyOption } from "@/app/(dashboard)/companies/actions";
+import {
+  getOrdersForCompany,
+  OrderOption,
+} from "@/app/(dashboard)/orders/actions";
 import {
   ContactOption,
   getContactsForCompany,
@@ -56,9 +57,8 @@ const makeOptions = <T extends string>(
 ];
 
 const addressLabel = (a: AddressOption) =>
-  [a.altName, a.streetAndNo, a.postalCode, a.city]
-    .filter(Boolean)
-    .join(", ") || a.uuid;
+  [a.altName, a.streetAndNo, a.postalCode, a.city].filter(Boolean).join(", ") ||
+  a.uuid;
 
 export const useReturnOrderSubmit = ({
   companies,
@@ -120,7 +120,10 @@ export const useReturnOrderSubmit = ({
 
   const transportRegionOptions = makeOptions(
     warehouseTransportRegions,
-    WAREHOUSE_TRANSPORT_REGION_LABELS as Record<WarehouseTransportRegion, string>,
+    WAREHOUSE_TRANSPORT_REGION_LABELS as Record<
+      WarehouseTransportRegion,
+      string
+    >,
   );
 
   const transportModeOptions = makeOptions(
@@ -169,9 +172,7 @@ export const useReturnOrderSubmit = ({
 
         returnDate: values.returnDate ? new Date(values.returnDate) : null,
         isPickup: values.isPickup,
-        pickupAddress: values.isPickup
-          ? values.pickupAddress || null
-          : null,
+        pickupAddress: values.isPickup ? values.pickupAddress || null : null,
         deliveryAddressUuid: values.isPickup
           ? null
           : values.deliveryAddressUuid || null,

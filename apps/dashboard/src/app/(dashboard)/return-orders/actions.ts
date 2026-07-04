@@ -12,11 +12,6 @@ import { generateUuid } from "@/lib/helpers";
 import { desc, eq, getTableColumns } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
-export { getAddressesForCompany } from "@/app/(dashboard)/companies/actions";
-export type { AddressOption } from "@/app/(dashboard)/companies/actions";
-export { getOrdersForCompany } from "@/app/(dashboard)/orders/actions";
-export type { OrderOption } from "@/app/(dashboard)/orders/actions";
-
 export type ReturnOrderFields = Omit<
   InsertReturnOrders,
   "id" | "uuid" | "createdAt" | "updatedAt"

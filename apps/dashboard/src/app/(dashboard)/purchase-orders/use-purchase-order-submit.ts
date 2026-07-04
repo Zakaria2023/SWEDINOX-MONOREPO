@@ -4,12 +4,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
+import { createPurchaseOrder, PurchaseOrderActionResult } from "./actions";
 import {
   AddressOption,
-  createPurchaseOrder,
   getAddressesForCompany,
-  PurchaseOrderActionResult,
-} from "./actions";
+} from "@/app/(dashboard)/addresses/actions";
 import {
   DEFAULT_PURCHASE_ORDER,
   purchaseOrderSchema,
@@ -20,6 +19,7 @@ import {
   ContactOption,
   getContactsForCompany,
 } from "@/app/(dashboard)/contacts/actions";
+import { ClerkUserOption } from "@/lib/server/clerk";
 import { SelectOption } from "@/components/shadcn/select";
 import {
   deliveryTerms,
@@ -41,6 +41,7 @@ import {
 
 type UsePurchaseOrderSubmitParams = {
   companies: CompanyOption[];
+  clerkUsers: ClerkUserOption[];
 };
 
 const emptyOpt = { value: "", label: COMMON_TEXT.emptyOption };
@@ -60,6 +61,7 @@ const addressLabel = (a: AddressOption) =>
 
 export const usePurchaseOrderSubmit = ({
   companies,
+  clerkUsers,
 }: UsePurchaseOrderSubmitParams) => {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -129,6 +131,8 @@ export const usePurchaseOrderSubmit = ({
     invoicePaymentTerms,
     INVOICE_PAYMENT_TERM_LABELS as Record<InvoicePaymentTerm, string>,
   );
+
+  const purchaserOptions: SelectOption[] = [emptyOpt, ...clerkUsers];
 
   const handleSupplierChange = (uuid: string) => {
     form.setValue("supplierUuid", uuid);
@@ -223,6 +227,7 @@ export const usePurchaseOrderSubmit = ({
     weightTypeOptions,
     deliveryTermOptions,
     paymentTermOptions,
+    purchaserOptions,
     isLoadingSupplierData,
     handleSupplierChange,
     handleCancel,
