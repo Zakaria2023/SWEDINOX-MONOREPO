@@ -117,23 +117,6 @@ export type ContactOption = Pick<
   "uuid" | "id" | "companyUuid" | "firstName" | "lastName"
 >;
 
-export type CustomerRoleCompany = Pick<
-  SelectCompanies,
-  | "uuid"
-  | "id"
-  | "companyName"
-  | "searchCode1"
-  | "searchCode2"
-  | "searchCode3"
-  | "representative"
-  | "accountManager"
-  | "region"
-  | "customerGroup"
-  | "vatNumber"
-  | "actionEmailTo"
-  | "releaseActionEmailTo"
->;
-
 export const updateCompanyDocuments = async (
   companyUuid: string,
   documents: Array<{ id: string; fileName: string }>,
@@ -226,29 +209,6 @@ export const getCustomerAndProspectCompaniesForSelect = async (): Promise<
       ),
     )
     .orderBy(asc(Companies.companyName));
-
-export const getCustomersWithCustomerRole = async (): Promise<
-  CustomerRoleCompany[]
-> =>
-  db
-    .select({
-      uuid: Companies.uuid,
-      id: Companies.id,
-      companyName: Companies.companyName,
-      searchCode1: Companies.searchCode1,
-      searchCode2: Companies.searchCode2,
-      searchCode3: Companies.searchCode3,
-      representative: Companies.representative,
-      accountManager: Companies.accountManager,
-      region: Companies.region,
-      customerGroup: Companies.customerGroup,
-      vatNumber: Companies.vatNumber,
-      actionEmailTo: Companies.actionEmailTo,
-      releaseActionEmailTo: Companies.releaseActionEmailTo,
-    })
-    .from(Companies)
-    .where(sql`JSON_CONTAINS(${Companies.roles}, '"customer"')`)
-    .orderBy(desc(Companies.id));
 
 export const getContactsForSuppliers = async (): Promise<ContactOption[]> =>
   db

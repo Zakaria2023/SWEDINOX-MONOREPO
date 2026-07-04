@@ -10,7 +10,7 @@ import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
 import { Products, SelectProducts } from "@/db/schema/products";
 import { generateUuid } from "@/lib/helpers";
-import { count, desc, eq, getTableColumns } from "drizzle-orm";
+import { desc, eq, getTableColumns } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 export type ComplaintFields = Omit<
@@ -49,16 +49,6 @@ export const getComplaints = async (): Promise<ComplaintListItem[]> => {
   } catch {
     throw new Error("Failed to fetch complaints");
   }
-};
-
-export const getComplaintCountsByCompany = async (): Promise<
-  Map<string, number>
-> => {
-  const rows = await db
-    .select({ companyUuid: Complaints.companyUuid, value: count() })
-    .from(Complaints)
-    .groupBy(Complaints.companyUuid);
-  return new Map(rows.map((row) => [row.companyUuid, row.value] as const));
 };
 
 export const createComplaint = async (

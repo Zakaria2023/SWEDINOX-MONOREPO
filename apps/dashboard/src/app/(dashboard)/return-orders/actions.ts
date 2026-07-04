@@ -9,7 +9,7 @@ import {
   SelectReturnOrders,
 } from "@/db/schema/return-orders";
 import { generateUuid } from "@/lib/helpers";
-import { count, desc, eq, getTableColumns } from "drizzle-orm";
+import { desc, eq, getTableColumns } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 export type ReturnOrderFields = Omit<
@@ -46,16 +46,6 @@ export const getReturnOrders = async (): Promise<ReturnOrderListItem[]> => {
   } catch {
     throw new Error("Failed to fetch return orders");
   }
-};
-
-export const getReturnOrderCountsByCompany = async (): Promise<
-  Map<string, number>
-> => {
-  const rows = await db
-    .select({ companyUuid: ReturnOrders.companyUuid, value: count() })
-    .from(ReturnOrders)
-    .groupBy(ReturnOrders.companyUuid);
-  return new Map(rows.map((row) => [row.companyUuid, row.value] as const));
 };
 
 export const createReturnOrder = async (

@@ -3,7 +3,6 @@
 import { db, SelectCompanyAddresses } from "@/db";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { CompanyAddresses } from "@/db/schema/company-addresses";
-import { toMapByCompanyUuid } from "@/lib/helpers";
 import { asc, desc, eq } from "drizzle-orm";
 
 export type AddressListItem = {
@@ -19,11 +18,6 @@ export type AddressSelectOption = Pick<
 export type AddressOption = Pick<
   SelectCompanyAddresses,
   "uuid" | "streetAndNo" | "city" | "postalCode" | "altName"
->;
-
-export type PrimaryAddress = Pick<
-  SelectCompanyAddresses,
-  "streetAndNo" | "city" | "postalCode" | "email"
 >;
 
 export const getAddresses = async (): Promise<AddressListItem[]> =>
@@ -61,21 +55,4 @@ export const getAddressesForSelect = async (): Promise<
     .innerJoin(Companies, eq(Companies.uuid, CompanyAddresses.companyUuid))
     .orderBy(Companies.companyName);
   return rows;
-};
-
-export const getPrimaryAddressesByCompany = async (): Promise<
-  Map<string, PrimaryAddress>
-> => {
-  const rows = await db
-    .select({
-      companyUuid: CompanyAddresses.companyUuid,
-      streetAndNo: CompanyAddresses.streetAndNo,
-      city: CompanyAddresses.city,
-      postalCode: CompanyAddresses.postalCode,
-      email: CompanyAddresses.email,
-    })
-    .from(CompanyAddresses)
-    .orderBy(asc(CompanyAddresses.id));
-
-  return toMapByCompanyUuid(rows);
 };

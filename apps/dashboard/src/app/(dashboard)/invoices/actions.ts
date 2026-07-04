@@ -11,7 +11,7 @@ import {
   SelectInvoices,
 } from "@/db";
 import { generateUuid } from "@/lib/helpers";
-import { count, desc, eq, getTableColumns, sum } from "drizzle-orm";
+import { desc, eq, getTableColumns } from "drizzle-orm";
 
 export type InvoiceActionResult = {
   invoiceUuid?: string;
@@ -42,8 +42,6 @@ export type InvoiceWithCompany = SelectInvoices & {
   companyCode: SelectCompanies["id"] | null;
 };
 
-export type InvoiceStats = { count: number; revenue: number };
-
 export const getInvoices = async (): Promise<InvoiceWithCompany[]> => {
   const rows = await db
     .select({
@@ -70,29 +68,6 @@ export const getInvoicesByCompanyUuid = async (
     .from(Invoices)
     .where(eq(Invoices.companyUuid, companyUuid))
     .orderBy(desc(Invoices.createdAt));
-
-export const getInvoiceStatsByCompany = async (): Promise<
-  Map<string, InvoiceStats>
-> => {
-  const rows = await db
-    .select({
-      companyUuid: Invoices.companyUuid,
-      value: count(),
-      revenue: sum(Invoices.invoiceAmountInclVat),
-    })
-    .from(Invoices)
-    .groupBy(Invoices.companyUuid);
-  const map = new Map<string, InvoiceStats>();
-  for (const row of rows) {
-    if (row.companyUuid) {
-      map.set(row.companyUuid, {
-        count: row.value,
-        revenue: row.revenue ? parseFloat(row.revenue) : 0,
-      });
-    }
-  }
-  return map;
-};
 
 export const createInvoice = async (
   fields: InvoiceFields,

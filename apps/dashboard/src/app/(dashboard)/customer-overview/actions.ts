@@ -1,18 +1,21 @@
 "use server";
 
-import { getPrimaryAddressesByCompany } from "@/app/(dashboard)/addresses/actions";
-import { getCustomersWithCustomerRole } from "@/app/(dashboard)/companies/actions";
-import { getComplaintCountsByCompany } from "@/app/(dashboard)/complaints/actions";
-import { getPrimaryContactsByCompany } from "@/app/(dashboard)/contacts/actions";
-import { getInvoiceStatsByCompany } from "@/app/(dashboard)/invoices/actions";
 import {
-  getLastOrderDatesByCompany,
-  getOrderCountsByCompany,
-} from "@/app/(dashboard)/orders/actions";
-import { getQuoteCountsByCompany } from "@/app/(dashboard)/quotes/actions";
-import { getReturnOrderCountsByCompany } from "@/app/(dashboard)/return-orders/actions";
-import { getVisitCountsByCompany } from "@/app/(dashboard)/visit-reports/actions";
-import { SelectCompanies, SelectCompanyAddresses, SelectContacts } from "@/db";
+  db,
+  SelectCompanies,
+  SelectCompanyAddresses,
+  SelectContacts,
+} from "@/db";
+import { CompanyAddresses } from "@/db/schema/company-addresses";
+import { Companies } from "@/db/schema/companies";
+import { Complaints } from "@/db/schema/complaints";
+import { Contacts } from "@/db/schema/contacts";
+import { Invoices } from "@/db/schema/invoices";
+import { Orders } from "@/db/schema/orders";
+import { Quotes } from "@/db/schema/quotes";
+import { ReturnOrders } from "@/db/schema/return-orders";
+import { VisitReports } from "@/db/schema/visit-reports";
+import { and, count, eq, max, min, sql, sum } from "drizzle-orm";
 
 export type CustomerOverviewRow = Pick<
   SelectCompanies,
@@ -50,67 +53,201 @@ export type CustomerOverviewRow = Pick<
 
 export const getCustomerOverview = async (): Promise<CustomerOverviewRow[]> => {
   try {
-    const customers = await getCustomersWithCustomerRole();
-    if (customers.length === 0) return [];
+    // Address with the lowest id per company (id is a global PK, so matching
+    // on it alone is enough to pick the right row).
+    const primaryAddressId = db
+      .select({
+        companyUuid: CompanyAddresses.companyUuid,
+        minId: min(CompanyAddresses.id).as("min_id"),
+      })
+      .from(CompanyAddresses)
+      .groupBy(CompanyAddresses.companyUuid)
+      .as("primary_address_id");
 
-    const [
-      addressByCompany,
-      contactByCompany,
-      quotesByCompany,
-      ordersByCompany,
-      lastOrderByCompany,
-      invoicesByCompany,
-      visitsByCompany,
-      returnOrdersByCompany,
-      complaintsByCompany,
-    ] = await Promise.all([
-      getPrimaryAddressesByCompany(),
-      getPrimaryContactsByCompany(),
-      getQuoteCountsByCompany(),
-      getOrderCountsByCompany(),
-      getLastOrderDatesByCompany(),
-      getInvoiceStatsByCompany(),
-      getVisitCountsByCompany(),
-      getReturnOrderCountsByCompany(),
-      getComplaintCountsByCompany(),
-    ]);
+    const primaryAddress = db
+      .select({
+        companyUuid: CompanyAddresses.companyUuid,
+        streetAndNo: CompanyAddresses.streetAndNo,
+        city: CompanyAddresses.city,
+        postalCode: CompanyAddresses.postalCode,
+        email: CompanyAddresses.email,
+      })
+      .from(CompanyAddresses)
+      .innerJoin(
+        primaryAddressId,
+        eq(CompanyAddresses.id, primaryAddressId.minId),
+      )
+      .as("primary_address");
 
-    return customers.map((customer): CustomerOverviewRow => {
-      const address = addressByCompany.get(customer.uuid);
-      const contact = contactByCompany.get(customer.uuid);
-      const lastOrder = lastOrderByCompany.get(customer.uuid);
-      const invoiceStats = invoicesByCompany.get(customer.uuid);
-      const invoiceCount = invoiceStats?.count ?? 0;
-      const invoiceRevenue = invoiceStats?.revenue ?? 0;
+    // Contact with the lowest sequence number per company (sequence numbers
+    // are only unique within a company, so the join needs both columns).
+    const primaryContactSeq = db
+      .select({
+        companyUuid: Contacts.companyUuid,
+        minSequenceNumber: min(Contacts.sequenceNumber).as(
+          "min_sequence_number",
+        ),
+      })
+      .from(Contacts)
+      .groupBy(Contacts.companyUuid)
+      .as("primary_contact_seq");
+
+    const primaryContact = db
+      .select({
+        companyUuid: Contacts.companyUuid,
+        initials: Contacts.initials,
+        email: Contacts.email,
+        customerRegionCode: Contacts.customerRegionCode,
+      })
+      .from(Contacts)
+      .innerJoin(
+        primaryContactSeq,
+        and(
+          eq(Contacts.companyUuid, primaryContactSeq.companyUuid),
+          eq(Contacts.sequenceNumber, primaryContactSeq.minSequenceNumber),
+        ),
+      )
+      .as("primary_contact");
+
+    const quoteCounts = db
+      .select({
+        companyUuid: Quotes.companyUuid,
+        value: count().as("value"),
+      })
+      .from(Quotes)
+      .groupBy(Quotes.companyUuid)
+      .as("quote_counts");
+
+    const orderStats = db
+      .select({
+        companyUuid: Orders.companyUuid,
+        value: count().as("value"),
+        lastOrderDate: max(Orders.createdAt).as("last_order_date"),
+      })
+      .from(Orders)
+      .groupBy(Orders.companyUuid)
+      .as("order_stats");
+
+    const invoiceStats = db
+      .select({
+        companyUuid: Invoices.companyUuid,
+        value: count().as("value"),
+        revenue: sum(Invoices.invoiceAmountInclVat).as("revenue"),
+      })
+      .from(Invoices)
+      .groupBy(Invoices.companyUuid)
+      .as("invoice_stats");
+
+    const visitCounts = db
+      .select({
+        companyUuid: VisitReports.companyUuid,
+        value: count().as("value"),
+      })
+      .from(VisitReports)
+      .groupBy(VisitReports.companyUuid)
+      .as("visit_counts");
+
+    const returnOrderCounts = db
+      .select({
+        companyUuid: ReturnOrders.companyUuid,
+        value: count().as("value"),
+      })
+      .from(ReturnOrders)
+      .groupBy(ReturnOrders.companyUuid)
+      .as("return_order_counts");
+
+    const complaintCounts = db
+      .select({
+        companyUuid: Complaints.companyUuid,
+        value: count().as("value"),
+      })
+      .from(Complaints)
+      .groupBy(Complaints.companyUuid)
+      .as("complaint_counts");
+
+    const rows = await db
+      .select({
+        companyUuid: Companies.uuid,
+        customerCode: Companies.id,
+        companyName: Companies.companyName,
+        searchCode1: Companies.searchCode1,
+        searchCode2: Companies.searchCode2,
+        searchCode3: Companies.searchCode3,
+        representative: Companies.representative,
+        accountManager: Companies.accountManager,
+        region: Companies.region,
+        customerGroup: Companies.customerGroup,
+        vatNumber: Companies.vatNumber,
+        actionEmailTo: Companies.actionEmailTo,
+        releaseActionEmailTo: Companies.releaseActionEmailTo,
+        streetAndNo: primaryAddress.streetAndNo,
+        city: primaryAddress.city,
+        postalCode: primaryAddress.postalCode,
+        addressEmail: primaryAddress.email,
+        initials: primaryContact.initials,
+        contactEmail: primaryContact.email,
+        regionCode: primaryContact.customerRegionCode,
+        quotes: quoteCounts.value,
+        orders: orderStats.value,
+        lastOrderDate: orderStats.lastOrderDate,
+        invoices: invoiceStats.value,
+        invoicedOrdersRevenue: invoiceStats.revenue,
+        visits: visitCounts.value,
+        returnOrders: returnOrderCounts.value,
+        complaints: complaintCounts.value,
+      })
+      .from(Companies)
+      .leftJoin(primaryAddress, eq(Companies.uuid, primaryAddress.companyUuid))
+      .leftJoin(primaryContact, eq(Companies.uuid, primaryContact.companyUuid))
+      .leftJoin(quoteCounts, eq(Companies.uuid, quoteCounts.companyUuid))
+      .leftJoin(orderStats, eq(Companies.uuid, orderStats.companyUuid))
+      .leftJoin(invoiceStats, eq(Companies.uuid, invoiceStats.companyUuid))
+      .leftJoin(visitCounts, eq(Companies.uuid, visitCounts.companyUuid))
+      .leftJoin(
+        returnOrderCounts,
+        eq(Companies.uuid, returnOrderCounts.companyUuid),
+      )
+      .leftJoin(
+        complaintCounts,
+        eq(Companies.uuid, complaintCounts.companyUuid),
+      )
+      .where(sql`JSON_CONTAINS(${Companies.roles}, '"customer"')`)
+      .orderBy(sql`${Companies.id} desc`);
+
+    return rows.map((row): CustomerOverviewRow => {
+      const invoiceCount = row.invoices ?? 0;
+      const invoiceRevenue = row.invoicedOrdersRevenue
+        ? parseFloat(row.invoicedOrdersRevenue)
+        : 0;
 
       return {
-        companyUuid: customer.uuid,
-        customerCode: customer.id,
-        companyName: customer.companyName,
-        searchCode1: customer.searchCode1,
-        searchCode2: customer.searchCode2,
-        searchCode3: customer.searchCode3,
-        representative: customer.representative,
-        accountManager: customer.accountManager,
-        region: customer.region,
-        customerGroup: customer.customerGroup,
-        vatNumber: customer.vatNumber,
-        actionEmailTo: customer.actionEmailTo,
-        releaseActionEmailTo: customer.releaseActionEmailTo,
-        streetAndNo: address?.streetAndNo ?? null,
-        city: address?.city ?? null,
-        postalCode: address?.postalCode ?? null,
-        addressEmail: address?.email ?? null,
-        initials: contact?.initials ?? null,
-        contactEmail: contact?.email ?? null,
-        regionCode: contact?.customerRegionCode ?? null,
-        quotes: quotesByCompany.get(customer.uuid) ?? 0,
-        orders: ordersByCompany.get(customer.uuid) ?? 0,
+        companyUuid: row.companyUuid,
+        customerCode: row.customerCode,
+        companyName: row.companyName,
+        searchCode1: row.searchCode1,
+        searchCode2: row.searchCode2,
+        searchCode3: row.searchCode3,
+        representative: row.representative,
+        accountManager: row.accountManager,
+        region: row.region,
+        customerGroup: row.customerGroup,
+        vatNumber: row.vatNumber,
+        actionEmailTo: row.actionEmailTo,
+        releaseActionEmailTo: row.releaseActionEmailTo,
+        streetAndNo: row.streetAndNo ?? null,
+        city: row.city ?? null,
+        postalCode: row.postalCode ?? null,
+        addressEmail: row.addressEmail ?? null,
+        initials: row.initials ?? null,
+        contactEmail: row.contactEmail ?? null,
+        regionCode: row.regionCode ?? null,
+        quotes: row.quotes ?? 0,
+        orders: row.orders ?? 0,
         invoices: invoiceCount,
-        visits: visitsByCompany.get(customer.uuid) ?? 0,
-        returnOrders: returnOrdersByCompany.get(customer.uuid) ?? 0,
-        complaints: complaintsByCompany.get(customer.uuid) ?? 0,
-        lastOrderDate: lastOrder?.toISOString().split("T")[0] ?? null,
+        visits: row.visits ?? 0,
+        returnOrders: row.returnOrders ?? 0,
+        complaints: row.complaints ?? 0,
+        lastOrderDate: row.lastOrderDate?.toISOString().split("T")[0] ?? null,
         invoicedOrdersRevenue: invoiceRevenue,
         avgOrderSize:
           invoiceCount > 0
