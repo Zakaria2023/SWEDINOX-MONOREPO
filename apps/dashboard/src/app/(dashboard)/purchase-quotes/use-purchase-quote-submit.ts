@@ -6,14 +6,14 @@ import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { createPurchaseQuote, PurchaseQuoteActionResult } from "./actions";
 import {
-  AddressOption,
-  getAddressesForCompany,
-} from "@/app/(dashboard)/addresses/actions";
-import {
   DEFAULT_PURCHASE_QUOTE,
   purchaseQuoteSchema,
   PurchaseQuoteFormValues,
 } from "./validation";
+import {
+  AddressOption,
+  getAddressesForCompany,
+} from "@/app/(dashboard)/addresses/actions";
 import { CompanyOption } from "@/app/(dashboard)/companies/actions";
 import {
   ContactOption,
@@ -55,9 +55,8 @@ const makeOptions = <T extends string>(
 ];
 
 const addressLabel = (a: AddressOption) =>
-  [a.altName, a.streetAndNo, a.postalCode, a.city]
-    .filter(Boolean)
-    .join(", ") || a.uuid;
+  [a.altName, a.streetAndNo, a.postalCode, a.city].filter(Boolean).join(", ") ||
+  a.uuid;
 
 export const usePurchaseQuoteSubmit = ({
   companies,
