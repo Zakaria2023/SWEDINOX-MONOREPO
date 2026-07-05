@@ -4,6 +4,8 @@ import {
   ContractForProjectOption,
   ContractListItem,
 } from "@/app/(dashboard)/contracts/actions";
+import { ProductGroupOption } from "@/app/(dashboard)/product-groups/actions";
+import { ProductOption } from "@/app/(dashboard)/products/actions";
 import { TextCategoryOption } from "@/app/(dashboard)/text-categories/actions";
 import { InsertCompanies } from "@/db/schema/companies";
 import { todayDateString } from "@/lib/helpers";
@@ -43,6 +45,7 @@ import {
   CompanyActionResult,
   CompanyContactInput,
   CompanyContractInput,
+  CompanyProductInput,
   CompanyTextInput,
   createCompany,
   CustomerProjectInput,
@@ -63,7 +66,10 @@ import {
   DEFAULT_COMM_SETTING,
   DEFAULT_CONTACT,
   DEFAULT_CONTRACT_SELECTION,
+  DEFAULT_PRODUCT,
   DEFAULT_TEXT,
+  productDialogSchema,
+  ProductDialogValues,
   textDialogSchema,
   TextDialogValues,
   USAGE_CATEGORY_FIELDS,
@@ -159,6 +165,8 @@ type UseCompanySubmitParams = {
   textCategories: TextCategoryOption[];
   debtorCompanies: DebtorCompanyOption[];
   purchaseOrgCompanies: DebtorCompanyOption[];
+  productGroups: ProductGroupOption[];
+  availableProducts: ProductOption[];
 };
 
 export const useCompanySubmit = ({
@@ -167,6 +175,8 @@ export const useCompanySubmit = ({
   textCategories,
   debtorCompanies,
   purchaseOrgCompanies,
+  productGroups,
+  availableProducts,
 }: UseCompanySubmitParams) => {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -192,6 +202,12 @@ export const useCompanySubmit = ({
   const [texts, setTexts] = useState<CompanyTextInput[]>([]);
   const [isProjectDialogOpen, setIsProjectDialogOpen] = useState(false);
   const [projects, setProjects] = useState<CustomerProjectInput[]>([]);
+  const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
+  const [isProductPickerOpen, setIsProductPickerOpen] = useState(false);
+  const [products, setProducts] = useState<CompanyProductInput[]>([]);
+  const [pickedProduct, setPickedProduct] = useState<ProductOption | null>(
+    null,
+  );
 
   const form = useForm<CompanyFormValues>({
     resolver: zodResolver(createCompanySchema()),
@@ -297,6 +313,11 @@ export const useCompanySubmit = ({
   const textForm = useForm<TextDialogValues>({
     resolver: zodResolver(textDialogSchema),
     defaultValues: DEFAULT_TEXT,
+  });
+
+  const productForm = useForm<ProductDialogValues>({
+    resolver: zodResolver(productDialogSchema),
+    defaultValues: DEFAULT_PRODUCT,
   });
 
   const projectForm = useForm<ProjectFormValues>({
@@ -768,6 +789,74 @@ export const useCompanySubmit = ({
   const removeProject = (index: number) =>
     setProjects((prev) => prev.filter((_, i) => i !== index));
 
+  // ── Product handlers ─────────────────────────────────────────────────────────
+
+  const handleProductOpenChange = (open: boolean) => {
+    if (!open) {
+      productForm.reset(DEFAULT_PRODUCT);
+      setPickedProduct(null);
+    }
+    setIsProductDialogOpen(open);
+  };
+
+  const handleOpenProduct = () => {
+    productForm.reset(DEFAULT_PRODUCT);
+    setPickedProduct(null);
+    setIsProductDialogOpen(true);
+  };
+
+  const handleCancelProduct = () => {
+    productForm.reset(DEFAULT_PRODUCT);
+    setPickedProduct(null);
+    setIsProductDialogOpen(false);
+  };
+
+  const handleOpenProductPicker = () => setIsProductPickerOpen(true);
+
+  const handleCancelProductPicker = () => setIsProductPickerOpen(false);
+
+  const handlePickProduct = (product: ProductOption) => {
+    setPickedProduct(product);
+    productForm.setValue("productUuid", product.uuid);
+    setIsProductPickerOpen(false);
+  };
+
+  const handleSaveProduct = productForm.handleSubmit((values) => {
+    if (!pickedProduct) return;
+    setProducts((prev) => [
+      ...prev,
+      {
+        // Copied from the picked catalog product — this creates the
+        // company's own product record rather than referencing the
+        // catalog product directly (same pattern as Contracts, which are
+        // copied per company from a selected template).
+        productCode: pickedProduct.productCode,
+        name: pickedProduct.name,
+        productGroupUuid: pickedProduct.productGroupUuid ?? undefined,
+        preferred: values.preferred,
+        ean: values.ean || undefined,
+        externalProductCode: values.externalProductCode || undefined,
+        editing: values.editing || undefined,
+        deliveryTime: values.deliveryTime
+          ? Number(values.deliveryTime)
+          : undefined,
+        deliveryTimeUnit: values.deliveryTimeUnit || undefined,
+        minOrderQty: values.minOrderQty || undefined,
+        minOrderQtyUnit: values.minOrderQtyUnit || undefined,
+        orderSeries: values.orderSeries
+          ? Number(values.orderSeries)
+          : undefined,
+        orderSeriesUnit: values.orderSeriesUnit || undefined,
+      },
+    ]);
+    productForm.reset(DEFAULT_PRODUCT);
+    setPickedProduct(null);
+    setIsProductDialogOpen(false);
+  });
+
+  const removeProduct = (index: number) =>
+    setProducts((prev) => prev.filter((_, i) => i !== index));
+
   // ── Role handler ─────────────────────────────────────────────────────────────
 
   const toggleRole = (role: CompanyRole) => {
@@ -909,6 +998,7 @@ export const useCompanySubmit = ({
         contacts,
         texts,
         projects,
+        products,
       );
       setState(result);
       if (result.success) router.push("/companies");
@@ -999,6 +1089,23 @@ export const useCompanySubmit = ({
     handleCancelProject,
     handleSaveProject,
     removeProject,
+
+    productForm,
+    products,
+    isProductDialogOpen,
+    isProductPickerOpen,
+    setIsProductPickerOpen,
+    pickedProduct,
+    handleProductOpenChange,
+    handleOpenProduct,
+    handleCancelProduct,
+    handleSaveProduct,
+    handleOpenProductPicker,
+    handleCancelProductPicker,
+    handlePickProduct,
+    removeProduct,
+    productGroups,
+    availableProducts,
 
     toggleRole,
 

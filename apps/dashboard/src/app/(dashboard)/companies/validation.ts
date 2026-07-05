@@ -6,7 +6,9 @@ import {
   contactSalutations,
   contractableRoles,
   currencies,
+  deliveryTimeUnits,
   invoicePaymentTerms,
+  purchasingUnits,
   ContractableRole,
   TextUsageCategory,
 } from "@/lib/enums";
@@ -319,6 +321,50 @@ export const USAGE_CATEGORY_FIELDS: Array<{
   { key: "website_in_advance", field: "websiteInAdvance" },
   { key: "website_after", field: "websiteAfter" },
 ];
+
+// ── Product Dialog ───────────────────────────────────────────────────────────
+
+export const productDialogSchema = z.object({
+  productUuid: z.string().min(1, "Please select a product"),
+  preferred: z.boolean(),
+  ean: z.string().optional(),
+  externalProductCode: z.string().optional(),
+  editing: z.string().optional(),
+  deliveryTime: z.string().optional(),
+  deliveryTimeUnit: z.union([
+    z.enum(deliveryTimeUnits),
+    z.literal(""),
+    z.undefined(),
+  ]),
+  minOrderQty: z.string().optional(),
+  minOrderQtyUnit: z.union([
+    z.enum(purchasingUnits),
+    z.literal(""),
+    z.undefined(),
+  ]),
+  orderSeries: z.string().optional(),
+  orderSeriesUnit: z.union([
+    z.enum(purchasingUnits),
+    z.literal(""),
+    z.undefined(),
+  ]),
+});
+
+export type ProductDialogValues = z.infer<typeof productDialogSchema>;
+
+export const DEFAULT_PRODUCT: ProductDialogValues = {
+  productUuid: "",
+  preferred: false,
+  ean: "",
+  externalProductCode: "",
+  editing: "",
+  deliveryTime: "",
+  deliveryTimeUnit: "",
+  minOrderQty: "",
+  minOrderQtyUnit: "",
+  orderSeries: "",
+  orderSeriesUnit: "",
+};
 
 export const DEFAULT_TEXT: TextDialogValues = {
   textCategoryUuid: "",

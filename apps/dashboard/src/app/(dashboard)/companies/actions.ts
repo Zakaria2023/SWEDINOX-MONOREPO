@@ -17,6 +17,7 @@ import {
   InsertCustomerProjects,
   SelectCustomerProjects,
 } from "@/db/schema/customer-projects";
+import { InsertProducts, Products } from "@/db/schema/products";
 import { InsertTexts, Texts } from "@/db/schema/texts";
 import { PurchaseCompanyType } from "@/lib/enums";
 import { generateUuid } from "@/lib/helpers";
@@ -98,6 +99,11 @@ export type CompanyContactInput = Omit<
 export type CompanyTextInput = Omit<
   InsertTexts,
   "id" | "uuid" | "companyUuid" | "createdByUserId" | "createdAt" | "updatedAt"
+>;
+
+export type CompanyProductInput = Omit<
+  InsertProducts,
+  "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt"
 >;
 
 export type DebtorCompanyOption = Pick<SelectCompanies, "uuid" | "companyName">;
@@ -273,6 +279,7 @@ export const createCompany = async (
   contacts: CompanyContactInput[] = [],
   texts: CompanyTextInput[] = [],
   projects: CustomerProjectInput[] = [],
+  products: CompanyProductInput[] = [],
 ): Promise<CompanyActionResult> => {
   const uuid = generateUuid();
 
@@ -335,6 +342,14 @@ export const createCompany = async (
       for (const project of projects) {
         await tx.insert(CustomerProjects).values({
           ...project,
+          uuid: generateUuid(),
+          companyUuid: uuid,
+        });
+      }
+
+      for (const product of products) {
+        await tx.insert(Products).values({
+          ...product,
           uuid: generateUuid(),
           companyUuid: uuid,
         });

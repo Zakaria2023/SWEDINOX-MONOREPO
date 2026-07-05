@@ -11,7 +11,12 @@ import {
   timestamp,
   varchar,
 } from "drizzle-orm/mysql-core";
-import { salesUnitOptions } from "../../lib/enums";
+import {
+  deliveryTimeUnits,
+  purchasingUnits,
+  salesUnitOptions,
+} from "../../lib/enums";
+import { Companies } from "./companies";
 import { ProductGroups } from "./product-groups";
 
 export const Products = mysqlTable(
@@ -44,15 +49,38 @@ export const Products = mysqlTable(
     }).default("0.0000"),
     weightUnit: mysqlEnum("weight_unit", salesUnitOptions),
 
+    // Company-specific product (customer or supplier role) — set when this
+    // product was created for a specific company (e.g. from the "Products"
+    // step of company creation) rather than being a general catalog item.
+    companyUuid: char("company_uuid", { length: 36 }),
+    preferred: boolean("preferred").default(false),
+    ean: varchar("ean", { length: 100 }),
+    externalProductCode: varchar("external_product_code", { length: 100 }),
+    editing: varchar("editing", { length: 100 }),
+    deliveryTime: int("delivery_time").default(0),
+    deliveryTimeUnit: mysqlEnum("delivery_time_unit", deliveryTimeUnits),
+    minOrderQty: decimal("min_order_qty", { precision: 15, scale: 3 }).default(
+      "0.000",
+    ),
+    minOrderQtyUnit: mysqlEnum("min_order_qty_unit", purchasingUnits),
+    orderSeries: int("order_series").default(0),
+    orderSeriesUnit: mysqlEnum("order_series_unit", purchasingUnits),
+
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
   },
   (table) => [
     index("idx_products_product_group_uuid").on(table.productGroupUuid),
+    index("idx_products_company_uuid").on(table.companyUuid),
     foreignKey({
       name: "fk_products_product_group",
       columns: [table.productGroupUuid],
       foreignColumns: [ProductGroups.uuid],
+    }),
+    foreignKey({
+      name: "fk_products_company",
+      columns: [table.companyUuid],
+      foreignColumns: [Companies.uuid],
     }),
   ],
 );

@@ -4,7 +4,7 @@ import { db } from "@/db";
 import { InsertProducts, Products, SelectProducts } from "@/db/schema/products";
 import { ProductGroups, SelectProductGroups } from "@/db/schema/product-groups";
 import { generateUuid } from "@/lib/helpers";
-import { asc, desc, eq, getTableColumns } from "drizzle-orm";
+import { asc, desc, eq, getTableColumns, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 export type ProductFields = Omit<
@@ -24,7 +24,7 @@ export type ProductListItem = SelectProducts & {
 
 export type ProductOption = Pick<
   SelectProducts,
-  "uuid" | "productCode" | "name"
+  "uuid" | "productCode" | "name" | "productGroupUuid"
 >;
 
 export const getProducts = async (): Promise<ProductListItem[]> => {
@@ -45,14 +45,21 @@ export const getProducts = async (): Promise<ProductListItem[]> => {
   }
 };
 
+/**
+ * General catalog products only (companyUuid is null) — used as the
+ * "assortment" a company-specific product is created from, so a company's
+ * own product copies don't show up as pickable templates themselves.
+ */
 export const getProductsForSelect = async (): Promise<ProductOption[]> =>
   db
     .select({
       uuid: Products.uuid,
       productCode: Products.productCode,
       name: Products.name,
+      productGroupUuid: Products.productGroupUuid,
     })
     .from(Products)
+    .where(isNull(Products.companyUuid))
     .orderBy(asc(Products.productCode));
 
 export const createProduct = async (
