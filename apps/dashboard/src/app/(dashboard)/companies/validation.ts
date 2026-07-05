@@ -366,6 +366,22 @@ export const DEFAULT_PRODUCT: ProductDialogValues = {
   orderSeriesUnit: "",
 };
 
+// ── Customer Product Dialog ──────────────────────────────────────────────────
+
+export const customerProductDialogSchema = z.object({
+  productUuid: z.string().min(1, "Please select a product"),
+  showOnWebsite: z.boolean(),
+});
+
+export type CustomerProductDialogValues = z.infer<
+  typeof customerProductDialogSchema
+>;
+
+export const DEFAULT_CUSTOMER_PRODUCT: CustomerProductDialogValues = {
+  productUuid: "",
+  showOnWebsite: false,
+};
+
 export const DEFAULT_TEXT: TextDialogValues = {
   textCategoryUuid: "",
   textBlock: "",

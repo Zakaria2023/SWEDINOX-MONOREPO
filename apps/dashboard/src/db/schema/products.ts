@@ -65,6 +65,9 @@ export const Products = mysqlTable(
     minOrderQtyUnit: mysqlEnum("min_order_qty_unit", purchasingUnits),
     orderSeries: int("order_series").default(0),
     orderSeriesUnit: mysqlEnum("order_series_unit", purchasingUnits),
+    // Customer-specific products: whether this company-scoped product
+    // should be shown on that customer's website/portal.
+    showOnWebsite: boolean("show_on_website").default(false),
 
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),

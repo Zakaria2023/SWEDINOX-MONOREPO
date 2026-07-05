@@ -22,6 +22,7 @@ import { DocumentsSection } from "@/components/companies/sections/documents-sect
 import { SearchCodesSection } from "@/components/companies/sections/search-codes-section";
 import { ContactsSection } from "@/components/companies/sections/contacts-section";
 import { ProductsSection } from "@/components/companies/sections/products-section";
+import { CustomerProductsSection } from "@/components/companies/sections/customer-products-section";
 import { FirstAddressDialog } from "@/components/companies/dialogs/first-address-dialog";
 import { AdditionalAddressDialog } from "@/components/companies/dialogs/additional-address-dialog";
 import { CommunicationSettingDialog } from "@/components/companies/dialogs/communication-setting-dialog";
@@ -31,6 +32,7 @@ import { ContactDialog } from "@/components/companies/dialogs/contact-dialog";
 import { ProjectDialog } from "@/components/companies/dialogs/project-dialog";
 import { ProductDialog } from "@/components/companies/dialogs/product-dialog";
 import { ProductPickerDialog } from "@/components/companies/dialogs/product-picker-dialog";
+import { CustomerProductDialog } from "@/components/companies/dialogs/customer-product-dialog";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { FormProvider } from "react-hook-form";
@@ -148,6 +150,20 @@ export const CompanyForm = ({
     handleCancelProductPicker,
     handlePickProduct,
     removeProduct,
+    customerProductForm,
+    customerProducts,
+    isCustomerProductDialogOpen,
+    isCustomerProductPickerOpen,
+    setIsCustomerProductPickerOpen,
+    pickedCustomerProduct,
+    handleCustomerProductOpenChange,
+    handleOpenCustomerProduct,
+    handleCancelCustomerProduct,
+    handleSaveCustomerProduct,
+    handleOpenCustomerProductPicker,
+    handleCancelCustomerProductPicker,
+    handlePickCustomerProduct,
+    removeCustomerProduct,
     toggleRole,
     salesData,
     setSalesData,
@@ -267,6 +283,15 @@ export const CompanyForm = ({
           />
         )}
 
+        {selectedRoles.includes("customer") && (
+          <CustomerProductsSection
+            products={customerProducts}
+            removeProduct={removeCustomerProduct}
+            handleOpenProduct={handleOpenCustomerProduct}
+            isPending={isPending}
+          />
+        )}
+
         <FormError>{state.error}</FormError>
 
         <FormActions
@@ -359,6 +384,25 @@ export const CompanyForm = ({
         onOpenChange={setIsProductPickerOpen}
         onCancel={handleCancelProductPicker}
         onSelect={handlePickProduct}
+        productGroups={productGroups}
+        products={availableProducts}
+      />
+
+      <CustomerProductDialog
+        isOpen={isCustomerProductDialogOpen}
+        onOpenChange={handleCustomerProductOpenChange}
+        onCancel={handleCancelCustomerProduct}
+        onSave={handleSaveCustomerProduct}
+        form={customerProductForm}
+        selectedProduct={pickedCustomerProduct}
+        onBrowse={handleOpenCustomerProductPicker}
+      />
+
+      <ProductPickerDialog
+        isOpen={isCustomerProductPickerOpen}
+        onOpenChange={setIsCustomerProductPickerOpen}
+        onCancel={handleCancelCustomerProductPicker}
+        onSelect={handlePickCustomerProduct}
         productGroups={productGroups}
         products={availableProducts}
       />

@@ -62,10 +62,13 @@ import {
   contractSelectionSchema,
   ContractSelectionValues,
   createCompanySchema,
+  customerProductDialogSchema,
+  CustomerProductDialogValues,
   DEFAULT_ADDRESS,
   DEFAULT_COMM_SETTING,
   DEFAULT_CONTACT,
   DEFAULT_CONTRACT_SELECTION,
+  DEFAULT_CUSTOMER_PRODUCT,
   DEFAULT_PRODUCT,
   DEFAULT_TEXT,
   productDialogSchema,
@@ -208,6 +211,15 @@ export const useCompanySubmit = ({
   const [pickedProduct, setPickedProduct] = useState<ProductOption | null>(
     null,
   );
+  const [isCustomerProductDialogOpen, setIsCustomerProductDialogOpen] =
+    useState(false);
+  const [isCustomerProductPickerOpen, setIsCustomerProductPickerOpen] =
+    useState(false);
+  const [customerProducts, setCustomerProducts] = useState<
+    CompanyProductInput[]
+  >([]);
+  const [pickedCustomerProduct, setPickedCustomerProduct] =
+    useState<ProductOption | null>(null);
 
   const form = useForm<CompanyFormValues>({
     resolver: zodResolver(createCompanySchema()),
@@ -318,6 +330,11 @@ export const useCompanySubmit = ({
   const productForm = useForm<ProductDialogValues>({
     resolver: zodResolver(productDialogSchema),
     defaultValues: DEFAULT_PRODUCT,
+  });
+
+  const customerProductForm = useForm<CustomerProductDialogValues>({
+    resolver: zodResolver(customerProductDialogSchema),
+    defaultValues: DEFAULT_CUSTOMER_PRODUCT,
   });
 
   const projectForm = useForm<ProjectFormValues>({
@@ -857,6 +874,63 @@ export const useCompanySubmit = ({
   const removeProduct = (index: number) =>
     setProducts((prev) => prev.filter((_, i) => i !== index));
 
+  // ── Customer product handlers ────────────────────────────────────────────────
+
+  const handleCustomerProductOpenChange = (open: boolean) => {
+    if (!open) {
+      customerProductForm.reset(DEFAULT_CUSTOMER_PRODUCT);
+      setPickedCustomerProduct(null);
+    }
+    setIsCustomerProductDialogOpen(open);
+  };
+
+  const handleOpenCustomerProduct = () => {
+    customerProductForm.reset(DEFAULT_CUSTOMER_PRODUCT);
+    setPickedCustomerProduct(null);
+    setIsCustomerProductDialogOpen(true);
+  };
+
+  const handleCancelCustomerProduct = () => {
+    customerProductForm.reset(DEFAULT_CUSTOMER_PRODUCT);
+    setPickedCustomerProduct(null);
+    setIsCustomerProductDialogOpen(false);
+  };
+
+  const handleOpenCustomerProductPicker = () =>
+    setIsCustomerProductPickerOpen(true);
+
+  const handleCancelCustomerProductPicker = () =>
+    setIsCustomerProductPickerOpen(false);
+
+  const handlePickCustomerProduct = (product: ProductOption) => {
+    setPickedCustomerProduct(product);
+    customerProductForm.setValue("productUuid", product.uuid);
+    setIsCustomerProductPickerOpen(false);
+  };
+
+  const handleSaveCustomerProduct = customerProductForm.handleSubmit(
+    (values) => {
+      if (!pickedCustomerProduct) return;
+      setCustomerProducts((prev) => [
+        ...prev,
+        {
+          // Copied from the picked catalog product, same as the general
+          // Products section — creates the company's own product record.
+          productCode: pickedCustomerProduct.productCode,
+          name: pickedCustomerProduct.name,
+          productGroupUuid: pickedCustomerProduct.productGroupUuid ?? undefined,
+          showOnWebsite: values.showOnWebsite,
+        },
+      ]);
+      customerProductForm.reset(DEFAULT_CUSTOMER_PRODUCT);
+      setPickedCustomerProduct(null);
+      setIsCustomerProductDialogOpen(false);
+    },
+  );
+
+  const removeCustomerProduct = (index: number) =>
+    setCustomerProducts((prev) => prev.filter((_, i) => i !== index));
+
   // ── Role handler ─────────────────────────────────────────────────────────────
 
   const toggleRole = (role: CompanyRole) => {
@@ -943,6 +1017,7 @@ export const useCompanySubmit = ({
       const isCustomerOrProspect =
         roles?.includes("customer") || roles?.includes("prospect");
       const allAddresses = [address, ...additionalAddresses].map(mapAddress);
+      const allProducts = [...products, ...customerProducts];
       const result = await createCompany(
         {
           companyName,
@@ -998,7 +1073,7 @@ export const useCompanySubmit = ({
         contacts,
         texts,
         projects,
-        products,
+        allProducts,
       );
       setState(result);
       if (result.success) router.push("/companies");
@@ -1106,6 +1181,21 @@ export const useCompanySubmit = ({
     removeProduct,
     productGroups,
     availableProducts,
+
+    customerProductForm,
+    customerProducts,
+    isCustomerProductDialogOpen,
+    isCustomerProductPickerOpen,
+    setIsCustomerProductPickerOpen,
+    pickedCustomerProduct,
+    handleCustomerProductOpenChange,
+    handleOpenCustomerProduct,
+    handleCancelCustomerProduct,
+    handleSaveCustomerProduct,
+    handleOpenCustomerProductPicker,
+    handleCancelCustomerProductPicker,
+    handlePickCustomerProduct,
+    removeCustomerProduct,
 
     toggleRole,
 
