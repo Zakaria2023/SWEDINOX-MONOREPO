@@ -231,13 +231,15 @@ export const CompanyForm = ({
           />
         )}
 
-        <CounterOrdersSection
-          counterOrders={counterOrders}
-          removeCounterOrder={removeCounterOrder}
-          handleOpenCounterOrder={handleOpenCounterOrder}
-          handleEditCounterOrder={handleEditCounterOrder}
-          isPending={isPending}
-        />
+        {selectedRoles.includes("customer") && (
+          <CounterOrdersSection
+            counterOrders={counterOrders}
+            removeCounterOrder={removeCounterOrder}
+            handleOpenCounterOrder={handleOpenCounterOrder}
+            handleEditCounterOrder={handleEditCounterOrder}
+            isPending={isPending}
+          />
+        )}
 
         <DocumentsSection />
 
