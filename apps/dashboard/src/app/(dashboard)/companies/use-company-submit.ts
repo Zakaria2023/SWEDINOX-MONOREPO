@@ -49,6 +49,7 @@ import {
   CustomerProjectInput,
   CustomerSalesInput,
   DebtorCompanyOption,
+  VisitReportInput,
 } from "./actions";
 import {
   AddressFormValues,
@@ -66,11 +67,14 @@ import {
   DEFAULT_CONTRACT_SELECTION,
   DEFAULT_PURCHASE_ORDER,
   DEFAULT_TEXT,
+  DEFAULT_VISIT_REPORT,
   purchaseOrderDialogSchema,
   PurchaseOrderDialogValues,
   textDialogSchema,
   TextDialogValues,
   USAGE_CATEGORY_FIELDS,
+  visitReportDialogSchema,
+  VisitReportDialogValues,
 } from "./validation";
 
 const AGENT_ALLOWED = new Set<CompanyRole>(["agent", "other", "internal"]);
@@ -196,6 +200,11 @@ export const useCompanySubmit = ({
   const [texts, setTexts] = useState<CompanyTextInput[]>([]);
   const [isProjectDialogOpen, setIsProjectDialogOpen] = useState(false);
   const [projects, setProjects] = useState<CustomerProjectInput[]>([]);
+  const [isVisitReportDialogOpen, setIsVisitReportDialogOpen] = useState(false);
+  const [visitReports, setVisitReports] = useState<VisitReportInput[]>([]);
+  const [editingVisitReportIndex, setEditingVisitReportIndex] = useState<
+    number | null
+  >(null);
   const [isPurchaseOrderDialogOpen, setIsPurchaseOrderDialogOpen] =
     useState(false);
   const [purchaseOrders, setPurchaseOrders] = useState<
@@ -325,6 +334,11 @@ export const useCompanySubmit = ({
   const projectForm = useForm<ProjectFormValues>({
     resolver: zodResolver(projectSchema),
     defaultValues: DEFAULT_PROJECT,
+  });
+
+  const visitReportForm = useForm<VisitReportDialogValues>({
+    resolver: zodResolver(visitReportDialogSchema),
+    defaultValues: DEFAULT_VISIT_REPORT,
   });
 
   const purchaseOrderForm = useForm<PurchaseOrderDialogValues>({
@@ -691,8 +705,27 @@ export const useCompanySubmit = ({
     );
   };
 
-  const removeContact = (index: number) =>
+  // Removing a contact shifts the indices of everything after it, so any
+  // visit report referencing one of those contacts needs its contactIndex
+  // shifted too (or cleared, if it pointed at the removed contact).
+  const removeContact = (index: number) => {
     setContacts((prev) => prev.filter((_, i) => i !== index));
+    setVisitReports((prev) =>
+      prev.map((report) => {
+        if (report.contactIndex == null) return report;
+        if (report.contactIndex === index) {
+          return {
+            ...report,
+            contactIndex: undefined,
+            representative: undefined,
+          };
+        }
+        return report.contactIndex > index
+          ? { ...report, contactIndex: report.contactIndex - 1 }
+          : report;
+      }),
+    );
+  };
 
   // ── Text handlers ────────────────────────────────────────────────────────────
 
@@ -795,6 +828,89 @@ export const useCompanySubmit = ({
 
   const removeProject = (index: number) =>
     setProjects((prev) => prev.filter((_, i) => i !== index));
+
+  // ── Visit report handlers ────────────────────────────────────────────────────
+
+  const contactLabel = (contact: CompanyContactInput) =>
+    [contact.firstName, contact.lastName].filter(Boolean).join(" ") ||
+    contact.email ||
+    "Contact";
+
+  // When exactly one contact exists it becomes the default; with none the
+  // field stays empty (the dialog disables it and prompts to add a contact).
+  const defaultContactIndex = () => (contacts.length === 1 ? "0" : "");
+
+  const handleVisitReportOpenChange = (open: boolean) => {
+    if (!open) {
+      visitReportForm.reset(DEFAULT_VISIT_REPORT);
+      setEditingVisitReportIndex(null);
+    }
+    setIsVisitReportDialogOpen(open);
+  };
+
+  const handleOpenVisitReport = () => {
+    setEditingVisitReportIndex(null);
+    visitReportForm.reset({
+      ...DEFAULT_VISIT_REPORT,
+      contactIndex: defaultContactIndex(),
+    });
+    setIsVisitReportDialogOpen(true);
+  };
+
+  const handleEditVisitReport = (index: number) => {
+    const report = visitReports[index];
+    if (!report) return;
+    setEditingVisitReportIndex(index);
+    visitReportForm.reset({
+      visitDate: report.visitDate ?? "",
+      visitTime: report.visitTime ?? "",
+      contactMethod: report.contactMethod ?? "",
+      hasTakenPlace: report.hasTakenPlace ?? false,
+      visitReason: report.visitReason ?? "",
+      contactIndex:
+        report.contactIndex != null ? String(report.contactIndex) : "",
+    });
+    setIsVisitReportDialogOpen(true);
+  };
+
+  const handleCancelVisitReport = () => {
+    visitReportForm.reset(DEFAULT_VISIT_REPORT);
+    setEditingVisitReportIndex(null);
+    setIsVisitReportDialogOpen(false);
+  };
+
+  const handleSaveVisitReport = visitReportForm.handleSubmit((values) => {
+    const contactIndex =
+      values.contactIndex !== undefined && values.contactIndex !== ""
+        ? Number(values.contactIndex)
+        : undefined;
+    const contact =
+      contactIndex !== undefined ? contacts[contactIndex] : undefined;
+    const entry: VisitReportInput = {
+      visitDate: values.visitDate || undefined,
+      visitTime: values.visitTime || undefined,
+      contactMethod: (values.contactMethod ||
+        undefined) as VisitReportInput["contactMethod"],
+      hasTakenPlace: values.hasTakenPlace,
+      visitReason: (values.visitReason ||
+        undefined) as VisitReportInput["visitReason"],
+      contactIndex,
+      representative: contact ? contactLabel(contact) : undefined,
+    };
+    setVisitReports((prev) =>
+      editingVisitReportIndex === null
+        ? [...prev, entry]
+        : prev.map((report, i) =>
+            i === editingVisitReportIndex ? entry : report,
+          ),
+    );
+    visitReportForm.reset(DEFAULT_VISIT_REPORT);
+    setEditingVisitReportIndex(null);
+    setIsVisitReportDialogOpen(false);
+  });
+
+  const removeVisitReport = (index: number) =>
+    setVisitReports((prev) => prev.filter((_, i) => i !== index));
 
   // ── Purchase order handlers ──────────────────────────────────────────────────
 
@@ -983,6 +1099,16 @@ export const useCompanySubmit = ({
       const isCustomerOrProspect =
         roles?.includes("customer") || roles?.includes("prospect");
       const allAddresses = [address, ...additionalAddresses].map(mapAddress);
+      // If a visit report was added before any contact existed, back-fill the
+      // sole contact so a single-contact company links automatically.
+      const resolvedVisitReports = visitReports.map((report) => {
+        if (report.contactIndex != null || contacts.length !== 1) return report;
+        return {
+          ...report,
+          contactIndex: 0,
+          representative: report.representative ?? contactLabel(contacts[0]),
+        };
+      });
       const result = await createCompany(
         {
           companyName,
@@ -1050,6 +1176,7 @@ export const useCompanySubmit = ({
         contacts,
         texts,
         projects,
+        resolvedVisitReports,
         purchaseOrders,
       );
       setState(result);
@@ -1141,6 +1268,17 @@ export const useCompanySubmit = ({
     handleCancelProject,
     handleSaveProject,
     removeProject,
+
+    visitReportForm,
+    visitReports,
+    isVisitReportDialogOpen,
+    isEditingVisitReport: editingVisitReportIndex !== null,
+    handleVisitReportOpenChange,
+    handleOpenVisitReport,
+    handleEditVisitReport,
+    handleCancelVisitReport,
+    handleSaveVisitReport,
+    removeVisitReport,
 
     purchaseOrderForm,
     purchaseOrders,

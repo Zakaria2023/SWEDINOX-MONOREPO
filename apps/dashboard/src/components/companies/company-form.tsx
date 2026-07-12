@@ -17,6 +17,7 @@ import { DebtorSection } from "@/components/companies/sections/debtor-section";
 import { InvoicesSection } from "@/components/companies/sections/invoices-section";
 import { TextsSection } from "@/components/companies/sections/texts-section";
 import { ProjectsSection } from "@/components/companies/sections/projects-section";
+import { VisitReportsSection } from "@/components/companies/sections/visit-reports-section";
 import { PurchaseOrdersSection } from "@/components/companies/sections/purchase-orders-section";
 import { DocumentsSection } from "@/components/companies/sections/documents-section";
 import { SearchCodesSection } from "@/components/companies/sections/search-codes-section";
@@ -28,6 +29,7 @@ import { ContractDialog } from "@/components/companies/dialogs/contract-dialog";
 import { TextDialog } from "@/components/companies/dialogs/text-dialog";
 import { ContactDialog } from "@/components/companies/dialogs/contact-dialog";
 import { ProjectDialog } from "@/components/companies/dialogs/project-dialog";
+import { VisitReportDialog } from "@/components/companies/dialogs/visit-report-dialog";
 import { PurchaseOrderDialog } from "@/components/companies/dialogs/purchase-order-dialog";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
@@ -128,6 +130,16 @@ export const CompanyForm = ({
     handleCancelProject,
     handleSaveProject,
     removeProject,
+    visitReportForm,
+    visitReports,
+    isVisitReportDialogOpen,
+    isEditingVisitReport,
+    handleVisitReportOpenChange,
+    handleOpenVisitReport,
+    handleEditVisitReport,
+    handleCancelVisitReport,
+    handleSaveVisitReport,
+    removeVisitReport,
     purchaseOrderForm,
     purchaseOrders,
     isPurchaseOrderDialogOpen,
@@ -241,6 +253,14 @@ export const CompanyForm = ({
           />
         )}
 
+        <VisitReportsSection
+          visitReports={visitReports}
+          removeVisitReport={removeVisitReport}
+          handleOpenVisitReport={handleOpenVisitReport}
+          handleEditVisitReport={handleEditVisitReport}
+          isPending={isPending}
+        />
+
         {isPurchaseOrderVisible && (
           <PurchaseOrdersSection
             purchaseOrders={purchaseOrders}
@@ -337,6 +357,16 @@ export const CompanyForm = ({
         onSave={handleSaveProject}
         form={projectForm}
         projectContracts={projectContracts_}
+      />
+
+      <VisitReportDialog
+        isOpen={isVisitReportDialogOpen}
+        onOpenChange={handleVisitReportOpenChange}
+        onCancel={handleCancelVisitReport}
+        onSave={handleSaveVisitReport}
+        form={visitReportForm}
+        contacts={contacts}
+        isEditing={isEditingVisitReport}
       />
 
       <PurchaseOrderDialog
