@@ -146,16 +146,21 @@ export const getCompanyDetail = async (
     .from(Companies)
     .where(eq(Companies.uuid, uuid))
     .limit(1);
-  if (!company) return null;
+  if (!company) {
+    return null;
+  }
+
   const addresses = await db
     .select()
     .from(CompanyAddresses)
     .where(eq(CompanyAddresses.companyUuid, uuid));
+
   const purchaseOrders = await db
     .select()
     .from(PurchaseOrders)
     .where(eq(PurchaseOrders.supplierUuid, uuid))
     .orderBy(desc(PurchaseOrders.createdAt));
+
   return { ...company, addresses, purchaseOrders };
 };
 

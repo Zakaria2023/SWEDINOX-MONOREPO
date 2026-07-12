@@ -35,51 +35,20 @@ type Props = {
   isEditing?: boolean;
 };
 
-const CheckboxField = ({
-  label,
-  checked,
-  onChange,
-}: {
+type CheckboxFieldProps = {
   label: string;
   checked: boolean;
   onChange: (value: boolean) => void;
-}) => (
-  <label className="flex cursor-pointer items-center gap-2">
-    <Checkbox checked={checked} onChange={(e) => onChange(e.target.checked)} />
-    <span className="text-sm text-gray-700">{label}</span>
-  </label>
-);
+};
 
-const DateField = ({
-  id,
-  label,
-  form,
-  name,
-}: {
+type DateFieldProps = {
   id: string;
   label: string;
   form: UseFormReturn<PurchaseOrderDialogValues>;
   name: "orderDate" | "deliveryDate" | "confirmationDate";
-}) => (
-  <div>
-    <FormLabel htmlFor={id}>{label}</FormLabel>
-    <Controller
-      name={name}
-      control={form.control}
-      render={({ field }) => (
-        <DatePicker value={field.value ?? ""} onChange={field.onChange} />
-      )}
-    />
-  </div>
-);
+};
 
-const TextField = ({
-  id,
-  label,
-  form,
-  name,
-  inputMode,
-}: {
+type TextFieldProps = {
   id: string;
   label: string;
   form: UseFormReturn<PurchaseOrderDialogValues>;
@@ -94,7 +63,29 @@ const TextField = ({
     | "inkoper"
     | "purchaserInitials";
   inputMode?: "decimal";
-}) => (
+};
+
+const CheckboxField = ({ label, checked, onChange }: CheckboxFieldProps) => (
+  <label className="flex cursor-pointer items-center gap-2">
+    <Checkbox checked={checked} onChange={(e) => onChange(e.target.checked)} />
+    <span className="text-sm text-gray-700">{label}</span>
+  </label>
+);
+
+const DateField = ({ id, label, form, name }: DateFieldProps) => (
+  <div>
+    <FormLabel htmlFor={id}>{label}</FormLabel>
+    <Controller
+      name={name}
+      control={form.control}
+      render={({ field }) => (
+        <DatePicker value={field.value ?? ""} onChange={field.onChange} />
+      )}
+    />
+  </div>
+);
+
+const TextField = ({ id, label, form, name, inputMode }: TextFieldProps) => (
   <div>
     <FormLabel htmlFor={id}>{label}</FormLabel>
     <Input id={id} inputMode={inputMode} {...form.register(name)} />
@@ -166,7 +157,12 @@ export const PurchaseOrderDialog = ({
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <DateField id="po-order-date" label="Order date" form={form} name="orderDate" />
+            <DateField
+              id="po-order-date"
+              label="Order date"
+              form={form}
+              name="orderDate"
+            />
             <DateField
               id="po-delivery-date"
               label="Delivery date"
@@ -176,7 +172,12 @@ export const PurchaseOrderDialog = ({
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <TextField id="po-for-order" label="For order" form={form} name="forOrder" />
+            <TextField
+              id="po-for-order"
+              label="For order"
+              form={form}
+              name="forOrder"
+            />
             <TextField
               id="po-reference"
               label="Reference"
@@ -233,7 +234,12 @@ export const PurchaseOrderDialog = ({
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <TextField id="po-inkoper" label="Inkoper" form={form} name="inkoper" />
+            <TextField
+              id="po-inkoper"
+              label="Inkoper"
+              form={form}
+              name="inkoper"
+            />
             <TextField
               id="po-purchaser-initials"
               label="Purchaser initials"

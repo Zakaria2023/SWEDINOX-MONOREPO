@@ -33,6 +33,7 @@ export const PurchaseOrders = mysqlTable(
     uuid: char("uuid", { length: 36 }).notNull().unique(),
 
     // ── Header ────────────────────────────────────────────────────────────────
+    // The supplier uuid is the company uuid that is supplying the goods or services for this purchase order
     supplierUuid: char("supplier_uuid", { length: 36 }).notNull(),
     agentUuid: char("agent_uuid", { length: 36 }),
     contactUuid: char("contact_uuid", { length: 36 }),
