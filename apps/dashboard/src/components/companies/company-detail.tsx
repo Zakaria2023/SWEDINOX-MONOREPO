@@ -14,6 +14,9 @@ import {
   COMPANY_ROLE_LABELS,
   INVOICE_PAYMENT_TERM_LABELS,
   INVOICE_VAT_SCENARIO_LABELS,
+  VISIT_REPORT_CONTACT_METHOD_LABELS,
+  VISIT_REPORT_REASON_LABELS,
+  PURCHASE_ORDER_STATUS_LABELS,
 } from "@/lib/labels";
 import { Plus } from "lucide-react";
 import Link from "next/link";
@@ -33,6 +36,16 @@ const Field = ({ label, value }: { label: string; value?: string | null }) => (
     </dd>
   </div>
 );
+
+// Number of whole days since the record was created.
+const daysInSystem = (createdAt: Date) =>
+  Math.max(
+    0,
+    Math.floor((Date.now() - new Date(createdAt).getTime()) / 86_400_000),
+  );
+
+const formatDate = (value: Date | string | null) =>
+  value ? new Date(value).toLocaleDateString() : COMMON_TEXT.notAvailable;
 
 export const CompanyDetailView = ({ company, invoices }: Props) => {
   const isCustomer = company.roles.includes("customer");
@@ -112,6 +125,112 @@ export const CompanyDetailView = ({ company, invoices }: Props) => {
                     <TableCell>{addr.country ?? na}</TableCell>
                     <TableCell>{addr.telephone ?? na}</TableCell>
                     <TableCell>{addr.email ?? na}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </section>
+      )}
+
+      {/* Visit Reports */}
+      {company.visitReports.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-gray-700">
+            Visit Reports{" "}
+            <span className="ml-1 text-xs font-normal text-muted-foreground">
+              {company.visitReports.length}
+            </span>
+          </h2>
+          <div className="overflow-x-auto rounded-lg border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Visit date</TableHead>
+                  <TableHead>Visit time</TableHead>
+                  <TableHead>Sort</TableHead>
+                  <TableHead>Took place</TableHead>
+                  <TableHead>Reason</TableHead>
+                  <TableHead>Contact</TableHead>
+                  <TableHead className="text-right">Days in system</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {company.visitReports.map((report) => (
+                  <TableRow key={report.uuid}>
+                    <TableCell>{report.visitDate ?? na}</TableCell>
+                    <TableCell>{report.visitTime ?? na}</TableCell>
+                    <TableCell>
+                      {report.contactMethod
+                        ? VISIT_REPORT_CONTACT_METHOD_LABELS[
+                            report.contactMethod
+                          ]
+                        : na}
+                    </TableCell>
+                    <TableCell>{report.hasTakenPlace ? "Yes" : "No"}</TableCell>
+                    <TableCell>
+                      {report.visitReason
+                        ? VISIT_REPORT_REASON_LABELS[report.visitReason]
+                        : na}
+                    </TableCell>
+                    <TableCell>{report.representative ?? na}</TableCell>
+                    <TableCell className="text-right">
+                      {daysInSystem(report.createdAt)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </section>
+      )}
+
+      {/* Purchase Orders */}
+      {company.purchaseOrders.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-gray-700">
+            Purchase Orders{" "}
+            <span className="ml-1 text-xs font-normal text-muted-foreground">
+              {company.purchaseOrders.length}
+            </span>
+          </h2>
+          <div className="overflow-x-auto rounded-lg border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Order no</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Order date</TableHead>
+                  <TableHead>Delivery date</TableHead>
+                  <TableHead className="text-right">Amount</TableHead>
+                  <TableHead className="text-right">Weight (kg)</TableHead>
+                  <TableHead>Reference</TableHead>
+                  <TableHead>Printed</TableHead>
+                  <TableHead>Mailed</TableHead>
+                  <TableHead className="text-right">Days in system</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {company.purchaseOrders.map((order) => (
+                  <TableRow key={order.uuid}>
+                    <TableCell className="font-medium">{order.id}</TableCell>
+                    <TableCell>
+                      {PURCHASE_ORDER_STATUS_LABELS[order.status]}
+                    </TableCell>
+                    <TableCell>{order.orderDate ?? na}</TableCell>
+                    <TableCell>{formatDate(order.deliveryDate)}</TableCell>
+                    <TableCell className="text-right whitespace-nowrap">
+                      € {order.amount}
+                    </TableCell>
+                    <TableCell className="text-right whitespace-nowrap">
+                      {order.weightKg}
+                    </TableCell>
+                    <TableCell>{order.reference ?? na}</TableCell>
+                    <TableCell>{order.isPrinted ? "Yes" : "No"}</TableCell>
+                    <TableCell>{order.isMailed ? "Yes" : "No"}</TableCell>
+                    <TableCell className="text-right">
+                      {daysInSystem(order.createdAt)}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

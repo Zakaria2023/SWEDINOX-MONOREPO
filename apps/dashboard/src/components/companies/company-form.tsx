@@ -16,8 +16,11 @@ import { RolesSection } from "@/components/companies/sections/roles-section";
 import { ContractsSection } from "@/components/companies/sections/contracts-section";
 import { SalesSection } from "@/components/companies/sections/sales-section";
 import { DebtorSection } from "@/components/companies/sections/debtor-section";
+import { InvoicesSection } from "@/components/companies/sections/invoices-section";
 import { TextsSection } from "@/components/companies/sections/texts-section";
 import { ProjectsSection } from "@/components/companies/sections/projects-section";
+import { VisitReportsSection } from "@/components/companies/sections/visit-reports-section";
+import { PurchaseOrdersSection } from "@/components/companies/sections/purchase-orders-section";
 import { DocumentsSection } from "@/components/companies/sections/documents-section";
 import { SearchCodesSection } from "@/components/companies/sections/search-codes-section";
 import { ContactsSection } from "@/components/companies/sections/contacts-section";
@@ -33,6 +36,8 @@ import { ProjectDialog } from "@/components/companies/dialogs/project-dialog";
 import { ProductDialog } from "@/components/companies/dialogs/product-dialog";
 import { ProductPickerDialog } from "@/components/companies/dialogs/product-picker-dialog";
 import { CustomerProductDialog } from "@/components/companies/dialogs/customer-product-dialog";
+import { VisitReportDialog } from "@/components/companies/dialogs/visit-report-dialog";
+import { PurchaseOrderDialog } from "@/components/companies/dialogs/purchase-order-dialog";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { FormProvider } from "react-hook-form";
@@ -164,6 +169,26 @@ export const CompanyForm = ({
     handleCancelCustomerProductPicker,
     handlePickCustomerProduct,
     removeCustomerProduct,
+    visitReportForm,
+    visitReports,
+    isVisitReportDialogOpen,
+    isEditingVisitReport,
+    handleVisitReportOpenChange,
+    handleOpenVisitReport,
+    handleEditVisitReport,
+    handleCancelVisitReport,
+    handleSaveVisitReport,
+    removeVisitReport,
+    purchaseOrderForm,
+    purchaseOrders,
+    isPurchaseOrderDialogOpen,
+    isEditingPurchaseOrder,
+    handlePurchaseOrderOpenChange,
+    handleOpenPurchaseOrder,
+    handleEditPurchaseOrder,
+    handleCancelPurchaseOrder,
+    handleSavePurchaseOrder,
+    removePurchaseOrder,
     toggleRole,
     salesData,
     setSalesData,
@@ -190,6 +215,11 @@ export const CompanyForm = ({
 
   const isCustomerOrSupplier =
     isCustomerOrProspect || selectedRoles.includes("supplier");
+
+  const isPurchaseOrderVisible =
+    selectedRoles.includes("customer") ||
+    selectedRoles.includes("processor") ||
+    selectedRoles.includes("supplier");
 
   return (
     <FormProvider {...form}>
@@ -245,6 +275,10 @@ export const CompanyForm = ({
           />
         )}
 
+        {selectedRoles.includes("customer") && (
+          <InvoicesSection isPending={isPending} />
+        )}
+
         <TextsSection
           texts={texts}
           removeText={removeText}
@@ -260,6 +294,24 @@ export const CompanyForm = ({
             handleOpenProject={handleOpenProject}
             isPending={isPending}
             projectContracts={projectContracts_}
+          />
+        )}
+
+        <VisitReportsSection
+          visitReports={visitReports}
+          removeVisitReport={removeVisitReport}
+          handleOpenVisitReport={handleOpenVisitReport}
+          handleEditVisitReport={handleEditVisitReport}
+          isPending={isPending}
+        />
+
+        {isPurchaseOrderVisible && (
+          <PurchaseOrdersSection
+            purchaseOrders={purchaseOrders}
+            removePurchaseOrder={removePurchaseOrder}
+            handleOpenPurchaseOrder={handleOpenPurchaseOrder}
+            handleEditPurchaseOrder={handleEditPurchaseOrder}
+            isPending={isPending}
           />
         )}
 
@@ -405,6 +457,25 @@ export const CompanyForm = ({
         onSelect={handlePickCustomerProduct}
         productGroups={productGroups}
         products={availableProducts}
+      />
+
+      <VisitReportDialog
+        isOpen={isVisitReportDialogOpen}
+        onOpenChange={handleVisitReportOpenChange}
+        onCancel={handleCancelVisitReport}
+        onSave={handleSaveVisitReport}
+        form={visitReportForm}
+        contacts={contacts}
+        isEditing={isEditingVisitReport}
+      />
+
+      <PurchaseOrderDialog
+        isOpen={isPurchaseOrderDialogOpen}
+        onOpenChange={handlePurchaseOrderOpenChange}
+        onCancel={handleCancelPurchaseOrder}
+        onSave={handleSavePurchaseOrder}
+        form={purchaseOrderForm}
+        isEditing={isEditingPurchaseOrder}
       />
     </FormProvider>
   );
