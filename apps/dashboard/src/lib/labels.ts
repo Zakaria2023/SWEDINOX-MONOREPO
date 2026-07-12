@@ -35,9 +35,11 @@ import type {
   QuoteOrderInvoiceOption,
   QuoteOrderOption,
   SalesRepresentative,
+  InvoiceFrequency,
   InvoicePaymentTerm,
   InvoiceSurchargeDescription,
   InvoiceVatScenario,
+  InvoicingMethod,
   ProcessedOption,
   ProductQualityStandard,
   PurchaseInvoiceBlockReason,
@@ -632,6 +634,18 @@ export const INVOICE_PAYMENT_TERM_LABELS: Record<InvoicePaymentTerm, string> = {
   immediately_after_receipt_of_goods: "Immediately after receipt of goods",
   payment_in_settlement: "Payment in settlement",
   direct_debit: "Direct Debit",
+};
+
+export const INVOICING_METHOD_LABELS: Record<InvoicingMethod, string> = {
+  per_delivery: "per delivery",
+  per_order: "per Order",
+  per_order_line: "per Order line",
+};
+
+export const INVOICE_FREQUENCY_LABELS: Record<InvoiceFrequency, string> = {
+  daily: "Daily",
+  weekly: "Weekly",
+  monthly: "Monthly",
 };
 
 export const PRODUCT_SHAPE_LABELS: Record<ProductShape, string> = {
