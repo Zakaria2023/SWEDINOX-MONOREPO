@@ -9,6 +9,8 @@ import {
   invoiceFrequencies,
   invoicePaymentTerms,
   invoicingMethods,
+  purchaseOrderStatuses,
+  purchaseOrderTypes,
   ContractableRole,
   TextUsageCategory,
 } from "@/lib/enums";
@@ -337,6 +339,60 @@ export const USAGE_CATEGORY_FIELDS: Array<{
   { key: "website_in_advance", field: "websiteInAdvance" },
   { key: "website_after", field: "websiteAfter" },
 ];
+
+// ── Purchase Order Dialog ────────────────────────────────────────────────────
+
+export const purchaseOrderDialogSchema = z.object({
+  status: z.enum(purchaseOrderStatuses),
+  purchaseOrderType: z
+    .union([z.enum(purchaseOrderTypes), z.literal("")])
+    .optional(),
+  forOrder: z.string().optional(),
+  orderDate: z.string().optional(),
+  deliveryDate: z.string().optional(),
+  amount: z.string().optional(),
+  weightKg: z.string().optional(),
+  confirmationReference: z.string().optional(),
+  confirmationDate: z.string().optional(),
+  copiedFrom: z.string().optional(),
+  internalReference: z.string().optional(),
+  reference: z.string().optional(),
+  inkoper: z.string().optional(),
+  purchaserInitials: z.string().optional(),
+  isPrinted: z.boolean(),
+  isMailed: z.boolean(),
+  arrangeTransport: z.boolean(),
+  pickupDropoffCdPurchases: z.boolean(),
+  isOverlengte: z.boolean(),
+  remarks: z.string().optional(),
+});
+
+export type PurchaseOrderDialogValues = z.infer<
+  typeof purchaseOrderDialogSchema
+>;
+
+export const DEFAULT_PURCHASE_ORDER: PurchaseOrderDialogValues = {
+  status: "open",
+  purchaseOrderType: "",
+  forOrder: "",
+  orderDate: "",
+  deliveryDate: "",
+  amount: "0.00",
+  weightKg: "0.000",
+  confirmationReference: "",
+  confirmationDate: "",
+  copiedFrom: "",
+  internalReference: "",
+  reference: "",
+  inkoper: "",
+  purchaserInitials: "",
+  isPrinted: false,
+  isMailed: false,
+  arrangeTransport: false,
+  pickupDropoffCdPurchases: false,
+  isOverlengte: false,
+  remarks: "",
+};
 
 export const DEFAULT_TEXT: TextDialogValues = {
   textCategoryUuid: "",

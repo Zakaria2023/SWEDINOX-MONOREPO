@@ -18,6 +18,11 @@ import {
   SelectCustomerProjects,
 } from "@/db/schema/customer-projects";
 import { InsertTexts, Texts } from "@/db/schema/texts";
+import {
+  InsertPurchaseOrders,
+  PurchaseOrders,
+  SelectPurchaseOrders,
+} from "@/db/schema/purchase-orders";
 import { PurchaseCompanyType } from "@/lib/enums";
 import { generateUuid } from "@/lib/helpers";
 import { currentUser } from "@clerk/nextjs/server";
@@ -100,6 +105,11 @@ export type CompanyTextInput = Omit<
   "id" | "uuid" | "companyUuid" | "createdByUserId" | "createdAt" | "updatedAt"
 >;
 
+export type CompanyPurchaseOrderInput = Omit<
+  InsertPurchaseOrders,
+  "id" | "uuid" | "supplierUuid" | "createdAt" | "updatedAt"
+>;
+
 export type DebtorCompanyOption = Pick<SelectCompanies, "uuid" | "companyName">;
 
 export type CompanyActionResult = {
@@ -110,6 +120,7 @@ export type CompanyActionResult = {
 
 export type CompanyDetail = SelectCompanies & {
   addresses: SelectCompanyAddresses[];
+  purchaseOrders: SelectPurchaseOrders[];
 };
 
 export type ContactOption = Pick<
@@ -135,12 +146,22 @@ export const getCompanyDetail = async (
     .from(Companies)
     .where(eq(Companies.uuid, uuid))
     .limit(1);
-  if (!company) return null;
+  if (!company) {
+    return null;
+  }
+
   const addresses = await db
     .select()
     .from(CompanyAddresses)
     .where(eq(CompanyAddresses.companyUuid, uuid));
-  return { ...company, addresses };
+
+  const purchaseOrders = await db
+    .select()
+    .from(PurchaseOrders)
+    .where(eq(PurchaseOrders.supplierUuid, uuid))
+    .orderBy(desc(PurchaseOrders.createdAt));
+
+  return { ...company, addresses, purchaseOrders };
 };
 
 // Derives whether a company acts as a supplier or an agent from its roles.
@@ -273,6 +294,7 @@ export const createCompany = async (
   contacts: CompanyContactInput[] = [],
   texts: CompanyTextInput[] = [],
   projects: CustomerProjectInput[] = [],
+  purchaseOrders: CompanyPurchaseOrderInput[] = [],
 ): Promise<CompanyActionResult> => {
   const uuid = generateUuid();
 
@@ -337,6 +359,14 @@ export const createCompany = async (
           ...project,
           uuid: generateUuid(),
           companyUuid: uuid,
+        });
+      }
+
+      for (const purchaseOrder of purchaseOrders) {
+        await tx.insert(PurchaseOrders).values({
+          ...purchaseOrder,
+          uuid: generateUuid(),
+          supplierUuid: uuid,
         });
       }
     });
