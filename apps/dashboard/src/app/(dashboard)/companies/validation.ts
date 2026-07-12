@@ -6,8 +6,10 @@ import {
   contactSalutations,
   contractableRoles,
   currencies,
+  deliveryTimeUnits,
   invoiceFrequencies,
   invoicePaymentTerms,
+  purchasingUnits,
   visitReportContactMethods,
   visitReportReasons,
   invoicingMethods,
@@ -341,6 +343,66 @@ export const USAGE_CATEGORY_FIELDS: Array<{
   { key: "website_in_advance", field: "websiteInAdvance" },
   { key: "website_after", field: "websiteAfter" },
 ];
+
+// ── Product Dialog ───────────────────────────────────────────────────────────
+
+export const productDialogSchema = z.object({
+  productUuid: z.string().min(1, "Please select a product"),
+  preferred: z.boolean(),
+  ean: z.string().optional(),
+  externalProductCode: z.string().optional(),
+  editing: z.string().optional(),
+  deliveryTime: z.string().optional(),
+  deliveryTimeUnit: z.union([
+    z.enum(deliveryTimeUnits),
+    z.literal(""),
+    z.undefined(),
+  ]),
+  minOrderQty: z.string().optional(),
+  minOrderQtyUnit: z.union([
+    z.enum(purchasingUnits),
+    z.literal(""),
+    z.undefined(),
+  ]),
+  orderSeries: z.string().optional(),
+  orderSeriesUnit: z.union([
+    z.enum(purchasingUnits),
+    z.literal(""),
+    z.undefined(),
+  ]),
+});
+
+export type ProductDialogValues = z.infer<typeof productDialogSchema>;
+
+export const DEFAULT_PRODUCT: ProductDialogValues = {
+  productUuid: "",
+  preferred: false,
+  ean: "",
+  externalProductCode: "",
+  editing: "",
+  deliveryTime: "",
+  deliveryTimeUnit: "",
+  minOrderQty: "",
+  minOrderQtyUnit: "",
+  orderSeries: "",
+  orderSeriesUnit: "",
+};
+
+// ── Customer Product Dialog ──────────────────────────────────────────────────
+
+export const customerProductDialogSchema = z.object({
+  productUuid: z.string().min(1, "Please select a product"),
+  showOnWebsite: z.boolean(),
+});
+
+export type CustomerProductDialogValues = z.infer<
+  typeof customerProductDialogSchema
+>;
+
+export const DEFAULT_CUSTOMER_PRODUCT: CustomerProductDialogValues = {
+  productUuid: "",
+  showOnWebsite: false,
+};
 
 // ── Visit Report Dialog ──────────────────────────────────────────────────────
 

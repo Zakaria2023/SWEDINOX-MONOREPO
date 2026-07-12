@@ -17,6 +17,7 @@ import {
   InsertCustomerProjects,
   SelectCustomerProjects,
 } from "@/db/schema/customer-projects";
+import { InsertProducts, Products } from "@/db/schema/products";
 import { InsertTexts, Texts } from "@/db/schema/texts";
 import {
   InsertVisitReports,
@@ -108,6 +109,11 @@ export type CompanyContactInput = Omit<
 export type CompanyTextInput = Omit<
   InsertTexts,
   "id" | "uuid" | "companyUuid" | "createdByUserId" | "createdAt" | "updatedAt"
+>;
+
+export type CompanyProductInput = Omit<
+  InsertProducts,
+  "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt"
 >;
 
 // contactIndex references a position in the `contacts` array passed to
@@ -316,6 +322,7 @@ export const createCompany = async (
   contacts: CompanyContactInput[] = [],
   texts: CompanyTextInput[] = [],
   projects: CustomerProjectInput[] = [],
+  products: CompanyProductInput[] = [],
   visitReports: VisitReportInput[] = [],
   purchaseOrders: CompanyPurchaseOrderInput[] = [],
 ): Promise<CompanyActionResult> => {
@@ -383,6 +390,14 @@ export const createCompany = async (
       for (const project of projects) {
         await tx.insert(CustomerProjects).values({
           ...project,
+          uuid: generateUuid(),
+          companyUuid: uuid,
+        });
+      }
+
+      for (const product of products) {
+        await tx.insert(Products).values({
+          ...product,
           uuid: generateUuid(),
           companyUuid: uuid,
         });

@@ -6,6 +6,8 @@ import {
   ContractForProjectOption,
   ContractListItem,
 } from "@/app/(dashboard)/contracts/actions";
+import { ProductGroupOption } from "@/app/(dashboard)/product-groups/actions";
+import { ProductOption } from "@/app/(dashboard)/products/actions";
 import { TextCategoryOption } from "@/app/(dashboard)/text-categories/actions";
 import { FormActions } from "@/components/ui/form-actions";
 import { FormError } from "@/components/ui/form-error";
@@ -22,6 +24,8 @@ import { PurchaseOrdersSection } from "@/components/companies/sections/purchase-
 import { DocumentsSection } from "@/components/companies/sections/documents-section";
 import { SearchCodesSection } from "@/components/companies/sections/search-codes-section";
 import { ContactsSection } from "@/components/companies/sections/contacts-section";
+import { ProductsSection } from "@/components/companies/sections/products-section";
+import { CustomerProductsSection } from "@/components/companies/sections/customer-products-section";
 import { FirstAddressDialog } from "@/components/companies/dialogs/first-address-dialog";
 import { AdditionalAddressDialog } from "@/components/companies/dialogs/additional-address-dialog";
 import { CommunicationSettingDialog } from "@/components/companies/dialogs/communication-setting-dialog";
@@ -29,6 +33,9 @@ import { ContractDialog } from "@/components/companies/dialogs/contract-dialog";
 import { TextDialog } from "@/components/companies/dialogs/text-dialog";
 import { ContactDialog } from "@/components/companies/dialogs/contact-dialog";
 import { ProjectDialog } from "@/components/companies/dialogs/project-dialog";
+import { ProductDialog } from "@/components/companies/dialogs/product-dialog";
+import { ProductPickerDialog } from "@/components/companies/dialogs/product-picker-dialog";
+import { CustomerProductDialog } from "@/components/companies/dialogs/customer-product-dialog";
 import { VisitReportDialog } from "@/components/companies/dialogs/visit-report-dialog";
 import { PurchaseOrderDialog } from "@/components/companies/dialogs/purchase-order-dialog";
 import { useUser } from "@clerk/nextjs";
@@ -41,6 +48,8 @@ type CompanyFormProps = {
   textCategories: TextCategoryOption[];
   debtorCompanies: DebtorCompanyOption[];
   purchaseOrgCompanies: DebtorCompanyOption[];
+  productGroups: ProductGroupOption[];
+  availableProducts: ProductOption[];
 };
 
 export const CompanyForm = ({
@@ -49,6 +58,8 @@ export const CompanyForm = ({
   textCategories,
   debtorCompanies,
   purchaseOrgCompanies,
+  productGroups,
+  availableProducts,
 }: CompanyFormProps) => {
   const router = useRouter();
   const { user } = useUser();
@@ -130,6 +141,34 @@ export const CompanyForm = ({
     handleCancelProject,
     handleSaveProject,
     removeProject,
+    productForm,
+    products,
+    isProductDialogOpen,
+    isProductPickerOpen,
+    setIsProductPickerOpen,
+    pickedProduct,
+    handleProductOpenChange,
+    handleOpenProduct,
+    handleCancelProduct,
+    handleSaveProduct,
+    handleOpenProductPicker,
+    handleCancelProductPicker,
+    handlePickProduct,
+    removeProduct,
+    customerProductForm,
+    customerProducts,
+    isCustomerProductDialogOpen,
+    isCustomerProductPickerOpen,
+    setIsCustomerProductPickerOpen,
+    pickedCustomerProduct,
+    handleCustomerProductOpenChange,
+    handleOpenCustomerProduct,
+    handleCancelCustomerProduct,
+    handleSaveCustomerProduct,
+    handleOpenCustomerProductPicker,
+    handleCancelCustomerProductPicker,
+    handlePickCustomerProduct,
+    removeCustomerProduct,
     visitReportForm,
     visitReports,
     isVisitReportDialogOpen,
@@ -162,6 +201,8 @@ export const CompanyForm = ({
     textCategories,
     debtorCompanies,
     purchaseOrgCompanies,
+    productGroups,
+    availableProducts,
   });
 
   const isCustomerOrProspect =
@@ -171,6 +212,9 @@ export const CompanyForm = ({
     selectedRoles.includes("customer") ||
     selectedRoles.includes("prospect") ||
     selectedRoles.includes("purchasing_org");
+
+  const isCustomerOrSupplier =
+    isCustomerOrProspect || selectedRoles.includes("supplier");
 
   const isPurchaseOrderVisible =
     selectedRoles.includes("customer") ||
@@ -282,6 +326,24 @@ export const CompanyForm = ({
           isPending={isPending}
         />
 
+        {isCustomerOrSupplier && (
+          <ProductsSection
+            products={products}
+            removeProduct={removeProduct}
+            handleOpenProduct={handleOpenProduct}
+            isPending={isPending}
+          />
+        )}
+
+        {selectedRoles.includes("customer") && (
+          <CustomerProductsSection
+            products={customerProducts}
+            removeProduct={removeCustomerProduct}
+            handleOpenProduct={handleOpenCustomerProduct}
+            isPending={isPending}
+          />
+        )}
+
         <FormError>{state.error}</FormError>
 
         <FormActions
@@ -357,6 +419,44 @@ export const CompanyForm = ({
         onSave={handleSaveProject}
         form={projectForm}
         projectContracts={projectContracts_}
+      />
+
+      <ProductDialog
+        isOpen={isProductDialogOpen}
+        onOpenChange={handleProductOpenChange}
+        onCancel={handleCancelProduct}
+        onSave={handleSaveProduct}
+        form={productForm}
+        selectedProduct={pickedProduct}
+        onBrowse={handleOpenProductPicker}
+      />
+
+      <ProductPickerDialog
+        isOpen={isProductPickerOpen}
+        onOpenChange={setIsProductPickerOpen}
+        onCancel={handleCancelProductPicker}
+        onSelect={handlePickProduct}
+        productGroups={productGroups}
+        products={availableProducts}
+      />
+
+      <CustomerProductDialog
+        isOpen={isCustomerProductDialogOpen}
+        onOpenChange={handleCustomerProductOpenChange}
+        onCancel={handleCancelCustomerProduct}
+        onSave={handleSaveCustomerProduct}
+        form={customerProductForm}
+        selectedProduct={pickedCustomerProduct}
+        onBrowse={handleOpenCustomerProductPicker}
+      />
+
+      <ProductPickerDialog
+        isOpen={isCustomerProductPickerOpen}
+        onOpenChange={setIsCustomerProductPickerOpen}
+        onCancel={handleCancelCustomerProductPicker}
+        onSelect={handlePickCustomerProduct}
+        productGroups={productGroups}
+        products={availableProducts}
       />
 
       <VisitReportDialog
