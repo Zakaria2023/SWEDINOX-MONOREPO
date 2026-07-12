@@ -20,6 +20,11 @@ import {
 import { InsertProducts, Products } from "@/db/schema/products";
 import { InsertTexts, Texts } from "@/db/schema/texts";
 import {
+  CounterOrders,
+  InsertCounterOrders,
+  SelectCounterOrders,
+} from "@/db/schema/counter-orders";
+import {
   InsertVisitReports,
   SelectVisitReports,
   VisitReports,
@@ -111,6 +116,11 @@ export type CompanyTextInput = Omit<
   "id" | "uuid" | "companyUuid" | "createdByUserId" | "createdAt" | "updatedAt"
 >;
 
+export type CompanyCounterOrderInput = Omit<
+  InsertCounterOrders,
+  "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt"
+>;
+
 export type CompanyProductInput = Omit<
   InsertProducts,
   "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt"
@@ -141,6 +151,7 @@ export type CompanyActionResult = {
 
 export type CompanyDetail = SelectCompanies & {
   addresses: SelectCompanyAddresses[];
+  counterOrders: SelectCounterOrders[];
   visitReports: SelectVisitReports[];
   purchaseOrders: SelectPurchaseOrders[];
 };
@@ -177,6 +188,12 @@ export const getCompanyDetail = async (
     .from(CompanyAddresses)
     .where(eq(CompanyAddresses.companyUuid, uuid));
 
+  const counterOrders = await db
+    .select()
+    .from(CounterOrders)
+    .where(eq(CounterOrders.companyUuid, uuid))
+    .orderBy(desc(CounterOrders.createdAt));
+
   const visitReports = await db
     .select()
     .from(VisitReports)
@@ -189,7 +206,13 @@ export const getCompanyDetail = async (
     .where(eq(PurchaseOrders.supplierUuid, uuid))
     .orderBy(desc(PurchaseOrders.createdAt));
 
-  return { ...company, addresses, visitReports, purchaseOrders };
+  return {
+    ...company,
+    addresses,
+    counterOrders,
+    visitReports,
+    purchaseOrders,
+  };
 };
 
 // Derives whether a company acts as a supplier or an agent from its roles.
@@ -322,6 +345,7 @@ export const createCompany = async (
   contacts: CompanyContactInput[] = [],
   texts: CompanyTextInput[] = [],
   projects: CustomerProjectInput[] = [],
+  counterOrders: CompanyCounterOrderInput[] = [],
   products: CompanyProductInput[] = [],
   visitReports: VisitReportInput[] = [],
   purchaseOrders: CompanyPurchaseOrderInput[] = [],
@@ -390,6 +414,14 @@ export const createCompany = async (
       for (const project of projects) {
         await tx.insert(CustomerProjects).values({
           ...project,
+          uuid: generateUuid(),
+          companyUuid: uuid,
+        });
+      }
+
+      for (const counterOrder of counterOrders) {
+        await tx.insert(CounterOrders).values({
+          ...counterOrder,
           uuid: generateUuid(),
           companyUuid: uuid,
         });

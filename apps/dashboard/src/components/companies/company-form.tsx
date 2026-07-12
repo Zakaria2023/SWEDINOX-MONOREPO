@@ -19,6 +19,7 @@ import { DebtorSection } from "@/components/companies/sections/debtor-section";
 import { InvoicesSection } from "@/components/companies/sections/invoices-section";
 import { TextsSection } from "@/components/companies/sections/texts-section";
 import { ProjectsSection } from "@/components/companies/sections/projects-section";
+import { CounterOrdersSection } from "@/components/companies/sections/counter-orders-section";
 import { VisitReportsSection } from "@/components/companies/sections/visit-reports-section";
 import { PurchaseOrdersSection } from "@/components/companies/sections/purchase-orders-section";
 import { DocumentsSection } from "@/components/companies/sections/documents-section";
@@ -33,6 +34,7 @@ import { ContractDialog } from "@/components/companies/dialogs/contract-dialog";
 import { TextDialog } from "@/components/companies/dialogs/text-dialog";
 import { ContactDialog } from "@/components/companies/dialogs/contact-dialog";
 import { ProjectDialog } from "@/components/companies/dialogs/project-dialog";
+import { CounterOrderDialog } from "@/components/companies/dialogs/counter-order-dialog";
 import { ProductDialog } from "@/components/companies/dialogs/product-dialog";
 import { ProductPickerDialog } from "@/components/companies/dialogs/product-picker-dialog";
 import { CustomerProductDialog } from "@/components/companies/dialogs/customer-product-dialog";
@@ -141,6 +143,16 @@ export const CompanyForm = ({
     handleCancelProject,
     handleSaveProject,
     removeProject,
+    counterOrderForm,
+    counterOrders,
+    isCounterOrderDialogOpen,
+    isEditingCounterOrder,
+    handleCounterOrderOpenChange,
+    handleOpenCounterOrder,
+    handleEditCounterOrder,
+    handleCancelCounterOrder,
+    handleSaveCounterOrder,
+    removeCounterOrder,
     productForm,
     products,
     isProductDialogOpen,
@@ -297,6 +309,16 @@ export const CompanyForm = ({
           />
         )}
 
+        {selectedRoles.includes("customer") && (
+          <CounterOrdersSection
+            counterOrders={counterOrders}
+            removeCounterOrder={removeCounterOrder}
+            handleOpenCounterOrder={handleOpenCounterOrder}
+            handleEditCounterOrder={handleEditCounterOrder}
+            isPending={isPending}
+          />
+        )}
+
         <VisitReportsSection
           visitReports={visitReports}
           removeVisitReport={removeVisitReport}
@@ -419,6 +441,15 @@ export const CompanyForm = ({
         onSave={handleSaveProject}
         form={projectForm}
         projectContracts={projectContracts_}
+      />
+
+      <CounterOrderDialog
+        isOpen={isCounterOrderDialogOpen}
+        onOpenChange={handleCounterOrderOpenChange}
+        onCancel={handleCancelCounterOrder}
+        onSave={handleSaveCounterOrder}
+        form={counterOrderForm}
+        isEditing={isEditingCounterOrder}
       />
 
       <ProductDialog
