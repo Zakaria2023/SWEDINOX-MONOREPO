@@ -9,6 +9,8 @@ import type {
   DeliveryTimeUnit,
   CommunicationSettingShape,
   CommunicationSettingType,
+  CounterOrderPriority,
+  CounterOrderStatus,
   MachineCapacityUnit,
   MachineLoadingType,
   MachineOptionType,
@@ -988,6 +990,20 @@ export const ORDER_WEIGHT_TYPE_LABELS: Record<OrderWeightType, string> = {
   german_trade_weight: "German trade weight",
   weighed: "Weighed",
 };
+
+export const COUNTER_ORDER_STATUS_LABELS: Record<CounterOrderStatus, string> = {
+  open: "Open",
+  in_progress: "In progress",
+  delivered: "Delivered",
+  invoiced: "Invoiced",
+  cancelled: "Cancelled",
+};
+
+export const COUNTER_ORDER_PRIORITY_LABELS: Record<CounterOrderPriority, string> =
+  {
+    normal: "Normal",
+    rush: "Rush",
+  };
 
 export const PURCHASE_ORDER_TYPE_LABELS: Record<PurchaseOrderType, string> = {
   materials: "Materials",

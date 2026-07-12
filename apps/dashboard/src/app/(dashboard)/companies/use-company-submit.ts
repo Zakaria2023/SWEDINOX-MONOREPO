@@ -43,6 +43,7 @@ import {
   CompanyActionResult,
   CompanyContactInput,
   CompanyContractInput,
+  CompanyCounterOrderInput,
   CompanyTextInput,
   createCompany,
   CustomerProjectInput,
@@ -58,11 +59,14 @@ import {
   ContactDialogValues,
   contractSelectionSchema,
   ContractSelectionValues,
+  counterOrderDialogSchema,
+  CounterOrderDialogValues,
   createCompanySchema,
   DEFAULT_ADDRESS,
   DEFAULT_COMM_SETTING,
   DEFAULT_CONTACT,
   DEFAULT_CONTRACT_SELECTION,
+  DEFAULT_COUNTER_ORDER,
   DEFAULT_TEXT,
   textDialogSchema,
   TextDialogValues,
@@ -192,6 +196,14 @@ export const useCompanySubmit = ({
   const [texts, setTexts] = useState<CompanyTextInput[]>([]);
   const [isProjectDialogOpen, setIsProjectDialogOpen] = useState(false);
   const [projects, setProjects] = useState<CustomerProjectInput[]>([]);
+  const [isCounterOrderDialogOpen, setIsCounterOrderDialogOpen] =
+    useState(false);
+  const [counterOrders, setCounterOrders] = useState<
+    CompanyCounterOrderInput[]
+  >([]);
+  const [editingCounterOrderIndex, setEditingCounterOrderIndex] = useState<
+    number | null
+  >(null);
 
   const form = useForm<CompanyFormValues>({
     resolver: zodResolver(createCompanySchema()),
@@ -302,6 +314,11 @@ export const useCompanySubmit = ({
   const projectForm = useForm<ProjectFormValues>({
     resolver: zodResolver(projectSchema),
     defaultValues: DEFAULT_PROJECT,
+  });
+
+  const counterOrderForm = useForm<CounterOrderDialogValues>({
+    resolver: zodResolver(counterOrderDialogSchema),
+    defaultValues: DEFAULT_COUNTER_ORDER,
   });
 
   const addressValues = form.watch("address");
@@ -768,6 +785,102 @@ export const useCompanySubmit = ({
   const removeProject = (index: number) =>
     setProjects((prev) => prev.filter((_, i) => i !== index));
 
+  // ── Counter order handlers ───────────────────────────────────────────────────
+
+  const mapCounterOrder = (
+    values: CounterOrderDialogValues,
+  ): CompanyCounterOrderInput => ({
+    orderDate: values.orderDate || undefined,
+    deliveryDate: values.deliveryDate || undefined,
+    status: values.status,
+    priority: values.priority,
+    orderMethod:
+      (values.orderMethod ||
+        undefined) as CompanyCounterOrderInput["orderMethod"],
+    seller: values.seller || undefined,
+    customerRef: values.customerRef || undefined,
+    ourReference: values.ourReference || undefined,
+    deliveryTerms:
+      (values.deliveryTerms ||
+        undefined) as CompanyCounterOrderInput["deliveryTerms"],
+    handlingBlocked: values.handlingBlocked,
+    printPickingSlips: values.printPickingSlips,
+    isPickup: values.isPickup,
+    isIncidental: values.isIncidental,
+    isOverlengte: values.isOverlengte,
+    amountExVat: values.amountExVat || "0.00",
+    weightKg: values.weightKg || "0.000",
+    gainPercent: values.gainPercent || "0.00",
+    remarks: values.remarks || undefined,
+  });
+
+  const handleCounterOrderOpenChange = (open: boolean) => {
+    if (!open) {
+      counterOrderForm.reset(DEFAULT_COUNTER_ORDER);
+      setEditingCounterOrderIndex(null);
+    }
+    setIsCounterOrderDialogOpen(open);
+  };
+
+  const handleOpenCounterOrder = () => {
+    setEditingCounterOrderIndex(null);
+    counterOrderForm.reset({
+      ...DEFAULT_COUNTER_ORDER,
+      orderDate: todayDateString(),
+    });
+    setIsCounterOrderDialogOpen(true);
+  };
+
+  const handleEditCounterOrder = (index: number) => {
+    const order = counterOrders[index];
+    if (!order) return;
+    setEditingCounterOrderIndex(index);
+    counterOrderForm.reset({
+      customerRef: order.customerRef ?? "",
+      ourReference: order.ourReference ?? "",
+      orderMethod: order.orderMethod ?? "",
+      seller: order.seller ?? "",
+      status: order.status ?? "open",
+      priority: order.priority ?? "normal",
+      orderDate: order.orderDate ?? "",
+      deliveryDate: order.deliveryDate ?? "",
+      deliveryTerms: order.deliveryTerms ?? "",
+      handlingBlocked: order.handlingBlocked ?? false,
+      printPickingSlips: order.printPickingSlips ?? true,
+      isPickup: order.isPickup ?? false,
+      isIncidental: order.isIncidental ?? false,
+      isOverlengte: order.isOverlengte ?? false,
+      amountExVat: order.amountExVat ?? "0.00",
+      weightKg: order.weightKg ?? "0.000",
+      gainPercent: order.gainPercent ?? "0.00",
+      remarks: order.remarks ?? "",
+    });
+    setIsCounterOrderDialogOpen(true);
+  };
+
+  const handleCancelCounterOrder = () => {
+    counterOrderForm.reset(DEFAULT_COUNTER_ORDER);
+    setEditingCounterOrderIndex(null);
+    setIsCounterOrderDialogOpen(false);
+  };
+
+  const handleSaveCounterOrder = counterOrderForm.handleSubmit((values) => {
+    const entry = mapCounterOrder(values);
+    setCounterOrders((prev) =>
+      editingCounterOrderIndex === null
+        ? [...prev, entry]
+        : prev.map((order, i) =>
+            i === editingCounterOrderIndex ? entry : order,
+          ),
+    );
+    counterOrderForm.reset(DEFAULT_COUNTER_ORDER);
+    setEditingCounterOrderIndex(null);
+    setIsCounterOrderDialogOpen(false);
+  });
+
+  const removeCounterOrder = (index: number) =>
+    setCounterOrders((prev) => prev.filter((_, i) => i !== index));
+
   // ── Role handler ─────────────────────────────────────────────────────────────
 
   const toggleRole = (role: CompanyRole) => {
@@ -909,6 +1022,7 @@ export const useCompanySubmit = ({
         contacts,
         texts,
         projects,
+        counterOrders,
       );
       setState(result);
       if (result.success) router.push("/companies");
@@ -999,6 +1113,17 @@ export const useCompanySubmit = ({
     handleCancelProject,
     handleSaveProject,
     removeProject,
+
+    counterOrderForm,
+    counterOrders,
+    isCounterOrderDialogOpen,
+    isEditingCounterOrder: editingCounterOrderIndex !== null,
+    handleCounterOrderOpenChange,
+    handleOpenCounterOrder,
+    handleEditCounterOrder,
+    handleCancelCounterOrder,
+    handleSaveCounterOrder,
+    removeCounterOrder,
 
     toggleRole,
 

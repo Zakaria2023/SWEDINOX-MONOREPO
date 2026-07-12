@@ -18,6 +18,11 @@ import {
   SelectCustomerProjects,
 } from "@/db/schema/customer-projects";
 import { InsertTexts, Texts } from "@/db/schema/texts";
+import {
+  CounterOrders,
+  InsertCounterOrders,
+  SelectCounterOrders,
+} from "@/db/schema/counter-orders";
 import { PurchaseCompanyType } from "@/lib/enums";
 import { generateUuid } from "@/lib/helpers";
 import { currentUser } from "@clerk/nextjs/server";
@@ -100,6 +105,11 @@ export type CompanyTextInput = Omit<
   "id" | "uuid" | "companyUuid" | "createdByUserId" | "createdAt" | "updatedAt"
 >;
 
+export type CompanyCounterOrderInput = Omit<
+  InsertCounterOrders,
+  "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt"
+>;
+
 export type DebtorCompanyOption = Pick<SelectCompanies, "uuid" | "companyName">;
 
 export type CompanyActionResult = {
@@ -110,6 +120,7 @@ export type CompanyActionResult = {
 
 export type CompanyDetail = SelectCompanies & {
   addresses: SelectCompanyAddresses[];
+  counterOrders: SelectCounterOrders[];
 };
 
 export type ContactOption = Pick<
@@ -140,7 +151,12 @@ export const getCompanyDetail = async (
     .select()
     .from(CompanyAddresses)
     .where(eq(CompanyAddresses.companyUuid, uuid));
-  return { ...company, addresses };
+  const counterOrders = await db
+    .select()
+    .from(CounterOrders)
+    .where(eq(CounterOrders.companyUuid, uuid))
+    .orderBy(desc(CounterOrders.createdAt));
+  return { ...company, addresses, counterOrders };
 };
 
 // Derives whether a company acts as a supplier or an agent from its roles.
@@ -273,6 +289,7 @@ export const createCompany = async (
   contacts: CompanyContactInput[] = [],
   texts: CompanyTextInput[] = [],
   projects: CustomerProjectInput[] = [],
+  counterOrders: CompanyCounterOrderInput[] = [],
 ): Promise<CompanyActionResult> => {
   const uuid = generateUuid();
 
@@ -335,6 +352,14 @@ export const createCompany = async (
       for (const project of projects) {
         await tx.insert(CustomerProjects).values({
           ...project,
+          uuid: generateUuid(),
+          companyUuid: uuid,
+        });
+      }
+
+      for (const counterOrder of counterOrders) {
+        await tx.insert(CounterOrders).values({
+          ...counterOrder,
           uuid: generateUuid(),
           companyUuid: uuid,
         });

@@ -16,6 +16,7 @@ import { SalesSection } from "@/components/companies/sections/sales-section";
 import { DebtorSection } from "@/components/companies/sections/debtor-section";
 import { TextsSection } from "@/components/companies/sections/texts-section";
 import { ProjectsSection } from "@/components/companies/sections/projects-section";
+import { CounterOrdersSection } from "@/components/companies/sections/counter-orders-section";
 import { DocumentsSection } from "@/components/companies/sections/documents-section";
 import { SearchCodesSection } from "@/components/companies/sections/search-codes-section";
 import { ContactsSection } from "@/components/companies/sections/contacts-section";
@@ -26,6 +27,7 @@ import { ContractDialog } from "@/components/companies/dialogs/contract-dialog";
 import { TextDialog } from "@/components/companies/dialogs/text-dialog";
 import { ContactDialog } from "@/components/companies/dialogs/contact-dialog";
 import { ProjectDialog } from "@/components/companies/dialogs/project-dialog";
+import { CounterOrderDialog } from "@/components/companies/dialogs/counter-order-dialog";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { FormProvider } from "react-hook-form";
@@ -125,6 +127,16 @@ export const CompanyForm = ({
     handleCancelProject,
     handleSaveProject,
     removeProject,
+    counterOrderForm,
+    counterOrders,
+    isCounterOrderDialogOpen,
+    isEditingCounterOrder,
+    handleCounterOrderOpenChange,
+    handleOpenCounterOrder,
+    handleEditCounterOrder,
+    handleCancelCounterOrder,
+    handleSaveCounterOrder,
+    removeCounterOrder,
     toggleRole,
     salesData,
     setSalesData,
@@ -219,6 +231,14 @@ export const CompanyForm = ({
           />
         )}
 
+        <CounterOrdersSection
+          counterOrders={counterOrders}
+          removeCounterOrder={removeCounterOrder}
+          handleOpenCounterOrder={handleOpenCounterOrder}
+          handleEditCounterOrder={handleEditCounterOrder}
+          isPending={isPending}
+        />
+
         <DocumentsSection />
 
         <SearchCodesSection isPending={isPending} />
@@ -305,6 +325,15 @@ export const CompanyForm = ({
         onSave={handleSaveProject}
         form={projectForm}
         projectContracts={projectContracts_}
+      />
+
+      <CounterOrderDialog
+        isOpen={isCounterOrderDialogOpen}
+        onOpenChange={handleCounterOrderOpenChange}
+        onCancel={handleCancelCounterOrder}
+        onSave={handleSaveCounterOrder}
+        form={counterOrderForm}
+        isEditing={isEditingCounterOrder}
       />
     </FormProvider>
   );

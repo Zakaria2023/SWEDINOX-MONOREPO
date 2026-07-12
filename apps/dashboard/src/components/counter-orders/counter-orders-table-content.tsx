@@ -1,0 +1,208 @@
+"use client";
+
+import { useState } from "react";
+import { type CounterOrderListItem } from "@/app/(dashboard)/counter-orders/actions";
+import {
+  COMMON_TEXT,
+  COUNTER_ORDER_PRIORITY_LABELS,
+  COUNTER_ORDER_STATUS_LABELS,
+} from "@/lib/labels";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/shadcn/table";
+import { ColumnSelector } from "@/components/ui/column-selector";
+import { buildColumnVisibility } from "@/lib/helpers";
+
+type ColumnKey =
+  | "id"
+  | "companyName"
+  | "handlingBlocked"
+  | "status"
+  | "priority"
+  | "orderDate"
+  | "deliveryDate"
+  | "amountExVat"
+  | "weightKg"
+  | "customerRef"
+  | "gainPercent"
+  | "daysInSystem"
+  | "createdAt";
+
+const ALL_COLUMNS: Array<{
+  defaultVisible: boolean;
+  key: ColumnKey;
+  label: string;
+}> = [
+  { key: "id", label: "Order no", defaultVisible: true },
+  { key: "companyName", label: "Customer", defaultVisible: true },
+  { key: "handlingBlocked", label: "Blocked", defaultVisible: true },
+  { key: "status", label: "Status", defaultVisible: true },
+  { key: "orderDate", label: "Order date", defaultVisible: true },
+  { key: "deliveryDate", label: "Delivery date", defaultVisible: true },
+  { key: "amountExVat", label: "Amount (ex VAT)", defaultVisible: true },
+  { key: "weightKg", label: "Weight (kg)", defaultVisible: true },
+  { key: "customerRef", label: "Customer reference", defaultVisible: true },
+  { key: "gainPercent", label: "Gain%", defaultVisible: true },
+  { key: "daysInSystem", label: "Days in system", defaultVisible: true },
+  { key: "priority", label: "Priority", defaultVisible: false },
+  { key: "createdAt", label: "Created At", defaultVisible: false },
+];
+
+const daysInSystem = (createdAt: Date) =>
+  Math.max(
+    0,
+    Math.floor((Date.now() - new Date(createdAt).getTime()) / 86_400_000),
+  );
+
+type CounterOrdersTableProps = {
+  counterOrders: CounterOrderListItem[];
+};
+
+export const CounterOrdersTable = ({
+  counterOrders,
+}: CounterOrdersTableProps) => {
+  const [columnVisibility, setColumnVisibility] =
+    useState<Record<ColumnKey, boolean>>(buildColumnVisibility(ALL_COLUMNS));
+
+  const toggleColumn = (key: string) =>
+    setColumnVisibility((prev) => ({
+      ...prev,
+      [key]: !prev[key as ColumnKey],
+    }));
+
+  const visibleColumns = ALL_COLUMNS.filter(
+    (column) => columnVisibility[column.key],
+  );
+  const na = COMMON_TEXT.notAvailable;
+
+  const renderCell = (order: CounterOrderListItem, key: ColumnKey) => {
+    switch (key) {
+      case "id":
+        return (
+          <TableCell key={key} className="font-medium">
+            {order.id}
+          </TableCell>
+        );
+      case "companyName":
+        return (
+          <TableCell key={key} className="font-medium">
+            {order.companyName}
+          </TableCell>
+        );
+      case "handlingBlocked":
+        return (
+          <TableCell key={key}>
+            {order.handlingBlocked ? (
+              <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
+                {COMMON_TEXT.yes}
+              </span>
+            ) : (
+              <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                {COMMON_TEXT.no}
+              </span>
+            )}
+          </TableCell>
+        );
+      case "status":
+        return (
+          <TableCell key={key}>
+            {COUNTER_ORDER_STATUS_LABELS[order.status]}
+          </TableCell>
+        );
+      case "priority":
+        return (
+          <TableCell key={key}>
+            {COUNTER_ORDER_PRIORITY_LABELS[order.priority]}
+          </TableCell>
+        );
+      case "orderDate":
+        return <TableCell key={key}>{order.orderDate ?? na}</TableCell>;
+      case "deliveryDate":
+        return <TableCell key={key}>{order.deliveryDate ?? na}</TableCell>;
+      case "amountExVat":
+        return (
+          <TableCell key={key} className="text-right whitespace-nowrap">
+            € {order.amountExVat}
+          </TableCell>
+        );
+      case "weightKg":
+        return (
+          <TableCell key={key} className="text-right whitespace-nowrap">
+            {order.weightKg}
+          </TableCell>
+        );
+      case "customerRef":
+        return <TableCell key={key}>{order.customerRef ?? na}</TableCell>;
+      case "gainPercent":
+        return (
+          <TableCell key={key} className="text-right whitespace-nowrap">
+            {order.gainPercent} %
+          </TableCell>
+        );
+      case "daysInSystem":
+        return (
+          <TableCell key={key} className="text-right">
+            {daysInSystem(order.createdAt)}
+          </TableCell>
+        );
+      case "createdAt":
+        return (
+          <TableCell key={key}>
+            {new Date(order.createdAt).toLocaleDateString()}
+          </TableCell>
+        );
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <ColumnSelector
+          columns={ALL_COLUMNS.map((column) => ({
+            key: column.key,
+            label: column.label,
+          }))}
+          visibility={columnVisibility}
+          onToggle={toggleColumn}
+        />
+      </div>
+
+      <div className="overflow-x-auto rounded-lg border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              {visibleColumns.map((column) => (
+                <TableHead key={column.key}>{column.label}</TableHead>
+              ))}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {counterOrders.length === 0 ? (
+              <TableRow>
+                <TableCell
+                  colSpan={visibleColumns.length}
+                  className="h-24 text-center"
+                >
+                  No counter orders found
+                </TableCell>
+              </TableRow>
+            ) : (
+              counterOrders.map((order) => (
+                <TableRow key={order.uuid}>
+                  {visibleColumns.map((column) =>
+                    renderCell(order, column.key),
+                  )}
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+};
