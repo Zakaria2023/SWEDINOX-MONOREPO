@@ -42,6 +42,7 @@ import type {
   ProductQualityStandard,
   PurchaseInvoiceBlockReason,
   PurchaseInvoiceFiscalBase,
+  PurchaseOrderStatus,
   PurchasingUnit,
   RevenueGroup,
   SalesUnit,
@@ -994,6 +995,15 @@ export const PURCHASE_ORDER_TYPE_LABELS: Record<PurchaseOrderType, string> = {
   processing: "Processing",
   customer_materials: "Customer Materials",
 };
+
+export const PURCHASE_ORDER_STATUS_LABELS: Record<PurchaseOrderStatus, string> =
+  {
+    open: "Open",
+    confirmed: "Confirmed",
+    pre_notified: "Pre-notified",
+    completed: "Completed",
+    cancelled: "Cancelled",
+  };
 
 export const PURCHASE_COMPANY_TYPE_LABELS: Record<
   PurchaseCompanyType,
