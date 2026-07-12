@@ -14,6 +14,7 @@ import { RolesSection } from "@/components/companies/sections/roles-section";
 import { ContractsSection } from "@/components/companies/sections/contracts-section";
 import { SalesSection } from "@/components/companies/sections/sales-section";
 import { DebtorSection } from "@/components/companies/sections/debtor-section";
+import { InvoicesSection } from "@/components/companies/sections/invoices-section";
 import { TextsSection } from "@/components/companies/sections/texts-section";
 import { ProjectsSection } from "@/components/companies/sections/projects-section";
 import { DocumentsSection } from "@/components/companies/sections/documents-section";
@@ -199,6 +200,10 @@ export const CompanyForm = ({
             currencyOptions={currencyOptions}
             currentUserName={currentUserName}
           />
+        )}
+
+        {selectedRoles.includes("customer") && (
+          <InvoicesSection isPending={isPending} />
         )}
 
         <TextsSection

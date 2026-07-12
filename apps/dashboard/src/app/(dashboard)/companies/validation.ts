@@ -6,7 +6,9 @@ import {
   contactSalutations,
   contractableRoles,
   currencies,
+  invoiceFrequencies,
   invoicePaymentTerms,
+  invoicingMethods,
   ContractableRole,
   TextUsageCategory,
 } from "@/lib/enums";
@@ -150,6 +152,22 @@ export const createCompanySchema = () =>
     currency: z.union([z.enum(currencies), z.literal(""), z.undefined()]),
     isBlocked: z.boolean(),
     blockedByNote: z.string().optional(),
+    // Invoicing settings
+    invoicingMethod: z.union([
+      z.enum(invoicingMethods),
+      z.literal(""),
+      z.undefined(),
+    ]),
+    collectiveInvoicing: z.boolean(),
+    invoicePackagingAtZeroPrice: z.boolean(),
+    printCommodityCode: z.boolean(),
+    invoiceFrequency: z.enum(invoiceFrequencies),
+    invoicePrintEnabled: z.boolean(),
+    invoicePrintCount: z.number().int().min(1),
+    invoiceEmailEnabled: z.boolean(),
+    invoiceEmailTo: z.string().optional(),
+    printEmailZeroValueInvoices: z.boolean(),
+    sendXmlWithInvoice: z.boolean(),
   });
 
 export type AddressFormValues = z.infer<ReturnType<typeof createAddressSchema>>;

@@ -20,7 +20,9 @@ import {
   customerGroups,
   devTheorWtOptions,
   groupLinesByDescriptionOptions,
+  invoiceFrequencies,
   invoicePaymentTerms,
+  invoicingMethods,
   printProductCodesOptions,
   salesRepresentatives,
   CompanyRole,
@@ -152,6 +154,35 @@ export const Companies = mysqlTable(
     currency: mysqlEnum("currency", currencies),
     blockedByUserId: varchar("blocked_by_user_id", { length: 255 }),
     blockedByNote: varchar("blocked_by_note", { length: 500 }),
+
+    // Invoicing settings (customer)
+    invoicingMethod: mysqlEnum("invoicing_method", invoicingMethods),
+    collectiveInvoicing: boolean("collective_invoicing")
+      .default(false)
+      .notNull(),
+    invoicePackagingAtZeroPrice: boolean("invoice_packaging_at_zero_price")
+      .default(false)
+      .notNull(),
+    printCommodityCode: boolean("print_commodity_code")
+      .default(false)
+      .notNull(),
+    invoiceFrequency: mysqlEnum("invoice_frequency", invoiceFrequencies)
+      .default("daily")
+      .notNull(),
+    invoicePrintEnabled: boolean("invoice_print_enabled")
+      .default(false)
+      .notNull(),
+    invoicePrintCount: int("invoice_print_count").default(1).notNull(),
+    invoiceEmailEnabled: boolean("invoice_email_enabled")
+      .default(false)
+      .notNull(),
+    invoiceEmailTo: varchar("invoice_email_to", { length: 255 }),
+    printEmailZeroValueInvoices: boolean("print_email_zero_value_invoices")
+      .default(false)
+      .notNull(),
+    sendXmlWithInvoice: boolean("send_xml_with_invoice")
+      .default(false)
+      .notNull(),
 
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
