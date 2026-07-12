@@ -25,6 +25,17 @@ type Props = {
   products: ProductOption[];
 };
 
+type GroupNodeProps = {
+  group: ProductGroupOption;
+  depth: number;
+  childGroupsByParent: Map<string, ProductGroupOption[]>;
+  productsByGroup: Map<string, ProductOption[]>;
+  expanded: Set<string>;
+  toggleExpanded: (uuid: string) => void;
+  selectedUuid: string | null;
+  onPick: (product: ProductOption) => void;
+};
+
 type Tab = "search" | "assortment";
 
 const GroupNode = ({
@@ -36,16 +47,7 @@ const GroupNode = ({
   toggleExpanded,
   selectedUuid,
   onPick,
-}: {
-  group: ProductGroupOption;
-  depth: number;
-  childGroupsByParent: Map<string, ProductGroupOption[]>;
-  productsByGroup: Map<string, ProductOption[]>;
-  expanded: Set<string>;
-  toggleExpanded: (uuid: string) => void;
-  selectedUuid: string | null;
-  onPick: (product: ProductOption) => void;
-}) => {
+}: GroupNodeProps) => {
   const isExpanded = expanded.has(group.uuid);
   const childGroups = childGroupsByParent.get(group.uuid) ?? [];
   const groupProducts = productsByGroup.get(group.uuid) ?? [];

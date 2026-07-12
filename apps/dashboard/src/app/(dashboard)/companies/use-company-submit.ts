@@ -900,7 +900,10 @@ export const useCompanySubmit = ({
   };
 
   const handleSaveProduct = productForm.handleSubmit((values) => {
-    if (!pickedProduct) return;
+    if (!pickedProduct) {
+      return;
+    }
+
     setProducts((prev) => [
       ...prev,
       {
