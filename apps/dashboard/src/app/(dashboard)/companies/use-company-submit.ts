@@ -48,6 +48,7 @@ import {
   CustomerProjectInput,
   CustomerSalesInput,
   DebtorCompanyOption,
+  VisitReportInput,
 } from "./actions";
 import {
   AddressFormValues,
@@ -64,9 +65,12 @@ import {
   DEFAULT_CONTACT,
   DEFAULT_CONTRACT_SELECTION,
   DEFAULT_TEXT,
+  DEFAULT_VISIT_REPORT,
   textDialogSchema,
   TextDialogValues,
   USAGE_CATEGORY_FIELDS,
+  visitReportDialogSchema,
+  VisitReportDialogValues,
 } from "./validation";
 
 const AGENT_ALLOWED = new Set<CompanyRole>(["agent", "other", "internal"]);
@@ -192,6 +196,8 @@ export const useCompanySubmit = ({
   const [texts, setTexts] = useState<CompanyTextInput[]>([]);
   const [isProjectDialogOpen, setIsProjectDialogOpen] = useState(false);
   const [projects, setProjects] = useState<CustomerProjectInput[]>([]);
+  const [isVisitReportDialogOpen, setIsVisitReportDialogOpen] = useState(false);
+  const [visitReports, setVisitReports] = useState<VisitReportInput[]>([]);
 
   const form = useForm<CompanyFormValues>({
     resolver: zodResolver(createCompanySchema()),
@@ -302,6 +308,11 @@ export const useCompanySubmit = ({
   const projectForm = useForm<ProjectFormValues>({
     resolver: zodResolver(projectSchema),
     defaultValues: DEFAULT_PROJECT,
+  });
+
+  const visitReportForm = useForm<VisitReportDialogValues>({
+    resolver: zodResolver(visitReportDialogSchema),
+    defaultValues: DEFAULT_VISIT_REPORT,
   });
 
   const addressValues = form.watch("address");
@@ -768,6 +779,45 @@ export const useCompanySubmit = ({
   const removeProject = (index: number) =>
     setProjects((prev) => prev.filter((_, i) => i !== index));
 
+  // ── Visit report handlers ────────────────────────────────────────────────────
+
+  const handleVisitReportOpenChange = (open: boolean) => {
+    if (!open) visitReportForm.reset(DEFAULT_VISIT_REPORT);
+    setIsVisitReportDialogOpen(open);
+  };
+
+  const handleOpenVisitReport = () => {
+    visitReportForm.reset(DEFAULT_VISIT_REPORT);
+    setIsVisitReportDialogOpen(true);
+  };
+
+  const handleCancelVisitReport = () => {
+    visitReportForm.reset(DEFAULT_VISIT_REPORT);
+    setIsVisitReportDialogOpen(false);
+  };
+
+  const handleSaveVisitReport = visitReportForm.handleSubmit((values) => {
+    setVisitReports((prev) => [
+      ...prev,
+      {
+        visitDate: values.visitDate || undefined,
+        visitTime: values.visitTime || undefined,
+        contactMethod:
+          (values.contactMethod ||
+            undefined) as VisitReportInput["contactMethod"],
+        hasTakenPlace: values.hasTakenPlace,
+        visitReason:
+          (values.visitReason || undefined) as VisitReportInput["visitReason"],
+        representative: values.contact || undefined,
+      },
+    ]);
+    visitReportForm.reset(DEFAULT_VISIT_REPORT);
+    setIsVisitReportDialogOpen(false);
+  });
+
+  const removeVisitReport = (index: number) =>
+    setVisitReports((prev) => prev.filter((_, i) => i !== index));
+
   // ── Role handler ─────────────────────────────────────────────────────────────
 
   const toggleRole = (role: CompanyRole) => {
@@ -909,6 +959,7 @@ export const useCompanySubmit = ({
         contacts,
         texts,
         projects,
+        visitReports,
       );
       setState(result);
       if (result.success) router.push("/companies");
@@ -999,6 +1050,15 @@ export const useCompanySubmit = ({
     handleCancelProject,
     handleSaveProject,
     removeProject,
+
+    visitReportForm,
+    visitReports,
+    isVisitReportDialogOpen,
+    handleVisitReportOpenChange,
+    handleOpenVisitReport,
+    handleCancelVisitReport,
+    handleSaveVisitReport,
+    removeVisitReport,
 
     toggleRole,
 

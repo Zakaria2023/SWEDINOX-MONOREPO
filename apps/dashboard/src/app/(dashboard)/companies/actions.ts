@@ -18,6 +18,11 @@ import {
   SelectCustomerProjects,
 } from "@/db/schema/customer-projects";
 import { InsertTexts, Texts } from "@/db/schema/texts";
+import {
+  InsertVisitReports,
+  SelectVisitReports,
+  VisitReports,
+} from "@/db/schema/visit-reports";
 import { PurchaseCompanyType } from "@/lib/enums";
 import { generateUuid } from "@/lib/helpers";
 import { currentUser } from "@clerk/nextjs/server";
@@ -100,6 +105,11 @@ export type CompanyTextInput = Omit<
   "id" | "uuid" | "companyUuid" | "createdByUserId" | "createdAt" | "updatedAt"
 >;
 
+export type VisitReportInput = Omit<
+  InsertVisitReports,
+  "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt"
+>;
+
 export type DebtorCompanyOption = Pick<SelectCompanies, "uuid" | "companyName">;
 
 export type CompanyActionResult = {
@@ -110,6 +120,7 @@ export type CompanyActionResult = {
 
 export type CompanyDetail = SelectCompanies & {
   addresses: SelectCompanyAddresses[];
+  visitReports: SelectVisitReports[];
 };
 
 export type ContactOption = Pick<
@@ -140,7 +151,12 @@ export const getCompanyDetail = async (
     .select()
     .from(CompanyAddresses)
     .where(eq(CompanyAddresses.companyUuid, uuid));
-  return { ...company, addresses };
+  const visitReports = await db
+    .select()
+    .from(VisitReports)
+    .where(eq(VisitReports.companyUuid, uuid))
+    .orderBy(desc(VisitReports.createdAt));
+  return { ...company, addresses, visitReports };
 };
 
 // Derives whether a company acts as a supplier or an agent from its roles.
@@ -273,6 +289,7 @@ export const createCompany = async (
   contacts: CompanyContactInput[] = [],
   texts: CompanyTextInput[] = [],
   projects: CustomerProjectInput[] = [],
+  visitReports: VisitReportInput[] = [],
 ): Promise<CompanyActionResult> => {
   const uuid = generateUuid();
 
@@ -335,6 +352,14 @@ export const createCompany = async (
       for (const project of projects) {
         await tx.insert(CustomerProjects).values({
           ...project,
+          uuid: generateUuid(),
+          companyUuid: uuid,
+        });
+      }
+
+      for (const visitReport of visitReports) {
+        await tx.insert(VisitReports).values({
+          ...visitReport,
           uuid: generateUuid(),
           companyUuid: uuid,
         });

@@ -7,6 +7,8 @@ import {
   contractableRoles,
   currencies,
   invoicePaymentTerms,
+  visitReportContactMethods,
+  visitReportReasons,
   ContractableRole,
   TextUsageCategory,
 } from "@/lib/enums";
@@ -319,6 +321,36 @@ export const USAGE_CATEGORY_FIELDS: Array<{
   { key: "website_in_advance", field: "websiteInAdvance" },
   { key: "website_after", field: "websiteAfter" },
 ];
+
+// ── Visit Report Dialog ──────────────────────────────────────────────────────
+
+export const visitReportDialogSchema = z.object({
+  visitDate: z.string().optional(),
+  visitTime: z.string().optional(),
+  contactMethod: z.union([
+    z.enum(visitReportContactMethods),
+    z.literal(""),
+    z.undefined(),
+  ]),
+  hasTakenPlace: z.boolean(),
+  visitReason: z.union([
+    z.enum(visitReportReasons),
+    z.literal(""),
+    z.undefined(),
+  ]),
+  contact: z.string().optional(),
+});
+
+export type VisitReportDialogValues = z.infer<typeof visitReportDialogSchema>;
+
+export const DEFAULT_VISIT_REPORT: VisitReportDialogValues = {
+  visitDate: "",
+  visitTime: "",
+  contactMethod: "",
+  hasTakenPlace: false,
+  visitReason: "",
+  contact: "",
+};
 
 export const DEFAULT_TEXT: TextDialogValues = {
   textCategoryUuid: "",

@@ -14,6 +14,8 @@ import {
   COMPANY_ROLE_LABELS,
   INVOICE_PAYMENT_TERM_LABELS,
   INVOICE_VAT_SCENARIO_LABELS,
+  VISIT_REPORT_CONTACT_METHOD_LABELS,
+  VISIT_REPORT_REASON_LABELS,
 } from "@/lib/labels";
 import { Plus } from "lucide-react";
 import Link from "next/link";
@@ -33,6 +35,13 @@ const Field = ({ label, value }: { label: string; value?: string | null }) => (
     </dd>
   </div>
 );
+
+// Number of whole days since the visit report was created.
+const daysInSystem = (createdAt: Date) =>
+  Math.max(
+    0,
+    Math.floor((Date.now() - new Date(createdAt).getTime()) / 86_400_000),
+  );
 
 export const CompanyDetailView = ({ company, invoices }: Props) => {
   const isCustomer = company.roles.includes("customer");
@@ -112,6 +121,58 @@ export const CompanyDetailView = ({ company, invoices }: Props) => {
                     <TableCell>{addr.country ?? na}</TableCell>
                     <TableCell>{addr.telephone ?? na}</TableCell>
                     <TableCell>{addr.email ?? na}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </section>
+      )}
+
+      {/* Visit Reports */}
+      {company.visitReports.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-gray-700">
+            Visit Reports{" "}
+            <span className="ml-1 text-xs font-normal text-muted-foreground">
+              {company.visitReports.length}
+            </span>
+          </h2>
+          <div className="overflow-x-auto rounded-lg border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Visit date</TableHead>
+                  <TableHead>Visit time</TableHead>
+                  <TableHead>Sort</TableHead>
+                  <TableHead>Took place</TableHead>
+                  <TableHead>Reason</TableHead>
+                  <TableHead>Contact</TableHead>
+                  <TableHead className="text-right">Days in system</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {company.visitReports.map((report) => (
+                  <TableRow key={report.uuid}>
+                    <TableCell>{report.visitDate ?? na}</TableCell>
+                    <TableCell>{report.visitTime ?? na}</TableCell>
+                    <TableCell>
+                      {report.contactMethod
+                        ? VISIT_REPORT_CONTACT_METHOD_LABELS[
+                            report.contactMethod
+                          ]
+                        : na}
+                    </TableCell>
+                    <TableCell>{report.hasTakenPlace ? "Yes" : "No"}</TableCell>
+                    <TableCell>
+                      {report.visitReason
+                        ? VISIT_REPORT_REASON_LABELS[report.visitReason]
+                        : na}
+                    </TableCell>
+                    <TableCell>{report.representative ?? na}</TableCell>
+                    <TableCell className="text-right">
+                      {daysInSystem(report.createdAt)}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
