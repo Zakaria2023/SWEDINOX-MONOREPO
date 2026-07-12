@@ -46,7 +46,7 @@ export const Companies = mysqlTable(
     searchCode1: varchar("search_code_1", { length: 100 }),
     searchCode2: varchar("search_code_2", { length: 100 }),
     searchCode3: varchar("search_code_3", { length: 100 }),
-    roles: json("roles").$type<CompanyRole[]>().default([]).notNull(),
+    roles: json("roles").$type<CompanyRole[]>().default([]),
     documents:
       json("documents").$type<Array<{ id: string; fileName: string }>>(),
 
@@ -58,15 +58,13 @@ export const Companies = mysqlTable(
     memberOf: varchar("member_of", { length: 255 }),
     miscellaneousSettings: json("miscellaneous_settings")
       .$type<MiscellaneousOption[]>()
-      .default([])
-      .notNull(),
+      .default([]),
     deliveryCondition: varchar("delivery_condition", { length: 255 }),
     devTheorWt: mysqlEnum("dev_theor_wt", devTheorWtOptions),
     defTransport: varchar("def_transport", { length: 255 }),
     quoteOrderSettings: json("quote_order_settings")
       .$type<QuoteOrderOption[]>()
-      .default([])
-      .notNull(),
+      .default([]),
     groupLinesByLongProductGroupDescription: mysqlEnum(
       "group_lines_by_long_product_group_description",
       groupLinesByDescriptionOptions,
@@ -77,46 +75,31 @@ export const Companies = mysqlTable(
     ),
     quoteOrderInvoiceSettings: json("quote_order_invoice_settings")
       .$type<QuoteOrderInvoiceOption[]>()
-      .default([])
-      .notNull(),
-    orderSettings: json("order_settings")
-      .$type<OrderOption[]>()
-      .default([])
-      .notNull(),
-    quoteSettings: json("quote_settings")
-      .$type<QuoteOption[]>()
-      .default([])
-      .notNull(),
-    websiteQuoteMustBeApproved: boolean("website_quote_must_be_approved")
-      .default(false)
-      .notNull(),
+      .default([]),
+    orderSettings: json("order_settings").$type<OrderOption[]>().default([]),
+    quoteSettings: json("quote_settings").$type<QuoteOption[]>().default([]),
+    websiteQuoteMustBeApproved: boolean(
+      "website_quote_must_be_approved",
+    ).default(false),
     websiteQuoteApprovalAmount: decimal("website_quote_approval_amount", {
       precision: 15,
       scale: 2,
     }),
-    releaseActionPrint: boolean("release_action_print")
-      .default(false)
-      .notNull(),
-    releaseActionEmailEnabled: boolean("release_action_email_enabled")
-      .default(false)
-      .notNull(),
+    releaseActionPrint: boolean("release_action_print").default(false),
+    releaseActionEmailEnabled: boolean("release_action_email_enabled").default(
+      false,
+    ),
     releaseActionEmailTo: varchar("release_action_email_to", { length: 255 }),
-    releaseActionFaxEnabled: boolean("release_action_fax_enabled")
-      .default(false)
-      .notNull(),
+    releaseActionFaxEnabled: boolean("release_action_fax_enabled").default(
+      false,
+    ),
     releaseActionFaxTo: varchar("release_action_fax_to", { length: 255 }),
-    actionPrint: boolean("action_print").default(false).notNull(),
-    actionEmailEnabled: boolean("action_email_enabled")
-      .default(false)
-      .notNull(),
+    actionPrint: boolean("action_print").default(false),
+    actionEmailEnabled: boolean("action_email_enabled").default(false),
     actionEmailTo: varchar("action_email_to", { length: 255 }),
-    actionFaxEnabled: boolean("action_fax_enabled").default(false).notNull(),
+    actionFaxEnabled: boolean("action_fax_enabled").default(false),
     actionFaxTo: varchar("action_fax_to", { length: 255 }),
-    ediSettings: json("edi_settings")
-      .$type<EdiOption[]>()
-      .default([])
-      .notNull(),
-
+    ediSettings: json("edi_settings").$type<EdiOption[]>().default([]),
     // Debtor fields
     debtorCompanyUuid: char("debtor_company_uuid", { length: 36 }),
     iban: varchar("iban", { length: 34 }),
@@ -127,11 +110,11 @@ export const Companies = mysqlTable(
     memberNumberPurchaseOrg: varchar("member_number_purchase_org", {
       length: 100,
     }),
-    calculateVat: boolean("calculate_vat").notNull().default(true),
-    reminder: boolean("reminder").notNull().default(true),
-    collectInvoicesInMandate: boolean("collect_invoices_in_mandate")
-      .notNull()
-      .default(false),
+    calculateVat: boolean("calculate_vat").default(true),
+    reminder: boolean("reminder").default(true),
+    collectInvoicesInMandate: boolean("collect_invoices_in_mandate").default(
+      false,
+    ),
     insuranceValidUntil: date("insurance_valid_until"),
     creditLimitInsurance: decimal("credit_limit_insurance", {
       precision: 15,
@@ -157,33 +140,23 @@ export const Companies = mysqlTable(
 
     // Invoicing settings (customer)
     invoicingMethod: mysqlEnum("invoicing_method", invoicingMethods),
-    collectiveInvoicing: boolean("collective_invoicing")
-      .default(false)
-      .notNull(),
-    invoicePackagingAtZeroPrice: boolean("invoice_packaging_at_zero_price")
-      .default(false)
-      .notNull(),
-    printCommodityCode: boolean("print_commodity_code")
-      .default(false)
-      .notNull(),
-    invoiceFrequency: mysqlEnum("invoice_frequency", invoiceFrequencies)
-      .default("daily")
-      .notNull(),
-    invoicePrintEnabled: boolean("invoice_print_enabled")
-      .default(false)
-      .notNull(),
-    invoicePrintCount: int("invoice_print_count").default(1).notNull(),
-    invoiceEmailEnabled: boolean("invoice_email_enabled")
-      .default(false)
-      .notNull(),
+    collectiveInvoicing: boolean("collective_invoicing").default(false),
+    invoicePackagingAtZeroPrice: boolean(
+      "invoice_packaging_at_zero_price",
+    ).default(false),
+    printCommodityCode: boolean("print_commodity_code").default(false),
+    invoiceFrequency: mysqlEnum(
+      "invoice_frequency",
+      invoiceFrequencies,
+    ).default("daily"),
+    invoicePrintEnabled: boolean("invoice_print_enabled").default(false),
+    invoicePrintCount: int("invoice_print_count").default(1),
+    invoiceEmailEnabled: boolean("invoice_email_enabled").default(false),
     invoiceEmailTo: varchar("invoice_email_to", { length: 255 }),
-    printEmailZeroValueInvoices: boolean("print_email_zero_value_invoices")
-      .default(false)
-      .notNull(),
-    sendXmlWithInvoice: boolean("send_xml_with_invoice")
-      .default(false)
-      .notNull(),
-
+    printEmailZeroValueInvoices: boolean(
+      "print_email_zero_value_invoices",
+    ).default(false),
+    sendXmlWithInvoice: boolean("send_xml_with_invoice").default(false),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
   },
