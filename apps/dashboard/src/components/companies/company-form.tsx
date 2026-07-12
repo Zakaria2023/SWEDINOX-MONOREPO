@@ -6,6 +6,8 @@ import {
   ContractForProjectOption,
   ContractListItem,
 } from "@/app/(dashboard)/contracts/actions";
+import { ProductGroupOption } from "@/app/(dashboard)/product-groups/actions";
+import { ProductOption } from "@/app/(dashboard)/products/actions";
 import { TextCategoryOption } from "@/app/(dashboard)/text-categories/actions";
 import { FormActions } from "@/components/ui/form-actions";
 import { FormError } from "@/components/ui/form-error";
@@ -14,12 +16,17 @@ import { RolesSection } from "@/components/companies/sections/roles-section";
 import { ContractsSection } from "@/components/companies/sections/contracts-section";
 import { SalesSection } from "@/components/companies/sections/sales-section";
 import { DebtorSection } from "@/components/companies/sections/debtor-section";
+import { InvoicesSection } from "@/components/companies/sections/invoices-section";
 import { TextsSection } from "@/components/companies/sections/texts-section";
 import { ProjectsSection } from "@/components/companies/sections/projects-section";
+import { CounterOrdersSection } from "@/components/companies/sections/counter-orders-section";
+import { VisitReportsSection } from "@/components/companies/sections/visit-reports-section";
 import { PurchaseOrdersSection } from "@/components/companies/sections/purchase-orders-section";
 import { DocumentsSection } from "@/components/companies/sections/documents-section";
 import { SearchCodesSection } from "@/components/companies/sections/search-codes-section";
 import { ContactsSection } from "@/components/companies/sections/contacts-section";
+import { ProductsSection } from "@/components/companies/sections/products-section";
+import { CustomerProductsSection } from "@/components/companies/sections/customer-products-section";
 import { FirstAddressDialog } from "@/components/companies/dialogs/first-address-dialog";
 import { AdditionalAddressDialog } from "@/components/companies/dialogs/additional-address-dialog";
 import { CommunicationSettingDialog } from "@/components/companies/dialogs/communication-setting-dialog";
@@ -27,6 +34,11 @@ import { ContractDialog } from "@/components/companies/dialogs/contract-dialog";
 import { TextDialog } from "@/components/companies/dialogs/text-dialog";
 import { ContactDialog } from "@/components/companies/dialogs/contact-dialog";
 import { ProjectDialog } from "@/components/companies/dialogs/project-dialog";
+import { CounterOrderDialog } from "@/components/companies/dialogs/counter-order-dialog";
+import { ProductDialog } from "@/components/companies/dialogs/product-dialog";
+import { ProductPickerDialog } from "@/components/companies/dialogs/product-picker-dialog";
+import { CustomerProductDialog } from "@/components/companies/dialogs/customer-product-dialog";
+import { VisitReportDialog } from "@/components/companies/dialogs/visit-report-dialog";
 import { PurchaseOrderDialog } from "@/components/companies/dialogs/purchase-order-dialog";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
@@ -38,6 +50,8 @@ type CompanyFormProps = {
   textCategories: TextCategoryOption[];
   debtorCompanies: DebtorCompanyOption[];
   purchaseOrgCompanies: DebtorCompanyOption[];
+  productGroups: ProductGroupOption[];
+  availableProducts: ProductOption[];
 };
 
 export const CompanyForm = ({
@@ -46,6 +60,8 @@ export const CompanyForm = ({
   textCategories,
   debtorCompanies,
   purchaseOrgCompanies,
+  productGroups,
+  availableProducts,
 }: CompanyFormProps) => {
   const router = useRouter();
   const { user } = useUser();
@@ -127,6 +143,54 @@ export const CompanyForm = ({
     handleCancelProject,
     handleSaveProject,
     removeProject,
+    counterOrderForm,
+    counterOrders,
+    isCounterOrderDialogOpen,
+    isEditingCounterOrder,
+    handleCounterOrderOpenChange,
+    handleOpenCounterOrder,
+    handleEditCounterOrder,
+    handleCancelCounterOrder,
+    handleSaveCounterOrder,
+    removeCounterOrder,
+    productForm,
+    products,
+    isProductDialogOpen,
+    isProductPickerOpen,
+    setIsProductPickerOpen,
+    pickedProduct,
+    handleProductOpenChange,
+    handleOpenProduct,
+    handleCancelProduct,
+    handleSaveProduct,
+    handleOpenProductPicker,
+    handleCancelProductPicker,
+    handlePickProduct,
+    removeProduct,
+    customerProductForm,
+    customerProducts,
+    isCustomerProductDialogOpen,
+    isCustomerProductPickerOpen,
+    setIsCustomerProductPickerOpen,
+    pickedCustomerProduct,
+    handleCustomerProductOpenChange,
+    handleOpenCustomerProduct,
+    handleCancelCustomerProduct,
+    handleSaveCustomerProduct,
+    handleOpenCustomerProductPicker,
+    handleCancelCustomerProductPicker,
+    handlePickCustomerProduct,
+    removeCustomerProduct,
+    visitReportForm,
+    visitReports,
+    isVisitReportDialogOpen,
+    isEditingVisitReport,
+    handleVisitReportOpenChange,
+    handleOpenVisitReport,
+    handleEditVisitReport,
+    handleCancelVisitReport,
+    handleSaveVisitReport,
+    removeVisitReport,
     purchaseOrderForm,
     purchaseOrders,
     isPurchaseOrderDialogOpen,
@@ -149,6 +213,8 @@ export const CompanyForm = ({
     textCategories,
     debtorCompanies,
     purchaseOrgCompanies,
+    productGroups,
+    availableProducts,
   });
 
   const isCustomerOrProspect =
@@ -158,6 +224,9 @@ export const CompanyForm = ({
     selectedRoles.includes("customer") ||
     selectedRoles.includes("prospect") ||
     selectedRoles.includes("purchasing_org");
+
+  const isCustomerOrSupplier =
+    isCustomerOrProspect || selectedRoles.includes("supplier");
 
   const isPurchaseOrderVisible =
     selectedRoles.includes("customer") ||
@@ -218,6 +287,10 @@ export const CompanyForm = ({
           />
         )}
 
+        {selectedRoles.includes("customer") && (
+          <InvoicesSection isPending={isPending} />
+        )}
+
         <TextsSection
           texts={texts}
           removeText={removeText}
@@ -235,6 +308,24 @@ export const CompanyForm = ({
             projectContracts={projectContracts_}
           />
         )}
+
+        {selectedRoles.includes("customer") && (
+          <CounterOrdersSection
+            counterOrders={counterOrders}
+            removeCounterOrder={removeCounterOrder}
+            handleOpenCounterOrder={handleOpenCounterOrder}
+            handleEditCounterOrder={handleEditCounterOrder}
+            isPending={isPending}
+          />
+        )}
+
+        <VisitReportsSection
+          visitReports={visitReports}
+          removeVisitReport={removeVisitReport}
+          handleOpenVisitReport={handleOpenVisitReport}
+          handleEditVisitReport={handleEditVisitReport}
+          isPending={isPending}
+        />
 
         {isPurchaseOrderVisible && (
           <PurchaseOrdersSection
@@ -256,6 +347,24 @@ export const CompanyForm = ({
           handleOpenContact={handleOpenContact}
           isPending={isPending}
         />
+
+        {isCustomerOrSupplier && (
+          <ProductsSection
+            products={products}
+            removeProduct={removeProduct}
+            handleOpenProduct={handleOpenProduct}
+            isPending={isPending}
+          />
+        )}
+
+        {selectedRoles.includes("customer") && (
+          <CustomerProductsSection
+            products={customerProducts}
+            removeProduct={removeCustomerProduct}
+            handleOpenProduct={handleOpenCustomerProduct}
+            isPending={isPending}
+          />
+        )}
 
         <FormError>{state.error}</FormError>
 
@@ -332,6 +441,63 @@ export const CompanyForm = ({
         onSave={handleSaveProject}
         form={projectForm}
         projectContracts={projectContracts_}
+      />
+
+      <CounterOrderDialog
+        isOpen={isCounterOrderDialogOpen}
+        onOpenChange={handleCounterOrderOpenChange}
+        onCancel={handleCancelCounterOrder}
+        onSave={handleSaveCounterOrder}
+        form={counterOrderForm}
+        isEditing={isEditingCounterOrder}
+      />
+
+      <ProductDialog
+        isOpen={isProductDialogOpen}
+        onOpenChange={handleProductOpenChange}
+        onCancel={handleCancelProduct}
+        onSave={handleSaveProduct}
+        form={productForm}
+        selectedProduct={pickedProduct}
+        onBrowse={handleOpenProductPicker}
+      />
+
+      <ProductPickerDialog
+        isOpen={isProductPickerOpen}
+        onOpenChange={setIsProductPickerOpen}
+        onCancel={handleCancelProductPicker}
+        onSelect={handlePickProduct}
+        productGroups={productGroups}
+        products={availableProducts}
+      />
+
+      <CustomerProductDialog
+        isOpen={isCustomerProductDialogOpen}
+        onOpenChange={handleCustomerProductOpenChange}
+        onCancel={handleCancelCustomerProduct}
+        onSave={handleSaveCustomerProduct}
+        form={customerProductForm}
+        selectedProduct={pickedCustomerProduct}
+        onBrowse={handleOpenCustomerProductPicker}
+      />
+
+      <ProductPickerDialog
+        isOpen={isCustomerProductPickerOpen}
+        onOpenChange={setIsCustomerProductPickerOpen}
+        onCancel={handleCancelCustomerProductPicker}
+        onSelect={handlePickCustomerProduct}
+        productGroups={productGroups}
+        products={availableProducts}
+      />
+
+      <VisitReportDialog
+        isOpen={isVisitReportDialogOpen}
+        onOpenChange={handleVisitReportOpenChange}
+        onCancel={handleCancelVisitReport}
+        onSave={handleSaveVisitReport}
+        form={visitReportForm}
+        contacts={contacts}
+        isEditing={isEditingVisitReport}
       />
 
       <PurchaseOrderDialog

@@ -17,7 +17,18 @@ import {
   InsertCustomerProjects,
   SelectCustomerProjects,
 } from "@/db/schema/customer-projects";
+import { InsertProducts, Products } from "@/db/schema/products";
 import { InsertTexts, Texts } from "@/db/schema/texts";
+import {
+  CounterOrders,
+  InsertCounterOrders,
+  SelectCounterOrders,
+} from "@/db/schema/counter-orders";
+import {
+  InsertVisitReports,
+  SelectVisitReports,
+  VisitReports,
+} from "@/db/schema/visit-reports";
 import {
   InsertPurchaseOrders,
   PurchaseOrders,
@@ -105,6 +116,26 @@ export type CompanyTextInput = Omit<
   "id" | "uuid" | "companyUuid" | "createdByUserId" | "createdAt" | "updatedAt"
 >;
 
+export type CompanyCounterOrderInput = Omit<
+  InsertCounterOrders,
+  "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt"
+>;
+
+export type CompanyProductInput = Omit<
+  InsertProducts,
+  "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt"
+>;
+
+// contactIndex references a position in the `contacts` array passed to
+// createCompany — contacts don't have a real uuid yet at this point, since
+// that's only generated once they're actually inserted.
+export type VisitReportInput = Omit<
+  InsertVisitReports,
+  "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt" | "contactUuid"
+> & {
+  contactIndex?: number;
+};
+
 export type CompanyPurchaseOrderInput = Omit<
   InsertPurchaseOrders,
   "id" | "uuid" | "supplierUuid" | "createdAt" | "updatedAt"
@@ -120,6 +151,8 @@ export type CompanyActionResult = {
 
 export type CompanyDetail = SelectCompanies & {
   addresses: SelectCompanyAddresses[];
+  counterOrders: SelectCounterOrders[];
+  visitReports: SelectVisitReports[];
   purchaseOrders: SelectPurchaseOrders[];
 };
 
@@ -155,13 +188,31 @@ export const getCompanyDetail = async (
     .from(CompanyAddresses)
     .where(eq(CompanyAddresses.companyUuid, uuid));
 
+  const counterOrders = await db
+    .select()
+    .from(CounterOrders)
+    .where(eq(CounterOrders.companyUuid, uuid))
+    .orderBy(desc(CounterOrders.createdAt));
+
+  const visitReports = await db
+    .select()
+    .from(VisitReports)
+    .where(eq(VisitReports.companyUuid, uuid))
+    .orderBy(desc(VisitReports.createdAt));
+
   const purchaseOrders = await db
     .select()
     .from(PurchaseOrders)
     .where(eq(PurchaseOrders.supplierUuid, uuid))
     .orderBy(desc(PurchaseOrders.createdAt));
 
-  return { ...company, addresses, purchaseOrders };
+  return {
+    ...company,
+    addresses,
+    counterOrders,
+    visitReports,
+    purchaseOrders,
+  };
 };
 
 // Derives whether a company acts as a supplier or an agent from its roles.
@@ -294,6 +345,9 @@ export const createCompany = async (
   contacts: CompanyContactInput[] = [],
   texts: CompanyTextInput[] = [],
   projects: CustomerProjectInput[] = [],
+  counterOrders: CompanyCounterOrderInput[] = [],
+  products: CompanyProductInput[] = [],
+  visitReports: VisitReportInput[] = [],
   purchaseOrders: CompanyPurchaseOrderInput[] = [],
 ): Promise<CompanyActionResult> => {
   const uuid = generateUuid();
@@ -337,10 +391,13 @@ export const createCompany = async (
         });
       }
 
+      const contactUuids: string[] = [];
       for (const contact of contacts) {
+        const contactUuid = generateUuid();
+        contactUuids.push(contactUuid);
         await tx.insert(Contacts).values({
           ...contact,
-          uuid: generateUuid(),
+          uuid: contactUuid,
           companyUuid: uuid,
         });
       }
@@ -359,6 +416,33 @@ export const createCompany = async (
           ...project,
           uuid: generateUuid(),
           companyUuid: uuid,
+        });
+      }
+
+      for (const counterOrder of counterOrders) {
+        await tx.insert(CounterOrders).values({
+          ...counterOrder,
+          uuid: generateUuid(),
+          companyUuid: uuid,
+        });
+      }
+
+      for (const product of products) {
+        await tx.insert(Products).values({
+          ...product,
+          uuid: generateUuid(),
+          companyUuid: uuid,
+        });
+      }
+
+      for (const visitReport of visitReports) {
+        const { contactIndex, ...rest } = visitReport;
+        await tx.insert(VisitReports).values({
+          ...rest,
+          uuid: generateUuid(),
+          companyUuid: uuid,
+          contactUuid:
+            contactIndex != null ? contactUuids[contactIndex] : undefined,
         });
       }
 

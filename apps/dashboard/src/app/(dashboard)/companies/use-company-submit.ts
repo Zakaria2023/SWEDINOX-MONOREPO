@@ -4,6 +4,8 @@ import {
   ContractForProjectOption,
   ContractListItem,
 } from "@/app/(dashboard)/contracts/actions";
+import { ProductGroupOption } from "@/app/(dashboard)/product-groups/actions";
+import { ProductOption } from "@/app/(dashboard)/products/actions";
 import { TextCategoryOption } from "@/app/(dashboard)/text-categories/actions";
 import { InsertCompanies } from "@/db/schema/companies";
 import { todayDateString } from "@/lib/helpers";
@@ -43,12 +45,15 @@ import {
   CompanyActionResult,
   CompanyContactInput,
   CompanyContractInput,
+  CompanyCounterOrderInput,
+  CompanyProductInput,
   CompanyPurchaseOrderInput,
   CompanyTextInput,
   createCompany,
   CustomerProjectInput,
   CustomerSalesInput,
   DebtorCompanyOption,
+  VisitReportInput,
 } from "./actions";
 import {
   AddressFormValues,
@@ -59,18 +64,30 @@ import {
   ContactDialogValues,
   contractSelectionSchema,
   ContractSelectionValues,
+  counterOrderDialogSchema,
+  CounterOrderDialogValues,
   createCompanySchema,
+  customerProductDialogSchema,
+  CustomerProductDialogValues,
   DEFAULT_ADDRESS,
   DEFAULT_COMM_SETTING,
   DEFAULT_CONTACT,
   DEFAULT_CONTRACT_SELECTION,
+  DEFAULT_COUNTER_ORDER,
+  DEFAULT_CUSTOMER_PRODUCT,
+  DEFAULT_PRODUCT,
   DEFAULT_PURCHASE_ORDER,
   DEFAULT_TEXT,
+  DEFAULT_VISIT_REPORT,
+  productDialogSchema,
+  ProductDialogValues,
   purchaseOrderDialogSchema,
   PurchaseOrderDialogValues,
   textDialogSchema,
   TextDialogValues,
   USAGE_CATEGORY_FIELDS,
+  visitReportDialogSchema,
+  VisitReportDialogValues,
 } from "./validation";
 
 const AGENT_ALLOWED = new Set<CompanyRole>(["agent", "other", "internal"]);
@@ -163,6 +180,8 @@ type UseCompanySubmitParams = {
   textCategories: TextCategoryOption[];
   debtorCompanies: DebtorCompanyOption[];
   purchaseOrgCompanies: DebtorCompanyOption[];
+  productGroups: ProductGroupOption[];
+  availableProducts: ProductOption[];
 };
 
 export const useCompanySubmit = ({
@@ -171,6 +190,8 @@ export const useCompanySubmit = ({
   textCategories,
   debtorCompanies,
   purchaseOrgCompanies,
+  productGroups,
+  availableProducts,
 }: UseCompanySubmitParams) => {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -196,6 +217,34 @@ export const useCompanySubmit = ({
   const [texts, setTexts] = useState<CompanyTextInput[]>([]);
   const [isProjectDialogOpen, setIsProjectDialogOpen] = useState(false);
   const [projects, setProjects] = useState<CustomerProjectInput[]>([]);
+  const [isCounterOrderDialogOpen, setIsCounterOrderDialogOpen] =
+    useState(false);
+  const [counterOrders, setCounterOrders] = useState<
+    CompanyCounterOrderInput[]
+  >([]);
+  const [editingCounterOrderIndex, setEditingCounterOrderIndex] = useState<
+    number | null
+  >(null);
+  const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
+  const [isProductPickerOpen, setIsProductPickerOpen] = useState(false);
+  const [products, setProducts] = useState<CompanyProductInput[]>([]);
+  const [pickedProduct, setPickedProduct] = useState<ProductOption | null>(
+    null,
+  );
+  const [isCustomerProductDialogOpen, setIsCustomerProductDialogOpen] =
+    useState(false);
+  const [isCustomerProductPickerOpen, setIsCustomerProductPickerOpen] =
+    useState(false);
+  const [customerProducts, setCustomerProducts] = useState<
+    CompanyProductInput[]
+  >([]);
+  const [pickedCustomerProduct, setPickedCustomerProduct] =
+    useState<ProductOption | null>(null);
+  const [isVisitReportDialogOpen, setIsVisitReportDialogOpen] = useState(false);
+  const [visitReports, setVisitReports] = useState<VisitReportInput[]>([]);
+  const [editingVisitReportIndex, setEditingVisitReportIndex] = useState<
+    number | null
+  >(null);
   const [isPurchaseOrderDialogOpen, setIsPurchaseOrderDialogOpen] =
     useState(false);
   const [purchaseOrders, setPurchaseOrders] = useState<
@@ -240,6 +289,17 @@ export const useCompanySubmit = ({
       currency: "",
       isBlocked: false,
       blockedByNote: "",
+      invoicingMethod: "per_delivery",
+      collectiveInvoicing: false,
+      invoicePackagingAtZeroPrice: false,
+      printCommodityCode: false,
+      invoiceFrequency: "daily",
+      invoicePrintEnabled: false,
+      invoicePrintCount: 1,
+      invoiceEmailEnabled: false,
+      invoiceEmailTo: "",
+      printEmailZeroValueInvoices: false,
+      sendXmlWithInvoice: false,
       address: {
         category: [],
         poBox: false,
@@ -311,9 +371,29 @@ export const useCompanySubmit = ({
     defaultValues: DEFAULT_TEXT,
   });
 
+  const productForm = useForm<ProductDialogValues>({
+    resolver: zodResolver(productDialogSchema),
+    defaultValues: DEFAULT_PRODUCT,
+  });
+
+  const customerProductForm = useForm<CustomerProductDialogValues>({
+    resolver: zodResolver(customerProductDialogSchema),
+    defaultValues: DEFAULT_CUSTOMER_PRODUCT,
+  });
+
   const projectForm = useForm<ProjectFormValues>({
     resolver: zodResolver(projectSchema),
     defaultValues: DEFAULT_PROJECT,
+  });
+
+  const counterOrderForm = useForm<CounterOrderDialogValues>({
+    resolver: zodResolver(counterOrderDialogSchema),
+    defaultValues: DEFAULT_COUNTER_ORDER,
+  });
+
+  const visitReportForm = useForm<VisitReportDialogValues>({
+    resolver: zodResolver(visitReportDialogSchema),
+    defaultValues: DEFAULT_VISIT_REPORT,
   });
 
   const purchaseOrderForm = useForm<PurchaseOrderDialogValues>({
@@ -680,8 +760,27 @@ export const useCompanySubmit = ({
     );
   };
 
-  const removeContact = (index: number) =>
+  // Removing a contact shifts the indices of everything after it, so any
+  // visit report referencing one of those contacts needs its contactIndex
+  // shifted too (or cleared, if it pointed at the removed contact).
+  const removeContact = (index: number) => {
     setContacts((prev) => prev.filter((_, i) => i !== index));
+    setVisitReports((prev) =>
+      prev.map((report) => {
+        if (report.contactIndex == null) return report;
+        if (report.contactIndex === index) {
+          return {
+            ...report,
+            contactIndex: undefined,
+            representative: undefined,
+          };
+        }
+        return report.contactIndex > index
+          ? { ...report, contactIndex: report.contactIndex - 1 }
+          : report;
+      }),
+    );
+  };
 
   // ── Text handlers ────────────────────────────────────────────────────────────
 
@@ -784,6 +883,313 @@ export const useCompanySubmit = ({
 
   const removeProject = (index: number) =>
     setProjects((prev) => prev.filter((_, i) => i !== index));
+
+  // ── Counter order handlers ───────────────────────────────────────────────────
+
+  const mapCounterOrder = (
+    values: CounterOrderDialogValues,
+  ): CompanyCounterOrderInput => ({
+    orderDate: values.orderDate || undefined,
+    deliveryDate: values.deliveryDate || undefined,
+    status: values.status,
+    priority: values.priority,
+    orderMethod: (values.orderMethod ||
+      undefined) as CompanyCounterOrderInput["orderMethod"],
+    seller: values.seller || undefined,
+    customerRef: values.customerRef || undefined,
+    ourReference: values.ourReference || undefined,
+    deliveryTerms: (values.deliveryTerms ||
+      undefined) as CompanyCounterOrderInput["deliveryTerms"],
+    handlingBlocked: values.handlingBlocked,
+    printPickingSlips: values.printPickingSlips,
+    isPickup: values.isPickup,
+    isIncidental: values.isIncidental,
+    isOverlengte: values.isOverlengte,
+    amountExVat: values.amountExVat || "0.00",
+    weightKg: values.weightKg || "0.000",
+    gainPercent: values.gainPercent || "0.00",
+    remarks: values.remarks || undefined,
+  });
+
+  const handleCounterOrderOpenChange = (open: boolean) => {
+    if (!open) {
+      counterOrderForm.reset(DEFAULT_COUNTER_ORDER);
+      setEditingCounterOrderIndex(null);
+    }
+    setIsCounterOrderDialogOpen(open);
+  };
+
+  const handleOpenCounterOrder = () => {
+    setEditingCounterOrderIndex(null);
+    counterOrderForm.reset({
+      ...DEFAULT_COUNTER_ORDER,
+      orderDate: todayDateString(),
+    });
+    setIsCounterOrderDialogOpen(true);
+  };
+
+  const handleEditCounterOrder = (index: number) => {
+    const order = counterOrders[index];
+    if (!order) {
+      return;
+    }
+    setEditingCounterOrderIndex(index);
+    counterOrderForm.reset({
+      customerRef: order.customerRef ?? "",
+      ourReference: order.ourReference ?? "",
+      orderMethod: order.orderMethod ?? "",
+      seller: order.seller ?? "",
+      status: order.status ?? "open",
+      priority: order.priority ?? "normal",
+      orderDate: order.orderDate ?? "",
+      deliveryDate: order.deliveryDate ?? "",
+      deliveryTerms: order.deliveryTerms ?? "",
+      handlingBlocked: order.handlingBlocked ?? false,
+      printPickingSlips: order.printPickingSlips ?? true,
+      isPickup: order.isPickup ?? false,
+      isIncidental: order.isIncidental ?? false,
+      isOverlengte: order.isOverlengte ?? false,
+      amountExVat: order.amountExVat ?? "0.00",
+      weightKg: order.weightKg ?? "0.000",
+      gainPercent: order.gainPercent ?? "0.00",
+      remarks: order.remarks ?? "",
+    });
+    setIsCounterOrderDialogOpen(true);
+  };
+
+  const handleCancelCounterOrder = () => {
+    counterOrderForm.reset(DEFAULT_COUNTER_ORDER);
+    setEditingCounterOrderIndex(null);
+    setIsCounterOrderDialogOpen(false);
+  };
+
+  const handleSaveCounterOrder = counterOrderForm.handleSubmit((values) => {
+    const entry = mapCounterOrder(values);
+    setCounterOrders((prev) =>
+      editingCounterOrderIndex === null
+        ? [...prev, entry]
+        : prev.map((order, i) =>
+            i === editingCounterOrderIndex ? entry : order,
+          ),
+    );
+    counterOrderForm.reset(DEFAULT_COUNTER_ORDER);
+    setEditingCounterOrderIndex(null);
+    setIsCounterOrderDialogOpen(false);
+  });
+
+  const removeCounterOrder = (index: number) =>
+    setCounterOrders((prev) => prev.filter((_, i) => i !== index));
+
+  // ── Product handlers ─────────────────────────────────────────────────────────
+
+  const handleProductOpenChange = (open: boolean) => {
+    if (!open) {
+      productForm.reset(DEFAULT_PRODUCT);
+      setPickedProduct(null);
+    }
+    setIsProductDialogOpen(open);
+  };
+
+  const handleOpenProduct = () => {
+    productForm.reset(DEFAULT_PRODUCT);
+    setPickedProduct(null);
+    setIsProductDialogOpen(true);
+  };
+
+  const handleCancelProduct = () => {
+    productForm.reset(DEFAULT_PRODUCT);
+    setPickedProduct(null);
+    setIsProductDialogOpen(false);
+  };
+
+  const handleOpenProductPicker = () => setIsProductPickerOpen(true);
+
+  const handleCancelProductPicker = () => setIsProductPickerOpen(false);
+
+  const handlePickProduct = (product: ProductOption) => {
+    setPickedProduct(product);
+    productForm.setValue("productUuid", product.uuid);
+    setIsProductPickerOpen(false);
+  };
+
+  const handleSaveProduct = productForm.handleSubmit((values) => {
+    if (!pickedProduct) {
+      return;
+    }
+
+    setProducts((prev) => [
+      ...prev,
+      {
+        // Copied from the picked catalog product — this creates the
+        // company's own product record rather than referencing the
+        // catalog product directly (same pattern as Contracts, which are
+        // copied per company from a selected template).
+        productCode: pickedProduct.productCode,
+        name: pickedProduct.name,
+        productGroupUuid: pickedProduct.productGroupUuid ?? undefined,
+        preferred: values.preferred,
+        ean: values.ean || undefined,
+        externalProductCode: values.externalProductCode || undefined,
+        editing: values.editing || undefined,
+        deliveryTime: values.deliveryTime
+          ? Number(values.deliveryTime)
+          : undefined,
+        deliveryTimeUnit: values.deliveryTimeUnit || undefined,
+        minOrderQty: values.minOrderQty || undefined,
+        minOrderQtyUnit: values.minOrderQtyUnit || undefined,
+        orderSeries: values.orderSeries
+          ? Number(values.orderSeries)
+          : undefined,
+        orderSeriesUnit: values.orderSeriesUnit || undefined,
+      },
+    ]);
+    productForm.reset(DEFAULT_PRODUCT);
+    setPickedProduct(null);
+    setIsProductDialogOpen(false);
+  });
+
+  const removeProduct = (index: number) =>
+    setProducts((prev) => prev.filter((_, i) => i !== index));
+
+  // ── Customer product handlers ────────────────────────────────────────────────
+
+  const handleCustomerProductOpenChange = (open: boolean) => {
+    if (!open) {
+      customerProductForm.reset(DEFAULT_CUSTOMER_PRODUCT);
+      setPickedCustomerProduct(null);
+    }
+    setIsCustomerProductDialogOpen(open);
+  };
+
+  const handleOpenCustomerProduct = () => {
+    customerProductForm.reset(DEFAULT_CUSTOMER_PRODUCT);
+    setPickedCustomerProduct(null);
+    setIsCustomerProductDialogOpen(true);
+  };
+
+  const handleCancelCustomerProduct = () => {
+    customerProductForm.reset(DEFAULT_CUSTOMER_PRODUCT);
+    setPickedCustomerProduct(null);
+    setIsCustomerProductDialogOpen(false);
+  };
+
+  const handleOpenCustomerProductPicker = () =>
+    setIsCustomerProductPickerOpen(true);
+
+  const handleCancelCustomerProductPicker = () =>
+    setIsCustomerProductPickerOpen(false);
+
+  const handlePickCustomerProduct = (product: ProductOption) => {
+    setPickedCustomerProduct(product);
+    customerProductForm.setValue("productUuid", product.uuid);
+    setIsCustomerProductPickerOpen(false);
+  };
+
+  const handleSaveCustomerProduct = customerProductForm.handleSubmit(
+    (values) => {
+      if (!pickedCustomerProduct) return;
+      setCustomerProducts((prev) => [
+        ...prev,
+        {
+          // Copied from the picked catalog product, same as the general
+          // Products section — creates the company's own product record.
+          productCode: pickedCustomerProduct.productCode,
+          name: pickedCustomerProduct.name,
+          productGroupUuid: pickedCustomerProduct.productGroupUuid ?? undefined,
+          showOnWebsite: values.showOnWebsite,
+        },
+      ]);
+      customerProductForm.reset(DEFAULT_CUSTOMER_PRODUCT);
+      setPickedCustomerProduct(null);
+      setIsCustomerProductDialogOpen(false);
+    },
+  );
+
+  const removeCustomerProduct = (index: number) =>
+    setCustomerProducts((prev) => prev.filter((_, i) => i !== index));
+
+  // ── Visit report handlers ────────────────────────────────────────────────────
+
+  const contactLabel = (contact: CompanyContactInput) =>
+    [contact.firstName, contact.lastName].filter(Boolean).join(" ") ||
+    contact.email ||
+    "Contact";
+
+  // When exactly one contact exists it becomes the default; with none the
+  // field stays empty (the dialog disables it and prompts to add a contact).
+  const defaultContactIndex = () => (contacts.length === 1 ? "0" : "");
+
+  const handleVisitReportOpenChange = (open: boolean) => {
+    if (!open) {
+      visitReportForm.reset(DEFAULT_VISIT_REPORT);
+      setEditingVisitReportIndex(null);
+    }
+    setIsVisitReportDialogOpen(open);
+  };
+
+  const handleOpenVisitReport = () => {
+    setEditingVisitReportIndex(null);
+    visitReportForm.reset({
+      ...DEFAULT_VISIT_REPORT,
+      contactIndex: defaultContactIndex(),
+    });
+    setIsVisitReportDialogOpen(true);
+  };
+
+  const handleEditVisitReport = (index: number) => {
+    const report = visitReports[index];
+    if (!report) return;
+    setEditingVisitReportIndex(index);
+    visitReportForm.reset({
+      visitDate: report.visitDate ?? "",
+      visitTime: report.visitTime ?? "",
+      contactMethod: report.contactMethod ?? "",
+      hasTakenPlace: report.hasTakenPlace ?? false,
+      visitReason: report.visitReason ?? "",
+      contactIndex:
+        report.contactIndex != null ? String(report.contactIndex) : "",
+    });
+    setIsVisitReportDialogOpen(true);
+  };
+
+  const handleCancelVisitReport = () => {
+    visitReportForm.reset(DEFAULT_VISIT_REPORT);
+    setEditingVisitReportIndex(null);
+    setIsVisitReportDialogOpen(false);
+  };
+
+  const handleSaveVisitReport = visitReportForm.handleSubmit((values) => {
+    const contactIndex =
+      values.contactIndex !== undefined && values.contactIndex !== ""
+        ? Number(values.contactIndex)
+        : undefined;
+    const contact =
+      contactIndex !== undefined ? contacts[contactIndex] : undefined;
+    const entry: VisitReportInput = {
+      visitDate: values.visitDate || undefined,
+      visitTime: values.visitTime || undefined,
+      contactMethod: (values.contactMethod ||
+        undefined) as VisitReportInput["contactMethod"],
+      hasTakenPlace: values.hasTakenPlace,
+      visitReason: (values.visitReason ||
+        undefined) as VisitReportInput["visitReason"],
+      contactIndex,
+      representative: contact ? contactLabel(contact) : undefined,
+    };
+    setVisitReports((prev) =>
+      editingVisitReportIndex === null
+        ? [...prev, entry]
+        : prev.map((report, i) =>
+            i === editingVisitReportIndex ? entry : report,
+          ),
+    );
+    visitReportForm.reset(DEFAULT_VISIT_REPORT);
+    setEditingVisitReportIndex(null);
+    setIsVisitReportDialogOpen(false);
+  });
+
+  const removeVisitReport = (index: number) =>
+    setVisitReports((prev) => prev.filter((_, i) => i !== index));
 
   // ── Purchase order handlers ──────────────────────────────────────────────────
 
@@ -972,6 +1378,17 @@ export const useCompanySubmit = ({
       const isCustomerOrProspect =
         roles?.includes("customer") || roles?.includes("prospect");
       const allAddresses = [address, ...additionalAddresses].map(mapAddress);
+      const allProducts = [...products, ...customerProducts];
+      // If a visit report was added before any contact existed, back-fill the
+      // sole contact so a single-contact company links automatically.
+      const resolvedVisitReports = visitReports.map((report) => {
+        if (report.contactIndex != null || contacts.length !== 1) return report;
+        return {
+          ...report,
+          contactIndex: 0,
+          representative: report.representative ?? contactLabel(contacts[0]),
+        };
+      });
       const result = await createCompany(
         {
           companyName,
@@ -1019,6 +1436,18 @@ export const useCompanySubmit = ({
           cocNumber: cocNumber || undefined,
           currency: (currency || undefined) as InsertCompanies["currency"],
           blockedByNote: blockedByNote || undefined,
+          invoicingMethod: (values.invoicingMethod ||
+            undefined) as InsertCompanies["invoicingMethod"],
+          collectiveInvoicing: values.collectiveInvoicing,
+          invoicePackagingAtZeroPrice: values.invoicePackagingAtZeroPrice,
+          printCommodityCode: values.printCommodityCode,
+          invoiceFrequency: values.invoiceFrequency,
+          invoicePrintEnabled: values.invoicePrintEnabled,
+          invoicePrintCount: values.invoicePrintCount,
+          invoiceEmailEnabled: values.invoiceEmailEnabled,
+          invoiceEmailTo: values.invoiceEmailTo || undefined,
+          printEmailZeroValueInvoices: values.printEmailZeroValueInvoices,
+          sendXmlWithInvoice: values.sendXmlWithInvoice,
         },
         isBlocked,
         allAddresses,
@@ -1027,6 +1456,9 @@ export const useCompanySubmit = ({
         contacts,
         texts,
         projects,
+        counterOrders,
+        allProducts,
+        resolvedVisitReports,
         purchaseOrders,
       );
       setState(result);
@@ -1118,6 +1550,60 @@ export const useCompanySubmit = ({
     handleCancelProject,
     handleSaveProject,
     removeProject,
+
+    counterOrderForm,
+    counterOrders,
+    isCounterOrderDialogOpen,
+    isEditingCounterOrder: editingCounterOrderIndex !== null,
+    handleCounterOrderOpenChange,
+    handleOpenCounterOrder,
+    handleEditCounterOrder,
+    handleCancelCounterOrder,
+    handleSaveCounterOrder,
+    removeCounterOrder,
+
+    productForm,
+    products,
+    isProductDialogOpen,
+    isProductPickerOpen,
+    setIsProductPickerOpen,
+    pickedProduct,
+    handleProductOpenChange,
+    handleOpenProduct,
+    handleCancelProduct,
+    handleSaveProduct,
+    handleOpenProductPicker,
+    handleCancelProductPicker,
+    handlePickProduct,
+    removeProduct,
+    productGroups,
+    availableProducts,
+
+    customerProductForm,
+    customerProducts,
+    isCustomerProductDialogOpen,
+    isCustomerProductPickerOpen,
+    setIsCustomerProductPickerOpen,
+    pickedCustomerProduct,
+    handleCustomerProductOpenChange,
+    handleOpenCustomerProduct,
+    handleCancelCustomerProduct,
+    handleSaveCustomerProduct,
+    handleOpenCustomerProductPicker,
+    handleCancelCustomerProductPicker,
+    handlePickCustomerProduct,
+    removeCustomerProduct,
+
+    visitReportForm,
+    visitReports,
+    isVisitReportDialogOpen,
+    isEditingVisitReport: editingVisitReportIndex !== null,
+    handleVisitReportOpenChange,
+    handleOpenVisitReport,
+    handleEditVisitReport,
+    handleCancelVisitReport,
+    handleSaveVisitReport,
+    removeVisitReport,
 
     purchaseOrderForm,
     purchaseOrders,

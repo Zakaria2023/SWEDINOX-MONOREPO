@@ -9,6 +9,8 @@ import type {
   DeliveryTimeUnit,
   CommunicationSettingShape,
   CommunicationSettingType,
+  CounterOrderPriority,
+  CounterOrderStatus,
   MachineCapacityUnit,
   MachineLoadingType,
   MachineOptionType,
@@ -35,9 +37,11 @@ import type {
   QuoteOrderInvoiceOption,
   QuoteOrderOption,
   SalesRepresentative,
+  InvoiceFrequency,
   InvoicePaymentTerm,
   InvoiceSurchargeDescription,
   InvoiceVatScenario,
+  InvoicingMethod,
   ProcessedOption,
   ProductQualityStandard,
   PurchaseInvoiceBlockReason,
@@ -634,6 +638,18 @@ export const INVOICE_PAYMENT_TERM_LABELS: Record<InvoicePaymentTerm, string> = {
   direct_debit: "Direct Debit",
 };
 
+export const INVOICING_METHOD_LABELS: Record<InvoicingMethod, string> = {
+  per_delivery: "per delivery",
+  per_order: "per Order",
+  per_order_line: "per Order line",
+};
+
+export const INVOICE_FREQUENCY_LABELS: Record<InvoiceFrequency, string> = {
+  daily: "Daily",
+  weekly: "Weekly",
+  monthly: "Monthly",
+};
+
 export const PRODUCT_SHAPE_LABELS: Record<ProductShape, string> = {
   bar_steel: "Bar Steel",
   coil: "Coil",
@@ -989,6 +1005,20 @@ export const ORDER_WEIGHT_TYPE_LABELS: Record<OrderWeightType, string> = {
   german_trade_weight: "German trade weight",
   weighed: "Weighed",
 };
+
+export const COUNTER_ORDER_STATUS_LABELS: Record<CounterOrderStatus, string> = {
+  open: "Open",
+  in_progress: "In progress",
+  delivered: "Delivered",
+  invoiced: "Invoiced",
+  cancelled: "Cancelled",
+};
+
+export const COUNTER_ORDER_PRIORITY_LABELS: Record<CounterOrderPriority, string> =
+  {
+    normal: "Normal",
+    rush: "Rush",
+  };
 
 export const PURCHASE_ORDER_TYPE_LABELS: Record<PurchaseOrderType, string> = {
   materials: "Materials",

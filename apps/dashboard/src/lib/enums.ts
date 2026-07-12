@@ -935,6 +935,39 @@ export const deliveryTypes = [
 
 export type DeliveryType = (typeof deliveryTypes)[number];
 
+export const counterOrderStatuses = [
+  "open",
+  "in_progress",
+  "delivered",
+  "invoiced",
+  "cancelled",
+] as const satisfies readonly string[];
+
+export type CounterOrderStatus = (typeof counterOrderStatuses)[number];
+
+export const counterOrderPriorities = [
+  "normal",
+  "rush",
+] as const satisfies readonly string[];
+
+export type CounterOrderPriority = (typeof counterOrderPriorities)[number];
+
+export const invoicingMethods = [
+  "per_delivery",
+  "per_order",
+  "per_order_line",
+] as const satisfies readonly string[];
+
+export type InvoicingMethod = (typeof invoicingMethods)[number];
+
+export const invoiceFrequencies = [
+  "daily",
+  "weekly",
+  "monthly",
+] as const satisfies readonly string[];
+
+export type InvoiceFrequency = (typeof invoiceFrequencies)[number];
+
 export const purchaseOrderTypes = [
   "materials",
   "processing",

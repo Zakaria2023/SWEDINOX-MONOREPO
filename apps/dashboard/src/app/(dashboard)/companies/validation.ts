@@ -5,8 +5,18 @@ import {
   companyRoles,
   contactSalutations,
   contractableRoles,
+  counterOrderPriorities,
+  counterOrderStatuses,
   currencies,
+  deliveryTerms,
+  deliveryTimeUnits,
+  invoiceFrequencies,
   invoicePaymentTerms,
+  orderMethods,
+  purchasingUnits,
+  visitReportContactMethods,
+  visitReportReasons,
+  invoicingMethods,
   purchaseOrderStatuses,
   purchaseOrderTypes,
   ContractableRole,
@@ -152,6 +162,22 @@ export const createCompanySchema = () =>
     currency: z.union([z.enum(currencies), z.literal(""), z.undefined()]),
     isBlocked: z.boolean(),
     blockedByNote: z.string().optional(),
+    // Invoicing settings
+    invoicingMethod: z.union([
+      z.enum(invoicingMethods),
+      z.literal(""),
+      z.undefined(),
+    ]),
+    collectiveInvoicing: z.boolean(),
+    invoicePackagingAtZeroPrice: z.boolean(),
+    printCommodityCode: z.boolean(),
+    invoiceFrequency: z.enum(invoiceFrequencies),
+    invoicePrintEnabled: z.boolean(),
+    invoicePrintCount: z.number().int().min(1),
+    invoiceEmailEnabled: z.boolean(),
+    invoiceEmailTo: z.string().optional(),
+    printEmailZeroValueInvoices: z.boolean(),
+    sendXmlWithInvoice: z.boolean(),
   });
 
 export type AddressFormValues = z.infer<ReturnType<typeof createAddressSchema>>;
@@ -321,6 +347,144 @@ export const USAGE_CATEGORY_FIELDS: Array<{
   { key: "website_in_advance", field: "websiteInAdvance" },
   { key: "website_after", field: "websiteAfter" },
 ];
+
+// ── Counter Order Dialog ─────────────────────────────────────────────────────
+
+export const counterOrderDialogSchema = z.object({
+  customerRef: z.string().optional(),
+  ourReference: z.string().optional(),
+  orderMethod: z.union([z.enum(orderMethods), z.literal("")]).optional(),
+  seller: z.string().optional(),
+  status: z.enum(counterOrderStatuses),
+  priority: z.enum(counterOrderPriorities),
+  orderDate: z.string().optional(),
+  deliveryDate: z.string().optional(),
+  deliveryTerms: z.union([z.enum(deliveryTerms), z.literal("")]).optional(),
+  handlingBlocked: z.boolean(),
+  printPickingSlips: z.boolean(),
+  isPickup: z.boolean(),
+  isIncidental: z.boolean(),
+  isOverlengte: z.boolean(),
+  amountExVat: z.string().optional(),
+  weightKg: z.string().optional(),
+  gainPercent: z.string().optional(),
+  remarks: z.string().optional(),
+});
+
+export type CounterOrderDialogValues = z.infer<typeof counterOrderDialogSchema>;
+
+export const DEFAULT_COUNTER_ORDER: CounterOrderDialogValues = {
+  customerRef: "",
+  ourReference: "",
+  orderMethod: "",
+  seller: "",
+  status: "open",
+  priority: "normal",
+  orderDate: "",
+  deliveryDate: "",
+  deliveryTerms: "",
+  handlingBlocked: false,
+  printPickingSlips: true,
+  isPickup: false,
+  isIncidental: false,
+  isOverlengte: false,
+  amountExVat: "0.00",
+  weightKg: "0.000",
+  gainPercent: "0.00",
+  remarks: "",
+};
+
+// ── Product Dialog ───────────────────────────────────────────────────────────
+
+export const productDialogSchema = z.object({
+  productUuid: z.string().min(1, "Please select a product"),
+  preferred: z.boolean(),
+  ean: z.string().optional(),
+  externalProductCode: z.string().optional(),
+  editing: z.string().optional(),
+  deliveryTime: z.string().optional(),
+  deliveryTimeUnit: z.union([
+    z.enum(deliveryTimeUnits),
+    z.literal(""),
+    z.undefined(),
+  ]),
+  minOrderQty: z.string().optional(),
+  minOrderQtyUnit: z.union([
+    z.enum(purchasingUnits),
+    z.literal(""),
+    z.undefined(),
+  ]),
+  orderSeries: z.string().optional(),
+  orderSeriesUnit: z.union([
+    z.enum(purchasingUnits),
+    z.literal(""),
+    z.undefined(),
+  ]),
+});
+
+export type ProductDialogValues = z.infer<typeof productDialogSchema>;
+
+export const DEFAULT_PRODUCT: ProductDialogValues = {
+  productUuid: "",
+  preferred: false,
+  ean: "",
+  externalProductCode: "",
+  editing: "",
+  deliveryTime: "",
+  deliveryTimeUnit: "",
+  minOrderQty: "",
+  minOrderQtyUnit: "",
+  orderSeries: "",
+  orderSeriesUnit: "",
+};
+
+// ── Customer Product Dialog ──────────────────────────────────────────────────
+
+export const customerProductDialogSchema = z.object({
+  productUuid: z.string().min(1, "Please select a product"),
+  showOnWebsite: z.boolean(),
+});
+
+export type CustomerProductDialogValues = z.infer<
+  typeof customerProductDialogSchema
+>;
+
+export const DEFAULT_CUSTOMER_PRODUCT: CustomerProductDialogValues = {
+  productUuid: "",
+  showOnWebsite: false,
+};
+
+// ── Visit Report Dialog ──────────────────────────────────────────────────────
+
+export const visitReportDialogSchema = z.object({
+  visitDate: z.string().optional(),
+  visitTime: z.string().optional(),
+  contactMethod: z.union([
+    z.enum(visitReportContactMethods),
+    z.literal(""),
+    z.undefined(),
+  ]),
+  hasTakenPlace: z.boolean(),
+  visitReason: z.union([
+    z.enum(visitReportReasons),
+    z.literal(""),
+    z.undefined(),
+  ]),
+  // Index into the in-progress contacts array — not a real uuid yet, since
+  // the company and its contacts aren't persisted until submit.
+  contactIndex: z.string().optional(),
+});
+
+export type VisitReportDialogValues = z.infer<typeof visitReportDialogSchema>;
+
+export const DEFAULT_VISIT_REPORT: VisitReportDialogValues = {
+  visitDate: "",
+  visitTime: "",
+  contactMethod: "",
+  hasTakenPlace: false,
+  visitReason: "",
+  contactIndex: "",
+};
 
 // ── Purchase Order Dialog ────────────────────────────────────────────────────
 
