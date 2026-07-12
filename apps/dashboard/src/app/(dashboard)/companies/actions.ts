@@ -23,6 +23,11 @@ import {
   SelectVisitReports,
   VisitReports,
 } from "@/db/schema/visit-reports";
+import {
+  InsertPurchaseOrders,
+  PurchaseOrders,
+  SelectPurchaseOrders,
+} from "@/db/schema/purchase-orders";
 import { PurchaseCompanyType } from "@/lib/enums";
 import { generateUuid } from "@/lib/helpers";
 import { currentUser } from "@clerk/nextjs/server";
@@ -110,6 +115,11 @@ export type VisitReportInput = Omit<
   "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt"
 >;
 
+export type CompanyPurchaseOrderInput = Omit<
+  InsertPurchaseOrders,
+  "id" | "uuid" | "supplierUuid" | "createdAt" | "updatedAt"
+>;
+
 export type DebtorCompanyOption = Pick<SelectCompanies, "uuid" | "companyName">;
 
 export type CompanyActionResult = {
@@ -121,6 +131,7 @@ export type CompanyActionResult = {
 export type CompanyDetail = SelectCompanies & {
   addresses: SelectCompanyAddresses[];
   visitReports: SelectVisitReports[];
+  purchaseOrders: SelectPurchaseOrders[];
 };
 
 export type ContactOption = Pick<
@@ -146,17 +157,28 @@ export const getCompanyDetail = async (
     .from(Companies)
     .where(eq(Companies.uuid, uuid))
     .limit(1);
-  if (!company) return null;
+  if (!company) {
+    return null;
+  }
+
   const addresses = await db
     .select()
     .from(CompanyAddresses)
     .where(eq(CompanyAddresses.companyUuid, uuid));
+
   const visitReports = await db
     .select()
     .from(VisitReports)
     .where(eq(VisitReports.companyUuid, uuid))
     .orderBy(desc(VisitReports.createdAt));
-  return { ...company, addresses, visitReports };
+
+  const purchaseOrders = await db
+    .select()
+    .from(PurchaseOrders)
+    .where(eq(PurchaseOrders.supplierUuid, uuid))
+    .orderBy(desc(PurchaseOrders.createdAt));
+
+  return { ...company, addresses, visitReports, purchaseOrders };
 };
 
 // Derives whether a company acts as a supplier or an agent from its roles.
@@ -290,6 +312,7 @@ export const createCompany = async (
   texts: CompanyTextInput[] = [],
   projects: CustomerProjectInput[] = [],
   visitReports: VisitReportInput[] = [],
+  purchaseOrders: CompanyPurchaseOrderInput[] = [],
 ): Promise<CompanyActionResult> => {
   const uuid = generateUuid();
 
@@ -362,6 +385,14 @@ export const createCompany = async (
           ...visitReport,
           uuid: generateUuid(),
           companyUuid: uuid,
+        });
+      }
+
+      for (const purchaseOrder of purchaseOrders) {
+        await tx.insert(PurchaseOrders).values({
+          ...purchaseOrder,
+          uuid: generateUuid(),
+          supplierUuid: uuid,
         });
       }
     });

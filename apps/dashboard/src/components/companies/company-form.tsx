@@ -14,9 +14,11 @@ import { RolesSection } from "@/components/companies/sections/roles-section";
 import { ContractsSection } from "@/components/companies/sections/contracts-section";
 import { SalesSection } from "@/components/companies/sections/sales-section";
 import { DebtorSection } from "@/components/companies/sections/debtor-section";
+import { InvoicesSection } from "@/components/companies/sections/invoices-section";
 import { TextsSection } from "@/components/companies/sections/texts-section";
 import { ProjectsSection } from "@/components/companies/sections/projects-section";
 import { VisitReportsSection } from "@/components/companies/sections/visit-reports-section";
+import { PurchaseOrdersSection } from "@/components/companies/sections/purchase-orders-section";
 import { DocumentsSection } from "@/components/companies/sections/documents-section";
 import { SearchCodesSection } from "@/components/companies/sections/search-codes-section";
 import { ContactsSection } from "@/components/companies/sections/contacts-section";
@@ -28,6 +30,7 @@ import { TextDialog } from "@/components/companies/dialogs/text-dialog";
 import { ContactDialog } from "@/components/companies/dialogs/contact-dialog";
 import { ProjectDialog } from "@/components/companies/dialogs/project-dialog";
 import { VisitReportDialog } from "@/components/companies/dialogs/visit-report-dialog";
+import { PurchaseOrderDialog } from "@/components/companies/dialogs/purchase-order-dialog";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { FormProvider } from "react-hook-form";
@@ -137,6 +140,16 @@ export const CompanyForm = ({
     handleCancelVisitReport,
     handleSaveVisitReport,
     removeVisitReport,
+    purchaseOrderForm,
+    purchaseOrders,
+    isPurchaseOrderDialogOpen,
+    isEditingPurchaseOrder,
+    handlePurchaseOrderOpenChange,
+    handleOpenPurchaseOrder,
+    handleEditPurchaseOrder,
+    handleCancelPurchaseOrder,
+    handleSavePurchaseOrder,
+    removePurchaseOrder,
     toggleRole,
     salesData,
     setSalesData,
@@ -158,6 +171,11 @@ export const CompanyForm = ({
     selectedRoles.includes("customer") ||
     selectedRoles.includes("prospect") ||
     selectedRoles.includes("purchasing_org");
+
+  const isPurchaseOrderVisible =
+    selectedRoles.includes("customer") ||
+    selectedRoles.includes("processor") ||
+    selectedRoles.includes("supplier");
 
   return (
     <FormProvider {...form}>
@@ -213,6 +231,10 @@ export const CompanyForm = ({
           />
         )}
 
+        {selectedRoles.includes("customer") && (
+          <InvoicesSection isPending={isPending} />
+        )}
+
         <TextsSection
           texts={texts}
           removeText={removeText}
@@ -238,6 +260,16 @@ export const CompanyForm = ({
           handleEditVisitReport={handleEditVisitReport}
           isPending={isPending}
         />
+
+        {isPurchaseOrderVisible && (
+          <PurchaseOrdersSection
+            purchaseOrders={purchaseOrders}
+            removePurchaseOrder={removePurchaseOrder}
+            handleOpenPurchaseOrder={handleOpenPurchaseOrder}
+            handleEditPurchaseOrder={handleEditPurchaseOrder}
+            isPending={isPending}
+          />
+        )}
 
         <DocumentsSection />
 
@@ -335,6 +367,15 @@ export const CompanyForm = ({
         form={visitReportForm}
         contacts={contacts}
         isEditing={isEditingVisitReport}
+      />
+
+      <PurchaseOrderDialog
+        isOpen={isPurchaseOrderDialogOpen}
+        onOpenChange={handlePurchaseOrderOpenChange}
+        onCancel={handleCancelPurchaseOrder}
+        onSave={handleSavePurchaseOrder}
+        form={purchaseOrderForm}
+        isEditing={isEditingPurchaseOrder}
       />
     </FormProvider>
   );

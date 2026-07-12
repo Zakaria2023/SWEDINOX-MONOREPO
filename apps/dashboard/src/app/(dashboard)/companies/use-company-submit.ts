@@ -43,6 +43,7 @@ import {
   CompanyActionResult,
   CompanyContactInput,
   CompanyContractInput,
+  CompanyPurchaseOrderInput,
   CompanyTextInput,
   createCompany,
   CustomerProjectInput,
@@ -64,8 +65,11 @@ import {
   DEFAULT_COMM_SETTING,
   DEFAULT_CONTACT,
   DEFAULT_CONTRACT_SELECTION,
+  DEFAULT_PURCHASE_ORDER,
   DEFAULT_TEXT,
   DEFAULT_VISIT_REPORT,
+  purchaseOrderDialogSchema,
+  PurchaseOrderDialogValues,
   textDialogSchema,
   TextDialogValues,
   USAGE_CATEGORY_FIELDS,
@@ -201,6 +205,14 @@ export const useCompanySubmit = ({
   const [editingVisitReportIndex, setEditingVisitReportIndex] = useState<
     number | null
   >(null);
+  const [isPurchaseOrderDialogOpen, setIsPurchaseOrderDialogOpen] =
+    useState(false);
+  const [purchaseOrders, setPurchaseOrders] = useState<
+    CompanyPurchaseOrderInput[]
+  >([]);
+  const [editingPurchaseOrderIndex, setEditingPurchaseOrderIndex] = useState<
+    number | null
+  >(null);
 
   const form = useForm<CompanyFormValues>({
     resolver: zodResolver(createCompanySchema()),
@@ -237,6 +249,17 @@ export const useCompanySubmit = ({
       currency: "",
       isBlocked: false,
       blockedByNote: "",
+      invoicingMethod: "per_delivery",
+      collectiveInvoicing: false,
+      invoicePackagingAtZeroPrice: false,
+      printCommodityCode: false,
+      invoiceFrequency: "daily",
+      invoicePrintEnabled: false,
+      invoicePrintCount: 1,
+      invoiceEmailEnabled: false,
+      invoiceEmailTo: "",
+      printEmailZeroValueInvoices: false,
+      sendXmlWithInvoice: false,
       address: {
         category: [],
         poBox: false,
@@ -316,6 +339,11 @@ export const useCompanySubmit = ({
   const visitReportForm = useForm<VisitReportDialogValues>({
     resolver: zodResolver(visitReportDialogSchema),
     defaultValues: DEFAULT_VISIT_REPORT,
+  });
+
+  const purchaseOrderForm = useForm<PurchaseOrderDialogValues>({
+    resolver: zodResolver(purchaseOrderDialogSchema),
+    defaultValues: DEFAULT_PURCHASE_ORDER,
   });
 
   const addressValues = form.watch("address");
@@ -862,6 +890,107 @@ export const useCompanySubmit = ({
   const removeVisitReport = (index: number) =>
     setVisitReports((prev) => prev.filter((_, i) => i !== index));
 
+  // ── Purchase order handlers ──────────────────────────────────────────────────
+
+  const mapPurchaseOrder = (
+    values: PurchaseOrderDialogValues,
+  ): CompanyPurchaseOrderInput => ({
+    status: values.status,
+    purchaseOrderType: (values.purchaseOrderType ||
+      undefined) as CompanyPurchaseOrderInput["purchaseOrderType"],
+    forOrder: values.forOrder || undefined,
+    orderDate: values.orderDate || undefined,
+    deliveryDate: values.deliveryDate
+      ? new Date(values.deliveryDate)
+      : undefined,
+    amount: values.amount || "0.00",
+    weightKg: values.weightKg || "0.000",
+    confirmationReference: values.confirmationReference || undefined,
+    confirmationDate: values.confirmationDate || undefined,
+    copiedFrom: values.copiedFrom || undefined,
+    internalReference: values.internalReference || undefined,
+    reference: values.reference || undefined,
+    inkoper: values.inkoper || undefined,
+    purchaserInitials: values.purchaserInitials || undefined,
+    isPrinted: values.isPrinted,
+    isMailed: values.isMailed,
+    arrangeTransport: values.arrangeTransport,
+    pickupDropoffCdPurchases: values.pickupDropoffCdPurchases,
+    isOverlengte: values.isOverlengte,
+    remarks: values.remarks || undefined,
+  });
+
+  const handlePurchaseOrderOpenChange = (open: boolean) => {
+    if (!open) {
+      purchaseOrderForm.reset(DEFAULT_PURCHASE_ORDER);
+      setEditingPurchaseOrderIndex(null);
+    }
+    setIsPurchaseOrderDialogOpen(open);
+  };
+
+  const handleOpenPurchaseOrder = () => {
+    setEditingPurchaseOrderIndex(null);
+    purchaseOrderForm.reset({
+      ...DEFAULT_PURCHASE_ORDER,
+      orderDate: todayDateString(),
+    });
+    setIsPurchaseOrderDialogOpen(true);
+  };
+
+  const handleEditPurchaseOrder = (index: number) => {
+    const order = purchaseOrders[index];
+    if (!order) return;
+    setEditingPurchaseOrderIndex(index);
+    purchaseOrderForm.reset({
+      status: order.status ?? "open",
+      purchaseOrderType: order.purchaseOrderType ?? "",
+      forOrder: order.forOrder ?? "",
+      orderDate: order.orderDate ?? "",
+      deliveryDate: order.deliveryDate
+        ? new Date(order.deliveryDate).toISOString().split("T")[0]
+        : "",
+      amount: order.amount ?? "0.00",
+      weightKg: order.weightKg ?? "0.000",
+      confirmationReference: order.confirmationReference ?? "",
+      confirmationDate: order.confirmationDate ?? "",
+      copiedFrom: order.copiedFrom ?? "",
+      internalReference: order.internalReference ?? "",
+      reference: order.reference ?? "",
+      inkoper: order.inkoper ?? "",
+      purchaserInitials: order.purchaserInitials ?? "",
+      isPrinted: order.isPrinted ?? false,
+      isMailed: order.isMailed ?? false,
+      arrangeTransport: order.arrangeTransport ?? false,
+      pickupDropoffCdPurchases: order.pickupDropoffCdPurchases ?? false,
+      isOverlengte: order.isOverlengte ?? false,
+      remarks: order.remarks ?? "",
+    });
+    setIsPurchaseOrderDialogOpen(true);
+  };
+
+  const handleCancelPurchaseOrder = () => {
+    purchaseOrderForm.reset(DEFAULT_PURCHASE_ORDER);
+    setEditingPurchaseOrderIndex(null);
+    setIsPurchaseOrderDialogOpen(false);
+  };
+
+  const handleSavePurchaseOrder = purchaseOrderForm.handleSubmit((values) => {
+    const entry = mapPurchaseOrder(values);
+    setPurchaseOrders((prev) =>
+      editingPurchaseOrderIndex === null
+        ? [...prev, entry]
+        : prev.map((order, i) =>
+            i === editingPurchaseOrderIndex ? entry : order,
+          ),
+    );
+    purchaseOrderForm.reset(DEFAULT_PURCHASE_ORDER);
+    setEditingPurchaseOrderIndex(null);
+    setIsPurchaseOrderDialogOpen(false);
+  });
+
+  const removePurchaseOrder = (index: number) =>
+    setPurchaseOrders((prev) => prev.filter((_, i) => i !== index));
+
   // ── Role handler ─────────────────────────────────────────────────────────────
 
   const toggleRole = (role: CompanyRole) => {
@@ -1006,6 +1135,18 @@ export const useCompanySubmit = ({
           cocNumber: cocNumber || undefined,
           currency: (currency || undefined) as InsertCompanies["currency"],
           blockedByNote: blockedByNote || undefined,
+          invoicingMethod: (values.invoicingMethod ||
+            undefined) as InsertCompanies["invoicingMethod"],
+          collectiveInvoicing: values.collectiveInvoicing,
+          invoicePackagingAtZeroPrice: values.invoicePackagingAtZeroPrice,
+          printCommodityCode: values.printCommodityCode,
+          invoiceFrequency: values.invoiceFrequency,
+          invoicePrintEnabled: values.invoicePrintEnabled,
+          invoicePrintCount: values.invoicePrintCount,
+          invoiceEmailEnabled: values.invoiceEmailEnabled,
+          invoiceEmailTo: values.invoiceEmailTo || undefined,
+          printEmailZeroValueInvoices: values.printEmailZeroValueInvoices,
+          sendXmlWithInvoice: values.sendXmlWithInvoice,
         },
         isBlocked,
         allAddresses,
@@ -1015,6 +1156,7 @@ export const useCompanySubmit = ({
         texts,
         projects,
         resolvedVisitReports,
+        purchaseOrders,
       );
       setState(result);
       if (result.success) router.push("/companies");
@@ -1116,6 +1258,17 @@ export const useCompanySubmit = ({
     handleCancelVisitReport,
     handleSaveVisitReport,
     removeVisitReport,
+
+    purchaseOrderForm,
+    purchaseOrders,
+    isPurchaseOrderDialogOpen,
+    isEditingPurchaseOrder: editingPurchaseOrderIndex !== null,
+    handlePurchaseOrderOpenChange,
+    handleOpenPurchaseOrder,
+    handleEditPurchaseOrder,
+    handleCancelPurchaseOrder,
+    handleSavePurchaseOrder,
+    removePurchaseOrder,
 
     toggleRole,
 
