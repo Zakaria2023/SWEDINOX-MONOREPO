@@ -102,7 +102,7 @@ export type ProjectOption = Pick<
 
 export type CompanyContactInput = Omit<
   InsertContacts,
-  "id" | "companyUuid" | "createdAt" | "updatedAt"
+  "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt"
 >;
 
 export type CompanyTextInput = Omit<
@@ -110,10 +110,15 @@ export type CompanyTextInput = Omit<
   "id" | "uuid" | "companyUuid" | "createdByUserId" | "createdAt" | "updatedAt"
 >;
 
+// contactIndex references a position in the `contacts` array passed to
+// createCompany — contacts don't have a real uuid yet at this point, since
+// that's only generated once they're actually inserted.
 export type VisitReportInput = Omit<
   InsertVisitReports,
-  "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt"
->;
+  "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt" | "contactUuid"
+> & {
+  contactIndex?: number;
+};
 
 export type CompanyPurchaseOrderInput = Omit<
   InsertPurchaseOrders,
@@ -355,10 +360,13 @@ export const createCompany = async (
         });
       }
 
+      const contactUuids: string[] = [];
       for (const contact of contacts) {
+        const contactUuid = generateUuid();
+        contactUuids.push(contactUuid);
         await tx.insert(Contacts).values({
           ...contact,
-          uuid: contact.uuid ?? generateUuid(),
+          uuid: contactUuid,
           companyUuid: uuid,
         });
       }
@@ -381,10 +389,13 @@ export const createCompany = async (
       }
 
       for (const visitReport of visitReports) {
+        const { contactIndex, ...rest } = visitReport;
         await tx.insert(VisitReports).values({
-          ...visitReport,
+          ...rest,
           uuid: generateUuid(),
           companyUuid: uuid,
+          contactUuid:
+            contactIndex != null ? contactUuids[contactIndex] : undefined,
         });
       }
 

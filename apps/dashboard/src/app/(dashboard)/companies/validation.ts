@@ -358,7 +358,9 @@ export const visitReportDialogSchema = z.object({
     z.literal(""),
     z.undefined(),
   ]),
-  contactUuid: z.string().optional(),
+  // Index into the in-progress contacts array — not a real uuid yet, since
+  // the company and its contacts aren't persisted until submit.
+  contactIndex: z.string().optional(),
 });
 
 export type VisitReportDialogValues = z.infer<typeof visitReportDialogSchema>;
@@ -369,7 +371,7 @@ export const DEFAULT_VISIT_REPORT: VisitReportDialogValues = {
   contactMethod: "",
   hasTakenPlace: false,
   visitReason: "",
-  contactUuid: "",
+  contactIndex: "",
 };
 
 // ── Purchase Order Dialog ────────────────────────────────────────────────────

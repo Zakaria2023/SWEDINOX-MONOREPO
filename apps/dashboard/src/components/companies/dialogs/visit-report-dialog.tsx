@@ -145,15 +145,15 @@ export const VisitReportDialog = ({
             <div>
               <FormLabel htmlFor="vr-contact">Contact</FormLabel>
               <Controller
-                name="contactUuid"
+                name="contactIndex"
                 control={form.control}
                 render={({ field }) => (
                   <Select
                     id="vr-contact"
                     options={[
                       { value: "", label: COMMON_TEXT.emptyOption },
-                      ...contacts.map((contact) => ({
-                        value: contact.uuid ?? "",
+                      ...contacts.map((contact, index) => ({
+                        value: String(index),
                         label: contactLabel(contact),
                       })),
                     ]}
