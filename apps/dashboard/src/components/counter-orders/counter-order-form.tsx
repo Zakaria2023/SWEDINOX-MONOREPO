@@ -41,17 +41,19 @@ type CounterOrderFormProps = {
   companies: CompanyOption[];
 };
 
+type CheckboxFieldProps = {
+  label: string;
+  checked: boolean;
+  onChange: (value: boolean) => void;
+  disabled?: boolean;
+};
+
 const CheckboxField = ({
   label,
   checked,
   onChange,
   disabled,
-}: {
-  label: string;
-  checked: boolean;
-  onChange: (value: boolean) => void;
-  disabled?: boolean;
-}) => (
+}: CheckboxFieldProps) => (
   <label className="flex cursor-pointer items-center gap-2">
     <Checkbox
       checked={checked}

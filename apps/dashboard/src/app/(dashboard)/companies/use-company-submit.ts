@@ -893,15 +893,13 @@ export const useCompanySubmit = ({
     deliveryDate: values.deliveryDate || undefined,
     status: values.status,
     priority: values.priority,
-    orderMethod:
-      (values.orderMethod ||
-        undefined) as CompanyCounterOrderInput["orderMethod"],
+    orderMethod: (values.orderMethod ||
+      undefined) as CompanyCounterOrderInput["orderMethod"],
     seller: values.seller || undefined,
     customerRef: values.customerRef || undefined,
     ourReference: values.ourReference || undefined,
-    deliveryTerms:
-      (values.deliveryTerms ||
-        undefined) as CompanyCounterOrderInput["deliveryTerms"],
+    deliveryTerms: (values.deliveryTerms ||
+      undefined) as CompanyCounterOrderInput["deliveryTerms"],
     handlingBlocked: values.handlingBlocked,
     printPickingSlips: values.printPickingSlips,
     isPickup: values.isPickup,
@@ -932,7 +930,9 @@ export const useCompanySubmit = ({
 
   const handleEditCounterOrder = (index: number) => {
     const order = counterOrders[index];
-    if (!order) return;
+    if (!order) {
+      return;
+    }
     setEditingCounterOrderIndex(index);
     counterOrderForm.reset({
       customerRef: order.customerRef ?? "",

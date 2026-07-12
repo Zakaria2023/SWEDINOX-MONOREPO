@@ -34,29 +34,25 @@ export const CounterOrders = mysqlTable(
     companyUuid: char("company_uuid", { length: 36 }).notNull(),
     contactUuid: char("contact_uuid", { length: 36 }),
     customerRef: varchar("customer_ref", { length: 255 }),
-    leaveCustomer: boolean("leave_customer").default(false).notNull(),
+    leaveCustomer: boolean("leave_customer").default(false),
     orderMethod: mysqlEnum("order_method", orderMethods),
     ourReference: varchar("our_reference", { length: 255 }),
     seller: varchar("seller", { length: 255 }),
     projectUuid: char("project_uuid", { length: 36 }),
-    status: mysqlEnum("status", counterOrderStatuses)
-      .default("open")
-      .notNull(),
-    priority: mysqlEnum("priority", counterOrderPriorities)
-      .default("normal")
-      .notNull(),
+    status: mysqlEnum("status", counterOrderStatuses).default("open"),
+    priority: mysqlEnum("priority", counterOrderPriorities).default("normal"),
     priceDate: date("price_date", { mode: "string" }),
     orderDate: date("order_date", { mode: "string" }),
-    handlingBlocked: boolean("handling_blocked").default(false).notNull(),
-    printPickingSlips: boolean("print_picking_slips").default(true).notNull(),
+    handlingBlocked: boolean("handling_blocked").default(false),
+    printPickingSlips: boolean("print_picking_slips").default(true),
 
     // ── Order type ──────────────────────────────────────────────────────────
-    isPickup: boolean("is_pickup").default(false).notNull(),
-    isIncidental: boolean("is_incidental").default(false).notNull(),
-    isOverlengte: boolean("is_overlengte").default(false).notNull(),
-    isPrinted: boolean("is_printed").default(false).notNull(),
-    isMailed: boolean("is_mailed").default(false).notNull(),
-    isFaxed: boolean("is_faxed").default(false).notNull(),
+    isPickup: boolean("is_pickup").default(false),
+    isIncidental: boolean("is_incidental").default(false),
+    isOverlengte: boolean("is_overlengte").default(false),
+    isPrinted: boolean("is_printed").default(false),
+    isMailed: boolean("is_mailed").default(false),
+    isFaxed: boolean("is_faxed").default(false),
 
     // ── Delivery ────────────────────────────────────────────────────────────
     deliveryTerms: mysqlEnum("delivery_terms", deliveryTerms),
@@ -68,16 +64,15 @@ export const CounterOrders = mysqlTable(
     deliveryRemark: varchar("delivery_remark", { length: 255 }),
 
     // ── Summary ─────────────────────────────────────────────────────────────
-    amountExVat: decimal("amount_ex_vat", { precision: 15, scale: 2 })
-      .default("0.00")
-      .notNull(),
-    weightKg: decimal("weight_kg", { precision: 12, scale: 3 })
-      .default("0.000")
-      .notNull(),
-    gainPercent: decimal("gain_percent", { precision: 6, scale: 2 })
-      .default("0.00")
-      .notNull(),
-
+    amountExVat: decimal("amount_ex_vat", { precision: 15, scale: 2 }).default(
+      "0.00",
+    ),
+    weightKg: decimal("weight_kg", { precision: 12, scale: 3 }).default(
+      "0.000",
+    ),
+    gainPercent: decimal("gain_percent", { precision: 6, scale: 2 }).default(
+      "0.00",
+    ),
     remarks: text("remarks"),
 
     createdAt: timestamp("created_at").defaultNow().notNull(),

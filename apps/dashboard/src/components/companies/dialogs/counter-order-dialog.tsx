@@ -44,15 +44,13 @@ type Props = {
   isEditing?: boolean;
 };
 
-const CheckboxField = ({
-  label,
-  checked,
-  onChange,
-}: {
+type CheckboxFieldProps = {
   label: string;
   checked: boolean;
   onChange: (value: boolean) => void;
-}) => (
+};
+
+const CheckboxField = ({ label, checked, onChange }: CheckboxFieldProps) => (
   <label className="flex cursor-pointer items-center gap-2">
     <Checkbox checked={checked} onChange={(e) => onChange(e.target.checked)} />
     <span className="text-sm text-gray-700">{label}</span>
