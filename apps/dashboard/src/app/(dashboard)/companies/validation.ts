@@ -338,7 +338,7 @@ export const visitReportDialogSchema = z.object({
     z.literal(""),
     z.undefined(),
   ]),
-  contact: z.string().optional(),
+  contactUuid: z.string().optional(),
 });
 
 export type VisitReportDialogValues = z.infer<typeof visitReportDialogSchema>;
@@ -349,7 +349,7 @@ export const DEFAULT_VISIT_REPORT: VisitReportDialogValues = {
   contactMethod: "",
   hasTakenPlace: false,
   visitReason: "",
-  contact: "",
+  contactUuid: "",
 };
 
 export const DEFAULT_TEXT: TextDialogValues = {

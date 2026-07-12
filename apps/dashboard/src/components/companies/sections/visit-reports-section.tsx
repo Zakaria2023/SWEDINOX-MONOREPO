@@ -5,12 +5,13 @@ import {
   VISIT_REPORT_CONTACT_METHOD_LABELS,
   VISIT_REPORT_REASON_LABELS,
 } from "@/lib/labels";
-import { ClipboardList, Plus, X } from "lucide-react";
+import { ClipboardList, Pencil, Plus, X } from "lucide-react";
 
 type Props = {
   visitReports: VisitReportInput[];
   removeVisitReport: (index: number) => void;
   handleOpenVisitReport: () => void;
+  handleEditVisitReport: (index: number) => void;
   isPending: boolean;
 };
 
@@ -18,6 +19,7 @@ export const VisitReportsSection = ({
   visitReports,
   removeVisitReport,
   handleOpenVisitReport,
+  handleEditVisitReport,
   isPending,
 }: Props) => (
   <section className="space-y-4">
@@ -55,15 +57,26 @@ export const VisitReportsSection = ({
               0 days in system
             </span>
           </div>
-          <button
-            type="button"
-            onClick={() => removeVisitReport(index)}
-            className="shrink-0 text-muted-foreground hover:text-destructive"
-            disabled={isPending}
-          >
-            <X className="size-4" />
-            <span className="sr-only">Remove visit report</span>
-          </button>
+          <div className="flex shrink-0 items-center gap-1">
+            <button
+              type="button"
+              onClick={() => handleEditVisitReport(index)}
+              className="text-muted-foreground hover:text-primary"
+              disabled={isPending}
+            >
+              <Pencil className="size-4" />
+              <span className="sr-only">Edit visit report</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => removeVisitReport(index)}
+              className="text-muted-foreground hover:text-destructive"
+              disabled={isPending}
+            >
+              <X className="size-4" />
+              <span className="sr-only">Remove visit report</span>
+            </button>
+          </div>
         </div>
       ))}
       <button

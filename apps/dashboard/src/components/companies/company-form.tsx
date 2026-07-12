@@ -130,8 +130,10 @@ export const CompanyForm = ({
     visitReportForm,
     visitReports,
     isVisitReportDialogOpen,
+    isEditingVisitReport,
     handleVisitReportOpenChange,
     handleOpenVisitReport,
+    handleEditVisitReport,
     handleCancelVisitReport,
     handleSaveVisitReport,
     removeVisitReport,
@@ -233,6 +235,7 @@ export const CompanyForm = ({
           visitReports={visitReports}
           removeVisitReport={removeVisitReport}
           handleOpenVisitReport={handleOpenVisitReport}
+          handleEditVisitReport={handleEditVisitReport}
           isPending={isPending}
         />
 
@@ -330,6 +333,8 @@ export const CompanyForm = ({
         onCancel={handleCancelVisitReport}
         onSave={handleSaveVisitReport}
         form={visitReportForm}
+        contacts={contacts}
+        isEditing={isEditingVisitReport}
       />
     </FormProvider>
   );

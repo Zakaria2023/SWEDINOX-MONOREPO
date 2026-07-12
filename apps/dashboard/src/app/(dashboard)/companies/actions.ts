@@ -97,7 +97,7 @@ export type ProjectOption = Pick<
 
 export type CompanyContactInput = Omit<
   InsertContacts,
-  "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt"
+  "id" | "companyUuid" | "createdAt" | "updatedAt"
 >;
 
 export type CompanyTextInput = Omit<
@@ -335,7 +335,7 @@ export const createCompany = async (
       for (const contact of contacts) {
         await tx.insert(Contacts).values({
           ...contact,
-          uuid: generateUuid(),
+          uuid: contact.uuid ?? generateUuid(),
           companyUuid: uuid,
         });
       }

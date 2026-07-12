@@ -6,7 +6,7 @@ import {
 } from "@/app/(dashboard)/contracts/actions";
 import { TextCategoryOption } from "@/app/(dashboard)/text-categories/actions";
 import { InsertCompanies } from "@/db/schema/companies";
-import { todayDateString } from "@/lib/helpers";
+import { generateUuid, todayDateString } from "@/lib/helpers";
 import {
   addressCategories,
   AddressCategory,
@@ -198,6 +198,9 @@ export const useCompanySubmit = ({
   const [projects, setProjects] = useState<CustomerProjectInput[]>([]);
   const [isVisitReportDialogOpen, setIsVisitReportDialogOpen] = useState(false);
   const [visitReports, setVisitReports] = useState<VisitReportInput[]>([]);
+  const [editingVisitReportIndex, setEditingVisitReportIndex] = useState<
+    number | null
+  >(null);
 
   const form = useForm<CompanyFormValues>({
     resolver: zodResolver(createCompanySchema()),
@@ -587,6 +590,7 @@ export const useCompanySubmit = ({
     setContacts((prev) => [
       ...prev,
       {
+        uuid: generateUuid(),
         salutation: (values.salutation ||
           undefined) as CompanyContactInput["salutation"],
         firstName: values.firstName || undefined,
@@ -781,37 +785,77 @@ export const useCompanySubmit = ({
 
   // ── Visit report handlers ────────────────────────────────────────────────────
 
+  const contactLabel = (contact: CompanyContactInput) =>
+    [contact.firstName, contact.lastName].filter(Boolean).join(" ") ||
+    contact.email ||
+    "Contact";
+
+  // When exactly one contact exists it becomes the default; with none the
+  // field stays empty (the dialog disables it and prompts to add a contact).
+  const defaultVisitReportContact = () =>
+    contacts.length === 1 ? (contacts[0].uuid ?? "") : "";
+
   const handleVisitReportOpenChange = (open: boolean) => {
-    if (!open) visitReportForm.reset(DEFAULT_VISIT_REPORT);
+    if (!open) {
+      visitReportForm.reset(DEFAULT_VISIT_REPORT);
+      setEditingVisitReportIndex(null);
+    }
     setIsVisitReportDialogOpen(open);
   };
 
   const handleOpenVisitReport = () => {
-    visitReportForm.reset(DEFAULT_VISIT_REPORT);
+    setEditingVisitReportIndex(null);
+    visitReportForm.reset({
+      ...DEFAULT_VISIT_REPORT,
+      contactUuid: defaultVisitReportContact(),
+    });
+    setIsVisitReportDialogOpen(true);
+  };
+
+  const handleEditVisitReport = (index: number) => {
+    const report = visitReports[index];
+    if (!report) return;
+    setEditingVisitReportIndex(index);
+    visitReportForm.reset({
+      visitDate: report.visitDate ?? "",
+      visitTime: report.visitTime ?? "",
+      contactMethod: report.contactMethod ?? "",
+      hasTakenPlace: report.hasTakenPlace ?? false,
+      visitReason: report.visitReason ?? "",
+      contactUuid: report.contactUuid ?? "",
+    });
     setIsVisitReportDialogOpen(true);
   };
 
   const handleCancelVisitReport = () => {
     visitReportForm.reset(DEFAULT_VISIT_REPORT);
+    setEditingVisitReportIndex(null);
     setIsVisitReportDialogOpen(false);
   };
 
   const handleSaveVisitReport = visitReportForm.handleSubmit((values) => {
-    setVisitReports((prev) => [
-      ...prev,
-      {
-        visitDate: values.visitDate || undefined,
-        visitTime: values.visitTime || undefined,
-        contactMethod:
-          (values.contactMethod ||
-            undefined) as VisitReportInput["contactMethod"],
-        hasTakenPlace: values.hasTakenPlace,
-        visitReason:
-          (values.visitReason || undefined) as VisitReportInput["visitReason"],
-        representative: values.contact || undefined,
-      },
-    ]);
+    const contact = contacts.find((c) => c.uuid === values.contactUuid);
+    const entry: VisitReportInput = {
+      visitDate: values.visitDate || undefined,
+      visitTime: values.visitTime || undefined,
+      contactMethod:
+        (values.contactMethod ||
+          undefined) as VisitReportInput["contactMethod"],
+      hasTakenPlace: values.hasTakenPlace,
+      visitReason:
+        (values.visitReason || undefined) as VisitReportInput["visitReason"],
+      contactUuid: contact?.uuid,
+      representative: contact ? contactLabel(contact) : undefined,
+    };
+    setVisitReports((prev) =>
+      editingVisitReportIndex === null
+        ? [...prev, entry]
+        : prev.map((report, i) =>
+            i === editingVisitReportIndex ? entry : report,
+          ),
+    );
     visitReportForm.reset(DEFAULT_VISIT_REPORT);
+    setEditingVisitReportIndex(null);
     setIsVisitReportDialogOpen(false);
   });
 
@@ -904,6 +948,17 @@ export const useCompanySubmit = ({
       const isCustomerOrProspect =
         roles?.includes("customer") || roles?.includes("prospect");
       const allAddresses = [address, ...additionalAddresses].map(mapAddress);
+      // If a visit report was added before any contact existed, back-fill the
+      // sole contact so a single-contact company links automatically.
+      const resolvedVisitReports = visitReports.map((report) => {
+        if (report.contactUuid || contacts.length !== 1) return report;
+        const only = contacts[0];
+        return {
+          ...report,
+          contactUuid: only.uuid,
+          representative: report.representative ?? contactLabel(only),
+        };
+      });
       const result = await createCompany(
         {
           companyName,
@@ -959,7 +1014,7 @@ export const useCompanySubmit = ({
         contacts,
         texts,
         projects,
-        visitReports,
+        resolvedVisitReports,
       );
       setState(result);
       if (result.success) router.push("/companies");
@@ -1054,8 +1109,10 @@ export const useCompanySubmit = ({
     visitReportForm,
     visitReports,
     isVisitReportDialogOpen,
+    isEditingVisitReport: editingVisitReportIndex !== null,
     handleVisitReportOpenChange,
     handleOpenVisitReport,
+    handleEditVisitReport,
     handleCancelVisitReport,
     handleSaveVisitReport,
     removeVisitReport,
