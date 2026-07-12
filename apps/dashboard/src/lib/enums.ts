@@ -943,6 +943,16 @@ export const purchaseOrderTypes = [
 
 export type PurchaseOrderType = (typeof purchaseOrderTypes)[number];
 
+export const purchaseOrderStatuses = [
+  "open",
+  "confirmed",
+  "pre_notified",
+  "completed",
+  "cancelled",
+] as const satisfies readonly string[];
+
+export type PurchaseOrderStatus = (typeof purchaseOrderStatuses)[number];
+
 export const purchaseCompanyTypes = [
   "supplier",
   "agent",

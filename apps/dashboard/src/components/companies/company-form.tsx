@@ -16,6 +16,7 @@ import { SalesSection } from "@/components/companies/sections/sales-section";
 import { DebtorSection } from "@/components/companies/sections/debtor-section";
 import { TextsSection } from "@/components/companies/sections/texts-section";
 import { ProjectsSection } from "@/components/companies/sections/projects-section";
+import { PurchaseOrdersSection } from "@/components/companies/sections/purchase-orders-section";
 import { DocumentsSection } from "@/components/companies/sections/documents-section";
 import { SearchCodesSection } from "@/components/companies/sections/search-codes-section";
 import { ContactsSection } from "@/components/companies/sections/contacts-section";
@@ -26,6 +27,7 @@ import { ContractDialog } from "@/components/companies/dialogs/contract-dialog";
 import { TextDialog } from "@/components/companies/dialogs/text-dialog";
 import { ContactDialog } from "@/components/companies/dialogs/contact-dialog";
 import { ProjectDialog } from "@/components/companies/dialogs/project-dialog";
+import { PurchaseOrderDialog } from "@/components/companies/dialogs/purchase-order-dialog";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { FormProvider } from "react-hook-form";
@@ -125,6 +127,16 @@ export const CompanyForm = ({
     handleCancelProject,
     handleSaveProject,
     removeProject,
+    purchaseOrderForm,
+    purchaseOrders,
+    isPurchaseOrderDialogOpen,
+    isEditingPurchaseOrder,
+    handlePurchaseOrderOpenChange,
+    handleOpenPurchaseOrder,
+    handleEditPurchaseOrder,
+    handleCancelPurchaseOrder,
+    handleSavePurchaseOrder,
+    removePurchaseOrder,
     toggleRole,
     salesData,
     setSalesData,
@@ -146,6 +158,11 @@ export const CompanyForm = ({
     selectedRoles.includes("customer") ||
     selectedRoles.includes("prospect") ||
     selectedRoles.includes("purchasing_org");
+
+  const isPurchaseOrderVisible =
+    selectedRoles.includes("customer") ||
+    selectedRoles.includes("processor") ||
+    selectedRoles.includes("supplier");
 
   return (
     <FormProvider {...form}>
@@ -216,6 +233,16 @@ export const CompanyForm = ({
             handleOpenProject={handleOpenProject}
             isPending={isPending}
             projectContracts={projectContracts_}
+          />
+        )}
+
+        {isPurchaseOrderVisible && (
+          <PurchaseOrdersSection
+            purchaseOrders={purchaseOrders}
+            removePurchaseOrder={removePurchaseOrder}
+            handleOpenPurchaseOrder={handleOpenPurchaseOrder}
+            handleEditPurchaseOrder={handleEditPurchaseOrder}
+            isPending={isPending}
           />
         )}
 
@@ -305,6 +332,15 @@ export const CompanyForm = ({
         onSave={handleSaveProject}
         form={projectForm}
         projectContracts={projectContracts_}
+      />
+
+      <PurchaseOrderDialog
+        isOpen={isPurchaseOrderDialogOpen}
+        onOpenChange={handlePurchaseOrderOpenChange}
+        onCancel={handleCancelPurchaseOrder}
+        onSave={handleSavePurchaseOrder}
+        form={purchaseOrderForm}
+        isEditing={isEditingPurchaseOrder}
       />
     </FormProvider>
   );

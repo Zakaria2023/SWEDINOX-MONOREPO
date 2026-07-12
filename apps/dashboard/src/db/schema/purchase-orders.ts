@@ -19,6 +19,7 @@ import {
   deliveryTypes,
   invoicePaymentTerms,
   orderWeightTypes,
+  purchaseOrderStatuses,
   purchaseOrderTypes,
 } from "../../lib/enums";
 import { Companies } from "./companies";
@@ -83,6 +84,25 @@ export const PurchaseOrders = mysqlTable(
     deliveryAfterTime: varchar("delivery_after_time", { length: 5 }),
     deliverForTime: varchar("deliver_for_time", { length: 5 }),
     transportMode: varchar("transport_mode", { length: 100 }),
+
+    // ── Summary / listing fields ────────────────────────────────────────────
+    status: mysqlEnum("status", purchaseOrderStatuses)
+      .default("open")
+      .notNull(),
+    forOrder: varchar("for_order", { length: 255 }),
+    orderDate: date("order_date", { mode: "string" }),
+    amount: decimal("amount", { precision: 15, scale: 2 })
+      .default("0.00")
+      .notNull(),
+    weightKg: decimal("weight_kg", { precision: 12, scale: 3 })
+      .default("0.000")
+      .notNull(),
+    confirmationReference: varchar("confirmation_reference", { length: 255 }),
+    confirmationDate: date("confirmation_date", { mode: "string" }),
+    copiedFrom: varchar("copied_from", { length: 255 }),
+    internalReference: varchar("internal_reference", { length: 255 }),
+    inkoper: varchar("inkoper", { length: 255 }),
+    purchaserInitials: varchar("purchaser_initials", { length: 50 }),
 
     // ── Remarks ───────────────────────────────────────────────────────────────
     remarks: text("remarks"),
