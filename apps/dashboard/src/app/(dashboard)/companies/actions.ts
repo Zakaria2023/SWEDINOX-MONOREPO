@@ -34,6 +34,7 @@ import {
   PurchaseOrders,
   SelectPurchaseOrders,
 } from "@/db/schema/purchase-orders";
+import { InsertQuotes, Quotes } from "@/db/schema/quotes";
 import { PurchaseCompanyType } from "@/lib/enums";
 import { generateUuid } from "@/lib/helpers";
 import { currentUser } from "@clerk/nextjs/server";
@@ -123,6 +124,11 @@ export type CompanyCounterOrderInput = Omit<
 
 export type CompanyProductInput = Omit<
   InsertProducts,
+  "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt"
+>;
+
+export type CompanyQuoteInput = Omit<
+  InsertQuotes,
   "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt"
 >;
 
@@ -231,9 +237,9 @@ export const resolveCompanyType = async (
     return null;
   }
   switch (true) {
-    case company.roles.includes("supplier"):
+    case company.roles?.includes("supplier"):
       return "supplier";
-    case company.roles.includes("agent"):
+    case company.roles?.includes("agent"):
       return "agent";
     default:
       return null;
@@ -349,6 +355,7 @@ export const createCompany = async (
   products: CompanyProductInput[] = [],
   visitReports: VisitReportInput[] = [],
   purchaseOrders: CompanyPurchaseOrderInput[] = [],
+  quotes: CompanyQuoteInput[] = [],
 ): Promise<CompanyActionResult> => {
   const uuid = generateUuid();
 
@@ -451,6 +458,14 @@ export const createCompany = async (
           ...purchaseOrder,
           uuid: generateUuid(),
           supplierUuid: uuid,
+        });
+      }
+
+      for (const quote of quotes) {
+        await tx.insert(Quotes).values({
+          ...quote,
+          uuid: generateUuid(),
+          companyUuid: uuid,
         });
       }
     });
