@@ -242,6 +242,46 @@ export const CompanyDetailView = ({ company, invoices }: Props) => {
         </section>
       )}
 
+      {/* Follow-up */}
+      {company.followUps.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-gray-700">
+            Follow-up{" "}
+            <span className="ml-1 text-xs font-normal text-muted-foreground">
+              {company.followUps.length}
+            </span>
+          </h2>
+          <div className="overflow-x-auto rounded-lg border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>By</TableHead>
+                  <TableHead>Contact person</TableHead>
+                  <TableHead>Text</TableHead>
+                  <TableHead>Completed</TableHead>
+                  <TableHead className="text-right">Days in system</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {company.followUps.map((followUp) => (
+                  <TableRow key={followUp.uuid}>
+                    <TableCell>{followUp.date ?? na}</TableCell>
+                    <TableCell>{followUp.by ?? na}</TableCell>
+                    <TableCell>{followUp.contactPerson ?? na}</TableCell>
+                    <TableCell>{followUp.text ?? na}</TableCell>
+                    <TableCell>{followUp.completed ? "Yes" : "No"}</TableCell>
+                    <TableCell className="text-right">
+                      {daysInSystem(followUp.createdAt)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </section>
+      )}
+
       {/* Purchase Orders */}
       {company.purchaseOrders.length > 0 && (
         <section className="space-y-3">

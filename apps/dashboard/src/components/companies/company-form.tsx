@@ -22,6 +22,7 @@ import { ProjectsSection } from "@/components/companies/sections/projects-sectio
 import { CounterOrdersSection } from "@/components/companies/sections/counter-orders-section";
 import { VisitReportsSection } from "@/components/companies/sections/visit-reports-section";
 import { PurchaseOrdersSection } from "@/components/companies/sections/purchase-orders-section";
+import { FollowUpsSection } from "@/components/companies/sections/follow-ups-section";
 import { DocumentsSection } from "@/components/companies/sections/documents-section";
 import { SearchCodesSection } from "@/components/companies/sections/search-codes-section";
 import { ContactsSection } from "@/components/companies/sections/contacts-section";
@@ -201,6 +202,10 @@ export const CompanyForm = ({
     handleCancelPurchaseOrder,
     handleSavePurchaseOrder,
     removePurchaseOrder,
+    followUps,
+    addFollowUp,
+    updateFollowUp,
+    removeFollowUp,
     toggleRole,
     salesData,
     setSalesData,
@@ -215,6 +220,7 @@ export const CompanyForm = ({
     purchaseOrgCompanies,
     productGroups,
     availableProducts,
+    currentUserName: user?.fullName ?? undefined,
   });
 
   const isCustomerOrProspect =
@@ -333,6 +339,16 @@ export const CompanyForm = ({
             removePurchaseOrder={removePurchaseOrder}
             handleOpenPurchaseOrder={handleOpenPurchaseOrder}
             handleEditPurchaseOrder={handleEditPurchaseOrder}
+            isPending={isPending}
+          />
+        )}
+
+        {selectedRoles.includes("customer") && (
+          <FollowUpsSection
+            followUps={followUps}
+            addFollowUp={addFollowUp}
+            updateFollowUp={updateFollowUp}
+            removeFollowUp={removeFollowUp}
             isPending={isPending}
           />
         )}

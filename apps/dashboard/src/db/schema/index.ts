@@ -23,3 +23,4 @@ export * from "./purchase-quotes";
 export * from "./purchase-requests";
 export * from "./machines";
 export * from "./counter-orders";
+export * from "./follow-ups";
