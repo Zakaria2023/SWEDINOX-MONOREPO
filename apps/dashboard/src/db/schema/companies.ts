@@ -15,6 +15,7 @@ import {
   varchar,
 } from "drizzle-orm/mysql-core";
 import {
+  companyClassifications,
   companyLangs,
   currencies,
   customerGroups,
@@ -25,6 +26,7 @@ import {
   invoicingMethods,
   printProductCodesOptions,
   salesRepresentatives,
+  visitReportReasons,
   CompanyRole,
   EdiOption,
   MiscellaneousOption,
@@ -32,6 +34,7 @@ import {
   QuoteOption,
   QuoteOrderInvoiceOption,
   QuoteOrderOption,
+  VisitPlanningEntry,
 } from "../../lib/enums";
 
 export const Companies = mysqlTable(
@@ -100,6 +103,37 @@ export const Companies = mysqlTable(
     actionFaxEnabled: boolean("action_fax_enabled").default(false),
     actionFaxTo: varchar("action_fax_to", { length: 255 }),
     ediSettings: json("edi_settings").$type<EdiOption[]>().default([]),
+
+    // Marketing settings
+    // industry stores the SBI code (Industries.id); it's a logical reference
+    // to the Industries lookup table.
+    industry: varchar("industry", { length: 10 }),
+    classification: mysqlEnum("classification", companyClassifications),
+    visitFrequency: int("visit_frequency").default(0),
+    callFrequencyPerYear: int("call_frequency_per_year").default(0),
+    targetDateNextVisit: date("target_date_next_visit"),
+    visitReason: mysqlEnum("visit_reason", visitReportReasons),
+    potentialAnnualRevenue: decimal("potential_annual_revenue", {
+      precision: 15,
+      scale: 2,
+    }),
+    targetAnnualRevenue: decimal("target_annual_revenue", {
+      precision: 15,
+      scale: 2,
+    }),
+    potentialAnnualSales: decimal("potential_annual_sales", {
+      precision: 15,
+      scale: 3,
+    }),
+    targetAnnualSales: decimal("target_annual_sales", {
+      precision: 15,
+      scale: 3,
+    }),
+    numberOfEmployees: int("number_of_employees").default(0),
+    visitPlanning: json("visit_planning")
+      .$type<VisitPlanningEntry[]>()
+      .default([]),
+
     // Debtor fields
     debtorCompanyUuid: char("debtor_company_uuid", { length: 36 }),
     iban: varchar("iban", { length: 34 }),
@@ -161,6 +195,7 @@ export const Companies = mysqlTable(
     updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
   },
   (table) => [
+    index("idx_companies_industry").on(table.industry),
     index("idx_companies_debtor_company_uuid").on(table.debtorCompanyUuid),
     index("idx_companies_purchase_org_company_uuid").on(
       table.purchaseOrgCompanyUuid,

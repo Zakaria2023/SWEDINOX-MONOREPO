@@ -1,6 +1,7 @@
 import {
   addressCategories,
   availableAtOptions,
+  companyClassifications,
   companyLangs,
   companyRoles,
   contactSalutations,
@@ -178,6 +179,29 @@ export const createCompanySchema = () =>
     invoiceEmailTo: z.string().optional(),
     printEmailZeroValueInvoices: z.boolean(),
     sendXmlWithInvoice: z.boolean(),
+    // Marketing settings
+    industry: z.string().optional(),
+    classification: z.union([
+      z.enum(companyClassifications),
+      z.literal(""),
+      z.undefined(),
+    ]),
+    visitFrequency: z.string().optional(),
+    callFrequencyPerYear: z.string().optional(),
+    targetDateNextVisit: z.string().optional(),
+    visitReason: z.union([
+      z.enum(visitReportReasons),
+      z.literal(""),
+      z.undefined(),
+    ]),
+    potentialAnnualRevenue: z.string().optional(),
+    targetAnnualRevenue: z.string().optional(),
+    potentialAnnualSales: z.string().optional(),
+    targetAnnualSales: z.string().optional(),
+    numberOfEmployees: z.string().optional(),
+    visitPlanning: z.array(
+      z.object({ call: z.boolean(), visit: z.boolean() }),
+    ),
   });
 
 export type AddressFormValues = z.infer<ReturnType<typeof createAddressSchema>>;
