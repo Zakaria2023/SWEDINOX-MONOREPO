@@ -1359,7 +1359,9 @@ export const useCompanySubmit = ({
 
   const handleEditQuote = (index: number) => {
     const quote = quotes[index];
-    if (!quote) return;
+    if (!quote) {
+      return;
+    }
     setEditingQuoteIndex(index);
     quoteForm.reset({
       customerRef: quote.customerRef ?? "",
