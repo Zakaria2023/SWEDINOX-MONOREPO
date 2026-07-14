@@ -49,7 +49,7 @@ const formatDate = (value: Date | string | null) =>
   value ? new Date(value).toLocaleDateString() : COMMON_TEXT.notAvailable;
 
 export const CompanyDetailView = ({ company, invoices }: Props) => {
-  const isCustomer = company.roles.includes("customer");
+  const isCustomer = company.roles?.includes("customer");
   const na = COMMON_TEXT.notAvailable;
 
   return (
@@ -74,7 +74,7 @@ export const CompanyDetailView = ({ company, invoices }: Props) => {
               Roles
             </dt>
             <dd className="mt-1 flex flex-wrap gap-1.5">
-              {company.roles.length > 0 ? (
+              {company.roles && company.roles.length > 0 ? (
                 company.roles.map((role) => (
                   <span
                     key={role}
@@ -163,9 +163,11 @@ export const CompanyDetailView = ({ company, invoices }: Props) => {
                 {company.counterOrders.map((order) => (
                   <TableRow key={order.uuid}>
                     <TableCell className="font-medium">{order.id}</TableCell>
-                    <TableCell>{order.handlingBlocked ? "Yes" : "No"}</TableCell>
                     <TableCell>
-                      {COUNTER_ORDER_STATUS_LABELS[order.status]}
+                      {order.handlingBlocked ? "Yes" : "No"}
+                    </TableCell>
+                    <TableCell>
+                      {order.status ? COUNTER_ORDER_STATUS_LABELS[order.status] : COMMON_TEXT.notAvailable}
                     </TableCell>
                     <TableCell>{order.orderDate ?? na}</TableCell>
                     <TableCell>{order.deliveryDate ?? na}</TableCell>
@@ -233,6 +235,46 @@ export const CompanyDetailView = ({ company, invoices }: Props) => {
                     <TableCell>{report.representative ?? na}</TableCell>
                     <TableCell className="text-right">
                       {daysInSystem(report.createdAt)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </section>
+      )}
+
+      {/* Follow-up */}
+      {company.followUps.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-gray-700">
+            Follow-up{" "}
+            <span className="ml-1 text-xs font-normal text-muted-foreground">
+              {company.followUps.length}
+            </span>
+          </h2>
+          <div className="overflow-x-auto rounded-lg border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>By</TableHead>
+                  <TableHead>Contact person</TableHead>
+                  <TableHead>Text</TableHead>
+                  <TableHead>Completed</TableHead>
+                  <TableHead className="text-right">Days in system</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {company.followUps.map((followUp) => (
+                  <TableRow key={followUp.uuid}>
+                    <TableCell>{followUp.date ?? na}</TableCell>
+                    <TableCell>{followUp.by ?? na}</TableCell>
+                    <TableCell>{followUp.contactPerson ?? na}</TableCell>
+                    <TableCell>{followUp.text ?? na}</TableCell>
+                    <TableCell>{followUp.completed ? "Yes" : "No"}</TableCell>
+                    <TableCell className="text-right">
+                      {daysInSystem(followUp.createdAt)}
                     </TableCell>
                   </TableRow>
                 ))}
