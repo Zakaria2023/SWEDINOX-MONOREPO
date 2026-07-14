@@ -46,6 +46,7 @@ import {
   CompanyContactInput,
   CompanyContractInput,
   CompanyCounterOrderInput,
+  CompanyFollowUpInput,
   CompanyProductInput,
   CompanyPurchaseOrderInput,
   CompanyQuoteInput,
@@ -186,6 +187,7 @@ type UseCompanySubmitParams = {
   purchaseOrgCompanies: DebtorCompanyOption[];
   productGroups: ProductGroupOption[];
   availableProducts: ProductOption[];
+  currentUserName?: string;
 };
 
 export const useCompanySubmit = ({
@@ -196,6 +198,7 @@ export const useCompanySubmit = ({
   purchaseOrgCompanies,
   productGroups,
   availableProducts,
+  currentUserName,
 }: UseCompanySubmitParams) => {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -262,6 +265,7 @@ export const useCompanySubmit = ({
   const [editingQuoteIndex, setEditingQuoteIndex] = useState<number | null>(
     null,
   );
+  const [followUps, setFollowUps] = useState<CompanyFollowUpInput[]>([]);
 
   const form = useForm<CompanyFormValues>({
     resolver: zodResolver(createCompanySchema()),
@@ -1414,6 +1418,35 @@ export const useCompanySubmit = ({
   const removeQuote = (index: number) =>
     setQuotes((prev) => prev.filter((_, i) => i !== index));
 
+  // ── Follow-up handlers (inline grid) ─────────────────────────────────────────
+
+  // "New" appends a row with the date and "by" auto-filled; the contact person,
+  // text and completed flag are edited inline in the grid.
+  const addFollowUp = () =>
+    setFollowUps((prev) => [
+      ...prev,
+      {
+        date: todayDateString(),
+        by: currentUserName ?? undefined,
+        contactPerson: "",
+        text: "",
+        completed: false,
+      },
+    ]);
+
+  const updateFollowUp = (
+    index: number,
+    patch: Partial<CompanyFollowUpInput>,
+  ) =>
+    setFollowUps((prev) =>
+      prev.map((followUp, i) =>
+        i === index ? { ...followUp, ...patch } : followUp,
+      ),
+    );
+
+  const removeFollowUp = (index: number) =>
+    setFollowUps((prev) => prev.filter((_, i) => i !== index));
+
   // ── Role handler ─────────────────────────────────────────────────────────────
 
   const toggleRole = (role: CompanyRole) => {
@@ -1583,6 +1616,7 @@ export const useCompanySubmit = ({
         resolvedVisitReports,
         purchaseOrders,
         quotes,
+        followUps,
       );
       setState(result);
       if (result.success) router.push("/companies");
@@ -1749,6 +1783,11 @@ export const useCompanySubmit = ({
     handleCancelQuote,
     handleSaveQuote,
     removeQuote,
+
+    followUps,
+    addFollowUp,
+    updateFollowUp,
+    removeFollowUp,
 
     toggleRole,
 

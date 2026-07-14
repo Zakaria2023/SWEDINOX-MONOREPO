@@ -23,6 +23,7 @@ import { CounterOrdersSection } from "@/components/companies/sections/counter-or
 import { VisitReportsSection } from "@/components/companies/sections/visit-reports-section";
 import { PurchaseOrdersSection } from "@/components/companies/sections/purchase-orders-section";
 import { QuotesSection } from "@/components/companies/sections/quotes-section";
+import { FollowUpsSection } from "@/components/companies/sections/follow-ups-section";
 import { DocumentsSection } from "@/components/companies/sections/documents-section";
 import { SearchCodesSection } from "@/components/companies/sections/search-codes-section";
 import { ContactsSection } from "@/components/companies/sections/contacts-section";
@@ -213,6 +214,10 @@ export const CompanyForm = ({
     handleCancelQuote,
     handleSaveQuote,
     removeQuote,
+    followUps,
+    addFollowUp,
+    updateFollowUp,
+    removeFollowUp,
     toggleRole,
     salesData,
     setSalesData,
@@ -227,6 +232,7 @@ export const CompanyForm = ({
     purchaseOrgCompanies,
     productGroups,
     availableProducts,
+    currentUserName: user?.fullName ?? undefined,
   });
 
   const isCustomerOrProspect =
@@ -355,6 +361,16 @@ export const CompanyForm = ({
             removeQuote={removeQuote}
             handleOpenQuote={handleOpenQuote}
             handleEditQuote={handleEditQuote}
+            isPending={isPending}
+          />
+        )}
+
+        {selectedRoles.includes("customer") && (
+          <FollowUpsSection
+            followUps={followUps}
+            addFollowUp={addFollowUp}
+            updateFollowUp={updateFollowUp}
+            removeFollowUp={removeFollowUp}
             isPending={isPending}
           />
         )}

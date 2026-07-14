@@ -35,6 +35,11 @@ import {
   SelectPurchaseOrders,
 } from "@/db/schema/purchase-orders";
 import { InsertQuotes, Quotes } from "@/db/schema/quotes";
+import {
+  FollowUps,
+  InsertFollowUps,
+  SelectFollowUps,
+} from "@/db/schema/follow-ups";
 import { PurchaseCompanyType } from "@/lib/enums";
 import { generateUuid } from "@/lib/helpers";
 import { currentUser } from "@clerk/nextjs/server";
@@ -147,6 +152,11 @@ export type CompanyPurchaseOrderInput = Omit<
   "id" | "uuid" | "supplierUuid" | "createdAt" | "updatedAt"
 >;
 
+export type CompanyFollowUpInput = Omit<
+  InsertFollowUps,
+  "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt"
+>;
+
 export type DebtorCompanyOption = Pick<SelectCompanies, "uuid" | "companyName">;
 
 export type CompanyActionResult = {
@@ -160,6 +170,7 @@ export type CompanyDetail = SelectCompanies & {
   counterOrders: SelectCounterOrders[];
   visitReports: SelectVisitReports[];
   purchaseOrders: SelectPurchaseOrders[];
+  followUps: SelectFollowUps[];
 };
 
 export type ContactOption = Pick<
@@ -212,11 +223,18 @@ export const getCompanyDetail = async (
     .where(eq(PurchaseOrders.supplierUuid, uuid))
     .orderBy(desc(PurchaseOrders.createdAt));
 
+  const followUps = await db
+    .select()
+    .from(FollowUps)
+    .where(eq(FollowUps.companyUuid, uuid))
+    .orderBy(desc(FollowUps.createdAt));
+
   return {
     ...company,
     addresses,
     counterOrders,
     visitReports,
+    followUps,
     purchaseOrders,
   };
 };
@@ -356,6 +374,7 @@ export const createCompany = async (
   visitReports: VisitReportInput[] = [],
   purchaseOrders: CompanyPurchaseOrderInput[] = [],
   quotes: CompanyQuoteInput[] = [],
+  followUps: CompanyFollowUpInput[] = [],
 ): Promise<CompanyActionResult> => {
   const uuid = generateUuid();
 
@@ -464,6 +483,14 @@ export const createCompany = async (
       for (const quote of quotes) {
         await tx.insert(Quotes).values({
           ...quote,
+          uuid: generateUuid(),
+          companyUuid: uuid,
+        });
+      }
+
+      for (const followUp of followUps) {
+        await tx.insert(FollowUps).values({
+          ...followUp,
           uuid: generateUuid(),
           companyUuid: uuid,
         });
