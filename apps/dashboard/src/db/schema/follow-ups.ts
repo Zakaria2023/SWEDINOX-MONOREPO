@@ -25,7 +25,7 @@ export const FollowUps = mysqlTable(
     by: varchar("by_user", { length: 255 }),
     contactPerson: varchar("contact_person", { length: 255 }),
     text: text("text"),
-    completed: boolean("completed").default(false).notNull(),
+    completed: boolean("completed").default(false),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
   },

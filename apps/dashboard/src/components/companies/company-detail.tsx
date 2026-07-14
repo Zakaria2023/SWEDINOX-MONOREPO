@@ -49,7 +49,7 @@ const formatDate = (value: Date | string | null) =>
   value ? new Date(value).toLocaleDateString() : COMMON_TEXT.notAvailable;
 
 export const CompanyDetailView = ({ company, invoices }: Props) => {
-  const isCustomer = company.roles.includes("customer");
+  const isCustomer = company.roles?.includes("customer");
   const na = COMMON_TEXT.notAvailable;
 
   return (
@@ -74,7 +74,7 @@ export const CompanyDetailView = ({ company, invoices }: Props) => {
               Roles
             </dt>
             <dd className="mt-1 flex flex-wrap gap-1.5">
-              {company.roles.length > 0 ? (
+              {company.roles && company.roles.length > 0 ? (
                 company.roles.map((role) => (
                   <span
                     key={role}
@@ -163,9 +163,11 @@ export const CompanyDetailView = ({ company, invoices }: Props) => {
                 {company.counterOrders.map((order) => (
                   <TableRow key={order.uuid}>
                     <TableCell className="font-medium">{order.id}</TableCell>
-                    <TableCell>{order.handlingBlocked ? "Yes" : "No"}</TableCell>
                     <TableCell>
-                      {COUNTER_ORDER_STATUS_LABELS[order.status]}
+                      {order.handlingBlocked ? "Yes" : "No"}
+                    </TableCell>
+                    <TableCell>
+                      {order.status ? COUNTER_ORDER_STATUS_LABELS[order.status] : COMMON_TEXT.notAvailable}
                     </TableCell>
                     <TableCell>{order.orderDate ?? na}</TableCell>
                     <TableCell>{order.deliveryDate ?? na}</TableCell>

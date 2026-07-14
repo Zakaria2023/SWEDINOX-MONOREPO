@@ -249,9 +249,9 @@ export const resolveCompanyType = async (
     return null;
   }
   switch (true) {
-    case company.roles.includes("supplier"):
+    case company.roles?.includes("supplier"):
       return "supplier";
-    case company.roles.includes("agent"):
+    case company.roles?.includes("agent"):
       return "agent";
     default:
       return null;
