@@ -34,6 +34,7 @@ import {
   PurchaseOrders,
   SelectPurchaseOrders,
 } from "@/db/schema/purchase-orders";
+import { InsertQuotes, Quotes } from "@/db/schema/quotes";
 import {
   FollowUps,
   InsertFollowUps,
@@ -128,6 +129,11 @@ export type CompanyCounterOrderInput = Omit<
 
 export type CompanyProductInput = Omit<
   InsertProducts,
+  "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt"
+>;
+
+export type CompanyQuoteInput = Omit<
+  InsertQuotes,
   "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt"
 >;
 
@@ -367,6 +373,7 @@ export const createCompany = async (
   products: CompanyProductInput[] = [],
   visitReports: VisitReportInput[] = [],
   purchaseOrders: CompanyPurchaseOrderInput[] = [],
+  quotes: CompanyQuoteInput[] = [],
   followUps: CompanyFollowUpInput[] = [],
 ): Promise<CompanyActionResult> => {
   const uuid = generateUuid();
@@ -470,6 +477,14 @@ export const createCompany = async (
           ...purchaseOrder,
           uuid: generateUuid(),
           supplierUuid: uuid,
+        });
+      }
+
+      for (const quote of quotes) {
+        await tx.insert(Quotes).values({
+          ...quote,
+          uuid: generateUuid(),
+          companyUuid: uuid,
         });
       }
 

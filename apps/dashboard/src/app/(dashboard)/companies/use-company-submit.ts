@@ -49,6 +49,7 @@ import {
   CompanyFollowUpInput,
   CompanyProductInput,
   CompanyPurchaseOrderInput,
+  CompanyQuoteInput,
   CompanyTextInput,
   createCompany,
   CustomerProjectInput,
@@ -78,12 +79,15 @@ import {
   DEFAULT_CUSTOMER_PRODUCT,
   DEFAULT_PRODUCT,
   DEFAULT_PURCHASE_ORDER,
+  DEFAULT_QUOTE,
   DEFAULT_TEXT,
   DEFAULT_VISIT_REPORT,
   productDialogSchema,
   ProductDialogValues,
   purchaseOrderDialogSchema,
   PurchaseOrderDialogValues,
+  quoteDialogSchema,
+  QuoteDialogValues,
   textDialogSchema,
   TextDialogValues,
   USAGE_CATEGORY_FIELDS,
@@ -256,6 +260,11 @@ export const useCompanySubmit = ({
   const [editingPurchaseOrderIndex, setEditingPurchaseOrderIndex] = useState<
     number | null
   >(null);
+  const [isQuoteDialogOpen, setIsQuoteDialogOpen] = useState(false);
+  const [quotes, setQuotes] = useState<CompanyQuoteInput[]>([]);
+  const [editingQuoteIndex, setEditingQuoteIndex] = useState<number | null>(
+    null,
+  );
   const [followUps, setFollowUps] = useState<CompanyFollowUpInput[]>([]);
 
   const form = useForm<CompanyFormValues>({
@@ -403,6 +412,11 @@ export const useCompanySubmit = ({
   const purchaseOrderForm = useForm<PurchaseOrderDialogValues>({
     resolver: zodResolver(purchaseOrderDialogSchema),
     defaultValues: DEFAULT_PURCHASE_ORDER,
+  });
+
+  const quoteForm = useForm<QuoteDialogValues>({
+    resolver: zodResolver(quoteDialogSchema),
+    defaultValues: DEFAULT_QUOTE,
   });
 
   const addressValues = form.watch("address");
@@ -1296,6 +1310,116 @@ export const useCompanySubmit = ({
   const removePurchaseOrder = (index: number) =>
     setPurchaseOrders((prev) => prev.filter((_, i) => i !== index));
 
+  // ── Quote handlers ───────────────────────────────────────────────────────────
+
+  const mapQuote = (values: QuoteDialogValues): CompanyQuoteInput => ({
+    customerRef: values.customerRef || undefined,
+    ourReference: values.ourReference || undefined,
+    requestMethod: (values.requestMethod ||
+      undefined) as CompanyQuoteInput["requestMethod"],
+    seller: values.seller || undefined,
+    quoteDate: values.quoteDate ? new Date(values.quoteDate) : undefined,
+    decisionDate: values.decisionDate
+      ? new Date(values.decisionDate)
+      : undefined,
+    priceDate: values.priceDate ? new Date(values.priceDate) : undefined,
+    validUntil: values.validUntil ? new Date(values.validUntil) : undefined,
+    validityPeriodDays: values.validityPeriodDays
+      ? Number(values.validityPeriodDays)
+      : undefined,
+    weightType: (values.weightType ||
+      undefined) as CompanyQuoteInput["weightType"],
+    deliveryTerms: (values.deliveryTerms ||
+      undefined) as CompanyQuoteInput["deliveryTerms"],
+    paymentTerms: (values.paymentTerms ||
+      undefined) as CompanyQuoteInput["paymentTerms"],
+    isPickup: values.isPickup,
+    isIncidental: values.isIncidental,
+    isConsignment: values.isConsignment,
+    isOverlengte: values.isOverlengte,
+    handlingBlocked: values.handlingBlocked,
+    totalWeightKg: values.totalWeightKg || "0.00",
+    totalExclVat: values.totalExclVat || "0.00",
+    remarks: values.remarks || undefined,
+  });
+
+  const handleQuoteOpenChange = (open: boolean) => {
+    if (!open) {
+      quoteForm.reset(DEFAULT_QUOTE);
+      setEditingQuoteIndex(null);
+    }
+    setIsQuoteDialogOpen(open);
+  };
+
+  const handleOpenQuote = () => {
+    setEditingQuoteIndex(null);
+    quoteForm.reset({ ...DEFAULT_QUOTE, quoteDate: todayDateString() });
+    setIsQuoteDialogOpen(true);
+  };
+
+  const handleEditQuote = (index: number) => {
+    const quote = quotes[index];
+    if (!quote) {
+      return;
+    }
+    setEditingQuoteIndex(index);
+    quoteForm.reset({
+      customerRef: quote.customerRef ?? "",
+      ourReference: quote.ourReference ?? "",
+      requestMethod: quote.requestMethod ?? "",
+      seller: quote.seller ?? "",
+      quoteDate: quote.quoteDate
+        ? new Date(quote.quoteDate).toISOString().split("T")[0]
+        : "",
+      decisionDate: quote.decisionDate
+        ? new Date(quote.decisionDate).toISOString().split("T")[0]
+        : "",
+      priceDate: quote.priceDate
+        ? new Date(quote.priceDate).toISOString().split("T")[0]
+        : "",
+      validUntil: quote.validUntil
+        ? new Date(quote.validUntil).toISOString().split("T")[0]
+        : "",
+      validityPeriodDays:
+        quote.validityPeriodDays != null
+          ? String(quote.validityPeriodDays)
+          : "",
+      weightType: quote.weightType ?? "",
+      deliveryTerms: quote.deliveryTerms ?? "",
+      paymentTerms: quote.paymentTerms ?? "",
+      isPickup: quote.isPickup ?? false,
+      isIncidental: quote.isIncidental ?? false,
+      isConsignment: quote.isConsignment ?? false,
+      isOverlengte: quote.isOverlengte ?? false,
+      handlingBlocked: quote.handlingBlocked ?? false,
+      totalWeightKg: quote.totalWeightKg ?? "0.00",
+      totalExclVat: quote.totalExclVat ?? "0.00",
+      remarks: quote.remarks ?? "",
+    });
+    setIsQuoteDialogOpen(true);
+  };
+
+  const handleCancelQuote = () => {
+    quoteForm.reset(DEFAULT_QUOTE);
+    setEditingQuoteIndex(null);
+    setIsQuoteDialogOpen(false);
+  };
+
+  const handleSaveQuote = quoteForm.handleSubmit((values) => {
+    const entry = mapQuote(values);
+    setQuotes((prev) =>
+      editingQuoteIndex === null
+        ? [...prev, entry]
+        : prev.map((quote, i) => (i === editingQuoteIndex ? entry : quote)),
+    );
+    quoteForm.reset(DEFAULT_QUOTE);
+    setEditingQuoteIndex(null);
+    setIsQuoteDialogOpen(false);
+  });
+
+  const removeQuote = (index: number) =>
+    setQuotes((prev) => prev.filter((_, i) => i !== index));
+
   // ── Follow-up handlers (inline grid) ─────────────────────────────────────────
 
   // "New" appends a row with the date and "by" auto-filled; the contact person,
@@ -1493,6 +1617,7 @@ export const useCompanySubmit = ({
         allProducts,
         resolvedVisitReports,
         purchaseOrders,
+        quotes,
         followUps,
       );
       setState(result);
@@ -1649,6 +1774,17 @@ export const useCompanySubmit = ({
     handleCancelPurchaseOrder,
     handleSavePurchaseOrder,
     removePurchaseOrder,
+
+    quoteForm,
+    quotes,
+    isQuoteDialogOpen,
+    isEditingQuote: editingQuoteIndex !== null,
+    handleQuoteOpenChange,
+    handleOpenQuote,
+    handleEditQuote,
+    handleCancelQuote,
+    handleSaveQuote,
+    removeQuote,
 
     followUps,
     addFollowUp,

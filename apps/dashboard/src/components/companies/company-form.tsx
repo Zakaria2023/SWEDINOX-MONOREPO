@@ -22,6 +22,7 @@ import { ProjectsSection } from "@/components/companies/sections/projects-sectio
 import { CounterOrdersSection } from "@/components/companies/sections/counter-orders-section";
 import { VisitReportsSection } from "@/components/companies/sections/visit-reports-section";
 import { PurchaseOrdersSection } from "@/components/companies/sections/purchase-orders-section";
+import { QuotesSection } from "@/components/companies/sections/quotes-section";
 import { FollowUpsSection } from "@/components/companies/sections/follow-ups-section";
 import { DocumentsSection } from "@/components/companies/sections/documents-section";
 import { SearchCodesSection } from "@/components/companies/sections/search-codes-section";
@@ -41,6 +42,7 @@ import { ProductPickerDialog } from "@/components/companies/dialogs/product-pick
 import { CustomerProductDialog } from "@/components/companies/dialogs/customer-product-dialog";
 import { VisitReportDialog } from "@/components/companies/dialogs/visit-report-dialog";
 import { PurchaseOrderDialog } from "@/components/companies/dialogs/purchase-order-dialog";
+import { QuoteDialog } from "@/components/companies/dialogs/quote-dialog";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { FormProvider } from "react-hook-form";
@@ -202,6 +204,16 @@ export const CompanyForm = ({
     handleCancelPurchaseOrder,
     handleSavePurchaseOrder,
     removePurchaseOrder,
+    quoteForm,
+    quotes,
+    isQuoteDialogOpen,
+    isEditingQuote,
+    handleQuoteOpenChange,
+    handleOpenQuote,
+    handleEditQuote,
+    handleCancelQuote,
+    handleSaveQuote,
+    removeQuote,
     followUps,
     addFollowUp,
     updateFollowUp,
@@ -339,6 +351,16 @@ export const CompanyForm = ({
             removePurchaseOrder={removePurchaseOrder}
             handleOpenPurchaseOrder={handleOpenPurchaseOrder}
             handleEditPurchaseOrder={handleEditPurchaseOrder}
+            isPending={isPending}
+          />
+        )}
+
+        {isCustomerOrProspect && (
+          <QuotesSection
+            quotes={quotes}
+            removeQuote={removeQuote}
+            handleOpenQuote={handleOpenQuote}
+            handleEditQuote={handleEditQuote}
             isPending={isPending}
           />
         )}
@@ -523,6 +545,15 @@ export const CompanyForm = ({
         onSave={handleSavePurchaseOrder}
         form={purchaseOrderForm}
         isEditing={isEditingPurchaseOrder}
+      />
+
+      <QuoteDialog
+        isOpen={isQuoteDialogOpen}
+        onOpenChange={handleQuoteOpenChange}
+        onCancel={handleCancelQuote}
+        onSave={handleSaveQuote}
+        form={quoteForm}
+        isEditing={isEditingQuote}
       />
     </FormProvider>
   );
