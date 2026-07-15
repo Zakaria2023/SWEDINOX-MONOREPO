@@ -116,6 +116,7 @@ export const StockMovementsTable = ({ stockMovements }: Props) => {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>#</TableHead>
               <TableHead>Product</TableHead>
               <TableHead>Type</TableHead>
               <TableHead>Reason</TableHead>
@@ -128,7 +129,7 @@ export const StockMovementsTable = ({ stockMovements }: Props) => {
             {filteredMovements.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={6}
+                  colSpan={7}
                   className="h-24 text-center text-muted-foreground"
                 >
                   No stock movements found.
@@ -137,6 +138,14 @@ export const StockMovementsTable = ({ stockMovements }: Props) => {
             ) : (
               filteredMovements.map((row) => (
                 <TableRow key={row.uuid}>
+                  <TableCell className="font-medium">
+                    <Link
+                      href={`/stock-movements/${row.uuid}`}
+                      className="underline-offset-4 hover:underline"
+                    >
+                      {row.id}
+                    </Link>
+                  </TableCell>
                   <TableCell className="font-medium">
                     {[row.productCode, row.productName]
                       .filter(Boolean)
