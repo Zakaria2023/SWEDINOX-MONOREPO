@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { PurchaseInvoiceListItem } from "@/app/(dashboard)/purchase-invoices/actions";
 import {
   Table,
@@ -58,7 +59,16 @@ export const PurchaseInvoicesTable = ({ invoices }: Props) => {
   const renderCell = (inv: PurchaseInvoiceListItem, key: ColumnKey) => {
     switch (key) {
       case "id":
-        return <TableCell key={key} className="font-medium whitespace-nowrap">{inv.id}</TableCell>;
+        return (
+          <TableCell key={key} className="font-medium whitespace-nowrap">
+            <Link
+              href={`/purchase-invoices/${inv.uuid}`}
+              className="underline-offset-4 hover:underline"
+            >
+              {inv.id}
+            </Link>
+          </TableCell>
+        );
       case "companyName":
         return <TableCell key={key} className="whitespace-nowrap">{inv.companyName ?? na}</TableCell>;
       case "sentBy":

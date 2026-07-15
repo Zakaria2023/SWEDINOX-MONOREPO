@@ -8,6 +8,7 @@ import {
   mysqlEnum,
   mysqlTable,
   timestamp,
+  varchar,
 } from "drizzle-orm/mysql-core";
 import { stockMovementTypes } from "../../lib/enums";
 import { Products } from "./products";
@@ -27,10 +28,15 @@ export const StockMovements = mysqlTable(
     type: mysqlEnum("type", stockMovementTypes).notNull(),
     quantity: decimal("quantity", { precision: 15, scale: 3 }).notNull(),
 
-    // Populated when type = "in" — stock entering from a purchase order.
+    // Purchase order this movement is tied to — the original "in" receipt,
+    // or the "out" reversal logged when that order is cancelled.
     purchaseOrderUuid: char("purchase_order_uuid", { length: 36 }),
-    // Populated when type = "out" — stock taken by a purchase invoice.
+    // Purchase invoice this movement is tied to — the "out" consumption,
+    // or the "in" reversal logged when that invoice is cancelled.
     purchaseInvoiceUuid: char("purchase_invoice_uuid", { length: 36 }),
+
+    // Clerk user id of whoever triggered this movement.
+    createdByUserId: varchar("created_by_user_id", { length: 255 }).notNull(),
 
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),

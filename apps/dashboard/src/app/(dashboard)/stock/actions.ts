@@ -5,6 +5,10 @@ import { SelectStock, Stock } from "@/db/schema/stock";
 import { Products, SelectProducts } from "@/db/schema/products";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { PurchaseOrders, SelectPurchaseOrders } from "@/db/schema/purchase-orders";
+import {
+  PurchaseOrderItems,
+  SelectPurchaseOrderItems,
+} from "@/db/schema/purchase-order-items";
 import { and, desc, eq, getTableColumns, gt } from "drizzle-orm";
 
 export type StockListItem = SelectStock & {
@@ -12,6 +16,7 @@ export type StockListItem = SelectStock & {
   productName: SelectProducts["name"] | null;
   companyName: SelectCompanies["companyName"] | null;
   purchaseOrderId: SelectPurchaseOrders["id"] | null;
+  originalQuantity: SelectPurchaseOrderItems["quantity"] | null;
 };
 
 export type PendingStockOption = Pick<SelectStock, "uuid" | "quantity"> & {
@@ -29,6 +34,7 @@ export const getStock = async (): Promise<StockListItem[]> => {
         productName: Products.name,
         companyName: Companies.companyName,
         purchaseOrderId: PurchaseOrders.id,
+        originalQuantity: PurchaseOrderItems.quantity,
       })
       .from(Stock)
       .leftJoin(Products, eq(Stock.productUuid, Products.uuid))
@@ -36,6 +42,10 @@ export const getStock = async (): Promise<StockListItem[]> => {
       .leftJoin(
         PurchaseOrders,
         eq(Stock.purchaseOrderUuid, PurchaseOrders.uuid),
+      )
+      .leftJoin(
+        PurchaseOrderItems,
+        eq(Stock.purchaseOrderItemUuid, PurchaseOrderItems.uuid),
       )
       .orderBy(desc(Stock.createdAt));
   } catch {

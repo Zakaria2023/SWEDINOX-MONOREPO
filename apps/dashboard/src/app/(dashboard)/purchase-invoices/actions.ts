@@ -10,11 +10,16 @@ import {
   SelectContacts,
   SelectPurchaseInvoices,
 } from "@/db";
-import { PurchaseInvoiceItems } from "@/db/schema/purchase-invoice-items";
+import {
+  PurchaseInvoiceItems,
+  SelectPurchaseInvoiceItems,
+} from "@/db/schema/purchase-invoice-items";
+import { Products, SelectProducts } from "@/db/schema/products";
 import { Stock } from "@/db/schema/stock";
 import { StockMovements } from "@/db/schema/stock-movements";
 import { generateUuid } from "@/lib/helpers";
-import { desc, eq, getTableColumns, inArray } from "drizzle-orm";
+import { currentUser } from "@clerk/nextjs/server";
+import { and, desc, eq, getTableColumns, gte, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -91,6 +96,12 @@ export const createPurchaseInvoice = async (
         }
       }
 
+      const user = await currentUser();
+      const userId = user?.id;
+      if (!userId) {
+        return { error: "User not authenticated" };
+      }
+
       await db.transaction(async (tx) => {
         await tx.insert(PurchaseInvoices).values({ ...fields, uuid });
 
@@ -112,13 +123,29 @@ export const createPurchaseInvoice = async (
             Number(stockRow.quantity) - Number(item.quantity)
           ).toFixed(3);
 
-          await tx
+          // Guard the update with the quantity/status we validated above so a
+          // concurrent invoice against the same lot can't oversell it — if
+          // another transaction already changed the row, affectedRows is 0
+          // and we roll back instead of silently double-spending stock.
+          const [updateResult] = await tx
             .update(Stock)
             .set({
               quantity: remainingQuantity,
               status: Number(remainingQuantity) > 0 ? "pending" : "received",
             })
-            .where(eq(Stock.uuid, item.stockUuid));
+            .where(
+              and(
+                eq(Stock.uuid, item.stockUuid),
+                eq(Stock.status, "pending"),
+                gte(Stock.quantity, item.quantity),
+              ),
+            );
+
+          if (updateResult.affectedRows === 0) {
+            throw new Error(
+              "Stock changed while processing this invoice — please refresh and try again.",
+            );
+          }
 
           await tx.insert(StockMovements).values({
             uuid: generateUuid(),
@@ -127,6 +154,7 @@ export const createPurchaseInvoice = async (
             type: "out",
             quantity: item.quantity,
             purchaseInvoiceUuid: uuid,
+            createdByUserId: userId,
           });
         }
       });
@@ -146,4 +174,136 @@ export const createPurchaseInvoice = async (
   revalidatePath("/stock");
   revalidatePath("/stock-movements");
   redirect("/purchase-invoices");
+};
+
+export type PurchaseInvoiceItemDetail = SelectPurchaseInvoiceItems & {
+  productCode: SelectProducts["productCode"] | null;
+  productName: SelectProducts["name"] | null;
+};
+
+export type PurchaseInvoiceDetail = SelectPurchaseInvoices & {
+  companyName: SelectCompanies["companyName"] | null;
+  supplierCode: SelectCompanies["searchCode1"] | null;
+  contactFirstName: SelectContacts["firstName"] | null;
+  contactLastName: SelectContacts["lastName"] | null;
+  items: PurchaseInvoiceItemDetail[];
+};
+
+export const getPurchaseInvoiceDetail = async (
+  uuid: string,
+): Promise<PurchaseInvoiceDetail | null> => {
+  const [invoice] = await db
+    .select({
+      ...getTableColumns(PurchaseInvoices),
+      companyName: Companies.companyName,
+      supplierCode: Companies.searchCode1,
+      contactFirstName: Contacts.firstName,
+      contactLastName: Contacts.lastName,
+    })
+    .from(PurchaseInvoices)
+    .leftJoin(Companies, eq(PurchaseInvoices.companyUuid, Companies.uuid))
+    .leftJoin(
+      Contacts,
+      eq(PurchaseInvoices.invoiceSentByContactUuid, Contacts.uuid),
+    )
+    .where(eq(PurchaseInvoices.uuid, uuid))
+    .limit(1);
+
+  if (!invoice) {
+    return null;
+  }
+
+  const items = await db
+    .select({
+      ...getTableColumns(PurchaseInvoiceItems),
+      productCode: Products.productCode,
+      productName: Products.name,
+    })
+    .from(PurchaseInvoiceItems)
+    .leftJoin(Products, eq(PurchaseInvoiceItems.productUuid, Products.uuid))
+    .where(eq(PurchaseInvoiceItems.purchaseInvoiceUuid, uuid));
+
+  return { ...invoice, items };
+};
+
+export const cancelPurchaseInvoice = async (
+  uuid: string,
+): Promise<PurchaseInvoiceActionResult> => {
+  try {
+    const [invoice] = await db
+      .select()
+      .from(PurchaseInvoices)
+      .where(eq(PurchaseInvoices.uuid, uuid))
+      .limit(1);
+
+    if (!invoice) {
+      return { error: "Purchase invoice not found." };
+    }
+
+    if (invoice.cancelled) {
+      return { error: "This purchase invoice is already cancelled." };
+    }
+
+    const items = await db
+      .select()
+      .from(PurchaseInvoiceItems)
+      .where(eq(PurchaseInvoiceItems.purchaseInvoiceUuid, uuid));
+
+    const user = await currentUser();
+    const userId = user?.id;
+    if (!userId) {
+      return { error: "User not authenticated" };
+    }
+
+    await db.transaction(async (tx) => {
+      await tx
+        .update(PurchaseInvoices)
+        .set({ cancelled: true })
+        .where(eq(PurchaseInvoices.uuid, uuid));
+
+      for (const item of items) {
+        const [stockRow] = await tx
+          .select()
+          .from(Stock)
+          .where(eq(Stock.uuid, item.stockUuid))
+          .limit(1);
+
+        if (!stockRow) {
+          continue;
+        }
+
+        const restoredQuantity = (
+          Number(stockRow.quantity) + Number(item.quantity)
+        ).toFixed(3);
+
+        await tx
+          .update(Stock)
+          .set({ quantity: restoredQuantity, status: "pending" })
+          .where(eq(Stock.uuid, item.stockUuid));
+
+        await tx.insert(StockMovements).values({
+          uuid: generateUuid(),
+          productUuid: item.productUuid,
+          stockUuid: item.stockUuid,
+          type: "in",
+          quantity: item.quantity,
+          purchaseInvoiceUuid: uuid,
+          createdByUserId: userId,
+        });
+      }
+    });
+
+    revalidatePath("/purchase-invoices");
+    revalidatePath(`/purchase-invoices/${uuid}`);
+    revalidatePath("/stock");
+    revalidatePath("/stock-movements");
+    return { success: true, purchaseInvoiceUuid: uuid };
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to cancel purchase invoice",
+    };
+  }
 };

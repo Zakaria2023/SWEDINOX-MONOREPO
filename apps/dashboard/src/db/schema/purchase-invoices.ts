@@ -56,6 +56,7 @@ export const PurchaseInvoices = mysqlTable(
     paymentTerms: mysqlEnum("pi_payment_terms", invoicePaymentTerms),
     blocked: boolean("blocked").default(false).notNull(),
     blockReason: mysqlEnum("block_reason", purchaseInvoiceBlockReasons),
+    cancelled: boolean("cancelled").default(false).notNull(),
 
     materials: decimal("materials", { precision: 15, scale: 2 })
       .default("0.00")
