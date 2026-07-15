@@ -5,10 +5,16 @@ import {
   purchaseInvoiceFiscalBases,
 } from "@/lib/enums";
 
+export const purchaseInvoiceItemSchema = z.object({
+  stockUuid: z.string().min(1, "Stock item is required"),
+  quantity: z.string().min(1, "Quantity is required"),
+});
+
 export const createPurchaseInvoiceSchema = () =>
   z
     .object({
       companyUuid: z.string().optional(),
+      items: z.array(purchaseInvoiceItemSchema).optional(),
       invoiceSentByContactUuid: z.string().optional(),
       bookingDate: z.string().optional(),
       invoiceDate: z.string().optional(),

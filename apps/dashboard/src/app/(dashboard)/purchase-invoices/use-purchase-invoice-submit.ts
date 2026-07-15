@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
+import { useEffect, useState, useTransition } from "react";
+import { useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   createPurchaseInvoice,
@@ -11,15 +11,21 @@ import {
   createPurchaseInvoiceSchema,
   type PurchaseInvoiceFormValues,
 } from "./validation";
+import {
+  getPendingStockForCompany,
+  type PendingStockOption,
+} from "@/app/(dashboard)/stock/actions";
 
 export const usePurchaseInvoiceSubmit = () => {
   const [isPending, startTransition] = useTransition();
   const [state, setState] = useState<PurchaseInvoiceActionResult>({});
+  const [pendingStock, setPendingStock] = useState<PendingStockOption[]>([]);
 
   const form = useForm<PurchaseInvoiceFormValues>({
     resolver: zodResolver(createPurchaseInvoiceSchema()),
     defaultValues: {
       companyUuid: "",
+      items: [],
       invoiceSentByContactUuid: "",
       bookingDate: "",
       invoiceDate: "",
@@ -45,36 +51,69 @@ export const usePurchaseInvoiceSubmit = () => {
     },
   });
 
+  const {
+    fields: itemFields,
+    append: appendItem,
+    remove: removeItem,
+    replace: replaceItems,
+  } = useFieldArray({ control: form.control, name: "items" });
+
+  const companyUuid = form.watch("companyUuid");
+
+  useEffect(() => {
+    replaceItems([]);
+    if (!companyUuid) {
+      setPendingStock([]);
+      return;
+    }
+    getPendingStockForCompany(companyUuid).then(setPendingStock);
+  }, [companyUuid, replaceItems]);
+
   const onSubmit = form.handleSubmit((values) => {
     startTransition(async () => {
-      const result = await createPurchaseInvoice({
-        companyUuid: values.companyUuid || undefined,
-        invoiceSentByContactUuid: values.invoiceSentByContactUuid || undefined,
-        bookingDate: values.bookingDate ? new Date(values.bookingDate) : null,
-        invoiceDate: values.invoiceDate ? new Date(values.invoiceDate) : null,
-        expirationDate: values.expirationDate ? new Date(values.expirationDate) : null,
-        invoiceNumberSupplier: values.invoiceNumberSupplier || undefined,
-        creditorNo: values.creditorNo || undefined,
-        creditorNo2: values.creditorNo2 || undefined,
-        basisForFiscalPeriod: values.basisForFiscalPeriod,
-        invoiceTotal: values.invoiceTotal,
-        purchaseOrderNumber: values.purchaseOrderNumber || undefined,
-        paymentTerms: values.paymentTerms ?? null,
-        blocked: values.blocked,
-        blockReason: values.blockReason ?? null,
-        materials: values.materials,
-        optionsAmount: values.optionsAmount,
-        surcharges: values.surcharges,
-        vatHigh: values.vatHigh,
-        vatMiddle: values.vatMiddle,
-        vatLow: values.vatLow,
-        creditRestriction: values.creditRestriction,
-        remarks: values.remarks || undefined,
-        documents: values.documents ?? [],
-      });
+      const result = await createPurchaseInvoice(
+        {
+          companyUuid: values.companyUuid || undefined,
+          invoiceSentByContactUuid:
+            values.invoiceSentByContactUuid || undefined,
+          bookingDate: values.bookingDate ? new Date(values.bookingDate) : null,
+          invoiceDate: values.invoiceDate ? new Date(values.invoiceDate) : null,
+          expirationDate: values.expirationDate
+            ? new Date(values.expirationDate)
+            : null,
+          invoiceNumberSupplier: values.invoiceNumberSupplier || undefined,
+          creditorNo: values.creditorNo || undefined,
+          creditorNo2: values.creditorNo2 || undefined,
+          basisForFiscalPeriod: values.basisForFiscalPeriod,
+          invoiceTotal: values.invoiceTotal,
+          purchaseOrderNumber: values.purchaseOrderNumber || undefined,
+          paymentTerms: values.paymentTerms ?? null,
+          blocked: values.blocked,
+          blockReason: values.blockReason ?? null,
+          materials: values.materials,
+          optionsAmount: values.optionsAmount,
+          surcharges: values.surcharges,
+          vatHigh: values.vatHigh,
+          vatMiddle: values.vatMiddle,
+          vatLow: values.vatLow,
+          creditRestriction: values.creditRestriction,
+          remarks: values.remarks || undefined,
+          documents: values.documents ?? [],
+        },
+        values.items ?? [],
+      );
       setState(result);
     });
   });
 
-  return { form, isPending, onSubmit, state };
+  return {
+    form,
+    isPending,
+    onSubmit,
+    state,
+    pendingStock,
+    itemFields,
+    appendItem,
+    removeItem,
+  };
 };

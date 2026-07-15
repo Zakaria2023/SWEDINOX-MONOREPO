@@ -8,6 +8,7 @@ import { usePurchaseInvoiceSubmit } from "@/app/(dashboard)/purchase-invoices/us
 import { FormActions } from "@/components/ui/form-actions";
 import { FormError } from "@/components/ui/form-error";
 import { PurchaseInvoiceDetailsSection } from "./sections/purchase-invoice-details-section";
+import { PurchaseInvoiceItemsSection } from "./sections/purchase-invoice-items-section";
 import { PurchaseInvoiceSummarySection } from "./sections/purchase-invoice-summary-section";
 import { RemarksAndDocumentsSection } from "./sections/remarks-and-documents-section";
 import {
@@ -35,7 +36,16 @@ export const PurchaseInvoiceForm = ({
   availableContacts,
 }: PurchaseInvoiceFormProps) => {
   const router = useRouter();
-  const { form, isPending, onSubmit, state } = usePurchaseInvoiceSubmit();
+  const {
+    form,
+    isPending,
+    onSubmit,
+    state,
+    pendingStock,
+    itemFields,
+    appendItem,
+    removeItem,
+  } = usePurchaseInvoiceSubmit();
   const { watch, setValue } = form;
 
   const [uploadedDocs, setUploadedDocs] = useState<
@@ -124,6 +134,15 @@ export const PurchaseInvoiceForm = ({
             totalInclVat={totalInclVat}
             remainder={remainder}
             totalGeneral={totalGeneral}
+          />
+
+          {/* Stock items — only shown once a supplier with pending stock is selected */}
+          <PurchaseInvoiceItemsSection
+            pendingStock={pendingStock}
+            itemFields={itemFields}
+            appendItem={appendItem}
+            removeItem={removeItem}
+            isPending={isPending}
           />
         </div>
 

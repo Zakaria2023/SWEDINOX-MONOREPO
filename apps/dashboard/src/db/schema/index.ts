@@ -12,6 +12,7 @@ export * from "./invoices";
 export * from "./product-groups";
 export * from "./products";
 export * from "./purchase-invoices";
+export * from "./purchase-invoice-items";
 export * from "./warehouses";
 export * from "./visit-reports";
 export * from "./warehouse-work-orders";
