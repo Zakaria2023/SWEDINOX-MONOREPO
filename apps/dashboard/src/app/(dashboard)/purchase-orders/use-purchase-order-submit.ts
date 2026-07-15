@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
+import { useFieldArray, useForm } from "react-hook-form";
 import { createPurchaseOrder, PurchaseOrderActionResult } from "./actions";
 import {
   AddressOption,
@@ -19,6 +19,10 @@ import {
   ContactOption,
   getContactsForCompany,
 } from "@/app/(dashboard)/contacts/actions";
+import {
+  getProductsForCompany,
+  ProductOption,
+} from "@/app/(dashboard)/products/actions";
 import { ClerkUserOption } from "@/lib/server/clerk";
 import { SelectOption } from "@/components/shadcn/select";
 import {
@@ -69,11 +73,19 @@ export const usePurchaseOrderSubmit = ({
   const [contacts, setContacts] = useState<ContactOption[]>([]);
   const [supplierAddresses, setSupplierAddresses] = useState<AddressOption[]>([]);
   const [isLoadingSupplierData, setIsLoadingSupplierData] = useState(false);
+  const [supplierProducts, setSupplierProducts] = useState<ProductOption[]>([]);
+  const [agentProducts, setAgentProducts] = useState<ProductOption[]>([]);
 
   const form = useForm<PurchaseOrderFormValues>({
     resolver: zodResolver(purchaseOrderSchema),
     defaultValues: DEFAULT_PURCHASE_ORDER,
   });
+
+  const {
+    fields: itemFields,
+    append: appendItem,
+    remove: removeItem,
+  } = useFieldArray({ control: form.control, name: "items" });
 
   const arrangeTransport = form.watch("arrangeTransport");
   const deliveryType = form.watch("deliveryType");
@@ -112,6 +124,21 @@ export const usePurchaseOrderSubmit = ({
     ...supplierAddresses.map((a) => ({ value: a.uuid, label: addressLabel(a) })),
   ];
 
+  const availableProducts = [
+    ...supplierProducts,
+    ...agentProducts.filter(
+      (product) => !supplierProducts.some((p) => p.uuid === product.uuid),
+    ),
+  ];
+
+  const productOptions: SelectOption[] = [
+    emptyOpt,
+    ...availableProducts.map((p) => ({
+      value: p.uuid,
+      label: [p.productCode, p.name].filter(Boolean).join(" — "),
+    })),
+  ];
+
   const purchaseOrderTypeOptions = makeOptions(
     purchaseOrderTypes,
     PURCHASE_ORDER_TYPE_LABELS as Record<PurchaseOrderType, string>,
@@ -134,76 +161,96 @@ export const usePurchaseOrderSubmit = ({
 
   const purchaserOptions: SelectOption[] = [emptyOpt, ...clerkUsers];
 
+  const resetItems = () =>
+    form.setValue("items", [{ productUuid: "", quantity: "" }]);
+
   const handleSupplierChange = (uuid: string) => {
     form.setValue("supplierUuid", uuid);
     form.setValue("contactUuid", "");
     form.setValue("supplierAddressUuid", "");
     setContacts([]);
     setSupplierAddresses([]);
+    setSupplierProducts([]);
+    resetItems();
     if (!uuid) return;
     setIsLoadingSupplierData(true);
     Promise.all([
       getContactsForCompany(uuid),
       getAddressesForCompany(uuid),
-    ]).then(([newContacts, newAddresses]) => {
+      getProductsForCompany(uuid),
+    ]).then(([newContacts, newAddresses, newProducts]) => {
       setContacts(newContacts);
       setSupplierAddresses(newAddresses);
+      setSupplierProducts(newProducts);
       setIsLoadingSupplierData(false);
     });
+  };
+
+  const handleAgentChange = (uuid: string) => {
+    form.setValue("agentUuid", uuid);
+    setAgentProducts([]);
+    resetItems();
+    if (!uuid) return;
+    getProductsForCompany(uuid).then(setAgentProducts);
   };
 
   const handleCancel = () => router.push("/purchase-orders");
 
   const onSubmit = form.handleSubmit((values) => {
     startTransition(async () => {
-      const result = await createPurchaseOrder({
-        supplierUuid: values.supplierUuid,
-        agentUuid: values.agentUuid || null,
-        contactUuid: values.contactUuid || null,
-        purchaser: values.purchaser || null,
-        reference: values.reference || null,
-        ourReference: values.ourReference || null,
-        orderCategory: values.orderCategory || null,
+      const result = await createPurchaseOrder(
+        {
+          supplierUuid: values.supplierUuid,
+          agentUuid: values.agentUuid || null,
+          contactUuid: values.contactUuid || null,
+          purchaser: values.purchaser || null,
+          reference: values.reference || null,
+          ourReference: values.ourReference || null,
+          orderCategory: values.orderCategory || null,
 
-        purchaseOrderType: values.purchaseOrderType || null,
-        weightType: values.weightType || null,
-        isOverlengte: values.isOverlengte,
-        isPrinted: values.isPrinted,
-        isMailed: values.isMailed,
-        isFaxed: values.isFaxed,
-        messageSentViaStaalWeb: values.messageSentViaStaalWeb,
-        doNotPrintPrices: values.doNotPrintPrices,
+          purchaseOrderType: values.purchaseOrderType || null,
+          weightType: values.weightType || null,
+          isOverlengte: values.isOverlengte,
+          isPrinted: values.isPrinted,
+          isMailed: values.isMailed,
+          isFaxed: values.isFaxed,
+          messageSentViaStaalWeb: values.messageSentViaStaalWeb,
+          doNotPrintPrices: values.doNotPrintPrices,
 
-        paymentTerms: values.paymentTerms || null,
+          paymentTerms: values.paymentTerms || null,
 
-        deliveryTerms: values.deliveryTerms || null,
-        deliveryAddressUuid: values.deliveryAddressUuid || null,
-        arrangeTransport: values.arrangeTransport,
-        pickupDropoffCdPurchases: values.arrangeTransport
-          ? values.pickupDropoffCdPurchases
-          : false,
-        supplierAddressUuid: values.supplierAddressUuid || null,
-        deliveryType: values.deliveryType,
-        deliveryDate: values.deliveryDate ? new Date(values.deliveryDate) : null,
-        deliveryWeek: values.deliveryWeek ? Number(values.deliveryWeek) : null,
-        deliveryYear: values.deliveryYear ? Number(values.deliveryYear) : null,
-        deliveryRemark: values.deliveryRemark || null,
+          deliveryTerms: values.deliveryTerms || null,
+          deliveryAddressUuid: values.deliveryAddressUuid || null,
+          arrangeTransport: values.arrangeTransport,
+          pickupDropoffCdPurchases: values.arrangeTransport
+            ? values.pickupDropoffCdPurchases
+            : false,
+          supplierAddressUuid: values.supplierAddressUuid || null,
+          deliveryType: values.deliveryType,
+          deliveryDate: values.deliveryDate
+            ? new Date(values.deliveryDate)
+            : null,
+          deliveryWeek: values.deliveryWeek ? Number(values.deliveryWeek) : null,
+          deliveryYear: values.deliveryYear ? Number(values.deliveryYear) : null,
+          deliveryRemark: values.deliveryRemark || null,
 
-        completeDelivery: values.completeDelivery,
-        transportBlockage: values.transportBlockage,
-        vehicleWithCrane: values.vehicleWithCrane,
-        vehicleWithCanopy: values.vehicleWithCanopy,
-        bundlingSeparate: values.bundlingSeparate,
-        transportRegion: values.transportRegion || null,
-        maxLengthMm: values.maxLengthMm ? Number(values.maxLengthMm) : null,
-        maxBundleWeightKg: values.maxBundleWeightKg || null,
-        deliveryAfterTime: values.deliveryAfterTime || null,
-        deliverForTime: values.deliverForTime || null,
-        transportMode: values.transportMode || null,
+          completeDelivery: values.completeDelivery,
+          transportBlockage: values.transportBlockage,
+          vehicleWithCrane: values.vehicleWithCrane,
+          vehicleWithCanopy: values.vehicleWithCanopy,
+          bundlingSeparate: values.bundlingSeparate,
+          transportRegion: values.transportRegion || null,
+          maxLengthMm: values.maxLengthMm ? Number(values.maxLengthMm) : null,
+          maxBundleWeightKg: values.maxBundleWeightKg || null,
+          deliveryAfterTime: values.deliveryAfterTime || null,
+          deliverForTime: values.deliverForTime || null,
+          transportMode: values.transportMode || null,
 
-        remarks: values.remarks || null,
-        documents: null,
-      });
+          remarks: values.remarks || null,
+          documents: null,
+        },
+        values.items,
+      );
 
       setState(result);
       if (result.success) {
@@ -223,6 +270,10 @@ export const usePurchaseOrderSubmit = ({
     agentOptions,
     contactOptions,
     supplierAddressOptions,
+    productOptions,
+    itemFields,
+    appendItem,
+    removeItem,
     purchaseOrderTypeOptions,
     weightTypeOptions,
     deliveryTermOptions,
@@ -230,6 +281,7 @@ export const usePurchaseOrderSubmit = ({
     purchaserOptions,
     isLoadingSupplierData,
     handleSupplierChange,
+    handleAgentChange,
     handleCancel,
   };
 };

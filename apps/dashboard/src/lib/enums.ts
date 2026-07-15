@@ -469,6 +469,14 @@ export const stockLabelPrintingOptions = [
 export type StockLabelPrintingOption =
   (typeof stockLabelPrintingOptions)[number];
 
+export const stockStatuses = [
+  "pending",
+  "received",
+  "cancelled",
+] as const satisfies readonly string[];
+
+export type StockStatus = (typeof stockStatuses)[number];
+
 export const customerLabelOptions = [
   "csv_file",
   "line_label",

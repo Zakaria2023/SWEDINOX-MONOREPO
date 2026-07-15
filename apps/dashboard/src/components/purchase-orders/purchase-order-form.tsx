@@ -6,6 +6,7 @@ import { CompanyOption } from "@/app/(dashboard)/companies/actions";
 import { FormActions } from "@/components/ui/form-actions";
 import { FormError } from "@/components/ui/form-error";
 import { PurchaseOrderInformationSection } from "./sections/purchase-order-information-section";
+import { PurchaseOrderItemsSection } from "./sections/purchase-order-items-section";
 import { PurchaseOrderTypeSection } from "./sections/purchase-order-type-section";
 import { PurchaseOrderFinancesSection } from "./sections/purchase-order-finances-section";
 import { PurchaseOrderDeliverySection } from "./sections/purchase-order-delivery-section";
@@ -30,6 +31,10 @@ export const PurchaseOrderForm = ({ companies, clerkUsers }: Props) => {
     agentOptions,
     contactOptions,
     supplierAddressOptions,
+    productOptions,
+    itemFields,
+    appendItem,
+    removeItem,
     purchaseOrderTypeOptions,
     weightTypeOptions,
     deliveryTermOptions,
@@ -37,6 +42,7 @@ export const PurchaseOrderForm = ({ companies, clerkUsers }: Props) => {
     purchaserOptions,
     isLoadingSupplierData,
     handleSupplierChange,
+    handleAgentChange,
     handleCancel,
   } = usePurchaseOrderSubmit({ companies, clerkUsers });
 
@@ -52,6 +58,14 @@ export const PurchaseOrderForm = ({ companies, clerkUsers }: Props) => {
           purchaserOptions={purchaserOptions}
           isLoadingSupplierData={isLoadingSupplierData}
           handleSupplierChange={handleSupplierChange}
+          handleAgentChange={handleAgentChange}
+        />
+
+        <PurchaseOrderItemsSection
+          productOptions={productOptions}
+          itemFields={itemFields}
+          appendItem={appendItem}
+          removeItem={removeItem}
         />
 
         <PurchaseOrderTypeSection

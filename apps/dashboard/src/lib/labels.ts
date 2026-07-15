@@ -56,6 +56,7 @@ import type {
   StockLabelPrintingOption,
   StockLabelType,
   StockMode,
+  StockStatus,
   TextUsageCategory,
   VisitReportContactMethod,
   VisitReportReason,
@@ -752,6 +753,12 @@ export const STOCK_LABEL_PRINTING_LABELS: Record<
   per_line_bundle: "Per line/bundle",
   per_bundle: "Per bundle or per",
   amount_per_line: "Amount (per line)",
+};
+
+export const STOCK_STATUS_LABELS: Record<StockStatus, string> = {
+  pending: "Pending",
+  received: "Received",
+  cancelled: "Cancelled",
 };
 
 export const CUSTOMER_LABEL_OPTION_LABELS: Record<CustomerLabelOption, string> =

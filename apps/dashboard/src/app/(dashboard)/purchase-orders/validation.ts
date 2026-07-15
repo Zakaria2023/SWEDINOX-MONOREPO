@@ -8,6 +8,11 @@ import {
 } from "@/lib/enums";
 import { todayDateString, currentYear } from "@/lib/helpers";
 
+export const purchaseOrderItemSchema = z.object({
+  productUuid: z.string().min(1, "Product is required"),
+  quantity: z.string().min(1, "Quantity is required"),
+});
+
 export const purchaseOrderSchema = z.object({
   // Header
   supplierUuid: z.string().min(1, "Supplier is required"),
@@ -17,6 +22,11 @@ export const purchaseOrderSchema = z.object({
   reference: z.string().optional(),
   ourReference: z.string().optional(),
   orderCategory: z.string().optional(),
+
+  // Products
+  items: z
+    .array(purchaseOrderItemSchema)
+    .min(1, "At least one product is required"),
 
   // Purchase order type
   purchaseOrderType: z.enum(purchaseOrderTypes).optional(),
@@ -70,6 +80,8 @@ export const DEFAULT_PURCHASE_ORDER: PurchaseOrderFormValues = {
   reference: "",
   ourReference: "",
   orderCategory: "",
+
+  items: [{ productUuid: "", quantity: "" }],
 
   purchaseOrderType: undefined,
   weightType: undefined,

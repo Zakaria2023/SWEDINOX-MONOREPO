@@ -6,17 +6,24 @@ import {
   PurchaseOrders,
   SelectPurchaseOrders,
 } from "@/db/schema/purchase-orders";
+import { PurchaseOrderItems } from "@/db/schema/purchase-order-items";
+import { Stock } from "@/db/schema/stock";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
 import { Products } from "@/db/schema/products";
 import { generateUuid } from "@/lib/helpers";
-import { desc, eq, getTableColumns } from "drizzle-orm";
+import { desc, eq, getTableColumns, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 export type PurchaseOrderFields = Omit<
   InsertPurchaseOrders,
   "id" | "uuid" | "createdAt" | "updatedAt"
 >;
+
+export type PurchaseOrderItemInput = {
+  productUuid: string;
+  quantity: string;
+};
 
 export type PurchaseOrderActionResult = {
   purchaseOrderUuid?: string;
@@ -59,6 +66,7 @@ const companyHasProducts = async (companyUuid: string): Promise<boolean> => {
 
 export const createPurchaseOrder = async (
   fields: PurchaseOrderFields,
+  items: PurchaseOrderItemInput[],
 ): Promise<PurchaseOrderActionResult> => {
   const uuid = generateUuid();
   try {
@@ -76,8 +84,46 @@ export const createPurchaseOrder = async (
       };
     }
 
-    await db.insert(PurchaseOrders).values({ ...fields, uuid });
+    if (items.length === 0) {
+      return { error: "At least one product is required." };
+    }
+
+    const productUuids = items.map((item) => item.productUuid);
+    const validProducts = await db
+      .select({ uuid: Products.uuid })
+      .from(Products)
+      .where(inArray(Products.uuid, productUuids));
+    const validProductUuids = new Set(validProducts.map((p) => p.uuid));
+
+    if (productUuids.some((productUuid) => !validProductUuids.has(productUuid))) {
+      return { error: "One or more selected products could not be found." };
+    }
+
+    await db.transaction(async (tx) => {
+      await tx.insert(PurchaseOrders).values({ ...fields, uuid });
+
+      for (const item of items) {
+        const itemUuid = generateUuid();
+        await tx.insert(PurchaseOrderItems).values({
+          uuid: itemUuid,
+          purchaseOrderUuid: uuid,
+          productUuid: item.productUuid,
+          quantity: item.quantity,
+        });
+
+        await tx.insert(Stock).values({
+          uuid: generateUuid(),
+          productUuid: item.productUuid,
+          purchaseOrderUuid: uuid,
+          purchaseOrderItemUuid: itemUuid,
+          quantity: item.quantity,
+          status: "pending",
+        });
+      }
+    });
+
     revalidatePath("/purchase-orders");
+    revalidatePath("/stock");
     return { success: true, purchaseOrderUuid: uuid };
   } catch (error) {
     return {

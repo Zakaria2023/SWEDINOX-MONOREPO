@@ -62,6 +62,20 @@ export const getProductsForSelect = async (): Promise<ProductOption[]> =>
     .where(isNull(Products.companyUuid))
     .orderBy(asc(Products.productCode));
 
+export const getProductsForCompany = async (
+  companyUuid: string,
+): Promise<ProductOption[]> =>
+  db
+    .select({
+      uuid: Products.uuid,
+      productCode: Products.productCode,
+      name: Products.name,
+      productGroupUuid: Products.productGroupUuid,
+    })
+    .from(Products)
+    .where(eq(Products.companyUuid, companyUuid))
+    .orderBy(asc(Products.productCode));
+
 export const createProduct = async (
   fields: ProductFields,
 ): Promise<ProductActionResult> => {
