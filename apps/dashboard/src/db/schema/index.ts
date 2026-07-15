@@ -27,3 +27,4 @@ export * from "./machines";
 export * from "./counter-orders";
 export * from "./follow-ups";
 export * from "./stock";
+export * from "./stock-movements";

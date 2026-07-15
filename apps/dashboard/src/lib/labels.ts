@@ -56,6 +56,7 @@ import type {
   StockLabelPrintingOption,
   StockLabelType,
   StockMode,
+  StockMovementType,
   StockStatus,
   TextUsageCategory,
   VisitReportContactMethod,
@@ -759,6 +760,11 @@ export const STOCK_STATUS_LABELS: Record<StockStatus, string> = {
   pending: "Pending",
   received: "Received",
   cancelled: "Cancelled",
+};
+
+export const STOCK_MOVEMENT_TYPE_LABELS: Record<StockMovementType, string> = {
+  in: "In",
+  out: "Out",
 };
 
 export const CUSTOMER_LABEL_OPTION_LABELS: Record<CustomerLabelOption, string> =

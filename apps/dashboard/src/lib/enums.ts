@@ -477,6 +477,13 @@ export const stockStatuses = [
 
 export type StockStatus = (typeof stockStatuses)[number];
 
+export const stockMovementTypes = [
+  "in",
+  "out",
+] as const satisfies readonly string[];
+
+export type StockMovementType = (typeof stockMovementTypes)[number];
+
 export const customerLabelOptions = [
   "csv_file",
   "line_label",

@@ -12,6 +12,7 @@ import {
 } from "@/db";
 import { PurchaseInvoiceItems } from "@/db/schema/purchase-invoice-items";
 import { Stock } from "@/db/schema/stock";
+import { StockMovements } from "@/db/schema/stock-movements";
 import { generateUuid } from "@/lib/helpers";
 import { desc, eq, getTableColumns, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -118,6 +119,15 @@ export const createPurchaseInvoice = async (
               status: Number(remainingQuantity) > 0 ? "pending" : "received",
             })
             .where(eq(Stock.uuid, item.stockUuid));
+
+          await tx.insert(StockMovements).values({
+            uuid: generateUuid(),
+            productUuid: stockRow.productUuid,
+            stockUuid: item.stockUuid,
+            type: "out",
+            quantity: item.quantity,
+            purchaseInvoiceUuid: uuid,
+          });
         }
       });
     } else {
@@ -134,5 +144,6 @@ export const createPurchaseInvoice = async (
 
   revalidatePath("/purchase-invoices");
   revalidatePath("/stock");
+  revalidatePath("/stock-movements");
   redirect("/purchase-invoices");
 };

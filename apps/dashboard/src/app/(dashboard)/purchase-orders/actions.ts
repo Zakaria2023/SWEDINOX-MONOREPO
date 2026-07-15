@@ -8,6 +8,7 @@ import {
 } from "@/db/schema/purchase-orders";
 import { PurchaseOrderItems } from "@/db/schema/purchase-order-items";
 import { Stock } from "@/db/schema/stock";
+import { StockMovements } from "@/db/schema/stock-movements";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
 import { Products } from "@/db/schema/products";
@@ -111,19 +112,30 @@ export const createPurchaseOrder = async (
           quantity: item.quantity,
         });
 
+        const stockUuid = generateUuid();
         await tx.insert(Stock).values({
-          uuid: generateUuid(),
+          uuid: stockUuid,
           productUuid: item.productUuid,
           purchaseOrderUuid: uuid,
           purchaseOrderItemUuid: itemUuid,
           quantity: item.quantity,
           status: "pending",
         });
+
+        await tx.insert(StockMovements).values({
+          uuid: generateUuid(),
+          productUuid: item.productUuid,
+          stockUuid,
+          type: "in",
+          quantity: item.quantity,
+          purchaseOrderUuid: uuid,
+        });
       }
     });
 
     revalidatePath("/purchase-orders");
     revalidatePath("/stock");
+    revalidatePath("/stock-movements");
     return { success: true, purchaseOrderUuid: uuid };
   } catch (error) {
     return {

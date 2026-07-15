@@ -448,9 +448,19 @@ export const AppSidebar = () => {
                     <SidebarMenuSubItem>
                       <SidebarMenuSubButton
                         render={<Link href="/stock" />}
-                        isActive={pathname.startsWith("/stock")}
+                        isActive={
+                          pathname === "/stock" || pathname.startsWith("/stock/")
+                        }
                       >
                         <span>Stock</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/stock-movements" />}
+                        isActive={pathname.startsWith("/stock-movements")}
+                      >
+                        <span>Stock Movements</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                   </SidebarMenuSub>
