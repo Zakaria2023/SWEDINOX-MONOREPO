@@ -10,7 +10,7 @@ import {
   timestamp,
   varchar,
 } from "drizzle-orm/mysql-core";
-import { stockMovementTypes } from "../../lib/enums";
+import { stockMovementReasons, stockMovementTypes } from "../../lib/enums";
 import { Products } from "./products";
 import { Stock } from "./stock";
 import { PurchaseOrders } from "./purchase-orders";
@@ -26,7 +26,9 @@ export const StockMovements = mysqlTable(
     stockUuid: char("stock_uuid", { length: 36 }).notNull(),
 
     type: mysqlEnum("type", stockMovementTypes).notNull(),
+    reason: mysqlEnum("reason", stockMovementReasons).notNull(),
     quantity: decimal("quantity", { precision: 15, scale: 3 }).notNull(),
+    note: varchar("note", { length: 255 }),
 
     // Purchase order this movement is tied to — the original "in" receipt,
     // or the "out" reversal logged when that order is cancelled.
@@ -44,6 +46,7 @@ export const StockMovements = mysqlTable(
   (table) => [
     index("idx_stock_movements_product_uuid").on(table.productUuid),
     index("idx_stock_movements_stock_uuid").on(table.stockUuid),
+    index("idx_stock_movements_reason").on(table.reason),
     index("idx_stock_movements_purchase_order_uuid").on(
       table.purchaseOrderUuid,
     ),

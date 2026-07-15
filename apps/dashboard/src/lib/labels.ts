@@ -56,6 +56,7 @@ import type {
   StockLabelPrintingOption,
   StockLabelType,
   StockMode,
+  StockMovementReason,
   StockMovementType,
   StockStatus,
   TextUsageCategory,
@@ -765,6 +766,16 @@ export const STOCK_STATUS_LABELS: Record<StockStatus, string> = {
 export const STOCK_MOVEMENT_TYPE_LABELS: Record<StockMovementType, string> = {
   in: "In",
   out: "Out",
+};
+
+export const STOCK_MOVEMENT_REASON_LABELS: Record<StockMovementReason, string> = {
+  purchase_receipt: "Purchase Receipt",
+  invoice_consumption: "Invoice Consumption",
+  purchase_order_cancelled: "Purchase Order Cancelled",
+  invoice_cancelled: "Invoice Cancelled",
+  manual_correction: "Manual Correction",
+  count_correction: "Count Correction",
+  damaged: "Damaged / Written Off",
 };
 
 export const CUSTOMER_LABEL_OPTION_LABELS: Record<CustomerLabelOption, string> =

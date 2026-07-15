@@ -484,6 +484,28 @@ export const stockMovementTypes = [
 
 export type StockMovementType = (typeof stockMovementTypes)[number];
 
+export const stockMovementReasons = [
+  "purchase_receipt",
+  "invoice_consumption",
+  "purchase_order_cancelled",
+  "invoice_cancelled",
+  "manual_correction",
+  "count_correction",
+  "damaged",
+] as const satisfies readonly string[];
+
+export type StockMovementReason = (typeof stockMovementReasons)[number];
+
+// The subset of stockMovementReasons a staff member can pick when manually
+// correcting stock — the others are only ever written by the system itself.
+export const stockCorrectionReasons = [
+  "manual_correction",
+  "count_correction",
+  "damaged",
+] as const satisfies readonly string[];
+
+export type StockCorrectionReason = (typeof stockCorrectionReasons)[number];
+
 export const customerLabelOptions = [
   "csv_file",
   "line_label",

@@ -13,8 +13,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
-import { stockMovementTypes } from "@/lib/enums";
-import { STOCK_MOVEMENT_TYPE_LABELS } from "@/lib/labels";
+import { stockMovementReasons, stockMovementTypes } from "@/lib/enums";
+import {
+  STOCK_MOVEMENT_REASON_LABELS,
+  STOCK_MOVEMENT_TYPE_LABELS,
+} from "@/lib/labels";
 
 type Props = {
   stockMovements: StockMovementListItem[];
@@ -28,9 +31,18 @@ const typeOptions: SelectOption[] = [
   })),
 ];
 
+const reasonOptions: SelectOption[] = [
+  { value: "", label: "All reasons" },
+  ...stockMovementReasons.map((reason) => ({
+    value: reason,
+    label: STOCK_MOVEMENT_REASON_LABELS[reason],
+  })),
+];
+
 export const StockMovementsTable = ({ stockMovements }: Props) => {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
+  const [reasonFilter, setReasonFilter] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
 
@@ -41,6 +53,9 @@ export const StockMovementsTable = ({ stockMovements }: Props) => {
 
     return stockMovements.filter((row) => {
       if (typeFilter && row.type !== typeFilter) {
+        return false;
+      }
+      if (reasonFilter && row.reason !== reasonFilter) {
         return false;
       }
       if (
@@ -60,7 +75,7 @@ export const StockMovementsTable = ({ stockMovements }: Props) => {
       }
       return true;
     });
-  }, [stockMovements, search, typeFilter, fromDate, toDate]);
+  }, [stockMovements, search, typeFilter, reasonFilter, fromDate, toDate]);
 
   return (
     <div className="space-y-4">
@@ -76,6 +91,12 @@ export const StockMovementsTable = ({ stockMovements }: Props) => {
           options={typeOptions}
           onValueChange={setTypeFilter}
           className="w-40"
+        />
+        <Select
+          value={reasonFilter}
+          options={reasonOptions}
+          onValueChange={setReasonFilter}
+          className="w-56"
         />
         <Input
           type="date"
@@ -97,6 +118,7 @@ export const StockMovementsTable = ({ stockMovements }: Props) => {
             <TableRow>
               <TableHead>Product</TableHead>
               <TableHead>Type</TableHead>
+              <TableHead>Reason</TableHead>
               <TableHead className="text-right">Quantity</TableHead>
               <TableHead>Source</TableHead>
               <TableHead>Time</TableHead>
@@ -106,7 +128,7 @@ export const StockMovementsTable = ({ stockMovements }: Props) => {
             {filteredMovements.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={5}
+                  colSpan={6}
                   className="h-24 text-center text-muted-foreground"
                 >
                   No stock movements found.
@@ -130,6 +152,14 @@ export const StockMovementsTable = ({ stockMovements }: Props) => {
                     >
                       {STOCK_MOVEMENT_TYPE_LABELS[row.type]}
                     </span>
+                  </TableCell>
+                  <TableCell>
+                    <div>{STOCK_MOVEMENT_REASON_LABELS[row.reason]}</div>
+                    {row.note && (
+                      <div className="text-xs text-muted-foreground">
+                        {row.note}
+                      </div>
+                    )}
                   </TableCell>
                   <TableCell className="text-right">{row.quantity}</TableCell>
                   <TableCell>

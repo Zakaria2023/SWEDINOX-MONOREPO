@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { StockListItem } from "@/app/(dashboard)/stock/actions";
+import { Button } from "@/components/shadcn/button";
 import { Input } from "@/components/shadcn/input";
 import { Select, type SelectOption } from "@/components/shadcn/select";
 import {
@@ -13,6 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { StockCorrectionDialog } from "./stock-correction-dialog";
 import { cn } from "@/lib/helpers";
 import { stockStatuses } from "@/lib/enums";
 import { STOCK_STATUS_LABELS } from "@/lib/labels";
@@ -30,6 +32,9 @@ export const StockTable = ({ stock }: Props) => {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [companyFilter, setCompanyFilter] = useState("");
+  const [correctingStock, setCorrectingStock] = useState<StockListItem | null>(
+    null,
+  );
 
   const statusOptions: SelectOption[] = [
     { value: "", label: "All statuses" },
@@ -108,13 +113,14 @@ export const StockTable = ({ stock }: Props) => {
               <TableHead>Status</TableHead>
               <TableHead>Pending For</TableHead>
               <TableHead>Created</TableHead>
+              <TableHead />
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredStock.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={7}
+                  colSpan={8}
                   className="h-24 text-center text-muted-foreground"
                 >
                   No stock found.
@@ -166,6 +172,18 @@ export const StockTable = ({ stock }: Props) => {
                     <TableCell>
                       {new Date(row.createdAt).toLocaleDateString("en-GB")}
                     </TableCell>
+                    <TableCell>
+                      {row.status !== "cancelled" && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCorrectingStock(row)}
+                        >
+                          Correct
+                        </Button>
+                      )}
+                    </TableCell>
                   </TableRow>
                 );
               })
@@ -173,6 +191,15 @@ export const StockTable = ({ stock }: Props) => {
           </TableBody>
         </Table>
       </div>
+
+      <StockCorrectionDialog
+        stock={correctingStock}
+        onOpenChange={(open) => {
+          if (!open) {
+            setCorrectingStock(null);
+          }
+        }}
+      />
     </div>
   );
 };
