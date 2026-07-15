@@ -11,6 +11,8 @@ import {
   PurchaseInvoices,
   SelectPurchaseInvoices,
 } from "@/db/schema/purchase-invoices";
+import { Orders, SelectOrders } from "@/db/schema/orders";
+import { Invoices, SelectInvoices } from "@/db/schema/invoices";
 import { desc, eq, getTableColumns } from "drizzle-orm";
 
 export type StockMovementListItem = SelectStockMovements & {
@@ -18,6 +20,8 @@ export type StockMovementListItem = SelectStockMovements & {
   productName: SelectProducts["name"] | null;
   purchaseOrderId: SelectPurchaseOrders["id"] | null;
   purchaseInvoiceId: SelectPurchaseInvoices["id"] | null;
+  orderId: SelectOrders["id"] | null;
+  invoiceId: SelectInvoices["id"] | null;
 };
 
 export const getStockMovements = async (): Promise<
@@ -31,6 +35,8 @@ export const getStockMovements = async (): Promise<
         productName: Products.name,
         purchaseOrderId: PurchaseOrders.id,
         purchaseInvoiceId: PurchaseInvoices.id,
+        orderId: Orders.id,
+        invoiceId: Invoices.id,
       })
       .from(StockMovements)
       .leftJoin(Products, eq(StockMovements.productUuid, Products.uuid))
@@ -42,6 +48,8 @@ export const getStockMovements = async (): Promise<
         PurchaseInvoices,
         eq(StockMovements.purchaseInvoiceUuid, PurchaseInvoices.uuid),
       )
+      .leftJoin(Orders, eq(StockMovements.orderUuid, Orders.uuid))
+      .leftJoin(Invoices, eq(StockMovements.invoiceUuid, Invoices.uuid))
       .orderBy(desc(StockMovements.createdAt));
   } catch {
     throw new Error("Failed to fetch stock movements");

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import {
   cancelPurchaseOrder,
   PurchaseOrderDetail,
@@ -138,7 +139,13 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
       </div>
 
       {canCancel && (
-        <div>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            render={<Link href={`/purchase-orders/${purchaseOrder.uuid}/edit`} />}
+          >
+            Edit Details
+          </Button>
           <Button
             type="button"
             variant="destructive"

@@ -2,8 +2,8 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
+import { useEffect, useState, useTransition } from "react";
+import { useFieldArray, useForm } from "react-hook-form";
 import { createOrder, OrderActionResult } from "./actions";
 import {
   AddressOption,
@@ -19,6 +19,10 @@ import {
   ContactOption,
   getContactsForCompany,
 } from "@/app/(dashboard)/contacts/actions";
+import {
+  AvailableStockOption,
+  getAvailableStockForSelect,
+} from "@/app/(dashboard)/stock/actions";
 import { SelectOption } from "@/components/shadcn/select";
 import {
   deliveryTerms,
@@ -64,11 +68,32 @@ export const useOrderSubmit = ({ companies }: UseOrderSubmitParams) => {
   const [addresses, setAddresses] = useState<AddressOption[]>([]);
   const [projects, setProjects] = useState<ProjectOption[]>([]);
   const [isLoadingCompanyData, setIsLoadingCompanyData] = useState(false);
+  const [availableStock, setAvailableStock] = useState<AvailableStockOption[]>(
+    [],
+  );
 
   const form = useForm<OrderFormValues>({
     resolver: zodResolver(orderSchema),
     defaultValues: DEFAULT_ORDER,
   });
+
+  const {
+    fields: itemFields,
+    append: appendItem,
+    remove: removeItem,
+  } = useFieldArray({ control: form.control, name: "items" });
+
+  useEffect(() => {
+    getAvailableStockForSelect().then(setAvailableStock);
+  }, []);
+
+  const stockOptions: SelectOption[] = [
+    emptyOpt,
+    ...availableStock.map((s) => ({
+      value: s.uuid,
+      label: `${[s.productCode, s.productName].filter(Boolean).join(" — ")} (${s.quantity} available)`,
+    })),
+  ];
 
   const isPickup = form.watch("isPickup");
   const isConsignment = form.watch("isConsignment");
@@ -155,7 +180,8 @@ export const useOrderSubmit = ({ companies }: UseOrderSubmitParams) => {
 
   const onSubmit = form.handleSubmit((values) => {
     startTransition(async () => {
-      const result = await createOrder({
+      const result = await createOrder(
+        {
         companyUuid: values.companyUuid,
         contactUuid: values.contactUuid || null,
         orderMethod: values.orderMethod || null,
@@ -218,7 +244,9 @@ export const useOrderSubmit = ({ companies }: UseOrderSubmitParams) => {
 
         remarks: values.remarks || null,
         documents: null,
-      });
+        },
+        values.items ?? [],
+      );
 
       setState(result);
       if (result.success) {
@@ -246,5 +274,9 @@ export const useOrderSubmit = ({ companies }: UseOrderSubmitParams) => {
     isLoadingCompanyData,
     handleCompanyChange,
     handleCancel,
+    stockOptions,
+    itemFields,
+    appendItem,
+    removeItem,
   };
 };

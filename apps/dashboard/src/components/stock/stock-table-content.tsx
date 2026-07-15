@@ -24,6 +24,7 @@ type Props = {
 };
 
 const DAYS_PENDING_WARNING_THRESHOLD = 30;
+const PAGE_SIZE = 20;
 
 const daysSince = (date: Date) =>
   Math.floor((Date.now() - new Date(date).getTime()) / 86_400_000);
@@ -32,6 +33,7 @@ export const StockTable = ({ stock }: Props) => {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [companyFilter, setCompanyFilter] = useState("");
+  const [page, setPage] = useState(1);
   const [correctingStock, setCorrectingStock] = useState<StockListItem | null>(
     null,
   );
@@ -79,25 +81,37 @@ export const StockTable = ({ stock }: Props) => {
     });
   }, [stock, search, statusFilter, companyFilter]);
 
+  const pageCount = Math.max(1, Math.ceil(filteredStock.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+  const pagedStock = filteredStock.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE,
+  );
+
+  const updateFilter = <T,>(setter: (value: T) => void) => (value: T) => {
+    setter(value);
+    setPage(1);
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
         <Input
           placeholder="Search product…"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => updateFilter(setSearch)(e.target.value)}
           className="w-56"
         />
         <Select
           value={statusFilter}
           options={statusOptions}
-          onValueChange={setStatusFilter}
+          onValueChange={updateFilter(setStatusFilter)}
           className="w-44"
         />
         <Select
           value={companyFilter}
           options={companyOptions}
-          onValueChange={setCompanyFilter}
+          onValueChange={updateFilter(setCompanyFilter)}
           className="w-56"
         />
       </div>
@@ -110,6 +124,7 @@ export const StockTable = ({ stock }: Props) => {
               <TableHead>Company</TableHead>
               <TableHead>Purchase Order</TableHead>
               <TableHead className="text-right">Original / Remaining</TableHead>
+              <TableHead className="text-right">Reserved / Available</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Pending For</TableHead>
               <TableHead>Created</TableHead>
@@ -117,26 +132,34 @@ export const StockTable = ({ stock }: Props) => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredStock.length === 0 ? (
+            {pagedStock.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={8}
+                  colSpan={9}
                   className="h-24 text-center text-muted-foreground"
                 >
                   No stock found.
                 </TableCell>
               </TableRow>
             ) : (
-              filteredStock.map((row) => {
+              pagedStock.map((row) => {
                 const pendingDays =
                   row.status === "pending" ? daysSince(row.createdAt) : null;
+                const available = (
+                  Number(row.quantity) - Number(row.reservedQuantity)
+                ).toFixed(3);
 
                 return (
                   <TableRow key={row.uuid}>
                     <TableCell className="font-medium">
-                      {[row.productCode, row.productName]
-                        .filter(Boolean)
-                        .join(" — ") || "—"}
+                      <Link
+                        href={`/stock/${row.uuid}`}
+                        className="underline-offset-4 hover:underline"
+                      >
+                        {[row.productCode, row.productName]
+                          .filter(Boolean)
+                          .join(" — ") || "—"}
+                      </Link>
                     </TableCell>
                     <TableCell>{row.companyName ?? "—"}</TableCell>
                     <TableCell>
@@ -153,6 +176,9 @@ export const StockTable = ({ stock }: Props) => {
                     </TableCell>
                     <TableCell className="text-right">
                       {row.originalQuantity ?? row.quantity} / {row.quantity}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {row.reservedQuantity} / {available}
                     </TableCell>
                     <TableCell>{STOCK_STATUS_LABELS[row.status]}</TableCell>
                     <TableCell>
@@ -191,6 +217,32 @@ export const StockTable = ({ stock }: Props) => {
           </TableBody>
         </Table>
       </div>
+
+      {pageCount > 1 && (
+        <div className="flex items-center justify-end gap-3 text-sm text-muted-foreground">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={currentPage <= 1}
+          >
+            Previous
+          </Button>
+          <span>
+            Page {currentPage} of {pageCount}
+          </span>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+            disabled={currentPage >= pageCount}
+          >
+            Next
+          </Button>
+        </div>
+      )}
 
       <StockCorrectionDialog
         stock={correctingStock}

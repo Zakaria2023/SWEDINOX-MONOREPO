@@ -19,7 +19,7 @@ import { Stock } from "@/db/schema/stock";
 import { StockMovements } from "@/db/schema/stock-movements";
 import { generateUuid } from "@/lib/helpers";
 import { currentUser } from "@clerk/nextjs/server";
-import { and, desc, eq, getTableColumns, gte, inArray } from "drizzle-orm";
+import { and, desc, eq, getTableColumns, gte, inArray, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -89,9 +89,11 @@ export const createPurchaseInvoice = async (
             error: "One or more selected stock items are no longer pending.",
           };
         }
-        if (Number(item.quantity) > Number(stockRow.quantity)) {
+        const freeQuantity =
+          Number(stockRow.quantity) - Number(stockRow.reservedQuantity);
+        if (Number(item.quantity) > freeQuantity) {
           return {
-            error: `Cannot take more than the available pending quantity (${stockRow.quantity}).`,
+            error: `Cannot take more than the unreserved pending quantity (${freeQuantity.toFixed(3)}).`,
           };
         }
       }
@@ -137,7 +139,10 @@ export const createPurchaseInvoice = async (
               and(
                 eq(Stock.uuid, item.stockUuid),
                 eq(Stock.status, "pending"),
-                gte(Stock.quantity, item.quantity),
+                gte(
+                  sql`(${Stock.quantity} - ${Stock.reservedQuantity})`,
+                  item.quantity,
+                ),
               ),
             );
 
@@ -175,6 +180,53 @@ export const createPurchaseInvoice = async (
   revalidatePath("/stock");
   revalidatePath("/stock-movements");
   redirect("/purchase-invoices");
+};
+
+export type PurchaseInvoiceHeaderEdit = Pick<
+  PurchaseInvoiceFields,
+  | "invoiceNumberSupplier"
+  | "creditorNo"
+  | "creditorNo2"
+  | "invoiceDate"
+  | "expirationDate"
+  | "paymentTerms"
+  | "remarks"
+>;
+
+export const updatePurchaseInvoice = async (
+  uuid: string,
+  fields: PurchaseInvoiceHeaderEdit,
+): Promise<PurchaseInvoiceActionResult> => {
+  try {
+    const [invoice] = await db
+      .select({ cancelled: PurchaseInvoices.cancelled })
+      .from(PurchaseInvoices)
+      .where(eq(PurchaseInvoices.uuid, uuid))
+      .limit(1);
+
+    if (!invoice) {
+      return { error: "Purchase invoice not found." };
+    }
+    if (invoice.cancelled) {
+      return { error: "Cannot edit a cancelled purchase invoice." };
+    }
+
+    await db
+      .update(PurchaseInvoices)
+      .set(fields)
+      .where(eq(PurchaseInvoices.uuid, uuid));
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to update purchase invoice",
+    };
+  }
+
+  revalidatePath("/purchase-invoices");
+  revalidatePath(`/purchase-invoices/${uuid}`);
+  redirect(`/purchase-invoices/${uuid}`);
 };
 
 export type PurchaseInvoiceItemDetail = SelectPurchaseInvoiceItems & {

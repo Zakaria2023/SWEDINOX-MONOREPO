@@ -7,6 +7,7 @@ import { CompanyOption } from "@/app/(dashboard)/companies/actions";
 import { FormActions } from "@/components/ui/form-actions";
 import { FormError } from "@/components/ui/form-error";
 import { OrderInformationSection } from "./sections/order-information-section";
+import { OrderItemsSection } from "./sections/order-items-section";
 import { OrderTypeSection } from "./sections/order-type-section";
 import { DeliverySection } from "./sections/delivery-section";
 import { LogisticsSection } from "./sections/logistics-section";
@@ -38,6 +39,10 @@ export const OrderForm = ({ companies, clerkUsers }: Props) => {
     isLoadingCompanyData,
     handleCompanyChange,
     handleCancel,
+    stockOptions,
+    itemFields,
+    appendItem,
+    removeItem,
   } = useOrderSubmit({ companies });
 
   return (
@@ -53,6 +58,13 @@ export const OrderForm = ({ companies, clerkUsers }: Props) => {
           clerkUsers={clerkUsers}
           isLoadingCompanyData={isLoadingCompanyData}
           handleCompanyChange={handleCompanyChange}
+        />
+
+        <OrderItemsSection
+          stockOptions={stockOptions}
+          itemFields={itemFields}
+          appendItem={appendItem}
+          removeItem={removeItem}
         />
 
         <OrderTypeSection

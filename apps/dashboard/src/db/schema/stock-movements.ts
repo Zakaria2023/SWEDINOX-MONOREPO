@@ -15,6 +15,8 @@ import { Products } from "./products";
 import { Stock } from "./stock";
 import { PurchaseOrders } from "./purchase-orders";
 import { PurchaseInvoices } from "./purchase-invoices";
+import { Orders } from "./orders";
+import { Invoices } from "./invoices";
 
 export const StockMovements = mysqlTable(
   "StockMovements",
@@ -37,6 +39,13 @@ export const StockMovements = mysqlTable(
     // or the "in" reversal logged when that invoice is cancelled.
     purchaseInvoiceUuid: char("purchase_invoice_uuid", { length: 36 }),
 
+    // Sales order this movement is tied to — set for the reservation's
+    // eventual "out" consumption once billed.
+    orderUuid: char("order_uuid", { length: 36 }),
+    // Sales invoice this movement is tied to — the "out" consumption, or the
+    // "in" reversal logged when that invoice is cancelled.
+    invoiceUuid: char("invoice_uuid", { length: 36 }),
+
     // Clerk user id of whoever triggered this movement.
     createdByUserId: varchar("created_by_user_id", { length: 255 }).notNull(),
 
@@ -53,6 +62,8 @@ export const StockMovements = mysqlTable(
     index("idx_stock_movements_purchase_invoice_uuid").on(
       table.purchaseInvoiceUuid,
     ),
+    index("idx_stock_movements_order_uuid").on(table.orderUuid),
+    index("idx_stock_movements_invoice_uuid").on(table.invoiceUuid),
     foreignKey({
       name: "fk_stock_movements_product",
       columns: [table.productUuid],
@@ -72,6 +83,16 @@ export const StockMovements = mysqlTable(
       name: "fk_stock_movements_purchase_invoice",
       columns: [table.purchaseInvoiceUuid],
       foreignColumns: [PurchaseInvoices.uuid],
+    }),
+    foreignKey({
+      name: "fk_stock_movements_order",
+      columns: [table.orderUuid],
+      foreignColumns: [Orders.uuid],
+    }),
+    foreignKey({
+      name: "fk_stock_movements_invoice",
+      columns: [table.invoiceUuid],
+      foreignColumns: [Invoices.uuid],
     }),
   ],
 );

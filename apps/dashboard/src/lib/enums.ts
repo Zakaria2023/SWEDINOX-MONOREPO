@@ -489,6 +489,8 @@ export const stockMovementReasons = [
   "invoice_consumption",
   "purchase_order_cancelled",
   "invoice_cancelled",
+  "sale_consumption",
+  "sale_invoice_cancelled",
   "manual_correction",
   "count_correction",
   "damaged",
@@ -940,6 +942,23 @@ export const orderMethods = [
 ] as const satisfies readonly string[];
 
 export type OrderMethod = (typeof orderMethods)[number];
+
+export const orderStatuses = [
+  "open",
+  "confirmed",
+  "completed",
+  "cancelled",
+] as const satisfies readonly string[];
+
+export type OrderStatus = (typeof orderStatuses)[number];
+
+export const orderItemStatuses = [
+  "reserved",
+  "invoiced",
+  "cancelled",
+] as const satisfies readonly string[];
+
+export type OrderItemStatus = (typeof orderItemStatuses)[number];
 
 export const deliveryTerms = [
   "exw",

@@ -71,6 +71,8 @@ import type {
   TransportMode,
   ReturnOrderReason,
   OrderMethod,
+  OrderStatus,
+  OrderItemStatus,
   DeliveryTerm,
   OrderWeightType,
   PurchaseCompanyType,
@@ -773,6 +775,8 @@ export const STOCK_MOVEMENT_REASON_LABELS: Record<StockMovementReason, string> =
   invoice_consumption: "Invoice Consumption",
   purchase_order_cancelled: "Purchase Order Cancelled",
   invoice_cancelled: "Invoice Cancelled",
+  sale_consumption: "Sale Consumption",
+  sale_invoice_cancelled: "Sale Invoice Cancelled",
   manual_correction: "Manual Correction",
   count_correction: "Count Correction",
   damaged: "Damaged / Written Off",
@@ -1008,6 +1012,19 @@ export const ORDER_METHOD_LABELS: Record<OrderMethod, string> = {
   website: "Website",
   edi: "EDI",
   ai_read_email: "AI-read Email",
+};
+
+export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
+  open: "Open",
+  confirmed: "Confirmed",
+  completed: "Completed",
+  cancelled: "Cancelled",
+};
+
+export const ORDER_ITEM_STATUS_LABELS: Record<OrderItemStatus, string> = {
+  reserved: "Reserved",
+  invoiced: "Invoiced",
+  cancelled: "Cancelled",
 };
 
 export const DELIVERY_TERM_LABELS: Record<DeliveryTerm, string> = {

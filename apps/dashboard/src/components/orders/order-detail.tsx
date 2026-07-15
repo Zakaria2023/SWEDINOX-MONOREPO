@@ -2,10 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import {
-  cancelPurchaseInvoice,
-  PurchaseInvoiceDetail,
-} from "@/app/(dashboard)/purchase-invoices/actions";
+import { cancelOrder, OrderDetail } from "@/app/(dashboard)/orders/actions";
 import { Button } from "@/components/shadcn/button";
 import {
   Table,
@@ -17,19 +14,22 @@ import {
 } from "@/components/shadcn/table";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FormError } from "@/components/ui/form-error";
+import { ORDER_ITEM_STATUS_LABELS, ORDER_STATUS_LABELS } from "@/lib/labels";
 
 type Props = {
-  purchaseInvoice: PurchaseInvoiceDetail;
+  order: OrderDetail;
 };
 
-export const PurchaseInvoiceDetailView = ({ purchaseInvoice }: Props) => {
+export const OrderDetailView = ({ order }: Props) => {
   const [isPending, startTransition] = useTransition();
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [error, setError] = useState<string | undefined>();
 
+  const canCancel = order.status !== "cancelled";
+
   const handleCancel = () => {
     startTransition(async () => {
-      const result = await cancelPurchaseInvoice(purchaseInvoice.uuid);
+      const result = await cancelOrder(order.uuid);
       if (result.error) {
         setError(result.error);
       }
@@ -46,17 +46,14 @@ export const PurchaseInvoiceDetailView = ({ purchaseInvoice }: Props) => {
           <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
             Company
           </p>
-          <p className="text-sm">{purchaseInvoice.companyName ?? "—"}</p>
+          <p className="text-sm">{order.companyName ?? "—"}</p>
         </div>
         <div>
           <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-            Invoice Sent By
+            Contact
           </p>
           <p className="text-sm">
-            {[
-              purchaseInvoice.contactFirstName,
-              purchaseInvoice.contactLastName,
-            ]
+            {[order.contactFirstName, order.contactLastName]
               .filter(Boolean)
               .join(" ") || "—"}
           </p>
@@ -65,58 +62,39 @@ export const PurchaseInvoiceDetailView = ({ purchaseInvoice }: Props) => {
           <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
             Status
           </p>
-          <p className="text-sm">
-            {purchaseInvoice.cancelled ? "Cancelled" : "Active"}
-          </p>
+          <p className="text-sm">{ORDER_STATUS_LABELS[order.status]}</p>
         </div>
         <div>
           <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-            Invoice Date
+            Customer Ref
           </p>
-          <p className="text-sm">
-            {purchaseInvoice.invoiceDate?.toLocaleDateString("en-GB") ?? "—"}
-          </p>
-        </div>
-        <div>
-          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-            Invoice Number (Supplier)
-          </p>
-          <p className="text-sm">
-            {purchaseInvoice.invoiceNumberSupplier ?? "—"}
-          </p>
-        </div>
-        <div>
-          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-            Invoice Total
-          </p>
-          <p className="text-sm">€{purchaseInvoice.invoiceTotal}</p>
+          <p className="text-sm">{order.customerRef ?? "—"}</p>
         </div>
       </div>
 
       <div className="space-y-3">
-        <h2 className="border-b pb-2 text-base font-semibold">
-          Stock Items Taken
-        </h2>
+        <h2 className="border-b pb-2 text-base font-semibold">Products</h2>
         <div className="overflow-x-auto rounded-md border">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Product</TableHead>
-                <TableHead className="text-right">Quantity</TableHead>
+                <TableHead className="text-right">Reserved</TableHead>
+                <TableHead>Status</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {purchaseInvoice.items.length === 0 ? (
+              {order.items.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={2}
+                    colSpan={3}
                     className="h-24 text-center text-muted-foreground"
                   >
-                    No stock items on this invoice.
+                    No products on this order.
                   </TableCell>
                 </TableRow>
               ) : (
-                purchaseInvoice.items.map((item) => (
+                order.items.map((item) => (
                   <TableRow key={item.uuid}>
                     <TableCell className="font-medium">
                       {[item.productCode, item.productName]
@@ -126,6 +104,9 @@ export const PurchaseInvoiceDetailView = ({ purchaseInvoice }: Props) => {
                     <TableCell className="text-right">
                       {item.quantity}
                     </TableCell>
+                    <TableCell>
+                      {ORDER_ITEM_STATUS_LABELS[item.status]}
+                    </TableCell>
                   </TableRow>
                 ))
               )}
@@ -134,13 +115,11 @@ export const PurchaseInvoiceDetailView = ({ purchaseInvoice }: Props) => {
         </div>
       </div>
 
-      {!purchaseInvoice.cancelled && (
+      {canCancel && (
         <div className="flex gap-2">
           <Button
             variant="outline"
-            render={
-              <Link href={`/purchase-invoices/${purchaseInvoice.uuid}/edit`} />
-            }
+            render={<Link href={`/orders/${order.uuid}/edit`} />}
           >
             Edit Details
           </Button>
@@ -150,7 +129,7 @@ export const PurchaseInvoiceDetailView = ({ purchaseInvoice }: Props) => {
             onClick={() => setIsConfirmOpen(true)}
             disabled={isPending}
           >
-            Cancel Purchase Invoice
+            Cancel Order
           </Button>
         </div>
       )}
@@ -160,9 +139,9 @@ export const PurchaseInvoiceDetailView = ({ purchaseInvoice }: Props) => {
         onOpenChange={setIsConfirmOpen}
         onConfirm={handleCancel}
         isPending={isPending}
-        title="Cancel purchase invoice"
-        description="This cancels the invoice and restores its stock items back to pending. This cannot be undone."
-        confirmLabel="Cancel Invoice"
+        title="Cancel order"
+        description="This cancels the order and releases any stock it had reserved. This cannot be undone."
+        confirmLabel="Cancel Order"
       />
     </div>
   );

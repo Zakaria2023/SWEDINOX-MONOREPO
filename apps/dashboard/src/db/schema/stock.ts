@@ -25,6 +25,11 @@ export const Stock = mysqlTable(
     purchaseOrderItemUuid: char("purchase_order_item_uuid", { length: 36 }),
 
     quantity: decimal("quantity", { precision: 15, scale: 3 }).notNull(),
+    // How much of `quantity` is earmarked by open sales order reservations —
+    // available to sell/invoice is always `quantity - reservedQuantity`.
+    reservedQuantity: decimal("reserved_quantity", { precision: 15, scale: 3 })
+      .default("0.000")
+      .notNull(),
     status: mysqlEnum("status", stockStatuses).default("pending").notNull(),
 
     createdAt: timestamp("created_at").defaultNow().notNull(),

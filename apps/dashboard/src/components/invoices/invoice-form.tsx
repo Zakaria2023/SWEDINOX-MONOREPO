@@ -1,7 +1,11 @@
 "use client";
 
 import { CompanyOption } from "@/app/(dashboard)/companies/actions";
-import { InvoiceSurchargeInput } from "@/app/(dashboard)/invoices/actions";
+import {
+  getReservedOrderItemsForCompany,
+  InvoiceSurchargeInput,
+  ReservedOrderItemOption,
+} from "@/app/(dashboard)/invoices/actions";
 import { useInvoiceSubmit } from "@/app/(dashboard)/invoices/use-invoice-submit";
 import {
   SurchargeFormValues,
@@ -16,6 +20,7 @@ import { FormProvider, useForm } from "react-hook-form";
 import { SurchargeDialog } from "./dialogs/surcharge-dialog";
 import { InvoiceAmountsSection } from "./sections/invoice-amounts-section";
 import { InvoiceHeaderSection } from "./sections/invoice-header-section";
+import { InvoiceOrderItemsSection } from "./sections/invoice-order-items-section";
 import { InvoiceSettingsSection } from "./sections/invoice-settings-section";
 import { InvoiceSurchargesSection } from "./sections/invoice-surcharges-section";
 
@@ -36,13 +41,35 @@ export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
   const [isSurchargeDialogOpen, setIsSurchargeDialogOpen] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [surchargeError, setSurchargeError] = useState<string | null>(null);
+  const [reservedItems, setReservedItems] = useState<ReservedOrderItemOption[]>(
+    [],
+  );
+  const [selectedOrderItemUuids, setSelectedOrderItemUuids] = useState<
+    string[]
+  >([]);
 
   const {
     form,
     isPending,
     onSubmit: submitForm,
     state,
-  } = useInvoiceSubmit(surcharges);
+  } = useInvoiceSubmit(surcharges, selectedOrderItemUuids);
+
+  const companyUuid = form.watch("companyUuid");
+
+  useEffect(() => {
+    setSelectedOrderItemUuids([]);
+    if (!companyUuid) {
+      setReservedItems([]);
+      return;
+    }
+    getReservedOrderItemsForCompany(companyUuid).then(setReservedItems);
+  }, [companyUuid]);
+
+  const toggleOrderItem = (uuid: string) =>
+    setSelectedOrderItemUuids((prev) =>
+      prev.includes(uuid) ? prev.filter((id) => id !== uuid) : [...prev, uuid],
+    );
 
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     if (surcharges.length === 0) {
@@ -120,6 +147,13 @@ export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
           <InvoiceAmountsSection isPending={isPending} />
           <InvoiceSettingsSection isPending={isPending} />
         </div>
+
+        <InvoiceOrderItemsSection
+          reservedItems={reservedItems}
+          selectedUuids={selectedOrderItemUuids}
+          onToggle={toggleOrderItem}
+          isPending={isPending}
+        />
 
         <InvoiceSurchargesSection
           isPending={isPending}

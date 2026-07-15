@@ -2,7 +2,7 @@
 
 import { db } from "@/db";
 import { SelectStock, Stock } from "@/db/schema/stock";
-import { StockMovements } from "@/db/schema/stock-movements";
+import { SelectStockMovements, StockMovements } from "@/db/schema/stock-movements";
 import { Products, SelectProducts } from "@/db/schema/products";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { PurchaseOrders, SelectPurchaseOrders } from "@/db/schema/purchase-orders";
@@ -13,7 +13,7 @@ import {
 import { StockCorrectionReason, StockMovementType } from "@/lib/enums";
 import { generateUuid } from "@/lib/helpers";
 import { currentUser } from "@clerk/nextjs/server";
-import { and, desc, eq, getTableColumns, gt } from "drizzle-orm";
+import { and, desc, eq, getTableColumns, gt, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 export type StockListItem = SelectStock & {
@@ -29,6 +29,8 @@ export type PendingStockOption = Pick<SelectStock, "uuid" | "quantity"> & {
   productCode: SelectProducts["productCode"];
   productName: SelectProducts["name"];
 };
+
+export type AvailableStockOption = PendingStockOption;
 
 export const getStock = async (): Promise<StockListItem[]> => {
   try {
@@ -58,13 +60,17 @@ export const getStock = async (): Promise<StockListItem[]> => {
   }
 };
 
+// Remaining quantity actually free to draw down further — physical quantity
+// minus whatever open sales-order reservations already hold on the lot.
+const availableQuantity = sql<string>`(${Stock.quantity} - ${Stock.reservedQuantity})`;
+
 export const getPendingStockForCompany = async (
   companyUuid: string,
 ): Promise<PendingStockOption[]> =>
   db
     .select({
       uuid: Stock.uuid,
-      quantity: Stock.quantity,
+      quantity: availableQuantity,
       productUuid: Products.uuid,
       productCode: Products.productCode,
       productName: Products.name,
@@ -75,9 +81,27 @@ export const getPendingStockForCompany = async (
       and(
         eq(Products.companyUuid, companyUuid),
         eq(Stock.status, "pending"),
-        gt(Stock.quantity, "0"),
+        gt(availableQuantity, "0"),
       ),
     )
+    .orderBy(desc(Stock.createdAt));
+
+// Available stock across every product — not scoped to a single company,
+// since a sales order can draw from any lot currently in the warehouse.
+export const getAvailableStockForSelect = async (): Promise<
+  AvailableStockOption[]
+> =>
+  db
+    .select({
+      uuid: Stock.uuid,
+      quantity: availableQuantity,
+      productUuid: Products.uuid,
+      productCode: Products.productCode,
+      productName: Products.name,
+    })
+    .from(Stock)
+    .innerJoin(Products, eq(Stock.productUuid, Products.uuid))
+    .where(and(eq(Stock.status, "pending"), gt(availableQuantity, "0")))
     .orderBy(desc(Stock.createdAt));
 
 export type StockCorrectionInput = {
@@ -111,12 +135,15 @@ export const createStockCorrection = async (
       return { error: "Cannot correct a cancelled stock item." };
     }
 
-    if (
-      input.direction === "out" &&
-      Number(input.quantity) > Number(stockRow.quantity)
-    ) {
+    const freeQuantity =
+      Number(stockRow.quantity) - Number(stockRow.reservedQuantity);
+
+    if (input.direction === "out" && Number(input.quantity) > freeQuantity) {
       return {
-        error: `Cannot remove more than the available quantity (${stockRow.quantity}).`,
+        error:
+          freeQuantity < Number(stockRow.quantity)
+            ? `Cannot remove more than the unreserved quantity (${freeQuantity.toFixed(3)}) — some of this lot is held by open sales orders.`
+            : `Cannot remove more than the available quantity (${stockRow.quantity}).`,
       };
     }
 
@@ -175,4 +202,44 @@ export const createStockCorrection = async (
           : "Failed to apply stock correction",
     };
   }
+};
+
+export type StockDetail = StockListItem & {
+  movements: SelectStockMovements[];
+};
+
+export const getStockDetail = async (
+  uuid: string,
+): Promise<StockDetail | null> => {
+  const [stockRow] = await db
+    .select({
+      ...getTableColumns(Stock),
+      productCode: Products.productCode,
+      productName: Products.name,
+      companyName: Companies.companyName,
+      purchaseOrderId: PurchaseOrders.id,
+      originalQuantity: PurchaseOrderItems.quantity,
+    })
+    .from(Stock)
+    .leftJoin(Products, eq(Stock.productUuid, Products.uuid))
+    .leftJoin(Companies, eq(Products.companyUuid, Companies.uuid))
+    .leftJoin(PurchaseOrders, eq(Stock.purchaseOrderUuid, PurchaseOrders.uuid))
+    .leftJoin(
+      PurchaseOrderItems,
+      eq(Stock.purchaseOrderItemUuid, PurchaseOrderItems.uuid),
+    )
+    .where(eq(Stock.uuid, uuid))
+    .limit(1);
+
+  if (!stockRow) {
+    return null;
+  }
+
+  const movements = await db
+    .select()
+    .from(StockMovements)
+    .where(eq(StockMovements.stockUuid, uuid))
+    .orderBy(desc(StockMovements.createdAt));
+
+  return { ...stockRow, movements };
 };

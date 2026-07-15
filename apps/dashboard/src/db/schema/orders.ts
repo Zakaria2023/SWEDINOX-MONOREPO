@@ -19,6 +19,7 @@ import {
   deliveryTypes,
   invoicePaymentTerms,
   orderMethods,
+  orderStatuses,
   orderWeightTypes,
 } from "../../lib/enums";
 import { Companies } from "./companies";
@@ -43,6 +44,7 @@ export const Orders = mysqlTable(
     priceDate: date("price_date"),
     orderCategory: varchar("order_category", { length: 100 }),
     handlingBlocked: boolean("handling_blocked").default(false),
+    status: mysqlEnum("status", orderStatuses).default("open").notNull(),
 
     // ── Order type ────────────────────────────────────────────────────────────
     isPickup: boolean("is_pickup").default(false),

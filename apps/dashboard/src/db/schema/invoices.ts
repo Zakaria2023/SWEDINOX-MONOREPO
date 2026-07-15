@@ -60,6 +60,7 @@ export const Invoices = mysqlTable(
     calculateVat: boolean("calculate_vat").default(false).notNull(),
     printed: boolean("printed").default(false).notNull(),
     mailed: boolean("mailed").default(false).notNull(),
+    cancelled: boolean("cancelled").default(false).notNull(),
 
     vatScenario: mysqlEnum("vat_scenario", invoiceVatScenarios),
     paymentTerms: mysqlEnum("payment_terms", invoicePaymentTerms),

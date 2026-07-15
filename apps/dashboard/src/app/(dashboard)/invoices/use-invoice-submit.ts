@@ -10,7 +10,10 @@ import {
 } from "./actions";
 import { createInvoiceSchema, InvoiceFormValues } from "./validation";
 
-export const useInvoiceSubmit = (surcharges: InvoiceSurchargeInput[]) => {
+export const useInvoiceSubmit = (
+  surcharges: InvoiceSurchargeInput[],
+  orderItemUuids: string[] = [],
+) => {
   const [isPending, startTransition] = useTransition();
   const [state, setState] = useState<InvoiceActionResult>({});
 
@@ -46,6 +49,7 @@ export const useInvoiceSubmit = (surcharges: InvoiceSurchargeInput[]) => {
           explanation: values.explanation || undefined,
         },
         surcharges,
+        orderItemUuids,
       );
       setState(result);
     });

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { InvoiceWithCompany } from "@/app/(dashboard)/invoices/actions";
 import {
   Table,
@@ -64,7 +65,16 @@ export const InvoicesTable = ({ invoices }: Props) => {
   const renderCell = (inv: InvoiceWithCompany, key: ColumnKey) => {
     switch (key) {
       case "id":
-        return <TableCell key={key} className="font-medium whitespace-nowrap">{inv.id}</TableCell>;
+        return (
+          <TableCell key={key} className="font-medium whitespace-nowrap">
+            <Link
+              href={`/invoices/${inv.uuid}`}
+              className="underline-offset-4 hover:underline"
+            >
+              {inv.id}
+            </Link>
+          </TableCell>
+        );
       case "companyName":
         return <TableCell key={key} className="whitespace-nowrap">{inv.companyName ?? na}</TableCell>;
       case "companyCode":

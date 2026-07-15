@@ -16,6 +16,7 @@ import { generateUuid } from "@/lib/helpers";
 import { currentUser } from "@clerk/nextjs/server";
 import { desc, eq, getTableColumns, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 export type PurchaseOrderFields = Omit<
   InsertPurchaseOrders,
@@ -249,10 +250,14 @@ export const cancelPurchaseOrder = async (
       .from(Stock)
       .where(eq(Stock.purchaseOrderUuid, uuid));
 
-    if (stockRows.some((row) => row.status !== "pending")) {
+    if (
+      stockRows.some(
+        (row) => row.status !== "pending" || Number(row.reservedQuantity) > 0,
+      )
+    ) {
       return {
         error:
-          "Cannot cancel: some products from this order have already been invoiced.",
+          "Cannot cancel: some products from this order have already been invoiced or reserved by a sales order.",
       };
     }
 
@@ -300,4 +305,51 @@ export const cancelPurchaseOrder = async (
           : "Failed to cancel purchase order",
     };
   }
+};
+
+export type PurchaseOrderHeaderEdit = Pick<
+  PurchaseOrderFields,
+  | "reference"
+  | "ourReference"
+  | "orderCategory"
+  | "paymentTerms"
+  | "deliveryDate"
+  | "deliveryRemark"
+  | "remarks"
+>;
+
+export const updatePurchaseOrder = async (
+  uuid: string,
+  fields: PurchaseOrderHeaderEdit,
+): Promise<PurchaseOrderActionResult> => {
+  try {
+    const [order] = await db
+      .select({ status: PurchaseOrders.status })
+      .from(PurchaseOrders)
+      .where(eq(PurchaseOrders.uuid, uuid))
+      .limit(1);
+
+    if (!order) {
+      return { error: "Purchase order not found." };
+    }
+    if (order.status === "cancelled") {
+      return { error: "Cannot edit a cancelled purchase order." };
+    }
+
+    await db
+      .update(PurchaseOrders)
+      .set(fields)
+      .where(eq(PurchaseOrders.uuid, uuid));
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to update purchase order",
+    };
+  }
+
+  revalidatePath("/purchase-orders");
+  revalidatePath(`/purchase-orders/${uuid}`);
+  redirect(`/purchase-orders/${uuid}`);
 };
