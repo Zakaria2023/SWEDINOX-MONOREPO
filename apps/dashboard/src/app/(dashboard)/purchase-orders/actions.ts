@@ -8,6 +8,7 @@ import {
 } from "@/db/schema/purchase-orders";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
+import { Products } from "@/db/schema/products";
 import { generateUuid } from "@/lib/helpers";
 import { desc, eq, getTableColumns } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -47,11 +48,34 @@ export const getPurchaseOrders = async (): Promise<PurchaseOrderListItem[]> => {
   }
 };
 
+const companyHasProducts = async (companyUuid: string): Promise<boolean> => {
+  const rows = await db
+    .select({ id: Products.id })
+    .from(Products)
+    .where(eq(Products.companyUuid, companyUuid))
+    .limit(1);
+  return rows.length > 0;
+};
+
 export const createPurchaseOrder = async (
   fields: PurchaseOrderFields,
 ): Promise<PurchaseOrderActionResult> => {
   const uuid = generateUuid();
   try {
+    if (!(await companyHasProducts(fields.supplierUuid))) {
+      return {
+        error:
+          "Selected supplier has no products. Add products to this company before creating a purchase order.",
+      };
+    }
+
+    if (fields.agentUuid && !(await companyHasProducts(fields.agentUuid))) {
+      return {
+        error:
+          "Selected agent has no products. Add products to this company before creating a purchase order.",
+      };
+    }
+
     await db.insert(PurchaseOrders).values({ ...fields, uuid });
     revalidatePath("/purchase-orders");
     return { success: true, purchaseOrderUuid: uuid };
