@@ -16,7 +16,7 @@ import {
 } from "@/db/schema/purchase-invoice-items";
 import { Products, SelectProducts } from "@/db/schema/products";
 import { Stock } from "@/db/schema/stock";
-import { StockMovements } from "@/db/schema/stock-movements";
+import { SelectStockMovements, StockMovements } from "@/db/schema/stock-movements";
 import { generateUuid } from "@/lib/helpers";
 import { currentUser } from "@clerk/nextjs/server";
 import { and, desc, eq, getTableColumns, gte, inArray, sql } from "drizzle-orm";
@@ -240,6 +240,7 @@ export type PurchaseInvoiceDetail = SelectPurchaseInvoices & {
   contactFirstName: SelectContacts["firstName"] | null;
   contactLastName: SelectContacts["lastName"] | null;
   items: PurchaseInvoiceItemDetail[];
+  movements: SelectStockMovements[];
 };
 
 export const getPurchaseInvoiceDetail = async (
@@ -276,7 +277,13 @@ export const getPurchaseInvoiceDetail = async (
     .leftJoin(Products, eq(PurchaseInvoiceItems.productUuid, Products.uuid))
     .where(eq(PurchaseInvoiceItems.purchaseInvoiceUuid, uuid));
 
-  return { ...invoice, items };
+  const movements = await db
+    .select()
+    .from(StockMovements)
+    .where(eq(StockMovements.purchaseInvoiceUuid, uuid))
+    .orderBy(desc(StockMovements.createdAt));
+
+  return { ...invoice, items, movements };
 };
 
 export const cancelPurchaseInvoice = async (

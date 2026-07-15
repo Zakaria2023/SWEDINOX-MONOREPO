@@ -28,13 +28,6 @@ export const createPurchaseInvoiceSchema = () =>
       paymentTerms: z.enum(invoicePaymentTerms).optional(),
       blocked: z.boolean(),
       blockReason: z.enum(purchaseInvoiceBlockReasons).optional(),
-      materials: z.string(),
-      optionsAmount: z.string(),
-      surcharges: z.string(),
-      vatHigh: z.string(),
-      vatMiddle: z.string(),
-      vatLow: z.string(),
-      creditRestriction: z.string(),
       remarks: z.string().optional(),
       documents: z
         .array(z.object({ id: z.string(), fileName: z.string() }))

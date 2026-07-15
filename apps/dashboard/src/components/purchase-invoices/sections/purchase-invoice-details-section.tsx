@@ -32,7 +32,7 @@ export const PurchaseInvoiceDetailsSection = ({
   const blocked = watch("blocked");
 
   return (
-    <div className="space-y-4 lg:col-span-2">
+    <div className="max-w-2xl space-y-4">
       <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-gray-700">
         Purchase Invoice
       </h2>

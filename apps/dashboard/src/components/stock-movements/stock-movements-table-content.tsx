@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { StockMovementListItem } from "@/app/(dashboard)/stock-movements/actions";
-import { Button } from "@/components/shadcn/button";
 import { Input } from "@/components/shadcn/input";
 import { Select, type SelectOption } from "@/components/shadcn/select";
 import {
@@ -40,15 +39,12 @@ const reasonOptions: SelectOption[] = [
   })),
 ];
 
-const PAGE_SIZE = 20;
-
 export const StockMovementsTable = ({ stockMovements }: Props) => {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
   const [reasonFilter, setReasonFilter] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
-  const [page, setPage] = useState(1);
 
   const filteredMovements = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -81,52 +77,37 @@ export const StockMovementsTable = ({ stockMovements }: Props) => {
     });
   }, [stockMovements, search, typeFilter, reasonFilter, fromDate, toDate]);
 
-  const pageCount = Math.max(
-    1,
-    Math.ceil(filteredMovements.length / PAGE_SIZE),
-  );
-  const currentPage = Math.min(page, pageCount);
-  const pagedMovements = filteredMovements.slice(
-    (currentPage - 1) * PAGE_SIZE,
-    currentPage * PAGE_SIZE,
-  );
-
-  const updateFilter = <T,>(setter: (value: T) => void) => (value: T) => {
-    setter(value);
-    setPage(1);
-  };
-
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
         <Input
           placeholder="Search product…"
           value={search}
-          onChange={(e) => updateFilter(setSearch)(e.target.value)}
+          onChange={(e) => setSearch(e.target.value)}
           className="w-56"
         />
         <Select
           value={typeFilter}
           options={typeOptions}
-          onValueChange={updateFilter(setTypeFilter)}
+          onValueChange={setTypeFilter}
           className="w-40"
         />
         <Select
           value={reasonFilter}
           options={reasonOptions}
-          onValueChange={updateFilter(setReasonFilter)}
+          onValueChange={setReasonFilter}
           className="w-56"
         />
         <Input
           type="date"
           value={fromDate}
-          onChange={(e) => updateFilter(setFromDate)(e.target.value)}
+          onChange={(e) => setFromDate(e.target.value)}
           className="w-40"
         />
         <Input
           type="date"
           value={toDate}
-          onChange={(e) => updateFilter(setToDate)(e.target.value)}
+          onChange={(e) => setToDate(e.target.value)}
           className="w-40"
         />
       </div>
@@ -144,7 +125,7 @@ export const StockMovementsTable = ({ stockMovements }: Props) => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {pagedMovements.length === 0 ? (
+            {filteredMovements.length === 0 ? (
               <TableRow>
                 <TableCell
                   colSpan={6}
@@ -154,7 +135,7 @@ export const StockMovementsTable = ({ stockMovements }: Props) => {
                 </TableCell>
               </TableRow>
             ) : (
-              pagedMovements.map((row) => (
+              filteredMovements.map((row) => (
                 <TableRow key={row.uuid}>
                   <TableCell className="font-medium">
                     {[row.productCode, row.productName]
@@ -223,32 +204,6 @@ export const StockMovementsTable = ({ stockMovements }: Props) => {
           </TableBody>
         </Table>
       </div>
-
-      {pageCount > 1 && (
-        <div className="flex items-center justify-end gap-3 text-sm text-muted-foreground">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={currentPage <= 1}
-          >
-            Previous
-          </Button>
-          <span>
-            Page {currentPage} of {pageCount}
-          </span>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
-            disabled={currentPage >= pageCount}
-          >
-            Next
-          </Button>
-        </div>
-      )}
     </div>
   );
 };

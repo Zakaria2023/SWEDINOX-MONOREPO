@@ -9,7 +9,6 @@ import { FormActions } from "@/components/ui/form-actions";
 import { FormError } from "@/components/ui/form-error";
 import { PurchaseInvoiceDetailsSection } from "./sections/purchase-invoice-details-section";
 import { PurchaseInvoiceItemsSection } from "./sections/purchase-invoice-items-section";
-import { PurchaseInvoiceSummarySection } from "./sections/purchase-invoice-summary-section";
 import { RemarksAndDocumentsSection } from "./sections/remarks-and-documents-section";
 import {
   invoicePaymentTerms,
@@ -24,11 +23,6 @@ import {
 type PurchaseInvoiceFormProps = {
   availableSuppliers: CompanyOption[];
   availableContacts: ContactOption[];
-};
-
-const formatAmount = (val: string) => {
-  const num = parseFloat(val || "0");
-  return isNaN(num) ? "€0,00" : `€${num.toFixed(2).replace(".", ",")}`;
 };
 
 export const PurchaseInvoiceForm = ({
@@ -57,20 +51,6 @@ export const PurchaseInvoiceForm = ({
   }, [uploadedDocs, setValue]);
 
   const selectedCompanyUuid = watch("companyUuid");
-  const materials = watch("materials");
-  const optionsAmount = watch("optionsAmount");
-  const surcharges = watch("surcharges");
-  const vatHigh = watch("vatHigh");
-  const vatMiddle = watch("vatMiddle");
-  const vatLow = watch("vatLow");
-  const creditRestriction = watch("creditRestriction");
-  const invoiceTotal = watch("invoiceTotal");
-
-  const toNum = (v: string | undefined) => parseFloat(v || "0") || 0;
-  const totalExclVat = toNum(materials) + toNum(optionsAmount) + toNum(surcharges);
-  const totalInclVat = totalExclVat + toNum(vatHigh) + toNum(vatMiddle) + toNum(vatLow);
-  const remainder = totalInclVat - toNum(creditRestriction);
-  const totalGeneral = toNum(invoiceTotal);
 
   const supplierOptions = [
     { value: "", label: COMMON_TEXT.emptyOption },
@@ -115,36 +95,23 @@ export const PurchaseInvoiceForm = ({
   return (
     <FormProvider {...form}>
       <form onSubmit={onSubmit} className="space-y-8">
-        <div className="grid gap-6 lg:grid-cols-3">
-          {/* Left: supplier / dates */}
-          <PurchaseInvoiceDetailsSection
-            isPending={isPending}
-            supplierOptions={supplierOptions}
-            contactOptions={contactOptions}
-            paymentTermOptions={paymentTermOptions}
-            blockReasonOptions={blockReasonOptions}
-            today={today}
-          />
+        <PurchaseInvoiceDetailsSection
+          isPending={isPending}
+          supplierOptions={supplierOptions}
+          contactOptions={contactOptions}
+          paymentTermOptions={paymentTermOptions}
+          blockReasonOptions={blockReasonOptions}
+          today={today}
+        />
 
-          {/* Right: accounting summary */}
-          <PurchaseInvoiceSummarySection
-            isPending={isPending}
-            formatAmount={formatAmount}
-            totalExclVat={totalExclVat}
-            totalInclVat={totalInclVat}
-            remainder={remainder}
-            totalGeneral={totalGeneral}
-          />
-
-          {/* Stock items — only shown once a supplier with pending stock is selected */}
-          <PurchaseInvoiceItemsSection
-            pendingStock={pendingStock}
-            itemFields={itemFields}
-            appendItem={appendItem}
-            removeItem={removeItem}
-            isPending={isPending}
-          />
-        </div>
+        {/* Stock items — only shown once a supplier with pending stock is selected */}
+        <PurchaseInvoiceItemsSection
+          pendingStock={pendingStock}
+          itemFields={itemFields}
+          appendItem={appendItem}
+          removeItem={removeItem}
+          isPending={isPending}
+        />
 
         {/* Remarks + Documents */}
         <RemarksAndDocumentsSection

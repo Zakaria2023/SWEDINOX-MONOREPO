@@ -37,6 +37,14 @@ export const PurchaseInvoiceDetailView = ({ purchaseInvoice }: Props) => {
     });
   };
 
+  const totalTaken = purchaseInvoice.movements
+    .filter((m) => m.type === "out")
+    .reduce((sum, m) => sum + Number(m.quantity), 0);
+  const totalRestored = purchaseInvoice.movements
+    .filter((m) => m.type === "in")
+    .reduce((sum, m) => sum + Number(m.quantity), 0);
+  const netTaken = totalTaken - totalRestored;
+
   return (
     <div className="space-y-6">
       {error && <FormError>{error}</FormError>}
@@ -90,6 +98,30 @@ export const PurchaseInvoiceDetailView = ({ purchaseInvoice }: Props) => {
             Invoice Total
           </p>
           <p className="text-sm">€{purchaseInvoice.invoiceTotal}</p>
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        <h2 className="border-b pb-2 text-base font-semibold">Summary</h2>
+        <div className="rounded-md border bg-gray-50 p-3 text-sm">
+          <div className="flex justify-between py-1">
+            <span className="text-gray-600">Total Taken</span>
+            <span className="font-medium">{totalTaken.toFixed(3)}</span>
+          </div>
+          {totalRestored > 0 && (
+            <div className="flex justify-between py-1">
+              <span className="text-gray-600">Total Restored</span>
+              <span className="font-medium">{totalRestored.toFixed(3)}</span>
+            </div>
+          )}
+          <div className="flex justify-between border-t pt-2 font-semibold">
+            <span>Net Taken</span>
+            <span>{netTaken.toFixed(3)}</span>
+          </div>
+          <div className="flex justify-between pt-1 text-xs text-muted-foreground">
+            <span>Stock Movements</span>
+            <span>{purchaseInvoice.movements.length}</span>
+          </div>
         </div>
       </div>
 
