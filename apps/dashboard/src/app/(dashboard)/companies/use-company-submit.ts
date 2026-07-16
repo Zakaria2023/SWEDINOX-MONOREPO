@@ -50,6 +50,7 @@ import {
   CompanyProductInput,
   CompanyPurchaseOrderInput,
   CompanyQuoteInput,
+  CompanyReturnOrderInput,
   CompanyTextInput,
   createCompany,
   CustomerProjectInput,
@@ -80,6 +81,7 @@ import {
   DEFAULT_PRODUCT,
   DEFAULT_PURCHASE_ORDER,
   DEFAULT_QUOTE,
+  DEFAULT_RETURN_ORDER,
   DEFAULT_TEXT,
   DEFAULT_VISIT_REPORT,
   productDialogSchema,
@@ -88,6 +90,8 @@ import {
   PurchaseOrderDialogValues,
   quoteDialogSchema,
   QuoteDialogValues,
+  returnOrderDialogSchema,
+  ReturnOrderDialogValues,
   textDialogSchema,
   TextDialogValues,
   USAGE_CATEGORY_FIELDS,
@@ -265,6 +269,14 @@ export const useCompanySubmit = ({
   const [editingQuoteIndex, setEditingQuoteIndex] = useState<number | null>(
     null,
   );
+  const [isReturnOrderDialogOpen, setIsReturnOrderDialogOpen] =
+    useState(false);
+  const [returnOrders, setReturnOrders] = useState<CompanyReturnOrderInput[]>(
+    [],
+  );
+  const [editingReturnOrderIndex, setEditingReturnOrderIndex] = useState<
+    number | null
+  >(null);
   const [followUps, setFollowUps] = useState<CompanyFollowUpInput[]>([]);
 
   const form = useForm<CompanyFormValues>({
@@ -417,6 +429,11 @@ export const useCompanySubmit = ({
   const quoteForm = useForm<QuoteDialogValues>({
     resolver: zodResolver(quoteDialogSchema),
     defaultValues: DEFAULT_QUOTE,
+  });
+
+  const returnOrderForm = useForm<ReturnOrderDialogValues>({
+    resolver: zodResolver(returnOrderDialogSchema),
+    defaultValues: DEFAULT_RETURN_ORDER,
   });
 
   const addressValues = form.watch("address");
@@ -1420,6 +1437,86 @@ export const useCompanySubmit = ({
   const removeQuote = (index: number) =>
     setQuotes((prev) => prev.filter((_, i) => i !== index));
 
+  // ── Return order handlers ────────────────────────────────────────────────────
+
+  const mapReturnOrder = (
+    values: ReturnOrderDialogValues,
+  ): CompanyReturnOrderInput => ({
+    orderReference: values.orderReference || undefined,
+    customerRef: values.customerRef || undefined,
+    ourReference: values.ourReference || undefined,
+    status: values.status,
+    orderDate: values.orderDate || undefined,
+    complaintRef: values.complaintRef || undefined,
+    returnReason: values.returnReason,
+    totalWeightKg: values.totalWeightKg || "0.00",
+    totalExclVat: values.totalExclVat || "0.00",
+    handlingBlocked: values.handlingBlocked,
+    remarks: values.remarks || undefined,
+  });
+
+  const handleReturnOrderOpenChange = (open: boolean) => {
+    if (!open) {
+      returnOrderForm.reset(DEFAULT_RETURN_ORDER);
+      setEditingReturnOrderIndex(null);
+    }
+    setIsReturnOrderDialogOpen(open);
+  };
+
+  const handleOpenReturnOrder = () => {
+    setEditingReturnOrderIndex(null);
+    returnOrderForm.reset({
+      ...DEFAULT_RETURN_ORDER,
+      orderDate: todayDateString(),
+    });
+    setIsReturnOrderDialogOpen(true);
+  };
+
+  const handleEditReturnOrder = (index: number) => {
+    const order = returnOrders[index];
+    if (!order) {
+      return;
+    }
+    setEditingReturnOrderIndex(index);
+    returnOrderForm.reset({
+      orderReference: order.orderReference ?? "",
+      customerRef: order.customerRef ?? "",
+      ourReference: order.ourReference ?? "",
+      status: order.status ?? "open",
+      orderDate: order.orderDate ?? "",
+      complaintRef: order.complaintRef ?? "",
+      returnReason: order.returnReason ?? ("" as ReturnOrderDialogValues["returnReason"]),
+      totalWeightKg: order.totalWeightKg ?? "0.00",
+      totalExclVat: order.totalExclVat ?? "0.00",
+      handlingBlocked: order.handlingBlocked ?? false,
+      remarks: order.remarks ?? "",
+    });
+    setIsReturnOrderDialogOpen(true);
+  };
+
+  const handleCancelReturnOrder = () => {
+    returnOrderForm.reset(DEFAULT_RETURN_ORDER);
+    setEditingReturnOrderIndex(null);
+    setIsReturnOrderDialogOpen(false);
+  };
+
+  const handleSaveReturnOrder = returnOrderForm.handleSubmit((values) => {
+    const entry = mapReturnOrder(values);
+    setReturnOrders((prev) =>
+      editingReturnOrderIndex === null
+        ? [...prev, entry]
+        : prev.map((order, i) =>
+            i === editingReturnOrderIndex ? entry : order,
+          ),
+    );
+    returnOrderForm.reset(DEFAULT_RETURN_ORDER);
+    setEditingReturnOrderIndex(null);
+    setIsReturnOrderDialogOpen(false);
+  });
+
+  const removeReturnOrder = (index: number) =>
+    setReturnOrders((prev) => prev.filter((_, i) => i !== index));
+
   // ── Follow-up handlers (inline grid) ─────────────────────────────────────────
 
   // "New" appends a row with the date and "by" auto-filled; the contact person,
@@ -1619,6 +1716,7 @@ export const useCompanySubmit = ({
         purchaseOrders,
         quotes,
         followUps,
+        returnOrders,
       );
       setState(result);
       if (result.success) router.push("/companies");
@@ -1785,6 +1883,17 @@ export const useCompanySubmit = ({
     handleCancelQuote,
     handleSaveQuote,
     removeQuote,
+
+    returnOrderForm,
+    returnOrders,
+    isReturnOrderDialogOpen,
+    isEditingReturnOrder: editingReturnOrderIndex !== null,
+    handleReturnOrderOpenChange,
+    handleOpenReturnOrder,
+    handleEditReturnOrder,
+    handleCancelReturnOrder,
+    handleSaveReturnOrder,
+    removeReturnOrder,
 
     followUps,
     addFollowUp,

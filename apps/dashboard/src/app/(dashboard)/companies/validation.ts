@@ -15,6 +15,9 @@ import {
   orderMethods,
   orderWeightTypes,
   purchasingUnits,
+  returnOrderReasons,
+  ReturnOrderReason,
+  returnOrderStatuses,
   visitReportContactMethods,
   visitReportReasons,
   invoicingMethods,
@@ -588,6 +591,40 @@ export const DEFAULT_PURCHASE_ORDER: PurchaseOrderDialogValues = {
   arrangeTransport: false,
   pickupDropoffCdPurchases: false,
   isOverlengte: false,
+  remarks: "",
+};
+
+// ── Return Order Dialog ──────────────────────────────────────────────────────
+
+export const returnOrderDialogSchema = z.object({
+  orderReference: z.string().optional(),
+  customerRef: z.string().optional(),
+  ourReference: z.string().optional(),
+  status: z.enum(returnOrderStatuses),
+  orderDate: z.string().optional(),
+  complaintRef: z.string().optional(),
+  returnReason: z.enum(returnOrderReasons, {
+    error: "Return reason is required",
+  }),
+  totalWeightKg: z.string().optional(),
+  totalExclVat: z.string().optional(),
+  handlingBlocked: z.boolean(),
+  remarks: z.string().optional(),
+});
+
+export type ReturnOrderDialogValues = z.infer<typeof returnOrderDialogSchema>;
+
+export const DEFAULT_RETURN_ORDER: ReturnOrderDialogValues = {
+  orderReference: "",
+  customerRef: "",
+  ourReference: "",
+  status: "open",
+  orderDate: "",
+  complaintRef: "",
+  returnReason: "" as ReturnOrderReason,
+  totalWeightKg: "0.00",
+  totalExclVat: "0.00",
+  handlingBlocked: false,
   remarks: "",
 };
 

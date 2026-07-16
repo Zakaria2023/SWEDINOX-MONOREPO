@@ -721,6 +721,16 @@ export const returnOrderReasons = [
 
 export type ReturnOrderReason = (typeof returnOrderReasons)[number];
 
+export const returnOrderStatuses = [
+  "open",
+  "in_progress",
+  "received",
+  "credited",
+  "cancelled",
+] as const satisfies readonly string[];
+
+export type ReturnOrderStatus = (typeof returnOrderStatuses)[number];
+
 export const machineOptionTypes = [
   "decoiling",
   "grinding",
