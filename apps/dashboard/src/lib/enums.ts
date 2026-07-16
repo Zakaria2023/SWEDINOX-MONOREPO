@@ -508,6 +508,19 @@ export const stockCorrectionReasons = [
 
 export type StockCorrectionReason = (typeof stockCorrectionReasons)[number];
 
+// Stock unit ("StkU") a stock lot is counted in — kg for coil/plate, pieces
+// for cut items, running/square/cubic metres for profiles.
+export const stockUnits = [
+  "kg",
+  "st",
+  "m1",
+  "m2",
+  "m3",
+  "mm",
+] as const satisfies readonly string[];
+
+export type StockUnit = (typeof stockUnits)[number];
+
 export const customerLabelOptions = [
   "csv_file",
   "line_label",

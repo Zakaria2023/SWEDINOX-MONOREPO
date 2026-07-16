@@ -74,7 +74,9 @@ export const AppSidebar = () => {
     pathname.startsWith("/warehouses") ||
     pathname.startsWith("/warehouse-sub-sections") ||
     pathname.startsWith("/warehouse-work-orders") ||
-    pathname.startsWith("/stock");
+    pathname.startsWith("/stock") ||
+    pathname.startsWith("/customer-stock") ||
+    pathname.startsWith("/reservations");
   const isLocationsActive = pathname.startsWith("/locations");
   const isLogisticsActive =
     pathname.startsWith("/machines") ||
@@ -461,6 +463,30 @@ export const AppSidebar = () => {
                         isActive={pathname.startsWith("/stock-movements")}
                       >
                         <span>Stock Movements</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/stock-on-location" />}
+                        isActive={pathname.startsWith("/stock-on-location")}
+                      >
+                        <span>Stock on Location</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/customer-stock" />}
+                        isActive={pathname.startsWith("/customer-stock")}
+                      >
+                        <span>Customer Stock</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/reservations" />}
+                        isActive={pathname.startsWith("/reservations")}
+                      >
+                        <span>Reservations</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                   </SidebarMenuSub>

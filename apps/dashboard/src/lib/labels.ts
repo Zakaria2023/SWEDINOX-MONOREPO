@@ -56,6 +56,7 @@ import type {
   StockLabelPrintingOption,
   StockLabelType,
   StockMode,
+  StockUnit,
   StockMovementReason,
   StockMovementType,
   StockStatus,
@@ -737,6 +738,15 @@ export const CERTIFICAAT_LABELS: Record<CertificaatOption, string> = {
 export const STOCK_MODE_LABELS: Record<StockMode, string> = {
   multiplier: "Times average monthly consumption",
   fixed_value: "Fixed value",
+};
+
+export const STOCK_UNIT_LABELS: Record<StockUnit, string> = {
+  kg: "KG",
+  st: "ST",
+  m1: "M1",
+  m2: "M2",
+  m3: "M3",
+  mm: "MM",
 };
 
 export const LEAD_TIME_METHOD_LABELS: Record<LeadTimeMethod, string> = {
