@@ -47,6 +47,7 @@ export const AppSidebar = () => {
     pathname.startsWith("/quotes") ||
     pathname.startsWith("/orders") ||
     pathname.startsWith("/return-orders") ||
+    pathname.startsWith("/return-lines") ||
     pathname.startsWith("/customer-overview") ||
     pathname.startsWith("/visit-schedule") ||
     pathname.startsWith("/follow-ups");
@@ -61,7 +62,10 @@ export const AppSidebar = () => {
     pathname === "/contracts" ||
     pathname.startsWith("/contracts/") ||
     pathname.startsWith("/contract-groups") ||
-    pathname.startsWith("/invoices");
+    pathname.startsWith("/invoices") ||
+    pathname.startsWith("/deliveries") ||
+    pathname.startsWith("/blocked-deliveries") ||
+    pathname.startsWith("/deliveries-to-arrange");
   const isSupplierActive =
     pathname.startsWith("/contracts-per-supplier") ||
     pathname.startsWith("/contact-persons-suppliers");
@@ -148,6 +152,14 @@ export const AppSidebar = () => {
                         isActive={pathname.startsWith("/return-orders")}
                       >
                         <span>Return Orders</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/return-lines" />}
+                        isActive={pathname.startsWith("/return-lines")}
+                      >
+                        <span>Return Lines</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                     <SidebarMenuSubItem>
@@ -319,6 +331,30 @@ export const AppSidebar = () => {
                         isActive={pathname.startsWith("/invoices")}
                       >
                         <span>Invoices</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/deliveries" />}
+                        isActive={pathname.startsWith("/deliveries")}
+                      >
+                        <span>Deliveries</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/blocked-deliveries" />}
+                        isActive={pathname.startsWith("/blocked-deliveries")}
+                      >
+                        <span>Blocked Deliveries</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/deliveries-to-arrange" />}
+                        isActive={pathname.startsWith("/deliveries-to-arrange")}
+                      >
+                        <span>Deliveries to Arrange</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                   </SidebarMenuSub>

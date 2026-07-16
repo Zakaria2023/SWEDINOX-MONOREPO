@@ -973,6 +973,29 @@ export const orderItemStatuses = [
 
 export type OrderItemStatus = (typeof orderItemStatuses)[number];
 
+// Fulfilment state of an order/return line (the "Line status" column).
+export const orderLineStatuses = [
+  "in_progress",
+  "released",
+  "partially_delivered",
+  "delivered",
+  "partially_invoiced",
+  "invoiced",
+  "cancelled",
+] as const satisfies readonly string[];
+
+export type OrderLineStatus = (typeof orderLineStatuses)[number];
+
+// Whether a line is ready to physically leave the warehouse.
+export const deliveryStatuses = [
+  "not_ready",
+  "ready",
+  "released",
+  "delivered",
+] as const satisfies readonly string[];
+
+export type DeliveryStatus = (typeof deliveryStatuses)[number];
+
 export const deliveryTerms = [
   "exw",
   "fca",

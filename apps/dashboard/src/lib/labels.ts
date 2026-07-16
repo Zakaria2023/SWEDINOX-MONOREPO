@@ -74,6 +74,8 @@ import type {
   OrderMethod,
   OrderStatus,
   OrderItemStatus,
+  OrderLineStatus,
+  DeliveryStatus,
   DeliveryTerm,
   OrderWeightType,
   PurchaseCompanyType,
@@ -1022,6 +1024,23 @@ export const ORDER_METHOD_LABELS: Record<OrderMethod, string> = {
   website: "Website",
   edi: "EDI",
   ai_read_email: "AI-read Email",
+};
+
+export const ORDER_LINE_STATUS_LABELS: Record<OrderLineStatus, string> = {
+  in_progress: "In progress",
+  released: "Released",
+  partially_delivered: "Partially delivered",
+  delivered: "Delivered",
+  partially_invoiced: "Partially invoiced",
+  invoiced: "Invoiced",
+  cancelled: "Cancelled",
+};
+
+export const DELIVERY_STATUS_LABELS: Record<DeliveryStatus, string> = {
+  not_ready: "Not ready",
+  ready: "Ready",
+  released: "Released",
+  delivered: "Delivered",
 };
 
 export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {

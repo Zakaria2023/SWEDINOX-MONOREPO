@@ -28,5 +28,6 @@ export * from "./purchase-requests";
 export * from "./machines";
 export * from "./counter-orders";
 export * from "./follow-ups";
+export * from "./return-order-items";
 export * from "./stock";
 export * from "./stock-movements";
