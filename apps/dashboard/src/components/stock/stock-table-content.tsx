@@ -1,11 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { StockListItem } from "@/app/(dashboard)/stock/actions";
 import { Button } from "@/components/shadcn/button";
-import { Input } from "@/components/shadcn/input";
-import { Select, type SelectOption } from "@/components/shadcn/select";
 import {
   Table,
   TableBody,
@@ -16,7 +14,6 @@ import {
 } from "@/components/shadcn/table";
 import { StockCorrectionDialog } from "./stock-correction-dialog";
 import { cn } from "@/lib/helpers";
-import { stockStatuses } from "@/lib/enums";
 import { STOCK_STATUS_LABELS } from "@/lib/labels";
 
 type Props = {
@@ -29,79 +26,12 @@ const daysSince = (date: Date) =>
   Math.floor((Date.now() - new Date(date).getTime()) / 86_400_000);
 
 export const StockTable = ({ stock }: Props) => {
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
-  const [companyFilter, setCompanyFilter] = useState("");
   const [correctingStock, setCorrectingStock] = useState<StockListItem | null>(
     null,
   );
 
-  const statusOptions: SelectOption[] = [
-    { value: "", label: "All statuses" },
-    ...stockStatuses.map((status) => ({
-      value: status,
-      label: STOCK_STATUS_LABELS[status],
-    })),
-  ];
-
-  const companyOptions: SelectOption[] = useMemo(() => {
-    const names = Array.from(
-      new Set(
-        stock
-          .map((row) => row.companyName)
-          .filter((name): name is string => !!name),
-      ),
-    ).sort();
-    return [
-      { value: "", label: "All companies" },
-      ...names.map((name) => ({ value: name, label: name })),
-    ];
-  }, [stock]);
-
-  const filteredStock = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    return stock.filter((row) => {
-      if (statusFilter && row.status !== statusFilter) {
-        return false;
-      }
-      if (companyFilter && row.companyName !== companyFilter) {
-        return false;
-      }
-      if (
-        query &&
-        !`${row.productCode ?? ""} ${row.productName ?? ""}`
-          .toLowerCase()
-          .includes(query)
-      ) {
-        return false;
-      }
-      return true;
-    });
-  }, [stock, search, statusFilter, companyFilter]);
-
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-3">
-        <Input
-          placeholder="Search product…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-56"
-        />
-        <Select
-          value={statusFilter}
-          options={statusOptions}
-          onValueChange={setStatusFilter}
-          className="w-44"
-        />
-        <Select
-          value={companyFilter}
-          options={companyOptions}
-          onValueChange={setCompanyFilter}
-          className="w-56"
-        />
-      </div>
-
       <div className="overflow-x-auto rounded-md border">
         <Table>
           <TableHeader>
@@ -118,7 +48,7 @@ export const StockTable = ({ stock }: Props) => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredStock.length === 0 ? (
+            {stock.length === 0 ? (
               <TableRow>
                 <TableCell
                   colSpan={9}
@@ -128,7 +58,7 @@ export const StockTable = ({ stock }: Props) => {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredStock.map((row) => {
+              stock.map((row) => {
                 const pendingDays =
                   row.status === "pending" ? daysSince(row.createdAt) : null;
                 const available = (
