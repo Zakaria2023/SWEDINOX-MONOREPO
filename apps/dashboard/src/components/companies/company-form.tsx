@@ -24,6 +24,8 @@ import { VisitReportsSection } from "@/components/companies/sections/visit-repor
 import { PurchaseOrdersSection } from "@/components/companies/sections/purchase-orders-section";
 import { QuotesSection } from "@/components/companies/sections/quotes-section";
 import { FollowUpsSection } from "@/components/companies/sections/follow-ups-section";
+import { TransporterCostsSection } from "@/components/companies/sections/transporter-costs-section";
+import { TransporterCountriesSection } from "@/components/companies/sections/transporter-countries-section";
 import { DocumentsSection } from "@/components/companies/sections/documents-section";
 import { SearchCodesSection } from "@/components/companies/sections/search-codes-section";
 import { ContactsSection } from "@/components/companies/sections/contacts-section";
@@ -218,6 +220,14 @@ export const CompanyForm = ({
     addFollowUp,
     updateFollowUp,
     removeFollowUp,
+    transporterCosts,
+    addTransporterCost,
+    updateTransporterCost,
+    removeTransporterCost,
+    transporterCountries,
+    addTransporterCountry,
+    updateTransporterCountry,
+    removeTransporterCountry,
     toggleRole,
     salesData,
     setSalesData,
@@ -371,6 +381,26 @@ export const CompanyForm = ({
             addFollowUp={addFollowUp}
             updateFollowUp={updateFollowUp}
             removeFollowUp={removeFollowUp}
+            isPending={isPending}
+          />
+        )}
+
+        {selectedRoles.includes("transporter") && (
+          <TransporterCostsSection
+            transporterCosts={transporterCosts}
+            addTransporterCost={addTransporterCost}
+            updateTransporterCost={updateTransporterCost}
+            removeTransporterCost={removeTransporterCost}
+            isPending={isPending}
+          />
+        )}
+
+        {selectedRoles.includes("transporter") && (
+          <TransporterCountriesSection
+            transporterCountries={transporterCountries}
+            addTransporterCountry={addTransporterCountry}
+            updateTransporterCountry={updateTransporterCountry}
+            removeTransporterCountry={removeTransporterCountry}
             isPending={isPending}
           />
         )}

@@ -51,6 +51,8 @@ import {
   CompanyPurchaseOrderInput,
   CompanyQuoteInput,
   CompanyTextInput,
+  CompanyTransporterCostInput,
+  CompanyTransporterCountryInput,
   createCompany,
   CustomerProjectInput,
   CustomerSalesInput,
@@ -266,6 +268,12 @@ export const useCompanySubmit = ({
     null,
   );
   const [followUps, setFollowUps] = useState<CompanyFollowUpInput[]>([]);
+  const [transporterCosts, setTransporterCosts] = useState<
+    CompanyTransporterCostInput[]
+  >([]);
+  const [transporterCountries, setTransporterCountries] = useState<
+    CompanyTransporterCountryInput[]
+  >([]);
 
   const form = useForm<CompanyFormValues>({
     resolver: zodResolver(createCompanySchema()),
@@ -1449,6 +1457,65 @@ export const useCompanySubmit = ({
   const removeFollowUp = (index: number) =>
     setFollowUps((prev) => prev.filter((_, i) => i !== index));
 
+  // ── Transporter cost handlers (inline grid) ──────────────────────────────────
+
+  // "New" appends a cost row valid from today through the far-future sentinel;
+  // every column is edited inline.
+  const addTransporterCost = () =>
+    setTransporterCosts((prev) => [
+      ...prev,
+      {
+        fromDate: todayDateString(),
+        untilDate: "9999-12-31",
+        nowValid: true,
+        fromKm: "0.000",
+        untilKm: "0.000",
+        fromKg: "0.000",
+        untilKg: "0.000",
+        price: "0.00",
+        priceUnit: "amount",
+        minAmount: "0.00",
+        maxAmount: "0.00",
+      },
+    ]);
+
+  const updateTransporterCost = (
+    index: number,
+    patch: Partial<CompanyTransporterCostInput>,
+  ) =>
+    setTransporterCosts((prev) =>
+      prev.map((cost, i) => (i === index ? { ...cost, ...patch } : cost)),
+    );
+
+  const removeTransporterCost = (index: number) =>
+    setTransporterCosts((prev) => prev.filter((_, i) => i !== index));
+
+  // ── Transporter country handlers (inline grid) ───────────────────────────────
+
+  const addTransporterCountry = () =>
+    setTransporterCountries((prev) => [
+      ...prev,
+      {
+        country: undefined,
+        deliveryTerms: undefined,
+        maxKg: "0.000",
+        surchargePercentage: "0.00",
+      },
+    ]);
+
+  const updateTransporterCountry = (
+    index: number,
+    patch: Partial<CompanyTransporterCountryInput>,
+  ) =>
+    setTransporterCountries((prev) =>
+      prev.map((country, i) =>
+        i === index ? { ...country, ...patch } : country,
+      ),
+    );
+
+  const removeTransporterCountry = (index: number) =>
+    setTransporterCountries((prev) => prev.filter((_, i) => i !== index));
+
   // ── Role handler ─────────────────────────────────────────────────────────────
 
   const toggleRole = (role: CompanyRole) => {
@@ -1619,6 +1686,8 @@ export const useCompanySubmit = ({
         purchaseOrders,
         quotes,
         followUps,
+        transporterCosts,
+        transporterCountries,
       );
       setState(result);
       if (result.success) router.push("/companies");
@@ -1790,6 +1859,16 @@ export const useCompanySubmit = ({
     addFollowUp,
     updateFollowUp,
     removeFollowUp,
+
+    transporterCosts,
+    addTransporterCost,
+    updateTransporterCost,
+    removeTransporterCost,
+
+    transporterCountries,
+    addTransporterCountry,
+    updateTransporterCountry,
+    removeTransporterCountry,
 
     toggleRole,
 
