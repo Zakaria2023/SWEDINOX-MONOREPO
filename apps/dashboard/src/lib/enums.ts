@@ -1249,3 +1249,15 @@ export const customerGroups = [
 ] as const satisfies readonly string[];
 
 export type CustomerGroup = (typeof customerGroups)[number];
+
+export const customerStockReasons = [
+  "initial_stock",
+  "correction",
+  "counting_difference",
+  "damaged",
+  "return_from_customer",
+  "transfer",
+  "other",
+] as const satisfies readonly string[];
+
+export type CustomerStockReason = (typeof customerStockReasons)[number];

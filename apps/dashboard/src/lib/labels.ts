@@ -26,6 +26,7 @@ import type {
   ContractType,
   Currency,
   CustomerGroup,
+  CustomerStockReason,
   DevTheorWt,
   EdiOption,
   FeaturesQuality,
@@ -1285,4 +1286,17 @@ export const CURRENCY_LABELS: Record<Currency, string> = {
   usd: "Dollar",
   gbp: "Pound",
   hkd: "HK-Dollar",
+};
+
+export const CUSTOMER_STOCK_REASON_LABELS: Record<
+  CustomerStockReason,
+  string
+> = {
+  initial_stock: "Initial stock",
+  correction: "Correction",
+  counting_difference: "Counting difference",
+  damaged: "Damaged",
+  return_from_customer: "Return from customer",
+  transfer: "Transfer",
+  other: "Other",
 };
