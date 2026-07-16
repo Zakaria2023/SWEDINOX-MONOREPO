@@ -40,6 +40,7 @@ import {
   InsertFollowUps,
   SelectFollowUps,
 } from "@/db/schema/follow-ups";
+import { Complaints, SelectComplaints } from "@/db/schema/complaints";
 import { PurchaseCompanyType } from "@/lib/enums";
 import { generateUuid } from "@/lib/helpers";
 import { currentUser } from "@clerk/nextjs/server";
@@ -171,6 +172,7 @@ export type CompanyDetail = SelectCompanies & {
   visitReports: SelectVisitReports[];
   purchaseOrders: SelectPurchaseOrders[];
   followUps: SelectFollowUps[];
+  complaints: SelectComplaints[];
 };
 
 export type ContactOption = Pick<
@@ -229,6 +231,12 @@ export const getCompanyDetail = async (
     .where(eq(FollowUps.companyUuid, uuid))
     .orderBy(desc(FollowUps.createdAt));
 
+  const complaints = await db
+    .select()
+    .from(Complaints)
+    .where(eq(Complaints.companyUuid, uuid))
+    .orderBy(desc(Complaints.createdAt));
+
   return {
     ...company,
     addresses,
@@ -236,6 +244,7 @@ export const getCompanyDetail = async (
     visitReports,
     followUps,
     purchaseOrders,
+    complaints,
   };
 };
 
