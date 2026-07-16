@@ -40,6 +40,7 @@ import {
   InsertFollowUps,
   SelectFollowUps,
 } from "@/db/schema/follow-ups";
+import { Processings, InsertProcessings } from "@/db/schema/processings";
 import { PurchaseCompanyType } from "@/lib/enums";
 import { generateUuid } from "@/lib/helpers";
 import { currentUser } from "@clerk/nextjs/server";
@@ -154,6 +155,11 @@ export type CompanyPurchaseOrderInput = Omit<
 
 export type CompanyFollowUpInput = Omit<
   InsertFollowUps,
+  "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt"
+>;
+
+export type CompanyProcessingInput = Omit<
+  InsertProcessings,
   "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt"
 >;
 
@@ -375,6 +381,7 @@ export const createCompany = async (
   purchaseOrders: CompanyPurchaseOrderInput[] = [],
   quotes: CompanyQuoteInput[] = [],
   followUps: CompanyFollowUpInput[] = [],
+  processings: CompanyProcessingInput[] = [],
 ): Promise<CompanyActionResult> => {
   const uuid = generateUuid();
 
@@ -491,6 +498,14 @@ export const createCompany = async (
       for (const followUp of followUps) {
         await tx.insert(FollowUps).values({
           ...followUp,
+          uuid: generateUuid(),
+          companyUuid: uuid,
+        });
+      }
+
+      for (const processing of processings) {
+        await tx.insert(Processings).values({
+          ...processing,
           uuid: generateUuid(),
           companyUuid: uuid,
         });

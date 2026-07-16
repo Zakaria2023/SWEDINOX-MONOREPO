@@ -783,6 +783,36 @@ export const machineCapacityUnits = [
 
 export type MachineCapacityUnit = (typeof machineCapacityUnits)[number];
 
+export const processingEditings = [
+  "stempelen",
+  "polished",
+  "paper_interleaving",
+  "pickling",
+  "laser",
+  "blue_foil",
+  "kanten",
+  "uv_foil",
+  "rolling",
+  "anodizing",
+  "slitting",
+  "brushing",
+  "remove_foil",
+  "certificate_2_1",
+  "zagen",
+  "coating",
+  "punching",
+  "grinding",
+  "decoilen",
+  "duplo",
+  "embossing",
+  "shear_cut",
+  "laser_foil",
+  "perforate",
+  "certificate_3_1",
+] as const satisfies readonly string[];
+
+export type ProcessingEditing = (typeof processingEditings)[number];
+
 export const textUsageCategories = [
   "purchase_quote_request",
   "purchase_order",

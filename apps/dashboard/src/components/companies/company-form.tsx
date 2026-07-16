@@ -1,6 +1,9 @@
 "use client";
 
-import { DebtorCompanyOption } from "@/app/(dashboard)/companies/actions";
+import {
+  CompanyOption,
+  DebtorCompanyOption,
+} from "@/app/(dashboard)/companies/actions";
 import { useCompanySubmit } from "@/app/(dashboard)/companies/use-company-submit";
 import {
   ContractForProjectOption,
@@ -24,6 +27,7 @@ import { VisitReportsSection } from "@/components/companies/sections/visit-repor
 import { PurchaseOrdersSection } from "@/components/companies/sections/purchase-orders-section";
 import { QuotesSection } from "@/components/companies/sections/quotes-section";
 import { FollowUpsSection } from "@/components/companies/sections/follow-ups-section";
+import { ProcessingsSection } from "@/components/companies/sections/processings-section";
 import { DocumentsSection } from "@/components/companies/sections/documents-section";
 import { SearchCodesSection } from "@/components/companies/sections/search-codes-section";
 import { ContactsSection } from "@/components/companies/sections/contacts-section";
@@ -55,6 +59,7 @@ type CompanyFormProps = {
   purchaseOrgCompanies: DebtorCompanyOption[];
   productGroups: ProductGroupOption[];
   availableProducts: ProductOption[];
+  suppliers: CompanyOption[];
 };
 
 export const CompanyForm = ({
@@ -65,6 +70,7 @@ export const CompanyForm = ({
   purchaseOrgCompanies,
   productGroups,
   availableProducts,
+  suppliers,
 }: CompanyFormProps) => {
   const router = useRouter();
   const { user } = useUser();
@@ -218,6 +224,11 @@ export const CompanyForm = ({
     addFollowUp,
     updateFollowUp,
     removeFollowUp,
+    processings,
+    addProcessing,
+    updateProcessing,
+    removeProcessing,
+    supplierOptions,
     toggleRole,
     salesData,
     setSalesData,
@@ -232,6 +243,7 @@ export const CompanyForm = ({
     purchaseOrgCompanies,
     productGroups,
     availableProducts,
+    suppliers,
     currentUserName: user?.fullName ?? undefined,
   });
 
@@ -371,6 +383,17 @@ export const CompanyForm = ({
             addFollowUp={addFollowUp}
             updateFollowUp={updateFollowUp}
             removeFollowUp={removeFollowUp}
+            isPending={isPending}
+          />
+        )}
+
+        {selectedRoles.includes("processor") && (
+          <ProcessingsSection
+            processings={processings}
+            addProcessing={addProcessing}
+            updateProcessing={updateProcessing}
+            removeProcessing={removeProcessing}
+            supplierOptions={supplierOptions}
             isPending={isPending}
           />
         )}
