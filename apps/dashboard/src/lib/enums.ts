@@ -1030,6 +1030,39 @@ export const complaintReports = [
 
 export type ComplaintReport = (typeof complaintReports)[number];
 
+export const complaintStatuses = [
+  "new",
+  "in_progress",
+  "on_hold",
+  "done",
+] as const satisfies readonly string[];
+
+export type ComplaintStatus = (typeof complaintStatuses)[number];
+
+export const complaintCauses = [
+  "warehouse",
+  "production",
+  "purchasing",
+  "sale",
+  "transportation",
+  "customer",
+  "supplier",
+  "processor",
+] as const satisfies readonly string[];
+
+export type ComplaintCause = (typeof complaintCauses)[number];
+
+export const complaintSolutions = [
+  "collect_goods_back_credit",
+  "return_goods_credit_redeliver",
+  "price_correction",
+  "subsequent_delivery",
+  "complaint_rejected",
+  "material_retained_correct_delivery",
+] as const satisfies readonly string[];
+
+export type ComplaintSolution = (typeof complaintSolutions)[number];
+
 export const countWorkorderMethods = [
   "counting_locations",
   "products_counting",

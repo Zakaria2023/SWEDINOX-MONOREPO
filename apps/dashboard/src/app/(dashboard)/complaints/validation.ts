@@ -1,7 +1,10 @@
 import { z } from "zod";
 import {
   complaintCategories,
+  complaintCauses,
   complaintReports,
+  complaintSolutions,
+  complaintStatuses,
   complaintTypes,
 } from "@/lib/enums";
 import { todayDateString } from "@/lib/helpers";
@@ -18,6 +21,23 @@ export const complaintSchema = z.object({
   qty: z.string(),
   amount: z.string(),
   weight: z.string(),
+  // Handling
+  status: z.enum(complaintStatuses),
+  responsibleUserId: z.string().optional(),
+  deadline: z.string().optional(),
+  cause: z.enum(complaintCauses).optional(),
+  explanationOfCause: z.string().optional(),
+  solution: z.enum(complaintSolutions).optional(),
+  explanationOfSolution: z.string().optional(),
+  costsCustomer: z.string(),
+  costsCustomerNote: z.string().optional(),
+  internalCosts: z.string(),
+  internalCostsNote: z.string().optional(),
+  extraCosts: z.string(),
+  extraCostsNote: z.string().optional(),
+  toBeReclaimed: z.string(),
+  toBeReclaimedNote: z.string().optional(),
+  documents: z.array(z.object({ id: z.string(), fileName: z.string() })),
 });
 
 export type ComplaintFormValues = z.infer<typeof complaintSchema>;
@@ -34,4 +54,20 @@ export const DEFAULT_COMPLAINT: ComplaintFormValues = {
   qty: "0.000",
   amount: "0.00",
   weight: "0.000",
+  status: "new",
+  responsibleUserId: "",
+  deadline: todayDateString(),
+  cause: undefined,
+  explanationOfCause: "",
+  solution: undefined,
+  explanationOfSolution: "",
+  costsCustomer: "0.00",
+  costsCustomerNote: "",
+  internalCosts: "0.00",
+  internalCostsNote: "",
+  extraCosts: "0.00",
+  extraCostsNote: "",
+  toBeReclaimed: "0.00",
+  toBeReclaimedNote: "",
+  documents: [],
 };

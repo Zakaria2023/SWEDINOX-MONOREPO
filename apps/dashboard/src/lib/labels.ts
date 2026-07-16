@@ -75,6 +75,9 @@ import type {
   ComplaintType,
   ComplaintCategory,
   ComplaintReport,
+  ComplaintStatus,
+  ComplaintCause,
+  ComplaintSolution,
   StickerPerPickWorkorderType,
   PrinterName,
   PrinterEntry,
@@ -1160,6 +1163,33 @@ export const COMPLAINT_REPORT_LABELS: Record<ComplaintReport, string> = {
   website: "Website",
   edi: "EDI",
   ai_read_email: "AI-read Email",
+};
+
+export const COMPLAINT_STATUS_LABELS: Record<ComplaintStatus, string> = {
+  new: "New",
+  in_progress: "In progress",
+  on_hold: "On hold",
+  done: "Done",
+};
+
+export const COMPLAINT_CAUSE_LABELS: Record<ComplaintCause, string> = {
+  warehouse: "Warehouse",
+  production: "Production",
+  purchasing: "Purchasing",
+  sale: "Sale",
+  transportation: "Transportation",
+  customer: "Customer",
+  supplier: "Supplier",
+  processor: "Processor",
+};
+
+export const COMPLAINT_SOLUTION_LABELS: Record<ComplaintSolution, string> = {
+  collect_goods_back_credit: "Collect goods back + credit",
+  return_goods_credit_redeliver: "Return goods + credit + redeliver",
+  price_correction: "Price correction",
+  subsequent_delivery: "Subsequent delivery",
+  complaint_rejected: "Complaint rejected",
+  material_retained_correct_delivery: "Material is retained + correct delivery",
 };
 
 export const STICKER_PER_PICK_WORKORDER_LABELS: Record<
