@@ -74,6 +74,9 @@ export const AppSidebar = () => {
     pathname.startsWith("/blocked-deliveries") ||
     pathname.startsWith("/deliveries-to-arrange");
   const isSupplierActive =
+    pathname.startsWith("/suppliers") ||
+    pathname.startsWith("/supplier-revenue") ||
+    pathname.startsWith("/supplier-revenue-per-revenue-group") ||
     pathname.startsWith("/contracts-per-supplier") ||
     pathname.startsWith("/contact-persons-suppliers");
   const isPurchasesActive =
@@ -454,6 +457,39 @@ export const AppSidebar = () => {
                 </SidebarMenuButton>
                 {isSupplierExpanded && (
                   <SidebarMenuSub>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/suppliers" />}
+                        isActive={pathname.startsWith("/suppliers")}
+                      >
+                        <span>Suppliers</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/supplier-revenue" />}
+                        isActive={
+                          pathname.startsWith("/supplier-revenue") &&
+                          !pathname.startsWith(
+                            "/supplier-revenue-per-revenue-group",
+                          )
+                        }
+                      >
+                        <span>Supplier Revenue</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={
+                          <Link href="/supplier-revenue-per-revenue-group" />
+                        }
+                        isActive={pathname.startsWith(
+                          "/supplier-revenue-per-revenue-group",
+                        )}
+                      >
+                        <span>Supplier Revenue per Revenue Group</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
                     <SidebarMenuSubItem>
                       <SidebarMenuSubButton
                         render={<Link href="/contracts-per-supplier" />}
