@@ -35,5 +35,7 @@ export * from "./journal-entries";
 export * from "./charges";
 export * from "./production-batches";
 export * from "./transport-trips";
+export * from "./production-work-orders";
+export * from "./transport-work-orders";
 export * from "./stock";
 export * from "./stock-movements";
