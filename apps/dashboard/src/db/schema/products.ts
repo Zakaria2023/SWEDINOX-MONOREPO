@@ -18,6 +18,7 @@ import {
 } from "../../lib/enums";
 import { Companies } from "./companies";
 import { ProductGroups } from "./product-groups";
+import { RevenueGroups } from "./revenue-groups";
 
 export const Products = mysqlTable(
   "Products",
@@ -28,6 +29,7 @@ export const Products = mysqlTable(
     productCode: varchar("product_code", { length: 100 }).notNull(),
     commodityCode: varchar("commodity_code", { length: 100 }),
     productGroupUuid: char("product_group_uuid", { length: 36 }),
+    revenueGroupUuid: char("revenue_group_uuid", { length: 36 }),
     name: varchar("name", { length: 255 }).notNull(),
 
     stockProduct: boolean("stock_product").default(false),
@@ -74,11 +76,17 @@ export const Products = mysqlTable(
   },
   (table) => [
     index("idx_products_product_group_uuid").on(table.productGroupUuid),
+    index("idx_products_revenue_group_uuid").on(table.revenueGroupUuid),
     index("idx_products_company_uuid").on(table.companyUuid),
     foreignKey({
       name: "fk_products_product_group",
       columns: [table.productGroupUuid],
       foreignColumns: [ProductGroups.uuid],
+    }),
+    foreignKey({
+      name: "fk_products_revenue_group",
+      columns: [table.revenueGroupUuid],
+      foreignColumns: [RevenueGroups.uuid],
     }),
     foreignKey({
       name: "fk_products_company",

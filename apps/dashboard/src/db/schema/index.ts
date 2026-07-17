@@ -29,5 +29,8 @@ export * from "./machines";
 export * from "./counter-orders";
 export * from "./follow-ups";
 export * from "./return-order-items";
+export * from "./revenue-groups";
+export * from "./journal-entries";
+export * from "./charges";
 export * from "./stock";
 export * from "./stock-movements";

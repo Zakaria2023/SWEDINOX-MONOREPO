@@ -63,6 +63,10 @@ export const AppSidebar = () => {
     pathname.startsWith("/contracts/") ||
     pathname.startsWith("/contract-groups") ||
     pathname.startsWith("/invoices") ||
+    pathname.startsWith("/invoice-lines") ||
+    pathname.startsWith("/charges") ||
+    pathname.startsWith("/journal-entries") ||
+    pathname.startsWith("/revenue-per-revenue-group") ||
     pathname.startsWith("/deliveries") ||
     pathname.startsWith("/blocked-deliveries") ||
     pathname.startsWith("/deliveries-to-arrange");
@@ -355,6 +359,40 @@ export const AppSidebar = () => {
                         isActive={pathname.startsWith("/deliveries-to-arrange")}
                       >
                         <span>Deliveries to Arrange</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/invoice-lines" />}
+                        isActive={pathname.startsWith("/invoice-lines")}
+                      >
+                        <span>Invoice Lines</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/charges" />}
+                        isActive={pathname.startsWith("/charges")}
+                      >
+                        <span>Charges</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/journal-entries" />}
+                        isActive={pathname.startsWith("/journal-entries")}
+                      >
+                        <span>Journal Entries</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/revenue-per-revenue-group" />}
+                        isActive={pathname.startsWith(
+                          "/revenue-per-revenue-group",
+                        )}
+                      >
+                        <span>Revenue per Revenue Group</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                   </SidebarMenuSub>
