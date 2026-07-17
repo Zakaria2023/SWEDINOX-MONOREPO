@@ -79,6 +79,7 @@ export const AppSidebar = () => {
   const isPurchasesActive =
     pathname.startsWith("/order-advice") ||
     pathname.startsWith("/stockon-advice") ||
+    pathname.startsWith("/sold-products-not-advised") ||
     pathname.startsWith("/purchase-quotes") ||
     pathname.startsWith("/purchase-requests") ||
     pathname.startsWith("/purchase-orders") ||
@@ -502,6 +503,16 @@ export const AppSidebar = () => {
                         isActive={pathname.startsWith("/stockon-advice")}
                       >
                         <span>StockOn Advice</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/sold-products-not-advised" />}
+                        isActive={pathname.startsWith(
+                          "/sold-products-not-advised",
+                        )}
+                      >
+                        <span>Sold Products Not Advised</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                     <SidebarMenuSubItem>
