@@ -2,11 +2,14 @@
 
 import { db } from "@/db";
 import { InvoiceItems } from "@/db/schema/invoice-items";
+import { Invoices } from "@/db/schema/invoices";
 import { OrderItems } from "@/db/schema/order-items";
 import { Products } from "@/db/schema/products";
 import { RevenueGroups } from "@/db/schema/revenue-groups";
 import { Stock } from "@/db/schema/stock";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
+
+export type PeriodFilter = { year?: number; month?: number };
 
 export type RevenueGroupTotals = {
   revenueGroupNumber: number | null;
@@ -19,9 +22,9 @@ export type RevenueGroupTotals = {
 
 // Revenue rolled up per revenue group from invoiced order lines. Cost comes
 // from the stock lot's valuation price; profit/margin are derived.
-export const getRevenuePerRevenueGroup = async (): Promise<
-  RevenueGroupTotals[]
-> => {
+export const getRevenuePerRevenueGroup = async (
+  filter: PeriodFilter = {},
+): Promise<RevenueGroupTotals[]> => {
   try {
     const rows = await db
       .select({
@@ -32,6 +35,7 @@ export const getRevenuePerRevenueGroup = async (): Promise<
         cost: sql<string>`COALESCE(SUM(${Stock.valuationPrice} * ${OrderItems.quantity}), 0)`,
       })
       .from(InvoiceItems)
+      .innerJoin(Invoices, eq(InvoiceItems.invoiceUuid, Invoices.uuid))
       .innerJoin(OrderItems, eq(InvoiceItems.orderItemUuid, OrderItems.uuid))
       .innerJoin(Products, eq(InvoiceItems.productUuid, Products.uuid))
       .leftJoin(
@@ -39,6 +43,16 @@ export const getRevenuePerRevenueGroup = async (): Promise<
         eq(Products.revenueGroupUuid, RevenueGroups.uuid),
       )
       .leftJoin(Stock, eq(OrderItems.stockUuid, Stock.uuid))
+      .where(
+        and(
+          filter.year
+            ? eq(sql`YEAR(${Invoices.invoiceDate})`, filter.year)
+            : undefined,
+          filter.month
+            ? eq(sql`MONTH(${Invoices.invoiceDate})`, filter.month)
+            : undefined,
+        ),
+      )
       .groupBy(RevenueGroups.uuid, RevenueGroups.number, RevenueGroups.name);
 
     return rows.map((row) => {

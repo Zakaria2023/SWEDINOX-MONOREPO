@@ -9,7 +9,9 @@ import { RevenueGroups } from "@/db/schema/revenue-groups";
 import { Stock } from "@/db/schema/stock";
 import { PurchaseInvoiceItems } from "@/db/schema/purchase-invoice-items";
 import { PurchaseInvoices } from "@/db/schema/purchase-invoices";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
+
+export type PeriodFilter = { year?: number; month?: number };
 
 export type PurchasesAndSalesRow = {
   revenueGroupNumber: number | null;
@@ -36,9 +38,9 @@ const keyOf = (
 
 // Combines the sales side (invoiced revenue/weight/profit) and the purchase
 // side (purchased kg/cost) per revenue group and period.
-export const getPurchasesAndSalesPerRevenueGroup = async (): Promise<
-  PurchasesAndSalesRow[]
-> => {
+export const getPurchasesAndSalesPerRevenueGroup = async (
+  filter: PeriodFilter = {},
+): Promise<PurchasesAndSalesRow[]> => {
   try {
     const salesYear = sql<number>`YEAR(${Invoices.invoiceDate})`;
     const salesMonth = sql<number>`MONTH(${Invoices.invoiceDate})`;
@@ -59,6 +61,12 @@ export const getPurchasesAndSalesPerRevenueGroup = async (): Promise<
       .innerJoin(Products, eq(InvoiceItems.productUuid, Products.uuid))
       .leftJoin(RevenueGroups, eq(Products.revenueGroupUuid, RevenueGroups.uuid))
       .leftJoin(Stock, eq(OrderItems.stockUuid, Stock.uuid))
+      .where(
+        and(
+          filter.year ? eq(salesYear, filter.year) : undefined,
+          filter.month ? eq(salesMonth, filter.month) : undefined,
+        ),
+      )
       .groupBy(RevenueGroups.uuid, RevenueGroups.number, RevenueGroups.name, salesYear, salesMonth);
 
     const purchaseYear = sql<number>`YEAR(${PurchaseInvoices.invoiceDate})`;
@@ -81,6 +89,12 @@ export const getPurchasesAndSalesPerRevenueGroup = async (): Promise<
       .innerJoin(Products, eq(PurchaseInvoiceItems.productUuid, Products.uuid))
       .leftJoin(RevenueGroups, eq(Products.revenueGroupUuid, RevenueGroups.uuid))
       .leftJoin(Stock, eq(PurchaseInvoiceItems.stockUuid, Stock.uuid))
+      .where(
+        and(
+          filter.year ? eq(purchaseYear, filter.year) : undefined,
+          filter.month ? eq(purchaseMonth, filter.month) : undefined,
+        ),
+      )
       .groupBy(RevenueGroups.uuid, RevenueGroups.number, RevenueGroups.name, purchaseYear, purchaseMonth);
 
     const buckets = new Map<string, Bucket>();
