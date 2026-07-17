@@ -32,5 +32,7 @@ export * from "./return-order-items";
 export * from "./revenue-groups";
 export * from "./journal-entries";
 export * from "./charges";
+export * from "./production-batches";
+export * from "./transport-trips";
 export * from "./stock";
 export * from "./stock-movements";
