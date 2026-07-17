@@ -67,6 +67,9 @@ export const AppSidebar = () => {
     pathname.startsWith("/charges") ||
     pathname.startsWith("/journal-entries") ||
     pathname.startsWith("/revenue-per-revenue-group") ||
+    pathname.startsWith("/revenue-per-product") ||
+    pathname.startsWith("/purchases-and-sales-per-revenue-group") ||
+    pathname.startsWith("/revenue-vs-budget") ||
     pathname.startsWith("/deliveries") ||
     pathname.startsWith("/blocked-deliveries") ||
     pathname.startsWith("/deliveries-to-arrange");
@@ -395,6 +398,34 @@ export const AppSidebar = () => {
                         )}
                       >
                         <span>Revenue per Revenue Group</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/revenue-per-product" />}
+                        isActive={pathname.startsWith("/revenue-per-product")}
+                      >
+                        <span>Revenue per Product</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={
+                          <Link href="/purchases-and-sales-per-revenue-group" />
+                        }
+                        isActive={pathname.startsWith(
+                          "/purchases-and-sales-per-revenue-group",
+                        )}
+                      >
+                        <span>Purchases &amp; Sales per Revenue Group</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/revenue-vs-budget" />}
+                        isActive={pathname.startsWith("/revenue-vs-budget")}
+                      >
+                        <span>Revenue w.r.t. Budget</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                   </SidebarMenuSub>

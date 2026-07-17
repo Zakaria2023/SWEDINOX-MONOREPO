@@ -30,6 +30,7 @@ export * from "./counter-orders";
 export * from "./follow-ups";
 export * from "./return-order-items";
 export * from "./revenue-groups";
+export * from "./revenue-budgets";
 export * from "./journal-entries";
 export * from "./charges";
 export * from "./production-batches";
