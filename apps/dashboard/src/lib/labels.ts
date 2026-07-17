@@ -792,6 +792,7 @@ export const STOCK_MOVEMENT_REASON_LABELS: Record<StockMovementReason, string> =
   manual_correction: "Manual Correction",
   count_correction: "Count Correction",
   damaged: "Damaged / Written Off",
+  production_output: "Production Output",
 };
 
 export const CUSTOMER_LABEL_OPTION_LABELS: Record<CustomerLabelOption, string> =

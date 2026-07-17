@@ -494,6 +494,7 @@ export const stockMovementReasons = [
   "manual_correction",
   "count_correction",
   "damaged",
+  "production_output",
 ] as const satisfies readonly string[];
 
 export type StockMovementReason = (typeof stockMovementReasons)[number];

@@ -1,6 +1,12 @@
 "use client";
 
-import { ProductionWorkOrderLineItem } from "@/app/(dashboard)/production-workorders/actions";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import {
+  ProductionWorkOrderLineItem,
+  completeProductionWorkOrderLine,
+} from "@/app/(dashboard)/production-workorders/actions";
+import { Button } from "@/components/shadcn/button";
 import {
   Table,
   TableBody,
@@ -16,6 +22,42 @@ import {
 
 type Props = {
   lines: ProductionWorkOrderLineItem[];
+};
+
+type CompleteButtonProps = {
+  lineUuid: string;
+};
+
+const CompleteButton = ({ lineUuid }: CompleteButtonProps) => {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  const onClick = () =>
+    startTransition(async () => {
+      setError(null);
+      const result = await completeProductionWorkOrderLine(lineUuid);
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      router.refresh();
+    });
+
+  return (
+    <div className="flex flex-col items-end gap-1">
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={onClick}
+        disabled={isPending}
+      >
+        {isPending ? "Completing…" : "Complete"}
+      </Button>
+      {error && <span className="text-xs text-destructive">{error}</span>}
+    </div>
+  );
 };
 
 export const ProductionWorkOrdersTable = ({ lines }: Props) => (
@@ -39,13 +81,14 @@ export const ProductionWorkOrdersTable = ({ lines }: Props) => (
           <TableHead className="text-center">Rush</TableHead>
           <TableHead className="text-right">Priority</TableHead>
           <TableHead>Charge</TableHead>
+          <TableHead className="text-right">Action</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {lines.length === 0 ? (
           <TableRow>
             <TableCell
-              colSpan={16}
+              colSpan={17}
               className="h-24 text-center text-muted-foreground"
             >
               No production work orders found.
@@ -87,6 +130,13 @@ export const ProductionWorkOrdersTable = ({ lines }: Props) => (
               </TableCell>
               <TableCell className="text-right">{row.priority ?? "—"}</TableCell>
               <TableCell>{row.charge ?? "—"}</TableCell>
+              <TableCell className="text-right">
+                {row.status === "completed" ? (
+                  "—"
+                ) : (
+                  <CompleteButton lineUuid={row.uuid} />
+                )}
+              </TableCell>
             </TableRow>
           ))
         )}

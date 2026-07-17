@@ -9,7 +9,13 @@ import {
 } from "@/db/schema/transport-work-orders";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { Products, SelectProducts } from "@/db/schema/products";
-import { desc, eq, getTableColumns } from "drizzle-orm";
+import { and, desc, eq, getTableColumns } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
+
+export type WorkOrderActionResult = {
+  error?: string;
+  success?: boolean;
+};
 
 export type TransportWorkOrderLineItem = SelectTransportWorkOrderLines & {
   tripNumber: SelectTransportWorkOrders["tripNumber"] | null;
@@ -45,5 +51,54 @@ export const getTransportWorkOrderLines = async (): Promise<
       .orderBy(desc(TransportWorkOrderLines.createdAt));
   } catch {
     throw new Error("Failed to fetch transport work orders");
+  }
+};
+
+// Completing a transport line confirms dispatch. It writes no stock movement:
+// the stock already left the warehouse at delivery (see the Deliver action),
+// so this only marks the line shipped to avoid double-counting.
+export const completeTransportWorkOrderLine = async (
+  lineUuid: string,
+): Promise<WorkOrderActionResult> => {
+  try {
+    const [line] = await db
+      .select()
+      .from(TransportWorkOrderLines)
+      .where(eq(TransportWorkOrderLines.uuid, lineUuid))
+      .limit(1);
+
+    if (!line) {
+      return { error: "Transport line not found." };
+    }
+    if (line.status === "completed") {
+      return { error: "This line is already completed." };
+    }
+
+    const [update] = await db
+      .update(TransportWorkOrderLines)
+      .set({ status: "completed" })
+      .where(
+        and(
+          eq(TransportWorkOrderLines.uuid, lineUuid),
+          eq(TransportWorkOrderLines.status, line.status),
+        ),
+      );
+
+    if (update.affectedRows === 0) {
+      return {
+        error:
+          "This line changed while completing — please refresh and try again.",
+      };
+    }
+
+    revalidatePath("/transport-workorders");
+    return { success: true };
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to complete transport line",
+    };
   }
 };

@@ -1,6 +1,12 @@
 "use client";
 
-import { TransportWorkOrderLineItem } from "@/app/(dashboard)/transport-workorders/actions";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import {
+  TransportWorkOrderLineItem,
+  completeTransportWorkOrderLine,
+} from "@/app/(dashboard)/transport-workorders/actions";
+import { Button } from "@/components/shadcn/button";
 import {
   Table,
   TableBody,
@@ -13,6 +19,42 @@ import { WAREHOUSE_WORK_ORDER_STATUS_LABELS } from "@/lib/labels";
 
 type Props = {
   lines: TransportWorkOrderLineItem[];
+};
+
+type CompleteButtonProps = {
+  lineUuid: string;
+};
+
+const CompleteButton = ({ lineUuid }: CompleteButtonProps) => {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  const onClick = () =>
+    startTransition(async () => {
+      setError(null);
+      const result = await completeTransportWorkOrderLine(lineUuid);
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      router.refresh();
+    });
+
+  return (
+    <div className="flex flex-col items-end gap-1">
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={onClick}
+        disabled={isPending}
+      >
+        {isPending ? "Completing…" : "Complete"}
+      </Button>
+      {error && <span className="text-xs text-destructive">{error}</span>}
+    </div>
+  );
 };
 
 export const TransportWorkOrdersTable = ({ lines }: Props) => (
@@ -35,13 +77,14 @@ export const TransportWorkOrdersTable = ({ lines }: Props) => (
           <TableHead className="text-right">Kg(p)</TableHead>
           <TableHead className="text-right">Colli</TableHead>
           <TableHead className="text-right">Priority</TableHead>
+          <TableHead className="text-right">Action</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {lines.length === 0 ? (
           <TableRow>
             <TableCell
-              colSpan={15}
+              colSpan={16}
               className="h-24 text-center text-muted-foreground"
             >
               No transport work orders found.
@@ -73,6 +116,13 @@ export const TransportWorkOrdersTable = ({ lines }: Props) => (
               <TableCell className="text-right">{row.kgPlanned ?? "—"}</TableCell>
               <TableCell className="text-right">{row.colli ?? "—"}</TableCell>
               <TableCell className="text-right">{row.priority ?? "—"}</TableCell>
+              <TableCell className="text-right">
+                {row.status === "completed" ? (
+                  "—"
+                ) : (
+                  <CompleteButton lineUuid={row.uuid} />
+                )}
+              </TableCell>
             </TableRow>
           ))
         )}
