@@ -1052,6 +1052,7 @@ export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
 
 export const ORDER_ITEM_STATUS_LABELS: Record<OrderItemStatus, string> = {
   reserved: "Reserved",
+  delivered: "Delivered",
   invoiced: "Invoiced",
   cancelled: "Cancelled",
 };

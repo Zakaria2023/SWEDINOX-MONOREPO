@@ -967,6 +967,7 @@ export type OrderStatus = (typeof orderStatuses)[number];
 
 export const orderItemStatuses = [
   "reserved",
+  "delivered",
   "invoiced",
   "cancelled",
 ] as const satisfies readonly string[];

@@ -1,6 +1,12 @@
 "use client";
 
-import { DeliveryLineItem } from "@/app/(dashboard)/deliveries/actions";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import {
+  DeliveryLineItem,
+  deliverOrderItem,
+} from "@/app/(dashboard)/deliveries/actions";
+import { Button } from "@/components/shadcn/button";
 import {
   Table,
   TableBody,
@@ -17,6 +23,42 @@ import {
 
 type Props = {
   lines: DeliveryLineItem[];
+};
+
+type DeliverButtonProps = {
+  orderItemUuid: string;
+};
+
+const DeliverButton = ({ orderItemUuid }: DeliverButtonProps) => {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  const onClick = () =>
+    startTransition(async () => {
+      setError(null);
+      const result = await deliverOrderItem(orderItemUuid);
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      router.refresh();
+    });
+
+  return (
+    <div className="flex flex-col items-end gap-1">
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={onClick}
+        disabled={isPending}
+      >
+        {isPending ? "Delivering…" : "Deliver"}
+      </Button>
+      {error && <span className="text-xs text-destructive">{error}</span>}
+    </div>
+  );
 };
 
 export const DeliveriesTable = ({ lines }: Props) => (
@@ -41,13 +83,14 @@ export const DeliveriesTable = ({ lines }: Props) => (
           <TableHead>Delivery status</TableHead>
           <TableHead>Delivery date</TableHead>
           <TableHead>Blocking reason</TableHead>
+          <TableHead className="text-right">Action</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {lines.length === 0 ? (
           <TableRow>
             <TableCell
-              colSpan={17}
+              colSpan={18}
               className="h-24 text-center text-muted-foreground"
             >
               No deliveries found.
@@ -94,6 +137,13 @@ export const DeliveriesTable = ({ lines }: Props) => (
               <TableCell>{row.deliveryDate ?? "—"}</TableCell>
               <TableCell className="text-muted-foreground">
                 {row.blockingReason ?? "—"}
+              </TableCell>
+              <TableCell className="text-right">
+                {row.status === "reserved" ? (
+                  <DeliverButton orderItemUuid={row.uuid} />
+                ) : (
+                  "—"
+                )}
               </TableCell>
             </TableRow>
           ))

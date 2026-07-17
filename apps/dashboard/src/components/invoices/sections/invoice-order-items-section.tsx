@@ -22,11 +22,12 @@ export const InvoiceOrderItemsSection = ({
   return (
     <div className="space-y-3">
       <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-gray-700">
-        Reserved Order Items
+        Delivered Order Items
       </h2>
       <p className="text-sm text-muted-foreground">
-        Select which open order reservations this invoice bills. Each is
-        billed in full, taking it out of stock.
+        Select which delivered order lines this invoice bills. Each is billed
+        in full; the stock already left the warehouse at delivery, so this is
+        purely financial.
       </p>
       <div className="space-y-2">
         {reservedItems.map((item) => (

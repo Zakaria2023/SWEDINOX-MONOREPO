@@ -12,11 +12,11 @@ import {
   SelectInvoiceSurcharges,
 } from "@/db";
 import { InvoiceItems, SelectInvoiceItems } from "@/db/schema/invoice-items";
+import { JournalEntries } from "@/db/schema/journal-entries";
 import { OrderItems } from "@/db/schema/order-items";
 import { Orders } from "@/db/schema/orders";
 import { Products, SelectProducts } from "@/db/schema/products";
-import { Stock } from "@/db/schema/stock";
-import { StockMovements } from "@/db/schema/stock-movements";
+import { buildSalesInvoiceJournalEntry } from "@/lib/server/accounting";
 import { generateUuid } from "@/lib/helpers";
 import { currentUser } from "@clerk/nextjs/server";
 import { and, desc, eq, getTableColumns, inArray } from "drizzle-orm";
@@ -80,7 +80,8 @@ export type ReservedOrderItemOption = {
   orderId: number;
 };
 
-// Open reservations for a customer, ready to be billed on an invoice.
+// Delivered order lines for a customer, ready to be billed on an invoice.
+// Stock already left at delivery, so invoicing these is purely financial.
 export const getReservedOrderItemsForCompany = async (
   companyUuid: string,
 ): Promise<ReservedOrderItemOption[]> =>
@@ -98,7 +99,7 @@ export const getReservedOrderItemsForCompany = async (
     .where(
       and(
         eq(Orders.companyUuid, companyUuid),
-        eq(OrderItems.status, "reserved"),
+        eq(OrderItems.status, "delivered"),
       ),
     )
     .orderBy(desc(OrderItems.createdAt));
@@ -133,8 +134,11 @@ export const createInvoice = async (
       if (!row) {
         return { error: "One or more selected reservations could not be found." };
       }
-      if (row.status !== "reserved") {
-        return { error: "One or more selected reservations are no longer open." };
+      if (row.status !== "delivered") {
+        return {
+          error:
+            "One or more selected lines are not delivered (or were already billed).",
+        };
       }
     }
 
@@ -155,6 +159,26 @@ export const createInvoice = async (
         outstanding,
       });
 
+      // Post the sales invoice to the general ledger.
+      const [insertedInvoice] = await tx
+        .select({ id: Invoices.id })
+        .from(Invoices)
+        .where(eq(Invoices.uuid, uuid))
+        .limit(1);
+
+      await tx.insert(JournalEntries).values(
+        buildSalesInvoiceJournalEntry({
+          invoiceUuid: uuid,
+          invoiceId: insertedInvoice?.id ?? null,
+          companyUuid: fields.companyUuid ?? null,
+          debCreditor: fields.debtorNo ?? null,
+          invoiceDate: fields.invoiceDate ?? null,
+          amountExclVat: exclVat,
+          vatAmount: Number(invoiceAmountInclVat) - exclVat,
+          userId: userId ?? null,
+        }),
+      );
+
       for (const surcharge of surcharges) {
         await tx.insert(InvoiceSurcharges).values({
           ...surcharge,
@@ -169,54 +193,21 @@ export const createInvoice = async (
           continue;
         }
 
-        // Guard: only bill a reservation that's still "reserved" — a
-        // concurrent invoice or cancellation can't double-bill it.
+        // Guard: only bill a line that's still "delivered" — a concurrent
+        // invoice or cancellation can't double-bill it. Stock already left at
+        // delivery, so billing is purely financial: no stock change, no
+        // movement — just the invoice line (the journal posting is booked
+        // once for the whole invoice above).
         const [itemUpdateResult] = await tx
           .update(OrderItems)
           .set({ status: "invoiced" })
-          .where(and(eq(OrderItems.uuid, id), eq(OrderItems.status, "reserved")));
+          .where(
+            and(eq(OrderItems.uuid, id), eq(OrderItems.status, "delivered")),
+          );
 
         if (itemUpdateResult.affectedRows === 0) {
           throw new Error(
-            "One of the selected reservations was already billed or cancelled — please refresh and try again.",
-          );
-        }
-
-        const [stockRow] = await tx
-          .select()
-          .from(Stock)
-          .where(eq(Stock.uuid, orderItem.stockUuid))
-          .limit(1);
-
-        if (!stockRow) {
-          continue;
-        }
-
-        const nextQuantity = (
-          Number(stockRow.quantity) - Number(orderItem.quantity)
-        ).toFixed(3);
-        const nextReserved = (
-          Number(stockRow.reservedQuantity) - Number(orderItem.quantity)
-        ).toFixed(3);
-
-        const [stockUpdateResult] = await tx
-          .update(Stock)
-          .set({
-            quantity: nextQuantity,
-            reservedQuantity: nextReserved,
-            status: Number(nextQuantity) > 0 ? "pending" : "received",
-          })
-          .where(
-            and(
-              eq(Stock.uuid, orderItem.stockUuid),
-              eq(Stock.quantity, stockRow.quantity),
-              eq(Stock.reservedQuantity, stockRow.reservedQuantity),
-            ),
-          );
-
-        if (stockUpdateResult.affectedRows === 0) {
-          throw new Error(
-            "Stock changed while billing this order — please refresh and try again.",
+            "One of the selected lines was already billed or cancelled — please refresh and try again.",
           );
         }
 
@@ -226,17 +217,6 @@ export const createInvoice = async (
           orderItemUuid: id,
           productUuid: orderItem.productUuid,
           quantity: orderItem.quantity,
-        });
-
-        await tx.insert(StockMovements).values({
-          uuid: generateUuid(),
-          productUuid: orderItem.productUuid,
-          stockUuid: orderItem.stockUuid,
-          type: "out",
-          reason: "sale_consumption",
-          quantity: orderItem.quantity,
-          invoiceUuid: uuid,
-          createdByUserId: userId as string,
         });
       }
     });
@@ -320,12 +300,8 @@ export const cancelInvoice = async (
     }
 
     const items = await db
-      .select({
-        ...getTableColumns(InvoiceItems),
-        stockUuid: OrderItems.stockUuid,
-      })
+      .select()
       .from(InvoiceItems)
-      .innerJoin(OrderItems, eq(InvoiceItems.orderItemUuid, OrderItems.uuid))
       .where(eq(InvoiceItems.invoiceUuid, uuid));
 
     const user = await currentUser();
@@ -340,48 +316,32 @@ export const cancelInvoice = async (
         .set({ cancelled: true })
         .where(eq(Invoices.uuid, uuid));
 
+      // Reverse the sales invoice's ledger posting.
+      await tx.insert(JournalEntries).values(
+        buildSalesInvoiceJournalEntry({
+          invoiceUuid: uuid,
+          invoiceId: invoice.id,
+          companyUuid: invoice.companyUuid,
+          debCreditor: invoice.debtorNo,
+          invoiceDate: invoice.invoiceDate,
+          amountExclVat: Number(invoice.invoiceAmountExclVat),
+          vatAmount:
+            Number(invoice.invoiceAmountInclVat) -
+            Number(invoice.invoiceAmountExclVat),
+          userId: userId ?? null,
+          reversal: true,
+        }),
+      );
+
+      // Cancelling an invoice reverses only the money. The stock left at
+      // delivery, so the lines go back to "delivered" (billable again) and
+      // stock is NOT restored — recovering shipped goods is a return, not an
+      // invoice cancellation.
       for (const item of items) {
         await tx
           .update(OrderItems)
-          .set({ status: "reserved" })
+          .set({ status: "delivered" })
           .where(eq(OrderItems.uuid, item.orderItemUuid));
-
-        const [stockRow] = await tx
-          .select()
-          .from(Stock)
-          .where(eq(Stock.uuid, item.stockUuid))
-          .limit(1);
-
-        if (!stockRow) {
-          continue;
-        }
-
-        const restoredQuantity = (
-          Number(stockRow.quantity) + Number(item.quantity)
-        ).toFixed(3);
-        const restoredReserved = (
-          Number(stockRow.reservedQuantity) + Number(item.quantity)
-        ).toFixed(3);
-
-        await tx
-          .update(Stock)
-          .set({
-            quantity: restoredQuantity,
-            reservedQuantity: restoredReserved,
-            status: "pending",
-          })
-          .where(eq(Stock.uuid, stockRow.uuid));
-
-        await tx.insert(StockMovements).values({
-          uuid: generateUuid(),
-          productUuid: item.productUuid,
-          stockUuid: stockRow.uuid,
-          type: "in",
-          reason: "sale_invoice_cancelled",
-          quantity: item.quantity,
-          invoiceUuid: uuid,
-          createdByUserId: userId as string,
-        });
       }
     });
 
