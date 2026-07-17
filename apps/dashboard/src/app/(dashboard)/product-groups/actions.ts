@@ -3,17 +3,26 @@
 import { db } from "@/db";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import {
+  InsertProductGroupSuppliers,
+  ProductGroupSuppliers,
+} from "@/db/schema/product-group-suppliers";
+import {
   InsertProductGroups,
   ProductGroups,
   SelectProductGroups,
 } from "@/db/schema/product-groups";
 import { generateUuid } from "@/lib/helpers";
-import { asc, desc, eq, getTableColumns, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, getTableColumns, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 export type ProductGroupFields = Omit<
   InsertProductGroups,
   "id" | "uuid" | "createdAt" | "updatedAt"
+>;
+
+export type ProductGroupSupplierInput = Omit<
+  InsertProductGroupSuppliers,
+  "id" | "uuid" | "productGroupUuid" | "createdAt" | "updatedAt"
 >;
 
 export type ProductGroupActionResult = {
@@ -40,8 +49,15 @@ export const getProductGroups = async (): Promise<ProductGroupListItem[]> => {
       })
       .from(ProductGroups)
       .leftJoin(
+        ProductGroupSuppliers,
+        and(
+          eq(ProductGroupSuppliers.productGroupUuid, ProductGroups.uuid),
+          eq(ProductGroupSuppliers.preferred, true),
+        ),
+      )
+      .leftJoin(
         Companies,
-        eq(ProductGroups.supplierCompanyUuid, Companies.uuid),
+        eq(ProductGroupSuppliers.supplierCompanyUuid, Companies.uuid),
       )
       .where(isNull(ProductGroups.parentUuid))
       .orderBy(desc(ProductGroups.createdAt));
@@ -66,10 +82,22 @@ export const getProductGroupsForSelect = async (): Promise<
 
 export const createProductGroup = async (
   fields: ProductGroupFields,
+  suppliers: ProductGroupSupplierInput[] = [],
 ): Promise<ProductGroupActionResult> => {
   const uuid = generateUuid();
   try {
-    await db.insert(ProductGroups).values({ ...fields, uuid });
+    await db.transaction(async (tx) => {
+      await tx.insert(ProductGroups).values({ ...fields, uuid });
+      if (suppliers.length > 0) {
+        await tx.insert(ProductGroupSuppliers).values(
+          suppliers.map((supplier) => ({
+            ...supplier,
+            uuid: generateUuid(),
+            productGroupUuid: uuid,
+          })),
+        );
+      }
+    });
     revalidatePath("/product-groups");
     return { success: true, productGroupUuid: uuid };
   } catch (error) {

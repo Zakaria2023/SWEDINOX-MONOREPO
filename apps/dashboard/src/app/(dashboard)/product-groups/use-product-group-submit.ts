@@ -177,18 +177,20 @@ export const useProductGroupSubmit = ({
         maxSalesLineQty: values.maxSalesLineQty,
         maxSalesNetPrice: values.maxSalesNetPrice,
         handlingCosts: values.handlingCosts,
-        supplierCompanyUuid: values.supplierCompanyUuid || null,
-        supplierPreferred: values.supplierPreferred,
-        supplierEan: values.supplierEan || null,
-        supplierExternalProductCode: values.supplierExternalProductCode || null,
-        supplierEditing: values.supplierEditing || null,
-        supplierDeliveryTime: values.supplierDeliveryTime,
-        supplierDeliveryTimeUnit: values.supplierDeliveryTimeUnit || null,
-        supplierMoq: values.supplierMoq,
-        supplierMoqUnit: values.supplierMoqUnit || null,
-        supplierOrderSeries: values.supplierOrderSeries,
         documents: values.documents ?? null,
-      });
+      }, values.suppliers.map((supplier) => ({
+        supplierCompanyUuid: supplier.supplierCompanyUuid,
+        preferred: supplier.preferred,
+        ean: supplier.ean || null,
+        externalProductCode: supplier.externalProductCode || null,
+        editing: supplier.editing || null,
+        deliveryTime: supplier.deliveryTime,
+        deliveryTimeUnit: supplier.deliveryTimeUnit || null,
+        moq: supplier.moq,
+        moqUnit: supplier.moqUnit || null,
+        orderSeries: supplier.orderSeries,
+        orderSeriesUnit: supplier.orderSeriesUnit || null,
+      })));
 
       setState(result);
       if (result.success && result.productGroupUuid) {

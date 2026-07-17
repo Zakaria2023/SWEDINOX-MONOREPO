@@ -11,6 +11,7 @@ export * from "./texts";
 export * from "./invoices";
 export * from "./invoice-items";
 export * from "./product-groups";
+export * from "./product-group-suppliers";
 export * from "./products";
 export * from "./purchase-invoices";
 export * from "./purchase-invoice-items";

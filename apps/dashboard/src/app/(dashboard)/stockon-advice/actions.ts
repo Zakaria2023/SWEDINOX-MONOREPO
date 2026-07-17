@@ -10,64 +10,89 @@ import { Products, SelectProducts } from "@/db/schema/products";
 import { PurchaseOrderItems } from "@/db/schema/purchase-order-items";
 import { PurchaseOrders } from "@/db/schema/purchase-orders";
 import { Stock } from "@/db/schema/stock";
+import { LeadTimeMethod } from "@/lib/enums";
 import { and, eq, inArray, isNull, like, sql } from "drizzle-orm";
 
-export type OrderAdviceFilter = {
+export type StockOnAdviceFilter = {
   productCode?: string;
   onlyAdvised?: boolean;
 };
 
-export type OrderAdviceRow = {
+export type StockOnAdviceRow = {
   productUuid: SelectProducts["uuid"];
   productCode: SelectProducts["productCode"];
   productName: SelectProducts["name"];
   stockUnit: SelectProducts["stockUnit"];
-  stockProduct: SelectProducts["stockProduct"];
   mainGroup: SelectProductGroups["name"] | null;
   supplierName: SelectCompanies["companyName"] | null;
-  // Physical / economic position (all in the product's stock unit)
   technicalStock: number;
   reserved: number;
   available: number;
   toBeReceived: number;
   economicStock: number;
-  // Demand
   avgMonthlyConsumption: number;
-  consumptionPreviousYear: number;
-  // Coverage in months (null when there is no consumption to divide by)
-  economicCoverage: number | null;
-  technicalCoverage: number | null;
-  // Policy levels + resulting advice
-  minStockLevel: number;
-  maxStockLevel: number;
-  adviceQty: number;
-  orderQty: number;
+  leadTimeDays: number;
+  reviewPeriodDays: number;
+  leadTimeMethod: NonNullable<SelectProductGroups["leadTimeMethod"]>;
+  orderLevel: number;
+  toOrder: number;
+  stockMinusOrderLevel: number;
+  pctDifference: number | null;
+  evaluateToday: boolean;
+  orderNow: boolean;
 };
 
-// Rounds an advised quantity up to the supplier's order series, never below the
-// minimum order quantity — the same rounding the ERP applies to "Order Qty".
+// Rounds an order-up-to quantity to the supplier's order series, never below
+// the minimum order quantity.
 const roundToOrderQty = (
-  advice: number,
+  toOrder: number,
   orderSeries: number,
   minOrderQty: number,
 ): number => {
-  if (advice <= 0) {
+  if (toOrder <= 0) {
     return 0;
   }
-  const target = Math.max(advice, minOrderQty);
+  const target = Math.max(toOrder, minOrderQty);
   if (orderSeries > 0) {
     return Math.ceil(target / orderSeries) * orderSeries;
   }
   return target;
 };
 
-// Order advice: for every stock product, compare its economic stock (on-hand
-// minus reservations plus what is still on order) against the min/max stock
-// policy carried by its product group, and advise a purchase quantity to bring
-// it back up to the maximum level. Demand comes from invoiced sales history.
-export const getOrderAdvice = async (
-  filter: OrderAdviceFilter = {},
-): Promise<OrderAdviceRow[]> => {
+// Maps a JS weekday (0 = Sunday) onto the product group's ordering-day flags.
+const isEvaluationDay = (
+  weekday: number,
+  group: {
+    orderOnMonday: boolean | null;
+    orderOnTuesday: boolean | null;
+    orderOnWednesday: boolean | null;
+    orderOnThursday: boolean | null;
+    orderOnFriday: boolean | null;
+  },
+): boolean => {
+  switch (weekday) {
+    case 1:
+      return Boolean(group.orderOnMonday);
+    case 2:
+      return Boolean(group.orderOnTuesday);
+    case 3:
+      return Boolean(group.orderOnWednesday);
+    case 4:
+      return Boolean(group.orderOnThursday);
+    case 5:
+      return Boolean(group.orderOnFriday);
+    default:
+      return false;
+  }
+};
+
+// StockOn advice: a periodic-review (R,S) reorder for products whose group has
+// StockOp enabled. The order-up-to level is the expected demand over the
+// protection interval (lead time + review period); an order is advised when the
+// economic stock has fallen below it and today is an evaluation day.
+export const getStockOnAdvice = async (
+  filter: StockOnAdviceFilter = {},
+): Promise<StockOnAdviceRow[]> => {
   try {
     const base = await db
       .select({
@@ -75,24 +100,22 @@ export const getOrderAdvice = async (
         productCode: Products.productCode,
         productName: Products.name,
         stockUnit: Products.stockUnit,
-        stockProduct: Products.stockProduct,
-        productOrderSeries: Products.orderSeries,
-        productMinOrderQty: Products.minOrderQty,
         mainGroup: ProductGroups.name,
-        minStockMode: ProductGroups.minStockMode,
-        minStockMultiplier: ProductGroups.minStockMultiplier,
-        minStockFixedValue: ProductGroups.minStockFixedValue,
-        maxStockMode: ProductGroups.maxStockMode,
-        maxStockMultiplier: ProductGroups.maxStockMultiplier,
-        maxStockFixedValue: ProductGroups.maxStockFixedValue,
-        groupOrderSeries: ProductGroups.stockOpOrderSeries,
-        groupMinOrderQty: ProductGroups.minOrderQty,
+        leadTime: ProductGroups.leadTime,
+        reviewPeriod: ProductGroups.reviewPeriod,
+        leadTimeMethod: ProductGroups.leadTimeMethod,
+        orderOnMonday: ProductGroups.orderOnMonday,
+        orderOnTuesday: ProductGroups.orderOnTuesday,
+        orderOnWednesday: ProductGroups.orderOnWednesday,
+        orderOnThursday: ProductGroups.orderOnThursday,
+        orderOnFriday: ProductGroups.orderOnFriday,
+        supplierName: Companies.companyName,
+        supplierDeliveryTime: ProductGroupSuppliers.deliveryTime,
         supplierOrderSeries: ProductGroupSuppliers.orderSeries,
         supplierMoq: ProductGroupSuppliers.moq,
-        supplierName: Companies.companyName,
       })
       .from(Products)
-      .leftJoin(
+      .innerJoin(
         ProductGroups,
         eq(Products.productGroupUuid, ProductGroups.uuid),
       )
@@ -110,6 +133,7 @@ export const getOrderAdvice = async (
       .where(
         and(
           eq(Products.stockProduct, true),
+          eq(ProductGroups.useStockOpForThisProduct, true),
           filter.productCode
             ? like(Products.productCode, `${filter.productCode}%`)
             : undefined,
@@ -123,9 +147,6 @@ export const getOrderAdvice = async (
 
     const productUuids = base.map((row) => row.productUuid);
 
-    // On-hand stock: "pending" lots are the active/on-hand state in this schema
-    // (a lot flips to "received" only once it is fully depleted). Own stock
-    // only (no consignment) and not blocked.
     const stockRows = await db
       .select({
         productUuid: Stock.productUuid,
@@ -150,7 +171,6 @@ export const getOrderAdvice = async (
       ]),
     );
 
-    // Still on order: open purchase-order lines not yet fully received.
     const onOrderRows = await db
       .select({
         productUuid: PurchaseOrderItems.productUuid,
@@ -173,13 +193,10 @@ export const getOrderAdvice = async (
       onOrderRows.map((row) => [row.productUuid, Number(row.toBeReceived)]),
     );
 
-    // Demand: invoiced quantity over the trailing 12 months (→ monthly average)
-    // and over the previous calendar year.
     const consumptionRows = await db
       .select({
         productUuid: InvoiceItems.productUuid,
         last12Months: sql<string>`COALESCE(SUM(CASE WHEN ${Invoices.invoiceDate} >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH) THEN ${InvoiceItems.quantity} ELSE 0 END), 0)`,
-        previousYear: sql<string>`COALESCE(SUM(CASE WHEN YEAR(${Invoices.invoiceDate}) = YEAR(CURDATE()) - 1 THEN ${InvoiceItems.quantity} ELSE 0 END), 0)`,
       })
       .from(InvoiceItems)
       .innerJoin(Invoices, eq(InvoiceItems.invoiceUuid, Invoices.uuid))
@@ -187,16 +204,12 @@ export const getOrderAdvice = async (
       .groupBy(InvoiceItems.productUuid);
 
     const consumptionByProduct = new Map(
-      consumptionRows.map((row) => [
-        row.productUuid,
-        {
-          last12Months: Number(row.last12Months),
-          previousYear: Number(row.previousYear),
-        },
-      ]),
+      consumptionRows.map((row) => [row.productUuid, Number(row.last12Months)]),
     );
 
-    const rows: OrderAdviceRow[] = base.map((row) => {
+    const weekday = new Date().getDay();
+
+    const rows: StockOnAdviceRow[] = base.map((row) => {
       const stock = stockByProduct.get(row.productUuid);
       const technicalStock = stock?.technical ?? 0;
       const reserved = stock?.reserved ?? 0;
@@ -204,50 +217,37 @@ export const getOrderAdvice = async (
       const toBeReceived = onOrderByProduct.get(row.productUuid) ?? 0;
       const economicStock = available + toBeReceived;
 
-      const consumption = consumptionByProduct.get(row.productUuid);
-      const avgMonthlyConsumption = (consumption?.last12Months ?? 0) / 12;
-      const consumptionPreviousYear = consumption?.previousYear ?? 0;
+      const annualConsumption = consumptionByProduct.get(row.productUuid) ?? 0;
+      const avgMonthlyConsumption = annualConsumption / 12;
+      const avgDailyConsumption = annualConsumption / 365;
 
-      const minMultiplier = Number(row.minStockMultiplier ?? 0);
-      const minFixed = Number(row.minStockFixedValue ?? 0);
-      const minStockLevel =
-        row.minStockMode === "fixed_value"
-          ? minFixed
-          : Math.max(minMultiplier * avgMonthlyConsumption, minFixed);
+      const leadTimeDays =
+        Number(row.leadTime ?? 0) || Number(row.supplierDeliveryTime ?? 0);
+      const reviewPeriodDays = Number(row.reviewPeriod ?? 0);
+      const protectionDays = leadTimeDays + reviewPeriodDays;
 
-      const maxMultiplier = Number(row.maxStockMultiplier ?? 0);
-      const maxFixed = Number(row.maxStockFixedValue ?? 0);
-      const maxByMultiplier = maxMultiplier * avgMonthlyConsumption;
-      const maxStockLevel =
-        row.maxStockMode === "fixed_value"
-          ? maxFixed
-          : maxFixed > 0
-            ? Math.min(maxByMultiplier, maxFixed)
-            : maxByMultiplier;
+      // Order-up-to level: expected demand across the protection interval.
+      const orderLevel = avgDailyConsumption * protectionDays;
+      const stockMinusOrderLevel = economicStock - orderLevel;
 
-      const adviceQty =
-        economicStock < minStockLevel
-          ? Math.max(0, maxStockLevel - economicStock)
+      const orderSeries = Number(row.supplierOrderSeries ?? 0);
+      const minOrderQty = Number(row.supplierMoq ?? 0);
+      const toOrder =
+        economicStock < orderLevel
+          ? roundToOrderQty(
+              orderLevel - economicStock,
+              orderSeries,
+              minOrderQty,
+            )
           : 0;
 
-      // Prefer the preferred supplier's terms, then the group's StockOp
-      // settings, then the product's own defaults.
-      const orderSeries =
-        Number(row.supplierOrderSeries ?? 0) ||
-        Number(row.groupOrderSeries ?? 0) ||
-        Number(row.productOrderSeries ?? 0);
-      const minOrderQty =
-        Number(row.supplierMoq ?? 0) ||
-        Number(row.groupMinOrderQty ?? 0) ||
-        Number(row.productMinOrderQty ?? 0);
-      const orderQty = roundToOrderQty(adviceQty, orderSeries, minOrderQty);
+      const evaluateToday = isEvaluationDay(weekday, row);
 
       return {
         productUuid: row.productUuid,
         productCode: row.productCode,
         productName: row.productName,
         stockUnit: row.stockUnit,
-        stockProduct: row.stockProduct,
         mainGroup: row.mainGroup,
         supplierName: row.supplierName,
         technicalStock,
@@ -256,24 +256,23 @@ export const getOrderAdvice = async (
         toBeReceived,
         economicStock,
         avgMonthlyConsumption,
-        consumptionPreviousYear,
-        economicCoverage:
-          avgMonthlyConsumption > 0
-            ? economicStock / avgMonthlyConsumption
+        leadTimeDays,
+        reviewPeriodDays,
+        leadTimeMethod: (row.leadTimeMethod ?? "manually") as LeadTimeMethod,
+        orderLevel,
+        toOrder,
+        stockMinusOrderLevel,
+        pctDifference:
+          orderLevel > 0
+            ? (stockMinusOrderLevel / orderLevel) * 100
             : null,
-        technicalCoverage:
-          avgMonthlyConsumption > 0
-            ? technicalStock / avgMonthlyConsumption
-            : null,
-        minStockLevel,
-        maxStockLevel,
-        adviceQty,
-        orderQty,
+        evaluateToday,
+        orderNow: evaluateToday && toOrder > 0,
       };
     });
 
-    return filter.onlyAdvised ? rows.filter((row) => row.orderQty > 0) : rows;
+    return filter.onlyAdvised ? rows.filter((row) => row.orderNow) : rows;
   } catch {
-    throw new Error("Failed to fetch order advice");
+    throw new Error("Failed to fetch StockOn advice");
   }
 };
