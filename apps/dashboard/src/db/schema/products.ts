@@ -51,6 +51,13 @@ export const Products = mysqlTable(
     }).default("0.0000"),
     weightUnit: mysqlEnum("weight_unit", salesUnitOptions),
 
+    // Current replacement (re-purchase) price — compared against what was
+    // actually paid on the "Purchase results" report.
+    replacementPrice: decimal("replacement_price", {
+      precision: 15,
+      scale: 2,
+    }).default("0.00"),
+
     // Company-specific product (customer or supplier role) — set when this
     // product was created for a specific company (e.g. from the "Products"
     // step of company creation) rather than being a general catalog item.

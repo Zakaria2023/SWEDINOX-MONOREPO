@@ -80,7 +80,12 @@ export const AppSidebar = () => {
     pathname.startsWith("/purchase-quotes") ||
     pathname.startsWith("/purchase-requests") ||
     pathname.startsWith("/purchase-orders") ||
-    pathname.startsWith("/purchase-invoices");
+    pathname.startsWith("/purchase-invoices") ||
+    pathname.startsWith("/purchase-lines") ||
+    pathname.startsWith("/purchase-quotes-overview") ||
+    pathname.startsWith("/purchase-results") ||
+    pathname.startsWith("/purchase-receivals") ||
+    pathname.startsWith("/receipts");
   const isWarehouseActive =
     pathname.startsWith("/warehouses") ||
     pathname.startsWith("/warehouse-sub-sections") ||
@@ -511,6 +516,48 @@ export const AppSidebar = () => {
                         isActive={pathname.startsWith("/purchase-invoices")}
                       >
                         <span>Purchase Invoices</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/purchase-lines" />}
+                        isActive={pathname.startsWith("/purchase-lines")}
+                      >
+                        <span>Purchase Lines</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/purchase-quotes-overview" />}
+                        isActive={pathname.startsWith(
+                          "/purchase-quotes-overview",
+                        )}
+                      >
+                        <span>Purchase Quotes Overview</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/purchase-receivals" />}
+                        isActive={pathname.startsWith("/purchase-receivals")}
+                      >
+                        <span>Purchase Receivals</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/receipts" />}
+                        isActive={pathname.startsWith("/receipts")}
+                      >
+                        <span>Receipts</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/purchase-results" />}
+                        isActive={pathname.startsWith("/purchase-results")}
+                      >
+                        <span>Purchase Results</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                   </SidebarMenuSub>
