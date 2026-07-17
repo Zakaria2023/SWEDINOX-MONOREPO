@@ -52,7 +52,8 @@ export const buildSalesInvoiceJournalEntry = (
 };
 
 // A purchase invoice posts to the purchase journal with the creditor as the
-// counter-account.
+// counter-account. `invoiceUuid` here is the purchase invoice's uuid and is
+// linked via purchaseInvoiceUuid (invoiceUuid is reserved for sales invoices).
 export const buildPurchaseInvoiceJournalEntry = (
   posting: InvoicePosting,
 ): InsertJournalEntries => {
@@ -72,7 +73,7 @@ export const buildPurchaseInvoiceJournalEntry = (
     amount: (sign * posting.amountExclVat).toFixed(2),
     vat: (sign * posting.vatAmount).toFixed(2),
     companyUuid: posting.companyUuid,
-    invoiceUuid: posting.invoiceUuid,
+    purchaseInvoiceUuid: posting.invoiceUuid,
     createdByUserId: posting.userId,
   };
 };

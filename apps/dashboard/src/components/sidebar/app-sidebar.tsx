@@ -91,7 +91,8 @@ export const AppSidebar = () => {
     pathname.startsWith("/production-batches") ||
     pathname.startsWith("/trip-data") ||
     pathname.startsWith("/production-workorders") ||
-    pathname.startsWith("/transport-workorders");
+    pathname.startsWith("/transport-workorders") ||
+    pathname.startsWith("/stock-history");
   const isLocationsActive = pathname.startsWith("/locations");
   const isLogisticsActive =
     pathname.startsWith("/machines") ||
@@ -612,6 +613,14 @@ export const AppSidebar = () => {
                         isActive={pathname.startsWith("/reservations")}
                       >
                         <span>Reservations</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/stock-history" />}
+                        isActive={pathname.startsWith("/stock-history")}
+                      >
+                        <span>Stock History</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                     <SidebarMenuSubItem>

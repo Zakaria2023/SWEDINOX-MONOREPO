@@ -13,6 +13,7 @@ import {
 } from "drizzle-orm/mysql-core";
 import { Companies } from "./companies";
 import { Invoices } from "./invoices";
+import { PurchaseInvoices } from "./purchase-invoices";
 
 // General-ledger journal entries. A sales/purchase invoice posts to several
 // of these rows (revenue/purchases, debtor/creditor, VAT); this table is the
@@ -49,9 +50,10 @@ export const JournalEntries = mysqlTable(
       length: 255,
     }),
 
-    // Source links.
+    // Source links — a row comes from either a sales or a purchase invoice.
     companyUuid: char("company_uuid", { length: 36 }),
     invoiceUuid: char("invoice_uuid", { length: 36 }),
+    purchaseInvoiceUuid: char("purchase_invoice_uuid", { length: 36 }),
     createdByUserId: varchar("created_by_user_id", { length: 255 }),
 
     createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -61,6 +63,9 @@ export const JournalEntries = mysqlTable(
     index("idx_journal_entries_booking_date").on(table.bookingDate),
     index("idx_journal_entries_company_uuid").on(table.companyUuid),
     index("idx_journal_entries_invoice_uuid").on(table.invoiceUuid),
+    index("idx_journal_entries_purchase_invoice_uuid").on(
+      table.purchaseInvoiceUuid,
+    ),
     foreignKey({
       name: "fk_journal_entries_company",
       columns: [table.companyUuid],
@@ -70,6 +75,11 @@ export const JournalEntries = mysqlTable(
       name: "fk_journal_entries_invoice",
       columns: [table.invoiceUuid],
       foreignColumns: [Invoices.uuid],
+    }),
+    foreignKey({
+      name: "fk_journal_entries_purchase_invoice",
+      columns: [table.purchaseInvoiceUuid],
+      foreignColumns: [PurchaseInvoices.uuid],
     }),
   ],
 );

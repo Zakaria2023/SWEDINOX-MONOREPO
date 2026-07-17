@@ -17,6 +17,8 @@ import {
 import { Products, SelectProducts } from "@/db/schema/products";
 import { Stock } from "@/db/schema/stock";
 import { SelectStockMovements, StockMovements } from "@/db/schema/stock-movements";
+import { JournalEntries } from "@/db/schema/journal-entries";
+import { buildPurchaseInvoiceJournalEntry } from "@/lib/server/accounting";
 import { generateUuid } from "@/lib/helpers";
 import { currentUser } from "@clerk/nextjs/server";
 import { and, desc, eq, getTableColumns, gte, inArray, sql } from "drizzle-orm";
@@ -70,6 +72,15 @@ export const createPurchaseInvoice = async (
   items: PurchaseInvoiceItemInput[] = [],
 ): Promise<PurchaseInvoiceActionResult> => {
   const uuid = generateUuid();
+  // Amounts posted to the purchase journal.
+  const exclVat =
+    Number(fields.materials ?? 0) +
+    Number(fields.optionsAmount ?? 0) +
+    Number(fields.surcharges ?? 0);
+  const vatAmount =
+    Number(fields.vatHigh ?? 0) +
+    Number(fields.vatMiddle ?? 0) +
+    Number(fields.vatLow ?? 0);
   try {
     if (items.length > 0) {
       const stockUuids = items.map((item) => item.stockUuid);
@@ -106,6 +117,25 @@ export const createPurchaseInvoice = async (
 
       await db.transaction(async (tx) => {
         await tx.insert(PurchaseInvoices).values({ ...fields, uuid });
+
+        const [inserted] = await tx
+          .select({ id: PurchaseInvoices.id })
+          .from(PurchaseInvoices)
+          .where(eq(PurchaseInvoices.uuid, uuid))
+          .limit(1);
+
+        await tx.insert(JournalEntries).values(
+          buildPurchaseInvoiceJournalEntry({
+            invoiceUuid: uuid,
+            invoiceId: inserted?.id ?? null,
+            companyUuid: fields.companyUuid ?? null,
+            debCreditor: fields.creditorNo ?? null,
+            invoiceDate: fields.invoiceDate ?? null,
+            amountExclVat: exclVat,
+            vatAmount,
+            userId,
+          }),
+        );
 
         for (const item of items) {
           const stockRow = stockByUuid.get(item.stockUuid);
@@ -165,7 +195,29 @@ export const createPurchaseInvoice = async (
         }
       });
     } else {
-      await db.insert(PurchaseInvoices).values({ ...fields, uuid });
+      const user = await currentUser();
+      await db.transaction(async (tx) => {
+        await tx.insert(PurchaseInvoices).values({ ...fields, uuid });
+
+        const [inserted] = await tx
+          .select({ id: PurchaseInvoices.id })
+          .from(PurchaseInvoices)
+          .where(eq(PurchaseInvoices.uuid, uuid))
+          .limit(1);
+
+        await tx.insert(JournalEntries).values(
+          buildPurchaseInvoiceJournalEntry({
+            invoiceUuid: uuid,
+            invoiceId: inserted?.id ?? null,
+            companyUuid: fields.companyUuid ?? null,
+            debCreditor: fields.creditorNo ?? null,
+            invoiceDate: fields.invoiceDate ?? null,
+            amountExclVat: exclVat,
+            vatAmount,
+            userId: user?.id ?? null,
+          }),
+        );
+      });
     }
   } catch (error) {
     return {
@@ -320,6 +372,27 @@ export const cancelPurchaseInvoice = async (
         .update(PurchaseInvoices)
         .set({ cancelled: true })
         .where(eq(PurchaseInvoices.uuid, uuid));
+
+      // Reverse the purchase invoice's ledger posting.
+      await tx.insert(JournalEntries).values(
+        buildPurchaseInvoiceJournalEntry({
+          invoiceUuid: uuid,
+          invoiceId: invoice.id,
+          companyUuid: invoice.companyUuid,
+          debCreditor: invoice.creditorNo,
+          invoiceDate: invoice.invoiceDate,
+          amountExclVat:
+            Number(invoice.materials) +
+            Number(invoice.optionsAmount) +
+            Number(invoice.surcharges),
+          vatAmount:
+            Number(invoice.vatHigh) +
+            Number(invoice.vatMiddle) +
+            Number(invoice.vatLow),
+          userId: userId ?? null,
+          reversal: true,
+        }),
+      );
 
       for (const item of items) {
         const [stockRow] = await tx
