@@ -66,6 +66,8 @@ export const AppSidebar = () => {
     pathname.startsWith("/invoice-lines") ||
     pathname.startsWith("/charges") ||
     pathname.startsWith("/journal-entries") ||
+    pathname.startsWith("/purchase-invoices-to-be-received") ||
+    pathname.startsWith("/purchase-orders-to-be-received") ||
     pathname.startsWith("/revenue-per-revenue-group") ||
     pathname.startsWith("/revenue-per-product") ||
     pathname.startsWith("/purchases-and-sales-per-revenue-group") ||
@@ -402,6 +404,28 @@ export const AppSidebar = () => {
                         isActive={pathname.startsWith("/journal-entries")}
                       >
                         <span>Journal Entries</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={
+                          <Link href="/purchase-invoices-to-be-received" />
+                        }
+                        isActive={pathname.startsWith(
+                          "/purchase-invoices-to-be-received",
+                        )}
+                      >
+                        <span>Purchase Invoices to be Received</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/purchase-orders-to-be-received" />}
+                        isActive={pathname.startsWith(
+                          "/purchase-orders-to-be-received",
+                        )}
+                      >
+                        <span>Purchase Orders to be Received</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                     <SidebarMenuSubItem>
