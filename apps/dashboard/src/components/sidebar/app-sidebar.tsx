@@ -49,6 +49,7 @@ export const AppSidebar = () => {
     pathname.startsWith("/return-orders") ||
     pathname.startsWith("/return-lines") ||
     pathname.startsWith("/customer-overview") ||
+    pathname.startsWith("/remarks-per-company") ||
     pathname.startsWith("/visit-schedule") ||
     pathname.startsWith("/follow-ups");
   const isCompanyActive =
@@ -66,6 +67,7 @@ export const AppSidebar = () => {
     pathname.startsWith("/invoice-lines") ||
     pathname.startsWith("/charges") ||
     pathname.startsWith("/journal-entries") ||
+    pathname.startsWith("/financially-blocked") ||
     pathname.startsWith("/purchase-invoices-to-be-received") ||
     pathname.startsWith("/purchase-orders-to-be-received") ||
     pathname.startsWith("/revenue-per-revenue-group") ||
@@ -193,6 +195,14 @@ export const AppSidebar = () => {
                         isActive={pathname.startsWith("/customer-overview")}
                       >
                         <span>Customer Overview</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/remarks-per-company" />}
+                        isActive={pathname.startsWith("/remarks-per-company")}
+                      >
+                        <span>Remarks per Company</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                     <SidebarMenuSubItem>
@@ -404,6 +414,14 @@ export const AppSidebar = () => {
                         isActive={pathname.startsWith("/journal-entries")}
                       >
                         <span>Journal Entries</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/financially-blocked" />}
+                        isActive={pathname.startsWith("/financially-blocked")}
+                      >
+                        <span>Financially Blocked Quotes &amp; Orders</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                     <SidebarMenuSubItem>
