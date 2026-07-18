@@ -2,6 +2,7 @@ import { InferInsertModel, InferSelectModel } from "drizzle-orm";
 import {
   boolean,
   char,
+  date,
   foreignKey,
   index,
   int,
@@ -18,6 +19,7 @@ import {
   stickerPerPickWorkorderTypes,
   warehouseAddresses,
   warehouseBlockReasons,
+  warehouseCountStockTypes,
   warehouseLoadingLocations,
   warehouseLocationTypes,
   warehouseTypes,
@@ -57,6 +59,20 @@ export const Warehouses = mysqlTable(
       json("documents").$type<Array<{ id: string; fileName: string }>>(),
     // Only populated for non-root rows (parentUuid IS NOT NULL)
     pickingSequence: int("picking_sequence"),
+
+    // Count settings (per location)
+    countPer: int("count_per"),
+    countedThis: int("counted_this").default(0),
+    countTargetDate: date("count_target_date", { mode: "string" }),
+    lastCountDate: date("last_count_date", { mode: "string" }),
+    countAs: mysqlEnum("count_as", warehouseCountStockTypes).default(
+      "technical_stock",
+    ),
+    countUnderValue: int("count_under_value"),
+    countUnderUnit: varchar("count_under_unit", { length: 50 }),
+    openCountOrderAvailable: boolean("open_count_order_available").default(
+      false,
+    ),
 
     // Count workorders
     countMethod: mysqlEnum("count_method", countWorkorderMethods),

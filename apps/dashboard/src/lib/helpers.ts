@@ -22,6 +22,11 @@ export const toDecimal = (
   fallback: string,
 ): string => (value && value.trim() !== "" ? value : fallback);
 
+export const toIntOrNull = (value: string | undefined): number | null =>
+  value !== undefined && value.trim() !== "" ? Number(value) : null;
+
+export const asNumber = (v: string) => (v === "" ? "" : Number(v));
+
 /**
  * Generates a random UUID v4.
  */

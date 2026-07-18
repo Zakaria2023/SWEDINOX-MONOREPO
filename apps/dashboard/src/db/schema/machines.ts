@@ -3,6 +3,7 @@ import {
   boolean,
   char,
   date,
+  decimal,
   foreignKey,
   index,
   int,
@@ -20,6 +21,8 @@ import {
   machineOptionTypes,
   machineProductionTypes,
 } from "../../lib/enums";
+import { ProductGroups } from "./product-groups";
+import { Products } from "./products";
 import { Warehouses } from "./warehouses";
 
 export const Machines = mysqlTable(
@@ -71,3 +74,87 @@ export const machinesRelations = relations(Machines, ({ one }) => ({
     references: [Warehouses.uuid],
   }),
 }));
+
+export const MachineProducts = mysqlTable(
+  "MachineProducts",
+  {
+    id: int("id").primaryKey().autoincrement(),
+    uuid: char("uuid", { length: 36 }).notNull().unique(),
+
+    machineUuid: char("machine_uuid", { length: 36 }).notNull(),
+    productUuid: char("product_uuid", { length: 36 }),
+    productGroupUuid: char("product_group_uuid", { length: 36 }),
+
+    // Snapshot of the picked product/group, mirroring how a company keeps
+    // its own copy rather than referencing the catalog row directly.
+    productCode: varchar("product_code", { length: 100 }),
+    description: varchar("description", { length: 255 }),
+
+    preference: int("preference").default(1),
+    productionPerHour: int("production_per_hour").default(0),
+    prodUnit: varchar("prod_unit", { length: 50 }),
+    minCorner: decimal("min_corner", { precision: 6, scale: 2 }).default(
+      "0.00",
+    ),
+    maxCorner: decimal("max_corner", { precision: 6, scale: 2 }).default(
+      "90.00",
+    ),
+    daysInSystem: int("days_in_system").default(0),
+
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+  },
+  (table) => [
+    index("idx_machine_products_machine_uuid").on(table.machineUuid),
+    index("idx_machine_products_product_uuid").on(table.productUuid),
+    index("idx_machine_products_product_group_uuid").on(table.productGroupUuid),
+    foreignKey({
+      name: "fk_machine_products_machine",
+      columns: [table.machineUuid],
+      foreignColumns: [Machines.uuid],
+    }),
+    foreignKey({
+      name: "fk_machine_products_product",
+      columns: [table.productUuid],
+      foreignColumns: [Products.uuid],
+    }),
+    foreignKey({
+      name: "fk_machine_products_product_group",
+      columns: [table.productGroupUuid],
+      foreignColumns: [ProductGroups.uuid],
+    }),
+  ],
+);
+
+export const MachinePostProcessings = mysqlTable(
+  "MachinePostProcessings",
+  {
+    id: int("id").primaryKey().autoincrement(),
+    uuid: char("uuid", { length: 36 }).notNull().unique(),
+
+    machineUuid: char("machine_uuid", { length: 36 }).notNull(),
+    option: mysqlEnum("post_processing_option", machineOptionTypes),
+    preference: int("preference").default(0),
+    daysInSystem: int("days_in_system").default(0),
+
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+  },
+  (table) => [
+    index("idx_machine_post_processings_machine_uuid").on(table.machineUuid),
+    foreignKey({
+      name: "fk_machine_post_processings_machine",
+      columns: [table.machineUuid],
+      foreignColumns: [Machines.uuid],
+    }),
+  ],
+);
+
+export type SelectMachineProducts = InferSelectModel<typeof MachineProducts>;
+export type InsertMachineProducts = InferInsertModel<typeof MachineProducts>;
+export type SelectMachinePostProcessings = InferSelectModel<
+  typeof MachinePostProcessings
+>;
+export type InsertMachinePostProcessings = InferInsertModel<
+  typeof MachinePostProcessings
+>;

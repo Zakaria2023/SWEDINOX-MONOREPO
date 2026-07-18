@@ -1,6 +1,7 @@
 import {
   addressCategories,
   availableAtOptions,
+  companyClassifications,
   companyLangs,
   companyRoles,
   contactSalutations,
@@ -15,12 +16,17 @@ import {
   orderMethods,
   orderWeightTypes,
   purchasingUnits,
+  returnOrderReasons,
+  ReturnOrderReason,
+  returnOrderStatuses,
   visitReportContactMethods,
   visitReportReasons,
   invoicingMethods,
   purchaseOrderStatuses,
   purchaseOrderTypes,
   ContractableRole,
+  CustomerStockReason,
+  customerStockReasons,
   TextUsageCategory,
 } from "@/lib/enums";
 import { VALIDATION_MESSAGES } from "@/lib/validation-messages";
@@ -179,6 +185,29 @@ export const createCompanySchema = () =>
     invoiceEmailTo: z.string().optional(),
     printEmailZeroValueInvoices: z.boolean(),
     sendXmlWithInvoice: z.boolean(),
+    // Marketing settings
+    industry: z.string().optional(),
+    classification: z.union([
+      z.enum(companyClassifications),
+      z.literal(""),
+      z.undefined(),
+    ]),
+    visitFrequency: z.string().optional(),
+    callFrequencyPerYear: z.string().optional(),
+    targetDateNextVisit: z.string().optional(),
+    visitReason: z.union([
+      z.enum(visitReportReasons),
+      z.literal(""),
+      z.undefined(),
+    ]),
+    potentialAnnualRevenue: z.string().optional(),
+    targetAnnualRevenue: z.string().optional(),
+    potentialAnnualSales: z.string().optional(),
+    targetAnnualSales: z.string().optional(),
+    numberOfEmployees: z.string().optional(),
+    visitPlanning: z.array(
+      z.object({ call: z.boolean(), visit: z.boolean() }),
+    ),
   });
 
 export type AddressFormValues = z.infer<ReturnType<typeof createAddressSchema>>;
@@ -505,6 +534,28 @@ export const DEFAULT_CUSTOMER_PRODUCT: CustomerProductDialogValues = {
   showOnWebsite: false,
 };
 
+// ── Customer Stock Dialog ────────────────────────────────────────────────────
+
+export const customerStockDialogSchema = z.object({
+  location: z.string().optional(),
+  productUuid: z.string().min(1, "Please select a product"),
+  quantity: z.string().optional(),
+  reason: z.enum(customerStockReasons, { error: "Please select a reason" }),
+  description: z.string().optional(),
+});
+
+export type CustomerStockDialogValues = z.infer<
+  typeof customerStockDialogSchema
+>;
+
+export const DEFAULT_CUSTOMER_STOCK: CustomerStockDialogValues = {
+  location: "",
+  productUuid: "",
+  quantity: "0.000",
+  reason: "" as CustomerStockReason,
+  description: "",
+};
+
 // ── Visit Report Dialog ──────────────────────────────────────────────────────
 
 export const visitReportDialogSchema = z.object({
@@ -588,6 +639,40 @@ export const DEFAULT_PURCHASE_ORDER: PurchaseOrderDialogValues = {
   arrangeTransport: false,
   pickupDropoffCdPurchases: false,
   isOverlengte: false,
+  remarks: "",
+};
+
+// ── Return Order Dialog ──────────────────────────────────────────────────────
+
+export const returnOrderDialogSchema = z.object({
+  orderReference: z.string().optional(),
+  customerRef: z.string().optional(),
+  ourReference: z.string().optional(),
+  status: z.enum(returnOrderStatuses),
+  orderDate: z.string().optional(),
+  complaintRef: z.string().optional(),
+  returnReason: z.enum(returnOrderReasons, {
+    error: "Return reason is required",
+  }),
+  totalWeightKg: z.string().optional(),
+  totalExclVat: z.string().optional(),
+  handlingBlocked: z.boolean(),
+  remarks: z.string().optional(),
+});
+
+export type ReturnOrderDialogValues = z.infer<typeof returnOrderDialogSchema>;
+
+export const DEFAULT_RETURN_ORDER: ReturnOrderDialogValues = {
+  orderReference: "",
+  customerRef: "",
+  ourReference: "",
+  status: "open",
+  orderDate: "",
+  complaintRef: "",
+  returnReason: "" as ReturnOrderReason,
+  totalWeightKg: "0.00",
+  totalExclVat: "0.00",
+  handlingBlocked: false,
   remarks: "",
 };
 

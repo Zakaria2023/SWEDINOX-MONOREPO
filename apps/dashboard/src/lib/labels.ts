@@ -12,6 +12,7 @@ import type {
   CounterOrderPriority,
   CounterOrderStatus,
   MachineCapacityUnit,
+  ProcessingEditing,
   MachineLoadingType,
   MachineOptionType,
   MachineProductionType,
@@ -26,6 +27,8 @@ import type {
   ContractType,
   Currency,
   CustomerGroup,
+  CustomerStockReason,
+  CompanyClassification,
   DevTheorWt,
   EdiOption,
   FeaturesQuality,
@@ -61,20 +64,27 @@ import type {
   VisitReportReason,
   WarehouseAddress,
   WarehouseBlockReason,
+  WarehouseCountStockType,
   WarehouseLoadingLocation,
   WarehouseLocationType,
   WarehouseProductType,
   WarehouseTransportRegion,
   TransportMode,
   ReturnOrderReason,
+  ReturnOrderStatus,
   OrderMethod,
   DeliveryTerm,
+  TransporterCountry,
+  TransporterPriceUnit,
   OrderWeightType,
   PurchaseCompanyType,
   PurchaseOrderType,
   ComplaintType,
   ComplaintCategory,
   ComplaintReport,
+  ComplaintStatus,
+  ComplaintCause,
+  ComplaintSolution,
   StickerPerPickWorkorderType,
   PrinterName,
   PrinterEntry,
@@ -373,6 +383,14 @@ export const WAREHOUSE_LOADING_LOCATION_LABELS: Record<
   load: "Load",
 };
 
+export const WAREHOUSE_COUNT_STOCK_TYPE_LABELS: Record<
+  WarehouseCountStockType,
+  string
+> = {
+  technical_stock: "Technical stock",
+  available_stock: "Available stock",
+};
+
 export const WAREHOUSE_BLOCK_REASON_LABELS: Record<
   WarehouseBlockReason,
   string
@@ -452,6 +470,14 @@ export const RETURN_ORDER_REASON_LABELS: Record<ReturnOrderReason, string> = {
   other: "Other",
 };
 
+export const RETURN_ORDER_STATUS_LABELS: Record<ReturnOrderStatus, string> = {
+  open: "Open",
+  in_progress: "In progress",
+  received: "Received",
+  credited: "Credited",
+  cancelled: "Cancelled",
+};
+
 export const MACHINE_OPTION_LABELS: Record<MachineOptionType, string> = {
   decoiling: "Decoiling",
   grinding: "Grinding",
@@ -524,6 +550,34 @@ export const MACHINE_CAPACITY_UNIT_LABELS: Record<MachineCapacityUnit, string> =
     st: "Pieces",
     tn: "Tonnage",
   };
+
+export const PROCESSING_EDITING_LABELS: Record<ProcessingEditing, string> = {
+  stamping: "Stamping",
+  polished: "Polished",
+  paper_interleaving: "Paper interleaving",
+  pickling: "Pickling",
+  laser: "Laser",
+  blue_foil: "Blue Foil",
+  bending: "Bending",
+  uv_foil: "UV Foil",
+  rolling: "Rolling",
+  anodizing: "Anodizing",
+  slitting: "Slitting",
+  brushing: "Brushing",
+  remove_foil: "Remove Foil",
+  certificate_2_1: "2.1 Certificate",
+  sawing: "Sawing",
+  coating: "Coating",
+  punching: "Punching",
+  grinding: "Grinding",
+  decoiling: "Decoiling",
+  duplo: "Duplo",
+  embossing: "Embossing",
+  shear_cut: "ShearCut",
+  laser_foil: "Laser Foil",
+  perforate: "Perforate",
+  certificate_3_1: "3.1 Certificate",
+};
 
 export const TEXT_USAGE_CATEGORY_LABELS: Record<TextUsageCategory, string> = {
   purchase_quote_request: "Purchase Quote Request",
@@ -1006,6 +1060,88 @@ export const ORDER_WEIGHT_TYPE_LABELS: Record<OrderWeightType, string> = {
   weighed: "Weighed",
 };
 
+export const TRANSPORTER_PRICE_UNIT_LABELS: Record<
+  TransporterPriceUnit,
+  string
+> = {
+  amount: "Amount",
+  per_km: "Per KM",
+  per_kg: "Per KG",
+  percentage: "Percentage",
+};
+
+export const TRANSPORTER_COUNTRY_LABELS: Record<TransporterCountry, string> = {
+  A: "Austria",
+  AE: "United Arab Emirates",
+  AN: "Netherlands Antilles",
+  AZ: "Azerbaijan",
+  B: "Belgium",
+  BAN: "Bangladesh",
+  BE2: "BE2",
+  BG: "Bulgaria",
+  BR: "Brazil",
+  BY: "Belarus",
+  CDN: "Canada",
+  CH: "Switzerland",
+  CL: "Sri Lanka",
+  CN: "China",
+  CR: "Czech Republic",
+  CW: "Curacao",
+  CY: "Cyprus",
+  CZ: "Czechia",
+  D: "Germany",
+  DK: "Denmark",
+  E: "Spain",
+  EE: "Estonia",
+  ES2: "ES2",
+  ET: "Egypt",
+  F: "France",
+  FIN: "Finland",
+  FL: "Liechtenstein",
+  GB: "United Kingdom",
+  GB2: "GB2",
+  GE: "Georgia",
+  GR: "Greece",
+  H: "Hungary",
+  HEG: "HEG",
+  HK: "Hong Kong",
+  I: "Italy",
+  IND: "India",
+  IR: "Iran",
+  IRL: "Ireland",
+  KR: "South Korea",
+  KRO: "Croatia",
+  L: "Luxembourg",
+  LT: "Lithuania",
+  LV: "Latvia",
+  MA: "Morocco",
+  MAL: "Malaysia",
+  MK: "Macedonia",
+  NL: "Netherlands",
+  NO: "Norway",
+  P: "Portugal",
+  PK: "Pakistan",
+  PL: "Poland",
+  RC: "Taiwan",
+  RO: "Romania",
+  ROK: "South Korea",
+  RUS: "Russia",
+  S: "Sweden",
+  SGP: "Singapore",
+  SK: "Slovakia",
+  SLO: "Slovenia",
+  SME: "Suriname",
+  SRB: "Serbia",
+  SVN: "SVN",
+  SYR: "Syria",
+  TR: "Turkey",
+  UA: "Ukraine",
+  uk: "UK",
+  USA: "USA",
+  VN: "Vietnam",
+  ZA: "South Africa",
+};
+
 export const COUNTER_ORDER_STATUS_LABELS: Record<CounterOrderStatus, string> = {
   open: "Open",
   in_progress: "In progress",
@@ -1131,6 +1267,15 @@ export const CUSTOMER_GROUP_LABELS: Record<CustomerGroup, string> = {
   care_homes: "Care Homes",
 };
 
+export const COMPANY_CLASSIFICATION_LABELS: Record<
+  CompanyClassification,
+  string
+> = {
+  A: "Major customer",
+  B: "Medium customer",
+  C: "Small customer",
+};
+
 export const COMPLAINT_TYPE_LABELS: Record<ComplaintType, string> = {
   counter_order: "Counter order",
   general: "General",
@@ -1160,6 +1305,33 @@ export const COMPLAINT_REPORT_LABELS: Record<ComplaintReport, string> = {
   website: "Website",
   edi: "EDI",
   ai_read_email: "AI-read Email",
+};
+
+export const COMPLAINT_STATUS_LABELS: Record<ComplaintStatus, string> = {
+  new: "New",
+  in_progress: "In progress",
+  on_hold: "On hold",
+  done: "Done",
+};
+
+export const COMPLAINT_CAUSE_LABELS: Record<ComplaintCause, string> = {
+  warehouse: "Warehouse",
+  production: "Production",
+  purchasing: "Purchasing",
+  sale: "Sale",
+  transportation: "Transportation",
+  customer: "Customer",
+  supplier: "Supplier",
+  processor: "Processor",
+};
+
+export const COMPLAINT_SOLUTION_LABELS: Record<ComplaintSolution, string> = {
+  collect_goods_back_credit: "Collect goods back + credit",
+  return_goods_credit_redeliver: "Return goods + credit + redeliver",
+  price_correction: "Price correction",
+  subsequent_delivery: "Subsequent delivery",
+  complaint_rejected: "Complaint rejected",
+  material_retained_correct_delivery: "Material is retained + correct delivery",
 };
 
 export const STICKER_PER_PICK_WORKORDER_LABELS: Record<
@@ -1285,4 +1457,17 @@ export const CURRENCY_LABELS: Record<Currency, string> = {
   usd: "Dollar",
   gbp: "Pound",
   hkd: "HK-Dollar",
+};
+
+export const CUSTOMER_STOCK_REASON_LABELS: Record<
+  CustomerStockReason,
+  string
+> = {
+  initial_stock: "Initial stock",
+  correction: "Correction",
+  counting_difference: "Counting difference",
+  damaged: "Damaged",
+  return_from_customer: "Return from customer",
+  transfer: "Transfer",
+  other: "Other",
 };
