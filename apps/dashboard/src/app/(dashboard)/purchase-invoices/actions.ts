@@ -5,7 +5,9 @@ import {
   Contacts,
   db,
   InsertPurchaseInvoices,
+  InsertPurchaseInvoiceSurcharges,
   PurchaseInvoices,
+  PurchaseInvoiceSurcharges,
   SelectCompanies,
   SelectContacts,
   SelectPurchaseInvoices,
@@ -15,7 +17,7 @@ import {
   SelectPurchaseInvoiceItems,
 } from "@/db/schema/purchase-invoice-items";
 import { Products, SelectProducts } from "@/db/schema/products";
-import { Stock } from "@/db/schema/stock";
+import { SelectStock, Stock } from "@/db/schema/stock";
 import { SelectStockMovements, StockMovements } from "@/db/schema/stock-movements";
 import { JournalEntries } from "@/db/schema/journal-entries";
 import { buildPurchaseInvoiceJournalEntry } from "@/lib/server/accounting";
@@ -40,6 +42,11 @@ export type PurchaseInvoiceItemInput = {
   stockUuid: string;
   quantity: string;
 };
+
+export type PurchaseInvoiceSurchargeInput = Omit<
+  InsertPurchaseInvoiceSurcharges,
+  "id" | "uuid" | "purchaseInvoiceUuid" | "createdAt" | "updatedAt"
+>;
 
 export type PurchaseInvoiceListItem = SelectPurchaseInvoices & {
   companyName: SelectCompanies["companyName"] | null;
@@ -70,6 +77,7 @@ export const getPurchaseInvoices = async (): Promise<
 export const createPurchaseInvoice = async (
   fields: PurchaseInvoiceFields,
   items: PurchaseInvoiceItemInput[] = [],
+  surcharges: PurchaseInvoiceSurchargeInput[] = [],
 ): Promise<PurchaseInvoiceActionResult> => {
   const uuid = generateUuid();
   // Amounts posted to the purchase journal.
@@ -82,18 +90,24 @@ export const createPurchaseInvoice = async (
     Number(fields.vatMiddle ?? 0) +
     Number(fields.vatLow ?? 0);
   try {
+    // Validate stock availability before opening the transaction.
+    const stockByUuid = new Map<string, SelectStock>();
     if (items.length > 0) {
       const stockUuids = items.map((item) => item.stockUuid);
       const stockRows = await db
         .select()
         .from(Stock)
         .where(inArray(Stock.uuid, stockUuids));
-      const stockByUuid = new Map(stockRows.map((row) => [row.uuid, row]));
+      for (const row of stockRows) {
+        stockByUuid.set(row.uuid, row);
+      }
 
       for (const item of items) {
         const stockRow = stockByUuid.get(item.stockUuid);
         if (!stockRow) {
-          return { error: "One or more selected stock items could not be found." };
+          return {
+            error: "One or more selected stock items could not be found.",
+          };
         }
         if (stockRow.status !== "pending") {
           return {
@@ -108,117 +122,107 @@ export const createPurchaseInvoice = async (
           };
         }
       }
+    }
 
-      const user = await currentUser();
-      const userId = user?.id;
-      if (!userId) {
-        return { error: "User not authenticated" };
+    const user = await currentUser();
+    const userId = user?.id ?? null;
+    // Consuming stock records who did it, so require an authenticated user.
+    if (items.length > 0 && !userId) {
+      return { error: "User not authenticated" };
+    }
+
+    await db.transaction(async (tx) => {
+      await tx.insert(PurchaseInvoices).values({ ...fields, uuid });
+
+      const [inserted] = await tx
+        .select({ id: PurchaseInvoices.id })
+        .from(PurchaseInvoices)
+        .where(eq(PurchaseInvoices.uuid, uuid))
+        .limit(1);
+
+      await tx.insert(JournalEntries).values(
+        buildPurchaseInvoiceJournalEntry({
+          invoiceUuid: uuid,
+          invoiceId: inserted?.id ?? null,
+          companyUuid: fields.companyUuid ?? null,
+          debCreditor: fields.creditorNo ?? null,
+          invoiceDate: fields.invoiceDate ?? null,
+          amountExclVat: exclVat,
+          vatAmount,
+          userId,
+        }),
+      );
+
+      for (const item of items) {
+        const stockRow = stockByUuid.get(item.stockUuid);
+        if (!stockRow) {
+          continue;
+        }
+        if (!userId) {
+          throw new Error("User not authenticated");
+        }
+
+        await tx.insert(PurchaseInvoiceItems).values({
+          uuid: generateUuid(),
+          purchaseInvoiceUuid: uuid,
+          stockUuid: item.stockUuid,
+          productUuid: stockRow.productUuid,
+          quantity: item.quantity,
+        });
+
+        const remainingQuantity = (
+          Number(stockRow.quantity) - Number(item.quantity)
+        ).toFixed(3);
+
+        // Guard the update with the quantity/status we validated above so a
+        // concurrent invoice against the same lot can't oversell it — if
+        // another transaction already changed the row, affectedRows is 0
+        // and we roll back instead of silently double-spending stock.
+        const [updateResult] = await tx
+          .update(Stock)
+          .set({
+            quantity: remainingQuantity,
+            status: Number(remainingQuantity) > 0 ? "pending" : "received",
+          })
+          .where(
+            and(
+              eq(Stock.uuid, item.stockUuid),
+              eq(Stock.status, "pending"),
+              gte(
+                sql`(${Stock.quantity} - ${Stock.reservedQuantity})`,
+                item.quantity,
+              ),
+            ),
+          );
+
+        if (updateResult.affectedRows === 0) {
+          throw new Error(
+            "Stock changed while processing this invoice — please refresh and try again.",
+          );
+        }
+
+        await tx.insert(StockMovements).values({
+          uuid: generateUuid(),
+          productUuid: stockRow.productUuid,
+          stockUuid: item.stockUuid,
+          type: "out",
+          reason: "invoice_consumption",
+          quantity: item.quantity,
+          purchaseInvoiceUuid: uuid,
+          createdByUserId: userId,
+        });
       }
 
-      await db.transaction(async (tx) => {
-        await tx.insert(PurchaseInvoices).values({ ...fields, uuid });
-
-        const [inserted] = await tx
-          .select({ id: PurchaseInvoices.id })
-          .from(PurchaseInvoices)
-          .where(eq(PurchaseInvoices.uuid, uuid))
-          .limit(1);
-
-        await tx.insert(JournalEntries).values(
-          buildPurchaseInvoiceJournalEntry({
-            invoiceUuid: uuid,
-            invoiceId: inserted?.id ?? null,
-            companyUuid: fields.companyUuid ?? null,
-            debCreditor: fields.creditorNo ?? null,
-            invoiceDate: fields.invoiceDate ?? null,
-            amountExclVat: exclVat,
-            vatAmount,
-            userId,
-          }),
-        );
-
-        for (const item of items) {
-          const stockRow = stockByUuid.get(item.stockUuid);
-          if (!stockRow) {
-            continue;
-          }
-
-          await tx.insert(PurchaseInvoiceItems).values({
+      if (surcharges.length > 0) {
+        await tx.insert(PurchaseInvoiceSurcharges).values(
+          surcharges.map((surcharge) => ({
+            ...surcharge,
             uuid: generateUuid(),
             purchaseInvoiceUuid: uuid,
-            stockUuid: item.stockUuid,
-            productUuid: stockRow.productUuid,
-            quantity: item.quantity,
-          });
-
-          const remainingQuantity = (
-            Number(stockRow.quantity) - Number(item.quantity)
-          ).toFixed(3);
-
-          // Guard the update with the quantity/status we validated above so a
-          // concurrent invoice against the same lot can't oversell it — if
-          // another transaction already changed the row, affectedRows is 0
-          // and we roll back instead of silently double-spending stock.
-          const [updateResult] = await tx
-            .update(Stock)
-            .set({
-              quantity: remainingQuantity,
-              status: Number(remainingQuantity) > 0 ? "pending" : "received",
-            })
-            .where(
-              and(
-                eq(Stock.uuid, item.stockUuid),
-                eq(Stock.status, "pending"),
-                gte(
-                  sql`(${Stock.quantity} - ${Stock.reservedQuantity})`,
-                  item.quantity,
-                ),
-              ),
-            );
-
-          if (updateResult.affectedRows === 0) {
-            throw new Error(
-              "Stock changed while processing this invoice — please refresh and try again.",
-            );
-          }
-
-          await tx.insert(StockMovements).values({
-            uuid: generateUuid(),
-            productUuid: stockRow.productUuid,
-            stockUuid: item.stockUuid,
-            type: "out",
-            reason: "invoice_consumption",
-            quantity: item.quantity,
-            purchaseInvoiceUuid: uuid,
-            createdByUserId: userId,
-          });
-        }
-      });
-    } else {
-      const user = await currentUser();
-      await db.transaction(async (tx) => {
-        await tx.insert(PurchaseInvoices).values({ ...fields, uuid });
-
-        const [inserted] = await tx
-          .select({ id: PurchaseInvoices.id })
-          .from(PurchaseInvoices)
-          .where(eq(PurchaseInvoices.uuid, uuid))
-          .limit(1);
-
-        await tx.insert(JournalEntries).values(
-          buildPurchaseInvoiceJournalEntry({
-            invoiceUuid: uuid,
-            invoiceId: inserted?.id ?? null,
-            companyUuid: fields.companyUuid ?? null,
-            debCreditor: fields.creditorNo ?? null,
-            invoiceDate: fields.invoiceDate ?? null,
-            amountExclVat: exclVat,
-            vatAmount,
-            userId: user?.id ?? null,
-          }),
+          })),
         );
-      });
-    }
+      }
+    });
   } catch (error) {
     return {
       error:

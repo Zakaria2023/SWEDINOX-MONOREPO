@@ -10,6 +10,7 @@ import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
 import { Products, SelectProducts } from "@/db/schema/products";
 import { generateUuid } from "@/lib/helpers";
+import { currentUser } from "@clerk/nextjs/server";
 import { desc, eq, getTableColumns } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
@@ -56,7 +57,24 @@ export const createComplaint = async (
 ): Promise<ComplaintActionResult> => {
   const uuid = generateUuid();
   try {
-    await db.insert(Complaints).values({ ...fields, uuid });
+    // The initial status history entry is stamped server-side with the current
+    // user, so "Assigned by" always reflects who actually created the record.
+    const user = await currentUser();
+    const assignedByName =
+      user?.fullName ||
+      [user?.firstName, user?.lastName].filter(Boolean).join(" ") ||
+      user?.username ||
+      "";
+    const statusHistory = [
+      {
+        status: fields.status ?? "new",
+        statusDate: new Date().toISOString(),
+        assignedByUserId: user?.id ?? "",
+        assignedByName,
+      },
+    ];
+
+    await db.insert(Complaints).values({ ...fields, uuid, statusHistory });
     revalidatePath("/complaints");
     return { success: true, complaintUuid: uuid };
   } catch (error) {

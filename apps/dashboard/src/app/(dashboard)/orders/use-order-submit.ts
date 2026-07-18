@@ -4,7 +4,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
-import { createOrder, OrderActionResult } from "./actions";
+import {
+  ContractOption,
+  createOrder,
+  getContractsByCompanyUuid,
+  OrderActionResult,
+  OrderExtras,
+} from "./actions";
 import {
   AddressOption,
   getAddressesForCompany,
@@ -41,6 +47,7 @@ import {
   ORDER_METHOD_LABELS,
   ORDER_WEIGHT_TYPE_LABELS,
 } from "@/lib/labels";
+import { toDecimal } from "@/lib/helpers";
 
 type UseOrderSubmitParams = {
   companies: CompanyOption[];
@@ -67,6 +74,7 @@ export const useOrderSubmit = ({ companies }: UseOrderSubmitParams) => {
   const [contacts, setContacts] = useState<ContactOption[]>([]);
   const [addresses, setAddresses] = useState<AddressOption[]>([]);
   const [projects, setProjects] = useState<ProjectOption[]>([]);
+  const [contracts, setContracts] = useState<ContractOption[]>([]);
   const [isLoadingCompanyData, setIsLoadingCompanyData] = useState(false);
   const [availableStock, setAvailableStock] = useState<AvailableStockOption[]>(
     [],
@@ -101,7 +109,7 @@ export const useOrderSubmit = ({ companies }: UseOrderSubmitParams) => {
 
   // Only show customer/prospect companies
   const customerCompanies = companies.filter(
-    (c) => c.roles.includes("customer") || c.roles.includes("prospect"),
+    (c) => c.roles?.includes("customer") || c.roles?.includes("prospect"),
   );
 
   const companyOptions: SelectOption[] = [
@@ -159,19 +167,25 @@ export const useOrderSubmit = ({ companies }: UseOrderSubmitParams) => {
     form.setValue("projectUuid", "");
     form.setValue("deliveryAddressUuid", "");
     form.setValue("billingAddressUuid", "");
+    form.setValue("contractUuids", []);
     setContacts([]);
     setProjects([]);
     setAddresses([]);
-    if (!uuid) return;
+    setContracts([]);
+    if (!uuid) {
+      return;
+    }
     setIsLoadingCompanyData(true);
     Promise.all([
       getContactsForCompany(uuid),
       getProjectsForCompany(uuid),
       getAddressesForCompany(uuid),
-    ]).then(([newContacts, newProjects, newAddresses]) => {
+      getContractsByCompanyUuid(uuid),
+    ]).then(([newContacts, newProjects, newAddresses, newContracts]) => {
       setContacts(newContacts);
       setProjects(newProjects);
       setAddresses(newAddresses);
+      setContracts(newContracts);
       setIsLoadingCompanyData(false);
     });
   };
@@ -179,73 +193,97 @@ export const useOrderSubmit = ({ companies }: UseOrderSubmitParams) => {
   const handleCancel = () => router.push("/orders");
 
   const onSubmit = form.handleSubmit((values) => {
+    const extras: OrderExtras = {
+      surcharges: values.surcharges.map((surcharge) => ({
+        companyUuid: surcharge.companyUuid || null,
+        order: 0,
+        description: surcharge.description || null,
+        surcharge: toDecimal(surcharge.surcharge, "0.00"),
+        unit: surcharge.unit || null,
+        fromValue: toDecimal(surcharge.fromValue, "0.00"),
+        unitIndication: surcharge.unitIndication || null,
+        tierUnit: surcharge.tierUnit || null,
+        amount: toDecimal(surcharge.amount, "0.00"),
+        profit: toDecimal(surcharge.profit, "0.00"),
+        thirdParties: surcharge.thirdParties,
+        companyCode: surcharge.companyCode || null,
+      })),
+      texts: values.texts.map((text) => ({
+        title: text.title,
+        textBlock: text.textBlock,
+        textCategoryUuid: text.textCategoryUuid || null,
+      })),
+      contractUuids: values.contractUuids,
+    };
+
     startTransition(async () => {
       const result = await createOrder(
         {
-        companyUuid: values.companyUuid,
-        contactUuid: values.contactUuid || null,
-        orderMethod: values.orderMethod || null,
-        customerRef: values.customerRef || null,
-        leaveCustomer: values.leaveCustomer,
-        ourReference: values.ourReference || null,
-        seller: values.seller || null,
-        projectUuid: values.projectUuid || null,
-        priceDate: values.priceDate ? new Date(values.priceDate) : null,
-        orderCategory: values.orderCategory || null,
-        handlingBlocked: values.handlingBlocked,
+          companyUuid: values.companyUuid,
+          contactUuid: values.contactUuid || null,
+          orderMethod: values.orderMethod || null,
+          customerRef: values.customerRef || null,
+          leaveCustomer: values.leaveCustomer,
+          ourReference: values.ourReference || null,
+          seller: values.seller || null,
+          projectUuid: values.projectUuid || null,
+          priceDate: values.priceDate ? new Date(values.priceDate) : null,
+          orderCategory: values.orderCategory || null,
+          handlingBlocked: values.handlingBlocked,
 
-        isPickup: values.isPickup,
-        isIncidental: values.isIncidental,
-        isConsignment: values.isConsignment,
-        consignmentDuration: values.consignmentDuration || null,
-        isInternalProduction: values.isInternalProduction,
-        isKlantMateriaal: values.isKlantMateriaal,
-        weightType: values.weightType || null,
-        isOverlengte: values.isOverlengte,
-        isPrinted: values.isPrinted,
-        isMailed: values.isMailed,
-        isFaxed: values.isFaxed,
+          isPickup: values.isPickup,
+          isIncidental: values.isIncidental,
+          isConsignment: values.isConsignment,
+          consignmentDuration: values.consignmentDuration,
+          isInternalProduction: values.isInternalProduction,
+          isKlantMateriaal: values.isKlantMateriaal,
+          weightType: values.weightType,
+          isOverlengte: values.isOverlengte,
+          isPrinted: values.isPrinted,
+          isMailed: values.isMailed,
+          isFaxed: values.isFaxed,
 
-        deliveryTerms: values.isPickup ? null : values.deliveryTerms || null,
-        deliveryAddressUuid: values.isPickup
-          ? null
-          : values.deliveryAddressUuid || null,
-        deliveryType: values.deliveryType,
-        deliveryDate: values.deliveryDate
-          ? new Date(values.deliveryDate)
-          : null,
-        deliveryWeek: values.deliveryWeek ?? null,
-        deliveryYear: values.deliveryYear ?? null,
-        deliveryRemark: values.deliveryRemark || null,
+          deliveryTerms: values.isPickup ? null : values.deliveryTerms,
+          deliveryAddressUuid: values.isPickup
+            ? null
+            : values.deliveryAddressUuid,
+          deliveryType: values.deliveryType,
+          deliveryDate: values.deliveryDate
+            ? new Date(values.deliveryDate)
+            : null,
+          deliveryWeek: values.deliveryWeek ?? null,
+          deliveryYear: values.deliveryYear ?? null,
+          deliveryRemark: values.deliveryRemark,
 
-        completeDelivery: values.completeDelivery,
-        transportBlockage: values.transportBlockage,
-        vehicleWithCrane: values.vehicleWithCrane,
-        vehicleWithCanopy: values.vehicleWithCanopy,
-        bundlingSeparate: values.bundlingSeparate,
-        transportRegion: values.transportRegion || null,
-        maxLengthMm: values.maxLengthMm ? Number(values.maxLengthMm) : null,
-        maxBundleWeightKg: values.maxBundleWeightKg || null,
-        deliveryAfterTime: values.deliveryAfterTime || null,
-        deliverForTime: values.deliverForTime || null,
-        transportMode: values.transportMode || null,
+          completeDelivery: values.completeDelivery,
+          transportBlockage: values.transportBlockage,
+          vehicleWithCrane: values.vehicleWithCrane,
+          vehicleWithCanopy: values.vehicleWithCanopy,
+          bundlingSeparate: values.bundlingSeparate,
+          transportRegion: values.transportRegion,
+          maxLengthMm: values.maxLengthMm ? Number(values.maxLengthMm) : null,
+          maxBundleWeightKg: values.maxBundleWeightKg,
+          deliveryAfterTime: values.deliveryAfterTime,
+          deliverForTime: values.deliverForTime,
+          transportMode: values.transportMode,
 
-        showNetPrice: values.showNetPrice,
-        scrapSurchargeSeparate: values.scrapSurchargeSeparate,
-        calculateVatIfApplicable: values.calculateVatIfApplicable,
-        financialBlockage: values.financialBlockage,
-        invoiceBlockage: values.invoiceBlockage,
-        onlyTotalAmountOnInvoice: values.onlyTotalAmountOnInvoice,
-        includeOptionPricesInMaterialPrices:
-          values.includeOptionPricesInMaterialPrices,
-        paymentTerms: values.paymentTerms || null,
-        billingAddressUuid: values.billingAddressUuid || null,
-        blockingReason: values.blockingReason || null,
+          showNetPrice: values.showNetPrice,
+          scrapSurchargeSeparate: values.scrapSurchargeSeparate,
+          calculateVatIfApplicable: values.calculateVatIfApplicable,
+          financialBlockage: values.financialBlockage,
+          invoiceBlockage: values.invoiceBlockage,
+          onlyTotalAmountOnInvoice: values.onlyTotalAmountOnInvoice,
+          includeOptionPricesInMaterialPrices:
+            values.includeOptionPricesInMaterialPrices,
+          paymentTerms: values.paymentTerms,
+          billingAddressUuid: values.billingAddressUuid,
+          blockingReason: values.blockingReason,
 
-        remarks: values.remarks || null,
-        documents: null,
+          remarks: values.remarks || null,
+          documents: values.documents.length > 0 ? values.documents : null,
         },
         values.items ?? [],
+        extras,
       );
 
       setState(result);
@@ -271,6 +309,7 @@ export const useOrderSubmit = ({ companies }: UseOrderSubmitParams) => {
     deliveryTermOptions,
     weightTypeOptions,
     paymentTermOptions,
+    contracts,
     isLoadingCompanyData,
     handleCompanyChange,
     handleCancel,

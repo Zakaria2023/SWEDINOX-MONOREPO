@@ -141,6 +141,32 @@ export const createMachineSchema = () =>
 
 export type MachineFormValues = z.infer<ReturnType<typeof createMachineSchema>>;
 
+// ── Machine Product dialog ───────────────────────────────────────────────────
+
+export const machineProductDialogSchema = z.object({
+  productUuid: z.string().min(1, "Please select a product"),
+  preference: z.string().optional(),
+  productionPerHour: z.string().optional(),
+  prodUnit: z.string().optional(),
+  minCorner: z.string().optional(),
+  maxCorner: z.string().optional(),
+  daysInSystem: z.string().optional(),
+});
+
+export type MachineProductDialogValues = z.infer<
+  typeof machineProductDialogSchema
+>;
+
+export const DEFAULT_MACHINE_PRODUCT: MachineProductDialogValues = {
+  productUuid: "",
+  preference: "1",
+  productionPerHour: "0",
+  prodUnit: "",
+  minCorner: "0",
+  maxCorner: "90",
+  daysInSystem: "0",
+};
+
 export const DEFAULT_MACHINE: MachineFormValues = {
   code: "",
   name: "",

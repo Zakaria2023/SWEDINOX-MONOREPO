@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   invoicePaymentTerms,
+  invoiceSurchargeDescriptions,
   purchaseInvoiceBlockReasons,
   purchaseInvoiceFiscalBases,
 } from "@/lib/enums";
@@ -9,6 +10,24 @@ export const purchaseInvoiceItemSchema = z.object({
   stockUuid: z.string().min(1, "Stock item is required"),
   quantity: z.string().min(1, "Quantity is required"),
 });
+
+export const purchaseInvoiceSurchargeSchema = z.object({
+  booked: z.boolean(),
+  orderRef: z.string().optional(),
+  description: z
+    .union([z.enum(invoiceSurchargeDescriptions), z.literal("")])
+    .optional(),
+  revenueGroup: z.string().optional(),
+  surcharge: z.string().optional(),
+  unit: z.string().optional(),
+  surchargeBasis: z.string().optional(),
+  amount: z.string().optional(),
+  vatRate: z.string().optional(),
+});
+
+export type PurchaseInvoiceSurchargeValues = z.infer<
+  typeof purchaseInvoiceSurchargeSchema
+>;
 
 export const createPurchaseInvoiceSchema = () =>
   z
@@ -32,6 +51,7 @@ export const createPurchaseInvoiceSchema = () =>
       documents: z
         .array(z.object({ id: z.string(), fileName: z.string() }))
         .optional(),
+      surchargeLines: z.array(purchaseInvoiceSurchargeSchema),
     })
     .refine(
       (data) => !data.blocked || !!data.blockReason,

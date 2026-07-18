@@ -9,6 +9,7 @@ import { FormActions } from "@/components/ui/form-actions";
 import { FormError } from "@/components/ui/form-error";
 import { PurchaseInvoiceDetailsSection } from "./sections/purchase-invoice-details-section";
 import { PurchaseInvoiceItemsSection } from "./sections/purchase-invoice-items-section";
+import { SurchargesSection } from "./sections/surcharges-section";
 import { RemarksAndDocumentsSection } from "./sections/remarks-and-documents-section";
 import {
   invoicePaymentTerms,
@@ -112,6 +113,9 @@ export const PurchaseInvoiceForm = ({
           removeItem={removeItem}
           isPending={isPending}
         />
+
+        {/* Surcharges */}
+        <SurchargesSection />
 
         {/* Remarks + Documents */}
         <RemarksAndDocumentsSection

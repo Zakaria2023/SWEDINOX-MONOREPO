@@ -131,6 +131,12 @@ export const useLocationSubmit = ({ allItems }: UseLocationSubmitParams) => {
       maxWeight: source.maxWeight ?? "",
       productTypes: (source.productTypes ?? []) as WarehouseProductType[],
       pickingSequence: currentPickingSequence,
+      countPer: "",
+      countAs: "technical_stock",
+      countUnderValue: "",
+      countUnderUnit: "",
+      openCountOrderAvailable: false,
+      documents: [],
     });
   };
 
@@ -190,6 +196,18 @@ export const useLocationSubmit = ({ allItems }: UseLocationSubmitParams) => {
           values.pickingSequence !== "" && values.pickingSequence !== undefined
             ? Number(values.pickingSequence)
             : undefined,
+        countPer:
+          values.countPer !== "" && values.countPer !== undefined
+            ? Number(values.countPer)
+            : undefined,
+        countAs: values.countAs,
+        countUnderValue:
+          values.countUnderValue !== "" && values.countUnderValue !== undefined
+            ? Number(values.countUnderValue)
+            : undefined,
+        countUnderUnit: values.countUnderUnit || undefined,
+        openCountOrderAvailable: values.openCountOrderAvailable,
+        documents: values.documents.length > 0 ? values.documents : undefined,
       });
       setState(result);
       if (result.success) router.push("/locations");

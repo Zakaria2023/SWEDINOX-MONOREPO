@@ -16,6 +16,9 @@ import {
   type PendingStockOption,
 } from "@/app/(dashboard)/stock/actions";
 
+const toDecimal = (value: string | undefined, fallback: string): string =>
+  value && value.trim() !== "" ? value : fallback;
+
 export const usePurchaseInvoiceSubmit = () => {
   const [isPending, startTransition] = useTransition();
   const [state, setState] = useState<PurchaseInvoiceActionResult>({});
@@ -41,6 +44,7 @@ export const usePurchaseInvoiceSubmit = () => {
       blockReason: undefined,
       remarks: "",
       documents: [],
+      surchargeLines: [],
     },
   });
 
@@ -63,6 +67,19 @@ export const usePurchaseInvoiceSubmit = () => {
   }, [companyUuid, replaceItems]);
 
   const onSubmit = form.handleSubmit((values) => {
+    const surcharges = values.surchargeLines.map((line) => ({
+      booked: line.booked,
+      orderRef: line.orderRef || null,
+      description: line.description || null,
+      revenueGroup: line.revenueGroup || null,
+      surcharge: toDecimal(line.surcharge, "0.00"),
+      unit: line.unit || null,
+      surchargeBasis: toDecimal(line.surchargeBasis, "0.00"),
+      amount: toDecimal(line.amount, "0.00"),
+      vatRate: line.vatRate?.trim() ? line.vatRate : null,
+      order: 0,
+    }));
+
     startTransition(async () => {
       const result = await createPurchaseInvoice(
         {
@@ -87,6 +104,7 @@ export const usePurchaseInvoiceSubmit = () => {
           documents: values.documents ?? [],
         },
         values.items ?? [],
+        surcharges,
       );
       setState(result);
     });

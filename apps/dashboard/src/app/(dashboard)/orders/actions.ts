@@ -1,14 +1,31 @@
 "use server";
 
 import { db } from "@/db";
-import { InsertOrders, Orders, SelectOrders } from "@/db/schema/orders";
+import {
+  InsertOrders,
+  InsertOrderSurcharges,
+  Orders,
+  OrderSurcharges,
+  SelectOrders,
+} from "@/db/schema/orders";
 import { OrderItems, SelectOrderItems } from "@/db/schema/order-items";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
+import { Contracts, SelectContracts } from "@/db/schema/contracts";
 import { Products, SelectProducts } from "@/db/schema/products";
-import { Stock } from "@/db/schema/stock";
+import { SelectStock, Stock } from "@/db/schema/stock";
+import { InsertTexts, Texts } from "@/db/schema/texts";
 import { generateUuid } from "@/lib/helpers";
-import { and, desc, eq, getTableColumns, gte, inArray, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  getTableColumns,
+  gte,
+  inArray,
+  sql,
+} from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -21,6 +38,27 @@ export type OrderItemInput = {
   stockUuid: string;
   quantity: string;
 };
+
+export type OrderSurchargeInput = Omit<
+  InsertOrderSurcharges,
+  "id" | "uuid" | "orderUuid" | "createdAt" | "updatedAt"
+>;
+
+export type OrderTextInput = Pick<
+  InsertTexts,
+  "title" | "textBlock" | "textCategoryUuid"
+>;
+
+export type OrderExtras = {
+  surcharges: OrderSurchargeInput[];
+  texts: OrderTextInput[];
+  contractUuids: string[];
+};
+
+export type ContractOption = Pick<
+  SelectContracts,
+  "uuid" | "code" | "description" | "contractType"
+>;
 
 export type OrderActionResult = {
   orderUuid?: string;
@@ -64,19 +102,43 @@ export const getOrders = async (): Promise<OrderListItem[]> => {
   }
 };
 
+export const getContractsByCompanyUuid = async (
+  companyUuid: string,
+): Promise<ContractOption[]> =>
+  db
+    .select({
+      uuid: Contracts.uuid,
+      code: Contracts.code,
+      description: Contracts.description,
+      contractType: Contracts.contractType,
+    })
+    .from(Contracts)
+    .where(
+      and(
+        eq(Contracts.companyUuid, companyUuid),
+        inArray(Contracts.role, ["customer", "prospect"]),
+      ),
+    )
+    .orderBy(asc(Contracts.code));
+
 export const createOrder = async (
   fields: OrderFields,
   items: OrderItemInput[] = [],
+  extras: OrderExtras = { surcharges: [], texts: [], contractUuids: [] },
 ): Promise<OrderActionResult> => {
   const uuid = generateUuid();
   try {
+    // Validate stock availability before opening the transaction.
+    const stockByUuid = new Map<string, SelectStock>();
     if (items.length > 0) {
       const stockUuids = items.map((item) => item.stockUuid);
       const stockRows = await db
         .select()
         .from(Stock)
         .where(inArray(Stock.uuid, stockUuids));
-      const stockByUuid = new Map(stockRows.map((row) => [row.uuid, row]));
+      for (const row of stockRows) {
+        stockByUuid.set(row.uuid, row);
+      }
 
       for (const item of items) {
         const stockRow = stockByUuid.get(item.stockUuid);
@@ -98,56 +160,84 @@ export const createOrder = async (
           };
         }
       }
+    }
 
-      await db.transaction(async (tx) => {
-        await tx.insert(Orders).values({ ...fields, uuid });
+    await db.transaction(async (tx) => {
+      await tx.insert(Orders).values({ ...fields, uuid });
 
-        for (const item of items) {
-          const stockRow = stockByUuid.get(item.stockUuid);
-          if (!stockRow) {
-            continue;
-          }
+      for (const item of items) {
+        const stockRow = stockByUuid.get(item.stockUuid);
+        if (!stockRow) {
+          continue;
+        }
 
-          const nextReserved = (
-            Number(stockRow.reservedQuantity) + Number(item.quantity)
-          ).toFixed(3);
+        const nextReserved = (
+          Number(stockRow.reservedQuantity) + Number(item.quantity)
+        ).toFixed(3);
 
-          // Guard: only reserve if the free quantity we validated above is
-          // still there — a concurrent reservation/consumption can't cause
-          // this lot to be oversold.
-          const [updateResult] = await tx
-            .update(Stock)
-            .set({ reservedQuantity: nextReserved })
-            .where(
-              and(
-                eq(Stock.uuid, item.stockUuid),
-                eq(Stock.status, "pending"),
-                gte(
-                  sql`(${Stock.quantity} - ${Stock.reservedQuantity})`,
-                  item.quantity,
-                ),
+        // Guard: only reserve if the free quantity we validated above is
+        // still there — a concurrent reservation/consumption can't cause
+        // this lot to be oversold.
+        const [updateResult] = await tx
+          .update(Stock)
+          .set({ reservedQuantity: nextReserved })
+          .where(
+            and(
+              eq(Stock.uuid, item.stockUuid),
+              eq(Stock.status, "pending"),
+              gte(
+                sql`(${Stock.quantity} - ${Stock.reservedQuantity})`,
+                item.quantity,
               ),
-            );
+            ),
+          );
 
-          if (updateResult.affectedRows === 0) {
-            throw new Error(
-              "Stock changed while reserving — please refresh and try again.",
-            );
-          }
+        if (updateResult.affectedRows === 0) {
+          throw new Error(
+            "Stock changed while reserving — please refresh and try again.",
+          );
+        }
 
-          await tx.insert(OrderItems).values({
+        await tx.insert(OrderItems).values({
+          uuid: generateUuid(),
+          orderUuid: uuid,
+          stockUuid: item.stockUuid,
+          productUuid: stockRow.productUuid,
+          quantity: item.quantity,
+          status: "reserved",
+        });
+      }
+
+      if (extras.surcharges.length > 0) {
+        await tx.insert(OrderSurcharges).values(
+          extras.surcharges.map((surcharge) => ({
+            ...surcharge,
             uuid: generateUuid(),
             orderUuid: uuid,
-            stockUuid: item.stockUuid,
-            productUuid: stockRow.productUuid,
-            quantity: item.quantity,
-            status: "reserved",
-          });
-        }
-      });
-    } else {
-      await db.insert(Orders).values({ ...fields, uuid });
-    }
+          })),
+        );
+      }
+
+      if (extras.texts.length > 0) {
+        await tx.insert(Texts).values(
+          extras.texts.map((text) => ({
+            uuid: generateUuid(),
+            orderUuid: uuid,
+            companyUuid: fields.companyUuid,
+            title: text.title,
+            textBlock: text.textBlock,
+            textCategoryUuid: text.textCategoryUuid ?? null,
+          })),
+        );
+      }
+
+      if (extras.contractUuids.length > 0) {
+        await tx
+          .update(Contracts)
+          .set({ orderUuid: uuid })
+          .where(inArray(Contracts.uuid, extras.contractUuids));
+      }
+    });
 
     revalidatePath("/orders");
     revalidatePath("/stock");

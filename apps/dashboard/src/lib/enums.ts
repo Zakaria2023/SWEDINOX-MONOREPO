@@ -297,6 +297,14 @@ export const warehouseLoadingLocations = [
 export type WarehouseLoadingLocation =
   (typeof warehouseLoadingLocations)[number];
 
+export const warehouseCountStockTypes = [
+  "technical_stock",
+  "available_stock",
+] as const satisfies readonly string[];
+
+export type WarehouseCountStockType =
+  (typeof warehouseCountStockTypes)[number];
+
 export const warehouseBlockReasons = [
   "disapproval",
   "reserved_for_customer",
@@ -774,6 +782,16 @@ export const returnOrderReasons = [
 
 export type ReturnOrderReason = (typeof returnOrderReasons)[number];
 
+export const returnOrderStatuses = [
+  "open",
+  "in_progress",
+  "received",
+  "credited",
+  "cancelled",
+] as const satisfies readonly string[];
+
+export type ReturnOrderStatus = (typeof returnOrderStatuses)[number];
+
 export const machineOptionTypes = [
   "decoiling",
   "grinding",
@@ -835,6 +853,36 @@ export const machineCapacityUnits = [
 ] as const satisfies readonly string[];
 
 export type MachineCapacityUnit = (typeof machineCapacityUnits)[number];
+
+export const processingEditings = [
+  "stamping",
+  "polished",
+  "paper_interleaving",
+  "pickling",
+  "laser",
+  "blue_foil",
+  "bending",
+  "uv_foil",
+  "rolling",
+  "anodizing",
+  "slitting",
+  "brushing",
+  "remove_foil",
+  "certificate_2_1",
+  "sawing",
+  "coating",
+  "punching",
+  "grinding",
+  "decoiling",
+  "duplo",
+  "embossing",
+  "shear_cut",
+  "laser_foil",
+  "perforate",
+  "certificate_3_1",
+] as const satisfies readonly string[];
+
+export type ProcessingEditing = (typeof processingEditings)[number];
 
 export const textUsageCategories = [
   "purchase_quote_request",
@@ -1029,6 +1077,91 @@ export const deliveryTypes = [
 
 export type DeliveryType = (typeof deliveryTypes)[number];
 
+export const transporterPriceUnits = [
+  "amount",
+  "per_km",
+  "per_kg",
+  "percentage",
+] as const satisfies readonly string[];
+
+export type TransporterPriceUnit = (typeof transporterPriceUnits)[number];
+
+// Country codes used on the transporter countries grid. Values are the legacy
+// dispatch codes shown in the "Code" column; labels are the descriptions.
+export const transporterCountries = [
+  "A",
+  "AE",
+  "AN",
+  "AZ",
+  "B",
+  "BAN",
+  "BE2",
+  "BG",
+  "BR",
+  "BY",
+  "CDN",
+  "CH",
+  "CL",
+  "CN",
+  "CR",
+  "CW",
+  "CY",
+  "CZ",
+  "D",
+  "DK",
+  "E",
+  "EE",
+  "ES2",
+  "ET",
+  "F",
+  "FIN",
+  "FL",
+  "GB",
+  "GB2",
+  "GE",
+  "GR",
+  "H",
+  "HEG",
+  "HK",
+  "I",
+  "IND",
+  "IR",
+  "IRL",
+  "KR",
+  "KRO",
+  "L",
+  "LT",
+  "LV",
+  "MA",
+  "MAL",
+  "MK",
+  "NL",
+  "NO",
+  "P",
+  "PK",
+  "PL",
+  "RC",
+  "RO",
+  "ROK",
+  "RUS",
+  "S",
+  "SGP",
+  "SK",
+  "SLO",
+  "SME",
+  "SRB",
+  "SVN",
+  "SYR",
+  "TR",
+  "UA",
+  "uk",
+  "USA",
+  "VN",
+  "ZA",
+] as const satisfies readonly string[];
+
+export type TransporterCountry = (typeof transporterCountries)[number];
+
 export const counterOrderStatuses = [
   "open",
   "in_progress",
@@ -1123,6 +1256,39 @@ export const complaintReports = [
 ] as const satisfies readonly string[];
 
 export type ComplaintReport = (typeof complaintReports)[number];
+
+export const complaintStatuses = [
+  "new",
+  "in_progress",
+  "on_hold",
+  "done",
+] as const satisfies readonly string[];
+
+export type ComplaintStatus = (typeof complaintStatuses)[number];
+
+export const complaintCauses = [
+  "warehouse",
+  "production",
+  "purchasing",
+  "sale",
+  "transportation",
+  "customer",
+  "supplier",
+  "processor",
+] as const satisfies readonly string[];
+
+export type ComplaintCause = (typeof complaintCauses)[number];
+
+export const complaintSolutions = [
+  "collect_goods_back_credit",
+  "return_goods_credit_redeliver",
+  "price_correction",
+  "subsequent_delivery",
+  "complaint_rejected",
+  "material_retained_correct_delivery",
+] as const satisfies readonly string[];
+
+export type ComplaintSolution = (typeof complaintSolutions)[number];
 
 export const countWorkorderMethods = [
   "counting_locations",
@@ -1343,3 +1509,27 @@ export const customerGroups = [
 ] as const satisfies readonly string[];
 
 export type CustomerGroup = (typeof customerGroups)[number];
+
+export const customerStockReasons = [
+  "initial_stock",
+  "correction",
+  "counting_difference",
+  "damaged",
+  "return_from_customer",
+  "transfer",
+  "other",
+] as const satisfies readonly string[];
+
+export type CustomerStockReason = (typeof customerStockReasons)[number];
+
+// One row of a company's yearly visit planning grid. The array is ordered
+// January (index 0) → December (index 11).
+export type VisitPlanningEntry = { call: boolean; visit: boolean };
+
+export const companyClassifications = [
+  "A",
+  "B",
+  "C",
+] as const satisfies readonly string[];
+
+export type CompanyClassification = (typeof companyClassifications)[number];
