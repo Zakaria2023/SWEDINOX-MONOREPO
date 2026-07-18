@@ -4,7 +4,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
-import { createReturnOrder, ReturnOrderActionResult } from "./actions";
+import {
+  createReturnOrder,
+  ReturnOrderActionResult,
+  ReturnOrderExtras,
+} from "./actions";
 import {
   DEFAULT_RETURN_ORDER,
   returnOrderSchema,
@@ -59,6 +63,9 @@ const makeOptions = <T extends string>(
 const addressLabel = (a: AddressOption) =>
   [a.altName, a.streetAndNo, a.postalCode, a.city].filter(Boolean).join(", ") ||
   a.uuid;
+
+const toDecimal = (value: string | undefined, fallback: string): string =>
+  value && value.trim() !== "" ? value : fallback;
 
 export const useReturnOrderSubmit = ({
   companies,
@@ -158,51 +165,76 @@ export const useReturnOrderSubmit = ({
 
   const onSubmit = form.handleSubmit((values) => {
     startTransition(async () => {
-      const result = await createReturnOrder({
-        companyUuid: values.companyUuid,
-        orderUuid: values.orderUuid || null,
-        complaintRef: values.complaintRef || null,
-        contactUuid: values.contactUuid || null,
-        customerRef: values.customerRef || null,
-        ourReference: values.ourReference || null,
-        handlingBlocked: values.handlingBlocked,
-        isPrinted: values.isPrinted,
-        isMailed: values.isMailed,
-        isFaxed: values.isFaxed,
+      const extras: ReturnOrderExtras = {
+        surcharges: values.surcharges.map((surcharge) => ({
+          companyUuid: surcharge.companyUuid || null,
+          order: 0,
+          description: surcharge.description || null,
+          surcharge: toDecimal(surcharge.surcharge, "0.00"),
+          unit: surcharge.unit || null,
+          fromValue: toDecimal(surcharge.fromValue, "0.00"),
+          unitIndication: surcharge.unitIndication || null,
+          tierUnit: surcharge.tierUnit || null,
+          amount: toDecimal(surcharge.amount, "0.00"),
+          profit: toDecimal(surcharge.profit, "0.00"),
+          thirdParties: surcharge.thirdParties,
+          companyCode: surcharge.companyCode || null,
+        })),
+        texts: values.texts.map((text) => ({
+          title: text.title,
+          textBlock: text.textBlock,
+          textCategoryUuid: text.textCategoryUuid || null,
+        })),
+      };
 
-        returnDate: values.returnDate ? new Date(values.returnDate) : null,
-        isPickup: values.isPickup,
-        pickupAddress: values.isPickup ? values.pickupAddress || null : null,
-        deliveryAddressUuid: values.isPickup
-          ? null
-          : values.deliveryAddressUuid || null,
+      const result = await createReturnOrder(
+        {
+          companyUuid: values.companyUuid,
+          orderUuid: values.orderUuid || null,
+          complaintRef: values.complaintRef || null,
+          contactUuid: values.contactUuid || null,
+          customerRef: values.customerRef || null,
+          ourReference: values.ourReference || null,
+          handlingBlocked: values.handlingBlocked,
+          isPrinted: values.isPrinted,
+          isMailed: values.isMailed,
+          isFaxed: values.isFaxed,
 
-        returnReason: values.returnReason,
+          returnDate: values.returnDate ? new Date(values.returnDate) : null,
+          isPickup: values.isPickup,
+          pickupAddress: values.isPickup ? values.pickupAddress || null : null,
+          deliveryAddressUuid: values.isPickup
+            ? null
+            : values.deliveryAddressUuid || null,
 
-        calculateVatIfApplicable: values.calculateVatIfApplicable,
-        invoiceBlockage: values.invoiceBlockage,
-        onlyTotalAmountOnInvoice: values.onlyTotalAmountOnInvoice,
-        includeOptionPricesInMaterialPrices:
-          values.includeOptionPricesInMaterialPrices,
-        paymentTerms: values.paymentTerms || null,
-        billingAddressUuid: values.billingAddressUuid || null,
-        blockingReason: values.blockingReason || null,
+          returnReason: values.returnReason,
 
-        completeDelivery: values.completeDelivery,
-        transportBlockage: values.transportBlockage,
-        vehicleWithCrane: values.vehicleWithCrane,
-        vehicleWithCanopy: values.vehicleWithCanopy,
-        bundlingSeparate: values.bundlingSeparate,
-        transportRegion: values.transportRegion || null,
-        maxLengthMm: values.maxLengthMm ? Number(values.maxLengthMm) : null,
-        maxBundleWeightKg: values.maxBundleWeightKg || null,
-        deliveryAfterTime: values.deliveryAfterTime || null,
-        deliverForTime: values.deliverForTime || null,
-        transportMode: values.transportMode || null,
+          calculateVatIfApplicable: values.calculateVatIfApplicable,
+          invoiceBlockage: values.invoiceBlockage,
+          onlyTotalAmountOnInvoice: values.onlyTotalAmountOnInvoice,
+          includeOptionPricesInMaterialPrices:
+            values.includeOptionPricesInMaterialPrices,
+          paymentTerms: values.paymentTerms || null,
+          billingAddressUuid: values.billingAddressUuid || null,
+          blockingReason: values.blockingReason || null,
 
-        remarks: values.remarks || null,
-        documents: values.documents?.length ? values.documents : null,
-      });
+          completeDelivery: values.completeDelivery,
+          transportBlockage: values.transportBlockage,
+          vehicleWithCrane: values.vehicleWithCrane,
+          vehicleWithCanopy: values.vehicleWithCanopy,
+          bundlingSeparate: values.bundlingSeparate,
+          transportRegion: values.transportRegion || null,
+          maxLengthMm: values.maxLengthMm ? Number(values.maxLengthMm) : null,
+          maxBundleWeightKg: values.maxBundleWeightKg || null,
+          deliveryAfterTime: values.deliveryAfterTime || null,
+          deliverForTime: values.deliverForTime || null,
+          transportMode: values.transportMode || null,
+
+          remarks: values.remarks || null,
+          documents: values.documents?.length ? values.documents : null,
+        },
+        extras,
+      );
 
       setState(result);
       if (result.success) {

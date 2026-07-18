@@ -1,12 +1,36 @@
 import { z } from "zod";
 import {
+  contractTierUnits,
   invoicePaymentTerms,
+  invoiceSurchargeDescriptions,
   returnOrderReasons,
   ReturnOrderReason,
   transportModes,
   warehouseTransportRegions,
 } from "@/lib/enums";
 import { todayDateString } from "@/lib/helpers";
+
+export const returnOrderSurchargeSchema = z.object({
+  description: z
+    .union([z.enum(invoiceSurchargeDescriptions), z.literal("")])
+    .optional(),
+  surcharge: z.string().optional(),
+  unit: z.string().optional(),
+  fromValue: z.string().optional(),
+  unitIndication: z.string().optional(),
+  tierUnit: z.union([z.enum(contractTierUnits), z.literal("")]).optional(),
+  amount: z.string().optional(),
+  profit: z.string().optional(),
+  thirdParties: z.boolean(),
+  companyCode: z.string().optional(),
+  companyUuid: z.string().optional(),
+});
+
+export const returnOrderTextSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  textCategoryUuid: z.string().optional(),
+  textBlock: z.string().min(1, "Text is required"),
+});
 
 export const returnOrderSchema = z.object({
   // Header
@@ -57,12 +81,22 @@ export const returnOrderSchema = z.object({
   // Remarks
   remarks: z.string().optional(),
 
+  // Surcharges
+  surcharges: z.array(returnOrderSurchargeSchema),
+
   // Documents
   documents: z
     .array(z.object({ id: z.string(), fileName: z.string() }))
     .optional(),
+
+  // Texts
+  texts: z.array(returnOrderTextSchema),
 });
 
+export type ReturnOrderSurchargeValues = z.infer<
+  typeof returnOrderSurchargeSchema
+>;
+export type ReturnOrderTextValues = z.infer<typeof returnOrderTextSchema>;
 export type ReturnOrderFormValues = z.infer<typeof returnOrderSchema>;
 
 export const DEFAULT_RETURN_ORDER: ReturnOrderFormValues = {
@@ -106,5 +140,7 @@ export const DEFAULT_RETURN_ORDER: ReturnOrderFormValues = {
 
   remarks: "",
 
+  surcharges: [],
   documents: [],
+  texts: [],
 };
