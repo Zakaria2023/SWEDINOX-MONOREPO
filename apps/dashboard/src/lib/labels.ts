@@ -12,6 +12,7 @@ import type {
   CounterOrderPriority,
   CounterOrderStatus,
   MachineCapacityUnit,
+  ProcessingEditing,
   MachineLoadingType,
   MachineOptionType,
   MachineProductionType,
@@ -26,6 +27,8 @@ import type {
   ContractType,
   Currency,
   CustomerGroup,
+  CustomerStockReason,
+  CompanyClassification,
   DevTheorWt,
   EdiOption,
   FeaturesQuality,
@@ -67,6 +70,7 @@ import type {
   WarehouseTransportRegion,
   TransportMode,
   ReturnOrderReason,
+  ReturnOrderStatus,
   OrderMethod,
   DeliveryTerm,
   TransporterCountry,
@@ -454,6 +458,14 @@ export const RETURN_ORDER_REASON_LABELS: Record<ReturnOrderReason, string> = {
   other: "Other",
 };
 
+export const RETURN_ORDER_STATUS_LABELS: Record<ReturnOrderStatus, string> = {
+  open: "Open",
+  in_progress: "In progress",
+  received: "Received",
+  credited: "Credited",
+  cancelled: "Cancelled",
+};
+
 export const MACHINE_OPTION_LABELS: Record<MachineOptionType, string> = {
   decoiling: "Decoiling",
   grinding: "Grinding",
@@ -526,6 +538,34 @@ export const MACHINE_CAPACITY_UNIT_LABELS: Record<MachineCapacityUnit, string> =
     st: "Pieces",
     tn: "Tonnage",
   };
+
+export const PROCESSING_EDITING_LABELS: Record<ProcessingEditing, string> = {
+  stamping: "Stamping",
+  polished: "Polished",
+  paper_interleaving: "Paper interleaving",
+  pickling: "Pickling",
+  laser: "Laser",
+  blue_foil: "Blue Foil",
+  bending: "Bending",
+  uv_foil: "UV Foil",
+  rolling: "Rolling",
+  anodizing: "Anodizing",
+  slitting: "Slitting",
+  brushing: "Brushing",
+  remove_foil: "Remove Foil",
+  certificate_2_1: "2.1 Certificate",
+  sawing: "Sawing",
+  coating: "Coating",
+  punching: "Punching",
+  grinding: "Grinding",
+  decoiling: "Decoiling",
+  duplo: "Duplo",
+  embossing: "Embossing",
+  shear_cut: "ShearCut",
+  laser_foil: "Laser Foil",
+  perforate: "Perforate",
+  certificate_3_1: "3.1 Certificate",
+};
 
 export const TEXT_USAGE_CATEGORY_LABELS: Record<TextUsageCategory, string> = {
   purchase_quote_request: "Purchase Quote Request",
@@ -1215,6 +1255,15 @@ export const CUSTOMER_GROUP_LABELS: Record<CustomerGroup, string> = {
   care_homes: "Care Homes",
 };
 
+export const COMPANY_CLASSIFICATION_LABELS: Record<
+  CompanyClassification,
+  string
+> = {
+  A: "Major customer",
+  B: "Medium customer",
+  C: "Small customer",
+};
+
 export const COMPLAINT_TYPE_LABELS: Record<ComplaintType, string> = {
   counter_order: "Counter order",
   general: "General",
@@ -1369,4 +1418,17 @@ export const CURRENCY_LABELS: Record<Currency, string> = {
   usd: "Dollar",
   gbp: "Pound",
   hkd: "HK-Dollar",
+};
+
+export const CUSTOMER_STOCK_REASON_LABELS: Record<
+  CustomerStockReason,
+  string
+> = {
+  initial_stock: "Initial stock",
+  correction: "Correction",
+  counting_difference: "Counting difference",
+  damaged: "Damaged",
+  return_from_customer: "Return from customer",
+  transfer: "Transfer",
+  other: "Other",
 };

@@ -1,6 +1,10 @@
 "use client";
 
-import { DebtorCompanyOption } from "@/app/(dashboard)/companies/actions";
+import {
+  CompanyOption,
+  DebtorCompanyOption,
+} from "@/app/(dashboard)/companies/actions";
+import { IndustryOption } from "@/app/(dashboard)/industries/actions";
 import { useCompanySubmit } from "@/app/(dashboard)/companies/use-company-submit";
 import {
   ContractForProjectOption,
@@ -15,6 +19,7 @@ import { CompanyDetailsSection } from "@/components/companies/sections/company-d
 import { RolesSection } from "@/components/companies/sections/roles-section";
 import { ContractsSection } from "@/components/companies/sections/contracts-section";
 import { SalesSection } from "@/components/companies/sections/sales-section";
+import { MarketingSection } from "@/components/companies/sections/marketing-section";
 import { DebtorSection } from "@/components/companies/sections/debtor-section";
 import { InvoicesSection } from "@/components/companies/sections/invoices-section";
 import { TextsSection } from "@/components/companies/sections/texts-section";
@@ -23,14 +28,17 @@ import { CounterOrdersSection } from "@/components/companies/sections/counter-or
 import { VisitReportsSection } from "@/components/companies/sections/visit-reports-section";
 import { PurchaseOrdersSection } from "@/components/companies/sections/purchase-orders-section";
 import { QuotesSection } from "@/components/companies/sections/quotes-section";
+import { ReturnsSection } from "@/components/companies/sections/returns-section";
 import { FollowUpsSection } from "@/components/companies/sections/follow-ups-section";
 import { TransporterCostsSection } from "@/components/companies/sections/transporter-costs-section";
 import { TransporterCountriesSection } from "@/components/companies/sections/transporter-countries-section";
+import { ProcessingsSection } from "@/components/companies/sections/processings-section";
 import { DocumentsSection } from "@/components/companies/sections/documents-section";
 import { SearchCodesSection } from "@/components/companies/sections/search-codes-section";
 import { ContactsSection } from "@/components/companies/sections/contacts-section";
 import { ProductsSection } from "@/components/companies/sections/products-section";
 import { CustomerProductsSection } from "@/components/companies/sections/customer-products-section";
+import { CustomerStockSection } from "@/components/companies/sections/customer-stock-section";
 import { FirstAddressDialog } from "@/components/companies/dialogs/first-address-dialog";
 import { AdditionalAddressDialog } from "@/components/companies/dialogs/additional-address-dialog";
 import { CommunicationSettingDialog } from "@/components/companies/dialogs/communication-setting-dialog";
@@ -42,9 +50,11 @@ import { CounterOrderDialog } from "@/components/companies/dialogs/counter-order
 import { ProductDialog } from "@/components/companies/dialogs/product-dialog";
 import { ProductPickerDialog } from "@/components/companies/dialogs/product-picker-dialog";
 import { CustomerProductDialog } from "@/components/companies/dialogs/customer-product-dialog";
+import { CustomerStockDialog } from "@/components/companies/dialogs/customer-stock-dialog";
 import { VisitReportDialog } from "@/components/companies/dialogs/visit-report-dialog";
 import { PurchaseOrderDialog } from "@/components/companies/dialogs/purchase-order-dialog";
 import { QuoteDialog } from "@/components/companies/dialogs/quote-dialog";
+import { ReturnOrderDialog } from "@/components/companies/dialogs/return-order-dialog";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { FormProvider } from "react-hook-form";
@@ -57,6 +67,8 @@ type CompanyFormProps = {
   purchaseOrgCompanies: DebtorCompanyOption[];
   productGroups: ProductGroupOption[];
   availableProducts: ProductOption[];
+  suppliers: CompanyOption[];
+  industries: IndustryOption[];
 };
 
 export const CompanyForm = ({
@@ -67,6 +79,8 @@ export const CompanyForm = ({
   purchaseOrgCompanies,
   productGroups,
   availableProducts,
+  suppliers,
+  industries,
 }: CompanyFormProps) => {
   const router = useRouter();
   const { user } = useUser();
@@ -186,6 +200,20 @@ export const CompanyForm = ({
     handleCancelCustomerProductPicker,
     handlePickCustomerProduct,
     removeCustomerProduct,
+    customerStockForm,
+    customerStock,
+    isCustomerStockDialogOpen,
+    isCustomerStockPickerOpen,
+    setIsCustomerStockPickerOpen,
+    pickedCustomerStockProduct,
+    handleCustomerStockOpenChange,
+    handleOpenCustomerStock,
+    handleCancelCustomerStock,
+    handleSaveCustomerStock,
+    handleOpenCustomerStockPicker,
+    handleCancelCustomerStockPicker,
+    handlePickCustomerStockProduct,
+    removeCustomerStock,
     visitReportForm,
     visitReports,
     isVisitReportDialogOpen,
@@ -216,6 +244,16 @@ export const CompanyForm = ({
     handleCancelQuote,
     handleSaveQuote,
     removeQuote,
+    returnOrderForm,
+    returnOrders,
+    isReturnOrderDialogOpen,
+    isEditingReturnOrder,
+    handleReturnOrderOpenChange,
+    handleOpenReturnOrder,
+    handleEditReturnOrder,
+    handleCancelReturnOrder,
+    handleSaveReturnOrder,
+    removeReturnOrder,
     followUps,
     addFollowUp,
     updateFollowUp,
@@ -228,6 +266,11 @@ export const CompanyForm = ({
     addTransporterCountry,
     updateTransporterCountry,
     removeTransporterCountry,
+    processings,
+    addProcessing,
+    updateProcessing,
+    removeProcessing,
+    supplierOptions,
     toggleRole,
     salesData,
     setSalesData,
@@ -242,6 +285,7 @@ export const CompanyForm = ({
     purchaseOrgCompanies,
     productGroups,
     availableProducts,
+    suppliers,
     currentUserName: user?.fullName ?? undefined,
   });
 
@@ -302,6 +346,10 @@ export const CompanyForm = ({
           isPending={isPending}
           isCustomerOrProspect={isCustomerOrProspect}
         />
+
+        {isCustomerOrProspect && (
+          <MarketingSection isPending={isPending} industries={industries} />
+        )}
 
         {isDebtorVisible && (
           <DebtorSection
@@ -376,6 +424,16 @@ export const CompanyForm = ({
         )}
 
         {selectedRoles.includes("customer") && (
+          <ReturnsSection
+            returnOrders={returnOrders}
+            removeReturnOrder={removeReturnOrder}
+            handleOpenReturnOrder={handleOpenReturnOrder}
+            handleEditReturnOrder={handleEditReturnOrder}
+            isPending={isPending}
+          />
+        )}
+
+        {selectedRoles.includes("customer") && (
           <FollowUpsSection
             followUps={followUps}
             addFollowUp={addFollowUp}
@@ -405,6 +463,17 @@ export const CompanyForm = ({
           />
         )}
 
+        {selectedRoles.includes("processor") && (
+          <ProcessingsSection
+            processings={processings}
+            addProcessing={addProcessing}
+            updateProcessing={updateProcessing}
+            removeProcessing={removeProcessing}
+            supplierOptions={supplierOptions}
+            isPending={isPending}
+          />
+        )}
+
         <DocumentsSection />
 
         <SearchCodesSection isPending={isPending} />
@@ -430,6 +499,15 @@ export const CompanyForm = ({
             products={customerProducts}
             removeProduct={removeCustomerProduct}
             handleOpenProduct={handleOpenCustomerProduct}
+            isPending={isPending}
+          />
+        )}
+
+        {selectedRoles.includes("customer") && (
+          <CustomerStockSection
+            stock={customerStock}
+            removeStock={removeCustomerStock}
+            handleOpenStock={handleOpenCustomerStock}
             isPending={isPending}
           />
         )}
@@ -558,6 +636,25 @@ export const CompanyForm = ({
         products={availableProducts}
       />
 
+      <CustomerStockDialog
+        isOpen={isCustomerStockDialogOpen}
+        onOpenChange={handleCustomerStockOpenChange}
+        onCancel={handleCancelCustomerStock}
+        onSave={handleSaveCustomerStock}
+        form={customerStockForm}
+        selectedProduct={pickedCustomerStockProduct}
+        onBrowse={handleOpenCustomerStockPicker}
+      />
+
+      <ProductPickerDialog
+        isOpen={isCustomerStockPickerOpen}
+        onOpenChange={setIsCustomerStockPickerOpen}
+        onCancel={handleCancelCustomerStockPicker}
+        onSelect={handlePickCustomerStockProduct}
+        productGroups={productGroups}
+        products={availableProducts}
+      />
+
       <VisitReportDialog
         isOpen={isVisitReportDialogOpen}
         onOpenChange={handleVisitReportOpenChange}
@@ -584,6 +681,15 @@ export const CompanyForm = ({
         onSave={handleSaveQuote}
         form={quoteForm}
         isEditing={isEditingQuote}
+      />
+
+      <ReturnOrderDialog
+        isOpen={isReturnOrderDialogOpen}
+        onOpenChange={handleReturnOrderOpenChange}
+        onCancel={handleCancelReturnOrder}
+        onSave={handleSaveReturnOrder}
+        form={returnOrderForm}
+        isEditing={isEditingReturnOrder}
       />
     </FormProvider>
   );

@@ -46,10 +46,14 @@ import {
   CompanyContactInput,
   CompanyContractInput,
   CompanyCounterOrderInput,
+  CompanyCustomerStockInput,
   CompanyFollowUpInput,
+  CompanyOption,
+  CompanyProcessingInput,
   CompanyProductInput,
   CompanyPurchaseOrderInput,
   CompanyQuoteInput,
+  CompanyReturnOrderInput,
   CompanyTextInput,
   CompanyTransporterCostInput,
   CompanyTransporterCountryInput,
@@ -73,15 +77,19 @@ import {
   createCompanySchema,
   customerProductDialogSchema,
   CustomerProductDialogValues,
+  customerStockDialogSchema,
+  CustomerStockDialogValues,
   DEFAULT_ADDRESS,
   DEFAULT_COMM_SETTING,
   DEFAULT_CONTACT,
   DEFAULT_CONTRACT_SELECTION,
   DEFAULT_COUNTER_ORDER,
   DEFAULT_CUSTOMER_PRODUCT,
+  DEFAULT_CUSTOMER_STOCK,
   DEFAULT_PRODUCT,
   DEFAULT_PURCHASE_ORDER,
   DEFAULT_QUOTE,
+  DEFAULT_RETURN_ORDER,
   DEFAULT_TEXT,
   DEFAULT_VISIT_REPORT,
   productDialogSchema,
@@ -90,6 +98,8 @@ import {
   PurchaseOrderDialogValues,
   quoteDialogSchema,
   QuoteDialogValues,
+  returnOrderDialogSchema,
+  ReturnOrderDialogValues,
   textDialogSchema,
   TextDialogValues,
   USAGE_CATEGORY_FIELDS,
@@ -189,6 +199,7 @@ type UseCompanySubmitParams = {
   purchaseOrgCompanies: DebtorCompanyOption[];
   productGroups: ProductGroupOption[];
   availableProducts: ProductOption[];
+  suppliers: CompanyOption[];
   currentUserName?: string;
 };
 
@@ -200,6 +211,7 @@ export const useCompanySubmit = ({
   purchaseOrgCompanies,
   productGroups,
   availableProducts,
+  suppliers,
   currentUserName,
 }: UseCompanySubmitParams) => {
   const router = useRouter();
@@ -249,6 +261,15 @@ export const useCompanySubmit = ({
   >([]);
   const [pickedCustomerProduct, setPickedCustomerProduct] =
     useState<ProductOption | null>(null);
+  const [isCustomerStockDialogOpen, setIsCustomerStockDialogOpen] =
+    useState(false);
+  const [isCustomerStockPickerOpen, setIsCustomerStockPickerOpen] =
+    useState(false);
+  const [customerStock, setCustomerStock] = useState<
+    CompanyCustomerStockInput[]
+  >([]);
+  const [pickedCustomerStockProduct, setPickedCustomerStockProduct] =
+    useState<ProductOption | null>(null);
   const [isVisitReportDialogOpen, setIsVisitReportDialogOpen] = useState(false);
   const [visitReports, setVisitReports] = useState<VisitReportInput[]>([]);
   const [editingVisitReportIndex, setEditingVisitReportIndex] = useState<
@@ -267,6 +288,14 @@ export const useCompanySubmit = ({
   const [editingQuoteIndex, setEditingQuoteIndex] = useState<number | null>(
     null,
   );
+  const [isReturnOrderDialogOpen, setIsReturnOrderDialogOpen] =
+    useState(false);
+  const [returnOrders, setReturnOrders] = useState<CompanyReturnOrderInput[]>(
+    [],
+  );
+  const [editingReturnOrderIndex, setEditingReturnOrderIndex] = useState<
+    number | null
+  >(null);
   const [followUps, setFollowUps] = useState<CompanyFollowUpInput[]>([]);
   const [transporterCosts, setTransporterCosts] = useState<
     CompanyTransporterCostInput[]
@@ -274,6 +303,7 @@ export const useCompanySubmit = ({
   const [transporterCountries, setTransporterCountries] = useState<
     CompanyTransporterCountryInput[]
   >([]);
+  const [processings, setProcessings] = useState<CompanyProcessingInput[]>([]);
 
   const form = useForm<CompanyFormValues>({
     resolver: zodResolver(createCompanySchema()),
@@ -321,6 +351,21 @@ export const useCompanySubmit = ({
       invoiceEmailTo: "",
       printEmailZeroValueInvoices: false,
       sendXmlWithInvoice: false,
+      industry: "",
+      classification: "",
+      visitFrequency: "0",
+      callFrequencyPerYear: "0",
+      targetDateNextVisit: "",
+      visitReason: "",
+      potentialAnnualRevenue: "0.00",
+      targetAnnualRevenue: "0.00",
+      potentialAnnualSales: "0.000",
+      targetAnnualSales: "0.000",
+      numberOfEmployees: "0",
+      visitPlanning: Array.from({ length: 12 }, () => ({
+        call: false,
+        visit: false,
+      })),
       address: {
         category: [],
         poBox: false,
@@ -402,6 +447,11 @@ export const useCompanySubmit = ({
     defaultValues: DEFAULT_CUSTOMER_PRODUCT,
   });
 
+  const customerStockForm = useForm<CustomerStockDialogValues>({
+    resolver: zodResolver(customerStockDialogSchema),
+    defaultValues: DEFAULT_CUSTOMER_STOCK,
+  });
+
   const projectForm = useForm<ProjectFormValues>({
     resolver: zodResolver(projectSchema),
     defaultValues: DEFAULT_PROJECT,
@@ -425,6 +475,11 @@ export const useCompanySubmit = ({
   const quoteForm = useForm<QuoteDialogValues>({
     resolver: zodResolver(quoteDialogSchema),
     defaultValues: DEFAULT_QUOTE,
+  });
+
+  const returnOrderForm = useForm<ReturnOrderDialogValues>({
+    resolver: zodResolver(returnOrderDialogSchema),
+    defaultValues: DEFAULT_RETURN_ORDER,
   });
 
   const addressValues = form.watch("address");
@@ -508,6 +563,18 @@ export const useCompanySubmit = ({
     ...purchaseOrgCompanies.map((c) => ({
       value: c.uuid,
       label: c.companyName,
+    })),
+  ];
+
+  // Supplier dropdown for the Processing grid — the label leads with the
+  // supplier code (searchCode1) since that's the "Supplier code" column.
+  const supplierOptions = [
+    { value: "", label: COMMON_TEXT.emptyOption },
+    ...suppliers.map((s) => ({
+      value: s.uuid,
+      label: s.searchCode1
+        ? `${s.searchCode1} — ${s.companyName}`
+        : s.companyName,
     })),
   ];
 
@@ -1134,6 +1201,66 @@ export const useCompanySubmit = ({
   const removeCustomerProduct = (index: number) =>
     setCustomerProducts((prev) => prev.filter((_, i) => i !== index));
 
+  // ── Customer stock handlers ──────────────────────────────────────────────────
+
+  const handleCustomerStockOpenChange = (open: boolean) => {
+    if (!open) {
+      customerStockForm.reset(DEFAULT_CUSTOMER_STOCK);
+      setPickedCustomerStockProduct(null);
+    }
+    setIsCustomerStockDialogOpen(open);
+  };
+
+  const handleOpenCustomerStock = () => {
+    customerStockForm.reset(DEFAULT_CUSTOMER_STOCK);
+    setPickedCustomerStockProduct(null);
+    setIsCustomerStockDialogOpen(true);
+  };
+
+  const handleCancelCustomerStock = () => {
+    customerStockForm.reset(DEFAULT_CUSTOMER_STOCK);
+    setPickedCustomerStockProduct(null);
+    setIsCustomerStockDialogOpen(false);
+  };
+
+  const handleOpenCustomerStockPicker = () =>
+    setIsCustomerStockPickerOpen(true);
+
+  const handleCancelCustomerStockPicker = () =>
+    setIsCustomerStockPickerOpen(false);
+
+  const handlePickCustomerStockProduct = (product: ProductOption) => {
+    setPickedCustomerStockProduct(product);
+    customerStockForm.setValue("productUuid", product.uuid);
+    setIsCustomerStockPickerOpen(false);
+  };
+
+  const handleSaveCustomerStock = customerStockForm.handleSubmit((values) => {
+    if (!pickedCustomerStockProduct) {
+      return;
+    }
+    setCustomerStock((prev) => [
+      ...prev,
+      {
+        location: values.location || undefined,
+        productUuid: pickedCustomerStockProduct.uuid,
+        // Snapshotted so the stock grid stays readable even if the catalog
+        // product is renamed later.
+        productCode: pickedCustomerStockProduct.productCode,
+        productName: pickedCustomerStockProduct.name,
+        quantity: values.quantity || "0.000",
+        reason: values.reason,
+        description: values.description || undefined,
+      },
+    ]);
+    customerStockForm.reset(DEFAULT_CUSTOMER_STOCK);
+    setPickedCustomerStockProduct(null);
+    setIsCustomerStockDialogOpen(false);
+  });
+
+  const removeCustomerStock = (index: number) =>
+    setCustomerStock((prev) => prev.filter((_, i) => i !== index));
+
   // ── Visit report handlers ────────────────────────────────────────────────────
 
   const contactLabel = (contact: CompanyContactInput) =>
@@ -1428,6 +1555,86 @@ export const useCompanySubmit = ({
   const removeQuote = (index: number) =>
     setQuotes((prev) => prev.filter((_, i) => i !== index));
 
+  // ── Return order handlers ────────────────────────────────────────────────────
+
+  const mapReturnOrder = (
+    values: ReturnOrderDialogValues,
+  ): CompanyReturnOrderInput => ({
+    orderReference: values.orderReference || undefined,
+    customerRef: values.customerRef || undefined,
+    ourReference: values.ourReference || undefined,
+    status: values.status,
+    orderDate: values.orderDate || undefined,
+    complaintRef: values.complaintRef || undefined,
+    returnReason: values.returnReason,
+    totalWeightKg: values.totalWeightKg || "0.00",
+    totalExclVat: values.totalExclVat || "0.00",
+    handlingBlocked: values.handlingBlocked,
+    remarks: values.remarks || undefined,
+  });
+
+  const handleReturnOrderOpenChange = (open: boolean) => {
+    if (!open) {
+      returnOrderForm.reset(DEFAULT_RETURN_ORDER);
+      setEditingReturnOrderIndex(null);
+    }
+    setIsReturnOrderDialogOpen(open);
+  };
+
+  const handleOpenReturnOrder = () => {
+    setEditingReturnOrderIndex(null);
+    returnOrderForm.reset({
+      ...DEFAULT_RETURN_ORDER,
+      orderDate: todayDateString(),
+    });
+    setIsReturnOrderDialogOpen(true);
+  };
+
+  const handleEditReturnOrder = (index: number) => {
+    const order = returnOrders[index];
+    if (!order) {
+      return;
+    }
+    setEditingReturnOrderIndex(index);
+    returnOrderForm.reset({
+      orderReference: order.orderReference ?? "",
+      customerRef: order.customerRef ?? "",
+      ourReference: order.ourReference ?? "",
+      status: order.status ?? "open",
+      orderDate: order.orderDate ?? "",
+      complaintRef: order.complaintRef ?? "",
+      returnReason: order.returnReason ?? ("" as ReturnOrderDialogValues["returnReason"]),
+      totalWeightKg: order.totalWeightKg ?? "0.00",
+      totalExclVat: order.totalExclVat ?? "0.00",
+      handlingBlocked: order.handlingBlocked ?? false,
+      remarks: order.remarks ?? "",
+    });
+    setIsReturnOrderDialogOpen(true);
+  };
+
+  const handleCancelReturnOrder = () => {
+    returnOrderForm.reset(DEFAULT_RETURN_ORDER);
+    setEditingReturnOrderIndex(null);
+    setIsReturnOrderDialogOpen(false);
+  };
+
+  const handleSaveReturnOrder = returnOrderForm.handleSubmit((values) => {
+    const entry = mapReturnOrder(values);
+    setReturnOrders((prev) =>
+      editingReturnOrderIndex === null
+        ? [...prev, entry]
+        : prev.map((order, i) =>
+            i === editingReturnOrderIndex ? entry : order,
+          ),
+    );
+    returnOrderForm.reset(DEFAULT_RETURN_ORDER);
+    setEditingReturnOrderIndex(null);
+    setIsReturnOrderDialogOpen(false);
+  });
+
+  const removeReturnOrder = (index: number) =>
+    setReturnOrders((prev) => prev.filter((_, i) => i !== index));
+
   // ── Follow-up handlers (inline grid) ─────────────────────────────────────────
 
   // "New" appends a row with the date and "by" auto-filled; the contact person,
@@ -1515,6 +1722,35 @@ export const useCompanySubmit = ({
 
   const removeTransporterCountry = (index: number) =>
     setTransporterCountries((prev) => prev.filter((_, i) => i !== index));
+
+  // ── Processing handlers (inline grid) ────────────────────────────────────────
+
+  // "New" appends a blank processing row; every column is edited inline.
+  const addProcessing = () =>
+    setProcessings((prev) => [
+      ...prev,
+      {
+        editing: undefined,
+        preference: false,
+        supplierUuid: undefined,
+        deliveryTime: 0,
+        deliveryTimeUnit: undefined,
+        processorLocation: undefined,
+      },
+    ]);
+
+  const updateProcessing = (
+    index: number,
+    patch: Partial<CompanyProcessingInput>,
+  ) =>
+    setProcessings((prev) =>
+      prev.map((processing, i) =>
+        i === index ? { ...processing, ...patch } : processing,
+      ),
+    );
+
+  const removeProcessing = (index: number) =>
+    setProcessings((prev) => prev.filter((_, i) => i !== index));
 
   // ── Role handler ─────────────────────────────────────────────────────────────
 
@@ -1672,6 +1908,36 @@ export const useCompanySubmit = ({
           invoiceEmailTo: values.invoiceEmailTo || undefined,
           printEmailZeroValueInvoices: values.printEmailZeroValueInvoices,
           sendXmlWithInvoice: values.sendXmlWithInvoice,
+          industry: values.industry || undefined,
+          classification: (values.classification ||
+            undefined) as InsertCompanies["classification"],
+          visitFrequency: values.visitFrequency
+            ? Number(values.visitFrequency)
+            : undefined,
+          callFrequencyPerYear: values.callFrequencyPerYear
+            ? Number(values.callFrequencyPerYear)
+            : undefined,
+          targetDateNextVisit: values.targetDateNextVisit
+            ? new Date(values.targetDateNextVisit)
+            : null,
+          visitReason: (values.visitReason ||
+            undefined) as InsertCompanies["visitReason"],
+          potentialAnnualRevenue: values.potentialAnnualRevenue
+            ? String(values.potentialAnnualRevenue)
+            : undefined,
+          targetAnnualRevenue: values.targetAnnualRevenue
+            ? String(values.targetAnnualRevenue)
+            : undefined,
+          potentialAnnualSales: values.potentialAnnualSales
+            ? String(values.potentialAnnualSales)
+            : undefined,
+          targetAnnualSales: values.targetAnnualSales
+            ? String(values.targetAnnualSales)
+            : undefined,
+          numberOfEmployees: values.numberOfEmployees
+            ? Number(values.numberOfEmployees)
+            : undefined,
+          visitPlanning: values.visitPlanning,
         },
         isBlocked,
         allAddresses,
@@ -1688,6 +1954,9 @@ export const useCompanySubmit = ({
         followUps,
         transporterCosts,
         transporterCountries,
+        returnOrders,
+        processings,
+        customerStock,
       );
       setState(result);
       if (result.success) router.push("/companies");
@@ -1822,6 +2091,21 @@ export const useCompanySubmit = ({
     handlePickCustomerProduct,
     removeCustomerProduct,
 
+    customerStockForm,
+    customerStock,
+    isCustomerStockDialogOpen,
+    isCustomerStockPickerOpen,
+    setIsCustomerStockPickerOpen,
+    pickedCustomerStockProduct,
+    handleCustomerStockOpenChange,
+    handleOpenCustomerStock,
+    handleCancelCustomerStock,
+    handleSaveCustomerStock,
+    handleOpenCustomerStockPicker,
+    handleCancelCustomerStockPicker,
+    handlePickCustomerStockProduct,
+    removeCustomerStock,
+
     visitReportForm,
     visitReports,
     isVisitReportDialogOpen,
@@ -1855,6 +2139,17 @@ export const useCompanySubmit = ({
     handleSaveQuote,
     removeQuote,
 
+    returnOrderForm,
+    returnOrders,
+    isReturnOrderDialogOpen,
+    isEditingReturnOrder: editingReturnOrderIndex !== null,
+    handleReturnOrderOpenChange,
+    handleOpenReturnOrder,
+    handleEditReturnOrder,
+    handleCancelReturnOrder,
+    handleSaveReturnOrder,
+    removeReturnOrder,
+
     followUps,
     addFollowUp,
     updateFollowUp,
@@ -1869,6 +2164,12 @@ export const useCompanySubmit = ({
     addTransporterCountry,
     updateTransporterCountry,
     removeTransporterCountry,
+
+    processings,
+    addProcessing,
+    updateProcessing,
+    removeProcessing,
+    supplierOptions,
 
     toggleRole,
 
