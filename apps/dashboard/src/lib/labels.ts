@@ -26,6 +26,7 @@ import type {
   ContractType,
   Currency,
   CustomerGroup,
+  CompanyClassification,
   DevTheorWt,
   EdiOption,
   FeaturesQuality,
@@ -1129,6 +1130,15 @@ export const CUSTOMER_GROUP_LABELS: Record<CustomerGroup, string> = {
   road_water_construction: "Road & Water Construction",
   hardware_stores: "Hardware Stores",
   care_homes: "Care Homes",
+};
+
+export const COMPANY_CLASSIFICATION_LABELS: Record<
+  CompanyClassification,
+  string
+> = {
+  A: "Major customer",
+  B: "Medium customer",
+  C: "Small customer",
 };
 
 export const COMPLAINT_TYPE_LABELS: Record<ComplaintType, string> = {
