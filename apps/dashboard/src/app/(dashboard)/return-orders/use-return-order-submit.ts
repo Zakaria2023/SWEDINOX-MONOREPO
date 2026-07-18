@@ -1,5 +1,36 @@
 "use client";
 
+import {
+  AddressOption,
+  getAddressesForCompany,
+} from "@/app/(dashboard)/addresses/actions";
+import { CompanyOption } from "@/app/(dashboard)/companies/actions";
+import {
+  ContactOption,
+  getContactsForCompany,
+} from "@/app/(dashboard)/contacts/actions";
+import {
+  getOrdersForCompany,
+  OrderOption,
+} from "@/app/(dashboard)/orders/actions";
+import { SelectOption } from "@/components/shadcn/select";
+import {
+  InvoicePaymentTerm,
+  invoicePaymentTerms,
+  ReturnOrderReason,
+  returnOrderReasons,
+  TransportMode,
+  transportModes,
+  WarehouseTransportRegion,
+  warehouseTransportRegions,
+} from "@/lib/enums";
+import {
+  COMMON_TEXT,
+  INVOICE_PAYMENT_TERM_LABELS,
+  RETURN_ORDER_REASON_LABELS,
+  TRANSPORT_MODE_LABELS,
+  WAREHOUSE_TRANSPORT_REGION_LABELS,
+} from "@/lib/labels";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -11,40 +42,9 @@ import {
 } from "./actions";
 import {
   DEFAULT_RETURN_ORDER,
-  returnOrderSchema,
   ReturnOrderFormValues,
+  returnOrderSchema,
 } from "./validation";
-import {
-  AddressOption,
-  getAddressesForCompany,
-} from "@/app/(dashboard)/addresses/actions";
-import { CompanyOption } from "@/app/(dashboard)/companies/actions";
-import {
-  getOrdersForCompany,
-  OrderOption,
-} from "@/app/(dashboard)/orders/actions";
-import {
-  ContactOption,
-  getContactsForCompany,
-} from "@/app/(dashboard)/contacts/actions";
-import { SelectOption } from "@/components/shadcn/select";
-import {
-  invoicePaymentTerms,
-  returnOrderReasons,
-  transportModes,
-  warehouseTransportRegions,
-  InvoicePaymentTerm,
-  ReturnOrderReason,
-  TransportMode,
-  WarehouseTransportRegion,
-} from "@/lib/enums";
-import {
-  COMMON_TEXT,
-  INVOICE_PAYMENT_TERM_LABELS,
-  RETURN_ORDER_REASON_LABELS,
-  TRANSPORT_MODE_LABELS,
-  WAREHOUSE_TRANSPORT_REGION_LABELS,
-} from "@/lib/labels";
 
 type UseReturnOrderSubmitParams = {
   companies: CompanyOption[];
@@ -86,7 +86,7 @@ export const useReturnOrderSubmit = ({
   const isPickup = form.watch("isPickup");
 
   const customerCompanies = companies.filter(
-    (c) => c.roles.includes("customer") || c.roles.includes("prospect"),
+    (c) => c.roles?.includes("customer") || c.roles?.includes("prospect"),
   );
 
   const companyOptions: SelectOption[] = [
