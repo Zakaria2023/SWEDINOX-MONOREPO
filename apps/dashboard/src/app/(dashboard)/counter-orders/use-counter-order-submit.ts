@@ -6,6 +6,7 @@ import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import {
   CounterOrderActionResult,
+  CounterOrderExtras,
   CounterOrderInput,
   createCounterOrder,
 } from "./actions";
@@ -13,6 +14,9 @@ import {
   createCounterOrderSchema,
   CounterOrderFormValues,
 } from "./validation";
+
+const toDecimal = (value: string | undefined, fallback: string): string =>
+  value && value.trim() !== "" ? value : fallback;
 
 export const useCounterOrderSubmit = () => {
   const [isPending, startTransition] = useTransition();
@@ -45,10 +49,39 @@ export const useCounterOrderSubmit = () => {
       deliveryAddressUuid: "",
       deliveryDate: "",
       deliveryRemark: "",
+
+      completeDelivery: false,
+      transportBlockage: false,
+      vehicleWithCrane: false,
+      vehicleWithCanopy: false,
+      bundlingSeparate: false,
+      transportRegion: "",
+      maxLengthMm: "",
+      maxBundleWeightKg: "",
+      deliveryAfterTime: "00:00",
+      deliverForTime: "00:00",
+      transportMode: "",
+
+      showNetPrice: false,
+      scrapSurchargeSeparate: false,
+      calculateVatIfApplicable: false,
+      financialBlockage: false,
+      invoiceBlockage: false,
+      onlyTotalAmountOnInvoice: false,
+      includeOptionPricesInMaterialPrices: false,
+      paymentTerms: "",
+      billingAddressUuid: "",
+      blockingReason: "",
+
       amountExVat: "0.00",
       weightKg: "0.000",
       gainPercent: "0.00",
       remarks: "",
+
+      surcharges: [],
+      documents: [],
+      contractUuids: [],
+      texts: [],
     },
   });
 
@@ -79,13 +112,63 @@ export const useCounterOrderSubmit = () => {
         deliveryAddressUuid: values.deliveryAddressUuid || undefined,
         deliveryDate: values.deliveryDate || undefined,
         deliveryRemark: values.deliveryRemark || undefined,
+
+        completeDelivery: values.completeDelivery,
+        transportBlockage: values.transportBlockage,
+        vehicleWithCrane: values.vehicleWithCrane,
+        vehicleWithCanopy: values.vehicleWithCanopy,
+        bundlingSeparate: values.bundlingSeparate,
+        transportRegion: values.transportRegion || undefined,
+        maxLengthMm: values.maxLengthMm ? Number(values.maxLengthMm) : undefined,
+        maxBundleWeightKg: values.maxBundleWeightKg || undefined,
+        deliveryAfterTime: values.deliveryAfterTime || undefined,
+        deliverForTime: values.deliverForTime || undefined,
+        transportMode: values.transportMode || undefined,
+
+        showNetPrice: values.showNetPrice,
+        scrapSurchargeSeparate: values.scrapSurchargeSeparate,
+        calculateVatIfApplicable: values.calculateVatIfApplicable,
+        financialBlockage: values.financialBlockage,
+        invoiceBlockage: values.invoiceBlockage,
+        onlyTotalAmountOnInvoice: values.onlyTotalAmountOnInvoice,
+        includeOptionPricesInMaterialPrices:
+          values.includeOptionPricesInMaterialPrices,
+        paymentTerms: values.paymentTerms || undefined,
+        billingAddressUuid: values.billingAddressUuid || undefined,
+        blockingReason: values.blockingReason || undefined,
+
         amountExVat: values.amountExVat || "0.00",
         weightKg: values.weightKg || "0.000",
         gainPercent: values.gainPercent || "0.00",
         remarks: values.remarks || undefined,
+
+        documents: values.documents?.length ? values.documents : undefined,
       };
 
-      const result = await createCounterOrder(input);
+      const extras: CounterOrderExtras = {
+        surcharges: values.surcharges.map((surcharge) => ({
+          companyUuid: surcharge.companyUuid || null,
+          order: 0,
+          description: surcharge.description || null,
+          surcharge: toDecimal(surcharge.surcharge, "0.00"),
+          unit: surcharge.unit || null,
+          fromValue: toDecimal(surcharge.fromValue, "0.00"),
+          unitIndication: surcharge.unitIndication || null,
+          tierUnit: surcharge.tierUnit || null,
+          amount: toDecimal(surcharge.amount, "0.00"),
+          profit: toDecimal(surcharge.profit, "0.00"),
+          thirdParties: surcharge.thirdParties,
+          companyCode: surcharge.companyCode || null,
+        })),
+        texts: values.texts.map((text) => ({
+          title: text.title,
+          textBlock: text.textBlock,
+          textCategoryUuid: text.textCategoryUuid || null,
+        })),
+        contractUuids: values.contractUuids,
+      };
+
+      const result = await createCounterOrder(input, extras);
       setState(result);
     });
   });

@@ -6,9 +6,12 @@ import { Controller, FormProvider } from "react-hook-form";
 import { CompanyOption } from "@/app/(dashboard)/companies/actions";
 import {
   AddressOption,
+  ContractOption,
   getAddressesByCompanyUuid,
+  getContractsByCompanyUuid,
 } from "@/app/(dashboard)/counter-orders/actions";
 import { useCounterOrderSubmit } from "@/app/(dashboard)/counter-orders/use-counter-order-submit";
+import { TextCategoryOption } from "@/app/(dashboard)/text-categories/actions";
 import {
   ContactOption,
   getContactsByCompanyUuid,
@@ -21,6 +24,12 @@ import { FormActions } from "@/components/ui/form-actions";
 import { FormError } from "@/components/ui/form-error";
 import { FormLabel } from "@/components/ui/form-field";
 import { FormSelectField } from "@/components/ui/form-select-field";
+import { ContractsSection } from "./sections/contracts-section";
+import { DocumentsSection } from "./sections/documents-section";
+import { FinancesSection } from "./sections/finances-section";
+import { LogisticsSection } from "./sections/logistics-section";
+import { SurchargesSection } from "./sections/surcharges-section";
+import { TextsSection } from "./sections/texts-section";
 import {
   counterOrderPriorities,
   counterOrderStatuses,
@@ -39,6 +48,7 @@ import {
 
 type CounterOrderFormProps = {
   companies: CompanyOption[];
+  textCategories: TextCategoryOption[];
 };
 
 type CheckboxFieldProps = {
@@ -64,13 +74,17 @@ const CheckboxField = ({
   </label>
 );
 
-export const CounterOrderForm = ({ companies }: CounterOrderFormProps) => {
+export const CounterOrderForm = ({
+  companies,
+  textCategories,
+}: CounterOrderFormProps) => {
   const router = useRouter();
   const { form, isPending, onSubmit, state } = useCounterOrderSubmit();
   const { control, register } = form;
 
   const [contacts, setContacts] = useState<ContactOption[]>([]);
   const [addresses, setAddresses] = useState<AddressOption[]>([]);
+  const [contracts, setContracts] = useState<ContractOption[]>([]);
 
   const handleCompanyChange = async (
     value: string,
@@ -79,16 +93,21 @@ export const CounterOrderForm = ({ companies }: CounterOrderFormProps) => {
     fieldOnChange(value);
     form.setValue("contactUuid", "");
     form.setValue("deliveryAddressUuid", "");
+    form.setValue("billingAddressUuid", "");
+    form.setValue("contractUuids", []);
     setContacts([]);
     setAddresses([]);
+    setContracts([]);
 
     if (value) {
-      const [contactResult, addressResult] = await Promise.all([
+      const [contactResult, addressResult, contractResult] = await Promise.all([
         getContactsByCompanyUuid(value),
         getAddressesByCompanyUuid(value),
+        getContractsByCompanyUuid(value),
       ]);
       setContacts(contactResult);
       setAddresses(addressResult);
+      setContracts(contractResult);
     }
   };
 
@@ -447,6 +466,18 @@ export const CounterOrderForm = ({ companies }: CounterOrderFormProps) => {
             </div>
           </div>
         </section>
+
+        <LogisticsSection />
+
+        <FinancesSection addressOptions={addressOptions} />
+
+        <SurchargesSection companyOptions={companyOptions} />
+
+        <DocumentsSection />
+
+        <ContractsSection contracts={contracts} />
+
+        <TextsSection textCategories={textCategories} />
 
         {/* Summary */}
         <section className="space-y-4">

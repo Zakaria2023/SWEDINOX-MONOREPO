@@ -21,6 +21,7 @@ import {
   contractTypes,
 } from "../../lib/enums";
 import { Companies } from "./companies";
+import { CounterOrders } from "./counter-orders";
 import { Orders } from "./orders";
 import { PurchaseOrders } from "./purchase-orders";
 
@@ -66,6 +67,7 @@ export const Contracts = mysqlTable(
 
     companyUuid: char("company_uuid", { length: 36 }),
     orderUuid: char("order_uuid", { length: 36 }),
+    counterOrderUuid: char("counter_order_uuid", { length: 36 }),
     purchaseOrderUuid: char("purchase_order_uuid", { length: 36 }),
     role: mysqlEnum("role", contractableRoles),
 
@@ -183,6 +185,7 @@ export const Contracts = mysqlTable(
   (table) => [
     index("idx_contracts_company_uuid").on(table.companyUuid),
     index("idx_contracts_order_uuid").on(table.orderUuid),
+    index("idx_contracts_counter_order_uuid").on(table.counterOrderUuid),
     index("idx_contracts_purchase_order_uuid").on(table.purchaseOrderUuid),
     index("idx_contracts_contract_group_uuid").on(table.contractGroupUuid),
     foreignKey({
@@ -194,6 +197,11 @@ export const Contracts = mysqlTable(
       name: "fk_contracts_order",
       columns: [table.orderUuid],
       foreignColumns: [Orders.uuid],
+    }),
+    foreignKey({
+      name: "fk_contracts_counter_order",
+      columns: [table.counterOrderUuid],
+      foreignColumns: [CounterOrders.uuid],
     }),
     foreignKey({
       name: "fk_contracts_purchase_order",
