@@ -4,6 +4,7 @@ import { FormProvider } from "react-hook-form";
 import { useOrderSubmit } from "@/app/(dashboard)/orders/use-order-submit";
 import { ClerkUserOption } from "@/lib/server/clerk";
 import { CompanyOption } from "@/app/(dashboard)/companies/actions";
+import { TextCategoryOption } from "@/app/(dashboard)/text-categories/actions";
 import { FormActions } from "@/components/ui/form-actions";
 import { FormError } from "@/components/ui/form-error";
 import { OrderInformationSection } from "./sections/order-information-section";
@@ -11,14 +12,19 @@ import { OrderTypeSection } from "./sections/order-type-section";
 import { DeliverySection } from "./sections/delivery-section";
 import { LogisticsSection } from "./sections/logistics-section";
 import { FinancesSection } from "./sections/finances-section";
+import { ContractsSection } from "./sections/contracts-section";
+import { SurchargesSection } from "./sections/surcharges-section";
 import { RemarksSection } from "./sections/remarks-section";
+import { TextsSection } from "./sections/texts-section";
+import { DocumentsSection } from "./sections/documents-section";
 
 type Props = {
   companies: CompanyOption[];
   clerkUsers: ClerkUserOption[];
+  textCategories: TextCategoryOption[];
 };
 
-export const OrderForm = ({ companies, clerkUsers }: Props) => {
+export const OrderForm = ({ companies, clerkUsers, textCategories }: Props) => {
   const {
     form,
     isPending,
@@ -35,6 +41,7 @@ export const OrderForm = ({ companies, clerkUsers }: Props) => {
     deliveryTermOptions,
     weightTypeOptions,
     paymentTermOptions,
+    contracts,
     isLoadingCompanyData,
     handleCompanyChange,
     handleCancel,
@@ -74,7 +81,15 @@ export const OrderForm = ({ companies, clerkUsers }: Props) => {
           paymentTermOptions={paymentTermOptions}
         />
 
+        <ContractsSection contracts={contracts} />
+
+        <SurchargesSection companyOptions={companyOptions} />
+
         <RemarksSection />
+
+        <TextsSection textCategories={textCategories} />
+
+        <DocumentsSection />
 
         <FormActions
           submitLabel="Create Order"

@@ -1,12 +1,36 @@
 import { z } from "zod";
 import {
+  contractTierUnits,
   deliveryTerms,
   deliveryTypes,
   invoicePaymentTerms,
+  invoiceSurchargeDescriptions,
   orderMethods,
   orderWeightTypes,
 } from "@/lib/enums";
 import { todayDateString, currentYear } from "@/lib/helpers";
+
+export const orderSurchargeSchema = z.object({
+  description: z
+    .union([z.enum(invoiceSurchargeDescriptions), z.literal("")])
+    .optional(),
+  surcharge: z.string().optional(),
+  unit: z.string().optional(),
+  fromValue: z.string().optional(),
+  unitIndication: z.string().optional(),
+  tierUnit: z.union([z.enum(contractTierUnits), z.literal("")]).optional(),
+  amount: z.string().optional(),
+  profit: z.string().optional(),
+  thirdParties: z.boolean(),
+  companyCode: z.string().optional(),
+  companyUuid: z.string().optional(),
+});
+
+export const orderTextSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  textCategoryUuid: z.string().optional(),
+  textBlock: z.string().min(1, "Text is required"),
+});
 
 export const orderSchema = z.object({
   // Header
@@ -81,8 +105,22 @@ export const orderSchema = z.object({
 
   // Remarks
   remarks: z.string().optional(),
+
+  // Surcharges
+  surcharges: z.array(orderSurchargeSchema),
+
+  // Documents
+  documents: z.array(z.object({ id: z.string(), fileName: z.string() })),
+
+  // Contracts
+  contractUuids: z.array(z.string()),
+
+  // Texts
+  texts: z.array(orderTextSchema),
 });
 
+export type OrderSurchargeValues = z.infer<typeof orderSurchargeSchema>;
+export type OrderTextValues = z.infer<typeof orderTextSchema>;
 export type OrderFormValues = z.infer<typeof orderSchema>;
 
 export const DEFAULT_ORDER: OrderFormValues = {
@@ -142,4 +180,9 @@ export const DEFAULT_ORDER: OrderFormValues = {
   blockingReason: "",
 
   remarks: "",
+
+  surcharges: [],
+  documents: [],
+  contractUuids: [],
+  texts: [],
 };

@@ -17,9 +17,13 @@ export const todayDateString = () => new Date().toISOString().split("T")[0];
  */
 export const currentYear = () => new Date().getFullYear();
 
+export const toDecimal = (
+  value: string | undefined,
+  fallback: string,
+): string => (value && value.trim() !== "" ? value : fallback);
+
 export const toIntOrNull = (value: string | undefined): number | null =>
   value !== undefined && value.trim() !== "" ? Number(value) : null;
-
 
 export const asNumber = (v: string) => (v === "" ? "" : Number(v));
 
