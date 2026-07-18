@@ -31,6 +31,7 @@ import { SearchCodesSection } from "@/components/companies/sections/search-codes
 import { ContactsSection } from "@/components/companies/sections/contacts-section";
 import { ProductsSection } from "@/components/companies/sections/products-section";
 import { CustomerProductsSection } from "@/components/companies/sections/customer-products-section";
+import { CustomerStockSection } from "@/components/companies/sections/customer-stock-section";
 import { FirstAddressDialog } from "@/components/companies/dialogs/first-address-dialog";
 import { AdditionalAddressDialog } from "@/components/companies/dialogs/additional-address-dialog";
 import { CommunicationSettingDialog } from "@/components/companies/dialogs/communication-setting-dialog";
@@ -42,6 +43,7 @@ import { CounterOrderDialog } from "@/components/companies/dialogs/counter-order
 import { ProductDialog } from "@/components/companies/dialogs/product-dialog";
 import { ProductPickerDialog } from "@/components/companies/dialogs/product-picker-dialog";
 import { CustomerProductDialog } from "@/components/companies/dialogs/customer-product-dialog";
+import { CustomerStockDialog } from "@/components/companies/dialogs/customer-stock-dialog";
 import { VisitReportDialog } from "@/components/companies/dialogs/visit-report-dialog";
 import { PurchaseOrderDialog } from "@/components/companies/dialogs/purchase-order-dialog";
 import { QuoteDialog } from "@/components/companies/dialogs/quote-dialog";
@@ -188,6 +190,20 @@ export const CompanyForm = ({
     handleCancelCustomerProductPicker,
     handlePickCustomerProduct,
     removeCustomerProduct,
+    customerStockForm,
+    customerStock,
+    isCustomerStockDialogOpen,
+    isCustomerStockPickerOpen,
+    setIsCustomerStockPickerOpen,
+    pickedCustomerStockProduct,
+    handleCustomerStockOpenChange,
+    handleOpenCustomerStock,
+    handleCancelCustomerStock,
+    handleSaveCustomerStock,
+    handleOpenCustomerStockPicker,
+    handleCancelCustomerStockPicker,
+    handlePickCustomerStockProduct,
+    removeCustomerStock,
     visitReportForm,
     visitReports,
     isVisitReportDialogOpen,
@@ -412,6 +428,15 @@ export const CompanyForm = ({
           />
         )}
 
+        {selectedRoles.includes("customer") && (
+          <CustomerStockSection
+            stock={customerStock}
+            removeStock={removeCustomerStock}
+            handleOpenStock={handleOpenCustomerStock}
+            isPending={isPending}
+          />
+        )}
+
         <FormError>{state.error}</FormError>
 
         <FormActions
@@ -532,6 +557,25 @@ export const CompanyForm = ({
         onOpenChange={setIsCustomerProductPickerOpen}
         onCancel={handleCancelCustomerProductPicker}
         onSelect={handlePickCustomerProduct}
+        productGroups={productGroups}
+        products={availableProducts}
+      />
+
+      <CustomerStockDialog
+        isOpen={isCustomerStockDialogOpen}
+        onOpenChange={handleCustomerStockOpenChange}
+        onCancel={handleCancelCustomerStock}
+        onSave={handleSaveCustomerStock}
+        form={customerStockForm}
+        selectedProduct={pickedCustomerStockProduct}
+        onBrowse={handleOpenCustomerStockPicker}
+      />
+
+      <ProductPickerDialog
+        isOpen={isCustomerStockPickerOpen}
+        onOpenChange={setIsCustomerStockPickerOpen}
+        onCancel={handleCancelCustomerStockPicker}
+        onSelect={handlePickCustomerStockProduct}
         productGroups={productGroups}
         products={availableProducts}
       />
