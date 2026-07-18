@@ -12,6 +12,9 @@ import {
   COMMON_TEXT,
   COMPANY_LANGUAGE_LABELS,
   COMPANY_ROLE_LABELS,
+  COMPLAINT_CATEGORY_LABELS,
+  COMPLAINT_REPORT_LABELS,
+  COMPLAINT_TYPE_LABELS,
   COUNTER_ORDER_STATUS_LABELS,
   INVOICE_PAYMENT_TERM_LABELS,
   INVOICE_VAT_SCENARIO_LABELS,
@@ -235,6 +238,74 @@ export const CompanyDetailView = ({ company, invoices }: Props) => {
                     <TableCell>{report.representative ?? na}</TableCell>
                     <TableCell className="text-right">
                       {daysInSystem(report.createdAt)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </section>
+      )}
+
+      {/* Complaints */}
+      {company.complaints.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-gray-700">
+            Complaints{" "}
+            <span className="ml-1 text-xs font-normal text-muted-foreground">
+              {company.complaints.length}
+            </span>
+          </h2>
+          <div className="overflow-x-auto rounded-lg border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Complaint no</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Report</TableHead>
+                  <TableHead>Report date</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead className="text-right">Qty</TableHead>
+                  <TableHead className="text-right">Amount</TableHead>
+                  <TableHead className="text-right">Weight</TableHead>
+                  <TableHead className="text-right">Days in system</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {company.complaints.map((complaint) => (
+                  <TableRow key={complaint.uuid}>
+                    <TableCell className="font-medium">
+                      {complaint.id}
+                    </TableCell>
+                    <TableCell>
+                      {complaint.complaintType
+                        ? COMPLAINT_TYPE_LABELS[complaint.complaintType]
+                        : na}
+                    </TableCell>
+                    <TableCell>
+                      {complaint.report
+                        ? COMPLAINT_REPORT_LABELS[complaint.report]
+                        : na}
+                    </TableCell>
+                    <TableCell>{formatDate(complaint.reportDate)}</TableCell>
+                    <TableCell>
+                      {complaint.category
+                        ? COMPLAINT_CATEGORY_LABELS[complaint.category]
+                        : na}
+                    </TableCell>
+                    <TableCell>{complaint.description ?? na}</TableCell>
+                    <TableCell className="text-right whitespace-nowrap">
+                      {complaint.qty}
+                    </TableCell>
+                    <TableCell className="text-right whitespace-nowrap">
+                      € {complaint.amount}
+                    </TableCell>
+                    <TableCell className="text-right whitespace-nowrap">
+                      {complaint.weight}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {daysInSystem(complaint.createdAt)}
                     </TableCell>
                   </TableRow>
                 ))}

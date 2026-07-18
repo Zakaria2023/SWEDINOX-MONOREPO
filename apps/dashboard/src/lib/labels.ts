@@ -27,6 +27,8 @@ import type {
   ContractType,
   Currency,
   CustomerGroup,
+  CustomerStockReason,
+  CompanyClassification,
   DevTheorWt,
   EdiOption,
   FeaturesQuality,
@@ -1160,6 +1162,15 @@ export const CUSTOMER_GROUP_LABELS: Record<CustomerGroup, string> = {
   care_homes: "Care Homes",
 };
 
+export const COMPANY_CLASSIFICATION_LABELS: Record<
+  CompanyClassification,
+  string
+> = {
+  A: "Major customer",
+  B: "Medium customer",
+  C: "Small customer",
+};
+
 export const COMPLAINT_TYPE_LABELS: Record<ComplaintType, string> = {
   counter_order: "Counter order",
   general: "General",
@@ -1314,4 +1325,17 @@ export const CURRENCY_LABELS: Record<Currency, string> = {
   usd: "Dollar",
   gbp: "Pound",
   hkd: "HK-Dollar",
+};
+
+export const CUSTOMER_STOCK_REASON_LABELS: Record<
+  CustomerStockReason,
+  string
+> = {
+  initial_stock: "Initial stock",
+  correction: "Correction",
+  counting_difference: "Counting difference",
+  damaged: "Damaged",
+  return_from_customer: "Return from customer",
+  transfer: "Transfer",
+  other: "Other",
 };

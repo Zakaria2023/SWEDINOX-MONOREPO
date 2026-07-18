@@ -1279,3 +1279,27 @@ export const customerGroups = [
 ] as const satisfies readonly string[];
 
 export type CustomerGroup = (typeof customerGroups)[number];
+
+export const customerStockReasons = [
+  "initial_stock",
+  "correction",
+  "counting_difference",
+  "damaged",
+  "return_from_customer",
+  "transfer",
+  "other",
+] as const satisfies readonly string[];
+
+export type CustomerStockReason = (typeof customerStockReasons)[number];
+
+// One row of a company's yearly visit planning grid. The array is ordered
+// January (index 0) → December (index 11).
+export type VisitPlanningEntry = { call: boolean; visit: boolean };
+
+export const companyClassifications = [
+  "A",
+  "B",
+  "C",
+] as const satisfies readonly string[];
+
+export type CompanyClassification = (typeof companyClassifications)[number];
