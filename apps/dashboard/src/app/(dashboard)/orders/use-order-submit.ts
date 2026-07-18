@@ -43,6 +43,7 @@ import {
   ORDER_METHOD_LABELS,
   ORDER_WEIGHT_TYPE_LABELS,
 } from "@/lib/labels";
+import { toDecimal } from "@/lib/helpers";
 
 type UseOrderSubmitParams = {
   companies: CompanyOption[];
@@ -61,9 +62,6 @@ const makeOptions = <T extends string>(
 const addressLabel = (a: AddressOption) =>
   [a.altName, a.streetAndNo, a.postalCode, a.city].filter(Boolean).join(", ") ||
   a.uuid;
-
-const toDecimal = (value: string | undefined, fallback: string): string =>
-  value && value.trim() !== "" ? value : fallback;
 
 export const useOrderSubmit = ({ companies }: UseOrderSubmitParams) => {
   const router = useRouter();
@@ -86,7 +84,7 @@ export const useOrderSubmit = ({ companies }: UseOrderSubmitParams) => {
 
   // Only show customer/prospect companies
   const customerCompanies = companies.filter(
-    (c) => c.roles.includes("customer") || c.roles.includes("prospect"),
+    (c) => c.roles?.includes("customer") || c.roles?.includes("prospect"),
   );
 
   const companyOptions: SelectOption[] = [
@@ -149,7 +147,9 @@ export const useOrderSubmit = ({ companies }: UseOrderSubmitParams) => {
     setProjects([]);
     setAddresses([]);
     setContracts([]);
-    if (!uuid) return;
+    if (!uuid) {
+      return;
+    }
     setIsLoadingCompanyData(true);
     Promise.all([
       getContactsForCompany(uuid),
@@ -194,67 +194,67 @@ export const useOrderSubmit = ({ companies }: UseOrderSubmitParams) => {
     startTransition(async () => {
       const result = await createOrder(
         {
-        companyUuid: values.companyUuid,
-        contactUuid: values.contactUuid || null,
-        orderMethod: values.orderMethod || null,
-        customerRef: values.customerRef || null,
-        leaveCustomer: values.leaveCustomer,
-        ourReference: values.ourReference || null,
-        seller: values.seller || null,
-        projectUuid: values.projectUuid || null,
-        priceDate: values.priceDate ? new Date(values.priceDate) : null,
-        orderCategory: values.orderCategory || null,
-        handlingBlocked: values.handlingBlocked,
+          companyUuid: values.companyUuid,
+          contactUuid: values.contactUuid,
+          orderMethod: values.orderMethod,
+          customerRef: values.customerRef,
+          leaveCustomer: values.leaveCustomer,
+          ourReference: values.ourReference,
+          seller: values.seller,
+          projectUuid: values.projectUuid,
+          priceDate: values.priceDate ? new Date(values.priceDate) : null,
+          orderCategory: values.orderCategory,
+          handlingBlocked: values.handlingBlocked,
 
-        isPickup: values.isPickup,
-        isIncidental: values.isIncidental,
-        isConsignment: values.isConsignment,
-        consignmentDuration: values.consignmentDuration || null,
-        isInternalProduction: values.isInternalProduction,
-        isKlantMateriaal: values.isKlantMateriaal,
-        weightType: values.weightType || null,
-        isOverlengte: values.isOverlengte,
-        isPrinted: values.isPrinted,
-        isMailed: values.isMailed,
-        isFaxed: values.isFaxed,
+          isPickup: values.isPickup,
+          isIncidental: values.isIncidental,
+          isConsignment: values.isConsignment,
+          consignmentDuration: values.consignmentDuration,
+          isInternalProduction: values.isInternalProduction,
+          isKlantMateriaal: values.isKlantMateriaal,
+          weightType: values.weightType,
+          isOverlengte: values.isOverlengte,
+          isPrinted: values.isPrinted,
+          isMailed: values.isMailed,
+          isFaxed: values.isFaxed,
 
-        deliveryTerms: values.isPickup ? null : values.deliveryTerms || null,
-        deliveryAddressUuid: values.isPickup
-          ? null
-          : values.deliveryAddressUuid || null,
-        deliveryType: values.deliveryType,
-        deliveryDate: values.deliveryDate
-          ? new Date(values.deliveryDate)
-          : null,
-        deliveryWeek: values.deliveryWeek ?? null,
-        deliveryYear: values.deliveryYear ?? null,
-        deliveryRemark: values.deliveryRemark || null,
+          deliveryTerms: values.isPickup ? null : values.deliveryTerms,
+          deliveryAddressUuid: values.isPickup
+            ? null
+            : values.deliveryAddressUuid,
+          deliveryType: values.deliveryType,
+          deliveryDate: values.deliveryDate
+            ? new Date(values.deliveryDate)
+            : null,
+          deliveryWeek: values.deliveryWeek ?? null,
+          deliveryYear: values.deliveryYear ?? null,
+          deliveryRemark: values.deliveryRemark,
 
-        completeDelivery: values.completeDelivery,
-        transportBlockage: values.transportBlockage,
-        vehicleWithCrane: values.vehicleWithCrane,
-        vehicleWithCanopy: values.vehicleWithCanopy,
-        bundlingSeparate: values.bundlingSeparate,
-        transportRegion: values.transportRegion || null,
-        maxLengthMm: values.maxLengthMm ? Number(values.maxLengthMm) : null,
-        maxBundleWeightKg: values.maxBundleWeightKg || null,
-        deliveryAfterTime: values.deliveryAfterTime || null,
-        deliverForTime: values.deliverForTime || null,
-        transportMode: values.transportMode || null,
+          completeDelivery: values.completeDelivery,
+          transportBlockage: values.transportBlockage,
+          vehicleWithCrane: values.vehicleWithCrane,
+          vehicleWithCanopy: values.vehicleWithCanopy,
+          bundlingSeparate: values.bundlingSeparate,
+          transportRegion: values.transportRegion,
+          maxLengthMm: values.maxLengthMm ? Number(values.maxLengthMm) : null,
+          maxBundleWeightKg: values.maxBundleWeightKg,
+          deliveryAfterTime: values.deliveryAfterTime,
+          deliverForTime: values.deliverForTime,
+          transportMode: values.transportMode,
 
-        showNetPrice: values.showNetPrice,
-        scrapSurchargeSeparate: values.scrapSurchargeSeparate,
-        calculateVatIfApplicable: values.calculateVatIfApplicable,
-        financialBlockage: values.financialBlockage,
-        invoiceBlockage: values.invoiceBlockage,
-        onlyTotalAmountOnInvoice: values.onlyTotalAmountOnInvoice,
-        includeOptionPricesInMaterialPrices:
-          values.includeOptionPricesInMaterialPrices,
-        paymentTerms: values.paymentTerms || null,
-        billingAddressUuid: values.billingAddressUuid || null,
-        blockingReason: values.blockingReason || null,
+          showNetPrice: values.showNetPrice,
+          scrapSurchargeSeparate: values.scrapSurchargeSeparate,
+          calculateVatIfApplicable: values.calculateVatIfApplicable,
+          financialBlockage: values.financialBlockage,
+          invoiceBlockage: values.invoiceBlockage,
+          onlyTotalAmountOnInvoice: values.onlyTotalAmountOnInvoice,
+          includeOptionPricesInMaterialPrices:
+            values.includeOptionPricesInMaterialPrices,
+          paymentTerms: values.paymentTerms,
+          billingAddressUuid: values.billingAddressUuid,
+          blockingReason: values.blockingReason,
 
-          remarks: values.remarks || null,
+          remarks: values.remarks,
           documents: values.documents.length > 0 ? values.documents : null,
         },
         extras,
