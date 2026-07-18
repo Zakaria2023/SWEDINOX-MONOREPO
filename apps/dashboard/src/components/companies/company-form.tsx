@@ -1,6 +1,7 @@
 "use client";
 
 import { DebtorCompanyOption } from "@/app/(dashboard)/companies/actions";
+import { IndustryOption } from "@/app/(dashboard)/industries/actions";
 import { useCompanySubmit } from "@/app/(dashboard)/companies/use-company-submit";
 import {
   ContractForProjectOption,
@@ -15,6 +16,7 @@ import { CompanyDetailsSection } from "@/components/companies/sections/company-d
 import { RolesSection } from "@/components/companies/sections/roles-section";
 import { ContractsSection } from "@/components/companies/sections/contracts-section";
 import { SalesSection } from "@/components/companies/sections/sales-section";
+import { MarketingSection } from "@/components/companies/sections/marketing-section";
 import { DebtorSection } from "@/components/companies/sections/debtor-section";
 import { InvoicesSection } from "@/components/companies/sections/invoices-section";
 import { TextsSection } from "@/components/companies/sections/texts-section";
@@ -57,6 +59,7 @@ type CompanyFormProps = {
   purchaseOrgCompanies: DebtorCompanyOption[];
   productGroups: ProductGroupOption[];
   availableProducts: ProductOption[];
+  industries: IndustryOption[];
 };
 
 export const CompanyForm = ({
@@ -67,6 +70,7 @@ export const CompanyForm = ({
   purchaseOrgCompanies,
   productGroups,
   availableProducts,
+  industries,
 }: CompanyFormProps) => {
   const router = useRouter();
   const { user } = useUser();
@@ -308,6 +312,10 @@ export const CompanyForm = ({
           isPending={isPending}
           isCustomerOrProspect={isCustomerOrProspect}
         />
+
+        {isCustomerOrProspect && (
+          <MarketingSection isPending={isPending} industries={industries} />
+        )}
 
         {isDebtorVisible && (
           <DebtorSection

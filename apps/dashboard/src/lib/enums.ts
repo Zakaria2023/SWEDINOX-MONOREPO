@@ -1261,3 +1261,15 @@ export const customerStockReasons = [
 ] as const satisfies readonly string[];
 
 export type CustomerStockReason = (typeof customerStockReasons)[number];
+
+// One row of a company's yearly visit planning grid. The array is ordered
+// January (index 0) → December (index 11).
+export type VisitPlanningEntry = { call: boolean; visit: boolean };
+
+export const companyClassifications = [
+  "A",
+  "B",
+  "C",
+] as const satisfies readonly string[];
+
+export type CompanyClassification = (typeof companyClassifications)[number];
