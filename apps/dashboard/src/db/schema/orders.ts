@@ -156,22 +156,18 @@ export const OrderSurcharges = mysqlTable(
 
     order: int("order").default(0).notNull(),
     description: mysqlEnum("description", invoiceSurchargeDescriptions),
-    surcharge: decimal("surcharge", { precision: 15, scale: 2 })
-      .default("0.00")
-      .notNull(),
+    surcharge: decimal("surcharge", { precision: 15, scale: 2 }).default(
+      "0.00",
+    ),
     unit: varchar("unit", { length: 50 }),
-    fromValue: decimal("from_value", { precision: 15, scale: 2 })
-      .default("0.00")
-      .notNull(),
+    fromValue: decimal("from_value", { precision: 15, scale: 2 }).default(
+      "0.00",
+    ),
     unitIndication: varchar("unit_indication", { length: 50 }),
     tierUnit: mysqlEnum("tier_unit", contractTierUnits),
-    amount: decimal("amount", { precision: 15, scale: 2 })
-      .default("0.00")
-      .notNull(),
-    profit: decimal("profit", { precision: 15, scale: 2 })
-      .default("0.00")
-      .notNull(),
-    thirdParties: boolean("third_parties").default(false).notNull(),
+    amount: decimal("amount", { precision: 15, scale: 2 }).default("0.00"),
+    profit: decimal("profit", { precision: 15, scale: 2 }).default("0.00"),
+    thirdParties: boolean("third_parties").default(false),
     companyCode: varchar("company_code", { length: 100 }),
 
     createdAt: timestamp("created_at").defaultNow().notNull(),
