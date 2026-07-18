@@ -38,6 +38,7 @@ import {
   MachineFormValues,
   MachineProductDialogValues,
 } from "./validation";
+import { toIntOrNull } from "@/lib/helpers";
 
 export type PostProcessingRow = {
   option: MachineOptionType | "";
@@ -48,9 +49,6 @@ export type PostProcessingRow = {
 type UseMachineSubmitParams = {
   stockLocations: MachineStockLocationOption[];
 };
-
-const toIntOrNull = (value: string | undefined): number | null =>
-  value !== undefined && value.trim() !== "" ? Number(value) : null;
 
 export const useMachineSubmit = ({
   stockLocations,
