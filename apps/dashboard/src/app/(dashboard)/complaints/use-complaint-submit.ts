@@ -17,24 +17,34 @@ import {
 import { CompanyOption } from "@/app/(dashboard)/companies/actions";
 import { ProductOption } from "@/app/(dashboard)/products/actions";
 import { SelectOption } from "@/components/shadcn/select";
+import type { DashboardUserOption } from "@/lib/server/clerk";
 import {
   complaintCategories,
+  complaintCauses,
   complaintReports,
+  complaintSolutions,
+  complaintStatuses,
   complaintTypes,
   ComplaintCategory,
+  ComplaintCause,
   ComplaintReport,
+  ComplaintSolution,
   ComplaintType,
 } from "@/lib/enums";
 import {
   COMMON_TEXT,
   COMPLAINT_CATEGORY_LABELS,
+  COMPLAINT_CAUSE_LABELS,
   COMPLAINT_REPORT_LABELS,
+  COMPLAINT_SOLUTION_LABELS,
+  COMPLAINT_STATUS_LABELS,
   COMPLAINT_TYPE_LABELS,
 } from "@/lib/labels";
 
 type UseComplaintSubmitParams = {
   companies: CompanyOption[];
   products: ProductOption[];
+  responsibleUsers: DashboardUserOption[];
 };
 
 const emptyOption = { value: "", label: COMMON_TEXT.emptyOption };
@@ -50,6 +60,7 @@ const makeOptions = <T extends string>(
 export const useComplaintSubmit = ({
   companies,
   products,
+  responsibleUsers,
 }: UseComplaintSubmitParams) => {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -101,6 +112,26 @@ export const useComplaintSubmit = ({
     COMPLAINT_CATEGORY_LABELS as Record<ComplaintCategory, string>,
   );
 
+  const statusOptions: SelectOption[] = complaintStatuses.map((v) => ({
+    value: v,
+    label: COMPLAINT_STATUS_LABELS[v],
+  }));
+
+  const causeOptions = makeOptions(
+    complaintCauses,
+    COMPLAINT_CAUSE_LABELS as Record<ComplaintCause, string>,
+  );
+
+  const solutionOptions = makeOptions(
+    complaintSolutions,
+    COMPLAINT_SOLUTION_LABELS as Record<ComplaintSolution, string>,
+  );
+
+  const responsibleOptions: SelectOption[] = [
+    emptyOption,
+    ...responsibleUsers.map((u) => ({ value: u.id, label: u.label })),
+  ];
+
   const handleCompanyChange = (uuid: string) => {
     form.setValue("companyUuid", uuid);
     form.setValue("contactUuid", "");
@@ -121,16 +152,32 @@ export const useComplaintSubmit = ({
     startTransition(async () => {
       const result = await createComplaint({
         companyUuid: values.companyUuid,
-        contactUuid: values.contactUuid || null,
-        complaintType: values.complaintType || null,
-        report: values.report || null,
+        contactUuid: values.contactUuid,
+        complaintType: values.complaintType,
+        report: values.report,
         reportDate: values.reportDate ? new Date(values.reportDate) : null,
-        description: values.description || null,
-        category: values.category || null,
-        productUuid: values.productUuid || null,
+        description: values.description,
+        category: values.category,
+        productUuid: values.productUuid,
         qty: values.qty,
         amount: values.amount,
         weight: values.weight,
+        status: values.status,
+        responsibleUserId: values.responsibleUserId,
+        deadline: values.deadline,
+        cause: values.cause,
+        explanationOfCause: values.explanationOfCause,
+        solution: values.solution,
+        explanationOfSolution: values.explanationOfSolution,
+        costsCustomer: values.costsCustomer,
+        costsCustomerNote: values.costsCustomerNote,
+        internalCosts: values.internalCosts,
+        internalCostsNote: values.internalCostsNote,
+        extraCosts: values.extraCosts,
+        extraCostsNote: values.extraCostsNote,
+        toBeReclaimed: values.toBeReclaimed,
+        toBeReclaimedNote: values.toBeReclaimedNote,
+        documents: values.documents,
       });
 
       setState(result);
@@ -151,6 +198,10 @@ export const useComplaintSubmit = ({
     complaintTypeOptions,
     complaintReportOptions,
     complaintCategoryOptions,
+    statusOptions,
+    causeOptions,
+    solutionOptions,
+    responsibleOptions,
     isLoadingContacts,
     handleCompanyChange,
     handleCancel,
