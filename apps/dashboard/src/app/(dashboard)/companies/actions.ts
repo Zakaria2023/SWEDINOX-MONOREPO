@@ -45,6 +45,13 @@ import {
   ReturnOrders,
   SelectReturnOrders,
 } from "@/db/schema/return-orders";
+import { Processings, InsertProcessings } from "@/db/schema/processings";
+import { Complaints, SelectComplaints } from "@/db/schema/complaints";
+import {
+  CustomerStock,
+  InsertCustomerStock,
+  SelectCustomerStock,
+} from "@/db/schema/customer-stock";
 import { PurchaseCompanyType } from "@/lib/enums";
 import { generateUuid } from "@/lib/helpers";
 import { currentUser } from "@clerk/nextjs/server";
@@ -167,6 +174,16 @@ export type CompanyReturnOrderInput = Omit<
   "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt"
 >;
 
+export type CompanyProcessingInput = Omit<
+  InsertProcessings,
+  "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt"
+>;
+
+export type CompanyCustomerStockInput = Omit<
+  InsertCustomerStock,
+  "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt"
+>;
+
 export type DebtorCompanyOption = Pick<SelectCompanies, "uuid" | "companyName">;
 
 export type CompanyActionResult = {
@@ -182,6 +199,8 @@ export type CompanyDetail = SelectCompanies & {
   purchaseOrders: SelectPurchaseOrders[];
   followUps: SelectFollowUps[];
   returnOrders: SelectReturnOrders[];
+  complaints: SelectComplaints[];
+  customerStock: SelectCustomerStock[];
 };
 
 export type ContactOption = Pick<
@@ -246,6 +265,18 @@ export const getCompanyDetail = async (
     .where(eq(ReturnOrders.companyUuid, uuid))
     .orderBy(desc(ReturnOrders.createdAt));
 
+  const complaints = await db
+    .select()
+    .from(Complaints)
+    .where(eq(Complaints.companyUuid, uuid))
+    .orderBy(desc(Complaints.createdAt));
+
+  const customerStock = await db
+    .select()
+    .from(CustomerStock)
+    .where(eq(CustomerStock.companyUuid, uuid))
+    .orderBy(desc(CustomerStock.createdAt));
+
   return {
     ...company,
     addresses,
@@ -254,6 +285,8 @@ export const getCompanyDetail = async (
     followUps,
     purchaseOrders,
     returnOrders,
+    complaints,
+    customerStock,
   };
 };
 
@@ -394,6 +427,8 @@ export const createCompany = async (
   quotes: CompanyQuoteInput[] = [],
   followUps: CompanyFollowUpInput[] = [],
   returnOrders: CompanyReturnOrderInput[] = [],
+  processings: CompanyProcessingInput[] = [],
+  customerStock: CompanyCustomerStockInput[] = [],
 ): Promise<CompanyActionResult> => {
   const uuid = generateUuid();
 
@@ -518,6 +553,22 @@ export const createCompany = async (
       for (const returnOrder of returnOrders) {
         await tx.insert(ReturnOrders).values({
           ...returnOrder,
+          uuid: generateUuid(),
+          companyUuid: uuid,
+        });
+      }
+
+      for (const processing of processings) {
+        await tx.insert(Processings).values({
+          ...processing,
+          uuid: generateUuid(),
+          companyUuid: uuid,
+        });
+      }
+
+      for (const stock of customerStock) {
+        await tx.insert(CustomerStock).values({
+          ...stock,
           uuid: generateUuid(),
           companyUuid: uuid,
         });

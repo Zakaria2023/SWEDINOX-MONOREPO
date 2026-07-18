@@ -793,6 +793,36 @@ export const machineCapacityUnits = [
 
 export type MachineCapacityUnit = (typeof machineCapacityUnits)[number];
 
+export const processingEditings = [
+  "stamping",
+  "polished",
+  "paper_interleaving",
+  "pickling",
+  "laser",
+  "blue_foil",
+  "bending",
+  "uv_foil",
+  "rolling",
+  "anodizing",
+  "slitting",
+  "brushing",
+  "remove_foil",
+  "certificate_2_1",
+  "sawing",
+  "coating",
+  "punching",
+  "grinding",
+  "decoiling",
+  "duplo",
+  "embossing",
+  "shear_cut",
+  "laser_foil",
+  "perforate",
+  "certificate_3_1",
+] as const satisfies readonly string[];
+
+export type ProcessingEditing = (typeof processingEditings)[number];
+
 export const textUsageCategories = [
   "purchase_quote_request",
   "purchase_order",
@@ -1259,3 +1289,27 @@ export const customerGroups = [
 ] as const satisfies readonly string[];
 
 export type CustomerGroup = (typeof customerGroups)[number];
+
+export const customerStockReasons = [
+  "initial_stock",
+  "correction",
+  "counting_difference",
+  "damaged",
+  "return_from_customer",
+  "transfer",
+  "other",
+] as const satisfies readonly string[];
+
+export type CustomerStockReason = (typeof customerStockReasons)[number];
+
+// One row of a company's yearly visit planning grid. The array is ordered
+// January (index 0) → December (index 11).
+export type VisitPlanningEntry = { call: boolean; visit: boolean };
+
+export const companyClassifications = [
+  "A",
+  "B",
+  "C",
+] as const satisfies readonly string[];
+
+export type CompanyClassification = (typeof companyClassifications)[number];

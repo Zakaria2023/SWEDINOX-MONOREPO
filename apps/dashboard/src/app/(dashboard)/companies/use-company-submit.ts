@@ -46,7 +46,10 @@ import {
   CompanyContactInput,
   CompanyContractInput,
   CompanyCounterOrderInput,
+  CompanyCustomerStockInput,
   CompanyFollowUpInput,
+  CompanyOption,
+  CompanyProcessingInput,
   CompanyProductInput,
   CompanyPurchaseOrderInput,
   CompanyQuoteInput,
@@ -72,12 +75,15 @@ import {
   createCompanySchema,
   customerProductDialogSchema,
   CustomerProductDialogValues,
+  customerStockDialogSchema,
+  CustomerStockDialogValues,
   DEFAULT_ADDRESS,
   DEFAULT_COMM_SETTING,
   DEFAULT_CONTACT,
   DEFAULT_CONTRACT_SELECTION,
   DEFAULT_COUNTER_ORDER,
   DEFAULT_CUSTOMER_PRODUCT,
+  DEFAULT_CUSTOMER_STOCK,
   DEFAULT_PRODUCT,
   DEFAULT_PURCHASE_ORDER,
   DEFAULT_QUOTE,
@@ -191,6 +197,7 @@ type UseCompanySubmitParams = {
   purchaseOrgCompanies: DebtorCompanyOption[];
   productGroups: ProductGroupOption[];
   availableProducts: ProductOption[];
+  suppliers: CompanyOption[];
   currentUserName?: string;
 };
 
@@ -202,6 +209,7 @@ export const useCompanySubmit = ({
   purchaseOrgCompanies,
   productGroups,
   availableProducts,
+  suppliers,
   currentUserName,
 }: UseCompanySubmitParams) => {
   const router = useRouter();
@@ -251,6 +259,15 @@ export const useCompanySubmit = ({
   >([]);
   const [pickedCustomerProduct, setPickedCustomerProduct] =
     useState<ProductOption | null>(null);
+  const [isCustomerStockDialogOpen, setIsCustomerStockDialogOpen] =
+    useState(false);
+  const [isCustomerStockPickerOpen, setIsCustomerStockPickerOpen] =
+    useState(false);
+  const [customerStock, setCustomerStock] = useState<
+    CompanyCustomerStockInput[]
+  >([]);
+  const [pickedCustomerStockProduct, setPickedCustomerStockProduct] =
+    useState<ProductOption | null>(null);
   const [isVisitReportDialogOpen, setIsVisitReportDialogOpen] = useState(false);
   const [visitReports, setVisitReports] = useState<VisitReportInput[]>([]);
   const [editingVisitReportIndex, setEditingVisitReportIndex] = useState<
@@ -278,6 +295,7 @@ export const useCompanySubmit = ({
     number | null
   >(null);
   const [followUps, setFollowUps] = useState<CompanyFollowUpInput[]>([]);
+  const [processings, setProcessings] = useState<CompanyProcessingInput[]>([]);
 
   const form = useForm<CompanyFormValues>({
     resolver: zodResolver(createCompanySchema()),
@@ -325,6 +343,21 @@ export const useCompanySubmit = ({
       invoiceEmailTo: "",
       printEmailZeroValueInvoices: false,
       sendXmlWithInvoice: false,
+      industry: "",
+      classification: "",
+      visitFrequency: "0",
+      callFrequencyPerYear: "0",
+      targetDateNextVisit: "",
+      visitReason: "",
+      potentialAnnualRevenue: "0.00",
+      targetAnnualRevenue: "0.00",
+      potentialAnnualSales: "0.000",
+      targetAnnualSales: "0.000",
+      numberOfEmployees: "0",
+      visitPlanning: Array.from({ length: 12 }, () => ({
+        call: false,
+        visit: false,
+      })),
       address: {
         category: [],
         poBox: false,
@@ -404,6 +437,11 @@ export const useCompanySubmit = ({
   const customerProductForm = useForm<CustomerProductDialogValues>({
     resolver: zodResolver(customerProductDialogSchema),
     defaultValues: DEFAULT_CUSTOMER_PRODUCT,
+  });
+
+  const customerStockForm = useForm<CustomerStockDialogValues>({
+    resolver: zodResolver(customerStockDialogSchema),
+    defaultValues: DEFAULT_CUSTOMER_STOCK,
   });
 
   const projectForm = useForm<ProjectFormValues>({
@@ -517,6 +555,18 @@ export const useCompanySubmit = ({
     ...purchaseOrgCompanies.map((c) => ({
       value: c.uuid,
       label: c.companyName,
+    })),
+  ];
+
+  // Supplier dropdown for the Processing grid — the label leads with the
+  // supplier code (searchCode1) since that's the "Supplier code" column.
+  const supplierOptions = [
+    { value: "", label: COMMON_TEXT.emptyOption },
+    ...suppliers.map((s) => ({
+      value: s.uuid,
+      label: s.searchCode1
+        ? `${s.searchCode1} — ${s.companyName}`
+        : s.companyName,
     })),
   ];
 
@@ -1143,6 +1193,66 @@ export const useCompanySubmit = ({
   const removeCustomerProduct = (index: number) =>
     setCustomerProducts((prev) => prev.filter((_, i) => i !== index));
 
+  // ── Customer stock handlers ──────────────────────────────────────────────────
+
+  const handleCustomerStockOpenChange = (open: boolean) => {
+    if (!open) {
+      customerStockForm.reset(DEFAULT_CUSTOMER_STOCK);
+      setPickedCustomerStockProduct(null);
+    }
+    setIsCustomerStockDialogOpen(open);
+  };
+
+  const handleOpenCustomerStock = () => {
+    customerStockForm.reset(DEFAULT_CUSTOMER_STOCK);
+    setPickedCustomerStockProduct(null);
+    setIsCustomerStockDialogOpen(true);
+  };
+
+  const handleCancelCustomerStock = () => {
+    customerStockForm.reset(DEFAULT_CUSTOMER_STOCK);
+    setPickedCustomerStockProduct(null);
+    setIsCustomerStockDialogOpen(false);
+  };
+
+  const handleOpenCustomerStockPicker = () =>
+    setIsCustomerStockPickerOpen(true);
+
+  const handleCancelCustomerStockPicker = () =>
+    setIsCustomerStockPickerOpen(false);
+
+  const handlePickCustomerStockProduct = (product: ProductOption) => {
+    setPickedCustomerStockProduct(product);
+    customerStockForm.setValue("productUuid", product.uuid);
+    setIsCustomerStockPickerOpen(false);
+  };
+
+  const handleSaveCustomerStock = customerStockForm.handleSubmit((values) => {
+    if (!pickedCustomerStockProduct) {
+      return;
+    }
+    setCustomerStock((prev) => [
+      ...prev,
+      {
+        location: values.location || undefined,
+        productUuid: pickedCustomerStockProduct.uuid,
+        // Snapshotted so the stock grid stays readable even if the catalog
+        // product is renamed later.
+        productCode: pickedCustomerStockProduct.productCode,
+        productName: pickedCustomerStockProduct.name,
+        quantity: values.quantity || "0.000",
+        reason: values.reason,
+        description: values.description || undefined,
+      },
+    ]);
+    customerStockForm.reset(DEFAULT_CUSTOMER_STOCK);
+    setPickedCustomerStockProduct(null);
+    setIsCustomerStockDialogOpen(false);
+  });
+
+  const removeCustomerStock = (index: number) =>
+    setCustomerStock((prev) => prev.filter((_, i) => i !== index));
+
   // ── Visit report handlers ────────────────────────────────────────────────────
 
   const contactLabel = (contact: CompanyContactInput) =>
@@ -1546,6 +1656,35 @@ export const useCompanySubmit = ({
   const removeFollowUp = (index: number) =>
     setFollowUps((prev) => prev.filter((_, i) => i !== index));
 
+  // ── Processing handlers (inline grid) ────────────────────────────────────────
+
+  // "New" appends a blank processing row; every column is edited inline.
+  const addProcessing = () =>
+    setProcessings((prev) => [
+      ...prev,
+      {
+        editing: undefined,
+        preference: false,
+        supplierUuid: undefined,
+        deliveryTime: 0,
+        deliveryTimeUnit: undefined,
+        processorLocation: undefined,
+      },
+    ]);
+
+  const updateProcessing = (
+    index: number,
+    patch: Partial<CompanyProcessingInput>,
+  ) =>
+    setProcessings((prev) =>
+      prev.map((processing, i) =>
+        i === index ? { ...processing, ...patch } : processing,
+      ),
+    );
+
+  const removeProcessing = (index: number) =>
+    setProcessings((prev) => prev.filter((_, i) => i !== index));
+
   // ── Role handler ─────────────────────────────────────────────────────────────
 
   const toggleRole = (role: CompanyRole) => {
@@ -1702,6 +1841,36 @@ export const useCompanySubmit = ({
           invoiceEmailTo: values.invoiceEmailTo || undefined,
           printEmailZeroValueInvoices: values.printEmailZeroValueInvoices,
           sendXmlWithInvoice: values.sendXmlWithInvoice,
+          industry: values.industry || undefined,
+          classification: (values.classification ||
+            undefined) as InsertCompanies["classification"],
+          visitFrequency: values.visitFrequency
+            ? Number(values.visitFrequency)
+            : undefined,
+          callFrequencyPerYear: values.callFrequencyPerYear
+            ? Number(values.callFrequencyPerYear)
+            : undefined,
+          targetDateNextVisit: values.targetDateNextVisit
+            ? new Date(values.targetDateNextVisit)
+            : null,
+          visitReason: (values.visitReason ||
+            undefined) as InsertCompanies["visitReason"],
+          potentialAnnualRevenue: values.potentialAnnualRevenue
+            ? String(values.potentialAnnualRevenue)
+            : undefined,
+          targetAnnualRevenue: values.targetAnnualRevenue
+            ? String(values.targetAnnualRevenue)
+            : undefined,
+          potentialAnnualSales: values.potentialAnnualSales
+            ? String(values.potentialAnnualSales)
+            : undefined,
+          targetAnnualSales: values.targetAnnualSales
+            ? String(values.targetAnnualSales)
+            : undefined,
+          numberOfEmployees: values.numberOfEmployees
+            ? Number(values.numberOfEmployees)
+            : undefined,
+          visitPlanning: values.visitPlanning,
         },
         isBlocked,
         allAddresses,
@@ -1717,6 +1886,8 @@ export const useCompanySubmit = ({
         quotes,
         followUps,
         returnOrders,
+        processings,
+        customerStock,
       );
       setState(result);
       if (result.success) router.push("/companies");
@@ -1851,6 +2022,21 @@ export const useCompanySubmit = ({
     handlePickCustomerProduct,
     removeCustomerProduct,
 
+    customerStockForm,
+    customerStock,
+    isCustomerStockDialogOpen,
+    isCustomerStockPickerOpen,
+    setIsCustomerStockPickerOpen,
+    pickedCustomerStockProduct,
+    handleCustomerStockOpenChange,
+    handleOpenCustomerStock,
+    handleCancelCustomerStock,
+    handleSaveCustomerStock,
+    handleOpenCustomerStockPicker,
+    handleCancelCustomerStockPicker,
+    handlePickCustomerStockProduct,
+    removeCustomerStock,
+
     visitReportForm,
     visitReports,
     isVisitReportDialogOpen,
@@ -1899,6 +2085,12 @@ export const useCompanySubmit = ({
     addFollowUp,
     updateFollowUp,
     removeFollowUp,
+
+    processings,
+    addProcessing,
+    updateProcessing,
+    removeProcessing,
+    supplierOptions,
 
     toggleRole,
 
