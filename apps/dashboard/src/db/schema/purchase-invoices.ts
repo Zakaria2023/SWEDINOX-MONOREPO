@@ -16,6 +16,7 @@ import {
 } from "drizzle-orm/mysql-core";
 import {
   invoicePaymentTerms,
+  invoiceSurchargeDescriptions,
   purchaseInvoiceBlockReasons,
   purchaseInvoiceFiscalBases,
 } from "../../lib/enums";
@@ -105,3 +106,50 @@ export const PurchaseInvoices = mysqlTable(
 
 export type SelectPurchaseInvoices = InferSelectModel<typeof PurchaseInvoices>;
 export type InsertPurchaseInvoices = InferInsertModel<typeof PurchaseInvoices>;
+
+export const PurchaseInvoiceSurcharges = mysqlTable(
+  "PurchaseInvoiceSurcharges",
+  {
+    id: int("id").primaryKey().autoincrement(),
+    uuid: char("uuid", { length: 36 }).notNull().unique(),
+
+    purchaseInvoiceUuid: char("purchase_invoice_uuid", { length: 36 }),
+
+    order: int("order").default(0).notNull(),
+    booked: boolean("booked").default(false).notNull(),
+    orderRef: varchar("order_ref", { length: 100 }),
+    description: mysqlEnum("description", invoiceSurchargeDescriptions),
+    revenueGroup: varchar("revenue_group", { length: 100 }),
+    surcharge: decimal("surcharge", { precision: 15, scale: 2 })
+      .default("0.00")
+      .notNull(),
+    unit: varchar("unit", { length: 50 }),
+    surchargeBasis: decimal("surcharge_basis", { precision: 15, scale: 2 })
+      .default("0.00")
+      .notNull(),
+    amount: decimal("amount", { precision: 15, scale: 2 })
+      .default("0.00")
+      .notNull(),
+    vatRate: decimal("vat_rate", { precision: 5, scale: 2 }),
+
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+  },
+  (table) => [
+    index("idx_purchase_invoice_surcharges_purchase_invoice_uuid").on(
+      table.purchaseInvoiceUuid,
+    ),
+    foreignKey({
+      name: "fk_purchase_invoice_surcharges_purchase_invoice",
+      columns: [table.purchaseInvoiceUuid],
+      foreignColumns: [PurchaseInvoices.uuid],
+    }),
+  ],
+);
+
+export type SelectPurchaseInvoiceSurcharges = InferSelectModel<
+  typeof PurchaseInvoiceSurcharges
+>;
+export type InsertPurchaseInvoiceSurcharges = InferInsertModel<
+  typeof PurchaseInvoiceSurcharges
+>;

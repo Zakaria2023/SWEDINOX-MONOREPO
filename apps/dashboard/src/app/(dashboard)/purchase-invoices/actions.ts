@@ -5,7 +5,9 @@ import {
   Contacts,
   db,
   InsertPurchaseInvoices,
+  InsertPurchaseInvoiceSurcharges,
   PurchaseInvoices,
+  PurchaseInvoiceSurcharges,
   SelectCompanies,
   SelectContacts,
   SelectPurchaseInvoices,
@@ -23,6 +25,11 @@ export type PurchaseInvoiceActionResult = {
 export type PurchaseInvoiceFields = Omit<
   InsertPurchaseInvoices,
   "id" | "uuid" | "createdAt" | "updatedAt"
+>;
+
+export type PurchaseInvoiceSurchargeInput = Omit<
+  InsertPurchaseInvoiceSurcharges,
+  "id" | "uuid" | "purchaseInvoiceUuid" | "createdAt" | "updatedAt"
 >;
 
 export type PurchaseInvoiceListItem = SelectPurchaseInvoices & {
@@ -53,11 +60,23 @@ export const getPurchaseInvoices = async (): Promise<
 
 export const createPurchaseInvoice = async (
   fields: PurchaseInvoiceFields,
+  surcharges: PurchaseInvoiceSurchargeInput[] = [],
 ): Promise<PurchaseInvoiceActionResult> => {
   const uuid = generateUuid();
   try {
-    await db.insert(PurchaseInvoices).values({ ...fields, uuid });
-    redirect("/purchase-invoices");
+    await db.transaction(async (tx) => {
+      await tx.insert(PurchaseInvoices).values({ ...fields, uuid });
+
+      if (surcharges.length > 0) {
+        await tx.insert(PurchaseInvoiceSurcharges).values(
+          surcharges.map((surcharge) => ({
+            ...surcharge,
+            uuid: generateUuid(),
+            purchaseInvoiceUuid: uuid,
+          })),
+        );
+      }
+    });
   } catch (error) {
     return {
       error:
@@ -66,4 +85,6 @@ export const createPurchaseInvoice = async (
           : "Failed to create purchase invoice",
     };
   }
+
+  redirect("/purchase-invoices");
 };

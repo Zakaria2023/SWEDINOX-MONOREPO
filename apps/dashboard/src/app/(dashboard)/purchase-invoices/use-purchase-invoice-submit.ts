@@ -12,6 +12,9 @@ import {
   type PurchaseInvoiceFormValues,
 } from "./validation";
 
+const toDecimal = (value: string | undefined, fallback: string): string =>
+  value && value.trim() !== "" ? value : fallback;
+
 export const usePurchaseInvoiceSubmit = () => {
   const [isPending, startTransition] = useTransition();
   const [state, setState] = useState<PurchaseInvoiceActionResult>({});
@@ -42,12 +45,27 @@ export const usePurchaseInvoiceSubmit = () => {
       creditRestriction: "0.00",
       remarks: "",
       documents: [],
+      surchargeLines: [],
     },
   });
 
   const onSubmit = form.handleSubmit((values) => {
+    const surcharges = values.surchargeLines.map((line) => ({
+      booked: line.booked,
+      orderRef: line.orderRef || null,
+      description: line.description || null,
+      revenueGroup: line.revenueGroup || null,
+      surcharge: toDecimal(line.surcharge, "0.00"),
+      unit: line.unit || null,
+      surchargeBasis: toDecimal(line.surchargeBasis, "0.00"),
+      amount: toDecimal(line.amount, "0.00"),
+      vatRate: line.vatRate?.trim() ? line.vatRate : null,
+      order: 0,
+    }));
+
     startTransition(async () => {
-      const result = await createPurchaseInvoice({
+      const result = await createPurchaseInvoice(
+        {
         companyUuid: values.companyUuid || undefined,
         invoiceSentByContactUuid: values.invoiceSentByContactUuid || undefined,
         bookingDate: values.bookingDate ? new Date(values.bookingDate) : null,
@@ -69,9 +87,11 @@ export const usePurchaseInvoiceSubmit = () => {
         vatMiddle: values.vatMiddle,
         vatLow: values.vatLow,
         creditRestriction: values.creditRestriction,
-        remarks: values.remarks || undefined,
-        documents: values.documents ?? [],
-      });
+          remarks: values.remarks || undefined,
+          documents: values.documents ?? [],
+        },
+        surcharges,
+      );
       setState(result);
     });
   });
