@@ -1,5 +1,5 @@
 "use client";
-
+import { MONTHS } from "@/lib/constants";
 import { IndustryOption } from "@/app/(dashboard)/industries/actions";
 import { CompanyFormValues } from "@/app/(dashboard)/companies/validation";
 import { Checkbox } from "@/components/shadcn/checkbox";
@@ -18,21 +18,6 @@ type Props = {
   isPending: boolean;
   industries: IndustryOption[];
 };
-
-const MONTHS = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-];
 
 const classificationOptions = [
   { value: "", label: COMMON_TEXT.emptyOption },
