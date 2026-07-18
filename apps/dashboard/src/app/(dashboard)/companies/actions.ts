@@ -40,6 +40,7 @@ import {
   InsertFollowUps,
   SelectFollowUps,
 } from "@/db/schema/follow-ups";
+import { Processings, InsertProcessings } from "@/db/schema/processings";
 import { Complaints, SelectComplaints } from "@/db/schema/complaints";
 import {
   CustomerStock,
@@ -160,6 +161,11 @@ export type CompanyPurchaseOrderInput = Omit<
 
 export type CompanyFollowUpInput = Omit<
   InsertFollowUps,
+  "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt"
+>;
+
+export type CompanyProcessingInput = Omit<
+  InsertProcessings,
   "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt"
 >;
 
@@ -402,6 +408,7 @@ export const createCompany = async (
   purchaseOrders: CompanyPurchaseOrderInput[] = [],
   quotes: CompanyQuoteInput[] = [],
   followUps: CompanyFollowUpInput[] = [],
+  processings: CompanyProcessingInput[] = [],
   customerStock: CompanyCustomerStockInput[] = [],
 ): Promise<CompanyActionResult> => {
   const uuid = generateUuid();
@@ -519,6 +526,14 @@ export const createCompany = async (
       for (const followUp of followUps) {
         await tx.insert(FollowUps).values({
           ...followUp,
+          uuid: generateUuid(),
+          companyUuid: uuid,
+        });
+      }
+
+      for (const processing of processings) {
+        await tx.insert(Processings).values({
+          ...processing,
           uuid: generateUuid(),
           companyUuid: uuid,
         });

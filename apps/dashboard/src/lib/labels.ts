@@ -12,6 +12,7 @@ import type {
   CounterOrderPriority,
   CounterOrderStatus,
   MachineCapacityUnit,
+  ProcessingEditing,
   MachineLoadingType,
   MachineOptionType,
   MachineProductionType,
@@ -526,6 +527,34 @@ export const MACHINE_CAPACITY_UNIT_LABELS: Record<MachineCapacityUnit, string> =
     st: "Pieces",
     tn: "Tonnage",
   };
+
+export const PROCESSING_EDITING_LABELS: Record<ProcessingEditing, string> = {
+  stamping: "Stamping",
+  polished: "Polished",
+  paper_interleaving: "Paper interleaving",
+  pickling: "Pickling",
+  laser: "Laser",
+  blue_foil: "Blue Foil",
+  bending: "Bending",
+  uv_foil: "UV Foil",
+  rolling: "Rolling",
+  anodizing: "Anodizing",
+  slitting: "Slitting",
+  brushing: "Brushing",
+  remove_foil: "Remove Foil",
+  certificate_2_1: "2.1 Certificate",
+  sawing: "Sawing",
+  coating: "Coating",
+  punching: "Punching",
+  grinding: "Grinding",
+  decoiling: "Decoiling",
+  duplo: "Duplo",
+  embossing: "Embossing",
+  shear_cut: "ShearCut",
+  laser_foil: "Laser Foil",
+  perforate: "Perforate",
+  certificate_3_1: "3.1 Certificate",
+};
 
 export const TEXT_USAGE_CATEGORY_LABELS: Record<TextUsageCategory, string> = {
   purchase_quote_request: "Purchase Quote Request",

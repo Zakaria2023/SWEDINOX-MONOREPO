@@ -5,6 +5,7 @@ import {
 import {
   getDebtorCompaniesForSelect,
   getPurchaseOrgCompaniesForSelect,
+  getSuppliersForSelect,
 } from "@/app/(dashboard)/companies/actions";
 import { getIndustriesForSelect } from "@/app/(dashboard)/industries/actions";
 import { getProductGroupsForSelect } from "@/app/(dashboard)/product-groups/actions";
@@ -22,6 +23,7 @@ const AddCompanyPage = async () => {
     purchaseOrgCompanies,
     productGroups,
     availableProducts,
+    suppliers,
     industries,
   ] = await Promise.all([
     getContracts(),
@@ -31,6 +33,7 @@ const AddCompanyPage = async () => {
     getPurchaseOrgCompaniesForSelect(),
     getProductGroupsForSelect(),
     getProductsForSelect(),
+    getSuppliersForSelect(),
     getIndustriesForSelect(),
   ]);
 
@@ -48,6 +51,7 @@ const AddCompanyPage = async () => {
         purchaseOrgCompanies={purchaseOrgCompanies}
         productGroups={productGroups}
         availableProducts={availableProducts}
+        suppliers={suppliers}
         industries={industries}
       />
     </div>

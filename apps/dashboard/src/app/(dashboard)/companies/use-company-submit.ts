@@ -48,6 +48,8 @@ import {
   CompanyCounterOrderInput,
   CompanyCustomerStockInput,
   CompanyFollowUpInput,
+  CompanyOption,
+  CompanyProcessingInput,
   CompanyProductInput,
   CompanyPurchaseOrderInput,
   CompanyQuoteInput,
@@ -191,6 +193,7 @@ type UseCompanySubmitParams = {
   purchaseOrgCompanies: DebtorCompanyOption[];
   productGroups: ProductGroupOption[];
   availableProducts: ProductOption[];
+  suppliers: CompanyOption[];
   currentUserName?: string;
 };
 
@@ -202,6 +205,7 @@ export const useCompanySubmit = ({
   purchaseOrgCompanies,
   productGroups,
   availableProducts,
+  suppliers,
   currentUserName,
 }: UseCompanySubmitParams) => {
   const router = useRouter();
@@ -279,6 +283,7 @@ export const useCompanySubmit = ({
     null,
   );
   const [followUps, setFollowUps] = useState<CompanyFollowUpInput[]>([]);
+  const [processings, setProcessings] = useState<CompanyProcessingInput[]>([]);
 
   const form = useForm<CompanyFormValues>({
     resolver: zodResolver(createCompanySchema()),
@@ -533,6 +538,18 @@ export const useCompanySubmit = ({
     ...purchaseOrgCompanies.map((c) => ({
       value: c.uuid,
       label: c.companyName,
+    })),
+  ];
+
+  // Supplier dropdown for the Processing grid — the label leads with the
+  // supplier code (searchCode1) since that's the "Supplier code" column.
+  const supplierOptions = [
+    { value: "", label: COMMON_TEXT.emptyOption },
+    ...suppliers.map((s) => ({
+      value: s.uuid,
+      label: s.searchCode1
+        ? `${s.searchCode1} — ${s.companyName}`
+        : s.companyName,
     })),
   ];
 
@@ -1542,6 +1559,35 @@ export const useCompanySubmit = ({
   const removeFollowUp = (index: number) =>
     setFollowUps((prev) => prev.filter((_, i) => i !== index));
 
+  // ── Processing handlers (inline grid) ────────────────────────────────────────
+
+  // "New" appends a blank processing row; every column is edited inline.
+  const addProcessing = () =>
+    setProcessings((prev) => [
+      ...prev,
+      {
+        editing: undefined,
+        preference: false,
+        supplierUuid: undefined,
+        deliveryTime: 0,
+        deliveryTimeUnit: undefined,
+        processorLocation: undefined,
+      },
+    ]);
+
+  const updateProcessing = (
+    index: number,
+    patch: Partial<CompanyProcessingInput>,
+  ) =>
+    setProcessings((prev) =>
+      prev.map((processing, i) =>
+        i === index ? { ...processing, ...patch } : processing,
+      ),
+    );
+
+  const removeProcessing = (index: number) =>
+    setProcessings((prev) => prev.filter((_, i) => i !== index));
+
   // ── Role handler ─────────────────────────────────────────────────────────────
 
   const toggleRole = (role: CompanyRole) => {
@@ -1742,6 +1788,7 @@ export const useCompanySubmit = ({
         purchaseOrders,
         quotes,
         followUps,
+        processings,
         customerStock,
       );
       setState(result);
@@ -1929,6 +1976,12 @@ export const useCompanySubmit = ({
     addFollowUp,
     updateFollowUp,
     removeFollowUp,
+
+    processings,
+    addProcessing,
+    updateProcessing,
+    removeProcessing,
+    supplierOptions,
 
     toggleRole,
 
