@@ -40,6 +40,7 @@ import {
   InsertFollowUps,
   SelectFollowUps,
 } from "@/db/schema/follow-ups";
+import { Complaints, SelectComplaints } from "@/db/schema/complaints";
 import {
   CustomerStock,
   InsertCustomerStock,
@@ -181,6 +182,7 @@ export type CompanyDetail = SelectCompanies & {
   visitReports: SelectVisitReports[];
   purchaseOrders: SelectPurchaseOrders[];
   followUps: SelectFollowUps[];
+  complaints: SelectComplaints[];
   customerStock: SelectCustomerStock[];
 };
 
@@ -240,6 +242,12 @@ export const getCompanyDetail = async (
     .where(eq(FollowUps.companyUuid, uuid))
     .orderBy(desc(FollowUps.createdAt));
 
+  const complaints = await db
+    .select()
+    .from(Complaints)
+    .where(eq(Complaints.companyUuid, uuid))
+    .orderBy(desc(Complaints.createdAt));
+
   const customerStock = await db
     .select()
     .from(CustomerStock)
@@ -253,6 +261,7 @@ export const getCompanyDetail = async (
     visitReports,
     followUps,
     purchaseOrders,
+    complaints,
     customerStock,
   };
 };
