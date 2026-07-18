@@ -4,24 +4,24 @@ import { CompanyOption } from "@/app/(dashboard)/companies/actions";
 import { ContractGroupOption } from "@/app/(dashboard)/contract-groups/actions";
 import { ContractCompanyEntry } from "@/app/(dashboard)/contracts/actions";
 import { useContractSubmit } from "@/app/(dashboard)/contracts/use-contract-submit";
-import { contractableRoles, ContractableRole } from "@/lib/enums";
+import { FormActions } from "@/components/ui/form-actions";
+import { FormError } from "@/components/ui/form-error";
+import { ContractableRole, contractableRoles } from "@/lib/enums";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { FormProvider, useForm } from "react-hook-form";
-import { FormActions } from "@/components/ui/form-actions";
-import { FormError } from "@/components/ui/form-error";
 import {
   AddCompanyDialog,
-  companyLinkSchema,
   CompanyLinkFormValues,
+  companyLinkSchema,
 } from "./dialogs/add-company-dialog";
-import { ContractTypeSection } from "./sections/contract-type-section";
-import { ContractDetailsSection } from "./sections/contract-details-section";
-import { ContractSearchCodesSection } from "./sections/contract-search-codes-section";
-import { ContractWebsiteSection } from "./sections/contract-website-section";
 import { ContractCompaniesSection } from "./sections/contract-companies-section";
+import { ContractDetailsSection } from "./sections/contract-details-section";
 import { ContractPriceDetailsSection } from "./sections/contract-price-details-section";
+import { ContractSearchCodesSection } from "./sections/contract-search-codes-section";
+import { ContractTypeSection } from "./sections/contract-type-section";
+import { ContractWebsiteSection } from "./sections/contract-website-section";
 
 type ContractFormProps = {
   groups: ContractGroupOption[];
@@ -31,8 +31,9 @@ type ContractFormProps = {
 const contractableRoleSet = new Set(contractableRoles as readonly string[]);
 
 const getContractableRole = (company: CompanyOption): ContractableRole | null =>
-  (company.roles.find((r) => contractableRoleSet.has(r)) as ContractableRole) ??
-  null;
+  (company.roles?.find((r) =>
+    contractableRoleSet.has(r),
+  ) as ContractableRole) ?? null;
 
 export const ContractForm = ({
   groups,
@@ -61,7 +62,7 @@ export const ContractForm = ({
 
   // Only companies that carry at least one contractable role
   const contractableCompanies = availableCompanies.filter((c) =>
-    c.roles.some((r) => contractableRoleSet.has(r)),
+    c.roles?.some((r) => contractableRoleSet.has(r)),
   );
 
   const openDialog = () => {

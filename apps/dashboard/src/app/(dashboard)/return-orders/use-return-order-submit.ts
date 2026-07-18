@@ -1,38 +1,28 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
-import { createReturnOrder, ReturnOrderActionResult } from "./actions";
-import {
-  DEFAULT_RETURN_ORDER,
-  returnOrderSchema,
-  ReturnOrderFormValues,
-} from "./validation";
 import {
   AddressOption,
   getAddressesForCompany,
 } from "@/app/(dashboard)/addresses/actions";
 import { CompanyOption } from "@/app/(dashboard)/companies/actions";
 import {
-  getOrdersForCompany,
-  OrderOption,
-} from "@/app/(dashboard)/orders/actions";
-import {
   ContactOption,
   getContactsForCompany,
 } from "@/app/(dashboard)/contacts/actions";
+import {
+  getOrdersForCompany,
+  OrderOption,
+} from "@/app/(dashboard)/orders/actions";
 import { SelectOption } from "@/components/shadcn/select";
 import {
-  invoicePaymentTerms,
-  returnOrderReasons,
-  transportModes,
-  warehouseTransportRegions,
   InvoicePaymentTerm,
+  invoicePaymentTerms,
   ReturnOrderReason,
+  returnOrderReasons,
   TransportMode,
+  transportModes,
   WarehouseTransportRegion,
+  warehouseTransportRegions,
 } from "@/lib/enums";
 import {
   COMMON_TEXT,
@@ -41,6 +31,16 @@ import {
   TRANSPORT_MODE_LABELS,
   WAREHOUSE_TRANSPORT_REGION_LABELS,
 } from "@/lib/labels";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
+import { useForm } from "react-hook-form";
+import { createReturnOrder, ReturnOrderActionResult } from "./actions";
+import {
+  DEFAULT_RETURN_ORDER,
+  ReturnOrderFormValues,
+  returnOrderSchema,
+} from "./validation";
 
 type UseReturnOrderSubmitParams = {
   companies: CompanyOption[];
@@ -79,7 +79,7 @@ export const useReturnOrderSubmit = ({
   const isPickup = form.watch("isPickup");
 
   const customerCompanies = companies.filter(
-    (c) => c.roles.includes("customer") || c.roles.includes("prospect"),
+    (c) => c.roles?.includes("customer") || c.roles?.includes("prospect"),
   );
 
   const companyOptions: SelectOption[] = [

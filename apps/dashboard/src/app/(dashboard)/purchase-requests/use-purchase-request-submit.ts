@@ -1,35 +1,24 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
-import { createPurchaseRequest, PurchaseRequestActionResult } from "./actions";
 import {
   AddressOption,
   getAddressesForCompany,
 } from "@/app/(dashboard)/addresses/actions";
-import {
-  DEFAULT_PURCHASE_REQUEST,
-  purchaseRequestSchema,
-  PurchaseRequestFormValues,
-} from "./validation";
 import { CompanyOption } from "@/app/(dashboard)/companies/actions";
 import {
   ContactOption,
   getContactsForCompany,
 } from "@/app/(dashboard)/contacts/actions";
-import { ClerkUserOption } from "@/lib/server/clerk";
 import { SelectOption } from "@/components/shadcn/select";
 import {
-  deliveryTerms,
-  invoicePaymentTerms,
-  orderWeightTypes,
-  purchaseOrderTypes,
   DeliveryTerm,
+  deliveryTerms,
   InvoicePaymentTerm,
+  invoicePaymentTerms,
   OrderWeightType,
+  orderWeightTypes,
   PurchaseOrderType,
+  purchaseOrderTypes,
 } from "@/lib/enums";
 import {
   COMMON_TEXT,
@@ -38,6 +27,17 @@ import {
   ORDER_WEIGHT_TYPE_LABELS,
   PURCHASE_ORDER_TYPE_LABELS,
 } from "@/lib/labels";
+import { ClerkUserOption } from "@/lib/server/clerk";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
+import { useForm } from "react-hook-form";
+import { createPurchaseRequest, PurchaseRequestActionResult } from "./actions";
+import {
+  DEFAULT_PURCHASE_REQUEST,
+  PurchaseRequestFormValues,
+  purchaseRequestSchema,
+} from "./validation";
 
 type UsePurchaseRequestSubmitParams = {
   companies: CompanyOption[];
@@ -55,9 +55,8 @@ const makeOptions = <T extends string>(
 ];
 
 const addressLabel = (a: AddressOption) =>
-  [a.altName, a.streetAndNo, a.postalCode, a.city]
-    .filter(Boolean)
-    .join(", ") || a.uuid;
+  [a.altName, a.streetAndNo, a.postalCode, a.city].filter(Boolean).join(", ") ||
+  a.uuid;
 
 export const usePurchaseRequestSubmit = ({
   companies,
@@ -81,9 +80,9 @@ export const usePurchaseRequestSubmit = ({
   const deliveryType = form.watch("deliveryType");
 
   const supplierCompanies = companies.filter((c) =>
-    c.roles.includes("supplier"),
+    c.roles?.includes("supplier"),
   );
-  const agentCompanies = companies.filter((c) => c.roles.includes("agent"));
+  const agentCompanies = companies.filter((c) => c.roles?.includes("agent"));
 
   const supplierOptions: SelectOption[] = [
     emptyOpt,
@@ -111,7 +110,10 @@ export const usePurchaseRequestSubmit = ({
 
   const supplierAddressOptions: SelectOption[] = [
     emptyOpt,
-    ...supplierAddresses.map((a) => ({ value: a.uuid, label: addressLabel(a) })),
+    ...supplierAddresses.map((a) => ({
+      value: a.uuid,
+      label: addressLabel(a),
+    })),
   ];
 
   const purchaseOrderTypeOptions = makeOptions(
@@ -184,7 +186,9 @@ export const usePurchaseRequestSubmit = ({
           : false,
         supplierAddressUuid: values.supplierAddressUuid || null,
         deliveryType: values.deliveryType,
-        deliveryDate: values.deliveryDate ? new Date(values.deliveryDate) : null,
+        deliveryDate: values.deliveryDate
+          ? new Date(values.deliveryDate)
+          : null,
         deliveryWeek: values.deliveryWeek ? Number(values.deliveryWeek) : null,
         deliveryYear: values.deliveryYear ? Number(values.deliveryYear) : null,
         deliveryRemark: values.deliveryRemark || null,

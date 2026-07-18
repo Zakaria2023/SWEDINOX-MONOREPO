@@ -1,15 +1,5 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
-import { createPurchaseQuote, PurchaseQuoteActionResult } from "./actions";
-import {
-  DEFAULT_PURCHASE_QUOTE,
-  purchaseQuoteSchema,
-  PurchaseQuoteFormValues,
-} from "./validation";
 import {
   AddressOption,
   getAddressesForCompany,
@@ -19,17 +9,16 @@ import {
   ContactOption,
   getContactsForCompany,
 } from "@/app/(dashboard)/contacts/actions";
-import { ClerkUserOption } from "@/lib/server/clerk";
 import { SelectOption } from "@/components/shadcn/select";
 import {
-  deliveryTerms,
-  invoicePaymentTerms,
-  orderWeightTypes,
-  purchaseOrderTypes,
   DeliveryTerm,
+  deliveryTerms,
   InvoicePaymentTerm,
+  invoicePaymentTerms,
   OrderWeightType,
+  orderWeightTypes,
   PurchaseOrderType,
+  purchaseOrderTypes,
 } from "@/lib/enums";
 import {
   COMMON_TEXT,
@@ -38,6 +27,17 @@ import {
   ORDER_WEIGHT_TYPE_LABELS,
   PURCHASE_ORDER_TYPE_LABELS,
 } from "@/lib/labels";
+import { ClerkUserOption } from "@/lib/server/clerk";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
+import { useForm } from "react-hook-form";
+import { createPurchaseQuote, PurchaseQuoteActionResult } from "./actions";
+import {
+  DEFAULT_PURCHASE_QUOTE,
+  PurchaseQuoteFormValues,
+  purchaseQuoteSchema,
+} from "./validation";
 
 type UsePurchaseQuoteSubmitParams = {
   companies: CompanyOption[];
@@ -78,9 +78,9 @@ export const usePurchaseQuoteSubmit = ({
   const deliveryType = form.watch("deliveryType");
 
   const supplierCompanies = companies.filter((c) =>
-    c.roles.includes("supplier"),
+    c.roles?.includes("supplier"),
   );
-  const agentCompanies = companies.filter((c) => c.roles.includes("agent"));
+  const agentCompanies = companies.filter((c) => c.roles?.includes("agent"));
 
   const supplierOptions: SelectOption[] = [
     emptyOpt,

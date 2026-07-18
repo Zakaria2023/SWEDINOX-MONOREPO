@@ -28,8 +28,9 @@ export type CompanyLinkFormValues = z.infer<typeof companyLinkSchema>;
 const contractableRoleSet = new Set(contractableRoles as readonly string[]);
 
 const getContractableRole = (company: CompanyOption): ContractableRole | null =>
-  (company.roles.find((r) => contractableRoleSet.has(r)) as ContractableRole) ??
-  null;
+  (company.roles?.find((r) =>
+    contractableRoleSet.has(r),
+  ) as ContractableRole) ?? null;
 
 type AddCompanyDialogProps = {
   isOpen: boolean;
