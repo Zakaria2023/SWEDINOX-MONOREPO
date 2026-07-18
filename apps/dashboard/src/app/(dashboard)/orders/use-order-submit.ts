@@ -76,7 +76,7 @@ export const useOrderSubmit = ({ companies }: UseOrderSubmitParams) => {
 
   // Only show customer/prospect companies
   const customerCompanies = companies.filter(
-    (c) => c.roles.includes("customer") || c.roles.includes("prospect"),
+    (c) => c.roles?.includes("customer") || c.roles?.includes("prospect"),
   );
 
   const companyOptions: SelectOption[] = [
