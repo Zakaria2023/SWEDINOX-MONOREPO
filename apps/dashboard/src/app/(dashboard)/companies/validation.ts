@@ -1,6 +1,7 @@
 import {
   addressCategories,
   availableAtOptions,
+  companyClassifications,
   companyLangs,
   companyRoles,
   contactSalutations,
@@ -21,6 +22,8 @@ import {
   purchaseOrderStatuses,
   purchaseOrderTypes,
   ContractableRole,
+  CustomerStockReason,
+  customerStockReasons,
   TextUsageCategory,
 } from "@/lib/enums";
 import { VALIDATION_MESSAGES } from "@/lib/validation-messages";
@@ -179,6 +182,29 @@ export const createCompanySchema = () =>
     invoiceEmailTo: z.string().optional(),
     printEmailZeroValueInvoices: z.boolean(),
     sendXmlWithInvoice: z.boolean(),
+    // Marketing settings
+    industry: z.string().optional(),
+    classification: z.union([
+      z.enum(companyClassifications),
+      z.literal(""),
+      z.undefined(),
+    ]),
+    visitFrequency: z.string().optional(),
+    callFrequencyPerYear: z.string().optional(),
+    targetDateNextVisit: z.string().optional(),
+    visitReason: z.union([
+      z.enum(visitReportReasons),
+      z.literal(""),
+      z.undefined(),
+    ]),
+    potentialAnnualRevenue: z.string().optional(),
+    targetAnnualRevenue: z.string().optional(),
+    potentialAnnualSales: z.string().optional(),
+    targetAnnualSales: z.string().optional(),
+    numberOfEmployees: z.string().optional(),
+    visitPlanning: z.array(
+      z.object({ call: z.boolean(), visit: z.boolean() }),
+    ),
   });
 
 export type AddressFormValues = z.infer<ReturnType<typeof createAddressSchema>>;
@@ -503,6 +529,28 @@ export type CustomerProductDialogValues = z.infer<
 export const DEFAULT_CUSTOMER_PRODUCT: CustomerProductDialogValues = {
   productUuid: "",
   showOnWebsite: false,
+};
+
+// ── Customer Stock Dialog ────────────────────────────────────────────────────
+
+export const customerStockDialogSchema = z.object({
+  location: z.string().optional(),
+  productUuid: z.string().min(1, "Please select a product"),
+  quantity: z.string().optional(),
+  reason: z.enum(customerStockReasons, { error: "Please select a reason" }),
+  description: z.string().optional(),
+});
+
+export type CustomerStockDialogValues = z.infer<
+  typeof customerStockDialogSchema
+>;
+
+export const DEFAULT_CUSTOMER_STOCK: CustomerStockDialogValues = {
+  location: "",
+  productUuid: "",
+  quantity: "0.000",
+  reason: "" as CustomerStockReason,
+  description: "",
 };
 
 // ── Visit Report Dialog ──────────────────────────────────────────────────────
