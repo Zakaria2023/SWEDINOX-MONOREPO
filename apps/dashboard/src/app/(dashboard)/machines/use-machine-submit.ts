@@ -121,7 +121,7 @@ export const useMachineSubmit = ({
         description: pickedProduct.name,
         preference: toIntOrNull(values.preference),
         productionPerHour: toIntOrNull(values.productionPerHour),
-        prodUnit: values.prodUnit || null,
+        prodUnit: values.prodUnit,
         minCorner: values.minCorner?.trim() ? values.minCorner : "0.00",
         maxCorner: values.maxCorner?.trim() ? values.maxCorner : "90.00",
         daysInSystem: toIntOrNull(values.daysInSystem),
