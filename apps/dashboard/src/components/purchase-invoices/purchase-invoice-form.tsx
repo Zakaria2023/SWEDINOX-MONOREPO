@@ -9,6 +9,7 @@ import { FormActions } from "@/components/ui/form-actions";
 import { FormError } from "@/components/ui/form-error";
 import { PurchaseInvoiceDetailsSection } from "./sections/purchase-invoice-details-section";
 import { PurchaseInvoiceSummarySection } from "./sections/purchase-invoice-summary-section";
+import { SurchargesSection } from "./sections/surcharges-section";
 import { RemarksAndDocumentsSection } from "./sections/remarks-and-documents-section";
 import {
   invoicePaymentTerms,
@@ -126,6 +127,9 @@ export const PurchaseInvoiceForm = ({
             totalGeneral={totalGeneral}
           />
         </div>
+
+        {/* Surcharges */}
+        <SurchargesSection />
 
         {/* Remarks + Documents */}
         <RemarksAndDocumentsSection

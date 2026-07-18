@@ -16,6 +16,7 @@ import {
 } from "drizzle-orm/mysql-core";
 import {
   invoicePaymentTerms,
+  invoiceSurchargeDescriptions,
   purchaseInvoiceBlockReasons,
   purchaseInvoiceFiscalBases,
 } from "../../lib/enums";
@@ -44,43 +45,38 @@ export const PurchaseInvoices = mysqlTable(
     basisForFiscalPeriod: mysqlEnum(
       "basis_for_fiscal_period",
       purchaseInvoiceFiscalBases,
-    )
-      .default("booking_date")
-      .notNull(),
-
-    invoiceTotal: decimal("invoice_total", { precision: 15, scale: 2 })
-      .default("0.00")
-      .notNull(),
+    ).default("booking_date"),
+    invoiceTotal: decimal("invoice_total", { precision: 15, scale: 2 }).default(
+      "0.00",
+    ),
     purchaseOrderNumber: varchar("purchase_order_number", { length: 100 }),
 
     paymentTerms: mysqlEnum("pi_payment_terms", invoicePaymentTerms),
-    blocked: boolean("blocked").default(false).notNull(),
+    blocked: boolean("blocked").default(false),
     blockReason: mysqlEnum("block_reason", purchaseInvoiceBlockReasons),
 
-    materials: decimal("materials", { precision: 15, scale: 2 })
-      .default("0.00")
-      .notNull(),
-    optionsAmount: decimal("options_amount", { precision: 15, scale: 2 })
-      .default("0.00")
-      .notNull(),
-    surcharges: decimal("surcharges", { precision: 15, scale: 2 })
-      .default("0.00")
-      .notNull(),
-    vatHigh: decimal("vat_high", { precision: 15, scale: 2 })
-      .default("0.00")
-      .notNull(),
-    vatMiddle: decimal("vat_middle", { precision: 15, scale: 2 })
-      .default("0.00")
-      .notNull(),
-    vatLow: decimal("vat_low", { precision: 15, scale: 2 })
-      .default("0.00")
-      .notNull(),
-    creditRestriction: decimal("credit_restriction", { precision: 15, scale: 2 })
-      .default("0.00")
-      .notNull(),
-
+    materials: decimal("materials", { precision: 15, scale: 2 }).default(
+      "0.00",
+    ),
+    optionsAmount: decimal("options_amount", {
+      precision: 15,
+      scale: 2,
+    }).default("0.00"),
+    surcharges: decimal("surcharges", { precision: 15, scale: 2 }).default(
+      "0.00",
+    ),
+    vatHigh: decimal("vat_high", { precision: 15, scale: 2 }).default("0.00"),
+    vatMiddle: decimal("vat_middle", { precision: 15, scale: 2 }).default(
+      "0.00",
+    ),
+    vatLow: decimal("vat_low", { precision: 15, scale: 2 }).default("0.00"),
+    creditRestriction: decimal("credit_restriction", {
+      precision: 15,
+      scale: 2,
+    }).default("0.00"),
     remarks: text("remarks"),
-    documents: json("documents").$type<Array<{ id: string; fileName: string }>>(),
+    documents:
+      json("documents").$type<Array<{ id: string; fileName: string }>>(),
 
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
@@ -105,3 +101,49 @@ export const PurchaseInvoices = mysqlTable(
 
 export type SelectPurchaseInvoices = InferSelectModel<typeof PurchaseInvoices>;
 export type InsertPurchaseInvoices = InferInsertModel<typeof PurchaseInvoices>;
+
+export const PurchaseInvoiceSurcharges = mysqlTable(
+  "PurchaseInvoiceSurcharges",
+  {
+    id: int("id").primaryKey().autoincrement(),
+    uuid: char("uuid", { length: 36 }).notNull().unique(),
+
+    purchaseInvoiceUuid: char("purchase_invoice_uuid", { length: 36 }),
+
+    order: int("order").default(0),
+    booked: boolean("booked").default(false),
+    orderRef: varchar("order_ref", { length: 100 }),
+    description: mysqlEnum("description", invoiceSurchargeDescriptions),
+    revenueGroup: varchar("revenue_group", { length: 100 }),
+    surcharge: decimal("surcharge", { precision: 15, scale: 2 }).default(
+      "0.00",
+    ),
+    unit: varchar("unit", { length: 50 }),
+    surchargeBasis: decimal("surcharge_basis", {
+      precision: 15,
+      scale: 2,
+    }).default("0.00"),
+    amount: decimal("amount", { precision: 15, scale: 2 }).default("0.00"),
+    vatRate: decimal("vat_rate", { precision: 5, scale: 2 }),
+
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+  },
+  (table) => [
+    index("idx_purchase_invoice_surcharges_purchase_invoice_uuid").on(
+      table.purchaseInvoiceUuid,
+    ),
+    foreignKey({
+      name: "fk_purchase_invoice_surcharges_purchase_invoice",
+      columns: [table.purchaseInvoiceUuid],
+      foreignColumns: [PurchaseInvoices.uuid],
+    }),
+  ],
+);
+
+export type SelectPurchaseInvoiceSurcharges = InferSelectModel<
+  typeof PurchaseInvoiceSurcharges
+>;
+export type InsertPurchaseInvoiceSurcharges = InferInsertModel<
+  typeof PurchaseInvoiceSurcharges
+>;
