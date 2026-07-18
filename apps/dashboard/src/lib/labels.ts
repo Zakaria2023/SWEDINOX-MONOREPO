@@ -70,6 +70,7 @@ import type {
   WarehouseTransportRegion,
   TransportMode,
   ReturnOrderReason,
+  ReturnOrderStatus,
   OrderMethod,
   DeliveryTerm,
   OrderWeightType,
@@ -453,6 +454,14 @@ export const RETURN_ORDER_REASON_LABELS: Record<ReturnOrderReason, string> = {
   excess_delivery: "Excess delivery",
   customer_changed_mind: "Customer changed mind",
   other: "Other",
+};
+
+export const RETURN_ORDER_STATUS_LABELS: Record<ReturnOrderStatus, string> = {
+  open: "Open",
+  in_progress: "In progress",
+  received: "Received",
+  credited: "Credited",
+  cancelled: "Cancelled",
 };
 
 export const MACHINE_OPTION_LABELS: Record<MachineOptionType, string> = {

@@ -28,6 +28,7 @@ import { CounterOrdersSection } from "@/components/companies/sections/counter-or
 import { VisitReportsSection } from "@/components/companies/sections/visit-reports-section";
 import { PurchaseOrdersSection } from "@/components/companies/sections/purchase-orders-section";
 import { QuotesSection } from "@/components/companies/sections/quotes-section";
+import { ReturnsSection } from "@/components/companies/sections/returns-section";
 import { FollowUpsSection } from "@/components/companies/sections/follow-ups-section";
 import { ProcessingsSection } from "@/components/companies/sections/processings-section";
 import { DocumentsSection } from "@/components/companies/sections/documents-section";
@@ -51,6 +52,7 @@ import { CustomerStockDialog } from "@/components/companies/dialogs/customer-sto
 import { VisitReportDialog } from "@/components/companies/dialogs/visit-report-dialog";
 import { PurchaseOrderDialog } from "@/components/companies/dialogs/purchase-order-dialog";
 import { QuoteDialog } from "@/components/companies/dialogs/quote-dialog";
+import { ReturnOrderDialog } from "@/components/companies/dialogs/return-order-dialog";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { FormProvider } from "react-hook-form";
@@ -240,6 +242,16 @@ export const CompanyForm = ({
     handleCancelQuote,
     handleSaveQuote,
     removeQuote,
+    returnOrderForm,
+    returnOrders,
+    isReturnOrderDialogOpen,
+    isEditingReturnOrder,
+    handleReturnOrderOpenChange,
+    handleOpenReturnOrder,
+    handleEditReturnOrder,
+    handleCancelReturnOrder,
+    handleSaveReturnOrder,
+    removeReturnOrder,
     followUps,
     addFollowUp,
     updateFollowUp,
@@ -397,6 +409,16 @@ export const CompanyForm = ({
             removeQuote={removeQuote}
             handleOpenQuote={handleOpenQuote}
             handleEditQuote={handleEditQuote}
+            isPending={isPending}
+          />
+        )}
+
+        {selectedRoles.includes("customer") && (
+          <ReturnsSection
+            returnOrders={returnOrders}
+            removeReturnOrder={removeReturnOrder}
+            handleOpenReturnOrder={handleOpenReturnOrder}
+            handleEditReturnOrder={handleEditReturnOrder}
             isPending={isPending}
           />
         )}
@@ -629,6 +651,15 @@ export const CompanyForm = ({
         onSave={handleSaveQuote}
         form={quoteForm}
         isEditing={isEditingQuote}
+      />
+
+      <ReturnOrderDialog
+        isOpen={isReturnOrderDialogOpen}
+        onOpenChange={handleReturnOrderOpenChange}
+        onCancel={handleCancelReturnOrder}
+        onSave={handleSaveReturnOrder}
+        form={returnOrderForm}
+        isEditing={isEditingReturnOrder}
       />
     </FormProvider>
   );

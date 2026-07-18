@@ -40,6 +40,11 @@ import {
   InsertFollowUps,
   SelectFollowUps,
 } from "@/db/schema/follow-ups";
+import {
+  InsertReturnOrders,
+  ReturnOrders,
+  SelectReturnOrders,
+} from "@/db/schema/return-orders";
 import { Processings, InsertProcessings } from "@/db/schema/processings";
 import { Complaints, SelectComplaints } from "@/db/schema/complaints";
 import {
@@ -164,6 +169,11 @@ export type CompanyFollowUpInput = Omit<
   "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt"
 >;
 
+export type CompanyReturnOrderInput = Omit<
+  InsertReturnOrders,
+  "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt"
+>;
+
 export type CompanyProcessingInput = Omit<
   InsertProcessings,
   "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt"
@@ -188,6 +198,7 @@ export type CompanyDetail = SelectCompanies & {
   visitReports: SelectVisitReports[];
   purchaseOrders: SelectPurchaseOrders[];
   followUps: SelectFollowUps[];
+  returnOrders: SelectReturnOrders[];
   complaints: SelectComplaints[];
   customerStock: SelectCustomerStock[];
 };
@@ -248,6 +259,12 @@ export const getCompanyDetail = async (
     .where(eq(FollowUps.companyUuid, uuid))
     .orderBy(desc(FollowUps.createdAt));
 
+  const returnOrders = await db
+    .select()
+    .from(ReturnOrders)
+    .where(eq(ReturnOrders.companyUuid, uuid))
+    .orderBy(desc(ReturnOrders.createdAt));
+
   const complaints = await db
     .select()
     .from(Complaints)
@@ -267,6 +284,7 @@ export const getCompanyDetail = async (
     visitReports,
     followUps,
     purchaseOrders,
+    returnOrders,
     complaints,
     customerStock,
   };
@@ -408,6 +426,7 @@ export const createCompany = async (
   purchaseOrders: CompanyPurchaseOrderInput[] = [],
   quotes: CompanyQuoteInput[] = [],
   followUps: CompanyFollowUpInput[] = [],
+  returnOrders: CompanyReturnOrderInput[] = [],
   processings: CompanyProcessingInput[] = [],
   customerStock: CompanyCustomerStockInput[] = [],
 ): Promise<CompanyActionResult> => {
@@ -526,6 +545,14 @@ export const createCompany = async (
       for (const followUp of followUps) {
         await tx.insert(FollowUps).values({
           ...followUp,
+          uuid: generateUuid(),
+          companyUuid: uuid,
+        });
+      }
+
+      for (const returnOrder of returnOrders) {
+        await tx.insert(ReturnOrders).values({
+          ...returnOrder,
           uuid: generateUuid(),
           companyUuid: uuid,
         });
