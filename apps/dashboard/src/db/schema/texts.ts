@@ -18,6 +18,7 @@ export const Texts = mysqlTable(
 
     companyUuid: char("company_uuid", { length: 36 }),
     orderUuid: char("order_uuid", { length: 36 }),
+    counterOrderUuid: char("counter_order_uuid", { length: 36 }),
     returnOrderUuid: char("return_order_uuid", { length: 36 }),
     quoteUuid: char("quote_uuid", { length: 36 }),
     purchaseOrderUuid: char("purchase_order_uuid", { length: 36 }),
@@ -58,6 +59,7 @@ export const Texts = mysqlTable(
   (table) => [
     index("idx_texts_company_uuid").on(table.companyUuid),
     index("idx_texts_order_uuid").on(table.orderUuid),
+    index("idx_texts_counter_order_uuid").on(table.counterOrderUuid),
     index("idx_texts_return_order_uuid").on(table.returnOrderUuid),
     index("idx_texts_quote_uuid").on(table.quoteUuid),
     index("idx_texts_purchase_order_uuid").on(table.purchaseOrderUuid),

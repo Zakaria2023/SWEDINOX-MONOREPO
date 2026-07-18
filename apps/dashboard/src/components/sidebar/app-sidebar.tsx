@@ -47,6 +47,7 @@ export const AppSidebar = () => {
     pathname.startsWith("/quotes") ||
     pathname.startsWith("/orders") ||
     pathname.startsWith("/return-orders") ||
+    pathname.startsWith("/counter-orders") ||
     pathname.startsWith("/customer-overview") ||
     pathname.startsWith("/visit-schedule") ||
     pathname.startsWith("/follow-ups");
@@ -145,6 +146,14 @@ export const AppSidebar = () => {
                         isActive={pathname.startsWith("/return-orders")}
                       >
                         <span>Return Orders</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/counter-orders" />}
+                        isActive={pathname.startsWith("/counter-orders")}
+                      >
+                        <span>Counter Orders</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                     <SidebarMenuSubItem>
