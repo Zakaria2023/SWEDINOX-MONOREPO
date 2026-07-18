@@ -7,8 +7,7 @@ import { FormLabel } from "@/components/ui/form-field";
 import { FormCheckboxCard } from "@/components/ui/form-checkbox-card";
 import { warehouseCountStockTypes } from "@/lib/enums";
 import { WAREHOUSE_COUNT_STOCK_TYPE_LABELS } from "@/lib/labels";
-
-const asNumber = (v: string) => (v === "" ? "" : Number(v));
+import { asNumber } from "@/lib/helpers";
 
 export const CountSettingsSection = () => {
   const { register } = useFormContext<LocationFormValues>();
