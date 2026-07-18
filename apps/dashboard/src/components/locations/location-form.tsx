@@ -6,6 +6,8 @@ import { WarehouseItemOption } from "@/app/(dashboard)/warehouses/actions";
 import { FormActions } from "@/components/ui/form-actions";
 import { FormError } from "@/components/ui/form-error";
 import { AdaptFromSection } from "./sections/adapt-from-section";
+import { CountSettingsSection } from "./sections/count-settings-section";
+import { DocumentsSection } from "./sections/documents-section";
 import { GeneralSection } from "./sections/general-section";
 import { StatusSection } from "./sections/status-section";
 
@@ -49,6 +51,10 @@ export const LocationForm = ({ allItems }: Props) => {
           blocked={blocked}
           blockReasonOptions={blockReasonOptions}
         />
+
+        <CountSettingsSection />
+
+        <DocumentsSection />
 
         <FormActions
           submitLabel="Save Location"

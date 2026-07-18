@@ -64,6 +64,7 @@ import type {
   VisitReportReason,
   WarehouseAddress,
   WarehouseBlockReason,
+  WarehouseCountStockType,
   WarehouseLoadingLocation,
   WarehouseLocationType,
   WarehouseProductType,
@@ -380,6 +381,14 @@ export const WAREHOUSE_LOADING_LOCATION_LABELS: Record<
   string
 > = {
   load: "Load",
+};
+
+export const WAREHOUSE_COUNT_STOCK_TYPE_LABELS: Record<
+  WarehouseCountStockType,
+  string
+> = {
+  technical_stock: "Technical stock",
+  available_stock: "Available stock",
 };
 
 export const WAREHOUSE_BLOCK_REASON_LABELS: Record<

@@ -297,6 +297,14 @@ export const warehouseLoadingLocations = [
 export type WarehouseLoadingLocation =
   (typeof warehouseLoadingLocations)[number];
 
+export const warehouseCountStockTypes = [
+  "technical_stock",
+  "available_stock",
+] as const satisfies readonly string[];
+
+export type WarehouseCountStockType =
+  (typeof warehouseCountStockTypes)[number];
+
 export const warehouseBlockReasons = [
   "disapproval",
   "reserved_for_customer",
