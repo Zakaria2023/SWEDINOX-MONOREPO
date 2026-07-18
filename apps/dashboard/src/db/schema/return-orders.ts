@@ -17,6 +17,7 @@ import {
 import {
   invoicePaymentTerms,
   returnOrderReasons,
+  returnOrderStatuses,
   transportModes,
   warehouseTransportRegions,
 } from "../../lib/enums";
@@ -34,10 +35,13 @@ export const ReturnOrders = mysqlTable(
     // ── Header ────────────────────────────────────────────────────────────────
     companyUuid: char("company_uuid", { length: 36 }).notNull(),
     orderUuid: char("order_uuid", { length: 36 }),
+    orderReference: varchar("order_reference", { length: 255 }),
     complaintRef: varchar("complaint_ref", { length: 255 }),
     contactUuid: char("contact_uuid", { length: 36 }),
     customerRef: varchar("customer_ref", { length: 255 }),
     ourReference: varchar("our_reference", { length: 255 }),
+    status: mysqlEnum("status", returnOrderStatuses).default("open"),
+    orderDate: date("order_date", { mode: "string" }),
     handlingBlocked: boolean("handling_blocked").default(false),
     isPrinted: boolean("is_printed").default(false),
     isMailed: boolean("is_mailed").default(false),

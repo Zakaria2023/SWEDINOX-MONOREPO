@@ -6,15 +6,21 @@ import {
   foreignKey,
   index,
   int,
+  json,
   mysqlEnum,
   mysqlTable,
   text,
   timestamp,
+  varchar,
 } from "drizzle-orm/mysql-core";
 import {
   complaintCategories,
+  complaintCauses,
   complaintReports,
+  complaintSolutions,
+  complaintStatuses,
   complaintTypes,
+  ComplaintStatus,
 } from "../../lib/enums";
 import { Companies } from "./companies";
 import { Contacts } from "./contacts";
@@ -39,6 +45,49 @@ export const Complaints = mysqlTable(
     qty: decimal("qty", { precision: 15, scale: 3 }).default("0.000"),
     amount: decimal("amount", { precision: 15, scale: 2 }).default("0.00"),
     weight: decimal("weight", { precision: 15, scale: 3 }).default("0.000"),
+
+    // ── Handling ──────────────────────────────────────────────────────────────
+    status: mysqlEnum("status", complaintStatuses).default("new"),
+    responsibleUserId: varchar("responsible_user_id", { length: 255 }),
+    deadline: date("deadline", { mode: "string" }),
+    cause: mysqlEnum("cause", complaintCauses),
+    explanationOfCause: text("explanation_of_cause"),
+    solution: mysqlEnum("solution", complaintSolutions),
+    explanationOfSolution: text("explanation_of_solution"),
+
+    // ── Handling costs ──────────────────────────────────────────────────────────
+    costsCustomer: decimal("costs_customer", {
+      precision: 15,
+      scale: 2,
+    }).default("0.00"),
+    costsCustomerNote: varchar("costs_customer_note", { length: 255 }),
+    internalCosts: decimal("internal_costs", {
+      precision: 15,
+      scale: 2,
+    }).default("0.00"),
+    internalCostsNote: varchar("internal_costs_note", { length: 255 }),
+    extraCosts: decimal("extra_costs", { precision: 15, scale: 2 }).default(
+      "0.00",
+    ),
+    extraCostsNote: varchar("extra_costs_note", { length: 255 }),
+    toBeReclaimed: decimal("to_be_reclaimed", {
+      precision: 15,
+      scale: 2,
+    }).default("0.00"),
+    toBeReclaimedNote: varchar("to_be_reclaimed_note", { length: 255 }),
+
+    // Snapshot of every status change; `assignedBy*` records who made it.
+    statusHistory:
+      json("status_history").$type<
+        Array<{
+          status: ComplaintStatus;
+          statusDate: string;
+          assignedByUserId: string;
+          assignedByName: string;
+        }>
+      >(),
+    documents:
+      json("documents").$type<Array<{ id: string; fileName: string }>>(),
 
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),

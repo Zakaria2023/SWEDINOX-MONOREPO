@@ -2,11 +2,13 @@ import { getCompaniesForSelect } from "@/app/(dashboard)/companies/actions";
 import { getProductsForSelect } from "@/app/(dashboard)/products/actions";
 import { ComplaintForm } from "@/components/complaints/complaint-form";
 import { PageHeading } from "@/components/layout/page-heading";
+import { getClerkAdminUsers } from "@/lib/server/clerk";
 
 const NewComplaintPage = async () => {
-  const [companies, products] = await Promise.all([
+  const [companies, products, responsibleUsers] = await Promise.all([
     getCompaniesForSelect(),
     getProductsForSelect(),
+    getClerkAdminUsers(),
   ]);
 
   return (
@@ -15,7 +17,11 @@ const NewComplaintPage = async () => {
         title="New Complaint"
         description="Register a new customer complaint"
       />
-      <ComplaintForm companies={companies} products={products} />
+      <ComplaintForm
+        companies={companies}
+        products={products}
+        responsibleUsers={responsibleUsers}
+      />
     </div>
   );
 };

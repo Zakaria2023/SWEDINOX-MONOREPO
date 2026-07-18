@@ -1,5 +1,6 @@
 import {
   warehouseBlockReasons,
+  warehouseCountStockTypes,
   warehouseLoadingLocations,
   warehouseLocationTypes,
   warehouseProductTypes,
@@ -40,6 +41,20 @@ export const createLocationSchema = () =>
       z.literal(""),
       z.undefined(),
     ]),
+
+    // Count settings
+    countPer: z.union([z.number().int().min(0), z.literal(""), z.undefined()]),
+    countAs: z.enum(warehouseCountStockTypes),
+    countUnderValue: z.union([
+      z.number().int().min(0),
+      z.literal(""),
+      z.undefined(),
+    ]),
+    countUnderUnit: z.string().optional(),
+    openCountOrderAvailable: z.boolean(),
+
+    // Documents
+    documents: z.array(z.object({ id: z.string(), fileName: z.string() })),
   });
 
 export type LocationFormValues = z.infer<ReturnType<typeof createLocationSchema>>;
@@ -60,4 +75,10 @@ export const DEFAULT_LOCATION: LocationFormValues = {
   maxWeight: "",
   productTypes: [],
   pickingSequence: "",
+  countPer: "",
+  countAs: "technical_stock",
+  countUnderValue: "",
+  countUnderUnit: "",
+  openCountOrderAvailable: false,
+  documents: [],
 };
