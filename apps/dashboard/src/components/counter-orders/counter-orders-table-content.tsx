@@ -1,12 +1,6 @@
 "use client";
 
-import { useState } from "react";
 import { type CounterOrderListItem } from "@/app/(dashboard)/counter-orders/actions";
-import {
-  COMMON_TEXT,
-  COUNTER_ORDER_PRIORITY_LABELS,
-  COUNTER_ORDER_STATUS_LABELS,
-} from "@/lib/labels";
 import {
   Table,
   TableBody,
@@ -17,6 +11,12 @@ import {
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { buildColumnVisibility } from "@/lib/helpers";
+import {
+  COMMON_TEXT,
+  COUNTER_ORDER_PRIORITY_LABELS,
+  COUNTER_ORDER_STATUS_LABELS,
+} from "@/lib/labels";
+import { useState } from "react";
 
 type ColumnKey =
   | "id"
@@ -66,8 +66,9 @@ type CounterOrdersTableProps = {
 export const CounterOrdersTable = ({
   counterOrders,
 }: CounterOrdersTableProps) => {
-  const [columnVisibility, setColumnVisibility] =
-    useState<Record<ColumnKey, boolean>>(buildColumnVisibility(ALL_COLUMNS));
+  const [columnVisibility, setColumnVisibility] = useState<
+    Record<ColumnKey, boolean>
+  >(buildColumnVisibility(ALL_COLUMNS));
 
   const toggleColumn = (key: string) =>
     setColumnVisibility((prev) => ({
@@ -111,13 +112,13 @@ export const CounterOrdersTable = ({
       case "status":
         return (
           <TableCell key={key}>
-            {COUNTER_ORDER_STATUS_LABELS[order.status]}
+            {order.status ? COUNTER_ORDER_STATUS_LABELS[order.status] : na}
           </TableCell>
         );
       case "priority":
         return (
           <TableCell key={key}>
-            {COUNTER_ORDER_PRIORITY_LABELS[order.priority]}
+            {order.priority ? COUNTER_ORDER_PRIORITY_LABELS[order.priority] : na}
           </TableCell>
         );
       case "orderDate":
