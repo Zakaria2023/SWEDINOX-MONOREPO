@@ -60,6 +60,7 @@ import type {
   StockLabelType,
   StockMode,
   TextUsageCategory,
+  VisitReportCategory,
   VisitReportContactMethod,
   VisitReportReason,
   WarehouseAddress,
@@ -1150,11 +1151,13 @@ export const COUNTER_ORDER_STATUS_LABELS: Record<CounterOrderStatus, string> = {
   cancelled: "Cancelled",
 };
 
-export const COUNTER_ORDER_PRIORITY_LABELS: Record<CounterOrderPriority, string> =
-  {
-    normal: "Normal",
-    rush: "Rush",
-  };
+export const COUNTER_ORDER_PRIORITY_LABELS: Record<
+  CounterOrderPriority,
+  string
+> = {
+  normal: "Normal",
+  rush: "Rush",
+};
 
 export const PURCHASE_ORDER_TYPE_LABELS: Record<PurchaseOrderType, string> = {
   materials: "Materials",
@@ -1171,13 +1174,11 @@ export const PURCHASE_ORDER_STATUS_LABELS: Record<PurchaseOrderStatus, string> =
     cancelled: "Cancelled",
   };
 
-export const PURCHASE_COMPANY_TYPE_LABELS: Record<
-  PurchaseCompanyType,
-  string
-> = {
-  supplier: "Supplier",
-  agent: "Agent",
-};
+export const PURCHASE_COMPANY_TYPE_LABELS: Record<PurchaseCompanyType, string> =
+  {
+    supplier: "Supplier",
+    agent: "Agent",
+  };
 
 export const CUSTOMER_GROUP_LABELS: Record<CustomerGroup, string> = {
   warehouse_staff: "Warehouse Staff",
@@ -1275,6 +1276,13 @@ export const COMPANY_CLASSIFICATION_LABELS: Record<
   B: "Medium customer",
   C: "Small customer",
 };
+
+export const VISIT_REPORT_CATEGORY_LABELS: Record<VisitReportCategory, string> =
+  {
+    wishing_next_visit: "Wishing you next visit",
+    following_complaint: "Following a complaint",
+    acquisition: "Acquisition",
+  };
 
 export const COMPLAINT_TYPE_LABELS: Record<ComplaintType, string> = {
   counter_order: "Counter order",
@@ -1459,15 +1467,13 @@ export const CURRENCY_LABELS: Record<Currency, string> = {
   hkd: "HK-Dollar",
 };
 
-export const CUSTOMER_STOCK_REASON_LABELS: Record<
-  CustomerStockReason,
-  string
-> = {
-  initial_stock: "Initial stock",
-  correction: "Correction",
-  counting_difference: "Counting difference",
-  damaged: "Damaged",
-  return_from_customer: "Return from customer",
-  transfer: "Transfer",
-  other: "Other",
-};
+export const CUSTOMER_STOCK_REASON_LABELS: Record<CustomerStockReason, string> =
+  {
+    initial_stock: "Initial stock",
+    correction: "Correction",
+    counting_difference: "Counting difference",
+    damaged: "Damaged",
+    return_from_customer: "Return from customer",
+    transfer: "Transfer",
+    other: "Other",
+  };

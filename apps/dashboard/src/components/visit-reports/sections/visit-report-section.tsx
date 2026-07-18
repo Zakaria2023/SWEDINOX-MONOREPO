@@ -10,19 +10,24 @@ import { TimePicker } from "@/components/shadcn/time-picker";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import { FormSelectField } from "@/components/ui/form-select-field";
 import { visitReportContactMethods } from "@/lib/enums";
-import {
-  COMMON_TEXT,
-  VISIT_REPORT_CONTACT_METHOD_LABELS,
-} from "@/lib/labels";
+import { COMMON_TEXT, VISIT_REPORT_CONTACT_METHOD_LABELS } from "@/lib/labels";
 
 type Props = {
   isPending: boolean;
   companies: CompanyOption[];
   adminUsers: DashboardUserOption[];
-  onCompanyChange: (value: string, fieldOnChange: (value: string) => void) => void;
+  onCompanyChange: (
+    value: string,
+    fieldOnChange: (value: string) => void,
+  ) => void;
 };
 
-export const VisitReportSection = ({ isPending, companies, adminUsers, onCompanyChange }: Props) => {
+export const VisitReportSection = ({
+  isPending,
+  companies,
+  adminUsers,
+  onCompanyChange,
+}: Props) => {
   const {
     control,
     register,
