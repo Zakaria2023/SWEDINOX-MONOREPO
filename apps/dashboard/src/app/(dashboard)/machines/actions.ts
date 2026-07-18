@@ -1,7 +1,15 @@
 "use server";
 
 import { db } from "@/db";
-import { InsertMachines, Machines, SelectMachines } from "@/db/schema/machines";
+import {
+  InsertMachinePostProcessings,
+  InsertMachineProducts,
+  InsertMachines,
+  MachinePostProcessings,
+  MachineProducts,
+  Machines,
+  SelectMachines,
+} from "@/db/schema/machines";
 import { SelectWarehouses, Warehouses } from "@/db/schema/warehouses";
 import { MachineProductionType } from "@/lib/enums";
 import { generateUuid } from "@/lib/helpers";
@@ -11,6 +19,16 @@ import { desc, eq, getTableColumns } from "drizzle-orm";
 export type MachineFields = Omit<
   InsertMachines,
   "id" | "uuid" | "createdAt" | "updatedAt"
+>;
+
+export type MachineProductInput = Omit<
+  InsertMachineProducts,
+  "id" | "uuid" | "machineUuid" | "createdAt" | "updatedAt"
+>;
+
+export type MachinePostProcessingInput = Omit<
+  InsertMachinePostProcessings,
+  "id" | "uuid" | "machineUuid" | "createdAt" | "updatedAt"
 >;
 
 export type MachineActionResult = {
@@ -40,6 +58,8 @@ export const getMachines = async (): Promise<MachineListItem[]> => {
 
 export const createMachine = async (
   fields: MachineFields,
+  products: MachineProductInput[] = [],
+  postProcessings: MachinePostProcessingInput[] = [],
 ): Promise<MachineActionResult> => {
   const uuid = generateUuid();
   try {
@@ -67,7 +87,30 @@ export const createMachine = async (
       };
     }
 
-    await db.insert(Machines).values({ ...fields, uuid });
+    await db.transaction(async (tx) => {
+      await tx.insert(Machines).values({ ...fields, uuid });
+
+      if (products.length > 0) {
+        await tx.insert(MachineProducts).values(
+          products.map((product) => ({
+            ...product,
+            uuid: generateUuid(),
+            machineUuid: uuid,
+          })),
+        );
+      }
+
+      if (postProcessings.length > 0) {
+        await tx.insert(MachinePostProcessings).values(
+          postProcessings.map((postProcessing) => ({
+            ...postProcessing,
+            uuid: generateUuid(),
+            machineUuid: uuid,
+          })),
+        );
+      }
+    });
+
     return { success: true, machineUuid: uuid };
   } catch {
     return { error: "Failed to create machine" };
