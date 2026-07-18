@@ -154,7 +154,7 @@ export const OrderSurcharges = mysqlTable(
     orderUuid: char("order_uuid", { length: 36 }),
     companyUuid: char("company_uuid", { length: 36 }),
 
-    order: int("order").default(0).notNull(),
+    order: int("order").default(0),
     description: mysqlEnum("description", invoiceSurchargeDescriptions),
     surcharge: decimal("surcharge", { precision: 15, scale: 2 }).default(
       "0.00",
