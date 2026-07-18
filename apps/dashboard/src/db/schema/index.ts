@@ -25,5 +25,7 @@ export * from "./machines";
 export * from "./counter-orders";
 export * from "./industries";
 export * from "./follow-ups";
+export * from "./transporter-costs";
+export * from "./transporter-countries";
 export * from "./processings";
 export * from "./customer-stock";

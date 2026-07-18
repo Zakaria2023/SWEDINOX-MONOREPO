@@ -41,6 +41,14 @@ import {
   SelectFollowUps,
 } from "@/db/schema/follow-ups";
 import {
+  InsertTransporterCosts,
+  TransporterCosts,
+} from "@/db/schema/transporter-costs";
+import {
+  InsertTransporterCountries,
+  TransporterCountries,
+} from "@/db/schema/transporter-countries";
+import {
   InsertReturnOrders,
   ReturnOrders,
   SelectReturnOrders,
@@ -166,6 +174,16 @@ export type CompanyPurchaseOrderInput = Omit<
 
 export type CompanyFollowUpInput = Omit<
   InsertFollowUps,
+  "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt"
+>;
+
+export type CompanyTransporterCostInput = Omit<
+  InsertTransporterCosts,
+  "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt"
+>;
+
+export type CompanyTransporterCountryInput = Omit<
+  InsertTransporterCountries,
   "id" | "uuid" | "companyUuid" | "createdAt" | "updatedAt"
 >;
 
@@ -426,6 +444,8 @@ export const createCompany = async (
   purchaseOrders: CompanyPurchaseOrderInput[] = [],
   quotes: CompanyQuoteInput[] = [],
   followUps: CompanyFollowUpInput[] = [],
+  transporterCosts: CompanyTransporterCostInput[] = [],
+  transporterCountries: CompanyTransporterCountryInput[] = [],
   returnOrders: CompanyReturnOrderInput[] = [],
   processings: CompanyProcessingInput[] = [],
   customerStock: CompanyCustomerStockInput[] = [],
@@ -545,6 +565,22 @@ export const createCompany = async (
       for (const followUp of followUps) {
         await tx.insert(FollowUps).values({
           ...followUp,
+          uuid: generateUuid(),
+          companyUuid: uuid,
+        });
+      }
+
+      for (const transporterCost of transporterCosts) {
+        await tx.insert(TransporterCosts).values({
+          ...transporterCost,
+          uuid: generateUuid(),
+          companyUuid: uuid,
+        });
+      }
+
+      for (const transporterCountry of transporterCountries) {
+        await tx.insert(TransporterCountries).values({
+          ...transporterCountry,
           uuid: generateUuid(),
           companyUuid: uuid,
         });
