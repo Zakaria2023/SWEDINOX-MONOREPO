@@ -14,6 +14,7 @@ import {
   invoiceFrequencies,
   invoicePaymentTerms,
   orderMethods,
+  orderWeightTypes,
   purchasingUnits,
   visitReportContactMethods,
   visitReportReasons,
@@ -415,6 +416,56 @@ export const DEFAULT_COUNTER_ORDER: CounterOrderDialogValues = {
   amountExVat: "0.00",
   weightKg: "0.000",
   gainPercent: "0.00",
+  remarks: "",
+};
+
+// ── Quote Dialog ─────────────────────────────────────────────────────────────
+
+export const quoteDialogSchema = z.object({
+  customerRef: z.string().optional(),
+  ourReference: z.string().optional(),
+  requestMethod: z.union([z.enum(orderMethods), z.literal("")]).optional(),
+  seller: z.string().optional(),
+  quoteDate: z.string().optional(),
+  decisionDate: z.string().optional(),
+  priceDate: z.string().optional(),
+  validUntil: z.string().optional(),
+  validityPeriodDays: z.string().optional(),
+  weightType: z.union([z.enum(orderWeightTypes), z.literal("")]).optional(),
+  deliveryTerms: z.union([z.enum(deliveryTerms), z.literal("")]).optional(),
+  paymentTerms: z.union([z.enum(invoicePaymentTerms), z.literal("")]).optional(),
+  isPickup: z.boolean(),
+  isIncidental: z.boolean(),
+  isConsignment: z.boolean(),
+  isOverlengte: z.boolean(),
+  handlingBlocked: z.boolean(),
+  totalWeightKg: z.string().optional(),
+  totalExclVat: z.string().optional(),
+  remarks: z.string().optional(),
+});
+
+export type QuoteDialogValues = z.infer<typeof quoteDialogSchema>;
+
+export const DEFAULT_QUOTE: QuoteDialogValues = {
+  customerRef: "",
+  ourReference: "",
+  requestMethod: "",
+  seller: "",
+  quoteDate: "",
+  decisionDate: "",
+  priceDate: "",
+  validUntil: "",
+  validityPeriodDays: "",
+  weightType: "",
+  deliveryTerms: "",
+  paymentTerms: "",
+  isPickup: false,
+  isIncidental: false,
+  isConsignment: false,
+  isOverlengte: false,
+  handlingBlocked: false,
+  totalWeightKg: "0.00",
+  totalExclVat: "0.00",
   remarks: "",
 };
 
