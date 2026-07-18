@@ -15,9 +15,11 @@ import {
   varchar,
 } from "drizzle-orm/mysql-core";
 import {
+  contractTierUnits,
   deliveryTerms,
   deliveryTypes,
   invoicePaymentTerms,
+  invoiceSurchargeDescriptions,
   orderMethods,
   orderWeightTypes,
 } from "../../lib/enums";
@@ -142,3 +144,54 @@ export const Orders = mysqlTable(
 
 export type SelectOrders = InferSelectModel<typeof Orders>;
 export type InsertOrders = InferInsertModel<typeof Orders>;
+
+export const OrderSurcharges = mysqlTable(
+  "OrderSurcharges",
+  {
+    id: int("id").primaryKey().autoincrement(),
+    uuid: char("uuid", { length: 36 }).notNull().unique(),
+
+    orderUuid: char("order_uuid", { length: 36 }),
+    companyUuid: char("company_uuid", { length: 36 }),
+
+    order: int("order").default(0).notNull(),
+    description: mysqlEnum("description", invoiceSurchargeDescriptions),
+    surcharge: decimal("surcharge", { precision: 15, scale: 2 })
+      .default("0.00")
+      .notNull(),
+    unit: varchar("unit", { length: 50 }),
+    fromValue: decimal("from_value", { precision: 15, scale: 2 })
+      .default("0.00")
+      .notNull(),
+    unitIndication: varchar("unit_indication", { length: 50 }),
+    tierUnit: mysqlEnum("tier_unit", contractTierUnits),
+    amount: decimal("amount", { precision: 15, scale: 2 })
+      .default("0.00")
+      .notNull(),
+    profit: decimal("profit", { precision: 15, scale: 2 })
+      .default("0.00")
+      .notNull(),
+    thirdParties: boolean("third_parties").default(false).notNull(),
+    companyCode: varchar("company_code", { length: 100 }),
+
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+  },
+  (table) => [
+    index("idx_order_surcharges_order_uuid").on(table.orderUuid),
+    index("idx_order_surcharges_company_uuid").on(table.companyUuid),
+    foreignKey({
+      name: "fk_order_surcharges_order",
+      columns: [table.orderUuid],
+      foreignColumns: [Orders.uuid],
+    }),
+    foreignKey({
+      name: "fk_order_surcharges_company",
+      columns: [table.companyUuid],
+      foreignColumns: [Companies.uuid],
+    }),
+  ],
+);
+
+export type SelectOrderSurcharges = InferSelectModel<typeof OrderSurcharges>;
+export type InsertOrderSurcharges = InferInsertModel<typeof OrderSurcharges>;

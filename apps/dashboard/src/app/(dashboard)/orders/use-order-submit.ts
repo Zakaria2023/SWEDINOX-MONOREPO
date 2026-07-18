@@ -4,7 +4,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
-import { createOrder, OrderActionResult } from "./actions";
+import {
+  ContractOption,
+  createOrder,
+  getContractsByCompanyUuid,
+  OrderActionResult,
+  OrderExtras,
+} from "./actions";
 import {
   AddressOption,
   getAddressesForCompany,
@@ -56,6 +62,9 @@ const addressLabel = (a: AddressOption) =>
   [a.altName, a.streetAndNo, a.postalCode, a.city].filter(Boolean).join(", ") ||
   a.uuid;
 
+const toDecimal = (value: string | undefined, fallback: string): string =>
+  value && value.trim() !== "" ? value : fallback;
+
 export const useOrderSubmit = ({ companies }: UseOrderSubmitParams) => {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -63,6 +72,7 @@ export const useOrderSubmit = ({ companies }: UseOrderSubmitParams) => {
   const [contacts, setContacts] = useState<ContactOption[]>([]);
   const [addresses, setAddresses] = useState<AddressOption[]>([]);
   const [projects, setProjects] = useState<ProjectOption[]>([]);
+  const [contracts, setContracts] = useState<ContractOption[]>([]);
   const [isLoadingCompanyData, setIsLoadingCompanyData] = useState(false);
 
   const form = useForm<OrderFormValues>({
@@ -134,19 +144,23 @@ export const useOrderSubmit = ({ companies }: UseOrderSubmitParams) => {
     form.setValue("projectUuid", "");
     form.setValue("deliveryAddressUuid", "");
     form.setValue("billingAddressUuid", "");
+    form.setValue("contractUuids", []);
     setContacts([]);
     setProjects([]);
     setAddresses([]);
+    setContracts([]);
     if (!uuid) return;
     setIsLoadingCompanyData(true);
     Promise.all([
       getContactsForCompany(uuid),
       getProjectsForCompany(uuid),
       getAddressesForCompany(uuid),
-    ]).then(([newContacts, newProjects, newAddresses]) => {
+      getContractsByCompanyUuid(uuid),
+    ]).then(([newContacts, newProjects, newAddresses, newContracts]) => {
       setContacts(newContacts);
       setProjects(newProjects);
       setAddresses(newAddresses);
+      setContracts(newContracts);
       setIsLoadingCompanyData(false);
     });
   };
@@ -154,8 +168,32 @@ export const useOrderSubmit = ({ companies }: UseOrderSubmitParams) => {
   const handleCancel = () => router.push("/orders");
 
   const onSubmit = form.handleSubmit((values) => {
+    const extras: OrderExtras = {
+      surcharges: values.surcharges.map((surcharge) => ({
+        companyUuid: surcharge.companyUuid || null,
+        order: 0,
+        description: surcharge.description || null,
+        surcharge: toDecimal(surcharge.surcharge, "0.00"),
+        unit: surcharge.unit || null,
+        fromValue: toDecimal(surcharge.fromValue, "0.00"),
+        unitIndication: surcharge.unitIndication || null,
+        tierUnit: surcharge.tierUnit || null,
+        amount: toDecimal(surcharge.amount, "0.00"),
+        profit: toDecimal(surcharge.profit, "0.00"),
+        thirdParties: surcharge.thirdParties,
+        companyCode: surcharge.companyCode || null,
+      })),
+      texts: values.texts.map((text) => ({
+        title: text.title,
+        textBlock: text.textBlock,
+        textCategoryUuid: text.textCategoryUuid || null,
+      })),
+      contractUuids: values.contractUuids,
+    };
+
     startTransition(async () => {
-      const result = await createOrder({
+      const result = await createOrder(
+        {
         companyUuid: values.companyUuid,
         contactUuid: values.contactUuid || null,
         orderMethod: values.orderMethod || null,
@@ -216,9 +254,11 @@ export const useOrderSubmit = ({ companies }: UseOrderSubmitParams) => {
         billingAddressUuid: values.billingAddressUuid || null,
         blockingReason: values.blockingReason || null,
 
-        remarks: values.remarks || null,
-        documents: null,
-      });
+          remarks: values.remarks || null,
+          documents: values.documents.length > 0 ? values.documents : null,
+        },
+        extras,
+      );
 
       setState(result);
       if (result.success) {
@@ -243,6 +283,7 @@ export const useOrderSubmit = ({ companies }: UseOrderSubmitParams) => {
     deliveryTermOptions,
     weightTypeOptions,
     paymentTermOptions,
+    contracts,
     isLoadingCompanyData,
     handleCompanyChange,
     handleCancel,
