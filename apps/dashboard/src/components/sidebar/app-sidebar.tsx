@@ -63,6 +63,7 @@ export const AppSidebar = () => {
     pathname.startsWith("/address-distances") ||
     pathname.startsWith("/visit-reports") ||
     pathname.startsWith("/text-categories") ||
+    pathname.startsWith("/inactive-companies") ||
     pathname.startsWith("/texts");
   const isSalesActive =
     pathname === "/contracts" ||
@@ -70,6 +71,8 @@ export const AppSidebar = () => {
     pathname.startsWith("/contract-groups") ||
     pathname.startsWith("/invoices") ||
     pathname.startsWith("/invoice-lines") ||
+    pathname.startsWith("/order-lines") ||
+    pathname.startsWith("/orders-still-to-be-called") ||
     pathname.startsWith("/charges") ||
     pathname.startsWith("/journal-entries") ||
     pathname.startsWith("/financially-blocked") ||
@@ -428,6 +431,14 @@ export const AppSidebar = () => {
                         <span>Texts</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/inactive-companies" />}
+                        isActive={pathname.startsWith("/inactive-companies")}
+                      >
+                        <span>Inactive Companies</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
                   </SidebarMenuSub>
                 )}
               </SidebarMenuItem>
@@ -497,6 +508,37 @@ export const AppSidebar = () => {
                         isActive={pathname.startsWith("/invoice-lines")}
                       >
                         <span>Invoice Lines</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/order-lines" />}
+                        isActive={
+                          pathname.startsWith("/order-lines") &&
+                          !pathname.startsWith("/order-lines-still-to-be-called")
+                        }
+                      >
+                        <span>Order Lines</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/order-lines-still-to-be-called" />}
+                        isActive={pathname.startsWith(
+                          "/order-lines-still-to-be-called",
+                        )}
+                      >
+                        <span>Order Lines Still to be Called</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/orders-still-to-be-called" />}
+                        isActive={pathname.startsWith(
+                          "/orders-still-to-be-called",
+                        )}
+                      >
+                        <span>Orders Still to be Called</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                     <SidebarMenuSubItem>
