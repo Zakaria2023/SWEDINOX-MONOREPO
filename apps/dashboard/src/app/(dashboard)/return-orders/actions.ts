@@ -5,9 +5,12 @@ import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
 import {
   InsertReturnOrders,
+  InsertReturnOrderSurcharges,
   ReturnOrders,
+  ReturnOrderSurcharges,
   SelectReturnOrders,
 } from "@/db/schema/return-orders";
+import { InsertTexts, Texts } from "@/db/schema/texts";
 import { generateUuid } from "@/lib/helpers";
 import { desc, eq, getTableColumns } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -16,6 +19,21 @@ export type ReturnOrderFields = Omit<
   InsertReturnOrders,
   "id" | "uuid" | "createdAt" | "updatedAt"
 >;
+
+export type ReturnOrderSurchargeInput = Omit<
+  InsertReturnOrderSurcharges,
+  "id" | "uuid" | "returnOrderUuid" | "createdAt" | "updatedAt"
+>;
+
+export type ReturnOrderTextInput = Pick<
+  InsertTexts,
+  "title" | "textBlock" | "textCategoryUuid"
+>;
+
+export type ReturnOrderExtras = {
+  surcharges: ReturnOrderSurchargeInput[];
+  texts: ReturnOrderTextInput[];
+};
 
 export type ReturnOrderActionResult = {
   returnOrderUuid?: string;
@@ -50,10 +68,36 @@ export const getReturnOrders = async (): Promise<ReturnOrderListItem[]> => {
 
 export const createReturnOrder = async (
   fields: ReturnOrderFields,
+  extras: ReturnOrderExtras,
 ): Promise<ReturnOrderActionResult> => {
   const uuid = generateUuid();
   try {
-    await db.insert(ReturnOrders).values({ ...fields, uuid });
+    await db.transaction(async (tx) => {
+      await tx.insert(ReturnOrders).values({ ...fields, uuid });
+
+      if (extras.surcharges.length > 0) {
+        await tx.insert(ReturnOrderSurcharges).values(
+          extras.surcharges.map((surcharge) => ({
+            ...surcharge,
+            uuid: generateUuid(),
+            returnOrderUuid: uuid,
+          })),
+        );
+      }
+
+      if (extras.texts.length > 0) {
+        await tx.insert(Texts).values(
+          extras.texts.map((text) => ({
+            uuid: generateUuid(),
+            returnOrderUuid: uuid,
+            companyUuid: fields.companyUuid,
+            title: text.title,
+            textBlock: text.textBlock,
+            textCategoryUuid: text.textCategoryUuid ?? null,
+          })),
+        );
+      }
+    });
     revalidatePath("/return-orders");
     return { success: true, returnOrderUuid: uuid };
   } catch (error) {

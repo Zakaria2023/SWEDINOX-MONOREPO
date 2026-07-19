@@ -1,11 +1,5 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
-import { createQuote, QuoteActionResult } from "./actions";
-import { DEFAULT_QUOTE, quoteSchema, QuoteFormValues } from "./validation";
 import {
   AddressOption,
   getAddressesForCompany,
@@ -15,21 +9,21 @@ import {
   getProjectsForCompany,
   ProjectOption,
 } from "@/app/(dashboard)/companies/actions";
-import { ContractForProjectOption } from "@/app/(dashboard)/contracts/actions";
 import {
   ContactOption,
   getContactsForCompany,
 } from "@/app/(dashboard)/contacts/actions";
+import { ContractForProjectOption } from "@/app/(dashboard)/contracts/actions";
 import { SelectOption } from "@/components/shadcn/select";
 import {
-  deliveryTerms,
-  invoicePaymentTerms,
-  orderMethods,
-  orderWeightTypes,
   DeliveryTerm,
+  deliveryTerms,
   InvoicePaymentTerm,
+  invoicePaymentTerms,
   OrderMethod,
+  orderMethods,
   OrderWeightType,
+  orderWeightTypes,
 } from "@/lib/enums";
 import {
   COMMON_TEXT,
@@ -38,6 +32,12 @@ import {
   ORDER_METHOD_LABELS,
   ORDER_WEIGHT_TYPE_LABELS,
 } from "@/lib/labels";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
+import { useForm } from "react-hook-form";
+import { createQuote, QuoteActionResult } from "./actions";
+import { DEFAULT_QUOTE, QuoteFormValues, quoteSchema } from "./validation";
 
 type UseQuoteSubmitParams = {
   companies: CompanyOption[];
@@ -81,7 +81,7 @@ export const useQuoteSubmit = ({
 
   // Only show customer/prospect companies
   const customerCompanies = companies.filter(
-    (c) => c.roles.includes("customer") || c.roles.includes("prospect"),
+    (c) => c.roles?.includes("customer") || c.roles?.includes("prospect"),
   );
 
   const companyOptions: SelectOption[] = [

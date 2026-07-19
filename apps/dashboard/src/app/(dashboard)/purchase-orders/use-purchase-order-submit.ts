@@ -1,19 +1,9 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
-import { useFieldArray, useForm } from "react-hook-form";
-import { createPurchaseOrder, PurchaseOrderActionResult } from "./actions";
 import {
   AddressOption,
   getAddressesForCompany,
 } from "@/app/(dashboard)/addresses/actions";
-import {
-  DEFAULT_PURCHASE_ORDER,
-  purchaseOrderSchema,
-  PurchaseOrderFormValues,
-} from "./validation";
 import { CompanyOption } from "@/app/(dashboard)/companies/actions";
 import {
   ContactOption,
@@ -23,17 +13,16 @@ import {
   getProductsForCompany,
   ProductOption,
 } from "@/app/(dashboard)/products/actions";
-import { ClerkUserOption } from "@/lib/server/clerk";
 import { SelectOption } from "@/components/shadcn/select";
 import {
-  deliveryTerms,
-  invoicePaymentTerms,
-  orderWeightTypes,
-  purchaseOrderTypes,
   DeliveryTerm,
+  deliveryTerms,
   InvoicePaymentTerm,
+  invoicePaymentTerms,
   OrderWeightType,
+  orderWeightTypes,
   PurchaseOrderType,
+  purchaseOrderTypes,
 } from "@/lib/enums";
 import {
   COMMON_TEXT,
@@ -42,6 +31,17 @@ import {
   ORDER_WEIGHT_TYPE_LABELS,
   PURCHASE_ORDER_TYPE_LABELS,
 } from "@/lib/labels";
+import { ClerkUserOption } from "@/lib/server/clerk";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
+import { useFieldArray, useForm } from "react-hook-form";
+import { createPurchaseOrder, PurchaseOrderActionResult } from "./actions";
+import {
+  DEFAULT_PURCHASE_ORDER,
+  PurchaseOrderFormValues,
+  purchaseOrderSchema,
+} from "./validation";
 
 type UsePurchaseOrderSubmitParams = {
   companies: CompanyOption[];
@@ -59,9 +59,8 @@ const makeOptions = <T extends string>(
 ];
 
 const addressLabel = (a: AddressOption) =>
-  [a.altName, a.streetAndNo, a.postalCode, a.city]
-    .filter(Boolean)
-    .join(", ") || a.uuid;
+  [a.altName, a.streetAndNo, a.postalCode, a.city].filter(Boolean).join(", ") ||
+  a.uuid;
 
 export const usePurchaseOrderSubmit = ({
   companies,
@@ -71,7 +70,9 @@ export const usePurchaseOrderSubmit = ({
   const [isPending, startTransition] = useTransition();
   const [state, setState] = useState<PurchaseOrderActionResult>({});
   const [contacts, setContacts] = useState<ContactOption[]>([]);
-  const [supplierAddresses, setSupplierAddresses] = useState<AddressOption[]>([]);
+  const [supplierAddresses, setSupplierAddresses] = useState<AddressOption[]>(
+    [],
+  );
   const [isLoadingSupplierData, setIsLoadingSupplierData] = useState(false);
   const [supplierProducts, setSupplierProducts] = useState<ProductOption[]>([]);
   const [agentProducts, setAgentProducts] = useState<ProductOption[]>([]);
@@ -91,9 +92,9 @@ export const usePurchaseOrderSubmit = ({
   const deliveryType = form.watch("deliveryType");
 
   const supplierCompanies = companies.filter((c) =>
-    c.roles.includes("supplier"),
+    c.roles?.includes("supplier"),
   );
-  const agentCompanies = companies.filter((c) => c.roles.includes("agent"));
+  const agentCompanies = companies.filter((c) => c.roles?.includes("agent"));
 
   const supplierOptions: SelectOption[] = [
     emptyOpt,
@@ -121,7 +122,10 @@ export const usePurchaseOrderSubmit = ({
 
   const supplierAddressOptions: SelectOption[] = [
     emptyOpt,
-    ...supplierAddresses.map((a) => ({ value: a.uuid, label: addressLabel(a) })),
+    ...supplierAddresses.map((a) => ({
+      value: a.uuid,
+      label: addressLabel(a),
+    })),
   ];
 
   const availableProducts = [
