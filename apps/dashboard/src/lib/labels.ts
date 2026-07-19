@@ -73,6 +73,7 @@ import type {
   TransportMode,
   ReturnOrderReason,
   ReturnOrderStatus,
+  PurchaseReturnOrderReason,
   OrderMethod,
   DeliveryTerm,
   TransporterCountry,
@@ -469,6 +470,19 @@ export const RETURN_ORDER_REASON_LABELS: Record<ReturnOrderReason, string> = {
   excess_delivery: "Excess delivery",
   customer_changed_mind: "Customer changed mind",
   other: "Other",
+};
+
+export const PURCHASE_RETURN_ORDER_REASON_LABELS: Record<
+  PurchaseReturnOrderReason,
+  string
+> = {
+  damaged: "Damaged",
+  wrong_quantity: "Wrong quantity",
+  wrong_material_delivered: "Wrong material delivered",
+  delivered_too_late: "Delivered too late",
+  not_delivered: "Not delivered",
+  transport_damage: "Transport damage",
+  incorrect_delivery_address: "Incorrect delivery address",
 };
 
 export const RETURN_ORDER_STATUS_LABELS: Record<ReturnOrderStatus, string> = {

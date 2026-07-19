@@ -738,6 +738,19 @@ export const returnOrderStatuses = [
 
 export type ReturnOrderStatus = (typeof returnOrderStatuses)[number];
 
+export const purchaseReturnOrderReasons = [
+  "damaged",
+  "wrong_quantity",
+  "wrong_material_delivered",
+  "delivered_too_late",
+  "not_delivered",
+  "transport_damage",
+  "incorrect_delivery_address",
+] as const satisfies readonly string[];
+
+export type PurchaseReturnOrderReason =
+  (typeof purchaseReturnOrderReasons)[number];
+
 export const machineOptionTypes = [
   "decoiling",
   "grinding",

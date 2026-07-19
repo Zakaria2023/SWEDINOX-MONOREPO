@@ -11,9 +11,7 @@ import {
   createPurchaseInvoiceSchema,
   type PurchaseInvoiceFormValues,
 } from "./validation";
-
-const toDecimal = (value: string | undefined, fallback: string): string =>
-  value && value.trim() !== "" ? value : fallback;
+import { toDecimal } from "@/lib/helpers";
 
 export const usePurchaseInvoiceSubmit = () => {
   const [isPending, startTransition] = useTransition();
@@ -66,27 +64,30 @@ export const usePurchaseInvoiceSubmit = () => {
     startTransition(async () => {
       const result = await createPurchaseInvoice(
         {
-        companyUuid: values.companyUuid || undefined,
-        invoiceSentByContactUuid: values.invoiceSentByContactUuid || undefined,
-        bookingDate: values.bookingDate ? new Date(values.bookingDate) : null,
-        invoiceDate: values.invoiceDate ? new Date(values.invoiceDate) : null,
-        expirationDate: values.expirationDate ? new Date(values.expirationDate) : null,
-        invoiceNumberSupplier: values.invoiceNumberSupplier || undefined,
-        creditorNo: values.creditorNo || undefined,
-        creditorNo2: values.creditorNo2 || undefined,
-        basisForFiscalPeriod: values.basisForFiscalPeriod,
-        invoiceTotal: values.invoiceTotal,
-        purchaseOrderNumber: values.purchaseOrderNumber || undefined,
-        paymentTerms: values.paymentTerms ?? null,
-        blocked: values.blocked,
-        blockReason: values.blockReason ?? null,
-        materials: values.materials,
-        optionsAmount: values.optionsAmount,
-        surcharges: values.surcharges,
-        vatHigh: values.vatHigh,
-        vatMiddle: values.vatMiddle,
-        vatLow: values.vatLow,
-        creditRestriction: values.creditRestriction,
+          companyUuid: values.companyUuid || undefined,
+          invoiceSentByContactUuid:
+            values.invoiceSentByContactUuid || undefined,
+          bookingDate: values.bookingDate ? new Date(values.bookingDate) : null,
+          invoiceDate: values.invoiceDate ? new Date(values.invoiceDate) : null,
+          expirationDate: values.expirationDate
+            ? new Date(values.expirationDate)
+            : null,
+          invoiceNumberSupplier: values.invoiceNumberSupplier || undefined,
+          creditorNo: values.creditorNo || undefined,
+          creditorNo2: values.creditorNo2 || undefined,
+          basisForFiscalPeriod: values.basisForFiscalPeriod,
+          invoiceTotal: values.invoiceTotal,
+          purchaseOrderNumber: values.purchaseOrderNumber || undefined,
+          paymentTerms: values.paymentTerms ?? null,
+          blocked: values.blocked,
+          blockReason: values.blockReason ?? null,
+          materials: values.materials,
+          optionsAmount: values.optionsAmount,
+          surcharges: values.surcharges,
+          vatHigh: values.vatHigh,
+          vatMiddle: values.vatMiddle,
+          vatLow: values.vatLow,
+          creditRestriction: values.creditRestriction,
           remarks: values.remarks || undefined,
           documents: values.documents ?? [],
         },
