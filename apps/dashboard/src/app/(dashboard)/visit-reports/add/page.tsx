@@ -1,14 +1,16 @@
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { getCustomerAndProspectCompaniesForSelect } from "@/app/(dashboard)/companies/actions";
+import { getIndustriesForSelect } from "@/app/(dashboard)/industries/actions";
 import { getClerkAdminUsers } from "@/lib/server/clerk";
 import { VisitReportForm } from "@/components/visit-reports/visit-report-form";
 import { PageHeading } from "@/components/layout/page-heading";
 
 const AddVisitReportPage = async () => {
-  const [companies, adminUsers] = await Promise.all([
+  const [companies, adminUsers, industries] = await Promise.all([
     getCustomerAndProspectCompaniesForSelect(),
     getClerkAdminUsers(),
+    getIndustriesForSelect(),
   ]);
 
   return (
@@ -26,7 +28,11 @@ const AddVisitReportPage = async () => {
         title="New Visit Report"
         description="Create a visit or telephone contact report."
       />
-      <VisitReportForm companies={companies} adminUsers={adminUsers} />
+      <VisitReportForm
+        companies={companies}
+        adminUsers={adminUsers}
+        industries={industries}
+      />
     </div>
   );
 };

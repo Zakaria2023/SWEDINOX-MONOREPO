@@ -1438,6 +1438,22 @@ export type CustomerStockReason = (typeof customerStockReasons)[number];
 // January (index 0) → December (index 11).
 export type VisitPlanningEntry = { call: boolean; visit: boolean };
 
+export const visitReportCategories = [
+  "wishing_next_visit",
+  "following_complaint",
+  "acquisition",
+] as const satisfies readonly string[];
+
+export type VisitReportCategory = (typeof visitReportCategories)[number];
+
+// One reader row on a visit report: the functionary (Clerk user id) plus
+// whether the report is queued for them to read and whether they have read it.
+export type VisitReportReader = {
+  userId: string;
+  toRead: boolean;
+  read: boolean;
+};
+
 export const companyClassifications = [
   "A",
   "B",

@@ -60,6 +60,7 @@ import type {
   StockLabelType,
   StockMode,
   TextUsageCategory,
+  VisitReportCategory,
   VisitReportContactMethod,
   VisitReportReason,
   WarehouseAddress,
@@ -1283,6 +1284,13 @@ export const COMPANY_CLASSIFICATION_LABELS: Record<
   B: "Medium customer",
   C: "Small customer",
 };
+
+export const VISIT_REPORT_CATEGORY_LABELS: Record<VisitReportCategory, string> =
+  {
+    wishing_next_visit: "Wishing you next visit",
+    following_complaint: "Following a complaint",
+    acquisition: "Acquisition",
+  };
 
 export const COMPLAINT_TYPE_LABELS: Record<ComplaintType, string> = {
   counter_order: "Counter order",

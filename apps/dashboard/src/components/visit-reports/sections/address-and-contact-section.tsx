@@ -14,7 +14,11 @@ type Props = {
   loadingContacts: boolean;
 };
 
-export const AddressAndContactSection = ({ isPending, contacts, loadingContacts }: Props) => {
+export const AddressAndContactSection = ({
+  isPending,
+  contacts,
+  loadingContacts,
+}: Props) => {
   const {
     control,
     register,
