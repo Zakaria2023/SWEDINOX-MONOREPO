@@ -302,8 +302,7 @@ export const warehouseCountStockTypes = [
   "available_stock",
 ] as const satisfies readonly string[];
 
-export type WarehouseCountStockType =
-  (typeof warehouseCountStockTypes)[number];
+export type WarehouseCountStockType = (typeof warehouseCountStockTypes)[number];
 
 export const warehouseBlockReasons = [
   "disapproval",
@@ -857,6 +856,8 @@ export type TextUsageCategory = (typeof textUsageCategories)[number];
 export const invoiceSurchargeDescriptions = [
   "project_discount",
   "certificate_costs",
+  "cutting_surcharge",
+  "decoil_surcharge",
   "order_surcharge",
   "packaging_surcharge",
   "pallet_surcharge",
@@ -864,11 +865,16 @@ export const invoiceSurchargeDescriptions = [
   "transport_costs",
   "transport_costs_internal",
   "maut_costs",
+  "return_costs",
   "import_costs",
   "costs",
   "other",
   "purchasing_rounding_differences",
+  "credit_notes_to_be_received_third_party",
+  "credit_notes_to_be_received",
+  "eu_import_duties",
   "price_differences",
+  "price_differences_eu_non_eu",
   "external_transport",
 ] as const satisfies readonly string[];
 
