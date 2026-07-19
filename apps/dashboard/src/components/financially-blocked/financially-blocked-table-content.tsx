@@ -1,6 +1,12 @@
 "use client";
 
-import { FinanciallyBlockedRow } from "@/app/(dashboard)/financially-blocked/actions";
+import { useRouter } from "next/navigation";
+import { useTransition } from "react";
+import {
+  FinanciallyBlockedRow,
+  unblockOrder,
+} from "@/app/(dashboard)/financially-blocked/actions";
+import { Button } from "@/components/shadcn/button";
 import {
   Table,
   TableBody,
@@ -14,6 +20,33 @@ import { cn } from "@/lib/helpers";
 
 type Props = {
   rows: FinanciallyBlockedRow[];
+};
+
+type UnblockButtonProps = {
+  orderUuid: string;
+};
+
+const UnblockButton = ({ orderUuid }: UnblockButtonProps) => {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+
+  const handleUnblock = () =>
+    startTransition(async () => {
+      await unblockOrder(orderUuid);
+      router.refresh();
+    });
+
+  return (
+    <Button
+      type="button"
+      size="sm"
+      variant="outline"
+      disabled={isPending}
+      onClick={handleUnblock}
+    >
+      {isPending ? "Unblocking..." : "Unblock"}
+    </Button>
+  );
 };
 
 const money = (value: number) =>
@@ -46,13 +79,14 @@ export const FinanciallyBlockedTable = ({ rows }: Props) => (
           <TableHead className="text-right">Credit limit</TableHead>
           <TableHead className="text-right">Credit space</TableHead>
           <TableHead className="text-center">Company blocked?</TableHead>
+          <TableHead className="text-right">Action</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {rows.length === 0 ? (
           <TableRow>
             <TableCell
-              colSpan={12}
+              colSpan={13}
               className="h-24 text-center text-muted-foreground"
             >
               No financially blocked quotes or orders.
@@ -95,6 +129,13 @@ export const FinanciallyBlockedTable = ({ rows }: Props) => (
               </TableCell>
               <TableCell className="text-center">
                 {row.companyBlocked ? "Yes" : "No"}
+              </TableCell>
+              <TableCell className="text-right">
+                {row.kind === "Order" ? (
+                  <UnblockButton orderUuid={row.uuid} />
+                ) : (
+                  "—"
+                )}
               </TableCell>
             </TableRow>
           ))

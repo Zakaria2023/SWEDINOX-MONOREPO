@@ -55,6 +55,7 @@ export const AppSidebar = () => {
     pathname.startsWith("/change-visit-schedule") ||
     pathname.startsWith("/to-visit-call") ||
     pathname.startsWith("/customer-revenue") ||
+    pathname.startsWith("/unblocked-orders") ||
     pathname.startsWith("/follow-ups");
   const isCompanyActive =
     pathname.startsWith("/companies") ||
@@ -340,6 +341,14 @@ export const AppSidebar = () => {
                         )}
                       >
                         <span>Customer Revenue, Sales &amp; Visits</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/unblocked-orders" />}
+                        isActive={pathname.startsWith("/unblocked-orders")}
+                      >
+                        <span>Unblocked Orders</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                     <SidebarMenuSubItem>

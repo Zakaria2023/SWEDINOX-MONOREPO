@@ -1,12 +1,49 @@
 "use server";
 
+import { requireAuth } from "@/lib/auth";
+import { generateUuid } from "@/lib/helpers";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { db } from "@/db";
 import { Invoices } from "@/db/schema/invoices";
+import { OrderDeblocks } from "@/db/schema/order-deblocks";
 import { OrderItems } from "@/db/schema/order-items";
 import { Orders, SelectOrders } from "@/db/schema/orders";
 import { Quotes, SelectQuotes } from "@/db/schema/quotes";
 import { eq, isNotNull, sql } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
+
+export type UnblockOrderResult = { success?: boolean; error?: string };
+
+// Release an order's financial block and record the event in the deblock audit
+// trail (which block, when, and by which user).
+export const unblockOrder = async (
+  orderUuid: string,
+): Promise<UnblockOrderResult> => {
+  const userId = await requireAuth();
+  try {
+    await db.transaction(async (tx) => {
+      await tx
+        .update(Orders)
+        .set({ financialBlockage: false })
+        .where(eq(Orders.uuid, orderUuid));
+
+      await tx.insert(OrderDeblocks).values({
+        uuid: generateUuid(),
+        orderUuid,
+        deblockType: "financial",
+        deblockedByUserId: userId,
+      });
+    });
+    revalidatePath("/financially-blocked");
+    revalidatePath("/unblocked-orders");
+    return { success: true };
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error ? error.message : "Failed to unblock order",
+    };
+  }
+};
 
 export type FinanciallyBlockedRow = {
   kind: "Order" | "Quote";

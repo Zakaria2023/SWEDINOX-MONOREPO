@@ -76,6 +76,7 @@ import type {
   TransportMode,
   ReturnOrderReason,
   ReturnOrderStatus,
+  OrderDeblockType,
   OrderMethod,
   OrderStatus,
   OrderItemStatus,
@@ -476,6 +477,13 @@ export const RETURN_ORDER_REASON_LABELS: Record<ReturnOrderReason, string> = {
   excess_delivery: "Excess delivery",
   customer_changed_mind: "Customer changed mind",
   other: "Other",
+};
+
+export const ORDER_DEBLOCK_TYPE_LABELS: Record<OrderDeblockType, string> = {
+  financial: "Financial",
+  invoice: "Invoice",
+  transport: "Transport",
+  handling: "Handling",
 };
 
 export const RETURN_ORDER_STATUS_LABELS: Record<ReturnOrderStatus, string> = {

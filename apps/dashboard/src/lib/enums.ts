@@ -792,6 +792,15 @@ export const returnOrderStatuses = [
 
 export type ReturnOrderStatus = (typeof returnOrderStatuses)[number];
 
+export const orderDeblockTypes = [
+  "financial",
+  "invoice",
+  "transport",
+  "handling",
+] as const satisfies readonly string[];
+
+export type OrderDeblockType = (typeof orderDeblockTypes)[number];
+
 export const machineOptionTypes = [
   "decoiling",
   "grinding",
