@@ -45,6 +45,7 @@ import {
   ReturnOrderFormValues,
   returnOrderSchema,
 } from "./validation";
+import { toDecimal } from "@/lib/helpers";
 
 type UseReturnOrderSubmitParams = {
   companies: CompanyOption[];
@@ -63,9 +64,6 @@ const makeOptions = <T extends string>(
 const addressLabel = (a: AddressOption) =>
   [a.altName, a.streetAndNo, a.postalCode, a.city].filter(Boolean).join(", ") ||
   a.uuid;
-
-const toDecimal = (value: string | undefined, fallback: string): string =>
-  value && value.trim() !== "" ? value : fallback;
 
 export const useReturnOrderSubmit = ({
   companies,
