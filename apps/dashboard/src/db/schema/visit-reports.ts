@@ -18,9 +18,9 @@ import {
   companyClassifications,
   visitReportContactMethods,
   visitReportReasons,
-  type VisitPlanningEntry,
-  type VisitReportCategory,
-  type VisitReportReader,
+  VisitPlanningEntry,
+  VisitReportCategory,
+  VisitReportReader,
 } from "@/lib/enums";
 import { Companies } from "./companies";
 import { Contacts } from "./contacts";
