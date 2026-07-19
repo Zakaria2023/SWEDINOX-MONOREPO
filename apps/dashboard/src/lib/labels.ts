@@ -606,6 +606,8 @@ export const INVOICE_SURCHARGE_DESCRIPTION_LABELS: Record<
 > = {
   project_discount: "Project discount",
   certificate_costs: "Certificate costs",
+  cutting_surcharge: "Cutting surcharge",
+  decoil_surcharge: "Decoil surcharge",
   order_surcharge: "Order surcharge",
   packaging_surcharge: "Packaging surcharge",
   pallet_surcharge: "Pallet surcharge",
@@ -613,11 +615,17 @@ export const INVOICE_SURCHARGE_DESCRIPTION_LABELS: Record<
   transport_costs: "Transport costs",
   transport_costs_internal: "Transport costs Internal",
   maut_costs: "Maut costs",
+  return_costs: "Return costs",
   import_costs: "Import costs",
   costs: "Costs",
   other: "Other",
   purchasing_rounding_differences: "Purchasing rounding differences",
+  credit_notes_to_be_received_third_party:
+    "Credit notes still to be received (3rd party)",
+  credit_notes_to_be_received: "Credit notes still to be received",
+  eu_import_duties: "EU Import duties",
   price_differences: "Price differences",
+  price_differences_eu_non_eu: "Price differences EU - Non EU",
   external_transport: "External transport",
 };
 
@@ -1150,11 +1158,13 @@ export const COUNTER_ORDER_STATUS_LABELS: Record<CounterOrderStatus, string> = {
   cancelled: "Cancelled",
 };
 
-export const COUNTER_ORDER_PRIORITY_LABELS: Record<CounterOrderPriority, string> =
-  {
-    normal: "Normal",
-    rush: "Rush",
-  };
+export const COUNTER_ORDER_PRIORITY_LABELS: Record<
+  CounterOrderPriority,
+  string
+> = {
+  normal: "Normal",
+  rush: "Rush",
+};
 
 export const PURCHASE_ORDER_TYPE_LABELS: Record<PurchaseOrderType, string> = {
   materials: "Materials",
@@ -1171,13 +1181,11 @@ export const PURCHASE_ORDER_STATUS_LABELS: Record<PurchaseOrderStatus, string> =
     cancelled: "Cancelled",
   };
 
-export const PURCHASE_COMPANY_TYPE_LABELS: Record<
-  PurchaseCompanyType,
-  string
-> = {
-  supplier: "Supplier",
-  agent: "Agent",
-};
+export const PURCHASE_COMPANY_TYPE_LABELS: Record<PurchaseCompanyType, string> =
+  {
+    supplier: "Supplier",
+    agent: "Agent",
+  };
 
 export const CUSTOMER_GROUP_LABELS: Record<CustomerGroup, string> = {
   warehouse_staff: "Warehouse Staff",
@@ -1459,15 +1467,13 @@ export const CURRENCY_LABELS: Record<Currency, string> = {
   hkd: "HK-Dollar",
 };
 
-export const CUSTOMER_STOCK_REASON_LABELS: Record<
-  CustomerStockReason,
-  string
-> = {
-  initial_stock: "Initial stock",
-  correction: "Correction",
-  counting_difference: "Counting difference",
-  damaged: "Damaged",
-  return_from_customer: "Return from customer",
-  transfer: "Transfer",
-  other: "Other",
-};
+export const CUSTOMER_STOCK_REASON_LABELS: Record<CustomerStockReason, string> =
+  {
+    initial_stock: "Initial stock",
+    correction: "Correction",
+    counting_difference: "Counting difference",
+    damaged: "Damaged",
+    return_from_customer: "Return from customer",
+    transfer: "Transfer",
+    other: "Other",
+  };
