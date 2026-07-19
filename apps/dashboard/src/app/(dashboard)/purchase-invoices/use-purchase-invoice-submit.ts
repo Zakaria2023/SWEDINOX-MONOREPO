@@ -15,9 +15,7 @@ import {
   getPendingStockForCompany,
   type PendingStockOption,
 } from "@/app/(dashboard)/stock/actions";
-
-const toDecimal = (value: string | undefined, fallback: string): string =>
-  value && value.trim() !== "" ? value : fallback;
+import { toDecimal } from "@/lib/helpers";
 
 export const usePurchaseInvoiceSubmit = () => {
   const [isPending, startTransition] = useTransition();

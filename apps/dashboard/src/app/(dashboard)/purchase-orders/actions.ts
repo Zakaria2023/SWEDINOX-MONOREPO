@@ -40,6 +40,24 @@ export type PurchaseOrderListItem = SelectPurchaseOrders & {
   contactLastName: SelectContacts["lastName"] | null;
 };
 
+export type PurchaseOrderOption = Pick<
+  SelectPurchaseOrders,
+  "uuid" | "id" | "reference"
+>;
+
+export const getPurchaseOrdersForCompany = async (
+  supplierUuid: string,
+): Promise<PurchaseOrderOption[]> =>
+  db
+    .select({
+      uuid: PurchaseOrders.uuid,
+      id: PurchaseOrders.id,
+      reference: PurchaseOrders.reference,
+    })
+    .from(PurchaseOrders)
+    .where(eq(PurchaseOrders.supplierUuid, supplierUuid))
+    .orderBy(desc(PurchaseOrders.createdAt));
+
 export const getPurchaseOrders = async (): Promise<PurchaseOrderListItem[]> => {
   try {
     return await db

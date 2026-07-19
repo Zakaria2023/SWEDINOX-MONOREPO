@@ -10,13 +10,8 @@ import {
   CounterOrderInput,
   createCounterOrder,
 } from "./actions";
-import {
-  createCounterOrderSchema,
-  CounterOrderFormValues,
-} from "./validation";
-
-const toDecimal = (value: string | undefined, fallback: string): string =>
-  value && value.trim() !== "" ? value : fallback;
+import { createCounterOrderSchema, CounterOrderFormValues } from "./validation";
+import { toDecimal } from "@/lib/helpers";
 
 export const useCounterOrderSubmit = () => {
   const [isPending, startTransition] = useTransition();
@@ -119,7 +114,9 @@ export const useCounterOrderSubmit = () => {
         vehicleWithCanopy: values.vehicleWithCanopy,
         bundlingSeparate: values.bundlingSeparate,
         transportRegion: values.transportRegion || undefined,
-        maxLengthMm: values.maxLengthMm ? Number(values.maxLengthMm) : undefined,
+        maxLengthMm: values.maxLengthMm
+          ? Number(values.maxLengthMm)
+          : undefined,
         maxBundleWeightKg: values.maxBundleWeightKg || undefined,
         deliveryAfterTime: values.deliveryAfterTime || undefined,
         deliverForTime: values.deliverForTime || undefined,

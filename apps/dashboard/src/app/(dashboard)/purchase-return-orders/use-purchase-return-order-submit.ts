@@ -10,15 +10,17 @@ import {
   getContactsForCompany,
 } from "@/app/(dashboard)/contacts/actions";
 import {
-  getOrdersForCompany,
-  OrderOption,
-} from "@/app/(dashboard)/orders/actions";
+  getPurchaseOrdersForCompany,
+  PurchaseOrderOption,
+} from "@/app/(dashboard)/purchase-orders/actions";
 import { SelectOption } from "@/components/shadcn/select";
 import {
   InvoicePaymentTerm,
   invoicePaymentTerms,
-  ReturnOrderReason,
-  returnOrderReasons,
+  PurchaseOrderType,
+  purchaseOrderTypes,
+  PurchaseReturnOrderReason,
+  purchaseReturnOrderReasons,
   TransportMode,
   transportModes,
   WarehouseTransportRegion,
@@ -27,28 +29,31 @@ import {
 import {
   COMMON_TEXT,
   INVOICE_PAYMENT_TERM_LABELS,
-  RETURN_ORDER_REASON_LABELS,
+  PURCHASE_ORDER_TYPE_LABELS,
+  PURCHASE_RETURN_ORDER_REASON_LABELS,
   TRANSPORT_MODE_LABELS,
   WAREHOUSE_TRANSPORT_REGION_LABELS,
 } from "@/lib/labels";
+import { ClerkUserOption } from "@/lib/server/clerk";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import {
-  createReturnOrder,
-  ReturnOrderActionResult,
-  ReturnOrderExtras,
+  createPurchaseReturnOrder,
+  PurchaseReturnOrderActionResult,
+  PurchaseReturnOrderExtras,
 } from "./actions";
 import {
-  DEFAULT_RETURN_ORDER,
-  ReturnOrderFormValues,
-  returnOrderSchema,
+  DEFAULT_PURCHASE_RETURN_ORDER,
+  PurchaseReturnOrderFormValues,
+  purchaseReturnOrderSchema,
 } from "./validation";
 import { toDecimal } from "@/lib/helpers";
 
-type UseReturnOrderSubmitParams = {
+type UsePurchaseReturnOrderSubmitParams = {
   companies: CompanyOption[];
+  clerkUsers: ClerkUserOption[];
 };
 
 const emptyOpt = { value: "", label: COMMON_TEXT.emptyOption };
@@ -65,31 +70,34 @@ const addressLabel = (a: AddressOption) =>
   [a.altName, a.streetAndNo, a.postalCode, a.city].filter(Boolean).join(", ") ||
   a.uuid;
 
-export const useReturnOrderSubmit = ({
+export const usePurchaseReturnOrderSubmit = ({
   companies,
-}: UseReturnOrderSubmitParams) => {
+  clerkUsers,
+}: UsePurchaseReturnOrderSubmitParams) => {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [state, setState] = useState<ReturnOrderActionResult>({});
+  const [state, setState] = useState<PurchaseReturnOrderActionResult>({});
   const [contacts, setContacts] = useState<ContactOption[]>([]);
   const [addresses, setAddresses] = useState<AddressOption[]>([]);
-  const [orders, setOrders] = useState<OrderOption[]>([]);
-  const [isLoadingCompanyData, setIsLoadingCompanyData] = useState(false);
+  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrderOption[]>(
+    [],
+  );
+  const [isLoadingSupplierData, setIsLoadingSupplierData] = useState(false);
 
-  const form = useForm<ReturnOrderFormValues>({
-    resolver: zodResolver(returnOrderSchema),
-    defaultValues: DEFAULT_RETURN_ORDER,
+  const form = useForm<PurchaseReturnOrderFormValues>({
+    resolver: zodResolver(purchaseReturnOrderSchema),
+    defaultValues: DEFAULT_PURCHASE_RETURN_ORDER,
   });
 
-  const isPickup = form.watch("isPickup");
+  const isDropOff = form.watch("isDropOff");
 
-  const customerCompanies = companies.filter(
-    (c) => c.roles?.includes("customer") || c.roles?.includes("prospect"),
+  const supplierCompanies = companies.filter((c) =>
+    c.roles?.includes("supplier"),
   );
 
-  const companyOptions: SelectOption[] = [
+  const supplierOptions: SelectOption[] = [
     emptyOpt,
-    ...customerCompanies.map((c) => ({
+    ...supplierCompanies.map((c) => ({
       value: c.uuid,
       label: c.companyName ?? c.searchCode1 ?? c.uuid,
     })),
@@ -108,14 +116,25 @@ export const useReturnOrderSubmit = ({
     ...addresses.map((a) => ({ value: a.uuid, label: addressLabel(a) })),
   ];
 
-  const orderOptions: SelectOption[] = [
+  const purchaseOrderOptions: SelectOption[] = [
     emptyOpt,
-    ...orders.map((o) => ({ value: o.uuid, label: `#${o.id}` })),
+    ...purchaseOrders.map((o) => ({
+      value: o.uuid,
+      label: o.reference ? `#${o.id} — ${o.reference}` : `#${o.id}`,
+    })),
   ];
 
+  const purchaseOrderTypeOptions = makeOptions(
+    purchaseOrderTypes,
+    PURCHASE_ORDER_TYPE_LABELS as Record<PurchaseOrderType, string>,
+  );
+
   const returnReasonOptions = makeOptions(
-    returnOrderReasons,
-    RETURN_ORDER_REASON_LABELS as Record<ReturnOrderReason, string>,
+    purchaseReturnOrderReasons,
+    PURCHASE_RETURN_ORDER_REASON_LABELS as Record<
+      PurchaseReturnOrderReason,
+      string
+    >,
   );
 
   const paymentTermOptions = makeOptions(
@@ -136,34 +155,35 @@ export const useReturnOrderSubmit = ({
     TRANSPORT_MODE_LABELS as Record<TransportMode, string>,
   );
 
-  const handleCompanyChange = (uuid: string) => {
-    form.setValue("companyUuid", uuid);
+  const purchaserOptions: SelectOption[] = [emptyOpt, ...clerkUsers];
+
+  const handleSupplierChange = (uuid: string) => {
+    form.setValue("supplierUuid", uuid);
     form.setValue("contactUuid", "");
-    form.setValue("orderUuid", "");
+    form.setValue("purchaseOrderUuid", "");
     form.setValue("deliveryAddressUuid", "");
-    form.setValue("billingAddressUuid", "");
     setContacts([]);
-    setOrders([]);
+    setPurchaseOrders([]);
     setAddresses([]);
     if (!uuid) return;
-    setIsLoadingCompanyData(true);
+    setIsLoadingSupplierData(true);
     Promise.all([
       getContactsForCompany(uuid),
-      getOrdersForCompany(uuid),
+      getPurchaseOrdersForCompany(uuid),
       getAddressesForCompany(uuid),
-    ]).then(([newContacts, newOrders, newAddresses]) => {
+    ]).then(([newContacts, newPurchaseOrders, newAddresses]) => {
       setContacts(newContacts);
-      setOrders(newOrders);
+      setPurchaseOrders(newPurchaseOrders);
       setAddresses(newAddresses);
-      setIsLoadingCompanyData(false);
+      setIsLoadingSupplierData(false);
     });
   };
 
-  const handleCancel = () => router.push("/return-orders");
+  const handleCancel = () => router.push("/purchase-return-orders");
 
   const onSubmit = form.handleSubmit((values) => {
     startTransition(async () => {
-      const extras: ReturnOrderExtras = {
+      const extras: PurchaseReturnOrderExtras = {
         surcharges: values.surcharges.map((surcharge) => ({
           companyUuid: surcharge.companyUuid || null,
           order: 0,
@@ -185,48 +205,40 @@ export const useReturnOrderSubmit = ({
         })),
       };
 
-      const result = await createReturnOrder(
+      const result = await createPurchaseReturnOrder(
         {
-          companyUuid: values.companyUuid,
-          orderUuid: values.orderUuid || null,
+          supplierUuid: values.supplierUuid,
+          purchaseOrderUuid: values.purchaseOrderUuid || null,
+          purchaseOrderReference: values.purchaseOrderReference || null,
           complaintRef: values.complaintRef || null,
           contactUuid: values.contactUuid || null,
-          customerRef: values.customerRef || null,
-          ourReference: values.ourReference || null,
-          handlingBlocked: values.handlingBlocked,
+          purchaser: values.purchaser || null,
+          purchaseOrderType: values.purchaseOrderType || null,
           isPrinted: values.isPrinted,
           isMailed: values.isMailed,
           isFaxed: values.isFaxed,
 
-          returnDate: values.returnDate ? new Date(values.returnDate) : null,
-          isPickup: values.isPickup,
-          pickupAddress: values.isPickup ? values.pickupAddress || null : null,
-          deliveryAddressUuid: values.isPickup
-            ? null
-            : values.deliveryAddressUuid || null,
-
-          returnReason: values.returnReason,
-
-          calculateVatIfApplicable: values.calculateVatIfApplicable,
-          invoiceBlockage: values.invoiceBlockage,
-          onlyTotalAmountOnInvoice: values.onlyTotalAmountOnInvoice,
-          includeOptionPricesInMaterialPrices:
-            values.includeOptionPricesInMaterialPrices,
           paymentTerms: values.paymentTerms || null,
-          billingAddressUuid: values.billingAddressUuid || null,
-          blockingReason: values.blockingReason || null,
+
+          returnDate: values.returnDate ? new Date(values.returnDate) : null,
+          returnReason: values.returnReason,
+          isDropOff: values.isDropOff,
+          deliveryAddressUuid: values.isDropOff
+            ? values.deliveryAddressUuid || null
+            : null,
+          pickupAddress: values.isDropOff ? null : values.pickupAddress || null,
 
           completeDelivery: values.completeDelivery,
-          transportBlockage: values.transportBlockage,
           vehicleWithCrane: values.vehicleWithCrane,
           vehicleWithCanopy: values.vehicleWithCanopy,
           bundlingSeparate: values.bundlingSeparate,
+          unloadingWarehousePerLine: values.unloadingWarehousePerLine,
           transportRegion: values.transportRegion || null,
+          transportMode: values.transportMode || null,
+          pickupAfterTime: values.pickupAfterTime || null,
+          pickupForTime: values.pickupForTime || null,
           maxLengthMm: values.maxLengthMm ? Number(values.maxLengthMm) : null,
           maxBundleWeightKg: values.maxBundleWeightKg || null,
-          deliveryAfterTime: values.deliveryAfterTime || null,
-          deliverForTime: values.deliverForTime || null,
-          transportMode: values.transportMode || null,
 
           remarks: values.remarks || null,
           documents: values.documents?.length ? values.documents : null,
@@ -236,7 +248,7 @@ export const useReturnOrderSubmit = ({
 
       setState(result);
       if (result.success) {
-        router.push("/return-orders");
+        router.push("/purchase-return-orders");
       }
     });
   });
@@ -246,17 +258,19 @@ export const useReturnOrderSubmit = ({
     isPending,
     onSubmit,
     state,
-    isPickup,
-    companyOptions,
+    isDropOff,
+    supplierOptions,
     contactOptions,
-    orderOptions,
+    purchaseOrderOptions,
     addressOptions,
+    purchaseOrderTypeOptions,
     returnReasonOptions,
     paymentTermOptions,
     transportRegionOptions,
     transportModeOptions,
-    isLoadingCompanyData,
-    handleCompanyChange,
+    purchaserOptions,
+    isLoadingSupplierData,
+    handleSupplierChange,
     handleCancel,
   };
 };

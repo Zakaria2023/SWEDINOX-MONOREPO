@@ -302,8 +302,7 @@ export const warehouseCountStockTypes = [
   "available_stock",
 ] as const satisfies readonly string[];
 
-export type WarehouseCountStockType =
-  (typeof warehouseCountStockTypes)[number];
+export type WarehouseCountStockType = (typeof warehouseCountStockTypes)[number];
 
 export const warehouseBlockReasons = [
   "disapproval",
@@ -801,6 +800,19 @@ export const orderDeblockTypes = [
 
 export type OrderDeblockType = (typeof orderDeblockTypes)[number];
 
+export const purchaseReturnOrderReasons = [
+  "damaged",
+  "wrong_quantity",
+  "wrong_material_delivered",
+  "delivered_too_late",
+  "not_delivered",
+  "transport_damage",
+  "incorrect_delivery_address",
+] as const satisfies readonly string[];
+
+export type PurchaseReturnOrderReason =
+  (typeof purchaseReturnOrderReasons)[number];
+
 export const machineOptionTypes = [
   "decoiling",
   "grinding",
@@ -919,6 +931,8 @@ export type TextUsageCategory = (typeof textUsageCategories)[number];
 export const invoiceSurchargeDescriptions = [
   "project_discount",
   "certificate_costs",
+  "cutting_surcharge",
+  "decoil_surcharge",
   "order_surcharge",
   "packaging_surcharge",
   "pallet_surcharge",
@@ -926,11 +940,16 @@ export const invoiceSurchargeDescriptions = [
   "transport_costs",
   "transport_costs_internal",
   "maut_costs",
+  "return_costs",
   "import_costs",
   "costs",
   "other",
   "purchasing_rounding_differences",
+  "credit_notes_to_be_received_third_party",
+  "credit_notes_to_be_received",
+  "eu_import_duties",
   "price_differences",
+  "price_differences_eu_non_eu",
   "external_transport",
 ] as const satisfies readonly string[];
 
@@ -1534,6 +1553,22 @@ export type CustomerStockReason = (typeof customerStockReasons)[number];
 // One row of a company's yearly visit planning grid. The array is ordered
 // January (index 0) → December (index 11).
 export type VisitPlanningEntry = { call: boolean; visit: boolean };
+
+export const visitReportCategories = [
+  "wishing_next_visit",
+  "following_complaint",
+  "acquisition",
+] as const satisfies readonly string[];
+
+export type VisitReportCategory = (typeof visitReportCategories)[number];
+
+// One reader row on a visit report: the functionary (Clerk user id) plus
+// whether the report is queued for them to read and whether they have read it.
+export type VisitReportReader = {
+  userId: string;
+  toRead: boolean;
+  read: boolean;
+};
 
 export const companyClassifications = [
   "A",
