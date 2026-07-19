@@ -52,6 +52,9 @@ export const AppSidebar = () => {
     pathname.startsWith("/customer-overview") ||
     pathname.startsWith("/remarks-per-company") ||
     pathname.startsWith("/visit-schedule") ||
+    pathname.startsWith("/change-visit-schedule") ||
+    pathname.startsWith("/to-visit-call") ||
+    pathname.startsWith("/customer-revenue") ||
     pathname.startsWith("/follow-ups");
   const isCompanyActive =
     pathname.startsWith("/companies") ||
@@ -260,6 +263,83 @@ export const AppSidebar = () => {
                         isActive={pathname.startsWith("/visit-schedule")}
                       >
                         <span>Visit Schedule</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/change-visit-schedule" />}
+                        isActive={pathname.startsWith("/change-visit-schedule")}
+                      >
+                        <span>Change Visit Schedule</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/to-visit-call" />}
+                        isActive={pathname.startsWith("/to-visit-call")}
+                      >
+                        <span>To Visit / Call</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/customer-revenue" />}
+                        isActive={pathname === "/customer-revenue"}
+                      >
+                        <span>Customer Revenue</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={
+                          <Link href="/customer-revenue-per-revenue-group" />
+                        }
+                        isActive={
+                          pathname.startsWith(
+                            "/customer-revenue-per-revenue-group",
+                          ) &&
+                          !pathname.startsWith(
+                            "/customer-revenue-per-revenue-group-split",
+                          )
+                        }
+                      >
+                        <span>Customer Revenue per Revenue Group</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={
+                          <Link href="/customer-revenue-per-product-group" />
+                        }
+                        isActive={pathname.startsWith(
+                          "/customer-revenue-per-product-group",
+                        )}
+                      >
+                        <span>Customer Revenue per Product Group</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={
+                          <Link href="/customer-revenue-per-revenue-group-split" />
+                        }
+                        isActive={pathname.startsWith(
+                          "/customer-revenue-per-revenue-group-split",
+                        )}
+                      >
+                        <span>Customer Revenue per Group (Split)</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={
+                          <Link href="/customer-revenue-sales-and-visits" />
+                        }
+                        isActive={pathname.startsWith(
+                          "/customer-revenue-sales-and-visits",
+                        )}
+                      >
+                        <span>Customer Revenue, Sales &amp; Visits</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                     <SidebarMenuSubItem>
