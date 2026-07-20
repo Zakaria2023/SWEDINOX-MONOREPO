@@ -49,6 +49,7 @@ export * from "./freight-movements";
 export * from "./count-list-deviations";
 export * from "./pick-statistics";
 export * from "./warehouse-capacity";
+export * from "./time-registrations";
 export * from "./transporter-costs";
 export * from "./transporter-countries";
 export * from "./processings";
