@@ -1577,3 +1577,14 @@ export const companyClassifications = [
 ] as const satisfies readonly string[];
 
 export type CompanyClassification = (typeof companyClassifications)[number];
+
+// Production-capacity traffic-light status shown on the "Production capacity"
+// overview: whether the machine's booked capacity is within limits.
+export const productionCapacityStatuses = [
+  "ok",
+  "warning",
+  "full",
+] as const satisfies readonly string[];
+
+export type ProductionCapacityStatus =
+  (typeof productionCapacityStatuses)[number];

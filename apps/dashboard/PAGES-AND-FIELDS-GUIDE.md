@@ -1159,6 +1159,20 @@ Columns / fields:
 - Order — The order the change applies to. Comes from: the linked order.
 - Order line — The specific order line. Comes from: the linked order line.
 
+ Production Capacity — `/production-capacity`
+What it is: A read-only report of machine capacity per day — how much of each machine's capacity is occupied, ready and remaining, split into square and not-square measures, against its limits.
+How data gets here: Read-only report — nothing is created here. Each row is a capacity snapshot for one machine on one day; the machine's code, name and type are pulled from the linked machine.
+Columns / fields:
+- Status — A traffic-light indicator (OK / Warning / Full) for the machine's load. Comes from: recorded on the snapshot.
+- Machine — The machine (code + name). Comes from: the linked machine.
+- Type of machine — The machine's production type. Comes from: the linked machine.
+- Maximum Capacity — The machine's ceiling for the day. Comes from: recorded on the snapshot.
+- Capacity — The day's total capacity. Comes from: recorded on the snapshot.
+- Remaining (not square) / Occupied (not square) / Ready (not square) — The not-square (linear/piece) measures. Comes from: recorded on the snapshot.
+- Ready / Remaining / Occupied capacity — The square measures. Comes from: recorded on the snapshot.
+- Date — The day the snapshot is for. Comes from: recorded on the snapshot.
+- Warning capacity — The level at which the status flips to Warning. Comes from: recorded on the snapshot.
+
  Production Batches — `/production-batches`
 What it is: A list of production batches (grouped production runs).
 How data gets here: Created by the production process. This page just lists existing batches.

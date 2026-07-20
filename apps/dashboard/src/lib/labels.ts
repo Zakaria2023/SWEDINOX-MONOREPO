@@ -16,6 +16,7 @@ import type {
   MachineLoadingType,
   MachineOptionType,
   MachineProductionType,
+  ProductionCapacityStatus,
   CompanyLang,
   CompanyRole,
   ContactCategory,
@@ -1579,3 +1580,12 @@ export const CUSTOMER_STOCK_REASON_LABELS: Record<CustomerStockReason, string> =
     transfer: "Transfer",
     other: "Other",
   };
+
+export const PRODUCTION_CAPACITY_STATUS_LABELS: Record<
+  ProductionCapacityStatus,
+  string
+> = {
+  ok: "OK",
+  warning: "Warning",
+  full: "Full",
+};
