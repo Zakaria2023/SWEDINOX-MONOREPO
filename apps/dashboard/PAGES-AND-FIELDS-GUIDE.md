@@ -1148,6 +1148,17 @@ Columns / fields:
 - Context / Context reference — What the scan relates to and its reference. Comes from: recorded by the scanner.
 - Action / Action reference — The action performed and its reference. Comes from: recorded by the scanner.
 
+ Transport Status Adjustments — `/transport-status-adjustments`
+What it is: A read-only log of trip-status changes — every time a transport's status was changed, by whom and when.
+How data gets here: Read-only report — nothing is created here. Each row is recorded when someone changes a trip's status; the order and order line are pulled from the linked records.
+Columns / fields:
+- Modifier — Who changed the status. Comes from: recorded on the change (an operator code).
+- Time modified — When the change was made. Comes from: recorded automatically.
+- Trip status — The status the trip was set to. Comes from: chosen when the status was changed.
+- Bill of lading — The transport document reference. Comes from: recorded on the change.
+- Order — The order the change applies to. Comes from: the linked order.
+- Order line — The specific order line. Comes from: the linked order line.
+
  Production Batches — `/production-batches`
 What it is: A list of production batches (grouped production runs).
 How data gets here: Created by the production process. This page just lists existing batches.
