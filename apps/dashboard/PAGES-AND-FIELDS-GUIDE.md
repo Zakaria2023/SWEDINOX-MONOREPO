@@ -1025,6 +1025,29 @@ Columns / fields:
 - Source — The document behind the movement (purchase order, purchase invoice, order, or invoice). Comes from: whichever linked document triggered the movement.
 - Time — When it happened. Comes from: recorded automatically.
 
+ Freight Movement — `/freight-movements`
+What it is: A read-only goods-flow ledger: every stock mutation with its running stock balance (before and after) and the accounting details attached to it.
+How data gets here: Read-only report — nothing is created here. Each row is a movement of goods; product, company, order, purchase order, charge and supplier details are pulled from the linked records.
+Columns / fields:
+-  — The movement's own number (links to detail). Comes from: assigned automatically by the system.
+- Mutation date / time — When the movement happened. Comes from: recorded on the movement.
+- Operator — Who triggered it. Comes from: recorded on the movement (a shop-floor operator code).
+- Product code / Description / Length (mm) / Width (mm) — Product and piece details. Comes from: the linked product.
+- MutationQty / StkU — How much moved and the unit it's counted in. Comes from: recorded on the movement.
+- Mutation reason — Why the stock changed. Comes from: set on the movement.
+- Workorder # — The work order behind the movement. Comes from: recorded on the movement.
+- Start date / End date — The balance window this movement falls in. Comes from: recorded on the movement.
+- Starting stock / Starting value — Quantity and euro value before the movement. Comes from: recorded on the movement.
+- Closing stock / Closing value — Quantity and euro value after the movement. Comes from: recorded on the movement.
+- General ledger — The ledger account it posts to. Comes from: recorded on the movement.
+- Revenue group — The revenue bucket it rolls up to. Comes from: the linked revenue group.
+- Std / Stock — Whether the product is a standard product / a stock product. Comes from: the linked product.
+- Company — The customer the movement serves (code + name). Comes from: the linked company.
+- Order — The sales order behind it. Comes from: the linked order.
+- Text — Free-text remark. Comes from: recorded on the movement.
+- Charge — The charge reference. Comes from: the linked charge.
+- Purchase order / Receipt date / Supplier — The purchase side of the movement. Comes from: the linked purchase order and supplier.
+
  Stock on Location — `/stock-on-location`
 What it is: A read-only report showing each stock lot by where it physically sits, with dimensions and valuation.
 How data gets here: Read-only report — nothing is created here. It lists existing stock lots (created via purchase orders / production) together with their location details.
@@ -1074,6 +1097,56 @@ Columns / fields:
 - Stock (Kg) — Total weight on hand. Comes from: calculated by summing the lots.
 - PriceU — Price per unit (total value ÷ total quantity). Comes from: calculated.
 - Stock (Stk.U.) / Stock (€) — Total quantity and total euro valuation. Comes from: calculated by summing the lots.
+
+ Deviations in Count Lists — `/count-list-deviations`
+What it is: A read-only report of stock-count discrepancies — where the counted stock differed from what the system expected — booked per count work order.
+How data gets here: Read-only report — nothing is created here. Each row is a correction booked when a count work order is completed; the product details are pulled from the linked product.
+Columns / fields:
+-  — The deviation's own number (links to detail). Comes from: assigned automatically by the system.
+- Workorder # / Workorder date — The count work order and its date. Comes from: recorded on the deviation.
+- Booked by — Who booked the correction. Comes from: recorded on the deviation (an operator code).
+- Location — Where the item was counted. Comes from: recorded on the deviation.
+- Product — The product counted (code + name). Comes from: the linked product.
+- Length (mm) — Piece length. Comes from: the linked product.
+- Qty. / U. / Kg. — The correction quantity, its unit and weight. Comes from: recorded on the deviation.
+- Amount — The euro value of the correction. Comes from: recorded on the deviation.
+- Document — The source document reference. Comes from: recorded on the deviation.
+- Old stk. / Old stk. Kg. — Stock (quantity and weight) before the correction. Comes from: recorded on the deviation.
+- New stk. / New stk. Kg. — Stock (quantity and weight) after the correction. Comes from: recorded on the deviation.
+- Date reported as completed — When the count was reported done. Comes from: recorded on the deviation.
+
+ Pick Statistic — `/pick-statistics`
+What it is: A read-only statistics report of picking activity, summarized per product per month.
+How data gets here: Read-only report — nothing is created here. Each row totals the picks of one product in one month; product details are pulled from the linked product.
+Columns / fields:
+- Product code / Description — The product. Comes from: the linked product.
+- Year / Month — The period (taken from each pick's completion date). Comes from: recorded when the picks were completed.
+- Picks — How many times the product was picked. Comes from: counted by the system.
+- Qty. Picked / Fetched / U. — Total quantity picked and its unit. Comes from: totalled by the system.
+- Kg. Picked — Total weight picked. Comes from: totalled by the system.
+- Avg. Qty. per pick / Avg. Kg. per pick — Quantity/weight divided by number of picks. Comes from: calculated by the system.
+- Stock product — Whether the product is a stock product. Comes from: the linked product.
+
+ Warehouse Capacity — `/warehouse-capacity`
+What it is: A read-only report of warehouse capacity per day, section, subsection and type of work order — how much is occupied, ready and still remaining.
+How data gets here: Read-only report — nothing is created here. Each row is a capacity snapshot for one section on one day.
+Columns / fields:
+- Date — The work order day the snapshot is for. Comes from: recorded on the snapshot.
+- Warehouse section / Subsection — Where the capacity sits. Comes from: recorded on the snapshot.
+- Workorder type — The kind of work the capacity covers. Comes from: recorded on the snapshot.
+- Occupied — Capacity already taken. Comes from: recorded on the snapshot.
+- Ready — Capacity ready to run. Comes from: recorded on the snapshot.
+- Remaining — Capacity still free. Comes from: recorded on the snapshot.
+
+ Time Registration — `/time-registration`
+What it is: A read-only log of shop-floor scan events — who scanned, what they scanned, and the context and action behind each scan.
+How data gets here: Read-only report — nothing is created here. Each row is a scan recorded by a warehouse/production scanner.
+Columns / fields:
+- Date Time — When the scan happened. Comes from: recorded by the scanner.
+- User / Extra User — The operator(s) that scanned (scan-login codes). Comes from: recorded by the scanner.
+- Scan code — The barcode that was scanned. Comes from: recorded by the scanner.
+- Context / Context reference — What the scan relates to and its reference. Comes from: recorded by the scanner.
+- Action / Action reference — The action performed and its reference. Comes from: recorded by the scanner.
 
  Production Batches — `/production-batches`
 What it is: A list of production batches (grouped production runs).
