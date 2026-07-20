@@ -15,6 +15,7 @@ import {
   invoicePaymentTerms,
   purchaseInvoiceBlockReasons,
 } from "@/lib/enums";
+import { getPaymentTermDueDate } from "@/lib/helpers";
 import {
   COMMON_TEXT,
   INVOICE_PAYMENT_TERM_LABELS,
@@ -52,6 +53,17 @@ export const PurchaseInvoiceForm = ({
   }, [uploadedDocs, setValue]);
 
   const selectedCompanyUuid = watch("companyUuid");
+  const paymentTerms = watch("paymentTerms");
+  const invoiceDate = watch("invoiceDate");
+
+  // Auto-fill the due date from the payment term whenever it (or the invoice
+  // date) changes and the term implies a determinate due date.
+  useEffect(() => {
+    const due = getPaymentTermDueDate(paymentTerms ?? null, invoiceDate ?? null);
+    if (due) {
+      setValue("expirationDate", due);
+    }
+  }, [paymentTerms, invoiceDate, setValue]);
 
   const supplierOptions = [
     { value: "", label: COMMON_TEXT.emptyOption },

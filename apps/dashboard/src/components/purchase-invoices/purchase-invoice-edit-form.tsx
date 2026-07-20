@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -16,7 +16,8 @@ import { Select } from "@/components/shadcn/select";
 import { Textarea } from "@/components/shadcn/textarea";
 import { FormError } from "@/components/ui/form-error";
 import { FormLabel } from "@/components/ui/form-field";
-import { invoicePaymentTerms } from "@/lib/enums";
+import { InvoicePaymentTerm, invoicePaymentTerms } from "@/lib/enums";
+import { getPaymentTermDueDate } from "@/lib/helpers";
 import { COMMON_TEXT, INVOICE_PAYMENT_TERM_LABELS } from "@/lib/labels";
 
 const editSchema = z.object({
@@ -48,18 +49,34 @@ export const PurchaseInvoiceEditForm = ({ purchaseInvoice }: Props) => {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | undefined>();
 
-  const { register, control, handleSubmit } = useForm<EditFormValues>({
-    resolver: zodResolver(editSchema),
-    defaultValues: {
-      invoiceNumberSupplier: purchaseInvoice.invoiceNumberSupplier ?? "",
-      creditorNo: purchaseInvoice.creditorNo ?? "",
-      creditorNo2: purchaseInvoice.creditorNo2 ?? "",
-      invoiceDate: toDateInput(purchaseInvoice.invoiceDate),
-      expirationDate: toDateInput(purchaseInvoice.expirationDate),
-      paymentTerms: purchaseInvoice.paymentTerms ?? "",
-      remarks: purchaseInvoice.remarks ?? "",
-    },
-  });
+  const { register, control, handleSubmit, watch, setValue } =
+    useForm<EditFormValues>({
+      resolver: zodResolver(editSchema),
+      defaultValues: {
+        invoiceNumberSupplier: purchaseInvoice.invoiceNumberSupplier ?? "",
+        creditorNo: purchaseInvoice.creditorNo ?? "",
+        creditorNo2: purchaseInvoice.creditorNo2 ?? "",
+        invoiceDate: toDateInput(purchaseInvoice.invoiceDate),
+        expirationDate: toDateInput(purchaseInvoice.expirationDate),
+        paymentTerms: purchaseInvoice.paymentTerms ?? "",
+        remarks: purchaseInvoice.remarks ?? "",
+      },
+    });
+
+  const paymentTerms = watch("paymentTerms");
+  const invoiceDate = watch("invoiceDate");
+
+  // Recompute the due date from the payment term when it or the invoice date
+  // changes and the term implies a determinate due date.
+  useEffect(() => {
+    const due = getPaymentTermDueDate(
+      (paymentTerms || null) as InvoicePaymentTerm | null,
+      invoiceDate ?? null,
+    );
+    if (due) {
+      setValue("expirationDate", due);
+    }
+  }, [paymentTerms, invoiceDate, setValue]);
 
   const paymentTermOptions = [
     { value: "", label: COMMON_TEXT.emptyOption },

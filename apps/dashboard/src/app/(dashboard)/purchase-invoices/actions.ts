@@ -21,7 +21,7 @@ import { SelectStock, Stock } from "@/db/schema/stock";
 import { SelectStockMovements, StockMovements } from "@/db/schema/stock-movements";
 import { JournalEntries } from "@/db/schema/journal-entries";
 import { buildPurchaseInvoiceJournalEntry } from "@/lib/server/accounting";
-import { generateUuid } from "@/lib/helpers";
+import { generateUuid, getPaymentTermDueDate, toDateString } from "@/lib/helpers";
 import { currentUser } from "@clerk/nextjs/server";
 import { and, desc, eq, getTableColumns, gte, inArray, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -131,8 +131,22 @@ export const createPurchaseInvoice = async (
       return { error: "User not authenticated" };
     }
 
+    // Derive the due date from the payment term when it isn't set and the term
+    // pins a date to the supplier's invoice date (e.g. "within 30 days").
+    const derivedExpiration =
+      fields.expirationDate ??
+      (() => {
+        const due = getPaymentTermDueDate(
+          fields.paymentTerms ?? null,
+          fields.invoiceDate ? toDateString(fields.invoiceDate) : null,
+        );
+        return due ? new Date(`${due}T00:00:00`) : null;
+      })();
+
     await db.transaction(async (tx) => {
-      await tx.insert(PurchaseInvoices).values({ ...fields, uuid });
+      await tx
+        .insert(PurchaseInvoices)
+        .values({ ...fields, expirationDate: derivedExpiration, uuid });
 
       const [inserted] = await tx
         .select({ id: PurchaseInvoices.id })
@@ -267,9 +281,20 @@ export const updatePurchaseInvoice = async (
       return { error: "Cannot edit a cancelled purchase invoice." };
     }
 
+    // Fill in the due date from the payment term when it wasn't set explicitly.
+    const expirationDate =
+      fields.expirationDate ??
+      (() => {
+        const due = getPaymentTermDueDate(
+          fields.paymentTerms ?? null,
+          fields.invoiceDate ? toDateString(fields.invoiceDate) : null,
+        );
+        return due ? new Date(`${due}T00:00:00`) : null;
+      })();
+
     await db
       .update(PurchaseInvoices)
-      .set(fields)
+      .set({ ...fields, expirationDate })
       .where(eq(PurchaseInvoices.uuid, uuid));
   } catch (error) {
     return {
