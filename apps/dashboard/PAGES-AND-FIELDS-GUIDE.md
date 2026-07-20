@@ -1196,6 +1196,19 @@ Columns / fields:
 - Line status / Line type — Order line status and type. Comes from: the order line.
 - Drilling holes / L.Saw angle / R.Saw angle / Bls / Bls+P / Sawing / Drilling / Standing / Sawing angle(s) — The sawing geometry and extra-work plan. Comes from: recorded on the production detail.
 
+ Capacity Checks — `/capacity-checks`
+What it is: A read-only report of configured capacity checks — each check's occupied vs. maximum capacity for the day, its warning threshold and when alerts fire.
+How data gets here: Read-only report — nothing is created here. Each row is a capacity check evaluated for a given day.
+Columns / fields:
+- Status — A traffic-light indicator (OK / Warning / Full). Comes from: recorded on the check.
+- Check — The check's name. Comes from: recorded on the check.
+- Type — The kind of check. Comes from: recorded on the check.
+- Occupied capacity / Capacity / Maximum Capacity — Used, total and ceiling capacity. Comes from: recorded on the check.
+- Date — The day the check applies to. Comes from: recorded on the check.
+- Time alert email — When the alert email is sent. Comes from: recorded on the check.
+- Time max warning — When the max-warning fires. Comes from: recorded on the check.
+- Warning capacity — The level at which the status flips to Warning. Comes from: recorded on the check.
+
  Production Batches — `/production-batches`
 What it is: A list of production batches (grouped production runs).
 How data gets here: Created by the production process. This page just lists existing batches.

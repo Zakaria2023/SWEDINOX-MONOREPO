@@ -53,6 +53,7 @@ export * from "./time-registrations";
 export * from "./transport-status-adjustments";
 export * from "./production-capacity";
 export * from "./production-capacity-details";
+export * from "./capacity-checks";
 export * from "./transporter-costs";
 export * from "./transporter-countries";
 export * from "./processings";
