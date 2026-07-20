@@ -45,6 +45,7 @@ export * from "./purchase-quote-items";
 export * from "./purchase-line-receivals";
 export * from "./stock";
 export * from "./stock-movements";
+export * from "./freight-movements";
 export * from "./transporter-costs";
 export * from "./transporter-countries";
 export * from "./processings";

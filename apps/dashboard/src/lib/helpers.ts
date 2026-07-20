@@ -76,6 +76,17 @@ export const formatRevenue = (value: string | null) => {
 export const toDateString = (date: Date): string =>
   date.toISOString().split("T")[0];
 
+/**
+ * Formats the value of a Drizzle `date` column (typed `string | Date`) for
+ * display, falling back to an em dash when the value is missing.
+ */
+export const formatDateValue = (value: string | Date | null): string => {
+  if (!value) {
+    return "—";
+  }
+  return new Date(value).toLocaleDateString("en-GB");
+};
+
 // ---------------------------------------------------------------------------
 // Enum-driven business logic
 //
