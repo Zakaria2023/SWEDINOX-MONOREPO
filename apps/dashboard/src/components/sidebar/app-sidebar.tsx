@@ -1024,9 +1024,22 @@ export const AppSidebar = () => {
                     <SidebarMenuSubItem>
                       <SidebarMenuSubButton
                         render={<Link href="/production-capacity" />}
-                        isActive={pathname.startsWith("/production-capacity")}
+                        isActive={
+                          pathname.startsWith("/production-capacity") &&
+                          !pathname.startsWith("/production-capacity-details")
+                        }
                       >
                         <span>Production Capacity</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/production-capacity-details" />}
+                        isActive={pathname.startsWith(
+                          "/production-capacity-details",
+                        )}
+                      >
+                        <span>Production Capacity Details</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                     <SidebarMenuSubItem>

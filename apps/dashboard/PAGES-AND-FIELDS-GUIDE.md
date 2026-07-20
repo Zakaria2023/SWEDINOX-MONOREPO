@@ -1173,6 +1173,29 @@ Columns / fields:
 - Date — The day the snapshot is for. Comes from: recorded on the snapshot.
 - Warning capacity — The level at which the status flips to Warning. Comes from: recorded on the snapshot.
 
+ Production Capacity Details — `/production-capacity-details`
+What it is: A read-only, wide drill-down behind Production capacity — one row per order line with its dimensions, quantities, delivery info and the full sawing/production plan.
+How data gets here: Read-only report — nothing is created here. Each row hangs off an order line (which already carries the order, product, dimensions, quantities, delivery and line status); the sawing/production attributes are added on top.
+Columns / fields:
+- Order / Order type — The order (links to detail) and a summary of its type flags (Pickup, Consignment, Internal production, etc.). Comes from: the linked order.
+- Line — The order line number. Comes from: the linked order line.
+- Company — The customer. Comes from: the order's linked company.
+- Product code / Product — The product. Comes from: the linked product.
+- Length (mm) / Width (mm) / Dikte — Piece dimensions. Comes from: the order line.
+- Kwaliteit / Categorie — Material quality and category. Comes from: recorded on the production detail.
+- Fixed dim. — Whether the piece is a fixed dimension. Comes from: recorded on the production detail.
+- Sawing speed / To saw — Sawing pace and amount still to saw. Comes from: recorded on the production detail.
+- Pick-up — Whether the line is collected. Comes from: the order line.
+- Sawing WO / Sawing WO line / Sawing method / Sawing type — The sawing work order and how it's sawn. Comes from: recorded on the production detail.
+- Production starting / Planned delivery / Transport date — Planning dates. Comes from: recorded on the production detail.
+- Delivery status / Order line deliv. date — Delivery progress and date. Comes from: the order line.
+- Line Qty (p) / Line Qty (a) / Qty unit — Planned vs actual quantity and its unit. Comes from: the order line.
+- Kg (p) / Kg (a) — Planned vs actual weight. Comes from: the order line.
+- Theor. weight / Theor. weight U. — Theoretical weight and unit. Comes from: the linked product.
+- Option Qty — Option quantity. Comes from: recorded on the production detail.
+- Line status / Line type — Order line status and type. Comes from: the order line.
+- Drilling holes / L.Saw angle / R.Saw angle / Bls / Bls+P / Sawing / Drilling / Standing / Sawing angle(s) — The sawing geometry and extra-work plan. Comes from: recorded on the production detail.
+
  Production Batches — `/production-batches`
 What it is: A list of production batches (grouped production runs).
 How data gets here: Created by the production process. This page just lists existing batches.
