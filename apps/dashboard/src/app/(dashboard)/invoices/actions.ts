@@ -17,7 +17,12 @@ import { OrderItems } from "@/db/schema/order-items";
 import { Orders } from "@/db/schema/orders";
 import { Products, SelectProducts } from "@/db/schema/products";
 import { buildSalesInvoiceJournalEntry } from "@/lib/server/accounting";
-import { generateUuid } from "@/lib/helpers";
+import {
+  generateUuid,
+  getInvoiceVatRatePercent,
+  getPaymentTermDueDate,
+  toDateString,
+} from "@/lib/helpers";
 import { currentUser } from "@clerk/nextjs/server";
 import { and, desc, eq, getTableColumns, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -114,10 +119,26 @@ export const createInvoice = async (
     (sum, s) => sum + parseFloat(s.amount ?? "0"),
     0,
   );
-  const invoiceAmountInclVat = (exclVat * 1.21).toFixed(2);
+  // VAT follows the invoice's VAT scenario: reverse-charge scenarios charge 0%,
+  // everything else the standard rate. (Previously hard-coded at 21%.)
+  const vatRate = getInvoiceVatRatePercent(fields.vatScenario);
+  const vatAmount = exclVat * (vatRate / 100);
+  const invoiceAmountInclVat = (exclVat + vatAmount).toFixed(2);
   const creditRestriction = "0.00";
   const invoiceTotal = invoiceAmountInclVat;
   const outstanding = invoiceTotal;
+
+  // Derive the due date from the payment term when one isn't supplied and the
+  // term pins a date to the invoice date (e.g. "within 30 days").
+  const derivedExpiration =
+    fields.expirationDate ??
+    (() => {
+      const due = getPaymentTermDueDate(
+        fields.paymentTerms ?? null,
+        fields.invoiceDate ? toDateString(fields.invoiceDate) : null,
+      );
+      return due ? new Date(`${due}T00:00:00`) : null;
+    })();
 
   try {
     const orderItemRows =
@@ -151,6 +172,7 @@ export const createInvoice = async (
     await db.transaction(async (tx) => {
       await tx.insert(Invoices).values({
         ...fields,
+        expirationDate: derivedExpiration,
         uuid,
         invoiceAmountExclVat: exclVat.toFixed(2),
         invoiceAmountInclVat,
@@ -174,7 +196,7 @@ export const createInvoice = async (
           debCreditor: fields.debtorNo ?? null,
           invoiceDate: fields.invoiceDate ?? null,
           amountExclVat: exclVat,
-          vatAmount: Number(invoiceAmountInclVat) - exclVat,
+          vatAmount,
           userId: userId ?? null,
         }),
       );
@@ -382,7 +404,21 @@ export const updateInvoice = async (
       return { error: "Cannot edit a cancelled invoice." };
     }
 
-    await db.update(Invoices).set(fields).where(eq(Invoices.uuid, uuid));
+    // Fill in the due date from the payment term when it wasn't set explicitly.
+    const expirationDate =
+      fields.expirationDate ??
+      (() => {
+        const due = getPaymentTermDueDate(
+          fields.paymentTerms ?? null,
+          fields.invoiceDate ? toDateString(fields.invoiceDate) : null,
+        );
+        return due ? new Date(`${due}T00:00:00`) : null;
+      })();
+
+    await db
+      .update(Invoices)
+      .set({ ...fields, expirationDate })
+      .where(eq(Invoices.uuid, uuid));
   } catch (error) {
     return {
       error:

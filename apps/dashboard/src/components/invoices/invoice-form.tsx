@@ -13,6 +13,7 @@ import {
 } from "@/app/(dashboard)/invoices/validation";
 import { FormActions } from "@/components/ui/form-actions";
 import { FormError } from "@/components/ui/form-error";
+import { getPaymentTermDueDate, invoiceChargesVat } from "@/lib/helpers";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -56,6 +57,9 @@ export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
   } = useInvoiceSubmit(surcharges, selectedOrderItemUuids);
 
   const companyUuid = form.watch("companyUuid");
+  const paymentTerms = form.watch("paymentTerms");
+  const invoiceDate = form.watch("invoiceDate");
+  const vatScenario = form.watch("vatScenario");
 
   useEffect(() => {
     setSelectedOrderItemUuids([]);
@@ -65,6 +69,24 @@ export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
     }
     getReservedOrderItemsForCompany(companyUuid).then(setReservedItems);
   }, [companyUuid]);
+
+  // Auto-fill the due date from the payment term whenever it (or the invoice
+  // date) changes and the term implies a determinate due date.
+  useEffect(() => {
+    const due = getPaymentTermDueDate(paymentTerms ?? null, invoiceDate ?? null);
+    if (due) {
+      form.setValue("expirationDate", due);
+    }
+  }, [paymentTerms, invoiceDate, form]);
+
+  // Reflect the VAT scenario in the "calculate VAT" flag: reverse-charge
+  // scenarios charge 0% VAT.
+  useEffect(() => {
+    if (!vatScenario) {
+      return;
+    }
+    form.setValue("calculateVat", invoiceChargesVat(vatScenario));
+  }, [vatScenario, form]);
 
   const toggleOrderItem = (uuid: string) =>
     setSelectedOrderItemUuids((prev) =>
