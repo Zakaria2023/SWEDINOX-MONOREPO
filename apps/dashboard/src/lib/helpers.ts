@@ -1,9 +1,16 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import type {
+  DeliveryTerm,
+  DeliveryTimeUnit,
+  DeliveryType,
   InvoicePaymentTerm,
   InvoiceVatScenario,
+  LeadTimeMethod,
+  OrderWeightType,
+  StockMode,
   StockMovementType,
+  TransporterPriceUnit,
   VatCode,
 } from "./enums";
 
@@ -323,3 +330,265 @@ export const applyStockMovementDelta = (
   quantity: number,
   type: StockMovementType,
 ): number => quantity * getStockMovementSign(type);
+
+/**
+ * The commercial responsibilities an Incoterm (delivery term) assigns between
+ * seller and buyer, per Incoterms 2020. Used to answer "who arranges/pays the
+ * carriage, who insures, who clears customs, and where does risk pass?".
+ */
+export type IncotermMeta = {
+  /** Seller arranges and pays the main carriage to the destination. */
+  sellerArrangesCarriage: boolean;
+  /** Seller carries a contractual insurance obligation (only CIF/CIP). */
+  sellerInsures: boolean;
+  /** Seller handles export clearance (every term except EXW). */
+  sellerClearsExport: boolean;
+  /** Seller handles import clearance and duties (only DDP). */
+  sellerClearsImport: boolean;
+  /** The point at which risk passes from seller to buyer. */
+  riskTransfer:
+    | "sellers_premises"
+    | "carrier_handover"
+    | "ship_on_board"
+    | "named_destination"
+    | "buyers_premises";
+};
+
+export const INCOTERM_META: Record<DeliveryTerm, IncotermMeta> = {
+  exw: {
+    sellerArrangesCarriage: false,
+    sellerInsures: false,
+    sellerClearsExport: false,
+    sellerClearsImport: false,
+    riskTransfer: "sellers_premises",
+  },
+  fca: {
+    sellerArrangesCarriage: false,
+    sellerInsures: false,
+    sellerClearsExport: true,
+    sellerClearsImport: false,
+    riskTransfer: "carrier_handover",
+  },
+  fob: {
+    sellerArrangesCarriage: false,
+    sellerInsures: false,
+    sellerClearsExport: true,
+    sellerClearsImport: false,
+    riskTransfer: "ship_on_board",
+  },
+  cfr: {
+    sellerArrangesCarriage: true,
+    sellerInsures: false,
+    sellerClearsExport: true,
+    sellerClearsImport: false,
+    riskTransfer: "ship_on_board",
+  },
+  cif: {
+    sellerArrangesCarriage: true,
+    sellerInsures: true,
+    sellerClearsExport: true,
+    sellerClearsImport: false,
+    riskTransfer: "ship_on_board",
+  },
+  cpt: {
+    sellerArrangesCarriage: true,
+    sellerInsures: false,
+    sellerClearsExport: true,
+    sellerClearsImport: false,
+    riskTransfer: "carrier_handover",
+  },
+  cip: {
+    sellerArrangesCarriage: true,
+    sellerInsures: true,
+    sellerClearsExport: true,
+    sellerClearsImport: false,
+    riskTransfer: "carrier_handover",
+  },
+  dap: {
+    sellerArrangesCarriage: true,
+    sellerInsures: false,
+    sellerClearsExport: true,
+    sellerClearsImport: false,
+    riskTransfer: "named_destination",
+  },
+  dpu: {
+    sellerArrangesCarriage: true,
+    sellerInsures: false,
+    sellerClearsExport: true,
+    sellerClearsImport: false,
+    riskTransfer: "named_destination",
+  },
+  ddp: {
+    sellerArrangesCarriage: true,
+    sellerInsures: false,
+    sellerClearsExport: true,
+    sellerClearsImport: true,
+    riskTransfer: "buyers_premises",
+  },
+};
+
+/**
+ * The Incoterm responsibilities for a delivery term (null when none is set).
+ */
+export const getIncotermMeta = (
+  term: DeliveryTerm | null | undefined,
+): IncotermMeta | null => (term ? INCOTERM_META[term] : null);
+
+/**
+ * Adds a lead time expressed in a given unit to a YYYY-MM-DD date, returning
+ * the resulting YYYY-MM-DD date. `working_days` skips weekends; `months` rolls
+ * the calendar month; `weeks` adds 7-day blocks. Returns null on bad input.
+ */
+export const addLeadTime = (
+  from: string | null | undefined,
+  amount: number,
+  unit: DeliveryTimeUnit,
+): string | null => {
+  if (!from || !Number.isFinite(amount)) {
+    return null;
+  }
+  const date = new Date(`${from.slice(0, 10)}T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+  if (unit === "months") {
+    date.setUTCMonth(date.getUTCMonth() + amount);
+  } else if (unit === "weeks") {
+    date.setUTCDate(date.getUTCDate() + amount * 7);
+  } else {
+    // working_days: step one calendar day at a time, counting only Mon–Fri.
+    let remaining = Math.trunc(amount);
+    const step = remaining >= 0 ? 1 : -1;
+    while (remaining !== 0) {
+      date.setUTCDate(date.getUTCDate() + step);
+      const day = date.getUTCDay();
+      if (day !== 0 && day !== 6) {
+        remaining -= step;
+      }
+    }
+  }
+  return date.toISOString().split("T")[0];
+};
+
+/**
+ * Computes a transport cost from a transporter's price unit and rate:
+ *   - amount: a flat charge (the rate itself)
+ *   - per_km: rate × distance
+ *   - per_kg: rate × weight
+ *   - percentage: rate % of the goods value
+ * Missing context for the chosen unit yields 0.
+ */
+export const computeTransportCost = (
+  unit: TransporterPriceUnit,
+  rate: number,
+  context: {
+    distanceKm?: number;
+    weightKg?: number;
+    goodsValue?: number;
+  } = {},
+): number => {
+  if (unit === "amount") {
+    return rate;
+  }
+  if (unit === "per_km") {
+    return rate * (context.distanceKm ?? 0);
+  }
+  if (unit === "per_kg") {
+    return rate * (context.weightKg ?? 0);
+  }
+  return ((context.goodsValue ?? 0) * rate) / 100;
+};
+
+/**
+ * The minimum stock level implied by a stock mode: a fixed value, or a
+ * multiplier applied to average monthly consumption.
+ */
+export const computeMinimumStock = (
+  mode: StockMode,
+  value: number,
+  averageMonthlyConsumption: number,
+): number =>
+  mode === "fixed_value" ? value : value * averageMonthlyConsumption;
+
+/**
+ * Resolves the lead time to use given the configured method: a manual value, or
+ * the automatic maximum/average of observed lead times. Returns null when the
+ * needed input is missing.
+ */
+export const resolveLeadTime = (
+  method: LeadTimeMethod,
+  context: { manual?: number; maximum?: number; average?: number },
+): number | null => {
+  if (method === "manually") {
+    return context.manual ?? null;
+  }
+  if (method === "automatic_maximum") {
+    return context.maximum ?? null;
+  }
+  return context.average ?? null;
+};
+
+/**
+ * Picks the weight to bill against, based on the order's weight type: the
+ * theoretical, trade, German trade, or actually-weighed figure. Returns null
+ * when the selected basis has no value.
+ */
+export const resolveOrderWeight = (
+  type: OrderWeightType,
+  weights: {
+    theoretical?: number | null;
+    trade?: number | null;
+    germanTrade?: number | null;
+    weighed?: number | null;
+  },
+): number | null => {
+  if (type === "theoretical_weight") {
+    return weights.theoretical ?? null;
+  }
+  if (type === "trade_weight") {
+    return weights.trade ?? null;
+  }
+  if (type === "german_trade_weight") {
+    return weights.germanTrade ?? null;
+  }
+  return weights.weighed ?? null;
+};
+
+/**
+ * The Monday of a given ISO week/year, as a YYYY-MM-DD string — used to turn a
+ * "delivery in week N" into a concrete date. Returns null on bad input.
+ */
+export const isoWeekToDate = (
+  week: number | null | undefined,
+  year: number | null | undefined,
+): string | null => {
+  if (!week || !year || week < 1 || week > 53) {
+    return null;
+  }
+  // ISO 8601: week 1 is the week containing the first Thursday of the year.
+  const jan4 = new Date(Date.UTC(year, 0, 4));
+  const jan4Day = jan4.getUTCDay() || 7; // Sunday (0) → 7
+  const week1Monday = new Date(jan4);
+  week1Monday.setUTCDate(jan4.getUTCDate() - (jan4Day - 1));
+  week1Monday.setUTCDate(week1Monday.getUTCDate() + (week - 1) * 7);
+  return week1Monday.toISOString().split("T")[0];
+};
+
+/**
+ * Resolves a delivery moment to a concrete YYYY-MM-DD date: for a `date`-type
+ * delivery it's the date itself; for a `week`-type it's the Monday of that ISO
+ * week. Returns null when the needed inputs are missing.
+ */
+export const resolveDeliveryDate = (
+  type: DeliveryType,
+  context: {
+    date?: string | null;
+    week?: number | null;
+    year?: number | null;
+  },
+): string | null => {
+  if (type === "week") {
+    return isoWeekToDate(context.week, context.year);
+  }
+  return context.date ? context.date.slice(0, 10) : null;
+};
