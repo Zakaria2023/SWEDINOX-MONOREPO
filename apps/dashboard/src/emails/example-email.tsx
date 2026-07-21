@@ -13,28 +13,26 @@ type ExampleEmailProps = {
   recipientName: string;
 };
 
-export const ExampleEmail = ({ recipientName }: ExampleEmailProps) => {
-  return (
-    <Html lang="en">
-      <Head />
-      <Preview>Example transactional email from Swedinox</Preview>
-      <Body style={body}>
-        <Container style={container}>
-          <Section>
-            <Heading as="h1" style={heading}>
-              Hello {recipientName},
-            </Heading>
-            <Text style={text}>
-              This is an example template. Duplicate this file in{" "}
-              <code>src/emails</code> to create new emails, and preview them
-              with <code>pnpm email:dev</code>.
-            </Text>
-          </Section>
-        </Container>
-      </Body>
-    </Html>
-  );
-};
+export const ExampleEmail = ({ recipientName }: ExampleEmailProps) => (
+  <Html lang="en">
+    <Head />
+    <Preview>Example transactional email from Swedinox</Preview>
+    <Body style={body}>
+      <Container style={container}>
+        <Section>
+          <Heading as="h1" style={heading}>
+            Hello {recipientName},
+          </Heading>
+          <Text style={text}>
+            This is an example template. Duplicate this file in{" "}
+            <code>src/emails</code> to create new emails, and preview them with{" "}
+            <code>pnpm email:dev</code>.
+          </Text>
+        </Section>
+      </Container>
+    </Body>
+  </Html>
+);
 
 ExampleEmail.PreviewProps = {
   recipientName: "Adnan",
