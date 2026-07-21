@@ -1325,6 +1325,23 @@ Columns / fields:
 - Fetch date / Fetch code / Fetch line / Fetch status / Fetch qty — The retrieval of the raw sheet from stock: its date, reference, line, state and quantity. Comes from: the fetch side of the nest.
 - Fetch product / Fetch description / Fetch length / Residual length — The raw sheet fetched, its description, its length and the leftover length after nesting. Comes from: the fetch side of the nest.
 
+ (Re)optimize — `/reoptimize`
+What it is: A read-only, wide report that re-optimizes the sawing/nesting plan — one row per order line, with the same layout as Nesting plus the full sawing geometry (bundles-plus-remainder and the Sawing/Drilling flags). Used to review and re-run the cutting optimization.
+How data gets here: Read-only report — nothing is created here. Each row hangs off an order line and comes from the (re)optimization run; this page lists them.
+Columns / fields:
+- Order / Order type / Line / Company — The order (links to the order), its type, the line number and the customer. Comes from: the order line and its order.
+- Product code / Product / Length (mm) / Width (mm) / Dikte — The product and the piece's dimensions. Comes from: the linked product and the order line.
+- Kwaliteit / Categorie — Material quality and category. Comes from: the row.
+- Sawing spec / Fixed dim. / Pick-up — Yes/No flags. Comes from: the row (Pick-up from the order line).
+- To saw / Sawing WO status / Production starting — Amount still to saw, the sawing work-order status and when production starts. Comes from: the row.
+- Planned delivered / Delivered / U(delivery) / Delivery date (p) / Delivery date (a) / Delivery status — The delivery plan and its status. Comes from: the row.
+- Kg (p) / Kg (a) / Theor. weight / Theor. weight U. — Planned/actual weight and the product's theoretical weight. Comes from: the order line and linked product.
+- Order line deliv. date / Line Qty (a) / Line Qty (p) / Line QtyU / Option Qty / Line status / Line type — The order line's delivery date, quantities, unit, status and type. Comes from: the order line (Option Qty from the row).
+- Sawing WO / Sawing WO line / Nest / Sawing machine — The sawing work order and its line, the nest and the machine. Comes from: the row.
+- Drilling holes / L.Saw angle / Bls / Bls+P / Sawing / Drilling / R.Saw angle / Standing / Sawing type / Sawing angle(s) — The full sawing geometry and extra-work plan. Comes from: the row.
+- Transport date — When the material is transported. Comes from: the row.
+- Fetch date / Fetch code / Fetch line / Fetch status / Fetch qty / Fetch product / Fetch description / Fetch length / Residual length — The retrieval of the raw material from stock and the leftover length. Comes from: the fetch side of the row.
+
 ---
 
  9. Others

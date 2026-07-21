@@ -137,6 +137,7 @@ export const AppSidebar = () => {
     pathname.startsWith("/production-capacity") ||
     pathname.startsWith("/capacity-checks") ||
     pathname.startsWith("/time-registration") ||
+    pathname.startsWith("/reoptimize") ||
     pathname.startsWith("/nesting") ||
     pathname.startsWith("/transport-status-adjustments");
   const isOthersActive = pathname.startsWith("/complaints");
@@ -1131,6 +1132,14 @@ export const AppSidebar = () => {
                         isActive={pathname.startsWith("/time-registration")}
                       >
                         <span>Time Registration</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/reoptimize" />}
+                        isActive={pathname.startsWith("/reoptimize")}
+                      >
+                        <span>(Re)optimize</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                     <SidebarMenuSubItem>
