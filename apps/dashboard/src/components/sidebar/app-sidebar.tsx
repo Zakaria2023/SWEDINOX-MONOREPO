@@ -133,7 +133,8 @@ export const AppSidebar = () => {
     pathname.startsWith("/machines") ||
     pathname.startsWith("/product-groups") ||
     pathname.startsWith("/products") ||
-    pathname.startsWith("/sawing-layouts");
+    pathname.startsWith("/sawing-layouts") ||
+    pathname.startsWith("/nesting");
   const isOthersActive = pathname.startsWith("/complaints");
 
   const [isCustomersOpen, setIsCustomersOpen] = useState(false);
@@ -1136,6 +1137,14 @@ export const AppSidebar = () => {
                         isActive={pathname.startsWith("/sawing-layouts")}
                       >
                         <span>Sawing Layouts</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/nesting" />}
+                        isActive={pathname.startsWith("/nesting")}
+                      >
+                        <span>Nesting</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                   </SidebarMenuSub>

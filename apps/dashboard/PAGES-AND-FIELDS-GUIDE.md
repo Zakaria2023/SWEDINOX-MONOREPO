@@ -1301,6 +1301,30 @@ Columns / fields:
 - To location(s) — Where the sawn pieces go. Comes from: recorded on the layout.
 - Qty. 1–10 / Length 1–10 — The ten fixed piece slots: the quantity and length of each cut the layout makes. Comes from: recorded on the layout.
 
+ Nesting — `/nesting`
+What it is: A read-only, wide report of the sheet-metal nesting plan — one row per order line being nested, with its dimensions, the sawing/nesting plan, the delivery plan, the sawing geometry and the raw sheet fetched from stock. It's the sheet counterpart to Sawing Layouts.
+How data gets here: Read-only report — nothing is created here. Each row hangs off an order line and is produced by the nesting/production process; this page lists them.
+Columns / fields:
+- Order / Order type / Line / Company — The order (links to the order), its type, the line number and the customer. Comes from: the order line and its order.
+- Product code / Product — The product being nested. Comes from: the linked product.
+- Length (mm) / Width (mm) / Dikte — The piece's dimensions and thickness. Comes from: the order line.
+- Kwaliteit / Categorie — Material quality and category. Comes from: recorded on the nest.
+- Sawing spec / Fixed dim. / Pick-up — Yes/No flags. Comes from: the nest (Pick-up from the order line).
+- To saw / Sawing WO status — Amount still to saw and the sawing work-order status. Comes from: the nest.
+- Production starting — When production starts. Comes from: the nest.
+- Planned delivered / Delivered / U(delivery) — Planned vs. delivered delivery quantity and its unit. Comes from: the nest.
+- Delivery date (p) / Delivery date (a) / Delivery status — Planned/actual delivery dates and the dispatch status (e.g. "Workorders created"). Comes from: the nest.
+- Kg (p) / Kg (a) — Planned vs. actual weight for the line. Comes from: the order line.
+- Theor. weight / Theor. weight U. — The product's theoretical weight and its unit. Comes from: the linked product.
+- Order line deliv. date — The order line's delivery date. Comes from: the order line.
+- Line Qty (a) / Line Qty (p) / Line QtyU / Option Qty — Actual/planned line quantities, their unit and the option quantity. Comes from: the order line (Option Qty from the nest).
+- Line status / Line type — The order line's status and type. Comes from: the order line.
+- Sawing WO / Sawing WO line / Nest / Sawing machine — The sawing work order and its line, the nest and the machine it runs on (e.g. "LASER 1"). Comes from: the nest.
+- Drilling holes / L.Saw angle / R.Saw angle / Bls / Standing / Sawing type / Sawing angle(s) — The sawing geometry and extra-work plan. Comes from: the nest.
+- Transport date — When the nested material is transported. Comes from: the nest.
+- Fetch date / Fetch code / Fetch line / Fetch status / Fetch qty — The retrieval of the raw sheet from stock: its date, reference, line, state and quantity. Comes from: the fetch side of the nest.
+- Fetch product / Fetch description / Fetch length / Residual length — The raw sheet fetched, its description, its length and the leftover length after nesting. Comes from: the fetch side of the nest.
+
 ---
 
  9. Others
