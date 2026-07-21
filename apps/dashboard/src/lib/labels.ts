@@ -17,6 +17,8 @@ import type {
   MachineOptionType,
   MachineProductionType,
   ProductionCapacityStatus,
+  SawingLayoutFetchStatus,
+  SawingStatus,
   CompanyLang,
   CompanyRole,
   ContactCategory,
@@ -1588,4 +1590,21 @@ export const PRODUCTION_CAPACITY_STATUS_LABELS: Record<
   ok: "OK",
   warning: "Warning",
   full: "Full",
+};
+
+export const SAWING_LAYOUT_FETCH_STATUS_LABELS: Record<
+  SawingLayoutFetchStatus,
+  string
+> = {
+  new: "New",
+  in_progress: "In progress",
+  completed: "Completed",
+  cancelled: "Cancelled",
+};
+
+export const SAWING_STATUS_LABELS: Record<SawingStatus, string> = {
+  new: "New",
+  in_progress: "In progress",
+  completed: "Completed",
+  cancelled: "Cancelled",
 };

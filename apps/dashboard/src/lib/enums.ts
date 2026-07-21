@@ -1588,3 +1588,25 @@ export const productionCapacityStatuses = [
 
 export type ProductionCapacityStatus =
   (typeof productionCapacityStatuses)[number];
+
+// Status of the material fetch (retrieving the raw bar/length from stock to
+// bring to the saw) on the Logistics "Sawing layouts" overview.
+export const sawingLayoutFetchStatuses = [
+  "new",
+  "in_progress",
+  "completed",
+  "cancelled",
+] as const satisfies readonly string[];
+
+export type SawingLayoutFetchStatus =
+  (typeof sawingLayoutFetchStatuses)[number];
+
+// Status of the sawing operation itself on the "Sawing layouts" overview.
+export const sawingStatuses = [
+  "new",
+  "in_progress",
+  "completed",
+  "cancelled",
+] as const satisfies readonly string[];
+
+export type SawingStatus = (typeof sawingStatuses)[number];
