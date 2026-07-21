@@ -26,20 +26,25 @@ export const resend = new Resend(requiredEnv("RESEND_API_KEY"));
 
 const RESEND_FROM_EMAIL = requiredEnv("RESEND_FROM_EMAIL");
 
-interface SendEmailOptions {
+type SendEmailOptions = {
   to: string | string[];
   subject: string;
   /** A React Email template element, e.g. <ExampleEmail recipientName="..." /> */
   react: ReactElement;
   replyTo?: string;
-}
+};
 
 /**
  * Renders a React Email template and sends it via Resend from the
  * configured sender address. Throws if Resend reports an error so callers
  * surface failures instead of silently dropping mail.
  */
-export async function sendEmail({ to, subject, react, replyTo }: SendEmailOptions) {
+export const sendEmail = async ({
+  to,
+  subject,
+  react,
+  replyTo,
+}: SendEmailOptions) => {
   const { data, error } = await resend.emails.send({
     from: RESEND_FROM_EMAIL,
     to,
@@ -53,4 +58,4 @@ export async function sendEmail({ to, subject, react, replyTo }: SendEmailOption
   }
 
   return data;
-}
+};

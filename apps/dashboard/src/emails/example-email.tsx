@@ -9,11 +9,11 @@ import {
   Text,
 } from "@react-email/components";
 
-interface ExampleEmailProps {
+type ExampleEmailProps = {
   recipientName: string;
-}
+};
 
-export default function ExampleEmail({ recipientName }: ExampleEmailProps) {
+export const ExampleEmail = ({ recipientName }: ExampleEmailProps) => {
   return (
     <Html lang="en">
       <Head />
@@ -34,7 +34,7 @@ export default function ExampleEmail({ recipientName }: ExampleEmailProps) {
       </Body>
     </Html>
   );
-}
+};
 
 ExampleEmail.PreviewProps = {
   recipientName: "Adnan",
