@@ -109,32 +109,36 @@ export const AppSidebar = () => {
     pathname.startsWith("/purchase-receivals") ||
     pathname.startsWith("/receipts");
   const isWarehouseActive =
-    pathname.startsWith("/warehouses") ||
-    pathname.startsWith("/warehouse-sub-sections") ||
-    pathname.startsWith("/warehouse-work-orders") ||
-    pathname.startsWith("/stock") ||
-    pathname.startsWith("/customer-stock") ||
-    pathname.startsWith("/reservations") ||
-    pathname.startsWith("/production-batches") ||
-    pathname.startsWith("/trip-data") ||
-    pathname.startsWith("/production-workorders") ||
-    pathname.startsWith("/transport-workorders") ||
-    pathname.startsWith("/stock-history") ||
-    pathname.startsWith("/freight-movements") ||
-    pathname.startsWith("/count-list-deviations") ||
-    pathname.startsWith("/pick-statistics") ||
-    pathname.startsWith("/warehouse-capacity") ||
-    pathname.startsWith("/time-registration") ||
-    pathname.startsWith("/transport-status-adjustments") ||
-    pathname.startsWith("/production-capacity") ||
-    pathname.startsWith("/capacity-checks");
+    pathname === "/warehouses" ||
+    pathname.startsWith("/warehouses/") ||
+    pathname.startsWith("/warehouse-sub-sections");
   const isLocationsActive = pathname.startsWith("/locations");
   const isLogisticsActive =
-    pathname.startsWith("/machines") ||
+    pathname.startsWith("/count-list-deviations") ||
     pathname.startsWith("/product-groups") ||
     pathname.startsWith("/products") ||
+    pathname.startsWith("/warehouse-work-orders") ||
+    pathname.startsWith("/production-workorders") ||
+    pathname.startsWith("/production-batches") ||
+    pathname.startsWith("/transport-workorders") ||
+    pathname.startsWith("/trip-data") ||
+    pathname.startsWith("/reservations") ||
+    pathname === "/stock" ||
+    pathname.startsWith("/stock/") ||
+    pathname.startsWith("/stock-movements") ||
+    pathname.startsWith("/stock-on-location") ||
+    pathname.startsWith("/customer-stock") ||
+    pathname.startsWith("/stock-history") ||
+    pathname.startsWith("/freight-movements") ||
+    pathname.startsWith("/pick-statistics") ||
+    pathname.startsWith("/machines") ||
     pathname.startsWith("/sawing-layouts") ||
-    pathname.startsWith("/nesting");
+    pathname.startsWith("/warehouse-capacity") ||
+    pathname.startsWith("/production-capacity") ||
+    pathname.startsWith("/capacity-checks") ||
+    pathname.startsWith("/time-registration") ||
+    pathname.startsWith("/nesting") ||
+    pathname.startsWith("/transport-status-adjustments");
   const isOthersActive = pathname.startsWith("/complaints");
 
   const [isCustomersOpen, setIsCustomersOpen] = useState(false);
@@ -900,175 +904,6 @@ export const AppSidebar = () => {
                         <span>Warehouse Sub Sections</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/warehouse-work-orders" />}
-                        isActive={pathname.startsWith("/warehouse-work-orders")}
-                      >
-                        <span>Warehouse Work Orders</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/production-workorders" />}
-                        isActive={pathname.startsWith("/production-workorders")}
-                      >
-                        <span>Production Work Orders</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/transport-workorders" />}
-                        isActive={pathname.startsWith("/transport-workorders")}
-                      >
-                        <span>Transport Work Orders</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/stock" />}
-                        isActive={
-                          pathname === "/stock" || pathname.startsWith("/stock/")
-                        }
-                      >
-                        <span>Stock</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/stock-movements" />}
-                        isActive={pathname.startsWith("/stock-movements")}
-                      >
-                        <span>Stock Movements</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/freight-movements" />}
-                        isActive={pathname.startsWith("/freight-movements")}
-                      >
-                        <span>Freight Movement</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/stock-on-location" />}
-                        isActive={pathname.startsWith("/stock-on-location")}
-                      >
-                        <span>Stock on Location</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/customer-stock" />}
-                        isActive={pathname.startsWith("/customer-stock")}
-                      >
-                        <span>Customer Stock</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/reservations" />}
-                        isActive={pathname.startsWith("/reservations")}
-                      >
-                        <span>Reservations</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/stock-history" />}
-                        isActive={pathname.startsWith("/stock-history")}
-                      >
-                        <span>Stock History</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/count-list-deviations" />}
-                        isActive={pathname.startsWith("/count-list-deviations")}
-                      >
-                        <span>Deviations in Count Lists</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/pick-statistics" />}
-                        isActive={pathname.startsWith("/pick-statistics")}
-                      >
-                        <span>Pick Statistic</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/warehouse-capacity" />}
-                        isActive={pathname.startsWith("/warehouse-capacity")}
-                      >
-                        <span>Warehouse Capacity</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/time-registration" />}
-                        isActive={pathname.startsWith("/time-registration")}
-                      >
-                        <span>Time Registration</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/transport-status-adjustments" />}
-                        isActive={pathname.startsWith(
-                          "/transport-status-adjustments",
-                        )}
-                      >
-                        <span>Transport Status Adjustments</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/production-capacity" />}
-                        isActive={
-                          pathname.startsWith("/production-capacity") &&
-                          !pathname.startsWith("/production-capacity-details")
-                        }
-                      >
-                        <span>Production Capacity</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/production-capacity-details" />}
-                        isActive={pathname.startsWith(
-                          "/production-capacity-details",
-                        )}
-                      >
-                        <span>Production Capacity Details</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/capacity-checks" />}
-                        isActive={pathname.startsWith("/capacity-checks")}
-                      >
-                        <span>Capacity Checks</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/production-batches" />}
-                        isActive={pathname.startsWith("/production-batches")}
-                      >
-                        <span>Production Batches</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/trip-data" />}
-                        isActive={pathname.startsWith("/trip-data")}
-                      >
-                        <span>Trip Data</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
                   </SidebarMenuSub>
                 )}
               </SidebarMenuItem>
@@ -1109,10 +944,10 @@ export const AppSidebar = () => {
                   <SidebarMenuSub>
                     <SidebarMenuSubItem>
                       <SidebarMenuSubButton
-                        render={<Link href="/machines" />}
-                        isActive={pathname.startsWith("/machines")}
+                        render={<Link href="/count-list-deviations" />}
+                        isActive={pathname.startsWith("/count-list-deviations")}
                       >
-                        <span>Machines</span>
+                        <span>Deviations in Count Lists</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                     <SidebarMenuSubItem>
@@ -1133,6 +968,120 @@ export const AppSidebar = () => {
                     </SidebarMenuSubItem>
                     <SidebarMenuSubItem>
                       <SidebarMenuSubButton
+                        render={<Link href="/warehouse-work-orders" />}
+                        isActive={pathname.startsWith("/warehouse-work-orders")}
+                      >
+                        <span>Warehouse Work Orders</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/production-workorders" />}
+                        isActive={pathname.startsWith("/production-workorders")}
+                      >
+                        <span>Production Work Orders</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/production-batches" />}
+                        isActive={pathname.startsWith("/production-batches")}
+                      >
+                        <span>Production Batches</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/transport-workorders" />}
+                        isActive={pathname.startsWith("/transport-workorders")}
+                      >
+                        <span>Transport Work Orders</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/trip-data" />}
+                        isActive={pathname.startsWith("/trip-data")}
+                      >
+                        <span>Trip Data</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/reservations" />}
+                        isActive={pathname.startsWith("/reservations")}
+                      >
+                        <span>Reservations</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/stock" />}
+                        isActive={
+                          pathname === "/stock" || pathname.startsWith("/stock/")
+                        }
+                      >
+                        <span>Stock</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/stock-movements" />}
+                        isActive={pathname.startsWith("/stock-movements")}
+                      >
+                        <span>Stock Movements</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/stock-on-location" />}
+                        isActive={pathname.startsWith("/stock-on-location")}
+                      >
+                        <span>Stock on Location</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/customer-stock" />}
+                        isActive={pathname.startsWith("/customer-stock")}
+                      >
+                        <span>Customer Stock</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/stock-history" />}
+                        isActive={pathname.startsWith("/stock-history")}
+                      >
+                        <span>Stock History</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/freight-movements" />}
+                        isActive={pathname.startsWith("/freight-movements")}
+                      >
+                        <span>Freight Movement</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/pick-statistics" />}
+                        isActive={pathname.startsWith("/pick-statistics")}
+                      >
+                        <span>Pick Statistic</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/machines" />}
+                        isActive={pathname.startsWith("/machines")}
+                      >
+                        <span>Machines</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
                         render={<Link href="/sawing-layouts" />}
                         isActive={pathname.startsWith("/sawing-layouts")}
                       >
@@ -1141,10 +1090,65 @@ export const AppSidebar = () => {
                     </SidebarMenuSubItem>
                     <SidebarMenuSubItem>
                       <SidebarMenuSubButton
+                        render={<Link href="/warehouse-capacity" />}
+                        isActive={pathname.startsWith("/warehouse-capacity")}
+                      >
+                        <span>Warehouse Capacity</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/production-capacity" />}
+                        isActive={
+                          pathname.startsWith("/production-capacity") &&
+                          !pathname.startsWith("/production-capacity-details")
+                        }
+                      >
+                        <span>Production Capacity</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/production-capacity-details" />}
+                        isActive={pathname.startsWith(
+                          "/production-capacity-details",
+                        )}
+                      >
+                        <span>Production Capacity Details</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/capacity-checks" />}
+                        isActive={pathname.startsWith("/capacity-checks")}
+                      >
+                        <span>Capacity Checks</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/time-registration" />}
+                        isActive={pathname.startsWith("/time-registration")}
+                      >
+                        <span>Time Registration</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
                         render={<Link href="/nesting" />}
                         isActive={pathname.startsWith("/nesting")}
                       >
                         <span>Nesting</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        render={<Link href="/transport-status-adjustments" />}
+                        isActive={pathname.startsWith(
+                          "/transport-status-adjustments",
+                        )}
+                      >
+                        <span>Transport Status Adjustments</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                   </SidebarMenuSub>
