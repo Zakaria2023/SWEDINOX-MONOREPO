@@ -12,7 +12,7 @@
     "db:generate": "pnpm --filter @swedinox/dashboard db:generate",
     "db:migrate": "pnpm --filter @swedinox/dashboard db:migrate",
     "db:studio": "pnpm --filter @swedinox/dashboard db:studio",
-    "email:dev": "pnpm --filter @swedinox/dashboard email:dev"
+    "dev:email": "pnpm --filter @swedinox/dashboard email:dev"
   },
   "devDependencies": {
     "prettier": "^3.3.3",
