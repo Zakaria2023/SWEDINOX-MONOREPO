@@ -61,8 +61,10 @@ import {
   CustomerProjectInput,
   CustomerSalesInput,
   DebtorCompanyOption,
+  updateCompany,
   VisitReportInput,
 } from "./actions";
+import type { CompanyEditData } from "./actions";
 import { sendCompanyWelcomeEmails } from "@/emails/actions";
 import {
   AddressFormValues,
@@ -202,6 +204,11 @@ type UseCompanySubmitParams = {
   availableProducts: ProductOption[];
   suppliers: CompanyOption[];
   currentUserName?: string;
+  // When editing, the company's existing data pre-populates the form; the uuid
+  // routes the submit to updateCompany instead of createCompany.
+  mode?: "create" | "edit";
+  companyUuid?: string;
+  initialData?: CompanyEditData;
 };
 
 export const useCompanySubmit = ({
@@ -214,7 +221,11 @@ export const useCompanySubmit = ({
   availableProducts,
   suppliers,
   currentUserName,
+  mode = "create",
+  companyUuid,
+  initialData,
 }: UseCompanySubmitParams) => {
+  const isEdit = mode === "edit" && !!companyUuid;
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [state, setState] = useState<CompanyActionResult>({});
@@ -225,31 +236,41 @@ export const useCompanySubmit = ({
     useState(false);
   const [additionalAddresses, setAdditionalAddresses] = useState<
     AddressFormValues[]
-  >([]);
+  >(initialData?.additionalAddresses ?? []);
   const [isCommSettingDialogOpen, setIsCommSettingDialogOpen] = useState(false);
   const [communicationSettings, setCommunicationSettings] = useState<
     CommSettingInput[]
-  >([]);
+  >(initialData?.communicationSettings ?? []);
   const [selectedCommType, setSelectedCommType] = useState("");
   const [isContractDialogOpen, setIsContractDialogOpen] = useState(false);
-  const [contracts, setContracts] = useState<CompanyContractInput[]>([]);
+  const [contracts, setContracts] = useState<CompanyContractInput[]>(
+    initialData?.contracts ?? [],
+  );
   const [isContactDialogOpen, setIsContactDialogOpen] = useState(false);
-  const [contacts, setContacts] = useState<CompanyContactInput[]>([]);
+  const [contacts, setContacts] = useState<CompanyContactInput[]>(
+    initialData?.contacts ?? [],
+  );
   const [isTextDialogOpen, setIsTextDialogOpen] = useState(false);
-  const [texts, setTexts] = useState<CompanyTextInput[]>([]);
+  const [texts, setTexts] = useState<CompanyTextInput[]>(
+    initialData?.texts ?? [],
+  );
   const [isProjectDialogOpen, setIsProjectDialogOpen] = useState(false);
-  const [projects, setProjects] = useState<CustomerProjectInput[]>([]);
+  const [projects, setProjects] = useState<CustomerProjectInput[]>(
+    initialData?.projects ?? [],
+  );
   const [isCounterOrderDialogOpen, setIsCounterOrderDialogOpen] =
     useState(false);
   const [counterOrders, setCounterOrders] = useState<
     CompanyCounterOrderInput[]
-  >([]);
+  >(initialData?.counterOrders ?? []);
   const [editingCounterOrderIndex, setEditingCounterOrderIndex] = useState<
     number | null
   >(null);
   const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
   const [isProductPickerOpen, setIsProductPickerOpen] = useState(false);
-  const [products, setProducts] = useState<CompanyProductInput[]>([]);
+  const [products, setProducts] = useState<CompanyProductInput[]>(
+    initialData?.products ?? [],
+  );
   const [pickedProduct, setPickedProduct] = useState<ProductOption | null>(
     null,
   );
@@ -259,7 +280,7 @@ export const useCompanySubmit = ({
     useState(false);
   const [customerProducts, setCustomerProducts] = useState<
     CompanyProductInput[]
-  >([]);
+  >(initialData?.customerProducts ?? []);
   const [pickedCustomerProduct, setPickedCustomerProduct] =
     useState<ProductOption | null>(null);
   const [isCustomerStockDialogOpen, setIsCustomerStockDialogOpen] =
@@ -268,11 +289,13 @@ export const useCompanySubmit = ({
     useState(false);
   const [customerStock, setCustomerStock] = useState<
     CompanyCustomerStockInput[]
-  >([]);
+  >(initialData?.customerStock ?? []);
   const [pickedCustomerStockProduct, setPickedCustomerStockProduct] =
     useState<ProductOption | null>(null);
   const [isVisitReportDialogOpen, setIsVisitReportDialogOpen] = useState(false);
-  const [visitReports, setVisitReports] = useState<VisitReportInput[]>([]);
+  const [visitReports, setVisitReports] = useState<VisitReportInput[]>(
+    initialData?.visitReports ?? [],
+  );
   const [editingVisitReportIndex, setEditingVisitReportIndex] = useState<
     number | null
   >(null);
@@ -280,34 +303,40 @@ export const useCompanySubmit = ({
     useState(false);
   const [purchaseOrders, setPurchaseOrders] = useState<
     CompanyPurchaseOrderInput[]
-  >([]);
+  >(initialData?.purchaseOrders ?? []);
   const [editingPurchaseOrderIndex, setEditingPurchaseOrderIndex] = useState<
     number | null
   >(null);
   const [isQuoteDialogOpen, setIsQuoteDialogOpen] = useState(false);
-  const [quotes, setQuotes] = useState<CompanyQuoteInput[]>([]);
+  const [quotes, setQuotes] = useState<CompanyQuoteInput[]>(
+    initialData?.quotes ?? [],
+  );
   const [editingQuoteIndex, setEditingQuoteIndex] = useState<number | null>(
     null,
   );
   const [isReturnOrderDialogOpen, setIsReturnOrderDialogOpen] = useState(false);
   const [returnOrders, setReturnOrders] = useState<CompanyReturnOrderInput[]>(
-    [],
+    initialData?.returnOrders ?? [],
   );
   const [editingReturnOrderIndex, setEditingReturnOrderIndex] = useState<
     number | null
   >(null);
-  const [followUps, setFollowUps] = useState<CompanyFollowUpInput[]>([]);
+  const [followUps, setFollowUps] = useState<CompanyFollowUpInput[]>(
+    initialData?.followUps ?? [],
+  );
   const [transporterCosts, setTransporterCosts] = useState<
     CompanyTransporterCostInput[]
-  >([]);
+  >(initialData?.transporterCosts ?? []);
   const [transporterCountries, setTransporterCountries] = useState<
     CompanyTransporterCountryInput[]
-  >([]);
-  const [processings, setProcessings] = useState<CompanyProcessingInput[]>([]);
+  >(initialData?.transporterCountries ?? []);
+  const [processings, setProcessings] = useState<CompanyProcessingInput[]>(
+    initialData?.processings ?? [],
+  );
 
   const form = useForm<CompanyFormValues>({
     resolver: zodResolver(createCompanySchema()),
-    defaultValues: {
+    defaultValues: initialData?.formValues ?? {
       companyName: "",
       correspName: "",
       remarks: "",
@@ -400,7 +429,9 @@ export const useCompanySubmit = ({
     },
   });
 
-  const [salesData, setSalesData] = useState<CustomerSalesInput | null>(null);
+  const [salesData, setSalesData] = useState<CustomerSalesInput | null>(
+    initialData?.salesData ?? null,
+  );
 
   const additionalForm = useForm<CompanyFormValues>({
     resolver: zodResolver(createCompanySchema()),
@@ -1859,121 +1890,149 @@ export const useCompanySubmit = ({
         ),
       ];
 
-      if (contactEmails.length > 0) {
+      // Welcome emails are only sent when the company is first created.
+      if (!isEdit && contactEmails.length > 0) {
         await sendCompanyWelcomeEmails(companyName, contactEmails);
       }
 
-      const result = await createCompany(
-        {
-          companyName,
-          correspName: correspName || undefined,
-          remarks: remarks || undefined,
-          lang: lang || undefined,
-          searchCode1: searchCode1 || undefined,
-          searchCode2: searchCode2 || undefined,
-          searchCode3: searchCode3 || undefined,
-          roles: (roles ?? []) as CompanyRole[],
-          documents: documents.length > 0 ? documents : undefined,
-          ...(salesData ?? {}),
-          debtorCompanyUuid: debtorCompanyUuid || undefined,
-          iban: iban || undefined,
-          bic: bic || undefined,
-          bankAccount: bankAccount || undefined,
-          postbankAccount: postbankAccount || undefined,
-          purchaseOrgCompanyUuid: isCustomerOrProspect
-            ? purchaseOrgCompanyUuid || undefined
-            : undefined,
-          memberNumberPurchaseOrg: isCustomerOrProspect
-            ? memberNumberPurchaseOrg || undefined
-            : undefined,
-          calculateVat,
-          reminder,
-          collectInvoicesInMandate,
-          insuranceValidUntil: insuranceValidUntil
-            ? new Date(insuranceValidUntil)
-            : null,
-          creditLimitInsurance: creditLimitInsurance
-            ? String(creditLimitInsurance)
-            : undefined,
-          creditLimit: creditLimit ? String(creditLimit) : undefined,
-          creditLimitUninsured: creditLimitUninsured
-            ? String(creditLimitUninsured)
-            : undefined,
-          creditLimitUninsuredDate: creditLimitUninsuredDate
-            ? new Date(creditLimitUninsuredDate)
-            : null,
-          paymentTerms: paymentTerms || undefined,
-          differentPaymentTermsExWorks:
-            differentPaymentTermsExWorks || undefined,
-          journalCode: journalCode ?? undefined,
-          vatNumber: vatNumber || undefined,
-          cocNumber: cocNumber || undefined,
-          currency: (currency || undefined) as InsertCompanies["currency"],
-          blockedByNote: blockedByNote || undefined,
-          invoicingMethod: (values.invoicingMethod ||
-            undefined) as InsertCompanies["invoicingMethod"],
-          collectiveInvoicing: values.collectiveInvoicing,
-          invoicePackagingAtZeroPrice: values.invoicePackagingAtZeroPrice,
-          printCommodityCode: values.printCommodityCode,
-          invoiceFrequency: values.invoiceFrequency,
-          invoicePrintEnabled: values.invoicePrintEnabled,
-          invoicePrintCount: values.invoicePrintCount,
-          invoiceEmailEnabled: values.invoiceEmailEnabled,
-          invoiceEmailTo: values.invoiceEmailTo || undefined,
-          printEmailZeroValueInvoices: values.printEmailZeroValueInvoices,
-          sendXmlWithInvoice: values.sendXmlWithInvoice,
-          industry: values.industry || undefined,
-          classification: (values.classification ||
-            undefined) as InsertCompanies["classification"],
-          visitFrequency: values.visitFrequency
-            ? Number(values.visitFrequency)
-            : undefined,
-          callFrequencyPerYear: values.callFrequencyPerYear
-            ? Number(values.callFrequencyPerYear)
-            : undefined,
-          targetDateNextVisit: values.targetDateNextVisit
-            ? new Date(values.targetDateNextVisit)
-            : null,
-          visitReason: (values.visitReason ||
-            undefined) as InsertCompanies["visitReason"],
-          potentialAnnualRevenue: values.potentialAnnualRevenue
-            ? String(values.potentialAnnualRevenue)
-            : undefined,
-          targetAnnualRevenue: values.targetAnnualRevenue
-            ? String(values.targetAnnualRevenue)
-            : undefined,
-          potentialAnnualSales: values.potentialAnnualSales
-            ? String(values.potentialAnnualSales)
-            : undefined,
-          targetAnnualSales: values.targetAnnualSales
-            ? String(values.targetAnnualSales)
-            : undefined,
-          numberOfEmployees: values.numberOfEmployees
-            ? Number(values.numberOfEmployees)
-            : undefined,
-          visitPlanning: values.visitPlanning,
-        },
-        isBlocked,
-        allAddresses,
-        communicationSettings,
-        contracts,
-        contacts,
-        texts,
-        projects,
-        counterOrders,
-        allProducts,
-        resolvedVisitReports,
-        purchaseOrders,
-        quotes,
-        followUps,
-        transporterCosts,
-        transporterCountries,
-        returnOrders,
-        processings,
-        customerStock,
-      );
+      const companyData = {
+        companyName,
+        correspName: correspName || undefined,
+        remarks: remarks || undefined,
+        lang: lang || undefined,
+        searchCode1: searchCode1 || undefined,
+        searchCode2: searchCode2 || undefined,
+        searchCode3: searchCode3 || undefined,
+        roles: (roles ?? []) as CompanyRole[],
+        documents: documents.length > 0 ? documents : undefined,
+        ...(salesData ?? {}),
+        debtorCompanyUuid: debtorCompanyUuid || undefined,
+        iban: iban || undefined,
+        bic: bic || undefined,
+        bankAccount: bankAccount || undefined,
+        postbankAccount: postbankAccount || undefined,
+        purchaseOrgCompanyUuid: isCustomerOrProspect
+          ? purchaseOrgCompanyUuid || undefined
+          : undefined,
+        memberNumberPurchaseOrg: isCustomerOrProspect
+          ? memberNumberPurchaseOrg || undefined
+          : undefined,
+        calculateVat,
+        reminder,
+        collectInvoicesInMandate,
+        insuranceValidUntil: insuranceValidUntil
+          ? new Date(insuranceValidUntil)
+          : null,
+        creditLimitInsurance: creditLimitInsurance
+          ? String(creditLimitInsurance)
+          : undefined,
+        creditLimit: creditLimit ? String(creditLimit) : undefined,
+        creditLimitUninsured: creditLimitUninsured
+          ? String(creditLimitUninsured)
+          : undefined,
+        creditLimitUninsuredDate: creditLimitUninsuredDate
+          ? new Date(creditLimitUninsuredDate)
+          : null,
+        paymentTerms: paymentTerms || undefined,
+        differentPaymentTermsExWorks: differentPaymentTermsExWorks || undefined,
+        journalCode: journalCode ?? undefined,
+        vatNumber: vatNumber || undefined,
+        cocNumber: cocNumber || undefined,
+        currency: (currency || undefined) as InsertCompanies["currency"],
+        blockedByNote: blockedByNote || undefined,
+        invoicingMethod: (values.invoicingMethod ||
+          undefined) as InsertCompanies["invoicingMethod"],
+        collectiveInvoicing: values.collectiveInvoicing,
+        invoicePackagingAtZeroPrice: values.invoicePackagingAtZeroPrice,
+        printCommodityCode: values.printCommodityCode,
+        invoiceFrequency: values.invoiceFrequency,
+        invoicePrintEnabled: values.invoicePrintEnabled,
+        invoicePrintCount: values.invoicePrintCount,
+        invoiceEmailEnabled: values.invoiceEmailEnabled,
+        invoiceEmailTo: values.invoiceEmailTo || undefined,
+        printEmailZeroValueInvoices: values.printEmailZeroValueInvoices,
+        sendXmlWithInvoice: values.sendXmlWithInvoice,
+        industry: values.industry || undefined,
+        classification: (values.classification ||
+          undefined) as InsertCompanies["classification"],
+        visitFrequency: values.visitFrequency
+          ? Number(values.visitFrequency)
+          : undefined,
+        callFrequencyPerYear: values.callFrequencyPerYear
+          ? Number(values.callFrequencyPerYear)
+          : undefined,
+        targetDateNextVisit: values.targetDateNextVisit
+          ? new Date(values.targetDateNextVisit)
+          : null,
+        visitReason: (values.visitReason ||
+          undefined) as InsertCompanies["visitReason"],
+        potentialAnnualRevenue: values.potentialAnnualRevenue
+          ? String(values.potentialAnnualRevenue)
+          : undefined,
+        targetAnnualRevenue: values.targetAnnualRevenue
+          ? String(values.targetAnnualRevenue)
+          : undefined,
+        potentialAnnualSales: values.potentialAnnualSales
+          ? String(values.potentialAnnualSales)
+          : undefined,
+        targetAnnualSales: values.targetAnnualSales
+          ? String(values.targetAnnualSales)
+          : undefined,
+        numberOfEmployees: values.numberOfEmployees
+          ? Number(values.numberOfEmployees)
+          : undefined,
+        visitPlanning: values.visitPlanning,
+      };
+
+      const result =
+        companyUuid && mode === "edit"
+          ? await updateCompany(
+              companyUuid,
+              companyData,
+              isBlocked,
+              allAddresses,
+              communicationSettings,
+              contracts,
+              contacts,
+              texts,
+              projects,
+              counterOrders,
+              allProducts,
+              resolvedVisitReports,
+              purchaseOrders,
+              quotes,
+              followUps,
+              transporterCosts,
+              transporterCountries,
+              returnOrders,
+              processings,
+              customerStock,
+            )
+          : await createCompany(
+              companyData,
+              isBlocked,
+              allAddresses,
+              communicationSettings,
+              contracts,
+              contacts,
+              texts,
+              projects,
+              counterOrders,
+              allProducts,
+              resolvedVisitReports,
+              purchaseOrders,
+              quotes,
+              followUps,
+              transporterCosts,
+              transporterCountries,
+              returnOrders,
+              processings,
+              customerStock,
+            );
       setState(result);
-      if (result.success) router.push("/companies");
+      if (result.success) {
+        router.push(isEdit ? `/companies/${companyUuid}` : "/companies");
+      }
     });
   });
 

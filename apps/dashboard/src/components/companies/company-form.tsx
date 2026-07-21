@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  CompanyEditData,
   CompanyOption,
   DebtorCompanyOption,
 } from "@/app/(dashboard)/companies/actions";
@@ -69,6 +70,9 @@ type CompanyFormProps = {
   availableProducts: ProductOption[];
   suppliers: CompanyOption[];
   industries: IndustryOption[];
+  mode?: "create" | "edit";
+  companyUuid?: string;
+  initialData?: CompanyEditData;
 };
 
 export const CompanyForm = ({
@@ -81,8 +85,12 @@ export const CompanyForm = ({
   availableProducts,
   suppliers,
   industries,
+  mode = "create",
+  companyUuid,
+  initialData,
 }: CompanyFormProps) => {
   const router = useRouter();
+  const isEdit = mode === "edit";
   const { user } = useUser();
   const currentUserName = (user?.firstName && user?.lastName) || undefined;
 
@@ -287,6 +295,9 @@ export const CompanyForm = ({
     availableProducts,
     suppliers,
     currentUserName: user?.fullName ?? undefined,
+    mode,
+    companyUuid,
+    initialData,
   });
 
   const isCustomerOrProspect =
@@ -516,8 +527,14 @@ export const CompanyForm = ({
 
         <FormActions
           isPending={isPending}
-          onCancel={() => router.push("/companies")}
-          submitLabel="Create Company"
+          onCancel={() =>
+            router.push(
+              isEdit && companyUuid
+                ? `/companies/${companyUuid}`
+                : "/companies",
+            )
+          }
+          submitLabel={isEdit ? "Save Changes" : "Create Company"}
         />
       </form>
 

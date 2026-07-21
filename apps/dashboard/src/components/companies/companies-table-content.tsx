@@ -12,7 +12,7 @@ import {
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { buildColumnVisibility } from "@/lib/helpers";
 import { SelectCompanies } from "@/db";
-import { Eye } from "lucide-react";
+import { Eye, Pencil } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -106,7 +106,7 @@ export const CompaniesTable = ({
               {visibleColumns.map((column) => (
                 <TableHead key={column.key}>{column.label}</TableHead>
               ))}
-              <TableHead className="w-16" />
+              <TableHead className="w-24" />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -126,12 +126,22 @@ export const CompaniesTable = ({
                     renderCell(company, column.key),
                   )}
                   <TableCell>
-                    <Link
-                      href={`/companies/${company.uuid}`}
-                      className="inline-flex text-muted-foreground hover:text-foreground"
-                    >
-                      <Eye className="size-4" />
-                    </Link>
+                    <div className="flex items-center gap-3">
+                      <Link
+                        href={`/companies/${company.uuid}`}
+                        aria-label="View company"
+                        className="inline-flex text-muted-foreground hover:text-foreground"
+                      >
+                        <Eye className="size-4" />
+                      </Link>
+                      <Link
+                        href={`/companies/${company.uuid}/edit`}
+                        aria-label="Edit company"
+                        className="inline-flex text-muted-foreground hover:text-foreground"
+                      >
+                        <Pencil className="size-4" />
+                      </Link>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
