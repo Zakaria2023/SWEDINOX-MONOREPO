@@ -63,6 +63,7 @@ import {
   DebtorCompanyOption,
   VisitReportInput,
 } from "./actions";
+import { sendCompanyWelcomeEmails } from "@/emails/actions";
 import {
   AddressFormValues,
   CommunicationSettingFormValues,
@@ -288,8 +289,7 @@ export const useCompanySubmit = ({
   const [editingQuoteIndex, setEditingQuoteIndex] = useState<number | null>(
     null,
   );
-  const [isReturnOrderDialogOpen, setIsReturnOrderDialogOpen] =
-    useState(false);
+  const [isReturnOrderDialogOpen, setIsReturnOrderDialogOpen] = useState(false);
   const [returnOrders, setReturnOrders] = useState<CompanyReturnOrderInput[]>(
     [],
   );
@@ -1603,7 +1603,8 @@ export const useCompanySubmit = ({
       status: order.status ?? "open",
       orderDate: order.orderDate ?? "",
       complaintRef: order.complaintRef ?? "",
-      returnReason: order.returnReason ?? ("" as ReturnOrderDialogValues["returnReason"]),
+      returnReason:
+        order.returnReason ?? ("" as ReturnOrderDialogValues["returnReason"]),
       totalWeightKg: order.totalWeightKg ?? "0.00",
       totalExclVat: order.totalExclVat ?? "0.00",
       handlingBlocked: order.handlingBlocked ?? false,
@@ -1849,6 +1850,19 @@ export const useCompanySubmit = ({
           representative: report.representative ?? contactLabel(contacts[0]),
         };
       });
+
+      const contactEmails = [
+        ...new Set(
+          contacts
+            .flatMap((contact) => [contact.email, contact.addressEmail])
+            .filter((email): email is string => !!email),
+        ),
+      ];
+
+      if (contactEmails.length > 0) {
+        await sendCompanyWelcomeEmails(companyName, contactEmails);
+      }
+
       const result = await createCompany(
         {
           companyName,

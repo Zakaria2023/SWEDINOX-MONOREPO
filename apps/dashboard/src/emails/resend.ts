@@ -9,7 +9,9 @@ import { Resend } from "resend";
  */
 const requiredEnv = (name: string): string => {
   const value = process.env[name];
-  if (!value) throw new Error(`Missing required environment variable: ${name}`);
+  if (!value) {
+    throw new Error(`Missing required environment variable: ${name}`);
+  }
   return value;
 };
 
@@ -29,7 +31,7 @@ const RESEND_FROM_EMAIL = requiredEnv("RESEND_FROM_EMAIL");
 type SendEmailOptions = {
   to: string | string[];
   subject: string;
-  /** A React Email template element, e.g. <ExampleEmail recipientName="..." /> */
+  /** A React Email template element, e.g. <CompanyWelcomeEmail companyName="..." /> */
   react: ReactElement;
   replyTo?: string;
 };
