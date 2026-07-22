@@ -7,6 +7,7 @@ import {
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarHeader,
+  SidebarInput,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -22,1171 +23,380 @@ import {
   Factory,
   MapPin,
   MessageSquareWarning,
+  Search,
   ShoppingCart,
   Truck,
   Users,
   Warehouse,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+
+type NavItem = {
+  label: string;
+  href: string;
+};
+
+type NavGroup = {
+  key: string;
+  label: string;
+  icon: LucideIcon;
+  items: NavItem[];
+};
+
+const NAV_GROUPS: NavGroup[] = [
+  {
+    key: "customers",
+    label: "Customers",
+    icon: Users,
+    items: [
+      { label: "Quotes", href: "/quotes" },
+      { label: "Orders", href: "/orders" },
+      { label: "Return Orders", href: "/return-orders" },
+      { label: "Return Lines", href: "/return-lines" },
+      { label: "Counter Orders", href: "/counter-orders" },
+      { label: "Customer Overview", href: "/customer-overview" },
+      { label: "Remarks per Company", href: "/remarks-per-company" },
+      { label: "Addresses", href: "/addresses" },
+      { label: "Customer/Prospect Contracts", href: "/contracts-per-customer" },
+      {
+        label: "Customer/Prospect Contact",
+        href: "/contact-persons-customers-and-prospects",
+      },
+      { label: "Customers and Prospects", href: "/customers-and-prospects" },
+      { label: "Visit Schedule", href: "/visit-schedule" },
+      { label: "Change Visit Schedule", href: "/change-visit-schedule" },
+      { label: "To Visit / Call", href: "/to-visit-call" },
+      { label: "Customer Revenue", href: "/customer-revenue" },
+      {
+        label: "Customer Revenue per Revenue Group",
+        href: "/customer-revenue-per-revenue-group",
+      },
+      {
+        label: "Customer Revenue per Product Group",
+        href: "/customer-revenue-per-product-group",
+      },
+      {
+        label: "Customer Revenue per Group (Split)",
+        href: "/customer-revenue-per-revenue-group-split",
+      },
+      {
+        label: "Customer Revenue, Sales & Visits",
+        href: "/customer-revenue-sales-and-visits",
+      },
+      { label: "Unblocked Orders", href: "/unblocked-orders" },
+      { label: "Follow-ups", href: "/follow-ups" },
+    ],
+  },
+  {
+    key: "company",
+    label: "Company",
+    icon: Building2,
+    items: [
+      { label: "Companies", href: "/companies" },
+      { label: "Communication Settings", href: "/communication-settings" },
+      { label: "Address Distances", href: "/address-distances" },
+      { label: "Visit Reports", href: "/visit-reports" },
+      { label: "Text Categories", href: "/text-categories" },
+      { label: "Texts", href: "/texts" },
+      { label: "Inactive Companies", href: "/inactive-companies" },
+    ],
+  },
+  {
+    key: "sales",
+    label: "Sales",
+    icon: ContactRound,
+    items: [
+      { label: "Contracts", href: "/contracts" },
+      { label: "Contract Groups", href: "/contract-groups" },
+      { label: "Invoices", href: "/invoices" },
+      { label: "Deliveries", href: "/deliveries" },
+      { label: "Blocked Deliveries", href: "/blocked-deliveries" },
+      { label: "Deliveries to Arrange", href: "/deliveries-to-arrange" },
+      { label: "Invoice Lines", href: "/invoice-lines" },
+      { label: "Order Lines", href: "/order-lines" },
+      {
+        label: "Order Lines Still to be Called",
+        href: "/order-lines-still-to-be-called",
+      },
+      {
+        label: "Orders Still to be Called",
+        href: "/orders-still-to-be-called",
+      },
+      { label: "Charges", href: "/charges" },
+      { label: "Journal Entries", href: "/journal-entries" },
+      {
+        label: "Financially Blocked Quotes & Orders",
+        href: "/financially-blocked",
+      },
+      {
+        label: "Credit Information Customers",
+        href: "/credit-information-customers",
+      },
+      {
+        label: "Purchase Invoices to be Received",
+        href: "/purchase-invoices-to-be-received",
+      },
+      {
+        label: "Purchase Orders to be Received",
+        href: "/purchase-orders-to-be-received",
+      },
+      {
+        label: "Revenue per Revenue Group",
+        href: "/revenue-per-revenue-group",
+      },
+      { label: "Revenue per Product", href: "/revenue-per-product" },
+      {
+        label: "Purchases & Sales per Revenue Group",
+        href: "/purchases-and-sales-per-revenue-group",
+      },
+      { label: "Revenue w.r.t. Budget", href: "/revenue-vs-budget" },
+    ],
+  },
+  {
+    key: "supplier",
+    label: "Supplier",
+    icon: Truck,
+    items: [
+      { label: "Suppliers", href: "/suppliers" },
+      { label: "Supplier Revenue", href: "/supplier-revenue" },
+      {
+        label: "Supplier Revenue per Revenue Group",
+        href: "/supplier-revenue-per-revenue-group",
+      },
+      { label: "Contracts per Supplier", href: "/contracts-per-supplier" },
+      {
+        label: "Contact Persons Suppliers",
+        href: "/contact-persons-suppliers",
+      },
+    ],
+  },
+  {
+    key: "purchases",
+    label: "Purchases",
+    icon: ShoppingCart,
+    items: [
+      { label: "Order Advice", href: "/order-advice" },
+      { label: "StockOn Advice", href: "/stockon-advice" },
+      {
+        label: "Sold Products Not Advised",
+        href: "/sold-products-not-advised",
+      },
+      { label: "Purchase Quotes", href: "/purchase-quotes" },
+      { label: "Purchase Requests", href: "/purchase-requests" },
+      { label: "Purchase Orders", href: "/purchase-orders" },
+      {
+        label: "Purchase Orders and Quotes",
+        href: "/purchase-orders-and-quotes",
+      },
+      { label: "Purchase Return Orders", href: "/purchase-return-orders" },
+      { label: "Purchase Invoices", href: "/purchase-invoices" },
+      { label: "Purchase Invoice Line", href: "/purchase-invoice-line" },
+      { label: "Purchase Lines", href: "/purchase-lines" },
+      { label: "Purchase Quotes Overview", href: "/purchase-quotes-overview" },
+      { label: "Purchase Receivals", href: "/purchase-receivals" },
+      { label: "Receipts", href: "/receipts" },
+      { label: "Purchase Results", href: "/purchase-results" },
+    ],
+  },
+  {
+    key: "warehouse",
+    label: "Warehouse",
+    icon: Warehouse,
+    items: [
+      { label: "Warehouses", href: "/warehouses" },
+      { label: "Warehouse Sub Sections", href: "/warehouse-sub-sections" },
+    ],
+  },
+  {
+    key: "locations",
+    label: "Locations",
+    icon: MapPin,
+    items: [{ label: "Locations", href: "/locations" }],
+  },
+  {
+    key: "logistics",
+    label: "Logistics",
+    icon: Factory,
+    items: [
+      { label: "Deviations in Count Lists", href: "/count-list-deviations" },
+      { label: "Product Groups", href: "/product-groups" },
+      { label: "Products", href: "/products" },
+      { label: "Warehouse Work Orders", href: "/warehouse-work-orders" },
+      { label: "Production Work Orders", href: "/production-workorders" },
+      { label: "Production Batches", href: "/production-batches" },
+      { label: "Transport Work Orders", href: "/transport-workorders" },
+      { label: "Trip Data", href: "/trip-data" },
+      { label: "Reservations", href: "/reservations" },
+      { label: "Stock", href: "/stock" },
+      { label: "Stock Movements", href: "/stock-movements" },
+      { label: "Stock on Location", href: "/stock-on-location" },
+      { label: "Customer Stock", href: "/customer-stock" },
+      { label: "Stock History", href: "/stock-history" },
+      { label: "Freight Movement", href: "/freight-movements" },
+      { label: "Pick Statistic", href: "/pick-statistics" },
+      { label: "Machines", href: "/machines" },
+      { label: "Sawing Layouts", href: "/sawing-layouts" },
+      { label: "Warehouse Capacity", href: "/warehouse-capacity" },
+      { label: "Production Capacity", href: "/production-capacity" },
+      {
+        label: "Production Capacity Details",
+        href: "/production-capacity-details",
+      },
+      { label: "Capacity Checks", href: "/capacity-checks" },
+      { label: "Time Registration", href: "/time-registration" },
+      { label: "(Re)optimize", href: "/reoptimize" },
+      { label: "Nesting", href: "/nesting" },
+      {
+        label: "Transport Status Adjustments",
+        href: "/transport-status-adjustments",
+      },
+    ],
+  },
+  {
+    key: "others",
+    label: "Others",
+    icon: MessageSquareWarning,
+    items: [{ label: "Complaints", href: "/complaints" }],
+  },
+];
+
+// A route matches a nav item when it is the exact path or a nested path beneath
+// it — never a sibling that merely shares the same prefix (so /stock stays
+// distinct from /stock-movements).
+const isPathActive = (href: string, pathname: string) =>
+  pathname === href || pathname.startsWith(`${href}/`);
 
 export const AppSidebar = () => {
   const pathname = usePathname();
+  const [query, setQuery] = useState("");
 
   const chevronClass = (isExpanded: boolean) =>
-    cn("ms-auto transition-transform", {
-      "rotate-90": isExpanded,
+    cn("ms-auto transition-transform", { "rotate-90": isExpanded });
+
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {};
+    for (const group of NAV_GROUPS) {
+      initial[group.key] = group.items.some((item) =>
+        isPathActive(item.href, pathname),
+      );
+    }
+    return initial;
+  });
+
+  // Auto-open the group that owns the current page on navigation, while still
+  // letting the user collapse it manually afterwards.
+  useEffect(() => {
+    setOpenGroups((prev) => {
+      const next = { ...prev };
+      for (const group of NAV_GROUPS) {
+        if (group.items.some((item) => isPathActive(item.href, pathname))) {
+          next[group.key] = true;
+        }
+      }
+      return next;
     });
+  }, [pathname]);
 
-  const isCustomersActive =
-    pathname.startsWith("/addresses") ||
-    pathname.startsWith("/contracts-per-customer") ||
-    pathname.startsWith("/contact-persons-customers-and-prospects") ||
-    pathname.startsWith("/customers-and-prospects") ||
-    pathname.startsWith("/quotes") ||
-    pathname.startsWith("/orders") ||
-    pathname.startsWith("/return-orders") ||
-    pathname.startsWith("/return-lines") ||
-    pathname.startsWith("/counter-orders") ||
-    pathname.startsWith("/customer-overview") ||
-    pathname.startsWith("/remarks-per-company") ||
-    pathname.startsWith("/visit-schedule") ||
-    pathname.startsWith("/change-visit-schedule") ||
-    pathname.startsWith("/to-visit-call") ||
-    pathname.startsWith("/customer-revenue") ||
-    pathname.startsWith("/unblocked-orders") ||
-    pathname.startsWith("/follow-ups");
-  const isCompanyActive =
-    pathname.startsWith("/companies") ||
-    pathname.startsWith("/communication-settings") ||
-    pathname.startsWith("/address-distances") ||
-    pathname.startsWith("/visit-reports") ||
-    pathname.startsWith("/text-categories") ||
-    pathname.startsWith("/inactive-companies") ||
-    pathname.startsWith("/texts");
-  const isSalesActive =
-    pathname === "/contracts" ||
-    pathname.startsWith("/contracts/") ||
-    pathname.startsWith("/contract-groups") ||
-    pathname.startsWith("/invoices") ||
-    pathname.startsWith("/invoice-lines") ||
-    pathname.startsWith("/order-lines") ||
-    pathname.startsWith("/orders-still-to-be-called") ||
-    pathname.startsWith("/charges") ||
-    pathname.startsWith("/journal-entries") ||
-    pathname.startsWith("/financially-blocked") ||
-    pathname.startsWith("/credit-information-customers") ||
-    pathname.startsWith("/purchase-invoices-to-be-received") ||
-    pathname.startsWith("/purchase-orders-to-be-received") ||
-    pathname.startsWith("/revenue-per-revenue-group") ||
-    pathname.startsWith("/revenue-per-product") ||
-    pathname.startsWith("/purchases-and-sales-per-revenue-group") ||
-    pathname.startsWith("/revenue-vs-budget") ||
-    pathname.startsWith("/deliveries") ||
-    pathname.startsWith("/blocked-deliveries") ||
-    pathname.startsWith("/deliveries-to-arrange");
-  const isSupplierActive =
-    pathname.startsWith("/suppliers") ||
-    pathname.startsWith("/supplier-revenue") ||
-    pathname.startsWith("/supplier-revenue-per-revenue-group") ||
-    pathname.startsWith("/contracts-per-supplier") ||
-    pathname.startsWith("/contact-persons-suppliers");
-  const isPurchasesActive =
-    pathname.startsWith("/order-advice") ||
-    pathname.startsWith("/stockon-advice") ||
-    pathname.startsWith("/sold-products-not-advised") ||
-    pathname.startsWith("/purchase-quotes") ||
-    pathname.startsWith("/purchase-requests") ||
-    pathname.startsWith("/purchase-orders") ||
-    pathname.startsWith("/purchase-orders-and-quotes") ||
-    pathname.startsWith("/purchase-return-orders") ||
-    pathname.startsWith("/purchase-invoices") ||
-    pathname.startsWith("/purchase-invoice-line") ||
-    pathname.startsWith("/purchase-lines") ||
-    pathname.startsWith("/purchase-quotes-overview") ||
-    pathname.startsWith("/purchase-results") ||
-    pathname.startsWith("/purchase-receivals") ||
-    pathname.startsWith("/receipts");
-  const isWarehouseActive =
-    pathname === "/warehouses" ||
-    pathname.startsWith("/warehouses/") ||
-    pathname.startsWith("/warehouse-sub-sections");
-  const isLocationsActive = pathname.startsWith("/locations");
-  const isLogisticsActive =
-    pathname.startsWith("/count-list-deviations") ||
-    pathname.startsWith("/product-groups") ||
-    pathname.startsWith("/products") ||
-    pathname.startsWith("/warehouse-work-orders") ||
-    pathname.startsWith("/production-workorders") ||
-    pathname.startsWith("/production-batches") ||
-    pathname.startsWith("/transport-workorders") ||
-    pathname.startsWith("/trip-data") ||
-    pathname.startsWith("/reservations") ||
-    pathname === "/stock" ||
-    pathname.startsWith("/stock/") ||
-    pathname.startsWith("/stock-movements") ||
-    pathname.startsWith("/stock-on-location") ||
-    pathname.startsWith("/customer-stock") ||
-    pathname.startsWith("/stock-history") ||
-    pathname.startsWith("/freight-movements") ||
-    pathname.startsWith("/pick-statistics") ||
-    pathname.startsWith("/machines") ||
-    pathname.startsWith("/sawing-layouts") ||
-    pathname.startsWith("/warehouse-capacity") ||
-    pathname.startsWith("/production-capacity") ||
-    pathname.startsWith("/capacity-checks") ||
-    pathname.startsWith("/time-registration") ||
-    pathname.startsWith("/reoptimize") ||
-    pathname.startsWith("/nesting") ||
-    pathname.startsWith("/transport-status-adjustments");
-  const isOthersActive = pathname.startsWith("/complaints");
+  const toggleGroup = (key: string) =>
+    setOpenGroups((prev) => ({ ...prev, [key]: !prev[key] }));
 
-  const [isCustomersOpen, setIsCustomersOpen] = useState(false);
-  const [isCompanyOpen, setIsCompanyOpen] = useState(false);
-  const [isSalesOpen, setIsSalesOpen] = useState(false);
-  const [isSupplierOpen, setIsSupplierOpen] = useState(false);
-  const [isPurchasesOpen, setIsPurchasesOpen] = useState(false);
-  const [isWarehouseOpen, setIsWarehouseOpen] = useState(false);
-  const [isLocationsOpen, setIsLocationsOpen] = useState(false);
-  const [isLogisticsOpen, setIsLogisticsOpen] = useState(false);
-  const [isOthersOpen, setIsOthersOpen] = useState(false);
+  const trimmedQuery = query.trim().toLowerCase();
+  const isSearching = trimmedQuery.length > 0;
 
-  const isCustomersExpanded = isCustomersOpen || isCustomersActive;
-  const isCompanyExpanded = isCompanyOpen || isCompanyActive;
-  const isSalesExpanded = isSalesOpen || isSalesActive;
-  const isSupplierExpanded = isSupplierOpen || isSupplierActive;
-  const isPurchasesExpanded = isPurchasesOpen || isPurchasesActive;
-  const isWarehouseExpanded = isWarehouseOpen || isWarehouseActive;
-  const isLocationsExpanded = isLocationsOpen || isLocationsActive;
-  const isLogisticsExpanded = isLogisticsOpen || isLogisticsActive;
-  const isOthersExpanded = isOthersOpen || isOthersActive;
+  const searchResults = useMemo(() => {
+    if (!trimmedQuery) {
+      return [];
+    }
+    return NAV_GROUPS.flatMap((group) =>
+      group.items
+        .filter((item) => item.label.toLowerCase().includes(trimmedQuery))
+        .map((item) => ({ ...item, groupLabel: group.label })),
+    );
+  }, [trimmedQuery]);
 
   return (
     <Sidebar>
-      <SidebarHeader className="px-4 py-5">
+      <SidebarHeader className="gap-3 px-4 py-5">
         <span className="text-lg font-semibold tracking-tight">Swedinox</span>
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-2 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <SidebarInput
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search…"
+            aria-label="Search navigation"
+            className="ps-8"
+          />
+        </div>
       </SidebarHeader>
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+          <SidebarGroupLabel>
+            {isSearching ? "Results" : "Navigation"}
+          </SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  aria-expanded={isCustomersExpanded}
-                  onClick={() => setIsCustomersOpen((open) => !open)}
-                >
-                  <Users />
-                  <span>Customers</span>
-                  <ChevronRight className={chevronClass(isCustomersExpanded)} />
-                </SidebarMenuButton>
-                {isCustomersExpanded && (
-                  <SidebarMenuSub>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/quotes" />}
-                        isActive={pathname.startsWith("/quotes")}
-                      >
-                        <span>Quotes</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/orders" />}
-                        isActive={pathname.startsWith("/orders")}
-                      >
-                        <span>Orders</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/return-orders" />}
-                        isActive={pathname.startsWith("/return-orders")}
-                      >
-                        <span>Return Orders</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/return-lines" />}
-                        isActive={pathname.startsWith("/return-lines")}
-                      >
-                        <span>Return Lines</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/counter-orders" />}
-                        isActive={pathname.startsWith("/counter-orders")}
-                      >
-                        <span>Counter Orders</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/customer-overview" />}
-                        isActive={pathname.startsWith("/customer-overview")}
-                      >
-                        <span>Customer Overview</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/remarks-per-company" />}
-                        isActive={pathname.startsWith("/remarks-per-company")}
-                      >
-                        <span>Remarks per Company</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/addresses" />}
-                        isActive={pathname.startsWith("/addresses")}
-                      >
-                        <span>Addresses</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/contracts-per-customer" />}
-                        isActive={pathname.startsWith(
-                          "/contracts-per-customer",
-                        )}
-                      >
-                        <span>Customer/Prospect Contracts</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={
-                          <Link href="/contact-persons-customers-and-prospects" />
-                        }
-                        isActive={pathname.startsWith(
-                          "/contact-persons-customers-and-prospects",
-                        )}
-                      >
-                        <span>Customer/Prospect Contact</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/customers-and-prospects" />}
-                        isActive={pathname.startsWith(
-                          "/customers-and-prospects",
-                        )}
-                      >
-                        <span>Customers and Prospects</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/visit-schedule" />}
-                        isActive={pathname.startsWith("/visit-schedule")}
-                      >
-                        <span>Visit Schedule</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/change-visit-schedule" />}
-                        isActive={pathname.startsWith("/change-visit-schedule")}
-                      >
-                        <span>Change Visit Schedule</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/to-visit-call" />}
-                        isActive={pathname.startsWith("/to-visit-call")}
-                      >
-                        <span>To Visit / Call</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/customer-revenue" />}
-                        isActive={pathname === "/customer-revenue"}
-                      >
-                        <span>Customer Revenue</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={
-                          <Link href="/customer-revenue-per-revenue-group" />
-                        }
-                        isActive={
-                          pathname.startsWith(
-                            "/customer-revenue-per-revenue-group",
-                          ) &&
-                          !pathname.startsWith(
-                            "/customer-revenue-per-revenue-group-split",
-                          )
-                        }
-                      >
-                        <span>Customer Revenue per Revenue Group</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={
-                          <Link href="/customer-revenue-per-product-group" />
-                        }
-                        isActive={pathname.startsWith(
-                          "/customer-revenue-per-product-group",
-                        )}
-                      >
-                        <span>Customer Revenue per Product Group</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={
-                          <Link href="/customer-revenue-per-revenue-group-split" />
-                        }
-                        isActive={pathname.startsWith(
-                          "/customer-revenue-per-revenue-group-split",
-                        )}
-                      >
-                        <span>Customer Revenue per Group (Split)</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={
-                          <Link href="/customer-revenue-sales-and-visits" />
-                        }
-                        isActive={pathname.startsWith(
-                          "/customer-revenue-sales-and-visits",
-                        )}
-                      >
-                        <span>Customer Revenue, Sales &amp; Visits</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/unblocked-orders" />}
-                        isActive={pathname.startsWith("/unblocked-orders")}
-                      >
-                        <span>Unblocked Orders</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/follow-ups" />}
-                        isActive={pathname.startsWith("/follow-ups")}
-                      >
-                        <span>Follow-ups</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                  </SidebarMenuSub>
-                )}
-              </SidebarMenuItem>
+            {isSearching && searchResults.length > 0 && (
+              <SidebarMenu>
+                {searchResults.map((item) => (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton
+                      render={<Link href={item.href} />}
+                      isActive={isPathActive(item.href, pathname)}
+                    >
+                      <span>{item.label}</span>
+                      <span className="ms-auto text-xs text-sidebar-foreground/50">
+                        {item.groupLabel}
+                      </span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            )}
 
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  aria-expanded={isCompanyExpanded}
-                  onClick={() => setIsCompanyOpen((open) => !open)}
-                >
-                  <Building2 />
-                  <span>Company</span>
-                  <ChevronRight className={chevronClass(isCompanyExpanded)} />
-                </SidebarMenuButton>
-                {isCompanyExpanded && (
-                  <SidebarMenuSub>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/companies" />}
-                        isActive={
-                          pathname === "/companies" ||
-                          pathname.startsWith("/companies/")
-                        }
-                      >
-                        <span>Companies</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/communication-settings" />}
-                        isActive={pathname.startsWith(
-                          "/communication-settings",
-                        )}
-                      >
-                        <span>Communication Settings</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/address-distances" />}
-                        isActive={pathname.startsWith("/address-distances")}
-                      >
-                        <span>Address Distances</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/visit-reports" />}
-                        isActive={pathname.startsWith("/visit-reports")}
-                      >
-                        <span>Visit Reports</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/text-categories" />}
-                        isActive={pathname.startsWith("/text-categories")}
-                      >
-                        <span>Text Categories</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/texts" />}
-                        isActive={pathname.startsWith("/texts")}
-                      >
-                        <span>Texts</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/inactive-companies" />}
-                        isActive={pathname.startsWith("/inactive-companies")}
-                      >
-                        <span>Inactive Companies</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                  </SidebarMenuSub>
-                )}
-              </SidebarMenuItem>
+            {isSearching && searchResults.length === 0 && (
+              <p className="px-2 py-1.5 text-sm text-muted-foreground">
+                No results for “{query.trim()}”
+              </p>
+            )}
 
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  aria-expanded={isSalesExpanded}
-                  onClick={() => setIsSalesOpen((open) => !open)}
-                >
-                  <ContactRound />
-                  <span>Sales</span>
-                  <ChevronRight className={chevronClass(isSalesExpanded)} />
-                </SidebarMenuButton>
-                {isSalesExpanded && (
-                  <SidebarMenuSub>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/contracts" />}
-                        isActive={pathname.startsWith("/contracts")}
-                      >
-                        <span>Contracts</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/contract-groups" />}
-                        isActive={pathname.startsWith("/contract-groups")}
-                      >
-                        <span>Contract Groups</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/invoices" />}
-                        isActive={pathname.startsWith("/invoices")}
-                      >
-                        <span>Invoices</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/deliveries" />}
-                        isActive={pathname.startsWith("/deliveries")}
-                      >
-                        <span>Deliveries</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/blocked-deliveries" />}
-                        isActive={pathname.startsWith("/blocked-deliveries")}
-                      >
-                        <span>Blocked Deliveries</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/deliveries-to-arrange" />}
-                        isActive={pathname.startsWith("/deliveries-to-arrange")}
-                      >
-                        <span>Deliveries to Arrange</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/invoice-lines" />}
-                        isActive={pathname.startsWith("/invoice-lines")}
-                      >
-                        <span>Invoice Lines</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/order-lines" />}
-                        isActive={
-                          pathname.startsWith("/order-lines") &&
-                          !pathname.startsWith("/order-lines-still-to-be-called")
-                        }
-                      >
-                        <span>Order Lines</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/order-lines-still-to-be-called" />}
-                        isActive={pathname.startsWith(
-                          "/order-lines-still-to-be-called",
-                        )}
-                      >
-                        <span>Order Lines Still to be Called</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/orders-still-to-be-called" />}
-                        isActive={pathname.startsWith(
-                          "/orders-still-to-be-called",
-                        )}
-                      >
-                        <span>Orders Still to be Called</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/charges" />}
-                        isActive={pathname.startsWith("/charges")}
-                      >
-                        <span>Charges</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/journal-entries" />}
-                        isActive={pathname.startsWith("/journal-entries")}
-                      >
-                        <span>Journal Entries</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/financially-blocked" />}
-                        isActive={pathname.startsWith("/financially-blocked")}
-                      >
-                        <span>Financially Blocked Quotes &amp; Orders</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={
-                          <Link href="/credit-information-customers" />
-                        }
-                        isActive={pathname.startsWith(
-                          "/credit-information-customers",
-                        )}
-                      >
-                        <span>Credit Information Customers</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={
-                          <Link href="/purchase-invoices-to-be-received" />
-                        }
-                        isActive={pathname.startsWith(
-                          "/purchase-invoices-to-be-received",
-                        )}
-                      >
-                        <span>Purchase Invoices to be Received</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/purchase-orders-to-be-received" />}
-                        isActive={pathname.startsWith(
-                          "/purchase-orders-to-be-received",
-                        )}
-                      >
-                        <span>Purchase Orders to be Received</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/revenue-per-revenue-group" />}
-                        isActive={pathname.startsWith(
-                          "/revenue-per-revenue-group",
-                        )}
-                      >
-                        <span>Revenue per Revenue Group</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/revenue-per-product" />}
-                        isActive={pathname.startsWith("/revenue-per-product")}
-                      >
-                        <span>Revenue per Product</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={
-                          <Link href="/purchases-and-sales-per-revenue-group" />
-                        }
-                        isActive={pathname.startsWith(
-                          "/purchases-and-sales-per-revenue-group",
-                        )}
-                      >
-                        <span>Purchases &amp; Sales per Revenue Group</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/revenue-vs-budget" />}
-                        isActive={pathname.startsWith("/revenue-vs-budget")}
-                      >
-                        <span>Revenue w.r.t. Budget</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                  </SidebarMenuSub>
-                )}
-              </SidebarMenuItem>
-
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  aria-expanded={isSupplierExpanded}
-                  onClick={() => setIsSupplierOpen((open) => !open)}
-                >
-                  <Truck />
-                  <span>Supplier</span>
-                  <ChevronRight className={chevronClass(isSupplierExpanded)} />
-                </SidebarMenuButton>
-                {isSupplierExpanded && (
-                  <SidebarMenuSub>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/suppliers" />}
-                        isActive={pathname.startsWith("/suppliers")}
-                      >
-                        <span>Suppliers</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/supplier-revenue" />}
-                        isActive={
-                          pathname.startsWith("/supplier-revenue") &&
-                          !pathname.startsWith(
-                            "/supplier-revenue-per-revenue-group",
-                          )
-                        }
-                      >
-                        <span>Supplier Revenue</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={
-                          <Link href="/supplier-revenue-per-revenue-group" />
-                        }
-                        isActive={pathname.startsWith(
-                          "/supplier-revenue-per-revenue-group",
-                        )}
-                      >
-                        <span>Supplier Revenue per Revenue Group</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/contracts-per-supplier" />}
-                        isActive={pathname.startsWith(
-                          "/contracts-per-supplier",
-                        )}
-                      >
-                        <span>Contracts per Supplier</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/contact-persons-suppliers" />}
-                        isActive={pathname.startsWith(
-                          "/contact-persons-suppliers",
-                        )}
-                      >
-                        <span>Contact Persons Suppliers</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                  </SidebarMenuSub>
-                )}
-              </SidebarMenuItem>
-
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  aria-expanded={isPurchasesExpanded}
-                  onClick={() => setIsPurchasesOpen((open) => !open)}
-                >
-                  <ShoppingCart />
-                  <span>Purchases</span>
-                  <ChevronRight className={chevronClass(isPurchasesExpanded)} />
-                </SidebarMenuButton>
-                {isPurchasesExpanded && (
-                  <SidebarMenuSub>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/order-advice" />}
-                        isActive={pathname.startsWith("/order-advice")}
-                      >
-                        <span>Order Advice</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/stockon-advice" />}
-                        isActive={pathname.startsWith("/stockon-advice")}
-                      >
-                        <span>StockOn Advice</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/sold-products-not-advised" />}
-                        isActive={pathname.startsWith(
-                          "/sold-products-not-advised",
-                        )}
-                      >
-                        <span>Sold Products Not Advised</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/purchase-quotes" />}
-                        isActive={pathname.startsWith("/purchase-quotes")}
-                      >
-                        <span>Purchase Quotes</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/purchase-requests" />}
-                        isActive={pathname.startsWith("/purchase-requests")}
-                      >
-                        <span>Purchase Requests</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/purchase-orders" />}
-                        isActive={
-                          pathname.startsWith("/purchase-orders") &&
-                          !pathname.startsWith("/purchase-orders-and-quotes")
-                        }
-                      >
-                        <span>Purchase Orders</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/purchase-orders-and-quotes" />}
-                        isActive={pathname.startsWith(
-                          "/purchase-orders-and-quotes",
-                        )}
-                      >
-                        <span>Purchase Orders and Quotes</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/purchase-return-orders" />}
-                        isActive={pathname.startsWith(
-                          "/purchase-return-orders",
-                        )}
-                      >
-                        <span>Purchase Return Orders</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/purchase-invoices" />}
-                        isActive={pathname.startsWith("/purchase-invoices")}
-                      >
-                        <span>Purchase Invoices</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/purchase-invoice-line" />}
-                        isActive={pathname.startsWith("/purchase-invoice-line")}
-                      >
-                        <span>Purchase Invoice Line</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/purchase-lines" />}
-                        isActive={pathname.startsWith("/purchase-lines")}
-                      >
-                        <span>Purchase Lines</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/purchase-quotes-overview" />}
-                        isActive={pathname.startsWith(
-                          "/purchase-quotes-overview",
-                        )}
-                      >
-                        <span>Purchase Quotes Overview</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/purchase-receivals" />}
-                        isActive={pathname.startsWith("/purchase-receivals")}
-                      >
-                        <span>Purchase Receivals</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/receipts" />}
-                        isActive={pathname.startsWith("/receipts")}
-                      >
-                        <span>Receipts</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/purchase-results" />}
-                        isActive={pathname.startsWith("/purchase-results")}
-                      >
-                        <span>Purchase Results</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                  </SidebarMenuSub>
-                )}
-              </SidebarMenuItem>
-
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  aria-expanded={isWarehouseExpanded}
-                  onClick={() => setIsWarehouseOpen((open) => !open)}
-                >
-                  <Warehouse />
-                  <span>Warehouse</span>
-                  <ChevronRight className={chevronClass(isWarehouseExpanded)} />
-                </SidebarMenuButton>
-                {isWarehouseExpanded && (
-                  <SidebarMenuSub>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/warehouses" />}
-                        isActive={
-                          pathname === "/warehouses" ||
-                          pathname.startsWith("/warehouses/")
-                        }
-                      >
-                        <span>Warehouses</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/warehouse-sub-sections" />}
-                        isActive={pathname.startsWith(
-                          "/warehouse-sub-sections",
-                        )}
-                      >
-                        <span>Warehouse Sub Sections</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                  </SidebarMenuSub>
-                )}
-              </SidebarMenuItem>
-
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  aria-expanded={isLocationsExpanded}
-                  onClick={() => setIsLocationsOpen((open) => !open)}
-                >
-                  <MapPin />
-                  <span>Locations</span>
-                  <ChevronRight className={chevronClass(isLocationsExpanded)} />
-                </SidebarMenuButton>
-                {isLocationsExpanded && (
-                  <SidebarMenuSub>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/locations" />}
-                        isActive={pathname.startsWith("/locations")}
-                      >
-                        <span>Locations</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                  </SidebarMenuSub>
-                )}
-              </SidebarMenuItem>
-
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  aria-expanded={isLogisticsExpanded}
-                  onClick={() => setIsLogisticsOpen((open) => !open)}
-                >
-                  <Factory />
-                  <span>Logistics</span>
-                  <ChevronRight className={chevronClass(isLogisticsExpanded)} />
-                </SidebarMenuButton>
-                {isLogisticsExpanded && (
-                  <SidebarMenuSub>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/count-list-deviations" />}
-                        isActive={pathname.startsWith("/count-list-deviations")}
-                      >
-                        <span>Deviations in Count Lists</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/product-groups" />}
-                        isActive={pathname.startsWith("/product-groups")}
-                      >
-                        <span>Product Groups</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/products" />}
-                        isActive={pathname.startsWith("/products")}
-                      >
-                        <span>Products</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/warehouse-work-orders" />}
-                        isActive={pathname.startsWith("/warehouse-work-orders")}
-                      >
-                        <span>Warehouse Work Orders</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/production-workorders" />}
-                        isActive={pathname.startsWith("/production-workorders")}
-                      >
-                        <span>Production Work Orders</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/production-batches" />}
-                        isActive={pathname.startsWith("/production-batches")}
-                      >
-                        <span>Production Batches</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/transport-workorders" />}
-                        isActive={pathname.startsWith("/transport-workorders")}
-                      >
-                        <span>Transport Work Orders</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/trip-data" />}
-                        isActive={pathname.startsWith("/trip-data")}
-                      >
-                        <span>Trip Data</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/reservations" />}
-                        isActive={pathname.startsWith("/reservations")}
-                      >
-                        <span>Reservations</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/stock" />}
-                        isActive={
-                          pathname === "/stock" || pathname.startsWith("/stock/")
-                        }
-                      >
-                        <span>Stock</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/stock-movements" />}
-                        isActive={pathname.startsWith("/stock-movements")}
-                      >
-                        <span>Stock Movements</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/stock-on-location" />}
-                        isActive={pathname.startsWith("/stock-on-location")}
-                      >
-                        <span>Stock on Location</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/customer-stock" />}
-                        isActive={pathname.startsWith("/customer-stock")}
-                      >
-                        <span>Customer Stock</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/stock-history" />}
-                        isActive={pathname.startsWith("/stock-history")}
-                      >
-                        <span>Stock History</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/freight-movements" />}
-                        isActive={pathname.startsWith("/freight-movements")}
-                      >
-                        <span>Freight Movement</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/pick-statistics" />}
-                        isActive={pathname.startsWith("/pick-statistics")}
-                      >
-                        <span>Pick Statistic</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/machines" />}
-                        isActive={pathname.startsWith("/machines")}
-                      >
-                        <span>Machines</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/sawing-layouts" />}
-                        isActive={pathname.startsWith("/sawing-layouts")}
-                      >
-                        <span>Sawing Layouts</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/warehouse-capacity" />}
-                        isActive={pathname.startsWith("/warehouse-capacity")}
-                      >
-                        <span>Warehouse Capacity</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/production-capacity" />}
-                        isActive={
-                          pathname.startsWith("/production-capacity") &&
-                          !pathname.startsWith("/production-capacity-details")
-                        }
-                      >
-                        <span>Production Capacity</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/production-capacity-details" />}
-                        isActive={pathname.startsWith(
-                          "/production-capacity-details",
-                        )}
-                      >
-                        <span>Production Capacity Details</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/capacity-checks" />}
-                        isActive={pathname.startsWith("/capacity-checks")}
-                      >
-                        <span>Capacity Checks</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/time-registration" />}
-                        isActive={pathname.startsWith("/time-registration")}
-                      >
-                        <span>Time Registration</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/reoptimize" />}
-                        isActive={pathname.startsWith("/reoptimize")}
-                      >
-                        <span>(Re)optimize</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/nesting" />}
-                        isActive={pathname.startsWith("/nesting")}
-                      >
-                        <span>Nesting</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/transport-status-adjustments" />}
-                        isActive={pathname.startsWith(
-                          "/transport-status-adjustments",
-                        )}
-                      >
-                        <span>Transport Status Adjustments</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                  </SidebarMenuSub>
-                )}
-              </SidebarMenuItem>
-
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  aria-expanded={isOthersExpanded}
-                  onClick={() => setIsOthersOpen((open) => !open)}
-                >
-                  <MessageSquareWarning />
-                  <span>Others</span>
-                  <ChevronRight className={chevronClass(isOthersExpanded)} />
-                </SidebarMenuButton>
-                {isOthersExpanded && (
-                  <SidebarMenuSub>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        render={<Link href="/complaints" />}
-                        isActive={pathname.startsWith("/complaints")}
-                      >
-                        <span>Complaints</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                  </SidebarMenuSub>
-                )}
-              </SidebarMenuItem>
-            </SidebarMenu>
+            {!isSearching && (
+              <SidebarMenu>
+                {NAV_GROUPS.map((group) => {
+                  const Icon = group.icon;
+                  const isExpanded = openGroups[group.key];
+                  return (
+                    <SidebarMenuItem key={group.key}>
+                      <SidebarMenuButton
+                        aria-expanded={isExpanded}
+                        onClick={() => toggleGroup(group.key)}
+                      >
+                        <Icon />
+                        <span>{group.label}</span>
+                        <ChevronRight className={chevronClass(isExpanded)} />
+                      </SidebarMenuButton>
+                      {isExpanded && (
+                        <SidebarMenuSub>
+                          {group.items.map((item) => (
+                            <SidebarMenuSubItem key={item.href}>
+                              <SidebarMenuSubButton
+                                render={<Link href={item.href} />}
+                                isActive={isPathActive(item.href, pathname)}
+                              >
+                                <span>{item.label}</span>
+                              </SidebarMenuSubButton>
+                            </SidebarMenuSubItem>
+                          ))}
+                        </SidebarMenuSub>
+                      )}
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            )}
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
