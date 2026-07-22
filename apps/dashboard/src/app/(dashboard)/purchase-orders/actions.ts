@@ -116,7 +116,9 @@ export const createPurchaseOrder = async (
       .where(inArray(Products.uuid, productUuids));
     const validProductUuids = new Set(validProducts.map((p) => p.uuid));
 
-    if (productUuids.some((productUuid) => !validProductUuids.has(productUuid))) {
+    if (
+      productUuids.some((productUuid) => !validProductUuids.has(productUuid))
+    ) {
       return { error: "One or more selected products could not be found." };
     }
 
@@ -129,13 +131,14 @@ export const createPurchaseOrder = async (
     await db.transaction(async (tx) => {
       await tx.insert(PurchaseOrders).values({ ...fields, uuid });
 
-      for (const item of items) {
+      for (const [index, item] of items.entries()) {
         const itemUuid = generateUuid();
         await tx.insert(PurchaseOrderItems).values({
           uuid: itemUuid,
           purchaseOrderUuid: uuid,
           productUuid: item.productUuid,
           quantity: item.quantity,
+          lineNumber: index + 1,
         });
 
         const stockUuid = generateUuid();
