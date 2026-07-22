@@ -295,8 +295,11 @@ Once orders, invoices and stock exist, confirm the aggregate reports compute:
   shows as still to be called (planned qty greater than called-off qty).
 - REPORT /order-advice, /stockon-advice, /sold-products-not-advised — reorder
   logic; needs stock plus sales history to produce suggestions.
-- REPORT /charges, /journal-entries, /credit-information-customers,
-  /inactive-companies, /remarks-per-company — verify they reflect your data.
+- REPORT /charges — open /charges and click "Generate from orders" to turn each
+  order's lines (and any order surcharges) into charge records (customer, revenue
+  group, amount, cost, profit). Orders already charged are skipped.
+- REPORT /journal-entries, /credit-information-customers, /inactive-companies,
+  /remarks-per-company — verify they reflect your data.
 
 ===============================================================================
 Quick dependency map (cheat sheet)
