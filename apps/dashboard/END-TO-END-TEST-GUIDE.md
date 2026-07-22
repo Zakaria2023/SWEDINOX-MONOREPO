@@ -132,15 +132,23 @@ Then check:
 
 Step 2.3 — Create a Purchase Invoice (CREATE /purchase-invoices/add)
 
-Match it to the supplier/purchase order. This draws down stock and posts to the
-purchase ledger.
+Pick the supplier. A "Stock items" section then appears listing the supplier's
+pending stock lots (created by the purchase order). You MUST click Add line and
+pick a lot with a quantity for each line you want to invoice — an invoice saved
+with no lines has a 0.00 total and produces no invoice lines. Adding lines draws
+down that stock and posts to the purchase ledger.
 
 Then check:
 
-- REPORT /purchase-invoices and /purchase-invoice-line.
-- REPORT /purchase-invoices-to-be-received — should drop off once invoiced.
+- REPORT /purchase-invoices — the invoice appears.
+- REPORT /purchase-invoice-line — one row per line you added (empty if you added
+  none).
 - REPORT /supplier-revenue and /supplier-revenue-per-revenue-group.
 - REPORT /purchases-and-sales-per-revenue-group (purchase side).
+
+Note: /purchase-invoices-to-be-received stays empty in this flow. It only lists
+purchase orders with a recorded goods receipt (a receival) that aren't invoiced
+yet, and the basic New PO -> New Invoice flow does not create receival records.
 
 Step 2.4 — Purchase Return Order (optional, CREATE /purchase-return-orders/new)
 
@@ -248,17 +256,24 @@ These pages act on data created upstream (or by planning processes).
 
 - ACTION /stock — use Correct to adjust a lot's quantity, which creates a manual
   stock movement. Check REPORT /stock-movements (reason shows your note) and
-  /freight-movements.
-- ACTION /production-workorders — press Complete on a line, which books finished
-  goods into stock (new lot plus "in" movement). Check REPORT /stock and
-  /stock-movements.
-- ACTION /transport-workorders — press Complete, which marks the line shipped
-  (no stock change).
+  REPORT /freight-movements — the goods-flow ledger now mirrors every stock
+  movement (purchase receipt, invoice/sale consumption, production, correction)
+  with its running stock balance.
+- ACTION /production-workorders — click "Generate from orders" to turn your order
+  lines into production work-order lines (needs at least one machine and one
+  order; re-running only adds newly-created order lines). Then press Complete on
+  a line, which books finished goods into stock (new lot plus "in" movement).
+  Check REPORT /production-workorders, /stock and /stock-movements.
+- ACTION /transport-workorders — click "Generate from orders" to turn your order
+  lines into a new trip's transport lines (delivered to each order's company).
+  Then press Complete, which marks the line shipped (no stock change, since the
+  stock already left at delivery). Check REPORT /transport-workorders.
 - REPORT /pick-statistics, /count-list-deviations, /warehouse-capacity,
   /production-capacity, /production-capacity-details, /capacity-checks,
   /time-registration, /transport-status-adjustments, /trip-data,
-  /production-batches — these are read-only and depend on planning/scan processes;
-  they may stay empty in a from-scratch test unless that data is seeded.
+  /production-batches — these are read-only and depend on planning/scan processes
+  that the basic create flow does not write to, so they stay empty in a
+  from-scratch test unless that data is seeded.
 
 ===============================================================================
 Phase 6 — Financial blocks and advice reports

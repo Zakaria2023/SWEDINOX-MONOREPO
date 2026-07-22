@@ -8,6 +8,7 @@ import { Products, SelectProducts } from "@/db/schema/products";
 import { Stock } from "@/db/schema/stock";
 import { StockMovements } from "@/db/schema/stock-movements";
 import { generateUuid, todayDateString } from "@/lib/helpers";
+import { recordFreightMovement } from "@/lib/server/freight";
 import { currentUser } from "@clerk/nextjs/server";
 import { and, desc, eq, getTableColumns, ne, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -168,6 +169,15 @@ export const deliverOrderItem = async (
           quantity: orderItem.quantity,
           orderUuid: orderItem.orderUuid,
           createdByUserId: userId,
+        });
+
+        await recordFreightMovement(tx, {
+          productUuid: orderItem.productUuid,
+          quantity: orderItem.quantity,
+          type: "out",
+          reason: "sale_consumption",
+          orderUuid: orderItem.orderUuid,
+          operator: userId,
         });
       }
     });

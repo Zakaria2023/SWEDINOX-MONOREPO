@@ -24,6 +24,7 @@ import {
 } from "@/db/schema/stock-movements";
 import { JournalEntries } from "@/db/schema/journal-entries";
 import { buildPurchaseInvoiceJournalEntry } from "@/lib/server/accounting";
+import { recordFreightMovement } from "@/lib/server/freight";
 import {
   generateUuid,
   getPaymentTermDueDate,
@@ -231,6 +232,16 @@ export const createPurchaseInvoice = async (
           quantity: item.quantity,
           purchaseInvoiceUuid: uuid,
           createdByUserId: userId,
+        });
+
+        await recordFreightMovement(tx, {
+          productUuid: stockRow.productUuid,
+          quantity: item.quantity,
+          type: "out",
+          reason: "invoice_consumption",
+          supplierUuid: fields.companyUuid ?? null,
+          valuationPrice: stockRow.valuationPrice,
+          operator: userId,
         });
       }
 

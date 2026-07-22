@@ -2,16 +2,23 @@
 
 import { db } from "@/db";
 import { SelectStock, Stock } from "@/db/schema/stock";
-import { SelectStockMovements, StockMovements } from "@/db/schema/stock-movements";
+import {
+  SelectStockMovements,
+  StockMovements,
+} from "@/db/schema/stock-movements";
 import { Products, SelectProducts } from "@/db/schema/products";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
-import { PurchaseOrders, SelectPurchaseOrders } from "@/db/schema/purchase-orders";
+import {
+  PurchaseOrders,
+  SelectPurchaseOrders,
+} from "@/db/schema/purchase-orders";
 import {
   PurchaseOrderItems,
   SelectPurchaseOrderItems,
 } from "@/db/schema/purchase-order-items";
 import { StockCorrectionReason, StockMovementType } from "@/lib/enums";
 import { generateUuid } from "@/lib/helpers";
+import { recordFreightMovement } from "@/lib/server/freight";
 import { currentUser } from "@clerk/nextjs/server";
 import { and, desc, eq, getTableColumns, gt, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -154,7 +161,9 @@ export const createStockCorrection = async (
     }
 
     const delta =
-      input.direction === "in" ? Number(input.quantity) : -Number(input.quantity);
+      input.direction === "in"
+        ? Number(input.quantity)
+        : -Number(input.quantity);
     const nextQuantity = (Number(stockRow.quantity) + delta).toFixed(3);
 
     await db.transaction(async (tx) => {
@@ -188,6 +197,16 @@ export const createStockCorrection = async (
         quantity: input.quantity,
         note: input.note || null,
         createdByUserId: userId,
+      });
+
+      await recordFreightMovement(tx, {
+        productUuid: stockRow.productUuid,
+        quantity: input.quantity,
+        type: input.direction,
+        reason: input.reason,
+        note: input.note || null,
+        valuationPrice: stockRow.valuationPrice,
+        operator: userId,
       });
     });
 

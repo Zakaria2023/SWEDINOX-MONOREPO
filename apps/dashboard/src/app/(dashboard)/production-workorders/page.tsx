@@ -1,5 +1,6 @@
 import { getProductionWorkOrderLines } from "@/app/(dashboard)/production-workorders/actions";
 import { ProductionWorkOrdersTable } from "@/components/production-workorders/production-workorders-table-content";
+import { GenerateProductionButton } from "@/components/production-workorders/generate-production-button";
 import { PageHeading } from "@/components/layout/page-heading";
 
 const ProductionWorkOrdersPage = async () => {
@@ -7,10 +8,13 @@ const ProductionWorkOrdersPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Production workorders"
-        description="Machine processing lines to run, grouped by machine and option"
-      />
+      <div className="flex items-start justify-between gap-4">
+        <PageHeading
+          title="Production workorders"
+          description="Machine processing lines to run, grouped by machine and option"
+        />
+        <GenerateProductionButton />
+      </div>
       <ProductionWorkOrdersTable lines={lines} />
     </div>
   );

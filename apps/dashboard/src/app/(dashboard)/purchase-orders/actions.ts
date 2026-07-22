@@ -13,6 +13,7 @@ import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
 import { Products } from "@/db/schema/products";
 import { generateUuid } from "@/lib/helpers";
+import { recordFreightMovement } from "@/lib/server/freight";
 import { currentUser } from "@clerk/nextjs/server";
 import { desc, eq, getTableColumns, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -160,6 +161,16 @@ export const createPurchaseOrder = async (
           quantity: item.quantity,
           purchaseOrderUuid: uuid,
           createdByUserId: userId,
+        });
+
+        await recordFreightMovement(tx, {
+          productUuid: item.productUuid,
+          quantity: item.quantity,
+          type: "in",
+          reason: "purchase_receipt",
+          purchaseOrderUuid: uuid,
+          supplierUuid: fields.supplierUuid,
+          operator: userId,
         });
       }
     });
