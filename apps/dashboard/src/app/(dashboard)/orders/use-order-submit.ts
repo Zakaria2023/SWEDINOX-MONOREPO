@@ -237,35 +237,35 @@ export const useOrderSubmit = ({ companies }: UseOrderSubmitParams) => {
           consignmentDuration: values.consignmentDuration,
           isInternalProduction: values.isInternalProduction,
           isKlantMateriaal: values.isKlantMateriaal,
-          weightType: values.weightType,
+          weightType: values.weightType || null,
           isOverlengte: values.isOverlengte,
           isPrinted: values.isPrinted,
           isMailed: values.isMailed,
           isFaxed: values.isFaxed,
 
-          deliveryTerms: values.isPickup ? null : values.deliveryTerms,
+          deliveryTerms: values.isPickup ? null : values.deliveryTerms || null,
           deliveryAddressUuid: values.isPickup
             ? null
-            : values.deliveryAddressUuid,
+            : values.deliveryAddressUuid || null,
           deliveryType: values.deliveryType,
           deliveryDate: values.deliveryDate
             ? new Date(values.deliveryDate)
             : null,
           deliveryWeek: values.deliveryWeek ?? null,
           deliveryYear: values.deliveryYear ?? null,
-          deliveryRemark: values.deliveryRemark,
+          deliveryRemark: values.deliveryRemark || null,
 
           completeDelivery: values.completeDelivery,
           transportBlockage: values.transportBlockage,
           vehicleWithCrane: values.vehicleWithCrane,
           vehicleWithCanopy: values.vehicleWithCanopy,
           bundlingSeparate: values.bundlingSeparate,
-          transportRegion: values.transportRegion,
+          transportRegion: values.transportRegion || null,
           maxLengthMm: values.maxLengthMm ? Number(values.maxLengthMm) : null,
-          maxBundleWeightKg: values.maxBundleWeightKg,
-          deliveryAfterTime: values.deliveryAfterTime,
-          deliverForTime: values.deliverForTime,
-          transportMode: values.transportMode,
+          maxBundleWeightKg: values.maxBundleWeightKg || null,
+          deliveryAfterTime: values.deliveryAfterTime || null,
+          deliverForTime: values.deliverForTime || null,
+          transportMode: values.transportMode || null,
 
           showNetPrice: values.showNetPrice,
           scrapSurchargeSeparate: values.scrapSurchargeSeparate,
@@ -275,9 +275,9 @@ export const useOrderSubmit = ({ companies }: UseOrderSubmitParams) => {
           onlyTotalAmountOnInvoice: values.onlyTotalAmountOnInvoice,
           includeOptionPricesInMaterialPrices:
             values.includeOptionPricesInMaterialPrices,
-          paymentTerms: values.paymentTerms,
-          billingAddressUuid: values.billingAddressUuid,
-          blockingReason: values.blockingReason,
+          paymentTerms: values.paymentTerms || null,
+          billingAddressUuid: values.billingAddressUuid || null,
+          blockingReason: values.blockingReason || null,
 
           remarks: values.remarks || null,
           documents: values.documents.length > 0 ? values.documents : null,
