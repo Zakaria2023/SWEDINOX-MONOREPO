@@ -12,6 +12,7 @@ import {
   SelectPurchaseOrders,
 } from "@/db/schema/purchase-orders";
 import { RevenueGroups, SelectRevenueGroups } from "@/db/schema/revenue-groups";
+import { getClerkUsersForSelect } from "@/lib/server/clerk";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 
 export type PurchaseOrderToReceiveRow = {
@@ -63,7 +64,10 @@ export const getPurchaseOrdersToBeReceived = async (): Promise<
       )
       .innerJoin(Companies, eq(PurchaseOrders.supplierUuid, Companies.uuid))
       .innerJoin(Products, eq(PurchaseOrderItems.productUuid, Products.uuid))
-      .leftJoin(RevenueGroups, eq(Products.revenueGroupUuid, RevenueGroups.uuid))
+      .leftJoin(
+        RevenueGroups,
+        eq(Products.revenueGroupUuid, RevenueGroups.uuid),
+      )
       .where(
         and(
           inArray(PurchaseOrders.status, ["open", "confirmed", "pre_notified"]),
@@ -71,6 +75,11 @@ export const getPurchaseOrdersToBeReceived = async (): Promise<
         ),
       )
       .orderBy(asc(Companies.companyName), asc(PurchaseOrders.reference));
+
+    // The buyer is stored on the header as a Clerk user id; resolve it to a
+    // display name (falling back to the raw id if it can't be resolved).
+    const users = await getClerkUsersForSelect();
+    const nameById = new Map(users.map((user) => [user.value, user.label]));
 
     return rows.map((row) => {
       const quantity = Number(row.quantity);
@@ -92,7 +101,9 @@ export const getPurchaseOrdersToBeReceived = async (): Promise<
         kgPurchased,
         kgReceived,
         kgStillToReceive: kgPurchased - kgReceived,
-        purchaser: row.purchaser,
+        purchaser: row.purchaser
+          ? (nameById.get(row.purchaser) ?? row.purchaser)
+          : row.purchaser,
         purchaserInitials: row.purchaserInitials,
       };
     });
