@@ -1035,9 +1035,41 @@ export const getCompanyForEdit = async (
   };
 };
 
-// Updates the company row and fully replaces its child collections. The child
-// records are deleted and re-inserted (rather than diffed) so the edit form is
-// the single source of truth — mirroring how createCompany writes them.
+// Reconciles a company's child rows with the submitted list by position:
+// existing rows (ordered by id) are updated in place — keeping their uuid so
+// foreign keys from other records (orders referencing a contact/address, etc.)
+// stay valid — extra submitted rows are inserted, and rows the user removed are
+// deleted. Returns the final uuid of each submitted row, in order (used to link
+// visit reports back to their contact).
+const syncCompanyChildren = async <T>(
+  existingUuids: string[],
+  incoming: T[],
+  onUpdate: (uuid: string, values: T) => Promise<void>,
+  onInsert: (uuid: string, values: T) => Promise<void>,
+  onDelete: (uuid: string) => Promise<void>,
+): Promise<string[]> => {
+  const finalUuids: string[] = [];
+  for (let index = 0; index < incoming.length; index++) {
+    const existingUuid = existingUuids[index];
+    if (existingUuid) {
+      await onUpdate(existingUuid, incoming[index]);
+      finalUuids.push(existingUuid);
+    } else {
+      const uuid = generateUuid();
+      await onInsert(uuid, incoming[index]);
+      finalUuids.push(uuid);
+    }
+  }
+  for (let index = incoming.length; index < existingUuids.length; index++) {
+    await onDelete(existingUuids[index]);
+  }
+  return finalUuids;
+};
+
+// Updates the company row and reconciles its child collections in place. Rows
+// are matched to the submitted list by position and updated (not deleted and
+// re-inserted), so their uuids — and any foreign keys pointing at them — survive
+// the edit.
 export const updateCompany = async (
   companyUuid: string,
   companyFields: CompanyFields,
@@ -1077,56 +1109,42 @@ export const updateCompany = async (
         })
         .where(eq(Companies.uuid, companyUuid));
 
-      // Delete referencing children first (visit reports point at contacts,
-      // customer stock at products) to avoid foreign-key violations.
-      await tx
-        .delete(VisitReports)
-        .where(eq(VisitReports.companyUuid, companyUuid));
-      await tx
-        .delete(CustomerStock)
-        .where(eq(CustomerStock.companyUuid, companyUuid));
-      await tx.delete(Contacts).where(eq(Contacts.companyUuid, companyUuid));
-      await tx.delete(Products).where(eq(Products.companyUuid, companyUuid));
-      await tx
-        .delete(CompanyAddresses)
-        .where(eq(CompanyAddresses.companyUuid, companyUuid));
+      const loadChildUuids = async (
+        query: PromiseLike<{ uuid: string }[]>,
+      ): Promise<string[]> => (await query).map((row) => row.uuid);
+
+      await syncCompanyChildren(
+        await loadChildUuids(
+          tx
+            .select({ uuid: CompanyAddresses.uuid })
+            .from(CompanyAddresses)
+            .where(eq(CompanyAddresses.companyUuid, companyUuid))
+            .orderBy(asc(CompanyAddresses.id)),
+        ),
+        addresses,
+        async (uuid, values) => {
+          await tx
+            .update(CompanyAddresses)
+            .set(values)
+            .where(eq(CompanyAddresses.uuid, uuid));
+        },
+        async (uuid, values) => {
+          await tx
+            .insert(CompanyAddresses)
+            .values({ ...values, uuid, companyUuid });
+        },
+        async (uuid) => {
+          await tx
+            .delete(CompanyAddresses)
+            .where(eq(CompanyAddresses.uuid, uuid));
+        },
+      );
+
+      // Communication settings have no uuid column of their own and nothing
+      // references them, so replacing them wholesale is safe.
       await tx
         .delete(CommunicationSettings)
         .where(eq(CommunicationSettings.companyUuid, companyUuid));
-      await tx.delete(Contracts).where(eq(Contracts.companyUuid, companyUuid));
-      await tx.delete(Texts).where(eq(Texts.companyUuid, companyUuid));
-      await tx
-        .delete(CustomerProjects)
-        .where(eq(CustomerProjects.companyUuid, companyUuid));
-      await tx
-        .delete(CounterOrders)
-        .where(eq(CounterOrders.companyUuid, companyUuid));
-      await tx
-        .delete(PurchaseOrders)
-        .where(eq(PurchaseOrders.supplierUuid, companyUuid));
-      await tx.delete(Quotes).where(eq(Quotes.companyUuid, companyUuid));
-      await tx.delete(FollowUps).where(eq(FollowUps.companyUuid, companyUuid));
-      await tx
-        .delete(TransporterCosts)
-        .where(eq(TransporterCosts.companyUuid, companyUuid));
-      await tx
-        .delete(TransporterCountries)
-        .where(eq(TransporterCountries.companyUuid, companyUuid));
-      await tx
-        .delete(ReturnOrders)
-        .where(eq(ReturnOrders.companyUuid, companyUuid));
-      await tx
-        .delete(Processings)
-        .where(eq(Processings.companyUuid, companyUuid));
-
-      for (const address of addresses) {
-        await tx.insert(CompanyAddresses).values({
-          ...address,
-          uuid: generateUuid(),
-          companyUuid,
-        });
-      }
-
       for (const setting of communicationSettings) {
         await tx.insert(CommunicationSettings).values({
           ...setting,
@@ -1135,132 +1153,373 @@ export const updateCompany = async (
         });
       }
 
-      for (const contract of contracts) {
-        await tx.insert(Contracts).values({
-          ...contract,
-          uuid: generateUuid(),
-          companyUuid,
-        });
-      }
+      await syncCompanyChildren(
+        await loadChildUuids(
+          tx
+            .select({ uuid: Contracts.uuid })
+            .from(Contracts)
+            .where(eq(Contracts.companyUuid, companyUuid))
+            .orderBy(asc(Contracts.id)),
+        ),
+        contracts,
+        async (uuid, values) => {
+          await tx
+            .update(Contracts)
+            .set(values)
+            .where(eq(Contracts.uuid, uuid));
+        },
+        async (uuid, values) => {
+          await tx.insert(Contracts).values({ ...values, uuid, companyUuid });
+        },
+        async (uuid) => {
+          await tx.delete(Contracts).where(eq(Contracts.uuid, uuid));
+        },
+      );
 
-      const contactUuids: string[] = [];
-      for (const contact of contacts) {
-        const contactUuid = generateUuid();
-        contactUuids.push(contactUuid);
-        await tx.insert(Contacts).values({
-          ...contact,
-          uuid: contactUuid,
-          companyUuid,
-        });
-      }
+      const contactUuids = await syncCompanyChildren(
+        await loadChildUuids(
+          tx
+            .select({ uuid: Contacts.uuid })
+            .from(Contacts)
+            .where(eq(Contacts.companyUuid, companyUuid))
+            .orderBy(asc(Contacts.id)),
+        ),
+        contacts,
+        async (uuid, values) => {
+          await tx.update(Contacts).set(values).where(eq(Contacts.uuid, uuid));
+        },
+        async (uuid, values) => {
+          await tx.insert(Contacts).values({ ...values, uuid, companyUuid });
+        },
+        async (uuid) => {
+          await tx.delete(Contacts).where(eq(Contacts.uuid, uuid));
+        },
+      );
 
-      for (const text of texts) {
-        await tx.insert(Texts).values({
-          ...text,
-          uuid: generateUuid(),
-          companyUuid,
-          createdByUserId: userId,
-        });
-      }
+      await syncCompanyChildren(
+        await loadChildUuids(
+          tx
+            .select({ uuid: Texts.uuid })
+            .from(Texts)
+            .where(eq(Texts.companyUuid, companyUuid))
+            .orderBy(asc(Texts.id)),
+        ),
+        texts,
+        async (uuid, values) => {
+          await tx.update(Texts).set(values).where(eq(Texts.uuid, uuid));
+        },
+        async (uuid, values) => {
+          await tx.insert(Texts).values({
+            ...values,
+            uuid,
+            companyUuid,
+            createdByUserId: userId,
+          });
+        },
+        async (uuid) => {
+          await tx.delete(Texts).where(eq(Texts.uuid, uuid));
+        },
+      );
 
-      for (const project of projects) {
-        await tx.insert(CustomerProjects).values({
-          ...project,
-          uuid: generateUuid(),
-          companyUuid,
-        });
-      }
+      await syncCompanyChildren(
+        await loadChildUuids(
+          tx
+            .select({ uuid: CustomerProjects.uuid })
+            .from(CustomerProjects)
+            .where(eq(CustomerProjects.companyUuid, companyUuid))
+            .orderBy(asc(CustomerProjects.id)),
+        ),
+        projects,
+        async (uuid, values) => {
+          await tx
+            .update(CustomerProjects)
+            .set(values)
+            .where(eq(CustomerProjects.uuid, uuid));
+        },
+        async (uuid, values) => {
+          await tx
+            .insert(CustomerProjects)
+            .values({ ...values, uuid, companyUuid });
+        },
+        async (uuid) => {
+          await tx
+            .delete(CustomerProjects)
+            .where(eq(CustomerProjects.uuid, uuid));
+        },
+      );
 
-      for (const counterOrder of counterOrders) {
-        await tx.insert(CounterOrders).values({
-          ...counterOrder,
-          uuid: generateUuid(),
-          companyUuid,
-        });
-      }
+      await syncCompanyChildren(
+        await loadChildUuids(
+          tx
+            .select({ uuid: CounterOrders.uuid })
+            .from(CounterOrders)
+            .where(eq(CounterOrders.companyUuid, companyUuid))
+            .orderBy(asc(CounterOrders.id)),
+        ),
+        counterOrders,
+        async (uuid, values) => {
+          await tx
+            .update(CounterOrders)
+            .set(values)
+            .where(eq(CounterOrders.uuid, uuid));
+        },
+        async (uuid, values) => {
+          await tx
+            .insert(CounterOrders)
+            .values({ ...values, uuid, companyUuid });
+        },
+        async (uuid) => {
+          await tx.delete(CounterOrders).where(eq(CounterOrders.uuid, uuid));
+        },
+      );
 
-      for (const product of products) {
-        await tx.insert(Products).values({
-          ...product,
-          uuid: generateUuid(),
-          companyUuid,
-        });
-      }
+      await syncCompanyChildren(
+        await loadChildUuids(
+          tx
+            .select({ uuid: Products.uuid })
+            .from(Products)
+            .where(eq(Products.companyUuid, companyUuid))
+            .orderBy(asc(Products.id)),
+        ),
+        products,
+        async (uuid, values) => {
+          await tx.update(Products).set(values).where(eq(Products.uuid, uuid));
+        },
+        async (uuid, values) => {
+          await tx.insert(Products).values({ ...values, uuid, companyUuid });
+        },
+        async (uuid) => {
+          await tx.delete(Products).where(eq(Products.uuid, uuid));
+        },
+      );
 
-      for (const visitReport of visitReports) {
-        const { contactIndex, ...rest } = visitReport;
-        await tx.insert(VisitReports).values({
-          ...rest,
-          uuid: generateUuid(),
-          companyUuid,
-          contactUuid:
-            contactIndex != null ? contactUuids[contactIndex] : undefined,
-        });
-      }
+      await syncCompanyChildren(
+        await loadChildUuids(
+          tx
+            .select({ uuid: VisitReports.uuid })
+            .from(VisitReports)
+            .where(eq(VisitReports.companyUuid, companyUuid))
+            .orderBy(asc(VisitReports.id)),
+        ),
+        visitReports,
+        async (uuid, { contactIndex, ...rest }) => {
+          await tx
+            .update(VisitReports)
+            .set({
+              ...rest,
+              contactUuid:
+                contactIndex != null ? contactUuids[contactIndex] : null,
+            })
+            .where(eq(VisitReports.uuid, uuid));
+        },
+        async (uuid, { contactIndex, ...rest }) => {
+          await tx.insert(VisitReports).values({
+            ...rest,
+            uuid,
+            companyUuid,
+            contactUuid:
+              contactIndex != null ? contactUuids[contactIndex] : undefined,
+          });
+        },
+        async (uuid) => {
+          await tx.delete(VisitReports).where(eq(VisitReports.uuid, uuid));
+        },
+      );
 
-      for (const purchaseOrder of purchaseOrders) {
-        await tx.insert(PurchaseOrders).values({
-          ...purchaseOrder,
-          uuid: generateUuid(),
-          supplierUuid: companyUuid,
-        });
-      }
+      await syncCompanyChildren(
+        await loadChildUuids(
+          tx
+            .select({ uuid: PurchaseOrders.uuid })
+            .from(PurchaseOrders)
+            .where(eq(PurchaseOrders.supplierUuid, companyUuid))
+            .orderBy(asc(PurchaseOrders.id)),
+        ),
+        purchaseOrders,
+        async (uuid, values) => {
+          await tx
+            .update(PurchaseOrders)
+            .set(values)
+            .where(eq(PurchaseOrders.uuid, uuid));
+        },
+        async (uuid, values) => {
+          await tx
+            .insert(PurchaseOrders)
+            .values({ ...values, uuid, supplierUuid: companyUuid });
+        },
+        async (uuid) => {
+          await tx.delete(PurchaseOrders).where(eq(PurchaseOrders.uuid, uuid));
+        },
+      );
 
-      for (const quote of quotes) {
-        await tx.insert(Quotes).values({
-          ...quote,
-          uuid: generateUuid(),
-          companyUuid,
-        });
-      }
+      await syncCompanyChildren(
+        await loadChildUuids(
+          tx
+            .select({ uuid: Quotes.uuid })
+            .from(Quotes)
+            .where(eq(Quotes.companyUuid, companyUuid))
+            .orderBy(asc(Quotes.id)),
+        ),
+        quotes,
+        async (uuid, values) => {
+          await tx.update(Quotes).set(values).where(eq(Quotes.uuid, uuid));
+        },
+        async (uuid, values) => {
+          await tx.insert(Quotes).values({ ...values, uuid, companyUuid });
+        },
+        async (uuid) => {
+          await tx.delete(Quotes).where(eq(Quotes.uuid, uuid));
+        },
+      );
 
-      for (const followUp of followUps) {
-        await tx.insert(FollowUps).values({
-          ...followUp,
-          uuid: generateUuid(),
-          companyUuid,
-        });
-      }
+      await syncCompanyChildren(
+        await loadChildUuids(
+          tx
+            .select({ uuid: FollowUps.uuid })
+            .from(FollowUps)
+            .where(eq(FollowUps.companyUuid, companyUuid))
+            .orderBy(asc(FollowUps.id)),
+        ),
+        followUps,
+        async (uuid, values) => {
+          await tx
+            .update(FollowUps)
+            .set(values)
+            .where(eq(FollowUps.uuid, uuid));
+        },
+        async (uuid, values) => {
+          await tx.insert(FollowUps).values({ ...values, uuid, companyUuid });
+        },
+        async (uuid) => {
+          await tx.delete(FollowUps).where(eq(FollowUps.uuid, uuid));
+        },
+      );
 
-      for (const transporterCost of transporterCosts) {
-        await tx.insert(TransporterCosts).values({
-          ...transporterCost,
-          uuid: generateUuid(),
-          companyUuid,
-        });
-      }
+      await syncCompanyChildren(
+        await loadChildUuids(
+          tx
+            .select({ uuid: TransporterCosts.uuid })
+            .from(TransporterCosts)
+            .where(eq(TransporterCosts.companyUuid, companyUuid))
+            .orderBy(asc(TransporterCosts.id)),
+        ),
+        transporterCosts,
+        async (uuid, values) => {
+          await tx
+            .update(TransporterCosts)
+            .set(values)
+            .where(eq(TransporterCosts.uuid, uuid));
+        },
+        async (uuid, values) => {
+          await tx
+            .insert(TransporterCosts)
+            .values({ ...values, uuid, companyUuid });
+        },
+        async (uuid) => {
+          await tx
+            .delete(TransporterCosts)
+            .where(eq(TransporterCosts.uuid, uuid));
+        },
+      );
 
-      for (const transporterCountry of transporterCountries) {
-        await tx.insert(TransporterCountries).values({
-          ...transporterCountry,
-          uuid: generateUuid(),
-          companyUuid,
-        });
-      }
+      await syncCompanyChildren(
+        await loadChildUuids(
+          tx
+            .select({ uuid: TransporterCountries.uuid })
+            .from(TransporterCountries)
+            .where(eq(TransporterCountries.companyUuid, companyUuid))
+            .orderBy(asc(TransporterCountries.id)),
+        ),
+        transporterCountries,
+        async (uuid, values) => {
+          await tx
+            .update(TransporterCountries)
+            .set(values)
+            .where(eq(TransporterCountries.uuid, uuid));
+        },
+        async (uuid, values) => {
+          await tx
+            .insert(TransporterCountries)
+            .values({ ...values, uuid, companyUuid });
+        },
+        async (uuid) => {
+          await tx
+            .delete(TransporterCountries)
+            .where(eq(TransporterCountries.uuid, uuid));
+        },
+      );
 
-      for (const returnOrder of returnOrders) {
-        await tx.insert(ReturnOrders).values({
-          ...returnOrder,
-          uuid: generateUuid(),
-          companyUuid,
-        });
-      }
+      await syncCompanyChildren(
+        await loadChildUuids(
+          tx
+            .select({ uuid: ReturnOrders.uuid })
+            .from(ReturnOrders)
+            .where(eq(ReturnOrders.companyUuid, companyUuid))
+            .orderBy(asc(ReturnOrders.id)),
+        ),
+        returnOrders,
+        async (uuid, values) => {
+          await tx
+            .update(ReturnOrders)
+            .set(values)
+            .where(eq(ReturnOrders.uuid, uuid));
+        },
+        async (uuid, values) => {
+          await tx
+            .insert(ReturnOrders)
+            .values({ ...values, uuid, companyUuid });
+        },
+        async (uuid) => {
+          await tx.delete(ReturnOrders).where(eq(ReturnOrders.uuid, uuid));
+        },
+      );
 
-      for (const processing of processings) {
-        await tx.insert(Processings).values({
-          ...processing,
-          uuid: generateUuid(),
-          companyUuid,
-        });
-      }
+      await syncCompanyChildren(
+        await loadChildUuids(
+          tx
+            .select({ uuid: Processings.uuid })
+            .from(Processings)
+            .where(eq(Processings.companyUuid, companyUuid))
+            .orderBy(asc(Processings.id)),
+        ),
+        processings,
+        async (uuid, values) => {
+          await tx
+            .update(Processings)
+            .set(values)
+            .where(eq(Processings.uuid, uuid));
+        },
+        async (uuid, values) => {
+          await tx.insert(Processings).values({ ...values, uuid, companyUuid });
+        },
+        async (uuid) => {
+          await tx.delete(Processings).where(eq(Processings.uuid, uuid));
+        },
+      );
 
-      for (const stock of customerStock) {
-        await tx.insert(CustomerStock).values({
-          ...stock,
-          uuid: generateUuid(),
-          companyUuid,
-        });
-      }
+      await syncCompanyChildren(
+        await loadChildUuids(
+          tx
+            .select({ uuid: CustomerStock.uuid })
+            .from(CustomerStock)
+            .where(eq(CustomerStock.companyUuid, companyUuid))
+            .orderBy(asc(CustomerStock.id)),
+        ),
+        customerStock,
+        async (uuid, values) => {
+          await tx
+            .update(CustomerStock)
+            .set(values)
+            .where(eq(CustomerStock.uuid, uuid));
+        },
+        async (uuid, values) => {
+          await tx
+            .insert(CustomerStock)
+            .values({ ...values, uuid, companyUuid });
+        },
+        async (uuid) => {
+          await tx.delete(CustomerStock).where(eq(CustomerStock.uuid, uuid));
+        },
+      );
     });
 
     return { success: true, companyUuid };
