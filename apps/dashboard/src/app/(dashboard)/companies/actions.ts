@@ -840,91 +840,114 @@ export const getCompanyForEdit = async (
     return null;
   }
 
-  const addressRows = await db
-    .select()
-    .from(CompanyAddresses)
-    .where(eq(CompanyAddresses.companyUuid, uuid))
-    .orderBy(asc(CompanyAddresses.id));
-  const commRows = await db
-    .select()
-    .from(CommunicationSettings)
-    .where(eq(CommunicationSettings.companyUuid, uuid))
-    .orderBy(asc(CommunicationSettings.id));
-  const contractRows = await db
-    .select()
-    .from(Contracts)
-    .where(eq(Contracts.companyUuid, uuid))
-    .orderBy(asc(Contracts.id));
-  const contactRows = await db
-    .select()
-    .from(Contacts)
-    .where(eq(Contacts.companyUuid, uuid))
-    .orderBy(asc(Contacts.id));
-  const textRows = await db
-    .select()
-    .from(Texts)
-    .where(eq(Texts.companyUuid, uuid))
-    .orderBy(asc(Texts.id));
-  const projectRows = await db
-    .select()
-    .from(CustomerProjects)
-    .where(eq(CustomerProjects.companyUuid, uuid))
-    .orderBy(asc(CustomerProjects.id));
-  const counterOrderRows = await db
-    .select()
-    .from(CounterOrders)
-    .where(eq(CounterOrders.companyUuid, uuid))
-    .orderBy(asc(CounterOrders.id));
-  const productRows = await db
-    .select()
-    .from(Products)
-    .where(eq(Products.companyUuid, uuid))
-    .orderBy(asc(Products.id));
-  const visitReportRows = await db
-    .select()
-    .from(VisitReports)
-    .where(eq(VisitReports.companyUuid, uuid))
-    .orderBy(asc(VisitReports.id));
-  const purchaseOrderRows = await db
-    .select()
-    .from(PurchaseOrders)
-    .where(eq(PurchaseOrders.supplierUuid, uuid))
-    .orderBy(asc(PurchaseOrders.id));
-  const quoteRows = await db
-    .select()
-    .from(Quotes)
-    .where(eq(Quotes.companyUuid, uuid))
-    .orderBy(asc(Quotes.id));
-  const followUpRows = await db
-    .select()
-    .from(FollowUps)
-    .where(eq(FollowUps.companyUuid, uuid))
-    .orderBy(asc(FollowUps.id));
-  const transporterCostRows = await db
-    .select()
-    .from(TransporterCosts)
-    .where(eq(TransporterCosts.companyUuid, uuid))
-    .orderBy(asc(TransporterCosts.id));
-  const transporterCountryRows = await db
-    .select()
-    .from(TransporterCountries)
-    .where(eq(TransporterCountries.companyUuid, uuid))
-    .orderBy(asc(TransporterCountries.id));
-  const returnOrderRows = await db
-    .select()
-    .from(ReturnOrders)
-    .where(eq(ReturnOrders.companyUuid, uuid))
-    .orderBy(asc(ReturnOrders.id));
-  const processingRows = await db
-    .select()
-    .from(Processings)
-    .where(eq(Processings.companyUuid, uuid))
-    .orderBy(asc(Processings.id));
-  const customerStockRows = await db
-    .select()
-    .from(CustomerStock)
-    .where(eq(CustomerStock.companyUuid, uuid))
-    .orderBy(asc(CustomerStock.id));
+  // Load every child collection in parallel — they're independent reads, and
+  // doing them sequentially against a remote database made opening the edit
+  // page slow.
+  const [
+    addressRows,
+    commRows,
+    contractRows,
+    contactRows,
+    textRows,
+    projectRows,
+    counterOrderRows,
+    productRows,
+    visitReportRows,
+    purchaseOrderRows,
+    quoteRows,
+    followUpRows,
+    transporterCostRows,
+    transporterCountryRows,
+    returnOrderRows,
+    processingRows,
+    customerStockRows,
+  ] = await Promise.all([
+    db
+      .select()
+      .from(CompanyAddresses)
+      .where(eq(CompanyAddresses.companyUuid, uuid))
+      .orderBy(asc(CompanyAddresses.id)),
+    db
+      .select()
+      .from(CommunicationSettings)
+      .where(eq(CommunicationSettings.companyUuid, uuid))
+      .orderBy(asc(CommunicationSettings.id)),
+    db
+      .select()
+      .from(Contracts)
+      .where(eq(Contracts.companyUuid, uuid))
+      .orderBy(asc(Contracts.id)),
+    db
+      .select()
+      .from(Contacts)
+      .where(eq(Contacts.companyUuid, uuid))
+      .orderBy(asc(Contacts.id)),
+    db
+      .select()
+      .from(Texts)
+      .where(eq(Texts.companyUuid, uuid))
+      .orderBy(asc(Texts.id)),
+    db
+      .select()
+      .from(CustomerProjects)
+      .where(eq(CustomerProjects.companyUuid, uuid))
+      .orderBy(asc(CustomerProjects.id)),
+    db
+      .select()
+      .from(CounterOrders)
+      .where(eq(CounterOrders.companyUuid, uuid))
+      .orderBy(asc(CounterOrders.id)),
+    db
+      .select()
+      .from(Products)
+      .where(eq(Products.companyUuid, uuid))
+      .orderBy(asc(Products.id)),
+    db
+      .select()
+      .from(VisitReports)
+      .where(eq(VisitReports.companyUuid, uuid))
+      .orderBy(asc(VisitReports.id)),
+    db
+      .select()
+      .from(PurchaseOrders)
+      .where(eq(PurchaseOrders.supplierUuid, uuid))
+      .orderBy(asc(PurchaseOrders.id)),
+    db
+      .select()
+      .from(Quotes)
+      .where(eq(Quotes.companyUuid, uuid))
+      .orderBy(asc(Quotes.id)),
+    db
+      .select()
+      .from(FollowUps)
+      .where(eq(FollowUps.companyUuid, uuid))
+      .orderBy(asc(FollowUps.id)),
+    db
+      .select()
+      .from(TransporterCosts)
+      .where(eq(TransporterCosts.companyUuid, uuid))
+      .orderBy(asc(TransporterCosts.id)),
+    db
+      .select()
+      .from(TransporterCountries)
+      .where(eq(TransporterCountries.companyUuid, uuid))
+      .orderBy(asc(TransporterCountries.id)),
+    db
+      .select()
+      .from(ReturnOrders)
+      .where(eq(ReturnOrders.companyUuid, uuid))
+      .orderBy(asc(ReturnOrders.id)),
+    db
+      .select()
+      .from(Processings)
+      .where(eq(Processings.companyUuid, uuid))
+      .orderBy(asc(Processings.id)),
+    db
+      .select()
+      .from(CustomerStock)
+      .where(eq(CustomerStock.companyUuid, uuid))
+      .orderBy(asc(CustomerStock.id)),
+  ]);
 
   const [firstAddress, ...restAddresses] = addressRows;
 
@@ -1100,6 +1123,144 @@ export const updateCompany = async (
       return { error: "User not authenticated" };
     }
 
+    // Read every child collection's existing ids up-front and in parallel.
+    // These are independent reads, so running them before (and outside) the
+    // write transaction avoids ~16 sequential round trips that made saving slow.
+    const loadUuids = (query: PromiseLike<{ uuid: string }[]>) =>
+      query.then((rows) => rows.map((row) => row.uuid));
+
+    const [
+      addressUuids,
+      contractUuids,
+      existingContactUuids,
+      textUuids,
+      projectUuids,
+      counterOrderUuids,
+      productUuids,
+      visitReportUuids,
+      purchaseOrderUuids,
+      quoteUuids,
+      followUpUuids,
+      transporterCostUuids,
+      transporterCountryUuids,
+      returnOrderUuids,
+      processingUuids,
+      customerStockUuids,
+    ] = await Promise.all([
+      loadUuids(
+        db
+          .select({ uuid: CompanyAddresses.uuid })
+          .from(CompanyAddresses)
+          .where(eq(CompanyAddresses.companyUuid, companyUuid))
+          .orderBy(asc(CompanyAddresses.id)),
+      ),
+      loadUuids(
+        db
+          .select({ uuid: Contracts.uuid })
+          .from(Contracts)
+          .where(eq(Contracts.companyUuid, companyUuid))
+          .orderBy(asc(Contracts.id)),
+      ),
+      loadUuids(
+        db
+          .select({ uuid: Contacts.uuid })
+          .from(Contacts)
+          .where(eq(Contacts.companyUuid, companyUuid))
+          .orderBy(asc(Contacts.id)),
+      ),
+      loadUuids(
+        db
+          .select({ uuid: Texts.uuid })
+          .from(Texts)
+          .where(eq(Texts.companyUuid, companyUuid))
+          .orderBy(asc(Texts.id)),
+      ),
+      loadUuids(
+        db
+          .select({ uuid: CustomerProjects.uuid })
+          .from(CustomerProjects)
+          .where(eq(CustomerProjects.companyUuid, companyUuid))
+          .orderBy(asc(CustomerProjects.id)),
+      ),
+      loadUuids(
+        db
+          .select({ uuid: CounterOrders.uuid })
+          .from(CounterOrders)
+          .where(eq(CounterOrders.companyUuid, companyUuid))
+          .orderBy(asc(CounterOrders.id)),
+      ),
+      loadUuids(
+        db
+          .select({ uuid: Products.uuid })
+          .from(Products)
+          .where(eq(Products.companyUuid, companyUuid))
+          .orderBy(asc(Products.id)),
+      ),
+      loadUuids(
+        db
+          .select({ uuid: VisitReports.uuid })
+          .from(VisitReports)
+          .where(eq(VisitReports.companyUuid, companyUuid))
+          .orderBy(asc(VisitReports.id)),
+      ),
+      loadUuids(
+        db
+          .select({ uuid: PurchaseOrders.uuid })
+          .from(PurchaseOrders)
+          .where(eq(PurchaseOrders.supplierUuid, companyUuid))
+          .orderBy(asc(PurchaseOrders.id)),
+      ),
+      loadUuids(
+        db
+          .select({ uuid: Quotes.uuid })
+          .from(Quotes)
+          .where(eq(Quotes.companyUuid, companyUuid))
+          .orderBy(asc(Quotes.id)),
+      ),
+      loadUuids(
+        db
+          .select({ uuid: FollowUps.uuid })
+          .from(FollowUps)
+          .where(eq(FollowUps.companyUuid, companyUuid))
+          .orderBy(asc(FollowUps.id)),
+      ),
+      loadUuids(
+        db
+          .select({ uuid: TransporterCosts.uuid })
+          .from(TransporterCosts)
+          .where(eq(TransporterCosts.companyUuid, companyUuid))
+          .orderBy(asc(TransporterCosts.id)),
+      ),
+      loadUuids(
+        db
+          .select({ uuid: TransporterCountries.uuid })
+          .from(TransporterCountries)
+          .where(eq(TransporterCountries.companyUuid, companyUuid))
+          .orderBy(asc(TransporterCountries.id)),
+      ),
+      loadUuids(
+        db
+          .select({ uuid: ReturnOrders.uuid })
+          .from(ReturnOrders)
+          .where(eq(ReturnOrders.companyUuid, companyUuid))
+          .orderBy(asc(ReturnOrders.id)),
+      ),
+      loadUuids(
+        db
+          .select({ uuid: Processings.uuid })
+          .from(Processings)
+          .where(eq(Processings.companyUuid, companyUuid))
+          .orderBy(asc(Processings.id)),
+      ),
+      loadUuids(
+        db
+          .select({ uuid: CustomerStock.uuid })
+          .from(CustomerStock)
+          .where(eq(CustomerStock.companyUuid, companyUuid))
+          .orderBy(asc(CustomerStock.id)),
+      ),
+    ]);
+
     await db.transaction(async (tx) => {
       await tx
         .update(Companies)
@@ -1109,18 +1270,8 @@ export const updateCompany = async (
         })
         .where(eq(Companies.uuid, companyUuid));
 
-      const loadChildUuids = async (
-        query: PromiseLike<{ uuid: string }[]>,
-      ): Promise<string[]> => (await query).map((row) => row.uuid);
-
       await syncCompanyChildren(
-        await loadChildUuids(
-          tx
-            .select({ uuid: CompanyAddresses.uuid })
-            .from(CompanyAddresses)
-            .where(eq(CompanyAddresses.companyUuid, companyUuid))
-            .orderBy(asc(CompanyAddresses.id)),
-        ),
+        addressUuids,
         addresses,
         async (uuid, values) => {
           await tx
@@ -1154,13 +1305,7 @@ export const updateCompany = async (
       }
 
       await syncCompanyChildren(
-        await loadChildUuids(
-          tx
-            .select({ uuid: Contracts.uuid })
-            .from(Contracts)
-            .where(eq(Contracts.companyUuid, companyUuid))
-            .orderBy(asc(Contracts.id)),
-        ),
+        contractUuids,
         contracts,
         async (uuid, values) => {
           await tx
@@ -1177,13 +1322,7 @@ export const updateCompany = async (
       );
 
       const contactUuids = await syncCompanyChildren(
-        await loadChildUuids(
-          tx
-            .select({ uuid: Contacts.uuid })
-            .from(Contacts)
-            .where(eq(Contacts.companyUuid, companyUuid))
-            .orderBy(asc(Contacts.id)),
-        ),
+        existingContactUuids,
         contacts,
         async (uuid, values) => {
           await tx.update(Contacts).set(values).where(eq(Contacts.uuid, uuid));
@@ -1197,13 +1336,7 @@ export const updateCompany = async (
       );
 
       await syncCompanyChildren(
-        await loadChildUuids(
-          tx
-            .select({ uuid: Texts.uuid })
-            .from(Texts)
-            .where(eq(Texts.companyUuid, companyUuid))
-            .orderBy(asc(Texts.id)),
-        ),
+        textUuids,
         texts,
         async (uuid, values) => {
           await tx.update(Texts).set(values).where(eq(Texts.uuid, uuid));
@@ -1222,13 +1355,7 @@ export const updateCompany = async (
       );
 
       await syncCompanyChildren(
-        await loadChildUuids(
-          tx
-            .select({ uuid: CustomerProjects.uuid })
-            .from(CustomerProjects)
-            .where(eq(CustomerProjects.companyUuid, companyUuid))
-            .orderBy(asc(CustomerProjects.id)),
-        ),
+        projectUuids,
         projects,
         async (uuid, values) => {
           await tx
@@ -1249,13 +1376,7 @@ export const updateCompany = async (
       );
 
       await syncCompanyChildren(
-        await loadChildUuids(
-          tx
-            .select({ uuid: CounterOrders.uuid })
-            .from(CounterOrders)
-            .where(eq(CounterOrders.companyUuid, companyUuid))
-            .orderBy(asc(CounterOrders.id)),
-        ),
+        counterOrderUuids,
         counterOrders,
         async (uuid, values) => {
           await tx
@@ -1274,13 +1395,7 @@ export const updateCompany = async (
       );
 
       await syncCompanyChildren(
-        await loadChildUuids(
-          tx
-            .select({ uuid: Products.uuid })
-            .from(Products)
-            .where(eq(Products.companyUuid, companyUuid))
-            .orderBy(asc(Products.id)),
-        ),
+        productUuids,
         products,
         async (uuid, values) => {
           await tx.update(Products).set(values).where(eq(Products.uuid, uuid));
@@ -1294,13 +1409,7 @@ export const updateCompany = async (
       );
 
       await syncCompanyChildren(
-        await loadChildUuids(
-          tx
-            .select({ uuid: VisitReports.uuid })
-            .from(VisitReports)
-            .where(eq(VisitReports.companyUuid, companyUuid))
-            .orderBy(asc(VisitReports.id)),
-        ),
+        visitReportUuids,
         visitReports,
         async (uuid, { contactIndex, ...rest }) => {
           await tx
@@ -1327,13 +1436,7 @@ export const updateCompany = async (
       );
 
       await syncCompanyChildren(
-        await loadChildUuids(
-          tx
-            .select({ uuid: PurchaseOrders.uuid })
-            .from(PurchaseOrders)
-            .where(eq(PurchaseOrders.supplierUuid, companyUuid))
-            .orderBy(asc(PurchaseOrders.id)),
-        ),
+        purchaseOrderUuids,
         purchaseOrders,
         async (uuid, values) => {
           await tx
@@ -1352,13 +1455,7 @@ export const updateCompany = async (
       );
 
       await syncCompanyChildren(
-        await loadChildUuids(
-          tx
-            .select({ uuid: Quotes.uuid })
-            .from(Quotes)
-            .where(eq(Quotes.companyUuid, companyUuid))
-            .orderBy(asc(Quotes.id)),
-        ),
+        quoteUuids,
         quotes,
         async (uuid, values) => {
           await tx.update(Quotes).set(values).where(eq(Quotes.uuid, uuid));
@@ -1372,13 +1469,7 @@ export const updateCompany = async (
       );
 
       await syncCompanyChildren(
-        await loadChildUuids(
-          tx
-            .select({ uuid: FollowUps.uuid })
-            .from(FollowUps)
-            .where(eq(FollowUps.companyUuid, companyUuid))
-            .orderBy(asc(FollowUps.id)),
-        ),
+        followUpUuids,
         followUps,
         async (uuid, values) => {
           await tx
@@ -1395,13 +1486,7 @@ export const updateCompany = async (
       );
 
       await syncCompanyChildren(
-        await loadChildUuids(
-          tx
-            .select({ uuid: TransporterCosts.uuid })
-            .from(TransporterCosts)
-            .where(eq(TransporterCosts.companyUuid, companyUuid))
-            .orderBy(asc(TransporterCosts.id)),
-        ),
+        transporterCostUuids,
         transporterCosts,
         async (uuid, values) => {
           await tx
@@ -1422,13 +1507,7 @@ export const updateCompany = async (
       );
 
       await syncCompanyChildren(
-        await loadChildUuids(
-          tx
-            .select({ uuid: TransporterCountries.uuid })
-            .from(TransporterCountries)
-            .where(eq(TransporterCountries.companyUuid, companyUuid))
-            .orderBy(asc(TransporterCountries.id)),
-        ),
+        transporterCountryUuids,
         transporterCountries,
         async (uuid, values) => {
           await tx
@@ -1449,13 +1528,7 @@ export const updateCompany = async (
       );
 
       await syncCompanyChildren(
-        await loadChildUuids(
-          tx
-            .select({ uuid: ReturnOrders.uuid })
-            .from(ReturnOrders)
-            .where(eq(ReturnOrders.companyUuid, companyUuid))
-            .orderBy(asc(ReturnOrders.id)),
-        ),
+        returnOrderUuids,
         returnOrders,
         async (uuid, values) => {
           await tx
@@ -1474,13 +1547,7 @@ export const updateCompany = async (
       );
 
       await syncCompanyChildren(
-        await loadChildUuids(
-          tx
-            .select({ uuid: Processings.uuid })
-            .from(Processings)
-            .where(eq(Processings.companyUuid, companyUuid))
-            .orderBy(asc(Processings.id)),
-        ),
+        processingUuids,
         processings,
         async (uuid, values) => {
           await tx
@@ -1497,13 +1564,7 @@ export const updateCompany = async (
       );
 
       await syncCompanyChildren(
-        await loadChildUuids(
-          tx
-            .select({ uuid: CustomerStock.uuid })
-            .from(CustomerStock)
-            .where(eq(CustomerStock.companyUuid, companyUuid))
-            .orderBy(asc(CustomerStock.id)),
-        ),
+        customerStockUuids,
         customerStock,
         async (uuid, values) => {
           await tx

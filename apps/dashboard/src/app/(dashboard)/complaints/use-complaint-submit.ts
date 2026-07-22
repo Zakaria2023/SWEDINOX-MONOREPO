@@ -152,13 +152,13 @@ export const useComplaintSubmit = ({
     startTransition(async () => {
       const result = await createComplaint({
         companyUuid: values.companyUuid,
-        contactUuid: values.contactUuid,
+        contactUuid: values.contactUuid || null,
         complaintType: values.complaintType,
         report: values.report,
         reportDate: values.reportDate ? new Date(values.reportDate) : null,
         description: values.description,
         category: values.category,
-        productUuid: values.productUuid,
+        productUuid: values.productUuid || null,
         qty: values.qty,
         amount: values.amount,
         weight: values.weight,
