@@ -68,11 +68,31 @@ export const getVisitSchedule = async (): Promise<VisitScheduleRow[]> => {
       targetYearRevenue: Contacts.targetYearRevenue,
       revenueLastYear: Contacts.revenueLastYear,
       revenueThisYear: Contacts.revenueThisYear,
-      visitStreetAndNo: Contacts.visitStreetAndNo,
-      visitPostalCode: Contacts.visitPostalCode,
-      visitCity: Contacts.visitCity,
-      visitCountry: Contacts.visitCountry,
-      visitTelephone: Contacts.visitTelephone,
+      // Fall back to the contact's main address/phone when no separate
+      // visiting address was entered, so these columns still surface data.
+      visitStreetAndNo: sql<
+        string | null
+      >`COALESCE(${Contacts.visitStreetAndNo}, ${Contacts.streetAndNo})`.as(
+        "visit_street_and_no",
+      ),
+      visitPostalCode: sql<
+        string | null
+      >`COALESCE(${Contacts.visitPostalCode}, ${Contacts.postalCode})`.as(
+        "visit_postal_code",
+      ),
+      visitCity: sql<
+        string | null
+      >`COALESCE(${Contacts.visitCity}, ${Contacts.city})`.as("visit_city"),
+      visitCountry: sql<
+        string | null
+      >`COALESCE(${Contacts.visitCountry}, ${Contacts.addressCountry})`.as(
+        "visit_country",
+      ),
+      visitTelephone: sql<
+        string | null
+      >`COALESCE(${Contacts.visitTelephone}, ${Contacts.addressTelephone}, ${Contacts.telephone})`.as(
+        "visit_telephone",
+      ),
     })
     .from(Contacts)
     .innerJoin(primaryContactId, eq(Contacts.id, primaryContactId.minId))
