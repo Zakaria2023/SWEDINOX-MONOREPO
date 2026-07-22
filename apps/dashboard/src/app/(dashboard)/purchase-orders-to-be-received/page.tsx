@@ -1,5 +1,6 @@
 import { getPurchaseOrdersToBeReceived } from "@/app/(dashboard)/purchase-orders-to-be-received/actions";
 import { PurchaseOrdersToBeReceivedTable } from "@/components/purchase-orders-to-be-received/purchase-orders-to-be-received-table-content";
+import { ReceiveGoodsButton } from "@/components/purchase-orders-to-be-received/receive-goods-button";
 import { PageHeading } from "@/components/layout/page-heading";
 
 const PurchaseOrdersToBeReceivedPage = async () => {
@@ -7,10 +8,13 @@ const PurchaseOrdersToBeReceivedPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Purchase orders to be received"
-        description="Open purchase-order lines still awaiting delivery, with outstanding weight per line"
-      />
+      <div className="flex items-start justify-between gap-4">
+        <PageHeading
+          title="Purchase orders to be received"
+          description="Open purchase-order lines still awaiting delivery, with outstanding weight per line"
+        />
+        <ReceiveGoodsButton />
+      </div>
       <PurchaseOrdersToBeReceivedTable rows={rows} />
     </div>
   );

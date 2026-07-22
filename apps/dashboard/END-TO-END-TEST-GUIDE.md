@@ -146,9 +146,12 @@ Then check:
 - REPORT /supplier-revenue and /supplier-revenue-per-revenue-group.
 - REPORT /purchases-and-sales-per-revenue-group (purchase side).
 
-Note: /purchase-invoices-to-be-received stays empty in this flow. It only lists
-purchase orders with a recorded goods receipt (a receival) that aren't invoiced
-yet, and the basic New PO -> New Invoice flow does not create receival records.
+To fill REPORT /purchase-invoices-to-be-received: open /purchase-orders-to-be-received
+and click "Receive goods" — it records a goods receipt (receival) for every open
+purchase-order line and marks it received. That drives REPORT /purchase-receivals
+and /receipts, and any received purchase order that has NOT been invoiced yet then
+appears on /purchase-invoices-to-be-received (it drops off once you invoice it). So
+to see a row there, create a purchase order, receive it, but don't invoice it yet.
 
 Step 2.4 — Purchase Return Order (optional, CREATE /purchase-return-orders/new)
 
@@ -293,8 +296,12 @@ Once orders, invoices and stock exist, confirm the aggregate reports compute:
   populated from every order. Each order line's planned quantity is set to the
   ordered amount at creation and nothing is called off yet, so the full quantity
   shows as still to be called (planned qty greater than called-off qty).
-- REPORT /order-advice, /stockon-advice, /sold-products-not-advised — reorder
-  logic; needs stock plus sales history to produce suggestions.
+- REPORT /order-advice, /sold-products-not-advised — reorder logic; needs stock
+  plus sales history to produce suggestions.
+- REPORT /stockon-advice — lists stock products whose product group has "Use
+  StockOp for this product" enabled (Product Group -> Stock policy). Enable that
+  flag on the group (and set a lead time / review period) and the product shows,
+  with an order-up-to level and a daily order decision.
 - REPORT /charges — open /charges and click "Generate from orders" to turn each
   order's lines (and any order surcharges) into charge records (customer, revenue
   group, amount, cost, profit). Orders already charged are skipped.

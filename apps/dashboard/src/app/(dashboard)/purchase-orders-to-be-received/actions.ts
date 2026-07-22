@@ -12,8 +12,11 @@ import {
   SelectPurchaseOrders,
 } from "@/db/schema/purchase-orders";
 import { RevenueGroups, SelectRevenueGroups } from "@/db/schema/revenue-groups";
+import { PurchaseLineReceivals } from "@/db/schema/purchase-line-receivals";
 import { getClerkUsersForSelect } from "@/lib/server/clerk";
+import { generateUuid, todayDateString } from "@/lib/helpers";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
 
 export type PurchaseOrderToReceiveRow = {
   purchaseOrderItemUuid: SelectPurchaseOrderItems["uuid"];
@@ -81,33 +84,148 @@ export const getPurchaseOrdersToBeReceived = async (): Promise<
     const users = await getClerkUsersForSelect();
     const nameById = new Map(users.map((user) => [user.value, user.label]));
 
-    return rows.map((row) => {
-      const quantity = Number(row.quantity);
-      const qtyReceived = Number(row.qtyReceived ?? 0);
-      const kgPurchased = Number(row.kgPurchased ?? 0);
-      // Attribute purchased kg to received/outstanding by the qty ratio.
-      const receivedRatio = quantity > 0 ? qtyReceived / quantity : 0;
-      const kgReceived = kgPurchased * receivedRatio;
-      return {
-        purchaseOrderItemUuid: row.purchaseOrderItemUuid,
-        reference: row.reference,
-        supplierName: row.supplierName,
-        companyCode: row.companyCode,
-        status: row.status,
-        orderDate: row.orderDate,
-        orderAmount: Number(row.orderAmount),
-        revenueGroupNumber: row.revenueGroupNumber,
-        revenueGroupName: row.revenueGroupName,
-        kgPurchased,
-        kgReceived,
-        kgStillToReceive: kgPurchased - kgReceived,
-        purchaser: row.purchaser
-          ? (nameById.get(row.purchaser) ?? row.purchaser)
-          : row.purchaser,
-        purchaserInitials: row.purchaserInitials,
-      };
-    });
+    return mapRows(rows, nameById);
   } catch {
     throw new Error("Failed to fetch purchase orders to be received");
   }
 };
+
+export type ReceiveGoodsResult = {
+  error?: string;
+  success?: boolean;
+};
+
+// Records a goods receipt for every open purchase-order line that still has
+// quantity outstanding: a PurchaseLineReceivals row plus setting the line's
+// received quantity to full. This drives the Purchase receivals / Receipts
+// overviews and moves not-yet-invoiced orders onto Purchase invoices to be
+// received. Fully-received lines are skipped, so it can be re-run.
+export const receiveOutstandingGoods =
+  async (): Promise<ReceiveGoodsResult> => {
+    try {
+      const lines = await db
+        .select({
+          itemUuid: PurchaseOrderItems.uuid,
+          purchaseOrderUuid: PurchaseOrders.uuid,
+          purchaseOrderId: PurchaseOrders.id,
+          supplierUuid: PurchaseOrders.supplierUuid,
+          productUuid: PurchaseOrderItems.productUuid,
+          lineNumber: PurchaseOrderItems.lineNumber,
+          unit: PurchaseOrderItems.unit,
+          quantity: PurchaseOrderItems.quantity,
+          qtyReceived: PurchaseOrderItems.qtyReceived,
+          kgPurchased: PurchaseOrderItems.kgPurchased,
+        })
+        .from(PurchaseOrderItems)
+        .innerJoin(
+          PurchaseOrders,
+          eq(PurchaseOrderItems.purchaseOrderUuid, PurchaseOrders.uuid),
+        )
+        .where(
+          and(
+            inArray(PurchaseOrders.status, [
+              "open",
+              "confirmed",
+              "pre_notified",
+            ]),
+            sql`${PurchaseOrderItems.quantity} - ${PurchaseOrderItems.qtyReceived} > 0`,
+          ),
+        );
+
+      if (lines.length === 0) {
+        return {
+          error: "No outstanding purchase-order lines to receive.",
+        };
+      }
+
+      const today = todayDateString();
+
+      await db.transaction(async (tx) => {
+        for (const line of lines) {
+          const outstanding = (
+            Number(line.quantity) - Number(line.qtyReceived ?? 0)
+          ).toFixed(3);
+
+          await tx.insert(PurchaseLineReceivals).values({
+            uuid: generateUuid(),
+            purchaseOrderUuid: line.purchaseOrderUuid,
+            purchaseOrderItemUuid: line.itemUuid,
+            productUuid: line.productUuid,
+            companyUuid: line.supplierUuid,
+            purchaseOrderCode: String(line.purchaseOrderId),
+            lineNumber: line.lineNumber,
+            receiptStatus: "received",
+            unit: line.unit,
+            qtyPlanned: line.quantity,
+            qtyActual: outstanding,
+            receivedQty: outstanding,
+            kgPlanned: line.kgPurchased,
+            receiptDate: today,
+            deliveryDateActual: today,
+          });
+
+          await tx
+            .update(PurchaseOrderItems)
+            .set({ qtyReceived: line.quantity })
+            .where(eq(PurchaseOrderItems.uuid, line.itemUuid));
+        }
+      });
+
+      revalidatePath("/purchase-orders-to-be-received");
+      revalidatePath("/purchase-invoices-to-be-received");
+      revalidatePath("/purchase-receivals");
+      revalidatePath("/receipts");
+      return { success: true };
+    } catch (error) {
+      return {
+        error:
+          error instanceof Error ? error.message : "Failed to receive goods",
+      };
+    }
+  };
+
+const mapRows = (
+  rows: {
+    purchaseOrderItemUuid: string;
+    reference: SelectPurchaseOrders["reference"];
+    supplierName: SelectCompanies["companyName"] | null;
+    companyCode: SelectCompanies["id"] | null;
+    status: SelectPurchaseOrders["status"];
+    orderDate: SelectPurchaseOrders["orderDate"];
+    orderAmount: string;
+    revenueGroupNumber: SelectRevenueGroups["number"] | null;
+    revenueGroupName: SelectRevenueGroups["name"] | null;
+    kgPurchased: string | null;
+    quantity: string;
+    qtyReceived: string | null;
+    purchaser: SelectPurchaseOrders["purchaser"];
+    purchaserInitials: SelectPurchaseOrders["purchaserInitials"];
+  }[],
+  nameById: Map<string, string>,
+): PurchaseOrderToReceiveRow[] =>
+  rows.map((row) => {
+    const quantity = Number(row.quantity);
+    const qtyReceived = Number(row.qtyReceived ?? 0);
+    const kgPurchased = Number(row.kgPurchased ?? 0);
+    // Attribute purchased kg to received/outstanding by the qty ratio.
+    const receivedRatio = quantity > 0 ? qtyReceived / quantity : 0;
+    const kgReceived = kgPurchased * receivedRatio;
+    return {
+      purchaseOrderItemUuid: row.purchaseOrderItemUuid,
+      reference: row.reference,
+      supplierName: row.supplierName,
+      companyCode: row.companyCode,
+      status: row.status,
+      orderDate: row.orderDate,
+      orderAmount: Number(row.orderAmount),
+      revenueGroupNumber: row.revenueGroupNumber,
+      revenueGroupName: row.revenueGroupName,
+      kgPurchased,
+      kgReceived,
+      kgStillToReceive: kgPurchased - kgReceived,
+      purchaser: row.purchaser
+        ? (nameById.get(row.purchaser) ?? row.purchaser)
+        : row.purchaser,
+      purchaserInitials: row.purchaserInitials,
+    };
+  });
