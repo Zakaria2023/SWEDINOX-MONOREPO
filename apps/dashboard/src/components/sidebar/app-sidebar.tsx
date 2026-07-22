@@ -340,15 +340,16 @@ export const AppSidebar = () => {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             {isSearching && searchResults.length > 0 && (
-              <SidebarMenu>
+              <SidebarMenu className="gap-1">
                 {searchResults.map((item) => (
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton
                       render={<Link href={item.href} />}
                       isActive={isPathActive(item.href, pathname)}
+                      className="h-auto min-h-8 flex-col items-start gap-0.5 py-1.5 whitespace-normal"
                     >
-                      <span>{item.label}</span>
-                      <span className="ms-auto text-xs text-sidebar-foreground/50">
+                      <span className="w-full leading-snug">{item.label}</span>
+                      <span className="text-xs text-sidebar-foreground/60">
                         {item.groupLabel}
                       </span>
                     </SidebarMenuButton>
