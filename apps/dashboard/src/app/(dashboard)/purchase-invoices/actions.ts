@@ -18,10 +18,17 @@ import {
 } from "@/db/schema/purchase-invoice-items";
 import { Products, SelectProducts } from "@/db/schema/products";
 import { SelectStock, Stock } from "@/db/schema/stock";
-import { SelectStockMovements, StockMovements } from "@/db/schema/stock-movements";
+import {
+  SelectStockMovements,
+  StockMovements,
+} from "@/db/schema/stock-movements";
 import { JournalEntries } from "@/db/schema/journal-entries";
 import { buildPurchaseInvoiceJournalEntry } from "@/lib/server/accounting";
-import { generateUuid, getPaymentTermDueDate, toDateString } from "@/lib/helpers";
+import {
+  generateUuid,
+  getPaymentTermDueDate,
+  toDateString,
+} from "@/lib/helpers";
 import { currentUser } from "@clerk/nextjs/server";
 import { and, desc, eq, getTableColumns, gte, inArray, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -50,7 +57,7 @@ export type PurchaseInvoiceSurchargeInput = Omit<
 
 export type PurchaseInvoiceListItem = SelectPurchaseInvoices & {
   companyName: SelectCompanies["companyName"] | null;
-  supplierCode: SelectCompanies["searchCode1"] | null;
+  supplierCode: SelectCompanies["id"] | null;
   contactFirstName: SelectContacts["firstName"] | null;
   contactLastName: SelectContacts["lastName"] | null;
 };
@@ -62,7 +69,7 @@ export const getPurchaseInvoices = async (): Promise<
     .select({
       ...getTableColumns(PurchaseInvoices),
       companyName: Companies.companyName,
-      supplierCode: Companies.searchCode1,
+      supplierCode: Companies.id,
       contactFirstName: Contacts.firstName,
       contactLastName: Contacts.lastName,
     })
@@ -317,7 +324,7 @@ export type PurchaseInvoiceItemDetail = SelectPurchaseInvoiceItems & {
 
 export type PurchaseInvoiceDetail = SelectPurchaseInvoices & {
   companyName: SelectCompanies["companyName"] | null;
-  supplierCode: SelectCompanies["searchCode1"] | null;
+  supplierCode: SelectCompanies["id"] | null;
   contactFirstName: SelectContacts["firstName"] | null;
   contactLastName: SelectContacts["lastName"] | null;
   items: PurchaseInvoiceItemDetail[];
@@ -331,7 +338,7 @@ export const getPurchaseInvoiceDetail = async (
     .select({
       ...getTableColumns(PurchaseInvoices),
       companyName: Companies.companyName,
-      supplierCode: Companies.searchCode1,
+      supplierCode: Companies.id,
       contactFirstName: Contacts.firstName,
       contactLastName: Contacts.lastName,
     })
