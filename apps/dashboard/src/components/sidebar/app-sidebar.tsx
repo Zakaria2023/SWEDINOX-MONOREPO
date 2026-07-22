@@ -269,6 +269,14 @@ const NAV_GROUPS: NavGroup[] = [
 const isPathActive = (href: string, pathname: string) =>
   pathname === href || pathname.startsWith(`${href}/`);
 
+// A prominent highlight for the active link — a primary-tinted background,
+// semibold text and a left accent bar — so it stands out from the muted hover.
+const ACTIVE_LINK_CLASS =
+  "data-active:border-l-2 data-active:border-l-primary data-active:bg-primary/10 data-active:font-semibold data-active:text-primary";
+
+// The group header that owns the current page gets a subtler primary emphasis.
+const ACTIVE_GROUP_CLASS = "data-active:font-semibold data-active:text-primary";
+
 export const AppSidebar = () => {
   const pathname = usePathname();
   const [query, setQuery] = useState("");
@@ -346,7 +354,10 @@ export const AppSidebar = () => {
                     <SidebarMenuButton
                       render={<Link href={item.href} />}
                       isActive={isPathActive(item.href, pathname)}
-                      className="h-auto min-h-8 flex-col items-start gap-0.5 py-1.5 whitespace-normal"
+                      className={cn(
+                        "h-auto min-h-8 flex-col items-start gap-0.5 py-1.5 whitespace-normal",
+                        ACTIVE_LINK_CLASS,
+                      )}
                     >
                       <span className="w-full leading-snug">{item.label}</span>
                       <span className="text-xs text-sidebar-foreground/60">
@@ -369,10 +380,15 @@ export const AppSidebar = () => {
                 {NAV_GROUPS.map((group) => {
                   const Icon = group.icon;
                   const isExpanded = openGroups[group.key];
+                  const isGroupActive = group.items.some((item) =>
+                    isPathActive(item.href, pathname),
+                  );
                   return (
                     <SidebarMenuItem key={group.key}>
                       <SidebarMenuButton
                         aria-expanded={isExpanded}
+                        isActive={isGroupActive && !isExpanded}
+                        className={ACTIVE_GROUP_CLASS}
                         onClick={() => toggleGroup(group.key)}
                       >
                         <Icon />
@@ -386,6 +402,7 @@ export const AppSidebar = () => {
                               <SidebarMenuSubButton
                                 render={<Link href={item.href} />}
                                 isActive={isPathActive(item.href, pathname)}
+                                className={ACTIVE_LINK_CLASS}
                               >
                                 <span>{item.label}</span>
                               </SidebarMenuSubButton>
