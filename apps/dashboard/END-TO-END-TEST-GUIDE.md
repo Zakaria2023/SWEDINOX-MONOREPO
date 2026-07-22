@@ -189,7 +189,11 @@ Step 3.3 — Counter Order / Return Order (optional)
 Do:
 
 - CREATE /counter-orders/add — then check REPORT /counter-orders.
-- CREATE /return-orders/new — then check REPORT /return-orders and /return-lines.
+- CREATE /return-orders/new — saves the return header only; then check REPORT
+  /return-orders.
+- To fill REPORT /return-lines, open /return-lines and click "Generate from
+  orders" — it creates a return order per sales order with a return line per
+  order item (the New Return Order form does not capture line items).
 
 Step 3.4 — Deliver the order (ACTION /deliveries)
 
