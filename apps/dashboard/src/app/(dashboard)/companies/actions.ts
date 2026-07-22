@@ -64,6 +64,7 @@ import { PurchaseCompanyType } from "@/lib/enums";
 import { generateUuid } from "@/lib/helpers";
 import { currentUser } from "@clerk/nextjs/server";
 import { asc, desc, eq, or, sql } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
 import { DEFAULT_ADDRESS } from "./validation";
 import type { AddressFormValues, CompanyFormValues } from "./validation";
 
@@ -236,6 +237,30 @@ export const updateCompanyDocuments = async (
     .update(Companies)
     .set({ documents })
     .where(eq(Companies.uuid, companyUuid));
+};
+
+// Flags a company as inactive (or reactivates it). An inactive company shows on
+// the Inactive Companies overview regardless of its order history.
+export const setCompanyInactive = async (
+  companyUuid: string,
+  isInactive: boolean,
+): Promise<CompanyActionResult> => {
+  try {
+    await db
+      .update(Companies)
+      .set({ isInactive })
+      .where(eq(Companies.uuid, companyUuid));
+    revalidatePath("/companies");
+    revalidatePath("/inactive-companies");
+    return { success: true, companyUuid };
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to update the company's active state",
+    };
+  }
 };
 
 export const getCompanyDetail = async (

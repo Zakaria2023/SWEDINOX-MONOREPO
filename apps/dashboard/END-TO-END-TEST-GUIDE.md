@@ -314,8 +314,11 @@ Once orders, invoices and stock exist, confirm the aggregate reports compute:
 - REPORT /charges — open /charges and click "Generate from orders" to turn each
   order's lines (and any order surcharges) into charge records (customer, revenue
   group, amount, cost, profit). Orders already charged are skipped.
-- REPORT /journal-entries, /credit-information-customers, /inactive-companies,
-  /remarks-per-company — verify they reflect your data.
+- REPORT /inactive-companies — lists customers/prospects with no order in the
+  last 12 months, plus any company you flag by hand: on /companies use the
+  "Inactive" button in the row actions (it turns into "Activate" to undo).
+- REPORT /journal-entries, /credit-information-customers, /remarks-per-company —
+  verify they reflect your data.
 
 ===============================================================================
 Quick dependency map (cheat sheet)

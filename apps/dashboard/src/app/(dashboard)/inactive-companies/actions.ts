@@ -63,10 +63,12 @@ export const getInactiveCompanies = async (): Promise<InactiveCompanyRow[]> => {
       .leftJoin(primaryContact, eq(Companies.uuid, primaryContact.companyUuid))
       .leftJoin(orderStats, eq(Companies.uuid, orderStats.companyUuid))
       .where(
-        sql`(${or(
+        // Either flagged inactive by hand, or a customer/prospect that hasn't
+        // ordered in the last 12 months.
+        sql`${Companies.isInactive} = TRUE OR ((${or(
           sql`JSON_CONTAINS(${Companies.roles}, '"customer"')`,
           sql`JSON_CONTAINS(${Companies.roles}, '"prospect"')`,
-        )}) AND (${orderStats.lastOrderDate} IS NULL OR ${orderStats.lastOrderDate} < DATE_SUB(NOW(), INTERVAL 12 MONTH))`,
+        )}) AND (${orderStats.lastOrderDate} IS NULL OR ${orderStats.lastOrderDate} < DATE_SUB(NOW(), INTERVAL 12 MONTH)))`,
       )
       .orderBy(asc(Companies.companyName));
 
@@ -78,9 +80,7 @@ export const getInactiveCompanies = async (): Promise<InactiveCompanyRow[]> => {
       representative: row.representative,
       customerGroup: row.customerGroup,
       region: row.region,
-      lastOrderDate: row.lastOrderDate
-        ? row.lastOrderDate.toISOString()
-        : null,
+      lastOrderDate: row.lastOrderDate ? row.lastOrderDate.toISOString() : null,
     }));
   } catch {
     throw new Error("Failed to fetch inactive companies");

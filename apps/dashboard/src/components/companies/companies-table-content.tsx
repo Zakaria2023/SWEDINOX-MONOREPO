@@ -11,12 +11,20 @@ import {
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { buildColumnVisibility } from "@/lib/helpers";
+import { setCompanyInactive } from "@/app/(dashboard)/companies/actions";
+import { Button } from "@/components/shadcn/button";
 import { SelectCompanies } from "@/db";
 import { Eye, Pencil } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
 
 type ColumnKey = "id" | "companyName" | "documents" | "createdAt" | "updatedAt";
+
+type InactiveToggleProps = {
+  companyUuid: string;
+  isInactive: boolean;
+};
 
 const ALL_COLUMNS: Array<{
   defaultVisible: boolean;
@@ -34,11 +42,33 @@ type CompaniesTableContentProps = {
   companies: SelectCompanies[];
 };
 
-export const CompaniesTable = ({
-  companies,
-}: CompaniesTableContentProps) => {
-  const [columnVisibility, setColumnVisibility] =
-    useState<Record<ColumnKey, boolean>>(buildColumnVisibility(ALL_COLUMNS));
+const InactiveToggle = ({ companyUuid, isInactive }: InactiveToggleProps) => {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+
+  const onClick = () =>
+    startTransition(async () => {
+      await setCompanyInactive(companyUuid, !isInactive);
+      router.refresh();
+    });
+
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      onClick={onClick}
+      disabled={isPending}
+    >
+      {isInactive ? "Activate" : "Inactive"}
+    </Button>
+  );
+};
+
+export const CompaniesTable = ({ companies }: CompaniesTableContentProps) => {
+  const [columnVisibility, setColumnVisibility] = useState<
+    Record<ColumnKey, boolean>
+  >(buildColumnVisibility(ALL_COLUMNS));
 
   const toggleColumn = (key: string) => {
     setColumnVisibility((prev) => ({
@@ -141,6 +171,10 @@ export const CompaniesTable = ({
                       >
                         <Pencil className="size-4" />
                       </Link>
+                      <InactiveToggle
+                        companyUuid={company.uuid}
+                        isInactive={company.isInactive ?? false}
+                      />
                     </div>
                   </TableCell>
                 </TableRow>
