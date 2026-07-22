@@ -114,7 +114,11 @@ Do:
 Then check:
 
 - REPORT /purchase-quotes and /purchase-requests.
-- REPORT /purchase-orders-and-quotes and /purchase-quotes-overview.
+- REPORT /purchase-orders-and-quotes — merges orders and quotes.
+- REPORT /purchase-quotes-overview — the New Purchase Quote form saves the quote
+  header only, so open this page and click "Generate quote lines" to fill each
+  empty quote with lines (taken from what has been ordered from that supplier,
+  or their product catalogue). Quotes that already have lines are skipped.
 
 Step 2.2 — Create a Purchase Order (CREATE /purchase-orders/new)
 
@@ -146,11 +150,16 @@ Then check:
 - REPORT /supplier-revenue and /supplier-revenue-per-revenue-group.
 - REPORT /purchases-and-sales-per-revenue-group (purchase side).
 
-To fill REPORT /purchase-invoices-to-be-received: open /purchase-orders-to-be-received
-and click "Receive goods" — it records a goods receipt (receival) for every open
-purchase-order line and marks it received. That drives REPORT /purchase-receivals
-and /receipts, and any received purchase order that has NOT been invoiced yet then
-appears on /purchase-invoices-to-be-received (it drops off once you invoice it). So
+Goods receipt — open /purchase-orders-to-be-received and click "Receive goods".
+It records a receival for every open purchase-order line and marks it received.
+That one action fills three reports:
+
+- REPORT /purchase-receivals — one row per received line.
+- REPORT /receipts — the same receipts totalled per date, supplier and product.
+- REPORT /purchase-results — purchase value against today's replacement price.
+
+It also drives REPORT /purchase-invoices-to-be-received: a received purchase order
+that has NOT been invoiced yet appears there, and drops off once you invoice it. So
 to see a row there, create a purchase order, receive it, but don't invoice it yet.
 
 Step 2.4 — Purchase Return Order (optional, CREATE /purchase-return-orders/new)
