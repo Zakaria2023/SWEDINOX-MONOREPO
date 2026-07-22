@@ -165,11 +165,13 @@ export const createOrder = async (
     await db.transaction(async (tx) => {
       await tx.insert(Orders).values({ ...fields, uuid });
 
+      let lineNumber = 0;
       for (const item of items) {
         const stockRow = stockByUuid.get(item.stockUuid);
         if (!stockRow) {
           continue;
         }
+        lineNumber += 1;
 
         const nextReserved = (
           Number(stockRow.reservedQuantity) + Number(item.quantity)
@@ -204,6 +206,11 @@ export const createOrder = async (
           stockUuid: item.stockUuid,
           productUuid: stockRow.productUuid,
           quantity: item.quantity,
+          // Planned = the ordered amount; nothing is called off yet, so the
+          // full quantity is still "to be called" until call-offs reduce it.
+          qtyPlanned: item.quantity,
+          qtyReserved: item.quantity,
+          lineNumber,
           status: "reserved",
         });
       }
@@ -294,9 +301,7 @@ export const getOrderDetail = async (
   return { ...order, items };
 };
 
-export const cancelOrder = async (
-  uuid: string,
-): Promise<OrderActionResult> => {
+export const cancelOrder = async (uuid: string): Promise<OrderActionResult> => {
   try {
     const [order] = await db
       .select()

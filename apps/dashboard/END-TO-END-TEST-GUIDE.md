@@ -289,8 +289,10 @@ Once orders, invoices and stock exist, confirm the aggregate reports compute:
   the Unblock button here releases it and records who/when, then check REPORT
   /unblocked-orders.
 - REPORT /blocked-deliveries — shows lines with a block flag set.
-- REPORT /order-lines-still-to-be-called and /orders-still-to-be-called — need a
-  call-off order where planned qty is greater than called-off qty.
+- REPORT /order-lines-still-to-be-called and /orders-still-to-be-called — now
+  populated from every order. Each order line's planned quantity is set to the
+  ordered amount at creation and nothing is called off yet, so the full quantity
+  shows as still to be called (planned qty greater than called-off qty).
 - REPORT /order-advice, /stockon-advice, /sold-products-not-advised — reorder
   logic; needs stock plus sales history to produce suggestions.
 - REPORT /charges, /journal-entries, /credit-information-customers,
