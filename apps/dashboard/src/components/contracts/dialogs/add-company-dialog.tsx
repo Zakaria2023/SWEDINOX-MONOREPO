@@ -20,6 +20,7 @@ import { z } from "zod";
 
 export const companyLinkSchema = z.object({
   companyUuid: z.string().min(1, "Company is required"),
+  role: z.enum(contractableRoles, { error: "Role is required" }),
   startingDate: z.string().optional(),
   endDate: z.string().optional(),
 });
@@ -27,10 +28,10 @@ export type CompanyLinkFormValues = z.infer<typeof companyLinkSchema>;
 
 const contractableRoleSet = new Set(contractableRoles as readonly string[]);
 
-const getContractableRole = (company: CompanyOption): ContractableRole | null =>
-  (company.roles?.find((r) =>
+const getContractableRoles = (company: CompanyOption): ContractableRole[] =>
+  (company.roles ?? []).filter((r): r is ContractableRole =>
     contractableRoleSet.has(r),
-  ) as ContractableRole) ?? null;
+  );
 
 type AddCompanyDialogProps = {
   isOpen: boolean;
@@ -51,9 +52,6 @@ export const AddCompanyDialog = ({
   const selectedCompany = contractableCompanies.find(
     (c) => c.uuid === watchedCompanyUuid,
   );
-  const autoRole = selectedCompany
-    ? getContractableRole(selectedCompany)
-    : null;
 
   const companyOptions = [
     { value: "", label: COMMON_TEXT.selectPlaceholder },
@@ -62,6 +60,12 @@ export const AddCompanyDialog = ({
       label: [c.searchCode1, c.companyName].filter(Boolean).join(" — "),
     })),
   ];
+
+  // A company can carry several contractable roles (e.g. customer + supplier);
+  // the contract is filed under the chosen one, so let the user pick which.
+  const roleOptions = (
+    selectedCompany ? getContractableRoles(selectedCompany) : []
+  ).map((role) => ({ value: role, label: CONTRACTABLE_ROLE_LABELS[role] }));
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -83,7 +87,21 @@ export const AddCompanyDialog = ({
                     id="linkCompanyUuid"
                     options={companyOptions}
                     value={field.value}
-                    onValueChange={field.onChange}
+                    onValueChange={(value) => {
+                      field.onChange(value);
+                      // Default the role to the company's first contractable
+                      // role so single-role companies need no extra step.
+                      const company = contractableCompanies.find(
+                        (c) => c.uuid === value,
+                      );
+                      const roles = company
+                        ? getContractableRoles(company)
+                        : [];
+                      linkForm.setValue(
+                        "role",
+                        roles[0] ?? ("" as ContractableRole),
+                      );
+                    }}
                     placeholder={COMMON_TEXT.selectPlaceholder}
                   />
                 )}
@@ -91,14 +109,29 @@ export const AddCompanyDialog = ({
               <FormFieldError
                 message={linkForm.formState.errors.companyUuid?.message}
               />
-              {autoRole && (
-                <div className="mt-1.5 flex items-center gap-1.5">
-                  <span className="text-xs text-muted-foreground">Role:</span>
-                  <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
-                    {CONTRACTABLE_ROLE_LABELS[autoRole]}
-                  </span>
-                </div>
-              )}
+            </div>
+
+            <div>
+              <FormLabel htmlFor="linkRole" required>
+                Role
+              </FormLabel>
+              <Controller
+                name="role"
+                control={linkForm.control}
+                render={({ field }) => (
+                  <Select
+                    id="linkRole"
+                    options={roleOptions}
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    placeholder="Select role"
+                    disabled={!selectedCompany}
+                  />
+                )}
+              />
+              <FormFieldError
+                message={linkForm.formState.errors.role?.message}
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-4">

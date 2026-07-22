@@ -60,7 +60,7 @@ const NAV_GROUPS: NavGroup[] = [
       { label: "Customer Overview", href: "/customer-overview" },
       { label: "Remarks per Company", href: "/remarks-per-company" },
       { label: "Addresses", href: "/addresses" },
-      { label: "Customer/Prospect Contracts", href: "/contracts-per-customer" },
+      { label: "Contracts per Customer", href: "/contracts-per-customer" },
       {
         label: "Customer/Prospect Contact",
         href: "/contact-persons-customers-and-prospects",
