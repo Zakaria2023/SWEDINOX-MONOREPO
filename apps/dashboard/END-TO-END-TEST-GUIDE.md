@@ -147,6 +147,28 @@ Then check:
   filled, with the product's main group, subgroup and preferred supplier
   alongside. Use the product code range filter to narrow it down.
 
+Step 1.10 — Create options and price them (ACTION /option-prices-per-product)
+
+Options are the processing steps sold alongside the material — sawing, bending,
+polishing. They are what the Options revenue report later reads.
+
+Do:
+
+- Open /option-prices-per-product and click "New option". Give it a short code
+  (e.g. Z), a name (Sawing), a processing type, a price unit and a base and cost
+  price. Create at least two so the revenue report has something to compare.
+- Click "Price options per product". It opens a price for every product/active
+  option pair that has none yet, seeded from the option's own base and cost
+  price and valid from today until 31-12-9999.
+
+Pairs that already have a price are left alone, so an option you priced by hand
+keeps its value and the action can be re-run after adding products or options.
+
+Then check:
+
+- REPORT /option-prices-per-product — one row per product and option, with the
+  option code, name, price unit, validity window, base price and cost price.
+
 ===============================================================================
 Phase 2 — Purchasing (this is what creates stock)
 ===============================================================================

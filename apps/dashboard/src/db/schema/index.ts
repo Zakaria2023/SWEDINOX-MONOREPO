@@ -59,6 +59,7 @@ export * from "./capacity-checks";
 export * from "./transporter-costs";
 export * from "./transporter-countries";
 export * from "./processings";
+export * from "./sales-options";
 export * from "./customer-stock";
 export * from "./sawing-layouts";
 export * from "./nesting";
