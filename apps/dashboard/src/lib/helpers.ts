@@ -1,6 +1,7 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import type {
+  CertificaatOption,
   DeliveryTerm,
   DeliveryTimeUnit,
   DeliveryType,
@@ -93,6 +94,22 @@ export const formatNumber = (value: number): string =>
  */
 export const formatPercent = (value: number): string =>
   `${formatNumber(value)}%`;
+
+/**
+ * The certificate a batch was bought with, read off the options the purchase
+ * line was ordered under. The processing options name the certificate directly
+ * ("certificate_3_1"), so an explicit 3.1 wins; anything else falls back to the
+ * 2.1 declaration of compliance that always accompanies the goods.
+ */
+export const resolveCertificateFromOptions = (
+  options: string | null | undefined,
+): CertificaatOption => {
+  const normalised = (options ?? "").toLowerCase();
+  if (normalised.includes("3_1") || normalised.includes("3.1")) {
+    return "en10204_3_1";
+  }
+  return "en10204_2_1";
+};
 
 /**
  * The internal charge number a received batch is traced by: the receipt year

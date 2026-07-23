@@ -268,7 +268,10 @@ const NAV_GROUPS: NavGroup[] = [
     key: "batch-registration",
     label: "Batch Registration",
     icon: PackageCheck,
-    items: [{ label: "Batches", href: "/batches" }],
+    items: [
+      { label: "Batches", href: "/batches" },
+      { label: "Certificates Received", href: "/certificates-received" },
+    ],
   },
   {
     key: "others",

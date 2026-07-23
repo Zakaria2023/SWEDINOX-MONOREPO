@@ -256,6 +256,34 @@ Then check:
   filled in. Filter by receipt date range, supplier code or product code.
 - REPORT /stock — the lot now carries the same internal charge number.
 
+Step 2.3b — Track the mill certificates (ACTION /certificates-received)
+
+Open /certificates-received and click "Open certificates for batches". Every
+registered batch gets the certificate it is owed:
+
+- Which certificate is derived from the options the purchase line was ordered
+  under — a line bought with a 3.1 gets a 3.1, everything else gets the 2.1
+  declaration that always accompanies the goods.
+- The purchase line number, its reference and the order's own reference (used as
+  the bill of lading) come across, so the certificate can be matched to the
+  shipment it arrived with.
+- The certificate starts outstanding: no received date, and "Mand. ign. doc."
+  ticked so the goods are not held up waiting for the file.
+
+When the document actually arrives, click Link on that row and enter the document
+code and file name. That stamps today's date, clears the ignore flag, and copies
+the same document details onto the batch.
+
+Batches that already have a certificate are skipped, so it can be re-run.
+
+Then check:
+
+- REPORT /certificates-received — tick "To be linked only" to see just the
+  certificates still outstanding; the ones you linked drop off that list and show
+  a received date.
+- REPORT /batches — the linked batch now shows its document code, file name and
+  certificate type.
+
 Step 2.4 — Purchase Return Order (optional, CREATE /purchase-return-orders/new)
 
 Then check:
@@ -518,7 +546,12 @@ Quote leads to Quote lines, which convert into an Order (reserving stock).
 
 Warehouse leads to Sub Section, then Location, then Machine.
 
+Product prices feed Contract net prices and the price on every quoted line.
+
+Options are priced per product, then charged on order lines (Options revenue).
+
 Purchase Order creates a STOCK LOT (in).
+Receiving it creates a BATCH, which is owed a mill CERTIFICATE.
 The stock lot is reserved by an Order line.
 Delivering the order removes stock (out).
 The delivered line is then billed by an Invoice.
