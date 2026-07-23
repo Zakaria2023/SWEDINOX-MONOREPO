@@ -8,4 +8,6 @@ export const VALIDATION_MESSAGES = {
   companyNameRequired: "Company name is required",
   descriptionRequired: "Description is required",
   nameRequired: "Name is required",
+  roleRequired: "Select at least one role",
+  contactLastNameRequired: "Last name is required",
 } as const;

@@ -96,8 +96,17 @@ export const ContactDialog = ({
             </div>
             <div className="grid gap-3 sm:grid-cols-3">
               <div>
-                <FormLabel htmlFor="co-lastName">Last Name</FormLabel>
-                <Input id="co-lastName" {...form.register("lastName")} />
+                <FormLabel htmlFor="co-lastName" required>
+                  Last Name
+                </FormLabel>
+                <Input
+                  id="co-lastName"
+                  aria-invalid={!!form.formState.errors.lastName}
+                  {...form.register("lastName")}
+                />
+                <FormFieldError
+                  message={form.formState.errors.lastName?.message}
+                />
               </div>
               <div>
                 <FormLabel htmlFor="co-telephone">Telephone</FormLabel>
