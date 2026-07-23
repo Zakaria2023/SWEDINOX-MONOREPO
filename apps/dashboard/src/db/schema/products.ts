@@ -2,6 +2,7 @@ import { InferInsertModel, InferSelectModel } from "drizzle-orm";
 import {
   boolean,
   char,
+  date,
   decimal,
   foreignKey,
   index,
@@ -27,6 +28,10 @@ export const Products = mysqlTable(
     uuid: char("uuid", { length: 36 }).notNull().unique(),
 
     productCode: varchar("product_code", { length: 100 }).notNull(),
+    // The code this product carried in the predecessor system — printed
+    // alongside the current code on the price overviews so buyers can still
+    // find an article by the number they know it as.
+    oldProductCode: varchar("old_product_code", { length: 100 }),
     commodityCode: varchar("commodity_code", { length: 100 }),
     productGroupUuid: char("product_group_uuid", { length: 36 }),
     revenueGroupUuid: char("revenue_group_uuid", { length: 36 }),
@@ -34,6 +39,9 @@ export const Products = mysqlTable(
 
     stockProduct: boolean("stock_product").default(false),
     standardProduct: boolean("standard_product").default(false),
+    // A group product is priced and ordered as the whole product group rather
+    // than as this single article.
+    groupProduct: boolean("group_product").default(false),
 
     length: decimal("length", { precision: 10, scale: 2 }),
     widthDiameter: decimal("width_diameter", { precision: 10, scale: 2 }),
@@ -51,12 +59,38 @@ export const Products = mysqlTable(
     }).default("0.0000"),
     weightUnit: mysqlEnum("weight_unit", salesUnitOptions),
 
+    // ── Prices ────────────────────────────────────────────────────────────────
+    // The unit every price below is quoted per (kg, tonne, piece, ...).
+    priceUnit: mysqlEnum("price_unit", salesUnitOptions),
+
     // Current replacement (re-purchase) price — compared against what was
     // actually paid on the "Purchase results" report.
     replacementPrice: decimal("replacement_price", {
       precision: 15,
       scale: 2,
     }).default("0.00"),
+
+    // The list price a customer is quoted before any contract discount.
+    // Recalculated from the replacement price and the markup percentage.
+    basePrice: decimal("base_price", { precision: 15, scale: 2 }).default(
+      "0.00",
+    ),
+    // Percentage added to the replacement price to reach the base price.
+    markup: decimal("markup", { precision: 6, scale: 2 }).default("0.00"),
+    // Average purchase price — the weighted average of what was actually paid
+    // for this product, derived from the goods actually received.
+    averagePurchasePrice: decimal("average_purchase_price", {
+      precision: 15,
+      scale: 2,
+    }).default("0.00"),
+    // Fixed sales price: when set, it overrides the calculated base price.
+    fixedSalesPrice: decimal("fixed_sales_price", {
+      precision: 15,
+      scale: 2,
+    }).default("0.00"),
+    orderAdviceCode: varchar("order_advice_code", { length: 100 }),
+    // When the price set above was last recalculated.
+    priceDate: date("price_date", { mode: "string" }),
 
     // Company-specific product (customer or supplier role) — set when this
     // product was created for a specific company (e.g. from the "Products"

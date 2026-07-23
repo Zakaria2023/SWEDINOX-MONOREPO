@@ -97,6 +97,28 @@ Then check:
 
 - REPORT /product-groups and REPORT /products — both appear.
 
+Step 1.9 — Price the catalogue (ACTION /product-prices)
+
+Products are created without a sales price. Open /product-prices, set "Default
+markup %" (25 is a sensible test value) and click "Recalculate prices". For every
+product it works out:
+
+- APP — the weighted average of what was actually paid, from the goods received
+  against purchase orders. It is 0,00 until Phase 2 has receipts, so run this
+  again after Step 2.3.
+- Replacement price — kept as maintained, or seeded from the APP when it is
+  still zero, so a bought product always has a cost basis.
+- Base price — the Fixed sales price (FSP) when one is set, otherwise the
+  replacement price plus the markup. This is the list price quotes and orders
+  are priced from.
+- Price date — set to today, which is what the "Price date from" filter reads.
+
+Then check:
+
+- REPORT /product-prices — Replacement price, Base price, Markup and APP are
+  filled, with the product's main group, subgroup and preferred supplier
+  alongside. Use the product code range filter to narrow it down.
+
 ===============================================================================
 Phase 2 — Purchasing (this is what creates stock)
 ===============================================================================
