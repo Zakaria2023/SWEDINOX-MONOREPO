@@ -398,6 +398,31 @@ Then check:
 - REPORT /complaints — appears.
 - REPORT /customer-overview — Complaints count increments.
 
+Step 4.3a — Break the complaint into lines (ACTION /complaint-lines)
+
+The New Complaint form saves the complaint header only. Open /complaint-lines and
+click "Generate from complaints". For every complaint with no lines yet, each
+order line that customer has for the complained-about product becomes its own
+complaint line, carrying:
+
+- the order and order line number,
+- the seller from that order,
+- the warehouse section the stock sat in (the parent of the stock lot's
+  location),
+- the cause, solution, category, type, deadline, status and owner from the
+  complaint header,
+- the contact person as the correspondence name.
+
+A complaint whose product that customer never ordered still gets one line, taken
+straight from the header, so nothing is silently dropped. Complaints that already
+have lines are skipped, so it can be re-run.
+
+Then check:
+
+- REPORT /complaint-lines — one row per complained-about order line, with the
+  responsible and created-by names resolved from Clerk. Filter by creation date
+  range.
+
 ===============================================================================
 Phase 5 — Warehouse and production actions
 ===============================================================================

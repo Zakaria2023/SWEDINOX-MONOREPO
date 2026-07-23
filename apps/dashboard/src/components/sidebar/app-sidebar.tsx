@@ -267,7 +267,10 @@ const NAV_GROUPS: NavGroup[] = [
     key: "others",
     label: "Others",
     icon: MessageSquareWarning,
-    items: [{ label: "Complaints", href: "/complaints" }],
+    items: [
+      { label: "Complaints", href: "/complaints" },
+      { label: "Complaint Lines", href: "/complaint-lines" },
+    ],
   },
 ];
 

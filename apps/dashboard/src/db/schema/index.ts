@@ -1,5 +1,6 @@
 export * from "./companies";
 export * from "./complaints";
+export * from "./complaint-items";
 export * from "./company-addresses";
 export * from "./contracts";
 export * from "./contract-net-prices";
