@@ -313,6 +313,23 @@ Then check:
 - REPORT /deliveries — the reserved line shows with a Deliver button.
 - REPORT /deliveries-to-arrange — shows lines with no reservation (0 reserved).
 
+Step 3.2a — Charge the options on the order lines (ACTION /options)
+
+Needs Step 1.10 (options created and priced). Open /options and click "Generate
+from order lines". For every order line that carries no option charges yet, each
+option priced for that product and valid today is booked at that price times the
+line quantity; the option's cost price gives the cost, and the difference is the
+profit. The price is copied onto the charge, so repricing the option later does
+not rewrite revenue that was already booked.
+
+Order lines that already carry option charges are skipped, so it can be re-run
+after adding more orders.
+
+Then check:
+
+- REPORT /options — revenue, profit and margin per option, split by revenue
+  group and line status, with a total row. Filter by creation date range.
+
 Step 3.3 — Counter Order / Return Order (optional)
 
 Do:

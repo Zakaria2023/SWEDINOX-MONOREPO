@@ -124,6 +124,7 @@ const NAV_GROUPS: NavGroup[] = [
         label: "Option Prices per Product",
         href: "/option-prices-per-product",
       },
+      { label: "Options", href: "/options" },
       {
         label: "Order Lines Still to be Called",
         href: "/order-lines-still-to-be-called",

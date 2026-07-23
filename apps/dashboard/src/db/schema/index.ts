@@ -60,6 +60,7 @@ export * from "./transporter-costs";
 export * from "./transporter-countries";
 export * from "./processings";
 export * from "./sales-options";
+export * from "./order-item-options";
 export * from "./customer-stock";
 export * from "./sawing-layouts";
 export * from "./nesting";
