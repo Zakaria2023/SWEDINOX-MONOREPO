@@ -70,11 +70,39 @@ Do:
 - On /contract-groups, click New Group (modal) — create a group.
 - On /contracts/add, create a contract, pick the group, link it to your company.
 
+On the contract, tick at least one discount (Group discount or Line discount) and
+add a tier or two (e.g. 0% from 0, 5% from 1000) — that is what turns into the
+net price ladder in Step 1.6a.
+
 Then check:
 
 - REPORT /contracts — the contract appears.
 - REPORT /contracts-per-customer — appears (company has customer role).
 - REPORT /contracts-per-supplier — appears (company has supplier role).
+
+Step 1.6a — Price the contract (ACTION /net-prices)
+
+Run this after Step 1.9 has given the products a base price. Open /net-prices and
+click "Generate from contracts". For every customer contract with no net prices
+yet it works out what that customer actually pays:
+
+- The products priced are the ones that customer has ordered before; a customer
+  with no order history gets the standard product catalogue.
+- The starting point is the product's base price, unless the contract overrides
+  the gross price — then that value is used instead.
+- The contract's group discount and line discount stack, and an extra discount
+  comes off on top of both.
+- Every quantity break in either tier ladder produces its own row, so a bigger
+  order finds a cheaper price (the FromQty column).
+
+Contracts that already have net prices are skipped, so it can be re-run.
+
+Then check:
+
+- REPORT /net-prices — one row per contract, product and quantity break, showing
+  base price, total discount and the resulting net price with its validity
+  window (taken from the contract's start and end dates). Filter by contract code
+  range, validity window or company code.
 
 Step 1.7 — Create Text Category (CREATE /text-categories/add)
 

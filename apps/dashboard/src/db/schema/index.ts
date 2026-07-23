@@ -2,6 +2,7 @@ export * from "./companies";
 export * from "./complaints";
 export * from "./company-addresses";
 export * from "./contracts";
+export * from "./contract-net-prices";
 export * from "./communication-settings";
 export * from "./address-distances";
 export * from "./contacts";

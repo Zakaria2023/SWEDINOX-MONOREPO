@@ -652,6 +652,46 @@ export const applyPriceDiscounts = (
   (1 - lineDiscountPercent / 100);
 
 /**
+ * A contract's discount tiers, as stored on the contract: each tier gives the
+ * percentage that applies from a quantity (or weight, or amount) upwards.
+ */
+export type DiscountTier = { from: number; percentage: number };
+
+/**
+ * The tiers a contract should be priced at, normalised: sorted by their
+ * threshold and always starting at 0, so every quantity finds a tier. A
+ * contract with no tiers at all prices at a single 0% tier from 0.
+ */
+export const normaliseDiscountTiers = (
+  tiers: DiscountTier[] | null | undefined,
+): DiscountTier[] => {
+  const sorted = [...(tiers ?? [])]
+    .filter((tier) => Number.isFinite(tier.from))
+    .sort((a, b) => a.from - b.from);
+  if (sorted.length === 0 || sorted[0].from > 0) {
+    return [{ from: 0, percentage: 0 }, ...sorted];
+  }
+  return sorted;
+};
+
+/**
+ * The discount percentage that applies to a given quantity — the highest tier
+ * whose threshold the quantity has reached.
+ */
+export const resolveTierDiscount = (
+  tiers: DiscountTier[] | null | undefined,
+  quantity: number,
+): number => {
+  let percentage = 0;
+  for (const tier of normaliseDiscountTiers(tiers)) {
+    if (quantity >= tier.from) {
+      percentage = tier.percentage;
+    }
+  }
+  return percentage;
+};
+
+/**
  * Profit margin as a percentage of revenue. Revenue of 0 has no margin to
  * report, so it yields 0 rather than dividing by zero.
  */

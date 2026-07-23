@@ -1,6 +1,6 @@
 "use client";
 
-import { ProductPriceRow } from "@/app/(dashboard)/product-prices/actions";
+import { NetPriceRow } from "@/app/(dashboard)/net-prices/actions";
 import {
   Table,
   TableBody,
@@ -10,36 +10,45 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { BooleanFlag } from "@/components/ui/boolean-flag";
-import { formatMoney, formatPercent } from "@/lib/helpers";
+import {
+  formatDateValue,
+  formatMoney,
+  formatNumber,
+  formatPercent,
+} from "@/lib/helpers";
 
 type Props = {
-  rows: ProductPriceRow[];
+  rows: NetPriceRow[];
 };
 
-const COLUMN_COUNT = 17;
+const COLUMN_COUNT = 21;
 
-export const ProductPricesTable = ({ rows }: Props) => (
+export const NetPricesTable = ({ rows }: Props) => (
   <div className="overflow-x-auto rounded-md border">
     <Table>
       <TableHeader>
         <TableRow>
+          <TableHead>Contract code</TableHead>
+          <TableHead>Contract</TableHead>
+          <TableHead className="text-right">Company code</TableHead>
+          <TableHead>Company</TableHead>
           <TableHead>Product code</TableHead>
-          <TableHead>Old product no.</TableHead>
+          <TableHead>Product no. (old)</TableHead>
           <TableHead>Product</TableHead>
-          <TableHead>PriceU</TableHead>
           <TableHead>Group product</TableHead>
           <TableHead>Stock product</TableHead>
           <TableHead>Standard product</TableHead>
           <TableHead>Main group</TableHead>
           <TableHead>Subgroup</TableHead>
           <TableHead>Preferred supplier</TableHead>
-          <TableHead>Product no. supplier</TableHead>
-          <TableHead className="text-right">Replacement price</TableHead>
+          <TableHead>Suppliers product no.</TableHead>
           <TableHead className="text-right">Base price</TableHead>
-          <TableHead className="text-right">Markup</TableHead>
-          <TableHead className="text-right">APP</TableHead>
-          <TableHead>Order advice code</TableHead>
-          <TableHead className="text-right">FSP</TableHead>
+          <TableHead className="text-right">Discount</TableHead>
+          <TableHead className="text-right">Net price</TableHead>
+          <TableHead>Net priceU</TableHead>
+          <TableHead>Valid from</TableHead>
+          <TableHead>Valid until</TableHead>
+          <TableHead className="text-right">FromQty</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -49,18 +58,25 @@ export const ProductPricesTable = ({ rows }: Props) => (
               colSpan={COLUMN_COUNT}
               className="h-24 text-center text-muted-foreground"
             >
-              No products found.
+              No net prices found.
             </TableCell>
           </TableRow>
         ) : (
           rows.map((row) => (
             <TableRow key={row.uuid}>
               <TableCell className="font-medium whitespace-nowrap">
-                {row.productCode}
+                {row.contractCode ?? "—"}
+              </TableCell>
+              <TableCell>{row.contractDescription ?? "—"}</TableCell>
+              <TableCell className="text-right">
+                {row.companyCode ?? "—"}
+              </TableCell>
+              <TableCell>{row.companyName ?? "—"}</TableCell>
+              <TableCell className="whitespace-nowrap">
+                {row.productCode ?? "—"}
               </TableCell>
               <TableCell>{row.oldProductCode ?? "—"}</TableCell>
-              <TableCell>{row.name}</TableCell>
-              <TableCell>{row.priceUnit ?? "—"}</TableCell>
+              <TableCell>{row.productName ?? "—"}</TableCell>
               <TableCell>
                 <BooleanFlag on={row.groupProduct} label="Group product" />
               </TableCell>
@@ -78,20 +94,23 @@ export const ProductPricesTable = ({ rows }: Props) => (
               <TableCell>{row.preferredSupplier ?? "—"}</TableCell>
               <TableCell>{row.supplierProductCode ?? "—"}</TableCell>
               <TableCell className="text-right whitespace-nowrap">
-                {formatMoney(Number(row.replacementPrice ?? 0))}
-              </TableCell>
-              <TableCell className="text-right whitespace-nowrap">
                 {formatMoney(Number(row.basePrice ?? 0))}
               </TableCell>
               <TableCell className="text-right">
-                {formatPercent(Number(row.markup ?? 0))}
+                {formatPercent(Number(row.discountPercent ?? 0))}
               </TableCell>
               <TableCell className="text-right whitespace-nowrap">
-                {formatMoney(Number(row.averagePurchasePrice ?? 0))}
+                {formatMoney(Number(row.netPrice ?? 0))}
               </TableCell>
-              <TableCell>{row.orderAdviceCode ?? "—"}</TableCell>
+              <TableCell>{row.netPriceUnit ?? "—"}</TableCell>
+              <TableCell className="whitespace-nowrap">
+                {formatDateValue(row.validFrom)}
+              </TableCell>
+              <TableCell className="whitespace-nowrap">
+                {formatDateValue(row.validUntil)}
+              </TableCell>
               <TableCell className="text-right whitespace-nowrap">
-                {formatMoney(Number(row.fixedSalesPrice ?? 0))}
+                {formatNumber(Number(row.fromQty ?? 0))} {row.fromQtyUnit ?? ""}
               </TableCell>
             </TableRow>
           ))
