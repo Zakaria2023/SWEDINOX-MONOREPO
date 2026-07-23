@@ -10,8 +10,9 @@ import {
   SelectVisitReports,
   VisitReports,
 } from "@/db";
-import { generateUuid } from "@/lib/helpers";
+import { generateUuid, todayDateString } from "@/lib/helpers";
 import { asc, desc, eq, getTableColumns } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 export type VisitReportInput = Omit<
@@ -72,4 +73,54 @@ export const createVisitReport = async (
   }
 
   redirect("/visit-reports");
+};
+
+// Resolves a planned visit/call: marks it as having taken place and stamps the
+// visit date with today when it has none. A completed report is what the visit
+// schedule, to-visit/call and customer-overview reports read for the "last
+// visit / last call" dates and the visit count, so this is what turns a planned
+// contact into a recorded one.
+export const resolveVisitReport = async (
+  uuid: string,
+): Promise<VisitReportActionResult> => {
+  try {
+    const [report] = await db
+      .select({
+        uuid: VisitReports.uuid,
+        hasTakenPlace: VisitReports.hasTakenPlace,
+        visitDate: VisitReports.visitDate,
+      })
+      .from(VisitReports)
+      .where(eq(VisitReports.uuid, uuid))
+      .limit(1);
+
+    if (!report) {
+      return { error: "Visit report not found." };
+    }
+    if (report.hasTakenPlace) {
+      return { error: "This visit report is already resolved." };
+    }
+
+    await db
+      .update(VisitReports)
+      .set({
+        hasTakenPlace: true,
+        visitDate: report.visitDate ?? todayDateString(),
+      })
+      .where(eq(VisitReports.uuid, uuid));
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to resolve visit report",
+    };
+  }
+
+  revalidatePath("/visit-reports");
+  revalidatePath("/visit-schedule");
+  revalidatePath("/change-visit-schedule");
+  revalidatePath("/to-visit-call");
+  revalidatePath("/customer-overview");
+  return {};
 };

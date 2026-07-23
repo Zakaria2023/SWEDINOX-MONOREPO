@@ -16,6 +16,7 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
+import { ResolveVisitReportButton } from "@/components/visit-reports/resolve-visit-report-button";
 import { buildColumnVisibility } from "@/lib/helpers";
 
 type ColumnKey =
@@ -226,13 +227,14 @@ export const VisitReportsTable = ({
               {visibleColumns.map((column) => (
                 <TableHead key={column.key}>{column.label}</TableHead>
               ))}
+              <TableHead className="text-right">Action</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {visitReports.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={visibleColumns.length}
+                  colSpan={visibleColumns.length + 1}
                   className="h-24 text-center"
                 >
                   No visit reports found
@@ -244,6 +246,12 @@ export const VisitReportsTable = ({
                   {visibleColumns.map((column) =>
                     renderCell(visitReport, column.key),
                   )}
+                  <TableCell className="text-right">
+                    <ResolveVisitReportButton
+                      uuid={visitReport.uuid}
+                      hasTakenPlace={visitReport.hasTakenPlace}
+                    />
+                  </TableCell>
                 </TableRow>
               ))
             )}
