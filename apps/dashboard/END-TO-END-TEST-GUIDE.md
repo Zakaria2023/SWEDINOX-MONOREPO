@@ -176,16 +176,61 @@ Now that stock exists, sell it.
 
 Step 3.1 — Create a Quote (CREATE /quotes/new)
 
-Pick your customer and contact.
+Pick your customer and contact. The New Quote form saves the quote header only.
 
 Then check:
 
-- REPORT /quotes — the quote appears.
+- REPORT /quotes — the quote appears with all totals at 0,00 (no lines yet).
+
+Step 3.1a — Fill the quote lines (ACTION /quote-lines)
+
+Open /quote-lines and click "Generate quote lines". It fills every quote that has
+no lines yet:
+
+- If the quote's customer has ordered before, their order lines are re-quoted —
+  same product, quantity, dimensions and the price that product last sold for.
+- A customer with no order history is quoted the standard product catalogue
+  (products with "Standard product" ticked) at quantity 1.
+- Cost price is always the product's replacement price, so profit and profit
+  margin are real numbers, not zeros.
+
+Quotes that already have lines are skipped, so it is safe to re-run after adding
+more quotes.
+
+Then check:
+
+- REPORT /quote-lines — one row per quoted line, with gross price, group/line
+  discount, net price, amount, cost, profit and margin.
+- REPORT /quotes — the header totals (Materials revenue, Total excl./incl. VAT,
+  Total weight, Avg. kilo price) are now rolled up from the lines.
+
+Step 3.1b — Convert the quote into an order (ACTION /quote-lines)
+
+Still on /quote-lines, pick the quote in the "Convert quote to order" box and
+click Convert. This is the quote-to-order handover:
+
+- Each quote line is allocated against the pending stock lots for its product,
+  oldest receipt first, spanning several lots when one is not enough.
+- The stock is reserved exactly the way the order form reserves it, so the lot
+  can never be oversold.
+- The new order inherits the quote's customer, contact, references, seller,
+  delivery and payment terms, order-type flags and contract link.
+
+If there is not enough free stock the whole conversion is refused and it tells
+you which product is short and by how much — buy/receive stock first (Phase 2).
+
+Then check:
+
+- REPORT /quote-lines — "Converted to" now names the order, and the line status
+  flips to Released.
+- REPORT /orders and /order-lines — the new order and its lines appear.
+- REPORT /stock and /reservations — the lot's Reserved goes up.
 
 Step 3.2 — Create an Order (CREATE /orders/new)
 
 Pick the customer, add a product line for the stocked product. Creating the order
-reserves stock against the lot from Phase 2.
+reserves stock against the lot from Phase 2. (Converting a quote in Step 3.1b
+produces the same result — this step is the manual route.)
 
 Then check:
 
@@ -331,7 +376,9 @@ Company (customer + supplier) leads to:
 - Visit Reports / Follow-ups / Complaints
 - Contracts
 
-Product Group leads to Product, used on Order and Purchase Order lines.
+Product Group leads to Product, used on Quote, Order and Purchase Order lines.
+
+Quote leads to Quote lines, which convert into an Order (reserving stock).
 
 Warehouse leads to Sub Section, then Location, then Machine.
 

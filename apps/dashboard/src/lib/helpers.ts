@@ -70,6 +70,47 @@ export const formatRevenue = (value: string | null) => {
 };
 
 /**
+ * Formats a number as a euro amount for the overviews (always two decimals).
+ */
+export const formatMoney = (value: number): string =>
+  `€ ${value.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+
+/**
+ * Formats a quantity/weight for the overviews — thousands separated, trailing
+ * zeros dropped.
+ */
+export const formatNumber = (value: number): string =>
+  value.toLocaleString("en-US", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  });
+
+/**
+ * Formats a percentage for the overviews, e.g. `12.5%`.
+ */
+export const formatPercent = (value: number): string =>
+  `${formatNumber(value)}%`;
+
+/**
+ * The initials of a person's name ("Jan de Vries" -> "JdV"), used by the
+ * overviews that print a seller/purchaser as initials.
+ */
+export const initialsOf = (name: string | null | undefined): string => {
+  if (!name) {
+    return "—";
+  }
+  const initials = name
+    .trim()
+    .split(/\s+/)
+    .map((part) => part.charAt(0))
+    .join("");
+  return initials === "" ? "—" : initials;
+};
+
+/**
  * Formats a JS Date as a YYYY-MM-DD string (the shape date inputs and MySQL
  * `date` columns expect).
  */
@@ -564,6 +605,58 @@ export const resolveOrderWeight = (
   }
   return weights.weighed ?? null;
 };
+
+/**
+ * The order type a quote/order header describes, as the single label the
+ * overviews print. The header carries the type as a set of independent flags,
+ * so the most specific one that is set wins; a header with none set is a plain
+ * "Standard" sale.
+ */
+export const resolveOrderTypeLabel = (flags: {
+  isPickup?: boolean | null;
+  isConsignment?: boolean | null;
+  isIncidental?: boolean | null;
+  isInternalProduction?: boolean | null;
+  isKlantMateriaal?: boolean | null;
+}): string => {
+  if (flags.isConsignment) {
+    return "Consignment";
+  }
+  if (flags.isKlantMateriaal) {
+    return "Customer material";
+  }
+  if (flags.isInternalProduction) {
+    return "Internal production";
+  }
+  if (flags.isIncidental) {
+    return "Incidental";
+  }
+  if (flags.isPickup) {
+    return "Pickup";
+  }
+  return "Standard";
+};
+
+/**
+ * The net price left after the group and line discounts are taken off a gross
+ * price. Discounts stack sequentially — the line discount applies to what the
+ * group discount already reduced — which is how the ERP quotes them.
+ */
+export const applyPriceDiscounts = (
+  grossPrice: number,
+  groupDiscountPercent: number,
+  lineDiscountPercent: number,
+): number =>
+  grossPrice *
+  (1 - groupDiscountPercent / 100) *
+  (1 - lineDiscountPercent / 100);
+
+/**
+ * Profit margin as a percentage of revenue. Revenue of 0 has no margin to
+ * report, so it yields 0 rather than dividing by zero.
+ */
+export const profitMarginPercent = (revenue: number, profit: number): number =>
+  revenue === 0 ? 0 : (profit / revenue) * 100;
 
 /**
  * The Monday of a given ISO week/year, as a YYYY-MM-DD string — used to turn a
