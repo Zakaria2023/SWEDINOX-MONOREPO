@@ -95,7 +95,7 @@ export const getQuoteLines = async (
         isConsignment: Quotes.isConsignment,
         isIncidental: Quotes.isIncidental,
         isInternalProduction: Quotes.isInternalProduction,
-        isKlantMateriaal: Quotes.isKlantMateriaal,
+        isCustomerMaterial: Quotes.isCustomerMaterial,
         customerCode: Companies.id,
         customerName: Companies.companyName,
         customerGroup: Companies.customerGroup,
@@ -510,7 +510,7 @@ export const convertQuoteToOrder = async (
         isConsignment: quote.isConsignment,
         isIncidental: quote.isIncidental,
         isInternalProduction: quote.isInternalProduction,
-        isKlantMateriaal: quote.isKlantMateriaal,
+        isCustomerMaterial: quote.isCustomerMaterial,
         weightType: quote.weightType,
         remarks: quote.remarks,
       });

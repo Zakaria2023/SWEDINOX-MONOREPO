@@ -55,7 +55,7 @@ export const CounterOrders = mysqlTable(
     // ── Order type ──────────────────────────────────────────────────────────
     isPickup: boolean("is_pickup").default(false),
     isIncidental: boolean("is_incidental").default(false),
-    isOverlengte: boolean("is_overlengte").default(false),
+    isOverlength: boolean("is_overlength").default(false),
     isPrinted: boolean("is_printed").default(false),
     isMailed: boolean("is_mailed").default(false),
     isFaxed: boolean("is_faxed").default(false),

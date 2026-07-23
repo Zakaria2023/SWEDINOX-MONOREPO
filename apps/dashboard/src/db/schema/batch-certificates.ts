@@ -31,7 +31,7 @@ export const BatchCertificates = mysqlTable(
     purchaseOrderItemUuid: char("purchase_order_item_uuid", { length: 36 }),
 
     // The purchase line the certified goods came in on, and the reference
-    // printed on that line ("regel referentie").
+    // printed on that line.
     purchaseLineNumber: int("purchase_line_number"),
     lineReference: varchar("line_reference", { length: 255 }),
     billOfLading: varchar("bill_of_lading", { length: 255 }),

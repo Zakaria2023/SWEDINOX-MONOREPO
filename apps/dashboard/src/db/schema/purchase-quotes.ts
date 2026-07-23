@@ -51,7 +51,7 @@ export const PurchaseQuotes = mysqlTable(
     // ── Purchase order type ───────────────────────────────────────────────────
     purchaseOrderType: mysqlEnum("purchase_order_type", purchaseOrderTypes),
     weightType: mysqlEnum("weight_type", orderWeightTypes),
-    isOverlengte: boolean("is_overlengte").default(false),
+    isOverlength: boolean("is_overlength").default(false),
     isConsignment: boolean("is_consignment").default(false),
 
     // ── Finances ──────────────────────────────────────────────────────────────

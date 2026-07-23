@@ -62,8 +62,8 @@ export const getNesting = async (): Promise<NestingListItem[]> => {
         orderIsIncidental: Orders.isIncidental,
         orderIsConsignment: Orders.isConsignment,
         orderIsInternalProduction: Orders.isInternalProduction,
-        orderIsKlantMateriaal: Orders.isKlantMateriaal,
-        orderIsOverlengte: Orders.isOverlengte,
+        orderIsCustomerMaterial: Orders.isCustomerMaterial,
+        orderIsOverlength: Orders.isOverlength,
       })
       .from(Nesting)
       .leftJoin(OrderItems, eq(Nesting.orderItemUuid, OrderItems.uuid))
@@ -78,8 +78,8 @@ export const getNesting = async (): Promise<NestingListItem[]> => {
         orderIsIncidental,
         orderIsConsignment,
         orderIsInternalProduction,
-        orderIsKlantMateriaal,
-        orderIsOverlengte,
+        orderIsCustomerMaterial,
+        orderIsOverlength,
         ...rest
       } = row;
 
@@ -88,8 +88,8 @@ export const getNesting = async (): Promise<NestingListItem[]> => {
         [orderIsIncidental, "Incidental"],
         [orderIsConsignment, "Consignment"],
         [orderIsInternalProduction, "Internal production"],
-        [orderIsKlantMateriaal, "Customer material"],
-        [orderIsOverlengte, "Overlength"],
+        [orderIsCustomerMaterial, "Customer material"],
+        [orderIsOverlength, "Overlength"],
       ];
       const active = flags.filter(([on]) => on).map(([, label]) => label);
 

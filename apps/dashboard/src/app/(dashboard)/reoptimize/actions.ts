@@ -62,8 +62,8 @@ export const getReoptimize = async (): Promise<ReoptimizeListItem[]> => {
         orderIsIncidental: Orders.isIncidental,
         orderIsConsignment: Orders.isConsignment,
         orderIsInternalProduction: Orders.isInternalProduction,
-        orderIsKlantMateriaal: Orders.isKlantMateriaal,
-        orderIsOverlengte: Orders.isOverlengte,
+        orderIsCustomerMaterial: Orders.isCustomerMaterial,
+        orderIsOverlength: Orders.isOverlength,
       })
       .from(Reoptimize)
       .leftJoin(OrderItems, eq(Reoptimize.orderItemUuid, OrderItems.uuid))
@@ -78,8 +78,8 @@ export const getReoptimize = async (): Promise<ReoptimizeListItem[]> => {
         orderIsIncidental,
         orderIsConsignment,
         orderIsInternalProduction,
-        orderIsKlantMateriaal,
-        orderIsOverlengte,
+        orderIsCustomerMaterial,
+        orderIsOverlength,
         ...rest
       } = row;
 
@@ -88,8 +88,8 @@ export const getReoptimize = async (): Promise<ReoptimizeListItem[]> => {
         [orderIsIncidental, "Incidental"],
         [orderIsConsignment, "Consignment"],
         [orderIsInternalProduction, "Internal production"],
-        [orderIsKlantMateriaal, "Customer material"],
-        [orderIsOverlengte, "Overlength"],
+        [orderIsCustomerMaterial, "Customer material"],
+        [orderIsOverlength, "Overlength"],
       ];
       const active = flags.filter(([on]) => on).map(([, label]) => label);
 

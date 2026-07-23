@@ -329,7 +329,7 @@ export const CounterOrderForm = ({
               )}
             />
             <Controller
-              name="isOverlengte"
+              name="isOverlength"
               control={control}
               render={({ field }) => (
                 <CheckboxField

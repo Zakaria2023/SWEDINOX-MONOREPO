@@ -70,8 +70,8 @@ export const getProductionCapacityDetails = async (): Promise<
         orderIsIncidental: Orders.isIncidental,
         orderIsConsignment: Orders.isConsignment,
         orderIsInternalProduction: Orders.isInternalProduction,
-        orderIsKlantMateriaal: Orders.isKlantMateriaal,
-        orderIsOverlengte: Orders.isOverlengte,
+        orderIsCustomerMaterial: Orders.isCustomerMaterial,
+        orderIsOverlength: Orders.isOverlength,
       })
       .from(ProductionCapacityDetails)
       .leftJoin(
@@ -89,8 +89,8 @@ export const getProductionCapacityDetails = async (): Promise<
         orderIsIncidental,
         orderIsConsignment,
         orderIsInternalProduction,
-        orderIsKlantMateriaal,
-        orderIsOverlengte,
+        orderIsCustomerMaterial,
+        orderIsOverlength,
         ...rest
       } = row;
 
@@ -99,8 +99,8 @@ export const getProductionCapacityDetails = async (): Promise<
         [orderIsIncidental, "Incidental"],
         [orderIsConsignment, "Consignment"],
         [orderIsInternalProduction, "Internal production"],
-        [orderIsKlantMateriaal, "Customer material"],
-        [orderIsOverlengte, "Overlength"],
+        [orderIsCustomerMaterial, "Customer material"],
+        [orderIsOverlength, "Overlength"],
       ];
       const active = flags.filter(([on]) => on).map(([, label]) => label);
 

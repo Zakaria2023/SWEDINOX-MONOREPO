@@ -214,7 +214,7 @@ export const usePurchaseOrderSubmit = ({
 
           purchaseOrderType: values.purchaseOrderType || null,
           weightType: values.weightType || null,
-          isOverlengte: values.isOverlengte,
+          isOverlength: values.isOverlength,
           isPrinted: values.isPrinted,
           isMailed: values.isMailed,
           isFaxed: values.isFaxed,

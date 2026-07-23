@@ -99,7 +99,7 @@ export const PurchaseOrderInformationSection = ({
         </div>
 
         <div>
-          <FormLabel htmlFor="ourReference">Onze referentie</FormLabel>
+          <FormLabel htmlFor="ourReference">Our reference</FormLabel>
           <Input id="ourReference" {...register("ourReference")} />
         </div>
 

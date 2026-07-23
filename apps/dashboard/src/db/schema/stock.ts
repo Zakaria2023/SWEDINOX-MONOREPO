@@ -45,7 +45,7 @@ export const Stock = mysqlTable(
     // The supplier the lot was sourced from (shown as "Supplier" on the grid).
     supplierUuid: char("supplier_uuid", { length: 36 }),
     // Owner of the stock when it isn't ours — set for customer/consignment
-    // stock ("Klant voorraad op locatie"); null means it's our own stock.
+    // customer stock held at a location; null means it is our own stock.
     ownerCompanyUuid: char("owner_company_uuid", { length: 36 }),
 
     // ── Physical attributes (as shown on "Stock on location") ─────────────────

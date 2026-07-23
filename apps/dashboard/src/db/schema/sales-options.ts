@@ -17,8 +17,8 @@ import { Products } from "./products";
 import { RevenueGroups } from "./revenue-groups";
 
 // A processing step that can be sold alongside the material — sawing, bending,
-// polishing and so on. `code` is the short letter the grids print ("Z" for
-// Zagen/sawing); `editing` ties the option to the processing type a supplier
+// polishing and so on. `code` is the short letter the grids print (e.g. "S" for
+// sawing); `editing` ties the option to the processing type a supplier
 // performs, so an option can be matched to the processors that offer it.
 export const SalesOptions = mysqlTable(
   "SalesOptions",

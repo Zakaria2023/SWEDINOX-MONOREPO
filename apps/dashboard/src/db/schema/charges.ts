@@ -14,7 +14,7 @@ import { Companies } from "./companies";
 import { Orders } from "./orders";
 import { RevenueGroups } from "./revenue-groups";
 
-// Sales charges / surcharges ("Toeslag") billed on top of the order lines —
+// Sales charges / surcharges billed on top of the order lines —
 // e.g. small-order, cutting or scrap surcharges, grouped by revenue group.
 export const Charges = mysqlTable(
   "Charges",

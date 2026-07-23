@@ -286,7 +286,7 @@ export const CounterOrderDialog = ({
               )}
             />
             <Controller
-              name="isOverlengte"
+              name="isOverlength"
               control={form.control}
               render={({ field }) => (
                 <CheckboxField

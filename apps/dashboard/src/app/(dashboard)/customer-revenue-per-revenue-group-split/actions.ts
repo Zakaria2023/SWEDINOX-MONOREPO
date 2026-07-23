@@ -41,7 +41,7 @@ const orderTypeLabel = sql<string>`CASE
   WHEN ${Orders.isConsignment} = 1 THEN 'Consignment'
   WHEN ${Orders.isIncidental} = 1 THEN 'Incidental'
   WHEN ${Orders.isInternalProduction} = 1 THEN 'Internal production'
-  WHEN ${Orders.isKlantMateriaal} = 1 THEN 'Customer material'
+  WHEN ${Orders.isCustomerMaterial} = 1 THEN 'Customer material'
   WHEN ${Orders.isPickup} = 1 THEN 'Pickup'
   ELSE 'Normal'
 END`;

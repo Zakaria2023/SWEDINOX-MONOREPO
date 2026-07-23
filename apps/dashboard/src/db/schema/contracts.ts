@@ -122,7 +122,7 @@ export const Contracts = mysqlTable(
     }),
     extraDiscountFromUnit: varchar("extra_discount_from_unit", { length: 10 }),
 
-    // Details tab — Quantity surcharge (Hoeveelheidstoeslag)
+    // Details tab — Quantity surcharge
     quantitySurcharge: boolean("quantity_surcharge").default(false),
     quantitySurchargeTierUnit: mysqlEnum(
       "quantity_surcharge_tier_unit",
@@ -144,7 +144,7 @@ export const Contracts = mysqlTable(
       { length: 36 },
     ),
 
-    // Details tab — Line discount (Regelkorting)
+    // Details tab — Line discount
     lineDiscount: boolean("line_discount").default(false),
     lineDiscountTierUnit: mysqlEnum(
       "line_discount_tier_unit",
@@ -158,7 +158,7 @@ export const Contracts = mysqlTable(
       .default([])
       .notNull(),
 
-    // Details tab — Group discount (Groepskorting)
+    // Details tab — Group discount
     groupDiscount: boolean("group_discount").default(false),
     groupDiscountTierUnit: mysqlEnum(
       "group_discount_tier_unit",

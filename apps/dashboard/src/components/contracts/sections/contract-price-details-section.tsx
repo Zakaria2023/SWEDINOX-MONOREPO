@@ -288,7 +288,7 @@ export const ContractPriceDetailsSection = ({
                 </div>
 
                 <div>
-                  <FormLabel>Toeslag per</FormLabel>
+                  <FormLabel>Surcharge per</FormLabel>
                   <div className="mt-1 space-y-1">
                     {contractSurchargePerTypes.map((type) => (
                       <label key={type} className="flex cursor-pointer items-center gap-2">

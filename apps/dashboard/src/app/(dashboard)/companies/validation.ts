@@ -394,7 +394,7 @@ export const counterOrderDialogSchema = z.object({
   printPickingSlips: z.boolean(),
   isPickup: z.boolean(),
   isIncidental: z.boolean(),
-  isOverlengte: z.boolean(),
+  isOverlength: z.boolean(),
   amountExVat: z.string().optional(),
   weightKg: z.string().optional(),
   gainPercent: z.string().optional(),
@@ -417,7 +417,7 @@ export const DEFAULT_COUNTER_ORDER: CounterOrderDialogValues = {
   printPickingSlips: true,
   isPickup: false,
   isIncidental: false,
-  isOverlengte: false,
+  isOverlength: false,
   amountExVat: "0.00",
   weightKg: "0.000",
   gainPercent: "0.00",
@@ -442,7 +442,7 @@ export const quoteDialogSchema = z.object({
   isPickup: z.boolean(),
   isIncidental: z.boolean(),
   isConsignment: z.boolean(),
-  isOverlengte: z.boolean(),
+  isOverlength: z.boolean(),
   handlingBlocked: z.boolean(),
   totalWeightKg: z.string().optional(),
   totalExclVat: z.string().optional(),
@@ -467,7 +467,7 @@ export const DEFAULT_QUOTE: QuoteDialogValues = {
   isPickup: false,
   isIncidental: false,
   isConsignment: false,
-  isOverlengte: false,
+  isOverlength: false,
   handlingBlocked: false,
   totalWeightKg: "0.00",
   totalExclVat: "0.00",
@@ -611,7 +611,7 @@ export const purchaseOrderDialogSchema = z.object({
   isMailed: z.boolean(),
   arrangeTransport: z.boolean(),
   pickupDropoffCdPurchases: z.boolean(),
-  isOverlengte: z.boolean(),
+  isOverlength: z.boolean(),
   remarks: z.string().optional(),
 });
 
@@ -638,7 +638,7 @@ export const DEFAULT_PURCHASE_ORDER: PurchaseOrderDialogValues = {
   isMailed: false,
   arrangeTransport: false,
   pickupDropoffCdPurchases: false,
-  isOverlengte: false,
+  isOverlength: false,
   remarks: "",
 };
 

@@ -1028,7 +1028,7 @@ export const useCompanySubmit = ({
     printPickingSlips: values.printPickingSlips,
     isPickup: values.isPickup,
     isIncidental: values.isIncidental,
-    isOverlengte: values.isOverlengte,
+    isOverlength: values.isOverlength,
     amountExVat: values.amountExVat || "0.00",
     weightKg: values.weightKg || "0.000",
     gainPercent: values.gainPercent || "0.00",
@@ -1072,7 +1072,7 @@ export const useCompanySubmit = ({
       printPickingSlips: order.printPickingSlips ?? true,
       isPickup: order.isPickup ?? false,
       isIncidental: order.isIncidental ?? false,
-      isOverlengte: order.isOverlengte ?? false,
+      isOverlength: order.isOverlength ?? false,
       amountExVat: order.amountExVat ?? "0.00",
       weightKg: order.weightKg ?? "0.000",
       gainPercent: order.gainPercent ?? "0.00",
@@ -1401,7 +1401,7 @@ export const useCompanySubmit = ({
     isMailed: values.isMailed,
     arrangeTransport: values.arrangeTransport,
     pickupDropoffCdPurchases: values.pickupDropoffCdPurchases,
-    isOverlengte: values.isOverlengte,
+    isOverlength: values.isOverlength,
     remarks: values.remarks || undefined,
   });
 
@@ -1447,7 +1447,7 @@ export const useCompanySubmit = ({
       isMailed: order.isMailed ?? false,
       arrangeTransport: order.arrangeTransport ?? false,
       pickupDropoffCdPurchases: order.pickupDropoffCdPurchases ?? false,
-      isOverlengte: order.isOverlengte ?? false,
+      isOverlength: order.isOverlength ?? false,
       remarks: order.remarks ?? "",
     });
     setIsPurchaseOrderDialogOpen(true);
@@ -1502,7 +1502,7 @@ export const useCompanySubmit = ({
     isPickup: values.isPickup,
     isIncidental: values.isIncidental,
     isConsignment: values.isConsignment,
-    isOverlengte: values.isOverlengte,
+    isOverlength: values.isOverlength,
     handlingBlocked: values.handlingBlocked,
     totalWeightKg: values.totalWeightKg || "0.00",
     totalExclVat: values.totalExclVat || "0.00",
@@ -1556,7 +1556,7 @@ export const useCompanySubmit = ({
       isPickup: quote.isPickup ?? false,
       isIncidental: quote.isIncidental ?? false,
       isConsignment: quote.isConsignment ?? false,
-      isOverlengte: quote.isOverlengte ?? false,
+      isOverlength: quote.isOverlength ?? false,
       handlingBlocked: quote.handlingBlocked ?? false,
       totalWeightKg: quote.totalWeightKg ?? "0.00",
       totalExclVat: quote.totalExclVat ?? "0.00",

@@ -199,9 +199,9 @@ export const useQuoteSubmit = ({
           ? values.consignmentDurationUnit || null
           : null,
         isInternalProduction: values.isInternalProduction,
-        isKlantMateriaal: values.isKlantMateriaal,
+        isCustomerMaterial: values.isCustomerMaterial,
         weightType: values.weightType || null,
-        isOverlengte: values.isOverlengte,
+        isOverlength: values.isOverlength,
         isPrinted: values.isPrinted,
         isMailed: values.isMailed,
         isFaxed: values.isFaxed,

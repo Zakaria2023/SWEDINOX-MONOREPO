@@ -51,7 +51,7 @@ export const createCounterOrderSchema = () =>
     printPickingSlips: z.boolean(),
     isPickup: z.boolean(),
     isIncidental: z.boolean(),
-    isOverlengte: z.boolean(),
+    isOverlength: z.boolean(),
     isPrinted: z.boolean(),
     isMailed: z.boolean(),
     isFaxed: z.boolean(),

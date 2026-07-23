@@ -100,7 +100,7 @@ export const PurchaseOrderEditForm = ({ purchaseOrder }: Props) => {
           <Input id="reference" {...register("reference")} disabled={isPending} />
         </div>
         <div>
-          <FormLabel htmlFor="ourReference">Onze referentie</FormLabel>
+          <FormLabel htmlFor="ourReference">Our reference</FormLabel>
           <Input
             id="ourReference"
             {...register("ourReference")}

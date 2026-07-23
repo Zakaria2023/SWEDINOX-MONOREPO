@@ -294,7 +294,7 @@ export const PurchaseOrderDialog = ({
               )}
             />
             <Controller
-              name="isOverlengte"
+              name="isOverlength"
               control={form.control}
               render={({ field }) => (
                 <CheckboxField

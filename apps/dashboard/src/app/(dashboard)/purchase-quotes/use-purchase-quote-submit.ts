@@ -182,7 +182,7 @@ export const usePurchaseQuoteSubmit = ({
 
         purchaseOrderType: values.purchaseOrderType || null,
         weightType: values.weightType || null,
-        isOverlengte: values.isOverlengte,
+        isOverlength: values.isOverlength,
         isConsignment: values.isConsignment,
 
         paymentTerms: values.paymentTerms || null,

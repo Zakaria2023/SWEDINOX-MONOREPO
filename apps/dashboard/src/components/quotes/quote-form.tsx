@@ -102,7 +102,7 @@ export const QuoteForm = ({ companies, clerkUsers, contracts }: Props) => {
           </div>
 
           <div>
-            <FormLabel htmlFor="ourReference">Onze referentie</FormLabel>
+            <FormLabel htmlFor="ourReference">Our reference</FormLabel>
             <Input id="ourReference" {...register("ourReference")} />
           </div>
 
@@ -235,10 +235,10 @@ export const QuoteForm = ({ companies, clerkUsers, contracts }: Props) => {
           />
           <Controller
             control={control}
-            name="isKlantMateriaal"
+            name="isCustomerMaterial"
             render={({ field }) => (
               <FormCheckboxCard
-                label="Klant materiaal"
+                label="Customer material"
                 checked={field.value}
                 active={field.value}
                 onChange={(e) => field.onChange(e.target.checked)}
@@ -247,7 +247,7 @@ export const QuoteForm = ({ companies, clerkUsers, contracts }: Props) => {
           />
           <Controller
             control={control}
-            name="isOverlengte"
+            name="isOverlength"
             render={({ field }) => (
               <FormCheckboxCard
                 label="Overlength"

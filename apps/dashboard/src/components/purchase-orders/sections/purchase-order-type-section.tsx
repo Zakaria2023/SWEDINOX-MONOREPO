@@ -46,7 +46,7 @@ export const PurchaseOrderTypeSection = ({
       <div className="flex flex-wrap gap-4">
         <Controller
           control={control}
-          name="isOverlengte"
+          name="isOverlength"
           render={({ field }) => (
             <FormCheckboxCard
               label="Overlength"

@@ -680,12 +680,12 @@ export const resolveOrderTypeLabel = (flags: {
   isConsignment?: boolean | null;
   isIncidental?: boolean | null;
   isInternalProduction?: boolean | null;
-  isKlantMateriaal?: boolean | null;
+  isCustomerMaterial?: boolean | null;
 }): string => {
   if (flags.isConsignment) {
     return "Consignment";
   }
-  if (flags.isKlantMateriaal) {
+  if (flags.isCustomerMaterial) {
     return "Customer material";
   }
   if (flags.isInternalProduction) {
