@@ -1,635 +1,465 @@
-===============================================================================
-Phase 1 — Master data (the foundation)
-===============================================================================
+Step 1.1 — Create the company
 
-Nothing works until these exist. Do them first.
+DO: /companies/add
 
-Step 1.1 — Create a Company (CREATE /companies/add)
-
-This is the single most important form: it's the origin point for addresses,
-contacts, communication settings, texts, roles, and follow-ups.
-
-Do:
-
-- Fill Company Name (Code is auto-assigned).
-- Set roles — tick Customer and Supplier so this one company can be used on both
-  the sales side and the purchase side while testing.
-- Add at least one Address (tag it delivery so delivery reports pick it up).
-- Add at least one Contact person (first/last name, email, city — many reports
-  read the first contact).
-- Optionally add a Communication Setting, a Text, and Sales settings
+- Company name (the code is auto-assigned).
+- Roles: tick BOTH Customer and Supplier (at least one role is required — the
+  form refuses to save with none). Using both lets this one company drive the
+  sales side and the purchase side.
+- Add at least one Address; tag it Delivery.
+- Add at least one Contact (last name is required — an empty contact is
+  rejected). Give it a first name, email and city too; many reports read the
+  first contact.
+- Optionally add a Communication setting, a Text, and Sales settings
   (representative, customer group, region, credit limit).
 
-Then check:
+CHECK:
 
-- REPORT /companies — your company appears.
-- REPORT /addresses — the address appears, linked to the company.
-- REPORT /communication-settings — the setting appears (if added).
-- REPORT /texts — the text appears (if added).
-- REPORT /customer-overview and /customers-and-prospects — appear (customer role).
-- REPORT /suppliers — appears (supplier role).
-- REPORT /credit-information-customers — appears with credit settings.
-- REPORT /contact-persons-customers-and-prospects — the contact appears (customer
-  role).
-- REPORT /contact-persons-suppliers — the contact appears (supplier role).
-- REPORT /address-distances — one row per address pair; the distance is 0/blank
-  until a routing/geocoding process fills it, so a fresh test shows the pairs
-  only.
-- REPORT /customer-stock — empty until goods are consigned to a customer (see
-  Step 3.3); it lists stock the customer holds but you still own.
+- /companies — the company appears.
+- /addresses — the address appears, linked to the company.
+- /contact-persons-customers-and-prospects — the contact appears (customer role).
+- /contact-persons-suppliers — the contact appears (supplier role).
+- /customer-overview and /customers-and-prospects — appear (customer role).
+- /suppliers — appears (supplier role).
+- /credit-information-customers — appears with the credit settings.
+- /communication-settings and /texts — appear if you added them.
+- /address-distances — one row per address pair (distance stays blank until a
+  routing process fills it).
 
-Step 1.2 — Create a Warehouse (CREATE /warehouses/add)
+Step 1.2 — Warehouse, sub section, location, machine
 
-Creating a warehouse auto-creates an empty warehouse work order.
+DO:
 
-Then check:
+- /warehouses/add — create a warehouse. This auto-creates an empty warehouse
+  work order.
+- /warehouse-sub-sections/add — create a sub section, linked to the warehouse.
+- /locations/add — create a storage location (bin/shelf) in the warehouse.
+- /machines/add — create a machine; set its stock location to the location above.
 
-- REPORT /warehouses — the warehouse appears.
-- REPORT /warehouse-work-orders — a work order was auto-created for it.
+CHECK:
 
-Step 1.3 — Create a Warehouse Sub Section (CREATE /warehouse-sub-sections/add)
+- /warehouses, /warehouse-sub-sections, /locations, /machines — all appear.
+- /warehouse-work-orders — a work order was auto-created for the warehouse.
 
-Link it to the warehouse from Step 1.2.
+Step 1.3 — Contract group and contract
 
-Then check:
+DO:
 
-- REPORT /warehouse-sub-sections — the sub section appears.
+- /contract-groups — New Group (modal) — create a group.
+- /contracts/add — create a contract, pick the group, link it to the company.
+  To make the sales pricing meaningful later, set a discount on it (a group
+  discount or line discount tier, or a fixed gross price).
 
-Step 1.4 — Create a Location (CREATE /locations/add)
+CHECK:
 
-A storage spot (bin/shelf) inside the warehouse.
+- /contracts — the contract appears.
+- /contracts-per-customer — appears (company has the customer role).
+- /contracts-per-supplier — appears (company has the supplier role).
 
-Then check:
+Step 1.4 — Text category
 
-- REPORT /locations — the location appears.
+DO: /text-categories/add — create a category (groups reusable text blocks).
+CHECK: /text-categories — the category appears.
 
-Step 1.5 — Create a Machine (CREATE /machines/add)
+Step 1.5 — Product group and product
 
-Set its Stock Location to the location from Step 1.4.
+DO:
 
-Then check:
+- /product-groups/add — create a top-level group. Set a preferred supplier
+  (the company) and a revenue group so reorder and revenue reports work.
+- /products/new — create a product in that group. Tick Stock product and
+  Standard product, set dimensions and theoretical weight, and set a price unit.
 
-- REPORT /machines — the machine appears.
+CHECK:
 
-Step 1.6 — Create Contract Group and Contract
+- /product-groups and /products — both appear.
 
-Do:
+Step 1.6 — Price the catalogue
 
-- On /contract-groups, click New Group (modal) — create a group.
-- On /contracts/add, create a contract, pick the group, link it to your company.
+DO: /product-prices — set "Default markup %" (25 is a good test value) and click
+Recalculate prices. For every product it computes:
 
-On the contract, tick at least one discount (Group discount or Line discount) and
-add a tier or two (e.g. 0% from 0, 5% from 1000) — that is what turns into the
-net price ladder in Step 1.6a.
+- APP — the weighted average of what was actually paid, from received goods. It
+  is 0,00 until Flow 2 has receipts, so run this AGAIN after Step 2.3.
+- Replacement price — kept as maintained, or seeded from the APP when still 0.
+- Base price — the fixed sales price if set, otherwise replacement price plus
+  the markup. This is the list price sales prices start from.
+- Price date — set to today.
 
-Then check:
+CHECK:
 
-- REPORT /contracts — the contract appears.
-- REPORT /contracts-per-customer — appears (company has customer role).
-- REPORT /contracts-per-supplier — appears (company has supplier role).
+- /product-prices — Replacement price, Base price, Markup and APP are filled,
+  with the product's main group, subgroup and preferred supplier alongside.
 
-Step 1.6a — Price the contract (ACTION /net-prices)
+Step 1.7 — Contract net prices (agreed prices)
 
-Run this after Step 1.9 has given the products a base price. Open /net-prices and
-click "Generate from contracts". For every customer contract with no net prices
-yet it works out what that customer actually pays:
+DO: /net-prices — click Generate from contracts. For every customer contract
+with no net prices yet, it prices the products that customer has ordered (or the
+standard catalogue) from the base price with the contract's discounts applied,
+producing one row per quantity break.
 
-- The products priced are the ones that customer has ordered before; a customer
-  with no order history gets the standard product catalogue.
-- The starting point is the product's base price, unless the contract overrides
-  the gross price — then that value is used instead.
-- The contract's group discount and line discount stack, and an extra discount
-  comes off on top of both.
-- Every quantity break in either tier ladder produces its own row, so a bigger
-  order finds a cheaper price (the FromQty column).
+CHECK:
 
-Contracts that already have net prices are skipped, so it can be re-run.
+- /net-prices — one row per contract/product/quantity break, showing base price,
+  discount, net price and the validity window. (Values are only meaningful once
+  Step 1.6 has produced non-zero base prices.)
 
-Then check:
+Step 1.8 — Option prices (processing options)
 
-- REPORT /net-prices — one row per contract, product and quantity break, showing
-  base price, total discount and the resulting net price with its validity
-  window (taken from the contract's start and end dates). Filter by contract code
-  range, validity window or company code.
+DO: /option-prices-per-product — this lists the per-product prices of the
+processing options (sawing, grinding, etc.) defined as sales options.
 
-Step 1.7 — Create Text Category (CREATE /text-categories/add)
+CHECK:
 
-Used to group the reusable text blocks.
-
-Then check:
-
-- REPORT /text-categories — the category appears.
-
-Step 1.8 — Create Product Group then Product
-
-Do:
-
-- CREATE /product-groups/add — create a top-level group. Set a preferred supplier
-  (your company) and a revenue group so reorder/revenue reports work.
-- CREATE /products/new — create a product, assign it to that group. Tick Stock
-  Product and set dimensions and theoretical weight.
-
-Then check:
-
-- REPORT /product-groups and REPORT /products — both appear.
-
-Step 1.9 — Price the catalogue (ACTION /product-prices)
-
-Products are created without a sales price. Open /product-prices, set "Default
-markup %" (25 is a sensible test value) and click "Recalculate prices". For every
-product it works out:
-
-- APP — the weighted average of what was actually paid, from the goods received
-  against purchase orders. It is 0,00 until Phase 2 has receipts, so run this
-  again after Step 2.3.
-- Replacement price — kept as maintained, or seeded from the APP when it is
-  still zero, so a bought product always has a cost basis.
-- Base price — the Fixed sales price (FSP) when one is set, otherwise the
-  replacement price plus the markup. This is the list price quotes and orders
-  are priced from.
-- Price date — set to today, which is what the "Price date from" filter reads.
-
-Then check:
-
-- REPORT /product-prices — Replacement price, Base price, Markup and APP are
-  filled, with the product's main group, subgroup and preferred supplier
-  alongside. Use the product code range filter to narrow it down.
-
-Step 1.10 — Create options and price them (ACTION /option-prices-per-product)
-
-Options are the processing steps sold alongside the material — sawing, bending,
-polishing. They are what the Options revenue report later reads.
-
-Do:
-
-- Open /option-prices-per-product and click "New option". Give it a short code
-  (e.g. Z), a name (Sawing), a processing type, a price unit and a base and cost
-  price. Create at least two so the revenue report has something to compare.
-- Click "Price options per product". It opens a price for every product/active
-  option pair that has none yet, seeded from the option's own base and cost
-  price and valid from today until 31-12-9999.
-
-Pairs that already have a price are left alone, so an option you priced by hand
-keeps its value and the action can be re-run after adding products or options.
-
-Then check:
-
-- REPORT /option-prices-per-product — one row per product and option, with the
-  option code, name, price unit, validity window, base price and cost price.
+- /option-prices-per-product — appears with option code, price unit and validity.
 
 ===============================================================================
-Phase 2 — Purchasing (this is what creates stock)
+FLOW 2 — Purchasing and stock (this is what creates stock)
 ===============================================================================
 
-There is no manual "add stock" screen. Stock lots are born from purchase orders
-and production. So to get anything into the warehouse, buy it.
+There is no manual "add stock" screen. Stock is born from purchase orders and
+from production. To get anything into the warehouse, buy it.
 
-Step 2.1 — Purchase Quote / Purchase Request (optional)
+Step 2.1 — Purchase quote / request (optional)
 
-Do:
+DO:
 
-- CREATE /purchase-quotes/new — request a supplier quote.
-- CREATE /purchase-requests/new — internal request to buy.
+- /purchase-quotes/new — request a supplier quote (saves the header only).
+- /purchase-requests/new — internal request to buy.
+- /purchase-quotes-overview — click Generate quote lines to fill each empty
+  quote with lines (from what has been ordered from that supplier, or their
+  catalogue). Quotes that already have lines are skipped.
 
-Then check:
+CHECK:
 
-- REPORT /purchase-quotes and /purchase-requests.
-- REPORT /purchase-orders-and-quotes — merges orders and quotes.
-- REPORT /purchase-quotes-overview — the New Purchase Quote form saves the quote
-  header only, so open this page and click "Generate quote lines" to fill each
-  empty quote with lines (taken from what has been ordered from that supplier,
-  or their product catalogue). Quotes that already have lines are skipped.
+- /purchase-quotes, /purchase-requests, /purchase-orders-and-quotes.
+- /purchase-quotes-overview — one row per generated quote line.
 
-Step 2.2 — Create a Purchase Order (CREATE /purchase-orders/new)
+Step 2.2 — Purchase order (makes stock)
 
-Pick your supplier company, add a product line for the product from Step 1.8.
-Creating the order opens incoming stock (a pending stock lot plus an "in" movement).
+DO: /purchase-orders/new — pick the supplier company, add a product line for the
+product from Step 1.5. Creating the order opens incoming stock (a pending stock
+lot plus an "in" movement).
 
-Then check:
+CHECK:
 
-- REPORT /purchase-orders — appears.
-- REPORT /purchase-lines — the line appears.
-- REPORT /stock — a new stock lot exists (status pending/received).
-- REPORT /stock-movements — an In movement with the purchase order as its source.
-- REPORT /stock-on-location and /stock-history — reflect the new lot.
-- REPORT /purchase-orders-to-be-received — the line shows as outstanding.
+- /purchase-orders — appears.
+- /purchase-lines — the line appears.
+- /stock — a new stock lot exists (status pending).
+- /stock-movements — an In movement with the purchase order as its source.
+- /stock-on-location and /stock-history — reflect the new lot.
+- /purchase-orders-to-be-received — the line shows as outstanding.
 
-Step 2.3 — Create a Purchase Invoice (CREATE /purchase-invoices/add)
+Step 2.3 — Receive the goods (per line or all)
 
-Pick the supplier. A "Stock items" section then appears listing the supplier's
-pending stock lots (created by the purchase order). You MUST click Add line and
-pick a lot with a quantity for each line you want to invoice — an invoice saved
-with no lines has a 0.00 total and produces no invoice lines. Adding lines draws
-down that stock and posts to the purchase ledger.
+DO: /purchase-orders-to-be-received. Two ways, both real:
 
-Then check:
+- Per line: click Receive on a single line's Action button.
+- All at once: click Receive goods (top right) to receive every open line.
+  Each records a receival and marks the line received.
 
-- REPORT /purchase-invoices — the invoice appears.
-- REPORT /purchase-invoice-line — one row per line you added (empty if you added
-  none).
-- REPORT /supplier-revenue and /supplier-revenue-per-revenue-group.
-- REPORT /purchases-and-sales-per-revenue-group (purchase side).
+Then re-run /product-prices — Recalculate prices, so APP / replacement / base
+price stop being 0,00 now that there is a receipt to cost from.
 
-Goods receipt — open /purchase-orders-to-be-received and click "Receive goods".
-It records a receival for every open purchase-order line and marks it received.
-That one action fills three reports:
+CHECK:
 
-- REPORT /purchase-receivals — one row per received line.
-- REPORT /receipts — the same receipts totalled per date, supplier and product.
-- REPORT /purchase-results — purchase value against today's replacement price.
+- /purchase-receivals — one row per received line.
+- /receipts — the same receipts totalled per date, supplier and product.
+- /purchase-results — purchase value against today's replacement price.
+- /purchase-invoices-to-be-received — a received-but-not-yet-invoiced order
+  appears here, and drops off once you invoice it (Step 2.4).
 
-It also drives REPORT /purchase-invoices-to-be-received: a received purchase order
-that has NOT been invoiced yet appears there, and drops off once you invoice it. So
-to see a row there, create a purchase order, receive it, but don't invoice it yet.
+Step 2.4 — Purchase invoice
 
-Step 2.3a — Register the batches (ACTION /batches)
+DO: /purchase-invoices/add — pick the supplier. A Stock items section lists the
+supplier's pending lots. Click Add line and pick a lot with a quantity for every
+line you want to invoice — an invoice saved with no lines has a 0,00 total and
+produces no invoice lines. Adding lines draws down that stock and posts to the
+purchase ledger.
 
-Run this after the goods receipt above. Open /batches and click "Register from
-receipts". For every goods receipt that has no batch yet it combines:
+CHECK:
 
-- the receipt — what arrived, when, on which purchase order, from which
-  supplier,
-- the stock lot that receipt created — the mill's charge number, quality, stock
-  category, sheet/bundle number and dimensions,
+- /purchase-invoices — the invoice appears.
+- /purchase-invoice-line — one row per line you added.
+- /supplier-revenue and /supplier-revenue-per-revenue-group.
+- /purchases-and-sales-per-revenue-group (purchase side).
 
-into one traceable batch. A lot with no internal charge number yet gets the next
-one for the receipt year (IC-YYYY-0001, IC-YYYY-0002, …) and that number is
-written back onto the stock lot, so stock and batch always agree.
+Step 2.5 — Purchase return order (optional)
 
-Receipts that already have a batch are skipped, so it can be re-run.
-
-Then check:
-
-- REPORT /batches — one row per received line, with the internal charge number
-  filled in. Filter by receipt date range, supplier code or product code.
-- REPORT /stock — the lot now carries the same internal charge number.
-
-Step 2.3b — Track the mill certificates (ACTION /certificates-received)
-
-Open /certificates-received and click "Open certificates for batches". Every
-registered batch gets the certificate it is owed:
-
-- Which certificate is derived from the options the purchase line was ordered
-  under — a line bought with a 3.1 gets a 3.1, everything else gets the 2.1
-  declaration that always accompanies the goods.
-- The purchase line number, its reference and the order's own reference (used as
-  the bill of lading) come across, so the certificate can be matched to the
-  shipment it arrived with.
-- The certificate starts outstanding: no received date, and "Mand. ign. doc."
-  ticked so the goods are not held up waiting for the file.
-
-When the document actually arrives, click Link on that row and enter the document
-code and file name. That stamps today's date, clears the ignore flag, and copies
-the same document details onto the batch.
-
-Batches that already have a certificate are skipped, so it can be re-run.
-
-Then check:
-
-- REPORT /certificates-received — tick "To be linked only" to see just the
-  certificates still outstanding; the ones you linked drop off that list and show
-  a received date.
-- REPORT /batches — the linked batch now shows its document code, file name and
-  certificate type.
-
-Step 2.4 — Purchase Return Order (optional, CREATE /purchase-return-orders/new)
-
-Then check:
-
-- REPORT /purchase-return-orders — the return order appears.
+DO: /purchase-return-orders/new.
+CHECK: /purchase-return-orders — the return order appears.
 
 ===============================================================================
-Phase 3 — Sales (this is what consumes stock)
+FLOW 3 — Sales (this is what consumes stock)
 ===============================================================================
 
 Now that stock exists, sell it.
 
-Step 3.1 — Create a Quote (CREATE /quotes/new)
+Step 3.1 — Quote with lines
 
-Pick your customer and contact. The New Quote form saves the quote header only.
+DO: /quotes/new — pick the customer and contact. In the Lines section, add each
+line: pick a product, enter quantity, dimensions and options, click Add line.
+Prices are NOT typed — on save they are resolved on the server from:
 
-Then check:
+1. the contract's agreed net price for the product, if one exists; else
+2. the product's base price with the contract's group/line discounts; else
+3. the base price on its own.
+   Cost is the product's replacement price, so profit and margin are real.
 
-- REPORT /quotes — the quote appears with all totals at 0,00 (no lines yet).
+CHECK:
 
-Step 3.1a — Fill the quote lines (ACTION /quote-lines)
+- /quotes — the quote appears; its header totals (materials revenue, total
+  excl./incl. VAT, weight, avg. kilo price) roll up from the lines.
+- /quote-lines — one row per quoted line, with gross price, discounts, net
+  price, amount, cost, profit and margin.
 
-Open /quote-lines and click "Generate quote lines". It fills every quote that has
-no lines yet:
+Step 3.2 — Convert the quote into an order
 
-- If the quote's customer has ordered before, their order lines are re-quoted —
-  same product, quantity, dimensions and the price that product last sold for.
-- A customer with no order history is quoted the standard product catalogue
-  (products with "Standard product" ticked) at quantity 1.
-- Cost price is always the product's replacement price, so profit and profit
-  margin are real numbers, not zeros.
+DO: /quote-lines — in the "Convert quote to order" box pick the quote and click
+Convert. Each quote line is allocated against the pending stock lots for its
+product (oldest receipt first, spanning lots), reserving stock the same way the
+order form does. The new order inherits the quote's customer, references,
+delivery/payment terms, order-type flags and contract. A stock shortfall refuses
+the whole conversion and names the short product — buy/receive more first.
 
-Quotes that already have lines are skipped, so it is safe to re-run after adding
-more quotes.
+CHECK:
 
-Then check:
+- /quote-lines — "Converted to" names the new order; the line status is Released.
+- /orders and /order-lines — the new order and its priced lines appear.
+- /stock — the lot's Reserved goes up, Available goes down.
+- /reservations — a reservation row plus summary appear.
+- /deliveries — the reserved line shows with a Deliver button.
 
-- REPORT /quote-lines — one row per quoted line, with gross price, group/line
-  discount, net price, amount, cost, profit and margin.
-- REPORT /quotes — the header totals (Materials revenue, Total excl./incl. VAT,
-  Total weight, Avg. kilo price) are now rolled up from the lines.
+Step 3.3 — Create an order directly (alternative to 3.2)
 
-Step 3.1b — Convert the quote into an order (ACTION /quote-lines)
+DO: /orders/new — pick the customer, add a product line for the stocked product.
+Creating the order reserves stock against the lot from Flow 2. (This is the
+manual route; converting a quote in Step 3.2 produces the same result.)
 
-Still on /quote-lines, pick the quote in the "Convert quote to order" box and
-click Convert. This is the quote-to-order handover:
+CHECK: same as Step 3.2 (orders, order-lines, stock, reservations, deliveries).
 
-- Each quote line is allocated against the pending stock lots for its product,
-  oldest receipt first, spanning several lots when one is not enough.
-- The stock is reserved exactly the way the order form reserves it, so the lot
-  can never be oversold.
-- The new order inherits the quote's customer, contact, references, seller,
-  delivery and payment terms, order-type flags and contract link.
+- /deliveries-to-arrange — shows lines with no reservation (0 reserved).
 
-If there is not enough free stock the whole conversion is refused and it tells
-you which product is short and by how much — buy/receive stock first (Phase 2).
+Step 3.4 — Deliver the order
 
-Then check:
+DO: /deliveries — click Deliver on the reserved line. This ships the goods, adds
+an "out" stock movement and sets the line to delivered.
 
-- REPORT /quote-lines — "Converted to" now names the order, and the line status
-  flips to Released.
-- REPORT /orders and /order-lines — the new order and its lines appear.
-- REPORT /stock and /reservations — the lot's Reserved goes up.
+CHECK:
 
-Step 3.2 — Create an Order (CREATE /orders/new)
+- /deliveries — the line flips to delivered with a delivery date.
+- /stock and /stock-movements — an Out movement; remaining stock drops.
 
-Pick the customer, add a product line for the stocked product. Creating the order
-reserves stock against the lot from Phase 2. (Converting a quote in Step 3.1b
-produces the same result — this step is the manual route.)
+Step 3.5 — Invoice the delivered line
 
-Then check:
+DO: /invoices/add — bill the delivered order line. This posts accounting journal
+entries.
 
-- REPORT /orders — appears.
-- REPORT /order-lines — the line appears with cost/profit/margin.
-- REPORT /stock — the lot's Reserved goes up, Available goes down.
-- REPORT /reservations — a reservation row plus summary appear.
-- REPORT /deliveries — the reserved line shows with a Deliver button.
-- REPORT /deliveries-to-arrange — shows lines with no reservation (0 reserved).
+CHECK:
 
-Step 3.2a — Charge the options on the order lines (ACTION /options)
+- /invoices — appears with Excl./Incl. VAT totals.
+- /invoice-lines — the billed line appears.
+- /journal-entries — bookkeeping entries were posted.
+- /customer-revenue and its variants (per revenue group, per product group,
+  per revenue group split, sales and visits) light up.
+- /revenue-per-revenue-group, /revenue-per-product, /revenue-vs-budget.
+- /customer-overview — the Invoices count and revenue update.
 
-Needs Step 1.10 (options created and priced). Open /options and click "Generate
-from order lines". For every order line that carries no option charges yet, each
-option priced for that product and valid today is booked at that price times the
-line quantity; the option's cost price gives the cost, and the difference is the
-profit. The price is copied onto the charge, so repricing the option later does
-not rewrite revenue that was already booked.
+Step 3.6 — Counter order / return order / return lines (optional)
 
-Order lines that already carry option charges are skipped, so it can be re-run
-after adding more orders.
+DO:
 
-Then check:
+- /counter-orders/add — then check /counter-orders.
+- /return-orders/new — saves the return header; then check /return-orders.
+- /return-lines — click Generate from orders to create a return line per order
+  item (the New Return Order form does not capture line items).
 
-- REPORT /options — revenue, profit and margin per option, split by revenue
-  group and line status, with a total row. Filter by creation date range.
+CHECK: /counter-orders, /return-orders, /return-lines.
 
-Step 3.3 — Counter Order / Return Order (optional)
+Step 3.7 — Charges and options
 
-Do:
+DO:
 
-- CREATE /counter-orders/add — then check REPORT /counter-orders.
-- CREATE /return-orders/new — saves the return header only; then check REPORT
-  /return-orders.
-- To fill REPORT /return-lines, open /return-lines and click "Generate from
-  orders" — it creates a return order per sales order with a return line per
-  order item (the New Return Order form does not capture line items).
+- /charges — click Generate from orders to turn each order's lines and surcharges
+  into charge records. Orders already charged are skipped.
+- /options — the options revenue report; fills once order lines carry options.
 
-Step 3.4 — Deliver the order (ACTION /deliveries)
-
-Click Deliver on the reserved line. This ships the goods and updates stock (an
-"out" movement) and sets the line to delivered.
-
-Then check:
-
-- REPORT /deliveries — line flips to delivered with a delivery date.
-- REPORT /stock and /stock-movements — an Out movement; remaining stock drops.
-
-Step 3.5 — Create an Invoice (CREATE /invoices/add)
-
-Bill the delivered order line. This posts accounting journal entries.
-
-Then check:
-
-- REPORT /invoices — appears with Excl./Incl. VAT totals.
-- REPORT /invoice-lines — the billed line appears.
-- REPORT /journal-entries — bookkeeping entries were posted.
-- REPORT the customer revenue reports light up: /customer-revenue,
-  /customer-revenue-per-revenue-group, /customer-revenue-per-product-group,
-  /customer-revenue-per-revenue-group-split, /customer-revenue-sales-and-visits.
-- REPORT /revenue-per-revenue-group, /revenue-per-product, /revenue-vs-budget.
-- REPORT /customer-overview — the Invoices count and revenue update.
+CHECK: /charges (customer, revenue group, amount, cost, profit); /options.
 
 ===============================================================================
-Phase 4 — CRM and activity
+FLOW 4 — Production and transport
 ===============================================================================
 
-Step 4.1 — Create a Visit Report (CREATE /visit-reports/add)
+These act on the order lines created in Flow 3.
 
-Log a visit or phone contact against your company. Mark has taken place.
+Step 4.1 — Production work orders
 
-Then check:
+DO: /production-workorders — click Generate from orders to turn order lines into
+production work-order lines (needs at least one machine and one order). Then
+press Complete on a line, which books finished goods into stock (a new lot plus
+an "in" movement).
 
-- REPORT /visit-reports — appears.
-- REPORT /visit-schedule, /change-visit-schedule, /to-visit-call — Last Call and
-  Last Visit dates update from the completed report.
-- REPORT /customer-overview — Visit count increments.
+CHECK: /production-workorders, /stock, /stock-movements.
 
-Step 4.2 — Add a Follow-up (company detail page /companies/{code})
+Step 4.2 — Transport work orders
 
-Open your company, add a follow-up note in the follow-ups section.
+DO: /transport-workorders — click Generate from orders to turn order lines into a
+new trip's transport lines (delivered to each order's company). Then press
+Complete, which marks the line shipped (no stock change — the stock already left
+at delivery).
 
-Then check:
+CHECK: /transport-workorders, /trip-data.
 
-- REPORT /follow-ups — appears, newest first.
+Step 4.3 — Manual stock correction
 
-Step 4.3 — Create a Complaint (CREATE /complaints/new)
+DO: /stock — use Correct on a lot to adjust its quantity, which creates a manual
+stock movement.
 
-Log a complaint against the company/product.
+CHECK:
 
-Then check:
-
-- REPORT /complaints — appears.
-- REPORT /customer-overview — Complaints count increments.
-
-Step 4.3a — Break the complaint into lines (ACTION /complaint-lines)
-
-The New Complaint form saves the complaint header only. Open /complaint-lines and
-click "Generate from complaints". For every complaint with no lines yet, each
-order line that customer has for the complained-about product becomes its own
-complaint line, carrying:
-
-- the order and order line number,
-- the seller from that order,
-- the warehouse section the stock sat in (the parent of the stock lot's
-  location),
-- the cause, solution, category, type, deadline, status and owner from the
-  complaint header,
-- the contact person as the correspondence name.
-
-A complaint whose product that customer never ordered still gets one line, taken
-straight from the header, so nothing is silently dropped. Complaints that already
-have lines are skipped, so it can be re-run.
-
-Then check:
-
-- REPORT /complaint-lines — one row per complained-about order line, with the
-  responsible and created-by names resolved from Clerk. Filter by creation date
-  range.
+- /stock-movements — the correction shows with your note.
+- /freight-movements — the goods-flow ledger mirrors every stock movement
+  (receipt, sale, production, correction) with its running balance.
 
 ===============================================================================
-Phase 5 — Warehouse and production actions
+FLOW 5 — CRM (visits, follow-ups, complaints)
 ===============================================================================
 
-These pages act on data created upstream (or by planning processes).
+Step 5.1 — Visit report and resolve it
 
-- ACTION /stock — use Correct to adjust a lot's quantity, which creates a manual
-  stock movement. Check REPORT /stock-movements (reason shows your note) and
-  REPORT /freight-movements — the goods-flow ledger now mirrors every stock
-  movement (purchase receipt, invoice/sale consumption, production, correction)
-  with its running stock balance.
-- REPORT /freight-flow — the monthly steel-federation (SFN) return built on top
-  of that ledger. See Phase 5a below.
+DO:
 
-===============================================================================
-Phase 5a — The SFN goods-flow return
-===============================================================================
+- /visit-reports/add — log a visit or phone contact against the company.
+- /visit-reports — click Resolve on the report's Action button. This marks it as
+  having taken place (and stamps today's visit date if it had none). A resolved
+  report is what the schedule and overview reports read.
 
-/freight-flow turns the freight-movement ledger into the monthly figures the
-steel federation asks for, per revenue group, in kilograms.
+CHECK:
 
-Step 5a.1 — Classify the counterparties (ACTION /freight-flow)
+- /visit-reports — the report shows Resolved.
+- /visit-schedule, /change-visit-schedule, /to-visit-call — Last Call and Last
+  Visit dates update from the resolved report.
+- /customer-overview — the Visit count increments.
 
-Which column a movement lands in depends on who the counterparty is. Open
-/freight-flow and expand "SFN classification" — it lists every company you have
-actually bought from or sold to. Set each one to:
+Step 5.2 — Follow-up
 
-- Producer / mill — the works that made the material,
-- SFN member — a fellow federation member,
-- Non-member — everyone else (this is the default, so an unclassified company
-  never inflates the producer or member figures).
+DO: open the company (/companies -> the company's detail page) and add a
+follow-up note in the follow-ups section.
 
-Domestic vs abroad is not set by hand: it comes from the company's main address
-country, and anything that is not the Netherlands (or blank) counts as abroad.
-The panel shows which side each company falls on.
+CHECK: /follow-ups — appears, newest first.
 
-Step 5a.2 — Read the return (REPORT /freight-flow)
+Step 5.3 — Complaint and complaint lines
 
-Leave the year and month blank for the current period, or give a range to see
-several months at once. Each row is one month for one revenue group:
+DO:
 
-- Starting stock — carried forward from everything that moved before it, so the
-  first reported month opens on the true historical balance and each later month
-  opens where the previous one closed.
-- Received from producers / producers abroad / SFN members / non-members —
-  purchase receipts, split by the supplier's classification.
-- Supplied SFN / Supplied non-SFN / Delivered abroad — sales, split by the
-  customer's classification. Abroad wins over membership, so an export is never
-  double-counted.
-- Stock difference — everything that was neither bought in nor sold out:
-  corrections, count differences, damage, production output, cancellations.
-- Ending inventory — always equals Starting + received − supplied + difference,
-  so the row reconciles on its face.
-- To order manufacturers / On order non-producers / On order abroad — what is
-  still outstanding on purchase orders (ordered minus received). This is a
-  position as at today, not a movement, so it is shown on the last reported
-  period only.
+- /complaints/new — log a complaint against the company/product.
+- /complaint-lines — click Generate from complaints to create the per-item lines.
 
-Quantities counted in kg are used as-is; anything counted in pieces or metres is
-weighed with the product's theoretical weight. A product with no theoretical
-weight contributes nothing rather than counting pieces as kilograms — so if a
-revenue group looks light, check the product's Theoretical Weight first.
-- ACTION /production-workorders — click "Generate from orders" to turn your order
-  lines into production work-order lines (needs at least one machine and one
-  order; re-running only adds newly-created order lines). Then press Complete on
-  a line, which books finished goods into stock (new lot plus "in" movement).
-  Check REPORT /production-workorders, /stock and /stock-movements.
-- ACTION /transport-workorders — click "Generate from orders" to turn your order
-  lines into a new trip's transport lines (delivered to each order's company).
-  Then press Complete, which marks the line shipped (no stock change, since the
-  stock already left at delivery). Check REPORT /transport-workorders.
-- REPORT /pick-statistics, /count-list-deviations, /warehouse-capacity,
-  /production-capacity, /production-capacity-details, /capacity-checks,
-  /time-registration, /transport-status-adjustments, /trip-data,
-  /production-batches, /nesting, /reoptimize, /sawing-layouts — these are
-  read-only and depend on planning/scan/optimisation processes that the basic
-  create flow does not write to, so they stay empty in a from-scratch test unless
-  that data is seeded.
+CHECK:
+
+- /complaints — appears.
+- /complaint-lines — one line per complaint item.
+- /customer-overview — the Complaints count increments.
 
 ===============================================================================
-Phase 6 — Financial blocks and advice reports
+FLOW 6 — Finance controls, advice and statistics
 ===============================================================================
 
-Once orders, invoices and stock exist, confirm the aggregate reports compute:
+Once orders, invoices and stock exist, confirm the aggregate reports compute.
 
-- REPORT /financially-blocked — set a financial block flag on an order/quote first;
-  the Unblock button here releases it and records who/when, then check REPORT
-  /unblocked-orders.
-- REPORT /blocked-deliveries — shows lines with a block flag set.
-- REPORT /order-lines-still-to-be-called and /orders-still-to-be-called — now
-  populated from every order. Each order line's planned quantity is set to the
-  ordered amount at creation and nothing is called off yet, so the full quantity
-  shows as still to be called (planned qty greater than called-off qty).
-- REPORT /order-advice, /sold-products-not-advised — reorder logic; needs stock
-  plus sales history to produce suggestions.
-- REPORT /stockon-advice — lists stock products whose product group has "Use
-  StockOp for this product" enabled (Product Group -> Stock policy). Enable that
-  flag on the group (and set a lead time / review period) and the product shows,
-  with an order-up-to level and a daily order decision.
-- REPORT /charges — open /charges and click "Generate from orders" to turn each
-  order's lines (and any order surcharges) into charge records (customer, revenue
-  group, amount, cost, profit). Orders already charged are skipped.
-- REPORT /inactive-companies — lists customers/prospects with no order in the
-  last 12 months, plus any company you flag by hand: on /companies use the
-  "Inactive" button in the row actions (it turns into "Activate" to undo).
-- REPORT /journal-entries, /credit-information-customers, /remarks-per-company —
-  verify they reflect your data.
+Step 6.1 — Financial block and unblock
+
+DO: set a financial block flag on an order/quote (the create forms have the
+flag), then /financially-blocked — click Unblock to release it (records who/when).
+
+CHECK:
+
+- /financially-blocked — the blocked order/quote is listed, then clears.
+- /unblocked-orders — the released order appears.
+- /blocked-deliveries — shows lines with a delivery block flag set.
+
+Step 6.2 — Call-off and advice reports
+
+CHECK:
+
+- /order-lines-still-to-be-called and /orders-still-to-be-called — every order
+  line's planned quantity is the ordered amount with nothing called off yet, so
+  the full quantity shows as still to be called.
+- /order-advice, /sold-products-not-advised — reorder logic; needs stock plus
+  sales history.
+- /stockon-advice — lists stock products whose product group has "Use StockOp"
+  enabled (set that flag and a lead time / review period on the group).
+
+Step 6.3 — SFN goods-flow return
+
+DO: /freight-flow — expand SFN classification and set each traded counterparty to
+Producer / SFN member / Non-member (unclassified counts as non-member). Domestic
+vs abroad comes from the company's main address country.
+
+CHECK: /freight-flow — the monthly goods flow per revenue group, in kilograms:
+starting stock carried forward, receipts split by supplier, sales split by
+customer, stock difference, ending inventory (which always reconciles), and the
+outstanding order book. Leave year/month blank for the current period.
+
+Step 6.4 — Inactive companies and remaining reports
+
+DO: /companies — the Inactive button in a row flags a company by hand (it turns
+into Activate to undo).
+
+CHECK:
+
+- /inactive-companies — customers/prospects with no order in 12 months, plus any
+  you flagged.
+- /journal-entries, /credit-information-customers, /remarks-per-company — reflect
+  your data.
 
 ===============================================================================
-Quick dependency map (cheat sheet)
+Quick dependency map
 ===============================================================================
 
 Company (customer + supplier) leads to:
 
-- Quotes / Orders / Counter Orders / Return Orders
-- Purchase Quotes / Requests / Orders / Invoices
-- Visit Reports / Follow-ups / Complaints
-- Contracts
+- Quotes / Orders / Counter orders / Return orders
+- Purchase quotes / requests / orders / invoices
+- Visit reports / Follow-ups / Complaints
+- Contracts and their net prices
 
-Product Group leads to Product, used on Quote, Order and Purchase Order lines.
+Product group -> Product -> Product prices -> Net prices, used on quote and
+order lines.
 
-Quote leads to Quote lines, which convert into an Order (reserving stock).
+Warehouse -> Sub section -> Location -> Machine.
 
-Warehouse leads to Sub Section, then Location, then Machine.
-
-Product prices feed Contract net prices and the price on every quoted line.
-
-Options are priced per product, then charged on order lines (Options revenue).
-
-Purchase Order creates a STOCK LOT (in).
-Receiving it creates a BATCH, which is owed a mill CERTIFICATE.
-
-Every stock movement is mirrored into the FREIGHT MOVEMENT ledger, which the
-SFN goods-flow return (/freight-flow) totals per month and revenue group.
-The stock lot is reserved by an Order line.
+Purchase order creates a STOCK LOT (in).
+Receiving it fills the receivals / receipts / results reports.
+A Quote's lines convert into an Order, which reserves the stock lot.
 Delivering the order removes stock (out).
-The delivered line is then billed by an Invoice.
-The Invoice posts Journal entries and feeds the Revenue reports.
+The delivered line is billed by an Invoice, which posts Journal entries and feeds
+the revenue reports.
 Production Complete also creates a STOCK LOT (in).
+Every stock movement is mirrored into the Freight movement ledger, which the SFN
+freight-flow return totals per month and revenue group.
 
-Golden path (the 8 steps that exercise the whole system):
+Golden path (the shortest run that exercises the whole system):
 
 1. Company (customer + supplier)
-2. Product Group
-3. Product
-4. Purchase Order (makes stock)
-5. Order (reserves stock)
-6. Deliver (ships stock)
-7. Invoice (posts revenue + journal)
-8. Visit Report + Complaint (CRM)
+2. Product group -> Product -> Recalculate prices
+3. Purchase order -> Receive goods (makes stock) -> Recalculate prices again
+4. Quote with lines -> Convert to order (reserves stock)
+5. Deliver (ships stock)
+6. Invoice (posts revenue + journal)
+7. Visit report -> Resolve, and Complaint -> Generate complaint lines
 
 After these, roughly 90 percent of the read-only reports have data.
+
+===============================================================================
+Pages that stay empty (planning / scan / lookup — no form writes to them)
+===============================================================================
+
+/nesting, /reoptimize, /sawing-layouts, /pick-statistics,
+/count-list-deviations, /capacity-checks, /production-capacity,
+/production-capacity-details, /warehouse-capacity, /time-registration,
+/transport-status-adjustments, /production-batches, /customer-stock (until goods
+are consigned), /address-distances (until a routing process runs), /industries
+(lookup data). These depend on planning, scanning or optimisation processes that
+the basic create flow does not write to, so they stay empty unless that data is
+seeded.
