@@ -29,6 +29,14 @@ Then check:
 - REPORT /customer-overview and /customers-and-prospects — appear (customer role).
 - REPORT /suppliers — appears (supplier role).
 - REPORT /credit-information-customers — appears with credit settings.
+- REPORT /contact-persons-customers-and-prospects — the contact appears (customer
+  role).
+- REPORT /contact-persons-suppliers — the contact appears (supplier role).
+- REPORT /address-distances — one row per address pair; the distance is 0/blank
+  until a routing/geocoding process fills it, so a fresh test shows the pairs
+  only.
+- REPORT /customer-stock — empty until goods are consigned to a customer (see
+  Step 3.3); it lists stock the customer holds but you still own.
 
 Step 1.2 — Create a Warehouse (CREATE /warehouses/add)
 
@@ -547,9 +555,10 @@ revenue group looks light, check the product's Theoretical Weight first.
 - REPORT /pick-statistics, /count-list-deviations, /warehouse-capacity,
   /production-capacity, /production-capacity-details, /capacity-checks,
   /time-registration, /transport-status-adjustments, /trip-data,
-  /production-batches — these are read-only and depend on planning/scan processes
-  that the basic create flow does not write to, so they stay empty in a
-  from-scratch test unless that data is seeded.
+  /production-batches, /nesting, /reoptimize, /sawing-layouts — these are
+  read-only and depend on planning/scan/optimisation processes that the basic
+  create flow does not write to, so they stay empty in a from-scratch test unless
+  that data is seeded.
 
 ===============================================================================
 Phase 6 — Financial blocks and advice reports
