@@ -93,29 +93,131 @@ export const getPurchaseOrdersToBeReceived = async (): Promise<
 export type ReceiveGoodsResult = {
   error?: string;
   success?: boolean;
+  received?: number;
+};
+
+// The transaction handle passed into db.transaction(async (tx) => ...).
+type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+type ReceivableLine = {
+  itemUuid: string;
+  purchaseOrderUuid: string | null;
+  purchaseOrderId: number;
+  supplierUuid: string | null;
+  productUuid: string | null;
+  lineNumber: number | null;
+  unit: SelectPurchaseOrderItems["unit"];
+  quantity: string;
+  qtyReceived: string | null;
+  kgPurchased: string | null;
+};
+
+const RECEIVABLE_LINE_COLUMNS = {
+  itemUuid: PurchaseOrderItems.uuid,
+  purchaseOrderUuid: PurchaseOrders.uuid,
+  purchaseOrderId: PurchaseOrders.id,
+  supplierUuid: PurchaseOrders.supplierUuid,
+  productUuid: PurchaseOrderItems.productUuid,
+  lineNumber: PurchaseOrderItems.lineNumber,
+  unit: PurchaseOrderItems.unit,
+  quantity: PurchaseOrderItems.quantity,
+  qtyReceived: PurchaseOrderItems.qtyReceived,
+  kgPurchased: PurchaseOrderItems.kgPurchased,
+};
+
+// Only orders that are still in flight have outstanding lines to receive.
+const OPEN_STATUSES = ["open", "confirmed", "pre_notified"] as const;
+
+// Books one line's outstanding quantity as received: a PurchaseLineReceivals
+// row plus setting the line's received quantity to full. Shared by the
+// per-line and receive-all actions so both record an identical receipt.
+const applyLineReceipt = async (
+  tx: Transaction,
+  line: ReceivableLine,
+  today: string,
+): Promise<void> => {
+  const outstanding = (
+    Number(line.quantity) - Number(line.qtyReceived ?? 0)
+  ).toFixed(3);
+
+  await tx.insert(PurchaseLineReceivals).values({
+    uuid: generateUuid(),
+    purchaseOrderUuid: line.purchaseOrderUuid,
+    purchaseOrderItemUuid: line.itemUuid,
+    productUuid: line.productUuid,
+    companyUuid: line.supplierUuid,
+    purchaseOrderCode: String(line.purchaseOrderId),
+    lineNumber: line.lineNumber,
+    receiptStatus: "received",
+    unit: line.unit,
+    qtyPlanned: line.quantity,
+    qtyActual: outstanding,
+    receivedQty: outstanding,
+    kgPlanned: line.kgPurchased,
+    receiptDate: today,
+    deliveryDateActual: today,
+  });
+
+  await tx
+    .update(PurchaseOrderItems)
+    .set({ qtyReceived: line.quantity })
+    .where(eq(PurchaseOrderItems.uuid, line.itemUuid));
+};
+
+const revalidateReceiptPaths = () => {
+  revalidatePath("/purchase-orders-to-be-received");
+  revalidatePath("/purchase-invoices-to-be-received");
+  revalidatePath("/purchase-receivals");
+  revalidatePath("/receipts");
+};
+
+// Receives a single outstanding purchase-order line — the per-line "Receive"
+// button in the table.
+export const receivePurchaseOrderLine = async (
+  purchaseOrderItemUuid: string,
+): Promise<ReceiveGoodsResult> => {
+  try {
+    const [line] = await db
+      .select(RECEIVABLE_LINE_COLUMNS)
+      .from(PurchaseOrderItems)
+      .innerJoin(
+        PurchaseOrders,
+        eq(PurchaseOrderItems.purchaseOrderUuid, PurchaseOrders.uuid),
+      )
+      .where(
+        and(
+          eq(PurchaseOrderItems.uuid, purchaseOrderItemUuid),
+          inArray(PurchaseOrders.status, [...OPEN_STATUSES]),
+          sql`${PurchaseOrderItems.quantity} - ${PurchaseOrderItems.qtyReceived} > 0`,
+        ),
+      )
+      .limit(1);
+
+    if (!line) {
+      return { error: "This line has already been fully received." };
+    }
+
+    const today = todayDateString();
+    await db.transaction((tx) => applyLineReceipt(tx, line, today));
+
+    revalidateReceiptPaths();
+    return { success: true, received: 1 };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "Failed to receive line",
+    };
+  }
 };
 
 // Records a goods receipt for every open purchase-order line that still has
-// quantity outstanding: a PurchaseLineReceivals row plus setting the line's
-// received quantity to full. This drives the Purchase receivals / Receipts
-// overviews and moves not-yet-invoiced orders onto Purchase invoices to be
-// received. Fully-received lines are skipped, so it can be re-run.
+// quantity outstanding. This drives the Purchase receivals / Receipts overviews
+// and moves not-yet-invoiced orders onto Purchase invoices to be received.
+// Fully-received lines are skipped, so it can be re-run.
 export const receiveOutstandingGoods =
   async (): Promise<ReceiveGoodsResult> => {
     try {
       const lines = await db
-        .select({
-          itemUuid: PurchaseOrderItems.uuid,
-          purchaseOrderUuid: PurchaseOrders.uuid,
-          purchaseOrderId: PurchaseOrders.id,
-          supplierUuid: PurchaseOrders.supplierUuid,
-          productUuid: PurchaseOrderItems.productUuid,
-          lineNumber: PurchaseOrderItems.lineNumber,
-          unit: PurchaseOrderItems.unit,
-          quantity: PurchaseOrderItems.quantity,
-          qtyReceived: PurchaseOrderItems.qtyReceived,
-          kgPurchased: PurchaseOrderItems.kgPurchased,
-        })
+        .select(RECEIVABLE_LINE_COLUMNS)
         .from(PurchaseOrderItems)
         .innerJoin(
           PurchaseOrders,
@@ -123,11 +225,7 @@ export const receiveOutstandingGoods =
         )
         .where(
           and(
-            inArray(PurchaseOrders.status, [
-              "open",
-              "confirmed",
-              "pre_notified",
-            ]),
+            inArray(PurchaseOrders.status, [...OPEN_STATUSES]),
             sql`${PurchaseOrderItems.quantity} - ${PurchaseOrderItems.qtyReceived} > 0`,
           ),
         );
@@ -142,40 +240,12 @@ export const receiveOutstandingGoods =
 
       await db.transaction(async (tx) => {
         for (const line of lines) {
-          const outstanding = (
-            Number(line.quantity) - Number(line.qtyReceived ?? 0)
-          ).toFixed(3);
-
-          await tx.insert(PurchaseLineReceivals).values({
-            uuid: generateUuid(),
-            purchaseOrderUuid: line.purchaseOrderUuid,
-            purchaseOrderItemUuid: line.itemUuid,
-            productUuid: line.productUuid,
-            companyUuid: line.supplierUuid,
-            purchaseOrderCode: String(line.purchaseOrderId),
-            lineNumber: line.lineNumber,
-            receiptStatus: "received",
-            unit: line.unit,
-            qtyPlanned: line.quantity,
-            qtyActual: outstanding,
-            receivedQty: outstanding,
-            kgPlanned: line.kgPurchased,
-            receiptDate: today,
-            deliveryDateActual: today,
-          });
-
-          await tx
-            .update(PurchaseOrderItems)
-            .set({ qtyReceived: line.quantity })
-            .where(eq(PurchaseOrderItems.uuid, line.itemUuid));
+          await applyLineReceipt(tx, line, today);
         }
       });
 
-      revalidatePath("/purchase-orders-to-be-received");
-      revalidatePath("/purchase-invoices-to-be-received");
-      revalidatePath("/purchase-receivals");
-      revalidatePath("/receipts");
-      return { success: true };
+      revalidateReceiptPaths();
+      return { success: true, received: lines.length };
     } catch (error) {
       return {
         error:

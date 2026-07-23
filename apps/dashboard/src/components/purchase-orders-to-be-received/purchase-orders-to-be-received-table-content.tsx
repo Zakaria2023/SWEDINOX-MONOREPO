@@ -1,6 +1,7 @@
 "use client";
 
 import { PurchaseOrderToReceiveRow } from "@/app/(dashboard)/purchase-orders-to-be-received/actions";
+import { ReceiveLineButton } from "@/components/purchase-orders-to-be-received/receive-line-button";
 import {
   Table,
   TableBody,
@@ -51,13 +52,14 @@ export const PurchaseOrdersToBeReceivedTable = ({ rows }: Props) => (
           <TableHead className="text-right">Kg still to receive</TableHead>
           <TableHead className="text-right">Order amount</TableHead>
           <TableHead>Purchaser</TableHead>
+          <TableHead className="text-right">Action</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {rows.length === 0 ? (
           <TableRow>
             <TableCell
-              colSpan={12}
+              colSpan={13}
               className="h-24 text-center text-muted-foreground"
             >
               No purchase orders awaiting delivery.
@@ -93,6 +95,11 @@ export const PurchaseOrdersToBeReceivedTable = ({ rows }: Props) => (
               </TableCell>
               <TableCell>
                 {row.purchaser ?? row.purchaserInitials ?? "—"}
+              </TableCell>
+              <TableCell className="text-right">
+                <ReceiveLineButton
+                  purchaseOrderItemUuid={row.purchaseOrderItemUuid}
+                />
               </TableCell>
             </TableRow>
           ))
