@@ -4,7 +4,6 @@ import {
 } from "@/app/(dashboard)/quote-lines/actions";
 import { PageHeading } from "@/components/layout/page-heading";
 import { ConvertQuoteToOrder } from "@/components/quote-lines/convert-quote-to-order";
-import { GenerateQuoteLinesButton } from "@/components/quote-lines/generate-quote-lines-button";
 import { QuoteLinesTable } from "@/components/quote-lines/quote-lines-table-content";
 import { PeriodFilter } from "@/components/ui/period-filter";
 
@@ -23,13 +22,10 @@ const QuoteLinesPage = async ({ searchParams }: Props) => {
 
   return (
     <div className="space-y-6 p-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <PageHeading
-          title="Quote lines"
-          description="Every quoted line with its dimensions, discounts and margin"
-        />
-        <GenerateQuoteLinesButton />
-      </div>
+      <PageHeading
+        title="Quote lines"
+        description="Every quoted line with its dimensions, discounts and margin"
+      />
       <PeriodFilter year={yearNum} month={monthNum} />
       <ConvertQuoteToOrder quotes={convertibleQuotes} />
       <QuoteLinesTable rows={rows} />

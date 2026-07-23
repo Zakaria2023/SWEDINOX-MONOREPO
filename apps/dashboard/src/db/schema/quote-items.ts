@@ -41,6 +41,7 @@ export const QuoteItems = mysqlTable(
     expirationReason: varchar("expiration_reason", { length: 255 }),
     description: varchar("description", { length: 255 }),
     reference: varchar("reference", { length: 255 }),
+    options: varchar("options", { length: 255 }),
     deliveryDate: date("delivery_date", { mode: "string" }),
 
     // ── Physical attributes ───────────────────────────────────────────────────

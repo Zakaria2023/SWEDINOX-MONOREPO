@@ -5,10 +5,12 @@ import { useQuoteSubmit } from "@/app/(dashboard)/quotes/use-quote-submit";
 import { ClerkUserOption } from "@/lib/server/clerk";
 import { CompanyOption } from "@/app/(dashboard)/companies/actions";
 import { ContractForProjectOption } from "@/app/(dashboard)/contracts/actions";
+import { ProductOption } from "@/app/(dashboard)/products/actions";
 import { Input } from "@/components/shadcn/input";
 import { Textarea } from "@/components/shadcn/textarea";
 import { Select } from "@/components/shadcn/select";
 import { DocumentUploader } from "@/components/document-uploader";
+import { QuoteLinesEditor } from "@/components/quotes/quote-lines-editor";
 import { FormActions } from "@/components/ui/form-actions";
 import { FormError } from "@/components/ui/form-error";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
@@ -19,9 +21,15 @@ type Props = {
   companies: CompanyOption[];
   clerkUsers: ClerkUserOption[];
   contracts: ContractForProjectOption[];
+  products: ProductOption[];
 };
 
-export const QuoteForm = ({ companies, clerkUsers, contracts }: Props) => {
+export const QuoteForm = ({
+  companies,
+  clerkUsers,
+  contracts,
+  products,
+}: Props) => {
   const {
     form,
     isPending,
@@ -552,6 +560,9 @@ export const QuoteForm = ({ companies, clerkUsers, contracts }: Props) => {
           Expired
         </label>
       </section>
+
+      {/* ── Lines ─────────────────────────────────────────────────────── */}
+      <QuoteLinesEditor control={control} products={products} />
 
       {/* ── Remarks ───────────────────────────────────────────────────── */}
       <section className="space-y-4">

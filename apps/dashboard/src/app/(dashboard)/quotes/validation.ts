@@ -5,8 +5,26 @@ import {
   invoicePaymentTerms,
   orderMethods,
   orderWeightTypes,
+  stockUnits,
 } from "@/lib/enums";
 import { todayDateString, currentYear } from "@/lib/helpers";
+
+// A line the salesperson adds to the quote. Only the product and a positive
+// quantity are required; the price is resolved on the server, so it is not
+// part of the form.
+export const quoteLineSchema = z.object({
+  productUuid: z.string().min(1, "Pick a product"),
+  quantity: z
+    .string()
+    .refine((v) => Number(v) > 0, "Quantity must be greater than 0"),
+  unit: z.enum(stockUnits).optional(),
+  lengthMm: z.string().optional(),
+  widthMm: z.string().optional(),
+  thicknessMm: z.string().optional(),
+  options: z.string().optional(),
+});
+
+export type QuoteLineFormValues = z.infer<typeof quoteLineSchema>;
 
 export const quoteSchema = z.object({
   // Header
@@ -71,6 +89,9 @@ export const quoteSchema = z.object({
   documents: z
     .array(z.object({ id: z.string(), fileName: z.string() }))
     .optional(),
+
+  // Line items
+  items: z.array(quoteLineSchema),
 });
 
 export type QuoteFormValues = z.infer<typeof quoteSchema>;
@@ -129,4 +150,6 @@ export const DEFAULT_QUOTE: QuoteFormValues = {
   remarks: "",
 
   documents: [],
+
+  items: [],
 };

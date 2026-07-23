@@ -234,7 +234,15 @@ export const useQuoteSubmit = ({
 
         remarks: values.remarks || null,
         documents: values.documents?.length ? values.documents : null,
-      });
+      }, values.items.map((item) => ({
+        productUuid: item.productUuid,
+        quantity: item.quantity,
+        unit: item.unit,
+        lengthMm: item.lengthMm ? Number(item.lengthMm) : null,
+        widthMm: item.widthMm ? Number(item.widthMm) : null,
+        thicknessMm: item.thicknessMm || null,
+        options: item.options || null,
+      })));
 
       setState(result);
       if (result.success) {
