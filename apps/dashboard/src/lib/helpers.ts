@@ -95,6 +95,15 @@ export const formatPercent = (value: number): string =>
   `${formatNumber(value)}%`;
 
 /**
+ * The internal charge number a received batch is traced by: the receipt year
+ * plus a zero-padded sequence within that year, e.g. `IC-2026-0001`.
+ */
+export const formatInternalChargeNumber = (
+  year: number,
+  sequence: number,
+): string => `IC-${year}-${String(sequence).padStart(4, "0")}`;
+
+/**
  * The initials of a person's name ("Jan de Vries" -> "JdV"), used by the
  * overviews that print a seller/purchaser as initials.
  */

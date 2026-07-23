@@ -23,6 +23,7 @@ import {
   Factory,
   MapPin,
   MessageSquareWarning,
+  PackageCheck,
   Search,
   ShoppingCart,
   Truck,
@@ -262,6 +263,12 @@ const NAV_GROUPS: NavGroup[] = [
         href: "/transport-status-adjustments",
       },
     ],
+  },
+  {
+    key: "batch-registration",
+    label: "Batch Registration",
+    icon: PackageCheck,
+    items: [{ label: "Batches", href: "/batches" }],
   },
   {
     key: "others",

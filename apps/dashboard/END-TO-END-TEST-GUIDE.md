@@ -234,6 +234,28 @@ It also drives REPORT /purchase-invoices-to-be-received: a received purchase ord
 that has NOT been invoiced yet appears there, and drops off once you invoice it. So
 to see a row there, create a purchase order, receive it, but don't invoice it yet.
 
+Step 2.3a — Register the batches (ACTION /batches)
+
+Run this after the goods receipt above. Open /batches and click "Register from
+receipts". For every goods receipt that has no batch yet it combines:
+
+- the receipt — what arrived, when, on which purchase order, from which
+  supplier,
+- the stock lot that receipt created — the mill's charge number, quality, stock
+  category, sheet/bundle number and dimensions,
+
+into one traceable batch. A lot with no internal charge number yet gets the next
+one for the receipt year (IC-YYYY-0001, IC-YYYY-0002, …) and that number is
+written back onto the stock lot, so stock and batch always agree.
+
+Receipts that already have a batch are skipped, so it can be re-run.
+
+Then check:
+
+- REPORT /batches — one row per received line, with the internal charge number
+  filled in. Filter by receipt date range, supplier code or product code.
+- REPORT /stock — the lot now carries the same internal charge number.
+
 Step 2.4 — Purchase Return Order (optional, CREATE /purchase-return-orders/new)
 
 Then check:
