@@ -529,6 +529,18 @@ export const stockUnits = [
 
 export type StockUnit = (typeof stockUnits)[number];
 
+// How a counterparty counts in the steel federation (SFN) goods-flow return:
+// a mill that makes the material, a fellow federation member, or anyone else.
+// Combined with whether the counterparty sits at home or abroad, this decides
+// which column of the "Freight flow (SFN)" report a movement lands in.
+export const sfnCounterpartyRoles = [
+  "producer",
+  "sfn_member",
+  "non_member",
+] as const satisfies readonly string[];
+
+export type SfnCounterpartyRole = (typeof sfnCounterpartyRoles)[number];
+
 export const customerLabelOptions = [
   "csv_file",
   "line_label",

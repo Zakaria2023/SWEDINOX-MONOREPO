@@ -10,6 +10,7 @@ import type {
   LeadTimeMethod,
   OrderWeightType,
   StockMode,
+  StockUnit,
   StockMovementType,
   TransporterPriceUnit,
   VatCode,
@@ -94,6 +95,42 @@ export const formatNumber = (value: number): string =>
  */
 export const formatPercent = (value: number): string =>
   `${formatNumber(value)}%`;
+
+// The home country for statistics purposes: a counterparty anywhere else counts
+// as "abroad" on the SFN goods-flow return.
+const DOMESTIC_COUNTRY_NAMES = ["nl", "nld", "netherlands", "nederland"];
+
+/**
+ * Whether a country name/code refers to the home country. A counterparty with
+ * no country recorded is treated as domestic, since an unknown address is far
+ * more likely to be a local one that was never filled in than an export.
+ */
+export const isDomesticCountry = (
+  country: string | null | undefined,
+): boolean => {
+  if (!country || country.trim() === "") {
+    return true;
+  }
+  return DOMESTIC_COUNTRY_NAMES.includes(country.trim().toLowerCase());
+};
+
+/**
+ * Converts a stock quantity to kilograms, which is the unit the goods-flow
+ * statistics are reported in. A quantity already counted in kg passes straight
+ * through; anything else is weighed with the product's theoretical weight per
+ * unit. A product with no theoretical weight contributes nothing rather than
+ * silently counting pieces as kilograms.
+ */
+export const toKilograms = (
+  quantity: number,
+  unit: StockUnit | null | undefined,
+  theoreticalWeightPerUnit: number | null | undefined,
+): number => {
+  if (unit === "kg") {
+    return quantity;
+  }
+  return quantity * (theoreticalWeightPerUnit ?? 0);
+};
 
 /**
  * The certificate a batch was bought with, read off the options the purchase

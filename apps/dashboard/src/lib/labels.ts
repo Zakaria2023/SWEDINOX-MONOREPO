@@ -62,6 +62,7 @@ import type {
   StockLabelPrintingOption,
   StockLabelType,
   StockMode,
+  SfnCounterpartyRole,
   StockUnit,
   StockMovementReason,
   StockMovementType,
@@ -830,6 +831,13 @@ export const STOCK_MODE_LABELS: Record<StockMode, string> = {
   fixed_value: "Fixed value",
 };
 
+export const SFN_COUNTERPARTY_ROLE_LABELS: Record<SfnCounterpartyRole, string> =
+  {
+    producer: "Producer / mill",
+    sfn_member: "SFN member",
+    non_member: "Non-member",
+  };
+
 export const STOCK_UNIT_LABELS: Record<StockUnit, string> = {
   kg: "KG",
   st: "ST",
@@ -870,18 +878,19 @@ export const STOCK_MOVEMENT_TYPE_LABELS: Record<StockMovementType, string> = {
   out: "Out",
 };
 
-export const STOCK_MOVEMENT_REASON_LABELS: Record<StockMovementReason, string> = {
-  purchase_receipt: "Purchase Receipt",
-  invoice_consumption: "Invoice Consumption",
-  purchase_order_cancelled: "Purchase Order Cancelled",
-  invoice_cancelled: "Invoice Cancelled",
-  sale_consumption: "Sale Consumption",
-  sale_invoice_cancelled: "Sale Invoice Cancelled",
-  manual_correction: "Manual Correction",
-  count_correction: "Count Correction",
-  damaged: "Damaged / Written Off",
-  production_output: "Production Output",
-};
+export const STOCK_MOVEMENT_REASON_LABELS: Record<StockMovementReason, string> =
+  {
+    purchase_receipt: "Purchase Receipt",
+    invoice_consumption: "Invoice Consumption",
+    purchase_order_cancelled: "Purchase Order Cancelled",
+    invoice_cancelled: "Invoice Cancelled",
+    sale_consumption: "Sale Consumption",
+    sale_invoice_cancelled: "Sale Invoice Cancelled",
+    manual_correction: "Manual Correction",
+    count_correction: "Count Correction",
+    damaged: "Damaged / Written Off",
+    production_output: "Production Output",
+  };
 
 export const CUSTOMER_LABEL_OPTION_LABELS: Record<CustomerLabelOption, string> =
   {

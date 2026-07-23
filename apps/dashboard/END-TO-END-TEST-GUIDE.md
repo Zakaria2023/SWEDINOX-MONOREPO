@@ -484,6 +484,57 @@ These pages act on data created upstream (or by planning processes).
   REPORT /freight-movements — the goods-flow ledger now mirrors every stock
   movement (purchase receipt, invoice/sale consumption, production, correction)
   with its running stock balance.
+- REPORT /freight-flow — the monthly steel-federation (SFN) return built on top
+  of that ledger. See Phase 5a below.
+
+===============================================================================
+Phase 5a — The SFN goods-flow return
+===============================================================================
+
+/freight-flow turns the freight-movement ledger into the monthly figures the
+steel federation asks for, per revenue group, in kilograms.
+
+Step 5a.1 — Classify the counterparties (ACTION /freight-flow)
+
+Which column a movement lands in depends on who the counterparty is. Open
+/freight-flow and expand "SFN classification" — it lists every company you have
+actually bought from or sold to. Set each one to:
+
+- Producer / mill — the works that made the material,
+- SFN member — a fellow federation member,
+- Non-member — everyone else (this is the default, so an unclassified company
+  never inflates the producer or member figures).
+
+Domestic vs abroad is not set by hand: it comes from the company's main address
+country, and anything that is not the Netherlands (or blank) counts as abroad.
+The panel shows which side each company falls on.
+
+Step 5a.2 — Read the return (REPORT /freight-flow)
+
+Leave the year and month blank for the current period, or give a range to see
+several months at once. Each row is one month for one revenue group:
+
+- Starting stock — carried forward from everything that moved before it, so the
+  first reported month opens on the true historical balance and each later month
+  opens where the previous one closed.
+- Received from producers / producers abroad / SFN members / non-members —
+  purchase receipts, split by the supplier's classification.
+- Supplied SFN / Supplied non-SFN / Delivered abroad — sales, split by the
+  customer's classification. Abroad wins over membership, so an export is never
+  double-counted.
+- Stock difference — everything that was neither bought in nor sold out:
+  corrections, count differences, damage, production output, cancellations.
+- Ending inventory — always equals Starting + received − supplied + difference,
+  so the row reconciles on its face.
+- To order manufacturers / On order non-producers / On order abroad — what is
+  still outstanding on purchase orders (ordered minus received). This is a
+  position as at today, not a movement, so it is shown on the last reported
+  period only.
+
+Quantities counted in kg are used as-is; anything counted in pieces or metres is
+weighed with the product's theoretical weight. A product with no theoretical
+weight contributes nothing rather than counting pieces as kilograms — so if a
+revenue group looks light, check the product's Theoretical Weight first.
 - ACTION /production-workorders — click "Generate from orders" to turn your order
   lines into production work-order lines (needs at least one machine and one
   order; re-running only adds newly-created order lines). Then press Complete on
@@ -552,6 +603,9 @@ Options are priced per product, then charged on order lines (Options revenue).
 
 Purchase Order creates a STOCK LOT (in).
 Receiving it creates a BATCH, which is owed a mill CERTIFICATE.
+
+Every stock movement is mirrored into the FREIGHT MOVEMENT ledger, which the
+SFN goods-flow return (/freight-flow) totals per month and revenue group.
 The stock lot is reserved by an Order line.
 Delivering the order removes stock (out).
 The delivered line is then billed by an Invoice.

@@ -245,6 +245,7 @@ const NAV_GROUPS: NavGroup[] = [
       { label: "Customer Stock", href: "/customer-stock" },
       { label: "Stock History", href: "/stock-history" },
       { label: "Freight Movement", href: "/freight-movements" },
+      { label: "Freight Flow (SFN)", href: "/freight-flow" },
       { label: "Pick Statistic", href: "/pick-statistics" },
       { label: "Machines", href: "/machines" },
       { label: "Sawing Layouts", href: "/sawing-layouts" },
