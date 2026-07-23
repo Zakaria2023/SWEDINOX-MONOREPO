@@ -45,11 +45,14 @@ export type OptionPriceRow = SelectProductOptionPrices & {
 };
 
 const ParentGroups = aliasedTable(ProductGroups, "parent_groups");
-const SupplierCompanies = aliasedTable(Companies, "supplier_companies");
 
+// The supplier's own name is fetched in a correlated subquery. The joined
+// Companies table is aliased with a raw `sc` inside the SQL string — an
+// `aliasedTable` interpolated into a raw sql template renders only the alias,
+// not `Companies AS alias`, which would query a table that does not exist.
 const preferredSupplierName = sql<
   string | null
->`(SELECT ${SupplierCompanies.companyName} FROM ${ProductGroupSuppliers} INNER JOIN ${SupplierCompanies} ON ${SupplierCompanies.uuid} = ${ProductGroupSuppliers.supplierCompanyUuid} WHERE ${ProductGroupSuppliers.productGroupUuid} = ${Products.productGroupUuid} AND ${ProductGroupSuppliers.preferred} = TRUE LIMIT 1)`;
+>`(SELECT sc.company_name FROM ${ProductGroupSuppliers} INNER JOIN ${Companies} sc ON sc.uuid = ${ProductGroupSuppliers.supplierCompanyUuid} WHERE ${ProductGroupSuppliers.productGroupUuid} = ${Products.productGroupUuid} AND ${ProductGroupSuppliers.preferred} = TRUE LIMIT 1)`;
 
 const supplierProductCode = sql<
   string | null
