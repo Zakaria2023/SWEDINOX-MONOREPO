@@ -21,25 +21,8 @@ import { describeError,
   normaliseDiscountTiers,
   resolveTierDiscount,
 } from "@/lib/helpers";
-import {
-  aliasedTable,
-  and,
-  asc,
-  eq,
-  gte,
-  inArray,
-  lte,
-  sql,
-} from "drizzle-orm";
+import { aliasedTable, asc, eq, inArray, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-
-export type NetPriceFilter = {
-  contractCodeFrom?: string;
-  contractCodeTo?: string;
-  validFrom?: string;
-  validUntil?: string;
-  companyCode?: number;
-};
 
 export type NetPriceRow = SelectContractNetPrices & {
   contractCode: SelectContracts["code"] | null;
@@ -76,11 +59,8 @@ const supplierProductCode = sql<
 >`(SELECT ${ProductGroupSuppliers.externalProductCode} FROM ${ProductGroupSuppliers} WHERE ${ProductGroupSuppliers.productGroupUuid} = ${Products.productGroupUuid} AND ${ProductGroupSuppliers.preferred} = TRUE LIMIT 1)`;
 
 // Every agreed price, joined to its contract, that contract's company and the
-// product it prices. The filters mirror the legacy overview: a contract code
-// range, the validity window the price must fall inside, and one company.
-export const getNetPrices = async (
-  filter: NetPriceFilter = {},
-): Promise<NetPriceRow[]> => {
+// product it prices.
+export const getNetPrices = async (): Promise<NetPriceRow[]> => {
   try {
     const rows = await db
       .select({
@@ -111,23 +91,6 @@ export const getNetPrices = async (
         eq(Products.productGroupUuid, ProductGroups.uuid),
       )
       .leftJoin(ParentGroups, eq(ProductGroups.parentUuid, ParentGroups.uuid))
-      .where(
-        and(
-          filter.contractCodeFrom
-            ? gte(Contracts.code, filter.contractCodeFrom)
-            : undefined,
-          filter.contractCodeTo
-            ? lte(Contracts.code, filter.contractCodeTo)
-            : undefined,
-          filter.validFrom
-            ? gte(ContractNetPrices.validUntil, filter.validFrom)
-            : undefined,
-          filter.validUntil
-            ? lte(ContractNetPrices.validFrom, filter.validUntil)
-            : undefined,
-          filter.companyCode ? eq(Companies.id, filter.companyCode) : undefined,
-        ),
-      )
       .orderBy(
         asc(Contracts.code),
         asc(Products.productCode),

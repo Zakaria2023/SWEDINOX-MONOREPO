@@ -12,12 +12,7 @@ import { PurchaseOrderItems } from "@/db/schema/purchase-order-items";
 import { PurchaseOrders } from "@/db/schema/purchase-orders";
 import { Stock } from "@/db/schema/stock";
 import { LeadTimeMethod } from "@/lib/enums";
-import { and, eq, inArray, isNull, like, sql } from "drizzle-orm";
-
-export type StockOnAdviceFilter = {
-  productCode?: string;
-  onlyAdvised?: boolean;
-};
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 
 export type StockOnAdviceRow = {
   productUuid: SelectProducts["uuid"];
@@ -91,9 +86,7 @@ const isEvaluationDay = (
 // StockOp enabled. The order-up-to level is the expected demand over the
 // protection interval (lead time + review period); an order is advised when the
 // economic stock has fallen below it and today is an evaluation day.
-export const getStockOnAdvice = async (
-  filter: StockOnAdviceFilter = {},
-): Promise<StockOnAdviceRow[]> => {
+export const getStockOnAdvice = async (): Promise<StockOnAdviceRow[]> => {
   try {
     const base = await db
       .select({
@@ -135,9 +128,6 @@ export const getStockOnAdvice = async (
         and(
           eq(Products.stockProduct, true),
           eq(ProductGroups.useStockOpForThisProduct, true),
-          filter.productCode
-            ? like(Products.productCode, `${filter.productCode}%`)
-            : undefined,
         ),
       )
       .orderBy(Products.productCode);
@@ -272,7 +262,7 @@ export const getStockOnAdvice = async (
       };
     });
 
-    return filter.onlyAdvised ? rows.filter((row) => row.orderNow) : rows;
+    return rows;
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch StockOn advice"));
   }

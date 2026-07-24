@@ -16,16 +16,11 @@ import {
   SelectSalesOptions,
 } from "@/db/schema/sales-options";
 import { describeError, generateUuid, todayDateString } from "@/lib/helpers";
-import { aliasedTable, and, asc, eq, gte, lte, sql } from "drizzle-orm";
+import { aliasedTable, asc, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 // The far-future date the ERP uses for "no end date".
 const OPEN_ENDED_UNTIL = "9999-12-31";
-
-export type OptionPriceFilter = {
-  codeFrom?: string;
-  codeTo?: string;
-};
 
 export type OptionPriceRow = SelectProductOptionPrices & {
   productCode: SelectProducts["productCode"] | null;
@@ -59,11 +54,8 @@ const supplierProductCode = sql<
 >`(SELECT ${ProductGroupSuppliers.externalProductCode} FROM ${ProductGroupSuppliers} WHERE ${ProductGroupSuppliers.productGroupUuid} = ${Products.productGroupUuid} AND ${ProductGroupSuppliers.preferred} = TRUE LIMIT 1)`;
 
 // Every priced product/option pair, with the product's grouping and preferred
-// supplier alongside. Filtered on a product code range, as the legacy overview
-// does.
-export const getOptionPrices = async (
-  filter: OptionPriceFilter = {},
-): Promise<OptionPriceRow[]> => {
+// supplier alongside.
+export const getOptionPrices = async (): Promise<OptionPriceRow[]> => {
   try {
     const rows = await db
       .select({
@@ -93,14 +85,6 @@ export const getOptionPrices = async (
         eq(Products.productGroupUuid, ProductGroups.uuid),
       )
       .leftJoin(ParentGroups, eq(ProductGroups.parentUuid, ParentGroups.uuid))
-      .where(
-        and(
-          filter.codeFrom
-            ? gte(Products.productCode, filter.codeFrom)
-            : undefined,
-          filter.codeTo ? lte(Products.productCode, filter.codeTo) : undefined,
-        ),
-      )
       .orderBy(asc(Products.productCode), asc(SalesOptions.code));
 
     return rows.map((row) => ({

@@ -7,9 +7,7 @@ import { PurchaseInvoiceItems } from "@/db/schema/purchase-invoice-items";
 import { PurchaseInvoices } from "@/db/schema/purchase-invoices";
 import { RevenueGroups, SelectRevenueGroups } from "@/db/schema/revenue-groups";
 import { Stock } from "@/db/schema/stock";
-import { and, eq, sql } from "drizzle-orm";
-
-export type PeriodFilter = { year?: number; month?: number };
+import { eq, sql } from "drizzle-orm";
 
 export type SupplierRevenuePerGroupRow = {
   revenueGroupNumber: SelectRevenueGroups["number"] | null;
@@ -24,9 +22,9 @@ export type SupplierRevenuePerGroupRow = {
 // Purchase turnover per revenue group and invoice period — the supplier-side
 // counterpart of the sales revenue-per-revenue-group report. Revenue is the
 // purchased value (stock valuation × quantity); weight is quantity in kg.
-export const getSupplierRevenuePerRevenueGroup = async (
-  filter: PeriodFilter = {},
-): Promise<SupplierRevenuePerGroupRow[]> => {
+export const getSupplierRevenuePerRevenueGroup = async (): Promise<
+  SupplierRevenuePerGroupRow[]
+> => {
   try {
     const year = sql<number>`YEAR(${PurchaseInvoices.invoiceDate})`;
     const month = sql<number>`MONTH(${PurchaseInvoices.invoiceDate})`;
@@ -48,12 +46,6 @@ export const getSupplierRevenuePerRevenueGroup = async (
       .innerJoin(Products, eq(PurchaseInvoiceItems.productUuid, Products.uuid))
       .leftJoin(RevenueGroups, eq(Products.revenueGroupUuid, RevenueGroups.uuid))
       .leftJoin(Stock, eq(PurchaseInvoiceItems.stockUuid, Stock.uuid))
-      .where(
-        and(
-          filter.year ? eq(year, filter.year) : undefined,
-          filter.month ? eq(month, filter.month) : undefined,
-        ),
-      )
       .groupBy(
         RevenueGroups.uuid,
         RevenueGroups.number,

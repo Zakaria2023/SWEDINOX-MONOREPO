@@ -7,9 +7,7 @@ import { Invoices } from "@/db/schema/invoices";
 import { OrderItems } from "@/db/schema/order-items";
 import { Products } from "@/db/schema/products";
 import { Stock } from "@/db/schema/stock";
-import { and, eq, sql } from "drizzle-orm";
-
-export type PeriodFilter = { year?: number; month?: number };
+import { eq, sql } from "drizzle-orm";
 
 export type RevenuePerProductRow = {
   productCode: string | null;
@@ -25,9 +23,9 @@ export type RevenuePerProductRow = {
 
 // Invoiced sales rolled up per product and invoice period. Cost comes from the
 // stock lot's valuation price; profit/margin are derived.
-export const getRevenuePerProduct = async (
-  filter: PeriodFilter = {},
-): Promise<RevenuePerProductRow[]> => {
+export const getRevenuePerProduct = async (): Promise<
+  RevenuePerProductRow[]
+> => {
   try {
     const year = sql<number>`YEAR(${Invoices.invoiceDate})`;
     const month = sql<number>`MONTH(${Invoices.invoiceDate})`;
@@ -48,16 +46,6 @@ export const getRevenuePerProduct = async (
       .innerJoin(OrderItems, eq(InvoiceItems.orderItemUuid, OrderItems.uuid))
       .innerJoin(Products, eq(InvoiceItems.productUuid, Products.uuid))
       .leftJoin(Stock, eq(OrderItems.stockUuid, Stock.uuid))
-      .where(
-        and(
-          filter.year
-            ? eq(sql`YEAR(${Invoices.invoiceDate})`, filter.year)
-            : undefined,
-          filter.month
-            ? eq(sql`MONTH(${Invoices.invoiceDate})`, filter.month)
-            : undefined,
-        ),
-      )
       .groupBy(Products.uuid, Products.productCode, Products.name, year, month);
 
     return rows.map((row) => {

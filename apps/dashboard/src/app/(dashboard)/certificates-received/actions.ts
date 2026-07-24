@@ -18,17 +18,8 @@ import { describeError,
   resolveCertificateFromOptions,
   todayDateString,
 } from "@/lib/helpers";
-import { and, asc, desc, eq, gte, isNull, like, lte } from "drizzle-orm";
+import { asc, desc, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-
-export type CertificateFilter = {
-  receiptFrom?: string;
-  receiptUntil?: string;
-  companyCode?: number;
-  productCode?: string;
-  // Only the certificates that have not arrived yet — the "to be linked" view.
-  outstandingOnly?: boolean;
-};
 
 export type CertificateRow = SelectBatchCertificates & {
   purchaseOrderId: SelectPurchaseOrders["id"] | null;
@@ -52,11 +43,8 @@ export type CertificateRow = SelectBatchCertificates & {
 };
 
 // Every expected certificate with the batch it belongs to, that batch's
-// purchase order, supplier and product. Filtered on the batch's receipt date,
-// supplier and product code, as the legacy overview does.
-export const getCertificatesReceived = async (
-  filter: CertificateFilter = {},
-): Promise<CertificateRow[]> => {
+// purchase order, supplier and product.
+export const getCertificatesReceived = async (): Promise<CertificateRow[]> => {
   try {
     const rows = await db
       .select({
@@ -88,23 +76,6 @@ export const getCertificatesReceived = async (
       )
       .leftJoin(Companies, eq(Batches.supplierUuid, Companies.uuid))
       .leftJoin(Products, eq(Batches.productUuid, Products.uuid))
-      .where(
-        and(
-          filter.receiptFrom
-            ? gte(Batches.receiptDate, filter.receiptFrom)
-            : undefined,
-          filter.receiptUntil
-            ? lte(Batches.receiptDate, filter.receiptUntil)
-            : undefined,
-          filter.companyCode ? eq(Companies.id, filter.companyCode) : undefined,
-          filter.productCode
-            ? like(Products.productCode, `${filter.productCode}%`)
-            : undefined,
-          filter.outstandingOnly
-            ? isNull(BatchCertificates.receivedDate)
-            : undefined,
-        ),
-      )
       .orderBy(desc(Batches.receiptDate), asc(Batches.internalCharge));
 
     return rows.map((row) => ({

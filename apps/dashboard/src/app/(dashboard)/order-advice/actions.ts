@@ -11,12 +11,7 @@ import { Products, SelectProducts } from "@/db/schema/products";
 import { PurchaseOrderItems } from "@/db/schema/purchase-order-items";
 import { PurchaseOrders } from "@/db/schema/purchase-orders";
 import { Stock } from "@/db/schema/stock";
-import { and, eq, inArray, isNull, like, sql } from "drizzle-orm";
-
-export type OrderAdviceFilter = {
-  productCode?: string;
-  onlyAdvised?: boolean;
-};
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 
 export type OrderAdviceRow = {
   productUuid: SelectProducts["uuid"];
@@ -66,9 +61,7 @@ const roundToOrderQty = (
 // minus reservations plus what is still on order) against the min/max stock
 // policy carried by its product group, and advise a purchase quantity to bring
 // it back up to the maximum level. Demand comes from invoiced sales history.
-export const getOrderAdvice = async (
-  filter: OrderAdviceFilter = {},
-): Promise<OrderAdviceRow[]> => {
+export const getOrderAdvice = async (): Promise<OrderAdviceRow[]> => {
   try {
     const base = await db
       .select({
@@ -108,14 +101,7 @@ export const getOrderAdvice = async (
         Companies,
         eq(ProductGroupSuppliers.supplierCompanyUuid, Companies.uuid),
       )
-      .where(
-        and(
-          eq(Products.stockProduct, true),
-          filter.productCode
-            ? like(Products.productCode, `${filter.productCode}%`)
-            : undefined,
-        ),
-      )
+      .where(eq(Products.stockProduct, true))
       .orderBy(Products.productCode);
 
     if (base.length === 0) {
@@ -273,7 +259,7 @@ export const getOrderAdvice = async (
       };
     });
 
-    return filter.onlyAdvised ? rows.filter((row) => row.orderQty > 0) : rows;
+    return rows;
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch order advice"));
   }

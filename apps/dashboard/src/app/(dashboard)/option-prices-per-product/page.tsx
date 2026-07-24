@@ -2,16 +2,10 @@ import { getOptionPrices } from "@/app/(dashboard)/option-prices-per-product/act
 import { PageHeading } from "@/components/layout/page-heading";
 import { GenerateOptionPricesButton } from "@/components/option-prices-per-product/generate-option-prices-button";
 import { NewOptionDialog } from "@/components/option-prices-per-product/new-option-dialog";
-import { OptionPriceFilter } from "@/components/option-prices-per-product/option-price-filter";
 import { OptionPricesTable } from "@/components/option-prices-per-product/option-prices-table-content";
 
-type Props = {
-  searchParams: Promise<{ codeFrom?: string; codeTo?: string }>;
-};
-
-const OptionPricesPerProductPage = async ({ searchParams }: Props) => {
-  const { codeFrom, codeTo } = await searchParams;
-  const rows = await getOptionPrices({ codeFrom, codeTo });
+const OptionPricesPerProductPage = async () => {
+  const rows = await getOptionPrices();
 
   return (
     <div className="space-y-6 p-6">
@@ -25,7 +19,6 @@ const OptionPricesPerProductPage = async ({ searchParams }: Props) => {
           <GenerateOptionPricesButton />
         </div>
       </div>
-      <OptionPriceFilter codeFrom={codeFrom} codeTo={codeTo} />
       <OptionPricesTable rows={rows} />
     </div>
   );

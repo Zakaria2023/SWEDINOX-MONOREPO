@@ -21,11 +21,6 @@ import { describeError,
 import { and, asc, desc, eq, gte, lte, or, sql, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
-export type OptionRevenueFilter = {
-  createdFrom?: string;
-  createdUntil?: string;
-};
-
 // One row per option, revenue group and line status — the "invoiced per option"
 // view of the legacy overview, which groups by option code.
 export type OptionRevenueRow = {
@@ -41,9 +36,7 @@ export type OptionRevenueRow = {
   lineCount: number;
 };
 
-export const getOptionRevenue = async (
-  filter: OptionRevenueFilter = {},
-): Promise<OptionRevenueRow[]> => {
+export const getOptionRevenue = async (): Promise<OptionRevenueRow[]> => {
   try {
     const rows = await db
       .select({
@@ -65,16 +58,6 @@ export const getOptionRevenue = async (
       .leftJoin(
         RevenueGroups,
         eq(OrderItemOptions.revenueGroupUuid, RevenueGroups.uuid),
-      )
-      .where(
-        and(
-          filter.createdFrom
-            ? gte(sql`DATE(${OrderItemOptions.createdAt})`, filter.createdFrom)
-            : undefined,
-          filter.createdUntil
-            ? lte(sql`DATE(${OrderItemOptions.createdAt})`, filter.createdUntil)
-            : undefined,
-        ),
       )
       .groupBy(
         SalesOptions.code,

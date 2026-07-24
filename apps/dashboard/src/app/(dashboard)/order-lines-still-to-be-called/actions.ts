@@ -8,9 +8,7 @@ import { OrderItems, SelectOrderItems } from "@/db/schema/order-items";
 import { Orders, SelectOrders } from "@/db/schema/orders";
 import { Products, SelectProducts } from "@/db/schema/products";
 import { RevenueGroups, SelectRevenueGroups } from "@/db/schema/revenue-groups";
-import { and, asc, eq, min, sql } from "drizzle-orm";
-
-export type PeriodFilter = { year?: number; month?: number };
+import { asc, eq, min, sql } from "drizzle-orm";
 
 export type OrderLineToCallRow = {
   revenueGroupName: SelectRevenueGroups["name"] | null;
@@ -40,13 +38,10 @@ export type OrderLineToCallRow = {
 
 // Order lines that still have quantity to be called off (planned quantity not
 // yet fully called). The "to be called" figures are the remaining balance.
-export const getOrderLinesStillToBeCalled = async (
-  filter: PeriodFilter = {},
-): Promise<OrderLineToCallRow[]> => {
+export const getOrderLinesStillToBeCalled = async (): Promise<
+  OrderLineToCallRow[]
+> => {
   try {
-    const year = sql<number>`YEAR(${OrderItems.createdAt})`;
-    const month = sql<number>`MONTH(${OrderItems.createdAt})`;
-
     const primaryContactId = db
       .select({
         companyUuid: Contacts.companyUuid,
@@ -96,13 +91,7 @@ export const getOrderLinesStillToBeCalled = async (
       .innerJoin(Products, eq(OrderItems.productUuid, Products.uuid))
       .leftJoin(RevenueGroups, eq(Products.revenueGroupUuid, RevenueGroups.uuid))
       .leftJoin(primaryContact, eq(Companies.uuid, primaryContact.companyUuid))
-      .where(
-        and(
-          sql`${OrderItems.qtyPlanned} > ${OrderItems.qtyCallOff}`,
-          filter.year ? eq(year, filter.year) : undefined,
-          filter.month ? eq(month, filter.month) : undefined,
-        ),
-      )
+      .where(sql`${OrderItems.qtyPlanned} > ${OrderItems.qtyCallOff}`)
       .orderBy(asc(OrderItems.deliveryDate));
 
     return rows.map((row) => {

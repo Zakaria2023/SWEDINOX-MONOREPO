@@ -19,8 +19,6 @@ import { describeError, generateUuid, resolveOrderTypeLabel } from "@/lib/helper
 import { and, asc, desc, eq, gte, isNull, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
-export type QuoteLinePeriodFilter = { year?: number; month?: number };
-
 export type QuoteLineRow = SelectQuoteItems & {
   quoteId: SelectQuotes["id"] | null;
   ourReference: SelectQuotes["ourReference"] | null;
@@ -69,9 +67,7 @@ const lastFollowUpBy = sql<
 
 // Every quote line, joined to its quote, customer, product and revenue group.
 // Filtered on the quote date, matching the legacy overview's date range.
-export const getQuoteLines = async (
-  filter: QuoteLinePeriodFilter = {},
-): Promise<QuoteLineRow[]> => {
+export const getQuoteLines = async (): Promise<QuoteLineRow[]> => {
   try {
     const year = sql<number>`YEAR(${Quotes.quoteDate})`;
     const month = sql<number>`MONTH(${Quotes.quoteDate})`;
@@ -116,12 +112,6 @@ export const getQuoteLines = async (
         eq(QuoteItems.revenueGroupUuid, RevenueGroups.uuid),
       )
       .leftJoin(Orders, eq(QuoteItems.convertedToOrderUuid, Orders.uuid))
-      .where(
-        and(
-          filter.year ? eq(year, filter.year) : undefined,
-          filter.month ? eq(month, filter.month) : undefined,
-        ),
-      )
       .orderBy(desc(Quotes.quoteDate), asc(QuoteItems.lineNumber));
 
     return rows.map(({ item, ...rest }) => ({

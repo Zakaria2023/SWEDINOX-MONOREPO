@@ -5,9 +5,7 @@ import { db } from "@/db";
 import { PurchaseLineReceivals } from "@/db/schema/purchase-line-receivals";
 import { Products } from "@/db/schema/products";
 import { ProductGroups } from "@/db/schema/product-groups";
-import { and, eq, sql } from "drizzle-orm";
-
-export type PeriodFilter = { year?: number; month?: number };
+import { eq, sql } from "drizzle-orm";
 
 export type PurchaseResultRow = {
   mainGroup: string | null;
@@ -23,9 +21,7 @@ export type PurchaseResultRow = {
 
 // What was actually paid for received goods vs. what replacing them would cost
 // today (the product's replacement price x received quantity).
-export const getPurchaseResults = async (
-  filter: PeriodFilter = {},
-): Promise<PurchaseResultRow[]> => {
+export const getPurchaseResults = async (): Promise<PurchaseResultRow[]> => {
   try {
     const year = sql<number>`YEAR(${PurchaseLineReceivals.receiptDate})`;
     const month = sql<number>`MONTH(${PurchaseLineReceivals.receiptDate})`;
@@ -45,12 +41,6 @@ export const getPurchaseResults = async (
       .leftJoin(
         ProductGroups,
         eq(Products.productGroupUuid, ProductGroups.uuid),
-      )
-      .where(
-        and(
-          filter.year ? eq(year, filter.year) : undefined,
-          filter.month ? eq(month, filter.month) : undefined,
-        ),
       )
       .groupBy(
         ProductGroups.name,

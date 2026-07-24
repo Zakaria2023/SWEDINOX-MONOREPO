@@ -7,9 +7,7 @@ import { OrderItems, SelectOrderItems } from "@/db/schema/order-items";
 import { Orders, SelectOrders } from "@/db/schema/orders";
 import { Products, SelectProducts } from "@/db/schema/products";
 import { Stock } from "@/db/schema/stock";
-import { and, desc, eq, sql } from "drizzle-orm";
-
-export type PeriodFilter = { year?: number; month?: number };
+import { desc, eq } from "drizzle-orm";
 
 export type OrderLineRow = {
   createdAt: string | null;
@@ -39,13 +37,8 @@ export type OrderLineRow = {
 
 // Every order line, joined to its order, customer and product. Cost is the
 // stock lot valuation; profit/margin are derived from the line amount.
-export const getOrderLines = async (
-  filter: PeriodFilter = {},
-): Promise<OrderLineRow[]> => {
+export const getOrderLines = async (): Promise<OrderLineRow[]> => {
   try {
-    const year = sql<number>`YEAR(${OrderItems.createdAt})`;
-    const month = sql<number>`MONTH(${OrderItems.createdAt})`;
-
     const rows = await db
       .select({
         createdAt: OrderItems.createdAt,
@@ -75,12 +68,6 @@ export const getOrderLines = async (
       .innerJoin(Companies, eq(Orders.companyUuid, Companies.uuid))
       .innerJoin(Products, eq(OrderItems.productUuid, Products.uuid))
       .leftJoin(Stock, eq(OrderItems.stockUuid, Stock.uuid))
-      .where(
-        and(
-          filter.year ? eq(year, filter.year) : undefined,
-          filter.month ? eq(month, filter.month) : undefined,
-        ),
-      )
       .orderBy(desc(OrderItems.createdAt));
 
     return rows.map((row) => {

@@ -1,16 +1,10 @@
 import { getComplaintLines } from "@/app/(dashboard)/complaint-lines/actions";
-import { ComplaintLineFilter } from "@/components/complaint-lines/complaint-line-filter";
 import { ComplaintLinesTable } from "@/components/complaint-lines/complaint-lines-table-content";
 import { GenerateComplaintLinesButton } from "@/components/complaint-lines/generate-complaint-lines-button";
 import { PageHeading } from "@/components/layout/page-heading";
 
-type Props = {
-  searchParams: Promise<{ createdFrom?: string; createdUntil?: string }>;
-};
-
-const ComplaintLinesPage = async ({ searchParams }: Props) => {
-  const { createdFrom, createdUntil } = await searchParams;
-  const rows = await getComplaintLines({ createdFrom, createdUntil });
+const ComplaintLinesPage = async () => {
+  const rows = await getComplaintLines();
 
   return (
     <div className="space-y-6 p-6">
@@ -21,10 +15,6 @@ const ComplaintLinesPage = async ({ searchParams }: Props) => {
         />
         <GenerateComplaintLinesButton />
       </div>
-      <ComplaintLineFilter
-        createdFrom={createdFrom}
-        createdUntil={createdUntil}
-      />
       <ComplaintLinesTable rows={rows} />
     </div>
   );

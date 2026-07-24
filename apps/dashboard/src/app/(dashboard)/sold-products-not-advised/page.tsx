@@ -1,19 +1,9 @@
 import { getSoldProductsNotAdvised } from "@/app/(dashboard)/sold-products-not-advised/actions";
-import { SoldProductsNotAdvisedFilter } from "@/components/sold-products-not-advised/sold-products-not-advised-filter";
 import { SoldProductsNotAdvisedTable } from "@/components/sold-products-not-advised/sold-products-not-advised-table-content";
 import { PageHeading } from "@/components/layout/page-heading";
 
-type Props = {
-  searchParams: Promise<{ productCode?: string; from?: string; to?: string }>;
-};
-
-const SoldProductsNotAdvisedPage = async ({ searchParams }: Props) => {
-  const { productCode, from, to } = await searchParams;
-  const rows = await getSoldProductsNotAdvised({
-    productCode: productCode || undefined,
-    from: from || undefined,
-    to: to || undefined,
-  });
+const SoldProductsNotAdvisedPage = async () => {
+  const rows = await getSoldProductsNotAdvised();
 
   return (
     <div className="space-y-6 p-6">
@@ -21,7 +11,6 @@ const SoldProductsNotAdvisedPage = async ({ searchParams }: Props) => {
         title="Sold products not on the order recommendation"
         description="Products invoiced in the period that no reorder logic is watching — the group isn’t making order advices, or they aren’t stock products"
       />
-      <SoldProductsNotAdvisedFilter productCode={productCode} from={from} to={to} />
       <SoldProductsNotAdvisedTable rows={rows} />
     </div>
   );

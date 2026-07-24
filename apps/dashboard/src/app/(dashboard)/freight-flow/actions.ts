@@ -13,13 +13,6 @@ import { describeError, currentYear, isDomesticCountry, toKilograms } from "@/li
 import { and, asc, eq, gte, lt, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
-export type FreightFlowFilter = {
-  yearFrom?: number;
-  yearTo?: number;
-  monthFrom?: number;
-  monthTo?: number;
-};
-
 // One reported period for one revenue group. Every figure is in kilograms, the
 // unit the federation return is filed in.
 export type FreightFlowRow = {
@@ -115,33 +108,12 @@ const resolveCounterparty = (
     domestic: true,
   };
 
-// A single return never spans more than a few years of months; the cap stops a
-// mistyped year from asking for centuries of periods.
-const MAX_PERIODS = 120;
-
 const clampMonth = (month: number) => Math.min(12, Math.max(1, month));
 
-// The list of (year, month) periods the report covers, in order. A blank year
-// or month means the current one, matching the legacy filter's own wording.
-const buildPeriods = (
-  filter: FreightFlowFilter,
-): Array<{ year: number; month: number }> => {
+// The report covers the current month.
+const buildPeriods = (): Array<{ year: number; month: number }> => {
   const now = new Date();
-  const yearFrom = filter.yearFrom ?? currentYear();
-  const yearTo = Math.max(yearFrom, filter.yearTo ?? yearFrom);
-  const monthFrom = clampMonth(filter.monthFrom ?? now.getMonth() + 1);
-  const monthTo = Math.max(monthFrom, clampMonth(filter.monthTo ?? monthFrom));
-
-  const periods: Array<{ year: number; month: number }> = [];
-  for (let year = yearFrom; year <= yearTo; year += 1) {
-    for (let month = monthFrom; month <= monthTo; month += 1) {
-      periods.push({ year, month });
-      if (periods.length >= MAX_PERIODS) {
-        return periods;
-      }
-    }
-  }
-  return periods;
+  return [{ year: currentYear(), month: clampMonth(now.getMonth() + 1) }];
 };
 
 const periodKey = (year: number, month: number) => `${year}-${month}`;
@@ -155,11 +127,9 @@ const periodKey = (year: number, month: number) => `${year}-${month}`;
 // corrections, damage, production, cancellations — is reported as the stock
 // difference, so starting + received − supplied + difference always equals the
 // ending inventory.
-export const getFreightFlow = async (
-  filter: FreightFlowFilter = {},
-): Promise<FreightFlowRow[]> => {
+export const getFreightFlow = async (): Promise<FreightFlowRow[]> => {
   try {
-    const periods = buildPeriods(filter);
+    const periods = buildPeriods();
     if (periods.length === 0) {
       return [];
     }

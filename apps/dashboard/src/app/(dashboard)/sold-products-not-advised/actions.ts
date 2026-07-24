@@ -8,14 +8,8 @@ import { OrderItems } from "@/db/schema/order-items";
 import { ProductGroups, SelectProductGroups } from "@/db/schema/product-groups";
 import { Products, SelectProducts } from "@/db/schema/products";
 import { Stock } from "@/db/schema/stock";
-import { and, eq, inArray, isNull, like, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/mysql-core";
-
-export type SoldProductsNotAdvisedFilter = {
-  productCode?: string;
-  from?: string;
-  to?: string;
-};
 
 export type SoldProductNotAdvisedRow = {
   productUuid: SelectProducts["uuid"];
@@ -38,9 +32,9 @@ export type SoldProductNotAdvisedRow = {
 // period but whose group isn't making order advices, or which aren't stock
 // products (either reason keeps them off "Order advice"). Highlights demand
 // that no reorder logic is currently watching.
-export const getSoldProductsNotAdvised = async (
-  filter: SoldProductsNotAdvisedFilter = {},
-): Promise<SoldProductNotAdvisedRow[]> => {
+export const getSoldProductsNotAdvised = async (): Promise<
+  SoldProductNotAdvisedRow[]
+> => {
   try {
     const MainGroups = alias(ProductGroups, "main_groups");
 
@@ -65,18 +59,9 @@ export const getSoldProductsNotAdvised = async (
       .leftJoin(ProductGroups, eq(Products.productGroupUuid, ProductGroups.uuid))
       .leftJoin(MainGroups, eq(ProductGroups.parentUuid, MainGroups.uuid))
       .where(
-        and(
-          // Not on the order recommendation: group not making advices OR not a
-          // stock product (null group counts as not-advised too).
-          sql`NOT (COALESCE(${ProductGroups.makingOrderAdvices}, 0) = 1 AND COALESCE(${Products.stockProduct}, 0) = 1)`,
-          filter.productCode
-            ? like(Products.productCode, `${filter.productCode}%`)
-            : undefined,
-          filter.from
-            ? sql`${Invoices.invoiceDate} >= ${filter.from}`
-            : undefined,
-          filter.to ? sql`${Invoices.invoiceDate} <= ${filter.to}` : undefined,
-        ),
+        // Not on the order recommendation: group not making advices OR not a
+        // stock product (null group counts as not-advised too).
+        sql`NOT (COALESCE(${ProductGroups.makingOrderAdvices}, 0) = 1 AND COALESCE(${Products.stockProduct}, 0) = 1)`,
       )
       .groupBy(
         Products.uuid,

@@ -5,18 +5,10 @@ import {
 import { PageHeading } from "@/components/layout/page-heading";
 import { ConvertQuoteToOrder } from "@/components/quote-lines/convert-quote-to-order";
 import { QuoteLinesTable } from "@/components/quote-lines/quote-lines-table-content";
-import { PeriodFilter } from "@/components/ui/period-filter";
 
-type Props = {
-  searchParams: Promise<{ year?: string; month?: string }>;
-};
-
-const QuoteLinesPage = async ({ searchParams }: Props) => {
-  const { year, month } = await searchParams;
-  const yearNum = year ? Number(year) : undefined;
-  const monthNum = month ? Number(month) : undefined;
+const QuoteLinesPage = async () => {
   const [rows, convertibleQuotes] = await Promise.all([
-    getQuoteLines({ year: yearNum, month: monthNum }),
+    getQuoteLines(),
     getConvertibleQuotes(),
   ]);
 
@@ -26,7 +18,6 @@ const QuoteLinesPage = async ({ searchParams }: Props) => {
         title="Quote lines"
         description="Every quoted line with its dimensions, discounts and margin"
       />
-      <PeriodFilter year={yearNum} month={monthNum} />
       <ConvertQuoteToOrder quotes={convertibleQuotes} />
       <QuoteLinesTable rows={rows} />
     </div>

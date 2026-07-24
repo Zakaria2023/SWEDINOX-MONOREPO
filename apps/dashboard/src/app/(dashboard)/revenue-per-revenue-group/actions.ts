@@ -8,9 +8,7 @@ import { OrderItems } from "@/db/schema/order-items";
 import { Products } from "@/db/schema/products";
 import { RevenueGroups } from "@/db/schema/revenue-groups";
 import { Stock } from "@/db/schema/stock";
-import { and, eq, sql } from "drizzle-orm";
-
-export type PeriodFilter = { year?: number; month?: number };
+import { eq, sql } from "drizzle-orm";
 
 export type RevenueGroupTotals = {
   revenueGroupNumber: number | null;
@@ -23,9 +21,9 @@ export type RevenueGroupTotals = {
 
 // Revenue rolled up per revenue group from invoiced order lines. Cost comes
 // from the stock lot's valuation price; profit/margin are derived.
-export const getRevenuePerRevenueGroup = async (
-  filter: PeriodFilter = {},
-): Promise<RevenueGroupTotals[]> => {
+export const getRevenuePerRevenueGroup = async (): Promise<
+  RevenueGroupTotals[]
+> => {
   try {
     const rows = await db
       .select({
@@ -44,16 +42,6 @@ export const getRevenuePerRevenueGroup = async (
         eq(Products.revenueGroupUuid, RevenueGroups.uuid),
       )
       .leftJoin(Stock, eq(OrderItems.stockUuid, Stock.uuid))
-      .where(
-        and(
-          filter.year
-            ? eq(sql`YEAR(${Invoices.invoiceDate})`, filter.year)
-            : undefined,
-          filter.month
-            ? eq(sql`MONTH(${Invoices.invoiceDate})`, filter.month)
-            : undefined,
-        ),
-      )
       .groupBy(RevenueGroups.uuid, RevenueGroups.number, RevenueGroups.name);
 
     return rows.map((row) => {

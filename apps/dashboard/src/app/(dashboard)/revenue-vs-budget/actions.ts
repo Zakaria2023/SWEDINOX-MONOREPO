@@ -9,9 +9,7 @@ import { RevenueGroups } from "@/db/schema/revenue-groups";
 import { RevenueBudgets } from "@/db/schema/revenue-budgets";
 import { Invoices } from "@/db/schema/invoices";
 import { Stock } from "@/db/schema/stock";
-import { and, eq, sql } from "drizzle-orm";
-
-export type PeriodFilter = { year?: number; month?: number };
+import { eq, sql } from "drizzle-orm";
 
 export type RevenueVsBudgetRow = {
   revenueGroupNumber: number | null;
@@ -40,9 +38,7 @@ type Bucket = {
 };
 
 // Actual invoiced sales vs the budget figures, per revenue group.
-export const getRevenueVsBudget = async (
-  filter: PeriodFilter = {},
-): Promise<RevenueVsBudgetRow[]> => {
+export const getRevenueVsBudget = async (): Promise<RevenueVsBudgetRow[]> => {
   try {
     const actuals = await db
       .select({
@@ -59,16 +55,6 @@ export const getRevenueVsBudget = async (
       .innerJoin(Products, eq(InvoiceItems.productUuid, Products.uuid))
       .leftJoin(RevenueGroups, eq(Products.revenueGroupUuid, RevenueGroups.uuid))
       .leftJoin(Stock, eq(OrderItems.stockUuid, Stock.uuid))
-      .where(
-        and(
-          filter.year
-            ? eq(sql`YEAR(${Invoices.invoiceDate})`, filter.year)
-            : undefined,
-          filter.month
-            ? eq(sql`MONTH(${Invoices.invoiceDate})`, filter.month)
-            : undefined,
-        ),
-      )
       .groupBy(RevenueGroups.uuid, RevenueGroups.number, RevenueGroups.name);
 
     const budgets = await db
@@ -84,14 +70,6 @@ export const getRevenueVsBudget = async (
       .leftJoin(
         RevenueGroups,
         eq(RevenueBudgets.revenueGroupUuid, RevenueGroups.uuid),
-      )
-      .where(
-        and(
-          filter.year
-            ? eq(RevenueBudgets.financialYear, filter.year)
-            : undefined,
-          filter.month ? eq(RevenueBudgets.month, filter.month) : undefined,
-        ),
       )
       .groupBy(RevenueGroups.uuid, RevenueGroups.number, RevenueGroups.name);
 

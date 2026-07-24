@@ -5,9 +5,7 @@ import { db } from "@/db";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { PurchaseOrders, SelectPurchaseOrders } from "@/db/schema/purchase-orders";
 import { PurchaseQuotes } from "@/db/schema/purchase-quotes";
-import { and, eq, sql } from "drizzle-orm";
-
-export type PeriodFilter = { year?: number; month?: number };
+import { eq } from "drizzle-orm";
 
 export type PurchaseOrderQuoteRow = {
   kind: "Order" | "Quote";
@@ -23,15 +21,10 @@ export type PurchaseOrderQuoteRow = {
 
 // Purchase orders and purchase quotes in one list. Each side is queried
 // separately (they carry their own header totals) and merged by creation date.
-export const getPurchaseOrdersAndQuotes = async (
-  filter: PeriodFilter = {},
-): Promise<PurchaseOrderQuoteRow[]> => {
+export const getPurchaseOrdersAndQuotes = async (): Promise<
+  PurchaseOrderQuoteRow[]
+> => {
   try {
-    const poYear = sql<number>`YEAR(${PurchaseOrders.createdAt})`;
-    const poMonth = sql<number>`MONTH(${PurchaseOrders.createdAt})`;
-    const pqYear = sql<number>`YEAR(${PurchaseQuotes.createdAt})`;
-    const pqMonth = sql<number>`MONTH(${PurchaseQuotes.createdAt})`;
-
     const orderRows = await db
       .select({
         id: PurchaseOrders.id,
@@ -44,13 +37,7 @@ export const getPurchaseOrdersAndQuotes = async (
         revenue: PurchaseOrders.amount,
       })
       .from(PurchaseOrders)
-      .leftJoin(Companies, eq(PurchaseOrders.supplierUuid, Companies.uuid))
-      .where(
-        and(
-          filter.year ? eq(poYear, filter.year) : undefined,
-          filter.month ? eq(poMonth, filter.month) : undefined,
-        ),
-      );
+      .leftJoin(Companies, eq(PurchaseOrders.supplierUuid, Companies.uuid));
 
     const quoteRows = await db
       .select({
@@ -63,13 +50,7 @@ export const getPurchaseOrdersAndQuotes = async (
         revenue: PurchaseQuotes.totalExclVat,
       })
       .from(PurchaseQuotes)
-      .leftJoin(Companies, eq(PurchaseQuotes.companyUuid, Companies.uuid))
-      .where(
-        and(
-          filter.year ? eq(pqYear, filter.year) : undefined,
-          filter.month ? eq(pqMonth, filter.month) : undefined,
-        ),
-      );
+      .leftJoin(Companies, eq(PurchaseQuotes.companyUuid, Companies.uuid));
 
     const orders: PurchaseOrderQuoteRow[] = orderRows.map((row) => ({
       kind: "Order",

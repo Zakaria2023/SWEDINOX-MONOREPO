@@ -10,14 +10,8 @@ import {
 import { Products, SelectProducts } from "@/db/schema/products";
 import { PurchaseLineReceivals } from "@/db/schema/purchase-line-receivals";
 import { describeError, todayDateString } from "@/lib/helpers";
-import { aliasedTable, and, asc, eq, gte, lte, sql } from "drizzle-orm";
+import { aliasedTable, asc, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-
-export type ProductPriceFilter = {
-  codeFrom?: string;
-  codeTo?: string;
-  priceDateFrom?: string;
-};
 
 export type ProductPriceRow = SelectProducts & {
   mainGroup: SelectProductGroups["name"] | null;
@@ -44,12 +38,8 @@ const supplierProductCode = sql<
   string | null
 >`(SELECT ${ProductGroupSuppliers.externalProductCode} FROM ${ProductGroupSuppliers} WHERE ${ProductGroupSuppliers.productGroupUuid} = ${Products.productGroupUuid} AND ${ProductGroupSuppliers.preferred} = TRUE LIMIT 1)`;
 
-// Every product with the prices it is bought and sold at. The product code
-// range and price date are the same filters the legacy overview offers; the
-// price date only takes a "from" value there, so only a lower bound is applied.
-export const getProductPrices = async (
-  filter: ProductPriceFilter = {},
-): Promise<ProductPriceRow[]> => {
+// Every product with the prices it is bought and sold at.
+export const getProductPrices = async (): Promise<ProductPriceRow[]> => {
   try {
     const rows = await db
       .select({
@@ -66,17 +56,6 @@ export const getProductPrices = async (
         eq(Products.productGroupUuid, ProductGroups.uuid),
       )
       .leftJoin(ParentGroups, eq(ProductGroups.parentUuid, ParentGroups.uuid))
-      .where(
-        and(
-          filter.codeFrom
-            ? gte(Products.productCode, filter.codeFrom)
-            : undefined,
-          filter.codeTo ? lte(Products.productCode, filter.codeTo) : undefined,
-          filter.priceDateFrom
-            ? gte(Products.priceDate, filter.priceDateFrom)
-            : undefined,
-        ),
-      )
       .orderBy(asc(Products.productCode));
 
     return rows.map((row) => ({

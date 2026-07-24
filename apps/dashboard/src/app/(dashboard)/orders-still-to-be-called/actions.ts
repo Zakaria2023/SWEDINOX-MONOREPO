@@ -9,9 +9,7 @@ import { Orders, SelectOrders } from "@/db/schema/orders";
 import { Products, SelectProducts } from "@/db/schema/products";
 import { RevenueGroups, SelectRevenueGroups } from "@/db/schema/revenue-groups";
 import { Stock } from "@/db/schema/stock";
-import { and, desc, eq, min, sql } from "drizzle-orm";
-
-export type PeriodFilter = { year?: number; month?: number };
+import { desc, eq, min, sql } from "drizzle-orm";
 
 export type OrderStillToCallRow = {
   orderId: SelectOrders["id"] | null;
@@ -42,13 +40,10 @@ export type OrderStillToCallRow = {
 
 // Orders that still have lines to be called off, viewed per line and ordered
 // by order, enriched with the reserved stock lot's on-hand figures.
-export const getOrdersStillToBeCalled = async (
-  filter: PeriodFilter = {},
-): Promise<OrderStillToCallRow[]> => {
+export const getOrdersStillToBeCalled = async (): Promise<
+  OrderStillToCallRow[]
+> => {
   try {
-    const year = sql<number>`YEAR(${OrderItems.createdAt})`;
-    const month = sql<number>`MONTH(${OrderItems.createdAt})`;
-
     const primaryContactId = db
       .select({
         companyUuid: Contacts.companyUuid,
@@ -100,13 +95,7 @@ export const getOrdersStillToBeCalled = async (
       .leftJoin(RevenueGroups, eq(Products.revenueGroupUuid, RevenueGroups.uuid))
       .leftJoin(Stock, eq(OrderItems.stockUuid, Stock.uuid))
       .leftJoin(primaryContact, eq(Companies.uuid, primaryContact.companyUuid))
-      .where(
-        and(
-          sql`${OrderItems.qtyPlanned} > ${OrderItems.qtyCallOff}`,
-          filter.year ? eq(year, filter.year) : undefined,
-          filter.month ? eq(month, filter.month) : undefined,
-        ),
-      )
+      .where(sql`${OrderItems.qtyPlanned} > ${OrderItems.qtyCallOff}`)
       .orderBy(desc(Orders.id), OrderItems.lineNumber);
 
     return rows.map((row) => {

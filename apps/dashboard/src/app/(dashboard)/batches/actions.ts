@@ -11,25 +11,8 @@ import {
 } from "@/db/schema/purchase-orders";
 import { Stock } from "@/db/schema/stock";
 import { describeError, formatInternalChargeNumber, generateUuid } from "@/lib/helpers";
-import {
-  and,
-  asc,
-  desc,
-  eq,
-  gte,
-  isNotNull,
-  like,
-  lte,
-  sql,
-} from "drizzle-orm";
+import { asc, desc, eq, isNotNull, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-
-export type BatchFilter = {
-  receiptFrom?: string;
-  receiptUntil?: string;
-  companyCode?: number;
-  productCode?: string;
-};
 
 export type BatchRow = SelectBatches & {
   purchaseOrderId: SelectPurchaseOrders["id"] | null;
@@ -40,11 +23,8 @@ export type BatchRow = SelectBatches & {
 };
 
 // Every registered batch, joined to the purchase order it arrived on, its
-// supplier and its product. Filtered on receipt date, supplier code and product
-// code, as the legacy overview does.
-export const getBatches = async (
-  filter: BatchFilter = {},
-): Promise<BatchRow[]> => {
+// supplier and its product.
+export const getBatches = async (): Promise<BatchRow[]> => {
   try {
     const rows = await db
       .select({
@@ -62,20 +42,6 @@ export const getBatches = async (
       )
       .leftJoin(Companies, eq(Batches.supplierUuid, Companies.uuid))
       .leftJoin(Products, eq(Batches.productUuid, Products.uuid))
-      .where(
-        and(
-          filter.receiptFrom
-            ? gte(Batches.receiptDate, filter.receiptFrom)
-            : undefined,
-          filter.receiptUntil
-            ? lte(Batches.receiptDate, filter.receiptUntil)
-            : undefined,
-          filter.companyCode ? eq(Companies.id, filter.companyCode) : undefined,
-          filter.productCode
-            ? like(Products.productCode, `${filter.productCode}%`)
-            : undefined,
-        ),
-      )
       .orderBy(desc(Batches.receiptDate), asc(Batches.internalCharge));
 
     return rows.map((row) => ({

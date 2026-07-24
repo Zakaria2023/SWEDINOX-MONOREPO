@@ -15,15 +15,10 @@ import { Stock } from "@/db/schema/stock";
 import { SelectWarehouses, Warehouses } from "@/db/schema/warehouses";
 import { describeError, generateUuid, todayDateString } from "@/lib/helpers";
 import { getClerkUsersForSelect } from "@/lib/server/clerk";
-import { aliasedTable, and, asc, desc, eq, gte, lte, sql } from "drizzle-orm";
+import { aliasedTable, and, asc, desc, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 const StockLocations = aliasedTable(Warehouses, "stock_locations");
-
-export type ComplaintLineFilter = {
-  createdFrom?: string;
-  createdUntil?: string;
-};
 
 export type ComplaintLineRow = SelectComplaintItems & {
   complaintNumber: SelectComplaints["id"] | null;
@@ -47,11 +42,8 @@ export type ComplaintLineRow = SelectComplaintItems & {
 };
 
 // Every complaint line, joined to its complaint, that complaint's company, the
-// order line it is about and the section the goods sat in. Filtered on the
-// line's creation date, as the legacy overview does.
-export const getComplaintLines = async (
-  filter: ComplaintLineFilter = {},
-): Promise<ComplaintLineRow[]> => {
+// order line it is about and the section the goods sat in.
+export const getComplaintLines = async (): Promise<ComplaintLineRow[]> => {
   try {
     const rows = await db
       .select({
@@ -80,16 +72,6 @@ export const getComplaintLines = async (
       .leftJoin(
         Warehouses,
         eq(ComplaintItems.warehouseSectionUuid, Warehouses.uuid),
-      )
-      .where(
-        and(
-          filter.createdFrom
-            ? gte(sql`DATE(${ComplaintItems.createdAt})`, filter.createdFrom)
-            : undefined,
-          filter.createdUntil
-            ? lte(sql`DATE(${ComplaintItems.createdAt})`, filter.createdUntil)
-            : undefined,
-        ),
       )
       .orderBy(desc(Complaints.id), asc(ComplaintItems.lineNumber));
 

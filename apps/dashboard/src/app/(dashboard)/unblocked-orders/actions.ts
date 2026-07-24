@@ -8,9 +8,7 @@ import { OrderDeblocks, SelectOrderDeblocks } from "@/db/schema/order-deblocks";
 import { OrderItems } from "@/db/schema/order-items";
 import { Orders, SelectOrders } from "@/db/schema/orders";
 import { getClerkUsersForSelect } from "@/lib/server/clerk";
-import { and, desc, eq, min, sql } from "drizzle-orm";
-
-export type PeriodFilter = { year?: number; month?: number };
+import { desc, eq, min, sql } from "drizzle-orm";
 
 export type UnblockedOrderRow = {
   customerName: SelectCompanies["companyName"] | null;
@@ -31,9 +29,7 @@ export type UnblockedOrderRow = {
 
 // Orders whose block has been released, read from the deblock audit trail and
 // enriched with the debtor, order total and the region/user that released it.
-export const getUnblockedOrders = async (
-  filter: PeriodFilter = {},
-): Promise<UnblockedOrderRow[]> => {
+export const getUnblockedOrders = async (): Promise<UnblockedOrderRow[]> => {
   try {
     const year = sql<number>`YEAR(${OrderDeblocks.createdAt})`;
     const month = sql<number>`MONTH(${OrderDeblocks.createdAt})`;
@@ -90,12 +86,6 @@ export const getUnblockedOrders = async (
       .innerJoin(Companies, eq(Orders.companyUuid, Companies.uuid))
       .leftJoin(primaryContact, eq(Companies.uuid, primaryContact.companyUuid))
       .leftJoin(orderAmounts, eq(Orders.uuid, orderAmounts.orderUuid))
-      .where(
-        and(
-          filter.year ? eq(year, filter.year) : undefined,
-          filter.month ? eq(month, filter.month) : undefined,
-        ),
-      )
       .orderBy(desc(OrderDeblocks.createdAt));
 
     // Resolve the Clerk user id into a display name.
