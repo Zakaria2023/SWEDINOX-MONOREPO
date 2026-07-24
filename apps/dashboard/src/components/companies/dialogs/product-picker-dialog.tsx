@@ -38,6 +38,10 @@ type GroupNodeProps = {
 
 type Tab = "search" | "assortment";
 
+// Tree key for the synthetic node holding products that have no product group,
+// so they are still pickable from the assortment tab.
+const UNGROUPED_KEY = "__ungrouped__";
+
 const GroupNode = ({
   group,
   depth,
@@ -153,6 +157,13 @@ export const ProductPickerDialog = ({
     return map;
   }, [products]);
 
+  // Products with no product group still need to be pickable, so they live
+  // under a dedicated "Ungrouped" node rather than being dropped from the tree.
+  const ungroupedProducts = useMemo(
+    () => products.filter((p) => !p.productGroupUuid),
+    [products],
+  );
+
   const searchResults = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
     if (!term) return [];
@@ -265,24 +276,71 @@ export const ProductPickerDialog = ({
             </div>
           ) : (
             <div className="max-h-80 overflow-y-auto rounded-md border p-1">
-              {rootGroups.length === 0 ? (
+              {rootGroups.length === 0 && ungroupedProducts.length === 0 ? (
                 <div className="p-4 text-center text-sm text-muted-foreground">
-                  No product groups found.
+                  No products found.
                 </div>
               ) : (
-                rootGroups.map((group) => (
-                  <GroupNode
-                    key={group.uuid}
-                    group={group}
-                    depth={0}
-                    childGroupsByParent={childGroupsByParent}
-                    productsByGroup={productsByGroup}
-                    expanded={expanded}
-                    toggleExpanded={toggleExpanded}
-                    selectedUuid={selected?.uuid ?? null}
-                    onPick={setSelected}
-                  />
-                ))
+                <>
+                  {rootGroups.map((group) => (
+                    <GroupNode
+                      key={group.uuid}
+                      group={group}
+                      depth={0}
+                      childGroupsByParent={childGroupsByParent}
+                      productsByGroup={productsByGroup}
+                      expanded={expanded}
+                      toggleExpanded={toggleExpanded}
+                      selectedUuid={selected?.uuid ?? null}
+                      onPick={setSelected}
+                    />
+                  ))}
+
+                  {ungroupedProducts.length > 0 && (
+                    <div>
+                      <button
+                        type="button"
+                        onClick={() => toggleExpanded(UNGROUPED_KEY)}
+                        className="flex w-full items-center gap-1.5 rounded px-2 py-1 text-left text-sm hover:bg-muted"
+                        style={{ paddingLeft: "0.5rem" }}
+                      >
+                        <ChevronRight
+                          className={cn(
+                            "size-3.5 shrink-0 transition-transform",
+                            expanded.has(UNGROUPED_KEY) && "rotate-90",
+                          )}
+                        />
+                        <span className="truncate text-muted-foreground">
+                          Ungrouped
+                        </span>
+                      </button>
+
+                      {expanded.has(UNGROUPED_KEY) && (
+                        <div>
+                          {ungroupedProducts.map((product) => (
+                            <button
+                              key={product.uuid}
+                              type="button"
+                              onClick={() => setSelected(product)}
+                              className={cn(
+                                "flex w-full items-center gap-1.5 rounded px-2 py-1 text-left text-sm hover:bg-muted",
+                                selected?.uuid === product.uuid &&
+                                  "bg-primary/10 text-primary",
+                              )}
+                              style={{ paddingLeft: "1.75rem" }}
+                            >
+                              <Package className="size-3.5 shrink-0 text-muted-foreground" />
+                              <span className="truncate">
+                                {product.productCode}
+                                {product.name ? ` — ${product.name}` : ""}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )}
