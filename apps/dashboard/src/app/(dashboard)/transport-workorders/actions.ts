@@ -11,7 +11,7 @@ import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { OrderItems } from "@/db/schema/order-items";
 import { Orders } from "@/db/schema/orders";
 import { Products, SelectProducts } from "@/db/schema/products";
-import { generateUuid, todayDateString } from "@/lib/helpers";
+import { describeError, generateUuid, todayDateString } from "@/lib/helpers";
 import { and, desc, eq, getTableColumns, max } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
@@ -55,8 +55,8 @@ export const getTransportWorkOrderLines = async (): Promise<
         eq(TransportWorkOrderLines.productUuid, Products.uuid),
       )
       .orderBy(desc(TransportWorkOrderLines.createdAt));
-  } catch {
-    throw new Error("Failed to fetch transport work orders");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch transport work orders"));
   }
 };
 

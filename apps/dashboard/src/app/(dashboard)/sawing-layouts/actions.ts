@@ -1,4 +1,5 @@
 "use server";
+import { describeError } from "@/lib/helpers";
 
 import { db } from "@/db";
 import { SawingLayouts, SelectSawingLayouts } from "@/db/schema/sawing-layouts";
@@ -12,7 +13,7 @@ export const getSawingLayouts = async (): Promise<SawingLayoutListItem[]> => {
       .select()
       .from(SawingLayouts)
       .orderBy(desc(SawingLayouts.sawingDate), asc(SawingLayouts.machine));
-  } catch {
-    throw new Error("Failed to fetch sawing layouts");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch sawing layouts"));
   }
 };

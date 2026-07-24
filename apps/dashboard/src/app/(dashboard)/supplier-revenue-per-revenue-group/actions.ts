@@ -1,4 +1,5 @@
 "use server";
+import { describeError } from "@/lib/helpers";
 
 import { db } from "@/db";
 import { Products } from "@/db/schema/products";
@@ -75,7 +76,7 @@ export const getSupplierRevenuePerRevenueGroup = async (
         avgPricePerKg: weightKg === 0 ? 0 : revenue / weightKg,
       };
     });
-  } catch {
-    throw new Error("Failed to fetch supplier revenue per revenue group");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch supplier revenue per revenue group"));
   }
 };

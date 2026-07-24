@@ -1,4 +1,5 @@
 "use server";
+import { describeError } from "@/lib/helpers";
 
 import { db } from "@/db";
 import { Nesting, SelectNesting } from "@/db/schema/nesting";
@@ -98,7 +99,7 @@ export const getNesting = async (): Promise<NestingListItem[]> => {
         orderType: active.length ? active.join(", ") : "Standard",
       };
     });
-  } catch {
-    throw new Error("Failed to fetch nesting");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch nesting"));
   }
 };

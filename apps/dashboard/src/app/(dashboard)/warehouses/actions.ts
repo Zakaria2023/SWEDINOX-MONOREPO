@@ -7,7 +7,7 @@ import {
   SelectWarehouses,
   Warehouses,
 } from "@/db/schema/warehouses";
-import { generateUuid } from "@/lib/helpers";
+import { describeError, generateUuid } from "@/lib/helpers";
 import { asc, desc, eq, isNull } from "drizzle-orm";
 
 export type WarehouseOption = Pick<SelectWarehouses, "uuid" | "name">;
@@ -149,8 +149,8 @@ export const getWarehouses = async (): Promise<SelectWarehouses[]> => {
       .from(Warehouses)
       .where(isNull(Warehouses.parentUuid))
       .orderBy(desc(Warehouses.createdAt));
-  } catch {
-    throw new Error("Failed to fetch warehouses");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch warehouses"));
   }
 };
 

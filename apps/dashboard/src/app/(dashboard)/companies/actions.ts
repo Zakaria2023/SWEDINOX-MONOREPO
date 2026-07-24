@@ -61,7 +61,7 @@ import {
   SelectCustomerStock,
 } from "@/db/schema/customer-stock";
 import { PurchaseCompanyType } from "@/lib/enums";
-import { generateUuid } from "@/lib/helpers";
+import { describeError, generateUuid } from "@/lib/helpers";
 import { currentUser } from "@clerk/nextjs/server";
 import { asc, desc, eq, or, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -451,8 +451,8 @@ export const getProjectsForCompany = async (
 export const getCompanies = async (): Promise<SelectCompanies[]> => {
   try {
     return await db.select().from(Companies).orderBy(desc(Companies.createdAt));
-  } catch {
-    throw new Error("Failed to fetch companies");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch companies"));
   }
 };
 

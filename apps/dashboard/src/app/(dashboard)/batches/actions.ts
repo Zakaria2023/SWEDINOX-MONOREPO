@@ -10,7 +10,7 @@ import {
   SelectPurchaseOrders,
 } from "@/db/schema/purchase-orders";
 import { Stock } from "@/db/schema/stock";
-import { formatInternalChargeNumber, generateUuid } from "@/lib/helpers";
+import { describeError, formatInternalChargeNumber, generateUuid } from "@/lib/helpers";
 import {
   and,
   asc,
@@ -86,8 +86,8 @@ export const getBatches = async (
       productCode: row.productCode,
       productName: row.productName,
     }));
-  } catch {
-    throw new Error("Failed to fetch batches");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch batches"));
   }
 };
 

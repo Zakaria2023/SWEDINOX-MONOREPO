@@ -1,4 +1,5 @@
 "use server";
+import { describeError } from "@/lib/helpers";
 
 import { db } from "@/db";
 import { InvoiceItems } from "@/db/schema/invoice-items";
@@ -148,7 +149,7 @@ export const getPurchasesAndSalesPerRevenueGroup = async (
       profitMargin: bucket.revenue === 0 ? 0 : (bucket.profit / bucket.revenue) * 100,
       avgSalesPricePerKg: bucket.weight === 0 ? 0 : bucket.revenue / bucket.weight,
     }));
-  } catch {
-    throw new Error("Failed to fetch purchases and sales per revenue group");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch purchases and sales per revenue group"));
   }
 };

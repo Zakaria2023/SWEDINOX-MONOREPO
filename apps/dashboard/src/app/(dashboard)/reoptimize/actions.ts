@@ -1,4 +1,5 @@
 "use server";
+import { describeError } from "@/lib/helpers";
 
 import { db } from "@/db";
 import { Reoptimize, SelectReoptimize } from "@/db/schema/reoptimize";
@@ -98,7 +99,7 @@ export const getReoptimize = async (): Promise<ReoptimizeListItem[]> => {
         orderType: active.length ? active.join(", ") : "Standard",
       };
     });
-  } catch {
-    throw new Error("Failed to fetch (re)optimize rows");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch (re)optimize rows"));
   }
 };

@@ -1,4 +1,5 @@
 "use server";
+import { describeError } from "@/lib/helpers";
 
 import { db } from "@/db";
 import { Stock } from "@/db/schema/stock";
@@ -45,8 +46,8 @@ export const getReservations = async (): Promise<ReservationItem[]> => {
       technicalKg: Number(row.technicalKg ?? 0),
       reservedQty: Number(row.reservedQty ?? 0),
     }));
-  } catch {
-    throw new Error("Failed to fetch reservations");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch reservations"));
   }
 };
 
@@ -103,7 +104,7 @@ export const getReservationRecords = async (): Promise<ReservationRecord[]> => {
           ? "Definitive (Sales)"
           : "Temporary (Sales)",
     }));
-  } catch {
-    throw new Error("Failed to fetch reservation records");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch reservation records"));
   }
 };

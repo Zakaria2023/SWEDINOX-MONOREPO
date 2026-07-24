@@ -15,7 +15,7 @@ import { Contracts, SelectContracts } from "@/db/schema/contracts";
 import { Products, SelectProducts } from "@/db/schema/products";
 import { SelectStock, Stock } from "@/db/schema/stock";
 import { InsertTexts, Texts } from "@/db/schema/texts";
-import { generateUuid } from "@/lib/helpers";
+import { describeError, generateUuid } from "@/lib/helpers";
 import {
   and,
   asc,
@@ -97,8 +97,8 @@ export const getOrders = async (): Promise<OrderListItem[]> => {
       .leftJoin(Contacts, eq(Orders.contactUuid, Contacts.uuid))
       .orderBy(desc(Orders.createdAt));
     return rows as OrderListItem[];
-  } catch {
-    throw new Error("Failed to fetch orders");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch orders"));
   }
 };
 

@@ -1,4 +1,5 @@
 "use server";
+import { describeError } from "@/lib/helpers";
 
 import { db } from "@/db";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
@@ -121,7 +122,7 @@ export const getUnblockedOrders = async (
       regionCode: row.regionCode ?? null,
       region: row.region,
     }));
-  } catch {
-    throw new Error("Failed to fetch unblocked orders");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch unblocked orders"));
   }
 };

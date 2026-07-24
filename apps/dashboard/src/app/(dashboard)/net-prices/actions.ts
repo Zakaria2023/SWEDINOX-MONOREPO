@@ -15,7 +15,7 @@ import {
   SelectProductGroupSuppliers,
 } from "@/db/schema/product-group-suppliers";
 import { Products, SelectProducts } from "@/db/schema/products";
-import {
+import { describeError,
   applyPriceDiscounts,
   generateUuid,
   normaliseDiscountTiers,
@@ -152,8 +152,8 @@ export const getNetPrices = async (
       preferredSupplier: row.preferredSupplier,
       supplierProductCode: row.supplierProductCode,
     }));
-  } catch {
-    throw new Error("Failed to fetch net prices");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch net prices"));
   }
 };
 

@@ -1,4 +1,5 @@
 "use server";
+import { describeError } from "@/lib/helpers";
 
 import { db } from "@/db";
 import {
@@ -21,7 +22,7 @@ export const getWarehouseCapacity = async (): Promise<
         asc(WarehouseCapacity.warehouseSection),
         asc(WarehouseCapacity.subsection),
       );
-  } catch {
-    throw new Error("Failed to fetch warehouse capacity");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch warehouse capacity"));
   }
 };

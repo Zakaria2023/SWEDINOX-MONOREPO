@@ -1,4 +1,5 @@
 "use server";
+import { describeError } from "@/lib/helpers";
 
 import { db } from "@/db";
 import {
@@ -30,8 +31,8 @@ export const getCountListDeviations = async (): Promise<
       .from(CountListDeviations)
       .leftJoin(Products, eq(CountListDeviations.productUuid, Products.uuid))
       .orderBy(desc(CountListDeviations.workOrderDate));
-  } catch {
-    throw new Error("Failed to fetch count-list deviations");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch count-list deviations"));
   }
 };
 

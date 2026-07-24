@@ -1,4 +1,5 @@
 "use server";
+import { describeError } from "@/lib/helpers";
 
 import { db } from "@/db";
 import { InvoiceItems, SelectInvoiceItems } from "@/db/schema/invoice-items";
@@ -41,7 +42,7 @@ export const getInvoiceLines = async (): Promise<InvoiceLineItem[]> => {
       .leftJoin(OrderItems, eq(InvoiceItems.orderItemUuid, OrderItems.uuid))
       .leftJoin(Products, eq(InvoiceItems.productUuid, Products.uuid))
       .orderBy(desc(Invoices.invoiceDate));
-  } catch {
-    throw new Error("Failed to fetch invoice lines");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch invoice lines"));
   }
 };

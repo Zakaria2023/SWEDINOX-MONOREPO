@@ -1,4 +1,5 @@
 "use server";
+import { describeError } from "@/lib/helpers";
 
 import { db } from "@/db";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
@@ -122,7 +123,7 @@ export const getCustomerRevenuePerProductGroup = async (
         invoiceLines: Number(row.invoiceLines),
       };
     });
-  } catch {
-    throw new Error("Failed to fetch customer revenue per product group");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch customer revenue per product group"));
   }
 };

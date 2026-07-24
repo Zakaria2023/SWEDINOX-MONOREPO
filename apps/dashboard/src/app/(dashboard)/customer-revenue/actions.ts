@@ -1,4 +1,5 @@
 "use server";
+import { describeError } from "@/lib/helpers";
 
 import { db } from "@/db";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
@@ -104,7 +105,7 @@ export const getCustomerRevenue = async (
         profitMargin: revenue === 0 ? 0 : (profit / revenue) * 100,
       };
     });
-  } catch {
-    throw new Error("Failed to fetch customer revenue");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch customer revenue"));
   }
 };

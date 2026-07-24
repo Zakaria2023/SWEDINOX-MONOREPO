@@ -9,7 +9,7 @@ import {
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
 import { resolveCompanyType } from "@/app/(dashboard)/companies/actions";
-import { generateUuid } from "@/lib/helpers";
+import { describeError, generateUuid } from "@/lib/helpers";
 import { desc, eq, getTableColumns } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
@@ -45,8 +45,8 @@ export const getPurchaseRequests = async (): Promise<
       .leftJoin(Companies, eq(PurchaseRequests.companyUuid, Companies.uuid))
       .leftJoin(Contacts, eq(PurchaseRequests.contactUuid, Contacts.uuid))
       .orderBy(desc(PurchaseRequests.createdAt))) as PurchaseRequestListItem[];
-  } catch {
-    throw new Error("Failed to fetch purchase requests");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch purchase requests"));
   }
 };
 

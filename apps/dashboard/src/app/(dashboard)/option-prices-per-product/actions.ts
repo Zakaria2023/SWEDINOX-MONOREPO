@@ -15,7 +15,7 @@ import {
   SelectProductOptionPrices,
   SelectSalesOptions,
 } from "@/db/schema/sales-options";
-import { generateUuid, todayDateString } from "@/lib/helpers";
+import { describeError, generateUuid, todayDateString } from "@/lib/helpers";
 import { aliasedTable, and, asc, eq, gte, lte, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
@@ -118,8 +118,8 @@ export const getOptionPrices = async (
       optionCode: row.optionCode,
       optionName: row.optionName,
     }));
-  } catch {
-    throw new Error("Failed to fetch option prices");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch option prices"));
   }
 };
 

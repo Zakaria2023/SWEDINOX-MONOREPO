@@ -1,4 +1,5 @@
 "use server";
+import { describeError } from "@/lib/helpers";
 
 import { db } from "@/db";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
@@ -272,7 +273,7 @@ export const getStockOnAdvice = async (
     });
 
     return filter.onlyAdvised ? rows.filter((row) => row.orderNow) : rows;
-  } catch {
-    throw new Error("Failed to fetch StockOn advice");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch StockOn advice"));
   }
 };

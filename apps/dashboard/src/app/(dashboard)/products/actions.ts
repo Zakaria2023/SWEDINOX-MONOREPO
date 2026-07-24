@@ -3,7 +3,7 @@
 import { db } from "@/db";
 import { InsertProducts, Products, SelectProducts } from "@/db/schema/products";
 import { ProductGroups, SelectProductGroups } from "@/db/schema/product-groups";
-import { generateUuid } from "@/lib/helpers";
+import { describeError, generateUuid } from "@/lib/helpers";
 import { asc, desc, eq, getTableColumns, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
@@ -40,8 +40,8 @@ export const getProducts = async (): Promise<ProductListItem[]> => {
         eq(Products.productGroupUuid, ProductGroups.uuid),
       )
       .orderBy(desc(Products.createdAt));
-  } catch {
-    throw new Error("Failed to fetch products");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch products"));
   }
 };
 

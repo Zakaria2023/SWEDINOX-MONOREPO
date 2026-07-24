@@ -1,4 +1,5 @@
 "use server";
+import { describeError } from "@/lib/helpers";
 
 import { db } from "@/db";
 import { SelectStock, Stock } from "@/db/schema/stock";
@@ -37,7 +38,7 @@ export const getCustomerStock = async (): Promise<CustomerStockItem[]> => {
       .leftJoin(owner, eq(Stock.ownerCompanyUuid, owner.uuid))
       .where(isNotNull(Stock.ownerCompanyUuid))
       .orderBy(desc(Stock.createdAt));
-  } catch {
-    throw new Error("Failed to fetch customer stock");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch customer stock"));
   }
 };

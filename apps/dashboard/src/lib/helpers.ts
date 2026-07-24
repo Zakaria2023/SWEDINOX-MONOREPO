@@ -23,6 +23,17 @@ import type {
 export const cn = (...inputs: ClassValue[]) => twMerge(clsx(inputs));
 
 /**
+ * A readable error message for a server-action catch block: the human-friendly
+ * fallback, followed by the underlying error's own message when there is one.
+ * Used so a failed query surfaces its real cause to the client (e.g. a missing
+ * column or a connection timeout) instead of only a generic "Failed to …".
+ */
+export const describeError = (error: unknown, fallback: string): string =>
+  error instanceof Error && error.message
+    ? `${fallback}: ${error.message}`
+    : fallback;
+
+/**
  * Returns today's date as a YYYY-MM-DD string.
  */
 export const todayDateString = () => new Date().toISOString().split("T")[0];

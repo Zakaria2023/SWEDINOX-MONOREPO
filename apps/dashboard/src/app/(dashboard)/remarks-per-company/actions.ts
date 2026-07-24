@@ -1,4 +1,5 @@
 "use server";
+import { describeError } from "@/lib/helpers";
 
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
@@ -60,7 +61,7 @@ export const getRemarksPerCompany = async (): Promise<RemarkPerCompanyRow[]> => 
       city: row.city ?? null,
       remarks: row.remarks ?? "",
     }));
-  } catch {
-    throw new Error("Failed to fetch remarks per company");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch remarks per company"));
   }
 };

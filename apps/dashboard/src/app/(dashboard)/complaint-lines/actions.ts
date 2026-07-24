@@ -13,7 +13,7 @@ import { Orders, SelectOrders } from "@/db/schema/orders";
 import { Products, SelectProducts } from "@/db/schema/products";
 import { Stock } from "@/db/schema/stock";
 import { SelectWarehouses, Warehouses } from "@/db/schema/warehouses";
-import { generateUuid, todayDateString } from "@/lib/helpers";
+import { describeError, generateUuid, todayDateString } from "@/lib/helpers";
 import { getClerkUsersForSelect } from "@/lib/server/clerk";
 import { aliasedTable, and, asc, desc, eq, gte, lte, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -121,8 +121,8 @@ export const getComplaintLines = async (
       reportMonth: rest.reportMonth === null ? null : Number(rest.reportMonth),
       reportYear: rest.reportYear === null ? null : Number(rest.reportYear),
     }));
-  } catch {
-    throw new Error("Failed to fetch complaint lines");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch complaint lines"));
   }
 };
 

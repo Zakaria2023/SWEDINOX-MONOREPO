@@ -9,7 +9,7 @@ import { Products } from "@/db/schema/products";
 import { QuoteItems } from "@/db/schema/quote-items";
 import { InsertQuotes, Quotes, SelectQuotes } from "@/db/schema/quotes";
 import { StockUnit } from "@/lib/enums";
-import {
+import { describeError,
   applyPriceDiscounts,
   generateUuid,
   profitMarginPercent,
@@ -63,8 +63,8 @@ export const getQuotes = async (): Promise<QuoteListItem[]> => {
       .leftJoin(Contacts, eq(Quotes.contactUuid, Contacts.uuid))
       .orderBy(desc(Quotes.createdAt));
     return rows;
-  } catch {
-    throw new Error("Failed to fetch quotes");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch quotes"));
   }
 };
 

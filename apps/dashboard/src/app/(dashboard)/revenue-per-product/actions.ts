@@ -1,4 +1,5 @@
 "use server";
+import { describeError } from "@/lib/helpers";
 
 import { db } from "@/db";
 import { InvoiceItems } from "@/db/schema/invoice-items";
@@ -74,7 +75,7 @@ export const getRevenuePerProduct = async (
         profitMargin: revenue === 0 ? 0 : (profit / revenue) * 100,
       };
     });
-  } catch {
-    throw new Error("Failed to fetch revenue per product");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch revenue per product"));
   }
 };

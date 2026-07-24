@@ -13,7 +13,7 @@ import {
   SelectPurchaseOrders,
 } from "@/db/schema/purchase-orders";
 import { PurchaseOrderItems } from "@/db/schema/purchase-order-items";
-import {
+import { describeError,
   generateUuid,
   resolveCertificateFromOptions,
   todayDateString,
@@ -128,8 +128,8 @@ export const getCertificatesReceived = async (
       unit: row.unit,
       kg: row.kg,
     }));
-  } catch {
-    throw new Error("Failed to fetch certificates");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch certificates"));
   }
 };
 

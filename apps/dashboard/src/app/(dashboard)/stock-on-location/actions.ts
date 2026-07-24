@@ -1,4 +1,5 @@
 "use server";
+import { describeError } from "@/lib/helpers";
 
 import { db } from "@/db";
 import { SelectStock, Stock } from "@/db/schema/stock";
@@ -29,7 +30,7 @@ export const getStockOnLocation = async (): Promise<StockOnLocationItem[]> => {
       .leftJoin(Warehouses, eq(Stock.locationUuid, Warehouses.uuid))
       .leftJoin(Companies, eq(Stock.supplierUuid, Companies.uuid))
       .orderBy(desc(Stock.createdAt));
-  } catch {
-    throw new Error("Failed to fetch stock on location");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch stock on location"));
   }
 };

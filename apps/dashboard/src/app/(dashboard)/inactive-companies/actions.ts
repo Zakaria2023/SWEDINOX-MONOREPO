@@ -1,4 +1,5 @@
 "use server";
+import { describeError } from "@/lib/helpers";
 
 import { db } from "@/db";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
@@ -82,7 +83,7 @@ export const getInactiveCompanies = async (): Promise<InactiveCompanyRow[]> => {
       region: row.region,
       lastOrderDate: row.lastOrderDate ? row.lastOrderDate.toISOString() : null,
     }));
-  } catch {
-    throw new Error("Failed to fetch inactive companies");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch inactive companies"));
   }
 };

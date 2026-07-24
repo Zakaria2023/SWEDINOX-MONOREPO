@@ -1,6 +1,7 @@
 "use server";
 
-import { Companies, SelectCompanies } from "@/db/schema/companies";
+import {
+  describeError, Companies, SelectCompanies } from "@/db/schema/companies";
 import { db } from "@/db";
 import { Products } from "@/db/schema/products";
 import {
@@ -14,7 +15,7 @@ import {
 import { RevenueGroups, SelectRevenueGroups } from "@/db/schema/revenue-groups";
 import { PurchaseLineReceivals } from "@/db/schema/purchase-line-receivals";
 import { getClerkUsersForSelect } from "@/lib/server/clerk";
-import { generateUuid, todayDateString } from "@/lib/helpers";
+import { describeError, generateUuid, todayDateString } from "@/lib/helpers";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
@@ -85,8 +86,8 @@ export const getPurchaseOrdersToBeReceived = async (): Promise<
     const nameById = new Map(users.map((user) => [user.value, user.label]));
 
     return mapRows(rows, nameById);
-  } catch {
-    throw new Error("Failed to fetch purchase orders to be received");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch purchase orders to be received"));
   }
 };
 

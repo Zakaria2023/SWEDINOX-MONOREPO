@@ -1,4 +1,5 @@
 "use server";
+import { describeError } from "@/lib/helpers";
 
 import { db } from "@/db";
 import {
@@ -52,8 +53,8 @@ export const getStockMovements = async (): Promise<
       .leftJoin(Orders, eq(StockMovements.orderUuid, Orders.uuid))
       .leftJoin(Invoices, eq(StockMovements.invoiceUuid, Invoices.uuid))
       .orderBy(desc(StockMovements.createdAt));
-  } catch {
-    throw new Error("Failed to fetch stock movements");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch stock movements"));
   }
 };
 

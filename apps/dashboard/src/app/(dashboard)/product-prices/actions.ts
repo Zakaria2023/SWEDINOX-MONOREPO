@@ -9,7 +9,7 @@ import {
 } from "@/db/schema/product-group-suppliers";
 import { Products, SelectProducts } from "@/db/schema/products";
 import { PurchaseLineReceivals } from "@/db/schema/purchase-line-receivals";
-import { todayDateString } from "@/lib/helpers";
+import { describeError, todayDateString } from "@/lib/helpers";
 import { aliasedTable, and, asc, eq, gte, lte, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
@@ -86,8 +86,8 @@ export const getProductPrices = async (
       preferredSupplier: row.preferredSupplier,
       supplierProductCode: row.supplierProductCode,
     }));
-  } catch {
-    throw new Error("Failed to fetch product prices");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch product prices"));
   }
 };
 

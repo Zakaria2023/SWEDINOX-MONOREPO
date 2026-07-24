@@ -14,7 +14,7 @@ import { Orders } from "@/db/schema/orders";
 import { Products, SelectProducts } from "@/db/schema/products";
 import { Stock } from "@/db/schema/stock";
 import { StockMovements } from "@/db/schema/stock-movements";
-import { generateUuid, todayDateString } from "@/lib/helpers";
+import { describeError, generateUuid, todayDateString } from "@/lib/helpers";
 import { recordFreightMovement } from "@/lib/server/freight";
 import { currentUser } from "@clerk/nextjs/server";
 import { and, desc, eq, getTableColumns } from "drizzle-orm";
@@ -61,8 +61,8 @@ export const getProductionWorkOrderLines = async (): Promise<
         eq(ProductionWorkOrderLines.productUuid, Products.uuid),
       )
       .orderBy(desc(ProductionWorkOrderLines.createdAt));
-  } catch {
-    throw new Error("Failed to fetch production work orders");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch production work orders"));
   }
 };
 

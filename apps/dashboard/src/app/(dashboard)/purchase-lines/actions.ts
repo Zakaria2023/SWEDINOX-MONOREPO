@@ -1,4 +1,5 @@
 "use server";
+import { describeError } from "@/lib/helpers";
 
 import { db } from "@/db";
 import {
@@ -57,7 +58,7 @@ export const getPurchaseLines = async (): Promise<PurchaseLineItem[]> => {
           ? (nameById.get(orderPurchaserId) ?? orderPurchaserId)
           : null),
     }));
-  } catch {
-    throw new Error("Failed to fetch purchase lines");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch purchase lines"));
   }
 };

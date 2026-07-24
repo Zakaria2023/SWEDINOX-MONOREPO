@@ -9,7 +9,7 @@ import { Products } from "@/db/schema/products";
 import { RevenueGroups, SelectRevenueGroups } from "@/db/schema/revenue-groups";
 import { Stock } from "@/db/schema/stock";
 import { INVOICE_SURCHARGE_DESCRIPTION_LABELS } from "@/lib/labels";
-import { generateUuid, todayDateString } from "@/lib/helpers";
+import { describeError, generateUuid, todayDateString } from "@/lib/helpers";
 import { desc, eq, getTableColumns } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
@@ -30,8 +30,8 @@ export const getCharges = async (): Promise<ChargeListItem[]> => {
       .leftJoin(Companies, eq(Charges.companyUuid, Companies.uuid))
       .leftJoin(RevenueGroups, eq(Charges.revenueGroupUuid, RevenueGroups.uuid))
       .orderBy(desc(Charges.creationDate));
-  } catch {
-    throw new Error("Failed to fetch charges");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch charges"));
   }
 };
 

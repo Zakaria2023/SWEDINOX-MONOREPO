@@ -9,7 +9,7 @@ import {
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
 import { Products, SelectProducts } from "@/db/schema/products";
-import { generateUuid } from "@/lib/helpers";
+import { describeError, generateUuid } from "@/lib/helpers";
 import { currentUser } from "@clerk/nextjs/server";
 import { desc, eq, getTableColumns } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -47,8 +47,8 @@ export const getComplaints = async (): Promise<ComplaintListItem[]> => {
       .leftJoin(Contacts, eq(Complaints.contactUuid, Contacts.uuid))
       .leftJoin(Products, eq(Complaints.productUuid, Products.uuid))
       .orderBy(desc(Complaints.createdAt));
-  } catch {
-    throw new Error("Failed to fetch complaints");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch complaints"));
   }
 };
 

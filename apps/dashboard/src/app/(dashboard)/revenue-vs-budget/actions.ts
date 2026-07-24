@@ -1,4 +1,5 @@
 "use server";
+import { describeError } from "@/lib/helpers";
 
 import { db } from "@/db";
 import { InvoiceItems } from "@/db/schema/invoice-items";
@@ -152,7 +153,7 @@ export const getRevenueVsBudget = async (
       avgSalesPriceBudget:
         bucket.weightBudget === 0 ? 0 : bucket.revenueBudget / bucket.weightBudget,
     }));
-  } catch {
-    throw new Error("Failed to fetch revenue vs budget");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch revenue vs budget"));
   }
 };

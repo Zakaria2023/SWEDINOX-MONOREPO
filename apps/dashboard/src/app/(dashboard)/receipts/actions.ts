@@ -1,4 +1,5 @@
 "use server";
+import { describeError } from "@/lib/helpers";
 
 import { db } from "@/db";
 import { PurchaseLineReceivals } from "@/db/schema/purchase-line-receivals";
@@ -65,7 +66,7 @@ export const getReceipts = async (): Promise<ReceiptRow[]> => {
         materialStillToReceive: Math.max(0, Number(row.planned) - qty),
       };
     });
-  } catch {
-    throw new Error("Failed to fetch receipts");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch receipts"));
   }
 };

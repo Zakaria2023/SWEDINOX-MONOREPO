@@ -1,4 +1,5 @@
 "use server";
+import { describeError } from "@/lib/helpers";
 
 import { db } from "@/db";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
@@ -135,7 +136,7 @@ export const getOrderLinesStillToBeCalled = async (
         consignment: !!row.consignment,
       };
     });
-  } catch {
-    throw new Error("Failed to fetch order lines still to be called");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch order lines still to be called"));
   }
 };

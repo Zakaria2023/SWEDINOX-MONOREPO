@@ -12,7 +12,7 @@ import {
 } from "@/db/schema/machines";
 import { SelectWarehouses, Warehouses } from "@/db/schema/warehouses";
 import { MachineProductionType } from "@/lib/enums";
-import { generateUuid } from "@/lib/helpers";
+import { describeError, generateUuid } from "@/lib/helpers";
 import { MACHINE_PRODUCTION_LABELS } from "@/lib/labels";
 import { desc, eq, getTableColumns } from "drizzle-orm";
 
@@ -51,8 +51,8 @@ export const getMachines = async (): Promise<MachineListItem[]> => {
       .from(Machines)
       .leftJoin(Warehouses, eq(Machines.stockLocationUuid, Warehouses.uuid))
       .orderBy(desc(Machines.createdAt));
-  } catch {
-    throw new Error("Failed to fetch machines");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch machines"));
   }
 };
 

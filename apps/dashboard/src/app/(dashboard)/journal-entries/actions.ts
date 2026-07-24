@@ -1,4 +1,5 @@
 "use server";
+import { describeError } from "@/lib/helpers";
 
 import { db } from "@/db";
 import {
@@ -22,7 +23,7 @@ export const getJournalEntries = async (): Promise<JournalEntryListItem[]> => {
       .from(JournalEntries)
       .leftJoin(Companies, eq(JournalEntries.companyUuid, Companies.uuid))
       .orderBy(desc(JournalEntries.bookingDate));
-  } catch {
-    throw new Error("Failed to fetch journal entries");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch journal entries"));
   }
 };

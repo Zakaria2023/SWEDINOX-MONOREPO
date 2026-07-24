@@ -1,4 +1,5 @@
 "use server";
+import { describeError } from "@/lib/helpers";
 
 import { db } from "@/db";
 import {
@@ -31,7 +32,7 @@ export const getProductionBatches = async (): Promise<
         eq(ProductionBatches.toLocationUuid, Warehouses.uuid),
       )
       .orderBy(desc(ProductionBatches.createdAt));
-  } catch {
-    throw new Error("Failed to fetch production batches");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch production batches"));
   }
 };

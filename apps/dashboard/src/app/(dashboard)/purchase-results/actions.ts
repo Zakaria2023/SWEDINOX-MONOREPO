@@ -1,4 +1,5 @@
 "use server";
+import { describeError } from "@/lib/helpers";
 
 import { db } from "@/db";
 import { PurchaseLineReceivals } from "@/db/schema/purchase-line-receivals";
@@ -77,7 +78,7 @@ export const getPurchaseResults = async (
           replacementValue === 0 ? 0 : (differenceEuro / replacementValue) * 100,
       };
     });
-  } catch {
-    throw new Error("Failed to fetch purchase results");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch purchase results"));
   }
 };

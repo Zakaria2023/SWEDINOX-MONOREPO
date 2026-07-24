@@ -9,7 +9,7 @@ import { PurchaseOrderItems } from "@/db/schema/purchase-order-items";
 import { PurchaseOrders } from "@/db/schema/purchase-orders";
 import { RevenueGroups, SelectRevenueGroups } from "@/db/schema/revenue-groups";
 import { SfnCounterpartyRole } from "@/lib/enums";
-import { currentYear, isDomesticCountry, toKilograms } from "@/lib/helpers";
+import { describeError, currentYear, isDomesticCountry, toKilograms } from "@/lib/helpers";
 import { and, asc, eq, gte, lt, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
@@ -410,8 +410,8 @@ export const getFreightFlow = async (
         a.month - b.month ||
         (a.revenueGroupNumber ?? 0) - (b.revenueGroupNumber ?? 0),
     );
-  } catch {
-    throw new Error("Failed to fetch the freight flow");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch the freight flow"));
   }
 };
 

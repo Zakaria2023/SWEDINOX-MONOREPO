@@ -1,4 +1,5 @@
 "use server";
+import { describeError } from "@/lib/helpers";
 
 import { db } from "@/db";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
@@ -155,7 +156,7 @@ export const getCreditInformationCustomers = async (
         revenueTwoYearsAgo: Number(row.revenueTwoYearsAgo ?? 0),
       };
     });
-  } catch {
-    throw new Error("Failed to fetch credit information customers");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch credit information customers"));
   }
 };

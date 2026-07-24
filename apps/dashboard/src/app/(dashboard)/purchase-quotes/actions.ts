@@ -9,7 +9,7 @@ import {
   SelectPurchaseQuotes,
 } from "@/db/schema/purchase-quotes";
 import { resolveCompanyType } from "@/app/(dashboard)/companies/actions";
-import { generateUuid } from "@/lib/helpers";
+import { describeError, generateUuid } from "@/lib/helpers";
 import { desc, eq, getTableColumns } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
@@ -43,8 +43,8 @@ export const getPurchaseQuotes = async (): Promise<PurchaseQuoteListItem[]> => {
       .leftJoin(Companies, eq(PurchaseQuotes.companyUuid, Companies.uuid))
       .leftJoin(Contacts, eq(PurchaseQuotes.contactUuid, Contacts.uuid))
       .orderBy(desc(PurchaseQuotes.createdAt));
-  } catch {
-    throw new Error("Failed to fetch purchase quotes");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch purchase quotes"));
   }
 };
 

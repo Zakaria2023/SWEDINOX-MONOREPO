@@ -1,4 +1,5 @@
 "use server";
+import { describeError } from "@/lib/helpers";
 
 import { db } from "@/db";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
@@ -110,7 +111,7 @@ export const getCustomerRevenueSalesVisits = async (
       kgLastYear: Number(row.kgLastYear),
       kgTwoYearsAgo: Number(row.kgTwoYearsAgo),
     }));
-  } catch {
-    throw new Error("Failed to fetch customer revenue, sales and visits");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch customer revenue, sales and visits"));
   }
 };

@@ -7,7 +7,7 @@ import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { Products, SelectProducts } from "@/db/schema/products";
 import { Stock } from "@/db/schema/stock";
 import { StockMovements } from "@/db/schema/stock-movements";
-import { generateUuid, todayDateString } from "@/lib/helpers";
+import { describeError, generateUuid, todayDateString } from "@/lib/helpers";
 import { recordFreightMovement } from "@/lib/server/freight";
 import { currentUser } from "@clerk/nextjs/server";
 import { and, desc, eq, getTableColumns, ne, or } from "drizzle-orm";
@@ -48,8 +48,8 @@ export const getDeliveries = async (): Promise<DeliveryLineItem[]> => {
       .leftJoin(Products, eq(OrderItems.productUuid, Products.uuid))
       .where(ne(OrderItems.status, "cancelled"))
       .orderBy(desc(OrderItems.createdAt));
-  } catch {
-    throw new Error("Failed to fetch deliveries");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch deliveries"));
   }
 };
 
@@ -70,8 +70,8 @@ export const getBlockedDeliveries = async (): Promise<DeliveryLineItem[]> => {
         ),
       )
       .orderBy(desc(OrderItems.createdAt));
-  } catch {
-    throw new Error("Failed to fetch blocked deliveries");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch blocked deliveries"));
   }
 };
 
@@ -206,7 +206,7 @@ export const getDeliveriesToArrange = async (): Promise<DeliveryLineItem[]> => {
       .leftJoin(Products, eq(OrderItems.productUuid, Products.uuid))
       .where(eq(OrderItems.qtyReserved, "0.000"))
       .orderBy(desc(OrderItems.createdAt));
-  } catch {
-    throw new Error("Failed to fetch deliveries to arrange");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch deliveries to arrange"));
   }
 };

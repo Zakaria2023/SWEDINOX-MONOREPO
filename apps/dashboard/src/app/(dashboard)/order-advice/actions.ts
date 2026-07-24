@@ -1,4 +1,5 @@
 "use server";
+import { describeError } from "@/lib/helpers";
 
 import { db } from "@/db";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
@@ -273,7 +274,7 @@ export const getOrderAdvice = async (
     });
 
     return filter.onlyAdvised ? rows.filter((row) => row.orderQty > 0) : rows;
-  } catch {
-    throw new Error("Failed to fetch order advice");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch order advice"));
   }
 };

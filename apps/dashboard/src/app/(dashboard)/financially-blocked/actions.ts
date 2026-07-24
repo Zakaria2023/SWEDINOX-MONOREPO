@@ -1,7 +1,8 @@
 "use server";
 
-import { requireAuth } from "@/lib/auth";
-import { generateUuid } from "@/lib/helpers";
+import {
+  describeError, requireAuth } from "@/lib/auth";
+import { describeError, generateUuid } from "@/lib/helpers";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { db } from "@/db";
 import { Invoices } from "@/db/schema/invoices";
@@ -169,7 +170,7 @@ export const getFinanciallyBlocked = async (): Promise<
       ...orderRows.map((row) => build("Order", row)),
       ...quoteRows.map((row) => build("Quote", row)),
     ].sort((a, b) => a.debtor.localeCompare(b.debtor));
-  } catch {
-    throw new Error("Failed to fetch financially blocked quotes and orders");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch financially blocked quotes and orders"));
   }
 };

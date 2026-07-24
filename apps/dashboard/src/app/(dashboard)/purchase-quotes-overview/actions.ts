@@ -14,7 +14,7 @@ import { Products, SelectProducts } from "@/db/schema/products";
 import { PurchaseOrderItems } from "@/db/schema/purchase-order-items";
 import { PurchaseOrders } from "@/db/schema/purchase-orders";
 import { RevenueGroups, SelectRevenueGroups } from "@/db/schema/revenue-groups";
-import { generateUuid } from "@/lib/helpers";
+import { describeError, generateUuid } from "@/lib/helpers";
 import { desc, eq, getTableColumns } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
@@ -57,8 +57,8 @@ export const getPurchaseQuoteLines = async (): Promise<
         eq(PurchaseQuoteItems.revenueGroupUuid, RevenueGroups.uuid),
       )
       .orderBy(desc(PurchaseQuotes.quoteDate));
-  } catch {
-    throw new Error("Failed to fetch purchase quotes");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch purchase quotes"));
   }
 };
 

@@ -1,4 +1,5 @@
 "use server";
+import { describeError } from "@/lib/helpers";
 
 import { db } from "@/db";
 import {
@@ -15,7 +16,7 @@ export const getCapacityChecks = async (): Promise<CapacityCheckListItem[]> => {
       .select()
       .from(CapacityChecks)
       .orderBy(desc(CapacityChecks.checkDate), asc(CapacityChecks.checkName));
-  } catch {
-    throw new Error("Failed to fetch capacity checks");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch capacity checks"));
   }
 };

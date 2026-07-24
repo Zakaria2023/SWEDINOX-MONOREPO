@@ -1,4 +1,5 @@
 "use server";
+import { describeError } from "@/lib/helpers";
 
 import { db, Companies, FollowUps, SelectCompanies, SelectFollowUps } from "@/db";
 import { desc, eq, getTableColumns } from "drizzle-orm";
@@ -17,7 +18,7 @@ export const getFollowUps = async (): Promise<FollowUpListItem[]> => {
       .from(FollowUps)
       .leftJoin(Companies, eq(FollowUps.companyUuid, Companies.uuid))
       .orderBy(desc(FollowUps.createdAt));
-  } catch {
-    throw new Error("Failed to fetch follow-ups");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch follow-ups"));
   }
 };

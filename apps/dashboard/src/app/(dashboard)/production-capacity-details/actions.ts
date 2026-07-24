@@ -1,4 +1,5 @@
 "use server";
+import { describeError } from "@/lib/helpers";
 
 import { db } from "@/db";
 import {
@@ -106,7 +107,7 @@ export const getProductionCapacityDetails = async (): Promise<
 
       return { ...rest, orderType: active.length ? active.join(", ") : "Standard" };
     });
-  } catch {
-    throw new Error("Failed to fetch production capacity details");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch production capacity details"));
   }
 };

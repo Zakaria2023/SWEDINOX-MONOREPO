@@ -1,4 +1,5 @@
 "use server";
+import { describeError } from "@/lib/helpers";
 
 import { db } from "@/db";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
@@ -100,7 +101,7 @@ export const getCustomerRevenuePerRevenueGroup = async (
       weightKg: Number(row.weightKg),
       revenue: Number(row.revenue),
     }));
-  } catch {
-    throw new Error("Failed to fetch customer revenue per revenue group");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch customer revenue per revenue group"));
   }
 };

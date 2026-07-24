@@ -13,7 +13,7 @@ import {
   SalesOptions,
   SelectSalesOptions,
 } from "@/db/schema/sales-options";
-import {
+import { describeError,
   generateUuid,
   profitMarginPercent,
   todayDateString,
@@ -104,8 +104,8 @@ export const getOptionRevenue = async (
         lineCount: Number(row.lineCount ?? 0),
       };
     });
-  } catch {
-    throw new Error("Failed to fetch option revenue");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch option revenue"));
   }
 };
 

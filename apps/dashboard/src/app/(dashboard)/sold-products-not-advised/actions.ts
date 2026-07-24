@@ -1,4 +1,5 @@
 "use server";
+import { describeError } from "@/lib/helpers";
 
 import { db } from "@/db";
 import { InvoiceItems } from "@/db/schema/invoice-items";
@@ -158,7 +159,7 @@ export const getSoldProductsNotAdvised = async (
         available: technical - reserved,
       };
     });
-  } catch {
-    throw new Error("Failed to fetch sold products not on the order recommendation");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch sold products not on the order recommendation"));
   }
 };

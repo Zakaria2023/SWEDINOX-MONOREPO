@@ -12,7 +12,7 @@ import { StockMovements } from "@/db/schema/stock-movements";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
 import { Products } from "@/db/schema/products";
-import { generateUuid } from "@/lib/helpers";
+import { describeError, generateUuid } from "@/lib/helpers";
 import { recordFreightMovement } from "@/lib/server/freight";
 import { currentUser } from "@clerk/nextjs/server";
 import { desc, eq, getTableColumns, inArray } from "drizzle-orm";
@@ -72,8 +72,8 @@ export const getPurchaseOrders = async (): Promise<PurchaseOrderListItem[]> => {
       .leftJoin(Companies, eq(PurchaseOrders.supplierUuid, Companies.uuid))
       .leftJoin(Contacts, eq(PurchaseOrders.contactUuid, Contacts.uuid))
       .orderBy(desc(PurchaseOrders.createdAt));
-  } catch {
-    throw new Error("Failed to fetch purchase orders");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch purchase orders"));
   }
 };
 

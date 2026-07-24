@@ -1,4 +1,5 @@
 "use server";
+import { describeError } from "@/lib/helpers";
 
 import { db } from "@/db";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
@@ -113,7 +114,7 @@ export const getOrderLines = async (
         seller: row.seller,
       };
     });
-  } catch {
-    throw new Error("Failed to fetch order lines");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch order lines"));
   }
 };

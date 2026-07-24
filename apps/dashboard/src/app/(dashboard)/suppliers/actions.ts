@@ -1,4 +1,5 @@
 "use server";
+import { describeError } from "@/lib/helpers";
 
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
@@ -133,7 +134,7 @@ export const getSuppliers = async (): Promise<SupplierRow[]> => {
         isProspect: roles.includes("prospect"),
       };
     });
-  } catch {
-    throw new Error("Failed to fetch suppliers");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch suppliers"));
   }
 };

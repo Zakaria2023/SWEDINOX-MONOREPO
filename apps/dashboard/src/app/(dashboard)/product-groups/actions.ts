@@ -11,7 +11,7 @@ import {
   ProductGroups,
   SelectProductGroups,
 } from "@/db/schema/product-groups";
-import { generateUuid } from "@/lib/helpers";
+import { describeError, generateUuid } from "@/lib/helpers";
 import { and, asc, desc, eq, getTableColumns, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
@@ -61,8 +61,8 @@ export const getProductGroups = async (): Promise<ProductGroupListItem[]> => {
       )
       .where(isNull(ProductGroups.parentUuid))
       .orderBy(desc(ProductGroups.createdAt));
-  } catch {
-    throw new Error("Failed to fetch product groups");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch product groups"));
   }
 };
 

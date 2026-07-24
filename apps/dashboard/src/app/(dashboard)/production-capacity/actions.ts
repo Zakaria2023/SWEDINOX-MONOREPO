@@ -1,4 +1,5 @@
 "use server";
+import { describeError } from "@/lib/helpers";
 
 import { db } from "@/db";
 import {
@@ -28,7 +29,7 @@ export const getProductionCapacity = async (): Promise<
       .from(ProductionCapacity)
       .leftJoin(Machines, eq(ProductionCapacity.machineUuid, Machines.uuid))
       .orderBy(desc(ProductionCapacity.capacityDate), asc(Machines.code));
-  } catch {
-    throw new Error("Failed to fetch production capacity");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch production capacity"));
   }
 };

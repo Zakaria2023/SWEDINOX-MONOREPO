@@ -1,4 +1,5 @@
 "use server";
+import { describeError } from "@/lib/helpers";
 
 import { db } from "@/db";
 import {
@@ -17,7 +18,7 @@ export const getTimeRegistrations = async (): Promise<
       .select()
       .from(TimeRegistrations)
       .orderBy(desc(TimeRegistrations.dateTime));
-  } catch {
-    throw new Error("Failed to fetch time registrations");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch time registrations"));
   }
 };

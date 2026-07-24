@@ -10,7 +10,7 @@ import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { OrderItems } from "@/db/schema/order-items";
 import { Orders } from "@/db/schema/orders";
 import { Products, SelectProducts } from "@/db/schema/products";
-import { generateUuid, todayDateString } from "@/lib/helpers";
+import { describeError, generateUuid, todayDateString } from "@/lib/helpers";
 import { desc, eq, getTableColumns } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
@@ -53,8 +53,8 @@ export const getReturnLines = async (): Promise<ReturnLineItem[]> => {
         profitMargin: amount === 0 ? 0 : (profit / amount) * 100,
       };
     });
-  } catch {
-    throw new Error("Failed to fetch return lines");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch return lines"));
   }
 };
 

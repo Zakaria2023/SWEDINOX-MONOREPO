@@ -1,4 +1,5 @@
 "use server";
+import { describeError } from "@/lib/helpers";
 
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
@@ -119,7 +120,7 @@ export const getPurchaseInvoicesToBeReceived = async (): Promise<
       actualDeliveryDate: row.actualDeliveryDate ?? null,
       amount: Number(row.amount),
     }));
-  } catch {
-    throw new Error("Failed to fetch purchase invoices to be received");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch purchase invoices to be received"));
   }
 };

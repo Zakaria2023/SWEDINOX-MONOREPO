@@ -15,7 +15,7 @@ import { QuoteItems, SelectQuoteItems } from "@/db/schema/quote-items";
 import { Quotes, SelectQuotes } from "@/db/schema/quotes";
 import { RevenueGroups, SelectRevenueGroups } from "@/db/schema/revenue-groups";
 import { SelectStock, Stock } from "@/db/schema/stock";
-import { generateUuid, resolveOrderTypeLabel } from "@/lib/helpers";
+import { describeError, generateUuid, resolveOrderTypeLabel } from "@/lib/helpers";
 import { and, asc, desc, eq, gte, isNull, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
@@ -150,8 +150,8 @@ export const getQuoteLines = async (
       quoteMonth: rest.quoteMonth === null ? null : Number(rest.quoteMonth),
       quoteYear: rest.quoteYear === null ? null : Number(rest.quoteYear),
     }));
-  } catch {
-    throw new Error("Failed to fetch quote lines");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch quote lines"));
   }
 };
 

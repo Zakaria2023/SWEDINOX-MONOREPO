@@ -1,4 +1,5 @@
 "use server";
+import { describeError } from "@/lib/helpers";
 
 import { db } from "@/db";
 import {
@@ -32,7 +33,7 @@ export const getPurchaseReceivals = async (): Promise<
       .leftJoin(Companies, eq(PurchaseLineReceivals.companyUuid, Companies.uuid))
       .leftJoin(Products, eq(PurchaseLineReceivals.productUuid, Products.uuid))
       .orderBy(desc(PurchaseLineReceivals.receiptDate));
-  } catch {
-    throw new Error("Failed to fetch purchase receivals");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch purchase receivals"));
   }
 };

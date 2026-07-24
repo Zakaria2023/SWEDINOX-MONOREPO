@@ -1,4 +1,5 @@
 "use server";
+import { describeError } from "@/lib/helpers";
 
 import { db } from "@/db";
 import { Stock } from "@/db/schema/stock";
@@ -61,7 +62,7 @@ export const getStockHistory = async (): Promise<StockHistoryRow[]> => {
         pricePerUnit: stockQty === 0 ? 0 : stockEuro / stockQty,
       };
     });
-  } catch {
-    throw new Error("Failed to fetch stock history");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch stock history"));
   }
 };

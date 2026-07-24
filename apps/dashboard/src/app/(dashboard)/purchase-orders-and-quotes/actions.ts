@@ -1,4 +1,5 @@
 "use server";
+import { describeError } from "@/lib/helpers";
 
 import { db } from "@/db";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
@@ -97,7 +98,7 @@ export const getPurchaseOrdersAndQuotes = async (
     return [...orders, ...quotes].sort((a, b) =>
       (b.createdAt ?? "").localeCompare(a.createdAt ?? ""),
     );
-  } catch {
-    throw new Error("Failed to fetch purchase orders and quotes");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch purchase orders and quotes"));
   }
 };

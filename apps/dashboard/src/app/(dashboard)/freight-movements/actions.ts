@@ -1,4 +1,5 @@
 "use server";
+import { describeError } from "@/lib/helpers";
 
 import { db } from "@/db";
 import {
@@ -70,8 +71,8 @@ export const getFreightMovements = async (): Promise<
       )
       .leftJoin(Suppliers, eq(FreightMovements.supplierUuid, Suppliers.uuid))
       .orderBy(desc(FreightMovements.mutationDate));
-  } catch {
-    throw new Error("Failed to fetch freight movements");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch freight movements"));
   }
 };
 

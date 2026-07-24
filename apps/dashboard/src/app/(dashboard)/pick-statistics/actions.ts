@@ -1,4 +1,5 @@
 "use server";
+import { describeError } from "@/lib/helpers";
 
 import { db } from "@/db";
 import {
@@ -38,7 +39,7 @@ export const getPickStatistics = async (): Promise<PickStatisticListItem[]> => {
       avgQtyPerPick: row.picks > 0 ? Number(row.quantityPicked) / row.picks : 0,
       avgKgPerPick: row.picks > 0 ? Number(row.kgPicked) / row.picks : 0,
     }));
-  } catch {
-    throw new Error("Failed to fetch pick statistics");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch pick statistics"));
   }
 };

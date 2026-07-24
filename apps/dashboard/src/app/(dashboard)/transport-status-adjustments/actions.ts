@@ -1,4 +1,5 @@
 "use server";
+import { describeError } from "@/lib/helpers";
 
 import { db } from "@/db";
 import {
@@ -32,7 +33,7 @@ export const getTransportStatusAdjustments = async (): Promise<
         eq(TransportStatusAdjustments.orderItemUuid, OrderItems.uuid),
       )
       .orderBy(desc(TransportStatusAdjustments.timeModified));
-  } catch {
-    throw new Error("Failed to fetch transport status adjustments");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch transport status adjustments"));
   }
 };

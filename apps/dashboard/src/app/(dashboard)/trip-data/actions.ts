@@ -1,4 +1,5 @@
 "use server";
+import { describeError } from "@/lib/helpers";
 
 import { db } from "@/db";
 import {
@@ -15,7 +16,7 @@ export const getTripData = async (): Promise<TripDataListItem[]> => {
       .select()
       .from(TransportTrips)
       .orderBy(desc(TransportTrips.tripDate));
-  } catch {
-    throw new Error("Failed to fetch trip data");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch trip data"));
   }
 };

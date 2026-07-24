@@ -17,7 +17,7 @@ import {
   SelectPurchaseOrderItems,
 } from "@/db/schema/purchase-order-items";
 import { StockCorrectionReason, StockMovementType } from "@/lib/enums";
-import { generateUuid } from "@/lib/helpers";
+import { describeError, generateUuid } from "@/lib/helpers";
 import { recordFreightMovement } from "@/lib/server/freight";
 import { currentUser } from "@clerk/nextjs/server";
 import { and, desc, eq, getTableColumns, gt, sql } from "drizzle-orm";
@@ -62,8 +62,8 @@ export const getStock = async (): Promise<StockListItem[]> => {
         eq(Stock.purchaseOrderItemUuid, PurchaseOrderItems.uuid),
       )
       .orderBy(desc(Stock.createdAt));
-  } catch {
-    throw new Error("Failed to fetch stock");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch stock"));
   }
 };
 

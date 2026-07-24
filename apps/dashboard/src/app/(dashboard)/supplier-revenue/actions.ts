@@ -1,4 +1,5 @@
 "use server";
+import { describeError } from "@/lib/helpers";
 
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
@@ -96,7 +97,7 @@ export const getSupplierRevenue = async (
       revenue: Number(row.revenue),
       weightKg: Number(row.weightKg),
     }));
-  } catch {
-    throw new Error("Failed to fetch supplier revenue");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch supplier revenue"));
   }
 };
