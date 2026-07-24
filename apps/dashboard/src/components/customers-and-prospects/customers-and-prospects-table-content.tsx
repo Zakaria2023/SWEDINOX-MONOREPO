@@ -13,7 +13,6 @@ import {
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { formatDateValue, formatRevenue } from "@/lib/helpers";
-import { COMMON_TEXT } from "@/lib/labels";
 
 type ColumnKey = keyof CustomerProspectRow | "contactPerson";
 
@@ -120,8 +119,6 @@ const initialVisibility = ALL_COLUMNS.reduce(
   {} as Record<ColumnKey, boolean>,
 );
 
-const na = COMMON_TEXT.notAvailable;
-
 type Props = { rows: CustomerProspectRow[] };
 
 export const CustomersAndProspectsTable = ({ rows }: Props) => {
@@ -139,7 +136,7 @@ export const CustomersAndProspectsTable = ({ rows }: Props) => {
   const renderCell = (row: CustomerProspectRow, key: ColumnKey) => {
     switch (key) {
       case "searchCode3":
-        return <TableCell key={key}>{row.searchCode3 ?? na}</TableCell>;
+        return <TableCell key={key}>{row.searchCode3 ?? "—"}</TableCell>;
       case "companyName":
         return (
           <TableCell key={key} className="font-medium">
@@ -152,7 +149,7 @@ export const CustomersAndProspectsTable = ({ rows }: Props) => {
           </TableCell>
         );
       case "visitCity":
-        return <TableCell key={key}>{row.visitCity ?? na}</TableCell>;
+        return <TableCell key={key}>{row.visitCity ?? "—"}</TableCell>;
       case "isCustomer":
         return (
           <TableCell key={key} className="text-center">
@@ -196,13 +193,13 @@ export const CustomersAndProspectsTable = ({ rows }: Props) => {
           </TableCell>
         );
       case "visitPostalCode":
-        return <TableCell key={key}>{row.visitPostalCode ?? na}</TableCell>;
+        return <TableCell key={key}>{row.visitPostalCode ?? "—"}</TableCell>;
       case "visitTelephone":
-        return <TableCell key={key}>{row.visitTelephone ?? na}</TableCell>;
+        return <TableCell key={key}>{row.visitTelephone ?? "—"}</TableCell>;
       case "visitFax":
-        return <TableCell key={key}>{row.visitFax ?? na}</TableCell>;
+        return <TableCell key={key}>{row.visitFax ?? "—"}</TableCell>;
       case "representative":
-        return <TableCell key={key}>{row.representative ?? na}</TableCell>;
+        return <TableCell key={key}>{row.representative ?? "—"}</TableCell>;
       case "targetVisitsPerYear":
         return (
           <TableCell key={key} className="text-right">
@@ -213,9 +210,9 @@ export const CustomersAndProspectsTable = ({ rows }: Props) => {
           </TableCell>
         );
       case "customerGroup":
-        return <TableCell key={key}>{row.customerGroup ?? na}</TableCell>;
+        return <TableCell key={key}>{row.customerGroup ?? "—"}</TableCell>;
       case "cocNumber":
-        return <TableCell key={key}>{row.cocNumber ?? na}</TableCell>;
+        return <TableCell key={key}>{row.cocNumber ?? "—"}</TableCell>;
       case "creditLimit":
         return (
           <TableCell key={key} className="text-right">
@@ -235,55 +232,55 @@ export const CustomersAndProspectsTable = ({ rows }: Props) => {
           </TableCell>
         );
       case "competitors":
-        return <TableCell key={key}>{row.competitors ?? na}</TableCell>;
+        return <TableCell key={key}>{row.competitors ?? "—"}</TableCell>;
       case "correspondenceStreetAndNo":
         return (
-          <TableCell key={key}>{row.correspondenceStreetAndNo ?? na}</TableCell>
+          <TableCell key={key}>{row.correspondenceStreetAndNo ?? "—"}</TableCell>
         );
       case "correspondencePostalCode":
         return (
-          <TableCell key={key}>{row.correspondencePostalCode ?? na}</TableCell>
+          <TableCell key={key}>{row.correspondencePostalCode ?? "—"}</TableCell>
         );
       case "correspondenceCity":
-        return <TableCell key={key}>{row.correspondenceCity ?? na}</TableCell>;
+        return <TableCell key={key}>{row.correspondenceCity ?? "—"}</TableCell>;
       case "correspondenceCountry":
         return (
-          <TableCell key={key}>{row.correspondenceCountry ?? na}</TableCell>
+          <TableCell key={key}>{row.correspondenceCountry ?? "—"}</TableCell>
         );
       case "correspondenceTelephone":
         return (
-          <TableCell key={key}>{row.correspondenceTelephone ?? na}</TableCell>
+          <TableCell key={key}>{row.correspondenceTelephone ?? "—"}</TableCell>
         );
       case "correspondenceFax":
-        return <TableCell key={key}>{row.correspondenceFax ?? na}</TableCell>;
+        return <TableCell key={key}>{row.correspondenceFax ?? "—"}</TableCell>;
       case "deliveryStreetAndNo":
-        return <TableCell key={key}>{row.deliveryStreetAndNo ?? na}</TableCell>;
+        return <TableCell key={key}>{row.deliveryStreetAndNo ?? "—"}</TableCell>;
       case "deliveryPostalCode":
-        return <TableCell key={key}>{row.deliveryPostalCode ?? na}</TableCell>;
+        return <TableCell key={key}>{row.deliveryPostalCode ?? "—"}</TableCell>;
       case "deliveryCity":
-        return <TableCell key={key}>{row.deliveryCity ?? na}</TableCell>;
+        return <TableCell key={key}>{row.deliveryCity ?? "—"}</TableCell>;
       case "deliveryCountry":
-        return <TableCell key={key}>{row.deliveryCountry ?? na}</TableCell>;
+        return <TableCell key={key}>{row.deliveryCountry ?? "—"}</TableCell>;
       case "contactPerson": {
         const parts = [row.contactFirstName, row.contactLastName].filter(
           Boolean,
         );
-        return <TableCell key={key}>{parts.join(" ") || na}</TableCell>;
+        return <TableCell key={key}>{parts.join(" ") || "—"}</TableCell>;
       }
       case "contactEmail":
-        return <TableCell key={key}>{row.contactEmail ?? na}</TableCell>;
+        return <TableCell key={key}>{row.contactEmail ?? "—"}</TableCell>;
       case "contactMobile":
-        return <TableCell key={key}>{row.contactMobile ?? na}</TableCell>;
+        return <TableCell key={key}>{row.contactMobile ?? "—"}</TableCell>;
       case "customerRegionCode":
-        return <TableCell key={key}>{row.customerRegionCode ?? na}</TableCell>;
+        return <TableCell key={key}>{row.customerRegionCode ?? "—"}</TableCell>;
       case "region":
-        return <TableCell key={key}>{row.region ?? na}</TableCell>;
+        return <TableCell key={key}>{row.region ?? "—"}</TableCell>;
       case "accountManager":
-        return <TableCell key={key}>{row.accountManager ?? na}</TableCell>;
+        return <TableCell key={key}>{row.accountManager ?? "—"}</TableCell>;
       case "searchCode2":
-        return <TableCell key={key}>{row.searchCode2 ?? na}</TableCell>;
+        return <TableCell key={key}>{row.searchCode2 ?? "—"}</TableCell>;
       case "searchCode1":
-        return <TableCell key={key}>{row.searchCode1 ?? na}</TableCell>;
+        return <TableCell key={key}>{row.searchCode1 ?? "—"}</TableCell>;
       case "completeDelivery":
         return (
           <TableCell key={key} className="text-center">
@@ -293,13 +290,13 @@ export const CustomersAndProspectsTable = ({ rows }: Props) => {
       case "companyCode":
         return <TableCell key={key}>{row.companyCode}</TableCell>;
       case "createdAt":
-        return <TableCell key={key}>{formatDateValue(row.createdAt, na)}</TableCell>;
+        return <TableCell key={key}>{formatDateValue(row.createdAt)}</TableCell>;
       case "contactCreatedAt":
         return (
-          <TableCell key={key}>{formatDateValue(row.contactCreatedAt, na)}</TableCell>
+          <TableCell key={key}>{formatDateValue(row.contactCreatedAt)}</TableCell>
         );
       default:
-        return <TableCell key={key}>{na}</TableCell>;
+        return <TableCell key={key}>—</TableCell>;
     }
   };
 

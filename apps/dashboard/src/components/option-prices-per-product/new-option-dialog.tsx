@@ -16,11 +16,7 @@ import { Select } from "@/components/shadcn/select";
 import { FormError } from "@/components/ui/form-error";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import { processingEditings, salesUnitOptions } from "@/lib/enums";
-import {
-  COMMON_TEXT,
-  PROCESSING_EDITING_LABELS,
-  SALES_UNIT_LABELS,
-} from "@/lib/labels";
+import { PROCESSING_EDITING_LABELS, SALES_UNIT_LABELS } from "@/lib/labels";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -49,7 +45,7 @@ const DEFAULT_VALUES: OptionFormValues = {
 };
 
 const editingOptions = [
-  { value: "", label: COMMON_TEXT.emptyOption },
+  { value: "", label: "Empty" },
   ...processingEditings.map((editing) => ({
     value: editing,
     label: PROCESSING_EDITING_LABELS[editing],
@@ -57,7 +53,7 @@ const editingOptions = [
 ];
 
 const priceUnitOptions = [
-  { value: "", label: COMMON_TEXT.emptyOption },
+  { value: "", label: "Empty" },
   ...salesUnitOptions.map((unit) => ({
     value: unit,
     label: `${unit} — ${SALES_UNIT_LABELS[unit]}`,
@@ -179,7 +175,7 @@ export const NewOptionDialog = () => {
                       options={editingOptions}
                       value={field.value ?? ""}
                       onValueChange={field.onChange}
-                      placeholder={COMMON_TEXT.emptyOption}
+                      placeholder="Empty"
                       disabled={isPending}
                     />
                   )}
@@ -198,7 +194,7 @@ export const NewOptionDialog = () => {
                         options={priceUnitOptions}
                         value={field.value ?? ""}
                         onValueChange={field.onChange}
-                        placeholder={COMMON_TEXT.emptyOption}
+                        placeholder="Empty"
                         disabled={isPending}
                       />
                     )}
@@ -237,10 +233,10 @@ export const NewOptionDialog = () => {
                 onClick={() => handleDialogClose(false)}
                 disabled={isPending}
               >
-                {COMMON_TEXT.cancel}
+                Cancel
               </Button>
               <Button type="submit" disabled={isPending}>
-                {isPending ? COMMON_TEXT.saving : "Create option"}
+                {isPending ? "Saving..." : "Create option"}
               </Button>
             </DialogFooter>
           </form>

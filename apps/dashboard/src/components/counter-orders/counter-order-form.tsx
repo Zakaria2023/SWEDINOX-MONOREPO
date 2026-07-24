@@ -37,14 +37,7 @@ import {
   orderMethods,
   salesRepresentatives,
 } from "@/lib/enums";
-import {
-  COMMON_TEXT,
-  COUNTER_ORDER_PRIORITY_LABELS,
-  COUNTER_ORDER_STATUS_LABELS,
-  DELIVERY_TERM_LABELS,
-  ORDER_METHOD_LABELS,
-  SALES_REPRESENTATIVE_LABELS,
-} from "@/lib/labels";
+import { COUNTER_ORDER_PRIORITY_LABELS, COUNTER_ORDER_STATUS_LABELS, DELIVERY_TERM_LABELS, ORDER_METHOD_LABELS, SALES_REPRESENTATIVE_LABELS } from "@/lib/labels";
 
 type CounterOrderFormProps = {
   companies: CompanyOption[];
@@ -112,7 +105,7 @@ export const CounterOrderForm = ({
   };
 
   const companyOptions = [
-    { value: "", label: COMMON_TEXT.selectPlaceholder },
+    { value: "", label: "Select an option" },
     ...companies.map((company) => ({
       value: company.uuid,
       label: [company.searchCode1, company.companyName]
@@ -122,7 +115,7 @@ export const CounterOrderForm = ({
   ];
 
   const contactOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...contacts.map((contact) => ({
       value: contact.uuid,
       label:
@@ -132,7 +125,7 @@ export const CounterOrderForm = ({
   ];
 
   const addressOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...addresses.map((address) => ({
       value: address.uuid,
       label:
@@ -143,7 +136,7 @@ export const CounterOrderForm = ({
   ];
 
   const orderMethodOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...orderMethods.map((method) => ({
       value: method,
       label: ORDER_METHOD_LABELS[method],
@@ -151,7 +144,7 @@ export const CounterOrderForm = ({
   ];
 
   const sellerOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...salesRepresentatives.map((rep) => ({
       value: rep,
       label: SALES_REPRESENTATIVE_LABELS[rep],
@@ -169,7 +162,7 @@ export const CounterOrderForm = ({
   }));
 
   const deliveryTermOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...deliveryTerms.map((term) => ({
       value: term,
       label: DELIVERY_TERM_LABELS[term],

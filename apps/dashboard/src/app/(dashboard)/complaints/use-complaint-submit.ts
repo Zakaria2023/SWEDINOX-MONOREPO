@@ -31,15 +31,7 @@ import {
   ComplaintSolution,
   ComplaintType,
 } from "@/lib/enums";
-import {
-  COMMON_TEXT,
-  COMPLAINT_CATEGORY_LABELS,
-  COMPLAINT_CAUSE_LABELS,
-  COMPLAINT_REPORT_LABELS,
-  COMPLAINT_SOLUTION_LABELS,
-  COMPLAINT_STATUS_LABELS,
-  COMPLAINT_TYPE_LABELS,
-} from "@/lib/labels";
+import { COMPLAINT_CATEGORY_LABELS, COMPLAINT_CAUSE_LABELS, COMPLAINT_REPORT_LABELS, COMPLAINT_SOLUTION_LABELS, COMPLAINT_STATUS_LABELS, COMPLAINT_TYPE_LABELS } from "@/lib/labels";
 
 type UseComplaintSubmitParams = {
   companies: CompanyOption[];
@@ -47,7 +39,7 @@ type UseComplaintSubmitParams = {
   responsibleUsers: DashboardUserOption[];
 };
 
-const emptyOption = { value: "", label: COMMON_TEXT.emptyOption };
+const emptyOption = { value: "", label: "Empty" };
 
 const makeOptions = <T extends string>(
   values: readonly T[],

@@ -18,7 +18,7 @@ import { Textarea } from "@/components/shadcn/textarea";
 import { FormError } from "@/components/ui/form-error";
 import { FormLabel } from "@/components/ui/form-field";
 import { invoicePaymentTerms } from "@/lib/enums";
-import { COMMON_TEXT, INVOICE_PAYMENT_TERM_LABELS } from "@/lib/labels";
+import { INVOICE_PAYMENT_TERM_LABELS } from "@/lib/labels";
 
 const editSchema = z.object({
   reference: z.string().optional(),
@@ -55,7 +55,7 @@ export const PurchaseOrderEditForm = ({ purchaseOrder }: Props) => {
   });
 
   const paymentTermOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...invoicePaymentTerms.map((t) => ({
       value: t,
       label: INVOICE_PAYMENT_TERM_LABELS[t],
@@ -165,10 +165,10 @@ export const PurchaseOrderEditForm = ({ purchaseOrder }: Props) => {
           onClick={() => router.push(`/purchase-orders/${purchaseOrder.uuid}`)}
           disabled={isPending}
         >
-          {COMMON_TEXT.cancel}
+          Cancel
         </Button>
         <Button type="submit" disabled={isPending}>
-          {isPending ? COMMON_TEXT.saving : "Save Changes"}
+          {isPending ? "Saving..." : "Save Changes"}
         </Button>
       </div>
     </form>

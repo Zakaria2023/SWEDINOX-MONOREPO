@@ -11,7 +11,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
-import { COMMON_TEXT } from "@/lib/labels";
 import { Plus, X } from "lucide-react";
 
 type Props = {
@@ -61,10 +60,10 @@ export const FollowUpsSection = ({
             {followUps.map((followUp, index) => (
               <TableRow key={index}>
                 <TableCell className="text-muted-foreground">
-                  {followUp.date ?? COMMON_TEXT.notAvailable}
+                  {followUp.date ?? "—"}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
-                  {followUp.by ?? COMMON_TEXT.notAvailable}
+                  {followUp.by ?? "—"}
                 </TableCell>
                 <TableCell>
                   <Input

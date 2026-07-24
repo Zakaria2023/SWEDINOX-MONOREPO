@@ -18,7 +18,7 @@ import { FormError } from "@/components/ui/form-error";
 import { FormLabel } from "@/components/ui/form-field";
 import { InvoicePaymentTerm, invoicePaymentTerms } from "@/lib/enums";
 import { getPaymentTermDueDate, toDateInput } from "@/lib/helpers";
-import { COMMON_TEXT, INVOICE_PAYMENT_TERM_LABELS } from "@/lib/labels";
+import { INVOICE_PAYMENT_TERM_LABELS } from "@/lib/labels";
 
 const editSchema = z.object({
   debtorNo: z.string().optional(),
@@ -67,7 +67,7 @@ export const InvoiceEditForm = ({ invoice }: Props) => {
   }, [paymentTerms, invoiceDate, setValue]);
 
   const paymentTermOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...invoicePaymentTerms.map((t) => ({
       value: t,
       label: INVOICE_PAYMENT_TERM_LABELS[t],
@@ -164,10 +164,10 @@ export const InvoiceEditForm = ({ invoice }: Props) => {
           onClick={() => router.push(`/invoices/${invoice.uuid}`)}
           disabled={isPending}
         >
-          {COMMON_TEXT.cancel}
+          Cancel
         </Button>
         <Button type="submit" disabled={isPending}>
-          {isPending ? COMMON_TEXT.saving : "Save Changes"}
+          {isPending ? "Saving..." : "Save Changes"}
         </Button>
       </div>
     </form>

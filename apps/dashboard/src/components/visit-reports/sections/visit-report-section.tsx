@@ -10,7 +10,7 @@ import { TimePicker } from "@/components/shadcn/time-picker";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import { FormSelectField } from "@/components/ui/form-select-field";
 import { visitReportContactMethods } from "@/lib/enums";
-import { COMMON_TEXT, VISIT_REPORT_CONTACT_METHOD_LABELS } from "@/lib/labels";
+import { VISIT_REPORT_CONTACT_METHOD_LABELS } from "@/lib/labels";
 
 type Props = {
   isPending: boolean;
@@ -35,7 +35,7 @@ export const VisitReportSection = ({
   } = useFormContext<VisitReportFormValues>();
 
   const companyOptions = [
-    { value: "", label: COMMON_TEXT.selectPlaceholder },
+    { value: "", label: "Select an option" },
     ...companies.map((company) => ({
       value: company.uuid,
       label: [company.searchCode1, company.companyName]
@@ -45,7 +45,7 @@ export const VisitReportSection = ({
   ];
 
   const visitedByOptions = [
-    { value: "", label: COMMON_TEXT.selectPlaceholder },
+    { value: "", label: "Select an option" },
     ...adminUsers.map((user) => ({
       value: user.value,
       label: user.label,
@@ -53,7 +53,7 @@ export const VisitReportSection = ({
   ];
 
   const contactMethodOptions = [
-    { value: "", label: COMMON_TEXT.selectPlaceholder },
+    { value: "", label: "Select an option" },
     ...visitReportContactMethods.map((method) => ({
       value: method,
       label: VISIT_REPORT_CONTACT_METHOD_LABELS[method],

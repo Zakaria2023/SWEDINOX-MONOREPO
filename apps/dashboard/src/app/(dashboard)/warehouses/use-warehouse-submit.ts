@@ -29,21 +29,7 @@ import {
   WorkorderReleaseMethod,
   WorkorderSlipType,
 } from "@/lib/enums";
-import {
-  COMMON_TEXT,
-  COUNT_WORKORDER_METHOD_LABELS,
-  PRINTER_ENTRY_LABELS,
-  PRINTER_NAME_LABELS,
-  STICKER_PER_PICK_WORKORDER_LABELS,
-  WAREHOUSE_ADDRESS_LABELS,
-  WAREHOUSE_BLOCK_REASON_LABELS,
-  WAREHOUSE_LOADING_LOCATION_LABELS,
-  WAREHOUSE_LOCATION_TYPE_LABELS,
-  WORKORDER_PRINT_METHOD_LABELS,
-  WORKORDER_PROCESSING_METHOD_LABELS,
-  WORKORDER_RELEASE_METHOD_LABELS,
-  WORKORDER_SLIP_TYPE_LABELS,
-} from "@/lib/labels";
+import { COUNT_WORKORDER_METHOD_LABELS, PRINTER_ENTRY_LABELS, PRINTER_NAME_LABELS, STICKER_PER_PICK_WORKORDER_LABELS, WAREHOUSE_ADDRESS_LABELS, WAREHOUSE_BLOCK_REASON_LABELS, WAREHOUSE_LOADING_LOCATION_LABELS, WAREHOUSE_LOCATION_TYPE_LABELS, WORKORDER_PRINT_METHOD_LABELS, WORKORDER_PROCESSING_METHOD_LABELS, WORKORDER_RELEASE_METHOD_LABELS, WORKORDER_SLIP_TYPE_LABELS } from "@/lib/labels";
 import { useRouter } from "next/navigation";
 import { useTransition, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -84,7 +70,7 @@ export const useWarehouseSubmit = ({
   const blocked = form.watch("blocked");
 
   const locationTypeOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...warehouseLocationTypes.map((t) => ({
       value: t,
       label: WAREHOUSE_LOCATION_TYPE_LABELS[t as WarehouseLocationType],
@@ -92,7 +78,7 @@ export const useWarehouseSubmit = ({
   ];
 
   const loadingLocationOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...warehouseLoadingLocations.map((l) => ({
       value: l,
       label: WAREHOUSE_LOADING_LOCATION_LABELS[l as WarehouseLoadingLocation],
@@ -100,7 +86,7 @@ export const useWarehouseSubmit = ({
   ];
 
   const blockReasonOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...warehouseBlockReasons.map((r) => ({
       value: r,
       label: WAREHOUSE_BLOCK_REASON_LABELS[r as WarehouseBlockReason],
@@ -110,12 +96,12 @@ export const useWarehouseSubmit = ({
   const [adaptFromValue, setAdaptFromValue] = useState("");
 
   const adaptFromOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...existingWarehouses.map((w) => ({ value: w.uuid, label: w.name })),
   ];
 
   const countMethodOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...countWorkorderMethods.map((m) => ({
       value: m,
       label: COUNT_WORKORDER_METHOD_LABELS[m as CountWorkorderMethod],
@@ -123,7 +109,7 @@ export const useWarehouseSubmit = ({
   ];
 
   const releaseMethodOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...workorderReleaseMethods.map((m) => ({
       value: m,
       label: WORKORDER_RELEASE_METHOD_LABELS[m as WorkorderReleaseMethod],
@@ -131,7 +117,7 @@ export const useWarehouseSubmit = ({
   ];
 
   const printMethodOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...workorderPrintMethods.map((m) => ({
       value: m,
       label: WORKORDER_PRINT_METHOD_LABELS[m as WorkorderPrintMethod],
@@ -139,7 +125,7 @@ export const useWarehouseSubmit = ({
   ];
 
   const workorderSlipOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...workorderSlipTypes.map((s) => ({
       value: s,
       label: WORKORDER_SLIP_TYPE_LABELS[s as WorkorderSlipType],
@@ -147,7 +133,7 @@ export const useWarehouseSubmit = ({
   ];
 
   const processingMethodOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...workorderProcessingMethods.map((m) => ({
       value: m,
       label: WORKORDER_PROCESSING_METHOD_LABELS[m as WorkorderProcessingMethod],
@@ -155,17 +141,17 @@ export const useWarehouseSubmit = ({
   ];
 
   const companyOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...companies.map((c) => ({ value: c.uuid, label: c.companyName })),
   ];
 
   const warehouseLocationOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...warehouseLocations.map((l) => ({ value: l.uuid, label: l.name })),
   ];
 
   const printerNameOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...printerNames.map((p) => ({
       value: p,
       label: PRINTER_NAME_LABELS[p as PrinterName],
@@ -173,7 +159,7 @@ export const useWarehouseSubmit = ({
   ];
 
   const printerEntryOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...printerEntries.map((e) => ({
       value: e,
       label: PRINTER_ENTRY_LABELS[e as PrinterEntry],
@@ -181,7 +167,7 @@ export const useWarehouseSubmit = ({
   ];
 
   const stickerPerPickOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...stickerPerPickWorkorderTypes.map((s) => ({
       value: s,
       label:
@@ -228,7 +214,7 @@ export const useWarehouseSubmit = ({
   };
 
   const addressOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...warehouseAddresses.map((a) => ({
       value: a,
       label: WAREHOUSE_ADDRESS_LABELS[a as WarehouseAddress],

@@ -11,7 +11,6 @@ import {
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { buildColumnVisibility } from "@/lib/helpers";
-import { COMMON_TEXT } from "@/lib/labels";
 import { useState } from "react";
 
 type ColumnKey =
@@ -52,7 +51,7 @@ export const AddressDistancesTable = ({ addressDistances }: Props) => {
     }));
 
   const visibleColumns = ALL_COLUMNS.filter((col) => columnVisibility[col.key]);
-  const fallback = COMMON_TEXT.notAvailable;
+  const fallback = "—";
 
   const renderCell = (row: AddressDistanceListItem, key: ColumnKey) => {
     switch (key) {

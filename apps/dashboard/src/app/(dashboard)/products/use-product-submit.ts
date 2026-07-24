@@ -9,7 +9,6 @@ import { DEFAULT_PRODUCT, productSchema, ProductFormValues } from "./validation"
 import { ProductGroupOption } from "@/app/(dashboard)/product-groups/actions";
 import { CompanyOption } from "@/app/(dashboard)/companies/actions";
 import { SelectOption } from "@/components/shadcn/select";
-import { COMMON_TEXT } from "@/lib/labels";
 
 type UseProductSubmitParams = {
   productGroups: ProductGroupOption[];
@@ -42,12 +41,12 @@ export const useProductSubmit = ({
   });
 
   const groupOptions: SelectOption[] = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...buildHierarchicalOptions(productGroups),
   ];
 
   const companyOptions: SelectOption[] = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...suppliers.map((c) => ({
       value: c.uuid,
       label: c.companyName ?? c.searchCode1 ?? c.uuid,

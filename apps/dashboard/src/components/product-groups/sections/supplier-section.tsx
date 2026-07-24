@@ -12,17 +12,13 @@ import { Input } from "@/components/shadcn/input";
 import { FormLabel } from "@/components/ui/form-field";
 import { FormSelectField } from "@/components/ui/form-select-field";
 import { deliveryTimeUnits, purchasingUnits } from "@/lib/enums";
-import {
-  COMMON_TEXT,
-  DELIVERY_TIME_UNIT_LABELS,
-  PURCHASING_UNIT_LABELS,
-} from "@/lib/labels";
+import { DELIVERY_TIME_UNIT_LABELS, PURCHASING_UNIT_LABELS } from "@/lib/labels";
 
 type Props = {
   supplierOptions: { value: string; label: string }[];
 };
 
-const emptyOption = { value: "", label: COMMON_TEXT.emptyOption };
+const emptyOption = { value: "", label: "Empty" };
 
 const makeEnumOptions = <T extends string>(
   values: readonly T[],

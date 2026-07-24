@@ -10,7 +10,6 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { daysInSystem } from "@/lib/helpers";
-import { COMMON_TEXT } from "@/lib/labels";
 import Link from "next/link";
 
 type Props = {
@@ -18,7 +17,6 @@ type Props = {
 };
 
 export const FollowUpsTable = ({ followUps }: Props) => {
-  const na = COMMON_TEXT.notAvailable;
 
   if (followUps.length === 0) {
     return (
@@ -54,14 +52,14 @@ export const FollowUpsTable = ({ followUps }: Props) => {
                     {followUp.companyName}
                   </Link>
                 ) : (
-                  na
+                  "—"
                 )}
               </TableCell>
-              <TableCell>{followUp.date ?? na}</TableCell>
-              <TableCell>{followUp.by ?? na}</TableCell>
-              <TableCell>{followUp.contactPerson ?? na}</TableCell>
+              <TableCell>{followUp.date ?? "—"}</TableCell>
+              <TableCell>{followUp.by ?? "—"}</TableCell>
+              <TableCell>{followUp.contactPerson ?? "—"}</TableCell>
               <TableCell className="max-w-xs truncate">
-                {followUp.text ?? na}
+                {followUp.text ?? "—"}
               </TableCell>
               <TableCell>{followUp.completed ? "Yes" : "No"}</TableCell>
               <TableCell className="text-right">

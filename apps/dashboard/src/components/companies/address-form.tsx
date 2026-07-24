@@ -11,11 +11,7 @@ import {
   AddressCategory,
   availableAtOptions,
 } from "@/lib/enums";
-import {
-  ADDRESS_CATEGORY_LABELS,
-  AVAILABLE_AT_LABELS,
-  COMMON_TEXT,
-} from "@/lib/labels";
+import { ADDRESS_CATEGORY_LABELS, AVAILABLE_AT_LABELS } from "@/lib/labels";
 import { useRef } from "react";
 import {
   Control,
@@ -76,7 +72,7 @@ export const AddressForm = ({
     (errors?.category as { message?: string } | undefined)?.message;
 
   const availableAtOptionsForSelect: SelectOption[] = [
-    { label: COMMON_TEXT.none, value: EMPTY_SELECT_VALUE },
+    { label: "None", value: EMPTY_SELECT_VALUE },
     ...availableAtOptions.map((option) => ({
       label: AVAILABLE_AT_LABELS[option],
       value: option,
@@ -84,7 +80,7 @@ export const AddressForm = ({
   ];
 
   const timeSelectOptions: SelectOption[] = [
-    { label: COMMON_TEXT.none, value: EMPTY_SELECT_VALUE },
+    { label: "None", value: EMPTY_SELECT_VALUE },
     ...Array.from({ length: 48 }, (_, index) => {
       const hours = String(Math.floor(index / 2)).padStart(2, "0");
       const minutes = index % 2 === 0 ? "00" : "30";

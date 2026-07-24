@@ -17,11 +17,7 @@ import { TimePicker } from "@/components/shadcn/time-picker";
 import { DialogFormFooter } from "@/components/ui/dialog-form-footer";
 import { FormLabel } from "@/components/ui/form-field";
 import { visitReportContactMethods, visitReportReasons } from "@/lib/enums";
-import {
-  COMMON_TEXT,
-  VISIT_REPORT_CONTACT_METHOD_LABELS,
-  VISIT_REPORT_REASON_LABELS,
-} from "@/lib/labels";
+import { VISIT_REPORT_CONTACT_METHOD_LABELS, VISIT_REPORT_REASON_LABELS } from "@/lib/labels";
 import { ClipboardList } from "lucide-react";
 import { FormEventHandler } from "react";
 import { Controller, UseFormReturn } from "react-hook-form";
@@ -105,7 +101,7 @@ export const VisitReportDialog = ({
                   <Select
                     id="vr-sort"
                     options={[
-                      { value: "", label: COMMON_TEXT.emptyOption },
+                      { value: "", label: "Empty" },
                       ...visitReportContactMethods.map((method) => ({
                         value: method,
                         label: VISIT_REPORT_CONTACT_METHOD_LABELS[method],
@@ -113,7 +109,7 @@ export const VisitReportDialog = ({
                     ]}
                     value={field.value ?? ""}
                     onValueChange={field.onChange}
-                    placeholder={COMMON_TEXT.selectOption}
+                    placeholder="Select"
                   />
                 )}
               />
@@ -128,7 +124,7 @@ export const VisitReportDialog = ({
                   <Select
                     id="vr-reason"
                     options={[
-                      { value: "", label: COMMON_TEXT.emptyOption },
+                      { value: "", label: "Empty" },
                       ...visitReportReasons.map((reason) => ({
                         value: reason,
                         label: VISIT_REPORT_REASON_LABELS[reason],
@@ -136,7 +132,7 @@ export const VisitReportDialog = ({
                     ]}
                     value={field.value ?? ""}
                     onValueChange={field.onChange}
-                    placeholder={COMMON_TEXT.selectOption}
+                    placeholder="Select"
                   />
                 )}
               />
@@ -151,7 +147,7 @@ export const VisitReportDialog = ({
                   <Select
                     id="vr-contact"
                     options={[
-                      { value: "", label: COMMON_TEXT.emptyOption },
+                      { value: "", label: "Empty" },
                       ...contacts.map((contact, index) => ({
                         value: String(index),
                         label: contactLabel(contact),
@@ -159,7 +155,7 @@ export const VisitReportDialog = ({
                     ]}
                     value={field.value ?? ""}
                     onValueChange={field.onChange}
-                    placeholder={COMMON_TEXT.selectOption}
+                    placeholder="Select"
                     disabled={!hasContacts}
                   />
                 )}

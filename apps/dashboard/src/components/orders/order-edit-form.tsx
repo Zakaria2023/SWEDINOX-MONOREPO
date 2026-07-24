@@ -13,7 +13,6 @@ import { Input } from "@/components/shadcn/input";
 import { Textarea } from "@/components/shadcn/textarea";
 import { FormError } from "@/components/ui/form-error";
 import { FormLabel } from "@/components/ui/form-field";
-import { COMMON_TEXT } from "@/lib/labels";
 
 const editSchema = z.object({
   customerRef: z.string().optional(),
@@ -125,10 +124,10 @@ export const OrderEditForm = ({ order }: Props) => {
           onClick={() => router.push(`/orders/${order.uuid}`)}
           disabled={isPending}
         >
-          {COMMON_TEXT.cancel}
+          Cancel
         </Button>
         <Button type="submit" disabled={isPending}>
-          {isPending ? COMMON_TEXT.saving : "Save Changes"}
+          {isPending ? "Saving..." : "Save Changes"}
         </Button>
       </div>
     </form>

@@ -17,7 +17,7 @@ import { Select } from "@/components/shadcn/select";
 import { Textarea } from "@/components/shadcn/textarea";
 import { DialogFormFooter } from "@/components/ui/dialog-form-footer";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
-import { COMMON_TEXT, TEXT_USAGE_CATEGORY_LABELS } from "@/lib/labels";
+import { TEXT_USAGE_CATEGORY_LABELS } from "@/lib/labels";
 import { AlignLeft } from "lucide-react";
 import { FormEventHandler } from "react";
 import { Controller, UseFormReturn } from "react-hook-form";
@@ -68,7 +68,7 @@ export const TextDialog = ({
                   <Select
                     id="txt-category"
                     options={[
-                      { value: "", label: COMMON_TEXT.selectOption },
+                      { value: "", label: "Select" },
                       ...textCategories.map((c) => ({
                         value: c.uuid,
                         label: c.name,
@@ -79,7 +79,7 @@ export const TextDialog = ({
                       field.onChange(value);
                       handleCategorySelect(value);
                     }}
-                    placeholder={COMMON_TEXT.selectOption}
+                    placeholder="Select"
                   />
                 )}
               />

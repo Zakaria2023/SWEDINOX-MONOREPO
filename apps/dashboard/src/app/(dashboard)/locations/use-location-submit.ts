@@ -10,12 +10,7 @@ import {
   WarehouseLocationType,
   WarehouseProductType,
 } from "@/lib/enums";
-import {
-  COMMON_TEXT,
-  WAREHOUSE_BLOCK_REASON_LABELS,
-  WAREHOUSE_LOADING_LOCATION_LABELS,
-  WAREHOUSE_LOCATION_TYPE_LABELS,
-} from "@/lib/labels";
+import { WAREHOUSE_BLOCK_REASON_LABELS, WAREHOUSE_LOADING_LOCATION_LABELS, WAREHOUSE_LOCATION_TYPE_LABELS } from "@/lib/labels";
 import { useRouter } from "next/navigation";
 import { useTransition, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -61,12 +56,12 @@ export const useLocationSubmit = ({ allItems }: UseLocationSubmitParams) => {
   const placement = form.watch("placement");
 
   const adaptFromOptions = [
-    { value: "", label: COMMON_TEXT.selectPlaceholder },
+    { value: "", label: "Select an option" },
     ...buildHierarchicalOptions(allItems),
   ];
 
   const locationTypeOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...warehouseLocationTypes.map((t) => ({
       value: t,
       label: WAREHOUSE_LOCATION_TYPE_LABELS[t as WarehouseLocationType],
@@ -74,7 +69,7 @@ export const useLocationSubmit = ({ allItems }: UseLocationSubmitParams) => {
   ];
 
   const loadingLocationOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...warehouseLoadingLocations.map((l) => ({
       value: l,
       label: WAREHOUSE_LOADING_LOCATION_LABELS[l as WarehouseLoadingLocation],
@@ -82,7 +77,7 @@ export const useLocationSubmit = ({ allItems }: UseLocationSubmitParams) => {
   ];
 
   const blockReasonOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...warehouseBlockReasons.map((r) => ({
       value: r,
       label: WAREHOUSE_BLOCK_REASON_LABELS[r as WarehouseBlockReason],

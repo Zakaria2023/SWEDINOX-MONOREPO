@@ -11,11 +11,7 @@ import {
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { buildColumnVisibility, daysInSystem } from "@/lib/helpers";
-import {
-  COMMON_TEXT,
-  COUNTER_ORDER_PRIORITY_LABELS,
-  COUNTER_ORDER_STATUS_LABELS,
-} from "@/lib/labels";
+import { COUNTER_ORDER_PRIORITY_LABELS, COUNTER_ORDER_STATUS_LABELS } from "@/lib/labels";
 import { useState } from "react";
 
 type ColumnKey =
@@ -73,7 +69,6 @@ export const CounterOrdersTable = ({
   const visibleColumns = ALL_COLUMNS.filter(
     (column) => columnVisibility[column.key],
   );
-  const na = COMMON_TEXT.notAvailable;
 
   const renderCell = (order: CounterOrderListItem, key: ColumnKey) => {
     switch (key) {
@@ -94,11 +89,11 @@ export const CounterOrdersTable = ({
           <TableCell key={key}>
             {order.handlingBlocked ? (
               <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
-                {COMMON_TEXT.yes}
+                Yes
               </span>
             ) : (
               <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
-                {COMMON_TEXT.no}
+                No
               </span>
             )}
           </TableCell>
@@ -106,19 +101,19 @@ export const CounterOrdersTable = ({
       case "status":
         return (
           <TableCell key={key}>
-            {order.status ? COUNTER_ORDER_STATUS_LABELS[order.status] : na}
+            {order.status ? COUNTER_ORDER_STATUS_LABELS[order.status] : "—"}
           </TableCell>
         );
       case "priority":
         return (
           <TableCell key={key}>
-            {order.priority ? COUNTER_ORDER_PRIORITY_LABELS[order.priority] : na}
+            {order.priority ? COUNTER_ORDER_PRIORITY_LABELS[order.priority] : "—"}
           </TableCell>
         );
       case "orderDate":
-        return <TableCell key={key}>{order.orderDate ?? na}</TableCell>;
+        return <TableCell key={key}>{order.orderDate ?? "—"}</TableCell>;
       case "deliveryDate":
-        return <TableCell key={key}>{order.deliveryDate ?? na}</TableCell>;
+        return <TableCell key={key}>{order.deliveryDate ?? "—"}</TableCell>;
       case "amountExVat":
         return (
           <TableCell key={key} className="text-right whitespace-nowrap">
@@ -132,7 +127,7 @@ export const CounterOrdersTable = ({
           </TableCell>
         );
       case "customerRef":
-        return <TableCell key={key}>{order.customerRef ?? na}</TableCell>;
+        return <TableCell key={key}>{order.customerRef ?? "—"}</TableCell>;
       case "gainPercent":
         return (
           <TableCell key={key} className="text-right whitespace-nowrap">

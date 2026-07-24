@@ -6,7 +6,6 @@ import { Dialog as SheetPrimitive } from "@base-ui/react/dialog"
 import { cn } from "@/lib/helpers"
 import { Button } from "@/components/shadcn/button"
 import { XIcon } from "lucide-react"
-import { COMMON_TEXT } from "@/lib/labels"
 
 function Sheet({ ...props }: SheetPrimitive.Root.Props) {
   return <SheetPrimitive.Root data-slot="sheet" {...props} />
@@ -73,7 +72,7 @@ function SheetContent({
           >
             <XIcon
             />
-            <span className="sr-only">{COMMON_TEXT.close}</span>
+            <span className="sr-only">Close</span>
           </SheetPrimitive.Close>
         )}
       </SheetPrimitive.Popup>

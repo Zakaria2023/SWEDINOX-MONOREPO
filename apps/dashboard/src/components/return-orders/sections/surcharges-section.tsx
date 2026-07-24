@@ -9,18 +9,14 @@ import { FormCheckboxCard } from "@/components/ui/form-checkbox-card";
 import { FormLabel } from "@/components/ui/form-field";
 import { FormSelectField } from "@/components/ui/form-select-field";
 import { contractTierUnits, invoiceSurchargeDescriptions } from "@/lib/enums";
-import {
-  COMMON_TEXT,
-  CONTRACT_TIER_UNIT_LABELS,
-  INVOICE_SURCHARGE_DESCRIPTION_LABELS,
-} from "@/lib/labels";
+import { CONTRACT_TIER_UNIT_LABELS, INVOICE_SURCHARGE_DESCRIPTION_LABELS } from "@/lib/labels";
 
 type Props = {
   companyOptions: SelectOption[];
 };
 
 const descriptionOptions = [
-  { value: "", label: COMMON_TEXT.emptyOption },
+  { value: "", label: "Empty" },
   ...invoiceSurchargeDescriptions.map((description) => ({
     value: description,
     label: INVOICE_SURCHARGE_DESCRIPTION_LABELS[description],
@@ -28,7 +24,7 @@ const descriptionOptions = [
 ];
 
 const tierUnitOptions = [
-  { value: "", label: COMMON_TEXT.emptyOption },
+  { value: "", label: "Empty" },
   ...contractTierUnits.map((unit) => ({
     value: unit,
     label: CONTRACT_TIER_UNIT_LABELS[unit],

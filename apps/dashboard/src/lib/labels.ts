@@ -112,30 +112,6 @@ import type {
   WarehouseWorkOrderLineType,
 } from "@/lib/enums";
 
-export const COMMON_TEXT = {
-  yes: "Yes",
-  no: "No",
-  notAvailable: "N/A",
-  selectOption: "Select",
-  emptyOption: "Empty",
-  none: "None",
-  cancel: "Cancel",
-  close: "Close",
-  edit: "Edit",
-  delete: "Delete",
-  saving: "Saving...",
-  deleting: "Deleting...",
-  confirmDelete: "Delete",
-  columns: "Columns",
-  selectPlaceholder: "Select an option",
-  datePlaceholder: "Pick a date",
-  previousMonth: "Previous month",
-  nextMonth: "Next month",
-  sidebarTitle: "Sidebar",
-  sidebarDescription: "Displays the mobile sidebar.",
-  toggleSidebar: "Toggle sidebar",
-} as const;
-
 export const ADDRESS_CATEGORY_LABELS: Record<AddressCategory, string> = {
   invoice: "Invoice",
   visit: "Visit",

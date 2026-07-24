@@ -40,20 +40,14 @@ import {
   OrderMethod,
   OrderWeightType,
 } from "@/lib/enums";
-import {
-  COMMON_TEXT,
-  DELIVERY_TERM_LABELS,
-  INVOICE_PAYMENT_TERM_LABELS,
-  ORDER_METHOD_LABELS,
-  ORDER_WEIGHT_TYPE_LABELS,
-} from "@/lib/labels";
+import { DELIVERY_TERM_LABELS, INVOICE_PAYMENT_TERM_LABELS, ORDER_METHOD_LABELS, ORDER_WEIGHT_TYPE_LABELS } from "@/lib/labels";
 import { toDecimal } from "@/lib/helpers";
 
 type UseOrderSubmitParams = {
   companies: CompanyOption[];
 };
 
-const emptyOpt = { value: "", label: COMMON_TEXT.emptyOption };
+const emptyOpt = { value: "", label: "Empty" };
 
 const makeOptions = <T extends string>(
   values: readonly T[],

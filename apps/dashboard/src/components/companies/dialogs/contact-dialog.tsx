@@ -18,11 +18,7 @@ import {
   ContactCategory,
   contactSalutations,
 } from "@/lib/enums";
-import {
-  COMMON_TEXT,
-  CONTACT_CATEGORY_LABELS,
-  CONTACT_SALUTATION_LABELS,
-} from "@/lib/labels";
+import { CONTACT_CATEGORY_LABELS, CONTACT_SALUTATION_LABELS } from "@/lib/labels";
 import { User } from "lucide-react";
 import { FormEventHandler } from "react";
 import { Controller, UseFormReturn } from "react-hook-form";
@@ -72,7 +68,7 @@ export const ContactDialog = ({
                     <Select
                       id="co-salutation"
                       options={[
-                        { value: "", label: COMMON_TEXT.emptyOption },
+                        { value: "", label: "Empty" },
                         ...contactSalutations.map((s) => ({
                           value: s,
                           label: CONTACT_SALUTATION_LABELS[s],
@@ -80,7 +76,7 @@ export const ContactDialog = ({
                       ]}
                       value={field.value ?? ""}
                       onValueChange={field.onChange}
-                      placeholder={COMMON_TEXT.emptyOption}
+                      placeholder="Empty"
                     />
                   )}
                 />

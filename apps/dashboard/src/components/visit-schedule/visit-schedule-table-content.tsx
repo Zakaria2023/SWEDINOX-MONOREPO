@@ -13,7 +13,6 @@ import {
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { formatDateValue, formatRevenue } from "@/lib/helpers";
-import { COMMON_TEXT } from "@/lib/labels";
 
 type ColumnKey = keyof VisitScheduleRow | "contactPerson";
 
@@ -73,8 +72,6 @@ const initialVisibility = ALL_COLUMNS.reduce(
   {} as Record<ColumnKey, boolean>,
 );
 
-const na = COMMON_TEXT.notAvailable;
-
 type Props = { rows: VisitScheduleRow[] };
 
 export const VisitScheduleTable = ({ rows }: Props) => {
@@ -105,19 +102,19 @@ export const VisitScheduleTable = ({ rows }: Props) => {
           </TableCell>
         );
       case "visitStreetAndNo":
-        return <TableCell key={key}>{row.visitStreetAndNo ?? na}</TableCell>;
+        return <TableCell key={key}>{row.visitStreetAndNo ?? "—"}</TableCell>;
       case "visitPostalCode":
-        return <TableCell key={key}>{row.visitPostalCode ?? na}</TableCell>;
+        return <TableCell key={key}>{row.visitPostalCode ?? "—"}</TableCell>;
       case "visitCity":
-        return <TableCell key={key}>{row.visitCity ?? na}</TableCell>;
+        return <TableCell key={key}>{row.visitCity ?? "—"}</TableCell>;
       case "visitCountry":
-        return <TableCell key={key}>{row.visitCountry ?? na}</TableCell>;
+        return <TableCell key={key}>{row.visitCountry ?? "—"}</TableCell>;
       case "visitTelephone":
-        return <TableCell key={key}>{row.visitTelephone ?? na}</TableCell>;
+        return <TableCell key={key}>{row.visitTelephone ?? "—"}</TableCell>;
       case "accountManager":
-        return <TableCell key={key}>{row.accountManager ?? na}</TableCell>;
+        return <TableCell key={key}>{row.accountManager ?? "—"}</TableCell>;
       case "representative":
-        return <TableCell key={key}>{row.representative ?? na}</TableCell>;
+        return <TableCell key={key}>{row.representative ?? "—"}</TableCell>;
       case "targetYearRevenue":
         return (
           <TableCell key={key} className="text-right">
@@ -137,29 +134,29 @@ export const VisitScheduleTable = ({ rows }: Props) => {
           </TableCell>
         );
       case "customerGroup":
-        return <TableCell key={key}>{row.customerGroup ?? na}</TableCell>;
+        return <TableCell key={key}>{row.customerGroup ?? "—"}</TableCell>;
       case "lastCallDate":
-        return <TableCell key={key}>{formatDateValue(row.lastCallDate, na)}</TableCell>;
+        return <TableCell key={key}>{formatDateValue(row.lastCallDate)}</TableCell>;
       case "callUpcoming":
-        return <TableCell key={key}>{formatDateValue(row.callUpcoming, na)}</TableCell>;
+        return <TableCell key={key}>{formatDateValue(row.callUpcoming)}</TableCell>;
       case "lastVisitDate":
-        return <TableCell key={key}>{formatDateValue(row.lastVisitDate, na)}</TableCell>;
+        return <TableCell key={key}>{formatDateValue(row.lastVisitDate)}</TableCell>;
       case "visitUpcoming":
-        return <TableCell key={key}>{formatDateValue(row.visitUpcoming, na)}</TableCell>;
+        return <TableCell key={key}>{formatDateValue(row.visitUpcoming)}</TableCell>;
       case "contactPerson": {
         const parts = [row.contactFirstName, row.contactLastName].filter(
           Boolean,
         );
-        return <TableCell key={key}>{parts.join(" ") || na}</TableCell>;
+        return <TableCell key={key}>{parts.join(" ") || "—"}</TableCell>;
       }
       case "contactEmail":
-        return <TableCell key={key}>{row.contactEmail ?? na}</TableCell>;
+        return <TableCell key={key}>{row.contactEmail ?? "—"}</TableCell>;
       case "contactMobile":
-        return <TableCell key={key}>{row.contactMobile ?? na}</TableCell>;
+        return <TableCell key={key}>{row.contactMobile ?? "—"}</TableCell>;
       case "customerRegionCode":
-        return <TableCell key={key}>{row.customerRegionCode ?? na}</TableCell>;
+        return <TableCell key={key}>{row.customerRegionCode ?? "—"}</TableCell>;
       case "region":
-        return <TableCell key={key}>{row.region ?? na}</TableCell>;
+        return <TableCell key={key}>{row.region ?? "—"}</TableCell>;
       case "callDue":
         return (
           <TableCell key={key} className="text-center">
@@ -173,7 +170,7 @@ export const VisitScheduleTable = ({ rows }: Props) => {
           </TableCell>
         );
       default:
-        return <TableCell key={key}>{na}</TableCell>;
+        return <TableCell key={key}>—</TableCell>;
     }
   };
 

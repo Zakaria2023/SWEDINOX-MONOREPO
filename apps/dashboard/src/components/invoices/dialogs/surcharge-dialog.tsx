@@ -14,10 +14,7 @@ import { Input } from "@/components/shadcn/input";
 import { Select } from "@/components/shadcn/select";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import { invoiceSurchargeDescriptions } from "@/lib/enums";
-import {
-  COMMON_TEXT,
-  INVOICE_SURCHARGE_DESCRIPTION_LABELS,
-} from "@/lib/labels";
+import { INVOICE_SURCHARGE_DESCRIPTION_LABELS } from "@/lib/labels";
 import { Controller, UseFormReturn } from "react-hook-form";
 
 type SurchargeDialogProps = {
@@ -36,7 +33,7 @@ export const SurchargeDialog = ({
   editingIndex,
 }: SurchargeDialogProps) => {
   const surchargeDescriptionOptions = [
-    { value: "", label: COMMON_TEXT.selectPlaceholder },
+    { value: "", label: "Select an option" },
     ...invoiceSurchargeDescriptions.map((d) => ({
       value: d,
       label: INVOICE_SURCHARGE_DESCRIPTION_LABELS[d],
@@ -115,7 +112,7 @@ export const SurchargeDialog = ({
               variant="outline"
               onClick={() => onOpenChange(false)}
             >
-              {COMMON_TEXT.cancel}
+              Cancel
             </Button>
             <Button type="submit">
               {editingIndex !== null ? "Save" : "Add"}

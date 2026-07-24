@@ -10,13 +10,9 @@ import {
   deliveryTimeUnits,
   purchasingUnits,
 } from "@/lib/enums";
-import {
-  COMMON_TEXT,
-  DELIVERY_TIME_UNIT_LABELS,
-  PURCHASING_UNIT_LABELS,
-} from "@/lib/labels";
+import { DELIVERY_TIME_UNIT_LABELS, PURCHASING_UNIT_LABELS } from "@/lib/labels";
 
-const emptyOption = { value: "", label: COMMON_TEXT.emptyOption };
+const emptyOption = { value: "", label: "Empty" };
 
 const makeEnumOptions = <T extends string>(
   values: readonly T[],

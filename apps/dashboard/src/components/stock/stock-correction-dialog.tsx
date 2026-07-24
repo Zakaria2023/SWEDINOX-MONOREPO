@@ -21,7 +21,7 @@ import { Select } from "@/components/shadcn/select";
 import { FormError } from "@/components/ui/form-error";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import { stockCorrectionReasons, stockMovementTypes } from "@/lib/enums";
-import { COMMON_TEXT, STOCK_MOVEMENT_REASON_LABELS } from "@/lib/labels";
+import { STOCK_MOVEMENT_REASON_LABELS } from "@/lib/labels";
 
 const correctionSchema = z.object({
   direction: z.enum(stockMovementTypes),
@@ -198,10 +198,10 @@ export const StockCorrectionDialog = ({ stock, onOpenChange }: Props) => {
               onClick={() => onOpenChange(false)}
               disabled={isPending}
             >
-              {COMMON_TEXT.cancel}
+              Cancel
             </Button>
             <Button type="submit" disabled={isPending}>
-              {isPending ? COMMON_TEXT.saving : "Apply Correction"}
+              {isPending ? "Saving..." : "Apply Correction"}
             </Button>
           </DialogFooter>
         </form>

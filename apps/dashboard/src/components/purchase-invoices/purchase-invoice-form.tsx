@@ -16,11 +16,7 @@ import {
   purchaseInvoiceBlockReasons,
 } from "@/lib/enums";
 import { getPaymentTermDueDate } from "@/lib/helpers";
-import {
-  COMMON_TEXT,
-  INVOICE_PAYMENT_TERM_LABELS,
-  PURCHASE_INVOICE_BLOCK_REASON_LABELS,
-} from "@/lib/labels";
+import { INVOICE_PAYMENT_TERM_LABELS, PURCHASE_INVOICE_BLOCK_REASON_LABELS } from "@/lib/labels";
 
 type PurchaseInvoiceFormProps = {
   availableSuppliers: CompanyOption[];
@@ -66,7 +62,7 @@ export const PurchaseInvoiceForm = ({
   }, [paymentTerms, invoiceDate, setValue]);
 
   const supplierOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...availableSuppliers.map((c) => ({
       value: c.uuid,
       label: [c.searchCode1, c.companyName].filter(Boolean).join(" — "),
@@ -74,7 +70,7 @@ export const PurchaseInvoiceForm = ({
   ];
 
   const contactOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...availableContacts
       .filter((c) => !selectedCompanyUuid || c.companyUuid === selectedCompanyUuid)
       .map((c) => ({
@@ -84,7 +80,7 @@ export const PurchaseInvoiceForm = ({
   ];
 
   const paymentTermOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...invoicePaymentTerms.map((t) => ({
       value: t,
       label: INVOICE_PAYMENT_TERM_LABELS[t],
@@ -92,7 +88,7 @@ export const PurchaseInvoiceForm = ({
   ];
 
   const blockReasonOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...purchaseInvoiceBlockReasons.map((r) => ({
       value: r,
       label: PURCHASE_INVOICE_BLOCK_REASON_LABELS[r],

@@ -26,15 +26,7 @@ import {
   InvoicePaymentTerm,
   invoicePaymentTerms,
 } from "@/lib/enums";
-import {
-  COMMON_TEXT,
-  COMMUNICATION_SETTING_DOCUMENT_TYPE_LABELS,
-  COMMUNICATION_SETTING_SHAPE_LABELS,
-  COMMUNICATION_SETTING_TYPE_LABELS,
-  COMPANY_LANGUAGE_LABELS,
-  CURRENCY_LABELS,
-  INVOICE_PAYMENT_TERM_LABELS,
-} from "@/lib/labels";
+import { COMMUNICATION_SETTING_DOCUMENT_TYPE_LABELS, COMMUNICATION_SETTING_SHAPE_LABELS, COMMUNICATION_SETTING_TYPE_LABELS, COMPANY_LANGUAGE_LABELS, CURRENCY_LABELS, INVOICE_PAYMENT_TERM_LABELS } from "@/lib/labels";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -537,7 +529,7 @@ export const useCompanySubmit = ({
   );
 
   const langOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...companyLangs.map((lang) => ({
       value: lang,
       label: COMPANY_LANGUAGE_LABELS[lang],
@@ -545,7 +537,7 @@ export const useCompanySubmit = ({
   ];
 
   const documentTypeOptions = [
-    { value: "", label: COMMON_TEXT.selectOption },
+    { value: "", label: "Select" },
     ...communicationSettingDocumentTypes.map((documentType) => ({
       value: documentType,
       label: COMMUNICATION_SETTING_DOCUMENT_TYPE_LABELS[documentType],
@@ -553,7 +545,7 @@ export const useCompanySubmit = ({
   ];
 
   const communicationTypeOptions = [
-    { value: "", label: COMMON_TEXT.selectOption },
+    { value: "", label: "Select" },
     ...communicationSettingTypes.map((communicationType) => ({
       value: communicationType,
       label: COMMUNICATION_SETTING_TYPE_LABELS[communicationType],
@@ -561,7 +553,7 @@ export const useCompanySubmit = ({
   ];
 
   const shapeOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...communicationSettingShapes.map((shape) => ({
       value: shape,
       label: COMMUNICATION_SETTING_SHAPE_LABELS[shape],
@@ -569,7 +561,7 @@ export const useCompanySubmit = ({
   ];
 
   const paymentTermOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...invoicePaymentTerms.map((t) => ({
       value: t,
       label: INVOICE_PAYMENT_TERM_LABELS[t as InvoicePaymentTerm],
@@ -577,7 +569,7 @@ export const useCompanySubmit = ({
   ];
 
   const currencyOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...currencies.map((c) => ({
       value: c,
       label: CURRENCY_LABELS[c as Currency],
@@ -585,12 +577,12 @@ export const useCompanySubmit = ({
   ];
 
   const debtorCompanyOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...debtorCompanies.map((c) => ({ value: c.uuid, label: c.companyName })),
   ];
 
   const purchaseOrgOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...purchaseOrgCompanies.map((c) => ({
       value: c.uuid,
       label: c.companyName,
@@ -600,7 +592,7 @@ export const useCompanySubmit = ({
   // Supplier dropdown for the Processing grid — the label leads with the
   // supplier code (searchCode1) since that's the "Supplier code" column.
   const supplierOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...suppliers.map((s) => ({
       value: s.uuid,
       label: s.searchCode1

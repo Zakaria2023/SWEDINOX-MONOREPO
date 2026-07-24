@@ -6,7 +6,6 @@ import { ContactOption } from "@/app/(dashboard)/visit-reports/actions";
 import { Input } from "@/components/shadcn/input";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import { FormSelectField } from "@/components/ui/form-select-field";
-import { COMMON_TEXT } from "@/lib/labels";
 
 type Props = {
   isPending: boolean;
@@ -76,7 +75,7 @@ export const AddressAndContactSection = ({
             name="contactUuid"
             label="Contact"
             options={[
-              { value: "", label: COMMON_TEXT.selectPlaceholder },
+              { value: "", label: "Select an option" },
               ...contacts.map((c) => ({
                 value: c.uuid,
                 label: [c.firstName, c.lastName].filter(Boolean).join(" "),

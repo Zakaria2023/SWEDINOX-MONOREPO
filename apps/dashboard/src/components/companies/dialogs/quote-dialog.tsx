@@ -22,14 +22,7 @@ import {
   orderWeightTypes,
   salesRepresentatives,
 } from "@/lib/enums";
-import {
-  COMMON_TEXT,
-  DELIVERY_TERM_LABELS,
-  INVOICE_PAYMENT_TERM_LABELS,
-  ORDER_METHOD_LABELS,
-  ORDER_WEIGHT_TYPE_LABELS,
-  SALES_REPRESENTATIVE_LABELS,
-} from "@/lib/labels";
+import { DELIVERY_TERM_LABELS, INVOICE_PAYMENT_TERM_LABELS, ORDER_METHOD_LABELS, ORDER_WEIGHT_TYPE_LABELS, SALES_REPRESENTATIVE_LABELS } from "@/lib/labels";
 import { FileText } from "lucide-react";
 import { FormEventHandler } from "react";
 import { Controller, UseFormReturn } from "react-hook-form";
@@ -155,7 +148,7 @@ export const QuoteDialog = ({
                   <Select
                     id="q-request-method"
                     options={[
-                      { value: "", label: COMMON_TEXT.emptyOption },
+                      { value: "", label: "Empty" },
                       ...orderMethods.map((method) => ({
                         value: method,
                         label: ORDER_METHOD_LABELS[method],
@@ -163,7 +156,7 @@ export const QuoteDialog = ({
                     ]}
                     value={field.value ?? ""}
                     onValueChange={field.onChange}
-                    placeholder={COMMON_TEXT.selectOption}
+                    placeholder="Select"
                   />
                 )}
               />
@@ -177,7 +170,7 @@ export const QuoteDialog = ({
                   <Select
                     id="q-seller"
                     options={[
-                      { value: "", label: COMMON_TEXT.emptyOption },
+                      { value: "", label: "Empty" },
                       ...salesRepresentatives.map((rep) => ({
                         value: rep,
                         label: SALES_REPRESENTATIVE_LABELS[rep],
@@ -185,7 +178,7 @@ export const QuoteDialog = ({
                     ]}
                     value={field.value ?? ""}
                     onValueChange={field.onChange}
-                    placeholder={COMMON_TEXT.selectOption}
+                    placeholder="Select"
                   />
                 )}
               />
@@ -221,7 +214,7 @@ export const QuoteDialog = ({
                   <Select
                     id="q-weight-type"
                     options={[
-                      { value: "", label: COMMON_TEXT.emptyOption },
+                      { value: "", label: "Empty" },
                       ...orderWeightTypes.map((type) => ({
                         value: type,
                         label: ORDER_WEIGHT_TYPE_LABELS[type],
@@ -229,7 +222,7 @@ export const QuoteDialog = ({
                     ]}
                     value={field.value ?? ""}
                     onValueChange={field.onChange}
-                    placeholder={COMMON_TEXT.selectOption}
+                    placeholder="Select"
                   />
                 )}
               />
@@ -243,7 +236,7 @@ export const QuoteDialog = ({
                   <Select
                     id="q-delivery-terms"
                     options={[
-                      { value: "", label: COMMON_TEXT.emptyOption },
+                      { value: "", label: "Empty" },
                       ...deliveryTerms.map((term) => ({
                         value: term,
                         label: DELIVERY_TERM_LABELS[term],
@@ -251,7 +244,7 @@ export const QuoteDialog = ({
                     ]}
                     value={field.value ?? ""}
                     onValueChange={field.onChange}
-                    placeholder={COMMON_TEXT.selectOption}
+                    placeholder="Select"
                   />
                 )}
               />
@@ -265,7 +258,7 @@ export const QuoteDialog = ({
                   <Select
                     id="q-payment-terms"
                     options={[
-                      { value: "", label: COMMON_TEXT.emptyOption },
+                      { value: "", label: "Empty" },
                       ...invoicePaymentTerms.map((term) => ({
                         value: term,
                         label: INVOICE_PAYMENT_TERM_LABELS[term],
@@ -273,7 +266,7 @@ export const QuoteDialog = ({
                     ]}
                     value={field.value ?? ""}
                     onValueChange={field.onChange}
-                    placeholder={COMMON_TEXT.selectOption}
+                    placeholder="Select"
                   />
                 )}
               />

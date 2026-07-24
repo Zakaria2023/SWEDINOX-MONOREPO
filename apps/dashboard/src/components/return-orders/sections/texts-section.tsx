@@ -8,7 +8,6 @@ import { Input } from "@/components/shadcn/input";
 import { Textarea } from "@/components/shadcn/textarea";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import { FormSelectField } from "@/components/ui/form-select-field";
-import { COMMON_TEXT } from "@/lib/labels";
 
 type Props = {
   textCategories: TextCategoryOption[];
@@ -32,7 +31,7 @@ export const TextsSection = ({ textCategories }: Props) => {
   });
 
   const categoryOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...textCategories.map((category) => ({
       value: category.uuid,
       label: category.name,

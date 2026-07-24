@@ -23,7 +23,6 @@ import {
 } from "@/components/shadcn/table";
 import { FormError } from "@/components/ui/form-error";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
-import { COMMON_TEXT } from "@/lib/labels";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -170,10 +169,10 @@ export const Industries = ({ industries }: Props) => {
                 onClick={() => handleDialogClose(false)}
                 disabled={isPending}
               >
-                {COMMON_TEXT.cancel}
+                Cancel
               </Button>
               <Button type="submit" disabled={isPending}>
-                {isPending ? COMMON_TEXT.saving : "Create Industry"}
+                {isPending ? "Saving..." : "Create Industry"}
               </Button>
             </DialogFooter>
           </form>

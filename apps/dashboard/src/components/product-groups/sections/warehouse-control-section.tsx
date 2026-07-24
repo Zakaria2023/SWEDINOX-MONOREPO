@@ -11,14 +11,9 @@ import {
   stockLabelPrintingOptions,
   stockLabelTypes,
 } from "@/lib/enums";
-import {
-  COMMON_TEXT,
-  CUSTOMER_LABEL_OPTION_LABELS,
-  STOCK_LABEL_PRINTING_LABELS,
-  STOCK_LABEL_TYPE_LABELS,
-} from "@/lib/labels";
+import { CUSTOMER_LABEL_OPTION_LABELS, STOCK_LABEL_PRINTING_LABELS, STOCK_LABEL_TYPE_LABELS } from "@/lib/labels";
 
-const emptyOption = { value: "", label: COMMON_TEXT.emptyOption };
+const emptyOption = { value: "", label: "Empty" };
 
 const makeEnumOptions = <T extends string>(
   values: readonly T[],

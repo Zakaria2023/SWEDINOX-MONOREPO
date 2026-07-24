@@ -10,12 +10,7 @@ import {
   contractSurchargePerTypes,
   contractTierUnits,
 } from "@/lib/enums";
-import {
-  COMMON_TEXT,
-  CONTRACT_DISCOUNT_BASED_ON_LABELS,
-  CONTRACT_SURCHARGE_PER_TYPE_LABELS,
-  CONTRACT_TIER_UNIT_LABELS,
-} from "@/lib/labels";
+import { CONTRACT_DISCOUNT_BASED_ON_LABELS, CONTRACT_SURCHARGE_PER_TYPE_LABELS, CONTRACT_TIER_UNIT_LABELS } from "@/lib/labels";
 import { Plus, X } from "lucide-react";
 import { Controller, useFieldArray, useFormContext } from "react-hook-form";
 
@@ -58,7 +53,7 @@ export const ContractPriceDetailsSection = ({
   } = useFieldArray({ control, name: "groupDiscountTiers" });
 
   const tierUnitOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...contractTierUnits.map((u) => ({
       value: u,
       label: CONTRACT_TIER_UNIT_LABELS[u],

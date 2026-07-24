@@ -4,7 +4,6 @@ import { ChevronDown } from "lucide-react";
 import { useCallback, useState } from "react";
 import { Button } from "@/components/shadcn/button";
 import { useClickOutside } from "@/hooks/use-click-outside";
-import { COMMON_TEXT } from "@/lib/labels";
 
 type Column = {
   key: string;
@@ -34,7 +33,7 @@ export const ColumnSelector = ({
         size="sm"
         onClick={() => setIsOpen((open) => !open)}
       >
-        {COMMON_TEXT.columns}
+        Columns
         <ChevronDown className="ms-2 h-4 w-4" />
       </Button>
 

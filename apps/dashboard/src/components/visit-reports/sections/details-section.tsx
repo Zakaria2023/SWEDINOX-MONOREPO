@@ -5,7 +5,7 @@ import { VisitReportFormValues } from "@/app/(dashboard)/visit-reports/validatio
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import { FormSelectField } from "@/components/ui/form-select-field";
 import { visitReportReasons } from "@/lib/enums";
-import { COMMON_TEXT, VISIT_REPORT_REASON_LABELS } from "@/lib/labels";
+import { VISIT_REPORT_REASON_LABELS } from "@/lib/labels";
 
 type Props = {
   isPending: boolean;
@@ -30,7 +30,7 @@ export const DetailsSection = ({ isPending }: Props) => {
           name="visitReason"
           label="Visit Reason"
           options={[
-            { value: "", label: COMMON_TEXT.selectPlaceholder },
+            { value: "", label: "Select an option" },
             ...visitReportReasons.map((reason) => ({
               value: reason,
               label: VISIT_REPORT_REASON_LABELS[reason],

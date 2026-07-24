@@ -4,11 +4,7 @@ import { InvoiceFormValues } from "@/app/(dashboard)/invoices/validation";
 import { Select } from "@/components/shadcn/select";
 import { FormLabel } from "@/components/ui/form-field";
 import { invoicePaymentTerms, invoiceVatScenarios } from "@/lib/enums";
-import {
-  COMMON_TEXT,
-  INVOICE_PAYMENT_TERM_LABELS,
-  INVOICE_VAT_SCENARIO_LABELS,
-} from "@/lib/labels";
+import { INVOICE_PAYMENT_TERM_LABELS, INVOICE_VAT_SCENARIO_LABELS } from "@/lib/labels";
 import { Controller, useFormContext } from "react-hook-form";
 
 type InvoiceSettingsSectionProps = {
@@ -21,7 +17,7 @@ export const InvoiceSettingsSection = ({
   const { register, control } = useFormContext<InvoiceFormValues>();
 
   const vatScenarioOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...invoiceVatScenarios.map((v) => ({
       value: v,
       label: INVOICE_VAT_SCENARIO_LABELS[v],
@@ -29,7 +25,7 @@ export const InvoiceSettingsSection = ({
   ];
 
   const paymentTermOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...invoicePaymentTerms.map((t) => ({
       value: t,
       label: INVOICE_PAYMENT_TERM_LABELS[t],

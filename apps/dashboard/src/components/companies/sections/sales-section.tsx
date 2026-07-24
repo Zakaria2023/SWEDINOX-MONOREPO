@@ -36,20 +36,7 @@ import {
   SalesRepresentative,
   salesRepresentatives,
 } from "@/lib/enums";
-import {
-  COMMON_TEXT,
-  CUSTOMER_GROUP_LABELS,
-  DEV_THEOR_WT_LABELS,
-  EDI_OPTION_LABELS,
-  GROUP_LINES_BY_DESCRIPTION_LABELS,
-  MISCELLANEOUS_OPTION_LABELS,
-  ORDER_OPTION_LABELS,
-  PRINT_PRODUCT_CODES_LABELS,
-  QUOTE_OPTION_LABELS,
-  QUOTE_ORDER_INVOICE_OPTION_LABELS,
-  QUOTE_ORDER_OPTION_LABELS,
-  SALES_REPRESENTATIVE_LABELS,
-} from "@/lib/labels";
+import { CUSTOMER_GROUP_LABELS, DEV_THEOR_WT_LABELS, EDI_OPTION_LABELS, GROUP_LINES_BY_DESCRIPTION_LABELS, MISCELLANEOUS_OPTION_LABELS, ORDER_OPTION_LABELS, PRINT_PRODUCT_CODES_LABELS, QUOTE_OPTION_LABELS, QUOTE_ORDER_INVOICE_OPTION_LABELS, QUOTE_ORDER_OPTION_LABELS, SALES_REPRESENTATIVE_LABELS } from "@/lib/labels";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus, ShoppingCart } from "lucide-react";
 import { useState } from "react";
@@ -224,7 +211,7 @@ export const SalesSection = ({
                 className="shrink-0 text-xs text-primary hover:underline"
                 disabled={isPending}
               >
-                {COMMON_TEXT.edit}
+                Edit
               </button>
             </div>
           ) : (
@@ -284,7 +271,7 @@ export const SalesSection = ({
                         <Select
                           id="sl-customerGroup"
                           options={[
-                            { value: "", label: COMMON_TEXT.emptyOption },
+                            { value: "", label: "Empty" },
                             ...customerGroups.map((g) => ({
                               value: g,
                               label: CUSTOMER_GROUP_LABELS[g],
@@ -292,7 +279,7 @@ export const SalesSection = ({
                           ]}
                           value={field.value ?? ""}
                           onValueChange={field.onChange}
-                          placeholder={COMMON_TEXT.emptyOption}
+                          placeholder="Empty"
                         />
                       )}
                     />
@@ -308,7 +295,7 @@ export const SalesSection = ({
                         <Select
                           id="sl-representative"
                           options={[
-                            { value: "", label: COMMON_TEXT.emptyOption },
+                            { value: "", label: "Empty" },
                             ...salesRepresentatives.map((r) => ({
                               value: r,
                               label: SALES_REPRESENTATIVE_LABELS[r],
@@ -316,7 +303,7 @@ export const SalesSection = ({
                           ]}
                           value={field.value ?? ""}
                           onValueChange={field.onChange}
-                          placeholder={COMMON_TEXT.emptyOption}
+                          placeholder="Empty"
                         />
                       )}
                     />
@@ -332,7 +319,7 @@ export const SalesSection = ({
                         <Select
                           id="sl-accountManager"
                           options={[
-                            { value: "", label: COMMON_TEXT.emptyOption },
+                            { value: "", label: "Empty" },
                             ...salesRepresentatives.map((r) => ({
                               value: r,
                               label: SALES_REPRESENTATIVE_LABELS[r],
@@ -340,7 +327,7 @@ export const SalesSection = ({
                           ]}
                           value={field.value ?? ""}
                           onValueChange={field.onChange}
-                          placeholder={COMMON_TEXT.emptyOption}
+                          placeholder="Empty"
                         />
                       )}
                     />
@@ -416,7 +403,7 @@ export const SalesSection = ({
                         <Select
                           id="sl-devTheorWt"
                           options={[
-                            { value: "", label: COMMON_TEXT.emptyOption },
+                            { value: "", label: "Empty" },
                             ...devTheorWtOptions.map((o) => ({
                               value: o,
                               label: DEV_THEOR_WT_LABELS[o],
@@ -424,7 +411,7 @@ export const SalesSection = ({
                           ]}
                           value={field.value ?? ""}
                           onValueChange={field.onChange}
-                          placeholder={COMMON_TEXT.emptyOption}
+                          placeholder="Empty"
                         />
                       )}
                     />
@@ -481,7 +468,7 @@ export const SalesSection = ({
                         <Select
                           id="sl-groupLines"
                           options={[
-                            { value: "", label: COMMON_TEXT.emptyOption },
+                            { value: "", label: "Empty" },
                             ...groupLinesByDescriptionOptions.map((o) => ({
                               value: o,
                               label: GROUP_LINES_BY_DESCRIPTION_LABELS[o],
@@ -489,7 +476,7 @@ export const SalesSection = ({
                           ]}
                           value={field.value ?? ""}
                           onValueChange={field.onChange}
-                          placeholder={COMMON_TEXT.emptyOption}
+                          placeholder="Empty"
                         />
                       )}
                     />
@@ -505,7 +492,7 @@ export const SalesSection = ({
                         <Select
                           id="sl-printProductCodes"
                           options={[
-                            { value: "", label: COMMON_TEXT.emptyOption },
+                            { value: "", label: "Empty" },
                             ...printProductCodesOptions.map((o) => ({
                               value: o,
                               label: PRINT_PRODUCT_CODES_LABELS[o],
@@ -513,7 +500,7 @@ export const SalesSection = ({
                           ]}
                           value={field.value ?? ""}
                           onValueChange={field.onChange}
-                          placeholder={COMMON_TEXT.emptyOption}
+                          placeholder="Empty"
                         />
                       )}
                     />

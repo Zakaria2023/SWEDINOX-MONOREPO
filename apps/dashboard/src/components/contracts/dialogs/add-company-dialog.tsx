@@ -14,7 +14,7 @@ import {
 import { Select } from "@/components/shadcn/select";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import { ContractableRole, contractableRoles } from "@/lib/enums";
-import { COMMON_TEXT, CONTRACTABLE_ROLE_LABELS } from "@/lib/labels";
+import { CONTRACTABLE_ROLE_LABELS } from "@/lib/labels";
 import { Controller, UseFormReturn } from "react-hook-form";
 import { z } from "zod";
 
@@ -54,7 +54,7 @@ export const AddCompanyDialog = ({
   );
 
   const companyOptions = [
-    { value: "", label: COMMON_TEXT.selectPlaceholder },
+    { value: "", label: "Select an option" },
     ...contractableCompanies.map((c) => ({
       value: c.uuid,
       label: [c.searchCode1, c.companyName].filter(Boolean).join(" — "),
@@ -102,7 +102,7 @@ export const AddCompanyDialog = ({
                         roles[0] ?? ("" as ContractableRole),
                       );
                     }}
-                    placeholder={COMMON_TEXT.selectPlaceholder}
+                    placeholder="Select an option"
                   />
                 )}
               />
@@ -169,7 +169,7 @@ export const AddCompanyDialog = ({
               variant="outline"
               onClick={() => onOpenChange(false)}
             >
-              {COMMON_TEXT.cancel}
+              Cancel
             </Button>
             <Button type="submit">Add</Button>
           </DialogFooter>

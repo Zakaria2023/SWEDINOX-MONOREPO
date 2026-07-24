@@ -14,7 +14,6 @@ import {
 import { Input } from "@/components/shadcn/input";
 import { FormError } from "@/components/ui/form-error";
 import { FormLabel } from "@/components/ui/form-field";
-import { COMMON_TEXT } from "@/lib/labels";
 import { Link2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -116,10 +115,10 @@ export const MarkReceivedDialog = ({
               onClick={() => handleDialogClose(false)}
               disabled={isPending}
             >
-              {COMMON_TEXT.cancel}
+              Cancel
             </Button>
             <Button type="button" onClick={onSubmit} disabled={isPending}>
-              {isPending ? COMMON_TEXT.saving : "Mark received"}
+              {isPending ? "Saving..." : "Mark received"}
             </Button>
           </DialogFooter>
         </DialogContent>

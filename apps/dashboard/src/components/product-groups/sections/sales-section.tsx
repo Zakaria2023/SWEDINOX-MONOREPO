@@ -13,16 +13,9 @@ import {
   salesUnitOptions,
   vatCodes,
 } from "@/lib/enums";
-import {
-  CERTIFICAAT_LABELS,
-  COMMON_TEXT,
-  PURCHASING_UNIT_LABELS,
-  REVENUE_GROUP_LABELS,
-  SALES_UNIT_LABELS,
-  VAT_CODE_LABELS,
-} from "@/lib/labels";
+import { CERTIFICAAT_LABELS, PURCHASING_UNIT_LABELS, REVENUE_GROUP_LABELS, SALES_UNIT_LABELS, VAT_CODE_LABELS } from "@/lib/labels";
 
-const emptyOption = { value: "", label: COMMON_TEXT.emptyOption };
+const emptyOption = { value: "", label: "Empty" };
 
 const makeEnumOptions = <T extends string>(
   values: readonly T[],

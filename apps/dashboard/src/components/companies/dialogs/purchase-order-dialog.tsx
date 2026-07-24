@@ -16,11 +16,7 @@ import { Textarea } from "@/components/shadcn/textarea";
 import { DialogFormFooter } from "@/components/ui/dialog-form-footer";
 import { FormLabel } from "@/components/ui/form-field";
 import { purchaseOrderStatuses, purchaseOrderTypes } from "@/lib/enums";
-import {
-  COMMON_TEXT,
-  PURCHASE_ORDER_STATUS_LABELS,
-  PURCHASE_ORDER_TYPE_LABELS,
-} from "@/lib/labels";
+import { PURCHASE_ORDER_STATUS_LABELS, PURCHASE_ORDER_TYPE_LABELS } from "@/lib/labels";
 import { PackageCheck } from "lucide-react";
 import { FormEventHandler } from "react";
 import { Controller, UseFormReturn } from "react-hook-form";
@@ -141,7 +137,7 @@ export const PurchaseOrderDialog = ({
                   <Select
                     id="po-type"
                     options={[
-                      { value: "", label: COMMON_TEXT.emptyOption },
+                      { value: "", label: "Empty" },
                       ...purchaseOrderTypes.map((type) => ({
                         value: type,
                         label: PURCHASE_ORDER_TYPE_LABELS[type],
@@ -149,7 +145,7 @@ export const PurchaseOrderDialog = ({
                     ]}
                     value={field.value ?? ""}
                     onValueChange={field.onChange}
-                    placeholder={COMMON_TEXT.selectOption}
+                    placeholder="Select"
                   />
                 )}
               />

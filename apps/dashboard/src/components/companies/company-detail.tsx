@@ -9,20 +9,7 @@ import {
 } from "@/components/shadcn/table";
 import { daysInSystem, formatDateValue } from "@/lib/helpers";
 import { SelectInvoices } from "@/db";
-import {
-  COMMON_TEXT,
-  COMPANY_LANGUAGE_LABELS,
-  COMPANY_ROLE_LABELS,
-  COMPLAINT_CATEGORY_LABELS,
-  COMPLAINT_REPORT_LABELS,
-  COMPLAINT_TYPE_LABELS,
-  COUNTER_ORDER_STATUS_LABELS,
-  INVOICE_PAYMENT_TERM_LABELS,
-  INVOICE_VAT_SCENARIO_LABELS,
-  VISIT_REPORT_CONTACT_METHOD_LABELS,
-  VISIT_REPORT_REASON_LABELS,
-  PURCHASE_ORDER_STATUS_LABELS,
-} from "@/lib/labels";
+import { COMPANY_LANGUAGE_LABELS, COMPANY_ROLE_LABELS, COMPLAINT_CATEGORY_LABELS, COMPLAINT_REPORT_LABELS, COMPLAINT_TYPE_LABELS, COUNTER_ORDER_STATUS_LABELS, INVOICE_PAYMENT_TERM_LABELS, INVOICE_VAT_SCENARIO_LABELS, VISIT_REPORT_CONTACT_METHOD_LABELS, VISIT_REPORT_REASON_LABELS, PURCHASE_ORDER_STATUS_LABELS } from "@/lib/labels";
 import { Plus } from "lucide-react";
 import Link from "next/link";
 
@@ -37,7 +24,7 @@ const Field = ({ label, value }: { label: string; value?: string | null }) => (
       {label}
     </dt>
     <dd className="mt-0.5 text-sm text-gray-900">
-      {value || COMMON_TEXT.notAvailable}
+      {value || "—"}
     </dd>
   </div>
 );
@@ -46,7 +33,7 @@ const Field = ({ label, value }: { label: string; value?: string | null }) => (
 
 export const CompanyDetailView = ({ company, invoices }: Props) => {
   const isCustomer = company.roles?.includes("customer");
-  const na = COMMON_TEXT.notAvailable;
+  const na = "—";
 
   return (
     <div className="space-y-8">
@@ -163,7 +150,7 @@ export const CompanyDetailView = ({ company, invoices }: Props) => {
                       {order.handlingBlocked ? "Yes" : "No"}
                     </TableCell>
                     <TableCell>
-                      {order.status ? COUNTER_ORDER_STATUS_LABELS[order.status] : COMMON_TEXT.notAvailable}
+                      {order.status ? COUNTER_ORDER_STATUS_LABELS[order.status] : "—"}
                     </TableCell>
                     <TableCell>{order.orderDate ?? na}</TableCell>
                     <TableCell>{order.deliveryDate ?? na}</TableCell>
@@ -281,7 +268,7 @@ export const CompanyDetailView = ({ company, invoices }: Props) => {
                         ? COMPLAINT_REPORT_LABELS[complaint.report]
                         : na}
                     </TableCell>
-                    <TableCell>{formatDateValue(complaint.reportDate, COMMON_TEXT.notAvailable)}</TableCell>
+                    <TableCell>{formatDateValue(complaint.reportDate, "—")}</TableCell>
                     <TableCell>
                       {complaint.category
                         ? COMPLAINT_CATEGORY_LABELS[complaint.category]
@@ -381,7 +368,7 @@ export const CompanyDetailView = ({ company, invoices }: Props) => {
                       {PURCHASE_ORDER_STATUS_LABELS[order.status]}
                     </TableCell>
                     <TableCell>{order.orderDate ?? na}</TableCell>
-                    <TableCell>{formatDateValue(order.deliveryDate, COMMON_TEXT.notAvailable)}</TableCell>
+                    <TableCell>{formatDateValue(order.deliveryDate, "—")}</TableCell>
                     <TableCell className="text-right whitespace-nowrap">
                       € {order.amount}
                     </TableCell>
