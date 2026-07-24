@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { toDateInput } from "@/lib/helpers";
 import { OrderDetail, updateOrder } from "@/app/(dashboard)/orders/actions";
 import { Button } from "@/components/shadcn/button";
 import { DatePicker } from "@/components/shadcn/date-picker";
@@ -23,14 +24,6 @@ const editSchema = z.object({
 });
 
 type EditFormValues = z.infer<typeof editSchema>;
-
-const toDateInput = (value: Date | string | null) => {
-  if (!value) {
-    return "";
-  }
-  const date = value instanceof Date ? value : new Date(value);
-  return date.toISOString().split("T")[0];
-};
 
 type Props = {
   order: OrderDetail;

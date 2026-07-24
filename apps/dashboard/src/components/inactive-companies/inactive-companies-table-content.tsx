@@ -10,21 +10,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
-import { CustomerGroup, SalesRepresentative } from "@/lib/enums";
-import { CUSTOMER_GROUP_LABELS, SALES_REPRESENTATIVE_LABELS } from "@/lib/labels";
+import { customerGroupLabel, formatDateValue, salesRepresentativeLabel } from "@/lib/helpers";
 
 type Props = {
   rows: InactiveCompanyRow[];
 };
-
-const fmtDate = (value: string | null) =>
-  value ? new Date(value).toLocaleDateString("en-GB") : "Never";
-
-const representativeLabel = (value: SalesRepresentative | null) =>
-  value ? (SALES_REPRESENTATIVE_LABELS[value] ?? value) : "—";
-
-const customerGroupLabel = (value: CustomerGroup | null) =>
-  value ? (CUSTOMER_GROUP_LABELS[value] ?? value) : "—";
 
 export const InactiveCompaniesTable = ({ rows }: Props) => (
   <div className="overflow-x-auto rounded-md border">
@@ -63,11 +53,11 @@ export const InactiveCompaniesTable = ({ rows }: Props) => (
                 </Link>
               </TableCell>
               <TableCell>{row.city ?? "—"}</TableCell>
-              <TableCell>{representativeLabel(row.representative)}</TableCell>
+              <TableCell>{salesRepresentativeLabel(row.representative)}</TableCell>
               <TableCell>{customerGroupLabel(row.customerGroup)}</TableCell>
               <TableCell>{row.region ?? "—"}</TableCell>
               <TableCell className="whitespace-nowrap">
-                {fmtDate(row.lastOrderDate)}
+                {formatDateValue(row.lastOrderDate, "Never")}
               </TableCell>
             </TableRow>
           ))

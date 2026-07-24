@@ -10,6 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { fullName } from "@/lib/helpers";
 import {
   INVOICE_PAYMENT_TERM_LABELS,
   SALES_REPRESENTATIVE_LABELS,
@@ -25,11 +26,6 @@ const flag = (value: boolean) =>
   ) : (
     <span className="text-muted-foreground">—</span>
   );
-
-const fullName = (first: string | null, last: string | null) => {
-  const name = [first, last].filter(Boolean).join(" ");
-  return name.length > 0 ? name : "—";
-};
 
 export const SuppliersTable = ({ rows }: Props) => (
   <div className="overflow-x-auto rounded-md border">

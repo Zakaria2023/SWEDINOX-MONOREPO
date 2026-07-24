@@ -14,7 +14,7 @@ import {
   SAWING_LAYOUT_FETCH_STATUS_LABELS,
   SAWING_STATUS_LABELS,
 } from "@/lib/labels";
-import { formatDateValue } from "@/lib/helpers";
+import { formatBoolean, formatDateValue } from "@/lib/helpers";
 import type { SawingLayoutFetchStatus, SawingStatus } from "@/lib/enums";
 
 type Props = {
@@ -40,13 +40,6 @@ const PIECE_SLOTS = [
   { qty: "qty9", length: "length9" },
   { qty: "qty10", length: "length10" },
 ] as const;
-
-const formatBool = (value: boolean | null): string => {
-  if (value === null) {
-    return "—";
-  }
-  return value ? "Yes" : "No";
-};
 
 export const SawingLayoutsTable = ({ layouts }: Props) => (
   <div className="overflow-x-auto rounded-md border">
@@ -152,8 +145,8 @@ export const SawingLayoutsTable = ({ layouts }: Props) => (
                 {row.totalPiecesToBeSawn ?? "—"}
               </TableCell>
               <TableCell>{row.sawingOfTl ?? "—"}</TableCell>
-              <TableCell>{formatBool(row.sawingAccordingToLayout)}</TableCell>
-              <TableCell>{formatBool(row.layoutIncludesCutoff)}</TableCell>
+              <TableCell>{formatBoolean(row.sawingAccordingToLayout)}</TableCell>
+              <TableCell>{formatBoolean(row.layoutIncludesCutoff)}</TableCell>
               <TableCell>{row.followUpProcessing ?? "—"}</TableCell>
               <TableCell>{row.toLocations ?? "—"}</TableCell>
               {PIECE_SLOTS.map((slot, index) => (

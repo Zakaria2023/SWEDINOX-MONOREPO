@@ -9,6 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { formatMoney } from "@/lib/helpers";
 import {
   ORDER_LINE_STATUS_LABELS,
   RETURN_ORDER_REASON_LABELS,
@@ -18,12 +19,6 @@ import {
 type Props = {
   lines: ReturnLineItem[];
 };
-
-const money = (value: number) =>
-  `€ ${value.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
 
 export const ReturnLinesTable = ({ lines }: Props) => (
   <div className="overflow-x-auto rounded-md border">
@@ -97,7 +92,7 @@ export const ReturnLinesTable = ({ lines }: Props) => (
                 € {row.amount}
               </TableCell>
               <TableCell className="text-right whitespace-nowrap">
-                {money(row.profit)}
+                {formatMoney(row.profit)}
               </TableCell>
               <TableCell className="text-right">
                 {row.profitMargin.toFixed(1)}%

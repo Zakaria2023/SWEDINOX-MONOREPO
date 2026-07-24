@@ -7,6 +7,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { daysInSystem, formatDateValue } from "@/lib/helpers";
 import { SelectInvoices } from "@/db";
 import {
   COMMON_TEXT,
@@ -42,14 +43,6 @@ const Field = ({ label, value }: { label: string; value?: string | null }) => (
 );
 
 // Number of whole days since the record was created.
-const daysInSystem = (createdAt: Date) =>
-  Math.max(
-    0,
-    Math.floor((Date.now() - new Date(createdAt).getTime()) / 86_400_000),
-  );
-
-const formatDate = (value: Date | string | null) =>
-  value ? new Date(value).toLocaleDateString() : COMMON_TEXT.notAvailable;
 
 export const CompanyDetailView = ({ company, invoices }: Props) => {
   const isCustomer = company.roles?.includes("customer");
@@ -288,7 +281,7 @@ export const CompanyDetailView = ({ company, invoices }: Props) => {
                         ? COMPLAINT_REPORT_LABELS[complaint.report]
                         : na}
                     </TableCell>
-                    <TableCell>{formatDate(complaint.reportDate)}</TableCell>
+                    <TableCell>{formatDateValue(complaint.reportDate, COMMON_TEXT.notAvailable)}</TableCell>
                     <TableCell>
                       {complaint.category
                         ? COMPLAINT_CATEGORY_LABELS[complaint.category]
@@ -388,7 +381,7 @@ export const CompanyDetailView = ({ company, invoices }: Props) => {
                       {PURCHASE_ORDER_STATUS_LABELS[order.status]}
                     </TableCell>
                     <TableCell>{order.orderDate ?? na}</TableCell>
-                    <TableCell>{formatDate(order.deliveryDate)}</TableCell>
+                    <TableCell>{formatDateValue(order.deliveryDate, COMMON_TEXT.notAvailable)}</TableCell>
                     <TableCell className="text-right whitespace-nowrap">
                       € {order.amount}
                     </TableCell>

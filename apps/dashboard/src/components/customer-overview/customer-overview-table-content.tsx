@@ -10,29 +10,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
-import { CustomerGroup, SalesRepresentative } from "@/lib/enums";
-import { formatRevenue } from "@/lib/helpers";
-import {
-  CUSTOMER_GROUP_LABELS,
-  SALES_REPRESENTATIVE_LABELS,
-} from "@/lib/labels";
+import { customerGroupLabel, formatRevenue, orDash, salesRepresentativeLabel } from "@/lib/helpers";
 
 type Props = {
   customers: CustomerOverviewRow[];
 };
 
 const COLUMN_COUNT = 21;
-
-const cellValue = (value: string | number | null) =>
-  value === null || value === "" ? "—" : value;
-
-const representativeLabel = (value: string | null) =>
-  value
-    ? (SALES_REPRESENTATIVE_LABELS[value as SalesRepresentative] ?? value)
-    : null;
-
-const customerGroupLabel = (value: string | null) =>
-  value ? (CUSTOMER_GROUP_LABELS[value as CustomerGroup] ?? value) : null;
 
 export const CustomerOverviewTable = ({ customers }: Props) => (
   <div className="overflow-x-auto rounded-md border">
@@ -88,27 +72,27 @@ export const CustomerOverviewTable = ({ customers }: Props) => (
                   {row.companyName}
                 </Link>
               </TableCell>
-              <TableCell>{cellValue(row.searchCode1)}</TableCell>
-              <TableCell>{cellValue(row.searchCode2)}</TableCell>
-              <TableCell>{cellValue(row.searchCode3)}</TableCell>
-              <TableCell>{cellValue(row.streetAndNo)}</TableCell>
-              <TableCell>{cellValue(row.city)}</TableCell>
-              <TableCell>{cellValue(row.postalCode)}</TableCell>
-              <TableCell>{cellValue(row.initials)}</TableCell>
+              <TableCell>{orDash(row.searchCode1)}</TableCell>
+              <TableCell>{orDash(row.searchCode2)}</TableCell>
+              <TableCell>{orDash(row.searchCode3)}</TableCell>
+              <TableCell>{orDash(row.streetAndNo)}</TableCell>
+              <TableCell>{orDash(row.city)}</TableCell>
+              <TableCell>{orDash(row.postalCode)}</TableCell>
+              <TableCell>{orDash(row.initials)}</TableCell>
               <TableCell>
-                {cellValue(representativeLabel(row.representative))}
+                {orDash(salesRepresentativeLabel(row.representative))}
               </TableCell>
               <TableCell>
-                {cellValue(representativeLabel(row.accountManager))}
+                {orDash(salesRepresentativeLabel(row.accountManager))}
               </TableCell>
-              <TableCell>{cellValue(row.regionCode)}</TableCell>
-              <TableCell>{cellValue(row.region)}</TableCell>
+              <TableCell>{orDash(row.regionCode)}</TableCell>
+              <TableCell>{orDash(row.region)}</TableCell>
               <TableCell>
-                {cellValue(customerGroupLabel(row.customerGroup))}
+                {orDash(customerGroupLabel(row.customerGroup))}
               </TableCell>
-              <TableCell>{cellValue(row.vatNumber)}</TableCell>
+              <TableCell>{orDash(row.vatNumber)}</TableCell>
               <TableCell>
-                {cellValue(
+                {orDash(
                   row.actionEmailTo ??
                     row.releaseActionEmailTo ??
                     row.addressEmail ??

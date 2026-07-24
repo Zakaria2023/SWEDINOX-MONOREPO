@@ -12,7 +12,7 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
-import { formatRevenue } from "@/lib/helpers";
+import { formatDateValue, formatRevenue } from "@/lib/helpers";
 import { COMMON_TEXT } from "@/lib/labels";
 
 type ColumnKey = keyof CustomerProspectRow | "contactPerson";
@@ -121,9 +121,6 @@ const initialVisibility = ALL_COLUMNS.reduce(
 );
 
 const na = COMMON_TEXT.notAvailable;
-
-const formatDate = (value: Date | string | null) =>
-  value ? new Date(value).toLocaleDateString("en-GB") : na;
 
 type Props = { rows: CustomerProspectRow[] };
 
@@ -296,10 +293,10 @@ export const CustomersAndProspectsTable = ({ rows }: Props) => {
       case "companyCode":
         return <TableCell key={key}>{row.companyCode}</TableCell>;
       case "createdAt":
-        return <TableCell key={key}>{formatDate(row.createdAt)}</TableCell>;
+        return <TableCell key={key}>{formatDateValue(row.createdAt, na)}</TableCell>;
       case "contactCreatedAt":
         return (
-          <TableCell key={key}>{formatDate(row.contactCreatedAt)}</TableCell>
+          <TableCell key={key}>{formatDateValue(row.contactCreatedAt, na)}</TableCell>
         );
       default:
         return <TableCell key={key}>{na}</TableCell>;

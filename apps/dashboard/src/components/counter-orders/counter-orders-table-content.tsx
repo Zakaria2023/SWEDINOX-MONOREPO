@@ -10,7 +10,7 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
-import { buildColumnVisibility } from "@/lib/helpers";
+import { buildColumnVisibility, daysInSystem } from "@/lib/helpers";
 import {
   COMMON_TEXT,
   COUNTER_ORDER_PRIORITY_LABELS,
@@ -52,12 +52,6 @@ const ALL_COLUMNS: Array<{
   { key: "priority", label: "Priority", defaultVisible: false },
   { key: "createdAt", label: "Created At", defaultVisible: false },
 ];
-
-const daysInSystem = (createdAt: Date) =>
-  Math.max(
-    0,
-    Math.floor((Date.now() - new Date(createdAt).getTime()) / 86_400_000),
-  );
 
 type CounterOrdersTableProps = {
   counterOrders: CounterOrderListItem[];

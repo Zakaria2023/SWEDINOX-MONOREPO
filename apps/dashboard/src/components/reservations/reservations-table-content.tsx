@@ -9,16 +9,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { formatFixed2 } from "@/lib/helpers";
 
 type Props = {
   reservations: ReservationItem[];
 };
-
-const format = (value: number) =>
-  value.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
 
 export const ReservationsTable = ({ reservations }: Props) => (
   <div className="overflow-x-auto rounded-md border">
@@ -50,13 +45,13 @@ export const ReservationsTable = ({ reservations }: Props) => (
               </TableCell>
               <TableCell>{row.productName ?? "—"}</TableCell>
               <TableCell className="text-right">
-                {format(row.technicalQty)}
+                {formatFixed2(row.technicalQty)}
               </TableCell>
               <TableCell className="text-right">
-                {format(row.technicalKg)}
+                {formatFixed2(row.technicalKg)}
               </TableCell>
               <TableCell className="text-right">
-                {format(row.reservedQty)}
+                {formatFixed2(row.reservedQty)}
               </TableCell>
             </TableRow>
           ))

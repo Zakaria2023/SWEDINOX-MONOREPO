@@ -9,14 +9,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { formatDateValue } from "@/lib/helpers";
 import { ORDER_LINE_STATUS_LABELS, STOCK_UNIT_LABELS } from "@/lib/labels";
 
 type Props = {
   lines: PurchaseQuoteLineItem[];
 };
-
-const formatDate = (value: Date | string | null) =>
-  value ? new Date(value).toLocaleDateString("en-GB") : "—";
 
 export const PurchaseQuotesOverviewTable = ({ lines }: Props) => (
   <div className="overflow-x-auto rounded-md border">
@@ -61,8 +59,8 @@ export const PurchaseQuotesOverviewTable = ({ lines }: Props) => (
               <TableCell className="font-medium">
                 {row.supplierName ?? "—"}
               </TableCell>
-              <TableCell>{formatDate(row.quoteDate)}</TableCell>
-              <TableCell>{formatDate(row.validUntil)}</TableCell>
+              <TableCell>{formatDateValue(row.quoteDate)}</TableCell>
+              <TableCell>{formatDateValue(row.validUntil)}</TableCell>
               <TableCell>{row.quoteNumberSupplier ?? "—"}</TableCell>
               <TableCell className="text-right">{row.quoteId ?? "—"}</TableCell>
               <TableCell className="text-right">

@@ -9,13 +9,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { formatDateValue } from "@/lib/helpers";
 
 type Props = {
   lines: InvoiceLineItem[];
 };
-
-const invoiceDate = (value: Date | string | null) =>
-  value ? new Date(value).toLocaleDateString("en-GB") : "—";
 
 export const InvoiceLinesTable = ({ lines }: Props) => (
   <div className="overflow-x-auto rounded-md border">
@@ -50,7 +48,7 @@ export const InvoiceLinesTable = ({ lines }: Props) => (
               <TableCell className="text-right font-medium">
                 {row.invoiceId ?? "—"}
               </TableCell>
-              <TableCell>{invoiceDate(row.invoiceDate)}</TableCell>
+              <TableCell>{formatDateValue(row.invoiceDate)}</TableCell>
               <TableCell className="text-right">
                 {row.lineNumber ?? "—"}
               </TableCell>

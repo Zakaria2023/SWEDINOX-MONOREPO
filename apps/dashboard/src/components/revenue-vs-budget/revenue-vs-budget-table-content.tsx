@@ -9,22 +9,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { formatMoney, formatNumber } from "@/lib/helpers";
 
 type Props = {
   rows: RevenueVsBudgetRow[];
 };
-
-const money = (value: number) =>
-  `€ ${value.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
-
-const number = (value: number) =>
-  value.toLocaleString("en-US", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  });
 
 export const RevenueVsBudgetTable = ({ rows }: Props) => (
   <div className="overflow-x-auto rounded-md border">
@@ -64,21 +53,21 @@ export const RevenueVsBudgetTable = ({ rows }: Props) => (
               <TableCell className="font-medium">
                 {row.revenueGroupName ?? "Ungrouped"}
               </TableCell>
-              <TableCell className="text-right">{number(row.weight)}</TableCell>
+              <TableCell className="text-right">{formatNumber(row.weight)}</TableCell>
               <TableCell className="text-right">
-                {number(row.weightBudget)}
+                {formatNumber(row.weightBudget)}
               </TableCell>
               <TableCell className="text-right whitespace-nowrap">
-                {money(row.revenue)}
+                {formatMoney(row.revenue)}
               </TableCell>
               <TableCell className="text-right whitespace-nowrap">
-                {money(row.revenueBudget)}
+                {formatMoney(row.revenueBudget)}
               </TableCell>
               <TableCell className="text-right whitespace-nowrap">
-                {money(row.profit)}
+                {formatMoney(row.profit)}
               </TableCell>
               <TableCell className="text-right whitespace-nowrap">
-                {money(row.profitBudget)}
+                {formatMoney(row.profitBudget)}
               </TableCell>
               <TableCell className="text-right">
                 {row.profitMargin.toFixed(1)}%
@@ -87,10 +76,10 @@ export const RevenueVsBudgetTable = ({ rows }: Props) => (
                 {row.profitMarginBudget.toFixed(1)}%
               </TableCell>
               <TableCell className="text-right whitespace-nowrap">
-                {money(row.avgSalesPrice)}
+                {formatMoney(row.avgSalesPrice)}
               </TableCell>
               <TableCell className="text-right whitespace-nowrap">
-                {money(row.avgSalesPriceBudget)}
+                {formatMoney(row.avgSalesPriceBudget)}
               </TableCell>
             </TableRow>
           ))

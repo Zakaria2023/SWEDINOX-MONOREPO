@@ -9,27 +9,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { formatMoney, formatNumber, monthOf, yearOf } from "@/lib/helpers";
 
 type Props = {
   rows: PurchaseInvoiceLineRow[];
 };
-
-const money = (value: number) =>
-  `€ ${value.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
-
-const number = (value: number) =>
-  value.toLocaleString("en-US", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  });
-
-const yearOf = (date: string | Date | null) =>
-  date ? new Date(date).getFullYear() : "—";
-const monthOf = (date: string | Date | null) =>
-  date ? new Date(date).getMonth() + 1 : "—";
 
 export const PurchaseInvoiceLineTable = ({ rows }: Props) => (
   <div className="overflow-x-auto rounded-md border">
@@ -81,10 +65,10 @@ export const PurchaseInvoiceLineTable = ({ rows }: Props) => (
               </TableCell>
               <TableCell>{row.productName ?? "—"}</TableCell>
               <TableCell className="text-right">
-                {number(Number(row.quantity ?? 0))}
+                {formatNumber(Number(row.quantity ?? 0))}
               </TableCell>
               <TableCell className="text-right whitespace-nowrap">
-                {money(row.revenue)}
+                {formatMoney(row.revenue)}
               </TableCell>
               <TableCell>{row.vatNumber ?? "—"}</TableCell>
             </TableRow>

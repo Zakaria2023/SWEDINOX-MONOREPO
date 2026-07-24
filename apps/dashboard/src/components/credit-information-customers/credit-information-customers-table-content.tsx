@@ -9,34 +9,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
-import { InvoicePaymentTerm, SalesRepresentative } from "@/lib/enums";
-import {
-  INVOICE_PAYMENT_TERM_LABELS,
-  SALES_REPRESENTATIVE_LABELS,
-} from "@/lib/labels";
+import { formatDateValue, formatMoney, invoicePaymentTermLabel, salesRepresentativeLabel } from "@/lib/helpers";
 
 type Props = {
   rows: CreditInformationRow[];
 };
-
-const money = (value: number) =>
-  `€ ${value.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
-
-const fmtDate = (value: string | Date | null) => {
-  if (!value) {
-    return "—";
-  }
-  return new Date(value).toLocaleDateString("en-GB");
-};
-
-const representativeLabel = (value: SalesRepresentative | null) =>
-  value ? (SALES_REPRESENTATIVE_LABELS[value] ?? value) : "—";
-
-const paymentTermLabel = (value: InvoicePaymentTerm | null) =>
-  value ? (INVOICE_PAYMENT_TERM_LABELS[value] ?? value) : "—";
 
 export const CreditInformationCustomersTable = ({ rows }: Props) => (
   <div className="overflow-x-auto rounded-md border">
@@ -84,47 +61,47 @@ export const CreditInformationCustomersTable = ({ rows }: Props) => (
               </TableCell>
               <TableCell>{row.city ?? "—"}</TableCell>
               <TableCell>{row.initials ?? "—"}</TableCell>
-              <TableCell>{representativeLabel(row.representative)}</TableCell>
-              <TableCell>{paymentTermLabel(row.paymentTerms)}</TableCell>
+              <TableCell>{salesRepresentativeLabel(row.representative)}</TableCell>
+              <TableCell>{invoicePaymentTermLabel(row.paymentTerms)}</TableCell>
               <TableCell className="text-right whitespace-nowrap">
-                {money(row.creditLimit)}
+                {formatMoney(row.creditLimit)}
               </TableCell>
               <TableCell className="text-right whitespace-nowrap">
-                {money(row.creditLimitUninsured)}
+                {formatMoney(row.creditLimitUninsured)}
               </TableCell>
               <TableCell className="text-right whitespace-nowrap">
-                {money(row.creditInsurance)}
+                {formatMoney(row.creditInsurance)}
               </TableCell>
               <TableCell className="whitespace-nowrap">
-                {fmtDate(row.creditInsuranceDate)}
+                {formatDateValue(row.creditInsuranceDate)}
               </TableCell>
               <TableCell className="text-right whitespace-nowrap">
-                {money(row.outstanding)}
+                {formatMoney(row.outstanding)}
               </TableCell>
               <TableCell className="text-right whitespace-nowrap">
-                {money(row.currentOrders)}
+                {formatMoney(row.currentOrders)}
               </TableCell>
               <TableCell className="text-right whitespace-nowrap">
-                {money(row.creditSpace)}
+                {formatMoney(row.creditSpace)}
               </TableCell>
               <TableCell className="whitespace-nowrap">
-                {fmtDate(row.oldestInvoiceDate)}
+                {formatDateValue(row.oldestInvoiceDate)}
               </TableCell>
               <TableCell className="whitespace-nowrap">
-                {fmtDate(row.oldestDueDate)}
+                {formatDateValue(row.oldestDueDate)}
               </TableCell>
               <TableCell className="text-center">
                 {row.blocked ? "Yes" : "No"}
               </TableCell>
               <TableCell>{row.vatNumber ?? "—"}</TableCell>
               <TableCell className="text-right whitespace-nowrap">
-                {money(row.revenueThisYear)}
+                {formatMoney(row.revenueThisYear)}
               </TableCell>
               <TableCell className="text-right whitespace-nowrap">
-                {money(row.revenueLastYear)}
+                {formatMoney(row.revenueLastYear)}
               </TableCell>
               <TableCell className="text-right whitespace-nowrap">
-                {money(row.revenueTwoYearsAgo)}
+                {formatMoney(row.revenueTwoYearsAgo)}
               </TableCell>
             </TableRow>
           ))

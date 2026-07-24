@@ -9,32 +9,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
-import { OrderDeblockType } from "@/lib/enums";
-import { ORDER_DEBLOCK_TYPE_LABELS } from "@/lib/labels";
+import { formatDateValue, formatMoney, formatTimeValue, orderDeblockTypeLabel } from "@/lib/helpers";
 
 type Props = {
   rows: UnblockedOrderRow[];
 };
-
-const money = (value: number) =>
-  `€ ${value.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
-
-const deblockTypeLabel = (value: OrderDeblockType) =>
-  ORDER_DEBLOCK_TYPE_LABELS[value] ?? value;
-
-const datePart = (iso: string | null) =>
-  iso ? new Date(iso).toLocaleDateString("en-GB") : "—";
-
-const timePart = (iso: string | null) =>
-  iso
-    ? new Date(iso).toLocaleTimeString("en-GB", {
-        hour: "2-digit",
-        minute: "2-digit",
-      })
-    : "—";
 
 export const UnblockedOrdersTable = ({ rows }: Props) => (
   <div className="overflow-x-auto rounded-md border">
@@ -77,22 +56,22 @@ export const UnblockedOrdersTable = ({ rows }: Props) => (
               <TableCell className="text-right">
                 {row.debtorNumber ?? "—"}
               </TableCell>
-              <TableCell>{deblockTypeLabel(row.deblockType)}</TableCell>
+              <TableCell>{orderDeblockTypeLabel(row.deblockType)}</TableCell>
               <TableCell className="text-right">{row.year ?? "—"}</TableCell>
               <TableCell className="text-right">{row.month ?? "—"}</TableCell>
               <TableCell className="whitespace-nowrap">
-                {datePart(row.deblockDate)}
+                {formatDateValue(row.deblockDate)}
               </TableCell>
-              <TableCell>{timePart(row.deblockDate)}</TableCell>
+              <TableCell>{formatTimeValue(row.deblockDate)}</TableCell>
               <TableCell>{row.deblockedBy ?? "—"}</TableCell>
               <TableCell className="whitespace-nowrap">
                 {row.orderCode ?? (row.orderId ? `#${row.orderId}` : "—")}
               </TableCell>
               <TableCell className="whitespace-nowrap">
-                {datePart(row.orderCreatedAt)}
+                {formatDateValue(row.orderCreatedAt)}
               </TableCell>
               <TableCell className="text-right whitespace-nowrap">
-                {money(row.orderAmount)}
+                {formatMoney(row.orderAmount)}
               </TableCell>
               <TableCell>{row.regionCode ?? "—"}</TableCell>
               <TableCell>{row.region ?? "—"}</TableCell>

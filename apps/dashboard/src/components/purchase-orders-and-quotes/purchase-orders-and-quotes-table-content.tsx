@@ -9,30 +9,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
-import { PurchaseOrderStatus } from "@/lib/enums";
-import { PURCHASE_ORDER_STATUS_LABELS } from "@/lib/labels";
+import { formatDateValue, formatMoney, formatNumber, purchaseOrderStatusLabel } from "@/lib/helpers";
 
 type Props = {
   rows: PurchaseOrderQuoteRow[];
 };
-
-const money = (value: number) =>
-  `€ ${value.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
-
-const number = (value: number) =>
-  value.toLocaleString("en-US", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  });
-
-const fmtDate = (value: string | null) =>
-  value ? new Date(value).toLocaleDateString("en-GB") : "—";
-
-const statusLabel = (value: PurchaseOrderStatus | null) =>
-  value ? (PURCHASE_ORDER_STATUS_LABELS[value] ?? value) : "—";
 
 export const PurchaseOrdersAndQuotesTable = ({ rows }: Props) => (
   <div className="overflow-x-auto rounded-md border">
@@ -66,19 +47,19 @@ export const PurchaseOrdersAndQuotesTable = ({ rows }: Props) => (
               <TableCell>{row.kind}</TableCell>
               <TableCell className="text-right">{row.id ?? "—"}</TableCell>
               <TableCell className="whitespace-nowrap">
-                {fmtDate(row.createdAt)}
+                {formatDateValue(row.createdAt)}
               </TableCell>
               <TableCell>{row.purchaser ?? "—"}</TableCell>
-              <TableCell>{statusLabel(row.status)}</TableCell>
+              <TableCell>{purchaseOrderStatusLabel(row.status)}</TableCell>
               <TableCell>{row.reference ?? "—"}</TableCell>
               <TableCell className="font-medium">
                 {row.supplierName ?? "—"}
               </TableCell>
               <TableCell className="text-right">
-                {number(row.weightKg)}
+                {formatNumber(row.weightKg)}
               </TableCell>
               <TableCell className="text-right whitespace-nowrap">
-                {money(row.revenue)}
+                {formatMoney(row.revenue)}
               </TableCell>
             </TableRow>
           ))

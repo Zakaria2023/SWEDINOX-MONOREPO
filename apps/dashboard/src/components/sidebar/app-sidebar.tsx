@@ -15,7 +15,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from "@/components/shadcn/sidebar";
-import { cn } from "@/lib/helpers";
+import { cn, isPathActive } from "@/lib/helpers";
 import {
   Building2,
   ChevronRight,
@@ -289,8 +289,6 @@ const NAV_GROUPS: NavGroup[] = [
 // A route matches a nav item when it is the exact path or a nested path beneath
 // it — never a sibling that merely shares the same prefix (so /stock stays
 // distinct from /stock-movements).
-const isPathActive = (href: string, pathname: string) =>
-  pathname === href || pathname.startsWith(`${href}/`);
 
 // A prominent highlight for the active link — a primary-tinted background,
 // semibold text and a left accent bar — so it stands out from the muted hover.

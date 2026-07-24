@@ -9,27 +9,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
-import { SalesRepresentative } from "@/lib/enums";
-import { SALES_REPRESENTATIVE_LABELS } from "@/lib/labels";
+import { formatMoney, formatNumber, salesRepresentativeLabel } from "@/lib/helpers";
 
 type Props = {
   rows: CustomerRevenueSalesVisitsRow[];
 };
-
-const money = (value: number) =>
-  `€ ${value.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
-
-const number = (value: number) =>
-  value.toLocaleString("en-US", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  });
-
-const representativeLabel = (value: SalesRepresentative | null) =>
-  value ? (SALES_REPRESENTATIVE_LABELS[value] ?? value) : "—";
 
 export const CustomerRevenueSalesVisitsTable = ({ rows }: Props) => (
   <div className="overflow-x-auto rounded-md border">
@@ -65,7 +49,7 @@ export const CustomerRevenueSalesVisitsTable = ({ rows }: Props) => (
         ) : (
           rows.map((row, index) => (
             <TableRow key={index}>
-              <TableCell>{representativeLabel(row.representative)}</TableCell>
+              <TableCell>{salesRepresentativeLabel(row.representative)}</TableCell>
               <TableCell className="text-right">
                 {row.companyCode ?? "—"}
               </TableCell>
@@ -80,22 +64,22 @@ export const CustomerRevenueSalesVisitsTable = ({ rows }: Props) => (
               <TableCell>{row.revenueGroupName ?? "—"}</TableCell>
               <TableCell className="text-right">{row.currentYear}</TableCell>
               <TableCell className="text-right whitespace-nowrap">
-                {money(row.revenueCurrentYear)}
+                {formatMoney(row.revenueCurrentYear)}
               </TableCell>
               <TableCell className="text-right whitespace-nowrap">
-                {money(row.revenueLastYear)}
+                {formatMoney(row.revenueLastYear)}
               </TableCell>
               <TableCell className="text-right whitespace-nowrap">
-                {money(row.revenueTwoYearsAgo)}
+                {formatMoney(row.revenueTwoYearsAgo)}
               </TableCell>
               <TableCell className="text-right">
-                {number(row.kgCurrentYear)}
+                {formatNumber(row.kgCurrentYear)}
               </TableCell>
               <TableCell className="text-right">
-                {number(row.kgLastYear)}
+                {formatNumber(row.kgLastYear)}
               </TableCell>
               <TableCell className="text-right">
-                {number(row.kgTwoYearsAgo)}
+                {formatNumber(row.kgTwoYearsAgo)}
               </TableCell>
             </TableRow>
           ))

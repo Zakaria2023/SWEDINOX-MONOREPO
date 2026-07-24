@@ -9,20 +9,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
-import { cn } from "@/lib/helpers";
+import { cn, formatCoverageMonths, formatNumber } from "@/lib/helpers";
 
 type Props = {
   rows: OrderAdviceRow[];
 };
-
-const qty = (value: number) =>
-  value.toLocaleString("en-US", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  });
-
-const coverage = (value: number | null) =>
-  value === null ? "—" : `${value.toFixed(1)} mo`;
 
 export const OrderAdviceTable = ({ rows }: Props) => (
   <div className="overflow-x-auto rounded-md border">
@@ -71,42 +62,42 @@ export const OrderAdviceTable = ({ rows }: Props) => (
               <TableCell>{row.mainGroup ?? "—"}</TableCell>
               <TableCell>{row.supplierName ?? "—"}</TableCell>
               <TableCell className="text-right">
-                {qty(row.technicalStock)}
+                {formatNumber(row.technicalStock)}
               </TableCell>
-              <TableCell className="text-right">{qty(row.reserved)}</TableCell>
-              <TableCell className="text-right">{qty(row.available)}</TableCell>
+              <TableCell className="text-right">{formatNumber(row.reserved)}</TableCell>
+              <TableCell className="text-right">{formatNumber(row.available)}</TableCell>
               <TableCell className="text-right">
-                {qty(row.toBeReceived)}
-              </TableCell>
-              <TableCell className="text-right">
-                {qty(row.economicStock)}
+                {formatNumber(row.toBeReceived)}
               </TableCell>
               <TableCell className="text-right">
-                {qty(row.avgMonthlyConsumption)}
+                {formatNumber(row.economicStock)}
               </TableCell>
               <TableCell className="text-right">
-                {qty(row.consumptionPreviousYear)}
+                {formatNumber(row.avgMonthlyConsumption)}
               </TableCell>
               <TableCell className="text-right">
-                {coverage(row.economicCoverage)}
+                {formatNumber(row.consumptionPreviousYear)}
               </TableCell>
               <TableCell className="text-right">
-                {coverage(row.technicalCoverage)}
+                {formatCoverageMonths(row.economicCoverage)}
               </TableCell>
               <TableCell className="text-right">
-                {qty(row.minStockLevel)}
+                {formatCoverageMonths(row.technicalCoverage)}
               </TableCell>
               <TableCell className="text-right">
-                {qty(row.maxStockLevel)}
+                {formatNumber(row.minStockLevel)}
               </TableCell>
-              <TableCell className="text-right">{qty(row.adviceQty)}</TableCell>
+              <TableCell className="text-right">
+                {formatNumber(row.maxStockLevel)}
+              </TableCell>
+              <TableCell className="text-right">{formatNumber(row.adviceQty)}</TableCell>
               <TableCell
                 className={cn(
                   "text-right whitespace-nowrap",
                   row.orderQty > 0 && "font-semibold text-amber-700",
                 )}
               >
-                {qty(row.orderQty)}
+                {formatNumber(row.orderQty)}
               </TableCell>
             </TableRow>
           ))

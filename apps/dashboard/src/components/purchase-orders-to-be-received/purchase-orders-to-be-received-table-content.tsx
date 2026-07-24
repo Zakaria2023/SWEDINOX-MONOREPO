@@ -10,29 +10,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { formatDateColumn, formatMoney, formatNumber } from "@/lib/helpers";
 import { PURCHASE_ORDER_STATUS_LABELS } from "@/lib/labels";
 
 type Props = {
   rows: PurchaseOrderToReceiveRow[];
-};
-
-const money = (value: number) =>
-  `€ ${value.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
-
-const kg = (value: number) =>
-  value.toLocaleString("en-US", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  });
-
-const fmtDate = (value: string | Date | null) => {
-  if (!value) {
-    return "—";
-  }
-  return typeof value === "string" ? value : value.toISOString().slice(0, 10);
 };
 
 export const PurchaseOrdersToBeReceivedTable = ({ rows }: Props) => (
@@ -79,19 +61,19 @@ export const PurchaseOrdersToBeReceivedTable = ({ rows }: Props) => (
                 {row.status ? PURCHASE_ORDER_STATUS_LABELS[row.status] : "—"}
               </TableCell>
               <TableCell className="whitespace-nowrap">
-                {fmtDate(row.orderDate)}
+                {formatDateColumn(row.orderDate)}
               </TableCell>
               <TableCell className="text-right">
                 {row.revenueGroupNumber ?? "—"}
               </TableCell>
               <TableCell>{row.revenueGroupName ?? "—"}</TableCell>
-              <TableCell className="text-right">{kg(row.kgPurchased)}</TableCell>
-              <TableCell className="text-right">{kg(row.kgReceived)}</TableCell>
+              <TableCell className="text-right">{formatNumber(row.kgPurchased)}</TableCell>
+              <TableCell className="text-right">{formatNumber(row.kgReceived)}</TableCell>
               <TableCell className="text-right font-medium">
-                {kg(row.kgStillToReceive)}
+                {formatNumber(row.kgStillToReceive)}
               </TableCell>
               <TableCell className="text-right whitespace-nowrap">
-                {money(row.orderAmount)}
+                {formatMoney(row.orderAmount)}
               </TableCell>
               <TableCell>
                 {row.purchaser ?? row.purchaserInitials ?? "—"}

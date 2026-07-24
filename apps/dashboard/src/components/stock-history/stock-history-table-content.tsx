@@ -9,22 +9,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { formatMoney, formatNumber } from "@/lib/helpers";
 
 type Props = {
   rows: StockHistoryRow[];
 };
-
-const money = (value: number) =>
-  `€ ${value.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
-
-const number = (value: number) =>
-  value.toLocaleString("en-US", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  });
 
 export const StockHistoryTable = ({ rows }: Props) => (
   <div className="overflow-x-auto rounded-md border">
@@ -64,15 +53,15 @@ export const StockHistoryTable = ({ rows }: Props) => (
               </TableCell>
               <TableCell>{row.productName ?? "—"}</TableCell>
               <TableCell className="text-right">{row.length ?? "—"}</TableCell>
-              <TableCell className="text-right">{number(row.stockKg)}</TableCell>
+              <TableCell className="text-right">{formatNumber(row.stockKg)}</TableCell>
               <TableCell className="text-right whitespace-nowrap">
-                {money(row.pricePerUnit)}
+                {formatMoney(row.pricePerUnit)}
               </TableCell>
               <TableCell className="text-right">
-                {number(row.stockQty)}
+                {formatNumber(row.stockQty)}
               </TableCell>
               <TableCell className="text-right whitespace-nowrap">
-                {money(row.stockEuro)}
+                {formatMoney(row.stockEuro)}
               </TableCell>
             </TableRow>
           ))

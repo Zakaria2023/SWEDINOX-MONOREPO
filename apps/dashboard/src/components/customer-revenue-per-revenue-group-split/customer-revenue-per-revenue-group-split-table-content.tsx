@@ -9,30 +9,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
-import { CustomerGroup, SalesRepresentative } from "@/lib/enums";
-import { CUSTOMER_GROUP_LABELS, SALES_REPRESENTATIVE_LABELS } from "@/lib/labels";
+import { customerGroupLabel, formatMoney, formatNumber, salesRepresentativeLabel } from "@/lib/helpers";
 
 type Props = {
   rows: CustomerRevenueSplitRow[];
 };
-
-const money = (value: number) =>
-  `€ ${value.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
-
-const number = (value: number) =>
-  value.toLocaleString("en-US", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  });
-
-const representativeLabel = (value: SalesRepresentative | null) =>
-  value ? (SALES_REPRESENTATIVE_LABELS[value] ?? value) : "—";
-
-const customerGroupLabel = (value: CustomerGroup | null) =>
-  value ? (CUSTOMER_GROUP_LABELS[value] ?? value) : "—";
 
 export const CustomerRevenuePerRevenueGroupSplitTable = ({ rows }: Props) => (
   <div className="overflow-x-auto rounded-md border">
@@ -72,7 +53,7 @@ export const CustomerRevenuePerRevenueGroupSplitTable = ({ rows }: Props) => (
         ) : (
           rows.map((row, index) => (
             <TableRow key={index}>
-              <TableCell>{representativeLabel(row.representative)}</TableCell>
+              <TableCell>{salesRepresentativeLabel(row.representative)}</TableCell>
               <TableCell>{customerGroupLabel(row.customerGroup)}</TableCell>
               <TableCell className="text-right">
                 {row.customerCode ?? "—"}
@@ -89,16 +70,16 @@ export const CustomerRevenuePerRevenueGroupSplitTable = ({ rows }: Props) => (
               <TableCell className="text-right">{row.year ?? "—"}</TableCell>
               <TableCell className="text-right">{row.month ?? "—"}</TableCell>
               <TableCell className="text-right whitespace-nowrap">
-                {money(row.revenue)}
+                {formatMoney(row.revenue)}
               </TableCell>
               <TableCell className="text-right whitespace-nowrap">
-                {money(row.profit)}
+                {formatMoney(row.profit)}
               </TableCell>
               <TableCell className="text-right">
-                {number(row.profitMargin)}%
+                {formatNumber(row.profitMargin)}%
               </TableCell>
               <TableCell className="text-right">
-                {number(row.weightKg)}
+                {formatNumber(row.weightKg)}
               </TableCell>
               <TableCell>{row.country ?? "—"}</TableCell>
               <TableCell>{row.accountManager ?? "—"}</TableCell>

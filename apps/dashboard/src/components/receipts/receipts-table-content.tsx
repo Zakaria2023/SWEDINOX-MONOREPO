@@ -9,16 +9,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { formatNumber } from "@/lib/helpers";
 
 type Props = {
   rows: ReceiptRow[];
 };
-
-const number = (value: number) =>
-  value.toLocaleString("en-US", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  });
 
 export const ReceiptsTable = ({ rows }: Props) => (
   <div className="overflow-x-auto rounded-md border">
@@ -58,12 +53,12 @@ export const ReceiptsTable = ({ rows }: Props) => (
                 {[row.productCode, row.productName].filter(Boolean).join(" — ") ||
                   "—"}
               </TableCell>
-              <TableCell className="text-right">{number(row.qty)}</TableCell>
-              <TableCell className="text-right">{number(row.kg)}</TableCell>
+              <TableCell className="text-right">{formatNumber(row.qty)}</TableCell>
+              <TableCell className="text-right">{formatNumber(row.kg)}</TableCell>
               <TableCell>{row.purchaseOrderCode ?? "—"}</TableCell>
               <TableCell>{row.receiptStatus ?? "—"}</TableCell>
               <TableCell className="text-right">
-                {number(row.materialStillToReceive)}
+                {formatNumber(row.materialStillToReceive)}
               </TableCell>
             </TableRow>
           ))

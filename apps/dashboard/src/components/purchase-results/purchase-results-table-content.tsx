@@ -9,16 +9,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { formatMoney } from "@/lib/helpers";
 
 type Props = {
   rows: PurchaseResultRow[];
 };
-
-const money = (value: number) =>
-  `€ ${value.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
 
 export const PurchaseResultsTable = ({ rows }: Props) => (
   <div className="overflow-x-auto rounded-md border">
@@ -57,13 +52,13 @@ export const PurchaseResultsTable = ({ rows }: Props) => (
               <TableCell className="text-right">{row.year ?? "—"}</TableCell>
               <TableCell className="text-right">{row.month ?? "—"}</TableCell>
               <TableCell className="text-right whitespace-nowrap">
-                {money(row.purchaseValue)}
+                {formatMoney(row.purchaseValue)}
               </TableCell>
               <TableCell className="text-right whitespace-nowrap">
-                {money(row.replacementValue)}
+                {formatMoney(row.replacementValue)}
               </TableCell>
               <TableCell className="text-right whitespace-nowrap">
-                {money(row.differenceEuro)}
+                {formatMoney(row.differenceEuro)}
               </TableCell>
               <TableCell className="text-right">
                 {row.differencePercent.toFixed(1)}%

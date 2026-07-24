@@ -9,22 +9,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { formatMoney, formatNumber } from "@/lib/helpers";
 
 type Props = {
   rows: RevenueGroupTotals[];
 };
-
-const money = (value: number) =>
-  `€ ${value.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
-
-const number = (value: number) =>
-  value.toLocaleString("en-US", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  });
 
 export const RevenuePerRevenueGroupTable = ({ rows }: Props) => (
   <div className="overflow-x-auto rounded-md border">
@@ -59,13 +48,13 @@ export const RevenuePerRevenueGroupTable = ({ rows }: Props) => (
                 {row.revenueGroupName ?? "Ungrouped"}
               </TableCell>
               <TableCell className="text-right">
-                {number(row.salesKg)}
+                {formatNumber(row.salesKg)}
               </TableCell>
               <TableCell className="text-right whitespace-nowrap">
-                {money(row.revenue)}
+                {formatMoney(row.revenue)}
               </TableCell>
               <TableCell className="text-right whitespace-nowrap">
-                {money(row.profit)}
+                {formatMoney(row.profit)}
               </TableCell>
               <TableCell className="text-right">
                 {row.profitMargin.toFixed(1)}%

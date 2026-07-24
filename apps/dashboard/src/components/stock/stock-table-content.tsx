@@ -13,7 +13,7 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { StockCorrectionDialog } from "./stock-correction-dialog";
-import { cn } from "@/lib/helpers";
+import { cn, daysInSystem } from "@/lib/helpers";
 import { STOCK_STATUS_LABELS } from "@/lib/labels";
 
 type Props = {
@@ -21,9 +21,6 @@ type Props = {
 };
 
 const DAYS_PENDING_WARNING_THRESHOLD = 30;
-
-const daysSince = (date: Date) =>
-  Math.floor((Date.now() - new Date(date).getTime()) / 86_400_000);
 
 export const StockTable = ({ stock }: Props) => {
   const [correctingStock, setCorrectingStock] = useState<StockListItem | null>(
@@ -60,7 +57,7 @@ export const StockTable = ({ stock }: Props) => {
             ) : (
               stock.map((row) => {
                 const pendingDays =
-                  row.status === "pending" ? daysSince(row.createdAt) : null;
+                  row.status === "pending" ? daysInSystem(row.createdAt) : null;
                 const available = (
                   Number(row.quantity) - Number(row.reservedQuantity)
                 ).toFixed(3);

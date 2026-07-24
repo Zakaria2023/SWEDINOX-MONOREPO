@@ -12,7 +12,7 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
-import { formatRevenue } from "@/lib/helpers";
+import { formatDateValue, formatRevenue } from "@/lib/helpers";
 import { COMMON_TEXT } from "@/lib/labels";
 
 type ColumnKey = keyof VisitScheduleRow | "contactPerson";
@@ -74,9 +74,6 @@ const initialVisibility = ALL_COLUMNS.reduce(
 );
 
 const na = COMMON_TEXT.notAvailable;
-
-const formatDate = (value: string | null) =>
-  value ? new Date(value).toLocaleDateString("en-GB") : na;
 
 type Props = { rows: VisitScheduleRow[] };
 
@@ -142,13 +139,13 @@ export const VisitScheduleTable = ({ rows }: Props) => {
       case "customerGroup":
         return <TableCell key={key}>{row.customerGroup ?? na}</TableCell>;
       case "lastCallDate":
-        return <TableCell key={key}>{formatDate(row.lastCallDate)}</TableCell>;
+        return <TableCell key={key}>{formatDateValue(row.lastCallDate, na)}</TableCell>;
       case "callUpcoming":
-        return <TableCell key={key}>{formatDate(row.callUpcoming)}</TableCell>;
+        return <TableCell key={key}>{formatDateValue(row.callUpcoming, na)}</TableCell>;
       case "lastVisitDate":
-        return <TableCell key={key}>{formatDate(row.lastVisitDate)}</TableCell>;
+        return <TableCell key={key}>{formatDateValue(row.lastVisitDate, na)}</TableCell>;
       case "visitUpcoming":
-        return <TableCell key={key}>{formatDate(row.visitUpcoming)}</TableCell>;
+        return <TableCell key={key}>{formatDateValue(row.visitUpcoming, na)}</TableCell>;
       case "contactPerson": {
         const parts = [row.contactFirstName, row.contactLastName].filter(
           Boolean,

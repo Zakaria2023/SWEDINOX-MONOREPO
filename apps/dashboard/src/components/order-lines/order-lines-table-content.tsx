@@ -9,30 +9,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
-import { OrderLineStatus } from "@/lib/enums";
-import { ORDER_LINE_STATUS_LABELS } from "@/lib/labels";
+import { formatDateValue, formatMoney, formatNumber, orderLineStatusLabel } from "@/lib/helpers";
 
 type Props = {
   rows: OrderLineRow[];
 };
-
-const money = (value: number) =>
-  `€ ${value.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
-
-const number = (value: number) =>
-  value.toLocaleString("en-US", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  });
-
-const fmtDate = (value: string | null) =>
-  value ? new Date(value).toLocaleDateString("en-GB") : "—";
-
-const lineStatusLabel = (value: OrderLineStatus | null) =>
-  value ? (ORDER_LINE_STATUS_LABELS[value] ?? value) : "—";
 
 export const OrderLinesTable = ({ rows }: Props) => (
   <div className="overflow-x-auto rounded-md border">
@@ -77,10 +58,10 @@ export const OrderLinesTable = ({ rows }: Props) => (
           rows.map((row, index) => (
             <TableRow key={index}>
               <TableCell className="whitespace-nowrap">
-                {fmtDate(row.createdAt)}
+                {formatDateValue(row.createdAt)}
               </TableCell>
               <TableCell className="whitespace-nowrap">
-                {fmtDate(row.deliveryDate)}
+                {formatDateValue(row.deliveryDate)}
               </TableCell>
               <TableCell className="font-medium">
                 {row.customerName ?? "—"}
@@ -92,7 +73,7 @@ export const OrderLinesTable = ({ rows }: Props) => (
               <TableCell className="text-right">
                 {row.lineNumber ?? "—"}
               </TableCell>
-              <TableCell>{lineStatusLabel(row.lineStatus)}</TableCell>
+              <TableCell>{orderLineStatusLabel(row.lineStatus)}</TableCell>
               <TableCell className="whitespace-nowrap">
                 {row.productCode ?? "—"}
               </TableCell>
@@ -106,26 +87,26 @@ export const OrderLinesTable = ({ rows }: Props) => (
                 {row.thicknessMm ?? "—"}
               </TableCell>
               <TableCell className="text-right">
-                {number(row.quantity)}
+                {formatNumber(row.quantity)}
               </TableCell>
               <TableCell>{row.unit?.toUpperCase() ?? "—"}</TableCell>
               <TableCell className="text-right">
-                {number(row.weightKg)}
+                {formatNumber(row.weightKg)}
               </TableCell>
               <TableCell className="text-right whitespace-nowrap">
-                {money(row.price)}
+                {formatMoney(row.price)}
               </TableCell>
               <TableCell className="text-right whitespace-nowrap">
-                {money(row.costPrice)}
+                {formatMoney(row.costPrice)}
               </TableCell>
               <TableCell className="text-right whitespace-nowrap">
-                {money(row.amount)}
+                {formatMoney(row.amount)}
               </TableCell>
               <TableCell className="text-right whitespace-nowrap">
-                {money(row.profit)}
+                {formatMoney(row.profit)}
               </TableCell>
               <TableCell className="text-right">
-                {number(row.profitMargin)}%
+                {formatNumber(row.profitMargin)}%
               </TableCell>
               <TableCell>{row.seller ?? "—"}</TableCell>
             </TableRow>

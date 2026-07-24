@@ -2,19 +2,32 @@ import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import type {
   CertificaatOption,
+  CustomerGroup,
   DeliveryTerm,
   DeliveryTimeUnit,
   DeliveryType,
   InvoicePaymentTerm,
   InvoiceVatScenario,
   LeadTimeMethod,
+  OrderDeblockType,
+  OrderLineStatus,
   OrderWeightType,
+  PurchaseOrderStatus,
+  SalesRepresentative,
   StockMode,
   StockUnit,
   StockMovementType,
   TransporterPriceUnit,
   VatCode,
 } from "./enums";
+import {
+  CUSTOMER_GROUP_LABELS,
+  INVOICE_PAYMENT_TERM_LABELS,
+  ORDER_DEBLOCK_TYPE_LABELS,
+  ORDER_LINE_STATUS_LABELS,
+  PURCHASE_ORDER_STATUS_LABELS,
+  SALES_REPRESENTATIVE_LABELS,
+} from "./labels";
 
 /**
  * Merges Tailwind classes safely, resolving conflicts.
@@ -193,14 +206,128 @@ export const toDateString = (date: Date): string =>
 
 /**
  * Formats the value of a Drizzle `date` column (typed `string | Date`) for
- * display, falling back to an em dash when the value is missing.
+ * display, falling back to `fallback` (an em dash by default) when the value is
+ * missing — pass e.g. "Never" or a "N/A" string where that reads better.
  */
-export const formatDateValue = (value: string | Date | null): string => {
+export const formatDateValue = (
+  value: string | Date | null,
+  fallback = "—",
+): string => {
   if (!value) {
-    return "—";
+    return fallback;
   }
   return new Date(value).toLocaleDateString("en-GB");
 };
+
+/**
+ * A `date` column value shown as it is stored (YYYY-MM-DD): a string passes
+ * straight through, a Date is reduced to its ISO date, and a missing value is an
+ * em dash. Use this where the raw stored date should be shown as-is rather than
+ * localised.
+ */
+export const formatDateColumn = (value: string | Date | null): string => {
+  if (!value) {
+    return "—";
+  }
+  return typeof value === "string" ? value : value.toISOString().slice(0, 10);
+};
+
+/**
+ * The time-of-day (HH:MM) of a date value, or an em dash when it is missing.
+ */
+export const formatTimeValue = (value: string | Date | null): string =>
+  value
+    ? new Date(value).toLocaleTimeString("en-GB", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "—";
+
+/**
+ * The calendar year of a date value, or an em dash when it is missing.
+ */
+export const yearOf = (value: string | Date | null): number | string =>
+  value ? new Date(value).getFullYear() : "—";
+
+/**
+ * The 1-based month of a date value, or an em dash when it is missing.
+ */
+export const monthOf = (value: string | Date | null): number | string =>
+  value ? new Date(value).getMonth() + 1 : "—";
+
+/**
+ * A Date or date-string as the YYYY-MM-DD value a date input expects, or an
+ * empty string when there is no value.
+ */
+export const toDateInput = (value: Date | string | null): string => {
+  if (!value) {
+    return "";
+  }
+  const date = value instanceof Date ? value : new Date(value);
+  return date.toISOString().split("T")[0];
+};
+
+/**
+ * The whole number of days between now and a creation timestamp, floored and
+ * never negative — the "days in system" the overviews print.
+ */
+export const daysInSystem = (createdAt: Date | string): number =>
+  Math.max(
+    0,
+    Math.floor((Date.now() - new Date(createdAt).getTime()) / 86_400_000),
+  );
+
+/**
+ * "Yes"/"No" for a boolean; a missing value reads as "No".
+ */
+export const yesNo = (value: boolean | null | undefined): string =>
+  value ? "Yes" : "No";
+
+/**
+ * "Yes"/"No" for a boolean, or an em dash when the value is unknown.
+ */
+export const formatBoolean = (value: boolean | null | undefined): string =>
+  value === null || value === undefined ? "—" : value ? "Yes" : "No";
+
+/**
+ * A person's full name from its parts, or an em dash when both are missing.
+ */
+export const fullName = (
+  first: string | null | undefined,
+  last: string | null | undefined,
+): string => {
+  const name = [first, last].filter(Boolean).join(" ");
+  return name.length > 0 ? name : "—";
+};
+
+/**
+ * A number with exactly two decimals, thousands separated (no currency symbol).
+ */
+export const formatFixed2 = (value: number): string =>
+  value.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
+/**
+ * Stock coverage in months ("3.2 mo"), or an em dash when it can't be computed.
+ */
+export const formatCoverageMonths = (value: number | null): string =>
+  value === null ? "—" : `${value.toFixed(1)} mo`;
+
+/**
+ * A table cell value, showing an em dash for a null or empty value.
+ */
+export const orDash = (value: string | number | null): string | number =>
+  value === null || value === "" ? "—" : value;
+
+/**
+ * Whether a nav href matches the current path — the exact path or a nested
+ * child beneath it, never a sibling that merely shares the same prefix (so
+ * `/stock` stays distinct from `/stock-movements`).
+ */
+export const isPathActive = (href: string, pathname: string): boolean =>
+  pathname === href || pathname.startsWith(`${href}/`);
 
 // ---------------------------------------------------------------------------
 // Enum-driven business logic
@@ -810,3 +937,53 @@ export const resolveDeliveryDate = (
   }
   return context.date ? context.date.slice(0, 10) : null;
 };
+
+// ---------------------------------------------------------------------------
+// Label lookups
+//
+// The overviews print an enum value through its human label; each helper looks
+// the value up in its label map, falls back to the raw value if the map has no
+// entry, and shows an em dash when there is no value at all.
+// ---------------------------------------------------------------------------
+
+/** The display label for a sales representative. */
+export const salesRepresentativeLabel = (
+  value: SalesRepresentative | string | null | undefined,
+): string =>
+  value
+    ? (SALES_REPRESENTATIVE_LABELS[value as SalesRepresentative] ?? value)
+    : "—";
+
+/** The display label for a customer group. */
+export const customerGroupLabel = (
+  value: CustomerGroup | string | null | undefined,
+): string =>
+  value ? (CUSTOMER_GROUP_LABELS[value as CustomerGroup] ?? value) : "—";
+
+/** The display label for an invoice payment term. */
+export const invoicePaymentTermLabel = (
+  value: InvoicePaymentTerm | string | null | undefined,
+): string =>
+  value
+    ? (INVOICE_PAYMENT_TERM_LABELS[value as InvoicePaymentTerm] ?? value)
+    : "—";
+
+/** The display label for an order line status. */
+export const orderLineStatusLabel = (
+  value: OrderLineStatus | string | null | undefined,
+): string =>
+  value ? (ORDER_LINE_STATUS_LABELS[value as OrderLineStatus] ?? value) : "—";
+
+/** The display label for a purchase order status. */
+export const purchaseOrderStatusLabel = (
+  value: PurchaseOrderStatus | string | null | undefined,
+): string =>
+  value
+    ? (PURCHASE_ORDER_STATUS_LABELS[value as PurchaseOrderStatus] ?? value)
+    : "—";
+
+/** The display label for an order deblock type. */
+export const orderDeblockTypeLabel = (
+  value: OrderDeblockType | string | null | undefined,
+): string =>
+  value ? (ORDER_DEBLOCK_TYPE_LABELS[value as OrderDeblockType] ?? value) : "—";

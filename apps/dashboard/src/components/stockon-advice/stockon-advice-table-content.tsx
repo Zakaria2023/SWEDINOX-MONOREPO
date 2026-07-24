@@ -10,19 +10,11 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { LEAD_TIME_METHOD_LABELS } from "@/lib/labels";
-import { cn } from "@/lib/helpers";
+import { cn, formatNumber, yesNo } from "@/lib/helpers";
 
 type Props = {
   rows: StockOnAdviceRow[];
 };
-
-const qty = (value: number) =>
-  value.toLocaleString("en-US", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  });
-
-const yesNo = (value: boolean) => (value ? "Yes" : "No");
 
 export const StockOnAdviceTable = ({ rows }: Props) => (
   <div className="overflow-x-auto rounded-md border">
@@ -74,27 +66,27 @@ export const StockOnAdviceTable = ({ rows }: Props) => (
               <TableCell>{row.mainGroup ?? "—"}</TableCell>
               <TableCell>{row.supplierName ?? "—"}</TableCell>
               <TableCell className="text-right">
-                {qty(row.technicalStock)}
+                {formatNumber(row.technicalStock)}
               </TableCell>
-              <TableCell className="text-right">{qty(row.reserved)}</TableCell>
-              <TableCell className="text-right">{qty(row.available)}</TableCell>
+              <TableCell className="text-right">{formatNumber(row.reserved)}</TableCell>
+              <TableCell className="text-right">{formatNumber(row.available)}</TableCell>
               <TableCell className="text-right">
-                {qty(row.toBeReceived)}
-              </TableCell>
-              <TableCell className="text-right">
-                {qty(row.economicStock)}
+                {formatNumber(row.toBeReceived)}
               </TableCell>
               <TableCell className="text-right">
-                {qty(row.avgMonthlyConsumption)}
+                {formatNumber(row.economicStock)}
+              </TableCell>
+              <TableCell className="text-right">
+                {formatNumber(row.avgMonthlyConsumption)}
               </TableCell>
               <TableCell className="text-right">{row.leadTimeDays}</TableCell>
               <TableCell className="text-right">
                 {row.reviewPeriodDays}
               </TableCell>
               <TableCell>{LEAD_TIME_METHOD_LABELS[row.leadTimeMethod]}</TableCell>
-              <TableCell className="text-right">{qty(row.orderLevel)}</TableCell>
+              <TableCell className="text-right">{formatNumber(row.orderLevel)}</TableCell>
               <TableCell className="text-right">
-                {qty(row.stockMinusOrderLevel)}
+                {formatNumber(row.stockMinusOrderLevel)}
               </TableCell>
               <TableCell className="text-right">
                 {row.pctDifference === null
@@ -107,7 +99,7 @@ export const StockOnAdviceTable = ({ rows }: Props) => (
                   row.toOrder > 0 && "font-semibold text-amber-700",
                 )}
               >
-                {qty(row.toOrder)}
+                {formatNumber(row.toOrder)}
               </TableCell>
               <TableCell className="text-center">
                 {yesNo(row.evaluateToday)}

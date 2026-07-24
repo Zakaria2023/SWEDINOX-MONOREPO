@@ -9,22 +9,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { formatMoney, formatNumber } from "@/lib/helpers";
 
 type Props = {
   rows: SupplierRevenueRow[];
 };
-
-const money = (value: number) =>
-  `€ ${value.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
-
-const number = (value: number) =>
-  value.toLocaleString("en-US", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  });
 
 export const SupplierRevenueTable = ({ rows }: Props) => (
   <div className="overflow-x-auto rounded-md border">
@@ -65,10 +54,10 @@ export const SupplierRevenueTable = ({ rows }: Props) => (
               <TableCell className="text-right">{row.month ?? "—"}</TableCell>
               <TableCell className="text-right">{row.year ?? "—"}</TableCell>
               <TableCell className="text-right whitespace-nowrap">
-                {money(row.revenue)}
+                {formatMoney(row.revenue)}
               </TableCell>
               <TableCell className="text-right">
-                {number(row.weightKg)}
+                {formatNumber(row.weightKg)}
               </TableCell>
             </TableRow>
           ))

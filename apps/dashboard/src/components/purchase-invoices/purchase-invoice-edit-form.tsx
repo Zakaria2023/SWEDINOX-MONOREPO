@@ -17,7 +17,7 @@ import { Textarea } from "@/components/shadcn/textarea";
 import { FormError } from "@/components/ui/form-error";
 import { FormLabel } from "@/components/ui/form-field";
 import { InvoicePaymentTerm, invoicePaymentTerms } from "@/lib/enums";
-import { getPaymentTermDueDate } from "@/lib/helpers";
+import { getPaymentTermDueDate, toDateInput } from "@/lib/helpers";
 import { COMMON_TEXT, INVOICE_PAYMENT_TERM_LABELS } from "@/lib/labels";
 
 const editSchema = z.object({
@@ -31,14 +31,6 @@ const editSchema = z.object({
 });
 
 type EditFormValues = z.infer<typeof editSchema>;
-
-const toDateInput = (value: Date | string | null) => {
-  if (!value) {
-    return "";
-  }
-  const date = value instanceof Date ? value : new Date(value);
-  return date.toISOString().split("T")[0];
-};
 
 type Props = {
   purchaseInvoice: PurchaseInvoiceDetail;

@@ -9,30 +9,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
-import { OrderLineStatus } from "@/lib/enums";
-import { ORDER_LINE_STATUS_LABELS } from "@/lib/labels";
+import { formatDateValue, formatMoney, formatNumber, orderLineStatusLabel } from "@/lib/helpers";
 
 type Props = {
   rows: OrderLineToCallRow[];
 };
-
-const money = (value: number) =>
-  `€ ${value.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
-
-const number = (value: number) =>
-  value.toLocaleString("en-US", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  });
-
-const fmtDate = (value: string | null) =>
-  value ? new Date(value).toLocaleDateString("en-GB") : "—";
-
-const lineStatusLabel = (value: OrderLineStatus | null) =>
-  value ? (ORDER_LINE_STATUS_LABELS[value] ?? value) : "—";
 
 export const OrderLinesStillToBeCalledTable = ({ rows }: Props) => (
   <div className="overflow-x-auto rounded-md border">
@@ -95,12 +76,12 @@ export const OrderLinesStillToBeCalledTable = ({ rows }: Props) => (
               </TableCell>
               <TableCell>{row.city ?? "—"}</TableCell>
               <TableCell>{row.reference ?? "—"}</TableCell>
-              <TableCell>{lineStatusLabel(row.lineStatus)}</TableCell>
+              <TableCell>{orderLineStatusLabel(row.lineStatus)}</TableCell>
               <TableCell className="whitespace-nowrap">
-                {fmtDate(row.deliveryDate)}
+                {formatDateValue(row.deliveryDate)}
               </TableCell>
               <TableCell className="text-right">
-                {number(row.quantity)}
+                {formatNumber(row.quantity)}
               </TableCell>
               <TableCell>{row.unit?.toUpperCase() ?? "—"}</TableCell>
               <TableCell className="text-right">
@@ -108,19 +89,19 @@ export const OrderLinesStillToBeCalledTable = ({ rows }: Props) => (
               </TableCell>
               <TableCell className="text-right">{row.widthMm ?? "—"}</TableCell>
               <TableCell className="text-right">
-                {number(row.weightKg)}
+                {formatNumber(row.weightKg)}
               </TableCell>
               <TableCell className="text-right whitespace-nowrap">
-                {money(row.amount)}
+                {formatMoney(row.amount)}
               </TableCell>
               <TableCell className="text-right">
-                {number(row.quantityNotCalled)}
+                {formatNumber(row.quantityNotCalled)}
               </TableCell>
               <TableCell className="text-right">
-                {number(row.weightToBeCalled)}
+                {formatNumber(row.weightToBeCalled)}
               </TableCell>
               <TableCell className="text-right whitespace-nowrap">
-                {money(row.amountToBeCalled)}
+                {formatMoney(row.amountToBeCalled)}
               </TableCell>
               <TableCell>{row.representative ?? "—"}</TableCell>
               <TableCell className="text-center">

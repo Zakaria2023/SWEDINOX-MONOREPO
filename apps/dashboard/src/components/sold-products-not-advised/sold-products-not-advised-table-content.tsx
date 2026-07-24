@@ -9,24 +9,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { formatMoney, formatNumber, yesNo } from "@/lib/helpers";
 
 type Props = {
   rows: SoldProductNotAdvisedRow[];
 };
-
-const money = (value: number) =>
-  `€ ${value.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
-
-const qty = (value: number) =>
-  value.toLocaleString("en-US", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  });
-
-const yesNo = (value: boolean | null) => (value ? "Yes" : "No");
 
 export const SoldProductsNotAdvisedTable = ({ rows }: Props) => (
   <div className="overflow-x-auto rounded-md border">
@@ -74,15 +61,15 @@ export const SoldProductsNotAdvisedTable = ({ rows }: Props) => (
                 {yesNo(row.standardProduct)}
               </TableCell>
               <TableCell className="text-right">
-                {qty(row.avgMonthlyConsumption)}
+                {formatNumber(row.avgMonthlyConsumption)}
               </TableCell>
               <TableCell className="text-right whitespace-nowrap">
-                {money(row.revenue)}
+                {formatMoney(row.revenue)}
               </TableCell>
-              <TableCell className="text-right">{qty(row.sales)}</TableCell>
-              <TableCell className="text-right">{qty(row.stock)}</TableCell>
+              <TableCell className="text-right">{formatNumber(row.sales)}</TableCell>
+              <TableCell className="text-right">{formatNumber(row.stock)}</TableCell>
               <TableCell className="text-right">
-                {qty(row.available)}
+                {formatNumber(row.available)}
               </TableCell>
               <TableCell>{row.stockUnit ?? "—"}</TableCell>
               <TableCell>{row.pacClassification ?? "—"}</TableCell>

@@ -16,7 +16,7 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { INVOICE_PAYMENT_TERM_LABELS } from "@/lib/labels";
-import { cn } from "@/lib/helpers";
+import { cn, formatDateColumn, formatMoney } from "@/lib/helpers";
 
 type Props = {
   rows: FinanciallyBlockedRow[];
@@ -47,19 +47,6 @@ const UnblockButton = ({ orderUuid }: UnblockButtonProps) => {
       {isPending ? "Unblocking..." : "Unblock"}
     </Button>
   );
-};
-
-const money = (value: number) =>
-  `€ ${value.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
-
-const fmtDate = (value: string | Date | null) => {
-  if (!value) {
-    return "—";
-  }
-  return typeof value === "string" ? value : value.toISOString().slice(0, 10);
 };
 
 export const FinanciallyBlockedTable = ({ rows }: Props) => (
@@ -102,7 +89,7 @@ export const FinanciallyBlockedTable = ({ rows }: Props) => (
               <TableCell>{row.debtor}</TableCell>
               <TableCell className="text-right">{row.debtorNumber}</TableCell>
               <TableCell className="whitespace-nowrap">
-                {fmtDate(row.deliveryDate)}
+                {formatDateColumn(row.deliveryDate)}
               </TableCell>
               <TableCell>{row.blockingReason ?? "—"}</TableCell>
               <TableCell>
@@ -111,13 +98,13 @@ export const FinanciallyBlockedTable = ({ rows }: Props) => (
                   : "—"}
               </TableCell>
               <TableCell className="text-right whitespace-nowrap">
-                {money(row.amount)}
+                {formatMoney(row.amount)}
               </TableCell>
               <TableCell className="text-right whitespace-nowrap">
-                {money(row.openEntrees)}
+                {formatMoney(row.openEntrees)}
               </TableCell>
               <TableCell className="text-right whitespace-nowrap">
-                {money(row.creditLimit)}
+                {formatMoney(row.creditLimit)}
               </TableCell>
               <TableCell
                 className={cn(
@@ -125,7 +112,7 @@ export const FinanciallyBlockedTable = ({ rows }: Props) => (
                   row.creditSpace < 0 && "font-semibold text-red-600",
                 )}
               >
-                {money(row.creditSpace)}
+                {formatMoney(row.creditSpace)}
               </TableCell>
               <TableCell className="text-center">
                 {row.companyBlocked ? "Yes" : "No"}

@@ -9,19 +9,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { daysInSystem } from "@/lib/helpers";
 import { COMMON_TEXT } from "@/lib/labels";
 import Link from "next/link";
 
 type Props = {
   followUps: FollowUpListItem[];
 };
-
-// Number of whole days since the record was created.
-const daysInSystem = (createdAt: Date | string) =>
-  Math.max(
-    0,
-    Math.floor((Date.now() - new Date(createdAt).getTime()) / 86_400_000),
-  );
 
 export const FollowUpsTable = ({ followUps }: Props) => {
   const na = COMMON_TEXT.notAvailable;

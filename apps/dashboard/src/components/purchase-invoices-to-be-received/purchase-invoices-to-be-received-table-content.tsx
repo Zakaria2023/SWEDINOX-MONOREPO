@@ -9,23 +9,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { formatDateColumn, formatMoney } from "@/lib/helpers";
 import { INVOICE_PAYMENT_TERM_LABELS } from "@/lib/labels";
 
 type Props = {
   rows: PurchaseInvoiceToReceiveRow[];
-};
-
-const money = (value: number) =>
-  `€ ${value.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
-
-const fmtDate = (value: string | Date | null) => {
-  if (!value) {
-    return "—";
-  }
-  return typeof value === "string" ? value : value.toISOString().slice(0, 10);
 };
 
 export const PurchaseInvoicesToBeReceivedTable = ({ rows }: Props) => {
@@ -70,7 +58,7 @@ export const PurchaseInvoicesToBeReceivedTable = ({ rows }: Props) => {
                   </TableCell>
                   <TableCell>{row.city ?? "—"}</TableCell>
                   <TableCell className="whitespace-nowrap">
-                    {fmtDate(row.orderDate)}
+                    {formatDateColumn(row.orderDate)}
                   </TableCell>
                   <TableCell>
                     {row.paymentTerms
@@ -78,20 +66,20 @@ export const PurchaseInvoicesToBeReceivedTable = ({ rows }: Props) => {
                       : "—"}
                   </TableCell>
                   <TableCell className="whitespace-nowrap">
-                    {fmtDate(row.scheduledDeliveryDate)}
+                    {formatDateColumn(row.scheduledDeliveryDate)}
                   </TableCell>
                   <TableCell className="whitespace-nowrap">
-                    {fmtDate(row.actualDeliveryDate)}
+                    {formatDateColumn(row.actualDeliveryDate)}
                   </TableCell>
                   <TableCell className="text-right whitespace-nowrap">
-                    {money(row.amount)}
+                    {formatMoney(row.amount)}
                   </TableCell>
                 </TableRow>
               ))}
               <TableRow className="border-t-2 font-semibold">
                 <TableCell colSpan={8}>Total</TableCell>
                 <TableCell className="text-right whitespace-nowrap">
-                  {money(total)}
+                  {formatMoney(total)}
                 </TableCell>
               </TableRow>
             </>
