@@ -8,7 +8,7 @@ import {
   type UseFieldArrayRemove,
 } from "react-hook-form";
 import { PurchaseInvoiceFormValues } from "@/app/(dashboard)/purchase-invoices/validation";
-import { PendingStockOption } from "@/app/(dashboard)/stock/actions";
+import { ReceivablePurchaseOrderItem } from "@/app/(dashboard)/purchase-orders/actions";
 import { Button } from "@/components/shadcn/button";
 import { Input } from "@/components/shadcn/input";
 import { Select } from "@/components/shadcn/select";
@@ -16,7 +16,7 @@ import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import { Plus, X } from "lucide-react";
 
 type Props = {
-  pendingStock: PendingStockOption[];
+  receivableItems: ReceivablePurchaseOrderItem[];
   itemFields: FieldArrayWithId<PurchaseInvoiceFormValues, "items", "id">[];
   appendItem: UseFieldArrayAppend<PurchaseInvoiceFormValues, "items">;
   removeItem: UseFieldArrayRemove;
@@ -24,7 +24,7 @@ type Props = {
 };
 
 export const PurchaseInvoiceItemsSection = ({
-  pendingStock,
+  receivableItems,
   itemFields,
   appendItem,
   removeItem,
@@ -36,22 +36,22 @@ export const PurchaseInvoiceItemsSection = ({
     formState: { errors },
   } = useFormContext<PurchaseInvoiceFormValues>();
 
-  const stockOptions = [
+  const orderLineOptions = [
     { value: "", label: "— Select —" },
-    ...pendingStock.map((s) => ({
-      value: s.uuid,
-      label: `${[s.productCode, s.productName].filter(Boolean).join(" — ")} (${s.quantity} available)`,
+    ...receivableItems.map((item) => ({
+      value: item.uuid,
+      label: `PO ${item.purchaseOrderId ?? "?"} · ${[item.productCode, item.productName].filter(Boolean).join(" — ")} (${item.remainingQuantity} to receive)`,
     })),
   ];
 
-  if (pendingStock.length === 0) {
+  if (receivableItems.length === 0) {
     return null;
   }
 
   return (
     <div className="space-y-4 lg:col-span-3">
       <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-gray-700">
-        Stock Items
+        Received Items
       </h2>
 
       <div className="space-y-3">
@@ -61,25 +61,25 @@ export const PurchaseInvoiceItemsSection = ({
             className="grid grid-cols-[1fr_160px_32px] items-start gap-3"
           >
             <div>
-              <FormLabel htmlFor={`items.${index}.stockUuid`} required>
-                Stock Item
+              <FormLabel htmlFor={`items.${index}.purchaseOrderItemUuid`} required>
+                Order Line
               </FormLabel>
               <Controller
                 control={control}
-                name={`items.${index}.stockUuid`}
-                render={({ field: stockField }) => (
+                name={`items.${index}.purchaseOrderItemUuid`}
+                render={({ field: orderLineField }) => (
                   <Select
-                    id={`items.${index}.stockUuid`}
-                    value={stockField.value || ""}
-                    options={stockOptions}
-                    onValueChange={stockField.onChange}
-                    invalid={!!errors.items?.[index]?.stockUuid}
+                    id={`items.${index}.purchaseOrderItemUuid`}
+                    value={orderLineField.value || ""}
+                    options={orderLineOptions}
+                    onValueChange={orderLineField.onChange}
+                    invalid={!!errors.items?.[index]?.purchaseOrderItemUuid}
                     disabled={isPending}
                   />
                 )}
               />
               <FormFieldError
-                message={errors.items?.[index]?.stockUuid?.message}
+                message={errors.items?.[index]?.purchaseOrderItemUuid?.message}
               />
             </div>
 
@@ -116,10 +116,10 @@ export const PurchaseInvoiceItemsSection = ({
         type="button"
         variant="outline"
         size="sm"
-        onClick={() => appendItem({ stockUuid: "", quantity: "" })}
+        onClick={() => appendItem({ purchaseOrderItemUuid: "", quantity: "" })}
         disabled={isPending}
       >
-        <Plus className="mr-1 size-3.5" /> Add stock item
+        <Plus className="mr-1 size-3.5" /> Add received item
       </Button>
     </div>
   );

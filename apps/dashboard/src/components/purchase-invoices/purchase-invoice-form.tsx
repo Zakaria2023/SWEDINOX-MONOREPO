@@ -37,7 +37,7 @@ export const PurchaseInvoiceForm = ({
     isPending,
     onSubmit,
     state,
-    pendingStock,
+    receivableItems,
     itemFields,
     appendItem,
     removeItem,
@@ -117,9 +117,10 @@ export const PurchaseInvoiceForm = ({
           today={today}
         />
 
-        {/* Stock items — only shown once a supplier with pending stock is selected */}
+        {/* Received items — only shown once a supplier with open purchase-order
+            lines is selected */}
         <PurchaseInvoiceItemsSection
-          pendingStock={pendingStock}
+          receivableItems={receivableItems}
           itemFields={itemFields}
           appendItem={appendItem}
           removeItem={removeItem}

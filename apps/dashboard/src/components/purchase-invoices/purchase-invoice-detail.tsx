@@ -37,13 +37,13 @@ export const PurchaseInvoiceDetailView = ({ purchaseInvoice }: Props) => {
     });
   };
 
-  const totalTaken = purchaseInvoice.movements
-    .filter((m) => m.type === "out")
-    .reduce((sum, m) => sum + Number(m.quantity), 0);
-  const totalRestored = purchaseInvoice.movements
+  const totalReceived = purchaseInvoice.movements
     .filter((m) => m.type === "in")
     .reduce((sum, m) => sum + Number(m.quantity), 0);
-  const netTaken = totalTaken - totalRestored;
+  const totalReversed = purchaseInvoice.movements
+    .filter((m) => m.type === "out")
+    .reduce((sum, m) => sum + Number(m.quantity), 0);
+  const netReceived = totalReceived - totalReversed;
 
   return (
     <div className="space-y-6">
@@ -105,18 +105,18 @@ export const PurchaseInvoiceDetailView = ({ purchaseInvoice }: Props) => {
         <h2 className="border-b pb-2 text-base font-semibold">Summary</h2>
         <div className="rounded-md border bg-gray-50 p-3 text-sm">
           <div className="flex justify-between py-1">
-            <span className="text-gray-600">Total Taken</span>
-            <span className="font-medium">{totalTaken.toFixed(3)}</span>
+            <span className="text-gray-600">Total Received</span>
+            <span className="font-medium">{totalReceived.toFixed(3)}</span>
           </div>
-          {totalRestored > 0 && (
+          {totalReversed > 0 && (
             <div className="flex justify-between py-1">
-              <span className="text-gray-600">Total Restored</span>
-              <span className="font-medium">{totalRestored.toFixed(3)}</span>
+              <span className="text-gray-600">Total Reversed</span>
+              <span className="font-medium">{totalReversed.toFixed(3)}</span>
             </div>
           )}
           <div className="flex justify-between border-t pt-2 font-semibold">
-            <span>Net Taken</span>
-            <span>{netTaken.toFixed(3)}</span>
+            <span>Net Received</span>
+            <span>{netReceived.toFixed(3)}</span>
           </div>
           <div className="flex justify-between pt-1 text-xs text-muted-foreground">
             <span>Stock Movements</span>
@@ -127,7 +127,7 @@ export const PurchaseInvoiceDetailView = ({ purchaseInvoice }: Props) => {
 
       <div className="space-y-3">
         <h2 className="border-b pb-2 text-base font-semibold">
-          Stock Items Taken
+          Stock Items Received
         </h2>
         <div className="overflow-x-auto rounded-md border">
           <Table>
@@ -144,7 +144,7 @@ export const PurchaseInvoiceDetailView = ({ purchaseInvoice }: Props) => {
                     colSpan={2}
                     className="h-24 text-center text-muted-foreground"
                   >
-                    No stock items on this invoice.
+                    No stock items received on this invoice.
                   </TableCell>
                 </TableRow>
               ) : (
@@ -193,7 +193,7 @@ export const PurchaseInvoiceDetailView = ({ purchaseInvoice }: Props) => {
         onConfirm={handleCancel}
         isPending={isPending}
         title="Cancel purchase invoice"
-        description="This cancels the invoice and restores its stock items back to pending. This cannot be undone."
+        description="This cancels the invoice and removes the stock it received. It's blocked if any of that stock has already been reserved or sold. This cannot be undone."
         confirmLabel="Cancel Invoice"
       />
     </div>

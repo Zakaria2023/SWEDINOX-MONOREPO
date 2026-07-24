@@ -7,7 +7,7 @@ import {
 } from "@/lib/enums";
 
 export const purchaseInvoiceItemSchema = z.object({
-  stockUuid: z.string().min(1, "Stock item is required"),
+  purchaseOrderItemUuid: z.string().min(1, "Order line is required"),
   quantity: z.string().min(1, "Quantity is required"),
 });
 

@@ -17,7 +17,11 @@ import {
   SelectPurchaseInvoiceItems,
 } from "@/db/schema/purchase-invoice-items";
 import { Products, SelectProducts } from "@/db/schema/products";
-import { SelectStock, Stock } from "@/db/schema/stock";
+import {
+  PurchaseOrderItems,
+  SelectPurchaseOrderItems,
+} from "@/db/schema/purchase-order-items";
+import { Stock } from "@/db/schema/stock";
 import {
   SelectStockMovements,
   StockMovements,
@@ -47,7 +51,7 @@ export type PurchaseInvoiceFields = Omit<
 >;
 
 export type PurchaseInvoiceItemInput = {
-  stockUuid: string;
+  purchaseOrderItemUuid: string;
   quantity: string;
 };
 
@@ -98,35 +102,34 @@ export const createPurchaseInvoice = async (
     Number(fields.vatMiddle ?? 0) +
     Number(fields.vatLow ?? 0);
   try {
-    // Validate stock availability before opening the transaction.
-    const stockByUuid = new Map<string, SelectStock>();
+    // Validate the selected purchase-order lines before opening the
+    // transaction. Receiving goods draws down the outstanding ordered quantity.
+    const poItemByUuid = new Map<string, SelectPurchaseOrderItems>();
     if (items.length > 0) {
-      const stockUuids = items.map((item) => item.stockUuid);
-      const stockRows = await db
+      const poItemUuids = items.map((item) => item.purchaseOrderItemUuid);
+      const poItemRows = await db
         .select()
-        .from(Stock)
-        .where(inArray(Stock.uuid, stockUuids));
-      for (const row of stockRows) {
-        stockByUuid.set(row.uuid, row);
+        .from(PurchaseOrderItems)
+        .where(inArray(PurchaseOrderItems.uuid, poItemUuids));
+      for (const row of poItemRows) {
+        poItemByUuid.set(row.uuid, row);
       }
 
       for (const item of items) {
-        const stockRow = stockByUuid.get(item.stockUuid);
-        if (!stockRow) {
+        const poItem = poItemByUuid.get(item.purchaseOrderItemUuid);
+        if (!poItem) {
           return {
-            error: "One or more selected stock items could not be found.",
+            error: "One or more selected order lines could not be found.",
           };
         }
-        if (stockRow.status !== "pending") {
-          return {
-            error: "One or more selected stock items are no longer pending.",
-          };
+        const remaining =
+          Number(poItem.quantity) - Number(poItem.qtyReceived ?? 0);
+        if (Number(item.quantity) <= 0) {
+          return { error: "Received quantity must be greater than zero." };
         }
-        const freeQuantity =
-          Number(stockRow.quantity) - Number(stockRow.reservedQuantity);
-        if (Number(item.quantity) > freeQuantity) {
+        if (Number(item.quantity) > remaining) {
           return {
-            error: `Cannot take more than the unreserved pending quantity (${freeQuantity.toFixed(3)}).`,
+            error: `Cannot receive more than the outstanding ordered quantity (${remaining.toFixed(3)}).`,
           };
         }
       }
@@ -134,7 +137,7 @@ export const createPurchaseInvoice = async (
 
     const user = await currentUser();
     const userId = user?.id ?? null;
-    // Consuming stock records who did it, so require an authenticated user.
+    // Receiving stock records who did it, so require an authenticated user.
     if (items.length > 0 && !userId) {
       return { error: "User not authenticated" };
     }
@@ -176,71 +179,79 @@ export const createPurchaseInvoice = async (
       );
 
       for (const item of items) {
-        const stockRow = stockByUuid.get(item.stockUuid);
-        if (!stockRow) {
+        const poItem = poItemByUuid.get(item.purchaseOrderItemUuid);
+        if (!poItem) {
           continue;
         }
         if (!userId) {
           throw new Error("User not authenticated");
         }
 
-        await tx.insert(PurchaseInvoiceItems).values({
-          uuid: generateUuid(),
-          purchaseInvoiceUuid: uuid,
-          stockUuid: item.stockUuid,
-          productUuid: stockRow.productUuid,
-          quantity: item.quantity,
-        });
-
-        const remainingQuantity = (
-          Number(stockRow.quantity) - Number(item.quantity)
-        ).toFixed(3);
-
-        // Guard the update with the quantity/status we validated above so a
-        // concurrent invoice against the same lot can't oversell it — if
-        // another transaction already changed the row, affectedRows is 0
-        // and we roll back instead of silently double-spending stock.
-        const [updateResult] = await tx
-          .update(Stock)
+        // Book the receipt against the PO line, guarding with the outstanding
+        // quantity so a concurrent invoice can't over-receive the same line —
+        // if another transaction already received it, affectedRows is 0 and we
+        // roll back instead of double-booking stock.
+        const [poUpdateResult] = await tx
+          .update(PurchaseOrderItems)
           .set({
-            quantity: remainingQuantity,
-            status: Number(remainingQuantity) > 0 ? "pending" : "received",
+            qtyReceived: sql`${PurchaseOrderItems.qtyReceived} + ${item.quantity}`,
           })
           .where(
             and(
-              eq(Stock.uuid, item.stockUuid),
-              eq(Stock.status, "pending"),
+              eq(PurchaseOrderItems.uuid, item.purchaseOrderItemUuid),
               gte(
-                sql`(${Stock.quantity} - ${Stock.reservedQuantity})`,
+                sql`(${PurchaseOrderItems.quantity} - ${PurchaseOrderItems.qtyReceived})`,
                 item.quantity,
               ),
             ),
           );
 
-        if (updateResult.affectedRows === 0) {
+        if (poUpdateResult.affectedRows === 0) {
           throw new Error(
-            "Stock changed while processing this invoice — please refresh and try again.",
+            "The order line changed while processing this invoice — please refresh and try again.",
           );
         }
 
+        // The goods physically arrive now: create the stock lot and log the
+        // "in". This is the receipt — the purchase order only recorded intent.
+        const stockUuid = generateUuid();
+        await tx.insert(Stock).values({
+          uuid: stockUuid,
+          productUuid: poItem.productUuid,
+          purchaseOrderUuid: poItem.purchaseOrderUuid,
+          purchaseOrderItemUuid: poItem.uuid,
+          supplierUuid: fields.companyUuid ?? null,
+          quantity: item.quantity,
+          status: "pending",
+        });
+
+        await tx.insert(PurchaseInvoiceItems).values({
+          uuid: generateUuid(),
+          purchaseInvoiceUuid: uuid,
+          stockUuid,
+          productUuid: poItem.productUuid,
+          quantity: item.quantity,
+        });
+
         await tx.insert(StockMovements).values({
           uuid: generateUuid(),
-          productUuid: stockRow.productUuid,
-          stockUuid: item.stockUuid,
-          type: "out",
-          reason: "invoice_consumption",
+          productUuid: poItem.productUuid,
+          stockUuid,
+          type: "in",
+          reason: "purchase_receipt",
           quantity: item.quantity,
+          purchaseOrderUuid: poItem.purchaseOrderUuid,
           purchaseInvoiceUuid: uuid,
           createdByUserId: userId,
         });
 
         await recordFreightMovement(tx, {
-          productUuid: stockRow.productUuid,
+          productUuid: poItem.productUuid,
           quantity: item.quantity,
-          type: "out",
-          reason: "invoice_consumption",
+          type: "in",
+          reason: "purchase_receipt",
+          purchaseOrderUuid: poItem.purchaseOrderUuid,
           supplierUuid: fields.companyUuid ?? null,
-          valuationPrice: stockRow.valuationPrice,
           operator: userId,
         });
       }
@@ -452,25 +463,60 @@ export const cancelPurchaseInvoice = async (
           continue;
         }
 
-        const restoredQuantity = (
-          Number(stockRow.quantity) + Number(item.quantity)
+        // The receipt can only be reversed while the lot is still fully on hand
+        // and unreserved — once any of it is reserved or sold, undoing the
+        // invoice would leave stock in an impossible state, so block it.
+        if (
+          stockRow.status === "cancelled" ||
+          Number(stockRow.reservedQuantity) > 0 ||
+          Number(stockRow.quantity) < Number(item.quantity)
+        ) {
+          throw new Error(
+            "Cannot cancel: received stock from this invoice has already been reserved or consumed.",
+          );
+        }
+
+        const remainingQuantity = (
+          Number(stockRow.quantity) - Number(item.quantity)
         ).toFixed(3);
 
+        // Reverse the "in" — pull the received goods back out of stock.
         await tx
           .update(Stock)
-          .set({ quantity: restoredQuantity, status: "pending" })
+          .set({ quantity: remainingQuantity, status: "cancelled" })
           .where(eq(Stock.uuid, item.stockUuid));
 
         await tx.insert(StockMovements).values({
           uuid: generateUuid(),
           productUuid: item.productUuid,
           stockUuid: item.stockUuid,
-          type: "in",
+          type: "out",
           reason: "invoice_cancelled",
           quantity: item.quantity,
           purchaseInvoiceUuid: uuid,
           createdByUserId: userId,
         });
+
+        await recordFreightMovement(tx, {
+          productUuid: item.productUuid,
+          quantity: item.quantity,
+          type: "out",
+          reason: "invoice_cancelled",
+          supplierUuid: invoice.companyUuid,
+          valuationPrice: stockRow.valuationPrice,
+          operator: userId,
+        });
+
+        // Give the received quantity back to the PO line so it can be
+        // re-received on a corrected invoice.
+        if (stockRow.purchaseOrderItemUuid) {
+          await tx
+            .update(PurchaseOrderItems)
+            .set({
+              qtyReceived: sql`GREATEST(${PurchaseOrderItems.qtyReceived} - ${item.quantity}, 0)`,
+            })
+            .where(eq(PurchaseOrderItems.uuid, stockRow.purchaseOrderItemUuid));
+        }
       }
     });
 

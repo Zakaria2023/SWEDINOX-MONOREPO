@@ -12,15 +12,17 @@ import {
   type PurchaseInvoiceFormValues,
 } from "./validation";
 import {
-  getPendingStockForCompany,
-  type PendingStockOption,
-} from "@/app/(dashboard)/stock/actions";
+  getReceivablePurchaseOrderItemsForCompany,
+  type ReceivablePurchaseOrderItem,
+} from "@/app/(dashboard)/purchase-orders/actions";
 import { toDecimal } from "@/lib/helpers";
 
 export const usePurchaseInvoiceSubmit = () => {
   const [isPending, startTransition] = useTransition();
   const [state, setState] = useState<PurchaseInvoiceActionResult>({});
-  const [pendingStock, setPendingStock] = useState<PendingStockOption[]>([]);
+  const [receivableItems, setReceivableItems] = useState<
+    ReceivablePurchaseOrderItem[]
+  >([]);
 
   const form = useForm<PurchaseInvoiceFormValues>({
     resolver: zodResolver(createPurchaseInvoiceSchema()),
@@ -58,10 +60,12 @@ export const usePurchaseInvoiceSubmit = () => {
   useEffect(() => {
     replaceItems([]);
     if (!companyUuid) {
-      setPendingStock([]);
+      setReceivableItems([]);
       return;
     }
-    getPendingStockForCompany(companyUuid).then(setPendingStock);
+    getReceivablePurchaseOrderItemsForCompany(companyUuid).then(
+      setReceivableItems,
+    );
   }, [companyUuid, replaceItems]);
 
   const onSubmit = form.handleSubmit((values) => {
@@ -113,7 +117,7 @@ export const usePurchaseInvoiceSubmit = () => {
     isPending,
     onSubmit,
     state,
-    pendingStock,
+    receivableItems,
     itemFields,
     appendItem,
     removeItem,

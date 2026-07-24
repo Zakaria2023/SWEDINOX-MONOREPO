@@ -6,16 +6,17 @@ import {
   PurchaseOrders,
   SelectPurchaseOrders,
 } from "@/db/schema/purchase-orders";
-import { PurchaseOrderItems } from "@/db/schema/purchase-order-items";
+import {
+  PurchaseOrderItems,
+  SelectPurchaseOrderItems,
+} from "@/db/schema/purchase-order-items";
 import { SelectStock, Stock } from "@/db/schema/stock";
-import { StockMovements } from "@/db/schema/stock-movements";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
-import { Products } from "@/db/schema/products";
+import { Products, SelectProducts } from "@/db/schema/products";
 import { describeError, generateUuid } from "@/lib/helpers";
-import { recordFreightMovement } from "@/lib/server/freight";
 import { currentUser } from "@clerk/nextjs/server";
-import { desc, eq, getTableColumns, inArray } from "drizzle-orm";
+import { and, desc, eq, getTableColumns, gt, inArray, ne, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -77,6 +78,54 @@ export const getPurchaseOrders = async (): Promise<PurchaseOrderListItem[]> => {
   }
 };
 
+// Outstanding quantity on a purchase-order line still waiting to be received:
+// what was ordered minus what earlier purchase invoices already received.
+const receivableQuantity = sql<string>`(${PurchaseOrderItems.quantity} - COALESCE(${PurchaseOrderItems.qtyReceived}, 0))`;
+
+export type ReceivablePurchaseOrderItem = {
+  uuid: SelectPurchaseOrderItems["uuid"];
+  productUuid: SelectPurchaseOrderItems["productUuid"];
+  productCode: SelectProducts["productCode"] | null;
+  productName: SelectProducts["name"] | null;
+  purchaseOrderUuid: SelectPurchaseOrderItems["purchaseOrderUuid"];
+  purchaseOrderId: SelectPurchaseOrders["id"] | null;
+  orderedQuantity: SelectPurchaseOrderItems["quantity"];
+  // quantity − qtyReceived, computed in SQL, so it stays a plain string.
+  remainingQuantity: string;
+};
+
+// Purchase-order lines from a supplier that still have quantity left to
+// receive — the pool a purchase invoice draws from to book goods into stock.
+export const getReceivablePurchaseOrderItemsForCompany = async (
+  supplierUuid: string,
+): Promise<ReceivablePurchaseOrderItem[]> =>
+  db
+    .select({
+      uuid: PurchaseOrderItems.uuid,
+      productUuid: PurchaseOrderItems.productUuid,
+      productCode: Products.productCode,
+      productName: Products.name,
+      purchaseOrderUuid: PurchaseOrderItems.purchaseOrderUuid,
+      purchaseOrderId: PurchaseOrders.id,
+      orderedQuantity: PurchaseOrderItems.quantity,
+      remainingQuantity: receivableQuantity,
+    })
+    .from(PurchaseOrderItems)
+    .innerJoin(
+      PurchaseOrders,
+      eq(PurchaseOrderItems.purchaseOrderUuid, PurchaseOrders.uuid),
+    )
+    .innerJoin(Products, eq(PurchaseOrderItems.productUuid, Products.uuid))
+    .where(
+      and(
+        eq(PurchaseOrders.supplierUuid, supplierUuid),
+        ne(PurchaseOrders.status, "cancelled"),
+        ne(PurchaseOrderItems.status, "cancelled"),
+        gt(receivableQuantity, "0"),
+      ),
+    )
+    .orderBy(desc(PurchaseOrderItems.createdAt));
+
 const companyHasProducts = async (companyUuid: string): Promise<boolean> => {
   const rows = await db
     .select({ id: Products.id })
@@ -132,45 +181,16 @@ export const createPurchaseOrder = async (
     await db.transaction(async (tx) => {
       await tx.insert(PurchaseOrders).values({ ...fields, uuid });
 
+      // A purchase order only records the intent to buy — no stock exists yet.
+      // Stock (and the "in" movement) is created later, when the matching
+      // purchase invoice arrives and the goods are actually received.
       for (const [index, item] of items.entries()) {
-        const itemUuid = generateUuid();
         await tx.insert(PurchaseOrderItems).values({
-          uuid: itemUuid,
+          uuid: generateUuid(),
           purchaseOrderUuid: uuid,
           productUuid: item.productUuid,
           quantity: item.quantity,
           lineNumber: index + 1,
-        });
-
-        const stockUuid = generateUuid();
-        await tx.insert(Stock).values({
-          uuid: stockUuid,
-          productUuid: item.productUuid,
-          purchaseOrderUuid: uuid,
-          purchaseOrderItemUuid: itemUuid,
-          quantity: item.quantity,
-          status: "pending",
-        });
-
-        await tx.insert(StockMovements).values({
-          uuid: generateUuid(),
-          productUuid: item.productUuid,
-          stockUuid,
-          type: "in",
-          reason: "purchase_receipt",
-          quantity: item.quantity,
-          purchaseOrderUuid: uuid,
-          createdByUserId: userId,
-        });
-
-        await recordFreightMovement(tx, {
-          productUuid: item.productUuid,
-          quantity: item.quantity,
-          type: "in",
-          reason: "purchase_receipt",
-          purchaseOrderUuid: uuid,
-          supplierUuid: fields.supplierUuid,
-          operator: userId,
         });
       }
     });
@@ -277,52 +297,25 @@ export const cancelPurchaseOrder = async (
       return { error: "This purchase order is already cancelled." };
     }
 
+    // A purchase order carries no stock of its own — stock only appears once a
+    // purchase invoice receives it. If any lot already points back to this
+    // order, it has been received and billed, so the order can't be cancelled.
     const stockRows = await db
-      .select()
+      .select({ id: Stock.id })
       .from(Stock)
       .where(eq(Stock.purchaseOrderUuid, uuid));
 
-    if (
-      stockRows.some(
-        (row) => row.status !== "pending" || Number(row.reservedQuantity) > 0,
-      )
-    ) {
+    if (stockRows.length > 0) {
       return {
         error:
-          "Cannot cancel: some products from this order have already been invoiced or reserved by a sales order.",
+          "Cannot cancel: this purchase order has already been received on a purchase invoice.",
       };
     }
 
-    const user = await currentUser();
-    const userId = user?.id;
-    if (!userId) {
-      return { error: "User not authenticated" };
-    }
-
-    await db.transaction(async (tx) => {
-      await tx
-        .update(PurchaseOrders)
-        .set({ status: "cancelled" })
-        .where(eq(PurchaseOrders.uuid, uuid));
-
-      for (const stockRow of stockRows) {
-        await tx
-          .update(Stock)
-          .set({ quantity: "0.000", status: "cancelled" })
-          .where(eq(Stock.uuid, stockRow.uuid));
-
-        await tx.insert(StockMovements).values({
-          uuid: generateUuid(),
-          productUuid: stockRow.productUuid,
-          stockUuid: stockRow.uuid,
-          type: "out",
-          reason: "purchase_order_cancelled",
-          quantity: stockRow.quantity,
-          purchaseOrderUuid: uuid,
-          createdByUserId: userId,
-        });
-      }
-    });
+    await db
+      .update(PurchaseOrders)
+      .set({ status: "cancelled" })
+      .where(eq(PurchaseOrders.uuid, uuid));
 
     revalidatePath("/purchase-orders");
     revalidatePath(`/purchase-orders/${uuid}`);
