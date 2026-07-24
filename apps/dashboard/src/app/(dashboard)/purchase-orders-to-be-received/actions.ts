@@ -1,7 +1,6 @@
 "use server";
 
-import {
-  describeError, Companies, SelectCompanies } from "@/db/schema/companies";
+import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { db } from "@/db";
 import { Products } from "@/db/schema/products";
 import {

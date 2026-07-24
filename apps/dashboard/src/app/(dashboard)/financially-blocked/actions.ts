@@ -1,7 +1,6 @@
 "use server";
 
-import {
-  describeError, requireAuth } from "@/lib/auth";
+import { requireAuth } from "@/lib/auth";
 import { describeError, generateUuid } from "@/lib/helpers";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { db } from "@/db";
