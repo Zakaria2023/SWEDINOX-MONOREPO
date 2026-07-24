@@ -119,7 +119,11 @@ export const useWarehouseSubSectionSubmit = ({
     const nextPlacement =
       isRoot && currentPlacement === "next" ? "below" : currentPlacement;
 
+    // Spread the defaults first so fields the source doesn't provide keep a
+    // defined value — a partial reset would flip the omitted inputs from
+    // controlled to uncontrolled.
     form.reset({
+      ...DEFAULT_WAREHOUSE_SUB_SECTION,
       adaptFromUuid: uuid,
       placement: nextPlacement,
       name: currentName,
@@ -146,55 +150,69 @@ export const useWarehouseSubSectionSubmit = ({
     return placement === "next" ? selectedItem.parentUuid : selectedItem.uuid;
   };
 
-  const onSubmit = form.handleSubmit((values) => {
-    const parentUuid = computedParentUuid();
-    if (!parentUuid) return;
+  const onSubmit = form.handleSubmit(
+    (values) => {
+      const parentUuid = computedParentUuid();
+      if (!parentUuid) {
+        setState({
+          error:
+            "Select a warehouse or sub section to adapt from before saving.",
+        });
+        return;
+      }
 
-    startTransition(async () => {
-      const result = await createWarehouseSubSection({
-        parentUuid,
-        name: values.name,
-        locationType: (values.locationType || undefined) as
-          | WarehouseLocationType
-          | undefined,
-        loadingLocation: (values.loadingLocation || undefined) as
-          | WarehouseLoadingLocation
-          | undefined,
-        blocked: values.blocked,
-        blockReason: values.blocked
-          ? ((values.blockReason || undefined) as
-              | WarehouseBlockReason
-              | undefined)
-          : undefined,
-        blockedForOptimization: values.blockedForOptimization,
-        limitedDimensions: values.limitedDimensions,
-        minLength:
-          values.minLength !== "" && values.minLength !== undefined
-            ? Number(values.minLength)
+      startTransition(async () => {
+        const result = await createWarehouseSubSection({
+          parentUuid,
+          name: values.name,
+          locationType: (values.locationType || undefined) as
+            | WarehouseLocationType
+            | undefined,
+          loadingLocation: (values.loadingLocation || undefined) as
+            | WarehouseLoadingLocation
+            | undefined,
+          blocked: values.blocked,
+          blockReason: values.blocked
+            ? ((values.blockReason || undefined) as
+                | WarehouseBlockReason
+                | undefined)
             : undefined,
-        maxLength:
-          values.maxLength !== "" && values.maxLength !== undefined
-            ? Number(values.maxLength)
-            : undefined,
-        maxWidth:
-          values.maxWidth !== "" && values.maxWidth !== undefined
-            ? Number(values.maxWidth)
-            : undefined,
-        maxWeight:
-          values.maxWeight !== "" && values.maxWeight !== undefined
-            ? Number(values.maxWeight)
-            : undefined,
-        productTypes:
-          values.productTypes.length > 0 ? values.productTypes : undefined,
-        pickingSequence:
-          values.pickingSequence !== "" && values.pickingSequence !== undefined
-            ? Number(values.pickingSequence)
-            : undefined,
+          blockedForOptimization: values.blockedForOptimization,
+          limitedDimensions: values.limitedDimensions,
+          minLength:
+            values.minLength !== "" && values.minLength !== undefined
+              ? Number(values.minLength)
+              : undefined,
+          maxLength:
+            values.maxLength !== "" && values.maxLength !== undefined
+              ? Number(values.maxLength)
+              : undefined,
+          maxWidth:
+            values.maxWidth !== "" && values.maxWidth !== undefined
+              ? Number(values.maxWidth)
+              : undefined,
+          maxWeight:
+            values.maxWeight !== "" && values.maxWeight !== undefined
+              ? Number(values.maxWeight)
+              : undefined,
+          productTypes:
+            values.productTypes.length > 0 ? values.productTypes : undefined,
+          pickingSequence:
+            values.pickingSequence !== "" &&
+            values.pickingSequence !== undefined
+              ? Number(values.pickingSequence)
+              : undefined,
+        });
+        setState(result);
+        if (result.success) router.push("/warehouse-sub-sections");
       });
-      setState(result);
-      if (result.success) router.push("/warehouse-sub-sections");
-    });
-  });
+    },
+    () => {
+      setState({
+        error: "Please fix the highlighted fields before saving.",
+      });
+    },
+  );
 
   const handleCancel = () => router.push("/warehouse-sub-sections");
 
