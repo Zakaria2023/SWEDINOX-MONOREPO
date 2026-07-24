@@ -102,6 +102,7 @@ const NAV_GROUPS: NavGroup[] = [
       { label: "Visit Reports", href: "/visit-reports" },
       { label: "Text Categories", href: "/text-categories" },
       { label: "Texts", href: "/texts" },
+      { label: "Industries", href: "/industries" },
       { label: "Inactive Companies", href: "/inactive-companies" },
     ],
   },
