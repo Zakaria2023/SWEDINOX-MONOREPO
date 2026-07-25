@@ -1,11 +1,10 @@
 import { z } from "zod";
 import { textUsageCategories } from "@/lib/enums";
-import { VALIDATION_MESSAGES } from "@/lib/validation-messages";
 
 export const createTextCategorySchema = () =>
   z.object({
     parentUuid: z.string().optional(),
-    name: z.string().min(1, VALIDATION_MESSAGES.nameRequired),
+    name: z.string().min(1, "Name is required"),
     description: z.string().optional(),
     usageCategoriesJson: z.array(z.enum(textUsageCategories)),
     sequenceNumber: z.number().int().min(0).optional(),

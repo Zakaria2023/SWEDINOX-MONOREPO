@@ -8,12 +8,13 @@ import {
 import { Batches, SelectBatches } from "@/db/schema/batches";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { Products, SelectProducts } from "@/db/schema/products";
+import { PurchaseOrderItems } from "@/db/schema/purchase-order-items";
 import {
   PurchaseOrders,
   SelectPurchaseOrders,
 } from "@/db/schema/purchase-orders";
-import { PurchaseOrderItems } from "@/db/schema/purchase-order-items";
-import { describeError,
+import {
+  describeError,
   generateUuid,
   resolveCertificateFromOptions,
   todayDateString,
@@ -40,6 +41,12 @@ export type CertificateRow = SelectBatchCertificates & {
   qty: SelectBatches["qty"] | null;
   unit: SelectBatches["unit"] | null;
   kg: SelectBatches["kg"] | null;
+};
+
+export type CertificateActionResult = {
+  error?: string;
+  success?: boolean;
+  createdCertificates?: number;
 };
 
 // Every expected certificate with the batch it belongs to, that batch's
@@ -102,12 +109,6 @@ export const getCertificatesReceived = async (): Promise<CertificateRow[]> => {
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch certificates"));
   }
-};
-
-export type CertificateActionResult = {
-  error?: string;
-  success?: boolean;
-  createdCertificates?: number;
 };
 
 // Opens the certificate every registered batch is owed.

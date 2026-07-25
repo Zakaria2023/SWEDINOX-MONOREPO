@@ -29,19 +29,18 @@ import {
   customerStockReasons,
   TextUsageCategory,
 } from "@/lib/enums";
-import { VALIDATION_MESSAGES } from "@/lib/validation-messages";
 import { z } from "zod";
 
 const createOptionalEmailSchema = () =>
   z.union([
-    z.email({ error: VALIDATION_MESSAGES.invalidEmailAddress }),
+    z.email({ error: "Invalid email address" }),
     z.literal(""),
     z.undefined(),
   ]);
 
 const createOptionalUrlSchema = () =>
   z.union([
-    z.url({ error: VALIDATION_MESSAGES.invalidWebsiteUrl }),
+    z.url({ error: "Invalid website URL" }),
     z.literal(""),
     z.undefined(),
   ]);
@@ -63,19 +62,19 @@ export const createAddressSchema = () =>
     billingAttention: z.string().optional(),
     billingAttentionAdditional: z.string().optional(),
     gln: z.union([
-      z.string().max(13, VALIDATION_MESSAGES.glnTooLong),
+      z.string().max(13, "GLN must be 13 characters or less"),
       z.literal(""),
       z.undefined(),
     ]),
     peppolId: z.union([
-      z.string().regex(/^\d{4}:.+$/, VALIDATION_MESSAGES.peppolFormat),
+      z.string().regex(/^\d{4}:.+$/, "Format must be 4 digits, then a colon, then an identifier (for example 1204:identifier)"),
       z.literal(""),
       z.undefined(),
     ]),
     sequenceNumber: z.string().optional(),
     category: z
       .array(z.enum(addressCategories))
-      .min(1, VALIDATION_MESSAGES.atLeastOneCategory),
+      .min(1, "At least one category is required"),
     needCrane: z.boolean().optional(),
     canopyRequired: z.boolean().optional(),
     bundleSeparately: z.boolean().optional(),
@@ -127,11 +126,11 @@ export const DEFAULT_ADDRESS: CompanyFormValues["address"] = {
 
 export const createCompanySchema = () =>
   z.object({
-    companyName: z.string().min(1, VALIDATION_MESSAGES.companyNameRequired),
+    companyName: z.string().min(1, "Company name is required"),
     correspName: z.string().optional(),
     remarks: z.string().optional(),
     lang: z.union([z.enum(companyLangs), z.literal(""), z.undefined()]),
-    roles: z.array(z.enum(companyRoles)).min(1, VALIDATION_MESSAGES.roleRequired),
+    roles: z.array(z.enum(companyRoles)).min(1, "Select at least one role"),
     searchCode1: z.string().optional(),
     searchCode2: z.string().optional(),
     searchCode3: z.string().optional(),
@@ -253,7 +252,7 @@ export const contactDialogSchema = z.object({
   salutation: z.enum(contactSalutations).optional(),
   firstName: z.string().optional(),
   initials: z.string().optional(),
-  lastName: z.string().min(1, VALIDATION_MESSAGES.contactLastNameRequired),
+  lastName: z.string().min(1, "Last name is required"),
   telephone: z.string().optional(),
   mobile: z.string().optional(),
   fax: z.string().optional(),

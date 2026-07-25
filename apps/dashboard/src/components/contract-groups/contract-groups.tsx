@@ -26,7 +26,6 @@ import {
 } from "@/components/shadcn/table";
 import { FormError } from "@/components/ui/form-error";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
-import { VALIDATION_MESSAGES } from "@/lib/validation-messages";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -64,7 +63,7 @@ export const ContractGroups = ({ groups }: Props) => {
   const [formError, setFormError] = useState<string | undefined>();
 
   const form = useForm<GroupFormValues>({
-    resolver: zodResolver(createGroupSchema(VALIDATION_MESSAGES.nameRequired)),
+    resolver: zodResolver(createGroupSchema("Name is required")),
     defaultValues: DEFAULT_VALUES,
   });
 

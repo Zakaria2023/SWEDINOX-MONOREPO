@@ -8,14 +8,19 @@ import { Orders, OrderSurcharges } from "@/db/schema/orders";
 import { Products } from "@/db/schema/products";
 import { RevenueGroups, SelectRevenueGroups } from "@/db/schema/revenue-groups";
 import { Stock } from "@/db/schema/stock";
-import { INVOICE_SURCHARGE_DESCRIPTION_LABELS } from "@/lib/labels";
 import { describeError, generateUuid, todayDateString } from "@/lib/helpers";
+import { INVOICE_SURCHARGE_DESCRIPTION_LABELS } from "@/lib/labels";
 import { desc, eq, getTableColumns } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 export type ChargeListItem = SelectCharges & {
   customerName: SelectCompanies["companyName"] | null;
   revenueGroupName: SelectRevenueGroups["name"] | null;
+};
+
+export type GenerateChargesResult = {
+  error?: string;
+  success?: boolean;
 };
 
 export const getCharges = async (): Promise<ChargeListItem[]> => {
@@ -33,11 +38,6 @@ export const getCharges = async (): Promise<ChargeListItem[]> => {
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch charges"));
   }
-};
-
-export type GenerateChargesResult = {
-  error?: string;
-  success?: boolean;
 };
 
 // Turns orders into charge records: one "line charge" per order line (valued at

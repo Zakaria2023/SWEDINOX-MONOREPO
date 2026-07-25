@@ -10,7 +10,11 @@ import {
   SelectPurchaseOrders,
 } from "@/db/schema/purchase-orders";
 import { Stock } from "@/db/schema/stock";
-import { describeError, formatInternalChargeNumber, generateUuid } from "@/lib/helpers";
+import {
+  describeError,
+  formatInternalChargeNumber,
+  generateUuid,
+} from "@/lib/helpers";
 import { asc, desc, eq, isNotNull, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
@@ -20,6 +24,12 @@ export type BatchRow = SelectBatches & {
   supplierName: SelectCompanies["companyName"] | null;
   productCode: SelectProducts["productCode"] | null;
   productName: SelectProducts["name"] | null;
+};
+
+export type GenerateBatchesResult = {
+  error?: string;
+  success?: boolean;
+  createdBatches?: number;
 };
 
 // Every registered batch, joined to the purchase order it arrived on, its
@@ -55,12 +65,6 @@ export const getBatches = async (): Promise<BatchRow[]> => {
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch batches"));
   }
-};
-
-export type GenerateBatchesResult = {
-  error?: string;
-  success?: boolean;
-  createdBatches?: number;
 };
 
 // Registers a batch for every goods receipt that has none yet.

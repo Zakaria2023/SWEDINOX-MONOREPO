@@ -14,12 +14,11 @@ import {
   workorderReleaseMethods,
   workorderSlipTypes,
 } from "@/lib/enums";
-import { VALIDATION_MESSAGES } from "@/lib/validation-messages";
 import { z } from "zod";
 
 export const createWarehouseSchema = () =>
   z.object({
-    name: z.string().min(1, VALIDATION_MESSAGES.nameRequired),
+    name: z.string().min(1, "Name is required"),
     locationType: z.union([
       z.enum(warehouseLocationTypes),
       z.literal(""),
