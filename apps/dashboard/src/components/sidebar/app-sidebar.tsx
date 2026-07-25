@@ -150,6 +150,10 @@ const NAV_GROUPS: NavGroup[] = [
         href: "/control-stock-increase-external-processing",
       },
       {
+        label: "Control: Revaluation of Stock (FSP)",
+        href: "/control-stock-revaluation-fsp",
+      },
+      {
         label: "Financially Blocked Quotes & Orders",
         href: "/financially-blocked",
       },
