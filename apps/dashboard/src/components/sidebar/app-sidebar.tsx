@@ -138,6 +138,10 @@ const NAV_GROUPS: NavGroup[] = [
       { label: "Charges", href: "/charges" },
       { label: "Journal Entries", href: "/journal-entries" },
       {
+        label: "Cost Price for Invoices to be Sent",
+        href: "/cost-price-invoices-to-be-sent",
+      },
+      {
         label: "Financially Blocked Quotes & Orders",
         href: "/financially-blocked",
       },
