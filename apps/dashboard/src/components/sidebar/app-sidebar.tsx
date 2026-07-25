@@ -142,6 +142,10 @@ const NAV_GROUPS: NavGroup[] = [
         href: "/cost-price-invoices-to-be-sent",
       },
       {
+        label: "CD-deliveries in Progress",
+        href: "/cd-deliveries-in-progress",
+      },
+      {
         label: "Financially Blocked Quotes & Orders",
         href: "/financially-blocked",
       },
