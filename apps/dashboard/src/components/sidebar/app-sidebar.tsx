@@ -154,6 +154,10 @@ const NAV_GROUPS: NavGroup[] = [
         href: "/control-stock-revaluation-fsp",
       },
       {
+        label: "Control: Sawing Waste",
+        href: "/control-sawing-waste",
+      },
+      {
         label: "Financially Blocked Quotes & Orders",
         href: "/financially-blocked",
       },
