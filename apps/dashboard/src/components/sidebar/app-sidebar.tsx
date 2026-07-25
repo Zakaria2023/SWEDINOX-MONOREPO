@@ -157,6 +157,7 @@ const NAV_GROUPS: NavGroup[] = [
         label: "Control: Sawing Waste",
         href: "/control-sawing-waste",
       },
+      { label: "CBS Documentation", href: "/cbs-documentation" },
       {
         label: "Financially Blocked Quotes & Orders",
         href: "/financially-blocked",
