@@ -6,7 +6,9 @@ import {
   deliveryTerms,
   invoicePaymentTerms,
   invoiceSurchargeDescriptions,
+  orderLineStatuses,
   orderMethods,
+  stockUnits,
   transportModes,
   warehouseTransportRegions,
 } from "@/lib/enums";
@@ -31,6 +33,27 @@ export const counterOrderTextSchema = z.object({
   title: z.string().min(1, "Title is required"),
   textCategoryUuid: z.string().optional(),
   textBlock: z.string().min(1, "Text is required"),
+});
+
+export const counterOrderItemSchema = z.object({
+  productUuid: z.string().min(1, "Product is required"),
+  productLabel: z.string().optional(),
+  status: z.enum(orderLineStatuses),
+  deliveryDate: z.string().optional(),
+  description: z.string().optional(),
+  levCode: z.string().optional(),
+  reference: z.string().optional(),
+  unit: z.enum(stockUnits),
+  qtyPlanned: z.string().optional(),
+  qtyActual: z.string().optional(),
+  lengthMm: z.string().optional(),
+  kgPlanned: z.string().optional(),
+  kgActual: z.string().optional(),
+  grossPrice: z.string().optional(),
+  lineDiscount: z.string().optional(),
+  groupDiscount: z.string().optional(),
+  netPrice: z.string().optional(),
+  amount: z.string().optional(),
 });
 
 export const createCounterOrderSchema = () =>
@@ -108,12 +131,16 @@ export const createCounterOrderSchema = () =>
 
     // Texts
     texts: z.array(counterOrderTextSchema),
+
+    // Order lines
+    items: z.array(counterOrderItemSchema),
   });
 
 export type CounterOrderSurchargeValues = z.infer<
   typeof counterOrderSurchargeSchema
 >;
 export type CounterOrderTextValues = z.infer<typeof counterOrderTextSchema>;
+export type CounterOrderItemValues = z.infer<typeof counterOrderItemSchema>;
 export type CounterOrderFormValues = z.infer<
   ReturnType<typeof createCounterOrderSchema>
 >;

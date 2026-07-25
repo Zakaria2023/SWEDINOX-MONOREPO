@@ -4,9 +4,11 @@ import {
   Companies,
   CompanyAddresses,
   Contracts,
+  CounterOrderItems,
   CounterOrders,
   CounterOrderSurcharges,
   db,
+  InsertCounterOrderItems,
   InsertCounterOrders,
   InsertCounterOrderSurcharges,
   InsertTexts,
@@ -35,10 +37,16 @@ export type CounterOrderTextInput = Pick<
   "title" | "textBlock" | "textCategoryUuid"
 >;
 
+export type CounterOrderItemInput = Omit<
+  InsertCounterOrderItems,
+  "id" | "uuid" | "counterOrderUuid" | "createdAt" | "updatedAt"
+>;
+
 export type CounterOrderExtras = {
   surcharges: CounterOrderSurchargeInput[];
   texts: CounterOrderTextInput[];
   contractUuids: string[];
+  items: CounterOrderItemInput[];
 };
 
 export type CounterOrderActionResult = {
@@ -140,6 +148,17 @@ export const createCounterOrder = async (
           .update(Contracts)
           .set({ counterOrderUuid: uuid })
           .where(inArray(Contracts.uuid, extras.contractUuids));
+      }
+
+      if (extras.items.length > 0) {
+        await tx.insert(CounterOrderItems).values(
+          extras.items.map((item, index) => ({
+            ...item,
+            uuid: generateUuid(),
+            counterOrderUuid: uuid,
+            lineNumber: (index + 1) * 10,
+          })),
+        );
       }
     });
   } catch (error) {

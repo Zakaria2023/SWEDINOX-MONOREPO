@@ -12,6 +12,8 @@ import {
 } from "@/app/(dashboard)/counter-orders/actions";
 import { useCounterOrderSubmit } from "@/app/(dashboard)/counter-orders/use-counter-order-submit";
 import { TextCategoryOption } from "@/app/(dashboard)/text-categories/actions";
+import { ProductOption } from "@/app/(dashboard)/products/actions";
+import { ProductGroupOption } from "@/app/(dashboard)/product-groups/actions";
 import {
   ContactOption,
   getContactsByCompanyUuid,
@@ -28,8 +30,10 @@ import { ContractsSection } from "./sections/contracts-section";
 import { DocumentsSection } from "./sections/documents-section";
 import { FinancesSection } from "./sections/finances-section";
 import { LogisticsSection } from "./sections/logistics-section";
+import { OrderLinesSection } from "./sections/order-lines-section";
 import { SurchargesSection } from "./sections/surcharges-section";
 import { TextsSection } from "./sections/texts-section";
+import { WorkordersSection } from "./sections/workorders-section";
 import {
   counterOrderPriorities,
   counterOrderStatuses,
@@ -42,6 +46,8 @@ import { COUNTER_ORDER_PRIORITY_LABELS, COUNTER_ORDER_STATUS_LABELS, DELIVERY_TE
 type CounterOrderFormProps = {
   companies: CompanyOption[];
   textCategories: TextCategoryOption[];
+  products: ProductOption[];
+  productGroups: ProductGroupOption[];
 };
 
 type CheckboxFieldProps = {
@@ -70,6 +76,8 @@ const CheckboxField = ({
 export const CounterOrderForm = ({
   companies,
   textCategories,
+  products,
+  productGroups,
 }: CounterOrderFormProps) => {
   const router = useRouter();
   const { form, isPending, onSubmit, state } = useCounterOrderSubmit();
@@ -460,6 +468,8 @@ export const CounterOrderForm = ({
           </div>
         </section>
 
+        <OrderLinesSection products={products} productGroups={productGroups} />
+
         <LogisticsSection />
 
         <FinancesSection addressOptions={addressOptions} />
@@ -469,6 +479,8 @@ export const CounterOrderForm = ({
         <DocumentsSection />
 
         <ContractsSection contracts={contracts} />
+
+        <WorkordersSection />
 
         <TextsSection textCategories={textCategories} />
 

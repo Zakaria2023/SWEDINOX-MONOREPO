@@ -2,14 +2,19 @@ import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { getCompaniesForSelect } from "@/app/(dashboard)/companies/actions";
 import { getTextCategoriesForSelect } from "@/app/(dashboard)/text-categories/actions";
+import { getProductsForSelect } from "@/app/(dashboard)/products/actions";
+import { getProductGroupsForSelect } from "@/app/(dashboard)/product-groups/actions";
 import { CounterOrderForm } from "@/components/counter-orders/counter-order-form";
 import { PageHeading } from "@/components/layout/page-heading";
 
 const AddCounterOrderPage = async () => {
-  const [companies, textCategories] = await Promise.all([
-    getCompaniesForSelect(),
-    getTextCategoriesForSelect(),
-  ]);
+  const [companies, textCategories, products, productGroups] =
+    await Promise.all([
+      getCompaniesForSelect(),
+      getTextCategoriesForSelect(),
+      getProductsForSelect(),
+      getProductGroupsForSelect(),
+    ]);
 
   return (
     <div className="max-w-5xl space-y-6 p-6">
@@ -26,7 +31,12 @@ const AddCounterOrderPage = async () => {
         title="New Counter Order"
         description="Create an order taken at the counter."
       />
-      <CounterOrderForm companies={companies} textCategories={textCategories} />
+      <CounterOrderForm
+        companies={companies}
+        textCategories={textCategories}
+        products={products}
+        productGroups={productGroups}
+      />
     </div>
   );
 };
