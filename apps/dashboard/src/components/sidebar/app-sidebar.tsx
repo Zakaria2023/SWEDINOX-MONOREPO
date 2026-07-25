@@ -146,6 +146,10 @@ const NAV_GROUPS: NavGroup[] = [
         href: "/cd-deliveries-in-progress",
       },
       {
+        label: "Control: Stock Increase Ext. Processing",
+        href: "/control-stock-increase-external-processing",
+      },
+      {
         label: "Financially Blocked Quotes & Orders",
         href: "/financially-blocked",
       },
