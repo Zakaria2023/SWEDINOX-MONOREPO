@@ -294,6 +294,10 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: "Batches", href: "/batches" },
       { label: "Certificates Received", href: "/certificates-received" },
+      {
+        label: "Certificates to be Linked",
+        href: "/certificates-to-be-linked",
+      },
     ],
   },
   {
