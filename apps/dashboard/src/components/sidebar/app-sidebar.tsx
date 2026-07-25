@@ -224,6 +224,10 @@ const NAV_GROUPS: NavGroup[] = [
       },
       { label: "Purchase Return Orders", href: "/purchase-return-orders" },
       { label: "Purchase Invoices", href: "/purchase-invoices" },
+      {
+        label: "Import Purchase Invoices",
+        href: "/import-purchase-invoices",
+      },
       { label: "Purchase Invoice Line", href: "/purchase-invoice-line" },
       { label: "Purchase Lines", href: "/purchase-lines" },
       { label: "Purchase Quotes Overview", href: "/purchase-quotes-overview" },
