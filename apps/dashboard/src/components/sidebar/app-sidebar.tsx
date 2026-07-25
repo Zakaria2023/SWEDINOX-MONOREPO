@@ -123,6 +123,10 @@ const NAV_GROUPS: NavGroup[] = [
       { label: "Product Prices", href: "/product-prices" },
       { label: "Net Prices", href: "/net-prices" },
       {
+        label: "SFN Statistics Product-Market",
+        href: "/sfn-statistics-product-market",
+      },
+      {
         label: "Option Prices per Product",
         href: "/option-prices-per-product",
       },
