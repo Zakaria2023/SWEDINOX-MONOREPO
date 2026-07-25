@@ -302,6 +302,11 @@ const NAV_GROUPS: NavGroup[] = [
         label: "Certificates to be Linked",
         href: "/certificates-to-be-linked",
       },
+      { label: "Sending Certificates", href: "/sending-certificates" },
+      {
+        label: "Deliveries from the Missing Batch",
+        href: "/deliveries-from-missing-batch",
+      },
     ],
   },
   {
