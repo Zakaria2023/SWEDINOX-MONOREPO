@@ -44,6 +44,12 @@ export type NetPriceRow = SelectContractNetPrices & {
     | null;
 };
 
+export type GenerateNetPricesResult = {
+  error?: string;
+  success?: boolean;
+  createdRows?: number;
+};
+
 const ParentGroups = aliasedTable(ProductGroups, "parent_groups");
 
 // The supplier's own name is fetched in a correlated subquery. The joined
@@ -118,12 +124,6 @@ export const getNetPrices = async (): Promise<NetPriceRow[]> => {
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch net prices"));
   }
-};
-
-export type GenerateNetPricesResult = {
-  error?: string;
-  success?: boolean;
-  createdRows?: number;
 };
 
 // Prices every customer contract that has no net prices yet.

@@ -20,6 +20,21 @@ export type ReservationItem = {
   reservedQty: number; // SUM(reserved_quantity)
 };
 
+export type ReservationRecord = SelectOrderItems & {
+  productCode: SelectProducts["productCode"] | null;
+  productName: SelectProducts["name"] | null;
+  stockProduct: SelectProducts["stockProduct"] | null;
+  standardProduct: SelectProducts["standardProduct"] | null;
+  productLength: SelectProducts["length"] | null;
+  sectionName: SelectWarehouses["name"] | null;
+  locationName: SelectWarehouses["name"] | null;
+  locationType: SelectWarehouses["locationType"] | null;
+  orderId: SelectOrders["id"] | null;
+  companyName: SelectCompanies["companyName"] | null;
+  // Derived label: definitive once invoiced, otherwise temporary.
+  reservationType: string;
+};
+
 // Technical stock vs. what open sales orders hold, aggregated per product.
 export const getReservations = async (): Promise<ReservationItem[]> => {
   try {
@@ -49,21 +64,6 @@ export const getReservations = async (): Promise<ReservationItem[]> => {
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch reservations"));
   }
-};
-
-export type ReservationRecord = SelectOrderItems & {
-  productCode: SelectProducts["productCode"] | null;
-  productName: SelectProducts["name"] | null;
-  stockProduct: SelectProducts["stockProduct"] | null;
-  standardProduct: SelectProducts["standardProduct"] | null;
-  productLength: SelectProducts["length"] | null;
-  sectionName: SelectWarehouses["name"] | null;
-  locationName: SelectWarehouses["name"] | null;
-  locationType: SelectWarehouses["locationType"] | null;
-  orderId: SelectOrders["id"] | null;
-  companyName: SelectCompanies["companyName"] | null;
-  // Derived label: definitive once invoiced, otherwise temporary.
-  reservationType: string;
 };
 
 // One row per stock reservation held by an order line, with the lot's

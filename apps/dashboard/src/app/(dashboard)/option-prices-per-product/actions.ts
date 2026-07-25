@@ -39,6 +39,22 @@ export type OptionPriceRow = SelectProductOptionPrices & {
   optionName: SelectSalesOptions["name"] | null;
 };
 
+export type SalesOptionFields = Omit<
+  InsertSalesOptions,
+  "id" | "uuid" | "createdAt" | "updatedAt"
+>;
+
+export type SalesOptionActionResult = {
+  error?: string;
+  success?: boolean;
+};
+
+export type GenerateOptionPricesResult = {
+  error?: string;
+  success?: boolean;
+  createdRows?: number;
+};
+
 const ParentGroups = aliasedTable(ProductGroups, "parent_groups");
 
 // The supplier's own name is fetched in a correlated subquery. The joined
@@ -110,16 +126,6 @@ export const getOptionPrices = async (): Promise<OptionPriceRow[]> => {
 export const getSalesOptions = async (): Promise<SelectSalesOptions[]> =>
   db.select().from(SalesOptions).orderBy(asc(SalesOptions.code));
 
-export type SalesOptionFields = Omit<
-  InsertSalesOptions,
-  "id" | "uuid" | "createdAt" | "updatedAt"
->;
-
-export type SalesOptionActionResult = {
-  error?: string;
-  success?: boolean;
-};
-
 export const createSalesOption = async (
   fields: SalesOptionFields,
 ): Promise<SalesOptionActionResult> => {
@@ -143,12 +149,6 @@ export const createSalesOption = async (
       error: error instanceof Error ? error.message : "Failed to create option",
     };
   }
-};
-
-export type GenerateOptionPricesResult = {
-  error?: string;
-  success?: boolean;
-  createdRows?: number;
 };
 
 // Opens a price for every product/active-option pair that has none yet, seeded

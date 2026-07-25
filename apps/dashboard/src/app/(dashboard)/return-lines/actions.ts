@@ -24,6 +24,11 @@ export type ReturnLineItem = SelectReturnOrderItems & {
   profitMargin: number;
 };
 
+export type GenerateReturnLinesResult = {
+  error?: string;
+  success?: boolean;
+};
+
 export const getReturnLines = async (): Promise<ReturnLineItem[]> => {
   try {
     const rows = await db
@@ -56,11 +61,6 @@ export const getReturnLines = async (): Promise<ReturnLineItem[]> => {
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch return lines"));
   }
-};
-
-export type GenerateReturnLinesResult = {
-  error?: string;
-  success?: boolean;
 };
 
 // Turns sales orders into return orders + return lines — one return order per

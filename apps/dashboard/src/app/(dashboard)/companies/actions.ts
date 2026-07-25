@@ -229,6 +229,32 @@ export type ContactOption = Pick<
   "uuid" | "id" | "companyUuid" | "firstName" | "lastName"
 >;
 
+// Everything the CompanyForm needs to pre-populate itself in edit mode: the
+// company's own fields mapped into the form's value shape, plus each child
+// collection mapped back into the same Input shapes the create flow uses.
+export type CompanyEditData = {
+  formValues: CompanyFormValues;
+  salesData: CustomerSalesInput;
+  additionalAddresses: AddressFormValues[];
+  communicationSettings: CommSettingInput[];
+  contracts: CompanyContractInput[];
+  contacts: CompanyContactInput[];
+  texts: CompanyTextInput[];
+  projects: CustomerProjectInput[];
+  counterOrders: CompanyCounterOrderInput[];
+  products: CompanyProductInput[];
+  customerProducts: CompanyProductInput[];
+  visitReports: VisitReportInput[];
+  purchaseOrders: CompanyPurchaseOrderInput[];
+  quotes: CompanyQuoteInput[];
+  followUps: CompanyFollowUpInput[];
+  transporterCosts: CompanyTransporterCostInput[];
+  transporterCountries: CompanyTransporterCountryInput[];
+  returnOrders: CompanyReturnOrderInput[];
+  processings: CompanyProcessingInput[];
+  customerStock: CompanyCustomerStockInput[];
+};
+
 export const updateCompanyDocuments = async (
   companyUuid: string,
   documents: Array<{ id: string; fileName: string }>,
@@ -648,32 +674,6 @@ export const createCompany = async (
 };
 
 // ── Edit support ─────────────────────────────────────────────────────────────
-
-// Everything the CompanyForm needs to pre-populate itself in edit mode: the
-// company's own fields mapped into the form's value shape, plus each child
-// collection mapped back into the same Input shapes the create flow uses.
-export type CompanyEditData = {
-  formValues: CompanyFormValues;
-  salesData: CustomerSalesInput;
-  additionalAddresses: AddressFormValues[];
-  communicationSettings: CommSettingInput[];
-  contracts: CompanyContractInput[];
-  contacts: CompanyContactInput[];
-  texts: CompanyTextInput[];
-  projects: CustomerProjectInput[];
-  counterOrders: CompanyCounterOrderInput[];
-  products: CompanyProductInput[];
-  customerProducts: CompanyProductInput[];
-  visitReports: VisitReportInput[];
-  purchaseOrders: CompanyPurchaseOrderInput[];
-  quotes: CompanyQuoteInput[];
-  followUps: CompanyFollowUpInput[];
-  transporterCosts: CompanyTransporterCostInput[];
-  transporterCountries: CompanyTransporterCountryInput[];
-  returnOrders: CompanyReturnOrderInput[];
-  processings: CompanyProcessingInput[];
-  customerStock: CompanyCustomerStockInput[];
-};
 
 // Formats a stored date (Date from a date/timestamp column, or an ISO string)
 // into the "YYYY-MM-DD" the date inputs expect, using local calendar parts so

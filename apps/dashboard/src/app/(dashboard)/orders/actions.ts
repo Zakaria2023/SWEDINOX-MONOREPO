@@ -74,6 +74,23 @@ export type OrderListItem = SelectOrders & {
 
 export type OrderOption = Pick<SelectOrders, "uuid" | "id">;
 
+export type OrderItemDetail = SelectOrderItems & {
+  productCode: SelectProducts["productCode"] | null;
+  productName: SelectProducts["name"] | null;
+};
+
+export type OrderDetail = SelectOrders & {
+  companyName: SelectCompanies["companyName"] | null;
+  contactFirstName: SelectContacts["firstName"] | null;
+  contactLastName: SelectContacts["lastName"] | null;
+  items: OrderItemDetail[];
+};
+
+export type OrderHeaderEdit = Pick<
+  OrderFields,
+  "customerRef" | "ourReference" | "deliveryDate" | "deliveryRemark" | "remarks"
+>;
+
 export const getOrdersForCompany = async (
   companyUuid: string,
 ): Promise<OrderOption[]> =>
@@ -256,18 +273,6 @@ export const createOrder = async (
   }
 };
 
-export type OrderItemDetail = SelectOrderItems & {
-  productCode: SelectProducts["productCode"] | null;
-  productName: SelectProducts["name"] | null;
-};
-
-export type OrderDetail = SelectOrders & {
-  companyName: SelectCompanies["companyName"] | null;
-  contactFirstName: SelectContacts["firstName"] | null;
-  contactLastName: SelectContacts["lastName"] | null;
-  items: OrderItemDetail[];
-};
-
 export const getOrderDetail = async (
   uuid: string,
 ): Promise<OrderDetail | null> => {
@@ -376,11 +381,6 @@ export const cancelOrder = async (uuid: string): Promise<OrderActionResult> => {
     };
   }
 };
-
-export type OrderHeaderEdit = Pick<
-  OrderFields,
-  "customerRef" | "ourReference" | "deliveryDate" | "deliveryRemark" | "remarks"
->;
 
 export const updateOrder = async (
   uuid: string,

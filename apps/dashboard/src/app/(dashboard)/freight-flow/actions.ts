@@ -41,6 +41,20 @@ type Counterparty = {
   domestic: boolean;
 };
 
+export type SfnCounterpartyRow = {
+  uuid: SelectCompanies["uuid"];
+  code: SelectCompanies["id"];
+  companyName: SelectCompanies["companyName"];
+  sfnRole: SelectCompanies["sfnRole"];
+  country: string | null;
+  domestic: boolean;
+};
+
+export type SfnRoleActionResult = {
+  error?: string;
+  success?: boolean;
+};
+
 // The reasons that make a movement a purchase receipt or a sale. Everything
 // else — corrections, damage, production output, cancellations — is neither
 // bought in nor sold out, so it lands in "Stock difference".
@@ -385,15 +399,6 @@ export const getFreightFlow = async (): Promise<FreightFlowRow[]> => {
   }
 };
 
-export type SfnCounterpartyRow = {
-  uuid: SelectCompanies["uuid"];
-  code: SelectCompanies["id"];
-  companyName: SelectCompanies["companyName"];
-  sfnRole: SelectCompanies["sfnRole"];
-  country: string | null;
-  domestic: boolean;
-};
-
 // The companies the goods flow actually reports on — everyone we have bought
 // from or sold to — so the classification list stays as short as the return
 // needs it to be.
@@ -420,11 +425,6 @@ export const getSfnCounterparties = async (): Promise<SfnCounterpartyRow[]> => {
     ...row,
     domestic: isDomesticCountry(row.country),
   }));
-};
-
-export type SfnRoleActionResult = {
-  error?: string;
-  success?: boolean;
 };
 
 export const setSfnRole = async (

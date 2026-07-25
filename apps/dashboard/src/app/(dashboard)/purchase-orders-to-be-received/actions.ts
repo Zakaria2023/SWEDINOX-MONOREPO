@@ -35,6 +35,28 @@ export type PurchaseOrderToReceiveRow = {
   purchaserInitials: SelectPurchaseOrders["purchaserInitials"];
 };
 
+export type ReceiveGoodsResult = {
+  error?: string;
+  success?: boolean;
+  received?: number;
+};
+
+// The transaction handle passed into db.transaction(async (tx) => ...).
+type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+type ReceivableLine = {
+  itemUuid: string;
+  purchaseOrderUuid: string | null;
+  purchaseOrderId: number;
+  supplierUuid: string | null;
+  productUuid: string | null;
+  lineNumber: number | null;
+  unit: SelectPurchaseOrderItems["unit"];
+  quantity: string;
+  qtyReceived: string | null;
+  kgPurchased: string | null;
+};
+
 // Open purchase-order lines still awaiting delivery — quantity not yet fully
 // received on orders that aren't completed or cancelled. Line-level amounts
 // aren't stored (the order total lives on the header), so the value picture is
@@ -88,28 +110,6 @@ export const getPurchaseOrdersToBeReceived = async (): Promise<
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch purchase orders to be received"));
   }
-};
-
-export type ReceiveGoodsResult = {
-  error?: string;
-  success?: boolean;
-  received?: number;
-};
-
-// The transaction handle passed into db.transaction(async (tx) => ...).
-type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
-
-type ReceivableLine = {
-  itemUuid: string;
-  purchaseOrderUuid: string | null;
-  purchaseOrderId: number;
-  supplierUuid: string | null;
-  productUuid: string | null;
-  lineNumber: number | null;
-  unit: SelectPurchaseOrderItems["unit"];
-  quantity: string;
-  qtyReceived: string | null;
-  kgPurchased: string | null;
 };
 
 const RECEIVABLE_LINE_COLUMNS = {

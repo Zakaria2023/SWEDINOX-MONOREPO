@@ -57,6 +57,31 @@ export type InvoiceWithCompany = SelectInvoices & {
   companyCode: SelectCompanies["id"] | null;
 };
 
+export type ReservedOrderItemOption = {
+  uuid: string;
+  quantity: string;
+  productCode: string | null;
+  productName: string | null;
+  orderId: number;
+};
+
+export type InvoiceItemDetail = SelectInvoiceItems & {
+  productCode: SelectProducts["productCode"] | null;
+  productName: SelectProducts["name"] | null;
+};
+
+export type InvoiceDetail = SelectInvoices & {
+  companyName: SelectCompanies["companyName"] | null;
+  companyCode: SelectCompanies["id"] | null;
+  surcharges: SelectInvoiceSurcharges[];
+  items: InvoiceItemDetail[];
+};
+
+export type InvoiceHeaderEdit = Pick<
+  InvoiceFields,
+  "debtorNo" | "invoiceDate" | "expirationDate" | "paymentTerms" | "explanation"
+>;
+
 export const getInvoices = async (): Promise<InvoiceWithCompany[]> =>
   db
     .select({
@@ -76,14 +101,6 @@ export const getInvoicesByCompanyUuid = async (
     .from(Invoices)
     .where(eq(Invoices.companyUuid, companyUuid))
     .orderBy(desc(Invoices.createdAt));
-
-export type ReservedOrderItemOption = {
-  uuid: string;
-  quantity: string;
-  productCode: string | null;
-  productName: string | null;
-  orderId: number;
-};
 
 // Delivered order lines for a customer, ready to be billed on an invoice.
 // Stock already left at delivery, so invoicing these is purely financial.
@@ -256,18 +273,6 @@ export const createInvoice = async (
   }
 };
 
-export type InvoiceItemDetail = SelectInvoiceItems & {
-  productCode: SelectProducts["productCode"] | null;
-  productName: SelectProducts["name"] | null;
-};
-
-export type InvoiceDetail = SelectInvoices & {
-  companyName: SelectCompanies["companyName"] | null;
-  companyCode: SelectCompanies["id"] | null;
-  surcharges: SelectInvoiceSurcharges[];
-  items: InvoiceItemDetail[];
-};
-
 export const getInvoiceDetail = async (
   uuid: string,
 ): Promise<InvoiceDetail | null> => {
@@ -380,11 +385,6 @@ export const cancelInvoice = async (
     };
   }
 };
-
-export type InvoiceHeaderEdit = Pick<
-  InvoiceFields,
-  "debtorNo" | "invoiceDate" | "expirationDate" | "paymentTerms" | "explanation"
->;
 
 export const updateInvoice = async (
   uuid: string,

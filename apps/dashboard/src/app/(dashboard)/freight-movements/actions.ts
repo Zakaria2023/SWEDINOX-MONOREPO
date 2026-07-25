@@ -33,6 +33,8 @@ export type FreightMovementListItem = SelectFreightMovements & {
   supplierName: SelectCompanies["companyName"] | null;
 };
 
+export type FreightMovementDetail = FreightMovementListItem;
+
 const selection = {
   ...getTableColumns(FreightMovements),
   productCode: Products.productCode,
@@ -75,8 +77,6 @@ export const getFreightMovements = async (): Promise<
     throw new Error(describeError(error, "Failed to fetch freight movements"));
   }
 };
-
-export type FreightMovementDetail = FreightMovementListItem;
 
 export const getFreightMovementDetail = async (
   uuid: string,

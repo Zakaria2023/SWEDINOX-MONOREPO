@@ -14,6 +14,22 @@ import { revalidatePath } from "next/cache";
 
 export type UnblockOrderResult = { success?: boolean; error?: string };
 
+export type FinanciallyBlockedRow = {
+  kind: "Order" | "Quote";
+  uuid: string;
+  code: SelectOrders["ourReference"];
+  debtor: SelectCompanies["companyName"];
+  debtorNumber: SelectCompanies["id"];
+  deliveryDate: SelectOrders["deliveryDate"];
+  blockingReason: SelectOrders["blockingReason"];
+  paymentTerms: SelectOrders["paymentTerms"];
+  amount: number;
+  creditLimit: number;
+  openEntrees: number;
+  creditSpace: number;
+  companyBlocked: boolean;
+};
+
 // Release an order's financial block and record the event in the deblock audit
 // trail (which block, when, and by which user).
 export const unblockOrder = async (
@@ -43,22 +59,6 @@ export const unblockOrder = async (
         error instanceof Error ? error.message : "Failed to unblock order",
     };
   }
-};
-
-export type FinanciallyBlockedRow = {
-  kind: "Order" | "Quote";
-  uuid: string;
-  code: SelectOrders["ourReference"];
-  debtor: SelectCompanies["companyName"];
-  debtorNumber: SelectCompanies["id"];
-  deliveryDate: SelectOrders["deliveryDate"];
-  blockingReason: SelectOrders["blockingReason"];
-  paymentTerms: SelectOrders["paymentTerms"];
-  amount: number;
-  creditLimit: number;
-  openEntrees: number;
-  creditSpace: number;
-  companyBlocked: boolean;
 };
 
 // Quotes and orders held on a financial block, enriched with the debtor's open

@@ -67,6 +67,31 @@ export type PurchaseInvoiceListItem = SelectPurchaseInvoices & {
   contactLastName: SelectContacts["lastName"] | null;
 };
 
+export type PurchaseInvoiceHeaderEdit = Pick<
+  PurchaseInvoiceFields,
+  | "invoiceNumberSupplier"
+  | "creditorNo"
+  | "creditorNo2"
+  | "invoiceDate"
+  | "expirationDate"
+  | "paymentTerms"
+  | "remarks"
+>;
+
+export type PurchaseInvoiceItemDetail = SelectPurchaseInvoiceItems & {
+  productCode: SelectProducts["productCode"] | null;
+  productName: SelectProducts["name"] | null;
+};
+
+export type PurchaseInvoiceDetail = SelectPurchaseInvoices & {
+  companyName: SelectCompanies["companyName"] | null;
+  supplierCode: SelectCompanies["id"] | null;
+  contactFirstName: SelectContacts["firstName"] | null;
+  contactLastName: SelectContacts["lastName"] | null;
+  items: PurchaseInvoiceItemDetail[];
+  movements: SelectStockMovements[];
+};
+
 export const getPurchaseInvoices = async (): Promise<
   PurchaseInvoiceListItem[]
 > =>
@@ -281,17 +306,6 @@ export const createPurchaseInvoice = async (
   redirect("/purchase-invoices");
 };
 
-export type PurchaseInvoiceHeaderEdit = Pick<
-  PurchaseInvoiceFields,
-  | "invoiceNumberSupplier"
-  | "creditorNo"
-  | "creditorNo2"
-  | "invoiceDate"
-  | "expirationDate"
-  | "paymentTerms"
-  | "remarks"
->;
-
 export const updatePurchaseInvoice = async (
   uuid: string,
   fields: PurchaseInvoiceHeaderEdit,
@@ -337,20 +351,6 @@ export const updatePurchaseInvoice = async (
   revalidatePath("/purchase-invoices");
   revalidatePath(`/purchase-invoices/${uuid}`);
   redirect(`/purchase-invoices/${uuid}`);
-};
-
-export type PurchaseInvoiceItemDetail = SelectPurchaseInvoiceItems & {
-  productCode: SelectProducts["productCode"] | null;
-  productName: SelectProducts["name"] | null;
-};
-
-export type PurchaseInvoiceDetail = SelectPurchaseInvoices & {
-  companyName: SelectCompanies["companyName"] | null;
-  supplierCode: SelectCompanies["id"] | null;
-  contactFirstName: SelectContacts["firstName"] | null;
-  contactLastName: SelectContacts["lastName"] | null;
-  items: PurchaseInvoiceItemDetail[];
-  movements: SelectStockMovements[];
 };
 
 export const getPurchaseInvoiceDetail = async (

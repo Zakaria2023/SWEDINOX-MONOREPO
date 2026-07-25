@@ -41,6 +41,12 @@ export type ComplaintLineRow = SelectComplaintItems & {
   reportYear: number | null;
 };
 
+export type GenerateComplaintLinesResult = {
+  error?: string;
+  success?: boolean;
+  createdLines?: number;
+};
+
 // Every complaint line, joined to its complaint, that complaint's company, the
 // order line it is about and the section the goods sat in.
 export const getComplaintLines = async (): Promise<ComplaintLineRow[]> => {
@@ -106,12 +112,6 @@ export const getComplaintLines = async (): Promise<ComplaintLineRow[]> => {
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch complaint lines"));
   }
-};
-
-export type GenerateComplaintLinesResult = {
-  error?: string;
-  success?: boolean;
-  createdLines?: number;
 };
 
 // Breaks each complaint that has no lines yet down into the lines it is

@@ -26,6 +26,16 @@ export type StockMovementListItem = SelectStockMovements & {
   invoiceId: SelectInvoices["id"] | null;
 };
 
+export type StockMovementDetail = SelectStockMovements & {
+  productCode: SelectProducts["productCode"] | null;
+  productName: SelectProducts["name"] | null;
+  purchaseOrderId: SelectPurchaseOrders["id"] | null;
+  purchaseInvoiceId: SelectPurchaseInvoices["id"] | null;
+  orderId: SelectOrders["id"] | null;
+  invoiceId: SelectInvoices["id"] | null;
+  stock: SelectStock | null;
+};
+
 export const getStockMovements = async (): Promise<
   StockMovementListItem[]
 > => {
@@ -56,16 +66,6 @@ export const getStockMovements = async (): Promise<
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch stock movements"));
   }
-};
-
-export type StockMovementDetail = SelectStockMovements & {
-  productCode: SelectProducts["productCode"] | null;
-  productName: SelectProducts["name"] | null;
-  purchaseOrderId: SelectPurchaseOrders["id"] | null;
-  purchaseInvoiceId: SelectPurchaseInvoices["id"] | null;
-  orderId: SelectOrders["id"] | null;
-  invoiceId: SelectInvoices["id"] | null;
-  stock: SelectStock | null;
 };
 
 export const getStockMovementDetail = async (

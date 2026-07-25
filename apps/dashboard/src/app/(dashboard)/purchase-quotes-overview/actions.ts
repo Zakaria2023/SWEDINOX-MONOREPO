@@ -29,6 +29,11 @@ export type PurchaseQuoteLineItem = SelectPurchaseQuoteItems & {
   revenueGroupName: SelectRevenueGroups["name"] | null;
 };
 
+export type GenerateQuoteLinesResult = {
+  error?: string;
+  success?: boolean;
+};
+
 export const getPurchaseQuoteLines = async (): Promise<
   PurchaseQuoteLineItem[]
 > => {
@@ -60,11 +65,6 @@ export const getPurchaseQuoteLines = async (): Promise<
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch purchase quotes"));
   }
-};
-
-export type GenerateQuoteLinesResult = {
-  error?: string;
-  success?: boolean;
 };
 
 // Fills purchase quotes that have no lines yet. Lines are taken from what has

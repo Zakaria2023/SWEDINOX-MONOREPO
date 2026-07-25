@@ -39,6 +39,23 @@ export type PendingStockOption = Pick<SelectStock, "uuid" | "quantity"> & {
 
 export type AvailableStockOption = PendingStockOption;
 
+export type StockCorrectionInput = {
+  stockUuid: string;
+  direction: StockMovementType;
+  quantity: string;
+  reason: StockCorrectionReason;
+  note?: string;
+};
+
+export type StockActionResult = {
+  error?: string;
+  success?: boolean;
+};
+
+export type StockDetail = StockListItem & {
+  movements: SelectStockMovements[];
+};
+
 export const getStock = async (): Promise<StockListItem[]> => {
   try {
     return await db
@@ -110,19 +127,6 @@ export const getAvailableStockForSelect = async (): Promise<
     .innerJoin(Products, eq(Stock.productUuid, Products.uuid))
     .where(and(eq(Stock.status, "pending"), gt(availableQuantity, "0")))
     .orderBy(desc(Stock.createdAt));
-
-export type StockCorrectionInput = {
-  stockUuid: string;
-  direction: StockMovementType;
-  quantity: string;
-  reason: StockCorrectionReason;
-  note?: string;
-};
-
-export type StockActionResult = {
-  error?: string;
-  success?: boolean;
-};
 
 export const createStockCorrection = async (
   input: StockCorrectionInput,
@@ -221,10 +225,6 @@ export const createStockCorrection = async (
           : "Failed to apply stock correction",
     };
   }
-};
-
-export type StockDetail = StockListItem & {
-  movements: SelectStockMovements[];
 };
 
 export const getStockDetail = async (

@@ -47,6 +47,20 @@ export type QuoteLineRow = SelectQuoteItems & {
   quoteYear: number | null;
 };
 
+export type QuoteLineActionResult = {
+  error?: string;
+  success?: boolean;
+  createdLines?: number;
+  orderUuid?: string;
+};
+
+export type ConvertibleQuote = {
+  uuid: SelectQuotes["uuid"];
+  quoteId: SelectQuotes["id"];
+  customerName: SelectCompanies["companyName"] | null;
+  lineCount: number;
+};
+
 // The customer's main address city — a scalar subquery rather than a join, so a
 // company with several addresses can't multiply its quote lines.
 const customerCity = sql<
@@ -143,13 +157,6 @@ export const getQuoteLines = async (): Promise<QuoteLineRow[]> => {
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch quote lines"));
   }
-};
-
-export type QuoteLineActionResult = {
-  error?: string;
-  success?: boolean;
-  createdLines?: number;
-  orderUuid?: string;
 };
 
 // Turns an accepted quote into a real order: each quote line is allocated
@@ -360,13 +367,6 @@ export const convertQuoteToOrder = async (
           : "Failed to convert the quote to an order",
     };
   }
-};
-
-export type ConvertibleQuote = {
-  uuid: SelectQuotes["uuid"];
-  quoteId: SelectQuotes["id"];
-  customerName: SelectCompanies["companyName"] | null;
-  lineCount: number;
 };
 
 // Quotes that have lines but have not been converted yet — the ones the

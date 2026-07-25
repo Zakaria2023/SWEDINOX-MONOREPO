@@ -47,6 +47,48 @@ export type PurchaseOrderOption = Pick<
   "uuid" | "id" | "reference"
 >;
 
+export type ReceivablePurchaseOrderItem = {
+  uuid: SelectPurchaseOrderItems["uuid"];
+  productUuid: SelectPurchaseOrderItems["productUuid"];
+  productCode: SelectProducts["productCode"] | null;
+  productName: SelectProducts["name"] | null;
+  purchaseOrderUuid: SelectPurchaseOrderItems["purchaseOrderUuid"];
+  purchaseOrderId: SelectPurchaseOrders["id"] | null;
+  orderedQuantity: SelectPurchaseOrderItems["quantity"];
+  // quantity − qtyReceived, computed in SQL, so it stays a plain string.
+  remainingQuantity: string;
+};
+
+export type PurchaseOrderItemDetail = {
+  uuid: string;
+  productUuid: string;
+  productCode: string;
+  productName: string;
+  orderedQuantity: string;
+  stockUuid: string | null;
+  stockQuantity: string | null;
+  stockStatus: SelectStock["status"] | null;
+};
+
+export type PurchaseOrderDetail = SelectPurchaseOrders & {
+  supplierName: SelectCompanies["companyName"] | null;
+  agentName: SelectCompanies["companyName"] | null;
+  contactFirstName: SelectContacts["firstName"] | null;
+  contactLastName: SelectContacts["lastName"] | null;
+  items: PurchaseOrderItemDetail[];
+};
+
+export type PurchaseOrderHeaderEdit = Pick<
+  PurchaseOrderFields,
+  | "reference"
+  | "ourReference"
+  | "orderCategory"
+  | "paymentTerms"
+  | "deliveryDate"
+  | "deliveryRemark"
+  | "remarks"
+>;
+
 export const getPurchaseOrdersForCompany = async (
   supplierUuid: string,
 ): Promise<PurchaseOrderOption[]> =>
@@ -81,18 +123,6 @@ export const getPurchaseOrders = async (): Promise<PurchaseOrderListItem[]> => {
 // Outstanding quantity on a purchase-order line still waiting to be received:
 // what was ordered minus what earlier purchase invoices already received.
 const receivableQuantity = sql<string>`(${PurchaseOrderItems.quantity} - COALESCE(${PurchaseOrderItems.qtyReceived}, 0))`;
-
-export type ReceivablePurchaseOrderItem = {
-  uuid: SelectPurchaseOrderItems["uuid"];
-  productUuid: SelectPurchaseOrderItems["productUuid"];
-  productCode: SelectProducts["productCode"] | null;
-  productName: SelectProducts["name"] | null;
-  purchaseOrderUuid: SelectPurchaseOrderItems["purchaseOrderUuid"];
-  purchaseOrderId: SelectPurchaseOrders["id"] | null;
-  orderedQuantity: SelectPurchaseOrderItems["quantity"];
-  // quantity − qtyReceived, computed in SQL, so it stays a plain string.
-  remainingQuantity: string;
-};
 
 // Purchase-order lines from a supplier that still have quantity left to
 // receive — the pool a purchase invoice draws from to book goods into stock.
@@ -209,25 +239,6 @@ export const createPurchaseOrder = async (
   }
 };
 
-export type PurchaseOrderItemDetail = {
-  uuid: string;
-  productUuid: string;
-  productCode: string;
-  productName: string;
-  orderedQuantity: string;
-  stockUuid: string | null;
-  stockQuantity: string | null;
-  stockStatus: SelectStock["status"] | null;
-};
-
-export type PurchaseOrderDetail = SelectPurchaseOrders & {
-  supplierName: SelectCompanies["companyName"] | null;
-  agentName: SelectCompanies["companyName"] | null;
-  contactFirstName: SelectContacts["firstName"] | null;
-  contactLastName: SelectContacts["lastName"] | null;
-  items: PurchaseOrderItemDetail[];
-};
-
 export const getPurchaseOrderDetail = async (
   uuid: string,
 ): Promise<PurchaseOrderDetail | null> => {
@@ -331,17 +342,6 @@ export const cancelPurchaseOrder = async (
     };
   }
 };
-
-export type PurchaseOrderHeaderEdit = Pick<
-  PurchaseOrderFields,
-  | "reference"
-  | "ourReference"
-  | "orderCategory"
-  | "paymentTerms"
-  | "deliveryDate"
-  | "deliveryRemark"
-  | "remarks"
->;
 
 export const updatePurchaseOrder = async (
   uuid: string,

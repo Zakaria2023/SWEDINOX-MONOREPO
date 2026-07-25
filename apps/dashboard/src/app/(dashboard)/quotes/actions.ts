@@ -49,6 +49,10 @@ export type QuoteListItem = SelectQuotes & {
   contactLastName: SelectContacts["lastName"] | null;
 };
 
+// One priced quote line, ready to insert. The price is derived, never supplied
+// by the caller.
+type PricedLine = typeof QuoteItems.$inferInsert;
+
 export const getQuotes = async (): Promise<QuoteListItem[]> => {
   try {
     const rows = await db
@@ -67,10 +71,6 @@ export const getQuotes = async (): Promise<QuoteListItem[]> => {
     throw new Error(describeError(error, "Failed to fetch quotes"));
   }
 };
-
-// One priced quote line, ready to insert. The price is derived, never supplied
-// by the caller.
-type PricedLine = typeof QuoteItems.$inferInsert;
 
 // Prices the quote's lines against the price list and the customer's contract:
 //

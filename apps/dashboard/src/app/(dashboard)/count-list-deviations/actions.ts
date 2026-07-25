@@ -15,6 +15,8 @@ export type CountListDeviationListItem = SelectCountListDeviations & {
   length: SelectProducts["length"] | null;
 };
 
+export type CountListDeviationDetail = CountListDeviationListItem;
+
 const selection = {
   ...getTableColumns(CountListDeviations),
   productCode: Products.productCode,
@@ -35,8 +37,6 @@ export const getCountListDeviations = async (): Promise<
     throw new Error(describeError(error, "Failed to fetch count-list deviations"));
   }
 };
-
-export type CountListDeviationDetail = CountListDeviationListItem;
 
 export const getCountListDeviationDetail = async (
   uuid: string,

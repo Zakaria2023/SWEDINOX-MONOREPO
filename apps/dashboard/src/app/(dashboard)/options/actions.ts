@@ -36,6 +36,12 @@ export type OptionRevenueRow = {
   lineCount: number;
 };
 
+export type GenerateOptionChargesResult = {
+  error?: string;
+  success?: boolean;
+  createdCharges?: number;
+};
+
 export const getOptionRevenue = async (): Promise<OptionRevenueRow[]> => {
   try {
     const rows = await db
@@ -90,12 +96,6 @@ export const getOptionRevenue = async (): Promise<OptionRevenueRow[]> => {
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch option revenue"));
   }
-};
-
-export type GenerateOptionChargesResult = {
-  error?: string;
-  success?: boolean;
-  createdCharges?: number;
 };
 
 // Books the priced options onto the order lines that don't carry them yet.

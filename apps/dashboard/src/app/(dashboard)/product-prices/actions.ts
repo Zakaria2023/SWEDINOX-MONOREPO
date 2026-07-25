@@ -22,6 +22,12 @@ export type ProductPriceRow = SelectProducts & {
     | null;
 };
 
+export type RecalculatePricesResult = {
+  error?: string;
+  success?: boolean;
+  updated?: number;
+};
+
 // A product group is at most two levels deep here: a group with no parent is
 // itself the main group, otherwise its parent is the main group and the group
 // is the subgroup.
@@ -68,12 +74,6 @@ export const getProductPrices = async (): Promise<ProductPriceRow[]> => {
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch product prices"));
   }
-};
-
-export type RecalculatePricesResult = {
-  error?: string;
-  success?: boolean;
-  updated?: number;
 };
 
 // Recomputes the sales price chain for every product:
