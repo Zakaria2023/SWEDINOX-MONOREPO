@@ -10,10 +10,13 @@ import { PurchaseOrders } from "@/db/schema/purchase-orders";
 import { RevenueGroups, SelectRevenueGroups } from "@/db/schema/revenue-groups";
 import { SfnCounterpartyRole } from "@/lib/enums";
 import {
+  buildPeriods,
   describeError,
-  currentYear,
   isDomesticCountry,
+  periodKey,
+  resolveCounterparty,
   toKilograms,
+  type Counterparty,
 } from "@/lib/helpers";
 import { and, asc, eq, gte, lt, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -39,11 +42,6 @@ export type FreightFlowRow = {
   toOrderManufacturers: number;
   onOrderNonProducers: number;
   onOrderAbroad: number;
-};
-
-type Counterparty = {
-  role: SfnCounterpartyRole;
-  domestic: boolean;
 };
 
 export type SfnCounterpartyRow = {
@@ -95,16 +93,28 @@ const emptyRow = (
   onOrderAbroad: 0,
 });
 
+// The country of a company's first address (lowest sequence number), embedded
+// as a correlated scalar subquery wherever a query needs to know whether a
+// counterparty sits at home or abroad.
+const firstAddressCountry = db
+  .select({ country: CompanyAddresses.country })
+  .from(CompanyAddresses)
+  .where(eq(CompanyAddresses.companyUuid, Companies.uuid))
+  .orderBy(asc(CompanyAddresses.sequenceNumber))
+  .limit(1);
+
+const companyCountry = sql<string | null>`(${firstAddressCountry})`;
+
 // Every company with the two things that decide which column it feeds: its
 // federation role and whether it sits at home or abroad. A company with no role
 // recorded counts as a non-member.
 const loadCounterparties = async (): Promise<Map<string, Counterparty>> => {
-  const country = sql<
-    string | null
-  >`(SELECT ${CompanyAddresses.country} FROM ${CompanyAddresses} WHERE ${CompanyAddresses.companyUuid} = ${Companies.uuid} ORDER BY ${CompanyAddresses.sequenceNumber} ASC LIMIT 1)`;
-
   const rows = await db
-    .select({ uuid: Companies.uuid, sfnRole: Companies.sfnRole, country })
+    .select({
+      uuid: Companies.uuid,
+      sfnRole: Companies.sfnRole,
+      country: companyCountry,
+    })
     .from(Companies);
 
   return new Map(
@@ -117,25 +127,6 @@ const loadCounterparties = async (): Promise<Map<string, Counterparty>> => {
     ]),
   );
 };
-
-const resolveCounterparty = (
-  counterparties: Map<string, Counterparty>,
-  uuid: string | null,
-): Counterparty =>
-  (uuid ? counterparties.get(uuid) : undefined) ?? {
-    role: "non_member",
-    domestic: true,
-  };
-
-const clampMonth = (month: number) => Math.min(12, Math.max(1, month));
-
-// The report covers the current month.
-const buildPeriods = (): Array<{ year: number; month: number }> => {
-  const now = new Date();
-  return [{ year: currentYear(), month: clampMonth(now.getMonth() + 1) }];
-};
-
-const periodKey = (year: number, month: number) => `${year}-${month}`;
 
 // The monthly goods flow behind the federation (SFN) return: what was in stock
 // at the start of the month, what came in and from whom, what went out and to
@@ -361,9 +352,7 @@ export const getFreightFlow = async (): Promise<FreightFlowRow[]> => {
     const result: FreightFlowRow[] = [];
 
     for (const [key, group] of groups) {
-      let balance = runningBalance.get(key) ?? 0;
-
-      periods.forEach((period, index) => {
+      periods.reduce((balance, period, index) => {
         const cell = bucketKey(period.year, period.month, key);
         const row =
           buckets.get(cell) ?? emptyRow(period.year, period.month, group);
@@ -378,7 +367,6 @@ export const getFreightFlow = async (): Promise<FreightFlowRow[]> => {
           row.suppliedSfn + row.suppliedNonSfn + row.deliveredAbroad;
         row.endingInventory =
           balance + received - supplied + row.stockDifference;
-        balance = row.endingInventory;
 
         // The outstanding order book is a position as at today, so it belongs
         // on the last reported period only.
@@ -390,7 +378,8 @@ export const getFreightFlow = async (): Promise<FreightFlowRow[]> => {
         }
 
         result.push(row);
-      });
+        return row.endingInventory;
+      }, runningBalance.get(key) ?? 0);
     }
 
     return result.sort(
@@ -408,10 +397,6 @@ export const getFreightFlow = async (): Promise<FreightFlowRow[]> => {
 // from or sold to — so the classification list stays as short as the return
 // needs it to be.
 export const getSfnCounterparties = async (): Promise<SfnCounterpartyRow[]> => {
-  const country = sql<
-    string | null
-  >`(SELECT ${CompanyAddresses.country} FROM ${CompanyAddresses} WHERE ${CompanyAddresses.companyUuid} = ${Companies.uuid} ORDER BY ${CompanyAddresses.sequenceNumber} ASC LIMIT 1)`;
-
   const traded = sql`EXISTS (SELECT 1 FROM ${FreightMovements} WHERE ${FreightMovements.supplierUuid} = ${Companies.uuid} OR ${FreightMovements.companyUuid} = ${Companies.uuid})`;
 
   const rows = await db
@@ -420,7 +405,7 @@ export const getSfnCounterparties = async (): Promise<SfnCounterpartyRow[]> => {
       code: Companies.id,
       companyName: Companies.companyName,
       sfnRole: Companies.sfnRole,
-      country,
+      country: companyCountry,
     })
     .from(Companies)
     .where(traded)

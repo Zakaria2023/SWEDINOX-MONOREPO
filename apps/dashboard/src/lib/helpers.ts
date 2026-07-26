@@ -14,6 +14,7 @@ import type {
   OrderWeightType,
   PurchaseOrderStatus,
   SalesRepresentative,
+  SfnCounterpartyRole,
   StockMode,
   StockUnit,
   StockMovementType,
@@ -995,3 +996,47 @@ export const orderDeblockTypeLabel = (
   value: OrderDeblockType | string | null | undefined,
 ): string =>
   value ? (ORDER_DEBLOCK_TYPE_LABELS[value as OrderDeblockType] ?? value) : "—";
+
+/**
+ * A goods-flow counterparty as the SFN return classifies it: its federation
+ * role plus whether it sits at home or abroad.
+ */
+export type Counterparty = {
+  role: SfnCounterpartyRole;
+  domestic: boolean;
+};
+
+/**
+ * The counterparty behind a company uuid, falling back to a domestic
+ * non-member when the uuid is missing or unknown — the default the goods-flow
+ * return classifies unrecorded companies under.
+ */
+export const resolveCounterparty = (
+  counterparties: Map<string, Counterparty>,
+  uuid: string | null,
+): Counterparty =>
+  (uuid ? counterparties.get(uuid) : undefined) ?? {
+    role: "non_member",
+    domestic: true,
+  };
+
+/**
+ * Clamps a month number into the valid 1–12 calendar range.
+ */
+export const clampMonth = (month: number): number =>
+  Math.min(12, Math.max(1, month));
+
+/**
+ * The periods a monthly report covers — currently just the running month of
+ * the current year.
+ */
+export const buildPeriods = (): Array<{ year: number; month: number }> => {
+  const now = new Date();
+  return [{ year: currentYear(), month: clampMonth(now.getMonth() + 1) }];
+};
+
+/**
+ * The `year-month` string reports bucket rows by when grouping per period.
+ */
+export const periodKey = (year: number, month: number): string =>
+  `${year}-${month}`;
