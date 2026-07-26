@@ -1,6 +1,6 @@
 "use server";
-import { describeError } from "@/lib/helpers";
 
+import { describeError } from "@/lib/helpers";
 import { db } from "@/db";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
@@ -89,7 +89,10 @@ export const getOrderLinesStillToBeCalled = async (): Promise<
       .innerJoin(Orders, eq(OrderItems.orderUuid, Orders.uuid))
       .innerJoin(Companies, eq(Orders.companyUuid, Companies.uuid))
       .innerJoin(Products, eq(OrderItems.productUuid, Products.uuid))
-      .leftJoin(RevenueGroups, eq(Products.revenueGroupUuid, RevenueGroups.uuid))
+      .leftJoin(
+        RevenueGroups,
+        eq(Products.revenueGroupUuid, RevenueGroups.uuid),
+      )
       .leftJoin(primaryContact, eq(Companies.uuid, primaryContact.companyUuid))
       .where(sql`${OrderItems.qtyPlanned} > ${OrderItems.qtyCallOff}`)
       .orderBy(asc(OrderItems.deliveryDate));
@@ -118,7 +121,8 @@ export const getOrderLinesStillToBeCalled = async (): Promise<
         weightKg: Number(row.weightKg ?? 0),
         amount,
         quantityNotCalled: qtyNotCalled,
-        weightToBeCalled: Number(row.weightKg ?? 0) - Number(row.kgCallOff ?? 0),
+        weightToBeCalled:
+          Number(row.weightKg ?? 0) - Number(row.kgCallOff ?? 0),
         amountToBeCalled:
           qtyPlanned > 0 ? amount * (qtyNotCalled / qtyPlanned) : 0,
         representative: row.representative,
@@ -126,6 +130,8 @@ export const getOrderLinesStillToBeCalled = async (): Promise<
       };
     });
   } catch (error) {
-    throw new Error(describeError(error, "Failed to fetch order lines still to be called"));
+    throw new Error(
+      describeError(error, "Failed to fetch order lines still to be called"),
+    );
   }
 };
