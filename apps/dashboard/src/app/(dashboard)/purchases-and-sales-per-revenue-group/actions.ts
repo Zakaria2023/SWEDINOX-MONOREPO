@@ -1,6 +1,6 @@
 "use server";
-import { describeError } from "@/lib/helpers";
 
+import { describeError } from "@/lib/helpers";
 import { db } from "@/db";
 import { InvoiceItems } from "@/db/schema/invoice-items";
 import { Invoices } from "@/db/schema/invoices";
@@ -58,9 +58,18 @@ export const getPurchasesAndSalesPerRevenueGroup = async (): Promise<
       .innerJoin(Invoices, eq(InvoiceItems.invoiceUuid, Invoices.uuid))
       .innerJoin(OrderItems, eq(InvoiceItems.orderItemUuid, OrderItems.uuid))
       .innerJoin(Products, eq(InvoiceItems.productUuid, Products.uuid))
-      .leftJoin(RevenueGroups, eq(Products.revenueGroupUuid, RevenueGroups.uuid))
+      .leftJoin(
+        RevenueGroups,
+        eq(Products.revenueGroupUuid, RevenueGroups.uuid),
+      )
       .leftJoin(Stock, eq(OrderItems.stockUuid, Stock.uuid))
-      .groupBy(RevenueGroups.uuid, RevenueGroups.number, RevenueGroups.name, salesYear, salesMonth);
+      .groupBy(
+        RevenueGroups.uuid,
+        RevenueGroups.number,
+        RevenueGroups.name,
+        salesYear,
+        salesMonth,
+      );
 
     const purchaseYear = sql<number>`YEAR(${PurchaseInvoices.invoiceDate})`;
     const purchaseMonth = sql<number>`MONTH(${PurchaseInvoices.invoiceDate})`;
@@ -80,9 +89,18 @@ export const getPurchasesAndSalesPerRevenueGroup = async (): Promise<
         eq(PurchaseInvoiceItems.purchaseInvoiceUuid, PurchaseInvoices.uuid),
       )
       .innerJoin(Products, eq(PurchaseInvoiceItems.productUuid, Products.uuid))
-      .leftJoin(RevenueGroups, eq(Products.revenueGroupUuid, RevenueGroups.uuid))
+      .leftJoin(
+        RevenueGroups,
+        eq(Products.revenueGroupUuid, RevenueGroups.uuid),
+      )
       .leftJoin(Stock, eq(PurchaseInvoiceItems.stockUuid, Stock.uuid))
-      .groupBy(RevenueGroups.uuid, RevenueGroups.number, RevenueGroups.name, purchaseYear, purchaseMonth);
+      .groupBy(
+        RevenueGroups.uuid,
+        RevenueGroups.number,
+        RevenueGroups.name,
+        purchaseYear,
+        purchaseMonth,
+      );
 
     const buckets = new Map<string, Bucket>();
 
@@ -117,7 +135,12 @@ export const getPurchasesAndSalesPerRevenueGroup = async (): Promise<
     for (const row of salesRows) {
       const year = row.year != null ? Number(row.year) : null;
       const month = row.month != null ? Number(row.month) : null;
-      const bucket = ensure(row.revenueGroupNumber, row.revenueGroupName, year, month);
+      const bucket = ensure(
+        row.revenueGroupNumber,
+        row.revenueGroupName,
+        year,
+        month,
+      );
       bucket.weight += Number(row.weight);
       bucket.revenue += Number(row.revenue);
       bucket.profit += Number(row.revenue) - Number(row.cost);
@@ -126,17 +149,29 @@ export const getPurchasesAndSalesPerRevenueGroup = async (): Promise<
     for (const row of purchaseRows) {
       const year = row.year != null ? Number(row.year) : null;
       const month = row.month != null ? Number(row.month) : null;
-      const bucket = ensure(row.revenueGroupNumber, row.revenueGroupName, year, month);
+      const bucket = ensure(
+        row.revenueGroupNumber,
+        row.revenueGroupName,
+        year,
+        month,
+      );
       bucket.purchaseKg += Number(row.purchaseKg);
       bucket.purchaseRevenue += Number(row.purchaseRevenue);
     }
 
     return [...buckets.values()].map((bucket) => ({
       ...bucket,
-      profitMargin: bucket.revenue === 0 ? 0 : (bucket.profit / bucket.revenue) * 100,
-      avgSalesPricePerKg: bucket.weight === 0 ? 0 : bucket.revenue / bucket.weight,
+      profitMargin:
+        bucket.revenue === 0 ? 0 : (bucket.profit / bucket.revenue) * 100,
+      avgSalesPricePerKg:
+        bucket.weight === 0 ? 0 : bucket.revenue / bucket.weight,
     }));
   } catch (error) {
-    throw new Error(describeError(error, "Failed to fetch purchases and sales per revenue group"));
+    throw new Error(
+      describeError(
+        error,
+        "Failed to fetch purchases and sales per revenue group",
+      ),
+    );
   }
 };
