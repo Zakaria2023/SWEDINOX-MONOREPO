@@ -150,14 +150,13 @@ export const generatePurchaseQuoteLines =
                 revenueGroupUuid: product.revenueGroupUuid,
               }));
 
-        let lineNumber = 1;
-        for (const line of sourceLines) {
+        for (const [index, line] of sourceLines.entries()) {
           rows.push({
             uuid: generateUuid(),
             purchaseQuoteUuid: quote.uuid,
             productUuid: line.productUuid,
             revenueGroupUuid: line.revenueGroupUuid,
-            lineNumber: lineNumber++,
+            lineNumber: index + 1,
             description: line.productName,
             quantity: line.quantity,
             unit: line.unit ?? "st",

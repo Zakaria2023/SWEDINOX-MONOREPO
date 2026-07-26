@@ -131,15 +131,14 @@ export const generateReturnLinesFromOrders =
             orderDate: today,
           });
 
-          let lineNumber = 1;
-          for (const item of items) {
+          for (const [index, item] of items.entries()) {
             await tx.insert(ReturnOrderItems).values({
               uuid: generateUuid(),
               returnOrderUuid,
               productUuid: item.productUuid,
               originalOrderUuid: order.uuid,
               originalOrderLine: item.lineNumber,
-              lineNumber: lineNumber++,
+              lineNumber: index + 1,
               quantity: item.quantity,
               returnQty: item.quantity,
               unit: item.unit,

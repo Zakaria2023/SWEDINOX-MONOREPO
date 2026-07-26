@@ -182,14 +182,14 @@ export const createOrder = async (
     await db.transaction(async (tx) => {
       await tx.insert(Orders).values({ ...fields, uuid });
 
-      let lineNumber = 0;
-      for (const item of items) {
+      // Only items whose stock lot still exists become order lines; the line
+      // number counts those, not the raw submitted rows.
+      const reservableItems = items.flatMap((item) => {
         const stockRow = stockByUuid.get(item.stockUuid);
-        if (!stockRow) {
-          continue;
-        }
-        lineNumber += 1;
+        return stockRow ? [{ item, stockRow }] : [];
+      });
 
+      for (const [index, { item, stockRow }] of reservableItems.entries()) {
         const nextReserved = (
           Number(stockRow.reservedQuantity) + Number(item.quantity)
         ).toFixed(3);
@@ -227,7 +227,7 @@ export const createOrder = async (
           // full quantity is still "to be called" until call-offs reduce it.
           qtyPlanned: item.quantity,
           qtyReserved: item.quantity,
-          lineNumber,
+          lineNumber: index + 1,
           status: "reserved",
         });
       }

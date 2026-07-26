@@ -81,20 +81,21 @@ export const getRevenueVsBudget = async (): Promise<RevenueVsBudgetRow[]> => {
       rgName: string | null,
     ): Bucket => {
       const key = uuid ?? "none";
-      let bucket = buckets.get(key);
-      if (!bucket) {
-        bucket = {
-          revenueGroupNumber: rgNumber,
-          revenueGroupName: rgName,
-          weight: 0,
-          weightBudget: 0,
-          revenue: 0,
-          revenueBudget: 0,
-          profit: 0,
-          profitBudget: 0,
-        };
-        buckets.set(key, bucket);
+      const existing = buckets.get(key);
+      if (existing) {
+        return existing;
       }
+      const bucket: Bucket = {
+        revenueGroupNumber: rgNumber,
+        revenueGroupName: rgName,
+        weight: 0,
+        weightBudget: 0,
+        revenue: 0,
+        revenueBudget: 0,
+        profit: 0,
+        profitBudget: 0,
+      };
+      buckets.set(key, bucket);
       return bucket;
     };
 

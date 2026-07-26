@@ -56,26 +56,25 @@ export const saveVisitReport = async (
 
   try {
     const contactUuid = parsed.data.contactIndex || null;
-    let representative: string | null = null;
 
-    if (contactUuid) {
-      const [contact] = await db
-        .select()
-        .from(Contacts)
-        .where(
-          and(
-            eq(Contacts.uuid, contactUuid),
-            eq(Contacts.companyUuid, payload.companyUuid),
-          ),
-        )
-        .limit(1);
+    const [contact] = contactUuid
+      ? await db
+          .select()
+          .from(Contacts)
+          .where(
+            and(
+              eq(Contacts.uuid, contactUuid),
+              eq(Contacts.companyUuid, payload.companyUuid),
+            ),
+          )
+          .limit(1)
+      : [];
 
-      if (!contact) {
-        return { error: "The selected contact no longer exists" };
-      }
-
-      representative = contactDisplayName(contact);
+    if (contactUuid && !contact) {
+      return { error: "The selected contact no longer exists" };
     }
+
+    const representative = contact ? contactDisplayName(contact) : null;
 
     const columns = {
       ...visitReportValuesToColumns(parsed.data),

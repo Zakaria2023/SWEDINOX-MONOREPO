@@ -230,8 +230,8 @@ export const convertQuoteToOrder = async (
       if (!item.productUuid) {
         return { error: `Quote line ${item.lineNumber} has no product.` };
       }
-      let remaining = Number(item.quantity ?? 0);
-      if (remaining <= 0) {
+      const requested = Number(item.quantity ?? 0);
+      if (requested <= 0) {
         continue;
       }
 
@@ -247,21 +247,23 @@ export const convertQuoteToOrder = async (
         )
         .orderBy(asc(Stock.receiptDate), asc(Stock.id));
 
-      for (const lot of lots) {
-        if (remaining <= 0) {
-          break;
+      // Greedily take from the oldest lots first, carrying the still-needed
+      // quantity through the fold.
+      const remaining = lots.reduce((left, lot) => {
+        if (left <= 0) {
+          return left;
         }
         const alreadyTaken = takenPerLot.get(lot.uuid) ?? 0;
         const free =
           Number(lot.quantity) - Number(lot.reservedQuantity) - alreadyTaken;
         if (free <= 0) {
-          continue;
+          return left;
         }
-        const take = Math.min(free, remaining);
+        const take = Math.min(free, left);
         allocations.push({ line: item, stock: lot, quantity: take });
         takenPerLot.set(lot.uuid, alreadyTaken + take);
-        remaining -= take;
-      }
+        return left - take;
+      }, requested);
 
       if (remaining > 0) {
         return {
@@ -312,9 +314,7 @@ export const convertQuoteToOrder = async (
           .where(eq(Contracts.uuid, quote.contractUuid));
       }
 
-      let lineNumber = 0;
-      for (const allocation of allocations) {
-        lineNumber += 1;
+      for (const [index, allocation] of allocations.entries()) {
         const quantity = allocation.quantity.toFixed(3);
         const nextReserved = (
           Number(allocation.stock.reservedQuantity) + allocation.quantity
@@ -350,7 +350,7 @@ export const convertQuoteToOrder = async (
           quantity,
           qtyPlanned: quantity,
           qtyReserved: quantity,
-          lineNumber,
+          lineNumber: index + 1,
           status: "reserved",
           lineType: allocation.line.lineType,
           seller: quote.seller,

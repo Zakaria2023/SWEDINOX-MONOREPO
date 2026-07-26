@@ -157,7 +157,6 @@ export const recalculateProductPrices = async (
     }
 
     const priceDate = todayDateString();
-    let updated = 0;
 
     for (const product of products) {
       const app = appByProduct.get(product.uuid) ?? 0;
@@ -184,12 +183,11 @@ export const recalculateProductPrices = async (
           priceDate,
         })
         .where(eq(Products.uuid, product.uuid));
-      updated += 1;
     }
 
     revalidatePath("/product-prices");
     revalidatePath("/products");
-    return { success: true, updated };
+    return { success: true, updated: products.length };
   } catch (error) {
     return {
       error:

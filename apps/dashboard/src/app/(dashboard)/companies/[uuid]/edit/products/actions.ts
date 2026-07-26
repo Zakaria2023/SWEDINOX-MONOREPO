@@ -79,17 +79,16 @@ export const saveCompanyProduct = async (
 
   try {
     if (payload.productUuid) {
-      let identityColumns: Partial<InsertProducts> = {};
+      const productChanged = parsed.data.productUuid !== payload.productUuid;
+      const picked = productChanged
+        ? await getPickedProduct(parsed.data.productUuid)
+        : null;
 
-      if (parsed.data.productUuid !== payload.productUuid) {
-        const picked = await getPickedProduct(parsed.data.productUuid);
-
-        if (!picked) {
-          return { error: "Selected product not found" };
-        }
-
-        identityColumns = picked;
+      if (productChanged && !picked) {
+        return { error: "Selected product not found" };
       }
+
+      const identityColumns: Partial<InsertProducts> = picked ?? {};
 
       await db
         .update(Products)

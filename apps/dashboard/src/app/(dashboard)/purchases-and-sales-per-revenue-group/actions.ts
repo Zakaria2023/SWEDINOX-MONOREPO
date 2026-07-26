@@ -93,23 +93,24 @@ export const getPurchasesAndSalesPerRevenueGroup = async (): Promise<
       month: number | null,
     ): Bucket => {
       const key = keyOf(rgNumber, rgName, year, month);
-      let bucket = buckets.get(key);
-      if (!bucket) {
-        bucket = {
-          revenueGroupNumber: rgNumber,
-          revenueGroupName: rgName,
-          year,
-          month,
-          purchaseKg: 0,
-          purchaseRevenue: 0,
-          weight: 0,
-          revenue: 0,
-          profit: 0,
-          profitMargin: 0,
-          avgSalesPricePerKg: 0,
-        };
-        buckets.set(key, bucket);
+      const existing = buckets.get(key);
+      if (existing) {
+        return existing;
       }
+      const bucket: Bucket = {
+        revenueGroupNumber: rgNumber,
+        revenueGroupName: rgName,
+        year,
+        month,
+        purchaseKg: 0,
+        purchaseRevenue: 0,
+        weight: 0,
+        revenue: 0,
+        profit: 0,
+        profitMargin: 0,
+        avgSalesPricePerKg: 0,
+      };
+      buckets.set(key, bucket);
       return bucket;
     };
 

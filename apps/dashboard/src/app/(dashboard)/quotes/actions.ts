@@ -3,8 +3,11 @@
 import { db } from "@/db";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
-import { ContractNetPrices } from "@/db/schema/contract-net-prices";
-import { Contracts } from "@/db/schema/contracts";
+import {
+  ContractNetPrices,
+  SelectContractNetPrices,
+} from "@/db/schema/contract-net-prices";
+import { Contracts, SelectContracts } from "@/db/schema/contracts";
 import { Products } from "@/db/schema/products";
 import { QuoteItems } from "@/db/schema/quote-items";
 import { InsertQuotes, Quotes, SelectQuotes } from "@/db/schema/quotes";
@@ -72,6 +75,58 @@ export const getQuotes = async (): Promise<QuoteListItem[]> => {
   }
 };
 
+// Resolves the price applied to one quote line: an agreed net price wins
+// outright; otherwise the contract's gross price and tiered discounts apply;
+// otherwise the list price stands on its own.
+const resolveLinePricing = (
+  listPrice: number,
+  quantity: number,
+  applicableNetPrice: SelectContractNetPrices | undefined,
+  contract: SelectContracts | undefined,
+): {
+  grossPrice: number;
+  groupDiscount: number;
+  lineDiscount: number;
+  netPrice: number;
+} => {
+  if (applicableNetPrice) {
+    return {
+      grossPrice: listPrice,
+      groupDiscount: 0,
+      lineDiscount: 0,
+      netPrice: Number(applicableNetPrice.netPrice ?? 0),
+    };
+  }
+  if (!contract) {
+    return {
+      grossPrice: listPrice,
+      groupDiscount: 0,
+      lineDiscount: 0,
+      netPrice: listPrice,
+    };
+  }
+  const grossPrice = contract.grossPrice
+    ? Number(contract.grossPriceValue ?? 0) || listPrice
+    : listPrice;
+  const groupDiscount = contract.groupDiscount
+    ? resolveTierDiscount(contract.groupDiscountTiers, quantity)
+    : 0;
+  const lineDiscount = contract.lineDiscount
+    ? resolveTierDiscount(contract.lineDiscountTiers, quantity)
+    : 0;
+  const extraDiscount = contract.extraDiscount
+    ? Number(contract.extraDiscountValue ?? 0)
+    : 0;
+  return {
+    grossPrice,
+    groupDiscount,
+    lineDiscount,
+    netPrice:
+      applyPriceDiscounts(grossPrice, groupDiscount, lineDiscount) *
+      (1 - extraDiscount / 100),
+  };
+};
+
 // Prices the quote's lines against the price list and the customer's contract:
 //
 //   1. If the contract has an agreed net price for the product (the tier whose
@@ -132,14 +187,12 @@ const priceQuoteLines = async (
     : [];
 
   const rows: PricedLine[] = [];
-  let lineNumber = 0;
 
-  for (const item of items) {
+  for (const [index, item] of items.entries()) {
     const product = productByUuid.get(item.productUuid);
     if (!product) {
       throw new Error("A selected product could not be found.");
     }
-    lineNumber += 1;
 
     const quantity = Number(item.quantity);
     const basePrice = Number(product.basePrice ?? 0);
@@ -156,31 +209,8 @@ const priceQuoteLines = async (
       )
       .sort((a, b) => Number(b.fromQty ?? 0) - Number(a.fromQty ?? 0))[0];
 
-    let grossPrice = listPrice;
-    let groupDiscount = 0;
-    let lineDiscount = 0;
-    let netPrice = listPrice;
-
-    if (applicableNetPrice) {
-      netPrice = Number(applicableNetPrice.netPrice ?? 0);
-      grossPrice = listPrice;
-    } else if (contract) {
-      grossPrice = contract.grossPrice
-        ? Number(contract.grossPriceValue ?? 0) || listPrice
-        : listPrice;
-      groupDiscount = contract.groupDiscount
-        ? resolveTierDiscount(contract.groupDiscountTiers, quantity)
-        : 0;
-      lineDiscount = contract.lineDiscount
-        ? resolveTierDiscount(contract.lineDiscountTiers, quantity)
-        : 0;
-      const extraDiscount = contract.extraDiscount
-        ? Number(contract.extraDiscountValue ?? 0)
-        : 0;
-      netPrice =
-        applyPriceDiscounts(grossPrice, groupDiscount, lineDiscount) *
-        (1 - extraDiscount / 100);
-    }
+    const { grossPrice, groupDiscount, lineDiscount, netPrice } =
+      resolveLinePricing(listPrice, quantity, applicableNetPrice, contract);
 
     const amount = netPrice * quantity;
     const costPrice = replacementPrice;
@@ -193,7 +223,7 @@ const priceQuoteLines = async (
       quoteUuid,
       productUuid: item.productUuid,
       revenueGroupUuid: product.revenueGroupUuid,
-      lineNumber,
+      lineNumber: index + 1,
       lineType: "material",
       description: product.name,
       reference,

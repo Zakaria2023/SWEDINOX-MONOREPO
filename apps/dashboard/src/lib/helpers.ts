@@ -719,15 +719,16 @@ export const addLeadTime = (
     date.setUTCDate(date.getUTCDate() + amount * 7);
   } else {
     // working_days: step one calendar day at a time, counting only Mon–Fri.
-    let remaining = Math.trunc(amount);
-    const step = remaining >= 0 ? 1 : -1;
-    while (remaining !== 0) {
+    const step = Math.trunc(amount) >= 0 ? 1 : -1;
+    const stepWorkingDays = (remaining: number): void => {
+      if (remaining === 0) {
+        return;
+      }
       date.setUTCDate(date.getUTCDate() + step);
       const day = date.getUTCDay();
-      if (day !== 0 && day !== 6) {
-        remaining -= step;
-      }
-    }
+      stepWorkingDays(day !== 0 && day !== 6 ? remaining - step : remaining);
+    };
+    stepWorkingDays(Math.trunc(amount));
   }
   return date.toISOString().split("T")[0];
 };
@@ -891,15 +892,10 @@ export const normaliseDiscountTiers = (
 export const resolveTierDiscount = (
   tiers: DiscountTier[] | null | undefined,
   quantity: number,
-): number => {
-  let percentage = 0;
-  for (const tier of normaliseDiscountTiers(tiers)) {
-    if (quantity >= tier.from) {
-      percentage = tier.percentage;
-    }
-  }
-  return percentage;
-};
+): number =>
+  normaliseDiscountTiers(tiers)
+    .filter((tier) => quantity >= tier.from)
+    .at(-1)?.percentage ?? 0;
 
 /**
  * Profit margin as a percentage of revenue. Revenue of 0 has no margin to
