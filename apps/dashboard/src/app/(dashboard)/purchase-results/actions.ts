@@ -1,6 +1,6 @@
 "use server";
-import { describeError } from "@/lib/helpers";
 
+import { describeError } from "@/lib/helpers";
 import { db } from "@/db";
 import { PurchaseLineReceivals } from "@/db/schema/purchase-line-receivals";
 import { Products } from "@/db/schema/products";
@@ -65,7 +65,9 @@ export const getPurchaseResults = async (): Promise<PurchaseResultRow[]> => {
         replacementValue,
         differenceEuro,
         differencePercent:
-          replacementValue === 0 ? 0 : (differenceEuro / replacementValue) * 100,
+          replacementValue === 0
+            ? 0
+            : (differenceEuro / replacementValue) * 100,
       };
     });
   } catch (error) {
