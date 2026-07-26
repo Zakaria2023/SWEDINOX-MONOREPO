@@ -1,6 +1,6 @@
 "use server";
-import { describeError } from "@/lib/helpers";
 
+import { describeError } from "@/lib/helpers";
 import { db } from "@/db";
 import { InvoiceItems } from "@/db/schema/invoice-items";
 import { OrderItems } from "@/db/schema/order-items";
@@ -53,7 +53,10 @@ export const getRevenueVsBudget = async (): Promise<RevenueVsBudgetRow[]> => {
       .innerJoin(Invoices, eq(InvoiceItems.invoiceUuid, Invoices.uuid))
       .innerJoin(OrderItems, eq(InvoiceItems.orderItemUuid, OrderItems.uuid))
       .innerJoin(Products, eq(InvoiceItems.productUuid, Products.uuid))
-      .leftJoin(RevenueGroups, eq(Products.revenueGroupUuid, RevenueGroups.uuid))
+      .leftJoin(
+        RevenueGroups,
+        eq(Products.revenueGroupUuid, RevenueGroups.uuid),
+      )
       .leftJoin(Stock, eq(OrderItems.stockUuid, Stock.uuid))
       .groupBy(RevenueGroups.uuid, RevenueGroups.number, RevenueGroups.name);
 
@@ -123,14 +126,17 @@ export const getRevenueVsBudget = async (): Promise<RevenueVsBudgetRow[]> => {
 
     return [...buckets.values()].map((bucket) => ({
       ...bucket,
-      profitMargin: bucket.revenue === 0 ? 0 : (bucket.profit / bucket.revenue) * 100,
+      profitMargin:
+        bucket.revenue === 0 ? 0 : (bucket.profit / bucket.revenue) * 100,
       profitMarginBudget:
         bucket.revenueBudget === 0
           ? 0
           : (bucket.profitBudget / bucket.revenueBudget) * 100,
       avgSalesPrice: bucket.weight === 0 ? 0 : bucket.revenue / bucket.weight,
       avgSalesPriceBudget:
-        bucket.weightBudget === 0 ? 0 : bucket.revenueBudget / bucket.weightBudget,
+        bucket.weightBudget === 0
+          ? 0
+          : bucket.revenueBudget / bucket.weightBudget,
     }));
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch revenue vs budget"));
