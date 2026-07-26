@@ -123,10 +123,6 @@ const NAV_GROUPS: NavGroup[] = [
       { label: "Product Prices", href: "/product-prices" },
       { label: "Net Prices", href: "/net-prices" },
       {
-        label: "SFN Statistics Product-Market",
-        href: "/sfn-statistics-product-market",
-      },
-      {
         label: "Option Prices per Product",
         href: "/option-prices-per-product",
       },
@@ -228,10 +224,6 @@ const NAV_GROUPS: NavGroup[] = [
       },
       { label: "Purchase Return Orders", href: "/purchase-return-orders" },
       { label: "Purchase Invoices", href: "/purchase-invoices" },
-      {
-        label: "Import Purchase Invoices",
-        href: "/import-purchase-invoices",
-      },
       { label: "Purchase Invoice Line", href: "/purchase-invoice-line" },
       { label: "Purchase Lines", href: "/purchase-lines" },
       { label: "Purchase Quotes Overview", href: "/purchase-quotes-overview" },
@@ -322,10 +314,6 @@ const NAV_GROUPS: NavGroup[] = [
       { label: "Complaint Lines", href: "/complaint-lines" },
       { label: "Balanced Scorecard", href: "/balanced-scorecard" },
       { label: "Transport by Region", href: "/transport-by-region" },
-      {
-        label: "SigmaNest Blocked Orders",
-        href: "/sigmanest-blocked-orders",
-      },
     ],
   },
 ];
