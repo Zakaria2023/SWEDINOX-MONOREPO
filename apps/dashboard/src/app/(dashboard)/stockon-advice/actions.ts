@@ -1,5 +1,5 @@
 "use server";
-import { describeError } from "@/lib/helpers";
+import { describeError, roundToOrderQty } from "@/lib/helpers";
 
 import { db } from "@/db";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
@@ -36,23 +36,6 @@ export type StockOnAdviceRow = {
   pctDifference: number | null;
   evaluateToday: boolean;
   orderNow: boolean;
-};
-
-// Rounds an order-up-to quantity to the supplier's order series, never below
-// the minimum order quantity.
-const roundToOrderQty = (
-  toOrder: number,
-  orderSeries: number,
-  minOrderQty: number,
-): number => {
-  if (toOrder <= 0) {
-    return 0;
-  }
-  const target = Math.max(toOrder, minOrderQty);
-  if (orderSeries > 0) {
-    return Math.ceil(target / orderSeries) * orderSeries;
-  }
-  return target;
 };
 
 // Maps a JS weekday (0 = Sunday) onto the product group's ordering-day flags.

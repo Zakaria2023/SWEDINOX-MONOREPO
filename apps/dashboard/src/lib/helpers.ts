@@ -1047,3 +1047,24 @@ export const periodKey = (year: number, month: number): string =>
  */
 export const firstCount = (rows: Array<{ value: number }>): number =>
   Number(rows[0]?.value ?? 0);
+
+/**
+ * Rounds an advised order quantity up to the supplier's order series, never
+ * below the minimum order quantity — the same rounding the ERP applies to
+ * "Order Qty". A non-positive advice stays 0; without an order series the
+ * quantity is only lifted to the minimum.
+ */
+export const roundToOrderQty = (
+  advice: number,
+  orderSeries: number,
+  minOrderQty: number,
+): number => {
+  if (advice <= 0) {
+    return 0;
+  }
+  const target = Math.max(advice, minOrderQty);
+  if (orderSeries > 0) {
+    return Math.ceil(target / orderSeries) * orderSeries;
+  }
+  return target;
+};

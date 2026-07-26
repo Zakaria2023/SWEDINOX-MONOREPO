@@ -1,6 +1,6 @@
 "use server";
-import { describeError } from "@/lib/helpers";
 
+import { describeError, roundToOrderQty } from "@/lib/helpers";
 import { db } from "@/db";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { InvoiceItems } from "@/db/schema/invoice-items";
@@ -38,23 +38,6 @@ export type OrderAdviceRow = {
   maxStockLevel: number;
   adviceQty: number;
   orderQty: number;
-};
-
-// Rounds an advised quantity up to the supplier's order series, never below the
-// minimum order quantity — the same rounding the ERP applies to "Order Qty".
-const roundToOrderQty = (
-  advice: number,
-  orderSeries: number,
-  minOrderQty: number,
-): number => {
-  if (advice <= 0) {
-    return 0;
-  }
-  const target = Math.max(advice, minOrderQty);
-  if (orderSeries > 0) {
-    return Math.ceil(target / orderSeries) * orderSeries;
-  }
-  return target;
 };
 
 // Order advice: for every stock product, compare its economic stock (on-hand
