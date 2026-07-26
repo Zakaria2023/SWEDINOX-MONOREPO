@@ -1,6 +1,6 @@
 "use server";
-import { describeError } from "@/lib/helpers";
 
+import { describeError } from "@/lib/helpers";
 import { db } from "@/db";
 import {
   SelectTransportStatusAdjustments,
@@ -34,6 +34,8 @@ export const getTransportStatusAdjustments = async (): Promise<
       )
       .orderBy(desc(TransportStatusAdjustments.timeModified));
   } catch (error) {
-    throw new Error(describeError(error, "Failed to fetch transport status adjustments"));
+    throw new Error(
+      describeError(error, "Failed to fetch transport status adjustments"),
+    );
   }
 };

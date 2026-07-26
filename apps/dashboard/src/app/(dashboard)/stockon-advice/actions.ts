@@ -1,6 +1,6 @@
 "use server";
-import { describeError, roundToOrderQty } from "@/lib/helpers";
 
+import { describeError, roundToOrderQty } from "@/lib/helpers";
 import { db } from "@/db";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { InvoiceItems } from "@/db/schema/invoice-items";
@@ -237,9 +237,7 @@ export const getStockOnAdvice = async (): Promise<StockOnAdviceRow[]> => {
         toOrder,
         stockMinusOrderLevel,
         pctDifference:
-          orderLevel > 0
-            ? (stockMinusOrderLevel / orderLevel) * 100
-            : null,
+          orderLevel > 0 ? (stockMinusOrderLevel / orderLevel) * 100 : null,
         evaluateToday,
         orderNow: evaluateToday && toOrder > 0,
       };

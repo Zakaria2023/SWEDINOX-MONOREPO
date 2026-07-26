@@ -1,6 +1,6 @@
 "use server";
-import { describeError } from "@/lib/helpers";
 
+import { describeError } from "@/lib/helpers";
 import { db } from "@/db";
 import { Products } from "@/db/schema/products";
 import { PurchaseInvoiceItems } from "@/db/schema/purchase-invoice-items";
@@ -44,7 +44,10 @@ export const getSupplierRevenuePerRevenueGroup = async (): Promise<
         eq(PurchaseInvoiceItems.purchaseInvoiceUuid, PurchaseInvoices.uuid),
       )
       .innerJoin(Products, eq(PurchaseInvoiceItems.productUuid, Products.uuid))
-      .leftJoin(RevenueGroups, eq(Products.revenueGroupUuid, RevenueGroups.uuid))
+      .leftJoin(
+        RevenueGroups,
+        eq(Products.revenueGroupUuid, RevenueGroups.uuid),
+      )
       .leftJoin(Stock, eq(PurchaseInvoiceItems.stockUuid, Stock.uuid))
       .groupBy(
         RevenueGroups.uuid,
@@ -69,6 +72,11 @@ export const getSupplierRevenuePerRevenueGroup = async (): Promise<
       };
     });
   } catch (error) {
-    throw new Error(describeError(error, "Failed to fetch supplier revenue per revenue group"));
+    throw new Error(
+      describeError(
+        error,
+        "Failed to fetch supplier revenue per revenue group",
+      ),
+    );
   }
 };
