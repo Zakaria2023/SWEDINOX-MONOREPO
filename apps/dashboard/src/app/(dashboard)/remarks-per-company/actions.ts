@@ -1,6 +1,6 @@
 "use server";
-import { describeError } from "@/lib/helpers";
 
+import { describeError } from "@/lib/helpers";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
 import { db } from "@/db";
@@ -17,7 +17,9 @@ export type RemarkPerCompanyRow = {
 
 // Companies that carry a free-text remark, with their representative and city —
 // the "Customer remarks" report.
-export const getRemarksPerCompany = async (): Promise<RemarkPerCompanyRow[]> => {
+export const getRemarksPerCompany = async (): Promise<
+  RemarkPerCompanyRow[]
+> => {
   try {
     const primaryContactId = db
       .select({
@@ -48,9 +50,7 @@ export const getRemarksPerCompany = async (): Promise<RemarkPerCompanyRow[]> => 
       })
       .from(Companies)
       .leftJoin(primaryContact, eq(Companies.uuid, primaryContact.companyUuid))
-      .where(
-        and(isNotNull(Companies.remarks), ne(Companies.remarks, sql`''`)),
-      )
+      .where(and(isNotNull(Companies.remarks), ne(Companies.remarks, sql`''`)))
       .orderBy(asc(Companies.companyName));
 
     return rows.map((row) => ({
@@ -62,6 +62,8 @@ export const getRemarksPerCompany = async (): Promise<RemarkPerCompanyRow[]> => 
       remarks: row.remarks ?? "",
     }));
   } catch (error) {
-    throw new Error(describeError(error, "Failed to fetch remarks per company"));
+    throw new Error(
+      describeError(error, "Failed to fetch remarks per company"),
+    );
   }
 };
