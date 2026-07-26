@@ -227,8 +227,7 @@ export const generateComplaintLines =
           continue;
         }
 
-        let lineNumber = 1;
-        for (const line of orderLines) {
+        for (const [index, line] of orderLines.entries()) {
           rows.push({
             ...shared,
             uuid: generateUuid(),
@@ -237,7 +236,7 @@ export const generateComplaintLines =
             productUuid: line.productUuid,
             warehouseSectionUuid: line.locationParentUuid ?? line.locationUuid,
             purchaserSeller: line.seller,
-            lineNumber: lineNumber++,
+            lineNumber: index + 1,
             qty: line.quantity ?? "0.000",
             amount: line.amount ?? "0.00",
             weightKg: line.weightKg ?? "0.00",
