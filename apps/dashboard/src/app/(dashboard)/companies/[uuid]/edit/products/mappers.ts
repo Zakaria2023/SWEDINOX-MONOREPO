@@ -1,6 +1,6 @@
-import type { ProductDialogValues } from "@/app/(dashboard)/companies/validation";
-import type { ProductOption } from "@/app/(dashboard)/products/actions";
-import type { InsertProducts, SelectProducts } from "@/db/schema/products";
+import { ProductDialogValues } from "@/app/(dashboard)/companies/validation";
+import { ProductOption } from "@/app/(dashboard)/products/actions";
+import { InsertProducts, SelectProducts } from "@/db/schema/products";
 
 // The product dialog edits only the company-specific terms of a product row
 // (preferred, codes, delivery time, order quantities). Identity columns

@@ -9,7 +9,7 @@ import { db } from "@/db";
 import { Companies } from "@/db/schema/companies";
 import { Contracts, SelectContracts } from "@/db/schema/contracts";
 import { CustomerProjects } from "@/db/schema/customer-projects";
-import type { CompanyRole, ContractableRole } from "@/lib/enums";
+import { CompanyRole, ContractableRole } from "@/lib/enums";
 import { contractableRoles } from "@/lib/enums";
 import {
   describeError,

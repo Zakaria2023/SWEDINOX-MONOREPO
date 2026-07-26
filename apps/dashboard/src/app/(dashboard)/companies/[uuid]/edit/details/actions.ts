@@ -1,6 +1,6 @@
 "use server";
 
-import type { CompanyActionResult } from "@/app/(dashboard)/companies/actions";
+import { CompanyActionResult } from "@/app/(dashboard)/companies/actions";
 import { db, SelectCompanies } from "@/db";
 import { Companies, InsertCompanies } from "@/db/schema/companies";
 import { describeError } from "@/lib/helpers";
@@ -56,7 +56,9 @@ export const updateCompanyDetails = async (
   const { companyUuid, ...values } = payload;
   const parsed = companyDetailsSchema.safeParse(values);
   if (!parsed.success) {
-    return { error: "Invalid company details — check the fields and try again" };
+    return {
+      error: "Invalid company details — check the fields and try again",
+    };
   }
 
   try {

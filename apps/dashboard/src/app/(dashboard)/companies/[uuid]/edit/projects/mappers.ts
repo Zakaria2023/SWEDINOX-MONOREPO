@@ -1,8 +1,8 @@
-import type {
+import {
   InsertCustomerProjects,
   SelectCustomerProjects,
 } from "@/db/schema/customer-projects";
-import type { ProjectDialogValues } from "./validation";
+import { ProjectDialogValues } from "./validation";
 
 // The project dialog edits the name, end date, revenue, and linked contract.
 // startingDate and daysInSystem are set once on insert (today / 0, matching

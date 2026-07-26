@@ -1,13 +1,16 @@
 "use server";
 
-import type { CompanyActionResult } from "@/app/(dashboard)/companies/actions";
+import { CompanyActionResult } from "@/app/(dashboard)/companies/actions";
 import { db, SelectCompanies } from "@/db";
 import { Companies, InsertCompanies } from "@/db/schema/companies";
 import { describeError } from "@/lib/helpers";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { companyMarketingSchema, CompanyMarketingFormValues } from "./validation";
+import {
+  companyMarketingSchema,
+  CompanyMarketingFormValues,
+} from "./validation";
 
 export type CompanyMarketingData = Pick<
   SelectCompanies,

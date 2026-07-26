@@ -1,5 +1,5 @@
-import type { QuoteDialogValues } from "@/app/(dashboard)/companies/validation";
-import type { InsertQuotes, SelectQuotes } from "@/db/schema/quotes";
+import { QuoteDialogValues } from "@/app/(dashboard)/companies/validation";
+import { InsertQuotes, SelectQuotes } from "@/db/schema/quotes";
 import { toDateInput } from "@/lib/helpers";
 
 // The quote dialog edits only a subset of the Quotes columns — these two
@@ -9,7 +9,9 @@ import { toDateInput } from "@/lib/helpers";
 // survive later edits. The quote date columns are Date-mode, so the dialog's
 // YYYY-MM-DD strings convert to Date on write and back via toDateInput on read.
 
-export const quoteRowToDialogValues = (row: SelectQuotes): QuoteDialogValues => ({
+export const quoteRowToDialogValues = (
+  row: SelectQuotes,
+): QuoteDialogValues => ({
   customerRef: row.customerRef ?? "",
   ourReference: row.ourReference ?? "",
   requestMethod: row.requestMethod ?? "",

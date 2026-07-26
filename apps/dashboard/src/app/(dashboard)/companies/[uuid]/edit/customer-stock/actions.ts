@@ -1,15 +1,12 @@
 "use server";
 
-import type { CompanyActionResult } from "@/app/(dashboard)/companies/actions";
+import { CompanyActionResult } from "@/app/(dashboard)/companies/actions";
 import {
   customerStockDialogSchema,
   CustomerStockDialogValues,
 } from "@/app/(dashboard)/companies/validation";
 import { db } from "@/db";
-import {
-  CustomerStock,
-  SelectCustomerStock,
-} from "@/db/schema/customer-stock";
+import { CustomerStock, SelectCustomerStock } from "@/db/schema/customer-stock";
 import { Products } from "@/db/schema/products";
 import { describeError, generateUuid } from "@/lib/helpers";
 import { and, asc, eq } from "drizzle-orm";

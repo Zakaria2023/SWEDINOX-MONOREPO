@@ -1,5 +1,5 @@
-import type { PurchaseOrderDialogValues } from "@/app/(dashboard)/companies/validation";
-import type {
+import { PurchaseOrderDialogValues } from "@/app/(dashboard)/companies/validation";
+import {
   InsertPurchaseOrders,
   SelectPurchaseOrders,
 } from "@/db/schema/purchase-orders";

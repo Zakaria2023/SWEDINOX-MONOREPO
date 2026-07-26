@@ -1,5 +1,5 @@
-import type { ReturnOrderDialogValues } from "@/app/(dashboard)/companies/validation";
-import type {
+import { ReturnOrderDialogValues } from "@/app/(dashboard)/companies/validation";
+import {
   InsertReturnOrders,
   SelectReturnOrders,
 } from "@/db/schema/return-orders";

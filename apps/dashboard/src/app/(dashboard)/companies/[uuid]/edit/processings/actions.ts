@@ -1,6 +1,6 @@
 "use server";
 
-import type { CompanyActionResult } from "@/app/(dashboard)/companies/actions";
+import { CompanyActionResult } from "@/app/(dashboard)/companies/actions";
 import { db } from "@/db";
 import { Processings, SelectProcessings } from "@/db/schema/processings";
 import { describeError, generateUuid } from "@/lib/helpers";

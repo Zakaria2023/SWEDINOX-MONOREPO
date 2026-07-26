@@ -1,6 +1,6 @@
 "use server";
 
-import type {
+import {
   CompanyActionResult,
   CustomerSalesInput,
 } from "@/app/(dashboard)/companies/actions";

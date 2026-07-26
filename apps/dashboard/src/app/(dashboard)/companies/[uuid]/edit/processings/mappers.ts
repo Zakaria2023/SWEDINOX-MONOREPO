@@ -1,8 +1,5 @@
-import type {
-  InsertProcessings,
-  SelectProcessings,
-} from "@/db/schema/processings";
-import type { ProcessingRowValues } from "./validation";
+import { InsertProcessings, SelectProcessings } from "@/db/schema/processings";
+import { ProcessingRowValues } from "./validation";
 
 // Row ↔ grid-values mappers for the inline processings table. Empty
 // selects/inputs write null back so clearing works.

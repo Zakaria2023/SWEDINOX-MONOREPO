@@ -1,15 +1,12 @@
 "use server";
 
-import type { CompanyActionResult } from "@/app/(dashboard)/companies/actions";
+import { CompanyActionResult } from "@/app/(dashboard)/companies/actions";
 import {
   counterOrderDialogSchema,
   CounterOrderDialogValues,
 } from "@/app/(dashboard)/companies/validation";
 import { db } from "@/db";
-import {
-  CounterOrders,
-  SelectCounterOrders,
-} from "@/db/schema/counter-orders";
+import { CounterOrders, SelectCounterOrders } from "@/db/schema/counter-orders";
 import { describeError, generateUuid } from "@/lib/helpers";
 import { and, asc, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
