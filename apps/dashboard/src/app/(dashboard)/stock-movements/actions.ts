@@ -1,13 +1,16 @@
 "use server";
-import { describeError } from "@/lib/helpers";
 
+import { describeError } from "@/lib/helpers";
 import { db } from "@/db";
 import {
   SelectStockMovements,
   StockMovements,
 } from "@/db/schema/stock-movements";
 import { Products, SelectProducts } from "@/db/schema/products";
-import { PurchaseOrders, SelectPurchaseOrders } from "@/db/schema/purchase-orders";
+import {
+  PurchaseOrders,
+  SelectPurchaseOrders,
+} from "@/db/schema/purchase-orders";
 import {
   PurchaseInvoices,
   SelectPurchaseInvoices,
@@ -36,9 +39,7 @@ export type StockMovementDetail = SelectStockMovements & {
   stock: SelectStock | null;
 };
 
-export const getStockMovements = async (): Promise<
-  StockMovementListItem[]
-> => {
+export const getStockMovements = async (): Promise<StockMovementListItem[]> => {
   try {
     return await db
       .select({
