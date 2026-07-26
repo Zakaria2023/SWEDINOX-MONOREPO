@@ -1,6 +1,6 @@
 "use server";
-import { describeError } from "@/lib/helpers";
 
+import { describeError } from "@/lib/helpers";
 import { db } from "@/db";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
@@ -90,6 +90,8 @@ export const getPurchaseInvoiceLines = async (): Promise<
       revenue: Number(row.valuationPrice ?? 0) * Number(row.quantity ?? 0),
     }));
   } catch (error) {
-    throw new Error(describeError(error, "Failed to fetch purchase invoice lines"));
+    throw new Error(
+      describeError(error, "Failed to fetch purchase invoice lines"),
+    );
   }
 };
