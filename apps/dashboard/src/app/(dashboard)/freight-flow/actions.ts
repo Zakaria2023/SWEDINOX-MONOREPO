@@ -18,7 +18,7 @@ import {
   toKilograms,
   type Counterparty,
 } from "@/lib/helpers";
-import { and, asc, eq, gte, lt, sql } from "drizzle-orm";
+import { and, asc, eq, exists, gte, lt, or, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 // One reported period for one revenue group. Every figure is in kilograms, the
@@ -397,7 +397,17 @@ export const getFreightFlow = async (): Promise<FreightFlowRow[]> => {
 // from or sold to — so the classification list stays as short as the return
 // needs it to be.
 export const getSfnCounterparties = async (): Promise<SfnCounterpartyRow[]> => {
-  const traded = sql`EXISTS (SELECT 1 FROM ${FreightMovements} WHERE ${FreightMovements.supplierUuid} = ${Companies.uuid} OR ${FreightMovements.companyUuid} = ${Companies.uuid})`;
+  const traded = exists(
+    db
+      .select({ uuid: FreightMovements.uuid })
+      .from(FreightMovements)
+      .where(
+        or(
+          eq(FreightMovements.supplierUuid, Companies.uuid),
+          eq(FreightMovements.companyUuid, Companies.uuid),
+        ),
+      ),
+  );
 
   const rows = await db
     .select({

@@ -16,7 +16,7 @@ import {
   SelectSalesOptions,
 } from "@/db/schema/sales-options";
 import { describeError, generateUuid, todayDateString } from "@/lib/helpers";
-import { aliasedTable, asc, eq, sql } from "drizzle-orm";
+import { aliasedTable, and, asc, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 // The far-future date the ERP uses for "no end date".
@@ -57,17 +57,41 @@ export type GenerateOptionPricesResult = {
 
 const ParentGroups = aliasedTable(ProductGroups, "parent_groups");
 
-// The supplier's own name is fetched in a correlated subquery. The joined
-// Companies table is aliased with a raw `sc` inside the SQL string — an
-// `aliasedTable` interpolated into a raw sql template renders only the alias,
-// not `Companies AS alias`, which would query a table that does not exist.
-const preferredSupplierName = sql<
-  string | null
->`(SELECT sc.company_name FROM ${ProductGroupSuppliers} INNER JOIN ${Companies} sc ON sc.uuid = ${ProductGroupSuppliers.supplierCompanyUuid} WHERE ${ProductGroupSuppliers.productGroupUuid} = ${Products.productGroupUuid} AND ${ProductGroupSuppliers.preferred} = TRUE LIMIT 1)`;
+// The preferred supplier of the product's group, resolved per row as
+// correlated scalar subqueries built with the query builder; Companies is
+// joined under an alias so the subquery stays independent of any Companies
+// reference in the outer query.
+const SupplierCompanies = aliasedTable(Companies, "supplier_companies");
 
-const supplierProductCode = sql<
-  string | null
->`(SELECT ${ProductGroupSuppliers.externalProductCode} FROM ${ProductGroupSuppliers} WHERE ${ProductGroupSuppliers.productGroupUuid} = ${Products.productGroupUuid} AND ${ProductGroupSuppliers.preferred} = TRUE LIMIT 1)`;
+const preferredSupplierRow = db
+  .select({ companyName: SupplierCompanies.companyName })
+  .from(ProductGroupSuppliers)
+  .innerJoin(
+    SupplierCompanies,
+    eq(SupplierCompanies.uuid, ProductGroupSuppliers.supplierCompanyUuid),
+  )
+  .where(
+    and(
+      eq(ProductGroupSuppliers.productGroupUuid, Products.productGroupUuid),
+      eq(ProductGroupSuppliers.preferred, true),
+    ),
+  )
+  .limit(1);
+
+const preferredSupplierName = sql<string | null>`(${preferredSupplierRow})`;
+
+const supplierProductCodeRow = db
+  .select({ code: ProductGroupSuppliers.externalProductCode })
+  .from(ProductGroupSuppliers)
+  .where(
+    and(
+      eq(ProductGroupSuppliers.productGroupUuid, Products.productGroupUuid),
+      eq(ProductGroupSuppliers.preferred, true),
+    ),
+  )
+  .limit(1);
+
+const supplierProductCode = sql<string | null>`(${supplierProductCodeRow})`;
 
 // Every priced product/option pair, with the product's grouping and preferred
 // supplier alongside.

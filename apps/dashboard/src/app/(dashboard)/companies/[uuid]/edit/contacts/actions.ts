@@ -15,7 +15,7 @@ import {
   generateUuid,
   pluralize,
 } from "@/lib/helpers";
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, count, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { contactValuesToColumns } from "./mappers";
 
@@ -135,7 +135,7 @@ export const deleteCompanyContact = async (
 ): Promise<CompanyActionResult> => {
   try {
     const linked = await db
-      .select({ value: sql<number>`COUNT(*)` })
+      .select({ value: count() })
       .from(VisitReports)
       .where(eq(VisitReports.contactUuid, payload.contactUuid));
     const linkedCount = firstCount(linked);

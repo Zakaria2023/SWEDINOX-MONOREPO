@@ -5,7 +5,7 @@ import { db } from "@/db";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
 import { Orders } from "@/db/schema/orders";
-import { asc, eq, max, min, or, sql } from "drizzle-orm";
+import { and, asc, eq, isNull, lt, max, min, or, sql } from "drizzle-orm";
 
 export type InactiveCompanyRow = {
   companyUuid: SelectCompanies["uuid"];
@@ -66,10 +66,22 @@ export const getInactiveCompanies = async (): Promise<InactiveCompanyRow[]> => {
       .where(
         // Either flagged inactive by hand, or a customer/prospect that hasn't
         // ordered in the last 12 months.
-        sql`${Companies.isInactive} = TRUE OR ((${or(
-          sql`JSON_CONTAINS(${Companies.roles}, '"customer"')`,
-          sql`JSON_CONTAINS(${Companies.roles}, '"prospect"')`,
-        )}) AND (${orderStats.lastOrderDate} IS NULL OR ${orderStats.lastOrderDate} < DATE_SUB(NOW(), INTERVAL 12 MONTH)))`,
+        or(
+          eq(Companies.isInactive, true),
+          and(
+            or(
+              sql`JSON_CONTAINS(${Companies.roles}, '"customer"')`,
+              sql`JSON_CONTAINS(${Companies.roles}, '"prospect"')`,
+            ),
+            or(
+              isNull(orderStats.lastOrderDate),
+              lt(
+                orderStats.lastOrderDate,
+                sql`DATE_SUB(NOW(), INTERVAL 12 MONTH)`,
+              ),
+            ),
+          ),
+        ),
       )
       .orderBy(asc(Companies.companyName));
 

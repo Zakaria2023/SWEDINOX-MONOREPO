@@ -24,7 +24,7 @@ import {
   generateUuid,
   pluralize,
 } from "@/lib/helpers";
-import { and, asc, eq, or, sql } from "drizzle-orm";
+import { and, asc, count, eq, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { addressValuesToColumns } from "./mappers";
 
@@ -102,7 +102,7 @@ export const deleteCompanyAddress = async (
 ): Promise<CompanyActionResult> => {
   try {
     const { addressUuid } = payload;
-    const count = { value: sql<number>`COUNT(*)` };
+    const countValue = { value: count() };
 
     const [
       orderRows,
@@ -115,7 +115,7 @@ export const deleteCompanyAddress = async (
       purchaseReturnOrderRows,
     ] = await Promise.all([
       db
-        .select(count)
+        .select(countValue)
         .from(Orders)
         .where(
           or(
@@ -124,7 +124,7 @@ export const deleteCompanyAddress = async (
           ),
         ),
       db
-        .select(count)
+        .select(countValue)
         .from(CounterOrders)
         .where(
           or(
@@ -133,7 +133,7 @@ export const deleteCompanyAddress = async (
           ),
         ),
       db
-        .select(count)
+        .select(countValue)
         .from(Quotes)
         .where(
           or(
@@ -142,7 +142,7 @@ export const deleteCompanyAddress = async (
           ),
         ),
       db
-        .select(count)
+        .select(countValue)
         .from(ReturnOrders)
         .where(
           or(
@@ -151,7 +151,7 @@ export const deleteCompanyAddress = async (
           ),
         ),
       db
-        .select(count)
+        .select(countValue)
         .from(PurchaseOrders)
         .where(
           or(
@@ -160,7 +160,7 @@ export const deleteCompanyAddress = async (
           ),
         ),
       db
-        .select(count)
+        .select(countValue)
         .from(PurchaseQuotes)
         .where(
           or(
@@ -169,7 +169,7 @@ export const deleteCompanyAddress = async (
           ),
         ),
       db
-        .select(count)
+        .select(countValue)
         .from(PurchaseRequests)
         .where(
           or(
@@ -178,7 +178,7 @@ export const deleteCompanyAddress = async (
           ),
         ),
       db
-        .select(count)
+        .select(countValue)
         .from(PurchaseReturnOrders)
         .where(eq(PurchaseReturnOrders.deliveryAddressUuid, addressUuid)),
     ]);

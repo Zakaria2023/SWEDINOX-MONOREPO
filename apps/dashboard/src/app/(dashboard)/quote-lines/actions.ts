@@ -16,7 +16,7 @@ import { Quotes, SelectQuotes } from "@/db/schema/quotes";
 import { RevenueGroups, SelectRevenueGroups } from "@/db/schema/revenue-groups";
 import { SelectStock, Stock } from "@/db/schema/stock";
 import { describeError, generateUuid, resolveOrderTypeLabel } from "@/lib/helpers";
-import { and, asc, desc, eq, gte, isNull, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, isNull, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 export type QuoteLineRow = SelectQuoteItems & {
@@ -63,21 +63,42 @@ export type ConvertibleQuote = {
 
 // The customer's main address city — a scalar subquery rather than a join, so a
 // company with several addresses can't multiply its quote lines.
-const customerCity = sql<
-  string | null
->`(SELECT ${CompanyAddresses.city} FROM ${CompanyAddresses} WHERE ${CompanyAddresses.companyUuid} = ${Companies.uuid} ORDER BY ${CompanyAddresses.sequenceNumber} ASC LIMIT 1)`;
+const customerCityRow = db
+  .select({ city: CompanyAddresses.city })
+  .from(CompanyAddresses)
+  .where(eq(CompanyAddresses.companyUuid, Companies.uuid))
+  .orderBy(asc(CompanyAddresses.sequenceNumber))
+  .limit(1);
 
-const lastFollowUpDate = sql<
-  string | null
->`(SELECT ${FollowUps.date} FROM ${FollowUps} WHERE ${FollowUps.companyUuid} = ${Companies.uuid} ORDER BY ${FollowUps.date} DESC LIMIT 1)`;
+const customerCity = sql<string | null>`(${customerCityRow})`;
 
-const lastFollowUpText = sql<
-  string | null
->`(SELECT ${FollowUps.text} FROM ${FollowUps} WHERE ${FollowUps.companyUuid} = ${Companies.uuid} ORDER BY ${FollowUps.date} DESC LIMIT 1)`;
+// The customer's most recent follow-up, one scalar subquery per printed field.
+const lastFollowUpDateRow = db
+  .select({ date: FollowUps.date })
+  .from(FollowUps)
+  .where(eq(FollowUps.companyUuid, Companies.uuid))
+  .orderBy(desc(FollowUps.date))
+  .limit(1);
 
-const lastFollowUpBy = sql<
-  string | null
->`(SELECT ${FollowUps.by} FROM ${FollowUps} WHERE ${FollowUps.companyUuid} = ${Companies.uuid} ORDER BY ${FollowUps.date} DESC LIMIT 1)`;
+const lastFollowUpDate = sql<string | null>`(${lastFollowUpDateRow})`;
+
+const lastFollowUpTextRow = db
+  .select({ text: FollowUps.text })
+  .from(FollowUps)
+  .where(eq(FollowUps.companyUuid, Companies.uuid))
+  .orderBy(desc(FollowUps.date))
+  .limit(1);
+
+const lastFollowUpText = sql<string | null>`(${lastFollowUpTextRow})`;
+
+const lastFollowUpByRow = db
+  .select({ by: FollowUps.by })
+  .from(FollowUps)
+  .where(eq(FollowUps.companyUuid, Companies.uuid))
+  .orderBy(desc(FollowUps.date))
+  .limit(1);
+
+const lastFollowUpBy = sql<string | null>`(${lastFollowUpByRow})`;
 
 // Every quote line, joined to its quote, customer, product and revenue group.
 // Filtered on the quote date, matching the legacy overview's date range.
@@ -377,7 +398,7 @@ export const getConvertibleQuotes = async (): Promise<ConvertibleQuote[]> => {
       uuid: Quotes.uuid,
       quoteId: Quotes.id,
       customerName: Companies.companyName,
-      lineCount: sql<number>`COUNT(${QuoteItems.uuid})`,
+      lineCount: count(QuoteItems.uuid),
     })
     .from(Quotes)
     .innerJoin(QuoteItems, eq(QuoteItems.quoteUuid, Quotes.uuid))

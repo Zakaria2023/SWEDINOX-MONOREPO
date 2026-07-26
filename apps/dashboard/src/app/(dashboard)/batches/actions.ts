@@ -15,7 +15,7 @@ import {
   formatInternalChargeNumber,
   generateUuid,
 } from "@/lib/helpers";
-import { asc, desc, eq, isNotNull, sql } from "drizzle-orm";
+import { asc, count, desc, eq, isNotNull, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 export type BatchRow = SelectBatches & {
@@ -137,7 +137,7 @@ export const generateBatches = async (): Promise<GenerateBatchesResult> => {
     const issued = await db
       .select({
         year: sql<number>`YEAR(${Batches.receiptDate})`,
-        count: sql<number>`COUNT(${Batches.uuid})`,
+        count: count(Batches.uuid),
       })
       .from(Batches)
       .where(isNotNull(Batches.internalCharge))

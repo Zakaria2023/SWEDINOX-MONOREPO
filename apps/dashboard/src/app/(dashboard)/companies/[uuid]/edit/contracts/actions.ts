@@ -17,7 +17,7 @@ import {
   generateUuid,
   pluralize,
 } from "@/lib/helpers";
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, count, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 export type SaveContractPayload = {
@@ -120,7 +120,7 @@ export const deleteCompanyContract = async (
 ): Promise<CompanyActionResult> => {
   try {
     const linked = await db
-      .select({ value: sql<number>`COUNT(*)` })
+      .select({ value: count() })
       .from(CustomerProjects)
       .where(eq(CustomerProjects.contractUuid, payload.contractUuid));
     const linkedCount = firstCount(linked);

@@ -10,7 +10,7 @@ import {
 import { Products, SelectProducts } from "@/db/schema/products";
 import { PurchaseLineReceivals } from "@/db/schema/purchase-line-receivals";
 import { describeError, todayDateString } from "@/lib/helpers";
-import { aliasedTable, asc, eq, sql } from "drizzle-orm";
+import { aliasedTable, and, asc, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 export type ProductPriceRow = SelectProducts & {
@@ -35,14 +35,40 @@ const ParentGroups = aliasedTable(ProductGroups, "parent_groups");
 
 // The preferred supplier of the product's group, and that supplier's own code
 // for the article. Scalar subqueries rather than joins, so a group with several
-// suppliers can't multiply the product rows.
-const preferredSupplierName = sql<
-  string | null
->`(SELECT ${Companies.companyName} FROM ${ProductGroupSuppliers} INNER JOIN ${Companies} ON ${Companies.uuid} = ${ProductGroupSuppliers.supplierCompanyUuid} WHERE ${ProductGroupSuppliers.productGroupUuid} = ${Products.productGroupUuid} AND ${ProductGroupSuppliers.preferred} = TRUE LIMIT 1)`;
+// suppliers can't multiply the product rows; Companies is joined under an alias
+// so the subquery stays independent of any Companies reference in the outer
+// query.
+const SupplierCompanies = aliasedTable(Companies, "supplier_companies");
 
-const supplierProductCode = sql<
-  string | null
->`(SELECT ${ProductGroupSuppliers.externalProductCode} FROM ${ProductGroupSuppliers} WHERE ${ProductGroupSuppliers.productGroupUuid} = ${Products.productGroupUuid} AND ${ProductGroupSuppliers.preferred} = TRUE LIMIT 1)`;
+const preferredSupplierRow = db
+  .select({ companyName: SupplierCompanies.companyName })
+  .from(ProductGroupSuppliers)
+  .innerJoin(
+    SupplierCompanies,
+    eq(SupplierCompanies.uuid, ProductGroupSuppliers.supplierCompanyUuid),
+  )
+  .where(
+    and(
+      eq(ProductGroupSuppliers.productGroupUuid, Products.productGroupUuid),
+      eq(ProductGroupSuppliers.preferred, true),
+    ),
+  )
+  .limit(1);
+
+const preferredSupplierName = sql<string | null>`(${preferredSupplierRow})`;
+
+const supplierProductCodeRow = db
+  .select({ code: ProductGroupSuppliers.externalProductCode })
+  .from(ProductGroupSuppliers)
+  .where(
+    and(
+      eq(ProductGroupSuppliers.productGroupUuid, Products.productGroupUuid),
+      eq(ProductGroupSuppliers.preferred, true),
+    ),
+  )
+  .limit(1);
+
+const supplierProductCode = sql<string | null>`(${supplierProductCodeRow})`;
 
 // Every product with the prices it is bought and sold at.
 export const getProductPrices = async (): Promise<ProductPriceRow[]> => {

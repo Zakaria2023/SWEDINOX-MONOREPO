@@ -18,7 +18,18 @@ import { describeError,
   profitMarginPercent,
   todayDateString,
 } from "@/lib/helpers";
-import { and, asc, desc, eq, gte, lte, or, sql, isNull } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gte,
+  isNull,
+  lte,
+  or,
+  sql,
+} from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 // One row per option, revenue group and line status — the "invoiced per option"
@@ -54,7 +65,7 @@ export const getOptionRevenue = async (): Promise<OptionRevenueRow[]> => {
         weightKg: sql<string>`COALESCE(SUM(${OrderItemOptions.weightKg}), 0)`,
         revenue: sql<string>`COALESCE(SUM(${OrderItemOptions.amount}), 0)`,
         profit: sql<string>`COALESCE(SUM(${OrderItemOptions.profit}), 0)`,
-        lineCount: sql<number>`COUNT(${OrderItemOptions.uuid})`,
+        lineCount: count(OrderItemOptions.uuid),
       })
       .from(OrderItemOptions)
       .innerJoin(

@@ -20,7 +20,7 @@ import { TransporterCosts } from "@/db/schema/transporter-costs";
 import { TransporterCountries } from "@/db/schema/transporter-countries";
 import { VisitReports } from "@/db/schema/visit-reports";
 import { firstCount } from "@/lib/helpers";
-import { eq, sql } from "drizzle-orm";
+import { count, eq } from "drizzle-orm";
 
 export type CompanyChildCounts = {
   addresses: number;
@@ -62,7 +62,7 @@ export const getCompanyEditOverview = async (
     return null;
   }
 
-  const countValue = { value: sql<number>`COUNT(*)` };
+  const countValue = { value: count() };
 
   const [
     addresses,
