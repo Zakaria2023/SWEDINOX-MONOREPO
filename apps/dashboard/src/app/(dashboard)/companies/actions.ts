@@ -61,12 +61,17 @@ import {
   SelectCustomerStock,
 } from "@/db/schema/customer-stock";
 import { PurchaseCompanyType } from "@/lib/enums";
-import { describeError, generateUuid } from "@/lib/helpers";
+import {
+  describeError,
+  generateUuid,
+  stripChildRow,
+  toDateInput,
+} from "@/lib/helpers";
 import { currentUser } from "@clerk/nextjs/server";
 import { asc, desc, eq, or, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { DEFAULT_ADDRESS } from "./validation";
-import type { AddressFormValues, CompanyFormValues } from "./validation";
+import { AddressFormValues, CompanyFormValues } from "./validation";
 
 export type CompanyOption = Pick<
   SelectCompanies,
@@ -675,49 +680,6 @@ export const createCompany = async (
 
 // ── Edit support ─────────────────────────────────────────────────────────────
 
-// Formats a stored date (Date from a date/timestamp column, or an ISO string)
-// into the "YYYY-MM-DD" the date inputs expect, using local calendar parts so
-// the value round-trips without a timezone shift.
-const toDateInput = (value: Date | string | null | undefined): string => {
-  if (!value) {
-    return "";
-  }
-  if (typeof value === "string") {
-    return value.slice(0, 10);
-  }
-  const year = value.getFullYear();
-  const month = String(value.getMonth() + 1).padStart(2, "0");
-  const day = String(value.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-};
-
-// Drops the DB-managed columns from a child row so what's left matches the
-// corresponding Input shape. `extraKeys` covers the per-table owner column
-// (companyUuid, or supplierUuid for purchase orders).
-const stripChildRow = <T extends object>(
-  row: T,
-  extraKeys: string[],
-): Record<string, unknown> => {
-  const skip = new Set<string>([
-    "id",
-    "uuid",
-    "createdAt",
-    "updatedAt",
-    "createdByUserId",
-    "modifiedByUserId",
-    ...extraKeys,
-  ]);
-  const source = row as Record<string, unknown>;
-  const result: Record<string, unknown> = {};
-  for (const key of Object.keys(source)) {
-    if (skip.has(key)) {
-      continue;
-    }
-    result[key] = source[key];
-  }
-  return result;
-};
-
 const mapAddressRowToForm = (
   address: SelectCompanyAddresses,
 ): AddressFormValues => ({
@@ -861,6 +823,7 @@ export const getCompanyForEdit = async (
     .from(Companies)
     .where(eq(Companies.uuid, uuid))
     .limit(1);
+
   if (!company) {
     return null;
   }
@@ -1097,19 +1060,19 @@ const syncCompanyChildren = async <T>(
   onDelete: (uuid: string) => Promise<void>,
 ): Promise<string[]> => {
   const finalUuids: string[] = [];
-  for (let index = 0; index < incoming.length; index++) {
+  for (const [index, values] of incoming.entries()) {
     const existingUuid = existingUuids[index];
     if (existingUuid) {
-      await onUpdate(existingUuid, incoming[index]);
+      await onUpdate(existingUuid, values);
       finalUuids.push(existingUuid);
     } else {
       const uuid = generateUuid();
-      await onInsert(uuid, incoming[index]);
+      await onInsert(uuid, values);
       finalUuids.push(uuid);
     }
   }
-  for (let index = incoming.length; index < existingUuids.length; index++) {
-    await onDelete(existingUuids[index]);
+  for (const uuid of existingUuids.slice(incoming.length)) {
+    await onDelete(uuid);
   }
   return finalUuids;
 };

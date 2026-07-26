@@ -257,14 +257,22 @@ export const monthOf = (value: string | Date | null): number | string =>
 
 /**
  * A Date or date-string as the YYYY-MM-DD value a date input expects, or an
- * empty string when there is no value.
+ * empty string when there is no value. Uses local calendar parts (never
+ * toISOString) so the value round-trips without a timezone shift.
  */
-export const toDateInput = (value: Date | string | null): string => {
+export const toDateInput = (
+  value: Date | string | null | undefined,
+): string => {
   if (!value) {
     return "";
   }
-  const date = value instanceof Date ? value : new Date(value);
-  return date.toISOString().split("T")[0];
+  if (typeof value === "string") {
+    return value.slice(0, 10);
+  }
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 };
 
 /**
@@ -987,3 +995,33 @@ export const orderDeblockTypeLabel = (
   value: OrderDeblockType | string | null | undefined,
 ): string =>
   value ? (ORDER_DEBLOCK_TYPE_LABELS[value as OrderDeblockType] ?? value) : "—";
+
+/**
+ * Drops the DB-managed columns (id, uuid, timestamps, user audit columns) from
+ * a child row so what's left matches the corresponding Input shape. `extraKeys`
+ * covers the per-table owner column (companyUuid, or supplierUuid for purchase
+ * orders).
+ */
+export const stripChildRow = <T extends object>(
+  row: T,
+  extraKeys: string[],
+): Record<string, unknown> => {
+  const skip = new Set<string>([
+    "id",
+    "uuid",
+    "createdAt",
+    "updatedAt",
+    "createdByUserId",
+    "modifiedByUserId",
+    ...extraKeys,
+  ]);
+  const source = row as Record<string, unknown>;
+  const result: Record<string, unknown> = {};
+  for (const key of Object.keys(source)) {
+    if (skip.has(key)) {
+      continue;
+    }
+    result[key] = source[key];
+  }
+  return result;
+};
