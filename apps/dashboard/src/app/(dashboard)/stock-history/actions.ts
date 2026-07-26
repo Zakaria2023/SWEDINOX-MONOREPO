@@ -1,6 +1,6 @@
 "use server";
-import { describeError } from "@/lib/helpers";
 
+import { describeError } from "@/lib/helpers";
 import { db } from "@/db";
 import { Stock } from "@/db/schema/stock";
 import { Products } from "@/db/schema/products";
@@ -37,7 +37,10 @@ export const getStockHistory = async (): Promise<StockHistoryRow[]> => {
       })
       .from(Stock)
       .innerJoin(Products, eq(Stock.productUuid, Products.uuid))
-      .leftJoin(RevenueGroups, eq(Products.revenueGroupUuid, RevenueGroups.uuid))
+      .leftJoin(
+        RevenueGroups,
+        eq(Products.revenueGroupUuid, RevenueGroups.uuid),
+      )
       .groupBy(
         RevenueGroups.number,
         RevenueGroups.name,

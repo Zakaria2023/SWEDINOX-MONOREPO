@@ -1,6 +1,6 @@
 "use server";
-import { describeError } from "@/lib/helpers";
 
+import { describeError } from "@/lib/helpers";
 import { db } from "@/db";
 import { InvoiceItems } from "@/db/schema/invoice-items";
 import { Invoices } from "@/db/schema/invoices";
@@ -56,7 +56,10 @@ export const getSoldProductsNotAdvised = async (): Promise<
       .innerJoin(Invoices, eq(InvoiceItems.invoiceUuid, Invoices.uuid))
       .innerJoin(OrderItems, eq(InvoiceItems.orderItemUuid, OrderItems.uuid))
       .innerJoin(Products, eq(InvoiceItems.productUuid, Products.uuid))
-      .leftJoin(ProductGroups, eq(Products.productGroupUuid, ProductGroups.uuid))
+      .leftJoin(
+        ProductGroups,
+        eq(Products.productGroupUuid, ProductGroups.uuid),
+      )
       .leftJoin(MainGroups, eq(ProductGroups.parentUuid, MainGroups.uuid))
       .where(
         // Not on the order recommendation: group not making advices OR not a
@@ -145,6 +148,11 @@ export const getSoldProductsNotAdvised = async (): Promise<
       };
     });
   } catch (error) {
-    throw new Error(describeError(error, "Failed to fetch sold products not on the order recommendation"));
+    throw new Error(
+      describeError(
+        error,
+        "Failed to fetch sold products not on the order recommendation",
+      ),
+    );
   }
 };
