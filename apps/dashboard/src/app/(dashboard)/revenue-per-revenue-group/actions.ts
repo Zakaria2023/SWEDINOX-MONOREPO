@@ -1,6 +1,6 @@
 "use server";
-import { describeError } from "@/lib/helpers";
 
+import { describeError } from "@/lib/helpers";
 import { db } from "@/db";
 import { InvoiceItems } from "@/db/schema/invoice-items";
 import { Invoices } from "@/db/schema/invoices";
@@ -57,6 +57,8 @@ export const getRevenuePerRevenueGroup = async (): Promise<
       };
     });
   } catch (error) {
-    throw new Error(describeError(error, "Failed to fetch revenue per revenue group"));
+    throw new Error(
+      describeError(error, "Failed to fetch revenue per revenue group"),
+    );
   }
 };
