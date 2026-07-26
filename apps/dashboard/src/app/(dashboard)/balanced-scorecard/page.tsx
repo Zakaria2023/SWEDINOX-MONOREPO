@@ -1,6 +1,6 @@
-import { getBalancedScorecard } from "@/app/(dashboard)/balanced-scorecard/actions";
 import { BalancedScorecardTable } from "@/components/balanced-scorecard/balanced-scorecard-table-content";
 import { PageHeading } from "@/components/layout/page-heading";
+import { getBalancedScorecard } from "@/app/(dashboard)/balanced-scorecard/balanced-scorecard";
 
 const BalancedScorecardPage = async () => {
   const rows = await getBalancedScorecard();

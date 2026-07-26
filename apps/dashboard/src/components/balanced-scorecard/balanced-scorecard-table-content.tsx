@@ -4,7 +4,7 @@ import {
   ScorecardRow,
   ScorecardStatus,
   ScorecardTrend,
-} from "@/app/(dashboard)/balanced-scorecard/actions";
+} from "@/app/(dashboard)/balanced-scorecard/types";
 import {
   Table,
   TableBody,
@@ -56,7 +56,9 @@ export const BalancedScorecardTable = ({ rows }: Props) => (
             <TableCell>{row.category}</TableCell>
             <TableCell className="font-medium">{row.kpi}</TableCell>
             <TableCell className="text-right">{row.value.toFixed(2)}</TableCell>
-            <TableCell className="text-right">{row.target.toFixed(2)}</TableCell>
+            <TableCell className="text-right">
+              {row.target.toFixed(2)}
+            </TableCell>
             <TableCell>{row.unit}</TableCell>
             <TableCell>
               <span
