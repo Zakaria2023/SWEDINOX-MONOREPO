@@ -1,6 +1,6 @@
 "use server";
-import { describeError } from "@/lib/helpers";
 
+import { describeError } from "@/lib/helpers";
 import { db } from "@/db";
 import { PurchaseLineReceivals } from "@/db/schema/purchase-line-receivals";
 import { Companies } from "@/db/schema/companies";
@@ -39,7 +39,10 @@ export const getReceipts = async (): Promise<ReceiptRow[]> => {
         planned: sql<string>`COALESCE(SUM(${PurchaseLineReceivals.qtyPlanned}), 0)`,
       })
       .from(PurchaseLineReceivals)
-      .leftJoin(Companies, eq(PurchaseLineReceivals.companyUuid, Companies.uuid))
+      .leftJoin(
+        Companies,
+        eq(PurchaseLineReceivals.companyUuid, Companies.uuid),
+      )
       .leftJoin(Products, eq(PurchaseLineReceivals.productUuid, Products.uuid))
       .groupBy(
         PurchaseLineReceivals.receiptDate,

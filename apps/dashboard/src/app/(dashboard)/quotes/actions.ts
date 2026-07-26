@@ -12,7 +12,8 @@ import { Products } from "@/db/schema/products";
 import { QuoteItems } from "@/db/schema/quote-items";
 import { InsertQuotes, Quotes, SelectQuotes } from "@/db/schema/quotes";
 import { StockUnit } from "@/lib/enums";
-import { describeError,
+import {
+  describeError,
   applyPriceDiscounts,
   generateUuid,
   profitMarginPercent,
