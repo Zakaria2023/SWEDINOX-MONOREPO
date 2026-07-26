@@ -1,6 +1,6 @@
 "use server";
-import { describeError } from "@/lib/helpers";
 
+import { describeError } from "@/lib/helpers";
 import { db } from "@/db";
 import {
   PurchaseLineReceivals,
@@ -30,7 +30,10 @@ export const getPurchaseReceivals = async (): Promise<
         productName: Products.name,
       })
       .from(PurchaseLineReceivals)
-      .leftJoin(Companies, eq(PurchaseLineReceivals.companyUuid, Companies.uuid))
+      .leftJoin(
+        Companies,
+        eq(PurchaseLineReceivals.companyUuid, Companies.uuid),
+      )
       .leftJoin(Products, eq(PurchaseLineReceivals.productUuid, Products.uuid))
       .orderBy(desc(PurchaseLineReceivals.receiptDate));
   } catch (error) {

@@ -81,6 +81,7 @@ export const generatePurchaseQuoteLines =
           quoteNumber: PurchaseQuotes.quoteNumber,
         })
         .from(PurchaseQuotes);
+
       if (quotes.length === 0) {
         return { error: "No purchase quotes yet. Create one first." };
       }
@@ -88,6 +89,7 @@ export const generatePurchaseQuoteLines =
       const existing = await db
         .select({ purchaseQuoteUuid: PurchaseQuoteItems.purchaseQuoteUuid })
         .from(PurchaseQuoteItems);
+
       const quotesWithLines = new Set(
         existing.map((row) => row.purchaseQuoteUuid),
       );
@@ -95,6 +97,7 @@ export const generatePurchaseQuoteLines =
       const emptyQuotes = quotes.filter(
         (quote) => !quotesWithLines.has(quote.uuid),
       );
+
       if (emptyQuotes.length === 0) {
         return { error: "Every purchase quote already has lines." };
       }
