@@ -18,7 +18,7 @@ import { daysInSystem, todayDateString } from "@/lib/helpers";
 import { COUNTER_ORDER_STATUS_LABELS } from "@/lib/labels";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Pencil, Plus, ShoppingCart, Trash2 } from "lucide-react";
-import { useActionState, useEffect, useState } from "react";
+import { startTransition, useActionState, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 
 type Props = {
@@ -93,12 +93,16 @@ export const CompanyCounterOrdersEditor = ({
   };
 
   const handleSave = counterOrderForm.handleSubmit((values) => {
-    dispatchSave({ companyUuid, counterOrderUuid: editingUuid, values });
+    startTransition(() => {
+      dispatchSave({ companyUuid, counterOrderUuid: editingUuid, values });
+    });
   });
 
   const handleConfirmDelete = () => {
     if (deleteTarget) {
-      dispatchDelete({ companyUuid, counterOrderUuid: deleteTarget.uuid });
+      startTransition(() => {
+        dispatchDelete({ companyUuid, counterOrderUuid: deleteTarget.uuid });
+      });
     }
   };
 

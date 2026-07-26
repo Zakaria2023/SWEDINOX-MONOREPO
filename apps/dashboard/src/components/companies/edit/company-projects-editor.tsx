@@ -17,7 +17,7 @@ import { FormError } from "@/components/ui/form-error";
 import type { SelectCustomerProjects } from "@/db/schema/customer-projects";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FolderOpen, Pencil, Plus, Trash2 } from "lucide-react";
-import { useActionState, useEffect, useState } from "react";
+import { startTransition, useActionState, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 
 type Props = {
@@ -89,12 +89,16 @@ export const CompanyProjectsEditor = ({
   };
 
   const handleSave = projectForm.handleSubmit((values) => {
-    dispatchSave({ companyUuid, projectUuid: editingUuid, values });
+    startTransition(() => {
+      dispatchSave({ companyUuid, projectUuid: editingUuid, values });
+    });
   });
 
   const handleConfirmDelete = () => {
     if (deleteTarget) {
-      dispatchDelete({ companyUuid, projectUuid: deleteTarget.uuid });
+      startTransition(() => {
+        dispatchDelete({ companyUuid, projectUuid: deleteTarget.uuid });
+      });
     }
   };
 

@@ -21,7 +21,7 @@ import {
 } from "@/lib/labels";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ClipboardList, Pencil, Plus, Trash2 } from "lucide-react";
-import { useActionState, useEffect, useState } from "react";
+import { startTransition, useActionState, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 
 type ContactSelectOption = {
@@ -104,12 +104,16 @@ export const CompanyVisitReportsEditor = ({
   };
 
   const handleSave = visitReportForm.handleSubmit((values) => {
-    dispatchSave({ companyUuid, visitReportUuid: editingUuid, values });
+    startTransition(() => {
+      dispatchSave({ companyUuid, visitReportUuid: editingUuid, values });
+    });
   });
 
   const handleConfirmDelete = () => {
     if (deleteTarget) {
-      dispatchDelete({ companyUuid, visitReportUuid: deleteTarget.uuid });
+      startTransition(() => {
+        dispatchDelete({ companyUuid, visitReportUuid: deleteTarget.uuid });
+      });
     }
   };
 

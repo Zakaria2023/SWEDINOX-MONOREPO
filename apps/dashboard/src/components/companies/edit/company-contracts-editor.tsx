@@ -18,7 +18,7 @@ import type { ContractableRole } from "@/lib/enums";
 import { CONTRACT_TYPE_LABELS, CONTRACTABLE_ROLE_LABELS } from "@/lib/labels";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FileText, Plus, Trash2 } from "lucide-react";
-import { useActionState, useEffect, useState } from "react";
+import { startTransition, useActionState, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 
 type Props = {
@@ -93,12 +93,16 @@ export const CompanyContractsEditor = ({
   };
 
   const handleSave = contractForm.handleSubmit((values) => {
-    dispatchSave({ companyUuid, values });
+    startTransition(() => {
+      dispatchSave({ companyUuid, values });
+    });
   });
 
   const handleConfirmDelete = () => {
     if (deleteTarget) {
-      dispatchDelete({ companyUuid, contractUuid: deleteTarget.uuid });
+      startTransition(() => {
+        dispatchDelete({ companyUuid, contractUuid: deleteTarget.uuid });
+      });
     }
   };
 

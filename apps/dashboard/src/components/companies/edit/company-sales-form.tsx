@@ -41,7 +41,7 @@ import {
 } from "@/lib/labels";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
-import { useActionState } from "react";
+import { startTransition, useActionState } from "react";
 import { Controller, useForm } from "react-hook-form";
 
 type Props = {
@@ -93,7 +93,9 @@ export const CompanySalesForm = ({ company }: Props) => {
   });
 
   const onSubmit = handleSubmit((values) => {
-    dispatch({ ...values, companyUuid: company.uuid });
+    startTransition(() => {
+      dispatch({ ...values, companyUuid: company.uuid });
+    });
   });
 
   return (

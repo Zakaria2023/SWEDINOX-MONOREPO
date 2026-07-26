@@ -31,7 +31,13 @@ import { transporterPriceUnits } from "@/lib/enums";
 import { generateUuid } from "@/lib/helpers";
 import { TRANSPORTER_PRICE_UNIT_LABELS } from "@/lib/labels";
 import { Plus, Save, Trash2, X } from "lucide-react";
-import { useActionState, useEffect, useRef, useState } from "react";
+import {
+  startTransition,
+  useActionState,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
 type DraftRow = {
   key: string;
@@ -258,15 +264,19 @@ export const CompanyTransporterCostsEditor = ({
       return;
     }
     pendingSaveRef.current = { kind: "update", uuid: row.uuid };
-    dispatchSave({ companyUuid, transporterCostUuid: row.uuid, values });
+    startTransition(() => {
+      dispatchSave({ companyUuid, transporterCostUuid: row.uuid, values });
+    });
   };
 
   const handleSaveDraft = (draft: DraftRow) => {
     pendingSaveRef.current = { kind: "insert", key: draft.key };
-    dispatchSave({
-      companyUuid,
-      transporterCostUuid: null,
-      values: draft.values,
+    startTransition(() => {
+      dispatchSave({
+        companyUuid,
+        transporterCostUuid: null,
+        values: draft.values,
+      });
     });
   };
 
@@ -275,7 +285,9 @@ export const CompanyTransporterCostsEditor = ({
 
   const handleConfirmDelete = () => {
     if (deleteTarget) {
-      dispatchDelete({ companyUuid, transporterCostUuid: deleteTarget.uuid });
+      startTransition(() => {
+        dispatchDelete({ companyUuid, transporterCostUuid: deleteTarget.uuid });
+      });
     }
   };
 

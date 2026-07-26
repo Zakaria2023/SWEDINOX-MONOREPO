@@ -29,7 +29,13 @@ import { deliveryTerms, transporterCountries } from "@/lib/enums";
 import { generateUuid } from "@/lib/helpers";
 import { DELIVERY_TERM_LABELS, TRANSPORTER_COUNTRY_LABELS } from "@/lib/labels";
 import { Plus, Save, Trash2, X } from "lucide-react";
-import { useActionState, useEffect, useRef, useState } from "react";
+import {
+  startTransition,
+  useActionState,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
 type DraftRow = {
   key: string;
@@ -221,15 +227,19 @@ export const CompanyTransporterCountriesEditor = ({
       return;
     }
     pendingSaveRef.current = { kind: "update", uuid: row.uuid };
-    dispatchSave({ companyUuid, transporterCountryUuid: row.uuid, values });
+    startTransition(() => {
+      dispatchSave({ companyUuid, transporterCountryUuid: row.uuid, values });
+    });
   };
 
   const handleSaveDraft = (draft: DraftRow) => {
     pendingSaveRef.current = { kind: "insert", key: draft.key };
-    dispatchSave({
-      companyUuid,
-      transporterCountryUuid: null,
-      values: draft.values,
+    startTransition(() => {
+      dispatchSave({
+        companyUuid,
+        transporterCountryUuid: null,
+        values: draft.values,
+      });
     });
   };
 
@@ -238,9 +248,11 @@ export const CompanyTransporterCountriesEditor = ({
 
   const handleConfirmDelete = () => {
     if (deleteTarget) {
-      dispatchDelete({
-        companyUuid,
-        transporterCountryUuid: deleteTarget.uuid,
+      startTransition(() => {
+        dispatchDelete({
+          companyUuid,
+          transporterCountryUuid: deleteTarget.uuid,
+        });
       });
     }
   };

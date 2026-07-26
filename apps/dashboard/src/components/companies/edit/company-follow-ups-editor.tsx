@@ -19,7 +19,13 @@ import { FormError } from "@/components/ui/form-error";
 import type { SelectFollowUps } from "@/db/schema/follow-ups";
 import { generateUuid, todayDateString } from "@/lib/helpers";
 import { Plus, Save, X } from "lucide-react";
-import { useActionState, useEffect, useRef, useState } from "react";
+import {
+  startTransition,
+  useActionState,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
 type FollowUpEditValues = {
   contactPerson: string;
@@ -140,25 +146,29 @@ export const CompanyFollowUpsEditor = ({
 
   const handleSaveRow = (row: SelectFollowUps) => {
     lastSavedKeyRef.current = row.uuid;
-    dispatchSave({
-      companyUuid,
-      followUpUuid: row.uuid,
-      values: getRowValues(row),
+    startTransition(() => {
+      dispatchSave({
+        companyUuid,
+        followUpUuid: row.uuid,
+        values: getRowValues(row),
+      });
     });
   };
 
   const handleSaveDraft = (draft: FollowUpDraft) => {
     lastSavedKeyRef.current = draft.key;
-    dispatchSave({
-      companyUuid,
-      followUpUuid: null,
-      values: {
-        date: draft.date ?? undefined,
-        by: draft.by ?? undefined,
-        contactPerson: draft.contactPerson,
-        text: draft.text,
-        completed: draft.completed,
-      },
+    startTransition(() => {
+      dispatchSave({
+        companyUuid,
+        followUpUuid: null,
+        values: {
+          date: draft.date ?? undefined,
+          by: draft.by ?? undefined,
+          contactPerson: draft.contactPerson,
+          text: draft.text,
+          completed: draft.completed,
+        },
+      });
     });
   };
 
@@ -167,7 +177,10 @@ export const CompanyFollowUpsEditor = ({
       return;
     }
     if (deleteTarget.uuid) {
-      dispatchDelete({ companyUuid, followUpUuid: deleteTarget.uuid });
+      const followUpUuid = deleteTarget.uuid;
+      startTransition(() => {
+        dispatchDelete({ companyUuid, followUpUuid });
+      });
       return;
     }
     setDrafts((prev) => prev.filter((draft) => draft.key !== deleteTarget.key));

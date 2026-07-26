@@ -18,7 +18,7 @@ import { todayDateString } from "@/lib/helpers";
 import { PURCHASE_ORDER_STATUS_LABELS } from "@/lib/labels";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { PackageCheck, Pencil, Plus, Trash2 } from "lucide-react";
-import { useActionState, useEffect, useState } from "react";
+import { startTransition, useActionState, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 
 type Props = {
@@ -94,12 +94,16 @@ export const CompanyPurchaseOrdersEditor = ({
   };
 
   const handleSave = purchaseOrderForm.handleSubmit((values) => {
-    dispatchSave({ companyUuid, purchaseOrderUuid: editingUuid, values });
+    startTransition(() => {
+      dispatchSave({ companyUuid, purchaseOrderUuid: editingUuid, values });
+    });
   });
 
   const handleConfirmDelete = () => {
     if (deleteTarget) {
-      dispatchDelete({ companyUuid, purchaseOrderUuid: deleteTarget.uuid });
+      startTransition(() => {
+        dispatchDelete({ companyUuid, purchaseOrderUuid: deleteTarget.uuid });
+      });
     }
   };
 

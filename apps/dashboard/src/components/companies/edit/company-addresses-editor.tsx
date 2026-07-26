@@ -117,7 +117,9 @@ export const CompanyAddressesEditor = ({ companyUuid, addresses }: Props) => {
 
   const handleConfirmDelete = () => {
     if (deleteTarget) {
-      dispatchDelete({ companyUuid, addressUuid: deleteTarget.uuid });
+      startTransition(() => {
+        dispatchDelete({ companyUuid, addressUuid: deleteTarget.uuid });
+      });
     }
   };
 

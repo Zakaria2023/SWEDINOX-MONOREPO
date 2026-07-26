@@ -33,7 +33,13 @@ import {
   PROCESSING_EDITING_LABELS,
 } from "@/lib/labels";
 import { Plus, Save, Trash2, X } from "lucide-react";
-import { useActionState, useEffect, useRef, useState } from "react";
+import {
+  startTransition,
+  useActionState,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
 type SupplierOption = {
   value: string;
@@ -246,12 +252,16 @@ export const CompanyProcessingsEditor = ({
       return;
     }
     pendingSaveRef.current = { kind: "update", uuid: row.uuid };
-    dispatchSave({ companyUuid, processingUuid: row.uuid, values });
+    startTransition(() => {
+      dispatchSave({ companyUuid, processingUuid: row.uuid, values });
+    });
   };
 
   const handleSaveDraft = (draft: DraftRow) => {
     pendingSaveRef.current = { kind: "insert", key: draft.key };
-    dispatchSave({ companyUuid, processingUuid: null, values: draft.values });
+    startTransition(() => {
+      dispatchSave({ companyUuid, processingUuid: null, values: draft.values });
+    });
   };
 
   const handleRemoveDraft = (key: string) =>
@@ -259,7 +269,9 @@ export const CompanyProcessingsEditor = ({
 
   const handleConfirmDelete = () => {
     if (deleteTarget) {
-      dispatchDelete({ companyUuid, processingUuid: deleteTarget.uuid });
+      startTransition(() => {
+        dispatchDelete({ companyUuid, processingUuid: deleteTarget.uuid });
+      });
     }
   };
 

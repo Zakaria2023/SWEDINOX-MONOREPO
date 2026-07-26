@@ -18,7 +18,7 @@ import type { ContactCategory } from "@/lib/enums";
 import { CONTACT_CATEGORY_LABELS } from "@/lib/labels";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Pencil, Plus, Trash2, User } from "lucide-react";
-import { useActionState, useEffect, useState } from "react";
+import { startTransition, useActionState, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 
 type Props = {
@@ -94,12 +94,16 @@ export const CompanyContactsEditor = ({ companyUuid, contacts }: Props) => {
   };
 
   const handleSave = contactForm.handleSubmit((values) => {
-    dispatchSave({ companyUuid, contactUuid: editingUuid, values });
+    startTransition(() => {
+      dispatchSave({ companyUuid, contactUuid: editingUuid, values });
+    });
   });
 
   const handleConfirmDelete = () => {
     if (deleteTarget) {
-      dispatchDelete({ companyUuid, contactUuid: deleteTarget.uuid });
+      startTransition(() => {
+        dispatchDelete({ companyUuid, contactUuid: deleteTarget.uuid });
+      });
     }
   };
 

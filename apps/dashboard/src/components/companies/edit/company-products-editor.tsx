@@ -26,7 +26,7 @@ import {
 } from "@/lib/labels";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Package, Pencil, Plus, Trash2 } from "lucide-react";
-import { useActionState, useEffect, useState } from "react";
+import { startTransition, useActionState, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 
 type Props = {
@@ -117,12 +117,16 @@ export const CompanyProductsEditor = ({
   };
 
   const handleSave = productForm.handleSubmit((values) => {
-    dispatchSave({ companyUuid, productUuid: editingUuid, values });
+    startTransition(() => {
+      dispatchSave({ companyUuid, productUuid: editingUuid, values });
+    });
   });
 
   const handleConfirmDelete = () => {
     if (deleteTarget) {
-      dispatchDelete({ companyUuid, productUuid: deleteTarget.uuid });
+      startTransition(() => {
+        dispatchDelete({ companyUuid, productUuid: deleteTarget.uuid });
+      });
     }
   };
 

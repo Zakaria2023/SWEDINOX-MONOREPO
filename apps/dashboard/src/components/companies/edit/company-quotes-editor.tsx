@@ -17,7 +17,7 @@ import type { SelectQuotes } from "@/db/schema/quotes";
 import { daysInSystem, toDateInput, todayDateString } from "@/lib/helpers";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FileText, Pencil, Plus, Trash2 } from "lucide-react";
-import { useActionState, useEffect, useState } from "react";
+import { startTransition, useActionState, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 
 type Props = {
@@ -81,12 +81,16 @@ export const CompanyQuotesEditor = ({ companyUuid, quotes }: Props) => {
   };
 
   const handleSave = quoteForm.handleSubmit((values) => {
-    dispatchSave({ companyUuid, quoteUuid: editingUuid, values });
+    startTransition(() => {
+      dispatchSave({ companyUuid, quoteUuid: editingUuid, values });
+    });
   });
 
   const handleConfirmDelete = () => {
     if (deleteTarget) {
-      dispatchDelete({ companyUuid, quoteUuid: deleteTarget.uuid });
+      startTransition(() => {
+        dispatchDelete({ companyUuid, quoteUuid: deleteTarget.uuid });
+      });
     }
   };
 

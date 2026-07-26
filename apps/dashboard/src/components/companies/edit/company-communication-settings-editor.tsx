@@ -26,7 +26,7 @@ import {
 } from "@/lib/labels";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { MessageSquare, Pencil, Plus, Trash2 } from "lucide-react";
-import { useActionState, useEffect, useState } from "react";
+import { startTransition, useActionState, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 
 type Props = {
@@ -125,12 +125,16 @@ export const CompanyCommunicationSettingsEditor = ({
   };
 
   const handleSave = commSettingForm.handleSubmit((values) => {
-    dispatchSave({ companyUuid, settingId: editingId, values });
+    startTransition(() => {
+      dispatchSave({ companyUuid, settingId: editingId, values });
+    });
   });
 
   const handleConfirmDelete = () => {
     if (deleteTarget) {
-      dispatchDelete({ companyUuid, settingId: deleteTarget.id });
+      startTransition(() => {
+        dispatchDelete({ companyUuid, settingId: deleteTarget.id });
+      });
     }
   };
 

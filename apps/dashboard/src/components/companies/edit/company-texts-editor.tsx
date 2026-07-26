@@ -19,7 +19,7 @@ import type { SelectTexts } from "@/db/schema/texts";
 import { TEXT_USAGE_CATEGORY_LABELS } from "@/lib/labels";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AlignLeft, Pencil, Plus, Trash2 } from "lucide-react";
-import { useActionState, useEffect, useState } from "react";
+import { startTransition, useActionState, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 
 type Props = {
@@ -103,12 +103,16 @@ export const CompanyTextsEditor = ({
   };
 
   const handleSave = textForm.handleSubmit((values) => {
-    dispatchSave({ companyUuid, textUuid: editingUuid, values });
+    startTransition(() => {
+      dispatchSave({ companyUuid, textUuid: editingUuid, values });
+    });
   });
 
   const handleConfirmDelete = () => {
     if (deleteTarget) {
-      dispatchDelete({ companyUuid, textUuid: deleteTarget.uuid });
+      startTransition(() => {
+        dispatchDelete({ companyUuid, textUuid: deleteTarget.uuid });
+      });
     }
   };
 

@@ -23,7 +23,7 @@ import type { SelectCustomerStock } from "@/db/schema/customer-stock";
 import { CUSTOMER_STOCK_REASON_LABELS } from "@/lib/labels";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Boxes, Pencil, Plus, Trash2 } from "lucide-react";
-import { useActionState, useEffect, useState } from "react";
+import { startTransition, useActionState, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 
 type Props = {
@@ -116,12 +116,16 @@ export const CompanyCustomerStockEditor = ({
   };
 
   const handleSave = stockForm.handleSubmit((values) => {
-    dispatchSave({ companyUuid, customerStockUuid: editingUuid, values });
+    startTransition(() => {
+      dispatchSave({ companyUuid, customerStockUuid: editingUuid, values });
+    });
   });
 
   const handleConfirmDelete = () => {
     if (deleteTarget) {
-      dispatchDelete({ companyUuid, customerStockUuid: deleteTarget.uuid });
+      startTransition(() => {
+        dispatchDelete({ companyUuid, customerStockUuid: deleteTarget.uuid });
+      });
     }
   };
 
