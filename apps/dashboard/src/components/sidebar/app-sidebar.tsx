@@ -320,7 +320,6 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: "Complaints", href: "/complaints" },
       { label: "Complaint Lines", href: "/complaint-lines" },
-      { label: "Actions", href: "/actions-overview" },
       { label: "Balanced Scorecard", href: "/balanced-scorecard" },
       { label: "Transport by Region", href: "/transport-by-region" },
       {
