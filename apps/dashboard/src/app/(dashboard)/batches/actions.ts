@@ -151,6 +151,12 @@ export const generateBatches = async (): Promise<GenerateBatchesResult> => {
     const chargeUpdates: Array<{ stockUuid: string; internalCharge: string }> =
       [];
 
+    const nextInternalCharge = (year: number) => {
+      const nextSequence = (sequenceByYear.get(year) ?? 0) + 1;
+      sequenceByYear.set(year, nextSequence);
+      return formatInternalChargeNumber(year, nextSequence);
+    };
+
     for (const row of openReceivals) {
       const { receival } = row;
       const receiptDate = receival.receiptDate;
@@ -158,14 +164,10 @@ export const generateBatches = async (): Promise<GenerateBatchesResult> => {
         ? Number(receiptDate.slice(0, 4))
         : new Date().getFullYear();
 
-      let internalCharge = row.stockInternalCharge;
-      if (!internalCharge) {
-        const nextSequence = (sequenceByYear.get(year) ?? 0) + 1;
-        sequenceByYear.set(year, nextSequence);
-        internalCharge = formatInternalChargeNumber(year, nextSequence);
-        if (row.stockUuid) {
-          chargeUpdates.push({ stockUuid: row.stockUuid, internalCharge });
-        }
+      const internalCharge =
+        row.stockInternalCharge || nextInternalCharge(year);
+      if (!row.stockInternalCharge && row.stockUuid) {
+        chargeUpdates.push({ stockUuid: row.stockUuid, internalCharge });
       }
 
       rows.push({
