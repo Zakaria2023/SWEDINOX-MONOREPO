@@ -13,13 +13,13 @@ import {
   CustomerStockDialogValues,
   DEFAULT_CUSTOMER_STOCK,
 } from "@/app/(dashboard)/companies/validation";
-import type { ProductGroupOption } from "@/app/(dashboard)/product-groups/actions";
-import type { ProductOption } from "@/app/(dashboard)/products/actions";
+import { ProductGroupOption } from "@/app/(dashboard)/product-groups/actions";
+import { ProductOption } from "@/app/(dashboard)/products/actions";
 import { CustomerStockDialog } from "@/components/companies/dialogs/customer-stock-dialog";
 import { ProductPickerDialog } from "@/components/companies/dialogs/product-picker-dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FormError } from "@/components/ui/form-error";
-import type { SelectCustomerStock } from "@/db/schema/customer-stock";
+import { SelectCustomerStock } from "@/db/schema/customer-stock";
 import { CUSTOMER_STOCK_REASON_LABELS } from "@/lib/labels";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Boxes, Pencil, Plus, Trash2 } from "lucide-react";

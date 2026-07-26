@@ -26,7 +26,7 @@ import {
 } from "@/components/shadcn/table";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FormError } from "@/components/ui/form-error";
-import type { SelectTransporterCosts } from "@/db/schema/transporter-costs";
+import { SelectTransporterCosts } from "@/db/schema/transporter-costs";
 import { transporterPriceUnits } from "@/lib/enums";
 import { generateUuid } from "@/lib/helpers";
 import { TRANSPORTER_PRICE_UNIT_LABELS } from "@/lib/labels";

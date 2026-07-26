@@ -1,14 +1,14 @@
 "use client";
 
 import {
-  type CompanyMarketingData,
+  CompanyMarketingData,
   updateCompanyMarketing,
 } from "@/app/(dashboard)/companies/[uuid]/edit/marketing/actions";
 import {
   companyMarketingSchema,
-  type CompanyMarketingFormValues,
+  CompanyMarketingFormValues,
 } from "@/app/(dashboard)/companies/[uuid]/edit/marketing/validation";
-import type { IndustryOption } from "@/app/(dashboard)/industries/actions";
+import { IndustryOption } from "@/app/(dashboard)/industries/actions";
 import { Button } from "@/components/shadcn/button";
 import { Checkbox } from "@/components/shadcn/checkbox";
 import { Input } from "@/components/shadcn/input";

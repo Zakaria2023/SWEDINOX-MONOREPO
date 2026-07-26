@@ -10,11 +10,11 @@ import {
   projectDialogSchema,
   ProjectDialogValues,
 } from "@/app/(dashboard)/companies/[uuid]/edit/projects/validation";
-import type { ContractForProjectOption } from "@/app/(dashboard)/contracts/actions";
+import { ContractForProjectOption } from "@/app/(dashboard)/contracts/actions";
 import { ProjectDialog } from "@/components/companies/dialogs/project-dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FormError } from "@/components/ui/form-error";
-import type { SelectCustomerProjects } from "@/db/schema/customer-projects";
+import { SelectCustomerProjects } from "@/db/schema/customer-projects";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FolderOpen, Pencil, Plus, Trash2 } from "lucide-react";
 import { startTransition, useActionState, useEffect, useState } from "react";

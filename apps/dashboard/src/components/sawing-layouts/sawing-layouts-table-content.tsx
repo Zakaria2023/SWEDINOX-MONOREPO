@@ -15,7 +15,7 @@ import {
   SAWING_STATUS_LABELS,
 } from "@/lib/labels";
 import { formatBoolean, formatDateValue } from "@/lib/helpers";
-import type { SawingLayoutFetchStatus, SawingStatus } from "@/lib/enums";
+import { SawingLayoutFetchStatus, SawingStatus } from "@/lib/enums";
 
 type Props = {
   layouts: SawingLayoutListItem[];
@@ -145,7 +145,9 @@ export const SawingLayoutsTable = ({ layouts }: Props) => (
                 {row.totalPiecesToBeSawn ?? "—"}
               </TableCell>
               <TableCell>{row.sawingOfTl ?? "—"}</TableCell>
-              <TableCell>{formatBoolean(row.sawingAccordingToLayout)}</TableCell>
+              <TableCell>
+                {formatBoolean(row.sawingAccordingToLayout)}
+              </TableCell>
               <TableCell>{formatBoolean(row.layoutIncludesCutoff)}</TableCell>
               <TableCell>{row.followUpProcessing ?? "—"}</TableCell>
               <TableCell>{row.toLocations ?? "—"}</TableCell>

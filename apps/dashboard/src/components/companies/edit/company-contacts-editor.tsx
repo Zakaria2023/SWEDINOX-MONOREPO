@@ -13,8 +13,8 @@ import {
 import { ContactDialog } from "@/components/companies/dialogs/contact-dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FormError } from "@/components/ui/form-error";
-import type { SelectContacts } from "@/db/schema/contacts";
-import type { ContactCategory } from "@/lib/enums";
+import { SelectContacts } from "@/db/schema/contacts";
+import { ContactCategory } from "@/lib/enums";
 import { CONTACT_CATEGORY_LABELS } from "@/lib/labels";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Pencil, Plus, Trash2, User } from "lucide-react";

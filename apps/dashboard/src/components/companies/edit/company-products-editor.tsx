@@ -13,13 +13,13 @@ import {
   productDialogSchema,
   ProductDialogValues,
 } from "@/app/(dashboard)/companies/validation";
-import type { ProductGroupOption } from "@/app/(dashboard)/product-groups/actions";
-import type { ProductOption } from "@/app/(dashboard)/products/actions";
+import { ProductGroupOption } from "@/app/(dashboard)/product-groups/actions";
+import { ProductOption } from "@/app/(dashboard)/products/actions";
 import { ProductDialog } from "@/components/companies/dialogs/product-dialog";
 import { ProductPickerDialog } from "@/components/companies/dialogs/product-picker-dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FormError } from "@/components/ui/form-error";
-import type { SelectProducts } from "@/db/schema/products";
+import { SelectProducts } from "@/db/schema/products";
 import {
   DELIVERY_TIME_UNIT_LABELS,
   PURCHASING_UNIT_LABELS,

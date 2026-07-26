@@ -1,6 +1,6 @@
-import type { ContactDialogValues } from "@/app/(dashboard)/companies/validation";
-import type { InsertContacts, SelectContacts } from "@/db/schema/contacts";
-import type { ContactCategory } from "@/lib/enums";
+import { ContactDialogValues } from "@/app/(dashboard)/companies/validation";
+import { InsertContacts, SelectContacts } from "@/db/schema/contacts";
+import { ContactCategory } from "@/lib/enums";
 
 // The contact dialog edits only a subset of the Contacts columns — these two
 // mappers convert between that subset and the stored row. Columns the dialog

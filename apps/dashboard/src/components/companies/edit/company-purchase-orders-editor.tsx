@@ -13,7 +13,7 @@ import {
 import { PurchaseOrderDialog } from "@/components/companies/dialogs/purchase-order-dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FormError } from "@/components/ui/form-error";
-import type { SelectPurchaseOrders } from "@/db/schema/purchase-orders";
+import { SelectPurchaseOrders } from "@/db/schema/purchase-orders";
 import { todayDateString } from "@/lib/helpers";
 import { PURCHASE_ORDER_STATUS_LABELS } from "@/lib/labels";
 import { zodResolver } from "@hookform/resolvers/zod";

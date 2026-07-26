@@ -9,12 +9,12 @@ import {
   ContractSelectionValues,
   DEFAULT_CONTRACT_SELECTION,
 } from "@/app/(dashboard)/companies/validation";
-import type { ContractListItem } from "@/app/(dashboard)/contracts/actions";
+import { ContractListItem } from "@/app/(dashboard)/contracts/actions";
 import { ContractDialog } from "@/components/companies/dialogs/contract-dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FormError } from "@/components/ui/form-error";
-import type { SelectContracts } from "@/db/schema/contracts";
-import type { ContractableRole } from "@/lib/enums";
+import { SelectContracts } from "@/db/schema/contracts";
+import { ContractableRole } from "@/lib/enums";
 import { CONTRACT_TYPE_LABELS, CONTRACTABLE_ROLE_LABELS } from "@/lib/labels";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FileText, Plus, Trash2 } from "lucide-react";

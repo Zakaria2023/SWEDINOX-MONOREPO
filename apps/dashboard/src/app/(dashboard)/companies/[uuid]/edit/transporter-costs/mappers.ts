@@ -1,8 +1,8 @@
-import type {
+import {
   InsertTransporterCosts,
   SelectTransporterCosts,
 } from "@/db/schema/transporter-costs";
-import type { TransporterCostRowValues } from "./validation";
+import { TransporterCostRowValues } from "./validation";
 
 // Row ↔ grid-values mappers for the inline transporter-costs table. Null
 // decimals render with the same zero fallbacks the legacy grid used; empty

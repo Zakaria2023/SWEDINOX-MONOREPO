@@ -1,8 +1,8 @@
-import type {
+import {
   InsertTransporterCountries,
   SelectTransporterCountries,
 } from "@/db/schema/transporter-countries";
-import type { TransporterCountryRowValues } from "./validation";
+import { TransporterCountryRowValues } from "./validation";
 
 // Row ↔ grid-values mappers for the inline transporter-countries table.
 // Empty selects/inputs write null back so clearing works.

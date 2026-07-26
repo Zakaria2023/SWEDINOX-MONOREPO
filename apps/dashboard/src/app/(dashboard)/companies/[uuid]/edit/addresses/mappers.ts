@@ -1,5 +1,5 @@
-import type { AddressFormValues } from "@/app/(dashboard)/companies/validation";
-import type {
+import { AddressFormValues } from "@/app/(dashboard)/companies/validation";
+import {
   InsertCompanyAddresses,
   SelectCompanyAddresses,
 } from "@/db/schema/company-addresses";
@@ -32,8 +32,7 @@ export const addressRowToFormValues = (
   billingAttentionAdditional: row.billingAttentionAdditional ?? "",
   gln: row.gln ?? "",
   peppolId: row.peppolId ?? "",
-  sequenceNumber:
-    row.sequenceNumber != null ? String(row.sequenceNumber) : "",
+  sequenceNumber: row.sequenceNumber != null ? String(row.sequenceNumber) : "",
   category: row.category ?? [],
   needCrane: row.needCrane ?? false,
   canopyRequired: row.canopyRequired ?? false,

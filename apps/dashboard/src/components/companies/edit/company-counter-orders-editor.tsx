@@ -13,7 +13,7 @@ import {
 import { CounterOrderDialog } from "@/components/companies/dialogs/counter-order-dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FormError } from "@/components/ui/form-error";
-import type { SelectCounterOrders } from "@/db/schema/counter-orders";
+import { SelectCounterOrders } from "@/db/schema/counter-orders";
 import { daysInSystem, todayDateString } from "@/lib/helpers";
 import { COUNTER_ORDER_STATUS_LABELS } from "@/lib/labels";
 import { zodResolver } from "@hookform/resolvers/zod";

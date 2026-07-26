@@ -1,4 +1,4 @@
-import type { ScorecardRow } from "./types";
+import { ScorecardRow } from "./types";
 import { SCORECARD } from "./types";
 
 export const getBalancedScorecard = async (): Promise<ScorecardRow[]> =>

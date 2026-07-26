@@ -1,13 +1,13 @@
 "use client";
 
-import type { DebtorCompanyOption } from "@/app/(dashboard)/companies/actions";
+import { DebtorCompanyOption } from "@/app/(dashboard)/companies/actions";
 import {
-  type CompanyDebtorData,
+  CompanyDebtorData,
   updateCompanyDebtor,
 } from "@/app/(dashboard)/companies/[uuid]/edit/debtor/actions";
 import {
   companyDebtorSchema,
-  type CompanyDebtorFormValues,
+  CompanyDebtorFormValues,
 } from "@/app/(dashboard)/companies/[uuid]/edit/debtor/validation";
 import { Button } from "@/components/shadcn/button";
 import { Checkbox } from "@/components/shadcn/checkbox";
@@ -320,7 +320,9 @@ export const CompanyDebtorForm = ({
           <label className="flex items-center gap-2 text-sm">
             <Checkbox
               checked={watch("calculateVat")}
-              onChange={() => setValue("calculateVat", !getValues("calculateVat"))}
+              onChange={() =>
+                setValue("calculateVat", !getValues("calculateVat"))
+              }
               disabled={isPending}
             />
             Calculate VAT

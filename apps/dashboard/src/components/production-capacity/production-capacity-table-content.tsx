@@ -14,7 +14,7 @@ import {
   PRODUCTION_CAPACITY_STATUS_LABELS,
 } from "@/lib/labels";
 import { formatDateValue } from "@/lib/helpers";
-import type { ProductionCapacityStatus } from "@/lib/enums";
+import { ProductionCapacityStatus } from "@/lib/enums";
 
 type Props = {
   capacity: ProductionCapacityListItem[];
@@ -83,7 +83,9 @@ export const ProductionCapacityTable = ({ capacity }: Props) => (
               <TableCell className="text-right">
                 {row.maximumCapacity ?? "—"}
               </TableCell>
-              <TableCell className="text-right">{row.capacity ?? "—"}</TableCell>
+              <TableCell className="text-right">
+                {row.capacity ?? "—"}
+              </TableCell>
               <TableCell className="text-right">
                 {row.remainingNotSquare ?? "—"}
               </TableCell>

@@ -25,7 +25,7 @@ import {
 } from "@/components/shadcn/table";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FormError } from "@/components/ui/form-error";
-import type { SelectProcessings } from "@/db/schema/processings";
+import { SelectProcessings } from "@/db/schema/processings";
 import { deliveryTimeUnits, processingEditings } from "@/lib/enums";
 import { generateUuid } from "@/lib/helpers";
 import {

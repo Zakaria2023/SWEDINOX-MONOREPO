@@ -11,11 +11,11 @@ import {
   TextDialogValues,
   USAGE_CATEGORY_FIELDS,
 } from "@/app/(dashboard)/companies/validation";
-import type { TextCategoryOption } from "@/app/(dashboard)/text-categories/actions";
+import { TextCategoryOption } from "@/app/(dashboard)/text-categories/actions";
 import { TextDialog } from "@/components/companies/dialogs/text-dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FormError } from "@/components/ui/form-error";
-import type { SelectTexts } from "@/db/schema/texts";
+import { SelectTexts } from "@/db/schema/texts";
 import { TEXT_USAGE_CATEGORY_LABELS } from "@/lib/labels";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AlignLeft, Pencil, Plus, Trash2 } from "lucide-react";

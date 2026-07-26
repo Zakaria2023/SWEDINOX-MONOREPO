@@ -2,9 +2,9 @@
 
 import { FormProvider } from "react-hook-form";
 import { useMachineSubmit } from "@/app/(dashboard)/machines/use-machine-submit";
-import type { ProductGroupOption } from "@/app/(dashboard)/product-groups/actions";
-import type { ProductOption } from "@/app/(dashboard)/products/actions";
-import type { MachineStockLocationOption } from "@/app/(dashboard)/warehouses/actions";
+import { ProductGroupOption } from "@/app/(dashboard)/product-groups/actions";
+import { ProductOption } from "@/app/(dashboard)/products/actions";
+import { MachineStockLocationOption } from "@/app/(dashboard)/warehouses/actions";
 import { ProductPickerDialog } from "@/components/companies/dialogs/product-picker-dialog";
 import { FormActions } from "@/components/ui/form-actions";
 import { FormError } from "@/components/ui/form-error";

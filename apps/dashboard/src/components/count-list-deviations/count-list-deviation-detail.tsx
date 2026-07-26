@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { ReactNode } from "react";
 import { CountListDeviationDetail } from "@/app/(dashboard)/count-list-deviations/actions";
 import { STOCK_UNIT_LABELS } from "@/lib/labels";
 import { formatDateValue } from "@/lib/helpers";

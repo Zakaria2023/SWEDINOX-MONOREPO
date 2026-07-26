@@ -13,7 +13,7 @@ import {
 import { ReturnOrderDialog } from "@/components/companies/dialogs/return-order-dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FormError } from "@/components/ui/form-error";
-import type { SelectReturnOrders } from "@/db/schema/return-orders";
+import { SelectReturnOrders } from "@/db/schema/return-orders";
 import { daysInSystem, todayDateString } from "@/lib/helpers";
 import {
   RETURN_ORDER_REASON_LABELS,

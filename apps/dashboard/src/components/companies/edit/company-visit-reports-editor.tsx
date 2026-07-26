@@ -13,7 +13,7 @@ import {
 import { VisitReportDialog } from "@/components/companies/dialogs/visit-report-dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FormError } from "@/components/ui/form-error";
-import type { SelectVisitReports } from "@/db/schema/visit-reports";
+import { SelectVisitReports } from "@/db/schema/visit-reports";
 import { daysInSystem, pluralize } from "@/lib/helpers";
 import {
   VISIT_REPORT_CONTACT_METHOD_LABELS,

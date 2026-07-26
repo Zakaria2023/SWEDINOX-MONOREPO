@@ -13,7 +13,7 @@ import {
 import { AdditionalAddressDialog } from "@/components/companies/dialogs/additional-address-dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FormError } from "@/components/ui/form-error";
-import type { SelectCompanyAddresses } from "@/db/schema/company-addresses";
+import { SelectCompanyAddresses } from "@/db/schema/company-addresses";
 import { addressCategories, AddressCategory } from "@/lib/enums";
 import { ADDRESS_CATEGORY_LABELS } from "@/lib/labels";
 import { zodResolver } from "@hookform/resolvers/zod";

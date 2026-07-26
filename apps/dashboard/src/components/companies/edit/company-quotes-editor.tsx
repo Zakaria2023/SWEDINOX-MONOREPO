@@ -13,7 +13,7 @@ import {
 import { QuoteDialog } from "@/components/companies/dialogs/quote-dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FormError } from "@/components/ui/form-error";
-import type { SelectQuotes } from "@/db/schema/quotes";
+import { SelectQuotes } from "@/db/schema/quotes";
 import { daysInSystem, toDateInput, todayDateString } from "@/lib/helpers";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FileText, Pencil, Plus, Trash2 } from "lucide-react";

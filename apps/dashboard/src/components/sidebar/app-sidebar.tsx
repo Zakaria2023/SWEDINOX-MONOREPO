@@ -30,7 +30,7 @@ import {
   Users,
   Warehouse,
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";

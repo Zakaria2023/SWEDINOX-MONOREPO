@@ -1,5 +1,5 @@
-import type { CommunicationSettingFormValues } from "@/app/(dashboard)/companies/validation";
-import type {
+import { CommunicationSettingFormValues } from "@/app/(dashboard)/companies/validation";
+import {
   InsertCommunicationSettings,
   SelectCommunicationSettings,
 } from "@/db/schema/communication-settings";

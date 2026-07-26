@@ -1,6 +1,6 @@
-import type { VisitReportDialogValues } from "@/app/(dashboard)/companies/validation";
-import type { SelectContacts } from "@/db/schema/contacts";
-import type {
+import { VisitReportDialogValues } from "@/app/(dashboard)/companies/validation";
+import { SelectContacts } from "@/db/schema/contacts";
+import {
   InsertVisitReports,
   SelectVisitReports,
 } from "@/db/schema/visit-reports";

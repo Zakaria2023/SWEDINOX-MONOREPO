@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { ReactNode } from "react";
 import Link from "next/link";
 import { FreightMovementDetail } from "@/app/(dashboard)/freight-movements/actions";
 import { STOCK_MOVEMENT_REASON_LABELS, STOCK_UNIT_LABELS } from "@/lib/labels";
@@ -50,9 +50,7 @@ export const FreightMovementDetailView = ({ movement }: Props) => (
             ? ` ${STOCK_UNIT_LABELS[movement.stockUnit]}`
             : ""}
         </Field>
-        <Field label="Internal charge">
-          {movement.internalCharge ?? "—"}
-        </Field>
+        <Field label="Internal charge">{movement.internalCharge ?? "—"}</Field>
         <Field label="Workorder #">{movement.workOrderNumber ?? "—"}</Field>
         <Field label="General ledger">{movement.generalLedger ?? "—"}</Field>
       </div>
@@ -62,17 +60,13 @@ export const FreightMovementDetailView = ({ movement }: Props) => (
       <h2 className="border-b pb-2 text-base font-semibold">Stock balance</h2>
       <div className="grid grid-cols-2 gap-4 rounded-lg border p-4 sm:grid-cols-3">
         <Field label="Start date">{formatDateValue(movement.startDate)}</Field>
-        <Field label="Starting stock">
-          {movement.startingStockQty ?? "—"}
-        </Field>
+        <Field label="Starting stock">{movement.startingStockQty ?? "—"}</Field>
         <Field label="Starting value">
           {movement.startingStockValue ?? "—"}
         </Field>
         <Field label="End date">{formatDateValue(movement.endDate)}</Field>
         <Field label="Closing stock">{movement.closingStockQty ?? "—"}</Field>
-        <Field label="Closing value">
-          {movement.closingStockValue ?? "—"}
-        </Field>
+        <Field label="Closing value">{movement.closingStockValue ?? "—"}</Field>
       </div>
     </div>
 

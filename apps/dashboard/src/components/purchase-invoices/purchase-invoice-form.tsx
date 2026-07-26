@@ -3,7 +3,10 @@
 import { useEffect, useState } from "react";
 import { FormProvider } from "react-hook-form";
 import { useRouter } from "next/navigation";
-import type { CompanyOption, ContactOption } from "@/app/(dashboard)/companies/actions";
+import {
+  CompanyOption,
+  ContactOption,
+} from "@/app/(dashboard)/companies/actions";
 import { usePurchaseInvoiceSubmit } from "@/app/(dashboard)/purchase-invoices/use-purchase-invoice-submit";
 import { FormActions } from "@/components/ui/form-actions";
 import { FormError } from "@/components/ui/form-error";
@@ -11,12 +14,12 @@ import { PurchaseInvoiceDetailsSection } from "./sections/purchase-invoice-detai
 import { PurchaseInvoiceItemsSection } from "./sections/purchase-invoice-items-section";
 import { SurchargesSection } from "./sections/surcharges-section";
 import { RemarksAndDocumentsSection } from "./sections/remarks-and-documents-section";
-import {
-  invoicePaymentTerms,
-  purchaseInvoiceBlockReasons,
-} from "@/lib/enums";
+import { invoicePaymentTerms, purchaseInvoiceBlockReasons } from "@/lib/enums";
 import { getPaymentTermDueDate } from "@/lib/helpers";
-import { INVOICE_PAYMENT_TERM_LABELS, PURCHASE_INVOICE_BLOCK_REASON_LABELS } from "@/lib/labels";
+import {
+  INVOICE_PAYMENT_TERM_LABELS,
+  PURCHASE_INVOICE_BLOCK_REASON_LABELS,
+} from "@/lib/labels";
 
 type PurchaseInvoiceFormProps = {
   availableSuppliers: CompanyOption[];
@@ -55,7 +58,10 @@ export const PurchaseInvoiceForm = ({
   // Auto-fill the due date from the payment term whenever it (or the invoice
   // date) changes and the term implies a determinate due date.
   useEffect(() => {
-    const due = getPaymentTermDueDate(paymentTerms ?? null, invoiceDate ?? null);
+    const due = getPaymentTermDueDate(
+      paymentTerms ?? null,
+      invoiceDate ?? null,
+    );
     if (due) {
       setValue("expirationDate", due);
     }
@@ -72,10 +78,14 @@ export const PurchaseInvoiceForm = ({
   const contactOptions = [
     { value: "", label: "Empty" },
     ...availableContacts
-      .filter((c) => !selectedCompanyUuid || c.companyUuid === selectedCompanyUuid)
+      .filter(
+        (c) => !selectedCompanyUuid || c.companyUuid === selectedCompanyUuid,
+      )
       .map((c) => ({
         value: c.uuid,
-        label: [String(c.id), c.firstName, c.lastName].filter(Boolean).join(" "),
+        label: [String(c.id), c.firstName, c.lastName]
+          .filter(Boolean)
+          .join(" "),
       })),
   ];
 
@@ -133,7 +143,10 @@ export const PurchaseInvoiceForm = ({
           onUploadSuccess={(uploads) =>
             setUploadedDocs((prev) => [
               ...prev,
-              ...uploads.map((u) => ({ id: u.documentId, fileName: u.fileName })),
+              ...uploads.map((u) => ({
+                id: u.documentId,
+                fileName: u.fileName,
+              })),
             ])
           }
           onRemoveDoc={(id) =>

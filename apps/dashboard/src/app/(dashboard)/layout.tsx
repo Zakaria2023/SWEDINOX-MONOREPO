@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { ReactNode } from "react";
 import { SidebarProvider } from "@/components/shadcn/sidebar";
 import { TooltipProvider } from "@/components/shadcn/tooltip";
 import { AppSidebar } from "@/components/sidebar/app-sidebar";

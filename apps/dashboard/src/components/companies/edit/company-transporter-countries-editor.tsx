@@ -24,7 +24,7 @@ import {
 } from "@/components/shadcn/table";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FormError } from "@/components/ui/form-error";
-import type { SelectTransporterCountries } from "@/db/schema/transporter-countries";
+import { SelectTransporterCountries } from "@/db/schema/transporter-countries";
 import { deliveryTerms, transporterCountries } from "@/lib/enums";
 import { generateUuid } from "@/lib/helpers";
 import { DELIVERY_TERM_LABELS, TRANSPORTER_COUNTRY_LABELS } from "@/lib/labels";

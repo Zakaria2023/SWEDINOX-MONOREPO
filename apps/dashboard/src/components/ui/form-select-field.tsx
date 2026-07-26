@@ -1,13 +1,8 @@
 "use client";
 
-import type { ReactNode } from "react";
-import {
-  Controller,
-  type Control,
-  type FieldPath,
-  type FieldValues,
-} from "react-hook-form";
-import { Select, type SelectOption } from "@/components/shadcn/select";
+import { ReactNode } from "react";
+import { Controller, Control, FieldPath, FieldValues } from "react-hook-form";
+import { Select, SelectOption } from "@/components/shadcn/select";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 
 type FormSelectFieldProps<TFieldValues extends FieldValues> = {

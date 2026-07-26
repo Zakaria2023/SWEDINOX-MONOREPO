@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { ReactElement } from "react";
+import { ReactElement } from "react";
 import { Resend } from "resend";
 
 /**

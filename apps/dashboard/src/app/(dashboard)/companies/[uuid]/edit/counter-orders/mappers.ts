@@ -1,5 +1,5 @@
-import type { CounterOrderDialogValues } from "@/app/(dashboard)/companies/validation";
-import type {
+import { CounterOrderDialogValues } from "@/app/(dashboard)/companies/validation";
+import {
   InsertCounterOrders,
   SelectCounterOrders,
 } from "@/db/schema/counter-orders";

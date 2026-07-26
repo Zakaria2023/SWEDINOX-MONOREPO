@@ -16,7 +16,7 @@ import {
 } from "@/components/shadcn/table";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FormError } from "@/components/ui/form-error";
-import type { SelectFollowUps } from "@/db/schema/follow-ups";
+import { SelectFollowUps } from "@/db/schema/follow-ups";
 import { generateUuid, todayDateString } from "@/lib/helpers";
 import { Plus, Save, X } from "lucide-react";
 import {

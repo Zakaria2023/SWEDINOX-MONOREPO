@@ -1,10 +1,10 @@
-import type { CustomerStockDialogValues } from "@/app/(dashboard)/companies/validation";
-import type { ProductOption } from "@/app/(dashboard)/products/actions";
-import type {
+import { CustomerStockDialogValues } from "@/app/(dashboard)/companies/validation";
+import { ProductOption } from "@/app/(dashboard)/products/actions";
+import {
   InsertCustomerStock,
   SelectCustomerStock,
 } from "@/db/schema/customer-stock";
-import type { CustomerStockReason } from "@/lib/enums";
+import { CustomerStockReason } from "@/lib/enums";
 
 // The customer stock dialog edits location, product, quantity, reason, and
 // description. productCode/productName are snapshotted from the picked catalog

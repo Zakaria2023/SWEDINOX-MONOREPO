@@ -1,5 +1,5 @@
-import type { TextDialogValues } from "@/app/(dashboard)/companies/validation";
-import type { InsertTexts, SelectTexts } from "@/db/schema/texts";
+import { TextDialogValues } from "@/app/(dashboard)/companies/validation";
+import { InsertTexts, SelectTexts } from "@/db/schema/texts";
 
 // The text dialog edits the category link, the text block, and the usage
 // flags. The stored title always mirrors the selected category's name (the

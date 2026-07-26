@@ -11,7 +11,7 @@ import {
 } from "@/components/shadcn/table";
 import { PRODUCTION_CAPACITY_STATUS_LABELS } from "@/lib/labels";
 import { formatDateValue } from "@/lib/helpers";
-import type { ProductionCapacityStatus } from "@/lib/enums";
+import { ProductionCapacityStatus } from "@/lib/enums";
 
 type Props = {
   checks: CapacityCheckListItem[];
@@ -71,7 +71,9 @@ export const CapacityChecksTable = ({ checks }: Props) => (
               <TableCell className="text-right">
                 {row.occupiedCapacity ?? "—"}
               </TableCell>
-              <TableCell className="text-right">{row.capacity ?? "—"}</TableCell>
+              <TableCell className="text-right">
+                {row.capacity ?? "—"}
+              </TableCell>
               <TableCell className="text-right">
                 {row.maximumCapacity ?? "—"}
               </TableCell>

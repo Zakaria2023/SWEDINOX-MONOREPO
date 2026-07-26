@@ -13,7 +13,7 @@ import {
 import { CommunicationSettingDialog } from "@/components/companies/dialogs/communication-setting-dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FormError } from "@/components/ui/form-error";
-import type { SelectCommunicationSettings } from "@/db/schema/communication-settings";
+import { SelectCommunicationSettings } from "@/db/schema/communication-settings";
 import {
   communicationSettingDocumentTypes,
   communicationSettingShapes,

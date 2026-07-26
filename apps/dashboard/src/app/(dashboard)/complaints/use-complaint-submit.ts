@@ -17,7 +17,7 @@ import {
 import { CompanyOption } from "@/app/(dashboard)/companies/actions";
 import { ProductOption } from "@/app/(dashboard)/products/actions";
 import { SelectOption } from "@/components/shadcn/select";
-import type { DashboardUserOption } from "@/lib/server/clerk";
+import { DashboardUserOption } from "@/lib/server/clerk";
 import {
   complaintCategories,
   complaintCauses,
@@ -31,7 +31,14 @@ import {
   ComplaintSolution,
   ComplaintType,
 } from "@/lib/enums";
-import { COMPLAINT_CATEGORY_LABELS, COMPLAINT_CAUSE_LABELS, COMPLAINT_REPORT_LABELS, COMPLAINT_SOLUTION_LABELS, COMPLAINT_STATUS_LABELS, COMPLAINT_TYPE_LABELS } from "@/lib/labels";
+import {
+  COMPLAINT_CATEGORY_LABELS,
+  COMPLAINT_CAUSE_LABELS,
+  COMPLAINT_REPORT_LABELS,
+  COMPLAINT_SOLUTION_LABELS,
+  COMPLAINT_STATUS_LABELS,
+  COMPLAINT_TYPE_LABELS,
+} from "@/lib/labels";
 
 type UseComplaintSubmitParams = {
   companies: CompanyOption[];
