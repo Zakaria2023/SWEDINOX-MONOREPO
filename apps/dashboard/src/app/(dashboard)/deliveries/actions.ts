@@ -92,12 +92,14 @@ export const deliverOrderItem = async (
     if (!orderItem) {
       return { error: "Order line not found." };
     }
+
     if (orderItem.status !== "reserved") {
       return { error: "Only a reserved line can be delivered." };
     }
 
     const user = await currentUser();
     const userId = user?.id;
+
     if (!userId) {
       return { error: "User not authenticated" };
     }
@@ -207,6 +209,8 @@ export const getDeliveriesToArrange = async (): Promise<DeliveryLineItem[]> => {
       .where(eq(OrderItems.qtyReserved, "0.000"))
       .orderBy(desc(OrderItems.createdAt));
   } catch (error) {
-    throw new Error(describeError(error, "Failed to fetch deliveries to arrange"));
+    throw new Error(
+      describeError(error, "Failed to fetch deliveries to arrange"),
+    );
   }
 };

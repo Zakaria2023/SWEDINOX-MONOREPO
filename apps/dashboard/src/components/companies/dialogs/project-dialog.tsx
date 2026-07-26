@@ -31,6 +31,7 @@ type Props = {
   onSave: FormEventHandler<HTMLFormElement>;
   form: UseFormReturn<ProjectFormValues>;
   projectContracts: ContractForProjectOption[];
+  submitLabel?: string;
 };
 
 export const ProjectDialog = ({
@@ -40,13 +41,14 @@ export const ProjectDialog = ({
   onSave,
   form,
   projectContracts,
+  submitLabel = "Add Project",
 }: Props) => (
   <Dialog open={isOpen} onOpenChange={onOpenChange}>
     <DialogContent className="max-w-lg">
       <DialogHeader>
         <DialogTitle className="flex items-center gap-2">
           <FolderOpen className="size-4" />
-          Add Project
+          Project
         </DialogTitle>
         <DialogDescription>
           Add a project for this customer / prospect.
@@ -97,7 +99,7 @@ export const ProjectDialog = ({
             />
           </div>
         </DialogBody>
-        <DialogFormFooter onCancel={onCancel} submitLabel="Add Project" />
+        <DialogFormFooter onCancel={onCancel} submitLabel={submitLabel} />
       </form>
     </DialogContent>
   </Dialog>

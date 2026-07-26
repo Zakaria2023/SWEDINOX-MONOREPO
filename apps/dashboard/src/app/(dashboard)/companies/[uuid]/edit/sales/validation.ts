@@ -1,0 +1,71 @@
+import {
+  customerGroups,
+  devTheorWtOptions,
+  ediOptions,
+  groupLinesByDescriptionOptions,
+  miscellaneousOptions,
+  orderOptions,
+  printProductCodesOptions,
+  quoteOptions,
+  quoteOrderInvoiceOptions,
+  quoteOrderOptions,
+  salesRepresentatives,
+} from "@/lib/enums";
+import { z } from "zod";
+
+export const companySalesSchema = z.object({
+  customerGroup: z.union([
+    z.enum(customerGroups),
+    z.literal(""),
+    z.undefined(),
+  ]),
+  representative: z.union([
+    z.enum(salesRepresentatives),
+    z.literal(""),
+    z.undefined(),
+  ]),
+  accountManager: z.union([
+    z.enum(salesRepresentatives),
+    z.literal(""),
+    z.undefined(),
+  ]),
+  region: z.string().optional(),
+  memberOf: z.string().optional(),
+  miscellaneousSettings: z.array(z.enum(miscellaneousOptions)),
+  deliveryCondition: z.string().optional(),
+  devTheorWt: z.union([
+    z.enum(devTheorWtOptions),
+    z.literal(""),
+    z.undefined(),
+  ]),
+  defTransport: z.string().optional(),
+  quoteOrderSettings: z.array(z.enum(quoteOrderOptions)),
+  groupLinesByLongProductGroupDescription: z.union([
+    z.enum(groupLinesByDescriptionOptions),
+    z.literal(""),
+    z.undefined(),
+  ]),
+  printProductCodesOnOutgoingDocuments: z.union([
+    z.enum(printProductCodesOptions),
+    z.literal(""),
+    z.undefined(),
+  ]),
+  quoteOrderInvoiceSettings: z.array(z.enum(quoteOrderInvoiceOptions)),
+  orderSettings: z.array(z.enum(orderOptions)),
+  quoteSettings: z.array(z.enum(quoteOptions)),
+  websiteQuoteMustBeApproved: z.boolean(),
+  websiteQuoteApprovalAmount: z.string().optional(),
+  releaseActionPrint: z.boolean(),
+  releaseActionEmailEnabled: z.boolean(),
+  releaseActionEmailTo: z.string().optional(),
+  releaseActionFaxEnabled: z.boolean(),
+  releaseActionFaxTo: z.string().optional(),
+  actionPrint: z.boolean(),
+  actionEmailEnabled: z.boolean(),
+  actionEmailTo: z.string().optional(),
+  actionFaxEnabled: z.boolean(),
+  actionFaxTo: z.string().optional(),
+  ediSettings: z.array(z.enum(ediOptions)),
+});
+
+export type CompanySalesFormValues = z.infer<typeof companySalesSchema>;

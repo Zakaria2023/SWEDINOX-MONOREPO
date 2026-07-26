@@ -21,6 +21,7 @@ type Props = {
   onSave: () => void;
   form: UseFormReturn<CompanyFormValues>;
   availableForNext: AddressCategory[];
+  submitLabel?: string;
 };
 
 export const AdditionalAddressDialog = ({
@@ -30,6 +31,7 @@ export const AdditionalAddressDialog = ({
   onSave,
   form,
   availableForNext,
+  submitLabel = "Save Address",
 }: Props) => (
   <Dialog open={isOpen} onOpenChange={onOpenChange}>
     <DialogContent className="flex h-[85dvh] max-w-3xl flex-col gap-0 p-0">
@@ -54,7 +56,7 @@ export const AdditionalAddressDialog = ({
       </div>
       <DialogFormFooter
         onCancel={onCancel}
-        submitLabel="Save Address"
+        submitLabel={submitLabel}
         onSubmit={onSave}
       />
     </DialogContent>

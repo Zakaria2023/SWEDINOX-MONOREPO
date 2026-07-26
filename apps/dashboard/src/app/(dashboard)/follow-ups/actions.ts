@@ -1,7 +1,13 @@
 "use server";
-import { describeError } from "@/lib/helpers";
 
-import { db, Companies, FollowUps, SelectCompanies, SelectFollowUps } from "@/db";
+import { describeError } from "@/lib/helpers";
+import {
+  db,
+  Companies,
+  FollowUps,
+  SelectCompanies,
+  SelectFollowUps,
+} from "@/db";
 import { desc, eq, getTableColumns } from "drizzle-orm";
 
 export type FollowUpListItem = SelectFollowUps & {

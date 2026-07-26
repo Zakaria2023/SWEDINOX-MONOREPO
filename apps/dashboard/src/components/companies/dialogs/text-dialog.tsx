@@ -30,6 +30,7 @@ type Props = {
   form: UseFormReturn<TextDialogValues>;
   textCategories: TextCategoryOption[];
   handleCategorySelect: (uuid: string) => void;
+  submitLabel?: string;
 };
 
 export const TextDialog = ({
@@ -40,13 +41,14 @@ export const TextDialog = ({
   form,
   textCategories,
   handleCategorySelect,
+  submitLabel = "Add Text",
 }: Props) => (
   <Dialog open={isOpen} onOpenChange={onOpenChange}>
     <DialogContent className="flex h-[85dvh] max-w-5xl flex-col gap-0 p-0">
       <DialogHeader className="shrink-0 border-b bg-background px-6 py-5">
         <DialogTitle className="flex items-center gap-2">
           <AlignLeft className="size-4" />
-          Add Text
+          Text
         </DialogTitle>
         <DialogDescription>
           Select a category to auto-fill the usage checkboxes, then fill in the
@@ -132,7 +134,7 @@ export const TextDialog = ({
           </div>
         </div>
 
-        <DialogFormFooter onCancel={onCancel} submitLabel="Add Text" />
+        <DialogFormFooter onCancel={onCancel} submitLabel={submitLabel} />
       </form>
     </DialogContent>
   </Dialog>

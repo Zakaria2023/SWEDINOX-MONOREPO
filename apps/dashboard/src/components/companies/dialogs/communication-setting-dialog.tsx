@@ -28,6 +28,7 @@ type Props = {
   documentTypeOptions: { value: string; label: string }[];
   communicationTypeOptions: { value: string; label: string }[];
   shapeOptions: { value: string; label: string }[];
+  submitLabel?: string;
 };
 
 export const CommunicationSettingDialog = ({
@@ -41,6 +42,7 @@ export const CommunicationSettingDialog = ({
   documentTypeOptions,
   communicationTypeOptions,
   shapeOptions,
+  submitLabel = "Add Setting",
 }: Props) => (
   <Dialog open={isOpen} onOpenChange={onOpenChange}>
     <DialogContent className="max-w-lg">
@@ -136,7 +138,7 @@ export const CommunicationSettingDialog = ({
             </div>
           )}
         </DialogBody>
-        <DialogFormFooter onCancel={onCancel} submitLabel="Add Setting" />
+        <DialogFormFooter onCancel={onCancel} submitLabel={submitLabel} />
       </form>
     </DialogContent>
   </Dialog>

@@ -1,6 +1,6 @@
 "use server";
-import { describeError } from "@/lib/helpers";
 
+import { describeError } from "@/lib/helpers";
 import { db } from "@/db";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
@@ -77,7 +77,10 @@ export const getCustomerRevenuePerProductGroup = async (): Promise<
       .innerJoin(OrderItems, eq(InvoiceItems.orderItemUuid, OrderItems.uuid))
       .innerJoin(Products, eq(InvoiceItems.productUuid, Products.uuid))
       .innerJoin(Companies, eq(Invoices.companyUuid, Companies.uuid))
-      .leftJoin(ProductGroups, eq(Products.productGroupUuid, ProductGroups.uuid))
+      .leftJoin(
+        ProductGroups,
+        eq(Products.productGroupUuid, ProductGroups.uuid),
+      )
       .leftJoin(Stock, eq(OrderItems.stockUuid, Stock.uuid))
       .leftJoin(primaryContact, eq(Companies.uuid, primaryContact.companyUuid))
       .groupBy(
@@ -116,6 +119,11 @@ export const getCustomerRevenuePerProductGroup = async (): Promise<
       };
     });
   } catch (error) {
-    throw new Error(describeError(error, "Failed to fetch customer revenue per product group"));
+    throw new Error(
+      describeError(
+        error,
+        "Failed to fetch customer revenue per product group",
+      ),
+    );
   }
 };

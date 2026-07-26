@@ -27,6 +27,7 @@ type Props = {
   form: UseFormReturn<ProductDialogValues>;
   selectedProduct: ProductOption | null;
   onBrowse: () => void;
+  submitLabel?: string;
 };
 
 const unitOptions = [
@@ -53,6 +54,7 @@ export const ProductDialog = ({
   form,
   selectedProduct,
   onBrowse,
+  submitLabel = "Add Product",
 }: Props) => {
   const { register, control, formState } = form;
 
@@ -78,7 +80,7 @@ export const ProductDialog = ({
                 onClick={onBrowse}
                 className="mt-1.5 flex h-9 w-full items-center justify-between rounded-lg border border-input px-3 text-sm hover:border-primary"
               >
-                <span className="truncate">
+                <span className="line-clamp-1">
                   {selectedProduct
                     ? `${selectedProduct.productCode} — ${selectedProduct.name}`
                     : "Browse products…"}
@@ -217,7 +219,7 @@ export const ProductDialog = ({
             </div>
           </DialogBody>
 
-          <DialogFormFooter onCancel={onCancel} submitLabel="Add Product" />
+          <DialogFormFooter onCancel={onCancel} submitLabel={submitLabel} />
         </form>
       </DialogContent>
     </Dialog>

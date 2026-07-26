@@ -30,6 +30,7 @@ type Props = {
   onSave: FormEventHandler<HTMLFormElement>;
   form: UseFormReturn<ContactDialogValues>;
   toggleContactCategory: (cat: ContactCategory) => void;
+  submitLabel?: string;
 };
 
 export const ContactDialog = ({
@@ -39,6 +40,7 @@ export const ContactDialog = ({
   onSave,
   form,
   toggleContactCategory,
+  submitLabel = "Add Contact",
 }: Props) => (
   <Dialog open={isOpen} onOpenChange={onOpenChange}>
     <DialogContent className="flex h-[85dvh] max-w-3xl flex-col gap-0 p-0">
@@ -277,7 +279,7 @@ export const ContactDialog = ({
           </div>
         </div>
 
-        <DialogFormFooter onCancel={onCancel} submitLabel="Add Contact" />
+        <DialogFormFooter onCancel={onCancel} submitLabel={submitLabel} />
       </form>
     </DialogContent>
   </Dialog>

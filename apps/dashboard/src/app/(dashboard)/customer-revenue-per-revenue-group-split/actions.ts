@@ -1,6 +1,6 @@
 "use server";
-import { describeError } from "@/lib/helpers";
 
+import { describeError } from "@/lib/helpers";
 import { db } from "@/db";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
@@ -98,7 +98,10 @@ export const getCustomerRevenueSplit = async (): Promise<
       .innerJoin(Orders, eq(OrderItems.orderUuid, Orders.uuid))
       .innerJoin(Products, eq(InvoiceItems.productUuid, Products.uuid))
       .innerJoin(Companies, eq(Invoices.companyUuid, Companies.uuid))
-      .leftJoin(RevenueGroups, eq(Products.revenueGroupUuid, RevenueGroups.uuid))
+      .leftJoin(
+        RevenueGroups,
+        eq(Products.revenueGroupUuid, RevenueGroups.uuid),
+      )
       .leftJoin(Stock, eq(OrderItems.stockUuid, Stock.uuid))
       .leftJoin(primaryContact, eq(Companies.uuid, primaryContact.companyUuid))
       .groupBy(
@@ -145,6 +148,11 @@ export const getCustomerRevenueSplit = async (): Promise<
       };
     });
   } catch (error) {
-    throw new Error(describeError(error, "Failed to fetch customer revenue with split order types"));
+    throw new Error(
+      describeError(
+        error,
+        "Failed to fetch customer revenue with split order types",
+      ),
+    );
   }
 };

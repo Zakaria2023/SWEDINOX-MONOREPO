@@ -29,6 +29,7 @@ type Props = {
   form: UseFormReturn<CustomerStockDialogValues>;
   selectedProduct: ProductOption | null;
   onBrowse: () => void;
+  submitLabel?: string;
 };
 
 export const CustomerStockDialog = ({
@@ -39,6 +40,7 @@ export const CustomerStockDialog = ({
   form,
   selectedProduct,
   onBrowse,
+  submitLabel = "Book Stock",
 }: Props) => {
   const { register, formState, control } = form;
 
@@ -125,7 +127,7 @@ export const CustomerStockDialog = ({
             </div>
           </DialogBody>
 
-          <DialogFormFooter onCancel={onCancel} submitLabel="Book Stock" />
+          <DialogFormFooter onCancel={onCancel} submitLabel={submitLabel} />
         </form>
       </DialogContent>
     </Dialog>
