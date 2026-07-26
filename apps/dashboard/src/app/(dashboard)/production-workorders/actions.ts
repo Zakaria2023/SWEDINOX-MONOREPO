@@ -62,7 +62,9 @@ export const getProductionWorkOrderLines = async (): Promise<
       )
       .orderBy(desc(ProductionWorkOrderLines.createdAt));
   } catch (error) {
-    throw new Error(describeError(error, "Failed to fetch production work orders"));
+    throw new Error(
+      describeError(error, "Failed to fetch production work orders"),
+    );
   }
 };
 
@@ -77,6 +79,7 @@ export const generateProductionWorkOrders =
         .select({ uuid: Machines.uuid })
         .from(Machines)
         .limit(1);
+
       if (!machine) {
         return { error: "Create a machine first (Logistics → Machines)." };
       }
@@ -109,6 +112,7 @@ export const generateProductionWorkOrders =
           productUuid: ProductionWorkOrderLines.productUuid,
         })
         .from(ProductionWorkOrderLines);
+
       const existingKeys = new Set(
         existing.map((line) => `${line.orderNumber}|${line.productUuid}`),
       );
@@ -116,6 +120,7 @@ export const generateProductionWorkOrders =
       const newItems = items.filter(
         (item) => !existingKeys.has(`${item.orderId}|${item.productUuid}`),
       );
+
       if (newItems.length === 0) {
         return { error: "All order lines are already planned." };
       }
