@@ -29,7 +29,6 @@ export type DeleteCounterOrderPayload = {
 const revalidateCounterOrderPaths = (companyUuid: string) => {
   revalidatePath(`/companies/${companyUuid}/edit/counter-orders`);
   revalidatePath(`/companies/${companyUuid}/edit`);
-  revalidatePath(`/companies/${companyUuid}/edit/full`);
 };
 
 export const getCounterOrdersForCompany = async (

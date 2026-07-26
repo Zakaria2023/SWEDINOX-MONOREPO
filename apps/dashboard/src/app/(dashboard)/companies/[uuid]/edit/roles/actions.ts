@@ -60,6 +60,5 @@ export const updateCompanyRoles = async (
   revalidatePath(`/companies/${companyUuid}`);
   revalidatePath(`/companies/${companyUuid}/edit`);
   revalidatePath(`/companies/${companyUuid}/edit/roles`);
-  revalidatePath(`/companies/${companyUuid}/edit/full`);
   redirect(`/companies/${companyUuid}/edit`);
 };

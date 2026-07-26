@@ -79,6 +79,5 @@ export const updateCompanyDetails = async (
   revalidatePath("/companies");
   revalidatePath(`/companies/${companyUuid}`);
   revalidatePath(`/companies/${companyUuid}/edit`);
-  revalidatePath(`/companies/${companyUuid}/edit/full`);
   redirect(`/companies/${companyUuid}/edit`);
 };

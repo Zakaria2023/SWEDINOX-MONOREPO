@@ -26,7 +26,6 @@ export type DeleteQuotePayload = {
 const revalidateQuotePaths = (companyUuid: string) => {
   revalidatePath(`/companies/${companyUuid}/edit/quotes`);
   revalidatePath(`/companies/${companyUuid}/edit`);
-  revalidatePath(`/companies/${companyUuid}/edit/full`);
 };
 
 export const getQuotesForCompany = async (

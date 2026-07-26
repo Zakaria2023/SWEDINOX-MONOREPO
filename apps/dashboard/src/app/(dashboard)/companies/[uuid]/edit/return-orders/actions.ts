@@ -26,7 +26,6 @@ export type DeleteReturnOrderPayload = {
 const revalidateReturnOrderPaths = (companyUuid: string) => {
   revalidatePath(`/companies/${companyUuid}/edit/return-orders`);
   revalidatePath(`/companies/${companyUuid}/edit`);
-  revalidatePath(`/companies/${companyUuid}/edit/full`);
 };
 
 export const getReturnOrdersForCompany = async (

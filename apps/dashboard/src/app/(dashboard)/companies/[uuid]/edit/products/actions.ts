@@ -32,7 +32,6 @@ export type DeleteCompanyProductPayload = {
 const revalidateProductPaths = (companyUuid: string) => {
   revalidatePath(`/companies/${companyUuid}/edit/products`);
   revalidatePath(`/companies/${companyUuid}/edit`);
-  revalidatePath(`/companies/${companyUuid}/edit/full`);
 };
 
 // The identity columns a company product row copies from the picked catalog

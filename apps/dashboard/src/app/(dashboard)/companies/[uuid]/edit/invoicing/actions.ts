@@ -100,6 +100,5 @@ export const updateCompanyInvoicing = async (
   revalidatePath(`/companies/${companyUuid}`);
   revalidatePath(`/companies/${companyUuid}/edit`);
   revalidatePath(`/companies/${companyUuid}/edit/invoicing`);
-  revalidatePath(`/companies/${companyUuid}/edit/full`);
   redirect(`/companies/${companyUuid}/edit`);
 };

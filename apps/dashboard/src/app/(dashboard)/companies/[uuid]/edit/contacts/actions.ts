@@ -30,7 +30,6 @@ export type DeleteContactPayload = {
 const revalidateContactPaths = (companyUuid: string) => {
   revalidatePath(`/companies/${companyUuid}/edit/contacts`);
   revalidatePath(`/companies/${companyUuid}/edit`);
-  revalidatePath(`/companies/${companyUuid}/edit/full`);
 };
 
 export const getCompanyHeader = async (

@@ -28,7 +28,6 @@ export type RemoveCompanyDocumentPayload = {
 const revalidateDocumentPaths = (companyUuid: string) => {
   revalidatePath(`/companies/${companyUuid}/edit/documents`);
   revalidatePath(`/companies/${companyUuid}/edit`);
-  revalidatePath(`/companies/${companyUuid}/edit/full`);
   revalidatePath(`/companies/${companyUuid}`);
   revalidatePath("/companies");
 };

@@ -125,6 +125,5 @@ export const updateCompanySales = async (
   revalidatePath(`/companies/${companyUuid}`);
   revalidatePath(`/companies/${companyUuid}/edit/sales`);
   revalidatePath(`/companies/${companyUuid}/edit`);
-  revalidatePath(`/companies/${companyUuid}/edit/full`);
   redirect(`/companies/${companyUuid}/edit`);
 };

@@ -29,7 +29,6 @@ export type DeleteTransporterCountryPayload = {
 const revalidateTransporterCountryPaths = (companyUuid: string) => {
   revalidatePath(`/companies/${companyUuid}/edit/transporter-countries`);
   revalidatePath(`/companies/${companyUuid}/edit`);
-  revalidatePath(`/companies/${companyUuid}/edit/full`);
 };
 
 export const getTransporterCountriesForCompany = async (

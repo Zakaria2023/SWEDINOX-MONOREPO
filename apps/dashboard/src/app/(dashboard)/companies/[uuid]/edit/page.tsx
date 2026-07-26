@@ -264,14 +264,6 @@ const CompanyEditPage = async ({ params }: Props) => {
           ))}
         </div>
       </section>
-
-      <div className="rounded-2xl border border-dashed border-border p-4 text-sm text-muted-foreground">
-        Prefer editing everything at once? The{" "}
-        <Link href={`${base}/full`} className="text-primary hover:underline">
-          full editor
-        </Link>{" "}
-        is still available.
-      </div>
     </div>
   );
 };

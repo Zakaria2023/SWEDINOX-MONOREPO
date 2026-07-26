@@ -28,7 +28,6 @@ export type DeleteTextPayload = {
 const revalidateTextPaths = (companyUuid: string) => {
   revalidatePath(`/companies/${companyUuid}/edit/texts`);
   revalidatePath(`/companies/${companyUuid}/edit`);
-  revalidatePath(`/companies/${companyUuid}/edit/full`);
 };
 
 export const getTextsForCompany = async (
@@ -43,8 +42,8 @@ export const getTextsForCompany = async (
 // Inserts a new text or updates an existing one by uuid. The title is
 // resolved server-side from the selected category's name (falling back to an
 // empty string), exactly like the legacy save handler. New texts record the
-// current Clerk user as createdByUserId, matching createCompany/updateCompany;
-// updates write only the dialog-editable columns.
+// current Clerk user as createdByUserId, matching createCompany; updates
+// write only the dialog-editable columns.
 export const saveCompanyText = async (
   _prevState: CompanyActionResult,
   payload: SaveTextPayload,

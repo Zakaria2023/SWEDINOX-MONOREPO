@@ -22,7 +22,6 @@ export type DeleteFollowUpPayload = {
 const revalidateFollowUpPaths = (companyUuid: string) => {
   revalidatePath(`/companies/${companyUuid}/edit/follow-ups`);
   revalidatePath(`/companies/${companyUuid}/edit`);
-  revalidatePath(`/companies/${companyUuid}/edit/full`);
 };
 
 export const getFollowUpsForCompany = async (

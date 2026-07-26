@@ -27,7 +27,6 @@ export type DeleteVisitReportPayload = {
 const revalidateVisitReportPaths = (companyUuid: string) => {
   revalidatePath(`/companies/${companyUuid}/edit/visit-reports`);
   revalidatePath(`/companies/${companyUuid}/edit`);
-  revalidatePath(`/companies/${companyUuid}/edit/full`);
 };
 
 export const getVisitReportsForCompany = async (

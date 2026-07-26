@@ -53,10 +53,8 @@ import {
   CustomerProjectInput,
   CustomerSalesInput,
   DebtorCompanyOption,
-  updateCompany,
   VisitReportInput,
 } from "./actions";
-import type { CompanyEditData } from "./actions";
 import { sendCompanyWelcomeEmails } from "@/emails/actions";
 import {
   AddressFormValues,
@@ -196,11 +194,6 @@ type UseCompanySubmitParams = {
   availableProducts: ProductOption[];
   suppliers: CompanyOption[];
   currentUserName?: string;
-  // When editing, the company's existing data pre-populates the form; the uuid
-  // routes the submit to updateCompany instead of createCompany.
-  mode?: "create" | "edit";
-  companyUuid?: string;
-  initialData?: CompanyEditData;
 };
 
 export const useCompanySubmit = ({
@@ -213,11 +206,7 @@ export const useCompanySubmit = ({
   availableProducts,
   suppliers,
   currentUserName,
-  mode = "create",
-  companyUuid,
-  initialData,
 }: UseCompanySubmitParams) => {
-  const isEdit = mode === "edit" && !!companyUuid;
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [state, setState] = useState<CompanyActionResult>({});
@@ -228,41 +217,31 @@ export const useCompanySubmit = ({
     useState(false);
   const [additionalAddresses, setAdditionalAddresses] = useState<
     AddressFormValues[]
-  >(initialData?.additionalAddresses ?? []);
+  >([]);
   const [isCommSettingDialogOpen, setIsCommSettingDialogOpen] = useState(false);
   const [communicationSettings, setCommunicationSettings] = useState<
     CommSettingInput[]
-  >(initialData?.communicationSettings ?? []);
+  >([]);
   const [selectedCommType, setSelectedCommType] = useState("");
   const [isContractDialogOpen, setIsContractDialogOpen] = useState(false);
-  const [contracts, setContracts] = useState<CompanyContractInput[]>(
-    initialData?.contracts ?? [],
-  );
+  const [contracts, setContracts] = useState<CompanyContractInput[]>([]);
   const [isContactDialogOpen, setIsContactDialogOpen] = useState(false);
-  const [contacts, setContacts] = useState<CompanyContactInput[]>(
-    initialData?.contacts ?? [],
-  );
+  const [contacts, setContacts] = useState<CompanyContactInput[]>([]);
   const [isTextDialogOpen, setIsTextDialogOpen] = useState(false);
-  const [texts, setTexts] = useState<CompanyTextInput[]>(
-    initialData?.texts ?? [],
-  );
+  const [texts, setTexts] = useState<CompanyTextInput[]>([]);
   const [isProjectDialogOpen, setIsProjectDialogOpen] = useState(false);
-  const [projects, setProjects] = useState<CustomerProjectInput[]>(
-    initialData?.projects ?? [],
-  );
+  const [projects, setProjects] = useState<CustomerProjectInput[]>([]);
   const [isCounterOrderDialogOpen, setIsCounterOrderDialogOpen] =
     useState(false);
   const [counterOrders, setCounterOrders] = useState<
     CompanyCounterOrderInput[]
-  >(initialData?.counterOrders ?? []);
+  >([]);
   const [editingCounterOrderIndex, setEditingCounterOrderIndex] = useState<
     number | null
   >(null);
   const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
   const [isProductPickerOpen, setIsProductPickerOpen] = useState(false);
-  const [products, setProducts] = useState<CompanyProductInput[]>(
-    initialData?.products ?? [],
-  );
+  const [products, setProducts] = useState<CompanyProductInput[]>([]);
   const [pickedProduct, setPickedProduct] = useState<ProductOption | null>(
     null,
   );
@@ -272,7 +251,7 @@ export const useCompanySubmit = ({
     useState(false);
   const [customerProducts, setCustomerProducts] = useState<
     CompanyProductInput[]
-  >(initialData?.customerProducts ?? []);
+  >([]);
   const [pickedCustomerProduct, setPickedCustomerProduct] =
     useState<ProductOption | null>(null);
   const [isCustomerStockDialogOpen, setIsCustomerStockDialogOpen] =
@@ -281,13 +260,11 @@ export const useCompanySubmit = ({
     useState(false);
   const [customerStock, setCustomerStock] = useState<
     CompanyCustomerStockInput[]
-  >(initialData?.customerStock ?? []);
+  >([]);
   const [pickedCustomerStockProduct, setPickedCustomerStockProduct] =
     useState<ProductOption | null>(null);
   const [isVisitReportDialogOpen, setIsVisitReportDialogOpen] = useState(false);
-  const [visitReports, setVisitReports] = useState<VisitReportInput[]>(
-    initialData?.visitReports ?? [],
-  );
+  const [visitReports, setVisitReports] = useState<VisitReportInput[]>([]);
   const [editingVisitReportIndex, setEditingVisitReportIndex] = useState<
     number | null
   >(null);
@@ -295,40 +272,34 @@ export const useCompanySubmit = ({
     useState(false);
   const [purchaseOrders, setPurchaseOrders] = useState<
     CompanyPurchaseOrderInput[]
-  >(initialData?.purchaseOrders ?? []);
+  >([]);
   const [editingPurchaseOrderIndex, setEditingPurchaseOrderIndex] = useState<
     number | null
   >(null);
   const [isQuoteDialogOpen, setIsQuoteDialogOpen] = useState(false);
-  const [quotes, setQuotes] = useState<CompanyQuoteInput[]>(
-    initialData?.quotes ?? [],
-  );
+  const [quotes, setQuotes] = useState<CompanyQuoteInput[]>([]);
   const [editingQuoteIndex, setEditingQuoteIndex] = useState<number | null>(
     null,
   );
   const [isReturnOrderDialogOpen, setIsReturnOrderDialogOpen] = useState(false);
   const [returnOrders, setReturnOrders] = useState<CompanyReturnOrderInput[]>(
-    initialData?.returnOrders ?? [],
+    [],
   );
   const [editingReturnOrderIndex, setEditingReturnOrderIndex] = useState<
     number | null
   >(null);
-  const [followUps, setFollowUps] = useState<CompanyFollowUpInput[]>(
-    initialData?.followUps ?? [],
-  );
+  const [followUps, setFollowUps] = useState<CompanyFollowUpInput[]>([]);
   const [transporterCosts, setTransporterCosts] = useState<
     CompanyTransporterCostInput[]
-  >(initialData?.transporterCosts ?? []);
+  >([]);
   const [transporterCountries, setTransporterCountries] = useState<
     CompanyTransporterCountryInput[]
-  >(initialData?.transporterCountries ?? []);
-  const [processings, setProcessings] = useState<CompanyProcessingInput[]>(
-    initialData?.processings ?? [],
-  );
+  >([]);
+  const [processings, setProcessings] = useState<CompanyProcessingInput[]>([]);
 
   const form = useForm<CompanyFormValues>({
     resolver: zodResolver(createCompanySchema()),
-    defaultValues: initialData?.formValues ?? {
+    defaultValues: {
       companyName: "",
       correspName: "",
       remarks: "",
@@ -421,9 +392,7 @@ export const useCompanySubmit = ({
     },
   });
 
-  const [salesData, setSalesData] = useState<CustomerSalesInput | null>(
-    initialData?.salesData ?? null,
-  );
+  const [salesData, setSalesData] = useState<CustomerSalesInput | null>(null);
 
   const additionalForm = useForm<CompanyFormValues>({
     resolver: zodResolver(createCompanySchema()),
@@ -1882,8 +1851,7 @@ export const useCompanySubmit = ({
         ),
       ];
 
-      // Welcome emails are only sent when the company is first created.
-      if (!isEdit && contactEmails.length > 0) {
+      if (contactEmails.length > 0) {
         await sendCompanyWelcomeEmails(companyName, contactEmails);
       }
 
@@ -1976,54 +1944,30 @@ export const useCompanySubmit = ({
         visitPlanning: values.visitPlanning,
       };
 
-      const result =
-        companyUuid && mode === "edit"
-          ? await updateCompany(
-              companyUuid,
-              companyData,
-              isBlocked,
-              allAddresses,
-              communicationSettings,
-              contracts,
-              contacts,
-              texts,
-              projects,
-              counterOrders,
-              allProducts,
-              resolvedVisitReports,
-              purchaseOrders,
-              quotes,
-              followUps,
-              transporterCosts,
-              transporterCountries,
-              returnOrders,
-              processings,
-              customerStock,
-            )
-          : await createCompany(
-              companyData,
-              isBlocked,
-              allAddresses,
-              communicationSettings,
-              contracts,
-              contacts,
-              texts,
-              projects,
-              counterOrders,
-              allProducts,
-              resolvedVisitReports,
-              purchaseOrders,
-              quotes,
-              followUps,
-              transporterCosts,
-              transporterCountries,
-              returnOrders,
-              processings,
-              customerStock,
-            );
+      const result = await createCompany(
+        companyData,
+        isBlocked,
+        allAddresses,
+        communicationSettings,
+        contracts,
+        contacts,
+        texts,
+        projects,
+        counterOrders,
+        allProducts,
+        resolvedVisitReports,
+        purchaseOrders,
+        quotes,
+        followUps,
+        transporterCosts,
+        transporterCountries,
+        returnOrders,
+        processings,
+        customerStock,
+      );
       setState(result);
       if (result.success) {
-        router.push(isEdit ? `/companies/${companyUuid}` : "/companies");
+        router.push("/companies");
       }
     });
   });

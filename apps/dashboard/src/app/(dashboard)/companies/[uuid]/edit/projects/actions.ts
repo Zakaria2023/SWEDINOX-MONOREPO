@@ -26,7 +26,6 @@ export type DeleteProjectPayload = {
 const revalidateProjectPaths = (companyUuid: string) => {
   revalidatePath(`/companies/${companyUuid}/edit/projects`);
   revalidatePath(`/companies/${companyUuid}/edit`);
-  revalidatePath(`/companies/${companyUuid}/edit/full`);
 };
 
 export const getProjectsForCompany = async (

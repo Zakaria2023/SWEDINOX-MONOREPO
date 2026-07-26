@@ -31,7 +31,6 @@ const isContractableRole = (role: CompanyRole): role is ContractableRole =>
 const revalidateContractPaths = (companyUuid: string) => {
   revalidatePath(`/companies/${companyUuid}/edit/contracts`);
   revalidatePath(`/companies/${companyUuid}/edit`);
-  revalidatePath(`/companies/${companyUuid}/edit/full`);
 };
 
 export const getContractsForCompany = async (

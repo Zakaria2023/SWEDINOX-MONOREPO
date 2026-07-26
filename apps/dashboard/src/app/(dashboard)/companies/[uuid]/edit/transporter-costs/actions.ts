@@ -29,7 +29,6 @@ export type DeleteTransporterCostPayload = {
 const revalidateTransporterCostPaths = (companyUuid: string) => {
   revalidatePath(`/companies/${companyUuid}/edit/transporter-costs`);
   revalidatePath(`/companies/${companyUuid}/edit`);
-  revalidatePath(`/companies/${companyUuid}/edit/full`);
 };
 
 export const getTransporterCostsForCompany = async (

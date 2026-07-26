@@ -32,7 +32,6 @@ export type DeleteCommunicationSettingPayload = {
 const revalidateCommunicationSettingPaths = (companyUuid: string) => {
   revalidatePath(`/companies/${companyUuid}/edit/communication-settings`);
   revalidatePath(`/companies/${companyUuid}/edit`);
-  revalidatePath(`/companies/${companyUuid}/edit/full`);
 };
 
 export const getCompanyCommunicationSettings = async (

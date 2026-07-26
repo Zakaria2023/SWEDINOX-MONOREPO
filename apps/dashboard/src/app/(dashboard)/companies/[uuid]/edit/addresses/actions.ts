@@ -37,7 +37,6 @@ export type DeleteAddressPayload = {
 const revalidateAddressPaths = (companyUuid: string) => {
   revalidatePath(`/companies/${companyUuid}/edit/addresses`);
   revalidatePath(`/companies/${companyUuid}/edit`);
-  revalidatePath(`/companies/${companyUuid}/edit/full`);
 };
 
 const toCount = (rows: Array<{ value: number }>): number =>

@@ -23,7 +23,6 @@ export type DeleteProcessingPayload = {
 const revalidateProcessingPaths = (companyUuid: string) => {
   revalidatePath(`/companies/${companyUuid}/edit/processings`);
   revalidatePath(`/companies/${companyUuid}/edit`);
-  revalidatePath(`/companies/${companyUuid}/edit/full`);
 };
 
 export const getProcessingsForCompany = async (

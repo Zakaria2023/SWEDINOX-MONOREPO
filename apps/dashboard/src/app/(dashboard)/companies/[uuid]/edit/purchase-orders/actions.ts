@@ -29,7 +29,6 @@ export type DeletePurchaseOrderPayload = {
 const revalidatePurchaseOrderPaths = (companyUuid: string) => {
   revalidatePath(`/companies/${companyUuid}/edit/purchase-orders`);
   revalidatePath(`/companies/${companyUuid}/edit`);
-  revalidatePath(`/companies/${companyUuid}/edit/full`);
 };
 
 // The company is the supplier on its purchase orders, so the owner column is

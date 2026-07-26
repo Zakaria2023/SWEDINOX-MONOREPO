@@ -30,7 +30,6 @@ export type DeleteCustomerStockPayload = {
 const revalidateCustomerStockPaths = (companyUuid: string) => {
   revalidatePath(`/companies/${companyUuid}/edit/customer-stock`);
   revalidatePath(`/companies/${companyUuid}/edit`);
-  revalidatePath(`/companies/${companyUuid}/edit/full`);
 };
 
 export const getCompanyCustomerStock = async (

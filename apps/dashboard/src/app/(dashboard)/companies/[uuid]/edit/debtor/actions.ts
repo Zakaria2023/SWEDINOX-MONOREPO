@@ -12,7 +12,7 @@ import { companyDebtorSchema, CompanyDebtorFormValues } from "./validation";
 
 // roles rides along so the form can gate the purchase-org fields the same way
 // the legacy Debtor section did (customer/prospect only); blockedByUserId maps
-// to the isBlocked checkbox exactly like getCompanyForEdit does.
+// to the isBlocked checkbox exactly like the legacy full editor did.
 export type CompanyDebtorData = Pick<
   SelectCompanies,
   | "uuid"
@@ -85,10 +85,11 @@ export const getCompanyDebtor = async (
 };
 
 // Updates only the debtor columns this section owns — other sections' fields
-// (and all child collections) are untouched. Blocked semantics replicate
-// updateCompany exactly: blockedByUserId becomes the current Clerk user id
-// when isBlocked is checked and null when it isn't. Like the legacy submit,
-// the purchase-org columns are only written for customer/prospect companies.
+// (and all child collections) are untouched. Blocked semantics replicate the
+// legacy full-editor save exactly: blockedByUserId becomes the current Clerk
+// user id when isBlocked is checked and null when it isn't. Like the legacy
+// submit, the purchase-org columns are only written for customer/prospect
+// companies.
 export const updateCompanyDebtor = async (
   _prevState: CompanyActionResult,
   payload: UpdateCompanyDebtorPayload,
@@ -168,6 +169,5 @@ export const updateCompanyDebtor = async (
   revalidatePath(`/companies/${companyUuid}`);
   revalidatePath(`/companies/${companyUuid}/edit/debtor`);
   revalidatePath(`/companies/${companyUuid}/edit`);
-  revalidatePath(`/companies/${companyUuid}/edit/full`);
   redirect(`/companies/${companyUuid}/edit`);
 };
