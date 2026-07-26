@@ -11,7 +11,12 @@ import { Contracts, SelectContracts } from "@/db/schema/contracts";
 import { CustomerProjects } from "@/db/schema/customer-projects";
 import type { CompanyRole, ContractableRole } from "@/lib/enums";
 import { contractableRoles } from "@/lib/enums";
-import { describeError, generateUuid, pluralize } from "@/lib/helpers";
+import {
+  describeError,
+  firstCount,
+  generateUuid,
+  pluralize,
+} from "@/lib/helpers";
 import { and, asc, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
@@ -114,11 +119,11 @@ export const deleteCompanyContract = async (
   payload: DeleteContractPayload,
 ): Promise<CompanyActionResult> => {
   try {
-    const [linked] = await db
+    const linked = await db
       .select({ value: sql<number>`COUNT(*)` })
       .from(CustomerProjects)
       .where(eq(CustomerProjects.contractUuid, payload.contractUuid));
-    const linkedCount = Number(linked?.value ?? 0);
+    const linkedCount = firstCount(linked);
 
     if (linkedCount > 0) {
       return {

@@ -19,6 +19,7 @@ import { Texts } from "@/db/schema/texts";
 import { TransporterCosts } from "@/db/schema/transporter-costs";
 import { TransporterCountries } from "@/db/schema/transporter-countries";
 import { VisitReports } from "@/db/schema/visit-reports";
+import { firstCount } from "@/lib/helpers";
 import { eq, sql } from "drizzle-orm";
 
 export type CompanyChildCounts = {
@@ -45,9 +46,6 @@ export type CompanyEditOverview = {
   company: SelectCompanies;
   counts: CompanyChildCounts;
 };
-
-const firstCount = (rows: Array<{ value: number }>): number =>
-  Number(rows[0]?.value ?? 0);
 
 // The edit hub only needs the company row itself plus how many rows each child
 // collection holds — the section pages load their own full data when opened.

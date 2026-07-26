@@ -1040,3 +1040,10 @@ export const buildPeriods = (): Array<{ year: number; month: number }> => {
  */
 export const periodKey = (year: number, month: number): string =>
   `${year}-${month}`;
+
+/**
+ * The number inside a single-row `{ value: COUNT(*) }` select — the shape the
+ * app's count queries project — as a plain number, 0 when no row came back.
+ */
+export const firstCount = (rows: Array<{ value: number }>): number =>
+  Number(rows[0]?.value ?? 0);

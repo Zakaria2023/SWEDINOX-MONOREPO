@@ -18,7 +18,12 @@ import { PurchaseRequests } from "@/db/schema/purchase-requests";
 import { PurchaseReturnOrders } from "@/db/schema/purchase-return-orders";
 import { Quotes } from "@/db/schema/quotes";
 import { ReturnOrders } from "@/db/schema/return-orders";
-import { describeError, generateUuid, pluralize } from "@/lib/helpers";
+import {
+  describeError,
+  firstCount,
+  generateUuid,
+  pluralize,
+} from "@/lib/helpers";
 import { and, asc, eq, or, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { addressValuesToColumns } from "./mappers";
@@ -38,9 +43,6 @@ const revalidateAddressPaths = (companyUuid: string) => {
   revalidatePath(`/companies/${companyUuid}/edit/addresses`);
   revalidatePath(`/companies/${companyUuid}/edit`);
 };
-
-const toCount = (rows: Array<{ value: number }>): number =>
-  Number(rows[0]?.value ?? 0);
 
 export const getCompanyAddresses = async (
   companyUuid: string,
@@ -182,15 +184,15 @@ export const deleteCompanyAddress = async (
     ]);
 
     const linked = [
-      { count: toCount(orderRows), noun: "order" },
-      { count: toCount(counterOrderRows), noun: "counter order" },
-      { count: toCount(quoteRows), noun: "quote" },
-      { count: toCount(returnOrderRows), noun: "return order" },
-      { count: toCount(purchaseOrderRows), noun: "purchase order" },
-      { count: toCount(purchaseQuoteRows), noun: "purchase quote" },
-      { count: toCount(purchaseRequestRows), noun: "purchase request" },
+      { count: firstCount(orderRows), noun: "order" },
+      { count: firstCount(counterOrderRows), noun: "counter order" },
+      { count: firstCount(quoteRows), noun: "quote" },
+      { count: firstCount(returnOrderRows), noun: "return order" },
+      { count: firstCount(purchaseOrderRows), noun: "purchase order" },
+      { count: firstCount(purchaseQuoteRows), noun: "purchase quote" },
+      { count: firstCount(purchaseRequestRows), noun: "purchase request" },
       {
-        count: toCount(purchaseReturnOrderRows),
+        count: firstCount(purchaseReturnOrderRows),
         noun: "purchase return order",
       },
     ].filter((entry) => entry.count > 0);

@@ -9,7 +9,12 @@ import { db, SelectCompanies } from "@/db";
 import { Companies } from "@/db/schema/companies";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
 import { VisitReports } from "@/db/schema/visit-reports";
-import { describeError, generateUuid, pluralize } from "@/lib/helpers";
+import {
+  describeError,
+  firstCount,
+  generateUuid,
+  pluralize,
+} from "@/lib/helpers";
 import { and, asc, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { contactValuesToColumns } from "./mappers";
@@ -129,11 +134,11 @@ export const deleteCompanyContact = async (
   payload: DeleteContactPayload,
 ): Promise<CompanyActionResult> => {
   try {
-    const [linked] = await db
+    const linked = await db
       .select({ value: sql<number>`COUNT(*)` })
       .from(VisitReports)
       .where(eq(VisitReports.contactUuid, payload.contactUuid));
-    const linkedCount = Number(linked?.value ?? 0);
+    const linkedCount = firstCount(linked);
 
     if (linkedCount > 0) {
       return {
