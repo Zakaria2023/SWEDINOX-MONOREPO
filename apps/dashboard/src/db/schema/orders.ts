@@ -21,6 +21,7 @@ import {
   invoicePaymentTerms,
   invoiceSurchargeDescriptions,
   orderMethods,
+  orderStatuses,
   orderWeightTypes,
 } from "../../lib/enums";
 import { Companies } from "./companies";
@@ -45,6 +46,7 @@ export const Orders = mysqlTable(
     priceDate: date("price_date"),
     orderCategory: varchar("order_category", { length: 100 }),
     handlingBlocked: boolean("handling_blocked").default(false),
+    status: mysqlEnum("status", orderStatuses).default("open").notNull(),
 
     // ── Order type ────────────────────────────────────────────────────────────
     isPickup: boolean("is_pickup").default(false),
@@ -52,9 +54,9 @@ export const Orders = mysqlTable(
     isConsignment: boolean("is_consignment").default(false),
     consignmentDuration: varchar("consignment_duration", { length: 100 }),
     isInternalProduction: boolean("is_internal_production").default(false),
-    isKlantMateriaal: boolean("is_klant_materiaal").default(false),
+    isCustomerMaterial: boolean("is_customer_material").default(false),
     weightType: mysqlEnum("weight_type", orderWeightTypes),
-    isOverlengte: boolean("is_overlengte").default(false),
+    isOverlength: boolean("is_overlength").default(false),
     isPrinted: boolean("is_printed").default(false),
     isMailed: boolean("is_mailed").default(false),
     isFaxed: boolean("is_faxed").default(false),

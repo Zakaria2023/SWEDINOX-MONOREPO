@@ -4,14 +4,13 @@ import {
   warehouseLocationTypes,
   warehouseProductTypes,
 } from "@/lib/enums";
-import { VALIDATION_MESSAGES } from "@/lib/validation-messages";
 import { z } from "zod";
 
 export const createWarehouseSubSectionSchema = () =>
   z.object({
     adaptFromUuid: z.string().min(1, "Please select a warehouse to adapt from"),
     placement: z.enum(["next", "below"]),
-    name: z.string().min(1, VALIDATION_MESSAGES.nameRequired),
+    name: z.string().min(1, "Name is required"),
     locationType: z.union([
       z.enum(warehouseLocationTypes),
       z.literal(""),

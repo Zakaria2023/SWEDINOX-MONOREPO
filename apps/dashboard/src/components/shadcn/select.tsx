@@ -3,7 +3,6 @@
 import { Select as SelectPrimitive } from "@base-ui/react/select";
 import { Check, ChevronDown, CornerDownRight } from "lucide-react";
 import { cn } from "@/lib/helpers";
-import { COMMON_TEXT } from "@/lib/labels";
 
 export type SelectOption = {
   label: string;
@@ -59,7 +58,7 @@ export const Select = ({
             const selected = options.find(
               (option) => option.value === selectedValue,
             );
-            if (!selected) return placeholder ?? COMMON_TEXT.selectPlaceholder;
+            if (!selected) return placeholder ?? "Select an option";
             if (selected.description)
               return `${selected.label} — ${selected.description}`;
             return selected.label;

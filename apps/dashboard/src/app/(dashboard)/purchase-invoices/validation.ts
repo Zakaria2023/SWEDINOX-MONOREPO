@@ -6,6 +6,11 @@ import {
   purchaseInvoiceFiscalBases,
 } from "@/lib/enums";
 
+export const purchaseInvoiceItemSchema = z.object({
+  purchaseOrderItemUuid: z.string().min(1, "Order line is required"),
+  quantity: z.string().min(1, "Quantity is required"),
+});
+
 export const purchaseInvoiceSurchargeSchema = z.object({
   booked: z.boolean(),
   orderRef: z.string().optional(),
@@ -28,6 +33,7 @@ export const createPurchaseInvoiceSchema = () =>
   z
     .object({
       companyUuid: z.string().optional(),
+      items: z.array(purchaseInvoiceItemSchema).optional(),
       invoiceSentByContactUuid: z.string().optional(),
       bookingDate: z.string().optional(),
       invoiceDate: z.string().optional(),
@@ -41,13 +47,6 @@ export const createPurchaseInvoiceSchema = () =>
       paymentTerms: z.enum(invoicePaymentTerms).optional(),
       blocked: z.boolean(),
       blockReason: z.enum(purchaseInvoiceBlockReasons).optional(),
-      materials: z.string(),
-      optionsAmount: z.string(),
-      surcharges: z.string(),
-      vatHigh: z.string(),
-      vatMiddle: z.string(),
-      vatLow: z.string(),
-      creditRestriction: z.string(),
       remarks: z.string().optional(),
       documents: z
         .array(z.object({ id: z.string(), fileName: z.string() }))

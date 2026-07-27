@@ -6,7 +6,6 @@ import { DatePicker } from "@/components/shadcn/date-picker";
 import { Input } from "@/components/shadcn/input";
 import { Select } from "@/components/shadcn/select";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
-import { COMMON_TEXT } from "@/lib/labels";
 import { Controller, useFormContext } from "react-hook-form";
 
 type ContractDetailsSectionProps = {
@@ -28,7 +27,7 @@ export const ContractDetailsSection = ({
   const hasPriceDate = watch("hasPriceDate");
 
   const groupOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...groups.map((g) => ({ value: g.uuid, label: g.name })),
   ];
 
@@ -88,7 +87,7 @@ export const ContractDetailsSection = ({
                 options={groupOptions}
                 value={field.value ?? ""}
                 onValueChange={field.onChange}
-                placeholder={COMMON_TEXT.emptyOption}
+                placeholder="Empty"
                 disabled={isPending}
               />
             )}

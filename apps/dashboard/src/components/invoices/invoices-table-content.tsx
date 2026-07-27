@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { InvoiceWithCompany } from "@/app/(dashboard)/invoices/actions";
 import {
   Table,
@@ -11,11 +12,7 @@ import {
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { buildColumnVisibility } from "@/lib/helpers";
-import {
-  COMMON_TEXT,
-  INVOICE_PAYMENT_TERM_LABELS,
-  INVOICE_VAT_SCENARIO_LABELS,
-} from "@/lib/labels";
+import { INVOICE_PAYMENT_TERM_LABELS, INVOICE_VAT_SCENARIO_LABELS } from "@/lib/labels";
 import { useState } from "react";
 
 type ColumnKey =
@@ -59,20 +56,28 @@ export const InvoicesTable = ({ invoices }: Props) => {
     setColumnVisibility((prev) => ({ ...prev, [key]: !prev[key as ColumnKey] }));
 
   const visibleColumns = ALL_COLUMNS.filter((col) => columnVisibility[col.key]);
-  const na = COMMON_TEXT.notAvailable;
 
   const renderCell = (inv: InvoiceWithCompany, key: ColumnKey) => {
     switch (key) {
       case "id":
-        return <TableCell key={key} className="font-medium whitespace-nowrap">{inv.id}</TableCell>;
+        return (
+          <TableCell key={key} className="font-medium whitespace-nowrap">
+            <Link
+              href={`/invoices/${inv.uuid}`}
+              className="underline-offset-4 hover:underline"
+            >
+              {inv.id}
+            </Link>
+          </TableCell>
+        );
       case "companyName":
-        return <TableCell key={key} className="whitespace-nowrap">{inv.companyName ?? na}</TableCell>;
+        return <TableCell key={key} className="whitespace-nowrap">{inv.companyName ?? "—"}</TableCell>;
       case "companyCode":
-        return <TableCell key={key} className="whitespace-nowrap">{inv.companyCode ?? na}</TableCell>;
+        return <TableCell key={key} className="whitespace-nowrap">{inv.companyCode ?? "—"}</TableCell>;
       case "invoiceDate":
-        return <TableCell key={key} className="whitespace-nowrap">{inv.invoiceDate?.toLocaleDateString() ?? na}</TableCell>;
+        return <TableCell key={key} className="whitespace-nowrap">{inv.invoiceDate?.toLocaleDateString() ?? "—"}</TableCell>;
       case "expirationDate":
-        return <TableCell key={key} className="whitespace-nowrap">{inv.expirationDate?.toLocaleDateString() ?? na}</TableCell>;
+        return <TableCell key={key} className="whitespace-nowrap">{inv.expirationDate?.toLocaleDateString() ?? "—"}</TableCell>;
       case "invoiceAmountExclVat":
         return <TableCell key={key} className="text-right whitespace-nowrap">€ {inv.invoiceAmountExclVat}</TableCell>;
       case "invoiceAmountInclVat":
@@ -86,13 +91,13 @@ export const InvoicesTable = ({ invoices }: Props) => {
       case "vatScenario":
         return (
           <TableCell key={key} className="whitespace-nowrap">
-            {inv.vatScenario ? INVOICE_VAT_SCENARIO_LABELS[inv.vatScenario] : na}
+            {inv.vatScenario ? INVOICE_VAT_SCENARIO_LABELS[inv.vatScenario] : "—"}
           </TableCell>
         );
       case "paymentTerms":
         return (
           <TableCell key={key} className="whitespace-nowrap">
-            {inv.paymentTerms ? INVOICE_PAYMENT_TERM_LABELS[inv.paymentTerms] : na}
+            {inv.paymentTerms ? INVOICE_PAYMENT_TERM_LABELS[inv.paymentTerms] : "—"}
           </TableCell>
         );
       case "status":

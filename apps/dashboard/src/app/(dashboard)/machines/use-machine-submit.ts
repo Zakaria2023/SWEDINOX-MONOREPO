@@ -11,14 +11,7 @@ import {
   MachineOptionType,
   MachineProductionType,
 } from "@/lib/enums";
-import {
-  COMMON_TEXT,
-  MACHINE_CAPACITY_UNIT_CODES,
-  MACHINE_CAPACITY_UNIT_LABELS,
-  MACHINE_LOADING_LABELS,
-  MACHINE_OPTION_LABELS,
-  MACHINE_PRODUCTION_LABELS,
-} from "@/lib/labels";
+import { MACHINE_CAPACITY_UNIT_CODES, MACHINE_CAPACITY_UNIT_LABELS, MACHINE_LOADING_LABELS, MACHINE_OPTION_LABELS, MACHINE_PRODUCTION_LABELS } from "@/lib/labels";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
@@ -160,7 +153,7 @@ export const useMachineSubmit = ({
 
   // ── Options ─────────────────────────────────────────────────────────────
   const stockLocationOptions = [
-    { value: "", label: COMMON_TEXT.selectPlaceholder },
+    { value: "", label: "Select an option" },
     ...stockLocations.map((location) => ({
       value: location.uuid,
       label: location.name,
@@ -183,7 +176,7 @@ export const useMachineSubmit = ({
   }));
 
   const capacityUnitOptions = [
-    { value: "", label: COMMON_TEXT.selectPlaceholder },
+    { value: "", label: "Select an option" },
     ...machineCapacityUnits.map((unit) => ({
       value: unit,
       label: MACHINE_CAPACITY_UNIT_CODES[unit as MachineCapacityUnit],
@@ -192,7 +185,7 @@ export const useMachineSubmit = ({
   ];
 
   const postProcessingOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...optionOptions,
   ];
 

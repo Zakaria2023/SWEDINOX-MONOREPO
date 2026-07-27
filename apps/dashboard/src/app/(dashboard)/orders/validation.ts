@@ -10,6 +10,11 @@ import {
 } from "@/lib/enums";
 import { todayDateString, currentYear } from "@/lib/helpers";
 
+export const orderItemSchema = z.object({
+  stockUuid: z.string().min(1, "Stock item is required"),
+  quantity: z.string().min(1, "Quantity is required"),
+});
+
 export const orderSurchargeSchema = z.object({
   description: z
     .union([z.enum(invoiceSurchargeDescriptions), z.literal("")])
@@ -35,6 +40,7 @@ export const orderTextSchema = z.object({
 export const orderSchema = z.object({
   // Header
   companyUuid: z.string().min(1, "Company is required"),
+  items: z.array(orderItemSchema).optional(),
   contactUuid: z.string().optional(),
   orderMethod: z.enum(orderMethods).optional(),
   customerRef: z.string().optional(),
@@ -52,9 +58,9 @@ export const orderSchema = z.object({
   isConsignment: z.boolean(),
   consignmentDuration: z.string().optional(),
   isInternalProduction: z.boolean(),
-  isKlantMateriaal: z.boolean(),
+  isCustomerMaterial: z.boolean(),
   weightType: z.enum(orderWeightTypes).optional(),
-  isOverlengte: z.boolean(),
+  isOverlength: z.boolean(),
   isPrinted: z.boolean(),
   isMailed: z.boolean(),
   isFaxed: z.boolean(),
@@ -125,6 +131,7 @@ export type OrderFormValues = z.infer<typeof orderSchema>;
 
 export const DEFAULT_ORDER: OrderFormValues = {
   companyUuid: "",
+  items: [],
   contactUuid: "",
   orderMethod: undefined,
   customerRef: "",
@@ -141,9 +148,9 @@ export const DEFAULT_ORDER: OrderFormValues = {
   isConsignment: false,
   consignmentDuration: "",
   isInternalProduction: false,
-  isKlantMateriaal: false,
+  isCustomerMaterial: false,
   weightType: undefined,
-  isOverlengte: false,
+  isOverlength: false,
   isPrinted: false,
   isMailed: false,
   isFaxed: false,

@@ -4,7 +4,7 @@ import { ContractListItem } from "@/app/(dashboard)/contracts/actions";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { buildColumnVisibility } from "@/lib/helpers";
-import { COMMON_TEXT, CONTRACT_TYPE_LABELS } from "@/lib/labels";
+import { CONTRACT_TYPE_LABELS } from "@/lib/labels";
 import { useState } from "react";
 
 type ColumnKey =
@@ -48,7 +48,7 @@ export const ContractsTable = ({ contracts }: ContractsTableContentProps) => {
     setColumnVisibility((prev) => ({ ...prev, [key]: !prev[key as ColumnKey] }));
 
   const visibleColumns = ALL_COLUMNS.filter((column) => columnVisibility[column.key]);
-  const fallbackValue = COMMON_TEXT.notAvailable;
+  const fallbackValue = "—";
 
   const renderCell = (contract: ContractListItem, key: ColumnKey) => {
     switch (key) {
@@ -79,11 +79,11 @@ export const ContractsTable = ({ contracts }: ContractsTableContentProps) => {
           <TableCell key={key}>
             {contract.hideOnWebsite ? (
               <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
-                {COMMON_TEXT.yes}
+                Yes
               </span>
             ) : (
               <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
-                {COMMON_TEXT.no}
+                No
               </span>
             )}
           </TableCell>

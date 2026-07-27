@@ -1,4 +1,4 @@
-import type {
+import {
   AddressCategory,
   ArticleGroup,
   AvailableAt,
@@ -16,6 +16,9 @@ import type {
   MachineLoadingType,
   MachineOptionType,
   MachineProductionType,
+  ProductionCapacityStatus,
+  SawingLayoutFetchStatus,
+  SawingStatus,
   CompanyLang,
   CompanyRole,
   ContactCategory,
@@ -59,6 +62,11 @@ import type {
   StockLabelPrintingOption,
   StockLabelType,
   StockMode,
+  SfnCounterpartyRole,
+  StockUnit,
+  StockMovementReason,
+  StockMovementType,
+  StockStatus,
   TextUsageCategory,
   VisitReportCategory,
   VisitReportContactMethod,
@@ -73,8 +81,13 @@ import type {
   TransportMode,
   ReturnOrderReason,
   ReturnOrderStatus,
+  OrderDeblockType,
   PurchaseReturnOrderReason,
   OrderMethod,
+  OrderStatus,
+  OrderItemStatus,
+  OrderLineStatus,
+  DeliveryStatus,
   DeliveryTerm,
   TransporterCountry,
   TransporterPriceUnit,
@@ -98,30 +111,6 @@ import type {
   WarehouseWorkOrderStatus,
   WarehouseWorkOrderLineType,
 } from "@/lib/enums";
-
-export const COMMON_TEXT = {
-  yes: "Yes",
-  no: "No",
-  notAvailable: "N/A",
-  selectOption: "Select",
-  emptyOption: "Empty",
-  none: "None",
-  cancel: "Cancel",
-  close: "Close",
-  edit: "Edit",
-  delete: "Delete",
-  saving: "Saving...",
-  deleting: "Deleting...",
-  confirmDelete: "Delete",
-  columns: "Columns",
-  selectPlaceholder: "Select an option",
-  datePlaceholder: "Pick a date",
-  previousMonth: "Previous month",
-  nextMonth: "Next month",
-  sidebarTitle: "Sidebar",
-  sidebarDescription: "Displays the mobile sidebar.",
-  toggleSidebar: "Toggle sidebar",
-} as const;
 
 export const ADDRESS_CATEGORY_LABELS: Record<AddressCategory, string> = {
   invoice: "Invoice",
@@ -472,6 +461,13 @@ export const RETURN_ORDER_REASON_LABELS: Record<ReturnOrderReason, string> = {
   other: "Other",
 };
 
+export const ORDER_DEBLOCK_TYPE_LABELS: Record<OrderDeblockType, string> = {
+  financial: "Financial",
+  invoice: "Invoice",
+  transport: "Transport",
+  handling: "Handling",
+};
+
 export const PURCHASE_RETURN_ORDER_REASON_LABELS: Record<
   PurchaseReturnOrderReason,
   string
@@ -811,6 +807,22 @@ export const STOCK_MODE_LABELS: Record<StockMode, string> = {
   fixed_value: "Fixed value",
 };
 
+export const SFN_COUNTERPARTY_ROLE_LABELS: Record<SfnCounterpartyRole, string> =
+  {
+    producer: "Producer / mill",
+    sfn_member: "SFN member",
+    non_member: "Non-member",
+  };
+
+export const STOCK_UNIT_LABELS: Record<StockUnit, string> = {
+  kg: "KG",
+  st: "ST",
+  m1: "M1",
+  m2: "M2",
+  m3: "M3",
+  mm: "MM",
+};
+
 export const LEAD_TIME_METHOD_LABELS: Record<LeadTimeMethod, string> = {
   manually: "Manually",
   automatic_maximum: "Automatic (Maximum)",
@@ -830,6 +842,31 @@ export const STOCK_LABEL_PRINTING_LABELS: Record<
   per_bundle: "Per bundle or per",
   amount_per_line: "Amount (per line)",
 };
+
+export const STOCK_STATUS_LABELS: Record<StockStatus, string> = {
+  pending: "Pending",
+  received: "Received",
+  cancelled: "Cancelled",
+};
+
+export const STOCK_MOVEMENT_TYPE_LABELS: Record<StockMovementType, string> = {
+  in: "In",
+  out: "Out",
+};
+
+export const STOCK_MOVEMENT_REASON_LABELS: Record<StockMovementReason, string> =
+  {
+    purchase_receipt: "Purchase Receipt",
+    invoice_consumption: "Invoice Consumption",
+    purchase_order_cancelled: "Purchase Order Cancelled",
+    invoice_cancelled: "Invoice Cancelled",
+    sale_consumption: "Sale Consumption",
+    sale_invoice_cancelled: "Sale Invoice Cancelled",
+    manual_correction: "Manual Correction",
+    count_correction: "Count Correction",
+    damaged: "Damaged / Written Off",
+    production_output: "Production Output",
+  };
 
 export const CUSTOMER_LABEL_OPTION_LABELS: Record<CustomerLabelOption, string> =
   {
@@ -1061,6 +1098,37 @@ export const ORDER_METHOD_LABELS: Record<OrderMethod, string> = {
   website: "Website",
   edi: "EDI",
   ai_read_email: "AI-read Email",
+};
+
+export const ORDER_LINE_STATUS_LABELS: Record<OrderLineStatus, string> = {
+  in_progress: "In progress",
+  released: "Released",
+  partially_delivered: "Partially delivered",
+  delivered: "Delivered",
+  partially_invoiced: "Partially invoiced",
+  invoiced: "Invoiced",
+  cancelled: "Cancelled",
+};
+
+export const DELIVERY_STATUS_LABELS: Record<DeliveryStatus, string> = {
+  not_ready: "Not ready",
+  ready: "Ready",
+  released: "Released",
+  delivered: "Delivered",
+};
+
+export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
+  open: "Open",
+  confirmed: "Confirmed",
+  completed: "Completed",
+  cancelled: "Cancelled",
+};
+
+export const ORDER_ITEM_STATUS_LABELS: Record<OrderItemStatus, string> = {
+  reserved: "Reserved",
+  delivered: "Delivered",
+  invoiced: "Invoiced",
+  cancelled: "Cancelled",
 };
 
 export const DELIVERY_TERM_LABELS: Record<DeliveryTerm, string> = {
@@ -1499,3 +1567,29 @@ export const CUSTOMER_STOCK_REASON_LABELS: Record<CustomerStockReason, string> =
     transfer: "Transfer",
     other: "Other",
   };
+
+export const PRODUCTION_CAPACITY_STATUS_LABELS: Record<
+  ProductionCapacityStatus,
+  string
+> = {
+  ok: "OK",
+  warning: "Warning",
+  full: "Full",
+};
+
+export const SAWING_LAYOUT_FETCH_STATUS_LABELS: Record<
+  SawingLayoutFetchStatus,
+  string
+> = {
+  new: "New",
+  in_progress: "In progress",
+  completed: "Completed",
+  cancelled: "Cancelled",
+};
+
+export const SAWING_STATUS_LABELS: Record<SawingStatus, string> = {
+  new: "New",
+  in_progress: "In progress",
+  completed: "Completed",
+  cancelled: "Cancelled",
+};

@@ -6,7 +6,7 @@ import {
   SelectWarehouses,
   Warehouses,
 } from "@/db/schema/warehouses";
-import { generateUuid } from "@/lib/helpers";
+import { describeError, generateUuid } from "@/lib/helpers";
 import { and, desc, eq, isNotNull } from "drizzle-orm";
 
 export type LocationFields = Omit<
@@ -29,8 +29,8 @@ export const getLocations = async (): Promise<SelectWarehouses[]> => {
         and(isNotNull(Warehouses.parentUuid), eq(Warehouses.type, "location")),
       )
       .orderBy(desc(Warehouses.createdAt));
-  } catch {
-    throw new Error("Failed to fetch locations");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch locations"));
   }
 };
 

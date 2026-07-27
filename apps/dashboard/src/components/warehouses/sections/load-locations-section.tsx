@@ -7,12 +7,7 @@ import {
   WarehouseTransportRegion,
   WarehouseLoadingLocation,
 } from "@/lib/enums";
-import {
-  WAREHOUSE_TRANSPORT_REGION_CODES,
-  WAREHOUSE_TRANSPORT_REGION_LABELS,
-  WAREHOUSE_LOADING_LOCATION_LABELS,
-  COMMON_TEXT,
-} from "@/lib/labels";
+import { WAREHOUSE_TRANSPORT_REGION_CODES, WAREHOUSE_TRANSPORT_REGION_LABELS, WAREHOUSE_LOADING_LOCATION_LABELS } from "@/lib/labels";
 import { useFormContext, useFieldArray } from "react-hook-form";
 import { WarehouseFormValues } from "@/app/(dashboard)/warehouses/validation";
 
@@ -23,7 +18,7 @@ const transportRegionOptions = warehouseTransportRegions.map((r) => ({
 }));
 
 const loadLocationOptions = [
-  { value: "", label: COMMON_TEXT.emptyOption },
+  { value: "", label: "Empty" },
   ...warehouseLoadingLocations.map((l) => ({
     value: l,
     label: WAREHOUSE_LOADING_LOCATION_LABELS[l as WarehouseLoadingLocation],

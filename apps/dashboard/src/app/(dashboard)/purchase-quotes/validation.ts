@@ -27,7 +27,7 @@ export const purchaseQuoteSchema = z
     // Purchase order type
     purchaseOrderType: z.enum(purchaseOrderTypes).optional(),
     weightType: z.enum(orderWeightTypes).optional(),
-    isOverlengte: z.boolean(),
+    isOverlength: z.boolean(),
     isConsignment: z.boolean(),
 
     // Finances
@@ -72,7 +72,7 @@ export const DEFAULT_PURCHASE_QUOTE: PurchaseQuoteFormValues = {
 
   purchaseOrderType: undefined,
   weightType: undefined,
-  isOverlengte: false,
+  isOverlength: false,
   isConsignment: false,
 
   paymentTerms: undefined,

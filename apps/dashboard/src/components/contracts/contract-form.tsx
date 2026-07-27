@@ -30,11 +30,6 @@ type ContractFormProps = {
 
 const contractableRoleSet = new Set(contractableRoles as readonly string[]);
 
-const getContractableRole = (company: CompanyOption): ContractableRole | null =>
-  (company.roles?.find((r) =>
-    contractableRoleSet.has(r),
-  ) as ContractableRole) ?? null;
-
 export const ContractForm = ({
   groups,
   availableCompanies,
@@ -49,6 +44,7 @@ export const ContractForm = ({
     resolver: zodResolver(companyLinkSchema),
     defaultValues: {
       companyUuid: "",
+      role: "" as ContractableRole,
       startingDate: "",
       endDate: "",
     },
@@ -71,13 +67,9 @@ export const ContractForm = ({
   };
 
   const handleSaveCompanyLink = linkForm.handleSubmit((values) => {
-    const company = contractableCompanies.find(
-      (c) => c.uuid === values.companyUuid,
-    );
-    const role = company ? getContractableRole(company) : null;
     const entry: ContractCompanyEntry = {
       companyUuid: values.companyUuid,
-      role,
+      role: values.role,
       startingDate: values.startingDate || null,
       endDate: values.endDate || null,
     };

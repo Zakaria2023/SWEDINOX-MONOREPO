@@ -25,13 +25,7 @@ import {
   OrderWeightType,
   orderWeightTypes,
 } from "@/lib/enums";
-import {
-  COMMON_TEXT,
-  DELIVERY_TERM_LABELS,
-  INVOICE_PAYMENT_TERM_LABELS,
-  ORDER_METHOD_LABELS,
-  ORDER_WEIGHT_TYPE_LABELS,
-} from "@/lib/labels";
+import { DELIVERY_TERM_LABELS, INVOICE_PAYMENT_TERM_LABELS, ORDER_METHOD_LABELS, ORDER_WEIGHT_TYPE_LABELS } from "@/lib/labels";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -44,7 +38,7 @@ type UseQuoteSubmitParams = {
   contracts: ContractForProjectOption[];
 };
 
-const emptyOpt = { value: "", label: COMMON_TEXT.emptyOption };
+const emptyOpt = { value: "", label: "Empty" };
 
 const makeOptions = <T extends string>(
   values: readonly T[],
@@ -199,9 +193,9 @@ export const useQuoteSubmit = ({
           ? values.consignmentDurationUnit || null
           : null,
         isInternalProduction: values.isInternalProduction,
-        isKlantMateriaal: values.isKlantMateriaal,
+        isCustomerMaterial: values.isCustomerMaterial,
         weightType: values.weightType || null,
-        isOverlengte: values.isOverlengte,
+        isOverlength: values.isOverlength,
         isPrinted: values.isPrinted,
         isMailed: values.isMailed,
         isFaxed: values.isFaxed,
@@ -234,7 +228,15 @@ export const useQuoteSubmit = ({
 
         remarks: values.remarks || null,
         documents: values.documents?.length ? values.documents : null,
-      });
+      }, values.items.map((item) => ({
+        productUuid: item.productUuid,
+        quantity: item.quantity,
+        unit: item.unit,
+        lengthMm: item.lengthMm ? Number(item.lengthMm) : null,
+        widthMm: item.widthMm ? Number(item.widthMm) : null,
+        thicknessMm: item.thicknessMm || null,
+        options: item.options || null,
+      })));
 
       setState(result);
       if (result.success) {

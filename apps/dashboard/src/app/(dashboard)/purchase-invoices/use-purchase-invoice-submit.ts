@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
+import { useEffect, useState, useTransition } from "react";
+import { useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   createPurchaseInvoice,
@@ -11,16 +11,24 @@ import {
   createPurchaseInvoiceSchema,
   type PurchaseInvoiceFormValues,
 } from "./validation";
+import {
+  getReceivablePurchaseOrderItemsForCompany,
+  type ReceivablePurchaseOrderItem,
+} from "@/app/(dashboard)/purchase-orders/actions";
 import { toDecimal } from "@/lib/helpers";
 
 export const usePurchaseInvoiceSubmit = () => {
   const [isPending, startTransition] = useTransition();
   const [state, setState] = useState<PurchaseInvoiceActionResult>({});
+  const [receivableItems, setReceivableItems] = useState<
+    ReceivablePurchaseOrderItem[]
+  >([]);
 
   const form = useForm<PurchaseInvoiceFormValues>({
     resolver: zodResolver(createPurchaseInvoiceSchema()),
     defaultValues: {
       companyUuid: "",
+      items: [],
       invoiceSentByContactUuid: "",
       bookingDate: "",
       invoiceDate: "",
@@ -34,18 +42,31 @@ export const usePurchaseInvoiceSubmit = () => {
       paymentTerms: undefined,
       blocked: false,
       blockReason: undefined,
-      materials: "0.00",
-      optionsAmount: "0.00",
-      surcharges: "0.00",
-      vatHigh: "0.00",
-      vatMiddle: "0.00",
-      vatLow: "0.00",
-      creditRestriction: "0.00",
       remarks: "",
       documents: [],
       surchargeLines: [],
     },
   });
+
+  const {
+    fields: itemFields,
+    append: appendItem,
+    remove: removeItem,
+    replace: replaceItems,
+  } = useFieldArray({ control: form.control, name: "items" });
+
+  const companyUuid = form.watch("companyUuid");
+
+  useEffect(() => {
+    replaceItems([]);
+    if (!companyUuid) {
+      setReceivableItems([]);
+      return;
+    }
+    getReceivablePurchaseOrderItemsForCompany(companyUuid).then(
+      setReceivableItems,
+    );
+  }, [companyUuid, replaceItems]);
 
   const onSubmit = form.handleSubmit((values) => {
     const surcharges = values.surchargeLines.map((line) => ({
@@ -81,21 +102,24 @@ export const usePurchaseInvoiceSubmit = () => {
           paymentTerms: values.paymentTerms ?? null,
           blocked: values.blocked,
           blockReason: values.blockReason ?? null,
-          materials: values.materials,
-          optionsAmount: values.optionsAmount,
-          surcharges: values.surcharges,
-          vatHigh: values.vatHigh,
-          vatMiddle: values.vatMiddle,
-          vatLow: values.vatLow,
-          creditRestriction: values.creditRestriction,
           remarks: values.remarks || undefined,
           documents: values.documents ?? [],
         },
+        values.items ?? [],
         surcharges,
       );
       setState(result);
     });
   });
 
-  return { form, isPending, onSubmit, state };
+  return {
+    form,
+    isPending,
+    onSubmit,
+    state,
+    receivableItems,
+    itemFields,
+    appendItem,
+    removeItem,
+  };
 };

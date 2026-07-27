@@ -11,11 +11,7 @@ import {
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { buildColumnVisibility } from "@/lib/helpers";
-import {
-  ADDRESS_CATEGORY_LABELS,
-  AVAILABLE_AT_LABELS,
-  COMMON_TEXT,
-} from "@/lib/labels";
+import { ADDRESS_CATEGORY_LABELS, AVAILABLE_AT_LABELS } from "@/lib/labels";
 import { useState } from "react";
 
 type ColumnKey =
@@ -143,7 +139,7 @@ export const AddressesTable = ({
   const visibleColumns = ALL_COLUMNS.filter(
     (column) => columnVisibility[column.key],
   );
-  const fallbackValue = COMMON_TEXT.notAvailable;
+  const fallbackValue = "—";
 
   const boolCell = (value: boolean | null) => (
     <span
@@ -151,7 +147,7 @@ export const AddressesTable = ({
         value ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
       }`}
     >
-      {value ? COMMON_TEXT.yes : COMMON_TEXT.no}
+      {value ? "Yes" : "No"}
     </span>
   );
 

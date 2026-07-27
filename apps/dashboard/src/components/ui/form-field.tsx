@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { ReactNode } from "react";
 
 type FormLabelProps = {
   children: ReactNode;
@@ -10,11 +10,7 @@ type FormFieldErrorProps = {
   message?: string;
 };
 
-export const FormLabel = ({
-  children,
-  htmlFor,
-  required,
-}: FormLabelProps) => (
+export const FormLabel = ({ children, htmlFor, required }: FormLabelProps) => (
   <label
     htmlFor={htmlFor}
     className="mb-1 block text-sm font-medium text-gray-700"

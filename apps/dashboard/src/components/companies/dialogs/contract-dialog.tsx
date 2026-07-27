@@ -14,7 +14,7 @@ import { Select } from "@/components/shadcn/select";
 import { DialogFormFooter } from "@/components/ui/dialog-form-footer";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import { ContractableRole } from "@/lib/enums";
-import { COMMON_TEXT, CONTRACTABLE_ROLE_LABELS } from "@/lib/labels";
+import { CONTRACTABLE_ROLE_LABELS } from "@/lib/labels";
 import { FileText } from "lucide-react";
 import { FormEventHandler } from "react";
 import { Controller, UseFormReturn } from "react-hook-form";
@@ -63,7 +63,7 @@ export const ContractDialog = ({
                 <Select
                   id="ct-contract"
                   options={[
-                    { value: "", label: COMMON_TEXT.selectOption },
+                    { value: "", label: "Select" },
                     ...availableContracts.map((c) => ({
                       value: c.uuid,
                       label: `${c.code}${c.description ? ` — ${c.description}` : ""}`,
@@ -71,7 +71,7 @@ export const ContractDialog = ({
                   ]}
                   value={field.value}
                   onValueChange={field.onChange}
-                  placeholder={COMMON_TEXT.selectOption}
+                  placeholder="Select"
                 />
               )}
             />
@@ -98,7 +98,7 @@ export const ContractDialog = ({
                   <Select
                     id="ct-role"
                     options={[
-                      { value: "", label: COMMON_TEXT.selectOption },
+                      { value: "", label: "Select" },
                       ...activeContractableRoles.map((r) => ({
                         value: r,
                         label: CONTRACTABLE_ROLE_LABELS[r],
@@ -106,7 +106,7 @@ export const ContractDialog = ({
                     ]}
                     value={field.value}
                     onValueChange={field.onChange}
-                    placeholder={COMMON_TEXT.selectOption}
+                    placeholder="Select"
                   />
                 )}
               />

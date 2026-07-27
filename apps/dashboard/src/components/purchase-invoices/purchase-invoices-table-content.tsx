@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { PurchaseInvoiceListItem } from "@/app/(dashboard)/purchase-invoices/actions";
 import {
   Table,
@@ -11,11 +12,7 @@ import {
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { buildColumnVisibility } from "@/lib/helpers";
-import {
-  COMMON_TEXT,
-  INVOICE_PAYMENT_TERM_LABELS,
-  PURCHASE_INVOICE_BLOCK_REASON_LABELS,
-} from "@/lib/labels";
+import { INVOICE_PAYMENT_TERM_LABELS, PURCHASE_INVOICE_BLOCK_REASON_LABELS } from "@/lib/labels";
 import { useState } from "react";
 
 type ColumnKey =
@@ -53,32 +50,40 @@ export const PurchaseInvoicesTable = ({ invoices }: Props) => {
     setColumnVisibility((prev) => ({ ...prev, [key]: !prev[key as ColumnKey] }));
 
   const visibleColumns = ALL_COLUMNS.filter((col) => columnVisibility[col.key]);
-  const na = COMMON_TEXT.notAvailable;
 
   const renderCell = (inv: PurchaseInvoiceListItem, key: ColumnKey) => {
     switch (key) {
       case "id":
-        return <TableCell key={key} className="font-medium whitespace-nowrap">{inv.id}</TableCell>;
+        return (
+          <TableCell key={key} className="font-medium whitespace-nowrap">
+            <Link
+              href={`/purchase-invoices/${inv.uuid}`}
+              className="underline-offset-4 hover:underline"
+            >
+              {inv.id}
+            </Link>
+          </TableCell>
+        );
       case "companyName":
-        return <TableCell key={key} className="whitespace-nowrap">{inv.companyName ?? na}</TableCell>;
+        return <TableCell key={key} className="whitespace-nowrap">{inv.companyName ?? "—"}</TableCell>;
       case "sentBy":
         return (
           <TableCell key={key} className="whitespace-nowrap">
-            {[inv.contactFirstName, inv.contactLastName].filter(Boolean).join(" ") || na}
+            {[inv.contactFirstName, inv.contactLastName].filter(Boolean).join(" ") || "—"}
           </TableCell>
         );
       case "supplierCode":
-        return <TableCell key={key} className="whitespace-nowrap">{inv.supplierCode ?? na}</TableCell>;
+        return <TableCell key={key} className="whitespace-nowrap">{inv.supplierCode ?? "—"}</TableCell>;
       case "invoiceDate":
-        return <TableCell key={key} className="whitespace-nowrap">{inv.invoiceDate?.toLocaleDateString() ?? na}</TableCell>;
+        return <TableCell key={key} className="whitespace-nowrap">{inv.invoiceDate?.toLocaleDateString() ?? "—"}</TableCell>;
       case "expirationDate":
-        return <TableCell key={key} className="whitespace-nowrap">{inv.expirationDate?.toLocaleDateString() ?? na}</TableCell>;
+        return <TableCell key={key} className="whitespace-nowrap">{inv.expirationDate?.toLocaleDateString() ?? "—"}</TableCell>;
       case "invoiceTotal":
         return <TableCell key={key} className="text-right whitespace-nowrap">€ {inv.invoiceTotal}</TableCell>;
       case "paymentTerms":
         return (
           <TableCell key={key} className="whitespace-nowrap">
-            {inv.paymentTerms ? INVOICE_PAYMENT_TERM_LABELS[inv.paymentTerms] : na}
+            {inv.paymentTerms ? INVOICE_PAYMENT_TERM_LABELS[inv.paymentTerms] : "—"}
           </TableCell>
         );
       case "blocked":
@@ -96,7 +101,7 @@ export const PurchaseInvoicesTable = ({ invoices }: Props) => {
       case "blockReason":
         return (
           <TableCell key={key} className="whitespace-nowrap">
-            {inv.blockReason ? PURCHASE_INVOICE_BLOCK_REASON_LABELS[inv.blockReason] : na}
+            {inv.blockReason ? PURCHASE_INVOICE_BLOCK_REASON_LABELS[inv.blockReason] : "—"}
           </TableCell>
         );
     }

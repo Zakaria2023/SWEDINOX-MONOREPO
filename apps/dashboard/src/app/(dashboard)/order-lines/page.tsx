@@ -1,0 +1,19 @@
+import { getOrderLines } from "@/app/(dashboard)/order-lines/actions";
+import { OrderLinesTable } from "@/components/order-lines/order-lines-table-content";
+import { PageHeading } from "@/components/layout/page-heading";
+
+const OrderLinesPage = async () => {
+  const rows = await getOrderLines();
+
+  return (
+    <div className="space-y-6 p-6">
+      <PageHeading
+        title="Order lines"
+        description="All order lines with pricing, dimensions and margin"
+      />
+      <OrderLinesTable rows={rows} />
+    </div>
+  );
+};
+
+export default OrderLinesPage;

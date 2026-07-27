@@ -1,7 +1,6 @@
 "use client";
 
 import { Button } from "@/components/shadcn/button";
-import { COMMON_TEXT } from "@/lib/labels";
 
 type FormActionsProps = {
   cancelLabel?: string;
@@ -20,10 +19,10 @@ export const FormActions = ({
 }: FormActionsProps) => (
   <div className="flex gap-3 pb-6">
     <Button type="submit" disabled={isPending}>
-      {isPending ? (pendingLabel ?? COMMON_TEXT.saving) : submitLabel}
+      {isPending ? (pendingLabel ?? "Saving...") : submitLabel}
     </Button>
     <Button type="button" variant="outline" onClick={onCancel}>
-      {cancelLabel ?? COMMON_TEXT.cancel}
+      {cancelLabel ?? "Cancel"}
     </Button>
   </div>
 );

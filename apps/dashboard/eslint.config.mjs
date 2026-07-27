@@ -36,6 +36,13 @@ const eslintConfig = [
           selector: 'FunctionExpression:not([generator=true])',
           message: 'Use arrow functions instead of function expressions.',
         },
+        // Never use let — restructure (entries()/reduce/early returns) so
+        // every binding can be const.
+        {
+          selector: "VariableDeclaration[kind='let']",
+          message:
+            'Use const instead of let — restructure so the binding is never reassigned.',
+        },
       ],
       // Components & Functions: implicit return when function body is a single expression
       'arrow-body-style': ['error', 'as-needed'],

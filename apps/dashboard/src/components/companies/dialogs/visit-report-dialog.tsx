@@ -18,7 +18,6 @@ import { DialogFormFooter } from "@/components/ui/dialog-form-footer";
 import { FormLabel } from "@/components/ui/form-field";
 import { visitReportContactMethods, visitReportReasons } from "@/lib/enums";
 import {
-  COMMON_TEXT,
   VISIT_REPORT_CONTACT_METHOD_LABELS,
   VISIT_REPORT_REASON_LABELS,
 } from "@/lib/labels";
@@ -27,10 +26,10 @@ import { FormEventHandler } from "react";
 import { Controller, UseFormReturn } from "react-hook-form";
 import { VisitReportDialogValues } from "@/app/(dashboard)/companies/validation";
 
-const contactLabel = (contact: CompanyContactInput) =>
-  [contact.firstName, contact.lastName].filter(Boolean).join(" ") ||
-  contact.email ||
-  "Contact";
+type ContactSelectOption = {
+  value: string;
+  label: string;
+};
 
 type Props = {
   isOpen: boolean;
@@ -38,9 +37,15 @@ type Props = {
   onCancel: () => void;
   onSave: FormEventHandler<HTMLFormElement>;
   form: UseFormReturn<VisitReportDialogValues>;
-  contacts: CompanyContactInput[];
+  contacts?: CompanyContactInput[];
+  contactOptions?: ContactSelectOption[];
   isEditing?: boolean;
 };
+
+const contactLabel = (contact: CompanyContactInput) =>
+  [contact.firstName, contact.lastName].filter(Boolean).join(" ") ||
+  contact.email ||
+  "Contact";
 
 export const VisitReportDialog = ({
   isOpen,
@@ -48,10 +53,21 @@ export const VisitReportDialog = ({
   onCancel,
   onSave,
   form,
-  contacts,
+  contacts = [],
+  contactOptions,
   isEditing = false,
 }: Props) => {
-  const hasContacts = contacts.length > 0;
+  // The dialog just renders whatever options it's given: the standalone edit
+  // page passes uuid-valued options via `contactOptions`, while the legacy
+  // create flow still passes the in-memory `contacts` array, which maps to
+  // index-valued options here.
+  const options =
+    contactOptions ??
+    contacts.map((contact, index) => ({
+      value: String(index),
+      label: contactLabel(contact),
+    }));
+  const hasContacts = options.length > 0;
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -105,7 +121,7 @@ export const VisitReportDialog = ({
                   <Select
                     id="vr-sort"
                     options={[
-                      { value: "", label: COMMON_TEXT.emptyOption },
+                      { value: "", label: "Empty" },
                       ...visitReportContactMethods.map((method) => ({
                         value: method,
                         label: VISIT_REPORT_CONTACT_METHOD_LABELS[method],
@@ -113,7 +129,7 @@ export const VisitReportDialog = ({
                     ]}
                     value={field.value ?? ""}
                     onValueChange={field.onChange}
-                    placeholder={COMMON_TEXT.selectOption}
+                    placeholder="Select"
                   />
                 )}
               />
@@ -128,7 +144,7 @@ export const VisitReportDialog = ({
                   <Select
                     id="vr-reason"
                     options={[
-                      { value: "", label: COMMON_TEXT.emptyOption },
+                      { value: "", label: "Empty" },
                       ...visitReportReasons.map((reason) => ({
                         value: reason,
                         label: VISIT_REPORT_REASON_LABELS[reason],
@@ -136,7 +152,7 @@ export const VisitReportDialog = ({
                     ]}
                     value={field.value ?? ""}
                     onValueChange={field.onChange}
-                    placeholder={COMMON_TEXT.selectOption}
+                    placeholder="Select"
                   />
                 )}
               />
@@ -150,16 +166,10 @@ export const VisitReportDialog = ({
                 render={({ field }) => (
                   <Select
                     id="vr-contact"
-                    options={[
-                      { value: "", label: COMMON_TEXT.emptyOption },
-                      ...contacts.map((contact, index) => ({
-                        value: String(index),
-                        label: contactLabel(contact),
-                      })),
-                    ]}
+                    options={[{ value: "", label: "Empty" }, ...options]}
                     value={field.value ?? ""}
                     onValueChange={field.onChange}
-                    placeholder={COMMON_TEXT.selectOption}
+                    placeholder="Select"
                     disabled={!hasContacts}
                   />
                 )}

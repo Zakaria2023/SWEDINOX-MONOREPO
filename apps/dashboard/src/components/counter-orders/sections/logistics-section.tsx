@@ -7,14 +7,10 @@ import { FormCheckboxCard } from "@/components/ui/form-checkbox-card";
 import { FormLabel } from "@/components/ui/form-field";
 import { FormSelectField } from "@/components/ui/form-select-field";
 import { transportModes, warehouseTransportRegions } from "@/lib/enums";
-import {
-  COMMON_TEXT,
-  TRANSPORT_MODE_LABELS,
-  WAREHOUSE_TRANSPORT_REGION_LABELS,
-} from "@/lib/labels";
+import { TRANSPORT_MODE_LABELS, WAREHOUSE_TRANSPORT_REGION_LABELS } from "@/lib/labels";
 
 const transportRegionOptions = [
-  { value: "", label: COMMON_TEXT.emptyOption },
+  { value: "", label: "Empty" },
   ...warehouseTransportRegions.map((region) => ({
     value: region,
     label: WAREHOUSE_TRANSPORT_REGION_LABELS[region],
@@ -22,7 +18,7 @@ const transportRegionOptions = [
 ];
 
 const transportModeOptions = [
-  { value: "", label: COMMON_TEXT.emptyOption },
+  { value: "", label: "Empty" },
   ...transportModes.map((mode) => ({
     value: mode,
     label: TRANSPORT_MODE_LABELS[mode],

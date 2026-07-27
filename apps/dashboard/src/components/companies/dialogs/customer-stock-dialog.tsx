@@ -16,7 +16,7 @@ import { Textarea } from "@/components/shadcn/textarea";
 import { DialogFormFooter } from "@/components/ui/dialog-form-footer";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import { customerStockReasons } from "@/lib/enums";
-import { COMMON_TEXT, CUSTOMER_STOCK_REASON_LABELS } from "@/lib/labels";
+import { CUSTOMER_STOCK_REASON_LABELS } from "@/lib/labels";
 import { Boxes } from "lucide-react";
 import { FormEventHandler } from "react";
 import { Controller, UseFormReturn } from "react-hook-form";
@@ -29,6 +29,7 @@ type Props = {
   form: UseFormReturn<CustomerStockDialogValues>;
   selectedProduct: ProductOption | null;
   onBrowse: () => void;
+  submitLabel?: string;
 };
 
 export const CustomerStockDialog = ({
@@ -39,6 +40,7 @@ export const CustomerStockDialog = ({
   form,
   selectedProduct,
   onBrowse,
+  submitLabel = "Book Stock",
 }: Props) => {
   const { register, formState, control } = form;
 
@@ -102,7 +104,7 @@ export const CustomerStockDialog = ({
                   <Select
                     id="cs-reason"
                     options={[
-                      { value: "", label: COMMON_TEXT.emptyOption },
+                      { value: "", label: "Empty" },
                       ...customerStockReasons.map((reason) => ({
                         value: reason,
                         label: CUSTOMER_STOCK_REASON_LABELS[reason],
@@ -110,7 +112,7 @@ export const CustomerStockDialog = ({
                     ]}
                     value={field.value ?? ""}
                     onValueChange={field.onChange}
-                    placeholder={COMMON_TEXT.selectOption}
+                    placeholder="Select"
                   />
                 )}
               />
@@ -125,7 +127,7 @@ export const CustomerStockDialog = ({
             </div>
           </DialogBody>
 
-          <DialogFormFooter onCancel={onCancel} submitLabel="Book Stock" />
+          <DialogFormFooter onCancel={onCancel} submitLabel={submitLabel} />
         </form>
       </DialogContent>
     </Dialog>

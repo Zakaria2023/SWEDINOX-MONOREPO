@@ -21,7 +21,7 @@ export const purchaseRequestSchema = z.object({
   // Purchase order type
   purchaseOrderType: z.enum(purchaseOrderTypes).optional(),
   weightType: z.enum(orderWeightTypes).optional(),
-  isOverlengte: z.boolean(),
+  isOverlength: z.boolean(),
   isPrinted: z.boolean(),
   isMailed: z.boolean(),
   isFaxed: z.boolean(),
@@ -59,7 +59,7 @@ export const DEFAULT_PURCHASE_REQUEST: PurchaseRequestFormValues = {
 
   purchaseOrderType: undefined,
   weightType: undefined,
-  isOverlengte: false,
+  isOverlength: false,
   isPrinted: false,
   isMailed: false,
   isFaxed: false,

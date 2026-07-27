@@ -12,11 +12,7 @@ import {
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { ContactSalutation } from "@/lib/enums";
 import { buildColumnVisibility, formatRevenue } from "@/lib/helpers";
-import {
-  COMMON_TEXT,
-  CONTACT_CATEGORY_LABELS,
-  CONTACT_SALUTATION_LABELS,
-} from "@/lib/labels";
+import { CONTACT_CATEGORY_LABELS, CONTACT_SALUTATION_LABELS } from "@/lib/labels";
 import { useState } from "react";
 
 type ColumnKey = keyof ContactPersonSupplierRow | "contactPerson";
@@ -78,7 +74,6 @@ const ALL_COLUMNS: Array<{
 
 type Props = { rows: ContactPersonSupplierRow[] };
 
-
 export const ContactPersonsSuppliersTable = ({ rows }: Props) => {
   const [columnVisibility, setColumnVisibility] =
     useState<Record<ColumnKey, boolean>>(buildColumnVisibility(ALL_COLUMNS));
@@ -90,7 +85,6 @@ export const ContactPersonsSuppliersTable = ({ rows }: Props) => {
     }));
 
   const visibleColumns = ALL_COLUMNS.filter((col) => columnVisibility[col.key]);
-  const na = COMMON_TEXT.notAvailable;
 
   const renderCell = (row: ContactPersonSupplierRow, key: ColumnKey) => {
     switch (key) {
@@ -115,7 +109,7 @@ export const ContactPersonsSuppliersTable = ({ rows }: Props) => {
           row.firstName,
           row.lastName,
         ].filter(Boolean);
-        return <TableCell key={key}>{parts.join(" ") || na}</TableCell>;
+        return <TableCell key={key}>{parts.join(" ") || "—"}</TableCell>;
       }
       case "categories":
         return (
@@ -129,35 +123,35 @@ export const ContactPersonsSuppliersTable = ({ rows }: Props) => {
                       ] ?? c,
                   )
                   .join(", ")
-              : na}
+              : "—"}
           </TableCell>
         );
       case "email":
-        return <TableCell key={key}>{row.email ?? na}</TableCell>;
+        return <TableCell key={key}>{row.email ?? "—"}</TableCell>;
       case "telephone":
-        return <TableCell key={key}>{row.telephone ?? na}</TableCell>;
+        return <TableCell key={key}>{row.telephone ?? "—"}</TableCell>;
       case "mobile":
-        return <TableCell key={key}>{row.mobile ?? na}</TableCell>;
+        return <TableCell key={key}>{row.mobile ?? "—"}</TableCell>;
       case "address":
-        return <TableCell key={key}>{row.address ?? na}</TableCell>;
+        return <TableCell key={key}>{row.address ?? "—"}</TableCell>;
       case "postalCode":
-        return <TableCell key={key}>{row.postalCode ?? na}</TableCell>;
+        return <TableCell key={key}>{row.postalCode ?? "—"}</TableCell>;
       case "city":
-        return <TableCell key={key}>{row.city ?? na}</TableCell>;
+        return <TableCell key={key}>{row.city ?? "—"}</TableCell>;
       case "addressCountry":
-        return <TableCell key={key}>{row.addressCountry ?? na}</TableCell>;
+        return <TableCell key={key}>{row.addressCountry ?? "—"}</TableCell>;
       case "addressTelephone":
-        return <TableCell key={key}>{row.addressTelephone ?? na}</TableCell>;
+        return <TableCell key={key}>{row.addressTelephone ?? "—"}</TableCell>;
       case "addressFax":
-        return <TableCell key={key}>{row.addressFax ?? na}</TableCell>;
+        return <TableCell key={key}>{row.addressFax ?? "—"}</TableCell>;
       case "purchaser":
-        return <TableCell key={key}>{row.purchaser ?? na}</TableCell>;
+        return <TableCell key={key}>{row.purchaser ?? "—"}</TableCell>;
       case "searchCode1":
-        return <TableCell key={key}>{row.searchCode1 ?? na}</TableCell>;
+        return <TableCell key={key}>{row.searchCode1 ?? "—"}</TableCell>;
       case "searchCode2":
-        return <TableCell key={key}>{row.searchCode2 ?? na}</TableCell>;
+        return <TableCell key={key}>{row.searchCode2 ?? "—"}</TableCell>;
       case "searchCode3":
-        return <TableCell key={key}>{row.searchCode3 ?? na}</TableCell>;
+        return <TableCell key={key}>{row.searchCode3 ?? "—"}</TableCell>;
       case "companyId":
         return <TableCell key={key}>{row.companyId}</TableCell>;
       case "companyName":
@@ -173,15 +167,15 @@ export const ContactPersonsSuppliersTable = ({ rows }: Props) => {
               ? (CONTACT_SALUTATION_LABELS[
                   row.salutation as ContactSalutation
                 ] ?? row.salutation)
-              : na}
+              : "—"}
           </TableCell>
         );
       case "initials":
-        return <TableCell key={key}>{row.initials ?? na}</TableCell>;
+        return <TableCell key={key}>{row.initials ?? "—"}</TableCell>;
       case "firstName":
-        return <TableCell key={key}>{row.firstName ?? na}</TableCell>;
+        return <TableCell key={key}>{row.firstName ?? "—"}</TableCell>;
       case "lastName":
-        return <TableCell key={key}>{row.lastName ?? na}</TableCell>;
+        return <TableCell key={key}>{row.lastName ?? "—"}</TableCell>;
       case "isCustomer":
         return (
           <TableCell key={key} className="text-center">
@@ -225,17 +219,17 @@ export const ContactPersonsSuppliersTable = ({ rows }: Props) => {
           </TableCell>
         );
       case "visitStreetAndNo":
-        return <TableCell key={key}>{row.visitStreetAndNo ?? na}</TableCell>;
+        return <TableCell key={key}>{row.visitStreetAndNo ?? "—"}</TableCell>;
       case "visitPostalCode":
-        return <TableCell key={key}>{row.visitPostalCode ?? na}</TableCell>;
+        return <TableCell key={key}>{row.visitPostalCode ?? "—"}</TableCell>;
       case "visitCity":
-        return <TableCell key={key}>{row.visitCity ?? na}</TableCell>;
+        return <TableCell key={key}>{row.visitCity ?? "—"}</TableCell>;
       case "visitCountry":
-        return <TableCell key={key}>{row.visitCountry ?? na}</TableCell>;
+        return <TableCell key={key}>{row.visitCountry ?? "—"}</TableCell>;
       case "visitTelephone":
-        return <TableCell key={key}>{row.visitTelephone ?? na}</TableCell>;
+        return <TableCell key={key}>{row.visitTelephone ?? "—"}</TableCell>;
       case "visitFax":
-        return <TableCell key={key}>{row.visitFax ?? na}</TableCell>;
+        return <TableCell key={key}>{row.visitFax ?? "—"}</TableCell>;
     }
   };
 

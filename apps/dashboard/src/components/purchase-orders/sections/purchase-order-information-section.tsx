@@ -14,6 +14,7 @@ type Props = {
   purchaserOptions: SelectOption[];
   isLoadingSupplierData: boolean;
   handleSupplierChange: (uuid: string) => void;
+  handleAgentChange: (uuid: string) => void;
 };
 
 export const PurchaseOrderInformationSection = ({
@@ -23,6 +24,7 @@ export const PurchaseOrderInformationSection = ({
   purchaserOptions,
   isLoadingSupplierData,
   handleSupplierChange,
+  handleAgentChange,
 }: Props) => {
   const {
     register,
@@ -69,6 +71,7 @@ export const PurchaseOrderInformationSection = ({
           label="Agent"
           options={agentOptions}
           emptyValue=""
+          onValueChange={(value) => handleAgentChange(value)}
         />
 
         <FormSelectField
@@ -96,7 +99,7 @@ export const PurchaseOrderInformationSection = ({
         </div>
 
         <div>
-          <FormLabel htmlFor="ourReference">Onze referentie</FormLabel>
+          <FormLabel htmlFor="ourReference">Our reference</FormLabel>
           <Input id="ourReference" {...register("ourReference")} />
         </div>
 

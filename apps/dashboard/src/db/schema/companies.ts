@@ -19,6 +19,7 @@ import {
   companyLangs,
   currencies,
   customerGroups,
+  sfnCounterpartyRoles,
   devTheorWtOptions,
   groupLinesByDescriptionOptions,
   invoiceFrequencies,
@@ -55,6 +56,10 @@ export const Companies = mysqlTable(
 
     // Sales settings
     customerGroup: mysqlEnum("customer_group", customerGroups),
+    // How this counterparty counts in the steel federation (SFN) goods-flow
+    // return. Left empty it is treated as a non-member, which is the safe
+    // default — only mills and fellow members change the reported figures.
+    sfnRole: mysqlEnum("sfn_role", sfnCounterpartyRoles),
     representative: mysqlEnum("representative", salesRepresentatives),
     accountManager: mysqlEnum("account_manager", salesRepresentatives),
     region: varchar("region", { length: 255 }),
@@ -171,6 +176,9 @@ export const Companies = mysqlTable(
     currency: mysqlEnum("currency", currencies),
     blockedByUserId: varchar("blocked_by_user_id", { length: 255 }),
     blockedByNote: varchar("blocked_by_note", { length: 500 }),
+    // Manually flagged as inactive — surfaces the company on the Inactive
+    // Companies overview regardless of its order history.
+    isInactive: boolean("is_inactive").default(false),
 
     // Invoicing settings (customer)
     invoicingMethod: mysqlEnum("invoicing_method", invoicingMethods),

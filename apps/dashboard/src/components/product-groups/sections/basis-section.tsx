@@ -13,15 +13,9 @@ import {
   processedOptions,
   productQualityStandards,
 } from "@/lib/enums";
-import {
-  CE_STANDARD_LABELS,
-  COMMON_TEXT,
-  FEATURES_QUALITY_LABELS,
-  PROCESSED_OPTION_LABELS,
-  PRODUCT_QUALITY_STANDARD_LABELS,
-} from "@/lib/labels";
+import { CE_STANDARD_LABELS, FEATURES_QUALITY_LABELS, PROCESSED_OPTION_LABELS, PRODUCT_QUALITY_STANDARD_LABELS } from "@/lib/labels";
 
-const emptyOption = { value: "", label: COMMON_TEXT.emptyOption };
+const emptyOption = { value: "", label: "Empty" };
 
 const makeEnumOptions = <T extends string>(
   values: readonly T[],

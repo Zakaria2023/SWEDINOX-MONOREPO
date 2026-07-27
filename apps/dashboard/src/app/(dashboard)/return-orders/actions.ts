@@ -11,7 +11,7 @@ import {
   SelectReturnOrders,
 } from "@/db/schema/return-orders";
 import { InsertTexts, Texts } from "@/db/schema/texts";
-import { generateUuid } from "@/lib/helpers";
+import { describeError, generateUuid } from "@/lib/helpers";
 import { desc, eq, getTableColumns } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
@@ -61,8 +61,8 @@ export const getReturnOrders = async (): Promise<ReturnOrderListItem[]> => {
       .leftJoin(Contacts, eq(ReturnOrders.contactUuid, Contacts.uuid))
       .orderBy(desc(ReturnOrders.createdAt));
     return rows;
-  } catch {
-    throw new Error("Failed to fetch return orders");
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch return orders"));
   }
 };
 

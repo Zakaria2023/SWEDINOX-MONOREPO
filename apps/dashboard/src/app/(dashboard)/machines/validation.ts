@@ -4,7 +4,6 @@ import {
   machineOptionTypes,
   machineProductionTypes,
 } from "@/lib/enums";
-import { VALIDATION_MESSAGES } from "@/lib/validation-messages";
 import { z } from "zod";
 
 const optionalNonNegativeInteger = z.union([
@@ -23,7 +22,7 @@ export const createMachineSchema = () =>
   z
     .object({
       code: z.string().trim().min(1, "Code is required"),
-      name: z.string().trim().min(1, VALIDATION_MESSAGES.nameRequired),
+      name: z.string().trim().min(1, "Name is required"),
       option: z.union([z.enum(machineOptionTypes), z.literal("")]),
       production: z.union([z.enum(machineProductionTypes), z.literal("")]),
       loading: z.union([z.enum(machineLoadingTypes), z.literal("")]),

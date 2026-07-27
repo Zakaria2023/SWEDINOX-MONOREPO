@@ -13,7 +13,7 @@ import {
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { buildColumnVisibility } from "@/lib/helpers";
 import { TextUsageCategory } from "@/lib/enums";
-import { COMMON_TEXT, TEXT_USAGE_CATEGORY_LABELS } from "@/lib/labels";
+import { TEXT_USAGE_CATEGORY_LABELS } from "@/lib/labels";
 import { SelectTexts } from "@/db";
 
 type UsageCategoryField = keyof Omit<
@@ -125,7 +125,7 @@ export const TextsTable = ({ texts }: TextsTableContentProps) => {
     }));
 
   const visibleColumns = ALL_COLUMNS.filter((col) => columnVisibility[col.key]);
-  const fallback = COMMON_TEXT.notAvailable;
+  const fallback = "—";
 
   const renderCell = (text: TextListItem, key: ColumnKey) => {
     if (USAGE_FIELD_SET.has(key)) {

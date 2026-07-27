@@ -5,7 +5,6 @@ import { InvoiceFormValues } from "@/app/(dashboard)/invoices/validation";
 import { DatePicker } from "@/components/shadcn/date-picker";
 import { Select } from "@/components/shadcn/select";
 import { FormLabel } from "@/components/ui/form-field";
-import { COMMON_TEXT } from "@/lib/labels";
 import { Controller, useFormContext } from "react-hook-form";
 
 type InvoiceHeaderSectionProps = {
@@ -20,7 +19,7 @@ export const InvoiceHeaderSection = ({
   const { control } = useFormContext<InvoiceFormValues>();
 
   const companyOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...availableCompanies.map((c) => ({
       value: c.uuid,
       label: [c.searchCode1, c.companyName].filter(Boolean).join(" — "),

@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
-import { COMMON_TEXT, INVOICE_SURCHARGE_DESCRIPTION_LABELS } from "@/lib/labels";
+import { INVOICE_SURCHARGE_DESCRIPTION_LABELS } from "@/lib/labels";
 import { Pencil, Plus, X } from "lucide-react";
 
 type InvoiceSurchargesSectionProps = {
@@ -30,7 +30,7 @@ export const InvoiceSurchargesSection = ({
   onEditSurcharge,
   onRemoveSurcharge,
 }: InvoiceSurchargesSectionProps) => {
-  const na = COMMON_TEXT.notAvailable;
+  const na = "—";
 
   return (
     <section className="space-y-3">

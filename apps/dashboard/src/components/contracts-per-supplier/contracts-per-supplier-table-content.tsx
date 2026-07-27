@@ -11,7 +11,6 @@ import {
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { buildColumnVisibility } from "@/lib/helpers";
-import { COMMON_TEXT } from "@/lib/labels";
 import { useState } from "react";
 
 type ColumnKey =
@@ -54,7 +53,6 @@ export const ContractsPerSupplierTable = ({ rows }: Props) => {
     }));
 
   const visibleColumns = ALL_COLUMNS.filter((col) => columnVisibility[col.key]);
-  const na = COMMON_TEXT.notAvailable;
 
   const renderCell = (row: ContractPerSupplierRow, key: ColumnKey) => {
     switch (key) {
@@ -67,7 +65,7 @@ export const ContractsPerSupplierTable = ({ rows }: Props) => {
           </TableCell>
         );
       case "city":
-        return <TableCell key={key}>{row.city ?? na}</TableCell>;
+        return <TableCell key={key}>{row.city ?? "—"}</TableCell>;
       case "code":
         return (
           <TableCell key={key} className="font-mono font-medium">
@@ -75,13 +73,13 @@ export const ContractsPerSupplierTable = ({ rows }: Props) => {
           </TableCell>
         );
       case "description":
-        return <TableCell key={key}>{row.description || na}</TableCell>;
+        return <TableCell key={key}>{row.description || "—"}</TableCell>;
       case "contractGroupName":
-        return <TableCell key={key}>{row.contractGroupName ?? na}</TableCell>;
+        return <TableCell key={key}>{row.contractGroupName ?? "—"}</TableCell>;
       case "startingDate":
-        return <TableCell key={key}>{row.startingDate ?? na}</TableCell>;
+        return <TableCell key={key}>{row.startingDate ?? "—"}</TableCell>;
       case "endDate":
-        return <TableCell key={key}>{row.endDate ?? na}</TableCell>;
+        return <TableCell key={key}>{row.endDate ?? "—"}</TableCell>;
       case "preference":
         return (
           <TableCell key={key} className="text-right">

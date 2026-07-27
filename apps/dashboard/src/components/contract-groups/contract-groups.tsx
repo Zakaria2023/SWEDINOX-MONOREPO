@@ -26,8 +26,6 @@ import {
 } from "@/components/shadcn/table";
 import { FormError } from "@/components/ui/form-error";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
-import { COMMON_TEXT } from "@/lib/labels";
-import { VALIDATION_MESSAGES } from "@/lib/validation-messages";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -65,7 +63,7 @@ export const ContractGroups = ({ groups }: Props) => {
   const [formError, setFormError] = useState<string | undefined>();
 
   const form = useForm<GroupFormValues>({
-    resolver: zodResolver(createGroupSchema(VALIDATION_MESSAGES.nameRequired)),
+    resolver: zodResolver(createGroupSchema("Name is required")),
     defaultValues: DEFAULT_VALUES,
   });
 
@@ -78,7 +76,7 @@ export const ContractGroups = ({ groups }: Props) => {
   } = form;
 
   const subgroupOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...groups.map((group) => ({ value: group.uuid, label: group.name })),
   ];
 
@@ -163,7 +161,7 @@ export const ContractGroups = ({ groups }: Props) => {
                     <TableCell className="font-medium">{group.id}</TableCell>
                     <TableCell className="font-medium">{group.name}</TableCell>
                     <TableCell className="text-muted-foreground">
-                      {group.subgroupName ?? COMMON_TEXT.notAvailable}
+                      {group.subgroupName ?? "—"}
                     </TableCell>
                     <TableCell>{activeBadge(group.isActive)}</TableCell>
                     <TableCell>
@@ -215,7 +213,7 @@ export const ContractGroups = ({ groups }: Props) => {
                       options={subgroupOptions}
                       value={field.value ?? ""}
                       onValueChange={field.onChange}
-                      placeholder={COMMON_TEXT.emptyOption}
+                      placeholder="Empty"
                       disabled={isPending}
                     />
                   )}
@@ -270,10 +268,10 @@ export const ContractGroups = ({ groups }: Props) => {
                 onClick={() => handleDialogClose(false)}
                 disabled={isPending}
               >
-                {COMMON_TEXT.cancel}
+                Cancel
               </Button>
               <Button type="submit" disabled={isPending}>
-                {isPending ? COMMON_TEXT.saving : "Create Group"}
+                {isPending ? "Saving..." : "Create Group"}
               </Button>
             </DialogFooter>
           </form>

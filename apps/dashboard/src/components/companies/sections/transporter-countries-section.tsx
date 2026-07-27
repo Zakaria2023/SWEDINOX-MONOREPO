@@ -12,11 +12,7 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { deliveryTerms, transporterCountries } from "@/lib/enums";
-import {
-  COMMON_TEXT,
-  DELIVERY_TERM_LABELS,
-  TRANSPORTER_COUNTRY_LABELS,
-} from "@/lib/labels";
+import { DELIVERY_TERM_LABELS, TRANSPORTER_COUNTRY_LABELS } from "@/lib/labels";
 import { Plus, X } from "lucide-react";
 
 type Props = {
@@ -31,7 +27,7 @@ type Props = {
 };
 
 const countryOptions = [
-  { value: "", label: COMMON_TEXT.emptyOption },
+  { value: "", label: "Empty" },
   ...transporterCountries.map((country) => ({
     value: country,
     label: `${country} — ${TRANSPORTER_COUNTRY_LABELS[country]}`,
@@ -39,7 +35,7 @@ const countryOptions = [
 ];
 
 const deliveryTermOptions = [
-  { value: "", label: COMMON_TEXT.emptyOption },
+  { value: "", label: "Empty" },
   ...deliveryTerms.map((term) => ({
     value: term,
     label: DELIVERY_TERM_LABELS[term],
@@ -94,7 +90,7 @@ export const TransporterCountriesSection = ({
                           undefined) as CompanyTransporterCountryInput["country"],
                       })
                     }
-                    placeholder={COMMON_TEXT.selectOption}
+                    placeholder="Select"
                     disabled={isPending}
                   />
                 </TableCell>
@@ -108,7 +104,7 @@ export const TransporterCountriesSection = ({
                           undefined) as CompanyTransporterCountryInput["deliveryTerms"],
                       })
                     }
-                    placeholder={COMMON_TEXT.selectOption}
+                    placeholder="Select"
                     disabled={isPending}
                   />
                 </TableCell>

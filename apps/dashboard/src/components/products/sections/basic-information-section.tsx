@@ -9,9 +9,13 @@ import { SelectOption } from "@/components/shadcn/select";
 
 type Props = {
   groupOptions: SelectOption[];
+  companyOptions: SelectOption[];
 };
 
-export const BasicInformationSection = ({ groupOptions }: Props) => {
+export const BasicInformationSection = ({
+  groupOptions,
+  companyOptions,
+}: Props) => {
   const {
     register,
     control,
@@ -47,6 +51,16 @@ export const BasicInformationSection = ({ groupOptions }: Props) => {
             name="productGroupUuid"
             label="Product Group"
             options={groupOptions}
+            emptyValue=""
+          />
+        </div>
+        <div className="col-span-2">
+          <FormSelectField
+            control={control}
+            id="companyUuid"
+            name="companyUuid"
+            label="Supplier"
+            options={companyOptions}
             emptyValue=""
           />
         </div>

@@ -11,12 +11,7 @@ import {
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { buildColumnVisibility } from "@/lib/helpers";
-import {
-    COMMON_TEXT,
-    COMMUNICATION_SETTING_DOCUMENT_TYPE_LABELS,
-    COMMUNICATION_SETTING_SHAPE_LABELS,
-    COMMUNICATION_SETTING_TYPE_LABELS,
-} from "@/lib/labels";
+import { COMMUNICATION_SETTING_DOCUMENT_TYPE_LABELS, COMMUNICATION_SETTING_SHAPE_LABELS, COMMUNICATION_SETTING_TYPE_LABELS } from "@/lib/labels";
 import { useState } from "react";
 
 type ColumnKey =
@@ -101,7 +96,7 @@ export const CommunicationSettingsTable = ({
   const visibleColumns = ALL_COLUMNS.filter(
     (column) => columnVisibility[column.key],
   );
-  const fallbackValue = COMMON_TEXT.notAvailable;
+  const fallbackValue = "—";
 
   const renderCell = (setting: CommunicationSettingListItem, key: ColumnKey) => {
     switch (key) {

@@ -5,7 +5,6 @@ import {
   contractTierUnits,
   contractTypes,
 } from "@/lib/enums";
-import { VALIDATION_MESSAGES } from "@/lib/validation-messages";
 
 const priceTierSchema = z.object({
   from: z.number().min(0),
@@ -18,7 +17,7 @@ export const createContractSchema = () =>
     contractType: z.enum(contractTypes).optional(),
     description: z
       .string()
-      .min(1, VALIDATION_MESSAGES.descriptionRequired),
+      .min(1, "Description is required"),
     contractGroupUuid: z.string().min(1, "Contract Group is required"),
     quicklyChangeOrder: z.string().optional(),
     hasPriceDate: z.boolean(),

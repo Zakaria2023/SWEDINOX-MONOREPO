@@ -12,8 +12,9 @@ import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import { FormSelectField } from "@/components/ui/form-select-field";
 import { Select } from "@/components/shadcn/select";
 import { DocumentUploader } from "@/components/document-uploader";
+import { WorkordersSection } from "./sections/workorders-section";
 import { COMPLAINT_STATUS_LABELS } from "@/lib/labels";
-import type { DashboardUserOption } from "@/lib/server/clerk";
+import { DashboardUserOption } from "@/lib/server/clerk";
 import { useUser } from "@clerk/nextjs";
 import { X } from "lucide-react";
 
@@ -199,11 +200,21 @@ export const ComplaintForm = ({
           </div>
           <div>
             <FormLabel htmlFor="amount">Amount (€)</FormLabel>
-            <Input id="amount" type="number" step="0.01" {...register("amount")} />
+            <Input
+              id="amount"
+              type="number"
+              step="0.01"
+              {...register("amount")}
+            />
           </div>
           <div>
             <FormLabel htmlFor="weight">Weight (kg)</FormLabel>
-            <Input id="weight" type="number" step="0.001" {...register("weight")} />
+            <Input
+              id="weight"
+              type="number"
+              step="0.001"
+              {...register("weight")}
+            />
           </div>
         </div>
       </section>
@@ -363,6 +374,9 @@ export const ComplaintForm = ({
           </table>
         </div>
       </section>
+
+      {/* Workorders */}
+      <WorkordersSection />
 
       {/* Documents */}
       <section className="space-y-4">

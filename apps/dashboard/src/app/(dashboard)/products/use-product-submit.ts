@@ -7,11 +7,12 @@ import { useForm } from "react-hook-form";
 import { createProduct, ProductActionResult } from "./actions";
 import { DEFAULT_PRODUCT, productSchema, ProductFormValues } from "./validation";
 import { ProductGroupOption } from "@/app/(dashboard)/product-groups/actions";
+import { CompanyOption } from "@/app/(dashboard)/companies/actions";
 import { SelectOption } from "@/components/shadcn/select";
-import { COMMON_TEXT } from "@/lib/labels";
 
 type UseProductSubmitParams = {
   productGroups: ProductGroupOption[];
+  suppliers: CompanyOption[];
 };
 
 const buildHierarchicalOptions = (
@@ -26,7 +27,10 @@ const buildHierarchicalOptions = (
       ...buildHierarchicalOptions(groups, g.uuid, depth + 1),
     ]);
 
-export const useProductSubmit = ({ productGroups }: UseProductSubmitParams) => {
+export const useProductSubmit = ({
+  productGroups,
+  suppliers,
+}: UseProductSubmitParams) => {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [state, setState] = useState<ProductActionResult>({});
@@ -37,8 +41,16 @@ export const useProductSubmit = ({ productGroups }: UseProductSubmitParams) => {
   });
 
   const groupOptions: SelectOption[] = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...buildHierarchicalOptions(productGroups),
+  ];
+
+  const companyOptions: SelectOption[] = [
+    { value: "", label: "Empty" },
+    ...suppliers.map((c) => ({
+      value: c.uuid,
+      label: c.companyName ?? c.searchCode1 ?? c.uuid,
+    })),
   ];
 
   const handleCancel = () => router.push("/products");
@@ -49,6 +61,7 @@ export const useProductSubmit = ({ productGroups }: UseProductSubmitParams) => {
         productCode: values.productCode,
         commodityCode: values.commodityCode || null,
         productGroupUuid: values.productGroupUuid || null,
+        companyUuid: values.companyUuid || null,
         name: values.name,
         stockProduct: values.stockProduct,
         standardProduct: values.standardProduct,
@@ -74,6 +87,7 @@ export const useProductSubmit = ({ productGroups }: UseProductSubmitParams) => {
     onSubmit,
     state,
     groupOptions,
+    companyOptions,
     handleCancel,
   };
 };

@@ -24,13 +24,7 @@ import {
   WarehouseTransportRegion,
   warehouseTransportRegions,
 } from "@/lib/enums";
-import {
-  COMMON_TEXT,
-  INVOICE_PAYMENT_TERM_LABELS,
-  RETURN_ORDER_REASON_LABELS,
-  TRANSPORT_MODE_LABELS,
-  WAREHOUSE_TRANSPORT_REGION_LABELS,
-} from "@/lib/labels";
+import { INVOICE_PAYMENT_TERM_LABELS, RETURN_ORDER_REASON_LABELS, TRANSPORT_MODE_LABELS, WAREHOUSE_TRANSPORT_REGION_LABELS } from "@/lib/labels";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -51,7 +45,7 @@ type UseReturnOrderSubmitParams = {
   companies: CompanyOption[];
 };
 
-const emptyOpt = { value: "", label: COMMON_TEXT.emptyOption };
+const emptyOpt = { value: "", label: "Empty" };
 
 const makeOptions = <T extends string>(
   values: readonly T[],

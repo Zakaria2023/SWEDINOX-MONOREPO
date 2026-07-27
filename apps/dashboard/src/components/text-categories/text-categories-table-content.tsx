@@ -11,7 +11,6 @@ import {
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { buildColumnVisibility } from "@/lib/helpers";
-import { COMMON_TEXT } from "@/lib/labels";
 import { useState } from "react";
 
 type ColumnKey =
@@ -74,7 +73,7 @@ export const TextCategoriesTable = ({
       case "parentName":
         return (
           <TableCell key={key}>
-            {category.parentName ?? COMMON_TEXT.none}
+            {category.parentName ?? "None"}
           </TableCell>
         );
       case "sequenceNumber":
@@ -84,11 +83,11 @@ export const TextCategoriesTable = ({
           <TableCell key={key}>
             {category.isActive ? (
               <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
-                {COMMON_TEXT.yes}
+                Yes
               </span>
             ) : (
               <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
-                {COMMON_TEXT.no}
+                No
               </span>
             )}
           </TableCell>

@@ -476,6 +476,71 @@ export const stockLabelPrintingOptions = [
 export type StockLabelPrintingOption =
   (typeof stockLabelPrintingOptions)[number];
 
+export const stockStatuses = [
+  "pending",
+  "received",
+  "cancelled",
+] as const satisfies readonly string[];
+
+export type StockStatus = (typeof stockStatuses)[number];
+
+export const stockMovementTypes = [
+  "in",
+  "out",
+] as const satisfies readonly string[];
+
+export type StockMovementType = (typeof stockMovementTypes)[number];
+
+export const stockMovementReasons = [
+  "purchase_receipt",
+  "invoice_consumption",
+  "purchase_order_cancelled",
+  "invoice_cancelled",
+  "sale_consumption",
+  "sale_invoice_cancelled",
+  "manual_correction",
+  "count_correction",
+  "damaged",
+  "production_output",
+] as const satisfies readonly string[];
+
+export type StockMovementReason = (typeof stockMovementReasons)[number];
+
+// The subset of stockMovementReasons a staff member can pick when manually
+// correcting stock — the others are only ever written by the system itself.
+export const stockCorrectionReasons = [
+  "manual_correction",
+  "count_correction",
+  "damaged",
+] as const satisfies readonly string[];
+
+export type StockCorrectionReason = (typeof stockCorrectionReasons)[number];
+
+// Stock unit ("StkU") a stock lot is counted in — kg for coil/plate, pieces
+// for cut items, running/square/cubic metres for profiles.
+export const stockUnits = [
+  "kg",
+  "st",
+  "m1",
+  "m2",
+  "m3",
+  "mm",
+] as const satisfies readonly string[];
+
+export type StockUnit = (typeof stockUnits)[number];
+
+// How a counterparty counts in the steel federation (SFN) goods-flow return:
+// a mill that makes the material, a fellow federation member, or anyone else.
+// Combined with whether the counterparty sits at home or abroad, this decides
+// which column of the "Freight flow (SFN)" report a movement lands in.
+export const sfnCounterpartyRoles = [
+  "producer",
+  "sfn_member",
+  "non_member",
+] as const satisfies readonly string[];
+
+export type SfnCounterpartyRole = (typeof sfnCounterpartyRoles)[number];
+
 export const customerLabelOptions = [
   "csv_file",
   "line_label",
@@ -738,6 +803,15 @@ export const returnOrderStatuses = [
 
 export type ReturnOrderStatus = (typeof returnOrderStatuses)[number];
 
+export const orderDeblockTypes = [
+  "financial",
+  "invoice",
+  "transport",
+  "handling",
+] as const satisfies readonly string[];
+
+export type OrderDeblockType = (typeof orderDeblockTypes)[number];
+
 export const purchaseReturnOrderReasons = [
   "damaged",
   "wrong_quantity",
@@ -970,6 +1044,47 @@ export const orderMethods = [
 ] as const satisfies readonly string[];
 
 export type OrderMethod = (typeof orderMethods)[number];
+
+export const orderStatuses = [
+  "open",
+  "confirmed",
+  "completed",
+  "cancelled",
+] as const satisfies readonly string[];
+
+export type OrderStatus = (typeof orderStatuses)[number];
+
+export const orderItemStatuses = [
+  "reserved",
+  "delivered",
+  "invoiced",
+  "cancelled",
+] as const satisfies readonly string[];
+
+export type OrderItemStatus = (typeof orderItemStatuses)[number];
+
+// Fulfilment state of an order/return line (the "Line status" column).
+export const orderLineStatuses = [
+  "in_progress",
+  "released",
+  "partially_delivered",
+  "delivered",
+  "partially_invoiced",
+  "invoiced",
+  "cancelled",
+] as const satisfies readonly string[];
+
+export type OrderLineStatus = (typeof orderLineStatuses)[number];
+
+// Whether a line is ready to physically leave the warehouse.
+export const deliveryStatuses = [
+  "not_ready",
+  "ready",
+  "released",
+  "delivered",
+] as const satisfies readonly string[];
+
+export type DeliveryStatus = (typeof deliveryStatuses)[number];
 
 export const deliveryTerms = [
   "exw",
@@ -1474,3 +1589,36 @@ export const companyClassifications = [
 ] as const satisfies readonly string[];
 
 export type CompanyClassification = (typeof companyClassifications)[number];
+
+// Production-capacity traffic-light status shown on the "Production capacity"
+// overview: whether the machine's booked capacity is within limits.
+export const productionCapacityStatuses = [
+  "ok",
+  "warning",
+  "full",
+] as const satisfies readonly string[];
+
+export type ProductionCapacityStatus =
+  (typeof productionCapacityStatuses)[number];
+
+// Status of the material fetch (retrieving the raw bar/length from stock to
+// bring to the saw) on the Logistics "Sawing layouts" overview.
+export const sawingLayoutFetchStatuses = [
+  "new",
+  "in_progress",
+  "completed",
+  "cancelled",
+] as const satisfies readonly string[];
+
+export type SawingLayoutFetchStatus =
+  (typeof sawingLayoutFetchStatuses)[number];
+
+// Status of the sawing operation itself on the "Sawing layouts" overview.
+export const sawingStatuses = [
+  "new",
+  "in_progress",
+  "completed",
+  "cancelled",
+] as const satisfies readonly string[];
+
+export type SawingStatus = (typeof sawingStatuses)[number];

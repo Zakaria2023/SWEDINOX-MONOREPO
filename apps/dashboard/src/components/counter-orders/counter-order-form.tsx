@@ -12,6 +12,8 @@ import {
 } from "@/app/(dashboard)/counter-orders/actions";
 import { useCounterOrderSubmit } from "@/app/(dashboard)/counter-orders/use-counter-order-submit";
 import { TextCategoryOption } from "@/app/(dashboard)/text-categories/actions";
+import { ProductOption } from "@/app/(dashboard)/products/actions";
+import { ProductGroupOption } from "@/app/(dashboard)/product-groups/actions";
 import {
   ContactOption,
   getContactsByCompanyUuid,
@@ -28,8 +30,10 @@ import { ContractsSection } from "./sections/contracts-section";
 import { DocumentsSection } from "./sections/documents-section";
 import { FinancesSection } from "./sections/finances-section";
 import { LogisticsSection } from "./sections/logistics-section";
+import { OrderLinesSection } from "./sections/order-lines-section";
 import { SurchargesSection } from "./sections/surcharges-section";
 import { TextsSection } from "./sections/texts-section";
+import { WorkordersSection } from "./sections/workorders-section";
 import {
   counterOrderPriorities,
   counterOrderStatuses,
@@ -37,18 +41,13 @@ import {
   orderMethods,
   salesRepresentatives,
 } from "@/lib/enums";
-import {
-  COMMON_TEXT,
-  COUNTER_ORDER_PRIORITY_LABELS,
-  COUNTER_ORDER_STATUS_LABELS,
-  DELIVERY_TERM_LABELS,
-  ORDER_METHOD_LABELS,
-  SALES_REPRESENTATIVE_LABELS,
-} from "@/lib/labels";
+import { COUNTER_ORDER_PRIORITY_LABELS, COUNTER_ORDER_STATUS_LABELS, DELIVERY_TERM_LABELS, ORDER_METHOD_LABELS, SALES_REPRESENTATIVE_LABELS } from "@/lib/labels";
 
 type CounterOrderFormProps = {
   companies: CompanyOption[];
   textCategories: TextCategoryOption[];
+  products: ProductOption[];
+  productGroups: ProductGroupOption[];
 };
 
 type CheckboxFieldProps = {
@@ -77,6 +76,8 @@ const CheckboxField = ({
 export const CounterOrderForm = ({
   companies,
   textCategories,
+  products,
+  productGroups,
 }: CounterOrderFormProps) => {
   const router = useRouter();
   const { form, isPending, onSubmit, state } = useCounterOrderSubmit();
@@ -112,7 +113,7 @@ export const CounterOrderForm = ({
   };
 
   const companyOptions = [
-    { value: "", label: COMMON_TEXT.selectPlaceholder },
+    { value: "", label: "Select an option" },
     ...companies.map((company) => ({
       value: company.uuid,
       label: [company.searchCode1, company.companyName]
@@ -122,7 +123,7 @@ export const CounterOrderForm = ({
   ];
 
   const contactOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...contacts.map((contact) => ({
       value: contact.uuid,
       label:
@@ -132,7 +133,7 @@ export const CounterOrderForm = ({
   ];
 
   const addressOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...addresses.map((address) => ({
       value: address.uuid,
       label:
@@ -143,7 +144,7 @@ export const CounterOrderForm = ({
   ];
 
   const orderMethodOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...orderMethods.map((method) => ({
       value: method,
       label: ORDER_METHOD_LABELS[method],
@@ -151,7 +152,7 @@ export const CounterOrderForm = ({
   ];
 
   const sellerOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...salesRepresentatives.map((rep) => ({
       value: rep,
       label: SALES_REPRESENTATIVE_LABELS[rep],
@@ -169,7 +170,7 @@ export const CounterOrderForm = ({
   }));
 
   const deliveryTermOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...deliveryTerms.map((term) => ({
       value: term,
       label: DELIVERY_TERM_LABELS[term],
@@ -329,7 +330,7 @@ export const CounterOrderForm = ({
               )}
             />
             <Controller
-              name="isOverlengte"
+              name="isOverlength"
               control={control}
               render={({ field }) => (
                 <CheckboxField
@@ -467,6 +468,8 @@ export const CounterOrderForm = ({
           </div>
         </section>
 
+        <OrderLinesSection products={products} productGroups={productGroups} />
+
         <LogisticsSection />
 
         <FinancesSection addressOptions={addressOptions} />
@@ -476,6 +479,8 @@ export const CounterOrderForm = ({
         <DocumentsSection />
 
         <ContractsSection contracts={contracts} />
+
+        <WorkordersSection />
 
         <TextsSection textCategories={textCategories} />
 

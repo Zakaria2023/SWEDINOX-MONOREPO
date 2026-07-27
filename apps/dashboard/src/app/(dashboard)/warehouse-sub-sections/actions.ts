@@ -6,7 +6,7 @@ import {
   SelectWarehouses,
   Warehouses,
 } from "@/db/schema/warehouses";
-import { generateUuid } from "@/lib/helpers";
+import { describeError, generateUuid } from "@/lib/helpers";
 import { and, desc, eq, isNotNull } from "drizzle-orm";
 
 export type WarehouseSubSectionFields = Omit<
@@ -31,8 +31,10 @@ export const getWarehouseSubSections = async (): Promise<
         and(isNotNull(Warehouses.parentUuid), eq(Warehouses.type, "warehouse")),
       )
       .orderBy(desc(Warehouses.createdAt));
-  } catch {
-    throw new Error("Failed to fetch warehouse sub sections");
+  } catch (error) {
+    throw new Error(
+      describeError(error, "Failed to fetch warehouse sub sections"),
+    );
   }
 };
 

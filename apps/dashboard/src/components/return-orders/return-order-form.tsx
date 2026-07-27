@@ -117,7 +117,7 @@ export const ReturnOrderForm = ({ companies, textCategories }: Props) => {
             </div>
 
             <div>
-              <FormLabel htmlFor="ourReference">Onze referentie</FormLabel>
+              <FormLabel htmlFor="ourReference">Our reference</FormLabel>
               <Input id="ourReference" {...register("ourReference")} />
             </div>
           </div>

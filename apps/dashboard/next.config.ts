@@ -1,7 +1,10 @@
-import type { NextConfig } from 'next'
+import { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["@aws-sdk/client-s3", "@aws-sdk/s3-request-presigner"],
-}
+  serverExternalPackages: [
+    "@aws-sdk/client-s3",
+    "@aws-sdk/s3-request-presigner",
+  ],
+};
 
-export default nextConfig
+export default nextConfig;

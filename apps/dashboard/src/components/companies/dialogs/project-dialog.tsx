@@ -13,7 +13,6 @@ import { Input } from "@/components/shadcn/input";
 import { Select } from "@/components/shadcn/select";
 import { DialogFormFooter } from "@/components/ui/dialog-form-footer";
 import { FormLabel } from "@/components/ui/form-field";
-import { COMMON_TEXT } from "@/lib/labels";
 import { FolderOpen } from "lucide-react";
 import { FormEventHandler } from "react";
 import { Controller, UseFormReturn } from "react-hook-form";
@@ -32,6 +31,7 @@ type Props = {
   onSave: FormEventHandler<HTMLFormElement>;
   form: UseFormReturn<ProjectFormValues>;
   projectContracts: ContractForProjectOption[];
+  submitLabel?: string;
 };
 
 export const ProjectDialog = ({
@@ -41,13 +41,14 @@ export const ProjectDialog = ({
   onSave,
   form,
   projectContracts,
+  submitLabel = "Add Project",
 }: Props) => (
   <Dialog open={isOpen} onOpenChange={onOpenChange}>
     <DialogContent className="max-w-lg">
       <DialogHeader>
         <DialogTitle className="flex items-center gap-2">
           <FolderOpen className="size-4" />
-          Add Project
+          Project
         </DialogTitle>
         <DialogDescription>
           Add a project for this customer / prospect.
@@ -84,7 +85,7 @@ export const ProjectDialog = ({
                 <Select
                   id="proj-contract"
                   options={[
-                    { value: "", label: COMMON_TEXT.emptyOption },
+                    { value: "", label: "Empty" },
                     ...projectContracts.map((c) => ({
                       value: c.uuid,
                       label: `${c.code}${c.description ? ` – ${c.description}` : ""}`,
@@ -92,13 +93,13 @@ export const ProjectDialog = ({
                   ]}
                   value={field.value ?? ""}
                   onValueChange={field.onChange}
-                  placeholder={COMMON_TEXT.selectOption}
+                  placeholder="Select"
                 />
               )}
             />
           </div>
         </DialogBody>
-        <DialogFormFooter onCancel={onCancel} submitLabel="Add Project" />
+        <DialogFormFooter onCancel={onCancel} submitLabel={submitLabel} />
       </form>
     </DialogContent>
   </Dialog>

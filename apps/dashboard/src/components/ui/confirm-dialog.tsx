@@ -9,7 +9,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/shadcn/dialog";
-import { COMMON_TEXT } from "@/lib/labels";
 
 type ConfirmDialogProps = {
   confirmLabel?: string;
@@ -43,7 +42,7 @@ export const ConfirmDialog = ({
           onClick={() => onOpenChange(false)}
           disabled={isPending}
         >
-          {COMMON_TEXT.cancel}
+          Cancel
         </Button>
         <Button
           type="button"
@@ -52,8 +51,8 @@ export const ConfirmDialog = ({
           disabled={isPending}
         >
           {isPending
-            ? COMMON_TEXT.deleting
-            : (confirmLabel ?? COMMON_TEXT.confirmDelete)}
+            ? "Deleting..."
+            : (confirmLabel ?? "Delete")}
         </Button>
       </DialogFooter>
     </DialogContent>

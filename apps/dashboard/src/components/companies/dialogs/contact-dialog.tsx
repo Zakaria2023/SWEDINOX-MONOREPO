@@ -18,11 +18,7 @@ import {
   ContactCategory,
   contactSalutations,
 } from "@/lib/enums";
-import {
-  COMMON_TEXT,
-  CONTACT_CATEGORY_LABELS,
-  CONTACT_SALUTATION_LABELS,
-} from "@/lib/labels";
+import { CONTACT_CATEGORY_LABELS, CONTACT_SALUTATION_LABELS } from "@/lib/labels";
 import { User } from "lucide-react";
 import { FormEventHandler } from "react";
 import { Controller, UseFormReturn } from "react-hook-form";
@@ -34,6 +30,7 @@ type Props = {
   onSave: FormEventHandler<HTMLFormElement>;
   form: UseFormReturn<ContactDialogValues>;
   toggleContactCategory: (cat: ContactCategory) => void;
+  submitLabel?: string;
 };
 
 export const ContactDialog = ({
@@ -43,6 +40,7 @@ export const ContactDialog = ({
   onSave,
   form,
   toggleContactCategory,
+  submitLabel = "Add Contact",
 }: Props) => (
   <Dialog open={isOpen} onOpenChange={onOpenChange}>
     <DialogContent className="flex h-[85dvh] max-w-3xl flex-col gap-0 p-0">
@@ -72,7 +70,7 @@ export const ContactDialog = ({
                     <Select
                       id="co-salutation"
                       options={[
-                        { value: "", label: COMMON_TEXT.emptyOption },
+                        { value: "", label: "Empty" },
                         ...contactSalutations.map((s) => ({
                           value: s,
                           label: CONTACT_SALUTATION_LABELS[s],
@@ -80,7 +78,7 @@ export const ContactDialog = ({
                       ]}
                       value={field.value ?? ""}
                       onValueChange={field.onChange}
-                      placeholder={COMMON_TEXT.emptyOption}
+                      placeholder="Empty"
                     />
                   )}
                 />
@@ -96,8 +94,17 @@ export const ContactDialog = ({
             </div>
             <div className="grid gap-3 sm:grid-cols-3">
               <div>
-                <FormLabel htmlFor="co-lastName">Last Name</FormLabel>
-                <Input id="co-lastName" {...form.register("lastName")} />
+                <FormLabel htmlFor="co-lastName" required>
+                  Last Name
+                </FormLabel>
+                <Input
+                  id="co-lastName"
+                  aria-invalid={!!form.formState.errors.lastName}
+                  {...form.register("lastName")}
+                />
+                <FormFieldError
+                  message={form.formState.errors.lastName?.message}
+                />
               </div>
               <div>
                 <FormLabel htmlFor="co-telephone">Telephone</FormLabel>
@@ -272,7 +279,7 @@ export const ContactDialog = ({
           </div>
         </div>
 
-        <DialogFormFooter onCancel={onCancel} submitLabel="Add Contact" />
+        <DialogFormFooter onCancel={onCancel} submitLabel={submitLabel} />
       </form>
     </DialogContent>
   </Dialog>

@@ -3,7 +3,7 @@ import { getInvoicesByCompanyUuid } from "@/app/(dashboard)/invoices/actions";
 import { CompanyDetailView } from "@/components/companies/company-detail";
 import { PageHeading } from "@/components/layout/page-heading";
 import { COMPANY_ROLE_LABELS } from "@/lib/labels";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Pencil } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -40,7 +40,16 @@ const CompanyDetailPage = async ({ params }: Props) => {
           Companies
         </Link>
       </div>
-      <PageHeading title={company.companyName} description={roleLabels} />
+      <div className="flex items-start justify-between gap-4">
+        <PageHeading title={company.companyName} description={roleLabels} />
+        <Link
+          href={`/companies/${uuid}/edit`}
+          className="inline-flex items-center gap-1.5 rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium shadow-sm hover:bg-accent"
+        >
+          <Pencil className="size-4" />
+          Edit
+        </Link>
+      </div>
       <CompanyDetailView company={company} invoices={invoices} />
     </div>
   );

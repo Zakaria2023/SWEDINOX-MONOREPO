@@ -6,7 +6,7 @@ import { Input } from "@/components/shadcn/input";
 import { Textarea } from "@/components/shadcn/textarea";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import { FormSelectField } from "@/components/ui/form-select-field";
-import { COMMON_TEXT, COMMUNICATION_SETTING_SHAPE_LABELS, ADDRESS_CATEGORY_LABELS } from "@/lib/labels";
+import { COMMUNICATION_SETTING_SHAPE_LABELS, ADDRESS_CATEGORY_LABELS } from "@/lib/labels";
 import { MapPin, MessageSquare, Plus, X } from "lucide-react";
 import { useFormContext } from "react-hook-form";
 
@@ -110,7 +110,7 @@ export const CompanyDetailsSection = ({
                 className="shrink-0 text-xs text-primary hover:underline"
                 disabled={isPending}
               >
-                {COMMON_TEXT.edit}
+                Edit
               </button>
             </div>
           ) : (

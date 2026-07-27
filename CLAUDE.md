@@ -47,7 +47,7 @@ This is a pnpm + Turborepo repo built on Next.js 16. Today it holds a single app
   const handler: React.MouseEventHandler = () => {};
 
   // ✅ Good
-  import type { ReactNode, MouseEventHandler } from "react";
+  import { ReactNode, MouseEventHandler } from "react";
   const foo: ReactNode = null;
   const handler: MouseEventHandler = () => {};
   ```
@@ -490,7 +490,7 @@ This is a pnpm + Turborepo repo built on Next.js 16. Today it holds a single app
 
   ```ts
   // ✅ Good — lib/labels.ts
-  import type { ProductStatus } from "./enums";
+  import { ProductStatus } from "./enums";
 
   export const PRODUCT_STATUS_LABELS: Record<ProductStatus, string> = {
     draft: "Draft",

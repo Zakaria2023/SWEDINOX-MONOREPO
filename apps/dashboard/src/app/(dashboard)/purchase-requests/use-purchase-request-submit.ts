@@ -20,13 +20,7 @@ import {
   PurchaseOrderType,
   purchaseOrderTypes,
 } from "@/lib/enums";
-import {
-  COMMON_TEXT,
-  DELIVERY_TERM_LABELS,
-  INVOICE_PAYMENT_TERM_LABELS,
-  ORDER_WEIGHT_TYPE_LABELS,
-  PURCHASE_ORDER_TYPE_LABELS,
-} from "@/lib/labels";
+import { DELIVERY_TERM_LABELS, INVOICE_PAYMENT_TERM_LABELS, ORDER_WEIGHT_TYPE_LABELS, PURCHASE_ORDER_TYPE_LABELS } from "@/lib/labels";
 import { ClerkUserOption } from "@/lib/server/clerk";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
@@ -44,7 +38,7 @@ type UsePurchaseRequestSubmitParams = {
   clerkUsers: ClerkUserOption[];
 };
 
-const emptyOpt = { value: "", label: COMMON_TEXT.emptyOption };
+const emptyOpt = { value: "", label: "Empty" };
 
 const makeOptions = <T extends string>(
   values: readonly T[],
@@ -170,7 +164,7 @@ export const usePurchaseRequestSubmit = ({
 
         purchaseOrderType: values.purchaseOrderType || null,
         weightType: values.weightType || null,
-        isOverlengte: values.isOverlengte,
+        isOverlength: values.isOverlength,
         isPrinted: values.isPrinted,
         isMailed: values.isMailed,
         isFaxed: values.isFaxed,

@@ -22,14 +22,7 @@ import {
   orderMethods,
   salesRepresentatives,
 } from "@/lib/enums";
-import {
-  COMMON_TEXT,
-  COUNTER_ORDER_PRIORITY_LABELS,
-  COUNTER_ORDER_STATUS_LABELS,
-  DELIVERY_TERM_LABELS,
-  ORDER_METHOD_LABELS,
-  SALES_REPRESENTATIVE_LABELS,
-} from "@/lib/labels";
+import { COUNTER_ORDER_PRIORITY_LABELS, COUNTER_ORDER_STATUS_LABELS, DELIVERY_TERM_LABELS, ORDER_METHOD_LABELS, SALES_REPRESENTATIVE_LABELS } from "@/lib/labels";
 import { ShoppingCart } from "lucide-react";
 import { FormEventHandler } from "react";
 import { Controller, UseFormReturn } from "react-hook-form";
@@ -156,7 +149,7 @@ export const CounterOrderDialog = ({
                   <Select
                     id="co-order-method"
                     options={[
-                      { value: "", label: COMMON_TEXT.emptyOption },
+                      { value: "", label: "Empty" },
                       ...orderMethods.map((method) => ({
                         value: method,
                         label: ORDER_METHOD_LABELS[method],
@@ -164,7 +157,7 @@ export const CounterOrderDialog = ({
                     ]}
                     value={field.value ?? ""}
                     onValueChange={field.onChange}
-                    placeholder={COMMON_TEXT.selectOption}
+                    placeholder="Select"
                   />
                 )}
               />
@@ -178,7 +171,7 @@ export const CounterOrderDialog = ({
                   <Select
                     id="co-seller"
                     options={[
-                      { value: "", label: COMMON_TEXT.emptyOption },
+                      { value: "", label: "Empty" },
                       ...salesRepresentatives.map((rep) => ({
                         value: rep,
                         label: SALES_REPRESENTATIVE_LABELS[rep],
@@ -186,7 +179,7 @@ export const CounterOrderDialog = ({
                     ]}
                     value={field.value ?? ""}
                     onValueChange={field.onChange}
-                    placeholder={COMMON_TEXT.selectOption}
+                    placeholder="Select"
                   />
                 )}
               />
@@ -221,7 +214,7 @@ export const CounterOrderDialog = ({
                 <Select
                   id="co-delivery-terms"
                   options={[
-                    { value: "", label: COMMON_TEXT.emptyOption },
+                    { value: "", label: "Empty" },
                     ...deliveryTerms.map((term) => ({
                       value: term,
                       label: DELIVERY_TERM_LABELS[term],
@@ -229,7 +222,7 @@ export const CounterOrderDialog = ({
                   ]}
                   value={field.value ?? ""}
                   onValueChange={field.onChange}
-                  placeholder={COMMON_TEXT.selectOption}
+                  placeholder="Select"
                 />
               )}
             />
@@ -286,7 +279,7 @@ export const CounterOrderDialog = ({
               )}
             />
             <Controller
-              name="isOverlengte"
+              name="isOverlength"
               control={form.control}
               render={({ field }) => (
                 <CheckboxField

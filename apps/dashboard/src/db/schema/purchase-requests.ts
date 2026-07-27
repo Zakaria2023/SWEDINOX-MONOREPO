@@ -43,7 +43,7 @@ export const PurchaseRequests = mysqlTable(
     // ── Purchase order type ───────────────────────────────────────────────────
     purchaseOrderType: mysqlEnum("purchase_order_type", purchaseOrderTypes),
     weightType: mysqlEnum("weight_type", orderWeightTypes),
-    isOverlengte: boolean("is_overlengte").default(false),
+    isOverlength: boolean("is_overlength").default(false),
     isPrinted: boolean("is_printed").default(false),
     isMailed: boolean("is_mailed").default(false),
     isFaxed: boolean("is_faxed").default(false),

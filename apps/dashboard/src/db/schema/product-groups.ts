@@ -1,5 +1,4 @@
 import { InferInsertModel, InferSelectModel } from "drizzle-orm";
-import { Companies } from "./companies";
 import {
   boolean,
   char,
@@ -341,42 +340,18 @@ export const ProductGroups = mysqlTable(
     pacClassification: varchar("pac_classification", { length: 10 }),
     orderAdviceCode: varchar("order_advice_code", { length: 10 }),
 
-    // Supplier
-    supplierCompanyUuid: char("supplier_company_uuid", { length: 36 }),
-    supplierPreferred: boolean("supplier_preferred").default(false),
-    supplierEan: varchar("supplier_ean", { length: 100 }),
-    supplierExternalProductCode: varchar("supplier_external_product_code", {
-      length: 100,
-    }),
-    supplierEditing: varchar("supplier_editing", { length: 100 }),
-    supplierDeliveryTime: int("supplier_delivery_time").default(0),
-    supplierDeliveryTimeUnit: mysqlEnum(
-      "supplier_delivery_time_unit",
-      deliveryTimeUnits,
-    ),
-    supplierMoq: decimal("supplier_moq", { precision: 15, scale: 3 }).default(
-      "0.000",
-    ),
-    supplierMoqUnit: mysqlEnum("supplier_moq_unit", purchasingUnits),
-    supplierOrderSeries: int("supplier_order_series").default(0),
+    // Suppliers live in the ProductGroupSuppliers table (one row per supplier,
+    // one flagged preferred).
 
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
   },
   (table) => [
     index("idx_product_groups_parent_uuid").on(table.parentUuid),
-    index("idx_product_groups_supplier_company_uuid").on(
-      table.supplierCompanyUuid,
-    ),
     foreignKey({
       name: "fk_product_groups_parent",
       columns: [table.parentUuid],
       foreignColumns: [table.uuid],
-    }),
-    foreignKey({
-      name: "fk_product_groups_supplier_company",
-      columns: [table.supplierCompanyUuid],
-      foreignColumns: [Companies.uuid],
     }),
   ],
 );

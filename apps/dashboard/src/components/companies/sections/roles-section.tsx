@@ -1,6 +1,7 @@
 "use client";
 
 import { Checkbox } from "@/components/shadcn/checkbox";
+import { FormFieldError } from "@/components/ui/form-field";
 import { CompanyRole, companyRoles } from "@/lib/enums";
 import { cn } from "@/lib/helpers";
 import { COMPANY_ROLE_LABELS } from "@/lib/labels";
@@ -10,6 +11,7 @@ type Props = {
   disabledRoles: Set<CompanyRole>;
   isPending: boolean;
   toggleRole: (role: CompanyRole) => void;
+  error?: string;
 };
 
 export const RolesSection = ({
@@ -17,6 +19,7 @@ export const RolesSection = ({
   disabledRoles,
   isPending,
   toggleRole,
+  error,
 }: Props) => (
   <section className="space-y-4">
     <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">Roles</h2>
@@ -45,5 +48,6 @@ export const RolesSection = ({
         );
       })}
     </div>
+    <FormFieldError message={error} />
   </section>
 );

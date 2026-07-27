@@ -36,7 +36,7 @@ export const useCounterOrderSubmit = () => {
       printPickingSlips: true,
       isPickup: false,
       isIncidental: false,
-      isOverlengte: false,
+      isOverlength: false,
       isPrinted: false,
       isMailed: false,
       isFaxed: false,
@@ -77,6 +77,7 @@ export const useCounterOrderSubmit = () => {
       documents: [],
       contractUuids: [],
       texts: [],
+      items: [],
     },
   });
 
@@ -99,7 +100,7 @@ export const useCounterOrderSubmit = () => {
         printPickingSlips: values.printPickingSlips,
         isPickup: values.isPickup,
         isIncidental: values.isIncidental,
-        isOverlengte: values.isOverlengte,
+        isOverlength: values.isOverlength,
         isPrinted: values.isPrinted,
         isMailed: values.isMailed,
         isFaxed: values.isFaxed,
@@ -163,6 +164,25 @@ export const useCounterOrderSubmit = () => {
           textCategoryUuid: text.textCategoryUuid || null,
         })),
         contractUuids: values.contractUuids,
+        items: values.items.map((item) => ({
+          productUuid: item.productUuid,
+          status: item.status,
+          deliveryDate: item.deliveryDate || null,
+          description: item.description || null,
+          levCode: item.levCode || null,
+          reference: item.reference || null,
+          unit: item.unit,
+          qtyPlanned: toDecimal(item.qtyPlanned, "0.000"),
+          qtyActual: toDecimal(item.qtyActual, "0.000"),
+          lengthMm: item.lengthMm ? Number(item.lengthMm) : null,
+          kgPlanned: toDecimal(item.kgPlanned, "0.00"),
+          kgActual: toDecimal(item.kgActual, "0.00"),
+          grossPrice: toDecimal(item.grossPrice, "0.00"),
+          lineDiscount: toDecimal(item.lineDiscount, "0.00"),
+          groupDiscount: toDecimal(item.groupDiscount, "0.00"),
+          netPrice: toDecimal(item.netPrice, "0.00"),
+          amount: toDecimal(item.amount, "0.00"),
+        })),
       };
 
       const result = await createCounterOrder(input, extras);

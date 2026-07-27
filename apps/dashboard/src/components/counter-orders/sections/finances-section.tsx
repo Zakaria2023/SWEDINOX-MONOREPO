@@ -8,14 +8,14 @@ import { FormCheckboxCard } from "@/components/ui/form-checkbox-card";
 import { FormLabel } from "@/components/ui/form-field";
 import { FormSelectField } from "@/components/ui/form-select-field";
 import { invoicePaymentTerms } from "@/lib/enums";
-import { COMMON_TEXT, INVOICE_PAYMENT_TERM_LABELS } from "@/lib/labels";
+import { INVOICE_PAYMENT_TERM_LABELS } from "@/lib/labels";
 
 type Props = {
   addressOptions: SelectOption[];
 };
 
 const paymentTermOptions = [
-  { value: "", label: COMMON_TEXT.emptyOption },
+  { value: "", label: "Empty" },
   ...invoicePaymentTerms.map((term) => ({
     value: term,
     label: INVOICE_PAYMENT_TERM_LABELS[term],

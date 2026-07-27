@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { MachineListItem } from "@/app/(dashboard)/machines/actions";
+import { MachineListItem } from "@/app/(dashboard)/machines/actions";
 import { DocumentCell } from "@/components/ui/document-cell";
 import {
   Table,
@@ -72,8 +72,9 @@ type Props = {
 };
 
 export const MachinesTable = ({ machines }: Props) => {
-  const [columnVisibility, setColumnVisibility] =
-    useState<Record<ColumnKey, boolean>>(buildColumnVisibility(ALL_COLUMNS));
+  const [columnVisibility, setColumnVisibility] = useState<
+    Record<ColumnKey, boolean>
+  >(buildColumnVisibility(ALL_COLUMNS));
 
   const toggleColumn = (key: string) => {
     setColumnVisibility((prev) => ({
@@ -109,9 +110,11 @@ export const MachinesTable = ({ machines }: Props) => {
       case "production":
         return (
           <TableCell key={key}>
-            {MACHINE_PRODUCTION_LABELS[
-              machine.production as MachineProductionType
-            ]}
+            {
+              MACHINE_PRODUCTION_LABELS[
+                machine.production as MachineProductionType
+              ]
+            }
           </TableCell>
         );
       case "loading":
@@ -121,7 +124,9 @@ export const MachinesTable = ({ machines }: Props) => {
           </TableCell>
         );
       case "stockLocation":
-        return <TableCell key={key}>{machine.stockLocationName ?? "-"}</TableCell>;
+        return (
+          <TableCell key={key}>{machine.stockLocationName ?? "-"}</TableCell>
+        );
       case "minLengthMm":
         return (
           <TableCell key={key}>
@@ -136,7 +141,9 @@ export const MachinesTable = ({ machines }: Props) => {
         );
       case "outOfBusiness":
         return (
-          <TableCell key={key}>{machine.outOfBusiness ? "Yes" : "No"}</TableCell>
+          <TableCell key={key}>
+            {machine.outOfBusiness ? "Yes" : "No"}
+          </TableCell>
         );
       case "averageDailyCapacity":
         return (
@@ -203,7 +210,9 @@ export const MachinesTable = ({ machines }: Props) => {
             ) : (
               machines.map((machine) => (
                 <TableRow key={machine.id}>
-                  {visibleColumns.map((column) => renderCell(machine, column.key))}
+                  {visibleColumns.map((column) =>
+                    renderCell(machine, column.key),
+                  )}
                 </TableRow>
               ))
             )}

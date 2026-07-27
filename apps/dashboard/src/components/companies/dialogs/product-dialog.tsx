@@ -14,11 +14,7 @@ import { Select } from "@/components/shadcn/select";
 import { DialogFormFooter } from "@/components/ui/dialog-form-footer";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import { deliveryTimeUnits, purchasingUnits } from "@/lib/enums";
-import {
-  COMMON_TEXT,
-  DELIVERY_TIME_UNIT_LABELS,
-  PURCHASING_UNIT_LABELS,
-} from "@/lib/labels";
+import { DELIVERY_TIME_UNIT_LABELS, PURCHASING_UNIT_LABELS } from "@/lib/labels";
 import { Package } from "lucide-react";
 import { FormEventHandler } from "react";
 import { Controller, UseFormReturn } from "react-hook-form";
@@ -31,10 +27,11 @@ type Props = {
   form: UseFormReturn<ProductDialogValues>;
   selectedProduct: ProductOption | null;
   onBrowse: () => void;
+  submitLabel?: string;
 };
 
 const unitOptions = [
-  { value: "", label: COMMON_TEXT.selectOption },
+  { value: "", label: "Select" },
   ...purchasingUnits.map((u) => ({
     value: u,
     label: PURCHASING_UNIT_LABELS[u],
@@ -42,7 +39,7 @@ const unitOptions = [
 ];
 
 const deliveryTimeUnitOptions = [
-  { value: "", label: COMMON_TEXT.selectOption },
+  { value: "", label: "Select" },
   ...deliveryTimeUnits.map((u) => ({
     value: u,
     label: DELIVERY_TIME_UNIT_LABELS[u],
@@ -57,6 +54,7 @@ export const ProductDialog = ({
   form,
   selectedProduct,
   onBrowse,
+  submitLabel = "Add Product",
 }: Props) => {
   const { register, control, formState } = form;
 
@@ -82,7 +80,7 @@ export const ProductDialog = ({
                 onClick={onBrowse}
                 className="mt-1.5 flex h-9 w-full items-center justify-between rounded-lg border border-input px-3 text-sm hover:border-primary"
               >
-                <span className="truncate">
+                <span className="line-clamp-1">
                   {selectedProduct
                     ? `${selectedProduct.productCode} — ${selectedProduct.name}`
                     : "Browse products…"}
@@ -156,7 +154,7 @@ export const ProductDialog = ({
                       options={deliveryTimeUnitOptions}
                       value={field.value}
                       onValueChange={field.onChange}
-                      placeholder={COMMON_TEXT.selectOption}
+                      placeholder="Select"
                     />
                   )}
                 />
@@ -185,7 +183,7 @@ export const ProductDialog = ({
                       options={unitOptions}
                       value={field.value}
                       onValueChange={field.onChange}
-                      placeholder={COMMON_TEXT.selectOption}
+                      placeholder="Select"
                     />
                   )}
                 />
@@ -213,7 +211,7 @@ export const ProductDialog = ({
                       options={unitOptions}
                       value={field.value}
                       onValueChange={field.onChange}
-                      placeholder={COMMON_TEXT.selectOption}
+                      placeholder="Select"
                     />
                   )}
                 />
@@ -221,7 +219,7 @@ export const ProductDialog = ({
             </div>
           </DialogBody>
 
-          <DialogFormFooter onCancel={onCancel} submitLabel="Add Product" />
+          <DialogFormFooter onCancel={onCancel} submitLabel={submitLabel} />
         </form>
       </DialogContent>
     </Dialog>

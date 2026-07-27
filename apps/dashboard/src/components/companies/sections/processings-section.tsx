@@ -13,11 +13,7 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { deliveryTimeUnits, processingEditings } from "@/lib/enums";
-import {
-  COMMON_TEXT,
-  DELIVERY_TIME_UNIT_LABELS,
-  PROCESSING_EDITING_LABELS,
-} from "@/lib/labels";
+import { DELIVERY_TIME_UNIT_LABELS, PROCESSING_EDITING_LABELS } from "@/lib/labels";
 import { Plus, X } from "lucide-react";
 
 type SupplierOption = {
@@ -38,7 +34,7 @@ type Props = {
 };
 
 const editingOptions = [
-  { value: "", label: COMMON_TEXT.emptyOption },
+  { value: "", label: "Empty" },
   ...processingEditings.map((editing) => ({
     value: editing,
     label: PROCESSING_EDITING_LABELS[editing],
@@ -46,7 +42,7 @@ const editingOptions = [
 ];
 
 const unitOptions = [
-  { value: "", label: COMMON_TEXT.emptyOption },
+  { value: "", label: "Empty" },
   ...deliveryTimeUnits.map((unit) => ({
     value: unit,
     label: DELIVERY_TIME_UNIT_LABELS[unit],
@@ -102,7 +98,7 @@ export const ProcessingsSection = ({
                           undefined) as CompanyProcessingInput["editing"],
                       })
                     }
-                    placeholder={COMMON_TEXT.selectOption}
+                    placeholder="Select"
                     disabled={isPending}
                   />
                 </TableCell>
@@ -124,7 +120,7 @@ export const ProcessingsSection = ({
                         supplierUuid: value || undefined,
                       })
                     }
-                    placeholder={COMMON_TEXT.selectOption}
+                    placeholder="Select"
                     disabled={isPending}
                   />
                 </TableCell>
@@ -153,7 +149,7 @@ export const ProcessingsSection = ({
                           undefined) as CompanyProcessingInput["deliveryTimeUnit"],
                       })
                     }
-                    placeholder={COMMON_TEXT.selectOption}
+                    placeholder="Select"
                     disabled={isPending}
                   />
                 </TableCell>

@@ -17,7 +17,7 @@ import {
 import { CompanyOption } from "@/app/(dashboard)/companies/actions";
 import { ProductOption } from "@/app/(dashboard)/products/actions";
 import { SelectOption } from "@/components/shadcn/select";
-import type { DashboardUserOption } from "@/lib/server/clerk";
+import { DashboardUserOption } from "@/lib/server/clerk";
 import {
   complaintCategories,
   complaintCauses,
@@ -32,7 +32,6 @@ import {
   ComplaintType,
 } from "@/lib/enums";
 import {
-  COMMON_TEXT,
   COMPLAINT_CATEGORY_LABELS,
   COMPLAINT_CAUSE_LABELS,
   COMPLAINT_REPORT_LABELS,
@@ -47,7 +46,7 @@ type UseComplaintSubmitParams = {
   responsibleUsers: DashboardUserOption[];
 };
 
-const emptyOption = { value: "", label: COMMON_TEXT.emptyOption };
+const emptyOption = { value: "", label: "Empty" };
 
 const makeOptions = <T extends string>(
   values: readonly T[],
@@ -152,13 +151,13 @@ export const useComplaintSubmit = ({
     startTransition(async () => {
       const result = await createComplaint({
         companyUuid: values.companyUuid,
-        contactUuid: values.contactUuid,
+        contactUuid: values.contactUuid || null,
         complaintType: values.complaintType,
         report: values.report,
         reportDate: values.reportDate ? new Date(values.reportDate) : null,
         description: values.description,
         category: values.category,
-        productUuid: values.productUuid,
+        productUuid: values.productUuid || null,
         qty: values.qty,
         amount: values.amount,
         weight: values.weight,

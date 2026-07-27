@@ -13,7 +13,6 @@ import { Input } from "@/components/shadcn/input";
 import { Select } from "@/components/shadcn/select";
 import { DialogFormFooter } from "@/components/ui/dialog-form-footer";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
-import { COMMON_TEXT } from "@/lib/labels";
 import { MessageSquare } from "lucide-react";
 import { FormEventHandler } from "react";
 import { Controller, UseFormReturn } from "react-hook-form";
@@ -29,6 +28,7 @@ type Props = {
   documentTypeOptions: { value: string; label: string }[];
   communicationTypeOptions: { value: string; label: string }[];
   shapeOptions: { value: string; label: string }[];
+  submitLabel?: string;
 };
 
 export const CommunicationSettingDialog = ({
@@ -42,6 +42,7 @@ export const CommunicationSettingDialog = ({
   documentTypeOptions,
   communicationTypeOptions,
   shapeOptions,
+  submitLabel = "Add Setting",
 }: Props) => (
   <Dialog open={isOpen} onOpenChange={onOpenChange}>
     <DialogContent className="max-w-lg">
@@ -70,7 +71,7 @@ export const CommunicationSettingDialog = ({
                   options={documentTypeOptions}
                   value={field.value}
                   onValueChange={field.onChange}
-                  placeholder={COMMON_TEXT.selectOption}
+                  placeholder="Select"
                 />
               )}
             />
@@ -97,7 +98,7 @@ export const CommunicationSettingDialog = ({
                     form.setValue("email", "");
                     form.setValue("fax", "");
                   }}
-                  placeholder={COMMON_TEXT.selectOption}
+                  placeholder="Select"
                 />
               )}
             />
@@ -117,7 +118,7 @@ export const CommunicationSettingDialog = ({
                   options={shapeOptions}
                   value={field.value ?? ""}
                   onValueChange={field.onChange}
-                  placeholder={COMMON_TEXT.emptyOption}
+                  placeholder="Empty"
                 />
               )}
             />
@@ -137,7 +138,7 @@ export const CommunicationSettingDialog = ({
             </div>
           )}
         </DialogBody>
-        <DialogFormFooter onCancel={onCancel} submitLabel="Add Setting" />
+        <DialogFormFooter onCancel={onCancel} submitLabel={submitLabel} />
       </form>
     </DialogContent>
   </Dialog>

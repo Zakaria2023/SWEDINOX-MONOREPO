@@ -26,15 +26,7 @@ import {
   InvoicePaymentTerm,
   invoicePaymentTerms,
 } from "@/lib/enums";
-import {
-  COMMON_TEXT,
-  COMMUNICATION_SETTING_DOCUMENT_TYPE_LABELS,
-  COMMUNICATION_SETTING_SHAPE_LABELS,
-  COMMUNICATION_SETTING_TYPE_LABELS,
-  COMPANY_LANGUAGE_LABELS,
-  CURRENCY_LABELS,
-  INVOICE_PAYMENT_TERM_LABELS,
-} from "@/lib/labels";
+import { COMMUNICATION_SETTING_DOCUMENT_TYPE_LABELS, COMMUNICATION_SETTING_SHAPE_LABELS, COMMUNICATION_SETTING_TYPE_LABELS, COMPANY_LANGUAGE_LABELS, CURRENCY_LABELS, INVOICE_PAYMENT_TERM_LABELS } from "@/lib/labels";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -506,7 +498,7 @@ export const useCompanySubmit = ({
   );
 
   const langOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...companyLangs.map((lang) => ({
       value: lang,
       label: COMPANY_LANGUAGE_LABELS[lang],
@@ -514,7 +506,7 @@ export const useCompanySubmit = ({
   ];
 
   const documentTypeOptions = [
-    { value: "", label: COMMON_TEXT.selectOption },
+    { value: "", label: "Select" },
     ...communicationSettingDocumentTypes.map((documentType) => ({
       value: documentType,
       label: COMMUNICATION_SETTING_DOCUMENT_TYPE_LABELS[documentType],
@@ -522,7 +514,7 @@ export const useCompanySubmit = ({
   ];
 
   const communicationTypeOptions = [
-    { value: "", label: COMMON_TEXT.selectOption },
+    { value: "", label: "Select" },
     ...communicationSettingTypes.map((communicationType) => ({
       value: communicationType,
       label: COMMUNICATION_SETTING_TYPE_LABELS[communicationType],
@@ -530,7 +522,7 @@ export const useCompanySubmit = ({
   ];
 
   const shapeOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...communicationSettingShapes.map((shape) => ({
       value: shape,
       label: COMMUNICATION_SETTING_SHAPE_LABELS[shape],
@@ -538,7 +530,7 @@ export const useCompanySubmit = ({
   ];
 
   const paymentTermOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...invoicePaymentTerms.map((t) => ({
       value: t,
       label: INVOICE_PAYMENT_TERM_LABELS[t as InvoicePaymentTerm],
@@ -546,7 +538,7 @@ export const useCompanySubmit = ({
   ];
 
   const currencyOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...currencies.map((c) => ({
       value: c,
       label: CURRENCY_LABELS[c as Currency],
@@ -554,12 +546,12 @@ export const useCompanySubmit = ({
   ];
 
   const debtorCompanyOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...debtorCompanies.map((c) => ({ value: c.uuid, label: c.companyName })),
   ];
 
   const purchaseOrgOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...purchaseOrgCompanies.map((c) => ({
       value: c.uuid,
       label: c.companyName,
@@ -569,7 +561,7 @@ export const useCompanySubmit = ({
   // Supplier dropdown for the Processing grid — the label leads with the
   // supplier code (searchCode1) since that's the "Supplier code" column.
   const supplierOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...suppliers.map((s) => ({
       value: s.uuid,
       label: s.searchCode1
@@ -997,7 +989,7 @@ export const useCompanySubmit = ({
     printPickingSlips: values.printPickingSlips,
     isPickup: values.isPickup,
     isIncidental: values.isIncidental,
-    isOverlengte: values.isOverlengte,
+    isOverlength: values.isOverlength,
     amountExVat: values.amountExVat || "0.00",
     weightKg: values.weightKg || "0.000",
     gainPercent: values.gainPercent || "0.00",
@@ -1041,7 +1033,7 @@ export const useCompanySubmit = ({
       printPickingSlips: order.printPickingSlips ?? true,
       isPickup: order.isPickup ?? false,
       isIncidental: order.isIncidental ?? false,
-      isOverlengte: order.isOverlengte ?? false,
+      isOverlength: order.isOverlength ?? false,
       amountExVat: order.amountExVat ?? "0.00",
       weightKg: order.weightKg ?? "0.000",
       gainPercent: order.gainPercent ?? "0.00",
@@ -1370,7 +1362,7 @@ export const useCompanySubmit = ({
     isMailed: values.isMailed,
     arrangeTransport: values.arrangeTransport,
     pickupDropoffCdPurchases: values.pickupDropoffCdPurchases,
-    isOverlengte: values.isOverlengte,
+    isOverlength: values.isOverlength,
     remarks: values.remarks || undefined,
   });
 
@@ -1416,7 +1408,7 @@ export const useCompanySubmit = ({
       isMailed: order.isMailed ?? false,
       arrangeTransport: order.arrangeTransport ?? false,
       pickupDropoffCdPurchases: order.pickupDropoffCdPurchases ?? false,
-      isOverlengte: order.isOverlengte ?? false,
+      isOverlength: order.isOverlength ?? false,
       remarks: order.remarks ?? "",
     });
     setIsPurchaseOrderDialogOpen(true);
@@ -1471,7 +1463,7 @@ export const useCompanySubmit = ({
     isPickup: values.isPickup,
     isIncidental: values.isIncidental,
     isConsignment: values.isConsignment,
-    isOverlengte: values.isOverlengte,
+    isOverlength: values.isOverlength,
     handlingBlocked: values.handlingBlocked,
     totalWeightKg: values.totalWeightKg || "0.00",
     totalExclVat: values.totalExclVat || "0.00",
@@ -1525,7 +1517,7 @@ export const useCompanySubmit = ({
       isPickup: quote.isPickup ?? false,
       isIncidental: quote.isIncidental ?? false,
       isConsignment: quote.isConsignment ?? false,
-      isOverlengte: quote.isOverlengte ?? false,
+      isOverlength: quote.isOverlength ?? false,
       handlingBlocked: quote.handlingBlocked ?? false,
       totalWeightKg: quote.totalWeightKg ?? "0.00",
       totalExclVat: quote.totalExclVat ?? "0.00",
@@ -1863,96 +1855,97 @@ export const useCompanySubmit = ({
         await sendCompanyWelcomeEmails(companyName, contactEmails);
       }
 
+      const companyData = {
+        companyName,
+        correspName: correspName || undefined,
+        remarks: remarks || undefined,
+        lang: lang || undefined,
+        searchCode1: searchCode1 || undefined,
+        searchCode2: searchCode2 || undefined,
+        searchCode3: searchCode3 || undefined,
+        roles: (roles ?? []) as CompanyRole[],
+        documents: documents.length > 0 ? documents : undefined,
+        ...(salesData ?? {}),
+        debtorCompanyUuid: debtorCompanyUuid || undefined,
+        iban: iban || undefined,
+        bic: bic || undefined,
+        bankAccount: bankAccount || undefined,
+        postbankAccount: postbankAccount || undefined,
+        purchaseOrgCompanyUuid: isCustomerOrProspect
+          ? purchaseOrgCompanyUuid || undefined
+          : undefined,
+        memberNumberPurchaseOrg: isCustomerOrProspect
+          ? memberNumberPurchaseOrg || undefined
+          : undefined,
+        calculateVat,
+        reminder,
+        collectInvoicesInMandate,
+        insuranceValidUntil: insuranceValidUntil
+          ? new Date(insuranceValidUntil)
+          : null,
+        creditLimitInsurance: creditLimitInsurance
+          ? String(creditLimitInsurance)
+          : undefined,
+        creditLimit: creditLimit ? String(creditLimit) : undefined,
+        creditLimitUninsured: creditLimitUninsured
+          ? String(creditLimitUninsured)
+          : undefined,
+        creditLimitUninsuredDate: creditLimitUninsuredDate
+          ? new Date(creditLimitUninsuredDate)
+          : null,
+        paymentTerms: paymentTerms || undefined,
+        differentPaymentTermsExWorks: differentPaymentTermsExWorks || undefined,
+        journalCode: journalCode ?? undefined,
+        vatNumber: vatNumber || undefined,
+        cocNumber: cocNumber || undefined,
+        currency: (currency || undefined) as InsertCompanies["currency"],
+        blockedByNote: blockedByNote || undefined,
+        invoicingMethod: (values.invoicingMethod ||
+          undefined) as InsertCompanies["invoicingMethod"],
+        collectiveInvoicing: values.collectiveInvoicing,
+        invoicePackagingAtZeroPrice: values.invoicePackagingAtZeroPrice,
+        printCommodityCode: values.printCommodityCode,
+        invoiceFrequency: values.invoiceFrequency,
+        invoicePrintEnabled: values.invoicePrintEnabled,
+        invoicePrintCount: values.invoicePrintCount,
+        invoiceEmailEnabled: values.invoiceEmailEnabled,
+        invoiceEmailTo: values.invoiceEmailTo || undefined,
+        printEmailZeroValueInvoices: values.printEmailZeroValueInvoices,
+        sendXmlWithInvoice: values.sendXmlWithInvoice,
+        industry: values.industry || undefined,
+        classification: (values.classification ||
+          undefined) as InsertCompanies["classification"],
+        visitFrequency: values.visitFrequency
+          ? Number(values.visitFrequency)
+          : undefined,
+        callFrequencyPerYear: values.callFrequencyPerYear
+          ? Number(values.callFrequencyPerYear)
+          : undefined,
+        targetDateNextVisit: values.targetDateNextVisit
+          ? new Date(values.targetDateNextVisit)
+          : null,
+        visitReason: (values.visitReason ||
+          undefined) as InsertCompanies["visitReason"],
+        potentialAnnualRevenue: values.potentialAnnualRevenue
+          ? String(values.potentialAnnualRevenue)
+          : undefined,
+        targetAnnualRevenue: values.targetAnnualRevenue
+          ? String(values.targetAnnualRevenue)
+          : undefined,
+        potentialAnnualSales: values.potentialAnnualSales
+          ? String(values.potentialAnnualSales)
+          : undefined,
+        targetAnnualSales: values.targetAnnualSales
+          ? String(values.targetAnnualSales)
+          : undefined,
+        numberOfEmployees: values.numberOfEmployees
+          ? Number(values.numberOfEmployees)
+          : undefined,
+        visitPlanning: values.visitPlanning,
+      };
+
       const result = await createCompany(
-        {
-          companyName,
-          correspName: correspName || undefined,
-          remarks: remarks || undefined,
-          lang: lang || undefined,
-          searchCode1: searchCode1 || undefined,
-          searchCode2: searchCode2 || undefined,
-          searchCode3: searchCode3 || undefined,
-          roles: (roles ?? []) as CompanyRole[],
-          documents: documents.length > 0 ? documents : undefined,
-          ...(salesData ?? {}),
-          debtorCompanyUuid: debtorCompanyUuid || undefined,
-          iban: iban || undefined,
-          bic: bic || undefined,
-          bankAccount: bankAccount || undefined,
-          postbankAccount: postbankAccount || undefined,
-          purchaseOrgCompanyUuid: isCustomerOrProspect
-            ? purchaseOrgCompanyUuid || undefined
-            : undefined,
-          memberNumberPurchaseOrg: isCustomerOrProspect
-            ? memberNumberPurchaseOrg || undefined
-            : undefined,
-          calculateVat,
-          reminder,
-          collectInvoicesInMandate,
-          insuranceValidUntil: insuranceValidUntil
-            ? new Date(insuranceValidUntil)
-            : null,
-          creditLimitInsurance: creditLimitInsurance
-            ? String(creditLimitInsurance)
-            : undefined,
-          creditLimit: creditLimit ? String(creditLimit) : undefined,
-          creditLimitUninsured: creditLimitUninsured
-            ? String(creditLimitUninsured)
-            : undefined,
-          creditLimitUninsuredDate: creditLimitUninsuredDate
-            ? new Date(creditLimitUninsuredDate)
-            : null,
-          paymentTerms: paymentTerms || undefined,
-          differentPaymentTermsExWorks:
-            differentPaymentTermsExWorks || undefined,
-          journalCode: journalCode ?? undefined,
-          vatNumber: vatNumber || undefined,
-          cocNumber: cocNumber || undefined,
-          currency: (currency || undefined) as InsertCompanies["currency"],
-          blockedByNote: blockedByNote || undefined,
-          invoicingMethod: (values.invoicingMethod ||
-            undefined) as InsertCompanies["invoicingMethod"],
-          collectiveInvoicing: values.collectiveInvoicing,
-          invoicePackagingAtZeroPrice: values.invoicePackagingAtZeroPrice,
-          printCommodityCode: values.printCommodityCode,
-          invoiceFrequency: values.invoiceFrequency,
-          invoicePrintEnabled: values.invoicePrintEnabled,
-          invoicePrintCount: values.invoicePrintCount,
-          invoiceEmailEnabled: values.invoiceEmailEnabled,
-          invoiceEmailTo: values.invoiceEmailTo || undefined,
-          printEmailZeroValueInvoices: values.printEmailZeroValueInvoices,
-          sendXmlWithInvoice: values.sendXmlWithInvoice,
-          industry: values.industry || undefined,
-          classification: (values.classification ||
-            undefined) as InsertCompanies["classification"],
-          visitFrequency: values.visitFrequency
-            ? Number(values.visitFrequency)
-            : undefined,
-          callFrequencyPerYear: values.callFrequencyPerYear
-            ? Number(values.callFrequencyPerYear)
-            : undefined,
-          targetDateNextVisit: values.targetDateNextVisit
-            ? new Date(values.targetDateNextVisit)
-            : null,
-          visitReason: (values.visitReason ||
-            undefined) as InsertCompanies["visitReason"],
-          potentialAnnualRevenue: values.potentialAnnualRevenue
-            ? String(values.potentialAnnualRevenue)
-            : undefined,
-          targetAnnualRevenue: values.targetAnnualRevenue
-            ? String(values.targetAnnualRevenue)
-            : undefined,
-          potentialAnnualSales: values.potentialAnnualSales
-            ? String(values.potentialAnnualSales)
-            : undefined,
-          targetAnnualSales: values.targetAnnualSales
-            ? String(values.targetAnnualSales)
-            : undefined,
-          numberOfEmployees: values.numberOfEmployees
-            ? Number(values.numberOfEmployees)
-            : undefined,
-          visitPlanning: values.visitPlanning,
-        },
+        companyData,
         isBlocked,
         allAddresses,
         communicationSettings,
@@ -1973,7 +1966,9 @@ export const useCompanySubmit = ({
         customerStock,
       );
       setState(result);
-      if (result.success) router.push("/companies");
+      if (result.success) {
+        router.push("/companies");
+      }
     });
   });
 

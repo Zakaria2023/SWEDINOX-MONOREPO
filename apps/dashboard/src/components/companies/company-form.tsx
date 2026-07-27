@@ -329,6 +329,7 @@ export const CompanyForm = ({
           disabledRoles={disabledRoles}
           isPending={isPending}
           toggleRole={toggleRole}
+          error={form.formState.errors.roles?.message}
         />
 
         {activeContractableRoles.length > 0 && (

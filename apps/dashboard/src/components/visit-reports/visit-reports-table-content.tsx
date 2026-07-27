@@ -2,11 +2,7 @@
 
 import { useState } from "react";
 import { type VisitReportListItem } from "@/app/(dashboard)/visit-reports/actions";
-import {
-  VISIT_REPORT_CONTACT_METHOD_LABELS,
-  VISIT_REPORT_REASON_LABELS,
-  COMMON_TEXT,
-} from "@/lib/labels";
+import { VISIT_REPORT_CONTACT_METHOD_LABELS, VISIT_REPORT_REASON_LABELS } from "@/lib/labels";
 import {
   Table,
   TableBody,
@@ -16,6 +12,7 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
+import { ResolveVisitReportButton } from "@/components/visit-reports/resolve-visit-report-button";
 import { buildColumnVisibility } from "@/lib/helpers";
 
 type ColumnKey =
@@ -83,7 +80,7 @@ export const VisitReportsTable = ({
   const visibleColumns = ALL_COLUMNS.filter(
     (column) => columnVisibility[column.key],
   );
-  const fallbackValue = COMMON_TEXT.notAvailable;
+  const fallbackValue = "—";
 
   const renderCell = (visitReport: VisitReportListItem, key: ColumnKey) => {
     switch (key) {
@@ -136,11 +133,11 @@ export const VisitReportsTable = ({
           <TableCell key={key}>
             {visitReport.hasTakenPlace ? (
               <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
-                {COMMON_TEXT.yes}
+                Yes
               </span>
             ) : (
               <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
-                {COMMON_TEXT.no}
+                No
               </span>
             )}
           </TableCell>
@@ -226,13 +223,14 @@ export const VisitReportsTable = ({
               {visibleColumns.map((column) => (
                 <TableHead key={column.key}>{column.label}</TableHead>
               ))}
+              <TableHead className="text-right">Action</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {visitReports.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={visibleColumns.length}
+                  colSpan={visibleColumns.length + 1}
                   className="h-24 text-center"
                 >
                   No visit reports found
@@ -244,6 +242,12 @@ export const VisitReportsTable = ({
                   {visibleColumns.map((column) =>
                     renderCell(visitReport, column.key),
                   )}
+                  <TableCell className="text-right">
+                    <ResolveVisitReportButton
+                      uuid={visitReport.uuid}
+                      hasTakenPlace={visitReport.hasTakenPlace}
+                    />
+                  </TableCell>
                 </TableRow>
               ))
             )}

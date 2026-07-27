@@ -131,7 +131,7 @@ export const PurchaseQuoteForm = ({ companies, clerkUsers }: Props) => {
           </div>
 
           <div>
-            <FormLabel htmlFor="ourReference">Onze referentie</FormLabel>
+            <FormLabel htmlFor="ourReference">Our reference</FormLabel>
             <Input id="ourReference" {...register("ourReference")} />
           </div>
 
@@ -191,7 +191,7 @@ export const PurchaseQuoteForm = ({ companies, clerkUsers }: Props) => {
         <div className="flex flex-wrap gap-4">
           <Controller
             control={control}
-            name="isOverlengte"
+            name="isOverlength"
             render={({ field }) => (
               <FormCheckboxCard
                 label="Overlength"

@@ -22,13 +22,16 @@ import {
   deliveryTypes,
   invoicePaymentTerms,
   invoiceSurchargeDescriptions,
+  orderLineStatuses,
   orderMethods,
+  stockUnits,
   transportModes,
   warehouseTransportRegions,
 } from "@/lib/enums";
 import { Companies } from "./companies";
 import { CompanyAddresses } from "./company-addresses";
 import { Contacts } from "./contacts";
+import { Products } from "./products";
 
 export const CounterOrders = mysqlTable(
   "CounterOrders",
@@ -55,7 +58,7 @@ export const CounterOrders = mysqlTable(
     // ── Order type ──────────────────────────────────────────────────────────
     isPickup: boolean("is_pickup").default(false),
     isIncidental: boolean("is_incidental").default(false),
-    isOverlengte: boolean("is_overlengte").default(false),
+    isOverlength: boolean("is_overlength").default(false),
     isPrinted: boolean("is_printed").default(false),
     isMailed: boolean("is_mailed").default(false),
     isFaxed: boolean("is_faxed").default(false),
@@ -205,8 +208,96 @@ export const CounterOrderSurcharges = mysqlTable(
   ],
 );
 
+// Line items of a counter order ("Order lines"). Pricing/cost columns are
+// stored as entered; derived figures shown in the native grid (profit, margin)
+// are recomputed in the view, not persisted here beyond what the grid edits.
+export const CounterOrderItems = mysqlTable(
+  "CounterOrderItems",
+  {
+    id: int("id").primaryKey().autoincrement(),
+    uuid: char("uuid", { length: 36 }).notNull().unique(),
+
+    counterOrderUuid: char("counter_order_uuid", { length: 36 }).notNull(),
+    productUuid: char("product_uuid", { length: 36 }),
+
+    // ── Line identity / state ─────────────────────────────────────────────────
+    lineNumber: int("line_number"),
+    quoteLine: int("quote_line"),
+    status: mysqlEnum("status", orderLineStatuses).default("in_progress"),
+    deliveryDate: date("delivery_date", { mode: "string" }),
+    description: varchar("description", { length: 255 }),
+    levCode: varchar("lev_code", { length: 100 }),
+    reference: varchar("reference", { length: 255 }),
+
+    // ── Physical attributes ───────────────────────────────────────────────────
+    unit: mysqlEnum("unit", stockUnits).default("st"),
+    qtyPlanned: decimal("qty_planned", { precision: 15, scale: 3 }).default(
+      "0.000",
+    ),
+    qtyActual: decimal("qty_actual", { precision: 15, scale: 3 }).default(
+      "0.000",
+    ),
+    lengthMm: int("length_mm"),
+    kgPlanned: decimal("kg_planned", { precision: 15, scale: 2 }).default(
+      "0.00",
+    ),
+    kgActual: decimal("kg_actual", { precision: 15, scale: 2 }).default("0.00"),
+
+    // ── Pricing / discounts ───────────────────────────────────────────────────
+    grossPrice: decimal("gross_price", { precision: 15, scale: 2 }).default(
+      "0.00",
+    ),
+    priceUnit: varchar("price_unit", { length: 10 }),
+    lineDiscount: decimal("line_discount", { precision: 6, scale: 2 }).default(
+      "0.00",
+    ),
+    groupDiscount: decimal("group_discount", { precision: 6, scale: 2 }).default(
+      "0.00",
+    ),
+    commercialDiscount: decimal("commercial_discount", {
+      precision: 6,
+      scale: 2,
+    }).default("0.00"),
+    netPrice: decimal("net_price", { precision: 15, scale: 2 }).default("0.00"),
+    amount: decimal("amount", { precision: 15, scale: 2 }).default("0.00"),
+    costs: decimal("costs", { precision: 15, scale: 2 }).default("0.00"),
+    profitAmount: decimal("profit_amount", { precision: 15, scale: 2 }).default(
+      "0.00",
+    ),
+    profitPercent: decimal("profit_percent", { precision: 6, scale: 2 }).default(
+      "0.00",
+    ),
+    profitTooLow: boolean("profit_too_low").default(false),
+
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+  },
+  (table) => [
+    index("idx_counter_order_items_counter_order_uuid").on(
+      table.counterOrderUuid,
+    ),
+    index("idx_counter_order_items_product_uuid").on(table.productUuid),
+    foreignKey({
+      name: "fk_counter_order_items_counter_order",
+      columns: [table.counterOrderUuid],
+      foreignColumns: [CounterOrders.uuid],
+    }),
+    foreignKey({
+      name: "fk_counter_order_items_product",
+      columns: [table.productUuid],
+      foreignColumns: [Products.uuid],
+    }),
+  ],
+);
+
 export type SelectCounterOrders = InferSelectModel<typeof CounterOrders>;
 export type InsertCounterOrders = InferInsertModel<typeof CounterOrders>;
+export type SelectCounterOrderItems = InferSelectModel<
+  typeof CounterOrderItems
+>;
+export type InsertCounterOrderItems = InferInsertModel<
+  typeof CounterOrderItems
+>;
 export type SelectCounterOrderSurcharges = InferSelectModel<
   typeof CounterOrderSurcharges
 >;

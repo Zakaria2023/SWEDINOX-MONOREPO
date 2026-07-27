@@ -11,7 +11,7 @@ import {
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { buildColumnVisibility } from "@/lib/helpers";
-import { COMMON_TEXT, COMPANY_ROLE_LABELS } from "@/lib/labels";
+import { COMPANY_ROLE_LABELS } from "@/lib/labels";
 import { useState } from "react";
 
 type ColumnKey =
@@ -76,7 +76,6 @@ export const ContractsPerCustomerTable = ({ rows }: Props) => {
     }));
 
   const visibleColumns = ALL_COLUMNS.filter((col) => columnVisibility[col.key]);
-  const na = COMMON_TEXT.notAvailable;
 
   const renderCell = (row: ContractPerCustomerRow, key: ColumnKey) => {
     switch (key) {
@@ -88,7 +87,7 @@ export const ContractsPerCustomerTable = ({ rows }: Props) => {
                 ? COMPANY_ROLE_LABELS[
                     row.role as keyof typeof COMPANY_ROLE_LABELS
                   ]
-                : na}
+                : "—"}
             </span>
           </TableCell>
         );
@@ -101,11 +100,11 @@ export const ContractsPerCustomerTable = ({ rows }: Props) => {
           </TableCell>
         );
       case "city":
-        return <TableCell key={key}>{row.city ?? na}</TableCell>;
+        return <TableCell key={key}>{row.city ?? "—"}</TableCell>;
       case "representative":
-        return <TableCell key={key}>{na}</TableCell>;
+        return <TableCell key={key}>—</TableCell>;
       case "customerGroup":
-        return <TableCell key={key}>{na}</TableCell>;
+        return <TableCell key={key}>—</TableCell>;
       case "code":
         return (
           <TableCell key={key} className="font-mono font-medium">
@@ -113,15 +112,15 @@ export const ContractsPerCustomerTable = ({ rows }: Props) => {
           </TableCell>
         );
       case "description":
-        return <TableCell key={key}>{row.description || na}</TableCell>;
+        return <TableCell key={key}>{row.description || "—"}</TableCell>;
       case "contractGroupName":
-        return <TableCell key={key}>{row.contractGroupName ?? na}</TableCell>;
+        return <TableCell key={key}>{row.contractGroupName ?? "—"}</TableCell>;
       case "priceDate":
-        return <TableCell key={key}>{row.priceDate ?? na}</TableCell>;
+        return <TableCell key={key}>{row.priceDate ?? "—"}</TableCell>;
       case "startingDate":
-        return <TableCell key={key}>{na}</TableCell>;
+        return <TableCell key={key}>—</TableCell>;
       case "endDate":
-        return <TableCell key={key}>{na}</TableCell>;
+        return <TableCell key={key}>—</TableCell>;
       case "preference":
         return (
           <TableCell key={key} className="text-right">
@@ -141,11 +140,11 @@ export const ContractsPerCustomerTable = ({ rows }: Props) => {
           </TableCell>
         );
       case "mostRecentInvoiceDate":
-        return <TableCell key={key}>{na}</TableCell>;
+        return <TableCell key={key}>—</TableCell>;
       case "regionCode":
-        return <TableCell key={key}>{na}</TableCell>;
+        return <TableCell key={key}>—</TableCell>;
       case "region":
-        return <TableCell key={key}>{na}</TableCell>;
+        return <TableCell key={key}>—</TableCell>;
     }
   };
 

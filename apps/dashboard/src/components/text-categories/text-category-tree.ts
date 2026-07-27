@@ -1,6 +1,5 @@
 import { SelectOption } from "@/components/shadcn/select";
 import { TextCategoryOption } from "@/app/(dashboard)/text-categories/actions";
-import { COMMON_TEXT } from "@/lib/labels";
 
 const sortCategories = (a: TextCategoryOption, b: TextCategoryOption) => {
   if (a.sequenceNumber !== b.sequenceNumber) {
@@ -34,4 +33,4 @@ const buildBranch = (
 
 export const buildTextCategorySelectOptions = (
   categories: TextCategoryOption[],
-) => [{ value: "", label: COMMON_TEXT.none }, ...buildBranch(categories, null)];
+) => [{ value: "", label: "None" }, ...buildBranch(categories, null)];

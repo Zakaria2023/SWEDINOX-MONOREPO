@@ -4,7 +4,6 @@ import { Popover as PopoverPrimitive } from "@base-ui/react/popover";
 import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/helpers";
-import { COMMON_TEXT } from "@/lib/labels";
 
 type DatePickerProps = {
   value?: string;
@@ -114,7 +113,7 @@ export const DatePicker = ({
           className,
         )}
       >
-        <span>{displayValue || placeholder || COMMON_TEXT.datePlaceholder}</span>
+        <span>{displayValue || placeholder || "Pick a date"}</span>
         <Calendar className="size-4 shrink-0 text-muted-foreground" />
       </PopoverPrimitive.Trigger>
 
@@ -126,7 +125,7 @@ export const DatePicker = ({
                 type="button"
                 onClick={prevMonth}
                 className="rounded-lg p-1 hover:bg-muted"
-                aria-label={COMMON_TEXT.previousMonth}
+                aria-label="Previous month"
               >
                 <ChevronLeft className="size-4" />
               </button>
@@ -135,7 +134,7 @@ export const DatePicker = ({
                 type="button"
                 onClick={nextMonth}
                 className="rounded-lg p-1 hover:bg-muted"
-                aria-label={COMMON_TEXT.nextMonth}
+                aria-label="Next month"
               >
                 <ChevronRight className="size-4" />
               </button>

@@ -17,7 +17,7 @@ import { Select } from "@/components/shadcn/select";
 import { Textarea } from "@/components/shadcn/textarea";
 import { DialogFormFooter } from "@/components/ui/dialog-form-footer";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
-import { COMMON_TEXT, TEXT_USAGE_CATEGORY_LABELS } from "@/lib/labels";
+import { TEXT_USAGE_CATEGORY_LABELS } from "@/lib/labels";
 import { AlignLeft } from "lucide-react";
 import { FormEventHandler } from "react";
 import { Controller, UseFormReturn } from "react-hook-form";
@@ -30,6 +30,7 @@ type Props = {
   form: UseFormReturn<TextDialogValues>;
   textCategories: TextCategoryOption[];
   handleCategorySelect: (uuid: string) => void;
+  submitLabel?: string;
 };
 
 export const TextDialog = ({
@@ -40,13 +41,14 @@ export const TextDialog = ({
   form,
   textCategories,
   handleCategorySelect,
+  submitLabel = "Add Text",
 }: Props) => (
   <Dialog open={isOpen} onOpenChange={onOpenChange}>
     <DialogContent className="flex h-[85dvh] max-w-5xl flex-col gap-0 p-0">
       <DialogHeader className="shrink-0 border-b bg-background px-6 py-5">
         <DialogTitle className="flex items-center gap-2">
           <AlignLeft className="size-4" />
-          Add Text
+          Text
         </DialogTitle>
         <DialogDescription>
           Select a category to auto-fill the usage checkboxes, then fill in the
@@ -68,7 +70,7 @@ export const TextDialog = ({
                   <Select
                     id="txt-category"
                     options={[
-                      { value: "", label: COMMON_TEXT.selectOption },
+                      { value: "", label: "Select" },
                       ...textCategories.map((c) => ({
                         value: c.uuid,
                         label: c.name,
@@ -79,7 +81,7 @@ export const TextDialog = ({
                       field.onChange(value);
                       handleCategorySelect(value);
                     }}
-                    placeholder={COMMON_TEXT.selectOption}
+                    placeholder="Select"
                   />
                 )}
               />
@@ -132,7 +134,7 @@ export const TextDialog = ({
           </div>
         </div>
 
-        <DialogFormFooter onCancel={onCancel} submitLabel="Add Text" />
+        <DialogFormFooter onCancel={onCancel} submitLabel={submitLabel} />
       </form>
     </DialogContent>
   </Dialog>

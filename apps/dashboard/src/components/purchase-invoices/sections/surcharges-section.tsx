@@ -8,13 +8,10 @@ import { FormCheckboxCard } from "@/components/ui/form-checkbox-card";
 import { FormLabel } from "@/components/ui/form-field";
 import { FormSelectField } from "@/components/ui/form-select-field";
 import { invoiceSurchargeDescriptions } from "@/lib/enums";
-import {
-  COMMON_TEXT,
-  INVOICE_SURCHARGE_DESCRIPTION_LABELS,
-} from "@/lib/labels";
+import { INVOICE_SURCHARGE_DESCRIPTION_LABELS } from "@/lib/labels";
 
 const descriptionOptions = [
-  { value: "", label: COMMON_TEXT.emptyOption },
+  { value: "", label: "Empty" },
   ...invoiceSurchargeDescriptions.map((description) => ({
     value: description,
     label: INVOICE_SURCHARGE_DESCRIPTION_LABELS[description],

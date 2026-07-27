@@ -7,11 +7,7 @@ import { Input } from "@/components/shadcn/input";
 import { Select } from "@/components/shadcn/select";
 import { FormLabel } from "@/components/ui/form-field";
 import { companyClassifications, visitReportReasons } from "@/lib/enums";
-import {
-  COMMON_TEXT,
-  COMPANY_CLASSIFICATION_LABELS,
-  VISIT_REPORT_REASON_LABELS,
-} from "@/lib/labels";
+import { COMPANY_CLASSIFICATION_LABELS, VISIT_REPORT_REASON_LABELS } from "@/lib/labels";
 
 type Props = {
   isPending: boolean;
@@ -19,7 +15,7 @@ type Props = {
 };
 
 const classificationOptions = [
-  { value: "", label: COMMON_TEXT.emptyOption },
+  { value: "", label: "Empty" },
   ...companyClassifications.map((code) => ({
     value: code,
     label: code,
@@ -28,7 +24,7 @@ const classificationOptions = [
 ];
 
 const visitReasonOptions = [
-  { value: "", label: COMMON_TEXT.emptyOption },
+  { value: "", label: "Empty" },
   ...visitReportReasons.map((reason) => ({
     value: reason,
     label: VISIT_REPORT_REASON_LABELS[reason],
@@ -39,7 +35,7 @@ export const MarketingSection = ({ isPending, industries }: Props) => {
   const { control, register } = useFormContext<VisitReportFormValues>();
 
   const industryOptions = [
-    { value: "", label: COMMON_TEXT.emptyOption },
+    { value: "", label: "Empty" },
     ...industries.map((industry) => ({
       value: industry.id,
       label: industry.id,
@@ -67,7 +63,7 @@ export const MarketingSection = ({ isPending, industries }: Props) => {
                 options={industryOptions}
                 value={field.value ?? ""}
                 onValueChange={field.onChange}
-                placeholder={COMMON_TEXT.emptyOption}
+                placeholder="Empty"
                 disabled={isPending}
               />
             )}
@@ -86,7 +82,7 @@ export const MarketingSection = ({ isPending, industries }: Props) => {
                 options={classificationOptions}
                 value={field.value ?? ""}
                 onValueChange={field.onChange}
-                placeholder={COMMON_TEXT.emptyOption}
+                placeholder="Empty"
                 disabled={isPending}
               />
             )}
@@ -142,7 +138,7 @@ export const MarketingSection = ({ isPending, industries }: Props) => {
                   options={visitReasonOptions}
                   value={field.value ?? ""}
                   onValueChange={field.onChange}
-                  placeholder={COMMON_TEXT.emptyOption}
+                  placeholder="Empty"
                   disabled={isPending}
                 />
               )}

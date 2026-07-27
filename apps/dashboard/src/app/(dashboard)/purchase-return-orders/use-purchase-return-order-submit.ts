@@ -26,14 +26,7 @@ import {
   WarehouseTransportRegion,
   warehouseTransportRegions,
 } from "@/lib/enums";
-import {
-  COMMON_TEXT,
-  INVOICE_PAYMENT_TERM_LABELS,
-  PURCHASE_ORDER_TYPE_LABELS,
-  PURCHASE_RETURN_ORDER_REASON_LABELS,
-  TRANSPORT_MODE_LABELS,
-  WAREHOUSE_TRANSPORT_REGION_LABELS,
-} from "@/lib/labels";
+import { INVOICE_PAYMENT_TERM_LABELS, PURCHASE_ORDER_TYPE_LABELS, PURCHASE_RETURN_ORDER_REASON_LABELS, TRANSPORT_MODE_LABELS, WAREHOUSE_TRANSPORT_REGION_LABELS } from "@/lib/labels";
 import { ClerkUserOption } from "@/lib/server/clerk";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
@@ -56,7 +49,7 @@ type UsePurchaseReturnOrderSubmitParams = {
   clerkUsers: ClerkUserOption[];
 };
 
-const emptyOpt = { value: "", label: COMMON_TEXT.emptyOption };
+const emptyOpt = { value: "", label: "Empty" };
 
 const makeOptions = <T extends string>(
   values: readonly T[],

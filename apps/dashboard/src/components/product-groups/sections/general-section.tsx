@@ -10,17 +10,13 @@ import {
   articleGroups,
   productShapes,
 } from "@/lib/enums";
-import {
-  ARTICLE_GROUP_LABELS,
-  COMMON_TEXT,
-  PRODUCT_SHAPE_LABELS,
-} from "@/lib/labels";
+import { ARTICLE_GROUP_LABELS, PRODUCT_SHAPE_LABELS } from "@/lib/labels";
 
 type Props = {
   parentGroupOptions: { value: string; label: string }[];
 };
 
-const emptyOption = { value: "", label: COMMON_TEXT.emptyOption };
+const emptyOption = { value: "", label: "Empty" };
 
 const makeEnumOptions = <T extends string>(
   values: readonly T[],

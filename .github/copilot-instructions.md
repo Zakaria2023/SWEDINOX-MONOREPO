@@ -11,7 +11,7 @@
   const handler: React.MouseEventHandler = () => {};
 
   // ✅ Good
-  import type { ReactNode, MouseEventHandler } from "react";
+  import { ReactNode, MouseEventHandler } from "react";
   const foo: ReactNode = null;
   const handler: MouseEventHandler = () => {};
   ```

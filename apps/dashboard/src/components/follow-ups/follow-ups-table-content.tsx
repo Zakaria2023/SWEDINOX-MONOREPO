@@ -9,22 +9,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
-import { COMMON_TEXT } from "@/lib/labels";
+import { daysInSystem } from "@/lib/helpers";
 import Link from "next/link";
 
 type Props = {
   followUps: FollowUpListItem[];
 };
 
-// Number of whole days since the record was created.
-const daysInSystem = (createdAt: Date | string) =>
-  Math.max(
-    0,
-    Math.floor((Date.now() - new Date(createdAt).getTime()) / 86_400_000),
-  );
-
 export const FollowUpsTable = ({ followUps }: Props) => {
-  const na = COMMON_TEXT.notAvailable;
 
   if (followUps.length === 0) {
     return (
@@ -60,14 +52,14 @@ export const FollowUpsTable = ({ followUps }: Props) => {
                     {followUp.companyName}
                   </Link>
                 ) : (
-                  na
+                  "—"
                 )}
               </TableCell>
-              <TableCell>{followUp.date ?? na}</TableCell>
-              <TableCell>{followUp.by ?? na}</TableCell>
-              <TableCell>{followUp.contactPerson ?? na}</TableCell>
+              <TableCell>{followUp.date ?? "—"}</TableCell>
+              <TableCell>{followUp.by ?? "—"}</TableCell>
+              <TableCell>{followUp.contactPerson ?? "—"}</TableCell>
               <TableCell className="max-w-xs truncate">
-                {followUp.text ?? na}
+                {followUp.text ?? "—"}
               </TableCell>
               <TableCell>{followUp.completed ? "Yes" : "No"}</TableCell>
               <TableCell className="text-right">

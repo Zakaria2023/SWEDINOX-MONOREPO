@@ -20,6 +20,36 @@ import {
   vatCodes,
 } from "@/lib/enums";
 
+export const supplierSchema = z.object({
+  supplierCompanyUuid: z.string().min(1, "Supplier is required"),
+  preferred: z.boolean(),
+  ean: z.string().optional(),
+  externalProductCode: z.string().optional(),
+  editing: z.string().optional(),
+  deliveryTime: z.coerce.number(),
+  deliveryTimeUnit: z.enum(deliveryTimeUnits).optional(),
+  moq: z.string(),
+  moqUnit: z.enum(purchasingUnits).optional(),
+  orderSeries: z.coerce.number(),
+  orderSeriesUnit: z.enum(purchasingUnits).optional(),
+});
+
+export type ProductGroupSupplierValues = z.infer<typeof supplierSchema>;
+
+export const EMPTY_SUPPLIER: ProductGroupSupplierValues = {
+  supplierCompanyUuid: "",
+  preferred: false,
+  ean: "",
+  externalProductCode: "",
+  editing: "",
+  deliveryTime: 0,
+  deliveryTimeUnit: undefined,
+  moq: "0.000",
+  moqUnit: undefined,
+  orderSeries: 0,
+  orderSeriesUnit: undefined,
+};
+
 export const productGroupSchema = z.object({
   parentUuid: z.string().nullable().optional(),
   name: z.string().min(1, "Name is required"),
@@ -153,17 +183,8 @@ export const productGroupSchema = z.object({
   maxSalesNetPrice: z.string(),
   handlingCosts: z.string(),
 
-  // Supplier
-  supplierCompanyUuid: z.string().nullable().optional(),
-  supplierPreferred: z.boolean(),
-  supplierEan: z.string().optional(),
-  supplierExternalProductCode: z.string().optional(),
-  supplierEditing: z.string().optional(),
-  supplierDeliveryTime: z.coerce.number(),
-  supplierDeliveryTimeUnit: z.enum(deliveryTimeUnits).optional(),
-  supplierMoq: z.string(),
-  supplierMoqUnit: z.enum(purchasingUnits).optional(),
-  supplierOrderSeries: z.coerce.number(),
+  // Suppliers (one row per supplier; one flagged preferred)
+  suppliers: z.array(supplierSchema),
 
   // Documents
   documents: z
@@ -291,15 +312,6 @@ export const DEFAULT_PRODUCT_GROUP: ProductGroupFormValues = {
   maxSalesLineQty: "0.000",
   maxSalesNetPrice: "0.00",
   handlingCosts: "0.00",
-  supplierCompanyUuid: null,
-  supplierPreferred: false,
-  supplierEan: "",
-  supplierExternalProductCode: "",
-  supplierEditing: "",
-  supplierDeliveryTime: 0,
-  supplierDeliveryTimeUnit: undefined,
-  supplierMoq: "0.000",
-  supplierMoqUnit: undefined,
-  supplierOrderSeries: 0,
+  suppliers: [],
   documents: [],
 };

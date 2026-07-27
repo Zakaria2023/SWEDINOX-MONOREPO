@@ -1,0 +1,101 @@
+"use client";
+
+import { DeliveryLineItem } from "@/app/(dashboard)/deliveries/actions";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/shadcn/table";
+import {
+  DELIVERY_STATUS_LABELS,
+  ORDER_LINE_STATUS_LABELS,
+} from "@/lib/labels";
+
+type Props = {
+  lines: DeliveryLineItem[];
+};
+
+export const BlockedDeliveriesTable = ({ lines }: Props) => (
+  <div className="overflow-x-auto rounded-md border">
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Customer</TableHead>
+          <TableHead className="text-right">Order</TableHead>
+          <TableHead>Customer reference</TableHead>
+          <TableHead>Order type</TableHead>
+          <TableHead className="text-right">Line</TableHead>
+          <TableHead>Line status</TableHead>
+          <TableHead>Product</TableHead>
+          <TableHead className="text-right">Qty(p)</TableHead>
+          <TableHead className="text-right">Qty(call-off)</TableHead>
+          <TableHead className="text-right">Kg(p)</TableHead>
+          <TableHead className="text-right">Gross price</TableHead>
+          <TableHead className="text-right">Amount</TableHead>
+          <TableHead>Delivery date</TableHead>
+          <TableHead>Delivery status</TableHead>
+          <TableHead>Blocking reason</TableHead>
+          <TableHead>Reservation date</TableHead>
+          <TableHead className="text-right">Qty(res)</TableHead>
+          <TableHead className="text-right">Kg(res)</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {lines.length === 0 ? (
+          <TableRow>
+            <TableCell
+              colSpan={18}
+              className="h-24 text-center text-muted-foreground"
+            >
+              No blocked deliveries found.
+            </TableCell>
+          </TableRow>
+        ) : (
+          lines.map((row) => (
+            <TableRow key={row.uuid}>
+              <TableCell className="font-medium">
+                {row.customerName ?? "—"}
+              </TableCell>
+              <TableCell className="text-right">{row.orderId ?? "—"}</TableCell>
+              <TableCell>{row.customerRef ?? "—"}</TableCell>
+              <TableCell>{row.orderCategory ?? "—"}</TableCell>
+              <TableCell className="text-right">
+                {row.lineNumber ?? "—"}
+              </TableCell>
+              <TableCell>
+                {row.lineStatus
+                  ? ORDER_LINE_STATUS_LABELS[row.lineStatus]
+                  : "—"}
+              </TableCell>
+              <TableCell>{row.productName ?? "—"}</TableCell>
+              <TableCell className="text-right">{row.qtyPlanned}</TableCell>
+              <TableCell className="text-right">{row.qtyCallOff}</TableCell>
+              <TableCell className="text-right">{row.kgPlanned}</TableCell>
+              <TableCell className="text-right whitespace-nowrap">
+                € {row.grossPrice}
+              </TableCell>
+              <TableCell className="text-right whitespace-nowrap">
+                € {row.amount}
+              </TableCell>
+              <TableCell>{row.deliveryDate ?? "—"}</TableCell>
+              <TableCell>
+                {row.deliveryStatus
+                  ? DELIVERY_STATUS_LABELS[row.deliveryStatus]
+                  : "—"}
+              </TableCell>
+              <TableCell className="text-muted-foreground">
+                {row.blockingReason ?? "—"}
+              </TableCell>
+              <TableCell>{row.reservationDate ?? "—"}</TableCell>
+              <TableCell className="text-right">{row.qtyReserved}</TableCell>
+              <TableCell className="text-right">{row.kgReserved}</TableCell>
+            </TableRow>
+          ))
+        )}
+      </TableBody>
+    </Table>
+  </div>
+);
