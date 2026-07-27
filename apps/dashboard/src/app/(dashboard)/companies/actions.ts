@@ -60,6 +60,7 @@ import {
   InsertCustomerStock,
   SelectCustomerStock,
 } from "@/db/schema/customer-stock";
+import { sendCompanyWelcomeEmails } from "@/emails/actions";
 import { PurchaseCompanyType } from "@/lib/enums";
 import { describeError, generateUuid } from "@/lib/helpers";
 import { currentUser } from "@clerk/nextjs/server";
@@ -635,6 +636,17 @@ export const createCompany = async (
         });
       }
     });
+
+    // Only sent once the transaction has committed — a rolled back company must
+    // never leave welcome emails behind, and an unsent email must never roll a
+    // committed company back (mail can't be undone anyway).
+    const contactEmails = contacts
+      .flatMap((contact) => [contact.email, contact.addressEmail])
+      .filter((email): email is string => !!email);
+
+    if (contactEmails.length > 0) {
+      await sendCompanyWelcomeEmails(companyFields.companyName, contactEmails);
+    }
 
     return { success: true, companyUuid: uuid };
   } catch (error) {

@@ -55,7 +55,6 @@ import {
   DebtorCompanyOption,
   VisitReportInput,
 } from "./actions";
-import { sendCompanyWelcomeEmails } from "@/emails/actions";
 import {
   AddressFormValues,
   CommunicationSettingFormValues,
@@ -1842,18 +1841,6 @@ export const useCompanySubmit = ({
           representative: report.representative ?? contactLabel(contacts[0]),
         };
       });
-
-      const contactEmails = [
-        ...new Set(
-          contacts
-            .flatMap((contact) => [contact.email, contact.addressEmail])
-            .filter((email): email is string => !!email),
-        ),
-      ];
-
-      if (contactEmails.length > 0) {
-        await sendCompanyWelcomeEmails(companyName, contactEmails);
-      }
 
       const companyData = {
         companyName,
