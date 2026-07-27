@@ -14,6 +14,7 @@ import {
   getContactsForCompany,
 } from "@/app/(dashboard)/contacts/actions";
 import { ContractForProjectOption } from "@/app/(dashboard)/contracts/actions";
+import { ProductPricingOption } from "@/app/(dashboard)/products/actions";
 import { SelectOption } from "@/components/shadcn/select";
 import {
   DeliveryTerm,
@@ -25,17 +26,26 @@ import {
   OrderWeightType,
   orderWeightTypes,
 } from "@/lib/enums";
+import {
+  computeQuoteSummary,
+  getQuoteVatRatePercent,
+  previewQuoteLine,
+} from "@/lib/helpers";
 import { DELIVERY_TERM_LABELS, INVOICE_PAYMENT_TERM_LABELS, ORDER_METHOD_LABELS, ORDER_WEIGHT_TYPE_LABELS } from "@/lib/labels";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
-import { createQuote, QuoteActionResult } from "./actions";
+import { createQuote, QuoteActionResult, updateQuote } from "./actions";
 import { DEFAULT_QUOTE, QuoteFormValues, quoteSchema } from "./validation";
 
 type UseQuoteSubmitParams = {
   companies: CompanyOption[];
   contracts: ContractForProjectOption[];
+  products: ProductPricingOption[];
+  /** The quote being edited. Omitted when creating a new one. */
+  quoteUuid?: string;
+  defaultValues?: QuoteFormValues;
 };
 
 const emptyOpt = { value: "", label: "Empty" };
@@ -55,6 +65,9 @@ const addressLabel = (a: AddressOption) =>
 export const useQuoteSubmit = ({
   companies,
   contracts,
+  products,
+  quoteUuid,
+  defaultValues,
 }: UseQuoteSubmitParams) => {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -66,12 +79,44 @@ export const useQuoteSubmit = ({
 
   const form = useForm<QuoteFormValues>({
     resolver: zodResolver(quoteSchema),
-    defaultValues: DEFAULT_QUOTE,
+    defaultValues: defaultValues ?? DEFAULT_QUOTE,
   });
 
   const isPickup = form.watch("isPickup");
   const isConsignment = form.watch("isConsignment");
   const deliveryType = form.watch("deliveryType");
+  const items = form.watch("items");
+  const calculateVatIfApplicable = form.watch("calculateVatIfApplicable");
+
+  // The summary is never typed in — it is recomputed from the lines on every
+  // keystroke here, and again on the server from the prices it actually saves.
+  const summary = computeQuoteSummary({
+    lines: items.map((item) => {
+      const product = products.find((p) => p.uuid === item.productUuid);
+      const line = previewQuoteLine({
+        quantity: Number(item.quantity),
+        lengthMm: item.lengthMm ? Number(item.lengthMm) : null,
+        basePrice: Number(product?.basePrice ?? 0),
+        replacementPrice: Number(product?.replacementPrice ?? 0),
+        purchasePrice: Number(product?.averagePurchasePrice ?? 0),
+        theoreticalWeight: Number(product?.theoreticalWeight ?? 0),
+        productLengthMm: Number(product?.length ?? 0),
+        minProfitMargin: 0,
+      });
+
+      return {
+        amount: line.amount,
+        costAmount: line.costAmount,
+        replacementCost: line.replacementCost,
+        weightKg: line.weightKg,
+        theoreticalWeightKg: line.weightKg,
+      };
+    }),
+    // Only the quote's own flag is known here. Whether the customer is one VAT
+    // is calculated for is settled server-side on save, so a VAT-exempt
+    // customer can turn this preview's VAT into 0 when the quote is written.
+    vatRatePercent: getQuoteVatRatePercent(calculateVatIfApplicable, true),
+  });
 
   // Only show customer/prospect companies
   const customerCompanies = companies.filter(
@@ -135,16 +180,7 @@ export const useQuoteSubmit = ({
     INVOICE_PAYMENT_TERM_LABELS as Record<InvoicePaymentTerm, string>,
   );
 
-  const handleCompanyChange = (uuid: string) => {
-    form.setValue("companyUuid", uuid);
-    form.setValue("contactUuid", "");
-    form.setValue("projectUuid", "");
-    form.setValue("deliveryAddressUuid", "");
-    form.setValue("billingAddressUuid", "");
-    setContacts([]);
-    setProjects([]);
-    setAddresses([]);
-    if (!uuid) return;
+  const loadCompanyData = useCallback((uuid: string) => {
     setIsLoadingCompanyData(true);
     Promise.all([
       getContactsForCompany(uuid),
@@ -156,13 +192,39 @@ export const useQuoteSubmit = ({
       setAddresses(newAddresses);
       setIsLoadingCompanyData(false);
     });
+  }, []);
+
+  const handleCompanyChange = (uuid: string) => {
+    form.setValue("companyUuid", uuid);
+    form.setValue("contactUuid", "");
+    form.setValue("projectUuid", "");
+    form.setValue("deliveryAddressUuid", "");
+    form.setValue("billingAddressUuid", "");
+    setContacts([]);
+    setProjects([]);
+    setAddresses([]);
+    if (!uuid) {
+      return;
+    }
+    loadCompanyData(uuid);
   };
 
-  const handleCancel = () => router.push("/quotes");
+  // An existing quote already has a customer picked, so its contacts, projects
+  // and addresses have to be fetched before the form can show what is selected.
+  const editingCompanyUuid = defaultValues?.companyUuid;
+  useEffect(() => {
+    if (!editingCompanyUuid) {
+      return;
+    }
+    loadCompanyData(editingCompanyUuid);
+  }, [editingCompanyUuid, loadCompanyData]);
+
+  const handleCancel = () =>
+    router.push(quoteUuid ? `/quotes/${quoteUuid}` : "/quotes");
 
   const onSubmit = form.handleSubmit((values) => {
     startTransition(async () => {
-      const result = await createQuote({
+      const fields = {
         companyUuid: values.companyUuid,
         contactUuid: values.contactUuid || null,
         customerRef: values.customerRef || null,
@@ -228,7 +290,9 @@ export const useQuoteSubmit = ({
 
         remarks: values.remarks || null,
         documents: values.documents?.length ? values.documents : null,
-      }, values.items.map((item) => ({
+      };
+
+      const lines = values.items.map((item) => ({
         productUuid: item.productUuid,
         quantity: item.quantity,
         unit: item.unit,
@@ -236,11 +300,19 @@ export const useQuoteSubmit = ({
         widthMm: item.widthMm ? Number(item.widthMm) : null,
         thicknessMm: item.thicknessMm || null,
         options: item.options || null,
-      })));
+      }));
 
+      // Updating redirects from inside the action, so only the create path has
+      // a result worth navigating on.
+      if (quoteUuid) {
+        setState(await updateQuote(quoteUuid, fields, lines));
+        return;
+      }
+
+      const result = await createQuote(fields, lines);
       setState(result);
-      if (result.success) {
-        router.push("/quotes");
+      if (result.success && result.quoteUuid) {
+        router.push(`/quotes/${result.quoteUuid}`);
       }
     });
   });
@@ -250,6 +322,8 @@ export const useQuoteSubmit = ({
     isPending,
     onSubmit,
     state,
+    summary,
+    isEditing: Boolean(quoteUuid),
     isPickup,
     isConsignment,
     deliveryType,

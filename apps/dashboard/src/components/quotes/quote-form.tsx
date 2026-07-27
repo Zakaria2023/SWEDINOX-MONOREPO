@@ -5,12 +5,14 @@ import { useQuoteSubmit } from "@/app/(dashboard)/quotes/use-quote-submit";
 import { ClerkUserOption } from "@/lib/server/clerk";
 import { CompanyOption } from "@/app/(dashboard)/companies/actions";
 import { ContractForProjectOption } from "@/app/(dashboard)/contracts/actions";
-import { ProductOption } from "@/app/(dashboard)/products/actions";
+import { ProductPricingOption } from "@/app/(dashboard)/products/actions";
+import { QuoteFormValues } from "@/app/(dashboard)/quotes/validation";
 import { Input } from "@/components/shadcn/input";
 import { Textarea } from "@/components/shadcn/textarea";
 import { Select } from "@/components/shadcn/select";
 import { DocumentUploader } from "@/components/document-uploader";
 import { QuoteLinesEditor } from "@/components/quotes/quote-lines-editor";
+import { QuoteSummaryPanel } from "@/components/quotes/quote-summary";
 import { FormActions } from "@/components/ui/form-actions";
 import { FormError } from "@/components/ui/form-error";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
@@ -21,7 +23,10 @@ type Props = {
   companies: CompanyOption[];
   clerkUsers: ClerkUserOption[];
   contracts: ContractForProjectOption[];
-  products: ProductOption[];
+  products: ProductPricingOption[];
+  /** Set when editing an existing quote; omitted when creating one. */
+  quoteUuid?: string;
+  defaultValues?: QuoteFormValues;
 };
 
 export const QuoteForm = ({
@@ -29,12 +34,16 @@ export const QuoteForm = ({
   clerkUsers,
   contracts,
   products,
+  quoteUuid,
+  defaultValues,
 }: Props) => {
   const {
     form,
     isPending,
     onSubmit,
     state,
+    summary,
+    isEditing,
     isPickup,
     isConsignment,
     deliveryType,
@@ -50,7 +59,13 @@ export const QuoteForm = ({
     isLoadingCompanyData,
     handleCompanyChange,
     handleCancel,
-  } = useQuoteSubmit({ companies, contracts });
+  } = useQuoteSubmit({
+    companies,
+    contracts,
+    products,
+    quoteUuid,
+    defaultValues,
+  });
 
   const {
     register,
@@ -562,7 +577,17 @@ export const QuoteForm = ({
       </section>
 
       {/* ── Lines ─────────────────────────────────────────────────────── */}
-      <QuoteLinesEditor control={control} products={products} />
+      <QuoteLinesEditor
+        control={control}
+        products={products}
+        isPickup={isPickup}
+      />
+
+      {/* ── Summary ───────────────────────────────────────────────────── */}
+      <QuoteSummaryPanel
+        summary={summary}
+        note="An estimate from list prices. The saved quote is recalculated with the customer's contract terms."
+      />
 
       {/* ── Remarks ───────────────────────────────────────────────────── */}
       <section className="space-y-4">
@@ -617,8 +642,8 @@ export const QuoteForm = ({
       </section>
 
       <FormActions
-        submitLabel="Create Quote"
-        pendingLabel="Creating..."
+        submitLabel={isEditing ? "Save Quote" : "Create Quote"}
+        pendingLabel={isEditing ? "Saving..." : "Creating..."}
         isPending={isPending}
         onCancel={handleCancel}
       />

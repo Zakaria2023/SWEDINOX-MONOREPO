@@ -578,6 +578,19 @@ export const getInvoiceVatRatePercent = (
 ): number => (invoiceChargesVat(scenario) ? STANDARD_INVOICE_VAT_RATE : 0);
 
 /**
+ * The VAT rate (percentage) a quote's summary should apply. VAT is only charged
+ * when the quote asks for it *and* the customer is one that VAT is calculated
+ * for — a VAT-exempt customer never gets VAT on a quote that ticks the box.
+ */
+export const getQuoteVatRatePercent = (
+  calculateVatIfApplicable: boolean | null | undefined,
+  companyCalculatesVat: boolean | null | undefined,
+): number =>
+  calculateVatIfApplicable && companyCalculatesVat !== false
+    ? STANDARD_INVOICE_VAT_RATE
+    : 0;
+
+/**
  * The direction a stock movement pushes the on-hand quantity: `in` adds, `out`
  * removes.
  */
@@ -1063,4 +1076,366 @@ export const roundToOrderQty = (
     return Math.ceil(target / orderSeries) * orderSeries;
   }
   return target;
+};
+
+/**
+ * One revenue-bearing block of a quote's summary: what it brings in, what it
+ * makes against actual cost, and what it makes against today's replacement
+ * price. The two profit figures diverge whenever the market has moved since the
+ * goods were bought, which is exactly what the reference system's side-by-side
+ * "Profit" / "Profit w.r.t. Repl. price" columns exist to show.
+ */
+export type QuoteSummaryBlock = {
+  revenue: number;
+  profit: number;
+  profitPercent: number;
+  profitReplPrice: number;
+  profitReplPricePercent: number;
+};
+
+/**
+ * A material line as the summary reads it. `amount` is the revenue the line
+ * brings in; the two costs are line totals, not unit prices.
+ */
+export type QuoteSummaryLineInput = {
+  amount: number;
+  costAmount: number;
+  replacementCost: number;
+  weightKg: number;
+  theoreticalWeightKg: number;
+};
+
+/** An option line: revenue and its own cost, with no replacement-price basis. */
+export type QuoteSummaryOptionInput = {
+  amount: number;
+  cost: number;
+};
+
+/**
+ * A surcharge: the amount charged and the profit it carries. Surcharges are
+ * quoted at an agreed margin rather than costed per unit, so the profit is
+ * given rather than derived.
+ */
+export type QuoteSummarySurchargeInput = {
+  amount: number;
+  profit: number;
+};
+
+export type QuoteSummaryInput = {
+  lines: QuoteSummaryLineInput[];
+  options?: QuoteSummaryOptionInput[];
+  surcharges?: QuoteSummarySurchargeInput[];
+  transportCosts?: number;
+  handlingCosts?: number;
+  /** VAT percentage to apply to the net total. 0 leaves the quote VAT-free. */
+  vatRatePercent?: number;
+};
+
+export type QuoteSummary = {
+  materials: QuoteSummaryBlock;
+  options: QuoteSummaryBlock;
+  surcharges: QuoteSummaryBlock;
+  transportCosts: number;
+  handlingCosts: number;
+  total: QuoteSummaryBlock;
+  vatAmount: number;
+  totalInclVat: number;
+  avgKiloPrice: number;
+  totalWeightKg: number;
+  theoreticalWeightKg: number;
+};
+
+/**
+ * What a quote line is worth once its net price is known: the two cost bases,
+ * the two profits they produce, the weight and the running metres.
+ */
+export type QuoteLineFinancialsInput = {
+  netPrice: number;
+  quantity: number;
+  /** Average purchase price per unit. Falls back to the replacement price. */
+  purchasePrice: number;
+  replacementPrice: number;
+  /** Weight of one unit, used for both the line weight and the kilo price. */
+  theoreticalWeight: number;
+  /** The line's own length in mm, or the product's when the line has none. */
+  lengthMm: number;
+  /** Margin floor from the product group; 0 disables the too-low flag. */
+  minProfitMargin: number;
+};
+
+export type QuoteLineFinancials = {
+  amount: number;
+  purchasePrice: number;
+  costPrice: number;
+  costAmount: number;
+  replacementCost: number;
+  profit: number;
+  profitMargin: number;
+  profitReplPrice: number;
+  weightKg: number;
+  m1PerPiece: number;
+  profitTooLow: boolean;
+};
+
+/**
+ * Derives everything a quote line reports in money from its net price.
+ *
+ * The net price itself is resolved elsewhere — on the server from the contract,
+ * on the client from the list price for the pre-save preview — but the
+ * arithmetic on top of it is the same either way, so both go through here and
+ * the preview can never quietly disagree with what gets saved.
+ *
+ * A product that has never been purchased has no average purchase price, so its
+ * replacement price stands in: the goods cost *something*, and pretending
+ * otherwise would show the line as pure profit.
+ */
+export const quoteLineFinancials = ({
+  netPrice,
+  quantity,
+  purchasePrice,
+  replacementPrice,
+  theoreticalWeight,
+  lengthMm,
+  minProfitMargin,
+}: QuoteLineFinancialsInput): QuoteLineFinancials => {
+  const amount = netPrice * quantity;
+  const costPrice = purchasePrice > 0 ? purchasePrice : replacementPrice;
+  const costAmount = costPrice * quantity;
+  const replacementCost = replacementPrice * quantity;
+  const profit = amount - costAmount;
+  const profitMargin = profitMarginPercent(amount, profit);
+
+  return {
+    amount,
+    purchasePrice,
+    costPrice,
+    costAmount,
+    replacementCost,
+    profit,
+    profitMargin,
+    profitReplPrice: amount - replacementCost,
+    weightKg: quantity * theoreticalWeight,
+    m1PerPiece: lengthMm / 1000,
+    profitTooLow: minProfitMargin > 0 && profitMargin < minProfitMargin,
+  };
+};
+
+export type QuoteLinePreviewInput = {
+  quantity: number;
+  lengthMm: number | null;
+  basePrice: number;
+  replacementPrice: number;
+  purchasePrice: number;
+  theoreticalWeight: number;
+  productLengthMm: number;
+  minProfitMargin: number;
+};
+
+/**
+ * What a line editor shows for a line that has not been saved yet: the same
+ * figures the server will store, priced off the list price alone.
+ *
+ * The contract's agreed net price and discounts are not applied here — the
+ * client has no business holding a customer's pricing terms — so a saved line
+ * can come out cheaper than this preview, never dearer. The screen says as much
+ * next to the grid.
+ */
+export const previewQuoteLine = ({
+  quantity,
+  lengthMm,
+  basePrice,
+  replacementPrice,
+  purchasePrice,
+  theoreticalWeight,
+  productLengthMm,
+  minProfitMargin,
+}: QuoteLinePreviewInput): QuoteLineFinancials & { netPrice: number } => {
+  const netPrice = basePrice > 0 ? basePrice : replacementPrice;
+
+  return {
+    netPrice,
+    ...quoteLineFinancials({
+      netPrice,
+      quantity,
+      purchasePrice,
+      replacementPrice,
+      theoreticalWeight,
+      lengthMm: lengthMm !== null && lengthMm > 0 ? lengthMm : productLengthMm,
+      minProfitMargin,
+    }),
+  };
+};
+
+/**
+ * The summary columns as the quote header stores them — decimal strings, any of
+ * which may be null on a row written before the column existed.
+ */
+export type QuoteSummarySnapshot = {
+  materialsRevenue: string | null;
+  materialsProfit: string | null;
+  materialsProfitReplPrice: string | null;
+  optionsRevenue: string | null;
+  optionsProfit: string | null;
+  optionsProfitReplPrice: string | null;
+  surchargesRevenue: string | null;
+  surchargesProfit: string | null;
+  surchargesProfitReplPrice: string | null;
+  transportCosts: string | null;
+  handlingCosts: string | null;
+  totalExclVat: string | null;
+  vatAmount: string | null;
+  totalInclVat: string | null;
+  avgKiloPrice: string | null;
+  totalWeightKg: string | null;
+  theorWeightKg: string | null;
+};
+
+const sum = (values: number[]): number =>
+  values.reduce((total, value) => total + value, 0);
+
+const summaryBlock = (
+  revenue: number,
+  profit: number,
+  profitReplPrice: number,
+): QuoteSummaryBlock => ({
+  revenue,
+  profit,
+  profitPercent: profitMarginPercent(revenue, profit),
+  profitReplPrice,
+  profitReplPricePercent: profitMarginPercent(revenue, profitReplPrice),
+});
+
+/**
+ * Rolls a quote's lines, options and surcharges up into the read-only summary
+ * shown on the quote screen.
+ *
+ * The shape follows the reference ERP exactly:
+ *
+ *   - Materials, options and surcharges each report revenue plus two profits —
+ *     against actual cost, and against replacement price.
+ *   - Transport and handling are costs with no revenue of their own, so they
+ *     only ever pull the profit columns down; they never touch revenue.
+ *   - The total line is the three revenue blocks added up, less those two costs.
+ *   - VAT applies to the net total, and the average kilo price is the net total
+ *     spread over the delivered weight.
+ *
+ * Nothing here is persisted by the caller's hand: the quote header stores this
+ * result as a snapshot so the list and the detail screen agree, but the numbers
+ * are always derived from the lines, never typed in.
+ */
+export const computeQuoteSummary = ({
+  lines,
+  options = [],
+  surcharges = [],
+  transportCosts = 0,
+  handlingCosts = 0,
+  vatRatePercent = 0,
+}: QuoteSummaryInput): QuoteSummary => {
+  const materialsRevenue = sum(lines.map((line) => line.amount));
+  const materials = summaryBlock(
+    materialsRevenue,
+    materialsRevenue - sum(lines.map((line) => line.costAmount)),
+    materialsRevenue - sum(lines.map((line) => line.replacementCost)),
+  );
+
+  // Options carry no replacement price of their own — the processing costs what
+  // it costs — so both profit columns report the same figure.
+  const optionsRevenue = sum(options.map((option) => option.amount));
+  const optionsProfit = optionsRevenue - sum(options.map((o) => o.cost));
+  const optionsBlock = summaryBlock(
+    optionsRevenue,
+    optionsProfit,
+    optionsProfit,
+  );
+
+  const surchargesRevenue = sum(surcharges.map((s) => s.amount));
+  const surchargesProfit = sum(surcharges.map((s) => s.profit));
+  const surchargesBlock = summaryBlock(
+    surchargesRevenue,
+    surchargesProfit,
+    surchargesProfit,
+  );
+
+  const totalRevenue =
+    materials.revenue + optionsBlock.revenue + surchargesBlock.revenue;
+  const nonRevenueCosts = transportCosts + handlingCosts;
+
+  const total = summaryBlock(
+    totalRevenue,
+    materials.profit +
+      optionsBlock.profit +
+      surchargesBlock.profit -
+      nonRevenueCosts,
+    materials.profitReplPrice +
+      optionsBlock.profitReplPrice +
+      surchargesBlock.profitReplPrice -
+      nonRevenueCosts,
+  );
+
+  const totalWeightKg = sum(lines.map((line) => line.weightKg));
+  const vatAmount = totalRevenue * (vatRatePercent / 100);
+
+  return {
+    materials,
+    options: optionsBlock,
+    surcharges: surchargesBlock,
+    transportCosts,
+    handlingCosts,
+    total,
+    vatAmount,
+    totalInclVat: totalRevenue + vatAmount,
+    avgKiloPrice: totalWeightKg === 0 ? 0 : totalRevenue / totalWeightKg,
+    totalWeightKg,
+    theoreticalWeightKg: sum(lines.map((line) => line.theoreticalWeightKg)),
+  };
+};
+
+/**
+ * Reads the summary a quote header already stores back into the shape the
+ * summary panel renders. The percentages are recomputed rather than stored,
+ * since a percentage of a stored revenue can never drift from it.
+ */
+export const quoteSummaryFromSnapshot = (
+  quote: QuoteSummarySnapshot,
+): QuoteSummary => {
+  const transportCosts = Number(quote.transportCosts ?? 0);
+  const handlingCosts = Number(quote.handlingCosts ?? 0);
+
+  return {
+    materials: summaryBlock(
+      Number(quote.materialsRevenue ?? 0),
+      Number(quote.materialsProfit ?? 0),
+      Number(quote.materialsProfitReplPrice ?? 0),
+    ),
+    options: summaryBlock(
+      Number(quote.optionsRevenue ?? 0),
+      Number(quote.optionsProfit ?? 0),
+      Number(quote.optionsProfitReplPrice ?? 0),
+    ),
+    surcharges: summaryBlock(
+      Number(quote.surchargesRevenue ?? 0),
+      Number(quote.surchargesProfit ?? 0),
+      Number(quote.surchargesProfitReplPrice ?? 0),
+    ),
+    transportCosts,
+    handlingCosts,
+    total: summaryBlock(
+      Number(quote.totalExclVat ?? 0),
+      Number(quote.materialsProfit ?? 0) +
+        Number(quote.optionsProfit ?? 0) +
+        Number(quote.surchargesProfit ?? 0) -
+        transportCosts -
+        handlingCosts,
+      Number(quote.materialsProfitReplPrice ?? 0) +
+        Number(quote.optionsProfitReplPrice ?? 0) +
+        Number(quote.surchargesProfitReplPrice ?? 0) -
+        transportCosts -
+        handlingCosts,
+    ),
+    vatAmount: Number(quote.vatAmount ?? 0),
+    totalInclVat: Number(quote.totalInclVat ?? 0),
+    avgKiloPrice: Number(quote.avgKiloPrice ?? 0),
+    totalWeightKg: Number(quote.totalWeightKg ?? 0),
+    theoreticalWeightKg: Number(quote.theorWeightKg ?? 0),
+  };
 };

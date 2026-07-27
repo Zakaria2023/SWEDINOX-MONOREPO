@@ -74,6 +74,37 @@ export const QuoteItems = mysqlTable(
       "0.00",
     ),
 
+    // ── Cost basis ────────────────────────────────────────────────────────────
+    // Two costs are kept per line because the summary reports profit twice: once
+    // against what the goods actually cost (`purchasePrice`, the average
+    // purchase price when the line was quoted) and once against what it would
+    // cost to re-buy them today (`replacementPrice`). A falling market makes the
+    // second number the honest one, which is why the reference system shows both
+    // side by side.
+    purchasePrice: decimal("purchase_price", {
+      precision: 15,
+      scale: 2,
+    }).default("0.00"),
+    replacementPrice: decimal("replacement_price", {
+      precision: 15,
+      scale: 2,
+    }).default("0.00"),
+    costAmount: decimal("cost_amount", { precision: 15, scale: 2 }).default(
+      "0.00",
+    ),
+    profitReplPrice: decimal("profit_repl_price", {
+      precision: 15,
+      scale: 2,
+    }).default("0.00"),
+    // Flagged when the line's margin falls under the minimum the product group
+    // allows, so the salesperson sees it before the quote goes out.
+    profitTooLow: boolean("profit_too_low").default(false),
+
+    // Running metres per piece — the "M1(p)" column on the lines grid.
+    m1PerPiece: decimal("m1_per_piece", { precision: 15, scale: 3 }).default(
+      "0.000",
+    ),
+
     // ── Commercial context ────────────────────────────────────────────────────
     isConsignment: boolean("is_consignment").default(false),
     affiliateCompany: varchar("affiliate_company", { length: 255 }),

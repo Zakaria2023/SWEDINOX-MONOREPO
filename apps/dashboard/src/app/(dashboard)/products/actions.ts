@@ -27,6 +27,27 @@ export type ProductOption = Pick<
   "uuid" | "productCode" | "name" | "productGroupUuid"
 >;
 
+// Carries the product's pricing and weight alongside its identity, so a line
+// editor can show what a line is worth before it is saved. The prices are still
+// re-resolved on the server when the document is written — these are for the
+// on-screen preview only, which is why plain pickers keep using ProductOption.
+export type ProductPricingOption = ProductOption &
+  Pick<
+    SelectProducts,
+    | "basePrice"
+    | "replacementPrice"
+    | "averagePurchasePrice"
+    | "theoreticalWeight"
+    | "priceUnit"
+    | "stockUnit"
+    | "length"
+  > & {
+    productGroupName: SelectProductGroups["name"] | null;
+    minProfitMarginStock: SelectProductGroups["minProfitMarginStock"] | null;
+    minProfitMarginExWorks: SelectProductGroups["minProfitMarginExWorks"] | null;
+    qualityStandard: SelectProductGroups["standardsQuality"] | null;
+  };
+
 export const getProducts = async (): Promise<ProductListItem[]> => {
   try {
     return await db
@@ -74,6 +95,33 @@ export const getProductsForCompany = async (
     })
     .from(Products)
     .where(eq(Products.companyUuid, companyUuid))
+    .orderBy(asc(Products.productCode));
+
+// The catalogue as a quote/order line editor needs it: identity plus the prices
+// and weights that let the grid total a line the moment it is added, and the
+// product group's margin floor so a thin line can be flagged on the spot.
+export const getProductsForPricing = async (): Promise<ProductPricingOption[]> =>
+  db
+    .select({
+      uuid: Products.uuid,
+      productCode: Products.productCode,
+      name: Products.name,
+      productGroupUuid: Products.productGroupUuid,
+      basePrice: Products.basePrice,
+      replacementPrice: Products.replacementPrice,
+      averagePurchasePrice: Products.averagePurchasePrice,
+      theoreticalWeight: Products.theoreticalWeight,
+      priceUnit: Products.priceUnit,
+      stockUnit: Products.stockUnit,
+      length: Products.length,
+      productGroupName: ProductGroups.name,
+      minProfitMarginStock: ProductGroups.minProfitMarginStock,
+      minProfitMarginExWorks: ProductGroups.minProfitMarginExWorks,
+      qualityStandard: ProductGroups.standardsQuality,
+    })
+    .from(Products)
+    .leftJoin(ProductGroups, eq(Products.productGroupUuid, ProductGroups.uuid))
+    .where(isNull(Products.companyUuid))
     .orderBy(asc(Products.productCode));
 
 export const createProduct = async (

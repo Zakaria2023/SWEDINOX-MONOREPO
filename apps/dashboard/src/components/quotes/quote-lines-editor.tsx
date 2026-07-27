@@ -1,6 +1,6 @@
 "use client";
 
-import { ProductOption } from "@/app/(dashboard)/products/actions";
+import { ProductPricingOption } from "@/app/(dashboard)/products/actions";
 import { QuoteFormValues } from "@/app/(dashboard)/quotes/validation";
 import { Button } from "@/components/shadcn/button";
 import { Input } from "@/components/shadcn/input";
@@ -15,14 +15,22 @@ import {
 } from "@/components/shadcn/table";
 import { FormLabel } from "@/components/ui/form-field";
 import { stockUnits } from "@/lib/enums";
-import { STOCK_UNIT_LABELS } from "@/lib/labels";
-import { Plus, Trash2 } from "lucide-react";
+import {
+  formatMoney,
+  formatNumber,
+  formatPercent,
+  previewQuoteLine,
+} from "@/lib/helpers";
+import { PRODUCT_QUALITY_STANDARD_LABELS, STOCK_UNIT_LABELS } from "@/lib/labels";
+import { AlertTriangle, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Control, useFieldArray } from "react-hook-form";
 
 type Props = {
   control: Control<QuoteFormValues>;
-  products: ProductOption[];
+  products: ProductPricingOption[];
+  /** Ex-works quotes are held to the ex-works margin floor. */
+  isPickup: boolean;
 };
 
 type Draft = {
@@ -50,7 +58,7 @@ const unitOptions = stockUnits.map((unit) => ({
   label: STOCK_UNIT_LABELS[unit],
 }));
 
-export const QuoteLinesEditor = ({ control, products }: Props) => {
+export const QuoteLinesEditor = ({ control, products, isPickup }: Props) => {
   const { fields, append, remove } = useFieldArray({ control, name: "items" });
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
   const [error, setError] = useState<string | null>(null);
@@ -62,11 +70,6 @@ export const QuoteLinesEditor = ({ control, products }: Props) => {
       label: `${product.productCode} — ${product.name}`,
     })),
   ];
-
-  const productName = (uuid: string) => {
-    const product = products.find((p) => p.uuid === uuid);
-    return product ? `${product.productCode} — ${product.name}` : uuid;
-  };
 
   const addLine = () => {
     if (!draft.productUuid) {
@@ -92,11 +95,17 @@ export const QuoteLinesEditor = ({ control, products }: Props) => {
 
   return (
     <section className="space-y-4">
-      <h2 className="border-b pb-2 text-base font-semibold">Lines</h2>
+      <div className="flex items-baseline justify-between border-b pb-2">
+        <h2 className="text-base font-semibold">Quote lines</h2>
+        <span className="text-xs text-muted-foreground">
+          {fields.length} {fields.length === 1 ? "line" : "lines"}
+        </span>
+      </div>
+
       <p className="text-xs text-muted-foreground">
-        Prices are calculated when you save, from the product price list and the
-        customer&apos;s contract (agreed net price, otherwise base price less the
-        contract&apos;s discounts).
+        Prices below are calculated from the product price list. The contract&apos;s
+        agreed net price and discounts are applied when you save, so the saved
+        line can come out lower than shown here.
       </p>
 
       <div className="grid grid-cols-2 gap-3 rounded-lg border border-border bg-muted/20 p-4 lg:grid-cols-7">
@@ -112,7 +121,7 @@ export const QuoteLinesEditor = ({ control, products }: Props) => {
           />
         </div>
         <div>
-          <FormLabel htmlFor="line-quantity">Quantity</FormLabel>
+          <FormLabel htmlFor="line-quantity">Qty</FormLabel>
           <Input
             id="line-quantity"
             type="number"
@@ -156,7 +165,7 @@ export const QuoteLinesEditor = ({ control, products }: Props) => {
           />
         </div>
         <div>
-          <FormLabel htmlFor="line-thickness">Thick. (mm)</FormLabel>
+          <FormLabel htmlFor="line-thickness">Thickness (mm)</FormLabel>
           <Input
             id="line-thickness"
             type="number"
@@ -180,7 +189,7 @@ export const QuoteLinesEditor = ({ control, products }: Props) => {
         <div className="flex items-end">
           <Button type="button" onClick={addLine} className="w-full">
             <Plus className="mr-1.5 size-4" />
-            Add line
+            New
           </Button>
         </div>
       </div>
@@ -192,49 +201,121 @@ export const QuoteLinesEditor = ({ control, products }: Props) => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="text-right">#</TableHead>
+                <TableHead>Code</TableHead>
+                <TableHead>Type</TableHead>
                 <TableHead>Product</TableHead>
-                <TableHead className="text-right">Quantity</TableHead>
-                <TableHead>Unit</TableHead>
+                <TableHead>Category</TableHead>
+                <TableHead>Quality</TableHead>
+                <TableHead className="text-right">Qty(p)</TableHead>
+                <TableHead>U</TableHead>
                 <TableHead className="text-right">Length</TableHead>
-                <TableHead className="text-right">Width</TableHead>
-                <TableHead className="text-right">Thick.</TableHead>
-                <TableHead>Options</TableHead>
+                <TableHead className="text-right">Thickness</TableHead>
+                <TableHead className="text-right">Kg(p)</TableHead>
+                <TableHead className="text-right">M1(p)</TableHead>
+                <TableHead className="text-right">Net Price</TableHead>
+                <TableHead className="text-right">Amount</TableHead>
+                <TableHead className="text-right">Purchase pr.</TableHead>
+                <TableHead className="text-right">Costs</TableHead>
+                <TableHead className="text-right">Profit</TableHead>
+                <TableHead className="text-right">Profit amount</TableHead>
                 <TableHead />
               </TableRow>
             </TableHeader>
             <TableBody>
-              {fields.map((field, index) => (
-                <TableRow key={field.id}>
-                  <TableCell className="text-right">{index + 1}</TableCell>
-                  <TableCell className="font-medium">
-                    {productName(field.productUuid)}
-                  </TableCell>
-                  <TableCell className="text-right">{field.quantity}</TableCell>
-                  <TableCell>{field.unit?.toUpperCase() ?? "—"}</TableCell>
-                  <TableCell className="text-right">
-                    {field.lengthMm || "—"}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {field.widthMm || "—"}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {field.thicknessMm || "—"}
-                  </TableCell>
-                  <TableCell>{field.options || "—"}</TableCell>
-                  <TableCell>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => remove(index)}
-                      aria-label={`Remove line ${index + 1}`}
-                    >
-                      <Trash2 className="size-4 text-destructive" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {fields.map((field, index) => {
+                const product = products.find(
+                  (p) => p.uuid === field.productUuid,
+                );
+                const line = previewQuoteLine({
+                  quantity: Number(field.quantity),
+                  lengthMm: field.lengthMm ? Number(field.lengthMm) : null,
+                  basePrice: Number(product?.basePrice ?? 0),
+                  replacementPrice: Number(product?.replacementPrice ?? 0),
+                  purchasePrice: Number(product?.averagePurchasePrice ?? 0),
+                  theoreticalWeight: Number(product?.theoreticalWeight ?? 0),
+                  productLengthMm: Number(product?.length ?? 0),
+                  minProfitMargin: Number(
+                    (isPickup
+                      ? product?.minProfitMarginExWorks
+                      : product?.minProfitMarginStock) ?? 0,
+                  ),
+                });
+
+                return (
+                  <TableRow key={field.id}>
+                    <TableCell className="font-medium">
+                      {product?.productCode ?? "—"}
+                    </TableCell>
+                    <TableCell>Material</TableCell>
+                    <TableCell>{product?.name ?? "—"}</TableCell>
+                    <TableCell>{product?.productGroupName ?? "—"}</TableCell>
+                    <TableCell>
+                      {product?.qualityStandard
+                        ? PRODUCT_QUALITY_STANDARD_LABELS[
+                            product.qualityStandard
+                          ]
+                        : "—"}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatNumber(Number(field.quantity))}
+                    </TableCell>
+                    <TableCell>{field.unit?.toUpperCase() ?? "—"}</TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {field.lengthMm || "—"}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {field.thicknessMm || "—"}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatNumber(line.weightKg)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatNumber(line.m1PerPiece)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatMoney(line.netPrice)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatMoney(line.amount)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatMoney(line.purchasePrice)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatMoney(line.costAmount)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      <span
+                        className={
+                          line.profitTooLow ? "text-destructive" : undefined
+                        }
+                      >
+                        {formatPercent(line.profitMargin)}
+                      </span>
+                      {line.profitTooLow && (
+                        <AlertTriangle
+                          className="ml-1 inline size-3.5 text-destructive"
+                          aria-label="Profit too low"
+                        />
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatMoney(line.profit)}
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => remove(index)}
+                        aria-label={`Delete line ${index + 1}`}
+                      >
+                        <Trash2 className="size-4 text-destructive" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>
