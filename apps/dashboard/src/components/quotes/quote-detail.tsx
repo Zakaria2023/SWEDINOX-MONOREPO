@@ -20,12 +20,15 @@ import { FormError } from "@/components/ui/form-error";
 import {
   formatDateColumn,
   formatMoney,
+  formatNumber,
   fullName,
+  orDash,
   pluralize,
   quoteSummaryFromSnapshot,
   yesNo,
 } from "@/lib/helpers";
 import {
+  CONTRACT_TIER_UNIT_LABELS,
   DELIVERY_TERM_LABELS,
   INVOICE_PAYMENT_TERM_LABELS,
   INVOICE_SURCHARGE_DESCRIPTION_LABELS,
@@ -330,9 +333,17 @@ export const QuoteDetailView = ({ quote }: Props) => {
                   <TableRow>
                     <TableHead>Description</TableHead>
                     <TableHead className="text-right">Surcharge</TableHead>
+                    <TableHead>Unit</TableHead>
+                    <TableHead className="text-right">From</TableHead>
                     <TableHead>U/i</TableHead>
+                    <TableHead>Tier unit</TableHead>
                     <TableHead className="text-right">Amount</TableHead>
                     <TableHead className="text-right">Profit</TableHead>
+                    <TableHead>Third parties</TableHead>
+                    <TableHead>Company code</TableHead>
+                    <TableHead>Company</TableHead>
+                    <TableHead className="text-right">Order</TableHead>
+                    <TableHead>Created</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -348,12 +359,30 @@ export const QuoteDetailView = ({ quote }: Props) => {
                       <TableCell className="text-right tabular-nums">
                         {formatMoney(Number(surcharge.surcharge ?? 0))}
                       </TableCell>
-                      <TableCell>{surcharge.unitIndication ?? "—"}</TableCell>
+                      <TableCell>{orDash(surcharge.unit)}</TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatNumber(Number(surcharge.fromValue ?? 0))}
+                      </TableCell>
+                      <TableCell>{orDash(surcharge.unitIndication)}</TableCell>
+                      <TableCell>
+                        {surcharge.tierUnit
+                          ? CONTRACT_TIER_UNIT_LABELS[surcharge.tierUnit]
+                          : "—"}
+                      </TableCell>
                       <TableCell className="text-right tabular-nums">
                         {formatMoney(Number(surcharge.amount ?? 0))}
                       </TableCell>
                       <TableCell className="text-right tabular-nums">
                         {formatMoney(Number(surcharge.profit ?? 0))}
+                      </TableCell>
+                      <TableCell>{yesNo(surcharge.thirdParties)}</TableCell>
+                      <TableCell>{orDash(surcharge.companyCode)}</TableCell>
+                      <TableCell>{orDash(surcharge.companyName)}</TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {orDash(surcharge.order)}
+                      </TableCell>
+                      <TableCell>
+                        {formatDateColumn(surcharge.createdAt)}
                       </TableCell>
                     </TableRow>
                   ))}

@@ -13,6 +13,7 @@ import { Select } from "@/components/shadcn/select";
 import { DocumentUploader } from "@/components/document-uploader";
 import { QuoteLinesEditor } from "@/components/quotes/quote-lines-editor";
 import { QuoteSummaryPanel } from "@/components/quotes/quote-summary";
+import { QuoteSurchargesSection } from "@/components/quotes/sections/surcharges-section";
 import { FormActions } from "@/components/ui/form-actions";
 import { FormError } from "@/components/ui/form-error";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
@@ -581,6 +582,13 @@ export const QuoteForm = ({
         control={control}
         products={products}
         isPickup={isPickup}
+      />
+
+      {/* ── Surcharges ────────────────────────────────────────────────── */}
+      <QuoteSurchargesSection
+        control={control}
+        register={register}
+        companyOptions={companyOptions}
       />
 
       {/* ── Summary ───────────────────────────────────────────────────── */}

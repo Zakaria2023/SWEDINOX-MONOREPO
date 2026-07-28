@@ -86,6 +86,7 @@ export const useQuoteSubmit = ({
   const isConsignment = form.watch("isConsignment");
   const deliveryType = form.watch("deliveryType");
   const items = form.watch("items");
+  const surcharges = form.watch("surcharges");
   const calculateVatIfApplicable = form.watch("calculateVatIfApplicable");
 
   // The summary is never typed in — it is recomputed from the lines on every
@@ -112,6 +113,10 @@ export const useQuoteSubmit = ({
         theoreticalWeightKg: line.weightKg,
       };
     }),
+    surcharges: surcharges.map((surcharge) => ({
+      amount: Number(surcharge.amount ?? 0),
+      profit: Number(surcharge.profit ?? 0),
+    })),
     // Only the quote's own flag is known here. Whether the customer is one VAT
     // is calculated for is settled server-side on save, so a VAT-exempt
     // customer can turn this preview's VAT into 0 when the quote is written.
@@ -302,14 +307,30 @@ export const useQuoteSubmit = ({
         options: item.options || null,
       }));
 
+      const quoteSurcharges = values.surcharges.map((surcharge) => ({
+        description: surcharge.description || null,
+        surcharge: surcharge.surcharge || "0.00",
+        unit: surcharge.unit || null,
+        fromValue: surcharge.fromValue || "0.00",
+        unitIndication: surcharge.unitIndication || null,
+        tierUnit: surcharge.tierUnit || null,
+        amount: surcharge.amount || "0.00",
+        profit: surcharge.profit || "0.00",
+        thirdParties: surcharge.thirdParties,
+        companyCode: surcharge.companyCode || null,
+        companyUuid: surcharge.companyUuid || null,
+      }));
+
       // Updating redirects from inside the action, so only the create path has
       // a result worth navigating on.
       if (quoteUuid) {
-        setState(await updateQuote(quoteUuid, fields, lines));
+        setState(
+          await updateQuote(quoteUuid, fields, lines, quoteSurcharges),
+        );
         return;
       }
 
-      const result = await createQuote(fields, lines);
+      const result = await createQuote(fields, lines, quoteSurcharges);
       setState(result);
       if (result.success && result.quoteUuid) {
         router.push(`/quotes/${result.quoteUuid}`);

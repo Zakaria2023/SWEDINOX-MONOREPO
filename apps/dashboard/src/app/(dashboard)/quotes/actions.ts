@@ -18,6 +18,7 @@ import {
 } from "@/db/schema/quote-item-options";
 import { QuoteItems, SelectQuoteItems } from "@/db/schema/quote-items";
 import {
+  InsertQuoteSurcharges,
   QuoteSurcharges,
   SelectQuoteSurcharges,
 } from "@/db/schema/quote-surcharges";
@@ -65,6 +66,14 @@ export type QuoteLineInput = {
   options?: string | null;
 };
 
+// A surcharge row as the form submits it. `order` and `quoteUuid` are set on
+// save — the sequence follows the order the rows were typed in — so neither is
+// the caller's to supply.
+export type QuoteSurchargeInput = Omit<
+  InsertQuoteSurcharges,
+  "id" | "uuid" | "quoteUuid" | "order" | "createdAt" | "updatedAt"
+>;
+
 export type QuoteActionResult = {
   quoteUuid?: string;
   error?: string;
@@ -91,6 +100,10 @@ export type QuoteOptionDetail = SelectQuoteItemOptions & {
   optionName: SelectSalesOptions["name"] | null;
 };
 
+export type QuoteSurchargeDetail = SelectQuoteSurcharges & {
+  companyName: SelectCompanies["companyName"] | null;
+};
+
 // A competitor the customer's contacts have named. The schema records these as
 // free text against a contact, so the quote screen lists who said what rather
 // than inventing a revenue share the app has nowhere to store.
@@ -108,7 +121,7 @@ export type QuoteDetail = SelectQuotes & {
   contractCode: SelectContracts["code"] | null;
   items: QuoteLineDetail[];
   options: QuoteOptionDetail[];
-  surcharges: SelectQuoteSurcharges[];
+  surcharges: QuoteSurchargeDetail[];
   // Customer-scoped context the reference system shows alongside a quote.
   complaints: SelectComplaints[];
   followUps: SelectFollowUps[];
@@ -433,9 +446,23 @@ const buildQuoteSummary = async (
   });
 };
 
+// Surcharge rows ready to insert, numbered in the order they were typed so the
+// grid reads back the way it was entered.
+const surchargeRows = (
+  quoteUuid: string,
+  surcharges: QuoteSurchargeInput[],
+): InsertQuoteSurcharges[] =>
+  surcharges.map((surcharge, index) => ({
+    ...surcharge,
+    uuid: generateUuid(),
+    quoteUuid,
+    order: index + 1,
+  }));
+
 export const createQuote = async (
   fields: QuoteFields,
   items: QuoteLineInput[] = [],
+  surcharges: QuoteSurchargeInput[] = [],
 ): Promise<QuoteActionResult> => {
   const uuid = generateUuid();
   try {
@@ -460,6 +487,10 @@ export const createQuote = async (
 
       if (pricedLines.length > 0) {
         await tx.insert(QuoteItems).values(pricedLines);
+      }
+
+      if (surcharges.length > 0) {
+        await tx.insert(QuoteSurcharges).values(surchargeRows(uuid, surcharges));
       }
 
       const summary = await buildQuoteSummary(tx, uuid, {
@@ -536,8 +567,12 @@ export const getQuoteDetail = async (
       .leftJoin(SalesOptions, eq(QuoteItemOptions.optionUuid, SalesOptions.uuid))
       .where(eq(QuoteItemOptions.quoteUuid, uuid)),
     db
-      .select()
+      .select({
+        ...getTableColumns(QuoteSurcharges),
+        companyName: Companies.companyName,
+      })
       .from(QuoteSurcharges)
+      .leftJoin(Companies, eq(QuoteSurcharges.companyUuid, Companies.uuid))
       .where(eq(QuoteSurcharges.quoteUuid, uuid))
       .orderBy(QuoteSurcharges.order),
       db
@@ -597,6 +632,7 @@ export const updateQuote = async (
   uuid: string,
   fields: QuoteFields,
   items: QuoteLineInput[] = [],
+  surcharges: QuoteSurchargeInput[] = [],
 ): Promise<QuoteActionResult> => {
   try {
     const [existing] = await db
@@ -652,9 +688,16 @@ export const updateQuote = async (
         .delete(QuoteItemOptions)
         .where(eq(QuoteItemOptions.quoteUuid, uuid));
       await tx.delete(QuoteItems).where(eq(QuoteItems.quoteUuid, uuid));
+      await tx
+        .delete(QuoteSurcharges)
+        .where(eq(QuoteSurcharges.quoteUuid, uuid));
 
       if (pricedLines.length > 0) {
         await tx.insert(QuoteItems).values(pricedLines);
+      }
+
+      if (surcharges.length > 0) {
+        await tx.insert(QuoteSurcharges).values(surchargeRows(uuid, surcharges));
       }
 
       const summary = await buildQuoteSummary(tx, uuid, {

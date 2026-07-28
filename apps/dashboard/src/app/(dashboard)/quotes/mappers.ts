@@ -71,4 +71,18 @@ export const quoteDetailToFormValues = (quote: QuoteDetail): QuoteFormValues => 
     thicknessMm: item.thicknessMm ?? "",
     options: item.options ?? "",
   })),
+
+  surcharges: quote.surcharges.map((surcharge) => ({
+    description: surcharge.description ?? "",
+    surcharge: surcharge.surcharge ?? "0.00",
+    unit: surcharge.unit ?? "",
+    fromValue: surcharge.fromValue ?? "0.00",
+    unitIndication: surcharge.unitIndication ?? "",
+    tierUnit: surcharge.tierUnit ?? "",
+    amount: surcharge.amount ?? "0.00",
+    profit: surcharge.profit ?? "0.00",
+    thirdParties: surcharge.thirdParties ?? false,
+    companyCode: surcharge.companyCode ?? "",
+    companyUuid: surcharge.companyUuid ?? "",
+  })),
 });
