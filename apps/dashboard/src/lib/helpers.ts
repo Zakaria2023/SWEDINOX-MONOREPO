@@ -1146,6 +1146,21 @@ export type QuoteSummary = {
 };
 
 /**
+ * Turns an enum's const array and its label map into the options a `<Select>`
+ * takes, with a leading "Empty" entry — almost every dropdown on the document
+ * screens treats "unset" as a real choice, so the blank is the default rather
+ * than an omission.
+ */
+export const enumOptions = <T extends string>(
+  values: readonly T[],
+  labels: Record<T, string>,
+  emptyLabel = "Empty",
+): Array<{ value: string; label: string }> => [
+  { value: "", label: emptyLabel },
+  ...values.map((value) => ({ value, label: labels[value] })),
+];
+
+/**
  * What a quote line is worth once its net price is known: the two cost bases,
  * the two profits they produce, the weight and the running metres.
  */

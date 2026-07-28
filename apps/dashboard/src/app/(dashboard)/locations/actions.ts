@@ -7,7 +7,7 @@ import {
   Warehouses,
 } from "@/db/schema/warehouses";
 import { describeError, generateUuid } from "@/lib/helpers";
-import { and, desc, eq, isNotNull } from "drizzle-orm";
+import { and, asc, desc, eq, isNotNull } from "drizzle-orm";
 
 export type LocationFields = Omit<
   InsertWarehouses,
@@ -19,6 +19,18 @@ export type LocationActionResult = {
   error?: string;
   success?: boolean;
 };
+
+export type LocationOption = Pick<SelectWarehouses, "uuid" | "name">;
+
+/** Locations as a picker needs them — identity only. */
+export const getLocationsForSelect = async (): Promise<LocationOption[]> =>
+  db
+    .select({ uuid: Warehouses.uuid, name: Warehouses.name })
+    .from(Warehouses)
+    .where(
+      and(isNotNull(Warehouses.parentUuid), eq(Warehouses.type, "location")),
+    )
+    .orderBy(asc(Warehouses.name));
 
 export const getLocations = async (): Promise<SelectWarehouses[]> => {
   try {

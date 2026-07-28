@@ -5,8 +5,13 @@ import {
   CeStandard,
   CertificaatOption,
   CommunicationSettingDocumentType,
+  CountStockBasis,
   CustomerLabelOption,
   DeliveryTimeUnit,
+  DispatchStrategy,
+  PriceTierBase,
+  ProductDimensionShape,
+  StockLabelBreakdown,
   CommunicationSettingShape,
   CommunicationSettingType,
   CounterOrderPriority,
@@ -1592,4 +1597,46 @@ export const SAWING_STATUS_LABELS: Record<SawingStatus, string> = {
   in_progress: "In progress",
   completed: "Completed",
   cancelled: "Cancelled",
+};
+
+export const PRODUCT_DIMENSION_SHAPE_LABELS: Record<
+  ProductDimensionShape,
+  string
+> = {
+  round: "Round",
+  square: "Square",
+  flat: "Flat",
+  rectangular: "Rectangular",
+  hexagonal: "Hexagonal",
+  octagonal: "Octagonal",
+  tube_round: "Tube — round",
+  tube_square: "Tube — square",
+  tube_rectangular: "Tube — rectangular",
+  sheet: "Sheet",
+  plate: "Plate",
+  beam: "Beam",
+  angle: "Angle",
+};
+
+export const DISPATCH_STRATEGY_LABELS: Record<DispatchStrategy, string> = {
+  lifo: "LIFO",
+  fifo: "FIFO",
+};
+
+export const PRICE_TIER_BASE_LABELS: Record<PriceTierBase, string> = {
+  order_line: "Order line",
+  group_product: "Group product",
+  product_group: "Product group",
+};
+
+export const STOCK_LABEL_BREAKDOWN_LABELS: Record<StockLabelBreakdown, string> =
+  {
+    per_line_bundle: "Per line / bundle",
+    per_bundle: "Per bundle",
+    amount_per_line: "Amount (per line)",
+  };
+
+export const COUNT_STOCK_BASIS_LABELS: Record<CountStockBasis, string> = {
+  technical: "Technical stock",
+  available: "Available stock",
 };

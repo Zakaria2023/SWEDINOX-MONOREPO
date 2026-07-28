@@ -1622,3 +1622,60 @@ export const sawingStatuses = [
 ] as const satisfies readonly string[];
 
 export type SawingStatus = (typeof sawingStatuses)[number];
+
+// The cross-section a product is made in — what "Dimensions" on the product
+// screen selects. It decides which of the width/thickness fields carry meaning:
+// a round bar's width is its diameter and its thickness stays 0, while a flat
+// bar uses both.
+export const productDimensionShapes = [
+  "round",
+  "square",
+  "flat",
+  "rectangular",
+  "hexagonal",
+  "octagonal",
+  "tube_round",
+  "tube_square",
+  "tube_rectangular",
+  "sheet",
+  "plate",
+  "beam",
+  "angle",
+] as const satisfies readonly string[];
+
+export type ProductDimensionShape = (typeof productDimensionShapes)[number];
+
+// Which stock lot leaves the warehouse first when a product is dispatched.
+export const dispatchStrategies = [
+  "lifo",
+  "fifo",
+] as const satisfies readonly string[];
+
+export type DispatchStrategy = (typeof dispatchStrategies)[number];
+
+// What a price-structure surcharge or discount tier is measured against: the
+// single order line, the group product, or the whole product group.
+export const priceTierBases = [
+  "order_line",
+  "group_product",
+  "product_group",
+] as const satisfies readonly string[];
+
+export type PriceTierBase = (typeof priceTierBases)[number];
+
+// How the stock label print run is broken up on a warehouse workorder.
+export const stockLabelBreakdowns = [
+  "per_line_bundle",
+  "per_bundle",
+  "amount_per_line",
+] as const satisfies readonly string[];
+
+export type StockLabelBreakdown = (typeof stockLabelBreakdowns)[number];
+
+// Which stock figure the periodic count is measured against.
+export const countStockBases = [
+  "technical",
+  "available",
+] as const satisfies readonly string[];
+
+export type CountStockBasis = (typeof countStockBases)[number];
