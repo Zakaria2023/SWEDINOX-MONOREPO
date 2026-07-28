@@ -1420,6 +1420,48 @@ export const computeQuoteSummary = ({
 };
 
 /**
+ * The summary columns an order header stores. Narrower than a quote's: an order
+ * has no options, no transport/handling costs of its own and no separate
+ * theoretical weight, because by the time it exists the goods have been
+ * allocated and their real weight is known.
+ */
+export type OrderSummarySnapshot = Pick<
+  QuoteSummarySnapshot,
+  | "materialsRevenue"
+  | "materialsProfit"
+  | "materialsProfitReplPrice"
+  | "surchargesRevenue"
+  | "surchargesProfit"
+  | "totalExclVat"
+  | "vatAmount"
+  | "totalInclVat"
+  | "avgKiloPrice"
+  | "totalWeightKg"
+>;
+
+/**
+ * An order's stored summary in the shape the shared summary panel renders, so
+ * an order and a quote present their worth identically. The blocks an order
+ * does not carry read as zero rather than being hidden — the panel's shape is
+ * what makes the two documents comparable at a glance.
+ */
+export const orderSummaryFromSnapshot = (
+  order: OrderSummarySnapshot,
+): QuoteSummary =>
+  quoteSummaryFromSnapshot({
+    ...order,
+    optionsRevenue: null,
+    optionsProfit: null,
+    optionsProfitReplPrice: null,
+    // Surcharges are agreed at a margin, so their profit is the same figure
+    // whichever cost basis is used.
+    surchargesProfitReplPrice: order.surchargesProfit,
+    transportCosts: null,
+    handlingCosts: null,
+    theorWeightKg: order.totalWeightKg,
+  });
+
+/**
  * Reads the summary a quote header already stores back into the shape the
  * summary panel renders. The percentages are recomputed rather than stored,
  * since a percentage of a stored revenue can never drift from it.

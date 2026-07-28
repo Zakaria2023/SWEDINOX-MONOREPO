@@ -82,12 +82,10 @@ export const OrdersAndQuotesTable = ({ rows }: Props) => (
                 {formatMoney(row.revenue)}
               </TableCell>
               <TableCell className="text-right tabular-nums whitespace-nowrap">
-                {/* Orders carry their cost on the stock lot, not the line, so
-                    there is no profit to print for them yet. */}
-                {row.kind === "quote" ? formatMoney(row.profit) : "—"}
+                {formatMoney(row.profit)}
               </TableCell>
               <TableCell className="text-right tabular-nums">
-                {row.kind === "quote" ? formatPercent(row.profitMargin) : "—"}
+                {formatPercent(row.profitMargin)}
               </TableCell>
               <TableCell>{orDash(row.seller)}</TableCell>
               <TableCell>{orDash(row.convertedFromTo)}</TableCell>

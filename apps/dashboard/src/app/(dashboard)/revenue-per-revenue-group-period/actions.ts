@@ -7,7 +7,6 @@ import { OrderItems } from "@/db/schema/order-items";
 import { Orders } from "@/db/schema/orders";
 import { Products } from "@/db/schema/products";
 import { RevenueGroups } from "@/db/schema/revenue-groups";
-import { Stock } from "@/db/schema/stock";
 import {
   describeError,
   profitMarginPercent,
@@ -46,7 +45,7 @@ export const getRevenuePerRevenueGroupPeriod = async (): Promise<
         isCustomerMaterial: Orders.isCustomerMaterial,
         salesKg: sql<string>`COALESCE(SUM(${OrderItems.kgPlanned}), 0)`,
         revenue: sql<string>`COALESCE(SUM(${OrderItems.amount}), 0)`,
-        cost: sql<string>`COALESCE(SUM(${Stock.valuationPrice} * ${OrderItems.quantity}), 0)`,
+        cost: sql<string>`COALESCE(SUM(${OrderItems.costAmount}), 0)`,
       })
       .from(InvoiceItems)
       .innerJoin(Invoices, eq(InvoiceItems.invoiceUuid, Invoices.uuid))
@@ -54,7 +53,6 @@ export const getRevenuePerRevenueGroupPeriod = async (): Promise<
       .innerJoin(Orders, eq(OrderItems.orderUuid, Orders.uuid))
       .innerJoin(Products, eq(InvoiceItems.productUuid, Products.uuid))
       .leftJoin(RevenueGroups, eq(Products.revenueGroupUuid, RevenueGroups.uuid))
-      .leftJoin(Stock, eq(OrderItems.stockUuid, Stock.uuid))
       .groupBy(
         sql`DATE_FORMAT(${Invoices.invoiceDate}, '%Y-%m')`,
         RevenueGroups.uuid,

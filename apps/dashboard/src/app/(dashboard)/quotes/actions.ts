@@ -5,10 +5,6 @@ import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { Complaints, SelectComplaints } from "@/db/schema/complaints";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
 import { FollowUps, SelectFollowUps } from "@/db/schema/follow-ups";
-import {
-  ContractNetPrices,
-  SelectContractNetPrices,
-} from "@/db/schema/contract-net-prices";
 import { Contracts, SelectContracts } from "@/db/schema/contracts";
 import { ProductGroups, SelectProductGroups } from "@/db/schema/product-groups";
 import { Products, SelectProducts } from "@/db/schema/products";
@@ -27,21 +23,23 @@ import { SalesOptions, SelectSalesOptions } from "@/db/schema/sales-options";
 import { StockUnit } from "@/lib/enums";
 import {
   describeError,
-  applyPriceDiscounts,
   computeQuoteSummary,
   generateUuid,
   fullName,
   getQuoteVatRatePercent,
   quoteLineFinancials,
   QuoteSummary,
-  resolveTierDiscount,
 } from "@/lib/helpers";
+import {
+  loadSalesPricingContext,
+  minimumMarginFor,
+  resolveLineNetPrice,
+} from "@/lib/server/sales-pricing";
 import {
   and,
   desc,
   eq,
   getTableColumns,
-  inArray,
   isNotNull,
 } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -161,58 +159,6 @@ export const getQuotes = async (): Promise<QuoteListItem[]> => {
   }
 };
 
-// Resolves the price applied to one quote line: an agreed net price wins
-// outright; otherwise the contract's gross price and tiered discounts apply;
-// otherwise the list price stands on its own.
-const resolveLinePricing = (
-  listPrice: number,
-  quantity: number,
-  applicableNetPrice: SelectContractNetPrices | undefined,
-  contract: SelectContracts | undefined,
-): {
-  grossPrice: number;
-  groupDiscount: number;
-  lineDiscount: number;
-  netPrice: number;
-} => {
-  if (applicableNetPrice) {
-    return {
-      grossPrice: listPrice,
-      groupDiscount: 0,
-      lineDiscount: 0,
-      netPrice: Number(applicableNetPrice.netPrice ?? 0),
-    };
-  }
-  if (!contract) {
-    return {
-      grossPrice: listPrice,
-      groupDiscount: 0,
-      lineDiscount: 0,
-      netPrice: listPrice,
-    };
-  }
-  const grossPrice = contract.grossPrice
-    ? Number(contract.grossPriceValue ?? 0) || listPrice
-    : listPrice;
-  const groupDiscount = contract.groupDiscount
-    ? resolveTierDiscount(contract.groupDiscountTiers, quantity)
-    : 0;
-  const lineDiscount = contract.lineDiscount
-    ? resolveTierDiscount(contract.lineDiscountTiers, quantity)
-    : 0;
-  const extraDiscount = contract.extraDiscount
-    ? Number(contract.extraDiscountValue ?? 0)
-    : 0;
-  return {
-    grossPrice,
-    groupDiscount,
-    lineDiscount,
-    netPrice:
-      applyPriceDiscounts(grossPrice, groupDiscount, lineDiscount) *
-      (1 - extraDiscount / 100),
-  };
-};
-
 // Prices the quote's lines against the price list and the customer's contract:
 //
 //   1. If the contract has an agreed net price for the product (the tier whose
@@ -238,72 +184,22 @@ const priceQuoteLines = async ({
     return [];
   }
 
-  const products = await db
-    .select({
-      uuid: Products.uuid,
-      name: Products.name,
-      basePrice: Products.basePrice,
-      replacementPrice: Products.replacementPrice,
-      averagePurchasePrice: Products.averagePurchasePrice,
-      priceUnit: Products.priceUnit,
-      stockUnit: Products.stockUnit,
-      revenueGroupUuid: Products.revenueGroupUuid,
-      theoreticalWeight: Products.theoreticalWeight,
-      length: Products.length,
-      minProfitMarginStock: ProductGroups.minProfitMarginStock,
-      minProfitMarginExWorks: ProductGroups.minProfitMarginExWorks,
-    })
-    .from(Products)
-    .leftJoin(ProductGroups, eq(Products.productGroupUuid, ProductGroups.uuid))
-    .where(inArray(Products.uuid, productUuids));
-  const productByUuid = new Map(products.map((p) => [p.uuid, p]));
-
-  const [contract] = contractUuid
-    ? await db
-        .select()
-        .from(Contracts)
-        .where(eq(Contracts.uuid, contractUuid))
-        .limit(1)
-    : [];
-
-  const netPriceRows = contractUuid
-    ? await db
-        .select()
-        .from(ContractNetPrices)
-        .where(
-          and(
-            eq(ContractNetPrices.contractUuid, contractUuid),
-            inArray(ContractNetPrices.productUuid, productUuids),
-          ),
-        )
-    : [];
+  const context = await loadSalesPricingContext(contractUuid, productUuids);
 
   const rows: PricedLine[] = [];
 
   for (const [index, item] of items.entries()) {
-    const product = productByUuid.get(item.productUuid);
+    const product = context.productByUuid.get(item.productUuid);
     if (!product) {
       throw new Error("A selected product could not be found.");
     }
 
     const quantity = Number(item.quantity);
-    const basePrice = Number(product.basePrice ?? 0);
     const replacementPrice = Number(product.replacementPrice ?? 0);
     const purchasePrice = Number(product.averagePurchasePrice ?? 0);
-    const listPrice = basePrice > 0 ? basePrice : replacementPrice;
-
-    // The agreed net price for this product at this quantity, if the contract
-    // has one — the highest tier the quantity reaches.
-    const applicableNetPrice = netPriceRows
-      .filter(
-        (row) =>
-          row.productUuid === item.productUuid &&
-          Number(row.fromQty ?? 0) <= quantity,
-      )
-      .sort((a, b) => Number(b.fromQty ?? 0) - Number(a.fromQty ?? 0))[0];
 
     const { grossPrice, groupDiscount, lineDiscount, netPrice } =
-      resolveLinePricing(listPrice, quantity, applicableNetPrice, contract);
+      resolveLineNetPrice(context, item.productUuid, quantity);
 
     const unit = item.unit ?? "st";
     // Running metres come off the line's own length when one was entered,
@@ -322,11 +218,7 @@ const priceQuoteLines = async ({
         lengthMm !== null && lengthMm > 0
           ? lengthMm
           : Number(product.length ?? 0),
-      minProfitMargin: Number(
-        (isPickup
-          ? product.minProfitMarginExWorks
-          : product.minProfitMarginStock) ?? 0,
-      ),
+      minProfitMargin: minimumMarginFor(product, isPickup),
     });
 
     rows.push({

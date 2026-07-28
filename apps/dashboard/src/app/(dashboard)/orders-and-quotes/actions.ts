@@ -63,8 +63,12 @@ export const getOrdersAndQuotes = async (): Promise<OrderOrQuoteRow[]> => {
           isInternalProduction: Orders.isInternalProduction,
           isCustomerMaterial: Orders.isCustomerMaterial,
           lineCount: sql<string>`COUNT(${OrderItems.uuid})`,
-          weightKg: sql<string>`COALESCE(SUM(${OrderItems.kgPlanned}), 0)`,
-          revenue: sql<string>`COALESCE(SUM(${OrderItems.amount}), 0)`,
+          // Revenue, profit and weight come off the order's own summary
+          // snapshot, the same way a quote's do — the header records what the
+          // document was worth when it was placed.
+          revenue: Orders.totalExclVat,
+          profit: Orders.materialsProfit,
+          weightKg: Orders.totalWeightKg,
         })
         .from(Orders)
         .leftJoin(Companies, eq(Orders.companyUuid, Companies.uuid))
@@ -106,7 +110,8 @@ export const getOrdersAndQuotes = async (): Promise<OrderOrQuoteRow[]> => {
     ]);
 
     const orders: OrderOrQuoteRow[] = orderRows.map((row) => {
-      const revenue = Number(row.revenue);
+      const revenue = Number(row.revenue ?? 0);
+      const profit = Number(row.profit ?? 0);
       return {
         uuid: row.uuid,
         kind: "order",
@@ -125,13 +130,10 @@ export const getOrdersAndQuotes = async (): Promise<OrderOrQuoteRow[]> => {
         }),
         customerName: row.companyName,
         reference: row.customerRef,
-        weightKg: Number(row.weightKg),
+        weightKg: Number(row.weightKg ?? 0),
         revenue,
-        // An order's cost sits on its stock lots rather than its lines, so no
-        // profit is claimed here: a zero would read as "made nothing", which is
-        // a different and wrong statement.
-        profit: 0,
-        profitMargin: 0,
+        profit,
+        profitMargin: profitMarginPercent(revenue, profit),
         seller: row.seller,
         convertedFromTo: null,
         quoteDate: null,

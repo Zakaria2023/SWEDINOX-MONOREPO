@@ -15,7 +15,18 @@ import { Contracts, SelectContracts } from "@/db/schema/contracts";
 import { Products, SelectProducts } from "@/db/schema/products";
 import { SelectStock, Stock } from "@/db/schema/stock";
 import { InsertTexts, Texts } from "@/db/schema/texts";
-import { describeError, generateUuid } from "@/lib/helpers";
+import {
+  computeQuoteSummary,
+  describeError,
+  generateUuid,
+  getQuoteVatRatePercent,
+  quoteLineFinancials,
+} from "@/lib/helpers";
+import {
+  loadSalesPricingContext,
+  minimumMarginFor,
+  resolveLineNetPrice,
+} from "@/lib/server/sales-pricing";
 import {
   and,
   asc,
@@ -138,6 +149,63 @@ export const getContractsByCompanyUuid = async (
     )
     .orderBy(asc(Contracts.code));
 
+/**
+ * Rolls an order's saved lines and surcharges into its header snapshot.
+ *
+ * Read back from the database rather than from what was just inserted, so the
+ * summary always describes what is actually stored — including lines a caller
+ * wrote by another path, such as a quote conversion.
+ */
+export const buildOrderSummary = async (
+  tx: Pick<typeof db, "select">,
+  orderUuid: string,
+  companyUuid: string,
+) => {
+  const [lines, surcharges, [company]] = await Promise.all([
+    tx.select().from(OrderItems).where(eq(OrderItems.orderUuid, orderUuid)),
+    tx
+      .select()
+      .from(OrderSurcharges)
+      .where(eq(OrderSurcharges.orderUuid, orderUuid)),
+    tx
+      .select({ calculateVat: Companies.calculateVat })
+      .from(Companies)
+      .where(eq(Companies.uuid, companyUuid))
+      .limit(1),
+  ]);
+
+  const summary = computeQuoteSummary({
+    lines: lines.map((line) => ({
+      amount: Number(line.amount ?? 0),
+      costAmount: Number(line.costAmount ?? 0),
+      replacementCost:
+        Number(line.replacementPrice ?? 0) * Number(line.quantity ?? 0),
+      weightKg: Number(line.kgPlanned ?? 0),
+      theoreticalWeightKg: Number(line.kgPlanned ?? 0),
+    })),
+    surcharges: surcharges.map((surcharge) => ({
+      amount: Number(surcharge.amount ?? 0),
+      profit: Number(surcharge.profit ?? 0),
+    })),
+    // An order carries no "calculate VAT if applicable" flag of its own, so it
+    // follows the customer's setting alone.
+    vatRatePercent: getQuoteVatRatePercent(true, company?.calculateVat),
+  });
+
+  return {
+    materialsRevenue: summary.materials.revenue.toFixed(2),
+    materialsProfit: summary.materials.profit.toFixed(2),
+    materialsProfitReplPrice: summary.materials.profitReplPrice.toFixed(2),
+    surchargesRevenue: summary.surcharges.revenue.toFixed(2),
+    surchargesProfit: summary.surcharges.profit.toFixed(2),
+    totalExclVat: summary.total.revenue.toFixed(2),
+    vatAmount: summary.vatAmount.toFixed(2),
+    totalInclVat: summary.totalInclVat.toFixed(2),
+    avgKiloPrice: summary.avgKiloPrice.toFixed(2),
+    totalWeightKg: summary.totalWeightKg.toFixed(2),
+  };
+};
+
 export const createOrder = async (
   fields: OrderFields,
   items: OrderItemInput[] = [],
@@ -179,6 +247,24 @@ export const createOrder = async (
       }
     }
 
+    // Price and cost the lines before opening the transaction — both are reads,
+    // and neither should hold the stock rows locked while it happens.
+    //
+    // An order references its contracts the other way round (Contracts.orderUuid),
+    // so the contract being applied is whichever was attached on the form; the
+    // first is the one its prices come from.
+    const pricingContext = await loadSalesPricingContext(
+      extras.contractUuids[0] ?? null,
+      [
+        ...new Set(
+          items.flatMap((item) => {
+            const stockRow = stockByUuid.get(item.stockUuid);
+            return stockRow ? [stockRow.productUuid] : [];
+          }),
+        ),
+      ],
+    );
+
     await db.transaction(async (tx) => {
       await tx.insert(Orders).values({ ...fields, uuid });
 
@@ -217,6 +303,25 @@ export const createOrder = async (
           );
         }
 
+        const quantity = Number(item.quantity);
+        const product = pricingContext.productByUuid.get(stockRow.productUuid);
+        const { grossPrice, groupDiscount, lineDiscount, netPrice } =
+          resolveLineNetPrice(pricingContext, stockRow.productUuid, quantity);
+
+        // The line is allocated to this exact lot, so its cost is what the lot
+        // is valued at — not an average across every lot of the product. That
+        // is the whole reason an order can report a truer margin than the quote
+        // it came from.
+        const financials = quoteLineFinancials({
+          netPrice,
+          quantity,
+          purchasePrice: Number(stockRow.valuationPrice ?? 0),
+          replacementPrice: Number(product?.replacementPrice ?? 0),
+          theoreticalWeight: Number(product?.theoreticalWeight ?? 0),
+          lengthMm: Number(product?.length ?? 0),
+          minProfitMargin: minimumMarginFor(product, fields.isPickup ?? false),
+        });
+
         await tx.insert(OrderItems).values({
           uuid: generateUuid(),
           orderUuid: uuid,
@@ -227,8 +332,24 @@ export const createOrder = async (
           // full quantity is still "to be called" until call-offs reduce it.
           qtyPlanned: item.quantity,
           qtyReserved: item.quantity,
+          kgPlanned: financials.weightKg.toFixed(2),
           lineNumber: index + 1,
           status: "reserved",
+
+          grossPrice: grossPrice.toFixed(2),
+          priceUnit: product?.priceUnit ?? null,
+          groupDiscount: groupDiscount.toFixed(2),
+          lineDiscount: lineDiscount.toFixed(2),
+          netPrice: netPrice.toFixed(2),
+          amount: financials.amount.toFixed(2),
+
+          costPrice: financials.costPrice.toFixed(4),
+          costAmount: financials.costAmount.toFixed(2),
+          replacementPrice: Number(product?.replacementPrice ?? 0).toFixed(2),
+          profit: financials.profit.toFixed(2),
+          profitMargin: financials.profitMargin.toFixed(2),
+          profitReplPrice: financials.profitReplPrice.toFixed(2),
+          profitTooLow: financials.profitTooLow,
         });
       }
 
@@ -261,6 +382,11 @@ export const createOrder = async (
           .set({ orderUuid: uuid })
           .where(inArray(Contracts.uuid, extras.contractUuids));
       }
+
+      await tx
+        .update(Orders)
+        .set(await buildOrderSummary(tx, uuid, fields.companyUuid))
+        .where(eq(Orders.uuid, uuid));
     });
 
     revalidatePath("/orders");

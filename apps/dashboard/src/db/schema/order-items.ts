@@ -117,7 +117,40 @@ export const OrderItems = mysqlTable(
       precision: 6,
       scale: 2,
     }).default("0.00"),
+    netPrice: decimal("net_price", { precision: 15, scale: 2 }).default("0.00"),
     amount: decimal("amount", { precision: 15, scale: 2 }).default("0.00"),
+
+    // ── Cost basis ────────────────────────────────────────────────────────────
+    // An order line is allocated to a specific stock lot, so unlike a quote it
+    // knows exactly what the goods cost: the lot's own valuation price. That is
+    // snapshotted here at reservation rather than read live, because a later
+    // revaluation must not silently move the margin already recorded against a
+    // shipped order.
+    //
+    // The replacement price is kept alongside it for the same reason quotes do:
+    // profit against what it cost and profit against what re-buying it costs
+    // today are different numbers, and a falling market makes the second the
+    // honest one.
+    costPrice: decimal("cost_price", { precision: 15, scale: 4 }).default(
+      "0.0000",
+    ),
+    costAmount: decimal("cost_amount", { precision: 15, scale: 2 }).default(
+      "0.00",
+    ),
+    replacementPrice: decimal("replacement_price", {
+      precision: 15,
+      scale: 2,
+    }).default("0.00"),
+    profit: decimal("profit", { precision: 15, scale: 2 }).default("0.00"),
+    profitMargin: decimal("profit_margin", { precision: 6, scale: 2 }).default(
+      "0.00",
+    ),
+    profitReplPrice: decimal("profit_repl_price", {
+      precision: 15,
+      scale: 2,
+    }).default("0.00"),
+    // Flagged when the line's margin falls under the product group's floor.
+    profitTooLow: boolean("profit_too_low").default(false),
 
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),

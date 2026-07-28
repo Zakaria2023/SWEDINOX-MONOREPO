@@ -7,7 +7,6 @@ import { Invoices } from "@/db/schema/invoices";
 import { OrderItems } from "@/db/schema/order-items";
 import { Products } from "@/db/schema/products";
 import { RevenueGroups } from "@/db/schema/revenue-groups";
-import { Stock } from "@/db/schema/stock";
 import { eq, sql } from "drizzle-orm";
 
 export type RevenueGroupTotals = {
@@ -31,7 +30,7 @@ export const getRevenuePerRevenueGroup = async (): Promise<
         revenueGroupName: RevenueGroups.name,
         salesKg: sql<string>`COALESCE(SUM(${OrderItems.kgPlanned}), 0)`,
         revenue: sql<string>`COALESCE(SUM(${OrderItems.amount}), 0)`,
-        cost: sql<string>`COALESCE(SUM(${Stock.valuationPrice} * ${OrderItems.quantity}), 0)`,
+        cost: sql<string>`COALESCE(SUM(${OrderItems.costAmount}), 0)`,
       })
       .from(InvoiceItems)
       .innerJoin(Invoices, eq(InvoiceItems.invoiceUuid, Invoices.uuid))
@@ -41,7 +40,6 @@ export const getRevenuePerRevenueGroup = async (): Promise<
         RevenueGroups,
         eq(Products.revenueGroupUuid, RevenueGroups.uuid),
       )
-      .leftJoin(Stock, eq(OrderItems.stockUuid, Stock.uuid))
       .groupBy(RevenueGroups.uuid, RevenueGroups.number, RevenueGroups.name);
 
     return rows.map((row) => {
