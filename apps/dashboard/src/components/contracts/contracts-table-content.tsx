@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { ContractListItem } from "@/app/(dashboard)/contracts/actions";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
@@ -53,7 +54,16 @@ export const ContractsTable = ({ contracts }: ContractsTableContentProps) => {
   const renderCell = (contract: ContractListItem, key: ColumnKey) => {
     switch (key) {
       case "id":
-        return <TableCell key={key} className="font-medium">{contract.id}</TableCell>;
+        return (
+          <TableCell key={key} className="font-medium">
+            <Link
+              href={`/contracts/${contract.uuid}`}
+              className="text-foreground underline-offset-4 hover:underline"
+            >
+              {contract.code}
+            </Link>
+          </TableCell>
+        );
       case "contractType":
         return (
           <TableCell key={key}>

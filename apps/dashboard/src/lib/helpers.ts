@@ -1146,6 +1146,20 @@ export type QuoteSummary = {
 };
 
 /**
+ * A stored column as the string a form control holds. NULL and undefined become
+ * the fallback (an empty string unless told otherwise), because an input's value
+ * must always be a string — handing it null makes React switch the field from
+ * controlled to uncontrolled mid-edit.
+ *
+ * The fallback matters for numeric columns: a decimal field wants "0.00" rather
+ * than "", so the box reads as a figure of zero instead of an empty one.
+ */
+export const toFormString = (
+  value: string | number | null | undefined,
+  fallback = "",
+): string => (value === null || value === undefined ? fallback : String(value));
+
+/**
  * Turns an enum's const array and its label map into the options a `<Select>`
  * takes, with a leading "Empty" entry — almost every dropdown on the document
  * screens treats "unset" as a real choice, so the blank is the default rather

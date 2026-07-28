@@ -3,6 +3,7 @@
 import { Controller, FormProvider } from "react-hook-form";
 import { useReturnOrderSubmit } from "@/app/(dashboard)/return-orders/use-return-order-submit";
 import { CompanyOption } from "@/app/(dashboard)/companies/actions";
+import { ReturnOrderFormValues } from "@/app/(dashboard)/return-orders/validation";
 import { TextCategoryOption } from "@/app/(dashboard)/text-categories/actions";
 import { Input } from "@/components/shadcn/input";
 import { Textarea } from "@/components/shadcn/textarea";
@@ -19,12 +20,21 @@ import { TextsSection } from "./sections/texts-section";
 type Props = {
   companies: CompanyOption[];
   textCategories: TextCategoryOption[];
+  /** Set when editing an existing return order; omitted when creating one. */
+  returnOrderUuid?: string;
+  defaultValues?: ReturnOrderFormValues;
 };
 
-export const ReturnOrderForm = ({ companies, textCategories }: Props) => {
+export const ReturnOrderForm = ({
+  companies,
+  textCategories,
+  returnOrderUuid,
+  defaultValues,
+}: Props) => {
   const {
     form,
     isPending,
+    isEditing,
     onSubmit,
     state,
     isPickup,
@@ -39,7 +49,7 @@ export const ReturnOrderForm = ({ companies, textCategories }: Props) => {
     isLoadingCompanyData,
     handleCompanyChange,
     handleCancel,
-  } = useReturnOrderSubmit({ companies });
+  } = useReturnOrderSubmit({ companies, returnOrderUuid, defaultValues });
 
   const {
     register,
@@ -467,7 +477,7 @@ export const ReturnOrderForm = ({ companies, textCategories }: Props) => {
         <TextsSection textCategories={textCategories} />
 
         <FormActions
-          submitLabel="Create Return Order"
+          submitLabel={isEditing ? "Save Return Order" : "Create Return Order"}
           pendingLabel="Creating..."
           isPending={isPending}
           onCancel={handleCancel}

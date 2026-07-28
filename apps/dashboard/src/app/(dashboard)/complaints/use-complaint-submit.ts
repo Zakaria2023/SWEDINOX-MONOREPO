@@ -2,9 +2,13 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import { useForm, Resolver } from "react-hook-form";
-import { ComplaintActionResult, createComplaint } from "./actions";
+import {
+  ComplaintActionResult,
+  createComplaint,
+  updateComplaint,
+} from "./actions";
 import {
   ContactOption,
   getContactsForCompany,
@@ -44,6 +48,9 @@ type UseComplaintSubmitParams = {
   companies: CompanyOption[];
   products: ProductOption[];
   responsibleUsers: DashboardUserOption[];
+  /** Set when editing an existing complaint; omitted when creating one. */
+  complaintUuid?: string;
+  defaultValues?: ComplaintFormValues;
 };
 
 const emptyOption = { value: "", label: "Empty" };
@@ -60,6 +67,8 @@ export const useComplaintSubmit = ({
   companies,
   products,
   responsibleUsers,
+  complaintUuid,
+  defaultValues,
 }: UseComplaintSubmitParams) => {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -69,8 +78,26 @@ export const useComplaintSubmit = ({
 
   const form = useForm<ComplaintFormValues>({
     resolver: zodResolver(complaintSchema) as Resolver<ComplaintFormValues>,
-    defaultValues: DEFAULT_COMPLAINT,
+    defaultValues: defaultValues ?? DEFAULT_COMPLAINT,
   });
+
+  // An existing complaint already has a company picked, so its contacts have to
+  // be fetched before the form can show which one is selected.
+  const loadContacts = useCallback((uuid: string) => {
+    setIsLoadingContacts(true);
+    getContactsForCompany(uuid).then((result) => {
+      setContacts(result);
+      setIsLoadingContacts(false);
+    });
+  }, []);
+
+  const editingCompanyUuid = defaultValues?.companyUuid;
+  useEffect(() => {
+    if (!editingCompanyUuid) {
+      return;
+    }
+    loadContacts(editingCompanyUuid);
+  }, [editingCompanyUuid, loadContacts]);
 
   const companyOptions: SelectOption[] = [
     emptyOption,
@@ -138,18 +165,15 @@ export const useComplaintSubmit = ({
     if (!uuid) {
       return;
     }
-    setIsLoadingContacts(true);
-    getContactsForCompany(uuid).then((result) => {
-      setContacts(result);
-      setIsLoadingContacts(false);
-    });
+    loadContacts(uuid);
   };
 
-  const handleCancel = () => router.push("/complaints");
+  const handleCancel = () =>
+    router.push(complaintUuid ? `/complaints/${complaintUuid}` : "/complaints");
 
   const onSubmit = form.handleSubmit((values) => {
     startTransition(async () => {
-      const result = await createComplaint({
+      const fields = {
         companyUuid: values.companyUuid,
         contactUuid: values.contactUuid || null,
         complaintType: values.complaintType,
@@ -177,11 +201,19 @@ export const useComplaintSubmit = ({
         toBeReclaimed: values.toBeReclaimed,
         toBeReclaimedNote: values.toBeReclaimedNote,
         documents: values.documents,
-      });
+      };
 
+      // Updating redirects from inside the action, so only the create path has
+      // a result worth navigating on.
+      if (complaintUuid) {
+        setState(await updateComplaint(complaintUuid, fields));
+        return;
+      }
+
+      const result = await createComplaint(fields);
       setState(result);
-      if (result.success) {
-        router.push("/complaints");
+      if (result.success && result.complaintUuid) {
+        router.push(`/complaints/${result.complaintUuid}`);
       }
     });
   });
@@ -189,6 +221,7 @@ export const useComplaintSubmit = ({
   return {
     form,
     isPending,
+    isEditing: Boolean(complaintUuid),
     onSubmit,
     state,
     companyOptions,

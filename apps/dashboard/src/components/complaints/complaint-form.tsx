@@ -3,6 +3,7 @@
 import { Controller } from "react-hook-form";
 import { useComplaintSubmit } from "@/app/(dashboard)/complaints/use-complaint-submit";
 import { CompanyOption } from "@/app/(dashboard)/companies/actions";
+import { ComplaintFormValues } from "@/app/(dashboard)/complaints/validation";
 import { ProductOption } from "@/app/(dashboard)/products/actions";
 import { Input } from "@/components/shadcn/input";
 import { Textarea } from "@/components/shadcn/textarea";
@@ -22,17 +23,23 @@ type Props = {
   companies: CompanyOption[];
   products: ProductOption[];
   responsibleUsers: DashboardUserOption[];
+  /** Set when editing an existing complaint; omitted when creating one. */
+  complaintUuid?: string;
+  defaultValues?: ComplaintFormValues;
 };
 
 export const ComplaintForm = ({
   companies,
   products,
   responsibleUsers,
+  complaintUuid,
+  defaultValues,
 }: Props) => {
   const { user } = useUser();
   const {
     form,
     isPending,
+    isEditing,
     onSubmit,
     state,
     companyOptions,
@@ -48,7 +55,13 @@ export const ComplaintForm = ({
     isLoadingContacts,
     handleCompanyChange,
     handleCancel,
-  } = useComplaintSubmit({ companies, products, responsibleUsers });
+  } = useComplaintSubmit({
+    companies,
+    products,
+    responsibleUsers,
+    complaintUuid,
+    defaultValues,
+  });
 
   const {
     register,
@@ -418,8 +431,8 @@ export const ComplaintForm = ({
       </section>
 
       <FormActions
-        submitLabel="Create Complaint"
-        pendingLabel="Creating..."
+        submitLabel={isEditing ? "Save Complaint" : "Create Complaint"}
+        pendingLabel={isEditing ? "Saving..." : "Creating..."}
         isPending={isPending}
         onCancel={handleCancel}
       />

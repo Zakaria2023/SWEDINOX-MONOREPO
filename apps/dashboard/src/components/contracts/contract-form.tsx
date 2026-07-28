@@ -4,6 +4,7 @@ import { CompanyOption } from "@/app/(dashboard)/companies/actions";
 import { ContractGroupOption } from "@/app/(dashboard)/contract-groups/actions";
 import { ContractCompanyEntry } from "@/app/(dashboard)/contracts/actions";
 import { useContractSubmit } from "@/app/(dashboard)/contracts/use-contract-submit";
+import { ContractFormValues } from "@/app/(dashboard)/contracts/validation";
 import { FormActions } from "@/components/ui/form-actions";
 import { FormError } from "@/components/ui/form-error";
 import { ContractableRole, contractableRoles } from "@/lib/enums";
@@ -26,6 +27,9 @@ import { ContractWebsiteSection } from "./sections/contract-website-section";
 type ContractFormProps = {
   groups: ContractGroupOption[];
   availableCompanies: CompanyOption[];
+  /** Set when editing an existing contract; omitted when creating one. */
+  contractUuid?: string;
+  defaultValues?: ContractFormValues;
 };
 
 const contractableRoleSet = new Set(contractableRoles as readonly string[]);
@@ -33,12 +37,18 @@ const contractableRoleSet = new Set(contractableRoles as readonly string[]);
 export const ContractForm = ({
   groups,
   availableCompanies,
+  contractUuid,
+  defaultValues,
 }: ContractFormProps) => {
   const router = useRouter();
   const [companies, setCompanies] = useState<ContractCompanyEntry[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  const { form, isPending, onSubmit, state } = useContractSubmit(companies);
+  const { form, isPending, isEditing, onSubmit, state } = useContractSubmit({
+    companies,
+    contractUuid,
+    defaultValues,
+  });
 
   const linkForm = useForm<CompanyLinkFormValues>({
     resolver: zodResolver(companyLinkSchema),
@@ -50,11 +60,12 @@ export const ContractForm = ({
     },
   });
 
+  // Only the create path navigates from here — updating redirects server-side.
   useEffect(() => {
-    if (state.success) {
+    if (state.success && !isEditing) {
       router.push("/contracts");
     }
-  }, [router, state.success]);
+  }, [isEditing, router, state.success]);
 
   // Only companies that carry at least one contractable role
   const contractableCompanies = availableCompanies.filter((c) =>
@@ -91,13 +102,17 @@ export const ContractForm = ({
           <ContractWebsiteSection isPending={isPending} />
         </div>
 
-        <ContractCompaniesSection
-          isPending={isPending}
-          companies={companies}
-          availableCompanies={availableCompanies}
-          onOpenDialog={openDialog}
-          onRemoveCompany={removeCompany}
-        />
+        {/* Companies are linked when a contract is created — an existing one is
+            already attached to whichever company it was created for. */}
+        {!isEditing && (
+          <ContractCompaniesSection
+            isPending={isPending}
+            companies={companies}
+            availableCompanies={availableCompanies}
+            onOpenDialog={openDialog}
+            onRemoveCompany={removeCompany}
+          />
+        )}
 
         <ContractPriceDetailsSection isPending={isPending} />
 
@@ -105,8 +120,12 @@ export const ContractForm = ({
 
         <FormActions
           isPending={isPending}
-          onCancel={() => router.push("/contracts")}
-          submitLabel="Create Contract"
+          onCancel={() =>
+            router.push(
+              contractUuid ? `/contracts/${contractUuid}` : "/contracts",
+            )
+          }
+          submitLabel={isEditing ? "Save Contract" : "Create Contract"}
         />
       </form>
 
