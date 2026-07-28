@@ -100,6 +100,7 @@ const NAV_GROUPS: NavGroup[] = [
       { label: "Communication Settings", href: "/communication-settings" },
       { label: "Address Distances", href: "/address-distances" },
       { label: "Visit Reports", href: "/visit-reports" },
+      { label: "Visits Made", href: "/visits-made" },
       { label: "Text Categories", href: "/text-categories" },
       { label: "Texts", href: "/texts" },
       { label: "Industries", href: "/industries" },
@@ -111,6 +112,15 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Sales",
     icon: ContactRound,
     items: [
+      { label: "Orders and Quotes", href: "/orders-and-quotes" },
+      {
+        label: "Order Lines Capacity Overflow",
+        href: "/order-lines-capacity-overflow",
+      },
+      {
+        label: "SFN Statistics Product-Market",
+        href: "/sfn-statistics-product-market",
+      },
       { label: "Contracts", href: "/contracts" },
       { label: "Contract Groups", href: "/contract-groups" },
       { label: "Invoices", href: "/invoices" },
@@ -178,6 +188,10 @@ const NAV_GROUPS: NavGroup[] = [
         label: "Revenue per Revenue Group",
         href: "/revenue-per-revenue-group",
       },
+      {
+        label: "Revenue per Revenue Group (Period)",
+        href: "/revenue-per-revenue-group-period",
+      },
       { label: "Revenue per Product", href: "/revenue-per-product" },
       {
         label: "Purchases & Sales per Revenue Group",
@@ -230,6 +244,10 @@ const NAV_GROUPS: NavGroup[] = [
       { label: "Purchase Receivals", href: "/purchase-receivals" },
       { label: "Receipts", href: "/receipts" },
       { label: "Purchase Results", href: "/purchase-results" },
+      {
+        label: "Import Purchase Invoices",
+        href: "/import-purchase-invoices",
+      },
     ],
   },
   {
@@ -257,6 +275,10 @@ const NAV_GROUPS: NavGroup[] = [
       { label: "Products", href: "/products" },
       { label: "Warehouse Work Orders", href: "/warehouse-work-orders" },
       { label: "Production Work Orders", href: "/production-workorders" },
+      {
+        label: "Warehouse- and Production Work Orders",
+        href: "/warehouse-and-production-workorders",
+      },
       { label: "Production Batches", href: "/production-batches" },
       { label: "Transport Work Orders", href: "/transport-workorders" },
       { label: "Trip Data", href: "/trip-data" },
@@ -314,6 +336,10 @@ const NAV_GROUPS: NavGroup[] = [
       { label: "Complaint Lines", href: "/complaint-lines" },
       { label: "Balanced Scorecard", href: "/balanced-scorecard" },
       { label: "Transport by Region", href: "/transport-by-region" },
+      {
+        label: "SigmaNest Blocked Orders",
+        href: "/sigmanest-blocked-orders",
+      },
     ],
   },
 ];
