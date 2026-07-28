@@ -21,6 +21,10 @@ export const surchargeSchema = z.object({
   description: z.enum(invoiceSurchargeDescriptions),
   surcharge: z.string().optional(),
   unit: z.string().optional(),
+  // What the surcharge earns after what it cost to provide. Captured rather
+  // than assumed — an uncosted surcharge adds no margin instead of counting as
+  // pure profit.
+  profit: z.string().optional(),
 });
 
 export type SurchargeFormValues = z.infer<typeof surchargeSchema>;

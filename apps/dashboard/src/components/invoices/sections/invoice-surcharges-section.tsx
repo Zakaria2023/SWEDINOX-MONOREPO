@@ -65,6 +65,7 @@ export const InvoiceSurchargesSection = ({
                 <TableHead className="w-24">Unit</TableHead>
                 <TableHead className="text-right">Surcharge %</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
+                <TableHead className="text-right">Profit</TableHead>
                 <TableHead className="w-16" />
               </TableRow>
             </TableHeader>
@@ -85,6 +86,7 @@ export const InvoiceSurchargesSection = ({
                     {s.surchargePercentage}
                   </TableCell>
                   <TableCell className="text-right">{s.amount}</TableCell>
+                  <TableCell className="text-right">{s.profit}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
                       <button

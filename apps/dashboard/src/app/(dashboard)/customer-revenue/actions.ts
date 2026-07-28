@@ -6,8 +6,6 @@ import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
 import { InvoiceItems } from "@/db/schema/invoice-items";
 import { Invoices } from "@/db/schema/invoices";
-import { OrderItems } from "@/db/schema/order-items";
-import { Stock } from "@/db/schema/stock";
 import { eq, min, sql } from "drizzle-orm";
 
 export type CustomerRevenueRow = {
@@ -23,9 +21,10 @@ export type CustomerRevenueRow = {
   profitMargin: number;
 };
 
-// Sales turnover per customer and invoice period. Revenue is the invoiced
-// order-line amount; cost comes from the stock lot's valuation price, so
-// profit/margin match the finance reports. Weight is the planned kg invoiced.
+// Sales turnover per customer and invoice period, read from the invoice line's
+// own snapshot of revenue, cost and weight. Those were fixed when the invoice
+// was raised, so the figures agree with the other finance reports and a past
+// period's margin cannot shift when stock is revalued.
 export const getCustomerRevenue = async (): Promise<CustomerRevenueRow[]> => {
   try {
     const year = sql<number>`YEAR(${Invoices.invoiceDate})`;
@@ -58,15 +57,13 @@ export const getCustomerRevenue = async (): Promise<CustomerRevenueRow[]> => {
         country: primaryContact.addressCountry,
         year,
         month,
-        revenue: sql<string>`COALESCE(SUM(${OrderItems.amount}), 0)`,
-        cost: sql<string>`COALESCE(SUM(${Stock.valuationPrice} * ${OrderItems.quantity}), 0)`,
-        weightKg: sql<string>`COALESCE(SUM(${OrderItems.kgPlanned}), 0)`,
+        revenue: sql<string>`COALESCE(SUM(${InvoiceItems.amount}), 0)`,
+        cost: sql<string>`COALESCE(SUM(${InvoiceItems.costAmount}), 0)`,
+        weightKg: sql<string>`COALESCE(SUM(${InvoiceItems.weightKg}), 0)`,
       })
       .from(InvoiceItems)
       .innerJoin(Invoices, eq(InvoiceItems.invoiceUuid, Invoices.uuid))
-      .innerJoin(OrderItems, eq(InvoiceItems.orderItemUuid, OrderItems.uuid))
       .innerJoin(Companies, eq(Invoices.companyUuid, Companies.uuid))
-      .leftJoin(Stock, eq(OrderItems.stockUuid, Stock.uuid))
       .leftJoin(primaryContact, eq(Companies.uuid, primaryContact.companyUuid))
       .groupBy(
         Companies.uuid,

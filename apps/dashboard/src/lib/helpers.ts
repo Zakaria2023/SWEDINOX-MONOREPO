@@ -1510,3 +1510,44 @@ export const quoteSummaryFromSnapshot = (
     theoreticalWeightKg: Number(quote.theorWeightKg ?? 0),
   };
 };
+
+/**
+ * The summary columns an invoice header stores. The same set an order carries,
+ * except that an invoice names its totals after the document rather than the
+ * summary — an invoice's "amount excluding VAT" *is* its net total.
+ */
+export type InvoiceSummarySnapshot = Pick<
+  OrderSummarySnapshot,
+  | "materialsRevenue"
+  | "materialsProfit"
+  | "materialsProfitReplPrice"
+  | "surchargesRevenue"
+  | "surchargesProfit"
+  | "avgKiloPrice"
+  | "totalWeightKg"
+> & {
+  invoiceAmountExclVat: string | null;
+  invoiceAmountInclVat: string | null;
+};
+
+/**
+ * An invoice's stored summary in the shape the shared summary panel renders, so
+ * a quote, its order and the invoice that bills it all present their worth the
+ * same way and can be read against each other without conversion.
+ *
+ * VAT is the gap between the two stored totals rather than a column of its own:
+ * the invoice already stores both, and deriving it keeps the three figures from
+ * ever disagreeing.
+ */
+export const invoiceSummaryFromSnapshot = (
+  invoice: InvoiceSummarySnapshot,
+): QuoteSummary =>
+  orderSummaryFromSnapshot({
+    ...invoice,
+    totalExclVat: invoice.invoiceAmountExclVat,
+    totalInclVat: invoice.invoiceAmountInclVat,
+    vatAmount: (
+      Number(invoice.invoiceAmountInclVat ?? 0) -
+      Number(invoice.invoiceAmountExclVat ?? 0)
+    ).toFixed(2),
+  });

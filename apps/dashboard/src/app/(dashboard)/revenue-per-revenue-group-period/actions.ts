@@ -43,9 +43,12 @@ export const getRevenuePerRevenueGroupPeriod = async (): Promise<
         isConsignment: Orders.isConsignment,
         isInternalProduction: Orders.isInternalProduction,
         isCustomerMaterial: Orders.isCustomerMaterial,
-        salesKg: sql<string>`COALESCE(SUM(${OrderItems.kgPlanned}), 0)`,
-        revenue: sql<string>`COALESCE(SUM(${OrderItems.amount}), 0)`,
-        cost: sql<string>`COALESCE(SUM(${OrderItems.costAmount}), 0)`,
+        // From the invoice line's snapshot, not the order line's live figures —
+        // what a past period earned must not move when an order is re-priced.
+        // The order is still joined, but only to classify the order type.
+        salesKg: sql<string>`COALESCE(SUM(${InvoiceItems.weightKg}), 0)`,
+        revenue: sql<string>`COALESCE(SUM(${InvoiceItems.amount}), 0)`,
+        cost: sql<string>`COALESCE(SUM(${InvoiceItems.costAmount}), 0)`,
       })
       .from(InvoiceItems)
       .innerJoin(Invoices, eq(InvoiceItems.invoiceUuid, Invoices.uuid))

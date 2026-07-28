@@ -6,7 +6,6 @@ import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
 import { InvoiceItems } from "@/db/schema/invoice-items";
 import { Invoices } from "@/db/schema/invoices";
-import { OrderItems } from "@/db/schema/order-items";
 import { Products } from "@/db/schema/products";
 import { RevenueGroups } from "@/db/schema/revenue-groups";
 import { eq, min, sql } from "drizzle-orm";
@@ -59,12 +58,12 @@ export const getCustomerRevenuePerRevenueGroup = async (): Promise<
         revenueGroupName: RevenueGroups.name,
         year,
         month,
-        weightKg: sql<string>`COALESCE(SUM(${OrderItems.kgPlanned}), 0)`,
-        revenue: sql<string>`COALESCE(SUM(${OrderItems.amount}), 0)`,
+        // The invoice line's own snapshot — see revenue-per-revenue-group.
+        weightKg: sql<string>`COALESCE(SUM(${InvoiceItems.weightKg}), 0)`,
+        revenue: sql<string>`COALESCE(SUM(${InvoiceItems.amount}), 0)`,
       })
       .from(InvoiceItems)
       .innerJoin(Invoices, eq(InvoiceItems.invoiceUuid, Invoices.uuid))
-      .innerJoin(OrderItems, eq(InvoiceItems.orderItemUuid, OrderItems.uuid))
       .innerJoin(Products, eq(InvoiceItems.productUuid, Products.uuid))
       .innerJoin(Companies, eq(Invoices.companyUuid, Companies.uuid))
       .leftJoin(

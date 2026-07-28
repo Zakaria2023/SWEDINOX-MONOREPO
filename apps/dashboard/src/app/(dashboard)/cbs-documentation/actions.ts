@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/db";
-import { InvoiceItems } from "@/db/schema/invoice-items";
+import { InvoiceItems, SelectInvoiceItems } from "@/db/schema/invoice-items";
 import { Invoices, SelectInvoices } from "@/db/schema/invoices";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { OrderItems, SelectOrderItems } from "@/db/schema/order-items";
@@ -13,8 +13,8 @@ export type CbsDocumentationRow = {
   key: string;
   invoiceDate: SelectInvoices["invoiceDate"];
   invoiceId: SelectInvoices["id"];
-  invoiceAmount: SelectOrderItems["amount"];
-  weightKg: SelectOrderItems["kgPlanned"];
+  invoiceAmount: SelectInvoiceItems["amount"];
+  weightKg: SelectInvoiceItems["weightKg"];
   companyName: SelectCompanies["companyName"] | null;
   partnerId: SelectCompanies["vatNumber"] | null;
   orderType: SelectOrders["orderCategory"];
@@ -34,8 +34,11 @@ export const getCbsDocumentation = async (): Promise<CbsDocumentationRow[]> => {
         key: InvoiceItems.uuid,
         invoiceDate: Invoices.invoiceDate,
         invoiceId: Invoices.id,
-        invoiceAmount: OrderItems.amount,
-        weightKg: OrderItems.kgPlanned,
+        // Declared value and weight come from the invoice line itself — a
+        // statutory return must state what was invoiced, not what the order
+        // happens to say now. The order stays joined for its identifiers.
+        invoiceAmount: InvoiceItems.amount,
+        weightKg: InvoiceItems.weightKg,
         companyName: Companies.companyName,
         partnerId: Companies.vatNumber,
         orderType: Orders.orderCategory,

@@ -26,6 +26,8 @@ const editSchema = z.object({
   expirationDate: z.string().optional(),
   paymentTerms: z.string().optional(),
   explanation: z.string().optional(),
+  invoiceAmountExclVat: z.string().optional(),
+  creditRestriction: z.string().optional(),
 });
 
 type EditFormValues = z.infer<typeof editSchema>;
@@ -48,6 +50,8 @@ export const InvoiceEditForm = ({ invoice }: Props) => {
         expirationDate: toDateInput(invoice.expirationDate),
         paymentTerms: invoice.paymentTerms ?? "",
         explanation: invoice.explanation ?? "",
+        invoiceAmountExclVat: invoice.invoiceAmountExclVat,
+        creditRestriction: invoice.creditRestriction,
       },
     });
 
@@ -84,6 +88,10 @@ export const InvoiceEditForm = ({ invoice }: Props) => {
           : null,
         paymentTerms: (values.paymentTerms || null) as InvoiceDetail["paymentTerms"],
         explanation: values.explanation || null,
+        // Sent every time; the action books a ledger correction only for the
+        // difference, so leaving them untouched changes nothing.
+        invoiceAmountExclVat: values.invoiceAmountExclVat || "0.00",
+        creditRestriction: values.creditRestriction || "0.00",
       });
 
       if (result.error) {
@@ -143,6 +151,36 @@ export const InvoiceEditForm = ({ invoice }: Props) => {
                 disabled={isPending}
               />
             )}
+          />
+        </div>
+      </div>
+
+      {/* Amounts are computed from the billed lines when the invoice is raised
+          and shown read-only there. They stay correctable here so an agreed
+          adjustment can be booked without re-cutting the invoice — VAT, the
+          total and the outstanding balance follow whatever is entered, and the
+          sales journal is corrected for the difference. */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <FormLabel htmlFor="invoiceAmountExclVat">
+            Invoice Amount (Excl. VAT)
+          </FormLabel>
+          <Input
+            id="invoiceAmountExclVat"
+            type="number"
+            step="0.01"
+            {...register("invoiceAmountExclVat")}
+            disabled={isPending}
+          />
+        </div>
+        <div>
+          <FormLabel htmlFor="creditRestriction">Credit Restriction</FormLabel>
+          <Input
+            id="creditRestriction"
+            type="number"
+            step="0.01"
+            {...register("creditRestriction")}
+            disabled={isPending}
           />
         </div>
       </div>

@@ -4,7 +4,6 @@ import { describeError } from "@/lib/helpers";
 import { db } from "@/db";
 import { InvoiceItems } from "@/db/schema/invoice-items";
 import { Invoices } from "@/db/schema/invoices";
-import { OrderItems } from "@/db/schema/order-items";
 import { Products } from "@/db/schema/products";
 import { RevenueGroups } from "@/db/schema/revenue-groups";
 import { Stock } from "@/db/schema/stock";
@@ -50,19 +49,19 @@ export const getPurchasesAndSalesPerRevenueGroup = async (): Promise<
         revenueGroupName: RevenueGroups.name,
         year: salesYear,
         month: salesMonth,
-        weight: sql<string>`COALESCE(SUM(${OrderItems.kgPlanned}), 0)`,
-        revenue: sql<string>`COALESCE(SUM(${OrderItems.amount}), 0)`,
-        cost: sql<string>`COALESCE(SUM(${Stock.valuationPrice} * ${InvoiceItems.quantity}), 0)`,
+        // The sales side reads the invoice line's own snapshot — see
+        // revenue-per-revenue-group.
+        weight: sql<string>`COALESCE(SUM(${InvoiceItems.weightKg}), 0)`,
+        revenue: sql<string>`COALESCE(SUM(${InvoiceItems.amount}), 0)`,
+        cost: sql<string>`COALESCE(SUM(${InvoiceItems.costAmount}), 0)`,
       })
       .from(InvoiceItems)
       .innerJoin(Invoices, eq(InvoiceItems.invoiceUuid, Invoices.uuid))
-      .innerJoin(OrderItems, eq(InvoiceItems.orderItemUuid, OrderItems.uuid))
       .innerJoin(Products, eq(InvoiceItems.productUuid, Products.uuid))
       .leftJoin(
         RevenueGroups,
         eq(Products.revenueGroupUuid, RevenueGroups.uuid),
       )
-      .leftJoin(Stock, eq(OrderItems.stockUuid, Stock.uuid))
       .groupBy(
         RevenueGroups.uuid,
         RevenueGroups.number,
