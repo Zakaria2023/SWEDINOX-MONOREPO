@@ -25,6 +25,7 @@ import {
 import { Companies } from "./companies";
 import { CompanyAddresses } from "./company-addresses";
 import { Contacts } from "./contacts";
+import { PurchaseQuotes } from "./purchase-quotes";
 
 export const PurchaseOrders = mysqlTable(
   "PurchaseOrders",
@@ -37,6 +38,12 @@ export const PurchaseOrders = mysqlTable(
     supplierUuid: char("supplier_uuid", { length: 36 }).notNull(),
     agentUuid: char("agent_uuid", { length: 36 }),
     contactUuid: char("contact_uuid", { length: 36 }),
+
+    // The supplier quote that was awarded, when the order came from one. This
+    // is the audit trail behind the purchase price: the lot received against
+    // this order is valued at that price, and every downstream margin depends
+    // on it, so being able to point at the quote it was agreed on matters.
+    purchaseQuoteUuid: char("purchase_quote_uuid", { length: 36 }),
     // Purchaser here is the Clerk user ID that is logged in to the system and is creating the purchase order
     purchaser: varchar("purchaser", { length: 255 }),
     reference: varchar("reference", { length: 255 }),
@@ -125,6 +132,14 @@ export const PurchaseOrders = mysqlTable(
     index("idx_purchase_orders_supplier_address_uuid").on(
       table.supplierAddressUuid,
     ),
+    index("idx_purchase_orders_purchase_quote_uuid").on(
+      table.purchaseQuoteUuid,
+    ),
+    foreignKey({
+      name: "fk_purchase_orders_purchase_quote",
+      columns: [table.purchaseQuoteUuid],
+      foreignColumns: [PurchaseQuotes.uuid],
+    }),
     foreignKey({
       name: "fk_purchase_orders_supplier",
       columns: [table.supplierUuid],

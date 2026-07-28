@@ -1253,6 +1253,32 @@ export const purchaseOrderStatuses = [
 
 export type PurchaseOrderStatus = (typeof purchaseOrderStatuses)[number];
 
+// Where a purchase request has got to. A request is the "who can supply this?"
+// document: it is sent to several suppliers at once, collects their quotes, and
+// ends when one of them is turned into a purchase order.
+export const purchaseRequestStatuses = [
+  "draft",
+  "sent",
+  "quoted",
+  "awarded",
+  "cancelled",
+] as const satisfies readonly string[];
+
+export type PurchaseRequestStatus = (typeof purchaseRequestStatuses)[number];
+
+// Where a supplier's quote has got to. "lost" is set on the siblings when
+// another quote against the same request is awarded, so the comparison screen
+// shows that a decision was taken rather than leaving every quote open forever.
+export const purchaseQuoteStatuses = [
+  "open",
+  "received",
+  "awarded",
+  "lost",
+  "expired",
+] as const satisfies readonly string[];
+
+export type PurchaseQuoteStatus = (typeof purchaseQuoteStatuses)[number];
+
 export const purchaseCompanyTypes = [
   "supplier",
   "agent",

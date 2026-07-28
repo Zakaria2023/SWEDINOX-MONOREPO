@@ -98,6 +98,8 @@ import {
   TransporterPriceUnit,
   OrderWeightType,
   PurchaseCompanyType,
+  PurchaseQuoteStatus,
+  PurchaseRequestStatus,
   PurchaseOrderType,
   ComplaintType,
   ComplaintCategory,
@@ -1267,6 +1269,26 @@ export const PURCHASE_ORDER_STATUS_LABELS: Record<PurchaseOrderStatus, string> =
     pre_notified: "Pre-notified",
     completed: "Completed",
     cancelled: "Cancelled",
+  };
+
+export const PURCHASE_REQUEST_STATUS_LABELS: Record<
+  PurchaseRequestStatus,
+  string
+> = {
+  draft: "Draft",
+  sent: "Sent",
+  quoted: "Quoted",
+  awarded: "Awarded",
+  cancelled: "Cancelled",
+};
+
+export const PURCHASE_QUOTE_STATUS_LABELS: Record<PurchaseQuoteStatus, string> =
+  {
+    open: "Open",
+    received: "Received",
+    awarded: "Awarded",
+    lost: "Lost",
+    expired: "Expired",
   };
 
 export const PURCHASE_COMPANY_TYPE_LABELS: Record<PurchaseCompanyType, string> =

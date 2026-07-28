@@ -34,6 +34,7 @@ export * from "./purchase-orders";
 export * from "./purchase-order-items";
 export * from "./purchase-quotes";
 export * from "./purchase-requests";
+export * from "./purchase-request-items";
 export * from "./machines";
 export * from "./counter-orders";
 export * from "./industries";

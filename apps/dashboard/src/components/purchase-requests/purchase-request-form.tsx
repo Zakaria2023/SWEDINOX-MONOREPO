@@ -5,7 +5,8 @@ import { usePurchaseRequestSubmit } from "@/app/(dashboard)/purchase-requests/us
 import { CompanyOption } from "@/app/(dashboard)/companies/actions";
 import { DatePicker } from "@/components/shadcn/date-picker";
 import { Input } from "@/components/shadcn/input";
-import { Select } from "@/components/shadcn/select";
+import { Select, SelectOption } from "@/components/shadcn/select";
+import { RequestItemsSection } from "@/components/purchase-requests/sections/request-items-section";
 import { FormActions } from "@/components/ui/form-actions";
 import { FormError } from "@/components/ui/form-error";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
@@ -16,9 +17,14 @@ import { ClerkUserOption } from "@/lib/server/clerk";
 type Props = {
   companies: CompanyOption[];
   clerkUsers: ClerkUserOption[];
+  productOptions: SelectOption[];
 };
 
-export const PurchaseRequestForm = ({ companies, clerkUsers }: Props) => {
+export const PurchaseRequestForm = ({
+  companies,
+  clerkUsers,
+  productOptions,
+}: Props) => {
   const {
     form,
     isPending,
@@ -38,6 +44,9 @@ export const PurchaseRequestForm = ({ companies, clerkUsers }: Props) => {
     isLoadingSupplierData,
     handleSupplierChange,
     handleCancel,
+    itemFields,
+    appendItem,
+    removeItem,
   } = usePurchaseRequestSubmit({ companies, clerkUsers });
 
   const {
@@ -358,6 +367,15 @@ export const PurchaseRequestForm = ({ companies, clerkUsers }: Props) => {
           />
         </div>
       </section>
+
+      <RequestItemsSection
+        productOptions={productOptions}
+        control={control}
+        register={register}
+        itemFields={itemFields}
+        appendItem={appendItem}
+        removeItem={removeItem}
+      />
 
       <FormActions
         submitLabel="Create Purchase Request"

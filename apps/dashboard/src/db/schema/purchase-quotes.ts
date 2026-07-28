@@ -21,10 +21,12 @@ import {
   orderWeightTypes,
   purchaseCompanyTypes,
   purchaseOrderTypes,
+  purchaseQuoteStatuses,
 } from "../../lib/enums";
 import { Companies } from "./companies";
 import { CompanyAddresses } from "./company-addresses";
 import { Contacts } from "./contacts";
+import { PurchaseRequests } from "./purchase-requests";
 
 export const PurchaseQuotes = mysqlTable(
   "PurchaseQuotes",
@@ -37,6 +39,15 @@ export const PurchaseQuotes = mysqlTable(
     companyUuid: char("company_uuid", { length: 36 }),
     companyType: mysqlEnum("company_type", purchaseCompanyTypes),
     contactUuid: char("contact_uuid", { length: 36 }),
+
+    // The request this quote answers. Nullable, because a supplier quote can
+    // also arrive unsolicited. When it is set, every quote sharing the value is
+    // a competing bid for the same job — which is what makes the comparison
+    // screens meaningful and what lets awarding one mark the rest as lost.
+    purchaseRequestUuid: char("purchase_request_uuid", { length: 36 }),
+    status: mysqlEnum("status", purchaseQuoteStatuses)
+      .default("open")
+      .notNull(),
     // Purchaser here is the Clerk user ID that is logged in to the system and is creating the purchase quote
     purchaser: varchar("purchaser", { length: 255 }),
     reference: varchar("reference", { length: 255 }),
@@ -107,6 +118,14 @@ export const PurchaseQuotes = mysqlTable(
   (table) => [
     index("idx_purchase_quotes_company_uuid").on(table.companyUuid),
     index("idx_purchase_quotes_contact_uuid").on(table.contactUuid),
+    index("idx_purchase_quotes_purchase_request_uuid").on(
+      table.purchaseRequestUuid,
+    ),
+    foreignKey({
+      name: "fk_purchase_quotes_purchase_request",
+      columns: [table.purchaseRequestUuid],
+      foreignColumns: [PurchaseRequests.uuid],
+    }),
     index("idx_purchase_quotes_delivery_address_uuid").on(
       table.deliveryAddressUuid,
     ),
