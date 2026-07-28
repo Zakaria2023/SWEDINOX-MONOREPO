@@ -222,12 +222,30 @@ export const completeProductionWorkOrderLine = async (
         );
       }
 
+      // Produced goods still have to enter stock at a cost, or every sales
+      // order drawn from them would report the whole sale as profit.
+      //
+      // Production consumes material this system does not yet track per
+      // workorder line, so the produced lot is valued at the product's
+      // replacement price — what buying the same thing would cost today. That
+      // is an honest stand-in rather than a zero, and it is the figure the
+      // valuation screens already treat as the fallback cost basis.
+      const [producedProduct] = await tx
+        .select({ replacementPrice: Products.replacementPrice })
+        .from(Products)
+        .where(eq(Products.uuid, productUuid))
+        .limit(1);
+
+      const valuationPrice = Number(producedProduct?.replacementPrice ?? 0);
+
       await tx.insert(Stock).values({
         uuid: stockUuid,
         productUuid,
         quantity: quantity.toFixed(3),
         quantityKg: Number(line.kgActual ?? line.kgPlanned ?? 0).toFixed(2),
         status: "received",
+        valuationPrice: valuationPrice.toFixed(4),
+        valuationEuro: (valuationPrice * quantity).toFixed(2),
       });
 
       await tx.insert(StockMovements).values({

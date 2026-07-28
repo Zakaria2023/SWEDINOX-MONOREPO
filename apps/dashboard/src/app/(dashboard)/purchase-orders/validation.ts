@@ -11,6 +11,14 @@ import { todayDateString, currentYear } from "@/lib/helpers";
 export const purchaseOrderItemSchema = z.object({
   productUuid: z.string().min(1, "Product is required"),
   quantity: z.string().min(1, "Quantity is required"),
+  // The agreed purchase price. Required, because the lot received against this
+  // line is valued at it — an unpriced line would put stock on the shelf with
+  // no cost, and every sales order drawing from it would report a false margin.
+  netPrice: z
+    .string()
+    .min(1, "Purchase price is required")
+    .refine((value) => Number(value) >= 0, "Purchase price cannot be negative"),
+  priceUnit: z.string().optional(),
 });
 
 export const purchaseOrderSchema = z.object({
@@ -81,7 +89,7 @@ export const DEFAULT_PURCHASE_ORDER: PurchaseOrderFormValues = {
   ourReference: "",
   orderCategory: "",
 
-  items: [{ productUuid: "", quantity: "" }],
+  items: [{ productUuid: "", quantity: "", netPrice: "", priceUnit: "" }],
 
   purchaseOrderType: undefined,
   weightType: undefined,

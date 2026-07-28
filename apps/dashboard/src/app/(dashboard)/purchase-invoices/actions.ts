@@ -287,6 +287,12 @@ export const createPurchaseInvoice = async (
 
         // The goods physically arrive now: create the stock lot and log the
         // "in". This is the receipt — the purchase order only recorded intent.
+        //
+        // The lot is valued at what was agreed to pay for it. This is the
+        // moment a cost enters the business: every sales order later drawn from
+        // this lot is costed against this figure, so a lot received without one
+        // would make every downstream margin a fiction.
+        const valuationPrice = Number(poItem.netPrice ?? 0);
         const stockUuid = generateUuid();
         await tx.insert(Stock).values({
           uuid: stockUuid,
@@ -296,6 +302,8 @@ export const createPurchaseInvoice = async (
           supplierUuid: fields.companyUuid ?? null,
           quantity: item.quantity,
           status: "pending",
+          valuationPrice: valuationPrice.toFixed(4),
+          valuationEuro: (valuationPrice * Number(item.quantity)).toFixed(2),
         });
 
         await tx.insert(PurchaseInvoiceItems).values({

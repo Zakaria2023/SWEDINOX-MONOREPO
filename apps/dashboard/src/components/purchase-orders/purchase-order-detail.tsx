@@ -17,6 +17,7 @@ import {
 } from "@/components/shadcn/table";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FormError } from "@/components/ui/form-error";
+import { cn, formatMoney, orDash } from "@/lib/helpers";
 import { PURCHASE_ORDER_STATUS_LABELS, STOCK_STATUS_LABELS } from "@/lib/labels";
 
 type Props = {
@@ -97,15 +98,19 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
               <TableRow>
                 <TableHead>Product</TableHead>
                 <TableHead className="text-right">Ordered</TableHead>
+                <TableHead className="text-right">Purchase price</TableHead>
+                <TableHead>Per</TableHead>
+                <TableHead className="text-right">Amount</TableHead>
                 <TableHead className="text-right">Remaining</TableHead>
                 <TableHead>Stock Status</TableHead>
+                <TableHead className="text-right">Lot valuation</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {purchaseOrder.items.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={4}
+                    colSpan={8}
                     className="h-24 text-center text-muted-foreground"
                   >
                     No products on this order.
@@ -119,15 +124,37 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
                         .filter(Boolean)
                         .join(" — ")}
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right tabular-nums">
                       {item.orderedQuantity}
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right tabular-nums">
+                      {formatMoney(Number(item.netPrice ?? 0))}
+                    </TableCell>
+                    <TableCell>{orDash(item.priceUnit)}</TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatMoney(Number(item.amount ?? 0))}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
                       {item.stockQuantity ?? "—"}
                     </TableCell>
                     <TableCell>
                       {item.stockStatus
                         ? STOCK_STATUS_LABELS[item.stockStatus]
+                        : "—"}
+                    </TableCell>
+                    {/* A lot received before purchase lines carried a price
+                        shows zero here — the sales margin drawn from it is
+                        measured against the replacement price instead. */}
+                    <TableCell
+                      className={cn(
+                        "text-right tabular-nums",
+                        item.stockUuid &&
+                          Number(item.stockValuationPrice ?? 0) === 0 &&
+                          "text-destructive",
+                      )}
+                    >
+                      {item.stockUuid
+                        ? formatMoney(Number(item.stockValuationPrice ?? 0))
                         : "—"}
                     </TableCell>
                   </TableRow>

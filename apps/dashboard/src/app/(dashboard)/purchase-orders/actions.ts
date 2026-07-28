@@ -28,6 +28,9 @@ export type PurchaseOrderFields = Omit<
 export type PurchaseOrderItemInput = {
   productUuid: string;
   quantity: string;
+  /** Agreed purchase price per unit — what the received lot is valued at. */
+  netPrice: string;
+  priceUnit?: string;
 };
 
 export type PurchaseOrderActionResult = {
@@ -65,9 +68,16 @@ export type PurchaseOrderItemDetail = {
   productCode: string;
   productName: string;
   orderedQuantity: string;
+  netPrice: SelectPurchaseOrderItems["netPrice"];
+  priceUnit: SelectPurchaseOrderItems["priceUnit"];
+  amount: SelectPurchaseOrderItems["amount"];
   stockUuid: string | null;
   stockQuantity: string | null;
   stockStatus: SelectStock["status"] | null;
+  // What the received lot was actually valued at. Normally the line's own
+  // price, but a lot received before purchase lines carried one reads zero —
+  // which is precisely what needs correcting rather than hiding.
+  stockValuationPrice: SelectStock["valuationPrice"] | null;
 };
 
 export type PurchaseOrderDetail = SelectPurchaseOrders & {
@@ -215,12 +225,18 @@ export const createPurchaseOrder = async (
       // Stock (and the "in" movement) is created later, when the matching
       // purchase invoice arrives and the goods are actually received.
       for (const [index, item] of items.entries()) {
+        const netPrice = Number(item.netPrice ?? 0);
+
         await tx.insert(PurchaseOrderItems).values({
           uuid: generateUuid(),
           purchaseOrderUuid: uuid,
           productUuid: item.productUuid,
           quantity: item.quantity,
+          qtyPlanned: item.quantity,
           lineNumber: index + 1,
+          netPrice: netPrice.toFixed(4),
+          priceUnit: item.priceUnit ?? null,
+          amount: (netPrice * Number(item.quantity)).toFixed(2),
         });
       }
     });
@@ -274,6 +290,10 @@ export const getPurchaseOrderDetail = async (
       productCode: Products.productCode,
       productName: Products.name,
       orderedQuantity: PurchaseOrderItems.quantity,
+      netPrice: PurchaseOrderItems.netPrice,
+      priceUnit: PurchaseOrderItems.priceUnit,
+      amount: PurchaseOrderItems.amount,
+      stockValuationPrice: Stock.valuationPrice,
       stockUuid: Stock.uuid,
       stockQuantity: Stock.quantity,
       stockStatus: Stock.status,
