@@ -809,6 +809,108 @@ export const getQuoteVatRatePercent = (
     ? STANDARD_INVOICE_VAT_RATE
     : 0;
 
+export type PurchaseInvoiceLineAmount = {
+  /** Net amount booked on the line. */
+  amount: number;
+  /** The VAT code the line was booked under, snapshotted from the product. */
+  vatCode: VatCode | null;
+};
+
+export type PurchaseInvoiceSummaryInput = {
+  lines: PurchaseInvoiceLineAmount[];
+  surcharges: number[];
+  optionsAmount?: number;
+  /** The supplier's kredietbeperking — the one figure a clerk types. */
+  creditRestriction: number;
+  /**
+   * The total printed on the supplier's document, also typed. Everything else
+   * is derived, so this is what the derivation is reconciled against.
+   */
+  invoiceTotal: number;
+};
+
+export type PurchaseInvoiceSummary = {
+  materials: number;
+  optionsAmount: number;
+  surcharges: number;
+  totalExclVat: number;
+  vatHigh: number;
+  vatMiddle: number;
+  vatLow: number;
+  vatTotal: number;
+  totalInclVat: number;
+  creditRestriction: number;
+  /** What the supplier billed that the booked lines don't account for. */
+  remainder: number;
+  /** The build-up's bottom line, which reconciles to the supplier's total. */
+  totalGeneral: number;
+};
+
+/**
+ * The accounting summary of a purchase invoice.
+ *
+ * Only two figures on this document are typed: the total printed on the
+ * supplier's paperwork, and the credit restriction they applied. Everything
+ * else is derived from the lines received and the surcharges booked — a clerk
+ * keying the materials total by hand is a clerk who can key it wrong, and the
+ * ledger would believe them.
+ *
+ * VAT splits into the three bands the document reports, taken from each line's
+ * own VAT code rather than one rate for the whole invoice: a pallet of goods at
+ * 21% and a delivery at 9% belong in different boxes on the return. Surcharges
+ * follow the high rate, being services.
+ *
+ * `remainder` is the reconciliation: the difference between what the supplier
+ * billed and what the booked lines, surcharges, VAT and credit restriction add
+ * up to. Zero means the booking matches the paperwork. Anything else is the
+ * amount someone still has to explain — which is precisely why it is shown
+ * rather than quietly absorbed into a total.
+ */
+export const summarisePurchaseInvoice = ({
+  lines,
+  surcharges,
+  optionsAmount = 0,
+  creditRestriction,
+  invoiceTotal,
+}: PurchaseInvoiceSummaryInput): PurchaseInvoiceSummary => {
+  const materials = lines.reduce((sum, line) => sum + line.amount, 0);
+  const surchargeTotal = surcharges.reduce((sum, amount) => sum + amount, 0);
+  const totalExclVat = materials + optionsAmount + surchargeTotal;
+
+  const vatOn = (code: VatCode): number =>
+    lines
+      .filter((line) => line.vatCode === code)
+      .reduce((sum, line) => sum + line.amount * (VAT_CODE_RATE[code] / 100), 0);
+
+  // Services follow the standard rate, so surcharges land in the high band.
+  const vatHigh =
+    vatOn("vat_high_21") + surchargeTotal * (VAT_CODE_RATE.vat_high_21 / 100);
+  const vatMiddle = vatOn("vat_middle_12");
+  const vatLow = vatOn("vat_low_9");
+  const vatTotal = vatHigh + vatMiddle + vatLow;
+  const totalInclVat = totalExclVat + vatTotal;
+
+  // With no supplier total to reconcile against there is nothing unexplained;
+  // the build-up stands on its own.
+  const accounted = totalInclVat + creditRestriction;
+  const remainder = invoiceTotal === 0 ? 0 : invoiceTotal - accounted;
+
+  return {
+    materials,
+    optionsAmount,
+    surcharges: surchargeTotal,
+    totalExclVat,
+    vatHigh,
+    vatMiddle,
+    vatLow,
+    vatTotal,
+    totalInclVat,
+    creditRestriction,
+    remainder,
+    totalGeneral: accounted + remainder,
+  };
+};
+
 /**
  * The direction a stock movement pushes the on-hand quantity: `in` adds, `out`
  * removes.

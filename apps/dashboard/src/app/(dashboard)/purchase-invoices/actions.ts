@@ -30,9 +30,11 @@ import { JournalEntries } from "@/db/schema/journal-entries";
 import { mailDocument, sendPurchaseInvoiceEmail } from "@/emails/documents";
 import { buildPurchaseJournalEntry } from "@/lib/server/ledger";
 import { recordFreightMovement } from "@/lib/server/freight";
+import { VatCode } from "@/lib/enums";
 import {
   generateUuid,
   getPaymentTermDueDate,
+  summarisePurchaseInvoice,
   toDateString,
 } from "@/lib/helpers";
 import { currentUser } from "@clerk/nextjs/server";
@@ -46,9 +48,23 @@ export type PurchaseInvoiceActionResult = {
   success?: boolean;
 };
 
+// Everything the accounting summary derives is left out: a clerk keys the
+// supplier's total and their credit restriction, and the document works the
+// rest out from the lines it received.
 export type PurchaseInvoiceFields = Omit<
   InsertPurchaseInvoices,
-  "id" | "uuid" | "createdAt" | "updatedAt"
+  | "id"
+  | "uuid"
+  | "materials"
+  | "optionsAmount"
+  | "surcharges"
+  | "vatHigh"
+  | "vatMiddle"
+  | "vatLow"
+  | "remainder"
+  | "outstanding"
+  | "createdAt"
+  | "updatedAt"
 >;
 
 export type PurchaseInvoiceItemInput = {
@@ -77,6 +93,10 @@ export type PurchaseInvoiceHeaderEdit = Pick<
   | "expirationDate"
   | "paymentTerms"
   | "remarks"
+  // The only two figures on this document a person types. Correcting either
+  // re-derives the whole summary and moves the payable with it.
+  | "invoiceTotal"
+  | "creditRestriction"
 >;
 
 export type PurchaseInvoiceItemDetail = SelectPurchaseInvoiceItems & {
@@ -118,19 +138,11 @@ export const createPurchaseInvoice = async (
   surcharges: PurchaseInvoiceSurchargeInput[] = [],
 ): Promise<PurchaseInvoiceActionResult> => {
   const uuid = generateUuid();
-  // Amounts posted to the purchase journal.
-  const exclVat =
-    Number(fields.materials ?? 0) +
-    Number(fields.optionsAmount ?? 0) +
-    Number(fields.surcharges ?? 0);
-  const vatAmount =
-    Number(fields.vatHigh ?? 0) +
-    Number(fields.vatMiddle ?? 0) +
-    Number(fields.vatLow ?? 0);
   try {
     // Validate the selected purchase-order lines before opening the
     // transaction. Receiving goods draws down the outstanding ordered quantity.
     const poItemByUuid = new Map<string, SelectPurchaseOrderItems>();
+    const vatCodeByProduct = new Map<string, VatCode | null>();
     if (items.length > 0) {
       const poItemUuids = items.map((item) => item.purchaseOrderItemUuid);
       const poItemRows = await db
@@ -139,6 +151,21 @@ export const createPurchaseInvoice = async (
         .where(inArray(PurchaseOrderItems.uuid, poItemUuids));
       for (const row of poItemRows) {
         poItemByUuid.set(row.uuid, row);
+      }
+
+      // Each line's VAT band comes from its own product, so an invoice mixing
+      // rates reports each in the right box rather than all at the high rate.
+      const productRows = await db
+        .select({ uuid: Products.uuid, vatCode: Products.vatCode })
+        .from(Products)
+        .where(
+          inArray(
+            Products.uuid,
+            poItemRows.map((row) => row.productUuid),
+          ),
+        );
+      for (const row of productRows) {
+        vatCodeByProduct.set(row.uuid, row.vatCode);
       }
 
       for (const item of items) {
@@ -180,16 +207,43 @@ export const createPurchaseInvoice = async (
         return due ? new Date(`${due}T00:00:00`) : null;
       })();
 
+    // The accounting summary, worked out from what was received rather than
+    // typed. Previously the form submitted none of these figures, so materials
+    // and VAT were always undefined — which meant every purchase invoice
+    // posted a zero to the purchase journal while the payable took the typed
+    // total. The ledger and the payable disagreed on every single one.
+    const bookedLines = items.map((item) => {
+      const poItem = poItemByUuid.get(item.purchaseOrderItemUuid);
+      const netPrice = Number(poItem?.netPrice ?? 0);
+      return {
+        amount: netPrice * Number(item.quantity),
+        vatCode: poItem ? (vatCodeByProduct.get(poItem.productUuid) ?? null) : null,
+      };
+    });
+
+    const summary = summarisePurchaseInvoice({
+      lines: bookedLines,
+      surcharges: surcharges.map((surcharge) => Number(surcharge.amount ?? 0)),
+      creditRestriction: Number(fields.creditRestriction ?? 0),
+      invoiceTotal: Number(fields.invoiceTotal ?? 0),
+    });
+
     await db.transaction(async (tx) => {
       await tx.insert(PurchaseInvoices).values({
         ...fields,
         expirationDate: derivedExpiration,
         uuid,
+        materials: summary.materials.toFixed(2),
+        optionsAmount: summary.optionsAmount.toFixed(2),
+        surcharges: summary.surcharges.toFixed(2),
+        vatHigh: summary.vatHigh.toFixed(2),
+        vatMiddle: summary.vatMiddle.toFixed(2),
+        vatLow: summary.vatLow.toFixed(2),
+        remainder: summary.remainder.toFixed(2),
         // Owed to the supplier in full until payments are registered against
-        // it. Falls back to the computed gross when no total was supplied.
-        outstanding: (
-          Number(fields.invoiceTotal ?? 0) || exclVat + vatAmount
-        ).toFixed(2),
+        // it. The document's own bottom line, which reconciles to the total on
+        // their paperwork.
+        outstanding: summary.totalGeneral.toFixed(2),
       });
 
       const [inserted] = await tx
@@ -205,8 +259,8 @@ export const createPurchaseInvoice = async (
           companyUuid: fields.companyUuid ?? null,
           debCreditor: fields.creditorNo ?? null,
           invoiceDate: fields.invoiceDate ?? null,
-          amountExclVat: exclVat,
-          vatAmount,
+          amountExclVat: summary.totalExclVat,
+          vatAmount: summary.vatTotal,
           userId,
         }),
       );
@@ -271,7 +325,13 @@ export const createPurchaseInvoice = async (
           purchaseInvoiceUuid: uuid,
           stockUuid,
           productUuid: poItem.productUuid,
+          purchaseOrderItemUuid: poItem.uuid,
           quantity: item.quantity,
+          // Snapshotted at receipt: re-pricing the purchase order afterwards
+          // must not rewrite an invoice already posted.
+          netPrice: valuationPrice.toFixed(4),
+          amount: (valuationPrice * Number(item.quantity)).toFixed(2),
+          vatCode: vatCodeByProduct.get(poItem.productUuid) ?? null,
         });
 
         await tx.insert(StockMovements).values({
@@ -335,7 +395,12 @@ export const updatePurchaseInvoice = async (
 ): Promise<PurchaseInvoiceActionResult> => {
   try {
     const [invoice] = await db
-      .select({ cancelled: PurchaseInvoices.cancelled })
+      .select({
+        cancelled: PurchaseInvoices.cancelled,
+        invoiceTotal: PurchaseInvoices.invoiceTotal,
+        creditRestriction: PurchaseInvoices.creditRestriction,
+        outstanding: PurchaseInvoices.outstanding,
+      })
       .from(PurchaseInvoices)
       .where(eq(PurchaseInvoices.uuid, uuid))
       .limit(1);
@@ -358,9 +423,53 @@ export const updatePurchaseInvoice = async (
         return due ? new Date(`${due}T00:00:00`) : null;
       })();
 
+    // Re-derive the summary from the lines that were received, against the
+    // corrected supplier total and credit restriction.
+    const lines = await db
+      .select({
+        amount: PurchaseInvoiceItems.amount,
+        vatCode: PurchaseInvoiceItems.vatCode,
+      })
+      .from(PurchaseInvoiceItems)
+      .where(eq(PurchaseInvoiceItems.purchaseInvoiceUuid, uuid));
+
+    const surchargeRows = await db
+      .select({ amount: PurchaseInvoiceSurcharges.amount })
+      .from(PurchaseInvoiceSurcharges)
+      .where(eq(PurchaseInvoiceSurcharges.purchaseInvoiceUuid, uuid));
+
+    const summary = summarisePurchaseInvoice({
+      lines: lines.map((line) => ({
+        amount: Number(line.amount ?? 0),
+        vatCode: line.vatCode,
+      })),
+      surcharges: surchargeRows.map((row) => Number(row.amount ?? 0)),
+      creditRestriction: Number(
+        fields.creditRestriction ?? invoice.creditRestriction ?? 0,
+      ),
+      invoiceTotal: Number(fields.invoiceTotal ?? invoice.invoiceTotal ?? 0),
+    });
+
+    // Move what is owed by the correction rather than resetting it: payments
+    // already registered against this invoice must not be un-received.
+    const outstanding =
+      Number(invoice.outstanding) +
+      (summary.totalGeneral - Number(invoice.invoiceTotal ?? 0));
+
     await db
       .update(PurchaseInvoices)
-      .set({ ...fields, expirationDate })
+      .set({
+        ...fields,
+        expirationDate,
+        materials: summary.materials.toFixed(2),
+        optionsAmount: summary.optionsAmount.toFixed(2),
+        surcharges: summary.surcharges.toFixed(2),
+        vatHigh: summary.vatHigh.toFixed(2),
+        vatMiddle: summary.vatMiddle.toFixed(2),
+        vatLow: summary.vatLow.toFixed(2),
+        remainder: summary.remainder.toFixed(2),
+        outstanding: outstanding.toFixed(2),
+      })
       .where(eq(PurchaseInvoices.uuid, uuid));
   } catch (error) {
     return {

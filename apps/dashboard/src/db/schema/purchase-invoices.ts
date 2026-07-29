@@ -94,6 +94,11 @@ export const PurchaseInvoices = mysqlTable(
       precision: 15,
       scale: 2,
     }).default("0.00"),
+    // What the supplier billed that the booked lines don't account for. Zero
+    // means the booking matches their paperwork; anything else is the amount
+    // somebody still has to explain, which is why it is shown rather than
+    // quietly absorbed into a total.
+    remainder: decimal("remainder", { precision: 15, scale: 2 }).default("0.00"),
     remarks: text("remarks"),
     documents:
       json("documents").$type<Array<{ id: string; fileName: string }>>(),
