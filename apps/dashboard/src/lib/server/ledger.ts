@@ -3,6 +3,20 @@ import "server-only";
 import { InsertJournalEntries } from "@/db/schema/journal-entries";
 import { generateUuid } from "@/lib/helpers";
 
+export type PurchasePosting = {
+  /** The PurchaseInvoices row being posted — an invoice or a credit note. */
+  purchaseInvoiceUuid: string;
+  invoiceId: number | null;
+  companyUuid: string | null;
+  debCreditor: string | null;
+  invoiceDate: Date | string | null;
+  amountExclVat: number;
+  vatAmount: number;
+  userId: string | null;
+  reversal?: boolean;
+  description?: string;
+};
+
 export type SalesPosting = {
   /** The Invoices row being posted — an invoice or a credit note. */
   invoiceUuid: string;
@@ -25,6 +39,41 @@ export type SalesPosting = {
  * note that reverses it can never drift onto different accounts.
  */
 export const SALES_REVENUE_ACCOUNT = "8000";
+
+/** Placeholder GL account code for purchases; see SALES_REVENUE_ACCOUNT. */
+export const PURCHASES_ACCOUNT = "7000";
+
+/**
+ * A purchase document posts to the purchase journal with the creditor as the
+ * counter-account. Its cancellation books the same row negated; a supplier's
+ * credit note arrives already negative and needs no reversal flag.
+ */
+export const buildPurchaseJournalEntry = (
+  posting: PurchasePosting,
+): InsertJournalEntries => {
+  const sign = posting.reversal ? -1 : 1;
+  const bookingDate = posting.invoiceDate
+    ? new Date(posting.invoiceDate).toISOString().split("T")[0]
+    : null;
+
+  return {
+    uuid: generateUuid(),
+    bookingDate,
+    documentDate: bookingDate,
+    documentNo: posting.invoiceId != null ? String(posting.invoiceId) : null,
+    journal: "purchase",
+    account: PURCHASES_ACCOUNT,
+    debCreditor: posting.debCreditor,
+    description:
+      posting.description ??
+      (posting.reversal ? "Purchase invoice cancelled" : "Purchase invoice"),
+    amount: (sign * posting.amountExclVat).toFixed(2),
+    vat: (sign * posting.vatAmount).toFixed(2),
+    companyUuid: posting.companyUuid,
+    purchaseInvoiceUuid: posting.purchaseInvoiceUuid,
+    createdByUserId: posting.userId,
+  };
+};
 
 /**
  * A sales document posts one row to the sales journal — revenue net of VAT,

@@ -504,6 +504,8 @@ export const stockMovementReasons = [
   "production_output",
   // Goods a customer sent back, booked into stock when the return is received.
   "sales_return",
+  // Goods sent back to the supplier, taken out of the lot they arrived in.
+  "purchase_return",
 ] as const satisfies readonly string[];
 
 export type StockMovementReason = (typeof stockMovementReasons)[number];

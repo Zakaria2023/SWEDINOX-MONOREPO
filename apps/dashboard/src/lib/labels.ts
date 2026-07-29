@@ -882,6 +882,7 @@ export const STOCK_MOVEMENT_REASON_LABELS: Record<StockMovementReason, string> =
     damaged: "Damaged / Written Off",
     production_output: "Production Output",
     sales_return: "Sales Return",
+    purchase_return: "Purchase Return",
   };
 
 export const CUSTOMER_LABEL_OPTION_LABELS: Record<CustomerLabelOption, string> =

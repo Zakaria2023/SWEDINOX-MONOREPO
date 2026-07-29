@@ -26,11 +26,9 @@ import {
   SelectStockMovements,
   StockMovements,
 } from "@/db/schema/stock-movements";
-import {
-  InsertJournalEntries,
-  JournalEntries,
-} from "@/db/schema/journal-entries";
+import { JournalEntries } from "@/db/schema/journal-entries";
 import { mailDocument, sendPurchaseInvoiceEmail } from "@/emails/documents";
+import { buildPurchaseJournalEntry } from "@/lib/server/ledger";
 import { recordFreightMovement } from "@/lib/server/freight";
 import {
   generateUuid,
@@ -93,52 +91,6 @@ export type PurchaseInvoiceDetail = SelectPurchaseInvoices & {
   contactLastName: SelectContacts["lastName"] | null;
   items: PurchaseInvoiceItemDetail[];
   movements: SelectStockMovements[];
-};
-
-type PurchaseInvoicePosting = {
-  invoiceUuid: string;
-  invoiceId: number | null;
-  companyUuid: string | null;
-  debCreditor: string | null;
-  invoiceDate: Date | string | null;
-  amountExclVat: number;
-  vatAmount: number;
-  userId: string | null;
-  // When cancelling, the entry is booked with the opposite sign.
-  reversal?: boolean;
-};
-
-// Placeholder GL account code for purchases; swap for the real chart of
-// accounts later.
-const PURCHASES_ACCOUNT = "7000";
-
-// A purchase invoice posts to the purchase journal with the creditor as the
-// counter-account. `invoiceUuid` here is the purchase invoice's uuid and is
-// linked via purchaseInvoiceUuid (invoiceUuid is reserved for sales invoices).
-const buildPurchaseInvoiceJournalEntry = (
-  posting: PurchaseInvoicePosting,
-): InsertJournalEntries => {
-  const sign = posting.reversal ? -1 : 1;
-  const bookingDate = posting.invoiceDate
-    ? new Date(posting.invoiceDate).toISOString().split("T")[0]
-    : null;
-  return {
-    uuid: generateUuid(),
-    bookingDate,
-    documentDate: bookingDate,
-    documentNo: posting.invoiceId != null ? String(posting.invoiceId) : null,
-    journal: "purchase",
-    account: PURCHASES_ACCOUNT,
-    debCreditor: posting.debCreditor,
-    description: posting.reversal
-      ? "Purchase invoice cancelled"
-      : "Purchase invoice",
-    amount: (sign * posting.amountExclVat).toFixed(2),
-    vat: (sign * posting.vatAmount).toFixed(2),
-    companyUuid: posting.companyUuid,
-    purchaseInvoiceUuid: posting.invoiceUuid,
-    createdByUserId: posting.userId,
-  };
 };
 
 export const getPurchaseInvoices = async (): Promise<
@@ -247,8 +199,8 @@ export const createPurchaseInvoice = async (
         .limit(1);
 
       await tx.insert(JournalEntries).values(
-        buildPurchaseInvoiceJournalEntry({
-          invoiceUuid: uuid,
+        buildPurchaseJournalEntry({
+          purchaseInvoiceUuid: uuid,
           invoiceId: inserted?.id ?? null,
           companyUuid: fields.companyUuid ?? null,
           debCreditor: fields.creditorNo ?? null,
@@ -504,8 +456,8 @@ export const cancelPurchaseInvoice = async (
 
       // Reverse the purchase invoice's ledger posting.
       await tx.insert(JournalEntries).values(
-        buildPurchaseInvoiceJournalEntry({
-          invoiceUuid: uuid,
+        buildPurchaseJournalEntry({
+          purchaseInvoiceUuid: uuid,
           invoiceId: invoice.id,
           companyUuid: invoice.companyUuid,
           debCreditor: invoice.creditorNo,

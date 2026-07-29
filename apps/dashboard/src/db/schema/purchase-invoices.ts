@@ -15,6 +15,7 @@ import {
   varchar,
 } from "drizzle-orm/mysql-core";
 import {
+  invoiceDocumentTypes,
   invoicePaymentTerms,
   invoiceSurchargeDescriptions,
   purchaseInvoiceBlockReasons,
@@ -31,6 +32,18 @@ export const PurchaseInvoices = mysqlTable(
 
     companyUuid: char("company_uuid", { length: 36 }),
     invoiceSentByContactUuid: char("invoice_sent_by_contact_uuid", {
+      length: 36,
+    }),
+
+    // Goods sent back to a supplier come back as their credit note, which is
+    // this same document with its amounts negated. Holding it here rather than
+    // in a parallel table means the payable, the purchase journal and the
+    // ageing net it off without learning anything new.
+    documentType: mysqlEnum("document_type", invoiceDocumentTypes)
+      .default("invoice")
+      .notNull(),
+    purchaseReturnOrderUuid: char("purchase_return_order_uuid", { length: 36 }),
+    creditsPurchaseInvoiceUuid: char("credits_purchase_invoice_uuid", {
       length: 36,
     }),
 

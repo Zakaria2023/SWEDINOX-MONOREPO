@@ -26,6 +26,7 @@ export * from "./order-items";
 export * from "./return-orders";
 export * from "./order-deblocks";
 export * from "./purchase-return-orders";
+export * from "./purchase-return-order-items";
 export * from "./quotes";
 export * from "./quote-items";
 export * from "./quote-item-options";
