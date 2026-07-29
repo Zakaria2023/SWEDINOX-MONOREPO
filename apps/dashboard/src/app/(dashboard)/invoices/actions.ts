@@ -26,6 +26,7 @@ import { Orders } from "@/db/schema/orders";
 import { Products, SelectProducts } from "@/db/schema/products";
 import {
   computeQuoteSummary,
+  creditRestrictionOn,
   generateUuid,
   getInvoiceVatRatePercent,
   getPaymentTermDueDate,
@@ -293,15 +294,20 @@ export const createInvoice = async (
     });
 
     const exclVat = summary.total.revenue;
-    const vatAmount = summary.vatAmount;
-    // No credit-restriction rate is configured anywhere in the system, so
-    // deriving one here would invent money. It is raised at zero and stays
-    // correctable from the edit screen until the rate and its sign are settled.
-    const creditRestriction = 0;
-    const invoiceTotal = summary.totalInclVat + creditRestriction;
-    // Nothing registers customer payments yet — there is no payments table — so
-    // an invoice is outstanding in full from the moment it is raised. This
-    // becomes total less receipts once payment registration exists.
+
+    // The surcharge for the credit this payment term extends. The customer
+    // earns it back by settling within the term — see registerPayment.
+    const creditRestriction = creditRestrictionOn(fields.paymentTerms, exclVat);
+
+    // VAT is charged on the surcharge too, which is why the system carries a
+    // dedicated `vat_credit_restriction_creditor` code. So the taxable base is
+    // the goods plus the surcharge, not the goods alone — which is also why
+    // this can't just use summary.vatAmount.
+    const vatRate = getInvoiceVatRatePercent(fields.vatScenario);
+    const vatAmount = (exclVat + creditRestriction) * (vatRate / 100);
+    const inclVat = exclVat + vatAmount;
+    const invoiceTotal = inclVat + creditRestriction;
+    // Outstanding in full until payments are registered against it.
     const outstanding = invoiceTotal;
 
     const user = await currentUser();
@@ -316,7 +322,7 @@ export const createInvoice = async (
         expirationDate: derivedExpiration,
         uuid,
         invoiceAmountExclVat: exclVat.toFixed(2),
-        invoiceAmountInclVat: summary.totalInclVat.toFixed(2),
+        invoiceAmountInclVat: inclVat.toFixed(2),
         creditRestriction: creditRestriction.toFixed(2),
         invoiceTotal: invoiceTotal.toFixed(2),
         outstanding: outstanding.toFixed(2),
@@ -579,10 +585,18 @@ export const updateInvoice = async (
         return { error: "Enter a valid amount." };
       }
 
+      // VAT is charged on the credit restriction too — see createInvoice.
       const vatRate = getInvoiceVatRatePercent(invoice.vatScenario);
-      const vatAmount = exclVat * (vatRate / 100);
+      const vatAmount = (exclVat + creditRestriction) * (vatRate / 100);
       const inclVat = exclVat + vatAmount;
       const invoiceTotal = inclVat + creditRestriction;
+
+      // Move the balance by the correction rather than resetting it to the new
+      // total: payments may already have been registered against this invoice,
+      // and overwriting outstanding would silently un-receive that money.
+      const outstanding =
+        Number(invoice.outstanding) +
+        (invoiceTotal - Number(invoice.invoiceTotal));
 
       const user = await currentUser();
       const userId = user?.id ?? null;
@@ -597,8 +611,7 @@ export const updateInvoice = async (
             invoiceAmountInclVat: inclVat.toFixed(2),
             creditRestriction: creditRestriction.toFixed(2),
             invoiceTotal: invoiceTotal.toFixed(2),
-            // Still nothing to net off against — see createInvoice.
-            outstanding: invoiceTotal.toFixed(2),
+            outstanding: outstanding.toFixed(2),
           })
           .where(eq(Invoices.uuid, uuid));
 

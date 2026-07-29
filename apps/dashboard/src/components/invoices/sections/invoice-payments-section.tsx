@@ -68,10 +68,19 @@ export const InvoicePaymentsSection = ({
     });
   }, [invoiceUuid, paymentDate]);
 
-  const discountAvailable = preview?.discountAvailable ?? 0;
+  const deductionAvailable = preview?.deductionAvailable ?? 0;
   const suggested = claimDiscount
     ? (preview?.cashDue ?? 0)
     : (preview?.outstanding ?? 0);
+
+  // Two separate entitlements can apply on the same payment, so the offer says
+  // which is which rather than showing one unexplained number.
+  const deductionParts = [
+    (preview?.discountAvailable ?? 0) > 0 &&
+      `${formatMoney(preview?.discountAvailable ?? 0)} early-payment discount`,
+    (preview?.creditRestrictionAvailable ?? 0) > 0 &&
+      `${formatMoney(preview?.creditRestrictionAvailable ?? 0)} credit restriction`,
+  ].filter((part): part is string => typeof part === "string");
 
   const submit = () => {
     setError(undefined);
@@ -215,9 +224,9 @@ export const InvoicePaymentsSection = ({
             </div>
           </div>
 
-          {/* The payment term's early-settlement discount, offered only while
-              the window is still open on the chosen payment date. */}
-          {discountAvailable > 0 && (
+          {/* What the term entitles the payer to keep back, offered only while
+              the windows are still open on the chosen payment date. */}
+          {deductionAvailable > 0 && (
             <label className="flex cursor-pointer items-start gap-2 rounded-md border border-dashed p-3 text-sm">
               <input
                 type="checkbox"
@@ -227,11 +236,11 @@ export const InvoicePaymentsSection = ({
                 disabled={isPending}
               />
               <span>
-                Customer deducted the early-payment discount of{" "}
+                Customer kept back{" "}
                 <span className="font-medium">
-                  {formatMoney(discountAvailable)}
-                </span>
-                . The invoice settles in full for{" "}
+                  {formatMoney(deductionAvailable)}
+                </span>{" "}
+                ({deductionParts.join(" + ")}). The invoice settles in full for{" "}
                 <span className="font-medium">
                   {formatMoney(preview?.cashDue ?? 0)}
                 </span>

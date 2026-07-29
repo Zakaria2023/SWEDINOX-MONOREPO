@@ -358,6 +358,8 @@ export const isPathActive = (href: string, pathname: string): boolean =>
  *   - endOfMonth: the net period runs to the end of the month it lands in.
  *   - prepaymentPercentage: portion required up front (0 = none, 100 = full).
  *   - discountPercentage / discountDays: early-payment discount and its window.
+ *   - creditRestrictionPercentage: the Dutch "kredietbeperking" surcharge —
+ *     see DEFAULT_CREDIT_RESTRICTION_PERCENTAGE below.
  */
 export type PaymentTermMeta = {
   netDays: number | null;
@@ -365,7 +367,21 @@ export type PaymentTermMeta = {
   prepaymentPercentage: number;
   discountPercentage: number | null;
   discountDays: number | null;
+  creditRestrictionPercentage: number;
 };
+
+/**
+ * The credit-restriction surcharge applied to terms that actually extend
+ * credit. It is added to the invoice and may be deducted again by a customer
+ * who settles within the term — a charge for taking time to pay, waived by not
+ * taking it.
+ *
+ * ASSUMPTION, NOT CONFIRMED: the reference system holds this field on both
+ * sales and purchase invoices but carries no data to read a rate from, and no
+ * maintenance screen for it was available. 2% is the conventional Dutch rate.
+ * Change this one constant to correct every term at once.
+ */
+export const DEFAULT_CREDIT_RESTRICTION_PERCENTAGE = 2;
 
 const netTerm = (
   netDays: number,
@@ -376,6 +392,10 @@ const netTerm = (
   prepaymentPercentage: 0,
   discountPercentage: null,
   discountDays: null,
+  // Paying now costs nothing extra; taking credit does. Terms settled on the
+  // invoice date (cash, prepayment) therefore carry no surcharge.
+  creditRestrictionPercentage:
+    netDays > 0 ? DEFAULT_CREDIT_RESTRICTION_PERCENTAGE : 0,
   ...overrides,
 });
 
@@ -390,6 +410,9 @@ const openTerm = (
   prepaymentPercentage,
   discountPercentage: null,
   discountDays: null,
+  // No derivable due date means no window to waive the surcharge against, so
+  // these terms don't carry one.
+  creditRestrictionPercentage: 0,
   ...overrides,
 });
 
@@ -520,6 +543,56 @@ export const getPaymentTermDiscount = (
     return null;
   }
   return { percentage: meta.discountPercentage, withinDays: meta.discountDays };
+};
+
+/**
+ * The credit-restriction surcharge a term carries (0 when it carries none).
+ */
+export const getCreditRestrictionPercentage = (
+  term: InvoicePaymentTerm | null | undefined,
+): number => (term ? PAYMENT_TERM_META[term].creditRestrictionPercentage : 0);
+
+/**
+ * The surcharge to add to an invoice for the credit its term extends,
+ * calculated on the net amount.
+ */
+export const creditRestrictionOn = (
+  term: InvoicePaymentTerm | null | undefined,
+  netAmount: number,
+): number =>
+  netAmount <= 0 ? 0 : netAmount * (getCreditRestrictionPercentage(term) / 100);
+
+/**
+ * How much of the credit restriction a payer may keep back.
+ *
+ * The surcharge is charged for taking time to pay, so settling inside the term
+ * earns it back in full; paying after the due date means bearing it. Like the
+ * early-payment discount this is a deadline rather than a sliding scale.
+ *
+ * Terms with no derivable due date (letters of credit, "against documents")
+ * carry no surcharge in the first place, so there is nothing to waive.
+ */
+export const allowedCreditRestrictionDeduction = ({
+  term,
+  invoiceDate,
+  paymentDate,
+  creditRestriction,
+}: {
+  term: InvoicePaymentTerm | null | undefined;
+  invoiceDate: string | null | undefined;
+  paymentDate: string | null | undefined;
+  creditRestriction: number;
+}): number => {
+  if (creditRestriction <= 0 || !invoiceDate || !paymentDate) {
+    return 0;
+  }
+
+  const dueDate = getPaymentTermDueDate(term, invoiceDate);
+  if (!dueDate) {
+    return 0;
+  }
+
+  return paymentDate.slice(0, 10) <= dueDate ? creditRestriction : 0;
 };
 
 export type EarlyPaymentDiscountInput = {

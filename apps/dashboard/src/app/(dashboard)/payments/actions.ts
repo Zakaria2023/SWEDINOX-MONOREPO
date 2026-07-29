@@ -2,7 +2,7 @@
 
 import { db } from "@/db";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
-import { Invoices } from "@/db/schema/invoices";
+import { Invoices, SelectInvoices } from "@/db/schema/invoices";
 import {
   InsertJournalEntries,
   JournalEntries,
@@ -11,6 +11,7 @@ import { Payments, SelectPayments } from "@/db/schema/payments";
 import { PurchaseInvoices } from "@/db/schema/purchase-invoices";
 import { PaymentMethod } from "@/lib/enums";
 import {
+  allowedCreditRestrictionDeduction,
   allowedEarlyPaymentDiscount,
   describeError,
   generateUuid,
@@ -40,17 +41,67 @@ export type RegisterPaymentInput = {
   amount: string;
   method: PaymentMethod;
   reference?: string;
-  /** Take the early-payment discount the term allows, when it is still open. */
+  /**
+   * Take the deductions the term allows on this payment date — the
+   * early-payment discount and the credit restriction earned back.
+   */
   claimDiscount?: boolean;
 };
 
-// What an invoice would settle for if paid on a given date — the cash due and
-// any early-payment discount that comes with it. Drives the register-payment
-// form so the figure is filled in rather than worked out by hand.
+// What an invoice would settle for if paid on a given date: the cash due, and
+// what the payer is entitled to keep back. Drives the register-payment form so
+// the figure is filled in rather than worked out by hand.
 export type PaymentPreview = {
   outstanding: number;
+  /** Early-settlement discount the term grants. */
   discountAvailable: number;
+  /** Credit restriction earned back by settling within the term. */
+  creditRestrictionAvailable: number;
+  /** The two above, capped at what is actually outstanding. */
+  deductionAvailable: number;
   cashDue: number;
+};
+
+// The deductions a payer may keep back on a given date. Both are deadlines
+// rather than sliding scales, and together they can never exceed the balance.
+const settlementDeductions = (
+  invoice: {
+    paymentTerms: SelectInvoices["paymentTerms"];
+    invoiceDate: SelectInvoices["invoiceDate"];
+    invoiceAmountExclVat: string;
+    creditRestriction: string;
+  },
+  outstanding: number,
+  paymentDate: string,
+) => {
+  const invoiceDate = invoice.invoiceDate
+    ? toDateString(invoice.invoiceDate)
+    : null;
+
+  const discountAvailable = allowedEarlyPaymentDiscount({
+    term: invoice.paymentTerms,
+    invoiceDate,
+    paymentDate,
+    baseAmount: Number(invoice.invoiceAmountExclVat),
+  });
+
+  const creditRestrictionAvailable = allowedCreditRestrictionDeduction({
+    term: invoice.paymentTerms,
+    invoiceDate,
+    paymentDate,
+    creditRestriction: Number(invoice.creditRestriction),
+  });
+
+  const deductionAvailable = Math.min(
+    discountAvailable + creditRestrictionAvailable,
+    Math.max(outstanding, 0),
+  );
+
+  return {
+    discountAvailable,
+    creditRestrictionAvailable,
+    deductionAvailable,
+  };
 };
 
 // Placeholder GL accounts; swap for the real chart of accounts later.
@@ -138,22 +189,12 @@ export const getInvoicePaymentPreview = async (
   }
 
   const outstanding = Number(invoice.outstanding);
-  const discountAvailable = Math.min(
-    allowedEarlyPaymentDiscount({
-      term: invoice.paymentTerms,
-      invoiceDate: invoice.invoiceDate
-        ? toDateString(invoice.invoiceDate)
-        : null,
-      paymentDate,
-      baseAmount: Number(invoice.invoiceAmountExclVat),
-    }),
-    outstanding,
-  );
+  const deductions = settlementDeductions(invoice, outstanding, paymentDate);
 
   return {
     outstanding,
-    discountAvailable,
-    cashDue: outstanding - discountAvailable,
+    ...deductions,
+    cashDue: outstanding - deductions.deductionAvailable,
   };
 };
 
@@ -200,20 +241,11 @@ export const registerPayment = async (
         return { error: "This invoice is already settled." };
       }
 
-      // The discount is only ever offered, never forced — a customer who pays
-      // early without deducting it has simply paid more.
+      // Deductions are only ever offered, never forced — a customer who pays
+      // early without keeping anything back has simply paid more.
       const discountAmount = input.claimDiscount
-        ? Math.min(
-            allowedEarlyPaymentDiscount({
-              term: invoice.paymentTerms,
-              invoiceDate: invoice.invoiceDate
-                ? toDateString(invoice.invoiceDate)
-                : null,
-              paymentDate,
-              baseAmount: Number(invoice.invoiceAmountExclVat),
-            }),
-            outstanding,
-          )
+        ? settlementDeductions(invoice, outstanding, paymentDate)
+            .deductionAvailable
         : 0;
 
       const settled = amount + discountAmount;
