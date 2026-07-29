@@ -483,9 +483,13 @@ export const cancelInvoice = async (
     }
 
     await db.transaction(async (tx) => {
+      // A cancelled invoice is void, so nothing is owed on it. Leaving
+      // `outstanding` at the full amount would keep the debt alive for good:
+      // it would go on consuming the customer's credit space and show up in
+      // their receivables long after the invoice stopped existing.
       await tx
         .update(Invoices)
-        .set({ cancelled: true })
+        .set({ cancelled: true, outstanding: "0.00" })
         .where(eq(Invoices.uuid, uuid));
 
       // Reverse the sales invoice's ledger posting.

@@ -595,6 +595,103 @@ export const allowedCreditRestrictionDeduction = ({
   return paymentDate.slice(0, 10) <= dueDate ? creditRestriction : 0;
 };
 
+export type CreditAssessmentInput = {
+  /** The debtor's agreed limit. 0 or absent means no limit has been set. */
+  creditLimit: number;
+  /** What the customer already owes on invoices that still stand. */
+  openReceivables: number;
+  /** Gross value of the order being placed — what it will become owed. */
+  orderAmount: number;
+  /** The order's payment term; some terms extend no credit at all. */
+  paymentTerms: InvoicePaymentTerm | null | undefined;
+  /** The company has been stopped by hand, whatever its balance says. */
+  companyBlocked: boolean;
+};
+
+export type CreditAssessment = {
+  blocked: boolean;
+  /** Why it was held, short enough for `Orders.blockingReason` (varchar 255). */
+  reason: string | null;
+  creditLimit: number;
+  openReceivables: number;
+  /** Room left before the limit is reached; negative once it is exceeded. */
+  creditSpace: number;
+  /** Receivables plus this order — what would be owed once it ships. */
+  exposure: number;
+};
+
+/**
+ * Whether a payment term actually lends the customer money. A term settled on
+ * the invoice date — cash, or full prepayment — extends no credit, so the
+ * debtor's limit has no bearing on an order placed under it: the goods are paid
+ * for before they go anywhere.
+ *
+ * Everything else does extend credit, including terms whose due date can't be
+ * derived (letters of credit, "against documents"). An unknown term is treated
+ * as extending credit, because the safe assumption is the one that checks.
+ */
+export const paymentTermExtendsCredit = (
+  term: InvoicePaymentTerm | null | undefined,
+): boolean => {
+  if (!term) {
+    return true;
+  }
+  const meta = PAYMENT_TERM_META[term];
+  return !(meta.netDays === 0 || meta.prepaymentPercentage === 100);
+};
+
+/**
+ * Decides whether an order should be held for credit reasons.
+ *
+ * The exposure being tested is what the customer would owe once this order is
+ * invoiced: everything outstanding today, plus this order's gross value. That
+ * is compared against the limit recorded on the debtor.
+ *
+ * Two deliberate refusals to block:
+ *   - A debtor with no limit recorded (0 or blank) is not blocked. A blank
+ *     field means "nobody has set one", not "this customer may owe nothing" —
+ *     reading it the other way would hold every order in the system.
+ *   - An order paid for up front is not blocked however much is outstanding,
+ *     because it adds nothing to what the customer owes.
+ *
+ * A company stopped by hand is blocked regardless of either, since that flag
+ * exists precisely to override the arithmetic.
+ */
+export const assessCredit = ({
+  creditLimit,
+  openReceivables,
+  orderAmount,
+  paymentTerms,
+  companyBlocked,
+}: CreditAssessmentInput): CreditAssessment => {
+  const extendsCredit = paymentTermExtendsCredit(paymentTerms);
+  const exposure = openReceivables + (extendsCredit ? orderAmount : 0);
+  const standing = {
+    creditLimit,
+    openReceivables,
+    creditSpace: creditLimit - openReceivables,
+    exposure,
+  };
+
+  if (companyBlocked) {
+    return {
+      ...standing,
+      blocked: true,
+      reason: "Customer is blocked",
+    };
+  }
+
+  if (!extendsCredit || creditLimit <= 0 || exposure <= creditLimit) {
+    return { ...standing, blocked: false, reason: null };
+  }
+
+  return {
+    ...standing,
+    blocked: true,
+    reason: `Credit limit exceeded — ${formatMoney(openReceivables)} outstanding plus ${formatMoney(orderAmount)} on this order against a ${formatMoney(creditLimit)} limit`,
+  };
+};
+
 export type EarlyPaymentDiscountInput = {
   term: InvoicePaymentTerm | null | undefined;
   /** Invoice date, `yyyy-mm-dd`. */

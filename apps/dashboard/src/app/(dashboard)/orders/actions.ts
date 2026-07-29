@@ -22,6 +22,7 @@ import {
   getQuoteVatRatePercent,
   quoteLineFinancials,
 } from "@/lib/helpers";
+import { checkCredit } from "@/lib/server/credit-control";
 import {
   loadSalesPricingContext,
   minimumMarginFor,
@@ -383,14 +384,36 @@ export const createOrder = async (
           .where(inArray(Contracts.uuid, extras.contractUuids));
       }
 
+      const summary = await buildOrderSummary(tx, uuid, fields.companyUuid);
+
+      // What the customer would owe once this order is invoiced, against the
+      // limit recorded on the debtor. The order is held, not refused: it stays
+      // a real order and surfaces on the Financially Blocked overview, where
+      // someone with the authority can release it — which is also the only
+      // thing that records who took that decision.
+      //
+      // A block is only ever added here, never lifted: an order the form
+      // already marked blocked stays blocked whatever the arithmetic says.
+      const credit = await checkCredit(tx, {
+        companyUuid: fields.companyUuid,
+        orderAmount: Number(summary.totalInclVat),
+        paymentTerms: fields.paymentTerms,
+      });
+
       await tx
         .update(Orders)
-        .set(await buildOrderSummary(tx, uuid, fields.companyUuid))
+        .set({
+          ...summary,
+          ...(credit.blocked
+            ? { financialBlockage: true, blockingReason: credit.reason }
+            : {}),
+        })
         .where(eq(Orders.uuid, uuid));
     });
 
     revalidatePath("/orders");
     revalidatePath("/stock");
+    revalidatePath("/financially-blocked");
     return { success: true, orderUuid: uuid };
   } catch (error) {
     return {

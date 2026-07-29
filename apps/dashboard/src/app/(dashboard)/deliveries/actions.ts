@@ -98,6 +98,37 @@ export const deliverOrderItem = async (
       return { error: "Only a reserved line can be delivered." };
     }
 
+    // A block has to actually stop the goods, or it is only a label. Both the
+    // line's own holds and the order's financial block are refused here, and
+    // both are lifted the same way: deliberately, by someone with the
+    // authority, leaving a record of who did it.
+    if (orderItem.commercialBlock) {
+      return { error: "This line is on a commercial block." };
+    }
+    if (orderItem.financialBlock) {
+      return { error: "This line is on a financial block." };
+    }
+    if (orderItem.transportBlock) {
+      return { error: "This line is on a transport block." };
+    }
+
+    const [order] = await db
+      .select({
+        financialBlockage: Orders.financialBlockage,
+        blockingReason: Orders.blockingReason,
+      })
+      .from(Orders)
+      .where(eq(Orders.uuid, orderItem.orderUuid))
+      .limit(1);
+
+    if (order?.financialBlockage) {
+      return {
+        error: order.blockingReason
+          ? `This order is financially blocked — ${order.blockingReason}. Release it on the Financially Blocked overview before delivering.`
+          : "This order is financially blocked. Release it on the Financially Blocked overview before delivering.",
+      };
+    }
+
     const user = await currentUser();
     const userId = user?.id;
 

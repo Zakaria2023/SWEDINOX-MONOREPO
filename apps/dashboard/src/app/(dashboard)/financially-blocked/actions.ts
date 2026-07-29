@@ -4,12 +4,12 @@ import { requireAuth } from "@/lib/auth";
 import { describeError, generateUuid } from "@/lib/helpers";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { db } from "@/db";
-import { Invoices } from "@/db/schema/invoices";
 import { OrderDeblocks } from "@/db/schema/order-deblocks";
 import { OrderItems } from "@/db/schema/order-items";
 import { Orders, SelectOrders } from "@/db/schema/orders";
 import { Quotes, SelectQuotes } from "@/db/schema/quotes";
-import { eq, isNotNull, sql } from "drizzle-orm";
+import { getOpenReceivablesByCompany } from "@/lib/server/credit-control";
+import { eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 export type UnblockOrderResult = { success?: boolean; error?: string };
@@ -52,6 +52,8 @@ export const unblockOrder = async (
     });
     revalidatePath("/financially-blocked");
     revalidatePath("/unblocked-orders");
+    // Delivery is gated on the block, so releasing it changes what can ship.
+    revalidatePath("/deliveries");
     return { success: true };
   } catch (error) {
     return {
@@ -67,19 +69,10 @@ export const getFinanciallyBlocked = async (): Promise<
   FinanciallyBlockedRow[]
 > => {
   try {
-    // Open receivables per debtor.
-    const arRows = await db
-      .select({
-        companyUuid: Invoices.companyUuid,
-        outstanding: sql<string>`COALESCE(SUM(${Invoices.outstanding}), 0)`,
-      })
-      .from(Invoices)
-      .where(isNotNull(Invoices.companyUuid))
-      .groupBy(Invoices.companyUuid);
-
-    const openByCompany = new Map(
-      arRows.map((row) => [row.companyUuid, Number(row.outstanding)]),
-    );
+    // Open receivables per debtor, read through the same helper the blocking
+    // rule uses, so the credit space shown here can never disagree with the
+    // figure an order was actually held against.
+    const openByCompany = await getOpenReceivablesByCompany(db);
 
     const orderRows = await db
       .select({
