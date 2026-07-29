@@ -24,6 +24,7 @@ import { OrderItems } from "@/db/schema/order-items";
 import { Payments, SelectPayments } from "@/db/schema/payments";
 import { Orders } from "@/db/schema/orders";
 import { Products, SelectProducts } from "@/db/schema/products";
+import { mailDocument, sendInvoiceEmail } from "@/emails/documents";
 import {
   computeQuoteSummary,
   creditRestrictionOn,
@@ -392,6 +393,11 @@ export const createInvoice = async (
         });
       }
     });
+
+    // Only once the transaction has committed: a rolled back invoice must never
+    // leave a sent invoice email behind, and an email that fails to send must
+    // never roll a raised invoice back — mail can't be undone anyway.
+    await mailDocument(() => sendInvoiceEmail(uuid), `Invoice ${uuid}`);
 
     revalidatePath("/invoices");
     revalidatePath("/orders");

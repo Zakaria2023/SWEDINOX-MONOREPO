@@ -19,6 +19,7 @@ import { PurchaseOrderItems } from "@/db/schema/purchase-order-items";
 import { PurchaseOrders } from "@/db/schema/purchase-orders";
 import { PurchaseRequests } from "@/db/schema/purchase-requests";
 import { resolveCompanyType } from "@/app/(dashboard)/companies/actions";
+import { mailDocument, sendPurchaseOrderEmail } from "@/emails/documents";
 import {
   describeError,
   generateUuid,
@@ -464,6 +465,13 @@ export const convertPurchaseQuoteToOrder = async (
           .where(eq(PurchaseRequests.uuid, quote.purchaseRequestUuid));
       }
     });
+
+    // An order raised from an awarded quote is still an order placed with the
+    // supplier, so it is confirmed to them the same way one entered by hand is.
+    await mailDocument(
+      () => sendPurchaseOrderEmail(orderUuid),
+      `Purchase order ${orderUuid}`,
+    );
 
     revalidatePath("/purchase-quotes");
     revalidatePath(`/purchase-quotes/${quoteUuid}`);

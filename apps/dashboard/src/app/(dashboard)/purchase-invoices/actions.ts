@@ -30,6 +30,7 @@ import {
   InsertJournalEntries,
   JournalEntries,
 } from "@/db/schema/journal-entries";
+import { mailDocument, sendPurchaseInvoiceEmail } from "@/emails/documents";
 import { recordFreightMovement } from "@/lib/server/freight";
 import {
   generateUuid,
@@ -362,6 +363,13 @@ export const createPurchaseInvoice = async (
           : "Failed to create purchase invoice",
     };
   }
+
+  // Confirms to the supplier what we booked and what we received. Runs after
+  // the transaction has committed and before the redirect, which throws.
+  await mailDocument(
+    () => sendPurchaseInvoiceEmail(uuid),
+    `Purchase invoice ${uuid}`,
+  );
 
   revalidatePath("/purchase-invoices");
   revalidatePath("/stock");

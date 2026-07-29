@@ -14,6 +14,7 @@ import { SelectStock, Stock } from "@/db/schema/stock";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
 import { Products, SelectProducts } from "@/db/schema/products";
+import { mailDocument, sendPurchaseOrderEmail } from "@/emails/documents";
 import { describeError, generateUuid } from "@/lib/helpers";
 import { currentUser } from "@clerk/nextjs/server";
 import { and, desc, eq, getTableColumns, gt, inArray, ne, sql } from "drizzle-orm";
@@ -240,6 +241,14 @@ export const createPurchaseOrder = async (
         });
       }
     });
+
+    // The supplier is told what we ordered as soon as the order stands. Sent
+    // after the transaction commits so a rolled back order leaves no email
+    // behind, and a failed send never rolls a placed order back.
+    await mailDocument(
+      () => sendPurchaseOrderEmail(uuid),
+      `Purchase order ${uuid}`,
+    );
 
     revalidatePath("/purchase-orders");
     revalidatePath("/stock");

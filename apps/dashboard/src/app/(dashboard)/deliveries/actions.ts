@@ -7,6 +7,7 @@ import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { Products, SelectProducts } from "@/db/schema/products";
 import { Stock } from "@/db/schema/stock";
 import { StockMovements } from "@/db/schema/stock-movements";
+import { mailDocument, sendDeliveryNoteEmail } from "@/emails/documents";
 import { describeError, generateUuid, todayDateString } from "@/lib/helpers";
 import { recordFreightMovement } from "@/lib/server/freight";
 import { currentUser } from "@clerk/nextjs/server";
@@ -183,6 +184,14 @@ export const deliverOrderItem = async (
         });
       }
     });
+
+    // The goods have physically left, so the customer is told what shipped.
+    // Sent after the transaction commits and never allowed to fail the
+    // delivery — the stock is already gone either way.
+    await mailDocument(
+      () => sendDeliveryNoteEmail(orderItemUuid),
+      `Delivery note for order line ${orderItemUuid}`,
+    );
 
     revalidatePath("/deliveries");
     revalidatePath("/stock");
