@@ -1,10 +1,12 @@
 import "server-only";
 
-import { and, eq, isNotNull, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, ne, sql } from "drizzle-orm";
 
 import { db } from "@/db";
 import { Companies } from "@/db/schema/companies";
 import { Invoices } from "@/db/schema/invoices";
+import { OrderItems } from "@/db/schema/order-items";
+import { Orders } from "@/db/schema/orders";
 import { assessCredit, CreditAssessment } from "@/lib/helpers";
 import { InvoicePaymentTerm } from "@/lib/enums";
 
@@ -15,6 +17,12 @@ export type CreditCheckInput = {
   /** Gross value of the order being placed. */
   orderAmount: number;
   paymentTerms: InvoicePaymentTerm | null | undefined;
+  /**
+   * The order being assessed. Its lines are already written when the check
+   * runs, so they are left out of the committed total and counted once, as
+   * `orderAmount`.
+   */
+  excludeOrderUuid?: string;
 };
 
 /**
@@ -59,13 +67,68 @@ export const getOpenReceivablesByCompany = async (
 };
 
 /**
+ * Order lines taken but not yet invoiced — receivables in waiting.
+ *
+ * Only "reserved" and "delivered" count. An invoiced line has already become
+ * an invoice and is counted there, so including it would charge the customer's
+ * limit twice for the same goods; cancelled and returned lines will never
+ * become receivables at all.
+ *
+ * `excludeOrderUuid` leaves out the order being assessed, whose lines are
+ * already written by the time the credit check runs.
+ */
+export const getCommittedOrderValue = async (
+  tx: CreditQuery,
+  companyUuid: string,
+  excludeOrderUuid?: string,
+): Promise<number> => {
+  const [row] = await tx
+    .select({
+      amount: sql<string>`COALESCE(SUM(${OrderItems.amount}), 0)`,
+    })
+    .from(OrderItems)
+    .innerJoin(Orders, eq(OrderItems.orderUuid, Orders.uuid))
+    .where(
+      and(
+        eq(Orders.companyUuid, companyUuid),
+        inArray(OrderItems.status, ["reserved", "delivered"]),
+        excludeOrderUuid ? ne(Orders.uuid, excludeOrderUuid) : undefined,
+      ),
+    );
+
+  return Number(row?.amount ?? 0);
+};
+
+/** Committed order value for every customer at once, for the overviews. */
+export const getCommittedOrderValueByCompany = async (
+  tx: CreditQuery,
+): Promise<Map<string, number>> => {
+  const rows = await tx
+    .select({
+      companyUuid: Orders.companyUuid,
+      amount: sql<string>`COALESCE(SUM(${OrderItems.amount}), 0)`,
+    })
+    .from(OrderItems)
+    .innerJoin(Orders, eq(OrderItems.orderUuid, Orders.uuid))
+    .where(inArray(OrderItems.status, ["reserved", "delivered"]))
+    .groupBy(Orders.companyUuid);
+
+  return new Map(rows.map((row) => [row.companyUuid, Number(row.amount)]));
+};
+
+/**
  * Reads the debtor's limit and balance and applies the credit rule to an order
  * about to be placed. Takes the surrounding transaction so the figures it reads
  * are the ones the order is actually being written against.
  */
 export const checkCredit = async (
   tx: CreditQuery,
-  { companyUuid, orderAmount, paymentTerms }: CreditCheckInput,
+  {
+    companyUuid,
+    orderAmount,
+    paymentTerms,
+    excludeOrderUuid,
+  }: CreditCheckInput,
 ): Promise<CreditAssessment> => {
   const [company] = await tx
     .select({
@@ -77,10 +140,16 @@ export const checkCredit = async (
     .limit(1);
 
   const openReceivables = await getOpenReceivables(tx, companyUuid);
+  const committedOrders = await getCommittedOrderValue(
+    tx,
+    companyUuid,
+    excludeOrderUuid,
+  );
 
   return assessCredit({
     creditLimit: Number(company?.creditLimit ?? 0),
     openReceivables,
+    committedOrders,
     orderAmount,
     paymentTerms,
     companyBlocked: !!company?.blockedByUserId,

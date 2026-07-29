@@ -8,7 +8,10 @@ import { OrderDeblocks } from "@/db/schema/order-deblocks";
 import { OrderItems } from "@/db/schema/order-items";
 import { Orders, SelectOrders } from "@/db/schema/orders";
 import { Quotes, SelectQuotes } from "@/db/schema/quotes";
-import { getOpenReceivablesByCompany } from "@/lib/server/credit-control";
+import {
+  getCommittedOrderValueByCompany,
+  getOpenReceivablesByCompany,
+} from "@/lib/server/credit-control";
 import { eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
@@ -72,7 +75,10 @@ export const getFinanciallyBlocked = async (): Promise<
     // Open receivables per debtor, read through the same helper the blocking
     // rule uses, so the credit space shown here can never disagree with the
     // figure an order was actually held against.
-    const openByCompany = await getOpenReceivablesByCompany(db);
+    const [openByCompany, committedByCompany] = await Promise.all([
+      getOpenReceivablesByCompany(db),
+      getCommittedOrderValueByCompany(db),
+    ]);
 
     const orderRows = await db
       .select({
@@ -140,6 +146,7 @@ export const getFinanciallyBlocked = async (): Promise<
       },
     ): FinanciallyBlockedRow => {
       const openEntrees = openByCompany.get(row.companyUuid) ?? 0;
+      const committed = committedByCompany.get(row.companyUuid) ?? 0;
       const creditLimit = Number(row.creditLimit ?? 0);
       return {
         kind,
@@ -153,7 +160,9 @@ export const getFinanciallyBlocked = async (): Promise<
         amount: Number(row.amount ?? 0),
         creditLimit,
         openEntrees,
-        creditSpace: creditLimit - openEntrees,
+        // Counts what is promised as well as what is billed, matching the rule
+        // that put these documents here in the first place.
+        creditSpace: creditLimit - openEntrees - committed,
         companyBlocked: row.blockedByUserId !== null,
       };
     };

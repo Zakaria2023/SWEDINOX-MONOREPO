@@ -604,6 +604,12 @@ export type CreditAssessmentInput = {
   creditLimit: number;
   /** What the customer already owes on invoices that still stand. */
   openReceivables: number;
+  /**
+   * Orders taken but not yet invoiced. These are receivables in waiting: the
+   * goods are promised, so the exposure is real even though no invoice exists
+   * yet. Excludes the order being assessed, which is counted separately.
+   */
+  committedOrders?: number;
   /** Gross value of the order being placed — what it will become owed. */
   orderAmount: number;
   /** The order's payment term; some terms extend no credit at all. */
@@ -618,9 +624,10 @@ export type CreditAssessment = {
   reason: string | null;
   creditLimit: number;
   openReceivables: number;
+  committedOrders: number;
   /** Room left before the limit is reached; negative once it is exceeded. */
   creditSpace: number;
-  /** Receivables plus this order — what would be owed once it ships. */
+  /** Everything owed and promised, including this order. */
   exposure: number;
 };
 
@@ -664,16 +671,21 @@ export const paymentTermExtendsCredit = (
 export const assessCredit = ({
   creditLimit,
   openReceivables,
+  committedOrders = 0,
   orderAmount,
   paymentTerms,
   companyBlocked,
 }: CreditAssessmentInput): CreditAssessment => {
   const extendsCredit = paymentTermExtendsCredit(paymentTerms);
-  const exposure = openReceivables + (extendsCredit ? orderAmount : 0);
+  const owed = openReceivables + committedOrders;
+  const exposure = owed + (extendsCredit ? orderAmount : 0);
   const standing = {
     creditLimit,
     openReceivables,
-    creditSpace: creditLimit - openReceivables,
+    committedOrders,
+    // Room left before the limit, counting what is promised as well as what is
+    // billed — an order taken is a receivable waiting to happen.
+    creditSpace: creditLimit - owed,
     exposure,
   };
 
@@ -692,7 +704,7 @@ export const assessCredit = ({
   return {
     ...standing,
     blocked: true,
-    reason: `Credit limit exceeded — ${formatMoney(openReceivables)} outstanding plus ${formatMoney(orderAmount)} on this order against a ${formatMoney(creditLimit)} limit`,
+    reason: `Credit limit exceeded — ${formatMoney(owed)} owed and on order plus ${formatMoney(orderAmount)} on this one against a ${formatMoney(creditLimit)} limit`,
   };
 };
 

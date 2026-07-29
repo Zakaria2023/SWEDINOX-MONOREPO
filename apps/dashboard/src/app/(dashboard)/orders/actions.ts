@@ -398,6 +398,9 @@ export const createOrder = async (
         companyUuid: fields.companyUuid,
         orderAmount: Number(summary.totalInclVat),
         paymentTerms: fields.paymentTerms,
+        // This order's lines are already written, so they are excluded from
+        // the committed total and counted once as orderAmount.
+        excludeOrderUuid: uuid,
       });
 
       await tx

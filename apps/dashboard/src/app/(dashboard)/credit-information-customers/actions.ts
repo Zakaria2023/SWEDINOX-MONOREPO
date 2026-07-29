@@ -5,8 +5,10 @@ import { db } from "@/db";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
 import { Invoices } from "@/db/schema/invoices";
-import { OrderItems } from "@/db/schema/order-items";
-import { Orders } from "@/db/schema/orders";
+import {
+  getCommittedOrderValueByCompany,
+  getOpenReceivablesByCompany,
+} from "@/lib/server/credit-control";
 import { eq, min, sql } from "drizzle-orm";
 
 export type CreditInformationRow = {
@@ -60,9 +62,6 @@ export const getCreditInformationCustomers = async (
     const arStats = db
       .select({
         companyUuid: Invoices.companyUuid,
-        outstanding: sql<string>`COALESCE(SUM(${Invoices.outstanding}), 0)`.as(
-          "ar_outstanding",
-        ),
         oldestInvoiceDate: min(Invoices.invoiceDate).as("oldest_invoice_date"),
         oldestDueDate: min(Invoices.expirationDate).as("oldest_due_date"),
       })
@@ -71,17 +70,13 @@ export const getCreditInformationCustomers = async (
       .groupBy(Invoices.companyUuid)
       .as("ar_stats");
 
-    const orderStats = db
-      .select({
-        companyUuid: Orders.companyUuid,
-        currentOrders: sql<string>`COALESCE(SUM(${OrderItems.amount}), 0)`.as(
-          "current_orders",
-        ),
-      })
-      .from(OrderItems)
-      .innerJoin(Orders, eq(OrderItems.orderUuid, Orders.uuid))
-      .groupBy(Orders.companyUuid)
-      .as("order_stats");
+    // Receivables and committed orders come from the same helpers the blocking
+    // rule uses, so this screen's credit space is the figure an order is
+    // actually held against rather than a second opinion.
+    const [receivablesByCompany, committedByCompany] = await Promise.all([
+      getOpenReceivablesByCompany(db),
+      getCommittedOrderValueByCompany(db),
+    ]);
 
     const revenueFor = (y: number, col: string) =>
       sql<string>`COALESCE(SUM(CASE WHEN YEAR(${Invoices.invoiceDate}) = ${y} THEN ${Invoices.invoiceAmountInclVat} ELSE 0 END), 0)`.as(
@@ -111,10 +106,9 @@ export const getCreditInformationCustomers = async (
         creditLimitUninsured: Companies.creditLimitUninsured,
         creditInsurance: Companies.creditLimitInsurance,
         creditInsuranceDate: Companies.creditLimitUninsuredDate,
-        outstanding: arStats.outstanding,
+        companyUuid: Companies.uuid,
         oldestInvoiceDate: arStats.oldestInvoiceDate,
         oldestDueDate: arStats.oldestDueDate,
-        currentOrders: orderStats.currentOrders,
         blockedByUserId: Companies.blockedByUserId,
         vatNumber: Companies.vatNumber,
         revenueThisYear: revenueStats.thisYear,
@@ -124,15 +118,14 @@ export const getCreditInformationCustomers = async (
       .from(Companies)
       .leftJoin(primaryContact, eq(Companies.uuid, primaryContact.companyUuid))
       .leftJoin(arStats, eq(Companies.uuid, arStats.companyUuid))
-      .leftJoin(orderStats, eq(Companies.uuid, orderStats.companyUuid))
       .leftJoin(revenueStats, eq(Companies.uuid, revenueStats.companyUuid))
       .where(sql`JSON_CONTAINS(${Companies.roles}, '"customer"')`)
       .orderBy(sql`${Companies.id} asc`);
 
     return rows.map((row) => {
       const creditLimit = Number(row.creditLimit ?? 0);
-      const outstanding = Number(row.outstanding ?? 0);
-      const currentOrders = Number(row.currentOrders ?? 0);
+      const outstanding = receivablesByCompany.get(row.companyUuid) ?? 0;
+      const currentOrders = committedByCompany.get(row.companyUuid) ?? 0;
       return {
         customerCode: row.customerCode,
         companyName: row.companyName,
