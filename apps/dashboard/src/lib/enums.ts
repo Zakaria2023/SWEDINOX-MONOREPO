@@ -502,6 +502,8 @@ export const stockMovementReasons = [
   "count_correction",
   "damaged",
   "production_output",
+  // Goods a customer sent back, booked into stock when the return is received.
+  "sales_return",
 ] as const satisfies readonly string[];
 
 export type StockMovementReason = (typeof stockMovementReasons)[number];
@@ -968,6 +970,17 @@ export const invoiceSurchargeDescriptions = [
 export type InvoiceSurchargeDescription =
   (typeof invoiceSurchargeDescriptions)[number];
 
+// What an Invoices row actually is. A credit note is the same document with
+// its amounts negated — same numbering, same ledger, same ageing — so it lives
+// in the same table rather than a parallel one that every report would have to
+// learn about separately.
+export const invoiceDocumentTypes = [
+  "invoice",
+  "credit_note",
+] as const satisfies readonly string[];
+
+export type InvoiceDocumentType = (typeof invoiceDocumentTypes)[number];
+
 export const invoiceVatScenarios = [
   "purchase_domestically",
   "domestic_purchase_vat_shifted",
@@ -1058,6 +1071,9 @@ export const orderItemStatuses = [
   "reserved",
   "delivered",
   "invoiced",
+  // Billed, then sent back and credited. Terminal: a line can only come back
+  // once, so this is what stops the same delivery being credited twice.
+  "returned",
   "cancelled",
 ] as const satisfies readonly string[];
 

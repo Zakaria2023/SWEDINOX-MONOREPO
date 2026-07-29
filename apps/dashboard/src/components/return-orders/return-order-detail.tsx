@@ -6,6 +6,7 @@ import {
   deleteReturnOrder,
   ReturnOrderDetail,
 } from "@/app/(dashboard)/return-orders/actions";
+import { ReturnSettlementSection } from "@/components/return-orders/sections/return-settlement-section";
 import { Button } from "@/components/shadcn/button";
 import {
   Table,
@@ -242,6 +243,8 @@ export const ReturnOrderDetailView = ({ returnOrder }: Props) => {
       </section>
 
       <div className="space-y-2">
+        <ReturnSettlementSection returnOrder={returnOrder} />
+
         <CollapsibleSection
           title="Surcharges"
           summary={pluralize(returnOrder.surcharges.length, "surcharge")}

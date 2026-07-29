@@ -51,6 +51,7 @@ import {
   InvoiceFrequency,
   InvoicePaymentTerm,
   InvoiceSurchargeDescription,
+  InvoiceDocumentType,
   InvoiceVatScenario,
   InvoicingMethod,
   ProcessedOption,
@@ -661,6 +662,12 @@ export const INVOICE_VAT_SCENARIO_LABELS: Record<InvoiceVatScenario, string> = {
     "Sales outside the EU with a reverse charge",
 };
 
+export const INVOICE_DOCUMENT_TYPE_LABELS: Record<InvoiceDocumentType, string> =
+  {
+    invoice: "Invoice",
+    credit_note: "Credit note",
+  };
+
 export const INVOICE_PAYMENT_TERM_LABELS: Record<InvoicePaymentTerm, string> = {
   prepayment: "Prepayment",
   cash: "Cash",
@@ -874,6 +881,7 @@ export const STOCK_MOVEMENT_REASON_LABELS: Record<StockMovementReason, string> =
     count_correction: "Count Correction",
     damaged: "Damaged / Written Off",
     production_output: "Production Output",
+    sales_return: "Sales Return",
   };
 
 export const CUSTOMER_LABEL_OPTION_LABELS: Record<CustomerLabelOption, string> =
@@ -1136,6 +1144,7 @@ export const ORDER_ITEM_STATUS_LABELS: Record<OrderItemStatus, string> = {
   reserved: "Reserved",
   delivered: "Delivered",
   invoiced: "Invoiced",
+  returned: "Returned",
   cancelled: "Cancelled",
 };
 

@@ -14,6 +14,7 @@ import {
   varchar,
 } from "drizzle-orm/mysql-core";
 import {
+  invoiceDocumentTypes,
   invoicePaymentTerms,
   invoiceSurchargeDescriptions,
   invoiceVatScenarios,
@@ -28,6 +29,18 @@ export const Invoices = mysqlTable(
 
     companyUuid: char("company_uuid", { length: 36 }),
     debtorNo: varchar("debtor_no", { length: 100 }),
+
+    // A credit note is this same document with its amounts negated, so it ages,
+    // posts and settles through exactly the same machinery. `outstanding` goes
+    // negative, which is what nets the debt down and hands the customer their
+    // credit space back.
+    documentType: mysqlEnum("document_type", invoiceDocumentTypes)
+      .default("invoice")
+      .notNull(),
+    // What the credit note credits: the goods that came back, and the invoice
+    // they were billed on. Both null on an ordinary invoice.
+    returnOrderUuid: char("return_order_uuid", { length: 36 }),
+    creditsInvoiceUuid: char("credits_invoice_uuid", { length: 36 }),
 
     invoiceDate: date("invoice_date"),
     expirationDate: date("expiration_date"),

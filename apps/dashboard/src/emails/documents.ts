@@ -23,6 +23,7 @@ import DocumentEmail, {
 } from "@/emails/templates/document-email";
 import { formatDateValue, formatMoney, formatNumber } from "@/lib/helpers";
 import {
+  INVOICE_DOCUMENT_TYPE_LABELS,
   INVOICE_PAYMENT_TERM_LABELS,
   INVOICE_SURCHARGE_DESCRIPTION_LABELS,
   INVOICE_VAT_SCENARIO_LABELS,
@@ -357,6 +358,7 @@ export const sendInvoiceEmail = async (
   const [invoice] = await db
     .select({
       id: Invoices.id,
+      documentType: Invoices.documentType,
       companyUuid: Invoices.companyUuid,
       debtorNo: Invoices.debtorNo,
       invoiceDate: Invoices.invoiceDate,
@@ -411,7 +413,12 @@ export const sendInvoiceEmail = async (
   const vat =
     Number(invoice.invoiceAmountInclVat ?? 0) -
     Number(invoice.invoiceAmountExclVat ?? 0);
-  const reference = `INV-${invoice.id}`;
+  // A credit note is the same row with negative amounts, but it must never
+  // arrive calling itself an invoice — the customer is owed this money, not
+  // being asked for it.
+  const isCreditNote = invoice.documentType === "credit_note";
+  const documentLabel = INVOICE_DOCUMENT_TYPE_LABELS[invoice.documentType];
+  const reference = `${isCreditNote ? "CRN" : "INV"}-${invoice.id}`;
   const dueDate = formatDateValue(invoice.expirationDate, "");
   const recipients = await resolveRecipients({
     companyUuid: invoice.companyUuid,
@@ -420,16 +427,22 @@ export const sendInvoiceEmail = async (
     routedTo: invoice.invoiceEmailEnabled ? invoice.invoiceEmailTo : null,
   });
 
-  const result = await deliver(recipients, `Invoice ${reference}`, {
-    documentLabel: "Invoice",
+  const result = await deliver(recipients, `${documentLabel} ${reference}`, {
+    documentLabel,
     reference,
     companyName: invoice.companyName ?? "Customer",
-    intro: dueDate
-      ? `Please find invoice ${reference} below. The amount is due by ${dueDate}.`
-      : `Please find invoice ${reference} below.`,
+    intro: isCreditNote
+      ? `Please find credit note ${reference} below. This amount is credited back to your account and settles against what you owe us.`
+      : dueDate
+        ? `Please find invoice ${reference} below. The amount is due by ${dueDate}.`
+        : `Please find invoice ${reference} below.`,
     fields: fieldsOf([
-      ["Invoice date", formatDateValue(invoice.invoiceDate, "")],
-      ["Due date", dueDate],
+      [
+        isCreditNote ? "Credit note date" : "Invoice date",
+        formatDateValue(invoice.invoiceDate, ""),
+      ],
+      // A credit note isn't due — it is owed the other way.
+      ["Due date", isCreditNote ? null : dueDate],
       ["Debtor number", invoice.debtorNo],
       ["Payment terms", paymentTermLabel(invoice.paymentTerms)],
       [
@@ -486,7 +499,7 @@ export const sendInvoiceEmail = async (
       { label: "Credit restriction", value: money(invoice.creditRestriction) },
       { label: "VAT", value: formatMoney(vat) },
       {
-        label: "Invoice total",
+        label: isCreditNote ? "Credited in total" : "Invoice total",
         value: money(invoice.invoiceTotal),
         emphasis: true,
       },

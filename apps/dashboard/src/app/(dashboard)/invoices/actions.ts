@@ -16,15 +16,13 @@ import {
   InvoiceItems,
   SelectInvoiceItems,
 } from "@/db/schema/invoice-items";
-import {
-  InsertJournalEntries,
-  JournalEntries,
-} from "@/db/schema/journal-entries";
+import { JournalEntries } from "@/db/schema/journal-entries";
 import { OrderItems } from "@/db/schema/order-items";
 import { Payments, SelectPayments } from "@/db/schema/payments";
 import { Orders } from "@/db/schema/orders";
 import { Products, SelectProducts } from "@/db/schema/products";
 import { mailDocument, sendInvoiceEmail } from "@/emails/documents";
+import { buildSalesJournalEntry } from "@/lib/server/ledger";
 import {
   computeQuoteSummary,
   creditRestrictionOn,
@@ -112,54 +110,6 @@ type InvoiceLineSnapshot = Omit<
   InsertInvoiceItems,
   "id" | "uuid" | "invoiceUuid" | "createdAt" | "updatedAt"
 >;
-
-type SalesInvoicePosting = {
-  invoiceUuid: string;
-  invoiceId: number | null;
-  companyUuid: string | null;
-  debCreditor: string | null;
-  invoiceDate: Date | string | null;
-  amountExclVat: number;
-  vatAmount: number;
-  userId: string | null;
-  // When cancelling, the entry is booked with the opposite sign.
-  reversal?: boolean;
-  // Overrides the default narration — used when booking a correction.
-  description?: string;
-};
-
-// Placeholder GL account code for sales revenue; swap for the real chart of
-// accounts later.
-const SALES_REVENUE_ACCOUNT = "8000";
-
-// A sales invoice posts one row to the sales journal — revenue net of VAT, with
-// the VAT shown separately and the debtor as the counter-account. A
-// cancellation books the same row negated.
-const buildSalesInvoiceJournalEntry = (
-  posting: SalesInvoicePosting,
-): InsertJournalEntries => {
-  const sign = posting.reversal ? -1 : 1;
-  const bookingDate = posting.invoiceDate
-    ? new Date(posting.invoiceDate).toISOString().split("T")[0]
-    : null;
-  return {
-    uuid: generateUuid(),
-    bookingDate,
-    documentDate: bookingDate,
-    documentNo: posting.invoiceId != null ? String(posting.invoiceId) : null,
-    journal: "sales",
-    account: SALES_REVENUE_ACCOUNT,
-    debCreditor: posting.debCreditor,
-    description:
-      posting.description ??
-      (posting.reversal ? "Sales invoice cancelled" : "Sales invoice"),
-    amount: (sign * posting.amountExclVat).toFixed(2),
-    vat: (sign * posting.vatAmount).toFixed(2),
-    companyUuid: posting.companyUuid,
-    invoiceUuid: posting.invoiceUuid,
-    createdByUserId: posting.userId,
-  };
-};
 
 export const getInvoices = async (): Promise<InvoiceWithCompany[]> =>
   db
@@ -344,7 +294,7 @@ export const createInvoice = async (
         .limit(1);
 
       await tx.insert(JournalEntries).values(
-        buildSalesInvoiceJournalEntry({
+        buildSalesJournalEntry({
           invoiceUuid: uuid,
           invoiceId: insertedInvoice?.id ?? null,
           companyUuid: fields.companyUuid ?? null,
@@ -494,7 +444,7 @@ export const cancelInvoice = async (
 
       // Reverse the sales invoice's ledger posting.
       await tx.insert(JournalEntries).values(
-        buildSalesInvoiceJournalEntry({
+        buildSalesJournalEntry({
           invoiceUuid: uuid,
           invoiceId: invoice.id,
           companyUuid: invoice.companyUuid,
@@ -639,7 +589,7 @@ export const updateInvoice = async (
 
         if (exclVatDelta !== 0 || vatDelta !== 0) {
           await tx.insert(JournalEntries).values(
-            buildSalesInvoiceJournalEntry({
+            buildSalesJournalEntry({
               invoiceUuid: uuid,
               invoiceId: invoice.id,
               companyUuid: invoice.companyUuid,
