@@ -421,6 +421,8 @@ export const cancelInvoice = async (
       return { error: "This invoice is already cancelled." };
     }
 
+    const isCreditNote = invoice.documentType === "credit_note";
+
     const items = await db
       .select()
       .from(InvoiceItems)
@@ -459,14 +461,20 @@ export const cancelInvoice = async (
         }),
       );
 
-      // Cancelling an invoice reverses only the money. The stock left at
-      // delivery, so the lines go back to "delivered" (billable again) and
-      // stock is NOT restored — recovering shipped goods is a return, not an
-      // invoice cancellation.
+      // Cancelling reverses only the money; stock is never restored here —
+      // recovering shipped goods is a return, not a cancellation.
+      //
+      // Where the line lands depends on which document was cancelled. An
+      // invoice pulled back leaves its lines billable again. A credit note
+      // pulled back means the customer owes for them once more, so they return
+      // to "invoiced" — sending them to "delivered" would offer goods that are
+      // physically back in the warehouse for delivery a second time.
+      const revertedStatus = isCreditNote ? "invoiced" : "delivered";
+
       for (const item of items) {
         await tx
           .update(OrderItems)
-          .set({ status: "delivered" })
+          .set({ status: revertedStatus })
           .where(eq(OrderItems.uuid, item.orderItemUuid));
       }
     });

@@ -4,6 +4,8 @@ import { ChevronLeft } from "lucide-react";
 import { getInvoiceDetail } from "@/app/(dashboard)/invoices/actions";
 import { InvoiceDetailView } from "@/components/invoices/invoice-detail";
 import { PageHeading } from "@/components/layout/page-heading";
+import { invoiceReference } from "@/lib/helpers";
+import { INVOICE_DOCUMENT_TYPE_LABELS } from "@/lib/labels";
 
 type Props = {
   params: Promise<{ uuid: string }>;
@@ -30,7 +32,7 @@ const InvoiceDetailPage = async ({ params }: Props) => {
         </Link>
       </div>
       <PageHeading
-        title={`Invoice #${invoice.id}`}
+        title={`${INVOICE_DOCUMENT_TYPE_LABELS[invoice.documentType]} ${invoiceReference(invoice.documentType, invoice.id)}`}
         description={invoice.companyName ?? undefined}
       />
       <InvoiceDetailView invoice={invoice} />

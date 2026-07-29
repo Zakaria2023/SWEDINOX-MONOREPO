@@ -11,12 +11,17 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
-import { buildColumnVisibility } from "@/lib/helpers";
-import { INVOICE_PAYMENT_TERM_LABELS, INVOICE_VAT_SCENARIO_LABELS } from "@/lib/labels";
+import { buildColumnVisibility, invoiceReference } from "@/lib/helpers";
+import {
+  INVOICE_DOCUMENT_TYPE_LABELS,
+  INVOICE_PAYMENT_TERM_LABELS,
+  INVOICE_VAT_SCENARIO_LABELS,
+} from "@/lib/labels";
 import { useState } from "react";
 
 type ColumnKey =
   | "id"
+  | "documentType"
   | "companyName"
   | "companyCode"
   | "invoiceDate"
@@ -31,7 +36,8 @@ type ColumnKey =
   | "status";
 
 const ALL_COLUMNS: Array<{ key: ColumnKey; label: string; defaultVisible: boolean }> = [
-  { key: "id", label: "Invoice No.", defaultVisible: true },
+  { key: "id", label: "Document No.", defaultVisible: true },
+  { key: "documentType", label: "Document", defaultVisible: true },
   { key: "companyName", label: "Customer", defaultVisible: true },
   { key: "companyCode", label: "Customer Code", defaultVisible: true },
   { key: "invoiceDate", label: "Invoice Date", defaultVisible: true },
@@ -66,8 +72,24 @@ export const InvoicesTable = ({ invoices }: Props) => {
               href={`/invoices/${inv.uuid}`}
               className="underline-offset-4 hover:underline"
             >
-              {inv.id}
+              {invoiceReference(inv.documentType, inv.id)}
             </Link>
+          </TableCell>
+        );
+      // A credit note sits in the same list as the invoices it offsets, so it
+      // has to say which it is — its negative amounts read as errors otherwise.
+      case "documentType":
+        return (
+          <TableCell key={key} className="whitespace-nowrap">
+            {inv.documentType === "credit_note" ? (
+              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                {INVOICE_DOCUMENT_TYPE_LABELS.credit_note}
+              </span>
+            ) : (
+              <span className="text-xs text-muted-foreground">
+                {INVOICE_DOCUMENT_TYPE_LABELS.invoice}
+              </span>
+            )}
           </TableCell>
         );
       case "companyName":

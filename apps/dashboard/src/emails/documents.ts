@@ -21,7 +21,12 @@ import DocumentEmail, {
   DocumentEmailField,
   DocumentEmailProps,
 } from "@/emails/templates/document-email";
-import { formatDateValue, formatMoney, formatNumber } from "@/lib/helpers";
+import {
+  formatDateValue,
+  formatMoney,
+  formatNumber,
+  invoiceReference,
+} from "@/lib/helpers";
 import {
   INVOICE_DOCUMENT_TYPE_LABELS,
   INVOICE_PAYMENT_TERM_LABELS,
@@ -418,7 +423,7 @@ export const sendInvoiceEmail = async (
   // being asked for it.
   const isCreditNote = invoice.documentType === "credit_note";
   const documentLabel = INVOICE_DOCUMENT_TYPE_LABELS[invoice.documentType];
-  const reference = `${isCreditNote ? "CRN" : "INV"}-${invoice.id}`;
+  const reference = invoiceReference(invoice.documentType, invoice.id);
   const dueDate = formatDateValue(invoice.expirationDate, "");
   const recipients = await resolveRecipients({
     companyUuid: invoice.companyUuid,

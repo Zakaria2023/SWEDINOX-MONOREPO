@@ -7,6 +7,7 @@ import {
   DeliveryTimeUnit,
   DeliveryType,
   InvoicePaymentTerm,
+  InvoiceDocumentType,
   InvoiceVatScenario,
   LeadTimeMethod,
   OrderDeblockType,
@@ -808,6 +809,17 @@ export const getQuoteVatRatePercent = (
   calculateVatIfApplicable && companyCalculatesVat !== false
     ? STANDARD_INVOICE_VAT_RATE
     : 0;
+
+/**
+ * How a sales document identifies itself: `INV-1042`, or `CRN-1043` when it is
+ * a credit note. Shared by the overview, the detail screen and the email so a
+ * customer quoting a number back at you finds the same document on screen.
+ */
+export const invoiceReference = (
+  documentType: InvoiceDocumentType | null | undefined,
+  id: number | null | undefined,
+): string =>
+  `${documentType === "credit_note" ? "CRN" : "INV"}-${id ?? "?"}`;
 
 export type PurchaseInvoiceLineAmount = {
   /** Net amount booked on the line. */

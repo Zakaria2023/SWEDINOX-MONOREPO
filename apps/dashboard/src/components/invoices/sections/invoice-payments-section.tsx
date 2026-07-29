@@ -21,7 +21,11 @@ import {
 } from "@/components/shadcn/table";
 import { FormError } from "@/components/ui/form-error";
 import { FormLabel } from "@/components/ui/form-field";
-import { PaymentMethod, paymentMethods } from "@/lib/enums";
+import {
+  InvoiceDocumentType,
+  PaymentMethod,
+  paymentMethods,
+} from "@/lib/enums";
 import { enumOptions, formatMoney, todayDateString } from "@/lib/helpers";
 import { PAYMENT_METHOD_LABELS } from "@/lib/labels";
 import { Undo2 } from "lucide-react";
@@ -32,6 +36,7 @@ type Props = {
   invoiceUuid: string;
   outstanding: string;
   cancelled: boolean;
+  documentType: InvoiceDocumentType;
   payments: SelectPayments[];
 };
 
@@ -39,6 +44,7 @@ export const InvoicePaymentsSection = ({
   invoiceUuid,
   outstanding,
   cancelled,
+  documentType,
   payments,
 }: Props) => {
   const [isPending, startTransition] = useTransition();
@@ -50,7 +56,11 @@ export const InvoicePaymentsSection = ({
   const [claimDiscount, setClaimDiscount] = useState(false);
   const [preview, setPreview] = useState<PaymentPreview | null>(null);
 
-  const isSettled = Number(outstanding) <= 0;
+  // A credit note's outstanding is negative by design. Left to the plain
+  // "settled" test it would report itself paid off, when in fact the money runs
+  // the other way and is waiting to offset the customer's next invoice.
+  const isCreditNote = documentType === "credit_note";
+  const isSettled = !isCreditNote && Number(outstanding) <= 0;
 
   // What settling on the chosen date would take, including any early-payment
   // discount still open on that date. Responses are stamped so a slow earlier
@@ -115,9 +125,11 @@ export const InvoicePaymentsSection = ({
   return (
     <div className="space-y-4">
       <h2 className="border-b pb-2 text-base font-semibold">
-        Payments{" "}
+        {isCreditNote ? "Credit" : "Payments"}{" "}
         <span className="text-sm font-normal text-muted-foreground">
-          {formatMoney(Number(outstanding))} outstanding
+          {isCreditNote
+            ? `${formatMoney(Math.abs(Number(outstanding)))} owed to the customer`
+            : `${formatMoney(Number(outstanding))} outstanding`}
         </span>
       </h2>
 
@@ -176,7 +188,9 @@ export const InvoicePaymentsSection = ({
         </div>
       )}
 
-      {!cancelled && !isSettled && (
+      {/* Nothing is received against a credit note, so it is offered no
+          payment form — registerPayment would refuse it anyway. */}
+      {!cancelled && !isSettled && !isCreditNote && (
         <div className="space-y-3 rounded-lg border p-4">
           <div className="grid gap-3 sm:grid-cols-4">
             <div>
@@ -260,6 +274,14 @@ export const InvoicePaymentsSection = ({
       {isSettled && (
         <p className="text-sm text-muted-foreground">
           This invoice is settled in full.
+        </p>
+      )}
+
+      {isCreditNote && (
+        <p className="text-sm text-muted-foreground">
+          A credit note isn&apos;t paid — it reduces what this customer owes.
+          The {formatMoney(Math.abs(Number(outstanding)))} here nets off against
+          their balance and frees the same amount of credit space.
         </p>
       )}
     </div>
