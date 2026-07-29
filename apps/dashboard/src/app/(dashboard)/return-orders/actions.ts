@@ -65,6 +65,8 @@ export type ReturnOrderItemInput = {
   orderItemUuid: string;
   returnQty: string;
   returnReason?: ReturnOrderReason | null;
+  /** The complaint that caused this line to come back, when one did. */
+  complaintUuid?: string | null;
 };
 
 // An invoiced order line the customer could send back, priced at what they were
@@ -974,6 +976,7 @@ export const createReturnOrder = async (
           uuid: generateUuid(),
           returnOrderUuid: uuid,
           productUuid: line.productUuid,
+          complaintUuid: item.complaintUuid ?? null,
           originalOrderUuid: line.orderUuid,
           originalOrderLine: line.lineNumber,
           originalOrderItemUuid: line.orderItemUuid,

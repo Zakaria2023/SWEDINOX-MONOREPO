@@ -2,6 +2,8 @@ import { clsx, ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import {
   CertificaatOption,
+  ComplaintCategory,
+  ComplaintSolution,
   CustomerGroup,
   DeliveryTerm,
   DeliveryTimeUnit,
@@ -14,6 +16,7 @@ import {
   OrderLineStatus,
   OrderWeightType,
   PurchaseOrderStatus,
+  ReturnOrderReason,
   SalesRepresentative,
   SfnCounterpartyRole,
   StockMode,
@@ -809,6 +812,41 @@ export const getQuoteVatRatePercent = (
   calculateVatIfApplicable && companyCalculatesVat !== false
     ? STANDARD_INVOICE_VAT_RATE
     : 0;
+
+/**
+ * Whether a complaint's agreed solution involves the goods physically coming
+ * back. Only these justify a return order: a price correction or a rejected
+ * complaint settles on paper, and a subsequent delivery sends more out rather
+ * than bringing anything in.
+ */
+export const complaintSolutionReturnsGoods = (
+  solution: ComplaintSolution | null | undefined,
+): boolean =>
+  solution === "collect_goods_back_credit" ||
+  solution === "return_goods_credit_redeliver";
+
+/**
+ * The return reason a complaint category implies. The two vocabularies were
+ * written for different screens and only partly overlap, so anything without a
+ * clear counterpart lands on "other" rather than being forced into a reason
+ * that would misreport why the goods came back.
+ */
+export const returnReasonForComplaintCategory = (
+  category: ComplaintCategory | null | undefined,
+): ReturnOrderReason => {
+  switch (category) {
+    case "damaged":
+    case "transport_damage":
+      return "damaged_goods";
+    case "wrong_material_delivered":
+    case "incorrect_delivery_address":
+      return "wrong_delivery";
+    case "wrong_quantity":
+      return "excess_delivery";
+    default:
+      return "other";
+  }
+};
 
 /**
  * How a sales document identifies itself: `INV-1042`, or `CRN-1043` when it is

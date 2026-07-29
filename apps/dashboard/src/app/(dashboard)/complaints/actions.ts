@@ -12,11 +12,20 @@ import {
 } from "@/db/schema/complaint-items";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
+import { OrderItems, SelectOrderItems } from "@/db/schema/order-items";
 import { Orders, SelectOrders } from "@/db/schema/orders";
 import { Products, SelectProducts } from "@/db/schema/products";
-import { describeError, generateUuid } from "@/lib/helpers";
+import { ReturnOrderItems } from "@/db/schema/return-order-items";
+import { ReturnOrders, SelectReturnOrders } from "@/db/schema/return-orders";
+import { createReturnOrder } from "@/app/(dashboard)/return-orders/actions";
+import {
+  complaintSolutionReturnsGoods,
+  describeError,
+  generateUuid,
+  returnReasonForComplaintCategory,
+} from "@/lib/helpers";
 import { currentUser } from "@clerk/nextjs/server";
-import { desc, eq, getTableColumns } from "drizzle-orm";
+import { and, desc, eq, getTableColumns, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -27,8 +36,33 @@ export type ComplaintFields = Omit<
 
 export type ComplaintActionResult = {
   complaintUuid?: string;
+  returnOrderUuid?: string;
   error?: string;
   success?: boolean;
+};
+
+// Which delivered line the customer is complaining about, and how much of it.
+export type ComplaintItemInput = {
+  orderItemUuid: string;
+  qty: string;
+  description?: string | null;
+};
+
+// A line the customer could complain about: anything that actually reached
+// them. A reserved line hasn't left the warehouse, so there is nothing yet to
+// be wrong with it.
+export type ComplainableLine = {
+  orderItemUuid: SelectOrderItems["uuid"];
+  orderUuid: SelectOrderItems["orderUuid"];
+  orderId: SelectOrders["id"];
+  lineNumber: SelectOrderItems["lineNumber"];
+  productUuid: SelectOrderItems["productUuid"];
+  productCode: SelectProducts["productCode"] | null;
+  productName: SelectProducts["name"] | null;
+  quantity: SelectOrderItems["quantity"];
+  amount: SelectOrderItems["amount"];
+  weightKg: SelectOrderItems["kgActual"];
+  status: SelectOrderItems["status"];
 };
 
 export type ComplaintListItem = SelectComplaints & {
@@ -74,6 +108,9 @@ export type ComplaintDetail = SelectComplaints & {
   productCode: SelectProducts["productCode"] | null;
   productName: SelectProducts["name"] | null;
   items: ComplaintItemDetail[];
+  // Return orders raised off the back of this complaint — the link between a
+  // customer's grievance and the goods actually coming back.
+  returnOrders: SelectReturnOrders[];
 };
 
 export const getComplaintDetail = async (
@@ -112,7 +149,19 @@ export const getComplaintDetail = async (
     .where(eq(ComplaintItems.complaintUuid, uuid))
     .orderBy(ComplaintItems.lineNumber);
 
-  return { ...complaint, items };
+  // Reached through the return lines, since it is the line that records which
+  // complaint sent it back.
+  const returnOrders = await db
+    .selectDistinct(getTableColumns(ReturnOrders))
+    .from(ReturnOrders)
+    .innerJoin(
+      ReturnOrderItems,
+      eq(ReturnOrderItems.returnOrderUuid, ReturnOrders.uuid),
+    )
+    .where(eq(ReturnOrderItems.complaintUuid, uuid))
+    .orderBy(desc(ReturnOrders.createdAt));
+
+  return { ...complaint, items, returnOrders };
 };
 
 export const updateComplaint = async (
@@ -189,8 +238,136 @@ export const deleteComplaint = async (
   redirect("/complaints");
 };
 
+// Delivered or invoiced lines for a customer — what they can complain about.
+export const getComplainableLines = async (
+  companyUuid: string,
+): Promise<ComplainableLine[]> =>
+  db
+    .select({
+      orderItemUuid: OrderItems.uuid,
+      orderUuid: OrderItems.orderUuid,
+      orderId: Orders.id,
+      lineNumber: OrderItems.lineNumber,
+      productUuid: OrderItems.productUuid,
+      productCode: Products.productCode,
+      productName: Products.name,
+      quantity: OrderItems.quantity,
+      amount: OrderItems.amount,
+      weightKg: OrderItems.kgActual,
+      status: OrderItems.status,
+    })
+    .from(OrderItems)
+    .innerJoin(Orders, eq(OrderItems.orderUuid, Orders.uuid))
+    .leftJoin(Products, eq(OrderItems.productUuid, Products.uuid))
+    .where(
+      and(
+        eq(Orders.companyUuid, companyUuid),
+        inArray(OrderItems.status, ["delivered", "invoiced"]),
+      ),
+    )
+    .orderBy(desc(OrderItems.createdAt));
+
+/**
+ * Raises the return order a complaint calls for.
+ *
+ * Only solutions that bring the goods physically back qualify — a price
+ * correction settles on paper and a subsequent delivery sends more out, so
+ * neither has anything to receive. The return is created through
+ * createReturnOrder rather than written here directly, so it inherits the same
+ * guards: only invoiced lines, never more than was billed, and never a line
+ * that has already come back.
+ */
+export const convertComplaintToReturnOrder = async (
+  complaintUuid: string,
+): Promise<ComplaintActionResult> => {
+  try {
+    const [complaint] = await db
+      .select()
+      .from(Complaints)
+      .where(eq(Complaints.uuid, complaintUuid))
+      .limit(1);
+
+    if (!complaint) {
+      return { error: "Complaint not found." };
+    }
+    if (!complaintSolutionReturnsGoods(complaint.solution)) {
+      return {
+        error:
+          "This complaint's solution doesn't bring the goods back, so there is nothing to return. Set it to collect or return the goods first.",
+      };
+    }
+
+    const items = await db
+      .select()
+      .from(ComplaintItems)
+      .where(eq(ComplaintItems.complaintUuid, complaintUuid));
+
+    const withOrderLine = items.filter((item) => !!item.orderItemUuid);
+    if (withOrderLine.length === 0) {
+      return {
+        error:
+          "This complaint has no lines pointing at an order line, so there is nothing to return.",
+      };
+    }
+
+    const existing = await db
+      .select({ uuid: ReturnOrderItems.uuid })
+      .from(ReturnOrderItems)
+      .where(eq(ReturnOrderItems.complaintUuid, complaintUuid))
+      .limit(1);
+
+    if (existing.length > 0) {
+      return { error: "A return order has already been raised for this complaint." };
+    }
+
+    const result = await createReturnOrder(
+      {
+        companyUuid: complaint.companyUuid,
+        contactUuid: complaint.contactUuid,
+        orderUuid: withOrderLine[0].orderUuid,
+        complaintRef: String(complaint.id),
+        returnReason: returnReasonForComplaintCategory(complaint.category),
+        status: "open",
+      },
+      { surcharges: [], texts: [] },
+      withOrderLine.flatMap((item) =>
+        item.orderItemUuid
+          ? [
+              {
+                orderItemUuid: item.orderItemUuid,
+                returnQty: item.qty ?? "0.000",
+                complaintUuid,
+              },
+            ]
+          : [],
+      ),
+    );
+
+    if (result.error) {
+      return { error: result.error };
+    }
+
+    revalidatePath("/complaints");
+    revalidatePath(`/complaints/${complaintUuid}`);
+    revalidatePath("/return-orders");
+    return {
+      success: true,
+      complaintUuid,
+      returnOrderUuid: result.returnOrderUuid,
+    };
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to raise a return order from this complaint",
+    };
+  }
+};
+
 export const createComplaint = async (
   fields: ComplaintFields,
+  items: ComplaintItemInput[] = [],
 ): Promise<ComplaintActionResult> => {
   const uuid = generateUuid();
   try {
@@ -211,7 +388,68 @@ export const createComplaint = async (
       },
     ];
 
-    await db.insert(Complaints).values({ ...fields, uuid, statusHistory });
+    // Resolve the complained-about lines before writing, so a complaint can
+    // only ever point at goods this customer actually received.
+    const complainable = await getComplainableLines(fields.companyUuid);
+    const byUuid = new Map(
+      complainable.map((line) => [line.orderItemUuid, line]),
+    );
+
+    for (const item of items) {
+      const line = byUuid.get(item.orderItemUuid);
+      if (!line) {
+        return {
+          error:
+            "One or more selected lines were not delivered to this customer.",
+        };
+      }
+      if (Number(item.qty) <= 0) {
+        return { error: "Every complaint line needs a quantity." };
+      }
+      if (Number(item.qty) > Number(line.quantity)) {
+        return {
+          error: `Cannot complain about more than was delivered (${Number(line.quantity).toFixed(3)}).`,
+        };
+      }
+    }
+
+    await db.transaction(async (tx) => {
+      await tx.insert(Complaints).values({ ...fields, uuid, statusHistory });
+
+      // Lines were previously discarded here, so a complaint was only ever a
+      // header — which is why nothing could act on one.
+      for (const [index, item] of items.entries()) {
+        const line = byUuid.get(item.orderItemUuid);
+        if (!line) {
+          continue;
+        }
+
+        const qty = Number(item.qty);
+        const deliveredQty = Number(line.quantity) || 1;
+
+        await tx.insert(ComplaintItems).values({
+          uuid: generateUuid(),
+          complaintUuid: uuid,
+          orderUuid: line.orderUuid,
+          orderItemUuid: line.orderItemUuid,
+          productUuid: line.productUuid,
+          lineNumber: index + 1,
+          description: item.description ?? null,
+          category: fields.category ?? null,
+          complaintType: fields.complaintType ?? null,
+          status: fields.status ?? "new",
+          responsibleUserId: fields.responsibleUserId ?? null,
+          createdByUserId: user?.id ?? null,
+          qty: qty.toFixed(3),
+          // The complained-about share of what the line was worth and weighed.
+          amount: ((Number(line.amount ?? 0) / deliveredQty) * qty).toFixed(2),
+          weightKg: ((Number(line.weightKg ?? 0) / deliveredQty) * qty).toFixed(
+            2,
+          ),
+        });
+      }
+    });
+
     revalidatePath("/complaints");
     return { success: true, complaintUuid: uuid };
   } catch (error) {

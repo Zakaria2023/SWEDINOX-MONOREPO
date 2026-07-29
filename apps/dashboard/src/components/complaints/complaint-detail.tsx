@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
+import { PackageCheck } from "lucide-react";
 import {
   ComplaintDetail,
+  convertComplaintToReturnOrder,
   deleteComplaint,
 } from "@/app/(dashboard)/complaints/actions";
 import { Button } from "@/components/shadcn/button";
@@ -20,6 +22,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DetailField } from "@/components/ui/detail-field";
 import { FormError } from "@/components/ui/form-error";
 import {
+  complaintSolutionReturnsGoods,
   formatDateColumn,
   formatMoney,
   formatNumber,
@@ -52,6 +55,19 @@ export const ComplaintDetailView = ({ complaint }: Props) => {
         setError(result.error);
       }
       setIsConfirmOpen(false);
+    });
+  };
+
+  const returnsGoods = complaintSolutionReturnsGoods(complaint.solution);
+  const hasReturn = complaint.returnOrders.length > 0;
+
+  const handleRaiseReturn = () => {
+    setError(undefined);
+    startTransition(async () => {
+      const result = await convertComplaintToReturnOrder(complaint.uuid);
+      if (result.error) {
+        setError(result.error);
+      }
     });
   };
 
@@ -211,6 +227,45 @@ export const ComplaintDetailView = ({ complaint }: Props) => {
           />
         </div>
       </section>
+
+      {/* Where a complaint turns into goods actually coming back. Offered only
+          when the agreed solution is one that brings them back — a price
+          correction settles on paper and has nothing to receive. */}
+      <div className="flex flex-wrap items-center gap-3 rounded-lg border p-4">
+        <Button
+          type="button"
+          onClick={handleRaiseReturn}
+          disabled={isPending || !returnsGoods || hasReturn}
+        >
+          <PackageCheck className="size-4" />
+          {hasReturn ? "Return order raised" : "Raise return order"}
+        </Button>
+
+        <p className="text-sm text-muted-foreground">
+          {hasReturn ? (
+            <>
+              Raised as{" "}
+              {complaint.returnOrders.map((returnOrder, index) => (
+                <span key={returnOrder.uuid}>
+                  {index > 0 && ", "}
+                  <Link
+                    href={`/return-orders/${returnOrder.uuid}`}
+                    className="text-primary hover:underline"
+                  >
+                    return order #{returnOrder.id}
+                  </Link>
+                </span>
+              ))}
+              . Receiving it books the goods back into stock; crediting it hands
+              the money back.
+            </>
+          ) : returnsGoods ? (
+            "Creates a return order for these lines, priced at what the customer was invoiced."
+          ) : (
+            "This complaint's solution doesn't bring the goods back, so there is nothing to return."
+          )}
+        </p>
+      </div>
 
       <div className="space-y-2">
         {/* The order link the schema has always carried — this is the first
