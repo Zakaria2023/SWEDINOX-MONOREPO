@@ -228,9 +228,16 @@ export const createPurchaseInvoice = async (
       })();
 
     await db.transaction(async (tx) => {
-      await tx
-        .insert(PurchaseInvoices)
-        .values({ ...fields, expirationDate: derivedExpiration, uuid });
+      await tx.insert(PurchaseInvoices).values({
+        ...fields,
+        expirationDate: derivedExpiration,
+        uuid,
+        // Owed to the supplier in full until payments are registered against
+        // it. Falls back to the computed gross when no total was supplied.
+        outstanding: (
+          Number(fields.invoiceTotal ?? 0) || exclVat + vatAmount
+        ).toFixed(2),
+      });
 
       const [inserted] = await tx
         .select({ id: PurchaseInvoices.id })

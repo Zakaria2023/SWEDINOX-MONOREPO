@@ -97,6 +97,7 @@ import {
   TransporterCountry,
   TransporterPriceUnit,
   OrderWeightType,
+  PaymentMethod,
   PurchaseCompanyType,
   PurchaseQuoteStatus,
   PurchaseRequestStatus,
@@ -1270,6 +1271,14 @@ export const PURCHASE_ORDER_STATUS_LABELS: Record<PurchaseOrderStatus, string> =
     completed: "Completed",
     cancelled: "Cancelled",
   };
+
+export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+  bank_transfer: "Bank transfer",
+  direct_debit: "Direct debit",
+  cash: "Cash",
+  card: "Card",
+  offset: "Offset",
+};
 
 export const PURCHASE_REQUEST_STATUS_LABELS: Record<
   PurchaseRequestStatus,

@@ -522,6 +522,55 @@ export const getPaymentTermDiscount = (
   return { percentage: meta.discountPercentage, withinDays: meta.discountDays };
 };
 
+export type EarlyPaymentDiscountInput = {
+  term: InvoicePaymentTerm | null | undefined;
+  /** Invoice date, `yyyy-mm-dd`. */
+  invoiceDate: string | null | undefined;
+  /** When the money actually arrived, `yyyy-mm-dd`. */
+  paymentDate: string | null | undefined;
+  /** The net (excl. VAT) amount the discount is calculated on. */
+  baseAmount: number;
+};
+
+/**
+ * What a customer is entitled to deduct for paying early, or 0 when nothing is
+ * due — the term grants no discount, or the money arrived after the window
+ * closed.
+ *
+ * The discount is calculated on the net amount rather than the gross: the VAT
+ * belongs to the tax authority either way, so discounting it would be giving
+ * away money that was never the seller's to give.
+ *
+ * Paying late does not partially earn it. The window is a deadline, so this
+ * returns either the whole discount or nothing.
+ */
+export const allowedEarlyPaymentDiscount = ({
+  term,
+  invoiceDate,
+  paymentDate,
+  baseAmount,
+}: EarlyPaymentDiscountInput): number => {
+  const discount = getPaymentTermDiscount(term);
+  if (!discount || !invoiceDate || !paymentDate || baseAmount <= 0) {
+    return 0;
+  }
+
+  const invoiced = new Date(`${invoiceDate.slice(0, 10)}T00:00:00Z`);
+  const paid = new Date(`${paymentDate.slice(0, 10)}T00:00:00Z`);
+  if (Number.isNaN(invoiced.getTime()) || Number.isNaN(paid.getTime())) {
+    return 0;
+  }
+
+  const deadline = new Date(invoiced);
+  deadline.setUTCDate(deadline.getUTCDate() + discount.withinDays);
+
+  if (paid.getTime() > deadline.getTime()) {
+    return 0;
+  }
+
+  return baseAmount * (discount.percentage / 100);
+};
+
 /**
  * The portion of the invoice a term requires up front (0 when none).
  */

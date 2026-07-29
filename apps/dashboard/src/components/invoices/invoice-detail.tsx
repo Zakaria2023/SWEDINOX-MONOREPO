@@ -12,6 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { InvoicePaymentsSection } from "@/components/invoices/sections/invoice-payments-section";
 import { QuoteSummaryPanel } from "@/components/quotes/quote-summary";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FormError } from "@/components/ui/form-error";
@@ -148,6 +149,13 @@ export const InvoiceDetailView = ({ invoice }: Props) => {
       </div>
 
       <QuoteSummaryPanel summary={invoiceSummaryFromSnapshot(invoice)} />
+
+      <InvoicePaymentsSection
+        invoiceUuid={invoice.uuid}
+        outstanding={invoice.outstanding}
+        cancelled={invoice.cancelled}
+        payments={invoice.payments}
+      />
 
       {!invoice.cancelled && (
         <div className="flex gap-2">

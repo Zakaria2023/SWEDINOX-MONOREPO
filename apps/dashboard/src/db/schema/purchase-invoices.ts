@@ -49,6 +49,12 @@ export const PurchaseInvoices = mysqlTable(
     invoiceTotal: decimal("invoice_total", { precision: 15, scale: 2 }).default(
       "0.00",
     ),
+    // What is still owed to the supplier. Mirrors Invoices.outstanding: set to
+    // the total when the invoice is booked, reduced as payments are registered
+    // against it.
+    outstanding: decimal("outstanding", { precision: 15, scale: 2 })
+      .default("0.00")
+      .notNull(),
     purchaseOrderNumber: varchar("purchase_order_number", { length: 100 }),
 
     paymentTerms: mysqlEnum("pi_payment_terms", invoicePaymentTerms),

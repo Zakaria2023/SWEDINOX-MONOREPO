@@ -1,0 +1,258 @@
+"use client";
+
+import { useEffect, useRef, useState, useTransition } from "react";
+import {
+  getInvoicePaymentPreview,
+  PaymentPreview,
+  registerPayment,
+  reversePayment,
+} from "@/app/(dashboard)/payments/actions";
+import { SelectPayments } from "@/db/schema/payments";
+import { Button } from "@/components/shadcn/button";
+import { Input } from "@/components/shadcn/input";
+import { Select } from "@/components/shadcn/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/shadcn/table";
+import { FormError } from "@/components/ui/form-error";
+import { FormLabel } from "@/components/ui/form-field";
+import { PaymentMethod, paymentMethods } from "@/lib/enums";
+import { enumOptions, formatMoney, todayDateString } from "@/lib/helpers";
+import { PAYMENT_METHOD_LABELS } from "@/lib/labels";
+import { Undo2 } from "lucide-react";
+
+const methodOptions = enumOptions(paymentMethods, PAYMENT_METHOD_LABELS);
+
+type Props = {
+  invoiceUuid: string;
+  outstanding: string;
+  cancelled: boolean;
+  payments: SelectPayments[];
+};
+
+export const InvoicePaymentsSection = ({
+  invoiceUuid,
+  outstanding,
+  cancelled,
+  payments,
+}: Props) => {
+  const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | undefined>();
+  const [paymentDate, setPaymentDate] = useState(todayDateString());
+  const [amount, setAmount] = useState("");
+  const [method, setMethod] = useState<PaymentMethod>("bank_transfer");
+  const [reference, setReference] = useState("");
+  const [claimDiscount, setClaimDiscount] = useState(false);
+  const [preview, setPreview] = useState<PaymentPreview | null>(null);
+
+  const isSettled = Number(outstanding) <= 0;
+
+  // What settling on the chosen date would take, including any early-payment
+  // discount still open on that date. Responses are stamped so a slow earlier
+  // lookup can't overwrite the answer for the date now on screen.
+  const latestRequest = useRef(0);
+
+  useEffect(() => {
+    latestRequest.current += 1;
+    const requestId = latestRequest.current;
+
+    getInvoicePaymentPreview(invoiceUuid, paymentDate).then((result) => {
+      if (latestRequest.current === requestId) {
+        setPreview(result);
+      }
+    });
+  }, [invoiceUuid, paymentDate]);
+
+  const discountAvailable = preview?.discountAvailable ?? 0;
+  const suggested = claimDiscount
+    ? (preview?.cashDue ?? 0)
+    : (preview?.outstanding ?? 0);
+
+  const submit = () => {
+    setError(undefined);
+    startTransition(async () => {
+      const result = await registerPayment({
+        invoiceUuid,
+        paymentDate,
+        amount: amount || suggested.toFixed(2),
+        method,
+        reference: reference || undefined,
+        claimDiscount,
+      });
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      setAmount("");
+      setReference("");
+    });
+  };
+
+  const reverse = (paymentUuid: string) => {
+    setError(undefined);
+    startTransition(async () => {
+      const result = await reversePayment(paymentUuid);
+      if (result.error) {
+        setError(result.error);
+      }
+    });
+  };
+
+  return (
+    <div className="space-y-4">
+      <h2 className="border-b pb-2 text-base font-semibold">
+        Payments{" "}
+        <span className="text-sm font-normal text-muted-foreground">
+          {formatMoney(Number(outstanding))} outstanding
+        </span>
+      </h2>
+
+      {error && <FormError>{error}</FormError>}
+
+      {payments.length > 0 && (
+        <div className="overflow-x-auto rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Date</TableHead>
+                <TableHead>Method</TableHead>
+                <TableHead>Reference</TableHead>
+                <TableHead className="text-right">Amount</TableHead>
+                <TableHead className="text-right">Discount</TableHead>
+                <TableHead className="w-24" />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {payments.map((payment) => (
+                <TableRow
+                  key={payment.uuid}
+                  className={payment.reversed ? "text-muted-foreground" : ""}
+                >
+                  <TableCell>{payment.paymentDate}</TableCell>
+                  <TableCell>
+                    {payment.method
+                      ? PAYMENT_METHOD_LABELS[payment.method]
+                      : "—"}
+                  </TableCell>
+                  <TableCell>{payment.reference ?? "—"}</TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {formatMoney(Number(payment.amount))}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {formatMoney(Number(payment.discountAmount))}
+                  </TableCell>
+                  <TableCell>
+                    {payment.reversed ? (
+                      <span className="text-xs">Reversed</span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => reverse(payment.uuid)}
+                        disabled={isPending}
+                        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive"
+                      >
+                        <Undo2 className="size-3.5" /> Reverse
+                      </button>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+
+      {!cancelled && !isSettled && (
+        <div className="space-y-3 rounded-lg border p-4">
+          <div className="grid gap-3 sm:grid-cols-4">
+            <div>
+              <FormLabel htmlFor="paymentDate">Payment date</FormLabel>
+              <Input
+                id="paymentDate"
+                type="date"
+                value={paymentDate}
+                onChange={(event) => setPaymentDate(event.target.value)}
+                disabled={isPending}
+              />
+            </div>
+            <div>
+              <FormLabel htmlFor="paymentAmount">Amount received</FormLabel>
+              <Input
+                id="paymentAmount"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder={suggested.toFixed(2)}
+                value={amount}
+                onChange={(event) => setAmount(event.target.value)}
+                disabled={isPending}
+              />
+            </div>
+            <div>
+              <FormLabel htmlFor="paymentMethod">Method</FormLabel>
+              <Select
+                id="paymentMethod"
+                value={method}
+                options={methodOptions}
+                onValueChange={(value) => setMethod(value as PaymentMethod)}
+                disabled={isPending}
+              />
+            </div>
+            <div>
+              <FormLabel htmlFor="paymentReference">Reference</FormLabel>
+              <Input
+                id="paymentReference"
+                placeholder="Bank statement line"
+                value={reference}
+                onChange={(event) => setReference(event.target.value)}
+                disabled={isPending}
+              />
+            </div>
+          </div>
+
+          {/* The payment term's early-settlement discount, offered only while
+              the window is still open on the chosen payment date. */}
+          {discountAvailable > 0 && (
+            <label className="flex cursor-pointer items-start gap-2 rounded-md border border-dashed p-3 text-sm">
+              <input
+                type="checkbox"
+                className="mt-0.5 size-4 accent-primary"
+                checked={claimDiscount}
+                onChange={(event) => setClaimDiscount(event.target.checked)}
+                disabled={isPending}
+              />
+              <span>
+                Customer deducted the early-payment discount of{" "}
+                <span className="font-medium">
+                  {formatMoney(discountAvailable)}
+                </span>
+                . The invoice settles in full for{" "}
+                <span className="font-medium">
+                  {formatMoney(preview?.cashDue ?? 0)}
+                </span>
+                .
+              </span>
+            </label>
+          )}
+
+          <Button type="button" onClick={submit} disabled={isPending}>
+            {isPending
+              ? "Registering..."
+              : `Register payment of ${formatMoney(Number(amount) || suggested)}`}
+          </Button>
+        </div>
+      )}
+
+      {isSettled && (
+        <p className="text-sm text-muted-foreground">
+          This invoice is settled in full.
+        </p>
+      )}
+    </div>
+  );
+};

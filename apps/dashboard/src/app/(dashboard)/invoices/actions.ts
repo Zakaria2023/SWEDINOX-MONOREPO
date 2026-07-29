@@ -21,6 +21,7 @@ import {
   JournalEntries,
 } from "@/db/schema/journal-entries";
 import { OrderItems } from "@/db/schema/order-items";
+import { Payments, SelectPayments } from "@/db/schema/payments";
 import { Orders } from "@/db/schema/orders";
 import { Products, SelectProducts } from "@/db/schema/products";
 import {
@@ -89,6 +90,7 @@ export type InvoiceDetail = SelectInvoices & {
   companyCode: SelectCompanies["id"] | null;
   surcharges: SelectInvoiceSurcharges[];
   items: InvoiceItemDetail[];
+  payments: SelectPayments[];
 };
 
 export type InvoiceHeaderEdit = Pick<
@@ -431,7 +433,13 @@ export const getInvoiceDetail = async (
     .leftJoin(Products, eq(InvoiceItems.productUuid, Products.uuid))
     .where(eq(InvoiceItems.invoiceUuid, uuid));
 
-  return { ...invoice, surcharges, items };
+  const payments = await db
+    .select()
+    .from(Payments)
+    .where(eq(Payments.invoiceUuid, uuid))
+    .orderBy(desc(Payments.paymentDate));
+
+  return { ...invoice, surcharges, items, payments };
 };
 
 export const cancelInvoice = async (

@@ -1253,6 +1253,18 @@ export const purchaseOrderStatuses = [
 
 export type PurchaseOrderStatus = (typeof purchaseOrderStatuses)[number];
 
+// How money actually moved. "Offset" is settlement without cash — a credit
+// note or a counter-invoice netted against this one.
+export const paymentMethods = [
+  "bank_transfer",
+  "direct_debit",
+  "cash",
+  "card",
+  "offset",
+] as const satisfies readonly string[];
+
+export type PaymentMethod = (typeof paymentMethods)[number];
+
 // Where a purchase request has got to. A request is the "who can supply this?"
 // document: it is sent to several suppliers at once, collects their quotes, and
 // ends when one of them is turned into a purchase order.
