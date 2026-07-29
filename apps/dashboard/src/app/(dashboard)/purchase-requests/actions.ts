@@ -13,12 +13,17 @@ import {
 } from "@/db/schema/purchase-request-items";
 import { PurchaseQuoteItems } from "@/db/schema/purchase-quote-items";
 import { PurchaseQuotes } from "@/db/schema/purchase-quotes";
+import { PurchaseOrderItems } from "@/db/schema/purchase-order-items";
+import { PurchaseOrders } from "@/db/schema/purchase-orders";
+import { OrderItems, SelectOrderItems } from "@/db/schema/order-items";
+import { Orders, SelectOrders } from "@/db/schema/orders";
+import { mailDocument, sendPurchaseOrderEmail } from "@/emails/documents";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
 import { Products, SelectProducts } from "@/db/schema/products";
 import { resolveCompanyType } from "@/app/(dashboard)/companies/actions";
 import { describeError, generateUuid, todayDateString } from "@/lib/helpers";
-import { desc, eq, getTableColumns, inArray } from "drizzle-orm";
+import { and, desc, eq, getTableColumns, inArray, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 export type PurchaseRequestFields = Omit<
@@ -34,8 +39,22 @@ export type PurchaseRequestItemInput = Omit<
 export type PurchaseRequestActionResult = {
   purchaseRequestUuid?: string;
   quoteUuids?: string[];
+  purchaseOrderUuid?: string;
   error?: string;
   success?: boolean;
+};
+
+// A sales order line waiting on material, so a request can say what it is for.
+export type OrderLineNeedingMaterial = {
+  orderItemUuid: SelectOrderItems["uuid"];
+  orderId: SelectOrders["id"];
+  lineNumber: SelectOrderItems["lineNumber"];
+  productUuid: SelectOrderItems["productUuid"];
+  productCode: SelectProducts["productCode"] | null;
+  productName: SelectProducts["name"] | null;
+  quantity: SelectOrderItems["quantity"];
+  deliveryDate: SelectOrderItems["deliveryDate"];
+  customerName: SelectCompanies["companyName"] | null;
 };
 
 export type PurchaseRequestListItem = SelectPurchaseRequests & {
@@ -47,6 +66,10 @@ export type PurchaseRequestListItem = SelectPurchaseRequests & {
 export type PurchaseRequestItemDetail = SelectPurchaseRequestItems & {
   productCode: SelectProducts["productCode"] | null;
   productName: SelectProducts["name"] | null;
+  // Left-joined: a line bought for stock is for no order line at all.
+  forOrderUuid: SelectOrderItems["orderUuid"] | null;
+  forOrderId: SelectOrders["id"] | null;
+  forOrderLine: SelectOrderItems["lineNumber"] | null;
 };
 
 export type PurchaseRequestQuoteSummary = {
@@ -143,9 +166,19 @@ export const getPurchaseRequestDetail = async (
       ...getTableColumns(PurchaseRequestItems),
       productCode: Products.productCode,
       productName: Products.name,
+      // The sales order line this material is for, resolved so the request can
+      // say who is waiting on it rather than just holding a uuid.
+      forOrderUuid: OrderItems.orderUuid,
+      forOrderId: Orders.id,
+      forOrderLine: OrderItems.lineNumber,
     })
     .from(PurchaseRequestItems)
     .leftJoin(Products, eq(PurchaseRequestItems.productUuid, Products.uuid))
+    .leftJoin(
+      OrderItems,
+      eq(PurchaseRequestItems.forOrderItemUuid, OrderItems.uuid),
+    )
+    .leftJoin(Orders, eq(OrderItems.orderUuid, Orders.uuid))
     .where(eq(PurchaseRequestItems.purchaseRequestUuid, uuid))
     .orderBy(PurchaseRequestItems.lineNumber);
 
@@ -191,6 +224,200 @@ export const getPurchaseRequestDetail = async (
       lineCount: lineCountByQuote.get(row.uuid) ?? 0,
     })),
   };
+};
+
+/**
+ * Sales order lines a purchase request could be covering — the "For line"
+ * column. Reserved lines only: once a line is delivered the material has
+ * already been found, so buying against it would be buying for nothing.
+ */
+export const getOrderLinesNeedingMaterial = async (): Promise<
+  OrderLineNeedingMaterial[]
+> =>
+  db
+    .select({
+      orderItemUuid: OrderItems.uuid,
+      orderId: Orders.id,
+      lineNumber: OrderItems.lineNumber,
+      productUuid: OrderItems.productUuid,
+      productCode: Products.productCode,
+      productName: Products.name,
+      quantity: OrderItems.quantity,
+      deliveryDate: OrderItems.deliveryDate,
+      customerName: Companies.companyName,
+    })
+    .from(OrderItems)
+    .innerJoin(Orders, eq(OrderItems.orderUuid, Orders.uuid))
+    .leftJoin(Companies, eq(Orders.companyUuid, Companies.uuid))
+    .leftJoin(Products, eq(OrderItems.productUuid, Products.uuid))
+    .where(eq(OrderItems.status, "reserved"))
+    .orderBy(desc(OrderItems.createdAt));
+
+/**
+ * Orders a request straight from a supplier, skipping the quote round.
+ *
+ * The reference screen offers this beside "Purchase quote" for good reason: a
+ * request whose price is already known — a contract, a repeat buy, an urgent
+ * top-up — gains nothing from being asked. Requiring the quote round anyway
+ * would only mean typing a price into a quote in order to award it to yourself.
+ *
+ * Prices are supplied here rather than derived, because a request deliberately
+ * carries none: it is the question, and this is someone answering it directly.
+ */
+export const convertPurchaseRequestToOrder = async (
+  requestUuid: string,
+  supplierUuid: string,
+  prices: { purchaseRequestItemUuid: string; netPrice: string }[] = [],
+): Promise<PurchaseRequestActionResult> => {
+  const orderUuid = generateUuid();
+  try {
+    const [request] = await db
+      .select()
+      .from(PurchaseRequests)
+      .where(eq(PurchaseRequests.uuid, requestUuid))
+      .limit(1);
+
+    if (!request) {
+      return { error: "Purchase request not found." };
+    }
+    if (request.status === "cancelled") {
+      return { error: "This request is cancelled." };
+    }
+    if (request.status === "awarded") {
+      return { error: "This request has already been awarded." };
+    }
+
+    const items = await db
+      .select()
+      .from(PurchaseRequestItems)
+      .where(eq(PurchaseRequestItems.purchaseRequestUuid, requestUuid))
+      .orderBy(PurchaseRequestItems.lineNumber);
+
+    if (items.length === 0) {
+      return { error: "Add at least one line before ordering this request." };
+    }
+
+    // A purchase order line without a product has nothing to receive into
+    // stock, so the order can't be raised from a request that only names
+    // things in words.
+    if (items.some((item) => !item.productUuid)) {
+      return {
+        error:
+          "Every line needs a product before this can become a purchase order. Ask for a quote instead if the goods aren't catalogued yet.",
+      };
+    }
+
+    const priceByItem = new Map(
+      prices.map((price) => [price.purchaseRequestItemUuid, price.netPrice]),
+    );
+
+    const unpriced = items.filter(
+      (item) => Number(priceByItem.get(item.uuid) ?? 0) <= 0,
+    );
+    if (unpriced.length > 0) {
+      return {
+        error:
+          "Every line needs an agreed price before this can become a purchase order.",
+      };
+    }
+
+    await db.transaction(async (tx) => {
+      // Claim the request first, so two people ordering at once can't raise
+      // two purchase orders for the same goods.
+      const [claimed] = await tx
+        .update(PurchaseRequests)
+        .set({ status: "awarded" })
+        .where(
+          and(
+            eq(PurchaseRequests.uuid, requestUuid),
+            ne(PurchaseRequests.status, "awarded"),
+          ),
+        );
+
+      if (claimed.affectedRows === 0) {
+        throw new Error(
+          "This request was already ordered — please refresh and try again.",
+        );
+      }
+
+      await tx.insert(PurchaseOrders).values({
+        uuid: orderUuid,
+        supplierUuid,
+        purchaseQuoteUuid: null,
+        contactUuid: null,
+        purchaser: request.purchaser,
+        reference: request.reference,
+        ourReference: request.ourReference,
+        orderCategory: request.orderCategory,
+        purchaseOrderType: request.purchaseOrderType,
+        weightType: request.weightType,
+        isOverlength: request.isOverlength ?? false,
+        paymentTerms: request.paymentTerms,
+        deliveryTerms: request.deliveryTerms,
+        deliveryAddressUuid: request.deliveryAddressUuid,
+        arrangeTransport: request.arrangeTransport ?? false,
+        pickupDropoffCdPurchases: request.pickupDropoffCdPurchases ?? false,
+        deliveryType: request.deliveryType,
+        deliveryDate: request.deliveryDate,
+        deliveryWeek: request.deliveryWeek,
+        deliveryYear: request.deliveryYear,
+        deliveryRemark: request.deliveryRemark,
+        orderDate: todayDateString(),
+        status: "open",
+      });
+
+      for (const [index, item] of items.entries()) {
+        const productUuid = item.productUuid;
+        if (!productUuid) {
+          continue;
+        }
+
+        const netPrice = Number(priceByItem.get(item.uuid) ?? 0);
+        const quantity = item.quantity ?? "0.000";
+
+        await tx.insert(PurchaseOrderItems).values({
+          uuid: generateUuid(),
+          purchaseOrderUuid: orderUuid,
+          productUuid,
+          quantity,
+          qtyPlanned: quantity,
+          lineNumber: item.lineNumber ?? index + 1,
+          unit: item.unit,
+          kgPurchased: item.kg,
+          lengthMm: item.lengthMm,
+          widthMm: item.widthMm,
+          thicknessMm: item.thicknessMm,
+          qualityCode: item.qualityCode,
+          stockCategory: item.stockCategory,
+          netPrice: netPrice.toFixed(4),
+          amount: (netPrice * Number(quantity)).toFixed(2),
+        });
+      }
+    });
+
+    // The supplier is told what we ordered, exactly as they are when the order
+    // came the long way round through a quote.
+    await mailDocument(
+      () => sendPurchaseOrderEmail(orderUuid),
+      `Purchase order ${orderUuid}`,
+    );
+
+    revalidatePath("/purchase-requests");
+    revalidatePath(`/purchase-requests/${requestUuid}`);
+    revalidatePath("/purchase-orders");
+    return {
+      success: true,
+      purchaseRequestUuid: requestUuid,
+      purchaseOrderUuid: orderUuid,
+    };
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to turn this request into a purchase order",
+    };
+  }
 };
 
 // Fans a request out to the suppliers being asked: one quote each, carrying the

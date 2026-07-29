@@ -18,8 +18,9 @@ import {
 } from "@/components/shadcn/table";
 import { FormError } from "@/components/ui/form-error";
 import { PurchaseQuoteStatus, PurchaseRequestStatus } from "@/lib/enums";
-import { formatMoney } from "@/lib/helpers";
+import { formatMoney, formatNumber, orDash, runningMeters } from "@/lib/helpers";
 import {
+  ORDER_LINE_STATUS_LABELS,
   PURCHASE_QUOTE_STATUS_LABELS,
   PURCHASE_REQUEST_STATUS_LABELS,
 } from "@/lib/labels";
@@ -109,10 +110,17 @@ export const PurchaseRequestDetailView = ({
             <TableHeader>
               <TableRow>
                 <TableHead className="w-12">#</TableHead>
+                <TableHead>For line</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead>Product</TableHead>
+                <TableHead>Category</TableHead>
+                <TableHead>Quality</TableHead>
                 <TableHead className="text-right">Quantity</TableHead>
                 <TableHead>Unit</TableHead>
                 <TableHead className="text-right">Length (mm)</TableHead>
+                <TableHead className="text-right">Thickness</TableHead>
+                <TableHead className="text-right">Kg</TableHead>
+                <TableHead className="text-right">M1</TableHead>
                 <TableHead>Required by</TableHead>
               </TableRow>
             </TableHeader>
@@ -120,7 +128,7 @@ export const PurchaseRequestDetailView = ({
               {request.items.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={6}
+                    colSpan={13}
                     className="h-24 text-center text-muted-foreground"
                   >
                     Nothing requested yet.
@@ -130,6 +138,26 @@ export const PurchaseRequestDetailView = ({
                 request.items.map((item) => (
                   <TableRow key={item.uuid}>
                     <TableCell>{item.lineNumber ?? "—"}</TableCell>
+                    {/* Why this material is being bought: a customer waiting,
+                        or nothing, which means it is going to stock. */}
+                    <TableCell className="whitespace-nowrap">
+                      {item.forOrderId ? (
+                        <Link
+                          href={`/orders/${item.forOrderUuid}`}
+                          className="text-primary hover:underline"
+                        >
+                          {item.forOrderId}
+                          {item.forOrderLine ? `/${item.forOrderLine}` : ""}
+                        </Link>
+                      ) : (
+                        <span className="text-muted-foreground">Stock</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {item.lineStatus
+                        ? ORDER_LINE_STATUS_LABELS[item.lineStatus]
+                        : "—"}
+                    </TableCell>
                     <TableCell className="font-medium">
                       {[item.productCode, item.productName]
                         .filter(Boolean)
@@ -137,12 +165,31 @@ export const PurchaseRequestDetailView = ({
                         item.description ||
                         "—"}
                     </TableCell>
+                    <TableCell>{orDash(item.stockCategory)}</TableCell>
+                    <TableCell>{orDash(item.qualityCode)}</TableCell>
                     <TableCell className="text-right tabular-nums">
                       {item.quantity}
                     </TableCell>
                     <TableCell>{item.unit ?? "—"}</TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {item.lengthMm ?? "—"}
+                      {orDash(item.lengthMm)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {orDash(item.thicknessMm)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatNumber(Number(item.kg ?? 0))}
+                    </TableCell>
+                    {/* Derived, never stored: for goods counted in metres the
+                        quantity already is the length. */}
+                    <TableCell className="text-right tabular-nums">
+                      {formatNumber(
+                        runningMeters({
+                          quantity: Number(item.quantity ?? 0),
+                          unit: item.unit,
+                          lengthMm: item.lengthMm,
+                        }),
+                      )}
                     </TableCell>
                     <TableCell>{item.requiredDate ?? "—"}</TableCell>
                   </TableRow>

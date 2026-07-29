@@ -12,7 +12,8 @@ import {
   timestamp,
   varchar,
 } from "drizzle-orm/mysql-core";
-import { stockUnits } from "../../lib/enums";
+import { orderLineStatuses, stockUnits } from "../../lib/enums";
+import { OrderItems } from "./order-items";
 import { Products } from "./products";
 import { PurchaseRequests } from "./purchase-requests";
 
@@ -35,7 +36,16 @@ export const PurchaseRequestItems = mysqlTable(
     // that is a normal way for a new product to enter the system.
     productUuid: char("product_uuid", { length: 36 }),
 
+    // The sales order line this material is being bought for. A request that
+    // can't say what it is for is a request nobody can judge: it is the
+    // difference between restocking and covering a customer who is waiting.
+    forOrderItemUuid: char("for_order_item_uuid", { length: 36 }),
+
     lineNumber: int("line_number"),
+    lineStatus: mysqlEnum("line_status", orderLineStatuses).default(
+      "in_progress",
+    ),
+    stockCategory: varchar("stock_category", { length: 100 }),
     description: varchar("description", { length: 255 }),
 
     // ── Physical attributes ───────────────────────────────────────────────────
@@ -59,6 +69,14 @@ export const PurchaseRequestItems = mysqlTable(
       table.purchaseRequestUuid,
     ),
     index("idx_purchase_request_items_product_uuid").on(table.productUuid),
+    index("idx_purchase_request_items_for_order_item_uuid").on(
+      table.forOrderItemUuid,
+    ),
+    foreignKey({
+      name: "fk_purchase_request_items_for_order_item",
+      columns: [table.forOrderItemUuid],
+      foreignColumns: [OrderItems.uuid],
+    }),
     foreignKey({
       name: "fk_purchase_request_items_purchase_request",
       columns: [table.purchaseRequestUuid],

@@ -13,10 +13,16 @@ import { todayDateString, currentYear } from "@/lib/helpers";
 // question being asked, and it comes back on the supplier's quote.
 export const purchaseRequestItemSchema = z.object({
   productUuid: z.string().optional(),
+  // Which sales order line this material is being bought for, when it is being
+  // bought for one rather than for stock.
+  forOrderItemUuid: z.string().optional(),
   description: z.string().optional(),
+  stockCategory: z.string().optional(),
+  qualityCode: z.string().optional(),
   quantity: z.string().optional(),
   unit: z.enum(stockUnits).optional(),
   lengthMm: z.string().optional(),
+  thicknessMm: z.string().optional(),
   kg: z.string().optional(),
   requiredDate: z.string().optional(),
   remark: z.string().optional(),
@@ -28,10 +34,14 @@ export type PurchaseRequestItemFormValues = z.infer<
 
 export const DEFAULT_PURCHASE_REQUEST_ITEM: PurchaseRequestItemFormValues = {
   productUuid: "",
+  forOrderItemUuid: "",
   description: "",
+  stockCategory: "",
+  qualityCode: "",
   quantity: "",
   unit: "st",
   lengthMm: "",
+  thicknessMm: "",
   kg: "",
   requiredDate: "",
   remark: "",

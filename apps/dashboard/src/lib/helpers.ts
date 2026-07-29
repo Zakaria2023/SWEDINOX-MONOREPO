@@ -814,6 +814,36 @@ export const getQuoteVatRatePercent = (
     : 0;
 
 /**
+ * Running metres a line represents — the "M1" column on the purchase screens.
+ *
+ * Derived rather than stored, because it is never independent information: for
+ * goods sold by the metre the quantity already is the length, and for goods
+ * sold by the piece it is the pieces times how long each one is. Storing it
+ * would create a second number that could disagree with the first.
+ *
+ * Returns 0 when the length is unknown, rather than inventing one.
+ */
+export const runningMeters = ({
+  quantity,
+  unit,
+  lengthMm,
+}: {
+  quantity: number;
+  unit: StockUnit | null | undefined;
+  lengthMm: number | null | undefined;
+}): number => {
+  // "m1" is the unit code for running metres, so such a line already counts in
+  // them and must not be multiplied by its own length again.
+  if (unit === "m1") {
+    return quantity;
+  }
+  if (!lengthMm) {
+    return 0;
+  }
+  return (quantity * lengthMm) / 1000;
+};
+
+/**
  * Whether a complaint's agreed solution involves the goods physically coming
  * back. Only these justify a return order: a price correction or a rejected
  * complaint settles on paper, and a subsequent delivery sends more out rather
