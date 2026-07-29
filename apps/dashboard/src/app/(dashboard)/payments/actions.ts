@@ -14,6 +14,7 @@ import {
   allowedCreditRestrictionDeduction,
   allowedEarlyPaymentDiscount,
   describeError,
+  financialPeriodFor,
   generateUuid,
   toDateString,
   todayDateString,
@@ -129,6 +130,10 @@ const buildSettlementEntry = (
   uuid: generateUuid(),
   bookingDate: posting.paymentDate,
   documentDate: posting.paymentDate,
+  // A settlement falls in the period the money moved, not the one the invoice
+  // was raised in — the two are routinely different months.
+  financialYear: financialPeriodFor(posting.paymentDate)?.financialYear ?? null,
+  period: financialPeriodFor(posting.paymentDate)?.period ?? null,
   documentNo: posting.documentNo,
   journal: "bank",
   account: posting.account,

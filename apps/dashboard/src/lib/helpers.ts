@@ -210,6 +210,44 @@ export const toDateString = (date: Date): string =>
   date.toISOString().split("T")[0];
 
 /**
+ * The financial year and period a ledger posting belongs to.
+ *
+ * Periods are calendar months. `JournalEntries` carries a plain integer beside
+ * the year and nothing in the system defines a fiscal calendar offset from the
+ * calendar one, so month number is the only honest reading.
+ *
+ * A posting with no booking date cannot be placed in a period at all, and gets
+ * `null` rather than today's — filing an entry into a period it does not belong
+ * to is worse than leaving it unfiled, because a period that has been reported
+ * would silently change.
+ *
+ * A `yyyy-mm-dd` string is read as written rather than through `Date`, which
+ * would parse it as UTC midnight and then be shifted back a day — and so into
+ * the previous period — by any timezone behind UTC.
+ */
+export const financialPeriodFor = (
+  bookingDate: Date | string | null | undefined,
+): { financialYear: number; period: number } | null => {
+  if (!bookingDate) {
+    return null;
+  }
+
+  if (typeof bookingDate === "string") {
+    const parts = /^(\d{4})-(\d{2})/.exec(bookingDate);
+    if (parts) {
+      return { financialYear: Number(parts[1]), period: Number(parts[2]) };
+    }
+  }
+
+  const date = new Date(bookingDate);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return { financialYear: date.getFullYear(), period: date.getMonth() + 1 };
+};
+
+/**
  * Formats the value of a Drizzle `date` column (typed `string | Date`) for
  * display, falling back to `fallback` (an em dash by default) when the value is
  * missing — pass e.g. "Never" or a "N/A" string where that reads better.
@@ -650,6 +688,28 @@ export const paymentTermExtendsCredit = (
   const meta = PAYMENT_TERM_META[term];
   return !(meta.netDays === 0 || meta.prepaymentPercentage === 100);
 };
+
+/**
+ * What a committed order will actually be worth as a receivable.
+ *
+ * Exposure has to be measured in one currency of value. Receivables are gross
+ * (`Invoices.outstanding` carries VAT) and the order being placed is already
+ * weighed gross (`Orders.totalInclVat`), but order *lines* are stored net — so
+ * summing them raw understates every uninvoiced order by its VAT. At the
+ * standard rate that hands a debtor about a fifth of their limit again in credit
+ * space that does not exist, and the shortfall only appears when the invoice
+ * lands, which reads as the customer consuming limit for no reason.
+ *
+ * The rate is the one the order's own summary applied — the customer's
+ * `calculateVat` flag — not the eventual invoice's VAT scenario. This is a
+ * forecast of an invoice that does not exist yet, and its job is to agree with
+ * the figure `createOrder` weighs against the limit.
+ */
+export const grossUpCommittedOrderValue = (
+  netAmount: number,
+  companyCalculatesVat: boolean | null | undefined,
+): number =>
+  netAmount * (1 + getQuoteVatRatePercent(true, companyCalculatesVat) / 100);
 
 /**
  * Decides whether an order should be held for credit reasons.

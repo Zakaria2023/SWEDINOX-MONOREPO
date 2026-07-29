@@ -1,7 +1,7 @@
 import "server-only";
 
 import { InsertJournalEntries } from "@/db/schema/journal-entries";
-import { generateUuid } from "@/lib/helpers";
+import { financialPeriodFor, generateUuid } from "@/lib/helpers";
 
 export type PurchasePosting = {
   /** The PurchaseInvoices row being posted — an invoice or a credit note. */
@@ -55,11 +55,14 @@ export const buildPurchaseJournalEntry = (
   const bookingDate = posting.invoiceDate
     ? new Date(posting.invoiceDate).toISOString().split("T")[0]
     : null;
+  const financialPeriod = financialPeriodFor(bookingDate);
 
   return {
     uuid: generateUuid(),
     bookingDate,
     documentDate: bookingDate,
+    financialYear: financialPeriod?.financialYear ?? null,
+    period: financialPeriod?.period ?? null,
     documentNo: posting.invoiceId != null ? String(posting.invoiceId) : null,
     journal: "purchase",
     account: PURCHASES_ACCOUNT,
@@ -88,11 +91,14 @@ export const buildSalesJournalEntry = (
   const bookingDate = posting.invoiceDate
     ? new Date(posting.invoiceDate).toISOString().split("T")[0]
     : null;
+  const financialPeriod = financialPeriodFor(bookingDate);
 
   return {
     uuid: generateUuid(),
     bookingDate,
     documentDate: bookingDate,
+    financialYear: financialPeriod?.financialYear ?? null,
+    period: financialPeriod?.period ?? null,
     documentNo: posting.invoiceId != null ? String(posting.invoiceId) : null,
     journal: "sales",
     account: SALES_REVENUE_ACCOUNT,

@@ -7,7 +7,11 @@ import { Companies } from "@/db/schema/companies";
 import { Invoices } from "@/db/schema/invoices";
 import { OrderItems } from "@/db/schema/order-items";
 import { Orders } from "@/db/schema/orders";
-import { assessCredit, CreditAssessment } from "@/lib/helpers";
+import {
+  assessCredit,
+  CreditAssessment,
+  grossUpCommittedOrderValue,
+} from "@/lib/helpers";
 import { InvoicePaymentTerm } from "@/lib/enums";
 
 type CreditQuery = Pick<typeof db, "select">;
@@ -74,6 +78,9 @@ export const getOpenReceivablesByCompany = async (
  * limit twice for the same goods; cancelled and returned lines will never
  * become receivables at all.
  *
+ * Line amounts are stored net and are grossed up here, because the receivables
+ * they are added to are gross — see `grossUpCommittedOrderValue`.
+ *
  * `excludeOrderUuid` leaves out the order being assessed, whose lines are
  * already written by the time the credit check runs.
  */
@@ -85,18 +92,24 @@ export const getCommittedOrderValue = async (
   const [row] = await tx
     .select({
       amount: sql<string>`COALESCE(SUM(${OrderItems.amount}), 0)`,
+      calculateVat: Companies.calculateVat,
     })
     .from(OrderItems)
     .innerJoin(Orders, eq(OrderItems.orderUuid, Orders.uuid))
+    .innerJoin(Companies, eq(Orders.companyUuid, Companies.uuid))
     .where(
       and(
         eq(Orders.companyUuid, companyUuid),
         inArray(OrderItems.status, ["reserved", "delivered"]),
         excludeOrderUuid ? ne(Orders.uuid, excludeOrderUuid) : undefined,
       ),
-    );
+    )
+    .groupBy(Companies.calculateVat);
 
-  return Number(row?.amount ?? 0);
+  return grossUpCommittedOrderValue(
+    Number(row?.amount ?? 0),
+    row?.calculateVat,
+  );
 };
 
 /** Committed order value for every customer at once, for the overviews. */
@@ -107,13 +120,20 @@ export const getCommittedOrderValueByCompany = async (
     .select({
       companyUuid: Orders.companyUuid,
       amount: sql<string>`COALESCE(SUM(${OrderItems.amount}), 0)`,
+      calculateVat: Companies.calculateVat,
     })
     .from(OrderItems)
     .innerJoin(Orders, eq(OrderItems.orderUuid, Orders.uuid))
+    .innerJoin(Companies, eq(Orders.companyUuid, Companies.uuid))
     .where(inArray(OrderItems.status, ["reserved", "delivered"]))
-    .groupBy(Orders.companyUuid);
+    .groupBy(Orders.companyUuid, Companies.calculateVat);
 
-  return new Map(rows.map((row) => [row.companyUuid, Number(row.amount)]));
+  return new Map(
+    rows.map((row) => [
+      row.companyUuid,
+      grossUpCommittedOrderValue(Number(row.amount), row.calculateVat),
+    ]),
+  );
 };
 
 /**
