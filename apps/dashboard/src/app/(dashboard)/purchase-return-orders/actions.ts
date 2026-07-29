@@ -36,6 +36,7 @@ import {
   describeError,
   generateUuid,
   getPaymentTermDueDate,
+  summarisePurchaseInvoice,
   todayDateString,
   toDateString,
 } from "@/lib/helpers";
@@ -256,8 +257,18 @@ const buildPurchaseReturnSummary = async (
       .select({
         amount: PurchaseReturnOrderItems.amount,
         weightKg: PurchaseReturnOrderItems.weightKg,
+        // The VAT band the goods were received under, so this panel reports
+        // the same figure as the credit note it will produce.
+        vatCode: PurchaseInvoiceItems.vatCode,
       })
       .from(PurchaseReturnOrderItems)
+      .leftJoin(
+        PurchaseInvoiceItems,
+        eq(
+          PurchaseInvoiceItems.purchaseOrderItemUuid,
+          PurchaseReturnOrderItems.originalPurchaseOrderItemUuid,
+        ),
+      )
       .where(
         eq(
           PurchaseReturnOrderItems.purchaseReturnOrderUuid,
@@ -275,28 +286,30 @@ const buildPurchaseReturnSummary = async (
       ),
   ]);
 
-  const materialsRevenue = lines.reduce(
-    (sum, line) => sum + Number(line.amount ?? 0),
-    0,
-  );
-  const surchargesRevenue = surcharges.reduce(
-    (sum, row) => sum + Number(row.amount ?? 0),
-    0,
-  );
+  // Positive here — this panel states what is going back, not the reversal.
+  // The credit note negates the same figures.
+  const summary = summarisePurchaseInvoice({
+    lines: lines.map((line) => ({
+      amount: Number(line.amount ?? 0),
+      vatCode: line.vatCode,
+    })),
+    surcharges: surcharges.map((row) => Number(row.amount ?? 0)),
+    creditRestriction: 0,
+    invoiceTotal: 0,
+  });
+
   const totalWeightKg = lines.reduce(
     (sum, line) => sum + Number(line.weightKg ?? 0),
     0,
   );
-  const totalExclVat = materialsRevenue + surchargesRevenue;
-  // Purchases carry the supplier's VAT, which arrives on their credit note
-  // rather than being derived here.
+
   return {
-    materialsRevenue: materialsRevenue.toFixed(2),
-    optionsRevenue: "0.00",
-    surchargesRevenue: surchargesRevenue.toFixed(2),
-    totalExclVat: totalExclVat.toFixed(2),
-    vatAmount: "0.00",
-    totalInclVat: totalExclVat.toFixed(2),
+    materialsRevenue: summary.materials.toFixed(2),
+    optionsRevenue: summary.optionsAmount.toFixed(2),
+    surchargesRevenue: summary.surcharges.toFixed(2),
+    totalExclVat: summary.totalExclVat.toFixed(2),
+    vatAmount: summary.vatTotal.toFixed(2),
+    totalInclVat: summary.totalInclVat.toFixed(2),
     totalWeightKg: totalWeightKg.toFixed(2),
   };
 };
@@ -543,20 +556,56 @@ export const creditPurchaseReturnOrder = async (
       return { error: "This return has no lines to credit." };
     }
 
-    const materials = items.reduce(
-      (sum, item) => sum + Number(item.amount ?? 0),
-      0,
-    );
     const surchargeRows = await db
       .select({ amount: PurchaseReturnOrderSurcharges.amount })
       .from(PurchaseReturnOrderSurcharges)
       .where(eq(PurchaseReturnOrderSurcharges.purchaseReturnOrderUuid, uuid));
-    const surchargeTotal = surchargeRows.reduce(
-      (sum, row) => sum + Number(row.amount ?? 0),
-      0,
+
+    // The VAT band each line was received under. Read from the purchase
+    // invoice that booked it rather than from the product as it stands today,
+    // so the credit reverses the band actually charged — recoding a product
+    // afterwards must not move an old receipt into a different VAT box.
+    const orderItemUuids = items.flatMap((item) =>
+      item.originalPurchaseOrderItemUuid
+        ? [item.originalPurchaseOrderItemUuid]
+        : [],
     );
 
-    const exclVat = materials + surchargeTotal;
+    const bookedRows =
+      orderItemUuids.length > 0
+        ? await db
+            .select({
+              purchaseOrderItemUuid: PurchaseInvoiceItems.purchaseOrderItemUuid,
+              vatCode: PurchaseInvoiceItems.vatCode,
+            })
+            .from(PurchaseInvoiceItems)
+            .where(
+              inArray(
+                PurchaseInvoiceItems.purchaseOrderItemUuid,
+                orderItemUuids,
+              ),
+            )
+        : [];
+
+    const vatCodeByOrderItem = new Map(
+      bookedRows.map((row) => [row.purchaseOrderItemUuid, row.vatCode]),
+    );
+
+    // Negative throughout: the same summary the invoice uses, reversed. No
+    // supplier total is keyed here — we raise this document ourselves from the
+    // goods sent back — so the build-up stands on its own and nothing is left
+    // unexplained.
+    const summary = summarisePurchaseInvoice({
+      lines: items.map((item) => ({
+        amount: -Number(item.amount ?? 0),
+        vatCode: item.originalPurchaseOrderItemUuid
+          ? (vatCodeByOrderItem.get(item.originalPurchaseOrderItemUuid) ?? null)
+          : null,
+      })),
+      surcharges: surchargeRows.map((row) => -Number(row.amount ?? 0)),
+      creditRestriction: 0,
+      invoiceTotal: 0,
+    });
 
     const user = await currentUser();
     const userId = user?.id ?? null;
@@ -594,12 +643,18 @@ export const creditPurchaseReturnOrder = async (
         expirationDate: dueDate ? new Date(`${dueDate}T00:00:00`) : null,
         paymentTerms: returnOrder.paymentTerms,
         purchaseOrderNumber: returnOrder.purchaseOrderReference,
-        materials: (-materials).toFixed(2),
-        optionsAmount: "0.00",
-        surcharges: (-surchargeTotal).toFixed(2),
-        invoiceTotal: (-exclVat).toFixed(2),
+        materials: summary.materials.toFixed(2),
+        optionsAmount: summary.optionsAmount.toFixed(2),
+        surcharges: summary.surcharges.toFixed(2),
+        // Reversed in the same three bands the goods were received under, so
+        // the VAT return nets each rate off against itself.
+        vatHigh: summary.vatHigh.toFixed(2),
+        vatMiddle: summary.vatMiddle.toFixed(2),
+        vatLow: summary.vatLow.toFixed(2),
+        remainder: summary.remainder.toFixed(2),
+        invoiceTotal: summary.totalGeneral.toFixed(2),
         // Negative: this reduces what we owe rather than adding to it.
-        outstanding: (-exclVat).toFixed(2),
+        outstanding: summary.totalGeneral.toFixed(2),
         remarks: `Supplier credit note for purchase return ${returnOrder.id}`,
       });
 
@@ -618,8 +673,8 @@ export const creditPurchaseReturnOrder = async (
           invoiceDate: new Date(),
           // Already negative, so this books as a reduction of cost without
           // needing the reversal flag.
-          amountExclVat: -exclVat,
-          vatAmount: 0,
+          amountExclVat: summary.totalExclVat,
+          vatAmount: summary.vatTotal,
           userId,
           description: "Purchase credit note",
         }),
