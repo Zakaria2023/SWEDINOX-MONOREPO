@@ -8,7 +8,12 @@ import { Products, SelectProducts } from "@/db/schema/products";
 import { Stock } from "@/db/schema/stock";
 import { StockMovements } from "@/db/schema/stock-movements";
 import { mailDocument, sendDeliveryNoteEmail } from "@/emails/documents";
-import { describeError, generateUuid, todayDateString } from "@/lib/helpers";
+import {
+  describeError,
+  generateUuid,
+  restateLotValue,
+  todayDateString,
+} from "@/lib/helpers";
 import { recordFreightMovement } from "@/lib/server/freight";
 import { currentUser } from "@clerk/nextjs/server";
 import { and, desc, eq, getTableColumns, ne, or } from "drizzle-orm";
@@ -179,6 +184,16 @@ export const deliverOrderItem = async (
             quantity: nextQuantity,
             reservedQuantity: nextReserved,
             status: Number(nextQuantity) > 0 ? "pending" : "received",
+            // Shipping material out has to take its value with it. Reducing the
+            // quantity alone left the remainder carrying the whole lot's value,
+            // so stock valuation climbed a little with every delivery and never
+            // came back down.
+            valuationEuro: restateLotValue({
+              previousQuantity: Number(stockRow.quantity),
+              remainingQuantity: Number(nextQuantity),
+              unitCost: Number(stockRow.valuationPrice ?? 0),
+              previousValue: Number(stockRow.valuationEuro ?? 0),
+            }).toFixed(2),
           })
           .where(
             and(

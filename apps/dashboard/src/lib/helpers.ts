@@ -1722,6 +1722,110 @@ export const quoteLineFinancials = ({
   };
 };
 
+export type LotRevaluationInput = {
+  /** What the lot held before the material left. */
+  previousQuantity: number;
+  /** What it holds now. */
+  remainingQuantity: number;
+  /** The lot's cost per unit, where it has one. */
+  unitCost: number;
+  /** The total the lot was carried at before. */
+  previousValue: number;
+};
+
+/**
+ * What a stock lot is worth once part of it has left.
+ *
+ * A lot carries a unit cost *and* a total, so taking material out without
+ * restating the total leaves fewer units sitting at the old value — the lot
+ * quietly becomes worth more per unit every time it is drawn down, and stock
+ * valuation drifts up permanently with nothing on any screen to reveal it.
+ *
+ * The unit cost is authoritative wherever there is one. Where there is not, the
+ * total is scaled by the share that remains, which keeps a drawdown
+ * proportional instead of writing the remainder down to nothing.
+ */
+export const restateLotValue = ({
+  previousQuantity,
+  remainingQuantity,
+  unitCost,
+  previousValue,
+}: LotRevaluationInput): number => {
+  if (remainingQuantity <= 0) {
+    return 0;
+  }
+  if (unitCost > 0) {
+    return remainingQuantity * unitCost;
+  }
+  if (previousQuantity <= 0) {
+    return 0;
+  }
+  return previousValue * (remainingQuantity / previousQuantity);
+};
+
+export type ProductionYieldInput = {
+  /** Material taken to the machine, out of the lot the order line reserved. */
+  consumed: number;
+  /** Finished goods the order line will be delivered from. */
+  produced: number;
+  /** Usable offcut going back to stock as a lot of its own. */
+  remnant: number;
+  /** What one unit of the input lot is carried at. */
+  inputUnitCost: number;
+};
+
+export type ProductionYield = {
+  /** Material that came out as neither goods nor remnant. */
+  waste: number;
+  /** True when more came out than went in — impossible, so a caller must refuse. */
+  impossible: boolean;
+  remnantCost: number;
+  producedCost: number;
+  producedUnitCost: number;
+};
+
+/**
+ * Splits the cost of the material a production run consumed across what it
+ * produced and what it put back.
+ *
+ * Sawing a bar destroys the lot it came from: what leaves the machine is
+ * customer goods, a usable offcut, and waste. So the quantities have to close —
+ *
+ *   consumed = produced + remnant + waste
+ *
+ * — and the money has to close with them, or stock value drifts every run.
+ *
+ * The remnant is carried at the input's unit cost, because it is the same
+ * material in a shorter length and anyone may order it next. Everything else,
+ * waste included, lands on the produced goods. That is deliberate: yield loss is
+ * a cost of the output that caused it, so a run that wastes half a bar shows the
+ * goods costing nearly twice the raw material — which is exactly the signal that
+ * makes bad sawing visible in the margin instead of hiding it in stock.
+ *
+ * Producing more than was consumed is flagged rather than silently absorbed. It
+ * means the figures are wrong, and inventing material to reconcile them is how a
+ * stock ledger starts lying.
+ */
+export const productionYield = ({
+  consumed,
+  produced,
+  remnant,
+  inputUnitCost,
+}: ProductionYieldInput): ProductionYield => {
+  const waste = consumed - produced - remnant;
+  const consumedCost = consumed * inputUnitCost;
+  const remnantCost = remnant * inputUnitCost;
+  const producedCost = consumedCost - remnantCost;
+
+  return {
+    waste,
+    impossible: waste < 0,
+    remnantCost,
+    producedCost,
+    producedUnitCost: produced > 0 ? producedCost / produced : 0,
+  };
+};
+
 export type QuoteLinePreviewInput = {
   quantity: number;
   lengthMm: number | null;

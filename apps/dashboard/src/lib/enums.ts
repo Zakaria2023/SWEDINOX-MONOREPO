@@ -501,7 +501,17 @@ export const stockMovementReasons = [
   "manual_correction",
   "count_correction",
   "damaged",
+  // The material a production line took to the machine, out of the lot it was
+  // reserved from. Its counterpart is production_output plus, where the offcut
+  // is worth keeping, production_remnant.
+  "production_input",
   "production_output",
+  // The usable offcut a production line put back — a new, smaller lot of the
+  // same material, free for anyone to order.
+  "production_remnant",
+  // Material that entered the machine and came out as neither goods nor
+  // remnant: saw kerf, trim, scrap. What the sawing-waste control list reports.
+  "sawing_waste",
   // Goods a customer sent back, booked into stock when the return is received.
   "sales_return",
   // Goods sent back to the supplier, taken out of the lot they arrived in.

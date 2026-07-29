@@ -880,7 +880,10 @@ export const STOCK_MOVEMENT_REASON_LABELS: Record<StockMovementReason, string> =
     manual_correction: "Manual Correction",
     count_correction: "Count Correction",
     damaged: "Damaged / Written Off",
+    production_input: "Production Input",
     production_output: "Production Output",
+    production_remnant: "Production Remnant",
+    sawing_waste: "Sawing Waste",
     sales_return: "Sales Return",
     purchase_return: "Purchase Return",
   };
