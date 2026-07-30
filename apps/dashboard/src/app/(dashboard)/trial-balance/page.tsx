@@ -1,0 +1,19 @@
+import { getTrialBalance } from "@/app/(dashboard)/trial-balance/actions";
+import { PageHeading } from "@/components/layout/page-heading";
+import { TrialBalanceTable } from "@/components/trial-balance/trial-balance-table-content";
+
+const TrialBalancePage = async () => {
+  const trialBalance = await getTrialBalance();
+
+  return (
+    <div className="space-y-6 p-6">
+      <PageHeading
+        title="Trial balance"
+        description="Every general-ledger account totalled, and whether the debits and credits agree"
+      />
+      <TrialBalanceTable trialBalance={trialBalance} />
+    </div>
+  );
+};
+
+export default TrialBalancePage;

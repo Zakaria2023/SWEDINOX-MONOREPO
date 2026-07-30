@@ -1722,6 +1722,64 @@ export const quoteLineFinancials = ({
   };
 };
 
+export type PostingLine = {
+  account: string;
+  debit: number;
+  credit: number;
+};
+
+export type PostingBalance = {
+  totalDebit: number;
+  totalCredit: number;
+  /** Debits less credits — zero for a well-formed entry. */
+  difference: number;
+  balanced: boolean;
+};
+
+/**
+ * Whether a set of posting lines balances.
+ *
+ * Double entry has exactly one rule: every entry moves the same total onto the
+ * debit side as onto the credit side. It is worth stating as code because it is
+ * the only check that catches a whole class of accounting bug at once — a
+ * forgotten VAT line, a surcharge posted to no counter-account, a credit note
+ * that reverses three lines out of four. None of those are visible in a list of
+ * journal rows; all of them show up here immediately.
+ *
+ * Rounding is allowed a cent, since amounts are decimals rendered to two places
+ * and a VAT calculation can legitimately land half a cent out. Anything larger
+ * is a missing line, not arithmetic.
+ */
+export const postingBalance = (lines: PostingLine[]): PostingBalance => {
+  const totalDebit = lines.reduce((sum, line) => sum + line.debit, 0);
+  const totalCredit = lines.reduce((sum, line) => sum + line.credit, 0);
+  const difference = totalDebit - totalCredit;
+
+  return {
+    totalDebit,
+    totalCredit,
+    difference,
+    balanced: Math.abs(difference) < 0.005,
+  };
+};
+
+/**
+ * Splits a signed amount onto the correct side of an account.
+ *
+ * Posting code otherwise repeats `amount > 0 ? ... : ...` at every call site,
+ * and a single one of them getting the sign backwards produces an entry that
+ * still balances while recording the opposite of what happened — the kind of
+ * error a trial balance cannot catch.
+ *
+ * A negative debit is a credit, and vice versa: reversals and credit notes
+ * arrive with negative amounts and must land on the other side rather than as a
+ * negative figure on the same one.
+ */
+export const debitCredit = (
+  amount: number,
+): { debit: number; credit: number } =>
+  amount >= 0 ? { debit: amount, credit: 0 } : { debit: 0, credit: -amount };
+
 export type LotRevaluationInput = {
   /** What the lot held before the material left. */
   previousQuantity: number;

@@ -261,6 +261,8 @@ export const createPurchaseInvoice = async (
           invoiceDate: fields.invoiceDate ?? null,
           amountExclVat: summary.totalExclVat,
           vatAmount: summary.vatTotal,
+          creditRestriction: summary.creditRestriction,
+          remainder: summary.remainder,
           userId,
         }),
       );
@@ -579,6 +581,8 @@ export const cancelPurchaseInvoice = async (
             Number(invoice.vatHigh) +
             Number(invoice.vatMiddle) +
             Number(invoice.vatLow),
+          creditRestriction: Number(invoice.creditRestriction),
+          remainder: Number(invoice.remainder),
           userId: userId ?? null,
           reversal: true,
         }),

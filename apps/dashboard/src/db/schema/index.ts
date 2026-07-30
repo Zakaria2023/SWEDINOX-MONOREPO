@@ -45,6 +45,7 @@ export * from "./return-order-items";
 export * from "./revenue-groups";
 export * from "./revenue-budgets";
 export * from "./journal-entries";
+export * from "./ledger-accounts";
 export * from "./charges";
 export * from "./production-batches";
 export * from "./transport-trips";

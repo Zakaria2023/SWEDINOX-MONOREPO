@@ -15,14 +15,26 @@ import { Companies } from "./companies";
 import { Invoices } from "./invoices";
 import { PurchaseInvoices } from "./purchase-invoices";
 
-// General-ledger journal entries. A sales/purchase invoice posts to several
-// of these rows (revenue/purchases, debtor/creditor, VAT); this table is the
-// authoritative accounting ledger behind the Finance overviews.
+// General-ledger journal entries — one row per posting line.
+//
+// A document posts a balanced set of lines: a sales invoice debits the debtor
+// and credits revenue, the credit restriction and the VAT it owes. The lines of
+// one document share an `entryUuid`, and within that group the debits equal the
+// credits. That is what makes a trial balance possible, and what makes an
+// unbalanced posting detectable instead of invisible.
+//
+// This used to be one row per document carrying `amount` (net) and `vat` with
+// the debtor as a text reference. Nothing recorded the other side, so the ledger
+// could not be balanced, totalled by account, or turned into a balance sheet —
+// only listed.
 export const JournalEntries = mysqlTable(
   "JournalEntries",
   {
     id: int("id").primaryKey().autoincrement(),
     uuid: char("uuid", { length: 36 }).notNull().unique(),
+
+    // Groups the lines of one document into a single balanced entry.
+    entryUuid: char("entry_uuid", { length: 36 }),
 
     bookingDate: date("booking_date", { mode: "string" }),
     documentDate: date("document_date", { mode: "string" }),
@@ -34,9 +46,21 @@ export const JournalEntries = mysqlTable(
     debCreditor: varchar("deb_creditor", { length: 100 }),
     description: varchar("description", { length: 255 }),
     reference: varchar("reference", { length: 255 }),
+    // The two sides. Exactly one of them carries a figure on any given line.
+    debit: decimal("debit", { precision: 15, scale: 2 })
+      .default("0.00")
+      .notNull(),
+    credit: decimal("credit", { precision: 15, scale: 2 })
+      .default("0.00")
+      .notNull(),
+    // The line's signed effect on its account (debit less credit). Kept because
+    // the journal overview and the export columns read it directly, and because
+    // summing it is how an account's movement is measured.
     amount: decimal("amount", { precision: 15, scale: 2 })
       .default("0.00")
       .notNull(),
+    // VAT now has a posting line of its own, so this stays zero on new entries.
+    // It is still read by rows booked before the ledger was double-sided.
     vat: decimal("vat", { precision: 15, scale: 2 }).default("0.00").notNull(),
     explanation: text("explanation"),
 
@@ -61,6 +85,8 @@ export const JournalEntries = mysqlTable(
   },
   (table) => [
     index("idx_journal_entries_booking_date").on(table.bookingDate),
+    index("idx_journal_entries_entry_uuid").on(table.entryUuid),
+    index("idx_journal_entries_account").on(table.account),
     index("idx_journal_entries_company_uuid").on(table.companyUuid),
     index("idx_journal_entries_invoice_uuid").on(table.invoiceUuid),
     index("idx_journal_entries_purchase_invoice_uuid").on(

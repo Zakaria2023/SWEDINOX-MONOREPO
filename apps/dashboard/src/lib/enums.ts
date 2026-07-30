@@ -491,6 +491,19 @@ export const stockMovementTypes = [
 
 export type StockMovementType = (typeof stockMovementTypes)[number];
 
+// What a general-ledger account is, which decides which side of it increases
+// and which of the two statements it lands on. Assets and expenses increase on
+// the debit side; liabilities, equity and revenue on the credit side.
+export const ledgerAccountTypes = [
+  "asset",
+  "liability",
+  "equity",
+  "revenue",
+  "expense",
+] as const satisfies readonly string[];
+
+export type LedgerAccountType = (typeof ledgerAccountTypes)[number];
+
 export const stockMovementReasons = [
   "purchase_receipt",
   "invoice_consumption",

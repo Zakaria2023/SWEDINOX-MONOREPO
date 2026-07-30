@@ -302,6 +302,7 @@ export const createInvoice = async (
           invoiceDate: fields.invoiceDate ?? null,
           amountExclVat: exclVat,
           vatAmount,
+          creditRestriction,
           userId: userId ?? null,
         }),
       );
@@ -456,6 +457,7 @@ export const cancelInvoice = async (
           vatAmount:
             Number(invoice.invoiceAmountInclVat) -
             Number(invoice.invoiceAmountExclVat),
+          creditRestriction: Number(invoice.creditRestriction),
           userId: userId ?? null,
           reversal: true,
         }),

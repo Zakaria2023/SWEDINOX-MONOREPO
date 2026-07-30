@@ -3,18 +3,18 @@
 import { db } from "@/db";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { Invoices, SelectInvoices } from "@/db/schema/invoices";
-import {
-  InsertJournalEntries,
-  JournalEntries,
-} from "@/db/schema/journal-entries";
+import { JournalEntries } from "@/db/schema/journal-entries";
 import { Payments, SelectPayments } from "@/db/schema/payments";
 import { PurchaseInvoices } from "@/db/schema/purchase-invoices";
 import { PaymentMethod } from "@/lib/enums";
 import {
+  buildSettlementEntry,
+  LEDGER_ACCOUNTS,
+} from "@/lib/server/ledger";
+import {
   allowedCreditRestrictionDeduction,
   allowedEarlyPaymentDiscount,
   describeError,
-  financialPeriodFor,
   generateUuid,
   toDateString,
   todayDateString,
@@ -105,48 +105,12 @@ const settlementDeductions = (
   };
 };
 
-// Placeholder GL accounts; swap for the real chart of accounts later.
-const BANK_ACCOUNT = "1100";
-const DISCOUNT_GRANTED_ACCOUNT = "8600";
-
-type SettlementPosting = {
-  invoiceUuid: string | null;
-  purchaseInvoiceUuid: string | null;
-  documentNo: string | null;
-  companyUuid: string | null;
-  debCreditor: string | null;
-  paymentDate: string;
-  amount: number;
-  account: string;
-  description: string;
-  userId: string | null;
-};
-
-// A settlement posts to the bank journal at the amount that moved. Reversal is
-// the same row negated, never a deletion.
-const buildSettlementEntry = (
-  posting: SettlementPosting,
-): InsertJournalEntries => ({
-  uuid: generateUuid(),
-  bookingDate: posting.paymentDate,
-  documentDate: posting.paymentDate,
-  // A settlement falls in the period the money moved, not the one the invoice
-  // was raised in — the two are routinely different months.
-  financialYear: financialPeriodFor(posting.paymentDate)?.financialYear ?? null,
-  period: financialPeriodFor(posting.paymentDate)?.period ?? null,
-  documentNo: posting.documentNo,
-  journal: "bank",
-  account: posting.account,
-  debCreditor: posting.debCreditor,
-  description: posting.description,
-  amount: posting.amount.toFixed(2),
-  // Settling an invoice moves cash only; the VAT was booked when it was raised.
-  vat: "0.00",
-  companyUuid: posting.companyUuid,
-  invoiceUuid: posting.invoiceUuid,
-  purchaseInvoiceUuid: posting.purchaseInvoiceUuid,
-  createdByUserId: posting.userId,
-});
+// The cash and discount accounts these settlements post to, from the chart of
+// accounts rather than from a local guess. The discount account moved from 8600
+// to 4700: a discount granted is a cost of collecting early, not negative
+// revenue, and 8xxx is the revenue range.
+const BANK_ACCOUNT = LEDGER_ACCOUNTS.bank;
+const DISCOUNT_GRANTED_ACCOUNT = LEDGER_ACCOUNTS.discountGranted;
 
 export const getPayments = async (): Promise<PaymentListItem[]> => {
   try {

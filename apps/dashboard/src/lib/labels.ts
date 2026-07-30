@@ -53,6 +53,7 @@ import {
   InvoiceSurchargeDescription,
   InvoiceDocumentType,
   InvoiceVatScenario,
+  LedgerAccountType,
   InvoicingMethod,
   ProcessedOption,
   ProductQualityStandard,
@@ -867,6 +868,14 @@ export const STOCK_STATUS_LABELS: Record<StockStatus, string> = {
 export const STOCK_MOVEMENT_TYPE_LABELS: Record<StockMovementType, string> = {
   in: "In",
   out: "Out",
+};
+
+export const LEDGER_ACCOUNT_TYPE_LABELS: Record<LedgerAccountType, string> = {
+  asset: "Asset",
+  liability: "Liability",
+  equity: "Equity",
+  revenue: "Revenue",
+  expense: "Expense",
 };
 
 export const STOCK_MOVEMENT_REASON_LABELS: Record<StockMovementReason, string> =
