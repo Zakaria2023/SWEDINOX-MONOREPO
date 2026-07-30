@@ -246,6 +246,14 @@ export const createInvoice = async (
 
     const exclVat = summary.total.revenue;
 
+    // What the goods being billed cost us. The cost has been sitting on the
+    // balance sheet since the goods were delivered; billing them is the moment
+    // it becomes a cost of this sale.
+    const costOfSales = billableLines.reduce(
+      (sum, line) => sum + Number(line.costAmount ?? 0),
+      0,
+    );
+
     // The surcharge for the credit this payment term extends. The customer
     // earns it back by settling within the term — see registerPayment.
     const creditRestriction = creditRestrictionOn(fields.paymentTerms, exclVat);
@@ -303,6 +311,7 @@ export const createInvoice = async (
           amountExclVat: exclVat,
           vatAmount,
           creditRestriction,
+          costOfSales,
           userId: userId ?? null,
         }),
       );
@@ -458,6 +467,13 @@ export const cancelInvoice = async (
             Number(invoice.invoiceAmountInclVat) -
             Number(invoice.invoiceAmountExclVat),
           creditRestriction: Number(invoice.creditRestriction),
+          // The margin is given back with the revenue: the goods go back to
+          // being an unbilled asset, which is what they were before this
+          // document existed.
+          costOfSales: items.reduce(
+            (sum, item) => sum + Number(item.costAmount ?? 0),
+            0,
+          ),
           userId: userId ?? null,
           reversal: true,
         }),

@@ -23,6 +23,22 @@ export type PurchasePosting = {
   creditRestriction?: number;
   /** Typed total less what the lines account for — booked to differences. */
   remainder?: number;
+  /**
+   * How much of `amountExclVat` became stock. That part is an asset, not a
+   * cost — it only becomes a cost when the goods are sold. Whatever is left
+   * over (freight, handling, options) is a cost of buying and is expensed now.
+   *
+   * Left undefined, the whole invoice is treated as a cost, which is what a
+   * document that receives no goods should do.
+   */
+  inventoryValue?: number;
+  /**
+   * Where the goods side lands. Defaults to inventory, which is right for a
+   * receipt. A supplier's credit note for goods already sent back clears
+   * `goodsReturnedNotCredited` instead — the stock left the shelf when it was
+   * shipped, so crediting inventory again here would remove it twice.
+   */
+  goodsAccount?: string;
   userId: string | null;
   reversal?: boolean;
   description?: string;
@@ -39,11 +55,43 @@ export type SalesPosting = {
   vatAmount: number;
   /** The credit-restriction surcharge added to the invoice, if any. */
   creditRestriction?: number;
+  /**
+   * What the goods being billed cost us — the sum of the lines' cost amounts.
+   *
+   * Charged to cost of sales against the revenue it earned, in the same entry,
+   * so a period's margin is the difference between two accounts rather than
+   * something that has to be worked out from the order lines. Zero on a
+   * document that bills no goods (a header correction, a surcharge-only
+   * invoice).
+   */
+  costOfSales?: number;
   userId: string | null;
   /** Books the same entry with every side reversed — used when cancelling. */
   reversal?: boolean;
   /** Overrides the default narration, e.g. when booking a correction. */
   description?: string;
+};
+
+/**
+ * Stock physically moving, with no invoice attached to it yet.
+ *
+ * Goods leave the warehouse at delivery and are billed later; goods come back
+ * on a return and are credited later. Both are real changes to what the
+ * business owns, so both have to move the inventory account when they happen —
+ * not when the paperwork catches up.
+ */
+export type InventoryPosting = {
+  bookingDate: Date | string | null;
+  documentNo: string | null;
+  description: string;
+  companyUuid: string | null;
+  debCreditor: string | null;
+  /** Signed: positive is value entering inventory, negative is value leaving. */
+  inventoryValue: number;
+  /** The account the value is coming from, or going to. */
+  counterAccount: string;
+  reference?: string | null;
+  userId: string | null;
 };
 
 export type SettlementPosting = {
@@ -77,15 +125,33 @@ export const LEDGER_ACCOUNTS = {
   creditors: "1600",
   /** Differences between a supplier's typed total and what its lines explain. */
   differences: "1999",
+  /** What the stock on the shelves is worth. Reconciles to the Stock table. */
+  inventory: "3000",
+  /**
+   * Goods sent back to a supplier that they have not credited yet. A debit
+   * balance here is money a supplier owes us for stock we no longer hold.
+   */
+  goodsReturnedNotCredited: "3100",
+  /**
+   * Goods that have shipped but not been billed yet — still ours in
+   * accounting terms, no longer ours physically. A negative balance is the
+   * mirror: goods a customer sent back that we have not credited yet.
+   */
+  goodsDeliveredNotInvoiced: "3200",
   discountGranted: "4700",
   creditRestriction: "4750",
-  purchases: "7000",
+  /** What the goods sold cost us, charged when the sale is invoiced. */
+  costOfSales: "7000",
+  /** Freight, handling and other costs of buying that never became stock. */
+  purchaseCosts: "7100",
+  /**
+   * Stock that changed without a document behind it — a count difference,
+   * damage, a write-off. The one inventory movement with no counterparty, so
+   * the value has nowhere to go but straight to the result.
+   */
+  inventoryDifferences: "7200",
   salesRevenue: "8000",
 } as const satisfies Record<string, string>;
-
-/** Kept as named exports: these two account numbers pre-date the chart. */
-export const SALES_REVENUE_ACCOUNT = LEDGER_ACCOUNTS.salesRevenue;
-export const PURCHASES_ACCOUNT = LEDGER_ACCOUNTS.purchases;
 
 type ChartEntry = {
   number: string;
@@ -126,6 +192,17 @@ export const DEFAULT_CHART_OF_ACCOUNTS: ChartEntry[] = [
     name: "Differences to be cleared",
     type: "liability",
   },
+  { number: LEDGER_ACCOUNTS.inventory, name: "Inventory", type: "asset" },
+  {
+    number: LEDGER_ACCOUNTS.goodsReturnedNotCredited,
+    name: "Goods returned to supplier, not yet credited",
+    type: "asset",
+  },
+  {
+    number: LEDGER_ACCOUNTS.goodsDeliveredNotInvoiced,
+    name: "Goods delivered, not yet invoiced",
+    type: "asset",
+  },
   {
     number: LEDGER_ACCOUNTS.discountGranted,
     name: "Early payment discount granted",
@@ -136,7 +213,17 @@ export const DEFAULT_CHART_OF_ACCOUNTS: ChartEntry[] = [
     name: "Credit restriction",
     type: "revenue",
   },
-  { number: LEDGER_ACCOUNTS.purchases, name: "Purchases", type: "expense" },
+  { number: LEDGER_ACCOUNTS.costOfSales, name: "Cost of sales", type: "expense" },
+  {
+    number: LEDGER_ACCOUNTS.purchaseCosts,
+    name: "Purchase costs and freight",
+    type: "expense",
+  },
+  {
+    number: LEDGER_ACCOUNTS.inventoryDifferences,
+    name: "Inventory differences and write-offs",
+    type: "expense",
+  },
   {
     number: LEDGER_ACCOUNTS.salesRevenue,
     name: "Sales revenue",
@@ -169,6 +256,8 @@ type EntryContext = {
   companyUuid: string | null;
   invoiceUuid?: string | null;
   purchaseInvoiceUuid?: string | null;
+  /** What the entry traces back to when it has no invoice to point at. */
+  reference?: string | null;
   userId: string | null;
 };
 
@@ -208,6 +297,7 @@ const buildEntry = (
       account: draft.account,
       debCreditor: context.debCreditor,
       description: draft.description ?? context.description,
+      reference: context.reference ?? null,
       debit: debit.toFixed(2),
       credit: credit.toFixed(2),
       amount: draft.amount.toFixed(2),
@@ -239,7 +329,14 @@ const buildEntry = (
 /**
  * A sales document as a balanced entry: the debtor owes the whole invoice, and
  * that total is made up of revenue, any credit restriction, and the VAT owed to
- * the tax authority.
+ * the tax authority. Alongside it, the cost of what was sold is charged against
+ * the revenue that earned it.
+ *
+ * The cost side is a second pair inside the same entry, and it balances on its
+ * own — cost of sales takes what the goods cost, and the account holding them
+ * since delivery gives it up. Keeping it in the same entry is what makes a
+ * cancellation reverse the margin along with the revenue, which is the whole
+ * reason the two belong together.
  *
  * A cancellation reverses every side; a credit note arrives with its amounts
  * already negative, which flips the sides on its own and needs no flag.
@@ -251,6 +348,7 @@ export const buildSalesJournalEntry = (
   const revenue = sign * posting.amountExclVat;
   const restriction = sign * (posting.creditRestriction ?? 0);
   const vat = sign * posting.vatAmount;
+  const cost = sign * (posting.costOfSales ?? 0);
 
   return buildEntry(
     {
@@ -271,6 +369,9 @@ export const buildSalesJournalEntry = (
       { account: LEDGER_ACCOUNTS.salesRevenue, amount: -revenue },
       { account: LEDGER_ACCOUNTS.creditRestriction, amount: -restriction },
       { account: LEDGER_ACCOUNTS.vatPayable, amount: -vat },
+      // And the goods stop being an asset and become a cost.
+      { account: LEDGER_ACCOUNTS.costOfSales, amount: cost },
+      { account: LEDGER_ACCOUNTS.goodsDeliveredNotInvoiced, amount: -cost },
     ],
   );
 };
@@ -280,16 +381,25 @@ export const buildSalesJournalEntry = (
  * invoice, made up of the goods, any credit restriction, the VAT reclaimable,
  * and whatever the lines fail to explain.
  *
- * The remainder gets an account of its own rather than being folded into
- * purchases. A difference between a supplier's typed total and what their lines
- * add up to is something a bookkeeper has to clear, and burying it in cost of
- * sales is how it stops being clearable.
+ * Goods received are an asset, not a cost. Buying steel does not make the
+ * business poorer — it swaps cash for steel, and the cost only lands when the
+ * steel is sold. Expensing it at purchase instead puts the cost in whichever
+ * month the goods arrived rather than the month they earned revenue, which
+ * makes every monthly margin a function of when purchasing happened to buy.
+ *
+ * The remainder gets an account of its own rather than being folded into the
+ * goods. A difference between a supplier's typed total and what their lines add
+ * up to is something a bookkeeper has to clear, and burying it in inventory or
+ * cost of sales is how it stops being clearable.
  */
 export const buildPurchaseJournalEntry = (
   posting: PurchasePosting,
 ): InsertJournalEntries[] => {
   const sign = posting.reversal ? -1 : 1;
-  const goods = sign * posting.amountExclVat;
+  const total = sign * posting.amountExclVat;
+  const goods = sign * (posting.inventoryValue ?? posting.amountExclVat);
+  // Whatever the invoice covered that never became stock is a cost of buying.
+  const purchaseCosts = total - goods;
   const restriction = sign * (posting.creditRestriction ?? 0);
   const vat = sign * posting.vatAmount;
   const remainder = sign * (posting.remainder ?? 0);
@@ -308,17 +418,51 @@ export const buildPurchaseJournalEntry = (
       userId: posting.userId,
     },
     [
-      { account: LEDGER_ACCOUNTS.purchases, amount: goods },
+      {
+        account: posting.goodsAccount ?? LEDGER_ACCOUNTS.inventory,
+        amount: goods,
+      },
+      { account: LEDGER_ACCOUNTS.purchaseCosts, amount: purchaseCosts },
       { account: LEDGER_ACCOUNTS.creditRestriction, amount: restriction },
       { account: LEDGER_ACCOUNTS.vatReclaimable, amount: vat },
       { account: LEDGER_ACCOUNTS.differences, amount: remainder },
       {
         account: LEDGER_ACCOUNTS.creditors,
-        amount: -(goods + restriction + vat + remainder),
+        amount: -(total + restriction + vat + remainder),
       },
     ],
   );
 };
+
+/**
+ * Stock moving as a balanced pair: inventory on one side, and whichever account
+ * is holding the value in the meantime on the other.
+ *
+ * Nothing is earned or lost here — value only changes hands between two
+ * balance-sheet accounts, which is exactly what a delivery or a return is until
+ * the invoice or credit note arrives to settle it. Both of those accounts should
+ * clear to nothing once the paperwork follows, and a balance left sitting on one
+ * of them is goods that moved and were never billed.
+ */
+export const buildInventoryMovementEntry = (
+  posting: InventoryPosting,
+): InsertJournalEntries[] =>
+  buildEntry(
+    {
+      bookingDate: posting.bookingDate,
+      documentNo: posting.documentNo,
+      journal: "stock",
+      description: posting.description,
+      debCreditor: posting.debCreditor,
+      companyUuid: posting.companyUuid,
+      reference: posting.reference ?? null,
+      userId: posting.userId,
+    },
+    [
+      { account: LEDGER_ACCOUNTS.inventory, amount: posting.inventoryValue },
+      { account: posting.counterAccount, amount: -posting.inventoryValue },
+    ],
+  );
 
 /**
  * A settlement as a balanced pair: cash (or a discount) on one side, and the

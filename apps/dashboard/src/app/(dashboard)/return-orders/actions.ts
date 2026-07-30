@@ -33,7 +33,11 @@ import {
   getQuoteVatRatePercent,
   todayDateString,
 } from "@/lib/helpers";
-import { buildSalesJournalEntry } from "@/lib/server/ledger";
+import {
+  buildInventoryMovementEntry,
+  buildSalesJournalEntry,
+  LEDGER_ACCOUNTS,
+} from "@/lib/server/ledger";
 import { recordFreightMovement } from "@/lib/server/freight";
 import { currentUser } from "@clerk/nextjs/server";
 import { and, desc, eq, getTableColumns, inArray } from "drizzle-orm";
@@ -482,7 +486,11 @@ export const receiveReturnOrder = async (
 ): Promise<ReturnOrderActionResult> => {
   try {
     const [returnOrder] = await db
-      .select({ status: ReturnOrders.status })
+      .select({
+        id: ReturnOrders.id,
+        status: ReturnOrders.status,
+        companyUuid: ReturnOrders.companyUuid,
+      })
       .from(ReturnOrders)
       .where(eq(ReturnOrders.uuid, uuid))
       .limit(1);
@@ -539,6 +547,7 @@ export const receiveReturnOrder = async (
             stockUuid: OrderItems.stockUuid,
             productUuid: OrderItems.productUuid,
             orderUuid: OrderItems.orderUuid,
+            costPrice: OrderItems.costPrice,
           })
           .from(OrderItems)
           .where(eq(OrderItems.uuid, item.originalOrderItemUuid))
@@ -561,10 +570,21 @@ export const receiveReturnOrder = async (
         const returned = Number(item.returnQty ?? 0);
         const nextQuantity = (Number(stockRow.quantity) + returned).toFixed(3);
 
+        // Goods coming back have to bring their value with them. Adding the
+        // quantity alone put material on the shelf worth nothing, so every
+        // return quietly wrote off the cost of what came back.
+        //
+        // They return at the cost the line went out at, which is the value the
+        // credit note will hand back — so the two agree, and the account holding
+        // the cost in between clears to nothing.
+        const valueBack = returned * Number(orderItem.costPrice ?? 0);
+        const nextValue = Number(stockRow.valuationEuro ?? 0) + valueBack;
+
         const [stockUpdate] = await tx
           .update(Stock)
           .set({
             quantity: nextQuantity,
+            valuationEuro: nextValue.toFixed(2),
             // Anything back on the shelf is sellable again.
             status: "pending",
           })
@@ -600,6 +620,24 @@ export const receiveReturnOrder = async (
           orderUuid: orderItem.orderUuid,
           operator: userId,
         });
+
+        // The mirror of a delivery: stock is back on the shelf, and the cost of
+        // it is owed back to the customer but not credited yet.
+        if (Math.abs(valueBack) >= 0.005) {
+          await tx.insert(JournalEntries).values(
+            buildInventoryMovementEntry({
+              bookingDate: todayDateString(),
+              documentNo: String(returnOrder.id),
+              description: "Returned goods received",
+              companyUuid: returnOrder.companyUuid,
+              debCreditor: null,
+              inventoryValue: valueBack,
+              counterAccount: LEDGER_ACCOUNTS.goodsDeliveredNotInvoiced,
+              reference: `Return order line ${item.uuid}`,
+              userId,
+            }),
+          );
+        }
       }
     });
 
@@ -850,6 +888,12 @@ export const creditReturnOrder = async (
           // needing the reversal flag.
           amountExclVat: -exclVat,
           vatAmount: -vatAmount,
+          // Cost comes back with the revenue, clearing what the goods have been
+          // parked at since they were received back into stock.
+          costOfSales: -creditLines.reduce(
+            (sum, line) => sum + line.costPrice * line.quantity,
+            0,
+          ),
           userId,
           description: "Credit note",
         }),

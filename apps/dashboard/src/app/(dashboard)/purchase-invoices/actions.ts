@@ -34,6 +34,7 @@ import { VatCode } from "@/lib/enums";
 import {
   generateUuid,
   getPaymentTermDueDate,
+  restateLotValue,
   summarisePurchaseInvoice,
   toDateString,
 } from "@/lib/helpers";
@@ -263,6 +264,10 @@ export const createPurchaseInvoice = async (
           vatAmount: summary.vatTotal,
           creditRestriction: summary.creditRestriction,
           remainder: summary.remainder,
+          // The lines are what became stock — each one is priced at exactly the
+          // figure its lot is valued at below. Surcharges bought no material, so
+          // they stay a cost of buying rather than inflating the shelf.
+          inventoryValue: summary.materials,
           userId,
         }),
       );
@@ -583,6 +588,9 @@ export const cancelPurchaseInvoice = async (
             Number(invoice.vatLow),
           creditRestriction: Number(invoice.creditRestriction),
           remainder: Number(invoice.remainder),
+          // The lots this invoice created are pulled back out below, so the
+          // inventory side reverses with them.
+          inventoryValue: Number(invoice.materials),
           userId: userId ?? null,
           reversal: true,
         }),
@@ -616,10 +624,22 @@ export const cancelPurchaseInvoice = async (
           Number(stockRow.quantity) - Number(item.quantity)
         ).toFixed(3);
 
-        // Reverse the "in" — pull the received goods back out of stock.
+        // Reverse the "in" — pull the received goods back out of stock, value
+        // and all. Reducing the quantity alone left the lot still carrying what
+        // was paid for goods that had been un-received, so cancelling a receipt
+        // permanently overstated the shelf.
         await tx
           .update(Stock)
-          .set({ quantity: remainingQuantity, status: "cancelled" })
+          .set({
+            quantity: remainingQuantity,
+            status: "cancelled",
+            valuationEuro: restateLotValue({
+              previousQuantity: Number(stockRow.quantity),
+              remainingQuantity: Number(remainingQuantity),
+              unitCost: Number(stockRow.valuationPrice ?? 0),
+              previousValue: Number(stockRow.valuationEuro ?? 0),
+            }).toFixed(2),
+          })
           .where(eq(Stock.uuid, item.stockUuid));
 
         await tx.insert(StockMovements).values({

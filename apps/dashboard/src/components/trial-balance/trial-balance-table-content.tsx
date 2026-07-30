@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { AlertTriangle, CheckCircle2 } from "lucide-react";
+import { AlertTriangle, Boxes, CheckCircle2 } from "lucide-react";
 import {
   SeedChartResult,
   seedChartOfAccounts,
@@ -68,6 +68,50 @@ export const TrialBalanceTable = ({ trialBalance }: Props) => {
             <p>
               A difference means an entry posted one side and not the other. The
               journal is the place to look — sort by document.
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* The one balance with a second source of truth to check it against. */}
+      <div
+        className={`flex items-start gap-3 rounded-md border p-4 ${
+          trialBalance.inventory.reconciled
+            ? "border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-100"
+            : "border-red-200 bg-red-50 text-red-900 dark:border-red-900 dark:bg-red-950 dark:text-red-100"
+        }`}
+      >
+        {trialBalance.inventory.reconciled ? (
+          <Boxes size={20} className="mt-0.5 shrink-0" />
+        ) : (
+          <AlertTriangle size={20} className="mt-0.5 shrink-0" />
+        )}
+        <div className="space-y-1 text-sm">
+          <p className="font-medium">
+            {trialBalance.inventory.reconciled
+              ? "Inventory agrees with the stock on the shelves."
+              : `Inventory is out by ${money(trialBalance.inventory.difference)} against the stock on the shelves.`}
+          </p>
+          <p>
+            The ledger carries {money(trialBalance.inventory.ledgerValue)}; the
+            stock lots are valued at {money(trialBalance.inventory.stockValue)}.
+          </p>
+          {trialBalance.inventory.deliveredNotInvoiced === 0 ? null : (
+            <p>
+              {money(trialBalance.inventory.deliveredNotInvoiced)} of cost sits
+              on goods that have shipped and not been invoiced.
+            </p>
+          )}
+          {trialBalance.inventory.returnedNotCredited === 0 ? null : (
+            <p>
+              {money(trialBalance.inventory.returnedNotCredited)} of cost sits on
+              goods sent back to suppliers who have not credited them.
+            </p>
+          )}
+          {trialBalance.inventory.reconciled ? null : (
+            <p>
+              A difference means stock moved without the ledger following it, or
+              a lot was revalued outside a posting.
             </p>
           )}
         </div>

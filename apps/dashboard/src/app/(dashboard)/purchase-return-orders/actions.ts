@@ -36,12 +36,17 @@ import {
   describeError,
   generateUuid,
   getPaymentTermDueDate,
+  restateLotValue,
   summarisePurchaseInvoice,
   todayDateString,
   toDateString,
 } from "@/lib/helpers";
 import { recordFreightMovement } from "@/lib/server/freight";
-import { buildPurchaseJournalEntry } from "@/lib/server/ledger";
+import {
+  buildInventoryMovementEntry,
+  buildPurchaseJournalEntry,
+  LEDGER_ACCOUNTS,
+} from "@/lib/server/ledger";
 import { currentUser } from "@clerk/nextjs/server";
 import { and, desc, eq, getTableColumns, inArray, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -384,7 +389,11 @@ export const dispatchPurchaseReturnOrder = async (
 ): Promise<PurchaseReturnOrderActionResult> => {
   try {
     const [returnOrder] = await db
-      .select({ status: PurchaseReturnOrders.status })
+      .select({
+        id: PurchaseReturnOrders.id,
+        status: PurchaseReturnOrders.status,
+        supplierUuid: PurchaseReturnOrders.supplierUuid,
+      })
       .from(PurchaseReturnOrders)
       .where(eq(PurchaseReturnOrders.uuid, uuid))
       .limit(1);
@@ -460,10 +469,22 @@ export const dispatchPurchaseReturnOrder = async (
 
         const nextQuantity = (Number(stockRow.quantity) - returned).toFixed(3);
 
+        // Material leaving for the supplier takes its value with it. Reducing
+        // the quantity alone left the rest of the lot carrying the value of
+        // goods that had gone back, so every purchase return overstated stock.
+        const previousValue = Number(stockRow.valuationEuro ?? 0);
+        const nextValue = restateLotValue({
+          previousQuantity: Number(stockRow.quantity),
+          remainingQuantity: Number(nextQuantity),
+          unitCost: Number(stockRow.valuationPrice ?? 0),
+          previousValue,
+        });
+
         const [stockUpdate] = await tx
           .update(Stock)
           .set({
             quantity: nextQuantity,
+            valuationEuro: nextValue.toFixed(2),
             status: Number(nextQuantity) > 0 ? "pending" : "received",
           })
           .where(
@@ -498,6 +519,26 @@ export const dispatchPurchaseReturnOrder = async (
           purchaseOrderUuid: item.originalPurchaseOrderUuid,
           operator: userId,
         });
+
+        // The goods are gone but the supplier has not credited them yet, so
+        // what they owe us for them is held until their credit note arrives.
+        const valueOut = previousValue - nextValue;
+
+        if (Math.abs(valueOut) >= 0.005) {
+          await tx.insert(JournalEntries).values(
+            buildInventoryMovementEntry({
+              bookingDate: todayDateString(),
+              documentNo: String(returnOrder.id),
+              description: "Goods returned to supplier",
+              companyUuid: returnOrder.supplierUuid,
+              debCreditor: null,
+              inventoryValue: -valueOut,
+              counterAccount: LEDGER_ACCOUNTS.goodsReturnedNotCredited,
+              reference: `Purchase return line ${item.uuid}`,
+              userId,
+            }),
+          );
+        }
       }
     });
 
@@ -675,6 +716,11 @@ export const creditPurchaseReturnOrder = async (
           // needing the reversal flag.
           amountExclVat: summary.totalExclVat,
           vatAmount: summary.vatTotal,
+          // The stock left the shelf when the goods were shipped back, so this
+          // clears what the supplier owed us for them rather than removing the
+          // same material from inventory a second time.
+          inventoryValue: summary.materials,
+          goodsAccount: LEDGER_ACCOUNTS.goodsReturnedNotCredited,
           userId,
           description: "Purchase credit note",
         }),

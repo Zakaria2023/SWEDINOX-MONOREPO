@@ -6,9 +6,10 @@ import {
   LedgerAccounts,
   SelectLedgerAccounts,
 } from "@/db/schema/ledger-accounts";
+import { Stock } from "@/db/schema/stock";
 import { describeError } from "@/lib/helpers";
-import { chartOfAccountsRows } from "@/lib/server/ledger";
-import { asc, eq, sql } from "drizzle-orm";
+import { chartOfAccountsRows, LEDGER_ACCOUNTS } from "@/lib/server/ledger";
+import { asc, eq, ne, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 export type TrialBalanceRow = {
@@ -22,6 +23,18 @@ export type TrialBalanceRow = {
   lineCount: number;
 };
 
+export type InventoryReconciliation = {
+  /** The balance of the inventory account, from the postings. */
+  ledgerValue: number;
+  /** What the stock lots are actually valued at, from the Stock table. */
+  stockValue: number;
+  difference: number;
+  reconciled: boolean;
+  /** Cost sitting on goods that have moved but not been billed or credited. */
+  deliveredNotInvoiced: number;
+  returnedNotCredited: number;
+};
+
 export type TrialBalance = {
   rows: TrialBalanceRow[];
   totalDebit: number;
@@ -33,6 +46,7 @@ export type TrialBalance = {
   unnamedAccounts: string[];
   /** True when the chart of accounts has not been created yet. */
   chartMissing: boolean;
+  inventory: InventoryReconciliation;
 };
 
 export type SeedChartResult = { created?: number; error?: string };
@@ -48,6 +62,11 @@ export type SeedChartResult = { created?: number; error?: string };
  * Accounts are read from the postings rather than from the chart, so a posting
  * to an account nobody has named still appears — and is called out — instead of
  * being silently dropped by an inner join.
+ *
+ * The inventory account gets a second check of its own. It is the one balance
+ * with an independent source of truth — the stock lots themselves — so the two
+ * can be compared, and a drift between them means goods moved without the
+ * ledger following. No other account can be verified this cheaply.
  */
 export const getTrialBalance = async (): Promise<TrialBalance> => {
   try {
@@ -90,6 +109,22 @@ export const getTrialBalance = async (): Promise<TrialBalance> => {
     const totalCredit = mapped.reduce((sum, row) => sum + row.totalCredit, 0);
     const difference = totalDebit - totalCredit;
 
+    const balanceOf = (account: string): number =>
+      mapped.find((row) => row.account === account)?.balance ?? 0;
+
+    // Cancelled lots are off the books: the receipt that created them was
+    // reversed, so their value is no longer claimed by the ledger either.
+    const [stock] = await db
+      .select({
+        value: sql<string>`COALESCE(SUM(${Stock.valuationEuro}), 0)`,
+      })
+      .from(Stock)
+      .where(ne(Stock.status, "cancelled"));
+
+    const ledgerValue = balanceOf(LEDGER_ACCOUNTS.inventory);
+    const stockValue = Number(stock?.value ?? 0);
+    const inventoryDifference = ledgerValue - stockValue;
+
     return {
       rows: mapped,
       totalDebit,
@@ -100,6 +135,21 @@ export const getTrialBalance = async (): Promise<TrialBalance> => {
         .filter((row) => row.accountName === null)
         .map((row) => row.account),
       chartMissing: Number(chart?.count ?? 0) === 0,
+      inventory: {
+        ledgerValue,
+        stockValue,
+        difference: inventoryDifference,
+        // Every inventory posting is the value a lot actually gained or lost, so
+        // these two are the same arithmetic on the same figures and should agree
+        // to the cent. Anything at all here is worth looking at.
+        reconciled: Math.abs(inventoryDifference) < 0.005,
+        deliveredNotInvoiced: balanceOf(
+          LEDGER_ACCOUNTS.goodsDeliveredNotInvoiced,
+        ),
+        returnedNotCredited: balanceOf(
+          LEDGER_ACCOUNTS.goodsReturnedNotCredited,
+        ),
+      },
     };
   } catch (error) {
     throw new Error(describeError(error, "Failed to build the trial balance"));
