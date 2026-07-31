@@ -62,6 +62,12 @@ import {
 } from "@/db/schema/stock-movements";
 import { SelectWarehouses, Warehouses } from "@/db/schema/warehouses";
 import { describeError, generateUuid } from "@/lib/helpers";
+import {
+  EMPTY_PURCHASE_COST,
+  loadPurchaseCost,
+  loadPurchaseCostByProduct,
+  ProductPurchaseCost,
+} from "@/lib/server/purchase-pricing";
 import { asc, desc, eq, getTableColumns, isNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/mysql-core";
 import { revalidatePath } from "next/cache";
@@ -131,18 +137,16 @@ export type ProductOption = Pick<
 export type ProductPricingOption = ProductOption &
   Pick<
     SelectProducts,
-    | "basePrice"
-    | "replacementPrice"
-    | "averagePurchasePrice"
-    | "theoreticalWeight"
-    | "priceUnit"
-    | "stockUnit"
-    | "length"
+    "basePrice" | "theoreticalWeight" | "priceUnit" | "stockUnit" | "length"
   > & {
     productGroupName: SelectProductGroups["name"] | null;
     minProfitMarginStock: SelectProductGroups["minProfitMarginStock"] | null;
     minProfitMarginExWorks: SelectProductGroups["minProfitMarginExWorks"] | null;
     qualityStandard: SelectProductGroups["standardsQuality"] | null;
+    // Cost figures come off the supplier invoices rather than the product, so
+    // they are aggregates rather than columns.
+    averagePurchasePrice: number;
+    replacementPrice: number;
   };
 
 export type RevenueGroupOption = Pick<SelectRevenueGroups, "uuid" | "name">;
@@ -208,29 +212,43 @@ export const getProductsForCompany = async (
 // The catalogue as a quote/order line editor needs it: identity plus the prices
 // and weights that let the grid total a line the moment it is added, and the
 // product group's margin floor so a thin line can be flagged on the spot.
-export const getProductsForPricing = async (): Promise<ProductPricingOption[]> =>
-  db
-    .select({
-      uuid: Products.uuid,
-      productCode: Products.productCode,
-      name: Products.name,
-      productGroupUuid: Products.productGroupUuid,
-      basePrice: Products.basePrice,
-      replacementPrice: Products.replacementPrice,
-      averagePurchasePrice: Products.averagePurchasePrice,
-      theoreticalWeight: Products.theoreticalWeight,
-      priceUnit: Products.priceUnit,
-      stockUnit: Products.stockUnit,
-      length: Products.length,
-      productGroupName: ProductGroups.name,
-      minProfitMarginStock: ProductGroups.minProfitMarginStock,
-      minProfitMarginExWorks: ProductGroups.minProfitMarginExWorks,
-      qualityStandard: ProductGroups.standardsQuality,
-    })
-    .from(Products)
-    .leftJoin(ProductGroups, eq(Products.productGroupUuid, ProductGroups.uuid))
-    .where(isNull(Products.companyUuid))
-    .orderBy(asc(Products.productCode));
+export const getProductsForPricing = async (): Promise<
+  ProductPricingOption[]
+> => {
+  const [rows, costs] = await Promise.all([
+    db
+      .select({
+        uuid: Products.uuid,
+        productCode: Products.productCode,
+        name: Products.name,
+        productGroupUuid: Products.productGroupUuid,
+        basePrice: Products.basePrice,
+        theoreticalWeight: Products.theoreticalWeight,
+        priceUnit: Products.priceUnit,
+        stockUnit: Products.stockUnit,
+        length: Products.length,
+        productGroupName: ProductGroups.name,
+        minProfitMarginStock: ProductGroups.minProfitMarginStock,
+        minProfitMarginExWorks: ProductGroups.minProfitMarginExWorks,
+        qualityStandard: ProductGroups.standardsQuality,
+      })
+      .from(Products)
+      .leftJoin(ProductGroups, eq(Products.productGroupUuid, ProductGroups.uuid))
+      .where(isNull(Products.companyUuid))
+      .orderBy(asc(Products.productCode)),
+
+    loadPurchaseCostByProduct(),
+  ]);
+
+  return rows.map((row) => {
+    const cost = costs.get(row.uuid) ?? EMPTY_PURCHASE_COST;
+    return {
+      ...row,
+      averagePurchasePrice: cost.averagePurchasePrice,
+      replacementPrice: cost.lastPurchasePrice,
+    };
+  });
+};
 
 // Writes the product's own child rows. Always a full replace: the form submits
 // the complete list, so reconciling row by row would only risk the saved set
@@ -482,6 +500,10 @@ export type ProductDetail = SelectProducts & {
   productGroupName: SelectProductGroups["name"] | null;
   companyName: SelectCompanies["companyName"] | null;
 
+  // What the article has actually been billed at, read back from the supplier
+  // invoices — the product itself carries no purchase price.
+  purchaseCost: ProductPurchaseCost;
+
   // Own child rows
   alternatives: ProductAlternativeRow[];
   suppliers: ProductSupplierRow[];
@@ -544,6 +566,7 @@ export const getProductDetail = async (
     stock,
     stockMovements,
     customerStock,
+    purchaseCost,
   ] = await Promise.all([
     db
       .select({
@@ -737,10 +760,13 @@ export const getProductDetail = async (
       .from(CustomerStock)
       .leftJoin(Companies, eq(CustomerStock.companyUuid, Companies.uuid))
       .where(eq(CustomerStock.productUuid, uuid)),
+
+    loadPurchaseCost(uuid),
   ]);
 
   return {
     ...product,
+    purchaseCost,
     alternatives,
     suppliers,
     preferredLocations,

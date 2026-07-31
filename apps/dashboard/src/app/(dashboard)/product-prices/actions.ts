@@ -8,8 +8,11 @@ import {
   SelectProductGroupSuppliers,
 } from "@/db/schema/product-group-suppliers";
 import { Products, SelectProducts } from "@/db/schema/products";
-import { PurchaseLineReceivals } from "@/db/schema/purchase-line-receivals";
 import { describeError, todayDateString } from "@/lib/helpers";
+import {
+  EMPTY_PURCHASE_COST,
+  loadPurchaseCostByProduct,
+} from "@/lib/server/purchase-pricing";
 import { aliasedTable, and, asc, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
@@ -20,6 +23,9 @@ export type ProductPriceRow = SelectProducts & {
   supplierProductCode:
     | SelectProductGroupSuppliers["externalProductCode"]
     | null;
+  // Both come off the supplier invoices rather than the product.
+  replacementPrice: number;
+  averagePurchasePrice: number;
 };
 
 export type RecalculatePricesResult = {
@@ -70,46 +76,60 @@ const supplierProductCodeRow = db
 
 const supplierProductCode = sql<string | null>`(${supplierProductCodeRow})`;
 
-// Every product with the prices it is bought and sold at.
+// Every product with the prices it is bought and sold at. The sales prices are
+// the product's own; the purchase figures are read back from the supplier
+// invoices, since that is where a purchase price is recorded.
 export const getProductPrices = async (): Promise<ProductPriceRow[]> => {
   try {
-    const rows = await db
-      .select({
-        product: Products,
-        groupName: ProductGroups.name,
-        groupParentUuid: ProductGroups.parentUuid,
-        parentName: ParentGroups.name,
-        preferredSupplier: preferredSupplierName,
-        supplierProductCode,
-      })
-      .from(Products)
-      .leftJoin(
-        ProductGroups,
-        eq(Products.productGroupUuid, ProductGroups.uuid),
-      )
-      .leftJoin(ParentGroups, eq(ProductGroups.parentUuid, ParentGroups.uuid))
-      .orderBy(asc(Products.productCode));
+    const [rows, costs] = await Promise.all([
+      db
+        .select({
+          product: Products,
+          groupName: ProductGroups.name,
+          groupParentUuid: ProductGroups.parentUuid,
+          parentName: ParentGroups.name,
+          preferredSupplier: preferredSupplierName,
+          supplierProductCode,
+        })
+        .from(Products)
+        .leftJoin(
+          ProductGroups,
+          eq(Products.productGroupUuid, ProductGroups.uuid),
+        )
+        .leftJoin(ParentGroups, eq(ProductGroups.parentUuid, ParentGroups.uuid))
+        .orderBy(asc(Products.productCode)),
 
-    return rows.map((row) => ({
-      ...row.product,
-      mainGroup: row.groupParentUuid ? row.parentName : row.groupName,
-      subGroup: row.groupParentUuid ? row.groupName : null,
-      preferredSupplier: row.preferredSupplier,
-      supplierProductCode: row.supplierProductCode,
-    }));
+      loadPurchaseCostByProduct(),
+    ]);
+
+    return rows.map((row) => {
+      const cost = costs.get(row.product.uuid) ?? EMPTY_PURCHASE_COST;
+      return {
+        ...row.product,
+        mainGroup: row.groupParentUuid ? row.parentName : row.groupName,
+        subGroup: row.groupParentUuid ? row.groupName : null,
+        preferredSupplier: row.preferredSupplier,
+        supplierProductCode: row.supplierProductCode,
+        replacementPrice: cost.lastPurchasePrice,
+        averagePurchasePrice: cost.averagePurchasePrice,
+      };
+    });
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch product prices"));
   }
 };
 
-// Recomputes the sales price chain for every product:
+// Recomputes the sales price of every product from what it actually cost:
 //
-//   APP            = weighted average of what was actually paid per unit, taken
-//                    from the goods received against purchase orders
-//   Replacement    = kept as maintained, or seeded from the APP when it is
-//                    still zero, so a freshly-bought product has a cost basis
-//   Base price     = the fixed sales price when one is set, otherwise the
-//                    replacement price plus the markup percentage
+//   Cost basis     = the last price a supplier invoiced the article at, or its
+//                    weighted average invoiced price when it has never carried
+//                    a single latest line to point at
+//   Base price     = the fixed sales price when one is set, otherwise the cost
+//                    basis plus the markup percentage
+//
+// Only the sales side is written. The cost basis is not stored back onto the
+// product: it is whatever the purchase invoices say, and copying it onto the
+// article would only create a second version of the same fact.
 //
 // Products with no markup of their own take `defaultMarkupPercent`, so a whole
 // catalogue can be priced in one pass.
@@ -121,63 +141,41 @@ export const recalculateProductPrices = async (
   }
 
   try {
-    const products = await db
-      .select({
-        uuid: Products.uuid,
-        replacementPrice: Products.replacementPrice,
-        markup: Products.markup,
-        fixedSalesPrice: Products.fixedSalesPrice,
-      })
-      .from(Products);
+    const [products, costs] = await Promise.all([
+      db
+        .select({
+          uuid: Products.uuid,
+          markup: Products.markup,
+          fixedSalesPrice: Products.fixedSalesPrice,
+        })
+        .from(Products),
+
+      loadPurchaseCostByProduct(),
+    ]);
 
     if (products.length === 0) {
       return { error: "No products yet. Create one first." };
     }
 
-    // Weighted average purchase price per product, from the received goods.
-    const received = await db
-      .select({
-        productUuid: PurchaseLineReceivals.productUuid,
-        value: sql<string>`SUM(${PurchaseLineReceivals.receivedQty} * ${PurchaseLineReceivals.invoicedPrice})`,
-        quantity: sql<string>`SUM(${PurchaseLineReceivals.receivedQty})`,
-      })
-      .from(PurchaseLineReceivals)
-      .groupBy(PurchaseLineReceivals.productUuid);
-
-    const appByProduct = new Map<string, number>();
-    for (const row of received) {
-      if (!row.productUuid) {
-        continue;
-      }
-      const quantity = Number(row.quantity ?? 0);
-      if (quantity <= 0) {
-        continue;
-      }
-      appByProduct.set(row.productUuid, Number(row.value ?? 0) / quantity);
-    }
-
     const priceDate = todayDateString();
 
     for (const product of products) {
-      const app = appByProduct.get(product.uuid) ?? 0;
-      const currentReplacement = Number(product.replacementPrice ?? 0);
-      const replacementPrice =
-        currentReplacement > 0 ? currentReplacement : app;
+      const cost = costs.get(product.uuid) ?? EMPTY_PURCHASE_COST;
+      const costBasis =
+        cost.lastPurchasePrice > 0
+          ? cost.lastPurchasePrice
+          : cost.averagePurchasePrice;
       const markup =
         Number(product.markup ?? 0) > 0
           ? Number(product.markup)
           : defaultMarkupPercent;
       const fixedSalesPrice = Number(product.fixedSalesPrice ?? 0);
       const basePrice =
-        fixedSalesPrice > 0
-          ? fixedSalesPrice
-          : replacementPrice * (1 + markup / 100);
+        fixedSalesPrice > 0 ? fixedSalesPrice : costBasis * (1 + markup / 100);
 
       await db
         .update(Products)
         .set({
-          averagePurchasePrice: app.toFixed(2),
-          replacementPrice: replacementPrice.toFixed(2),
           markup: markup.toFixed(2),
           basePrice: basePrice.toFixed(2),
           priceDate,

@@ -20,12 +20,12 @@ import { OptimizationCriteriaSection } from "./sections/optimization-criteria-se
 import { PreferredLocationsSection } from "./sections/preferred-locations-section";
 import { PriceStructuresSection } from "./sections/price-structures-section";
 import { PurchaseSection } from "./sections/purchase-section";
+import { SalesPricesSection } from "./sections/sales-prices-section";
 import { SalesSection } from "./sections/sales-section";
 import { SawingPricesSection } from "./sections/sawing-prices-section";
 import { StockControlSection } from "./sections/stock-control-section";
 import { StockPolicySection } from "./sections/stock-policy-section";
 import { SuppliersSection } from "./sections/suppliers-section";
-import { ValuationSection } from "./sections/valuation-section";
 import { WarehouseControlSection } from "./sections/warehouse-control-section";
 
 type Props = {
@@ -87,7 +87,7 @@ export const ProductForm = ({
 
         <AlternativesSection productOptions={productOptions} />
 
-        <ValuationSection />
+        <SalesPricesSection />
 
         <PriceStructuresSection />
 

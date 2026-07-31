@@ -300,19 +300,12 @@ export const productSchema = z.object({
   optFactorLengthCutoffs: z.string().optional(),
   optAllowLongestOffcuts: z.boolean(),
 
-  // ── Valuation ─────────────────────────────────────────────────────────────
-  replacementPrice: z.string().optional(),
+  // ── Sales prices ──────────────────────────────────────────────────────────
   basePrice: z.string().optional(),
   markup: z.string().optional(),
   fixedSalesPrice: z.string().optional(),
-  averagePurchasePrice: z.string().optional(),
   priceUnit: optionalEnum(salesUnitOptions),
   priceDate: z.string().optional(),
-  fixedSettlementPrice: z.string().optional(),
-  valuationInternalSurcharge: z.string().optional(),
-  valuationExternalSurcharge: z.string().optional(),
-  valuationStartDate: z.string().optional(),
-  fspCalculationBasis: z.string().optional(),
 
   // ── Misc ──────────────────────────────────────────────────────────────────
   technicalStock: z.string(),
@@ -576,18 +569,11 @@ export const DEFAULT_PRODUCT: ProductFormValues = {
   optFactorLengthCutoffs: "0",
   optAllowLongestOffcuts: false,
 
-  replacementPrice: "0.00",
   basePrice: "0.00",
   markup: "0.00",
   fixedSalesPrice: "0.00",
-  averagePurchasePrice: "0.00",
   priceUnit: "",
   priceDate: "",
-  fixedSettlementPrice: "0.00000",
-  valuationInternalSurcharge: "0.00",
-  valuationExternalSurcharge: "0.00",
-  valuationStartDate: "",
-  fspCalculationBasis: "0.00",
 
   technicalStock: "0.000",
   theoreticalWeight: "0.0000",

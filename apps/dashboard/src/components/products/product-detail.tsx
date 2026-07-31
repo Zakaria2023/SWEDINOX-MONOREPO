@@ -169,21 +169,15 @@ export const ProductDetailView = ({ product }: Props) => {
         </div>
       </section>
 
-      {/* ── Valuation ───────────────────────────────────────────────────── */}
+      {/* ── Sales prices ────────────────────────────────────────────────── */}
       <section className="space-y-4">
-        <h2 className="border-b pb-2 text-base font-semibold">
-          Prices and valuation
-        </h2>
+        <h2 className="border-b pb-2 text-base font-semibold">Sales prices</h2>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
           <ProductField
             label="Price unit"
             value={
               product.priceUnit ? SALES_UNIT_LABELS[product.priceUnit] : null
             }
-          />
-          <ProductField
-            label="Replacement price"
-            value={formatMoney(Number(product.replacementPrice ?? 0))}
           />
           <ProductField
             label="Base price"
@@ -195,28 +189,39 @@ export const ProductDetailView = ({ product }: Props) => {
             value={formatMoney(Number(product.fixedSalesPrice ?? 0))}
           />
           <ProductField
-            label="Average purchase price (APP)"
-            value={formatMoney(Number(product.averagePurchasePrice ?? 0))}
-          />
-          <ProductField
-            label="Fixed settlement price (FSP)"
-            value={formatMoney(Number(product.fixedSettlementPrice ?? 0))}
-          />
-          <ProductField
             label="Price date"
             value={formatDateColumn(product.priceDate)}
           />
+        </div>
+      </section>
+
+      {/* ── Purchase cost ───────────────────────────────────────────────── */}
+      <section className="space-y-4">
+        <h2 className="border-b pb-2 text-base font-semibold">Purchase cost</h2>
+        <p className="text-sm text-muted-foreground">
+          Read back from the supplier invoices this article has been billed on —
+          it is not maintained on the product.
+        </p>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
           <ProductField
-            label="Last purchase price"
-            value={formatMoney(Number(product.lastPurchasePrice ?? 0))}
+            label="Average purchase price (APP)"
+            value={formatMoney(product.purchaseCost.averagePurchasePrice)}
           />
           <ProductField
-            label="Last purchase order"
-            value={product.lastPurchaseOrderCode}
+            label="Last invoiced price"
+            value={formatMoney(product.purchaseCost.lastPurchasePrice)}
           />
           <ProductField
-            label="Last purchase date"
-            value={formatDateColumn(product.lastPurchaseOrderDate)}
+            label="Last invoice date"
+            value={formatDateColumn(product.purchaseCost.lastPurchaseDate)}
+          />
+          <ProductField
+            label="Last invoice"
+            value={product.purchaseCost.lastPurchaseInvoiceNumber}
+          />
+          <ProductField
+            label="Last supplier"
+            value={product.purchaseCost.lastPurchaseSupplier}
           />
         </div>
       </section>

@@ -9,18 +9,25 @@ import { Contracts, SelectContracts } from "@/db/schema/contracts";
 import { ProductGroups } from "@/db/schema/product-groups";
 import { Products } from "@/db/schema/products";
 import { applyPriceDiscounts, resolveTierDiscount } from "@/lib/helpers";
+import {
+  EMPTY_PURCHASE_COST,
+  loadPurchaseCostByProduct,
+} from "@/lib/server/purchase-pricing";
 import { and, eq, inArray } from "drizzle-orm";
 
 /**
  * The product facts a sales line is priced and costed from. Loaded once per
  * document rather than per line, since a document usually repeats products.
+ *
+ * The two cost figures are not product columns: what the article costs is what
+ * a supplier billed for it, so both are read back from its purchase invoices.
  */
 export type PricedProduct = {
   uuid: string;
   name: string;
   basePrice: string | null;
-  replacementPrice: string | null;
-  averagePurchasePrice: string | null;
+  replacementPrice: number;
+  averagePurchasePrice: number;
   priceUnit: string | null;
   revenueGroupUuid: string | null;
   theoreticalWeight: string | null;
@@ -65,14 +72,12 @@ export const loadSalesPricingContext = async (
     };
   }
 
-  const [products, contracts, netPriceRows] = await Promise.all([
+  const [products, contracts, netPriceRows, purchaseCosts] = await Promise.all([
     db
       .select({
         uuid: Products.uuid,
         name: Products.name,
         basePrice: Products.basePrice,
-        replacementPrice: Products.replacementPrice,
-        averagePurchasePrice: Products.averagePurchasePrice,
         priceUnit: Products.priceUnit,
         revenueGroupUuid: Products.revenueGroupUuid,
         theoreticalWeight: Products.theoreticalWeight,
@@ -103,10 +108,26 @@ export const loadSalesPricingContext = async (
             ),
           )
       : Promise.resolve([]),
+
+    loadPurchaseCostByProduct(productUuids),
   ]);
 
   return {
-    productByUuid: new Map(products.map((product) => [product.uuid, product])),
+    productByUuid: new Map(
+      products.map((product) => {
+        const cost = purchaseCosts.get(product.uuid) ?? EMPTY_PURCHASE_COST;
+        return [
+          product.uuid,
+          {
+            ...product,
+            averagePurchasePrice: cost.averagePurchasePrice,
+            // What re-buying the article costs today is the last price a
+            // supplier invoiced it at.
+            replacementPrice: cost.lastPurchasePrice,
+          },
+        ];
+      }),
+    ),
     contract: contracts[0],
     netPriceRows,
   };

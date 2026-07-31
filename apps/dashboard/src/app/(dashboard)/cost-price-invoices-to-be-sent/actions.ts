@@ -7,6 +7,7 @@ import { Products } from "@/db/schema/products";
 import { ReturnOrderItems } from "@/db/schema/return-order-items";
 import { ReturnOrders } from "@/db/schema/return-orders";
 import { describeError, remainingToInvoice } from "@/lib/helpers";
+import { averagePurchasePriceSql } from "@/lib/server/purchase-pricing";
 import { eq } from "drizzle-orm";
 
 export type CostPriceToBeSentRow = {
@@ -26,8 +27,9 @@ const COGS_ACCOUNT = "7000";
 const COST_CENTRE = 0;
 
 // Cost of goods already issued on orders whose invoice has not been sent yet:
-// delivered-but-not-invoiced order lines valued at the product's average
-// purchase price, plus return lines booked as negatives.
+// delivered-but-not-invoiced order lines valued at the average price the
+// article's suppliers have invoiced it at, plus return lines booked as
+// negatives.
 export const getCostPriceInvoicesToBeSent = async (): Promise<
   CostPriceToBeSentRow[]
 > => {
@@ -40,7 +42,7 @@ export const getCostPriceInvoicesToBeSent = async (): Promise<
         goodsIssueDate: OrderItems.deliveryDate,
         quantity: OrderItems.quantity,
         invoicedQuantity: OrderItems.invoicedQuantity,
-        app: Products.averagePurchasePrice,
+        app: averagePurchasePriceSql(Products.uuid),
       })
       .from(OrderItems)
       .innerJoin(Orders, eq(OrderItems.orderUuid, Orders.uuid))

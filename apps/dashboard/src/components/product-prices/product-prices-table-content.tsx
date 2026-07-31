@@ -34,7 +34,7 @@ export const ProductPricesTable = ({ rows }: Props) => (
           <TableHead>Subgroup</TableHead>
           <TableHead>Preferred supplier</TableHead>
           <TableHead>Product no. supplier</TableHead>
-          <TableHead className="text-right">Replacement price</TableHead>
+          <TableHead className="text-right">Last invoiced price</TableHead>
           <TableHead className="text-right">Base price</TableHead>
           <TableHead className="text-right">Markup</TableHead>
           <TableHead className="text-right">APP</TableHead>

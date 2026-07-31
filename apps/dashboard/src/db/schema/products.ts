@@ -77,30 +77,22 @@ export const Products = mysqlTable(
     }).default("0.0000"),
     weightUnit: mysqlEnum("weight_unit", salesUnitOptions),
 
-    // ── Prices ────────────────────────────────────────────────────────────────
+    // ── Sales prices ──────────────────────────────────────────────────────────
+    // Only what the article is sold for lives here. What it costs to buy is not
+    // a property of the product — it is whatever a supplier billed — so every
+    // purchase figure is read back from the purchase invoices instead
+    // (`lib/server/purchase-pricing.ts`).
+    //
     // The unit every price below is quoted per (kg, tonne, piece, ...).
     priceUnit: mysqlEnum("price_unit", salesUnitOptions),
 
-    // Current replacement (re-purchase) price — compared against what was
-    // actually paid on the "Purchase results" report.
-    replacementPrice: decimal("replacement_price", {
-      precision: 15,
-      scale: 2,
-    }).default("0.00"),
-
     // The list price a customer is quoted before any contract discount.
-    // Recalculated from the replacement price and the markup percentage.
+    // Recalculated from the invoiced purchase price and the markup percentage.
     basePrice: decimal("base_price", { precision: 15, scale: 2 }).default(
       "0.00",
     ),
-    // Percentage added to the replacement price to reach the base price.
+    // Percentage added to the invoiced purchase price to reach the base price.
     markup: decimal("markup", { precision: 6, scale: 2 }).default("0.00"),
-    // Average purchase price — the weighted average of what was actually paid
-    // for this product, derived from the goods actually received.
-    averagePurchasePrice: decimal("average_purchase_price", {
-      precision: 15,
-      scale: 2,
-    }).default("0.00"),
     // Fixed sales price: when set, it overrides the calculated base price.
     fixedSalesPrice: decimal("fixed_sales_price", {
       precision: 15,
@@ -522,37 +514,6 @@ export const Products = mysqlTable(
     ).default(0),
     optFactorLengthCutoffs: int("opt_factor_length_cutoffs").default(0),
     optAllowLongestOffcuts: boolean("opt_allow_longest_offcuts").default(false),
-
-    // ── Valuation ─────────────────────────────────────────────────────────────
-    // FSP is the fixed settlement price the warehouse values stock at; it moves
-    // on its own schedule, which is why it carries its own start date and a
-    // history table rather than simply overwriting.
-    fixedSettlementPrice: decimal("fixed_settlement_price", {
-      precision: 15,
-      scale: 5,
-    }).default("0.00000"),
-    valuationInternalSurcharge: decimal("valuation_internal_surcharge", {
-      precision: 10,
-      scale: 2,
-    }).default("0.00"),
-    valuationExternalSurcharge: decimal("valuation_external_surcharge", {
-      precision: 10,
-      scale: 2,
-    }).default("0.00"),
-    valuationStartDate: date("valuation_start_date", { mode: "string" }),
-    fspCalculationBasis: decimal("fsp_calculation_basis", {
-      precision: 15,
-      scale: 2,
-    }).default("0.00"),
-    lastPurchasePrice: decimal("last_purchase_price", {
-      precision: 15,
-      scale: 2,
-    }).default("0.00"),
-    lastPurchaseOrderCode: varchar("last_purchase_order_code", { length: 100 }),
-    lastPurchaseOrderDate: date("last_purchase_order_date", { mode: "string" }),
-    lastPurchaseSupplierUuid: char("last_purchase_supplier_uuid", {
-      length: 36,
-    }),
 
     documents:
       json("documents").$type<Array<{ id: string; fileName: string }>>(),

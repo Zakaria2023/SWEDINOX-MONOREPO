@@ -21,6 +21,7 @@ import { describeError,
   normaliseDiscountTiers,
   resolveTierDiscount,
 } from "@/lib/helpers";
+import { lastPurchasePriceSql } from "@/lib/server/purchase-pricing";
 import { aliasedTable, and, asc, eq, inArray, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
@@ -194,7 +195,7 @@ export const generateNetPrices = async (): Promise<GenerateNetPricesResult> => {
             .selectDistinct({
               uuid: Products.uuid,
               basePrice: Products.basePrice,
-              replacementPrice: Products.replacementPrice,
+              replacementPrice: lastPurchasePriceSql(Products.uuid),
               priceUnit: Products.priceUnit,
               stockUnit: Products.stockUnit,
             })
@@ -211,7 +212,7 @@ export const generateNetPrices = async (): Promise<GenerateNetPricesResult> => {
               .select({
                 uuid: Products.uuid,
                 basePrice: Products.basePrice,
-                replacementPrice: Products.replacementPrice,
+                replacementPrice: lastPurchasePriceSql(Products.uuid),
                 priceUnit: Products.priceUnit,
                 stockUnit: Products.stockUnit,
               })
