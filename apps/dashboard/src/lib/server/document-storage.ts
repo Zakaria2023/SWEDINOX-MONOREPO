@@ -2,7 +2,10 @@ import "server-only";
 
 import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { cloudflareR2, CLOUDFLARE_R2_BUCKET_NAME } from "./cloudflare-r2";
+import {
+  getCloudflareR2,
+  getCloudflareR2BucketName,
+} from "./cloudflare-r2";
 
 /** Maximum permitted upload size (20 MB). */
 export const MAX_DOCUMENT_SIZE_BYTES = 20 * 1024 * 1024;
@@ -52,12 +55,12 @@ export const createDocumentUploadUrl = ({
   contentType,
 }: CreateDocumentUploadUrlParams): Promise<string> => {
   const command = new PutObjectCommand({
-    Bucket: CLOUDFLARE_R2_BUCKET_NAME,
+    Bucket: getCloudflareR2BucketName(),
     Key: createDocumentObjectKey(documentId),
     ContentType: contentType,
   });
 
-  return getSignedUrl(cloudflareR2, command, { expiresIn: 60 * 5 });
+  return getSignedUrl(getCloudflareR2(), command, { expiresIn: 60 * 5 });
 };
 
 /**
@@ -72,12 +75,12 @@ export const createDocumentDownloadUrl = ({
   fileName,
 }: CreateDocumentDownloadUrlParams): Promise<string> => {
   const command = new GetObjectCommand({
-    Bucket: CLOUDFLARE_R2_BUCKET_NAME,
+    Bucket: getCloudflareR2BucketName(),
     Key: createDocumentObjectKey(documentId),
     ...(fileName && {
       ResponseContentDisposition: `attachment; filename="${sanitizeFileName(fileName)}"`,
     }),
   });
 
-  return getSignedUrl(cloudflareR2, command, { expiresIn: 60 });
+  return getSignedUrl(getCloudflareR2(), command, { expiresIn: 60 });
 };

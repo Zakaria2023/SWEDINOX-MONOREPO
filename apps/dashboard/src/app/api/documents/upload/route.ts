@@ -1,8 +1,8 @@
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { generateUuid } from "@/lib/helpers";
 import {
-  cloudflareR2,
-  CLOUDFLARE_R2_BUCKET_NAME,
+  getCloudflareR2,
+  getCloudflareR2BucketName,
 } from "@/lib/server/cloudflare-r2";
 import {
   createDocumentObjectKey,
@@ -30,9 +30,9 @@ export const POST = async (req: Request) => {
     const documentId = generateUuid();
     const buffer = await file.arrayBuffer();
 
-    await cloudflareR2.send(
+    await getCloudflareR2().send(
       new PutObjectCommand({
-        Bucket: CLOUDFLARE_R2_BUCKET_NAME,
+        Bucket: getCloudflareR2BucketName(),
         Key: createDocumentObjectKey(documentId),
         Body: Buffer.from(buffer),
         ContentType: file.type,
