@@ -9,6 +9,9 @@ import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { Products, SelectProducts } from "@/db/schema/products";
 import { desc, eq, getTableColumns } from "drizzle-orm";
 
+// The money and weight columns come from the invoice line itself, which
+// snapshots them at invoicing — reaching back to the order line would report
+// whatever it says today rather than what was billed.
 export type InvoiceLineItem = SelectInvoiceItems & {
   invoiceId: SelectInvoices["id"] | null;
   invoiceDate: SelectInvoices["invoiceDate"] | null;
@@ -17,8 +20,6 @@ export type InvoiceLineItem = SelectInvoiceItems & {
   productCode: SelectProducts["productCode"] | null;
   productName: SelectProducts["name"] | null;
   lineNumber: SelectOrderItems["lineNumber"] | null;
-  weightKg: SelectOrderItems["kgPlanned"] | null;
-  amount: SelectOrderItems["amount"] | null;
 };
 
 export const getInvoiceLines = async (): Promise<InvoiceLineItem[]> => {
@@ -33,8 +34,6 @@ export const getInvoiceLines = async (): Promise<InvoiceLineItem[]> => {
         productCode: Products.productCode,
         productName: Products.name,
         lineNumber: OrderItems.lineNumber,
-        weightKg: OrderItems.kgPlanned,
-        amount: OrderItems.amount,
       })
       .from(InvoiceItems)
       .leftJoin(Invoices, eq(InvoiceItems.invoiceUuid, Invoices.uuid))

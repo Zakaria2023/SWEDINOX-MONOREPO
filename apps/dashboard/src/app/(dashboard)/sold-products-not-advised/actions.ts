@@ -4,7 +4,6 @@ import { describeError } from "@/lib/helpers";
 import { db } from "@/db";
 import { InvoiceItems } from "@/db/schema/invoice-items";
 import { Invoices } from "@/db/schema/invoices";
-import { OrderItems } from "@/db/schema/order-items";
 import { ProductGroups, SelectProductGroups } from "@/db/schema/product-groups";
 import { Products, SelectProducts } from "@/db/schema/products";
 import { Stock } from "@/db/schema/stock";
@@ -50,11 +49,11 @@ export const getSoldProductsNotAdvised = async (): Promise<
         mainGroup: MainGroups.name,
         pacClassification: ProductGroups.pacClassification,
         sales: sql<string>`COALESCE(SUM(${InvoiceItems.quantity}), 0)`,
-        revenue: sql<string>`COALESCE(SUM(${OrderItems.amount}), 0)`,
+        // The invoice line's own snapshot — see revenue-per-revenue-group.
+        revenue: sql<string>`COALESCE(SUM(${InvoiceItems.amount}), 0)`,
       })
       .from(InvoiceItems)
       .innerJoin(Invoices, eq(InvoiceItems.invoiceUuid, Invoices.uuid))
-      .innerJoin(OrderItems, eq(InvoiceItems.orderItemUuid, OrderItems.uuid))
       .innerJoin(Products, eq(InvoiceItems.productUuid, Products.uuid))
       .leftJoin(
         ProductGroups,

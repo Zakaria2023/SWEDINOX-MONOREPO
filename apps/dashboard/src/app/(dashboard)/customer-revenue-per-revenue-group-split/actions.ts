@@ -10,7 +10,6 @@ import { OrderItems } from "@/db/schema/order-items";
 import { Orders } from "@/db/schema/orders";
 import { Products } from "@/db/schema/products";
 import { RevenueGroups } from "@/db/schema/revenue-groups";
-import { Stock } from "@/db/schema/stock";
 import { count, eq, min, sql } from "drizzle-orm";
 
 export type CustomerRevenueSplitRow = {
@@ -87,9 +86,11 @@ export const getCustomerRevenueSplit = async (): Promise<
         orderType: orderTypeLabel,
         year,
         month,
-        weightKg: sql<string>`COALESCE(SUM(${OrderItems.kgPlanned}), 0)`,
-        revenue: sql<string>`COALESCE(SUM(${OrderItems.amount}), 0)`,
-        cost: sql<string>`COALESCE(SUM(${Stock.valuationPrice} * ${OrderItems.quantity}), 0)`,
+        // The invoice line's own snapshot — see revenue-per-revenue-group. The
+        // order stays joined only to classify the order type.
+        weightKg: sql<string>`COALESCE(SUM(${InvoiceItems.weightKg}), 0)`,
+        revenue: sql<string>`COALESCE(SUM(${InvoiceItems.amount}), 0)`,
+        cost: sql<string>`COALESCE(SUM(${InvoiceItems.costAmount}), 0)`,
         invoiceLines: count(InvoiceItems.uuid),
       })
       .from(InvoiceItems)
@@ -102,7 +103,6 @@ export const getCustomerRevenueSplit = async (): Promise<
         RevenueGroups,
         eq(Products.revenueGroupUuid, RevenueGroups.uuid),
       )
-      .leftJoin(Stock, eq(OrderItems.stockUuid, Stock.uuid))
       .leftJoin(primaryContact, eq(Companies.uuid, primaryContact.companyUuid))
       .groupBy(
         Companies.uuid,

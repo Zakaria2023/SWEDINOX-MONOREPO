@@ -1,18 +1,26 @@
 import { clsx, ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import {
+  AgeingBucket,
+  ageingBuckets,
   CertificaatOption,
+  ComplaintCategory,
+  ComplaintSolution,
   CustomerGroup,
   DeliveryTerm,
   DeliveryTimeUnit,
   DeliveryType,
   InvoicePaymentTerm,
+  InvoiceDocumentType,
   InvoiceVatScenario,
   LeadTimeMethod,
   OrderDeblockType,
   OrderLineStatus,
   OrderWeightType,
   PurchaseOrderStatus,
+  ReminderStage,
+  reminderStages,
+  ReturnOrderReason,
   SalesRepresentative,
   SfnCounterpartyRole,
   StockMode,
@@ -206,6 +214,44 @@ export const toDateString = (date: Date): string =>
   date.toISOString().split("T")[0];
 
 /**
+ * The financial year and period a ledger posting belongs to.
+ *
+ * Periods are calendar months. `JournalEntries` carries a plain integer beside
+ * the year and nothing in the system defines a fiscal calendar offset from the
+ * calendar one, so month number is the only honest reading.
+ *
+ * A posting with no booking date cannot be placed in a period at all, and gets
+ * `null` rather than today's — filing an entry into a period it does not belong
+ * to is worse than leaving it unfiled, because a period that has been reported
+ * would silently change.
+ *
+ * A `yyyy-mm-dd` string is read as written rather than through `Date`, which
+ * would parse it as UTC midnight and then be shifted back a day — and so into
+ * the previous period — by any timezone behind UTC.
+ */
+export const financialPeriodFor = (
+  bookingDate: Date | string | null | undefined,
+): { financialYear: number; period: number } | null => {
+  if (!bookingDate) {
+    return null;
+  }
+
+  if (typeof bookingDate === "string") {
+    const parts = /^(\d{4})-(\d{2})/.exec(bookingDate);
+    if (parts) {
+      return { financialYear: Number(parts[1]), period: Number(parts[2]) };
+    }
+  }
+
+  const date = new Date(bookingDate);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return { financialYear: date.getFullYear(), period: date.getMonth() + 1 };
+};
+
+/**
  * Formats the value of a Drizzle `date` column (typed `string | Date`) for
  * display, falling back to `fallback` (an em dash by default) when the value is
  * missing — pass e.g. "Never" or a "N/A" string where that reads better.
@@ -358,6 +404,8 @@ export const isPathActive = (href: string, pathname: string): boolean =>
  *   - endOfMonth: the net period runs to the end of the month it lands in.
  *   - prepaymentPercentage: portion required up front (0 = none, 100 = full).
  *   - discountPercentage / discountDays: early-payment discount and its window.
+ *   - creditRestrictionPercentage: the Dutch "kredietbeperking" surcharge —
+ *     see DEFAULT_CREDIT_RESTRICTION_PERCENTAGE below.
  */
 export type PaymentTermMeta = {
   netDays: number | null;
@@ -365,7 +413,21 @@ export type PaymentTermMeta = {
   prepaymentPercentage: number;
   discountPercentage: number | null;
   discountDays: number | null;
+  creditRestrictionPercentage: number;
 };
+
+/**
+ * The credit-restriction surcharge applied to terms that actually extend
+ * credit. It is added to the invoice and may be deducted again by a customer
+ * who settles within the term — a charge for taking time to pay, waived by not
+ * taking it.
+ *
+ * ASSUMPTION, NOT CONFIRMED: the reference system holds this field on both
+ * sales and purchase invoices but carries no data to read a rate from, and no
+ * maintenance screen for it was available. 2% is the conventional Dutch rate.
+ * Change this one constant to correct every term at once.
+ */
+export const DEFAULT_CREDIT_RESTRICTION_PERCENTAGE = 2;
 
 const netTerm = (
   netDays: number,
@@ -376,6 +438,10 @@ const netTerm = (
   prepaymentPercentage: 0,
   discountPercentage: null,
   discountDays: null,
+  // Paying now costs nothing extra; taking credit does. Terms settled on the
+  // invoice date (cash, prepayment) therefore carry no surcharge.
+  creditRestrictionPercentage:
+    netDays > 0 ? DEFAULT_CREDIT_RESTRICTION_PERCENTAGE : 0,
   ...overrides,
 });
 
@@ -390,6 +456,9 @@ const openTerm = (
   prepaymentPercentage,
   discountPercentage: null,
   discountDays: null,
+  // No derivable due date means no window to waive the surcharge against, so
+  // these terms don't carry one.
+  creditRestrictionPercentage: 0,
   ...overrides,
 });
 
@@ -523,6 +592,541 @@ export const getPaymentTermDiscount = (
 };
 
 /**
+ * The credit-restriction surcharge a term carries (0 when it carries none).
+ */
+export const getCreditRestrictionPercentage = (
+  term: InvoicePaymentTerm | null | undefined,
+): number => (term ? PAYMENT_TERM_META[term].creditRestrictionPercentage : 0);
+
+/**
+ * The surcharge to add to an invoice for the credit its term extends,
+ * calculated on the net amount.
+ */
+export const creditRestrictionOn = (
+  term: InvoicePaymentTerm | null | undefined,
+  netAmount: number,
+): number =>
+  netAmount <= 0 ? 0 : netAmount * (getCreditRestrictionPercentage(term) / 100);
+
+/**
+ * How much of the credit restriction a payer may keep back.
+ *
+ * The surcharge is charged for taking time to pay, so settling inside the term
+ * earns it back in full; paying after the due date means bearing it. Like the
+ * early-payment discount this is a deadline rather than a sliding scale.
+ *
+ * Terms with no derivable due date (letters of credit, "against documents")
+ * carry no surcharge in the first place, so there is nothing to waive.
+ */
+export const allowedCreditRestrictionDeduction = ({
+  term,
+  invoiceDate,
+  paymentDate,
+  creditRestriction,
+}: {
+  term: InvoicePaymentTerm | null | undefined;
+  invoiceDate: string | null | undefined;
+  paymentDate: string | null | undefined;
+  creditRestriction: number;
+}): number => {
+  if (creditRestriction <= 0 || !invoiceDate || !paymentDate) {
+    return 0;
+  }
+
+  const dueDate = getPaymentTermDueDate(term, invoiceDate);
+  if (!dueDate) {
+    return 0;
+  }
+
+  return paymentDate.slice(0, 10) <= dueDate ? creditRestriction : 0;
+};
+
+// ---------------------------------------------------------------------------
+// Billing part of a line
+//
+// An order line can be invoiced in instalments, so every money figure on it has
+// to be divisible without leaking a cent. The naive way — round(total × share)
+// each time — does leak: three slices of a € 100.00 line at a third each round
+// to € 33.33 and lose a penny that never appears on any invoice and never comes
+// off the holding account.
+//
+// So a slice is measured as the *movement in the cumulative total*: what should
+// have been billed after this instalment, less what should have been billed
+// before it. The last slice therefore lands on exactly the line total, whatever
+// the rounding did to the ones before it.
+// ---------------------------------------------------------------------------
+
+export type LineSlice = {
+  /** The order line's full quantity. */
+  quantity: number;
+  /** How much of that quantity has already been billed. */
+  alreadyBilled: number;
+  /** How much is being billed now. */
+  billing: number;
+};
+
+/**
+ * The share of a line-level amount that belongs to the quantity being billed.
+ *
+ * Exact by construction: for any sequence of instalments that adds up to the
+ * line quantity, the slices add up to `total` rounded to `decimals` — no
+ * accumulated drift, no final-cent fudge.
+ */
+export const proRataSlice = (
+  total: number,
+  { quantity, alreadyBilled, billing }: LineSlice,
+  decimals = 2,
+): number => {
+  const factor = 10 ** decimals;
+  const roundTo = (value: number) => Math.round(value * factor) / factor;
+
+  if (billing <= 0) {
+    return 0;
+  }
+  // A line with no quantity can't be apportioned; billing it at all bills the
+  // whole of whatever it carries. This is the surcharge-shaped case — value
+  // with nothing to divide it by.
+  if (quantity <= 0) {
+    return roundTo(total);
+  }
+
+  const before = roundTo((total * alreadyBilled) / quantity);
+  const after = roundTo((total * (alreadyBilled + billing)) / quantity);
+  return roundTo(after - before);
+};
+
+export type OrderLineAmounts = {
+  amount: number;
+  costAmount: number;
+  weightKg: number;
+  profit: number;
+  profitReplPrice: number;
+};
+
+/**
+ * An order line's money, cut down to the quantity being billed now.
+ *
+ * Per-unit figures — net price, cost price, replacement price, margin
+ * percentage — are deliberately absent: they don't scale with quantity, so a
+ * slice carries them unchanged. Only the extended amounts are divided.
+ */
+export const sliceOrderLineAmounts = (
+  amounts: OrderLineAmounts,
+  slice: LineSlice,
+): OrderLineAmounts => ({
+  amount: proRataSlice(amounts.amount, slice),
+  costAmount: proRataSlice(amounts.costAmount, slice),
+  weightKg: proRataSlice(amounts.weightKg, slice),
+  profit: proRataSlice(amounts.profit, slice),
+  profitReplPrice: proRataSlice(amounts.profitReplPrice, slice),
+});
+
+/**
+ * How much of an order line is still to be billed.
+ *
+ * Clamped at zero rather than allowed to go negative: a line that has somehow
+ * been over-billed offers nothing further, and reporting a negative remainder
+ * would have the invoice screen offer to bill a negative quantity.
+ */
+export const remainingToInvoice = (
+  quantity: string | number | null | undefined,
+  invoicedQuantity: string | number | null | undefined,
+): number =>
+  Math.max(0, Number(quantity ?? 0) - Number(invoicedQuantity ?? 0));
+
+/**
+ * Quantities are held to three decimals, so anything under half a thousandth is
+ * the residue of dividing a line rather than a quantity anybody meant. Used to
+ * decide "this line is now fully billed" without demanding exact equality of
+ * two decimal strings.
+ */
+export const QUANTITY_EPSILON = 0.0005;
+
+// ---------------------------------------------------------------------------
+// Ageing
+//
+// A receivable's age is the distance from the day it fell due to today — not
+// from the invoice date. Two invoices raised the same morning on 8-day and
+// 60-day terms are not equally late, and only the due date knows that.
+//
+// Everything here is deliberately date-string arithmetic on whole days. An
+// ageing report is read as "this debt is 34 days late", never to the hour, and
+// working in UTC days keeps a report run at 09:00 and one run at 23:00 in the
+// same bucket.
+// ---------------------------------------------------------------------------
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/** Whole days between two YYYY-MM-DD dates, negative when `from` is later. */
+const daysBetween = (from: string, to: string): number | null => {
+  const start = Date.parse(`${from.slice(0, 10)}T00:00:00Z`);
+  const end = Date.parse(`${to.slice(0, 10)}T00:00:00Z`);
+  if (Number.isNaN(start) || Number.isNaN(end)) {
+    return null;
+  }
+  return Math.round((end - start) / MS_PER_DAY);
+};
+
+/**
+ * How many days past its due date a receivable is. Zero on the due date itself
+ * — the debtor has all of that day to pay — and negative while it is still
+ * inside the term, which is how the caller tells "not due" from "due today".
+ *
+ * `null` when there is no due date to measure from. An invoice on a letter of
+ * credit or "against documents" has no derivable due date, and inventing one
+ * would report a debt as overdue on a deadline nobody agreed to.
+ */
+export const daysOverdue = (
+  dueDate: string | Date | null | undefined,
+  asOf: string = todayDateString(),
+): number | null => {
+  if (!dueDate) {
+    return null;
+  }
+  const due =
+    dueDate instanceof Date ? dueDate.toISOString().slice(0, 10) : dueDate;
+  return daysBetween(due, asOf);
+};
+
+/**
+ * Which ageing bucket a receivable falls in.
+ *
+ * An invoice with no due date is reported as `not_due` rather than dropped:
+ * the money is still owed and has to appear in the total, but calling it late
+ * would be asserting a deadline the document never carried.
+ */
+export const ageingBucketFor = (
+  dueDate: string | Date | null | undefined,
+  asOf: string = todayDateString(),
+): AgeingBucket => {
+  const overdue = daysOverdue(dueDate, asOf);
+  if (overdue === null || overdue <= 0) {
+    return "not_due";
+  }
+  if (overdue <= 30) {
+    return "days_1_30";
+  }
+  if (overdue <= 60) {
+    return "days_31_60";
+  }
+  if (overdue <= 90) {
+    return "days_61_90";
+  }
+  return "days_over_90";
+};
+
+export type AgeingTotals = Record<AgeingBucket, number> & { total: number };
+
+/**
+ * Adds a set of open balances up per bucket.
+ *
+ * Credit notes carry a negative outstanding and are bucketed like anything
+ * else, so a credit sitting against an overdue invoice reduces the bucket it
+ * belongs to instead of flattering the total. That means a bucket can legally
+ * come out negative — a customer owed more than they owe.
+ */
+export const summariseAgeing = (
+  items: { dueDate: string | Date | null | undefined; outstanding: number }[],
+  asOf: string = todayDateString(),
+): AgeingTotals => {
+  const empty = ageingBuckets.reduce(
+    (acc, bucket) => ({ ...acc, [bucket]: 0 }),
+    {} as Record<AgeingBucket, number>,
+  );
+
+  return items.reduce<AgeingTotals>(
+    (totals, item) => {
+      const bucket = ageingBucketFor(item.dueDate, asOf);
+      return {
+        ...totals,
+        [bucket]: totals[bucket] + item.outstanding,
+        total: totals.total + item.outstanding,
+      };
+    },
+    { ...empty, total: 0 },
+  );
+};
+
+// ---------------------------------------------------------------------------
+// Payment reminders
+// ---------------------------------------------------------------------------
+
+/**
+ * How overdue an invoice must be before each stage of chasing is warranted.
+ *
+ * POLICY, NOT CONFIRMED: the reference system holds a per-debtor "reminder"
+ * flag but exposed no schedule to read these numbers from. 14 / 28 / 42 days is
+ * the conventional Dutch cadence — a reminder a fortnight after the term, a
+ * second a fortnight later, then a final notice before it goes to collection.
+ * Change these three numbers to change the policy everywhere.
+ */
+export const REMINDER_STAGE_AFTER_DAYS: Record<ReminderStage, number> = {
+  first: 14,
+  second: 28,
+  final: 42,
+};
+
+/** The stage after a given one, or `null` when a final notice has been sent. */
+export const nextReminderStage = (
+  sent: ReminderStage | null | undefined,
+): ReminderStage | null => {
+  if (!sent) {
+    return "first";
+  }
+  const next = reminderStages[reminderStages.indexOf(sent) + 1];
+  return next ?? null;
+};
+
+export type ReminderAssessment = {
+  /** The stage that should go out now, or `null` if none should. */
+  stage: ReminderStage | null;
+  /** Why nothing is being sent, for the screen to show instead of a button. */
+  reason: string | null;
+};
+
+/**
+ * Whether an invoice is due a reminder, and which one.
+ *
+ * The rules, in the order they bite:
+ *   - Nothing is chased that isn't owed. A settled invoice, and a credit note
+ *     (which owes the customer money), are never chased.
+ *   - A debtor with reminders switched off is never chased, whatever the age.
+ *     That flag exists to stop letters going to a customer being handled by
+ *     hand — a payment plan, a dispute, a receiver.
+ *   - An invoice with no derivable due date is not chased automatically. There
+ *     is no deadline to say it was missed by.
+ *   - The next stage goes out only once its own threshold is passed, so an
+ *     invoice 60 days late that has had nothing sent gets a first reminder, not
+ *     a final notice. Escalation is a sequence of letters, not a lookup.
+ */
+export const assessReminder = ({
+  outstanding,
+  dueDate,
+  documentType,
+  remindersEnabled,
+  lastStageSent,
+  asOf = todayDateString(),
+}: {
+  outstanding: number;
+  dueDate: string | Date | null | undefined;
+  documentType: InvoiceDocumentType;
+  remindersEnabled: boolean;
+  lastStageSent: ReminderStage | null | undefined;
+  asOf?: string;
+}): ReminderAssessment => {
+  if (documentType === "credit_note") {
+    return { stage: null, reason: "A credit note is owed to the customer." };
+  }
+  if (outstanding <= 0) {
+    return { stage: null, reason: "Nothing outstanding." };
+  }
+  if (!remindersEnabled) {
+    return { stage: null, reason: "Reminders are switched off for this debtor." };
+  }
+
+  const overdue = daysOverdue(dueDate, asOf);
+  if (overdue === null) {
+    return { stage: null, reason: "No due date to measure against." };
+  }
+  if (overdue <= 0) {
+    return { stage: null, reason: "Not due yet." };
+  }
+
+  const stage = nextReminderStage(lastStageSent);
+  if (!stage) {
+    return { stage: null, reason: "A final notice has already been sent." };
+  }
+  if (overdue < REMINDER_STAGE_AFTER_DAYS[stage]) {
+    return {
+      stage: null,
+      reason: `${overdue} day${overdue === 1 ? "" : "s"} overdue — the next reminder is due at ${REMINDER_STAGE_AFTER_DAYS[stage]}.`,
+    };
+  }
+
+  return { stage, reason: null };
+};
+
+export type CreditAssessmentInput = {
+  /** The debtor's agreed limit. 0 or absent means no limit has been set. */
+  creditLimit: number;
+  /** What the customer already owes on invoices that still stand. */
+  openReceivables: number;
+  /**
+   * Orders taken but not yet invoiced. These are receivables in waiting: the
+   * goods are promised, so the exposure is real even though no invoice exists
+   * yet. Excludes the order being assessed, which is counted separately.
+   */
+  committedOrders?: number;
+  /** Gross value of the order being placed — what it will become owed. */
+  orderAmount: number;
+  /** The order's payment term; some terms extend no credit at all. */
+  paymentTerms: InvoicePaymentTerm | null | undefined;
+  /** The company has been stopped by hand, whatever its balance says. */
+  companyBlocked: boolean;
+};
+
+export type CreditAssessment = {
+  blocked: boolean;
+  /** Why it was held, short enough for `Orders.blockingReason` (varchar 255). */
+  reason: string | null;
+  creditLimit: number;
+  openReceivables: number;
+  committedOrders: number;
+  /** Room left before the limit is reached; negative once it is exceeded. */
+  creditSpace: number;
+  /** Everything owed and promised, including this order. */
+  exposure: number;
+};
+
+/**
+ * Whether a payment term actually lends the customer money. A term settled on
+ * the invoice date — cash, or full prepayment — extends no credit, so the
+ * debtor's limit has no bearing on an order placed under it: the goods are paid
+ * for before they go anywhere.
+ *
+ * Everything else does extend credit, including terms whose due date can't be
+ * derived (letters of credit, "against documents"). An unknown term is treated
+ * as extending credit, because the safe assumption is the one that checks.
+ */
+export const paymentTermExtendsCredit = (
+  term: InvoicePaymentTerm | null | undefined,
+): boolean => {
+  if (!term) {
+    return true;
+  }
+  const meta = PAYMENT_TERM_META[term];
+  return !(meta.netDays === 0 || meta.prepaymentPercentage === 100);
+};
+
+/**
+ * What a committed order will actually be worth as a receivable.
+ *
+ * Exposure has to be measured in one currency of value. Receivables are gross
+ * (`Invoices.outstanding` carries VAT) and the order being placed is already
+ * weighed gross (`Orders.totalInclVat`), but order *lines* are stored net — so
+ * summing them raw understates every uninvoiced order by its VAT. At the
+ * standard rate that hands a debtor about a fifth of their limit again in credit
+ * space that does not exist, and the shortfall only appears when the invoice
+ * lands, which reads as the customer consuming limit for no reason.
+ *
+ * The rate is the one the order's own summary applied — the customer's
+ * `calculateVat` flag — not the eventual invoice's VAT scenario. This is a
+ * forecast of an invoice that does not exist yet, and its job is to agree with
+ * the figure `createOrder` weighs against the limit.
+ */
+export const grossUpCommittedOrderValue = (
+  netAmount: number,
+  companyCalculatesVat: boolean | null | undefined,
+): number =>
+  netAmount * (1 + getQuoteVatRatePercent(true, companyCalculatesVat) / 100);
+
+/**
+ * Decides whether an order should be held for credit reasons.
+ *
+ * The exposure being tested is what the customer would owe once this order is
+ * invoiced: everything outstanding today, plus this order's gross value. That
+ * is compared against the limit recorded on the debtor.
+ *
+ * Two deliberate refusals to block:
+ *   - A debtor with no limit recorded (0 or blank) is not blocked. A blank
+ *     field means "nobody has set one", not "this customer may owe nothing" —
+ *     reading it the other way would hold every order in the system.
+ *   - An order paid for up front is not blocked however much is outstanding,
+ *     because it adds nothing to what the customer owes.
+ *
+ * A company stopped by hand is blocked regardless of either, since that flag
+ * exists precisely to override the arithmetic.
+ */
+export const assessCredit = ({
+  creditLimit,
+  openReceivables,
+  committedOrders = 0,
+  orderAmount,
+  paymentTerms,
+  companyBlocked,
+}: CreditAssessmentInput): CreditAssessment => {
+  const extendsCredit = paymentTermExtendsCredit(paymentTerms);
+  const owed = openReceivables + committedOrders;
+  const exposure = owed + (extendsCredit ? orderAmount : 0);
+  const standing = {
+    creditLimit,
+    openReceivables,
+    committedOrders,
+    // Room left before the limit, counting what is promised as well as what is
+    // billed — an order taken is a receivable waiting to happen.
+    creditSpace: creditLimit - owed,
+    exposure,
+  };
+
+  if (companyBlocked) {
+    return {
+      ...standing,
+      blocked: true,
+      reason: "Customer is blocked",
+    };
+  }
+
+  if (!extendsCredit || creditLimit <= 0 || exposure <= creditLimit) {
+    return { ...standing, blocked: false, reason: null };
+  }
+
+  return {
+    ...standing,
+    blocked: true,
+    reason: `Credit limit exceeded — ${formatMoney(owed)} owed and on order plus ${formatMoney(orderAmount)} on this one against a ${formatMoney(creditLimit)} limit`,
+  };
+};
+
+export type EarlyPaymentDiscountInput = {
+  term: InvoicePaymentTerm | null | undefined;
+  /** Invoice date, `yyyy-mm-dd`. */
+  invoiceDate: string | null | undefined;
+  /** When the money actually arrived, `yyyy-mm-dd`. */
+  paymentDate: string | null | undefined;
+  /** The net (excl. VAT) amount the discount is calculated on. */
+  baseAmount: number;
+};
+
+/**
+ * What a customer is entitled to deduct for paying early, or 0 when nothing is
+ * due — the term grants no discount, or the money arrived after the window
+ * closed.
+ *
+ * The discount is calculated on the net amount rather than the gross: the VAT
+ * belongs to the tax authority either way, so discounting it would be giving
+ * away money that was never the seller's to give.
+ *
+ * Paying late does not partially earn it. The window is a deadline, so this
+ * returns either the whole discount or nothing.
+ */
+export const allowedEarlyPaymentDiscount = ({
+  term,
+  invoiceDate,
+  paymentDate,
+  baseAmount,
+}: EarlyPaymentDiscountInput): number => {
+  const discount = getPaymentTermDiscount(term);
+  if (!discount || !invoiceDate || !paymentDate || baseAmount <= 0) {
+    return 0;
+  }
+
+  const invoiced = new Date(`${invoiceDate.slice(0, 10)}T00:00:00Z`);
+  const paid = new Date(`${paymentDate.slice(0, 10)}T00:00:00Z`);
+  if (Number.isNaN(invoiced.getTime()) || Number.isNaN(paid.getTime())) {
+    return 0;
+  }
+
+  const deadline = new Date(invoiced);
+  deadline.setUTCDate(deadline.getUTCDate() + discount.withinDays);
+
+  if (paid.getTime() > deadline.getTime()) {
+    return 0;
+  }
+
+  return baseAmount * (discount.percentage / 100);
+};
+
+/**
  * The portion of the invoice a term requires up front (0 when none).
  */
 export const getPaymentTermPrepaymentPercentage = (
@@ -576,6 +1180,197 @@ const STANDARD_INVOICE_VAT_RATE = VAT_CODE_RATE.vat_high_21;
 export const getInvoiceVatRatePercent = (
   scenario: InvoiceVatScenario | null | undefined,
 ): number => (invoiceChargesVat(scenario) ? STANDARD_INVOICE_VAT_RATE : 0);
+
+/**
+ * The VAT rate (percentage) a quote's summary should apply. VAT is only charged
+ * when the quote asks for it *and* the customer is one that VAT is calculated
+ * for — a VAT-exempt customer never gets VAT on a quote that ticks the box.
+ */
+export const getQuoteVatRatePercent = (
+  calculateVatIfApplicable: boolean | null | undefined,
+  companyCalculatesVat: boolean | null | undefined,
+): number =>
+  calculateVatIfApplicable && companyCalculatesVat !== false
+    ? STANDARD_INVOICE_VAT_RATE
+    : 0;
+
+/**
+ * Running metres a line represents — the "M1" column on the purchase screens.
+ *
+ * Derived rather than stored, because it is never independent information: for
+ * goods sold by the metre the quantity already is the length, and for goods
+ * sold by the piece it is the pieces times how long each one is. Storing it
+ * would create a second number that could disagree with the first.
+ *
+ * Returns 0 when the length is unknown, rather than inventing one.
+ */
+export const runningMeters = ({
+  quantity,
+  unit,
+  lengthMm,
+}: {
+  quantity: number;
+  unit: StockUnit | null | undefined;
+  lengthMm: number | null | undefined;
+}): number => {
+  // "m1" is the unit code for running metres, so such a line already counts in
+  // them and must not be multiplied by its own length again.
+  if (unit === "m1") {
+    return quantity;
+  }
+  if (!lengthMm) {
+    return 0;
+  }
+  return (quantity * lengthMm) / 1000;
+};
+
+/**
+ * Whether a complaint's agreed solution involves the goods physically coming
+ * back. Only these justify a return order: a price correction or a rejected
+ * complaint settles on paper, and a subsequent delivery sends more out rather
+ * than bringing anything in.
+ */
+export const complaintSolutionReturnsGoods = (
+  solution: ComplaintSolution | null | undefined,
+): boolean =>
+  solution === "collect_goods_back_credit" ||
+  solution === "return_goods_credit_redeliver";
+
+/**
+ * The return reason a complaint category implies. The two vocabularies were
+ * written for different screens and only partly overlap, so anything without a
+ * clear counterpart lands on "other" rather than being forced into a reason
+ * that would misreport why the goods came back.
+ */
+export const returnReasonForComplaintCategory = (
+  category: ComplaintCategory | null | undefined,
+): ReturnOrderReason => {
+  switch (category) {
+    case "damaged":
+    case "transport_damage":
+      return "damaged_goods";
+    case "wrong_material_delivered":
+    case "incorrect_delivery_address":
+      return "wrong_delivery";
+    case "wrong_quantity":
+      return "excess_delivery";
+    default:
+      return "other";
+  }
+};
+
+/**
+ * How a sales document identifies itself: `INV-1042`, or `CRN-1043` when it is
+ * a credit note. Shared by the overview, the detail screen and the email so a
+ * customer quoting a number back at you finds the same document on screen.
+ */
+export const invoiceReference = (
+  documentType: InvoiceDocumentType | null | undefined,
+  id: number | null | undefined,
+): string =>
+  `${documentType === "credit_note" ? "CRN" : "INV"}-${id ?? "?"}`;
+
+export type PurchaseInvoiceLineAmount = {
+  /** Net amount booked on the line. */
+  amount: number;
+  /** The VAT code the line was booked under, snapshotted from the product. */
+  vatCode: VatCode | null;
+};
+
+export type PurchaseInvoiceSummaryInput = {
+  lines: PurchaseInvoiceLineAmount[];
+  surcharges: number[];
+  optionsAmount?: number;
+  /** The supplier's kredietbeperking — the one figure a clerk types. */
+  creditRestriction: number;
+  /**
+   * The total printed on the supplier's document, also typed. Everything else
+   * is derived, so this is what the derivation is reconciled against.
+   */
+  invoiceTotal: number;
+};
+
+export type PurchaseInvoiceSummary = {
+  materials: number;
+  optionsAmount: number;
+  surcharges: number;
+  totalExclVat: number;
+  vatHigh: number;
+  vatMiddle: number;
+  vatLow: number;
+  vatTotal: number;
+  totalInclVat: number;
+  creditRestriction: number;
+  /** What the supplier billed that the booked lines don't account for. */
+  remainder: number;
+  /** The build-up's bottom line, which reconciles to the supplier's total. */
+  totalGeneral: number;
+};
+
+/**
+ * The accounting summary of a purchase invoice.
+ *
+ * Only two figures on this document are typed: the total printed on the
+ * supplier's paperwork, and the credit restriction they applied. Everything
+ * else is derived from the lines received and the surcharges booked — a clerk
+ * keying the materials total by hand is a clerk who can key it wrong, and the
+ * ledger would believe them.
+ *
+ * VAT splits into the three bands the document reports, taken from each line's
+ * own VAT code rather than one rate for the whole invoice: a pallet of goods at
+ * 21% and a delivery at 9% belong in different boxes on the return. Surcharges
+ * follow the high rate, being services.
+ *
+ * `remainder` is the reconciliation: the difference between what the supplier
+ * billed and what the booked lines, surcharges, VAT and credit restriction add
+ * up to. Zero means the booking matches the paperwork. Anything else is the
+ * amount someone still has to explain — which is precisely why it is shown
+ * rather than quietly absorbed into a total.
+ */
+export const summarisePurchaseInvoice = ({
+  lines,
+  surcharges,
+  optionsAmount = 0,
+  creditRestriction,
+  invoiceTotal,
+}: PurchaseInvoiceSummaryInput): PurchaseInvoiceSummary => {
+  const materials = lines.reduce((sum, line) => sum + line.amount, 0);
+  const surchargeTotal = surcharges.reduce((sum, amount) => sum + amount, 0);
+  const totalExclVat = materials + optionsAmount + surchargeTotal;
+
+  const vatOn = (code: VatCode): number =>
+    lines
+      .filter((line) => line.vatCode === code)
+      .reduce((sum, line) => sum + line.amount * (VAT_CODE_RATE[code] / 100), 0);
+
+  // Services follow the standard rate, so surcharges land in the high band.
+  const vatHigh =
+    vatOn("vat_high_21") + surchargeTotal * (VAT_CODE_RATE.vat_high_21 / 100);
+  const vatMiddle = vatOn("vat_middle_12");
+  const vatLow = vatOn("vat_low_9");
+  const vatTotal = vatHigh + vatMiddle + vatLow;
+  const totalInclVat = totalExclVat + vatTotal;
+
+  // With no supplier total to reconcile against there is nothing unexplained;
+  // the build-up stands on its own.
+  const accounted = totalInclVat + creditRestriction;
+  const remainder = invoiceTotal === 0 ? 0 : invoiceTotal - accounted;
+
+  return {
+    materials,
+    optionsAmount,
+    surcharges: surchargeTotal,
+    totalExclVat,
+    vatHigh,
+    vatMiddle,
+    vatLow,
+    vatTotal,
+    totalInclVat,
+    creditRestriction,
+    remainder,
+    totalGeneral: accounted + remainder,
+  };
+};
 
 /**
  * The direction a stock movement pushes the on-hand quantity: `in` adds, `out`
@@ -1064,3 +1859,639 @@ export const roundToOrderQty = (
   }
   return target;
 };
+
+/**
+ * One revenue-bearing block of a quote's summary: what it brings in, what it
+ * makes against actual cost, and what it makes against today's replacement
+ * price. The two profit figures diverge whenever the market has moved since the
+ * goods were bought, which is exactly what the reference system's side-by-side
+ * "Profit" / "Profit w.r.t. Repl. price" columns exist to show.
+ */
+export type QuoteSummaryBlock = {
+  revenue: number;
+  profit: number;
+  profitPercent: number;
+  profitReplPrice: number;
+  profitReplPricePercent: number;
+};
+
+/**
+ * A material line as the summary reads it. `amount` is the revenue the line
+ * brings in; the two costs are line totals, not unit prices.
+ */
+export type QuoteSummaryLineInput = {
+  amount: number;
+  costAmount: number;
+  replacementCost: number;
+  weightKg: number;
+  theoreticalWeightKg: number;
+};
+
+/** An option line: revenue and its own cost, with no replacement-price basis. */
+export type QuoteSummaryOptionInput = {
+  amount: number;
+  cost: number;
+};
+
+/**
+ * A surcharge: the amount charged and the profit it carries. Surcharges are
+ * quoted at an agreed margin rather than costed per unit, so the profit is
+ * given rather than derived.
+ */
+export type QuoteSummarySurchargeInput = {
+  amount: number;
+  profit: number;
+};
+
+export type QuoteSummaryInput = {
+  lines: QuoteSummaryLineInput[];
+  options?: QuoteSummaryOptionInput[];
+  surcharges?: QuoteSummarySurchargeInput[];
+  transportCosts?: number;
+  handlingCosts?: number;
+  /** VAT percentage to apply to the net total. 0 leaves the quote VAT-free. */
+  vatRatePercent?: number;
+};
+
+export type QuoteSummary = {
+  materials: QuoteSummaryBlock;
+  options: QuoteSummaryBlock;
+  surcharges: QuoteSummaryBlock;
+  transportCosts: number;
+  handlingCosts: number;
+  total: QuoteSummaryBlock;
+  vatAmount: number;
+  totalInclVat: number;
+  avgKiloPrice: number;
+  totalWeightKg: number;
+  theoreticalWeightKg: number;
+};
+
+/**
+ * A stored column as the string a form control holds. NULL and undefined become
+ * the fallback (an empty string unless told otherwise), because an input's value
+ * must always be a string — handing it null makes React switch the field from
+ * controlled to uncontrolled mid-edit.
+ *
+ * The fallback matters for numeric columns: a decimal field wants "0.00" rather
+ * than "", so the box reads as a figure of zero instead of an empty one.
+ */
+export const toFormString = (
+  value: string | number | null | undefined,
+  fallback = "",
+): string => (value === null || value === undefined ? fallback : String(value));
+
+/**
+ * Turns an enum's const array and its label map into the options a `<Select>`
+ * takes, with a leading "Empty" entry — almost every dropdown on the document
+ * screens treats "unset" as a real choice, so the blank is the default rather
+ * than an omission.
+ */
+export const enumOptions = <T extends string>(
+  values: readonly T[],
+  labels: Record<T, string>,
+  emptyLabel = "Empty",
+): Array<{ value: string; label: string }> => [
+  { value: "", label: emptyLabel },
+  ...values.map((value) => ({ value, label: labels[value] })),
+];
+
+/**
+ * What a quote line is worth once its net price is known: the two cost bases,
+ * the two profits they produce, the weight and the running metres.
+ */
+export type QuoteLineFinancialsInput = {
+  netPrice: number;
+  quantity: number;
+  /** Average purchase price per unit. Falls back to the replacement price. */
+  purchasePrice: number;
+  replacementPrice: number;
+  /** Weight of one unit, used for both the line weight and the kilo price. */
+  theoreticalWeight: number;
+  /** The line's own length in mm, or the product's when the line has none. */
+  lengthMm: number;
+  /** Margin floor from the product group; 0 disables the too-low flag. */
+  minProfitMargin: number;
+};
+
+export type QuoteLineFinancials = {
+  amount: number;
+  purchasePrice: number;
+  costPrice: number;
+  costAmount: number;
+  replacementCost: number;
+  profit: number;
+  profitMargin: number;
+  profitReplPrice: number;
+  weightKg: number;
+  m1PerPiece: number;
+  profitTooLow: boolean;
+};
+
+/**
+ * Derives everything a quote line reports in money from its net price.
+ *
+ * The net price itself is resolved elsewhere — on the server from the contract,
+ * on the client from the list price for the pre-save preview — but the
+ * arithmetic on top of it is the same either way, so both go through here and
+ * the preview can never quietly disagree with what gets saved.
+ *
+ * A product that has never been purchased has no average purchase price, so its
+ * replacement price stands in: the goods cost *something*, and pretending
+ * otherwise would show the line as pure profit.
+ */
+export const quoteLineFinancials = ({
+  netPrice,
+  quantity,
+  purchasePrice,
+  replacementPrice,
+  theoreticalWeight,
+  lengthMm,
+  minProfitMargin,
+}: QuoteLineFinancialsInput): QuoteLineFinancials => {
+  const amount = netPrice * quantity;
+  const costPrice = purchasePrice > 0 ? purchasePrice : replacementPrice;
+  const costAmount = costPrice * quantity;
+  const replacementCost = replacementPrice * quantity;
+  const profit = amount - costAmount;
+  const profitMargin = profitMarginPercent(amount, profit);
+
+  return {
+    amount,
+    purchasePrice,
+    costPrice,
+    costAmount,
+    replacementCost,
+    profit,
+    profitMargin,
+    profitReplPrice: amount - replacementCost,
+    weightKg: quantity * theoreticalWeight,
+    m1PerPiece: lengthMm / 1000,
+    profitTooLow: minProfitMargin > 0 && profitMargin < minProfitMargin,
+  };
+};
+
+export type PostingLine = {
+  account: string;
+  debit: number;
+  credit: number;
+};
+
+export type PostingBalance = {
+  totalDebit: number;
+  totalCredit: number;
+  /** Debits less credits — zero for a well-formed entry. */
+  difference: number;
+  balanced: boolean;
+};
+
+/**
+ * Whether a set of posting lines balances.
+ *
+ * Double entry has exactly one rule: every entry moves the same total onto the
+ * debit side as onto the credit side. It is worth stating as code because it is
+ * the only check that catches a whole class of accounting bug at once — a
+ * forgotten VAT line, a surcharge posted to no counter-account, a credit note
+ * that reverses three lines out of four. None of those are visible in a list of
+ * journal rows; all of them show up here immediately.
+ *
+ * Rounding is allowed a cent, since amounts are decimals rendered to two places
+ * and a VAT calculation can legitimately land half a cent out. Anything larger
+ * is a missing line, not arithmetic.
+ */
+export const postingBalance = (lines: PostingLine[]): PostingBalance => {
+  const totalDebit = lines.reduce((sum, line) => sum + line.debit, 0);
+  const totalCredit = lines.reduce((sum, line) => sum + line.credit, 0);
+  const difference = totalDebit - totalCredit;
+
+  return {
+    totalDebit,
+    totalCredit,
+    difference,
+    balanced: Math.abs(difference) < 0.005,
+  };
+};
+
+/**
+ * Splits a signed amount onto the correct side of an account.
+ *
+ * Posting code otherwise repeats `amount > 0 ? ... : ...` at every call site,
+ * and a single one of them getting the sign backwards produces an entry that
+ * still balances while recording the opposite of what happened — the kind of
+ * error a trial balance cannot catch.
+ *
+ * A negative debit is a credit, and vice versa: reversals and credit notes
+ * arrive with negative amounts and must land on the other side rather than as a
+ * negative figure on the same one.
+ */
+export const debitCredit = (
+  amount: number,
+): { debit: number; credit: number } =>
+  amount >= 0 ? { debit: amount, credit: 0 } : { debit: 0, credit: -amount };
+
+export type LotRevaluationInput = {
+  /** What the lot held before the material left. */
+  previousQuantity: number;
+  /** What it holds now. */
+  remainingQuantity: number;
+  /** The lot's cost per unit, where it has one. */
+  unitCost: number;
+  /** The total the lot was carried at before. */
+  previousValue: number;
+};
+
+/**
+ * What a stock lot is worth once part of it has left.
+ *
+ * A lot carries a unit cost *and* a total, so taking material out without
+ * restating the total leaves fewer units sitting at the old value — the lot
+ * quietly becomes worth more per unit every time it is drawn down, and stock
+ * valuation drifts up permanently with nothing on any screen to reveal it.
+ *
+ * The unit cost is authoritative wherever there is one. Where there is not, the
+ * total is scaled by the share that remains, which keeps a drawdown
+ * proportional instead of writing the remainder down to nothing.
+ */
+export const restateLotValue = ({
+  previousQuantity,
+  remainingQuantity,
+  unitCost,
+  previousValue,
+}: LotRevaluationInput): number => {
+  if (remainingQuantity <= 0) {
+    return 0;
+  }
+  if (unitCost > 0) {
+    return remainingQuantity * unitCost;
+  }
+  if (previousQuantity <= 0) {
+    return 0;
+  }
+  return previousValue * (remainingQuantity / previousQuantity);
+};
+
+export type ProductionYieldInput = {
+  /** Material taken to the machine, out of the lot the order line reserved. */
+  consumed: number;
+  /** Finished goods the order line will be delivered from. */
+  produced: number;
+  /** Usable offcut going back to stock as a lot of its own. */
+  remnant: number;
+  /** What one unit of the input lot is carried at. */
+  inputUnitCost: number;
+};
+
+export type ProductionYield = {
+  /** Material that came out as neither goods nor remnant. */
+  waste: number;
+  /** True when more came out than went in — impossible, so a caller must refuse. */
+  impossible: boolean;
+  remnantCost: number;
+  producedCost: number;
+  producedUnitCost: number;
+};
+
+/**
+ * Splits the cost of the material a production run consumed across what it
+ * produced and what it put back.
+ *
+ * Sawing a bar destroys the lot it came from: what leaves the machine is
+ * customer goods, a usable offcut, and waste. So the quantities have to close —
+ *
+ *   consumed = produced + remnant + waste
+ *
+ * — and the money has to close with them, or stock value drifts every run.
+ *
+ * The remnant is carried at the input's unit cost, because it is the same
+ * material in a shorter length and anyone may order it next. Everything else,
+ * waste included, lands on the produced goods. That is deliberate: yield loss is
+ * a cost of the output that caused it, so a run that wastes half a bar shows the
+ * goods costing nearly twice the raw material — which is exactly the signal that
+ * makes bad sawing visible in the margin instead of hiding it in stock.
+ *
+ * Producing more than was consumed is flagged rather than silently absorbed. It
+ * means the figures are wrong, and inventing material to reconcile them is how a
+ * stock ledger starts lying.
+ */
+export const productionYield = ({
+  consumed,
+  produced,
+  remnant,
+  inputUnitCost,
+}: ProductionYieldInput): ProductionYield => {
+  const waste = consumed - produced - remnant;
+  const consumedCost = consumed * inputUnitCost;
+  const remnantCost = remnant * inputUnitCost;
+  const producedCost = consumedCost - remnantCost;
+
+  return {
+    waste,
+    impossible: waste < 0,
+    remnantCost,
+    producedCost,
+    producedUnitCost: produced > 0 ? producedCost / produced : 0,
+  };
+};
+
+export type QuoteLinePreviewInput = {
+  quantity: number;
+  lengthMm: number | null;
+  basePrice: number;
+  replacementPrice: number;
+  purchasePrice: number;
+  theoreticalWeight: number;
+  productLengthMm: number;
+  minProfitMargin: number;
+};
+
+/**
+ * What a line editor shows for a line that has not been saved yet: the same
+ * figures the server will store, priced off the list price alone.
+ *
+ * The contract's agreed net price and discounts are not applied here — the
+ * client has no business holding a customer's pricing terms — so a saved line
+ * can come out cheaper than this preview, never dearer. The screen says as much
+ * next to the grid.
+ */
+export const previewQuoteLine = ({
+  quantity,
+  lengthMm,
+  basePrice,
+  replacementPrice,
+  purchasePrice,
+  theoreticalWeight,
+  productLengthMm,
+  minProfitMargin,
+}: QuoteLinePreviewInput): QuoteLineFinancials & { netPrice: number } => {
+  const netPrice = basePrice > 0 ? basePrice : replacementPrice;
+
+  return {
+    netPrice,
+    ...quoteLineFinancials({
+      netPrice,
+      quantity,
+      purchasePrice,
+      replacementPrice,
+      theoreticalWeight,
+      lengthMm: lengthMm !== null && lengthMm > 0 ? lengthMm : productLengthMm,
+      minProfitMargin,
+    }),
+  };
+};
+
+/**
+ * The summary columns as the quote header stores them — decimal strings, any of
+ * which may be null on a row written before the column existed.
+ */
+export type QuoteSummarySnapshot = {
+  materialsRevenue: string | null;
+  materialsProfit: string | null;
+  materialsProfitReplPrice: string | null;
+  optionsRevenue: string | null;
+  optionsProfit: string | null;
+  optionsProfitReplPrice: string | null;
+  surchargesRevenue: string | null;
+  surchargesProfit: string | null;
+  surchargesProfitReplPrice: string | null;
+  transportCosts: string | null;
+  handlingCosts: string | null;
+  totalExclVat: string | null;
+  vatAmount: string | null;
+  totalInclVat: string | null;
+  avgKiloPrice: string | null;
+  totalWeightKg: string | null;
+  theorWeightKg: string | null;
+};
+
+const sum = (values: number[]): number =>
+  values.reduce((total, value) => total + value, 0);
+
+const summaryBlock = (
+  revenue: number,
+  profit: number,
+  profitReplPrice: number,
+): QuoteSummaryBlock => ({
+  revenue,
+  profit,
+  profitPercent: profitMarginPercent(revenue, profit),
+  profitReplPrice,
+  profitReplPricePercent: profitMarginPercent(revenue, profitReplPrice),
+});
+
+/**
+ * Rolls a quote's lines, options and surcharges up into the read-only summary
+ * shown on the quote screen.
+ *
+ * The shape follows the reference ERP exactly:
+ *
+ *   - Materials, options and surcharges each report revenue plus two profits —
+ *     against actual cost, and against replacement price.
+ *   - Transport and handling are costs with no revenue of their own, so they
+ *     only ever pull the profit columns down; they never touch revenue.
+ *   - The total line is the three revenue blocks added up, less those two costs.
+ *   - VAT applies to the net total, and the average kilo price is the net total
+ *     spread over the delivered weight.
+ *
+ * Nothing here is persisted by the caller's hand: the quote header stores this
+ * result as a snapshot so the list and the detail screen agree, but the numbers
+ * are always derived from the lines, never typed in.
+ */
+export const computeQuoteSummary = ({
+  lines,
+  options = [],
+  surcharges = [],
+  transportCosts = 0,
+  handlingCosts = 0,
+  vatRatePercent = 0,
+}: QuoteSummaryInput): QuoteSummary => {
+  const materialsRevenue = sum(lines.map((line) => line.amount));
+  const materials = summaryBlock(
+    materialsRevenue,
+    materialsRevenue - sum(lines.map((line) => line.costAmount)),
+    materialsRevenue - sum(lines.map((line) => line.replacementCost)),
+  );
+
+  // Options carry no replacement price of their own — the processing costs what
+  // it costs — so both profit columns report the same figure.
+  const optionsRevenue = sum(options.map((option) => option.amount));
+  const optionsProfit = optionsRevenue - sum(options.map((o) => o.cost));
+  const optionsBlock = summaryBlock(
+    optionsRevenue,
+    optionsProfit,
+    optionsProfit,
+  );
+
+  const surchargesRevenue = sum(surcharges.map((s) => s.amount));
+  const surchargesProfit = sum(surcharges.map((s) => s.profit));
+  const surchargesBlock = summaryBlock(
+    surchargesRevenue,
+    surchargesProfit,
+    surchargesProfit,
+  );
+
+  const totalRevenue =
+    materials.revenue + optionsBlock.revenue + surchargesBlock.revenue;
+  const nonRevenueCosts = transportCosts + handlingCosts;
+
+  const total = summaryBlock(
+    totalRevenue,
+    materials.profit +
+      optionsBlock.profit +
+      surchargesBlock.profit -
+      nonRevenueCosts,
+    materials.profitReplPrice +
+      optionsBlock.profitReplPrice +
+      surchargesBlock.profitReplPrice -
+      nonRevenueCosts,
+  );
+
+  const totalWeightKg = sum(lines.map((line) => line.weightKg));
+  const vatAmount = totalRevenue * (vatRatePercent / 100);
+
+  return {
+    materials,
+    options: optionsBlock,
+    surcharges: surchargesBlock,
+    transportCosts,
+    handlingCosts,
+    total,
+    vatAmount,
+    totalInclVat: totalRevenue + vatAmount,
+    avgKiloPrice: totalWeightKg === 0 ? 0 : totalRevenue / totalWeightKg,
+    totalWeightKg,
+    theoreticalWeightKg: sum(lines.map((line) => line.theoreticalWeightKg)),
+  };
+};
+
+/**
+ * The summary columns an order header stores. Narrower than a quote's: an order
+ * has no options, no transport/handling costs of its own and no separate
+ * theoretical weight, because by the time it exists the goods have been
+ * allocated and their real weight is known.
+ */
+export type OrderSummarySnapshot = Pick<
+  QuoteSummarySnapshot,
+  | "materialsRevenue"
+  | "materialsProfit"
+  | "materialsProfitReplPrice"
+  | "surchargesRevenue"
+  | "surchargesProfit"
+  | "totalExclVat"
+  | "vatAmount"
+  | "totalInclVat"
+  | "avgKiloPrice"
+  | "totalWeightKg"
+>;
+
+/**
+ * An order's stored summary in the shape the shared summary panel renders, so
+ * an order and a quote present their worth identically. The blocks an order
+ * does not carry read as zero rather than being hidden — the panel's shape is
+ * what makes the two documents comparable at a glance.
+ */
+export const orderSummaryFromSnapshot = (
+  order: OrderSummarySnapshot,
+): QuoteSummary =>
+  quoteSummaryFromSnapshot({
+    ...order,
+    optionsRevenue: null,
+    optionsProfit: null,
+    optionsProfitReplPrice: null,
+    // Surcharges are agreed at a margin, so their profit is the same figure
+    // whichever cost basis is used.
+    surchargesProfitReplPrice: order.surchargesProfit,
+    transportCosts: null,
+    handlingCosts: null,
+    theorWeightKg: order.totalWeightKg,
+  });
+
+/**
+ * Reads the summary a quote header already stores back into the shape the
+ * summary panel renders. The percentages are recomputed rather than stored,
+ * since a percentage of a stored revenue can never drift from it.
+ */
+export const quoteSummaryFromSnapshot = (
+  quote: QuoteSummarySnapshot,
+): QuoteSummary => {
+  const transportCosts = Number(quote.transportCosts ?? 0);
+  const handlingCosts = Number(quote.handlingCosts ?? 0);
+
+  return {
+    materials: summaryBlock(
+      Number(quote.materialsRevenue ?? 0),
+      Number(quote.materialsProfit ?? 0),
+      Number(quote.materialsProfitReplPrice ?? 0),
+    ),
+    options: summaryBlock(
+      Number(quote.optionsRevenue ?? 0),
+      Number(quote.optionsProfit ?? 0),
+      Number(quote.optionsProfitReplPrice ?? 0),
+    ),
+    surcharges: summaryBlock(
+      Number(quote.surchargesRevenue ?? 0),
+      Number(quote.surchargesProfit ?? 0),
+      Number(quote.surchargesProfitReplPrice ?? 0),
+    ),
+    transportCosts,
+    handlingCosts,
+    total: summaryBlock(
+      Number(quote.totalExclVat ?? 0),
+      Number(quote.materialsProfit ?? 0) +
+        Number(quote.optionsProfit ?? 0) +
+        Number(quote.surchargesProfit ?? 0) -
+        transportCosts -
+        handlingCosts,
+      Number(quote.materialsProfitReplPrice ?? 0) +
+        Number(quote.optionsProfitReplPrice ?? 0) +
+        Number(quote.surchargesProfitReplPrice ?? 0) -
+        transportCosts -
+        handlingCosts,
+    ),
+    vatAmount: Number(quote.vatAmount ?? 0),
+    totalInclVat: Number(quote.totalInclVat ?? 0),
+    avgKiloPrice: Number(quote.avgKiloPrice ?? 0),
+    totalWeightKg: Number(quote.totalWeightKg ?? 0),
+    theoreticalWeightKg: Number(quote.theorWeightKg ?? 0),
+  };
+};
+
+/**
+ * The summary columns an invoice header stores. The same set an order carries,
+ * except that an invoice names its totals after the document rather than the
+ * summary — an invoice's "amount excluding VAT" *is* its net total.
+ */
+export type InvoiceSummarySnapshot = Pick<
+  OrderSummarySnapshot,
+  | "materialsRevenue"
+  | "materialsProfit"
+  | "materialsProfitReplPrice"
+  | "surchargesRevenue"
+  | "surchargesProfit"
+  | "avgKiloPrice"
+  | "totalWeightKg"
+> & {
+  invoiceAmountExclVat: string | null;
+  invoiceAmountInclVat: string | null;
+};
+
+/**
+ * An invoice's stored summary in the shape the shared summary panel renders, so
+ * a quote, its order and the invoice that bills it all present their worth the
+ * same way and can be read against each other without conversion.
+ *
+ * VAT is the gap between the two stored totals rather than a column of its own:
+ * the invoice already stores both, and deriving it keeps the three figures from
+ * ever disagreeing.
+ */
+export const invoiceSummaryFromSnapshot = (
+  invoice: InvoiceSummarySnapshot,
+): QuoteSummary =>
+  orderSummaryFromSnapshot({
+    ...invoice,
+    totalExclVat: invoice.invoiceAmountExclVat,
+    totalInclVat: invoice.invoiceAmountInclVat,
+    vatAmount: (
+      Number(invoice.invoiceAmountInclVat ?? 0) -
+      Number(invoice.invoiceAmountExclVat ?? 0)
+    ).toFixed(2),
+  });

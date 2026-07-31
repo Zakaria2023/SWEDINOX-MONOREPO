@@ -26,14 +26,16 @@ import {
   SelectStockMovements,
   StockMovements,
 } from "@/db/schema/stock-movements";
-import {
-  InsertJournalEntries,
-  JournalEntries,
-} from "@/db/schema/journal-entries";
+import { JournalEntries } from "@/db/schema/journal-entries";
+import { mailDocument, sendPurchaseInvoiceEmail } from "@/emails/documents";
+import { buildPurchaseJournalEntry } from "@/lib/server/ledger";
 import { recordFreightMovement } from "@/lib/server/freight";
+import { VatCode } from "@/lib/enums";
 import {
   generateUuid,
   getPaymentTermDueDate,
+  restateLotValue,
+  summarisePurchaseInvoice,
   toDateString,
 } from "@/lib/helpers";
 import { currentUser } from "@clerk/nextjs/server";
@@ -47,9 +49,23 @@ export type PurchaseInvoiceActionResult = {
   success?: boolean;
 };
 
+// Everything the accounting summary derives is left out: a clerk keys the
+// supplier's total and their credit restriction, and the document works the
+// rest out from the lines it received.
 export type PurchaseInvoiceFields = Omit<
   InsertPurchaseInvoices,
-  "id" | "uuid" | "createdAt" | "updatedAt"
+  | "id"
+  | "uuid"
+  | "materials"
+  | "optionsAmount"
+  | "surcharges"
+  | "vatHigh"
+  | "vatMiddle"
+  | "vatLow"
+  | "remainder"
+  | "outstanding"
+  | "createdAt"
+  | "updatedAt"
 >;
 
 export type PurchaseInvoiceItemInput = {
@@ -78,6 +94,10 @@ export type PurchaseInvoiceHeaderEdit = Pick<
   | "expirationDate"
   | "paymentTerms"
   | "remarks"
+  // The only two figures on this document a person types. Correcting either
+  // re-derives the whole summary and moves the payable with it.
+  | "invoiceTotal"
+  | "creditRestriction"
 >;
 
 export type PurchaseInvoiceItemDetail = SelectPurchaseInvoiceItems & {
@@ -92,52 +112,6 @@ export type PurchaseInvoiceDetail = SelectPurchaseInvoices & {
   contactLastName: SelectContacts["lastName"] | null;
   items: PurchaseInvoiceItemDetail[];
   movements: SelectStockMovements[];
-};
-
-type PurchaseInvoicePosting = {
-  invoiceUuid: string;
-  invoiceId: number | null;
-  companyUuid: string | null;
-  debCreditor: string | null;
-  invoiceDate: Date | string | null;
-  amountExclVat: number;
-  vatAmount: number;
-  userId: string | null;
-  // When cancelling, the entry is booked with the opposite sign.
-  reversal?: boolean;
-};
-
-// Placeholder GL account code for purchases; swap for the real chart of
-// accounts later.
-const PURCHASES_ACCOUNT = "7000";
-
-// A purchase invoice posts to the purchase journal with the creditor as the
-// counter-account. `invoiceUuid` here is the purchase invoice's uuid and is
-// linked via purchaseInvoiceUuid (invoiceUuid is reserved for sales invoices).
-const buildPurchaseInvoiceJournalEntry = (
-  posting: PurchaseInvoicePosting,
-): InsertJournalEntries => {
-  const sign = posting.reversal ? -1 : 1;
-  const bookingDate = posting.invoiceDate
-    ? new Date(posting.invoiceDate).toISOString().split("T")[0]
-    : null;
-  return {
-    uuid: generateUuid(),
-    bookingDate,
-    documentDate: bookingDate,
-    documentNo: posting.invoiceId != null ? String(posting.invoiceId) : null,
-    journal: "purchase",
-    account: PURCHASES_ACCOUNT,
-    debCreditor: posting.debCreditor,
-    description: posting.reversal
-      ? "Purchase invoice cancelled"
-      : "Purchase invoice",
-    amount: (sign * posting.amountExclVat).toFixed(2),
-    vat: (sign * posting.vatAmount).toFixed(2),
-    companyUuid: posting.companyUuid,
-    purchaseInvoiceUuid: posting.invoiceUuid,
-    createdByUserId: posting.userId,
-  };
 };
 
 export const getPurchaseInvoices = async (): Promise<
@@ -165,19 +139,11 @@ export const createPurchaseInvoice = async (
   surcharges: PurchaseInvoiceSurchargeInput[] = [],
 ): Promise<PurchaseInvoiceActionResult> => {
   const uuid = generateUuid();
-  // Amounts posted to the purchase journal.
-  const exclVat =
-    Number(fields.materials ?? 0) +
-    Number(fields.optionsAmount ?? 0) +
-    Number(fields.surcharges ?? 0);
-  const vatAmount =
-    Number(fields.vatHigh ?? 0) +
-    Number(fields.vatMiddle ?? 0) +
-    Number(fields.vatLow ?? 0);
   try {
     // Validate the selected purchase-order lines before opening the
     // transaction. Receiving goods draws down the outstanding ordered quantity.
     const poItemByUuid = new Map<string, SelectPurchaseOrderItems>();
+    const vatCodeByProduct = new Map<string, VatCode | null>();
     if (items.length > 0) {
       const poItemUuids = items.map((item) => item.purchaseOrderItemUuid);
       const poItemRows = await db
@@ -186,6 +152,21 @@ export const createPurchaseInvoice = async (
         .where(inArray(PurchaseOrderItems.uuid, poItemUuids));
       for (const row of poItemRows) {
         poItemByUuid.set(row.uuid, row);
+      }
+
+      // Each line's VAT band comes from its own product, so an invoice mixing
+      // rates reports each in the right box rather than all at the high rate.
+      const productRows = await db
+        .select({ uuid: Products.uuid, vatCode: Products.vatCode })
+        .from(Products)
+        .where(
+          inArray(
+            Products.uuid,
+            poItemRows.map((row) => row.productUuid),
+          ),
+        );
+      for (const row of productRows) {
+        vatCodeByProduct.set(row.uuid, row.vatCode);
       }
 
       for (const item of items) {
@@ -227,10 +208,44 @@ export const createPurchaseInvoice = async (
         return due ? new Date(`${due}T00:00:00`) : null;
       })();
 
+    // The accounting summary, worked out from what was received rather than
+    // typed. Previously the form submitted none of these figures, so materials
+    // and VAT were always undefined — which meant every purchase invoice
+    // posted a zero to the purchase journal while the payable took the typed
+    // total. The ledger and the payable disagreed on every single one.
+    const bookedLines = items.map((item) => {
+      const poItem = poItemByUuid.get(item.purchaseOrderItemUuid);
+      const netPrice = Number(poItem?.netPrice ?? 0);
+      return {
+        amount: netPrice * Number(item.quantity),
+        vatCode: poItem ? (vatCodeByProduct.get(poItem.productUuid) ?? null) : null,
+      };
+    });
+
+    const summary = summarisePurchaseInvoice({
+      lines: bookedLines,
+      surcharges: surcharges.map((surcharge) => Number(surcharge.amount ?? 0)),
+      creditRestriction: Number(fields.creditRestriction ?? 0),
+      invoiceTotal: Number(fields.invoiceTotal ?? 0),
+    });
+
     await db.transaction(async (tx) => {
-      await tx
-        .insert(PurchaseInvoices)
-        .values({ ...fields, expirationDate: derivedExpiration, uuid });
+      await tx.insert(PurchaseInvoices).values({
+        ...fields,
+        expirationDate: derivedExpiration,
+        uuid,
+        materials: summary.materials.toFixed(2),
+        optionsAmount: summary.optionsAmount.toFixed(2),
+        surcharges: summary.surcharges.toFixed(2),
+        vatHigh: summary.vatHigh.toFixed(2),
+        vatMiddle: summary.vatMiddle.toFixed(2),
+        vatLow: summary.vatLow.toFixed(2),
+        remainder: summary.remainder.toFixed(2),
+        // Owed to the supplier in full until payments are registered against
+        // it. The document's own bottom line, which reconciles to the total on
+        // their paperwork.
+        outstanding: summary.totalGeneral.toFixed(2),
+      });
 
       const [inserted] = await tx
         .select({ id: PurchaseInvoices.id })
@@ -239,14 +254,20 @@ export const createPurchaseInvoice = async (
         .limit(1);
 
       await tx.insert(JournalEntries).values(
-        buildPurchaseInvoiceJournalEntry({
-          invoiceUuid: uuid,
+        buildPurchaseJournalEntry({
+          purchaseInvoiceUuid: uuid,
           invoiceId: inserted?.id ?? null,
           companyUuid: fields.companyUuid ?? null,
           debCreditor: fields.creditorNo ?? null,
           invoiceDate: fields.invoiceDate ?? null,
-          amountExclVat: exclVat,
-          vatAmount,
+          amountExclVat: summary.totalExclVat,
+          vatAmount: summary.vatTotal,
+          creditRestriction: summary.creditRestriction,
+          remainder: summary.remainder,
+          // The lines are what became stock — each one is priced at exactly the
+          // figure its lot is valued at below. Surcharges bought no material, so
+          // they stay a cost of buying rather than inflating the shelf.
+          inventoryValue: summary.materials,
           userId,
         }),
       );
@@ -287,6 +308,12 @@ export const createPurchaseInvoice = async (
 
         // The goods physically arrive now: create the stock lot and log the
         // "in". This is the receipt — the purchase order only recorded intent.
+        //
+        // The lot is valued at what was agreed to pay for it. This is the
+        // moment a cost enters the business: every sales order later drawn from
+        // this lot is costed against this figure, so a lot received without one
+        // would make every downstream margin a fiction.
+        const valuationPrice = Number(poItem.netPrice ?? 0);
         const stockUuid = generateUuid();
         await tx.insert(Stock).values({
           uuid: stockUuid,
@@ -296,6 +323,8 @@ export const createPurchaseInvoice = async (
           supplierUuid: fields.companyUuid ?? null,
           quantity: item.quantity,
           status: "pending",
+          valuationPrice: valuationPrice.toFixed(4),
+          valuationEuro: (valuationPrice * Number(item.quantity)).toFixed(2),
         });
 
         await tx.insert(PurchaseInvoiceItems).values({
@@ -303,7 +332,13 @@ export const createPurchaseInvoice = async (
           purchaseInvoiceUuid: uuid,
           stockUuid,
           productUuid: poItem.productUuid,
+          purchaseOrderItemUuid: poItem.uuid,
           quantity: item.quantity,
+          // Snapshotted at receipt: re-pricing the purchase order afterwards
+          // must not rewrite an invoice already posted.
+          netPrice: valuationPrice.toFixed(4),
+          amount: (valuationPrice * Number(item.quantity)).toFixed(2),
+          vatCode: vatCodeByProduct.get(poItem.productUuid) ?? null,
         });
 
         await tx.insert(StockMovements).values({
@@ -348,6 +383,13 @@ export const createPurchaseInvoice = async (
     };
   }
 
+  // Confirms to the supplier what we booked and what we received. Runs after
+  // the transaction has committed and before the redirect, which throws.
+  await mailDocument(
+    () => sendPurchaseInvoiceEmail(uuid),
+    `Purchase invoice ${uuid}`,
+  );
+
   revalidatePath("/purchase-invoices");
   revalidatePath("/stock");
   revalidatePath("/stock-movements");
@@ -360,7 +402,12 @@ export const updatePurchaseInvoice = async (
 ): Promise<PurchaseInvoiceActionResult> => {
   try {
     const [invoice] = await db
-      .select({ cancelled: PurchaseInvoices.cancelled })
+      .select({
+        cancelled: PurchaseInvoices.cancelled,
+        invoiceTotal: PurchaseInvoices.invoiceTotal,
+        creditRestriction: PurchaseInvoices.creditRestriction,
+        outstanding: PurchaseInvoices.outstanding,
+      })
       .from(PurchaseInvoices)
       .where(eq(PurchaseInvoices.uuid, uuid))
       .limit(1);
@@ -383,9 +430,53 @@ export const updatePurchaseInvoice = async (
         return due ? new Date(`${due}T00:00:00`) : null;
       })();
 
+    // Re-derive the summary from the lines that were received, against the
+    // corrected supplier total and credit restriction.
+    const lines = await db
+      .select({
+        amount: PurchaseInvoiceItems.amount,
+        vatCode: PurchaseInvoiceItems.vatCode,
+      })
+      .from(PurchaseInvoiceItems)
+      .where(eq(PurchaseInvoiceItems.purchaseInvoiceUuid, uuid));
+
+    const surchargeRows = await db
+      .select({ amount: PurchaseInvoiceSurcharges.amount })
+      .from(PurchaseInvoiceSurcharges)
+      .where(eq(PurchaseInvoiceSurcharges.purchaseInvoiceUuid, uuid));
+
+    const summary = summarisePurchaseInvoice({
+      lines: lines.map((line) => ({
+        amount: Number(line.amount ?? 0),
+        vatCode: line.vatCode,
+      })),
+      surcharges: surchargeRows.map((row) => Number(row.amount ?? 0)),
+      creditRestriction: Number(
+        fields.creditRestriction ?? invoice.creditRestriction ?? 0,
+      ),
+      invoiceTotal: Number(fields.invoiceTotal ?? invoice.invoiceTotal ?? 0),
+    });
+
+    // Move what is owed by the correction rather than resetting it: payments
+    // already registered against this invoice must not be un-received.
+    const outstanding =
+      Number(invoice.outstanding) +
+      (summary.totalGeneral - Number(invoice.invoiceTotal ?? 0));
+
     await db
       .update(PurchaseInvoices)
-      .set({ ...fields, expirationDate })
+      .set({
+        ...fields,
+        expirationDate,
+        materials: summary.materials.toFixed(2),
+        optionsAmount: summary.optionsAmount.toFixed(2),
+        surcharges: summary.surcharges.toFixed(2),
+        vatHigh: summary.vatHigh.toFixed(2),
+        vatMiddle: summary.vatMiddle.toFixed(2),
+        vatLow: summary.vatLow.toFixed(2),
+        remainder: summary.remainder.toFixed(2),
+        outstanding: outstanding.toFixed(2),
+      })
       .where(eq(PurchaseInvoices.uuid, uuid));
   } catch (error) {
     return {
@@ -481,8 +572,8 @@ export const cancelPurchaseInvoice = async (
 
       // Reverse the purchase invoice's ledger posting.
       await tx.insert(JournalEntries).values(
-        buildPurchaseInvoiceJournalEntry({
-          invoiceUuid: uuid,
+        buildPurchaseJournalEntry({
+          purchaseInvoiceUuid: uuid,
           invoiceId: invoice.id,
           companyUuid: invoice.companyUuid,
           debCreditor: invoice.creditorNo,
@@ -495,6 +586,11 @@ export const cancelPurchaseInvoice = async (
             Number(invoice.vatHigh) +
             Number(invoice.vatMiddle) +
             Number(invoice.vatLow),
+          creditRestriction: Number(invoice.creditRestriction),
+          remainder: Number(invoice.remainder),
+          // The lots this invoice created are pulled back out below, so the
+          // inventory side reverses with them.
+          inventoryValue: Number(invoice.materials),
           userId: userId ?? null,
           reversal: true,
         }),
@@ -528,10 +624,22 @@ export const cancelPurchaseInvoice = async (
           Number(stockRow.quantity) - Number(item.quantity)
         ).toFixed(3);
 
-        // Reverse the "in" — pull the received goods back out of stock.
+        // Reverse the "in" — pull the received goods back out of stock, value
+        // and all. Reducing the quantity alone left the lot still carrying what
+        // was paid for goods that had been un-received, so cancelling a receipt
+        // permanently overstated the shelf.
         await tx
           .update(Stock)
-          .set({ quantity: remainingQuantity, status: "cancelled" })
+          .set({
+            quantity: remainingQuantity,
+            status: "cancelled",
+            valuationEuro: restateLotValue({
+              previousQuantity: Number(stockRow.quantity),
+              remainingQuantity: Number(remainingQuantity),
+              unitCost: Number(stockRow.valuationPrice ?? 0),
+              previousValue: Number(stockRow.valuationEuro ?? 0),
+            }).toFixed(2),
+          })
           .where(eq(Stock.uuid, item.stockUuid));
 
         await tx.insert(StockMovements).values({

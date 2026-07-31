@@ -15,7 +15,13 @@ import { QuoteItems, SelectQuoteItems } from "@/db/schema/quote-items";
 import { Quotes, SelectQuotes } from "@/db/schema/quotes";
 import { RevenueGroups, SelectRevenueGroups } from "@/db/schema/revenue-groups";
 import { SelectStock, Stock } from "@/db/schema/stock";
-import { describeError, generateUuid, resolveOrderTypeLabel } from "@/lib/helpers";
+import {
+  describeError,
+  generateUuid,
+  quoteLineFinancials,
+  resolveOrderTypeLabel,
+} from "@/lib/helpers";
+import { buildOrderSummary } from "@/app/(dashboard)/orders/actions";
 import { and, asc, count, desc, eq, gte, isNull, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
@@ -342,6 +348,25 @@ export const convertQuoteToOrder = async (
           );
         }
 
+        // The quote priced this line from the product's average purchase price,
+        // because no lot had been chosen yet. Now one has, so the order line is
+        // costed against that lot's own valuation — which is why an order can
+        // report a truer margin than the quote it came from, and why the two
+        // figures legitimately differ.
+        const financials = quoteLineFinancials({
+          netPrice: Number(allocation.line.netPrice ?? 0),
+          quantity: allocation.quantity,
+          purchasePrice: Number(allocation.stock.valuationPrice ?? 0),
+          replacementPrice: Number(allocation.line.replacementPrice ?? 0),
+          theoreticalWeight:
+            allocation.quantity === 0
+              ? 0
+              : Number(allocation.line.weightKg ?? 0) /
+                Number(allocation.line.quantity ?? 1),
+          lengthMm: allocation.line.lengthMm ?? 0,
+          minProfitMargin: 0,
+        });
+
         await tx.insert(OrderItems).values({
           uuid: generateUuid(),
           orderUuid,
@@ -350,6 +375,7 @@ export const convertQuoteToOrder = async (
           quantity,
           qtyPlanned: quantity,
           qtyReserved: quantity,
+          kgPlanned: financials.weightKg.toFixed(2),
           lineNumber: index + 1,
           status: "reserved",
           lineType: allocation.line.lineType,
@@ -359,13 +385,20 @@ export const convertQuoteToOrder = async (
           lengthMm: allocation.line.lengthMm,
           widthMm: allocation.line.widthMm,
           thicknessMm: allocation.line.thicknessMm,
+
           grossPrice: allocation.line.grossPrice,
           priceUnit: allocation.line.priceUnit,
           groupDiscount: allocation.line.groupDiscount,
           lineDiscount: allocation.line.lineDiscount,
-          amount: (
-            Number(allocation.line.netPrice ?? 0) * allocation.quantity
-          ).toFixed(2),
+          netPrice: allocation.line.netPrice,
+          amount: financials.amount.toFixed(2),
+
+          costPrice: financials.costPrice.toFixed(4),
+          costAmount: financials.costAmount.toFixed(2),
+          replacementPrice: allocation.line.replacementPrice,
+          profit: financials.profit.toFixed(2),
+          profitMargin: financials.profitMargin.toFixed(2),
+          profitReplPrice: financials.profitReplPrice.toFixed(2),
         });
       }
 
@@ -373,6 +406,11 @@ export const convertQuoteToOrder = async (
         .update(QuoteItems)
         .set({ convertedToOrderUuid: orderUuid, status: "released" })
         .where(eq(QuoteItems.quoteUuid, quoteUuid));
+
+      await tx
+        .update(Orders)
+        .set(await buildOrderSummary(tx, orderUuid, quote.companyUuid))
+        .where(eq(Orders.uuid, orderUuid));
     });
 
     revalidatePath("/quote-lines");

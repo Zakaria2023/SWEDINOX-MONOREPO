@@ -1,12 +1,18 @@
 import {
   AddressCategory,
+  AgeingBucket,
   ArticleGroup,
   AvailableAt,
   CeStandard,
   CertificaatOption,
   CommunicationSettingDocumentType,
+  CountStockBasis,
   CustomerLabelOption,
   DeliveryTimeUnit,
+  DispatchStrategy,
+  PriceTierBase,
+  ProductDimensionShape,
+  StockLabelBreakdown,
   CommunicationSettingShape,
   CommunicationSettingType,
   CounterOrderPriority,
@@ -46,7 +52,9 @@ import {
   InvoiceFrequency,
   InvoicePaymentTerm,
   InvoiceSurchargeDescription,
+  InvoiceDocumentType,
   InvoiceVatScenario,
+  LedgerAccountType,
   InvoicingMethod,
   ProcessedOption,
   ProductQualityStandard,
@@ -79,6 +87,7 @@ import {
   WarehouseProductType,
   WarehouseTransportRegion,
   TransportMode,
+  ReminderStage,
   ReturnOrderReason,
   ReturnOrderStatus,
   OrderDeblockType,
@@ -92,7 +101,10 @@ import {
   TransporterCountry,
   TransporterPriceUnit,
   OrderWeightType,
+  PaymentMethod,
   PurchaseCompanyType,
+  PurchaseQuoteStatus,
+  PurchaseRequestStatus,
   PurchaseOrderType,
   ComplaintType,
   ComplaintCategory,
@@ -653,6 +665,12 @@ export const INVOICE_VAT_SCENARIO_LABELS: Record<InvoiceVatScenario, string> = {
     "Sales outside the EU with a reverse charge",
 };
 
+export const INVOICE_DOCUMENT_TYPE_LABELS: Record<InvoiceDocumentType, string> =
+  {
+    invoice: "Invoice",
+    credit_note: "Credit note",
+  };
+
 export const INVOICE_PAYMENT_TERM_LABELS: Record<InvoicePaymentTerm, string> = {
   prepayment: "Prepayment",
   cash: "Cash",
@@ -854,6 +872,14 @@ export const STOCK_MOVEMENT_TYPE_LABELS: Record<StockMovementType, string> = {
   out: "Out",
 };
 
+export const LEDGER_ACCOUNT_TYPE_LABELS: Record<LedgerAccountType, string> = {
+  asset: "Asset",
+  liability: "Liability",
+  equity: "Equity",
+  revenue: "Revenue",
+  expense: "Expense",
+};
+
 export const STOCK_MOVEMENT_REASON_LABELS: Record<StockMovementReason, string> =
   {
     purchase_receipt: "Purchase Receipt",
@@ -865,7 +891,12 @@ export const STOCK_MOVEMENT_REASON_LABELS: Record<StockMovementReason, string> =
     manual_correction: "Manual Correction",
     count_correction: "Count Correction",
     damaged: "Damaged / Written Off",
+    production_input: "Production Input",
     production_output: "Production Output",
+    production_remnant: "Production Remnant",
+    sawing_waste: "Sawing Waste",
+    sales_return: "Sales Return",
+    purchase_return: "Purchase Return",
   };
 
 export const CUSTOMER_LABEL_OPTION_LABELS: Record<CustomerLabelOption, string> =
@@ -1128,6 +1159,7 @@ export const ORDER_ITEM_STATUS_LABELS: Record<OrderItemStatus, string> = {
   reserved: "Reserved",
   delivered: "Delivered",
   invoiced: "Invoiced",
+  returned: "Returned",
   cancelled: "Cancelled",
 };
 
@@ -1262,6 +1294,34 @@ export const PURCHASE_ORDER_STATUS_LABELS: Record<PurchaseOrderStatus, string> =
     pre_notified: "Pre-notified",
     completed: "Completed",
     cancelled: "Cancelled",
+  };
+
+export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+  bank_transfer: "Bank transfer",
+  direct_debit: "Direct debit",
+  cash: "Cash",
+  card: "Card",
+  offset: "Offset",
+};
+
+export const PURCHASE_REQUEST_STATUS_LABELS: Record<
+  PurchaseRequestStatus,
+  string
+> = {
+  draft: "Draft",
+  sent: "Sent",
+  quoted: "Quoted",
+  awarded: "Awarded",
+  cancelled: "Cancelled",
+};
+
+export const PURCHASE_QUOTE_STATUS_LABELS: Record<PurchaseQuoteStatus, string> =
+  {
+    open: "Open",
+    received: "Received",
+    awarded: "Awarded",
+    lost: "Lost",
+    expired: "Expired",
   };
 
 export const PURCHASE_COMPANY_TYPE_LABELS: Record<PurchaseCompanyType, string> =
@@ -1592,4 +1652,60 @@ export const SAWING_STATUS_LABELS: Record<SawingStatus, string> = {
   in_progress: "In progress",
   completed: "Completed",
   cancelled: "Cancelled",
+};
+
+export const PRODUCT_DIMENSION_SHAPE_LABELS: Record<
+  ProductDimensionShape,
+  string
+> = {
+  round: "Round",
+  square: "Square",
+  flat: "Flat",
+  rectangular: "Rectangular",
+  hexagonal: "Hexagonal",
+  octagonal: "Octagonal",
+  tube_round: "Tube — round",
+  tube_square: "Tube — square",
+  tube_rectangular: "Tube — rectangular",
+  sheet: "Sheet",
+  plate: "Plate",
+  beam: "Beam",
+  angle: "Angle",
+};
+
+export const DISPATCH_STRATEGY_LABELS: Record<DispatchStrategy, string> = {
+  lifo: "LIFO",
+  fifo: "FIFO",
+};
+
+export const PRICE_TIER_BASE_LABELS: Record<PriceTierBase, string> = {
+  order_line: "Order line",
+  group_product: "Group product",
+  product_group: "Product group",
+};
+
+export const STOCK_LABEL_BREAKDOWN_LABELS: Record<StockLabelBreakdown, string> =
+  {
+    per_line_bundle: "Per line / bundle",
+    per_bundle: "Per bundle",
+    amount_per_line: "Amount (per line)",
+  };
+
+export const COUNT_STOCK_BASIS_LABELS: Record<CountStockBasis, string> = {
+  technical: "Technical stock",
+  available: "Available stock",
+};
+
+export const AGEING_BUCKET_LABELS: Record<AgeingBucket, string> = {
+  not_due: "Not yet due",
+  days_1_30: "1 – 30 days",
+  days_31_60: "31 – 60 days",
+  days_61_90: "61 – 90 days",
+  days_over_90: "Over 90 days",
+};
+
+export const REMINDER_STAGE_LABELS: Record<ReminderStage, string> = {
+  first: "First reminder",
+  second: "Second reminder",
+  final: "Final notice",
 };

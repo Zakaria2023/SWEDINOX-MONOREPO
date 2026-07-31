@@ -9,6 +9,10 @@ import {
   SelectPurchaseOrders,
 } from "@/db/schema/purchase-orders";
 import { describeError } from "@/lib/helpers";
+import {
+  averagePurchasePriceSql,
+  lastPurchasePriceSql,
+} from "@/lib/server/purchase-pricing";
 import { and, asc, eq, inArray, isNotNull } from "drizzle-orm";
 
 export type CdDeliveryRow = {
@@ -29,8 +33,10 @@ export type CdDeliveryRow = {
 
 // Cross-dock / direct-delivery order lines still in progress: order lines drawn
 // from a purchase order (purchaseOrderUuid set) that aren't invoiced or
-// cancelled yet. Stock value is the goods at replacement price; purchase value
-// is the goods at average purchase price; the difference is the revaluation.
+// cancelled yet. Both values come off the article's purchase invoices, since
+// that is where its cost is recorded: stock value is the goods at the price
+// last invoiced, purchase value is the goods at the average invoiced price, and
+// the difference is the revaluation.
 export const getCdDeliveriesInProgress = async (): Promise<CdDeliveryRow[]> => {
   try {
     const rows = await db
@@ -44,8 +50,8 @@ export const getCdDeliveriesInProgress = async (): Promise<CdDeliveryRow[]> => {
         quantity: OrderItems.quantity,
         unit: OrderItems.unit,
         weightKg: OrderItems.kgPlanned,
-        replacementPrice: Products.replacementPrice,
-        averagePurchasePrice: Products.averagePurchasePrice,
+        replacementPrice: lastPurchasePriceSql(Products.uuid),
+        averagePurchasePrice: averagePurchasePriceSql(Products.uuid),
         purchaseOrderId: PurchaseOrders.id,
       })
       .from(OrderItems)

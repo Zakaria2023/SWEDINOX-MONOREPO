@@ -36,6 +36,10 @@ export const ReturnOrderItems = mysqlTable(
     // The original sales order/line this return came from.
     originalOrderUuid: char("original_order_uuid", { length: 36 }),
     originalOrderLine: int("original_order_line"),
+    // The exact order line coming back. The order/line-number pair above
+    // identifies it for a human; this identifies it for the credit note, which
+    // has to find what was billed and must not guess.
+    originalOrderItemUuid: char("original_order_item_uuid", { length: 36 }),
 
     lineNumber: int("line_number"),
     lineType: varchar("line_type", { length: 50 }),
@@ -88,6 +92,9 @@ export const ReturnOrderItems = mysqlTable(
     index("idx_return_order_items_complaint_uuid").on(table.complaintUuid),
     index("idx_return_order_items_original_order_uuid").on(
       table.originalOrderUuid,
+    ),
+    index("idx_return_order_items_original_order_item_uuid").on(
+      table.originalOrderItemUuid,
     ),
     foreignKey({
       name: "fk_return_order_items_return_order",

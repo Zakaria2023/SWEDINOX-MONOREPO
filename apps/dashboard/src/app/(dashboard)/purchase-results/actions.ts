@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { PurchaseLineReceivals } from "@/db/schema/purchase-line-receivals";
 import { Products } from "@/db/schema/products";
 import { ProductGroups } from "@/db/schema/product-groups";
+import { lastPurchasePriceSql } from "@/lib/server/purchase-pricing";
 import { eq, sql } from "drizzle-orm";
 
 export type PurchaseResultRow = {
@@ -20,7 +21,8 @@ export type PurchaseResultRow = {
 };
 
 // What was actually paid for received goods vs. what replacing them would cost
-// today (the product's replacement price x received quantity).
+// today. Replacing them costs the last price a supplier invoiced the article at
+// — the product carries no replacement price of its own.
 export const getPurchaseResults = async (): Promise<PurchaseResultRow[]> => {
   try {
     const year = sql<number>`YEAR(${PurchaseLineReceivals.receiptDate})`;
@@ -34,7 +36,7 @@ export const getPurchaseResults = async (): Promise<PurchaseResultRow[]> => {
         year,
         month,
         purchaseValue: sql<string>`COALESCE(SUM(${PurchaseLineReceivals.lineAmount}), 0)`,
-        replacementValue: sql<string>`COALESCE(SUM(${Products.replacementPrice} * ${PurchaseLineReceivals.receivedQty}), 0)`,
+        replacementValue: sql<string>`COALESCE(SUM(${lastPurchasePriceSql(Products.uuid)} * ${PurchaseLineReceivals.receivedQty}), 0)`,
       })
       .from(PurchaseLineReceivals)
       .innerJoin(Products, eq(PurchaseLineReceivals.productUuid, Products.uuid))

@@ -64,8 +64,8 @@ export const getInactiveCompanies = async (): Promise<InactiveCompanyRow[]> => {
       .leftJoin(primaryContact, eq(Companies.uuid, primaryContact.companyUuid))
       .leftJoin(orderStats, eq(Companies.uuid, orderStats.companyUuid))
       .where(
-        // Either flagged inactive by hand, or a customer/prospect that hasn't
-        // ordered in the last 12 months.
+        // Either flagged inactive by hand, or a customer/prospect where nothing
+        // has happened on the account for twelve months.
         or(
           eq(Companies.isInactive, true),
           and(
@@ -74,10 +74,23 @@ export const getInactiveCompanies = async (): Promise<InactiveCompanyRow[]> => {
               sql`JSON_CONTAINS(${Companies.roles}, '"prospect"')`,
             ),
             or(
-              isNull(orderStats.lastOrderDate),
+              // Ordered before, but not lately. NULL fails this comparison, so
+              // a customer who has never ordered is left to the next branch.
               lt(
                 orderStats.lastOrderDate,
                 sql`DATE_SUB(NOW(), INTERVAL 12 MONTH)`,
+              ),
+              // Never ordered — but only counts as inactive once the account has
+              // been on the books long enough for that to mean something. A
+              // customer taken on last week has not gone quiet, they have not
+              // started; listing them made every new customer look dormant and
+              // the screen read as "all companies".
+              and(
+                isNull(orderStats.lastOrderDate),
+                lt(
+                  Companies.createdAt,
+                  sql`DATE_SUB(NOW(), INTERVAL 12 MONTH)`,
+                ),
               ),
             ),
           ),

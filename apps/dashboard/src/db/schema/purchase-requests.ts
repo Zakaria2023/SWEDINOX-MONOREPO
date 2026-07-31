@@ -19,6 +19,7 @@ import {
   orderWeightTypes,
   purchaseCompanyTypes,
   purchaseOrderTypes,
+  purchaseRequestStatuses,
 } from "../../lib/enums";
 import { Companies } from "./companies";
 import { CompanyAddresses } from "./company-addresses";
@@ -39,6 +40,12 @@ export const PurchaseRequests = mysqlTable(
     orderCategory: varchar("order_category", { length: 100 }),
     reference: varchar("reference", { length: 255 }),
     ourReference: varchar("our_reference", { length: 255 }),
+
+    // Tracks the request through the RFQ cycle: raised, sent to suppliers,
+    // quotes back, and finally one of them awarded as a purchase order.
+    status: mysqlEnum("status", purchaseRequestStatuses)
+      .default("draft")
+      .notNull(),
 
     // ── Purchase order type ───────────────────────────────────────────────────
     purchaseOrderType: mysqlEnum("purchase_order_type", purchaseOrderTypes),

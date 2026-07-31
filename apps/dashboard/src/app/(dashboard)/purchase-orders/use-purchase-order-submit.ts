@@ -160,7 +160,9 @@ export const usePurchaseOrderSubmit = ({
   const purchaserOptions: SelectOption[] = [emptyOpt, ...clerkUsers];
 
   const resetItems = () =>
-    form.setValue("items", [{ productUuid: "", quantity: "" }]);
+    form.setValue("items", [
+      { productUuid: "", quantity: "", netPrice: "", priceUnit: "" },
+    ]);
 
   const handleSupplierChange = (uuid: string) => {
     form.setValue("supplierUuid", uuid);

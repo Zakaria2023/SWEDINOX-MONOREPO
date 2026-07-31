@@ -104,6 +104,22 @@ export const SurchargeDialog = ({
                 />
               </div>
             </div>
+
+            {/* What the surcharge earns after what it cost to provide — bought-in
+                freight, outsourced cutting. Left empty it contributes nothing to
+                margin rather than counting as pure profit. */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <FormLabel htmlFor="surchargeProfit">Profit</FormLabel>
+                <Input
+                  id="surchargeProfit"
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  {...surchargeForm.register("profit")}
+                />
+              </div>
+            </div>
           </DialogBody>
 
           <DialogFooter>

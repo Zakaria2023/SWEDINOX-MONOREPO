@@ -31,6 +31,7 @@ import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import {
   createReturnOrder,
+  updateReturnOrder,
   ReturnOrderActionResult,
   ReturnOrderExtras,
 } from "./actions";
@@ -43,6 +44,9 @@ import { toDecimal } from "@/lib/helpers";
 
 type UseReturnOrderSubmitParams = {
   companies: CompanyOption[];
+  /** Set when editing an existing return order; omitted when creating one. */
+  returnOrderUuid?: string;
+  defaultValues?: ReturnOrderFormValues;
 };
 
 const emptyOpt = { value: "", label: "Empty" };
@@ -61,6 +65,8 @@ const addressLabel = (a: AddressOption) =>
 
 export const useReturnOrderSubmit = ({
   companies,
+  returnOrderUuid,
+  defaultValues,
 }: UseReturnOrderSubmitParams) => {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -72,7 +78,7 @@ export const useReturnOrderSubmit = ({
 
   const form = useForm<ReturnOrderFormValues>({
     resolver: zodResolver(returnOrderSchema),
-    defaultValues: DEFAULT_RETURN_ORDER,
+    defaultValues: defaultValues ?? DEFAULT_RETURN_ORDER,
   });
 
   const isPickup = form.watch("isPickup");
@@ -153,7 +159,10 @@ export const useReturnOrderSubmit = ({
     });
   };
 
-  const handleCancel = () => router.push("/return-orders");
+  const handleCancel = () =>
+    router.push(
+      returnOrderUuid ? `/return-orders/${returnOrderUuid}` : "/return-orders",
+    );
 
   const onSubmit = form.handleSubmit((values) => {
     startTransition(async () => {
@@ -179,8 +188,7 @@ export const useReturnOrderSubmit = ({
         })),
       };
 
-      const result = await createReturnOrder(
-        {
+      const fields = {
           companyUuid: values.companyUuid,
           orderUuid: values.orderUuid || null,
           complaintRef: values.complaintRef || null,
@@ -224,13 +232,19 @@ export const useReturnOrderSubmit = ({
 
           remarks: values.remarks || null,
           documents: values.documents?.length ? values.documents : null,
-        },
-        extras,
-      );
+      };
 
+      // Updating redirects from inside the action, so only the create path has
+      // a result worth navigating on.
+      if (returnOrderUuid) {
+        setState(await updateReturnOrder(returnOrderUuid, fields, extras));
+        return;
+      }
+
+      const result = await createReturnOrder(fields, extras);
       setState(result);
-      if (result.success) {
-        router.push("/return-orders");
+      if (result.success && result.returnOrderUuid) {
+        router.push(`/return-orders/${result.returnOrderUuid}`);
       }
     });
   });
@@ -238,6 +252,7 @@ export const useReturnOrderSubmit = ({
   return {
     form,
     isPending,
+    isEditing: Boolean(returnOrderUuid),
     onSubmit,
     state,
     isPickup,

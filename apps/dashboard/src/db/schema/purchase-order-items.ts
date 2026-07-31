@@ -54,6 +54,21 @@ export const PurchaseOrderItems = mysqlTable(
       "0.00",
     ),
 
+    // ── Price ─────────────────────────────────────────────────────────────────
+    // What was agreed to pay the supplier. Held at four decimals because a
+    // purchase price is quoted per kilo or per metre far more often than per
+    // piece, and rounding it to cents before multiplying by a tonne loses real
+    // money.
+    //
+    // A received lot is valued at this price, which is what makes a sales order
+    // line's cost — and therefore its margin — a true figure rather than a
+    // stand-in for the replacement price.
+    netPrice: decimal("net_price", { precision: 15, scale: 4 }).default(
+      "0.0000",
+    ),
+    priceUnit: varchar("price_unit", { length: 10 }),
+    amount: decimal("amount", { precision: 15, scale: 2 }).default("0.00"),
+
     // ── Receipt ───────────────────────────────────────────────────────────────
     receiptDate: date("receipt_date", { mode: "string" }),
 

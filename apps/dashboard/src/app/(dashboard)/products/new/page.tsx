@@ -1,21 +1,36 @@
-import { getProductGroupsForSelect } from "@/app/(dashboard)/product-groups/actions";
 import { getSuppliersForSelect } from "@/app/(dashboard)/companies/actions";
-import { ProductForm } from "@/components/products/product-form";
+import { getLocationsForSelect } from "@/app/(dashboard)/locations/actions";
+import { getProductGroupsForSelect } from "@/app/(dashboard)/product-groups/actions";
+import {
+  getProductsForSelect,
+  getRevenueGroupsForSelect,
+} from "@/app/(dashboard)/products/actions";
 import { PageHeading } from "@/components/layout/page-heading";
+import { ProductForm } from "@/components/products/product-form";
 
 const NewProductPage = async () => {
-  const [productGroups, suppliers] = await Promise.all([
-    getProductGroupsForSelect(),
-    getSuppliersForSelect(),
-  ]);
+  const [productGroups, suppliers, products, locations, revenueGroups] =
+    await Promise.all([
+      getProductGroupsForSelect(),
+      getSuppliersForSelect(),
+      getProductsForSelect(),
+      getLocationsForSelect(),
+      getRevenueGroupsForSelect(),
+    ]);
 
   return (
-    <div className="max-w-4xl space-y-6 p-6">
+    <div className="max-w-6xl space-y-6 p-6">
       <PageHeading
         title="Add Product"
         description="Create a new product with all its properties"
       />
-      <ProductForm productGroups={productGroups} suppliers={suppliers} />
+      <ProductForm
+        productGroups={productGroups}
+        suppliers={suppliers}
+        products={products}
+        locations={locations}
+        revenueGroups={revenueGroups}
+      />
     </div>
   );
 };

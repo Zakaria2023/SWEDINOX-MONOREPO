@@ -25,10 +25,15 @@ import { ClerkUserOption } from "@/lib/server/clerk";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
-import { createPurchaseRequest, PurchaseRequestActionResult } from "./actions";
+import { useFieldArray, useForm } from "react-hook-form";
+import {
+  createPurchaseRequest,
+  PurchaseRequestActionResult,
+  PurchaseRequestItemInput,
+} from "./actions";
 import {
   DEFAULT_PURCHASE_REQUEST,
+  DEFAULT_PURCHASE_REQUEST_ITEM,
   PurchaseRequestFormValues,
   purchaseRequestSchema,
 } from "./validation";
@@ -37,6 +42,9 @@ type UsePurchaseRequestSubmitParams = {
   companies: CompanyOption[];
   clerkUsers: ClerkUserOption[];
 };
+
+const optionalNumber = (value: string | undefined): number | null =>
+  value && Number.isFinite(Number(value)) ? Number(value) : null;
 
 const emptyOpt = { value: "", label: "Empty" };
 
@@ -69,6 +77,12 @@ export const usePurchaseRequestSubmit = ({
     resolver: zodResolver(purchaseRequestSchema),
     defaultValues: DEFAULT_PURCHASE_REQUEST,
   });
+
+  const {
+    fields: itemFields,
+    append: appendItem,
+    remove: removeItem,
+  } = useFieldArray({ control: form.control, name: "items" });
 
   const arrangeTransport = form.watch("arrangeTransport");
   const deliveryType = form.watch("deliveryType");
@@ -153,6 +167,23 @@ export const usePurchaseRequestSubmit = ({
   const handleCancel = () => router.push("/purchase-requests");
 
   const onSubmit = form.handleSubmit((values) => {
+    // Blank rows are the field array's starting state, not a line someone
+    // meant to ask for — drop anything with neither a product nor a
+    // description.
+    const items: PurchaseRequestItemInput[] = values.items
+      .filter((item) => item.productUuid || item.description)
+      .map((item, index) => ({
+        productUuid: item.productUuid || null,
+        description: item.description || null,
+        lineNumber: index + 1,
+        quantity: item.quantity || "0.000",
+        unit: item.unit ?? "st",
+        kg: item.kg || "0.00",
+        lengthMm: optionalNumber(item.lengthMm),
+        requiredDate: item.requiredDate || null,
+        remark: item.remark || null,
+      }));
+
     startTransition(async () => {
       const result = await createPurchaseRequest({
         companyUuid: values.supplierUuid || values.agentUuid || null,
@@ -190,7 +221,7 @@ export const usePurchaseRequestSubmit = ({
         deadline: values.deadline ? new Date(values.deadline) : null,
 
         documents: null,
-      });
+      }, items);
 
       setState(result);
       if (result.success) {
@@ -218,5 +249,8 @@ export const usePurchaseRequestSubmit = ({
     isLoadingSupplierData,
     handleSupplierChange,
     handleCancel,
+    itemFields,
+    appendItem: () => appendItem(DEFAULT_PURCHASE_REQUEST_ITEM),
+    removeItem,
   };
 };

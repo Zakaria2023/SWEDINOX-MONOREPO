@@ -42,7 +42,10 @@ export const createPurchaseInvoiceSchema = () =>
       creditorNo: z.string().optional(),
       creditorNo2: z.string().optional(),
       basisForFiscalPeriod: z.enum(purchaseInvoiceFiscalBases),
+      // The two figures a clerk types. Everything else in the accounting
+      // summary is derived from the lines received.
       invoiceTotal: z.string(),
+      creditRestriction: z.string().optional(),
       purchaseOrderNumber: z.string().optional(),
       paymentTerms: z.enum(invoicePaymentTerms).optional(),
       blocked: z.boolean(),

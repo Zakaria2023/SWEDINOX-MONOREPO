@@ -14,6 +14,7 @@ import {
   varchar,
 } from "drizzle-orm/mysql-core";
 import {
+  invoiceDocumentTypes,
   invoicePaymentTerms,
   invoiceSurchargeDescriptions,
   invoiceVatScenarios,
@@ -28,6 +29,18 @@ export const Invoices = mysqlTable(
 
     companyUuid: char("company_uuid", { length: 36 }),
     debtorNo: varchar("debtor_no", { length: 100 }),
+
+    // A credit note is this same document with its amounts negated, so it ages,
+    // posts and settles through exactly the same machinery. `outstanding` goes
+    // negative, which is what nets the debt down and hands the customer their
+    // credit space back.
+    documentType: mysqlEnum("document_type", invoiceDocumentTypes)
+      .default("invoice")
+      .notNull(),
+    // What the credit note credits: the goods that came back, and the invoice
+    // they were billed on. Both null on an ordinary invoice.
+    returnOrderUuid: char("return_order_uuid", { length: 36 }),
+    creditsInvoiceUuid: char("credits_invoice_uuid", { length: 36 }),
 
     invoiceDate: date("invoice_date"),
     expirationDate: date("expiration_date"),
@@ -56,6 +69,44 @@ export const Invoices = mysqlTable(
     outstanding: decimal("outstanding", { precision: 15, scale: 2 })
       .default("0.00")
       .notNull(),
+
+    // ── Margin snapshot ───────────────────────────────────────────────────────
+    // Rolled up from the invoice lines when the invoice is raised, in the same
+    // shape the order header stores, so the two documents report their worth
+    // identically and the finance overviews never have to re-aggregate lines to
+    // show what a sale made.
+    //
+    // Held as a snapshot for the same reason the lines are: a revaluation of the
+    // underlying stock must not retroactively change the margin booked against
+    // an invoice that has already been sent.
+    materialsRevenue: decimal("materials_revenue", {
+      precision: 15,
+      scale: 2,
+    }).default("0.00"),
+    materialsProfit: decimal("materials_profit", {
+      precision: 15,
+      scale: 2,
+    }).default("0.00"),
+    materialsProfitReplPrice: decimal("materials_profit_repl_price", {
+      precision: 15,
+      scale: 2,
+    }).default("0.00"),
+    surchargesRevenue: decimal("surcharges_revenue", {
+      precision: 15,
+      scale: 2,
+    }).default("0.00"),
+    surchargesProfit: decimal("surcharges_profit", {
+      precision: 15,
+      scale: 2,
+    }).default("0.00"),
+    avgKiloPrice: decimal("avg_kilo_price", {
+      precision: 15,
+      scale: 4,
+    }).default("0.0000"),
+    totalWeightKg: decimal("total_weight_kg", {
+      precision: 15,
+      scale: 2,
+    }).default("0.00"),
 
     calculateVat: boolean("calculate_vat").default(false).notNull(),
     printed: boolean("printed").default(false).notNull(),
@@ -103,6 +154,13 @@ export const InvoiceSurcharges = mysqlTable(
       .default("0.00")
       .notNull(),
     amount: decimal("amount", { precision: 15, scale: 2 })
+      .default("0.00")
+      .notNull(),
+    // What the surcharge earns after what it cost to provide — freight bought
+    // in, outsourced cutting. Recorded rather than assumed: a surcharge with no
+    // cost captured contributes nothing to margin instead of counting as pure
+    // profit. Mirrors OrderSurcharges.profit.
+    profit: decimal("profit", { precision: 15, scale: 2 })
       .default("0.00")
       .notNull(),
 

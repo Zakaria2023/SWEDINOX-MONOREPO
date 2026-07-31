@@ -9,7 +9,7 @@ import { Products, SelectProducts } from "@/db/schema/products";
 import { RevenueGroups, SelectRevenueGroups } from "@/db/schema/revenue-groups";
 import { Orders, SelectOrders } from "@/db/schema/orders";
 import { describeError } from "@/lib/helpers";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, inArray } from "drizzle-orm";
 
 export type SawingWasteRow = {
   key: string;
@@ -26,10 +26,15 @@ export type SawingWasteRow = {
   orderId: SelectOrders["id"] | null;
 };
 
-// Control list of stock written off as sawing waste. The stock ledger has no
-// dedicated sawing-waste reason, processor company, workorder link, kg or GL
-// accounts, so those columns have no source yet — "damaged / written off"
-// movements are the closest truthful source for waste taken out of stock.
+// Control list of stock written off as sawing waste.
+//
+// Production now records what a run lost to kerf and trim under its own reason,
+// so the real thing is reportable: `sawing_waste`, attributed to the lot it was
+// cut from. Hand write-offs stay in the list — a bar ruined at the saw is waste
+// however it was booked, and dropping them would make the list look better than
+// the shop floor is.
+//
+// Processor company, workorder link, kg and GL account still have no source.
 export const getSawingWaste = async (): Promise<SawingWasteRow[]> => {
   try {
     const rows = await db
@@ -52,7 +57,7 @@ export const getSawingWaste = async (): Promise<SawingWasteRow[]> => {
         eq(Products.revenueGroupUuid, RevenueGroups.uuid),
       )
       .leftJoin(Orders, eq(StockMovements.orderUuid, Orders.uuid))
-      .where(eq(StockMovements.reason, "damaged"))
+      .where(inArray(StockMovements.reason, ["sawing_waste", "damaged"]))
       .orderBy(desc(StockMovements.createdAt));
 
     return rows.map((row) => ({

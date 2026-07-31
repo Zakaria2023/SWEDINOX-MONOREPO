@@ -12,8 +12,17 @@ import {
   InsertContracts,
   SelectCompanyAddresses,
 } from "@/db";
+import {
+  ContractNetPrices,
+  SelectContractNetPrices,
+} from "@/db/schema/contract-net-prices";
+import { Orders } from "@/db/schema/orders";
+import { Products, SelectProducts } from "@/db/schema/products";
+import { Quotes } from "@/db/schema/quotes";
 import { generateUuid } from "@/lib/helpers";
 import { and, desc, eq, getTableColumns, inArray, isNotNull } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 export type ContractInput = Omit<
   InsertContracts,
@@ -140,6 +149,166 @@ export const getContractsPerSupplier = async (): Promise<ContractPerSupplierRow[
     .where(
       and(eq(Contracts.role, "supplier"), isNotNull(Contracts.companyUuid)),
     );
+
+// A contract as its own screen reads it: the header, who it is with, and the
+// agreed net prices that make it worth having.
+export type ContractDetail = SelectContracts & {
+  contractGroupName: SelectContractGroups["name"] | null;
+  companyName: SelectCompanies["companyName"] | null;
+  netPrices: ContractNetPriceRow[];
+  quotesUsing: ContractUsageRow[];
+  // A contract can be attached to one specific order — the reference calls
+  // these "order contracts", as opposed to company or project ones. The link
+  // runs from the contract to the order, so this is one row and not a list.
+  linkedOrder: ContractUsageRow | null;
+};
+
+export type ContractNetPriceRow = SelectContractNetPrices & {
+  productCode: SelectProducts["productCode"] | null;
+  productName: SelectProducts["name"] | null;
+};
+
+// A document priced against this contract. Enough to open it, and enough to
+// see whether removing the contract would strand anything.
+export type ContractUsageRow = {
+  uuid: string;
+  documentNumber: number;
+  companyName: SelectCompanies["companyName"] | null;
+  createdAt: Date;
+};
+
+export const getContractDetail = async (
+  uuid: string,
+): Promise<ContractDetail | null> => {
+  const [contract] = await db
+    .select({
+      ...getTableColumns(Contracts),
+      contractGroupName: ContractGroups.name,
+      companyName: Companies.companyName,
+    })
+    .from(Contracts)
+    .leftJoin(
+      ContractGroups,
+      eq(ContractGroups.uuid, Contracts.contractGroupUuid),
+    )
+    .leftJoin(Companies, eq(Companies.uuid, Contracts.companyUuid))
+    .where(eq(Contracts.uuid, uuid))
+    .limit(1);
+
+  if (!contract) {
+    return null;
+  }
+
+  const [netPrices, quotesUsing, linkedOrders] = await Promise.all([
+    db
+      .select({
+        ...getTableColumns(ContractNetPrices),
+        productCode: Products.productCode,
+        productName: Products.name,
+      })
+      .from(ContractNetPrices)
+      .leftJoin(Products, eq(ContractNetPrices.productUuid, Products.uuid))
+      .where(eq(ContractNetPrices.contractUuid, uuid))
+      .orderBy(ContractNetPrices.fromQty),
+
+    db
+      .select({
+        uuid: Quotes.uuid,
+        documentNumber: Quotes.id,
+        companyName: Companies.companyName,
+        createdAt: Quotes.createdAt,
+      })
+      .from(Quotes)
+      .leftJoin(Companies, eq(Quotes.companyUuid, Companies.uuid))
+      .where(eq(Quotes.contractUuid, uuid))
+      .orderBy(desc(Quotes.createdAt)),
+
+    contract.orderUuid
+      ? db
+          .select({
+            uuid: Orders.uuid,
+            documentNumber: Orders.id,
+            companyName: Companies.companyName,
+            createdAt: Orders.createdAt,
+          })
+          .from(Orders)
+          .leftJoin(Companies, eq(Orders.companyUuid, Companies.uuid))
+          .where(eq(Orders.uuid, contract.orderUuid))
+          .limit(1)
+      : Promise.resolve([]),
+  ]);
+
+  return {
+    ...contract,
+    netPrices,
+    quotesUsing,
+    linkedOrder: linkedOrders[0] ?? null,
+  };
+};
+
+export const updateContract = async (
+  uuid: string,
+  input: ContractInput,
+): Promise<ContractActionResult> => {
+  try {
+    const [existing] = await db
+      .select({ uuid: Contracts.uuid })
+      .from(Contracts)
+      .where(eq(Contracts.uuid, uuid))
+      .limit(1);
+
+    if (!existing) {
+      return { error: "Contract not found." };
+    }
+
+    await db.update(Contracts).set(input).where(eq(Contracts.uuid, uuid));
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error ? error.message : "Failed to update contract",
+    };
+  }
+
+  revalidatePath("/contracts");
+  revalidatePath(`/contracts/${uuid}`);
+  redirect(`/contracts/${uuid}`);
+};
+
+export const deleteContract = async (
+  uuid: string,
+): Promise<ContractActionResult> => {
+  try {
+    // A quote priced against this contract would lose the terms it was priced
+    // under, so the contract stays until those quotes are gone.
+    const [quoted] = await db
+      .select({ uuid: Quotes.uuid })
+      .from(Quotes)
+      .where(eq(Quotes.contractUuid, uuid))
+      .limit(1);
+
+    if (quoted) {
+      return {
+        error:
+          "Cannot delete: quotes have been priced against this contract.",
+      };
+    }
+
+    await db.transaction(async (tx) => {
+      await tx
+        .delete(ContractNetPrices)
+        .where(eq(ContractNetPrices.contractUuid, uuid));
+      await tx.delete(Contracts).where(eq(Contracts.uuid, uuid));
+    });
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error ? error.message : "Failed to delete contract",
+    };
+  }
+
+  revalidatePath("/contracts");
+  redirect("/contracts");
+};
 
 export const createContract = async (
   input: ContractInput,

@@ -12,8 +12,26 @@ import {
 } from "@/db/schema/purchase-order-items";
 import { SelectStock, Stock } from "@/db/schema/stock";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
+import {
+  CommunicationSettings,
+  SelectCommunicationSettings,
+} from "@/db/schema/communication-settings";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
+import { Contracts, SelectContracts } from "@/db/schema/contracts";
 import { Products, SelectProducts } from "@/db/schema/products";
+import {
+  PurchaseLineReceivals,
+  SelectPurchaseLineReceivals,
+} from "@/db/schema/purchase-line-receivals";
+import {
+  PurchaseReturnOrderItems,
+  SelectPurchaseReturnOrderItems,
+} from "@/db/schema/purchase-return-order-items";
+import {
+  PurchaseReturnOrders,
+  SelectPurchaseReturnOrders,
+} from "@/db/schema/purchase-return-orders";
+import { mailDocument, sendPurchaseOrderEmail } from "@/emails/documents";
 import { describeError, generateUuid } from "@/lib/helpers";
 import { currentUser } from "@clerk/nextjs/server";
 import { and, desc, eq, getTableColumns, gt, inArray, ne, sql } from "drizzle-orm";
@@ -28,6 +46,9 @@ export type PurchaseOrderFields = Omit<
 export type PurchaseOrderItemInput = {
   productUuid: string;
   quantity: string;
+  /** Agreed purchase price per unit — what the received lot is valued at. */
+  netPrice: string;
+  priceUnit?: string;
 };
 
 export type PurchaseOrderActionResult = {
@@ -65,9 +86,50 @@ export type PurchaseOrderItemDetail = {
   productCode: string;
   productName: string;
   orderedQuantity: string;
+  netPrice: SelectPurchaseOrderItems["netPrice"];
+  priceUnit: SelectPurchaseOrderItems["priceUnit"];
+  amount: SelectPurchaseOrderItems["amount"];
   stockUuid: string | null;
   stockQuantity: string | null;
   stockStatus: SelectStock["status"] | null;
+  // What the received lot was actually valued at. Normally the line's own
+  // price, but a lot received before purchase lines carried one reads zero —
+  // which is precisely what needs correcting rather than hiding.
+  stockValuationPrice: SelectStock["valuationPrice"] | null;
+};
+
+// A goods receipt booked against this order — the "Product Receipt Documents"
+// section. Recorded since receivals existed and never shown on the order they
+// belong to, so what had actually arrived could only be found by leaving it.
+export type PurchaseReceiptDocument = {
+  uuid: SelectPurchaseLineReceivals["uuid"];
+  lineNumber: SelectPurchaseLineReceivals["lineNumber"];
+  receiptDate: SelectPurchaseLineReceivals["receiptDate"];
+  receiptStatus: SelectPurchaseLineReceivals["receiptStatus"];
+  lineStatus: SelectPurchaseLineReceivals["lineStatus"];
+  productCode: SelectProducts["productCode"] | null;
+  productName: SelectProducts["name"] | null;
+  qtyPlanned: SelectPurchaseLineReceivals["qtyPlanned"];
+  receivedQty: SelectPurchaseLineReceivals["receivedQty"];
+  kgActual: SelectPurchaseLineReceivals["kgActual"];
+  lineAmount: SelectPurchaseLineReceivals["lineAmount"];
+  purchaser: SelectPurchaseLineReceivals["purchaser"];
+};
+
+// A line of this order the supplier is being asked to take back.
+export type PurchaseOrderReturnLine = {
+  uuid: SelectPurchaseReturnOrderItems["uuid"];
+  returnOrderUuid: SelectPurchaseReturnOrderItems["purchaseReturnOrderUuid"];
+  returnOrderId: SelectPurchaseReturnOrders["id"] | null;
+  returnOrderStatus: SelectPurchaseReturnOrders["status"] | null;
+  lineNumber: SelectPurchaseReturnOrderItems["lineNumber"];
+  productCode: SelectProducts["productCode"] | null;
+  productName: SelectProducts["name"] | null;
+  returnQty: SelectPurchaseReturnOrderItems["returnQty"];
+  unit: SelectPurchaseReturnOrderItems["unit"];
+  returnReason: SelectPurchaseReturnOrderItems["returnReason"];
+  returnDate: SelectPurchaseReturnOrderItems["returnDate"];
+  amount: SelectPurchaseReturnOrderItems["amount"];
 };
 
 export type PurchaseOrderDetail = SelectPurchaseOrders & {
@@ -76,6 +138,17 @@ export type PurchaseOrderDetail = SelectPurchaseOrders & {
   contactFirstName: SelectContacts["firstName"] | null;
   contactLastName: SelectContacts["lastName"] | null;
   items: PurchaseOrderItemDetail[];
+  // What has actually arrived against this order.
+  receipts: PurchaseReceiptDocument[];
+  // Agreements attached to this order — the schema has carried the link since
+  // contracts existed and no screen followed it.
+  contracts: SelectContracts[];
+  // Lines going back to the supplier.
+  returnLines: PurchaseOrderReturnLine[];
+  // How documents reach this supplier: which channel and address each document
+  // type is routed to. Held per company, shown here because the purchase order
+  // is where somebody asks "did this actually get sent, and where?".
+  communication: SelectCommunicationSettings[];
 };
 
 export type PurchaseOrderHeaderEdit = Pick<
@@ -215,15 +288,29 @@ export const createPurchaseOrder = async (
       // Stock (and the "in" movement) is created later, when the matching
       // purchase invoice arrives and the goods are actually received.
       for (const [index, item] of items.entries()) {
+        const netPrice = Number(item.netPrice ?? 0);
+
         await tx.insert(PurchaseOrderItems).values({
           uuid: generateUuid(),
           purchaseOrderUuid: uuid,
           productUuid: item.productUuid,
           quantity: item.quantity,
+          qtyPlanned: item.quantity,
           lineNumber: index + 1,
+          netPrice: netPrice.toFixed(4),
+          priceUnit: item.priceUnit ?? null,
+          amount: (netPrice * Number(item.quantity)).toFixed(2),
         });
       }
     });
+
+    // The supplier is told what we ordered as soon as the order stands. Sent
+    // after the transaction commits so a rolled back order leaves no email
+    // behind, and a failed send never rolls a placed order back.
+    await mailDocument(
+      () => sendPurchaseOrderEmail(uuid),
+      `Purchase order ${uuid}`,
+    );
 
     revalidatePath("/purchase-orders");
     revalidatePath("/stock");
@@ -274,6 +361,10 @@ export const getPurchaseOrderDetail = async (
       productCode: Products.productCode,
       productName: Products.name,
       orderedQuantity: PurchaseOrderItems.quantity,
+      netPrice: PurchaseOrderItems.netPrice,
+      priceUnit: PurchaseOrderItems.priceUnit,
+      amount: PurchaseOrderItems.amount,
+      stockValuationPrice: Stock.valuationPrice,
       stockUuid: Stock.uuid,
       stockQuantity: Stock.quantity,
       stockStatus: Stock.status,
@@ -283,10 +374,77 @@ export const getPurchaseOrderDetail = async (
     .leftJoin(Stock, eq(Stock.purchaseOrderItemUuid, PurchaseOrderItems.uuid))
     .where(eq(PurchaseOrderItems.purchaseOrderUuid, uuid));
 
+  const [receipts, contracts, returnLines, communication] = await Promise.all([
+    db
+      .select({
+        uuid: PurchaseLineReceivals.uuid,
+        lineNumber: PurchaseLineReceivals.lineNumber,
+        receiptDate: PurchaseLineReceivals.receiptDate,
+        receiptStatus: PurchaseLineReceivals.receiptStatus,
+        lineStatus: PurchaseLineReceivals.lineStatus,
+        productCode: Products.productCode,
+        productName: Products.name,
+        qtyPlanned: PurchaseLineReceivals.qtyPlanned,
+        receivedQty: PurchaseLineReceivals.receivedQty,
+        kgActual: PurchaseLineReceivals.kgActual,
+        lineAmount: PurchaseLineReceivals.lineAmount,
+        purchaser: PurchaseLineReceivals.purchaser,
+      })
+      .from(PurchaseLineReceivals)
+      .leftJoin(Products, eq(PurchaseLineReceivals.productUuid, Products.uuid))
+      .where(eq(PurchaseLineReceivals.purchaseOrderUuid, uuid))
+      .orderBy(desc(PurchaseLineReceivals.receiptDate)),
+
+    db.select().from(Contracts).where(eq(Contracts.purchaseOrderUuid, uuid)),
+
+    db
+      .select({
+        uuid: PurchaseReturnOrderItems.uuid,
+        returnOrderUuid: PurchaseReturnOrderItems.purchaseReturnOrderUuid,
+        returnOrderId: PurchaseReturnOrders.id,
+        returnOrderStatus: PurchaseReturnOrders.status,
+        lineNumber: PurchaseReturnOrderItems.lineNumber,
+        productCode: Products.productCode,
+        productName: Products.name,
+        returnQty: PurchaseReturnOrderItems.returnQty,
+        unit: PurchaseReturnOrderItems.unit,
+        returnReason: PurchaseReturnOrderItems.returnReason,
+        returnDate: PurchaseReturnOrderItems.returnDate,
+        amount: PurchaseReturnOrderItems.amount,
+      })
+      .from(PurchaseReturnOrderItems)
+      .leftJoin(
+        PurchaseReturnOrders,
+        eq(
+          PurchaseReturnOrderItems.purchaseReturnOrderUuid,
+          PurchaseReturnOrders.uuid,
+        ),
+      )
+      .leftJoin(
+        Products,
+        eq(PurchaseReturnOrderItems.productUuid, Products.uuid),
+      )
+      .where(eq(PurchaseReturnOrderItems.originalPurchaseOrderUuid, uuid))
+      .orderBy(desc(PurchaseReturnOrderItems.returnDate)),
+
+    // Routing belongs to the supplier, not the order, so an order with no
+    // supplier has nothing to show rather than everybody's settings.
+    order.supplierUuid
+      ? db
+          .select()
+          .from(CommunicationSettings)
+          .where(eq(CommunicationSettings.companyUuid, order.supplierUuid))
+      : [],
+  ]);
+
   return {
     ...order,
     agentName: agent?.companyName ?? null,
     items,
+    receipts,
+    contracts,
+    returnLines,
+    communication,
   };
 };
 

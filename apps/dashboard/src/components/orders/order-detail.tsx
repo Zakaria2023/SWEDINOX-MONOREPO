@@ -14,6 +14,13 @@ import {
 } from "@/components/shadcn/table";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FormError } from "@/components/ui/form-error";
+import { QuoteSummaryPanel } from "@/components/quotes/quote-summary";
+import {
+  cn,
+  formatMoney,
+  formatPercent,
+  orderSummaryFromSnapshot,
+} from "@/lib/helpers";
 import { ORDER_ITEM_STATUS_LABELS, ORDER_STATUS_LABELS } from "@/lib/labels";
 
 type Props = {
@@ -81,13 +88,18 @@ export const OrderDetailView = ({ order }: Props) => {
                 <TableHead>Product</TableHead>
                 <TableHead className="text-right">Reserved</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead className="text-right">Net price</TableHead>
+                <TableHead className="text-right">Amount</TableHead>
+                <TableHead className="text-right">Cost</TableHead>
+                <TableHead className="text-right">Profit</TableHead>
+                <TableHead className="text-right">Margin</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {order.items.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={3}
+                    colSpan={8}
                     className="h-24 text-center text-muted-foreground"
                   >
                     No products on this order.
@@ -101,11 +113,31 @@ export const OrderDetailView = ({ order }: Props) => {
                         .filter(Boolean)
                         .join(" — ")}
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right tabular-nums">
                       {item.quantity}
                     </TableCell>
                     <TableCell>
                       {ORDER_ITEM_STATUS_LABELS[item.status]}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatMoney(Number(item.netPrice ?? 0))}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatMoney(Number(item.amount ?? 0))}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatMoney(Number(item.costAmount ?? 0))}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatMoney(Number(item.profit ?? 0))}
+                    </TableCell>
+                    <TableCell
+                      className={cn(
+                        "text-right tabular-nums",
+                        item.profitTooLow && "text-destructive",
+                      )}
+                    >
+                      {formatPercent(Number(item.profitMargin ?? 0))}
                     </TableCell>
                   </TableRow>
                 ))
@@ -114,6 +146,10 @@ export const OrderDetailView = ({ order }: Props) => {
           </Table>
         </div>
       </div>
+
+      {/* The order's own rollup — costed against the stock lots actually
+          allocated to it, so it can report a truer margin than the quote. */}
+      <QuoteSummaryPanel summary={orderSummaryFromSnapshot(order)} />
 
       {canCancel && (
         <div className="flex gap-2">

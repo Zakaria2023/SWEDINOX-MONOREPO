@@ -15,9 +15,29 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { CollapsibleSection } from "@/components/ui/collapsible-section";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FormError } from "@/components/ui/form-error";
-import { PURCHASE_ORDER_STATUS_LABELS, STOCK_STATUS_LABELS } from "@/lib/labels";
+import {
+  cn,
+  formatDateColumn,
+  formatMoney,
+  formatNumber,
+  orDash,
+  pluralize,
+} from "@/lib/helpers";
+import {
+  COMMUNICATION_SETTING_DOCUMENT_TYPE_LABELS,
+  COMMUNICATION_SETTING_SHAPE_LABELS,
+  COMMUNICATION_SETTING_TYPE_LABELS,
+  CONTRACT_TYPE_LABELS,
+  CONTRACTABLE_ROLE_LABELS,
+  ORDER_LINE_STATUS_LABELS,
+  PURCHASE_ORDER_STATUS_LABELS,
+  PURCHASE_RETURN_ORDER_REASON_LABELS,
+  RETURN_ORDER_STATUS_LABELS,
+  STOCK_STATUS_LABELS,
+} from "@/lib/labels";
 
 type Props = {
   purchaseOrder: PurchaseOrderDetail;
@@ -97,15 +117,19 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
               <TableRow>
                 <TableHead>Product</TableHead>
                 <TableHead className="text-right">Ordered</TableHead>
+                <TableHead className="text-right">Purchase price</TableHead>
+                <TableHead>Per</TableHead>
+                <TableHead className="text-right">Amount</TableHead>
                 <TableHead className="text-right">Remaining</TableHead>
                 <TableHead>Stock Status</TableHead>
+                <TableHead className="text-right">Lot valuation</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {purchaseOrder.items.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={4}
+                    colSpan={8}
                     className="h-24 text-center text-muted-foreground"
                   >
                     No products on this order.
@@ -119,15 +143,37 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
                         .filter(Boolean)
                         .join(" — ")}
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right tabular-nums">
                       {item.orderedQuantity}
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right tabular-nums">
+                      {formatMoney(Number(item.netPrice ?? 0))}
+                    </TableCell>
+                    <TableCell>{orDash(item.priceUnit)}</TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatMoney(Number(item.amount ?? 0))}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
                       {item.stockQuantity ?? "—"}
                     </TableCell>
                     <TableCell>
                       {item.stockStatus
                         ? STOCK_STATUS_LABELS[item.stockStatus]
+                        : "—"}
+                    </TableCell>
+                    {/* A lot received before purchase lines carried a price
+                        shows zero here — the sales margin drawn from it is
+                        measured against the replacement price instead. */}
+                    <TableCell
+                      className={cn(
+                        "text-right tabular-nums",
+                        item.stockUuid &&
+                          Number(item.stockValuationPrice ?? 0) === 0 &&
+                          "text-destructive",
+                      )}
+                    >
+                      {item.stockUuid
+                        ? formatMoney(Number(item.stockValuationPrice ?? 0))
                         : "—"}
                     </TableCell>
                   </TableRow>
@@ -136,6 +182,264 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
             </TableBody>
           </Table>
         </div>
+      </div>
+
+      <div className="space-y-2">
+        {/* What has actually arrived. Booked against the order since receivals
+            existed and never shown on it. */}
+        <CollapsibleSection
+          title="Product Receipt Documents"
+          summary={pluralize(purchaseOrder.receipts.length, "receipt")}
+        >
+          {purchaseOrder.receipts.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Nothing has been booked in against this order yet.
+            </p>
+          ) : (
+            <div className="overflow-x-auto rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-right">Line</TableHead>
+                    <TableHead>Receipt date</TableHead>
+                    <TableHead>Product</TableHead>
+                    <TableHead>Line status</TableHead>
+                    <TableHead>Receipt status</TableHead>
+                    <TableHead className="text-right">Planned</TableHead>
+                    <TableHead className="text-right">Received</TableHead>
+                    <TableHead className="text-right">Kg</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead>Purchaser</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {purchaseOrder.receipts.map((receipt) => (
+                    <TableRow key={receipt.uuid}>
+                      <TableCell className="text-right tabular-nums">
+                        {orDash(receipt.lineNumber)}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {formatDateColumn(receipt.receiptDate)}
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {[receipt.productCode, receipt.productName]
+                          .filter(Boolean)
+                          .join(" — ") || "—"}
+                      </TableCell>
+                      <TableCell>
+                        {receipt.lineStatus
+                          ? ORDER_LINE_STATUS_LABELS[receipt.lineStatus]
+                          : "—"}
+                      </TableCell>
+                      <TableCell>{orDash(receipt.receiptStatus)}</TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatNumber(Number(receipt.qtyPlanned ?? 0))}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatNumber(Number(receipt.receivedQty ?? 0))}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatNumber(Number(receipt.kgActual ?? 0))}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatMoney(Number(receipt.lineAmount ?? 0))}
+                      </TableCell>
+                      <TableCell>{orDash(receipt.purchaser)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CollapsibleSection>
+
+        {/* The link has been in the schema since contracts existed; no screen
+            followed it, so an order bought under an agreement never said so. */}
+        <CollapsibleSection
+          title="Contracts"
+          summary={pluralize(purchaseOrder.contracts.length, "contract")}
+        >
+          {purchaseOrder.contracts.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              This order is not attached to a contract.
+            </p>
+          ) : (
+            <div className="overflow-x-auto rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Code</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Start</TableHead>
+                    <TableHead>End</TableHead>
+                    <TableHead className="text-right">Max weight (kg)</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {purchaseOrder.contracts.map((contract) => (
+                    <TableRow key={contract.uuid}>
+                      <TableCell className="font-medium">
+                        <Link
+                          href={`/contracts/${contract.uuid}`}
+                          className="text-primary hover:underline"
+                        >
+                          {contract.code}
+                        </Link>
+                      </TableCell>
+                      <TableCell>{contract.description}</TableCell>
+                      <TableCell>
+                        {contract.contractType
+                          ? CONTRACT_TYPE_LABELS[contract.contractType]
+                          : "—"}
+                      </TableCell>
+                      <TableCell>
+                        {contract.role
+                          ? CONTRACTABLE_ROLE_LABELS[contract.role]
+                          : "—"}
+                      </TableCell>
+                      <TableCell>{orDash(contract.startingDate)}</TableCell>
+                      <TableCell>{orDash(contract.endDate)}</TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatNumber(Number(contract.maxWeightKg ?? 0))}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          title="Return lines"
+          summary={pluralize(purchaseOrder.returnLines.length, "return line")}
+        >
+          {purchaseOrder.returnLines.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Nothing from this order is going back to the supplier.
+            </p>
+          ) : (
+            <div className="overflow-x-auto rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Return order</TableHead>
+                    <TableHead className="text-right">Line</TableHead>
+                    <TableHead>Product</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Reason</TableHead>
+                    <TableHead>Return date</TableHead>
+                    <TableHead className="text-right">Return qty</TableHead>
+                    <TableHead>Unit</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {purchaseOrder.returnLines.map((line) => (
+                    <TableRow key={line.uuid}>
+                      <TableCell className="font-medium">
+                        <Link
+                          href={`/purchase-return-orders/${line.returnOrderUuid}`}
+                          className="text-primary hover:underline"
+                        >
+                          #{orDash(line.returnOrderId)}
+                        </Link>
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {orDash(line.lineNumber)}
+                      </TableCell>
+                      <TableCell>
+                        {[line.productCode, line.productName]
+                          .filter(Boolean)
+                          .join(" — ") || "—"}
+                      </TableCell>
+                      <TableCell>
+                        {line.returnOrderStatus
+                          ? RETURN_ORDER_STATUS_LABELS[line.returnOrderStatus]
+                          : "—"}
+                      </TableCell>
+                      <TableCell>
+                        {line.returnReason
+                          ? PURCHASE_RETURN_ORDER_REASON_LABELS[
+                              line.returnReason
+                            ]
+                          : "—"}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {formatDateColumn(line.returnDate)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatNumber(Number(line.returnQty ?? 0))}
+                      </TableCell>
+                      <TableCell>{line.unit?.toUpperCase() ?? "—"}</TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatMoney(Number(line.amount ?? 0))}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CollapsibleSection>
+
+        {/* Where each document type actually goes for this supplier. Routing is
+            held per company, and this is the screen where somebody asks whether
+            the order reached them and at which address. */}
+        <CollapsibleSection
+          title="Communication"
+          summary={pluralize(purchaseOrder.communication.length, "route")}
+        >
+          {purchaseOrder.communication.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No document routing is configured for this supplier, so documents
+              go to their contacts.
+            </p>
+          ) : (
+            <div className="overflow-x-auto rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Document</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Shape</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Fax</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {purchaseOrder.communication.map((route) => (
+                    <TableRow key={route.id}>
+                      <TableCell className="font-medium">
+                        {route.documentType
+                          ? COMMUNICATION_SETTING_DOCUMENT_TYPE_LABELS[
+                              route.documentType
+                            ]
+                          : "—"}
+                      </TableCell>
+                      <TableCell>
+                        {route.communicationType
+                          ? COMMUNICATION_SETTING_TYPE_LABELS[
+                              route.communicationType
+                            ]
+                          : "—"}
+                      </TableCell>
+                      <TableCell>
+                        {route.shape
+                          ? COMMUNICATION_SETTING_SHAPE_LABELS[route.shape]
+                          : "—"}
+                      </TableCell>
+                      <TableCell>{orDash(route.email)}</TableCell>
+                      <TableCell>{orDash(route.fax)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CollapsibleSection>
       </div>
 
       {canCancel && (

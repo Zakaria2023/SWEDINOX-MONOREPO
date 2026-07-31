@@ -35,10 +35,13 @@ export const getCustomerRevenueSalesVisits = async (
 ): Promise<CustomerRevenueSalesVisitsRow[]> => {
   try {
     const invoiceYear = sql`YEAR(${Invoices.invoiceDate})`;
+    // Both read the invoice line's own snapshot — see revenue-per-revenue-group.
+    // A year-on-year comparison in particular must not shift as older orders
+    // are re-priced.
     const revenueFor = (y: number) =>
-      sql<string>`COALESCE(SUM(CASE WHEN ${invoiceYear} = ${y} THEN ${OrderItems.amount} ELSE 0 END), 0)`;
+      sql<string>`COALESCE(SUM(CASE WHEN ${invoiceYear} = ${y} THEN ${InvoiceItems.amount} ELSE 0 END), 0)`;
     const kgFor = (y: number) =>
-      sql<string>`COALESCE(SUM(CASE WHEN ${invoiceYear} = ${y} THEN ${OrderItems.kgPlanned} ELSE 0 END), 0)`;
+      sql<string>`COALESCE(SUM(CASE WHEN ${invoiceYear} = ${y} THEN ${InvoiceItems.weightKg} ELSE 0 END), 0)`;
 
     const primaryContactId = db
       .select({

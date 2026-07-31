@@ -11,22 +11,31 @@ import {
   SelectInvoices,
   SelectInvoiceSurcharges,
 } from "@/db";
-import { InvoiceItems, SelectInvoiceItems } from "@/db/schema/invoice-items";
 import {
-  InsertJournalEntries,
-  JournalEntries,
-} from "@/db/schema/journal-entries";
-import { OrderItems } from "@/db/schema/order-items";
+  InsertInvoiceItems,
+  InvoiceItems,
+  SelectInvoiceItems,
+} from "@/db/schema/invoice-items";
+import { JournalEntries } from "@/db/schema/journal-entries";
+import { OrderItems, SelectOrderItems } from "@/db/schema/order-items";
+import { Payments, SelectPayments } from "@/db/schema/payments";
 import { Orders } from "@/db/schema/orders";
 import { Products, SelectProducts } from "@/db/schema/products";
+import { mailDocument, sendInvoiceEmail } from "@/emails/documents";
+import { buildSalesJournalEntry } from "@/lib/server/ledger";
 import {
+  computeQuoteSummary,
+  creditRestrictionOn,
   generateUuid,
   getInvoiceVatRatePercent,
   getPaymentTermDueDate,
+  QUANTITY_EPSILON,
+  remainingToInvoice,
+  sliceOrderLineAmounts,
   toDateString,
 } from "@/lib/helpers";
 import { currentUser } from "@clerk/nextjs/server";
-import { and, desc, eq, getTableColumns, inArray } from "drizzle-orm";
+import { and, desc, eq, getTableColumns, inArray, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -45,6 +54,13 @@ export type InvoiceFields = Omit<
   | "creditRestriction"
   | "invoiceTotal"
   | "outstanding"
+  | "materialsRevenue"
+  | "materialsProfit"
+  | "materialsProfitReplPrice"
+  | "surchargesRevenue"
+  | "surchargesProfit"
+  | "avgKiloPrice"
+  | "totalWeightKg"
   | "createdAt"
   | "updatedAt"
 >;
@@ -61,10 +77,27 @@ export type InvoiceWithCompany = SelectInvoices & {
 
 export type ReservedOrderItemOption = {
   uuid: string;
+  /** What is left to bill on the line — never the full ordered quantity. */
   quantity: string;
+  /** The line's whole quantity, so the screen can show "3 of 10 left". */
+  orderedQuantity: SelectOrderItems["quantity"];
+  invoicedQuantity: SelectOrderItems["invoicedQuantity"];
+  unit: SelectOrderItems["unit"];
+  netPrice: SelectOrderItems["netPrice"];
   productCode: string | null;
   productName: string | null;
   orderId: number;
+};
+
+/**
+ * One order line an invoice is billing, and how much of it.
+ *
+ * `quantity` left out bills whatever is left on the line, which is both the
+ * common case and what the system did before it could do anything else.
+ */
+export type InvoiceLineSelection = {
+  orderItemUuid: string;
+  quantity?: string;
 };
 
 export type InvoiceItemDetail = SelectInvoiceItems & {
@@ -77,56 +110,26 @@ export type InvoiceDetail = SelectInvoices & {
   companyCode: SelectCompanies["id"] | null;
   surcharges: SelectInvoiceSurcharges[];
   items: InvoiceItemDetail[];
+  payments: SelectPayments[];
 };
 
 export type InvoiceHeaderEdit = Pick<
   InvoiceFields,
   "debtorNo" | "invoiceDate" | "expirationDate" | "paymentTerms" | "explanation"
+> & {
+  // Amounts are computed from the lines when the invoice is raised, but stay
+  // correctable afterwards — a credit restriction, an agreed goodwill
+  // adjustment or a rounding fix has to be bookable without re-cutting the
+  // invoice. Left undefined, the stored amounts are kept as they are.
+  invoiceAmountExclVat?: string;
+  creditRestriction?: string;
+};
+
+// The columns an invoice line copies from the order line it bills.
+type InvoiceLineSnapshot = Omit<
+  InsertInvoiceItems,
+  "id" | "uuid" | "invoiceUuid" | "createdAt" | "updatedAt"
 >;
-
-type SalesInvoicePosting = {
-  invoiceUuid: string;
-  invoiceId: number | null;
-  companyUuid: string | null;
-  debCreditor: string | null;
-  invoiceDate: Date | string | null;
-  amountExclVat: number;
-  vatAmount: number;
-  userId: string | null;
-  // When cancelling, the entry is booked with the opposite sign.
-  reversal?: boolean;
-};
-
-// Placeholder GL account code for sales revenue; swap for the real chart of
-// accounts later.
-const SALES_REVENUE_ACCOUNT = "8000";
-
-// A sales invoice posts one row to the sales journal — revenue net of VAT, with
-// the VAT shown separately and the debtor as the counter-account. A
-// cancellation books the same row negated.
-const buildSalesInvoiceJournalEntry = (
-  posting: SalesInvoicePosting,
-): InsertJournalEntries => {
-  const sign = posting.reversal ? -1 : 1;
-  const bookingDate = posting.invoiceDate
-    ? new Date(posting.invoiceDate).toISOString().split("T")[0]
-    : null;
-  return {
-    uuid: generateUuid(),
-    bookingDate,
-    documentDate: bookingDate,
-    documentNo: posting.invoiceId != null ? String(posting.invoiceId) : null,
-    journal: "sales",
-    account: SALES_REVENUE_ACCOUNT,
-    debCreditor: posting.debCreditor,
-    description: posting.reversal ? "Sales invoice cancelled" : "Sales invoice",
-    amount: (sign * posting.amountExclVat).toFixed(2),
-    vat: (sign * posting.vatAmount).toFixed(2),
-    companyUuid: posting.companyUuid,
-    invoiceUuid: posting.invoiceUuid,
-    createdByUserId: posting.userId,
-  };
-};
 
 export const getInvoices = async (): Promise<InvoiceWithCompany[]> =>
   db
@@ -150,13 +153,20 @@ export const getInvoicesByCompanyUuid = async (
 
 // Delivered order lines for a customer, ready to be billed on an invoice.
 // Stock already left at delivery, so invoicing these is purely financial.
+//
+// The quantity offered is what is left to bill, not what was ordered: a line
+// already part-billed appears again for its remainder, and a line billed out is
+// at status "invoiced" and gone from the list.
 export const getReservedOrderItemsForCompany = async (
   companyUuid: string,
-): Promise<ReservedOrderItemOption[]> =>
-  db
+): Promise<ReservedOrderItemOption[]> => {
+  const rows = await db
     .select({
       uuid: OrderItems.uuid,
       quantity: OrderItems.quantity,
+      invoicedQuantity: OrderItems.invoicedQuantity,
+      unit: OrderItems.unit,
+      netPrice: OrderItems.netPrice,
       productCode: Products.productCode,
       productName: Products.name,
       orderId: Orders.id,
@@ -168,28 +178,30 @@ export const getReservedOrderItemsForCompany = async (
       and(
         eq(Orders.companyUuid, companyUuid),
         eq(OrderItems.status, "delivered"),
+        sql`${OrderItems.quantity} - ${OrderItems.invoicedQuantity} > 0`,
       ),
     )
     .orderBy(desc(OrderItems.createdAt));
 
+  return rows.map((row) => ({
+    uuid: row.uuid,
+    quantity: remainingToInvoice(row.quantity, row.invoicedQuantity).toFixed(3),
+    orderedQuantity: row.quantity,
+    invoicedQuantity: row.invoicedQuantity,
+    unit: row.unit,
+    netPrice: row.netPrice,
+    productCode: row.productCode,
+    productName: row.productName,
+    orderId: row.orderId,
+  }));
+};
+
 export const createInvoice = async (
   fields: InvoiceFields,
   surcharges: InvoiceSurchargeInput[] = [],
-  orderItemUuids: string[] = [],
+  selections: InvoiceLineSelection[] = [],
 ): Promise<InvoiceActionResult> => {
   const uuid = generateUuid();
-  const exclVat = surcharges.reduce(
-    (sum, s) => sum + parseFloat(s.amount ?? "0"),
-    0,
-  );
-  // VAT follows the invoice's VAT scenario: reverse-charge scenarios charge 0%,
-  // everything else the standard rate. (Previously hard-coded at 21%.)
-  const vatRate = getInvoiceVatRatePercent(fields.vatScenario);
-  const vatAmount = exclVat * (vatRate / 100);
-  const invoiceAmountInclVat = (exclVat + vatAmount).toFixed(2);
-  const creditRestriction = "0.00";
-  const invoiceTotal = invoiceAmountInclVat;
-  const outstanding = invoiceTotal;
 
   // Derive the due date from the payment term when one isn't supplied and the
   // term pins a date to the invoice date (e.g. "within 30 days").
@@ -204,6 +216,16 @@ export const createInvoice = async (
     })();
 
   try {
+    const orderItemUuids = selections.map(
+      (selection) => selection.orderItemUuid,
+    );
+    // The same line twice would be sliced twice from the same starting point and
+    // bill more than is left. One line, one instalment per invoice.
+    if (new Set(orderItemUuids).size !== orderItemUuids.length) {
+      return {
+        error: "The same order line was selected more than once on this invoice.",
+      };
+    }
     const orderItemRows =
       orderItemUuids.length > 0
         ? await db
@@ -213,8 +235,28 @@ export const createInvoice = async (
         : [];
     const orderItemByUuid = new Map(orderItemRows.map((row) => [row.uuid, row]));
 
-    for (const id of orderItemUuids) {
-      const row = orderItemByUuid.get(id);
+    // An invoice line carries the order line's already-resolved per-unit price
+    // and cost verbatim rather than pricing anything a second time. The order
+    // line resolved both at reservation — the price from the customer's
+    // contract, the cost from the stock lot it was allocated — and that
+    // resolution is precisely what is being billed.
+    //
+    // What does change with a part-bill is the extended money: the amount, the
+    // cost, the weight and the margin are the share belonging to the quantity on
+    // this invoice. Per-unit figures are carried untouched, because they don't
+    // scale.
+    const billableLines: InvoiceLineSnapshot[] = [];
+    // What each line's invoiced quantity was when it was read, so the update can
+    // refuse to apply if anything billed against it in the meantime.
+    const claims: {
+      orderItemUuid: string;
+      previousInvoiced: string;
+      nextInvoiced: number;
+      fullyBilled: boolean;
+    }[] = [];
+
+    for (const selection of selections) {
+      const row = orderItemByUuid.get(selection.orderItemUuid);
       if (!row) {
         return { error: "One or more selected reservations could not be found." };
       }
@@ -224,7 +266,114 @@ export const createInvoice = async (
             "One or more selected lines are not delivered (or were already billed).",
         };
       }
+
+      const alreadyBilled = Number(row.invoicedQuantity ?? 0);
+      const remaining = remainingToInvoice(row.quantity, row.invoicedQuantity);
+      // No quantity given means bill the rest of the line, which is both the
+      // common case and what this action did before it could do anything else.
+      const billing =
+        selection.quantity === undefined || selection.quantity === ""
+          ? remaining
+          : Number(selection.quantity);
+
+      if (!Number.isFinite(billing) || billing <= 0) {
+        return { error: "Every line being billed needs a quantity above zero." };
+      }
+      if (billing > remaining + QUANTITY_EPSILON) {
+        return {
+          error: `Cannot bill more than is left on the line (${remaining.toFixed(3)}).`,
+        };
+      }
+
+      const slice = { quantity: Number(row.quantity), alreadyBilled, billing };
+      const sliced = sliceOrderLineAmounts(
+        {
+          amount: Number(row.amount ?? 0),
+          costAmount: Number(row.costAmount ?? 0),
+          // What actually shipped is what gets billed by weight; the planned
+          // figure stands in for a line delivered before actuals were recorded.
+          weightKg:
+            Number(row.kgActual ?? 0) > 0
+              ? Number(row.kgActual ?? 0)
+              : Number(row.kgPlanned ?? 0),
+          profit: Number(row.profit ?? 0),
+          profitReplPrice: Number(row.profitReplPrice ?? 0),
+        },
+        slice,
+      );
+
+      billableLines.push({
+        orderItemUuid: selection.orderItemUuid,
+        productUuid: row.productUuid,
+        quantity: billing.toFixed(3),
+        netPrice: row.netPrice,
+        amount: sliced.amount.toFixed(2),
+        costPrice: row.costPrice,
+        costAmount: sliced.costAmount.toFixed(2),
+        replacementPrice: row.replacementPrice,
+        profit: sliced.profit.toFixed(2),
+        // A percentage of a slice is the percentage of the whole — nothing to
+        // apportion.
+        profitMargin: row.profitMargin,
+        profitReplPrice: sliced.profitReplPrice.toFixed(2),
+        weightKg: sliced.weightKg.toFixed(2),
+      });
+
+      claims.push({
+        orderItemUuid: selection.orderItemUuid,
+        previousInvoiced: row.invoicedQuantity,
+        nextInvoiced: alreadyBilled + billing,
+        fullyBilled:
+          Number(row.quantity) - (alreadyBilled + billing) <= QUANTITY_EPSILON,
+      });
     }
+
+    // The invoice's worth, rolled up from those lines and its own surcharges.
+    // Materials were previously left out of the header entirely — an invoice
+    // reported only its surcharges as revenue, so the goods it billed showed as
+    // nothing.
+    const summary = computeQuoteSummary({
+      lines: billableLines.map((line) => ({
+        amount: Number(line.amount ?? 0),
+        costAmount: Number(line.costAmount ?? 0),
+        replacementCost:
+          Number(line.replacementPrice ?? 0) * Number(line.quantity ?? 0),
+        weightKg: Number(line.weightKg ?? 0),
+        theoreticalWeightKg: Number(line.weightKg ?? 0),
+      })),
+      surcharges: surcharges.map((surcharge) => ({
+        amount: Number(surcharge.amount ?? 0),
+        profit: Number(surcharge.profit ?? 0),
+      })),
+      // VAT follows the invoice's VAT scenario: reverse-charge scenarios charge
+      // 0%, everything else the standard rate.
+      vatRatePercent: getInvoiceVatRatePercent(fields.vatScenario),
+    });
+
+    const exclVat = summary.total.revenue;
+
+    // What the goods being billed cost us. The cost has been sitting on the
+    // balance sheet since the goods were delivered; billing them is the moment
+    // it becomes a cost of this sale.
+    const costOfSales = billableLines.reduce(
+      (sum, line) => sum + Number(line.costAmount ?? 0),
+      0,
+    );
+
+    // The surcharge for the credit this payment term extends. The customer
+    // earns it back by settling within the term — see registerPayment.
+    const creditRestriction = creditRestrictionOn(fields.paymentTerms, exclVat);
+
+    // VAT is charged on the surcharge too, which is why the system carries a
+    // dedicated `vat_credit_restriction_creditor` code. So the taxable base is
+    // the goods plus the surcharge, not the goods alone — which is also why
+    // this can't just use summary.vatAmount.
+    const vatRate = getInvoiceVatRatePercent(fields.vatScenario);
+    const vatAmount = (exclVat + creditRestriction) * (vatRate / 100);
+    const inclVat = exclVat + vatAmount;
+    const invoiceTotal = inclVat + creditRestriction;
+    // Outstanding in full until payments are registered against it.
+    const outstanding = invoiceTotal;
 
     const user = await currentUser();
     const userId = user?.id;
@@ -238,10 +387,17 @@ export const createInvoice = async (
         expirationDate: derivedExpiration,
         uuid,
         invoiceAmountExclVat: exclVat.toFixed(2),
-        invoiceAmountInclVat,
-        creditRestriction,
-        invoiceTotal,
-        outstanding,
+        invoiceAmountInclVat: inclVat.toFixed(2),
+        creditRestriction: creditRestriction.toFixed(2),
+        invoiceTotal: invoiceTotal.toFixed(2),
+        outstanding: outstanding.toFixed(2),
+        materialsRevenue: summary.materials.revenue.toFixed(2),
+        materialsProfit: summary.materials.profit.toFixed(2),
+        materialsProfitReplPrice: summary.materials.profitReplPrice.toFixed(2),
+        surchargesRevenue: summary.surcharges.revenue.toFixed(2),
+        surchargesProfit: summary.surcharges.profit.toFixed(2),
+        avgKiloPrice: summary.avgKiloPrice.toFixed(4),
+        totalWeightKg: summary.totalWeightKg.toFixed(2),
       });
 
       // Post the sales invoice to the general ledger.
@@ -252,7 +408,7 @@ export const createInvoice = async (
         .limit(1);
 
       await tx.insert(JournalEntries).values(
-        buildSalesInvoiceJournalEntry({
+        buildSalesJournalEntry({
           invoiceUuid: uuid,
           invoiceId: insertedInvoice?.id ?? null,
           companyUuid: fields.companyUuid ?? null,
@@ -260,6 +416,8 @@ export const createInvoice = async (
           invoiceDate: fields.invoiceDate ?? null,
           amountExclVat: exclVat,
           vatAmount,
+          creditRestriction,
+          costOfSales,
           userId: userId ?? null,
         }),
       );
@@ -272,39 +430,53 @@ export const createInvoice = async (
         });
       }
 
-      for (const id of orderItemUuids) {
-        const orderItem = orderItemByUuid.get(id);
-        if (!orderItem) {
-          continue;
-        }
-
-        // Guard: only bill a line that's still "delivered" — a concurrent
-        // invoice or cancellation can't double-bill it. Stock already left at
-        // delivery, so billing is purely financial: no stock change, no
-        // movement — just the invoice line (the journal posting is booked
-        // once for the whole invoice above).
+      for (const claim of claims) {
+        // Guard: the line must still be "delivered" and still have billed
+        // exactly what it had billed when we read it. Matching on the invoiced
+        // quantity is what makes part-billing safe — two invoices raised at once
+        // would otherwise each bill the same remainder, and the second loses
+        // here instead.
+        //
+        // Stock already left at delivery, so billing is purely financial: no
+        // stock change, no movement — just the invoice line (the journal posting
+        // is booked once for the whole invoice above).
         const [itemUpdateResult] = await tx
           .update(OrderItems)
-          .set({ status: "invoiced" })
+          .set({
+            invoicedQuantity: claim.nextInvoiced.toFixed(3),
+            // A line only leaves the billable list once all of it is billed;
+            // until then it stays "delivered" and offers its remainder.
+            status: claim.fullyBilled ? "invoiced" : "delivered",
+            lineStatus: claim.fullyBilled ? "invoiced" : "partially_invoiced",
+          })
           .where(
-            and(eq(OrderItems.uuid, id), eq(OrderItems.status, "delivered")),
+            and(
+              eq(OrderItems.uuid, claim.orderItemUuid),
+              eq(OrderItems.status, "delivered"),
+              eq(OrderItems.invoicedQuantity, claim.previousInvoiced),
+            ),
           );
 
         if (itemUpdateResult.affectedRows === 0) {
           throw new Error(
-            "One of the selected lines was already billed or cancelled — please refresh and try again.",
+            "One of the selected lines was billed or cancelled while this invoice was being raised — please refresh and try again.",
           );
         }
+      }
 
+      for (const line of billableLines) {
         await tx.insert(InvoiceItems).values({
+          ...line,
           uuid: generateUuid(),
           invoiceUuid: uuid,
-          orderItemUuid: id,
-          productUuid: orderItem.productUuid,
-          quantity: orderItem.quantity,
         });
       }
     });
+
+    // Only once the transaction has committed: a rolled back invoice must never
+    // leave a sent invoice email behind, and an email that fails to send must
+    // never roll a raised invoice back — mail can't be undone anyway.
+    await mailDocument(() => sendInvoiceEmail(uuid), `Invoice ${uuid}`);
 
     revalidatePath("/invoices");
     revalidatePath("/orders");
@@ -352,7 +524,13 @@ export const getInvoiceDetail = async (
     .leftJoin(Products, eq(InvoiceItems.productUuid, Products.uuid))
     .where(eq(InvoiceItems.invoiceUuid, uuid));
 
-  return { ...invoice, surcharges, items };
+  const payments = await db
+    .select()
+    .from(Payments)
+    .where(eq(Payments.invoiceUuid, uuid))
+    .orderBy(desc(Payments.paymentDate));
+
+  return { ...invoice, surcharges, items, payments };
 };
 
 export const cancelInvoice = async (
@@ -372,6 +550,8 @@ export const cancelInvoice = async (
       return { error: "This invoice is already cancelled." };
     }
 
+    const isCreditNote = invoice.documentType === "credit_note";
+
     const items = await db
       .select()
       .from(InvoiceItems)
@@ -384,14 +564,18 @@ export const cancelInvoice = async (
     }
 
     await db.transaction(async (tx) => {
+      // A cancelled invoice is void, so nothing is owed on it. Leaving
+      // `outstanding` at the full amount would keep the debt alive for good:
+      // it would go on consuming the customer's credit space and show up in
+      // their receivables long after the invoice stopped existing.
       await tx
         .update(Invoices)
-        .set({ cancelled: true })
+        .set({ cancelled: true, outstanding: "0.00" })
         .where(eq(Invoices.uuid, uuid));
 
       // Reverse the sales invoice's ledger posting.
       await tx.insert(JournalEntries).values(
-        buildSalesInvoiceJournalEntry({
+        buildSalesJournalEntry({
           invoiceUuid: uuid,
           invoiceId: invoice.id,
           companyUuid: invoice.companyUuid,
@@ -401,19 +585,74 @@ export const cancelInvoice = async (
           vatAmount:
             Number(invoice.invoiceAmountInclVat) -
             Number(invoice.invoiceAmountExclVat),
+          creditRestriction: Number(invoice.creditRestriction),
+          // The margin is given back with the revenue: the goods go back to
+          // being an unbilled asset, which is what they were before this
+          // document existed.
+          costOfSales: items.reduce(
+            (sum, item) => sum + Number(item.costAmount ?? 0),
+            0,
+          ),
           userId: userId ?? null,
           reversal: true,
         }),
       );
 
-      // Cancelling an invoice reverses only the money. The stock left at
-      // delivery, so the lines go back to "delivered" (billable again) and
-      // stock is NOT restored — recovering shipped goods is a return, not an
-      // invoice cancellation.
+      // Cancelling reverses only the money; stock is never restored here —
+      // recovering shipped goods is a return, not a cancellation.
+      //
+      // Where the line lands depends on which document was cancelled. An
+      // invoice pulled back leaves its lines billable again. A credit note
+      // pulled back means the customer owes for them once more, so they return
+      // to "invoiced" — sending them to "delivered" would offer goods that are
+      // physically back in the warehouse for delivery a second time.
+      const revertedStatus = isCreditNote ? "invoiced" : "delivered";
+
       for (const item of items) {
+        const [orderItem] = await tx
+          .select({
+            quantity: OrderItems.quantity,
+            invoicedQuantity: OrderItems.invoicedQuantity,
+          })
+          .from(OrderItems)
+          .where(eq(OrderItems.uuid, item.orderItemUuid))
+          .limit(1);
+
+        if (!orderItem) {
+          continue;
+        }
+
+        // Unbill what this document billed. A credit note's own line quantity is
+        // already negative, so subtracting it adds the quantity back — the
+        // customer owes for those goods again, which is exactly what pulling a
+        // credit note back means.
+        //
+        // Clamped at zero and at the line quantity: neither end is reachable by
+        // the normal path, and letting a stray figure out of that range would
+        // leave the line either permanently unbillable or offering quantity it
+        // never had.
+        const unbilled = Math.min(
+          Math.max(
+            Number(orderItem.invoicedQuantity ?? 0) - Number(item.quantity ?? 0),
+            0,
+          ),
+          Number(orderItem.quantity ?? 0),
+        );
+        const fullyBilled =
+          Number(orderItem.quantity ?? 0) - unbilled <= QUANTITY_EPSILON;
+
         await tx
           .update(OrderItems)
-          .set({ status: "delivered" })
+          .set({
+            status: revertedStatus,
+            invoicedQuantity: unbilled.toFixed(3),
+            lineStatus:
+              unbilled <= QUANTITY_EPSILON
+                ? "delivered"
+                : fullyBilled
+                  ? "invoiced"
+                  : "partially_invoiced",
+          })
           .where(eq(OrderItems.uuid, item.orderItemUuid));
       }
     });
@@ -438,7 +677,7 @@ export const updateInvoice = async (
 ): Promise<InvoiceActionResult> => {
   try {
     const [invoice] = await db
-      .select({ cancelled: Invoices.cancelled })
+      .select()
       .from(Invoices)
       .where(eq(Invoices.uuid, uuid))
       .limit(1);
@@ -450,21 +689,113 @@ export const updateInvoice = async (
       return { error: "Cannot edit a cancelled invoice." };
     }
 
+    const {
+      invoiceAmountExclVat: exclVatOverride,
+      creditRestriction: creditRestrictionOverride,
+      ...headerFields
+    } = fields;
+
     // Fill in the due date from the payment term when it wasn't set explicitly.
     const expirationDate =
-      fields.expirationDate ??
+      headerFields.expirationDate ??
       (() => {
         const due = getPaymentTermDueDate(
-          fields.paymentTerms ?? null,
-          fields.invoiceDate ? toDateString(fields.invoiceDate) : null,
+          headerFields.paymentTerms ?? null,
+          headerFields.invoiceDate
+            ? toDateString(headerFields.invoiceDate)
+            : null,
         );
         return due ? new Date(`${due}T00:00:00`) : null;
       })();
 
-    await db
-      .update(Invoices)
-      .set({ ...fields, expirationDate })
-      .where(eq(Invoices.uuid, uuid));
+    if (exclVatOverride === undefined && creditRestrictionOverride === undefined) {
+      await db
+        .update(Invoices)
+        .set({ ...headerFields, expirationDate })
+        .where(eq(Invoices.uuid, uuid));
+    } else {
+      const previousExclVat = Number(invoice.invoiceAmountExclVat);
+      const previousVat =
+        Number(invoice.invoiceAmountInclVat) - previousExclVat;
+
+      const exclVat =
+        exclVatOverride === undefined
+          ? previousExclVat
+          : Number(exclVatOverride);
+      const creditRestriction =
+        creditRestrictionOverride === undefined
+          ? Number(invoice.creditRestriction)
+          : Number(creditRestrictionOverride);
+
+      if (!Number.isFinite(exclVat) || !Number.isFinite(creditRestriction)) {
+        return { error: "Enter a valid amount." };
+      }
+
+      // VAT is charged on the credit restriction too — see createInvoice.
+      const vatRate = getInvoiceVatRatePercent(invoice.vatScenario);
+      const vatAmount = (exclVat + creditRestriction) * (vatRate / 100);
+      const inclVat = exclVat + vatAmount;
+      const invoiceTotal = inclVat + creditRestriction;
+
+      // Move the balance by the correction rather than resetting it to the new
+      // total: payments may already have been registered against this invoice,
+      // and overwriting outstanding would silently un-receive that money.
+      const outstanding =
+        Number(invoice.outstanding) +
+        (invoiceTotal - Number(invoice.invoiceTotal));
+
+      const user = await currentUser();
+      const userId = user?.id ?? null;
+
+      await db.transaction(async (tx) => {
+        await tx
+          .update(Invoices)
+          .set({
+            ...headerFields,
+            expirationDate,
+            invoiceAmountExclVat: exclVat.toFixed(2),
+            invoiceAmountInclVat: inclVat.toFixed(2),
+            creditRestriction: creditRestriction.toFixed(2),
+            invoiceTotal: invoiceTotal.toFixed(2),
+            outstanding: outstanding.toFixed(2),
+          })
+          .where(eq(Invoices.uuid, uuid));
+
+        // Correcting an amount has to move the ledger with it, or the sales
+        // journal and the invoice stop agreeing. The correction is booked as
+        // its own entry for the difference rather than by rewriting the
+        // original posting, so the trail keeps both the figure first issued and
+        // the adjustment made to it.
+        //
+        // The line-level split is deliberately left alone: it remains the
+        // record of what was actually billed, and a header correction is by
+        // definition something the lines don't account for.
+        const exclVatDelta = exclVat - previousExclVat;
+        const vatDelta = vatAmount - previousVat;
+
+        if (exclVatDelta !== 0 || vatDelta !== 0) {
+          await tx.insert(JournalEntries).values(
+            buildSalesJournalEntry({
+              invoiceUuid: uuid,
+              invoiceId: invoice.id,
+              companyUuid: invoice.companyUuid,
+              debCreditor:
+                headerFields.debtorNo === undefined
+                  ? invoice.debtorNo
+                  : headerFields.debtorNo,
+              invoiceDate:
+                headerFields.invoiceDate === undefined
+                  ? invoice.invoiceDate
+                  : headerFields.invoiceDate,
+              amountExclVat: exclVatDelta,
+              vatAmount: vatDelta,
+              userId,
+              description: "Sales invoice corrected",
+            }),
+          );
+        }
+      });
+    }
   } catch (error) {
     return {
       error:

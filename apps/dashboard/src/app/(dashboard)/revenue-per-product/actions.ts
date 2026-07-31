@@ -4,9 +4,7 @@ import { describeError } from "@/lib/helpers";
 import { db } from "@/db";
 import { InvoiceItems } from "@/db/schema/invoice-items";
 import { Invoices } from "@/db/schema/invoices";
-import { OrderItems } from "@/db/schema/order-items";
 import { Products } from "@/db/schema/products";
-import { Stock } from "@/db/schema/stock";
 import { eq, sql } from "drizzle-orm";
 
 export type RevenuePerProductRow = {
@@ -21,8 +19,10 @@ export type RevenuePerProductRow = {
   profitMargin: number;
 };
 
-// Invoiced sales rolled up per product and invoice period. Cost comes from the
-// stock lot's valuation price; profit/margin are derived.
+// Invoiced sales rolled up per product and invoice period, from the invoice
+// line's own snapshot. Cost was fixed to the stock lot's valuation at the time
+// of sale, so a later revaluation of that lot cannot rewrite the margin already
+// reported for a past period.
 export const getRevenuePerProduct = async (): Promise<
   RevenuePerProductRow[]
 > => {
@@ -36,16 +36,14 @@ export const getRevenuePerProduct = async (): Promise<
         productName: Products.name,
         year,
         month,
-        weightKg: sql<string>`COALESCE(SUM(${OrderItems.kgPlanned}), 0)`,
+        weightKg: sql<string>`COALESCE(SUM(${InvoiceItems.weightKg}), 0)`,
         sales: sql<string>`COALESCE(SUM(${InvoiceItems.quantity}), 0)`,
-        revenue: sql<string>`COALESCE(SUM(${OrderItems.amount}), 0)`,
-        cost: sql<string>`COALESCE(SUM(${Stock.valuationPrice} * ${InvoiceItems.quantity}), 0)`,
+        revenue: sql<string>`COALESCE(SUM(${InvoiceItems.amount}), 0)`,
+        cost: sql<string>`COALESCE(SUM(${InvoiceItems.costAmount}), 0)`,
       })
       .from(InvoiceItems)
       .innerJoin(Invoices, eq(InvoiceItems.invoiceUuid, Invoices.uuid))
-      .innerJoin(OrderItems, eq(InvoiceItems.orderItemUuid, OrderItems.uuid))
       .innerJoin(Products, eq(InvoiceItems.productUuid, Products.uuid))
-      .leftJoin(Stock, eq(OrderItems.stockUuid, Stock.uuid))
       .groupBy(Products.uuid, Products.productCode, Products.name, year, month);
 
     return rows.map((row) => {

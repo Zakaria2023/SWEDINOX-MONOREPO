@@ -26,8 +26,8 @@ export const JournalEntriesTable = ({ entries }: Props) => (
           <TableHead>External account</TableHead>
           <TableHead>Description</TableHead>
           <TableHead>Reference</TableHead>
-          <TableHead className="text-right">Amount</TableHead>
-          <TableHead className="text-right">VAT</TableHead>
+          <TableHead className="text-right">Debit</TableHead>
+          <TableHead className="text-right">Credit</TableHead>
           <TableHead>Deb/Creditor</TableHead>
           <TableHead>Document date</TableHead>
           <TableHead>Explanation</TableHead>
@@ -51,16 +51,21 @@ export const JournalEntriesTable = ({ entries }: Props) => (
               <TableCell className="font-medium">
                 {row.documentNo ?? "—"}
               </TableCell>
-              <TableCell>{row.account ?? "—"}</TableCell>
+              <TableCell className="whitespace-nowrap">
+                {row.account ?? "—"}
+                {row.accountName ? (
+                  <span className="text-muted-foreground"> {row.accountName}</span>
+                ) : null}
+              </TableCell>
               <TableCell>{row.journal ?? "—"}</TableCell>
               <TableCell>{row.externalAccount ?? "—"}</TableCell>
               <TableCell>{row.description ?? "—"}</TableCell>
               <TableCell>{row.reference ?? "—"}</TableCell>
               <TableCell className="text-right whitespace-nowrap">
-                € {row.amount}
+                {Number(row.debit) === 0 ? "—" : `€ ${row.debit}`}
               </TableCell>
               <TableCell className="text-right whitespace-nowrap">
-                € {row.vat}
+                {Number(row.credit) === 0 ? "—" : `€ ${row.credit}`}
               </TableCell>
               <TableCell>{row.debCreditor ?? row.companyName ?? "—"}</TableCell>
               <TableCell>{row.documentDate ?? "—"}</TableCell>

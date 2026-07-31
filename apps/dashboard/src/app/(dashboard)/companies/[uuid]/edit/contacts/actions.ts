@@ -9,6 +9,8 @@ import { db, SelectCompanies } from "@/db";
 import { Companies } from "@/db/schema/companies";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
 import { VisitReports } from "@/db/schema/visit-reports";
+import { sendCompanyWelcomeEmails } from "@/emails/actions";
+import { mailDocument } from "@/emails/documents";
 import {
   describeError,
   firstCount,
@@ -120,6 +122,24 @@ export const saveCompanyContact = async (
         isAgent: roles.includes("agent"),
         isOther: roles.includes("other"),
       });
+
+      // A contact added here gets the same welcome the create-company flow
+      // sends. This was the one thing that path copied and this one didn't, so a
+      // contact added to an existing company was silently never written to.
+      //
+      // Only on insert. Re-welcoming somebody because a typo in their name was
+      // corrected is worse than sending nothing, and an edit gives no way to
+      // tell a new address from a fixed one.
+      const welcomeTo = [columns.email, columns.addressEmail].filter(
+        (email): email is string => !!email,
+      );
+
+      if (welcomeTo.length > 0) {
+        await mailDocument(
+          () => sendCompanyWelcomeEmails(company.companyName, welcomeTo),
+          `Welcome email for a new contact at ${company.companyName}`,
+        );
+      }
     }
 
     revalidateContactPaths(payload.companyUuid);

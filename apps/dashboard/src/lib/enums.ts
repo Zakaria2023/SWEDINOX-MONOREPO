@@ -491,6 +491,19 @@ export const stockMovementTypes = [
 
 export type StockMovementType = (typeof stockMovementTypes)[number];
 
+// What a general-ledger account is, which decides which side of it increases
+// and which of the two statements it lands on. Assets and expenses increase on
+// the debit side; liabilities, equity and revenue on the credit side.
+export const ledgerAccountTypes = [
+  "asset",
+  "liability",
+  "equity",
+  "revenue",
+  "expense",
+] as const satisfies readonly string[];
+
+export type LedgerAccountType = (typeof ledgerAccountTypes)[number];
+
 export const stockMovementReasons = [
   "purchase_receipt",
   "invoice_consumption",
@@ -501,7 +514,21 @@ export const stockMovementReasons = [
   "manual_correction",
   "count_correction",
   "damaged",
+  // The material a production line took to the machine, out of the lot it was
+  // reserved from. Its counterpart is production_output plus, where the offcut
+  // is worth keeping, production_remnant.
+  "production_input",
   "production_output",
+  // The usable offcut a production line put back — a new, smaller lot of the
+  // same material, free for anyone to order.
+  "production_remnant",
+  // Material that entered the machine and came out as neither goods nor
+  // remnant: saw kerf, trim, scrap. What the sawing-waste control list reports.
+  "sawing_waste",
+  // Goods a customer sent back, booked into stock when the return is received.
+  "sales_return",
+  // Goods sent back to the supplier, taken out of the lot they arrived in.
+  "purchase_return",
 ] as const satisfies readonly string[];
 
 export type StockMovementReason = (typeof stockMovementReasons)[number];
@@ -968,6 +995,17 @@ export const invoiceSurchargeDescriptions = [
 export type InvoiceSurchargeDescription =
   (typeof invoiceSurchargeDescriptions)[number];
 
+// What an Invoices row actually is. A credit note is the same document with
+// its amounts negated — same numbering, same ledger, same ageing — so it lives
+// in the same table rather than a parallel one that every report would have to
+// learn about separately.
+export const invoiceDocumentTypes = [
+  "invoice",
+  "credit_note",
+] as const satisfies readonly string[];
+
+export type InvoiceDocumentType = (typeof invoiceDocumentTypes)[number];
+
 export const invoiceVatScenarios = [
   "purchase_domestically",
   "domestic_purchase_vat_shifted",
@@ -1058,6 +1096,9 @@ export const orderItemStatuses = [
   "reserved",
   "delivered",
   "invoiced",
+  // Billed, then sent back and credited. Terminal: a line can only come back
+  // once, so this is what stops the same delivery being credited twice.
+  "returned",
   "cancelled",
 ] as const satisfies readonly string[];
 
@@ -1252,6 +1293,44 @@ export const purchaseOrderStatuses = [
 ] as const satisfies readonly string[];
 
 export type PurchaseOrderStatus = (typeof purchaseOrderStatuses)[number];
+
+// How money actually moved. "Offset" is settlement without cash — a credit
+// note or a counter-invoice netted against this one.
+export const paymentMethods = [
+  "bank_transfer",
+  "direct_debit",
+  "cash",
+  "card",
+  "offset",
+] as const satisfies readonly string[];
+
+export type PaymentMethod = (typeof paymentMethods)[number];
+
+// Where a purchase request has got to. A request is the "who can supply this?"
+// document: it is sent to several suppliers at once, collects their quotes, and
+// ends when one of them is turned into a purchase order.
+export const purchaseRequestStatuses = [
+  "draft",
+  "sent",
+  "quoted",
+  "awarded",
+  "cancelled",
+] as const satisfies readonly string[];
+
+export type PurchaseRequestStatus = (typeof purchaseRequestStatuses)[number];
+
+// Where a supplier's quote has got to. "lost" is set on the siblings when
+// another quote against the same request is awarded, so the comparison screen
+// shows that a decision was taken rather than leaving every quote open forever.
+export const purchaseQuoteStatuses = [
+  "open",
+  "received",
+  "awarded",
+  "lost",
+  "expired",
+] as const satisfies readonly string[];
+
+export type PurchaseQuoteStatus = (typeof purchaseQuoteStatuses)[number];
 
 export const purchaseCompanyTypes = [
   "supplier",
@@ -1622,3 +1701,83 @@ export const sawingStatuses = [
 ] as const satisfies readonly string[];
 
 export type SawingStatus = (typeof sawingStatuses)[number];
+
+// The cross-section a product is made in — what "Dimensions" on the product
+// screen selects. It decides which of the width/thickness fields carry meaning:
+// a round bar's width is its diameter and its thickness stays 0, while a flat
+// bar uses both.
+export const productDimensionShapes = [
+  "round",
+  "square",
+  "flat",
+  "rectangular",
+  "hexagonal",
+  "octagonal",
+  "tube_round",
+  "tube_square",
+  "tube_rectangular",
+  "sheet",
+  "plate",
+  "beam",
+  "angle",
+] as const satisfies readonly string[];
+
+export type ProductDimensionShape = (typeof productDimensionShapes)[number];
+
+// Which stock lot leaves the warehouse first when a product is dispatched.
+export const dispatchStrategies = [
+  "lifo",
+  "fifo",
+] as const satisfies readonly string[];
+
+export type DispatchStrategy = (typeof dispatchStrategies)[number];
+
+// What a price-structure surcharge or discount tier is measured against: the
+// single order line, the group product, or the whole product group.
+export const priceTierBases = [
+  "order_line",
+  "group_product",
+  "product_group",
+] as const satisfies readonly string[];
+
+export type PriceTierBase = (typeof priceTierBases)[number];
+
+// How the stock label print run is broken up on a warehouse workorder.
+export const stockLabelBreakdowns = [
+  "per_line_bundle",
+  "per_bundle",
+  "amount_per_line",
+] as const satisfies readonly string[];
+
+export type StockLabelBreakdown = (typeof stockLabelBreakdowns)[number];
+
+// Which stock figure the periodic count is measured against.
+export const countStockBases = [
+  "technical",
+  "available",
+] as const satisfies readonly string[];
+
+export type CountStockBasis = (typeof countStockBases)[number];
+
+// How overdue a receivable is, measured from its due date. `not_due` is not an
+// age — it is everything still inside its payment term, kept in the same list
+// so the buckets add up to the whole debt rather than only the late part.
+export const ageingBuckets = [
+  "not_due",
+  "days_1_30",
+  "days_31_60",
+  "days_61_90",
+  "days_over_90",
+] as const satisfies readonly string[];
+
+export type AgeingBucket = (typeof ageingBuckets)[number];
+
+// How far a chase has been taken. Each stage is sent once: a debtor who has had
+// a final notice is not sent another, they are escalated by hand.
+export const reminderStages = [
+  "first",
+  "second",
+  "final",
+] as const satisfies readonly string[];
+
+export type ReminderStage = (typeof reminderStages)[number];

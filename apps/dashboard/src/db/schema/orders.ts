@@ -105,6 +105,50 @@ export const Orders = mysqlTable(
     billingAddressUuid: char("billing_address_uuid", { length: 36 }),
     blockingReason: varchar("blocking_reason", { length: 255 }),
 
+    // ── Summary (computed snapshot, read-only in the UI) ─────────────────────
+    // The same rollup a quote header carries, so an order reports its worth
+    // without every overview having to re-aggregate its lines — and so the
+    // margin recorded on the day it was placed survives later revaluations.
+    materialsRevenue: decimal("materials_revenue", {
+      precision: 15,
+      scale: 2,
+    }).default("0.00"),
+    materialsProfit: decimal("materials_profit", {
+      precision: 15,
+      scale: 2,
+    }).default("0.00"),
+    materialsProfitReplPrice: decimal("materials_profit_repl_price", {
+      precision: 15,
+      scale: 2,
+    }).default("0.00"),
+    surchargesRevenue: decimal("surcharges_revenue", {
+      precision: 15,
+      scale: 2,
+    }).default("0.00"),
+    surchargesProfit: decimal("surcharges_profit", {
+      precision: 15,
+      scale: 2,
+    }).default("0.00"),
+    totalExclVat: decimal("total_excl_vat", {
+      precision: 15,
+      scale: 2,
+    }).default("0.00"),
+    vatAmount: decimal("vat_amount", { precision: 15, scale: 2 }).default(
+      "0.00",
+    ),
+    totalInclVat: decimal("total_incl_vat", {
+      precision: 15,
+      scale: 2,
+    }).default("0.00"),
+    avgKiloPrice: decimal("avg_kilo_price", {
+      precision: 15,
+      scale: 2,
+    }).default("0.00"),
+    totalWeightKg: decimal("total_weight_kg", {
+      precision: 10,
+      scale: 2,
+    }).default("0.00"),
+
     // ── Remark ────────────────────────────────────────────────────────────────
     remarks: text("remarks"),
 

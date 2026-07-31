@@ -16,9 +16,20 @@ import {
   PurchaseOrderItems,
   SelectPurchaseOrderItems,
 } from "@/db/schema/purchase-order-items";
+import { JournalEntries } from "@/db/schema/journal-entries";
 import { StockCorrectionReason, StockMovementType } from "@/lib/enums";
-import { describeError, generateUuid } from "@/lib/helpers";
+import {
+  describeError,
+  generateUuid,
+  restateLotValue,
+  todayDateString,
+} from "@/lib/helpers";
+import { STOCK_MOVEMENT_REASON_LABELS } from "@/lib/labels";
 import { recordFreightMovement } from "@/lib/server/freight";
+import {
+  buildInventoryMovementEntry,
+  LEDGER_ACCOUNTS,
+} from "@/lib/server/ledger";
 import { currentUser } from "@clerk/nextjs/server";
 import { and, desc, eq, getTableColumns, gt, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -170,6 +181,22 @@ export const createStockCorrection = async (
         : -Number(input.quantity);
     const nextQuantity = (Number(stockRow.quantity) + delta).toFixed(3);
 
+    // A correction has to move the lot's value as well as its count, or the
+    // shelf keeps the worth of material that is no longer on it. Material added
+    // by a count difference can only be valued at what the rest of the lot cost;
+    // material removed takes its share of the value with it.
+    const previousValue = Number(stockRow.valuationEuro ?? 0);
+    const unitCost = Number(stockRow.valuationPrice ?? 0);
+    const nextValue =
+      delta > 0
+        ? previousValue + delta * unitCost
+        : restateLotValue({
+            previousQuantity: Number(stockRow.quantity),
+            remainingQuantity: Number(nextQuantity),
+            unitCost,
+            previousValue,
+          });
+
     await db.transaction(async (tx) => {
       // Optimistic lock: only apply if the quantity we read hasn't changed —
       // otherwise another correction/consumption raced us and we roll back.
@@ -177,6 +204,7 @@ export const createStockCorrection = async (
         .update(Stock)
         .set({
           quantity: nextQuantity,
+          valuationEuro: nextValue.toFixed(2),
           status: Number(nextQuantity) > 0 ? "pending" : "received",
         })
         .where(
@@ -212,6 +240,28 @@ export const createStockCorrection = async (
         valuationPrice: stockRow.valuationPrice,
         operator: userId,
       });
+
+      // Every other inventory movement has a document on the other side. This
+      // one does not: material appearing or vanishing off the back of a count is
+      // a gain or a loss the moment it is recorded, so it goes straight to the
+      // result rather than waiting for paperwork that will never come.
+      const valueChange = nextValue - previousValue;
+
+      if (Math.abs(valueChange) >= 0.005) {
+        await tx.insert(JournalEntries).values(
+          buildInventoryMovementEntry({
+            bookingDate: todayDateString(),
+            documentNo: null,
+            description: `Stock correction — ${STOCK_MOVEMENT_REASON_LABELS[input.reason]}`,
+            companyUuid: null,
+            debCreditor: null,
+            inventoryValue: valueChange,
+            counterAccount: LEDGER_ACCOUNTS.inventoryDifferences,
+            reference: `Stock lot ${input.stockUuid}`,
+            userId,
+          }),
+        );
+      }
     });
 
     revalidatePath("/stock");

@@ -16,7 +16,7 @@ import { FormError } from "@/components/ui/form-error";
 import { getPaymentTermDueDate, invoiceChargesVat } from "@/lib/helpers";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import { SurchargeDialog } from "./dialogs/surcharge-dialog";
 import { InvoiceAmountsSection } from "./sections/invoice-amounts-section";
@@ -34,6 +34,7 @@ const DEFAULT_SURCHARGE = {
   description: undefined,
   surcharge: "",
   unit: "Euro",
+  profit: "",
 };
 
 export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
@@ -48,13 +49,23 @@ export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
   const [selectedOrderItemUuids, setSelectedOrderItemUuids] = useState<
     string[]
   >([]);
+  // What to bill on each selected line. A line the user hasn't touched isn't in
+  // here at all, and the action reads that as "bill the whole remainder".
+  const [billQuantities, setBillQuantities] = useState<Record<string, string>>(
+    {},
+  );
+
+  const selections = selectedOrderItemUuids.map((uuid) => ({
+    orderItemUuid: uuid,
+    quantity: billQuantities[uuid],
+  }));
 
   const {
     form,
     isPending,
     onSubmit: submitForm,
     state,
-  } = useInvoiceSubmit(surcharges, selectedOrderItemUuids);
+  } = useInvoiceSubmit(surcharges, selections);
 
   const companyUuid = form.watch("companyUuid");
   const paymentTerms = form.watch("paymentTerms");
@@ -63,6 +74,7 @@ export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
 
   useEffect(() => {
     setSelectedOrderItemUuids([]);
+    setBillQuantities({});
     if (!companyUuid) {
       setReservedItems([]);
       return;
@@ -93,9 +105,16 @@ export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
       prev.includes(uuid) ? prev.filter((id) => id !== uuid) : [...prev, uuid],
     );
 
-  const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    if (surcharges.length === 0) {
-      setSurchargeError("At least one surcharge is required.");
+  const setBillQuantity = (uuid: string, quantity: string) =>
+    setBillQuantities((prev) => ({ ...prev, [uuid]: quantity }));
+
+  // An invoice has to bill something, but either goods or surcharges will do —
+  // a plain materials invoice carries its value on the lines it bills.
+  const onSubmit = (e: FormEvent<HTMLFormElement>) => {
+    if (surcharges.length === 0 && selectedOrderItemUuids.length === 0) {
+      setSurchargeError(
+        "Select at least one delivered line to bill, or add a surcharge.",
+      );
       e.preventDefault();
       return;
     }
@@ -128,6 +147,7 @@ export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
       description: s.description ?? undefined,
       surcharge: s.surcharge ?? "",
       unit: s.unit ?? "Euro",
+      profit: s.profit ?? "",
     });
     setIsSurchargeDialogOpen(true);
   };
@@ -141,6 +161,7 @@ export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
       unit: values.unit || undefined,
       surchargePercentage: "0.00",
       amount: surchargeVal,
+      profit: values.profit || "0.00",
     };
     if (editingIndex !== null) {
       setSurcharges((prev) =>
@@ -173,7 +194,9 @@ export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
         <InvoiceOrderItemsSection
           reservedItems={reservedItems}
           selectedUuids={selectedOrderItemUuids}
+          quantities={billQuantities}
           onToggle={toggleOrderItem}
+          onQuantityChange={setBillQuantity}
           isPending={isPending}
         />
 

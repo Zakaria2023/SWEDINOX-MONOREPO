@@ -1,8 +1,10 @@
 import { z } from "zod";
 import {
+  contractTierUnits,
   deliveryTerms,
   deliveryTypes,
   invoicePaymentTerms,
+  invoiceSurchargeDescriptions,
   orderMethods,
   orderWeightTypes,
   stockUnits,
@@ -25,6 +27,28 @@ export const quoteLineSchema = z.object({
 });
 
 export type QuoteLineFormValues = z.infer<typeof quoteLineSchema>;
+
+// A surcharge quoted on top of the material — scrap/alloy surcharge, small
+// order fee. Every field is optional so a half-filled row can still be typed
+// out of order; the sequence and the creation stamp are set on save rather than
+// entered, so they are not part of the form.
+export const quoteSurchargeSchema = z.object({
+  description: z
+    .union([z.enum(invoiceSurchargeDescriptions), z.literal("")])
+    .optional(),
+  surcharge: z.string().optional(),
+  unit: z.string().optional(),
+  fromValue: z.string().optional(),
+  unitIndication: z.string().optional(),
+  tierUnit: z.union([z.enum(contractTierUnits), z.literal("")]).optional(),
+  amount: z.string().optional(),
+  profit: z.string().optional(),
+  thirdParties: z.boolean(),
+  companyCode: z.string().optional(),
+  companyUuid: z.string().optional(),
+});
+
+export type QuoteSurchargeFormValues = z.infer<typeof quoteSurchargeSchema>;
 
 export const quoteSchema = z.object({
   // Header
@@ -92,6 +116,9 @@ export const quoteSchema = z.object({
 
   // Line items
   items: z.array(quoteLineSchema),
+
+  // Surcharges
+  surcharges: z.array(quoteSurchargeSchema),
 });
 
 export type QuoteFormValues = z.infer<typeof quoteSchema>;
@@ -152,4 +179,6 @@ export const DEFAULT_QUOTE: QuoteFormValues = {
   documents: [],
 
   items: [],
+
+  surcharges: [],
 };

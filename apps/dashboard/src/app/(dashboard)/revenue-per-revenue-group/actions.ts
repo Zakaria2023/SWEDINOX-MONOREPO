@@ -4,10 +4,8 @@ import { describeError } from "@/lib/helpers";
 import { db } from "@/db";
 import { InvoiceItems } from "@/db/schema/invoice-items";
 import { Invoices } from "@/db/schema/invoices";
-import { OrderItems } from "@/db/schema/order-items";
 import { Products } from "@/db/schema/products";
 import { RevenueGroups } from "@/db/schema/revenue-groups";
-import { Stock } from "@/db/schema/stock";
 import { eq, sql } from "drizzle-orm";
 
 export type RevenueGroupTotals = {
@@ -19,8 +17,10 @@ export type RevenueGroupTotals = {
   profitMargin: number;
 };
 
-// Revenue rolled up per revenue group from invoiced order lines. Cost comes
-// from the stock lot's valuation price; profit/margin are derived.
+// Revenue rolled up per revenue group from invoiced lines. Revenue, weight and
+// cost all come from the invoice line's own snapshot, taken when the invoice
+// was raised — reading them back off the order line would report whatever it
+// says today rather than what was actually billed.
 export const getRevenuePerRevenueGroup = async (): Promise<
   RevenueGroupTotals[]
 > => {
@@ -29,19 +29,17 @@ export const getRevenuePerRevenueGroup = async (): Promise<
       .select({
         revenueGroupNumber: RevenueGroups.number,
         revenueGroupName: RevenueGroups.name,
-        salesKg: sql<string>`COALESCE(SUM(${OrderItems.kgPlanned}), 0)`,
-        revenue: sql<string>`COALESCE(SUM(${OrderItems.amount}), 0)`,
-        cost: sql<string>`COALESCE(SUM(${Stock.valuationPrice} * ${OrderItems.quantity}), 0)`,
+        salesKg: sql<string>`COALESCE(SUM(${InvoiceItems.weightKg}), 0)`,
+        revenue: sql<string>`COALESCE(SUM(${InvoiceItems.amount}), 0)`,
+        cost: sql<string>`COALESCE(SUM(${InvoiceItems.costAmount}), 0)`,
       })
       .from(InvoiceItems)
       .innerJoin(Invoices, eq(InvoiceItems.invoiceUuid, Invoices.uuid))
-      .innerJoin(OrderItems, eq(InvoiceItems.orderItemUuid, OrderItems.uuid))
       .innerJoin(Products, eq(InvoiceItems.productUuid, Products.uuid))
       .leftJoin(
         RevenueGroups,
         eq(Products.revenueGroupUuid, RevenueGroups.uuid),
       )
-      .leftJoin(Stock, eq(OrderItems.stockUuid, Stock.uuid))
       .groupBy(RevenueGroups.uuid, RevenueGroups.number, RevenueGroups.name);
 
     return rows.map((row) => {

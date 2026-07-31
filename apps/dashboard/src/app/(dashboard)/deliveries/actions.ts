@@ -1,14 +1,25 @@
 "use server";
 
 import { db } from "@/db";
+import { JournalEntries } from "@/db/schema/journal-entries";
 import { OrderItems, SelectOrderItems } from "@/db/schema/order-items";
 import { Orders, SelectOrders } from "@/db/schema/orders";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { Products, SelectProducts } from "@/db/schema/products";
 import { Stock } from "@/db/schema/stock";
 import { StockMovements } from "@/db/schema/stock-movements";
-import { describeError, generateUuid, todayDateString } from "@/lib/helpers";
+import { mailDocument, sendDeliveryNoteEmail } from "@/emails/documents";
+import {
+  describeError,
+  generateUuid,
+  restateLotValue,
+  todayDateString,
+} from "@/lib/helpers";
 import { recordFreightMovement } from "@/lib/server/freight";
+import {
+  buildInventoryMovementEntry,
+  LEDGER_ACCOUNTS,
+} from "@/lib/server/ledger";
 import { currentUser } from "@clerk/nextjs/server";
 import { and, desc, eq, getTableColumns, ne, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -97,6 +108,39 @@ export const deliverOrderItem = async (
       return { error: "Only a reserved line can be delivered." };
     }
 
+    // A block has to actually stop the goods, or it is only a label. Both the
+    // line's own holds and the order's financial block are refused here, and
+    // both are lifted the same way: deliberately, by someone with the
+    // authority, leaving a record of who did it.
+    if (orderItem.commercialBlock) {
+      return { error: "This line is on a commercial block." };
+    }
+    if (orderItem.financialBlock) {
+      return { error: "This line is on a financial block." };
+    }
+    if (orderItem.transportBlock) {
+      return { error: "This line is on a transport block." };
+    }
+
+    const [order] = await db
+      .select({
+        id: Orders.id,
+        companyUuid: Orders.companyUuid,
+        financialBlockage: Orders.financialBlockage,
+        blockingReason: Orders.blockingReason,
+      })
+      .from(Orders)
+      .where(eq(Orders.uuid, orderItem.orderUuid))
+      .limit(1);
+
+    if (order?.financialBlockage) {
+      return {
+        error: order.blockingReason
+          ? `This order is financially blocked — ${order.blockingReason}. Release it on the Financially Blocked overview before delivering.`
+          : "This order is financially blocked. Release it on the Financially Blocked overview before delivering.",
+      };
+    }
+
     const user = await currentUser();
     const userId = user?.id;
 
@@ -141,12 +185,25 @@ export const deliverOrderItem = async (
           Number(stockRow.reservedQuantity) - Number(orderItem.quantity)
         ).toFixed(3);
 
+        const previousValue = Number(stockRow.valuationEuro ?? 0);
+        const nextValue = restateLotValue({
+          previousQuantity: Number(stockRow.quantity),
+          remainingQuantity: Number(nextQuantity),
+          unitCost: Number(stockRow.valuationPrice ?? 0),
+          previousValue,
+        });
+
         const [stockUpdate] = await tx
           .update(Stock)
           .set({
             quantity: nextQuantity,
             reservedQuantity: nextReserved,
             status: Number(nextQuantity) > 0 ? "pending" : "received",
+            // Shipping material out has to take its value with it. Reducing the
+            // quantity alone left the remainder carrying the whole lot's value,
+            // so stock valuation climbed a little with every delivery and never
+            // came back down.
+            valuationEuro: nextValue.toFixed(2),
           })
           .where(
             and(
@@ -181,8 +238,43 @@ export const deliverOrderItem = async (
           orderUuid: orderItem.orderUuid,
           operator: userId,
         });
+
+        // The stock ledger has to move when the stock does. The goods are no
+        // longer on the shelf, but nobody has been billed for them either, so
+        // their cost is parked until the invoice charges it to cost of sales.
+        // Waiting for the invoice would leave the balance sheet claiming stock
+        // that had already been shipped.
+        //
+        // The figure posted is the value the lot actually gave up, not what the
+        // order line says it should have — that is what keeps the inventory
+        // account reconcilable to the Stock table line by line.
+        const valueOut = previousValue - nextValue;
+
+        if (Math.abs(valueOut) >= 0.005) {
+          await tx.insert(JournalEntries).values(
+            buildInventoryMovementEntry({
+              bookingDate: todayDateString(),
+              documentNo: order?.id != null ? String(order.id) : null,
+              description: "Goods delivered",
+              companyUuid: order?.companyUuid ?? null,
+              debCreditor: null,
+              inventoryValue: -valueOut,
+              counterAccount: LEDGER_ACCOUNTS.goodsDeliveredNotInvoiced,
+              reference: `Order line ${orderItemUuid}`,
+              userId,
+            }),
+          );
+        }
       }
     });
+
+    // The goods have physically left, so the customer is told what shipped.
+    // Sent after the transaction commits and never allowed to fail the
+    // delivery — the stock is already gone either way.
+    await mailDocument(
+      () => sendDeliveryNoteEmail(orderItemUuid),
+      `Delivery note for order line ${orderItemUuid}`,
+    );
 
     revalidatePath("/deliveries");
     revalidatePath("/stock");

@@ -7,111 +7,87 @@ import {
   ContractActionResult,
   ContractCompanyEntry,
   createContract,
+  updateContract,
 } from "./actions";
+import { contractFormToInput } from "./mappers";
 import { ContractFormValues, createContractSchema } from "./validation";
 
-export const useContractSubmit = (companies: ContractCompanyEntry[]) => {
+type UseContractSubmitParams = {
+  companies: ContractCompanyEntry[];
+  /** Set when editing an existing contract; omitted when creating one. */
+  contractUuid?: string;
+  defaultValues?: ContractFormValues;
+};
+
+const DEFAULT_CONTRACT: ContractFormValues = {
+  code: "",
+  contractType: undefined,
+  description: "",
+  contractGroupUuid: "",
+  quicklyChangeOrder: "",
+  hasPriceDate: false,
+  priceDate: "",
+  linkToNewCustomer: false,
+  searchCode1: "",
+  searchCode2: "",
+  searchCode3: "",
+  websiteSorting: "10",
+  hideOnWebsite: false,
+
+  grossPrice: false,
+  grossPriceValue: "",
+  colorSurcharge: false,
+  colorSurchargeValue: "",
+  colorSurchargeUnit: "",
+  extraDiscount: false,
+  extraDiscountValue: "",
+  extraDiscountUnit: "",
+  extraDiscountFromValue: "",
+  extraDiscountFromUnit: "",
+  quantitySurcharge: false,
+  quantitySurchargeTierUnit: undefined,
+  quantitySurchargeDiscountUnit: "",
+  quantitySurchargeTiers: [],
+  quantitySurchargePerType: undefined,
+  lineDiscount: false,
+  lineDiscountTierUnit: undefined,
+  lineDiscountDiscountUnit: "",
+  lineDiscountTiers: [],
+  groupDiscount: false,
+  groupDiscountTierUnit: undefined,
+  groupDiscountDiscountUnit: "",
+  groupDiscountTiers: [],
+  groupDiscountBasedOn: undefined,
+};
+
+export const useContractSubmit = ({
+  companies,
+  contractUuid,
+  defaultValues,
+}: UseContractSubmitParams) => {
   const [isPending, startTransition] = useTransition();
   const [state, setState] = useState<ContractActionResult>({});
 
   const form = useForm<ContractFormValues>({
     resolver: zodResolver(createContractSchema()),
-    defaultValues: {
-      code: "",
-      contractType: undefined,
-      description: "",
-      contractGroupUuid: "",
-      quicklyChangeOrder: "",
-      hasPriceDate: false,
-      priceDate: "",
-      linkToNewCustomer: false,
-      searchCode1: "",
-      searchCode2: "",
-      searchCode3: "",
-      websiteSorting: "10",
-      hideOnWebsite: false,
-      // Details
-      grossPrice: false,
-      grossPriceValue: "",
-      colorSurcharge: false,
-      colorSurchargeValue: "",
-      colorSurchargeUnit: "",
-      extraDiscount: false,
-      extraDiscountValue: "",
-      extraDiscountUnit: "",
-      extraDiscountFromValue: "",
-      extraDiscountFromUnit: "",
-      quantitySurcharge: false,
-      quantitySurchargeTierUnit: undefined,
-      quantitySurchargeDiscountUnit: "",
-      quantitySurchargeTiers: [],
-      quantitySurchargePerType: undefined,
-      lineDiscount: false,
-      lineDiscountTierUnit: undefined,
-      lineDiscountDiscountUnit: "",
-      lineDiscountTiers: [],
-      groupDiscount: false,
-      groupDiscountTierUnit: undefined,
-      groupDiscountDiscountUnit: "",
-      groupDiscountTiers: [],
-      groupDiscountBasedOn: undefined,
-    },
+    defaultValues: defaultValues ?? DEFAULT_CONTRACT,
   });
 
   const onSubmit = form.handleSubmit((values) => {
     startTransition(async () => {
-      const result = await createContract(
-        {
-          code: values.code.toUpperCase(),
-          contractType: values.contractType ?? null,
-          description: values.description,
-          contractGroupUuid: values.contractGroupUuid,
-          quicklyChangeOrder: values.quicklyChangeOrder || undefined,
-          hasPriceDate: values.hasPriceDate,
-          priceDate:
-            values.hasPriceDate && values.priceDate
-              ? values.priceDate
-              : undefined,
-          linkToNewCustomer: values.linkToNewCustomer,
-          searchCode1: values.searchCode1 || undefined,
-          searchCode2: values.searchCode2 || undefined,
-          searchCode3: values.searchCode3 || undefined,
-          websiteSorting:
-            values.websiteSorting !== "" && values.websiteSorting !== undefined
-              ? Number(values.websiteSorting)
-              : 10,
-          hideOnWebsite: values.hideOnWebsite,
-          // Details
-          grossPrice: values.grossPrice,
-          grossPriceValue: values.grossPriceValue || undefined,
-          colorSurcharge: values.colorSurcharge,
-          colorSurchargeValue: values.colorSurchargeValue || undefined,
-          colorSurchargeUnit: values.colorSurchargeUnit || undefined,
-          extraDiscount: values.extraDiscount,
-          extraDiscountValue: values.extraDiscountValue || undefined,
-          extraDiscountUnit: values.extraDiscountUnit || undefined,
-          extraDiscountFromValue: values.extraDiscountFromValue || undefined,
-          extraDiscountFromUnit: values.extraDiscountFromUnit || undefined,
-          quantitySurcharge: values.quantitySurcharge,
-          quantitySurchargeTierUnit: values.quantitySurchargeTierUnit ?? null,
-          quantitySurchargeDiscountUnit: values.quantitySurchargeDiscountUnit || undefined,
-          quantitySurchargeTiers: values.quantitySurchargeTiers,
-          quantitySurchargePerType: values.quantitySurchargePerType ?? null,
-          lineDiscount: values.lineDiscount,
-          lineDiscountTierUnit: values.lineDiscountTierUnit ?? null,
-          lineDiscountDiscountUnit: values.lineDiscountDiscountUnit || undefined,
-          lineDiscountTiers: values.lineDiscountTiers,
-          groupDiscount: values.groupDiscount,
-          groupDiscountTierUnit: values.groupDiscountTierUnit ?? null,
-          groupDiscountDiscountUnit: values.groupDiscountDiscountUnit || undefined,
-          groupDiscountTiers: values.groupDiscountTiers,
-          groupDiscountBasedOn: values.groupDiscountBasedOn ?? null,
-        },
-        companies,
-      );
-      setState(result);
+      const input = contractFormToInput(values);
+
+      // Updating redirects from inside the action; creating one contract per
+      // linked company is a create-only concern, since an existing contract is
+      // already attached to whichever company it was created for.
+      if (contractUuid) {
+        setState(await updateContract(contractUuid, input));
+        return;
+      }
+
+      setState(await createContract(input, companies));
     });
   });
 
-  return { form, isPending, onSubmit, state };
+  return { form, isPending, isEditing: Boolean(contractUuid), onSubmit, state };
 };

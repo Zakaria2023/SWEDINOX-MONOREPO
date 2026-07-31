@@ -15,6 +15,7 @@ import {
   varchar,
 } from "drizzle-orm/mysql-core";
 import {
+  invoiceDocumentTypes,
   invoicePaymentTerms,
   invoiceSurchargeDescriptions,
   purchaseInvoiceBlockReasons,
@@ -34,6 +35,18 @@ export const PurchaseInvoices = mysqlTable(
       length: 36,
     }),
 
+    // Goods sent back to a supplier come back as their credit note, which is
+    // this same document with its amounts negated. Holding it here rather than
+    // in a parallel table means the payable, the purchase journal and the
+    // ageing net it off without learning anything new.
+    documentType: mysqlEnum("document_type", invoiceDocumentTypes)
+      .default("invoice")
+      .notNull(),
+    purchaseReturnOrderUuid: char("purchase_return_order_uuid", { length: 36 }),
+    creditsPurchaseInvoiceUuid: char("credits_purchase_invoice_uuid", {
+      length: 36,
+    }),
+
     bookingDate: date("booking_date"),
     invoiceDate: date("invoice_date"),
     expirationDate: date("expiration_date"),
@@ -49,6 +62,12 @@ export const PurchaseInvoices = mysqlTable(
     invoiceTotal: decimal("invoice_total", { precision: 15, scale: 2 }).default(
       "0.00",
     ),
+    // What is still owed to the supplier. Mirrors Invoices.outstanding: set to
+    // the total when the invoice is booked, reduced as payments are registered
+    // against it.
+    outstanding: decimal("outstanding", { precision: 15, scale: 2 })
+      .default("0.00")
+      .notNull(),
     purchaseOrderNumber: varchar("purchase_order_number", { length: 100 }),
 
     paymentTerms: mysqlEnum("pi_payment_terms", invoicePaymentTerms),
@@ -75,6 +94,11 @@ export const PurchaseInvoices = mysqlTable(
       precision: 15,
       scale: 2,
     }).default("0.00"),
+    // What the supplier billed that the booked lines don't account for. Zero
+    // means the booking matches their paperwork; anything else is the amount
+    // somebody still has to explain, which is why it is shown rather than
+    // quietly absorbed into a total.
+    remainder: decimal("remainder", { precision: 15, scale: 2 }).default("0.00"),
     remarks: text("remarks"),
     documents:
       json("documents").$type<Array<{ id: string; fileName: string }>>(),
