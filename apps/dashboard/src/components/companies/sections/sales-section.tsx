@@ -249,10 +249,13 @@ export const SalesSection = ({
             </DialogDescription>
           </DialogHeader>
 
-          <form
-            onSubmit={handleSaveSales}
-            className="flex flex-1 flex-col overflow-hidden"
-          >
+          {/* Deliberately not a <form>. This section renders inside the company
+              form, and Radix portals the dialog out to the body — which fixes the
+              DOM nesting but not the React tree, so a submit event raised in here
+              still bubbles to the company form's onSubmit and creates the
+              company. The save is an onClick instead, the same way the address
+              dialogs in this form do it. */}
+          <div className="flex flex-1 flex-col overflow-hidden">
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
               {/* Commercial layout */}
               <div>
@@ -741,8 +744,9 @@ export const SalesSection = ({
             <DialogFormFooter
               onCancel={() => setIsSalesDialogOpen(false)}
               submitLabel="Save Sales Settings"
+              onSubmit={() => void handleSaveSales()}
             />
-          </form>
+          </div>
         </DialogContent>
       </Dialog>
     </>
