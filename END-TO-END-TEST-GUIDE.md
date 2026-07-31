@@ -12,6 +12,11 @@ comes from one of them:
   valuations are all resolved on the server at the moment a document is written,
   and snapshotted onto it. Re-pricing the catalogue later never rewrites a
   document already raised.
+- A product has no purchase price. What an article costs is whatever a supplier
+  billed for it, so it is entered once on their invoice, and every cost figure
+  in the app — average purchase price, the price it would cost to re-buy, cost
+  of sales, stock valuation — is read back from there. The product screen holds
+  sales prices only.
 - Stock is never created by hand. It is born from a purchase invoice and from
   production, and it dies at delivery. There is no "add stock" screen.
 
@@ -114,19 +119,26 @@ CHECK:
 Step 1.6 — Price the catalogue
 
 DO: /product-prices — set "Default markup %" (25 is a good test value) and click
-Recalculate prices. For every product it computes:
+Recalculate prices. It writes the sales side only:
 
-- APP — the weighted average of what was actually paid, from received goods. It
-  is 0,00 until Flow 2 has receipts, so run this AGAIN after Step 2.4.
-- Replacement price — kept as maintained, or seeded from the APP when still 0.
-- Base price — the fixed sales price if set, otherwise replacement price plus
+- Base price — the fixed sales price if set, otherwise the article's cost plus
   the markup. This is the list price sales prices start from.
+- Markup — the product's own, or the default you typed when it has none.
 - Price date — set to today.
+
+The cost it marks up is not stored on the product: it is the last price a
+supplier invoiced the article at, falling back to the average of every invoiced
+line. Until Flow 2 has booked a purchase invoice there is no such price, so base
+price comes out 0,00 — run this AGAIN after Step 2.4.
 
 CHECK:
 
-- /product-prices — Replacement price, Base price, Markup and APP are filled,
-  with the product's main group, subgroup and preferred supplier alongside.
+- /product-prices — Base price and Markup are filled, alongside the article's
+  Last invoiced price and APP (both read from the purchase invoices, so both are
+  still 0,00 at this stage) and its main group, subgroup and preferred supplier.
+- /products/<uuid> — the Sales prices panel holds what you just computed. The
+  Purchase cost panel below it is read-only and still empty: nothing has been
+  invoiced yet.
 
 Step 1.7 — Contract net prices (agreed prices)
 
@@ -232,7 +244,9 @@ CHECK:
 
 - /purchase-receivals — one row per received line.
 - /receipts — the same receipts totalled per date, supplier and product.
-- /purchase-results — purchase value against today's replacement price.
+- /purchase-results — what was paid against what replacing the goods would cost
+  today, i.e. the price the article was last invoiced at. Both sides read from
+  the purchase invoices, so this stays 0,00 until Step 2.4 books one.
 - /purchase-invoices-to-be-received — a received-but-not-yet-invoiced order
   appears here, and drops off once you invoice it (Step 2.4).
 - /purchase-orders/<uuid> — the receipt appears under Product Receipt Documents.
@@ -244,8 +258,14 @@ supplier's pending lots. Click Add line and pick a lot with a quantity for every
 line you want to invoice — an invoice saved with no lines has a 0,00 total and
 produces no invoice lines. Add a surcharge (freight) too, to see the split below.
 
-Then re-run /product-prices — Recalculate prices, so APP / replacement / base
-price stop being 0,00 now that there is a receipt to cost from.
+This invoice is what puts a cost on the article. The moment it is booked, the
+APP and the last invoiced price stop being 0,00 everywhere they are shown —
+nothing has to be recalculated for that, because they are read from these lines
+rather than copied onto the product.
+
+Base price is the one figure that does not follow on its own, since it is the
+product's own sales price. Re-run /product-prices — Recalculate prices to mark
+the new cost up.
 
 What it posts:
 
