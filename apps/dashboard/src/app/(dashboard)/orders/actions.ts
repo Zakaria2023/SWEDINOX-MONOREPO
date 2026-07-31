@@ -478,7 +478,17 @@ export const cancelOrder = async (uuid: string): Promise<OrderActionResult> => {
       .from(OrderItems)
       .where(eq(OrderItems.orderUuid, uuid));
 
-    if (items.some((item) => item.status === "invoiced")) {
+    // Anything billed stops a cancellation, whether it was billed in full or in
+    // part. A part-billed line stays at "delivered" so it can be billed for the
+    // rest, so status alone no longer answers the question — the invoiced
+    // quantity does, and cancelling around a live invoice would void goods a
+    // customer has already been charged for.
+    if (
+      items.some(
+        (item) =>
+          item.status === "invoiced" || Number(item.invoicedQuantity ?? 0) > 0,
+      )
+    ) {
       return {
         error:
           "Cannot cancel: some products on this order have already been invoiced.",

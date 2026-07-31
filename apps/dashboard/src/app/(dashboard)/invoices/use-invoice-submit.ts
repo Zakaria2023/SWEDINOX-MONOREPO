@@ -6,13 +6,14 @@ import { useForm } from "react-hook-form";
 import {
   createInvoice,
   InvoiceActionResult,
+  InvoiceLineSelection,
   InvoiceSurchargeInput,
 } from "./actions";
 import { createInvoiceSchema, InvoiceFormValues } from "./validation";
 
 export const useInvoiceSubmit = (
   surcharges: InvoiceSurchargeInput[],
-  orderItemUuids: string[] = [],
+  selections: InvoiceLineSelection[] = [],
 ) => {
   const [isPending, startTransition] = useTransition();
   const [state, setState] = useState<InvoiceActionResult>({});
@@ -49,7 +50,7 @@ export const useInvoiceSubmit = (
           explanation: values.explanation || undefined,
         },
         surcharges,
-        orderItemUuids,
+        selections,
       );
       setState(result);
     });

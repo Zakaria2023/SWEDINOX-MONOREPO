@@ -49,13 +49,23 @@ export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
   const [selectedOrderItemUuids, setSelectedOrderItemUuids] = useState<
     string[]
   >([]);
+  // What to bill on each selected line. A line the user hasn't touched isn't in
+  // here at all, and the action reads that as "bill the whole remainder".
+  const [billQuantities, setBillQuantities] = useState<Record<string, string>>(
+    {},
+  );
+
+  const selections = selectedOrderItemUuids.map((uuid) => ({
+    orderItemUuid: uuid,
+    quantity: billQuantities[uuid],
+  }));
 
   const {
     form,
     isPending,
     onSubmit: submitForm,
     state,
-  } = useInvoiceSubmit(surcharges, selectedOrderItemUuids);
+  } = useInvoiceSubmit(surcharges, selections);
 
   const companyUuid = form.watch("companyUuid");
   const paymentTerms = form.watch("paymentTerms");
@@ -64,6 +74,7 @@ export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
 
   useEffect(() => {
     setSelectedOrderItemUuids([]);
+    setBillQuantities({});
     if (!companyUuid) {
       setReservedItems([]);
       return;
@@ -93,6 +104,9 @@ export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
     setSelectedOrderItemUuids((prev) =>
       prev.includes(uuid) ? prev.filter((id) => id !== uuid) : [...prev, uuid],
     );
+
+  const setBillQuantity = (uuid: string, quantity: string) =>
+    setBillQuantities((prev) => ({ ...prev, [uuid]: quantity }));
 
   // An invoice has to bill something, but either goods or surcharges will do —
   // a plain materials invoice carries its value on the lines it bills.
@@ -180,7 +194,9 @@ export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
         <InvoiceOrderItemsSection
           reservedItems={reservedItems}
           selectedUuids={selectedOrderItemUuids}
+          quantities={billQuantities}
           onToggle={toggleOrderItem}
+          onQuantityChange={setBillQuantity}
           isPending={isPending}
         />
 

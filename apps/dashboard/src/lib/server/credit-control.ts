@@ -71,12 +71,33 @@ export const getOpenReceivablesByCompany = async (
 };
 
 /**
+ * The part of an order line that has not been billed yet, in money.
+ *
+ * A line billed in instalments is half receivable and half invoice, and its full
+ * amount must not be counted as committed — the billed half is already sitting
+ * in `Invoices.outstanding`, so counting the whole line again would charge the
+ * customer's limit twice for the same goods and hold orders that should pass.
+ *
+ * A line with no quantity can't be apportioned, so it counts in full.
+ */
+const uninvoicedLineAmount = sql<string>`COALESCE(SUM(
+  CASE
+    WHEN ${OrderItems.quantity} > 0
+      THEN ${OrderItems.amount} *
+           (${OrderItems.quantity} - ${OrderItems.invoicedQuantity}) /
+           ${OrderItems.quantity}
+    ELSE ${OrderItems.amount}
+  END
+), 0)`;
+
+/**
  * Order lines taken but not yet invoiced — receivables in waiting.
  *
- * Only "reserved" and "delivered" count. An invoiced line has already become
- * an invoice and is counted there, so including it would charge the customer's
- * limit twice for the same goods; cancelled and returned lines will never
- * become receivables at all.
+ * Only "reserved" and "delivered" count. A fully invoiced line has already
+ * become an invoice and is counted there, so including it would charge the
+ * customer's limit twice for the same goods; cancelled and returned lines will
+ * never become receivables at all. A part-billed line stays at "delivered" and
+ * contributes only its unbilled share.
  *
  * Line amounts are stored net and are grossed up here, because the receivables
  * they are added to are gross — see `grossUpCommittedOrderValue`.
@@ -91,7 +112,7 @@ export const getCommittedOrderValue = async (
 ): Promise<number> => {
   const [row] = await tx
     .select({
-      amount: sql<string>`COALESCE(SUM(${OrderItems.amount}), 0)`,
+      amount: uninvoicedLineAmount,
       calculateVat: Companies.calculateVat,
     })
     .from(OrderItems)
@@ -119,7 +140,7 @@ export const getCommittedOrderValueByCompany = async (
   const rows = await tx
     .select({
       companyUuid: Orders.companyUuid,
-      amount: sql<string>`COALESCE(SUM(${OrderItems.amount}), 0)`,
+      amount: uninvoicedLineAmount,
       calculateVat: Companies.calculateVat,
     })
     .from(OrderItems)

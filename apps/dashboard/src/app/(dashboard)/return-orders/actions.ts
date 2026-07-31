@@ -22,6 +22,18 @@ import { InvoiceItems, SelectInvoiceItems } from "@/db/schema/invoice-items";
 import { Invoices, SelectInvoices } from "@/db/schema/invoices";
 import { JournalEntries } from "@/db/schema/journal-entries";
 import { OrderItems, SelectOrderItems } from "@/db/schema/order-items";
+import {
+  ComplaintItems,
+  SelectComplaintItems,
+} from "@/db/schema/complaint-items";
+import { Complaints, SelectComplaints } from "@/db/schema/complaints";
+import { Machines, SelectMachines } from "@/db/schema/machines";
+import {
+  ProductionWorkOrderLines,
+  ProductionWorkOrders,
+  SelectProductionWorkOrderLines,
+  SelectProductionWorkOrders,
+} from "@/db/schema/production-work-orders";
 import { Stock } from "@/db/schema/stock";
 import { StockMovements } from "@/db/schema/stock-movements";
 import { mailDocument, sendInvoiceEmail } from "@/emails/documents";
@@ -31,6 +43,8 @@ import {
   generateUuid,
   getInvoiceVatRatePercent,
   getQuoteVatRatePercent,
+  proRataSlice,
+  QUANTITY_EPSILON,
   todayDateString,
 } from "@/lib/helpers";
 import {
@@ -40,7 +54,7 @@ import {
 } from "@/lib/server/ledger";
 import { recordFreightMovement } from "@/lib/server/freight";
 import { currentUser } from "@clerk/nextjs/server";
-import { and, desc, eq, getTableColumns, inArray } from "drizzle-orm";
+import { and, desc, eq, getTableColumns, inArray, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -140,6 +154,43 @@ export const getReturnOrders = async (): Promise<ReturnOrderListItem[]> => {
 export type ReturnOrderLineDetail = SelectReturnOrderItems & {
   productCode: SelectProducts["productCode"] | null;
   productName: SelectProducts["name"] | null;
+  // The "Sales" column: what the original order line sold these goods for. The
+  // return carries its own price, and the two are not always the same figure —
+  // seeing them side by side is how a credit gets checked before it goes out.
+  salesNetPrice: SelectOrderItems["netPrice"] | null;
+  salesAmount: SelectOrderItems["amount"] | null;
+  salesQuantity: SelectOrderItems["quantity"] | null;
+};
+
+// A production work order that touched the goods on this return. Reached through
+// the original order line, which is the only link the workorder carries.
+export type ReturnWorkOrderLine = {
+  uuid: SelectProductionWorkOrderLines["uuid"];
+  workOrderId: SelectProductionWorkOrders["id"] | null;
+  workOrderUuid: SelectProductionWorkOrderLines["workOrderUuid"];
+  machineName: SelectMachines["name"] | null;
+  date: SelectProductionWorkOrderLines["date"];
+  status: SelectProductionWorkOrderLines["status"];
+  productCode: SelectProductionWorkOrderLines["productCode"];
+  qtyPlanned: SelectProductionWorkOrderLines["qtyPlanned"];
+  qtyActual: SelectProductionWorkOrderLines["qtyActual"];
+  kgActual: SelectProductionWorkOrderLines["kgActual"];
+};
+
+// A complaint raised about the goods on this return. Returns and complaints are
+// two records of the same event — the customer sending something back and
+// saying why — so the return has to be able to show the paperwork beside it.
+export type ReturnComplaintLine = {
+  uuid: SelectComplaintItems["uuid"];
+  complaintUuid: SelectComplaintItems["complaintUuid"];
+  complaintId: SelectComplaints["id"] | null;
+  reportDate: SelectComplaints["reportDate"] | null;
+  status: SelectComplaints["status"] | null;
+  category: SelectComplaints["category"] | null;
+  solution: SelectComplaints["solution"] | null;
+  description: SelectComplaintItems["description"];
+  qty: SelectComplaintItems["qty"];
+  amount: SelectComplaintItems["amount"];
 };
 
 export type ReturnOrderDetail = SelectReturnOrders & {
@@ -157,6 +208,10 @@ export type ReturnOrderDetail = SelectReturnOrders & {
   invoiceLines: ReturnInvoiceLine[];
   // The "Credits" section: credit notes raised against this return.
   credits: SelectInvoices[];
+  // The "Workorders" section: production that touched these goods.
+  workOrders: ReturnWorkOrderLine[];
+  // The "Complaints" section: what the customer said was wrong.
+  complaints: ReturnComplaintLine[];
 };
 
 export const getReturnOrderDetail = async (
@@ -188,9 +243,18 @@ export const getReturnOrderDetail = async (
         ...getTableColumns(ReturnOrderItems),
         productCode: Products.productCode,
         productName: Products.name,
+        salesNetPrice: OrderItems.netPrice,
+        salesAmount: OrderItems.amount,
+        salesQuantity: OrderItems.quantity,
       })
       .from(ReturnOrderItems)
       .leftJoin(Products, eq(ReturnOrderItems.productUuid, Products.uuid))
+      // Left-joined: a return line raised without pointing at an order line has
+      // no sale behind it, and must still appear.
+      .leftJoin(
+        OrderItems,
+        eq(ReturnOrderItems.originalOrderItemUuid, OrderItems.uuid),
+      )
       .where(eq(ReturnOrderItems.returnOrderUuid, uuid))
       .orderBy(ReturnOrderItems.lineNumber),
 
@@ -240,19 +304,75 @@ export const getReturnOrderDetail = async (
           )
       : [];
 
-  const invoicedByOrderItem = new Map(
-    invoicedRows.map((row) => [row.orderItemUuid, row]),
+  // Every invoice line behind a returned line, not one of them. A line billed in
+  // instalments has several, and showing a single row would understate what the
+  // customer was actually charged.
+  const invoiceLines = items.flatMap((item) =>
+    item.originalOrderItemUuid
+      ? invoicedRows
+          .filter((row) => row.orderItemUuid === item.originalOrderItemUuid)
+          .map((row) => ({ returnOrderItemUuid: item.uuid, ...row }))
+      : [],
   );
 
-  const invoiceLines = items.flatMap((item) => {
-    const invoiced = item.originalOrderItemUuid
-      ? invoicedByOrderItem.get(item.originalOrderItemUuid)
-      : undefined;
-    if (!invoiced) {
-      return [];
-    }
-    return [{ returnOrderItemUuid: item.uuid, ...invoiced }];
-  });
+  // Production that touched these goods, and what the customer complained
+  // about. Both hang off the original order line, which is the only link either
+  // record carries back to a return.
+  const [workOrders, complaints] =
+    orderItemUuids.length > 0
+      ? await Promise.all([
+          db
+            .select({
+              uuid: ProductionWorkOrderLines.uuid,
+              workOrderId: ProductionWorkOrders.id,
+              workOrderUuid: ProductionWorkOrderLines.workOrderUuid,
+              machineName: Machines.name,
+              date: ProductionWorkOrderLines.date,
+              status: ProductionWorkOrderLines.status,
+              productCode: ProductionWorkOrderLines.productCode,
+              qtyPlanned: ProductionWorkOrderLines.qtyPlanned,
+              qtyActual: ProductionWorkOrderLines.qtyActual,
+              kgActual: ProductionWorkOrderLines.kgActual,
+            })
+            .from(ProductionWorkOrderLines)
+            .leftJoin(
+              ProductionWorkOrders,
+              eq(
+                ProductionWorkOrderLines.workOrderUuid,
+                ProductionWorkOrders.uuid,
+              ),
+            )
+            .leftJoin(
+              Machines,
+              eq(ProductionWorkOrders.machineUuid, Machines.uuid),
+            )
+            .where(
+              inArray(ProductionWorkOrderLines.orderItemUuid, orderItemUuids),
+            )
+            .orderBy(desc(ProductionWorkOrderLines.date)),
+
+          db
+            .select({
+              uuid: ComplaintItems.uuid,
+              complaintUuid: ComplaintItems.complaintUuid,
+              complaintId: Complaints.id,
+              reportDate: Complaints.reportDate,
+              status: Complaints.status,
+              category: Complaints.category,
+              solution: Complaints.solution,
+              description: ComplaintItems.description,
+              qty: ComplaintItems.qty,
+              amount: ComplaintItems.amount,
+            })
+            .from(ComplaintItems)
+            .leftJoin(
+              Complaints,
+              eq(ComplaintItems.complaintUuid, Complaints.uuid),
+            )
+            .where(inArray(ComplaintItems.orderItemUuid, orderItemUuids))
+            .orderBy(desc(Complaints.reportDate)),
+        ])
+      : [[], []];
 
   return {
     ...returnOrder,
@@ -261,6 +381,8 @@ export const getReturnOrderDetail = async (
     texts,
     invoiceLines,
     credits,
+    workOrders,
+    complaints,
   };
 };
 
@@ -740,9 +862,45 @@ export const creditReturnOrder = async (
         ),
       );
 
-    const invoicedByOrderItem = new Map(
-      invoicedRows.map((row) => [row.orderItemUuid, row]),
-    );
+    // A line can be billed in instalments, so it can have several invoice lines.
+    // They have to be added up: keeping one of them would price the credit off an
+    // arbitrary slice, and check "no more than was invoiced" against a fraction
+    // of what was actually charged.
+    //
+    // Per-unit figures are identical across the slices of a line by
+    // construction — a slice divides the extended amounts and carries the unit
+    // price through untouched — so the first slice speaks for all of them.
+    const invoicedByOrderItem = new Map<
+      string,
+      {
+        quantity: number;
+        weightKg: number;
+        netPrice: number;
+        costPrice: number;
+        replacementPrice: number;
+        productUuid: string;
+        invoiceUuids: Set<string>;
+      }
+    >();
+
+    for (const row of invoicedRows) {
+      const existing = invoicedByOrderItem.get(row.orderItemUuid);
+      if (existing) {
+        existing.quantity += Number(row.quantity ?? 0);
+        existing.weightKg += Number(row.weightKg ?? 0);
+        existing.invoiceUuids.add(row.invoiceUuid);
+        continue;
+      }
+      invoicedByOrderItem.set(row.orderItemUuid, {
+        quantity: Number(row.quantity ?? 0),
+        weightKg: Number(row.weightKg ?? 0),
+        netPrice: Number(row.netPrice ?? 0),
+        costPrice: Number(row.costPrice ?? 0),
+        replacementPrice: Number(row.replacementPrice ?? 0),
+        productUuid: row.productUuid,
+        invoiceUuids: new Set([row.invoiceUuid]),
+      });
+    }
 
     const creditLines: {
       orderItemUuid: string;
@@ -752,7 +910,7 @@ export const creditReturnOrder = async (
       costPrice: number;
       replacementPrice: number;
       weightKg: number;
-      invoiceUuid: string;
+      invoiceUuids: Set<string>;
     }[] = [];
 
     for (const item of creditable) {
@@ -774,31 +932,36 @@ export const creditReturnOrder = async (
         return { error: "Every credited line needs a return quantity." };
       }
       // The guard that matters: a return can never hand back more than was
-      // charged for it.
-      if (returnQty > Number(invoiced.quantity)) {
+      // charged for it. With part-billing this is the total across every
+      // instalment, not whatever the last one happened to be.
+      if (returnQty > invoiced.quantity + QUANTITY_EPSILON) {
         return {
-          error: `Cannot credit more than was invoiced (${Number(invoiced.quantity).toFixed(3)}).`,
+          error: `Cannot credit more than was invoiced (${invoiced.quantity.toFixed(3)}).`,
         };
       }
 
-      const invoicedQty = Number(invoiced.quantity) || 1;
       creditLines.push({
         orderItemUuid,
         productUuid: invoiced.productUuid,
         quantity: returnQty,
-        netPrice: Number(invoiced.netPrice ?? 0),
-        costPrice: Number(invoiced.costPrice ?? 0),
-        replacementPrice: Number(invoiced.replacementPrice ?? 0),
-        // Weight was billed for the whole line; credit it in proportion.
-        weightKg: (Number(invoiced.weightKg ?? 0) / invoicedQty) * returnQty,
-        invoiceUuid: invoiced.invoiceUuid,
+        netPrice: invoiced.netPrice,
+        costPrice: invoiced.costPrice,
+        replacementPrice: invoiced.replacementPrice,
+        // Weight was billed across the line; credit it in proportion.
+        weightKg: proRataSlice(invoiced.weightKg, {
+          quantity: invoiced.quantity,
+          alreadyBilled: 0,
+          billing: returnQty,
+        }),
+        invoiceUuids: invoiced.invoiceUuids,
       });
     }
 
     const [first] = invoicedRows;
-    // Only claim to credit one specific invoice when every line came from it.
+    // Only claim to credit one specific invoice when every line came from it —
+    // and a line billed in instalments spans several, so it never does.
     const sourceInvoiceUuids = new Set(
-      creditLines.map((line) => line.invoiceUuid),
+      creditLines.flatMap((line) => [...line.invoiceUuids]),
     );
     const creditsInvoiceUuid =
       sourceInvoiceUuids.size === 1 ? [...sourceInvoiceUuids][0] : null;
@@ -901,10 +1064,19 @@ export const creditReturnOrder = async (
 
       for (const line of creditLines) {
         // Guard: only credit a line still sitting at "invoiced". A line already
-        // returned is terminal, so the same goods can't be credited twice.
+        // returned is terminal, so the same goods can't be credited twice — and
+        // since a part-billed line stays at "delivered", this also holds back a
+        // credit on goods that have not all been charged for yet.
+        //
+        // Crediting takes the quantity back out of what stands billed, so the
+        // line's invoiced quantity keeps meaning "what the customer currently
+        // owes for". That is what lets a cancelled credit note put it back.
         const [lineClaimed] = await tx
           .update(OrderItems)
-          .set({ status: "returned" })
+          .set({
+            status: "returned",
+            invoicedQuantity: sql`GREATEST(${OrderItems.invoicedQuantity} - ${line.quantity.toFixed(3)}, 0)`,
+          })
           .where(
             and(
               eq(OrderItems.uuid, line.orderItemUuid),
@@ -914,7 +1086,7 @@ export const creditReturnOrder = async (
 
         if (lineClaimed.affectedRows === 0) {
           throw new Error(
-            "One of these lines was already returned or cancelled — please refresh and try again.",
+            "One of these lines is not fully invoiced, or was already returned or cancelled — please refresh and try again.",
           );
         }
 

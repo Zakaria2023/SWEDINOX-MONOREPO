@@ -33,9 +33,23 @@ export const OrderItems = mysqlTable(
     stockUuid: char("stock_uuid", { length: 36 }).notNull(),
     productUuid: char("product_uuid", { length: 36 }).notNull(),
 
-    // Amount reserved from stockUuid — never changes after creation. Consumed
-    // in full when invoiced, or released in full when cancelled.
+    // Amount reserved from stockUuid — never changes after creation. Released
+    // in full when cancelled.
     quantity: decimal("quantity", { precision: 15, scale: 3 }).notNull(),
+    // How much of that quantity has been billed. A line can be invoiced in
+    // instalments — a customer calling off half a bundle and being billed for
+    // what they took — so the line only reaches "invoiced" once this reaches
+    // `quantity`, and stays billable for the remainder until it does.
+    //
+    // Held as the running total rather than derived from the invoice lines
+    // because it is what the optimistic guard compares against: two invoices
+    // raised at once must not each bill the same remaining quantity.
+    invoicedQuantity: decimal("invoiced_quantity", {
+      precision: 15,
+      scale: 3,
+    })
+      .default("0.000")
+      .notNull(),
     status: mysqlEnum("status", orderItemStatuses)
       .default("reserved")
       .notNull(),

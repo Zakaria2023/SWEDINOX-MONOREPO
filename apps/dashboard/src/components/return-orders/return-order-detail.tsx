@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { FileText } from "lucide-react";
 import { useState, useTransition } from "react";
 import {
   deleteReturnOrder,
@@ -30,10 +31,14 @@ import {
   yesNo,
 } from "@/lib/helpers";
 import {
+  COMPLAINT_CATEGORY_LABELS,
+  COMPLAINT_SOLUTION_LABELS,
+  COMPLAINT_STATUS_LABELS,
   INVOICE_PAYMENT_TERM_LABELS,
   INVOICE_SURCHARGE_DESCRIPTION_LABELS,
   RETURN_ORDER_REASON_LABELS,
   RETURN_ORDER_STATUS_LABELS,
+  WAREHOUSE_WORK_ORDER_STATUS_LABELS,
 } from "@/lib/labels";
 
 type Props = {
@@ -177,13 +182,15 @@ export const ReturnOrderDetailView = ({ returnOrder }: Props) => {
                 <TableHead className="text-right">Kg</TableHead>
                 <TableHead className="text-right">Net price</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
+                {/* What the goods were sold for, against what is coming back. */}
+                <TableHead className="text-right">Sales</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {returnOrder.items.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={11}
+                    colSpan={12}
                     className="h-24 text-center text-muted-foreground"
                   >
                     No lines on this return order.
@@ -233,6 +240,13 @@ export const ReturnOrderDetailView = ({ returnOrder }: Props) => {
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {formatMoney(Number(item.amount ?? 0))}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {item.salesAmount === null ? (
+                        <span className="text-muted-foreground">—</span>
+                      ) : (
+                        formatMoney(Number(item.salesAmount))
+                      )}
                     </TableCell>
                   </TableRow>
                 ))
@@ -288,6 +302,165 @@ export const ReturnOrderDetailView = ({ returnOrder }: Props) => {
                 </TableBody>
               </Table>
             </div>
+          )}
+        </CollapsibleSection>
+
+        {/* Production that touched these goods. Reached through the order line
+            the return points at — the only link a workorder carries back. */}
+        <CollapsibleSection
+          title="Workorders"
+          summary={pluralize(returnOrder.workOrders.length, "workorder line")}
+        >
+          {returnOrder.workOrders.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No production workorder touched the goods on this return.
+            </p>
+          ) : (
+            <div className="overflow-x-auto rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Workorder</TableHead>
+                    <TableHead>Machine</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Product</TableHead>
+                    <TableHead className="text-right">Qty planned</TableHead>
+                    <TableHead className="text-right">Qty actual</TableHead>
+                    <TableHead className="text-right">Kg actual</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {returnOrder.workOrders.map((line) => (
+                    <TableRow key={line.uuid}>
+                      <TableCell className="font-medium">
+                        <Link
+                          href={`/production-workorders/${line.workOrderUuid}`}
+                          className="text-primary hover:underline"
+                        >
+                          #{orDash(line.workOrderId)}
+                        </Link>
+                      </TableCell>
+                      <TableCell>{orDash(line.machineName)}</TableCell>
+                      <TableCell>{formatDateColumn(line.date)}</TableCell>
+                      <TableCell>
+                        {line.status
+                          ? WAREHOUSE_WORK_ORDER_STATUS_LABELS[line.status]
+                          : "—"}
+                      </TableCell>
+                      <TableCell>{orDash(line.productCode)}</TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatNumber(Number(line.qtyPlanned ?? 0))}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatNumber(Number(line.qtyActual ?? 0))}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatNumber(Number(line.kgActual ?? 0))}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CollapsibleSection>
+
+        {/* A return and a complaint are two records of the same event — the
+            customer sending something back and saying why. */}
+        <CollapsibleSection
+          title="Complaints"
+          summary={pluralize(returnOrder.complaints.length, "complaint line")}
+        >
+          {returnOrder.complaints.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No complaint has been raised about the goods on this return.
+            </p>
+          ) : (
+            <div className="overflow-x-auto rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Complaint</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead>Solution</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead className="text-right">Qty</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {returnOrder.complaints.map((line) => (
+                    <TableRow key={line.uuid}>
+                      <TableCell className="font-medium">
+                        <Link
+                          href={`/complaints/${line.complaintUuid}`}
+                          className="text-primary hover:underline"
+                        >
+                          #{orDash(line.complaintId)}
+                        </Link>
+                      </TableCell>
+                      <TableCell>
+                        {formatDateColumn(line.reportDate)}
+                      </TableCell>
+                      <TableCell>
+                        {line.status
+                          ? COMPLAINT_STATUS_LABELS[line.status]
+                          : "—"}
+                      </TableCell>
+                      <TableCell>
+                        {line.category
+                          ? COMPLAINT_CATEGORY_LABELS[line.category]
+                          : "—"}
+                      </TableCell>
+                      <TableCell>
+                        {line.solution
+                          ? COMPLAINT_SOLUTION_LABELS[line.solution]
+                          : "—"}
+                      </TableCell>
+                      <TableCell>{orDash(line.description)}</TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatNumber(Number(line.qty ?? 0))}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatMoney(Number(line.amount ?? 0))}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CollapsibleSection>
+
+        {/* Stored on the return since it could be created, and never shown. */}
+        <CollapsibleSection
+          title="Documents"
+          summary={pluralize(returnOrder.documents?.length ?? 0, "document")}
+        >
+          {!returnOrder.documents || returnOrder.documents.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No documents attached to this return order.
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {returnOrder.documents.map((document) => (
+                <li
+                  key={document.id}
+                  className="flex items-center gap-3 rounded-lg border border-border px-3 py-2 text-sm"
+                >
+                  <FileText size={16} className="shrink-0 text-muted-foreground" />
+                  <Link
+                    href={`/api/documents/${document.id}/download`}
+                    className="flex-1 text-primary hover:underline"
+                  >
+                    {document.fileName}
+                  </Link>
+                </li>
+              ))}
+            </ul>
           )}
         </CollapsibleSection>
 

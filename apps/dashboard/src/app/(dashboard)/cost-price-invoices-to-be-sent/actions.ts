@@ -6,7 +6,7 @@ import { Orders } from "@/db/schema/orders";
 import { Products } from "@/db/schema/products";
 import { ReturnOrderItems } from "@/db/schema/return-order-items";
 import { ReturnOrders } from "@/db/schema/return-orders";
-import { describeError } from "@/lib/helpers";
+import { describeError, remainingToInvoice } from "@/lib/helpers";
 import { eq } from "drizzle-orm";
 
 export type CostPriceToBeSentRow = {
@@ -39,6 +39,7 @@ export const getCostPriceInvoicesToBeSent = async (): Promise<
         lineNumber: OrderItems.lineNumber,
         goodsIssueDate: OrderItems.deliveryDate,
         quantity: OrderItems.quantity,
+        invoicedQuantity: OrderItems.invoicedQuantity,
         app: Products.averagePurchasePrice,
       })
       .from(OrderItems)
@@ -65,7 +66,13 @@ export const getCostPriceInvoicesToBeSent = async (): Promise<
       ...orderRows.map((row) => ({
         key: `order-${row.key}`,
         account: COGS_ACCOUNT,
-        amount: Number(row.app ?? 0) * Number(row.quantity ?? 0),
+        // Only the part still to be billed belongs on this screen. A line
+        // part-invoiced has had that share charged to cost of sales already, and
+        // showing the whole line would double-count it against the invoice that
+        // has gone out.
+        amount:
+          Number(row.app ?? 0) *
+          remainingToInvoice(row.quantity, row.invoicedQuantity),
         orderReference: `O${row.orderId}`,
         lineNumber: row.lineNumber,
         goodsIssueDate: row.goodsIssueDate,

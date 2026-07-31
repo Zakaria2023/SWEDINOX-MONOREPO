@@ -1,6 +1,8 @@
 import { clsx, ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import {
+  AgeingBucket,
+  ageingBuckets,
   CertificaatOption,
   ComplaintCategory,
   ComplaintSolution,
@@ -16,6 +18,8 @@ import {
   OrderLineStatus,
   OrderWeightType,
   PurchaseOrderStatus,
+  ReminderStage,
+  reminderStages,
   ReturnOrderReason,
   SalesRepresentative,
   SfnCounterpartyRole,
@@ -635,6 +639,311 @@ export const allowedCreditRestrictionDeduction = ({
   }
 
   return paymentDate.slice(0, 10) <= dueDate ? creditRestriction : 0;
+};
+
+// ---------------------------------------------------------------------------
+// Billing part of a line
+//
+// An order line can be invoiced in instalments, so every money figure on it has
+// to be divisible without leaking a cent. The naive way — round(total × share)
+// each time — does leak: three slices of a € 100.00 line at a third each round
+// to € 33.33 and lose a penny that never appears on any invoice and never comes
+// off the holding account.
+//
+// So a slice is measured as the *movement in the cumulative total*: what should
+// have been billed after this instalment, less what should have been billed
+// before it. The last slice therefore lands on exactly the line total, whatever
+// the rounding did to the ones before it.
+// ---------------------------------------------------------------------------
+
+export type LineSlice = {
+  /** The order line's full quantity. */
+  quantity: number;
+  /** How much of that quantity has already been billed. */
+  alreadyBilled: number;
+  /** How much is being billed now. */
+  billing: number;
+};
+
+/**
+ * The share of a line-level amount that belongs to the quantity being billed.
+ *
+ * Exact by construction: for any sequence of instalments that adds up to the
+ * line quantity, the slices add up to `total` rounded to `decimals` — no
+ * accumulated drift, no final-cent fudge.
+ */
+export const proRataSlice = (
+  total: number,
+  { quantity, alreadyBilled, billing }: LineSlice,
+  decimals = 2,
+): number => {
+  const factor = 10 ** decimals;
+  const roundTo = (value: number) => Math.round(value * factor) / factor;
+
+  if (billing <= 0) {
+    return 0;
+  }
+  // A line with no quantity can't be apportioned; billing it at all bills the
+  // whole of whatever it carries. This is the surcharge-shaped case — value
+  // with nothing to divide it by.
+  if (quantity <= 0) {
+    return roundTo(total);
+  }
+
+  const before = roundTo((total * alreadyBilled) / quantity);
+  const after = roundTo((total * (alreadyBilled + billing)) / quantity);
+  return roundTo(after - before);
+};
+
+export type OrderLineAmounts = {
+  amount: number;
+  costAmount: number;
+  weightKg: number;
+  profit: number;
+  profitReplPrice: number;
+};
+
+/**
+ * An order line's money, cut down to the quantity being billed now.
+ *
+ * Per-unit figures — net price, cost price, replacement price, margin
+ * percentage — are deliberately absent: they don't scale with quantity, so a
+ * slice carries them unchanged. Only the extended amounts are divided.
+ */
+export const sliceOrderLineAmounts = (
+  amounts: OrderLineAmounts,
+  slice: LineSlice,
+): OrderLineAmounts => ({
+  amount: proRataSlice(amounts.amount, slice),
+  costAmount: proRataSlice(amounts.costAmount, slice),
+  weightKg: proRataSlice(amounts.weightKg, slice),
+  profit: proRataSlice(amounts.profit, slice),
+  profitReplPrice: proRataSlice(amounts.profitReplPrice, slice),
+});
+
+/**
+ * How much of an order line is still to be billed.
+ *
+ * Clamped at zero rather than allowed to go negative: a line that has somehow
+ * been over-billed offers nothing further, and reporting a negative remainder
+ * would have the invoice screen offer to bill a negative quantity.
+ */
+export const remainingToInvoice = (
+  quantity: string | number | null | undefined,
+  invoicedQuantity: string | number | null | undefined,
+): number =>
+  Math.max(0, Number(quantity ?? 0) - Number(invoicedQuantity ?? 0));
+
+/**
+ * Quantities are held to three decimals, so anything under half a thousandth is
+ * the residue of dividing a line rather than a quantity anybody meant. Used to
+ * decide "this line is now fully billed" without demanding exact equality of
+ * two decimal strings.
+ */
+export const QUANTITY_EPSILON = 0.0005;
+
+// ---------------------------------------------------------------------------
+// Ageing
+//
+// A receivable's age is the distance from the day it fell due to today — not
+// from the invoice date. Two invoices raised the same morning on 8-day and
+// 60-day terms are not equally late, and only the due date knows that.
+//
+// Everything here is deliberately date-string arithmetic on whole days. An
+// ageing report is read as "this debt is 34 days late", never to the hour, and
+// working in UTC days keeps a report run at 09:00 and one run at 23:00 in the
+// same bucket.
+// ---------------------------------------------------------------------------
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/** Whole days between two YYYY-MM-DD dates, negative when `from` is later. */
+const daysBetween = (from: string, to: string): number | null => {
+  const start = Date.parse(`${from.slice(0, 10)}T00:00:00Z`);
+  const end = Date.parse(`${to.slice(0, 10)}T00:00:00Z`);
+  if (Number.isNaN(start) || Number.isNaN(end)) {
+    return null;
+  }
+  return Math.round((end - start) / MS_PER_DAY);
+};
+
+/**
+ * How many days past its due date a receivable is. Zero on the due date itself
+ * — the debtor has all of that day to pay — and negative while it is still
+ * inside the term, which is how the caller tells "not due" from "due today".
+ *
+ * `null` when there is no due date to measure from. An invoice on a letter of
+ * credit or "against documents" has no derivable due date, and inventing one
+ * would report a debt as overdue on a deadline nobody agreed to.
+ */
+export const daysOverdue = (
+  dueDate: string | Date | null | undefined,
+  asOf: string = todayDateString(),
+): number | null => {
+  if (!dueDate) {
+    return null;
+  }
+  const due =
+    dueDate instanceof Date ? dueDate.toISOString().slice(0, 10) : dueDate;
+  return daysBetween(due, asOf);
+};
+
+/**
+ * Which ageing bucket a receivable falls in.
+ *
+ * An invoice with no due date is reported as `not_due` rather than dropped:
+ * the money is still owed and has to appear in the total, but calling it late
+ * would be asserting a deadline the document never carried.
+ */
+export const ageingBucketFor = (
+  dueDate: string | Date | null | undefined,
+  asOf: string = todayDateString(),
+): AgeingBucket => {
+  const overdue = daysOverdue(dueDate, asOf);
+  if (overdue === null || overdue <= 0) {
+    return "not_due";
+  }
+  if (overdue <= 30) {
+    return "days_1_30";
+  }
+  if (overdue <= 60) {
+    return "days_31_60";
+  }
+  if (overdue <= 90) {
+    return "days_61_90";
+  }
+  return "days_over_90";
+};
+
+export type AgeingTotals = Record<AgeingBucket, number> & { total: number };
+
+/**
+ * Adds a set of open balances up per bucket.
+ *
+ * Credit notes carry a negative outstanding and are bucketed like anything
+ * else, so a credit sitting against an overdue invoice reduces the bucket it
+ * belongs to instead of flattering the total. That means a bucket can legally
+ * come out negative — a customer owed more than they owe.
+ */
+export const summariseAgeing = (
+  items: { dueDate: string | Date | null | undefined; outstanding: number }[],
+  asOf: string = todayDateString(),
+): AgeingTotals => {
+  const empty = ageingBuckets.reduce(
+    (acc, bucket) => ({ ...acc, [bucket]: 0 }),
+    {} as Record<AgeingBucket, number>,
+  );
+
+  return items.reduce<AgeingTotals>(
+    (totals, item) => {
+      const bucket = ageingBucketFor(item.dueDate, asOf);
+      return {
+        ...totals,
+        [bucket]: totals[bucket] + item.outstanding,
+        total: totals.total + item.outstanding,
+      };
+    },
+    { ...empty, total: 0 },
+  );
+};
+
+// ---------------------------------------------------------------------------
+// Payment reminders
+// ---------------------------------------------------------------------------
+
+/**
+ * How overdue an invoice must be before each stage of chasing is warranted.
+ *
+ * POLICY, NOT CONFIRMED: the reference system holds a per-debtor "reminder"
+ * flag but exposed no schedule to read these numbers from. 14 / 28 / 42 days is
+ * the conventional Dutch cadence — a reminder a fortnight after the term, a
+ * second a fortnight later, then a final notice before it goes to collection.
+ * Change these three numbers to change the policy everywhere.
+ */
+export const REMINDER_STAGE_AFTER_DAYS: Record<ReminderStage, number> = {
+  first: 14,
+  second: 28,
+  final: 42,
+};
+
+/** The stage after a given one, or `null` when a final notice has been sent. */
+export const nextReminderStage = (
+  sent: ReminderStage | null | undefined,
+): ReminderStage | null => {
+  if (!sent) {
+    return "first";
+  }
+  const next = reminderStages[reminderStages.indexOf(sent) + 1];
+  return next ?? null;
+};
+
+export type ReminderAssessment = {
+  /** The stage that should go out now, or `null` if none should. */
+  stage: ReminderStage | null;
+  /** Why nothing is being sent, for the screen to show instead of a button. */
+  reason: string | null;
+};
+
+/**
+ * Whether an invoice is due a reminder, and which one.
+ *
+ * The rules, in the order they bite:
+ *   - Nothing is chased that isn't owed. A settled invoice, and a credit note
+ *     (which owes the customer money), are never chased.
+ *   - A debtor with reminders switched off is never chased, whatever the age.
+ *     That flag exists to stop letters going to a customer being handled by
+ *     hand — a payment plan, a dispute, a receiver.
+ *   - An invoice with no derivable due date is not chased automatically. There
+ *     is no deadline to say it was missed by.
+ *   - The next stage goes out only once its own threshold is passed, so an
+ *     invoice 60 days late that has had nothing sent gets a first reminder, not
+ *     a final notice. Escalation is a sequence of letters, not a lookup.
+ */
+export const assessReminder = ({
+  outstanding,
+  dueDate,
+  documentType,
+  remindersEnabled,
+  lastStageSent,
+  asOf = todayDateString(),
+}: {
+  outstanding: number;
+  dueDate: string | Date | null | undefined;
+  documentType: InvoiceDocumentType;
+  remindersEnabled: boolean;
+  lastStageSent: ReminderStage | null | undefined;
+  asOf?: string;
+}): ReminderAssessment => {
+  if (documentType === "credit_note") {
+    return { stage: null, reason: "A credit note is owed to the customer." };
+  }
+  if (outstanding <= 0) {
+    return { stage: null, reason: "Nothing outstanding." };
+  }
+  if (!remindersEnabled) {
+    return { stage: null, reason: "Reminders are switched off for this debtor." };
+  }
+
+  const overdue = daysOverdue(dueDate, asOf);
+  if (overdue === null) {
+    return { stage: null, reason: "No due date to measure against." };
+  }
+  if (overdue <= 0) {
+    return { stage: null, reason: "Not due yet." };
+  }
+
+  const stage = nextReminderStage(lastStageSent);
+  if (!stage) {
+    return { stage: null, reason: "A final notice has already been sent." };
+  }
+  if (overdue < REMINDER_STAGE_AFTER_DAYS[stage]) {
+    return {
+      stage: null,
+      reason: `${overdue} day${overdue === 1 ? "" : "s"} overdue — the next reminder is due at ${REMINDER_STAGE_AFTER_DAYS[stage]}.`,
+    };
+  }
+
+  return { stage, reason: null };
 };
 
 export type CreditAssessmentInput = {

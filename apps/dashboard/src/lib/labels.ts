@@ -1,5 +1,6 @@
 import {
   AddressCategory,
+  AgeingBucket,
   ArticleGroup,
   AvailableAt,
   CeStandard,
@@ -86,6 +87,7 @@ import {
   WarehouseProductType,
   WarehouseTransportRegion,
   TransportMode,
+  ReminderStage,
   ReturnOrderReason,
   ReturnOrderStatus,
   OrderDeblockType,
@@ -1692,4 +1694,18 @@ export const STOCK_LABEL_BREAKDOWN_LABELS: Record<StockLabelBreakdown, string> =
 export const COUNT_STOCK_BASIS_LABELS: Record<CountStockBasis, string> = {
   technical: "Technical stock",
   available: "Available stock",
+};
+
+export const AGEING_BUCKET_LABELS: Record<AgeingBucket, string> = {
+  not_due: "Not yet due",
+  days_1_30: "1 – 30 days",
+  days_31_60: "31 – 60 days",
+  days_61_90: "61 – 90 days",
+  days_over_90: "Over 90 days",
+};
+
+export const REMINDER_STAGE_LABELS: Record<ReminderStage, string> = {
+  first: "First reminder",
+  second: "Second reminder",
+  final: "Final notice",
 };

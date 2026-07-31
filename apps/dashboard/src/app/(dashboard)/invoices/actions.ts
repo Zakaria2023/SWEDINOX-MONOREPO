@@ -17,7 +17,7 @@ import {
   SelectInvoiceItems,
 } from "@/db/schema/invoice-items";
 import { JournalEntries } from "@/db/schema/journal-entries";
-import { OrderItems } from "@/db/schema/order-items";
+import { OrderItems, SelectOrderItems } from "@/db/schema/order-items";
 import { Payments, SelectPayments } from "@/db/schema/payments";
 import { Orders } from "@/db/schema/orders";
 import { Products, SelectProducts } from "@/db/schema/products";
@@ -29,10 +29,13 @@ import {
   generateUuid,
   getInvoiceVatRatePercent,
   getPaymentTermDueDate,
+  QUANTITY_EPSILON,
+  remainingToInvoice,
+  sliceOrderLineAmounts,
   toDateString,
 } from "@/lib/helpers";
 import { currentUser } from "@clerk/nextjs/server";
-import { and, desc, eq, getTableColumns, inArray } from "drizzle-orm";
+import { and, desc, eq, getTableColumns, inArray, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -74,10 +77,27 @@ export type InvoiceWithCompany = SelectInvoices & {
 
 export type ReservedOrderItemOption = {
   uuid: string;
+  /** What is left to bill on the line — never the full ordered quantity. */
   quantity: string;
+  /** The line's whole quantity, so the screen can show "3 of 10 left". */
+  orderedQuantity: SelectOrderItems["quantity"];
+  invoicedQuantity: SelectOrderItems["invoicedQuantity"];
+  unit: SelectOrderItems["unit"];
+  netPrice: SelectOrderItems["netPrice"];
   productCode: string | null;
   productName: string | null;
   orderId: number;
+};
+
+/**
+ * One order line an invoice is billing, and how much of it.
+ *
+ * `quantity` left out bills whatever is left on the line, which is both the
+ * common case and what the system did before it could do anything else.
+ */
+export type InvoiceLineSelection = {
+  orderItemUuid: string;
+  quantity?: string;
 };
 
 export type InvoiceItemDetail = SelectInvoiceItems & {
@@ -133,13 +153,20 @@ export const getInvoicesByCompanyUuid = async (
 
 // Delivered order lines for a customer, ready to be billed on an invoice.
 // Stock already left at delivery, so invoicing these is purely financial.
+//
+// The quantity offered is what is left to bill, not what was ordered: a line
+// already part-billed appears again for its remainder, and a line billed out is
+// at status "invoiced" and gone from the list.
 export const getReservedOrderItemsForCompany = async (
   companyUuid: string,
-): Promise<ReservedOrderItemOption[]> =>
-  db
+): Promise<ReservedOrderItemOption[]> => {
+  const rows = await db
     .select({
       uuid: OrderItems.uuid,
       quantity: OrderItems.quantity,
+      invoicedQuantity: OrderItems.invoicedQuantity,
+      unit: OrderItems.unit,
+      netPrice: OrderItems.netPrice,
       productCode: Products.productCode,
       productName: Products.name,
       orderId: Orders.id,
@@ -151,14 +178,28 @@ export const getReservedOrderItemsForCompany = async (
       and(
         eq(Orders.companyUuid, companyUuid),
         eq(OrderItems.status, "delivered"),
+        sql`${OrderItems.quantity} - ${OrderItems.invoicedQuantity} > 0`,
       ),
     )
     .orderBy(desc(OrderItems.createdAt));
 
+  return rows.map((row) => ({
+    uuid: row.uuid,
+    quantity: remainingToInvoice(row.quantity, row.invoicedQuantity).toFixed(3),
+    orderedQuantity: row.quantity,
+    invoicedQuantity: row.invoicedQuantity,
+    unit: row.unit,
+    netPrice: row.netPrice,
+    productCode: row.productCode,
+    productName: row.productName,
+    orderId: row.orderId,
+  }));
+};
+
 export const createInvoice = async (
   fields: InvoiceFields,
   surcharges: InvoiceSurchargeInput[] = [],
-  orderItemUuids: string[] = [],
+  selections: InvoiceLineSelection[] = [],
 ): Promise<InvoiceActionResult> => {
   const uuid = generateUuid();
 
@@ -175,6 +216,16 @@ export const createInvoice = async (
     })();
 
   try {
+    const orderItemUuids = selections.map(
+      (selection) => selection.orderItemUuid,
+    );
+    // The same line twice would be sliced twice from the same starting point and
+    // bill more than is left. One line, one instalment per invoice.
+    if (new Set(orderItemUuids).size !== orderItemUuids.length) {
+      return {
+        error: "The same order line was selected more than once on this invoice.",
+      };
+    }
     const orderItemRows =
       orderItemUuids.length > 0
         ? await db
@@ -184,15 +235,28 @@ export const createInvoice = async (
         : [];
     const orderItemByUuid = new Map(orderItemRows.map((row) => [row.uuid, row]));
 
-    // An invoice bills each reservation in full, so its line carries the order
-    // line's already-resolved price and cost verbatim rather than pricing
-    // anything a second time. The order line resolved both at reservation —
-    // the price from the customer's contract, the cost from the stock lot it
-    // was allocated — and that resolution is precisely what is being billed.
+    // An invoice line carries the order line's already-resolved per-unit price
+    // and cost verbatim rather than pricing anything a second time. The order
+    // line resolved both at reservation — the price from the customer's
+    // contract, the cost from the stock lot it was allocated — and that
+    // resolution is precisely what is being billed.
+    //
+    // What does change with a part-bill is the extended money: the amount, the
+    // cost, the weight and the margin are the share belonging to the quantity on
+    // this invoice. Per-unit figures are carried untouched, because they don't
+    // scale.
     const billableLines: InvoiceLineSnapshot[] = [];
+    // What each line's invoiced quantity was when it was read, so the update can
+    // refuse to apply if anything billed against it in the meantime.
+    const claims: {
+      orderItemUuid: string;
+      previousInvoiced: string;
+      nextInvoiced: number;
+      fullyBilled: boolean;
+    }[] = [];
 
-    for (const id of orderItemUuids) {
-      const row = orderItemByUuid.get(id);
+    for (const selection of selections) {
+      const row = orderItemByUuid.get(selection.orderItemUuid);
       if (!row) {
         return { error: "One or more selected reservations could not be found." };
       }
@@ -203,22 +267,64 @@ export const createInvoice = async (
         };
       }
 
+      const alreadyBilled = Number(row.invoicedQuantity ?? 0);
+      const remaining = remainingToInvoice(row.quantity, row.invoicedQuantity);
+      // No quantity given means bill the rest of the line, which is both the
+      // common case and what this action did before it could do anything else.
+      const billing =
+        selection.quantity === undefined || selection.quantity === ""
+          ? remaining
+          : Number(selection.quantity);
+
+      if (!Number.isFinite(billing) || billing <= 0) {
+        return { error: "Every line being billed needs a quantity above zero." };
+      }
+      if (billing > remaining + QUANTITY_EPSILON) {
+        return {
+          error: `Cannot bill more than is left on the line (${remaining.toFixed(3)}).`,
+        };
+      }
+
+      const slice = { quantity: Number(row.quantity), alreadyBilled, billing };
+      const sliced = sliceOrderLineAmounts(
+        {
+          amount: Number(row.amount ?? 0),
+          costAmount: Number(row.costAmount ?? 0),
+          // What actually shipped is what gets billed by weight; the planned
+          // figure stands in for a line delivered before actuals were recorded.
+          weightKg:
+            Number(row.kgActual ?? 0) > 0
+              ? Number(row.kgActual ?? 0)
+              : Number(row.kgPlanned ?? 0),
+          profit: Number(row.profit ?? 0),
+          profitReplPrice: Number(row.profitReplPrice ?? 0),
+        },
+        slice,
+      );
+
       billableLines.push({
-        orderItemUuid: id,
+        orderItemUuid: selection.orderItemUuid,
         productUuid: row.productUuid,
-        quantity: row.quantity,
+        quantity: billing.toFixed(3),
         netPrice: row.netPrice,
-        amount: row.amount,
+        amount: sliced.amount.toFixed(2),
         costPrice: row.costPrice,
-        costAmount: row.costAmount,
+        costAmount: sliced.costAmount.toFixed(2),
         replacementPrice: row.replacementPrice,
-        profit: row.profit,
+        profit: sliced.profit.toFixed(2),
+        // A percentage of a slice is the percentage of the whole — nothing to
+        // apportion.
         profitMargin: row.profitMargin,
-        profitReplPrice: row.profitReplPrice,
-        // What actually shipped is what gets billed by weight; the planned
-        // figure stands in for a line delivered before actuals were recorded.
-        weightKg:
-          Number(row.kgActual ?? 0) > 0 ? row.kgActual : row.kgPlanned,
+        profitReplPrice: sliced.profitReplPrice.toFixed(2),
+        weightKg: sliced.weightKg.toFixed(2),
+      });
+
+      claims.push({
+        orderItemUuid: selection.orderItemUuid,
+        previousInvoiced: row.invoicedQuantity,
+        nextInvoiced: alreadyBilled + billing,
+        fullyBilled:
+          Number(row.quantity) - (alreadyBilled + billing) <= QUANTITY_EPSILON,
       });
     }
 
@@ -324,28 +430,41 @@ export const createInvoice = async (
         });
       }
 
-      for (const line of billableLines) {
-        // Guard: only bill a line that's still "delivered" — a concurrent
-        // invoice or cancellation can't double-bill it. Stock already left at
-        // delivery, so billing is purely financial: no stock change, no
-        // movement — just the invoice line (the journal posting is booked
-        // once for the whole invoice above).
+      for (const claim of claims) {
+        // Guard: the line must still be "delivered" and still have billed
+        // exactly what it had billed when we read it. Matching on the invoiced
+        // quantity is what makes part-billing safe — two invoices raised at once
+        // would otherwise each bill the same remainder, and the second loses
+        // here instead.
+        //
+        // Stock already left at delivery, so billing is purely financial: no
+        // stock change, no movement — just the invoice line (the journal posting
+        // is booked once for the whole invoice above).
         const [itemUpdateResult] = await tx
           .update(OrderItems)
-          .set({ status: "invoiced" })
+          .set({
+            invoicedQuantity: claim.nextInvoiced.toFixed(3),
+            // A line only leaves the billable list once all of it is billed;
+            // until then it stays "delivered" and offers its remainder.
+            status: claim.fullyBilled ? "invoiced" : "delivered",
+            lineStatus: claim.fullyBilled ? "invoiced" : "partially_invoiced",
+          })
           .where(
             and(
-              eq(OrderItems.uuid, line.orderItemUuid),
+              eq(OrderItems.uuid, claim.orderItemUuid),
               eq(OrderItems.status, "delivered"),
+              eq(OrderItems.invoicedQuantity, claim.previousInvoiced),
             ),
           );
 
         if (itemUpdateResult.affectedRows === 0) {
           throw new Error(
-            "One of the selected lines was already billed or cancelled — please refresh and try again.",
+            "One of the selected lines was billed or cancelled while this invoice was being raised — please refresh and try again.",
           );
         }
+      }
 
+      for (const line of billableLines) {
         await tx.insert(InvoiceItems).values({
           ...line,
           uuid: generateUuid(),
@@ -490,9 +609,50 @@ export const cancelInvoice = async (
       const revertedStatus = isCreditNote ? "invoiced" : "delivered";
 
       for (const item of items) {
+        const [orderItem] = await tx
+          .select({
+            quantity: OrderItems.quantity,
+            invoicedQuantity: OrderItems.invoicedQuantity,
+          })
+          .from(OrderItems)
+          .where(eq(OrderItems.uuid, item.orderItemUuid))
+          .limit(1);
+
+        if (!orderItem) {
+          continue;
+        }
+
+        // Unbill what this document billed. A credit note's own line quantity is
+        // already negative, so subtracting it adds the quantity back — the
+        // customer owes for those goods again, which is exactly what pulling a
+        // credit note back means.
+        //
+        // Clamped at zero and at the line quantity: neither end is reachable by
+        // the normal path, and letting a stray figure out of that range would
+        // leave the line either permanently unbillable or offering quantity it
+        // never had.
+        const unbilled = Math.min(
+          Math.max(
+            Number(orderItem.invoicedQuantity ?? 0) - Number(item.quantity ?? 0),
+            0,
+          ),
+          Number(orderItem.quantity ?? 0),
+        );
+        const fullyBilled =
+          Number(orderItem.quantity ?? 0) - unbilled <= QUANTITY_EPSILON;
+
         await tx
           .update(OrderItems)
-          .set({ status: revertedStatus })
+          .set({
+            status: revertedStatus,
+            invoicedQuantity: unbilled.toFixed(3),
+            lineStatus:
+              unbilled <= QUANTITY_EPSILON
+                ? "delivered"
+                : fullyBilled
+                  ? "invoiced"
+                  : "partially_invoiced",
+          })
           .where(eq(OrderItems.uuid, item.orderItemUuid));
       }
     });

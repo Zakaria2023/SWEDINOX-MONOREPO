@@ -22,6 +22,7 @@ import DocumentEmail, {
   DocumentEmailProps,
 } from "@/emails/templates/document-email";
 import {
+  daysOverdue,
   formatDateValue,
   formatMoney,
   formatNumber,
@@ -32,9 +33,10 @@ import {
   INVOICE_PAYMENT_TERM_LABELS,
   INVOICE_SURCHARGE_DESCRIPTION_LABELS,
   INVOICE_VAT_SCENARIO_LABELS,
+  REMINDER_STAGE_LABELS,
   STOCK_UNIT_LABELS,
 } from "@/lib/labels";
-import { InvoicePaymentTerm } from "@/lib/enums";
+import { InvoicePaymentTerm, ReminderStage } from "@/lib/enums";
 
 export type EmailDeliveryResult = {
   sent: number;
@@ -520,6 +522,100 @@ export const sendInvoiceEmail = async (
   }
 
   return result;
+};
+
+/**
+ * A reminder that an invoice is past its due date.
+ *
+ * Deliberately not a copy of the invoice. The customer already has that; what
+ * they are being sent is the balance still open, how late it is, and — at the
+ * final stage — what happens next. The tone escalates with the stage while the
+ * figures stay identical, because the amount owed is not a matter of emphasis.
+ */
+export const sendPaymentReminderEmail = async (
+  invoiceUuid: string,
+  stage: ReminderStage,
+): Promise<EmailDeliveryResult> => {
+  const [invoice] = await db
+    .select({
+      id: Invoices.id,
+      documentType: Invoices.documentType,
+      companyUuid: Invoices.companyUuid,
+      debtorNo: Invoices.debtorNo,
+      invoiceDate: Invoices.invoiceDate,
+      expirationDate: Invoices.expirationDate,
+      paymentTerms: Invoices.paymentTerms,
+      invoiceTotal: Invoices.invoiceTotal,
+      outstanding: Invoices.outstanding,
+      companyName: Companies.companyName,
+      invoiceEmailEnabled: Companies.invoiceEmailEnabled,
+      invoiceEmailTo: Companies.invoiceEmailTo,
+    })
+    .from(Invoices)
+    .leftJoin(Companies, eq(Invoices.companyUuid, Companies.uuid))
+    .where(eq(Invoices.uuid, invoiceUuid))
+    .limit(1);
+
+  if (!invoice) {
+    return NOTHING_SENT;
+  }
+
+  const reference = invoiceReference(invoice.documentType, invoice.id);
+  const stageLabel = REMINDER_STAGE_LABELS[stage];
+  const overdue = daysOverdue(invoice.expirationDate) ?? 0;
+  const outstanding = Number(invoice.outstanding ?? 0);
+  const paid = Number(invoice.invoiceTotal ?? 0) - outstanding;
+  const dueDate = formatDateValue(invoice.expirationDate, "");
+
+  const intro = {
+    first: `Our records show that invoice ${reference} was due on ${dueDate} and is still open. If it has been paid in the meantime, please treat this as settled and accept our apologies for the crossover.`,
+    second: `Invoice ${reference} remains unpaid ${overdue} days after its due date of ${dueDate}. We have written to you about it once already. Please arrange payment, or contact us if something about this invoice is in dispute.`,
+    final: `Invoice ${reference} is now ${overdue} days overdue and two reminders have gone unanswered. Unless the balance below is paid, or you contact us to agree an arrangement, this account will be passed on for collection.`,
+  }[stage];
+
+  const recipients = await resolveRecipients({
+    companyUuid: invoice.companyUuid,
+    routedTo: invoice.invoiceEmailEnabled ? invoice.invoiceEmailTo : null,
+  });
+
+  return deliver(recipients, `${stageLabel} — invoice ${reference}`, {
+    documentLabel: stageLabel,
+    reference,
+    companyName: invoice.companyName ?? "Customer",
+    intro,
+    fields: fieldsOf([
+      ["Invoice date", formatDateValue(invoice.invoiceDate, "")],
+      ["Due date", dueDate],
+      ["Days overdue", overdue > 0 ? String(overdue) : null],
+      ["Debtor number", invoice.debtorNo],
+      ["Payment terms", paymentTermLabel(invoice.paymentTerms)],
+    ]),
+    tables: [
+      {
+        caption: "Open item",
+        columns: ["Document", "Invoice date", "Due date", "Days overdue", "Outstanding"],
+        alignRightFrom: 3,
+        rows: [
+          [
+            reference,
+            formatDateValue(invoice.invoiceDate, "—"),
+            formatDateValue(invoice.expirationDate, "—"),
+            String(overdue),
+            money(invoice.outstanding),
+          ],
+        ],
+      },
+    ],
+    totals: [
+      { label: "Invoice total", value: money(invoice.invoiceTotal) },
+      // Only worth saying when part of it did arrive; on an untouched invoice
+      // "Paid € 0.00" reads as an accusation rather than a fact.
+      ...(paid > 0.005
+        ? [{ label: "Received so far", value: formatMoney(paid) }]
+        : []),
+      { label: "Still outstanding", value: money(invoice.outstanding), emphasis: true },
+    ],
+  });
 };
 
 /**

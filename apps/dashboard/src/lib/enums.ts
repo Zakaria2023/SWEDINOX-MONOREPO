@@ -1758,3 +1758,26 @@ export const countStockBases = [
 ] as const satisfies readonly string[];
 
 export type CountStockBasis = (typeof countStockBases)[number];
+
+// How overdue a receivable is, measured from its due date. `not_due` is not an
+// age — it is everything still inside its payment term, kept in the same list
+// so the buckets add up to the whole debt rather than only the late part.
+export const ageingBuckets = [
+  "not_due",
+  "days_1_30",
+  "days_31_60",
+  "days_61_90",
+  "days_over_90",
+] as const satisfies readonly string[];
+
+export type AgeingBucket = (typeof ageingBuckets)[number];
+
+// How far a chase has been taken. Each stage is sent once: a debtor who has had
+// a final notice is not sent another, they are escalated by hand.
+export const reminderStages = [
+  "first",
+  "second",
+  "final",
+] as const satisfies readonly string[];
+
+export type ReminderStage = (typeof reminderStages)[number];
