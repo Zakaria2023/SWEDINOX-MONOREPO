@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { TripDataListItem } from "@/app/(dashboard)/trip-data/actions";
 import {
   Table,
@@ -42,7 +43,12 @@ export const TripDataTable = ({ trips }: Props) => (
           trips.map((row) => (
             <TableRow key={row.uuid}>
               <TableCell className="text-right font-medium">
-                {row.tripNumber ?? "—"}
+                <Link
+                  href={`/trip-data/${row.uuid}`}
+                  className="text-primary hover:underline"
+                >
+                  {row.tripNumber ?? `#${row.id}`}
+                </Link>
               </TableCell>
               <TableCell>{row.tripDate ?? "—"}</TableCell>
               <TableCell>{row.vehicle ?? "—"}</TableCell>

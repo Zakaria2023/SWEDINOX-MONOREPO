@@ -42,7 +42,14 @@ export const TransportStatusAdjustmentsTable = ({ adjustments }: Props) => (
         ) : (
           adjustments.map((row) => (
             <TableRow key={row.uuid}>
-              <TableCell>{row.modifier ?? "—"}</TableCell>
+              <TableCell className="font-medium">
+                <Link
+                  href={`/transport-status-adjustments/${row.uuid}`}
+                  className="text-primary hover:underline"
+                >
+                  {row.modifier ?? `Adjustment #${row.id}`}
+                </Link>
+              </TableCell>
               <TableCell className="whitespace-nowrap">
                 {new Date(row.timeModified).toLocaleString("en-GB")}
               </TableCell>

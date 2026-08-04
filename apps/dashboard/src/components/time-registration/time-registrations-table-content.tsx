@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { TimeRegistrationListItem } from "@/app/(dashboard)/time-registration/actions";
 import {
   Table,
@@ -42,8 +43,13 @@ export const TimeRegistrationsTable = ({ registrations }: Props) => (
         ) : (
           registrations.map((row) => (
             <TableRow key={row.uuid}>
-              <TableCell className="whitespace-nowrap">
-                {new Date(row.dateTime).toLocaleString("en-GB")}
+              <TableCell className="font-medium whitespace-nowrap">
+                <Link
+                  href={`/time-registration/${row.uuid}`}
+                  className="text-primary hover:underline"
+                >
+                  {new Date(row.dateTime).toLocaleString("en-GB")}
+                </Link>
               </TableCell>
               <TableCell>{row.user ?? "—"}</TableCell>
               <TableCell>{row.extraUser ?? "—"}</TableCell>

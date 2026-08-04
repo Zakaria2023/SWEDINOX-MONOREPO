@@ -28,6 +28,12 @@ export type TransportWorkOrderLineItem = SelectTransportWorkOrderLines & {
   productName: SelectProducts["name"] | null;
 };
 
+export type TransportWorkOrderLineDetail = TransportWorkOrderLineItem & {
+  workOrderId: SelectTransportWorkOrders["id"] | null;
+  workOrderStatus: SelectTransportWorkOrders["status"] | null;
+  catalogProductCode: SelectProducts["productCode"] | null;
+};
+
 export const getTransportWorkOrderLines = async (): Promise<
   TransportWorkOrderLineItem[]
 > => {
@@ -58,6 +64,41 @@ export const getTransportWorkOrderLines = async (): Promise<
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch transport work orders"));
   }
+};
+
+/**
+ * One transport work-order line with the trip it sits on, the destination and
+ * the product being carried.
+ */
+export const getTransportWorkOrderLineDetail = async (
+  uuid: string,
+): Promise<TransportWorkOrderLineDetail | null> => {
+  const [row] = await db
+    .select({
+      ...getTableColumns(TransportWorkOrderLines),
+      tripNumber: TransportWorkOrders.tripNumber,
+      workOrderDate: TransportWorkOrders.date,
+      workOrderId: TransportWorkOrders.id,
+      workOrderStatus: TransportWorkOrders.status,
+      vehicle: TransportWorkOrders.vehicle,
+      destinationName: Companies.companyName,
+      productName: Products.name,
+      catalogProductCode: Products.productCode,
+    })
+    .from(TransportWorkOrderLines)
+    .innerJoin(
+      TransportWorkOrders,
+      eq(TransportWorkOrderLines.workOrderUuid, TransportWorkOrders.uuid),
+    )
+    .leftJoin(
+      Companies,
+      eq(TransportWorkOrderLines.destinationCompanyUuid, Companies.uuid),
+    )
+    .leftJoin(Products, eq(TransportWorkOrderLines.productUuid, Products.uuid))
+    .where(eq(TransportWorkOrderLines.uuid, uuid))
+    .limit(1);
+
+  return row ?? null;
 };
 
 // Turns the order lines into transport work-order lines — one line per order
