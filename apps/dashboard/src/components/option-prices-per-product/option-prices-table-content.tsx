@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { OptionPriceRow } from "@/app/(dashboard)/option-prices-per-product/actions";
 import {
   Table,
@@ -56,7 +57,12 @@ export const OptionPricesTable = ({ rows }: Props) => (
           rows.map((row) => (
             <TableRow key={row.uuid}>
               <TableCell className="font-medium whitespace-nowrap">
-                {row.productCode ?? "—"}
+                <Link
+                  href={`/option-prices-per-product/${row.uuid}`}
+                  className="text-primary hover:underline"
+                >
+                  {row.productCode ?? `Option price #${row.id}`}
+                </Link>
               </TableCell>
               <TableCell>{row.oldProductCode ?? "—"}</TableCell>
               <TableCell>{row.productName ?? "—"}</TableCell>

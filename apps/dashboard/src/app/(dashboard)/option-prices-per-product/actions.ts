@@ -16,7 +16,7 @@ import {
   SelectSalesOptions,
 } from "@/db/schema/sales-options";
 import { describeError, generateUuid, todayDateString } from "@/lib/helpers";
-import { aliasedTable, and, asc, eq, sql } from "drizzle-orm";
+import { aliasedTable, and, asc, eq, SQL, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 // The far-future date the ERP uses for "no end date".
@@ -95,10 +95,11 @@ const supplierProductCode = sql<string | null>`(${supplierProductCodeRow})`;
 
 // Every priced product/option pair, with the product's grouping and preferred
 // supplier alongside.
-export const getOptionPrices = async (): Promise<OptionPriceRow[]> => {
-  try {
-    const rows = await db
-      .select({
+// The overview and the detail screen show the same row, so they share one query
+// and differ only in the filter applied. `where` is left off for the overview.
+const selectOptionPrices = async (where?: SQL): Promise<OptionPriceRow[]> => {
+  const base = db
+    .select({
         optionPrice: ProductOptionPrices,
         productCode: Products.productCode,
         oldProductCode: Products.oldProductCode,
@@ -124,10 +125,14 @@ export const getOptionPrices = async (): Promise<OptionPriceRow[]> => {
         ProductGroups,
         eq(Products.productGroupUuid, ProductGroups.uuid),
       )
-      .leftJoin(ParentGroups, eq(ProductGroups.parentUuid, ParentGroups.uuid))
-      .orderBy(asc(Products.productCode), asc(SalesOptions.code));
+    .leftJoin(ParentGroups, eq(ProductGroups.parentUuid, ParentGroups.uuid));
 
-    return rows.map((row) => ({
+  const rows = await (where ? base.where(where) : base).orderBy(
+    asc(Products.productCode),
+    asc(SalesOptions.code),
+  );
+
+  return rows.map((row) => ({
       ...row.optionPrice,
       productCode: row.productCode,
       oldProductCode: row.oldProductCode,
@@ -139,11 +144,31 @@ export const getOptionPrices = async (): Promise<OptionPriceRow[]> => {
       subGroup: row.groupParentUuid ? row.groupName : null,
       preferredSupplier: row.preferredSupplier,
       supplierProductCode: row.supplierProductCode,
-      optionCode: row.optionCode,
-      optionName: row.optionName,
-    }));
+    optionCode: row.optionCode,
+    optionName: row.optionName,
+  }));
+};
+
+export const getOptionPrices = async (): Promise<OptionPriceRow[]> => {
+  try {
+    return await selectOptionPrices();
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch option prices"));
+  }
+};
+
+/**
+ * One option price with the option it prices, the product it applies to, and
+ * that product's group and preferred supplier.
+ */
+export const getOptionPriceDetail = async (
+  uuid: string,
+): Promise<OptionPriceRow | null> => {
+  try {
+    const [row] = await selectOptionPrices(eq(ProductOptionPrices.uuid, uuid));
+    return row ?? null;
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch option price"));
   }
 };
 

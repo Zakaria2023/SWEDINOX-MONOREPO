@@ -33,6 +33,12 @@ export type ContactOption = Pick<
   "uuid" | "firstName" | "lastName"
 >;
 
+export type VisitReportDetail = VisitReportListItem & {
+  companyId: SelectCompanies["id"] | null;
+  contactFirstName: SelectContacts["firstName"] | null;
+  contactLastName: SelectContacts["lastName"] | null;
+};
+
 export const getVisitReports = async (): Promise<VisitReportListItem[]> =>
   db
     .select({
@@ -42,6 +48,29 @@ export const getVisitReports = async (): Promise<VisitReportListItem[]> =>
     .from(VisitReports)
     .innerJoin(Companies, eq(Companies.uuid, VisitReports.companyUuid))
     .orderBy(desc(VisitReports.createdAt));
+
+/**
+ * One visit report with the company visited and the contact seen.
+ */
+export const getVisitReportDetail = async (
+  uuid: string,
+): Promise<VisitReportDetail | null> => {
+  const [row] = await db
+    .select({
+      ...getTableColumns(VisitReports),
+      companyName: Companies.companyName,
+      companyId: Companies.id,
+      contactFirstName: Contacts.firstName,
+      contactLastName: Contacts.lastName,
+    })
+    .from(VisitReports)
+    .innerJoin(Companies, eq(Companies.uuid, VisitReports.companyUuid))
+    .leftJoin(Contacts, eq(Contacts.uuid, VisitReports.contactUuid))
+    .where(eq(VisitReports.uuid, uuid))
+    .limit(1);
+
+  return row ?? null;
+};
 
 export const getContactsByCompanyUuid = async (
   companyUuid: string,

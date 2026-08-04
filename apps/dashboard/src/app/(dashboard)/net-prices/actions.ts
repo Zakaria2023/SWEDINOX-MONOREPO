@@ -22,7 +22,7 @@ import { describeError,
   resolveTierDiscount,
 } from "@/lib/helpers";
 import { lastPurchasePriceSql } from "@/lib/server/purchase-pricing";
-import { aliasedTable, and, asc, eq, inArray, sql } from "drizzle-orm";
+import { aliasedTable, and, asc, eq, inArray, SQL, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 export type NetPriceRow = SelectContractNetPrices & {
@@ -90,10 +90,11 @@ const supplierProductCode = sql<string | null>`(${supplierProductCodeRow})`;
 
 // Every agreed price, joined to its contract, that contract's company and the
 // product it prices.
-export const getNetPrices = async (): Promise<NetPriceRow[]> => {
-  try {
-    const rows = await db
-      .select({
+// The overview and the detail screen show the same row, so they share one query
+// and differ only in the filter applied. `where` is left off for the overview.
+const selectNetPrices = async (where?: SQL): Promise<NetPriceRow[]> => {
+  const base = db
+    .select({
         netPrice: ContractNetPrices,
         contractCode: Contracts.code,
         contractDescription: Contracts.description,
@@ -120,14 +121,15 @@ export const getNetPrices = async (): Promise<NetPriceRow[]> => {
         ProductGroups,
         eq(Products.productGroupUuid, ProductGroups.uuid),
       )
-      .leftJoin(ParentGroups, eq(ProductGroups.parentUuid, ParentGroups.uuid))
-      .orderBy(
-        asc(Contracts.code),
-        asc(Products.productCode),
-        asc(ContractNetPrices.fromQty),
-      );
+    .leftJoin(ParentGroups, eq(ProductGroups.parentUuid, ParentGroups.uuid));
 
-    return rows.map((row) => ({
+  const rows = await (where ? base.where(where) : base).orderBy(
+    asc(Contracts.code),
+    asc(Products.productCode),
+    asc(ContractNetPrices.fromQty),
+  );
+
+  return rows.map((row) => ({
       ...row.netPrice,
       contractCode: row.contractCode,
       contractDescription: row.contractDescription,
@@ -142,11 +144,31 @@ export const getNetPrices = async (): Promise<NetPriceRow[]> => {
       basePrice: row.basePrice,
       mainGroup: row.groupParentUuid ? row.parentName : row.groupName,
       subGroup: row.groupParentUuid ? row.groupName : null,
-      preferredSupplier: row.preferredSupplier,
-      supplierProductCode: row.supplierProductCode,
-    }));
+    preferredSupplier: row.preferredSupplier,
+    supplierProductCode: row.supplierProductCode,
+  }));
+};
+
+export const getNetPrices = async (): Promise<NetPriceRow[]> => {
+  try {
+    return await selectNetPrices();
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch net prices"));
+  }
+};
+
+/**
+ * One agreed net price with its contract, the customer that contract is with,
+ * the product and the product's group and preferred supplier.
+ */
+export const getNetPriceDetail = async (
+  uuid: string,
+): Promise<NetPriceRow | null> => {
+  try {
+    const [row] = await selectNetPrices(eq(ContractNetPrices.uuid, uuid));
+    return row ?? null;
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch net price"));
   }
 };
 
