@@ -4,7 +4,7 @@ import { Input } from "@/components/shadcn/input";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import { FormSelectField } from "@/components/ui/form-select-field";
 import { useFormContext } from "react-hook-form";
-import { WarehouseSubSectionFormValues } from "@/app/(dashboard)/warehouse-sub-sections/validation";
+import { WarehouseSubSectionEditValues } from "@/app/(dashboard)/warehouse-sub-sections/validation";
 
 type Props = {
   locationTypeOptions: { value: string; label: string }[];
@@ -19,7 +19,7 @@ export const GeneralSection = ({
     register,
     control,
     formState: { errors },
-  } = useFormContext<WarehouseSubSectionFormValues>();
+  } = useFormContext<WarehouseSubSectionEditValues>();
 
   return (
     <section className="space-y-4">

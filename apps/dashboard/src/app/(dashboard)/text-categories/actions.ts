@@ -6,9 +6,11 @@ import {
   InsertTextCategories,
   SelectTextCategories,
 } from "@/db";
-import { generateUuid } from "@/lib/helpers";
-import { desc, eq } from "drizzle-orm";
+import { describeError, generateUuid } from "@/lib/helpers";
+import { desc, eq, ne } from "drizzle-orm";
 import { alias } from "drizzle-orm/mysql-core";
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 export type TextCategoryOption = Pick<
   SelectTextCategories,
@@ -35,10 +37,12 @@ export type TextCategoryActionResult = {
   textCategoryUuid?: string;
 };
 
-export const getTextCategoriesForSelect = async (): Promise<
-  TextCategoryOption[]
-> =>
-  db
+// `excludeUuid` is passed when editing a category: a category can't be offered
+// as its own parent, which would detach the branch from the tree.
+export const getTextCategoriesForSelect = async (
+  excludeUuid?: string,
+): Promise<TextCategoryOption[]> => {
+  const base = db
     .select({
       uuid: TextCategories.uuid,
       parentUuid: TextCategories.parentUuid,
@@ -47,8 +51,12 @@ export const getTextCategoriesForSelect = async (): Promise<
       isActive: TextCategories.isActive,
       usageCategoriesJson: TextCategories.usageCategoriesJson,
     })
-    .from(TextCategories)
-    .orderBy(TextCategories.sequenceNumber, TextCategories.name);
+    .from(TextCategories);
+
+  return (
+    excludeUuid ? base.where(ne(TextCategories.uuid, excludeUuid)) : base
+  ).orderBy(TextCategories.sequenceNumber, TextCategories.name);
+};
 
 export const getTextCategories = async (): Promise<TextCategoryListItem[]> => {
   const ParentCategory = alias(TextCategories, "parent_category");
@@ -87,4 +95,39 @@ export const createTextCategory = async (
           : "Failed to create text category",
     };
   }
+};
+
+export const getTextCategoryForEdit = async (
+  uuid: string,
+): Promise<SelectTextCategories | null> => {
+  const [category] = await db
+    .select()
+    .from(TextCategories)
+    .where(eq(TextCategories.uuid, uuid))
+    .limit(1);
+
+  return category ?? null;
+};
+
+export const updateTextCategory = async (
+  uuid: string,
+  input: TextCategoryInput,
+): Promise<TextCategoryActionResult> => {
+  // Parenting a category to itself would orphan the whole branch, so it is
+  // rejected here as well as hidden from the dropdown.
+  if (input.parentUuid === uuid) {
+    return { error: "A category cannot be its own parent" };
+  }
+
+  try {
+    await db
+      .update(TextCategories)
+      .set(input)
+      .where(eq(TextCategories.uuid, uuid));
+  } catch (error) {
+    return { error: describeError(error, "Failed to update text category") };
+  }
+
+  revalidatePath("/text-categories");
+  redirect("/text-categories");
 };
