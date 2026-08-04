@@ -113,7 +113,12 @@ export const ProductionCapacityDetailsTable = ({ details }: Props) => (
                 {row.orderType}
               </TableCell>
               <TableCell className="text-right">
-                {row.lineNumber ?? "—"}
+                <Link
+                  href={`/production-capacity-details/${row.uuid}`}
+                  className="font-medium text-primary underline-offset-4 hover:underline"
+                >
+                  {row.lineNumber ?? "View"}
+                </Link>
               </TableCell>
               <TableCell>{row.companyName ?? "—"}</TableCell>
               <TableCell className="font-medium">

@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, Minus } from "lucide-react";
+import Link from "next/link";
 import { PickStatisticListItem } from "@/app/(dashboard)/pick-statistics/actions";
 import {
   Table,
@@ -59,7 +60,12 @@ export const PickStatisticsTable = ({ statistics }: Props) => (
           statistics.map((row) => (
             <TableRow key={row.uuid}>
               <TableCell className="font-medium">
-                {row.productCode ?? "—"}
+                <Link
+                  href={`/pick-statistics/${row.uuid}`}
+                  className="text-primary hover:underline"
+                >
+                  {row.productCode ?? `Row #${row.id}`}
+                </Link>
               </TableCell>
               <TableCell>{row.productName ?? "—"}</TableCell>
               <TableCell className="text-right">{row.year}</TableCell>

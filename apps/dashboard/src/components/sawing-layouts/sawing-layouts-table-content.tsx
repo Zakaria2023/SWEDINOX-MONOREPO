@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Fragment } from "react";
 import { SawingLayoutListItem } from "@/app/(dashboard)/sawing-layouts/actions";
 import {
@@ -95,7 +96,12 @@ export const SawingLayoutsTable = ({ layouts }: Props) => (
           layouts.map((row) => (
             <TableRow key={row.uuid}>
               <TableCell className="font-medium">
-                {row.machine ?? "—"}
+                <Link
+                  href={`/sawing-layouts/${row.uuid}`}
+                  className="text-primary hover:underline"
+                >
+                  {row.machine ?? `Layout #${row.id}`}
+                </Link>
               </TableCell>
               <TableCell className="whitespace-nowrap">
                 {formatDateValue(row.fetchDate)}

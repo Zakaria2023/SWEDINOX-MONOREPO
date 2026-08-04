@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ProductionWorkOrderLineItem,
@@ -97,7 +98,14 @@ export const ProductionWorkOrdersTable = ({ lines }: Props) => (
         ) : (
           lines.map((row) => (
             <TableRow key={row.uuid}>
-              <TableCell>{row.date ?? row.workOrderDate ?? "—"}</TableCell>
+              <TableCell className="font-medium">
+                <Link
+                  href={`/production-workorders/${row.uuid}`}
+                  className="text-primary hover:underline"
+                >
+                  {row.date ?? row.workOrderDate ?? `Line #${row.id}`}
+                </Link>
+              </TableCell>
               <TableCell>
                 {[
                   row.machineName,

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { ProductionBatchListItem } from "@/app/(dashboard)/production-batches/actions";
 import {
   Table,
@@ -38,7 +39,14 @@ export const ProductionBatchesTable = ({ batches }: Props) => (
         ) : (
           batches.map((row) => (
             <TableRow key={row.uuid}>
-              <TableCell className="font-medium">{row.code}</TableCell>
+              <TableCell className="font-medium">
+                <Link
+                  href={`/production-batches/${row.uuid}`}
+                  className="text-primary hover:underline"
+                >
+                  {row.code}
+                </Link>
+              </TableCell>
               <TableCell>{row.createdOn ?? "—"}</TableCell>
               <TableCell>{row.machineName ?? "—"}</TableCell>
               <TableCell>{row.toLocationName ?? "—"}</TableCell>

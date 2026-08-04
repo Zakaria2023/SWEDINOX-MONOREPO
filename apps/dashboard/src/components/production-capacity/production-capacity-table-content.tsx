@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { ProductionCapacityListItem } from "@/app/(dashboard)/production-capacity/actions";
 import {
   Table,
@@ -71,9 +72,14 @@ export const ProductionCapacityTable = ({ capacity }: Props) => (
                 )}
               </TableCell>
               <TableCell className="font-medium">
-                {[row.machineCode, row.machineName]
-                  .filter(Boolean)
-                  .join(" — ") || "—"}
+                <Link
+                  href={`/production-capacity/${row.uuid}`}
+                  className="text-primary hover:underline"
+                >
+                  {[row.machineCode, row.machineName]
+                    .filter(Boolean)
+                    .join(" — ") || `Row #${row.id}`}
+                </Link>
               </TableCell>
               <TableCell>
                 {row.machineType
