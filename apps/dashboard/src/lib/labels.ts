@@ -86,6 +86,7 @@ import {
   WarehouseLocationType,
   WarehouseProductType,
   WarehouseTransportRegion,
+  WarehouseType,
   TransportMode,
   ReminderStage,
   ReturnOrderReason,
@@ -354,6 +355,11 @@ export const CONTACT_CATEGORY_LABELS: Record<ContactCategory, string> = {
   management: "Management",
   bookkeeping: "Bookkeeping",
   certificates: "Certificates",
+};
+
+export const WAREHOUSE_TYPE_LABELS: Record<WarehouseType, string> = {
+  warehouse: "Warehouse",
+  location: "Location",
 };
 
 export const WAREHOUSE_ADDRESS_LABELS: Record<WarehouseAddress, string> = {
