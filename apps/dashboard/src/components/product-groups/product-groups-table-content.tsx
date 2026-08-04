@@ -62,14 +62,21 @@ export const ProductGroupsTable = ({ productGroups }: Props) => {
       case "id":
         return (
           <Link
-            href={`/product-groups/${row.uuid}`}
+            href={`/product-groups/${row.uuid}/edit`}
             className="font-medium text-foreground underline-offset-4 hover:underline"
           >
             {row.id}
           </Link>
         );
       case "name":
-        return row.name;
+        return (
+          <Link
+            href={`/product-groups/${row.uuid}/edit`}
+            className="text-primary hover:underline"
+          >
+            {row.name}
+          </Link>
+        );
       case "productShape":
         return row.productShape
           ? (PRODUCT_SHAPE_LABELS[row.productShape as ProductShape] ?? row.productShape)
