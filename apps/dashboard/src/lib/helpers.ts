@@ -18,6 +18,7 @@ import {
   OrderLineStatus,
   OrderWeightType,
   PurchaseOrderStatus,
+  PurchaseQuoteStatus,
   ReminderStage,
   reminderStages,
   ReturnOrderReason,
@@ -2495,3 +2496,18 @@ export const invoiceSummaryFromSnapshot = (
       Number(invoice.invoiceAmountExclVat ?? 0)
     ).toFixed(2),
   });
+
+/**
+ * Whether a purchase quote may still be edited.
+ *
+ * An awarded quote is the head of the cost chain: a purchase order was raised
+ * from it, and its prices are what stock received against that order is valued
+ * at. Editing it afterwards would leave the order disagreeing with its own
+ * source, so a decided quote is read-only.
+ *
+ * `expired` stays editable on purpose — that is how the validity date gets
+ * extended.
+ */
+export const isPurchaseQuoteEditable = (
+  status: PurchaseQuoteStatus | null,
+): boolean => status !== "awarded" && status !== "lost";

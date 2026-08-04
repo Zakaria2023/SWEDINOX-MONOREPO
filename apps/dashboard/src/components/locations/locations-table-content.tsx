@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { SelectWarehouses } from "@/db";
 import {
@@ -88,7 +89,12 @@ export const LocationsTable = ({ locations }: Props) => {
       case "name":
         return (
           <TableCell key={key} className="font-medium">
-            {location.name}
+            <Link
+              href={`/locations/${location.uuid}/edit`}
+              className="text-primary hover:underline"
+            >
+              {location.name}
+            </Link>
           </TableCell>
         );
       case "pickingSequence":

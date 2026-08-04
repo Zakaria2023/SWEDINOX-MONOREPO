@@ -1,7 +1,7 @@
 "use client";
 
 import { useFormContext } from "react-hook-form";
-import { LocationFormValues } from "@/app/(dashboard)/locations/validation";
+import { LocationEditValues } from "@/app/(dashboard)/locations/validation";
 import { Checkbox } from "@/components/shadcn/checkbox";
 import { Input } from "@/components/shadcn/input";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
@@ -23,7 +23,7 @@ export const StatusSection = ({ blocked, blockReasonOptions }: Props) => {
     watch,
     setValue,
     formState: { errors },
-  } = useFormContext<LocationFormValues>();
+  } = useFormContext<LocationEditValues>();
 
   return (
     <section className="space-y-4">

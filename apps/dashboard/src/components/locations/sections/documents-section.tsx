@@ -1,11 +1,11 @@
 "use client";
 
 import { useFormContext } from "react-hook-form";
-import { LocationFormValues } from "@/app/(dashboard)/locations/validation";
+import { LocationEditValues } from "@/app/(dashboard)/locations/validation";
 import { DocumentUploader } from "@/components/document-uploader";
 
 export const DocumentsSection = () => {
-  const { watch, setValue } = useFormContext<LocationFormValues>();
+  const { watch, setValue } = useFormContext<LocationEditValues>();
 
   return (
     <section className="space-y-4">
