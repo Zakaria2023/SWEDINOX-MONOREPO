@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { QuoteLineRow } from "@/app/(dashboard)/quote-lines/actions";
 import {
   Table,
@@ -94,7 +95,14 @@ export const QuoteLinesTable = ({ rows }: Props) => (
         ) : (
           rows.map((row) => (
             <TableRow key={row.uuid}>
-              <TableCell className="text-right">{row.quoteId ?? "—"}</TableCell>
+              <TableCell className="text-right font-medium">
+                <Link
+                  href={`/quote-lines/${row.uuid}`}
+                  className="text-primary hover:underline"
+                >
+                  {row.quoteId ?? `#${row.id}`}
+                </Link>
+              </TableCell>
               <TableCell>{row.ourReference ?? "—"}</TableCell>
               <TableCell className="whitespace-nowrap">
                 {formatDateValue(row.quoteDate)}

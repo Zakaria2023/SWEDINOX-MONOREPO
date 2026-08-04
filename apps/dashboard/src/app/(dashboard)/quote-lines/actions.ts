@@ -22,7 +22,7 @@ import {
   resolveOrderTypeLabel,
 } from "@/lib/helpers";
 import { buildOrderSummary } from "@/app/(dashboard)/orders/actions";
-import { and, asc, count, desc, eq, gte, isNull, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, isNull, SQL, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 export type QuoteLineRow = SelectQuoteItems & {
@@ -107,82 +107,107 @@ const lastFollowUpByRow = db
 const lastFollowUpBy = sql<string | null>`(${lastFollowUpByRow})`;
 
 // Every quote line, joined to its quote, customer, product and revenue group.
-// Filtered on the quote date, matching the legacy overview's date range.
+//
+// The overview and the detail screen show the same row, so they share one query
+// and differ only in the filter applied. `where` is left off for the overview.
+const selectQuoteLines = async (where?: SQL): Promise<QuoteLineRow[]> => {
+  const year = sql<number>`YEAR(${Quotes.quoteDate})`;
+  const month = sql<number>`MONTH(${Quotes.quoteDate})`;
+
+  const base = db
+    .select({
+      item: QuoteItems,
+      quoteId: Quotes.id,
+      ourReference: Quotes.ourReference,
+      quoteDate: Quotes.quoteDate,
+      decisionDate: Quotes.decisionDate,
+      validUntil: Quotes.validUntil,
+      seller: Quotes.seller,
+      customerRef: Quotes.customerRef,
+      isPickup: Quotes.isPickup,
+      isConsignment: Quotes.isConsignment,
+      isIncidental: Quotes.isIncidental,
+      isInternalProduction: Quotes.isInternalProduction,
+      isCustomerMaterial: Quotes.isCustomerMaterial,
+      customerCode: Companies.id,
+      customerName: Companies.companyName,
+      customerGroup: Companies.customerGroup,
+      representative: Companies.representative,
+      city: customerCity,
+      productCode: Products.productCode,
+      productName: Products.name,
+      revenueGroupNumber: RevenueGroups.number,
+      revenueGroupName: RevenueGroups.name,
+      convertedToOrderId: Orders.id,
+      lastFollowUpDate,
+      lastFollowUp: lastFollowUpText,
+      lastFollowUpBy,
+      quoteMonth: month,
+      quoteYear: year,
+    })
+    .from(QuoteItems)
+    .innerJoin(Quotes, eq(QuoteItems.quoteUuid, Quotes.uuid))
+    .leftJoin(Companies, eq(Quotes.companyUuid, Companies.uuid))
+    .leftJoin(Products, eq(QuoteItems.productUuid, Products.uuid))
+    .leftJoin(
+      RevenueGroups,
+      eq(QuoteItems.revenueGroupUuid, RevenueGroups.uuid),
+    )
+    .leftJoin(Orders, eq(QuoteItems.convertedToOrderUuid, Orders.uuid));
+
+  const rows = await (where ? base.where(where) : base).orderBy(
+    desc(Quotes.quoteDate),
+    asc(QuoteItems.lineNumber),
+  );
+
+  return rows.map(({ item, ...rest }) => ({
+    ...item,
+    quoteId: rest.quoteId,
+    ourReference: rest.ourReference,
+    quoteDate: rest.quoteDate,
+    decisionDate: rest.decisionDate,
+    validUntil: rest.validUntil,
+    seller: rest.seller,
+    customerRef: rest.customerRef,
+    customerCode: rest.customerCode,
+    customerName: rest.customerName,
+    customerGroup: rest.customerGroup,
+    representative: rest.representative,
+    city: rest.city,
+    productCode: rest.productCode,
+    productName: rest.productName,
+    revenueGroupNumber: rest.revenueGroupNumber,
+    revenueGroupName: rest.revenueGroupName,
+    convertedToOrderId: rest.convertedToOrderId,
+    lastFollowUpDate: rest.lastFollowUpDate,
+    lastFollowUp: rest.lastFollowUp,
+    lastFollowUpBy: rest.lastFollowUpBy,
+    orderType: resolveOrderTypeLabel(rest),
+    quoteMonth: rest.quoteMonth === null ? null : Number(rest.quoteMonth),
+    quoteYear: rest.quoteYear === null ? null : Number(rest.quoteYear),
+  }));
+};
+
 export const getQuoteLines = async (): Promise<QuoteLineRow[]> => {
   try {
-    const year = sql<number>`YEAR(${Quotes.quoteDate})`;
-    const month = sql<number>`MONTH(${Quotes.quoteDate})`;
-
-    const rows = await db
-      .select({
-        item: QuoteItems,
-        quoteId: Quotes.id,
-        ourReference: Quotes.ourReference,
-        quoteDate: Quotes.quoteDate,
-        decisionDate: Quotes.decisionDate,
-        validUntil: Quotes.validUntil,
-        seller: Quotes.seller,
-        customerRef: Quotes.customerRef,
-        isPickup: Quotes.isPickup,
-        isConsignment: Quotes.isConsignment,
-        isIncidental: Quotes.isIncidental,
-        isInternalProduction: Quotes.isInternalProduction,
-        isCustomerMaterial: Quotes.isCustomerMaterial,
-        customerCode: Companies.id,
-        customerName: Companies.companyName,
-        customerGroup: Companies.customerGroup,
-        representative: Companies.representative,
-        city: customerCity,
-        productCode: Products.productCode,
-        productName: Products.name,
-        revenueGroupNumber: RevenueGroups.number,
-        revenueGroupName: RevenueGroups.name,
-        convertedToOrderId: Orders.id,
-        lastFollowUpDate,
-        lastFollowUp: lastFollowUpText,
-        lastFollowUpBy,
-        quoteMonth: month,
-        quoteYear: year,
-      })
-      .from(QuoteItems)
-      .innerJoin(Quotes, eq(QuoteItems.quoteUuid, Quotes.uuid))
-      .leftJoin(Companies, eq(Quotes.companyUuid, Companies.uuid))
-      .leftJoin(Products, eq(QuoteItems.productUuid, Products.uuid))
-      .leftJoin(
-        RevenueGroups,
-        eq(QuoteItems.revenueGroupUuid, RevenueGroups.uuid),
-      )
-      .leftJoin(Orders, eq(QuoteItems.convertedToOrderUuid, Orders.uuid))
-      .orderBy(desc(Quotes.quoteDate), asc(QuoteItems.lineNumber));
-
-    return rows.map(({ item, ...rest }) => ({
-      ...item,
-      quoteId: rest.quoteId,
-      ourReference: rest.ourReference,
-      quoteDate: rest.quoteDate,
-      decisionDate: rest.decisionDate,
-      validUntil: rest.validUntil,
-      seller: rest.seller,
-      customerRef: rest.customerRef,
-      customerCode: rest.customerCode,
-      customerName: rest.customerName,
-      customerGroup: rest.customerGroup,
-      representative: rest.representative,
-      city: rest.city,
-      productCode: rest.productCode,
-      productName: rest.productName,
-      revenueGroupNumber: rest.revenueGroupNumber,
-      revenueGroupName: rest.revenueGroupName,
-      convertedToOrderId: rest.convertedToOrderId,
-      lastFollowUpDate: rest.lastFollowUpDate,
-      lastFollowUp: rest.lastFollowUp,
-      lastFollowUpBy: rest.lastFollowUpBy,
-      orderType: resolveOrderTypeLabel(rest),
-      quoteMonth: rest.quoteMonth === null ? null : Number(rest.quoteMonth),
-      quoteYear: rest.quoteYear === null ? null : Number(rest.quoteYear),
-    }));
+    return await selectQuoteLines();
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch quote lines"));
+  }
+};
+
+/**
+ * One quote line with its quote, customer, product, revenue group, the order it
+ * was converted into, and the last follow-up recorded against the quote.
+ */
+export const getQuoteLineDetail = async (
+  uuid: string,
+): Promise<QuoteLineRow | null> => {
+  try {
+    const [row] = await selectQuoteLines(eq(QuoteItems.uuid, uuid));
+    return row ?? null;
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch quote line"));
   }
 };
 

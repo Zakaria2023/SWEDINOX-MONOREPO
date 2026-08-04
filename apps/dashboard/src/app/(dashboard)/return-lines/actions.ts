@@ -29,6 +29,12 @@ export type GenerateReturnLinesResult = {
   success?: boolean;
 };
 
+export type ReturnLineDetail = ReturnLineItem & {
+  companyUuid: SelectCompanies["uuid"] | null;
+  returnOrderReason: SelectReturnOrders["returnReason"] | null;
+  returnOrderStatus: SelectReturnOrders["status"] | null;
+};
+
 export const getReturnLines = async (): Promise<ReturnLineItem[]> => {
   try {
     const rows = await db
@@ -60,6 +66,52 @@ export const getReturnLines = async (): Promise<ReturnLineItem[]> => {
     });
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch return lines"));
+  }
+};
+
+/**
+ * One return line with the return order, customer and product behind it. Margin
+ * is derived the same way the overview derives it.
+ */
+export const getReturnLineDetail = async (
+  uuid: string,
+): Promise<ReturnLineDetail | null> => {
+  try {
+    const [row] = await db
+      .select({
+        ...getTableColumns(ReturnOrderItems),
+        returnOrderId: ReturnOrders.id,
+        returnOrderReason: ReturnOrders.returnReason,
+        returnOrderStatus: ReturnOrders.status,
+        customerName: Companies.companyName,
+        companyUuid: Companies.uuid,
+        productCode: Products.productCode,
+        productName: Products.name,
+      })
+      .from(ReturnOrderItems)
+      .leftJoin(
+        ReturnOrders,
+        eq(ReturnOrderItems.returnOrderUuid, ReturnOrders.uuid),
+      )
+      .leftJoin(Companies, eq(ReturnOrders.companyUuid, Companies.uuid))
+      .leftJoin(Products, eq(ReturnOrderItems.productUuid, Products.uuid))
+      .where(eq(ReturnOrderItems.uuid, uuid))
+      .limit(1);
+
+    if (!row) {
+      return null;
+    }
+
+    const amount = Number(row.amount);
+    const profit = amount - Number(row.costPrice) * Number(row.quantity);
+
+    return {
+      ...row,
+      profit,
+      profitMargin: amount === 0 ? 0 : (profit / amount) * 100,
+    };
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch return line"));
   }
 };
 

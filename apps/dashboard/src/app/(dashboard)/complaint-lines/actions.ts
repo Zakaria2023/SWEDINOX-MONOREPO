@@ -15,7 +15,7 @@ import { Stock } from "@/db/schema/stock";
 import { SelectWarehouses, Warehouses } from "@/db/schema/warehouses";
 import { describeError, generateUuid, todayDateString } from "@/lib/helpers";
 import { getClerkUsersForSelect } from "@/lib/server/clerk";
-import { aliasedTable, and, asc, desc, eq, sql } from "drizzle-orm";
+import { aliasedTable, and, asc, desc, eq, SQL, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 const StockLocations = aliasedTable(Warehouses, "stock_locations");
@@ -25,6 +25,7 @@ export type ComplaintLineRow = SelectComplaintItems & {
   reportDate: SelectComplaints["reportDate"] | null;
   companyCode: SelectCompanies["id"] | null;
   companyName: SelectCompanies["companyName"] | null;
+  companyUuid: SelectCompanies["uuid"] | null;
   customerGroup: SelectCompanies["customerGroup"] | null;
   representative: SelectCompanies["representative"] | null;
   orderId: SelectOrders["id"] | null;
@@ -49,68 +50,98 @@ export type GenerateComplaintLinesResult = {
 
 // Every complaint line, joined to its complaint, that complaint's company, the
 // order line it is about and the section the goods sat in.
+//
+// The overview and the detail screen show the same row, so they share one query
+// and differ only in the filter applied. `where` is left off for the overview.
+const selectComplaintLines = async (
+  where?: SQL,
+): Promise<ComplaintLineRow[]> => {
+  const base = db
+    .select({
+      item: ComplaintItems,
+      complaintNumber: Complaints.id,
+      reportDate: Complaints.reportDate,
+      companyCode: Companies.id,
+      companyName: Companies.companyName,
+      companyUuid: Companies.uuid,
+      customerGroup: Companies.customerGroup,
+      representative: Companies.representative,
+      orderId: Orders.id,
+      orderSeller: Orders.seller,
+      orderLineNumber: OrderItems.lineNumber,
+      productCode: Products.productCode,
+      productName: Products.name,
+      warehouseSection: Warehouses.name,
+      reportMonth: sql<number>`MONTH(${Complaints.reportDate})`,
+      reportYear: sql<number>`YEAR(${Complaints.reportDate})`,
+    })
+    .from(ComplaintItems)
+    .innerJoin(Complaints, eq(ComplaintItems.complaintUuid, Complaints.uuid))
+    .leftJoin(Companies, eq(Complaints.companyUuid, Companies.uuid))
+    .leftJoin(Orders, eq(ComplaintItems.orderUuid, Orders.uuid))
+    .leftJoin(OrderItems, eq(ComplaintItems.orderItemUuid, OrderItems.uuid))
+    .leftJoin(Products, eq(ComplaintItems.productUuid, Products.uuid))
+    .leftJoin(
+      Warehouses,
+      eq(ComplaintItems.warehouseSectionUuid, Warehouses.uuid),
+    );
+
+  const rows = await (where ? base.where(where) : base).orderBy(
+    desc(Complaints.id),
+    asc(ComplaintItems.lineNumber),
+  );
+
+  // Clerk owns the user list, so the ids stored on the line are resolved to
+  // names here rather than joined.
+  const users = await getClerkUsersForSelect();
+  const nameById = new Map(users.map((user) => [user.value, user.label]));
+
+  return rows.map(({ item, ...rest }) => ({
+    ...item,
+    complaintNumber: rest.complaintNumber,
+    reportDate: rest.reportDate,
+    companyCode: rest.companyCode,
+    companyName: rest.companyName,
+    companyUuid: rest.companyUuid,
+    customerGroup: rest.customerGroup,
+    representative: rest.representative,
+    orderId: rest.orderId,
+    orderSeller: rest.orderSeller,
+    orderLineNumber: rest.orderLineNumber,
+    productCode: rest.productCode,
+    productName: rest.productName,
+    warehouseSection: rest.warehouseSection,
+    responsibleName: item.responsibleUserId
+      ? (nameById.get(item.responsibleUserId) ?? item.responsibleUserId)
+      : null,
+    createdByName: item.createdByUserId
+      ? (nameById.get(item.createdByUserId) ?? item.createdByUserId)
+      : null,
+    reportMonth: rest.reportMonth === null ? null : Number(rest.reportMonth),
+    reportYear: rest.reportYear === null ? null : Number(rest.reportYear),
+  }));
+};
+
 export const getComplaintLines = async (): Promise<ComplaintLineRow[]> => {
   try {
-    const rows = await db
-      .select({
-        item: ComplaintItems,
-        complaintNumber: Complaints.id,
-        reportDate: Complaints.reportDate,
-        companyCode: Companies.id,
-        companyName: Companies.companyName,
-        customerGroup: Companies.customerGroup,
-        representative: Companies.representative,
-        orderId: Orders.id,
-        orderSeller: Orders.seller,
-        orderLineNumber: OrderItems.lineNumber,
-        productCode: Products.productCode,
-        productName: Products.name,
-        warehouseSection: Warehouses.name,
-        reportMonth: sql<number>`MONTH(${Complaints.reportDate})`,
-        reportYear: sql<number>`YEAR(${Complaints.reportDate})`,
-      })
-      .from(ComplaintItems)
-      .innerJoin(Complaints, eq(ComplaintItems.complaintUuid, Complaints.uuid))
-      .leftJoin(Companies, eq(Complaints.companyUuid, Companies.uuid))
-      .leftJoin(Orders, eq(ComplaintItems.orderUuid, Orders.uuid))
-      .leftJoin(OrderItems, eq(ComplaintItems.orderItemUuid, OrderItems.uuid))
-      .leftJoin(Products, eq(ComplaintItems.productUuid, Products.uuid))
-      .leftJoin(
-        Warehouses,
-        eq(ComplaintItems.warehouseSectionUuid, Warehouses.uuid),
-      )
-      .orderBy(desc(Complaints.id), asc(ComplaintItems.lineNumber));
-
-    // Clerk owns the user list, so the ids stored on the line are resolved to
-    // names here rather than joined.
-    const users = await getClerkUsersForSelect();
-    const nameById = new Map(users.map((user) => [user.value, user.label]));
-
-    return rows.map(({ item, ...rest }) => ({
-      ...item,
-      complaintNumber: rest.complaintNumber,
-      reportDate: rest.reportDate,
-      companyCode: rest.companyCode,
-      companyName: rest.companyName,
-      customerGroup: rest.customerGroup,
-      representative: rest.representative,
-      orderId: rest.orderId,
-      orderSeller: rest.orderSeller,
-      orderLineNumber: rest.orderLineNumber,
-      productCode: rest.productCode,
-      productName: rest.productName,
-      warehouseSection: rest.warehouseSection,
-      responsibleName: item.responsibleUserId
-        ? (nameById.get(item.responsibleUserId) ?? item.responsibleUserId)
-        : null,
-      createdByName: item.createdByUserId
-        ? (nameById.get(item.createdByUserId) ?? item.createdByUserId)
-        : null,
-      reportMonth: rest.reportMonth === null ? null : Number(rest.reportMonth),
-      reportYear: rest.reportYear === null ? null : Number(rest.reportYear),
-    }));
+    return await selectComplaintLines();
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch complaint lines"));
+  }
+};
+
+/**
+ * One complaint line with its complaint, the customer, the order line it is
+ * about, the product and the warehouse section the goods sat in.
+ */
+export const getComplaintLineDetail = async (
+  uuid: string,
+): Promise<ComplaintLineRow | null> => {
+  try {
+    const [row] = await selectComplaintLines(eq(ComplaintItems.uuid, uuid));
+    return row ?? null;
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch complaint line"));
   }
 };
 

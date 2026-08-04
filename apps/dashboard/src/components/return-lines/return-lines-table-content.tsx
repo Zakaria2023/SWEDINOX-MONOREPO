@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { ReturnLineItem } from "@/app/(dashboard)/return-lines/actions";
 import {
   Table,
@@ -58,7 +59,12 @@ export const ReturnLinesTable = ({ lines }: Props) => (
           lines.map((row) => (
             <TableRow key={row.uuid}>
               <TableCell className="text-right font-medium">
-                {row.returnOrderId ?? "—"}
+                <Link
+                  href={`/return-lines/${row.uuid}`}
+                  className="text-primary hover:underline"
+                >
+                  {row.returnOrderId ?? `#${row.id}`}
+                </Link>
               </TableCell>
               <TableCell className="text-right">
                 {row.lineNumber ?? "—"}
