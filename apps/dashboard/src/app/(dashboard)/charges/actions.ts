@@ -4,7 +4,7 @@ import { db } from "@/db";
 import { Charges, SelectCharges } from "@/db/schema/charges";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { OrderItems } from "@/db/schema/order-items";
-import { Orders, OrderSurcharges } from "@/db/schema/orders";
+import { Orders, OrderSurcharges, SelectOrders } from "@/db/schema/orders";
 import { Products } from "@/db/schema/products";
 import { RevenueGroups, SelectRevenueGroups } from "@/db/schema/revenue-groups";
 import { Stock } from "@/db/schema/stock";
@@ -23,6 +23,11 @@ export type GenerateChargesResult = {
   success?: boolean;
 };
 
+export type ChargeDetail = ChargeListItem & {
+  orderId: SelectOrders["id"] | null;
+  revenueGroupNumber: SelectRevenueGroups["number"] | null;
+};
+
 export const getCharges = async (): Promise<ChargeListItem[]> => {
   try {
     return await db
@@ -37,6 +42,34 @@ export const getCharges = async (): Promise<ChargeListItem[]> => {
       .orderBy(desc(Charges.creationDate));
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch charges"));
+  }
+};
+
+/**
+ * One charge with the customer, order and revenue group it was booked against.
+ */
+export const getChargeDetail = async (
+  uuid: string,
+): Promise<ChargeDetail | null> => {
+  try {
+    const [row] = await db
+      .select({
+        ...getTableColumns(Charges),
+        customerName: Companies.companyName,
+        revenueGroupName: RevenueGroups.name,
+        revenueGroupNumber: RevenueGroups.number,
+        orderId: Orders.id,
+      })
+      .from(Charges)
+      .leftJoin(Companies, eq(Charges.companyUuid, Companies.uuid))
+      .leftJoin(RevenueGroups, eq(Charges.revenueGroupUuid, RevenueGroups.uuid))
+      .leftJoin(Orders, eq(Charges.orderUuid, Orders.uuid))
+      .where(eq(Charges.uuid, uuid))
+      .limit(1);
+
+    return row ?? null;
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch charge"));
   }
 };
 

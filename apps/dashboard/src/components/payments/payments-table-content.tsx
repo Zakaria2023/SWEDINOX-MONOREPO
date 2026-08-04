@@ -47,7 +47,14 @@ export const PaymentsTableContent = ({ rows }: Props) => (
               key={row.uuid}
               className={row.reversed ? "text-muted-foreground" : ""}
             >
-              <TableCell>{row.paymentDate}</TableCell>
+              <TableCell className="font-medium">
+                <Link
+                  href={`/payments/${row.uuid}`}
+                  className="text-primary hover:underline"
+                >
+                  {row.paymentDate}
+                </Link>
+              </TableCell>
               <TableCell>
                 {row.invoiceUuid ? "Received" : "Paid"}
               </TableCell>
