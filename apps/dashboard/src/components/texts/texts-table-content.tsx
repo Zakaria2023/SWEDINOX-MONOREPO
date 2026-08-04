@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { TextListItem } from "@/app/(dashboard)/texts/actions";
 import {
@@ -11,51 +12,18 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
-import { buildColumnVisibility } from "@/lib/helpers";
-import { TextUsageCategory } from "@/lib/enums";
+import {
+  activeTextUsageCategories,
+  buildColumnVisibility,
+  TEXT_USAGE_CATEGORY_FIELDS,
+  TextUsageCategoryField,
+} from "@/lib/helpers";
 import { TEXT_USAGE_CATEGORY_LABELS } from "@/lib/labels";
-import { SelectTexts } from "@/db";
 
-type UsageCategoryField = keyof Omit<
-  SelectTexts,
-  | "id"
-  | "uuid"
-  | "companyUuid"
-  | "textCategoryUuid"
-  | "title"
-  | "textBlock"
-  | "sequenceNumber"
-  | "isActive"
-  | "createdByUserId"
-  | "createdAt"
-  | "updatedAt"
->;
-
-const USAGE_CATEGORY_MAP: Array<{
-  field: UsageCategoryField;
-  key: TextUsageCategory;
-}> = [
-  { key: "visit_report", field: "visitReport" },
-  { key: "purchase_quote_request", field: "purchaseQuoteRequest" },
-  { key: "purchase_order", field: "purchaseOrder" },
-  { key: "purchase_order_tool_tip", field: "purchaseOrderToolTip" },
-  { key: "purchase_return_order", field: "purchaseReturnOrder" },
-  { key: "sales_quote", field: "salesQuote" },
-  { key: "sales_order", field: "salesOrder" },
-  { key: "sales_order_tool_tip", field: "salesOrderToolTip" },
-  { key: "sales_invoice", field: "salesInvoice" },
-  { key: "warehouse_order", field: "warehouseOrder" },
-  { key: "production_order", field: "productionOrder" },
-  { key: "loadlist", field: "loadlist" },
-  { key: "waybill", field: "waybill" },
-  { key: "ride_list", field: "rideList" },
-  { key: "customer_label", field: "customerLabel" },
-  { key: "transport_planning", field: "transportPlanning" },
-  { key: "website_in_advance", field: "websiteInAdvance" },
-  { key: "website_after", field: "websiteAfter" },
-];
+type UsageCategoryField = TextUsageCategoryField;
 
 type ColumnKey =
+  | "title"
   | "companyId"
   | "companyName"
   | "city"
@@ -74,6 +42,7 @@ const BASE_COLUMNS: Array<{
   key: ColumnKey;
   label: string;
 }> = [
+  { key: "title", label: "Title", defaultVisible: true },
   { key: "companyId", label: "Company code", defaultVisible: true },
   { key: "companyName", label: "Customer", defaultVisible: true },
   { key: "city", label: "City", defaultVisible: true },
@@ -91,7 +60,7 @@ const USAGE_COLUMNS: Array<{
   defaultVisible: boolean;
   key: ColumnKey;
   label: string;
-}> = USAGE_CATEGORY_MAP.map(({ key, field }) => ({
+}> = TEXT_USAGE_CATEGORY_FIELDS.map(({ key, field }) => ({
   key: field as ColumnKey,
   label: TEXT_USAGE_CATEGORY_LABELS[key],
   defaultVisible: true,
@@ -99,7 +68,9 @@ const USAGE_COLUMNS: Array<{
 
 const ALL_COLUMNS = [...BASE_COLUMNS, ...USAGE_COLUMNS];
 
-const USAGE_FIELD_SET = new Set<string>(USAGE_CATEGORY_MAP.map((m) => m.field));
+const USAGE_FIELD_SET = new Set<string>(
+  TEXT_USAGE_CATEGORY_FIELDS.map((m) => m.field),
+);
 
 type TextsTableContentProps = {
   texts: TextListItem[];
@@ -137,6 +108,17 @@ export const TextsTable = ({ texts }: TextsTableContentProps) => {
     }
 
     switch (key) {
+      case "title":
+        return (
+          <TableCell key={key} className="font-medium">
+            <Link
+              href={`/texts/${text.uuid}`}
+              className="text-primary hover:underline"
+            >
+              {text.title}
+            </Link>
+          </TableCell>
+        );
       case "companyId":
         return (
           <TableCell key={key} className="font-medium">
@@ -186,9 +168,7 @@ export const TextsTable = ({ texts }: TextsTableContentProps) => {
           </TableCell>
         );
       case "categories": {
-        const enabled = USAGE_CATEGORY_MAP.filter(
-          ({ field }) => text[field],
-        ).map(({ key: cat }) => TEXT_USAGE_CATEGORY_LABELS[cat]);
+        const enabled = activeTextUsageCategories(text);
         return (
           <TableCell key={key}>
             {enabled.length > 0 ? enabled.join(", ") : fallback}

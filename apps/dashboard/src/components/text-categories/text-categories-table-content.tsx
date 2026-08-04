@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { TextCategoryListItem } from "@/app/(dashboard)/text-categories/actions";
 import {
   Table,
@@ -67,7 +68,12 @@ export const TextCategoriesTable = ({
       case "name":
         return (
           <TableCell key={key} className="font-medium">
-            {category.name}
+            <Link
+              href={`/text-categories/${category.uuid}`}
+              className="text-primary hover:underline"
+            >
+              {category.name}
+            </Link>
           </TableCell>
         );
       case "parentName":

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { MachineListItem } from "@/app/(dashboard)/machines/actions";
 import { DocumentCell } from "@/components/ui/document-cell";
@@ -92,7 +93,12 @@ export const MachinesTable = ({ machines }: Props) => {
       case "code":
         return (
           <TableCell key={key} className="font-mono font-medium">
-            {machine.code}
+            <Link
+              href={`/machines/${machine.uuid}`}
+              className="text-primary hover:underline"
+            >
+              {machine.code}
+            </Link>
           </TableCell>
         );
       case "name":

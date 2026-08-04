@@ -8,8 +8,12 @@ import {
   MachinePostProcessings,
   MachineProducts,
   Machines,
+  SelectMachinePostProcessings,
+  SelectMachineProducts,
   SelectMachines,
 } from "@/db/schema/machines";
+import { ProductGroups, SelectProductGroups } from "@/db/schema/product-groups";
+import { Products, SelectProducts } from "@/db/schema/products";
 import { SelectWarehouses, Warehouses } from "@/db/schema/warehouses";
 import { MachineProductionType } from "@/lib/enums";
 import { describeError, generateUuid } from "@/lib/helpers";
@@ -41,6 +45,18 @@ export type MachineListItem = SelectMachines & {
   stockLocationName: SelectWarehouses["name"] | null;
 };
 
+export type MachineProductRow = SelectMachineProducts & {
+  catalogProductCode: SelectProducts["productCode"] | null;
+  catalogProductName: SelectProducts["name"] | null;
+  productGroupName: SelectProductGroups["name"] | null;
+};
+
+export type MachineDetail = MachineListItem & {
+  stockLocationType: SelectWarehouses["type"] | null;
+  products: MachineProductRow[];
+  postProcessings: SelectMachinePostProcessings[];
+};
+
 export const getMachines = async (): Promise<MachineListItem[]> => {
   try {
     return await db
@@ -54,6 +70,59 @@ export const getMachines = async (): Promise<MachineListItem[]> => {
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch machines"));
   }
+};
+
+/**
+ * One machine with everything recorded on it: its own settings, the stock
+ * location it stands in, the products/groups it can run, and the post
+ * processings that follow it.
+ *
+ * A machine product keeps its own snapshot of the code and description it was
+ * added under, so the catalogue row is joined alongside rather than instead of
+ * it — a product later renamed should not silently rewrite the machine's setup.
+ */
+export const getMachineDetail = async (
+  uuid: string,
+): Promise<MachineDetail | null> => {
+  const [machine] = await db
+    .select({
+      ...getTableColumns(Machines),
+      stockLocationName: Warehouses.name,
+      stockLocationType: Warehouses.type,
+    })
+    .from(Machines)
+    .leftJoin(Warehouses, eq(Machines.stockLocationUuid, Warehouses.uuid))
+    .where(eq(Machines.uuid, uuid))
+    .limit(1);
+
+  if (!machine) {
+    return null;
+  }
+
+  const [products, postProcessings] = await Promise.all([
+    db
+      .select({
+        ...getTableColumns(MachineProducts),
+        catalogProductCode: Products.productCode,
+        catalogProductName: Products.name,
+        productGroupName: ProductGroups.name,
+      })
+      .from(MachineProducts)
+      .leftJoin(Products, eq(Products.uuid, MachineProducts.productUuid))
+      .leftJoin(
+        ProductGroups,
+        eq(ProductGroups.uuid, MachineProducts.productGroupUuid),
+      )
+      .where(eq(MachineProducts.machineUuid, uuid))
+      .orderBy(MachineProducts.preference),
+    db
+      .select()
+      .from(MachinePostProcessings)
+      .where(eq(MachinePostProcessings.machineUuid, uuid))
+      .orderBy(MachinePostProcessings.preference),
+  ]);
+
+  return { ...machine, products, postProcessings };
 };
 
 export const createMachine = async (
