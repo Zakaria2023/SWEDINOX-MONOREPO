@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { type CounterOrderListItem } from "@/app/(dashboard)/counter-orders/actions";
 import {
   Table,
@@ -75,7 +76,12 @@ export const CounterOrdersTable = ({
       case "id":
         return (
           <TableCell key={key} className="font-medium">
-            {order.id}
+            <Link
+              href={`/counter-orders/${order.uuid}/edit`}
+              className="text-primary hover:underline"
+            >
+              {order.id}
+            </Link>
           </TableCell>
         );
       case "companyName":
