@@ -1,6 +1,10 @@
 "use server";
 
 import { db } from "@/db";
+import {
+  BatchCertificates,
+  SelectBatchCertificates,
+} from "@/db/schema/batch-certificates";
 import { Batches, SelectBatches } from "@/db/schema/batches";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { Products, SelectProducts } from "@/db/schema/products";
@@ -9,7 +13,7 @@ import {
   PurchaseOrders,
   SelectPurchaseOrders,
 } from "@/db/schema/purchase-orders";
-import { Stock } from "@/db/schema/stock";
+import { SelectStock, Stock } from "@/db/schema/stock";
 import {
   describeError,
   formatInternalChargeNumber,
@@ -30,6 +34,36 @@ export type GenerateBatchesResult = {
   error?: string;
   success?: boolean;
   createdBatches?: number;
+};
+
+export type BatchCertificateRow = Pick<
+  SelectBatchCertificates,
+  | "uuid"
+  | "documentCertificate"
+  | "documentCode"
+  | "fileName"
+  | "billOfLading"
+  | "producer"
+  | "receivedDate"
+  | "mandatoryIgnoreDocument"
+  | "documents"
+>;
+
+export type BatchStockRow = Pick<
+  SelectStock,
+  | "uuid"
+  | "status"
+  | "quantity"
+  | "reservedQuantity"
+  | "unit"
+  | "charge"
+  | "internalCharge"
+  | "warehouseUuid"
+>;
+
+export type BatchDetail = BatchRow & {
+  certificates: BatchCertificateRow[];
+  stock: BatchStockRow | null;
 };
 
 // Every registered batch, joined to the purchase order it arrived on, its
@@ -65,6 +99,81 @@ export const getBatches = async (): Promise<BatchRow[]> => {
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch batches"));
   }
+};
+
+/**
+ * One batch with its full traceability: the purchase order and supplier it
+ * arrived on, the product, the certificates expected or received against it, and
+ * the stock lot it became.
+ */
+export const getBatchDetail = async (
+  uuid: string,
+): Promise<BatchDetail | null> => {
+  const [row] = await db
+    .select({
+      batch: Batches,
+      purchaseOrderId: PurchaseOrders.id,
+      supplierCode: Companies.id,
+      supplierName: Companies.companyName,
+      productCode: Products.productCode,
+      productName: Products.name,
+    })
+    .from(Batches)
+    .leftJoin(PurchaseOrders, eq(Batches.purchaseOrderUuid, PurchaseOrders.uuid))
+    .leftJoin(Companies, eq(Batches.supplierUuid, Companies.uuid))
+    .leftJoin(Products, eq(Batches.productUuid, Products.uuid))
+    .where(eq(Batches.uuid, uuid))
+    .limit(1);
+
+  if (!row) {
+    return null;
+  }
+
+  const certificates = await db
+    .select({
+      uuid: BatchCertificates.uuid,
+      documentCertificate: BatchCertificates.documentCertificate,
+      documentCode: BatchCertificates.documentCode,
+      fileName: BatchCertificates.fileName,
+      billOfLading: BatchCertificates.billOfLading,
+      producer: BatchCertificates.producer,
+      receivedDate: BatchCertificates.receivedDate,
+      mandatoryIgnoreDocument: BatchCertificates.mandatoryIgnoreDocument,
+      documents: BatchCertificates.documents,
+    })
+    .from(BatchCertificates)
+    .where(eq(BatchCertificates.batchUuid, uuid))
+    .orderBy(desc(BatchCertificates.receivedDate));
+
+  // A batch registered before its stock lot existed carries no stockUuid, so
+  // there is nothing to look up rather than a lot that is merely missing.
+  const [stock] = row.batch.stockUuid
+    ? await db
+        .select({
+          uuid: Stock.uuid,
+          status: Stock.status,
+          quantity: Stock.quantity,
+          reservedQuantity: Stock.reservedQuantity,
+          unit: Stock.unit,
+          charge: Stock.charge,
+          internalCharge: Stock.internalCharge,
+          warehouseUuid: Stock.warehouseUuid,
+        })
+        .from(Stock)
+        .where(eq(Stock.uuid, row.batch.stockUuid))
+        .limit(1)
+    : [];
+
+  return {
+    ...row.batch,
+    purchaseOrderId: row.purchaseOrderId,
+    supplierCode: row.supplierCode,
+    supplierName: row.supplierName,
+    productCode: row.productCode,
+    productName: row.productName,
+    certificates,
+    stock: stock ?? null,
+  };
 };
 
 // Registers a batch for every goods receipt that has none yet.

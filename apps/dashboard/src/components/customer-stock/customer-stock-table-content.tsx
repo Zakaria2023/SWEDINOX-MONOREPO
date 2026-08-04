@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { CustomerStockItem } from "@/app/(dashboard)/customer-stock/actions";
 import {
   Table,
@@ -58,7 +59,12 @@ export const CustomerStockTable = ({ stock }: Props) => (
             return (
               <TableRow key={row.uuid}>
                 <TableCell className="font-medium">
-                  {row.ownerName ?? "—"}
+                  <Link
+                    href={`/stock/${row.uuid}`}
+                    className="text-primary hover:underline"
+                  >
+                    {row.ownerName ?? "Stock lot"}
+                  </Link>
                 </TableCell>
                 <TableCell>{row.locationName ?? "—"}</TableCell>
                 <TableCell>{row.productCode ?? "—"}</TableCell>

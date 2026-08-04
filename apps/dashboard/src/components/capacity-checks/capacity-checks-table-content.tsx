@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { CapacityCheckListItem } from "@/app/(dashboard)/capacity-checks/actions";
 import {
   Table,
@@ -65,7 +66,12 @@ export const CapacityChecksTable = ({ checks }: Props) => (
                 )}
               </TableCell>
               <TableCell className="font-medium">
-                {row.checkName ?? "—"}
+                <Link
+                  href={`/capacity-checks/${row.uuid}`}
+                  className="text-primary hover:underline"
+                >
+                  {row.checkName ?? `Check #${row.id}`}
+                </Link>
               </TableCell>
               <TableCell>{row.type ?? "—"}</TableCell>
               <TableCell className="text-right">

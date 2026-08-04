@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { CertificateRow } from "@/app/(dashboard)/certificates-received/actions";
 import {
   Table,
@@ -102,7 +103,12 @@ export const CertificatesTable = ({ rows }: Props) => (
               </TableCell>
               <TableCell>{row.charge ?? "—"}</TableCell>
               <TableCell className="font-medium whitespace-nowrap">
-                {row.internalCharge ?? "—"}
+                <Link
+                  href={`/certificates-received/${row.uuid}`}
+                  className="text-primary hover:underline"
+                >
+                  {row.internalCharge ?? `Certificate #${row.id}`}
+                </Link>
               </TableCell>
               <TableCell>{row.sheetNumber ?? "—"}</TableCell>
               <TableCell>{row.documentCode ?? "—"}</TableCell>
