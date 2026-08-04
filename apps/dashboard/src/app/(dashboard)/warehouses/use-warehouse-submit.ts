@@ -2,24 +2,12 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  countWorkorderMethods,
-  printerEntries,
-  printerNames,
-  stickerPerPickWorkorderTypes,
-  warehouseAddresses,
-  warehouseBlockReasons,
-  warehouseLoadingLocations,
-  warehouseLocationTypes,
   WarehouseAddress,
   WarehouseBlockReason,
   WarehouseLoadingLocation,
   WarehouseLocationType,
   WarehouseProductType,
   WarehouseTransportRegion,
-  workorderPrintMethods,
-  workorderProcessingMethods,
-  workorderReleaseMethods,
-  workorderSlipTypes,
   CountWorkorderMethod,
   PrinterEntry,
   PrinterName,
@@ -29,7 +17,6 @@ import {
   WorkorderReleaseMethod,
   WorkorderSlipType,
 } from "@/lib/enums";
-import { COUNT_WORKORDER_METHOD_LABELS, PRINTER_ENTRY_LABELS, PRINTER_NAME_LABELS, STICKER_PER_PICK_WORKORDER_LABELS, WAREHOUSE_ADDRESS_LABELS, WAREHOUSE_BLOCK_REASON_LABELS, WAREHOUSE_LOADING_LOCATION_LABELS, WAREHOUSE_LOCATION_TYPE_LABELS, WORKORDER_PRINT_METHOD_LABELS, WORKORDER_PROCESSING_METHOD_LABELS, WORKORDER_RELEASE_METHOD_LABELS, WORKORDER_SLIP_TYPE_LABELS } from "@/lib/labels";
 import { useRouter } from "next/navigation";
 import { useTransition, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -41,6 +28,7 @@ import {
   WarehouseOption,
 } from "./actions";
 import { CompanyOption } from "@/app/(dashboard)/companies/actions";
+import { buildWarehouseOptions } from "@/components/warehouses/warehouse-options";
 import {
   createWarehouseSchema,
   DEFAULT_WAREHOUSE,
@@ -69,111 +57,27 @@ export const useWarehouseSubmit = ({
 
   const blocked = form.watch("blocked");
 
-  const locationTypeOptions = [
-    { value: "", label: "Empty" },
-    ...warehouseLocationTypes.map((t) => ({
-      value: t,
-      label: WAREHOUSE_LOCATION_TYPE_LABELS[t as WarehouseLocationType],
-    })),
-  ];
-
-  const loadingLocationOptions = [
-    { value: "", label: "Empty" },
-    ...warehouseLoadingLocations.map((l) => ({
-      value: l,
-      label: WAREHOUSE_LOADING_LOCATION_LABELS[l as WarehouseLoadingLocation],
-    })),
-  ];
-
-  const blockReasonOptions = [
-    { value: "", label: "Empty" },
-    ...warehouseBlockReasons.map((r) => ({
-      value: r,
-      label: WAREHOUSE_BLOCK_REASON_LABELS[r as WarehouseBlockReason],
-    })),
-  ];
-
   const [adaptFromValue, setAdaptFromValue] = useState("");
 
-  const adaptFromOptions = [
-    { value: "", label: "Empty" },
-    ...existingWarehouses.map((w) => ({ value: w.uuid, label: w.name })),
-  ];
-
-  const countMethodOptions = [
-    { value: "", label: "Empty" },
-    ...countWorkorderMethods.map((m) => ({
-      value: m,
-      label: COUNT_WORKORDER_METHOD_LABELS[m as CountWorkorderMethod],
-    })),
-  ];
-
-  const releaseMethodOptions = [
-    { value: "", label: "Empty" },
-    ...workorderReleaseMethods.map((m) => ({
-      value: m,
-      label: WORKORDER_RELEASE_METHOD_LABELS[m as WorkorderReleaseMethod],
-    })),
-  ];
-
-  const printMethodOptions = [
-    { value: "", label: "Empty" },
-    ...workorderPrintMethods.map((m) => ({
-      value: m,
-      label: WORKORDER_PRINT_METHOD_LABELS[m as WorkorderPrintMethod],
-    })),
-  ];
-
-  const workorderSlipOptions = [
-    { value: "", label: "Empty" },
-    ...workorderSlipTypes.map((s) => ({
-      value: s,
-      label: WORKORDER_SLIP_TYPE_LABELS[s as WorkorderSlipType],
-    })),
-  ];
-
-  const processingMethodOptions = [
-    { value: "", label: "Empty" },
-    ...workorderProcessingMethods.map((m) => ({
-      value: m,
-      label: WORKORDER_PROCESSING_METHOD_LABELS[m as WorkorderProcessingMethod],
-    })),
-  ];
-
-  const companyOptions = [
-    { value: "", label: "Empty" },
-    ...companies.map((c) => ({ value: c.uuid, label: c.companyName })),
-  ];
-
-  const warehouseLocationOptions = [
-    { value: "", label: "Empty" },
-    ...warehouseLocations.map((l) => ({ value: l.uuid, label: l.name })),
-  ];
-
-  const printerNameOptions = [
-    { value: "", label: "Empty" },
-    ...printerNames.map((p) => ({
-      value: p,
-      label: PRINTER_NAME_LABELS[p as PrinterName],
-    })),
-  ];
-
-  const printerEntryOptions = [
-    { value: "", label: "Empty" },
-    ...printerEntries.map((e) => ({
-      value: e,
-      label: PRINTER_ENTRY_LABELS[e as PrinterEntry],
-    })),
-  ];
-
-  const stickerPerPickOptions = [
-    { value: "", label: "Empty" },
-    ...stickerPerPickWorkorderTypes.map((s) => ({
-      value: s,
-      label:
-        STICKER_PER_PICK_WORKORDER_LABELS[s as StickerPerPickWorkorderType],
-    })),
-  ];
+  // Every dropdown a warehouse form shows, built in one place so the create
+  // form and the edit sections can't drift apart on labels or allowed values.
+  const {
+    locationTypeOptions,
+    loadingLocationOptions,
+    addressOptions,
+    blockReasonOptions,
+    adaptFromOptions,
+    countMethodOptions,
+    releaseMethodOptions,
+    printMethodOptions,
+    processingMethodOptions,
+    workorderSlipOptions,
+    companyOptions,
+    warehouseLocationOptions,
+    printerNameOptions,
+    printerEntryOptions,
+    stickerPerPickOptions,
+  } = buildWarehouseOptions({ companies, warehouseLocations, existingWarehouses });
 
   const handleAdaptFrom = (uuid: string) => {
     setAdaptFromValue(uuid);
@@ -212,14 +116,6 @@ export const useWarehouseSubmit = ({
       });
     });
   };
-
-  const addressOptions = [
-    { value: "", label: "Empty" },
-    ...warehouseAddresses.map((a) => ({
-      value: a,
-      label: WAREHOUSE_ADDRESS_LABELS[a as WarehouseAddress],
-    })),
-  ];
 
   const onSubmit = form.handleSubmit(
     (values) => {
