@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { SelectWarehouses } from "@/db";
 import {
@@ -93,7 +94,12 @@ export const WarehousesTable = ({ warehouses }: Props) => {
       case "name":
         return (
           <TableCell key={key} className="font-medium">
-            {warehouse.name}
+            <Link
+              href={`/warehouses/${warehouse.uuid}`}
+              className="text-primary hover:underline"
+            >
+              {warehouse.name}
+            </Link>
           </TableCell>
         );
       case "locationType":

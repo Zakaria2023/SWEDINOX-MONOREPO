@@ -1,14 +1,20 @@
 "use server";
 
 import { db } from "@/db";
-import { WarehouseWorkOrders } from "@/db/schema/warehouse-work-orders";
+import { Companies, SelectCompanies } from "@/db/schema/companies";
+import { Machines, SelectMachines } from "@/db/schema/machines";
+import {
+  SelectWarehouseWorkOrders,
+  WarehouseWorkOrders,
+} from "@/db/schema/warehouse-work-orders";
 import {
   InsertWarehouses,
   SelectWarehouses,
   Warehouses,
 } from "@/db/schema/warehouses";
 import { describeError, generateUuid } from "@/lib/helpers";
-import { asc, desc, eq, isNull } from "drizzle-orm";
+import { asc, desc, eq, getTableColumns, isNull } from "drizzle-orm";
+import { alias } from "drizzle-orm/mysql-core";
 
 export type WarehouseOption = Pick<SelectWarehouses, "uuid" | "name">;
 
@@ -64,6 +70,25 @@ export type MachineStockLocationOption = Pick<
   SelectWarehouses,
   "uuid" | "name"
 >;
+
+export type WarehouseChildRow = Pick<
+  SelectWarehouses,
+  "uuid" | "name" | "type" | "locationType" | "blocked" | "pickingSequence"
+>;
+
+export type WarehouseMachineRow = Pick<
+  SelectMachines,
+  "uuid" | "code" | "name" | "production" | "outOfBusiness"
+>;
+
+export type WarehouseDetail = SelectWarehouses & {
+  parentName: SelectWarehouses["name"] | null;
+  transportByCompanyName: SelectCompanies["companyName"] | null;
+  pickupDefaultLocationName: SelectWarehouses["name"] | null;
+  children: WarehouseChildRow[];
+  machines: WarehouseMachineRow[];
+  workOrders: SelectWarehouseWorkOrders[];
+};
 
 /** Warehouses of type "location" — for the pick-up default location dropdown */
 export const getWarehouseLocationsForSelect = async (): Promise<
@@ -152,6 +177,78 @@ export const getWarehouses = async (): Promise<SelectWarehouses[]> => {
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch warehouses"));
   }
+};
+
+/**
+ * One warehouse row with everything recorded on it, plus what sits under it.
+ *
+ * `Warehouses` is one table holding three things the sidebar lists separately —
+ * root warehouses, their sub-sections, and locations — so this one query serves
+ * the detail screen for all three. Which it is reads off `type` and whether it
+ * has a parent, rather than from the route it was reached by.
+ */
+export const getWarehouseDetail = async (
+  uuid: string,
+): Promise<WarehouseDetail | null> => {
+  const ParentWarehouse = alias(Warehouses, "parent_warehouse");
+  const PickupLocation = alias(Warehouses, "pickup_location");
+
+  const [warehouse] = await db
+    .select({
+      ...getTableColumns(Warehouses),
+      parentName: ParentWarehouse.name,
+      transportByCompanyName: Companies.companyName,
+      pickupDefaultLocationName: PickupLocation.name,
+    })
+    .from(Warehouses)
+    .leftJoin(ParentWarehouse, eq(ParentWarehouse.uuid, Warehouses.parentUuid))
+    .leftJoin(
+      Companies,
+      eq(Companies.uuid, Warehouses.transportByCompanyUuid),
+    )
+    .leftJoin(
+      PickupLocation,
+      eq(PickupLocation.uuid, Warehouses.pickupDefaultLocationUuid),
+    )
+    .where(eq(Warehouses.uuid, uuid))
+    .limit(1);
+
+  if (!warehouse) {
+    return null;
+  }
+
+  const [children, machines, workOrders] = await Promise.all([
+    db
+      .select({
+        uuid: Warehouses.uuid,
+        name: Warehouses.name,
+        type: Warehouses.type,
+        locationType: Warehouses.locationType,
+        blocked: Warehouses.blocked,
+        pickingSequence: Warehouses.pickingSequence,
+      })
+      .from(Warehouses)
+      .where(eq(Warehouses.parentUuid, uuid))
+      .orderBy(asc(Warehouses.pickingSequence), asc(Warehouses.name)),
+    db
+      .select({
+        uuid: Machines.uuid,
+        code: Machines.code,
+        name: Machines.name,
+        production: Machines.production,
+        outOfBusiness: Machines.outOfBusiness,
+      })
+      .from(Machines)
+      .where(eq(Machines.stockLocationUuid, uuid))
+      .orderBy(asc(Machines.code)),
+    db
+      .select()
+      .from(WarehouseWorkOrders)
+      .where(eq(WarehouseWorkOrders.warehouseUuid, uuid))
+      .orderBy(desc(WarehouseWorkOrders.createdAt)),
+  ]);
+
+  return { ...warehouse, children, machines, workOrders };
 };
 
 export const updateWarehouseDocuments = async (

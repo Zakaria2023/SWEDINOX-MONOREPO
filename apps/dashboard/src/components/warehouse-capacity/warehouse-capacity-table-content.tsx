@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { WarehouseCapacityListItem } from "@/app/(dashboard)/warehouse-capacity/actions";
 import {
   Table,
@@ -43,8 +44,13 @@ export const WarehouseCapacityTable = ({ capacity }: Props) => (
         ) : (
           capacity.map((row) => (
             <TableRow key={row.uuid}>
-              <TableCell className="whitespace-nowrap">
-                {formatDateValue(row.capacityDate)}
+              <TableCell className="font-medium whitespace-nowrap">
+                <Link
+                  href={`/warehouse-capacity/${row.uuid}`}
+                  className="text-primary hover:underline"
+                >
+                  {formatDateValue(row.capacityDate)}
+                </Link>
               </TableCell>
               <TableCell>{row.warehouseSection ?? "—"}</TableCell>
               <TableCell>{row.subsection ?? "—"}</TableCell>

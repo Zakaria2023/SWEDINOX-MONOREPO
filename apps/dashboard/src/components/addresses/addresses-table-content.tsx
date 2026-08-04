@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { AddressListItem } from "@/app/(dashboard)/addresses/actions";
 import {
   Table,
@@ -176,8 +177,13 @@ export const AddressesTable = ({
         );
       case "streetAndNo":
         return (
-          <TableCell key={key}>
-            {address.streetAndNo || fallbackValue}
+          <TableCell key={key} className="font-medium">
+            <Link
+              href={`/addresses/${address.uuid}`}
+              className="text-primary hover:underline"
+            >
+              {address.streetAndNo || fallbackValue}
+            </Link>
           </TableCell>
         );
       case "postalCode":
