@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { PurchaseLineItem } from "@/app/(dashboard)/purchase-lines/actions";
 import {
   Table,
@@ -57,7 +58,12 @@ export const PurchaseLinesTable = ({ lines }: Props) => (
                 {new Date(row.createdAt).toLocaleDateString("en-GB")}
               </TableCell>
               <TableCell className="text-right font-medium">
-                {row.purchaseOrderId ?? "—"}
+                <Link
+                  href={`/purchase-lines/${row.uuid}`}
+                  className="text-primary hover:underline"
+                >
+                  {row.purchaseOrderId ?? `#${row.id}`}
+                </Link>
               </TableCell>
               <TableCell className="text-right">
                 {row.lineNumber ?? "—"}

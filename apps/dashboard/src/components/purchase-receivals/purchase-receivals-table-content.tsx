@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { PurchaseReceivalItem } from "@/app/(dashboard)/purchase-receivals/actions";
 import {
   Table,
@@ -56,7 +57,12 @@ export const PurchaseReceivalsTable = ({ receivals }: Props) => (
           receivals.map((row) => (
             <TableRow key={row.uuid}>
               <TableCell className="font-medium">
-                {row.purchaseOrderCode ?? "—"}
+                <Link
+                  href={`/purchase-receivals/${row.uuid}`}
+                  className="text-primary hover:underline"
+                >
+                  {row.purchaseOrderCode ?? `Receipt #${row.id}`}
+                </Link>
               </TableCell>
               <TableCell className="text-right">
                 {row.lineNumber ?? "—"}
