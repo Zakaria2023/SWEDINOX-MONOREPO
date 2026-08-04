@@ -18,7 +18,13 @@ import {
 } from "@/components/shadcn/table";
 import { FormError } from "@/components/ui/form-error";
 import { PurchaseQuoteStatus, PurchaseRequestStatus } from "@/lib/enums";
-import { formatMoney, formatNumber, orDash, runningMeters } from "@/lib/helpers";
+import {
+  formatMoney,
+  formatNumber,
+  isPurchaseRequestEditable,
+  orDash,
+  runningMeters,
+} from "@/lib/helpers";
 import {
   ORDER_LINE_STATUS_LABELS,
   PURCHASE_QUOTE_STATUS_LABELS,
@@ -40,8 +46,7 @@ export const PurchaseRequestDetailView = ({
   const [selected, setSelected] = useState<string[]>([]);
 
   const alreadyAsked = new Set(request.quotes.map((quote) => quote.uuid));
-  const isClosed =
-    request.status === "awarded" || request.status === "cancelled";
+  const isClosed = !isPurchaseRequestEditable(request.status);
 
   const toggle = (uuid: string) =>
     setSelected((prev) =>
@@ -261,6 +266,17 @@ export const PurchaseRequestDetailView = ({
           </Table>
         </div>
       </div>
+
+      {!isClosed && (
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            render={<Link href={`/purchase-requests/${request.uuid}/edit`} />}
+          >
+            Edit Request
+          </Button>
+        </div>
+      )}
 
       {/* ── Ask more suppliers ──────────────────────────────────────────── */}
       {!isClosed && (

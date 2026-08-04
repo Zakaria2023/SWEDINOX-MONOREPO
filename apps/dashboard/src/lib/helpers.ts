@@ -19,9 +19,11 @@ import {
   OrderWeightType,
   PurchaseOrderStatus,
   PurchaseQuoteStatus,
+  PurchaseRequestStatus,
   ReminderStage,
   reminderStages,
   ReturnOrderReason,
+  ReturnOrderStatus,
   SalesRepresentative,
   SfnCounterpartyRole,
   StockMode,
@@ -2511,3 +2513,36 @@ export const invoiceSummaryFromSnapshot = (
 export const isPurchaseQuoteEditable = (
   status: PurchaseQuoteStatus | null,
 ): boolean => status !== "awarded" && status !== "lost";
+
+/**
+ * Whether a purchase request's header may still be edited — the same terminal
+ * states the conversion actions refuse to act on.
+ */
+export const isPurchaseRequestEditable = (
+  status: PurchaseRequestStatus | null,
+): boolean => status !== "awarded" && status !== "cancelled";
+
+/**
+ * Whether a purchase request's lines may still be changed.
+ *
+ * Asking a supplier for a quote copies the request's lines onto that quote. Once
+ * that has happened the lines are the question that was actually asked, and
+ * editing them would leave the answers on file responding to something else — so
+ * they are frozen the moment the request leaves draft.
+ */
+export const canEditPurchaseRequestLines = (
+  status: PurchaseRequestStatus | null,
+): boolean => status === null || status === "draft";
+
+/**
+ * Whether a purchase return order may still be edited.
+ *
+ * Dispatching one moves stock out of the lot the goods arrived in, and
+ * crediting one raises a supplier credit note against it. Once either has
+ * happened the paperwork describes something that physically occurred, so the
+ * terms behind it are frozen.
+ */
+export const isPurchaseReturnOrderEditable = (
+  status: ReturnOrderStatus | null,
+): boolean =>
+  status !== "received" && status !== "credited" && status !== "cancelled";

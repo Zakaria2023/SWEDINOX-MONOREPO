@@ -36,6 +36,7 @@ import {
   describeError,
   generateUuid,
   getPaymentTermDueDate,
+  isPurchaseReturnOrderEditable,
   restateLotValue,
   summarisePurchaseInvoice,
   todayDateString,
@@ -50,6 +51,7 @@ import {
 import { currentUser } from "@clerk/nextjs/server";
 import { and, desc, eq, getTableColumns, inArray, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 export type PurchaseReturnOrderFields = Omit<
   InsertPurchaseReturnOrders,
@@ -739,6 +741,90 @@ export const creditPurchaseReturnOrder = async (
           : "Failed to credit the purchase return",
     };
   }
+};
+
+/**
+ * Changes the terms a return is going back on: header, surcharges and texts.
+ *
+ * The returned lines are not touched. They name the exact lot each item came
+ * out of and the price it was received at, which is what dispatching reverses —
+ * re-picking them is creating a different return, not editing this one.
+ */
+export const updatePurchaseReturnOrder = async (
+  uuid: string,
+  fields: PurchaseReturnOrderFields,
+  extras: PurchaseReturnOrderExtras,
+): Promise<PurchaseReturnOrderActionResult> => {
+  try {
+    const [returnOrder] = await db
+      .select({ status: PurchaseReturnOrders.status })
+      .from(PurchaseReturnOrders)
+      .where(eq(PurchaseReturnOrders.uuid, uuid))
+      .limit(1);
+
+    if (!returnOrder) {
+      return { error: "Purchase return order not found." };
+    }
+    if (!isPurchaseReturnOrderEditable(returnOrder.status)) {
+      return {
+        error:
+          returnOrder.status === "cancelled"
+            ? "This return order is cancelled."
+            : "This return has already gone back to the supplier.",
+      };
+    }
+
+    await db.transaction(async (tx) => {
+      await tx
+        .update(PurchaseReturnOrders)
+        .set(fields)
+        .where(eq(PurchaseReturnOrders.uuid, uuid));
+
+      await tx
+        .delete(PurchaseReturnOrderSurcharges)
+        .where(eq(PurchaseReturnOrderSurcharges.purchaseReturnOrderUuid, uuid));
+
+      if (extras.surcharges.length > 0) {
+        await tx.insert(PurchaseReturnOrderSurcharges).values(
+          extras.surcharges.map((surcharge) => ({
+            ...surcharge,
+            uuid: generateUuid(),
+            purchaseReturnOrderUuid: uuid,
+          })),
+        );
+      }
+
+      await tx.delete(Texts).where(eq(Texts.purchaseReturnOrderUuid, uuid));
+
+      if (extras.texts.length > 0) {
+        await tx.insert(Texts).values(
+          extras.texts.map((text) => ({
+            uuid: generateUuid(),
+            purchaseReturnOrderUuid: uuid,
+            companyUuid: fields.supplierUuid,
+            title: text.title,
+            textBlock: text.textBlock,
+            textCategoryUuid: text.textCategoryUuid ?? null,
+          })),
+        );
+      }
+
+      // Surcharges are part of what the return is worth, so the stored totals
+      // are rebuilt rather than left describing the old set.
+      await tx
+        .update(PurchaseReturnOrders)
+        .set(await buildPurchaseReturnSummary(tx, uuid))
+        .where(eq(PurchaseReturnOrders.uuid, uuid));
+    });
+  } catch (error) {
+    return {
+      error: describeError(error, "Failed to update purchase return order"),
+    };
+  }
+
+  revalidatePath("/purchase-return-orders");
+  revalidatePath(`/purchase-return-orders/${uuid}`);
+  redirect(`/purchase-return-orders/${uuid}`);
 };
 
 export const createPurchaseReturnOrder = async (

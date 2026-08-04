@@ -30,12 +30,13 @@ import { INVOICE_PAYMENT_TERM_LABELS, PURCHASE_ORDER_TYPE_LABELS, PURCHASE_RETUR
 import { ClerkUserOption } from "@/lib/server/clerk";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import {
   createPurchaseReturnOrder,
   PurchaseReturnOrderActionResult,
   PurchaseReturnOrderExtras,
+  updatePurchaseReturnOrder,
 } from "./actions";
 import {
   DEFAULT_PURCHASE_RETURN_ORDER,
@@ -47,6 +48,9 @@ import { toDecimal } from "@/lib/helpers";
 type UsePurchaseReturnOrderSubmitParams = {
   companies: CompanyOption[];
   clerkUsers: ClerkUserOption[];
+  /** Set when editing an existing return order; omitted when creating one. */
+  purchaseReturnOrderUuid?: string;
+  defaultValues?: PurchaseReturnOrderFormValues;
 };
 
 const emptyOpt = { value: "", label: "Empty" };
@@ -66,6 +70,8 @@ const addressLabel = (a: AddressOption) =>
 export const usePurchaseReturnOrderSubmit = ({
   companies,
   clerkUsers,
+  purchaseReturnOrderUuid,
+  defaultValues,
 }: UsePurchaseReturnOrderSubmitParams) => {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -79,7 +85,7 @@ export const usePurchaseReturnOrderSubmit = ({
 
   const form = useForm<PurchaseReturnOrderFormValues>({
     resolver: zodResolver(purchaseReturnOrderSchema),
-    defaultValues: DEFAULT_PURCHASE_RETURN_ORDER,
+    defaultValues: defaultValues ?? DEFAULT_PURCHASE_RETURN_ORDER,
   });
 
   const isDropOff = form.watch("isDropOff");
@@ -150,11 +156,7 @@ export const usePurchaseReturnOrderSubmit = ({
 
   const purchaserOptions: SelectOption[] = [emptyOpt, ...clerkUsers];
 
-  const handleSupplierChange = (uuid: string) => {
-    form.setValue("supplierUuid", uuid);
-    form.setValue("contactUuid", "");
-    form.setValue("purchaseOrderUuid", "");
-    form.setValue("deliveryAddressUuid", "");
+  const loadSupplierData = useCallback((uuid: string) => {
     setContacts([]);
     setPurchaseOrders([]);
     setAddresses([]);
@@ -170,9 +172,33 @@ export const usePurchaseReturnOrderSubmit = ({
       setAddresses(newAddresses);
       setIsLoadingSupplierData(false);
     });
+  }, []);
+
+  // An existing return order already names a supplier, so its contacts, orders
+  // and addresses have to be fetched before the form can show which ones are
+  // selected.
+  const editingSupplierUuid = defaultValues?.supplierUuid;
+  useEffect(() => {
+    if (!editingSupplierUuid) {
+      return;
+    }
+    loadSupplierData(editingSupplierUuid);
+  }, [editingSupplierUuid, loadSupplierData]);
+
+  const handleSupplierChange = (uuid: string) => {
+    form.setValue("supplierUuid", uuid);
+    form.setValue("contactUuid", "");
+    form.setValue("purchaseOrderUuid", "");
+    form.setValue("deliveryAddressUuid", "");
+    loadSupplierData(uuid);
   };
 
-  const handleCancel = () => router.push("/purchase-return-orders");
+  const handleCancel = () =>
+    router.push(
+      purchaseReturnOrderUuid
+        ? `/purchase-return-orders/${purchaseReturnOrderUuid}`
+        : "/purchase-return-orders",
+    );
 
   const onSubmit = form.handleSubmit((values) => {
     startTransition(async () => {
@@ -198,8 +224,7 @@ export const usePurchaseReturnOrderSubmit = ({
         })),
       };
 
-      const result = await createPurchaseReturnOrder(
-        {
+      const fields = {
           supplierUuid: values.supplierUuid,
           purchaseOrderUuid: values.purchaseOrderUuid || null,
           purchaseOrderReference: values.purchaseOrderReference || null,
@@ -235,10 +260,22 @@ export const usePurchaseReturnOrderSubmit = ({
 
           remarks: values.remarks || null,
           documents: values.documents?.length ? values.documents : null,
-        },
-        extras,
-      );
+      };
 
+      // Updating redirects from inside the action, so only the create path has
+      // a result worth navigating on.
+      if (purchaseReturnOrderUuid) {
+        setState(
+          await updatePurchaseReturnOrder(
+            purchaseReturnOrderUuid,
+            fields,
+            extras,
+          ),
+        );
+        return;
+      }
+
+      const result = await createPurchaseReturnOrder(fields, extras);
       setState(result);
       if (result.success) {
         router.push("/purchase-return-orders");
@@ -249,6 +286,7 @@ export const usePurchaseReturnOrderSubmit = ({
   return {
     form,
     isPending,
+    isEditing: Boolean(purchaseReturnOrderUuid),
     onSubmit,
     state,
     isDropOff,
