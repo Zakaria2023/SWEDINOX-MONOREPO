@@ -96,9 +96,9 @@ export const counterOrderToFormValues = (
     textBlock: text.textBlock ?? "",
   })),
   items: relations.items.map((item) => ({
-    productUuid: item.productUuid,
+    productUuid: item.productUuid ?? "",
     productLabel: item.description ?? "",
-    status: item.status ?? "open",
+    status: item.status ?? "in_progress",
     deliveryDate: item.deliveryDate ?? "",
     description: item.description ?? "",
     levCode: item.levCode ?? "",

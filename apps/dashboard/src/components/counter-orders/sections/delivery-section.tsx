@@ -45,7 +45,7 @@ export const DeliverySection = ({
           label="Delivery address"
           options={addressOptions}
           emptyValue=""
-          disabled={isPending || isPickup || addresses.length === 0}
+          disabled={isPending || isPickup || addressOptions.length === 0}
         />
 
         <div>
