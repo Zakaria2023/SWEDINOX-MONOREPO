@@ -11,6 +11,7 @@ import {
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { buildColumnVisibility } from "@/lib/helpers";
+import Link from "next/link";
 import { useState } from "react";
 
 type ColumnKey =
@@ -67,7 +68,12 @@ export const TextCategoriesTable = ({
       case "name":
         return (
           <TableCell key={key} className="font-medium">
-            {category.name}
+            <Link
+              href={`/text-categories/${category.uuid}/edit`}
+              className="text-primary hover:underline"
+            >
+              {category.name}
+            </Link>
           </TableCell>
         );
       case "parentName":

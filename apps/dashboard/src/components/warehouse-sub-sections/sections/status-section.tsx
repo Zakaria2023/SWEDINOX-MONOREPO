@@ -11,7 +11,7 @@ import {
 import { WAREHOUSE_PRODUCT_TYPE_LABELS } from "@/lib/labels";
 import { cn } from "@/lib/helpers";
 import { useFormContext } from "react-hook-form";
-import { WarehouseSubSectionFormValues } from "@/app/(dashboard)/warehouse-sub-sections/validation";
+import { WarehouseSubSectionEditValues } from "@/app/(dashboard)/warehouse-sub-sections/validation";
 
 type Props = {
   blocked: boolean;
@@ -25,7 +25,7 @@ export const StatusSection = ({ blocked, blockReasonOptions }: Props) => {
     setValue,
     control,
     formState: { errors },
-  } = useFormContext<WarehouseSubSectionFormValues>();
+  } = useFormContext<WarehouseSubSectionEditValues>();
 
   return (
     <section className="space-y-4">

@@ -3,6 +3,7 @@
 import { Controller } from "react-hook-form";
 import { usePurchaseRequestSubmit } from "@/app/(dashboard)/purchase-requests/use-purchase-request-submit";
 import { CompanyOption } from "@/app/(dashboard)/companies/actions";
+import { PurchaseRequestFormValues } from "@/app/(dashboard)/purchase-requests/validation";
 import { DatePicker } from "@/components/shadcn/date-picker";
 import { Input } from "@/components/shadcn/input";
 import { Select, SelectOption } from "@/components/shadcn/select";
@@ -18,16 +19,28 @@ type Props = {
   companies: CompanyOption[];
   clerkUsers: ClerkUserOption[];
   productOptions: SelectOption[];
+  /** Set when editing an existing request; omitted when creating one. */
+  purchaseRequestUuid?: string;
+  defaultValues?: PurchaseRequestFormValues;
+  /**
+   * False once the request has left draft: its lines are the question the
+   * quotes on file are answering, so they are shown but no longer editable.
+   */
+  canEditLines?: boolean;
 };
 
 export const PurchaseRequestForm = ({
   companies,
   clerkUsers,
   productOptions,
+  purchaseRequestUuid,
+  defaultValues,
+  canEditLines = true,
 }: Props) => {
   const {
     form,
     isPending,
+    isEditing,
     onSubmit,
     state,
     arrangeTransport,
@@ -47,7 +60,12 @@ export const PurchaseRequestForm = ({
     itemFields,
     appendItem,
     removeItem,
-  } = usePurchaseRequestSubmit({ companies, clerkUsers });
+  } = usePurchaseRequestSubmit({
+    companies,
+    clerkUsers,
+    purchaseRequestUuid,
+    defaultValues,
+  });
 
   const {
     register,
@@ -368,18 +386,31 @@ export const PurchaseRequestForm = ({
         </div>
       </section>
 
-      <RequestItemsSection
-        productOptions={productOptions}
-        control={control}
-        register={register}
-        itemFields={itemFields}
-        appendItem={appendItem}
-        removeItem={removeItem}
-      />
+      {canEditLines ? (
+        <RequestItemsSection
+          productOptions={productOptions}
+          control={control}
+          register={register}
+          itemFields={itemFields}
+          appendItem={appendItem}
+          removeItem={removeItem}
+        />
+      ) : (
+        <section className="space-y-4">
+          <h2 className="text-base font-semibold">Lines</h2>
+          <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+            This request has already gone out to suppliers. Its lines are the
+            question their quotes are answering, so they can no longer be
+            changed here.
+          </p>
+        </section>
+      )}
 
       <FormActions
-        submitLabel="Create Purchase Request"
-        pendingLabel="Creating..."
+        submitLabel={
+          isEditing ? "Save Purchase Request" : "Create Purchase Request"
+        }
+        pendingLabel={isEditing ? "Saving..." : "Creating..."}
         isPending={isPending}
         onCancel={handleCancel}
       />

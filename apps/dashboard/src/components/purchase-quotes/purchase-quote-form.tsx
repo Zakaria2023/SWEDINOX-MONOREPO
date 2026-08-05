@@ -3,6 +3,7 @@
 import { Controller } from "react-hook-form";
 import { usePurchaseQuoteSubmit } from "@/app/(dashboard)/purchase-quotes/use-purchase-quote-submit";
 import { CompanyOption } from "@/app/(dashboard)/companies/actions";
+import { PurchaseQuoteFormValues } from "@/app/(dashboard)/purchase-quotes/validation";
 import { Input } from "@/components/shadcn/input";
 import { Select } from "@/components/shadcn/select";
 import { DocumentUploader } from "@/components/document-uploader";
@@ -16,12 +17,21 @@ import { ClerkUserOption } from "@/lib/server/clerk";
 type Props = {
   companies: CompanyOption[];
   clerkUsers: ClerkUserOption[];
+  /** Set when editing an existing quote; omitted when creating one. */
+  purchaseQuoteUuid?: string;
+  defaultValues?: PurchaseQuoteFormValues;
 };
 
-export const PurchaseQuoteForm = ({ companies, clerkUsers }: Props) => {
+export const PurchaseQuoteForm = ({
+  companies,
+  clerkUsers,
+  purchaseQuoteUuid,
+  defaultValues,
+}: Props) => {
   const {
     form,
     isPending,
+    isEditing,
     onSubmit,
     state,
     arrangeTransport,
@@ -39,7 +49,12 @@ export const PurchaseQuoteForm = ({ companies, clerkUsers }: Props) => {
     handleSupplierChange,
     handleAgentChange,
     handleCancel,
-  } = usePurchaseQuoteSubmit({ companies, clerkUsers });
+  } = usePurchaseQuoteSubmit({
+    companies,
+    clerkUsers,
+    purchaseQuoteUuid,
+    defaultValues,
+  });
 
   const {
     register,
@@ -421,8 +436,10 @@ export const PurchaseQuoteForm = ({ companies, clerkUsers }: Props) => {
       </section>
 
       <FormActions
-        submitLabel="Create Purchase Quote"
-        pendingLabel="Creating..."
+        submitLabel={
+          isEditing ? "Save Purchase Quote" : "Create Purchase Quote"
+        }
+        pendingLabel={isEditing ? "Saving..." : "Creating..."}
         isPending={isPending}
         onCancel={handleCancel}
       />

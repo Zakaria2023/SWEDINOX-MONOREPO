@@ -20,7 +20,7 @@ import {
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FormError } from "@/components/ui/form-error";
 import { PurchaseQuoteStatus } from "@/lib/enums";
-import { formatMoney } from "@/lib/helpers";
+import { formatMoney, isPurchaseQuoteEditable } from "@/lib/helpers";
 import { PURCHASE_QUOTE_STATUS_LABELS } from "@/lib/labels";
 import { Check, Save } from "lucide-react";
 
@@ -38,7 +38,7 @@ export const PurchaseQuoteDetailView = ({ quote }: Props) => {
     ),
   );
 
-  const isDecided = quote.status === "awarded" || quote.status === "lost";
+  const isDecided = !isPurchaseQuoteEditable(quote.status);
 
   const savePrices = () => {
     setError(undefined);
@@ -206,6 +206,17 @@ export const PurchaseQuoteDetailView = ({ quote }: Props) => {
           </p>
         )}
       </div>
+
+      {!isDecided && (
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            render={<Link href={`/purchase-quotes/${quote.uuid}/edit`} />}
+          >
+            Edit Quote
+          </Button>
+        </div>
+      )}
 
       {!isDecided && quote.items.length > 0 && (
         <div className="flex gap-2">

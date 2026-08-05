@@ -24,10 +24,12 @@ import {
   describeError,
   generateUuid,
   getQuoteVatRatePercent,
+  isPurchaseQuoteEditable,
   todayDateString,
 } from "@/lib/helpers";
 import { and, desc, eq, getTableColumns, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 export type PurchaseQuoteFields = Omit<
   InsertPurchaseQuotes,
@@ -191,6 +193,64 @@ export const createPurchaseQuote = async (
           : "Failed to create purchase quote",
     };
   }
+};
+
+export const getPurchaseQuoteForEdit = async (
+  uuid: string,
+): Promise<SelectPurchaseQuotes | null> => {
+  const [quote] = await db
+    .select()
+    .from(PurchaseQuotes)
+    .where(eq(PurchaseQuotes.uuid, uuid))
+    .limit(1);
+
+  return quote ?? null;
+};
+
+export const updatePurchaseQuote = async (
+  uuid: string,
+  fields: PurchaseQuoteFields,
+): Promise<PurchaseQuoteActionResult> => {
+  try {
+    const [quote] = await db
+      .select()
+      .from(PurchaseQuotes)
+      .where(eq(PurchaseQuotes.uuid, uuid))
+      .limit(1);
+
+    if (!quote) {
+      return { error: "Purchase quote not found." };
+    }
+    if (!isPurchaseQuoteEditable(quote.status)) {
+      return { error: "This quote has already been decided." };
+    }
+
+    const companyType = await resolveCompanyType(fields.companyUuid);
+
+    await db.transaction(async (tx) => {
+      await tx
+        .update(PurchaseQuotes)
+        .set({ ...fields, companyType })
+        .where(eq(PurchaseQuotes.uuid, uuid));
+
+      // Moving the quote to another supplier can change whether VAT applies, so
+      // the stored totals are rebuilt rather than left showing the old rate.
+      await tx
+        .update(PurchaseQuotes)
+        .set(
+          await buildPurchaseQuoteSummary(tx, uuid, fields.companyUuid ?? null),
+        )
+        .where(eq(PurchaseQuotes.uuid, uuid));
+    });
+  } catch (error) {
+    return {
+      error: describeError(error, "Failed to update purchase quote"),
+    };
+  }
+
+  revalidatePath("/purchase-quotes");
+  revalidatePath(`/purchase-quotes/${uuid}`);
+  redirect(`/purchase-quotes/${uuid}`);
 };
 
 export const getPurchaseQuoteDetail = async (

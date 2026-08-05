@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { SelectWarehouses } from "@/db";
 import {
@@ -91,7 +92,12 @@ export const WarehouseSubSectionsTable = ({ subSections }: Props) => {
       case "name":
         return (
           <TableCell key={key} className="font-medium">
-            {subSection.name}
+            <Link
+              href={`/warehouse-sub-sections/${subSection.uuid}/edit`}
+              className="text-primary hover:underline"
+            >
+              {subSection.name}
+            </Link>
           </TableCell>
         );
       case "pickingSequence":

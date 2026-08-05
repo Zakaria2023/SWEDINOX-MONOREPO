@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { type VisitReportListItem } from "@/app/(dashboard)/visit-reports/actions";
 import { VISIT_REPORT_CONTACT_METHOD_LABELS, VISIT_REPORT_REASON_LABELS } from "@/lib/labels";
@@ -93,7 +94,12 @@ export const VisitReportsTable = ({
       case "companyName":
         return (
           <TableCell key={key} className="font-medium">
-            {visitReport.companyName}
+            <Link
+              href={`/visit-reports/${visitReport.uuid}/edit`}
+              className="text-primary hover:underline"
+            >
+              {visitReport.companyName}
+            </Link>
           </TableCell>
         );
       case "representative":

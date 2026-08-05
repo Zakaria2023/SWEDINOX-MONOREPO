@@ -3,6 +3,7 @@
 import { Controller, FormProvider } from "react-hook-form";
 import { usePurchaseReturnOrderSubmit } from "@/app/(dashboard)/purchase-return-orders/use-purchase-return-order-submit";
 import { CompanyOption } from "@/app/(dashboard)/companies/actions";
+import { PurchaseReturnOrderFormValues } from "@/app/(dashboard)/purchase-return-orders/validation";
 import { TextCategoryOption } from "@/app/(dashboard)/text-categories/actions";
 import { ClerkUserOption } from "@/lib/server/clerk";
 import { Input } from "@/components/shadcn/input";
@@ -21,16 +22,22 @@ type Props = {
   companies: CompanyOption[];
   clerkUsers: ClerkUserOption[];
   textCategories: TextCategoryOption[];
+  /** Set when editing an existing return order; omitted when creating one. */
+  purchaseReturnOrderUuid?: string;
+  defaultValues?: PurchaseReturnOrderFormValues;
 };
 
 export const PurchaseReturnOrderForm = ({
   companies,
   clerkUsers,
   textCategories,
+  purchaseReturnOrderUuid,
+  defaultValues,
 }: Props) => {
   const {
     form,
     isPending,
+    isEditing,
     onSubmit,
     state,
     isDropOff,
@@ -47,7 +54,12 @@ export const PurchaseReturnOrderForm = ({
     isLoadingSupplierData,
     handleSupplierChange,
     handleCancel,
-  } = usePurchaseReturnOrderSubmit({ companies, clerkUsers });
+  } = usePurchaseReturnOrderSubmit({
+    companies,
+    clerkUsers,
+    purchaseReturnOrderUuid,
+    defaultValues,
+  });
 
   const {
     register,
@@ -416,8 +428,12 @@ export const PurchaseReturnOrderForm = ({
         <TextsSection textCategories={textCategories} />
 
         <FormActions
-          submitLabel="Create Purchase Return Order"
-          pendingLabel="Creating..."
+          submitLabel={
+            isEditing
+              ? "Save Purchase Return Order"
+              : "Create Purchase Return Order"
+          }
+          pendingLabel={isEditing ? "Saving..." : "Creating..."}
           isPending={isPending}
           onCancel={handleCancel}
         />

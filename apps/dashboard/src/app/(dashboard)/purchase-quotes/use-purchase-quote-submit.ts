@@ -24,9 +24,13 @@ import { DELIVERY_TERM_LABELS, INVOICE_PAYMENT_TERM_LABELS, ORDER_WEIGHT_TYPE_LA
 import { ClerkUserOption } from "@/lib/server/clerk";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
-import { createPurchaseQuote, PurchaseQuoteActionResult } from "./actions";
+import {
+  createPurchaseQuote,
+  PurchaseQuoteActionResult,
+  updatePurchaseQuote,
+} from "./actions";
 import {
   DEFAULT_PURCHASE_QUOTE,
   PurchaseQuoteFormValues,
@@ -36,6 +40,9 @@ import {
 type UsePurchaseQuoteSubmitParams = {
   companies: CompanyOption[];
   clerkUsers: ClerkUserOption[];
+  /** Set when editing an existing quote; omitted when creating one. */
+  purchaseQuoteUuid?: string;
+  defaultValues?: PurchaseQuoteFormValues;
 };
 
 const emptyOpt = { value: "", label: "Empty" };
@@ -55,6 +62,8 @@ const addressLabel = (a: AddressOption) =>
 export const usePurchaseQuoteSubmit = ({
   companies,
   clerkUsers,
+  purchaseQuoteUuid,
+  defaultValues,
 }: UsePurchaseQuoteSubmitParams) => {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -65,7 +74,7 @@ export const usePurchaseQuoteSubmit = ({
 
   const form = useForm<PurchaseQuoteFormValues>({
     resolver: zodResolver(purchaseQuoteSchema),
-    defaultValues: DEFAULT_PURCHASE_QUOTE,
+    defaultValues: defaultValues ?? DEFAULT_PURCHASE_QUOTE,
   });
 
   const arrangeTransport = form.watch("arrangeTransport");
@@ -127,7 +136,7 @@ export const usePurchaseQuoteSubmit = ({
 
   const purchaserOptions: SelectOption[] = [emptyOpt, ...clerkUsers];
 
-  const loadCompanyData = (uuid: string) => {
+  const loadCompanyData = useCallback((uuid: string) => {
     setContacts([]);
     setAddresses([]);
     if (!uuid) return;
@@ -140,7 +149,18 @@ export const usePurchaseQuoteSubmit = ({
       setAddresses(newAddresses);
       setIsLoadingCompanyData(false);
     });
-  };
+  }, []);
+
+  // An existing quote already names a company, so its contacts and addresses
+  // have to be fetched before the form can show which ones are selected.
+  const editingCompanyUuid =
+    defaultValues?.supplierUuid || defaultValues?.agentUuid;
+  useEffect(() => {
+    if (!editingCompanyUuid) {
+      return;
+    }
+    loadCompanyData(editingCompanyUuid);
+  }, [editingCompanyUuid, loadCompanyData]);
 
   const handleSupplierChange = (uuid: string) => {
     form.setValue("supplierUuid", uuid);
@@ -158,11 +178,16 @@ export const usePurchaseQuoteSubmit = ({
     loadCompanyData(uuid);
   };
 
-  const handleCancel = () => router.push("/purchase-quotes");
+  const handleCancel = () =>
+    router.push(
+      purchaseQuoteUuid
+        ? `/purchase-quotes/${purchaseQuoteUuid}`
+        : "/purchase-quotes",
+    );
 
   const onSubmit = form.handleSubmit((values) => {
     startTransition(async () => {
-      const result = await createPurchaseQuote({
+      const fields = {
         companyUuid: values.supplierUuid || values.agentUuid || null,
         contactUuid: values.contactUuid || null,
         purchaser: values.purchaser || null,
@@ -197,8 +222,16 @@ export const usePurchaseQuoteSubmit = ({
         deliveryRemark: values.deliveryRemark || null,
 
         documents: values.documents?.length ? values.documents : null,
-      });
+      };
 
+      // Updating redirects from inside the action, so only the create path has
+      // a result worth navigating on.
+      if (purchaseQuoteUuid) {
+        setState(await updatePurchaseQuote(purchaseQuoteUuid, fields));
+        return;
+      }
+
+      const result = await createPurchaseQuote(fields);
       setState(result);
       if (result.success) {
         router.push("/purchase-quotes");
@@ -209,6 +242,7 @@ export const usePurchaseQuoteSubmit = ({
   return {
     form,
     isPending,
+    isEditing: Boolean(purchaseQuoteUuid),
     onSubmit,
     state,
     arrangeTransport,

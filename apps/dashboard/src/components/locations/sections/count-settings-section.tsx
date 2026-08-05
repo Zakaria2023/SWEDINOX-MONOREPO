@@ -1,7 +1,7 @@
 "use client";
 
 import { useFormContext } from "react-hook-form";
-import { LocationFormValues } from "@/app/(dashboard)/locations/validation";
+import { LocationEditValues } from "@/app/(dashboard)/locations/validation";
 import { Input } from "@/components/shadcn/input";
 import { FormLabel } from "@/components/ui/form-field";
 import { FormCheckboxCard } from "@/components/ui/form-checkbox-card";
@@ -10,7 +10,7 @@ import { WAREHOUSE_COUNT_STOCK_TYPE_LABELS } from "@/lib/labels";
 import { asNumber } from "@/lib/helpers";
 
 export const CountSettingsSection = () => {
-  const { register } = useFormContext<LocationFormValues>();
+  const { register } = useFormContext<LocationEditValues>();
 
   return (
     <section className="space-y-4">
