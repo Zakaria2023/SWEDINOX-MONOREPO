@@ -110,7 +110,7 @@ export const PurchaseRequestDetailView = ({
       {/* ── What is being asked for ─────────────────────────────────────── */}
       <div className="space-y-3">
         <h2 className="border-b pb-2 text-base font-semibold">Requested</h2>
-        <div className="overflow-x-auto rounded-md border">
+        <div>
           <Table>
             <TableHeader>
               <TableRow>
@@ -213,7 +213,7 @@ export const PurchaseRequestDetailView = ({
             {request.quotes.length} asked
           </span>
         </h2>
-        <div className="overflow-x-auto rounded-md border">
+        <div>
           <Table>
             <TableHeader>
               <TableRow>

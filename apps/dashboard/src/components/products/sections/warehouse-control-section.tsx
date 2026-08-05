@@ -191,7 +191,7 @@ export const WarehouseControlSection = () => {
         <h3 className="text-sm font-medium text-muted-foreground">
           Tolerances when reporting as completed (%)
         </h3>
-        <div className="overflow-x-auto rounded-md border">
+        <div>
           <Table>
             <TableHeader>
               <TableRow>

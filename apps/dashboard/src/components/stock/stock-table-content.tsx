@@ -29,7 +29,7 @@ export const StockTable = ({ stock }: Props) => {
 
   return (
     <div className="space-y-4">
-      <div className="overflow-x-auto rounded-md border">
+      <div>
         <Table>
           <TableHeader>
             <TableRow>

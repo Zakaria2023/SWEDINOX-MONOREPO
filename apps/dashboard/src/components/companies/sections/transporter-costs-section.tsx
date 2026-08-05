@@ -55,7 +55,7 @@ export const TransporterCostsSection = ({
     </div>
 
     {transporterCosts.length > 0 && (
-      <div className="overflow-x-auto rounded-2xl border border-border">
+      <div>
         <Table>
           <TableHeader>
             <TableRow>

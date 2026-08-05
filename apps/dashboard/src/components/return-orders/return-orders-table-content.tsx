@@ -18,7 +18,7 @@ type Props = {
 };
 
 export const ReturnOrdersTable = ({ returnOrders }: Props) => (
-  <div className="overflow-x-auto rounded-md border">
+  <div>
     <Table>
       <TableHeader>
         <TableRow>

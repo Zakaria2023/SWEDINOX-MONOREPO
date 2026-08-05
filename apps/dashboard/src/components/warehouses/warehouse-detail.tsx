@@ -534,7 +534,7 @@ export const WarehouseDetailView = ({ warehouse }: Props) => {
         <h2 className="border-b pb-2 text-base font-semibold">
           Sub-sections and locations
         </h2>
-        <div className="overflow-x-auto rounded-md border">
+        <div>
           <Table>
             <TableHeader>
               <TableRow>
@@ -590,7 +590,7 @@ export const WarehouseDetailView = ({ warehouse }: Props) => {
         <h2 className="border-b pb-2 text-base font-semibold">
           Machines in this location
         </h2>
-        <div className="overflow-x-auto rounded-md border">
+        <div>
           <Table>
             <TableHeader>
               <TableRow>
@@ -636,7 +636,7 @@ export const WarehouseDetailView = ({ warehouse }: Props) => {
 
       <section className="space-y-3">
         <h2 className="border-b pb-2 text-base font-semibold">Work orders</h2>
-        <div className="overflow-x-auto rounded-md border">
+        <div>
           <Table>
             <TableHeader>
               <TableRow>

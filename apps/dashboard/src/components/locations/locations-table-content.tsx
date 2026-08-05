@@ -163,7 +163,7 @@ export const LocationsTable = ({ locations }: Props) => {
         />
       </div>
 
-      <div className="overflow-x-auto rounded-lg border">
+      <div>
         <Table>
           <TableHeader>
             <TableRow>

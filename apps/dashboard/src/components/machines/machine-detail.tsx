@@ -154,7 +154,7 @@ export const MachineDetailView = ({ machine }: Props) => (
       <h2 className="border-b pb-2 text-base font-semibold">
         Products this machine runs
       </h2>
-      <div className="overflow-x-auto rounded-md border">
+      <div>
         <Table>
           <TableHeader>
             <TableRow>
@@ -233,7 +233,7 @@ export const MachineDetailView = ({ machine }: Props) => (
       <h2 className="border-b pb-2 text-base font-semibold">
         Post processings
       </h2>
-      <div className="overflow-x-auto rounded-md border">
+      <div>
         <Table>
           <TableHeader>
             <TableRow>

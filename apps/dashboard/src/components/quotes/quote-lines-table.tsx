@@ -22,7 +22,7 @@ type Props = {
 // grid prints them. Every figure here was calculated when the quote was saved —
 // nothing on this table is editable.
 export const QuoteLinesTable = ({ items }: Props) => (
-  <div className="overflow-x-auto rounded-md border">
+  <div>
     <Table>
       <TableHeader>
         <TableRow>

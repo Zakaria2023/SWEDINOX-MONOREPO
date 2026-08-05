@@ -111,7 +111,7 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
 
       <div className="space-y-3">
         <h2 className="border-b pb-2 text-base font-semibold">Products</h2>
-        <div className="overflow-x-auto rounded-md border">
+        <div>
           <Table>
             <TableHeader>
               <TableRow>
@@ -196,7 +196,7 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
               Nothing has been booked in against this order yet.
             </p>
           ) : (
-            <div className="overflow-x-auto rounded-md border">
+            <div>
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -264,7 +264,7 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
               This order is not attached to a contract.
             </p>
           ) : (
-            <div className="overflow-x-auto rounded-md border">
+            <div>
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -321,7 +321,7 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
               Nothing from this order is going back to the supplier.
             </p>
           ) : (
-            <div className="overflow-x-auto rounded-md border">
+            <div>
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -398,7 +398,7 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
               go to their contacts.
             </p>
           ) : (
-            <div className="overflow-x-auto rounded-md border">
+            <div>
               <Table>
                 <TableHeader>
                   <TableRow>

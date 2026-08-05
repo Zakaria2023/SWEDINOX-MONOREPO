@@ -66,7 +66,7 @@ export const TextCategoryDetailView = ({ category }: Props) => (
 
     <section className="space-y-3">
       <h2 className="border-b pb-2 text-base font-semibold">Sub-groups</h2>
-      <div className="overflow-x-auto rounded-md border">
+      <div>
         <Table>
           <TableHeader>
             <TableRow>
@@ -112,7 +112,7 @@ export const TextCategoryDetailView = ({ category }: Props) => (
       <h2 className="border-b pb-2 text-base font-semibold">
         Texts in this group
       </h2>
-      <div className="overflow-x-auto rounded-md border">
+      <div>
         <Table>
           <TableHeader>
             <TableRow>

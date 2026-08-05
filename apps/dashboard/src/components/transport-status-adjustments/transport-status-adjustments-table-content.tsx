@@ -17,7 +17,7 @@ type Props = {
 };
 
 export const TransportStatusAdjustmentsTable = ({ adjustments }: Props) => (
-  <div className="overflow-x-auto rounded-md border">
+  <div>
     <Table>
       <TableHeader>
         <TableRow>

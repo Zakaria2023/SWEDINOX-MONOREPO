@@ -18,7 +18,7 @@ type Props = {
 const Dash = () => <span className="text-muted-foreground">—</span>;
 
 export const TransportByRegionTable = ({ rows }: Props) => (
-  <div className="overflow-x-auto rounded-md border">
+  <div>
     <Table>
       <TableHeader>
         <TableRow>

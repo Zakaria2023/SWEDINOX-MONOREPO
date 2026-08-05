@@ -34,7 +34,7 @@ const BooleanCell = ({ value }: BooleanCellProps) =>
   );
 
 export const ReoptimizeTable = ({ rows }: Props) => (
-  <div className="overflow-x-auto rounded-md border">
+  <div>
     <Table>
       <TableHeader>
         <TableRow>

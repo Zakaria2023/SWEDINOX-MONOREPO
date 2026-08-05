@@ -90,7 +90,7 @@ export const SfnCounterpartiesPanel = ({ counterparties }: Props) => {
           {error && (
             <p className="px-4 pb-2 text-xs text-destructive">{error}</p>
           )}
-          <div className="max-h-96 overflow-y-auto">
+          <div className="max-h-96">
             <Table>
               <TableHeader>
                 <TableRow>

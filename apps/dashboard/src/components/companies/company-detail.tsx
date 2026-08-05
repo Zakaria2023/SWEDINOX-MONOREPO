@@ -88,7 +88,7 @@ export const CompanyDetailView = ({ company, invoices }: Props) => {
               {company.addresses.length}
             </span>
           </h2>
-          <div className="overflow-x-auto rounded-lg border">
+          <div>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -126,7 +126,7 @@ export const CompanyDetailView = ({ company, invoices }: Props) => {
               {company.counterOrders.length}
             </span>
           </h2>
-          <div className="overflow-x-auto rounded-lg border">
+          <div>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -184,7 +184,7 @@ export const CompanyDetailView = ({ company, invoices }: Props) => {
               {company.visitReports.length}
             </span>
           </h2>
-          <div className="overflow-x-auto rounded-lg border">
+          <div>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -236,7 +236,7 @@ export const CompanyDetailView = ({ company, invoices }: Props) => {
               {company.complaints.length}
             </span>
           </h2>
-          <div className="overflow-x-auto rounded-lg border">
+          <div>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -304,7 +304,7 @@ export const CompanyDetailView = ({ company, invoices }: Props) => {
               {company.followUps.length}
             </span>
           </h2>
-          <div className="overflow-x-auto rounded-lg border">
+          <div>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -344,7 +344,7 @@ export const CompanyDetailView = ({ company, invoices }: Props) => {
               {company.purchaseOrders.length}
             </span>
           </h2>
-          <div className="overflow-x-auto rounded-lg border">
+          <div>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -409,7 +409,7 @@ export const CompanyDetailView = ({ company, invoices }: Props) => {
           </div>
 
           {invoices && invoices.length > 0 ? (
-            <div className="overflow-x-auto rounded-lg border">
+            <div>
               <Table>
                 <TableHeader>
                   <TableRow>

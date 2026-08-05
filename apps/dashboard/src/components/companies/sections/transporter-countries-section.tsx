@@ -66,7 +66,7 @@ export const TransporterCountriesSection = ({
     </div>
 
     {rows.length > 0 && (
-      <div className="overflow-x-auto rounded-2xl border border-border">
+      <div>
         <Table>
           <TableHeader>
             <TableRow>

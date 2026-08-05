@@ -87,7 +87,7 @@ export const PaymentRemindersTable = ({ reminders }: Props) => {
 
       <div className="space-y-2">
         <h2 className="text-lg font-medium tracking-tight">Due a reminder</h2>
-        <div className="overflow-x-auto rounded-md border">
+        <div>
           <Table>
             <TableHeader>
               <TableRow>
@@ -183,7 +183,7 @@ export const PaymentRemindersTable = ({ reminders }: Props) => {
           invoices. */}
       <div className="space-y-2">
         <h2 className="text-lg font-medium tracking-tight">Not being chased</h2>
-        <div className="overflow-x-auto rounded-md border">
+        <div>
           <Table>
             <TableHeader>
               <TableRow>

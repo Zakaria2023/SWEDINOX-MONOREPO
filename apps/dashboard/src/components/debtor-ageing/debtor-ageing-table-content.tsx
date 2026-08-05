@@ -49,7 +49,7 @@ export const DebtorAgeingTable = ({ ageing }: Props) => (
 
     <div className="space-y-2">
       <h2 className="text-lg font-medium tracking-tight">Per debtor</h2>
-      <div className="overflow-x-auto rounded-md border">
+      <div>
         <Table>
           <TableHeader>
             <TableRow>
@@ -135,7 +135,7 @@ export const DebtorAgeingTable = ({ ageing }: Props) => (
 
     <div className="space-y-2">
       <h2 className="text-lg font-medium tracking-tight">Open items</h2>
-      <div className="overflow-x-auto rounded-md border">
+      <div>
         <Table>
           <TableHeader>
             <TableRow>

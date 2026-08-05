@@ -21,7 +21,7 @@ type Props = {
 
 export const StockMovementsTable = ({ stockMovements }: Props) => (
   <div className="space-y-4">
-    <div className="overflow-x-auto rounded-md border">
+    <div>
       <Table>
         <TableHeader>
           <TableRow>

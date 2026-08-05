@@ -34,7 +34,7 @@ export const OptionsTable = ({ rows }: Props) => {
   );
 
   return (
-    <div className="overflow-x-auto rounded-md border">
+    <div>
       <Table>
         <TableHeader>
           <TableRow>

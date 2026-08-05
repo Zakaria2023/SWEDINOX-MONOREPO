@@ -45,7 +45,7 @@ export const IndustryDetailView = ({ industry }: Props) => (
         {industry.companies.length}{" "}
         {pluralize(industry.companies.length, "company", "companies")}
       </p>
-      <div className="overflow-x-auto rounded-md border">
+      <div>
         <Table>
           <TableHeader>
             <TableRow>

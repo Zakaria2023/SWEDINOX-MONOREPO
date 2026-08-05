@@ -152,7 +152,7 @@ export const BatchDetailView = ({ batch }: Props) => (
       <h2 className="border-b pb-2 text-base font-semibold">
         Certificates received
       </h2>
-      <div className="overflow-x-auto rounded-md border">
+      <div>
         <Table>
           <TableHeader>
             <TableRow>

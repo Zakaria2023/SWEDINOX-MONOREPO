@@ -45,7 +45,7 @@ type GridProps = {
 // an explicit empty state, because "nothing here" and "not loaded" have to look
 // different to whoever is reading the article's history.
 const Grid = ({ headers, emptyMessage, rowCount, children }: GridProps) => (
-  <div className="overflow-x-auto rounded-md border">
+  <div>
     <Table>
       <TableHeader>
         <TableRow>

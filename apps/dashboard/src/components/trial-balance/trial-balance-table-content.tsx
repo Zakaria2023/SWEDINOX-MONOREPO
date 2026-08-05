@@ -141,7 +141,7 @@ export const TrialBalanceTable = ({ trialBalance }: Props) => {
         </div>
       ) : null}
 
-      <div className="overflow-x-auto rounded-md border">
+      <div>
         <Table>
           <TableHeader>
             <TableRow>

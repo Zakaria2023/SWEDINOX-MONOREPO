@@ -126,7 +126,7 @@ export const SawingLayoutDetailView = ({ layout }: Props) => (
           value={layout.residualLength}
         />
       </div>
-      <div className="overflow-x-auto rounded-md border">
+      <div>
         <Table>
           <TableHeader>
             <TableRow>

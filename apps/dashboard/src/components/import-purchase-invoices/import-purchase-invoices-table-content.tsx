@@ -20,7 +20,7 @@ type Props = {
 // would make the grid unreadable. What is shown is where they were parked, so
 // the message can be pulled from storage when one needs reading.
 export const ImportPurchaseInvoicesTable = ({ rows }: Props) => (
-  <div className="overflow-x-auto rounded-md border">
+  <div>
     <Table>
       <TableHeader>
         <TableRow>

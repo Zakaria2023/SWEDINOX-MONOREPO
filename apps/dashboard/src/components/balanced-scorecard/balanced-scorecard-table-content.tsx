@@ -37,7 +37,7 @@ const TrendIcon = ({ trend }: { trend: ScorecardTrend }) => {
 };
 
 export const BalancedScorecardTable = ({ rows }: Props) => (
-  <div className="overflow-x-auto rounded-md border">
+  <div>
     <Table>
       <TableHeader>
         <TableRow>

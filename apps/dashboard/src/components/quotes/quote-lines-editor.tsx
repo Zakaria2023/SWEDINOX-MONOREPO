@@ -197,7 +197,7 @@ export const QuoteLinesEditor = ({ control, products, isPickup }: Props) => {
       {error && <p className="text-xs text-destructive">{error}</p>}
 
       {fields.length > 0 && (
-        <div className="overflow-x-auto rounded-md border">
+        <div>
           <Table>
             <TableHeader>
               <TableRow>

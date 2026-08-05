@@ -120,7 +120,7 @@ export const ContractsTable = ({ contracts }: ContractsTableContentProps) => {
         />
       </div>
 
-      <div className="overflow-x-auto rounded-lg border">
+      <div>
         <Table>
           <TableHeader>
             <TableRow>

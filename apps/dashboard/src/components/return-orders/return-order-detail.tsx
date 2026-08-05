@@ -167,7 +167,7 @@ export const ReturnOrderDetailView = ({ returnOrder }: Props) => {
             {formatMoney(returnedValue)}
           </span>
         </div>
-        <div className="overflow-x-auto rounded-md border">
+        <div>
           <Table>
             <TableHeader>
               <TableRow>
@@ -268,7 +268,7 @@ export const ReturnOrderDetailView = ({ returnOrder }: Props) => {
               No surcharges on this return order.
             </p>
           ) : (
-            <div className="overflow-x-auto rounded-md border">
+            <div>
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -316,7 +316,7 @@ export const ReturnOrderDetailView = ({ returnOrder }: Props) => {
               No production workorder touched the goods on this return.
             </p>
           ) : (
-            <div className="overflow-x-auto rounded-md border">
+            <div>
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -377,7 +377,7 @@ export const ReturnOrderDetailView = ({ returnOrder }: Props) => {
               No complaint has been raised about the goods on this return.
             </p>
           ) : (
-            <div className="overflow-x-auto rounded-md border">
+            <div>
               <Table>
                 <TableHeader>
                   <TableRow>

@@ -63,7 +63,7 @@ const DeliverButton = ({ orderItemUuid }: DeliverButtonProps) => {
 };
 
 export const DeliveriesTable = ({ lines }: Props) => (
-  <div className="overflow-x-auto rounded-md border">
+  <div>
     <Table>
       <TableHeader>
         <TableRow>

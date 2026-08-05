@@ -131,7 +131,7 @@ export const PurchaseQuoteDetailView = ({ quote }: Props) => {
         <h2 className="border-b pb-2 text-base font-semibold">
           Quoted lines
         </h2>
-        <div className="overflow-x-auto rounded-md border">
+        <div>
           <Table>
             <TableHeader>
               <TableRow>

@@ -22,7 +22,7 @@ type Props = {
 const COLUMN_COUNT = 28;
 
 export const CertificatesTable = ({ rows }: Props) => (
-  <div className="overflow-x-auto rounded-md border">
+  <div>
     <Table>
       <TableHeader>
         <TableRow>

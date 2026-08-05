@@ -134,7 +134,7 @@ export const ContractGroups = ({ groups }: Props) => {
           </Button>
         </div>
 
-        <div className="overflow-x-auto rounded-lg border">
+        <div>
           <Table>
             <TableHeader>
               <TableRow>

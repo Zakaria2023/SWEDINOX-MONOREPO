@@ -29,7 +29,7 @@ const BooleanCell = ({ value }: BooleanCellProps) =>
   );
 
 export const PickStatisticsTable = ({ statistics }: Props) => (
-  <div className="overflow-x-auto rounded-md border">
+  <div>
     <Table>
       <TableHeader>
         <TableRow>

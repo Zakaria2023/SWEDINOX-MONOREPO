@@ -121,6 +121,36 @@ body {
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+@layer components {
+  /* The box a data table scrolls inside. The overflow belongs to the table, not
+     to the page: a wide table is read by scrolling the table sideways, and a
+     long one scrolls under its own header, so the page itself never grows a
+     second scrollbar and the header row never leaves the screen. */
+  .table-scroll {
+    max-height: calc(100svh - 14rem);
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .table-scroll::-webkit-scrollbar {
+    height: 0.625rem;
+    width: 0.625rem;
+  }
+
+  .table-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .table-scroll::-webkit-scrollbar-thumb {
+    border-radius: 9999px;
+    background-color: var(--border);
+  }
+
+  .table-scroll:hover::-webkit-scrollbar-thumb {
+    background-color: var(--ring);
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

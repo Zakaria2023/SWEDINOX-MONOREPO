@@ -16,7 +16,7 @@ type Props = {
 };
 
 export const CustomerRevenuePerProductGroupTable = ({ rows }: Props) => (
-  <div className="overflow-x-auto rounded-md border">
+  <div>
     <Table>
       <TableHeader>
         <TableRow>

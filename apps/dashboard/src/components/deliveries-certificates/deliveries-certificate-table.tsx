@@ -20,7 +20,7 @@ type Props = {
 const Dash = () => <span className="text-muted-foreground">—</span>;
 
 export const DeliveriesCertificateTable = ({ rows, emptyMessage }: Props) => (
-  <div className="overflow-x-auto rounded-md border">
+  <div>
     <Table>
       <TableHeader>
         <TableRow>

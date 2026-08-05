@@ -23,13 +23,19 @@ export const DataTableFallback = ({
         <Skeleton className={cn("h-9 rounded-md", toolbarWidthClassName)} />
       </div>
 
-      <div className="overflow-x-auto rounded-lg border">
+      <div className="table-scroll overflow-auto rounded-xl border border-border bg-card shadow-xs">
         <div style={{ gridTemplateColumns, minWidth }}>
-          <div className="grid gap-4 border-b px-4 py-3" style={{ gridTemplateColumns }}>
+          <div
+            className="grid gap-4 border-b px-4 py-3"
+            style={{ gridTemplateColumns }}
+          >
             {Array.from({ length: columnCount }).map((_, index) => (
               <Skeleton
                 key={`header-${index}`}
-                className={cn("h-4", WIDTH_CLASSES[index % WIDTH_CLASSES.length])}
+                className={cn(
+                  "h-4",
+                  WIDTH_CLASSES[index % WIDTH_CLASSES.length],
+                )}
               />
             ))}
           </div>
@@ -45,7 +51,9 @@ export const DataTableFallback = ({
                   key={`cell-${rowIndex}-${columnIndex}`}
                   className={cn(
                     "h-4",
-                    WIDTH_CLASSES[(rowIndex + columnIndex) % WIDTH_CLASSES.length],
+                    WIDTH_CLASSES[
+                      (rowIndex + columnIndex) % WIDTH_CLASSES.length
+                    ],
                   )}
                 />
               ))}

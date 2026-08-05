@@ -30,7 +30,7 @@ type Props = {
 const COLUMN_COUNT = 46;
 
 export const QuoteLinesTable = ({ rows }: Props) => (
-  <div className="overflow-x-auto rounded-md border">
+  <div>
     <Table>
       <TableHeader>
         <TableRow>

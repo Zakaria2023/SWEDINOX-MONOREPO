@@ -62,7 +62,7 @@ const CompleteButton = ({ lineUuid }: CompleteButtonProps) => {
 };
 
 export const ProductionWorkOrdersTable = ({ lines }: Props) => (
-  <div className="overflow-x-auto rounded-md border">
+  <div>
     <Table>
       <TableHeader>
         <TableRow>

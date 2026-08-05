@@ -126,7 +126,7 @@ export const TextCategoriesTable = ({
         />
       </div>
 
-      <div className="overflow-x-auto rounded-lg border">
+      <div>
         <Table>
           <TableHeader>
             <TableRow>

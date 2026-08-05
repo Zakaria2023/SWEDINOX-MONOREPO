@@ -91,7 +91,7 @@ export const Industries = ({ industries }: Props) => {
           </Button>
         </div>
 
-        <div className="overflow-x-auto rounded-lg border">
+        <div>
           <Table>
             <TableHeader>
               <TableRow>

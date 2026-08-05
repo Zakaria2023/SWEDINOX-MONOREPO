@@ -81,7 +81,7 @@ export const OrderDetailView = ({ order }: Props) => {
 
       <div className="space-y-3">
         <h2 className="border-b pb-2 text-base font-semibold">Products</h2>
-        <div className="overflow-x-auto rounded-md border">
+        <div>
           <Table>
             <TableHeader>
               <TableRow>

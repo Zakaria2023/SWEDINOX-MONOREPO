@@ -313,7 +313,7 @@ export const CustomersAndProspectsTable = ({ rows }: Props) => {
         />
       </div>
 
-      <div className="overflow-x-auto rounded-lg border">
+      <div>
         <Table>
           <TableHeader>
             <TableRow>

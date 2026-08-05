@@ -67,7 +67,7 @@ export const AddressDistanceDetailView = ({ distance }: Props) => (
         Matched on the company plus the city and postal code recorded above — a
         distance is held against a place rather than against one address row.
       </p>
-      <div className="overflow-x-auto rounded-md border">
+      <div>
         <Table>
           <TableHeader>
             <TableRow>

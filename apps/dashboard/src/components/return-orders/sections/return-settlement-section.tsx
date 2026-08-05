@@ -99,7 +99,7 @@ export const ReturnSettlementSection = ({ returnOrder }: Props) => {
             credit against.
           </p>
         ) : (
-          <div className="overflow-x-auto">
+          <div>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -156,7 +156,7 @@ export const ReturnSettlementSection = ({ returnOrder }: Props) => {
             No credit note has been raised for this return yet.
           </p>
         ) : (
-          <div className="overflow-x-auto">
+          <div>
             <Table>
               <TableHeader>
                 <TableRow>

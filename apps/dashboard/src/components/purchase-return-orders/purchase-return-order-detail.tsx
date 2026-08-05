@@ -195,7 +195,7 @@ export const PurchaseReturnOrderDetailView = ({ returnOrder }: Props) => {
             {formatMoney(returnedValue)}
           </span>
         </div>
-        <div className="overflow-x-auto rounded-md border">
+        <div>
           <Table>
             <TableHeader>
               <TableRow>
@@ -281,7 +281,7 @@ export const PurchaseReturnOrderDetailView = ({ returnOrder }: Props) => {
               The supplier has not credited this return yet.
             </p>
           ) : (
-            <div className="overflow-x-auto">
+            <div>
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -332,7 +332,7 @@ export const PurchaseReturnOrderDetailView = ({ returnOrder }: Props) => {
               No surcharges on this purchase return order.
             </p>
           ) : (
-            <div className="overflow-x-auto">
+            <div>
               <Table>
                 <TableHeader>
                   <TableRow>

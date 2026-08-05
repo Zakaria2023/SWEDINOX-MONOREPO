@@ -20,7 +20,7 @@ export const PurchaseInvoicesToBeReceivedTable = ({ rows }: Props) => {
   const total = rows.reduce((sum, row) => sum + row.amount, 0);
 
   return (
-    <div className="overflow-x-auto rounded-md border">
+    <div>
       <Table>
         <TableHeader>
           <TableRow>
@@ -76,7 +76,7 @@ export const PurchaseInvoicesToBeReceivedTable = ({ rows }: Props) => {
                   </TableCell>
                 </TableRow>
               ))}
-              <TableRow className="border-t-2 font-semibold">
+              <TableRow className="font-semibold [&>td]:border-t-2 [&>td]:border-border">
                 <TableCell colSpan={8}>Total</TableCell>
                 <TableCell className="text-right whitespace-nowrap">
                   {formatMoney(total)}

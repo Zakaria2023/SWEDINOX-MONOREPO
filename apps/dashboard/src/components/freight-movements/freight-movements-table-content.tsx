@@ -30,7 +30,7 @@ const BooleanCell = ({ value }: BooleanCellProps) =>
   );
 
 export const FreightMovementsTable = ({ freightMovements }: Props) => (
-  <div className="overflow-x-auto rounded-md border">
+  <div>
     <Table>
       <TableHeader>
         <TableRow>

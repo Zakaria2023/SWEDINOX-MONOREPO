@@ -100,8 +100,11 @@ export const AppSidebar = () => {
   const railProps = isMobile
     ? {}
     : {
+        // Above the page's own sticky furniture — a table header sticks at
+        // z-10 too, and being later in the DOM it would otherwise paint over
+        // the panel the moment it opens.
         className:
-          "border-r border-sidebar-border transition-shadow duration-200 group-data-[state=expanded]:shadow-2xl",
+          "z-30 border-r border-sidebar-border transition-shadow duration-200 group-data-[state=expanded]:shadow-2xl",
         onMouseEnter: () => setOpen(true),
         onMouseLeave: () => setOpen(false),
         onFocusCapture: () => setOpen(true),

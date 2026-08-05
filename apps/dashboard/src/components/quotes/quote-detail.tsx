@@ -279,7 +279,7 @@ export const QuoteDetailView = ({ quote }: Props) => {
               No options quoted on these lines.
             </p>
           ) : (
-            <div className="overflow-x-auto rounded-md border">
+            <div>
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -327,7 +327,7 @@ export const QuoteDetailView = ({ quote }: Props) => {
               No surcharges on this quote.
             </p>
           ) : (
-            <div className="overflow-x-auto rounded-md border">
+            <div>
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -416,7 +416,7 @@ export const QuoteDetailView = ({ quote }: Props) => {
               No complaints recorded for this customer.
             </p>
           ) : (
-            <div className="overflow-x-auto rounded-md border">
+            <div>
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -454,7 +454,7 @@ export const QuoteDetailView = ({ quote }: Props) => {
               No open follow-ups for this customer.
             </p>
           ) : (
-            <div className="overflow-x-auto rounded-md border">
+            <div>
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -492,7 +492,7 @@ export const QuoteDetailView = ({ quote }: Props) => {
               No competitors recorded against this customer&apos;s contacts.
             </p>
           ) : (
-            <div className="overflow-x-auto rounded-md border">
+            <div>
               <Table>
                 <TableHeader>
                   <TableRow>

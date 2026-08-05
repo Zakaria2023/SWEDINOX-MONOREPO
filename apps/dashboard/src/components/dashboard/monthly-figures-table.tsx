@@ -45,7 +45,7 @@ export const MonthlyFiguresTable = ({ months }: MonthlyFiguresTableProps) => {
       title="Monthly figures"
       summary="Every value plotted above, as numbers"
     >
-      <div className="overflow-x-auto">
+      <div>
         <Table>
           <TableHeader>
             <TableRow>

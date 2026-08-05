@@ -91,7 +91,7 @@ export const StockDetailView = ({ stock }: Props) => {
         <h2 className="border-b pb-2 text-base font-semibold">
           Movement History
         </h2>
-        <div className="overflow-x-auto rounded-md border">
+        <div>
           <Table>
             <TableHeader>
               <TableRow>

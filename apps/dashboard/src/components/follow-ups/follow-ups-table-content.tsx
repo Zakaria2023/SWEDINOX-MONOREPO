@@ -27,7 +27,7 @@ export const FollowUpsTable = ({ followUps }: Props) => {
   }
 
   return (
-    <div className="overflow-x-auto rounded-lg border">
+    <div>
       <Table>
         <TableHeader>
           <TableRow>

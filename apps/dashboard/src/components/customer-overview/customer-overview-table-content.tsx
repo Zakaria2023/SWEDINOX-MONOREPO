@@ -19,7 +19,7 @@ type Props = {
 const COLUMN_COUNT = 21;
 
 export const CustomerOverviewTable = ({ customers }: Props) => (
-  <div className="overflow-x-auto rounded-md border">
+  <div>
     <Table>
       <TableHeader>
         <TableRow>

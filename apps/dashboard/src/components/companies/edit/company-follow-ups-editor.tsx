@@ -206,7 +206,7 @@ export const CompanyFollowUpsEditor = ({
       </div>
 
       {hasRows ? (
-        <div className="overflow-x-auto rounded-2xl border border-border">
+        <div>
           <Table>
             <TableHeader>
               <TableRow>

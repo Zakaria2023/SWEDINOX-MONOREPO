@@ -113,7 +113,7 @@ export const ProductGroupsTable = ({ productGroups }: Props) => {
           onToggle={handleToggle}
         />
       </div>
-      <div className="overflow-x-auto rounded-md border">
+      <div>
         <Table>
           <TableHeader>
             <TableRow>

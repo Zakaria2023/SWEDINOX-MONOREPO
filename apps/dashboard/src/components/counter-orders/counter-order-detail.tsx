@@ -285,7 +285,7 @@ export const CounterOrderDetailView = ({ order }: Props) => (
 
     <section className="space-y-3">
       <h2 className="border-b pb-2 text-base font-semibold">Lines</h2>
-      <div className="overflow-x-auto rounded-md border">
+      <div>
         <Table>
           <TableHeader>
             <TableRow>

@@ -275,7 +275,7 @@ export const ComplaintDetailView = ({ complaint }: Props) => {
           summary={pluralize(complaint.items.length, "line")}
           defaultOpen={complaint.items.length > 0}
         >
-          <div className="overflow-x-auto rounded-md border">
+          <div>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -358,7 +358,7 @@ export const ComplaintDetailView = ({ complaint }: Props) => {
           title="Status history"
           summary={pluralize(complaint.statusHistory?.length ?? 0, "change")}
         >
-          <div className="overflow-x-auto rounded-md border">
+          <div>
             <Table>
               <TableHeader>
                 <TableRow>

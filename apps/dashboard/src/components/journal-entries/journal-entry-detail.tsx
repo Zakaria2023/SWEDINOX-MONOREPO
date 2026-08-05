@@ -138,7 +138,7 @@ export const JournalEntryDetailView = ({ entry }: Props) => (
           ? "The lines of one document, which should balance."
           : "This line predates the double-sided ledger and has no entry group."}
       </p>
-      <div className="overflow-x-auto rounded-md border">
+      <div>
         <Table>
           <TableHeader>
             <TableRow>

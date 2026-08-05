@@ -18,7 +18,7 @@ type Props = {
 const COLUMN_COUNT = 17;
 
 export const FreightFlowTable = ({ rows }: Props) => (
-  <div className="overflow-x-auto rounded-md border">
+  <div>
     <Table>
       <TableHeader>
         <TableRow>

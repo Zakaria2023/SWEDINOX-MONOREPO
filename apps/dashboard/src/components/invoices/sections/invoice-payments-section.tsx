@@ -136,7 +136,7 @@ export const InvoicePaymentsSection = ({
       {error && <FormError>{error}</FormError>}
 
       {payments.length > 0 && (
-        <div className="overflow-x-auto rounded-md border">
+        <div>
           <Table>
             <TableHeader>
               <TableRow>

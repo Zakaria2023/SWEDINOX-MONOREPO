@@ -43,7 +43,7 @@ const PIECE_SLOTS = [
 ] as const;
 
 export const SawingLayoutsTable = ({ layouts }: Props) => (
-  <div className="overflow-x-auto rounded-md border">
+  <div>
     <Table>
       <TableHeader>
         <TableRow>

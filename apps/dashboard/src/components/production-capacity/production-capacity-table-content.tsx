@@ -28,7 +28,7 @@ const STATUS_STYLES: Record<ProductionCapacityStatus, string> = {
 };
 
 export const ProductionCapacityTable = ({ capacity }: Props) => (
-  <div className="overflow-x-auto rounded-md border">
+  <div>
     <Table>
       <TableHeader>
         <TableRow>

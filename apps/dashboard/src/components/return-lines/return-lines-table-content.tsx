@@ -22,7 +22,7 @@ type Props = {
 };
 
 export const ReturnLinesTable = ({ lines }: Props) => (
-  <div className="overflow-x-auto rounded-md border">
+  <div>
     <Table>
       <TableHeader>
         <TableRow>

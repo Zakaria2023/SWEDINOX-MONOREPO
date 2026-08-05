@@ -249,7 +249,7 @@ export const ContractDetailView = ({ contract }: Props) => {
           title="Agreed net prices"
           summary={pluralize(contract.netPrices.length, "product")}
         >
-          <div className="overflow-x-auto rounded-md border">
+          <div>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -307,7 +307,7 @@ export const ContractDetailView = ({ contract }: Props) => {
           title="Quotes priced against this contract"
           summary={pluralize(contract.quotesUsing.length, "quote")}
         >
-          <div className="overflow-x-auto rounded-md border">
+          <div>
             <Table>
               <TableHeader>
                 <TableRow>
