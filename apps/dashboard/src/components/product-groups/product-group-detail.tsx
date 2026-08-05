@@ -56,7 +56,7 @@ const StockRule = ({
   <DetailField
     label={label}
     value={
-      mode === "fixed"
+      mode === "fixed_value"
         ? `${fixedValue ?? "0"} ${unit ?? ""}`.trim()
         : `${multiplier ?? "0"} × average monthly consumption`
     }

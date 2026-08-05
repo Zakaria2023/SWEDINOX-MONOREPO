@@ -58,7 +58,7 @@ export type BatchStockRow = Pick<
   | "unit"
   | "charge"
   | "internalCharge"
-  | "warehouseUuid"
+  | "locationUuid"
 >;
 
 export type BatchDetail = BatchRow & {
@@ -157,7 +157,7 @@ export const getBatchDetail = async (
           unit: Stock.unit,
           charge: Stock.charge,
           internalCharge: Stock.internalCharge,
-          warehouseUuid: Stock.warehouseUuid,
+          locationUuid: Stock.locationUuid,
         })
         .from(Stock)
         .where(eq(Stock.uuid, row.batch.stockUuid))
