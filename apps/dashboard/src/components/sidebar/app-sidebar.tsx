@@ -3,9 +3,9 @@
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarInput,
   SidebarMenu,
@@ -14,361 +14,39 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
+  useSidebar,
 } from "@/components/shadcn/sidebar";
+import { DASHBOARD_HREF, NAV_GROUPS } from "@/lib/constants";
 import { cn, isPathActive } from "@/lib/helpers";
-import {
-  Building2,
-  ChevronRight,
-  ContactRound,
-  Factory,
-  LayoutDashboard,
-  MapPin,
-  MessageSquareWarning,
-  PackageCheck,
-  Search,
-  ShoppingCart,
-  Truck,
-  Users,
-  Warehouse,
-} from "lucide-react";
-import { LucideIcon } from "lucide-react";
+import { ChevronRight, Layers, LayoutDashboard, Search } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { FocusEvent, useEffect, useMemo, useRef, useState } from "react";
 
-type NavItem = {
-  label: string;
-  href: string;
-};
+// Links wrap onto a second line rather than losing their ends: several entries
+// ("Customer Revenue per Revenue Group") only differ in the last word, so a
+// clipped label is not just untidy, it stops naming the page.
+const LINK_CLASS =
+  "h-auto min-h-9 items-start gap-2 rounded-lg px-2.5 py-2 leading-snug whitespace-normal text-sidebar-foreground/75 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground";
 
-type NavGroup = {
-  key: string;
-  label: string;
-  icon: LucideIcon;
-  items: NavItem[];
-};
-
-const DASHBOARD_HREF = "/";
-
-const NAV_GROUPS: NavGroup[] = [
-  {
-    key: "customers",
-    label: "Customers",
-    icon: Users,
-    items: [
-      { label: "Quotes", href: "/quotes" },
-      { label: "Orders", href: "/orders" },
-      { label: "Return Orders", href: "/return-orders" },
-      { label: "Return Lines", href: "/return-lines" },
-      { label: "Counter Orders", href: "/counter-orders" },
-      { label: "Customer Overview", href: "/customer-overview" },
-      { label: "Remarks per Company", href: "/remarks-per-company" },
-      { label: "Addresses", href: "/addresses" },
-      { label: "Contracts per Customer", href: "/contracts-per-customer" },
-      {
-        label: "Customer/Prospect Contact",
-        href: "/contact-persons-customers-and-prospects",
-      },
-      { label: "Customers and Prospects", href: "/customers-and-prospects" },
-      { label: "Visit Schedule", href: "/visit-schedule" },
-      { label: "Change Visit Schedule", href: "/change-visit-schedule" },
-      { label: "To Visit / Call", href: "/to-visit-call" },
-      { label: "Customer Revenue", href: "/customer-revenue" },
-      {
-        label: "Customer Revenue per Revenue Group",
-        href: "/customer-revenue-per-revenue-group",
-      },
-      {
-        label: "Customer Revenue per Product Group",
-        href: "/customer-revenue-per-product-group",
-      },
-      {
-        label: "Customer Revenue per Group (Split)",
-        href: "/customer-revenue-per-revenue-group-split",
-      },
-      {
-        label: "Customer Revenue, Sales & Visits",
-        href: "/customer-revenue-sales-and-visits",
-      },
-      { label: "Unblocked Orders", href: "/unblocked-orders" },
-      { label: "Follow-ups", href: "/follow-ups" },
-    ],
-  },
-  {
-    key: "company",
-    label: "Company",
-    icon: Building2,
-    items: [
-      { label: "Companies", href: "/companies" },
-      { label: "Communication Settings", href: "/communication-settings" },
-      { label: "Address Distances", href: "/address-distances" },
-      { label: "Visit Reports", href: "/visit-reports" },
-      { label: "Visits Made", href: "/visits-made" },
-      { label: "Text Categories", href: "/text-categories" },
-      { label: "Texts", href: "/texts" },
-      { label: "Industries", href: "/industries" },
-      { label: "Inactive Companies", href: "/inactive-companies" },
-    ],
-  },
-  {
-    key: "sales",
-    label: "Sales",
-    icon: ContactRound,
-    items: [
-      { label: "Orders and Quotes", href: "/orders-and-quotes" },
-      {
-        label: "Order Lines Capacity Overflow",
-        href: "/order-lines-capacity-overflow",
-      },
-      {
-        label: "SFN Statistics Product-Market",
-        href: "/sfn-statistics-product-market",
-      },
-      { label: "Contracts", href: "/contracts" },
-      { label: "Contract Groups", href: "/contract-groups" },
-      { label: "Invoices", href: "/invoices" },
-      { label: "Deliveries", href: "/deliveries" },
-      { label: "Blocked Deliveries", href: "/blocked-deliveries" },
-      { label: "Deliveries to Arrange", href: "/deliveries-to-arrange" },
-      { label: "Invoice Lines", href: "/invoice-lines" },
-      { label: "Quote Lines", href: "/quote-lines" },
-      { label: "Order Lines", href: "/order-lines" },
-      { label: "Product Prices", href: "/product-prices" },
-      { label: "Net Prices", href: "/net-prices" },
-      {
-        label: "Option Prices per Product",
-        href: "/option-prices-per-product",
-      },
-      { label: "Options", href: "/options" },
-      {
-        label: "Order Lines Still to be Called",
-        href: "/order-lines-still-to-be-called",
-      },
-      {
-        label: "Orders Still to be Called",
-        href: "/orders-still-to-be-called",
-      },
-      { label: "Charges", href: "/charges" },
-      { label: "Journal Entries", href: "/journal-entries" },
-      { label: "Trial Balance", href: "/trial-balance" },
-      { label: "Payments", href: "/payments" },
-      { label: "Debtor Ageing", href: "/debtor-ageing" },
-      { label: "Payment Reminders", href: "/payment-reminders" },
-      {
-        label: "Cost Price for Invoices to be Sent",
-        href: "/cost-price-invoices-to-be-sent",
-      },
-      {
-        label: "CD-deliveries in Progress",
-        href: "/cd-deliveries-in-progress",
-      },
-      {
-        label: "Control: Stock Increase Ext. Processing",
-        href: "/control-stock-increase-external-processing",
-      },
-      {
-        label: "Control: Revaluation of Stock (FSP)",
-        href: "/control-stock-revaluation-fsp",
-      },
-      {
-        label: "Control: Sawing Waste",
-        href: "/control-sawing-waste",
-      },
-      { label: "CBS Documentation", href: "/cbs-documentation" },
-      {
-        label: "Financially Blocked Quotes & Orders",
-        href: "/financially-blocked",
-      },
-      {
-        label: "Credit Information Customers",
-        href: "/credit-information-customers",
-      },
-      {
-        label: "Purchase Invoices to be Received",
-        href: "/purchase-invoices-to-be-received",
-      },
-      {
-        label: "Purchase Orders to be Received",
-        href: "/purchase-orders-to-be-received",
-      },
-      {
-        label: "Revenue per Revenue Group",
-        href: "/revenue-per-revenue-group",
-      },
-      {
-        label: "Revenue per Revenue Group (Period)",
-        href: "/revenue-per-revenue-group-period",
-      },
-      { label: "Revenue per Product", href: "/revenue-per-product" },
-      {
-        label: "Purchases & Sales per Revenue Group",
-        href: "/purchases-and-sales-per-revenue-group",
-      },
-      { label: "Revenue w.r.t. Budget", href: "/revenue-vs-budget" },
-    ],
-  },
-  {
-    key: "supplier",
-    label: "Supplier",
-    icon: Truck,
-    items: [
-      { label: "Suppliers", href: "/suppliers" },
-      { label: "Supplier Revenue", href: "/supplier-revenue" },
-      {
-        label: "Supplier Revenue per Revenue Group",
-        href: "/supplier-revenue-per-revenue-group",
-      },
-      { label: "Contracts per Supplier", href: "/contracts-per-supplier" },
-      {
-        label: "Contact Persons Suppliers",
-        href: "/contact-persons-suppliers",
-      },
-    ],
-  },
-  {
-    key: "purchases",
-    label: "Purchases",
-    icon: ShoppingCart,
-    items: [
-      { label: "Order Advice", href: "/order-advice" },
-      { label: "StockOn Advice", href: "/stockon-advice" },
-      {
-        label: "Sold Products Not Advised",
-        href: "/sold-products-not-advised",
-      },
-      { label: "Purchase Quotes", href: "/purchase-quotes" },
-      { label: "Purchase Requests", href: "/purchase-requests" },
-      { label: "Purchase Orders", href: "/purchase-orders" },
-      {
-        label: "Purchase Orders and Quotes",
-        href: "/purchase-orders-and-quotes",
-      },
-      { label: "Purchase Return Orders", href: "/purchase-return-orders" },
-      { label: "Purchase Invoices", href: "/purchase-invoices" },
-      { label: "Purchase Invoice Line", href: "/purchase-invoice-line" },
-      { label: "Purchase Lines", href: "/purchase-lines" },
-      { label: "Purchase Quotes Overview", href: "/purchase-quotes-overview" },
-      { label: "Purchase Receivals", href: "/purchase-receivals" },
-      { label: "Receipts", href: "/receipts" },
-      { label: "Purchase Results", href: "/purchase-results" },
-      {
-        label: "Import Purchase Invoices",
-        href: "/import-purchase-invoices",
-      },
-    ],
-  },
-  {
-    key: "warehouse",
-    label: "Warehouse",
-    icon: Warehouse,
-    items: [
-      { label: "Warehouses", href: "/warehouses" },
-      { label: "Warehouse Sub Sections", href: "/warehouse-sub-sections" },
-    ],
-  },
-  {
-    key: "locations",
-    label: "Locations",
-    icon: MapPin,
-    items: [{ label: "Locations", href: "/locations" }],
-  },
-  {
-    key: "logistics",
-    label: "Logistics",
-    icon: Factory,
-    items: [
-      { label: "Deviations in Count Lists", href: "/count-list-deviations" },
-      { label: "Product Groups", href: "/product-groups" },
-      { label: "Products", href: "/products" },
-      { label: "Warehouse Work Orders", href: "/warehouse-work-orders" },
-      { label: "Production Work Orders", href: "/production-workorders" },
-      {
-        label: "Warehouse- and Production Work Orders",
-        href: "/warehouse-and-production-workorders",
-      },
-      { label: "Production Batches", href: "/production-batches" },
-      { label: "Transport Work Orders", href: "/transport-workorders" },
-      { label: "Trip Data", href: "/trip-data" },
-      { label: "Reservations", href: "/reservations" },
-      { label: "Stock", href: "/stock" },
-      { label: "Stock Movements", href: "/stock-movements" },
-      { label: "Stock on Location", href: "/stock-on-location" },
-      { label: "Customer Stock", href: "/customer-stock" },
-      { label: "Stock History", href: "/stock-history" },
-      { label: "Freight Movement", href: "/freight-movements" },
-      { label: "Freight Flow (SFN)", href: "/freight-flow" },
-      { label: "Pick Statistic", href: "/pick-statistics" },
-      { label: "Machines", href: "/machines" },
-      { label: "Sawing Layouts", href: "/sawing-layouts" },
-      { label: "Warehouse Capacity", href: "/warehouse-capacity" },
-      { label: "Production Capacity", href: "/production-capacity" },
-      {
-        label: "Production Capacity Details",
-        href: "/production-capacity-details",
-      },
-      { label: "Capacity Checks", href: "/capacity-checks" },
-      { label: "Time Registration", href: "/time-registration" },
-      { label: "(Re)optimize", href: "/reoptimize" },
-      { label: "Nesting", href: "/nesting" },
-      {
-        label: "Transport Status Adjustments",
-        href: "/transport-status-adjustments",
-      },
-    ],
-  },
-  {
-    key: "batch-registration",
-    label: "Batch Registration",
-    icon: PackageCheck,
-    items: [
-      { label: "Batches", href: "/batches" },
-      { label: "Certificates Received", href: "/certificates-received" },
-      {
-        label: "Certificates to be Linked",
-        href: "/certificates-to-be-linked",
-      },
-      { label: "Sending Certificates", href: "/sending-certificates" },
-      {
-        label: "Deliveries from the Missing Batch",
-        href: "/deliveries-from-missing-batch",
-      },
-    ],
-  },
-  {
-    key: "others",
-    label: "Others",
-    icon: MessageSquareWarning,
-    items: [
-      { label: "Complaints", href: "/complaints" },
-      { label: "Complaint Lines", href: "/complaint-lines" },
-      { label: "Balanced Scorecard", href: "/balanced-scorecard" },
-      { label: "Transport by Region", href: "/transport-by-region" },
-      {
-        label: "SigmaNest Blocked Orders",
-        href: "/sigmanest-blocked-orders",
-      },
-    ],
-  },
-];
-
-// A route matches a nav item when it is the exact path or a nested path beneath
-// it — never a sibling that merely shares the same prefix (so /stock stays
-// distinct from /stock-movements).
-
-// A prominent highlight for the active link — a primary-tinted background,
-// semibold text and a left accent bar — so it stands out from the muted hover.
+// The page you are on: filled, in full-strength ink, with a bar down its left
+// edge that lines up with the group's guide line.
 const ACTIVE_LINK_CLASS =
-  "data-active:border-l-2 data-active:border-l-primary data-active:bg-primary/10 data-active:font-semibold data-active:text-primary";
+  "data-active:bg-sidebar-accent data-active:font-medium data-active:text-sidebar-foreground";
 
-// The group header that owns the current page gets a subtler primary emphasis.
-const ACTIVE_GROUP_CLASS = "data-active:font-semibold data-active:text-primary";
+// The group holding the current page. It reads as emphasised rather than
+// selected, since the group itself is not a page.
+const ACTIVE_GROUP_CLASS =
+  "data-active:bg-sidebar-accent/60 data-active:font-medium data-active:text-sidebar-foreground";
+
+const GROUP_BUTTON_CLASS =
+  "h-10 gap-3 rounded-lg px-2.5 text-base font-medium text-sidebar-foreground/80 transition-colors group-data-[collapsible=icon]:mx-auto hover:bg-sidebar-accent hover:text-sidebar-foreground [&>svg]:text-sidebar-foreground/60 [&>svg]:transition-colors hover:[&>svg]:text-sidebar-foreground";
 
 export const AppSidebar = () => {
   const pathname = usePathname();
+  const { isMobile, setOpen, state } = useSidebar();
   const [query, setQuery] = useState("");
-
-  const chevronClass = (isExpanded: boolean) =>
-    cn("ms-auto transition-transform", { "rotate-90": isExpanded });
+  const searchRef = useRef<HTMLInputElement>(null);
 
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {};
@@ -399,6 +77,7 @@ export const AppSidebar = () => {
 
   const trimmedQuery = query.trim().toLowerCase();
   const isSearching = trimmedQuery.length > 0;
+  const isCollapsed = state === "collapsed" && !isMobile;
 
   const searchResults = useMemo(() => {
     if (!trimmedQuery) {
@@ -411,27 +90,87 @@ export const AppSidebar = () => {
     );
   }, [trimmedQuery]);
 
+  // The rail opens on hover and closes again on the way out. Tab does the same,
+  // so the nav is reachable without a pointer; the panel only closes once focus
+  // has actually left it, never while moving between its own links.
+  //
+  // On a phone the panel is a sheet the user opens deliberately, so none of
+  // this applies — and the props would land on the sheet's own root rather than
+  // on anything a pointer can hover.
+  const railProps = isMobile
+    ? {}
+    : {
+        className:
+          "border-r border-sidebar-border transition-shadow duration-200 group-data-[state=expanded]:shadow-2xl",
+        onMouseEnter: () => setOpen(true),
+        onMouseLeave: () => setOpen(false),
+        onFocusCapture: () => setOpen(true),
+        onBlurCapture: (event: FocusEvent<HTMLDivElement>) => {
+          if (!event.currentTarget.contains(event.relatedTarget)) {
+            setOpen(false);
+          }
+        },
+      };
+
+  const openSearch = () => {
+    setOpen(true);
+    // The field is only rendered at full width, so it can be focused once the
+    // panel has been told to expand.
+    requestAnimationFrame(() => searchRef.current?.focus());
+  };
+
   return (
-    <Sidebar>
-      <SidebarHeader className="gap-3 px-4 py-5">
-        <span className="text-lg font-semibold tracking-tight">Swedinox</span>
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-2 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <SidebarInput
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search…"
+    <Sidebar collapsible="icon" {...railProps}>
+      <SidebarHeader className="gap-3 overflow-hidden p-3 pb-2">
+        <Link
+          href={DASHBOARD_HREF}
+          aria-label="Swedinox dashboard"
+          className={cn(
+            "flex min-w-0 items-center gap-3 rounded-lg transition-opacity hover:opacity-80",
+            isCollapsed && "justify-center",
+          )}
+        >
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+            <Layers size={16} />
+          </span>
+          {!isCollapsed && (
+            <span className="flex min-w-0 flex-col">
+              <span className="text-sm font-semibold tracking-tight">
+                Swedinox
+              </span>
+              <span className="text-xs text-sidebar-foreground/60">
+                Back office
+              </span>
+            </span>
+          )}
+        </Link>
+
+        {isCollapsed ? (
+          <button
+            type="button"
+            onClick={openSearch}
             aria-label="Search navigation"
-            className="ps-8"
-          />
-        </div>
+            className="mx-auto flex size-8 items-center justify-center rounded-lg text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+          >
+            <Search size={16} />
+          </button>
+        ) : (
+          <div className="relative">
+            <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-sidebar-foreground/50" />
+            <SidebarInput
+              ref={searchRef}
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search…"
+              aria-label="Search navigation"
+              className="h-9 rounded-lg border-sidebar-border bg-sidebar-accent/50 ps-8 text-sm"
+            />
+          </div>
+        )}
       </SidebarHeader>
 
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>
-            {isSearching ? "Results" : "Navigation"}
-          </SidebarGroupLabel>
+      <SidebarContent className="px-2">
+        <SidebarGroup className="p-0">
           <SidebarGroupContent>
             {isSearching && searchResults.length > 0 && (
               <SidebarMenu className="gap-1">
@@ -441,12 +180,14 @@ export const AppSidebar = () => {
                       render={<Link href={item.href} />}
                       isActive={isPathActive(item.href, pathname)}
                       className={cn(
-                        "h-auto min-h-8 flex-col items-start gap-0.5 py-1.5 whitespace-normal",
+                        "h-auto min-h-9 flex-col items-start gap-0.5 rounded-lg px-2.5 py-1.5 whitespace-normal",
                         ACTIVE_LINK_CLASS,
                       )}
                     >
-                      <span className="w-full leading-snug">{item.label}</span>
-                      <span className="text-xs text-sidebar-foreground/60">
+                      <span className="w-full text-sm leading-snug">
+                        {item.label}
+                      </span>
+                      <span className="text-xs text-sidebar-foreground/55">
                         {item.groupLabel}
                       </span>
                     </SidebarMenuButton>
@@ -456,24 +197,24 @@ export const AppSidebar = () => {
             )}
 
             {isSearching && searchResults.length === 0 && (
-              <p className="px-2 py-1.5 text-sm text-muted-foreground">
+              <p className="px-2.5 py-2 text-sm text-sidebar-foreground/60">
                 No results for “{query.trim()}”
               </p>
             )}
 
             {!isSearching && (
-              <SidebarMenu>
+              <SidebarMenu className="gap-0.5">
                 {/* The overview sits above the groups and is matched on the
-                    exact path: every route starts with "/", so the usual
-                    prefix test would leave it lit on every page. */}
+                    exact path: every route starts with "/", so the usual prefix
+                    test would leave it lit on every page. */}
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     render={<Link href={DASHBOARD_HREF} />}
                     isActive={pathname === DASHBOARD_HREF}
-                    className={ACTIVE_GROUP_CLASS}
+                    className={cn(GROUP_BUTTON_CLASS, ACTIVE_GROUP_CLASS)}
                   >
                     <LayoutDashboard />
-                    <span>Dashboard</span>
+                    {!isCollapsed && <span>Dashboard</span>}
                   </SidebarMenuButton>
                 </SidebarMenuItem>
 
@@ -488,26 +229,52 @@ export const AppSidebar = () => {
                       <SidebarMenuButton
                         aria-expanded={isExpanded}
                         isActive={isGroupActive && !isExpanded}
-                        className={ACTIVE_GROUP_CLASS}
+                        className={cn(GROUP_BUTTON_CLASS, ACTIVE_GROUP_CLASS)}
                         onClick={() => toggleGroup(group.key)}
                       >
                         <Icon />
-                        <span>{group.label}</span>
-                        <ChevronRight className={chevronClass(isExpanded)} />
+                        {!isCollapsed && (
+                          <>
+                            <span>{group.label}</span>
+                            <ChevronRight
+                              className={cn(
+                                "ms-auto text-sidebar-foreground/40 transition-transform duration-200",
+                                { "rotate-90": isExpanded },
+                              )}
+                            />
+                          </>
+                        )}
                       </SidebarMenuButton>
                       {isExpanded && (
-                        <SidebarMenuSub>
-                          {group.items.map((item) => (
-                            <SidebarMenuSubItem key={item.href}>
-                              <SidebarMenuSubButton
-                                render={<Link href={item.href} />}
-                                isActive={isPathActive(item.href, pathname)}
-                                className={ACTIVE_LINK_CLASS}
-                              >
-                                <span>{item.label}</span>
-                              </SidebarMenuSubButton>
-                            </SidebarMenuSubItem>
-                          ))}
+                        <SidebarMenuSub className="mx-4 my-1 gap-0.5 border-sidebar-border px-2.5 py-0">
+                          {group.items.map((item) => {
+                            const isItemActive = isPathActive(
+                              item.href,
+                              pathname,
+                            );
+                            return (
+                              <SidebarMenuSubItem key={item.href}>
+                                <SidebarMenuSubButton
+                                  render={<Link href={item.href} />}
+                                  size="md"
+                                  isActive={isItemActive}
+                                  className={cn(
+                                    "relative",
+                                    LINK_CLASS,
+                                    ACTIVE_LINK_CLASS,
+                                  )}
+                                >
+                                  {isItemActive && (
+                                    <span
+                                      aria-hidden
+                                      className="absolute top-1/2 -left-2.5 h-4 w-0.5 -translate-y-1/2 rounded-full bg-sidebar-primary"
+                                    />
+                                  )}
+                                  <span>{item.label}</span>
+                                </SidebarMenuSubButton>
+                              </SidebarMenuSubItem>
+                            );
+                          })}
                         </SidebarMenuSub>
                       )}
                     </SidebarMenuItem>
@@ -518,6 +285,8 @@ export const AppSidebar = () => {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+
+      <SidebarFooter className="p-3 group-data-[collapsible=icon]:hidden"></SidebarFooter>
     </Sidebar>
   );
 };
