@@ -8,6 +8,7 @@ import {
   getContactsForCompany,
 } from "@/app/(dashboard)/contacts/actions";
 import { SelectOption } from "@/components/shadcn/select";
+import { companyOptionLabel } from "@/lib/helpers";
 import {
   counterOrderPriorities,
   counterOrderStatuses,
@@ -32,10 +33,6 @@ type Props = {
 
 const emptyOption: SelectOption = { value: "", label: "Empty" };
 
-const companyLabel = (company: CompanyOption): string =>
-  [company.searchCode1, company.companyName].filter(Boolean).join(" - ") ||
-  company.uuid;
-
 export const CounterOrderHeaderEditor = ({
   counterOrderUuid,
   defaultValues,
@@ -57,7 +54,7 @@ export const CounterOrderHeaderEditor = ({
     { value: "", label: "Select an option" },
     ...companies.map((company) => ({
       value: company.uuid,
-      label: companyLabel(company),
+      label: companyOptionLabel(company),
     })),
   ];
 

@@ -5,22 +5,11 @@ import { FileText, X } from "lucide-react";
 import { ContractOption } from "@/app/(dashboard)/orders/actions";
 import { OrderFormValues } from "@/app/(dashboard)/orders/validation";
 import { Select } from "@/components/shadcn/select";
-import { CONTRACT_TYPE_LABELS } from "@/lib/labels";
+import { contractOptionLabel } from "@/lib/helpers";
 
 type Props = {
   contracts: ContractOption[];
 };
-
-const contractLabel = (contract: ContractOption): string =>
-  [
-    contract.code,
-    contract.description,
-    contract.contractType
-      ? CONTRACT_TYPE_LABELS[contract.contractType]
-      : null,
-  ]
-    .filter(Boolean)
-    .join(" — ");
 
 export const ContractsSection = ({ contracts }: Props) => {
   const { watch, setValue } = useFormContext<OrderFormValues>();
@@ -32,7 +21,7 @@ export const ContractsSection = ({ contracts }: Props) => {
       .filter((contract) => !selected.includes(contract.uuid))
       .map((contract) => ({
         value: contract.uuid,
-        label: contractLabel(contract),
+        label: contractOptionLabel(contract),
       })),
   ];
 
@@ -51,7 +40,7 @@ export const ContractsSection = ({ contracts }: Props) => {
                 >
                   <FileText className="size-4 shrink-0 text-muted-foreground" />
                   <span className="flex-1 truncate">
-                    {contract ? contractLabel(contract) : uuid}
+                    {contract ? contractOptionLabel(contract) : uuid}
                   </span>
                   <button
                     type="button"

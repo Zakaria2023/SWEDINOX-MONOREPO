@@ -17,6 +17,7 @@ import { TimePicker } from "@/components/shadcn/time-picker";
 import { DialogFormFooter } from "@/components/ui/dialog-form-footer";
 import { FormLabel } from "@/components/ui/form-field";
 import { visitReportContactMethods, visitReportReasons } from "@/lib/enums";
+import { contactOptionLabel } from "@/lib/helpers";
 import {
   VISIT_REPORT_CONTACT_METHOD_LABELS,
   VISIT_REPORT_REASON_LABELS,
@@ -42,11 +43,6 @@ type Props = {
   isEditing?: boolean;
 };
 
-const contactLabel = (contact: CompanyContactInput) =>
-  [contact.firstName, contact.lastName].filter(Boolean).join(" ") ||
-  contact.email ||
-  "Contact";
-
 export const VisitReportDialog = ({
   isOpen,
   onOpenChange,
@@ -65,7 +61,7 @@ export const VisitReportDialog = ({
     contactOptions ??
     contacts.map((contact, index) => ({
       value: String(index),
-      label: contactLabel(contact),
+      label: contactOptionLabel(contact),
     }));
   const hasContacts = options.length > 0;
 

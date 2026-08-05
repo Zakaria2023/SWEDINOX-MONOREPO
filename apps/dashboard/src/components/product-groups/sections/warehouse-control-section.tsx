@@ -6,6 +6,7 @@ import { Checkbox } from "@/components/shadcn/checkbox";
 import { Input } from "@/components/shadcn/input";
 import { FormLabel } from "@/components/ui/form-field";
 import { FormSelectField } from "@/components/ui/form-select-field";
+import { enumOptions } from "@/lib/helpers";
 import {
   customerLabelOptions,
   stockLabelPrintingOptions,
@@ -13,22 +14,15 @@ import {
 } from "@/lib/enums";
 import { CUSTOMER_LABEL_OPTION_LABELS, STOCK_LABEL_PRINTING_LABELS, STOCK_LABEL_TYPE_LABELS } from "@/lib/labels";
 
-const emptyOption = { value: "", label: "Empty" };
-
-const makeEnumOptions = <T extends string>(
-  values: readonly T[],
-  labels: Record<T, string>,
-) => [emptyOption, ...values.map((v) => ({ value: v, label: labels[v] }))];
-
-const stockLabelTypeOptions = makeEnumOptions(
+const stockLabelTypeOptions = enumOptions(
   stockLabelTypes,
   STOCK_LABEL_TYPE_LABELS,
 );
-const stockLabelPrintingOpts = makeEnumOptions(
+const stockLabelPrintingOpts = enumOptions(
   stockLabelPrintingOptions,
   STOCK_LABEL_PRINTING_LABELS,
 );
-const customerLabelOpts = makeEnumOptions(
+const customerLabelOpts = enumOptions(
   customerLabelOptions,
   CUSTOMER_LABEL_OPTION_LABELS,
 );

@@ -1,7 +1,7 @@
 "use client";
 
 import { ReservedOrderItemOption } from "@/app/(dashboard)/invoices/actions";
-import { STOCK_UNIT_LABELS } from "@/lib/labels";
+import { stockUnitLabel } from "@/lib/helpers";
 
 type Props = {
   reservedItems: ReservedOrderItemOption[];
@@ -12,9 +12,6 @@ type Props = {
   onQuantityChange: (uuid: string, quantity: string) => void;
   isPending: boolean;
 };
-
-const unitLabel = (unit: ReservedOrderItemOption["unit"]) =>
-  unit ? STOCK_UNIT_LABELS[unit] : "";
 
 export const InvoiceOrderItemsSection = ({
   reservedItems,
@@ -68,7 +65,7 @@ export const InvoiceOrderItemsSection = ({
                 {partlyBilled
                   ? `${item.quantity} of ${item.orderedQuantity} left`
                   : item.quantity}{" "}
-                {unitLabel(item.unit)}
+                {stockUnitLabel(item.unit)}
               </span>
               <label className="flex items-center gap-2 text-sm">
                 <span className="text-muted-foreground">Bill</span>

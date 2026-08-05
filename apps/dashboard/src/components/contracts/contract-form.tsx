@@ -7,7 +7,8 @@ import { useContractSubmit } from "@/app/(dashboard)/contracts/use-contract-subm
 import { ContractFormValues } from "@/app/(dashboard)/contracts/validation";
 import { FormActions } from "@/components/ui/form-actions";
 import { FormError } from "@/components/ui/form-error";
-import { ContractableRole, contractableRoles } from "@/lib/enums";
+import { ContractableRole } from "@/lib/enums";
+import { contractableRolesOf } from "@/lib/helpers";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -31,8 +32,6 @@ type ContractFormProps = {
   contractUuid?: string;
   defaultValues?: ContractFormValues;
 };
-
-const contractableRoleSet = new Set(contractableRoles as readonly string[]);
 
 export const ContractForm = ({
   groups,
@@ -68,8 +67,8 @@ export const ContractForm = ({
   }, [isEditing, router, state.success]);
 
   // Only companies that carry at least one contractable role
-  const contractableCompanies = availableCompanies.filter((c) =>
-    c.roles?.some((r) => contractableRoleSet.has(r)),
+  const contractableCompanies = availableCompanies.filter(
+    (company) => contractableRolesOf(company.roles).length > 0,
   );
 
   const openDialog = () => {

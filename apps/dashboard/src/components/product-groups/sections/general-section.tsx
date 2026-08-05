@@ -6,6 +6,7 @@ import { Checkbox } from "@/components/shadcn/checkbox";
 import { Input } from "@/components/shadcn/input";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import { FormSelectField } from "@/components/ui/form-select-field";
+import { enumOptions } from "@/lib/helpers";
 import {
   articleGroups,
   productShapes,
@@ -16,15 +17,8 @@ type Props = {
   parentGroupOptions: { value: string; label: string }[];
 };
 
-const emptyOption = { value: "", label: "Empty" };
-
-const makeEnumOptions = <T extends string>(
-  values: readonly T[],
-  labels: Record<T, string>,
-) => [emptyOption, ...values.map((v) => ({ value: v, label: labels[v] }))];
-
-const productShapeOptions = makeEnumOptions(productShapes, PRODUCT_SHAPE_LABELS);
-const articleGroupOptions = makeEnumOptions(articleGroups, ARTICLE_GROUP_LABELS);
+const productShapeOptions = enumOptions(productShapes, PRODUCT_SHAPE_LABELS);
+const articleGroupOptions = enumOptions(articleGroups, ARTICLE_GROUP_LABELS);
 
 export const GeneralSection = ({ parentGroupOptions }: Props) => {
   const {

@@ -6,6 +6,7 @@ import { Checkbox } from "@/components/shadcn/checkbox";
 import { Input } from "@/components/shadcn/input";
 import { FormLabel } from "@/components/ui/form-field";
 import { FormSelectField } from "@/components/ui/form-select-field";
+import { enumOptions } from "@/lib/helpers";
 import {
   certificaatOptions,
   purchasingUnits,
@@ -15,24 +16,17 @@ import {
 } from "@/lib/enums";
 import { CERTIFICAAT_LABELS, PURCHASING_UNIT_LABELS, REVENUE_GROUP_LABELS, SALES_UNIT_LABELS, VAT_CODE_LABELS } from "@/lib/labels";
 
-const emptyOption = { value: "", label: "Empty" };
-
-const makeEnumOptions = <T extends string>(
-  values: readonly T[],
-  labels: Record<T, string>,
-) => [emptyOption, ...values.map((v) => ({ value: v, label: labels[v] }))];
-
-const revenueGroupOptions = makeEnumOptions(
+const revenueGroupOptions = enumOptions(
   revenueGroups,
   REVENUE_GROUP_LABELS,
 );
-const salesUnitOpts = makeEnumOptions(salesUnitOptions, SALES_UNIT_LABELS);
-const purchasingUnitOptions = makeEnumOptions(
+const salesUnitOpts = enumOptions(salesUnitOptions, SALES_UNIT_LABELS);
+const purchasingUnitOptions = enumOptions(
   purchasingUnits,
   PURCHASING_UNIT_LABELS,
 );
-const vatCodeOptions = makeEnumOptions(vatCodes, VAT_CODE_LABELS);
-const certificaatOpts = makeEnumOptions(certificaatOptions, CERTIFICAAT_LABELS);
+const vatCodeOptions = enumOptions(vatCodes, VAT_CODE_LABELS);
+const certificaatOpts = enumOptions(certificaatOptions, CERTIFICAAT_LABELS);
 
 export const SalesSection = () => {
   const { register, control, watch, setValue } =

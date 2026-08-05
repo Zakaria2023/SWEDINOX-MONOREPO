@@ -7,6 +7,7 @@ import {
   seedChartOfAccounts,
   TrialBalance,
 } from "@/app/(dashboard)/trial-balance/actions";
+import { formatMoneyOrDash } from "@/lib/helpers";
 import { LEDGER_ACCOUNT_TYPE_LABELS } from "@/lib/labels";
 import { Button } from "@/components/shadcn/button";
 import {
@@ -22,14 +23,6 @@ import {
 type Props = {
   trialBalance: TrialBalance;
 };
-
-const money = (value: number) =>
-  value === 0
-    ? "—"
-    : `€ ${value.toLocaleString("en-GB", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      })}`;
 
 export const TrialBalanceTable = ({ trialBalance }: Props) => {
   const [state, dispatch, isPending] = useActionState<
@@ -56,11 +49,11 @@ export const TrialBalanceTable = ({ trialBalance }: Props) => {
           <p className="font-medium">
             {trialBalance.balanced
               ? "The ledger balances."
-              : `The ledger is out by ${money(trialBalance.difference)}.`}
+              : `The ledger is out by ${formatMoneyOrDash(trialBalance.difference)}.`}
           </p>
           <p>
-            Debits {money(trialBalance.totalDebit)} against credits{" "}
-            {money(trialBalance.totalCredit)} across{" "}
+            Debits {formatMoneyOrDash(trialBalance.totalDebit)} against credits{" "}
+            {formatMoneyOrDash(trialBalance.totalCredit)} across{" "}
             {trialBalance.rows.length} account
             {trialBalance.rows.length === 1 ? "" : "s"}.
           </p>
@@ -90,22 +83,25 @@ export const TrialBalanceTable = ({ trialBalance }: Props) => {
           <p className="font-medium">
             {trialBalance.inventory.reconciled
               ? "Inventory agrees with the stock on the shelves."
-              : `Inventory is out by ${money(trialBalance.inventory.difference)} against the stock on the shelves.`}
+              : `Inventory is out by ${formatMoneyOrDash(trialBalance.inventory.difference)} against the stock on the shelves.`}
           </p>
           <p>
-            The ledger carries {money(trialBalance.inventory.ledgerValue)}; the
-            stock lots are valued at {money(trialBalance.inventory.stockValue)}.
+            The ledger carries{" "}
+            {formatMoneyOrDash(trialBalance.inventory.ledgerValue)}; the stock
+            lots are valued at{" "}
+            {formatMoneyOrDash(trialBalance.inventory.stockValue)}.
           </p>
           {trialBalance.inventory.deliveredNotInvoiced === 0 ? null : (
             <p>
-              {money(trialBalance.inventory.deliveredNotInvoiced)} of cost sits
-              on goods that have shipped and not been invoiced.
+              {formatMoneyOrDash(trialBalance.inventory.deliveredNotInvoiced)}{" "}
+              of cost sits on goods that have shipped and not been invoiced.
             </p>
           )}
           {trialBalance.inventory.returnedNotCredited === 0 ? null : (
             <p>
-              {money(trialBalance.inventory.returnedNotCredited)} of cost sits on
-              goods sent back to suppliers who have not credited them.
+              {formatMoneyOrDash(trialBalance.inventory.returnedNotCredited)} of
+              cost sits on goods sent back to suppliers who have not credited
+              them.
             </p>
           )}
           {trialBalance.inventory.reconciled ? null : (
@@ -129,7 +125,9 @@ export const TrialBalanceTable = ({ trialBalance }: Props) => {
           </p>
           <form action={dispatch}>
             <Button type="submit" variant="outline" disabled={isPending}>
-              {isPending ? "Creating…" : "Create the standard chart of accounts"}
+              {isPending
+                ? "Creating…"
+                : "Create the standard chart of accounts"}
             </Button>
           </form>
           {state.error ? (
@@ -172,7 +170,9 @@ export const TrialBalanceTable = ({ trialBalance }: Props) => {
                   <TableCell className="font-medium">{row.account}</TableCell>
                   <TableCell>
                     {row.accountName ?? (
-                      <span className="text-muted-foreground">Not in the chart</span>
+                      <span className="text-muted-foreground">
+                        Not in the chart
+                      </span>
                     )}
                   </TableCell>
                   <TableCell>
@@ -182,13 +182,13 @@ export const TrialBalanceTable = ({ trialBalance }: Props) => {
                   </TableCell>
                   <TableCell className="text-right">{row.lineCount}</TableCell>
                   <TableCell className="text-right whitespace-nowrap">
-                    {money(row.totalDebit)}
+                    {formatMoneyOrDash(row.totalDebit)}
                   </TableCell>
                   <TableCell className="text-right whitespace-nowrap">
-                    {money(row.totalCredit)}
+                    {formatMoneyOrDash(row.totalCredit)}
                   </TableCell>
                   <TableCell className="text-right font-medium whitespace-nowrap">
-                    {money(row.balance)}
+                    {formatMoneyOrDash(row.balance)}
                   </TableCell>
                 </TableRow>
               ))
@@ -199,13 +199,13 @@ export const TrialBalanceTable = ({ trialBalance }: Props) => {
               <TableRow>
                 <TableCell colSpan={4}>Total</TableCell>
                 <TableCell className="text-right whitespace-nowrap">
-                  {money(trialBalance.totalDebit)}
+                  {formatMoneyOrDash(trialBalance.totalDebit)}
                 </TableCell>
                 <TableCell className="text-right whitespace-nowrap">
-                  {money(trialBalance.totalCredit)}
+                  {formatMoneyOrDash(trialBalance.totalCredit)}
                 </TableCell>
                 <TableCell className="text-right whitespace-nowrap">
-                  {money(trialBalance.difference)}
+                  {formatMoneyOrDash(trialBalance.difference)}
                 </TableCell>
               </TableRow>
             </TableFooter>
