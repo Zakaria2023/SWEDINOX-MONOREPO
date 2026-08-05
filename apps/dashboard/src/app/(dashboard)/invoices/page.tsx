@@ -8,7 +8,7 @@ const InvoicesPage = async () => {
   const invoices = await getInvoices();
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <div className="flex items-start justify-between">
         <PageHeading title="Invoices" />
         <Link

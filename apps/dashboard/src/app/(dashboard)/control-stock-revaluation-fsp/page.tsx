@@ -6,7 +6,7 @@ const ControlStockRevaluationFspPage = async () => {
   const rows = await getStockRevaluationFsp();
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <PageHeading title="Control: Revaluation of Stock due to FSP-changes" />
       <StockRevaluationFspTable rows={rows} />
     </div>

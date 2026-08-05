@@ -6,7 +6,7 @@ const ContractsPerSupplierPage = async () => {
   const rows = await getContractsPerSupplier();
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <PageHeading title="Contracts per Supplier" />
       <ContractsPerSupplierTable rows={rows} />
     </div>

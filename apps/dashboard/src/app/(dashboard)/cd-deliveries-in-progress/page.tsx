@@ -6,7 +6,7 @@ const CdDeliveriesInProgressPage = async () => {
   const rows = await getCdDeliveriesInProgress();
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <PageHeading title="CD-deliveries in Progress" />
       <CdDeliveriesInProgressTable rows={rows} />
     </div>

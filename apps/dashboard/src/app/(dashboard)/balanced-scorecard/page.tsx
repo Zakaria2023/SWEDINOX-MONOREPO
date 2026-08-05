@@ -6,7 +6,7 @@ const BalancedScorecardPage = async () => {
   const rows = await getBalancedScorecard();
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <PageHeading title="Balanced Scorecard" />
       <BalancedScorecardTable rows={rows} />
     </div>

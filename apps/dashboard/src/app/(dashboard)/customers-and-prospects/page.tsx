@@ -6,7 +6,7 @@ const CustomersAndProspectsPage = async () => {
   const rows = await getCustomersAndProspects();
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <PageHeading title="Customers and Prospects" />
       <CustomersAndProspectsTable rows={rows} />
     </div>

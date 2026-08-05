@@ -6,7 +6,7 @@ const WarehouseWorkOrdersPage = async () => {
   const workOrders = await getWarehouseWorkOrders();
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <PageHeading title="Warehouse Work Orders" />
       <WarehouseWorkOrdersTable workOrders={workOrders} />
     </div>

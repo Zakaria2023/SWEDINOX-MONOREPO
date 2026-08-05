@@ -6,7 +6,7 @@ const DeliveriesToArrangePage = async () => {
   const lines = await getDeliveriesToArrange();
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <PageHeading title="Deliveries to be arranged without stock reservation" />
       <DeliveriesToArrangeTable lines={lines} />
     </div>

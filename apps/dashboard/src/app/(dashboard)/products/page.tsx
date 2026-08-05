@@ -7,7 +7,7 @@ const ProductsPage = async () => {
   const products = await getProducts();
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <div className="flex items-start justify-between">
         <PageHeading title="Products" />
         <Link

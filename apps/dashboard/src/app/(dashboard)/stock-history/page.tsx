@@ -6,7 +6,7 @@ const StockHistoryPage = async () => {
   const rows = await getStockHistory();
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <PageHeading title="Stock history" />
       <StockHistoryTable rows={rows} />
     </div>

@@ -6,7 +6,7 @@ const StockOnLocationPage = async () => {
   const stock = await getStockOnLocation();
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <PageHeading title="Stock on location" />
       <StockOnLocationTable stock={stock} />
     </div>

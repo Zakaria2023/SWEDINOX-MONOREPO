@@ -6,7 +6,7 @@ const PurchasesAndSalesPerRevenueGroupPage = async () => {
   const rows = await getPurchasesAndSalesPerRevenueGroup();
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <PageHeading title="Purchases and sales per revenue group" />
       <PurchasesAndSalesPerRevenueGroupTable rows={rows} />
     </div>

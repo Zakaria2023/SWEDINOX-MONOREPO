@@ -6,7 +6,7 @@ const JournalEntriesPage = async () => {
   const entries = await getJournalEntries();
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <PageHeading title="Journal entries" />
       <JournalEntriesTable entries={entries} />
     </div>

@@ -6,7 +6,7 @@ const OrderAdvicePage = async () => {
   const rows = await getOrderAdvice();
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <PageHeading title="Order advice" />
       <OrderAdviceTable rows={rows} />
     </div>

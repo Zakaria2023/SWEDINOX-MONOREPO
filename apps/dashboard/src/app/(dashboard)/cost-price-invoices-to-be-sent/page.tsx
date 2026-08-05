@@ -6,7 +6,7 @@ const CostPriceInvoicesToBeSentPage = async () => {
   const rows = await getCostPriceInvoicesToBeSent();
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <PageHeading title="Cost Price for Selling of Invoices to Be Sent" />
       <CostPriceInvoicesToBeSentTable rows={rows} />
     </div>

@@ -6,7 +6,7 @@ const PaymentRemindersPage = async () => {
   const reminders = await getPaymentReminders();
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <PageHeading title="Payment reminders" />
       <PaymentRemindersTable reminders={reminders} />
     </div>

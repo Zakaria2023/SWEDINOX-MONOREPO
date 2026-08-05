@@ -20,7 +20,7 @@ const NewPurchaseRequestPage = async () => {
   ];
 
   return (
-    <div className="max-w-5xl space-y-6 p-6">
+    <div className="max-w-5xl space-y-4">
       <PageHeading title="New Purchase Request" />
       <PurchaseRequestForm
         companies={companies}

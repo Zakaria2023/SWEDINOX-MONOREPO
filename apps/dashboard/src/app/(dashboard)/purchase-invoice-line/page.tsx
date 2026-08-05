@@ -6,7 +6,7 @@ const PurchaseInvoiceLinePage = async () => {
   const rows = await getPurchaseInvoiceLines();
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <PageHeading title="Purchase invoice line" />
       <PurchaseInvoiceLineTable rows={rows} />
     </div>

@@ -7,7 +7,7 @@ const CertificatesReceivedPage = async () => {
   const rows = await getCertificatesReceived();
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <PageHeading title="Certificates received" />
         <GenerateCertificatesButton />

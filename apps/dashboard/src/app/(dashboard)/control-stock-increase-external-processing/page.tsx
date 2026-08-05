@@ -6,7 +6,7 @@ const ControlStockIncreaseExternalProcessingPage = async () => {
   const rows = await getStockIncreaseExternalProcessing();
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <PageHeading title="Control: Stock Increase due to External Processing" />
       <StockIncreaseExternalProcessingTable rows={rows} />
     </div>

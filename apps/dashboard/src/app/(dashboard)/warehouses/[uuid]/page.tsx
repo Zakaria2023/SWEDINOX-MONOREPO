@@ -29,7 +29,7 @@ const WarehouseDetailPage = async ({ params }: Props) => {
         : { href: "/warehouse-sub-sections", label: "Warehouse Sub-sections" };
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <div>
         <Link
           href={origin.href}

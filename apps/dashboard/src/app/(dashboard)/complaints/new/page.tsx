@@ -12,7 +12,7 @@ const NewComplaintPage = async () => {
   ]);
 
   return (
-    <div className="max-w-3xl space-y-6 p-6">
+    <div className="max-w-3xl space-y-4">
       <PageHeading title="New Complaint" />
       <ComplaintForm
         companies={companies}

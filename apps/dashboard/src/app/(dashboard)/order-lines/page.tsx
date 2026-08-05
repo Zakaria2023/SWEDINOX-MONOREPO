@@ -6,7 +6,7 @@ const OrderLinesPage = async () => {
   const rows = await getOrderLines();
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <PageHeading title="Order lines" />
       <OrderLinesTable rows={rows} />
     </div>

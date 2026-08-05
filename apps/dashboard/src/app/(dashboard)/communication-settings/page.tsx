@@ -6,7 +6,7 @@ const CommunicationSettingsPage = async () => {
   const settings = await getCommunicationSettings();
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <PageHeading title="Communication Settings" />
       <CommunicationSettingsTable settings={settings} />
     </div>

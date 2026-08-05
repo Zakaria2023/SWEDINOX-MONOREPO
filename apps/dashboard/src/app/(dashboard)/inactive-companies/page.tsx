@@ -6,7 +6,7 @@ const InactiveCompaniesPage = async () => {
   const rows = await getInactiveCompanies();
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <PageHeading title="Inactive companies" />
       <InactiveCompaniesTable rows={rows} />
     </div>

@@ -6,7 +6,7 @@ const TransportByRegionPage = async () => {
   const rows = await getTransportByRegion();
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <PageHeading title="Transport by Region" />
       <TransportByRegionTable rows={rows} />
     </div>

@@ -6,7 +6,7 @@ const TextsPage = async () => {
   const texts = await getTexts();
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <PageHeading title="Texts" />
       <TextsTable texts={texts} />
     </div>

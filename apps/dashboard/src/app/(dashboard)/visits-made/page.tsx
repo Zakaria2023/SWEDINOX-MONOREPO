@@ -6,7 +6,7 @@ const VisitsMadePage = async () => {
   const rows = await getVisitsMade();
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <PageHeading title="Visits made" />
       <VisitsMadeTable rows={rows} />
     </div>

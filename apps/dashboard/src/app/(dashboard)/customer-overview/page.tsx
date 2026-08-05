@@ -6,7 +6,7 @@ const CustomerOverviewPage = async () => {
   const customers = await getCustomerOverview();
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <PageHeading title="Customer Overview" />
       <CustomerOverviewTable customers={customers} />
     </div>

@@ -6,7 +6,7 @@ const SoldProductsNotAdvisedPage = async () => {
   const rows = await getSoldProductsNotAdvised();
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <PageHeading title="Sold products not on the order recommendation" />
       <SoldProductsNotAdvisedTable rows={rows} />
     </div>

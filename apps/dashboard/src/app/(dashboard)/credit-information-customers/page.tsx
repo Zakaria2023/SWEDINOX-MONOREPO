@@ -6,7 +6,7 @@ const CreditInformationCustomersPage = async () => {
   const rows = await getCreditInformationCustomers();
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <PageHeading title="Credit information customers" />
       <CreditInformationCustomersTable rows={rows} />
     </div>

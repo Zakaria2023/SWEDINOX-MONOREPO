@@ -6,7 +6,7 @@ const WarehouseAndProductionWorkOrdersPage = async () => {
   const rows = await getWarehouseAndProductionWorkOrders();
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <PageHeading title="Warehouse- and production workorders" />
       <WarehouseAndProductionWorkOrdersTable rows={rows} />
     </div>

@@ -6,7 +6,7 @@ const StockOnAdvicePage = async () => {
   const rows = await getStockOnAdvice();
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <PageHeading title="StockOn advice" />
       <StockOnAdviceTable rows={rows} />
     </div>

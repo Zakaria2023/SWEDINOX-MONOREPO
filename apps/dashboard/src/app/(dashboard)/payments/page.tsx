@@ -6,7 +6,7 @@ const PaymentsPage = async () => {
   const rows = await getPayments();
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <PageHeading title="Payments" />
       <PaymentsTableContent rows={rows} />
     </div>

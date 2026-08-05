@@ -32,7 +32,7 @@ const EditQuotePage = async ({ params }: Props) => {
   }
 
   return (
-    <div className="max-w-6xl space-y-6 p-6">
+    <div className="max-w-6xl space-y-4">
       <div>
         <Link
           href={`/quotes/${uuid}`}

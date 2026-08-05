@@ -6,7 +6,7 @@ const SawingLayoutsPage = async () => {
   const layouts = await getSawingLayouts();
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <PageHeading title="Sawing Layouts" />
       <SawingLayoutsTable layouts={layouts} />
     </div>

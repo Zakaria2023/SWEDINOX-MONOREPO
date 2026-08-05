@@ -6,7 +6,7 @@ const PurchaseInvoicesToBeReceivedPage = async () => {
   const rows = await getPurchaseInvoicesToBeReceived();
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <PageHeading title="Purchase invoices to be received" />
       <PurchaseInvoicesToBeReceivedTable rows={rows} />
     </div>

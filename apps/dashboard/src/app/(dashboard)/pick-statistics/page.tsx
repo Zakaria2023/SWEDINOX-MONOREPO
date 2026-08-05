@@ -6,7 +6,7 @@ const PickStatisticsPage = async () => {
   const statistics = await getPickStatistics();
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <PageHeading title="Pick Statistic" />
       <PickStatisticsTable statistics={statistics} />
     </div>

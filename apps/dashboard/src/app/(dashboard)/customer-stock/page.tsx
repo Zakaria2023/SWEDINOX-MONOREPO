@@ -6,7 +6,7 @@ const CustomerStockPage = async () => {
   const stock = await getCustomerStock();
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <PageHeading title="Customer stock on location" />
       <CustomerStockTable stock={stock} />
     </div>

@@ -5,7 +5,7 @@ import { PageHeading } from "@/components/layout/page-heading";
 import { DataTableFallback } from "@/components/ui/data-table-fallback";
 
 const ComplaintsPage = () => (
-  <div className="space-y-6 p-6">
+  <div className="space-y-4">
     <div className="flex items-start justify-between">
       <PageHeading title="Complaints" />
       <Link

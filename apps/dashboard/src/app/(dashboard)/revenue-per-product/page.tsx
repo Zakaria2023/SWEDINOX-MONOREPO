@@ -6,7 +6,7 @@ const RevenuePerProductPage = async () => {
   const rows = await getRevenuePerProduct();
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <PageHeading title="Revenue per product" />
       <RevenuePerProductTable rows={rows} />
     </div>

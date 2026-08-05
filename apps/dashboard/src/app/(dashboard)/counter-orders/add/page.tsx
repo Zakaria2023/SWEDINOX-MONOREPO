@@ -17,7 +17,7 @@ const AddCounterOrderPage = async () => {
     ]);
 
   return (
-    <div className="max-w-5xl space-y-6 p-6">
+    <div className="max-w-5xl space-y-4">
       <div>
         <Link
           href="/counter-orders"

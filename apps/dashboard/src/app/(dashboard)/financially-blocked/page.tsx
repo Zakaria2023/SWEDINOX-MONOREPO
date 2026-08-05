@@ -6,7 +6,7 @@ const FinanciallyBlockedPage = async () => {
   const rows = await getFinanciallyBlocked();
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <PageHeading title="Financially blocked quotes and orders" />
       <FinanciallyBlockedTable rows={rows} />
     </div>

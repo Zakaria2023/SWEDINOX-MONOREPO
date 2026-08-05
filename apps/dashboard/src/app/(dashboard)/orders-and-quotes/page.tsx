@@ -6,7 +6,7 @@ const OrdersAndQuotesPage = async () => {
   const rows = await getOrdersAndQuotes();
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <PageHeading title="Orders and Quotes" />
       <OrdersAndQuotesTable rows={rows} />
     </div>

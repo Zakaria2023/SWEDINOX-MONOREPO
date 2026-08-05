@@ -6,7 +6,7 @@ const RemarksPerCompanyPage = async () => {
   const rows = await getRemarksPerCompany();
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <PageHeading title="Remarks per company" />
       <RemarksPerCompanyTable rows={rows} />
     </div>

@@ -6,7 +6,7 @@ const PurchaseOrdersAndQuotesPage = async () => {
   const rows = await getPurchaseOrdersAndQuotes();
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <PageHeading title="Purchase orders and quotes" />
       <PurchaseOrdersAndQuotesTable rows={rows} />
     </div>

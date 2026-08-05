@@ -6,7 +6,7 @@ const CountListDeviationsPage = async () => {
   const deviations = await getCountListDeviations();
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <PageHeading title="Deviations in Count Lists" />
       <CountListDeviationsTable deviations={deviations} />
     </div>

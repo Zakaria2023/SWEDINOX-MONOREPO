@@ -31,7 +31,9 @@ const DashboardLayout = ({ children }: Props) => (
       <AppSidebar />
       <main className="flex min-w-0 flex-1 flex-col">
         <DashboardHeader />
-        <div className="flex-1 p-6">{children}</div>
+        {/* The one place a page's margin is set. Tight at the top and against
+            the nav, so the work starts near the top-left corner. */}
+        <div className="flex-1 px-4 pt-3 pb-6">{children}</div>
       </main>
     </SidebarProvider>
   </TooltipProvider>

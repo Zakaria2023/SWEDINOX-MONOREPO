@@ -6,7 +6,7 @@ const TripDataPage = async () => {
   const trips = await getTripData();
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <PageHeading title="Trip data" />
       <TripDataTable trips={trips} />
     </div>

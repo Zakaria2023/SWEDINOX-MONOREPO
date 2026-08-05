@@ -13,7 +13,7 @@ const ReservationsPage = async () => {
   ]);
 
   return (
-    <div className="space-y-8 p-6">
+    <div className="space-y-6">
       <div className="space-y-4">
         <PageHeading title="Reservations" />
         <ReservationRecordsTable records={records} />

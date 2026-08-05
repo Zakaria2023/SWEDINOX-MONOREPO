@@ -19,7 +19,7 @@ const NestingDetailPage = async ({ params }: Props) => {
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <div>
         <Link
           href="/nesting"

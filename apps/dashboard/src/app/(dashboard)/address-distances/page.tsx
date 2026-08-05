@@ -6,7 +6,7 @@ const AddressDistancesPage = async () => {
   const addressDistances = await getAddressDistances();
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <PageHeading title="Address Distances" />
       <AddressDistancesTable addressDistances={addressDistances} />
     </div>

@@ -38,7 +38,7 @@ const AddCompanyPage = async () => {
   ]);
 
   return (
-    <div className="max-w-4xl space-y-6 p-6">
+    <div className="max-w-4xl space-y-4">
       <PageHeading title="Add Company" />
       <CompanyForm
         availableContracts={availableContracts}

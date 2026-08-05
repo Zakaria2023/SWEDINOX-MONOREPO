@@ -6,7 +6,7 @@ const DeliveriesFromMissingBatchPage = async () => {
   const rows = await getDeliveryCertificateRows("missing-batch");
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <PageHeading title="Deliveries from the Missing Batch" />
       <DeliveriesCertificateTable
         rows={rows}

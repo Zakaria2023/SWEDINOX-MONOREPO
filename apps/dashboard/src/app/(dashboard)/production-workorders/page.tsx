@@ -7,7 +7,7 @@ const ProductionWorkOrdersPage = async () => {
   const lines = await getProductionWorkOrderLines();
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <div className="flex items-start justify-between gap-4">
         <PageHeading title="Production workorders" />
         <GenerateProductionButton />

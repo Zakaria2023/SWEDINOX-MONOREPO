@@ -6,7 +6,7 @@ const ToVisitCallPage = async () => {
   const rows = await getVisitSchedule();
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <PageHeading title="To visit / call" />
       <VisitScheduleTable rows={rows} />
     </div>

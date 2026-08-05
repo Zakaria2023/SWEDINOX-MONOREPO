@@ -6,7 +6,7 @@ const FreightMovementsPage = async () => {
   const freightMovements = await getFreightMovements();
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <PageHeading title="Freight Movement" />
       <FreightMovementsTable freightMovements={freightMovements} />
     </div>

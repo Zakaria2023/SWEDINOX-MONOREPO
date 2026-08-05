@@ -6,7 +6,7 @@ const CustomerRevenuePerProductGroupPage = async () => {
   const rows = await getCustomerRevenuePerProductGroup();
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <PageHeading title="Customer revenue per product group" />
       <CustomerRevenuePerProductGroupTable rows={rows} />
     </div>

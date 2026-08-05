@@ -13,7 +13,7 @@ const QuoteLinesPage = async () => {
   ]);
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <PageHeading title="Quote lines" />
       <ConvertQuoteToOrder quotes={convertibleQuotes} />
       <QuoteLinesTable rows={rows} />

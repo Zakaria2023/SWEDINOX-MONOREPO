@@ -6,7 +6,7 @@ const RevenueVsBudgetPage = async () => {
   const rows = await getRevenueVsBudget();
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <PageHeading title="Revenue w.r.t. Budget" />
       <RevenueVsBudgetTable rows={rows} />
     </div>

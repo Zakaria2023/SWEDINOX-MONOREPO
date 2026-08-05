@@ -6,7 +6,7 @@ const CapacityChecksPage = async () => {
   const checks = await getCapacityChecks();
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <PageHeading title="Capacity Checks" />
       <CapacityChecksTable checks={checks} />
     </div>

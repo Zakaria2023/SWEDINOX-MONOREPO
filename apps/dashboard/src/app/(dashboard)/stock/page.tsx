@@ -6,7 +6,7 @@ const StockPage = async () => {
   const stock = await getStock();
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <PageHeading title="Stock" />
       <StockTable stock={stock} />
     </div>

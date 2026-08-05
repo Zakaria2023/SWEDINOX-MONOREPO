@@ -6,7 +6,7 @@ const UnblockedOrdersPage = async () => {
   const rows = await getUnblockedOrders();
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <PageHeading title="Unblocked orders" />
       <UnblockedOrdersTable rows={rows} />
     </div>

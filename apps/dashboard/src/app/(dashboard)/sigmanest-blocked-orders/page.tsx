@@ -6,7 +6,7 @@ const SigmaNestBlockedOrdersPage = async () => {
   const rows = await getSigmaNestBlockedOrders();
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <PageHeading title="SigmaNest blocked orders" />
       <SigmaNestBlockedOrdersTable rows={rows} />
     </div>

@@ -6,7 +6,7 @@ const OrdersStillToBeCalledPage = async () => {
   const rows = await getOrdersStillToBeCalled();
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4">
       <PageHeading title="Orders still to be called" />
       <OrdersStillToBeCalledTable rows={rows} />
     </div>
