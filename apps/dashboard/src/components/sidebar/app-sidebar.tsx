@@ -21,6 +21,7 @@ import {
   ChevronRight,
   ContactRound,
   Factory,
+  LayoutDashboard,
   MapPin,
   MessageSquareWarning,
   PackageCheck,
@@ -46,6 +47,8 @@ type NavGroup = {
   icon: LucideIcon;
   items: NavItem[];
 };
+
+const DASHBOARD_HREF = "/";
 
 const NAV_GROUPS: NavGroup[] = [
   {
@@ -460,6 +463,20 @@ export const AppSidebar = () => {
 
             {!isSearching && (
               <SidebarMenu>
+                {/* The overview sits above the groups and is matched on the
+                    exact path: every route starts with "/", so the usual
+                    prefix test would leave it lit on every page. */}
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    render={<Link href={DASHBOARD_HREF} />}
+                    isActive={pathname === DASHBOARD_HREF}
+                    className={ACTIVE_GROUP_CLASS}
+                  >
+                    <LayoutDashboard />
+                    <span>Dashboard</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+
                 {NAV_GROUPS.map((group) => {
                   const Icon = group.icon;
                   const isExpanded = openGroups[group.key];

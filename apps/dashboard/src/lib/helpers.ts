@@ -134,6 +134,16 @@ export const formatNumber = (value: number): string =>
 export const formatPercent = (value: number): string =>
   `${formatNumber(value)}%`;
 
+/**
+ * A count with the noun it counts — `1 order`, `12 orders` — for the one-line
+ * summaries under a figure.
+ */
+export const countLabel = (
+  count: number,
+  singular: string,
+  plural = `${singular}s`,
+): string => `${formatNumber(count)} ${pluralize(count, singular, plural)}`;
+
 // The home country for statistics purposes: a counterparty anywhere else counts
 // as "abroad" on the SFN goods-flow return.
 const DOMESTIC_COUNTRY_NAMES = ["nl", "nld", "netherlands", "nederland"];
@@ -1838,6 +1848,42 @@ export const periodKey = (year: number, month: number): string =>
   `${year}-${month}`;
 
 /**
+ * The last `count` calendar months, oldest first, ending with the month that
+ * `from` falls in.
+ *
+ * Each entry carries the key the SQL period rows are matched on, the short
+ * label a chart axis shows, and the first day of the month a query filters
+ * from. Built from local calendar parts rather than by subtracting days, so a
+ * 31st never rolls into the wrong month.
+ */
+export const recentMonths = (
+  count: number,
+  from: Date = new Date(),
+): Array<{
+  key: string;
+  label: string;
+  year: number;
+  month: number;
+  start: string;
+}> =>
+  Array.from({ length: count }, (_, index) => {
+    const date = new Date(
+      from.getFullYear(),
+      from.getMonth() - (count - 1 - index),
+      1,
+    );
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1;
+    return {
+      key: periodKey(year, month),
+      label: date.toLocaleDateString("en-US", { month: "short" }),
+      year,
+      month,
+      start: `${year}-${String(month).padStart(2, "0")}-01`,
+    };
+  });
+
+/**
  * The number inside a single-row `{ value: COUNT(*) }` select — the shape the
  * app's count queries project — as a plain number, 0 when no row came back.
  */
@@ -2652,3 +2698,231 @@ export const isPurchaseReturnOrderEditable = (
   status: ReturnOrderStatus | null,
 ): boolean =>
   status !== "received" && status !== "credited" && status !== "cancelled";
+
+// ---------------------------------------------------------------------------
+// Charts
+//
+// The geometry and the shortened figures the dashboard's charts are drawn from.
+// They are plain arithmetic on numbers, so they live here rather than inside a
+// component: every chart on the page then rounds its axis, rounds its bar caps
+// and shortens its labels the same way.
+// ---------------------------------------------------------------------------
+
+/** Whether a figure moved up, moved down, or held still against a baseline. */
+export type TrendDirection = "up" | "down" | "flat";
+
+/** What kind of figure a chart plots, which decides how its labels read. */
+export type ChartValueFormat = "money" | "number";
+
+/**
+ * A shortened number for a headline figure — `1,284`, `12.9K`, `4.2M`.
+ *
+ * Only for a value read on its own (a tile, an axis tick). A column of figures
+ * that has to add up keeps `formatNumber`, since rounding to one decimal makes
+ * the parts stop summing to the total.
+ */
+export const formatCompactNumber = (value: number): string => {
+  const magnitude = Math.abs(value);
+  if (magnitude >= 1_000_000) {
+    return `${(value / 1_000_000).toLocaleString("en-US", {
+      maximumFractionDigits: 1,
+    })}M`;
+  }
+  if (magnitude >= 10_000) {
+    return `${(value / 1_000).toLocaleString("en-US", {
+      maximumFractionDigits: 1,
+    })}K`;
+  }
+  return value.toLocaleString("en-US", { maximumFractionDigits: 0 });
+};
+
+/**
+ * The same shortening as a euro amount, e.g. `€ 4.2M`.
+ */
+export const formatCompactMoney = (value: number): string =>
+  `€ ${formatCompactNumber(value)}`;
+
+/**
+ * A percentage at one decimal, e.g. `12.4%` — the precision a rate is read at
+ * on a tile, where a second decimal is noise.
+ */
+export const formatPercentOneDecimal = (value: number): string =>
+  formatPercent(Math.round(value * 10) / 10);
+
+/**
+ * A figure as a chart reads it: exact, since this is the number the reader
+ * takes away from a tooltip or a bar.
+ */
+export const formatChartValue = (
+  value: number,
+  format: ChartValueFormat,
+): string => (format === "money" ? formatMoney(value) : formatNumber(value));
+
+/**
+ * The same figure shortened for an axis tick or a direct label, where the
+ * space is a few characters wide.
+ */
+export const formatChartTick = (
+  value: number,
+  format: ChartValueFormat,
+): string =>
+  format === "money" ? formatCompactMoney(value) : formatCompactNumber(value);
+
+/**
+ * Which way a figure moved, for the arrow beside it.
+ */
+export const trendDirection = (value: number): TrendDirection => {
+  if (value > 0) {
+    return "up";
+  }
+  if (value < 0) {
+    return "down";
+  }
+  return "flat";
+};
+
+/**
+ * The sentence under a revenue figure: how it compares with the same run of
+ * days a year earlier.
+ *
+ * A year with nothing invoiced in it is said so in words rather than shown as a
+ * percentage, because there is no baseline to be a percentage of.
+ */
+export const describeRevenueChange = (
+  changePercent: number | null,
+  previousYear: number,
+): { text: string; direction: TrendDirection } => {
+  if (changePercent === null) {
+    return {
+      text: `Nothing invoiced in the same run of ${previousYear}`,
+      direction: "flat",
+    };
+  }
+  const rounded = Math.round(changePercent * 10) / 10;
+  return {
+    text: `${rounded > 0 ? "+" : ""}${formatPercent(rounded)} against ${previousYear} to the same day`,
+    direction: trendDirection(rounded),
+  };
+};
+
+/**
+ * How much a figure moved against the period before it, as a percentage.
+ *
+ * Null when the earlier period was zero: growth from nothing is not a
+ * percentage, and reporting it as one (or as 100%) invents a baseline that was
+ * never there.
+ */
+export const percentChange = (
+  current: number,
+  previous: number,
+): number | null => {
+  if (previous === 0) {
+    return null;
+  }
+  return ((current - previous) / Math.abs(previous)) * 100;
+};
+
+/**
+ * A round number at or above the largest value plotted, for the top of a chart
+ * axis — so the ticks read 0 / 500 / 1,000 rather than 0 / 437 / 874.
+ */
+export const niceAxisMax = (value: number): number => {
+  if (value <= 0) {
+    return 1;
+  }
+  const magnitude = 10 ** Math.floor(Math.log10(value));
+  const scaled = value / magnitude;
+  const step =
+    [1, 2, 2.5, 5, 10].find((candidate) => scaled <= candidate) ?? 10;
+  return step * magnitude;
+};
+
+/**
+ * The evenly spaced tick values from zero up to `max`, smallest first.
+ */
+export const axisTicks = (max: number, steps: number = 4): number[] =>
+  Array.from({ length: steps + 1 }, (_, index) => (max / steps) * index);
+
+/**
+ * The path of a column: rounded at the data end, square where it meets the
+ * baseline, so the bar still reads as growing from zero.
+ *
+ * The radius is clamped to the bar itself, which keeps a very short column from
+ * curling into a lens shape.
+ */
+export const columnPath = ({
+  x,
+  y,
+  width,
+  height,
+  radius = 4,
+}: {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  radius?: number;
+}): string => {
+  const r = Math.max(0, Math.min(radius, width / 2, height));
+  const bottom = y + height;
+  return [
+    `M ${x} ${bottom}`,
+    `L ${x} ${y + r}`,
+    `Q ${x} ${y} ${x + r} ${y}`,
+    `L ${x + width - r} ${y}`,
+    `Q ${x + width} ${y} ${x + width} ${y + r}`,
+    `L ${x + width} ${bottom}`,
+    "Z",
+  ].join(" ");
+};
+
+/**
+ * Where a sparkline ends inside its box — the point the current-period marker
+ * is drawn on. Scaled exactly as `sparklinePath` scales the line, so the dot
+ * can never drift off it.
+ */
+export const sparklineEndPoint = (
+  values: number[],
+  width: number,
+  height: number,
+): { x: number; y: number } => {
+  const last = values[values.length - 1];
+  if (last === undefined) {
+    return { x: 0, y: height / 2 };
+  }
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = max - min;
+  return {
+    x: width,
+    y: span === 0 ? height / 2 : height - ((last - min) / span) * height,
+  };
+};
+
+/**
+ * The path of a sparkline through `values`, drawn to fill the given box.
+ *
+ * A flat run sits on the middle of the box rather than on its floor, so "no
+ * movement" does not read as "at zero".
+ */
+export const sparklinePath = (
+  values: number[],
+  width: number,
+  height: number,
+): string => {
+  if (values.length === 0) {
+    return "";
+  }
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = max - min;
+  const step = values.length > 1 ? width / (values.length - 1) : 0;
+
+  return values
+    .map((value, index) => {
+      const y =
+        span === 0 ? height / 2 : height - ((value - min) / span) * height;
+      return `${index === 0 ? "M" : "L"} ${index * step} ${y}`;
+    })
+    .join(" ");
+};
