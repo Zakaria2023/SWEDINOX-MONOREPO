@@ -33,7 +33,7 @@ export const PurchaseInvoiceDetailsSection = ({
 
   return (
     <div className="max-w-2xl space-y-4">
-      <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-gray-700">
+      <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-foreground">
         Purchase Invoice
       </h2>
 
@@ -62,7 +62,9 @@ export const PurchaseInvoiceDetailsSection = ({
         </div>
 
         <div>
-          <FormLabel htmlFor="invoiceSentByContactUuid">Invoice Sent By</FormLabel>
+          <FormLabel htmlFor="invoiceSentByContactUuid">
+            Invoice Sent By
+          </FormLabel>
           <Controller
             name="invoiceSentByContactUuid"
             control={control}
@@ -82,7 +84,7 @@ export const PurchaseInvoiceDetailsSection = ({
       <div className="grid gap-4 sm:grid-cols-3">
         <div>
           <FormLabel>Booking Date</FormLabel>
-          <p className="mt-1 rounded-md border bg-gray-50 px-3 py-2 text-sm text-gray-600">
+          <p className="mt-1 rounded-md border bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
             Automatically — {today}
           </p>
         </div>
@@ -118,7 +120,9 @@ export const PurchaseInvoiceDetailsSection = ({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <FormLabel htmlFor="invoiceNumberSupplier">Invoice Number Supplier</FormLabel>
+          <FormLabel htmlFor="invoiceNumberSupplier">
+            Invoice Number Supplier
+          </FormLabel>
           <Input
             id="invoiceNumberSupplier"
             {...register("invoiceNumberSupplier")}
@@ -158,7 +162,10 @@ export const PurchaseInvoiceDetailsSection = ({
         <FormLabel>Basis for Fiscal Period</FormLabel>
         <div className="mt-2 flex gap-6">
           {purchaseInvoiceFiscalBases.map((basis) => (
-            <label key={basis} className="flex cursor-pointer items-center gap-2">
+            <label
+              key={basis}
+              className="flex cursor-pointer items-center gap-2"
+            >
               <input
                 type="radio"
                 value={basis}
@@ -166,7 +173,7 @@ export const PurchaseInvoiceDetailsSection = ({
                 className="size-4 accent-primary"
                 disabled={isPending}
               />
-              <span className="text-sm font-medium text-gray-700">
+              <span className="text-sm font-medium text-foreground">
                 {PURCHASE_INVOICE_FISCAL_BASE_LABELS[basis]}
               </span>
             </label>
@@ -212,7 +219,10 @@ export const PurchaseInvoiceDetailsSection = ({
             className="size-4 accent-primary"
             disabled={isPending}
           />
-          <label htmlFor="blocked" className="text-sm font-medium text-gray-700 cursor-pointer">
+          <label
+            htmlFor="blocked"
+            className="text-sm font-medium text-foreground cursor-pointer"
+          >
             Blocked
           </label>
         </div>

@@ -27,7 +27,7 @@ export const InvoiceOrderItemsSection = ({
 
   return (
     <div className="space-y-3">
-      <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-gray-700">
+      <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-foreground">
         Delivered Order Items
       </h2>
       <p className="text-sm text-muted-foreground">
@@ -54,7 +54,7 @@ export const InvoiceOrderItemsSection = ({
                   onChange={() => onToggle(item.uuid)}
                   disabled={isPending}
                 />
-                <span className="flex-1 text-sm text-gray-700">
+                <span className="flex-1 text-sm text-foreground">
                   {[item.productCode, item.productName]
                     .filter(Boolean)
                     .join(" — ")}

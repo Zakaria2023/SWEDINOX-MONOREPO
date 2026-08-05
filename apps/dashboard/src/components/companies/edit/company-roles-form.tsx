@@ -68,7 +68,7 @@ export const CompanyRolesForm = ({ company }: Props) => {
       <FormError>{state.error}</FormError>
 
       <section className="space-y-4">
-        <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
+        <h2 className="border-b pb-2 text-lg font-semibold text-foreground">
           Roles
         </h2>
         <div className="grid gap-3 rounded-2xl border border-border bg-muted/20 p-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -89,7 +89,7 @@ export const CompanyRolesForm = ({ company }: Props) => {
                   onChange={() => toggleRole(role)}
                   disabled={isDisabled}
                 />
-                <span className="text-sm font-medium text-gray-700">
+                <span className="text-sm font-medium text-foreground">
                   {COMPANY_ROLE_LABELS[role]}
                 </span>
               </label>
@@ -105,7 +105,7 @@ export const CompanyRolesForm = ({ company }: Props) => {
         </Button>
         <Link
           href={`/companies/${company.uuid}/edit`}
-          className="inline-flex h-9 items-center rounded-lg border border-border px-4 text-sm text-gray-700 transition-colors hover:bg-muted/40"
+          className="inline-flex h-9 items-center rounded-lg border border-border px-4 text-sm text-foreground transition-colors hover:bg-muted/40"
         >
           Cancel
         </Link>

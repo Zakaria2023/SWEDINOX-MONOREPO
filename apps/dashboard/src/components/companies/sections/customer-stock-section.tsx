@@ -18,7 +18,7 @@ export const CustomerStockSection = ({
   isPending,
 }: Props) => (
   <section className="space-y-4">
-    <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
+    <h2 className="border-b pb-2 text-lg font-semibold text-foreground">
       Customer Stock
     </h2>
     <div className="space-y-2 rounded-2xl border border-border bg-muted/20 p-4">
@@ -30,7 +30,9 @@ export const CustomerStockSection = ({
                 <th className="px-3 py-2 font-medium">Location</th>
                 <th className="px-3 py-2 font-medium">Product code</th>
                 <th className="px-3 py-2 font-medium">Product</th>
-                <th className="px-3 py-2 text-right font-medium">Qty (Stock)</th>
+                <th className="px-3 py-2 text-right font-medium">
+                  Qty (Stock)
+                </th>
                 <th className="px-3 py-2 font-medium">Reason</th>
                 <th className="px-3 py-2 font-medium">Description</th>
                 <th className="px-3 py-2" />
@@ -44,7 +46,9 @@ export const CustomerStockSection = ({
                   <td className="px-3 py-2">{entry.productName}</td>
                   <td className="px-3 py-2 text-right">{entry.quantity}</td>
                   <td className="px-3 py-2">
-                    {entry.reason ? CUSTOMER_STOCK_REASON_LABELS[entry.reason] : ""}
+                    {entry.reason
+                      ? CUSTOMER_STOCK_REASON_LABELS[entry.reason]
+                      : ""}
                   </td>
                   <td className="px-3 py-2 text-muted-foreground">
                     {entry.description}

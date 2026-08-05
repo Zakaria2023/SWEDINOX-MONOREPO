@@ -36,7 +36,19 @@ import {
   SalesRepresentative,
   salesRepresentatives,
 } from "@/lib/enums";
-import { CUSTOMER_GROUP_LABELS, DEV_THEOR_WT_LABELS, EDI_OPTION_LABELS, GROUP_LINES_BY_DESCRIPTION_LABELS, MISCELLANEOUS_OPTION_LABELS, ORDER_OPTION_LABELS, PRINT_PRODUCT_CODES_LABELS, QUOTE_OPTION_LABELS, QUOTE_ORDER_INVOICE_OPTION_LABELS, QUOTE_ORDER_OPTION_LABELS, SALES_REPRESENTATIVE_LABELS } from "@/lib/labels";
+import {
+  CUSTOMER_GROUP_LABELS,
+  DEV_THEOR_WT_LABELS,
+  EDI_OPTION_LABELS,
+  GROUP_LINES_BY_DESCRIPTION_LABELS,
+  MISCELLANEOUS_OPTION_LABELS,
+  ORDER_OPTION_LABELS,
+  PRINT_PRODUCT_CODES_LABELS,
+  QUOTE_OPTION_LABELS,
+  QUOTE_ORDER_INVOICE_OPTION_LABELS,
+  QUOTE_ORDER_OPTION_LABELS,
+  SALES_REPRESENTATIVE_LABELS,
+} from "@/lib/labels";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus, ShoppingCart } from "lucide-react";
 import { useState } from "react";
@@ -185,7 +197,7 @@ export const SalesSection = ({
   return (
     <>
       <section className="space-y-4">
-        <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
+        <h2 className="border-b pb-2 text-lg font-semibold text-foreground">
           Sales
         </h2>
         <div className="space-y-2 rounded-2xl border border-border bg-muted/20 p-4">
@@ -259,7 +271,7 @@ export const SalesSection = ({
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
               {/* Commercial layout */}
               <div>
-                <h3 className="mb-3 text-sm font-semibold text-gray-700">
+                <h3 className="mb-3 text-sm font-semibold text-foreground">
                   Commercial layout
                 </h3>
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -344,7 +356,7 @@ export const SalesSection = ({
 
               {/* Miscellaneous */}
               <div>
-                <h3 className="mb-3 text-sm font-semibold text-gray-700">
+                <h3 className="mb-3 text-sm font-semibold text-foreground">
                   Miscellaneous
                 </h3>
                 <div>
@@ -382,7 +394,7 @@ export const SalesSection = ({
 
               {/* Quote/Order */}
               <div>
-                <h3 className="mb-3 text-sm font-semibold text-gray-700">
+                <h3 className="mb-3 text-sm font-semibold text-foreground">
                   Quote/Order
                 </h3>
                 <div className="mb-3 grid gap-3 sm:grid-cols-3">
@@ -456,7 +468,7 @@ export const SalesSection = ({
 
               {/* Quote/Order/Invoice */}
               <div>
-                <h3 className="mb-3 text-sm font-semibold text-gray-700">
+                <h3 className="mb-3 text-sm font-semibold text-foreground">
                   Quote/Order/Invoice
                 </h3>
                 <div className="mb-3 grid gap-3 sm:grid-cols-2">
@@ -537,7 +549,7 @@ export const SalesSection = ({
               {/* Order & Quote */}
               <div className="grid gap-6 sm:grid-cols-2">
                 <div>
-                  <h3 className="mb-3 text-sm font-semibold text-gray-700">
+                  <h3 className="mb-3 text-sm font-semibold text-foreground">
                     Order
                   </h3>
                   <div className="space-y-2">
@@ -565,7 +577,7 @@ export const SalesSection = ({
                   </div>
                 </div>
                 <div>
-                  <h3 className="mb-3 text-sm font-semibold text-gray-700">
+                  <h3 className="mb-3 text-sm font-semibold text-foreground">
                     Quote
                   </h3>
                   <div className="space-y-2">
@@ -596,7 +608,7 @@ export const SalesSection = ({
 
               {/* Website-quote */}
               <div>
-                <h3 className="mb-3 text-sm font-semibold text-gray-700">
+                <h3 className="mb-3 text-sm font-semibold text-foreground">
                   Website-quote
                 </h3>
                 <label className="flex cursor-pointer items-center gap-2 text-sm">
@@ -621,7 +633,7 @@ export const SalesSection = ({
               {/* Actions upon release */}
               <div className="grid gap-6 sm:grid-cols-2">
                 <div>
-                  <h3 className="mb-3 text-sm font-semibold text-gray-700">
+                  <h3 className="mb-3 text-sm font-semibold text-foreground">
                     Actions upon release
                   </h3>
                   <div className="space-y-2">
@@ -666,7 +678,7 @@ export const SalesSection = ({
                   </div>
                 </div>
                 <div>
-                  <h3 className="mb-3 text-sm font-semibold text-gray-700">
+                  <h3 className="mb-3 text-sm font-semibold text-foreground">
                     Actions upon (quote/order confirmation)
                   </h3>
                   <div className="space-y-2">
@@ -714,7 +726,7 @@ export const SalesSection = ({
 
               {/* EDI */}
               <div>
-                <h3 className="mb-3 text-sm font-semibold text-gray-700">
+                <h3 className="mb-3 text-sm font-semibold text-foreground">
                   EDI
                 </h3>
                 <div className="space-y-2">

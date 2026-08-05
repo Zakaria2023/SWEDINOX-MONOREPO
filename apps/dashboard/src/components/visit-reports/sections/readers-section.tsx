@@ -42,7 +42,7 @@ export const ReadersSection = ({ isPending, adminUsers }: Props) => {
 
   return (
     <section className="space-y-4">
-      <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
+      <h2 className="border-b pb-2 text-lg font-semibold text-foreground">
         Readers
       </h2>
       <div className="overflow-x-auto rounded-2xl border border-border">

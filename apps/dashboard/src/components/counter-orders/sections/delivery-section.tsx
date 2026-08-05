@@ -24,7 +24,7 @@ export const DeliverySection = ({
 
   return (
     <section className="space-y-4">
-      <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
+      <h2 className="border-b pb-2 text-lg font-semibold text-foreground">
         Delivery
       </h2>
       <div className="grid gap-4 rounded-2xl border border-border bg-muted/20 p-4 md:grid-cols-2">

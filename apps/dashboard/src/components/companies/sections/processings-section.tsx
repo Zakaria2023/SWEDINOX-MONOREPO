@@ -13,7 +13,10 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { deliveryTimeUnits, processingEditings } from "@/lib/enums";
-import { DELIVERY_TIME_UNIT_LABELS, PROCESSING_EDITING_LABELS } from "@/lib/labels";
+import {
+  DELIVERY_TIME_UNIT_LABELS,
+  PROCESSING_EDITING_LABELS,
+} from "@/lib/labels";
 import { Plus, X } from "lucide-react";
 
 type SupplierOption = {
@@ -59,7 +62,7 @@ export const ProcessingsSection = ({
 }: Props) => (
   <section className="space-y-4">
     <div className="flex items-center justify-between border-b pb-2">
-      <h2 className="text-lg font-semibold text-gray-800">Processing</h2>
+      <h2 className="text-lg font-semibold text-foreground">Processing</h2>
       <button
         type="button"
         onClick={addProcessing}

@@ -124,11 +124,10 @@ type AddressesTableContentProps = {
   addresses: AddressListItem[];
 };
 
-export const AddressesTable = ({
-  addresses,
-}: AddressesTableContentProps) => {
-  const [columnVisibility, setColumnVisibility] =
-    useState<Record<ColumnKey, boolean>>(buildColumnVisibility(ALL_COLUMNS));
+export const AddressesTable = ({ addresses }: AddressesTableContentProps) => {
+  const [columnVisibility, setColumnVisibility] = useState<
+    Record<ColumnKey, boolean>
+  >(buildColumnVisibility(ALL_COLUMNS));
 
   const toggleColumn = (key: string) => {
     setColumnVisibility((prev) => ({
@@ -145,7 +144,7 @@ export const AddressesTable = ({
   const boolCell = (value: boolean | null) => (
     <span
       className={`rounded-full px-2 py-0.5 text-xs ${
-        value ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
+        value ? "bg-green-100 text-green-700" : "bg-muted text-muted-foreground"
       }`}
     >
       {value ? "Yes" : "No"}

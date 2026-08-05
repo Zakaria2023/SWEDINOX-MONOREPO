@@ -20,7 +20,7 @@ const ReservationsPage = async () => {
       </div>
 
       <div className="space-y-4">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-700">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-foreground">
           Technical stock vs. reserved, per product
         </h2>
         <ReservationsTable reservations={reservations} />

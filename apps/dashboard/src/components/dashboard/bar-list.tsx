@@ -8,11 +8,11 @@ import { ChartValueFormat, cn, formatChartValue } from "@/lib/helpers";
  * so no row reads as background.
  */
 const ORDINAL_FILL = [
+  "bg-chart-1",
   "bg-chart-2",
   "bg-chart-3",
   "bg-chart-4",
   "bg-chart-5",
-  "bg-foreground",
 ];
 
 const UNIFORM_FILL = "bg-chart-4";

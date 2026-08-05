@@ -9,13 +9,15 @@ type ContractTypeSectionProps = {
   isPending: boolean;
 };
 
-export const ContractTypeSection = ({ isPending }: ContractTypeSectionProps) => {
+export const ContractTypeSection = ({
+  isPending,
+}: ContractTypeSectionProps) => {
   const { watch, setValue } = useFormContext<ContractFormValues>();
   const contractType = watch("contractType");
 
   return (
     <section className="space-y-3">
-      <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-gray-700">
+      <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-foreground">
         Contract Type
       </h2>
       <div className="space-y-2">
@@ -31,7 +33,7 @@ export const ContractTypeSection = ({ isPending }: ContractTypeSectionProps) => 
               onChange={() => setValue("contractType", type)}
               disabled={isPending}
             />
-            <span className="text-sm text-gray-700">
+            <span className="text-sm text-foreground">
               {CONTRACT_TYPE_LABELS[type]}
             </span>
           </label>

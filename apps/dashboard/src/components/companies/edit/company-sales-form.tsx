@@ -51,46 +51,42 @@ type Props = {
 export const CompanySalesForm = ({ company }: Props) => {
   const [state, dispatch, isPending] = useActionState(updateCompanySales, {});
 
-  const {
-    register,
-    control,
-    watch,
-    handleSubmit,
-  } = useForm<CompanySalesFormValues>({
-    resolver: zodResolver(companySalesSchema),
-    defaultValues: {
-      customerGroup: company.customerGroup ?? "",
-      representative: company.representative ?? "",
-      accountManager: company.accountManager ?? "",
-      region: company.region ?? "",
-      memberOf: company.memberOf ?? "",
-      miscellaneousSettings: company.miscellaneousSettings ?? [],
-      deliveryCondition: company.deliveryCondition ?? "",
-      devTheorWt: company.devTheorWt ?? "",
-      defTransport: company.defTransport ?? "",
-      quoteOrderSettings: company.quoteOrderSettings ?? [],
-      groupLinesByLongProductGroupDescription:
-        company.groupLinesByLongProductGroupDescription ?? "",
-      printProductCodesOnOutgoingDocuments:
-        company.printProductCodesOnOutgoingDocuments ?? "",
-      quoteOrderInvoiceSettings: company.quoteOrderInvoiceSettings ?? [],
-      orderSettings: company.orderSettings ?? [],
-      quoteSettings: company.quoteSettings ?? [],
-      websiteQuoteMustBeApproved: company.websiteQuoteMustBeApproved ?? false,
-      websiteQuoteApprovalAmount: company.websiteQuoteApprovalAmount ?? "",
-      releaseActionPrint: company.releaseActionPrint ?? false,
-      releaseActionEmailEnabled: company.releaseActionEmailEnabled ?? false,
-      releaseActionEmailTo: company.releaseActionEmailTo ?? "",
-      releaseActionFaxEnabled: company.releaseActionFaxEnabled ?? false,
-      releaseActionFaxTo: company.releaseActionFaxTo ?? "",
-      actionPrint: company.actionPrint ?? false,
-      actionEmailEnabled: company.actionEmailEnabled ?? false,
-      actionEmailTo: company.actionEmailTo ?? "",
-      actionFaxEnabled: company.actionFaxEnabled ?? false,
-      actionFaxTo: company.actionFaxTo ?? "",
-      ediSettings: company.ediSettings ?? [],
-    },
-  });
+  const { register, control, watch, handleSubmit } =
+    useForm<CompanySalesFormValues>({
+      resolver: zodResolver(companySalesSchema),
+      defaultValues: {
+        customerGroup: company.customerGroup ?? "",
+        representative: company.representative ?? "",
+        accountManager: company.accountManager ?? "",
+        region: company.region ?? "",
+        memberOf: company.memberOf ?? "",
+        miscellaneousSettings: company.miscellaneousSettings ?? [],
+        deliveryCondition: company.deliveryCondition ?? "",
+        devTheorWt: company.devTheorWt ?? "",
+        defTransport: company.defTransport ?? "",
+        quoteOrderSettings: company.quoteOrderSettings ?? [],
+        groupLinesByLongProductGroupDescription:
+          company.groupLinesByLongProductGroupDescription ?? "",
+        printProductCodesOnOutgoingDocuments:
+          company.printProductCodesOnOutgoingDocuments ?? "",
+        quoteOrderInvoiceSettings: company.quoteOrderInvoiceSettings ?? [],
+        orderSettings: company.orderSettings ?? [],
+        quoteSettings: company.quoteSettings ?? [],
+        websiteQuoteMustBeApproved: company.websiteQuoteMustBeApproved ?? false,
+        websiteQuoteApprovalAmount: company.websiteQuoteApprovalAmount ?? "",
+        releaseActionPrint: company.releaseActionPrint ?? false,
+        releaseActionEmailEnabled: company.releaseActionEmailEnabled ?? false,
+        releaseActionEmailTo: company.releaseActionEmailTo ?? "",
+        releaseActionFaxEnabled: company.releaseActionFaxEnabled ?? false,
+        releaseActionFaxTo: company.releaseActionFaxTo ?? "",
+        actionPrint: company.actionPrint ?? false,
+        actionEmailEnabled: company.actionEmailEnabled ?? false,
+        actionEmailTo: company.actionEmailTo ?? "",
+        actionFaxEnabled: company.actionFaxEnabled ?? false,
+        actionFaxTo: company.actionFaxTo ?? "",
+        ediSettings: company.ediSettings ?? [],
+      },
+    });
 
   const onSubmit = handleSubmit((values) => {
     startTransition(() => {
@@ -103,13 +99,13 @@ export const CompanySalesForm = ({ company }: Props) => {
       <FormError>{state.error}</FormError>
 
       <section className="space-y-4">
-        <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
+        <h2 className="border-b pb-2 text-lg font-semibold text-foreground">
           Sales Settings
         </h2>
         <div className="space-y-6 rounded-2xl border border-border bg-muted/20 p-4">
           {/* Commercial layout */}
           <div>
-            <h3 className="mb-3 text-sm font-semibold text-gray-700">
+            <h3 className="mb-3 text-sm font-semibold text-foreground">
               Commercial layout
             </h3>
             <div className="grid gap-3 sm:grid-cols-2">
@@ -199,7 +195,7 @@ export const CompanySalesForm = ({ company }: Props) => {
 
           {/* Miscellaneous */}
           <div>
-            <h3 className="mb-3 text-sm font-semibold text-gray-700">
+            <h3 className="mb-3 text-sm font-semibold text-foreground">
               Miscellaneous
             </h3>
             <div>
@@ -247,7 +243,7 @@ export const CompanySalesForm = ({ company }: Props) => {
 
           {/* Quote/Order */}
           <div>
-            <h3 className="mb-3 text-sm font-semibold text-gray-700">
+            <h3 className="mb-3 text-sm font-semibold text-foreground">
               Quote/Order
             </h3>
             <div className="mb-3 grid gap-3 sm:grid-cols-3">
@@ -329,7 +325,7 @@ export const CompanySalesForm = ({ company }: Props) => {
 
           {/* Quote/Order/Invoice */}
           <div>
-            <h3 className="mb-3 text-sm font-semibold text-gray-700">
+            <h3 className="mb-3 text-sm font-semibold text-foreground">
               Quote/Order/Invoice
             </h3>
             <div className="mb-3 grid gap-3 sm:grid-cols-2">
@@ -421,7 +417,7 @@ export const CompanySalesForm = ({ company }: Props) => {
           {/* Order & Quote */}
           <div className="grid gap-6 sm:grid-cols-2">
             <div>
-              <h3 className="mb-3 text-sm font-semibold text-gray-700">
+              <h3 className="mb-3 text-sm font-semibold text-foreground">
                 Order
               </h3>
               <Controller
@@ -458,7 +454,7 @@ export const CompanySalesForm = ({ company }: Props) => {
               />
             </div>
             <div>
-              <h3 className="mb-3 text-sm font-semibold text-gray-700">
+              <h3 className="mb-3 text-sm font-semibold text-foreground">
                 Quote
               </h3>
               <Controller
@@ -498,7 +494,7 @@ export const CompanySalesForm = ({ company }: Props) => {
 
           {/* Website-quote */}
           <div>
-            <h3 className="mb-3 text-sm font-semibold text-gray-700">
+            <h3 className="mb-3 text-sm font-semibold text-foreground">
               Website-quote
             </h3>
             <label className="flex cursor-pointer items-center gap-2 text-sm">
@@ -524,7 +520,7 @@ export const CompanySalesForm = ({ company }: Props) => {
           {/* Actions upon release / confirmation */}
           <div className="grid gap-6 sm:grid-cols-2">
             <div>
-              <h3 className="mb-3 text-sm font-semibold text-gray-700">
+              <h3 className="mb-3 text-sm font-semibold text-foreground">
                 Actions upon release
               </h3>
               <div className="space-y-2">
@@ -574,7 +570,7 @@ export const CompanySalesForm = ({ company }: Props) => {
               </div>
             </div>
             <div>
-              <h3 className="mb-3 text-sm font-semibold text-gray-700">
+              <h3 className="mb-3 text-sm font-semibold text-foreground">
                 Actions upon (quote/order confirmation)
               </h3>
               <div className="space-y-2">
@@ -627,7 +623,7 @@ export const CompanySalesForm = ({ company }: Props) => {
 
           {/* EDI */}
           <div>
-            <h3 className="mb-3 text-sm font-semibold text-gray-700">EDI</h3>
+            <h3 className="mb-3 text-sm font-semibold text-foreground">EDI</h3>
             <Controller
               name="ediSettings"
               control={control}
@@ -670,7 +666,7 @@ export const CompanySalesForm = ({ company }: Props) => {
         </Button>
         <Link
           href={`/companies/${company.uuid}/edit`}
-          className="inline-flex h-9 items-center rounded-lg border border-border px-4 text-sm text-gray-700 transition-colors hover:bg-muted/40"
+          className="inline-flex h-9 items-center rounded-lg border border-border px-4 text-sm text-foreground transition-colors hover:bg-muted/40"
         >
           Cancel
         </Link>

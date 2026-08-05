@@ -33,7 +33,7 @@ export const ContractDetailsSection = ({
 
   return (
     <section className="space-y-4">
-      <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-gray-700">
+      <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-foreground">
         Contract
       </h2>
       <div className="grid gap-4">
@@ -51,9 +51,7 @@ export const ContractDetailsSection = ({
                 value={field.value}
                 aria-invalid={!!errors.code}
                 disabled={isPending}
-                onChange={(e) =>
-                  field.onChange(e.target.value.toUpperCase())
-                }
+                onChange={(e) => field.onChange(e.target.value.toUpperCase())}
                 onBlur={field.onBlur}
               />
             )}
@@ -98,7 +96,7 @@ export const ContractDetailsSection = ({
         <div className="flex items-center gap-3">
           <label
             htmlFor="quicklyChangeOrder"
-            className="shrink-0 text-sm font-medium text-gray-700"
+            className="shrink-0 text-sm font-medium text-foreground"
           >
             Quickly Change Order
           </label>
@@ -120,7 +118,7 @@ export const ContractDetailsSection = ({
           />
           <label
             htmlFor="hasPriceDate"
-            className="shrink-0 text-sm font-medium text-gray-700"
+            className="shrink-0 text-sm font-medium text-foreground"
           >
             Price Date
           </label>
@@ -150,7 +148,7 @@ export const ContractDetailsSection = ({
           />
           <label
             htmlFor="linkToNewCustomer"
-            className="text-sm font-medium text-gray-700"
+            className="text-sm font-medium text-foreground"
           >
             Link this contract to a new customer
           </label>

@@ -7,7 +7,10 @@ import { FormCheckboxCard } from "@/components/ui/form-checkbox-card";
 import { FormLabel } from "@/components/ui/form-field";
 import { FormSelectField } from "@/components/ui/form-select-field";
 import { transportModes, warehouseTransportRegions } from "@/lib/enums";
-import { TRANSPORT_MODE_LABELS, WAREHOUSE_TRANSPORT_REGION_LABELS } from "@/lib/labels";
+import {
+  TRANSPORT_MODE_LABELS,
+  WAREHOUSE_TRANSPORT_REGION_LABELS,
+} from "@/lib/labels";
 
 const transportRegionOptions = [
   { value: "", label: "Empty" },
@@ -30,7 +33,7 @@ export const LogisticsSection = () => {
 
   return (
     <section className="space-y-4">
-      <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
+      <h2 className="border-b pb-2 text-lg font-semibold text-foreground">
         Logistics
       </h2>
 

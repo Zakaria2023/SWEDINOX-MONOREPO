@@ -2,14 +2,14 @@ import { SignIn } from "@clerk/nextjs";
 import { Layers } from "lucide-react";
 
 const SignInPage = () => (
-  <main className="flex min-h-screen items-center justify-center bg-white">
+  <main className="flex min-h-screen items-center justify-center bg-background">
     <div className="flex w-full max-w-105 flex-col items-center gap-6 px-4">
       <div className="text-center">
-        <div className="mb-3.5 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gray-900">
+        <div className="mb-3.5 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-primary">
           <Layers size={24} color="white" />
         </div>
-        <h1 className="mb-1 text-2xl font-bold text-gray-900">Swedinox</h1>
-        <p className="m-0 text-sm text-gray-500">
+        <h1 className="mb-1 text-2xl font-bold text-foreground">Swedinox</h1>
+        <p className="m-0 text-sm text-muted-foreground">
           Welcome back, sign in to continue
         </p>
       </div>

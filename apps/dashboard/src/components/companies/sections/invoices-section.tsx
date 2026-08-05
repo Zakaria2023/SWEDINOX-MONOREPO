@@ -33,7 +33,7 @@ export const InvoicesSection = ({ isPending }: Props) => {
 
   return (
     <section className="space-y-4">
-      <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
+      <h2 className="border-b pb-2 text-lg font-semibold text-foreground">
         Invoicing
       </h2>
 
@@ -53,7 +53,10 @@ export const InvoicesSection = ({ isPending }: Props) => {
             <Checkbox
               checked={watch("collectiveInvoicing")}
               onChange={() =>
-                setValue("collectiveInvoicing", !getValues("collectiveInvoicing"))
+                setValue(
+                  "collectiveInvoicing",
+                  !getValues("collectiveInvoicing"),
+                )
               }
               disabled={isPending}
             />
@@ -116,7 +119,10 @@ export const InvoicesSection = ({ isPending }: Props) => {
               <Checkbox
                 checked={watch("invoicePrintEnabled")}
                 onChange={() =>
-                  setValue("invoicePrintEnabled", !getValues("invoicePrintEnabled"))
+                  setValue(
+                    "invoicePrintEnabled",
+                    !getValues("invoicePrintEnabled"),
+                  )
                 }
                 disabled={isPending}
               />
@@ -138,7 +144,10 @@ export const InvoicesSection = ({ isPending }: Props) => {
               <Checkbox
                 checked={watch("invoiceEmailEnabled")}
                 onChange={() =>
-                  setValue("invoiceEmailEnabled", !getValues("invoiceEmailEnabled"))
+                  setValue(
+                    "invoiceEmailEnabled",
+                    !getValues("invoiceEmailEnabled"),
+                  )
                 }
                 disabled={isPending}
               />

@@ -61,10 +61,7 @@ export const PurchaseInvoiceDetailView = ({ purchaseInvoice }: Props) => {
             Invoice Sent By
           </p>
           <p className="text-sm">
-            {[
-              purchaseInvoice.contactFirstName,
-              purchaseInvoice.contactLastName,
-            ]
+            {[purchaseInvoice.contactFirstName, purchaseInvoice.contactLastName]
               .filter(Boolean)
               .join(" ") || "—"}
           </p>
@@ -103,14 +100,14 @@ export const PurchaseInvoiceDetailView = ({ purchaseInvoice }: Props) => {
 
       <div className="space-y-3">
         <h2 className="border-b pb-2 text-base font-semibold">Summary</h2>
-        <div className="rounded-md border bg-gray-50 p-3 text-sm">
+        <div className="rounded-md border bg-muted/50 p-3 text-sm">
           <div className="flex justify-between py-1">
-            <span className="text-gray-600">Total Received</span>
+            <span className="text-muted-foreground">Total Received</span>
             <span className="font-medium">{totalReceived.toFixed(3)}</span>
           </div>
           {totalReversed > 0 && (
             <div className="flex justify-between py-1">
-              <span className="text-gray-600">Total Reversed</span>
+              <span className="text-muted-foreground">Total Reversed</span>
               <span className="font-medium">{totalReversed.toFixed(3)}</span>
             </div>
           )}

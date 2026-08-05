@@ -24,7 +24,7 @@ export const RemarksAndDocumentsSection = ({
 
   return (
     <div className="space-y-4">
-      <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-gray-700">
+      <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-foreground">
         Remarks &amp; Documents
       </h2>
       <div className="grid gap-6 lg:grid-cols-2">
@@ -45,7 +45,9 @@ export const RemarksAndDocumentsSection = ({
             <ul className="mt-2 space-y-1 text-sm">
               {uploadedDocs.map((doc) => (
                 <li key={doc.id} className="flex items-center justify-between">
-                  <span className="truncate text-gray-700">{doc.fileName}</span>
+                  <span className="truncate text-foreground">
+                    {doc.fileName}
+                  </span>
                   <button
                     type="button"
                     className="ml-2 text-xs text-red-500 hover:underline"

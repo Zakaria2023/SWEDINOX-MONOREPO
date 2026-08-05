@@ -28,7 +28,7 @@ export const InvoiceHeaderSection = ({
 
   return (
     <div className="space-y-4">
-      <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-gray-700">
+      <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-foreground">
         Invoice
       </h2>
       <div>

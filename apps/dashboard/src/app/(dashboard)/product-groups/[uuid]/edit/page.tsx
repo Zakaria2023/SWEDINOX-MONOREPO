@@ -114,7 +114,7 @@ const ProductGroupEditPage = async ({ params }: Props) => {
       <PageHeading title={`Edit ${group.name}`} />
 
       <section className="space-y-3">
-        <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
+        <h2 className="border-b pb-2 text-lg font-semibold text-foreground">
           Product Group Settings
         </h2>
         <div className="grid gap-3 sm:grid-cols-2">
@@ -125,7 +125,7 @@ const ProductGroupEditPage = async ({ params }: Props) => {
       </section>
 
       <section className="space-y-3">
-        <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
+        <h2 className="border-b pb-2 text-lg font-semibold text-foreground">
           Related Records
         </h2>
         <div className="grid gap-3 sm:grid-cols-2">

@@ -92,7 +92,7 @@ export const AddressForm = ({
   return (
     <div className="space-y-8">
       <section className="space-y-4">
-        <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
+        <h2 className="border-b pb-2 text-lg font-semibold text-foreground">
           Basic Info
         </h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -157,9 +157,9 @@ export const AddressForm = ({
               type="checkbox"
               id="poBox"
               {...register("address.poBox")}
-              className="h-4 w-4 rounded border-gray-300 accent-primary"
+              className="h-4 w-4 rounded border-border accent-primary"
             />
-            <label htmlFor="poBox" className="text-sm text-gray-700">
+            <label htmlFor="poBox" className="text-sm text-foreground">
               PO Box
             </label>
           </div>
@@ -167,7 +167,7 @@ export const AddressForm = ({
       </section>
 
       <section className="space-y-4">
-        <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
+        <h2 className="border-b pb-2 text-lg font-semibold text-foreground">
           Address
         </h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -199,7 +199,7 @@ export const AddressForm = ({
       </section>
 
       <section className="space-y-4">
-        <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
+        <h2 className="border-b pb-2 text-lg font-semibold text-foreground">
           Contact
         </h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -239,7 +239,7 @@ export const AddressForm = ({
       </section>
 
       <section className="space-y-4">
-        <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
+        <h2 className="border-b pb-2 text-lg font-semibold text-foreground">
           Category
         </h2>
         <div className="space-y-4 rounded-2xl border border-border bg-muted/20 p-4">
@@ -266,7 +266,7 @@ export const AddressForm = ({
 
       {showBillingSettings && (
         <section className="space-y-4">
-          <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
+          <h2 className="border-b pb-2 text-lg font-semibold text-foreground">
             Billing Address Settings
           </h2>
           <div className="space-y-4 rounded-2xl border border-border bg-muted/20 p-4">
@@ -292,7 +292,7 @@ export const AddressForm = ({
 
       {showDeliverySettings && (
         <section className="space-y-4">
-          <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
+          <h2 className="border-b pb-2 text-lg font-semibold text-foreground">
             Delivery Address Settings
           </h2>
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">

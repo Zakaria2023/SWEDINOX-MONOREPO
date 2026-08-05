@@ -81,7 +81,9 @@ export const ReturnOrderDialog = ({
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <FormLabel htmlFor="ro-customer-ref">Customer reference</FormLabel>
+              <FormLabel htmlFor="ro-customer-ref">
+                Customer reference
+              </FormLabel>
               <Input
                 id="ro-customer-ref"
                 {...form.register("customerRef")}
@@ -183,7 +185,9 @@ export const ReturnOrderDialog = ({
                   checked={field.value}
                   onChange={(e) => field.onChange(e.target.checked)}
                 />
-                <span className="text-sm text-gray-700">Handling blocked</span>
+                <span className="text-sm text-foreground">
+                  Handling blocked
+                </span>
               </label>
             )}
           />

@@ -254,7 +254,7 @@ export const ContractGroups = ({ groups }: Props) => {
                   {...register("isActive")}
                   disabled={isPending}
                 />
-                <span className="text-sm font-medium text-gray-700">
+                <span className="text-sm font-medium text-foreground">
                   Active
                 </span>
               </label>

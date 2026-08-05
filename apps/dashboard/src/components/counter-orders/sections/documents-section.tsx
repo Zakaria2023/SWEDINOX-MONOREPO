@@ -11,7 +11,7 @@ export const DocumentsSection = () => {
 
   return (
     <section className="space-y-4">
-      <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
+      <h2 className="border-b pb-2 text-lg font-semibold text-foreground">
         Documents
       </h2>
       <div className="space-y-2 rounded-2xl border border-border bg-muted/20 p-4">

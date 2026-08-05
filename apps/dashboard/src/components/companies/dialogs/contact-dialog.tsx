@@ -18,7 +18,10 @@ import {
   ContactCategory,
   contactSalutations,
 } from "@/lib/enums";
-import { CONTACT_CATEGORY_LABELS, CONTACT_SALUTATION_LABELS } from "@/lib/labels";
+import {
+  CONTACT_CATEGORY_LABELS,
+  CONTACT_SALUTATION_LABELS,
+} from "@/lib/labels";
 import { User } from "lucide-react";
 import { FormEventHandler } from "react";
 import { Controller, UseFormReturn } from "react-hook-form";
@@ -57,7 +60,7 @@ export const ContactDialog = ({
       <form onSubmit={onSave} className="flex flex-1 flex-col overflow-hidden">
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
           <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-gray-700">
+            <h3 className="text-sm font-semibold text-foreground">
               Contact Person
             </h3>
             <div className="grid gap-3 sm:grid-cols-3">
@@ -147,7 +150,7 @@ export const ContactDialog = ({
           </div>
 
           <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-gray-700">Address</h3>
+            <h3 className="text-sm font-semibold text-foreground">Address</h3>
             <div className="grid gap-3 sm:grid-cols-3">
               <div>
                 <FormLabel htmlFor="co-country">Country</FormLabel>
@@ -235,7 +238,9 @@ export const ContactDialog = ({
           </div>
 
           <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-gray-700">Categories</h3>
+            <h3 className="text-sm font-semibold text-foreground">
+              Categories
+            </h3>
             <Controller
               name="categories"
               control={form.control}
@@ -250,7 +255,7 @@ export const ContactDialog = ({
                         checked={(field.value as string[]).includes(cat)}
                         onChange={() => toggleContactCategory(cat)}
                       />
-                      <span className="text-sm text-gray-700">
+                      <span className="text-sm text-foreground">
                         {CONTACT_CATEGORY_LABELS[cat]}
                       </span>
                     </label>
@@ -261,7 +266,7 @@ export const ContactDialog = ({
           </div>
 
           <div className="space-y-2">
-            <h3 className="text-sm font-semibold text-gray-700">
+            <h3 className="text-sm font-semibold text-foreground">
               Sequence Number
             </h3>
             <div className="w-32">

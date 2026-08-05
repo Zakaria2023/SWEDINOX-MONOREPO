@@ -16,7 +16,10 @@ import { Textarea } from "@/components/shadcn/textarea";
 import { DialogFormFooter } from "@/components/ui/dialog-form-footer";
 import { FormLabel } from "@/components/ui/form-field";
 import { purchaseOrderStatuses, purchaseOrderTypes } from "@/lib/enums";
-import { PURCHASE_ORDER_STATUS_LABELS, PURCHASE_ORDER_TYPE_LABELS } from "@/lib/labels";
+import {
+  PURCHASE_ORDER_STATUS_LABELS,
+  PURCHASE_ORDER_TYPE_LABELS,
+} from "@/lib/labels";
 import { PackageCheck } from "lucide-react";
 import { FormEventHandler } from "react";
 import { Controller, UseFormReturn } from "react-hook-form";
@@ -64,7 +67,7 @@ type TextFieldProps = {
 const CheckboxField = ({ label, checked, onChange }: CheckboxFieldProps) => (
   <label className="flex cursor-pointer items-center gap-2">
     <Checkbox checked={checked} onChange={(e) => onChange(e.target.checked)} />
-    <span className="text-sm text-gray-700">{label}</span>
+    <span className="text-sm text-foreground">{label}</span>
   </label>
 );
 

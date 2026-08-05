@@ -30,7 +30,7 @@ export const FollowUpsSection = ({
 }: Props) => (
   <section className="space-y-4">
     <div className="flex items-center justify-between border-b pb-2">
-      <h2 className="text-lg font-semibold text-gray-800">Follow-up</h2>
+      <h2 className="text-lg font-semibold text-foreground">Follow-up</h2>
       <button
         type="button"
         onClick={addFollowUp}

@@ -73,7 +73,7 @@ export const CustomerProductDialog = ({
                 type="checkbox"
                 id="cust-prod-show-on-website"
                 {...register("showOnWebsite")}
-                className="h-4 w-4 rounded border-gray-300"
+                className="h-4 w-4 rounded border-border"
               />
               <label htmlFor="cust-prod-show-on-website" className="text-sm">
                 Show on website

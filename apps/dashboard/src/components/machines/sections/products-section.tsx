@@ -17,7 +17,7 @@ export const ProductsSection = ({
   isPending,
 }: Props) => (
   <section className="space-y-4">
-    <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
+    <h2 className="border-b pb-2 text-lg font-semibold text-foreground">
       Products
     </h2>
     <div className="space-y-2 rounded-2xl border border-border bg-muted/20 p-4">
@@ -45,7 +45,9 @@ export const ProductsSection = ({
                   </td>
                   <td className="px-3 py-2">{product.description || "—"}</td>
                   <td className="px-3 py-2">{product.preference ?? 0}</td>
-                  <td className="px-3 py-2">{product.productionPerHour ?? 0}</td>
+                  <td className="px-3 py-2">
+                    {product.productionPerHour ?? 0}
+                  </td>
                   <td className="px-3 py-2">{product.prodUnit || "—"}</td>
                   <td className="px-3 py-2">{product.minCorner ?? "0.00"}</td>
                   <td className="px-3 py-2">{product.maxCorner ?? "0.00"}</td>

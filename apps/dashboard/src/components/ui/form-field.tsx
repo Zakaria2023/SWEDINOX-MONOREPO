@@ -13,7 +13,7 @@ type FormFieldErrorProps = {
 export const FormLabel = ({ children, htmlFor, required }: FormLabelProps) => (
   <label
     htmlFor={htmlFor}
-    className="mb-1 block text-sm font-medium text-gray-700"
+    className="mb-1 block text-sm font-medium text-foreground"
   >
     {children}
     {required && <span className="ml-1 text-red-500">*</span>}

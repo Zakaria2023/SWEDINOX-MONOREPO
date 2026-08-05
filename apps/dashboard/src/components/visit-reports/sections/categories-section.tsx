@@ -23,7 +23,7 @@ export const CategoriesSection = ({ isPending }: Props) => {
 
   return (
     <section className="space-y-4">
-      <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
+      <h2 className="border-b pb-2 text-lg font-semibold text-foreground">
         Categories
       </h2>
       <div className="space-y-2 rounded-2xl border border-border bg-muted/20 p-4">
@@ -37,7 +37,7 @@ export const CategoriesSection = ({ isPending }: Props) => {
               onChange={() => toggle(category)}
               disabled={isPending}
             />
-            <span className="text-sm text-gray-700">
+            <span className="text-sm text-foreground">
               {VISIT_REPORT_CATEGORY_LABELS[category]}
             </span>
           </label>

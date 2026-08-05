@@ -110,7 +110,7 @@ export const TextDialog = ({
           </div>
 
           <div className="flex w-60 shrink-0 flex-col gap-1 overflow-y-auto p-6">
-            <p className="mb-2 text-sm font-medium text-gray-700">
+            <p className="mb-2 text-sm font-medium text-foreground">
               Usage Categories
             </p>
             {USAGE_CATEGORY_FIELDS.map(({ key, field }) => (
@@ -124,7 +124,7 @@ export const TextDialog = ({
                       checked={!!f.value}
                       onChange={(e) => f.onChange(e.target.checked)}
                     />
-                    <span className="text-sm text-gray-700">
+                    <span className="text-sm text-foreground">
                       {TEXT_USAGE_CATEGORY_LABELS[key]}
                     </span>
                   </label>

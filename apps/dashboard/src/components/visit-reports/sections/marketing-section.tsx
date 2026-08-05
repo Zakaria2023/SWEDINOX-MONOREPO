@@ -7,7 +7,10 @@ import { Input } from "@/components/shadcn/input";
 import { Select } from "@/components/shadcn/select";
 import { FormLabel } from "@/components/ui/form-field";
 import { companyClassifications, visitReportReasons } from "@/lib/enums";
-import { COMPANY_CLASSIFICATION_LABELS, VISIT_REPORT_REASON_LABELS } from "@/lib/labels";
+import {
+  COMPANY_CLASSIFICATION_LABELS,
+  VISIT_REPORT_REASON_LABELS,
+} from "@/lib/labels";
 
 type Props = {
   isPending: boolean;
@@ -45,7 +48,7 @@ export const MarketingSection = ({ isPending, industries }: Props) => {
 
   return (
     <section className="space-y-4">
-      <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
+      <h2 className="border-b pb-2 text-lg font-semibold text-foreground">
         Marketing
       </h2>
 
@@ -92,7 +95,7 @@ export const MarketingSection = ({ isPending, industries }: Props) => {
 
       {/* Visit */}
       <div>
-        <h3 className="mb-3 text-sm font-semibold text-gray-700">Visit</h3>
+        <h3 className="mb-3 text-sm font-semibold text-foreground">Visit</h3>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
             <FormLabel htmlFor="visitFrequency">Visit frequency</FormLabel>
@@ -149,7 +152,7 @@ export const MarketingSection = ({ isPending, industries }: Props) => {
 
       {/* Revenue & sales */}
       <div>
-        <h3 className="mb-3 text-sm font-semibold text-gray-700">
+        <h3 className="mb-3 text-sm font-semibold text-foreground">
           Revenue &amp; sales
         </h3>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

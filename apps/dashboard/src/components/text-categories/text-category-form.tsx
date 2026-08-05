@@ -28,10 +28,12 @@ export const TextCategoryForm = ({
   defaultValues,
 }: TextCategoryFormProps) => {
   const router = useRouter();
-  const { form, isPending, isEditing, onSubmit, state } = useTextCategorySubmit({
-    textCategoryUuid,
-    defaultValues,
-  });
+  const { form, isPending, isEditing, onSubmit, state } = useTextCategorySubmit(
+    {
+      textCategoryUuid,
+      defaultValues,
+    },
+  );
   const {
     control,
     register,
@@ -58,7 +60,7 @@ export const TextCategoryForm = ({
     <FormProvider {...form}>
       <form onSubmit={onSubmit} className="space-y-8">
         <section className="space-y-4">
-          <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
+          <h2 className="border-b pb-2 text-lg font-semibold text-foreground">
             Text Category
           </h2>
           <div className="grid gap-4 rounded-2xl border border-border bg-muted/20 p-4 md:grid-cols-2">
@@ -130,7 +132,7 @@ export const TextCategoryForm = ({
                         onChange={() => toggleUsageCategory(category)}
                         disabled={isPending}
                       />
-                      <span className="text-sm font-medium text-gray-700">
+                      <span className="text-sm font-medium text-foreground">
                         {TEXT_USAGE_CATEGORY_LABELS[category]}
                       </span>
                     </label>
@@ -148,7 +150,9 @@ export const TextCategoryForm = ({
                   {...register("isActive")}
                   disabled={isPending}
                 />
-                <span className="text-sm font-medium text-gray-700">Active</span>
+                <span className="text-sm font-medium text-foreground">
+                  Active
+                </span>
               </label>
             </div>
           </div>

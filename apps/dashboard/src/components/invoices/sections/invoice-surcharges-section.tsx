@@ -35,7 +35,7 @@ export const InvoiceSurchargesSection = ({
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between border-b pb-2">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-700">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-foreground">
           Surcharges{" "}
           <span className="ml-1 text-xs font-normal text-muted-foreground">
             {surcharges.length}{" "}
@@ -78,9 +78,7 @@ export const InvoiceSurchargesSection = ({
                       ? INVOICE_SURCHARGE_DESCRIPTION_LABELS[s.description]
                       : na}
                   </TableCell>
-                  <TableCell className="text-right">
-                    {s.surcharge}
-                  </TableCell>
+                  <TableCell className="text-right">{s.surcharge}</TableCell>
                   <TableCell>{s.unit ?? na}</TableCell>
                   <TableCell className="text-right">
                     {s.surchargePercentage}
@@ -112,9 +110,7 @@ export const InvoiceSurchargesSection = ({
         </div>
       )}
       {surchargeError && (
-        <p className="text-sm font-medium text-destructive">
-          {surchargeError}
-        </p>
+        <p className="text-sm font-medium text-destructive">{surchargeError}</p>
       )}
     </section>
   );

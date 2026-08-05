@@ -14,7 +14,10 @@ import { Select } from "@/components/shadcn/select";
 import { DialogFormFooter } from "@/components/ui/dialog-form-footer";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import { deliveryTimeUnits, purchasingUnits } from "@/lib/enums";
-import { DELIVERY_TIME_UNIT_LABELS, PURCHASING_UNIT_LABELS } from "@/lib/labels";
+import {
+  DELIVERY_TIME_UNIT_LABELS,
+  PURCHASING_UNIT_LABELS,
+} from "@/lib/labels";
 import { Package } from "lucide-react";
 import { FormEventHandler } from "react";
 import { Controller, UseFormReturn } from "react-hook-form";
@@ -94,7 +97,7 @@ export const ProductDialog = ({
                 type="checkbox"
                 id="prod-preferred"
                 {...register("preferred")}
-                className="h-4 w-4 rounded border-gray-300"
+                className="h-4 w-4 rounded border-border"
               />
               <label htmlFor="prod-preferred" className="text-sm">
                 Preferred

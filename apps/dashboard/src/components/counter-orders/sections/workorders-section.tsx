@@ -61,7 +61,10 @@ const WorkordersPanel = ({ title, columns }: PanelProps) => (
         <thead>
           <tr className="border-b text-left text-xs text-muted-foreground">
             {columns.map((column) => (
-              <th key={column} className="whitespace-nowrap px-3 py-2 font-medium">
+              <th
+                key={column}
+                className="whitespace-nowrap px-3 py-2 font-medium"
+              >
                 {column}
               </th>
             ))}
@@ -84,7 +87,7 @@ const WorkordersPanel = ({ title, columns }: PanelProps) => (
 
 export const WorkordersSection = () => (
   <section className="space-y-4">
-    <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
+    <h2 className="border-b pb-2 text-lg font-semibold text-foreground">
       Workorders
     </h2>
     {WORKORDER_PANELS.map((panel) => (

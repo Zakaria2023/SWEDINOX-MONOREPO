@@ -51,7 +51,7 @@ export const TransporterCountriesSection = ({
 }: Props) => (
   <section className="space-y-4">
     <div className="flex items-center justify-between border-b pb-2">
-      <h2 className="text-lg font-semibold text-gray-800">
+      <h2 className="text-lg font-semibold text-foreground">
         Transporter countries
       </h2>
       <button

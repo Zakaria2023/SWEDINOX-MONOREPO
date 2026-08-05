@@ -9,7 +9,19 @@ import {
 } from "@/components/shadcn/table";
 import { daysInSystem, formatDateValue } from "@/lib/helpers";
 import { SelectInvoices } from "@/db";
-import { COMPANY_LANGUAGE_LABELS, COMPANY_ROLE_LABELS, COMPLAINT_CATEGORY_LABELS, COMPLAINT_REPORT_LABELS, COMPLAINT_TYPE_LABELS, COUNTER_ORDER_STATUS_LABELS, INVOICE_PAYMENT_TERM_LABELS, INVOICE_VAT_SCENARIO_LABELS, VISIT_REPORT_CONTACT_METHOD_LABELS, VISIT_REPORT_REASON_LABELS, PURCHASE_ORDER_STATUS_LABELS } from "@/lib/labels";
+import {
+  COMPANY_LANGUAGE_LABELS,
+  COMPANY_ROLE_LABELS,
+  COMPLAINT_CATEGORY_LABELS,
+  COMPLAINT_REPORT_LABELS,
+  COMPLAINT_TYPE_LABELS,
+  COUNTER_ORDER_STATUS_LABELS,
+  INVOICE_PAYMENT_TERM_LABELS,
+  INVOICE_VAT_SCENARIO_LABELS,
+  VISIT_REPORT_CONTACT_METHOD_LABELS,
+  VISIT_REPORT_REASON_LABELS,
+  PURCHASE_ORDER_STATUS_LABELS,
+} from "@/lib/labels";
 import { Plus } from "lucide-react";
 import Link from "next/link";
 
@@ -23,9 +35,7 @@ const Field = ({ label, value }: { label: string; value?: string | null }) => (
     <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
       {label}
     </dt>
-    <dd className="mt-0.5 text-sm text-gray-900">
-      {value || "—"}
-    </dd>
+    <dd className="mt-0.5 text-sm text-foreground">{value || "—"}</dd>
   </div>
 );
 
@@ -39,7 +49,7 @@ export const CompanyDetailView = ({ company, invoices }: Props) => {
     <div className="space-y-8">
       {/* General info */}
       <section className="space-y-4">
-        <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-gray-700">
+        <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-foreground">
           General
         </h2>
         <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -82,7 +92,7 @@ export const CompanyDetailView = ({ company, invoices }: Props) => {
       {/* Addresses */}
       {company.addresses.length > 0 && (
         <section className="space-y-3">
-          <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-gray-700">
+          <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-foreground">
             Addresses{" "}
             <span className="ml-1 text-xs font-normal text-muted-foreground">
               {company.addresses.length}
@@ -120,7 +130,7 @@ export const CompanyDetailView = ({ company, invoices }: Props) => {
       {/* Counter Orders */}
       {company.counterOrders.length > 0 && (
         <section className="space-y-3">
-          <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-gray-700">
+          <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-foreground">
             Counter Orders{" "}
             <span className="ml-1 text-xs font-normal text-muted-foreground">
               {company.counterOrders.length}
@@ -150,7 +160,9 @@ export const CompanyDetailView = ({ company, invoices }: Props) => {
                       {order.handlingBlocked ? "Yes" : "No"}
                     </TableCell>
                     <TableCell>
-                      {order.status ? COUNTER_ORDER_STATUS_LABELS[order.status] : "—"}
+                      {order.status
+                        ? COUNTER_ORDER_STATUS_LABELS[order.status]
+                        : "—"}
                     </TableCell>
                     <TableCell>{order.orderDate ?? na}</TableCell>
                     <TableCell>{order.deliveryDate ?? na}</TableCell>
@@ -178,7 +190,7 @@ export const CompanyDetailView = ({ company, invoices }: Props) => {
       {/* Visit Reports */}
       {company.visitReports.length > 0 && (
         <section className="space-y-3">
-          <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-gray-700">
+          <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-foreground">
             Visit Reports{" "}
             <span className="ml-1 text-xs font-normal text-muted-foreground">
               {company.visitReports.length}
@@ -230,7 +242,7 @@ export const CompanyDetailView = ({ company, invoices }: Props) => {
       {/* Complaints */}
       {company.complaints.length > 0 && (
         <section className="space-y-3">
-          <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-gray-700">
+          <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-foreground">
             Complaints{" "}
             <span className="ml-1 text-xs font-normal text-muted-foreground">
               {company.complaints.length}
@@ -268,7 +280,9 @@ export const CompanyDetailView = ({ company, invoices }: Props) => {
                         ? COMPLAINT_REPORT_LABELS[complaint.report]
                         : na}
                     </TableCell>
-                    <TableCell>{formatDateValue(complaint.reportDate, "—")}</TableCell>
+                    <TableCell>
+                      {formatDateValue(complaint.reportDate, "—")}
+                    </TableCell>
                     <TableCell>
                       {complaint.category
                         ? COMPLAINT_CATEGORY_LABELS[complaint.category]
@@ -298,7 +312,7 @@ export const CompanyDetailView = ({ company, invoices }: Props) => {
       {/* Follow-up */}
       {company.followUps.length > 0 && (
         <section className="space-y-3">
-          <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-gray-700">
+          <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-foreground">
             Follow-up{" "}
             <span className="ml-1 text-xs font-normal text-muted-foreground">
               {company.followUps.length}
@@ -338,7 +352,7 @@ export const CompanyDetailView = ({ company, invoices }: Props) => {
       {/* Purchase Orders */}
       {company.purchaseOrders.length > 0 && (
         <section className="space-y-3">
-          <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-gray-700">
+          <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-foreground">
             Purchase Orders{" "}
             <span className="ml-1 text-xs font-normal text-muted-foreground">
               {company.purchaseOrders.length}
@@ -368,7 +382,9 @@ export const CompanyDetailView = ({ company, invoices }: Props) => {
                       {PURCHASE_ORDER_STATUS_LABELS[order.status]}
                     </TableCell>
                     <TableCell>{order.orderDate ?? na}</TableCell>
-                    <TableCell>{formatDateValue(order.deliveryDate, "—")}</TableCell>
+                    <TableCell>
+                      {formatDateValue(order.deliveryDate, "—")}
+                    </TableCell>
                     <TableCell className="text-right whitespace-nowrap">
                       € {order.amount}
                     </TableCell>
@@ -393,7 +409,7 @@ export const CompanyDetailView = ({ company, invoices }: Props) => {
       {isCustomer && (
         <section className="space-y-3">
           <div className="flex items-center justify-between border-b pb-2">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-700">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-foreground">
               Invoices{" "}
               <span className="ml-1 text-xs font-normal text-muted-foreground">
                 {invoices?.length ?? 0}

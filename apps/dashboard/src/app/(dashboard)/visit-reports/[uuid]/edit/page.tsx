@@ -126,7 +126,7 @@ const VisitReportEditPage = async ({ params }: Props) => {
       />
 
       <section className="space-y-3">
-        <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
+        <h2 className="border-b pb-2 text-lg font-semibold text-foreground">
           Report
         </h2>
         <div className="grid gap-3 sm:grid-cols-2">
@@ -137,7 +137,7 @@ const VisitReportEditPage = async ({ params }: Props) => {
       </section>
 
       <section className="space-y-3">
-        <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
+        <h2 className="border-b pb-2 text-lg font-semibold text-foreground">
           Lists
         </h2>
         <div className="grid gap-3 sm:grid-cols-2">

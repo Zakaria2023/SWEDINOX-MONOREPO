@@ -9,7 +9,10 @@ import { FormCheckboxCard } from "@/components/ui/form-checkbox-card";
 import { FormLabel } from "@/components/ui/form-field";
 import { FormSelectField } from "@/components/ui/form-select-field";
 import { contractTierUnits, invoiceSurchargeDescriptions } from "@/lib/enums";
-import { CONTRACT_TIER_UNIT_LABELS, INVOICE_SURCHARGE_DESCRIPTION_LABELS } from "@/lib/labels";
+import {
+  CONTRACT_TIER_UNIT_LABELS,
+  INVOICE_SURCHARGE_DESCRIPTION_LABELS,
+} from "@/lib/labels";
 
 type Props = {
   companyOptions: SelectOption[];
@@ -54,7 +57,7 @@ export const SurchargesSection = ({ companyOptions }: Props) => {
 
   return (
     <section className="space-y-4">
-      <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
+      <h2 className="border-b pb-2 text-lg font-semibold text-foreground">
         Surcharges
       </h2>
       <div className="space-y-3 rounded-2xl border border-border bg-muted/20 p-4">

@@ -16,7 +16,7 @@ export const ContractWebsiteSection = ({
 
   return (
     <section className="space-y-4">
-      <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-gray-700">
+      <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-foreground">
         Website
       </h2>
       <div className="space-y-3">
@@ -41,7 +41,7 @@ export const ContractWebsiteSection = ({
           />
           <label
             htmlFor="hideOnWebsite"
-            className="text-sm font-medium text-gray-700"
+            className="text-sm font-medium text-foreground"
           >
             Hide on Website
           </label>

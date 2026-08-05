@@ -39,7 +39,7 @@ export const ContractCompaniesSection = ({
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between border-b pb-2">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-700">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-foreground">
           Companies{" "}
           <span className="ml-1 text-xs font-normal text-muted-foreground">
             {companies.length}{" "}

@@ -22,7 +22,13 @@ import {
   orderMethods,
   salesRepresentatives,
 } from "@/lib/enums";
-import { COUNTER_ORDER_PRIORITY_LABELS, COUNTER_ORDER_STATUS_LABELS, DELIVERY_TERM_LABELS, ORDER_METHOD_LABELS, SALES_REPRESENTATIVE_LABELS } from "@/lib/labels";
+import {
+  COUNTER_ORDER_PRIORITY_LABELS,
+  COUNTER_ORDER_STATUS_LABELS,
+  DELIVERY_TERM_LABELS,
+  ORDER_METHOD_LABELS,
+  SALES_REPRESENTATIVE_LABELS,
+} from "@/lib/labels";
 import { ShoppingCart } from "lucide-react";
 import { FormEventHandler } from "react";
 import { Controller, UseFormReturn } from "react-hook-form";
@@ -46,7 +52,7 @@ type CheckboxFieldProps = {
 const CheckboxField = ({ label, checked, onChange }: CheckboxFieldProps) => (
   <label className="flex cursor-pointer items-center gap-2">
     <Checkbox checked={checked} onChange={(e) => onChange(e.target.checked)} />
-    <span className="text-sm text-gray-700">{label}</span>
+    <span className="text-sm text-foreground">{label}</span>
   </label>
 );
 

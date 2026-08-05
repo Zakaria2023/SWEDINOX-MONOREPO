@@ -27,11 +27,18 @@ export const DebtorSection = ({
   currencyOptions,
   currentUserName,
 }: Props) => {
-  const { control, register, formState: { errors }, watch, setValue, getValues } = useFormContext<CompanyFormValues>();
+  const {
+    control,
+    register,
+    formState: { errors },
+    watch,
+    setValue,
+    getValues,
+  } = useFormContext<CompanyFormValues>();
 
   return (
     <section className="space-y-4">
-      <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
+      <h2 className="border-b pb-2 text-lg font-semibold text-foreground">
         Debtor
       </h2>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -66,9 +73,7 @@ export const DebtorSection = ({
                 disabled={isPending}
               />
               <FormFieldError
-                message={
-                  errors.memberNumberPurchaseOrg?.message
-                }
+                message={errors.memberNumberPurchaseOrg?.message}
               />
             </div>
           </>
@@ -103,21 +108,13 @@ export const DebtorSection = ({
 
         <div className="space-y-2">
           <FormLabel htmlFor="iban">IBAN</FormLabel>
-          <Input
-            id="iban"
-            {...register("iban")}
-            disabled={isPending}
-          />
+          <Input id="iban" {...register("iban")} disabled={isPending} />
           <FormFieldError message={errors.iban?.message} />
         </div>
 
         <div className="space-y-2">
           <FormLabel htmlFor="bic">BIC</FormLabel>
-          <Input
-            id="bic"
-            {...register("bic")}
-            disabled={isPending}
-          />
+          <Input id="bic" {...register("bic")} disabled={isPending} />
           <FormFieldError message={errors.bic?.message} />
         </div>
 
@@ -128,23 +125,17 @@ export const DebtorSection = ({
             {...register("bankAccount")}
             disabled={isPending}
           />
-          <FormFieldError
-            message={errors.bankAccount?.message}
-          />
+          <FormFieldError message={errors.bankAccount?.message} />
         </div>
 
         <div className="space-y-2">
-          <FormLabel htmlFor="postbankAccount">
-            Postbank account
-          </FormLabel>
+          <FormLabel htmlFor="postbankAccount">Postbank account</FormLabel>
           <Input
             id="postbankAccount"
             {...register("postbankAccount")}
             disabled={isPending}
           />
-          <FormFieldError
-            message={errors.postbankAccount?.message}
-          />
+          <FormFieldError message={errors.postbankAccount?.message} />
         </div>
 
         <div className="space-y-2">
@@ -154,9 +145,7 @@ export const DebtorSection = ({
             {...register("vatNumber")}
             disabled={isPending}
           />
-          <FormFieldError
-            message={errors.vatNumber?.message}
-          />
+          <FormFieldError message={errors.vatNumber?.message} />
         </div>
 
         <div className="space-y-2">
@@ -166,9 +155,7 @@ export const DebtorSection = ({
             {...register("cocNumber")}
             disabled={isPending}
           />
-          <FormFieldError
-            message={errors.cocNumber?.message}
-          />
+          <FormFieldError message={errors.cocNumber?.message} />
         </div>
 
         <div className="space-y-2">
@@ -179,9 +166,7 @@ export const DebtorSection = ({
             {...register("journalCode", { valueAsNumber: true })}
             disabled={isPending}
           />
-          <FormFieldError
-            message={errors.journalCode?.message}
-          />
+          <FormFieldError message={errors.journalCode?.message} />
         </div>
 
         <div className="space-y-2">
@@ -193,9 +178,7 @@ export const DebtorSection = ({
             {...register("creditLimit")}
             disabled={isPending}
           />
-          <FormFieldError
-            message={errors.creditLimit?.message}
-          />
+          <FormFieldError message={errors.creditLimit?.message} />
         </div>
 
         <div className="space-y-2">
@@ -209,9 +192,7 @@ export const DebtorSection = ({
             {...register("creditLimitInsurance")}
             disabled={isPending}
           />
-          <FormFieldError
-            message={errors.creditLimitInsurance?.message}
-          />
+          <FormFieldError message={errors.creditLimitInsurance?.message} />
         </div>
 
         <div className="space-y-2">
@@ -225,9 +206,7 @@ export const DebtorSection = ({
             {...register("creditLimitUninsured")}
             disabled={isPending}
           />
-          <FormFieldError
-            message={errors.creditLimitUninsured?.message}
-          />
+          <FormFieldError message={errors.creditLimitUninsured?.message} />
         </div>
 
         <div className="space-y-2">
@@ -240,9 +219,7 @@ export const DebtorSection = ({
             {...register("insuranceValidUntil")}
             disabled={isPending}
           />
-          <FormFieldError
-            message={errors.insuranceValidUntil?.message}
-          />
+          <FormFieldError message={errors.insuranceValidUntil?.message} />
         </div>
 
         <div className="space-y-2">
@@ -255,11 +232,7 @@ export const DebtorSection = ({
             {...register("creditLimitUninsuredDate")}
             disabled={isPending}
           />
-          <FormFieldError
-            message={
-              errors.creditLimitUninsuredDate?.message
-            }
-          />
+          <FormFieldError message={errors.creditLimitUninsuredDate?.message} />
         </div>
       </div>
 
@@ -268,10 +241,7 @@ export const DebtorSection = ({
           <Checkbox
             checked={watch("calculateVat")}
             onChange={() =>
-              setValue(
-                "calculateVat",
-                !getValues("calculateVat"),
-              )
+              setValue("calculateVat", !getValues("calculateVat"))
             }
             disabled={isPending}
           />
@@ -280,9 +250,7 @@ export const DebtorSection = ({
         <label className="flex items-center gap-2 text-sm">
           <Checkbox
             checked={watch("reminder")}
-            onChange={() =>
-              setValue("reminder", !getValues("reminder"))
-            }
+            onChange={() => setValue("reminder", !getValues("reminder"))}
             disabled={isPending}
           />
           Reminder
@@ -303,14 +271,10 @@ export const DebtorSection = ({
         <label className="flex items-center gap-2 text-sm">
           <Checkbox
             checked={watch("isBlocked")}
-            onChange={() =>
-              setValue("isBlocked", !getValues("isBlocked"))
-            }
+            onChange={() => setValue("isBlocked", !getValues("isBlocked"))}
             disabled={isPending}
           />
-          {watch("isBlocked")
-            ? `Blocked by ${currentUserName}`
-            : "Blocked by"}
+          {watch("isBlocked") ? `Blocked by ${currentUserName}` : "Blocked by"}
         </label>
       </div>
 
@@ -322,9 +286,7 @@ export const DebtorSection = ({
             {...register("blockedByNote")}
             disabled={isPending}
           />
-          <FormFieldError
-            message={errors.blockedByNote?.message}
-          />
+          <FormFieldError message={errors.blockedByNote?.message} />
         </div>
       )}
     </section>

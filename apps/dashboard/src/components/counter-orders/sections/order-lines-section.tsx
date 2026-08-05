@@ -1,11 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Controller,
-  useFieldArray,
-  useFormContext,
-} from "react-hook-form";
+import { Controller, useFieldArray, useFormContext } from "react-hook-form";
 import { CounterOrderFormValues } from "@/app/(dashboard)/counter-orders/validation";
 import { ProductOption } from "@/app/(dashboard)/products/actions";
 import { ProductGroupOption } from "@/app/(dashboard)/product-groups/actions";
@@ -99,7 +95,7 @@ export const OrderLinesSection = ({ products, productGroups }: Props) => {
 
   return (
     <section className="space-y-4">
-      <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
+      <h2 className="border-b pb-2 text-lg font-semibold text-foreground">
         Order lines
       </h2>
 

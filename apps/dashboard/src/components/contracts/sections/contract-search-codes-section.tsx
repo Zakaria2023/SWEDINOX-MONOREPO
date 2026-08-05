@@ -16,7 +16,7 @@ export const ContractSearchCodesSection = ({
 
   return (
     <section className="space-y-4">
-      <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-gray-700">
+      <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-foreground">
         Search Codes
       </h2>
       <div className="space-y-3">

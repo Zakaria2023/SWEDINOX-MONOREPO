@@ -123,7 +123,7 @@ export const CompanyProjectsEditor = ({
             >
               <div className="flex min-w-0 items-center gap-2 text-sm">
                 <FolderOpen className="size-4 shrink-0 text-muted-foreground" />
-                <span className="line-clamp-1 text-gray-800">
+                <span className="line-clamp-1 text-foreground">
                   {project.projectName || "Project"}
                 </span>
                 {project.startingDate && (

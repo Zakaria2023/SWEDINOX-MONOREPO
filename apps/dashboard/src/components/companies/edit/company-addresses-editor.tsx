@@ -140,7 +140,7 @@ export const CompanyAddressesEditor = ({ companyUuid, addresses }: Props) => {
           >
             <div className="flex min-w-0 items-center gap-2 text-sm">
               <MapPin className="size-4 shrink-0 text-muted-foreground" />
-              <span className="line-clamp-1 text-gray-800">
+              <span className="line-clamp-1 text-foreground">
                 {[address.streetAndNo, address.city]
                   .filter(Boolean)
                   .join(", ") ||

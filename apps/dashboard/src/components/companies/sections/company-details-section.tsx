@@ -1,12 +1,18 @@
 "use client";
 
-import { AddressFormValues, CompanyFormValues } from "@/app/(dashboard)/companies/validation";
+import {
+  AddressFormValues,
+  CompanyFormValues,
+} from "@/app/(dashboard)/companies/validation";
 import { CommSettingInput } from "@/app/(dashboard)/companies/actions";
 import { Input } from "@/components/shadcn/input";
 import { Textarea } from "@/components/shadcn/textarea";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import { FormSelectField } from "@/components/ui/form-select-field";
-import { COMMUNICATION_SETTING_SHAPE_LABELS, ADDRESS_CATEGORY_LABELS } from "@/lib/labels";
+import {
+  COMMUNICATION_SETTING_SHAPE_LABELS,
+  ADDRESS_CATEGORY_LABELS,
+} from "@/lib/labels";
 import { MapPin, MessageSquare, Plus, X } from "lucide-react";
 import { useFormContext } from "react-hook-form";
 
@@ -14,7 +20,11 @@ type Props = {
   isPending: boolean;
   hasFirstAddress: boolean;
   addressValues: AddressFormValues;
-  addressLabel: (address: { streetAndNo?: string; city?: string; altName?: string }) => string;
+  addressLabel: (address: {
+    streetAndNo?: string;
+    city?: string;
+    altName?: string;
+  }) => string;
   additionalAddresses: AddressFormValues[];
   setIsFirstAddressDialogOpen: (open: boolean) => void;
   removeAdditionalAddress: (index: number) => void;
@@ -41,11 +51,15 @@ export const CompanyDetailsSection = ({
   handleOpenCommSetting,
   langOptions,
 }: Props) => {
-  const { register, control, formState: { errors } } = useFormContext<CompanyFormValues>();
+  const {
+    register,
+    control,
+    formState: { errors },
+  } = useFormContext<CompanyFormValues>();
 
   return (
     <section className="space-y-4">
-      <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
+      <h2 className="border-b pb-2 text-lg font-semibold text-foreground">
         Company Details
       </h2>
       <div className="space-y-4 rounded-2xl border border-border bg-muted/20 p-4">
@@ -200,9 +214,7 @@ export const CompanyDetailsSection = ({
                 disabled={isPending}
               >
                 <X className="size-4" />
-                <span className="sr-only">
-                  Remove communication setting
-                </span>
+                <span className="sr-only">Remove communication setting</span>
               </button>
             </div>
           ))}

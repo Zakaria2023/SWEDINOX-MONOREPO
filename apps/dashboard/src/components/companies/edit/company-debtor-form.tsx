@@ -117,7 +117,7 @@ export const CompanyDebtorForm = ({
       <FormError>{state.error}</FormError>
 
       <section className="space-y-4">
-        <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
+        <h2 className="border-b pb-2 text-lg font-semibold text-foreground">
           Debtor
         </h2>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -379,7 +379,7 @@ export const CompanyDebtorForm = ({
         </Button>
         <Link
           href={`/companies/${company.uuid}/edit`}
-          className="inline-flex h-9 items-center rounded-lg border border-border px-4 text-sm text-gray-700 transition-colors hover:bg-muted/40"
+          className="inline-flex h-9 items-center rounded-lg border border-border px-4 text-sm text-foreground transition-colors hover:bg-muted/40"
         >
           Cancel
         </Link>

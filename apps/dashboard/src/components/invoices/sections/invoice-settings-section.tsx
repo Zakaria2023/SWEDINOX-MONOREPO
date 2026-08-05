@@ -4,7 +4,10 @@ import { InvoiceFormValues } from "@/app/(dashboard)/invoices/validation";
 import { Select } from "@/components/shadcn/select";
 import { FormLabel } from "@/components/ui/form-field";
 import { invoicePaymentTerms, invoiceVatScenarios } from "@/lib/enums";
-import { INVOICE_PAYMENT_TERM_LABELS, INVOICE_VAT_SCENARIO_LABELS } from "@/lib/labels";
+import {
+  INVOICE_PAYMENT_TERM_LABELS,
+  INVOICE_VAT_SCENARIO_LABELS,
+} from "@/lib/labels";
 import { Controller, useFormContext } from "react-hook-form";
 
 type InvoiceSettingsSectionProps = {
@@ -34,7 +37,7 @@ export const InvoiceSettingsSection = ({
 
   return (
     <div className="space-y-4">
-      <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-gray-700">
+      <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-foreground">
         Settings
       </h2>
       <div>

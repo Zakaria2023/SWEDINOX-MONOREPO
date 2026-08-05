@@ -27,7 +27,7 @@ export const FinancesSection = ({ addressOptions }: Props) => {
 
   return (
     <section className="space-y-4">
-      <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
+      <h2 className="border-b pb-2 text-lg font-semibold text-foreground">
         Finances
       </h2>
 

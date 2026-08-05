@@ -31,7 +31,7 @@ export const FormCheckboxCard = ({
     <input
       type="checkbox"
       className={cn(
-        "mt-0.5 h-4 w-4 rounded border-gray-300 accent-primary",
+        "mt-0.5 h-4 w-4 rounded border-border accent-primary",
         checkboxClassName,
       )}
       {...inputProps}

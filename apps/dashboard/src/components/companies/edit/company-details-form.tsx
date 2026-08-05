@@ -57,7 +57,7 @@ export const CompanyDetailsForm = ({ company }: Props) => {
       <FormError>{state.error}</FormError>
 
       <section className="space-y-4">
-        <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
+        <h2 className="border-b pb-2 text-lg font-semibold text-foreground">
           Company Details
         </h2>
         <div className="space-y-4 rounded-2xl border border-border bg-muted/20 p-4">
@@ -113,7 +113,7 @@ export const CompanyDetailsForm = ({ company }: Props) => {
       </section>
 
       <section className="space-y-4">
-        <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
+        <h2 className="border-b pb-2 text-lg font-semibold text-foreground">
           Search Codes
         </h2>
         <div className="grid gap-3 rounded-2xl border border-border bg-muted/20 p-4 sm:grid-cols-3">
@@ -150,7 +150,7 @@ export const CompanyDetailsForm = ({ company }: Props) => {
         </Button>
         <Link
           href={`/companies/${company.uuid}/edit`}
-          className="inline-flex h-9 items-center rounded-lg border border-border px-4 text-sm text-gray-700 transition-colors hover:bg-muted/40"
+          className="inline-flex h-9 items-center rounded-lg border border-border px-4 text-sm text-foreground transition-colors hover:bg-muted/40"
         >
           Cancel
         </Link>

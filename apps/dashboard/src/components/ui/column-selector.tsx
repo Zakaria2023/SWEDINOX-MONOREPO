@@ -48,7 +48,7 @@ export const ColumnSelector = ({
                 type="checkbox"
                 checked={visibility[column.key] ?? true}
                 onChange={() => onToggle(column.key)}
-                className="h-4 w-4 rounded border-gray-300"
+                className="h-4 w-4 rounded border-border"
               />
               {column.label}
             </label>

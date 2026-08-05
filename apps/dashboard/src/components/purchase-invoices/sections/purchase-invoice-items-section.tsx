@@ -50,7 +50,7 @@ export const PurchaseInvoiceItemsSection = ({
 
   return (
     <div className="space-y-4 lg:col-span-3">
-      <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-gray-700">
+      <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-foreground">
         Received Items
       </h2>
 
@@ -61,7 +61,10 @@ export const PurchaseInvoiceItemsSection = ({
             className="grid grid-cols-[1fr_160px_32px] items-start gap-3"
           >
             <div>
-              <FormLabel htmlFor={`items.${index}.purchaseOrderItemUuid`} required>
+              <FormLabel
+                htmlFor={`items.${index}.purchaseOrderItemUuid`}
+                required
+              >
                 Order Line
               </FormLabel>
               <Controller

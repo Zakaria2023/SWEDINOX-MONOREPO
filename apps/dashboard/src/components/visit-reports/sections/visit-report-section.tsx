@@ -62,7 +62,7 @@ export const VisitReportSection = ({
 
   return (
     <section className="space-y-4">
-      <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
+      <h2 className="border-b pb-2 text-lg font-semibold text-foreground">
         Visit Report
       </h2>
       <div className="grid gap-4 rounded-2xl border border-border bg-muted/20 p-4 md:grid-cols-2">
@@ -151,7 +151,7 @@ export const VisitReportSection = ({
               {...register("hasTakenPlace")}
               disabled={isPending}
             />
-            <span className="text-sm font-medium text-gray-700">
+            <span className="text-sm font-medium text-foreground">
               Visit / telephone contact has taken place
             </span>
           </label>

@@ -22,7 +22,13 @@ import {
   orderWeightTypes,
   salesRepresentatives,
 } from "@/lib/enums";
-import { DELIVERY_TERM_LABELS, INVOICE_PAYMENT_TERM_LABELS, ORDER_METHOD_LABELS, ORDER_WEIGHT_TYPE_LABELS, SALES_REPRESENTATIVE_LABELS } from "@/lib/labels";
+import {
+  DELIVERY_TERM_LABELS,
+  INVOICE_PAYMENT_TERM_LABELS,
+  ORDER_METHOD_LABELS,
+  ORDER_WEIGHT_TYPE_LABELS,
+  SALES_REPRESENTATIVE_LABELS,
+} from "@/lib/labels";
 import { FileText } from "lucide-react";
 import { FormEventHandler } from "react";
 import { Controller, UseFormReturn } from "react-hook-form";
@@ -46,7 +52,7 @@ type CheckboxFieldProps = {
 const CheckboxField = ({ label, checked, onChange }: CheckboxFieldProps) => (
   <label className="flex cursor-pointer items-center gap-2">
     <Checkbox checked={checked} onChange={(e) => onChange(e.target.checked)} />
-    <span className="text-sm text-gray-700">{label}</span>
+    <span className="text-sm text-foreground">{label}</span>
   </label>
 );
 
@@ -65,9 +71,7 @@ export const QuoteDialog = ({
           <FileText className="size-4" />
           {isEditing ? "Edit Quote" : "Add Quote"}
         </DialogTitle>
-        <DialogDescription>
-          Add a quote for this company.
-        </DialogDescription>
+        <DialogDescription>Add a quote for this company.</DialogDescription>
       </DialogHeader>
       <form onSubmit={onSave} className="flex min-h-0 flex-1 flex-col">
         <DialogBody className="flex-1 space-y-4 overflow-y-auto px-6 py-4">

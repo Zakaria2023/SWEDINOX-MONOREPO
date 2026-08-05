@@ -22,7 +22,9 @@ export const RolesSection = ({
   error,
 }: Props) => (
   <section className="space-y-4">
-    <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">Roles</h2>
+    <h2 className="border-b pb-2 text-lg font-semibold text-foreground">
+      Roles
+    </h2>
     <div className="grid gap-3 rounded-2xl border border-border bg-muted/20 p-4 sm:grid-cols-2 lg:grid-cols-4">
       {companyRoles.map((role) => {
         const isDisabled = isPending || disabledRoles.has(role);
@@ -41,7 +43,7 @@ export const RolesSection = ({
               onChange={() => toggleRole(role)}
               disabled={isDisabled}
             />
-            <span className="text-sm font-medium text-gray-700">
+            <span className="text-sm font-medium text-foreground">
               {COMPANY_ROLE_LABELS[role]}
             </span>
           </label>

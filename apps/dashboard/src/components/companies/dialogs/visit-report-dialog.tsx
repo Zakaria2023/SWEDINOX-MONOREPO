@@ -186,7 +186,7 @@ export const VisitReportDialog = ({
                     checked={!!field.value}
                     onChange={(e) => field.onChange(e.target.checked)}
                   />
-                  <span className="text-sm text-gray-700">Took place</span>
+                  <span className="text-sm text-foreground">Took place</span>
                 </label>
               )}
             />

@@ -6,7 +6,7 @@ type Props = {
 };
 
 export const PageHeading = ({ title, titleClassName }: Props) => (
-  <h1 className={cn("text-3xl font-bold text-gray-900", titleClassName)}>
+  <h1 className={cn("text-3xl font-bold text-foreground", titleClassName)}>
     {title}
   </h1>
 );

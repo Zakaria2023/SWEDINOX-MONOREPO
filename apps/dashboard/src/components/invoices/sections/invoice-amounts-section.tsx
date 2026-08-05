@@ -14,7 +14,7 @@ export const InvoiceAmountsSection = ({
 
   return (
     <div className="space-y-4">
-      <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-gray-700">
+      <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-foreground">
         Amounts
       </h2>
       <div className="space-y-2 pt-1">
@@ -26,7 +26,7 @@ export const InvoiceAmountsSection = ({
             className="size-4 accent-primary"
             disabled={isPending}
           />
-          <span className="text-sm font-medium text-gray-700">
+          <span className="text-sm font-medium text-foreground">
             Calculate VAT
           </span>
         </label>
@@ -38,9 +38,7 @@ export const InvoiceAmountsSection = ({
             className="size-4 accent-primary"
             disabled={isPending}
           />
-          <span className="text-sm font-medium text-gray-700">
-            Printed
-          </span>
+          <span className="text-sm font-medium text-foreground">Printed</span>
         </label>
         <label className="flex cursor-pointer items-center gap-2">
           <input
@@ -50,9 +48,7 @@ export const InvoiceAmountsSection = ({
             className="size-4 accent-primary"
             disabled={isPending}
           />
-          <span className="text-sm font-medium text-gray-700">
-            Mailed
-          </span>
+          <span className="text-sm font-medium text-foreground">Mailed</span>
         </label>
       </div>
     </div>

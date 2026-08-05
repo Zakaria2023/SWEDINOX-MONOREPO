@@ -27,7 +27,7 @@ const CheckboxField = ({
       onChange={(e) => onChange(e.target.checked)}
       disabled={disabled}
     />
-    <span className="text-sm text-gray-700">{label}</span>
+    <span className="text-sm text-foreground">{label}</span>
   </label>
 );
 
@@ -36,7 +36,7 @@ export const OrderTypeSection = ({ isPending }: Props) => {
 
   return (
     <section className="space-y-4">
-      <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
+      <h2 className="border-b pb-2 text-lg font-semibold text-foreground">
         Order type
       </h2>
       <div className="grid gap-3 rounded-2xl border border-border bg-muted/20 p-4 sm:grid-cols-2 lg:grid-cols-3">

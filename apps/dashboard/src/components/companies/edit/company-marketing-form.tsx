@@ -107,7 +107,7 @@ export const CompanyMarketingForm = ({ company, industries }: Props) => {
       <FormError>{state.error}</FormError>
 
       <section className="space-y-4">
-        <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">
+        <h2 className="border-b pb-2 text-lg font-semibold text-foreground">
           Marketing
         </h2>
 
@@ -154,7 +154,7 @@ export const CompanyMarketingForm = ({ company, industries }: Props) => {
 
         {/* Visit */}
         <div>
-          <h3 className="mb-3 text-sm font-semibold text-gray-700">Visit</h3>
+          <h3 className="mb-3 text-sm font-semibold text-foreground">Visit</h3>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
               <FormLabel htmlFor="visitFrequency">Visit frequency</FormLabel>
@@ -211,7 +211,7 @@ export const CompanyMarketingForm = ({ company, industries }: Props) => {
 
         {/* Revenue & sales */}
         <div>
-          <h3 className="mb-3 text-sm font-semibold text-gray-700">
+          <h3 className="mb-3 text-sm font-semibold text-foreground">
             Revenue &amp; sales
           </h3>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -280,7 +280,7 @@ export const CompanyMarketingForm = ({ company, industries }: Props) => {
 
         {/* Visit planning */}
         <div>
-          <h3 className="mb-3 text-sm font-semibold text-gray-700">
+          <h3 className="mb-3 text-sm font-semibold text-foreground">
             Visit planning
           </h3>
           <div className="overflow-x-auto rounded-2xl border border-border">
@@ -330,7 +330,7 @@ export const CompanyMarketingForm = ({ company, industries }: Props) => {
         </Button>
         <Link
           href={`/companies/${company.uuid}/edit`}
-          className="inline-flex h-9 items-center rounded-lg border border-border px-4 text-sm text-gray-700 transition-colors hover:bg-muted/40"
+          className="inline-flex h-9 items-center rounded-lg border border-border px-4 text-sm text-foreground transition-colors hover:bg-muted/40"
         >
           Cancel
         </Link>

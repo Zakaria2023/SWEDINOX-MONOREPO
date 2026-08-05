@@ -42,7 +42,9 @@ export const TransporterCostsSection = ({
 }: Props) => (
   <section className="space-y-4">
     <div className="flex items-center justify-between border-b pb-2">
-      <h2 className="text-lg font-semibold text-gray-800">Transporter costs</h2>
+      <h2 className="text-lg font-semibold text-foreground">
+        Transporter costs
+      </h2>
       <button
         type="button"
         onClick={addTransporterCost}
@@ -176,7 +178,9 @@ export const TransporterCostsSection = ({
                     inputMode="decimal"
                     value={cost.minAmount ?? "0.00"}
                     onChange={(e) =>
-                      updateTransporterCost(index, { minAmount: e.target.value })
+                      updateTransporterCost(index, {
+                        minAmount: e.target.value,
+                      })
                     }
                     disabled={isPending}
                     className="h-8"
@@ -187,7 +191,9 @@ export const TransporterCostsSection = ({
                     inputMode="decimal"
                     value={cost.maxAmount ?? "0.00"}
                     onChange={(e) =>
-                      updateTransporterCost(index, { maxAmount: e.target.value })
+                      updateTransporterCost(index, {
+                        maxAmount: e.target.value,
+                      })
                     }
                     disabled={isPending}
                     className="h-8"
