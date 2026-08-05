@@ -3,6 +3,7 @@
 import { CompanyCounterOrderInput } from "@/app/(dashboard)/companies/actions";
 import { COUNTER_ORDER_STATUS_LABELS } from "@/lib/labels";
 import { Pencil, Plus, ShoppingCart, X } from "lucide-react";
+import { RowAction } from "@/components/ui/row-action";
 
 type Props = {
   counterOrders: CompanyCounterOrderInput[];
@@ -52,15 +53,14 @@ export const CounterOrdersSection = ({
             </span>
           </div>
           <div className="flex shrink-0 items-center gap-1">
-            <button
-              type="button"
+            <RowAction
               onClick={() => handleEditCounterOrder(index)}
-              className="text-muted-foreground hover:text-primary"
+              label="Edit counter order"
+              tone="edit"
               disabled={isPending}
             >
               <Pencil className="size-4" />
-              <span className="sr-only">Edit counter order</span>
-            </button>
+            </RowAction>
             <button
               type="button"
               onClick={() => removeCounterOrder(index)}

@@ -20,6 +20,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { FileText, Plus, Trash2 } from "lucide-react";
 import { startTransition, useActionState, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
+import { RowAction } from "@/components/ui/row-action";
 
 type Props = {
   companyUuid: string;
@@ -142,15 +143,14 @@ export const CompanyContractsEditor = ({
                 </span>
               )}
             </div>
-            <button
-              type="button"
+            <RowAction
               onClick={() => setDeleteTarget(contract)}
-              className="rounded p-1 text-muted-foreground hover:text-destructive"
+              label="Delete contract"
+              tone="danger"
               disabled={isSaving || isDeleting}
             >
               <Trash2 className="size-4" />
-              <span className="sr-only">Delete contract</span>
-            </button>
+            </RowAction>
           </div>
         ))}
         <button

@@ -23,6 +23,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Pencil, Plus, Trash2, Undo2 } from "lucide-react";
 import { startTransition, useActionState, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
+import { RowAction } from "@/components/ui/row-action";
 
 type Props = {
   companyUuid: string;
@@ -152,24 +153,22 @@ export const CompanyReturnOrdersEditor = ({
               </span>
             </div>
             <div className="flex shrink-0 items-center gap-1">
-              <button
-                type="button"
+              <RowAction
                 onClick={() => handleOpenEdit(order)}
-                className="rounded p-1 text-muted-foreground hover:text-primary"
+                label="Edit return order"
+                tone="edit"
                 disabled={isSaving || isDeleting}
               >
                 <Pencil className="size-4" />
-                <span className="sr-only">Edit return order</span>
-              </button>
-              <button
-                type="button"
+              </RowAction>
+              <RowAction
                 onClick={() => setDeleteTarget(order)}
-                className="rounded p-1 text-muted-foreground hover:text-destructive"
+                label="Delete return order"
+                tone="danger"
                 disabled={isSaving || isDeleting}
               >
                 <Trash2 className="size-4" />
-                <span className="sr-only">Delete return order</span>
-              </button>
+              </RowAction>
             </div>
           </div>
         ))}

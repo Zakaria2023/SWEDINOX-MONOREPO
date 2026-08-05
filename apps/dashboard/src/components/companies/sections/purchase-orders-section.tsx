@@ -3,6 +3,7 @@
 import { CompanyPurchaseOrderInput } from "@/app/(dashboard)/companies/actions";
 import { PURCHASE_ORDER_STATUS_LABELS } from "@/lib/labels";
 import { PackageCheck, Pencil, Plus, X } from "lucide-react";
+import { RowAction } from "@/components/ui/row-action";
 
 type Props = {
   purchaseOrders: CompanyPurchaseOrderInput[];
@@ -52,15 +53,14 @@ export const PurchaseOrdersSection = ({
             </span>
           </div>
           <div className="flex shrink-0 items-center gap-1">
-            <button
-              type="button"
+            <RowAction
               onClick={() => handleEditPurchaseOrder(index)}
-              className="text-muted-foreground hover:text-primary"
+              label="Edit purchase order"
+              tone="edit"
               disabled={isPending}
             >
               <Pencil className="size-4" />
-              <span className="sr-only">Edit purchase order</span>
-            </button>
+            </RowAction>
             <button
               type="button"
               onClick={() => removePurchaseOrder(index)}

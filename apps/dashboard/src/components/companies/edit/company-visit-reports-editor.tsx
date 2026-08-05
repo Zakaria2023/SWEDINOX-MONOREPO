@@ -23,6 +23,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { ClipboardList, Pencil, Plus, Trash2 } from "lucide-react";
 import { startTransition, useActionState, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
+import { RowAction } from "@/components/ui/row-action";
 
 type ContactSelectOption = {
   value: string;
@@ -162,24 +163,22 @@ export const CompanyVisitReportsEditor = ({
                 </span>
               </div>
               <div className="flex shrink-0 items-center gap-1">
-                <button
-                  type="button"
+                <RowAction
                   onClick={() => handleOpenEdit(report)}
-                  className="rounded p-1 text-muted-foreground hover:text-primary"
+                  label="Edit visit report"
+                  tone="edit"
                   disabled={isSaving || isDeleting}
                 >
                   <Pencil className="size-4" />
-                  <span className="sr-only">Edit visit report</span>
-                </button>
-                <button
-                  type="button"
+                </RowAction>
+                <RowAction
                   onClick={() => setDeleteTarget(report)}
-                  className="rounded p-1 text-muted-foreground hover:text-destructive"
+                  label="Delete visit report"
+                  tone="danger"
                   disabled={isSaving || isDeleting}
                 >
                   <Trash2 className="size-4" />
-                  <span className="sr-only">Delete visit report</span>
-                </button>
+                </RowAction>
               </div>
             </div>
           );

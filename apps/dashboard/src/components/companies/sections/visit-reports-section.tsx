@@ -6,6 +6,7 @@ import {
   VISIT_REPORT_REASON_LABELS,
 } from "@/lib/labels";
 import { ClipboardList, Pencil, Plus, X } from "lucide-react";
+import { RowAction } from "@/components/ui/row-action";
 
 type Props = {
   visitReports: VisitReportInput[];
@@ -58,15 +59,14 @@ export const VisitReportsSection = ({
             </span>
           </div>
           <div className="flex shrink-0 items-center gap-1">
-            <button
-              type="button"
+            <RowAction
               onClick={() => handleEditVisitReport(index)}
-              className="text-muted-foreground hover:text-primary"
+              label="Edit visit report"
+              tone="edit"
               disabled={isPending}
             >
               <Pencil className="size-4" />
-              <span className="sr-only">Edit visit report</span>
-            </button>
+            </RowAction>
             <button
               type="button"
               onClick={() => removeVisitReport(index)}

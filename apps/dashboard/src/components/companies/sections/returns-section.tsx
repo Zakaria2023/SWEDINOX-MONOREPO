@@ -6,6 +6,7 @@ import {
   RETURN_ORDER_STATUS_LABELS,
 } from "@/lib/labels";
 import { Pencil, Plus, Undo2, X } from "lucide-react";
+import { RowAction } from "@/components/ui/row-action";
 
 type Props = {
   returnOrders: CompanyReturnOrderInput[];
@@ -60,15 +61,14 @@ export const ReturnsSection = ({
             </span>
           </div>
           <div className="flex shrink-0 items-center gap-1">
-            <button
-              type="button"
+            <RowAction
               onClick={() => handleEditReturnOrder(index)}
-              className="text-muted-foreground hover:text-primary"
+              label="Edit return"
+              tone="edit"
               disabled={isPending}
             >
               <Pencil className="size-4" />
-              <span className="sr-only">Edit return</span>
-            </button>
+            </RowAction>
             <button
               type="button"
               onClick={() => removeReturnOrder(index)}

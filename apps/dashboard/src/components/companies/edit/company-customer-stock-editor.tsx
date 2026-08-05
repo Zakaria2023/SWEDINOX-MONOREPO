@@ -25,6 +25,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Boxes, Pencil, Plus, Trash2 } from "lucide-react";
 import { startTransition, useActionState, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
+import { RowAction } from "@/components/ui/row-action";
 
 type Props = {
   companyUuid: string;
@@ -167,24 +168,22 @@ export const CompanyCustomerStockEditor = ({
                     </td>
                     <td className="px-3 py-2 text-right">
                       <div className="flex items-center justify-end gap-1">
-                        <button
-                          type="button"
+                        <RowAction
                           onClick={() => handleOpenEdit(entry)}
-                          className="rounded p-1 text-muted-foreground hover:text-primary"
+                          label="Edit stock booking"
+                          tone="edit"
                           disabled={isSaving || isDeleting}
                         >
                           <Pencil className="size-4" />
-                          <span className="sr-only">Edit stock booking</span>
-                        </button>
-                        <button
-                          type="button"
+                        </RowAction>
+                        <RowAction
                           onClick={() => setDeleteTarget(entry)}
-                          className="rounded p-1 text-muted-foreground hover:text-destructive"
+                          label="Delete stock booking"
+                          tone="danger"
                           disabled={isSaving || isDeleting}
                         >
                           <Trash2 className="size-4" />
-                          <span className="sr-only">Delete stock booking</span>
-                        </button>
+                        </RowAction>
                       </div>
                     </td>
                   </tr>

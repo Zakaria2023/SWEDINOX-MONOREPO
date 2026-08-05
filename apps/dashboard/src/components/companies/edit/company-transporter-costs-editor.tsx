@@ -38,6 +38,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { RowAction } from "@/components/ui/row-action";
 
 type DraftRow = {
   key: string;
@@ -351,15 +352,14 @@ export const CompanyTransporterCostsEditor = ({
                         <Save className="size-4" />
                         <span className="sr-only">Save transporter cost</span>
                       </button>
-                      <button
-                        type="button"
+                      <RowAction
                         onClick={() => setDeleteTarget(row)}
-                        className="text-muted-foreground hover:text-destructive"
+                        label="Delete transporter cost"
+                        tone="danger"
                         disabled={isBusy}
                       >
                         <Trash2 className="size-4" />
-                        <span className="sr-only">Delete transporter cost</span>
-                      </button>
+                      </RowAction>
                     </div>
                   </TableCell>
                 </TableRow>

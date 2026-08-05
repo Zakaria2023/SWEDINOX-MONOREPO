@@ -2,6 +2,7 @@
 
 import { CompanyQuoteInput } from "@/app/(dashboard)/companies/actions";
 import { FileText, Pencil, Plus, X } from "lucide-react";
+import { RowAction } from "@/components/ui/row-action";
 
 type Props = {
   quotes: CompanyQuoteInput[];
@@ -53,15 +54,14 @@ export const QuotesSection = ({
             </span>
           </div>
           <div className="flex shrink-0 items-center gap-1">
-            <button
-              type="button"
+            <RowAction
               onClick={() => handleEditQuote(index)}
-              className="text-muted-foreground hover:text-primary"
+              label="Edit quote"
+              tone="edit"
               disabled={isPending}
             >
               <Pencil className="size-4" />
-              <span className="sr-only">Edit quote</span>
-            </button>
+            </RowAction>
             <button
               type="button"
               onClick={() => removeQuote(index)}

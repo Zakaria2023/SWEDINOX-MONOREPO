@@ -11,6 +11,7 @@ import { FormError } from "@/components/ui/form-error";
 import { FileText, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { startTransition, useActionState, useEffect, useState } from "react";
+import { RowAction } from "@/components/ui/row-action";
 
 type Props = {
   companyUuid: string;
@@ -23,8 +24,9 @@ type UploadedFile = {
 };
 
 export const CompanyDocumentsEditor = ({ companyUuid, documents }: Props) => {
-  const [deleteTarget, setDeleteTarget] =
-    useState<CompanyDocumentEntry | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<CompanyDocumentEntry | null>(
+    null,
+  );
   const [isDeletingFile, setIsDeletingFile] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
@@ -126,15 +128,14 @@ export const CompanyDocumentsEditor = ({ companyUuid, documents }: Props) => {
                 {document.fileName}
               </Link>
             </div>
-            <button
-              type="button"
+            <RowAction
               onClick={() => setDeleteTarget(document)}
-              className="shrink-0 rounded p-1 text-muted-foreground hover:text-destructive"
+              label="Delete document"
+              tone="danger"
               disabled={isAdding || isRemoving || isDeletingFile}
             >
               <Trash2 className="size-4" />
-              <span className="sr-only">Delete document</span>
-            </button>
+            </RowAction>
           </div>
         ))}
         <DocumentUploader onSuccess={handleUploadSuccess} />

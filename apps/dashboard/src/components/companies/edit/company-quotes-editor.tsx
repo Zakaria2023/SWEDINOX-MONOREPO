@@ -19,6 +19,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { FileText, Pencil, Plus, Trash2 } from "lucide-react";
 import { startTransition, useActionState, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
+import { RowAction } from "@/components/ui/row-action";
 
 type Props = {
   companyUuid: string;
@@ -132,24 +133,22 @@ export const CompanyQuotesEditor = ({ companyUuid, quotes }: Props) => {
               </span>
             </div>
             <div className="flex shrink-0 items-center gap-1">
-              <button
-                type="button"
+              <RowAction
                 onClick={() => handleOpenEdit(quote)}
-                className="rounded p-1 text-muted-foreground hover:text-primary"
+                label="Edit quote"
+                tone="edit"
                 disabled={isSaving || isDeleting}
               >
                 <Pencil className="size-4" />
-                <span className="sr-only">Edit quote</span>
-              </button>
-              <button
-                type="button"
+              </RowAction>
+              <RowAction
                 onClick={() => setDeleteTarget(quote)}
-                className="rounded p-1 text-muted-foreground hover:text-destructive"
+                label="Delete quote"
+                tone="danger"
                 disabled={isSaving || isDeleting}
               >
                 <Trash2 className="size-4" />
-                <span className="sr-only">Delete quote</span>
-              </button>
+              </RowAction>
             </div>
           </div>
         ))}

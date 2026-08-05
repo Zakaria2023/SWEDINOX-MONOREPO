@@ -40,6 +40,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { RowAction } from "@/components/ui/row-action";
 
 type SupplierOption = {
   value: string;
@@ -331,15 +332,14 @@ export const CompanyProcessingsEditor = ({
                         <Save className="size-4" />
                         <span className="sr-only">Save processing</span>
                       </button>
-                      <button
-                        type="button"
+                      <RowAction
                         onClick={() => setDeleteTarget(row)}
-                        className="text-muted-foreground hover:text-destructive"
+                        label="Delete processing"
+                        tone="danger"
                         disabled={isBusy}
                       >
                         <Trash2 className="size-4" />
-                        <span className="sr-only">Delete processing</span>
-                      </button>
+                      </RowAction>
                     </div>
                   </TableCell>
                 </TableRow>

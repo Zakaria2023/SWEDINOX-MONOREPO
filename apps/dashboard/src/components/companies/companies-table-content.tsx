@@ -15,9 +15,9 @@ import { setCompanyInactive } from "@/app/(dashboard)/companies/actions";
 import { Button } from "@/components/shadcn/button";
 import { SelectCompanies } from "@/db";
 import { Eye, Pencil } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { RowAction } from "@/components/ui/row-action";
 
 type ColumnKey = "id" | "companyName" | "documents" | "createdAt" | "updatedAt";
 
@@ -156,21 +156,21 @@ export const CompaniesTable = ({ companies }: CompaniesTableContentProps) => {
                     renderCell(company, column.key),
                   )}
                   <TableCell>
-                    <div className="flex items-center gap-3">
-                      <Link
+                    <div className="flex items-center gap-1">
+                      <RowAction
                         href={`/companies/${company.uuid}`}
-                        aria-label="View company"
-                        className="inline-flex text-muted-foreground hover:text-foreground"
+                        label="View company"
+                        tone="view"
                       >
                         <Eye className="size-4" />
-                      </Link>
-                      <Link
+                      </RowAction>
+                      <RowAction
                         href={`/companies/${company.uuid}/edit`}
-                        aria-label="Edit company"
-                        className="inline-flex text-muted-foreground hover:text-foreground"
+                        label="Edit company"
+                        tone="edit"
                       >
                         <Pencil className="size-4" />
-                      </Link>
+                      </RowAction>
                       <InactiveToggle
                         companyUuid={company.uuid}
                         isInactive={company.isInactive ?? false}
