@@ -4,6 +4,9 @@ import {
   AgeingBucket,
   ageingBuckets,
   CertificaatOption,
+  ContractableRole,
+  contractableRoles,
+  ContractType,
   ComplaintCategory,
   ComplaintSolution,
   CustomerGroup,
@@ -34,12 +37,14 @@ import {
   VatCode,
 } from "./enums";
 import {
+  CONTRACT_TYPE_LABELS,
   CUSTOMER_GROUP_LABELS,
   INVOICE_PAYMENT_TERM_LABELS,
   ORDER_DEBLOCK_TYPE_LABELS,
   ORDER_LINE_STATUS_LABELS,
   PURCHASE_ORDER_STATUS_LABELS,
   SALES_REPRESENTATIVE_LABELS,
+  STOCK_UNIT_LABELS,
   TEXT_USAGE_CATEGORY_LABELS,
 } from "./labels";
 
@@ -390,6 +395,79 @@ export const formatCoverageMonths = (value: number | null): string =>
  */
 export const orDash = (value: string | number | null): string | number =>
   value === null || value === "" ? "—" : value;
+
+/**
+ * A euro amount in a column of figures, with an em dash where the amount is
+ * zero — a page of "€ 0.00" hides the rows that carry a number.
+ */
+export const formatMoneyOrDash = (value: number): string =>
+  value === 0 ? "—" : formatMoney(value);
+
+/**
+ * How many days past its term a receivable is, blank while it is still inside
+ * the term: "0" would read as due today rather than as not yet due.
+ */
+export const formatOverdueDays = (days: number | null): string => {
+  if (days === null || days <= 0) {
+    return "—";
+  }
+  return String(days);
+};
+
+/**
+ * A contract as a picklist reads it: its code, what it covers and what kind of
+ * contract it is, in one line.
+ */
+export const contractOptionLabel = (contract: {
+  code: string | null;
+  description: string | null;
+  contractType: ContractType | null;
+}): string =>
+  [
+    contract.code,
+    contract.description,
+    contract.contractType ? CONTRACT_TYPE_LABELS[contract.contractType] : null,
+  ]
+    .filter(Boolean)
+    .join(" — ");
+
+/**
+ * A company as a picklist reads it — the search code staff actually type, then
+ * the name. A company with neither falls back to its uuid, so the option can
+ * still be told apart from the one below it.
+ */
+export const companyOptionLabel = (company: {
+  searchCode1: string | null;
+  companyName: string | null;
+  uuid: string;
+}): string =>
+  [company.searchCode1, company.companyName].filter(Boolean).join(" - ") ||
+  company.uuid;
+
+/**
+ * A contact as a picklist reads it: their name, or the address they are reached
+ * on when the name was never filled in.
+ */
+export const contactOptionLabel = (contact: {
+  firstName?: string | null;
+  lastName?: string | null;
+  email?: string | null;
+}): string =>
+  [contact.firstName, contact.lastName].filter(Boolean).join(" ") ||
+  contact.email ||
+  "Contact";
+
+/**
+ * The roles a company holds that a contract can actually be written against.
+ * Anything else it is on file as — a transporter, a purchasing organisation —
+ * is not a party to a contract and is dropped.
+ */
+export const contractableRolesOf = (
+  roles: readonly string[] | null | undefined,
+): ContractableRole[] =>
+  (roles ?? []).filter((role): role is ContractableRole =>
+    contractableRoles.includes(role as ContractableRole),
+  );
 
 /**
  * Whether a nav href matches the current path — the exact path or a nested
@@ -879,6 +957,33 @@ export const REMINDER_STAGE_AFTER_DAYS: Record<ReminderStage, number> = {
   first: 14,
   second: 28,
   final: 42,
+};
+
+/**
+ * One line describing a finished reminder run, built only from what actually
+ * happened — a count of zero is left out rather than reported as "0 failed".
+ *
+ * Null while the run has not succeeded: there is nothing to describe yet, and
+ * the error is reported on its own.
+ */
+export const describeReminderRun = (run: {
+  success?: boolean;
+  sent?: number;
+  unaddressed?: number;
+  failed?: number;
+  skipped?: number;
+}): string | null => {
+  if (!run.success) {
+    return null;
+  }
+  const parts = [
+    run.sent ? `${run.sent} sent` : null,
+    run.unaddressed ? `${run.unaddressed} with no address on file` : null,
+    run.failed ? `${run.failed} could not be delivered` : null,
+    run.skipped ? `${run.skipped} no longer due` : null,
+  ].filter((part): part is string => part !== null);
+
+  return parts.length > 0 ? `${parts.join(", ")}.` : "Nothing was due.";
 };
 
 /** The stage after a given one, or `null` when a final notice has been sent. */
@@ -1783,6 +1888,11 @@ export const invoicePaymentTermLabel = (
     ? (INVOICE_PAYMENT_TERM_LABELS[value as InvoicePaymentTerm] ?? value)
     : "—";
 
+/** The display label for a stock unit, blank when the line carries none. */
+export const stockUnitLabel = (
+  value: StockUnit | null | undefined,
+): string => (value ? STOCK_UNIT_LABELS[value] : "");
+
 /** The display label for an order line status. */
 export const orderLineStatusLabel = (
   value: OrderLineStatus | string | null | undefined,
@@ -2585,6 +2695,32 @@ export type TextUsageFlags = {
 
 export type TextUsageCategoryField = keyof TextUsageFlags;
 
+/** A document a text is attached to, as a link. */
+export type AttachedDocument = {
+  label: string;
+  href: string;
+};
+
+/** The document keys a `Texts` row can carry — at most one of them is set. */
+export type TextAttachmentSource = {
+  orderUuid: string | null;
+  orderId: number | null;
+  quoteUuid: string | null;
+  quoteId: number | null;
+  counterOrderUuid: string | null;
+  counterOrderId: number | null;
+  returnOrderUuid: string | null;
+  returnOrderId: number | null;
+  purchaseOrderUuid: string | null;
+  purchaseOrderId: number | null;
+  purchaseQuoteUuid: string | null;
+  purchaseQuoteId: number | null;
+  purchaseRequestUuid: string | null;
+  purchaseRequestId: number | null;
+  purchaseReturnOrderUuid: string | null;
+  purchaseReturnOrderId: number | null;
+};
+
 /** Each usage category paired with the `Texts` column that records it. */
 export const TEXT_USAGE_CATEGORY_FIELDS: Array<{
   key: TextUsageCategory;
@@ -2609,6 +2745,74 @@ export const TEXT_USAGE_CATEGORY_FIELDS: Array<{
   { key: "website_in_advance", field: "websiteInAdvance" },
   { key: "website_after", field: "websiteAfter" },
 ];
+
+/**
+ * The one document a text hangs off, if any.
+ *
+ * A text carries at most one of these keys, so the first one set is the answer;
+ * a text with none is a library text belonging to the company (or to nothing)
+ * rather than to a document.
+ */
+export const attachedDocumentOf = (
+  text: TextAttachmentSource,
+): AttachedDocument | null => {
+  const attachments: Array<{
+    uuid: string | null;
+    id: number | null;
+    noun: string;
+    path: string;
+  }> = [
+    { uuid: text.orderUuid, id: text.orderId, noun: "Order", path: "orders" },
+    { uuid: text.quoteUuid, id: text.quoteId, noun: "Quote", path: "quotes" },
+    {
+      uuid: text.counterOrderUuid,
+      id: text.counterOrderId,
+      noun: "Counter order",
+      path: "counter-orders",
+    },
+    {
+      uuid: text.returnOrderUuid,
+      id: text.returnOrderId,
+      noun: "Return order",
+      path: "return-orders",
+    },
+    {
+      uuid: text.purchaseOrderUuid,
+      id: text.purchaseOrderId,
+      noun: "Purchase order",
+      path: "purchase-orders",
+    },
+    {
+      uuid: text.purchaseQuoteUuid,
+      id: text.purchaseQuoteId,
+      noun: "Purchase quote",
+      path: "purchase-quotes",
+    },
+    {
+      uuid: text.purchaseRequestUuid,
+      id: text.purchaseRequestId,
+      noun: "Purchase request",
+      path: "purchase-requests",
+    },
+    {
+      uuid: text.purchaseReturnOrderUuid,
+      id: text.purchaseReturnOrderId,
+      noun: "Purchase return order",
+      path: "purchase-return-orders",
+    },
+  ];
+
+  const attached = attachments.find(
+    (candidate) => candidate.uuid !== null && candidate.id !== null,
+  );
+  if (!attached) {
+    return null;
+  }
+  return {
+    label: `${attached.noun} #${attached.id}`,
+    href: `/${attached.path}/${attached.uuid}`,
+  };
+};
 
 /**
  * The labels of the documents a text block is switched on for, in the order the

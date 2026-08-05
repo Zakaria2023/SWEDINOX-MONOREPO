@@ -6,6 +6,7 @@ import { Checkbox } from "@/components/shadcn/checkbox";
 import { Input } from "@/components/shadcn/input";
 import { FormLabel } from "@/components/ui/form-field";
 import { FormSelectField } from "@/components/ui/form-select-field";
+import { enumOptions } from "@/lib/helpers";
 import {
   ceStandards,
   decimalPlacesOptions,
@@ -15,23 +16,16 @@ import {
 } from "@/lib/enums";
 import { CE_STANDARD_LABELS, FEATURES_QUALITY_LABELS, PROCESSED_OPTION_LABELS, PRODUCT_QUALITY_STANDARD_LABELS } from "@/lib/labels";
 
-const emptyOption = { value: "", label: "Empty" };
-
-const makeEnumOptions = <T extends string>(
-  values: readonly T[],
-  labels: Record<T, string>,
-) => [emptyOption, ...values.map((v) => ({ value: v, label: labels[v] }))];
-
-const processedOptionOptions = makeEnumOptions(
+const processedOptionOptions = enumOptions(
   processedOptions,
   PROCESSED_OPTION_LABELS,
 );
-const ceOptions = makeEnumOptions(ceStandards, CE_STANDARD_LABELS);
-const standardsQualityOptions = makeEnumOptions(
+const ceOptions = enumOptions(ceStandards, CE_STANDARD_LABELS);
+const standardsQualityOptions = enumOptions(
   productQualityStandards,
   PRODUCT_QUALITY_STANDARD_LABELS,
 );
-const featuresQualityOptions = makeEnumOptions(
+const featuresQualityOptions = enumOptions(
   featuresQualities,
   FEATURES_QUALITY_LABELS,
 );

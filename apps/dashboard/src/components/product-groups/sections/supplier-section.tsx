@@ -11,6 +11,7 @@ import { Checkbox } from "@/components/shadcn/checkbox";
 import { Input } from "@/components/shadcn/input";
 import { FormLabel } from "@/components/ui/form-field";
 import { FormSelectField } from "@/components/ui/form-select-field";
+import { enumOptions } from "@/lib/helpers";
 import { deliveryTimeUnits, purchasingUnits } from "@/lib/enums";
 import { DELIVERY_TIME_UNIT_LABELS, PURCHASING_UNIT_LABELS } from "@/lib/labels";
 
@@ -18,18 +19,11 @@ type Props = {
   supplierOptions: { value: string; label: string }[];
 };
 
-const emptyOption = { value: "", label: "Empty" };
-
-const makeEnumOptions = <T extends string>(
-  values: readonly T[],
-  labels: Record<T, string>,
-) => [emptyOption, ...values.map((v) => ({ value: v, label: labels[v] }))];
-
-const deliveryTimeUnitOptions = makeEnumOptions(
+const deliveryTimeUnitOptions = enumOptions(
   deliveryTimeUnits,
   DELIVERY_TIME_UNIT_LABELS,
 );
-const purchasingUnitOptions = makeEnumOptions(
+const purchasingUnitOptions = enumOptions(
   purchasingUnits,
   PURCHASING_UNIT_LABELS,
 );

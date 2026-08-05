@@ -19,29 +19,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
-import { formatDateValue, formatMoney, invoiceReference } from "@/lib/helpers";
+import {
+  describeReminderRun,
+  formatDateValue,
+  formatMoney,
+  formatMoneyOrDash,
+  invoiceReference,
+} from "@/lib/helpers";
 import { REMINDER_STAGE_LABELS } from "@/lib/labels";
 
 type Props = {
   reminders: PaymentRemindersView;
-};
-
-const money = (value: number) => (value === 0 ? "—" : formatMoney(value));
-
-// One line describing a finished run, built only from what actually happened —
-// a count of zero is left out rather than reported as "0 failed".
-const describeRun = (state: ReminderActionResult): string | null => {
-  if (!state.success) {
-    return null;
-  }
-  const parts = [
-    state.sent ? `${state.sent} sent` : null,
-    state.unaddressed ? `${state.unaddressed} with no address on file` : null,
-    state.failed ? `${state.failed} could not be delivered` : null,
-    state.skipped ? `${state.skipped} no longer due` : null,
-  ].filter((part): part is string => part !== null);
-
-  return parts.length > 0 ? `${parts.join(", ")}.` : "Nothing was due.";
 };
 
 export const PaymentRemindersTable = ({ reminders }: Props) => {
@@ -55,7 +43,7 @@ export const PaymentRemindersTable = ({ reminders }: Props) => {
       : sendAllPaymentReminders();
   }, {});
 
-  const summary = describeRun(state);
+  const summary = describeReminderRun(state);
 
   return (
     <div className="space-y-6">
@@ -142,7 +130,7 @@ export const PaymentRemindersTable = ({ reminders }: Props) => {
                       {row.daysOverdue ?? "—"}
                     </TableCell>
                     <TableCell className="text-right font-medium whitespace-nowrap">
-                      {money(row.outstanding)}
+                      {formatMoneyOrDash(row.outstanding)}
                     </TableCell>
                     <TableCell className="whitespace-nowrap">
                       {row.lastStageSent
@@ -180,7 +168,7 @@ export const PaymentRemindersTable = ({ reminders }: Props) => {
                 <TableRow>
                   <TableCell colSpan={4}>Total due</TableCell>
                   <TableCell className="text-right whitespace-nowrap">
-                    {money(reminders.dueTotal)}
+                    {formatMoneyOrDash(reminders.dueTotal)}
                   </TableCell>
                   <TableCell colSpan={3} />
                 </TableRow>
@@ -239,7 +227,7 @@ export const PaymentRemindersTable = ({ reminders }: Props) => {
                         : "—"}
                     </TableCell>
                     <TableCell className="text-right whitespace-nowrap">
-                      {money(row.outstanding)}
+                      {formatMoneyOrDash(row.outstanding)}
                     </TableCell>
                     <TableCell className="whitespace-nowrap">
                       {row.lastStageSent

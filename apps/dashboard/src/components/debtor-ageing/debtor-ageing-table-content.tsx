@@ -12,21 +12,17 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { ageingBuckets } from "@/lib/enums";
-import { formatDateValue, formatMoney, invoiceReference } from "@/lib/helpers";
+import {
+  formatDateValue,
+  formatMoney,
+  formatMoneyOrDash,
+  formatOverdueDays,
+  invoiceReference,
+} from "@/lib/helpers";
 import { AGEING_BUCKET_LABELS, REMINDER_STAGE_LABELS } from "@/lib/labels";
 
 type Props = {
   ageing: DebtorAgeing;
-};
-
-const money = (value: number) => (value === 0 ? "—" : formatMoney(value));
-
-/** Blank rather than "0" while an invoice is still inside its term. */
-const overdueLabel = (days: number | null) => {
-  if (days === null) {
-    return "—";
-  }
-  return days > 0 ? String(days) : "—";
 };
 
 export const DebtorAgeingTable = ({ ageing }: Props) => (
@@ -39,7 +35,7 @@ export const DebtorAgeingTable = ({ ageing }: Props) => (
             {AGEING_BUCKET_LABELS[bucket]}
           </p>
           <p className="mt-1 text-2xl font-medium tracking-tight">
-            {money(ageing.totals[bucket])}
+            {formatMoneyOrDash(ageing.totals[bucket])}
           </p>
         </div>
       ))}
@@ -102,11 +98,11 @@ export const DebtorAgeingTable = ({ ageing }: Props) => (
                       key={bucket}
                       className="text-right whitespace-nowrap"
                     >
-                      {money(debtor.totals[bucket])}
+                      {formatMoneyOrDash(debtor.totals[bucket])}
                     </TableCell>
                   ))}
                   <TableCell className="text-right font-medium whitespace-nowrap">
-                    {money(debtor.totals.total)}
+                    {formatMoneyOrDash(debtor.totals.total)}
                   </TableCell>
                 </TableRow>
               ))
@@ -124,11 +120,11 @@ export const DebtorAgeingTable = ({ ageing }: Props) => (
                     key={bucket}
                     className="text-right whitespace-nowrap"
                   >
-                    {money(ageing.totals[bucket])}
+                    {formatMoneyOrDash(ageing.totals[bucket])}
                   </TableCell>
                 ))}
                 <TableCell className="text-right whitespace-nowrap">
-                  {money(ageing.totals.total)}
+                  {formatMoneyOrDash(ageing.totals.total)}
                 </TableCell>
               </TableRow>
             </TableFooter>
@@ -185,16 +181,16 @@ export const DebtorAgeingTable = ({ ageing }: Props) => (
                     {formatDateValue(item.dueDate, "—")}
                   </TableCell>
                   <TableCell className="text-right">
-                    {overdueLabel(item.daysOverdue)}
+                    {formatOverdueDays(item.daysOverdue)}
                   </TableCell>
                   <TableCell className="whitespace-nowrap">
                     {AGEING_BUCKET_LABELS[item.bucket]}
                   </TableCell>
                   <TableCell className="text-right whitespace-nowrap">
-                    {money(item.invoiceTotal)}
+                    {formatMoneyOrDash(item.invoiceTotal)}
                   </TableCell>
                   <TableCell className="text-right font-medium whitespace-nowrap">
-                    {money(item.outstanding)}
+                    {formatMoneyOrDash(item.outstanding)}
                   </TableCell>
                   <TableCell className="whitespace-nowrap">
                     {item.lastStageSent

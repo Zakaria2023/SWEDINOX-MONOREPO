@@ -4,6 +4,7 @@ import { BooleanFlag } from "@/components/ui/boolean-flag";
 import { DetailField } from "@/components/ui/detail-field";
 import {
   activeTextUsageCategories,
+  attachedDocumentOf,
   formatDateValue,
   TEXT_USAGE_CATEGORY_FIELDS,
   yesNo,
@@ -12,60 +13,6 @@ import { TEXT_USAGE_CATEGORY_LABELS } from "@/lib/labels";
 
 type Props = {
   text: TextDetail;
-};
-
-type AttachedDocument = {
-  label: string;
-  href: string;
-};
-
-// The one document a text hangs off, if any. A text carries at most one of these
-// keys, so the first one set is the answer; a text with none is a library text
-// that belongs to the company (or to nothing) rather than to a document.
-const attachedDocumentOf = (text: TextDetail): AttachedDocument | null => {
-  if (text.orderUuid && text.orderId !== null) {
-    return { label: `Order #${text.orderId}`, href: `/orders/${text.orderUuid}` };
-  }
-  if (text.quoteUuid && text.quoteId !== null) {
-    return { label: `Quote #${text.quoteId}`, href: `/quotes/${text.quoteUuid}` };
-  }
-  if (text.counterOrderUuid && text.counterOrderId !== null) {
-    return {
-      label: `Counter order #${text.counterOrderId}`,
-      href: `/counter-orders/${text.counterOrderUuid}`,
-    };
-  }
-  if (text.returnOrderUuid && text.returnOrderId !== null) {
-    return {
-      label: `Return order #${text.returnOrderId}`,
-      href: `/return-orders/${text.returnOrderUuid}`,
-    };
-  }
-  if (text.purchaseOrderUuid && text.purchaseOrderId !== null) {
-    return {
-      label: `Purchase order #${text.purchaseOrderId}`,
-      href: `/purchase-orders/${text.purchaseOrderUuid}`,
-    };
-  }
-  if (text.purchaseQuoteUuid && text.purchaseQuoteId !== null) {
-    return {
-      label: `Purchase quote #${text.purchaseQuoteId}`,
-      href: `/purchase-quotes/${text.purchaseQuoteUuid}`,
-    };
-  }
-  if (text.purchaseRequestUuid && text.purchaseRequestId !== null) {
-    return {
-      label: `Purchase request #${text.purchaseRequestId}`,
-      href: `/purchase-requests/${text.purchaseRequestUuid}`,
-    };
-  }
-  if (text.purchaseReturnOrderUuid && text.purchaseReturnOrderId !== null) {
-    return {
-      label: `Purchase return order #${text.purchaseReturnOrderId}`,
-      href: `/purchase-return-orders/${text.purchaseReturnOrderUuid}`,
-    };
-  }
-  return null;
 };
 
 export const TextDetailView = ({ text }: Props) => {

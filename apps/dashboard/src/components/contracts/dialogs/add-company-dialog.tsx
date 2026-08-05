@@ -14,6 +14,7 @@ import {
 import { Select } from "@/components/shadcn/select";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import { ContractableRole, contractableRoles } from "@/lib/enums";
+import { contractableRolesOf } from "@/lib/helpers";
 import { CONTRACTABLE_ROLE_LABELS } from "@/lib/labels";
 import { Controller, UseFormReturn } from "react-hook-form";
 import { z } from "zod";
@@ -25,13 +26,6 @@ export const companyLinkSchema = z.object({
   endDate: z.string().optional(),
 });
 export type CompanyLinkFormValues = z.infer<typeof companyLinkSchema>;
-
-const contractableRoleSet = new Set(contractableRoles as readonly string[]);
-
-const getContractableRoles = (company: CompanyOption): ContractableRole[] =>
-  (company.roles ?? []).filter((r): r is ContractableRole =>
-    contractableRoleSet.has(r),
-  );
 
 type AddCompanyDialogProps = {
   isOpen: boolean;
@@ -64,7 +58,7 @@ export const AddCompanyDialog = ({
   // A company can carry several contractable roles (e.g. customer + supplier);
   // the contract is filed under the chosen one, so let the user pick which.
   const roleOptions = (
-    selectedCompany ? getContractableRoles(selectedCompany) : []
+    selectedCompany ? contractableRolesOf(selectedCompany.roles) : []
   ).map((role) => ({ value: role, label: CONTRACTABLE_ROLE_LABELS[role] }));
 
   return (
@@ -95,7 +89,7 @@ export const AddCompanyDialog = ({
                         (c) => c.uuid === value,
                       );
                       const roles = company
-                        ? getContractableRoles(company)
+                        ? contractableRolesOf(company.roles)
                         : [];
                       linkForm.setValue(
                         "role",

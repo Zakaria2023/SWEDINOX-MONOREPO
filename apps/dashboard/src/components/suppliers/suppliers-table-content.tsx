@@ -1,7 +1,7 @@
 "use client";
 
-import { Check } from "lucide-react";
 import { SupplierRow } from "@/app/(dashboard)/suppliers/actions";
+import { BooleanFlag } from "@/components/ui/boolean-flag";
 import {
   Table,
   TableBody,
@@ -19,13 +19,6 @@ import {
 type Props = {
   rows: SupplierRow[];
 };
-
-const flag = (value: boolean) =>
-  value ? (
-    <Check className="mx-auto size-4 text-green-600" />
-  ) : (
-    <span className="text-muted-foreground">—</span>
-  );
 
 export const SuppliersTable = ({ rows }: Props) => (
   <div className="overflow-x-auto rounded-md border">
@@ -72,21 +65,25 @@ export const SuppliersTable = ({ rows }: Props) => (
               </TableCell>
               <TableCell>{row.companyName}</TableCell>
               <TableCell className="text-center">
-                {flag(row.isSupplier)}
+                {<BooleanFlag on={row.isSupplier} label="Supplier" />}
               </TableCell>
               <TableCell className="text-center">
-                {flag(row.isProcessor)}
+                {<BooleanFlag on={row.isProcessor} label="Processor" />}
               </TableCell>
               <TableCell className="text-center">
-                {flag(row.isTransporter)}
-              </TableCell>
-              <TableCell className="text-center">{flag(row.isAgent)}</TableCell>
-              <TableCell className="text-center">{flag(row.isOther)}</TableCell>
-              <TableCell className="text-center">
-                {flag(row.isCustomer)}
+                {<BooleanFlag on={row.isTransporter} label="Transporter" />}
               </TableCell>
               <TableCell className="text-center">
-                {flag(row.isProspect)}
+                {<BooleanFlag on={row.isAgent} label="Agent" />}
+              </TableCell>
+              <TableCell className="text-center">
+                {<BooleanFlag on={row.isOther} label="Other" />}
+              </TableCell>
+              <TableCell className="text-center">
+                {<BooleanFlag on={row.isCustomer} label="Customer" />}
+              </TableCell>
+              <TableCell className="text-center">
+                {<BooleanFlag on={row.isProspect} label="Prospect" />}
               </TableCell>
               <TableCell>{row.visitCity ?? "—"}</TableCell>
               <TableCell>
