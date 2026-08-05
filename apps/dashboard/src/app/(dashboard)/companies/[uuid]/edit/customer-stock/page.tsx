@@ -37,10 +37,7 @@ const CompanyCustomerStockPage = async ({ params }: Props) => {
           Back to edit overview
         </Link>
       </div>
-      <PageHeading
-        title={`Customer Stock — ${company.companyName}`}
-        description="Book, edit, or remove stock this customer keeps at one of our locations. Every change saves immediately."
-      />
+      <PageHeading title={`Customer Stock — ${company.companyName}`} />
       <CompanyCustomerStockEditor
         companyUuid={uuid}
         customerStock={customerStock}

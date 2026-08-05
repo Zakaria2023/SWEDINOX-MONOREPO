@@ -7,10 +7,7 @@ const ControlStockRevaluationFspPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Control: Revaluation of Stock due to FSP-changes"
-        description="Products carrying a fixed sales price (FSP), with their on-hand technical stock valued at that FSP"
-      />
+      <PageHeading title="Control: Revaluation of Stock due to FSP-changes" />
       <StockRevaluationFspTable rows={rows} />
     </div>
   );

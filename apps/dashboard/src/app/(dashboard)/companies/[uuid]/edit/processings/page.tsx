@@ -43,10 +43,7 @@ const CompanyProcessingsPage = async ({ params }: Props) => {
           Back to edit overview
         </Link>
       </div>
-      <PageHeading
-        title={`Processings — ${company.companyName}`}
-        description="Processing agreements this company offers. Save each row after editing it."
-      />
+      <PageHeading title={`Processings — ${company.companyName}`} />
       <CompanyProcessingsEditor
         companyUuid={uuid}
         processings={processings}

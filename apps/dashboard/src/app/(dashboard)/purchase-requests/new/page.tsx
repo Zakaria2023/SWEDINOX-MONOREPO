@@ -21,10 +21,7 @@ const NewPurchaseRequestPage = async () => {
 
   return (
     <div className="max-w-5xl space-y-6 p-6">
-      <PageHeading
-        title="New Purchase Request"
-        description="Ask suppliers to quote for what you need"
-      />
+      <PageHeading title="New Purchase Request" />
       <PurchaseRequestForm
         companies={companies}
         clerkUsers={clerkUsers}

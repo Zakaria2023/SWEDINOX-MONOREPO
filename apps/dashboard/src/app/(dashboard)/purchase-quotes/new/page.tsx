@@ -11,10 +11,7 @@ const NewPurchaseQuotePage = async () => {
 
   return (
     <div className="max-w-4xl space-y-6 p-6">
-      <PageHeading
-        title="New Purchase Quote"
-        description="Create a new supplier purchase quote"
-      />
+      <PageHeading title="New Purchase Quote" />
       <PurchaseQuoteForm companies={companies} clerkUsers={clerkUsers} />
     </div>
   );

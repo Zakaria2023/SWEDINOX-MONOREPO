@@ -32,10 +32,7 @@ const CompanyCounterOrdersPage = async ({ params }: Props) => {
           Back to edit overview
         </Link>
       </div>
-      <PageHeading
-        title={`Counter Orders — ${company.companyName}`}
-        description="Add, edit, or remove counter orders. Every change saves immediately."
-      />
+      <PageHeading title={`Counter Orders — ${company.companyName}`} />
       <CompanyCounterOrdersEditor
         companyUuid={uuid}
         counterOrders={counterOrders}

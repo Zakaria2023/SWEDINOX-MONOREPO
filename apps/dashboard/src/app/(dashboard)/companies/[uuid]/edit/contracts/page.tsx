@@ -5,10 +5,7 @@ import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getCompanyHeader } from "../contacts/actions";
-import {
-  getCompanyContractableRoles,
-  getContractsForCompany,
-} from "./actions";
+import { getCompanyContractableRoles, getContractsForCompany } from "./actions";
 
 type Props = {
   params: Promise<{ uuid: string }>;
@@ -39,10 +36,7 @@ const CompanyContractsPage = async ({ params }: Props) => {
           Back to edit overview
         </Link>
       </div>
-      <PageHeading
-        title={`Contracts — ${company.companyName}`}
-        description="Link existing contracts to this company or remove them. Every change saves immediately."
-      />
+      <PageHeading title={`Contracts — ${company.companyName}`} />
       <CompanyContractsEditor
         companyUuid={uuid}
         contracts={contracts}

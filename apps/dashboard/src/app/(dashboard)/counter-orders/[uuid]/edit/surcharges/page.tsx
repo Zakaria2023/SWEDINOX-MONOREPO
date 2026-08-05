@@ -34,7 +34,7 @@ const CounterOrderSurchargesPage = async ({ params }: Props) => {
           Back to edit overview
         </Link>
       </div>
-      <PageHeading title="Surcharges" description="What is charged on top of the material" />
+      <PageHeading title="Surcharges" />
       <CounterOrderSurchargesEditor
         counterOrderUuid={uuid}
         defaultValues={counterOrderToFormValues(order, order)}

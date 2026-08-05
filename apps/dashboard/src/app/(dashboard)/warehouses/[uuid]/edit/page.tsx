@@ -122,10 +122,7 @@ const WarehouseEditPage = async ({ params }: Props) => {
           Warehouses
         </Link>
       </div>
-      <PageHeading
-        title={`Edit ${warehouse.name}`}
-        description="Pick a section to edit it on its own page"
-      />
+      <PageHeading title={`Edit ${warehouse.name}`} />
 
       <section className="space-y-3">
         <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">

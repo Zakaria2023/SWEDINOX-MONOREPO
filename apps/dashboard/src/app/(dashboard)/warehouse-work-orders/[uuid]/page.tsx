@@ -29,10 +29,7 @@ const WarehouseWorkOrderDetailPage = async ({ params }: Props) => {
           Warehouse Work Orders
         </Link>
       </div>
-      <PageHeading
-        title={`Work order #${workOrder.id}`}
-        description={workOrder.warehouseName ?? undefined}
-      />
+      <PageHeading title={`Work order #${workOrder.id}`} />
       <WarehouseWorkOrderDetailView workOrder={workOrder} />
     </div>
   );

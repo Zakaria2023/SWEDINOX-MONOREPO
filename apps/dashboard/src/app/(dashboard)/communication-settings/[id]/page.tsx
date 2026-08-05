@@ -38,10 +38,7 @@ const CommunicationSettingDetailPage = async ({ params }: Props) => {
         </Link>
       </div>
       <PageHeading
-        title={
-          COMMUNICATION_SETTING_DOCUMENT_TYPE_LABELS[setting.documentType]
-        }
-        description={setting.companyName ?? undefined}
+        title={COMMUNICATION_SETTING_DOCUMENT_TYPE_LABELS[setting.documentType]}
       />
       <CommunicationSettingDetailView setting={setting} />
     </div>

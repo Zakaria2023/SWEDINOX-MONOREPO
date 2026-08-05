@@ -7,10 +7,7 @@ const DeliveriesFromMissingBatchPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Deliveries from the Missing Batch"
-        description="Delivered sales lines whose stock has no linked batch — the batch and its certificate are missing"
-      />
+      <PageHeading title="Deliveries from the Missing Batch" />
       <DeliveriesCertificateTable
         rows={rows}
         emptyMessage="No deliveries with a missing batch."

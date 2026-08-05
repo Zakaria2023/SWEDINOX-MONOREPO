@@ -20,10 +20,7 @@ const NewProductPage = async () => {
 
   return (
     <div className="max-w-6xl space-y-6 p-6">
-      <PageHeading
-        title="Add Product"
-        description="Create a new product with all its properties"
-      />
+      <PageHeading title="Add Product" />
       <ProductForm
         productGroups={productGroups}
         suppliers={suppliers}

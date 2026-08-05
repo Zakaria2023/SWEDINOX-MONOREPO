@@ -29,10 +29,7 @@ const ProductionBatchDetailPage = async ({ params }: Props) => {
           Production Batches
         </Link>
       </div>
-      <PageHeading
-        title={batch.code}
-        description={batch.machineName ?? undefined}
-      />
+      <PageHeading title={batch.code} />
       <ProductionBatchDetailView batch={batch} />
     </div>
   );

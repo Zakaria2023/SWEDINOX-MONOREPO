@@ -36,7 +36,6 @@ const CertificateDetailPage = async ({ params }: Props) => {
             ? CERTIFICAAT_LABELS[certificate.documentCertificate]
             : `Certificate #${certificate.id}`
         }
-        description={certificate.internalCharge ?? undefined}
       />
       <CertificateDetailView certificate={certificate} />
     </div>

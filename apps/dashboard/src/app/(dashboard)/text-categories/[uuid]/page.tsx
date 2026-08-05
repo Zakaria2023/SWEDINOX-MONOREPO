@@ -29,10 +29,7 @@ const TextCategoryDetailPage = async ({ params }: Props) => {
           Text Categories
         </Link>
       </div>
-      <PageHeading
-        title={category.name}
-        description={category.parentName ?? undefined}
-      />
+      <PageHeading title={category.name} />
       <TextCategoryDetailView category={category} />
     </div>
   );

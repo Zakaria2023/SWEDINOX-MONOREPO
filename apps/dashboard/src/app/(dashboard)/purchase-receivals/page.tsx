@@ -7,10 +7,7 @@ const PurchaseReceivalsPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Purchase receivals"
-        description="Goods received against purchase order lines"
-      />
+      <PageHeading title="Purchase receivals" />
       <PurchaseReceivalsTable receivals={receivals} />
     </div>
   );

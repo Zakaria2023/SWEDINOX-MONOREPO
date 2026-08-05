@@ -7,10 +7,7 @@ const SuppliersPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Suppliers"
-        description="Every company with the supplier role, with its roles, purchaser, payment terms and correspondence details"
-      />
+      <PageHeading title="Suppliers" />
       <SuppliersTable rows={rows} />
     </div>
   );

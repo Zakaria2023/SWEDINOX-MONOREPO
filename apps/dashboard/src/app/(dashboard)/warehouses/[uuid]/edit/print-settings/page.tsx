@@ -29,10 +29,7 @@ const WarehousePrintSettingsPage = async ({ params }: Props) => {
           Back to edit overview
         </Link>
       </div>
-      <PageHeading
-        title={`Print Settings — ${warehouse.name}`}
-        description="Which printer gets what, and how customer labels are named"
-      />
+      <PageHeading title={`Print Settings — ${warehouse.name}`} />
       <WarehousePrintSettingsEditor
         warehouseUuid={uuid}
         defaultValues={warehouseToFormValues(warehouse)}

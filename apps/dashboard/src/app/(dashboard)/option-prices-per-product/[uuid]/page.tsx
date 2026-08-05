@@ -35,7 +35,6 @@ const OptionPriceDetailPage = async ({ params }: Props) => {
             .filter(Boolean)
             .join(" — ") || `Option price #${optionPrice.id}`
         }
-        description={optionPrice.optionName ?? undefined}
       />
       <OptionPriceDetailView optionPrice={optionPrice} />
     </div>

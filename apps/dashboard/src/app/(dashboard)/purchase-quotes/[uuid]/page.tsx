@@ -29,10 +29,7 @@ const PurchaseQuoteDetailPage = async ({ params }: Props) => {
           Purchase quotes
         </Link>
       </div>
-      <PageHeading
-        title={`Purchase quote #${quote.id}`}
-        description={quote.companyName ?? undefined}
-      />
+      <PageHeading title={`Purchase quote #${quote.id}`} />
       <PurchaseQuoteDetailView quote={quote} />
     </div>
   );

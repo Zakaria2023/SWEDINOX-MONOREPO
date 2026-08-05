@@ -29,12 +29,7 @@ const CountListDeviationDetailPage = async ({ params }: Props) => {
           Deviations in Count Lists
         </Link>
       </div>
-      <PageHeading
-        title={`Deviation #${deviation.id}`}
-        description={[deviation.productCode, deviation.productName]
-          .filter(Boolean)
-          .join(" — ")}
-      />
+      <PageHeading title={`Deviation #${deviation.id}`} />
       <CountListDeviationDetailView deviation={deviation} />
     </div>
   );

@@ -7,10 +7,7 @@ const VisitsMadePage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Visits made"
-        description="Customer visits that actually took place, newest first"
-      />
+      <PageHeading title="Visits made" />
       <VisitsMadeTable rows={rows} />
     </div>
   );

@@ -29,12 +29,7 @@ const FreightMovementDetailPage = async ({ params }: Props) => {
           Freight Movement
         </Link>
       </div>
-      <PageHeading
-        title={`Movement #${movement.id}`}
-        description={[movement.productCode, movement.productName]
-          .filter(Boolean)
-          .join(" — ")}
-      />
+      <PageHeading title={`Movement #${movement.id}`} />
       <FreightMovementDetailView movement={movement} />
     </div>
   );

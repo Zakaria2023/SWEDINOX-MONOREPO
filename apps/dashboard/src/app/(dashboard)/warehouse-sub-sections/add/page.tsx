@@ -7,10 +7,7 @@ const AddWarehouseSubSectionPage = async () => {
 
   return (
     <div className="max-w-4xl space-y-6 p-6">
-      <PageHeading
-        title="Add Warehouse Sub Section"
-        description="Create a new sub section by adapting from an existing warehouse"
-      />
+      <PageHeading title="Add Warehouse Sub Section" />
       <WarehouseSubSectionForm allItems={allItems} />
     </div>
   );

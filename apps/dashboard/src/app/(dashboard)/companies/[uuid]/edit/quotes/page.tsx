@@ -32,10 +32,7 @@ const CompanyQuotesPage = async ({ params }: Props) => {
           Back to edit overview
         </Link>
       </div>
-      <PageHeading
-        title={`Quotes — ${company.companyName}`}
-        description="Add, edit, or remove sales quotes. Every change saves immediately."
-      />
+      <PageHeading title={`Quotes — ${company.companyName}`} />
       <CompanyQuotesEditor companyUuid={uuid} quotes={quotes} />
     </div>
   );

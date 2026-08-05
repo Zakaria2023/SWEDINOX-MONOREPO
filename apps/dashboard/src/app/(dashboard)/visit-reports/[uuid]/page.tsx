@@ -29,10 +29,7 @@ const VisitReportDetailPage = async ({ params }: Props) => {
           Visit Reports
         </Link>
       </div>
-      <PageHeading
-        title={report.companyName}
-        description={report.visitDate ?? undefined}
-      />
+      <PageHeading title={report.companyName} />
       <VisitReportDetailView report={report} />
     </div>
   );

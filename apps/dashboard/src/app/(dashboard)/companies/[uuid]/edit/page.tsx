@@ -238,10 +238,7 @@ const CompanyEditPage = async ({ params }: Props) => {
           Back to company
         </Link>
       </div>
-      <PageHeading
-        title={`Edit ${company.companyName}`}
-        description="Pick a section to edit it on its own page"
-      />
+      <PageHeading title={`Edit ${company.companyName}`} />
 
       <section className="space-y-3">
         <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">

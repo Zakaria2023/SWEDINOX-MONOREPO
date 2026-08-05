@@ -13,10 +13,7 @@ const AddMachinePage = async () => {
 
   return (
     <div className="max-w-4xl space-y-6 p-6">
-      <PageHeading
-        title="Add Machine"
-        description="Create a new production machine"
-      />
+      <PageHeading title="Add Machine" />
       <MachineForm
         stockLocations={stockLocations}
         productGroups={productGroups}

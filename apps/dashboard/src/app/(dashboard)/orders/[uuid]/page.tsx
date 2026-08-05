@@ -29,10 +29,7 @@ const OrderDetailPage = async ({ params }: Props) => {
           Orders
         </Link>
       </div>
-      <PageHeading
-        title={`Order #${order.id}`}
-        description={order.companyName ?? undefined}
-      />
+      <PageHeading title={`Order #${order.id}`} />
       <OrderDetailView order={order} />
     </div>
   );

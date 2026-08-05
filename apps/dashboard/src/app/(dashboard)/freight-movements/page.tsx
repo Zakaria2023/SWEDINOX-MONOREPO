@@ -7,10 +7,7 @@ const FreightMovementsPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Freight Movement"
-        description="The goods-flow ledger — every mutation with its running stock balance and accounting dimensions"
-      />
+      <PageHeading title="Freight Movement" />
       <FreightMovementsTable freightMovements={freightMovements} />
     </div>
   );

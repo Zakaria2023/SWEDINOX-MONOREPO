@@ -7,10 +7,7 @@ const PurchaseInvoiceLinePage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Purchase invoice line"
-        description="Purchase invoice lines with supplier country, VAT and purchased value"
-      />
+      <PageHeading title="Purchase invoice line" />
       <PurchaseInvoiceLineTable rows={rows} />
     </div>
   );

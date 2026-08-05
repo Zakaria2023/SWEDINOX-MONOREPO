@@ -32,10 +32,7 @@ const CompanyDocumentsPage = async ({ params }: Props) => {
           Back to edit overview
         </Link>
       </div>
-      <PageHeading
-        title={`Documents — ${company.companyName}`}
-        description="Upload or remove files for this company. Every change saves immediately."
-      />
+      <PageHeading title={`Documents — ${company.companyName}`} />
       <CompanyDocumentsEditor companyUuid={uuid} documents={documents} />
     </div>
   );

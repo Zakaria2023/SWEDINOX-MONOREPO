@@ -7,10 +7,7 @@ const PaymentsPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Payments"
-        description="Money received from customers and paid to suppliers"
-      />
+      <PageHeading title="Payments" />
       <PaymentsTableContent rows={rows} />
     </div>
   );

@@ -9,10 +9,7 @@ const PurchaseQuotesOverviewPage = async () => {
   return (
     <div className="space-y-6 p-6">
       <div className="flex items-start justify-between gap-4">
-        <PageHeading
-          title="Purchase quotes"
-          description="Quote lines per supplier, with pricing and validity"
-        />
+        <PageHeading title="Purchase quotes" />
         <GenerateQuoteLinesButton />
       </div>
       <PurchaseQuotesOverviewTable lines={lines} />

@@ -42,10 +42,7 @@ const ContactDetailPage = async ({ params }: Props) => {
           {origin.label}
         </Link>
       </div>
-      <PageHeading
-        title={fullName(contact.firstName, contact.lastName)}
-        description={contact.companyName ?? undefined}
-      />
+      <PageHeading title={fullName(contact.firstName, contact.lastName)} />
       <ContactDetailView contact={contact} />
     </div>
   );

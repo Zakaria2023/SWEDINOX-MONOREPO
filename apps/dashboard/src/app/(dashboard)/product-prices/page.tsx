@@ -9,10 +9,7 @@ const ProductPricesPage = async () => {
   return (
     <div className="space-y-6 p-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <PageHeading
-          title="Product prices"
-          description="What every product costs to re-buy and what it is sold at"
-        />
+        <PageHeading title="Product prices" />
         <RecalculatePricesButton />
       </div>
       <ProductPricesTable rows={rows} />

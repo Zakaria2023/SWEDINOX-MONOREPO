@@ -30,8 +30,9 @@ const StockDetailPage = async ({ params }: Props) => {
         </Link>
       </div>
       <PageHeading
-        title={[stock.productCode, stock.productName].filter(Boolean).join(" — ")}
-        description={stock.companyName ?? undefined}
+        title={[stock.productCode, stock.productName]
+          .filter(Boolean)
+          .join(" — ")}
       />
       <StockDetailView stock={stock} />
     </div>

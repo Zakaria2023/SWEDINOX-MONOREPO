@@ -7,10 +7,7 @@ const OrderLinesPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Order lines"
-        description="All order lines with pricing, dimensions and margin"
-      />
+      <PageHeading title="Order lines" />
       <OrderLinesTable rows={rows} />
     </div>
   );

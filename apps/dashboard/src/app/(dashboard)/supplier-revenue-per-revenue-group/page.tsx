@@ -7,10 +7,7 @@ const SupplierRevenuePerRevenueGroupPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Supplier revenue per revenue group"
-        description="Purchase turnover, weight and average price per revenue group and invoice period"
-      />
+      <PageHeading title="Supplier revenue per revenue group" />
       <SupplierRevenuePerGroupTable rows={rows} />
     </div>
   );

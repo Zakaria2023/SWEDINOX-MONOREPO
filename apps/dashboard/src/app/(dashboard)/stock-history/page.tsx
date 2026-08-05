@@ -7,10 +7,7 @@ const StockHistoryPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Stock history"
-        description="Current stock quantity and value per product and revenue group"
-      />
+      <PageHeading title="Stock history" />
       <StockHistoryTable rows={rows} />
     </div>
   );

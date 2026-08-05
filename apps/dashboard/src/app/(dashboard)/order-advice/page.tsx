@@ -7,10 +7,7 @@ const OrderAdvicePage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Order advice"
-        description="Advised purchase quantities per stock product, from stock policy, open orders and invoiced demand"
-      />
+      <PageHeading title="Order advice" />
       <OrderAdviceTable rows={rows} />
     </div>
   );

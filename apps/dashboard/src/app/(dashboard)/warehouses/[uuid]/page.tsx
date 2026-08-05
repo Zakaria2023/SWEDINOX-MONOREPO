@@ -4,7 +4,6 @@ import { ChevronLeft } from "lucide-react";
 import { getWarehouseDetail } from "@/app/(dashboard)/warehouses/actions";
 import { WarehouseDetailView } from "@/components/warehouses/warehouse-detail";
 import { PageHeading } from "@/components/layout/page-heading";
-import { WAREHOUSE_TYPE_LABELS } from "@/lib/labels";
 
 type Props = {
   params: Promise<{ uuid: string }>;
@@ -40,17 +39,7 @@ const WarehouseDetailPage = async ({ params }: Props) => {
           {origin.label}
         </Link>
       </div>
-      <PageHeading
-        title={warehouse.name}
-        description={
-          [
-            warehouse.type ? WAREHOUSE_TYPE_LABELS[warehouse.type] : null,
-            warehouse.parentName,
-          ]
-            .filter(Boolean)
-            .join(" — ") || undefined
-        }
-      />
+      <PageHeading title={warehouse.name} />
       <WarehouseDetailView warehouse={warehouse} />
     </div>
   );

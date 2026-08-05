@@ -35,10 +35,6 @@ const ReturnLineDetailPage = async ({ params }: Props) => {
             ? `Line #${line.id}`
             : `Return #${line.returnOrderId} — line ${line.lineNumber ?? "?"}`
         }
-        description={
-          [line.productCode, line.productName].filter(Boolean).join(" — ") ||
-          undefined
-        }
       />
       <ReturnLineDetailView line={line} />
     </div>

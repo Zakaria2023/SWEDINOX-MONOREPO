@@ -29,10 +29,7 @@ const TextDetailPage = async ({ params }: Props) => {
           Texts
         </Link>
       </div>
-      <PageHeading
-        title={text.title}
-        description={text.textCategoryName ?? undefined}
-      />
+      <PageHeading title={text.title} />
       <TextDetailView text={text} />
     </div>
   );

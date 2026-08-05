@@ -29,10 +29,7 @@ const WarehouseLoadLocationsPage = async ({ params }: Props) => {
           Back to edit overview
         </Link>
       </div>
-      <PageHeading
-        title={`Load Locations — ${warehouse.name}`}
-        description="Which loading spot serves each transport region"
-      />
+      <PageHeading title={`Load Locations — ${warehouse.name}`} />
       <WarehouseLoadLocationsEditor
         warehouseUuid={uuid}
         defaultValues={warehouseToFormValues(warehouse)}

@@ -4,7 +4,6 @@ import { ChevronLeft } from "lucide-react";
 import { getJournalEntryDetail } from "@/app/(dashboard)/journal-entries/actions";
 import { JournalEntryDetailView } from "@/components/journal-entries/journal-entry-detail";
 import { PageHeading } from "@/components/layout/page-heading";
-import { formatDateColumn } from "@/lib/helpers";
 
 type Props = {
   params: Promise<{ uuid: string }>;
@@ -30,14 +29,7 @@ const JournalEntryDetailPage = async ({ params }: Props) => {
           Journal Entries
         </Link>
       </div>
-      <PageHeading
-        title={entry.documentNo ?? `Posting #${entry.id}`}
-        description={
-          [formatDateColumn(entry.bookingDate), entry.accountName]
-            .filter((part) => part && part !== "—")
-            .join(" — ") || undefined
-        }
-      />
+      <PageHeading title={entry.documentNo ?? `Posting #${entry.id}`} />
       <JournalEntryDetailView entry={entry} />
     </div>
   );

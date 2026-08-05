@@ -36,10 +36,7 @@ const EditReturnOrderPage = async ({ params }: Props) => {
           Return order #{returnOrder.id}
         </Link>
       </div>
-      <PageHeading
-        title={`Edit return order #${returnOrder.id}`}
-        description={returnOrder.companyName ?? undefined}
-      />
+      <PageHeading title={`Edit return order #${returnOrder.id}`} />
       <ReturnOrderForm
         companies={companies}
         textCategories={textCategories}

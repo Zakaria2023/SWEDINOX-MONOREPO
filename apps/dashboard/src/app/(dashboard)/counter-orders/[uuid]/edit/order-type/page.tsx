@@ -29,7 +29,7 @@ const CounterOrderTypePage = async ({ params }: Props) => {
           Back to edit overview
         </Link>
       </div>
-      <PageHeading title="Order Type" description="Pickup, incidental, overlength and how it was sent out" />
+      <PageHeading title="Order Type" />
       <CounterOrderTypeEditor
         counterOrderUuid={uuid}
         defaultValues={counterOrderToFormValues(order, order)}

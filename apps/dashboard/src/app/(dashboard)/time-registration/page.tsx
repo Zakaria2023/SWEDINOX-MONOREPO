@@ -7,10 +7,7 @@ const TimeRegistrationPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Time Registration"
-        description="Shop-floor scan events — who scanned what, and the context and action each scan belongs to"
-      />
+      <PageHeading title="Time Registration" />
       <TimeRegistrationsTable registrations={registrations} />
     </div>
   );

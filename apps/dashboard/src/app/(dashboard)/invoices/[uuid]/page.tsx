@@ -33,7 +33,6 @@ const InvoiceDetailPage = async ({ params }: Props) => {
       </div>
       <PageHeading
         title={`${INVOICE_DOCUMENT_TYPE_LABELS[invoice.documentType]} ${invoiceReference(invoice.documentType, invoice.id)}`}
-        description={invoice.companyName ?? undefined}
       />
       <InvoiceDetailView invoice={invoice} />
     </div>

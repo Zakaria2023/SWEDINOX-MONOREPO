@@ -35,10 +35,6 @@ const QuoteLineDetailPage = async ({ params }: Props) => {
             ? `Line #${line.id}`
             : `Quote #${line.quoteId} — line ${line.lineNumber ?? "?"}`
         }
-        description={
-          [line.productCode, line.productName].filter(Boolean).join(" — ") ||
-          undefined
-        }
       />
       <QuoteLineDetailView line={line} />
     </div>

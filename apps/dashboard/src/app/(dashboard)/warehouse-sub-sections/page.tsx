@@ -9,10 +9,7 @@ const WarehouseSubSectionsPage = async () => {
   return (
     <div className="space-y-6 p-6">
       <div className="flex items-start justify-between">
-        <PageHeading
-          title="Warehouse Sub Sections"
-          description="Manage warehouse sub section locations"
-        />
+        <PageHeading title="Warehouse Sub Sections" />
         <Link
           href="/warehouse-sub-sections/add"
           className="inline-flex h-8 items-center justify-center rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/80"

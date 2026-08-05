@@ -29,10 +29,7 @@ const ProductGroupDocumentsPage = async ({ params }: Props) => {
           Back to edit overview
         </Link>
       </div>
-      <PageHeading
-        title={`Documents — ${group.name}`}
-        description="Uploaded files"
-      />
+      <PageHeading title={`Documents — ${group.name}`} />
       <ProductGroupDocumentsEditor
         productGroupUuid={uuid}
         defaultValues={productGroupToFormValues(group, group.suppliers)}

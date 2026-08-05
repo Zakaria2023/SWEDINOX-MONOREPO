@@ -28,10 +28,7 @@ const MachinePostProcessingPage = async ({ params }: Props) => {
           Back to edit overview
         </Link>
       </div>
-      <PageHeading
-        title={`Post-Processing — ${machine.name}`}
-        description="Steps that follow work on this machine, in preference order"
-      />
+      <PageHeading title={`Post-Processing — ${machine.name}`} />
       <MachinePostProcessingEditor
         machineUuid={uuid}
         postProcessings={machine.postProcessings.map((postProcessing) => ({

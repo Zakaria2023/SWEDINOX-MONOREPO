@@ -9,10 +9,7 @@ const ReturnLinesPage = async () => {
   return (
     <div className="space-y-6 p-6">
       <div className="flex items-start justify-between gap-4">
-        <PageHeading
-          title="Return lines"
-          description="Return-order line items with pricing, margin and complaint link"
-        />
+        <PageHeading title="Return lines" />
         <GenerateReturnLinesButton />
       </div>
       <ReturnLinesTable lines={lines} />

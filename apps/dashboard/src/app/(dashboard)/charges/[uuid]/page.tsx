@@ -31,7 +31,6 @@ const ChargeDetailPage = async ({ params }: Props) => {
       </div>
       <PageHeading
         title={charge.surcharge ?? charge.code ?? `Charge #${charge.id}`}
-        description={charge.customerName ?? undefined}
       />
       <ChargeDetailView charge={charge} />
     </div>

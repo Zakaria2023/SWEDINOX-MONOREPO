@@ -7,10 +7,7 @@ const DeliveriesToArrangePage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Deliveries to be arranged without stock reservation"
-        description="Order lines still to be arranged that hold no stock reservation"
-      />
+      <PageHeading title="Deliveries to be arranged without stock reservation" />
       <DeliveriesToArrangeTable lines={lines} />
     </div>
   );

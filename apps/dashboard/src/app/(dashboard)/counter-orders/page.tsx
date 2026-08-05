@@ -10,10 +10,7 @@ const CounterOrdersPage = async () => {
   return (
     <div className="space-y-6 p-6">
       <div className="flex items-start justify-between">
-        <PageHeading
-          title="Counter Orders"
-          description="Orders taken at the counter."
-        />
+        <PageHeading title="Counter Orders" />
         <Link
           href="/counter-orders/add"
           className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"

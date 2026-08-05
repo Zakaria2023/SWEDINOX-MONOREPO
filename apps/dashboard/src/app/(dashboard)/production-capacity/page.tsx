@@ -7,10 +7,7 @@ const ProductionCapacityPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Production Capacity"
-        description="Machine capacity per day — occupied, ready and remaining (square and not-square) against each machine's limits"
-      />
+      <PageHeading title="Production Capacity" />
       <ProductionCapacityTable capacity={capacity} />
     </div>
   );

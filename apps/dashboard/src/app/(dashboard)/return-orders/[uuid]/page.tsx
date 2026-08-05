@@ -29,10 +29,7 @@ const ReturnOrderDetailPage = async ({ params }: Props) => {
           Return orders
         </Link>
       </div>
-      <PageHeading
-        title={`Return order #${returnOrder.id}`}
-        description={returnOrder.companyName ?? undefined}
-      />
+      <PageHeading title={`Return order #${returnOrder.id}`} />
       <ReturnOrderDetailView returnOrder={returnOrder} />
     </div>
   );

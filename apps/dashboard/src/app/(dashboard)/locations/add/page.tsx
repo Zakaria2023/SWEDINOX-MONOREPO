@@ -7,10 +7,7 @@ const AddLocationPage = async () => {
 
   return (
     <div className="max-w-4xl space-y-6 p-6">
-      <PageHeading
-        title="Add Location"
-        description="Create a new location by adapting from an existing warehouse"
-      />
+      <PageHeading title="Add Location" />
       <LocationForm allItems={allItems} />
     </div>
   );

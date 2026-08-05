@@ -29,10 +29,7 @@ const WarehouseDocumentsPage = async ({ params }: Props) => {
           Back to edit overview
         </Link>
       </div>
-      <PageHeading
-        title={`Documents — ${warehouse.name}`}
-        description="Uploaded files"
-      />
+      <PageHeading title={`Documents — ${warehouse.name}`} />
       <WarehouseDocumentsEditor
         warehouseUuid={uuid}
         defaultValues={warehouseToFormValues(warehouse)}

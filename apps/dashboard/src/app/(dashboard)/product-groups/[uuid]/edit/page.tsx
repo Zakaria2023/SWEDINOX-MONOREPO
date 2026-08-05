@@ -39,12 +39,8 @@ const ProductGroupEditPage = async ({ params }: Props) => {
       summary:
         [
           parentName ? `Under ${parentName}` : "Top level",
-          group.productShape
-            ? PRODUCT_SHAPE_LABELS[group.productShape]
-            : null,
-          group.articleGroup
-            ? ARTICLE_GROUP_LABELS[group.articleGroup]
-            : null,
+          group.productShape ? PRODUCT_SHAPE_LABELS[group.productShape] : null,
+          group.articleGroup ? ARTICLE_GROUP_LABELS[group.articleGroup] : null,
         ]
           .filter(Boolean)
           .join(" · ") || "—",
@@ -52,10 +48,9 @@ const ProductGroupEditPage = async ({ params }: Props) => {
     },
     {
       title: "Basis",
-      summary:
-        [group.length, group.width, group.thickness].some(Boolean)
-          ? `${group.length ?? "—"} × ${group.width ?? "—"} × ${group.thickness ?? "—"}`
-          : "No dimensions set",
+      summary: [group.length, group.width, group.thickness].some(Boolean)
+        ? `${group.length ?? "—"} × ${group.width ?? "—"} × ${group.thickness ?? "—"}`
+        : "No dimensions set",
       href: `${base}/basis`,
     },
     {
@@ -116,10 +111,7 @@ const ProductGroupEditPage = async ({ params }: Props) => {
           Product Groups
         </Link>
       </div>
-      <PageHeading
-        title={`Edit ${group.name}`}
-        description="Pick a section to edit it on its own page"
-      />
+      <PageHeading title={`Edit ${group.name}`} />
 
       <section className="space-y-3">
         <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">

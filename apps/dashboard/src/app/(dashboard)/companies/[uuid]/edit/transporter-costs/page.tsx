@@ -32,10 +32,7 @@ const CompanyTransporterCostsPage = async ({ params }: Props) => {
           Back to edit overview
         </Link>
       </div>
-      <PageHeading
-        title={`Transporter Costs — ${company.companyName}`}
-        description="Transport price agreements per validity window and KM/KG range. Save each row after editing it."
-      />
+      <PageHeading title={`Transporter Costs — ${company.companyName}`} />
       <CompanyTransporterCostsEditor
         companyUuid={uuid}
         transporterCosts={transporterCosts}

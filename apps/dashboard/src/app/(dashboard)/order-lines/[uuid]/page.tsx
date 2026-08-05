@@ -35,10 +35,6 @@ const OrderLineDetailPage = async ({ params }: Props) => {
             ? `Line #${line.id}`
             : `Order #${line.orderId} — line ${line.lineNumber ?? "?"}`
         }
-        description={
-          [line.productCode, line.productName].filter(Boolean).join(" — ") ||
-          undefined
-        }
       />
       <OrderLineDetailView line={line} />
     </div>

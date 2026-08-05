@@ -29,7 +29,7 @@ const VisitReportAddressPage = async ({ params }: Props) => {
           Back to edit overview
         </Link>
       </div>
-      <PageHeading title="Address & Contact" description="Where the visit took place and who was seen" />
+      <PageHeading title="Address & Contact" />
       <VisitReportAddressEditor
         visitReportUuid={uuid}
         defaultValues={visitReportToFormValues(report)}

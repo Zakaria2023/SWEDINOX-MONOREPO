@@ -31,7 +31,7 @@ const IndustryDetailPage = async ({ params }: Props) => {
           Industries
         </Link>
       </div>
-      <PageHeading title={industry.name} description={`SBI ${industry.id}`} />
+      <PageHeading title={industry.name} />
       <IndustryDetailView industry={industry} />
     </div>
   );

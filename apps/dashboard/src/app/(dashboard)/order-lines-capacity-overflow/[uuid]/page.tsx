@@ -35,7 +35,6 @@ const CapacityOverflowDetailPage = async ({ params }: Props) => {
             ? `Overflow #${overflow.id}`
             : `Order #${overflow.orderId} — line ${overflow.lineNumber ?? "?"}`
         }
-        description={overflow.capacityName ?? undefined}
       />
       <CapacityOverflowDetailView overflow={overflow} />
     </div>

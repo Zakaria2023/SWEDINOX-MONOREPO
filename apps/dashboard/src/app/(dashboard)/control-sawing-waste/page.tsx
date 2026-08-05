@@ -7,10 +7,7 @@ const ControlSawingWastePage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Control: Sawing Waste"
-        description="Stock written off as waste — the mutation, its product, revenue group and originating order"
-      />
+      <PageHeading title="Control: Sawing Waste" />
       <ControlSawingWasteTable rows={rows} />
     </div>
   );

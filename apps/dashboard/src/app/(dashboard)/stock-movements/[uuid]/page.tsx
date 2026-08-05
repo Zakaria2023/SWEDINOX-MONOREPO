@@ -29,12 +29,7 @@ const StockMovementDetailPage = async ({ params }: Props) => {
           Stock Movements
         </Link>
       </div>
-      <PageHeading
-        title={`Movement #${movement.id}`}
-        description={[movement.productCode, movement.productName]
-          .filter(Boolean)
-          .join(" — ")}
-      />
+      <PageHeading title={`Movement #${movement.id}`} />
       <StockMovementDetailView movement={movement} />
     </div>
   );

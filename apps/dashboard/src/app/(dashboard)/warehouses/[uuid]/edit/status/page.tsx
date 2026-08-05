@@ -29,10 +29,7 @@ const WarehouseStatusPage = async ({ params }: Props) => {
           Back to edit overview
         </Link>
       </div>
-      <PageHeading
-        title={`Status — ${warehouse.name}`}
-        description="Whether it is blocked, and what it is allowed to hold"
-      />
+      <PageHeading title={`Status — ${warehouse.name}`} />
       <WarehouseStatusEditor
         warehouseUuid={uuid}
         defaultValues={warehouseToFormValues(warehouse)}

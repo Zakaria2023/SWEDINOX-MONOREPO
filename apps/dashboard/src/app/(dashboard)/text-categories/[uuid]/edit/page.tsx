@@ -35,10 +35,7 @@ const EditTextCategoryPage = async ({ params }: Props) => {
           Text Categories
         </Link>
       </div>
-      <PageHeading
-        title={`Edit ${category.name}`}
-        description="Change how this category sits in the text tree."
-      />
+      <PageHeading title={`Edit ${category.name}`} />
       <TextCategoryForm
         categories={categories}
         textCategoryUuid={uuid}

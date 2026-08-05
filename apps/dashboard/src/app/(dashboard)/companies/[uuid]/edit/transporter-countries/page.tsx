@@ -32,10 +32,7 @@ const CompanyTransporterCountriesPage = async ({ params }: Props) => {
           Back to edit overview
         </Link>
       </div>
-      <PageHeading
-        title={`Transporter Countries — ${company.companyName}`}
-        description="Countries this transporter serves, with delivery terms and per-country limits. Save each row after editing it."
-      />
+      <PageHeading title={`Transporter Countries — ${company.companyName}`} />
       <CompanyTransporterCountriesEditor
         companyUuid={uuid}
         transporterCountries={transporterCountries}

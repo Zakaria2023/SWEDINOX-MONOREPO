@@ -9,10 +9,7 @@ const CertificatesReceivedPage = async () => {
   return (
     <div className="space-y-6 p-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <PageHeading
-          title="Certificates received"
-          description="The mill certificate each received batch is owed, and whether it has arrived"
-        />
+        <PageHeading title="Certificates received" />
         <GenerateCertificatesButton />
       </div>
       <CertificatesTable rows={rows} />

@@ -20,15 +20,21 @@ type Props = {
 const EditProductPage = async ({ params }: Props) => {
   const { uuid } = await params;
 
-  const [product, productGroups, suppliers, products, locations, revenueGroups] =
-    await Promise.all([
-      getProductDetail(uuid),
-      getProductGroupsForSelect(),
-      getSuppliersForSelect(),
-      getProductsForSelect(),
-      getLocationsForSelect(),
-      getRevenueGroupsForSelect(),
-    ]);
+  const [
+    product,
+    productGroups,
+    suppliers,
+    products,
+    locations,
+    revenueGroups,
+  ] = await Promise.all([
+    getProductDetail(uuid),
+    getProductGroupsForSelect(),
+    getSuppliersForSelect(),
+    getProductsForSelect(),
+    getLocationsForSelect(),
+    getRevenueGroupsForSelect(),
+  ]);
 
   if (!product) {
     notFound();
@@ -45,10 +51,7 @@ const EditProductPage = async ({ params }: Props) => {
           {product.productCode}
         </Link>
       </div>
-      <PageHeading
-        title={`Edit ${product.productCode}`}
-        description={product.name}
-      />
+      <PageHeading title={`Edit ${product.productCode}`} />
       <ProductForm
         productGroups={productGroups}
         suppliers={suppliers}

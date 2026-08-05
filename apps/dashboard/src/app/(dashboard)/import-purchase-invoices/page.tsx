@@ -7,10 +7,7 @@ const ImportPurchaseInvoicesPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Import purchase invoices"
-        description="Inbound supplier invoice messages, those needing attention first"
-      />
+      <PageHeading title="Import purchase invoices" />
       <ImportPurchaseInvoicesTable rows={rows} />
     </div>
   );

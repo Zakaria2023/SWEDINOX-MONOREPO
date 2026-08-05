@@ -7,10 +7,7 @@ const OrderLinesCapacityOverflowPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Order lines capacity overflow"
-        description="Order lines that push a capacity check past its ceiling, and what was decided"
-      />
+      <PageHeading title="Order lines capacity overflow" />
       <OrderLinesCapacityOverflowTable rows={rows} />
     </div>
   );

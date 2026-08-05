@@ -35,7 +35,6 @@ const PickStatisticDetailPage = async ({ params }: Props) => {
             .filter(Boolean)
             .join(" — ") || "Pick statistics"
         }
-        description={`${statistic.year}-${String(statistic.month).padStart(2, "0")}`}
       />
       <PickStatisticDetailView statistic={statistic} />
     </div>

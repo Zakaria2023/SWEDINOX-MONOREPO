@@ -7,10 +7,7 @@ const AddressesPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Addresses"
-        description="Address records and details"
-      />
+      <PageHeading title="Addresses" />
       <AddressesTable addresses={addresses} />
     </div>
   );

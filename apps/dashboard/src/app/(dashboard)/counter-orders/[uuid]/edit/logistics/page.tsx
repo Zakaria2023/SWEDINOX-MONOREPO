@@ -29,7 +29,7 @@ const CounterOrderLogisticsPage = async ({ params }: Props) => {
           Back to edit overview
         </Link>
       </div>
-      <PageHeading title="Logistics" description="What the delivery needs from transport" />
+      <PageHeading title="Logistics" />
       <CounterOrderLogisticsEditor
         counterOrderUuid={uuid}
         defaultValues={counterOrderToFormValues(order, order)}

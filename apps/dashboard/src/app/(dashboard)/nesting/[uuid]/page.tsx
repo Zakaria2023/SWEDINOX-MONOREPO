@@ -29,14 +29,7 @@ const NestingDetailPage = async ({ params }: Props) => {
           Nesting
         </Link>
       </div>
-      <PageHeading
-        title={nesting.nest ?? `Nest #${nesting.id}`}
-        description={
-          nesting.orderId === null
-            ? undefined
-            : `Order #${nesting.orderId} — line ${nesting.lineNumber ?? "?"}`
-        }
-      />
+      <PageHeading title={nesting.nest ?? `Nest #${nesting.id}`} />
       <NestingDetailView nesting={nesting} />
     </div>
   );

@@ -9,10 +9,7 @@ const PurchaseOrdersToBeReceivedPage = async () => {
   return (
     <div className="space-y-6 p-6">
       <div className="flex items-start justify-between gap-4">
-        <PageHeading
-          title="Purchase orders to be received"
-          description="Open purchase-order lines still awaiting delivery, with outstanding weight per line"
-        />
+        <PageHeading title="Purchase orders to be received" />
         <ReceiveGoodsButton />
       </div>
       <PurchaseOrdersToBeReceivedTable rows={rows} />

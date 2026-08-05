@@ -7,10 +7,7 @@ const CommunicationSettingsPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Communication Settings"
-        description="Manage communication settings per company and document type"
-      />
+      <PageHeading title="Communication Settings" />
       <CommunicationSettingsTable settings={settings} />
     </div>
   );

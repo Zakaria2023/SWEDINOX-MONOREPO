@@ -36,7 +36,7 @@ const CounterOrderLinesPage = async ({ params }: Props) => {
           Back to edit overview
         </Link>
       </div>
-      <PageHeading title="Order Lines" description="What was sold, in what quantity and at what price" />
+      <PageHeading title="Order Lines" />
       <CounterOrderLinesEditor
         counterOrderUuid={uuid}
         defaultValues={counterOrderToFormValues(order, order)}

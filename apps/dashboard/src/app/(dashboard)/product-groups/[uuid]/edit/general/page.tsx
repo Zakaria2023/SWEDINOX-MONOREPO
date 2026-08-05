@@ -34,10 +34,7 @@ const ProductGroupGeneralPage = async ({ params }: Props) => {
           Back to edit overview
         </Link>
       </div>
-      <PageHeading
-        title={`General — ${group.name}`}
-        description="What this group is, where it sits and how it is found"
-      />
+      <PageHeading title={`General — ${group.name}`} />
       <ProductGroupGeneralEditor
         productGroupUuid={uuid}
         defaultValues={productGroupToFormValues(group, group.suppliers)}

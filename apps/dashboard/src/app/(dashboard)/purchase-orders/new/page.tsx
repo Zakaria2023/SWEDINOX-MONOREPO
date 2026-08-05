@@ -11,10 +11,7 @@ const NewPurchaseOrderPage = async () => {
 
   return (
     <div className="max-w-4xl space-y-6 p-6">
-      <PageHeading
-        title="New Purchase Order"
-        description="Create a new supplier purchase order"
-      />
+      <PageHeading title="New Purchase Order" />
       <PurchaseOrderForm companies={companies} clerkUsers={clerkUsers} />
     </div>
   );

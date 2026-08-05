@@ -35,10 +35,6 @@ const ReoptimizeDetailPage = async ({ params }: Props) => {
             ? `Row #${row.id}`
             : `Order #${row.orderId} — line ${row.lineNumber ?? "?"}`
         }
-        description={
-          [row.productCode, row.productName].filter(Boolean).join(" — ") ||
-          undefined
-        }
       />
       <ReoptimizeDetailView row={row} />
     </div>

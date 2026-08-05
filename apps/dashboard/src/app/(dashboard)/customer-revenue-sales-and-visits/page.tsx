@@ -7,10 +7,7 @@ const CustomerRevenueSalesVisitsPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Customer revenue, sales and visits"
-        description="Three-year sales comparison per customer and revenue group"
-      />
+      <PageHeading title="Customer revenue, sales and visits" />
       <CustomerRevenueSalesVisitsTable rows={rows} />
     </div>
   );

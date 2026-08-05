@@ -29,14 +29,7 @@ const EditWarehouseSubSectionPage = async ({ params }: Props) => {
           Warehouse Sub Sections
         </Link>
       </div>
-      <PageHeading
-        title={`Edit ${subSection.name}`}
-        description={
-          subSection.parentName
-            ? `Sits under ${subSection.parentName}. Editing never moves a sub section — create a new one to place it elsewhere.`
-            : "Editing never moves a sub section — create a new one to place it elsewhere."
-        }
-      />
+      <PageHeading title={`Edit ${subSection.name}`} />
       <WarehouseSubSectionEditForm
         subSectionUuid={uuid}
         defaultValues={subSectionToEditValues(subSection)}

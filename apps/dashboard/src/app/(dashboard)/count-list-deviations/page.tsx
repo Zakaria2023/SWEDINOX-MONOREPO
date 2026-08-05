@@ -7,10 +7,7 @@ const CountListDeviationsPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Deviations in Count Lists"
-        description="Stock-count discrepancies booked per workorder — old vs. new stock and the value of each correction"
-      />
+      <PageHeading title="Deviations in Count Lists" />
       <CountListDeviationsTable deviations={deviations} />
     </div>
   );

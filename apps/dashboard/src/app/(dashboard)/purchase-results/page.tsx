@@ -7,10 +7,7 @@ const PurchaseResultsPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Purchase results"
-        description="What was paid for received goods against today's replacement value"
-      />
+      <PageHeading title="Purchase results" />
       <PurchaseResultsTable rows={rows} />
     </div>
   );

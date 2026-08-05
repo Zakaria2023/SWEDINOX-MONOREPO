@@ -7,10 +7,7 @@ const WarehouseCapacityPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Warehouse Capacity"
-        description="Capacity per section and workorder type — how much is occupied, ready and remaining each day"
-      />
+      <PageHeading title="Warehouse Capacity" />
       <WarehouseCapacityTable capacity={capacity} />
     </div>
   );

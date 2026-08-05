@@ -18,10 +18,7 @@ const AddTextCategoryPage = async () => {
           Text Categories
         </Link>
       </div>
-      <PageHeading
-        title="Add Text Category"
-        description="Create a category in the text tree."
-      />
+      <PageHeading title="Add Text Category" />
       <TextCategoryForm categories={categories} />
     </div>
   );

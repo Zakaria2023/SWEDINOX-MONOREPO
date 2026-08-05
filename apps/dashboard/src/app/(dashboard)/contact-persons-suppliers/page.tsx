@@ -7,10 +7,7 @@ const ContactPersonsSuppliersPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Contact Persons Suppliers"
-        description="Overview of all contact persons linked to suppliers"
-      />
+      <PageHeading title="Contact Persons Suppliers" />
       <ContactPersonsSuppliersTable rows={rows} />
     </div>
   );

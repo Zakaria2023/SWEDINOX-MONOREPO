@@ -34,10 +34,7 @@ const WarehousePickupWorkordersPage = async ({ params }: Props) => {
           Back to edit overview
         </Link>
       </div>
-      <PageHeading
-        title={`Pick-up Workorders — ${warehouse.name}`}
-        description="The default pick-up location and which printers serve it"
-      />
+      <PageHeading title={`Pick-up Workorders — ${warehouse.name}`} />
       <WarehousePickupWorkordersEditor
         warehouseUuid={uuid}
         defaultValues={warehouseToFormValues(warehouse)}

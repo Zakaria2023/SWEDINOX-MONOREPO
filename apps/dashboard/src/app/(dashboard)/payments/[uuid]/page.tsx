@@ -4,7 +4,7 @@ import { ChevronLeft } from "lucide-react";
 import { getPaymentDetail } from "@/app/(dashboard)/payments/actions";
 import { PaymentDetailView } from "@/components/payments/payment-detail";
 import { PageHeading } from "@/components/layout/page-heading";
-import { formatDateColumn, formatMoney } from "@/lib/helpers";
+import { formatMoney } from "@/lib/helpers";
 
 type Props = {
   params: Promise<{ uuid: string }>;
@@ -30,14 +30,7 @@ const PaymentDetailPage = async ({ params }: Props) => {
           Payments
         </Link>
       </div>
-      <PageHeading
-        title={formatMoney(Number(payment.amount))}
-        description={
-          [formatDateColumn(payment.paymentDate), payment.companyName]
-            .filter((part) => part && part !== "—")
-            .join(" — ") || undefined
-        }
-      />
+      <PageHeading title={formatMoney(Number(payment.amount))} />
       <PaymentDetailView payment={payment} />
     </div>
   );

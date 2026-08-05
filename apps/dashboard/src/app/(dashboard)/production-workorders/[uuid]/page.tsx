@@ -35,7 +35,6 @@ const ProductionWorkOrderLinePage = async ({ params }: Props) => {
             .filter(Boolean)
             .join(" — ") || `Line #${line.id}`
         }
-        description={line.machineName ?? undefined}
       />
       <ProductionWorkOrderLineDetailView line={line} />
     </div>

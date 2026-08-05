@@ -7,10 +7,7 @@ const TransportStatusAdjustmentsPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Transport Status Adjustments"
-        description="A log of trip-status changes — who changed it, when, and the order and bill of lading it applies to"
-      />
+      <PageHeading title="Transport Status Adjustments" />
       <TransportStatusAdjustmentsTable adjustments={adjustments} />
     </div>
   );

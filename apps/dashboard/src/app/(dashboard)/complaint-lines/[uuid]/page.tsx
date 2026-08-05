@@ -35,10 +35,6 @@ const ComplaintLineDetailPage = async ({ params }: Props) => {
             ? `Line #${line.id}`
             : `Complaint #${line.complaintNumber} — line ${line.lineNumber ?? "?"}`
         }
-        description={
-          [line.productCode, line.productName].filter(Boolean).join(" — ") ||
-          undefined
-        }
       />
       <ComplaintLineDetailView line={line} />
     </div>

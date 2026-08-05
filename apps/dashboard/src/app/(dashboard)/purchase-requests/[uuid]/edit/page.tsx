@@ -50,10 +50,7 @@ const EditPurchaseRequestPage = async ({ params }: Props) => {
           Back to purchase request
         </Link>
       </div>
-      <PageHeading
-        title={`Edit Purchase Request #${request.id}`}
-        description="Change what is being asked for and who to ask"
-      />
+      <PageHeading title={`Edit Purchase Request #${request.id}`} />
 
       {isPurchaseRequestEditable(request.status) ? (
         <PurchaseRequestForm

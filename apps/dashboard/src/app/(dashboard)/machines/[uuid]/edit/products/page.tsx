@@ -35,10 +35,7 @@ const MachineProductsPage = async ({ params }: Props) => {
           Back to edit overview
         </Link>
       </div>
-      <PageHeading
-        title={`Products — ${machine.name}`}
-        description="What this machine can run, and how fast it runs it"
-      />
+      <PageHeading title={`Products — ${machine.name}`} />
       <MachineProductsEditor
         machineUuid={uuid}
         products={machine.products.map((product) => ({

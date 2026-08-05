@@ -7,10 +7,7 @@ const BalancedScorecardPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Balanced Scorecard"
-        description="Key performance indicators per category, with value, target, status and trend"
-      />
+      <PageHeading title="Balanced Scorecard" />
       <BalancedScorecardTable rows={rows} />
     </div>
   );

@@ -7,10 +7,7 @@ const NestingPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Nesting"
-        description="Sheet-metal nesting plan per order line — dimensions, the sawing/nesting plan, the delivery plan and the material fetched from stock"
-      />
+      <PageHeading title="Nesting" />
       <NestingTable rows={rows} />
     </div>
   );

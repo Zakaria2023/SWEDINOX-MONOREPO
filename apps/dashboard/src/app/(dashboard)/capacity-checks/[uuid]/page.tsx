@@ -4,7 +4,6 @@ import { ChevronLeft } from "lucide-react";
 import { getCapacityCheckDetail } from "@/app/(dashboard)/capacity-checks/actions";
 import { CapacityCheckDetailView } from "@/components/capacity-checks/capacity-check-detail";
 import { PageHeading } from "@/components/layout/page-heading";
-import { formatDateColumn } from "@/lib/helpers";
 
 type Props = {
   params: Promise<{ uuid: string }>;
@@ -30,10 +29,7 @@ const CapacityCheckDetailPage = async ({ params }: Props) => {
           Capacity Checks
         </Link>
       </div>
-      <PageHeading
-        title={check.checkName ?? `Check #${check.id}`}
-        description={formatDateColumn(check.checkDate)}
-      />
+      <PageHeading title={check.checkName ?? `Check #${check.id}`} />
       <CapacityCheckDetailView check={check} />
     </div>
   );

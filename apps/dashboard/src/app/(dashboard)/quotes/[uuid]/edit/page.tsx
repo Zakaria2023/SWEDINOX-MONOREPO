@@ -17,13 +17,15 @@ type Props = {
 const EditQuotePage = async ({ params }: Props) => {
   const { uuid } = await params;
 
-  const [quote, companies, clerkUsers, contracts, products] = await Promise.all([
-    getQuoteDetail(uuid),
-    getCompaniesForSelect(),
-    getClerkUsersForSelect(),
-    getContractsForProjects(),
-    getProductsForPricing(),
-  ]);
+  const [quote, companies, clerkUsers, contracts, products] = await Promise.all(
+    [
+      getQuoteDetail(uuid),
+      getCompaniesForSelect(),
+      getClerkUsersForSelect(),
+      getContractsForProjects(),
+      getProductsForPricing(),
+    ],
+  );
 
   if (!quote) {
     notFound();
@@ -40,10 +42,7 @@ const EditQuotePage = async ({ params }: Props) => {
           Quote #{quote.id}
         </Link>
       </div>
-      <PageHeading
-        title={`Edit Quote #${quote.id}`}
-        description={quote.companyName ?? undefined}
-      />
+      <PageHeading title={`Edit Quote #${quote.id}`} />
       <QuoteForm
         companies={companies}
         clerkUsers={clerkUsers}

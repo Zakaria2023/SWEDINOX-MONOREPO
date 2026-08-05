@@ -35,9 +35,6 @@ const TransportWorkOrderLinePage = async ({ params }: Props) => {
             .filter(Boolean)
             .join(" — ") || `Line #${line.id}`
         }
-        description={
-          line.tripNumber === null ? undefined : `Trip ${line.tripNumber}`
-        }
       />
       <TransportWorkOrderLineDetailView line={line} />
     </div>

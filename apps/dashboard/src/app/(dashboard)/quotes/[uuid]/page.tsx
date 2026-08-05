@@ -29,10 +29,7 @@ const QuoteDetailPage = async ({ params }: Props) => {
           Quotes
         </Link>
       </div>
-      <PageHeading
-        title={`Quote #${quote.id}`}
-        description={quote.companyName ?? undefined}
-      />
+      <PageHeading title={`Quote #${quote.id}`} />
       <QuoteDetailView quote={quote} />
     </div>
   );

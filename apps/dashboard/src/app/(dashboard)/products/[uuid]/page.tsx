@@ -29,7 +29,7 @@ const ProductDetailPage = async ({ params }: Props) => {
           Products
         </Link>
       </div>
-      <PageHeading title={product.productCode} description={product.name} />
+      <PageHeading title={product.productCode} />
       <ProductDetailView product={product} />
     </div>
   );

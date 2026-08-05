@@ -4,7 +4,6 @@ import { ChevronLeft } from "lucide-react";
 import { getProductionCapacityDetail } from "@/app/(dashboard)/production-capacity/actions";
 import { ProductionCapacityDetailView } from "@/components/production-capacity/production-capacity-detail";
 import { PageHeading } from "@/components/layout/page-heading";
-import { formatDateColumn } from "@/lib/helpers";
 
 type Props = {
   params: Promise<{ uuid: string }>;
@@ -36,7 +35,6 @@ const ProductionCapacityDetailPage = async ({ params }: Props) => {
             .filter(Boolean)
             .join(" — ") || "Production capacity"
         }
-        description={formatDateColumn(capacity.capacityDate)}
       />
       <ProductionCapacityDetailView capacity={capacity} />
     </div>

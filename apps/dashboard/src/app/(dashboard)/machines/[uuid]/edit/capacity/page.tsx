@@ -29,10 +29,7 @@ const MachineCapacityPage = async ({ params }: Props) => {
           Back to edit overview
         </Link>
       </div>
-      <PageHeading
-        title={`Capacity — ${machine.name}`}
-        description="What a normal day looks like, and when to warn that it is full"
-      />
+      <PageHeading title={`Capacity — ${machine.name}`} />
       <MachineCapacityEditor
         machineUuid={uuid}
         defaultValues={machineToFormValues(machine)}

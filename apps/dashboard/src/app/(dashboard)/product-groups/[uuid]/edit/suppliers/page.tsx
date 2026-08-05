@@ -34,10 +34,7 @@ const ProductGroupSuppliersPage = async ({ params }: Props) => {
           Back to edit overview
         </Link>
       </div>
-      <PageHeading
-        title={`Suppliers — ${group.name}`}
-        description="Who supplies this group, on what terms, and which one is preferred"
-      />
+      <PageHeading title={`Suppliers — ${group.name}`} />
       <ProductGroupSupplierEditor
         productGroupUuid={uuid}
         defaultValues={productGroupToFormValues(group, group.suppliers)}

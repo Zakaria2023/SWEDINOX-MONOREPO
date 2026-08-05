@@ -29,14 +29,7 @@ const EditLocationPage = async ({ params }: Props) => {
           Locations
         </Link>
       </div>
-      <PageHeading
-        title={`Edit ${location.name}`}
-        description={
-          location.parentName
-            ? `Sits under ${location.parentName}. Editing never moves a location — create a new one to place it elsewhere.`
-            : "Editing never moves a location — create a new one to place it elsewhere."
-        }
-      />
+      <PageHeading title={`Edit ${location.name}`} />
       <LocationEditForm
         locationUuid={uuid}
         defaultValues={locationToEditValues(location)}

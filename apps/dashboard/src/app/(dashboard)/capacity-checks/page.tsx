@@ -7,10 +7,7 @@ const CapacityChecksPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Capacity Checks"
-        description="Configured capacity checks — occupied vs. maximum capacity, warning thresholds and alert-email timing"
-      />
+      <PageHeading title="Capacity Checks" />
       <CapacityChecksTable checks={checks} />
     </div>
   );

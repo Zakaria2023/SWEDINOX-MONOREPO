@@ -24,10 +24,7 @@ const AddVisitReportPage = async () => {
           Visit Reports
         </Link>
       </div>
-      <PageHeading
-        title="New Visit Report"
-        description="Create a visit or telephone contact report."
-      />
+      <PageHeading title="New Visit Report" />
       <VisitReportForm
         companies={companies}
         adminUsers={adminUsers}

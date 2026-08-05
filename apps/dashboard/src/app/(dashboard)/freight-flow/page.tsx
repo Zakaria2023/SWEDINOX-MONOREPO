@@ -14,10 +14,7 @@ const FreightFlowPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Freight flow (SFN)"
-        description="The monthly goods flow per revenue group behind the steel federation return, in kilograms"
-      />
+      <PageHeading title="Freight flow (SFN)" />
       <SfnCounterpartiesPanel counterparties={counterparties} />
       <FreightFlowTable rows={rows} />
     </div>

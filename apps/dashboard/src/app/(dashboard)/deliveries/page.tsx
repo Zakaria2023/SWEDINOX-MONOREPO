@@ -7,10 +7,7 @@ const DeliveriesPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Deliveries"
-        description="Order lines to deliver, with their delivery and line status"
-      />
+      <PageHeading title="Deliveries" />
       <DeliveriesTable lines={lines} />
     </div>
   );

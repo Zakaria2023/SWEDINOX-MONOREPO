@@ -7,10 +7,7 @@ const StockOnAdvicePage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="StockOn advice"
-        description="Periodic-review reorder for StockOp-enabled products: order-up-to level from lead time and review period, with a daily order decision"
-      />
+      <PageHeading title="StockOn advice" />
       <StockOnAdviceTable rows={rows} />
     </div>
   );

@@ -7,10 +7,7 @@ const DebtorAgeingPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Debtor ageing"
-        description="What every customer still owes, split by how long it has been overdue"
-      />
+      <PageHeading title="Debtor ageing" />
       <DebtorAgeingTable ageing={ageing} />
     </div>
   );

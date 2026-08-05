@@ -29,10 +29,7 @@ const WarehouseGeneralPage = async ({ params }: Props) => {
           Back to edit overview
         </Link>
       </div>
-      <PageHeading
-        title={`General — ${warehouse.name}`}
-        description="What this warehouse is and the sizes it takes"
-      />
+      <PageHeading title={`General — ${warehouse.name}`} />
       <WarehouseGeneralEditor
         warehouseUuid={uuid}
         defaultValues={warehouseToFormValues(warehouse)}

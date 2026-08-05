@@ -33,10 +33,7 @@ const EditPurchaseOrderPage = async ({ params }: Props) => {
           Purchase Order #{purchaseOrder.id}
         </Link>
       </div>
-      <PageHeading
-        title={`Edit Purchase Order #${purchaseOrder.id}`}
-        description="Header details only — supplier, agent and products can't be changed after creation."
-      />
+      <PageHeading title={`Edit Purchase Order #${purchaseOrder.id}`} />
       <PurchaseOrderEditForm purchaseOrder={purchaseOrder} />
     </div>
   );

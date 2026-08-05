@@ -39,10 +39,7 @@ const CompanyDebtorPage = async ({ params }: Props) => {
           Back to edit overview
         </Link>
       </div>
-      <PageHeading
-        title={`Debtor & Finance — ${company.companyName}`}
-        description="Banking details, credit limits, payment terms, and blocking"
-      />
+      <PageHeading title={`Debtor & Finance — ${company.companyName}`} />
       <CompanyDebtorForm
         company={debtor}
         debtorCompanies={debtorCompanies}

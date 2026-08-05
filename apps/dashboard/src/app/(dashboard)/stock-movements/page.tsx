@@ -7,10 +7,7 @@ const StockMovementsPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Stock Movements"
-        description="Every entry into and out of stock, with its source and time"
-      />
+      <PageHeading title="Stock Movements" />
       <StockMovementsTable stockMovements={stockMovements} />
     </div>
   );

@@ -7,10 +7,7 @@ const RemarksPerCompanyPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Remarks per company"
-        description="Companies that carry a free-text remark, with representative and city"
-      />
+      <PageHeading title="Remarks per company" />
       <RemarksPerCompanyTable rows={rows} />
     </div>
   );

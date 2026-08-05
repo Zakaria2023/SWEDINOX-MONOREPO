@@ -29,7 +29,7 @@ const ContractDetailPage = async ({ params }: Props) => {
           Contracts
         </Link>
       </div>
-      <PageHeading title={contract.code} description={contract.description} />
+      <PageHeading title={contract.code} />
       <ContractDetailView contract={contract} />
     </div>
   );

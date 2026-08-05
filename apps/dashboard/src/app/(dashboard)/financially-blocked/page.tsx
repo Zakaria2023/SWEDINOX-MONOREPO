@@ -7,10 +7,7 @@ const FinanciallyBlockedPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Financially blocked quotes and orders"
-        description="Quotes and orders on a financial block, with the debtor's open receivables, credit limit and remaining credit space"
-      />
+      <PageHeading title="Financially blocked quotes and orders" />
       <FinanciallyBlockedTable rows={rows} />
     </div>
   );

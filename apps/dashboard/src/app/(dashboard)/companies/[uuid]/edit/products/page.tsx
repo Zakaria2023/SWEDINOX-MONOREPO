@@ -37,10 +37,7 @@ const CompanyProductsPage = async ({ params }: Props) => {
           Back to edit overview
         </Link>
       </div>
-      <PageHeading
-        title={`Products — ${company.companyName}`}
-        description="Add, edit, or remove the company's own product records. Every change saves immediately."
-      />
+      <PageHeading title={`Products — ${company.companyName}`} />
       <CompanyProductsEditor
         companyUuid={uuid}
         products={products}

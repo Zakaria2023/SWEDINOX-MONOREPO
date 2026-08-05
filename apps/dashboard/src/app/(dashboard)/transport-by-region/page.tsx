@@ -7,10 +7,7 @@ const TransportByRegionPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Transport by Region"
-        description="Transport trips with their date, vehicle and total load"
-      />
+      <PageHeading title="Transport by Region" />
       <TransportByRegionTable rows={rows} />
     </div>
   );

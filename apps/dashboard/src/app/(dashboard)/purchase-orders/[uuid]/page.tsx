@@ -29,10 +29,7 @@ const PurchaseOrderDetailPage = async ({ params }: Props) => {
           Purchase Orders
         </Link>
       </div>
-      <PageHeading
-        title={`Purchase Order #${purchaseOrder.id}`}
-        description={purchaseOrder.supplierName ?? undefined}
-      />
+      <PageHeading title={`Purchase Order #${purchaseOrder.id}`} />
       <PurchaseOrderDetailView purchaseOrder={purchaseOrder} />
     </div>
   );

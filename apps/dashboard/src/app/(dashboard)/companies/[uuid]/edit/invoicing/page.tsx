@@ -28,10 +28,7 @@ const CompanyInvoicingPage = async ({ params }: Props) => {
           Back to edit overview
         </Link>
       </div>
-      <PageHeading
-        title={`Invoicing — ${company.companyName}`}
-        description="Invoicing method, frequency, and sending actions"
-      />
+      <PageHeading title={`Invoicing — ${company.companyName}`} />
       <CompanyInvoicingForm company={company} />
     </div>
   );

@@ -29,10 +29,7 @@ const ProductGroupStockPolicyPage = async ({ params }: Props) => {
           Back to edit overview
         </Link>
       </div>
-      <PageHeading
-        title={`Stock Policy — ${group.name}`}
-        description="What to hold, when to order it and what that costs"
-      />
+      <PageHeading title={`Stock Policy — ${group.name}`} />
       <ProductGroupStockPolicyEditor
         productGroupUuid={uuid}
         defaultValues={productGroupToFormValues(group, group.suppliers)}

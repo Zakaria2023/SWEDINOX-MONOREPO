@@ -7,10 +7,7 @@ const OrderLinesStillToBeCalledPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Order lines still to be called"
-        description="Order lines with call-off quantity remaining"
-      />
+      <PageHeading title="Order lines still to be called" />
       <OrderLinesStillToBeCalledTable rows={rows} />
     </div>
   );

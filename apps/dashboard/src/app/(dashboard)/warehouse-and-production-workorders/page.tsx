@@ -7,10 +7,7 @@ const WarehouseAndProductionWorkOrdersPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Warehouse- and production workorders"
-        description="Both workorder streams in one list, with planned against actual weight"
-      />
+      <PageHeading title="Warehouse- and production workorders" />
       <WarehouseAndProductionWorkOrdersTable rows={rows} />
     </div>
   );

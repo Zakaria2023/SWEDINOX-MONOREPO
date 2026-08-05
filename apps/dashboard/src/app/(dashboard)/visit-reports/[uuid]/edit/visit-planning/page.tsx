@@ -29,7 +29,7 @@ const VisitReportPlanningPage = async ({ params }: Props) => {
           Back to edit overview
         </Link>
       </div>
-      <PageHeading title="Visit Planning" description="Which months to call and which to visit" />
+      <PageHeading title="Visit Planning" />
       <VisitReportPlanningEditor
         visitReportUuid={uuid}
         defaultValues={visitReportToFormValues(report)}

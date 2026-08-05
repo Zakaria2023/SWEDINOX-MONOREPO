@@ -35,10 +35,6 @@ const ProductionCapacityDetailPage = async ({ params }: Props) => {
             ? `Detail #${detail.id}`
             : `Order #${detail.orderId} — line ${detail.lineNumber ?? "?"}`
         }
-        description={
-          [detail.productCode, detail.productName].filter(Boolean).join(" — ") ||
-          undefined
-        }
       />
       <ProductionCapacityDetailView detail={detail} />
     </div>

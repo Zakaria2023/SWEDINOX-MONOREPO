@@ -11,10 +11,7 @@ const AddProductGroupPage = async () => {
 
   return (
     <div className="max-w-4xl space-y-6 p-6">
-      <PageHeading
-        title="Add Product Group"
-        description="Create a new product group with all its properties"
-      />
+      <PageHeading title="Add Product Group" />
       <ProductGroupForm existingGroups={existingGroups} companies={companies} />
     </div>
   );

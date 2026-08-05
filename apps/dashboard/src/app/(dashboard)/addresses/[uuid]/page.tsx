@@ -35,7 +35,6 @@ const AddressDetailPage = async ({ params }: Props) => {
           address.altName ||
           "Address"
         }
-        description={address.companyName ?? undefined}
       />
       <AddressDetailView address={address} />
     </div>

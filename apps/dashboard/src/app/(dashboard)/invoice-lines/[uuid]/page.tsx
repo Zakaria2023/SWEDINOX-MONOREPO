@@ -35,7 +35,6 @@ const InvoiceLineDetailPage = async ({ params }: Props) => {
           line.invoiceDocumentType,
           line.invoiceId,
         )} — ${line.productCode ?? `line #${line.id}`}`}
-        description={line.customerName ?? undefined}
       />
       <InvoiceLineDetailView line={line} />
     </div>

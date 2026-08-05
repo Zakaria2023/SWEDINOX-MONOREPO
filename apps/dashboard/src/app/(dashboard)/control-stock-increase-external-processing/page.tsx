@@ -7,10 +7,7 @@ const ControlStockIncreaseExternalProcessingPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Control: Stock Increase due to External Processing"
-        description="Stock increases booked from processing output — the mutation, its product, revenue group and originating order"
-      />
+      <PageHeading title="Control: Stock Increase due to External Processing" />
       <StockIncreaseExternalProcessingTable rows={rows} />
     </div>
   );

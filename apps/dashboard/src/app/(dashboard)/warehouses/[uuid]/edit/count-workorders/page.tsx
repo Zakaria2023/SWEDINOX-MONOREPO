@@ -29,10 +29,7 @@ const WarehouseCountWorkordersPage = async ({ params }: Props) => {
           Back to edit overview
         </Link>
       </div>
-      <PageHeading
-        title={`Count Workorders — ${warehouse.name}`}
-        description="How stock counts are raised, released and printed"
-      />
+      <PageHeading title={`Count Workorders — ${warehouse.name}`} />
       <WarehouseCountWorkordersEditor
         warehouseUuid={uuid}
         defaultValues={warehouseToFormValues(warehouse)}

@@ -9,10 +9,7 @@ const OptionsPage = async () => {
   return (
     <div className="space-y-6 p-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <PageHeading
-          title="Options"
-          description="Revenue and profit per processing option, split by revenue group and line status"
-        />
+        <PageHeading title="Options" />
         <GenerateOptionChargesButton />
       </div>
       <OptionsTable rows={rows} />

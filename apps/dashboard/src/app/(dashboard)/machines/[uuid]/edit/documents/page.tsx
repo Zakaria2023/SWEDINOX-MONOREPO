@@ -29,10 +29,7 @@ const MachineDocumentsPage = async ({ params }: Props) => {
           Back to edit overview
         </Link>
       </div>
-      <PageHeading
-        title={`Documents — ${machine.name}`}
-        description="Manuals, certificates and anything else worth keeping with it"
-      />
+      <PageHeading title={`Documents — ${machine.name}`} />
       <MachineDocumentsEditor
         machineUuid={uuid}
         defaultValues={machineToFormValues(machine)}

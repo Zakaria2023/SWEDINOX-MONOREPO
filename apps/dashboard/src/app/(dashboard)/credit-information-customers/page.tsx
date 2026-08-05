@@ -7,10 +7,7 @@ const CreditInformationCustomersPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Credit information customers"
-        description="Credit limits, open receivables, current orders and remaining credit space per customer"
-      />
+      <PageHeading title="Credit information customers" />
       <CreditInformationCustomersTable rows={rows} />
     </div>
   );

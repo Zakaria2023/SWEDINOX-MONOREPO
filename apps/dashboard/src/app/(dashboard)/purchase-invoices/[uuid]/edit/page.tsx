@@ -33,10 +33,7 @@ const EditPurchaseInvoicePage = async ({ params }: Props) => {
           Purchase Invoice #{purchaseInvoice.id}
         </Link>
       </div>
-      <PageHeading
-        title={`Edit Purchase Invoice #${purchaseInvoice.id}`}
-        description="Header details only — the company and stock items can't be changed after creation."
-      />
+      <PageHeading title={`Edit Purchase Invoice #${purchaseInvoice.id}`} />
       <PurchaseInvoiceEditForm purchaseInvoice={purchaseInvoice} />
     </div>
   );

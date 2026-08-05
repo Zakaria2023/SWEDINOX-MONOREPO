@@ -7,10 +7,7 @@ import { DataTableFallback } from "@/components/ui/data-table-fallback";
 const ComplaintsPage = () => (
   <div className="space-y-6 p-6">
     <div className="flex items-start justify-between">
-      <PageHeading
-        title="Complaints"
-        description="Manage customer complaints"
-      />
+      <PageHeading title="Complaints" />
       <Link
         href="/complaints/new"
         className="inline-flex h-8 items-center justify-center rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/80"

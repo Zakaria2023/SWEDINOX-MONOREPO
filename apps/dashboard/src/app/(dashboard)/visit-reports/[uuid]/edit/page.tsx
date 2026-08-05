@@ -123,7 +123,6 @@ const VisitReportEditPage = async ({ params }: Props) => {
       </div>
       <PageHeading
         title={`Edit visit report${companyName ? ` — ${companyName}` : ""}`}
-        description="Pick a section to edit it on its own page"
       />
 
       <section className="space-y-3">

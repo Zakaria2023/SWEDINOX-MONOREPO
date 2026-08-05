@@ -29,10 +29,7 @@ const ProductGroupSalesPage = async ({ params }: Props) => {
           Back to edit overview
         </Link>
       </div>
-      <PageHeading
-        title={`Sales — ${group.name}`}
-        description="How this group is sold, priced and shown"
-      />
+      <PageHeading title={`Sales — ${group.name}`} />
       <ProductGroupSalesEditor
         productGroupUuid={uuid}
         defaultValues={productGroupToFormValues(group, group.suppliers)}

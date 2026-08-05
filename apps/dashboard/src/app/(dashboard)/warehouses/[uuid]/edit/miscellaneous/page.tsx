@@ -34,10 +34,7 @@ const WarehouseMiscellaneousPage = async ({ params }: Props) => {
           Back to edit overview
         </Link>
       </div>
-      <PageHeading
-        title={`Miscellaneous — ${warehouse.name}`}
-        description="Workorder slips, CSV naming and who transports for this warehouse"
-      />
+      <PageHeading title={`Miscellaneous — ${warehouse.name}`} />
       <WarehouseMiscellaneousEditor
         warehouseUuid={uuid}
         defaultValues={warehouseToFormValues(warehouse)}

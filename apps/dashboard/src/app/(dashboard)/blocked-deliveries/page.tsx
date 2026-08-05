@@ -7,10 +7,7 @@ const BlockedDeliveriesPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Blocked deliveries"
-        description="Order lines held back by a commercial, financial or transport block"
-      />
+      <PageHeading title="Blocked deliveries" />
       <BlockedDeliveriesTable lines={lines} />
     </div>
   );

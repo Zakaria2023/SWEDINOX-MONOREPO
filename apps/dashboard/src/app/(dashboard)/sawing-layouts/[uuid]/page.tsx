@@ -29,13 +29,7 @@ const SawingLayoutDetailPage = async ({ params }: Props) => {
           Sawing Layouts
         </Link>
       </div>
-      <PageHeading
-        title={layout.sawingCode ?? `Layout #${layout.id}`}
-        description={
-          [layout.machine, layout.sawingProduct].filter(Boolean).join(" — ") ||
-          undefined
-        }
-      />
+      <PageHeading title={layout.sawingCode ?? `Layout #${layout.id}`} />
       <SawingLayoutDetailView layout={layout} />
     </div>
   );

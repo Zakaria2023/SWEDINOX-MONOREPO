@@ -35,7 +35,6 @@ const NetPriceDetailPage = async ({ params }: Props) => {
             .filter(Boolean)
             .join(" — ") || `Net price #${netPrice.id}`
         }
-        description={netPrice.companyName ?? undefined}
       />
       <NetPriceDetailView netPrice={netPrice} />
     </div>

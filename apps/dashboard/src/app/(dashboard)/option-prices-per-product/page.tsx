@@ -10,10 +10,7 @@ const OptionPricesPerProductPage = async () => {
   return (
     <div className="space-y-6 p-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <PageHeading
-          title="Option prices per product"
-          description="What each processing option costs on each product, and from when"
-        />
+        <PageHeading title="Option prices per product" />
         <div className="flex items-start gap-3">
           <NewOptionDialog />
           <GenerateOptionPricesButton />

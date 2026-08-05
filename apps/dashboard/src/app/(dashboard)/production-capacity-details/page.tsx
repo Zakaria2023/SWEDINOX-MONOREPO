@@ -7,10 +7,7 @@ const ProductionCapacityDetailsPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Production Capacity Details"
-        description="The per-order-line production and sawing drill-down: dimensions, quantities, delivery and the full sawing plan"
-      />
+      <PageHeading title="Production Capacity Details" />
       <ProductionCapacityDetailsTable details={details} />
     </div>
   );

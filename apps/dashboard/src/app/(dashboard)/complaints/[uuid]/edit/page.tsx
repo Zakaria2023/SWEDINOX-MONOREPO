@@ -38,10 +38,7 @@ const EditComplaintPage = async ({ params }: Props) => {
           Complaint #{complaint.id}
         </Link>
       </div>
-      <PageHeading
-        title={`Edit Complaint #${complaint.id}`}
-        description={complaint.companyName ?? undefined}
-      />
+      <PageHeading title={`Edit Complaint #${complaint.id}`} />
       <ComplaintForm
         companies={companies}
         products={products}

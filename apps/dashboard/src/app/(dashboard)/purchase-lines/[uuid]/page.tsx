@@ -35,10 +35,6 @@ const PurchaseLineDetailPage = async ({ params }: Props) => {
             ? `Line #${line.id}`
             : `Purchase #${line.purchaseOrderId} — line ${line.lineNumber ?? "?"}`
         }
-        description={
-          [line.productCode, line.productName].filter(Boolean).join(" — ") ||
-          undefined
-        }
       />
       <PurchaseLineDetailView line={line} />
     </div>

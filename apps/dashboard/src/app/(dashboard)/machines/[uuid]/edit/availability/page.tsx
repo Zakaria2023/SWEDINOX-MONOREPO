@@ -29,10 +29,7 @@ const MachineAvailabilityPage = async ({ params }: Props) => {
           Back to edit overview
         </Link>
       </div>
-      <PageHeading
-        title={`Availability — ${machine.name}`}
-        description="When this machine is out of business, and for how long"
-      />
+      <PageHeading title={`Availability — ${machine.name}`} />
       <MachineAvailabilityEditor
         machineUuid={uuid}
         defaultValues={machineToFormValues(machine)}

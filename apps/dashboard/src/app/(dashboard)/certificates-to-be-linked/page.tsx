@@ -7,10 +7,7 @@ const CertificatesToBeLinkedPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Certificates to be Linked"
-        description="Certificates that have arrived but are not yet linked to a batch"
-      />
+      <PageHeading title="Certificates to be Linked" />
       <CertificatesToBeLinkedTable rows={rows} />
     </div>
   );

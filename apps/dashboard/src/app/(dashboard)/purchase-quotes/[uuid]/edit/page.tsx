@@ -42,10 +42,7 @@ const EditPurchaseQuotePage = async ({ params }: Props) => {
           Back to purchase quote
         </Link>
       </div>
-      <PageHeading
-        title={heading}
-        description="Change the terms this quote was asked for on"
-      />
+      <PageHeading title={heading} />
 
       {isPurchaseQuoteEditable(quote.status) ? (
         <PurchaseQuoteForm

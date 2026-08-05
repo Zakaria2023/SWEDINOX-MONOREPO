@@ -7,10 +7,7 @@ const CdDeliveriesInProgressPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="CD-deliveries in Progress"
-        description="Cross-dock / direct-delivery order lines drawn from a purchase order that are not yet invoiced — with stock value, purchase value and their difference"
-      />
+      <PageHeading title="CD-deliveries in Progress" />
       <CdDeliveriesInProgressTable rows={rows} />
     </div>
   );

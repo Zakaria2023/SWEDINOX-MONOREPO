@@ -9,10 +9,7 @@ const PurchaseReturnOrdersPage = async () => {
   return (
     <div className="space-y-6 p-6">
       <div className="flex items-start justify-between">
-        <PageHeading
-          title="Purchase Return Orders"
-          description="Manage supplier purchase return orders"
-        />
+        <PageHeading title="Purchase Return Orders" />
         <Link
           href="/purchase-return-orders/new"
           className="inline-flex h-8 items-center justify-center rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/80"

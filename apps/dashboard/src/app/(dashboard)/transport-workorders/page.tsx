@@ -9,10 +9,7 @@ const TransportWorkOrdersPage = async () => {
   return (
     <div className="space-y-6 p-6">
       <div className="flex items-start justify-between gap-4">
-        <PageHeading
-          title="Transport workorders"
-          description="Trips and the order lines carried to each destination"
-        />
+        <PageHeading title="Transport workorders" />
         <GenerateTransportButton />
       </div>
       <TransportWorkOrdersTable lines={lines} />

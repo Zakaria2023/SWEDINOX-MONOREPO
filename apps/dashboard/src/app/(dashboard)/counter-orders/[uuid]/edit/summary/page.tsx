@@ -29,7 +29,7 @@ const CounterOrderSummaryPage = async ({ params }: Props) => {
           Back to edit overview
         </Link>
       </div>
-      <PageHeading title="Summary" description="Order value, weight and remarks" />
+      <PageHeading title="Summary" />
       <CounterOrderSummaryEditor
         counterOrderUuid={uuid}
         defaultValues={counterOrderToFormValues(order, order)}

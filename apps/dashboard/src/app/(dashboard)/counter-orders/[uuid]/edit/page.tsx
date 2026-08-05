@@ -48,9 +48,7 @@ const CounterOrderEditPage = async ({ params }: Props) => {
         [
           companyName,
           order.status ? COUNTER_ORDER_STATUS_LABELS[order.status] : null,
-          order.priority
-            ? COUNTER_ORDER_PRIORITY_LABELS[order.priority]
-            : null,
+          order.priority ? COUNTER_ORDER_PRIORITY_LABELS[order.priority] : null,
         ]
           .filter(Boolean)
           .join(" · ") || "—",
@@ -155,10 +153,7 @@ const CounterOrderEditPage = async ({ params }: Props) => {
           Counter Orders
         </Link>
       </div>
-      <PageHeading
-        title={`Edit counter order #${order.id}`}
-        description="Pick a section to edit it on its own page"
-      />
+      <PageHeading title={`Edit counter order #${order.id}`} />
 
       <section className="space-y-3">
         <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">

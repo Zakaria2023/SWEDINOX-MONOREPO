@@ -31,7 +31,6 @@ const FollowUpDetailPage = async ({ params }: Props) => {
       </div>
       <PageHeading
         title={followUp.companyName ?? `Follow-up #${followUp.id}`}
-        description={followUp.date ?? undefined}
       />
       <FollowUpDetailView followUp={followUp} />
     </div>

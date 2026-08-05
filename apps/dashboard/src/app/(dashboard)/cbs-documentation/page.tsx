@@ -7,10 +7,7 @@ const CbsDocumentationPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="CBS Documentation"
-        description="CBS / Intrastat export base — one row per invoiced goods line with its customer and originating order"
-      />
+      <PageHeading title="CBS Documentation" />
       <CbsDocumentationTable rows={rows} />
     </div>
   );

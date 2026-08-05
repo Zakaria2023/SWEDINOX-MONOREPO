@@ -4,7 +4,6 @@ import { ChevronLeft } from "lucide-react";
 import { getTripDataDetail } from "@/app/(dashboard)/trip-data/actions";
 import { TripDataDetailView } from "@/components/trip-data/trip-data-detail";
 import { PageHeading } from "@/components/layout/page-heading";
-import { formatDateColumn } from "@/lib/helpers";
 
 type Props = {
   params: Promise<{ uuid: string }>;
@@ -32,12 +31,9 @@ const TripDataDetailPage = async ({ params }: Props) => {
       </div>
       <PageHeading
         title={
-          trip.tripNumber === null ? `Trip #${trip.id}` : `Trip ${trip.tripNumber}`
-        }
-        description={
-          [formatDateColumn(trip.tripDate), trip.vehicle]
-            .filter((part) => part && part !== "—")
-            .join(" — ") || undefined
+          trip.tripNumber === null
+            ? `Trip #${trip.id}`
+            : `Trip ${trip.tripNumber}`
         }
       />
       <TripDataDetailView trip={trip} />

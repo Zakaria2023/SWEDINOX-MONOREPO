@@ -7,10 +7,7 @@ const TrialBalancePage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Trial balance"
-        description="Every general-ledger account totalled, and whether the debits and credits agree"
-      />
+      <PageHeading title="Trial balance" />
       <TrialBalanceTable trialBalance={trialBalance} />
     </div>
   );

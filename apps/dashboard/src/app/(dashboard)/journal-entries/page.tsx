@@ -7,10 +7,7 @@ const JournalEntriesPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Journal entries"
-        description="General-ledger postings behind the sales and purchase invoices"
-      />
+      <PageHeading title="Journal entries" />
       <JournalEntriesTable entries={entries} />
     </div>
   );

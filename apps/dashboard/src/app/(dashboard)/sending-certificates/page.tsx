@@ -7,10 +7,7 @@ const SendingCertificatesPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Sending Certificates"
-        description="Delivered sales lines whose mill certificate has arrived and can be sent to the customer"
-      />
+      <PageHeading title="Sending Certificates" />
       <DeliveriesCertificateTable
         rows={rows}
         emptyMessage="No certificates to send."

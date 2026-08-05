@@ -7,10 +7,7 @@ const CustomerRevenueSplitPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Customer revenue per revenue group with split order types"
-        description="Sales turnover per customer and revenue group, split by order type"
-      />
+      <PageHeading title="Customer revenue per revenue group with split order types" />
       <CustomerRevenuePerRevenueGroupSplitTable rows={rows} />
     </div>
   );

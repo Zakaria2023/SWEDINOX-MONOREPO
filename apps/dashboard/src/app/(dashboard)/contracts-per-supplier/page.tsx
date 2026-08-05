@@ -7,10 +7,7 @@ const ContractsPerSupplierPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Contracts per Supplier"
-        description="Overview of all contracts linked to suppliers"
-      />
+      <PageHeading title="Contracts per Supplier" />
       <ContractsPerSupplierTable rows={rows} />
     </div>
   );

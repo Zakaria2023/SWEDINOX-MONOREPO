@@ -4,7 +4,6 @@ import { ChevronLeft } from "lucide-react";
 import { getTransportStatusAdjustmentDetail } from "@/app/(dashboard)/transport-status-adjustments/actions";
 import { TransportStatusAdjustmentDetailView } from "@/components/transport-status-adjustments/transport-status-adjustment-detail";
 import { PageHeading } from "@/components/layout/page-heading";
-import { formatDateValue } from "@/lib/helpers";
 import { DELIVERY_STATUS_LABELS } from "@/lib/labels";
 
 type Props = {
@@ -37,7 +36,6 @@ const TransportStatusAdjustmentDetailPage = async ({ params }: Props) => {
             ? DELIVERY_STATUS_LABELS[adjustment.tripStatus]
             : `Adjustment #${adjustment.id}`
         }
-        description={formatDateValue(adjustment.timeModified)}
       />
       <TransportStatusAdjustmentDetailView adjustment={adjustment} />
     </div>

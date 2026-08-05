@@ -30,14 +30,7 @@ const WarehouseCapacityDetailPage = async ({ params }: Props) => {
           Warehouse Capacity
         </Link>
       </div>
-      <PageHeading
-        title={formatDateColumn(capacity.capacityDate)}
-        description={
-          [capacity.warehouseSection, capacity.subsection]
-            .filter(Boolean)
-            .join(" — ") || undefined
-        }
-      />
+      <PageHeading title={formatDateColumn(capacity.capacityDate)} />
       <WarehouseCapacityDetailView capacity={capacity} />
     </div>
   );

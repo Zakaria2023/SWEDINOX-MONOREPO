@@ -29,10 +29,7 @@ const WarehouseSurfaceTreatmentPage = async ({ params }: Props) => {
           Back to edit overview
         </Link>
       </div>
-      <PageHeading
-        title={`Surface Treatment — ${warehouse.name}`}
-        description="How fetch workorders for surface treatment are handled"
-      />
+      <PageHeading title={`Surface Treatment — ${warehouse.name}`} />
       <WarehouseSurfaceTreatmentEditor
         warehouseUuid={uuid}
         defaultValues={warehouseToFormValues(warehouse)}

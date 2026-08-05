@@ -7,10 +7,7 @@ const SigmaNestBlockedOrdersPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="SigmaNest blocked orders"
-        description="Work orders SigmaNest will not release, soonest delivery first"
-      />
+      <PageHeading title="SigmaNest blocked orders" />
       <SigmaNestBlockedOrdersTable rows={rows} />
     </div>
   );

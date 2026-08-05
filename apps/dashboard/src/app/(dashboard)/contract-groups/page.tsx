@@ -7,10 +7,7 @@ const ContractGroupsPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Contract Groups"
-        description="Manage groups that can be assigned to contracts."
-      />
+      <PageHeading title="Contract Groups" />
       <ContractGroups groups={groups} />
     </div>
   );

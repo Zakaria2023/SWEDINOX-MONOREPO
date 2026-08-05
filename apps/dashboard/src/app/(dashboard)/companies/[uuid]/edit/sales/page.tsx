@@ -32,10 +32,7 @@ const CompanySalesPage = async ({ params }: Props) => {
           Back to edit overview
         </Link>
       </div>
-      <PageHeading
-        title={`Sales — ${company.companyName}`}
-        description="Customer group, representative, quote/order and document settings"
-      />
+      <PageHeading title={`Sales — ${company.companyName}`} />
       <CompanySalesForm company={sales} />
     </div>
   );

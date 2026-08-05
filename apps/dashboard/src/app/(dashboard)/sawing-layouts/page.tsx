@@ -7,10 +7,7 @@ const SawingLayoutsPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Sawing Layouts"
-        description="Cutting plans per saw — the raw length fetched from stock, the sawing operation and the piece slots it produces"
-      />
+      <PageHeading title="Sawing Layouts" />
       <SawingLayoutsTable layouts={layouts} />
     </div>
   );

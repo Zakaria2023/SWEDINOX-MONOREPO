@@ -34,10 +34,7 @@ const MachineGeneralPage = async ({ params }: Props) => {
           Back to edit overview
         </Link>
       </div>
-      <PageHeading
-        title={`General — ${machine.name}`}
-        description="Code, name, what it does and where it stands"
-      />
+      <PageHeading title={`General — ${machine.name}`} />
       <MachineGeneralEditor
         machineUuid={uuid}
         defaultValues={machineToFormValues(machine)}

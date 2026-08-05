@@ -7,10 +7,7 @@ const ReoptimizePage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="(Re)optimize"
-        description="Re-optimization view of the sawing/nesting plan per order line — dimensions, the sawing plan and geometry, the delivery plan and the material fetched from stock"
-      />
+      <PageHeading title="(Re)optimize" />
       <ReoptimizeTable rows={rows} />
     </div>
   );

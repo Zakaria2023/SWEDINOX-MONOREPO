@@ -7,10 +7,7 @@ const CustomerRevenuePage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Customer revenue"
-        description="Sales turnover and weight per customer and invoice period"
-      />
+      <PageHeading title="Customer revenue" />
       <CustomerRevenueTable rows={rows} />
     </div>
   );

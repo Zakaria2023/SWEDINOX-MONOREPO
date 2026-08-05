@@ -37,10 +37,7 @@ const PurchaseRequestDetailPage = async ({ params }: Props) => {
           Purchase requests
         </Link>
       </div>
-      <PageHeading
-        title={`Purchase request #${request.id}`}
-        description={request.ourReference ?? undefined}
-      />
+      <PageHeading title={`Purchase request #${request.id}`} />
       <PurchaseRequestDetailView
         request={request}
         supplierOptions={supplierOptions}

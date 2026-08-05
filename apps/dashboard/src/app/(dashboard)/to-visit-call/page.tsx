@@ -7,10 +7,7 @@ const ToVisitCallPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="To visit / call"
-        description="Customers and prospects with their call and visit status"
-      />
+      <PageHeading title="To visit / call" />
       <VisitScheduleTable rows={rows} />
     </div>
   );

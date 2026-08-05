@@ -4,7 +4,6 @@ import { ChevronLeft } from "lucide-react";
 import { getPurchaseReceivalDetail } from "@/app/(dashboard)/purchase-receivals/actions";
 import { PurchaseReceivalDetailView } from "@/components/purchase-receivals/purchase-receival-detail";
 import { PageHeading } from "@/components/layout/page-heading";
-import { formatDateColumn } from "@/lib/helpers";
 
 type Props = {
   params: Promise<{ uuid: string }>;
@@ -35,11 +34,6 @@ const PurchaseReceivalDetailPage = async ({ params }: Props) => {
           [receival.productCode, receival.productName]
             .filter(Boolean)
             .join(" — ") || `Receipt #${receival.id}`
-        }
-        description={
-          [formatDateColumn(receival.receiptDate), receival.supplierName]
-            .filter((part) => part && part !== "—")
-            .join(" — ") || undefined
         }
       />
       <PurchaseReceivalDetailView receival={receival} />

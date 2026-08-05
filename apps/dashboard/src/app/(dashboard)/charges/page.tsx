@@ -9,10 +9,7 @@ const ChargesPage = async () => {
   return (
     <div className="space-y-6 p-6">
       <div className="flex items-start justify-between gap-4">
-        <PageHeading
-          title="Charges"
-          description="Sales surcharges billed on top of the order lines"
-        />
+        <PageHeading title="Charges" />
         <GenerateChargesButton />
       </div>
       <ChargesTable charges={charges} />

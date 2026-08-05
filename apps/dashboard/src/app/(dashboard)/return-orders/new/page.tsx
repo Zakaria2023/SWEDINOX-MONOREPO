@@ -11,10 +11,7 @@ const NewReturnOrderPage = async () => {
 
   return (
     <div className="max-w-4xl space-y-6 p-6">
-      <PageHeading
-        title="New Return Order"
-        description="Create a new customer return order"
-      />
+      <PageHeading title="New Return Order" />
       <ReturnOrderForm companies={companies} textCategories={textCategories} />
     </div>
   );

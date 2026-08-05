@@ -29,10 +29,7 @@ const PurchaseInvoiceDetailPage = async ({ params }: Props) => {
           Purchase Invoices
         </Link>
       </div>
-      <PageHeading
-        title={`Purchase Invoice #${purchaseInvoice.id}`}
-        description={purchaseInvoice.companyName ?? undefined}
-      />
+      <PageHeading title={`Purchase Invoice #${purchaseInvoice.id}`} />
       <PurchaseInvoiceDetailView purchaseInvoice={purchaseInvoice} />
     </div>
   );

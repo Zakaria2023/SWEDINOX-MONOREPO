@@ -7,10 +7,7 @@ const RevenueVsBudgetPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Revenue w.r.t. Budget"
-        description="Actual invoiced sales against the budget, per revenue group"
-      />
+      <PageHeading title="Revenue w.r.t. Budget" />
       <RevenueVsBudgetTable rows={rows} />
     </div>
   );

@@ -28,10 +28,7 @@ const CompanyRolesPage = async ({ params }: Props) => {
           Back to edit overview
         </Link>
       </div>
-      <PageHeading
-        title={`Roles — ${company.companyName}`}
-        description="Which roles this company fulfils"
-      />
+      <PageHeading title={`Roles — ${company.companyName}`} />
       <CompanyRolesForm company={company} />
     </div>
   );

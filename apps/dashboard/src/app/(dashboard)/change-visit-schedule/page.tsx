@@ -7,10 +7,7 @@ const ChangeVisitSchedulePage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Change visit schedule"
-        description="Adjust call and visit planning for customers and prospects"
-      />
+      <PageHeading title="Change visit schedule" />
       <VisitScheduleTable rows={rows} />
     </div>
   );

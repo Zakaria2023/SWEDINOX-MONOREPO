@@ -109,10 +109,7 @@ const MachineEditPage = async ({ params }: Props) => {
           Machines
         </Link>
       </div>
-      <PageHeading
-        title={`Edit ${machine.name}`}
-        description="Pick a section to edit it on its own page"
-      />
+      <PageHeading title={`Edit ${machine.name}`} />
 
       <section className="space-y-3">
         <h2 className="border-b pb-2 text-lg font-semibold text-gray-800">

@@ -34,7 +34,7 @@ const CounterOrderHeaderPage = async ({ params }: Props) => {
           Back to edit overview
         </Link>
       </div>
-      <PageHeading title="Counter Order" description="Who it is for, who took it, and where it stands" />
+      <PageHeading title="Counter Order" />
       <CounterOrderHeaderEditor
         counterOrderUuid={uuid}
         defaultValues={counterOrderToFormValues(order, order)}

@@ -7,10 +7,7 @@ const UnblockedOrdersPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Unblocked orders"
-        description="Orders whose block has been released, from the deblock audit trail"
-      />
+      <PageHeading title="Unblocked orders" />
       <UnblockedOrdersTable rows={rows} />
     </div>
   );

@@ -34,7 +34,7 @@ const CounterOrderDeliveryPage = async ({ params }: Props) => {
           Back to edit overview
         </Link>
       </div>
-      <PageHeading title="Delivery" description="Terms, address and when it is due" />
+      <PageHeading title="Delivery" />
       <CounterOrderDeliveryEditor
         counterOrderUuid={uuid}
         defaultValues={counterOrderToFormValues(order, order)}

@@ -7,10 +7,7 @@ const ReceiptsPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Receipts"
-        description="Goods received per day, per supplier and product"
-      />
+      <PageHeading title="Receipts" />
       <ReceiptsTable rows={rows} />
     </div>
   );

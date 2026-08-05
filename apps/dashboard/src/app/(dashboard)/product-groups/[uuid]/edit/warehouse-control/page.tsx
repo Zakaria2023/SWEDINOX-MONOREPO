@@ -29,10 +29,7 @@ const ProductGroupWarehouseControlPage = async ({ params }: Props) => {
           Back to edit overview
         </Link>
       </div>
-      <PageHeading
-        title={`Warehouse Control — ${group.name}`}
-        description="Receipt, labelling and the tolerances the floor works to"
-      />
+      <PageHeading title={`Warehouse Control — ${group.name}`} />
       <ProductGroupWarehouseControlEditor
         productGroupUuid={uuid}
         defaultValues={productGroupToFormValues(group, group.suppliers)}

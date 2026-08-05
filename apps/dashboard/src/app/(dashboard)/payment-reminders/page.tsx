@@ -7,10 +7,7 @@ const PaymentRemindersPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Payment reminders"
-        description="Overdue invoices due a reminder, and what has already been sent on each"
-      />
+      <PageHeading title="Payment reminders" />
       <PaymentRemindersTable reminders={reminders} />
     </div>
   );

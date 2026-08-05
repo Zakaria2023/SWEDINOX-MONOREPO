@@ -34,10 +34,7 @@ const CompanyTextsPage = async ({ params }: Props) => {
           Back to edit overview
         </Link>
       </div>
-      <PageHeading
-        title={`Texts — ${company.companyName}`}
-        description="Add, edit, or remove text blocks printed on documents. Every change saves immediately."
-      />
+      <PageHeading title={`Texts — ${company.companyName}`} />
       <CompanyTextsEditor
         companyUuid={uuid}
         texts={texts}

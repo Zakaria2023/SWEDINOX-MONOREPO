@@ -37,10 +37,7 @@ const CompanyFollowUpsPage = async ({ params }: Props) => {
           Back to edit overview
         </Link>
       </div>
-      <PageHeading
-        title={`Follow-up — ${company.companyName}`}
-        description="Log follow-ups for this company. Each row saves individually."
-      />
+      <PageHeading title={`Follow-up — ${company.companyName}`} />
       <CompanyFollowUpsEditor
         companyUuid={uuid}
         currentUserName={user?.fullName ?? null}

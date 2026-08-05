@@ -33,10 +33,7 @@ const EditInvoicePage = async ({ params }: Props) => {
           Invoice #{invoice.id}
         </Link>
       </div>
-      <PageHeading
-        title={`Edit Invoice #${invoice.id}`}
-        description="Header details only — the customer and stock items can't be changed after creation."
-      />
+      <PageHeading title={`Edit Invoice #${invoice.id}`} />
       <InvoiceEditForm invoice={invoice} />
     </div>
   );

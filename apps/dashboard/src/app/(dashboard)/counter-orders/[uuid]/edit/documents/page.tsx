@@ -29,7 +29,7 @@ const CounterOrderDocumentsPage = async ({ params }: Props) => {
           Back to edit overview
         </Link>
       </div>
-      <PageHeading title="Documents" description="Uploaded files" />
+      <PageHeading title="Documents" />
       <CounterOrderDocumentsEditor
         counterOrderUuid={uuid}
         defaultValues={counterOrderToFormValues(order, order)}

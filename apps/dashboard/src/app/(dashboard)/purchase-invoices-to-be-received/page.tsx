@@ -7,10 +7,7 @@ const PurchaseInvoicesToBeReceivedPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Purchase invoices to be received"
-        description="Received purchase orders that have not yet been invoiced by the supplier"
-      />
+      <PageHeading title="Purchase invoices to be received" />
       <PurchaseInvoicesToBeReceivedTable rows={rows} />
     </div>
   );

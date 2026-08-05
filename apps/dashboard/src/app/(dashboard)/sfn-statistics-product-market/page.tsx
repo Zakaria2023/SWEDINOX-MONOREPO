@@ -7,10 +7,7 @@ const SfnStatisticsProductMarketPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="SFN statistics Product-Market combinations"
-        description="Invoiced weight per CBS commodity number, customer industry and postal area"
-      />
+      <PageHeading title="SFN statistics Product-Market combinations" />
       <SfnStatisticsTable rows={rows} />
     </div>
   );

@@ -40,10 +40,7 @@ const EditPurchaseReturnOrderPage = async ({ params }: Props) => {
           Back to return order
         </Link>
       </div>
-      <PageHeading
-        title={`Edit Purchase Return Order #${returnOrder.id}`}
-        description="Change the terms these goods are going back on"
-      />
+      <PageHeading title={`Edit Purchase Return Order #${returnOrder.id}`} />
 
       {isPurchaseReturnOrderEditable(returnOrder.status) ? (
         <PurchaseReturnOrderForm

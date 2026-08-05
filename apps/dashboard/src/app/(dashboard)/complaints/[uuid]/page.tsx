@@ -29,10 +29,7 @@ const ComplaintDetailPage = async ({ params }: Props) => {
           Complaints
         </Link>
       </div>
-      <PageHeading
-        title={`Complaint #${complaint.id}`}
-        description={complaint.companyName ?? undefined}
-      />
+      <PageHeading title={`Complaint #${complaint.id}`} />
       <ComplaintDetailView complaint={complaint} />
     </div>
   );

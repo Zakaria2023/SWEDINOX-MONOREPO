@@ -36,10 +36,7 @@ const EditContractPage = async ({ params }: Props) => {
           {contract.code}
         </Link>
       </div>
-      <PageHeading
-        title={`Edit ${contract.code}`}
-        description={contract.description}
-      />
+      <PageHeading title={`Edit ${contract.code}`} />
       <ContractForm
         groups={groups}
         availableCompanies={companies}

@@ -7,10 +7,7 @@ const IndustriesPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Industries"
-        description="SBI codes that can be assigned to a company's industry"
-      />
+      <PageHeading title="Industries" />
       <Industries industries={industries} />
     </div>
   );

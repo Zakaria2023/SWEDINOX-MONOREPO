@@ -28,10 +28,7 @@ const CompanyDetailsPage = async ({ params }: Props) => {
           Back to edit overview
         </Link>
       </div>
-      <PageHeading
-        title={`Company Details — ${company.companyName}`}
-        description="Name, language, remarks, and search codes"
-      />
+      <PageHeading title={`Company Details — ${company.companyName}`} />
       <CompanyDetailsForm company={company} />
     </div>
   );

@@ -29,10 +29,7 @@ const MachineDetailPage = async ({ params }: Props) => {
           Machines
         </Link>
       </div>
-      <PageHeading
-        title={`${machine.code} — ${machine.name}`}
-        description={machine.stockLocationName ?? undefined}
-      />
+      <PageHeading title={`${machine.code} — ${machine.name}`} />
       <MachineDetailView machine={machine} />
     </div>
   );

@@ -42,10 +42,7 @@ const CompanyVisitReportsPage = async ({ params }: Props) => {
           Back to edit overview
         </Link>
       </div>
-      <PageHeading
-        title={`Visit Reports — ${company.companyName}`}
-        description="Add, edit, or remove visit and call reports. Every change saves immediately."
-      />
+      <PageHeading title={`Visit Reports — ${company.companyName}`} />
       <CompanyVisitReportsEditor
         companyUuid={uuid}
         visitReports={visitReports}

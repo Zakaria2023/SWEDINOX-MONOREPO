@@ -7,10 +7,7 @@ const InactiveCompaniesPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Inactive companies"
-        description="Customers and prospects that have gone quiet for 12 months, plus any flagged inactive by hand. Accounts opened within the last year are not counted as inactive."
-      />
+      <PageHeading title="Inactive companies" />
       <InactiveCompaniesTable rows={rows} />
     </div>
   );

@@ -34,7 +34,7 @@ const CounterOrderFinancesPage = async ({ params }: Props) => {
           Back to edit overview
         </Link>
       </div>
-      <PageHeading title="Finances" description="Payment terms, billing address and what is blocked" />
+      <PageHeading title="Finances" />
       <CounterOrderFinancesEditor
         counterOrderUuid={uuid}
         defaultValues={counterOrderToFormValues(order, order)}

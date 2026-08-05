@@ -29,10 +29,7 @@ const MachineDimensionsPage = async ({ params }: Props) => {
           Back to edit overview
         </Link>
       </div>
-      <PageHeading
-        title={`Dimensions & Remarks — ${machine.name}`}
-        description="The lengths this machine can take, and anything worth noting"
-      />
+      <PageHeading title={`Dimensions & Remarks — ${machine.name}`} />
       <MachineDimensionsEditor
         machineUuid={uuid}
         defaultValues={machineToFormValues(machine)}

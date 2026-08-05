@@ -7,10 +7,7 @@ const RevenuePerRevenueGroupPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Revenue per revenue group"
-        description="Invoiced sales, profit and margin rolled up per revenue group"
-      />
+      <PageHeading title="Revenue per revenue group" />
       <RevenuePerRevenueGroupTable rows={rows} />
     </div>
   );

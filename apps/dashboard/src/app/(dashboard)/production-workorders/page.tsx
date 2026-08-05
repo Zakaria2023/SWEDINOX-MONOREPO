@@ -9,10 +9,7 @@ const ProductionWorkOrdersPage = async () => {
   return (
     <div className="space-y-6 p-6">
       <div className="flex items-start justify-between gap-4">
-        <PageHeading
-          title="Production workorders"
-          description="Machine processing lines to run, grouped by machine and option"
-        />
+        <PageHeading title="Production workorders" />
         <GenerateProductionButton />
       </div>
       <ProductionWorkOrdersTable lines={lines} />

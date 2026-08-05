@@ -7,10 +7,7 @@ const PurchasesAndSalesPerRevenueGroupPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Purchases and sales per revenue group"
-        description="Purchased cost and invoiced sales side by side, per revenue group and period"
-      />
+      <PageHeading title="Purchases and sales per revenue group" />
       <PurchasesAndSalesPerRevenueGroupTable rows={rows} />
     </div>
   );

@@ -7,10 +7,7 @@ const CustomerRevenuePerProductGroupPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Customer revenue per product group"
-        description="Sales turnover per customer and product group by invoice period"
-      />
+      <PageHeading title="Customer revenue per product group" />
       <CustomerRevenuePerProductGroupTable rows={rows} />
     </div>
   );

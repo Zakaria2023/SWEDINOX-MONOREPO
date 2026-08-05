@@ -7,10 +7,7 @@ const SupplierRevenuePage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Supplier revenue"
-        description="Purchase turnover and weight per supplier and invoice period"
-      />
+      <PageHeading title="Supplier revenue" />
       <SupplierRevenueTable rows={rows} />
     </div>
   );

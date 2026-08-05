@@ -15,10 +15,7 @@ const ReservationsPage = async () => {
   return (
     <div className="space-y-8 p-6">
       <div className="space-y-4">
-        <PageHeading
-          title="Reservations"
-          description="Every stock reservation held by an order line, with its location and type"
-        />
+        <PageHeading title="Reservations" />
         <ReservationRecordsTable records={records} />
       </div>
 

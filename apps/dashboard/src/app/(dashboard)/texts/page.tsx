@@ -7,10 +7,7 @@ const TextsPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Texts"
-        description="Manage reusable text blocks."
-      />
+      <PageHeading title="Texts" />
       <TextsTable texts={texts} />
     </div>
   );

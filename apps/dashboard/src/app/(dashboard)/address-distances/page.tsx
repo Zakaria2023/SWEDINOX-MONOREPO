@@ -7,10 +7,7 @@ const AddressDistancesPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Address Distances"
-        description="Distance records between company addresses."
-      />
+      <PageHeading title="Address Distances" />
       <AddressDistancesTable addressDistances={addressDistances} />
     </div>
   );

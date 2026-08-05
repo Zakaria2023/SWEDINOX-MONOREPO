@@ -32,10 +32,7 @@ const CompanyCommunicationSettingsPage = async ({ params }: Props) => {
           Back to edit overview
         </Link>
       </div>
-      <PageHeading
-        title={`Communication Settings — ${company.companyName}`}
-        description="Per-document communication preferences. Every change saves immediately."
-      />
+      <PageHeading title={`Communication Settings — ${company.companyName}`} />
       <CompanyCommunicationSettingsEditor
         companyUuid={uuid}
         settings={settings}

@@ -29,13 +29,7 @@ const BatchDetailPage = async ({ params }: Props) => {
           Batches
         </Link>
       </div>
-      <PageHeading
-        title={batch.internalCharge ?? `Batch #${batch.id}`}
-        description={
-          [batch.productCode, batch.productName].filter(Boolean).join(" — ") ||
-          undefined
-        }
-      />
+      <PageHeading title={batch.internalCharge ?? `Batch #${batch.id}`} />
       <BatchDetailView batch={batch} />
     </div>
   );

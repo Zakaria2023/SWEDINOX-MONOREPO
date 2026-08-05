@@ -7,10 +7,7 @@ const InvoiceLinesPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Invoice lines"
-        description="Individual invoiced lines with revenue, weight and VAT"
-      />
+      <PageHeading title="Invoice lines" />
       <InvoiceLinesTable lines={lines} />
     </div>
   );

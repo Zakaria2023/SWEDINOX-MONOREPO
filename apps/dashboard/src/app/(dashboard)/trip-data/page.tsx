@@ -7,10 +7,7 @@ const TripDataPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Trip data"
-        description="Transport trips with stops, load and orders per stop"
-      />
+      <PageHeading title="Trip data" />
       <TripDataTable trips={trips} />
     </div>
   );

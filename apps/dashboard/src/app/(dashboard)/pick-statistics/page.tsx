@@ -7,10 +7,7 @@ const PickStatisticsPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Pick Statistic"
-        description="Picking activity per product per month — counts, quantities and average pick size"
-      />
+      <PageHeading title="Pick Statistic" />
       <PickStatisticsTable statistics={statistics} />
     </div>
   );

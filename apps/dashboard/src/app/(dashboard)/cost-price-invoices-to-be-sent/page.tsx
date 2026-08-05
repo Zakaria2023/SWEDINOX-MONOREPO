@@ -7,10 +7,7 @@ const CostPriceInvoicesToBeSentPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Cost Price for Selling of Invoices to Be Sent"
-        description="Cost of goods already issued on orders whose invoice has not been sent yet — delivered order lines at average purchase price, with returns as negatives"
-      />
+      <PageHeading title="Cost Price for Selling of Invoices to Be Sent" />
       <CostPriceInvoicesToBeSentTable rows={rows} />
     </div>
   );

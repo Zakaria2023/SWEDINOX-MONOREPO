@@ -7,10 +7,7 @@ const ProductionBatchesPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Production batches"
-        description="Batches produced on a machine, destined for a stock location"
-      />
+      <PageHeading title="Production batches" />
       <ProductionBatchesTable batches={batches} />
     </div>
   );

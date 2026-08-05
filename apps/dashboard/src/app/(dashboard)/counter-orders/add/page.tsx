@@ -27,10 +27,7 @@ const AddCounterOrderPage = async () => {
           Counter Orders
         </Link>
       </div>
-      <PageHeading
-        title="New Counter Order"
-        description="Create an order taken at the counter."
-      />
+      <PageHeading title="New Counter Order" />
       <CounterOrderForm
         companies={companies}
         textCategories={textCategories}

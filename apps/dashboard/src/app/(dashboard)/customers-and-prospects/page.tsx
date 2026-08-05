@@ -7,10 +7,7 @@ const CustomersAndProspectsPage = async () => {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeading
-        title="Customers and Prospects"
-        description="Overview of all companies with the customer or prospect role"
-      />
+      <PageHeading title="Customers and Prospects" />
       <CustomersAndProspectsTable rows={rows} />
     </div>
   );
