@@ -11,6 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { StatusBadge } from "@/components/ui/status-badge";
 import {
   DELIVERY_STATUS_LABELS,
   ORDER_LINE_STATUS_LABELS,
@@ -125,7 +126,9 @@ export const ProductionCapacityDetailsTable = ({ details }: Props) => (
                 {row.productCode ?? "—"}
               </TableCell>
               <TableCell>{row.productName ?? "—"}</TableCell>
-              <TableCell className="text-right">{row.lengthMm ?? "—"}</TableCell>
+              <TableCell className="text-right">
+                {row.lengthMm ?? "—"}
+              </TableCell>
               <TableCell className="text-right">{row.widthMm ?? "—"}</TableCell>
               <TableCell className="text-right">
                 {row.thicknessMm ?? "—"}
@@ -160,9 +163,14 @@ export const ProductionCapacityDetailsTable = ({ details }: Props) => (
                 {formatDateValue(row.transportDate)}
               </TableCell>
               <TableCell>
-                {row.deliveryStatus
-                  ? DELIVERY_STATUS_LABELS[row.deliveryStatus]
-                  : "—"}
+                <StatusBadge
+                  value={row.deliveryStatus}
+                  label={
+                    row.deliveryStatus
+                      ? DELIVERY_STATUS_LABELS[row.deliveryStatus]
+                      : null
+                  }
+                />
               </TableCell>
               <TableCell className="whitespace-nowrap">
                 {formatDateValue(row.orderLineDeliveryDate)}
@@ -179,7 +187,9 @@ export const ProductionCapacityDetailsTable = ({ details }: Props) => (
               <TableCell className="text-right">
                 {row.kgPlanned ?? "—"}
               </TableCell>
-              <TableCell className="text-right">{row.kgActual ?? "—"}</TableCell>
+              <TableCell className="text-right">
+                {row.kgActual ?? "—"}
+              </TableCell>
               <TableCell className="text-right">
                 {row.theoreticalWeight ?? "—"}
               </TableCell>
@@ -192,9 +202,14 @@ export const ProductionCapacityDetailsTable = ({ details }: Props) => (
                 {row.optionQty ?? "—"}
               </TableCell>
               <TableCell>
-                {row.lineStatus
-                  ? ORDER_LINE_STATUS_LABELS[row.lineStatus]
-                  : "—"}
+                <StatusBadge
+                  value={row.lineStatus}
+                  label={
+                    row.lineStatus
+                      ? ORDER_LINE_STATUS_LABELS[row.lineStatus]
+                      : null
+                  }
+                />
               </TableCell>
               <TableCell>{row.lineType ?? "—"}</TableCell>
               <TableCell className="text-right">

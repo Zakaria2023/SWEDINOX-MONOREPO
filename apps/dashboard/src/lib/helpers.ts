@@ -824,8 +824,7 @@ export const sliceOrderLineAmounts = (
 export const remainingToInvoice = (
   quantity: string | number | null | undefined,
   invoicedQuantity: string | number | null | undefined,
-): number =>
-  Math.max(0, Number(quantity ?? 0) - Number(invoicedQuantity ?? 0));
+): number => Math.max(0, Number(quantity ?? 0) - Number(invoicedQuantity ?? 0));
 
 /**
  * Quantities are held to three decimals, so anything under half a thousandth is
@@ -1041,7 +1040,10 @@ export const assessReminder = ({
     return { stage: null, reason: "Nothing outstanding." };
   }
   if (!remindersEnabled) {
-    return { stage: null, reason: "Reminders are switched off for this debtor." };
+    return {
+      stage: null,
+      reason: "Reminders are switched off for this debtor.",
+    };
   }
 
   const overdue = daysOverdue(dueDate, asOf);
@@ -1387,8 +1389,7 @@ export const returnReasonForComplaintCategory = (
 export const invoiceReference = (
   documentType: InvoiceDocumentType | null | undefined,
   id: number | null | undefined,
-): string =>
-  `${documentType === "credit_note" ? "CRN" : "INV"}-${id ?? "?"}`;
+): string => `${documentType === "credit_note" ? "CRN" : "INV"}-${id ?? "?"}`;
 
 export type PurchaseInvoiceLineAmount = {
   /** Net amount booked on the line. */
@@ -1461,7 +1462,10 @@ export const summarisePurchaseInvoice = ({
   const vatOn = (code: VatCode): number =>
     lines
       .filter((line) => line.vatCode === code)
-      .reduce((sum, line) => sum + line.amount * (VAT_CODE_RATE[code] / 100), 0);
+      .reduce(
+        (sum, line) => sum + line.amount * (VAT_CODE_RATE[code] / 100),
+        0,
+      );
 
   // Services follow the standard rate, so surcharges land in the high band.
   const vatHigh =
@@ -1889,9 +1893,8 @@ export const invoicePaymentTermLabel = (
     : "—";
 
 /** The display label for a stock unit, blank when the line carries none. */
-export const stockUnitLabel = (
-  value: StockUnit | null | undefined,
-): string => (value ? STOCK_UNIT_LABELS[value] : "");
+export const stockUnitLabel = (value: StockUnit | null | undefined): string =>
+  value ? STOCK_UNIT_LABELS[value] : "";
 
 /** The display label for an order line status. */
 export const orderLineStatusLabel = (
@@ -3130,3 +3133,62 @@ export const sparklinePath = (
     })
     .join(" ");
 };
+
+// ---------------------------------------------------------------------------
+// Status colour
+// ---------------------------------------------------------------------------
+
+/** How a status reads at a glance, before anyone has read the word. */
+export type StatusTone =
+  | "neutral"
+  | "active"
+  | "done"
+  | "attention"
+  | "critical";
+
+/**
+ * Which tone a stored status wears.
+ *
+ * Keyed on the stored value rather than on the table it came from, because the
+ * same words mean the same thing across the system: "cancelled" is cancelled
+ * whether it was an order, a purchase order or a complaint. A value nobody has
+ * classified stays neutral rather than being guessed at.
+ */
+const STATUS_TONES: Record<string, StatusTone> = {
+  draft: "neutral",
+  new: "neutral",
+  open: "neutral",
+  pending: "neutral",
+  quoted: "neutral",
+  first: "neutral",
+  second: "neutral",
+  not_ready: "neutral",
+  confirmed: "active",
+  in_progress: "active",
+  reserved: "active",
+  released: "active",
+  pre_notified: "active",
+  sent: "active",
+  partially_delivered: "active",
+  partially_invoiced: "active",
+  ready: "active",
+  completed: "done",
+  done: "done",
+  delivered: "done",
+  invoiced: "done",
+  received: "done",
+  credited: "done",
+  awarded: "done",
+  ok: "done",
+  full: "done",
+  on_hold: "attention",
+  warning: "attention",
+  expired: "attention",
+  returned: "attention",
+  final: "attention",
+  cancelled: "critical",
+  lost: "critical",
+};
+
+export const statusTone = (value: string | null | undefined): StatusTone =>
+  value ? (STATUS_TONES[value] ?? "neutral") : "neutral";

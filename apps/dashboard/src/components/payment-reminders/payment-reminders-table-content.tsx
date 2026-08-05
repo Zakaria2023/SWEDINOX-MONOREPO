@@ -19,6 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { StatusBadge } from "@/components/ui/status-badge";
 import {
   describeReminderRun,
   formatDateValue,
@@ -138,9 +139,14 @@ export const PaymentRemindersTable = ({ reminders }: Props) => {
                         : "Nothing yet"}
                     </TableCell>
                     <TableCell className="whitespace-nowrap">
-                      {row.assessment.stage
-                        ? REMINDER_STAGE_LABELS[row.assessment.stage]
-                        : "—"}
+                      <StatusBadge
+                        value={row.assessment.stage}
+                        label={
+                          row.assessment.stage
+                            ? REMINDER_STAGE_LABELS[row.assessment.stage]
+                            : null
+                        }
+                      />
                     </TableCell>
                     <TableCell className="text-right">
                       <form action={dispatch}>

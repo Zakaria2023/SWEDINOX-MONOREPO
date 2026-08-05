@@ -10,6 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { formatDateColumn, formatMoney, formatNumber } from "@/lib/helpers";
 import { PURCHASE_ORDER_STATUS_LABELS } from "@/lib/labels";
 
@@ -58,7 +59,12 @@ export const PurchaseOrdersToBeReceivedTable = ({ rows }: Props) => (
                 {row.companyCode ?? "—"}
               </TableCell>
               <TableCell>
-                {row.status ? PURCHASE_ORDER_STATUS_LABELS[row.status] : "—"}
+                <StatusBadge
+                  value={row.status}
+                  label={
+                    row.status ? PURCHASE_ORDER_STATUS_LABELS[row.status] : null
+                  }
+                />
               </TableCell>
               <TableCell className="whitespace-nowrap">
                 {formatDateColumn(row.orderDate)}
@@ -67,8 +73,12 @@ export const PurchaseOrdersToBeReceivedTable = ({ rows }: Props) => (
                 {row.revenueGroupNumber ?? "—"}
               </TableCell>
               <TableCell>{row.revenueGroupName ?? "—"}</TableCell>
-              <TableCell className="text-right">{formatNumber(row.kgPurchased)}</TableCell>
-              <TableCell className="text-right">{formatNumber(row.kgReceived)}</TableCell>
+              <TableCell className="text-right">
+                {formatNumber(row.kgPurchased)}
+              </TableCell>
+              <TableCell className="text-right">
+                {formatNumber(row.kgReceived)}
+              </TableCell>
               <TableCell className="text-right font-medium">
                 {formatNumber(row.kgStillToReceive)}
               </TableCell>

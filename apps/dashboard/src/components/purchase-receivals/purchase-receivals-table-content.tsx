@@ -10,6 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { ORDER_LINE_STATUS_LABELS, STOCK_UNIT_LABELS } from "@/lib/labels";
 
 type Props = {
@@ -76,7 +77,9 @@ export const PurchaseReceivalsTable = ({ receivals }: Props) => (
                 € {row.lineAmount}
               </TableCell>
               <TableCell className="text-right">{row.qtyPlanned}</TableCell>
-              <TableCell>{row.unit ? STOCK_UNIT_LABELS[row.unit] : "—"}</TableCell>
+              <TableCell>
+                {row.unit ? STOCK_UNIT_LABELS[row.unit] : "—"}
+              </TableCell>
               <TableCell className="text-right">{row.qtyActual}</TableCell>
               <TableCell className="text-right">{row.receivedQty}</TableCell>
               <TableCell className="text-right whitespace-nowrap">
@@ -84,7 +87,14 @@ export const PurchaseReceivalsTable = ({ receivals }: Props) => (
               </TableCell>
               <TableCell>{row.options ?? "—"}</TableCell>
               <TableCell>
-                {row.lineStatus ? ORDER_LINE_STATUS_LABELS[row.lineStatus] : "—"}
+                <StatusBadge
+                  value={row.lineStatus}
+                  label={
+                    row.lineStatus
+                      ? ORDER_LINE_STATUS_LABELS[row.lineStatus]
+                      : null
+                  }
+                />
               </TableCell>
               <TableCell>{row.receiptStatus ?? "—"}</TableCell>
               <TableCell>{row.receiptDate ?? "—"}</TableCell>

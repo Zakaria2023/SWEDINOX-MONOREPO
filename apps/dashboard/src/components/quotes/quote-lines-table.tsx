@@ -7,7 +7,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
-import { formatDateColumn, formatMoney, formatNumber, formatPercent, orDash } from "@/lib/helpers";
+import { StatusBadge } from "@/components/ui/status-badge";
+import {
+  formatDateColumn,
+  formatMoney,
+  formatNumber,
+  formatPercent,
+  orDash,
+} from "@/lib/helpers";
 import {
   ORDER_LINE_STATUS_LABELS,
   PRODUCT_QUALITY_STANDARD_LABELS,
@@ -70,7 +77,12 @@ export const QuoteLinesTable = ({ items }: Props) => (
               <TableCell>{orDash(item.lineType)}</TableCell>
               <TableCell>{formatDateColumn(item.deliveryDate)}</TableCell>
               <TableCell>
-                {item.status ? ORDER_LINE_STATUS_LABELS[item.status] : "—"}
+                <StatusBadge
+                  value={item.status}
+                  label={
+                    item.status ? ORDER_LINE_STATUS_LABELS[item.status] : null
+                  }
+                />
               </TableCell>
               <TableCell>{orDash(item.productName)}</TableCell>
               <TableCell>{orDash(item.description)}</TableCell>

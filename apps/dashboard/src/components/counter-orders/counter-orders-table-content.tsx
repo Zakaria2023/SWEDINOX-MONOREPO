@@ -10,9 +10,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { buildColumnVisibility, daysInSystem } from "@/lib/helpers";
-import { COUNTER_ORDER_PRIORITY_LABELS, COUNTER_ORDER_STATUS_LABELS } from "@/lib/labels";
+import {
+  COUNTER_ORDER_PRIORITY_LABELS,
+  COUNTER_ORDER_STATUS_LABELS,
+} from "@/lib/labels";
 import { useState } from "react";
 
 type ColumnKey =
@@ -107,13 +111,20 @@ export const CounterOrdersTable = ({
       case "status":
         return (
           <TableCell key={key}>
-            {order.status ? COUNTER_ORDER_STATUS_LABELS[order.status] : "—"}
+            <StatusBadge
+              value={order.status}
+              label={
+                order.status ? COUNTER_ORDER_STATUS_LABELS[order.status] : null
+              }
+            />
           </TableCell>
         );
       case "priority":
         return (
           <TableCell key={key}>
-            {order.priority ? COUNTER_ORDER_PRIORITY_LABELS[order.priority] : "—"}
+            {order.priority
+              ? COUNTER_ORDER_PRIORITY_LABELS[order.priority]
+              : "—"}
           </TableCell>
         );
       case "orderDate":

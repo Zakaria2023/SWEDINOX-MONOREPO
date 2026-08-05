@@ -10,6 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { ORDER_LINE_STATUS_LABELS, STOCK_UNIT_LABELS } from "@/lib/labels";
 
 type Props = {
@@ -69,7 +70,12 @@ export const PurchaseLinesTable = ({ lines }: Props) => (
                 {row.lineNumber ?? "—"}
               </TableCell>
               <TableCell>
-                {row.status ? ORDER_LINE_STATUS_LABELS[row.status] : "—"}
+                <StatusBadge
+                  value={row.status}
+                  label={
+                    row.status ? ORDER_LINE_STATUS_LABELS[row.status] : null
+                  }
+                />
               </TableCell>
               <TableCell>{row.supplierName ?? "—"}</TableCell>
               <TableCell className="font-medium">
@@ -79,10 +85,14 @@ export const PurchaseLinesTable = ({ lines }: Props) => (
               <TableCell>{row.qualityCode ?? "—"}</TableCell>
               <TableCell>{row.stockCategory ?? "—"}</TableCell>
               <TableCell>{row.options ?? "—"}</TableCell>
-              <TableCell className="text-right">{row.lengthMm ?? "—"}</TableCell>
+              <TableCell className="text-right">
+                {row.lengthMm ?? "—"}
+              </TableCell>
               <TableCell className="text-right">{row.widthMm ?? "—"}</TableCell>
               <TableCell className="text-right">{row.qtyPlanned}</TableCell>
-              <TableCell>{row.unit ? STOCK_UNIT_LABELS[row.unit] : "—"}</TableCell>
+              <TableCell>
+                {row.unit ? STOCK_UNIT_LABELS[row.unit] : "—"}
+              </TableCell>
               <TableCell className="text-right">{row.reservedQty}</TableCell>
               <TableCell className="text-right">{row.kgPurchased}</TableCell>
               <TableCell>{row.receiptDate ?? "—"}</TableCell>

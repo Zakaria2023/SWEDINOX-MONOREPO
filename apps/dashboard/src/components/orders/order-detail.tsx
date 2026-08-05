@@ -12,6 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FormError } from "@/components/ui/form-error";
 import { QuoteSummaryPanel } from "@/components/quotes/quote-summary";
@@ -117,7 +118,14 @@ export const OrderDetailView = ({ order }: Props) => {
                       {item.quantity}
                     </TableCell>
                     <TableCell>
-                      {ORDER_ITEM_STATUS_LABELS[item.status]}
+                      <StatusBadge
+                        value={item.status}
+                        label={
+                          item.status
+                            ? ORDER_ITEM_STATUS_LABELS[item.status]
+                            : null
+                        }
+                      />
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {formatMoney(Number(item.netPrice ?? 0))}

@@ -8,9 +8,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { DetailField } from "@/components/ui/detail-field";
 import { DocumentCell } from "@/components/ui/document-cell";
-import { formatDateColumn, formatDateValue, orDash, yesNo } from "@/lib/helpers";
+import {
+  formatDateColumn,
+  formatDateValue,
+  orDash,
+  yesNo,
+} from "@/lib/helpers";
 import {
   COUNT_WORKORDER_METHOD_LABELS,
   MACHINE_PRODUCTION_LABELS,
@@ -56,10 +62,7 @@ const WorkorderMethods = ({
     <h3 className="text-sm font-medium text-muted-foreground">{title}</h3>
     <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
       {perSubsection !== undefined && (
-        <DetailField
-          label="Make per subsection"
-          value={yesNo(perSubsection)}
-        />
+        <DetailField label="Make per subsection" value={yesNo(perSubsection)} />
       )}
       <DetailField
         label="Processing method"
@@ -96,7 +99,9 @@ export const WarehouseDetailView = ({ warehouse }: Props) => {
           <DetailField label="Name" value={warehouse.name} />
           <DetailField
             label="Type"
-            value={warehouse.type ? WAREHOUSE_TYPE_LABELS[warehouse.type] : null}
+            value={
+              warehouse.type ? WAREHOUSE_TYPE_LABELS[warehouse.type] : null
+            }
           />
           <div>
             <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
@@ -660,9 +665,14 @@ export const WarehouseDetailView = ({ warehouse }: Props) => {
                   <TableRow key={row.uuid}>
                     <TableCell className="font-medium">#{row.id}</TableCell>
                     <TableCell>
-                      {row.status
-                        ? WAREHOUSE_WORK_ORDER_STATUS_LABELS[row.status]
-                        : "—"}
+                      <StatusBadge
+                        value={row.status}
+                        label={
+                          row.status
+                            ? WAREHOUSE_WORK_ORDER_STATUS_LABELS[row.status]
+                            : null
+                        }
+                      />
                     </TableCell>
                     <TableCell>{formatDateValue(row.createdAt)}</TableCell>
                   </TableRow>

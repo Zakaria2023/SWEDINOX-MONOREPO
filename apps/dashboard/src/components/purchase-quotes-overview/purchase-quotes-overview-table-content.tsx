@@ -9,6 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { formatDateValue } from "@/lib/helpers";
 import { ORDER_LINE_STATUS_LABELS, STOCK_UNIT_LABELS } from "@/lib/labels";
 
@@ -67,7 +68,12 @@ export const PurchaseQuotesOverviewTable = ({ lines }: Props) => (
                 {row.lineNumber ?? "—"}
               </TableCell>
               <TableCell>
-                {row.status ? ORDER_LINE_STATUS_LABELS[row.status] : "—"}
+                <StatusBadge
+                  value={row.status}
+                  label={
+                    row.status ? ORDER_LINE_STATUS_LABELS[row.status] : null
+                  }
+                />
               </TableCell>
               <TableCell>{row.expirationReason ?? "—"}</TableCell>
               <TableCell className="text-right">
@@ -78,10 +84,14 @@ export const PurchaseQuotesOverviewTable = ({ lines }: Props) => (
                 {row.productCode ?? "—"}
               </TableCell>
               <TableCell>{row.description ?? "—"}</TableCell>
-              <TableCell className="text-right">{row.lengthMm ?? "—"}</TableCell>
+              <TableCell className="text-right">
+                {row.lengthMm ?? "—"}
+              </TableCell>
               <TableCell className="text-right">{row.widthMm ?? "—"}</TableCell>
               <TableCell className="text-right">{row.quantity}</TableCell>
-              <TableCell>{row.unit ? STOCK_UNIT_LABELS[row.unit] : "—"}</TableCell>
+              <TableCell>
+                {row.unit ? STOCK_UNIT_LABELS[row.unit] : "—"}
+              </TableCell>
               <TableCell className="text-right">{row.kg}</TableCell>
               <TableCell className="text-right whitespace-nowrap">
                 € {row.netPrice}

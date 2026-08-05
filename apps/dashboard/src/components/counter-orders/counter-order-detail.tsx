@@ -8,6 +8,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { DetailField } from "@/components/ui/detail-field";
 import { DocumentCell } from "@/components/ui/document-cell";
 import {
@@ -194,10 +195,7 @@ export const CounterOrderDetailView = ({ order }: Props) => (
           label="Maximum bundle weight (kg)"
           value={order.maxBundleWeightKg}
         />
-        <DetailField
-          label="Deliver after"
-          value={order.deliveryAfterTime}
-        />
+        <DetailField label="Deliver after" value={order.deliveryAfterTime} />
         <DetailField label="Deliver before" value={order.deliverForTime} />
       </div>
     </section>
@@ -335,9 +333,14 @@ export const CounterOrderDetailView = ({ order }: Props) => (
                     {orDash(item.description ?? item.productName)}
                   </TableCell>
                   <TableCell>
-                    {item.status
-                      ? ORDER_LINE_STATUS_LABELS[item.status]
-                      : "—"}
+                    <StatusBadge
+                      value={item.status}
+                      label={
+                        item.status
+                          ? ORDER_LINE_STATUS_LABELS[item.status]
+                          : null
+                      }
+                    />
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
                     {orDash(item.qtyPlanned)}

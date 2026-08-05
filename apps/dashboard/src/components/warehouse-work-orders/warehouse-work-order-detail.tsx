@@ -8,6 +8,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { DetailField } from "@/components/ui/detail-field";
 import {
   formatDateColumn,
@@ -115,7 +116,14 @@ export const WarehouseWorkOrderDetailView = ({ workOrder }: Props) => (
                       : "—"}
                   </TableCell>
                   <TableCell>
-                    {WAREHOUSE_WORK_ORDER_STATUS_LABELS[line.status]}
+                    <StatusBadge
+                      value={line.status}
+                      label={
+                        line.status
+                          ? WAREHOUSE_WORK_ORDER_STATUS_LABELS[line.status]
+                          : null
+                      }
+                    />
                   </TableCell>
                   <TableCell>{orDash(line.orderNumber)}</TableCell>
                   <TableCell>

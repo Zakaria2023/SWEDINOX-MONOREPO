@@ -9,6 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { DELIVERY_STATUS_LABELS, STOCK_UNIT_LABELS } from "@/lib/labels";
 import { formatDateValue, formatNumber } from "@/lib/helpers";
 
@@ -133,9 +134,14 @@ export const DeliveriesCertificateTable = ({ rows, emptyMessage }: Props) => (
                     : "No"}
               </TableCell>
               <TableCell>
-                {row.deliveryStatus
-                  ? DELIVERY_STATUS_LABELS[row.deliveryStatus]
-                  : "—"}
+                <StatusBadge
+                  value={row.deliveryStatus}
+                  label={
+                    row.deliveryStatus
+                      ? DELIVERY_STATUS_LABELS[row.deliveryStatus]
+                      : null
+                  }
+                />
               </TableCell>
               <TableCell>{row.options ?? "—"}</TableCell>
               <TableCell className="text-right">

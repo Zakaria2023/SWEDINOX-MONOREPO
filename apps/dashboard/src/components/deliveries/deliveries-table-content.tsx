@@ -16,6 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { StatusBadge } from "@/components/ui/status-badge";
 import {
   DELIVERY_STATUS_LABELS,
   ORDER_LINE_STATUS_LABELS,
@@ -109,9 +110,14 @@ export const DeliveriesTable = ({ lines }: Props) => (
                 </Link>
               </TableCell>
               <TableCell>
-                {row.lineStatus
-                  ? ORDER_LINE_STATUS_LABELS[row.lineStatus]
-                  : "—"}
+                <StatusBadge
+                  value={row.lineStatus}
+                  label={
+                    row.lineStatus
+                      ? ORDER_LINE_STATUS_LABELS[row.lineStatus]
+                      : null
+                  }
+                />
               </TableCell>
               <TableCell className="text-right font-medium">
                 {row.orderId ?? "—"}
@@ -131,16 +137,21 @@ export const DeliveriesTable = ({ lines }: Props) => (
               <TableCell className="text-right">
                 {row.lengthMm ?? "—"}
               </TableCell>
-              <TableCell className="text-right">
-                {row.widthMm ?? "—"}
-              </TableCell>
+              <TableCell className="text-right">{row.widthMm ?? "—"}</TableCell>
               <TableCell>{row.options ?? "—"}</TableCell>
               <TableCell className="text-right">{row.qtyPlanned}</TableCell>
-              <TableCell>{row.unit ? STOCK_UNIT_LABELS[row.unit] : "—"}</TableCell>
               <TableCell>
-                {row.deliveryStatus
-                  ? DELIVERY_STATUS_LABELS[row.deliveryStatus]
-                  : "—"}
+                {row.unit ? STOCK_UNIT_LABELS[row.unit] : "—"}
+              </TableCell>
+              <TableCell>
+                <StatusBadge
+                  value={row.deliveryStatus}
+                  label={
+                    row.deliveryStatus
+                      ? DELIVERY_STATUS_LABELS[row.deliveryStatus]
+                      : null
+                  }
+                />
               </TableCell>
               <TableCell>{row.deliveryDate ?? "—"}</TableCell>
               <TableCell className="text-muted-foreground">

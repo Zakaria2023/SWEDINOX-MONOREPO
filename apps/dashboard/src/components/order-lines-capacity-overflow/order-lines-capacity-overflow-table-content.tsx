@@ -10,12 +10,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
-import {
-  formatDateColumn,
-  formatNumber,
-  orDash,
-  yesNo,
-} from "@/lib/helpers";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { formatDateColumn, formatNumber, orDash, yesNo } from "@/lib/helpers";
 import { ORDER_ITEM_STATUS_LABELS } from "@/lib/labels";
 
 type Props = {
@@ -183,9 +179,14 @@ export const OrderLinesCapacityOverflowTable = ({ rows }: Props) => (
                 {orDash(row.optionQty)}
               </TableCell>
               <TableCell>
-                {row.lineStatus
-                  ? ORDER_ITEM_STATUS_LABELS[row.lineStatus]
-                  : "—"}
+                <StatusBadge
+                  value={row.lineStatus}
+                  label={
+                    row.lineStatus
+                      ? ORDER_ITEM_STATUS_LABELS[row.lineStatus]
+                      : null
+                  }
+                />
               </TableCell>
               <TableCell>{orDash(row.lineType)}</TableCell>
               <TableCell>{orDash(row.sawingWorkOrder)}</TableCell>

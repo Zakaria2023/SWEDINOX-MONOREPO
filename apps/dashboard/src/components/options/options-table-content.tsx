@@ -9,6 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { StatusBadge } from "@/components/ui/status-badge";
 import {
   formatMoney,
   formatNumber,
@@ -73,9 +74,14 @@ export const OptionsTable = ({ rows }: Props) => {
                   </TableCell>
                   <TableCell>{row.revenueGroupName ?? "—"}</TableCell>
                   <TableCell>
-                    {row.lineStatus
-                      ? ORDER_LINE_STATUS_LABELS[row.lineStatus]
-                      : "—"}
+                    <StatusBadge
+                      value={row.lineStatus}
+                      label={
+                        row.lineStatus
+                          ? ORDER_LINE_STATUS_LABELS[row.lineStatus]
+                          : null
+                      }
+                    />
                   </TableCell>
                   <TableCell className="text-right">{row.lineCount}</TableCell>
                   <TableCell className="text-right">

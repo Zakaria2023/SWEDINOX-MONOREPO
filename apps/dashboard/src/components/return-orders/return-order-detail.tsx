@@ -17,6 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { CollapsibleSection } from "@/components/ui/collapsible-section";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DetailField } from "@/components/ui/detail-field";
@@ -107,9 +108,7 @@ export const ReturnOrderDetailView = ({ returnOrder }: Props) => {
                 #{returnOrder.originalOrderId}
               </Link>
             ) : (
-              <p className="text-sm">
-                {returnOrder.orderReference ?? "—"}
-              </p>
+              <p className="text-sm">{returnOrder.orderReference ?? "—"}</p>
             )}
           </div>
 
@@ -344,9 +343,14 @@ export const ReturnOrderDetailView = ({ returnOrder }: Props) => {
                       <TableCell>{orDash(line.machineName)}</TableCell>
                       <TableCell>{formatDateColumn(line.date)}</TableCell>
                       <TableCell>
-                        {line.status
-                          ? WAREHOUSE_WORK_ORDER_STATUS_LABELS[line.status]
-                          : "—"}
+                        <StatusBadge
+                          value={line.status}
+                          label={
+                            line.status
+                              ? WAREHOUSE_WORK_ORDER_STATUS_LABELS[line.status]
+                              : null
+                          }
+                        />
                       </TableCell>
                       <TableCell>{orDash(line.productCode)}</TableCell>
                       <TableCell className="text-right tabular-nums">
@@ -402,13 +406,16 @@ export const ReturnOrderDetailView = ({ returnOrder }: Props) => {
                           #{orDash(line.complaintId)}
                         </Link>
                       </TableCell>
+                      <TableCell>{formatDateColumn(line.reportDate)}</TableCell>
                       <TableCell>
-                        {formatDateColumn(line.reportDate)}
-                      </TableCell>
-                      <TableCell>
-                        {line.status
-                          ? COMPLAINT_STATUS_LABELS[line.status]
-                          : "—"}
+                        <StatusBadge
+                          value={line.status}
+                          label={
+                            line.status
+                              ? COMPLAINT_STATUS_LABELS[line.status]
+                              : null
+                          }
+                        />
                       </TableCell>
                       <TableCell>
                         {line.category
@@ -451,7 +458,10 @@ export const ReturnOrderDetailView = ({ returnOrder }: Props) => {
                   key={document.id}
                   className="flex items-center gap-3 rounded-lg border border-border px-3 py-2 text-sm"
                 >
-                  <FileText size={16} className="shrink-0 text-muted-foreground" />
+                  <FileText
+                    size={16}
+                    className="shrink-0 text-muted-foreground"
+                  />
                   <Link
                     href={`/api/documents/${document.id}/download`}
                     className="flex-1 text-primary hover:underline"

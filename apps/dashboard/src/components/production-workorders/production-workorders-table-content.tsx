@@ -16,6 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { StatusBadge } from "@/components/ui/status-badge";
 import {
   MACHINE_OPTION_LABELS,
   WAREHOUSE_WORK_ORDER_STATUS_LABELS,
@@ -115,9 +116,14 @@ export const ProductionWorkOrdersTable = ({ lines }: Props) => (
                   .join(" · ") || "—"}
               </TableCell>
               <TableCell>
-                {row.status
-                  ? WAREHOUSE_WORK_ORDER_STATUS_LABELS[row.status]
-                  : "—"}
+                <StatusBadge
+                  value={row.status}
+                  label={
+                    row.status
+                      ? WAREHOUSE_WORK_ORDER_STATUS_LABELS[row.status]
+                      : null
+                  }
+                />
               </TableCell>
               <TableCell className="font-medium">
                 {row.productCode ?? "—"}
@@ -127,16 +133,24 @@ export const ProductionWorkOrdersTable = ({ lines }: Props) => (
               <TableCell className="text-right">
                 {row.thicknessMm ?? "—"}
               </TableCell>
-              <TableCell className="text-right">{row.qtyPlanned ?? "—"}</TableCell>
-              <TableCell className="text-right">{row.qtyActual ?? "—"}</TableCell>
-              <TableCell className="text-right">{row.kgPlanned ?? "—"}</TableCell>
+              <TableCell className="text-right">
+                {row.qtyPlanned ?? "—"}
+              </TableCell>
+              <TableCell className="text-right">
+                {row.qtyActual ?? "—"}
+              </TableCell>
+              <TableCell className="text-right">
+                {row.kgPlanned ?? "—"}
+              </TableCell>
               <TableCell>{row.fromLocation ?? "—"}</TableCell>
               <TableCell>{row.toLocation ?? "—"}</TableCell>
               <TableCell>{row.deliverOn ?? "—"}</TableCell>
               <TableCell className="text-center">
                 {row.rush ? "Yes" : ""}
               </TableCell>
-              <TableCell className="text-right">{row.priority ?? "—"}</TableCell>
+              <TableCell className="text-right">
+                {row.priority ?? "—"}
+              </TableCell>
               <TableCell>{row.charge ?? "—"}</TableCell>
               <TableCell className="text-right">
                 {row.status === "completed" ? (

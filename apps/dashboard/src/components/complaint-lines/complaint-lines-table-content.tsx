@@ -10,6 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { formatDateValue } from "@/lib/helpers";
 import {
   COMPLAINT_CATEGORY_LABELS,
@@ -107,7 +108,12 @@ export const ComplaintLinesTable = ({ rows }: Props) => (
                 {row.category ? COMPLAINT_CATEGORY_LABELS[row.category] : "—"}
               </TableCell>
               <TableCell>
-                {row.status ? COMPLAINT_STATUS_LABELS[row.status] : "—"}
+                <StatusBadge
+                  value={row.status}
+                  label={
+                    row.status ? COMPLAINT_STATUS_LABELS[row.status] : null
+                  }
+                />
               </TableCell>
               <TableCell className="whitespace-nowrap">
                 {formatDateValue(row.statusDate)}

@@ -15,6 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { CollapsibleSection } from "@/components/ui/collapsible-section";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FormError } from "@/components/ui/form-error";
@@ -157,9 +158,14 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
                       {item.stockQuantity ?? "—"}
                     </TableCell>
                     <TableCell>
-                      {item.stockStatus
-                        ? STOCK_STATUS_LABELS[item.stockStatus]
-                        : "—"}
+                      <StatusBadge
+                        value={item.stockStatus}
+                        label={
+                          item.stockStatus
+                            ? STOCK_STATUS_LABELS[item.stockStatus]
+                            : null
+                        }
+                      />
                     </TableCell>
                     {/* A lot received before purchase lines carried a price
                         shows zero here — the sales margin drawn from it is
@@ -227,9 +233,14 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
                           .join(" — ") || "—"}
                       </TableCell>
                       <TableCell>
-                        {receipt.lineStatus
-                          ? ORDER_LINE_STATUS_LABELS[receipt.lineStatus]
-                          : "—"}
+                        <StatusBadge
+                          value={receipt.lineStatus}
+                          label={
+                            receipt.lineStatus
+                              ? ORDER_LINE_STATUS_LABELS[receipt.lineStatus]
+                              : null
+                          }
+                        />
                       </TableCell>
                       <TableCell>{orDash(receipt.receiptStatus)}</TableCell>
                       <TableCell className="text-right tabular-nums">
@@ -274,7 +285,9 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
                     <TableHead>Role</TableHead>
                     <TableHead>Start</TableHead>
                     <TableHead>End</TableHead>
-                    <TableHead className="text-right">Max weight (kg)</TableHead>
+                    <TableHead className="text-right">
+                      Max weight (kg)
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -356,9 +369,16 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
                           .join(" — ") || "—"}
                       </TableCell>
                       <TableCell>
-                        {line.returnOrderStatus
-                          ? RETURN_ORDER_STATUS_LABELS[line.returnOrderStatus]
-                          : "—"}
+                        <StatusBadge
+                          value={line.returnOrderStatus}
+                          label={
+                            line.returnOrderStatus
+                              ? RETURN_ORDER_STATUS_LABELS[
+                                  line.returnOrderStatus
+                                ]
+                              : null
+                          }
+                        />
                       </TableCell>
                       <TableCell>
                         {line.returnReason
@@ -446,7 +466,9 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
         <div className="flex gap-2">
           <Button
             variant="outline"
-            render={<Link href={`/purchase-orders/${purchaseOrder.uuid}/edit`} />}
+            render={
+              <Link href={`/purchase-orders/${purchaseOrder.uuid}/edit`} />
+            }
           >
             Edit Details
           </Button>

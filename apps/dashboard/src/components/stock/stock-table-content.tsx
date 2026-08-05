@@ -12,6 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { StockCorrectionDialog } from "./stock-correction-dialog";
 import { cn, daysInSystem } from "@/lib/helpers";
 import { STOCK_STATUS_LABELS } from "@/lib/labels";
@@ -93,7 +94,14 @@ export const StockTable = ({ stock }: Props) => {
                     <TableCell className="text-right">
                       {row.reservedQuantity} / {available}
                     </TableCell>
-                    <TableCell>{STOCK_STATUS_LABELS[row.status]}</TableCell>
+                    <TableCell>
+                      <StatusBadge
+                        value={row.status}
+                        label={
+                          row.status ? STOCK_STATUS_LABELS[row.status] : null
+                        }
+                      />
+                    </TableCell>
                     <TableCell>
                       {pendingDays === null ? (
                         "—"

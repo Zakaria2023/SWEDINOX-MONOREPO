@@ -10,10 +10,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
-import {
-  DELIVERY_STATUS_LABELS,
-  ORDER_LINE_STATUS_LABELS,
-} from "@/lib/labels";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { DELIVERY_STATUS_LABELS, ORDER_LINE_STATUS_LABELS } from "@/lib/labels";
 
 type Props = {
   lines: DeliveryLineItem[];
@@ -72,9 +70,14 @@ export const BlockedDeliveriesTable = ({ lines }: Props) => (
                 {row.lineNumber ?? "—"}
               </TableCell>
               <TableCell>
-                {row.lineStatus
-                  ? ORDER_LINE_STATUS_LABELS[row.lineStatus]
-                  : "—"}
+                <StatusBadge
+                  value={row.lineStatus}
+                  label={
+                    row.lineStatus
+                      ? ORDER_LINE_STATUS_LABELS[row.lineStatus]
+                      : null
+                  }
+                />
               </TableCell>
               <TableCell>{row.productName ?? "—"}</TableCell>
               <TableCell className="text-right">{row.qtyPlanned}</TableCell>
@@ -88,9 +91,14 @@ export const BlockedDeliveriesTable = ({ lines }: Props) => (
               </TableCell>
               <TableCell>{row.deliveryDate ?? "—"}</TableCell>
               <TableCell>
-                {row.deliveryStatus
-                  ? DELIVERY_STATUS_LABELS[row.deliveryStatus]
-                  : "—"}
+                <StatusBadge
+                  value={row.deliveryStatus}
+                  label={
+                    row.deliveryStatus
+                      ? DELIVERY_STATUS_LABELS[row.deliveryStatus]
+                      : null
+                  }
+                />
               </TableCell>
               <TableCell className="text-muted-foreground">
                 {row.blockingReason ?? "—"}

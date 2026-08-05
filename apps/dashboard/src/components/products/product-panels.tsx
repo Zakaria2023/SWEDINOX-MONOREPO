@@ -11,6 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { CollapsibleSection } from "@/components/ui/collapsible-section";
 import {
   formatDateColumn,
@@ -480,7 +481,10 @@ export const ProductPanels = ({ product }: Props) => (
             </TableCell>
             <TableCell>{orDash(row.customerName)}</TableCell>
             <TableCell>
-              {row.status ? ORDER_LINE_STATUS_LABELS[row.status] : "—"}
+              <StatusBadge
+                value={row.status}
+                label={row.status ? ORDER_LINE_STATUS_LABELS[row.status] : null}
+              />
             </TableCell>
             <TableCell className="text-right tabular-nums">
               {formatNumber(Number(row.quantity ?? 0))}
@@ -530,7 +534,10 @@ export const ProductPanels = ({ product }: Props) => (
             </TableCell>
             <TableCell>{orDash(row.customerName)}</TableCell>
             <TableCell>
-              {row.status ? ORDER_ITEM_STATUS_LABELS[row.status] : "—"}
+              <StatusBadge
+                value={row.status}
+                label={row.status ? ORDER_ITEM_STATUS_LABELS[row.status] : null}
+              />
             </TableCell>
             <TableCell className="text-right tabular-nums">
               {formatNumber(Number(row.quantity ?? 0))}

@@ -17,6 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { CollapsibleSection } from "@/components/ui/collapsible-section";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DetailField } from "@/components/ui/detail-field";
@@ -103,7 +104,9 @@ export const ComplaintDetailView = ({ complaint }: Props) => {
           <DetailField
             label="Report"
             value={
-              complaint.report ? COMPLAINT_REPORT_LABELS[complaint.report] : null
+              complaint.report
+                ? COMPLAINT_REPORT_LABELS[complaint.report]
+                : null
             }
           />
           <DetailField
@@ -121,7 +124,9 @@ export const ComplaintDetailView = ({ complaint }: Props) => {
           <DetailField
             label="Status"
             value={
-              complaint.status ? COMPLAINT_STATUS_LABELS[complaint.status] : null
+              complaint.status
+                ? COMPLAINT_STATUS_LABELS[complaint.status]
+                : null
             }
           />
           <DetailField
@@ -221,10 +226,7 @@ export const ComplaintDetailView = ({ complaint }: Props) => {
             label="To be reclaimed"
             value={formatMoney(Number(complaint.toBeReclaimed ?? 0))}
           />
-          <DetailField
-            label="Total costs"
-            value={formatMoney(totalCosts)}
-          />
+          <DetailField label="Total costs" value={formatMoney(totalCosts)} />
         </div>
       </section>
 
@@ -333,9 +335,14 @@ export const ComplaintDetailView = ({ complaint }: Props) => {
                       </TableCell>
                       <TableCell>{orDash(item.description)}</TableCell>
                       <TableCell>
-                        {item.status
-                          ? COMPLAINT_STATUS_LABELS[item.status]
-                          : "—"}
+                        <StatusBadge
+                          value={item.status}
+                          label={
+                            item.status
+                              ? COMPLAINT_STATUS_LABELS[item.status]
+                              : null
+                          }
+                        />
                       </TableCell>
                       <TableCell className="text-right tabular-nums">
                         {formatNumber(Number(item.qty ?? 0))}
@@ -382,9 +389,18 @@ export const ComplaintDetailView = ({ complaint }: Props) => {
                   complaint.statusHistory.map((entry, index) => (
                     <TableRow key={`${entry.statusDate}-${index}`}>
                       <TableCell className="font-medium">
-                        {COMPLAINT_STATUS_LABELS[entry.status]}
+                        <StatusBadge
+                          value={entry.status}
+                          label={
+                            entry.status
+                              ? COMPLAINT_STATUS_LABELS[entry.status]
+                              : null
+                          }
+                        />
                       </TableCell>
-                      <TableCell>{formatDateColumn(entry.statusDate)}</TableCell>
+                      <TableCell>
+                        {formatDateColumn(entry.statusDate)}
+                      </TableCell>
                       <TableCell>{orDash(entry.assignedByName)}</TableCell>
                     </TableRow>
                   ))

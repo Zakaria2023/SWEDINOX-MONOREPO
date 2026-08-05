@@ -11,6 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { StatusBadge } from "@/components/ui/status-badge";
 import {
   ORDER_LINE_STATUS_LABELS,
   SALES_UNIT_LABELS,
@@ -136,7 +137,9 @@ export const NestingTable = ({ rows }: Props) => (
                 {row.productCode ?? "—"}
               </TableCell>
               <TableCell>{row.productName ?? "—"}</TableCell>
-              <TableCell className="text-right">{row.lengthMm ?? "—"}</TableCell>
+              <TableCell className="text-right">
+                {row.lengthMm ?? "—"}
+              </TableCell>
               <TableCell className="text-right">{row.widthMm ?? "—"}</TableCell>
               <TableCell className="text-right">
                 {row.thicknessMm ?? "—"}
@@ -180,7 +183,9 @@ export const NestingTable = ({ rows }: Props) => (
               <TableCell className="text-right">
                 {row.kgPlanned ?? "—"}
               </TableCell>
-              <TableCell className="text-right">{row.kgActual ?? "—"}</TableCell>
+              <TableCell className="text-right">
+                {row.kgActual ?? "—"}
+              </TableCell>
               <TableCell className="text-right">
                 {row.theoreticalWeight ?? "—"}
               </TableCell>
@@ -205,9 +210,14 @@ export const NestingTable = ({ rows }: Props) => (
                 {row.optionQty ?? "—"}
               </TableCell>
               <TableCell>
-                {row.lineStatus
-                  ? ORDER_LINE_STATUS_LABELS[row.lineStatus]
-                  : "—"}
+                <StatusBadge
+                  value={row.lineStatus}
+                  label={
+                    row.lineStatus
+                      ? ORDER_LINE_STATUS_LABELS[row.lineStatus]
+                      : null
+                  }
+                />
               </TableCell>
               <TableCell>{row.lineType ?? "—"}</TableCell>
               <TableCell>{row.sawingWorkOrder ?? "—"}</TableCell>

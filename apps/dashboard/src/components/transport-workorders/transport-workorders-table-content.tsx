@@ -16,6 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { WAREHOUSE_WORK_ORDER_STATUS_LABELS } from "@/lib/labels";
 
 type Props = {
@@ -112,16 +113,31 @@ export const TransportWorkOrdersTable = ({ lines }: Props) => (
               <TableCell>{row.orderNumber ?? "—"}</TableCell>
               <TableCell>{row.action ?? "—"}</TableCell>
               <TableCell>
-                {row.status
-                  ? WAREHOUSE_WORK_ORDER_STATUS_LABELS[row.status]
-                  : "—"}
+                <StatusBadge
+                  value={row.status}
+                  label={
+                    row.status
+                      ? WAREHOUSE_WORK_ORDER_STATUS_LABELS[row.status]
+                      : null
+                  }
+                />
               </TableCell>
-              <TableCell className="text-right">{row.lengthMm ?? "—"}</TableCell>
-              <TableCell className="text-right">{row.qtyPlanned ?? "—"}</TableCell>
-              <TableCell className="text-right">{row.qtyLoaded ?? "—"}</TableCell>
-              <TableCell className="text-right">{row.kgPlanned ?? "—"}</TableCell>
+              <TableCell className="text-right">
+                {row.lengthMm ?? "—"}
+              </TableCell>
+              <TableCell className="text-right">
+                {row.qtyPlanned ?? "—"}
+              </TableCell>
+              <TableCell className="text-right">
+                {row.qtyLoaded ?? "—"}
+              </TableCell>
+              <TableCell className="text-right">
+                {row.kgPlanned ?? "—"}
+              </TableCell>
               <TableCell className="text-right">{row.colli ?? "—"}</TableCell>
-              <TableCell className="text-right">{row.priority ?? "—"}</TableCell>
+              <TableCell className="text-right">
+                {row.priority ?? "—"}
+              </TableCell>
               <TableCell className="text-right">
                 {row.status === "completed" ? (
                   "—"

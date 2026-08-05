@@ -7,6 +7,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { daysInSystem, formatDateValue } from "@/lib/helpers";
 import { SelectInvoices } from "@/db";
 import {
@@ -160,9 +161,14 @@ export const CompanyDetailView = ({ company, invoices }: Props) => {
                       {order.handlingBlocked ? "Yes" : "No"}
                     </TableCell>
                     <TableCell>
-                      {order.status
-                        ? COUNTER_ORDER_STATUS_LABELS[order.status]
-                        : "—"}
+                      <StatusBadge
+                        value={order.status}
+                        label={
+                          order.status
+                            ? COUNTER_ORDER_STATUS_LABELS[order.status]
+                            : null
+                        }
+                      />
                     </TableCell>
                     <TableCell>{order.orderDate ?? na}</TableCell>
                     <TableCell>{order.deliveryDate ?? na}</TableCell>
@@ -379,7 +385,14 @@ export const CompanyDetailView = ({ company, invoices }: Props) => {
                   <TableRow key={order.uuid}>
                     <TableCell className="font-medium">{order.id}</TableCell>
                     <TableCell>
-                      {PURCHASE_ORDER_STATUS_LABELS[order.status]}
+                      <StatusBadge
+                        value={order.status}
+                        label={
+                          order.status
+                            ? PURCHASE_ORDER_STATUS_LABELS[order.status]
+                            : null
+                        }
+                      />
                     </TableCell>
                     <TableCell>{order.orderDate ?? na}</TableCell>
                     <TableCell>

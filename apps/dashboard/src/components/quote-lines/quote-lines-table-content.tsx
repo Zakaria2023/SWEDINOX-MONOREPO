@@ -10,6 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { StatusBadge } from "@/components/ui/status-badge";
 import {
   formatDateValue,
   formatMoney,
@@ -152,7 +153,12 @@ export const QuoteLinesTable = ({ rows }: Props) => (
               </TableCell>
               <TableCell>{row.lineType ?? "—"}</TableCell>
               <TableCell>
-                {row.status ? ORDER_LINE_STATUS_LABELS[row.status] : "—"}
+                <StatusBadge
+                  value={row.status}
+                  label={
+                    row.status ? ORDER_LINE_STATUS_LABELS[row.status] : null
+                  }
+                />
               </TableCell>
               <TableCell className="text-right">
                 {formatNumber(Number(row.quantity ?? 0))}

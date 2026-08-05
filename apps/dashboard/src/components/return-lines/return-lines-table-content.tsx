@@ -10,6 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { formatMoney } from "@/lib/helpers";
 import {
   ORDER_LINE_STATUS_LABELS,
@@ -76,12 +77,19 @@ export const ReturnLinesTable = ({ lines }: Props) => (
               </TableCell>
               <TableCell>{row.productName ?? "—"}</TableCell>
               <TableCell>
-                {row.lineStatus
-                  ? ORDER_LINE_STATUS_LABELS[row.lineStatus]
-                  : "—"}
+                <StatusBadge
+                  value={row.lineStatus}
+                  label={
+                    row.lineStatus
+                      ? ORDER_LINE_STATUS_LABELS[row.lineStatus]
+                      : null
+                  }
+                />
               </TableCell>
               <TableCell className="text-right">{row.quantity}</TableCell>
-              <TableCell>{row.unit ? STOCK_UNIT_LABELS[row.unit] : "—"}</TableCell>
+              <TableCell>
+                {row.unit ? STOCK_UNIT_LABELS[row.unit] : "—"}
+              </TableCell>
               <TableCell className="text-right">{row.returnQty}</TableCell>
               <TableCell>
                 {row.returnReason

@@ -16,6 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { FormError } from "@/components/ui/form-error";
 import { PurchaseQuoteStatus, PurchaseRequestStatus } from "@/lib/enums";
 import {
@@ -50,9 +51,7 @@ export const PurchaseRequestDetailView = ({
 
   const toggle = (uuid: string) =>
     setSelected((prev) =>
-      prev.includes(uuid)
-        ? prev.filter((id) => id !== uuid)
-        : [...prev, uuid],
+      prev.includes(uuid) ? prev.filter((id) => id !== uuid) : [...prev, uuid],
     );
 
   const requestQuotes = () => {
@@ -159,9 +158,14 @@ export const PurchaseRequestDetailView = ({
                       )}
                     </TableCell>
                     <TableCell>
-                      {item.lineStatus
-                        ? ORDER_LINE_STATUS_LABELS[item.lineStatus]
-                        : "—"}
+                      <StatusBadge
+                        value={item.lineStatus}
+                        label={
+                          item.lineStatus
+                            ? ORDER_LINE_STATUS_LABELS[item.lineStatus]
+                            : null
+                        }
+                      />
                     </TableCell>
                     <TableCell className="font-medium">
                       {[item.productCode, item.productName]
@@ -303,7 +307,9 @@ export const PurchaseRequestDetailView = ({
                   disabled={isPending || alreadyAsked.has(supplier.uuid)}
                 />
                 <span>
-                  {supplier.companyName ?? supplier.searchCode1 ?? supplier.uuid}
+                  {supplier.companyName ??
+                    supplier.searchCode1 ??
+                    supplier.uuid}
                 </span>
               </label>
             ))}
