@@ -25,6 +25,7 @@ import {
   formatMoney,
   formatNumber,
   fullName,
+  isPurchaseReturnOrderEditable,
   orDash,
   pluralize,
 } from "@/lib/helpers";
@@ -139,6 +140,19 @@ export const PurchaseReturnOrderDetailView = ({ returnOrder }: Props) => {
           />
         </div>
       </section>
+
+      {isPurchaseReturnOrderEditable(returnOrder.status) && (
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            render={
+              <Link href={`/purchase-return-orders/${returnOrder.uuid}/edit`} />
+            }
+          >
+            Edit Return Order
+          </Button>
+        </div>
+      )}
 
       {!isCancelled && (
         <div className="flex flex-wrap items-center gap-3 rounded-lg border p-4">

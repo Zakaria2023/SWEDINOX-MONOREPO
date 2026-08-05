@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-
 import { useState } from "react";
 import { type VisitReportListItem } from "@/app/(dashboard)/visit-reports/actions";
 import { VISIT_REPORT_CONTACT_METHOD_LABELS, VISIT_REPORT_REASON_LABELS } from "@/lib/labels";

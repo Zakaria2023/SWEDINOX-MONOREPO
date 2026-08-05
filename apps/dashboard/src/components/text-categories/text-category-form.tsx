@@ -4,6 +4,7 @@ import { FormProvider } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { TextCategoryOption } from "@/app/(dashboard)/text-categories/actions";
 import { useTextCategorySubmit } from "@/app/(dashboard)/text-categories/use-text-category-submit";
+import { TextCategoryFormValues } from "@/app/(dashboard)/text-categories/validation";
 import { Input } from "@/components/shadcn/input";
 import { FormActions } from "@/components/ui/form-actions";
 import { FormError } from "@/components/ui/form-error";
@@ -16,11 +17,21 @@ import { TEXT_USAGE_CATEGORY_LABELS } from "@/lib/labels";
 
 type TextCategoryFormProps = {
   categories: TextCategoryOption[];
+  /** Set when editing an existing category; omitted when creating one. */
+  textCategoryUuid?: string;
+  defaultValues?: TextCategoryFormValues;
 };
 
-export const TextCategoryForm = ({ categories }: TextCategoryFormProps) => {
+export const TextCategoryForm = ({
+  categories,
+  textCategoryUuid,
+  defaultValues,
+}: TextCategoryFormProps) => {
   const router = useRouter();
-  const { form, isPending, onSubmit, state } = useTextCategorySubmit();
+  const { form, isPending, isEditing, onSubmit, state } = useTextCategorySubmit({
+    textCategoryUuid,
+    defaultValues,
+  });
   const {
     control,
     register,
@@ -148,7 +159,9 @@ export const TextCategoryForm = ({ categories }: TextCategoryFormProps) => {
         <FormActions
           isPending={isPending}
           onCancel={() => router.push("/text-categories")}
-          submitLabel="Create Text Category"
+          submitLabel={
+            isEditing ? "Save Text Category" : "Create Text Category"
+          }
         />
       </form>
     </FormProvider>

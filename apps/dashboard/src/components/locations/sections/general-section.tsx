@@ -1,7 +1,7 @@
 "use client";
 
 import { useFormContext } from "react-hook-form";
-import { LocationFormValues } from "@/app/(dashboard)/locations/validation";
+import { LocationEditValues } from "@/app/(dashboard)/locations/validation";
 import { Input } from "@/components/shadcn/input";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import { FormSelectField } from "@/components/ui/form-select-field";
@@ -20,7 +20,7 @@ export const GeneralSection = ({
     register,
     control,
     formState: { errors },
-  } = useFormContext<LocationFormValues>();
+  } = useFormContext<LocationEditValues>();
 
   return (
     <section className="space-y-4">

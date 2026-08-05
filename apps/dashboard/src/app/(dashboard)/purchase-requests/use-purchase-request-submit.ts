@@ -24,12 +24,13 @@ import { DELIVERY_TERM_LABELS, INVOICE_PAYMENT_TERM_LABELS, ORDER_WEIGHT_TYPE_LA
 import { ClerkUserOption } from "@/lib/server/clerk";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import {
   createPurchaseRequest,
   PurchaseRequestActionResult,
   PurchaseRequestItemInput,
+  updatePurchaseRequest,
 } from "./actions";
 import {
   DEFAULT_PURCHASE_REQUEST,
@@ -41,6 +42,9 @@ import {
 type UsePurchaseRequestSubmitParams = {
   companies: CompanyOption[];
   clerkUsers: ClerkUserOption[];
+  /** Set when editing an existing request; omitted when creating one. */
+  purchaseRequestUuid?: string;
+  defaultValues?: PurchaseRequestFormValues;
 };
 
 const optionalNumber = (value: string | undefined): number | null =>
@@ -63,6 +67,8 @@ const addressLabel = (a: AddressOption) =>
 export const usePurchaseRequestSubmit = ({
   companies,
   clerkUsers,
+  purchaseRequestUuid,
+  defaultValues,
 }: UsePurchaseRequestSubmitParams) => {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -75,7 +81,7 @@ export const usePurchaseRequestSubmit = ({
 
   const form = useForm<PurchaseRequestFormValues>({
     resolver: zodResolver(purchaseRequestSchema),
-    defaultValues: DEFAULT_PURCHASE_REQUEST,
+    defaultValues: defaultValues ?? DEFAULT_PURCHASE_REQUEST,
   });
 
   const {
@@ -146,10 +152,7 @@ export const usePurchaseRequestSubmit = ({
 
   const purchaserOptions: SelectOption[] = [emptyOpt, ...clerkUsers];
 
-  const handleSupplierChange = (uuid: string) => {
-    form.setValue("supplierUuid", uuid);
-    form.setValue("contactUuid", "");
-    form.setValue("supplierAddressUuid", "");
+  const loadSupplierData = useCallback((uuid: string) => {
     setContacts([]);
     setSupplierAddresses([]);
     if (!uuid) return;
@@ -162,9 +165,32 @@ export const usePurchaseRequestSubmit = ({
       setSupplierAddresses(newAddresses);
       setIsLoadingSupplierData(false);
     });
+  }, []);
+
+  // An existing request already names a company, so its contacts and addresses
+  // have to be fetched before the form can show which ones are selected.
+  const editingCompanyUuid =
+    defaultValues?.supplierUuid || defaultValues?.agentUuid;
+  useEffect(() => {
+    if (!editingCompanyUuid) {
+      return;
+    }
+    loadSupplierData(editingCompanyUuid);
+  }, [editingCompanyUuid, loadSupplierData]);
+
+  const handleSupplierChange = (uuid: string) => {
+    form.setValue("supplierUuid", uuid);
+    form.setValue("contactUuid", "");
+    form.setValue("supplierAddressUuid", "");
+    loadSupplierData(uuid);
   };
 
-  const handleCancel = () => router.push("/purchase-requests");
+  const handleCancel = () =>
+    router.push(
+      purchaseRequestUuid
+        ? `/purchase-requests/${purchaseRequestUuid}`
+        : "/purchase-requests",
+    );
 
   const onSubmit = form.handleSubmit((values) => {
     // Blank rows are the field array's starting state, not a line someone
@@ -174,18 +200,25 @@ export const usePurchaseRequestSubmit = ({
       .filter((item) => item.productUuid || item.description)
       .map((item, index) => ({
         productUuid: item.productUuid || null,
+        // Which sales order line this material is being bought for. Dropping it
+        // would leave the request unable to say what it is for, which is the
+        // whole reason the column exists.
+        forOrderItemUuid: item.forOrderItemUuid || null,
         description: item.description || null,
         lineNumber: index + 1,
+        stockCategory: item.stockCategory || null,
+        qualityCode: item.qualityCode || null,
         quantity: item.quantity || "0.000",
         unit: item.unit ?? "st",
         kg: item.kg || "0.00",
         lengthMm: optionalNumber(item.lengthMm),
+        thicknessMm: item.thicknessMm || null,
         requiredDate: item.requiredDate || null,
         remark: item.remark || null,
       }));
 
     startTransition(async () => {
-      const result = await createPurchaseRequest({
+      const fields = {
         companyUuid: values.supplierUuid || values.agentUuid || null,
         contactUuid: values.contactUuid || null,
         purchaser: values.purchaser || null,
@@ -221,8 +254,16 @@ export const usePurchaseRequestSubmit = ({
         deadline: values.deadline ? new Date(values.deadline) : null,
 
         documents: null,
-      }, items);
+      };
 
+      // Updating redirects from inside the action, so only the create path has
+      // a result worth navigating on.
+      if (purchaseRequestUuid) {
+        setState(await updatePurchaseRequest(purchaseRequestUuid, fields, items));
+        return;
+      }
+
+      const result = await createPurchaseRequest(fields, items);
       setState(result);
       if (result.success) {
         router.push("/purchase-requests");
@@ -233,6 +274,7 @@ export const usePurchaseRequestSubmit = ({
   return {
     form,
     isPending,
+    isEditing: Boolean(purchaseRequestUuid),
     onSubmit,
     state,
     arrangeTransport,

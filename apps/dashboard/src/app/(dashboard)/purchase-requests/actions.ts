@@ -22,9 +22,16 @@ import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
 import { Products, SelectProducts } from "@/db/schema/products";
 import { resolveCompanyType } from "@/app/(dashboard)/companies/actions";
-import { describeError, generateUuid, todayDateString } from "@/lib/helpers";
+import {
+  canEditPurchaseRequestLines,
+  describeError,
+  generateUuid,
+  isPurchaseRequestEditable,
+  todayDateString,
+} from "@/lib/helpers";
 import { and, desc, eq, getTableColumns, inArray, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 export type PurchaseRequestFields = Omit<
   InsertPurchaseRequests,
@@ -142,6 +149,67 @@ export const createPurchaseRequest = async (
           : "Failed to create purchase request",
     };
   }
+};
+
+export const updatePurchaseRequest = async (
+  uuid: string,
+  fields: PurchaseRequestFields,
+  items: PurchaseRequestItemInput[] = [],
+): Promise<PurchaseRequestActionResult> => {
+  try {
+    const [request] = await db
+      .select()
+      .from(PurchaseRequests)
+      .where(eq(PurchaseRequests.uuid, uuid))
+      .limit(1);
+
+    if (!request) {
+      return { error: "Purchase request not found." };
+    }
+    if (!isPurchaseRequestEditable(request.status)) {
+      return {
+        error:
+          request.status === "cancelled"
+            ? "This request is cancelled."
+            : "This request has already been awarded.",
+      };
+    }
+
+    const companyType = await resolveCompanyType(fields.companyUuid);
+    // Lines are only rewritten while the request is still a draft. Once it has
+    // been sent, its lines are the question the quotes on file are answering.
+    const rewriteLines = canEditPurchaseRequestLines(request.status);
+
+    await db.transaction(async (tx) => {
+      await tx
+        .update(PurchaseRequests)
+        .set({ ...fields, companyType })
+        .where(eq(PurchaseRequests.uuid, uuid));
+
+      if (!rewriteLines) {
+        return;
+      }
+
+      await tx
+        .delete(PurchaseRequestItems)
+        .where(eq(PurchaseRequestItems.purchaseRequestUuid, uuid));
+
+      for (const [index, item] of items.entries()) {
+        await tx.insert(PurchaseRequestItems).values({
+          ...item,
+          uuid: generateUuid(),
+          purchaseRequestUuid: uuid,
+          lineNumber: item.lineNumber ?? index + 1,
+        });
+      }
+    });
+  } catch (error) {
+    return { error: describeError(error, "Failed to update purchase request") };
+  }
+
+  revalidatePath("/purchase-requests");
+  revalidatePath(`/purchase-requests/${uuid}`);
+  redirect(`/purchase-requests/${uuid}`);
 };
 
 export const getPurchaseRequestDetail = async (

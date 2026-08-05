@@ -1,0 +1,41 @@
+import { getCounterOrderForEdit } from "@/app/(dashboard)/counter-orders/[uuid]/edit/actions";
+import { counterOrderToFormValues } from "@/app/(dashboard)/counter-orders/mappers";
+import { CounterOrderTypeEditor } from "@/components/counter-orders/edit/counter-order-type-editor";
+import { PageHeading } from "@/components/layout/page-heading";
+import { ChevronLeft } from "lucide-react";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+
+type Props = {
+  params: Promise<{ uuid: string }>;
+};
+
+const CounterOrderTypePage = async ({ params }: Props) => {
+  const { uuid } = await params;
+  const order = await getCounterOrderForEdit(uuid);
+
+  if (!order) {
+    notFound();
+  }
+
+  return (
+    <div className="max-w-5xl space-y-6 p-6">
+      <div>
+        <Link
+          href={`/counter-orders/${uuid}/edit`}
+          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+        >
+          <ChevronLeft className="size-4" />
+          Back to edit overview
+        </Link>
+      </div>
+      <PageHeading title="Order Type" description="Pickup, incidental, overlength and how it was sent out" />
+      <CounterOrderTypeEditor
+        counterOrderUuid={uuid}
+        defaultValues={counterOrderToFormValues(order, order)}
+      />
+    </div>
+  );
+};
+
+export default CounterOrderTypePage;
