@@ -77,7 +77,7 @@ export const CounterOrdersTable = ({
         return (
           <TableCell key={key} className="font-medium">
             <Link
-              href={`/counter-orders/${order.uuid}/edit`}
+              href={`/counter-orders/${order.uuid}`}
               className="text-primary hover:underline"
             >
               {order.id}

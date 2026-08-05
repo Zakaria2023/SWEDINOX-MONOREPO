@@ -14,6 +14,10 @@ export type FollowUpListItem = SelectFollowUps & {
   companyName: SelectCompanies["companyName"] | null;
 };
 
+export type FollowUpDetail = FollowUpListItem & {
+  companyId: SelectCompanies["id"] | null;
+};
+
 export const getFollowUps = async (): Promise<FollowUpListItem[]> => {
   try {
     return await db
@@ -27,4 +31,22 @@ export const getFollowUps = async (): Promise<FollowUpListItem[]> => {
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch follow-ups"));
   }
+};
+
+/** One follow-up with the company it was logged against. */
+export const getFollowUpDetail = async (
+  uuid: string,
+): Promise<FollowUpDetail | null> => {
+  const [row] = await db
+    .select({
+      ...getTableColumns(FollowUps),
+      companyName: Companies.companyName,
+      companyId: Companies.id,
+    })
+    .from(FollowUps)
+    .leftJoin(Companies, eq(FollowUps.companyUuid, Companies.uuid))
+    .where(eq(FollowUps.uuid, uuid))
+    .limit(1);
+
+  return row ?? null;
 };

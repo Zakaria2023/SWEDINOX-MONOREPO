@@ -25,6 +25,7 @@ import { FormError } from "@/components/ui/form-error";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
@@ -111,7 +112,14 @@ export const Industries = ({ industries }: Props) => {
               ) : (
                 industries.map((industry) => (
                   <TableRow key={industry.id}>
-                    <TableCell className="font-medium">{industry.id}</TableCell>
+                    <TableCell className="font-medium">
+                      <Link
+                        href={`/industries/${encodeURIComponent(industry.id)}`}
+                        className="text-primary hover:underline"
+                      >
+                        {industry.id}
+                      </Link>
+                    </TableCell>
                     <TableCell>{industry.name}</TableCell>
                   </TableRow>
                 ))

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { DeliveryLineItem } from "@/app/(dashboard)/deliveries/actions";
 import {
   Table,
@@ -57,7 +58,12 @@ export const BlockedDeliveriesTable = ({ lines }: Props) => (
           lines.map((row) => (
             <TableRow key={row.uuid}>
               <TableCell className="font-medium">
-                {row.customerName ?? "—"}
+                <Link
+                  href={`/order-lines/${row.uuid}`}
+                  className="text-primary hover:underline"
+                >
+                  {row.customerName ?? "View line"}
+                </Link>
               </TableCell>
               <TableCell className="text-right">{row.orderId ?? "—"}</TableCell>
               <TableCell>{row.customerRef ?? "—"}</TableCell>

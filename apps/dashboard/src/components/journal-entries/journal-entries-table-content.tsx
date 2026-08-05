@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { JournalEntryListItem } from "@/app/(dashboard)/journal-entries/actions";
 import {
   Table,
@@ -49,7 +50,12 @@ export const JournalEntriesTable = ({ entries }: Props) => (
             <TableRow key={row.uuid}>
               <TableCell>{row.bookingDate ?? "—"}</TableCell>
               <TableCell className="font-medium">
-                {row.documentNo ?? "—"}
+                <Link
+                  href={`/journal-entries/${row.uuid}`}
+                  className="text-primary hover:underline"
+                >
+                  {row.documentNo ?? `Posting #${row.id}`}
+                </Link>
               </TableCell>
               <TableCell className="whitespace-nowrap">
                 {row.account ?? "—"}

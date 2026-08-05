@@ -35,6 +35,15 @@ export type PaymentListItem = SelectPayments & {
   purchaseInvoiceId: number | null;
 };
 
+export type PaymentDetail = PaymentListItem & {
+  invoiceDocumentType: SelectInvoices["documentType"] | null;
+  invoiceDate: SelectInvoices["invoiceDate"] | null;
+  invoiceOutstanding: SelectInvoices["outstanding"] | null;
+  invoicePaymentTerms: SelectInvoices["paymentTerms"] | null;
+  /** Cash plus the discount taken — what the payment settled in total. */
+  settledAmount: number;
+};
+
 export type RegisterPaymentInput = {
   invoiceUuid?: string;
   purchaseInvoiceUuid?: string;
@@ -131,6 +140,51 @@ export const getPayments = async (): Promise<PaymentListItem[]> => {
       .orderBy(desc(Payments.paymentDate), desc(Payments.id));
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch payments"));
+  }
+};
+
+/**
+ * One payment with the counterparty and the invoice it settled.
+ *
+ * `settledAmount` is the cash plus the early-payment discount taken: an invoice
+ * can close in full even though less money arrived than was billed, and the
+ * cash figure alone does not show that.
+ */
+export const getPaymentDetail = async (
+  uuid: string,
+): Promise<PaymentDetail | null> => {
+  try {
+    const [row] = await db
+      .select({
+        ...getTableColumns(Payments),
+        companyName: Companies.companyName,
+        invoiceId: Invoices.id,
+        invoiceDocumentType: Invoices.documentType,
+        invoiceDate: Invoices.invoiceDate,
+        invoiceOutstanding: Invoices.outstanding,
+        invoicePaymentTerms: Invoices.paymentTerms,
+        purchaseInvoiceId: PurchaseInvoices.id,
+      })
+      .from(Payments)
+      .leftJoin(Companies, eq(Payments.companyUuid, Companies.uuid))
+      .leftJoin(Invoices, eq(Payments.invoiceUuid, Invoices.uuid))
+      .leftJoin(
+        PurchaseInvoices,
+        eq(Payments.purchaseInvoiceUuid, PurchaseInvoices.uuid),
+      )
+      .where(eq(Payments.uuid, uuid))
+      .limit(1);
+
+    if (!row) {
+      return null;
+    }
+
+    return {
+      ...row,
+      settledAmount: Number(row.amount) + Number(row.discountAmount),
+    };
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch payment"));
   }
 };
 

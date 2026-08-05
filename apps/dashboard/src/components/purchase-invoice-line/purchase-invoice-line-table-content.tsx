@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { PurchaseInvoiceLineRow } from "@/app/(dashboard)/purchase-invoice-line/actions";
 import {
   Table,
@@ -44,10 +45,15 @@ export const PurchaseInvoiceLineTable = ({ rows }: Props) => (
             </TableCell>
           </TableRow>
         ) : (
-          rows.map((row, index) => (
-            <TableRow key={index}>
-              <TableCell className="text-right">
-                {yearOf(row.invoiceDate)}
+          rows.map((row) => (
+            <TableRow key={row.uuid}>
+              <TableCell className="text-right font-medium">
+                <Link
+                  href={`/purchase-invoice-line/${row.uuid}`}
+                  className="text-primary hover:underline"
+                >
+                  {yearOf(row.invoiceDate)}
+                </Link>
               </TableCell>
               <TableCell className="text-right">
                 {monthOf(row.invoiceDate)}

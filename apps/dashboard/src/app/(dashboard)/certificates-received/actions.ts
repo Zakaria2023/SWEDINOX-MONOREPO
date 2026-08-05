@@ -49,6 +49,11 @@ export type CertificateActionResult = {
   createdCertificates?: number;
 };
 
+export type CertificateDetail = CertificateRow & {
+  batchId: SelectBatches["id"] | null;
+  producerOnBatch: SelectBatches["producer"] | null;
+};
+
 // Every expected certificate with the batch it belongs to, that batch's
 // purchase order, supplier and product.
 export const getCertificatesReceived = async (): Promise<CertificateRow[]> => {
@@ -109,6 +114,58 @@ export const getCertificatesReceived = async (): Promise<CertificateRow[]> => {
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch certificates"));
   }
+};
+
+/**
+ * One certificate with the batch it belongs to and that batch's purchase order,
+ * supplier and product — everything needed to tell which shipment the document
+ * covers.
+ */
+export const getCertificateDetail = async (
+  uuid: string,
+): Promise<CertificateDetail | null> => {
+  const [row] = await db
+    .select({
+      certificate: BatchCertificates,
+      batchId: Batches.id,
+      purchaseOrderId: PurchaseOrders.id,
+      supplierCode: Companies.id,
+      supplierName: Companies.companyName,
+      productCode: Products.productCode,
+      productName: Products.name,
+      receiptDate: Batches.receiptDate,
+      internalCharge: Batches.internalCharge,
+      charge: Batches.charge,
+      sheetNumber: Batches.sheetNumber,
+      stockCategory: Batches.stockCategory,
+      qualityCode: Batches.qualityCode,
+      options: Batches.options,
+      producerOnBatch: Batches.producer,
+      lengthMm: Batches.lengthMm,
+      widthMm: Batches.widthMm,
+      thicknessMm: Batches.thicknessMm,
+      qty: Batches.qty,
+      unit: Batches.unit,
+      kg: Batches.kg,
+    })
+    .from(BatchCertificates)
+    .innerJoin(Batches, eq(BatchCertificates.batchUuid, Batches.uuid))
+    .leftJoin(
+      PurchaseOrders,
+      eq(BatchCertificates.purchaseOrderUuid, PurchaseOrders.uuid),
+    )
+    .leftJoin(Companies, eq(Batches.supplierUuid, Companies.uuid))
+    .leftJoin(Products, eq(Batches.productUuid, Products.uuid))
+    .where(eq(BatchCertificates.uuid, uuid))
+    .limit(1);
+
+  if (!row) {
+    return null;
+  }
+
+  const { certificate, ...joined } = row;
+
+  return { ...certificate, ...joined };
 };
 
 // Opens the certificate every registered batch is owed.

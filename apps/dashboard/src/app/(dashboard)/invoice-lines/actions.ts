@@ -22,6 +22,12 @@ export type InvoiceLineItem = SelectInvoiceItems & {
   lineNumber: SelectOrderItems["lineNumber"] | null;
 };
 
+export type InvoiceLineDetail = InvoiceLineItem & {
+  invoiceDocumentType: SelectInvoices["documentType"] | null;
+  companyUuid: SelectCompanies["uuid"] | null;
+  orderUuid: SelectOrderItems["orderUuid"] | null;
+};
+
 export const getInvoiceLines = async (): Promise<InvoiceLineItem[]> => {
   try {
     return await db
@@ -43,5 +49,41 @@ export const getInvoiceLines = async (): Promise<InvoiceLineItem[]> => {
       .orderBy(desc(Invoices.invoiceDate));
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch invoice lines"));
+  }
+};
+
+/**
+ * One invoice line with the invoice, customer, product and order line behind it.
+ * The money and weight are the line's own snapshot, taken at invoicing.
+ */
+export const getInvoiceLineDetail = async (
+  uuid: string,
+): Promise<InvoiceLineDetail | null> => {
+  try {
+    const [row] = await db
+      .select({
+        ...getTableColumns(InvoiceItems),
+        invoiceId: Invoices.id,
+        invoiceDate: Invoices.invoiceDate,
+        invoiceDocumentType: Invoices.documentType,
+        customerName: Companies.companyName,
+        companyUuid: Companies.uuid,
+        vatNumber: Companies.vatNumber,
+        productCode: Products.productCode,
+        productName: Products.name,
+        lineNumber: OrderItems.lineNumber,
+        orderUuid: OrderItems.orderUuid,
+      })
+      .from(InvoiceItems)
+      .leftJoin(Invoices, eq(InvoiceItems.invoiceUuid, Invoices.uuid))
+      .leftJoin(Companies, eq(Invoices.companyUuid, Companies.uuid))
+      .leftJoin(OrderItems, eq(InvoiceItems.orderItemUuid, OrderItems.uuid))
+      .leftJoin(Products, eq(InvoiceItems.productUuid, Products.uuid))
+      .where(eq(InvoiceItems.uuid, uuid))
+      .limit(1);
+
+    return row ?? null;
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch invoice line"));
   }
 };

@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { ContactPersonCustomerProspectRow } from "@/app/(dashboard)/contact-persons-customers-and-prospects/actions";
 import {
   Table,
@@ -290,7 +292,16 @@ export const ContactPersonsCustomersAndProspectsTable = ({ rows }: Props) => {
       case "initials":
         return <TableCell key={key}>{row.initials ?? "—"}</TableCell>;
       case "firstName":
-        return <TableCell key={key}>{row.firstName ?? "—"}</TableCell>;
+        return (
+          <TableCell key={key} className="font-medium">
+            <Link
+              href={`/contacts/${row.uuid}`}
+              className="text-primary hover:underline"
+            >
+              {row.firstName ?? "View contact"}
+            </Link>
+          </TableCell>
+        );
       case "lastName":
         return <TableCell key={key}>{row.lastName ?? "—"}</TableCell>;
       default:

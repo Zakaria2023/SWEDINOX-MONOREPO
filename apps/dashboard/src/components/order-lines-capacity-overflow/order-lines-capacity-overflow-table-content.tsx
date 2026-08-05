@@ -102,7 +102,12 @@ export const OrderLinesCapacityOverflowTable = ({ rows }: Props) => (
           rows.map((row) => (
             <TableRow key={row.uuid}>
               <TableCell className="font-medium">
-                {orDash(row.action)}
+                <Link
+                  href={`/order-lines-capacity-overflow/${row.uuid}`}
+                  className="text-primary hover:underline"
+                >
+                  {row.action ?? `Overflow #${row.id}`}
+                </Link>
               </TableCell>
               <TableCell className="whitespace-nowrap">
                 {row.orderUuid ? (

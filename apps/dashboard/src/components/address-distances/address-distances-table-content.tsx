@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { AddressDistanceListItem } from "@/app/(dashboard)/address-distances/actions";
 import {
   Table,
@@ -60,7 +61,16 @@ export const AddressDistancesTable = ({ addressDistances }: Props) => {
       case "country":
         return <TableCell key={key}>{row.country ?? fallback}</TableCell>;
       case "city":
-        return <TableCell key={key}>{row.city ?? fallback}</TableCell>;
+        return (
+          <TableCell key={key} className="font-medium">
+            <Link
+              href={`/address-distances/${row.uuid}`}
+              className="text-primary hover:underline"
+            >
+              {row.city ?? fallback}
+            </Link>
+          </TableCell>
+        );
       case "street":
         return <TableCell key={key}>{row.street ?? fallback}</TableCell>;
       case "postalCode":

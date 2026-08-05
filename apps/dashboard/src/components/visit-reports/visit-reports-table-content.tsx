@@ -95,7 +95,7 @@ export const VisitReportsTable = ({
         return (
           <TableCell key={key} className="font-medium">
             <Link
-              href={`/visit-reports/${visitReport.uuid}/edit`}
+              href={`/visit-reports/${visitReport.uuid}`}
               className="text-primary hover:underline"
             >
               {visitReport.companyName}

@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { CommunicationSettingListItem } from "@/app/(dashboard)/communication-settings/actions";
 import {
     Table,
@@ -114,8 +116,13 @@ export const CommunicationSettingsTable = ({
         );
       case "documentType":
         return (
-          <TableCell key={key}>
-            {COMMUNICATION_SETTING_DOCUMENT_TYPE_LABELS[setting.documentType]}
+          <TableCell key={key} className="font-medium">
+            <Link
+              href={`/communication-settings/${setting.id}`}
+              className="text-primary hover:underline"
+            >
+              {COMMUNICATION_SETTING_DOCUMENT_TYPE_LABELS[setting.documentType]}
+            </Link>
           </TableCell>
         );
       case "communicationType":

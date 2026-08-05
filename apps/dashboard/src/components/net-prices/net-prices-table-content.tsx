@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { NetPriceRow } from "@/app/(dashboard)/net-prices/actions";
 import {
   Table,
@@ -65,7 +66,12 @@ export const NetPricesTable = ({ rows }: Props) => (
           rows.map((row) => (
             <TableRow key={row.uuid}>
               <TableCell className="font-medium whitespace-nowrap">
-                {row.contractCode ?? "—"}
+                <Link
+                  href={`/net-prices/${row.uuid}`}
+                  className="text-primary hover:underline"
+                >
+                  {row.contractCode ?? `Net price #${row.id}`}
+                </Link>
               </TableCell>
               <TableCell>{row.contractDescription ?? "—"}</TableCell>
               <TableCell className="text-right">

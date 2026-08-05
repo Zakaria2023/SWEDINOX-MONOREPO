@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { TextCategoryListItem } from "@/app/(dashboard)/text-categories/actions";
 import {
   Table,
@@ -11,7 +12,6 @@ import {
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { buildColumnVisibility } from "@/lib/helpers";
-import Link from "next/link";
 import { useState } from "react";
 
 type ColumnKey =
@@ -69,7 +69,7 @@ export const TextCategoriesTable = ({
         return (
           <TableCell key={key} className="font-medium">
             <Link
-              href={`/text-categories/${category.uuid}/edit`}
+              href={`/text-categories/${category.uuid}`}
               className="text-primary hover:underline"
             >
               {category.name}

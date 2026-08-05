@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { ComplaintLineRow } from "@/app/(dashboard)/complaint-lines/actions";
 import {
   Table,
@@ -74,8 +75,13 @@ export const ComplaintLinesTable = ({ rows }: Props) => (
         ) : (
           rows.map((row) => (
             <TableRow key={row.uuid}>
-              <TableCell className="text-right">
-                {row.reportYear ?? "—"}
+              <TableCell className="text-right font-medium">
+                <Link
+                  href={`/complaint-lines/${row.uuid}`}
+                  className="text-primary hover:underline"
+                >
+                  {row.reportYear ?? `#${row.id}`}
+                </Link>
               </TableCell>
               <TableCell className="text-right">
                 {row.reportMonth ?? "—"}

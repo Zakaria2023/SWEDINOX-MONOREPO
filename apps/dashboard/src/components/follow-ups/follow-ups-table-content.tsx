@@ -55,7 +55,14 @@ export const FollowUpsTable = ({ followUps }: Props) => {
                   "—"
                 )}
               </TableCell>
-              <TableCell>{followUp.date ?? "—"}</TableCell>
+              <TableCell className="font-medium">
+                <Link
+                  href={`/follow-ups/${followUp.uuid}`}
+                  className="text-primary hover:underline"
+                >
+                  {followUp.date ?? `Follow-up #${followUp.id}`}
+                </Link>
+              </TableCell>
               <TableCell>{followUp.by ?? "—"}</TableCell>
               <TableCell>{followUp.contactPerson ?? "—"}</TableCell>
               <TableCell className="max-w-xs truncate">

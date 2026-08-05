@@ -95,7 +95,7 @@ export const WarehousesTable = ({ warehouses }: Props) => {
         return (
           <TableCell key={key} className="font-medium">
             <Link
-              href={`/warehouses/${warehouse.uuid}/edit`}
+              href={`/warehouses/${warehouse.uuid}`}
               className="text-primary hover:underline"
             >
               {warehouse.name}

@@ -94,7 +94,7 @@ export const MachinesTable = ({ machines }: Props) => {
         return (
           <TableCell key={key} className="font-mono font-medium">
             <Link
-              href={`/machines/${machine.uuid}/edit`}
+              href={`/machines/${machine.uuid}`}
               className="text-primary hover:underline"
             >
               {machine.code}

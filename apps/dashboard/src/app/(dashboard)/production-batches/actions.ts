@@ -15,6 +15,11 @@ export type ProductionBatchListItem = SelectProductionBatches & {
   toLocationName: SelectWarehouses["name"] | null;
 };
 
+export type ProductionBatchDetail = ProductionBatchListItem & {
+  machineCode: SelectMachines["code"] | null;
+  machineProduction: SelectMachines["production"] | null;
+};
+
 export const getProductionBatches = async (): Promise<
   ProductionBatchListItem[]
 > => {
@@ -35,4 +40,28 @@ export const getProductionBatches = async (): Promise<
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch production batches"));
   }
+};
+
+/**
+ * One production batch with the machine it ran on and the stock location it was
+ * destined for.
+ */
+export const getProductionBatchDetail = async (
+  uuid: string,
+): Promise<ProductionBatchDetail | null> => {
+  const [row] = await db
+    .select({
+      ...getTableColumns(ProductionBatches),
+      machineName: Machines.name,
+      machineCode: Machines.code,
+      machineProduction: Machines.production,
+      toLocationName: Warehouses.name,
+    })
+    .from(ProductionBatches)
+    .leftJoin(Machines, eq(ProductionBatches.machineUuid, Machines.uuid))
+    .leftJoin(Warehouses, eq(ProductionBatches.toLocationUuid, Warehouses.uuid))
+    .where(eq(ProductionBatches.uuid, uuid))
+    .limit(1);
+
+  return row ?? null;
 };

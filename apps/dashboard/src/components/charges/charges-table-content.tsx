@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { ChargeListItem } from "@/app/(dashboard)/charges/actions";
 import {
   Table,
@@ -49,7 +50,14 @@ export const ChargesTable = ({ charges }: Props) => (
           charges.map((row) => (
             <TableRow key={row.uuid}>
               <TableCell>{row.orderType ?? "—"}</TableCell>
-              <TableCell className="font-medium">{row.code ?? "—"}</TableCell>
+              <TableCell className="font-medium">
+                <Link
+                  href={`/charges/${row.uuid}`}
+                  className="text-primary hover:underline"
+                >
+                  {row.code ?? `Charge #${row.id}`}
+                </Link>
+              </TableCell>
               <TableCell>{row.creationDate ?? "—"}</TableCell>
               <TableCell>{row.deliveryDate ?? "—"}</TableCell>
               <TableCell>{row.revenueGroupName ?? "—"}</TableCell>

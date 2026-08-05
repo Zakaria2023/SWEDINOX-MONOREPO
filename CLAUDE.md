@@ -136,6 +136,46 @@ This is a pnpm + Turborepo repo built on Next.js 16. Today it holds a single app
   const Card = ({ title }: CardProps) => <div>{title}</div>;
   ```
 
+## Type Placement
+
+- This applies to **every** `.ts`/`.tsx` file, not just components: all `type` declarations live together in one block at the top of the file, directly below the imports and above every `const`/function in that file. Never interleave a type between functions, and never place a type directly above the one function that happens to use it.
+- This includes `actions.ts` files. When adding a new action to an existing `actions.ts`, its DTO types go at the **bottom of the existing type block at the top**, not next to the new function.
+- Module-level constants also belong above the functions — put them directly below the imports, before the type block.
+
+  ```ts
+  // ❌ Bad — each type sits next to the function that uses it
+  export type OrderListItem = SelectOrders & { customerName: string | null };
+
+  export const getOrders = async (): Promise<OrderListItem[]> => {
+    // ...
+  };
+
+  export type OrderDetail = OrderListItem & { items: OrderItemRow[] };
+
+  export const getOrderDetail = async (
+    uuid: string,
+  ): Promise<OrderDetail | null> => {
+    // ...
+  };
+
+  // ✅ Good — one type block at the top, then the functions
+  const ORDER_ITEM_LIMIT = 100;
+
+  export type OrderListItem = SelectOrders & { customerName: string | null };
+
+  export type OrderDetail = OrderListItem & { items: OrderItemRow[] };
+
+  export const getOrders = async (): Promise<OrderListItem[]> => {
+    // ...
+  };
+
+  export const getOrderDetail = async (
+    uuid: string,
+  ): Promise<OrderDetail | null> => {
+    // ...
+  };
+  ```
+
 ## Icons
 
 - Never use inline `<svg>` elements for icons. Always use [`lucide-react`](https://lucide.dev) instead.

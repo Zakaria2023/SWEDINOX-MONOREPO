@@ -90,7 +90,7 @@ export const LocationsTable = ({ locations }: Props) => {
         return (
           <TableCell key={key} className="font-medium">
             <Link
-              href={`/locations/${location.uuid}/edit`}
+              href={`/warehouses/${location.uuid}`}
               className="text-primary hover:underline"
             >
               {location.name}

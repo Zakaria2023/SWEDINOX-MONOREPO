@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   DeliveryLineItem,
@@ -99,7 +100,14 @@ export const DeliveriesTable = ({ lines }: Props) => (
         ) : (
           lines.map((row) => (
             <TableRow key={row.uuid}>
-              <TableCell>{row.orderCategory ?? "—"}</TableCell>
+              <TableCell className="font-medium">
+                <Link
+                  href={`/order-lines/${row.uuid}`}
+                  className="text-primary hover:underline"
+                >
+                  {row.orderCategory ?? "View line"}
+                </Link>
+              </TableCell>
               <TableCell>
                 {row.lineStatus
                   ? ORDER_LINE_STATUS_LABELS[row.lineStatus]

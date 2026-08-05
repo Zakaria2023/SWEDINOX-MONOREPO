@@ -17,6 +17,36 @@ export type PickStatisticListItem = SelectPickStatistics & {
   avgKgPerPick: number; // kgPicked / picks — computed
 };
 
+/**
+ * One month's pick statistics for a product, with the per-pick averages derived
+ * the same way the overview derives them.
+ */
+export const getPickStatisticDetail = async (
+  uuid: string,
+): Promise<PickStatisticListItem | null> => {
+  const [row] = await db
+    .select({
+      ...getTableColumns(PickStatistics),
+      productCode: Products.productCode,
+      productName: Products.name,
+      stockProduct: Products.stockProduct,
+    })
+    .from(PickStatistics)
+    .leftJoin(Products, eq(PickStatistics.productUuid, Products.uuid))
+    .where(eq(PickStatistics.uuid, uuid))
+    .limit(1);
+
+  if (!row) {
+    return null;
+  }
+
+  return {
+    ...row,
+    avgQtyPerPick: row.picks > 0 ? Number(row.quantityPicked) / row.picks : 0,
+    avgKgPerPick: row.picks > 0 ? Number(row.kgPicked) / row.picks : 0,
+  };
+};
+
 export const getPickStatistics = async (): Promise<PickStatisticListItem[]> => {
   try {
     const rows = await db

@@ -7,15 +7,20 @@ import {
   CounterOrderItems,
   CounterOrders,
   CounterOrderSurcharges,
+  Contacts,
   db,
   InsertCounterOrderItems,
   InsertCounterOrders,
   InsertCounterOrderSurcharges,
   InsertTexts,
+  Products,
   SelectCompanies,
   SelectCompanyAddresses,
+  SelectContacts,
   SelectContracts,
+  SelectCounterOrderItems,
   SelectCounterOrders,
+  SelectProducts,
   Texts,
 } from "@/db";
 import { generateUuid } from "@/lib/helpers";
@@ -67,6 +72,19 @@ export type ContractOption = Pick<
   "uuid" | "code" | "description" | "contractType"
 >;
 
+export type CounterOrderItemRow = SelectCounterOrderItems & {
+  productCode: SelectProducts["productCode"] | null;
+  productName: SelectProducts["name"] | null;
+};
+
+export type CounterOrderDetail = CounterOrderListItem & {
+  companyId: SelectCompanies["id"] | null;
+  contactName: SelectContacts["firstName"] | null;
+  deliveryAddressCity: SelectCompanyAddresses["city"] | null;
+  deliveryAddressStreet: SelectCompanyAddresses["streetAndNo"] | null;
+  items: CounterOrderItemRow[];
+};
+
 export const getCounterOrders = async (): Promise<CounterOrderListItem[]> =>
   db
     .select({
@@ -76,6 +94,50 @@ export const getCounterOrders = async (): Promise<CounterOrderListItem[]> =>
     .from(CounterOrders)
     .innerJoin(Companies, eq(Companies.uuid, CounterOrders.companyUuid))
     .orderBy(desc(CounterOrders.createdAt));
+
+/**
+ * One counter order with its customer, contact, delivery address and lines —
+ * everything the order records.
+ */
+export const getCounterOrderDetail = async (
+  uuid: string,
+): Promise<CounterOrderDetail | null> => {
+  const [order] = await db
+    .select({
+      ...getTableColumns(CounterOrders),
+      companyName: Companies.companyName,
+      companyId: Companies.id,
+      contactName: Contacts.firstName,
+      deliveryAddressCity: CompanyAddresses.city,
+      deliveryAddressStreet: CompanyAddresses.streetAndNo,
+    })
+    .from(CounterOrders)
+    .innerJoin(Companies, eq(Companies.uuid, CounterOrders.companyUuid))
+    .leftJoin(Contacts, eq(Contacts.uuid, CounterOrders.contactUuid))
+    .leftJoin(
+      CompanyAddresses,
+      eq(CompanyAddresses.uuid, CounterOrders.deliveryAddressUuid),
+    )
+    .where(eq(CounterOrders.uuid, uuid))
+    .limit(1);
+
+  if (!order) {
+    return null;
+  }
+
+  const items = await db
+    .select({
+      ...getTableColumns(CounterOrderItems),
+      productCode: Products.productCode,
+      productName: Products.name,
+    })
+    .from(CounterOrderItems)
+    .leftJoin(Products, eq(Products.uuid, CounterOrderItems.productUuid))
+    .where(eq(CounterOrderItems.counterOrderUuid, uuid))
+    .orderBy(asc(CounterOrderItems.lineNumber));
+
+  return { ...order, items };
+};
 
 export const getAddressesByCompanyUuid = async (
   companyUuid: string,

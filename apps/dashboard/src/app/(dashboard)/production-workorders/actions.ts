@@ -40,6 +40,16 @@ export type ProductionWorkOrderLineItem = SelectProductionWorkOrderLines & {
   productName: SelectProducts["name"] | null;
 };
 
+export type ProductionWorkOrderLineDetail = ProductionWorkOrderLineItem & {
+  workOrderStatus: SelectProductionWorkOrders["status"] | null;
+  workOrderId: SelectProductionWorkOrders["id"] | null;
+  machineUuid: SelectMachines["uuid"] | null;
+  machineCode: SelectMachines["code"] | null;
+  // The catalogue product's own code, kept apart from the line's snapshot in
+  // `productCode` so a product later recoded doesn't appear to rewrite the run.
+  catalogProductCode: SelectProducts["productCode"] | null;
+};
+
 export const getProductionWorkOrderLines = async (): Promise<
   ProductionWorkOrderLineItem[]
 > => {
@@ -73,6 +83,44 @@ export const getProductionWorkOrderLines = async (): Promise<
       describeError(error, "Failed to fetch production work orders"),
     );
   }
+};
+
+/**
+ * One production work-order line with the work order it sits under, the machine
+ * that runs it, and the customer and product it is for.
+ */
+export const getProductionWorkOrderLineDetail = async (
+  uuid: string,
+): Promise<ProductionWorkOrderLineDetail | null> => {
+  const [row] = await db
+    .select({
+      ...getTableColumns(ProductionWorkOrderLines),
+      option: ProductionWorkOrders.option,
+      workOrderDate: ProductionWorkOrders.date,
+      workOrderStatus: ProductionWorkOrders.status,
+      workOrderId: ProductionWorkOrders.id,
+      machineUuid: Machines.uuid,
+      machineName: Machines.name,
+      machineCode: Machines.code,
+      companyName: Companies.companyName,
+      productName: Products.name,
+      catalogProductCode: Products.productCode,
+    })
+    .from(ProductionWorkOrderLines)
+    .innerJoin(
+      ProductionWorkOrders,
+      eq(ProductionWorkOrderLines.workOrderUuid, ProductionWorkOrders.uuid),
+    )
+    .leftJoin(Machines, eq(ProductionWorkOrders.machineUuid, Machines.uuid))
+    .leftJoin(
+      Companies,
+      eq(ProductionWorkOrderLines.companyUuid, Companies.uuid),
+    )
+    .leftJoin(Products, eq(ProductionWorkOrderLines.productUuid, Products.uuid))
+    .where(eq(ProductionWorkOrderLines.uuid, uuid))
+    .limit(1);
+
+  return row ?? null;
 };
 
 // Turns the order lines into production work-order lines to run — one line per

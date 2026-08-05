@@ -29,6 +29,7 @@ import {
   StockMode,
   StockUnit,
   StockMovementType,
+  TextUsageCategory,
   TransporterPriceUnit,
   VatCode,
 } from "./enums";
@@ -39,6 +40,7 @@ import {
   ORDER_LINE_STATUS_LABELS,
   PURCHASE_ORDER_STATUS_LABELS,
   SALES_REPRESENTATIVE_LABELS,
+  TEXT_USAGE_CATEGORY_LABELS,
 } from "./labels";
 
 /**
@@ -2498,6 +2500,110 @@ export const invoiceSummaryFromSnapshot = (
       Number(invoice.invoiceAmountExclVat ?? 0)
     ).toFixed(2),
   });
+
+// ---------------------------------------------------------------------------
+// Text usage categories
+//
+// `Texts` records which documents a text block may be printed on as one boolean
+// column per document, rather than as a list. The mapping between the enum and
+// those columns is needed by every screen that reads a text — the overview
+// prints a checkbox per column, the detail screen prints the enabled ones as a
+// list — so it lives here instead of being re-typed at each call site.
+// ---------------------------------------------------------------------------
+
+/**
+ * The boolean columns on `Texts` that carry the usage categories. Declared
+ * structurally so this module stays free of a database import; `SelectTexts`
+ * satisfies it.
+ */
+export type TextUsageFlags = {
+  visitReport: boolean | null;
+  purchaseQuoteRequest: boolean | null;
+  purchaseOrder: boolean | null;
+  purchaseOrderToolTip: boolean | null;
+  purchaseReturnOrder: boolean | null;
+  salesQuote: boolean | null;
+  salesOrder: boolean | null;
+  salesOrderToolTip: boolean | null;
+  salesInvoice: boolean | null;
+  warehouseOrder: boolean | null;
+  productionOrder: boolean | null;
+  loadlist: boolean | null;
+  waybill: boolean | null;
+  rideList: boolean | null;
+  customerLabel: boolean | null;
+  transportPlanning: boolean | null;
+  websiteInAdvance: boolean | null;
+  websiteAfter: boolean | null;
+};
+
+export type TextUsageCategoryField = keyof TextUsageFlags;
+
+/** Each usage category paired with the `Texts` column that records it. */
+export const TEXT_USAGE_CATEGORY_FIELDS: Array<{
+  key: TextUsageCategory;
+  field: TextUsageCategoryField;
+}> = [
+  { key: "visit_report", field: "visitReport" },
+  { key: "purchase_quote_request", field: "purchaseQuoteRequest" },
+  { key: "purchase_order", field: "purchaseOrder" },
+  { key: "purchase_order_tool_tip", field: "purchaseOrderToolTip" },
+  { key: "purchase_return_order", field: "purchaseReturnOrder" },
+  { key: "sales_quote", field: "salesQuote" },
+  { key: "sales_order", field: "salesOrder" },
+  { key: "sales_order_tool_tip", field: "salesOrderToolTip" },
+  { key: "sales_invoice", field: "salesInvoice" },
+  { key: "warehouse_order", field: "warehouseOrder" },
+  { key: "production_order", field: "productionOrder" },
+  { key: "loadlist", field: "loadlist" },
+  { key: "waybill", field: "waybill" },
+  { key: "ride_list", field: "rideList" },
+  { key: "customer_label", field: "customerLabel" },
+  { key: "transport_planning", field: "transportPlanning" },
+  { key: "website_in_advance", field: "websiteInAdvance" },
+  { key: "website_after", field: "websiteAfter" },
+];
+
+/**
+ * The labels of the documents a text block is switched on for, in the order the
+ * categories are declared. Empty when the text is not printed anywhere.
+ */
+export const activeTextUsageCategories = (text: TextUsageFlags): string[] =>
+  TEXT_USAGE_CATEGORY_FIELDS.filter(({ field }) => text[field]).map(
+    ({ key }) => TEXT_USAGE_CATEGORY_LABELS[key],
+  );
+
+/**
+ * The boolean flags an order carries instead of a single "type" column. An order
+ * can be several of these at once — a consignment order collected by the
+ * customer is both — which is why there is no one enum for it.
+ */
+export type OrderTypeFlags = {
+  isPickup: boolean | null;
+  isIncidental: boolean | null;
+  isConsignment: boolean | null;
+  isInternalProduction: boolean | null;
+  isCustomerMaterial: boolean | null;
+  isOverlength: boolean | null;
+};
+
+/**
+ * How an order describes its own type, for the production and logistics reports
+ * that print it as one column: every flag that is set, comma separated, or
+ * "Standard" when none is.
+ */
+export const describeOrderType = (flags: OrderTypeFlags): string => {
+  const labelled: Array<[boolean | null, string]> = [
+    [flags.isPickup, "Pickup"],
+    [flags.isIncidental, "Incidental"],
+    [flags.isConsignment, "Consignment"],
+    [flags.isInternalProduction, "Internal production"],
+    [flags.isCustomerMaterial, "Customer material"],
+    [flags.isOverlength, "Overlength"],
+  ];
+  const active = labelled.filter(([on]) => on).map(([, label]) => label);
+  return active.length > 0 ? active.join(", ") : "Standard";
+};
 
 /**
  * Whether a purchase quote may still be edited.

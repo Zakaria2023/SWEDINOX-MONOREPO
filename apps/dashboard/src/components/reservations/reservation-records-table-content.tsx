@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { ReservationRecord } from "@/app/(dashboard)/reservations/actions";
 import {
   Table,
@@ -50,7 +51,12 @@ export const ReservationRecordsTable = ({ records }: Props) => (
           records.map((row) => (
             <TableRow key={row.uuid}>
               <TableCell className="font-medium">
-                {row.productCode ?? "—"}
+                <Link
+                  href={`/order-lines/${row.uuid}`}
+                  className="text-primary hover:underline"
+                >
+                  {row.productCode ?? "View line"}
+                </Link>
               </TableCell>
               <TableCell>{row.productName ?? "—"}</TableCell>
               <TableCell className="text-center">

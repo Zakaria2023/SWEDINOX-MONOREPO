@@ -12,7 +12,7 @@ import { OrderItems, SelectOrderItems } from "@/db/schema/order-items";
 import { Orders, SelectOrders } from "@/db/schema/orders";
 import { Products, SelectProducts } from "@/db/schema/products";
 import { describeError, resolveOrderTypeLabel } from "@/lib/helpers";
-import { desc, eq, getTableColumns } from "drizzle-orm";
+import { desc, eq, getTableColumns, SQL } from "drizzle-orm";
 
 // An order line that pushes a capacity check past its ceiling. The row pulls
 // from four places at once, which is exactly why the reference grid is so wide:
@@ -71,12 +71,13 @@ export type CapacityOverflowRow = SelectOrderLineCapacityOverflows & {
   transportDate: SelectNesting["transportDate"] | null;
 };
 
-export const getOrderLinesCapacityOverflow = async (): Promise<
-  CapacityOverflowRow[]
-> => {
-  try {
-    const rows = await db
-      .select({
+// The overview and the detail screen show the same row, so they share one query
+// and differ only in the filter applied. `where` is left off for the overview.
+const selectCapacityOverflows = async (
+  where?: SQL,
+): Promise<CapacityOverflowRow[]> => {
+  const base = db
+    .select({
         ...getTableColumns(OrderLineCapacityOverflows),
         orderId: Orders.id,
         orderUuid: OrderItems.orderUuid,
@@ -129,35 +130,64 @@ export const getOrderLinesCapacityOverflow = async (): Promise<
         deliveryStatus: Nesting.deliveryStatus,
         optionQty: Nesting.optionQty,
         transportDate: Nesting.transportDate,
-      })
-      .from(OrderLineCapacityOverflows)
-      .innerJoin(
-        OrderItems,
-        eq(OrderLineCapacityOverflows.orderItemUuid, OrderItems.uuid),
-      )
-      .leftJoin(Orders, eq(OrderItems.orderUuid, Orders.uuid))
-      .leftJoin(Companies, eq(Orders.companyUuid, Companies.uuid))
-      .leftJoin(Products, eq(OrderItems.productUuid, Products.uuid))
-      .leftJoin(
-        CapacityChecks,
-        eq(OrderLineCapacityOverflows.capacityCheckUuid, CapacityChecks.uuid),
-      )
-      .leftJoin(Nesting, eq(Nesting.orderItemUuid, OrderItems.uuid))
-      .orderBy(desc(CapacityChecks.checkDate));
+    })
+    .from(OrderLineCapacityOverflows)
+    .innerJoin(
+      OrderItems,
+      eq(OrderLineCapacityOverflows.orderItemUuid, OrderItems.uuid),
+    )
+    .leftJoin(Orders, eq(OrderItems.orderUuid, Orders.uuid))
+    .leftJoin(Companies, eq(Orders.companyUuid, Companies.uuid))
+    .leftJoin(Products, eq(OrderItems.productUuid, Products.uuid))
+    .leftJoin(
+      CapacityChecks,
+      eq(OrderLineCapacityOverflows.capacityCheckUuid, CapacityChecks.uuid),
+    )
+    .leftJoin(Nesting, eq(Nesting.orderItemUuid, OrderItems.uuid));
 
-    return rows.map((row) => ({
-      ...row,
-      orderType: resolveOrderTypeLabel({
-        isPickup: row.isPickup,
-        isIncidental: row.isIncidental,
-        isConsignment: row.isConsignment,
-        isInternalProduction: row.isInternalProduction,
-        isCustomerMaterial: row.isCustomerMaterial,
-      }),
-    }));
+  const rows = await (where ? base.where(where) : base).orderBy(
+    desc(CapacityChecks.checkDate),
+  );
+
+  return rows.map((row) => ({
+    ...row,
+    orderType: resolveOrderTypeLabel({
+      isPickup: row.isPickup,
+      isIncidental: row.isIncidental,
+      isConsignment: row.isConsignment,
+      isInternalProduction: row.isInternalProduction,
+      isCustomerMaterial: row.isCustomerMaterial,
+    }),
+  }));
+};
+
+export const getOrderLinesCapacityOverflow = async (): Promise<
+  CapacityOverflowRow[]
+> => {
+  try {
+    return await selectCapacityOverflows();
   } catch (error) {
     throw new Error(
       describeError(error, "Failed to fetch order lines capacity overflow"),
+    );
+  }
+};
+
+/**
+ * One recorded capacity overflow: the decision taken, plus the order line, the
+ * capacity check it broke and the sawing plan behind it.
+ */
+export const getCapacityOverflowDetail = async (
+  uuid: string,
+): Promise<CapacityOverflowRow | null> => {
+  try {
+    const [row] = await selectCapacityOverflows(
+      eq(OrderLineCapacityOverflows.uuid, uuid),
+    );
+    return row ?? null;
+  } catch (error) {
+    throw new Error(
+      describeError(error, "Failed to fetch capacity overflow"),
     );
   }
 };

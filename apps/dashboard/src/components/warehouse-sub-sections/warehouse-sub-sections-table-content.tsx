@@ -93,7 +93,7 @@ export const WarehouseSubSectionsTable = ({ subSections }: Props) => {
         return (
           <TableCell key={key} className="font-medium">
             <Link
-              href={`/warehouse-sub-sections/${subSection.uuid}/edit`}
+              href={`/warehouses/${subSection.uuid}`}
               className="text-primary hover:underline"
             >
               {subSection.name}

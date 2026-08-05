@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { InvoiceLineItem } from "@/app/(dashboard)/invoice-lines/actions";
 import {
   Table,
@@ -46,7 +47,12 @@ export const InvoiceLinesTable = ({ lines }: Props) => (
           lines.map((row) => (
             <TableRow key={row.uuid}>
               <TableCell className="text-right font-medium">
-                {row.invoiceId ?? "—"}
+                <Link
+                  href={`/invoice-lines/${row.uuid}`}
+                  className="text-primary hover:underline"
+                >
+                  {row.invoiceId ?? `#${row.id}`}
+                </Link>
               </TableCell>
               <TableCell>{formatDateValue(row.invoiceDate)}</TableCell>
               <TableCell className="text-right">

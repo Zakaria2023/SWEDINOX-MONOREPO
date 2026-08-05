@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { OrderLineRow } from "@/app/(dashboard)/order-lines/actions";
 import {
   Table,
@@ -55,10 +56,15 @@ export const OrderLinesTable = ({ rows }: Props) => (
             </TableCell>
           </TableRow>
         ) : (
-          rows.map((row, index) => (
-            <TableRow key={index}>
-              <TableCell className="whitespace-nowrap">
-                {formatDateValue(row.createdAt)}
+          rows.map((row) => (
+            <TableRow key={row.uuid}>
+              <TableCell className="font-medium whitespace-nowrap">
+                <Link
+                  href={`/order-lines/${row.uuid}`}
+                  className="text-primary hover:underline"
+                >
+                  {formatDateValue(row.createdAt)}
+                </Link>
               </TableCell>
               <TableCell className="whitespace-nowrap">
                 {formatDateValue(row.deliveryDate)}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   TransportWorkOrderLineItem,
@@ -94,7 +95,12 @@ export const TransportWorkOrdersTable = ({ lines }: Props) => (
           lines.map((row) => (
             <TableRow key={row.uuid}>
               <TableCell className="text-right font-medium">
-                {row.tripNumber ?? "—"}
+                <Link
+                  href={`/transport-workorders/${row.uuid}`}
+                  className="text-primary hover:underline"
+                >
+                  {row.tripNumber ?? `#${row.id}`}
+                </Link>
               </TableCell>
               <TableCell>{row.workOrderDate ?? "—"}</TableCell>
               <TableCell>{row.vehicle ?? "—"}</TableCell>
