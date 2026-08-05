@@ -16,7 +16,7 @@ const AddWarehousePage = async () => {
   );
 
   return (
-    <div className="max-w-4xl space-y-4">
+    <div className="space-y-4">
       <PageHeading title="Add Warehouse" />
       <WarehouseForm
         existingWarehouses={existingWarehouses}

@@ -32,7 +32,7 @@ const EditPurchaseQuotePage = async ({ params }: Props) => {
     : "Edit Purchase Quote";
 
   return (
-    <div className="max-w-4xl space-y-4">
+    <div className="space-y-4">
       <div>
         <Link
           href={`/purchase-quotes/${uuid}`}

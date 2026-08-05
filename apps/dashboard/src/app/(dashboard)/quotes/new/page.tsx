@@ -14,7 +14,7 @@ const NewQuotePage = async () => {
   ]);
 
   return (
-    <div className="max-w-6xl space-y-4">
+    <div className="space-y-4">
       <PageHeading title="New Quote" />
       <QuoteForm
         companies={companies}

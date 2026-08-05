@@ -41,7 +41,7 @@ const EditProductPage = async ({ params }: Props) => {
   }
 
   return (
-    <div className="max-w-6xl space-y-4">
+    <div className="space-y-4">
       <div>
         <Link
           href={`/products/${uuid}`}

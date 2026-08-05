@@ -6,7 +6,7 @@ const AddWarehouseSubSectionPage = async () => {
   const allItems = await getAllWarehouseItemsForSelect();
 
   return (
-    <div className="max-w-4xl space-y-4">
+    <div className="space-y-4">
       <PageHeading title="Add Warehouse Sub Section" />
       <WarehouseSubSectionForm allItems={allItems} />
     </div>

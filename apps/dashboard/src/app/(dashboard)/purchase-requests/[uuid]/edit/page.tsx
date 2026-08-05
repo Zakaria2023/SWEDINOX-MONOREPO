@@ -40,7 +40,7 @@ const EditPurchaseRequestPage = async ({ params }: Props) => {
   ];
 
   return (
-    <div className="max-w-5xl space-y-4">
+    <div className="space-y-4">
       <div>
         <Link
           href={`/purchase-requests/${uuid}`}

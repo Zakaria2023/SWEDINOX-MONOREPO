@@ -19,7 +19,7 @@ const NewProductPage = async () => {
     ]);
 
   return (
-    <div className="max-w-6xl space-y-4">
+    <div className="space-y-4">
       <PageHeading title="Add Product" />
       <ProductForm
         productGroups={productGroups}
