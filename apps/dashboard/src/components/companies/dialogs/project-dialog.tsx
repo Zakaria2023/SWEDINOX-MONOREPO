@@ -12,7 +12,7 @@ import {
 import { Input } from "@/components/shadcn/input";
 import { Select } from "@/components/shadcn/select";
 import { DialogFormFooter } from "@/components/ui/dialog-form-footer";
-import { FormLabel } from "@/components/ui/form-field";
+import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import { FolderOpen } from "lucide-react";
 import { FormEventHandler } from "react";
 import { Controller, UseFormReturn } from "react-hook-form";
@@ -72,9 +72,15 @@ export const ProjectDialog = ({
             <FormLabel htmlFor="proj-revenue">Revenue</FormLabel>
             <Input
               id="proj-revenue"
+              type="number"
+              step="0.01"
+              min="0"
+              inputMode="decimal"
+              autoComplete="off"
               {...form.register("revenue")}
-              placeholder="Revenue"
+              placeholder="0.00"
             />
+            <FormFieldError message={form.formState.errors.revenue?.message} />
           </div>
           <div>
             <FormLabel htmlFor="proj-contract">Contract</FormLabel>

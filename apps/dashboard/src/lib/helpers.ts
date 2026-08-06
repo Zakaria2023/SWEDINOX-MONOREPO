@@ -80,6 +80,35 @@ export const toDecimal = (
   fallback: string,
 ): string => (value && value.trim() !== "" ? value : fallback);
 
+/**
+ * The shape a hand-typed money field has to have before it can be stored in a
+ * `decimal` column: an optional sign, digits, and at most two decimals after a
+ * dot or a comma. Shared by the zod schemas that validate such a field and by
+ * `toDecimalAmount` below, so the check and the conversion can't drift apart.
+ */
+export const DECIMAL_AMOUNT_PATTERN = /^-?\d+(?:[.,]\d{1,2})?$/;
+
+/**
+ * A hand-typed money field as the plain decimal string MySQL accepts: trimmed,
+ * with a comma decimal separator rewritten as a dot.
+ *
+ * A blank field — or one holding something that isn't an amount at all —
+ * becomes `fallback`. Validation should have caught the latter first; this is
+ * the second line of defence, because a stray string reaching a `decimal`
+ * column fails the whole insert, and on the company form that insert is one
+ * statement inside a transaction that creates everything else too.
+ */
+export const toDecimalAmount = (
+  value: string | null | undefined,
+  fallback = "0.00",
+): string => {
+  const trimmed = (value ?? "").trim();
+  if (!DECIMAL_AMOUNT_PATTERN.test(trimmed)) {
+    return fallback;
+  }
+  return trimmed.replace(",", ".");
+};
+
 export const toIntOrNull = (value: string | undefined): number | null =>
   value !== undefined && value.trim() !== "" ? Number(value) : null;
 

@@ -8,7 +8,11 @@ import { ProductGroupOption } from "@/app/(dashboard)/product-groups/actions";
 import { ProductOption } from "@/app/(dashboard)/products/actions";
 import { TextCategoryOption } from "@/app/(dashboard)/text-categories/actions";
 import { InsertCompanies } from "@/db/schema/companies";
-import { todayDateString } from "@/lib/helpers";
+import {
+  DECIMAL_AMOUNT_PATTERN,
+  toDecimalAmount,
+  todayDateString,
+} from "@/lib/helpers";
 import {
   addressCategories,
   AddressCategory,
@@ -170,7 +174,13 @@ const mapAddress = (address: CompanyFormValues["address"]) => ({
 const projectSchema = z.object({
   projectName: z.string().optional(),
   endDate: z.string().optional(),
-  revenue: z.string().optional(),
+  revenue: z
+    .string()
+    .optional()
+    .refine(
+      (value) => !value?.trim() || DECIMAL_AMOUNT_PATTERN.test(value.trim()),
+      "Revenue must be an amount, for example 1250.00",
+    ),
   contractUuid: z.string().optional(),
 });
 
@@ -956,7 +966,7 @@ export const useCompanySubmit = ({
         projectName: values.projectName || undefined,
         startingDate: today,
         endDate: values.endDate || undefined,
-        revenue: values.revenue || undefined,
+        revenue: toDecimalAmount(values.revenue),
         contractUuid: values.contractUuid || undefined,
         daysInSystem: 0,
       },
