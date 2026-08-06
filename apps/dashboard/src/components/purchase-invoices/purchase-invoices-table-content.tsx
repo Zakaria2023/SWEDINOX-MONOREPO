@@ -11,8 +11,15 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
+import { TablePagination } from "@/components/ui/table-pagination";
+import { TableSortHeader } from "@/components/ui/table-sort-header";
+import { TableToolbar } from "@/components/ui/table-toolbar";
+import { Paged, TableFilterControl } from "@/lib/table-query";
 import { buildColumnVisibility } from "@/lib/helpers";
-import { INVOICE_PAYMENT_TERM_LABELS, PURCHASE_INVOICE_BLOCK_REASON_LABELS } from "@/lib/labels";
+import {
+  INVOICE_PAYMENT_TERM_LABELS,
+  PURCHASE_INVOICE_BLOCK_REASON_LABELS,
+} from "@/lib/labels";
 import { useState } from "react";
 
 type ColumnKey =
@@ -27,7 +34,11 @@ type ColumnKey =
   | "blocked"
   | "blockReason";
 
-const ALL_COLUMNS: Array<{ key: ColumnKey; label: string; defaultVisible: boolean }> = [
+const ALL_COLUMNS: Array<{
+  key: ColumnKey;
+  label: string;
+  defaultVisible: boolean;
+}> = [
   { key: "id", label: "No.", defaultVisible: true },
   { key: "companyName", label: "Supplier", defaultVisible: true },
   { key: "sentBy", label: "Sent By", defaultVisible: true },
@@ -40,14 +51,29 @@ const ALL_COLUMNS: Array<{ key: ColumnKey; label: string; defaultVisible: boolea
   { key: "blockReason", label: "Block Reason", defaultVisible: true },
 ];
 
-type Props = { invoices: PurchaseInvoiceListItem[] };
+// The columns a header may sort on, matching the keys actions.ts declared.
+const SORTABLE: Partial<Record<ColumnKey, string>> = {
+  companyName: "supplier",
+  invoiceDate: "invoiceDate",
+  expirationDate: "expirationDate",
+  invoiceTotal: "invoiceTotal",
+};
 
-export const PurchaseInvoicesTable = ({ invoices }: Props) => {
-  const [columnVisibility, setColumnVisibility] =
-    useState<Record<ColumnKey, boolean>>(buildColumnVisibility(ALL_COLUMNS));
+type Props = {
+  page: Paged<PurchaseInvoiceListItem>;
+  filters: TableFilterControl[];
+};
+
+export const PurchaseInvoicesTable = ({ page, filters }: Props) => {
+  const [columnVisibility, setColumnVisibility] = useState<
+    Record<ColumnKey, boolean>
+  >(buildColumnVisibility(ALL_COLUMNS));
 
   const toggleColumn = (key: string) =>
-    setColumnVisibility((prev) => ({ ...prev, [key]: !prev[key as ColumnKey] }));
+    setColumnVisibility((prev) => ({
+      ...prev,
+      [key]: !prev[key as ColumnKey],
+    }));
 
   const visibleColumns = ALL_COLUMNS.filter((col) => columnVisibility[col.key]);
 
@@ -65,25 +91,49 @@ export const PurchaseInvoicesTable = ({ invoices }: Props) => {
           </TableCell>
         );
       case "companyName":
-        return <TableCell key={key} className="whitespace-nowrap">{inv.companyName ?? "—"}</TableCell>;
+        return (
+          <TableCell key={key} className="whitespace-nowrap">
+            {inv.companyName ?? "—"}
+          </TableCell>
+        );
       case "sentBy":
         return (
           <TableCell key={key} className="whitespace-nowrap">
-            {[inv.contactFirstName, inv.contactLastName].filter(Boolean).join(" ") || "—"}
+            {[inv.contactFirstName, inv.contactLastName]
+              .filter(Boolean)
+              .join(" ") || "—"}
           </TableCell>
         );
       case "supplierCode":
-        return <TableCell key={key} className="whitespace-nowrap">{inv.supplierCode ?? "—"}</TableCell>;
+        return (
+          <TableCell key={key} className="whitespace-nowrap">
+            {inv.supplierCode ?? "—"}
+          </TableCell>
+        );
       case "invoiceDate":
-        return <TableCell key={key} className="whitespace-nowrap">{inv.invoiceDate?.toLocaleDateString() ?? "—"}</TableCell>;
+        return (
+          <TableCell key={key} className="whitespace-nowrap">
+            {inv.invoiceDate?.toLocaleDateString() ?? "—"}
+          </TableCell>
+        );
       case "expirationDate":
-        return <TableCell key={key} className="whitespace-nowrap">{inv.expirationDate?.toLocaleDateString() ?? "—"}</TableCell>;
+        return (
+          <TableCell key={key} className="whitespace-nowrap">
+            {inv.expirationDate?.toLocaleDateString() ?? "—"}
+          </TableCell>
+        );
       case "invoiceTotal":
-        return <TableCell key={key} className="text-right whitespace-nowrap">€ {inv.invoiceTotal}</TableCell>;
+        return (
+          <TableCell key={key} className="text-right whitespace-nowrap">
+            € {inv.invoiceTotal}
+          </TableCell>
+        );
       case "paymentTerms":
         return (
           <TableCell key={key} className="whitespace-nowrap">
-            {inv.paymentTerms ? INVOICE_PAYMENT_TERM_LABELS[inv.paymentTerms] : "—"}
+            {inv.paymentTerms
+              ? INVOICE_PAYMENT_TERM_LABELS[inv.paymentTerms]
+              : "—"}
           </TableCell>
         );
       case "blocked":
@@ -101,7 +151,9 @@ export const PurchaseInvoicesTable = ({ invoices }: Props) => {
       case "blockReason":
         return (
           <TableCell key={key} className="whitespace-nowrap">
-            {inv.blockReason ? PURCHASE_INVOICE_BLOCK_REASON_LABELS[inv.blockReason] : "—"}
+            {inv.blockReason
+              ? PURCHASE_INVOICE_BLOCK_REASON_LABELS[inv.blockReason]
+              : "—"}
           </TableCell>
         );
     }
@@ -109,32 +161,48 @@ export const PurchaseInvoicesTable = ({ invoices }: Props) => {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <TableToolbar
+        searchPlaceholder="Search supplier invoice number or supplier…"
+        filters={filters}
+      >
         <ColumnSelector
-          columns={ALL_COLUMNS.map((col) => ({ key: col.key, label: col.label }))}
+          columns={ALL_COLUMNS.map((col) => ({
+            key: col.key,
+            label: col.label,
+          }))}
           visibility={columnVisibility}
           onToggle={toggleColumn}
         />
-      </div>
+      </TableToolbar>
 
       <div>
         <Table>
           <TableHeader>
             <TableRow>
-              {visibleColumns.map((col) => (
-                <TableHead key={col.key}>{col.label}</TableHead>
-              ))}
+              {visibleColumns.map((col) => {
+                const sortKey = SORTABLE[col.key];
+                return sortKey ? (
+                  <TableSortHeader key={col.key} sortKey={sortKey}>
+                    {col.label}
+                  </TableSortHeader>
+                ) : (
+                  <TableHead key={col.key}>{col.label}</TableHead>
+                );
+              })}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {invoices.length === 0 ? (
+            {page.rows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={visibleColumns.length} className="h-24 text-center">
+                <TableCell
+                  colSpan={visibleColumns.length}
+                  className="h-24 text-center"
+                >
                   No purchase invoices found.
                 </TableCell>
               </TableRow>
             ) : (
-              invoices.map((inv) => (
+              page.rows.map((inv) => (
                 <TableRow key={inv.uuid}>
                   {visibleColumns.map((col) => renderCell(inv, col.key))}
                 </TableRow>
@@ -143,6 +211,11 @@ export const PurchaseInvoicesTable = ({ invoices }: Props) => {
           </TableBody>
         </Table>
       </div>
+      <TablePagination
+        page={page}
+        singular="purchase invoice"
+        plural="purchase invoices"
+      />
     </div>
   );
 };

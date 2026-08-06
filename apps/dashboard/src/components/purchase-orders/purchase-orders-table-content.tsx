@@ -10,28 +10,39 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { TablePagination } from "@/components/ui/table-pagination";
+import { TableSortHeader } from "@/components/ui/table-sort-header";
+import { TableToolbar } from "@/components/ui/table-toolbar";
 import { PURCHASE_ORDER_TYPE_LABELS } from "@/lib/labels";
 import { PurchaseOrderType } from "@/lib/enums";
+import { Paged, TableFilterControl } from "@/lib/table-query";
 
 type Props = {
-  purchaseOrders: PurchaseOrderListItem[];
+  page: Paged<PurchaseOrderListItem>;
+  filters: TableFilterControl[];
 };
 
-export const PurchaseOrdersTable = ({ purchaseOrders }: Props) => (
-  <div>
+export const PurchaseOrdersTable = ({ page, filters }: Props) => (
+  <div className="space-y-4">
+    <TableToolbar
+      searchPlaceholder="Search reference or supplier…"
+      filters={filters}
+    />
     <Table>
       <TableHeader>
         <TableRow>
           <TableHead>#</TableHead>
-          <TableHead>Supplier</TableHead>
+          <TableSortHeader sortKey="supplier">Supplier</TableSortHeader>
           <TableHead>Contact</TableHead>
           <TableHead>Type</TableHead>
-          <TableHead>Delivery Date</TableHead>
-          <TableHead>Created</TableHead>
+          <TableSortHeader sortKey="deliveryDate">
+            Delivery Date
+          </TableSortHeader>
+          <TableSortHeader sortKey="createdAt">Created</TableSortHeader>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {purchaseOrders.length === 0 ? (
+        {page.rows.length === 0 ? (
           <TableRow>
             <TableCell
               colSpan={6}
@@ -41,7 +52,7 @@ export const PurchaseOrdersTable = ({ purchaseOrders }: Props) => (
             </TableCell>
           </TableRow>
         ) : (
-          purchaseOrders.map((row) => (
+          page.rows.map((row) => (
             <TableRow key={row.uuid}>
               <TableCell>
                 <Link
@@ -79,5 +90,10 @@ export const PurchaseOrdersTable = ({ purchaseOrders }: Props) => (
         )}
       </TableBody>
     </Table>
+    <TablePagination
+      page={page}
+      singular="purchase order"
+      plural="purchase orders"
+    />
   </div>
 );

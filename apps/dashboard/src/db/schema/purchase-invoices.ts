@@ -98,7 +98,9 @@ export const PurchaseInvoices = mysqlTable(
     // means the booking matches their paperwork; anything else is the amount
     // somebody still has to explain, which is why it is shown rather than
     // quietly absorbed into a total.
-    remainder: decimal("remainder", { precision: 15, scale: 2 }).default("0.00"),
+    remainder: decimal("remainder", { precision: 15, scale: 2 }).default(
+      "0.00",
+    ),
     remarks: text("remarks"),
     documents:
       json("documents").$type<Array<{ id: string; fileName: string }>>(),
@@ -108,6 +110,18 @@ export const PurchaseInvoices = mysqlTable(
   },
   (table) => [
     index("idx_purchase_invoices_company_uuid").on(table.companyUuid),
+    // The purchase-cost derivation in lib/server/purchase-pricing.ts selects
+    // booked invoices as "not cancelled and of type invoice", ordered by
+    // invoice date — every cost figure in the app reads through that, so this
+    // composite serves far more than the overview's filter.
+    index("idx_purchase_invoices_cancelled_type_date").on(
+      table.cancelled,
+      table.documentType,
+      table.invoiceDate,
+    ),
+    index("idx_purchase_invoices_booking_date").on(table.bookingDate),
+    index("idx_purchase_invoices_blocked").on(table.blocked),
+    index("idx_purchase_invoices_created_at_id").on(table.createdAt, table.id),
     index("idx_purchase_invoices_contact_uuid").on(
       table.invoiceSentByContactUuid,
     ),
