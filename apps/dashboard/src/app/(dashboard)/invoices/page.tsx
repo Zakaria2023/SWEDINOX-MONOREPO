@@ -1,11 +1,21 @@
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { getInvoices } from "@/app/(dashboard)/invoices/actions";
+import { invoiceFilters } from "@/app/(dashboard)/invoices/filters";
+import { getCompaniesForSelect } from "@/app/(dashboard)/companies/actions";
 import { InvoicesTable } from "@/components/invoices/invoices-table-content";
 import { PageHeading } from "@/components/layout/page-heading";
+import { parseTableQuery, SearchParams } from "@/lib/table-query";
 
-const InvoicesPage = async () => {
-  const invoices = await getInvoices();
+type Props = {
+  searchParams: Promise<SearchParams>;
+};
+
+const InvoicesPage = async ({ searchParams }: Props) => {
+  const query = parseTableQuery(await searchParams);
+  // Sequential rather than concurrent: this database caps connections.
+  const invoices = await getInvoices(query);
+  const companies = await getCompaniesForSelect();
 
   return (
     <div className="space-y-4">
@@ -19,7 +29,7 @@ const InvoicesPage = async () => {
           New Invoice
         </Link>
       </div>
-      <InvoicesTable invoices={invoices} />
+      <InvoicesTable page={invoices} filters={invoiceFilters(companies)} />
     </div>
   );
 };

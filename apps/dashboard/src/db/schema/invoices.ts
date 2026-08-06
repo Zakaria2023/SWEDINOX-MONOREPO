@@ -122,6 +122,21 @@ export const Invoices = mysqlTable(
   },
   (table) => [
     index("idx_invoices_company_uuid").on(table.companyUuid),
+    // The two dates every receivables question is asked over: what was raised
+    // in a period, and what falls due in one. The ageing report and the
+    // reminder run both read by due date, so this index serves them as well as
+    // the overview's filter.
+    index("idx_invoices_invoice_date").on(table.invoiceDate),
+    index("idx_invoices_expiration_date").on(table.expirationDate),
+    // Open items are selected as "not cancelled and still owed" in one
+    // condition, by the ageing report, the reminder run and the credit check
+    // alike — see lib/server/receivables.ts.
+    index("idx_invoices_cancelled_outstanding").on(
+      table.cancelled,
+      table.outstanding,
+    ),
+    // The overview's default ordering, newest first, with its tiebreaker.
+    index("idx_invoices_created_at_id").on(table.createdAt, table.id),
     foreignKey({
       name: "fk_invoices_company",
       columns: [table.companyUuid],
