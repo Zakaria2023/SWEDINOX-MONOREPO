@@ -1,10 +1,20 @@
 import Link from "next/link";
 import { getOrders } from "@/app/(dashboard)/orders/actions";
+import { orderFilters } from "@/app/(dashboard)/orders/filters";
+import { getCompaniesForSelect } from "@/app/(dashboard)/companies/actions";
 import { OrdersTable } from "@/components/orders/orders-table-content";
 import { PageHeading } from "@/components/layout/page-heading";
+import { parseTableQuery, SearchParams } from "@/lib/table-query";
 
-const OrdersPage = async () => {
-  const orders = await getOrders();
+type Props = {
+  searchParams: Promise<SearchParams>;
+};
+
+const OrdersPage = async ({ searchParams }: Props) => {
+  const query = parseTableQuery(await searchParams);
+  // Sequential rather than concurrent: this database caps connections.
+  const orders = await getOrders(query);
+  const companies = await getCompaniesForSelect();
 
   return (
     <div className="space-y-4">
@@ -17,7 +27,7 @@ const OrdersPage = async () => {
           New Order
         </Link>
       </div>
-      <OrdersTable orders={orders} />
+      <OrdersTable page={orders} filters={orderFilters(companies)} />
     </div>
   );
 };
