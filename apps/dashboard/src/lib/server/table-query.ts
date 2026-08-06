@@ -1,6 +1,6 @@
 import "server-only";
 
-import { Paged, TableQuery } from "@/lib/helpers";
+import { Paged, TableQuery } from "@/lib/table-query";
 import {
   and,
   asc,
