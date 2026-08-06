@@ -89,9 +89,13 @@ export const parseRangeValue = (
 export const rangeValue = (from: string, to: string): string | null =>
   from || to ? `${from}..${to}` : null;
 
-export const TABLE_PAGE_SIZE = 50;
+export const TABLE_PAGE_SIZE = 10;
 
-export const TABLE_PAGE_SIZES = [25, 50, 100, 200] as const;
+// The sizes the pager offers. 10 is the default because these tables are wide —
+// twenty-odd columns on the line overviews — and a screenful of ten rows is
+// what fits without scrolling in two directions at once. The larger sizes stay
+// available for anyone scanning rather than reading.
+export const TABLE_PAGE_SIZES = [10, 25, 50, 100] as const;
 
 // The keys the table machinery owns. Anything else in the URL is a filter, so
 // an overview can add one without touching the parser.

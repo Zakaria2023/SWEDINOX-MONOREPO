@@ -2,6 +2,10 @@
 
 import Link from "next/link";
 import { StockMovementListItem } from "@/app/(dashboard)/stock-movements/actions";
+import { TablePagination } from "@/components/ui/table-pagination";
+import { TableSortHeader } from "@/components/ui/table-sort-header";
+import { TableToolbar } from "@/components/ui/table-toolbar";
+import { Paged, TableFilterControl } from "@/lib/table-query";
 import {
   Table,
   TableBody,
@@ -16,26 +20,33 @@ import {
 } from "@/lib/labels";
 
 type Props = {
-  stockMovements: StockMovementListItem[];
+  page: Paged<StockMovementListItem>;
+  filters: TableFilterControl[];
 };
 
-export const StockMovementsTable = ({ stockMovements }: Props) => (
+export const StockMovementsTable = ({ page, filters }: Props) => (
   <div className="space-y-4">
+    <TableToolbar
+      searchPlaceholder="Search product or note…"
+      filters={filters}
+    />
     <div>
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead>#</TableHead>
-            <TableHead>Product</TableHead>
-            <TableHead>Type</TableHead>
-            <TableHead>Reason</TableHead>
-            <TableHead className="text-right">Quantity</TableHead>
+            <TableSortHeader sortKey="product">Product</TableSortHeader>
+            <TableSortHeader sortKey="type">Type</TableSortHeader>
+            <TableSortHeader sortKey="reason">Reason</TableSortHeader>
+            <TableSortHeader sortKey="quantity" className="text-right">
+              Quantity
+            </TableSortHeader>
             <TableHead>Source</TableHead>
-            <TableHead>Time</TableHead>
+            <TableSortHeader sortKey="createdAt">Time</TableSortHeader>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {stockMovements.length === 0 ? (
+          {page.rows.length === 0 ? (
             <TableRow>
               <TableCell
                 colSpan={7}
@@ -45,7 +56,7 @@ export const StockMovementsTable = ({ stockMovements }: Props) => (
               </TableCell>
             </TableRow>
           ) : (
-            stockMovements.map((row) => (
+            page.rows.map((row) => (
               <TableRow key={row.uuid}>
                 <TableCell className="font-medium">
                   <Link
@@ -122,5 +133,6 @@ export const StockMovementsTable = ({ stockMovements }: Props) => (
         </TableBody>
       </Table>
     </div>
+    <TablePagination page={page} singular="movement" plural="movements" />
   </div>
 );
