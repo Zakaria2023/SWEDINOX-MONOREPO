@@ -240,6 +240,9 @@ export const useCompanySubmit = ({
   const [texts, setTexts] = useState<CompanyTextInput[]>([]);
   const [isProjectDialogOpen, setIsProjectDialogOpen] = useState(false);
   const [projects, setProjects] = useState<CustomerProjectInput[]>([]);
+  const [editingProjectIndex, setEditingProjectIndex] = useState<number | null>(
+    null,
+  );
   const [isCounterOrderDialogOpen, setIsCounterOrderDialogOpen] =
     useState(false);
   const [counterOrders, setCounterOrders] = useState<
@@ -944,34 +947,62 @@ export const useCompanySubmit = ({
   // ── Project handlers ───────────────────────────────────────────────────────
 
   const handleProjectOpenChange = (open: boolean) => {
-    if (!open) projectForm.reset(DEFAULT_PROJECT);
+    if (!open) {
+      projectForm.reset(DEFAULT_PROJECT);
+      setEditingProjectIndex(null);
+    }
     setIsProjectDialogOpen(open);
   };
 
   const handleOpenProject = () => {
+    setEditingProjectIndex(null);
     projectForm.reset(DEFAULT_PROJECT);
+    setIsProjectDialogOpen(true);
+  };
+
+  const handleEditProject = (index: number) => {
+    const project = projects[index];
+    if (!project) {
+      return;
+    }
+    setEditingProjectIndex(index);
+    projectForm.reset({
+      projectName: project.projectName ?? "",
+      endDate: project.endDate ?? "",
+      revenue: project.revenue ?? "",
+      contractUuid: project.contractUuid ?? "",
+    });
     setIsProjectDialogOpen(true);
   };
 
   const handleCancelProject = () => {
     projectForm.reset(DEFAULT_PROJECT);
+    setEditingProjectIndex(null);
     setIsProjectDialogOpen(false);
   };
 
   const handleSaveProject = projectForm.handleSubmit((values) => {
-    const today = todayDateString();
-    setProjects((prev) => [
-      ...prev,
-      {
-        projectName: values.projectName || undefined,
-        startingDate: today,
-        endDate: values.endDate || undefined,
-        revenue: toDecimalAmount(values.revenue),
-        contractUuid: values.contractUuid || undefined,
-        daysInSystem: 0,
-      },
-    ]);
+    const fields = {
+      projectName: values.projectName || undefined,
+      endDate: values.endDate || undefined,
+      revenue: toDecimalAmount(values.revenue),
+      contractUuid: values.contractUuid || undefined,
+    };
+    setProjects((prev) =>
+      editingProjectIndex === null
+        ? [
+            ...prev,
+            { ...fields, startingDate: todayDateString(), daysInSystem: 0 },
+          ]
+        : // startingDate and daysInSystem are set once, when the project is
+          // added, and are never rewritten by an edit — the same rule the
+          // edit-page mapper follows.
+          prev.map((project, index) =>
+            index === editingProjectIndex ? { ...project, ...fields } : project,
+          ),
+    );
     projectForm.reset(DEFAULT_PROJECT);
+    setEditingProjectIndex(null);
     setIsProjectDialogOpen(false);
   });
 
@@ -2048,8 +2079,10 @@ export const useCompanySubmit = ({
     projectForm,
     projects,
     isProjectDialogOpen,
+    isEditingProject: editingProjectIndex !== null,
     handleProjectOpenChange,
     handleOpenProject,
+    handleEditProject,
     handleCancelProject,
     handleSaveProject,
     removeProject,

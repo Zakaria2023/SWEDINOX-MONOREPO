@@ -2,12 +2,14 @@
 
 import { CustomerProjectInput } from "@/app/(dashboard)/companies/actions";
 import { ContractForProjectOption } from "@/app/(dashboard)/contracts/actions";
-import { FolderOpen, Plus, X } from "lucide-react";
+import { RowAction } from "@/components/ui/row-action";
+import { FolderOpen, Pencil, Plus, X } from "lucide-react";
 
 type Props = {
   projects: CustomerProjectInput[];
   removeProject: (index: number) => void;
   handleOpenProject: () => void;
+  handleEditProject: (index: number) => void;
   isPending: boolean;
   projectContracts: ContractForProjectOption[];
 };
@@ -16,6 +18,7 @@ export const ProjectsSection = ({
   projects,
   removeProject,
   handleOpenProject,
+  handleEditProject,
   isPending,
   projectContracts,
 }: Props) => (
@@ -31,7 +34,7 @@ export const ProjectsSection = ({
         >
           <div className="flex min-w-0 items-center gap-2 text-sm">
             <FolderOpen className="size-4 shrink-0 text-muted-foreground" />
-            <span className="truncate text-muted-foreground">
+            <span className="line-clamp-1 text-muted-foreground">
               {project.projectName || "Project"}
             </span>
             {project.startingDate && (
@@ -47,15 +50,25 @@ export const ProjectsSection = ({
               </span>
             )}
           </div>
-          <button
-            type="button"
-            onClick={() => removeProject(index)}
-            className="shrink-0 text-muted-foreground hover:text-destructive"
-            disabled={isPending}
-          >
-            <X className="size-4" />
-            <span className="sr-only">Remove project</span>
-          </button>
+          <div className="flex shrink-0 items-center gap-1">
+            <RowAction
+              onClick={() => handleEditProject(index)}
+              label="Edit project"
+              tone="edit"
+              disabled={isPending}
+            >
+              <Pencil className="size-4" />
+            </RowAction>
+            <button
+              type="button"
+              onClick={() => removeProject(index)}
+              className="text-muted-foreground hover:text-destructive"
+              disabled={isPending}
+            >
+              <X className="size-4" />
+              <span className="sr-only">Remove project</span>
+            </button>
+          </div>
         </div>
       ))}
       <button

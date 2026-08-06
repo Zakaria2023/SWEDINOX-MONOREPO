@@ -157,8 +157,10 @@ export const CompanyForm = ({
     projectForm,
     projects,
     isProjectDialogOpen,
+    isEditingProject,
     handleProjectOpenChange,
     handleOpenProject,
+    handleEditProject,
     handleCancelProject,
     handleSaveProject,
     removeProject,
@@ -381,6 +383,7 @@ export const CompanyForm = ({
             projects={projects}
             removeProject={removeProject}
             handleOpenProject={handleOpenProject}
+            handleEditProject={handleEditProject}
             isPending={isPending}
             projectContracts={projectContracts_}
           />
@@ -588,6 +591,7 @@ export const CompanyForm = ({
         onSave={handleSaveProject}
         form={projectForm}
         projectContracts={projectContracts_}
+        submitLabel={isEditingProject ? "Save Changes" : "Add Project"}
       />
 
       <CounterOrderDialog
