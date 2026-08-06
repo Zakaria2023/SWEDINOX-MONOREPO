@@ -1,10 +1,20 @@
 import Link from "next/link";
 import { getReturnOrders } from "@/app/(dashboard)/return-orders/actions";
 import { ReturnOrdersTable } from "@/components/return-orders/return-orders-table-content";
+import { returnOrderFilters } from "@/app/(dashboard)/return-orders/filters";
+import { getCompaniesForSelect } from "@/app/(dashboard)/companies/actions";
+import { parseTableQuery, SearchParams } from "@/lib/table-query";
 import { PageHeading } from "@/components/layout/page-heading";
 
-const ReturnOrdersPage = async () => {
-  const returnOrders = await getReturnOrders();
+type Props = {
+  searchParams: Promise<SearchParams>;
+};
+
+const ReturnOrdersPage = async ({ searchParams }: Props) => {
+  const query = parseTableQuery(await searchParams);
+  // Sequential rather than concurrent: this database caps connections.
+  const returnOrders = await getReturnOrders(query);
+  const companies = await getCompaniesForSelect();
 
   return (
     <div className="space-y-4">
@@ -17,7 +27,10 @@ const ReturnOrdersPage = async () => {
           New Return Order
         </Link>
       </div>
-      <ReturnOrdersTable returnOrders={returnOrders} />
+      <ReturnOrdersTable
+        page={returnOrders}
+        filters={returnOrderFilters(companies)}
+      />
     </div>
   );
 };

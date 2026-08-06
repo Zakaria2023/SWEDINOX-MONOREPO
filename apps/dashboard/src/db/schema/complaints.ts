@@ -77,15 +77,14 @@ export const Complaints = mysqlTable(
     toBeReclaimedNote: varchar("to_be_reclaimed_note", { length: 255 }),
 
     // Snapshot of every status change; `assignedBy*` records who made it.
-    statusHistory:
-      json("status_history").$type<
-        Array<{
-          status: ComplaintStatus;
-          statusDate: string;
-          assignedByUserId: string;
-          assignedByName: string;
-        }>
-      >(),
+    statusHistory: json("status_history").$type<
+      Array<{
+        status: ComplaintStatus;
+        statusDate: string;
+        assignedByUserId: string;
+        assignedByName: string;
+      }>
+    >(),
     documents:
       json("documents").$type<Array<{ id: string; fileName: string }>>(),
 
@@ -94,6 +93,10 @@ export const Complaints = mysqlTable(
   },
   (table) => [
     index("idx_complaints_company_uuid").on(table.companyUuid),
+    // A complaint list is worked by state and by when it came in.
+    index("idx_complaints_status").on(table.status),
+    index("idx_complaints_report_date").on(table.reportDate),
+    index("idx_complaints_created_at_id").on(table.createdAt, table.id),
     index("idx_complaints_contact_uuid").on(table.contactUuid),
     index("idx_complaints_product_uuid").on(table.productUuid),
     foreignKey({

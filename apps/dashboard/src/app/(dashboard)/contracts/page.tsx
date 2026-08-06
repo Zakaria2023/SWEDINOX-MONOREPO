@@ -2,10 +2,22 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 import { getContracts } from "@/app/(dashboard)/contracts/actions";
 import { ContractsTable } from "@/components/contracts/contracts-table-content";
+import { contractFilters } from "@/app/(dashboard)/contracts/filters";
+import { getCompaniesForSelect } from "@/app/(dashboard)/companies/actions";
+import { getContractGroups } from "@/app/(dashboard)/contract-groups/actions";
+import { parseTableQuery, SearchParams } from "@/lib/table-query";
 import { PageHeading } from "@/components/layout/page-heading";
 
-const ContractsPage = async () => {
-  const contracts = await getContracts();
+type Props = {
+  searchParams: Promise<SearchParams>;
+};
+
+const ContractsPage = async ({ searchParams }: Props) => {
+  const query = parseTableQuery(await searchParams);
+  // Sequential rather than concurrent: this database caps connections.
+  const contracts = await getContracts(query);
+  const companies = await getCompaniesForSelect();
+  const contractGroups = await getContractGroups();
 
   return (
     <div className="space-y-4">
@@ -19,7 +31,10 @@ const ContractsPage = async () => {
           New Contract
         </Link>
       </div>
-      <ContractsTable contracts={contracts} />
+      <ContractsTable
+        page={contracts}
+        filters={contractFilters(companies, contractGroups)}
+      />
     </div>
   );
 };

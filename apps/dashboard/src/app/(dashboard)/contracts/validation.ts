@@ -15,9 +15,7 @@ export const createContractSchema = () =>
   z.object({
     code: z.string().min(1, "Code is required"),
     contractType: z.enum(contractTypes).optional(),
-    description: z
-      .string()
-      .min(1, "Description is required"),
+    description: z.string().min(1, "Description is required"),
     contractGroupUuid: z.string().min(1, "Contract Group is required"),
     quicklyChangeOrder: z.string().optional(),
     hasPriceDate: z.boolean(),
@@ -60,4 +58,6 @@ export const createContractSchema = () =>
     groupDiscountBasedOn: z.enum(contractDiscountBasedOnTypes).optional(),
   });
 
-export type ContractFormValues = z.infer<ReturnType<typeof createContractSchema>>;
+export type ContractFormValues = z.infer<
+  ReturnType<typeof createContractSchema>
+>;

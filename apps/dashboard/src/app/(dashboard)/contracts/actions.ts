@@ -20,7 +20,25 @@ import { Orders } from "@/db/schema/orders";
 import { Products, SelectProducts } from "@/db/schema/products";
 import { Quotes } from "@/db/schema/quotes";
 import { generateUuid } from "@/lib/helpers";
-import { and, desc, eq, getTableColumns, inArray, isNotNull } from "drizzle-orm";
+import { contractableRoles, contractTypes } from "@/lib/enums";
+import {
+  enumFilter,
+  relationFilter,
+  runPaged,
+  tableOrderBy,
+  tableWhere,
+} from "@/lib/server/table-query";
+import { Paged, TableQuery } from "@/lib/table-query";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  getTableColumns,
+  inArray,
+  isNotNull,
+} from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -82,7 +100,35 @@ export const getContractsForProjects = async (): Promise<
     .where(inArray(Contracts.role, ["customer", "prospect"]))
     .orderBy(Contracts.code);
 
-export const getContracts = async (): Promise<ContractListItem[]> =>
+const CONTRACT_SEARCH = [
+  Contracts.code,
+  Contracts.description,
+  ContractGroups.name,
+] as const;
+
+const CONTRACT_SORTABLE = {
+  createdAt: Contracts.createdAt,
+  code: Contracts.code,
+  contractType: Contracts.contractType,
+  contractGroup: ContractGroups.name,
+};
+
+// Which side of the business the contract is written for, what kind it is,
+// whose it is, and which group it belongs to — the four things that tell one
+// contract from another on a list of them.
+const CONTRACT_FILTERS = {
+  role: enumFilter(Contracts.role, contractableRoles),
+  contractType: enumFilter(Contracts.contractType, contractTypes),
+  company: relationFilter(Contracts.companyUuid),
+  contractGroup: relationFilter(Contracts.contractGroupUuid),
+};
+
+/**
+ * Every contract, unpaged — for the pickers that offer a company the contracts
+ * it can be linked to. A form's dropdown is not a table: paging it would hide
+ * options behind a page number nobody can reach from inside a select.
+ */
+export const getContractsForSelect = async (): Promise<ContractListItem[]> =>
   db
     .select({
       ...getTableColumns(Contracts),
@@ -93,9 +139,58 @@ export const getContracts = async (): Promise<ContractListItem[]> =>
       ContractGroups,
       eq(ContractGroups.uuid, Contracts.contractGroupUuid),
     )
-    .orderBy(desc(Contracts.createdAt));
+    .orderBy(asc(Contracts.code));
 
-export const getContractsPerCustomer = async (): Promise<ContractPerCustomerRow[]> =>
+export const getContracts = async (
+  query: TableQuery,
+): Promise<Paged<ContractListItem>> => {
+  const where = tableWhere({
+    query,
+    search: CONTRACT_SEARCH,
+    filters: CONTRACT_FILTERS,
+  });
+
+  return runPaged(query, {
+    rows: (limit, offset) =>
+      db
+        .select({
+          ...getTableColumns(Contracts),
+          contractGroupName: ContractGroups.name,
+        })
+        .from(Contracts)
+        .leftJoin(
+          ContractGroups,
+          eq(ContractGroups.uuid, Contracts.contractGroupUuid),
+        )
+        .where(where)
+        .orderBy(
+          ...tableOrderBy(
+            CONTRACT_SORTABLE,
+            query,
+            [desc(Contracts.createdAt)],
+            Contracts.id,
+          ),
+        )
+        .limit(limit)
+        .offset(offset),
+
+    count: async () => {
+      const [row] = await db
+        .select({ value: count() })
+        .from(Contracts)
+        .leftJoin(
+          ContractGroups,
+          eq(ContractGroups.uuid, Contracts.contractGroupUuid),
+        )
+        .where(where);
+      return Number(row?.value ?? 0);
+    },
+  });
+};
+
+export const getContractsPerCustomer = async (): Promise<
+  ContractPerCustomerRow[]
+> =>
   db
     .select({
       role: Contracts.role,
@@ -124,7 +219,9 @@ export const getContractsPerCustomer = async (): Promise<ContractPerCustomerRow[
       ),
     );
 
-export const getContractsPerSupplier = async (): Promise<ContractPerSupplierRow[]> =>
+export const getContractsPerSupplier = async (): Promise<
+  ContractPerSupplierRow[]
+> =>
   db
     .select({
       id: Companies.id,
@@ -288,8 +385,7 @@ export const deleteContract = async (
 
     if (quoted) {
       return {
-        error:
-          "Cannot delete: quotes have been priced against this contract.",
+        error: "Cannot delete: quotes have been priced against this contract.",
       };
     }
 

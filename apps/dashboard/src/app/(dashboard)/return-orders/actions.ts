@@ -54,7 +54,25 @@ import {
 } from "@/lib/server/ledger";
 import { recordFreightMovement } from "@/lib/server/freight";
 import { currentUser } from "@clerk/nextjs/server";
-import { and, desc, eq, getTableColumns, inArray, sql } from "drizzle-orm";
+import { returnOrderReasons, returnOrderStatuses } from "@/lib/enums";
+import {
+  dateRangeFilter,
+  enumFilter,
+  relationFilter,
+  runPaged,
+  tableOrderBy,
+  tableWhere,
+} from "@/lib/server/table-query";
+import { Paged, TableQuery } from "@/lib/table-query";
+import {
+  and,
+  count,
+  desc,
+  eq,
+  getTableColumns,
+  inArray,
+  sql,
+} from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -132,20 +150,71 @@ export type ReturnOrderListItem = SelectReturnOrders & {
   contactLastName: SelectContacts["lastName"] | null;
 };
 
-export const getReturnOrders = async (): Promise<ReturnOrderListItem[]> => {
+const RETURN_ORDER_SEARCH = [
+  ReturnOrders.customerRef,
+  Companies.companyName,
+] as const;
+
+const RETURN_ORDER_SORTABLE = {
+  createdAt: ReturnOrders.createdAt,
+  returnDate: ReturnOrders.returnDate,
+  customer: Companies.companyName,
+  status: ReturnOrders.status,
+};
+
+// Status is the whole workflow of a return — raised, received, credited — so it
+// is the filter this screen exists for. The reason is what the quality side
+// slices by.
+const RETURN_ORDER_FILTERS = {
+  status: enumFilter(ReturnOrders.status, returnOrderStatuses),
+  returnReason: enumFilter(ReturnOrders.returnReason, returnOrderReasons),
+  company: relationFilter(ReturnOrders.companyUuid),
+  returnDate: dateRangeFilter(ReturnOrders.returnDate),
+};
+
+export const getReturnOrders = async (
+  query: TableQuery,
+): Promise<Paged<ReturnOrderListItem>> => {
   try {
-    const rows = await db
-      .select({
-        ...getTableColumns(ReturnOrders),
-        companyName: Companies.companyName,
-        contactFirstName: Contacts.firstName,
-        contactLastName: Contacts.lastName,
-      })
-      .from(ReturnOrders)
-      .leftJoin(Companies, eq(ReturnOrders.companyUuid, Companies.uuid))
-      .leftJoin(Contacts, eq(ReturnOrders.contactUuid, Contacts.uuid))
-      .orderBy(desc(ReturnOrders.createdAt));
-    return rows;
+    const where = tableWhere({
+      query,
+      search: RETURN_ORDER_SEARCH,
+      filters: RETURN_ORDER_FILTERS,
+    });
+
+    return await runPaged(query, {
+      rows: (limit, offset) =>
+        db
+          .select({
+            ...getTableColumns(ReturnOrders),
+            companyName: Companies.companyName,
+            contactFirstName: Contacts.firstName,
+            contactLastName: Contacts.lastName,
+          })
+          .from(ReturnOrders)
+          .leftJoin(Companies, eq(ReturnOrders.companyUuid, Companies.uuid))
+          .leftJoin(Contacts, eq(ReturnOrders.contactUuid, Contacts.uuid))
+          .where(where)
+          .orderBy(
+            ...tableOrderBy(
+              RETURN_ORDER_SORTABLE,
+              query,
+              [desc(ReturnOrders.createdAt)],
+              ReturnOrders.id,
+            ),
+          )
+          .limit(limit)
+          .offset(offset),
+
+      count: async () => {
+        const [row] = await db
+          .select({ value: count() })
+          .from(ReturnOrders)
+          .leftJoin(Companies, eq(ReturnOrders.companyUuid, Companies.uuid))
+          .where(where);
+        return Number(row?.value ?? 0);
+      },
+    });
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch return orders"));
   }
@@ -620,7 +689,10 @@ export const receiveReturnOrder = async (
     if (!returnOrder) {
       return { error: "Return order not found." };
     }
-    if (returnOrder.status === "received" || returnOrder.status === "credited") {
+    if (
+      returnOrder.status === "received" ||
+      returnOrder.status === "credited"
+    ) {
       return { error: "This return has already been received." };
     }
     if (returnOrder.status === "cancelled") {
@@ -1131,7 +1203,9 @@ export const creditReturnOrder = async (
   } catch (error) {
     return {
       error:
-        error instanceof Error ? error.message : "Failed to credit return order",
+        error instanceof Error
+          ? error.message
+          : "Failed to credit return order",
     };
   }
 };

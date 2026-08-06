@@ -35,7 +35,7 @@ const ComplaintDetailPage = async ({ params }: Props) => {
         </Link>
       </div>
       <PageHeading title={`Complaint #${complaint.id}`} />
-      <ComplaintDetailView complaint={complaint}  userNames={userNames} />
+      <ComplaintDetailView complaint={complaint} userNames={userNames} />
     </div>
   );
 };

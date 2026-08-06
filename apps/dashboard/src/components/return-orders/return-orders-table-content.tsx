@@ -2,6 +2,10 @@
 
 import Link from "next/link";
 import { ReturnOrderListItem } from "@/app/(dashboard)/return-orders/actions";
+import { TablePagination } from "@/components/ui/table-pagination";
+import { TableSortHeader } from "@/components/ui/table-sort-header";
+import { TableToolbar } from "@/components/ui/table-toolbar";
+import { Paged, TableFilterControl } from "@/lib/table-query";
 import {
   Table,
   TableBody,
@@ -14,24 +18,29 @@ import { RETURN_ORDER_REASON_LABELS } from "@/lib/labels";
 import { ReturnOrderReason } from "@/lib/enums";
 
 type Props = {
-  returnOrders: ReturnOrderListItem[];
+  page: Paged<ReturnOrderListItem>;
+  filters: TableFilterControl[];
 };
 
-export const ReturnOrdersTable = ({ returnOrders }: Props) => (
-  <div>
+export const ReturnOrdersTable = ({ page, filters }: Props) => (
+  <div className="space-y-4">
+    <TableToolbar
+      searchPlaceholder="Search reference or customer…"
+      filters={filters}
+    />
     <Table>
       <TableHeader>
         <TableRow>
           <TableHead>#</TableHead>
-          <TableHead>Customer</TableHead>
+          <TableSortHeader sortKey="customer">Customer</TableSortHeader>
           <TableHead>Contact</TableHead>
           <TableHead>Return Reason</TableHead>
-          <TableHead>Return Date</TableHead>
-          <TableHead>Created</TableHead>
+          <TableSortHeader sortKey="returnDate">Return Date</TableSortHeader>
+          <TableSortHeader sortKey="createdAt">Created</TableSortHeader>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {returnOrders.length === 0 ? (
+        {page.rows.length === 0 ? (
           <TableRow>
             <TableCell
               colSpan={6}
@@ -41,7 +50,7 @@ export const ReturnOrdersTable = ({ returnOrders }: Props) => (
             </TableCell>
           </TableRow>
         ) : (
-          returnOrders.map((row) => (
+          page.rows.map((row) => (
             <TableRow key={row.uuid}>
               <TableCell>
                 <Link
@@ -77,5 +86,10 @@ export const ReturnOrdersTable = ({ returnOrders }: Props) => (
         )}
       </TableBody>
     </Table>
+    <TablePagination
+      page={page}
+      singular="return order"
+      plural="return orders"
+    />
   </div>
 );

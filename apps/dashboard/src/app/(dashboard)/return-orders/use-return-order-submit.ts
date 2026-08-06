@@ -24,7 +24,12 @@ import {
   WarehouseTransportRegion,
   warehouseTransportRegions,
 } from "@/lib/enums";
-import { INVOICE_PAYMENT_TERM_LABELS, RETURN_ORDER_REASON_LABELS, TRANSPORT_MODE_LABELS, WAREHOUSE_TRANSPORT_REGION_LABELS } from "@/lib/labels";
+import {
+  INVOICE_PAYMENT_TERM_LABELS,
+  RETURN_ORDER_REASON_LABELS,
+  TRANSPORT_MODE_LABELS,
+  WAREHOUSE_TRANSPORT_REGION_LABELS,
+} from "@/lib/labels";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -189,49 +194,49 @@ export const useReturnOrderSubmit = ({
       };
 
       const fields = {
-          companyUuid: values.companyUuid,
-          orderUuid: values.orderUuid || null,
-          complaintRef: values.complaintRef || null,
-          contactUuid: values.contactUuid || null,
-          customerRef: values.customerRef || null,
-          ourReference: values.ourReference || null,
-          handlingBlocked: values.handlingBlocked,
-          isPrinted: values.isPrinted,
-          isMailed: values.isMailed,
-          isFaxed: values.isFaxed,
+        companyUuid: values.companyUuid,
+        orderUuid: values.orderUuid || null,
+        complaintRef: values.complaintRef || null,
+        contactUuid: values.contactUuid || null,
+        customerRef: values.customerRef || null,
+        ourReference: values.ourReference || null,
+        handlingBlocked: values.handlingBlocked,
+        isPrinted: values.isPrinted,
+        isMailed: values.isMailed,
+        isFaxed: values.isFaxed,
 
-          returnDate: values.returnDate ? new Date(values.returnDate) : null,
-          isPickup: values.isPickup,
-          pickupAddress: values.isPickup ? values.pickupAddress || null : null,
-          deliveryAddressUuid: values.isPickup
-            ? null
-            : values.deliveryAddressUuid || null,
+        returnDate: values.returnDate ? new Date(values.returnDate) : null,
+        isPickup: values.isPickup,
+        pickupAddress: values.isPickup ? values.pickupAddress || null : null,
+        deliveryAddressUuid: values.isPickup
+          ? null
+          : values.deliveryAddressUuid || null,
 
-          returnReason: values.returnReason,
+        returnReason: values.returnReason,
 
-          calculateVatIfApplicable: values.calculateVatIfApplicable,
-          invoiceBlockage: values.invoiceBlockage,
-          onlyTotalAmountOnInvoice: values.onlyTotalAmountOnInvoice,
-          includeOptionPricesInMaterialPrices:
-            values.includeOptionPricesInMaterialPrices,
-          paymentTerms: values.paymentTerms || null,
-          billingAddressUuid: values.billingAddressUuid || null,
-          blockingReason: values.blockingReason || null,
+        calculateVatIfApplicable: values.calculateVatIfApplicable,
+        invoiceBlockage: values.invoiceBlockage,
+        onlyTotalAmountOnInvoice: values.onlyTotalAmountOnInvoice,
+        includeOptionPricesInMaterialPrices:
+          values.includeOptionPricesInMaterialPrices,
+        paymentTerms: values.paymentTerms || null,
+        billingAddressUuid: values.billingAddressUuid || null,
+        blockingReason: values.blockingReason || null,
 
-          completeDelivery: values.completeDelivery,
-          transportBlockage: values.transportBlockage,
-          vehicleWithCrane: values.vehicleWithCrane,
-          vehicleWithCanopy: values.vehicleWithCanopy,
-          bundlingSeparate: values.bundlingSeparate,
-          transportRegion: values.transportRegion || null,
-          maxLengthMm: values.maxLengthMm ? Number(values.maxLengthMm) : null,
-          maxBundleWeightKg: values.maxBundleWeightKg || null,
-          deliveryAfterTime: values.deliveryAfterTime || null,
-          deliverForTime: values.deliverForTime || null,
-          transportMode: values.transportMode || null,
+        completeDelivery: values.completeDelivery,
+        transportBlockage: values.transportBlockage,
+        vehicleWithCrane: values.vehicleWithCrane,
+        vehicleWithCanopy: values.vehicleWithCanopy,
+        bundlingSeparate: values.bundlingSeparate,
+        transportRegion: values.transportRegion || null,
+        maxLengthMm: values.maxLengthMm ? Number(values.maxLengthMm) : null,
+        maxBundleWeightKg: values.maxBundleWeightKg || null,
+        deliveryAfterTime: values.deliveryAfterTime || null,
+        deliverForTime: values.deliverForTime || null,
+        transportMode: values.transportMode || null,
 
-          remarks: values.remarks || null,
-          documents: values.documents?.length ? values.documents : null,
+        remarks: values.remarks || null,
+        documents: values.documents?.length ? values.documents : null,
       };
 
       // Updating redirects from inside the action, so only the create path has

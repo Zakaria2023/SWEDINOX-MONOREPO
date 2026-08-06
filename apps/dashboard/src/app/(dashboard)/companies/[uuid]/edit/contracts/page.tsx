@@ -1,4 +1,4 @@
-import { getContracts } from "@/app/(dashboard)/contracts/actions";
+import { getContractsForSelect } from "@/app/(dashboard)/contracts/actions";
 import { CompanyContractsEditor } from "@/components/companies/edit/company-contracts-editor";
 import { PageHeading } from "@/components/layout/page-heading";
 import { ChevronLeft } from "lucide-react";
@@ -17,7 +17,7 @@ const CompanyContractsPage = async ({ params }: Props) => {
     await Promise.all([
       getCompanyHeader(uuid),
       getContractsForCompany(uuid),
-      getContracts(),
+      getContractsForSelect(),
       getCompanyContractableRoles(uuid),
     ]);
 

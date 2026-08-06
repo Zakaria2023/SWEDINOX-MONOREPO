@@ -2,7 +2,6 @@ import { ComplaintDetail } from "@/app/(dashboard)/complaints/actions";
 import { ComplaintFormValues } from "@/app/(dashboard)/complaints/validation";
 import { toDateInput, toFormString } from "@/lib/helpers";
 
-
 /**
  * A saved complaint back into the values its form edits. The status history is
  * absent by design: it is appended to when the status moves, never edited.
