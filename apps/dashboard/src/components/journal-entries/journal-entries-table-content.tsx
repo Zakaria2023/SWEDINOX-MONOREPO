@@ -2,6 +2,10 @@
 
 import Link from "next/link";
 import { JournalEntryListItem } from "@/app/(dashboard)/journal-entries/actions";
+import { TablePagination } from "@/components/ui/table-pagination";
+import { TableSortHeader } from "@/components/ui/table-sort-header";
+import { TableToolbar } from "@/components/ui/table-toolbar";
+import { Paged, TableFilterControl } from "@/lib/table-query";
 import {
   Table,
   TableBody,
@@ -12,17 +16,22 @@ import {
 } from "@/components/shadcn/table";
 
 type Props = {
-  entries: JournalEntryListItem[];
+  page: Paged<JournalEntryListItem>;
+  filters: TableFilterControl[];
 };
 
-export const JournalEntriesTable = ({ entries }: Props) => (
-  <div>
+export const JournalEntriesTable = ({ page, filters }: Props) => (
+  <div className="space-y-4">
+    <TableToolbar
+      searchPlaceholder="Search document, description, reference or counterparty…"
+      filters={filters}
+    />
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Booking date</TableHead>
-          <TableHead>Document</TableHead>
-          <TableHead>Account</TableHead>
+          <TableSortHeader sortKey="bookingDate">Booking date</TableSortHeader>
+          <TableSortHeader sortKey="documentNo">Document</TableSortHeader>
+          <TableSortHeader sortKey="account">Account</TableSortHeader>
           <TableHead>Journal</TableHead>
           <TableHead>External account</TableHead>
           <TableHead>Description</TableHead>
@@ -36,7 +45,7 @@ export const JournalEntriesTable = ({ entries }: Props) => (
         </TableRow>
       </TableHeader>
       <TableBody>
-        {entries.length === 0 ? (
+        {page.rows.length === 0 ? (
           <TableRow>
             <TableCell
               colSpan={13}
@@ -46,7 +55,7 @@ export const JournalEntriesTable = ({ entries }: Props) => (
             </TableCell>
           </TableRow>
         ) : (
-          entries.map((row) => (
+          page.rows.map((row) => (
             <TableRow key={row.uuid}>
               <TableCell>{row.bookingDate ?? "—"}</TableCell>
               <TableCell className="font-medium">
@@ -60,7 +69,10 @@ export const JournalEntriesTable = ({ entries }: Props) => (
               <TableCell className="whitespace-nowrap">
                 {row.account ?? "—"}
                 {row.accountName ? (
-                  <span className="text-muted-foreground"> {row.accountName}</span>
+                  <span className="text-muted-foreground">
+                    {" "}
+                    {row.accountName}
+                  </span>
                 ) : null}
               </TableCell>
               <TableCell>{row.journal ?? "—"}</TableCell>
@@ -84,5 +96,6 @@ export const JournalEntriesTable = ({ entries }: Props) => (
         )}
       </TableBody>
     </Table>
+    <TablePagination page={page} singular="posting" plural="postings" />
   </div>
 );

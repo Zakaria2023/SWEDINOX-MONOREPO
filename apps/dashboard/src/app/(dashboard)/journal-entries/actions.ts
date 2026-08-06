@@ -11,7 +11,17 @@ import {
   LedgerAccounts,
   SelectLedgerAccounts,
 } from "@/db/schema/ledger-accounts";
-import { asc, desc, eq, getTableColumns } from "drizzle-orm";
+import {
+  dateRangeFilter,
+  numberRangeFilter,
+  relationFilter,
+  runPaged,
+  tableOrderBy,
+  tableWhere,
+  valueFilter,
+} from "@/lib/server/table-query";
+import { Paged, TableQuery } from "@/lib/table-query";
+import { asc, count, desc, eq, getTableColumns } from "drizzle-orm";
 
 export type JournalEntryListItem = SelectJournalEntries & {
   companyName: SelectCompanies["companyName"] | null;
@@ -35,24 +45,90 @@ export type JournalEntryTotals = {
   balanced: boolean;
 };
 
-// Postings newest first, and within one document in the order its lines were
-// written — a balanced entry only reads as one if its lines stay together.
-export const getJournalEntries = async (): Promise<JournalEntryListItem[]> => {
+const JOURNAL_SEARCH = [
+  JournalEntries.documentNo,
+  JournalEntries.description,
+  JournalEntries.reference,
+  JournalEntries.debCreditor,
+  Companies.companyName,
+] as const;
+
+const JOURNAL_SORTABLE = {
+  bookingDate: JournalEntries.bookingDate,
+  documentNo: JournalEntries.documentNo,
+  account: JournalEntries.account,
+  company: Companies.companyName,
+  amount: JournalEntries.amount,
+};
+
+// What a bookkeeper actually narrows by: which account, whose entry, which
+// journal it was posted through, and over what period. account and booking_date
+// carry their own indexes; company_uuid does too.
+const JOURNAL_FILTERS = {
+  account: valueFilter(JournalEntries.account),
+  journal: valueFilter(JournalEntries.journal),
+  company: relationFilter(JournalEntries.companyUuid),
+  bookingDate: dateRangeFilter(JournalEntries.bookingDate),
+  amount: numberRangeFilter(JournalEntries.amount),
+};
+
+/**
+ * Postings newest first, and within one document in the order its lines were
+ * written — a balanced entry only reads as one if its lines stay together.
+ *
+ * That ordering is why the fallback keeps all three of its terms: dropping to
+ * booking date alone would interleave the lines of two documents posted on the
+ * same day, and an entry whose halves are separated cannot be read at all.
+ */
+export const getJournalEntries = async (
+  query: TableQuery,
+): Promise<Paged<JournalEntryListItem>> => {
   try {
-    return await db
-      .select({
-        ...getTableColumns(JournalEntries),
-        companyName: Companies.companyName,
-        accountName: LedgerAccounts.name,
-      })
-      .from(JournalEntries)
-      .leftJoin(Companies, eq(JournalEntries.companyUuid, Companies.uuid))
-      .leftJoin(LedgerAccounts, eq(JournalEntries.account, LedgerAccounts.number))
-      .orderBy(
-        desc(JournalEntries.bookingDate),
-        desc(JournalEntries.entryUuid),
-        asc(JournalEntries.id),
-      );
+    const where = tableWhere({
+      query,
+      search: JOURNAL_SEARCH,
+      filters: JOURNAL_FILTERS,
+    });
+
+    return await runPaged(query, {
+      rows: (limit, offset) =>
+        db
+          .select({
+            ...getTableColumns(JournalEntries),
+            companyName: Companies.companyName,
+            accountName: LedgerAccounts.name,
+          })
+          .from(JournalEntries)
+          .leftJoin(Companies, eq(JournalEntries.companyUuid, Companies.uuid))
+          .leftJoin(
+            LedgerAccounts,
+            eq(JournalEntries.account, LedgerAccounts.number),
+          )
+          .where(where)
+          .orderBy(
+            ...tableOrderBy(
+              JOURNAL_SORTABLE,
+              query,
+              [
+                desc(JournalEntries.bookingDate),
+                desc(JournalEntries.entryUuid),
+                asc(JournalEntries.id),
+              ],
+              JournalEntries.id,
+            ),
+          )
+          .limit(limit)
+          .offset(offset),
+
+      count: async () => {
+        const [row] = await db
+          .select({ value: count() })
+          .from(JournalEntries)
+          .leftJoin(Companies, eq(JournalEntries.companyUuid, Companies.uuid))
+          .where(where);
+        return Number(row?.value ?? 0);
+      },
+    });
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch journal entries"));
   }
@@ -109,10 +185,7 @@ export const getJournalEntryDetail = async (
           .orderBy(asc(JournalEntries.id))
       : [line];
 
-    const debit = siblingLines.reduce(
-      (sum, row) => sum + Number(row.debit),
-      0,
-    );
+    const debit = siblingLines.reduce((sum, row) => sum + Number(row.debit), 0);
     const credit = siblingLines.reduce(
       (sum, row) => sum + Number(row.credit),
       0,

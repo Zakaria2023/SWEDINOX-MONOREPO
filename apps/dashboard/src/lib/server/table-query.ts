@@ -279,15 +279,30 @@ export const jsonArrayFilter =
   };
 
 /**
- * A filter matching a related record by uuid — a customer, a supplier, a
- * product, a contract. Several uuids mean any of them.
+ * A filter matching a column against one of a set of values chosen from a
+ * lookup — a ledger account number, a journal name, a warehouse code. Unlike
+ * enumFilter there is no fixed set to validate against, because the legal
+ * values live in another table; unlike relationFilter the column is not a uuid.
+ *
+ * A value that matches nothing simply returns no rows, which is the honest
+ * answer to "show me account 9999".
  */
-export const relationFilter =
+export const valueFilter =
   (column: MySqlColumn): FilterBinding =>
   (values) => {
-    const uuids = values.filter((value) => value.trim() !== "");
-    if (uuids.length === 0) {
+    const wanted = values.filter((value) => value.trim() !== "");
+    if (wanted.length === 0) {
       return undefined;
     }
-    return inArray(column, uuids);
+    return inArray(column, wanted);
   };
+
+/**
+ * A filter matching a related record by uuid — a customer, a supplier, a
+ * product, a contract. Several uuids mean any of them.
+ *
+ * The uuid case of valueFilter, named separately because that is what every
+ * call site is doing and the name is what makes an overview's filter list
+ * readable.
+ */
+export const relationFilter = valueFilter;
