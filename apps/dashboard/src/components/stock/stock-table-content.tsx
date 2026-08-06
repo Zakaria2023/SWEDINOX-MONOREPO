@@ -3,6 +3,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import { StockListItem } from "@/app/(dashboard)/stock/actions";
+import { TablePagination } from "@/components/ui/table-pagination";
+import { TableSortHeader } from "@/components/ui/table-sort-header";
+import { TableToolbar } from "@/components/ui/table-toolbar";
+import { Paged, TableFilterControl } from "@/lib/table-query";
 import { Button } from "@/components/shadcn/button";
 import {
   Table,
@@ -18,35 +22,40 @@ import { cn, daysInSystem } from "@/lib/helpers";
 import { STOCK_STATUS_LABELS } from "@/lib/labels";
 
 type Props = {
-  stock: StockListItem[];
+  page: Paged<StockListItem>;
+  filters: TableFilterControl[];
 };
 
 const DAYS_PENDING_WARNING_THRESHOLD = 30;
 
-export const StockTable = ({ stock }: Props) => {
+export const StockTable = ({ page, filters }: Props) => {
   const [correctingStock, setCorrectingStock] = useState<StockListItem | null>(
     null,
   );
 
   return (
     <div className="space-y-4">
+      <TableToolbar
+        searchPlaceholder="Search product or charge…"
+        filters={filters}
+      />
       <div>
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Product</TableHead>
+              <TableSortHeader sortKey="product">Product</TableSortHeader>
               <TableHead>Company</TableHead>
               <TableHead>Purchase Order</TableHead>
               <TableHead className="text-right">Original / Remaining</TableHead>
               <TableHead className="text-right">Reserved / Available</TableHead>
-              <TableHead>Status</TableHead>
+              <TableSortHeader sortKey="status">Status</TableSortHeader>
               <TableHead>Pending For</TableHead>
-              <TableHead>Created</TableHead>
+              <TableSortHeader sortKey="createdAt">Created</TableSortHeader>
               <TableHead />
             </TableRow>
           </TableHeader>
           <TableBody>
-            {stock.length === 0 ? (
+            {page.rows.length === 0 ? (
               <TableRow>
                 <TableCell
                   colSpan={9}
@@ -56,7 +65,7 @@ export const StockTable = ({ stock }: Props) => {
                 </TableCell>
               </TableRow>
             ) : (
-              stock.map((row) => {
+              page.rows.map((row) => {
                 const pendingDays =
                   row.status === "pending" ? daysInSystem(row.createdAt) : null;
                 const available = (
@@ -138,6 +147,8 @@ export const StockTable = ({ stock }: Props) => {
           </TableBody>
         </Table>
       </div>
+
+      <TablePagination page={page} singular="lot" plural="lots" />
 
       <StockCorrectionDialog
         stock={correctingStock}

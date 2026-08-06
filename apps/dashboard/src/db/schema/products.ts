@@ -503,9 +503,9 @@ export const Products = mysqlTable(
     ).default(0),
     optFactorSawingCuts: int("opt_factor_sawing_cuts").default(0),
     optFactorCreatedOffcuts: int("opt_factor_created_offcuts").default(0),
-    optFactorCreatedScrapPieces: int(
-      "opt_factor_created_scrap_pieces",
-    ).default(0),
+    optFactorCreatedScrapPieces: int("opt_factor_created_scrap_pieces").default(
+      0,
+    ),
     optFactorUsedTradeLengths: int("opt_factor_used_trade_lengths").default(0),
     optFactorUsedOffcuts: int("opt_factor_used_offcuts").default(0),
     optFactorScrapPieceLength: int("opt_factor_scrap_piece_length").default(0),
@@ -524,6 +524,12 @@ export const Products = mysqlTable(
   },
   (table) => [
     index("idx_products_product_group_uuid").on(table.productGroupUuid),
+    // The catalogue is searched by code far more than anything else, and the
+    // two flags decide whether an article can be sold from stock at all.
+    index("idx_products_product_code").on(table.productCode),
+    index("idx_products_article_group").on(table.articleGroup),
+    index("idx_products_stock_product").on(table.stockProduct),
+    index("idx_products_created_at_id").on(table.createdAt, table.id),
     index("idx_products_revenue_group_uuid").on(table.revenueGroupUuid),
     index("idx_products_company_uuid").on(table.companyUuid),
     foreignKey({

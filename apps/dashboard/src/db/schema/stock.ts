@@ -79,10 +79,18 @@ export const Stock = mysqlTable(
   },
   (table) => [
     index("idx_stock_product_uuid").on(table.productUuid),
-    index("idx_stock_purchase_order_uuid").on(table.purchaseOrderUuid),
-    index("idx_stock_purchase_order_item_uuid").on(
-      table.purchaseOrderItemUuid,
+    // Allocation reads pending lots for a product oldest-receipt-first, on every
+    // order and every quote conversion — so this composite backs the reservation
+    // path, not only the overview's status filter.
+    index("idx_stock_status_product_receipt").on(
+      table.status,
+      table.productUuid,
+      table.receiptDate,
     ),
+    index("idx_stock_blocked").on(table.blocked),
+    index("idx_stock_created_at_id").on(table.createdAt, table.id),
+    index("idx_stock_purchase_order_uuid").on(table.purchaseOrderUuid),
+    index("idx_stock_purchase_order_item_uuid").on(table.purchaseOrderItemUuid),
     index("idx_stock_location_uuid").on(table.locationUuid),
     index("idx_stock_supplier_uuid").on(table.supplierUuid),
     index("idx_stock_owner_company_uuid").on(table.ownerCompanyUuid),
