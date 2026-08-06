@@ -49,6 +49,46 @@ export type Paged<T> = {
 /** The shape Next hands a page component in searchParams. */
 export type SearchParams = Record<string, string | string[] | undefined>;
 
+/**
+ * One filter control an overview offers, as plain data the toolbar renders.
+ *
+ * Deliberately separate from the binding that turns the same key into SQL: a
+ * binding closes over a Drizzle column, which cannot be serialised to a client
+ * component. The two are keyed by the same string, so a control and its query
+ * are declared together even though they cannot live in the same object.
+ *
+ * A relation filter — a customer, a supplier, a product — is a `select` whose
+ * options were loaded on the server. It needs no separate kind, because by the
+ * time the toolbar sees it, "which customer" and "which status" are the same
+ * question.
+ */
+export type TableFilterControl =
+  | {
+      key: string;
+      kind: "select";
+      label: string;
+      options: Array<{ value: string; label: string }>;
+      placeholder?: string;
+    }
+  | { key: string; kind: "dateRange"; label: string }
+  | { key: string; kind: "numberRange"; label: string };
+
+/** The two ends of a range filter, which the URL carries as "from..to". */
+export const parseRangeValue = (
+  value: string | null | undefined,
+): { from: string; to: string } => {
+  const [from = "", to = ""] = (value ?? "").split("..");
+  return { from, to };
+};
+
+/**
+ * The two ends back into one param, or null when neither end is set — an empty
+ * range has to clear the key rather than write "..", which would read as a
+ * filter that is on but selects everything.
+ */
+export const rangeValue = (from: string, to: string): string | null =>
+  from || to ? `${from}..${to}` : null;
+
 export const TABLE_PAGE_SIZE = 50;
 
 export const TABLE_PAGE_SIZES = [25, 50, 100, 200] as const;
