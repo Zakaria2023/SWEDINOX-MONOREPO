@@ -12,6 +12,7 @@ import {
   lte,
   or,
   SQL,
+  sql,
 } from "drizzle-orm";
 import { MySqlColumn } from "drizzle-orm/mysql-core";
 
@@ -236,6 +237,32 @@ export const numberRangeFilter =
     return and(
       from && Number.isFinite(lower) ? gte(column, String(lower)) : undefined,
       to && Number.isFinite(upper) ? lte(column, String(upper)) : undefined,
+    );
+  };
+
+/**
+ * A filter on a column holding a JSON array of values — a company's roles, an
+ * address's categories. Several values mean any of them.
+ *
+ * The one filter shape here that cannot use an ordinary index: JSON_CONTAINS
+ * has to look inside every row's document. That is acceptable on the tables
+ * that carry these columns, which hold one row per company or per address and
+ * are small by nature. It would not be on a transaction table — if one ever
+ * grows a JSON array worth filtering, the answer is a multi-valued index on the
+ * array, not a different query here.
+ */
+export const jsonArrayFilter =
+  (column: MySqlColumn, allowed: readonly string[]): FilterBinding =>
+  (values) => {
+    const permitted = new Set<string>(allowed);
+    const wanted = values.filter((value) => permitted.has(value));
+    if (wanted.length === 0) {
+      return undefined;
+    }
+    return or(
+      ...wanted.map(
+        (value) => sql`JSON_CONTAINS(${column}, ${JSON.stringify(value)})`,
+      ),
     );
   };
 
