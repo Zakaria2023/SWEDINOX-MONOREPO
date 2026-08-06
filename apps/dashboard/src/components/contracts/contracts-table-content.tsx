@@ -2,8 +2,19 @@
 
 import Link from "next/link";
 import { ContractListItem } from "@/app/(dashboard)/contracts/actions";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/shadcn/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
+import { TablePagination } from "@/components/ui/table-pagination";
+import { TableSortHeader } from "@/components/ui/table-sort-header";
+import { TableToolbar } from "@/components/ui/table-toolbar";
+import { Paged, TableFilterControl } from "@/lib/table-query";
 import { buildColumnVisibility } from "@/lib/helpers";
 import { CONTRACT_TYPE_LABELS } from "@/lib/labels";
 import { useState } from "react";
@@ -37,18 +48,38 @@ const ALL_COLUMNS: Array<{
   { key: "createdAt", label: "Created At", defaultVisible: false },
 ];
 
-type ContractsTableContentProps = {
-  contracts: ContractListItem[];
+// The columns a header may sort on, matching the keys actions.ts declared.
+const SORTABLE: Partial<Record<ColumnKey, string>> = {
+  // The "Code" column renders contract.code, so it sorts by that rather than
+  // by the id it is keyed under.
+  id: "code",
+  contractType: "contractType",
+  contractGroupName: "contractGroup",
+  createdAt: "createdAt",
 };
 
-export const ContractsTable = ({ contracts }: ContractsTableContentProps) => {
-  const [columnVisibility, setColumnVisibility] =
-    useState<Record<ColumnKey, boolean>>(buildColumnVisibility(ALL_COLUMNS));
+type ContractsTableContentProps = {
+  page: Paged<ContractListItem>;
+  filters: TableFilterControl[];
+};
+
+export const ContractsTable = ({
+  page,
+  filters,
+}: ContractsTableContentProps) => {
+  const [columnVisibility, setColumnVisibility] = useState<
+    Record<ColumnKey, boolean>
+  >(buildColumnVisibility(ALL_COLUMNS));
 
   const toggleColumn = (key: string) =>
-    setColumnVisibility((prev) => ({ ...prev, [key]: !prev[key as ColumnKey] }));
+    setColumnVisibility((prev) => ({
+      ...prev,
+      [key]: !prev[key as ColumnKey],
+    }));
 
-  const visibleColumns = ALL_COLUMNS.filter((column) => columnVisibility[column.key]);
+  const visibleColumns = ALL_COLUMNS.filter(
+    (column) => columnVisibility[column.key],
+  );
   const fallbackValue = "—";
 
   const renderCell = (contract: ContractListItem, key: ColumnKey) => {
@@ -73,17 +104,37 @@ export const ContractsTable = ({ contracts }: ContractsTableContentProps) => {
           </TableCell>
         );
       case "contractGroupName":
-        return <TableCell key={key}>{contract.contractGroupName ?? fallbackValue}</TableCell>;
+        return (
+          <TableCell key={key}>
+            {contract.contractGroupName ?? fallbackValue}
+          </TableCell>
+        );
       case "description":
         return <TableCell key={key}>{contract.description}</TableCell>;
       case "searchCode1":
-        return <TableCell key={key}>{contract.searchCode1 ?? fallbackValue}</TableCell>;
+        return (
+          <TableCell key={key}>
+            {contract.searchCode1 ?? fallbackValue}
+          </TableCell>
+        );
       case "searchCode2":
-        return <TableCell key={key}>{contract.searchCode2 ?? fallbackValue}</TableCell>;
+        return (
+          <TableCell key={key}>
+            {contract.searchCode2 ?? fallbackValue}
+          </TableCell>
+        );
       case "searchCode3":
-        return <TableCell key={key}>{contract.searchCode3 ?? fallbackValue}</TableCell>;
+        return (
+          <TableCell key={key}>
+            {contract.searchCode3 ?? fallbackValue}
+          </TableCell>
+        );
       case "websiteSorting":
-        return <TableCell key={key}>{contract.websiteSorting ?? fallbackValue}</TableCell>;
+        return (
+          <TableCell key={key}>
+            {contract.websiteSorting ?? fallbackValue}
+          </TableCell>
+        );
       case "hideOnWebsite":
         return (
           <TableCell key={key}>
@@ -109,7 +160,10 @@ export const ContractsTable = ({ contracts }: ContractsTableContentProps) => {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <TableToolbar
+        searchPlaceholder="Search code, description or group…"
+        filters={filters}
+      >
         <ColumnSelector
           columns={ALL_COLUMNS.map((column) => ({
             key: column.key,
@@ -118,34 +172,47 @@ export const ContractsTable = ({ contracts }: ContractsTableContentProps) => {
           visibility={columnVisibility}
           onToggle={toggleColumn}
         />
-      </div>
+      </TableToolbar>
 
       <div>
         <Table>
           <TableHeader>
             <TableRow>
-              {visibleColumns.map((column) => (
-                <TableHead key={column.key}>{column.label}</TableHead>
-              ))}
+              {visibleColumns.map((column) => {
+                const sortKey = SORTABLE[column.key];
+                return sortKey ? (
+                  <TableSortHeader key={column.key} sortKey={sortKey}>
+                    {column.label}
+                  </TableSortHeader>
+                ) : (
+                  <TableHead key={column.key}>{column.label}</TableHead>
+                );
+              })}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {contracts.length === 0 ? (
+            {page.rows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={visibleColumns.length} className="h-24 text-center">
+                <TableCell
+                  colSpan={visibleColumns.length}
+                  className="h-24 text-center"
+                >
                   No contracts found
                 </TableCell>
               </TableRow>
             ) : (
-              contracts.map((contract) => (
+              page.rows.map((contract) => (
                 <TableRow key={contract.id}>
-                  {visibleColumns.map((column) => renderCell(contract, column.key))}
+                  {visibleColumns.map((column) =>
+                    renderCell(contract, column.key),
+                  )}
                 </TableRow>
               ))
             )}
           </TableBody>
         </Table>
       </div>
+      <TablePagination page={page} singular="contract" plural="contracts" />
     </div>
   );
 };

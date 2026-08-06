@@ -31,7 +31,19 @@ import {
   LEDGER_ACCOUNTS,
 } from "@/lib/server/ledger";
 import { currentUser } from "@clerk/nextjs/server";
-import { and, desc, eq, getTableColumns, gt, sql } from "drizzle-orm";
+import { stockStatuses } from "@/lib/enums";
+import {
+  booleanFilter,
+  dateRangeFilter,
+  enumFilter,
+  numberRangeFilter,
+  relationFilter,
+  runPaged,
+  tableOrderBy,
+  tableWhere,
+} from "@/lib/server/table-query";
+import { Paged, TableQuery } from "@/lib/table-query";
+import { and, count, desc, eq, getTableColumns, gt, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 export type StockListItem = SelectStock & {
@@ -67,29 +79,88 @@ export type StockDetail = StockListItem & {
   movements: SelectStockMovements[];
 };
 
-export const getStock = async (): Promise<StockListItem[]> => {
+const STOCK_SEARCH = [
+  Products.productCode,
+  Products.name,
+  Stock.charge,
+  Stock.internalCharge,
+] as const;
+
+const STOCK_SORTABLE = {
+  createdAt: Stock.createdAt,
+  product: Products.productCode,
+  status: Stock.status,
+  receiptDate: Stock.receiptDate,
+  quantity: Stock.quantity,
+  valuationEuro: Stock.valuationEuro,
+};
+
+// A lot is looked for by article, by state, by where it sits and by who supplied
+// it. `blocked` is offered because blocked stock is on the shelf but cannot be
+// sold, which is exactly the discrepancy someone is chasing when they ask.
+const STOCK_FILTERS = {
+  status: enumFilter(Stock.status, stockStatuses),
+  product: relationFilter(Stock.productUuid),
+  location: relationFilter(Stock.locationUuid),
+  supplier: relationFilter(Stock.supplierUuid),
+  receiptDate: dateRangeFilter(Stock.receiptDate),
+  quantity: numberRangeFilter(Stock.quantity),
+  blocked: booleanFilter(Stock.blocked),
+};
+
+export const getStock = async (
+  query: TableQuery,
+): Promise<Paged<StockListItem>> => {
   try {
-    return await db
-      .select({
-        ...getTableColumns(Stock),
-        productCode: Products.productCode,
-        productName: Products.name,
-        companyName: Companies.companyName,
-        purchaseOrderId: PurchaseOrders.id,
-        originalQuantity: PurchaseOrderItems.quantity,
-      })
-      .from(Stock)
-      .leftJoin(Products, eq(Stock.productUuid, Products.uuid))
-      .leftJoin(Companies, eq(Products.companyUuid, Companies.uuid))
-      .leftJoin(
-        PurchaseOrders,
-        eq(Stock.purchaseOrderUuid, PurchaseOrders.uuid),
-      )
-      .leftJoin(
-        PurchaseOrderItems,
-        eq(Stock.purchaseOrderItemUuid, PurchaseOrderItems.uuid),
-      )
-      .orderBy(desc(Stock.createdAt));
+    const where = tableWhere({
+      query,
+      search: STOCK_SEARCH,
+      filters: STOCK_FILTERS,
+    });
+
+    return await runPaged(query, {
+      rows: (limit, offset) =>
+        db
+          .select({
+            ...getTableColumns(Stock),
+            productCode: Products.productCode,
+            productName: Products.name,
+            companyName: Companies.companyName,
+            purchaseOrderId: PurchaseOrders.id,
+            originalQuantity: PurchaseOrderItems.quantity,
+          })
+          .from(Stock)
+          .leftJoin(Products, eq(Stock.productUuid, Products.uuid))
+          .leftJoin(Companies, eq(Products.companyUuid, Companies.uuid))
+          .leftJoin(
+            PurchaseOrders,
+            eq(Stock.purchaseOrderUuid, PurchaseOrders.uuid),
+          )
+          .leftJoin(
+            PurchaseOrderItems,
+            eq(Stock.purchaseOrderItemUuid, PurchaseOrderItems.uuid),
+          )
+          .where(where)
+          .orderBy(
+            ...tableOrderBy(
+              STOCK_SORTABLE,
+              query,
+              [desc(Stock.createdAt)],
+              Stock.id,
+            ),
+          )
+          .limit(limit)
+          .offset(offset),
+
+      count: async () => {
+        const [row] = await db
+          .select({ value: count() })
+          .from(Stock)
+          .leftJoin(Products, eq(Stock.productUuid, Products.uuid))
+          .where(where);
+        return Number(row?.value ?? 0);
+      },
+    });
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch stock"));
   }

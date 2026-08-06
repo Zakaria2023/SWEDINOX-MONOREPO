@@ -2,6 +2,10 @@
 
 import Link from "next/link";
 import { ComplaintListItem } from "@/app/(dashboard)/complaints/actions";
+import { TablePagination } from "@/components/ui/table-pagination";
+import { TableSortHeader } from "@/components/ui/table-sort-header";
+import { TableToolbar } from "@/components/ui/table-toolbar";
+import { Paged, TableFilterControl } from "@/lib/table-query";
 import {
   Table,
   TableBody,
@@ -14,25 +18,30 @@ import { COMPLAINT_CATEGORY_LABELS, COMPLAINT_TYPE_LABELS } from "@/lib/labels";
 import { ComplaintCategory, ComplaintType } from "@/lib/enums";
 
 type Props = {
-  complaints: ComplaintListItem[];
+  page: Paged<ComplaintListItem>;
+  filters: TableFilterControl[];
 };
 
-export const ComplaintsTableContent = ({ complaints }: Props) => (
-  <div>
+export const ComplaintsTableContent = ({ page, filters }: Props) => (
+  <div className="space-y-4">
+    <TableToolbar
+      searchPlaceholder="Search description, customer or product…"
+      filters={filters}
+    />
     <Table>
       <TableHeader>
         <TableRow>
           <TableHead>ID</TableHead>
-          <TableHead>Company</TableHead>
+          <TableSortHeader sortKey="customer">Company</TableSortHeader>
           <TableHead>Contact</TableHead>
           <TableHead>Type</TableHead>
           <TableHead>Category</TableHead>
-          <TableHead>Report Date</TableHead>
+          <TableSortHeader sortKey="reportDate">Report Date</TableSortHeader>
           <TableHead>Product</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {complaints.length === 0 ? (
+        {page.rows.length === 0 ? (
           <TableRow>
             <TableCell
               colSpan={7}
@@ -42,7 +51,7 @@ export const ComplaintsTableContent = ({ complaints }: Props) => (
             </TableCell>
           </TableRow>
         ) : (
-          complaints.map((row) => (
+          page.rows.map((row) => (
             <TableRow key={row.uuid}>
               <TableCell>
                 <Link
@@ -83,5 +92,6 @@ export const ComplaintsTableContent = ({ complaints }: Props) => (
         )}
       </TableBody>
     </Table>
+    <TablePagination page={page} singular="complaint" plural="complaints" />
   </div>
 );

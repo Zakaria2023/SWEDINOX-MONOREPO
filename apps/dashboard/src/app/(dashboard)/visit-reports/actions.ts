@@ -11,9 +11,19 @@ import {
   VisitReports,
 } from "@/db";
 import { generateUuid, todayDateString } from "@/lib/helpers";
-import { asc, desc, eq, getTableColumns } from "drizzle-orm";
+import { asc, count, desc, eq, getTableColumns } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { visitReportReasons } from "@/lib/enums";
+import {
+  dateRangeFilter,
+  enumFilter,
+  relationFilter,
+  runPaged,
+  tableOrderBy,
+  tableWhere,
+} from "@/lib/server/table-query";
+import { Paged, TableQuery } from "@/lib/table-query";
 
 export type VisitReportInput = Omit<
   InsertVisitReports,
@@ -39,15 +49,65 @@ export type VisitReportDetail = VisitReportListItem & {
   contactLastName: SelectContacts["lastName"] | null;
 };
 
-export const getVisitReports = async (): Promise<VisitReportListItem[]> =>
-  db
-    .select({
-      ...getTableColumns(VisitReports),
-      companyName: Companies.companyName,
-    })
-    .from(VisitReports)
-    .innerJoin(Companies, eq(Companies.uuid, VisitReports.companyUuid))
-    .orderBy(desc(VisitReports.createdAt));
+const VISIT_REPORT_SEARCH = [
+  VisitReports.remarks,
+  Companies.companyName,
+] as const;
+
+const VISIT_REPORT_SORTABLE = {
+  createdAt: VisitReports.createdAt,
+  visitDate: VisitReports.visitDate,
+  customer: Companies.companyName,
+};
+
+// Whose visit it was, why, and when. `resolved` separates what actually took
+// place from what is merely planned — see /visits-made, which is that filter.
+const VISIT_REPORT_FILTERS = {
+  company: relationFilter(VisitReports.companyUuid),
+  visitReason: enumFilter(VisitReports.visitReason, visitReportReasons),
+  visitDate: dateRangeFilter(VisitReports.visitDate),
+};
+
+export const getVisitReports = async (
+  query: TableQuery,
+): Promise<Paged<VisitReportListItem>> => {
+  const where = tableWhere({
+    query,
+    search: VISIT_REPORT_SEARCH,
+    filters: VISIT_REPORT_FILTERS,
+  });
+
+  return runPaged(query, {
+    rows: (limit, offset) =>
+      db
+        .select({
+          ...getTableColumns(VisitReports),
+          companyName: Companies.companyName,
+        })
+        .from(VisitReports)
+        .innerJoin(Companies, eq(Companies.uuid, VisitReports.companyUuid))
+        .where(where)
+        .orderBy(
+          ...tableOrderBy(
+            VISIT_REPORT_SORTABLE,
+            query,
+            [desc(VisitReports.createdAt)],
+            VisitReports.id,
+          ),
+        )
+        .limit(limit)
+        .offset(offset),
+
+    count: async () => {
+      const [row] = await db
+        .select({ value: count() })
+        .from(VisitReports)
+        .innerJoin(Companies, eq(Companies.uuid, VisitReports.companyUuid))
+        .where(where);
+      return Number(row?.value ?? 0);
+    },
+  });
+};
 
 /**
  * One visit report with the company visited and the contact seen.

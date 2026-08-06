@@ -11,8 +11,12 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
+import { TablePagination } from "@/components/ui/table-pagination";
+import { TableSortHeader } from "@/components/ui/table-sort-header";
+import { TableToolbar } from "@/components/ui/table-toolbar";
 import { buildColumnVisibility } from "@/lib/helpers";
 import { ADDRESS_CATEGORY_LABELS, AVAILABLE_AT_LABELS } from "@/lib/labels";
+import { Paged, TableFilterControl } from "@/lib/table-query";
 import { useState } from "react";
 
 type ColumnKey =
@@ -120,11 +124,28 @@ const ALL_COLUMNS: Array<{
   { key: "updatedAt", label: "Updated At", defaultVisible: false },
 ];
 
-type AddressesTableContentProps = {
-  addresses: AddressListItem[];
+// The columns a header may sort on, matching the keys actions.ts declared
+// sortable. A column not named here renders as a plain header.
+const SORTABLE: Partial<Record<ColumnKey, string>> = {
+  companyName: "company",
+  streetAndNo: "streetAndNo",
+  postalCode: "postalCode",
+  city: "city",
+  country: "country",
+  category: "category",
+  createdAt: "createdAt",
 };
 
-export const AddressesTable = ({ addresses }: AddressesTableContentProps) => {
+type AddressesTableContentProps = {
+  page: Paged<AddressListItem>;
+  filters: TableFilterControl[];
+};
+
+export const AddressesTable = ({
+  page,
+  filters,
+}: AddressesTableContentProps) => {
+  const addresses = page.rows;
   const [columnVisibility, setColumnVisibility] = useState<
     Record<ColumnKey, boolean>
   >(buildColumnVisibility(ALL_COLUMNS));
@@ -347,7 +368,10 @@ export const AddressesTable = ({ addresses }: AddressesTableContentProps) => {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <TableToolbar
+        searchPlaceholder="Search street, city, postcode or company…"
+        filters={filters}
+      >
         <ColumnSelector
           columns={ALL_COLUMNS.map((column) => ({
             key: column.key,
@@ -356,15 +380,22 @@ export const AddressesTable = ({ addresses }: AddressesTableContentProps) => {
           visibility={columnVisibility}
           onToggle={toggleColumn}
         />
-      </div>
+      </TableToolbar>
 
       <div>
         <Table>
           <TableHeader>
             <TableRow>
-              {visibleColumns.map((column) => (
-                <TableHead key={column.key}>{column.label}</TableHead>
-              ))}
+              {visibleColumns.map((column) => {
+                const sortKey = SORTABLE[column.key];
+                return sortKey ? (
+                  <TableSortHeader key={column.key} sortKey={sortKey}>
+                    {column.label}
+                  </TableSortHeader>
+                ) : (
+                  <TableHead key={column.key}>{column.label}</TableHead>
+                );
+              })}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -387,6 +418,8 @@ export const AddressesTable = ({ addresses }: AddressesTableContentProps) => {
           </TableBody>
         </Table>
       </div>
+
+      <TablePagination page={page} singular="address" plural="addresses" />
     </div>
   );
 };

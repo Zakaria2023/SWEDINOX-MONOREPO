@@ -5,7 +5,6 @@ import {
 import { ContractFormValues } from "@/app/(dashboard)/contracts/validation";
 import { toFormString } from "@/lib/helpers";
 
-
 /** A saved contract back into the values its form edits. */
 export const contractDetailToFormValues = (
   contract: ContractDetail,
@@ -37,7 +36,9 @@ export const contractDetailToFormValues = (
 
   quantitySurcharge: contract.quantitySurcharge ?? false,
   quantitySurchargeTierUnit: contract.quantitySurchargeTierUnit ?? undefined,
-  quantitySurchargeDiscountUnit: toFormString(contract.quantitySurchargeDiscountUnit),
+  quantitySurchargeDiscountUnit: toFormString(
+    contract.quantitySurchargeDiscountUnit,
+  ),
   quantitySurchargeTiers: contract.quantitySurchargeTiers ?? [],
   quantitySurchargePerType: contract.quantitySurchargePerType ?? undefined,
 

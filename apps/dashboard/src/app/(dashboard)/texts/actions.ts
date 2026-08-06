@@ -29,7 +29,14 @@ import {
   SelectCompanyAddresses,
   SelectTextCategories,
 } from "@/db";
-import { desc, eq, getTableColumns } from "drizzle-orm";
+import { count, desc, eq, getTableColumns } from "drizzle-orm";
+import {
+  relationFilter,
+  runPaged,
+  tableOrderBy,
+  tableWhere,
+} from "@/lib/server/table-query";
+import { Paged, TableQuery } from "@/lib/table-query";
 
 export type TextListItem = SelectTexts & {
   companyId: SelectCompanies["id"] | null;
@@ -56,24 +63,76 @@ export type TextDetail = SelectTexts & {
   purchaseRequestId: SelectPurchaseRequests["id"] | null;
 };
 
-export const getTexts = async (): Promise<TextListItem[]> =>
-  db
-    .select({
-      ...getTableColumns(Texts),
-      companyId: Companies.id,
-      companyName: Companies.companyName,
-      roles: Companies.roles,
-      city: CompanyAddresses.city,
-      textCategoryName: TextCategories.name,
-    })
-    .from(Texts)
-    .leftJoin(Companies, eq(Companies.uuid, Texts.companyUuid))
-    .leftJoin(
-      CompanyAddresses,
-      eq(CompanyAddresses.companyUuid, Texts.companyUuid),
-    )
-    .leftJoin(TextCategories, eq(TextCategories.uuid, Texts.textCategoryUuid))
-    .orderBy(desc(Texts.createdAt));
+const TEXT_SEARCH = [Texts.textBlock, Companies.companyName] as const;
+
+const TEXT_SORTABLE = {
+  createdAt: Texts.createdAt,
+  company: Companies.companyName,
+  category: TextCategories.name,
+};
+
+// Whose text it is and which category it prints under.
+const TEXT_FILTERS = {
+  company: relationFilter(Texts.companyUuid),
+  textCategory: relationFilter(Texts.textCategoryUuid),
+};
+
+export const getTexts = async (
+  query: TableQuery,
+): Promise<Paged<TextListItem>> => {
+  const where = tableWhere({
+    query,
+    search: TEXT_SEARCH,
+    filters: TEXT_FILTERS,
+  });
+
+  return runPaged(query, {
+    rows: (limit, offset) =>
+      db
+        .select({
+          ...getTableColumns(Texts),
+          companyId: Companies.id,
+          companyName: Companies.companyName,
+          roles: Companies.roles,
+          city: CompanyAddresses.city,
+          textCategoryName: TextCategories.name,
+        })
+        .from(Texts)
+        .leftJoin(Companies, eq(Companies.uuid, Texts.companyUuid))
+        .leftJoin(
+          CompanyAddresses,
+          eq(CompanyAddresses.companyUuid, Texts.companyUuid),
+        )
+        .leftJoin(
+          TextCategories,
+          eq(TextCategories.uuid, Texts.textCategoryUuid),
+        )
+        .where(where)
+        .orderBy(
+          ...tableOrderBy(
+            TEXT_SORTABLE,
+            query,
+            [desc(Texts.createdAt)],
+            Texts.id,
+          ),
+        )
+        .limit(limit)
+        .offset(offset),
+
+    count: async () => {
+      const [row] = await db
+        .select({ value: count() })
+        .from(Texts)
+        .leftJoin(Companies, eq(Companies.uuid, Texts.companyUuid))
+        .leftJoin(
+          TextCategories,
+          eq(TextCategories.uuid, Texts.textCategoryUuid),
+        )
+        .where(where);
+      return Number(row?.value ?? 0);
+    },
+  });
+};
 
 /**
  * One text block with everything recorded on it: the company and document it is

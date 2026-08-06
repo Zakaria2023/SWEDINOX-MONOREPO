@@ -39,7 +39,28 @@ import {
   toDateString,
 } from "@/lib/helpers";
 import { currentUser } from "@clerk/nextjs/server";
-import { and, desc, eq, getTableColumns, gte, inArray, sql } from "drizzle-orm";
+import { invoiceDocumentTypes, purchaseInvoiceBlockReasons } from "@/lib/enums";
+import {
+  booleanFilter,
+  dateRangeFilter,
+  enumFilter,
+  numberRangeFilter,
+  relationFilter,
+  runPaged,
+  tableOrderBy,
+  tableWhere,
+} from "@/lib/server/table-query";
+import { Paged, TableQuery } from "@/lib/table-query";
+import {
+  and,
+  count,
+  desc,
+  eq,
+  getTableColumns,
+  gte,
+  inArray,
+  sql,
+} from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -114,24 +135,86 @@ export type PurchaseInvoiceDetail = SelectPurchaseInvoices & {
   movements: SelectStockMovements[];
 };
 
-export const getPurchaseInvoices = async (): Promise<
-  PurchaseInvoiceListItem[]
-> =>
-  db
-    .select({
-      ...getTableColumns(PurchaseInvoices),
-      companyName: Companies.companyName,
-      supplierCode: Companies.id,
-      contactFirstName: Contacts.firstName,
-      contactLastName: Contacts.lastName,
-    })
-    .from(PurchaseInvoices)
-    .leftJoin(Companies, eq(PurchaseInvoices.companyUuid, Companies.uuid))
-    .leftJoin(
-      Contacts,
-      eq(PurchaseInvoices.invoiceSentByContactUuid, Contacts.uuid),
-    )
-    .orderBy(desc(PurchaseInvoices.createdAt));
+const PURCHASE_INVOICE_SEARCH = [
+  PurchaseInvoices.invoiceNumberSupplier,
+  Companies.companyName,
+] as const;
+
+const PURCHASE_INVOICE_SORTABLE = {
+  createdAt: PurchaseInvoices.createdAt,
+  supplier: Companies.companyName,
+  invoiceDate: PurchaseInvoices.invoiceDate,
+  bookingDate: PurchaseInvoices.bookingDate,
+  expirationDate: PurchaseInvoices.expirationDate,
+  invoiceTotal: PurchaseInvoices.invoiceTotal,
+  outstanding: PurchaseInvoices.outstanding,
+};
+
+// A purchase invoice is chased by supplier, period and whether it is held. Both
+// `blocked` and `cancelled` are offered: a blocked invoice is one somebody has
+// to resolve before it can be paid, and a cancelled one is invisible to every
+// other screen's reasoning.
+const PURCHASE_INVOICE_FILTERS = {
+  documentType: enumFilter(PurchaseInvoices.documentType, invoiceDocumentTypes),
+  supplier: relationFilter(PurchaseInvoices.companyUuid),
+  blockReason: enumFilter(
+    PurchaseInvoices.blockReason,
+    purchaseInvoiceBlockReasons,
+  ),
+  invoiceDate: dateRangeFilter(PurchaseInvoices.invoiceDate),
+  bookingDate: dateRangeFilter(PurchaseInvoices.bookingDate),
+  outstanding: numberRangeFilter(PurchaseInvoices.outstanding),
+  blocked: booleanFilter(PurchaseInvoices.blocked),
+  cancelled: booleanFilter(PurchaseInvoices.cancelled),
+};
+
+export const getPurchaseInvoices = async (
+  query: TableQuery,
+): Promise<Paged<PurchaseInvoiceListItem>> => {
+  const where = tableWhere({
+    query,
+    search: PURCHASE_INVOICE_SEARCH,
+    filters: PURCHASE_INVOICE_FILTERS,
+  });
+
+  return runPaged(query, {
+    rows: (limit, offset) =>
+      db
+        .select({
+          ...getTableColumns(PurchaseInvoices),
+          companyName: Companies.companyName,
+          supplierCode: Companies.id,
+          contactFirstName: Contacts.firstName,
+          contactLastName: Contacts.lastName,
+        })
+        .from(PurchaseInvoices)
+        .leftJoin(Companies, eq(PurchaseInvoices.companyUuid, Companies.uuid))
+        .leftJoin(
+          Contacts,
+          eq(PurchaseInvoices.invoiceSentByContactUuid, Contacts.uuid),
+        )
+        .where(where)
+        .orderBy(
+          ...tableOrderBy(
+            PURCHASE_INVOICE_SORTABLE,
+            query,
+            [desc(PurchaseInvoices.createdAt)],
+            PurchaseInvoices.id,
+          ),
+        )
+        .limit(limit)
+        .offset(offset),
+
+    count: async () => {
+      const [row] = await db
+        .select({ value: count() })
+        .from(PurchaseInvoices)
+        .leftJoin(Companies, eq(PurchaseInvoices.companyUuid, Companies.uuid))
+        .where(where);
+      return Number(row?.value ?? 0);
+    },
+  });
+};
 
 export const createPurchaseInvoice = async (
   fields: PurchaseInvoiceFields,
@@ -218,7 +301,9 @@ export const createPurchaseInvoice = async (
       const netPrice = Number(poItem?.netPrice ?? 0);
       return {
         amount: netPrice * Number(item.quantity),
-        vatCode: poItem ? (vatCodeByProduct.get(poItem.productUuid) ?? null) : null,
+        vatCode: poItem
+          ? (vatCodeByProduct.get(poItem.productUuid) ?? null)
+          : null,
       };
     });
 

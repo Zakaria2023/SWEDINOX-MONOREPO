@@ -161,6 +161,13 @@ export const Orders = mysqlTable(
   },
   (table) => [
     index("idx_orders_company_uuid").on(table.companyUuid),
+    // Status and delivery date are what the overview narrows by; the financial
+    // blockage is a two-value column that /financially-blocked selects on
+    // directly, so it is worth an index of its own.
+    index("idx_orders_status").on(table.status),
+    index("idx_orders_delivery_date").on(table.deliveryDate),
+    index("idx_orders_financial_blockage").on(table.financialBlockage),
+    index("idx_orders_created_at_id").on(table.createdAt, table.id),
     index("idx_orders_contact_uuid").on(table.contactUuid),
     index("idx_orders_project_uuid").on(table.projectUuid),
     index("idx_orders_delivery_address_uuid").on(table.deliveryAddressUuid),

@@ -3,6 +3,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ProductListItem } from "@/app/(dashboard)/products/actions";
+import { TablePagination } from "@/components/ui/table-pagination";
+import { TableSortHeader } from "@/components/ui/table-sort-header";
+import { TableToolbar } from "@/components/ui/table-toolbar";
+import { Paged, TableFilterControl } from "@/lib/table-query";
 import {
   Table,
   TableBody,
@@ -47,15 +51,27 @@ const ALL_COLUMNS: Array<{
   { key: "thickness", label: "Thickness", defaultVisible: false },
   { key: "technicalStock", label: "Technical Stock", defaultVisible: true },
   { key: "stockUnit", label: "StkU", defaultVisible: true },
-  { key: "theoreticalWeight", label: "Theor. Weight (kg)", defaultVisible: true },
+  {
+    key: "theoreticalWeight",
+    label: "Theor. Weight (kg)",
+    defaultVisible: true,
+  },
   { key: "weightUnit", label: "WeightU", defaultVisible: true },
 ];
 
-type Props = {
-  products: ProductListItem[];
+// The columns a header may sort on, matching the keys actions.ts declared.
+const SORTABLE: Partial<Record<ColumnKey, string>> = {
+  productCode: "productCode",
+  name: "name",
+  productGroup: "productGroup",
 };
 
-export const ProductsTable = ({ products }: Props) => {
+type Props = {
+  page: Paged<ProductListItem>;
+  filters: TableFilterControl[];
+};
+
+export const ProductsTable = ({ page, filters }: Props) => {
   const [visibility, setVisibility] = useState<Record<string, boolean>>(
     buildColumnVisibility(ALL_COLUMNS),
   );
@@ -111,24 +127,34 @@ export const ProductsTable = ({ products }: Props) => {
 
   return (
     <div className="space-y-3">
-      <div className="flex justify-end">
+      <TableToolbar
+        searchPlaceholder="Search product code, name or commodity code…"
+        filters={filters}
+      >
         <ColumnSelector
           columns={ALL_COLUMNS}
           visibility={visibility}
           onToggle={handleToggle}
         />
-      </div>
+      </TableToolbar>
       <div>
         <Table>
           <TableHeader>
             <TableRow>
-              {visible.map((col) => (
-                <TableHead key={col.key}>{col.label}</TableHead>
-              ))}
+              {visible.map((col) => {
+                const sortKey = SORTABLE[col.key];
+                return sortKey ? (
+                  <TableSortHeader key={col.key} sortKey={sortKey}>
+                    {col.label}
+                  </TableSortHeader>
+                ) : (
+                  <TableHead key={col.key}>{col.label}</TableHead>
+                );
+              })}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {products.length === 0 ? (
+            {page.rows.length === 0 ? (
               <TableRow>
                 <TableCell
                   colSpan={visible.length}
@@ -138,7 +164,7 @@ export const ProductsTable = ({ products }: Props) => {
                 </TableCell>
               </TableRow>
             ) : (
-              products.map((row) => (
+              page.rows.map((row) => (
                 <TableRow key={row.uuid}>
                   {visible.map((col) => (
                     <TableCell key={col.key}>
@@ -151,6 +177,7 @@ export const ProductsTable = ({ products }: Props) => {
           </TableBody>
         </Table>
       </div>
+      <TablePagination page={page} singular="product" plural="products" />
     </div>
   );
 };

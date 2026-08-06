@@ -129,6 +129,10 @@ export const ReturnOrders = mysqlTable(
   },
   (table) => [
     index("idx_return_orders_company_uuid").on(table.companyUuid),
+    // Status is the whole workflow of a return — raised, received, credited.
+    index("idx_return_orders_status").on(table.status),
+    index("idx_return_orders_return_date").on(table.returnDate),
+    index("idx_return_orders_created_at_id").on(table.createdAt, table.id),
     index("idx_return_orders_order_uuid").on(table.orderUuid),
     index("idx_return_orders_contact_uuid").on(table.contactUuid),
     index("idx_return_orders_delivery_address_uuid").on(

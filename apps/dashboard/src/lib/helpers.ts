@@ -394,6 +394,37 @@ export const formatBoolean = (value: boolean | null | undefined): string =>
   value === null || value === undefined ? "—" : value ? "Yes" : "No";
 
 /**
+ * A stored user reference as a person's name.
+ *
+ * Clerk owns the user list and there is no local Users table, so every column
+ * that refers to a person — seller, purchaser, created by, responsible for,
+ * blocked by — holds a Clerk id. Printing that id is printing
+ * `user_3EImbVyJV9yjKPDmndXbEb3bUZD` at somebody, which names nobody.
+ *
+ * Three cases, all of which occur:
+ *   - an id Clerk knows becomes that person's name;
+ *   - an id it no longer knows — someone who has left — reads as "Unknown
+ *     user", because the raw id tells a reader strictly less than that;
+ *   - a value that is not a Clerk id passes through unchanged, since these are
+ *     plain varchar columns and some rows hold a name that was typed in.
+ *
+ * Pair with `getClerkUserNames` from lib/server/clerk.ts, which builds the map.
+ */
+export const userName = (
+  value: string | null | undefined,
+  names: Record<string, string>,
+): string => {
+  if (!value) {
+    return "—";
+  }
+  const resolved = names[value];
+  if (resolved) {
+    return resolved;
+  }
+  return value.startsWith("user_") ? "Unknown user" : value;
+};
+
+/**
  * A person's full name from its parts, or an em dash when both are missing.
  */
 export const fullName = (

@@ -1,13 +1,15 @@
 import Link from "next/link";
 import { ContactDetail } from "@/app/(dashboard)/contacts/actions";
 import { DetailField } from "@/components/ui/detail-field";
-import { formatDateValue, formatMoney, yesNo } from "@/lib/helpers";
+import { formatDateValue, formatMoney, userName, yesNo } from "@/lib/helpers";
 import {
   CONTACT_CATEGORY_LABELS,
   CONTACT_SALUTATION_LABELS,
 } from "@/lib/labels";
 
 type Props = {
+  /** Clerk id -> name; these columns store the id, not the name. */
+  userNames: Record<string, string>;
   contact: ContactDetail;
 };
 
@@ -23,7 +25,7 @@ const ROLE_FIELDS: Array<{ field: keyof ContactDetail; label: string }> = [
   { field: "isOther", label: "Other" },
 ];
 
-export const ContactDetailView = ({ contact }: Props) => {
+export const ContactDetailView = ({ contact, userNames }: Props) => {
   const roles = ROLE_FIELDS.filter(({ field }) => contact[field]).map(
     ({ label }) => label,
   );
@@ -78,10 +80,7 @@ export const ContactDetailView = ({ contact }: Props) => {
             label="Category addition"
             value={contact.categoryAddition}
           />
-          <DetailField
-            label="Sequence number"
-            value={contact.sequenceNumber}
-          />
+          <DetailField label="Sequence number" value={contact.sequenceNumber} />
           <DetailField
             label="Created"
             value={formatDateValue(contact.createdAt)}
@@ -118,10 +117,7 @@ export const ContactDetailView = ({ contact }: Props) => {
           <DetailField label="City" value={contact.city} />
           <DetailField label="Region" value={contact.region} />
           <DetailField label="Country" value={contact.country} />
-          <DetailField
-            label="Address country"
-            value={contact.addressCountry}
-          />
+          <DetailField label="Address country" value={contact.addressCountry} />
           <DetailField
             label="Address telephone"
             value={contact.addressTelephone}
@@ -151,11 +147,11 @@ export const ContactDetailView = ({ contact }: Props) => {
       <section className="space-y-4">
         <h2 className="border-b pb-2 text-base font-semibold">Commercial</h2>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          <DetailField label="Purchaser" value={contact.purchaser} />
           <DetailField
-            label="Account manager"
-            value={contact.accountManager}
+            label="Purchaser"
+            value={userName(contact.purchaser, userNames)}
           />
+          <DetailField label="Account manager" value={contact.accountManager} />
           <DetailField label="Representative" value={contact.representative} />
           <DetailField label="Customer group" value={contact.customerGroup} />
           <DetailField label="Industry code" value={contact.industryCode} />
@@ -169,10 +165,7 @@ export const ContactDetailView = ({ contact }: Props) => {
             label="Customer region code"
             value={contact.customerRegionCode}
           />
-          <DetailField
-            label="Customer region"
-            value={contact.customerRegion}
-          />
+          <DetailField label="Customer region" value={contact.customerRegion} />
           <DetailField label="Search code 1" value={contact.searchCode1} />
           <DetailField label="Search code 2" value={contact.searchCode2} />
           <DetailField label="Search code 3" value={contact.searchCode3} />

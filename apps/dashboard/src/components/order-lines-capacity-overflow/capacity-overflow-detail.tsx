@@ -5,15 +5,18 @@ import {
   formatDateColumn,
   formatDateValue,
   orDash,
+  userName,
   yesNo,
 } from "@/lib/helpers";
 import { ORDER_ITEM_STATUS_LABELS, STOCK_UNIT_LABELS } from "@/lib/labels";
 
 type Props = {
+  /** Clerk id -> name; these columns store the id, not the name. */
+  userNames: Record<string, string>;
   overflow: CapacityOverflowRow;
 };
 
-export const CapacityOverflowDetailView = ({ overflow }: Props) => (
+export const CapacityOverflowDetailView = ({ overflow, userNames }: Props) => (
   <div className="space-y-6">
     <section className="space-y-4">
       <h2 className="border-b pb-2 text-base font-semibold">
@@ -25,15 +28,15 @@ export const CapacityOverflowDetailView = ({ overflow }: Props) => (
       </p>
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         <DetailField label="Action" value={overflow.action} />
-        <DetailField label="Action by" value={overflow.actionByUserId} />
+        <DetailField
+          label="Action by"
+          value={userName(overflow.actionByUserId, userNames)}
+        />
         <DetailField
           label="Action on"
           value={formatDateColumn(overflow.actionOn)}
         />
-        <DetailField
-          label="Accountability"
-          value={overflow.accountability}
-        />
+        <DetailField label="Accountability" value={overflow.accountability} />
         <DetailField
           label="Created"
           value={formatDateValue(overflow.createdAt)}
@@ -193,10 +196,7 @@ export const CapacityOverflowDetailView = ({ overflow }: Props) => (
           label="Planned delivered quantity"
           value={overflow.plannedDeliveredQty}
         />
-        <DetailField
-          label="Delivered quantity"
-          value={overflow.deliveredQty}
-        />
+        <DetailField label="Delivered quantity" value={overflow.deliveredQty} />
         <DetailField label="Delivery unit" value={overflow.deliveryUnit} />
         <DetailField
           label="Delivery date planned"
@@ -206,10 +206,7 @@ export const CapacityOverflowDetailView = ({ overflow }: Props) => (
           label="Delivery date actual"
           value={formatDateColumn(overflow.deliveryDateActual)}
         />
-        <DetailField
-          label="Delivery status"
-          value={overflow.deliveryStatus}
-        />
+        <DetailField label="Delivery status" value={overflow.deliveryStatus} />
         <DetailField
           label="Transport date"
           value={orDash(overflow.transportDate)}

@@ -7,7 +7,16 @@ import { Invoices, SelectInvoices } from "@/db/schema/invoices";
 import { OrderItems, SelectOrderItems } from "@/db/schema/order-items";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { Products, SelectProducts } from "@/db/schema/products";
-import { desc, eq, getTableColumns } from "drizzle-orm";
+import { count, desc, eq, getTableColumns } from "drizzle-orm";
+import {
+  dateRangeFilter,
+  numberRangeFilter,
+  relationFilter,
+  runPaged,
+  tableOrderBy,
+  tableWhere,
+} from "@/lib/server/table-query";
+import { Paged, TableQuery } from "@/lib/table-query";
 
 // The money and weight columns come from the invoice line itself, which
 // snapshots them at invoicing — reaching back to the order line would report
@@ -28,25 +37,79 @@ export type InvoiceLineDetail = InvoiceLineItem & {
   orderUuid: SelectOrderItems["orderUuid"] | null;
 };
 
-export const getInvoiceLines = async (): Promise<InvoiceLineItem[]> => {
+const INVOICE_LINE_SEARCH = [
+  Products.productCode,
+  Products.name,
+  Companies.companyName,
+] as const;
+
+const INVOICE_LINE_SORTABLE = {
+  invoiceDate: Invoices.invoiceDate,
+  customer: Companies.companyName,
+  productCode: Products.productCode,
+  amount: InvoiceItems.amount,
+};
+
+// A billed line is looked up by whose invoice it was on, which article, and
+// over what period.
+const INVOICE_LINE_FILTERS = {
+  company: relationFilter(Invoices.companyUuid),
+  product: relationFilter(InvoiceItems.productUuid),
+  invoiceDate: dateRangeFilter(Invoices.invoiceDate),
+  amount: numberRangeFilter(InvoiceItems.amount),
+};
+
+export const getInvoiceLines = async (
+  query: TableQuery,
+): Promise<Paged<InvoiceLineItem>> => {
   try {
-    return await db
-      .select({
-        ...getTableColumns(InvoiceItems),
-        invoiceId: Invoices.id,
-        invoiceDate: Invoices.invoiceDate,
-        customerName: Companies.companyName,
-        vatNumber: Companies.vatNumber,
-        productCode: Products.productCode,
-        productName: Products.name,
-        lineNumber: OrderItems.lineNumber,
-      })
-      .from(InvoiceItems)
-      .leftJoin(Invoices, eq(InvoiceItems.invoiceUuid, Invoices.uuid))
-      .leftJoin(Companies, eq(Invoices.companyUuid, Companies.uuid))
-      .leftJoin(OrderItems, eq(InvoiceItems.orderItemUuid, OrderItems.uuid))
-      .leftJoin(Products, eq(InvoiceItems.productUuid, Products.uuid))
-      .orderBy(desc(Invoices.invoiceDate));
+    const where = tableWhere({
+      query,
+      search: INVOICE_LINE_SEARCH,
+      filters: INVOICE_LINE_FILTERS,
+    });
+
+    return await runPaged(query, {
+      rows: (limit, offset) =>
+        db
+          .select({
+            ...getTableColumns(InvoiceItems),
+            invoiceId: Invoices.id,
+            invoiceDate: Invoices.invoiceDate,
+            customerName: Companies.companyName,
+            vatNumber: Companies.vatNumber,
+            productCode: Products.productCode,
+            productName: Products.name,
+            lineNumber: OrderItems.lineNumber,
+          })
+          .from(InvoiceItems)
+          .leftJoin(Invoices, eq(InvoiceItems.invoiceUuid, Invoices.uuid))
+          .leftJoin(Companies, eq(Invoices.companyUuid, Companies.uuid))
+          .leftJoin(OrderItems, eq(InvoiceItems.orderItemUuid, OrderItems.uuid))
+          .leftJoin(Products, eq(InvoiceItems.productUuid, Products.uuid))
+          .where(where)
+          .orderBy(
+            ...tableOrderBy(
+              INVOICE_LINE_SORTABLE,
+              query,
+              [desc(Invoices.invoiceDate)],
+              InvoiceItems.id,
+            ),
+          )
+          .limit(limit)
+          .offset(offset),
+
+      count: async () => {
+        const [row] = await db
+          .select({ value: count() })
+          .from(InvoiceItems)
+          .leftJoin(Invoices, eq(InvoiceItems.invoiceUuid, Invoices.uuid))
+          .leftJoin(Companies, eq(Invoices.companyUuid, Companies.uuid))
+          .leftJoin(Products, eq(InvoiceItems.productUuid, Products.uuid))
+          .where(where);
+        return Number(row?.value ?? 0);
+      },
+    });
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch invoice lines"));
   }

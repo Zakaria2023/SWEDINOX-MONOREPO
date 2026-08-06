@@ -1,5 +1,9 @@
 "use client";
 
+import { TablePagination } from "@/components/ui/table-pagination";
+import { TableSortHeader } from "@/components/ui/table-sort-header";
+import { TableToolbar } from "@/components/ui/table-toolbar";
+import { Paged, TableFilterControl } from "@/lib/table-query";
 import Link from "next/link";
 import { useState } from "react";
 import { TextListItem } from "@/app/(dashboard)/texts/actions";
@@ -72,8 +76,17 @@ const USAGE_FIELD_SET = new Set<string>(
   TEXT_USAGE_CATEGORY_FIELDS.map((m) => m.field),
 );
 
+// The columns a header may sort on, matching the keys actions.ts declared.
+// A key not named here renders as a plain header.
+const SORTABLE: Partial<Record<ColumnKey, string>> = {
+  companyName: "company",
+  textCategoryName: "category",
+  createdAt: "createdAt",
+};
+
 type TextsTableContentProps = {
-  texts: TextListItem[];
+  page: Paged<TextListItem>;
+  filters: TableFilterControl[];
 };
 
 const BooleanCheckbox = ({ checked }: { checked: boolean }) => (
@@ -85,9 +98,10 @@ const BooleanCheckbox = ({ checked }: { checked: boolean }) => (
   />
 );
 
-export const TextsTable = ({ texts }: TextsTableContentProps) => {
-  const [columnVisibility, setColumnVisibility] =
-    useState<Record<ColumnKey, boolean>>(buildColumnVisibility(ALL_COLUMNS));
+export const TextsTable = ({ page, filters }: TextsTableContentProps) => {
+  const [columnVisibility, setColumnVisibility] = useState<
+    Record<ColumnKey, boolean>
+  >(buildColumnVisibility(ALL_COLUMNS));
 
   const toggleColumn = (key: string) =>
     setColumnVisibility((prev) => ({
@@ -192,7 +206,10 @@ export const TextsTable = ({ texts }: TextsTableContentProps) => {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <TableToolbar
+        searchPlaceholder="Search text or company…"
+        filters={filters}
+      >
         <ColumnSelector
           columns={ALL_COLUMNS.map((col) => ({
             key: col.key,
@@ -201,19 +218,26 @@ export const TextsTable = ({ texts }: TextsTableContentProps) => {
           visibility={columnVisibility}
           onToggle={toggleColumn}
         />
-      </div>
+      </TableToolbar>
 
       <div>
         <Table>
           <TableHeader>
             <TableRow>
-              {visibleColumns.map((col) => (
-                <TableHead key={col.key}>{col.label}</TableHead>
-              ))}
+              {visibleColumns.map((col) => {
+                const sortKey = SORTABLE[col.key];
+                return sortKey ? (
+                  <TableSortHeader key={col.key} sortKey={sortKey}>
+                    {col.label}
+                  </TableSortHeader>
+                ) : (
+                  <TableHead key={col.key}>{col.label}</TableHead>
+                );
+              })}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {texts.length === 0 ? (
+            {page.rows.length === 0 ? (
               <TableRow>
                 <TableCell
                   colSpan={visibleColumns.length}
@@ -223,7 +247,7 @@ export const TextsTable = ({ texts }: TextsTableContentProps) => {
                 </TableCell>
               </TableRow>
             ) : (
-              texts.map((text) => (
+              page.rows.map((text) => (
                 <TableRow key={text.uuid}>
                   {visibleColumns.map((col) => renderCell(text, col.key))}
                 </TableRow>
@@ -232,6 +256,7 @@ export const TextsTable = ({ texts }: TextsTableContentProps) => {
           </TableBody>
         </Table>
       </div>
+      <TablePagination page={page} singular="text" plural="texts" />
     </div>
   );
 };

@@ -32,9 +32,30 @@ import {
   SelectPurchaseReturnOrders,
 } from "@/db/schema/purchase-return-orders";
 import { mailDocument, sendPurchaseOrderEmail } from "@/emails/documents";
+import { purchaseOrderStatuses } from "@/lib/enums";
 import { describeError, generateUuid } from "@/lib/helpers";
+import {
+  dateRangeFilter,
+  enumFilter,
+  numberRangeFilter,
+  relationFilter,
+  runPaged,
+  tableOrderBy,
+  tableWhere,
+} from "@/lib/server/table-query";
+import { Paged, TableQuery } from "@/lib/table-query";
 import { currentUser } from "@clerk/nextjs/server";
-import { and, desc, eq, getTableColumns, gt, inArray, ne, sql } from "drizzle-orm";
+import {
+  and,
+  count,
+  desc,
+  eq,
+  getTableColumns,
+  gt,
+  inArray,
+  ne,
+  sql,
+} from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -175,19 +196,75 @@ export const getPurchaseOrdersForCompany = async (
     .where(eq(PurchaseOrders.supplierUuid, supplierUuid))
     .orderBy(desc(PurchaseOrders.createdAt));
 
-export const getPurchaseOrders = async (): Promise<PurchaseOrderListItem[]> => {
+const PURCHASE_ORDER_SEARCH = [
+  PurchaseOrders.ourReference,
+  PurchaseOrders.reference,
+  Companies.companyName,
+] as const;
+
+const PURCHASE_ORDER_SORTABLE = {
+  createdAt: PurchaseOrders.createdAt,
+  supplier: Companies.companyName,
+  status: PurchaseOrders.status,
+  orderDate: PurchaseOrders.orderDate,
+  deliveryDate: PurchaseOrders.deliveryDate,
+  amount: PurchaseOrders.amount,
+};
+
+// Which supplier, what state, when it was placed, when it is due, what it is
+// worth. Status is what /purchase-orders-to-be-received is a view of, so it
+// carries an index of its own.
+const PURCHASE_ORDER_FILTERS = {
+  status: enumFilter(PurchaseOrders.status, purchaseOrderStatuses),
+  supplier: relationFilter(PurchaseOrders.supplierUuid),
+  orderDate: dateRangeFilter(PurchaseOrders.orderDate),
+  deliveryDate: dateRangeFilter(PurchaseOrders.deliveryDate),
+  amount: numberRangeFilter(PurchaseOrders.amount),
+};
+
+export const getPurchaseOrders = async (
+  query: TableQuery,
+): Promise<Paged<PurchaseOrderListItem>> => {
   try {
-    return await db
-      .select({
-        ...getTableColumns(PurchaseOrders),
-        supplierName: Companies.companyName,
-        contactFirstName: Contacts.firstName,
-        contactLastName: Contacts.lastName,
-      })
-      .from(PurchaseOrders)
-      .leftJoin(Companies, eq(PurchaseOrders.supplierUuid, Companies.uuid))
-      .leftJoin(Contacts, eq(PurchaseOrders.contactUuid, Contacts.uuid))
-      .orderBy(desc(PurchaseOrders.createdAt));
+    const where = tableWhere({
+      query,
+      search: PURCHASE_ORDER_SEARCH,
+      filters: PURCHASE_ORDER_FILTERS,
+    });
+
+    return await runPaged(query, {
+      rows: (limit, offset) =>
+        db
+          .select({
+            ...getTableColumns(PurchaseOrders),
+            supplierName: Companies.companyName,
+            contactFirstName: Contacts.firstName,
+            contactLastName: Contacts.lastName,
+          })
+          .from(PurchaseOrders)
+          .leftJoin(Companies, eq(PurchaseOrders.supplierUuid, Companies.uuid))
+          .leftJoin(Contacts, eq(PurchaseOrders.contactUuid, Contacts.uuid))
+          .where(where)
+          .orderBy(
+            ...tableOrderBy(
+              PURCHASE_ORDER_SORTABLE,
+              query,
+              [desc(PurchaseOrders.createdAt)],
+              PurchaseOrders.id,
+            ),
+          )
+          .limit(limit)
+          .offset(offset),
+
+      count: async () => {
+        const [row] = await db
+          .select({ value: count() })
+          .from(PurchaseOrders)
+          .leftJoin(Companies, eq(PurchaseOrders.supplierUuid, Companies.uuid))
+          .where(where);
+        return Number(row?.value ?? 0);
+      },
+    });
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch purchase orders"));
   }

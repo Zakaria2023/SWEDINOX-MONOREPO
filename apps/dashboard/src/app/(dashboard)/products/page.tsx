@@ -1,10 +1,22 @@
 import Link from "next/link";
 import { getProducts } from "@/app/(dashboard)/products/actions";
+import { productFilters } from "@/app/(dashboard)/products/filters";
+import { getProductGroupsForSelect } from "@/app/(dashboard)/product-groups/actions";
+import { getCompaniesForSelect } from "@/app/(dashboard)/companies/actions";
+import { parseTableQuery, SearchParams } from "@/lib/table-query";
 import { ProductsTable } from "@/components/products/products-table-content";
 import { PageHeading } from "@/components/layout/page-heading";
 
-const ProductsPage = async () => {
-  const products = await getProducts();
+type Props = {
+  searchParams: Promise<SearchParams>;
+};
+
+const ProductsPage = async ({ searchParams }: Props) => {
+  const query = parseTableQuery(await searchParams);
+  // Sequential rather than concurrent: this database caps connections.
+  const products = await getProducts(query);
+  const productGroups = await getProductGroupsForSelect();
+  const companies = await getCompaniesForSelect();
 
   return (
     <div className="space-y-4">
@@ -17,7 +29,10 @@ const ProductsPage = async () => {
           New Product
         </Link>
       </div>
-      <ProductsTable products={products} />
+      <ProductsTable
+        page={products}
+        filters={productFilters(productGroups, companies)}
+      />
     </div>
   );
 };

@@ -22,6 +22,7 @@ import {
   getQuoteVatRatePercent,
   quoteLineFinancials,
 } from "@/lib/helpers";
+import { invoicePaymentTerms, orderStatuses } from "@/lib/enums";
 import { checkCredit } from "@/lib/server/credit-control";
 import {
   loadSalesPricingContext,
@@ -29,8 +30,20 @@ import {
   resolveLineNetPrice,
 } from "@/lib/server/sales-pricing";
 import {
+  booleanFilter,
+  dateRangeFilter,
+  enumFilter,
+  numberRangeFilter,
+  relationFilter,
+  runPaged,
+  tableOrderBy,
+  tableWhere,
+} from "@/lib/server/table-query";
+import { Paged, TableQuery } from "@/lib/table-query";
+import {
   and,
   asc,
+  count,
   desc,
   eq,
   getTableColumns,
@@ -112,20 +125,77 @@ export const getOrdersForCompany = async (
     .where(eq(Orders.companyUuid, companyUuid))
     .orderBy(desc(Orders.createdAt));
 
-export const getOrders = async (): Promise<OrderListItem[]> => {
+const ORDER_SEARCH = [
+  Orders.customerRef,
+  Orders.ourReference,
+  Companies.companyName,
+] as const;
+
+const ORDER_SORTABLE = {
+  createdAt: Orders.createdAt,
+  company: Companies.companyName,
+  status: Orders.status,
+  deliveryDate: Orders.deliveryDate,
+  totalInclVat: Orders.totalInclVat,
+};
+
+// Who it is for, what state it is in, when it ships, what it is worth — and the
+// financial block, because an order held for credit is the one people go
+// looking for. See /financially-blocked, which is this filter as a screen.
+const ORDER_FILTERS = {
+  status: enumFilter(Orders.status, orderStatuses),
+  company: relationFilter(Orders.companyUuid),
+  paymentTerms: enumFilter(Orders.paymentTerms, invoicePaymentTerms),
+  deliveryDate: dateRangeFilter(Orders.deliveryDate),
+  total: numberRangeFilter(Orders.totalInclVat),
+  financialBlockage: booleanFilter(Orders.financialBlockage),
+};
+
+export const getOrders = async (
+  query: TableQuery,
+): Promise<Paged<OrderListItem>> => {
   try {
-    const rows = await db
-      .select({
-        ...getTableColumns(Orders),
-        companyName: Companies.companyName,
-        contactFirstName: Contacts.firstName,
-        contactLastName: Contacts.lastName,
-      })
-      .from(Orders)
-      .leftJoin(Companies, eq(Orders.companyUuid, Companies.uuid))
-      .leftJoin(Contacts, eq(Orders.contactUuid, Contacts.uuid))
-      .orderBy(desc(Orders.createdAt));
-    return rows as OrderListItem[];
+    const where = tableWhere({
+      query,
+      search: ORDER_SEARCH,
+      filters: ORDER_FILTERS,
+    });
+
+    return await runPaged(query, {
+      rows: async (limit, offset) => {
+        const rows = await db
+          .select({
+            ...getTableColumns(Orders),
+            companyName: Companies.companyName,
+            contactFirstName: Contacts.firstName,
+            contactLastName: Contacts.lastName,
+          })
+          .from(Orders)
+          .leftJoin(Companies, eq(Orders.companyUuid, Companies.uuid))
+          .leftJoin(Contacts, eq(Orders.contactUuid, Contacts.uuid))
+          .where(where)
+          .orderBy(
+            ...tableOrderBy(
+              ORDER_SORTABLE,
+              query,
+              [desc(Orders.createdAt)],
+              Orders.id,
+            ),
+          )
+          .limit(limit)
+          .offset(offset);
+        return rows as OrderListItem[];
+      },
+
+      count: async () => {
+        const [row] = await db
+          .select({ value: count() })
+          .from(Orders)
+          .leftJoin(Companies, eq(Orders.companyUuid, Companies.uuid))
+          .where(where);
+        return Number(row?.value ?? 0);
+      },
+    });
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch orders"));
   }

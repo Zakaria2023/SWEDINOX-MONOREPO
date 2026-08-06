@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { CommunicationSettingDetail } from "@/app/(dashboard)/communication-settings/actions";
 import { DetailField } from "@/components/ui/detail-field";
-import { formatDateValue } from "@/lib/helpers";
+import { formatDateValue, userName } from "@/lib/helpers";
 import {
   COMMUNICATION_SETTING_DOCUMENT_TYPE_LABELS,
   COMMUNICATION_SETTING_SHAPE_LABELS,
@@ -9,10 +9,15 @@ import {
 } from "@/lib/labels";
 
 type Props = {
+  /** Clerk id -> name; these columns store the id, not the name. */
+  userNames: Record<string, string>;
   setting: CommunicationSettingDetail;
 };
 
-export const CommunicationSettingDetailView = ({ setting }: Props) => (
+export const CommunicationSettingDetailView = ({
+  setting,
+  userNames,
+}: Props) => (
   <div className="space-y-6">
     <section className="space-y-4">
       <h2 className="border-b pb-2 text-base font-semibold">Setting</h2>
@@ -41,9 +46,7 @@ export const CommunicationSettingDetailView = ({ setting }: Props) => (
         />
         <DetailField
           label="Communication type"
-          value={
-            COMMUNICATION_SETTING_TYPE_LABELS[setting.communicationType]
-          }
+          value={COMMUNICATION_SETTING_TYPE_LABELS[setting.communicationType]}
         />
         <DetailField
           label="Shape"
@@ -57,7 +60,7 @@ export const CommunicationSettingDetailView = ({ setting }: Props) => (
         <DetailField label="Fax" value={setting.fax} />
         <DetailField
           label="Modified by"
-          value={setting.modifiedByUserId}
+          value={userName(setting.modifiedByUserId, userNames)}
         />
         <DetailField
           label="Created"

@@ -1,5 +1,9 @@
 "use client";
 
+import { TablePagination } from "@/components/ui/table-pagination";
+import { TableSortHeader } from "@/components/ui/table-sort-header";
+import { TableToolbar } from "@/components/ui/table-toolbar";
+import { Paged, TableFilterControl } from "@/lib/table-query";
 import Link from "next/link";
 import { InvoiceLineItem } from "@/app/(dashboard)/invoice-lines/actions";
 import {
@@ -13,19 +17,24 @@ import {
 import { formatDateValue } from "@/lib/helpers";
 
 type Props = {
-  lines: InvoiceLineItem[];
+  page: Paged<InvoiceLineItem>;
+  filters: TableFilterControl[];
 };
 
-export const InvoiceLinesTable = ({ lines }: Props) => (
-  <div>
+export const InvoiceLinesTable = ({ page, filters }: Props) => (
+  <div className="space-y-4">
+    <TableToolbar
+      searchPlaceholder="Search product or customer…"
+      filters={filters}
+    />
     <Table>
       <TableHeader>
         <TableRow>
           <TableHead className="text-right">Invoice no.</TableHead>
-          <TableHead>Invoice date</TableHead>
+          <TableSortHeader sortKey="invoiceDate">Invoice date</TableSortHeader>
           <TableHead className="text-right">Order line</TableHead>
-          <TableHead>Customer</TableHead>
-          <TableHead>Product code</TableHead>
+          <TableSortHeader sortKey="customer">Customer</TableSortHeader>
+          <TableSortHeader sortKey="productCode">Product code</TableSortHeader>
           <TableHead>Product</TableHead>
           <TableHead className="text-right">Quantity</TableHead>
           <TableHead className="text-right">Weight (kg)</TableHead>
@@ -34,7 +43,7 @@ export const InvoiceLinesTable = ({ lines }: Props) => (
         </TableRow>
       </TableHeader>
       <TableBody>
-        {lines.length === 0 ? (
+        {page.rows.length === 0 ? (
           <TableRow>
             <TableCell
               colSpan={10}
@@ -44,7 +53,7 @@ export const InvoiceLinesTable = ({ lines }: Props) => (
             </TableCell>
           </TableRow>
         ) : (
-          lines.map((row) => (
+          page.rows.map((row) => (
             <TableRow key={row.uuid}>
               <TableCell className="text-right font-medium">
                 <Link
@@ -76,5 +85,10 @@ export const InvoiceLinesTable = ({ lines }: Props) => (
         )}
       </TableBody>
     </Table>
+    <TablePagination
+      page={page}
+      singular="invoice line"
+      plural="invoice lines"
+    />
   </div>
 );

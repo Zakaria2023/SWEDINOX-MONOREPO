@@ -11,7 +11,18 @@ import {
 } from "@/db/schema/purchase-orders";
 import { Products, SelectProducts } from "@/db/schema/products";
 import { SelectStock, Stock } from "@/db/schema/stock";
-import { desc, eq, getTableColumns } from "drizzle-orm";
+import { orderLineStatuses } from "@/lib/enums";
+import {
+  dateRangeFilter,
+  enumFilter,
+  numberRangeFilter,
+  relationFilter,
+  runPaged,
+  tableOrderBy,
+  tableWhere,
+} from "@/lib/server/table-query";
+import { Paged, TableQuery } from "@/lib/table-query";
+import { count, desc, eq, getTableColumns } from "drizzle-orm";
 
 export type OrderLineRow = {
   uuid: SelectOrderItems["uuid"];
@@ -67,73 +78,141 @@ export type OrderLineStockRow = Pick<
   | "valuationPrice"
 >;
 
+// What the search box looks in: the identifiers somebody reads off a document
+// and types back. Not the dimensions or the money, which are filtered by range.
+const ORDER_LINE_SEARCH = [
+  Products.productCode,
+  Products.name,
+  Orders.customerRef,
+  Companies.companyName,
+] as const;
+
+const ORDER_LINE_SORTABLE = {
+  createdAt: OrderItems.createdAt,
+  deliveryDate: OrderItems.deliveryDate,
+  customer: Companies.companyName,
+  order: Orders.id,
+  lineStatus: OrderItems.lineStatus,
+  productCode: Products.productCode,
+  quantity: OrderItems.quantity,
+  amount: OrderItems.amount,
+};
+
+// company and product narrow on indexed columns. lineStatus and deliveryDate
+// are indexed by this change — see db/schema/order-items.ts — because this is
+// the table that grows fastest and a status filter on it must not be a scan.
+const ORDER_LINE_FILTERS = {
+  lineStatus: enumFilter(OrderItems.lineStatus, orderLineStatuses),
+  company: relationFilter(Orders.companyUuid),
+  product: relationFilter(OrderItems.productUuid),
+  deliveryDate: dateRangeFilter(OrderItems.deliveryDate),
+  amount: numberRangeFilter(OrderItems.amount),
+};
+
 // Every order line, joined to its order, customer and product. Cost is the
 // stock lot valuation; profit/margin are derived from the line amount.
-export const getOrderLines = async (): Promise<OrderLineRow[]> => {
+//
+// The joins to Orders, Companies and Products are inner and are repeated in the
+// count, because the search and several filters reach through them — a count
+// built on the bare table would report rows the page cannot show.
+export const getOrderLines = async (
+  query: TableQuery,
+): Promise<Paged<OrderLineRow>> => {
   try {
-    const rows = await db
-      .select({
-        uuid: OrderItems.uuid,
-        createdAt: OrderItems.createdAt,
-        deliveryDate: OrderItems.deliveryDate,
-        customerName: Companies.companyName,
-        reference: Orders.customerRef,
-        orderId: Orders.id,
-        lineNumber: OrderItems.lineNumber,
-        lineStatus: OrderItems.lineStatus,
-        productCode: Products.productCode,
-        description: Products.name,
-        options: OrderItems.options,
-        lengthMm: OrderItems.lengthMm,
-        widthMm: OrderItems.widthMm,
-        thicknessMm: OrderItems.thicknessMm,
-        quantity: OrderItems.quantity,
-        unit: OrderItems.unit,
-        weightKg: OrderItems.kgPlanned,
-        price: OrderItems.grossPrice,
-        priceUnit: OrderItems.priceUnit,
-        costPrice: Stock.valuationPrice,
-        amount: OrderItems.amount,
-        seller: OrderItems.seller,
-      })
-      .from(OrderItems)
-      .innerJoin(Orders, eq(OrderItems.orderUuid, Orders.uuid))
-      .innerJoin(Companies, eq(Orders.companyUuid, Companies.uuid))
-      .innerJoin(Products, eq(OrderItems.productUuid, Products.uuid))
-      .leftJoin(Stock, eq(OrderItems.stockUuid, Stock.uuid))
-      .orderBy(desc(OrderItems.createdAt));
+    const where = tableWhere({
+      query,
+      search: ORDER_LINE_SEARCH,
+      filters: ORDER_LINE_FILTERS,
+    });
 
-    return rows.map((row) => {
-      const amount = Number(row.amount ?? 0);
-      const quantity = Number(row.quantity ?? 0);
-      const costPrice = Number(row.costPrice ?? 0);
-      const profit = amount - costPrice * quantity;
-      return {
-        uuid: row.uuid,
-        createdAt: row.createdAt ? row.createdAt.toISOString() : null,
-        deliveryDate: row.deliveryDate,
-        customerName: row.customerName,
-        reference: row.reference,
-        orderId: row.orderId,
-        lineNumber: row.lineNumber,
-        lineStatus: row.lineStatus,
-        productCode: row.productCode,
-        description: row.description,
-        options: row.options,
-        lengthMm: row.lengthMm,
-        widthMm: row.widthMm,
-        thicknessMm: row.thicknessMm,
-        quantity,
-        unit: row.unit,
-        weightKg: Number(row.weightKg ?? 0),
-        price: Number(row.price ?? 0),
-        priceUnit: row.priceUnit,
-        costPrice,
-        amount,
-        profit,
-        profitMargin: amount === 0 ? 0 : (profit / amount) * 100,
-        seller: row.seller,
-      };
+    return await runPaged(query, {
+      rows: async (limit, offset) => {
+        const rows = await db
+          .select({
+            uuid: OrderItems.uuid,
+            createdAt: OrderItems.createdAt,
+            deliveryDate: OrderItems.deliveryDate,
+            customerName: Companies.companyName,
+            reference: Orders.customerRef,
+            orderId: Orders.id,
+            lineNumber: OrderItems.lineNumber,
+            lineStatus: OrderItems.lineStatus,
+            productCode: Products.productCode,
+            description: Products.name,
+            options: OrderItems.options,
+            lengthMm: OrderItems.lengthMm,
+            widthMm: OrderItems.widthMm,
+            thicknessMm: OrderItems.thicknessMm,
+            quantity: OrderItems.quantity,
+            unit: OrderItems.unit,
+            weightKg: OrderItems.kgPlanned,
+            price: OrderItems.grossPrice,
+            priceUnit: OrderItems.priceUnit,
+            costPrice: Stock.valuationPrice,
+            amount: OrderItems.amount,
+            seller: OrderItems.seller,
+          })
+          .from(OrderItems)
+          .innerJoin(Orders, eq(OrderItems.orderUuid, Orders.uuid))
+          .innerJoin(Companies, eq(Orders.companyUuid, Companies.uuid))
+          .innerJoin(Products, eq(OrderItems.productUuid, Products.uuid))
+          .leftJoin(Stock, eq(OrderItems.stockUuid, Stock.uuid))
+          .where(where)
+          .orderBy(
+            ...tableOrderBy(
+              ORDER_LINE_SORTABLE,
+              query,
+              [desc(OrderItems.createdAt)],
+              OrderItems.id,
+            ),
+          )
+          .limit(limit)
+          .offset(offset);
+
+        return rows.map((row) => {
+          const amount = Number(row.amount ?? 0);
+          const quantity = Number(row.quantity ?? 0);
+          const costPrice = Number(row.costPrice ?? 0);
+          const profit = amount - costPrice * quantity;
+          return {
+            uuid: row.uuid,
+            createdAt: row.createdAt ? row.createdAt.toISOString() : null,
+            deliveryDate: row.deliveryDate,
+            customerName: row.customerName,
+            reference: row.reference,
+            orderId: row.orderId,
+            lineNumber: row.lineNumber,
+            lineStatus: row.lineStatus,
+            productCode: row.productCode,
+            description: row.description,
+            options: row.options,
+            lengthMm: row.lengthMm,
+            widthMm: row.widthMm,
+            thicknessMm: row.thicknessMm,
+            quantity,
+            unit: row.unit,
+            weightKg: Number(row.weightKg ?? 0),
+            price: Number(row.price ?? 0),
+            priceUnit: row.priceUnit,
+            costPrice,
+            amount,
+            profit,
+            profitMargin: amount === 0 ? 0 : (profit / amount) * 100,
+            seller: row.seller,
+          };
+        });
+      },
+
+      count: async () => {
+        const [row] = await db
+          .select({ value: count() })
+          .from(OrderItems)
+          .innerJoin(Orders, eq(OrderItems.orderUuid, Orders.uuid))
+          .innerJoin(Companies, eq(Orders.companyUuid, Companies.uuid))
+          .innerJoin(Products, eq(OrderItems.productUuid, Products.uuid))
+          .where(where);
+        return Number(row?.value ?? 0);
+      },
     });
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch order lines"));

@@ -176,6 +176,14 @@ export const Quotes = mysqlTable(
   },
   (table) => [
     index("idx_quotes_company_uuid").on(table.companyUuid),
+    // The overview filters and sorts on these: when the quote was given, how
+    // long it stands, and whether it has run out. `expired` holds two values,
+    // which is exactly the case an index earns its keep on for "show me the
+    // live ones".
+    index("idx_quotes_quote_date").on(table.quoteDate),
+    index("idx_quotes_valid_until").on(table.validUntil),
+    index("idx_quotes_expired").on(table.expired),
+    index("idx_quotes_created_at_id").on(table.createdAt, table.id),
     index("idx_quotes_contact_uuid").on(table.contactUuid),
     index("idx_quotes_project_uuid").on(table.projectUuid),
     index("idx_quotes_contract_uuid").on(table.contractUuid),

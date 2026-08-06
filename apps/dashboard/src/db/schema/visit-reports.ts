@@ -95,6 +95,9 @@ export const VisitReports = mysqlTable(
   },
   (table) => [
     index("idx_visit_reports_company_uuid").on(table.companyUuid),
+    // /visits-made and the visit schedule both read by date.
+    index("idx_visit_reports_visit_date").on(table.visitDate),
+    index("idx_visit_reports_created_at_id").on(table.createdAt, table.id),
     foreignKey({
       name: "fk_visit_reports_company",
       columns: [table.companyUuid],

@@ -35,7 +35,27 @@ import {
   toDateString,
 } from "@/lib/helpers";
 import { currentUser } from "@clerk/nextjs/server";
-import { and, desc, eq, getTableColumns, inArray, sql } from "drizzle-orm";
+import {
+  booleanFilter,
+  dateRangeFilter,
+  enumFilter,
+  numberRangeFilter,
+  relationFilter,
+  runPaged,
+  tableOrderBy,
+  tableWhere,
+} from "@/lib/server/table-query";
+import { Paged, TableQuery } from "@/lib/table-query";
+import { invoiceDocumentTypes, invoicePaymentTerms } from "@/lib/enums";
+import {
+  and,
+  count,
+  desc,
+  eq,
+  getTableColumns,
+  inArray,
+  sql,
+} from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -131,16 +151,77 @@ type InvoiceLineSnapshot = Omit<
   "id" | "uuid" | "invoiceUuid" | "createdAt" | "updatedAt"
 >;
 
-export const getInvoices = async (): Promise<InvoiceWithCompany[]> =>
-  db
-    .select({
-      ...getTableColumns(Invoices),
-      companyName: Companies.companyName,
-      companyCode: Companies.id,
-    })
-    .from(Invoices)
-    .leftJoin(Companies, eq(Invoices.companyUuid, Companies.uuid))
-    .orderBy(desc(Invoices.createdAt));
+const INVOICE_SEARCH = [
+  Invoices.debtorNo,
+  Invoices.explanation,
+  Companies.companyName,
+] as const;
+
+const INVOICE_SORTABLE = {
+  invoiceDate: Invoices.invoiceDate,
+  expirationDate: Invoices.expirationDate,
+  customer: Companies.companyName,
+  documentType: Invoices.documentType,
+  invoiceTotal: Invoices.invoiceTotal,
+  outstanding: Invoices.outstanding,
+  createdAt: Invoices.createdAt,
+};
+
+// An invoice is looked for by who owes it, when it was raised, when it fell
+// due, and whether it is still owed. `cancelled` is offered because a void
+// invoice is hidden from every other screen's reasoning and someone
+// occasionally has to find one.
+const INVOICE_FILTERS = {
+  documentType: enumFilter(Invoices.documentType, invoiceDocumentTypes),
+  company: relationFilter(Invoices.companyUuid),
+  paymentTerms: enumFilter(Invoices.paymentTerms, invoicePaymentTerms),
+  invoiceDate: dateRangeFilter(Invoices.invoiceDate),
+  dueDate: dateRangeFilter(Invoices.expirationDate),
+  outstanding: numberRangeFilter(Invoices.outstanding),
+  cancelled: booleanFilter(Invoices.cancelled),
+};
+
+export const getInvoices = async (
+  query: TableQuery,
+): Promise<Paged<InvoiceWithCompany>> => {
+  const where = tableWhere({
+    query,
+    search: INVOICE_SEARCH,
+    filters: INVOICE_FILTERS,
+  });
+
+  return runPaged(query, {
+    rows: (limit, offset) =>
+      db
+        .select({
+          ...getTableColumns(Invoices),
+          companyName: Companies.companyName,
+          companyCode: Companies.id,
+        })
+        .from(Invoices)
+        .leftJoin(Companies, eq(Invoices.companyUuid, Companies.uuid))
+        .where(where)
+        .orderBy(
+          ...tableOrderBy(
+            INVOICE_SORTABLE,
+            query,
+            [desc(Invoices.createdAt)],
+            Invoices.id,
+          ),
+        )
+        .limit(limit)
+        .offset(offset),
+
+    count: async () => {
+      const [row] = await db
+        .select({ value: count() })
+        .from(Invoices)
+        .leftJoin(Companies, eq(Invoices.companyUuid, Companies.uuid))
+        .where(where);
+      return Number(row?.value ?? 0);
+    },
+  });
+};
 
 export const getInvoicesByCompanyUuid = async (
   companyUuid: string,
@@ -223,7 +304,8 @@ export const createInvoice = async (
     // bill more than is left. One line, one instalment per invoice.
     if (new Set(orderItemUuids).size !== orderItemUuids.length) {
       return {
-        error: "The same order line was selected more than once on this invoice.",
+        error:
+          "The same order line was selected more than once on this invoice.",
       };
     }
     const orderItemRows =
@@ -233,7 +315,9 @@ export const createInvoice = async (
             .from(OrderItems)
             .where(inArray(OrderItems.uuid, orderItemUuids))
         : [];
-    const orderItemByUuid = new Map(orderItemRows.map((row) => [row.uuid, row]));
+    const orderItemByUuid = new Map(
+      orderItemRows.map((row) => [row.uuid, row]),
+    );
 
     // An invoice line carries the order line's already-resolved per-unit price
     // and cost verbatim rather than pricing anything a second time. The order
@@ -258,7 +342,9 @@ export const createInvoice = async (
     for (const selection of selections) {
       const row = orderItemByUuid.get(selection.orderItemUuid);
       if (!row) {
-        return { error: "One or more selected reservations could not be found." };
+        return {
+          error: "One or more selected reservations could not be found.",
+        };
       }
       if (row.status !== "delivered") {
         return {
@@ -277,7 +363,9 @@ export const createInvoice = async (
           : Number(selection.quantity);
 
       if (!Number.isFinite(billing) || billing <= 0) {
-        return { error: "Every line being billed needs a quantity above zero." };
+        return {
+          error: "Every line being billed needs a quantity above zero.",
+        };
       }
       if (billing > remaining + QUANTITY_EPSILON) {
         return {
@@ -633,7 +721,8 @@ export const cancelInvoice = async (
         // never had.
         const unbilled = Math.min(
           Math.max(
-            Number(orderItem.invoicedQuantity ?? 0) - Number(item.quantity ?? 0),
+            Number(orderItem.invoicedQuantity ?? 0) -
+              Number(item.quantity ?? 0),
             0,
           ),
           Number(orderItem.quantity ?? 0),
@@ -708,7 +797,10 @@ export const updateInvoice = async (
         return due ? new Date(`${due}T00:00:00`) : null;
       })();
 
-    if (exclVatOverride === undefined && creditRestrictionOverride === undefined) {
+    if (
+      exclVatOverride === undefined &&
+      creditRestrictionOverride === undefined
+    ) {
       await db
         .update(Invoices)
         .set({ ...headerFields, expirationDate })

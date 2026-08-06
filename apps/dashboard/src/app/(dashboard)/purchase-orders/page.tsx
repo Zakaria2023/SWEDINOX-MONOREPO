@@ -1,10 +1,20 @@
 import Link from "next/link";
 import { getPurchaseOrders } from "@/app/(dashboard)/purchase-orders/actions";
+import { purchaseOrderFilters } from "@/app/(dashboard)/purchase-orders/filters";
+import { getCompaniesForSelect } from "@/app/(dashboard)/companies/actions";
+import { parseTableQuery, SearchParams } from "@/lib/table-query";
 import { PurchaseOrdersTable } from "@/components/purchase-orders/purchase-orders-table-content";
 import { PageHeading } from "@/components/layout/page-heading";
 
-const PurchaseOrdersPage = async () => {
-  const purchaseOrders = await getPurchaseOrders();
+type Props = {
+  searchParams: Promise<SearchParams>;
+};
+
+const PurchaseOrdersPage = async ({ searchParams }: Props) => {
+  const query = parseTableQuery(await searchParams);
+  // Sequential rather than concurrent: this database caps connections.
+  const purchaseOrders = await getPurchaseOrders(query);
+  const suppliers = await getCompaniesForSelect();
 
   return (
     <div className="space-y-4">
@@ -17,7 +27,10 @@ const PurchaseOrdersPage = async () => {
           New Purchase Order
         </Link>
       </div>
-      <PurchaseOrdersTable purchaseOrders={purchaseOrders} />
+      <PurchaseOrdersTable
+        page={purchaseOrders}
+        filters={purchaseOrderFilters(suppliers)}
+      />
     </div>
   );
 };

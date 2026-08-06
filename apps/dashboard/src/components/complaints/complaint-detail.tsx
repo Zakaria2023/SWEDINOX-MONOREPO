@@ -30,6 +30,7 @@ import {
   fullName,
   orDash,
   pluralize,
+  userName,
 } from "@/lib/helpers";
 import {
   COMPLAINT_CATEGORY_LABELS,
@@ -41,10 +42,12 @@ import {
 } from "@/lib/labels";
 
 type Props = {
+  /** Clerk id -> name; these columns store the id, not the name. */
+  userNames: Record<string, string>;
   complaint: ComplaintDetail;
 };
 
-export const ComplaintDetailView = ({ complaint }: Props) => {
+export const ComplaintDetailView = ({ complaint, userNames }: Props) => {
   const [isPending, startTransition] = useTransition();
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [error, setError] = useState<string | undefined>();
@@ -178,7 +181,7 @@ export const ComplaintDetailView = ({ complaint }: Props) => {
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           <DetailField
             label="Responsible"
-            value={complaint.responsibleUserId}
+            value={userName(complaint.responsibleUserId, userNames)}
           />
           <DetailField
             label="Cause"

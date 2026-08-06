@@ -4,6 +4,7 @@ import { ChevronLeft } from "lucide-react";
 import { getOrderLineDetail } from "@/app/(dashboard)/order-lines/actions";
 import { OrderLineDetailView } from "@/components/order-lines/order-line-detail";
 import { PageHeading } from "@/components/layout/page-heading";
+import { getClerkUserNames } from "@/lib/server/clerk";
 
 type Props = {
   params: Promise<{ uuid: string }>;
@@ -17,6 +18,10 @@ const OrderLineDetailPage = async ({ params }: Props) => {
   if (!line) {
     notFound();
   }
+
+  // These columns store a Clerk id; Clerk owns the names.
+
+  const userNames = await getClerkUserNames();
 
   return (
     <div className="space-y-4">
@@ -36,7 +41,7 @@ const OrderLineDetailPage = async ({ params }: Props) => {
             : `Order #${line.orderId} — line ${line.lineNumber ?? "?"}`
         }
       />
-      <OrderLineDetailView line={line} />
+      <OrderLineDetailView line={line}  userNames={userNames} />
     </div>
   );
 };

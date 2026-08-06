@@ -25,6 +25,7 @@ import {
   orDash,
   pluralize,
   quoteSummaryFromSnapshot,
+  userName,
   yesNo,
 } from "@/lib/helpers";
 import {
@@ -37,6 +38,8 @@ import {
 } from "@/lib/labels";
 
 type Props = {
+  /** Clerk id -> name; these columns store the id, not the name. */
+  userNames: Record<string, string>;
   quote: QuoteDetail;
 };
 
@@ -54,7 +57,7 @@ const Field = ({ label, value }: FieldProps) => (
   </div>
 );
 
-export const QuoteDetailView = ({ quote }: Props) => {
+export const QuoteDetailView = ({ quote, userNames }: Props) => {
   const [isPending, startTransition] = useTransition();
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [error, setError] = useState<string | undefined>();
@@ -90,7 +93,10 @@ export const QuoteDetailView = ({ quote }: Props) => {
       <section className="space-y-4">
         <h2 className="border-b pb-2 text-base font-semibold">Quote</h2>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          <Field label="Creation date" value={formatDateColumn(quote.createdAt)} />
+          <Field
+            label="Creation date"
+            value={formatDateColumn(quote.createdAt)}
+          />
           <Field label="Customer" value={quote.companyName} />
           <Field
             label="Contact"
@@ -106,7 +112,7 @@ export const QuoteDetailView = ({ quote }: Props) => {
                 : null
             }
           />
-          <Field label="Seller" value={quote.seller} />
+          <Field label="Seller" value={userName(quote.seller, userNames)} />
           <Field label="Contract" value={quote.contractCode} />
           <Field label="Price date" value={formatDateColumn(quote.priceDate)} />
           <Field
@@ -136,12 +142,16 @@ export const QuoteDetailView = ({ quote }: Props) => {
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
           <Field
             label="Type"
-            value={orderTypeFlags.length > 0 ? orderTypeFlags.join(", ") : "Normal"}
+            value={
+              orderTypeFlags.length > 0 ? orderTypeFlags.join(", ") : "Normal"
+            }
           />
           <Field
             label="Weight type"
             value={
-              quote.weightType ? ORDER_WEIGHT_TYPE_LABELS[quote.weightType] : null
+              quote.weightType
+                ? ORDER_WEIGHT_TYPE_LABELS[quote.weightType]
+                : null
             }
           />
           {quote.isConsignment && (

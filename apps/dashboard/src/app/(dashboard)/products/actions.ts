@@ -32,7 +32,10 @@ import {
   PurchaseOrderItems,
   SelectPurchaseOrderItems,
 } from "@/db/schema/purchase-order-items";
-import { PurchaseOrders, SelectPurchaseOrders } from "@/db/schema/purchase-orders";
+import {
+  PurchaseOrders,
+  SelectPurchaseOrders,
+} from "@/db/schema/purchase-orders";
 import {
   PurchaseQuoteItems,
   SelectPurchaseQuoteItems,
@@ -45,10 +48,7 @@ import {
   SelectReturnOrderItems,
 } from "@/db/schema/return-order-items";
 import { ReturnOrders, SelectReturnOrders } from "@/db/schema/return-orders";
-import {
-  RevenueGroups,
-  SelectRevenueGroups,
-} from "@/db/schema/revenue-groups";
+import { RevenueGroups, SelectRevenueGroups } from "@/db/schema/revenue-groups";
 import {
   ProductOptionPrices,
   SalesOptions,
@@ -68,7 +68,17 @@ import {
   loadPurchaseCostByProduct,
   ProductPurchaseCost,
 } from "@/lib/server/purchase-pricing";
-import { asc, desc, eq, getTableColumns, isNull } from "drizzle-orm";
+import { articleGroups } from "@/lib/enums";
+import {
+  booleanFilter,
+  enumFilter,
+  relationFilter,
+  runPaged,
+  tableOrderBy,
+  tableWhere,
+} from "@/lib/server/table-query";
+import { Paged, TableQuery } from "@/lib/table-query";
+import { asc, count, desc, eq, getTableColumns, isNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/mysql-core";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -141,7 +151,9 @@ export type ProductPricingOption = ProductOption &
   > & {
     productGroupName: SelectProductGroups["name"] | null;
     minProfitMarginStock: SelectProductGroups["minProfitMarginStock"] | null;
-    minProfitMarginExWorks: SelectProductGroups["minProfitMarginExWorks"] | null;
+    minProfitMarginExWorks:
+      | SelectProductGroups["minProfitMarginExWorks"]
+      | null;
     qualityStandard: SelectProductGroups["standardsQuality"] | null;
     // Cost figures come off the supplier invoices rather than the product, so
     // they are aggregates rather than columns.
@@ -160,19 +172,77 @@ export const getRevenueGroupsForSelect = async (): Promise<
     .from(RevenueGroups)
     .orderBy(asc(RevenueGroups.name));
 
-export const getProducts = async (): Promise<ProductListItem[]> => {
+const PRODUCT_SEARCH = [
+  Products.productCode,
+  Products.name,
+  Products.commodityCode,
+] as const;
+
+const PRODUCT_SORTABLE = {
+  createdAt: Products.createdAt,
+  productCode: Products.productCode,
+  name: Products.name,
+  productGroup: ProductGroups.name,
+  basePrice: Products.basePrice,
+};
+
+// The catalogue is searched by code far more than it is filtered, so the list
+// is short: which group it sits in, what kind of article it is, whose product
+// it is, and the two flags that decide whether it can be sold from stock at all.
+const PRODUCT_FILTERS = {
+  productGroup: relationFilter(Products.productGroupUuid),
+  articleGroup: enumFilter(Products.articleGroup, articleGroups),
+  company: relationFilter(Products.companyUuid),
+  stockProduct: booleanFilter(Products.stockProduct),
+  blockedForPurchasing: booleanFilter(Products.blockedForPurchasing),
+};
+
+export const getProducts = async (
+  query: TableQuery,
+): Promise<Paged<ProductListItem>> => {
   try {
-    return await db
-      .select({
-        ...getTableColumns(Products),
-        productGroupName: ProductGroups.name,
-      })
-      .from(Products)
-      .leftJoin(
-        ProductGroups,
-        eq(Products.productGroupUuid, ProductGroups.uuid),
-      )
-      .orderBy(desc(Products.createdAt));
+    const where = tableWhere({
+      query,
+      search: PRODUCT_SEARCH,
+      filters: PRODUCT_FILTERS,
+    });
+
+    return await runPaged(query, {
+      rows: (limit, offset) =>
+        db
+          .select({
+            ...getTableColumns(Products),
+            productGroupName: ProductGroups.name,
+          })
+          .from(Products)
+          .leftJoin(
+            ProductGroups,
+            eq(Products.productGroupUuid, ProductGroups.uuid),
+          )
+          .where(where)
+          .orderBy(
+            ...tableOrderBy(
+              PRODUCT_SORTABLE,
+              query,
+              [desc(Products.createdAt)],
+              Products.id,
+            ),
+          )
+          .limit(limit)
+          .offset(offset),
+
+      count: async () => {
+        const [row] = await db
+          .select({ value: count() })
+          .from(Products)
+          .leftJoin(
+            ProductGroups,
+            eq(Products.productGroupUuid, ProductGroups.uuid),
+          )
+          .where(where);
+        return Number(row?.value ?? 0);
+      },
+    });
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch products"));
   }
@@ -233,7 +303,10 @@ export const getProductsForPricing = async (): Promise<
         qualityStandard: ProductGroups.standardsQuality,
       })
       .from(Products)
-      .leftJoin(ProductGroups, eq(Products.productGroupUuid, ProductGroups.uuid))
+      .leftJoin(
+        ProductGroups,
+        eq(Products.productGroupUuid, ProductGroups.uuid),
+      )
       .where(isNull(Products.companyUuid))
       .orderBy(asc(Products.productCode)),
 

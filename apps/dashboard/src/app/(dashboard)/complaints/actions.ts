@@ -25,7 +25,22 @@ import {
   returnReasonForComplaintCategory,
 } from "@/lib/helpers";
 import { currentUser } from "@clerk/nextjs/server";
-import { and, desc, eq, getTableColumns, inArray } from "drizzle-orm";
+import {
+  complaintCategories,
+  complaintCauses,
+  complaintSolutions,
+  complaintStatuses,
+} from "@/lib/enums";
+import {
+  dateRangeFilter,
+  enumFilter,
+  relationFilter,
+  runPaged,
+  tableOrderBy,
+  tableWhere,
+} from "@/lib/server/table-query";
+import { Paged, TableQuery } from "@/lib/table-query";
+import { and, count, desc, eq, getTableColumns, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -72,21 +87,79 @@ export type ComplaintListItem = SelectComplaints & {
   productCode: SelectProducts["productCode"] | null;
 };
 
-export const getComplaints = async (): Promise<ComplaintListItem[]> => {
+const COMPLAINT_SEARCH = [
+  Complaints.description,
+  Companies.companyName,
+  Products.productCode,
+] as const;
+
+const COMPLAINT_SORTABLE = {
+  createdAt: Complaints.createdAt,
+  reportDate: Complaints.reportDate,
+  deadline: Complaints.deadline,
+  customer: Companies.companyName,
+  status: Complaints.status,
+};
+
+// A complaint is worked by state and by deadline. Category, cause and solution
+// are what the quality reporting slices it by, and the solution is what decides
+// whether goods physically come back — see complaintSolutionReturnsGoods.
+const COMPLAINT_FILTERS = {
+  status: enumFilter(Complaints.status, complaintStatuses),
+  category: enumFilter(Complaints.category, complaintCategories),
+  cause: enumFilter(Complaints.cause, complaintCauses),
+  solution: enumFilter(Complaints.solution, complaintSolutions),
+  company: relationFilter(Complaints.companyUuid),
+  product: relationFilter(Complaints.productUuid),
+  reportDate: dateRangeFilter(Complaints.reportDate),
+};
+
+export const getComplaints = async (
+  query: TableQuery,
+): Promise<Paged<ComplaintListItem>> => {
   try {
-    return await db
-      .select({
-        ...getTableColumns(Complaints),
-        companyName: Companies.companyName,
-        contactFirstName: Contacts.firstName,
-        contactLastName: Contacts.lastName,
-        productCode: Products.productCode,
-      })
-      .from(Complaints)
-      .leftJoin(Companies, eq(Complaints.companyUuid, Companies.uuid))
-      .leftJoin(Contacts, eq(Complaints.contactUuid, Contacts.uuid))
-      .leftJoin(Products, eq(Complaints.productUuid, Products.uuid))
-      .orderBy(desc(Complaints.createdAt));
+    const where = tableWhere({
+      query,
+      search: COMPLAINT_SEARCH,
+      filters: COMPLAINT_FILTERS,
+    });
+
+    return await runPaged(query, {
+      rows: (limit, offset) =>
+        db
+          .select({
+            ...getTableColumns(Complaints),
+            companyName: Companies.companyName,
+            contactFirstName: Contacts.firstName,
+            contactLastName: Contacts.lastName,
+            productCode: Products.productCode,
+          })
+          .from(Complaints)
+          .leftJoin(Companies, eq(Complaints.companyUuid, Companies.uuid))
+          .leftJoin(Contacts, eq(Complaints.contactUuid, Contacts.uuid))
+          .leftJoin(Products, eq(Complaints.productUuid, Products.uuid))
+          .where(where)
+          .orderBy(
+            ...tableOrderBy(
+              COMPLAINT_SORTABLE,
+              query,
+              [desc(Complaints.createdAt)],
+              Complaints.id,
+            ),
+          )
+          .limit(limit)
+          .offset(offset),
+
+      count: async () => {
+        const [row] = await db
+          .select({ value: count() })
+          .from(Complaints)
+          .leftJoin(Companies, eq(Complaints.companyUuid, Companies.uuid))
+          .leftJoin(Products, eq(Complaints.productUuid, Products.uuid))
+          .where(where);
+        return Number(row?.value ?? 0);
+      },
+    });
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch complaints"));
   }
@@ -170,7 +243,10 @@ export const updateComplaint = async (
 ): Promise<ComplaintActionResult> => {
   try {
     const [existing] = await db
-      .select({ status: Complaints.status, statusHistory: Complaints.statusHistory })
+      .select({
+        status: Complaints.status,
+        statusHistory: Complaints.statusHistory,
+      })
       .from(Complaints)
       .where(eq(Complaints.uuid, uuid))
       .limit(1);
@@ -317,7 +393,9 @@ export const convertComplaintToReturnOrder = async (
       .limit(1);
 
     if (existing.length > 0) {
-      return { error: "A return order has already been raised for this complaint." };
+      return {
+        error: "A return order has already been raised for this complaint.",
+      };
     }
 
     const result = await createReturnOrder(

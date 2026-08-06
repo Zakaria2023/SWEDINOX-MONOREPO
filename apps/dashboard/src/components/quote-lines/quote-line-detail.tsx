@@ -6,6 +6,7 @@ import {
   formatDateValue,
   formatMoney,
   formatPercent,
+  userName,
 } from "@/lib/helpers";
 import {
   CUSTOMER_GROUP_LABELS,
@@ -15,10 +16,12 @@ import {
 } from "@/lib/labels";
 
 type Props = {
+  /** Clerk id -> name; these columns store the id, not the name. */
+  userNames: Record<string, string>;
   line: QuoteLineRow;
 };
 
-export const QuoteLineDetailView = ({ line }: Props) => (
+export const QuoteLineDetailView = ({ line, userNames }: Props) => (
   <div className="space-y-6">
     <section className="space-y-4">
       <h2 className="border-b pb-2 text-base font-semibold">Quote</h2>
@@ -53,7 +56,7 @@ export const QuoteLineDetailView = ({ line }: Props) => (
           value={formatDateColumn(line.validUntil)}
         />
         <DetailField label="Order type" value={line.orderType} />
-        <DetailField label="Seller" value={line.seller} />
+        <DetailField label="Seller" value={userName(line.seller, userNames)} />
         <div>
           <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
             Converted to order
@@ -112,10 +115,7 @@ export const QuoteLineDetailView = ({ line }: Props) => (
           label="Status"
           value={line.status ? ORDER_LINE_STATUS_LABELS[line.status] : null}
         />
-        <DetailField
-          label="Expiration reason"
-          value={line.expirationReason}
-        />
+        <DetailField label="Expiration reason" value={line.expirationReason} />
         <div>
           <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
             Product
@@ -125,9 +125,7 @@ export const QuoteLineDetailView = ({ line }: Props) => (
               href={`/products/${line.productUuid}`}
               className="text-sm text-primary hover:underline"
             >
-              {[line.productCode, line.productName]
-                .filter(Boolean)
-                .join(" — ")}
+              {[line.productCode, line.productName].filter(Boolean).join(" — ")}
             </Link>
           ) : (
             <p className="text-sm">—</p>

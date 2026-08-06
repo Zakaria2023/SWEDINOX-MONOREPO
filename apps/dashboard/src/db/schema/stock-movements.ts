@@ -64,6 +64,12 @@ export const StockMovements = mysqlTable(
     ),
     index("idx_stock_movements_order_uuid").on(table.orderUuid),
     index("idx_stock_movements_invoice_uuid").on(table.invoiceUuid),
+    // "Everything that went out" is the common narrowing on this list, and the
+    // column has two values — so an index on it is what turns that question
+    // from a scan of every movement ever made into a seek.
+    index("idx_stock_movements_type").on(table.type),
+    // The default ordering, newest first, with the tiebreaker paging needs.
+    index("idx_stock_movements_created_at_id").on(table.createdAt, table.id),
     foreignKey({
       name: "fk_stock_movements_product",
       columns: [table.productUuid],

@@ -1,5 +1,5 @@
 import {
-  getContracts,
+  getContractsForSelect,
   getContractsForProjects,
 } from "@/app/(dashboard)/contracts/actions";
 import {
@@ -26,7 +26,7 @@ const AddCompanyPage = async () => {
     suppliers,
     industries,
   ] = await Promise.all([
-    getContracts(),
+    getContractsForSelect(),
     getContractsForProjects(),
     getTextCategoriesForSelect(),
     getDebtorCompaniesForSelect(),

@@ -12,26 +12,37 @@ import {
 } from "@/components/shadcn/table";
 import { ORDER_METHOD_LABELS } from "@/lib/labels";
 import { OrderMethod } from "@/lib/enums";
+import { TablePagination } from "@/components/ui/table-pagination";
+import { TableSortHeader } from "@/components/ui/table-sort-header";
+import { TableToolbar } from "@/components/ui/table-toolbar";
+import { Paged, TableFilterControl } from "@/lib/table-query";
 
 type Props = {
-  orders: OrderListItem[];
+  page: Paged<OrderListItem>;
+  filters: TableFilterControl[];
 };
 
-export const OrdersTable = ({ orders }: Props) => (
-  <div>
+export const OrdersTable = ({ page, filters }: Props) => (
+  <div className="space-y-4">
+    <TableToolbar
+      searchPlaceholder="Search reference or customer…"
+      filters={filters}
+    />
     <Table>
       <TableHeader>
         <TableRow>
           <TableHead>#</TableHead>
-          <TableHead>Company</TableHead>
+          <TableSortHeader sortKey="company">Company</TableSortHeader>
           <TableHead>Contact</TableHead>
           <TableHead>Method</TableHead>
-          <TableHead>Delivery Date</TableHead>
-          <TableHead>Created</TableHead>
+          <TableSortHeader sortKey="deliveryDate">
+            Delivery Date
+          </TableSortHeader>
+          <TableSortHeader sortKey="createdAt">Created</TableSortHeader>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {orders.length === 0 ? (
+        {page.rows.length === 0 ? (
           <TableRow>
             <TableCell
               colSpan={6}
@@ -41,7 +52,7 @@ export const OrdersTable = ({ orders }: Props) => (
             </TableCell>
           </TableRow>
         ) : (
-          orders.map((row) => (
+          page.rows.map((row) => (
             <TableRow key={row.uuid}>
               <TableCell>
                 <Link
@@ -78,5 +89,6 @@ export const OrdersTable = ({ orders }: Props) => (
         )}
       </TableBody>
     </Table>
+    <TablePagination page={page} singular="order" plural="orders" />
   </div>
 );

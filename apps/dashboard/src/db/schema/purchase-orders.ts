@@ -124,6 +124,12 @@ export const PurchaseOrders = mysqlTable(
   },
   (table) => [
     index("idx_purchase_orders_supplier_uuid").on(table.supplierUuid),
+    // Status is what /purchase-orders-to-be-received is a view of, and the two
+    // dates are what the overview narrows by.
+    index("idx_purchase_orders_status").on(table.status),
+    index("idx_purchase_orders_order_date").on(table.orderDate),
+    index("idx_purchase_orders_delivery_date").on(table.deliveryDate),
+    index("idx_purchase_orders_created_at_id").on(table.createdAt, table.id),
     index("idx_purchase_orders_agent_uuid").on(table.agentUuid),
     index("idx_purchase_orders_contact_uuid").on(table.contactUuid),
     index("idx_purchase_orders_delivery_address_uuid").on(

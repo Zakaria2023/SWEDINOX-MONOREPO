@@ -1,9 +1,18 @@
 "use server";
 
-import { VisitReportActionResult, VisitReportInput } from "@/app/(dashboard)/visit-reports/actions";
+import {
+  VisitReportActionResult,
+  VisitReportInput,
+} from "@/app/(dashboard)/visit-reports/actions";
 import { formValuesToVisitReportInput } from "@/app/(dashboard)/visit-reports/mappers";
 import { VisitReportFormValues } from "@/app/(dashboard)/visit-reports/validation";
-import { Companies, db, SelectCompanies, SelectVisitReports, VisitReports } from "@/db";
+import {
+  Companies,
+  db,
+  SelectCompanies,
+  SelectVisitReports,
+  VisitReports,
+} from "@/db";
 import { describeError } from "@/lib/helpers";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -101,7 +110,10 @@ const saveSection = async (
   columns: Partial<VisitReportInput>,
 ): Promise<VisitReportActionResult> => {
   try {
-    await db.update(VisitReports).set(columns).where(eq(VisitReports.uuid, uuid));
+    await db
+      .update(VisitReports)
+      .set(columns)
+      .where(eq(VisitReports.uuid, uuid));
   } catch (error) {
     return { error: describeError(error, "Failed to update visit report") };
   }

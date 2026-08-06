@@ -184,6 +184,11 @@ export const Contracts = mysqlTable(
   },
   (table) => [
     index("idx_contracts_company_uuid").on(table.companyUuid),
+    // Which side of the business the contract is for, and what kind it is.
+    index("idx_contracts_role").on(table.role),
+    index("idx_contracts_contract_type").on(table.contractType),
+    index("idx_contracts_code").on(table.code),
+    index("idx_contracts_created_at_id").on(table.createdAt, table.id),
     index("idx_contracts_order_uuid").on(table.orderUuid),
     index("idx_contracts_counter_order_uuid").on(table.counterOrderUuid),
     index("idx_contracts_purchase_order_uuid").on(table.purchaseOrderUuid),
