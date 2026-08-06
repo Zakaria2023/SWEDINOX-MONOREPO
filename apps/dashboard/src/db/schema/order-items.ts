@@ -174,6 +174,15 @@ export const OrderItems = mysqlTable(
     index("idx_order_items_stock_uuid").on(table.stockUuid),
     index("idx_order_items_product_uuid").on(table.productUuid),
     index("idx_order_items_purchase_order_uuid").on(table.purchaseOrderUuid),
+    // The overview filters on these two, and this is the table that grows
+    // fastest — one row per line of every order ever taken. Without them a
+    // status filter reads every row to return fifty.
+    index("idx_order_items_line_status").on(table.lineStatus),
+    index("idx_order_items_delivery_date").on(table.deliveryDate),
+    // The default ordering of the order-lines overview, newest first, with the
+    // unique tiebreaker paging depends on. As one index the sort is a range
+    // scan rather than a filesort over the whole table.
+    index("idx_order_items_created_at_id").on(table.createdAt, table.id),
     foreignKey({
       name: "fk_order_items_order",
       columns: [table.orderUuid],
