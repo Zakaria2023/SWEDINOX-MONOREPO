@@ -1,5 +1,9 @@
 "use client";
 
+import { TablePagination } from "@/components/ui/table-pagination";
+import { TableSortHeader } from "@/components/ui/table-sort-header";
+import { TableToolbar } from "@/components/ui/table-toolbar";
+import { Paged, TableFilterControl } from "@/lib/table-query";
 import Link from "next/link";
 import { PurchaseLineItem } from "@/app/(dashboard)/purchase-lines/actions";
 import {
@@ -14,20 +18,25 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { ORDER_LINE_STATUS_LABELS, STOCK_UNIT_LABELS } from "@/lib/labels";
 
 type Props = {
-  lines: PurchaseLineItem[];
+  page: Paged<PurchaseLineItem>;
+  filters: TableFilterControl[];
 };
 
-export const PurchaseLinesTable = ({ lines }: Props) => (
-  <div>
+export const PurchaseLinesTable = ({ page, filters }: Props) => (
+  <div className="space-y-4">
+    <TableToolbar
+      searchPlaceholder="Search product or supplier…"
+      filters={filters}
+    />
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Date created</TableHead>
+          <TableSortHeader sortKey="createdAt">Date created</TableSortHeader>
           <TableHead className="text-right">Purchase order</TableHead>
           <TableHead className="text-right">Line</TableHead>
           <TableHead>Status</TableHead>
-          <TableHead>Supplier</TableHead>
-          <TableHead>Product code</TableHead>
+          <TableSortHeader sortKey="supplier">Supplier</TableSortHeader>
+          <TableSortHeader sortKey="productCode">Product code</TableSortHeader>
           <TableHead>Product</TableHead>
           <TableHead>Quality</TableHead>
           <TableHead>Stock category</TableHead>
@@ -43,7 +52,7 @@ export const PurchaseLinesTable = ({ lines }: Props) => (
         </TableRow>
       </TableHeader>
       <TableBody>
-        {lines.length === 0 ? (
+        {page.rows.length === 0 ? (
           <TableRow>
             <TableCell
               colSpan={18}
@@ -53,7 +62,7 @@ export const PurchaseLinesTable = ({ lines }: Props) => (
             </TableCell>
           </TableRow>
         ) : (
-          lines.map((row) => (
+          page.rows.map((row) => (
             <TableRow key={row.uuid}>
               <TableCell>
                 {new Date(row.createdAt).toLocaleDateString("en-GB")}
@@ -102,5 +111,10 @@ export const PurchaseLinesTable = ({ lines }: Props) => (
         )}
       </TableBody>
     </Table>
+    <TablePagination
+      page={page}
+      singular="purchase line"
+      plural="purchase lines"
+    />
   </div>
 );

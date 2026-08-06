@@ -3,9 +3,19 @@ import { Plus } from "lucide-react";
 import { getCounterOrders } from "@/app/(dashboard)/counter-orders/actions";
 import { CounterOrdersTable } from "@/components/counter-orders/counter-orders-table-content";
 import { PageHeading } from "@/components/layout/page-heading";
+import { counterOrderFilters } from "@/app/(dashboard)/counter-orders/filters";
+import { getCompaniesForSelect } from "@/app/(dashboard)/companies/actions";
+import { parseTableQuery, SearchParams } from "@/lib/table-query";
 
-const CounterOrdersPage = async () => {
-  const counterOrders = await getCounterOrders();
+type Props = {
+  searchParams: Promise<SearchParams>;
+};
+
+const CounterOrdersPage = async ({ searchParams }: Props) => {
+  const query = parseTableQuery(await searchParams);
+  // Sequential rather than concurrent: this database caps connections.
+  const counterOrders = await getCounterOrders(query);
+  const companies = await getCompaniesForSelect();
 
   return (
     <div className="space-y-4">
@@ -19,7 +29,10 @@ const CounterOrdersPage = async () => {
           New Counter Order
         </Link>
       </div>
-      <CounterOrdersTable counterOrders={counterOrders} />
+      <CounterOrdersTable
+        page={counterOrders}
+        filters={counterOrderFilters(companies)}
+      />
     </div>
   );
 };

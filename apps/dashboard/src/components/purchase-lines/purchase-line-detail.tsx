@@ -89,9 +89,7 @@ export const PurchaseLineDetailView = ({ line }: Props) => (
               href={`/products/${line.productUuid}`}
               className="text-sm text-primary hover:underline"
             >
-              {[line.productCode, line.productName]
-                .filter(Boolean)
-                .join(" — ")}
+              {[line.productCode, line.productName].filter(Boolean).join(" — ")}
             </Link>
           ) : (
             <p className="text-sm">—</p>

@@ -1,5 +1,9 @@
 "use client";
 
+import { TablePagination } from "@/components/ui/table-pagination";
+import { TableSortHeader } from "@/components/ui/table-sort-header";
+import { TableToolbar } from "@/components/ui/table-toolbar";
+import { Paged, TableFilterControl } from "@/lib/table-query";
 import Link from "next/link";
 import { type CounterOrderListItem } from "@/app/(dashboard)/counter-orders/actions";
 import {
@@ -54,12 +58,22 @@ const ALL_COLUMNS: Array<{
   { key: "createdAt", label: "Created At", defaultVisible: false },
 ];
 
+// The columns a header may sort on, matching the keys actions.ts declared.
+// A key not named here renders as a plain header.
+const SORTABLE: Partial<Record<ColumnKey, string>> = {
+  companyName: "customer",
+  orderDate: "orderDate",
+  status: "status",
+};
+
 type CounterOrdersTableProps = {
-  counterOrders: CounterOrderListItem[];
+  page: Paged<CounterOrderListItem>;
+  filters: TableFilterControl[];
 };
 
 export const CounterOrdersTable = ({
-  counterOrders,
+  page,
+  filters,
 }: CounterOrdersTableProps) => {
   const [columnVisibility, setColumnVisibility] = useState<
     Record<ColumnKey, boolean>
@@ -168,7 +182,10 @@ export const CounterOrdersTable = ({
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <TableToolbar
+        searchPlaceholder="Search reference or customer…"
+        filters={filters}
+      >
         <ColumnSelector
           columns={ALL_COLUMNS.map((column) => ({
             key: column.key,
@@ -177,19 +194,26 @@ export const CounterOrdersTable = ({
           visibility={columnVisibility}
           onToggle={toggleColumn}
         />
-      </div>
+      </TableToolbar>
 
       <div>
         <Table>
           <TableHeader>
             <TableRow>
-              {visibleColumns.map((column) => (
-                <TableHead key={column.key}>{column.label}</TableHead>
-              ))}
+              {visibleColumns.map((column) => {
+                const sortKey = SORTABLE[column.key];
+                return sortKey ? (
+                  <TableSortHeader key={column.key} sortKey={sortKey}>
+                    {column.label}
+                  </TableSortHeader>
+                ) : (
+                  <TableHead key={column.key}>{column.label}</TableHead>
+                );
+              })}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {counterOrders.length === 0 ? (
+            {page.rows.length === 0 ? (
               <TableRow>
                 <TableCell
                   colSpan={visibleColumns.length}
@@ -199,7 +223,7 @@ export const CounterOrdersTable = ({
                 </TableCell>
               </TableRow>
             ) : (
-              counterOrders.map((order) => (
+              page.rows.map((order) => (
                 <TableRow key={order.uuid}>
                   {visibleColumns.map((column) =>
                     renderCell(order, column.key),
@@ -210,6 +234,11 @@ export const CounterOrdersTable = ({
           </TableBody>
         </Table>
       </div>
+      <TablePagination
+        page={page}
+        singular="counter order"
+        plural="counter orders"
+      />
     </div>
   );
 };

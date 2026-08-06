@@ -59,6 +59,8 @@ export const Texts = mysqlTable(
   },
   (table) => [
     index("idx_texts_company_uuid").on(table.companyUuid),
+    index("idx_texts_text_category_uuid").on(table.textCategoryUuid),
+    index("idx_texts_created_at_id").on(table.createdAt, table.id),
     index("idx_texts_order_uuid").on(table.orderUuid),
     index("idx_texts_counter_order_uuid").on(table.counterOrderUuid),
     index("idx_texts_return_order_uuid").on(table.returnOrderUuid),

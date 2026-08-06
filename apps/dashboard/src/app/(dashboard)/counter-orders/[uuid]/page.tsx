@@ -35,7 +35,7 @@ const CounterOrderDetailPage = async ({ params }: Props) => {
         </Link>
       </div>
       <PageHeading title={`Counter order #${order.id}`} />
-      <CounterOrderDetailView order={order}  userNames={userNames} />
+      <CounterOrderDetailView order={order} userNames={userNames} />
     </div>
   );
 };

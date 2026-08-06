@@ -80,6 +80,10 @@ export const PurchaseOrderItems = mysqlTable(
       table.purchaseOrderUuid,
     ),
     index("idx_purchase_order_items_product_uuid").on(table.productUuid),
+    index("idx_purchase_order_items_created_at_id").on(
+      table.createdAt,
+      table.id,
+    ),
     foreignKey({
       name: "fk_purchase_order_items_purchase_order",
       columns: [table.purchaseOrderUuid],

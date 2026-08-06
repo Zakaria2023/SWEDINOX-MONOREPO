@@ -81,13 +81,11 @@ export const InvoiceLineDetailView = ({ line }: Props) => (
     </section>
 
     <section className="space-y-4">
-      <h2 className="border-b pb-2 text-base font-semibold">
-        What was billed
-      </h2>
+      <h2 className="border-b pb-2 text-base font-semibold">What was billed</h2>
       <p className="text-sm text-muted-foreground">
-        Price, cost and weight are the invoice line&rsquo;s own snapshot, taken at
-        invoicing — re-pricing the order or revaluing its lot afterwards does not
-        move them.
+        Price, cost and weight are the invoice line&rsquo;s own snapshot, taken
+        at invoicing — re-pricing the order or revaluing its lot afterwards does
+        not move them.
       </p>
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         <DetailField label="Quantity" value={line.quantity} />

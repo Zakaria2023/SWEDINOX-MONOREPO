@@ -35,7 +35,7 @@ const TextDetailPage = async ({ params }: Props) => {
         </Link>
       </div>
       <PageHeading title={text.title} />
-      <TextDetailView text={text}  userNames={userNames} />
+      <TextDetailView text={text} userNames={userNames} />
     </div>
   );
 };

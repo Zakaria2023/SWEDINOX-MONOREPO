@@ -62,6 +62,7 @@ export const InvoiceItems = mysqlTable(
   },
   (table) => [
     index("idx_invoice_items_invoice_uuid").on(table.invoiceUuid),
+    index("idx_invoice_items_created_at_id").on(table.createdAt, table.id),
     index("idx_invoice_items_order_item_uuid").on(table.orderItemUuid),
     index("idx_invoice_items_product_uuid").on(table.productUuid),
     foreignKey({

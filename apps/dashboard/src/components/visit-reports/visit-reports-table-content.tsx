@@ -1,9 +1,16 @@
 "use client";
 
+import { TablePagination } from "@/components/ui/table-pagination";
+import { TableSortHeader } from "@/components/ui/table-sort-header";
+import { TableToolbar } from "@/components/ui/table-toolbar";
+import { Paged, TableFilterControl } from "@/lib/table-query";
 import Link from "next/link";
 import { useState } from "react";
 import { type VisitReportListItem } from "@/app/(dashboard)/visit-reports/actions";
-import { VISIT_REPORT_CONTACT_METHOD_LABELS, VISIT_REPORT_REASON_LABELS } from "@/lib/labels";
+import {
+  VISIT_REPORT_CONTACT_METHOD_LABELS,
+  VISIT_REPORT_REASON_LABELS,
+} from "@/lib/labels";
 import {
   Table,
   TableBody,
@@ -61,12 +68,22 @@ const ALL_COLUMNS: Array<{
   { key: "createdAt", label: "Created At", defaultVisible: false },
 ];
 
+// The columns a header may sort on, matching the keys actions.ts declared.
+// A key not named here renders as a plain header.
+const SORTABLE: Partial<Record<ColumnKey, string>> = {
+  companyName: "customer",
+  visitDate: "visitDate",
+  createdAt: "createdAt",
+};
+
 type VisitReportsTableContentProps = {
-  visitReports: VisitReportListItem[];
+  page: Paged<VisitReportListItem>;
+  filters: TableFilterControl[];
 };
 
 export const VisitReportsTable = ({
-  visitReports,
+  page,
+  filters,
 }: VisitReportsTableContentProps) => {
   const [columnVisibility, setColumnVisibility] = useState<
     Record<ColumnKey, boolean>
@@ -211,7 +228,10 @@ export const VisitReportsTable = ({
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <TableToolbar
+        searchPlaceholder="Search remarks or company…"
+        filters={filters}
+      >
         <ColumnSelector
           columns={ALL_COLUMNS.map((column) => ({
             key: column.key,
@@ -220,20 +240,27 @@ export const VisitReportsTable = ({
           visibility={columnVisibility}
           onToggle={toggleColumn}
         />
-      </div>
+      </TableToolbar>
 
       <div>
         <Table>
           <TableHeader>
             <TableRow>
-              {visibleColumns.map((column) => (
-                <TableHead key={column.key}>{column.label}</TableHead>
-              ))}
+              {visibleColumns.map((column) => {
+                const sortKey = SORTABLE[column.key];
+                return sortKey ? (
+                  <TableSortHeader key={column.key} sortKey={sortKey}>
+                    {column.label}
+                  </TableSortHeader>
+                ) : (
+                  <TableHead key={column.key}>{column.label}</TableHead>
+                );
+              })}
               <TableHead className="text-right">Action</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {visitReports.length === 0 ? (
+            {page.rows.length === 0 ? (
               <TableRow>
                 <TableCell
                   colSpan={visibleColumns.length + 1}
@@ -243,7 +270,7 @@ export const VisitReportsTable = ({
                 </TableCell>
               </TableRow>
             ) : (
-              visitReports.map((visitReport) => (
+              page.rows.map((visitReport) => (
                 <TableRow key={visitReport.uuid}>
                   {visibleColumns.map((column) =>
                     renderCell(visitReport, column.key),
@@ -260,6 +287,11 @@ export const VisitReportsTable = ({
           </TableBody>
         </Table>
       </div>
+      <TablePagination
+        page={page}
+        singular="visit report"
+        plural="visit reports"
+      />
     </div>
   );
 };

@@ -13,7 +13,16 @@ import {
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { Products, SelectProducts } from "@/db/schema/products";
 import { getClerkUsersForSelect } from "@/lib/server/clerk";
-import { desc, eq, getTableColumns } from "drizzle-orm";
+import { count, desc, eq, getTableColumns } from "drizzle-orm";
+import {
+  dateRangeFilter,
+  numberRangeFilter,
+  relationFilter,
+  tableOrderBy,
+  tablePage,
+  tableWhere,
+} from "@/lib/server/table-query";
+import { Paged, TableQuery } from "@/lib/table-query";
 
 export type PurchaseLineItem = SelectPurchaseOrderItems & {
   purchaseOrderId: SelectPurchaseOrders["id"] | null;
@@ -29,8 +38,40 @@ export type PurchaseLineDetail = PurchaseLineItem & {
   purchaseOrderReference: SelectPurchaseOrders["reference"] | null;
 };
 
-export const getPurchaseLines = async (): Promise<PurchaseLineItem[]> => {
+const PURCHASE_LINE_SEARCH = [
+  Products.productCode,
+  Products.name,
+  Companies.companyName,
+] as const;
+
+const PURCHASE_LINE_SORTABLE = {
+  createdAt: PurchaseOrderItems.createdAt,
+  orderDate: PurchaseOrders.orderDate,
+  supplier: Companies.companyName,
+  productCode: Products.productCode,
+  quantity: PurchaseOrderItems.quantity,
+};
+
+// Whose order it was on, which article, and when it was placed.
+const PURCHASE_LINE_FILTERS = {
+  supplier: relationFilter(PurchaseOrders.supplierUuid),
+  product: relationFilter(PurchaseOrderItems.productUuid),
+  orderDate: dateRangeFilter(PurchaseOrders.orderDate),
+  quantity: numberRangeFilter(PurchaseOrderItems.quantity),
+};
+
+export const getPurchaseLines = async (
+  query: TableQuery,
+): Promise<Paged<PurchaseLineItem>> => {
   try {
+    const where = tableWhere({
+      query,
+      search: PURCHASE_LINE_SEARCH,
+      filters: PURCHASE_LINE_FILTERS,
+    });
+
+    const { limit, offset } = tablePage(query);
+
     const rows = await db
       .select({
         ...getTableColumns(PurchaseOrderItems),
@@ -49,21 +90,47 @@ export const getPurchaseLines = async (): Promise<PurchaseLineItem[]> => {
       )
       .leftJoin(Companies, eq(PurchaseOrders.supplierUuid, Companies.uuid))
       .leftJoin(Products, eq(PurchaseOrderItems.productUuid, Products.uuid))
-      .orderBy(desc(PurchaseOrderItems.createdAt));
+      .where(where)
+      .orderBy(
+        ...tableOrderBy(
+          PURCHASE_LINE_SORTABLE,
+          query,
+          [desc(PurchaseOrderItems.createdAt)],
+          PurchaseOrderItems.id,
+        ),
+      )
+      .limit(limit)
+      .offset(offset);
+
+    const [totalRow] = await db
+      .select({ value: count() })
+      .from(PurchaseOrderItems)
+      .leftJoin(
+        PurchaseOrders,
+        eq(PurchaseOrderItems.purchaseOrderUuid, PurchaseOrders.uuid),
+      )
+      .leftJoin(Companies, eq(PurchaseOrders.supplierUuid, Companies.uuid))
+      .leftJoin(Products, eq(PurchaseOrderItems.productUuid, Products.uuid))
+      .where(where);
 
     // Resolve the buyer's Clerk id to a display name. Fall back to a
     // line-level purchaser if one was set, then to the raw id.
     const users = await getClerkUsersForSelect();
     const nameById = new Map(users.map((user) => [user.value, user.label]));
 
-    return rows.map(({ orderPurchaserId, ...row }) => ({
-      ...row,
-      purchaser:
-        row.purchaser ??
-        (orderPurchaserId
-          ? (nameById.get(orderPurchaserId) ?? orderPurchaserId)
-          : null),
-    }));
+    return {
+      rows: rows.map(({ orderPurchaserId, ...row }) => ({
+        ...row,
+        purchaser:
+          row.purchaser ??
+          (orderPurchaserId
+            ? (nameById.get(orderPurchaserId) ?? orderPurchaserId)
+            : null),
+      })),
+      total: Number(totalRow?.value ?? 0),
+      page: query.page,
+      pageSize: query.pageSize,
+    };
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch purchase lines"));
   }

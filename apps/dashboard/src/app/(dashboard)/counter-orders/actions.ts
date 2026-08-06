@@ -24,8 +24,26 @@ import {
   Texts,
 } from "@/db";
 import { generateUuid } from "@/lib/helpers";
-import { and, asc, desc, eq, getTableColumns, inArray } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  getTableColumns,
+  inArray,
+} from "drizzle-orm";
 import { redirect } from "next/navigation";
+import { counterOrderStatuses } from "@/lib/enums";
+import {
+  dateRangeFilter,
+  enumFilter,
+  relationFilter,
+  runPaged,
+  tableOrderBy,
+  tableWhere,
+} from "@/lib/server/table-query";
+import { Paged, TableQuery } from "@/lib/table-query";
 
 export type CounterOrderInput = Omit<
   InsertCounterOrders,
@@ -85,15 +103,65 @@ export type CounterOrderDetail = CounterOrderListItem & {
   items: CounterOrderItemRow[];
 };
 
-export const getCounterOrders = async (): Promise<CounterOrderListItem[]> =>
-  db
-    .select({
-      ...getTableColumns(CounterOrders),
-      companyName: Companies.companyName,
-    })
-    .from(CounterOrders)
-    .innerJoin(Companies, eq(Companies.uuid, CounterOrders.companyUuid))
-    .orderBy(desc(CounterOrders.createdAt));
+const COUNTER_ORDER_SEARCH = [
+  CounterOrders.customerRef,
+  CounterOrders.ourReference,
+  Companies.companyName,
+] as const;
+
+const COUNTER_ORDER_SORTABLE = {
+  createdAt: CounterOrders.createdAt,
+  orderDate: CounterOrders.orderDate,
+  customer: Companies.companyName,
+  status: CounterOrders.status,
+};
+
+const COUNTER_ORDER_FILTERS = {
+  status: enumFilter(CounterOrders.status, counterOrderStatuses),
+  company: relationFilter(CounterOrders.companyUuid),
+  orderDate: dateRangeFilter(CounterOrders.orderDate),
+};
+
+export const getCounterOrders = async (
+  query: TableQuery,
+): Promise<Paged<CounterOrderListItem>> => {
+  const where = tableWhere({
+    query,
+    search: COUNTER_ORDER_SEARCH,
+    filters: COUNTER_ORDER_FILTERS,
+  });
+
+  return runPaged(query, {
+    rows: (limit, offset) =>
+      db
+        .select({
+          ...getTableColumns(CounterOrders),
+          companyName: Companies.companyName,
+        })
+        .from(CounterOrders)
+        .innerJoin(Companies, eq(Companies.uuid, CounterOrders.companyUuid))
+        .where(where)
+        .orderBy(
+          ...tableOrderBy(
+            COUNTER_ORDER_SORTABLE,
+            query,
+            [desc(CounterOrders.createdAt)],
+            CounterOrders.id,
+          ),
+        )
+        .limit(limit)
+        .offset(offset),
+
+    count: async () => {
+      const [row] = await db
+        .select({ value: count() })
+        .from(CounterOrders)
+        .innerJoin(Companies, eq(Companies.uuid, CounterOrders.companyUuid))
+        .where(where);
+      return Number(row?.value ?? 0);
+    },
+  });
+};
 
 /**
  * One counter order with its customer, contact, delivery address and lines —

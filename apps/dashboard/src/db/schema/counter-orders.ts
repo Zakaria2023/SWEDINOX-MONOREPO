@@ -127,6 +127,9 @@ export const CounterOrders = mysqlTable(
   },
   (table) => [
     index("idx_counter_orders_company_uuid").on(table.companyUuid),
+    index("idx_counter_orders_status").on(table.status),
+    index("idx_counter_orders_order_date").on(table.orderDate),
+    index("idx_counter_orders_created_at_id").on(table.createdAt, table.id),
     index("idx_counter_orders_contact_uuid").on(table.contactUuid),
     index("idx_counter_orders_project_uuid").on(table.projectUuid),
     index("idx_counter_orders_delivery_address_uuid").on(
@@ -251,9 +254,10 @@ export const CounterOrderItems = mysqlTable(
     lineDiscount: decimal("line_discount", { precision: 6, scale: 2 }).default(
       "0.00",
     ),
-    groupDiscount: decimal("group_discount", { precision: 6, scale: 2 }).default(
-      "0.00",
-    ),
+    groupDiscount: decimal("group_discount", {
+      precision: 6,
+      scale: 2,
+    }).default("0.00"),
     commercialDiscount: decimal("commercial_discount", {
       precision: 6,
       scale: 2,
@@ -264,9 +268,10 @@ export const CounterOrderItems = mysqlTable(
     profitAmount: decimal("profit_amount", { precision: 15, scale: 2 }).default(
       "0.00",
     ),
-    profitPercent: decimal("profit_percent", { precision: 6, scale: 2 }).default(
-      "0.00",
-    ),
+    profitPercent: decimal("profit_percent", {
+      precision: 6,
+      scale: 2,
+    }).default("0.00"),
     profitTooLow: boolean("profit_too_low").default(false),
 
     createdAt: timestamp("created_at").defaultNow().notNull(),
