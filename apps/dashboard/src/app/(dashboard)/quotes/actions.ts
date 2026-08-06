@@ -35,13 +35,19 @@ import {
   minimumMarginFor,
   resolveLineNetPrice,
 } from "@/lib/server/sales-pricing";
+import { invoicePaymentTerms } from "@/lib/enums";
 import {
-  and,
-  desc,
-  eq,
-  getTableColumns,
-  isNotNull,
-} from "drizzle-orm";
+  booleanFilter,
+  dateRangeFilter,
+  enumFilter,
+  numberRangeFilter,
+  relationFilter,
+  runPaged,
+  tableOrderBy,
+  tableWhere,
+} from "@/lib/server/table-query";
+import { Paged, TableQuery } from "@/lib/table-query";
+import { and, count, desc, eq, getTableColumns, isNotNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -140,20 +146,75 @@ type PriceQuoteLinesParams = {
   items: QuoteLineInput[];
 };
 
-export const getQuotes = async (): Promise<QuoteListItem[]> => {
+const QUOTE_SEARCH = [
+  Quotes.customerRef,
+  Quotes.ourReference,
+  Companies.companyName,
+] as const;
+
+const QUOTE_SORTABLE = {
+  createdAt: Quotes.createdAt,
+  quoteDate: Quotes.quoteDate,
+  validUntil: Quotes.validUntil,
+  customer: Companies.companyName,
+  totalInclVat: Quotes.totalInclVat,
+};
+
+// A quote has no status column — what it is worth, when it was given, how long
+// it stands, and whether it has run out. `expired` is the one a salesperson
+// actually reaches for, since a live quote list is the point of the screen.
+const QUOTE_FILTERS = {
+  company: relationFilter(Quotes.companyUuid),
+  paymentTerms: enumFilter(Quotes.paymentTerms, invoicePaymentTerms),
+  quoteDate: dateRangeFilter(Quotes.quoteDate),
+  validUntil: dateRangeFilter(Quotes.validUntil),
+  total: numberRangeFilter(Quotes.totalInclVat),
+  expired: booleanFilter(Quotes.expired),
+};
+
+export const getQuotes = async (
+  query: TableQuery,
+): Promise<Paged<QuoteListItem>> => {
   try {
-    const rows = await db
-      .select({
-        ...getTableColumns(Quotes),
-        companyName: Companies.companyName,
-        contactFirstName: Contacts.firstName,
-        contactLastName: Contacts.lastName,
-      })
-      .from(Quotes)
-      .leftJoin(Companies, eq(Quotes.companyUuid, Companies.uuid))
-      .leftJoin(Contacts, eq(Quotes.contactUuid, Contacts.uuid))
-      .orderBy(desc(Quotes.createdAt));
-    return rows;
+    const where = tableWhere({
+      query,
+      search: QUOTE_SEARCH,
+      filters: QUOTE_FILTERS,
+    });
+
+    return await runPaged(query, {
+      rows: (limit, offset) =>
+        db
+          .select({
+            ...getTableColumns(Quotes),
+            companyName: Companies.companyName,
+            contactFirstName: Contacts.firstName,
+            contactLastName: Contacts.lastName,
+          })
+          .from(Quotes)
+          .leftJoin(Companies, eq(Quotes.companyUuid, Companies.uuid))
+          .leftJoin(Contacts, eq(Quotes.contactUuid, Contacts.uuid))
+          .where(where)
+          .orderBy(
+            ...tableOrderBy(
+              QUOTE_SORTABLE,
+              query,
+              [desc(Quotes.createdAt)],
+              Quotes.id,
+            ),
+          )
+          .limit(limit)
+          .offset(offset),
+
+      count: async () => {
+        const [row] = await db
+          .select({ value: count() })
+          .from(Quotes)
+          .leftJoin(Companies, eq(Quotes.companyUuid, Companies.uuid))
+          .where(where);
+        return Number(row?.value ?? 0);
+      },
+    });
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch quotes"));
   }
@@ -289,7 +350,10 @@ const buildQuoteSummary = async (
   quoteUuid: string,
   header: Pick<
     SelectQuotes,
-    "calculateVatIfApplicable" | "transportCosts" | "handlingCosts" | "companyUuid"
+    | "calculateVatIfApplicable"
+    | "transportCosts"
+    | "handlingCosts"
+    | "companyUuid"
   >,
 ): Promise<QuoteSummary> => {
   const [lines, options, surcharges, [company]] = await Promise.all([
@@ -382,7 +446,9 @@ export const createQuote = async (
       }
 
       if (surcharges.length > 0) {
-        await tx.insert(QuoteSurcharges).values(surchargeRows(uuid, surcharges));
+        await tx
+          .insert(QuoteSurcharges)
+          .values(surchargeRows(uuid, surcharges));
       }
 
       const summary = await buildQuoteSummary(tx, uuid, {
@@ -433,40 +499,43 @@ export const getQuoteDetail = async (
 
   const [items, options, surcharges, complaints, followUps, contacts] =
     await Promise.all([
-    db
-      .select({
-        ...getTableColumns(QuoteItems),
-        productCode: Products.productCode,
-        productName: Products.name,
-        productGroupName: ProductGroups.name,
-        qualityStandard: ProductGroups.standardsQuality,
-      })
-      .from(QuoteItems)
-      .leftJoin(Products, eq(QuoteItems.productUuid, Products.uuid))
-      .leftJoin(
-        ProductGroups,
-        eq(Products.productGroupUuid, ProductGroups.uuid),
-      )
-      .where(eq(QuoteItems.quoteUuid, uuid))
-      .orderBy(QuoteItems.lineNumber),
-    db
-      .select({
-        ...getTableColumns(QuoteItemOptions),
-        optionCode: SalesOptions.code,
-        optionName: SalesOptions.name,
-      })
-      .from(QuoteItemOptions)
-      .leftJoin(SalesOptions, eq(QuoteItemOptions.optionUuid, SalesOptions.uuid))
-      .where(eq(QuoteItemOptions.quoteUuid, uuid)),
-    db
-      .select({
-        ...getTableColumns(QuoteSurcharges),
-        companyName: Companies.companyName,
-      })
-      .from(QuoteSurcharges)
-      .leftJoin(Companies, eq(QuoteSurcharges.companyUuid, Companies.uuid))
-      .where(eq(QuoteSurcharges.quoteUuid, uuid))
-      .orderBy(QuoteSurcharges.order),
+      db
+        .select({
+          ...getTableColumns(QuoteItems),
+          productCode: Products.productCode,
+          productName: Products.name,
+          productGroupName: ProductGroups.name,
+          qualityStandard: ProductGroups.standardsQuality,
+        })
+        .from(QuoteItems)
+        .leftJoin(Products, eq(QuoteItems.productUuid, Products.uuid))
+        .leftJoin(
+          ProductGroups,
+          eq(Products.productGroupUuid, ProductGroups.uuid),
+        )
+        .where(eq(QuoteItems.quoteUuid, uuid))
+        .orderBy(QuoteItems.lineNumber),
+      db
+        .select({
+          ...getTableColumns(QuoteItemOptions),
+          optionCode: SalesOptions.code,
+          optionName: SalesOptions.name,
+        })
+        .from(QuoteItemOptions)
+        .leftJoin(
+          SalesOptions,
+          eq(QuoteItemOptions.optionUuid, SalesOptions.uuid),
+        )
+        .where(eq(QuoteItemOptions.quoteUuid, uuid)),
+      db
+        .select({
+          ...getTableColumns(QuoteSurcharges),
+          companyName: Companies.companyName,
+        })
+        .from(QuoteSurcharges)
+        .leftJoin(Companies, eq(QuoteSurcharges.companyUuid, Companies.uuid))
+        .where(eq(QuoteSurcharges.quoteUuid, uuid))
+        .orderBy(QuoteSurcharges.order),
       db
         .select()
         .from(Complaints)
@@ -589,7 +658,9 @@ export const updateQuote = async (
       }
 
       if (surcharges.length > 0) {
-        await tx.insert(QuoteSurcharges).values(surchargeRows(uuid, surcharges));
+        await tx
+          .insert(QuoteSurcharges)
+          .values(surchargeRows(uuid, surcharges));
       }
 
       const summary = await buildQuoteSummary(tx, uuid, {
@@ -616,9 +687,7 @@ export const updateQuote = async (
   redirect(`/quotes/${uuid}`);
 };
 
-export const deleteQuote = async (
-  uuid: string,
-): Promise<QuoteActionResult> => {
+export const deleteQuote = async (uuid: string): Promise<QuoteActionResult> => {
   try {
     const converted = await db
       .select({ uuid: QuoteItems.uuid })

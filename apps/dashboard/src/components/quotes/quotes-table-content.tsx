@@ -10,28 +10,37 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { TablePagination } from "@/components/ui/table-pagination";
+import { TableSortHeader } from "@/components/ui/table-sort-header";
+import { TableToolbar } from "@/components/ui/table-toolbar";
 import { ORDER_METHOD_LABELS } from "@/lib/labels";
 import { OrderMethod } from "@/lib/enums";
+import { Paged, TableFilterControl } from "@/lib/table-query";
 
 type Props = {
-  quotes: QuoteListItem[];
+  page: Paged<QuoteListItem>;
+  filters: TableFilterControl[];
 };
 
-export const QuotesTable = ({ quotes }: Props) => (
-  <div>
+export const QuotesTable = ({ page, filters }: Props) => (
+  <div className="space-y-4">
+    <TableToolbar
+      searchPlaceholder="Search reference or customer…"
+      filters={filters}
+    />
     <Table>
       <TableHeader>
         <TableRow>
           <TableHead>#</TableHead>
-          <TableHead>Customer</TableHead>
+          <TableSortHeader sortKey="customer">Customer</TableSortHeader>
           <TableHead>Contact</TableHead>
           <TableHead>Request</TableHead>
-          <TableHead>Valid Until</TableHead>
-          <TableHead>Created</TableHead>
+          <TableSortHeader sortKey="validUntil">Valid Until</TableSortHeader>
+          <TableSortHeader sortKey="createdAt">Created</TableSortHeader>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {quotes.length === 0 ? (
+        {page.rows.length === 0 ? (
           <TableRow>
             <TableCell
               colSpan={6}
@@ -41,7 +50,7 @@ export const QuotesTable = ({ quotes }: Props) => (
             </TableCell>
           </TableRow>
         ) : (
-          quotes.map((row) => (
+          page.rows.map((row) => (
             <TableRow key={row.uuid}>
               <TableCell>
                 <Link
@@ -76,5 +85,6 @@ export const QuotesTable = ({ quotes }: Props) => (
         )}
       </TableBody>
     </Table>
+    <TablePagination page={page} singular="quote" plural="quotes" />
   </div>
 );
