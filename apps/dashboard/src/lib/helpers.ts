@@ -287,18 +287,27 @@ export const totalPages = (total: number, pageSize: number): number =>
   Math.max(1, Math.ceil(total / Math.max(1, pageSize)));
 
 /**
- * What a pager says it is showing: "51–100 of 1,284". An empty result says so
- * in words, since "0–0 of 0" is only arithmetic.
+ * What a pager says it is showing: "51–100 of 1,284 invoices". An empty result
+ * says so in words, since "0–0 of 0" is only arithmetic.
+ *
+ * The plural is a parameter rather than the singular with an "s", because half
+ * the nouns these tables count are irregular — a page of "companys" reads as a
+ * bug in the screen.
  */
-export const pageRangeLabel = <T>(page: Paged<T>, noun = "row"): string => {
+export const pageRangeLabel = <T>(
+  page: Paged<T>,
+  singular = "row",
+  plural = `${singular}s`,
+): string => {
   if (page.total === 0) {
-    return `No ${pluralize(2, noun)}`;
+    return `No ${plural}`;
   }
   const first = (page.page - 1) * page.pageSize + 1;
   const last = Math.min(page.total, first + page.rows.length - 1);
   return `${formatNumber(first)}–${formatNumber(last)} of ${countLabel(
     page.total,
-    noun,
+    singular,
+    plural,
   )}`;
 };
 
