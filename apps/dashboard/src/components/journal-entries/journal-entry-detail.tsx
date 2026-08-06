@@ -14,14 +14,17 @@ import {
   formatDateValue,
   formatMoney,
   orDash,
+  userName,
 } from "@/lib/helpers";
 import { LEDGER_ACCOUNT_TYPE_LABELS } from "@/lib/labels";
 
 type Props = {
+  /** Clerk id -> name; these columns store the id, not the name. */
+  userNames: Record<string, string>;
   entry: JournalEntryDetail;
 };
 
-export const JournalEntryDetailView = ({ entry }: Props) => (
+export const JournalEntryDetailView = ({ entry, userNames }: Props) => (
   <div className="space-y-6">
     <section className="space-y-4">
       <h2 className="border-b pb-2 text-base font-semibold">Posting line</h2>
@@ -50,21 +53,18 @@ export const JournalEntryDetailView = ({ entry }: Props) => (
         <DetailField label="Debtor / creditor" value={entry.debCreditor} />
         <DetailField label="Description" value={entry.description} />
         <DetailField label="Reference" value={entry.reference} />
-        <DetailField
-          label="Debit"
-          value={formatMoney(Number(entry.debit))}
-        />
-        <DetailField
-          label="Credit"
-          value={formatMoney(Number(entry.credit))}
-        />
+        <DetailField label="Debit" value={formatMoney(Number(entry.debit))} />
+        <DetailField label="Credit" value={formatMoney(Number(entry.credit))} />
         <DetailField
           label="Signed amount"
           value={formatMoney(Number(entry.amount))}
         />
         <DetailField label="Financial year" value={entry.financialYear} />
         <DetailField label="Period" value={entry.period} />
-        <DetailField label="Created by" value={entry.createdByUserId} />
+        <DetailField
+          label="Created by"
+          value={userName(entry.createdByUserId, userNames)}
+        />
         <DetailField label="Created" value={formatDateValue(entry.createdAt)} />
       </div>
       <DetailField label="Explanation" value={entry.explanation} />
@@ -130,9 +130,7 @@ export const JournalEntryDetailView = ({ entry }: Props) => (
     </section>
 
     <section className="space-y-3">
-      <h2 className="border-b pb-2 text-base font-semibold">
-        The whole entry
-      </h2>
+      <h2 className="border-b pb-2 text-base font-semibold">The whole entry</h2>
       <p className="text-sm text-muted-foreground">
         {entry.entryUuid
           ? "The lines of one document, which should balance."

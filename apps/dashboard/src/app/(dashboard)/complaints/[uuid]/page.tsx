@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { getComplaintDetail } from "@/app/(dashboard)/complaints/actions";
 import { ComplaintDetailView } from "@/components/complaints/complaint-detail";
 import { PageHeading } from "@/components/layout/page-heading";
+import { getClerkUserNames } from "@/lib/server/clerk";
 
 type Props = {
   params: Promise<{ uuid: string }>;
@@ -18,6 +19,10 @@ const ComplaintDetailPage = async ({ params }: Props) => {
     notFound();
   }
 
+  // These columns store a Clerk id; Clerk owns the names.
+
+  const userNames = await getClerkUserNames();
+
   return (
     <div className="space-y-4">
       <div>
@@ -30,7 +35,7 @@ const ComplaintDetailPage = async ({ params }: Props) => {
         </Link>
       </div>
       <PageHeading title={`Complaint #${complaint.id}`} />
-      <ComplaintDetailView complaint={complaint} />
+      <ComplaintDetailView complaint={complaint}  userNames={userNames} />
     </div>
   );
 };

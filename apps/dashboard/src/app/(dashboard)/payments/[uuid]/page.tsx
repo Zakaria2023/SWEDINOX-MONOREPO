@@ -5,6 +5,7 @@ import { getPaymentDetail } from "@/app/(dashboard)/payments/actions";
 import { PaymentDetailView } from "@/components/payments/payment-detail";
 import { PageHeading } from "@/components/layout/page-heading";
 import { formatMoney } from "@/lib/helpers";
+import { getClerkUserNames } from "@/lib/server/clerk";
 
 type Props = {
   params: Promise<{ uuid: string }>;
@@ -19,6 +20,10 @@ const PaymentDetailPage = async ({ params }: Props) => {
     notFound();
   }
 
+  // These columns store a Clerk id; Clerk owns the names.
+
+  const userNames = await getClerkUserNames();
+
   return (
     <div className="space-y-4">
       <div>
@@ -31,7 +36,7 @@ const PaymentDetailPage = async ({ params }: Props) => {
         </Link>
       </div>
       <PageHeading title={formatMoney(Number(payment.amount))} />
-      <PaymentDetailView payment={payment} />
+      <PaymentDetailView payment={payment}  userNames={userNames} />
     </div>
   );
 };

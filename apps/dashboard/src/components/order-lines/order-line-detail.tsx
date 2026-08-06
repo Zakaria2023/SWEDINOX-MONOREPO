@@ -7,6 +7,7 @@ import {
   formatMoney,
   formatNumber,
   formatPercent,
+  userName,
   yesNo,
 } from "@/lib/helpers";
 import {
@@ -18,10 +19,12 @@ import {
 } from "@/lib/labels";
 
 type Props = {
+  /** Clerk id -> name; these columns store the id, not the name. */
+  userNames: Record<string, string>;
   line: OrderLineDetail;
 };
 
-export const OrderLineDetailView = ({ line }: Props) => (
+export const OrderLineDetailView = ({ line, userNames }: Props) => (
   <div className="space-y-6">
     <section className="space-y-4">
       <h2 className="border-b pb-2 text-base font-semibold">Line</h2>
@@ -70,7 +73,7 @@ export const OrderLineDetailView = ({ line }: Props) => (
         </div>
         <DetailField label="Customer reference" value={line.customerRef} />
         <DetailField label="Order category" value={line.orderCategory} />
-        <DetailField label="Seller" value={line.seller} />
+        <DetailField label="Seller" value={userName(line.seller, userNames)} />
         <div>
           <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
             Product
@@ -80,9 +83,7 @@ export const OrderLineDetailView = ({ line }: Props) => (
               href={`/products/${line.productUuid}`}
               className="text-sm text-primary hover:underline"
             >
-              {[line.productCode, line.productName]
-                .filter(Boolean)
-                .join(" — ")}
+              {[line.productCode, line.productName].filter(Boolean).join(" — ")}
             </Link>
           ) : (
             <p className="text-sm">—</p>

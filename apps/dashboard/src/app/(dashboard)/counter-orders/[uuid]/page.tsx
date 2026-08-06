@@ -4,6 +4,7 @@ import { ChevronLeft } from "lucide-react";
 import { getCounterOrderDetail } from "@/app/(dashboard)/counter-orders/actions";
 import { CounterOrderDetailView } from "@/components/counter-orders/counter-order-detail";
 import { PageHeading } from "@/components/layout/page-heading";
+import { getClerkUserNames } from "@/lib/server/clerk";
 
 type Props = {
   params: Promise<{ uuid: string }>;
@@ -18,6 +19,10 @@ const CounterOrderDetailPage = async ({ params }: Props) => {
     notFound();
   }
 
+  // These columns store a Clerk id; Clerk owns the names.
+
+  const userNames = await getClerkUserNames();
+
   return (
     <div className="space-y-4">
       <div>
@@ -30,7 +35,7 @@ const CounterOrderDetailPage = async ({ params }: Props) => {
         </Link>
       </div>
       <PageHeading title={`Counter order #${order.id}`} />
-      <CounterOrderDetailView order={order} />
+      <CounterOrderDetailView order={order}  userNames={userNames} />
     </div>
   );
 };

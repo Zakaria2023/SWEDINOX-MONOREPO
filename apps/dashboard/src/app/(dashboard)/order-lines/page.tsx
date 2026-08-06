@@ -4,6 +4,7 @@ import { getCompaniesForSelect } from "@/app/(dashboard)/companies/actions";
 import { getProductsForSelect } from "@/app/(dashboard)/products/actions";
 import { OrderLinesTable } from "@/components/order-lines/order-lines-table-content";
 import { PageHeading } from "@/components/layout/page-heading";
+import { getClerkUserNames } from "@/lib/server/clerk";
 import { parseTableQuery, SearchParams } from "@/lib/table-query";
 
 type Props = {
@@ -17,6 +18,8 @@ const OrderLinesPage = async ({ searchParams }: Props) => {
   const rows = await getOrderLines(query);
   const companies = await getCompaniesForSelect();
   const products = await getProductsForSelect();
+  // The seller column stores a Clerk id; Clerk owns the names.
+  const userNames = await getClerkUserNames();
 
   return (
     <div className="space-y-4">
@@ -24,6 +27,7 @@ const OrderLinesPage = async ({ searchParams }: Props) => {
       <OrderLinesTable
         page={rows}
         filters={orderLineFilters(companies, products)}
+        userNames={userNames}
       />
     </div>
   );

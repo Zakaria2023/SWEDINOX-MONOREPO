@@ -4,6 +4,7 @@ import { ChevronLeft } from "lucide-react";
 import { getTextDetail } from "@/app/(dashboard)/texts/actions";
 import { TextDetailView } from "@/components/texts/text-detail";
 import { PageHeading } from "@/components/layout/page-heading";
+import { getClerkUserNames } from "@/lib/server/clerk";
 
 type Props = {
   params: Promise<{ uuid: string }>;
@@ -18,6 +19,10 @@ const TextDetailPage = async ({ params }: Props) => {
     notFound();
   }
 
+  // These columns store a Clerk id; Clerk owns the names.
+
+  const userNames = await getClerkUserNames();
+
   return (
     <div className="space-y-4">
       <div>
@@ -30,7 +35,7 @@ const TextDetailPage = async ({ params }: Props) => {
         </Link>
       </div>
       <PageHeading title={text.title} />
-      <TextDetailView text={text} />
+      <TextDetailView text={text}  userNames={userNames} />
     </div>
   );
 };

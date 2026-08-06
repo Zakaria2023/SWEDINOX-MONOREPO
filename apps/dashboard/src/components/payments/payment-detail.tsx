@@ -6,6 +6,7 @@ import {
   formatDateValue,
   formatMoney,
   invoiceReference,
+  userName,
   yesNo,
 } from "@/lib/helpers";
 import {
@@ -14,17 +15,17 @@ import {
 } from "@/lib/labels";
 
 type Props = {
+  /** Clerk id -> name; these columns store the id, not the name. */
+  userNames: Record<string, string>;
   payment: PaymentDetail;
 };
 
-export const PaymentDetailView = ({ payment }: Props) => (
+export const PaymentDetailView = ({ payment, userNames }: Props) => (
   <div className="space-y-6">
     {payment.reversed && (
       <p className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm">
         This payment has been reversed
-        {payment.reversedAt
-          ? ` on ${formatDateValue(payment.reversedAt)}`
-          : ""}
+        {payment.reversedAt ? ` on ${formatDateValue(payment.reversedAt)}` : ""}
         . A payment is never edited — a wrong one is reversed and re-registered,
         so the trail keeps what was booked and when.
       </p>
@@ -55,7 +56,10 @@ export const PaymentDetailView = ({ payment }: Props) => (
           value={formatMoney(payment.settledAmount)}
         />
         <DetailField label="Reversed" value={yesNo(payment.reversed)} />
-        <DetailField label="Registered by" value={payment.createdByUserId} />
+        <DetailField
+          label="Registered by"
+          value={userName(payment.createdByUserId, userNames)}
+        />
         <DetailField
           label="Created"
           value={formatDateValue(payment.createdAt)}

@@ -18,15 +18,18 @@ import {
   formatMoney,
   formatNumber,
   orderLineStatusLabel,
+  userName,
 } from "@/lib/helpers";
 import { Paged, TableFilterControl } from "@/lib/table-query";
 
 type Props = {
   page: Paged<OrderLineRow>;
   filters: TableFilterControl[];
+  /** Clerk id -> name, for the seller column. */
+  userNames: Record<string, string>;
 };
 
-export const OrderLinesTable = ({ page, filters }: Props) => (
+export const OrderLinesTable = ({ page, filters, userNames }: Props) => (
   <div className="space-y-4">
     <TableToolbar
       searchPlaceholder="Search product, reference or customer…"
@@ -134,7 +137,7 @@ export const OrderLinesTable = ({ page, filters }: Props) => (
               <TableCell className="text-right">
                 {formatNumber(row.profitMargin)}%
               </TableCell>
-              <TableCell>{row.seller ?? "—"}</TableCell>
+              <TableCell>{userName(row.seller, userNames)}</TableCell>
             </TableRow>
           ))
         )}

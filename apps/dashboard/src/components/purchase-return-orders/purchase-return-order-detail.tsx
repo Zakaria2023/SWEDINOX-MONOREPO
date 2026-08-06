@@ -28,6 +28,7 @@ import {
   isPurchaseReturnOrderEditable,
   orDash,
   pluralize,
+  userName,
 } from "@/lib/helpers";
 import {
   INVOICE_PAYMENT_TERM_LABELS,
@@ -36,10 +37,15 @@ import {
 } from "@/lib/labels";
 
 type Props = {
+  /** Clerk id -> name; these columns store the id, not the name. */
+  userNames: Record<string, string>;
   returnOrder: PurchaseReturnOrderDetail;
 };
 
-export const PurchaseReturnOrderDetailView = ({ returnOrder }: Props) => {
+export const PurchaseReturnOrderDetailView = ({
+  returnOrder,
+  userNames,
+}: Props) => {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | undefined>();
 
@@ -115,7 +121,10 @@ export const PurchaseReturnOrderDetailView = ({ returnOrder }: Props) => {
                 : null
             }
           />
-          <DetailField label="Purchaser" value={returnOrder.purchaser} />
+          <DetailField
+            label="Purchaser"
+            value={userName(returnOrder.purchaser, userNames)}
+          />
         </div>
       </section>
 
@@ -160,7 +169,9 @@ export const PurchaseReturnOrderDetailView = ({ returnOrder }: Props) => {
               decisions, so they are two buttons. */}
           <Button
             type="button"
-            onClick={() => run(() => dispatchPurchaseReturnOrder(returnOrder.uuid))}
+            onClick={() =>
+              run(() => dispatchPurchaseReturnOrder(returnOrder.uuid))
+            }
             disabled={isPending || isDispatched || isCredited}
           >
             <PackageX className="size-4" />
@@ -170,7 +181,9 @@ export const PurchaseReturnOrderDetailView = ({ returnOrder }: Props) => {
           <Button
             type="button"
             variant="outline"
-            onClick={() => run(() => creditPurchaseReturnOrder(returnOrder.uuid))}
+            onClick={() =>
+              run(() => creditPurchaseReturnOrder(returnOrder.uuid))
+            }
             disabled={isPending || !isDispatched}
           >
             <ReceiptText className="size-4" />

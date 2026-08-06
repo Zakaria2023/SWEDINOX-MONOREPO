@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { getQuoteDetail } from "@/app/(dashboard)/quotes/actions";
 import { PageHeading } from "@/components/layout/page-heading";
 import { QuoteDetailView } from "@/components/quotes/quote-detail";
+import { getClerkUserNames } from "@/lib/server/clerk";
 
 type Props = {
   params: Promise<{ uuid: string }>;
@@ -18,6 +19,10 @@ const QuoteDetailPage = async ({ params }: Props) => {
     notFound();
   }
 
+  // These columns store a Clerk id; Clerk owns the names.
+
+  const userNames = await getClerkUserNames();
+
   return (
     <div className="space-y-4">
       <div>
@@ -30,7 +35,7 @@ const QuoteDetailPage = async ({ params }: Props) => {
         </Link>
       </div>
       <PageHeading title={`Quote #${quote.id}`} />
-      <QuoteDetailView quote={quote} />
+      <QuoteDetailView quote={quote}  userNames={userNames} />
     </div>
   );
 };

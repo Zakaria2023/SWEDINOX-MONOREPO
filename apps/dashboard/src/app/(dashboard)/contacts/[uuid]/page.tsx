@@ -5,6 +5,7 @@ import { getContactDetail } from "@/app/(dashboard)/contacts/actions";
 import { ContactDetailView } from "@/components/contacts/contact-detail";
 import { PageHeading } from "@/components/layout/page-heading";
 import { fullName } from "@/lib/helpers";
+import { getClerkUserNames } from "@/lib/server/clerk";
 
 type Props = {
   params: Promise<{ uuid: string }>;
@@ -31,6 +32,10 @@ const ContactDetailPage = async ({ params }: Props) => {
         label: "Contact Persons Customers and Prospects",
       };
 
+  // These columns store a Clerk id; Clerk owns the names.
+
+  const userNames = await getClerkUserNames();
+
   return (
     <div className="space-y-4">
       <div>
@@ -43,7 +48,7 @@ const ContactDetailPage = async ({ params }: Props) => {
         </Link>
       </div>
       <PageHeading title={fullName(contact.firstName, contact.lastName)} />
-      <ContactDetailView contact={contact} />
+      <ContactDetailView contact={contact}  userNames={userNames} />
     </div>
   );
 };

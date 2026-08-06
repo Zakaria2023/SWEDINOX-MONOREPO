@@ -16,13 +16,16 @@ import {
   formatNumber,
   formatPercent,
   orDash,
+  userName,
 } from "@/lib/helpers";
 
 type Props = {
   rows: OrderOrQuoteRow[];
+  /** Clerk id -> name, for the seller column. */
+  userNames: Record<string, string>;
 };
 
-export const OrdersAndQuotesTable = ({ rows }: Props) => (
+export const OrdersAndQuotesTable = ({ rows, userNames }: Props) => (
   <div>
     <Table>
       <TableHeader>
@@ -87,7 +90,7 @@ export const OrdersAndQuotesTable = ({ rows }: Props) => (
               <TableCell className="text-right tabular-nums">
                 {formatPercent(row.profitMargin)}
               </TableCell>
-              <TableCell>{orDash(row.seller)}</TableCell>
+              <TableCell>{userName(row.seller, userNames)}</TableCell>
               <TableCell>{orDash(row.convertedFromTo)}</TableCell>
               <TableCell>{formatDateColumn(row.quoteDate)}</TableCell>
               <TableCell>{formatDateColumn(row.decisionDate)}</TableCell>

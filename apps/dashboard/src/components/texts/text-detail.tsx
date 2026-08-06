@@ -3,19 +3,22 @@ import { TextDetail } from "@/app/(dashboard)/texts/actions";
 import { BooleanFlag } from "@/components/ui/boolean-flag";
 import { DetailField } from "@/components/ui/detail-field";
 import {
+  TEXT_USAGE_CATEGORY_FIELDS,
   activeTextUsageCategories,
   attachedDocumentOf,
   formatDateValue,
-  TEXT_USAGE_CATEGORY_FIELDS,
+  userName,
   yesNo,
 } from "@/lib/helpers";
 import { TEXT_USAGE_CATEGORY_LABELS } from "@/lib/labels";
 
 type Props = {
+  /** Clerk id -> name; these columns store the id, not the name. */
+  userNames: Record<string, string>;
   text: TextDetail;
 };
 
-export const TextDetailView = ({ text }: Props) => {
+export const TextDetailView = ({ text, userNames }: Props) => {
   const document = attachedDocumentOf(text);
   const usedOn = activeTextUsageCategories(text);
 
@@ -32,8 +35,14 @@ export const TextDetailView = ({ text }: Props) => {
           />
           <DetailField label="Sequence number" value={text.sequenceNumber} />
           <DetailField label="Active" value={yesNo(text.isActive)} />
-          <DetailField label="Created by" value={text.createdByUserId} />
-          <DetailField label="Created" value={formatDateValue(text.createdAt)} />
+          <DetailField
+            label="Created by"
+            value={userName(text.createdByUserId, userNames)}
+          />
+          <DetailField
+            label="Created"
+            value={formatDateValue(text.createdAt)}
+          />
           <DetailField
             label="Last modified"
             value={formatDateValue(text.updatedAt)}
@@ -111,9 +120,7 @@ export const TextDetailView = ({ text }: Props) => {
                 on={text[field]}
                 label={TEXT_USAGE_CATEGORY_LABELS[key]}
               />
-              <span className="text-sm">
-                {TEXT_USAGE_CATEGORY_LABELS[key]}
-              </span>
+              <span className="text-sm">{TEXT_USAGE_CATEGORY_LABELS[key]}</span>
             </div>
           ))}
         </div>

@@ -4,6 +4,7 @@ import { ChevronLeft } from "lucide-react";
 import { getCapacityOverflowDetail } from "@/app/(dashboard)/order-lines-capacity-overflow/actions";
 import { CapacityOverflowDetailView } from "@/components/order-lines-capacity-overflow/capacity-overflow-detail";
 import { PageHeading } from "@/components/layout/page-heading";
+import { getClerkUserNames } from "@/lib/server/clerk";
 
 type Props = {
   params: Promise<{ uuid: string }>;
@@ -17,6 +18,10 @@ const CapacityOverflowDetailPage = async ({ params }: Props) => {
   if (!overflow) {
     notFound();
   }
+
+  // These columns store a Clerk id; Clerk owns the names.
+
+  const userNames = await getClerkUserNames();
 
   return (
     <div className="space-y-4">
@@ -36,7 +41,7 @@ const CapacityOverflowDetailPage = async ({ params }: Props) => {
             : `Order #${overflow.orderId} — line ${overflow.lineNumber ?? "?"}`
         }
       />
-      <CapacityOverflowDetailView overflow={overflow} />
+      <CapacityOverflowDetailView overflow={overflow}  userNames={userNames} />
     </div>
   );
 };

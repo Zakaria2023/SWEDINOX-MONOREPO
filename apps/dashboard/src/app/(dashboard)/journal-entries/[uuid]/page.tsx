@@ -4,6 +4,7 @@ import { ChevronLeft } from "lucide-react";
 import { getJournalEntryDetail } from "@/app/(dashboard)/journal-entries/actions";
 import { JournalEntryDetailView } from "@/components/journal-entries/journal-entry-detail";
 import { PageHeading } from "@/components/layout/page-heading";
+import { getClerkUserNames } from "@/lib/server/clerk";
 
 type Props = {
   params: Promise<{ uuid: string }>;
@@ -18,6 +19,10 @@ const JournalEntryDetailPage = async ({ params }: Props) => {
     notFound();
   }
 
+  // These columns store a Clerk id; Clerk owns the names.
+
+  const userNames = await getClerkUserNames();
+
   return (
     <div className="space-y-4">
       <div>
@@ -30,7 +35,7 @@ const JournalEntryDetailPage = async ({ params }: Props) => {
         </Link>
       </div>
       <PageHeading title={entry.documentNo ?? `Posting #${entry.id}`} />
-      <JournalEntryDetailView entry={entry} />
+      <JournalEntryDetailView entry={entry}  userNames={userNames} />
     </div>
   );
 };

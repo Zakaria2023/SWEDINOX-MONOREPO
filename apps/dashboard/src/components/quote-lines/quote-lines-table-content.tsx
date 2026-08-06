@@ -17,6 +17,7 @@ import {
   formatNumber,
   formatPercent,
   initialsOf,
+  userName,
 } from "@/lib/helpers";
 import {
   CUSTOMER_GROUP_LABELS,
@@ -26,11 +27,13 @@ import {
 
 type Props = {
   rows: QuoteLineRow[];
+  /** Clerk id -> name, for the seller column. */
+  userNames: Record<string, string>;
 };
 
 const COLUMN_COUNT = 46;
 
-export const QuoteLinesTable = ({ rows }: Props) => (
+export const QuoteLinesTable = ({ rows, userNames }: Props) => (
   <div>
     <Table>
       <TableHeader>
@@ -128,7 +131,7 @@ export const QuoteLinesTable = ({ rows }: Props) => (
               <TableCell className="whitespace-nowrap">
                 {formatDateValue(row.validUntil)}
               </TableCell>
-              <TableCell>{row.seller ?? "—"}</TableCell>
+              <TableCell>{userName(row.seller, userNames)}</TableCell>
               <TableCell>{initialsOf(row.seller)}</TableCell>
               <TableCell>
                 {row.representative

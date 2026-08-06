@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { getPurchaseReturnOrderDetail } from "@/app/(dashboard)/purchase-return-orders/actions";
 import { PageHeading } from "@/components/layout/page-heading";
 import { PurchaseReturnOrderDetailView } from "@/components/purchase-return-orders/purchase-return-order-detail";
+import { getClerkUserNames } from "@/lib/server/clerk";
 
 type Props = {
   params: Promise<{ uuid: string }>;
@@ -18,6 +19,10 @@ const PurchaseReturnOrderDetailPage = async ({ params }: Props) => {
     notFound();
   }
 
+  // These columns store a Clerk id; Clerk owns the names.
+
+  const userNames = await getClerkUserNames();
+
   return (
     <div className="space-y-4">
       <div>
@@ -30,7 +35,7 @@ const PurchaseReturnOrderDetailPage = async ({ params }: Props) => {
         </Link>
       </div>
       <PageHeading title={`Purchase return order #${returnOrder.id}`} />
-      <PurchaseReturnOrderDetailView returnOrder={returnOrder} />
+      <PurchaseReturnOrderDetailView returnOrder={returnOrder}  userNames={userNames} />
     </div>
   );
 };

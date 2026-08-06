@@ -1,5 +1,6 @@
 "use client";
 
+import { userName } from "@/lib/helpers";
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -25,6 +26,8 @@ import {
 
 type Props = {
   lines: DeliveryLineItem[];
+  /** Clerk id -> name, for the seller column. */
+  userNames: Record<string, string>;
 };
 
 type DeliverButtonProps = {
@@ -63,7 +66,7 @@ const DeliverButton = ({ orderItemUuid }: DeliverButtonProps) => {
   );
 };
 
-export const DeliveriesTable = ({ lines }: Props) => (
+export const DeliveriesTable = ({ lines, userNames }: Props) => (
   <div>
     <Table>
       <TableHeader>
@@ -126,7 +129,7 @@ export const DeliveriesTable = ({ lines }: Props) => (
                 {row.lineNumber ?? "—"}
               </TableCell>
               <TableCell>{row.customerName ?? "—"}</TableCell>
-              <TableCell>{row.seller ?? "—"}</TableCell>
+              <TableCell>{userName(row.seller, userNames)}</TableCell>
               <TableCell className="text-center">
                 {row.isPickup ? "Yes" : ""}
               </TableCell>

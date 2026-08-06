@@ -5,6 +5,7 @@ import { getCommunicationSettingDetail } from "@/app/(dashboard)/communication-s
 import { CommunicationSettingDetailView } from "@/components/communication-settings/communication-setting-detail";
 import { PageHeading } from "@/components/layout/page-heading";
 import { COMMUNICATION_SETTING_DOCUMENT_TYPE_LABELS } from "@/lib/labels";
+import { getClerkUserNames } from "@/lib/server/clerk";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -26,6 +27,10 @@ const CommunicationSettingDetailPage = async ({ params }: Props) => {
     notFound();
   }
 
+  // These columns store a Clerk id; Clerk owns the names.
+
+  const userNames = await getClerkUserNames();
+
   return (
     <div className="space-y-4">
       <div>
@@ -40,7 +45,7 @@ const CommunicationSettingDetailPage = async ({ params }: Props) => {
       <PageHeading
         title={COMMUNICATION_SETTING_DOCUMENT_TYPE_LABELS[setting.documentType]}
       />
-      <CommunicationSettingDetailView setting={setting} />
+      <CommunicationSettingDetailView setting={setting} userNames={userNames} />
     </div>
   );
 };

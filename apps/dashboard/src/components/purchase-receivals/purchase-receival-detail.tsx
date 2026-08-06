@@ -5,14 +5,17 @@ import {
   formatDateColumn,
   formatDateValue,
   formatMoney,
+  userName,
 } from "@/lib/helpers";
 import { ORDER_LINE_STATUS_LABELS, STOCK_UNIT_LABELS } from "@/lib/labels";
 
 type Props = {
+  /** Clerk id -> name; these columns store the id, not the name. */
+  userNames: Record<string, string>;
   receival: PurchaseReceivalDetail;
 };
 
-export const PurchaseReceivalDetailView = ({ receival }: Props) => (
+export const PurchaseReceivalDetailView = ({ receival, userNames }: Props) => (
   <div className="space-y-6">
     <section className="space-y-4">
       <h2 className="border-b pb-2 text-base font-semibold">Receipt</h2>
@@ -21,10 +24,7 @@ export const PurchaseReceivalDetailView = ({ receival }: Props) => (
           label="Receipt date"
           value={formatDateColumn(receival.receiptDate)}
         />
-        <DetailField
-          label="Receipt status"
-          value={receival.receiptStatus}
-        />
+        <DetailField label="Receipt status" value={receival.receiptStatus} />
         <DetailField
           label="Line status"
           value={
@@ -33,7 +33,10 @@ export const PurchaseReceivalDetailView = ({ receival }: Props) => (
               : null
           }
         />
-        <DetailField label="Purchaser" value={receival.purchaser} />
+        <DetailField
+          label="Purchaser"
+          value={userName(receival.purchaser, userNames)}
+        />
         <DetailField label="Initials" value={receival.initials} />
         <DetailField
           label="Delivery date planned"

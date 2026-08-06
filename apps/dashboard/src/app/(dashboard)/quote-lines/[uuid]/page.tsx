@@ -4,6 +4,7 @@ import { ChevronLeft } from "lucide-react";
 import { getQuoteLineDetail } from "@/app/(dashboard)/quote-lines/actions";
 import { QuoteLineDetailView } from "@/components/quote-lines/quote-line-detail";
 import { PageHeading } from "@/components/layout/page-heading";
+import { getClerkUserNames } from "@/lib/server/clerk";
 
 type Props = {
   params: Promise<{ uuid: string }>;
@@ -17,6 +18,10 @@ const QuoteLineDetailPage = async ({ params }: Props) => {
   if (!line) {
     notFound();
   }
+
+  // These columns store a Clerk id; Clerk owns the names.
+
+  const userNames = await getClerkUserNames();
 
   return (
     <div className="space-y-4">
@@ -36,7 +41,7 @@ const QuoteLineDetailPage = async ({ params }: Props) => {
             : `Quote #${line.quoteId} — line ${line.lineNumber ?? "?"}`
         }
       />
-      <QuoteLineDetailView line={line} />
+      <QuoteLineDetailView line={line}  userNames={userNames} />
     </div>
   );
 };

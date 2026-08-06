@@ -17,6 +17,7 @@ import {
   formatMoney,
   formatPercent,
   orDash,
+  userName,
   yesNo,
 } from "@/lib/helpers";
 import {
@@ -32,10 +33,12 @@ import {
 } from "@/lib/labels";
 
 type Props = {
+  /** Clerk id -> name; these columns store the id, not the name. */
+  userNames: Record<string, string>;
   order: CounterOrderDetail;
 };
 
-export const CounterOrderDetailView = ({ order }: Props) => (
+export const CounterOrderDetailView = ({ order, userNames }: Props) => (
   <div className="space-y-6">
     <section className="space-y-4">
       <h2 className="border-b pb-2 text-base font-semibold">Header</h2>
@@ -55,7 +58,7 @@ export const CounterOrderDetailView = ({ order }: Props) => (
         <DetailField label="Contact" value={order.contactName} />
         <DetailField label="Customer reference" value={order.customerRef} />
         <DetailField label="Our reference" value={order.ourReference} />
-        <DetailField label="Seller" value={order.seller} />
+        <DetailField label="Seller" value={userName(order.seller, userNames)} />
         <DetailField
           label="Status"
           value={
