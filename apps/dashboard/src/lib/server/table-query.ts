@@ -106,17 +106,29 @@ export const tableWhere = ({
  * natural order, so a stale link sorts by something sensible instead of failing
  * — and a hand-typed one cannot name a column that was never meant to be
  * exposed.
+ *
+ * `tiebreak` must be unique per row, and is required rather than optional
+ * because paging without one is silently broken. Sorting a hundred addresses by
+ * city puts every Rotterdam row in a group the database may return in any order
+ * it likes, and it need not pick the same order twice — so LIMIT 50 OFFSET 50
+ * can hand back a row page one already showed, while another is never shown at
+ * all. Appending a unique column makes the ordering total, which is what makes
+ * one page the complement of the others rather than a sample of them.
  */
 export const tableOrderBy = (
   sortable: SortableColumns,
   query: TableQuery,
   fallback: SQL[],
+  tiebreak: MySqlColumn | SQL,
 ): SQL[] => {
   const column = query.sort ? sortable[query.sort] : undefined;
-  if (!column) {
-    return fallback;
-  }
-  return [query.dir === "desc" ? desc(column) : asc(column)];
+  const direction = query.dir === "desc" ? desc : asc;
+  return [
+    ...(column ? [direction(column)] : fallback),
+    // Same direction as the sort, so ties read in the order the rest of the
+    // page does rather than against it.
+    direction(tiebreak),
+  ];
 };
 
 /** The window of rows one page covers. */

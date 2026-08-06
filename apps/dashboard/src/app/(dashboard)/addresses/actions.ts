@@ -95,9 +95,12 @@ export const getAddresses = async (
         .leftJoin(Companies, eq(Companies.uuid, CompanyAddresses.companyUuid))
         .where(where)
         .orderBy(
-          ...tableOrderBy(ADDRESS_SORTABLE, query, [
-            desc(CompanyAddresses.createdAt),
-          ]),
+          ...tableOrderBy(
+            ADDRESS_SORTABLE,
+            query,
+            [desc(CompanyAddresses.createdAt)],
+            CompanyAddresses.id,
+          ),
         )
         .limit(limit)
         .offset(offset),
