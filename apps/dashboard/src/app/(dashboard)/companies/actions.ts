@@ -17,6 +17,7 @@ import {
   InsertCustomerProjects,
   SelectCustomerProjects,
 } from "@/db/schema/customer-projects";
+import { Industries, SelectIndustries } from "@/db/schema/industries";
 import { InsertProducts, Products } from "@/db/schema/products";
 import { InsertTexts, Texts } from "@/db/schema/texts";
 import {
@@ -64,7 +65,7 @@ import { sendCompanyWelcomeEmails } from "@/emails/actions";
 import { PurchaseCompanyType } from "@/lib/enums";
 import { describeError, generateUuid } from "@/lib/helpers";
 import { currentUser } from "@clerk/nextjs/server";
-import { asc, desc, eq, or, sql } from "drizzle-orm";
+import { asc, desc, eq, inArray, or, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 export type CompanyOption = Pick<
@@ -221,6 +222,11 @@ export type CompanyDetail = SelectCompanies & {
   returnOrders: SelectReturnOrders[];
   complaints: SelectComplaints[];
   customerStock: SelectCustomerStock[];
+  // The debtor, purchase organisation and industry are stored as references —
+  // the detail page shows the name behind each, not the raw uuid/SBI code.
+  debtorCompanyName: SelectCompanies["companyName"] | null;
+  purchaseOrgCompanyName: SelectCompanies["companyName"] | null;
+  industryName: SelectIndustries["name"] | null;
 };
 
 export type ContactOption = Pick<
@@ -321,6 +327,29 @@ export const getCompanyDetail = async (
     .where(eq(CustomerStock.companyUuid, uuid))
     .orderBy(desc(CustomerStock.createdAt));
 
+  // Both references point back at Companies, so one lookup answers for the two
+  // of them.
+  const referencedCompanyUuids = [
+    company.debtorCompanyUuid,
+    company.purchaseOrgCompanyUuid,
+  ].filter((value): value is string => value !== null);
+
+  const referencedCompanies =
+    referencedCompanyUuids.length > 0
+      ? await db
+          .select({ uuid: Companies.uuid, companyName: Companies.companyName })
+          .from(Companies)
+          .where(inArray(Companies.uuid, referencedCompanyUuids))
+      : [];
+
+  const [industry] = company.industry
+    ? await db
+        .select({ name: Industries.name })
+        .from(Industries)
+        .where(eq(Industries.id, company.industry))
+        .limit(1)
+    : [];
+
   return {
     ...company,
     addresses,
@@ -331,6 +360,15 @@ export const getCompanyDetail = async (
     returnOrders,
     complaints,
     customerStock,
+    debtorCompanyName:
+      referencedCompanies.find(
+        (referenced) => referenced.uuid === company.debtorCompanyUuid,
+      )?.companyName ?? null,
+    purchaseOrgCompanyName:
+      referencedCompanies.find(
+        (referenced) => referenced.uuid === company.purchaseOrgCompanyUuid,
+      )?.companyName ?? null,
+    industryName: industry?.name ?? null,
   };
 };
 
