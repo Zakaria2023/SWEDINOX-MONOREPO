@@ -2,6 +2,7 @@ import { getCompanyDetail } from "@/app/(dashboard)/companies/actions";
 import { getInvoicesByCompanyUuid } from "@/app/(dashboard)/invoices/actions";
 import { CompanyDetailView } from "@/components/companies/company-detail";
 import { PageHeading } from "@/components/layout/page-heading";
+import { getClerkUserNames } from "@/lib/server/clerk";
 import { ChevronLeft, Pencil } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -23,6 +24,7 @@ const CompanyDetailPage = async ({ params }: Props) => {
   const invoices = isCustomer
     ? await getInvoicesByCompanyUuid(uuid)
     : undefined;
+  const userNames = await getClerkUserNames();
 
   return (
     <div className="space-y-4">
@@ -45,7 +47,11 @@ const CompanyDetailPage = async ({ params }: Props) => {
           Edit
         </Link>
       </div>
-      <CompanyDetailView company={company} invoices={invoices} />
+      <CompanyDetailView
+        company={company}
+        invoices={invoices}
+        userNames={userNames}
+      />
     </div>
   );
 };

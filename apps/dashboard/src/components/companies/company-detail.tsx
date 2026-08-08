@@ -1,4 +1,5 @@
 import { CompanyDetail } from "@/app/(dashboard)/companies/actions";
+import { CompanyDocumentCell } from "@/components/companies/company-document-cell";
 import {
   Table,
   TableBody,
@@ -8,17 +9,43 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { daysInSystem, formatDateValue } from "@/lib/helpers";
+import { MONTHS } from "@/lib/constants";
+import {
+  daysInSystem,
+  formatDateValue,
+  formatRevenue,
+  userName,
+  yesNo,
+} from "@/lib/helpers";
 import { SelectInvoices } from "@/db";
 import {
+  COMPANY_CLASSIFICATION_LABELS,
   COMPANY_LANGUAGE_LABELS,
   COMPANY_ROLE_LABELS,
   COMPLAINT_CATEGORY_LABELS,
   COMPLAINT_REPORT_LABELS,
   COMPLAINT_TYPE_LABELS,
   COUNTER_ORDER_STATUS_LABELS,
+  CURRENCY_LABELS,
+  CUSTOMER_GROUP_LABELS,
+  CUSTOMER_STOCK_REASON_LABELS,
+  DEV_THEOR_WT_LABELS,
+  EDI_OPTION_LABELS,
+  GROUP_LINES_BY_DESCRIPTION_LABELS,
+  INVOICE_FREQUENCY_LABELS,
   INVOICE_PAYMENT_TERM_LABELS,
   INVOICE_VAT_SCENARIO_LABELS,
+  INVOICING_METHOD_LABELS,
+  MISCELLANEOUS_OPTION_LABELS,
+  ORDER_OPTION_LABELS,
+  PRINT_PRODUCT_CODES_LABELS,
+  QUOTE_OPTION_LABELS,
+  QUOTE_ORDER_INVOICE_OPTION_LABELS,
+  QUOTE_ORDER_OPTION_LABELS,
+  RETURN_ORDER_REASON_LABELS,
+  RETURN_ORDER_STATUS_LABELS,
+  SALES_REPRESENTATIVE_LABELS,
+  SFN_COUNTERPARTY_ROLE_LABELS,
   VISIT_REPORT_CONTACT_METHOD_LABELS,
   VISIT_REPORT_REASON_LABELS,
   PURCHASE_ORDER_STATUS_LABELS,
@@ -29,22 +56,71 @@ import Link from "next/link";
 type Props = {
   company: CompanyDetail;
   invoices?: SelectInvoices[];
+  userNames: Record<string, string>;
 };
 
-const Field = ({ label, value }: { label: string; value?: string | null }) => (
+type FieldProps = {
+  label: string;
+  value?: string | number | null;
+};
+
+type OptionListProps = {
+  label: string;
+  values?: readonly string[] | null;
+  labels: Record<string, string>;
+};
+
+const Field = ({ label, value }: FieldProps) => (
   <div>
     <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
       {label}
     </dt>
-    <dd className="mt-0.5 text-sm text-foreground">{value || "—"}</dd>
+    <dd className="mt-0.5 text-sm text-foreground">
+      {value === null || value === undefined || value === "" ? "—" : value}
+    </dd>
   </div>
 );
 
-// Number of whole days since the record was created.
+// A stored multi-select (the JSON option columns) as the set of options that
+// were ticked — an empty set reads as an em dash rather than as nothing at all.
+const OptionList = ({ label, values, labels }: OptionListProps) => (
+  <div className="sm:col-span-2 lg:col-span-3">
+    <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+      {label}
+    </dt>
+    <dd className="mt-1 flex flex-wrap gap-1.5">
+      {values && values.length > 0 ? (
+        values.map((value) => (
+          <span
+            key={value}
+            className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-foreground"
+          >
+            {labels[value] ?? value}
+          </span>
+        ))
+      ) : (
+        <span className="text-sm text-muted-foreground">—</span>
+      )}
+    </dd>
+  </div>
+);
 
-export const CompanyDetailView = ({ company, invoices }: Props) => {
+export const CompanyDetailView = ({ company, invoices, userNames }: Props) => {
   const isCustomer = company.roles?.includes("customer");
   const na = "—";
+
+  const visitPlanning = MONTHS.map((month, index) => {
+    const entry = company.visitPlanning?.[index];
+    if (!entry) {
+      return null;
+    }
+    const planned = [entry.call ? "call" : null, entry.visit ? "visit" : null]
+      .filter((part): part is string => part !== null)
+      .join(" + ");
+    return planned.length > 0 ? `${month} (${planned})` : null;
+  })
+    .filter((entry): entry is string => entry !== null)
+    .join(", ");
 
   return (
     <div className="space-y-8">
@@ -82,12 +158,406 @@ export const CompanyDetailView = ({ company, invoices }: Props) => {
               )}
             </dd>
           </div>
-          {company.remarks && (
-            <div className="sm:col-span-2 lg:col-span-3">
-              <Field label="Remarks" value={company.remarks} />
-            </div>
-          )}
+          <Field
+            label="Blocked by"
+            value={
+              company.blockedByUserId
+                ? userName(company.blockedByUserId, userNames)
+                : "Not blocked"
+            }
+          />
+          <Field label="Blocking note" value={company.blockedByNote} />
+          <Field label="Inactive" value={yesNo(company.isInactive)} />
+          <Field
+            label="Created"
+            value={formatDateValue(company.createdAt, na)}
+          />
+          <Field
+            label="Last updated"
+            value={formatDateValue(company.updatedAt, na)}
+          />
+          <div className="sm:col-span-2 lg:col-span-3">
+            <Field label="Remarks" value={company.remarks} />
+          </div>
         </dl>
+      </section>
+
+      {/* Sales settings */}
+      <section className="space-y-4">
+        <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-foreground">
+          Sales
+        </h2>
+        <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <Field
+            label="Customer group"
+            value={
+              company.customerGroup
+                ? CUSTOMER_GROUP_LABELS[company.customerGroup]
+                : null
+            }
+          />
+          <Field
+            label="SFN role"
+            value={
+              company.sfnRole
+                ? SFN_COUNTERPARTY_ROLE_LABELS[company.sfnRole]
+                : null
+            }
+          />
+          <Field
+            label="Representative"
+            value={
+              company.representative
+                ? SALES_REPRESENTATIVE_LABELS[company.representative]
+                : null
+            }
+          />
+          <Field
+            label="Account manager"
+            value={
+              company.accountManager
+                ? SALES_REPRESENTATIVE_LABELS[company.accountManager]
+                : null
+            }
+          />
+          <Field label="Region" value={company.region} />
+          <Field label="Member of" value={company.memberOf} />
+          <Field label="Delivery condition" value={company.deliveryCondition} />
+          <Field
+            label="Dev. theor. wt."
+            value={
+              company.devTheorWt
+                ? DEV_THEOR_WT_LABELS[company.devTheorWt]
+                : null
+            }
+          />
+          <Field label="Def. transport" value={company.defTransport} />
+          <Field
+            label="Group lines by long product group description"
+            value={
+              company.groupLinesByLongProductGroupDescription
+                ? GROUP_LINES_BY_DESCRIPTION_LABELS[
+                    company.groupLinesByLongProductGroupDescription
+                  ]
+                : null
+            }
+          />
+          <Field
+            label="Print product codes on outgoing documents"
+            value={
+              company.printProductCodesOnOutgoingDocuments
+                ? PRINT_PRODUCT_CODES_LABELS[
+                    company.printProductCodesOnOutgoingDocuments
+                  ]
+                : null
+            }
+          />
+          <Field
+            label="Website quote must be approved"
+            value={
+              company.websiteQuoteMustBeApproved
+                ? `Above ${formatRevenue(company.websiteQuoteApprovalAmount)}`
+                : "No"
+            }
+          />
+          <OptionList
+            label="Miscellaneous"
+            values={company.miscellaneousSettings}
+            labels={MISCELLANEOUS_OPTION_LABELS}
+          />
+          <OptionList
+            label="Quote / order"
+            values={company.quoteOrderSettings}
+            labels={QUOTE_ORDER_OPTION_LABELS}
+          />
+          <OptionList
+            label="Quote / order / invoice"
+            values={company.quoteOrderInvoiceSettings}
+            labels={QUOTE_ORDER_INVOICE_OPTION_LABELS}
+          />
+          <OptionList
+            label="Order"
+            values={company.orderSettings}
+            labels={ORDER_OPTION_LABELS}
+          />
+          <OptionList
+            label="Quote"
+            values={company.quoteSettings}
+            labels={QUOTE_OPTION_LABELS}
+          />
+          <OptionList
+            label="EDI"
+            values={company.ediSettings}
+            labels={EDI_OPTION_LABELS}
+          />
+          <Field
+            label="On release — print"
+            value={yesNo(company.releaseActionPrint)}
+          />
+          <Field
+            label="On release — e-mail to"
+            value={
+              company.releaseActionEmailEnabled
+                ? (company.releaseActionEmailTo ?? "Contact person")
+                : "No"
+            }
+          />
+          <Field
+            label="On release — fax to"
+            value={
+              company.releaseActionFaxEnabled
+                ? (company.releaseActionFaxTo ?? "Contact person")
+                : "No"
+            }
+          />
+          <Field
+            label="On confirmation — print"
+            value={yesNo(company.actionPrint)}
+          />
+          <Field
+            label="On confirmation — e-mail to"
+            value={
+              company.actionEmailEnabled
+                ? (company.actionEmailTo ?? "Contact person")
+                : "No"
+            }
+          />
+          <Field
+            label="On confirmation — fax to"
+            value={
+              company.actionFaxEnabled
+                ? (company.actionFaxTo ?? "Contact person")
+                : "No"
+            }
+          />
+        </dl>
+      </section>
+
+      {/* Marketing */}
+      <section className="space-y-4">
+        <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-foreground">
+          Marketing
+        </h2>
+        <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <Field
+            label="Industry"
+            value={
+              company.industry
+                ? `${company.industry}${company.industryName ? ` — ${company.industryName}` : ""}`
+                : null
+            }
+          />
+          <Field
+            label="Classification"
+            value={
+              company.classification
+                ? COMPANY_CLASSIFICATION_LABELS[company.classification]
+                : null
+            }
+          />
+          <Field label="Visit frequency" value={company.visitFrequency} />
+          <Field
+            label="Call frequency per year"
+            value={company.callFrequencyPerYear}
+          />
+          <Field
+            label="Target date next visit"
+            value={formatDateValue(company.targetDateNextVisit, na)}
+          />
+          <Field
+            label="Visit reason"
+            value={
+              company.visitReason
+                ? VISIT_REPORT_REASON_LABELS[company.visitReason]
+                : null
+            }
+          />
+          <Field
+            label="Potential annual revenue"
+            value={
+              company.potentialAnnualRevenue
+                ? formatRevenue(company.potentialAnnualRevenue)
+                : null
+            }
+          />
+          <Field
+            label="Target annual revenue"
+            value={
+              company.targetAnnualRevenue
+                ? formatRevenue(company.targetAnnualRevenue)
+                : null
+            }
+          />
+          <Field
+            label="Potential annual sales"
+            value={company.potentialAnnualSales}
+          />
+          <Field
+            label="Target annual sales"
+            value={company.targetAnnualSales}
+          />
+          <Field
+            label="Number of employees"
+            value={company.numberOfEmployees}
+          />
+          <div className="sm:col-span-2 lg:col-span-3">
+            <Field label="Visit planning" value={visitPlanning} />
+          </div>
+        </dl>
+      </section>
+
+      {/* Debtor */}
+      <section className="space-y-4">
+        <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-foreground">
+          Debtor
+        </h2>
+        <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <Field label="Debtor" value={company.debtorCompanyName} />
+          <Field label="Purchase org." value={company.purchaseOrgCompanyName} />
+          <Field
+            label="Member number purchase org."
+            value={company.memberNumberPurchaseOrg}
+          />
+          <Field
+            label="Payment terms"
+            value={
+              company.paymentTerms
+                ? INVOICE_PAYMENT_TERM_LABELS[company.paymentTerms]
+                : null
+            }
+          />
+          <Field
+            label="Different payment terms ex works"
+            value={
+              company.differentPaymentTermsExWorks
+                ? INVOICE_PAYMENT_TERM_LABELS[
+                    company.differentPaymentTermsExWorks
+                  ]
+                : null
+            }
+          />
+          <Field
+            label="Currency"
+            value={company.currency ? CURRENCY_LABELS[company.currency] : null}
+          />
+          <Field label="IBAN" value={company.iban} />
+          <Field label="BIC" value={company.bic} />
+          <Field label="Bank account" value={company.bankAccount} />
+          <Field label="Postbank account" value={company.postbankAccount} />
+          <Field label="VAT number" value={company.vatNumber} />
+          <Field label="COC number" value={company.cocNumber} />
+          <Field label="Journal code" value={company.journalCode} />
+          {/* A blank credit limit is not a limit of zero — nobody set one, and
+              the credit check never blocks on it. Left as an em dash. */}
+          <Field
+            label="Credit limit"
+            value={
+              company.creditLimit ? formatRevenue(company.creditLimit) : null
+            }
+          />
+          <Field
+            label="Credit limit insurance"
+            value={
+              company.creditLimitInsurance
+                ? formatRevenue(company.creditLimitInsurance)
+                : null
+            }
+          />
+          <Field
+            label="Credit limit uninsured"
+            value={
+              company.creditLimitUninsured
+                ? formatRevenue(company.creditLimitUninsured)
+                : null
+            }
+          />
+          <Field
+            label="Credit limit uninsured date"
+            value={formatDateValue(company.creditLimitUninsuredDate, na)}
+          />
+          <Field
+            label="Insurance valid until"
+            value={formatDateValue(company.insuranceValidUntil, na)}
+          />
+          <Field label="Calculate VAT" value={yesNo(company.calculateVat)} />
+          <Field label="Reminder" value={yesNo(company.reminder)} />
+          <Field
+            label="Collect invoices in mandate"
+            value={yesNo(company.collectInvoicesInMandate)}
+          />
+        </dl>
+      </section>
+
+      {/* Invoicing */}
+      <section className="space-y-4">
+        <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-foreground">
+          Invoicing
+        </h2>
+        <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <Field
+            label="Invoicing method"
+            value={
+              company.invoicingMethod
+                ? INVOICING_METHOD_LABELS[company.invoicingMethod]
+                : null
+            }
+          />
+          <Field
+            label="Frequency of sending invoices"
+            value={
+              company.invoiceFrequency
+                ? INVOICE_FREQUENCY_LABELS[company.invoiceFrequency]
+                : null
+            }
+          />
+          <Field
+            label="Collective invoicing"
+            value={yesNo(company.collectiveInvoicing)}
+          />
+          <Field
+            label="Invoice packaging at zero price"
+            value={yesNo(company.invoicePackagingAtZeroPrice)}
+          />
+          <Field
+            label="Print commodity code"
+            value={yesNo(company.printCommodityCode)}
+          />
+          <Field
+            label="Print invoice"
+            value={
+              company.invoicePrintEnabled
+                ? `Yes — ${company.invoicePrintCount ?? 1}×`
+                : "No"
+            }
+          />
+          <Field
+            label="E-mail invoice to"
+            value={
+              company.invoiceEmailEnabled
+                ? (company.invoiceEmailTo ?? "Contact person")
+                : "No"
+            }
+          />
+          <Field
+            label="Print / e-mail zero value invoices"
+            value={yesNo(company.printEmailZeroValueInvoices)}
+          />
+          <Field
+            label="Send XML with invoice"
+            value={yesNo(company.sendXmlWithInvoice)}
+          />
+        </dl>
+      </section>
+
+      {/* Documents */}
+      <section className="space-y-3">
+        <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-foreground">
+          Documents{" "}
+          <span className="ml-1 text-xs font-normal text-muted-foreground">
+            {company.documents?.length ?? 0}
+          </span>
+        </h2>
+        <CompanyDocumentCell company={company} />
       </section>
 
       {/* Addresses */}
@@ -409,6 +879,119 @@ export const CompanyDetailView = ({ company, invoices }: Props) => {
                     <TableCell>{order.isMailed ? "Yes" : "No"}</TableCell>
                     <TableCell className="text-right">
                       {daysInSystem(order.createdAt)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </section>
+      )}
+
+      {/* Return Orders */}
+      {company.returnOrders.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-foreground">
+            Return Orders{" "}
+            <span className="ml-1 text-xs font-normal text-muted-foreground">
+              {company.returnOrders.length}
+            </span>
+          </h2>
+          <div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Return no</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Order date</TableHead>
+                  <TableHead>Return date</TableHead>
+                  <TableHead>Reason</TableHead>
+                  <TableHead>Customer reference</TableHead>
+                  <TableHead>Our reference</TableHead>
+                  <TableHead>Blocked</TableHead>
+                  <TableHead className="text-right">Days in system</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {company.returnOrders.map((returnOrder) => (
+                  <TableRow key={returnOrder.uuid}>
+                    <TableCell className="font-medium">
+                      {returnOrder.id}
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge
+                        value={returnOrder.status}
+                        label={
+                          returnOrder.status
+                            ? RETURN_ORDER_STATUS_LABELS[returnOrder.status]
+                            : null
+                        }
+                      />
+                    </TableCell>
+                    <TableCell>
+                      {formatDateValue(returnOrder.orderDate, na)}
+                    </TableCell>
+                    <TableCell>
+                      {formatDateValue(returnOrder.returnDate, na)}
+                    </TableCell>
+                    <TableCell>
+                      {returnOrder.returnReason
+                        ? RETURN_ORDER_REASON_LABELS[returnOrder.returnReason]
+                        : na}
+                    </TableCell>
+                    <TableCell>{returnOrder.customerRef ?? na}</TableCell>
+                    <TableCell>{returnOrder.ourReference ?? na}</TableCell>
+                    <TableCell>{yesNo(returnOrder.handlingBlocked)}</TableCell>
+                    <TableCell className="text-right">
+                      {daysInSystem(returnOrder.createdAt)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </section>
+      )}
+
+      {/* Customer Stock */}
+      {company.customerStock.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="border-b pb-2 text-sm font-semibold uppercase tracking-wide text-foreground">
+            Customer Stock{" "}
+            <span className="ml-1 text-xs font-normal text-muted-foreground">
+              {company.customerStock.length}
+            </span>
+          </h2>
+          <div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Location</TableHead>
+                  <TableHead>Product code</TableHead>
+                  <TableHead>Product</TableHead>
+                  <TableHead className="text-right">Quantity</TableHead>
+                  <TableHead>Reason</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead className="text-right">Days in system</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {company.customerStock.map((stock) => (
+                  <TableRow key={stock.uuid}>
+                    <TableCell>{stock.location ?? na}</TableCell>
+                    <TableCell>{stock.productCode ?? na}</TableCell>
+                    <TableCell>{stock.productName ?? na}</TableCell>
+                    <TableCell className="text-right whitespace-nowrap">
+                      {stock.quantity}
+                    </TableCell>
+                    <TableCell>
+                      {stock.reason
+                        ? CUSTOMER_STOCK_REASON_LABELS[stock.reason]
+                        : na}
+                    </TableCell>
+                    <TableCell>{stock.description ?? na}</TableCell>
+                    <TableCell className="text-right">
+                      {daysInSystem(stock.createdAt)}
                     </TableCell>
                   </TableRow>
                 ))}

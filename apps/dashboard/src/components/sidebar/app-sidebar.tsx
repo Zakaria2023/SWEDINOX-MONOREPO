@@ -17,8 +17,14 @@ import {
   useSidebar,
 } from "@/components/shadcn/sidebar";
 import { DASHBOARD_HREF, NAV_GROUPS } from "@/lib/constants";
-import { cn, isPathActive } from "@/lib/helpers";
-import { ChevronRight, Layers, LayoutDashboard, Search } from "lucide-react";
+import { cn, countLabel, isPathActive } from "@/lib/helpers";
+import {
+  ChevronRight,
+  Layers,
+  LayoutDashboard,
+  Search,
+  SearchX,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { FocusEvent, useEffect, useMemo, useRef, useState } from "react";
@@ -86,7 +92,13 @@ export const AppSidebar = () => {
     return NAV_GROUPS.flatMap((group) =>
       group.items
         .filter((item) => item.label.toLowerCase().includes(trimmedQuery))
-        .map((item) => ({ ...item, groupLabel: group.label })),
+        // The group's icon comes along: it is what a result is drawn as once
+        // the rail is collapsed and there is no room for its label.
+        .map((item) => ({
+          ...item,
+          groupLabel: group.label,
+          groupIcon: group.icon,
+        })),
     );
   }, [trimmedQuery]);
 
@@ -152,10 +164,24 @@ export const AppSidebar = () => {
           <button
             type="button"
             onClick={openSearch}
-            aria-label="Search navigation"
-            className="mx-auto flex size-8 items-center justify-center rounded-lg text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+            aria-label={
+              isSearching
+                ? `Search navigation — ${countLabel(searchResults.length, "match", "matches")} for ${query.trim()}`
+                : "Search navigation"
+            }
+            className="relative mx-auto flex size-8 items-center justify-center rounded-lg text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
           >
             <Search size={16} />
+            {/* The icons below are a filtered list, not the whole menu — without
+                this the collapsed rail gives no sign a query is still on. */}
+            {isSearching && (
+              <span
+                aria-hidden
+                className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-sidebar-primary px-1 text-xs leading-none text-sidebar-primary-foreground"
+              >
+                {searchResults.length}
+              </span>
+            )}
           </button>
         ) : (
           <div className="relative">
@@ -175,35 +201,60 @@ export const AppSidebar = () => {
       <SidebarContent className="px-2">
         <SidebarGroup className="p-0">
           <SidebarGroupContent>
+            {/* A collapsed rail is too narrow for a result's label, and the
+                clipped text named nothing — every "Order ..." page came out as
+                "Ord". Collapsed, a result is its group's icon with the full
+                label on the tooltip; the panel opens on hover for the rest. */}
             {isSearching && searchResults.length > 0 && (
-              <SidebarMenu className="gap-1">
-                {searchResults.map((item) => (
-                  <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton
-                      render={<Link href={item.href} />}
-                      isActive={isPathActive(item.href, pathname)}
-                      className={cn(
-                        "h-auto min-h-9 flex-col items-start gap-0.5 rounded-lg px-2.5 py-1.5 whitespace-normal",
-                        ACTIVE_LINK_CLASS,
-                      )}
-                    >
-                      <span className="w-full text-sm leading-snug">
-                        {item.label}
-                      </span>
-                      <span className="text-xs text-sidebar-foreground/55">
-                        {item.groupLabel}
-                      </span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
+              <SidebarMenu className={isCollapsed ? "gap-0.5" : "gap-1"}>
+                {searchResults.map((item) => {
+                  const ResultIcon = item.groupIcon;
+                  return (
+                    <SidebarMenuItem key={item.href}>
+                      <SidebarMenuButton
+                        render={<Link href={item.href} />}
+                        isActive={isPathActive(item.href, pathname)}
+                        tooltip={`${item.label} — ${item.groupLabel}`}
+                        className={cn(
+                          isCollapsed
+                            ? GROUP_BUTTON_CLASS
+                            : "h-auto min-h-9 flex-col items-start gap-0.5 rounded-lg px-2.5 py-1.5 whitespace-normal",
+                          ACTIVE_LINK_CLASS,
+                        )}
+                      >
+                        {isCollapsed ? (
+                          <ResultIcon />
+                        ) : (
+                          <>
+                            <span className="w-full text-sm leading-snug">
+                              {item.label}
+                            </span>
+                            <span className="text-xs text-sidebar-foreground/55">
+                              {item.groupLabel}
+                            </span>
+                          </>
+                        )}
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
               </SidebarMenu>
             )}
 
-            {isSearching && searchResults.length === 0 && (
-              <p className="px-2.5 py-2 text-sm text-sidebar-foreground/60">
-                No results for “{query.trim()}”
-              </p>
-            )}
+            {isSearching &&
+              searchResults.length === 0 &&
+              (isCollapsed ? (
+                <span
+                  aria-label={`No results for ${query.trim()}`}
+                  className="mx-auto flex size-8 items-center justify-center text-sidebar-foreground/40"
+                >
+                  <SearchX size={16} />
+                </span>
+              ) : (
+                <p className="px-2.5 py-2 text-sm text-sidebar-foreground/60">
+                  No results for “{query.trim()}”
+                </p>
+              ))}
 
             {!isSearching && (
               <SidebarMenu className="gap-0.5">
