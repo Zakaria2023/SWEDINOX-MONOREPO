@@ -1,10 +1,10 @@
-import Link from "next/link";
+import { getCompaniesForSelect } from "@/app/(dashboard)/companies/actions";
 import { getOrders } from "@/app/(dashboard)/orders/actions";
 import { orderFilters } from "@/app/(dashboard)/orders/filters";
-import { getCompaniesForSelect } from "@/app/(dashboard)/companies/actions";
-import { OrdersTable } from "@/components/orders/orders-table-content";
 import { PageHeading } from "@/components/layout/page-heading";
+import { OrdersTable } from "@/components/orders/orders-table-content";
 import { parseTableQuery, SearchParams } from "@/lib/table-query";
+import Link from "next/link";
 
 type Props = {
   searchParams: Promise<SearchParams>;
