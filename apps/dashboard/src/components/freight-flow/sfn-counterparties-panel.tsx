@@ -20,6 +20,7 @@ import { SFN_COUNTERPARTY_ROLE_LABELS } from "@/lib/labels";
 import { ChevronRight, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { TableExportButton } from "@/components/ui/table-export-button";
 
 type Props = {
   counterparties: SfnCounterpartyRow[];
@@ -91,43 +92,52 @@ export const SfnCounterpartiesPanel = ({ counterparties }: Props) => {
             <p className="px-4 pb-2 text-xs text-destructive">{error}</p>
           )}
           <div className="max-h-96">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-right">Code</TableHead>
-                  <TableHead>Company</TableHead>
-                  <TableHead>Country</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead className="w-56">SFN role</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {counterparties.map((counterparty) => (
-                  <TableRow key={counterparty.uuid}>
-                    <TableCell className="text-right">
-                      {counterparty.code}
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {counterparty.companyName}
-                    </TableCell>
-                    <TableCell>{counterparty.country ?? "—"}</TableCell>
-                    <TableCell>
-                      {counterparty.domestic ? "Domestic" : "Abroad"}
-                    </TableCell>
-                    <TableCell>
-                      <Select
-                        options={roleOptions}
-                        value={counterparty.sfnRole ?? "non_member"}
-                        onValueChange={(role) =>
-                          onRoleChange(counterparty.uuid, role)
-                        }
-                        disabled={isPending}
-                      />
-                    </TableCell>
+            <div className="space-y-4">
+              <div className="flex justify-end">
+                <TableExportButton
+                  tableId="freight-flow-table"
+                  fileName="freight-flow"
+                  sheetName="Freight flow (SFN)"
+                />
+              </div>
+              <Table id="freight-flow-table">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-right">Code</TableHead>
+                    <TableHead>Company</TableHead>
+                    <TableHead>Country</TableHead>
+                    <TableHead>Location</TableHead>
+                    <TableHead className="w-56">SFN role</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {counterparties.map((counterparty) => (
+                    <TableRow key={counterparty.uuid}>
+                      <TableCell className="text-right">
+                        {counterparty.code}
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {counterparty.companyName}
+                      </TableCell>
+                      <TableCell>{counterparty.country ?? "—"}</TableCell>
+                      <TableCell>
+                        {counterparty.domestic ? "Domestic" : "Abroad"}
+                      </TableCell>
+                      <TableCell>
+                        <Select
+                          options={roleOptions}
+                          value={counterparty.sfnRole ?? "non_member"}
+                          onValueChange={(role) =>
+                            onRoleChange(counterparty.uuid, role)
+                          }
+                          disabled={isPending}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         </div>
       )}

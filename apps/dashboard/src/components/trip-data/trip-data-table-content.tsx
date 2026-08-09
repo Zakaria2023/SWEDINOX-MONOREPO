@@ -10,6 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { TableExportButton } from "@/components/ui/table-export-button";
 
 type Props = {
   trips: TripDataListItem[];
@@ -17,49 +18,58 @@ type Props = {
 
 export const TripDataTable = ({ trips }: Props) => (
   <div>
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead className="text-right">Trip</TableHead>
-          <TableHead>Trip date</TableHead>
-          <TableHead>Vehicle</TableHead>
-          <TableHead className="text-right">Stops</TableHead>
-          <TableHead className="text-right">Kg.</TableHead>
-          <TableHead className="text-right">Colli</TableHead>
-          <TableHead>Orders per stop</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {trips.length === 0 ? (
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <TableExportButton
+          tableId="trip-data-table"
+          fileName="trip-data"
+          sheetName="Trip data"
+        />
+      </div>
+      <Table id="trip-data-table">
+        <TableHeader>
           <TableRow>
-            <TableCell
-              colSpan={7}
-              className="h-24 text-center text-muted-foreground"
-            >
-              No trips found.
-            </TableCell>
+            <TableHead className="text-right">Trip</TableHead>
+            <TableHead>Trip date</TableHead>
+            <TableHead>Vehicle</TableHead>
+            <TableHead className="text-right">Stops</TableHead>
+            <TableHead className="text-right">Kg.</TableHead>
+            <TableHead className="text-right">Colli</TableHead>
+            <TableHead>Orders per stop</TableHead>
           </TableRow>
-        ) : (
-          trips.map((row) => (
-            <TableRow key={row.uuid}>
-              <TableCell className="text-right font-medium">
-                <Link
-                  href={`/trip-data/${row.uuid}`}
-                  className="text-primary hover:underline"
-                >
-                  {row.tripNumber ?? `#${row.id}`}
-                </Link>
+        </TableHeader>
+        <TableBody>
+          {trips.length === 0 ? (
+            <TableRow>
+              <TableCell
+                colSpan={7}
+                className="h-24 text-center text-muted-foreground"
+              >
+                No trips found.
               </TableCell>
-              <TableCell>{row.tripDate ?? "—"}</TableCell>
-              <TableCell>{row.vehicle ?? "—"}</TableCell>
-              <TableCell className="text-right">{row.stops}</TableCell>
-              <TableCell className="text-right">{row.kg}</TableCell>
-              <TableCell className="text-right">{row.colli}</TableCell>
-              <TableCell>{row.ordersPerStop ?? "—"}</TableCell>
             </TableRow>
-          ))
-        )}
-      </TableBody>
-    </Table>
+          ) : (
+            trips.map((row) => (
+              <TableRow key={row.uuid}>
+                <TableCell className="text-right font-medium">
+                  <Link
+                    href={`/trip-data/${row.uuid}`}
+                    className="text-primary hover:underline"
+                  >
+                    {row.tripNumber ?? `#${row.id}`}
+                  </Link>
+                </TableCell>
+                <TableCell>{row.tripDate ?? "—"}</TableCell>
+                <TableCell>{row.vehicle ?? "—"}</TableCell>
+                <TableCell className="text-right">{row.stops}</TableCell>
+                <TableCell className="text-right">{row.kg}</TableCell>
+                <TableCell className="text-right">{row.colli}</TableCell>
+                <TableCell>{row.ordersPerStop ?? "—"}</TableCell>
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
+    </div>
   </div>
 );

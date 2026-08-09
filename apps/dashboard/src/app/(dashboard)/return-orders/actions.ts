@@ -63,7 +63,14 @@ import {
   tableOrderBy,
   tableWhere,
 } from "@/lib/server/table-query";
-import { Paged, TableQuery } from "@/lib/table-query";
+import {
+  Paged,
+  parseTableQuery,
+  SearchParams,
+  TableQuery,
+} from "@/lib/table-query";
+import { exportRows } from "@/lib/server/excel";
+import { RETURN_ORDER_COLUMNS } from "@/app/(dashboard)/return-orders/columns";
 import {
   and,
   count,
@@ -172,6 +179,53 @@ const RETURN_ORDER_FILTERS = {
   returnDate: dateRangeFilter(ReturnOrders.returnDate),
 };
 
+/**
+ * The rows one view of the return orders overview selects, as a window onto
+ * them. Shared by the page and the export.
+ */
+const returnOrderRows =
+  (query: TableQuery) =>
+  (limit: number, offset: number): Promise<ReturnOrderListItem[]> =>
+    db
+      .select({
+        ...getTableColumns(ReturnOrders),
+        companyName: Companies.companyName,
+        contactFirstName: Contacts.firstName,
+        contactLastName: Contacts.lastName,
+      })
+      .from(ReturnOrders)
+      .leftJoin(Companies, eq(ReturnOrders.companyUuid, Companies.uuid))
+      .leftJoin(Contacts, eq(ReturnOrders.contactUuid, Contacts.uuid))
+      .where(
+        tableWhere({
+          query,
+          search: RETURN_ORDER_SEARCH,
+          filters: RETURN_ORDER_FILTERS,
+        }),
+      )
+      .orderBy(
+        ...tableOrderBy(
+          RETURN_ORDER_SORTABLE,
+          query,
+          [desc(ReturnOrders.createdAt)],
+          ReturnOrders.id,
+        ),
+      )
+      .limit(limit)
+      .offset(offset);
+
+/** Every return order the current view matches, as a workbook. */
+export const exportReturnOrders = async (
+  params: SearchParams,
+  columnKeys: string[],
+): Promise<string> =>
+  exportRows({
+    name: "Return Orders",
+    columns: RETURN_ORDER_COLUMNS,
+    columnKeys,
+    rows: returnOrderRows(parseTableQuery(params)),
+  });
+
 export const getReturnOrders = async (
   query: TableQuery,
 ): Promise<Paged<ReturnOrderListItem>> => {
@@ -183,28 +237,7 @@ export const getReturnOrders = async (
     });
 
     return await runPaged(query, {
-      rows: (limit, offset) =>
-        db
-          .select({
-            ...getTableColumns(ReturnOrders),
-            companyName: Companies.companyName,
-            contactFirstName: Contacts.firstName,
-            contactLastName: Contacts.lastName,
-          })
-          .from(ReturnOrders)
-          .leftJoin(Companies, eq(ReturnOrders.companyUuid, Companies.uuid))
-          .leftJoin(Contacts, eq(ReturnOrders.contactUuid, Contacts.uuid))
-          .where(where)
-          .orderBy(
-            ...tableOrderBy(
-              RETURN_ORDER_SORTABLE,
-              query,
-              [desc(ReturnOrders.createdAt)],
-              ReturnOrders.id,
-            ),
-          )
-          .limit(limit)
-          .offset(offset),
+      rows: returnOrderRows(query),
 
       count: async () => {
         const [row] = await db

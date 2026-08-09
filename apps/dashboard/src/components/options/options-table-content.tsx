@@ -17,6 +17,7 @@ import {
   profitMarginPercent,
 } from "@/lib/helpers";
 import { ORDER_LINE_STATUS_LABELS } from "@/lib/labels";
+import { TableExportButton } from "@/components/ui/table-export-button";
 
 type Props = {
   rows: OptionRevenueRow[];
@@ -36,89 +37,102 @@ export const OptionsTable = ({ rows }: Props) => {
 
   return (
     <div>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Option code</TableHead>
-            <TableHead>Option</TableHead>
-            <TableHead className="text-right">Revenue group code</TableHead>
-            <TableHead>Revenue group</TableHead>
-            <TableHead>Line status</TableHead>
-            <TableHead className="text-right">Lines</TableHead>
-            <TableHead className="text-right">Weight (kg)</TableHead>
-            <TableHead className="text-right">Revenue</TableHead>
-            <TableHead className="text-right">Profit</TableHead>
-            <TableHead className="text-right">Profit margin</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {rows.length === 0 ? (
+      <div className="space-y-4">
+        <div className="flex justify-end">
+          <TableExportButton
+            tableId="options-table"
+            fileName="options"
+            sheetName="Options"
+          />
+        </div>
+        <Table id="options-table">
+          <TableHeader>
             <TableRow>
-              <TableCell
-                colSpan={COLUMN_COUNT}
-                className="h-24 text-center text-muted-foreground"
-              >
-                No option revenue found.
-              </TableCell>
+              <TableHead>Option code</TableHead>
+              <TableHead>Option</TableHead>
+              <TableHead className="text-right">Revenue group code</TableHead>
+              <TableHead>Revenue group</TableHead>
+              <TableHead>Line status</TableHead>
+              <TableHead className="text-right">Lines</TableHead>
+              <TableHead className="text-right">Weight (kg)</TableHead>
+              <TableHead className="text-right">Revenue</TableHead>
+              <TableHead className="text-right">Profit</TableHead>
+              <TableHead className="text-right">Profit margin</TableHead>
             </TableRow>
-          ) : (
-            <>
-              {rows.map((row, index) => (
-                <TableRow key={`${row.optionCode}-${row.lineStatus}-${index}`}>
-                  <TableCell className="font-medium">
-                    {row.optionCode}
-                  </TableCell>
-                  <TableCell>{row.optionName}</TableCell>
-                  <TableCell className="text-right">
-                    {row.revenueGroupNumber ?? "—"}
-                  </TableCell>
-                  <TableCell>{row.revenueGroupName ?? "—"}</TableCell>
-                  <TableCell>
-                    <StatusBadge
-                      value={row.lineStatus}
-                      label={
-                        row.lineStatus
-                          ? ORDER_LINE_STATUS_LABELS[row.lineStatus]
-                          : null
-                      }
-                    />
-                  </TableCell>
-                  <TableCell className="text-right">{row.lineCount}</TableCell>
-                  <TableCell className="text-right">
-                    {formatNumber(row.weightKg)}
-                  </TableCell>
-                  <TableCell className="text-right whitespace-nowrap">
-                    {formatMoney(row.revenue)}
-                  </TableCell>
-                  <TableCell className="text-right whitespace-nowrap">
-                    {formatMoney(row.profit)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {formatPercent(row.profitMargin)}
-                  </TableCell>
-                </TableRow>
-              ))}
-              <TableRow className="font-semibold">
-                <TableCell colSpan={6}>Total</TableCell>
-                <TableCell className="text-right">
-                  {formatNumber(totals.weightKg)}
-                </TableCell>
-                <TableCell className="text-right whitespace-nowrap">
-                  {formatMoney(totals.revenue)}
-                </TableCell>
-                <TableCell className="text-right whitespace-nowrap">
-                  {formatMoney(totals.profit)}
-                </TableCell>
-                <TableCell className="text-right">
-                  {formatPercent(
-                    profitMarginPercent(totals.revenue, totals.profit),
-                  )}
+          </TableHeader>
+          <TableBody>
+            {rows.length === 0 ? (
+              <TableRow>
+                <TableCell
+                  colSpan={COLUMN_COUNT}
+                  className="h-24 text-center text-muted-foreground"
+                >
+                  No option revenue found.
                 </TableCell>
               </TableRow>
-            </>
-          )}
-        </TableBody>
-      </Table>
+            ) : (
+              <>
+                {rows.map((row, index) => (
+                  <TableRow
+                    key={`${row.optionCode}-${row.lineStatus}-${index}`}
+                  >
+                    <TableCell className="font-medium">
+                      {row.optionCode}
+                    </TableCell>
+                    <TableCell>{row.optionName}</TableCell>
+                    <TableCell className="text-right">
+                      {row.revenueGroupNumber ?? "—"}
+                    </TableCell>
+                    <TableCell>{row.revenueGroupName ?? "—"}</TableCell>
+                    <TableCell>
+                      <StatusBadge
+                        value={row.lineStatus}
+                        label={
+                          row.lineStatus
+                            ? ORDER_LINE_STATUS_LABELS[row.lineStatus]
+                            : null
+                        }
+                      />
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {row.lineCount}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {formatNumber(row.weightKg)}
+                    </TableCell>
+                    <TableCell className="text-right whitespace-nowrap">
+                      {formatMoney(row.revenue)}
+                    </TableCell>
+                    <TableCell className="text-right whitespace-nowrap">
+                      {formatMoney(row.profit)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {formatPercent(row.profitMargin)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+                <TableRow className="font-semibold">
+                  <TableCell colSpan={6}>Total</TableCell>
+                  <TableCell className="text-right">
+                    {formatNumber(totals.weightKg)}
+                  </TableCell>
+                  <TableCell className="text-right whitespace-nowrap">
+                    {formatMoney(totals.revenue)}
+                  </TableCell>
+                  <TableCell className="text-right whitespace-nowrap">
+                    {formatMoney(totals.profit)}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {formatPercent(
+                      profitMarginPercent(totals.revenue, totals.profit),
+                    )}
+                  </TableCell>
+                </TableRow>
+              </>
+            )}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 };

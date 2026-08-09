@@ -17,6 +17,7 @@ import {
 } from "@/components/shadcn/table";
 import { INVOICE_PAYMENT_TERM_LABELS } from "@/lib/labels";
 import { cn, formatDateColumn, formatMoney } from "@/lib/helpers";
+import { TableExportButton } from "@/components/ui/table-export-button";
 
 type Props = {
   rows: FinanciallyBlockedRow[];
@@ -51,83 +52,94 @@ const UnblockButton = ({ orderUuid }: UnblockButtonProps) => {
 
 export const FinanciallyBlockedTable = ({ rows }: Props) => (
   <div>
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Type</TableHead>
-          <TableHead>Code</TableHead>
-          <TableHead>Debtor</TableHead>
-          <TableHead className="text-right">Debtor no.</TableHead>
-          <TableHead>1st delivery date</TableHead>
-          <TableHead>Blocking reason</TableHead>
-          <TableHead>Payment term</TableHead>
-          <TableHead className="text-right">Order amount</TableHead>
-          <TableHead className="text-right">Open entrees</TableHead>
-          <TableHead className="text-right">Credit limit</TableHead>
-          <TableHead className="text-right">Credit space</TableHead>
-          <TableHead className="text-center">Company blocked?</TableHead>
-          <TableHead className="text-right">Action</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {rows.length === 0 ? (
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <TableExportButton
+          tableId="financially-blocked-table"
+          fileName="financially-blocked"
+          sheetName="Financially blocked quotes and orders"
+        />
+      </div>
+      <Table id="financially-blocked-table">
+        <TableHeader>
           <TableRow>
-            <TableCell
-              colSpan={13}
-              className="h-24 text-center text-muted-foreground"
-            >
-              No financially blocked quotes or orders.
-            </TableCell>
+            <TableHead>Type</TableHead>
+            <TableHead>Code</TableHead>
+            <TableHead>Debtor</TableHead>
+            <TableHead className="text-right">Debtor no.</TableHead>
+            <TableHead>1st delivery date</TableHead>
+            <TableHead>Blocking reason</TableHead>
+            <TableHead>Payment term</TableHead>
+            <TableHead className="text-right">Order amount</TableHead>
+            <TableHead className="text-right">Open entrees</TableHead>
+            <TableHead className="text-right">Credit limit</TableHead>
+            <TableHead className="text-right">Credit space</TableHead>
+            <TableHead className="text-center">Company blocked?</TableHead>
+            <TableHead data-export-ignore className="text-right">
+              Action
+            </TableHead>
           </TableRow>
-        ) : (
-          rows.map((row) => (
-            <TableRow key={`${row.kind}-${row.uuid}`}>
-              <TableCell>{row.kind}</TableCell>
-              <TableCell className="font-medium whitespace-nowrap">
-                {row.code ?? "—"}
-              </TableCell>
-              <TableCell>{row.debtor}</TableCell>
-              <TableCell className="text-right">{row.debtorNumber}</TableCell>
-              <TableCell className="whitespace-nowrap">
-                {formatDateColumn(row.deliveryDate)}
-              </TableCell>
-              <TableCell>{row.blockingReason ?? "—"}</TableCell>
-              <TableCell>
-                {row.paymentTerms
-                  ? INVOICE_PAYMENT_TERM_LABELS[row.paymentTerms]
-                  : "—"}
-              </TableCell>
-              <TableCell className="text-right whitespace-nowrap">
-                {formatMoney(row.amount)}
-              </TableCell>
-              <TableCell className="text-right whitespace-nowrap">
-                {formatMoney(row.openEntrees)}
-              </TableCell>
-              <TableCell className="text-right whitespace-nowrap">
-                {formatMoney(row.creditLimit)}
-              </TableCell>
+        </TableHeader>
+        <TableBody>
+          {rows.length === 0 ? (
+            <TableRow>
               <TableCell
-                className={cn(
-                  "text-right whitespace-nowrap",
-                  row.creditSpace < 0 && "font-semibold text-red-600",
-                )}
+                colSpan={13}
+                className="h-24 text-center text-muted-foreground"
               >
-                {formatMoney(row.creditSpace)}
-              </TableCell>
-              <TableCell className="text-center">
-                {row.companyBlocked ? "Yes" : "No"}
-              </TableCell>
-              <TableCell className="text-right">
-                {row.kind === "Order" ? (
-                  <UnblockButton orderUuid={row.uuid} />
-                ) : (
-                  "—"
-                )}
+                No financially blocked quotes or orders.
               </TableCell>
             </TableRow>
-          ))
-        )}
-      </TableBody>
-    </Table>
+          ) : (
+            rows.map((row) => (
+              <TableRow key={`${row.kind}-${row.uuid}`}>
+                <TableCell>{row.kind}</TableCell>
+                <TableCell className="font-medium whitespace-nowrap">
+                  {row.code ?? "—"}
+                </TableCell>
+                <TableCell>{row.debtor}</TableCell>
+                <TableCell className="text-right">{row.debtorNumber}</TableCell>
+                <TableCell className="whitespace-nowrap">
+                  {formatDateColumn(row.deliveryDate)}
+                </TableCell>
+                <TableCell>{row.blockingReason ?? "—"}</TableCell>
+                <TableCell>
+                  {row.paymentTerms
+                    ? INVOICE_PAYMENT_TERM_LABELS[row.paymentTerms]
+                    : "—"}
+                </TableCell>
+                <TableCell className="text-right whitespace-nowrap">
+                  {formatMoney(row.amount)}
+                </TableCell>
+                <TableCell className="text-right whitespace-nowrap">
+                  {formatMoney(row.openEntrees)}
+                </TableCell>
+                <TableCell className="text-right whitespace-nowrap">
+                  {formatMoney(row.creditLimit)}
+                </TableCell>
+                <TableCell
+                  className={cn(
+                    "text-right whitespace-nowrap",
+                    row.creditSpace < 0 && "font-semibold text-red-600",
+                  )}
+                >
+                  {formatMoney(row.creditSpace)}
+                </TableCell>
+                <TableCell className="text-center">
+                  {row.companyBlocked ? "Yes" : "No"}
+                </TableCell>
+                <TableCell className="text-right">
+                  {row.kind === "Order" ? (
+                    <UnblockButton orderUuid={row.uuid} />
+                  ) : (
+                    "—"
+                  )}
+                </TableCell>
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
+    </div>
   </div>
 );

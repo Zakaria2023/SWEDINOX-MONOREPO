@@ -18,6 +18,7 @@ import { Eye, Pencil } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { RowAction } from "@/components/ui/row-action";
+import { TableExportButton } from "@/components/ui/table-export-button";
 
 type ColumnKey = "id" | "companyName" | "documents" | "createdAt" | "updatedAt";
 
@@ -118,7 +119,7 @@ export const CompaniesTable = ({ companies }: CompaniesTableContentProps) => {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex items-start justify-end gap-2">
         <ColumnSelector
           columns={ALL_COLUMNS.map((column) => ({
             key: column.key,
@@ -127,10 +128,15 @@ export const CompaniesTable = ({ companies }: CompaniesTableContentProps) => {
           visibility={columnVisibility}
           onToggle={toggleColumn}
         />
+        <TableExportButton
+          tableId="companies-table"
+          fileName="companies"
+          sheetName="Companies"
+        />
       </div>
 
       <div>
-        <Table>
+        <Table id="companies-table">
           <TableHeader>
             <TableRow>
               {visibleColumns.map((column) => (

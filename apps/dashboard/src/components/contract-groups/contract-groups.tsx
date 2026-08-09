@@ -32,6 +32,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
+import { TableExportButton } from "@/components/ui/table-export-button";
 
 const createGroupSchema = (nameRequiredMessage: string) =>
   z.object({
@@ -135,43 +136,54 @@ export const ContractGroups = ({ groups }: Props) => {
         </div>
 
         <div>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Code</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Subgroup</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Created At</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {groups.length === 0 ? (
+          <div className="space-y-4">
+            <div className="flex justify-end">
+              <TableExportButton
+                tableId="contract-groups-table"
+                fileName="contract-groups"
+                sheetName="Contract Groups"
+              />
+            </div>
+            <Table id="contract-groups-table">
+              <TableHeader>
                 <TableRow>
-                  <TableCell
-                    colSpan={5}
-                    className="h-24 text-center text-muted-foreground"
-                  >
-                    No contract groups yet
-                  </TableCell>
+                  <TableHead>Code</TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Subgroup</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Created At</TableHead>
                 </TableRow>
-              ) : (
-                groups.map((group) => (
-                  <TableRow key={group.id}>
-                    <TableCell className="font-medium">{group.id}</TableCell>
-                    <TableCell className="font-medium">{group.name}</TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {group.subgroupName ?? "—"}
-                    </TableCell>
-                    <TableCell>{activeBadge(group.isActive)}</TableCell>
-                    <TableCell>
-                      {new Date(group.createdAt).toLocaleDateString()}
+              </TableHeader>
+              <TableBody>
+                {groups.length === 0 ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={5}
+                      className="h-24 text-center text-muted-foreground"
+                    >
+                      No contract groups yet
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ) : (
+                  groups.map((group) => (
+                    <TableRow key={group.id}>
+                      <TableCell className="font-medium">{group.id}</TableCell>
+                      <TableCell className="font-medium">
+                        {group.name}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {group.subgroupName ?? "—"}
+                      </TableCell>
+                      <TableCell>{activeBadge(group.isActive)}</TableCell>
+                      <TableCell>
+                        {new Date(group.createdAt).toLocaleDateString()}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </div>
       </div>
 

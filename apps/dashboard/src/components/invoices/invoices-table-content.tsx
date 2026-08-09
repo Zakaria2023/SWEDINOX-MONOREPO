@@ -1,10 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { InvoiceWithCompany } from "@/app/(dashboard)/invoices/actions";
+import {
+  exportInvoices,
+  InvoiceWithCompany,
+} from "@/app/(dashboard)/invoices/actions";
+import {
+  INVOICE_COLUMNS,
+  InvoiceColumnKey,
+} from "@/app/(dashboard)/invoices/columns";
+import { PagedTableExportButton } from "@/components/ui/table-export-button";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { TableSortHeader } from "@/components/ui/table-sort-header";
 import { TableToolbar } from "@/components/ui/table-toolbar";
+import { selectorColumns } from "@/lib/excel";
 import { Paged, TableFilterControl } from "@/lib/table-query";
 import {
   Table,
@@ -23,46 +32,12 @@ import {
 } from "@/lib/labels";
 import { useState } from "react";
 
-type ColumnKey =
-  | "id"
-  | "documentType"
-  | "companyName"
-  | "companyCode"
-  | "invoiceDate"
-  | "expirationDate"
-  | "invoiceAmountExclVat"
-  | "invoiceAmountInclVat"
-  | "creditRestriction"
-  | "invoiceTotal"
-  | "outstanding"
-  | "vatScenario"
-  | "paymentTerms"
-  | "status";
+type ColumnKey = InvoiceColumnKey;
 
-const ALL_COLUMNS: Array<{
-  key: ColumnKey;
-  label: string;
-  defaultVisible: boolean;
-}> = [
-  { key: "id", label: "Document No.", defaultVisible: true },
-  { key: "documentType", label: "Document", defaultVisible: true },
-  { key: "companyName", label: "Customer", defaultVisible: true },
-  { key: "companyCode", label: "Customer Code", defaultVisible: true },
-  { key: "invoiceDate", label: "Invoice Date", defaultVisible: true },
-  { key: "expirationDate", label: "Expiration Date", defaultVisible: true },
-  { key: "invoiceAmountExclVat", label: "Excl. VAT", defaultVisible: true },
-  { key: "invoiceAmountInclVat", label: "Incl. VAT", defaultVisible: true },
-  {
-    key: "creditRestriction",
-    label: "Credit Restriction",
-    defaultVisible: false,
-  },
-  { key: "invoiceTotal", label: "Total", defaultVisible: true },
-  { key: "outstanding", label: "Outstanding", defaultVisible: true },
-  { key: "vatScenario", label: "VAT Scenario", defaultVisible: true },
-  { key: "paymentTerms", label: "Payment Terms", defaultVisible: true },
-  { key: "status", label: "Status", defaultVisible: true },
-];
+// The column selector and the export read the same declaration — see
+// app/(dashboard)/invoices/columns.ts — so a column cannot be on screen and
+// missing from the file.
+const ALL_COLUMNS = selectorColumns(INVOICE_COLUMNS);
 
 // The columns a header may sort on, matching the keys actions.ts declared
 // sortable. Anything not named here renders as a plain header.
@@ -233,6 +208,11 @@ export const InvoicesTable = ({ page, filters }: Props) => {
           }))}
           visibility={columnVisibility}
           onToggle={toggleColumn}
+        />
+        <PagedTableExportButton
+          fileName="invoices"
+          columnKeys={visibleColumns.map((column) => column.key)}
+          action={exportInvoices}
         />
       </TableToolbar>
 

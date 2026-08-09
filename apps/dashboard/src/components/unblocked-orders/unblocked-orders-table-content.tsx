@@ -9,7 +9,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
-import { formatDateValue, formatMoney, formatTimeValue, orderDeblockTypeLabel } from "@/lib/helpers";
+import {
+  formatDateValue,
+  formatMoney,
+  formatTimeValue,
+  orderDeblockTypeLabel,
+} from "@/lib/helpers";
+import { TableExportButton } from "@/components/ui/table-export-button";
 
 type Props = {
   rows: UnblockedOrderRow[];
@@ -17,68 +23,77 @@ type Props = {
 
 export const UnblockedOrdersTable = ({ rows }: Props) => (
   <div>
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Customer name</TableHead>
-          <TableHead>City</TableHead>
-          <TableHead className="text-right">Debtor number</TableHead>
-          <TableHead>Deblock type</TableHead>
-          <TableHead className="text-right">Year</TableHead>
-          <TableHead className="text-right">Month</TableHead>
-          <TableHead>Deblock date</TableHead>
-          <TableHead>Deblock time</TableHead>
-          <TableHead>Deblocked by</TableHead>
-          <TableHead>Order</TableHead>
-          <TableHead>Creation date of Order</TableHead>
-          <TableHead className="text-right">Order amount</TableHead>
-          <TableHead>Region code</TableHead>
-          <TableHead>Region</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {rows.length === 0 ? (
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <TableExportButton
+          tableId="unblocked-orders-table"
+          fileName="unblocked-orders"
+          sheetName="Unblocked orders"
+        />
+      </div>
+      <Table id="unblocked-orders-table">
+        <TableHeader>
           <TableRow>
-            <TableCell
-              colSpan={14}
-              className="h-24 text-center text-muted-foreground"
-            >
-              No unblocked orders found.
-            </TableCell>
+            <TableHead>Customer name</TableHead>
+            <TableHead>City</TableHead>
+            <TableHead className="text-right">Debtor number</TableHead>
+            <TableHead>Deblock type</TableHead>
+            <TableHead className="text-right">Year</TableHead>
+            <TableHead className="text-right">Month</TableHead>
+            <TableHead>Deblock date</TableHead>
+            <TableHead>Deblock time</TableHead>
+            <TableHead>Deblocked by</TableHead>
+            <TableHead>Order</TableHead>
+            <TableHead>Creation date of Order</TableHead>
+            <TableHead className="text-right">Order amount</TableHead>
+            <TableHead>Region code</TableHead>
+            <TableHead>Region</TableHead>
           </TableRow>
-        ) : (
-          rows.map((row, index) => (
-            <TableRow key={index}>
-              <TableCell className="font-medium">
-                {row.customerName ?? "—"}
+        </TableHeader>
+        <TableBody>
+          {rows.length === 0 ? (
+            <TableRow>
+              <TableCell
+                colSpan={14}
+                className="h-24 text-center text-muted-foreground"
+              >
+                No unblocked orders found.
               </TableCell>
-              <TableCell>{row.city ?? "—"}</TableCell>
-              <TableCell className="text-right">
-                {row.debtorNumber ?? "—"}
-              </TableCell>
-              <TableCell>{orderDeblockTypeLabel(row.deblockType)}</TableCell>
-              <TableCell className="text-right">{row.year ?? "—"}</TableCell>
-              <TableCell className="text-right">{row.month ?? "—"}</TableCell>
-              <TableCell className="whitespace-nowrap">
-                {formatDateValue(row.deblockDate)}
-              </TableCell>
-              <TableCell>{formatTimeValue(row.deblockDate)}</TableCell>
-              <TableCell>{row.deblockedBy ?? "—"}</TableCell>
-              <TableCell className="whitespace-nowrap">
-                {row.orderCode ?? (row.orderId ? `#${row.orderId}` : "—")}
-              </TableCell>
-              <TableCell className="whitespace-nowrap">
-                {formatDateValue(row.orderCreatedAt)}
-              </TableCell>
-              <TableCell className="text-right whitespace-nowrap">
-                {formatMoney(row.orderAmount)}
-              </TableCell>
-              <TableCell>{row.regionCode ?? "—"}</TableCell>
-              <TableCell>{row.region ?? "—"}</TableCell>
             </TableRow>
-          ))
-        )}
-      </TableBody>
-    </Table>
+          ) : (
+            rows.map((row, index) => (
+              <TableRow key={index}>
+                <TableCell className="font-medium">
+                  {row.customerName ?? "—"}
+                </TableCell>
+                <TableCell>{row.city ?? "—"}</TableCell>
+                <TableCell className="text-right">
+                  {row.debtorNumber ?? "—"}
+                </TableCell>
+                <TableCell>{orderDeblockTypeLabel(row.deblockType)}</TableCell>
+                <TableCell className="text-right">{row.year ?? "—"}</TableCell>
+                <TableCell className="text-right">{row.month ?? "—"}</TableCell>
+                <TableCell className="whitespace-nowrap">
+                  {formatDateValue(row.deblockDate)}
+                </TableCell>
+                <TableCell>{formatTimeValue(row.deblockDate)}</TableCell>
+                <TableCell>{row.deblockedBy ?? "—"}</TableCell>
+                <TableCell className="whitespace-nowrap">
+                  {row.orderCode ?? (row.orderId ? `#${row.orderId}` : "—")}
+                </TableCell>
+                <TableCell className="whitespace-nowrap">
+                  {formatDateValue(row.orderCreatedAt)}
+                </TableCell>
+                <TableCell className="text-right whitespace-nowrap">
+                  {formatMoney(row.orderAmount)}
+                </TableCell>
+                <TableCell>{row.regionCode ?? "—"}</TableCell>
+                <TableCell>{row.region ?? "—"}</TableCell>
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
+    </div>
   </div>
 );

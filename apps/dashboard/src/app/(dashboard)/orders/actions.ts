@@ -39,7 +39,14 @@ import {
   tableOrderBy,
   tableWhere,
 } from "@/lib/server/table-query";
-import { Paged, TableQuery } from "@/lib/table-query";
+import { ORDER_COLUMNS } from "@/app/(dashboard)/orders/columns";
+import { exportRows } from "@/lib/server/excel";
+import {
+  Paged,
+  parseTableQuery,
+  SearchParams,
+  TableQuery,
+} from "@/lib/table-query";
 import {
   and,
   asc,
@@ -151,48 +158,56 @@ const ORDER_FILTERS = {
   financialBlockage: booleanFilter(Orders.financialBlockage),
 };
 
+/**
+ * The rows one view of the orders overview selects, as a window onto them.
+ *
+ * Shared by the page and the export so the file cannot drift from the screen:
+ * the export is this same query with the page window opened up.
+ */
+const orderRows =
+  (query: TableQuery) =>
+  async (limit: number, offset: number): Promise<OrderListItem[]> => {
+    const rows = await db
+      .select({
+        ...getTableColumns(Orders),
+        companyName: Companies.companyName,
+        contactFirstName: Contacts.firstName,
+        contactLastName: Contacts.lastName,
+      })
+      .from(Orders)
+      .leftJoin(Companies, eq(Orders.companyUuid, Companies.uuid))
+      .leftJoin(Contacts, eq(Orders.contactUuid, Contacts.uuid))
+      .where(
+        tableWhere({ query, search: ORDER_SEARCH, filters: ORDER_FILTERS }),
+      )
+      .orderBy(
+        ...tableOrderBy(
+          ORDER_SORTABLE,
+          query,
+          [desc(Orders.createdAt)],
+          Orders.id,
+        ),
+      )
+      .limit(limit)
+      .offset(offset);
+    return rows as OrderListItem[];
+  };
+
 export const getOrders = async (
   query: TableQuery,
 ): Promise<Paged<OrderListItem>> => {
   try {
-    const where = tableWhere({
-      query,
-      search: ORDER_SEARCH,
-      filters: ORDER_FILTERS,
-    });
-
     return await runPaged(query, {
-      rows: async (limit, offset) => {
-        const rows = await db
-          .select({
-            ...getTableColumns(Orders),
-            companyName: Companies.companyName,
-            contactFirstName: Contacts.firstName,
-            contactLastName: Contacts.lastName,
-          })
-          .from(Orders)
-          .leftJoin(Companies, eq(Orders.companyUuid, Companies.uuid))
-          .leftJoin(Contacts, eq(Orders.contactUuid, Contacts.uuid))
-          .where(where)
-          .orderBy(
-            ...tableOrderBy(
-              ORDER_SORTABLE,
-              query,
-              [desc(Orders.createdAt)],
-              Orders.id,
-            ),
-          )
-          .limit(limit)
-          .offset(offset);
-        return rows as OrderListItem[];
-      },
+      rows: orderRows(query),
 
       count: async () => {
         const [row] = await db
           .select({ value: count() })
           .from(Orders)
           .leftJoin(Companies, eq(Orders.companyUuid, Companies.uuid))
-          .where(where);
+          .where(
+            tableWhere({ query, search: ORDER_SEARCH, filters: ORDER_FILTERS }),
+          );
         return Number(row?.value ?? 0);
       },
     });
@@ -200,6 +215,18 @@ export const getOrders = async (
     throw new Error(describeError(error, "Failed to fetch orders"));
   }
 };
+
+/** Every order the current view matches, as a workbook. */
+export const exportOrders = async (
+  params: SearchParams,
+  columnKeys: string[],
+): Promise<string> =>
+  exportRows({
+    name: "Orders",
+    columns: ORDER_COLUMNS,
+    columnKeys,
+    rows: orderRows(parseTableQuery(params)),
+  });
 
 export const getContractsByCompanyUuid = async (
   companyUuid: string,

@@ -77,7 +77,14 @@ import {
   tableOrderBy,
   tableWhere,
 } from "@/lib/server/table-query";
-import { Paged, TableQuery } from "@/lib/table-query";
+import {
+  Paged,
+  parseTableQuery,
+  SearchParams,
+  TableQuery,
+} from "@/lib/table-query";
+import { exportRows } from "@/lib/server/excel";
+import { PRODUCT_COLUMNS } from "@/app/(dashboard)/products/columns";
 import { asc, count, desc, eq, getTableColumns, isNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/mysql-core";
 import { revalidatePath } from "next/cache";
@@ -197,6 +204,49 @@ const PRODUCT_FILTERS = {
   blockedForPurchasing: booleanFilter(Products.blockedForPurchasing),
 };
 
+/**
+ * The rows one view of the products overview selects, as a window onto them.
+ * Shared by the page and the export.
+ */
+const productRows =
+  (query: TableQuery) =>
+  (limit: number, offset: number): Promise<ProductListItem[]> =>
+    db
+      .select({
+        ...getTableColumns(Products),
+        productGroupName: ProductGroups.name,
+      })
+      .from(Products)
+      .leftJoin(
+        ProductGroups,
+        eq(Products.productGroupUuid, ProductGroups.uuid),
+      )
+      .where(
+        tableWhere({ query, search: PRODUCT_SEARCH, filters: PRODUCT_FILTERS }),
+      )
+      .orderBy(
+        ...tableOrderBy(
+          PRODUCT_SORTABLE,
+          query,
+          [desc(Products.createdAt)],
+          Products.id,
+        ),
+      )
+      .limit(limit)
+      .offset(offset);
+
+/** Every product the current view matches, as a workbook. */
+export const exportProducts = async (
+  params: SearchParams,
+  columnKeys: string[],
+): Promise<string> =>
+  exportRows({
+    name: "Products",
+    columns: PRODUCT_COLUMNS,
+    columnKeys,
+    rows: productRows(parseTableQuery(params)),
+  });
+
 export const getProducts = async (
   query: TableQuery,
 ): Promise<Paged<ProductListItem>> => {
@@ -208,28 +258,7 @@ export const getProducts = async (
     });
 
     return await runPaged(query, {
-      rows: (limit, offset) =>
-        db
-          .select({
-            ...getTableColumns(Products),
-            productGroupName: ProductGroups.name,
-          })
-          .from(Products)
-          .leftJoin(
-            ProductGroups,
-            eq(Products.productGroupUuid, ProductGroups.uuid),
-          )
-          .where(where)
-          .orderBy(
-            ...tableOrderBy(
-              PRODUCT_SORTABLE,
-              query,
-              [desc(Products.createdAt)],
-              Products.id,
-            ),
-          )
-          .limit(limit)
-          .offset(offset),
+      rows: productRows(query),
 
       count: async () => {
         const [row] = await db

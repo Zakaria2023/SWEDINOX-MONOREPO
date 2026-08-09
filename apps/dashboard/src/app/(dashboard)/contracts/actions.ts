@@ -28,7 +28,14 @@ import {
   tableOrderBy,
   tableWhere,
 } from "@/lib/server/table-query";
-import { Paged, TableQuery } from "@/lib/table-query";
+import {
+  Paged,
+  parseTableQuery,
+  SearchParams,
+  TableQuery,
+} from "@/lib/table-query";
+import { CONTRACT_COLUMNS } from "@/app/(dashboard)/contracts/columns";
+import { exportRows } from "@/lib/server/excel";
 import {
   and,
   asc,
@@ -141,6 +148,50 @@ export const getContractsForSelect = async (): Promise<ContractListItem[]> =>
     )
     .orderBy(asc(Contracts.code));
 
+/** The rows one view of the contracts overview selects, as a window onto them. */
+const contractRows =
+  (query: TableQuery) =>
+  (limit: number, offset: number): Promise<ContractListItem[]> =>
+    db
+      .select({
+        ...getTableColumns(Contracts),
+        contractGroupName: ContractGroups.name,
+      })
+      .from(Contracts)
+      .leftJoin(
+        ContractGroups,
+        eq(ContractGroups.uuid, Contracts.contractGroupUuid),
+      )
+      .where(
+        tableWhere({
+          query,
+          search: CONTRACT_SEARCH,
+          filters: CONTRACT_FILTERS,
+        }),
+      )
+      .orderBy(
+        ...tableOrderBy(
+          CONTRACT_SORTABLE,
+          query,
+          [desc(Contracts.createdAt)],
+          Contracts.id,
+        ),
+      )
+      .limit(limit)
+      .offset(offset);
+
+/** Every contract the current view matches, as a workbook. */
+export const exportContracts = async (
+  params: SearchParams,
+  columnKeys: string[],
+): Promise<string> =>
+  exportRows({
+    name: "Contracts",
+    columns: CONTRACT_COLUMNS,
+    columnKeys,
+    rows: contractRows(parseTableQuery(params)),
+  });
+
 export const getContracts = async (
   query: TableQuery,
 ): Promise<Paged<ContractListItem>> => {
@@ -151,28 +202,7 @@ export const getContracts = async (
   });
 
   return runPaged(query, {
-    rows: (limit, offset) =>
-      db
-        .select({
-          ...getTableColumns(Contracts),
-          contractGroupName: ContractGroups.name,
-        })
-        .from(Contracts)
-        .leftJoin(
-          ContractGroups,
-          eq(ContractGroups.uuid, Contracts.contractGroupUuid),
-        )
-        .where(where)
-        .orderBy(
-          ...tableOrderBy(
-            CONTRACT_SORTABLE,
-            query,
-            [desc(Contracts.createdAt)],
-            Contracts.id,
-          ),
-        )
-        .limit(limit)
-        .offset(offset),
+    rows: contractRows(query),
 
     count: async () => {
       const [row] = await db

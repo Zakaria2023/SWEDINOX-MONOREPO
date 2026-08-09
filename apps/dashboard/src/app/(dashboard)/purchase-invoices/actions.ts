@@ -50,7 +50,14 @@ import {
   tableOrderBy,
   tableWhere,
 } from "@/lib/server/table-query";
-import { Paged, TableQuery } from "@/lib/table-query";
+import {
+  Paged,
+  parseTableQuery,
+  SearchParams,
+  TableQuery,
+} from "@/lib/table-query";
+import { exportRows } from "@/lib/server/excel";
+import { PURCHASE_INVOICE_COLUMNS } from "@/app/(dashboard)/purchase-invoices/columns";
 import {
   and,
   count,
@@ -168,6 +175,57 @@ const PURCHASE_INVOICE_FILTERS = {
   cancelled: booleanFilter(PurchaseInvoices.cancelled),
 };
 
+/**
+ * The rows one view of the purchase invoices overview selects, as a window onto
+ * them. Shared by the page and the export.
+ */
+const purchaseInvoiceRows =
+  (query: TableQuery) =>
+  (limit: number, offset: number): Promise<PurchaseInvoiceListItem[]> =>
+    db
+      .select({
+        ...getTableColumns(PurchaseInvoices),
+        companyName: Companies.companyName,
+        supplierCode: Companies.id,
+        contactFirstName: Contacts.firstName,
+        contactLastName: Contacts.lastName,
+      })
+      .from(PurchaseInvoices)
+      .leftJoin(Companies, eq(PurchaseInvoices.companyUuid, Companies.uuid))
+      .leftJoin(
+        Contacts,
+        eq(PurchaseInvoices.invoiceSentByContactUuid, Contacts.uuid),
+      )
+      .where(
+        tableWhere({
+          query,
+          search: PURCHASE_INVOICE_SEARCH,
+          filters: PURCHASE_INVOICE_FILTERS,
+        }),
+      )
+      .orderBy(
+        ...tableOrderBy(
+          PURCHASE_INVOICE_SORTABLE,
+          query,
+          [desc(PurchaseInvoices.createdAt)],
+          PurchaseInvoices.id,
+        ),
+      )
+      .limit(limit)
+      .offset(offset);
+
+/** Every purchase invoice the current view matches, as a workbook. */
+export const exportPurchaseInvoices = async (
+  params: SearchParams,
+  columnKeys: string[],
+): Promise<string> =>
+  exportRows({
+    name: "Purchase Invoices",
+    columns: PURCHASE_INVOICE_COLUMNS,
+    columnKeys,
+    rows: purchaseInvoiceRows(parseTableQuery(params)),
+  });
+
 export const getPurchaseInvoices = async (
   query: TableQuery,
 ): Promise<Paged<PurchaseInvoiceListItem>> => {
@@ -178,32 +236,7 @@ export const getPurchaseInvoices = async (
   });
 
   return runPaged(query, {
-    rows: (limit, offset) =>
-      db
-        .select({
-          ...getTableColumns(PurchaseInvoices),
-          companyName: Companies.companyName,
-          supplierCode: Companies.id,
-          contactFirstName: Contacts.firstName,
-          contactLastName: Contacts.lastName,
-        })
-        .from(PurchaseInvoices)
-        .leftJoin(Companies, eq(PurchaseInvoices.companyUuid, Companies.uuid))
-        .leftJoin(
-          Contacts,
-          eq(PurchaseInvoices.invoiceSentByContactUuid, Contacts.uuid),
-        )
-        .where(where)
-        .orderBy(
-          ...tableOrderBy(
-            PURCHASE_INVOICE_SORTABLE,
-            query,
-            [desc(PurchaseInvoices.createdAt)],
-            PurchaseInvoices.id,
-          ),
-        )
-        .limit(limit)
-        .offset(offset),
+    rows: purchaseInvoiceRows(query),
 
     count: async () => {
       const [row] = await db

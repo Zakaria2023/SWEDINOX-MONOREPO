@@ -1,7 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { ComplaintListItem } from "@/app/(dashboard)/complaints/actions";
+import {
+  ComplaintListItem,
+  exportComplaints,
+} from "@/app/(dashboard)/complaints/actions";
+import { PagedTableExportButton } from "@/components/ui/table-export-button";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { TableSortHeader } from "@/components/ui/table-sort-header";
 import { TableToolbar } from "@/components/ui/table-toolbar";
@@ -27,7 +31,9 @@ export const ComplaintsTableContent = ({ page, filters }: Props) => (
     <TableToolbar
       searchPlaceholder="Search description, customer or product…"
       filters={filters}
-    />
+    >
+      <PagedTableExportButton fileName="complaints" action={exportComplaints} />
+    </TableToolbar>
     <Table>
       <TableHeader>
         <TableRow>

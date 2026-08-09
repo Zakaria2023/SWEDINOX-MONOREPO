@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { QuoteListItem } from "@/app/(dashboard)/quotes/actions";
+import { exportQuotes, QuoteListItem } from "@/app/(dashboard)/quotes/actions";
 import {
   Table,
   TableBody,
@@ -10,6 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { PagedTableExportButton } from "@/components/ui/table-export-button";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { TableSortHeader } from "@/components/ui/table-sort-header";
 import { TableToolbar } from "@/components/ui/table-toolbar";
@@ -27,7 +28,9 @@ export const QuotesTable = ({ page, filters }: Props) => (
     <TableToolbar
       searchPlaceholder="Search reference or customer…"
       filters={filters}
-    />
+    >
+      <PagedTableExportButton fileName="quotes" action={exportQuotes} />
+    </TableToolbar>
     <Table>
       <TableHeader>
         <TableRow>

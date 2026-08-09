@@ -23,6 +23,7 @@ import {
   ORDER_LINE_STATUS_LABELS,
   STOCK_UNIT_LABELS,
 } from "@/lib/labels";
+import { TableExportButton } from "@/components/ui/table-export-button";
 
 type Props = {
   lines: DeliveryLineItem[];
@@ -68,109 +69,122 @@ const DeliverButton = ({ orderItemUuid }: DeliverButtonProps) => {
 
 export const DeliveriesTable = ({ lines, userNames }: Props) => (
   <div>
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Order type</TableHead>
-          <TableHead>Line status</TableHead>
-          <TableHead className="text-right">Order</TableHead>
-          <TableHead className="text-right">Line</TableHead>
-          <TableHead>Customer</TableHead>
-          <TableHead>Seller</TableHead>
-          <TableHead className="text-center">Pick-up</TableHead>
-          <TableHead>Product code</TableHead>
-          <TableHead>Product</TableHead>
-          <TableHead className="text-right">Length</TableHead>
-          <TableHead className="text-right">Width</TableHead>
-          <TableHead>Options</TableHead>
-          <TableHead className="text-right">Line Qty(p)</TableHead>
-          <TableHead>StkU</TableHead>
-          <TableHead>Delivery status</TableHead>
-          <TableHead>Delivery date</TableHead>
-          <TableHead>Blocking reason</TableHead>
-          <TableHead className="text-right">Action</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {lines.length === 0 ? (
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <TableExportButton
+          tableId="deliveries-table"
+          fileName="deliveries"
+          sheetName="Deliveries"
+        />
+      </div>
+      <Table id="deliveries-table">
+        <TableHeader>
           <TableRow>
-            <TableCell
-              colSpan={18}
-              className="h-24 text-center text-muted-foreground"
-            >
-              No deliveries found.
-            </TableCell>
+            <TableHead>Order type</TableHead>
+            <TableHead>Line status</TableHead>
+            <TableHead className="text-right">Order</TableHead>
+            <TableHead className="text-right">Line</TableHead>
+            <TableHead>Customer</TableHead>
+            <TableHead>Seller</TableHead>
+            <TableHead className="text-center">Pick-up</TableHead>
+            <TableHead>Product code</TableHead>
+            <TableHead>Product</TableHead>
+            <TableHead className="text-right">Length</TableHead>
+            <TableHead className="text-right">Width</TableHead>
+            <TableHead>Options</TableHead>
+            <TableHead className="text-right">Line Qty(p)</TableHead>
+            <TableHead>StkU</TableHead>
+            <TableHead>Delivery status</TableHead>
+            <TableHead>Delivery date</TableHead>
+            <TableHead>Blocking reason</TableHead>
+            <TableHead data-export-ignore className="text-right">
+              Action
+            </TableHead>
           </TableRow>
-        ) : (
-          lines.map((row) => (
-            <TableRow key={row.uuid}>
-              <TableCell className="font-medium">
-                <Link
-                  href={`/order-lines/${row.uuid}`}
-                  className="text-primary hover:underline"
-                >
-                  {row.orderCategory ?? "View line"}
-                </Link>
-              </TableCell>
-              <TableCell>
-                <StatusBadge
-                  value={row.lineStatus}
-                  label={
-                    row.lineStatus
-                      ? ORDER_LINE_STATUS_LABELS[row.lineStatus]
-                      : null
-                  }
-                />
-              </TableCell>
-              <TableCell className="text-right font-medium">
-                {row.orderId ?? "—"}
-              </TableCell>
-              <TableCell className="text-right">
-                {row.lineNumber ?? "—"}
-              </TableCell>
-              <TableCell>{row.customerName ?? "—"}</TableCell>
-              <TableCell>{userName(row.seller, userNames)}</TableCell>
-              <TableCell className="text-center">
-                {row.isPickup ? "Yes" : ""}
-              </TableCell>
-              <TableCell className="font-medium">
-                {row.productCode ?? "—"}
-              </TableCell>
-              <TableCell>{row.productName ?? "—"}</TableCell>
-              <TableCell className="text-right">
-                {row.lengthMm ?? "—"}
-              </TableCell>
-              <TableCell className="text-right">{row.widthMm ?? "—"}</TableCell>
-              <TableCell>{row.options ?? "—"}</TableCell>
-              <TableCell className="text-right">{row.qtyPlanned}</TableCell>
-              <TableCell>
-                {row.unit ? STOCK_UNIT_LABELS[row.unit] : "—"}
-              </TableCell>
-              <TableCell>
-                <StatusBadge
-                  value={row.deliveryStatus}
-                  label={
-                    row.deliveryStatus
-                      ? DELIVERY_STATUS_LABELS[row.deliveryStatus]
-                      : null
-                  }
-                />
-              </TableCell>
-              <TableCell>{row.deliveryDate ?? "—"}</TableCell>
-              <TableCell className="text-muted-foreground">
-                {row.blockingReason ?? "—"}
-              </TableCell>
-              <TableCell className="text-right">
-                {row.status === "reserved" ? (
-                  <DeliverButton orderItemUuid={row.uuid} />
-                ) : (
-                  "—"
-                )}
+        </TableHeader>
+        <TableBody>
+          {lines.length === 0 ? (
+            <TableRow>
+              <TableCell
+                colSpan={18}
+                className="h-24 text-center text-muted-foreground"
+              >
+                No deliveries found.
               </TableCell>
             </TableRow>
-          ))
-        )}
-      </TableBody>
-    </Table>
+          ) : (
+            lines.map((row) => (
+              <TableRow key={row.uuid}>
+                <TableCell className="font-medium">
+                  <Link
+                    href={`/order-lines/${row.uuid}`}
+                    className="text-primary hover:underline"
+                  >
+                    {row.orderCategory ?? "View line"}
+                  </Link>
+                </TableCell>
+                <TableCell>
+                  <StatusBadge
+                    value={row.lineStatus}
+                    label={
+                      row.lineStatus
+                        ? ORDER_LINE_STATUS_LABELS[row.lineStatus]
+                        : null
+                    }
+                  />
+                </TableCell>
+                <TableCell className="text-right font-medium">
+                  {row.orderId ?? "—"}
+                </TableCell>
+                <TableCell className="text-right">
+                  {row.lineNumber ?? "—"}
+                </TableCell>
+                <TableCell>{row.customerName ?? "—"}</TableCell>
+                <TableCell>{userName(row.seller, userNames)}</TableCell>
+                <TableCell className="text-center">
+                  {row.isPickup ? "Yes" : ""}
+                </TableCell>
+                <TableCell className="font-medium">
+                  {row.productCode ?? "—"}
+                </TableCell>
+                <TableCell>{row.productName ?? "—"}</TableCell>
+                <TableCell className="text-right">
+                  {row.lengthMm ?? "—"}
+                </TableCell>
+                <TableCell className="text-right">
+                  {row.widthMm ?? "—"}
+                </TableCell>
+                <TableCell>{row.options ?? "—"}</TableCell>
+                <TableCell className="text-right">{row.qtyPlanned}</TableCell>
+                <TableCell>
+                  {row.unit ? STOCK_UNIT_LABELS[row.unit] : "—"}
+                </TableCell>
+                <TableCell>
+                  <StatusBadge
+                    value={row.deliveryStatus}
+                    label={
+                      row.deliveryStatus
+                        ? DELIVERY_STATUS_LABELS[row.deliveryStatus]
+                        : null
+                    }
+                  />
+                </TableCell>
+                <TableCell>{row.deliveryDate ?? "—"}</TableCell>
+                <TableCell className="text-muted-foreground">
+                  {row.blockingReason ?? "—"}
+                </TableCell>
+                <TableCell className="text-right">
+                  {row.status === "reserved" ? (
+                    <DeliverButton orderItemUuid={row.uuid} />
+                  ) : (
+                    "—"
+                  )}
+                </TableCell>
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
+    </div>
   </div>
 );

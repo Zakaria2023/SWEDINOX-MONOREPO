@@ -26,6 +26,7 @@ import {
   WarehouseLocationType,
 } from "@/lib/enums";
 import { DocumentCell } from "@/components/ui/document-cell";
+import { TableExportButton } from "@/components/ui/table-export-button";
 
 type ColumnKey =
   | "id"
@@ -69,8 +70,9 @@ type Props = {
 };
 
 export const WarehousesTable = ({ warehouses }: Props) => {
-  const [columnVisibility, setColumnVisibility] =
-    useState<Record<ColumnKey, boolean>>(buildColumnVisibility(ALL_COLUMNS));
+  const [columnVisibility, setColumnVisibility] = useState<
+    Record<ColumnKey, boolean>
+  >(buildColumnVisibility(ALL_COLUMNS));
 
   const toggleColumn = (key: string) => {
     setColumnVisibility((prev) => ({
@@ -167,7 +169,7 @@ export const WarehousesTable = ({ warehouses }: Props) => {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex items-start justify-end gap-2">
         <ColumnSelector
           columns={ALL_COLUMNS.map((column) => ({
             key: column.key,
@@ -176,10 +178,15 @@ export const WarehousesTable = ({ warehouses }: Props) => {
           visibility={columnVisibility}
           onToggle={toggleColumn}
         />
+        <TableExportButton
+          tableId="warehouses-table"
+          fileName="warehouses"
+          sheetName="Warehouses"
+        />
       </div>
 
       <div>
-        <Table>
+        <Table id="warehouses-table">
           <TableHeader>
             <TableRow>
               {visibleColumns.map((column) => (

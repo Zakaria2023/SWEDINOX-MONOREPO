@@ -23,6 +23,7 @@ import {
   WarehouseLoadingLocation,
   WarehouseLocationType,
 } from "@/lib/enums";
+import { TableExportButton } from "@/components/ui/table-export-button";
 
 type ColumnKey =
   | "id"
@@ -64,8 +65,9 @@ type Props = {
 };
 
 export const WarehouseSubSectionsTable = ({ subSections }: Props) => {
-  const [columnVisibility, setColumnVisibility] =
-    useState<Record<ColumnKey, boolean>>(buildColumnVisibility(ALL_COLUMNS));
+  const [columnVisibility, setColumnVisibility] = useState<
+    Record<ColumnKey, boolean>
+  >(buildColumnVisibility(ALL_COLUMNS));
 
   const toggleColumn = (key: string) => {
     setColumnVisibility((prev) => ({
@@ -78,10 +80,7 @@ export const WarehouseSubSectionsTable = ({ subSections }: Props) => {
     (column) => columnVisibility[column.key],
   );
 
-  const renderCell = (
-    subSection: SelectWarehouses,
-    key: ColumnKey,
-  ) => {
+  const renderCell = (subSection: SelectWarehouses, key: ColumnKey) => {
     switch (key) {
       case "id":
         return (
@@ -155,7 +154,7 @@ export const WarehouseSubSectionsTable = ({ subSections }: Props) => {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex items-start justify-end gap-2">
         <ColumnSelector
           columns={ALL_COLUMNS.map((column) => ({
             key: column.key,
@@ -164,10 +163,15 @@ export const WarehouseSubSectionsTable = ({ subSections }: Props) => {
           visibility={columnVisibility}
           onToggle={toggleColumn}
         />
+        <TableExportButton
+          tableId="warehouse-sub-sections-table"
+          fileName="warehouse-sub-sections"
+          sheetName="Warehouse Sub Sections"
+        />
       </div>
 
       <div>
-        <Table>
+        <Table id="warehouse-sub-sections-table">
           <TableHeader>
             <TableRow>
               {visibleColumns.map((column) => (

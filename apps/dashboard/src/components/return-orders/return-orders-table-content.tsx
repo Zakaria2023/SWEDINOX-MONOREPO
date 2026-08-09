@@ -1,7 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { ReturnOrderListItem } from "@/app/(dashboard)/return-orders/actions";
+import {
+  exportReturnOrders,
+  ReturnOrderListItem,
+} from "@/app/(dashboard)/return-orders/actions";
+import { PagedTableExportButton } from "@/components/ui/table-export-button";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { TableSortHeader } from "@/components/ui/table-sort-header";
 import { TableToolbar } from "@/components/ui/table-toolbar";
@@ -27,7 +31,12 @@ export const ReturnOrdersTable = ({ page, filters }: Props) => (
     <TableToolbar
       searchPlaceholder="Search reference or customer…"
       filters={filters}
-    />
+    >
+      <PagedTableExportButton
+        fileName="return-orders"
+        action={exportReturnOrders}
+      />
+    </TableToolbar>
     <Table>
       <TableHeader>
         <TableRow>

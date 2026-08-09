@@ -22,7 +22,14 @@ import {
   tablePage,
   tableWhere,
 } from "@/lib/server/table-query";
-import { Paged, TableQuery } from "@/lib/table-query";
+import {
+  Paged,
+  parseTableQuery,
+  SearchParams,
+  TableQuery,
+} from "@/lib/table-query";
+import { exportRows } from "@/lib/server/excel";
+import { PURCHASE_LINE_COLUMNS } from "@/app/(dashboard)/purchase-lines/columns";
 
 export type PurchaseLineItem = SelectPurchaseOrderItems & {
   purchaseOrderId: SelectPurchaseOrders["id"] | null;
@@ -60,18 +67,17 @@ const PURCHASE_LINE_FILTERS = {
   quantity: numberRangeFilter(PurchaseOrderItems.quantity),
 };
 
-export const getPurchaseLines = async (
-  query: TableQuery,
-): Promise<Paged<PurchaseLineItem>> => {
-  try {
-    const where = tableWhere({
-      query,
-      search: PURCHASE_LINE_SEARCH,
-      filters: PURCHASE_LINE_FILTERS,
-    });
-
-    const { limit, offset } = tablePage(query);
-
+/**
+ * The rows one view of the purchase lines overview selects, as a window onto
+ * them.
+ *
+ * Shared by the page and the export, including the buyer's name: that is
+ * resolved here from Clerk rather than in SQL, so a second copy of this query
+ * would be a second answer to who bought a line.
+ */
+const purchaseLineRows =
+  (query: TableQuery) =>
+  async (limit: number, offset: number): Promise<PurchaseLineItem[]> => {
     const rows = await db
       .select({
         ...getTableColumns(PurchaseOrderItems),
@@ -90,7 +96,13 @@ export const getPurchaseLines = async (
       )
       .leftJoin(Companies, eq(PurchaseOrders.supplierUuid, Companies.uuid))
       .leftJoin(Products, eq(PurchaseOrderItems.productUuid, Products.uuid))
-      .where(where)
+      .where(
+        tableWhere({
+          query,
+          search: PURCHASE_LINE_SEARCH,
+          filters: PURCHASE_LINE_FILTERS,
+        }),
+      )
       .orderBy(
         ...tableOrderBy(
           PURCHASE_LINE_SORTABLE,
@@ -102,6 +114,40 @@ export const getPurchaseLines = async (
       .limit(limit)
       .offset(offset);
 
+    // Resolve the buyer's Clerk id to a display name. Fall back to a
+    // line-level purchaser if one was set, then to the raw id.
+    const users = await getClerkUsersForSelect();
+    const nameById = new Map(users.map((user) => [user.value, user.label]));
+
+    return rows.map(({ orderPurchaserId, ...row }) => ({
+      ...row,
+      purchaser:
+        row.purchaser ??
+        (orderPurchaserId
+          ? (nameById.get(orderPurchaserId) ?? orderPurchaserId)
+          : null),
+    }));
+  };
+
+/** Every purchase line the current view matches, as a workbook. */
+export const exportPurchaseLines = async (
+  params: SearchParams,
+  columnKeys: string[],
+): Promise<string> =>
+  exportRows({
+    name: "Purchase Lines",
+    columns: PURCHASE_LINE_COLUMNS,
+    columnKeys,
+    rows: purchaseLineRows(parseTableQuery(params)),
+  });
+
+export const getPurchaseLines = async (
+  query: TableQuery,
+): Promise<Paged<PurchaseLineItem>> => {
+  try {
+    const { limit, offset } = tablePage(query);
+    const rows = await purchaseLineRows(query)(limit, offset);
+
     const [totalRow] = await db
       .select({ value: count() })
       .from(PurchaseOrderItems)
@@ -111,22 +157,16 @@ export const getPurchaseLines = async (
       )
       .leftJoin(Companies, eq(PurchaseOrders.supplierUuid, Companies.uuid))
       .leftJoin(Products, eq(PurchaseOrderItems.productUuid, Products.uuid))
-      .where(where);
-
-    // Resolve the buyer's Clerk id to a display name. Fall back to a
-    // line-level purchaser if one was set, then to the raw id.
-    const users = await getClerkUsersForSelect();
-    const nameById = new Map(users.map((user) => [user.value, user.label]));
+      .where(
+        tableWhere({
+          query,
+          search: PURCHASE_LINE_SEARCH,
+          filters: PURCHASE_LINE_FILTERS,
+        }),
+      );
 
     return {
-      rows: rows.map(({ orderPurchaserId, ...row }) => ({
-        ...row,
-        purchaser:
-          row.purchaser ??
-          (orderPurchaserId
-            ? (nameById.get(orderPurchaserId) ?? orderPurchaserId)
-            : null),
-      })),
+      rows,
       total: Number(totalRow?.value ?? 0),
       page: query.page,
       pageSize: query.pageSize,

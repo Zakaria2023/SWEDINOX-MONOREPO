@@ -12,11 +12,10 @@ import {
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { buildColumnVisibility } from "@/lib/helpers";
-import {
-  WAREHOUSE_WORK_ORDER_STATUS_LABELS,
-} from "@/lib/labels";
+import { WAREHOUSE_WORK_ORDER_STATUS_LABELS } from "@/lib/labels";
 import { WarehouseWorkOrderStatus } from "@/lib/enums";
 import { WorkOrderListItem } from "@/app/(dashboard)/warehouse-work-orders/actions";
+import { TableExportButton } from "@/components/ui/table-export-button";
 
 type ColumnKey = "id" | "warehouseName" | "status" | "createdAt";
 
@@ -36,8 +35,9 @@ type Props = {
 };
 
 export const WarehouseWorkOrdersTable = ({ workOrders }: Props) => {
-  const [columnVisibility, setColumnVisibility] =
-    useState<Record<ColumnKey, boolean>>(buildColumnVisibility(ALL_COLUMNS));
+  const [columnVisibility, setColumnVisibility] = useState<
+    Record<ColumnKey, boolean>
+  >(buildColumnVisibility(ALL_COLUMNS));
 
   const toggleColumn = (key: string) => {
     setColumnVisibility((prev) => ({
@@ -86,7 +86,7 @@ export const WarehouseWorkOrdersTable = ({ workOrders }: Props) => {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex items-start justify-end gap-2">
         <ColumnSelector
           columns={ALL_COLUMNS.map((column) => ({
             key: column.key,
@@ -95,10 +95,15 @@ export const WarehouseWorkOrdersTable = ({ workOrders }: Props) => {
           visibility={columnVisibility}
           onToggle={toggleColumn}
         />
+        <TableExportButton
+          tableId="warehouse-work-orders-table"
+          fileName="warehouse-work-orders"
+          sheetName="Warehouse Work Orders"
+        />
       </div>
 
       <div>
-        <Table>
+        <Table id="warehouse-work-orders-table">
           <TableHeader>
             <TableRow>
               {visibleColumns.map((column) => (

@@ -12,6 +12,7 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { STOCK_UNIT_LABELS } from "@/lib/labels";
+import { TableExportButton } from "@/components/ui/table-export-button";
 
 type Props = {
   statistics: PickStatisticListItem[];
@@ -30,67 +31,78 @@ const BooleanCell = ({ value }: BooleanCellProps) =>
 
 export const PickStatisticsTable = ({ statistics }: Props) => (
   <div>
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Product code</TableHead>
-          <TableHead>Description</TableHead>
-          <TableHead className="text-right">Year</TableHead>
-          <TableHead className="text-right">Month</TableHead>
-          <TableHead className="text-right">Picks</TableHead>
-          <TableHead className="text-right">Qty. Picked / Fetched</TableHead>
-          <TableHead>U.</TableHead>
-          <TableHead className="text-right">Kg. Picked</TableHead>
-          <TableHead className="text-right">Avg. Qty. per pick</TableHead>
-          <TableHead className="text-right">Avg. Kg. per pick</TableHead>
-          <TableHead className="text-center">Stock product</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {statistics.length === 0 ? (
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <TableExportButton
+          tableId="pick-statistics-table"
+          fileName="pick-statistics"
+          sheetName="Pick Statistic"
+        />
+      </div>
+      <Table id="pick-statistics-table">
+        <TableHeader>
           <TableRow>
-            <TableCell
-              colSpan={11}
-              className="h-24 text-center text-muted-foreground"
-            >
-              No pick statistics found.
-            </TableCell>
+            <TableHead>Product code</TableHead>
+            <TableHead>Description</TableHead>
+            <TableHead className="text-right">Year</TableHead>
+            <TableHead className="text-right">Month</TableHead>
+            <TableHead className="text-right">Picks</TableHead>
+            <TableHead className="text-right">Qty. Picked / Fetched</TableHead>
+            <TableHead>U.</TableHead>
+            <TableHead className="text-right">Kg. Picked</TableHead>
+            <TableHead className="text-right">Avg. Qty. per pick</TableHead>
+            <TableHead className="text-right">Avg. Kg. per pick</TableHead>
+            <TableHead className="text-center">Stock product</TableHead>
           </TableRow>
-        ) : (
-          statistics.map((row) => (
-            <TableRow key={row.uuid}>
-              <TableCell className="font-medium">
-                <Link
-                  href={`/pick-statistics/${row.uuid}`}
-                  className="text-primary hover:underline"
-                >
-                  {row.productCode ?? `Row #${row.id}`}
-                </Link>
-              </TableCell>
-              <TableCell>{row.productName ?? "—"}</TableCell>
-              <TableCell className="text-right">{row.year}</TableCell>
-              <TableCell className="text-right">{row.month}</TableCell>
-              <TableCell className="text-right">{row.picks}</TableCell>
-              <TableCell className="text-right">{row.quantityPicked}</TableCell>
-              <TableCell>
-                {row.unit ? STOCK_UNIT_LABELS[row.unit] : "—"}
-              </TableCell>
-              <TableCell className="text-right">{row.kgPicked}</TableCell>
-              <TableCell className="text-right">
-                {row.avgQtyPerPick.toFixed(2)}
-              </TableCell>
-              <TableCell className="text-right">
-                {row.avgKgPerPick.toFixed(2)}
-              </TableCell>
-              <TableCell className="text-center">
-                <span className="inline-flex justify-center">
-                  <BooleanCell value={row.stockProduct} />
-                </span>
+        </TableHeader>
+        <TableBody>
+          {statistics.length === 0 ? (
+            <TableRow>
+              <TableCell
+                colSpan={11}
+                className="h-24 text-center text-muted-foreground"
+              >
+                No pick statistics found.
               </TableCell>
             </TableRow>
-          ))
-        )}
-      </TableBody>
-    </Table>
+          ) : (
+            statistics.map((row) => (
+              <TableRow key={row.uuid}>
+                <TableCell className="font-medium">
+                  <Link
+                    href={`/pick-statistics/${row.uuid}`}
+                    className="text-primary hover:underline"
+                  >
+                    {row.productCode ?? `Row #${row.id}`}
+                  </Link>
+                </TableCell>
+                <TableCell>{row.productName ?? "—"}</TableCell>
+                <TableCell className="text-right">{row.year}</TableCell>
+                <TableCell className="text-right">{row.month}</TableCell>
+                <TableCell className="text-right">{row.picks}</TableCell>
+                <TableCell className="text-right">
+                  {row.quantityPicked}
+                </TableCell>
+                <TableCell>
+                  {row.unit ? STOCK_UNIT_LABELS[row.unit] : "—"}
+                </TableCell>
+                <TableCell className="text-right">{row.kgPicked}</TableCell>
+                <TableCell className="text-right">
+                  {row.avgQtyPerPick.toFixed(2)}
+                </TableCell>
+                <TableCell className="text-right">
+                  {row.avgKgPerPick.toFixed(2)}
+                </TableCell>
+                <TableCell className="text-center">
+                  <span className="inline-flex justify-center">
+                    <BooleanCell value={row.stockProduct} />
+                  </span>
+                </TableCell>
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
+    </div>
   </div>
 );

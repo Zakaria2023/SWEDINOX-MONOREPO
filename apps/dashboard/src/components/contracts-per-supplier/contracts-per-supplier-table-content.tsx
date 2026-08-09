@@ -12,6 +12,7 @@ import {
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { buildColumnVisibility } from "@/lib/helpers";
 import { useState } from "react";
+import { TableExportButton } from "@/components/ui/table-export-button";
 
 type ColumnKey =
   | "id"
@@ -43,8 +44,9 @@ const ALL_COLUMNS: Array<{
 type Props = { rows: ContractPerSupplierRow[] };
 
 export const ContractsPerSupplierTable = ({ rows }: Props) => {
-  const [columnVisibility, setColumnVisibility] =
-    useState<Record<ColumnKey, boolean>>(buildColumnVisibility(ALL_COLUMNS));
+  const [columnVisibility, setColumnVisibility] = useState<
+    Record<ColumnKey, boolean>
+  >(buildColumnVisibility(ALL_COLUMNS));
 
   const toggleColumn = (key: string) =>
     setColumnVisibility((prev) => ({
@@ -91,7 +93,7 @@ export const ContractsPerSupplierTable = ({ rows }: Props) => {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex items-start justify-end gap-2">
         <ColumnSelector
           columns={ALL_COLUMNS.map((col) => ({
             key: col.key,
@@ -100,10 +102,15 @@ export const ContractsPerSupplierTable = ({ rows }: Props) => {
           visibility={columnVisibility}
           onToggle={toggleColumn}
         />
+        <TableExportButton
+          tableId="contracts-per-supplier-table"
+          fileName="contracts-per-supplier"
+          sheetName="Contracts per Supplier"
+        />
       </div>
 
       <div>
-        <Table>
+        <Table id="contracts-per-supplier-table">
           <TableHeader>
             <TableRow>
               {visibleColumns.map((col) => (

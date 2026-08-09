@@ -26,6 +26,7 @@ import {
   MACHINE_OPTION_LABELS,
   MACHINE_PRODUCTION_LABELS,
 } from "@/lib/labels";
+import { TableExportButton } from "@/components/ui/table-export-button";
 
 type ColumnKey =
   | "code"
@@ -183,7 +184,7 @@ export const MachinesTable = ({ machines }: Props) => {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex items-start justify-end gap-2">
         <ColumnSelector
           columns={ALL_COLUMNS.map((column) => ({
             key: column.key,
@@ -192,10 +193,15 @@ export const MachinesTable = ({ machines }: Props) => {
           visibility={columnVisibility}
           onToggle={toggleColumn}
         />
+        <TableExportButton
+          tableId="machines-table"
+          fileName="machines"
+          sheetName="Machines"
+        />
       </div>
 
       <div>
-        <Table>
+        <Table id="machines-table">
           <TableHeader>
             <TableRow>
               {visibleColumns.map((column) => (

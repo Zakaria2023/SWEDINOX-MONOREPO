@@ -1,7 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { AddressListItem } from "@/app/(dashboard)/addresses/actions";
+import {
+  AddressListItem,
+  exportAddresses,
+} from "@/app/(dashboard)/addresses/actions";
+import {
+  AddressColumnKey,
+  ADDRESS_COLUMNS,
+} from "@/app/(dashboard)/addresses/columns";
 import {
   Table,
   TableBody,
@@ -11,118 +18,22 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
+import { PagedTableExportButton } from "@/components/ui/table-export-button";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { TableSortHeader } from "@/components/ui/table-sort-header";
 import { TableToolbar } from "@/components/ui/table-toolbar";
+import { selectorColumns } from "@/lib/excel";
 import { buildColumnVisibility } from "@/lib/helpers";
 import { ADDRESS_CATEGORY_LABELS, AVAILABLE_AT_LABELS } from "@/lib/labels";
 import { Paged, TableFilterControl } from "@/lib/table-query";
 import { useState } from "react";
 
-type ColumnKey =
-  | "id"
-  | "companyCode"
-  | "companyName"
-  | "altName"
-  | "streetAndNo"
-  | "postalCode"
-  | "city"
-  | "region"
-  | "country"
-  | "house"
-  | "poBox"
-  | "gln"
-  | "peppolId"
-  | "telephone"
-  | "fax"
-  | "email"
-  | "website"
-  | "billingAttention"
-  | "billingAttentionAdditional"
-  | "sequenceNumber"
-  | "category"
-  | "addressComplete"
-  | "needCrane"
-  | "canopyRequired"
-  | "bundleSeparately"
-  | "specialTransport"
-  | "availableAt"
-  | "unloadingStartTime"
-  | "unloadingEndTime"
-  | "maxLength"
-  | "maxBundleWeight"
-  | "loadingInstructions"
-  | "createdAt"
-  | "updatedAt";
+type ColumnKey = AddressColumnKey;
 
-const ALL_COLUMNS: Array<{
-  defaultVisible: boolean;
-  key: ColumnKey;
-  label: string;
-}> = [
-  { key: "id", label: "Code", defaultVisible: true },
-  { key: "companyCode", label: "Company Code", defaultVisible: true },
-  { key: "companyName", label: "Company Name", defaultVisible: true },
-  { key: "altName", label: "Alt Name", defaultVisible: true },
-  { key: "streetAndNo", label: "Street & No.", defaultVisible: true },
-  { key: "postalCode", label: "Postal Code", defaultVisible: true },
-  { key: "city", label: "City", defaultVisible: true },
-  { key: "region", label: "Region", defaultVisible: true },
-  { key: "country", label: "Country", defaultVisible: true },
-  { key: "house", label: "House", defaultVisible: false },
-  { key: "poBox", label: "PO Box", defaultVisible: false },
-  { key: "gln", label: "GLN", defaultVisible: true },
-  { key: "peppolId", label: "Peppol ID", defaultVisible: true },
-  { key: "telephone", label: "Telephone", defaultVisible: false },
-  { key: "fax", label: "Fax", defaultVisible: false },
-  { key: "email", label: "Email", defaultVisible: false },
-  { key: "website", label: "Website", defaultVisible: false },
-  {
-    key: "billingAttention",
-    label: "Billing Attention",
-    defaultVisible: false,
-  },
-  {
-    key: "billingAttentionAdditional",
-    label: "Billing Attention 2",
-    defaultVisible: false,
-  },
-  { key: "sequenceNumber", label: "Sequence No.", defaultVisible: false },
-  { key: "category", label: "Category", defaultVisible: true },
-  { key: "addressComplete", label: "Address Complete", defaultVisible: true },
-  { key: "needCrane", label: "Need Crane", defaultVisible: false },
-  { key: "canopyRequired", label: "Canopy Required", defaultVisible: false },
-  {
-    key: "bundleSeparately",
-    label: "Bundle Separately",
-    defaultVisible: false,
-  },
-  {
-    key: "specialTransport",
-    label: "Special Transport",
-    defaultVisible: false,
-  },
-  { key: "availableAt", label: "Available At", defaultVisible: false },
-  {
-    key: "unloadingStartTime",
-    label: "Unloading Start",
-    defaultVisible: false,
-  },
-  { key: "unloadingEndTime", label: "Unloading End", defaultVisible: false },
-  { key: "maxLength", label: "Max Length (mm)", defaultVisible: false },
-  {
-    key: "maxBundleWeight",
-    label: "Max Bundle Weight (kg)",
-    defaultVisible: false,
-  },
-  {
-    key: "loadingInstructions",
-    label: "Loading Instructions",
-    defaultVisible: false,
-  },
-  { key: "createdAt", label: "Created At", defaultVisible: false },
-  { key: "updatedAt", label: "Updated At", defaultVisible: false },
-];
+// The column selector and the export read the same declaration — see
+// app/(dashboard)/addresses/columns.ts — so a column cannot be on screen and
+// missing from the file.
+const ALL_COLUMNS = selectorColumns(ADDRESS_COLUMNS);
 
 // The columns a header may sort on, matching the keys actions.ts declared
 // sortable. A column not named here renders as a plain header.
@@ -379,6 +290,11 @@ export const AddressesTable = ({
           }))}
           visibility={columnVisibility}
           onToggle={toggleColumn}
+        />
+        <PagedTableExportButton
+          fileName="addresses"
+          columnKeys={visibleColumns.map((column) => column.key)}
+          action={exportAddresses}
         />
       </TableToolbar>
 

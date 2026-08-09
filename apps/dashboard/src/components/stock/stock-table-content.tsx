@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { StockListItem } from "@/app/(dashboard)/stock/actions";
+import { exportStock, StockListItem } from "@/app/(dashboard)/stock/actions";
+import { PagedTableExportButton } from "@/components/ui/table-export-button";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { TableSortHeader } from "@/components/ui/table-sort-header";
 import { TableToolbar } from "@/components/ui/table-toolbar";
@@ -38,7 +39,9 @@ export const StockTable = ({ page, filters }: Props) => {
       <TableToolbar
         searchPlaceholder="Search product or charge…"
         filters={filters}
-      />
+      >
+        <PagedTableExportButton fileName="stock" action={exportStock} />
+      </TableToolbar>
       <div>
         <Table>
           <TableHeader>

@@ -1,11 +1,20 @@
 "use client";
 
+import { PagedTableExportButton } from "@/components/ui/table-export-button";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { TableSortHeader } from "@/components/ui/table-sort-header";
 import { TableToolbar } from "@/components/ui/table-toolbar";
+import { selectorColumns } from "@/lib/excel";
 import { Paged, TableFilterControl } from "@/lib/table-query";
 import Link from "next/link";
-import { type CounterOrderListItem } from "@/app/(dashboard)/counter-orders/actions";
+import {
+  exportCounterOrders,
+  CounterOrderListItem,
+} from "@/app/(dashboard)/counter-orders/actions";
+import {
+  COUNTER_ORDER_COLUMNS,
+  CounterOrderColumnKey,
+} from "@/app/(dashboard)/counter-orders/columns";
 import {
   Table,
   TableBody,
@@ -23,40 +32,12 @@ import {
 } from "@/lib/labels";
 import { useState } from "react";
 
-type ColumnKey =
-  | "id"
-  | "companyName"
-  | "handlingBlocked"
-  | "status"
-  | "priority"
-  | "orderDate"
-  | "deliveryDate"
-  | "amountExVat"
-  | "weightKg"
-  | "customerRef"
-  | "gainPercent"
-  | "daysInSystem"
-  | "createdAt";
+type ColumnKey = CounterOrderColumnKey;
 
-const ALL_COLUMNS: Array<{
-  defaultVisible: boolean;
-  key: ColumnKey;
-  label: string;
-}> = [
-  { key: "id", label: "Order no", defaultVisible: true },
-  { key: "companyName", label: "Customer", defaultVisible: true },
-  { key: "handlingBlocked", label: "Blocked", defaultVisible: true },
-  { key: "status", label: "Status", defaultVisible: true },
-  { key: "orderDate", label: "Order date", defaultVisible: true },
-  { key: "deliveryDate", label: "Delivery date", defaultVisible: true },
-  { key: "amountExVat", label: "Amount (ex VAT)", defaultVisible: true },
-  { key: "weightKg", label: "Weight (kg)", defaultVisible: true },
-  { key: "customerRef", label: "Customer reference", defaultVisible: true },
-  { key: "gainPercent", label: "Gain%", defaultVisible: true },
-  { key: "daysInSystem", label: "Days in system", defaultVisible: true },
-  { key: "priority", label: "Priority", defaultVisible: false },
-  { key: "createdAt", label: "Created At", defaultVisible: false },
-];
+// The column selector and the export read the same declaration — see
+// app/(dashboard)/counter-orders/columns.ts — so a column cannot be on screen and
+// missing from the file.
+const ALL_COLUMNS = selectorColumns(COUNTER_ORDER_COLUMNS);
 
 // The columns a header may sort on, matching the keys actions.ts declared.
 // A key not named here renders as a plain header.
@@ -193,6 +174,11 @@ export const CounterOrdersTable = ({
           }))}
           visibility={columnVisibility}
           onToggle={toggleColumn}
+        />
+        <PagedTableExportButton
+          fileName="counter-orders"
+          columnKeys={visibleColumns.map((column) => column.key)}
+          action={exportCounterOrders}
         />
       </TableToolbar>
 

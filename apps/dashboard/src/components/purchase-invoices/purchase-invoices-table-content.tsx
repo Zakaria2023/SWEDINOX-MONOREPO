@@ -1,7 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { PurchaseInvoiceListItem } from "@/app/(dashboard)/purchase-invoices/actions";
+import {
+  exportPurchaseInvoices,
+  PurchaseInvoiceListItem,
+} from "@/app/(dashboard)/purchase-invoices/actions";
+import {
+  PURCHASE_INVOICE_COLUMNS,
+  PurchaseInvoiceColumnKey,
+} from "@/app/(dashboard)/purchase-invoices/columns";
 import {
   Table,
   TableBody,
@@ -11,9 +18,11 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
+import { PagedTableExportButton } from "@/components/ui/table-export-button";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { TableSortHeader } from "@/components/ui/table-sort-header";
 import { TableToolbar } from "@/components/ui/table-toolbar";
+import { selectorColumns } from "@/lib/excel";
 import { Paged, TableFilterControl } from "@/lib/table-query";
 import { buildColumnVisibility } from "@/lib/helpers";
 import {
@@ -22,34 +31,12 @@ import {
 } from "@/lib/labels";
 import { useState } from "react";
 
-type ColumnKey =
-  | "id"
-  | "companyName"
-  | "sentBy"
-  | "supplierCode"
-  | "invoiceDate"
-  | "expirationDate"
-  | "invoiceTotal"
-  | "paymentTerms"
-  | "blocked"
-  | "blockReason";
+type ColumnKey = PurchaseInvoiceColumnKey;
 
-const ALL_COLUMNS: Array<{
-  key: ColumnKey;
-  label: string;
-  defaultVisible: boolean;
-}> = [
-  { key: "id", label: "No.", defaultVisible: true },
-  { key: "companyName", label: "Supplier", defaultVisible: true },
-  { key: "sentBy", label: "Sent By", defaultVisible: true },
-  { key: "supplierCode", label: "Supplier Code", defaultVisible: true },
-  { key: "invoiceDate", label: "Invoice Date", defaultVisible: true },
-  { key: "expirationDate", label: "Exp. Date", defaultVisible: true },
-  { key: "invoiceTotal", label: "Total", defaultVisible: true },
-  { key: "paymentTerms", label: "Payment Terms", defaultVisible: true },
-  { key: "blocked", label: "Blocked", defaultVisible: true },
-  { key: "blockReason", label: "Block Reason", defaultVisible: true },
-];
+// The column selector and the export read the same declaration — see
+// app/(dashboard)/purchase-invoices/columns.ts — so a column cannot be on screen and
+// missing from the file.
+const ALL_COLUMNS = selectorColumns(PURCHASE_INVOICE_COLUMNS);
 
 // The columns a header may sort on, matching the keys actions.ts declared.
 const SORTABLE: Partial<Record<ColumnKey, string>> = {
@@ -172,6 +159,11 @@ export const PurchaseInvoicesTable = ({ page, filters }: Props) => {
           }))}
           visibility={columnVisibility}
           onToggle={toggleColumn}
+        />
+        <PagedTableExportButton
+          fileName="purchase-invoices"
+          columnKeys={visibleColumns.map((column) => column.key)}
+          action={exportPurchaseInvoices}
         />
       </TableToolbar>
 

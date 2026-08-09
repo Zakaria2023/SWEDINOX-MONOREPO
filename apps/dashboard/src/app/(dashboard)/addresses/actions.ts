@@ -7,8 +7,15 @@ import {
 } from "@/db/schema/address-distances";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { CompanyAddresses } from "@/db/schema/company-addresses";
+import { ADDRESS_COLUMNS } from "@/app/(dashboard)/addresses/columns";
 import { addressCategories } from "@/lib/enums";
-import { Paged, TableQuery } from "@/lib/table-query";
+import {
+  Paged,
+  parseTableQuery,
+  SearchParams,
+  TableQuery,
+} from "@/lib/table-query";
+import { exportRows } from "@/lib/server/excel";
 import {
   jsonArrayFilter,
   relationFilter,
@@ -72,6 +79,39 @@ const ADDRESS_FILTERS = {
 };
 
 /**
+ * The rows one view of this overview selects, as a window onto them.
+ *
+ * Shared by the page and the export rather than written twice: the export is
+ * the same query with the page window opened up, and the moment the two are
+ * separate the file stops agreeing with the screen the first time a filter is
+ * added to one of them.
+ */
+const addressRows =
+  (query: TableQuery) =>
+  (limit: number, offset: number): Promise<AddressListItem[]> =>
+    db
+      .select()
+      .from(CompanyAddresses)
+      .leftJoin(Companies, eq(Companies.uuid, CompanyAddresses.companyUuid))
+      .where(
+        tableWhere({
+          query,
+          search: ADDRESS_SEARCH,
+          filters: ADDRESS_FILTERS,
+        }),
+      )
+      .orderBy(
+        ...tableOrderBy(
+          ADDRESS_SORTABLE,
+          query,
+          [desc(CompanyAddresses.createdAt)],
+          CompanyAddresses.id,
+        ),
+      )
+      .limit(limit)
+      .offset(offset);
+
+/**
  * One page of addresses, narrowed by whatever the URL asked for.
  *
  * The join to Companies is an inner part of both the row query and the count,
@@ -80,41 +120,43 @@ const ADDRESS_FILTERS = {
  */
 export const getAddresses = async (
   query: TableQuery,
-): Promise<Paged<AddressListItem>> => {
-  const where = tableWhere({
-    query,
-    search: ADDRESS_SEARCH,
-    filters: ADDRESS_FILTERS,
-  });
-
-  return runPaged(query, {
-    rows: (limit, offset) =>
-      db
-        .select()
-        .from(CompanyAddresses)
-        .leftJoin(Companies, eq(Companies.uuid, CompanyAddresses.companyUuid))
-        .where(where)
-        .orderBy(
-          ...tableOrderBy(
-            ADDRESS_SORTABLE,
-            query,
-            [desc(CompanyAddresses.createdAt)],
-            CompanyAddresses.id,
-          ),
-        )
-        .limit(limit)
-        .offset(offset),
+): Promise<Paged<AddressListItem>> =>
+  runPaged(query, {
+    rows: addressRows(query),
 
     count: async () => {
       const [row] = await db
         .select({ value: count() })
         .from(CompanyAddresses)
         .leftJoin(Companies, eq(Companies.uuid, CompanyAddresses.companyUuid))
-        .where(where);
+        .where(
+          tableWhere({
+            query,
+            search: ADDRESS_SEARCH,
+            filters: ADDRESS_FILTERS,
+          }),
+        );
       return Number(row?.value ?? 0);
     },
   });
-};
+
+/**
+ * Every address the current view matches, as a workbook.
+ *
+ * The params are the ones in the reader's address bar, so the file is narrowed
+ * and ordered exactly as the screen is — only without the page window, which is
+ * the whole difference between an export and a screenshot.
+ */
+export const exportAddresses = async (
+  params: SearchParams,
+  columnKeys: string[],
+): Promise<string> =>
+  exportRows({
+    name: "Addresses",
+    columns: ADDRESS_COLUMNS,
+    columnKeys,
+    rows: addressRows(parseTableQuery(params)),
+  });
 
 export const getAddressesForCompany = async (
   companyUuid: string,

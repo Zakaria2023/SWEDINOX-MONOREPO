@@ -39,7 +39,14 @@ import {
   tableOrderBy,
   tableWhere,
 } from "@/lib/server/table-query";
-import { Paged, TableQuery } from "@/lib/table-query";
+import {
+  Paged,
+  parseTableQuery,
+  SearchParams,
+  TableQuery,
+} from "@/lib/table-query";
+import { exportRows } from "@/lib/server/excel";
+import { COMPLAINT_COLUMNS } from "@/app/(dashboard)/complaints/columns";
 import { and, count, desc, eq, getTableColumns, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -114,6 +121,56 @@ const COMPLAINT_FILTERS = {
   reportDate: dateRangeFilter(Complaints.reportDate),
 };
 
+/**
+ * The rows one view of the complaints overview selects, as a window onto them.
+ *
+ * Shared by the page and the export so the file cannot drift from the screen.
+ */
+const complaintRows =
+  (query: TableQuery) =>
+  (limit: number, offset: number): Promise<ComplaintListItem[]> =>
+    db
+      .select({
+        ...getTableColumns(Complaints),
+        companyName: Companies.companyName,
+        contactFirstName: Contacts.firstName,
+        contactLastName: Contacts.lastName,
+        productCode: Products.productCode,
+      })
+      .from(Complaints)
+      .leftJoin(Companies, eq(Complaints.companyUuid, Companies.uuid))
+      .leftJoin(Contacts, eq(Complaints.contactUuid, Contacts.uuid))
+      .leftJoin(Products, eq(Complaints.productUuid, Products.uuid))
+      .where(
+        tableWhere({
+          query,
+          search: COMPLAINT_SEARCH,
+          filters: COMPLAINT_FILTERS,
+        }),
+      )
+      .orderBy(
+        ...tableOrderBy(
+          COMPLAINT_SORTABLE,
+          query,
+          [desc(Complaints.createdAt)],
+          Complaints.id,
+        ),
+      )
+      .limit(limit)
+      .offset(offset);
+
+/** Every complaint the current view matches, as a workbook. */
+export const exportComplaints = async (
+  params: SearchParams,
+  columnKeys: string[],
+): Promise<string> =>
+  exportRows({
+    name: "Complaints",
+    columns: COMPLAINT_COLUMNS,
+    columnKeys,
+    rows: complaintRows(parseTableQuery(params)),
+  });
+
 export const getComplaints = async (
   query: TableQuery,
 ): Promise<Paged<ComplaintListItem>> => {
@@ -125,30 +182,7 @@ export const getComplaints = async (
     });
 
     return await runPaged(query, {
-      rows: (limit, offset) =>
-        db
-          .select({
-            ...getTableColumns(Complaints),
-            companyName: Companies.companyName,
-            contactFirstName: Contacts.firstName,
-            contactLastName: Contacts.lastName,
-            productCode: Products.productCode,
-          })
-          .from(Complaints)
-          .leftJoin(Companies, eq(Complaints.companyUuid, Companies.uuid))
-          .leftJoin(Contacts, eq(Complaints.contactUuid, Contacts.uuid))
-          .leftJoin(Products, eq(Complaints.productUuid, Products.uuid))
-          .where(where)
-          .orderBy(
-            ...tableOrderBy(
-              COMPLAINT_SORTABLE,
-              query,
-              [desc(Complaints.createdAt)],
-              Complaints.id,
-            ),
-          )
-          .limit(limit)
-          .offset(offset),
+      rows: complaintRows(query),
 
       count: async () => {
         const [row] = await db

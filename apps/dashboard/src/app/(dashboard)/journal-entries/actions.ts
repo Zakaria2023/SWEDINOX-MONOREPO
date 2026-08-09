@@ -20,7 +20,14 @@ import {
   tableWhere,
   valueFilter,
 } from "@/lib/server/table-query";
-import { Paged, TableQuery } from "@/lib/table-query";
+import {
+  Paged,
+  parseTableQuery,
+  SearchParams,
+  TableQuery,
+} from "@/lib/table-query";
+import { exportRows } from "@/lib/server/excel";
+import { JOURNAL_ENTRY_COLUMNS } from "@/app/(dashboard)/journal-entries/columns";
 import { asc, count, desc, eq, getTableColumns } from "drizzle-orm";
 
 export type JournalEntryListItem = SelectJournalEntries & {
@@ -80,6 +87,55 @@ const JOURNAL_FILTERS = {
  * booking date alone would interleave the lines of two documents posted on the
  * same day, and an entry whose halves are separated cannot be read at all.
  */
+/**
+ * The rows one view of the journal selects, as a window onto them. Shared by
+ * the page and the export.
+ */
+const journalEntryRows =
+  (query: TableQuery) =>
+  (limit: number, offset: number): Promise<JournalEntryListItem[]> =>
+    db
+      .select({
+        ...getTableColumns(JournalEntries),
+        companyName: Companies.companyName,
+        accountName: LedgerAccounts.name,
+      })
+      .from(JournalEntries)
+      .leftJoin(Companies, eq(JournalEntries.companyUuid, Companies.uuid))
+      .leftJoin(
+        LedgerAccounts,
+        eq(JournalEntries.account, LedgerAccounts.number),
+      )
+      .where(
+        tableWhere({ query, search: JOURNAL_SEARCH, filters: JOURNAL_FILTERS }),
+      )
+      .orderBy(
+        ...tableOrderBy(
+          JOURNAL_SORTABLE,
+          query,
+          [
+            desc(JournalEntries.bookingDate),
+            desc(JournalEntries.entryUuid),
+            asc(JournalEntries.id),
+          ],
+          JournalEntries.id,
+        ),
+      )
+      .limit(limit)
+      .offset(offset);
+
+/** Every posting the current view matches, as a workbook. */
+export const exportJournalEntries = async (
+  params: SearchParams,
+  columnKeys: string[],
+): Promise<string> =>
+  exportRows({
+    name: "Journal Entries",
+    columns: JOURNAL_ENTRY_COLUMNS,
+    columnKeys,
+    rows: journalEntryRows(parseTableQuery(params)),
+  });
+
 export const getJournalEntries = async (
   query: TableQuery,
 ): Promise<Paged<JournalEntryListItem>> => {
@@ -91,34 +147,7 @@ export const getJournalEntries = async (
     });
 
     return await runPaged(query, {
-      rows: (limit, offset) =>
-        db
-          .select({
-            ...getTableColumns(JournalEntries),
-            companyName: Companies.companyName,
-            accountName: LedgerAccounts.name,
-          })
-          .from(JournalEntries)
-          .leftJoin(Companies, eq(JournalEntries.companyUuid, Companies.uuid))
-          .leftJoin(
-            LedgerAccounts,
-            eq(JournalEntries.account, LedgerAccounts.number),
-          )
-          .where(where)
-          .orderBy(
-            ...tableOrderBy(
-              JOURNAL_SORTABLE,
-              query,
-              [
-                desc(JournalEntries.bookingDate),
-                desc(JournalEntries.entryUuid),
-                asc(JournalEntries.id),
-              ],
-              JournalEntries.id,
-            ),
-          )
-          .limit(limit)
-          .offset(offset),
+      rows: journalEntryRows(query),
 
       count: async () => {
         const [row] = await db

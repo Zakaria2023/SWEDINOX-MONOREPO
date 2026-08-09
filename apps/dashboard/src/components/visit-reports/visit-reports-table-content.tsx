@@ -1,12 +1,21 @@
 "use client";
 
+import { PagedTableExportButton } from "@/components/ui/table-export-button";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { TableSortHeader } from "@/components/ui/table-sort-header";
 import { TableToolbar } from "@/components/ui/table-toolbar";
+import { selectorColumns } from "@/lib/excel";
 import { Paged, TableFilterControl } from "@/lib/table-query";
 import Link from "next/link";
 import { useState } from "react";
-import { type VisitReportListItem } from "@/app/(dashboard)/visit-reports/actions";
+import {
+  exportVisitReports,
+  VisitReportListItem,
+} from "@/app/(dashboard)/visit-reports/actions";
+import {
+  VISIT_REPORT_COLUMNS,
+  VisitReportColumnKey,
+} from "@/app/(dashboard)/visit-reports/columns";
 import {
   VISIT_REPORT_CONTACT_METHOD_LABELS,
   VISIT_REPORT_REASON_LABELS,
@@ -23,50 +32,12 @@ import { ColumnSelector } from "@/components/ui/column-selector";
 import { ResolveVisitReportButton } from "@/components/visit-reports/resolve-visit-report-button";
 import { buildColumnVisibility } from "@/lib/helpers";
 
-type ColumnKey =
-  | "id"
-  | "companyName"
-  | "representative"
-  | "visitedBy"
-  | "contactMethod"
-  | "visitDate"
-  | "visitTime"
-  | "hasTakenPlace"
-  | "visitReason"
-  | "contactUuid"
-  | "city"
-  | "postalCode"
-  | "telephone"
-  | "fax"
-  | "address"
-  | "attentionPoint"
-  | "remarks"
-  | "createdAt";
+type ColumnKey = VisitReportColumnKey;
 
-const ALL_COLUMNS: Array<{
-  defaultVisible: boolean;
-  key: ColumnKey;
-  label: string;
-}> = [
-  { key: "id", label: "ID", defaultVisible: true },
-  { key: "companyName", label: "Company", defaultVisible: true },
-  { key: "visitedBy", label: "Visited By", defaultVisible: true },
-  { key: "contactMethod", label: "Contact Method", defaultVisible: true },
-  { key: "visitDate", label: "Visit Date", defaultVisible: true },
-  { key: "hasTakenPlace", label: "Happened", defaultVisible: true },
-  { key: "visitReason", label: "Visit Reason", defaultVisible: true },
-  { key: "representative", label: "Representative", defaultVisible: false },
-  { key: "visitTime", label: "Visit Time", defaultVisible: false },
-  { key: "contactUuid", label: "Contact", defaultVisible: false },
-  { key: "city", label: "City", defaultVisible: false },
-  { key: "postalCode", label: "Postal Code", defaultVisible: false },
-  { key: "telephone", label: "Telephone", defaultVisible: false },
-  { key: "fax", label: "Fax", defaultVisible: false },
-  { key: "address", label: "Address", defaultVisible: false },
-  { key: "attentionPoint", label: "Attention Point", defaultVisible: false },
-  { key: "remarks", label: "Remarks", defaultVisible: false },
-  { key: "createdAt", label: "Created At", defaultVisible: false },
-];
+// The column selector and the export read the same declaration — see
+// app/(dashboard)/visit-reports/columns.ts — so a column cannot be on screen and
+// missing from the file.
+const ALL_COLUMNS = selectorColumns(VISIT_REPORT_COLUMNS);
 
 // The columns a header may sort on, matching the keys actions.ts declared.
 // A key not named here renders as a plain header.
@@ -240,6 +211,11 @@ export const VisitReportsTable = ({
           visibility={columnVisibility}
           onToggle={toggleColumn}
         />
+        <PagedTableExportButton
+          fileName="visit-reports"
+          columnKeys={visibleColumns.map((column) => column.key)}
+          action={exportVisitReports}
+        />
       </TableToolbar>
 
       <div>
@@ -256,7 +232,9 @@ export const VisitReportsTable = ({
                   <TableHead key={column.key}>{column.label}</TableHead>
                 );
               })}
-              <TableHead className="text-right">Action</TableHead>
+              <TableHead data-export-ignore className="text-right">
+                Action
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

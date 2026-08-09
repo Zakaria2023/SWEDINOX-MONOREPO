@@ -10,6 +10,7 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { SALES_REPRESENTATIVE_LABELS } from "@/lib/labels";
+import { TableExportButton } from "@/components/ui/table-export-button";
 
 type Props = {
   rows: RemarkPerCompanyRow[];
@@ -17,44 +18,53 @@ type Props = {
 
 export const RemarksPerCompanyTable = ({ rows }: Props) => (
   <div>
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead className="text-right">Customer no.</TableHead>
-          <TableHead>Customer</TableHead>
-          <TableHead>City</TableHead>
-          <TableHead>Representative</TableHead>
-          <TableHead>Remarks</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {rows.length === 0 ? (
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <TableExportButton
+          tableId="remarks-per-company-table"
+          fileName="remarks-per-company"
+          sheetName="Remarks per company"
+        />
+      </div>
+      <Table id="remarks-per-company-table">
+        <TableHeader>
           <TableRow>
-            <TableCell
-              colSpan={5}
-              className="h-24 text-center text-muted-foreground"
-            >
-              No company remarks found.
-            </TableCell>
+            <TableHead className="text-right">Customer no.</TableHead>
+            <TableHead>Customer</TableHead>
+            <TableHead>City</TableHead>
+            <TableHead>Representative</TableHead>
+            <TableHead>Remarks</TableHead>
           </TableRow>
-        ) : (
-          rows.map((row) => (
-            <TableRow key={row.companyUuid}>
-              <TableCell className="text-right">{row.companyCode}</TableCell>
-              <TableCell className="font-medium">{row.customer}</TableCell>
-              <TableCell>{row.city ?? "—"}</TableCell>
-              <TableCell>
-                {row.representative
-                  ? SALES_REPRESENTATIVE_LABELS[row.representative]
-                  : "—"}
-              </TableCell>
-              <TableCell className="max-w-md whitespace-pre-wrap">
-                {row.remarks}
+        </TableHeader>
+        <TableBody>
+          {rows.length === 0 ? (
+            <TableRow>
+              <TableCell
+                colSpan={5}
+                className="h-24 text-center text-muted-foreground"
+              >
+                No company remarks found.
               </TableCell>
             </TableRow>
-          ))
-        )}
-      </TableBody>
-    </Table>
+          ) : (
+            rows.map((row) => (
+              <TableRow key={row.companyUuid}>
+                <TableCell className="text-right">{row.companyCode}</TableCell>
+                <TableCell className="font-medium">{row.customer}</TableCell>
+                <TableCell>{row.city ?? "—"}</TableCell>
+                <TableCell>
+                  {row.representative
+                    ? SALES_REPRESENTATIVE_LABELS[row.representative]
+                    : "—"}
+                </TableCell>
+                <TableCell className="max-w-md whitespace-pre-wrap">
+                  {row.remarks}
+                </TableCell>
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
+    </div>
   </div>
 );

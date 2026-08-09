@@ -23,7 +23,14 @@ import {
   tableOrderBy,
   tableWhere,
 } from "@/lib/server/table-query";
-import { Paged, TableQuery } from "@/lib/table-query";
+import {
+  Paged,
+  parseTableQuery,
+  SearchParams,
+  TableQuery,
+} from "@/lib/table-query";
+import { exportRows } from "@/lib/server/excel";
+import { VISIT_REPORT_COLUMNS } from "@/app/(dashboard)/visit-reports/columns";
 
 export type VisitReportInput = Omit<
   InsertVisitReports,
@@ -68,6 +75,50 @@ const VISIT_REPORT_FILTERS = {
   visitDate: dateRangeFilter(VisitReports.visitDate),
 };
 
+/**
+ * The rows one view of the visit reports overview selects, as a window onto
+ * them. Shared by the page and the export.
+ */
+const visitReportRows =
+  (query: TableQuery) =>
+  (limit: number, offset: number): Promise<VisitReportListItem[]> =>
+    db
+      .select({
+        ...getTableColumns(VisitReports),
+        companyName: Companies.companyName,
+      })
+      .from(VisitReports)
+      .innerJoin(Companies, eq(Companies.uuid, VisitReports.companyUuid))
+      .where(
+        tableWhere({
+          query,
+          search: VISIT_REPORT_SEARCH,
+          filters: VISIT_REPORT_FILTERS,
+        }),
+      )
+      .orderBy(
+        ...tableOrderBy(
+          VISIT_REPORT_SORTABLE,
+          query,
+          [desc(VisitReports.createdAt)],
+          VisitReports.id,
+        ),
+      )
+      .limit(limit)
+      .offset(offset);
+
+/** Every visit report the current view matches, as a workbook. */
+export const exportVisitReports = async (
+  params: SearchParams,
+  columnKeys: string[],
+): Promise<string> =>
+  exportRows({
+    name: "Visit Reports",
+    columns: VISIT_REPORT_COLUMNS,
+    columnKeys,
+    rows: visitReportRows(parseTableQuery(params)),
+  });
+
 export const getVisitReports = async (
   query: TableQuery,
 ): Promise<Paged<VisitReportListItem>> => {
@@ -78,25 +129,7 @@ export const getVisitReports = async (
   });
 
   return runPaged(query, {
-    rows: (limit, offset) =>
-      db
-        .select({
-          ...getTableColumns(VisitReports),
-          companyName: Companies.companyName,
-        })
-        .from(VisitReports)
-        .innerJoin(Companies, eq(Companies.uuid, VisitReports.companyUuid))
-        .where(where)
-        .orderBy(
-          ...tableOrderBy(
-            VISIT_REPORT_SORTABLE,
-            query,
-            [desc(VisitReports.createdAt)],
-            VisitReports.id,
-          ),
-        )
-        .limit(limit)
-        .offset(offset),
+    rows: visitReportRows(query),
 
     count: async () => {
       const [row] = await db

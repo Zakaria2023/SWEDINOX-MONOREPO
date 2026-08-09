@@ -1,12 +1,15 @@
 "use client";
 
+import { PagedTableExportButton } from "@/components/ui/table-export-button";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { TableSortHeader } from "@/components/ui/table-sort-header";
 import { TableToolbar } from "@/components/ui/table-toolbar";
+import { selectorColumns } from "@/lib/excel";
 import { Paged, TableFilterControl } from "@/lib/table-query";
 import Link from "next/link";
 import { useState } from "react";
-import { TextListItem } from "@/app/(dashboard)/texts/actions";
+import { exportTexts, TextListItem } from "@/app/(dashboard)/texts/actions";
+import { TEXT_COLUMNS, TextColumnKey } from "@/app/(dashboard)/texts/columns";
 import {
   Table,
   TableBody,
@@ -22,55 +25,15 @@ import {
   TEXT_USAGE_CATEGORY_FIELDS,
   TextUsageCategoryField,
 } from "@/lib/helpers";
-import { TEXT_USAGE_CATEGORY_LABELS } from "@/lib/labels";
 
 type UsageCategoryField = TextUsageCategoryField;
 
-type ColumnKey =
-  | "title"
-  | "companyId"
-  | "companyName"
-  | "city"
-  | "customer"
-  | "supplier"
-  | "processor"
-  | "textCategoryName"
-  | "textBlock"
-  | "categories"
-  | "updatedAt"
-  | "createdAt"
-  | UsageCategoryField;
+type ColumnKey = TextColumnKey;
 
-const BASE_COLUMNS: Array<{
-  defaultVisible: boolean;
-  key: ColumnKey;
-  label: string;
-}> = [
-  { key: "title", label: "Title", defaultVisible: true },
-  { key: "companyId", label: "Company code", defaultVisible: true },
-  { key: "companyName", label: "Customer", defaultVisible: true },
-  { key: "city", label: "City", defaultVisible: true },
-  { key: "customer", label: "Customer", defaultVisible: true },
-  { key: "supplier", label: "Supplier", defaultVisible: true },
-  { key: "processor", label: "Processor", defaultVisible: true },
-  { key: "textCategoryName", label: "Text group", defaultVisible: true },
-  { key: "textBlock", label: "Text", defaultVisible: true },
-  { key: "categories", label: "Categories", defaultVisible: true },
-  { key: "updatedAt", label: "Modified", defaultVisible: true },
-  { key: "createdAt", label: "Created", defaultVisible: true },
-];
-
-const USAGE_COLUMNS: Array<{
-  defaultVisible: boolean;
-  key: ColumnKey;
-  label: string;
-}> = TEXT_USAGE_CATEGORY_FIELDS.map(({ key, field }) => ({
-  key: field as ColumnKey,
-  label: TEXT_USAGE_CATEGORY_LABELS[key],
-  defaultVisible: true,
-}));
-
-const ALL_COLUMNS = [...BASE_COLUMNS, ...USAGE_COLUMNS];
+// The column selector and the export read the same declaration — see
+// app/(dashboard)/texts/columns.ts — so a column cannot be on screen and
+// missing from the file.
+const ALL_COLUMNS = selectorColumns(TEXT_COLUMNS);
 
 const USAGE_FIELD_SET = new Set<string>(
   TEXT_USAGE_CATEGORY_FIELDS.map((m) => m.field),
@@ -217,6 +180,11 @@ export const TextsTable = ({ page, filters }: TextsTableContentProps) => {
           }))}
           visibility={columnVisibility}
           onToggle={toggleColumn}
+        />
+        <PagedTableExportButton
+          fileName="texts"
+          columnKeys={visibleColumns.map((column) => column.key)}
+          action={exportTexts}
         />
       </TableToolbar>
 

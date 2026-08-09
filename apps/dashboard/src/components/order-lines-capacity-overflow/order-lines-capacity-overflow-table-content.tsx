@@ -13,6 +13,7 @@ import {
 import { StatusBadge } from "@/components/ui/status-badge";
 import { formatDateColumn, formatNumber, orDash, yesNo } from "@/lib/helpers";
 import { ORDER_ITEM_STATUS_LABELS } from "@/lib/labels";
+import { TableExportButton } from "@/components/ui/table-export-button";
 
 type Props = {
   rows: CapacityOverflowRow[];
@@ -74,144 +75,157 @@ const HEADERS = [
 
 export const OrderLinesCapacityOverflowTable = ({ rows }: Props) => (
   <div>
-    <Table>
-      <TableHeader>
-        <TableRow>
-          {HEADERS.map((header) => (
-            <TableHead key={header} className="whitespace-nowrap">
-              {header}
-            </TableHead>
-          ))}
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {rows.length === 0 ? (
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <TableExportButton
+          tableId="order-lines-capacity-overflow-table"
+          fileName="order-lines-capacity-overflow"
+          sheetName="Order lines capacity overflow"
+        />
+      </div>
+      <Table id="order-lines-capacity-overflow-table">
+        <TableHeader>
           <TableRow>
-            <TableCell
-              colSpan={HEADERS.length}
-              className="h-24 text-center text-muted-foreground"
-            >
-              No capacity overflows recorded.
-            </TableCell>
+            {HEADERS.map((header) => (
+              <TableHead key={header} className="whitespace-nowrap">
+                {header}
+              </TableHead>
+            ))}
           </TableRow>
-        ) : (
-          rows.map((row) => (
-            <TableRow key={row.uuid}>
-              <TableCell className="font-medium">
-                <Link
-                  href={`/order-lines-capacity-overflow/${row.uuid}`}
-                  className="text-primary hover:underline"
-                >
-                  {row.action ?? `Overflow #${row.id}`}
-                </Link>
+        </TableHeader>
+        <TableBody>
+          {rows.length === 0 ? (
+            <TableRow>
+              <TableCell
+                colSpan={HEADERS.length}
+                className="h-24 text-center text-muted-foreground"
+              >
+                No capacity overflows recorded.
               </TableCell>
-              <TableCell className="whitespace-nowrap">
-                {row.orderUuid ? (
+            </TableRow>
+          ) : (
+            rows.map((row) => (
+              <TableRow key={row.uuid}>
+                <TableCell className="font-medium">
                   <Link
-                    href={`/orders/${row.orderUuid}`}
+                    href={`/order-lines-capacity-overflow/${row.uuid}`}
                     className="text-primary hover:underline"
                   >
-                    {orDash(row.orderId)}
+                    {row.action ?? `Overflow #${row.id}`}
                   </Link>
-                ) : (
-                  orDash(row.orderId)
-                )}
-              </TableCell>
-              <TableCell>{row.orderType}</TableCell>
-              <TableCell>{orDash(row.actionByUserId)}</TableCell>
-              <TableCell>{orDash(row.companyName)}</TableCell>
-              <TableCell>{formatDateColumn(row.capacityDate)}</TableCell>
-              <TableCell>{orDash(row.capacityName)}</TableCell>
-              <TableCell>{orDash(row.accountability)}</TableCell>
-              <TableCell className="text-right tabular-nums">
-                {orDash(row.lineNumber)}
-              </TableCell>
-              <TableCell>{formatDateColumn(row.actionOn)}</TableCell>
-              <TableCell>{orDash(row.productCode)}</TableCell>
-              <TableCell>{orDash(row.productName)}</TableCell>
-              <TableCell className="text-right tabular-nums">
-                {orDash(row.lengthMm)}
-              </TableCell>
-              <TableCell className="text-right tabular-nums">
-                {orDash(row.widthMm)}
-              </TableCell>
-              <TableCell className="text-right tabular-nums">
-                {orDash(row.thicknessMm)}
-              </TableCell>
-              <TableCell>{orDash(row.quality)}</TableCell>
-              <TableCell>{orDash(row.category)}</TableCell>
-              <TableCell>{yesNo(row.isPickup)}</TableCell>
-              <TableCell>{yesNo(row.sawingSpec)}</TableCell>
-              <TableCell>{yesNo(row.fixedDimension)}</TableCell>
-              <TableCell className="text-right tabular-nums">
-                {orDash(row.toSaw)}
-              </TableCell>
-              <TableCell>
-                {formatDateColumn(row.productionStartingDate)}
-              </TableCell>
-              <TableCell className="text-right tabular-nums">
-                {orDash(row.plannedDeliveredQty)}
-              </TableCell>
-              <TableCell className="text-right tabular-nums">
-                {orDash(row.deliveredQty)}
-              </TableCell>
-              <TableCell>{orDash(row.deliveryUnit)}</TableCell>
-              <TableCell>{formatDateColumn(row.deliveryDatePlanned)}</TableCell>
-              <TableCell>{formatDateColumn(row.deliveryDateActual)}</TableCell>
-              <TableCell>{orDash(row.deliveryStatus)}</TableCell>
-              <TableCell className="text-right tabular-nums">
-                {formatNumber(Number(row.kgPlanned ?? 0))}
-              </TableCell>
-              <TableCell className="text-right tabular-nums">
-                {formatNumber(Number(row.kgActual ?? 0))}
-              </TableCell>
-              <TableCell>
-                {formatDateColumn(row.orderLineDeliveryDate)}
-              </TableCell>
-              <TableCell className="text-right tabular-nums">
-                {formatNumber(Number(row.qtyPlanned ?? 0))}
-              </TableCell>
-              <TableCell className="text-right tabular-nums">
-                {formatNumber(Number(row.qtyActual ?? 0))}
-              </TableCell>
-              <TableCell>{row.unit?.toUpperCase() ?? "—"}</TableCell>
-              <TableCell className="text-right tabular-nums">
-                {orDash(row.optionQty)}
-              </TableCell>
-              <TableCell>
-                <StatusBadge
-                  value={row.lineStatus}
-                  label={
-                    row.lineStatus
-                      ? ORDER_ITEM_STATUS_LABELS[row.lineStatus]
-                      : null
-                  }
-                />
-              </TableCell>
-              <TableCell>{orDash(row.lineType)}</TableCell>
-              <TableCell>{orDash(row.sawingWorkOrder)}</TableCell>
-              <TableCell>{orDash(row.sawingWorkOrderLine)}</TableCell>
-              <TableCell>{orDash(row.sawingMachine)}</TableCell>
-              <TableCell className="text-right tabular-nums">
-                {orDash(row.drillingHoles)}
-              </TableCell>
-              <TableCell className="text-right tabular-nums">
-                {orDash(row.leftSawAngle)}
-              </TableCell>
-              <TableCell className="text-right tabular-nums">
-                {orDash(row.rightSawAngle)}
-              </TableCell>
-              <TableCell className="text-right tabular-nums">
-                {orDash(row.bundles)}
-              </TableCell>
-              <TableCell>{yesNo(row.standing)}</TableCell>
-              <TableCell>{orDash(row.sawingType)}</TableCell>
-              <TableCell>{orDash(row.sawingAngles)}</TableCell>
-              <TableCell>{formatDateColumn(row.transportDate)}</TableCell>
-            </TableRow>
-          ))
-        )}
-      </TableBody>
-    </Table>
+                </TableCell>
+                <TableCell className="whitespace-nowrap">
+                  {row.orderUuid ? (
+                    <Link
+                      href={`/orders/${row.orderUuid}`}
+                      className="text-primary hover:underline"
+                    >
+                      {orDash(row.orderId)}
+                    </Link>
+                  ) : (
+                    orDash(row.orderId)
+                  )}
+                </TableCell>
+                <TableCell>{row.orderType}</TableCell>
+                <TableCell>{orDash(row.actionByUserId)}</TableCell>
+                <TableCell>{orDash(row.companyName)}</TableCell>
+                <TableCell>{formatDateColumn(row.capacityDate)}</TableCell>
+                <TableCell>{orDash(row.capacityName)}</TableCell>
+                <TableCell>{orDash(row.accountability)}</TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {orDash(row.lineNumber)}
+                </TableCell>
+                <TableCell>{formatDateColumn(row.actionOn)}</TableCell>
+                <TableCell>{orDash(row.productCode)}</TableCell>
+                <TableCell>{orDash(row.productName)}</TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {orDash(row.lengthMm)}
+                </TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {orDash(row.widthMm)}
+                </TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {orDash(row.thicknessMm)}
+                </TableCell>
+                <TableCell>{orDash(row.quality)}</TableCell>
+                <TableCell>{orDash(row.category)}</TableCell>
+                <TableCell>{yesNo(row.isPickup)}</TableCell>
+                <TableCell>{yesNo(row.sawingSpec)}</TableCell>
+                <TableCell>{yesNo(row.fixedDimension)}</TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {orDash(row.toSaw)}
+                </TableCell>
+                <TableCell>
+                  {formatDateColumn(row.productionStartingDate)}
+                </TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {orDash(row.plannedDeliveredQty)}
+                </TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {orDash(row.deliveredQty)}
+                </TableCell>
+                <TableCell>{orDash(row.deliveryUnit)}</TableCell>
+                <TableCell>
+                  {formatDateColumn(row.deliveryDatePlanned)}
+                </TableCell>
+                <TableCell>
+                  {formatDateColumn(row.deliveryDateActual)}
+                </TableCell>
+                <TableCell>{orDash(row.deliveryStatus)}</TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {formatNumber(Number(row.kgPlanned ?? 0))}
+                </TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {formatNumber(Number(row.kgActual ?? 0))}
+                </TableCell>
+                <TableCell>
+                  {formatDateColumn(row.orderLineDeliveryDate)}
+                </TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {formatNumber(Number(row.qtyPlanned ?? 0))}
+                </TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {formatNumber(Number(row.qtyActual ?? 0))}
+                </TableCell>
+                <TableCell>{row.unit?.toUpperCase() ?? "—"}</TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {orDash(row.optionQty)}
+                </TableCell>
+                <TableCell>
+                  <StatusBadge
+                    value={row.lineStatus}
+                    label={
+                      row.lineStatus
+                        ? ORDER_ITEM_STATUS_LABELS[row.lineStatus]
+                        : null
+                    }
+                  />
+                </TableCell>
+                <TableCell>{orDash(row.lineType)}</TableCell>
+                <TableCell>{orDash(row.sawingWorkOrder)}</TableCell>
+                <TableCell>{orDash(row.sawingWorkOrderLine)}</TableCell>
+                <TableCell>{orDash(row.sawingMachine)}</TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {orDash(row.drillingHoles)}
+                </TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {orDash(row.leftSawAngle)}
+                </TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {orDash(row.rightSawAngle)}
+                </TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {orDash(row.bundles)}
+                </TableCell>
+                <TableCell>{yesNo(row.standing)}</TableCell>
+                <TableCell>{orDash(row.sawingType)}</TableCell>
+                <TableCell>{orDash(row.sawingAngles)}</TableCell>
+                <TableCell>{formatDateColumn(row.transportDate)}</TableCell>
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
+    </div>
   </div>
 );

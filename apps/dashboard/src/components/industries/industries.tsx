@@ -30,6 +30,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { TableExportButton } from "@/components/ui/table-export-button";
 
 const industrySchema = z.object({
   id: z.string().min(1, "Code is required"),
@@ -92,40 +93,49 @@ export const Industries = ({ industries }: Props) => {
         </div>
 
         <div>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>SBI code</TableHead>
-                <TableHead>Name</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {industries.length === 0 ? (
+          <div className="space-y-4">
+            <div className="flex justify-end">
+              <TableExportButton
+                tableId="industries-table"
+                fileName="industries"
+                sheetName="Industries"
+              />
+            </div>
+            <Table id="industries-table">
+              <TableHeader>
                 <TableRow>
-                  <TableCell
-                    colSpan={2}
-                    className="h-24 text-center text-muted-foreground"
-                  >
-                    No industries yet.
-                  </TableCell>
+                  <TableHead>SBI code</TableHead>
+                  <TableHead>Name</TableHead>
                 </TableRow>
-              ) : (
-                industries.map((industry) => (
-                  <TableRow key={industry.id}>
-                    <TableCell className="font-medium">
-                      <Link
-                        href={`/industries/${encodeURIComponent(industry.id)}`}
-                        className="text-primary hover:underline"
-                      >
-                        {industry.id}
-                      </Link>
+              </TableHeader>
+              <TableBody>
+                {industries.length === 0 ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={2}
+                      className="h-24 text-center text-muted-foreground"
+                    >
+                      No industries yet.
                     </TableCell>
-                    <TableCell>{industry.name}</TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ) : (
+                  industries.map((industry) => (
+                    <TableRow key={industry.id}>
+                      <TableCell className="font-medium">
+                        <Link
+                          href={`/industries/${encodeURIComponent(industry.id)}`}
+                          className="text-primary hover:underline"
+                        >
+                          {industry.id}
+                        </Link>
+                      </TableCell>
+                      <TableCell>{industry.name}</TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </div>
       </div>
 

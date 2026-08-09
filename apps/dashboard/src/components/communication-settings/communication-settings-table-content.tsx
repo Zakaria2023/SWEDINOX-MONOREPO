@@ -4,17 +4,22 @@ import Link from "next/link";
 
 import { CommunicationSettingListItem } from "@/app/(dashboard)/communication-settings/actions";
 import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { buildColumnVisibility } from "@/lib/helpers";
-import { COMMUNICATION_SETTING_DOCUMENT_TYPE_LABELS, COMMUNICATION_SETTING_SHAPE_LABELS, COMMUNICATION_SETTING_TYPE_LABELS } from "@/lib/labels";
+import {
+  COMMUNICATION_SETTING_DOCUMENT_TYPE_LABELS,
+  COMMUNICATION_SETTING_SHAPE_LABELS,
+  COMMUNICATION_SETTING_TYPE_LABELS,
+} from "@/lib/labels";
 import { useState } from "react";
+import { TableExportButton } from "@/components/ui/table-export-button";
 
 type ColumnKey =
   | "id"
@@ -86,8 +91,9 @@ type CommunicationSettingsTableContentProps = {
 export const CommunicationSettingsTable = ({
   settings,
 }: CommunicationSettingsTableContentProps) => {
-  const [columnVisibility, setColumnVisibility] =
-    useState<Record<ColumnKey, boolean>>(buildColumnVisibility(ALL_COLUMNS));
+  const [columnVisibility, setColumnVisibility] = useState<
+    Record<ColumnKey, boolean>
+  >(buildColumnVisibility(ALL_COLUMNS));
 
   const toggleColumn = (key: string) =>
     setColumnVisibility((prev) => ({
@@ -100,7 +106,10 @@ export const CommunicationSettingsTable = ({
   );
   const fallbackValue = "—";
 
-  const renderCell = (setting: CommunicationSettingListItem, key: ColumnKey) => {
+  const renderCell = (
+    setting: CommunicationSettingListItem,
+    key: ColumnKey,
+  ) => {
     switch (key) {
       case "id":
         return (
@@ -162,7 +171,7 @@ export const CommunicationSettingsTable = ({
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex items-start justify-end gap-2">
         <ColumnSelector
           columns={ALL_COLUMNS.map((column) => ({
             key: column.key,
@@ -171,10 +180,15 @@ export const CommunicationSettingsTable = ({
           visibility={columnVisibility}
           onToggle={toggleColumn}
         />
+        <TableExportButton
+          tableId="communication-settings-table"
+          fileName="communication-settings"
+          sheetName="Communication Settings"
+        />
       </div>
 
       <div>
-        <Table>
+        <Table id="communication-settings-table">
           <TableHeader>
             <TableRow>
               {visibleColumns.map((column) => (

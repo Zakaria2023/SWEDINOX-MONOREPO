@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { OrderLineRow } from "@/app/(dashboard)/order-lines/actions";
+import {
+  exportOrderLines,
+  OrderLineRow,
+} from "@/app/(dashboard)/order-lines/actions";
 import {
   Table,
   TableBody,
@@ -10,6 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { PagedTableExportButton } from "@/components/ui/table-export-button";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { TableSortHeader } from "@/components/ui/table-sort-header";
 import { TableToolbar } from "@/components/ui/table-toolbar";
@@ -34,7 +38,12 @@ export const OrderLinesTable = ({ page, filters, userNames }: Props) => (
     <TableToolbar
       searchPlaceholder="Search product, reference or customer…"
       filters={filters}
-    />
+    >
+      <PagedTableExportButton
+        fileName="order-lines"
+        action={exportOrderLines}
+      />
+    </TableToolbar>
     <Table>
       <TableHeader>
         <TableRow>

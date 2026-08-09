@@ -27,7 +27,14 @@ import {
   tableOrderBy,
   tableWhere,
 } from "@/lib/server/table-query";
-import { Paged, TableQuery } from "@/lib/table-query";
+import {
+  Paged,
+  parseTableQuery,
+  SearchParams,
+  TableQuery,
+} from "@/lib/table-query";
+import { exportRows } from "@/lib/server/excel";
+import { STOCK_MOVEMENT_COLUMNS } from "@/app/(dashboard)/stock-movements/columns";
 import { count, desc, eq, getTableColumns } from "drizzle-orm";
 
 export type StockMovementListItem = SelectStockMovements & {
@@ -74,6 +81,65 @@ const MOVEMENT_FILTERS = {
   createdAt: dateRangeFilter(StockMovements.createdAt),
 };
 
+/**
+ * The rows one view of the stock movements overview selects, as a window onto
+ * them. Shared by the page and the export.
+ */
+const stockMovementRows =
+  (query: TableQuery) =>
+  (limit: number, offset: number): Promise<StockMovementListItem[]> =>
+    db
+      .select({
+        ...getTableColumns(StockMovements),
+        productCode: Products.productCode,
+        productName: Products.name,
+        purchaseOrderId: PurchaseOrders.id,
+        purchaseInvoiceId: PurchaseInvoices.id,
+        orderId: Orders.id,
+        invoiceId: Invoices.id,
+      })
+      .from(StockMovements)
+      .leftJoin(Products, eq(StockMovements.productUuid, Products.uuid))
+      .leftJoin(
+        PurchaseOrders,
+        eq(StockMovements.purchaseOrderUuid, PurchaseOrders.uuid),
+      )
+      .leftJoin(
+        PurchaseInvoices,
+        eq(StockMovements.purchaseInvoiceUuid, PurchaseInvoices.uuid),
+      )
+      .leftJoin(Orders, eq(StockMovements.orderUuid, Orders.uuid))
+      .leftJoin(Invoices, eq(StockMovements.invoiceUuid, Invoices.uuid))
+      .where(
+        tableWhere({
+          query,
+          search: MOVEMENT_SEARCH,
+          filters: MOVEMENT_FILTERS,
+        }),
+      )
+      .orderBy(
+        ...tableOrderBy(
+          MOVEMENT_SORTABLE,
+          query,
+          [desc(StockMovements.createdAt)],
+          StockMovements.id,
+        ),
+      )
+      .limit(limit)
+      .offset(offset);
+
+/** Every stock movement the current view matches, as a workbook. */
+export const exportStockMovements = async (
+  params: SearchParams,
+  columnKeys: string[],
+): Promise<string> =>
+  exportRows({
+    name: "Stock Movements",
+    columns: STOCK_MOVEMENT_COLUMNS,
+    columnKeys,
+    rows: stockMovementRows(parseTableQuery(params)),
+  });
+
 export const getStockMovements = async (
   query: TableQuery,
 ): Promise<Paged<StockMovementListItem>> => {
@@ -85,40 +151,7 @@ export const getStockMovements = async (
     });
 
     return await runPaged(query, {
-      rows: (limit, offset) =>
-        db
-          .select({
-            ...getTableColumns(StockMovements),
-            productCode: Products.productCode,
-            productName: Products.name,
-            purchaseOrderId: PurchaseOrders.id,
-            purchaseInvoiceId: PurchaseInvoices.id,
-            orderId: Orders.id,
-            invoiceId: Invoices.id,
-          })
-          .from(StockMovements)
-          .leftJoin(Products, eq(StockMovements.productUuid, Products.uuid))
-          .leftJoin(
-            PurchaseOrders,
-            eq(StockMovements.purchaseOrderUuid, PurchaseOrders.uuid),
-          )
-          .leftJoin(
-            PurchaseInvoices,
-            eq(StockMovements.purchaseInvoiceUuid, PurchaseInvoices.uuid),
-          )
-          .leftJoin(Orders, eq(StockMovements.orderUuid, Orders.uuid))
-          .leftJoin(Invoices, eq(StockMovements.invoiceUuid, Invoices.uuid))
-          .where(where)
-          .orderBy(
-            ...tableOrderBy(
-              MOVEMENT_SORTABLE,
-              query,
-              [desc(StockMovements.createdAt)],
-              StockMovements.id,
-            ),
-          )
-          .limit(limit)
-          .offset(offset),
+      rows: stockMovementRows(query),
 
       count: async () => {
         const [row] = await db

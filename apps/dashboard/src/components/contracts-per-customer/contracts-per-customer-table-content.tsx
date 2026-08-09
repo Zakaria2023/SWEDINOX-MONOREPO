@@ -13,6 +13,7 @@ import { ColumnSelector } from "@/components/ui/column-selector";
 import { buildColumnVisibility } from "@/lib/helpers";
 import { COMPANY_ROLE_LABELS } from "@/lib/labels";
 import { useState } from "react";
+import { TableExportButton } from "@/components/ui/table-export-button";
 
 type ColumnKey =
   | "role"
@@ -66,8 +67,9 @@ const ALL_COLUMNS: Array<{
 type Props = { rows: ContractPerCustomerRow[] };
 
 export const ContractsPerCustomerTable = ({ rows }: Props) => {
-  const [columnVisibility, setColumnVisibility] =
-    useState<Record<ColumnKey, boolean>>(buildColumnVisibility(ALL_COLUMNS));
+  const [columnVisibility, setColumnVisibility] = useState<
+    Record<ColumnKey, boolean>
+  >(buildColumnVisibility(ALL_COLUMNS));
 
   const toggleColumn = (key: string) =>
     setColumnVisibility((prev) => ({
@@ -150,7 +152,7 @@ export const ContractsPerCustomerTable = ({ rows }: Props) => {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex items-start justify-end gap-2">
         <ColumnSelector
           columns={ALL_COLUMNS.map((col) => ({
             key: col.key,
@@ -159,10 +161,15 @@ export const ContractsPerCustomerTable = ({ rows }: Props) => {
           visibility={columnVisibility}
           onToggle={toggleColumn}
         />
+        <TableExportButton
+          tableId="contracts-per-customer-table"
+          fileName="contracts-per-customer"
+          sheetName="Contracts per Customer / Prospect"
+        />
       </div>
 
       <div>
-        <Table>
+        <Table id="contracts-per-customer-table">
           <TableHeader>
             <TableRow>
               {visibleColumns.map((col) => (

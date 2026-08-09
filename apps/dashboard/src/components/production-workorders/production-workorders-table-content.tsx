@@ -21,6 +21,7 @@ import {
   MACHINE_OPTION_LABELS,
   WAREHOUSE_WORK_ORDER_STATUS_LABELS,
 } from "@/lib/labels";
+import { TableExportButton } from "@/components/ui/table-export-button";
 
 type Props = {
   lines: ProductionWorkOrderLineItem[];
@@ -64,105 +65,116 @@ const CompleteButton = ({ lineUuid }: CompleteButtonProps) => {
 
 export const ProductionWorkOrdersTable = ({ lines }: Props) => (
   <div>
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Date</TableHead>
-          <TableHead>Machine / Option</TableHead>
-          <TableHead>Status</TableHead>
-          <TableHead>Product code</TableHead>
-          <TableHead>Order</TableHead>
-          <TableHead>Company</TableHead>
-          <TableHead className="text-right">Dikte</TableHead>
-          <TableHead className="text-right">Qty(p)</TableHead>
-          <TableHead className="text-right">Qty(a)</TableHead>
-          <TableHead className="text-right">Kg(p)</TableHead>
-          <TableHead>From</TableHead>
-          <TableHead>To</TableHead>
-          <TableHead>Deliver on</TableHead>
-          <TableHead className="text-center">Rush</TableHead>
-          <TableHead className="text-right">Priority</TableHead>
-          <TableHead>Charge</TableHead>
-          <TableHead className="text-right">Action</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {lines.length === 0 ? (
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <TableExportButton
+          tableId="production-workorders-table"
+          fileName="production-workorders"
+          sheetName="Production workorders"
+        />
+      </div>
+      <Table id="production-workorders-table">
+        <TableHeader>
           <TableRow>
-            <TableCell
-              colSpan={17}
-              className="h-24 text-center text-muted-foreground"
-            >
-              No production work orders found.
-            </TableCell>
+            <TableHead>Date</TableHead>
+            <TableHead>Machine / Option</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Product code</TableHead>
+            <TableHead>Order</TableHead>
+            <TableHead>Company</TableHead>
+            <TableHead className="text-right">Dikte</TableHead>
+            <TableHead className="text-right">Qty(p)</TableHead>
+            <TableHead className="text-right">Qty(a)</TableHead>
+            <TableHead className="text-right">Kg(p)</TableHead>
+            <TableHead>From</TableHead>
+            <TableHead>To</TableHead>
+            <TableHead>Deliver on</TableHead>
+            <TableHead className="text-center">Rush</TableHead>
+            <TableHead className="text-right">Priority</TableHead>
+            <TableHead>Charge</TableHead>
+            <TableHead data-export-ignore className="text-right">
+              Action
+            </TableHead>
           </TableRow>
-        ) : (
-          lines.map((row) => (
-            <TableRow key={row.uuid}>
-              <TableCell className="font-medium">
-                <Link
-                  href={`/production-workorders/${row.uuid}`}
-                  className="text-primary hover:underline"
-                >
-                  {row.date ?? row.workOrderDate ?? `Line #${row.id}`}
-                </Link>
-              </TableCell>
-              <TableCell>
-                {[
-                  row.machineName,
-                  row.option ? MACHINE_OPTION_LABELS[row.option] : null,
-                ]
-                  .filter(Boolean)
-                  .join(" · ") || "—"}
-              </TableCell>
-              <TableCell>
-                <StatusBadge
-                  value={row.status}
-                  label={
-                    row.status
-                      ? WAREHOUSE_WORK_ORDER_STATUS_LABELS[row.status]
-                      : null
-                  }
-                />
-              </TableCell>
-              <TableCell className="font-medium">
-                {row.productCode ?? "—"}
-              </TableCell>
-              <TableCell>{row.orderNumber ?? "—"}</TableCell>
-              <TableCell>{row.companyName ?? "—"}</TableCell>
-              <TableCell className="text-right">
-                {row.thicknessMm ?? "—"}
-              </TableCell>
-              <TableCell className="text-right">
-                {row.qtyPlanned ?? "—"}
-              </TableCell>
-              <TableCell className="text-right">
-                {row.qtyActual ?? "—"}
-              </TableCell>
-              <TableCell className="text-right">
-                {row.kgPlanned ?? "—"}
-              </TableCell>
-              <TableCell>{row.fromLocation ?? "—"}</TableCell>
-              <TableCell>{row.toLocation ?? "—"}</TableCell>
-              <TableCell>{row.deliverOn ?? "—"}</TableCell>
-              <TableCell className="text-center">
-                {row.rush ? "Yes" : ""}
-              </TableCell>
-              <TableCell className="text-right">
-                {row.priority ?? "—"}
-              </TableCell>
-              <TableCell>{row.charge ?? "—"}</TableCell>
-              <TableCell className="text-right">
-                {row.status === "completed" ? (
-                  "—"
-                ) : (
-                  <CompleteButton lineUuid={row.uuid} />
-                )}
+        </TableHeader>
+        <TableBody>
+          {lines.length === 0 ? (
+            <TableRow>
+              <TableCell
+                colSpan={17}
+                className="h-24 text-center text-muted-foreground"
+              >
+                No production work orders found.
               </TableCell>
             </TableRow>
-          ))
-        )}
-      </TableBody>
-    </Table>
+          ) : (
+            lines.map((row) => (
+              <TableRow key={row.uuid}>
+                <TableCell className="font-medium">
+                  <Link
+                    href={`/production-workorders/${row.uuid}`}
+                    className="text-primary hover:underline"
+                  >
+                    {row.date ?? row.workOrderDate ?? `Line #${row.id}`}
+                  </Link>
+                </TableCell>
+                <TableCell>
+                  {[
+                    row.machineName,
+                    row.option ? MACHINE_OPTION_LABELS[row.option] : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ") || "—"}
+                </TableCell>
+                <TableCell>
+                  <StatusBadge
+                    value={row.status}
+                    label={
+                      row.status
+                        ? WAREHOUSE_WORK_ORDER_STATUS_LABELS[row.status]
+                        : null
+                    }
+                  />
+                </TableCell>
+                <TableCell className="font-medium">
+                  {row.productCode ?? "—"}
+                </TableCell>
+                <TableCell>{row.orderNumber ?? "—"}</TableCell>
+                <TableCell>{row.companyName ?? "—"}</TableCell>
+                <TableCell className="text-right">
+                  {row.thicknessMm ?? "—"}
+                </TableCell>
+                <TableCell className="text-right">
+                  {row.qtyPlanned ?? "—"}
+                </TableCell>
+                <TableCell className="text-right">
+                  {row.qtyActual ?? "—"}
+                </TableCell>
+                <TableCell className="text-right">
+                  {row.kgPlanned ?? "—"}
+                </TableCell>
+                <TableCell>{row.fromLocation ?? "—"}</TableCell>
+                <TableCell>{row.toLocation ?? "—"}</TableCell>
+                <TableCell>{row.deliverOn ?? "—"}</TableCell>
+                <TableCell className="text-center">
+                  {row.rush ? "Yes" : ""}
+                </TableCell>
+                <TableCell className="text-right">
+                  {row.priority ?? "—"}
+                </TableCell>
+                <TableCell>{row.charge ?? "—"}</TableCell>
+                <TableCell className="text-right">
+                  {row.status === "completed" ? (
+                    "—"
+                  ) : (
+                    <CompleteButton lineUuid={row.uuid} />
+                  )}
+                </TableCell>
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
+    </div>
   </div>
 );

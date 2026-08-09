@@ -13,6 +13,7 @@ import {
 import { PRODUCTION_CAPACITY_STATUS_LABELS } from "@/lib/labels";
 import { formatDateValue } from "@/lib/helpers";
 import { ProductionCapacityStatus } from "@/lib/enums";
+import { TableExportButton } from "@/components/ui/table-export-button";
 
 type Props = {
   checks: CapacityCheckListItem[];
@@ -26,75 +27,84 @@ const STATUS_STYLES: Record<ProductionCapacityStatus, string> = {
 
 export const CapacityChecksTable = ({ checks }: Props) => (
   <div>
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Status</TableHead>
-          <TableHead>Check</TableHead>
-          <TableHead>Type</TableHead>
-          <TableHead className="text-right">Occupied capacity</TableHead>
-          <TableHead className="text-right">Capacity</TableHead>
-          <TableHead className="text-right">Maximum Capacity</TableHead>
-          <TableHead>Date</TableHead>
-          <TableHead>Time alert email</TableHead>
-          <TableHead>Time max warning</TableHead>
-          <TableHead className="text-right">Warning capacity</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {checks.length === 0 ? (
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <TableExportButton
+          tableId="capacity-checks-table"
+          fileName="capacity-checks"
+          sheetName="Capacity Checks"
+        />
+      </div>
+      <Table id="capacity-checks-table">
+        <TableHeader>
           <TableRow>
-            <TableCell
-              colSpan={10}
-              className="h-24 text-center text-muted-foreground"
-            >
-              No capacity checks found.
-            </TableCell>
+            <TableHead>Status</TableHead>
+            <TableHead>Check</TableHead>
+            <TableHead>Type</TableHead>
+            <TableHead className="text-right">Occupied capacity</TableHead>
+            <TableHead className="text-right">Capacity</TableHead>
+            <TableHead className="text-right">Maximum Capacity</TableHead>
+            <TableHead>Date</TableHead>
+            <TableHead>Time alert email</TableHead>
+            <TableHead>Time max warning</TableHead>
+            <TableHead className="text-right">Warning capacity</TableHead>
           </TableRow>
-        ) : (
-          checks.map((row) => (
-            <TableRow key={row.uuid}>
-              <TableCell>
-                {row.status ? (
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLES[row.status]}`}
-                  >
-                    {PRODUCTION_CAPACITY_STATUS_LABELS[row.status]}
-                  </span>
-                ) : (
-                  "—"
-                )}
-              </TableCell>
-              <TableCell className="font-medium">
-                <Link
-                  href={`/capacity-checks/${row.uuid}`}
-                  className="text-primary hover:underline"
-                >
-                  {row.checkName ?? `Check #${row.id}`}
-                </Link>
-              </TableCell>
-              <TableCell>{row.type ?? "—"}</TableCell>
-              <TableCell className="text-right">
-                {row.occupiedCapacity ?? "—"}
-              </TableCell>
-              <TableCell className="text-right">
-                {row.capacity ?? "—"}
-              </TableCell>
-              <TableCell className="text-right">
-                {row.maximumCapacity ?? "—"}
-              </TableCell>
-              <TableCell className="whitespace-nowrap">
-                {formatDateValue(row.checkDate)}
-              </TableCell>
-              <TableCell>{row.timeAlertEmail ?? "—"}</TableCell>
-              <TableCell>{row.timeMaxWarning ?? "—"}</TableCell>
-              <TableCell className="text-right">
-                {row.warningCapacity ?? "—"}
+        </TableHeader>
+        <TableBody>
+          {checks.length === 0 ? (
+            <TableRow>
+              <TableCell
+                colSpan={10}
+                className="h-24 text-center text-muted-foreground"
+              >
+                No capacity checks found.
               </TableCell>
             </TableRow>
-          ))
-        )}
-      </TableBody>
-    </Table>
+          ) : (
+            checks.map((row) => (
+              <TableRow key={row.uuid}>
+                <TableCell>
+                  {row.status ? (
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLES[row.status]}`}
+                    >
+                      {PRODUCTION_CAPACITY_STATUS_LABELS[row.status]}
+                    </span>
+                  ) : (
+                    "—"
+                  )}
+                </TableCell>
+                <TableCell className="font-medium">
+                  <Link
+                    href={`/capacity-checks/${row.uuid}`}
+                    className="text-primary hover:underline"
+                  >
+                    {row.checkName ?? `Check #${row.id}`}
+                  </Link>
+                </TableCell>
+                <TableCell>{row.type ?? "—"}</TableCell>
+                <TableCell className="text-right">
+                  {row.occupiedCapacity ?? "—"}
+                </TableCell>
+                <TableCell className="text-right">
+                  {row.capacity ?? "—"}
+                </TableCell>
+                <TableCell className="text-right">
+                  {row.maximumCapacity ?? "—"}
+                </TableCell>
+                <TableCell className="whitespace-nowrap">
+                  {formatDateValue(row.checkDate)}
+                </TableCell>
+                <TableCell>{row.timeAlertEmail ?? "—"}</TableCell>
+                <TableCell>{row.timeMaxWarning ?? "—"}</TableCell>
+                <TableCell className="text-right">
+                  {row.warningCapacity ?? "—"}
+                </TableCell>
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
+    </div>
   </div>
 );

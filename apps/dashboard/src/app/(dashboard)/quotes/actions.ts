@@ -46,7 +46,14 @@ import {
   tableOrderBy,
   tableWhere,
 } from "@/lib/server/table-query";
-import { Paged, TableQuery } from "@/lib/table-query";
+import {
+  Paged,
+  parseTableQuery,
+  SearchParams,
+  TableQuery,
+} from "@/lib/table-query";
+import { QUOTE_COLUMNS } from "@/app/(dashboard)/quotes/columns";
+import { exportRows } from "@/lib/server/excel";
 import { and, count, desc, eq, getTableColumns, isNotNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -172,46 +179,49 @@ const QUOTE_FILTERS = {
   expired: booleanFilter(Quotes.expired),
 };
 
+/** The rows one view of the quotes overview selects, as a window onto them. */
+const quoteRows =
+  (query: TableQuery) =>
+  (limit: number, offset: number): Promise<QuoteListItem[]> =>
+    db
+      .select({
+        ...getTableColumns(Quotes),
+        companyName: Companies.companyName,
+        contactFirstName: Contacts.firstName,
+        contactLastName: Contacts.lastName,
+      })
+      .from(Quotes)
+      .leftJoin(Companies, eq(Quotes.companyUuid, Companies.uuid))
+      .leftJoin(Contacts, eq(Quotes.contactUuid, Contacts.uuid))
+      .where(
+        tableWhere({ query, search: QUOTE_SEARCH, filters: QUOTE_FILTERS }),
+      )
+      .orderBy(
+        ...tableOrderBy(
+          QUOTE_SORTABLE,
+          query,
+          [desc(Quotes.createdAt)],
+          Quotes.id,
+        ),
+      )
+      .limit(limit)
+      .offset(offset);
+
 export const getQuotes = async (
   query: TableQuery,
 ): Promise<Paged<QuoteListItem>> => {
   try {
-    const where = tableWhere({
-      query,
-      search: QUOTE_SEARCH,
-      filters: QUOTE_FILTERS,
-    });
-
     return await runPaged(query, {
-      rows: (limit, offset) =>
-        db
-          .select({
-            ...getTableColumns(Quotes),
-            companyName: Companies.companyName,
-            contactFirstName: Contacts.firstName,
-            contactLastName: Contacts.lastName,
-          })
-          .from(Quotes)
-          .leftJoin(Companies, eq(Quotes.companyUuid, Companies.uuid))
-          .leftJoin(Contacts, eq(Quotes.contactUuid, Contacts.uuid))
-          .where(where)
-          .orderBy(
-            ...tableOrderBy(
-              QUOTE_SORTABLE,
-              query,
-              [desc(Quotes.createdAt)],
-              Quotes.id,
-            ),
-          )
-          .limit(limit)
-          .offset(offset),
+      rows: quoteRows(query),
 
       count: async () => {
         const [row] = await db
           .select({ value: count() })
           .from(Quotes)
           .leftJoin(Companies, eq(Quotes.companyUuid, Companies.uuid))
-          .where(where);
+          .where(
+            tableWhere({ query, search: QUOTE_SEARCH, filters: QUOTE_FILTERS }),
+          );
         return Number(row?.value ?? 0);
       },
     });
@@ -219,6 +229,18 @@ export const getQuotes = async (
     throw new Error(describeError(error, "Failed to fetch quotes"));
   }
 };
+
+/** Every quote the current view matches, as a workbook. */
+export const exportQuotes = async (
+  params: SearchParams,
+  columnKeys: string[],
+): Promise<string> =>
+  exportRows({
+    name: "Quotes",
+    columns: QUOTE_COLUMNS,
+    columnKeys,
+    rows: quoteRows(parseTableQuery(params)),
+  });
 
 // Prices the quote's lines against the price list and the customer's contract:
 //

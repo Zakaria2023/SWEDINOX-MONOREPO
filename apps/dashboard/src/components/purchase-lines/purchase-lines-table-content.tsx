@@ -1,11 +1,15 @@
 "use client";
 
+import { PagedTableExportButton } from "@/components/ui/table-export-button";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { TableSortHeader } from "@/components/ui/table-sort-header";
 import { TableToolbar } from "@/components/ui/table-toolbar";
 import { Paged, TableFilterControl } from "@/lib/table-query";
 import Link from "next/link";
-import { PurchaseLineItem } from "@/app/(dashboard)/purchase-lines/actions";
+import {
+  exportPurchaseLines,
+  PurchaseLineItem,
+} from "@/app/(dashboard)/purchase-lines/actions";
 import {
   Table,
   TableBody,
@@ -27,7 +31,12 @@ export const PurchaseLinesTable = ({ page, filters }: Props) => (
     <TableToolbar
       searchPlaceholder="Search product or supplier…"
       filters={filters}
-    />
+    >
+      <PagedTableExportButton
+        fileName="purchase-lines"
+        action={exportPurchaseLines}
+      />
+    </TableToolbar>
     <Table>
       <TableHeader>
         <TableRow>

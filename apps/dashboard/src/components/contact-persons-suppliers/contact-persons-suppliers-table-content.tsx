@@ -14,8 +14,12 @@ import {
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { ContactSalutation } from "@/lib/enums";
 import { buildColumnVisibility, formatRevenue } from "@/lib/helpers";
-import { CONTACT_CATEGORY_LABELS, CONTACT_SALUTATION_LABELS } from "@/lib/labels";
+import {
+  CONTACT_CATEGORY_LABELS,
+  CONTACT_SALUTATION_LABELS,
+} from "@/lib/labels";
 import { useState } from "react";
+import { TableExportButton } from "@/components/ui/table-export-button";
 
 type ColumnKey = keyof ContactPersonSupplierRow | "contactPerson";
 
@@ -77,8 +81,9 @@ const ALL_COLUMNS: Array<{
 type Props = { rows: ContactPersonSupplierRow[] };
 
 export const ContactPersonsSuppliersTable = ({ rows }: Props) => {
-  const [columnVisibility, setColumnVisibility] =
-    useState<Record<ColumnKey, boolean>>(buildColumnVisibility(ALL_COLUMNS));
+  const [columnVisibility, setColumnVisibility] = useState<
+    Record<ColumnKey, boolean>
+  >(buildColumnVisibility(ALL_COLUMNS));
 
   const toggleColumn = (key: string) =>
     setColumnVisibility((prev) => ({
@@ -246,7 +251,7 @@ export const ContactPersonsSuppliersTable = ({ rows }: Props) => {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex items-start justify-end gap-2">
         <ColumnSelector
           columns={ALL_COLUMNS.map((col) => ({
             key: col.key,
@@ -255,10 +260,15 @@ export const ContactPersonsSuppliersTable = ({ rows }: Props) => {
           visibility={columnVisibility}
           onToggle={toggleColumn}
         />
+        <TableExportButton
+          tableId="contact-persons-suppliers-table"
+          fileName="contact-persons-suppliers"
+          sheetName="Contact Persons Suppliers"
+        />
       </div>
 
       <div>
-        <Table>
+        <Table id="contact-persons-suppliers-table">
           <TableHeader>
             <TableRow>
               {visibleColumns.map((col) => (

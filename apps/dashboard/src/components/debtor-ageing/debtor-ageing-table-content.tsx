@@ -11,6 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { TableExportButton } from "@/components/ui/table-export-button";
 import { ageingBuckets } from "@/lib/enums";
 import {
   formatDateValue,
@@ -48,9 +49,16 @@ export const DebtorAgeingTable = ({ ageing }: Props) => (
     </p>
 
     <div className="space-y-2">
-      <h2 className="text-lg font-medium tracking-tight">Per debtor</h2>
+      <div className="flex items-start justify-between gap-2">
+        <h2 className="text-lg font-medium tracking-tight">Per debtor</h2>
+        <TableExportButton
+          tableId="debtor-ageing-per-debtor-table"
+          fileName="debtor-ageing-per-debtor"
+          sheetName="Per debtor"
+        />
+      </div>
       <div>
-        <Table>
+        <Table id="debtor-ageing-per-debtor-table">
           <TableHeader>
             <TableRow>
               <TableHead>Company</TableHead>
@@ -134,9 +142,16 @@ export const DebtorAgeingTable = ({ ageing }: Props) => (
     </div>
 
     <div className="space-y-2">
-      <h2 className="text-lg font-medium tracking-tight">Open items</h2>
+      <div className="flex items-start justify-between gap-2">
+        <h2 className="text-lg font-medium tracking-tight">Open items</h2>
+        <TableExportButton
+          tableId="debtor-ageing-open-items-table"
+          fileName="debtor-ageing-open-items"
+          sheetName="Open items"
+        />
+      </div>
       <div>
-        <Table>
+        <Table id="debtor-ageing-open-items-table">
           <TableHeader>
             <TableRow>
               <TableHead>Document</TableHead>

@@ -42,7 +42,14 @@ import {
   tableOrderBy,
   tableWhere,
 } from "@/lib/server/table-query";
-import { Paged, TableQuery } from "@/lib/table-query";
+import {
+  Paged,
+  parseTableQuery,
+  SearchParams,
+  TableQuery,
+} from "@/lib/table-query";
+import { exportRows } from "@/lib/server/excel";
+import { STOCK_COLUMNS } from "@/app/(dashboard)/stock/columns";
 import { and, count, desc, eq, getTableColumns, gt, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
@@ -108,6 +115,59 @@ const STOCK_FILTERS = {
   blocked: booleanFilter(Stock.blocked),
 };
 
+/**
+ * The rows one view of the stock overview selects, as a window onto them.
+ * Shared by the page and the export.
+ */
+const stockRows =
+  (query: TableQuery) =>
+  (limit: number, offset: number): Promise<StockListItem[]> =>
+    db
+      .select({
+        ...getTableColumns(Stock),
+        productCode: Products.productCode,
+        productName: Products.name,
+        companyName: Companies.companyName,
+        purchaseOrderId: PurchaseOrders.id,
+        originalQuantity: PurchaseOrderItems.quantity,
+      })
+      .from(Stock)
+      .leftJoin(Products, eq(Stock.productUuid, Products.uuid))
+      .leftJoin(Companies, eq(Products.companyUuid, Companies.uuid))
+      .leftJoin(
+        PurchaseOrders,
+        eq(Stock.purchaseOrderUuid, PurchaseOrders.uuid),
+      )
+      .leftJoin(
+        PurchaseOrderItems,
+        eq(Stock.purchaseOrderItemUuid, PurchaseOrderItems.uuid),
+      )
+      .where(
+        tableWhere({ query, search: STOCK_SEARCH, filters: STOCK_FILTERS }),
+      )
+      .orderBy(
+        ...tableOrderBy(
+          STOCK_SORTABLE,
+          query,
+          [desc(Stock.createdAt)],
+          Stock.id,
+        ),
+      )
+      .limit(limit)
+      .offset(offset);
+
+/** Every stock lot the current view matches, as a workbook. */
+export const exportStock = async (
+  params: SearchParams,
+  columnKeys: string[],
+): Promise<string> =>
+  exportRows({
+    name: "Stock",
+    columns: STOCK_COLUMNS,
+    columnKeys,
+    rows: stockRows(parseTableQuery(params)),
+  });
+
 export const getStock = async (
   query: TableQuery,
 ): Promise<Paged<StockListItem>> => {
@@ -119,38 +179,7 @@ export const getStock = async (
     });
 
     return await runPaged(query, {
-      rows: (limit, offset) =>
-        db
-          .select({
-            ...getTableColumns(Stock),
-            productCode: Products.productCode,
-            productName: Products.name,
-            companyName: Companies.companyName,
-            purchaseOrderId: PurchaseOrders.id,
-            originalQuantity: PurchaseOrderItems.quantity,
-          })
-          .from(Stock)
-          .leftJoin(Products, eq(Stock.productUuid, Products.uuid))
-          .leftJoin(Companies, eq(Products.companyUuid, Companies.uuid))
-          .leftJoin(
-            PurchaseOrders,
-            eq(Stock.purchaseOrderUuid, PurchaseOrders.uuid),
-          )
-          .leftJoin(
-            PurchaseOrderItems,
-            eq(Stock.purchaseOrderItemUuid, PurchaseOrderItems.uuid),
-          )
-          .where(where)
-          .orderBy(
-            ...tableOrderBy(
-              STOCK_SORTABLE,
-              query,
-              [desc(Stock.createdAt)],
-              Stock.id,
-            ),
-          )
-          .limit(limit)
-          .offset(offset),
+      rows: stockRows(query),
 
       count: async () => {
         const [row] = await db

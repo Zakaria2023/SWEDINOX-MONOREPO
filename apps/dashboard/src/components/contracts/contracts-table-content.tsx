@@ -1,7 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { ContractListItem } from "@/app/(dashboard)/contracts/actions";
+import {
+  exportContracts,
+  ContractListItem,
+} from "@/app/(dashboard)/contracts/actions";
+import {
+  CONTRACT_COLUMNS,
+  ContractColumnKey,
+} from "@/app/(dashboard)/contracts/columns";
 import {
   Table,
   TableBody,
@@ -11,42 +18,22 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
+import { PagedTableExportButton } from "@/components/ui/table-export-button";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { TableSortHeader } from "@/components/ui/table-sort-header";
 import { TableToolbar } from "@/components/ui/table-toolbar";
+import { selectorColumns } from "@/lib/excel";
 import { Paged, TableFilterControl } from "@/lib/table-query";
 import { buildColumnVisibility } from "@/lib/helpers";
 import { CONTRACT_TYPE_LABELS } from "@/lib/labels";
 import { useState } from "react";
 
-type ColumnKey =
-  | "id"
-  | "contractType"
-  | "contractGroupName"
-  | "description"
-  | "searchCode1"
-  | "searchCode2"
-  | "searchCode3"
-  | "websiteSorting"
-  | "hideOnWebsite"
-  | "createdAt";
+type ColumnKey = ContractColumnKey;
 
-const ALL_COLUMNS: Array<{
-  defaultVisible: boolean;
-  key: ColumnKey;
-  label: string;
-}> = [
-  { key: "id", label: "Code", defaultVisible: true },
-  { key: "contractType", label: "Contract Type", defaultVisible: true },
-  { key: "contractGroupName", label: "Contract Group", defaultVisible: true },
-  { key: "description", label: "Description", defaultVisible: true },
-  { key: "searchCode1", label: "Search Code 1", defaultVisible: false },
-  { key: "searchCode2", label: "Search Code 2", defaultVisible: false },
-  { key: "searchCode3", label: "Search Code 3", defaultVisible: false },
-  { key: "websiteSorting", label: "Website Sort", defaultVisible: false },
-  { key: "hideOnWebsite", label: "Hide on Website", defaultVisible: false },
-  { key: "createdAt", label: "Created At", defaultVisible: false },
-];
+// The column selector and the export read the same declaration — see
+// app/(dashboard)/contracts/columns.ts — so a column cannot be on screen and
+// missing from the file.
+const ALL_COLUMNS = selectorColumns(CONTRACT_COLUMNS);
 
 // The columns a header may sort on, matching the keys actions.ts declared.
 const SORTABLE: Partial<Record<ColumnKey, string>> = {
@@ -171,6 +158,11 @@ export const ContractsTable = ({
           }))}
           visibility={columnVisibility}
           onToggle={toggleColumn}
+        />
+        <PagedTableExportButton
+          fileName="contracts"
+          columnKeys={visibleColumns.map((column) => column.key)}
+          action={exportContracts}
         />
       </TableToolbar>
 

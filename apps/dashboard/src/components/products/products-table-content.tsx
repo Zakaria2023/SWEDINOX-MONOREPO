@@ -2,10 +2,19 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ProductListItem } from "@/app/(dashboard)/products/actions";
+import {
+  exportProducts,
+  ProductListItem,
+} from "@/app/(dashboard)/products/actions";
+import {
+  PRODUCT_COLUMNS,
+  ProductColumnKey,
+} from "@/app/(dashboard)/products/columns";
+import { PagedTableExportButton } from "@/components/ui/table-export-button";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { TableSortHeader } from "@/components/ui/table-sort-header";
 import { TableToolbar } from "@/components/ui/table-toolbar";
+import { selectorColumns } from "@/lib/excel";
 import { Paged, TableFilterControl } from "@/lib/table-query";
 import {
   Table,
@@ -20,44 +29,12 @@ import { buildColumnVisibility } from "@/lib/helpers";
 import { SALES_UNIT_LABELS } from "@/lib/labels";
 import { SalesUnit } from "@/lib/enums";
 
-type ColumnKey =
-  | "productCode"
-  | "commodityCode"
-  | "productGroup"
-  | "name"
-  | "stockProduct"
-  | "standardProduct"
-  | "length"
-  | "widthDiameter"
-  | "thickness"
-  | "technicalStock"
-  | "stockUnit"
-  | "theoreticalWeight"
-  | "weightUnit";
+type ColumnKey = ProductColumnKey;
 
-const ALL_COLUMNS: Array<{
-  key: ColumnKey;
-  label: string;
-  defaultVisible: boolean;
-}> = [
-  { key: "productCode", label: "Product Code", defaultVisible: true },
-  { key: "commodityCode", label: "Commodity Code", defaultVisible: true },
-  { key: "productGroup", label: "Product Group", defaultVisible: true },
-  { key: "name", label: "Product", defaultVisible: true },
-  { key: "stockProduct", label: "Stock Product", defaultVisible: true },
-  { key: "standardProduct", label: "Standard Product", defaultVisible: true },
-  { key: "length", label: "Length", defaultVisible: false },
-  { key: "widthDiameter", label: "Width/Diameter", defaultVisible: false },
-  { key: "thickness", label: "Thickness", defaultVisible: false },
-  { key: "technicalStock", label: "Technical Stock", defaultVisible: true },
-  { key: "stockUnit", label: "StkU", defaultVisible: true },
-  {
-    key: "theoreticalWeight",
-    label: "Theor. Weight (kg)",
-    defaultVisible: true,
-  },
-  { key: "weightUnit", label: "WeightU", defaultVisible: true },
-];
+// The column selector and the export read the same declaration — see
+// app/(dashboard)/products/columns.ts — so a column cannot be on screen and
+// missing from the file.
+const ALL_COLUMNS = selectorColumns(PRODUCT_COLUMNS);
 
 // The columns a header may sort on, matching the keys actions.ts declared.
 const SORTABLE: Partial<Record<ColumnKey, string>> = {
@@ -135,6 +112,11 @@ export const ProductsTable = ({ page, filters }: Props) => {
           columns={ALL_COLUMNS}
           visibility={visibility}
           onToggle={handleToggle}
+        />
+        <PagedTableExportButton
+          fileName="products"
+          columnKeys={visible.map((column) => column.key)}
+          action={exportProducts}
         />
       </TableToolbar>
       <div>

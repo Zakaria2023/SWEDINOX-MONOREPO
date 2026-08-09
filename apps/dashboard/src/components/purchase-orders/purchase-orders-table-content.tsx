@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { PurchaseOrderListItem } from "@/app/(dashboard)/purchase-orders/actions";
+import {
+  exportPurchaseOrders,
+  PurchaseOrderListItem,
+} from "@/app/(dashboard)/purchase-orders/actions";
 import {
   Table,
   TableBody,
@@ -10,6 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { PagedTableExportButton } from "@/components/ui/table-export-button";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { TableSortHeader } from "@/components/ui/table-sort-header";
 import { TableToolbar } from "@/components/ui/table-toolbar";
@@ -27,7 +31,12 @@ export const PurchaseOrdersTable = ({ page, filters }: Props) => (
     <TableToolbar
       searchPlaceholder="Search reference or supplier…"
       filters={filters}
-    />
+    >
+      <PagedTableExportButton
+        fileName="purchase-orders"
+        action={exportPurchaseOrders}
+      />
+    </TableToolbar>
     <Table>
       <TableHeader>
         <TableRow>

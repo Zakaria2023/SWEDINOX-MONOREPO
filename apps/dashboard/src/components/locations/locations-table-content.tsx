@@ -23,6 +23,7 @@ import {
   WarehouseLoadingLocation,
   WarehouseLocationType,
 } from "@/lib/enums";
+import { TableExportButton } from "@/components/ui/table-export-button";
 
 type ColumnKey =
   | "id"
@@ -64,8 +65,9 @@ type Props = {
 };
 
 export const LocationsTable = ({ locations }: Props) => {
-  const [columnVisibility, setColumnVisibility] =
-    useState<Record<ColumnKey, boolean>>(buildColumnVisibility(ALL_COLUMNS));
+  const [columnVisibility, setColumnVisibility] = useState<
+    Record<ColumnKey, boolean>
+  >(buildColumnVisibility(ALL_COLUMNS));
 
   const toggleColumn = (key: string) => {
     setColumnVisibility((prev) => ({
@@ -152,7 +154,7 @@ export const LocationsTable = ({ locations }: Props) => {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex items-start justify-end gap-2">
         <ColumnSelector
           columns={ALL_COLUMNS.map((column) => ({
             key: column.key,
@@ -161,10 +163,15 @@ export const LocationsTable = ({ locations }: Props) => {
           visibility={columnVisibility}
           onToggle={toggleColumn}
         />
+        <TableExportButton
+          tableId="locations-table"
+          fileName="locations"
+          sheetName="Locations"
+        />
       </div>
 
       <div>
-        <Table>
+        <Table id="locations-table">
           <TableHeader>
             <TableRow>
               {visibleColumns.map((column) => (

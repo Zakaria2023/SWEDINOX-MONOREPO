@@ -13,6 +13,7 @@ import {
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { formatDateValue, formatRevenue } from "@/lib/helpers";
+import { TableExportButton } from "@/components/ui/table-export-button";
 
 type ColumnKey = keyof CustomerProspectRow | "contactPerson";
 
@@ -235,7 +236,9 @@ export const CustomersAndProspectsTable = ({ rows }: Props) => {
         return <TableCell key={key}>{row.competitors ?? "—"}</TableCell>;
       case "correspondenceStreetAndNo":
         return (
-          <TableCell key={key}>{row.correspondenceStreetAndNo ?? "—"}</TableCell>
+          <TableCell key={key}>
+            {row.correspondenceStreetAndNo ?? "—"}
+          </TableCell>
         );
       case "correspondencePostalCode":
         return (
@@ -254,7 +257,9 @@ export const CustomersAndProspectsTable = ({ rows }: Props) => {
       case "correspondenceFax":
         return <TableCell key={key}>{row.correspondenceFax ?? "—"}</TableCell>;
       case "deliveryStreetAndNo":
-        return <TableCell key={key}>{row.deliveryStreetAndNo ?? "—"}</TableCell>;
+        return (
+          <TableCell key={key}>{row.deliveryStreetAndNo ?? "—"}</TableCell>
+        );
       case "deliveryPostalCode":
         return <TableCell key={key}>{row.deliveryPostalCode ?? "—"}</TableCell>;
       case "deliveryCity":
@@ -290,10 +295,14 @@ export const CustomersAndProspectsTable = ({ rows }: Props) => {
       case "companyCode":
         return <TableCell key={key}>{row.companyCode}</TableCell>;
       case "createdAt":
-        return <TableCell key={key}>{formatDateValue(row.createdAt)}</TableCell>;
+        return (
+          <TableCell key={key}>{formatDateValue(row.createdAt)}</TableCell>
+        );
       case "contactCreatedAt":
         return (
-          <TableCell key={key}>{formatDateValue(row.contactCreatedAt)}</TableCell>
+          <TableCell key={key}>
+            {formatDateValue(row.contactCreatedAt)}
+          </TableCell>
         );
       default:
         return <TableCell key={key}>—</TableCell>;
@@ -302,7 +311,7 @@ export const CustomersAndProspectsTable = ({ rows }: Props) => {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex items-start justify-end gap-2">
         <ColumnSelector
           columns={ALL_COLUMNS.map((col) => ({
             key: col.key,
@@ -311,10 +320,15 @@ export const CustomersAndProspectsTable = ({ rows }: Props) => {
           visibility={columnVisibility}
           onToggle={toggleColumn}
         />
+        <TableExportButton
+          tableId="customers-and-prospects-table"
+          fileName="customers-and-prospects"
+          sheetName="Customers and Prospects"
+        />
       </div>
 
       <div>
-        <Table>
+        <Table id="customers-and-prospects-table">
           <TableHeader>
             <TableRow>
               {visibleColumns.map((col) => (

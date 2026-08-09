@@ -24,6 +24,8 @@ import {
   summariseAgeing,
   todayDateString,
 } from "@/lib/helpers";
+import { ExportSheet } from "@/lib/excel";
+import { buildWorkbook } from "@/lib/server/excel";
 import { getOpenReceivableItems } from "@/lib/server/receivables";
 
 const MONTHS_ON_CHART = 12;
@@ -139,6 +141,18 @@ export type DashboardOverview = {
   };
   topCustomers: TopCustomerSlice[];
 };
+
+/**
+ * Writes a workbook for an overview that renders all of its rows.
+ *
+ * The grid comes from the browser, read off the table the reader is looking at,
+ * so this action does no querying and reveals nothing the caller was not already
+ * shown — it exists because the workbook library belongs on the server, not
+ * because the data does. The overviews that page on the server export through
+ * their own action instead, which re-runs the query without the page window.
+ */
+export const exportTableSheet = async (sheet: ExportSheet): Promise<string> =>
+  buildWorkbook(sheet);
 
 /**
  * Everything the home page reports, in one round of queries.

@@ -36,7 +36,14 @@ import {
   tableOrderBy,
   tableWhere,
 } from "@/lib/server/table-query";
-import { Paged, TableQuery } from "@/lib/table-query";
+import {
+  Paged,
+  parseTableQuery,
+  SearchParams,
+  TableQuery,
+} from "@/lib/table-query";
+import { exportRows } from "@/lib/server/excel";
+import { TEXT_COLUMNS } from "@/app/(dashboard)/texts/columns";
 
 export type TextListItem = SelectTexts & {
   companyId: SelectCompanies["id"] | null;
@@ -77,6 +84,53 @@ const TEXT_FILTERS = {
   textCategory: relationFilter(Texts.textCategoryUuid),
 };
 
+/**
+ * The rows one view of the texts overview selects, as a window onto them.
+ * Shared by the page and the export.
+ */
+const textRows =
+  (query: TableQuery) =>
+  (limit: number, offset: number): Promise<TextListItem[]> =>
+    db
+      .select({
+        ...getTableColumns(Texts),
+        companyId: Companies.id,
+        companyName: Companies.companyName,
+        roles: Companies.roles,
+        city: CompanyAddresses.city,
+        textCategoryName: TextCategories.name,
+      })
+      .from(Texts)
+      .leftJoin(Companies, eq(Companies.uuid, Texts.companyUuid))
+      .leftJoin(
+        CompanyAddresses,
+        eq(CompanyAddresses.companyUuid, Texts.companyUuid),
+      )
+      .leftJoin(TextCategories, eq(TextCategories.uuid, Texts.textCategoryUuid))
+      .where(tableWhere({ query, search: TEXT_SEARCH, filters: TEXT_FILTERS }))
+      .orderBy(
+        ...tableOrderBy(
+          TEXT_SORTABLE,
+          query,
+          [desc(Texts.createdAt)],
+          Texts.id,
+        ),
+      )
+      .limit(limit)
+      .offset(offset);
+
+/** Every text the current view matches, as a workbook. */
+export const exportTexts = async (
+  params: SearchParams,
+  columnKeys: string[],
+): Promise<string> =>
+  exportRows({
+    name: "Texts",
+    columns: TEXT_COLUMNS,
+    columnKeys,
+    rows: textRows(parseTableQuery(params)),
+  });
+
 export const getTexts = async (
   query: TableQuery,
 ): Promise<Paged<TextListItem>> => {
@@ -87,37 +141,7 @@ export const getTexts = async (
   });
 
   return runPaged(query, {
-    rows: (limit, offset) =>
-      db
-        .select({
-          ...getTableColumns(Texts),
-          companyId: Companies.id,
-          companyName: Companies.companyName,
-          roles: Companies.roles,
-          city: CompanyAddresses.city,
-          textCategoryName: TextCategories.name,
-        })
-        .from(Texts)
-        .leftJoin(Companies, eq(Companies.uuid, Texts.companyUuid))
-        .leftJoin(
-          CompanyAddresses,
-          eq(CompanyAddresses.companyUuid, Texts.companyUuid),
-        )
-        .leftJoin(
-          TextCategories,
-          eq(TextCategories.uuid, Texts.textCategoryUuid),
-        )
-        .where(where)
-        .orderBy(
-          ...tableOrderBy(
-            TEXT_SORTABLE,
-            query,
-            [desc(Texts.createdAt)],
-            Texts.id,
-          ),
-        )
-        .limit(limit)
-        .offset(offset),
+    rows: textRows(query),
 
     count: async () => {
       const [row] = await db

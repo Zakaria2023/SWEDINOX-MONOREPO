@@ -16,7 +16,14 @@ import {
   tableOrderBy,
   tableWhere,
 } from "@/lib/server/table-query";
-import { Paged, TableQuery } from "@/lib/table-query";
+import {
+  Paged,
+  parseTableQuery,
+  SearchParams,
+  TableQuery,
+} from "@/lib/table-query";
+import { exportRows } from "@/lib/server/excel";
+import { INVOICE_LINE_COLUMNS } from "@/app/(dashboard)/invoice-lines/columns";
 
 // The money and weight columns come from the invoice line itself, which
 // snapshots them at invoicing — reaching back to the order line would report
@@ -59,6 +66,59 @@ const INVOICE_LINE_FILTERS = {
   amount: numberRangeFilter(InvoiceItems.amount),
 };
 
+/**
+ * The rows one view of the invoice lines overview selects, as a window onto
+ * them. Shared by the page and the export.
+ */
+const invoiceLineRows =
+  (query: TableQuery) =>
+  (limit: number, offset: number): Promise<InvoiceLineItem[]> =>
+    db
+      .select({
+        ...getTableColumns(InvoiceItems),
+        invoiceId: Invoices.id,
+        invoiceDate: Invoices.invoiceDate,
+        customerName: Companies.companyName,
+        vatNumber: Companies.vatNumber,
+        productCode: Products.productCode,
+        productName: Products.name,
+        lineNumber: OrderItems.lineNumber,
+      })
+      .from(InvoiceItems)
+      .leftJoin(Invoices, eq(InvoiceItems.invoiceUuid, Invoices.uuid))
+      .leftJoin(Companies, eq(Invoices.companyUuid, Companies.uuid))
+      .leftJoin(OrderItems, eq(InvoiceItems.orderItemUuid, OrderItems.uuid))
+      .leftJoin(Products, eq(InvoiceItems.productUuid, Products.uuid))
+      .where(
+        tableWhere({
+          query,
+          search: INVOICE_LINE_SEARCH,
+          filters: INVOICE_LINE_FILTERS,
+        }),
+      )
+      .orderBy(
+        ...tableOrderBy(
+          INVOICE_LINE_SORTABLE,
+          query,
+          [desc(Invoices.invoiceDate)],
+          InvoiceItems.id,
+        ),
+      )
+      .limit(limit)
+      .offset(offset);
+
+/** Every invoice line the current view matches, as a workbook. */
+export const exportInvoiceLines = async (
+  params: SearchParams,
+  columnKeys: string[],
+): Promise<string> =>
+  exportRows({
+    name: "Invoice Lines",
+    columns: INVOICE_LINE_COLUMNS,
+    columnKeys,
+    rows: invoiceLineRows(parseTableQuery(params)),
+  });
+
 export const getInvoiceLines = async (
   query: TableQuery,
 ): Promise<Paged<InvoiceLineItem>> => {
@@ -70,34 +130,7 @@ export const getInvoiceLines = async (
     });
 
     return await runPaged(query, {
-      rows: (limit, offset) =>
-        db
-          .select({
-            ...getTableColumns(InvoiceItems),
-            invoiceId: Invoices.id,
-            invoiceDate: Invoices.invoiceDate,
-            customerName: Companies.companyName,
-            vatNumber: Companies.vatNumber,
-            productCode: Products.productCode,
-            productName: Products.name,
-            lineNumber: OrderItems.lineNumber,
-          })
-          .from(InvoiceItems)
-          .leftJoin(Invoices, eq(InvoiceItems.invoiceUuid, Invoices.uuid))
-          .leftJoin(Companies, eq(Invoices.companyUuid, Companies.uuid))
-          .leftJoin(OrderItems, eq(InvoiceItems.orderItemUuid, OrderItems.uuid))
-          .leftJoin(Products, eq(InvoiceItems.productUuid, Products.uuid))
-          .where(where)
-          .orderBy(
-            ...tableOrderBy(
-              INVOICE_LINE_SORTABLE,
-              query,
-              [desc(Invoices.invoiceDate)],
-              InvoiceItems.id,
-            ),
-          )
-          .limit(limit)
-          .offset(offset),
+      rows: invoiceLineRows(query),
 
       count: async () => {
         const [row] = await db

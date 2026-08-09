@@ -1,11 +1,15 @@
 "use client";
 
+import { PagedTableExportButton } from "@/components/ui/table-export-button";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { TableSortHeader } from "@/components/ui/table-sort-header";
 import { TableToolbar } from "@/components/ui/table-toolbar";
 import { Paged, TableFilterControl } from "@/lib/table-query";
 import Link from "next/link";
-import { InvoiceLineItem } from "@/app/(dashboard)/invoice-lines/actions";
+import {
+  exportInvoiceLines,
+  InvoiceLineItem,
+} from "@/app/(dashboard)/invoice-lines/actions";
 import {
   Table,
   TableBody,
@@ -26,7 +30,12 @@ export const InvoiceLinesTable = ({ page, filters }: Props) => (
     <TableToolbar
       searchPlaceholder="Search product or customer…"
       filters={filters}
-    />
+    >
+      <PagedTableExportButton
+        fileName="invoice-lines"
+        action={exportInvoiceLines}
+      />
+    </TableToolbar>
     <Table>
       <TableHeader>
         <TableRow>

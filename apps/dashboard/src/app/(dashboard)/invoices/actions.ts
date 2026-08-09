@@ -45,7 +45,14 @@ import {
   tableOrderBy,
   tableWhere,
 } from "@/lib/server/table-query";
-import { Paged, TableQuery } from "@/lib/table-query";
+import {
+  Paged,
+  parseTableQuery,
+  SearchParams,
+  TableQuery,
+} from "@/lib/table-query";
+import { exportRows } from "@/lib/server/excel";
+import { INVOICE_COLUMNS } from "@/app/(dashboard)/invoices/columns";
 import { invoiceDocumentTypes, invoicePaymentTerms } from "@/lib/enums";
 import {
   and,
@@ -181,6 +188,47 @@ const INVOICE_FILTERS = {
   cancelled: booleanFilter(Invoices.cancelled),
 };
 
+/**
+ * The rows one view of the invoices overview selects, as a window onto them.
+ * Shared by the page and the export.
+ */
+const invoiceRows =
+  (query: TableQuery) =>
+  (limit: number, offset: number): Promise<InvoiceWithCompany[]> =>
+    db
+      .select({
+        ...getTableColumns(Invoices),
+        companyName: Companies.companyName,
+        companyCode: Companies.id,
+      })
+      .from(Invoices)
+      .leftJoin(Companies, eq(Invoices.companyUuid, Companies.uuid))
+      .where(
+        tableWhere({ query, search: INVOICE_SEARCH, filters: INVOICE_FILTERS }),
+      )
+      .orderBy(
+        ...tableOrderBy(
+          INVOICE_SORTABLE,
+          query,
+          [desc(Invoices.createdAt)],
+          Invoices.id,
+        ),
+      )
+      .limit(limit)
+      .offset(offset);
+
+/** Every invoice the current view matches, as a workbook. */
+export const exportInvoices = async (
+  params: SearchParams,
+  columnKeys: string[],
+): Promise<string> =>
+  exportRows({
+    name: "Invoices",
+    columns: INVOICE_COLUMNS,
+    columnKeys,
+    rows: invoiceRows(parseTableQuery(params)),
+  });
+
 export const getInvoices = async (
   query: TableQuery,
 ): Promise<Paged<InvoiceWithCompany>> => {
@@ -191,26 +239,7 @@ export const getInvoices = async (
   });
 
   return runPaged(query, {
-    rows: (limit, offset) =>
-      db
-        .select({
-          ...getTableColumns(Invoices),
-          companyName: Companies.companyName,
-          companyCode: Companies.id,
-        })
-        .from(Invoices)
-        .leftJoin(Companies, eq(Invoices.companyUuid, Companies.uuid))
-        .where(where)
-        .orderBy(
-          ...tableOrderBy(
-            INVOICE_SORTABLE,
-            query,
-            [desc(Invoices.createdAt)],
-            Invoices.id,
-          ),
-        )
-        .limit(limit)
-        .offset(offset),
+    rows: invoiceRows(query),
 
     count: async () => {
       const [row] = await db

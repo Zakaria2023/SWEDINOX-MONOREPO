@@ -19,6 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { TableExportButton } from "@/components/ui/table-export-button";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
   describeReminderRun,
@@ -87,9 +88,16 @@ export const PaymentRemindersTable = ({ reminders }: Props) => {
       ) : null}
 
       <div className="space-y-2">
-        <h2 className="text-lg font-medium tracking-tight">Due a reminder</h2>
+        <div className="flex items-start justify-between gap-2">
+          <h2 className="text-lg font-medium tracking-tight">Due a reminder</h2>
+          <TableExportButton
+            tableId="payment-reminders-due-table"
+            fileName="payment-reminders-due"
+            sheetName="Due a reminder"
+          />
+        </div>
         <div>
-          <Table>
+          <Table id="payment-reminders-due-table">
             <TableHeader>
               <TableRow>
                 <TableHead>Document</TableHead>
@@ -99,7 +107,9 @@ export const PaymentRemindersTable = ({ reminders }: Props) => {
                 <TableHead className="text-right">Outstanding</TableHead>
                 <TableHead>Last sent</TableHead>
                 <TableHead>To send</TableHead>
-                <TableHead className="text-right">Action</TableHead>
+                <TableHead data-export-ignore className="text-right">
+                  Action
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -188,9 +198,18 @@ export const PaymentRemindersTable = ({ reminders }: Props) => {
           being chased, and why. Without it the screen looks like it has lost
           invoices. */}
       <div className="space-y-2">
-        <h2 className="text-lg font-medium tracking-tight">Not being chased</h2>
+        <div className="flex items-start justify-between gap-2">
+          <h2 className="text-lg font-medium tracking-tight">
+            Not being chased
+          </h2>
+          <TableExportButton
+            tableId="payment-reminders-not-chased-table"
+            fileName="payment-reminders-not-chased"
+            sheetName="Not being chased"
+          />
+        </div>
         <div>
-          <Table>
+          <Table id="payment-reminders-not-chased-table">
             <TableHeader>
               <TableRow>
                 <TableHead>Document</TableHead>

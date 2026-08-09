@@ -13,6 +13,7 @@ import {
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { formatDateValue, formatRevenue } from "@/lib/helpers";
+import { TableExportButton } from "@/components/ui/table-export-button";
 
 type ColumnKey = keyof VisitScheduleRow | "contactPerson";
 
@@ -136,13 +137,21 @@ export const VisitScheduleTable = ({ rows }: Props) => {
       case "customerGroup":
         return <TableCell key={key}>{row.customerGroup ?? "—"}</TableCell>;
       case "lastCallDate":
-        return <TableCell key={key}>{formatDateValue(row.lastCallDate)}</TableCell>;
+        return (
+          <TableCell key={key}>{formatDateValue(row.lastCallDate)}</TableCell>
+        );
       case "callUpcoming":
-        return <TableCell key={key}>{formatDateValue(row.callUpcoming)}</TableCell>;
+        return (
+          <TableCell key={key}>{formatDateValue(row.callUpcoming)}</TableCell>
+        );
       case "lastVisitDate":
-        return <TableCell key={key}>{formatDateValue(row.lastVisitDate)}</TableCell>;
+        return (
+          <TableCell key={key}>{formatDateValue(row.lastVisitDate)}</TableCell>
+        );
       case "visitUpcoming":
-        return <TableCell key={key}>{formatDateValue(row.visitUpcoming)}</TableCell>;
+        return (
+          <TableCell key={key}>{formatDateValue(row.visitUpcoming)}</TableCell>
+        );
       case "contactPerson": {
         const parts = [row.contactFirstName, row.contactLastName].filter(
           Boolean,
@@ -176,7 +185,7 @@ export const VisitScheduleTable = ({ rows }: Props) => {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex items-start justify-end gap-2">
         <ColumnSelector
           columns={ALL_COLUMNS.map((col) => ({
             key: col.key,
@@ -185,10 +194,15 @@ export const VisitScheduleTable = ({ rows }: Props) => {
           visibility={columnVisibility}
           onToggle={toggleColumn}
         />
+        <TableExportButton
+          tableId="change-visit-schedule-table"
+          fileName="change-visit-schedule"
+          sheetName="Change visit schedule"
+        />
       </div>
 
       <div>
-        <Table>
+        <Table id="change-visit-schedule-table">
           <TableHeader>
             <TableRow>
               {visibleColumns.map((col) => (

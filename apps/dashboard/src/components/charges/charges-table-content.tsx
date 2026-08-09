@@ -10,14 +10,23 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { TableExportButton } from "@/components/ui/table-export-button";
 
 type Props = {
   charges: ChargeListItem[];
 };
 
 export const ChargesTable = ({ charges }: Props) => (
-  <div>
-    <Table>
+  <div className="space-y-4">
+    <div className="flex justify-end">
+      <TableExportButton
+        tableId="charges-table"
+        fileName="charges"
+        sheetName="Charges"
+      />
+    </div>
+
+    <Table id="charges-table">
       <TableHeader>
         <TableRow>
           <TableHead>Order type</TableHead>

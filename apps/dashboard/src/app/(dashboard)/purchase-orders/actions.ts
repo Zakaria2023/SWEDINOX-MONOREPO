@@ -43,7 +43,14 @@ import {
   tableOrderBy,
   tableWhere,
 } from "@/lib/server/table-query";
-import { Paged, TableQuery } from "@/lib/table-query";
+import {
+  Paged,
+  parseTableQuery,
+  SearchParams,
+  TableQuery,
+} from "@/lib/table-query";
+import { exportRows } from "@/lib/server/excel";
+import { PURCHASE_ORDER_COLUMNS } from "@/app/(dashboard)/purchase-orders/columns";
 import { currentUser } from "@clerk/nextjs/server";
 import {
   and,
@@ -222,6 +229,53 @@ const PURCHASE_ORDER_FILTERS = {
   amount: numberRangeFilter(PurchaseOrders.amount),
 };
 
+/**
+ * The rows one view of the purchase orders overview selects, as a window onto
+ * them. Shared by the page and the export.
+ */
+const purchaseOrderRows =
+  (query: TableQuery) =>
+  (limit: number, offset: number): Promise<PurchaseOrderListItem[]> =>
+    db
+      .select({
+        ...getTableColumns(PurchaseOrders),
+        supplierName: Companies.companyName,
+        contactFirstName: Contacts.firstName,
+        contactLastName: Contacts.lastName,
+      })
+      .from(PurchaseOrders)
+      .leftJoin(Companies, eq(PurchaseOrders.supplierUuid, Companies.uuid))
+      .leftJoin(Contacts, eq(PurchaseOrders.contactUuid, Contacts.uuid))
+      .where(
+        tableWhere({
+          query,
+          search: PURCHASE_ORDER_SEARCH,
+          filters: PURCHASE_ORDER_FILTERS,
+        }),
+      )
+      .orderBy(
+        ...tableOrderBy(
+          PURCHASE_ORDER_SORTABLE,
+          query,
+          [desc(PurchaseOrders.createdAt)],
+          PurchaseOrders.id,
+        ),
+      )
+      .limit(limit)
+      .offset(offset);
+
+/** Every purchase order the current view matches, as a workbook. */
+export const exportPurchaseOrders = async (
+  params: SearchParams,
+  columnKeys: string[],
+): Promise<string> =>
+  exportRows({
+    name: "Purchase Orders",
+    columns: PURCHASE_ORDER_COLUMNS,
+    columnKeys,
+    rows: purchaseOrderRows(parseTableQuery(params)),
+  });
+
 export const getPurchaseOrders = async (
   query: TableQuery,
 ): Promise<Paged<PurchaseOrderListItem>> => {
@@ -233,28 +287,7 @@ export const getPurchaseOrders = async (
     });
 
     return await runPaged(query, {
-      rows: (limit, offset) =>
-        db
-          .select({
-            ...getTableColumns(PurchaseOrders),
-            supplierName: Companies.companyName,
-            contactFirstName: Contacts.firstName,
-            contactLastName: Contacts.lastName,
-          })
-          .from(PurchaseOrders)
-          .leftJoin(Companies, eq(PurchaseOrders.supplierUuid, Companies.uuid))
-          .leftJoin(Contacts, eq(PurchaseOrders.contactUuid, Contacts.uuid))
-          .where(where)
-          .orderBy(
-            ...tableOrderBy(
-              PURCHASE_ORDER_SORTABLE,
-              query,
-              [desc(PurchaseOrders.createdAt)],
-              PurchaseOrders.id,
-            ),
-          )
-          .limit(limit)
-          .offset(offset),
+      rows: purchaseOrderRows(query),
 
       count: async () => {
         const [row] = await db

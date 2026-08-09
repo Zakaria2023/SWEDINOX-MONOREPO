@@ -13,6 +13,7 @@ import {
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { buildColumnVisibility } from "@/lib/helpers";
 import { useState } from "react";
+import { TableExportButton } from "@/components/ui/table-export-button";
 
 type ColumnKey =
   | "companyName"
@@ -42,8 +43,9 @@ type Props = {
 };
 
 export const AddressDistancesTable = ({ addressDistances }: Props) => {
-  const [columnVisibility, setColumnVisibility] =
-    useState<Record<ColumnKey, boolean>>(buildColumnVisibility(ALL_COLUMNS));
+  const [columnVisibility, setColumnVisibility] = useState<
+    Record<ColumnKey, boolean>
+  >(buildColumnVisibility(ALL_COLUMNS));
 
   const toggleColumn = (key: string) =>
     setColumnVisibility((prev) => ({
@@ -88,7 +90,7 @@ export const AddressDistancesTable = ({ addressDistances }: Props) => {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex items-start justify-end gap-2">
         <ColumnSelector
           columns={ALL_COLUMNS.map((col) => ({
             key: col.key,
@@ -97,10 +99,15 @@ export const AddressDistancesTable = ({ addressDistances }: Props) => {
           visibility={columnVisibility}
           onToggle={toggleColumn}
         />
+        <TableExportButton
+          tableId="address-distances-table"
+          fileName="address-distances"
+          sheetName="Address Distances"
+        />
       </div>
 
       <div>
-        <Table>
+        <Table id="address-distances-table">
           <TableHeader>
             <TableRow>
               {visibleColumns.map((col) => (

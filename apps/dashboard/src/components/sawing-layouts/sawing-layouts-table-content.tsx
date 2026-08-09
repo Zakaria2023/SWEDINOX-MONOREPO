@@ -17,6 +17,7 @@ import {
 } from "@/lib/labels";
 import { formatBoolean, formatDateValue } from "@/lib/helpers";
 import { SawingLayoutFetchStatus, SawingStatus } from "@/lib/enums";
+import { TableExportButton } from "@/components/ui/table-export-button";
 
 type Props = {
   layouts: SawingLayoutListItem[];
@@ -44,133 +45,146 @@ const PIECE_SLOTS = [
 
 export const SawingLayoutsTable = ({ layouts }: Props) => (
   <div>
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Machine</TableHead>
-          <TableHead>Fetch date</TableHead>
-          <TableHead>Fetch code</TableHead>
-          <TableHead>Fetch status</TableHead>
-          <TableHead className="text-right">Fetch qty</TableHead>
-          <TableHead>Warehouse</TableHead>
-          <TableHead>Section</TableHead>
-          <TableHead>Location</TableHead>
-          <TableHead>Product</TableHead>
-          <TableHead>Description</TableHead>
-          <TableHead className="text-right">Length</TableHead>
-          <TableHead className="text-right">Residual length</TableHead>
-          <TableHead>Sawing date</TableHead>
-          <TableHead>Sawing code</TableHead>
-          <TableHead>Sawing status</TableHead>
-          <TableHead>Sawing product</TableHead>
-          <TableHead>Sawing product description</TableHead>
-          <TableHead className="text-right">Total pieces to be sawn</TableHead>
-          <TableHead>Sawing of TL</TableHead>
-          <TableHead>Sawing according to layout</TableHead>
-          <TableHead>Layout includes cut-off</TableHead>
-          <TableHead>Follow-up processing</TableHead>
-          <TableHead>To location(s)</TableHead>
-          {PIECE_SLOTS.map((_, index) => (
-            <Fragment key={`slot-head-${index}`}>
-              <TableHead className="text-right whitespace-nowrap">
-                Qty. {index + 1}
-              </TableHead>
-              <TableHead className="text-right whitespace-nowrap">
-                Length {index + 1}
-              </TableHead>
-            </Fragment>
-          ))}
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {layouts.length === 0 ? (
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <TableExportButton
+          tableId="sawing-layouts-table"
+          fileName="sawing-layouts"
+          sheetName="Sawing Layouts"
+        />
+      </div>
+      <Table id="sawing-layouts-table">
+        <TableHeader>
           <TableRow>
-            <TableCell
-              colSpan={23 + PIECE_SLOTS.length * 2}
-              className="h-24 text-center text-muted-foreground"
-            >
-              No sawing layouts found.
-            </TableCell>
+            <TableHead>Machine</TableHead>
+            <TableHead>Fetch date</TableHead>
+            <TableHead>Fetch code</TableHead>
+            <TableHead>Fetch status</TableHead>
+            <TableHead className="text-right">Fetch qty</TableHead>
+            <TableHead>Warehouse</TableHead>
+            <TableHead>Section</TableHead>
+            <TableHead>Location</TableHead>
+            <TableHead>Product</TableHead>
+            <TableHead>Description</TableHead>
+            <TableHead className="text-right">Length</TableHead>
+            <TableHead className="text-right">Residual length</TableHead>
+            <TableHead>Sawing date</TableHead>
+            <TableHead>Sawing code</TableHead>
+            <TableHead>Sawing status</TableHead>
+            <TableHead>Sawing product</TableHead>
+            <TableHead>Sawing product description</TableHead>
+            <TableHead className="text-right">
+              Total pieces to be sawn
+            </TableHead>
+            <TableHead>Sawing of TL</TableHead>
+            <TableHead>Sawing according to layout</TableHead>
+            <TableHead>Layout includes cut-off</TableHead>
+            <TableHead>Follow-up processing</TableHead>
+            <TableHead>To location(s)</TableHead>
+            {PIECE_SLOTS.map((_, index) => (
+              <Fragment key={`slot-head-${index}`}>
+                <TableHead className="text-right whitespace-nowrap">
+                  Qty. {index + 1}
+                </TableHead>
+                <TableHead className="text-right whitespace-nowrap">
+                  Length {index + 1}
+                </TableHead>
+              </Fragment>
+            ))}
           </TableRow>
-        ) : (
-          layouts.map((row) => (
-            <TableRow key={row.uuid}>
-              <TableCell className="font-medium">
-                <Link
-                  href={`/sawing-layouts/${row.uuid}`}
-                  className="text-primary hover:underline"
-                >
-                  {row.machine ?? `Layout #${row.id}`}
-                </Link>
+        </TableHeader>
+        <TableBody>
+          {layouts.length === 0 ? (
+            <TableRow>
+              <TableCell
+                colSpan={23 + PIECE_SLOTS.length * 2}
+                className="h-24 text-center text-muted-foreground"
+              >
+                No sawing layouts found.
               </TableCell>
-              <TableCell className="whitespace-nowrap">
-                {formatDateValue(row.fetchDate)}
-              </TableCell>
-              <TableCell>{row.fetchCode ?? "—"}</TableCell>
-              <TableCell>
-                {row.fetchStatus ? (
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLES[row.fetchStatus]}`}
-                  >
-                    {SAWING_LAYOUT_FETCH_STATUS_LABELS[row.fetchStatus]}
-                  </span>
-                ) : (
-                  "—"
-                )}
-              </TableCell>
-              <TableCell className="text-right">
-                {row.fetchQty ?? "—"}
-              </TableCell>
-              <TableCell>{row.warehouse ?? "—"}</TableCell>
-              <TableCell>{row.section ?? "—"}</TableCell>
-              <TableCell>{row.location ?? "—"}</TableCell>
-              <TableCell>{row.product ?? "—"}</TableCell>
-              <TableCell>{row.description ?? "—"}</TableCell>
-              <TableCell className="text-right">{row.length ?? "—"}</TableCell>
-              <TableCell className="text-right">
-                {row.residualLength ?? "—"}
-              </TableCell>
-              <TableCell className="whitespace-nowrap">
-                {formatDateValue(row.sawingDate)}
-              </TableCell>
-              <TableCell>{row.sawingCode ?? "—"}</TableCell>
-              <TableCell>
-                {row.sawingStatus ? (
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLES[row.sawingStatus]}`}
-                  >
-                    {SAWING_STATUS_LABELS[row.sawingStatus]}
-                  </span>
-                ) : (
-                  "—"
-                )}
-              </TableCell>
-              <TableCell>{row.sawingProduct ?? "—"}</TableCell>
-              <TableCell>{row.sawingProductDescription ?? "—"}</TableCell>
-              <TableCell className="text-right">
-                {row.totalPiecesToBeSawn ?? "—"}
-              </TableCell>
-              <TableCell>{row.sawingOfTl ?? "—"}</TableCell>
-              <TableCell>
-                {formatBoolean(row.sawingAccordingToLayout)}
-              </TableCell>
-              <TableCell>{formatBoolean(row.layoutIncludesCutoff)}</TableCell>
-              <TableCell>{row.followUpProcessing ?? "—"}</TableCell>
-              <TableCell>{row.toLocations ?? "—"}</TableCell>
-              {PIECE_SLOTS.map((slot, index) => (
-                <Fragment key={`${row.uuid}-slot-${index}`}>
-                  <TableCell className="text-right">
-                    {row[slot.qty] ?? "—"}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {row[slot.length] ?? "—"}
-                  </TableCell>
-                </Fragment>
-              ))}
             </TableRow>
-          ))
-        )}
-      </TableBody>
-    </Table>
+          ) : (
+            layouts.map((row) => (
+              <TableRow key={row.uuid}>
+                <TableCell className="font-medium">
+                  <Link
+                    href={`/sawing-layouts/${row.uuid}`}
+                    className="text-primary hover:underline"
+                  >
+                    {row.machine ?? `Layout #${row.id}`}
+                  </Link>
+                </TableCell>
+                <TableCell className="whitespace-nowrap">
+                  {formatDateValue(row.fetchDate)}
+                </TableCell>
+                <TableCell>{row.fetchCode ?? "—"}</TableCell>
+                <TableCell>
+                  {row.fetchStatus ? (
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLES[row.fetchStatus]}`}
+                    >
+                      {SAWING_LAYOUT_FETCH_STATUS_LABELS[row.fetchStatus]}
+                    </span>
+                  ) : (
+                    "—"
+                  )}
+                </TableCell>
+                <TableCell className="text-right">
+                  {row.fetchQty ?? "—"}
+                </TableCell>
+                <TableCell>{row.warehouse ?? "—"}</TableCell>
+                <TableCell>{row.section ?? "—"}</TableCell>
+                <TableCell>{row.location ?? "—"}</TableCell>
+                <TableCell>{row.product ?? "—"}</TableCell>
+                <TableCell>{row.description ?? "—"}</TableCell>
+                <TableCell className="text-right">
+                  {row.length ?? "—"}
+                </TableCell>
+                <TableCell className="text-right">
+                  {row.residualLength ?? "—"}
+                </TableCell>
+                <TableCell className="whitespace-nowrap">
+                  {formatDateValue(row.sawingDate)}
+                </TableCell>
+                <TableCell>{row.sawingCode ?? "—"}</TableCell>
+                <TableCell>
+                  {row.sawingStatus ? (
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLES[row.sawingStatus]}`}
+                    >
+                      {SAWING_STATUS_LABELS[row.sawingStatus]}
+                    </span>
+                  ) : (
+                    "—"
+                  )}
+                </TableCell>
+                <TableCell>{row.sawingProduct ?? "—"}</TableCell>
+                <TableCell>{row.sawingProductDescription ?? "—"}</TableCell>
+                <TableCell className="text-right">
+                  {row.totalPiecesToBeSawn ?? "—"}
+                </TableCell>
+                <TableCell>{row.sawingOfTl ?? "—"}</TableCell>
+                <TableCell>
+                  {formatBoolean(row.sawingAccordingToLayout)}
+                </TableCell>
+                <TableCell>{formatBoolean(row.layoutIncludesCutoff)}</TableCell>
+                <TableCell>{row.followUpProcessing ?? "—"}</TableCell>
+                <TableCell>{row.toLocations ?? "—"}</TableCell>
+                {PIECE_SLOTS.map((slot, index) => (
+                  <Fragment key={`${row.uuid}-slot-${index}`}>
+                    <TableCell className="text-right">
+                      {row[slot.qty] ?? "—"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {row[slot.length] ?? "—"}
+                    </TableCell>
+                  </Fragment>
+                ))}
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
+    </div>
   </div>
 );

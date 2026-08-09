@@ -19,6 +19,7 @@ import {
   REVENUE_GROUP_LABELS,
 } from "@/lib/labels";
 import { ArticleGroup, ProductShape, RevenueGroup } from "@/lib/enums";
+import { TableExportButton } from "@/components/ui/table-export-button";
 
 type ColumnKey =
   | "id"
@@ -32,7 +33,11 @@ type ColumnKey =
   | "materialGroup"
   | "commodity";
 
-const ALL_COLUMNS: Array<{ key: ColumnKey; label: string; defaultVisible: boolean }> = [
+const ALL_COLUMNS: Array<{
+  key: ColumnKey;
+  label: string;
+  defaultVisible: boolean;
+}> = [
   { key: "id", label: "Code", defaultVisible: true },
   { key: "name", label: "Name", defaultVisible: true },
   { key: "productShape", label: "Product Shape", defaultVisible: true },
@@ -79,17 +84,20 @@ export const ProductGroupsTable = ({ productGroups }: Props) => {
         );
       case "productShape":
         return row.productShape
-          ? (PRODUCT_SHAPE_LABELS[row.productShape as ProductShape] ?? row.productShape)
+          ? (PRODUCT_SHAPE_LABELS[row.productShape as ProductShape] ??
+              row.productShape)
           : "—";
       case "articleGroup":
         return row.articleGroup
-          ? (ARTICLE_GROUP_LABELS[row.articleGroup as ArticleGroup] ?? row.articleGroup)
+          ? (ARTICLE_GROUP_LABELS[row.articleGroup as ArticleGroup] ??
+              row.articleGroup)
           : "—";
       case "supplier":
         return row.supplierName ?? "—";
       case "revenueGroup":
         return row.revenueGroup
-          ? (REVENUE_GROUP_LABELS[row.revenueGroup as RevenueGroup] ?? row.revenueGroup)
+          ? (REVENUE_GROUP_LABELS[row.revenueGroup as RevenueGroup] ??
+              row.revenueGroup)
           : "—";
       case "scrap":
         return row.scrap ? "Yes" : "No";
@@ -102,19 +110,26 @@ export const ProductGroupsTable = ({ productGroups }: Props) => {
     }
   };
 
-  const visible = ALL_COLUMNS.filter((c) => visibility[c.key] ?? c.defaultVisible);
+  const visible = ALL_COLUMNS.filter(
+    (c) => visibility[c.key] ?? c.defaultVisible,
+  );
 
   return (
     <div className="space-y-3">
-      <div className="flex justify-end">
+      <div className="flex items-start justify-end gap-2">
         <ColumnSelector
           columns={ALL_COLUMNS}
           visibility={visibility}
           onToggle={handleToggle}
         />
+        <TableExportButton
+          tableId="product-groups-table"
+          fileName="product-groups"
+          sheetName="Product Groups"
+        />
       </div>
       <div>
-        <Table>
+        <Table id="product-groups-table">
           <TableHeader>
             <TableRow>
               {visible.map((col) => (
@@ -136,7 +151,9 @@ export const ProductGroupsTable = ({ productGroups }: Props) => {
               productGroups.map((row) => (
                 <TableRow key={row.uuid}>
                   {visible.map((col) => (
-                    <TableCell key={col.key}>{renderCell(row, col.key)}</TableCell>
+                    <TableCell key={col.key}>
+                      {renderCell(row, col.key)}
+                    </TableCell>
                   ))}
                 </TableRow>
               ))

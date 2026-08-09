@@ -13,6 +13,7 @@ import {
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { buildColumnVisibility } from "@/lib/helpers";
 import { useState } from "react";
+import { TableExportButton } from "@/components/ui/table-export-button";
 
 type ColumnKey =
   | "id"
@@ -44,8 +45,9 @@ type TextCategoriesTableContentProps = {
 export const TextCategoriesTable = ({
   categories,
 }: TextCategoriesTableContentProps) => {
-  const [columnVisibility, setColumnVisibility] =
-    useState<Record<ColumnKey, boolean>>(buildColumnVisibility(ALL_COLUMNS));
+  const [columnVisibility, setColumnVisibility] = useState<
+    Record<ColumnKey, boolean>
+  >(buildColumnVisibility(ALL_COLUMNS));
 
   const toggleColumn = (key: string) =>
     setColumnVisibility((prev) => ({
@@ -77,11 +79,7 @@ export const TextCategoriesTable = ({
           </TableCell>
         );
       case "parentName":
-        return (
-          <TableCell key={key}>
-            {category.parentName ?? "None"}
-          </TableCell>
-        );
+        return <TableCell key={key}>{category.parentName ?? "None"}</TableCell>;
       case "sequenceNumber":
         return <TableCell key={key}>{category.sequenceNumber}</TableCell>;
       case "isActive":
@@ -115,7 +113,7 @@ export const TextCategoriesTable = ({
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex items-start justify-end gap-2">
         <ColumnSelector
           columns={ALL_COLUMNS.map((column) => ({
             key: column.key,
@@ -124,10 +122,15 @@ export const TextCategoriesTable = ({
           visibility={columnVisibility}
           onToggle={toggleColumn}
         />
+        <TableExportButton
+          tableId="text-categories-table"
+          fileName="text-categories"
+          sheetName="Text Categories"
+        />
       </div>
 
       <div>
-        <Table>
+        <Table id="text-categories-table">
           <TableHeader>
             <TableRow>
               {visibleColumns.map((column) => (

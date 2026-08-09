@@ -21,7 +21,15 @@ import {
   tableOrderBy,
   tableWhere,
 } from "@/lib/server/table-query";
-import { Paged, TableQuery } from "@/lib/table-query";
+import {
+  Paged,
+  parseTableQuery,
+  SearchParams,
+  TableQuery,
+} from "@/lib/table-query";
+import { exportRows } from "@/lib/server/excel";
+import { orderLineColumns } from "@/app/(dashboard)/order-lines/columns";
+import { getClerkUserNames } from "@/lib/server/clerk";
 import { count, desc, eq, getTableColumns } from "drizzle-orm";
 
 export type OrderLineRow = {
@@ -115,93 +123,107 @@ const ORDER_LINE_FILTERS = {
 // The joins to Orders, Companies and Products are inner and are repeated in the
 // count, because the search and several filters reach through them — a count
 // built on the bare table would report rows the page cannot show.
+/**
+ * The rows one view of the order lines overview selects, as a window onto them.
+ *
+ * Shared by the page and the export, which matters more here than elsewhere:
+ * profit and margin are worked out in this function rather than in SQL, and a
+ * second copy of it for the export is a second answer to what a line earned.
+ */
+const orderLineRows =
+  (query: TableQuery) =>
+  async (limit: number, offset: number): Promise<OrderLineRow[]> => {
+    const rows = await db
+      .select({
+        uuid: OrderItems.uuid,
+        createdAt: OrderItems.createdAt,
+        deliveryDate: OrderItems.deliveryDate,
+        customerName: Companies.companyName,
+        reference: Orders.customerRef,
+        orderId: Orders.id,
+        lineNumber: OrderItems.lineNumber,
+        lineStatus: OrderItems.lineStatus,
+        productCode: Products.productCode,
+        description: Products.name,
+        options: OrderItems.options,
+        lengthMm: OrderItems.lengthMm,
+        widthMm: OrderItems.widthMm,
+        thicknessMm: OrderItems.thicknessMm,
+        quantity: OrderItems.quantity,
+        unit: OrderItems.unit,
+        weightKg: OrderItems.kgPlanned,
+        price: OrderItems.grossPrice,
+        priceUnit: OrderItems.priceUnit,
+        costPrice: Stock.valuationPrice,
+        amount: OrderItems.amount,
+        seller: OrderItems.seller,
+      })
+      .from(OrderItems)
+      .innerJoin(Orders, eq(OrderItems.orderUuid, Orders.uuid))
+      .innerJoin(Companies, eq(Orders.companyUuid, Companies.uuid))
+      .innerJoin(Products, eq(OrderItems.productUuid, Products.uuid))
+      .leftJoin(Stock, eq(OrderItems.stockUuid, Stock.uuid))
+      .where(
+        tableWhere({
+          query,
+          search: ORDER_LINE_SEARCH,
+          filters: ORDER_LINE_FILTERS,
+        }),
+      )
+      .orderBy(
+        ...tableOrderBy(
+          ORDER_LINE_SORTABLE,
+          query,
+          [desc(OrderItems.createdAt)],
+          OrderItems.id,
+        ),
+      )
+      .limit(limit)
+      .offset(offset);
+
+    return rows.map((row) => {
+      const amount = Number(row.amount ?? 0);
+      const quantity = Number(row.quantity ?? 0);
+      const costPrice = Number(row.costPrice ?? 0);
+      const profit = amount - costPrice * quantity;
+      return {
+        uuid: row.uuid,
+        createdAt: row.createdAt ? row.createdAt.toISOString() : null,
+        deliveryDate: row.deliveryDate,
+        customerName: row.customerName,
+        reference: row.reference,
+        orderId: row.orderId,
+        lineNumber: row.lineNumber,
+        lineStatus: row.lineStatus,
+        productCode: row.productCode,
+        description: row.description,
+        options: row.options,
+        lengthMm: row.lengthMm,
+        widthMm: row.widthMm,
+        thicknessMm: row.thicknessMm,
+        quantity,
+        unit: row.unit,
+        weightKg: Number(row.weightKg ?? 0),
+        price: Number(row.price ?? 0),
+        priceUnit: row.priceUnit,
+        costPrice,
+        amount,
+        profit,
+        profitMargin: amount === 0 ? 0 : (profit / amount) * 100,
+        seller: row.seller,
+      };
+    });
+  };
+
+// The joins are part of the count as well as the rows, because the search and
+// several filters reach through them — a count built on the bare table would
+// report rows the page cannot show.
 export const getOrderLines = async (
   query: TableQuery,
 ): Promise<Paged<OrderLineRow>> => {
   try {
-    const where = tableWhere({
-      query,
-      search: ORDER_LINE_SEARCH,
-      filters: ORDER_LINE_FILTERS,
-    });
-
     return await runPaged(query, {
-      rows: async (limit, offset) => {
-        const rows = await db
-          .select({
-            uuid: OrderItems.uuid,
-            createdAt: OrderItems.createdAt,
-            deliveryDate: OrderItems.deliveryDate,
-            customerName: Companies.companyName,
-            reference: Orders.customerRef,
-            orderId: Orders.id,
-            lineNumber: OrderItems.lineNumber,
-            lineStatus: OrderItems.lineStatus,
-            productCode: Products.productCode,
-            description: Products.name,
-            options: OrderItems.options,
-            lengthMm: OrderItems.lengthMm,
-            widthMm: OrderItems.widthMm,
-            thicknessMm: OrderItems.thicknessMm,
-            quantity: OrderItems.quantity,
-            unit: OrderItems.unit,
-            weightKg: OrderItems.kgPlanned,
-            price: OrderItems.grossPrice,
-            priceUnit: OrderItems.priceUnit,
-            costPrice: Stock.valuationPrice,
-            amount: OrderItems.amount,
-            seller: OrderItems.seller,
-          })
-          .from(OrderItems)
-          .innerJoin(Orders, eq(OrderItems.orderUuid, Orders.uuid))
-          .innerJoin(Companies, eq(Orders.companyUuid, Companies.uuid))
-          .innerJoin(Products, eq(OrderItems.productUuid, Products.uuid))
-          .leftJoin(Stock, eq(OrderItems.stockUuid, Stock.uuid))
-          .where(where)
-          .orderBy(
-            ...tableOrderBy(
-              ORDER_LINE_SORTABLE,
-              query,
-              [desc(OrderItems.createdAt)],
-              OrderItems.id,
-            ),
-          )
-          .limit(limit)
-          .offset(offset);
-
-        return rows.map((row) => {
-          const amount = Number(row.amount ?? 0);
-          const quantity = Number(row.quantity ?? 0);
-          const costPrice = Number(row.costPrice ?? 0);
-          const profit = amount - costPrice * quantity;
-          return {
-            uuid: row.uuid,
-            createdAt: row.createdAt ? row.createdAt.toISOString() : null,
-            deliveryDate: row.deliveryDate,
-            customerName: row.customerName,
-            reference: row.reference,
-            orderId: row.orderId,
-            lineNumber: row.lineNumber,
-            lineStatus: row.lineStatus,
-            productCode: row.productCode,
-            description: row.description,
-            options: row.options,
-            lengthMm: row.lengthMm,
-            widthMm: row.widthMm,
-            thicknessMm: row.thicknessMm,
-            quantity,
-            unit: row.unit,
-            weightKg: Number(row.weightKg ?? 0),
-            price: Number(row.price ?? 0),
-            priceUnit: row.priceUnit,
-            costPrice,
-            amount,
-            profit,
-            profitMargin: amount === 0 ? 0 : (profit / amount) * 100,
-            seller: row.seller,
-          };
-        });
-      },
+      rows: orderLineRows(query),
 
       count: async () => {
         const [row] = await db
@@ -210,7 +232,13 @@ export const getOrderLines = async (
           .innerJoin(Orders, eq(OrderItems.orderUuid, Orders.uuid))
           .innerJoin(Companies, eq(Orders.companyUuid, Companies.uuid))
           .innerJoin(Products, eq(OrderItems.productUuid, Products.uuid))
-          .where(where);
+          .where(
+            tableWhere({
+              query,
+              search: ORDER_LINE_SEARCH,
+              filters: ORDER_LINE_FILTERS,
+            }),
+          );
         return Number(row?.value ?? 0);
       },
     });
@@ -218,6 +246,24 @@ export const getOrderLines = async (
     throw new Error(describeError(error, "Failed to fetch order lines"));
   }
 };
+
+/**
+ * Every order line the current view matches, as a workbook.
+ *
+ * The seller names are fetched here rather than taken from the caller: the
+ * column spells a Clerk id as a person, and an export must not depend on the
+ * browser to tell it who someone is.
+ */
+export const exportOrderLines = async (
+  params: SearchParams,
+  columnKeys: string[],
+): Promise<string> =>
+  exportRows({
+    name: "Order Lines",
+    columns: orderLineColumns(await getClerkUserNames()),
+    columnKeys,
+    rows: orderLineRows(parseTableQuery(params)),
+  });
 
 /**
  * One order line in full: everything the line records, the order and customer it

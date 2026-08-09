@@ -1,7 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { StockMovementListItem } from "@/app/(dashboard)/stock-movements/actions";
+import {
+  exportStockMovements,
+  StockMovementListItem,
+} from "@/app/(dashboard)/stock-movements/actions";
+import { PagedTableExportButton } from "@/components/ui/table-export-button";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { TableSortHeader } from "@/components/ui/table-sort-header";
 import { TableToolbar } from "@/components/ui/table-toolbar";
@@ -26,10 +30,12 @@ type Props = {
 
 export const StockMovementsTable = ({ page, filters }: Props) => (
   <div className="space-y-4">
-    <TableToolbar
-      searchPlaceholder="Search product or note…"
-      filters={filters}
-    />
+    <TableToolbar searchPlaceholder="Search product or note…" filters={filters}>
+      <PagedTableExportButton
+        fileName="stock-movements"
+        action={exportStockMovements}
+      />
+    </TableToolbar>
     <div>
       <Table>
         <TableHeader>

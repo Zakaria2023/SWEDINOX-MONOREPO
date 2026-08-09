@@ -19,6 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { TableExportButton } from "@/components/ui/table-export-button";
 
 type Props = {
   trialBalance: TrialBalance;
@@ -142,75 +143,86 @@ export const TrialBalanceTable = ({ trialBalance }: Props) => {
       ) : null}
 
       <div>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Account</TableHead>
-              <TableHead>Name</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead className="text-right">Lines</TableHead>
-              <TableHead className="text-right">Debit</TableHead>
-              <TableHead className="text-right">Credit</TableHead>
-              <TableHead className="text-right">Balance</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {trialBalance.rows.length === 0 ? (
+        <div className="space-y-4">
+          <div className="flex justify-end">
+            <TableExportButton
+              tableId="trial-balance-table"
+              fileName="trial-balance"
+              sheetName="Trial balance"
+            />
+          </div>
+          <Table id="trial-balance-table">
+            <TableHeader>
               <TableRow>
-                <TableCell
-                  colSpan={7}
-                  className="h-24 text-center text-muted-foreground"
-                >
-                  Nothing has been posted to the general ledger yet.
-                </TableCell>
+                <TableHead>Account</TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead className="text-right">Lines</TableHead>
+                <TableHead className="text-right">Debit</TableHead>
+                <TableHead className="text-right">Credit</TableHead>
+                <TableHead className="text-right">Balance</TableHead>
               </TableRow>
-            ) : (
-              trialBalance.rows.map((row) => (
-                <TableRow key={row.account}>
-                  <TableCell className="font-medium">{row.account}</TableCell>
-                  <TableCell>
-                    {row.accountName ?? (
-                      <span className="text-muted-foreground">
-                        Not in the chart
-                      </span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {row.accountType
-                      ? LEDGER_ACCOUNT_TYPE_LABELS[row.accountType]
-                      : "—"}
-                  </TableCell>
-                  <TableCell className="text-right">{row.lineCount}</TableCell>
-                  <TableCell className="text-right whitespace-nowrap">
-                    {formatMoneyOrDash(row.totalDebit)}
-                  </TableCell>
-                  <TableCell className="text-right whitespace-nowrap">
-                    {formatMoneyOrDash(row.totalCredit)}
-                  </TableCell>
-                  <TableCell className="text-right font-medium whitespace-nowrap">
-                    {formatMoneyOrDash(row.balance)}
+            </TableHeader>
+            <TableBody>
+              {trialBalance.rows.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={7}
+                    className="h-24 text-center text-muted-foreground"
+                  >
+                    Nothing has been posted to the general ledger yet.
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-          {trialBalance.rows.length > 0 ? (
-            <TableFooter>
-              <TableRow>
-                <TableCell colSpan={4}>Total</TableCell>
-                <TableCell className="text-right whitespace-nowrap">
-                  {formatMoneyOrDash(trialBalance.totalDebit)}
-                </TableCell>
-                <TableCell className="text-right whitespace-nowrap">
-                  {formatMoneyOrDash(trialBalance.totalCredit)}
-                </TableCell>
-                <TableCell className="text-right whitespace-nowrap">
-                  {formatMoneyOrDash(trialBalance.difference)}
-                </TableCell>
-              </TableRow>
-            </TableFooter>
-          ) : null}
-        </Table>
+              ) : (
+                trialBalance.rows.map((row) => (
+                  <TableRow key={row.account}>
+                    <TableCell className="font-medium">{row.account}</TableCell>
+                    <TableCell>
+                      {row.accountName ?? (
+                        <span className="text-muted-foreground">
+                          Not in the chart
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {row.accountType
+                        ? LEDGER_ACCOUNT_TYPE_LABELS[row.accountType]
+                        : "—"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {row.lineCount}
+                    </TableCell>
+                    <TableCell className="text-right whitespace-nowrap">
+                      {formatMoneyOrDash(row.totalDebit)}
+                    </TableCell>
+                    <TableCell className="text-right whitespace-nowrap">
+                      {formatMoneyOrDash(row.totalCredit)}
+                    </TableCell>
+                    <TableCell className="text-right font-medium whitespace-nowrap">
+                      {formatMoneyOrDash(row.balance)}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+            {trialBalance.rows.length > 0 ? (
+              <TableFooter>
+                <TableRow>
+                  <TableCell colSpan={4}>Total</TableCell>
+                  <TableCell className="text-right whitespace-nowrap">
+                    {formatMoneyOrDash(trialBalance.totalDebit)}
+                  </TableCell>
+                  <TableCell className="text-right whitespace-nowrap">
+                    {formatMoneyOrDash(trialBalance.totalCredit)}
+                  </TableCell>
+                  <TableCell className="text-right whitespace-nowrap">
+                    {formatMoneyOrDash(trialBalance.difference)}
+                  </TableCell>
+                </TableRow>
+              </TableFooter>
+            ) : null}
+          </Table>
+        </div>
       </div>
     </div>
   );

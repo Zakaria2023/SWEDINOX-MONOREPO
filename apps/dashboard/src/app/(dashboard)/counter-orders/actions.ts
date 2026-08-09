@@ -43,7 +43,14 @@ import {
   tableOrderBy,
   tableWhere,
 } from "@/lib/server/table-query";
-import { Paged, TableQuery } from "@/lib/table-query";
+import {
+  Paged,
+  parseTableQuery,
+  SearchParams,
+  TableQuery,
+} from "@/lib/table-query";
+import { COUNTER_ORDER_COLUMNS } from "@/app/(dashboard)/counter-orders/columns";
+import { exportRows } from "@/lib/server/excel";
 
 export type CounterOrderInput = Omit<
   InsertCounterOrders,
@@ -122,6 +129,50 @@ const COUNTER_ORDER_FILTERS = {
   orderDate: dateRangeFilter(CounterOrders.orderDate),
 };
 
+/**
+ * The rows one view of the counter orders overview selects, as a window onto
+ * them.
+ */
+const counterOrderRows =
+  (query: TableQuery) =>
+  (limit: number, offset: number): Promise<CounterOrderListItem[]> =>
+    db
+      .select({
+        ...getTableColumns(CounterOrders),
+        companyName: Companies.companyName,
+      })
+      .from(CounterOrders)
+      .innerJoin(Companies, eq(Companies.uuid, CounterOrders.companyUuid))
+      .where(
+        tableWhere({
+          query,
+          search: COUNTER_ORDER_SEARCH,
+          filters: COUNTER_ORDER_FILTERS,
+        }),
+      )
+      .orderBy(
+        ...tableOrderBy(
+          COUNTER_ORDER_SORTABLE,
+          query,
+          [desc(CounterOrders.createdAt)],
+          CounterOrders.id,
+        ),
+      )
+      .limit(limit)
+      .offset(offset);
+
+/** Every counter order the current view matches, as a workbook. */
+export const exportCounterOrders = async (
+  params: SearchParams,
+  columnKeys: string[],
+): Promise<string> =>
+  exportRows({
+    name: "Counter Orders",
+    columns: COUNTER_ORDER_COLUMNS,
+    columnKeys,
+    rows: counterOrderRows(parseTableQuery(params)),
+  });
+
 export const getCounterOrders = async (
   query: TableQuery,
 ): Promise<Paged<CounterOrderListItem>> => {
@@ -132,25 +183,7 @@ export const getCounterOrders = async (
   });
 
   return runPaged(query, {
-    rows: (limit, offset) =>
-      db
-        .select({
-          ...getTableColumns(CounterOrders),
-          companyName: Companies.companyName,
-        })
-        .from(CounterOrders)
-        .innerJoin(Companies, eq(Companies.uuid, CounterOrders.companyUuid))
-        .where(where)
-        .orderBy(
-          ...tableOrderBy(
-            COUNTER_ORDER_SORTABLE,
-            query,
-            [desc(CounterOrders.createdAt)],
-            CounterOrders.id,
-          ),
-        )
-        .limit(limit)
-        .offset(offset),
+    rows: counterOrderRows(query),
 
     count: async () => {
       const [row] = await db

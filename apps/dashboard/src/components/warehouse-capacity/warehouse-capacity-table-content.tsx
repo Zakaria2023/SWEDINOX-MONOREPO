@@ -12,6 +12,7 @@ import {
 } from "@/components/shadcn/table";
 import { WAREHOUSE_WORK_ORDER_LINE_TYPE_LABELS } from "@/lib/labels";
 import { formatDateValue } from "@/lib/helpers";
+import { TableExportButton } from "@/components/ui/table-export-button";
 
 type Props = {
   capacity: WarehouseCapacityListItem[];
@@ -19,53 +20,62 @@ type Props = {
 
 export const WarehouseCapacityTable = ({ capacity }: Props) => (
   <div>
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Date</TableHead>
-          <TableHead>Warehouse section</TableHead>
-          <TableHead>Subsection</TableHead>
-          <TableHead>Workorder type</TableHead>
-          <TableHead className="text-right">Occupied</TableHead>
-          <TableHead className="text-right">Ready</TableHead>
-          <TableHead className="text-right">Remaining</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {capacity.length === 0 ? (
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <TableExportButton
+          tableId="warehouse-capacity-table"
+          fileName="warehouse-capacity"
+          sheetName="Warehouse Capacity"
+        />
+      </div>
+      <Table id="warehouse-capacity-table">
+        <TableHeader>
           <TableRow>
-            <TableCell
-              colSpan={7}
-              className="h-24 text-center text-muted-foreground"
-            >
-              No warehouse capacity found.
-            </TableCell>
+            <TableHead>Date</TableHead>
+            <TableHead>Warehouse section</TableHead>
+            <TableHead>Subsection</TableHead>
+            <TableHead>Workorder type</TableHead>
+            <TableHead className="text-right">Occupied</TableHead>
+            <TableHead className="text-right">Ready</TableHead>
+            <TableHead className="text-right">Remaining</TableHead>
           </TableRow>
-        ) : (
-          capacity.map((row) => (
-            <TableRow key={row.uuid}>
-              <TableCell className="font-medium whitespace-nowrap">
-                <Link
-                  href={`/warehouse-capacity/${row.uuid}`}
-                  className="text-primary hover:underline"
-                >
-                  {formatDateValue(row.capacityDate)}
-                </Link>
+        </TableHeader>
+        <TableBody>
+          {capacity.length === 0 ? (
+            <TableRow>
+              <TableCell
+                colSpan={7}
+                className="h-24 text-center text-muted-foreground"
+              >
+                No warehouse capacity found.
               </TableCell>
-              <TableCell>{row.warehouseSection ?? "—"}</TableCell>
-              <TableCell>{row.subsection ?? "—"}</TableCell>
-              <TableCell>
-                {row.workOrderType
-                  ? WAREHOUSE_WORK_ORDER_LINE_TYPE_LABELS[row.workOrderType]
-                  : "—"}
-              </TableCell>
-              <TableCell className="text-right">{row.occupied}</TableCell>
-              <TableCell className="text-right">{row.ready}</TableCell>
-              <TableCell className="text-right">{row.remaining}</TableCell>
             </TableRow>
-          ))
-        )}
-      </TableBody>
-    </Table>
+          ) : (
+            capacity.map((row) => (
+              <TableRow key={row.uuid}>
+                <TableCell className="font-medium whitespace-nowrap">
+                  <Link
+                    href={`/warehouse-capacity/${row.uuid}`}
+                    className="text-primary hover:underline"
+                  >
+                    {formatDateValue(row.capacityDate)}
+                  </Link>
+                </TableCell>
+                <TableCell>{row.warehouseSection ?? "—"}</TableCell>
+                <TableCell>{row.subsection ?? "—"}</TableCell>
+                <TableCell>
+                  {row.workOrderType
+                    ? WAREHOUSE_WORK_ORDER_LINE_TYPE_LABELS[row.workOrderType]
+                    : "—"}
+                </TableCell>
+                <TableCell className="text-right">{row.occupied}</TableCell>
+                <TableCell className="text-right">{row.ready}</TableCell>
+                <TableCell className="text-right">{row.remaining}</TableCell>
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
+    </div>
   </div>
 );

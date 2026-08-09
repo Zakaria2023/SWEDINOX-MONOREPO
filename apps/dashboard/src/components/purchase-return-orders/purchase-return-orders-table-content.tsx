@@ -12,6 +12,7 @@ import {
 } from "@/components/shadcn/table";
 import { PURCHASE_RETURN_ORDER_REASON_LABELS } from "@/lib/labels";
 import { PurchaseReturnOrderReason } from "@/lib/enums";
+import { TableExportButton } from "@/components/ui/table-export-button";
 
 type Props = {
   purchaseReturnOrders: PurchaseReturnOrderListItem[];
@@ -19,63 +20,72 @@ type Props = {
 
 export const PurchaseReturnOrdersTable = ({ purchaseReturnOrders }: Props) => (
   <div>
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>#</TableHead>
-          <TableHead>Supplier</TableHead>
-          <TableHead>Contact</TableHead>
-          <TableHead>Return Reason</TableHead>
-          <TableHead>Return Date</TableHead>
-          <TableHead>Created</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {purchaseReturnOrders.length === 0 ? (
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <TableExportButton
+          tableId="purchase-return-orders-table"
+          fileName="purchase-return-orders"
+          sheetName="Purchase Return Orders"
+        />
+      </div>
+      <Table id="purchase-return-orders-table">
+        <TableHeader>
           <TableRow>
-            <TableCell
-              colSpan={6}
-              className="h-24 text-center text-muted-foreground"
-            >
-              No purchase return orders found.
-            </TableCell>
+            <TableHead>#</TableHead>
+            <TableHead>Supplier</TableHead>
+            <TableHead>Contact</TableHead>
+            <TableHead>Return Reason</TableHead>
+            <TableHead>Return Date</TableHead>
+            <TableHead>Created</TableHead>
           </TableRow>
-        ) : (
-          purchaseReturnOrders.map((row) => (
-            <TableRow key={row.uuid}>
-              <TableCell>
-                <Link
-                  href={`/purchase-return-orders/${row.uuid}`}
-                  className="font-medium text-foreground underline-offset-4 hover:underline"
-                >
-                  {row.id}
-                </Link>
-              </TableCell>
-              <TableCell>{row.supplierName ?? "—"}</TableCell>
-              <TableCell>
-                {[row.contactFirstName, row.contactLastName]
-                  .filter(Boolean)
-                  .join(" ") || "—"}
-              </TableCell>
-              <TableCell>
-                {row.returnReason
-                  ? (PURCHASE_RETURN_ORDER_REASON_LABELS[
-                      row.returnReason as PurchaseReturnOrderReason
-                    ] ?? row.returnReason)
-                  : "—"}
-              </TableCell>
-              <TableCell>
-                {row.returnDate
-                  ? new Date(row.returnDate).toLocaleDateString("en-GB")
-                  : "—"}
-              </TableCell>
-              <TableCell>
-                {new Date(row.createdAt).toLocaleDateString("en-GB")}
+        </TableHeader>
+        <TableBody>
+          {purchaseReturnOrders.length === 0 ? (
+            <TableRow>
+              <TableCell
+                colSpan={6}
+                className="h-24 text-center text-muted-foreground"
+              >
+                No purchase return orders found.
               </TableCell>
             </TableRow>
-          ))
-        )}
-      </TableBody>
-    </Table>
+          ) : (
+            purchaseReturnOrders.map((row) => (
+              <TableRow key={row.uuid}>
+                <TableCell>
+                  <Link
+                    href={`/purchase-return-orders/${row.uuid}`}
+                    className="font-medium text-foreground underline-offset-4 hover:underline"
+                  >
+                    {row.id}
+                  </Link>
+                </TableCell>
+                <TableCell>{row.supplierName ?? "—"}</TableCell>
+                <TableCell>
+                  {[row.contactFirstName, row.contactLastName]
+                    .filter(Boolean)
+                    .join(" ") || "—"}
+                </TableCell>
+                <TableCell>
+                  {row.returnReason
+                    ? (PURCHASE_RETURN_ORDER_REASON_LABELS[
+                        row.returnReason as PurchaseReturnOrderReason
+                      ] ?? row.returnReason)
+                    : "—"}
+                </TableCell>
+                <TableCell>
+                  {row.returnDate
+                    ? new Date(row.returnDate).toLocaleDateString("en-GB")
+                    : "—"}
+                </TableCell>
+                <TableCell>
+                  {new Date(row.createdAt).toLocaleDateString("en-GB")}
+                </TableCell>
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
+    </div>
   </div>
 );

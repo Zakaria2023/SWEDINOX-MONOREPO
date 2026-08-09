@@ -1,7 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { JournalEntryListItem } from "@/app/(dashboard)/journal-entries/actions";
+import {
+  exportJournalEntries,
+  JournalEntryListItem,
+} from "@/app/(dashboard)/journal-entries/actions";
+import { PagedTableExportButton } from "@/components/ui/table-export-button";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { TableSortHeader } from "@/components/ui/table-sort-header";
 import { TableToolbar } from "@/components/ui/table-toolbar";
@@ -25,7 +29,12 @@ export const JournalEntriesTable = ({ page, filters }: Props) => (
     <TableToolbar
       searchPlaceholder="Search document, description, reference or counterparty…"
       filters={filters}
-    />
+    >
+      <PagedTableExportButton
+        fileName="journal-entries"
+        action={exportJournalEntries}
+      />
+    </TableToolbar>
     <Table>
       <TableHeader>
         <TableRow>

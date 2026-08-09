@@ -15,6 +15,7 @@ import {
 } from "@/components/shadcn/table";
 import { cn } from "@/lib/helpers";
 import { ArrowDown, ArrowRight, ArrowUp } from "lucide-react";
+import { TableExportButton } from "@/components/ui/table-export-button";
 
 type Props = {
   rows: ScorecardRow[];
@@ -38,43 +39,54 @@ const TrendIcon = ({ trend }: { trend: ScorecardTrend }) => {
 
 export const BalancedScorecardTable = ({ rows }: Props) => (
   <div>
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Category</TableHead>
-          <TableHead>KPI</TableHead>
-          <TableHead className="text-right">Value</TableHead>
-          <TableHead className="text-right">Target</TableHead>
-          <TableHead>U.</TableHead>
-          <TableHead>Status</TableHead>
-          <TableHead>Trend</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {rows.map((row) => (
-          <TableRow key={row.key}>
-            <TableCell>{row.category}</TableCell>
-            <TableCell className="font-medium">{row.kpi}</TableCell>
-            <TableCell className="text-right">{row.value.toFixed(2)}</TableCell>
-            <TableCell className="text-right">
-              {row.target.toFixed(2)}
-            </TableCell>
-            <TableCell>{row.unit}</TableCell>
-            <TableCell>
-              <span
-                className={cn(
-                  "inline-block size-3 rounded-full",
-                  STATUS_STYLES[row.status],
-                )}
-                aria-label={row.status}
-              />
-            </TableCell>
-            <TableCell>
-              <TrendIcon trend={row.trend} />
-            </TableCell>
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <TableExportButton
+          tableId="balanced-scorecard-table"
+          fileName="balanced-scorecard"
+          sheetName="Balanced Scorecard"
+        />
+      </div>
+      <Table id="balanced-scorecard-table">
+        <TableHeader>
+          <TableRow>
+            <TableHead>Category</TableHead>
+            <TableHead>KPI</TableHead>
+            <TableHead className="text-right">Value</TableHead>
+            <TableHead className="text-right">Target</TableHead>
+            <TableHead>U.</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Trend</TableHead>
           </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+        </TableHeader>
+        <TableBody>
+          {rows.map((row) => (
+            <TableRow key={row.key}>
+              <TableCell>{row.category}</TableCell>
+              <TableCell className="font-medium">{row.kpi}</TableCell>
+              <TableCell className="text-right">
+                {row.value.toFixed(2)}
+              </TableCell>
+              <TableCell className="text-right">
+                {row.target.toFixed(2)}
+              </TableCell>
+              <TableCell>{row.unit}</TableCell>
+              <TableCell>
+                <span
+                  className={cn(
+                    "inline-block size-3 rounded-full",
+                    STATUS_STYLES[row.status],
+                  )}
+                  aria-label={row.status}
+                />
+              </TableCell>
+              <TableCell>
+                <TrendIcon trend={row.trend} />
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   </div>
 );

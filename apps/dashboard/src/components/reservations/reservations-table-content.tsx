@@ -10,6 +10,7 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { formatFixed2 } from "@/lib/helpers";
+import { TableExportButton } from "@/components/ui/table-export-button";
 
 type Props = {
   reservations: ReservationItem[];
@@ -17,46 +18,55 @@ type Props = {
 
 export const ReservationsTable = ({ reservations }: Props) => (
   <div>
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Product code</TableHead>
-          <TableHead>Product</TableHead>
-          <TableHead className="text-right">Qty Techn. Stock</TableHead>
-          <TableHead className="text-right">Kg Techn. Stock</TableHead>
-          <TableHead className="text-right">Qty Reserved</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {reservations.length === 0 ? (
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <TableExportButton
+          tableId="reservations-table"
+          fileName="reservations"
+          sheetName="Reservations"
+        />
+      </div>
+      <Table id="reservations-table">
+        <TableHeader>
           <TableRow>
-            <TableCell
-              colSpan={5}
-              className="h-24 text-center text-muted-foreground"
-            >
-              No reservations found.
-            </TableCell>
+            <TableHead>Product code</TableHead>
+            <TableHead>Product</TableHead>
+            <TableHead className="text-right">Qty Techn. Stock</TableHead>
+            <TableHead className="text-right">Kg Techn. Stock</TableHead>
+            <TableHead className="text-right">Qty Reserved</TableHead>
           </TableRow>
-        ) : (
-          reservations.map((row) => (
-            <TableRow key={row.productUuid}>
-              <TableCell className="font-medium">
-                {row.productCode ?? "—"}
-              </TableCell>
-              <TableCell>{row.productName ?? "—"}</TableCell>
-              <TableCell className="text-right">
-                {formatFixed2(row.technicalQty)}
-              </TableCell>
-              <TableCell className="text-right">
-                {formatFixed2(row.technicalKg)}
-              </TableCell>
-              <TableCell className="text-right">
-                {formatFixed2(row.reservedQty)}
+        </TableHeader>
+        <TableBody>
+          {reservations.length === 0 ? (
+            <TableRow>
+              <TableCell
+                colSpan={5}
+                className="h-24 text-center text-muted-foreground"
+              >
+                No reservations found.
               </TableCell>
             </TableRow>
-          ))
-        )}
-      </TableBody>
-    </Table>
+          ) : (
+            reservations.map((row) => (
+              <TableRow key={row.productUuid}>
+                <TableCell className="font-medium">
+                  {row.productCode ?? "—"}
+                </TableCell>
+                <TableCell>{row.productName ?? "—"}</TableCell>
+                <TableCell className="text-right">
+                  {formatFixed2(row.technicalQty)}
+                </TableCell>
+                <TableCell className="text-right">
+                  {formatFixed2(row.technicalKg)}
+                </TableCell>
+                <TableCell className="text-right">
+                  {formatFixed2(row.reservedQty)}
+                </TableCell>
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
+    </div>
   </div>
 );
