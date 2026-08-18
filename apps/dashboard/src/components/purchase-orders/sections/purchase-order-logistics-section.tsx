@@ -3,6 +3,7 @@
 import { Controller, useFormContext } from "react-hook-form";
 import { PurchaseOrderFormValues } from "@/app/(dashboard)/purchase-orders/validation";
 import { Input } from "@/components/shadcn/input";
+import { TimePicker } from "@/components/shadcn/time-picker";
 import { FormLabel } from "@/components/ui/form-field";
 import { FormCheckboxCard } from "@/components/ui/form-checkbox-card";
 
@@ -98,18 +99,30 @@ export const PurchaseOrderLogisticsSection = () => {
         </div>
         <div>
           <FormLabel htmlFor="deliveryAfterTime">Delivery After</FormLabel>
-          <Input
-            id="deliveryAfterTime"
-            type="time"
-            {...register("deliveryAfterTime")}
+          <Controller
+            name="deliveryAfterTime"
+            control={control}
+            render={({ field }) => (
+              <TimePicker
+                id="deliveryAfterTime"
+                value={field.value ?? ""}
+                onChange={field.onChange}
+              />
+            )}
           />
         </div>
         <div>
           <FormLabel htmlFor="deliverForTime">Deliver For</FormLabel>
-          <Input
-            id="deliverForTime"
-            type="time"
-            {...register("deliverForTime")}
+          <Controller
+            name="deliverForTime"
+            control={control}
+            render={({ field }) => (
+              <TimePicker
+                id="deliverForTime"
+                value={field.value ?? ""}
+                onChange={field.onChange}
+              />
+            )}
           />
         </div>
         <div>

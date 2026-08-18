@@ -5,6 +5,7 @@ import { useComplaintSubmit } from "@/app/(dashboard)/complaints/use-complaint-s
 import { CompanyOption } from "@/app/(dashboard)/companies/actions";
 import { ComplaintFormValues } from "@/app/(dashboard)/complaints/validation";
 import { ProductOption } from "@/app/(dashboard)/products/actions";
+import { DatePicker } from "@/components/shadcn/date-picker";
 import { Input } from "@/components/shadcn/input";
 import { Textarea } from "@/components/shadcn/textarea";
 import { FormActions } from "@/components/ui/form-actions";
@@ -169,7 +170,17 @@ export const ComplaintForm = ({
 
           <div>
             <FormLabel htmlFor="reportDate">Report Date</FormLabel>
-            <Input id="reportDate" type="date" {...register("reportDate")} />
+            <Controller
+              name="reportDate"
+              control={control}
+              render={({ field }) => (
+                <DatePicker
+                  id="reportDate"
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                />
+              )}
+            />
           </div>
 
           <FormSelectField
@@ -256,7 +267,17 @@ export const ComplaintForm = ({
 
           <div>
             <FormLabel htmlFor="deadline">Deadline</FormLabel>
-            <Input id="deadline" type="date" {...register("deadline")} />
+            <Controller
+              name="deadline"
+              control={control}
+              render={({ field }) => (
+                <DatePicker
+                  id="deadline"
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                />
+              )}
+            />
           </div>
           <div />
 

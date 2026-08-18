@@ -9,6 +9,7 @@ import {
 } from "@/app/(dashboard)/payments/actions";
 import { SelectPayments } from "@/db/schema/payments";
 import { Button } from "@/components/shadcn/button";
+import { DatePicker } from "@/components/shadcn/date-picker";
 import { Input } from "@/components/shadcn/input";
 import { Select } from "@/components/shadcn/select";
 import {
@@ -195,11 +196,10 @@ export const InvoicePaymentsSection = ({
           <div className="grid gap-3 sm:grid-cols-4">
             <div>
               <FormLabel htmlFor="paymentDate">Payment date</FormLabel>
-              <Input
+              <DatePicker
                 id="paymentDate"
-                type="date"
                 value={paymentDate}
-                onChange={(event) => setPaymentDate(event.target.value)}
+                onChange={setPaymentDate}
                 disabled={isPending}
               />
             </div>

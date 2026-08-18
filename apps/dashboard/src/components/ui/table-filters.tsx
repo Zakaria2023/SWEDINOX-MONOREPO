@@ -1,5 +1,6 @@
 "use client";
 
+import { DatePicker } from "@/components/shadcn/date-picker";
 import { Input } from "@/components/shadcn/input";
 import { Select } from "@/components/shadcn/select";
 import { useTableQuery } from "@/hooks/use-table-query";
@@ -69,23 +70,23 @@ const DateRangeFilter = ({ control }: FilterProps) => {
   return (
     <Labelled label={control.label} htmlFor={`filter-${control.key}-from`}>
       <div className="flex items-center gap-1">
-        <Input
+        <DatePicker
           id={`filter-${control.key}-from`}
-          type="date"
           value={from}
           disabled={isPending}
-          onChange={(event) => write(event.target.value, to)}
-          aria-label={`${control.label} from`}
-          className="h-8 w-36"
+          onChange={(next) => write(next, to)}
+          ariaLabel={`${control.label} from`}
+          placeholder="From"
+          className="w-36"
         />
         <span className="text-xs text-muted-foreground">to</span>
-        <Input
-          type="date"
+        <DatePicker
           value={to}
           disabled={isPending}
-          onChange={(event) => write(from, event.target.value)}
-          aria-label={`${control.label} to`}
-          className="h-8 w-36"
+          onChange={(next) => write(from, next)}
+          ariaLabel={`${control.label} to`}
+          placeholder="To"
+          className="w-36"
         />
       </div>
     </Labelled>

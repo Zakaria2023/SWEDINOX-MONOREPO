@@ -3,6 +3,7 @@
 import { Controller, useFormContext } from "react-hook-form";
 import { ProductFormValues } from "@/app/(dashboard)/products/validation";
 import { SelectOption } from "@/components/shadcn/select";
+import { DatePicker } from "@/components/shadcn/date-picker";
 import { Input } from "@/components/shadcn/input";
 import { FormCheckboxCard } from "@/components/ui/form-checkbox-card";
 import { FormLabel } from "@/components/ui/form-field";
@@ -91,10 +92,16 @@ export const StockControlSection = ({
             <FormLabel htmlFor="stockProductSince">
               Stock product since
             </FormLabel>
-            <Input
-              id="stockProductSince"
-              type="date"
-              {...register("stockProductSince")}
+            <Controller
+              name="stockProductSince"
+              control={control}
+              render={({ field }) => (
+                <DatePicker
+                  id="stockProductSince"
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                />
+              )}
             />
           </div>
         </div>
@@ -340,20 +347,32 @@ export const StockControlSection = ({
           </div>
           <div>
             <FormLabel htmlFor="lastCountDate">Last count</FormLabel>
-            <Input
-              id="lastCountDate"
-              type="date"
-              {...register("lastCountDate")}
+            <Controller
+              name="lastCountDate"
+              control={control}
+              render={({ field }) => (
+                <DatePicker
+                  id="lastCountDate"
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                />
+              )}
             />
           </div>
           <div>
             <FormLabel htmlFor="nextCountTargetDate">
               Target date next
             </FormLabel>
-            <Input
-              id="nextCountTargetDate"
-              type="date"
-              {...register("nextCountTargetDate")}
+            <Controller
+              name="nextCountTargetDate"
+              control={control}
+              render={({ field }) => (
+                <DatePicker
+                  id="nextCountTargetDate"
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                />
+              )}
             />
           </div>
           <FormSelectField

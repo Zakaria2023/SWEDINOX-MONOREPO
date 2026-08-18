@@ -8,6 +8,7 @@ import {
 } from "react-hook-form";
 import { PurchaseRequestFormValues } from "@/app/(dashboard)/purchase-requests/validation";
 import { Button } from "@/components/shadcn/button";
+import { DatePicker } from "@/components/shadcn/date-picker";
 import { Input } from "@/components/shadcn/input";
 import { Select, SelectOption } from "@/components/shadcn/select";
 import { FormLabel } from "@/components/ui/form-field";
@@ -112,10 +113,16 @@ export const RequestItemsSection = ({
             <FormLabel htmlFor={`items.${index}.requiredDate`}>
               Required by
             </FormLabel>
-            <Input
-              id={`items.${index}.requiredDate`}
-              type="date"
-              {...register(`items.${index}.requiredDate`)}
+            <Controller
+              control={control}
+              name={`items.${index}.requiredDate`}
+              render={({ field: requiredDateField }) => (
+                <DatePicker
+                  id={`items.${index}.requiredDate`}
+                  value={requiredDateField.value ?? ""}
+                  onChange={requiredDateField.onChange}
+                />
+              )}
             />
           </div>
 

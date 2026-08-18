@@ -3,6 +3,7 @@
 import { Controller, useFormContext } from "react-hook-form";
 import { IndustryOption } from "@/app/(dashboard)/industries/actions";
 import { VisitReportFormValues } from "@/app/(dashboard)/visit-reports/validation";
+import { DatePicker } from "@/components/shadcn/date-picker";
 import { Input } from "@/components/shadcn/input";
 import { Select } from "@/components/shadcn/select";
 import { FormLabel } from "@/components/ui/form-field";
@@ -123,11 +124,17 @@ export const MarketingSection = ({ isPending, industries }: Props) => {
             <FormLabel htmlFor="targetDateNextVisit">
               Target date of next visit
             </FormLabel>
-            <Input
-              id="targetDateNextVisit"
-              type="date"
-              {...register("targetDateNextVisit")}
-              disabled={isPending}
+            <Controller
+              name="targetDateNextVisit"
+              control={control}
+              render={({ field }) => (
+                <DatePicker
+                  id="targetDateNextVisit"
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                  disabled={isPending}
+                />
+              )}
             />
           </div>
           <div>

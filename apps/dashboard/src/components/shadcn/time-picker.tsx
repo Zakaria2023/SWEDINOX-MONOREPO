@@ -9,6 +9,8 @@ type TimePickerProps = {
   onChange?: (value: string) => void;
   disabled?: boolean;
   className?: string;
+  id?: string;
+  ariaLabel?: string;
 };
 
 const HOURS = Array.from({ length: 12 }, (_, i) => i + 1);
@@ -19,6 +21,8 @@ export const TimePicker = ({
   onChange,
   disabled,
   className,
+  id,
+  ariaLabel,
 }: TimePickerProps) => {
   const [rawH, rawM] = (value ?? "").split(":").map(Number);
   const hour24 = isNaN(rawH) ? null : rawH;
@@ -41,6 +45,8 @@ export const TimePicker = ({
   return (
     <PopoverPrimitive.Root>
       <PopoverPrimitive.Trigger
+        id={id}
+        aria-label={ariaLabel}
         disabled={disabled}
         type="button"
         className={cn(
@@ -122,6 +128,16 @@ export const TimePicker = ({
                 })}
               </div>
             </div>
+
+            {/* A native time input could always be emptied again; without this
+                a picked time would be impossible to take back. */}
+            <button
+              type="button"
+              onClick={() => onChange?.("")}
+              className="mt-2 w-full rounded-lg py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted"
+            >
+              Clear
+            </button>
           </PopoverPrimitive.Popup>
         </PopoverPrimitive.Positioner>
       </PopoverPrimitive.Portal>

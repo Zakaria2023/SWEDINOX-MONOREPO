@@ -1,7 +1,8 @@
 "use client";
 
-import { useFormContext } from "react-hook-form";
+import { Controller, useFormContext } from "react-hook-form";
 import { ProductFormValues } from "@/app/(dashboard)/products/validation";
+import { DatePicker } from "@/components/shadcn/date-picker";
 import { Input } from "@/components/shadcn/input";
 import { FormLabel } from "@/components/ui/form-field";
 import { FormSelectField } from "@/components/ui/form-select-field";
@@ -48,7 +49,17 @@ export const SalesPricesSection = () => {
         </div>
         <div>
           <FormLabel htmlFor="priceDate">Price date</FormLabel>
-          <Input id="priceDate" type="date" {...register("priceDate")} />
+          <Controller
+            name="priceDate"
+            control={control}
+            render={({ field }) => (
+              <DatePicker
+                id="priceDate"
+                value={field.value ?? ""}
+                onChange={field.onChange}
+              />
+            )}
+          />
         </div>
       </div>
     </section>

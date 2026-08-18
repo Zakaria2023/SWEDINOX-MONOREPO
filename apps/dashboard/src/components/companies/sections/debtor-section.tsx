@@ -3,10 +3,11 @@
 import { CompanyFormValues } from "@/app/(dashboard)/companies/validation";
 import { CompanyRole } from "@/lib/enums";
 import { Checkbox } from "@/components/shadcn/checkbox";
+import { DatePicker } from "@/components/shadcn/date-picker";
 import { Input } from "@/components/shadcn/input";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import { FormSelectField } from "@/components/ui/form-select-field";
-import { useFormContext } from "react-hook-form";
+import { Controller, useFormContext } from "react-hook-form";
 
 type Props = {
   isPending: boolean;
@@ -213,11 +214,17 @@ export const DebtorSection = ({
           <FormLabel htmlFor="insuranceValidUntil">
             Insurance valid until
           </FormLabel>
-          <Input
-            id="insuranceValidUntil"
-            type="date"
-            {...register("insuranceValidUntil")}
-            disabled={isPending}
+          <Controller
+            name="insuranceValidUntil"
+            control={control}
+            render={({ field }) => (
+              <DatePicker
+                id="insuranceValidUntil"
+                value={field.value ?? ""}
+                onChange={field.onChange}
+                disabled={isPending}
+              />
+            )}
           />
           <FormFieldError message={errors.insuranceValidUntil?.message} />
         </div>
@@ -226,11 +233,17 @@ export const DebtorSection = ({
           <FormLabel htmlFor="creditLimitUninsuredDate">
             Credit limit uninsured date
           </FormLabel>
-          <Input
-            id="creditLimitUninsuredDate"
-            type="date"
-            {...register("creditLimitUninsuredDate")}
-            disabled={isPending}
+          <Controller
+            name="creditLimitUninsuredDate"
+            control={control}
+            render={({ field }) => (
+              <DatePicker
+                id="creditLimitUninsuredDate"
+                value={field.value ?? ""}
+                onChange={field.onChange}
+                disabled={isPending}
+              />
+            )}
           />
           <FormFieldError message={errors.creditLimitUninsuredDate?.message} />
         </div>

@@ -11,6 +11,7 @@ import {
 } from "@/app/(dashboard)/companies/[uuid]/edit/debtor/validation";
 import { Button } from "@/components/shadcn/button";
 import { Checkbox } from "@/components/shadcn/checkbox";
+import { DatePicker } from "@/components/shadcn/date-picker";
 import { Input } from "@/components/shadcn/input";
 import { FormError } from "@/components/ui/form-error";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
@@ -22,7 +23,7 @@ import { useUser } from "@clerk/nextjs";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { startTransition, useActionState } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 
 type Props = {
   company: CompanyDebtorData;
@@ -291,11 +292,17 @@ export const CompanyDebtorForm = ({
             <FormLabel htmlFor="insuranceValidUntil">
               Insurance valid until
             </FormLabel>
-            <Input
-              id="insuranceValidUntil"
-              type="date"
-              {...register("insuranceValidUntil")}
-              disabled={isPending}
+            <Controller
+              name="insuranceValidUntil"
+              control={control}
+              render={({ field }) => (
+                <DatePicker
+                  id="insuranceValidUntil"
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                  disabled={isPending}
+                />
+              )}
             />
             <FormFieldError message={errors.insuranceValidUntil?.message} />
           </div>
@@ -304,11 +311,17 @@ export const CompanyDebtorForm = ({
             <FormLabel htmlFor="creditLimitUninsuredDate">
               Credit limit uninsured date
             </FormLabel>
-            <Input
-              id="creditLimitUninsuredDate"
-              type="date"
-              {...register("creditLimitUninsuredDate")}
-              disabled={isPending}
+            <Controller
+              name="creditLimitUninsuredDate"
+              control={control}
+              render={({ field }) => (
+                <DatePicker
+                  id="creditLimitUninsuredDate"
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                  disabled={isPending}
+                />
+              )}
             />
             <FormFieldError
               message={errors.creditLimitUninsuredDate?.message}

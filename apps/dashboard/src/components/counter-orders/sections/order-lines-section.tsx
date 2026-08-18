@@ -7,6 +7,7 @@ import { ProductOption } from "@/app/(dashboard)/products/actions";
 import { ProductGroupOption } from "@/app/(dashboard)/product-groups/actions";
 import { ProductPickerDialog } from "@/components/companies/dialogs/product-picker-dialog";
 import { Button } from "@/components/shadcn/button";
+import { DatePicker } from "@/components/shadcn/date-picker";
 import { Input } from "@/components/shadcn/input";
 import { Select } from "@/components/shadcn/select";
 import { FormFieldError } from "@/components/ui/form-field";
@@ -189,9 +190,15 @@ export const OrderLinesSection = ({ products, productGroups }: Props) => {
                   <label className="mb-1 block text-xs font-medium text-muted-foreground">
                     Delivery date
                   </label>
-                  <Input
-                    type="date"
-                    {...register(`items.${index}.deliveryDate`)}
+                  <Controller
+                    control={control}
+                    name={`items.${index}.deliveryDate`}
+                    render={({ field: deliveryDateField }) => (
+                      <DatePicker
+                        value={deliveryDateField.value ?? ""}
+                        onChange={deliveryDateField.onChange}
+                      />
+                    )}
                   />
                 </div>
                 <div>

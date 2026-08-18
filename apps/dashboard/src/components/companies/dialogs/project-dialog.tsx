@@ -9,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/shadcn/dialog";
+import { DatePicker } from "@/components/shadcn/date-picker";
 import { Input } from "@/components/shadcn/input";
 import { Select } from "@/components/shadcn/select";
 import { DialogFormFooter } from "@/components/ui/dialog-form-footer";
@@ -66,7 +67,17 @@ export const ProjectDialog = ({
           </div>
           <div>
             <FormLabel htmlFor="proj-end">End Date</FormLabel>
-            <Input id="proj-end" type="date" {...form.register("endDate")} />
+            <Controller
+              name="endDate"
+              control={form.control}
+              render={({ field }) => (
+                <DatePicker
+                  id="proj-end"
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                />
+              )}
+            />
           </div>
           <div>
             <FormLabel htmlFor="proj-revenue">Revenue</FormLabel>

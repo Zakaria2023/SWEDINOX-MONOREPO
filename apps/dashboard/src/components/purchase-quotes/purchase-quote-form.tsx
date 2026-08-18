@@ -4,6 +4,7 @@ import { Controller } from "react-hook-form";
 import { usePurchaseQuoteSubmit } from "@/app/(dashboard)/purchase-quotes/use-purchase-quote-submit";
 import { CompanyOption } from "@/app/(dashboard)/companies/actions";
 import { PurchaseQuoteFormValues } from "@/app/(dashboard)/purchase-quotes/validation";
+import { DatePicker } from "@/components/shadcn/date-picker";
 import { Input } from "@/components/shadcn/input";
 import { Select } from "@/components/shadcn/select";
 import { DocumentUploader } from "@/components/document-uploader";
@@ -168,11 +169,31 @@ export const PurchaseQuoteForm = ({
           </div>
           <div>
             <FormLabel htmlFor="quoteDate">Quote date</FormLabel>
-            <Input id="quoteDate" type="date" {...register("quoteDate")} />
+            <Controller
+              name="quoteDate"
+              control={control}
+              render={({ field }) => (
+                <DatePicker
+                  id="quoteDate"
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                />
+              )}
+            />
           </div>
           <div>
             <FormLabel htmlFor="validUntil">Valid u/i</FormLabel>
-            <Input id="validUntil" type="date" {...register("validUntil")} />
+            <Controller
+              name="validUntil"
+              control={control}
+              render={({ field }) => (
+                <DatePicker
+                  id="validUntil"
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                />
+              )}
+            />
           </div>
         </div>
       </section>
@@ -351,11 +372,17 @@ export const PurchaseQuoteForm = ({
             <div className="flex items-end gap-3">
               <div>
                 <FormLabel htmlFor="deliveryDate">Date</FormLabel>
-                <Input
-                  id="deliveryDate"
-                  type="date"
-                  className="w-48"
-                  {...register("deliveryDate")}
+                <Controller
+                  name="deliveryDate"
+                  control={control}
+                  render={({ field }) => (
+                    <DatePicker
+                      id="deliveryDate"
+                      value={field.value ?? ""}
+                      onChange={field.onChange}
+                      className="w-48"
+                    />
+                  )}
                 />
               </div>
               <div>

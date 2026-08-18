@@ -7,6 +7,7 @@ import { CompanyOption } from "@/app/(dashboard)/companies/actions";
 import { ContractForProjectOption } from "@/app/(dashboard)/contracts/actions";
 import { ProductPricingOption } from "@/app/(dashboard)/products/actions";
 import { QuoteFormValues } from "@/app/(dashboard)/quotes/validation";
+import { DatePicker } from "@/components/shadcn/date-picker";
 import { Input } from "@/components/shadcn/input";
 import { Textarea } from "@/components/shadcn/textarea";
 import { Select } from "@/components/shadcn/select";
@@ -169,21 +170,47 @@ export const QuoteForm = ({
 
           <div>
             <FormLabel htmlFor="priceDate">Price date</FormLabel>
-            <Input id="priceDate" type="date" {...register("priceDate")} />
+            <Controller
+              name="priceDate"
+              control={control}
+              render={({ field }) => (
+                <DatePicker
+                  id="priceDate"
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                />
+              )}
+            />
           </div>
 
           <div>
             <FormLabel htmlFor="decisionDate">Decision date</FormLabel>
-            <Input
-              id="decisionDate"
-              type="date"
-              {...register("decisionDate")}
+            <Controller
+              name="decisionDate"
+              control={control}
+              render={({ field }) => (
+                <DatePicker
+                  id="decisionDate"
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                />
+              )}
             />
           </div>
 
           <div>
             <FormLabel htmlFor="quoteDate">Quote date</FormLabel>
-            <Input id="quoteDate" type="date" {...register("quoteDate")} />
+            <Controller
+              name="quoteDate"
+              control={control}
+              render={({ field }) => (
+                <DatePicker
+                  id="quoteDate"
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                />
+              )}
+            />
           </div>
 
           <div>
@@ -200,7 +227,17 @@ export const QuoteForm = ({
 
           <div>
             <FormLabel htmlFor="validUntil">Valid u/i</FormLabel>
-            <Input id="validUntil" type="date" {...register("validUntil")} />
+            <Controller
+              name="validUntil"
+              control={control}
+              render={({ field }) => (
+                <DatePicker
+                  id="validUntil"
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                />
+              )}
+            />
           </div>
         </div>
 
@@ -525,11 +562,17 @@ export const QuoteForm = ({
             <div className="flex items-end gap-3">
               <div>
                 <FormLabel htmlFor="deliveryDate">Date</FormLabel>
-                <Input
-                  id="deliveryDate"
-                  type="date"
-                  className="w-48"
-                  {...register("deliveryDate")}
+                <Controller
+                  name="deliveryDate"
+                  control={control}
+                  render={({ field }) => (
+                    <DatePicker
+                      id="deliveryDate"
+                      value={field.value ?? ""}
+                      onChange={field.onChange}
+                      className="w-48"
+                    />
+                  )}
                 />
               </div>
               <div>

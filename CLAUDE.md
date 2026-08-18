@@ -210,6 +210,38 @@ This is a pnpm + Turborepo repo built on Next.js 16. Today it holds a single app
   />;
   ```
 
+## Dates & Times
+
+- Never use a native date/time input (`<Input type="date" />`, `type="time"`, `type="datetime-local"`, `type="month"`, `type="week"`). Always use `DatePicker` from `@/components/shadcn/date-picker` or `TimePicker` from `@/components/shadcn/time-picker`.
+- Both are controlled by a plain string — `DatePicker` reads and emits `"yyyy-MM-dd"`, `TimePicker` reads and emits 24-hour `"HH:mm"` — which is exactly what the native inputs produced, so zod schemas and Server Actions need no change.
+- Inside a `react-hook-form` form they are wired with `Controller` (they have no `ref`, so `register` does not work on them). Outside a form, pass `value` and `onChange` from `useState` directly — `onChange` hands you the string, not an event.
+- When a `FormLabel` has an `htmlFor`, pass the same value as the picker's `id` so clicking the label still reaches the control.
+
+  ```tsx
+  // ❌ Bad — native date input
+  <Input id="quoteDate" type="date" {...register("quoteDate")} />
+
+  // ❌ Also bad — register() on a picker, which has no ref to bind
+  <DatePicker {...register("quoteDate")} />
+
+  // ✅ Good — inside a form
+  <FormLabel htmlFor="quoteDate">Quote date</FormLabel>
+  <Controller
+    name="quoteDate"
+    control={control}
+    render={({ field }) => (
+      <DatePicker
+        id="quoteDate"
+        value={field.value ?? ""}
+        onChange={field.onChange}
+      />
+    )}
+  />
+
+  // ✅ Good — outside a form
+  <DatePicker value={paymentDate} onChange={setPaymentDate} />
+  ```
+
 ## Navigation
 
 - Never use a plain `<a>` tag for in-app navigation. Always use `Link` from `next/link` instead.

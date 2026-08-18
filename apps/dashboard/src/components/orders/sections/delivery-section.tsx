@@ -2,6 +2,7 @@
 
 import { Controller, useFormContext } from "react-hook-form";
 import { OrderFormValues } from "@/app/(dashboard)/orders/validation";
+import { DatePicker } from "@/components/shadcn/date-picker";
 import { Input } from "@/components/shadcn/input";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import { FormSelectField } from "@/components/ui/form-select-field";
@@ -85,7 +86,17 @@ export const DeliverySection = ({
         </div>
 
         {deliveryType === "date" ? (
-          <Input type="date" className="w-48" {...register("deliveryDate")} />
+          <Controller
+            name="deliveryDate"
+            control={control}
+            render={({ field }) => (
+              <DatePicker
+                value={field.value ?? ""}
+                onChange={field.onChange}
+                className="w-48"
+              />
+            )}
+          />
         ) : (
           <div className="flex items-center gap-2">
             <div>

@@ -11,6 +11,8 @@ type DatePickerProps = {
   disabled?: boolean;
   placeholder?: string;
   className?: string;
+  id?: string;
+  ariaLabel?: string;
 };
 
 export const DatePicker = ({
@@ -19,6 +21,8 @@ export const DatePicker = ({
   disabled,
   placeholder,
   className,
+  id,
+  ariaLabel,
 }: DatePickerProps) => {
   const locale = "en-US";
   const today = new Date();
@@ -103,6 +107,8 @@ export const DatePicker = ({
   return (
     <PopoverPrimitive.Root>
       <PopoverPrimitive.Trigger
+        id={id}
+        aria-label={ariaLabel}
         disabled={disabled}
         type="button"
         className={cn(
@@ -173,6 +179,16 @@ export const DatePicker = ({
                 </div>
               ))}
             </div>
+
+            {/* A native date input could always be emptied again; without this
+                a picked date would be impossible to take back. */}
+            <button
+              type="button"
+              onClick={() => onChange?.("")}
+              className="mt-2 w-full rounded-lg py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted"
+            >
+              Clear
+            </button>
           </PopoverPrimitive.Popup>
         </PopoverPrimitive.Positioner>
       </PopoverPrimitive.Portal>

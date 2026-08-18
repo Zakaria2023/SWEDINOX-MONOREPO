@@ -11,6 +11,7 @@ import {
 import { IndustryOption } from "@/app/(dashboard)/industries/actions";
 import { Button } from "@/components/shadcn/button";
 import { Checkbox } from "@/components/shadcn/checkbox";
+import { DatePicker } from "@/components/shadcn/date-picker";
 import { Input } from "@/components/shadcn/input";
 import { Select } from "@/components/shadcn/select";
 import { FormError } from "@/components/ui/form-error";
@@ -182,11 +183,17 @@ export const CompanyMarketingForm = ({ company, industries }: Props) => {
               <FormLabel htmlFor="targetDateNextVisit">
                 Target date of next visit
               </FormLabel>
-              <Input
-                id="targetDateNextVisit"
-                type="date"
-                {...register("targetDateNextVisit")}
-                disabled={isPending}
+              <Controller
+                name="targetDateNextVisit"
+                control={control}
+                render={({ field }) => (
+                  <DatePicker
+                    id="targetDateNextVisit"
+                    value={field.value ?? ""}
+                    onChange={field.onChange}
+                    disabled={isPending}
+                  />
+                )}
               />
             </div>
             <div>

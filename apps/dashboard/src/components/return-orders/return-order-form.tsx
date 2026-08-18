@@ -5,7 +5,9 @@ import { useReturnOrderSubmit } from "@/app/(dashboard)/return-orders/use-return
 import { CompanyOption } from "@/app/(dashboard)/companies/actions";
 import { ReturnOrderFormValues } from "@/app/(dashboard)/return-orders/validation";
 import { TextCategoryOption } from "@/app/(dashboard)/text-categories/actions";
+import { DatePicker } from "@/components/shadcn/date-picker";
 import { Input } from "@/components/shadcn/input";
+import { TimePicker } from "@/components/shadcn/time-picker";
 import { Textarea } from "@/components/shadcn/textarea";
 import { Select } from "@/components/shadcn/select";
 import { DocumentUploader } from "@/components/document-uploader";
@@ -159,7 +161,17 @@ export const ReturnOrderForm = ({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <FormLabel htmlFor="returnDate">Return date</FormLabel>
-              <Input id="returnDate" type="date" {...register("returnDate")} />
+              <Controller
+                name="returnDate"
+                control={control}
+                render={({ field }) => (
+                  <DatePicker
+                    id="returnDate"
+                    value={field.value ?? ""}
+                    onChange={field.onChange}
+                  />
+                )}
+              />
             </div>
 
             <div className="flex items-end pb-1">
@@ -393,18 +405,30 @@ export const ReturnOrderForm = ({
             </div>
             <div>
               <FormLabel htmlFor="deliveryAfterTime">Delivery after</FormLabel>
-              <Input
-                id="deliveryAfterTime"
-                type="time"
-                {...register("deliveryAfterTime")}
+              <Controller
+                name="deliveryAfterTime"
+                control={control}
+                render={({ field }) => (
+                  <TimePicker
+                    id="deliveryAfterTime"
+                    value={field.value ?? ""}
+                    onChange={field.onChange}
+                  />
+                )}
               />
             </div>
             <div>
               <FormLabel htmlFor="deliverForTime">Deliver for</FormLabel>
-              <Input
-                id="deliverForTime"
-                type="time"
-                {...register("deliverForTime")}
+              <Controller
+                name="deliverForTime"
+                control={control}
+                render={({ field }) => (
+                  <TimePicker
+                    id="deliverForTime"
+                    value={field.value ?? ""}
+                    onChange={field.onChange}
+                  />
+                )}
               />
             </div>
             <FormSelectField

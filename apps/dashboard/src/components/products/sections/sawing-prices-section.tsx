@@ -6,6 +6,7 @@ import {
   EMPTY_SAWING_PRICE,
   ProductFormValues,
 } from "@/app/(dashboard)/products/validation";
+import { DatePicker } from "@/components/shadcn/date-picker";
 import { Input } from "@/components/shadcn/input";
 import { FormCheckboxCard } from "@/components/ui/form-checkbox-card";
 import { FormLabel } from "@/components/ui/form-field";
@@ -61,20 +62,32 @@ export const SawingPricesSection = () => {
                 <FormLabel htmlFor={`sawingPrices.${index}.validFrom`}>
                   Valid from
                 </FormLabel>
-                <Input
-                  id={`sawingPrices.${index}.validFrom`}
-                  type="date"
-                  {...register(`sawingPrices.${index}.validFrom`)}
+                <Controller
+                  control={control}
+                  name={`sawingPrices.${index}.validFrom`}
+                  render={({ field: validFromField }) => (
+                    <DatePicker
+                      id={`sawingPrices.${index}.validFrom`}
+                      value={validFromField.value ?? ""}
+                      onChange={validFromField.onChange}
+                    />
+                  )}
                 />
               </div>
               <div>
                 <FormLabel htmlFor={`sawingPrices.${index}.validUntil`}>
                   Valid until
                 </FormLabel>
-                <Input
-                  id={`sawingPrices.${index}.validUntil`}
-                  type="date"
-                  {...register(`sawingPrices.${index}.validUntil`)}
+                <Controller
+                  control={control}
+                  name={`sawingPrices.${index}.validUntil`}
+                  render={({ field: validUntilField }) => (
+                    <DatePicker
+                      id={`sawingPrices.${index}.validUntil`}
+                      value={validUntilField.value ?? ""}
+                      onChange={validUntilField.onChange}
+                    />
+                  )}
                 />
               </div>
               <FormSelectField

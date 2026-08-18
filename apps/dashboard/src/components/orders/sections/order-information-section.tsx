@@ -3,6 +3,7 @@
 import { Controller, useFormContext } from "react-hook-form";
 import { OrderFormValues } from "@/app/(dashboard)/orders/validation";
 import { ClerkUserOption } from "@/lib/server/clerk";
+import { DatePicker } from "@/components/shadcn/date-picker";
 import { Input } from "@/components/shadcn/input";
 import { Select, SelectOption } from "@/components/shadcn/select";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
@@ -115,7 +116,17 @@ export const OrderInformationSection = ({
 
         <div>
           <FormLabel htmlFor="priceDate">Price Date</FormLabel>
-          <Input id="priceDate" type="date" {...register("priceDate")} />
+          <Controller
+            name="priceDate"
+            control={control}
+            render={({ field }) => (
+              <DatePicker
+                id="priceDate"
+                value={field.value ?? ""}
+                onChange={field.onChange}
+              />
+            )}
+          />
         </div>
 
         <div>
