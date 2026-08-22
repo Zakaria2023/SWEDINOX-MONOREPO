@@ -13,6 +13,7 @@ import {
   Warehouses,
 } from "@/db/schema/warehouses";
 import { describeError, generateUuid } from "@/lib/helpers";
+import { checkPrintSetup } from "@/app/(dashboard)/warehouses/print-setup";
 import { asc, desc, eq, getTableColumns, isNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/mysql-core";
 
@@ -202,10 +203,7 @@ export const getWarehouseDetail = async (
     })
     .from(Warehouses)
     .leftJoin(ParentWarehouse, eq(ParentWarehouse.uuid, Warehouses.parentUuid))
-    .leftJoin(
-      Companies,
-      eq(Companies.uuid, Warehouses.transportByCompanyUuid),
-    )
+    .leftJoin(Companies, eq(Companies.uuid, Warehouses.transportByCompanyUuid))
     .leftJoin(
       PickupLocation,
       eq(PickupLocation.uuid, Warehouses.pickupDefaultLocationUuid),
@@ -266,6 +264,14 @@ export const createWarehouse = async (
 ): Promise<WarehouseActionResult> => {
   const uuid = generateUuid();
   const workOrderUuid = generateUuid();
+
+  // A slip sent to a device that cannot produce it, or a paper tray on a device
+  // with no trays, only shows up as a bad print run on the floor.
+  const printProblem = checkPrintSetup(fields);
+  if (printProblem) {
+    return { error: printProblem };
+  }
+
   try {
     await db.transaction(async (tx) => {
       await tx.insert(Warehouses).values({ ...fields, uuid });

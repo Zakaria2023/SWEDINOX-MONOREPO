@@ -92,6 +92,7 @@ export const WarehouseWorkOrderDetailView = ({ workOrder }: Props) => (
               <TableHead className="text-right">Kg planned</TableHead>
               <TableHead className="text-right">Kg actual</TableHead>
               <TableHead>Charge</TableHead>
+              <TableHead className="text-right">Labels</TableHead>
               <TableHead className="text-right">Priority</TableHead>
               <TableHead>Rush</TableHead>
             </TableRow>
@@ -100,7 +101,7 @@ export const WarehouseWorkOrderDetailView = ({ workOrder }: Props) => (
             {workOrder.lines.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={15}
+                  colSpan={16}
                   className="h-24 text-center text-muted-foreground"
                 >
                   No lines on this work order.
@@ -156,6 +157,11 @@ export const WarehouseWorkOrderDetailView = ({ workOrder }: Props) => (
                     {orDash(line.kgActual)}
                   </TableCell>
                   <TableCell>{orDash(line.internalCharge)}</TableCell>
+                  {/* Customer labels plus stock labels — what this line has to
+                      put on the goods before they leave the shelf. */}
+                  <TableCell className="text-right tabular-nums">
+                    {line.customerLabels + line.stockLabels}
+                  </TableCell>
                   <TableCell className="text-right tabular-nums">
                     {orDash(line.priority)}
                   </TableCell>

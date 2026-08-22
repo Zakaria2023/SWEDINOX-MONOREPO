@@ -8,7 +8,14 @@ import {
   WarehouseWorkOrderLines,
   WarehouseWorkOrders,
 } from "@/db/schema/warehouse-work-orders";
+import { Products } from "@/db/schema/products";
 import { SelectWarehouses, Warehouses } from "@/db/schema/warehouses";
+import {
+  customerLabelCount,
+  customerLabelMedium,
+  PrintMedium,
+  stockLabelCount,
+} from "@/lib/helpers";
 import { desc, eq, getTableColumns } from "drizzle-orm";
 
 export type WorkOrderListItem = SelectWarehouseWorkOrders & {
@@ -17,6 +24,13 @@ export type WorkOrderListItem = SelectWarehouseWorkOrders & {
 
 export type WorkOrderLineListItem = SelectWarehouseWorkOrderLines & {
   companyName: SelectCompanies["companyName"] | null;
+  // How many labels this line prints, which the two options on the product
+  // already decide: per line, per collo or per piece for the customer's label,
+  // and per bundle or a fixed count for the stock label. Derived rather than
+  // stored — it follows the line's colli and quantity.
+  customerLabels: number;
+  stockLabels: number;
+  labelMedium: PrintMedium | null;
 };
 
 export type WorkOrderDetail = WorkOrderListItem & {
@@ -80,13 +94,42 @@ export const getWarehouseWorkOrderLines = async (
     .select({
       ...getTableColumns(WarehouseWorkOrderLines),
       companyName: Companies.companyName,
+      // The line records the product by code, so the label settings are joined
+      // on the code rather than on a reference it does not hold.
+      customerLabelForPickingSlip: Products.customerLabelForPickingSlip,
+      stockLabelBreakdown: Products.stockLabelBreakdown,
+      stockLabelPieces: Products.stockLabelPieces,
     })
     .from(WarehouseWorkOrderLines)
     .leftJoin(
       Companies,
       eq(WarehouseWorkOrderLines.companyUuid, Companies.uuid),
     )
+    .leftJoin(
+      Products,
+      eq(WarehouseWorkOrderLines.productCode, Products.productCode),
+    )
     .where(eq(WarehouseWorkOrderLines.workOrderUuid, workOrderUuid))
     .orderBy(desc(WarehouseWorkOrderLines.date));
-  return rows.map((r) => ({ ...r, companyName: r.companyName ?? null }));
+
+  return rows.map(
+    ({
+      customerLabelForPickingSlip,
+      stockLabelBreakdown,
+      stockLabelPieces,
+      ...line
+    }) => ({
+      ...line,
+      companyName: line.companyName ?? null,
+      customerLabels: customerLabelCount(customerLabelForPickingSlip, {
+        colli: line.colliCount ?? 0,
+        pieces: Number(line.qtyPlanned ?? 0),
+      }),
+      stockLabels: stockLabelCount(stockLabelBreakdown, {
+        bundles: line.colliCount ?? 0,
+        amountPerLine: stockLabelPieces ?? 0,
+      }),
+      labelMedium: customerLabelMedium(customerLabelForPickingSlip),
+    }),
+  );
 };

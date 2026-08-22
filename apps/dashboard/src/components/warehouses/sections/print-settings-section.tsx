@@ -6,6 +6,8 @@ import { FormLabel } from "@/components/ui/form-field";
 import { FormSelectField } from "@/components/ui/form-select-field";
 import { useFormContext } from "react-hook-form";
 import { WarehouseFormValues } from "@/app/(dashboard)/warehouses/validation";
+import { printSetupAdvisory } from "@/app/(dashboard)/warehouses/print-setup";
+import { PrinterName, StickerPerPickWorkorderType } from "@/lib/enums";
 
 type Props = {
   printerNameOptions: { value: string; label: string }[];
@@ -18,6 +20,14 @@ export const PrintSettingsSection = ({
 }: Props) => {
   const { register, control, watch, setValue } =
     useFormContext<WarehouseFormValues>();
+
+  // The sticker settings are specified at a resolution the label devices in the
+  // catalogue do not reach. That is worth knowing while the pair is being
+  // chosen, but it is not a reason to refuse the save.
+  const stickerAdvisory = printSetupAdvisory(
+    watch("stickerPerPickWorkorder") as StickerPerPickWorkorderType | null,
+    watch("stickerPrinter") as PrinterName | null,
+  );
 
   return (
     <section className="space-y-6">
@@ -117,6 +127,9 @@ export const PrintSettingsSection = ({
             options={stickerPerPickOptions}
             emptyValue=""
           />
+          {stickerAdvisory && (
+            <p className="text-xs text-muted-foreground">{stickerAdvisory}</p>
+          )}
         </div>
         <div className="space-y-3">
           <h3 className="text-sm font-medium text-muted-foreground">

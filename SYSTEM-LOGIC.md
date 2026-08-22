@@ -1519,6 +1519,37 @@ move, and whether it is closed by a scan. workOrderLineTypeForMove names the
 operation for a move, and returns null for one no operation describes — which is
 what makes an unsupported move visible rather than silently allowed.
 
+15.14 — A printer is a device, and a label option is a count
+
+A printer was a name on a dropdown, so an A4 pick slip could be routed to a
+label roll, a paper tray could be chosen on a device that has none, and a
+sticker setting could be saved with no label printer behind it. Nothing
+objected; the print run simply came out wrong on the floor.
+
+PRINTER_META describes the thirteen devices: six A4 sheet printers with trays
+(three departments, black and colour), two 203 dpi SATO thermal label printers
+with no trays, and five virtual devices that only ever produce a file.
+WORKORDER_SLIP_META gives each slip type the medium it has to come out on — A4
+landscape, A4 portrait, a label, or a CSV file that is not printed at all.
+
+checkPrintSetup refuses three things on save, on both the create screen and the
+two edit sections that own printer fields: a slip on a device that cannot produce
+its medium, a tray on a device with no trays, and a sticker-per-pick setting with
+no label printer behind it. A virtual device accepts anything, because it does.
+
+One thing is deliberately not refused. The two sticker-per-pick settings are
+specified at 600 dpi and every label device in the catalogue prints at 203, so
+refusing that pair would make the setting unusable. printSetupAdvisory says so on
+the screen instead, and the save goes through.
+
+The label options are counts, not captions. customerLabelCount prints one label
+per line, one per collo, or one per piece — which is the whole difference between
+sticker_per_line, sticker_per_collo and sticker_per_piece, and it was not being
+counted anywhere. stockLabelCount does the same for the three breakdowns: the
+line's own label plus one per bundle, one per bundle alone, or a fixed number per
+line. stickerPerPickCount is none, one for the order, or one per line. The
+warehouse work-order detail now shows how many labels each line has to produce.
+
 ===============================================================================
 PART 16 — Quick map of the derivations
 ===============================================================================

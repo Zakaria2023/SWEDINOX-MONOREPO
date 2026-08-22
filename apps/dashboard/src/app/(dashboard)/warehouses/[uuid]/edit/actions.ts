@@ -9,6 +9,7 @@ import { WarehouseFormValues } from "@/app/(dashboard)/warehouses/validation";
 import { db } from "@/db";
 import { SelectWarehouses, Warehouses } from "@/db/schema/warehouses";
 import { describeError } from "@/lib/helpers";
+import { checkPrintSetup } from "@/app/(dashboard)/warehouses/print-setup";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -256,26 +257,31 @@ export const updateWarehouseSawing = async (
 export const updateWarehousePickupWorkorders = async (
   uuid: string,
   values: WarehouseFormValues,
-): Promise<WarehouseActionResult> =>
-  saveSection(
+): Promise<WarehouseActionResult> => {
+  const fields = formValuesToWarehouseFields(values);
+  const problem = checkPrintSetup(fields);
+  if (problem) {
+    return { error: problem };
+  }
+
+  return saveSection(
     uuid,
-    pickColumns(
-      formValuesToWarehouseFields(values),
-      SECTION_COLUMNS.pickupWorkorders,
-    ),
+    pickColumns(fields, SECTION_COLUMNS.pickupWorkorders),
   );
+};
 
 export const updateWarehousePrintSettings = async (
   uuid: string,
   values: WarehouseFormValues,
-): Promise<WarehouseActionResult> =>
-  saveSection(
-    uuid,
-    pickColumns(
-      formValuesToWarehouseFields(values),
-      SECTION_COLUMNS.printSettings,
-    ),
-  );
+): Promise<WarehouseActionResult> => {
+  const fields = formValuesToWarehouseFields(values);
+  const problem = checkPrintSetup(fields);
+  if (problem) {
+    return { error: problem };
+  }
+
+  return saveSection(uuid, pickColumns(fields, SECTION_COLUMNS.printSettings));
+};
 
 export const updateWarehouseDocumentsSection = async (
   uuid: string,

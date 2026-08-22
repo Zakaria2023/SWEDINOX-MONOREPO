@@ -9,6 +9,8 @@ import {
   contractableRoles,
   ContractType,
   ComplaintCategory,
+  CountWorkorderMethod,
+  CustomerLabelOption,
   ComplaintSolution,
   CustomerGroup,
   DeliveryTerm,
@@ -30,6 +32,8 @@ import {
   OrderDeblockType,
   OrderLineStatus,
   OrderWeightType,
+  PrinterEntry,
+  PrinterName,
   ProcessingEditing,
   ProductDimensionShape,
   ProductShape,
@@ -46,6 +50,9 @@ import {
   SalesRepresentative,
   SfnCounterpartyRole,
   StockMode,
+  StickerPerPickWorkorderType,
+  StockLabelBreakdown,
+  StockLabelType,
   StockUnit,
   StockMovementType,
   SurchargeBasis,
@@ -55,12 +62,16 @@ import {
   transportModes,
   VatCode,
   WarehouseBlockReason,
+  WarehouseCountStockType,
   WarehouseLocationType,
   warehouseLocationTypes,
   WarehouseTransportRegion,
   warehouseTransportRegions,
   WarehouseWorkOrderLineType,
   warehouseWorkOrderLineTypes,
+  WorkorderPrintMethod,
+  WorkorderReleaseMethod,
+  WorkorderSlipType,
 } from "./enums";
 import {
   CONTRACT_TYPE_LABELS,
@@ -4953,6 +4964,346 @@ export const workOrderLineTypeMetaOf = (
   type: WarehouseWorkOrderLineType | null | undefined,
 ): WarehouseWorkOrderLineTypeMeta | null =>
   type ? WAREHOUSE_WORK_ORDER_LINE_TYPE_META[type] : null;
+
+// ---------------------------------------------------------------------------
+// Printers, slips and labels
+//
+// A printer was a name on a dropdown, so an A4 pick slip could be sent to a
+// label printer, a paper tray could be chosen on a device that has no trays,
+// and a 600 dpi sticker could be routed to a 203 dpi label printer. Nothing
+// objected, and the print run simply came out wrong on the floor.
+//
+// A printer is a device with a medium, a resolution and a department; a slip
+// type is the medium it has to come out on; and a label option is a count of
+// labels rather than a caption. All three are known from their own value.
+// ---------------------------------------------------------------------------
+
+/** What comes out of a device. */
+export type PrintMedium = "a4" | "label" | "virtual" | "file";
+
+export type PrinterMeta = {
+  medium: Exclude<PrintMedium, "file">;
+  /** Prints in colour as well as black. */
+  colour: boolean;
+  /** Resolution, where the device has a stated one. Null for sheet printers. */
+  dpi: number | null;
+  /** Whose printer it is, for routing a document to the right floor. */
+  department: "sales" | "logistics" | "administration" | "none";
+  /** Has paper trays to choose between. A label roll and a PDF do not. */
+  hasTrays: boolean;
+};
+
+export type WorkorderSlipMeta = {
+  /** The medium the slip has to come out on. */
+  medium: PrintMedium;
+  orientation: "landscape" | "portrait" | null;
+};
+
+export type CustomerLabelMeta = {
+  medium: PrintMedium | null;
+  /** What one label covers, which is what decides how many are printed. */
+  per: "line" | "collo" | "piece" | "none";
+};
+
+export const PRINTER_META: Record<PrinterName, PrinterMeta> = {
+  sales_black: {
+    medium: "a4",
+    colour: false,
+    dpi: null,
+    department: "sales",
+    hasTrays: true,
+  },
+  sales_color: {
+    medium: "a4",
+    colour: true,
+    dpi: null,
+    department: "sales",
+    hasTrays: true,
+  },
+  logistics_black: {
+    medium: "a4",
+    colour: false,
+    dpi: null,
+    department: "logistics",
+    hasTrays: true,
+  },
+  logistics_color: {
+    medium: "a4",
+    colour: true,
+    dpi: null,
+    department: "logistics",
+    hasTrays: true,
+  },
+  administration_black: {
+    medium: "a4",
+    colour: false,
+    dpi: null,
+    department: "administration",
+    hasTrays: true,
+  },
+  administration_color: {
+    medium: "a4",
+    colour: true,
+    dpi: null,
+    department: "administration",
+    hasTrays: true,
+  },
+  // Thermal label printers: a roll, one resolution, no trays.
+  sato_cl4nx_203dpi: {
+    medium: "label",
+    colour: false,
+    dpi: 203,
+    department: "logistics",
+    hasTrays: false,
+  },
+  sato_cl408e_logistics: {
+    medium: "label",
+    colour: false,
+    dpi: 203,
+    department: "logistics",
+    hasTrays: false,
+  },
+  // Virtual devices. They accept anything and produce a file, so they are never
+  // the right answer for a label that has to end up on a bundle.
+  microsoft_print_to_pdf: {
+    medium: "virtual",
+    colour: true,
+    dpi: null,
+    department: "none",
+    hasTrays: false,
+  },
+  microsoft_print_to_pdf_8_redirected: {
+    medium: "virtual",
+    colour: true,
+    dpi: null,
+    department: "none",
+    hasTrays: false,
+  },
+  onenote_desktop: {
+    medium: "virtual",
+    colour: true,
+    dpi: null,
+    department: "none",
+    hasTrays: false,
+  },
+  onenote_desktop_8_redirected: {
+    medium: "virtual",
+    colour: true,
+    dpi: null,
+    department: "none",
+    hasTrays: false,
+  },
+  send_to_onenote_16: {
+    medium: "virtual",
+    colour: true,
+    dpi: null,
+    department: "none",
+    hasTrays: false,
+  },
+};
+
+export const WORKORDER_SLIP_META: Record<WorkorderSlipType, WorkorderSlipMeta> =
+  {
+    a4_landscape: { medium: "a4", orientation: "landscape" },
+    a4_portrait: { medium: "a4", orientation: "portrait" },
+    label: { medium: "label", orientation: null },
+    // Not printed at all: written out for a label machine to read.
+    label_via_csv: { medium: "file", orientation: null },
+  };
+
+export const CUSTOMER_LABEL_META: Record<
+  CustomerLabelOption,
+  CustomerLabelMeta
+> = {
+  no_customer_label: { medium: null, per: "none" },
+  csv_file: { medium: "file", per: "line" },
+  line_label: { medium: "label", per: "line" },
+  sticker_per_line: { medium: "label", per: "line" },
+  sticker_per_collo: { medium: "label", per: "collo" },
+  sticker_per_piece: { medium: "label", per: "piece" },
+};
+
+/** The resolution the sticker-per-pick options are specified at. */
+export const STICKER_PER_PICK_DPI = 600;
+
+/** What a printer is, or null when a setting names none. */
+export const printerMetaOf = (
+  printer: PrinterName | null | undefined,
+): PrinterMeta | null => (printer ? PRINTER_META[printer] : null);
+
+/**
+ * Whether a device can produce a medium. A virtual printer accepts anything —
+ * it only ever produces a file — which is why it is allowed here and refused
+ * wherever the output has to physically end up on a bundle.
+ */
+export const printerAcceptsMedium = (
+  printer: PrinterName | null | undefined,
+  medium: PrintMedium,
+): boolean => {
+  const meta = printerMetaOf(printer);
+  if (!meta) {
+    return true;
+  }
+  if (medium === "file" || meta.medium === "virtual") {
+    return true;
+  }
+  return meta.medium === medium;
+};
+
+/**
+ * Whether a printer can produce a given workorder slip. An A4 slip on a label
+ * roll and a label on a sheet printer are both wrong before the run starts.
+ */
+export const printerAcceptsSlip = (
+  printer: PrinterName | null | undefined,
+  slip: WorkorderSlipType | null | undefined,
+): boolean =>
+  slip ? printerAcceptsMedium(printer, WORKORDER_SLIP_META[slip].medium) : true;
+
+/**
+ * Whether a paper-tray choice makes sense on a device. Only a sheet printer has
+ * trays; "select automatically" is always allowed, since it chooses nothing.
+ */
+export const printerAcceptsEntry = (
+  printer: PrinterName | null | undefined,
+  entry: PrinterEntry | null | undefined,
+): boolean => {
+  if (!entry || entry === "select_automatically") {
+    return true;
+  }
+  const meta = printerMetaOf(printer);
+  return meta ? meta.hasTrays : true;
+};
+
+/** The medium a customer label comes out on, or null when none is printed. */
+export const customerLabelMedium = (
+  option: CustomerLabelOption | null | undefined,
+): PrintMedium | null => (option ? CUSTOMER_LABEL_META[option].medium : null);
+
+/**
+ * How many customer labels a line produces. Per line is one, per collo is one
+ * for each package, per piece is one for each piece — which is the whole
+ * difference between the three options, and it was not being counted anywhere.
+ */
+export const customerLabelCount = (
+  option: CustomerLabelOption | null | undefined,
+  context: { colli?: number; pieces?: number },
+): number => {
+  if (!option) {
+    return 0;
+  }
+  const meta = CUSTOMER_LABEL_META[option];
+  if (meta.per === "none") {
+    return 0;
+  }
+  if (meta.per === "line") {
+    return 1;
+  }
+  if (meta.per === "collo") {
+    return Math.max(0, Math.trunc(context.colli ?? 0));
+  }
+  return Math.max(0, Math.trunc(context.pieces ?? 0));
+};
+
+/**
+ * How many stock labels a workorder line prints, by the breakdown chosen: one
+ * for the line and one per bundle, one per bundle alone, or a fixed number per
+ * line.
+ */
+export const stockLabelCount = (
+  breakdown: StockLabelBreakdown | null | undefined,
+  context: { bundles?: number; amountPerLine?: number },
+): number => {
+  const bundles = Math.max(0, Math.trunc(context.bundles ?? 0));
+  if (breakdown === "per_bundle") {
+    return bundles;
+  }
+  if (breakdown === "amount_per_line") {
+    return Math.max(0, Math.trunc(context.amountPerLine ?? 0));
+  }
+  // per_line_bundle: the line's own label plus one for each bundle in it.
+  return 1 + bundles;
+};
+
+/**
+ * Which of the warehouse's two label devices a stock label goes to: the label
+ * printer for a label, the sticker printer for a sticker.
+ */
+export const printerFieldForStockLabelType = (
+  type: StockLabelType | null | undefined,
+): "labelPrinter" | "stickerPrinter" | null => {
+  if (type === "label") {
+    return "labelPrinter";
+  }
+  if (type === "sticker") {
+    return "stickerPrinter";
+  }
+  return null;
+};
+
+/**
+ * How many stickers a pick workorder prints: none, one for the whole order, or
+ * one for each of its lines.
+ */
+export const stickerPerPickCount = (
+  type: StickerPerPickWorkorderType | null | undefined,
+  lineCount: number,
+): number => {
+  if (type === "sticker_per_workorder_600dpi") {
+    return 1;
+  }
+  if (type === "sticker_per_workorder_line_600dpi") {
+    return Math.max(0, Math.trunc(lineCount));
+  }
+  return 0;
+};
+
+/** Whether a sticker-per-pick setting needs a device to print anything at all. */
+export const stickerPerPickNeedsPrinter = (
+  type: StickerPerPickWorkorderType | null | undefined,
+): boolean => Boolean(type) && type !== "no_customer_label";
+
+/** Whether a workorder of this kind is printed without anyone asking. */
+export const printsAutomatically = (
+  method: WorkorderPrintMethod | null | undefined,
+): boolean => method === "automatic";
+
+/** Whether a workorder of this kind is printed at all. */
+export const printsAtAll = (
+  method: WorkorderPrintMethod | null | undefined,
+): boolean => method !== "do_not_print";
+
+/** Whether a workorder is released to the floor the moment it is made. */
+export const releasesImmediately = (
+  method: WorkorderReleaseMethod | null | undefined,
+): boolean => method === "direct";
+
+/** Whether releasing a workorder waits for the day's schedule. */
+export const releasesOnSchedule = (
+  method: WorkorderReleaseMethod | null | undefined,
+): boolean => method === "according_to_schedule";
+
+/**
+ * What a count workorder walks: every location in turn, or every product in
+ * turn. Null when the warehouse has not said.
+ */
+export const countWorkorderWalks = (
+  method: CountWorkorderMethod | null | undefined,
+): "locations" | "products" | null => {
+  if (method === "counting_locations") {
+    return "locations";
+  }
+  if (method === "products_counting") {
+    return "products";
+  }
+  return null;
+};
+
+/** Which stock figure a count is measured against. */
+export const countStockColumn = (
+  type: WarehouseCountStockType | null | undefined,
+): "technical" | "available" =>
+  type === "available_stock" ? "available" : "technical";
 
 // ---------------------------------------------------------------------------
 // Label lookups
