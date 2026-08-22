@@ -10,7 +10,15 @@ import {
   CommunicationSettings,
   SelectCommunicationSettings,
 } from "@/db/schema/communication-settings";
-import { describeError } from "@/lib/helpers";
+import {
+  CommunicationSettingShape,
+  CommunicationSettingType,
+} from "@/lib/enums";
+import { communicationSetupIsCoherent, describeError } from "@/lib/helpers";
+import {
+  COMMUNICATION_SETTING_SHAPE_LABELS,
+  COMMUNICATION_SETTING_TYPE_LABELS,
+} from "@/lib/labels";
 import { currentUser } from "@clerk/nextjs/server";
 import { and, asc, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -66,6 +74,17 @@ export const saveCompanyCommunicationSetting = async (
     }
 
     const columns = communicationSettingValuesToColumns(parsed.data);
+
+    // An EDI link expects data, not a PDF of a document, and a printer cannot
+    // print a Peppol envelope. The pair was saved unchecked, so a setting that
+    // could never deliver anything looked exactly like one that works.
+    if (
+      !communicationSetupIsCoherent(columns.communicationType, columns.shape)
+    ) {
+      return {
+        error: `${COMMUNICATION_SETTING_TYPE_LABELS[columns.communicationType as CommunicationSettingType]} cannot carry ${COMMUNICATION_SETTING_SHAPE_LABELS[columns.shape as CommunicationSettingShape]}.`,
+      };
+    }
 
     if (payload.settingId != null) {
       await db

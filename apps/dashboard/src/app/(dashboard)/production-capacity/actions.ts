@@ -1,5 +1,5 @@
 "use server";
-import { describeError } from "@/lib/helpers";
+import { describeError, productionCapacityStatusFor } from "@/lib/helpers";
 
 import { db } from "@/db";
 import {
@@ -26,7 +26,7 @@ export const getProductionCapacity = async (): Promise<
   ProductionCapacityListItem[]
 > => {
   try {
-    return await db
+    const rows = await db
       .select({
         ...getTableColumns(ProductionCapacity),
         machineCode: Machines.code,
@@ -36,8 +36,26 @@ export const getProductionCapacity = async (): Promise<
       .from(ProductionCapacity)
       .leftJoin(Machines, eq(ProductionCapacity.machineUuid, Machines.uuid))
       .orderBy(desc(ProductionCapacity.capacityDate), asc(Machines.code));
+
+    // The traffic light is arithmetic, not an opinion: full at or above the
+    // ceiling, warning at or above the warning line. It was a stored column
+    // nobody recomputed, so a day that filled up after the row was written went
+    // on showing green.
+    return rows.map((row) => ({
+      ...row,
+      status: productionCapacityStatusFor({
+        occupied:
+          row.occupiedCapacity === null ? null : Number(row.occupiedCapacity),
+        warning:
+          row.warningCapacity === null ? null : Number(row.warningCapacity),
+        maximum:
+          row.maximumCapacity === null ? null : Number(row.maximumCapacity),
+      }),
+    }));
   } catch (error) {
-    throw new Error(describeError(error, "Failed to fetch production capacity"));
+    throw new Error(
+      describeError(error, "Failed to fetch production capacity"),
+    );
   }
 };
 
@@ -78,6 +96,7 @@ export const getProductionCapacityDetail = async (
 
   return {
     ...row,
+    status: productionCapacityStatusFor({ occupied, warning, maximum }),
     occupiedPercentOfMaximum:
       occupied === null || maximum === null || maximum === 0
         ? null

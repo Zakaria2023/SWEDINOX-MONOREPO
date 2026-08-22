@@ -9,15 +9,20 @@ import {
   CertificaatOption,
   ContractableRole,
   contractableRoles,
+  CommunicationSettingShape,
+  CommunicationSettingType,
   CompanyClassification,
   CompanyLang,
   ContactSalutation,
   ContractDiscountBasedOnType,
   ContractSurchargePerType,
+  ContractTierUnit,
   ContractType,
   ComplaintCategory,
+  CounterOrderPriority,
   CountWorkorderMethod,
   Currency,
+  DispatchStrategy,
   CustomerLabelOption,
   EdiOption,
   GroupLinesByDescription,
@@ -49,6 +54,7 @@ import {
   OrderWeightType,
   PriceTierBase,
   PrinterEntry,
+  ProductionCapacityStatus,
   ProductQualityStandard,
   PrinterName,
   PrintProductCodes,
@@ -84,13 +90,16 @@ import {
   TransporterPriceUnit,
   TransportMode,
   transportModes,
+  VisitReportCategory,
   VisitReportContactMethod,
   VisitReportReason,
   VatCode,
+  WarehouseAddress,
   WarehouseBlockReason,
   WarehouseCountStockType,
   WarehouseLocationType,
   warehouseLocationTypes,
+  WarehouseProductType,
   WarehouseTransportRegion,
   warehouseTransportRegions,
   WarehouseWorkOrderLineType,
@@ -6371,6 +6380,259 @@ export const requiredCertificateFor = ({
   }
   return required ?? productCertificate ?? orderedCertificate ?? "en10204_2_1";
 };
+
+// ---------------------------------------------------------------------------
+// The remaining settings that decide something
+//
+// The last of the picklists that were only ever written and read back: which
+// lot leaves the shelf first, what a tier threshold is measured in, when a
+// machine-day is full, where a warehouse actually stands, and how a document
+// leaves the building.
+// ---------------------------------------------------------------------------
+
+export type WarehouseAddressMeta = {
+  /** Our own site, as opposed to space taken at a port. */
+  ownSite: boolean;
+  /** Goods clear customs here, so an import needs paperwork before release. */
+  clearsCustoms: boolean;
+  /** The transport region the site sits in. */
+  transportRegion: WarehouseTransportRegion;
+  city: string;
+};
+
+export type WarehouseProductTypeMeta = {
+  /** Handled by crane rather than by forklift. */
+  needsCrane: boolean;
+  /** Stored standing in a rack rather than stacked flat. */
+  storedInRack: boolean;
+  /** The cross-section its articles are weighed with. */
+  dimensionShape: ProductDimensionShape;
+};
+
+export type CommunicationChannelMeta = {
+  /** Reaches the customer over a network rather than on paper. */
+  electronic: boolean;
+  /** A machine at the other end reads it, so the format has to be a data one. */
+  machineReadable: boolean;
+  /** Needs an address of some kind before it can be sent. */
+  needsAddress: boolean;
+};
+
+export type CommunicationFormatMeta = {
+  /** A person reads it; the rest are for a system. */
+  humanReadable: boolean;
+  /** Carries structured data a machine can post straight into its own ledger. */
+  structured: boolean;
+};
+
+export const WAREHOUSE_ADDRESS_META: Record<
+  WarehouseAddress,
+  WarehouseAddressMeta
+> = {
+  hego_almere: {
+    ownSite: true,
+    clearsCustoms: false,
+    transportRegion: "ned",
+    city: "Almere",
+  },
+  // A port site: goods land here from outside the union and are cleared before
+  // they go anywhere.
+  port_of_rotterdam: {
+    ownSite: false,
+    clearsCustoms: true,
+    transportRegion: "ned",
+    city: "Rotterdam",
+  },
+  port_of_antwerp: {
+    ownSite: false,
+    clearsCustoms: true,
+    transportRegion: "bel",
+    city: "Antwerp",
+  },
+};
+
+export const WAREHOUSE_PRODUCT_TYPE_META: Record<
+  WarehouseProductType,
+  WarehouseProductTypeMeta
+> = {
+  beam: { needsCrane: true, storedInRack: true, dimensionShape: "beam" },
+  tube: { needsCrane: false, storedInRack: true, dimensionShape: "tube_round" },
+  sheet: { needsCrane: true, storedInRack: false, dimensionShape: "sheet" },
+  profile: { needsCrane: false, storedInRack: true, dimensionShape: "angle" },
+  bar: { needsCrane: false, storedInRack: true, dimensionShape: "round" },
+};
+
+export const COMMUNICATION_CHANNEL_META: Record<
+  CommunicationSettingType,
+  CommunicationChannelMeta
+> = {
+  email: { electronic: true, machineReadable: false, needsAddress: true },
+  fax: { electronic: true, machineReadable: false, needsAddress: true },
+  // The one channel that reaches nobody by itself: it comes out of a printer
+  // here and somebody has to carry it.
+  printing: { electronic: false, machineReadable: false, needsAddress: false },
+  edi_ftp: { electronic: true, machineReadable: true, needsAddress: true },
+  edi_http: { electronic: true, machineReadable: true, needsAddress: true },
+  edi_https: { electronic: true, machineReadable: true, needsAddress: true },
+};
+
+export const COMMUNICATION_FORMAT_META: Record<
+  CommunicationSettingShape,
+  CommunicationFormatMeta
+> = {
+  pdf: { humanReadable: true, structured: false },
+  text: { humanReadable: true, structured: false },
+  scsn: { humanReadable: false, structured: true },
+  sales_in_the_construction: { humanReadable: false, structured: true },
+  edi4steel: { humanReadable: false, structured: true },
+  peppol: { humanReadable: false, structured: true },
+};
+
+/** What a warehouse address implies, or null when none is set. */
+export const warehouseAddressMetaOf = (
+  address: WarehouseAddress | null | undefined,
+): WarehouseAddressMeta | null =>
+  address ? WAREHOUSE_ADDRESS_META[address] : null;
+
+/** What a warehouse product type implies, or null when none is set. */
+export const warehouseProductTypeMetaOf = (
+  type: WarehouseProductType | null | undefined,
+): WarehouseProductTypeMeta | null =>
+  type ? WAREHOUSE_PRODUCT_TYPE_META[type] : null;
+
+/**
+ * Whether a channel and a format can actually be used together. An EDI link
+ * expects data, not a PDF of a document, and a printer cannot print a Peppol
+ * envelope. A setting with only one half chosen is not yet wrong.
+ */
+export const communicationSetupIsCoherent = (
+  channel: CommunicationSettingType | null | undefined,
+  format: CommunicationSettingShape | null | undefined,
+): boolean => {
+  if (!channel || !format) {
+    return true;
+  }
+  const channelMeta = COMMUNICATION_CHANNEL_META[channel];
+  const formatMeta = COMMUNICATION_FORMAT_META[format];
+  if (channelMeta.machineReadable) {
+    return formatMeta.structured;
+  }
+  return formatMeta.humanReadable;
+};
+
+/**
+ * Which lot leaves first. LIFO dispatches the newest receipt, FIFO the oldest;
+ * a product that says nothing is dispatched oldest first, which is what keeps
+ * metal from ageing on the shelf.
+ */
+export const dispatchOrderFor = (
+  strategy: DispatchStrategy | null | undefined,
+): "newest_first" | "oldest_first" =>
+  strategy === "lifo" ? "newest_first" : "oldest_first";
+
+/**
+ * Lots in the order the product's dispatch strategy takes them: newest receipt
+ * first under LIFO, oldest first under FIFO. Lots with no receipt date sort
+ * last either way — an undated lot is not evidence of being the oldest.
+ */
+export const sortLotsForDispatch = <
+  T extends { receiptDate?: string | null; id?: number | null },
+>(
+  lots: readonly T[],
+  strategy: DispatchStrategy | null | undefined,
+): T[] => {
+  const newestFirst = dispatchOrderFor(strategy) === "newest_first";
+  return [...lots].sort((a, b) => {
+    const left = a.receiptDate ?? "";
+    const right = b.receiptDate ?? "";
+    if (left === right) {
+      return (a.id ?? 0) - (b.id ?? 0);
+    }
+    if (!left) {
+      return 1;
+    }
+    if (!right) {
+      return -1;
+    }
+    return newestFirst ? right.localeCompare(left) : left.localeCompare(right);
+  });
+};
+
+/**
+ * The figure a contract tier's threshold is compared against: tonnes when the
+ * tier is measured in TN, money when it is measured in Euro. Null when the
+ * caller has no figure for the unit named, which leaves the tier unapplied
+ * rather than applied against the wrong number.
+ */
+export const tierThresholdValue = (
+  unit: ContractTierUnit | null | undefined,
+  measures: { tonnes?: number | null; amount?: number | null },
+): number | null => {
+  if (unit === "TN") {
+    return measures.tonnes ?? null;
+  }
+  if (unit === "Euro") {
+    return measures.amount ?? null;
+  }
+  return null;
+};
+
+/**
+ * How full a machine-day is, from what is booked against the ceiling and the
+ * warning threshold. Full at or above the maximum, warning at or above the
+ * warning line, otherwise fine. With no maximum recorded there is nothing to be
+ * full of, so it reads as fine.
+ */
+export const productionCapacityStatusFor = ({
+  occupied,
+  warning,
+  maximum,
+}: {
+  occupied: number | null;
+  warning: number | null;
+  maximum: number | null;
+}): ProductionCapacityStatus => {
+  if (occupied === null) {
+    return "ok";
+  }
+  if (maximum !== null && maximum > 0 && occupied >= maximum) {
+    return "full";
+  }
+  if (warning !== null && warning > 0 && occupied >= warning) {
+    return "warning";
+  }
+  return "ok";
+};
+
+/** Whether a counter order jumps the queue. */
+export const counterOrderIsUrgent = (
+  priority: CounterOrderPriority | null | undefined,
+): boolean => priority === "rush";
+
+/**
+ * Where a counter order sits in the picking queue — a rush order ahead of
+ * everything normal. Lower sorts first.
+ */
+export const counterOrderQueueRank = (
+  priority: CounterOrderPriority | null | undefined,
+): number => (counterOrderIsUrgent(priority) ? 0 : 1);
+
+/**
+ * What a visit report category commits us to: whether the customer asked for
+ * another visit, whether it follows a complaint, and whether it counts toward
+ * acquisition rather than account care.
+ */
+export const visitCategoryMeta = (
+  category: VisitReportCategory | null | undefined,
+): {
+  expectsNextVisit: boolean;
+  followsComplaint: boolean;
+  countsAsAcquisition: boolean;
+} => ({
+  expectsNextVisit: category === "wishing_next_visit",
+  followsComplaint: category === "following_complaint",
+  countsAsAcquisition: category === "acquisition",
+});
 
 // ---------------------------------------------------------------------------
 // Label lookups

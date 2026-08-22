@@ -1722,6 +1722,38 @@ standard are held until the document is on hand. The product screen prints the
 certificate required, whether the goods are held for it, and the dimensional
 tolerance standard its quality standard implies.
 
+15.21 — The last of the picklists
+
+Dispatch strategy. A product says whether its lots leave LIFO or FIFO, and the
+quote-line allocation always took the oldest receipt regardless — so a LIFO
+article was dispatched FIFO every time. sortLotsForDispatch orders them by the
+product's own strategy, with undated lots last either way, since an undated lot
+is not evidence of being the oldest.
+
+Production capacity status. The traffic light is arithmetic — full at or above
+the ceiling, warning at or above the warning line — but it was a stored column
+nobody recomputed, so a machine-day that filled up after its row was written
+went on showing green. productionCapacityStatusFor derives it on read, on both
+the overview and the detail. With no maximum recorded there is nothing to be
+full of, so it reads as fine rather than as full.
+
+Contract tier unit. A tier threshold measured in TN is compared with tonnes and
+one measured in Euro with money. tierThresholdValue returns the right figure,
+and null when the caller holds none for the unit named — which leaves the tier
+unapplied rather than applied against the wrong number.
+
+Communication channel and format. An EDI link expects data, not a PDF of a
+document, and a printer cannot print a Peppol envelope. The pair was saved
+unchecked, so a setting that could never deliver anything looked exactly like
+one that works; communicationSetupIsCoherent now refuses it. A setting with only
+one half chosen is not yet wrong.
+
+And the descriptive ones, each answering something a screen needs:
+WAREHOUSE_ADDRESS_META (own site or port, clears customs, transport region),
+WAREHOUSE_PRODUCT_TYPE_META (crane or forklift, racked or stacked, and the
+cross-section its articles are weighed with), counterOrderQueueRank (a rush
+order ahead of everything normal), and visitCategoryMeta.
+
 ===============================================================================
 PART 16 — Quick map of the derivations
 ===============================================================================

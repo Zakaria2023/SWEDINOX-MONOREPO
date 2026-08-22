@@ -22,6 +22,7 @@ import {
   NON_SELLABLE_LOCATION_TYPES,
   quoteLineFinancials,
   resolveOrderTypeLabel,
+  sortLotsForDispatch,
 } from "@/lib/helpers";
 import { buildOrderSummary } from "@/app/(dashboard)/orders/actions";
 import {
@@ -286,10 +287,14 @@ export const convertQuoteToOrder = async (
       // spoken for or not yet approved; allocating from one of those would
       // promise a customer steel that is already somebody else's or not yet
       // passed.
-      const lots = await db
-        .select(getTableColumns(Stock))
+      const openLots = await db
+        .select({
+          ...getTableColumns(Stock),
+          dispatchStrategy: Products.batchDispatchStrategy,
+        })
         .from(Stock)
         .leftJoin(Warehouses, eq(Stock.locationUuid, Warehouses.uuid))
+        .leftJoin(Products, eq(Stock.productUuid, Products.uuid))
         .where(
           and(
             eq(Stock.productUuid, item.productUuid),
@@ -301,10 +306,15 @@ export const convertQuoteToOrder = async (
               notInArray(Warehouses.locationType, NON_SELLABLE_LOCATION_TYPES),
             ),
           ),
-        )
-        .orderBy(asc(Stock.receiptDate), asc(Stock.id));
+        );
 
-      // Greedily take from the oldest lots first, carrying the still-needed
+      // Which lot goes first is the product's own dispatch strategy, which was
+      // stored and never read: allocation always took the oldest receipt, so a
+      // LIFO article was dispatched FIFO. Lots with no receipt date sort last
+      // either way — an undated lot is not evidence of being the oldest.
+      const lots = sortLotsForDispatch(openLots, openLots[0]?.dispatchStrategy);
+
+      // Greedily take from the lots in that order, carrying the still-needed
       // quantity through the fold.
       const remaining = lots.reduce((left, lot) => {
         if (left <= 0) {
