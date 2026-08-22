@@ -21,6 +21,7 @@ import {
   PurchaseOrderItems,
   SelectPurchaseOrderItems,
 } from "@/db/schema/purchase-order-items";
+import { PurchaseOrders } from "@/db/schema/purchase-orders";
 import { Stock } from "@/db/schema/stock";
 import {
   SelectStockMovements,
@@ -30,10 +31,12 @@ import { JournalEntries } from "@/db/schema/journal-entries";
 import { mailDocument, sendPurchaseInvoiceEmail } from "@/emails/documents";
 import { buildPurchaseJournalEntry } from "@/lib/server/ledger";
 import { recordFreightMovement } from "@/lib/server/freight";
-import { VatCode } from "@/lib/enums";
+import { PurchaseOrderType, VatCode } from "@/lib/enums";
 import {
+  fiscalPeriodDate,
   generateUuid,
   getPaymentTermDueDate,
+  purchaseBecomesStock,
   resolveSurchargeAmounts,
   restateLotValue,
   summarisePurchaseInvoice,
@@ -261,6 +264,7 @@ export const createPurchaseInvoice = async (
     // transaction. Receiving goods draws down the outstanding ordered quantity.
     const poItemByUuid = new Map<string, SelectPurchaseOrderItems>();
     const vatCodeByProduct = new Map<string, VatCode | null>();
+    const purchaseTypeByOrder = new Map<string, PurchaseOrderType | null>();
     if (items.length > 0) {
       const poItemUuids = items.map((item) => item.purchaseOrderItemUuid);
       const poItemRows = await db
@@ -284,6 +288,29 @@ export const createPurchaseInvoice = async (
         );
       for (const row of productRows) {
         vatCodeByProduct.set(row.uuid, row.vatCode);
+      }
+
+      // What the orders behind these lines were for. Only a materials order
+      // buys stock: a processing order buys labour on metal we already own, and
+      // a customer-materials order works on metal that was never ours. Booking
+      // either of those to inventory would put a value on the shelf twice, or
+      // put somebody else's metal on it.
+      const orderRows = await db
+        .select({
+          uuid: PurchaseOrders.uuid,
+          purchaseOrderType: PurchaseOrders.purchaseOrderType,
+        })
+        .from(PurchaseOrders)
+        .where(
+          inArray(
+            PurchaseOrders.uuid,
+            poItemRows.flatMap((row) =>
+              row.purchaseOrderUuid ? [row.purchaseOrderUuid] : [],
+            ),
+          ),
+        );
+      for (const row of orderRows) {
+        purchaseTypeByOrder.set(row.uuid, row.purchaseOrderType);
       }
 
       for (const item of items) {
@@ -353,6 +380,19 @@ export const createPurchaseInvoice = async (
       lineCount: bookedLines.length,
     });
 
+    // Whether this invoice puts anything on the shelf at all. A single invoice
+    // covers one order in practice; where its lines come from several, it
+    // capitalises only if every one of them was a materials order.
+    const capitalisesStock =
+      items.length === 0 ||
+      items.every((item) => {
+        const poItem = poItemByUuid.get(item.purchaseOrderItemUuid);
+        const orderUuid = poItem?.purchaseOrderUuid ?? null;
+        return purchaseBecomesStock(
+          orderUuid ? purchaseTypeByOrder.get(orderUuid) : null,
+        );
+      });
+
     const summary = summarisePurchaseInvoice({
       lines: bookedLines,
       surcharges: pricedSurcharges.map((surcharge) =>
@@ -392,7 +432,13 @@ export const createPurchaseInvoice = async (
           invoiceId: inserted?.id ?? null,
           companyUuid: fields.companyUuid ?? null,
           debCreditor: fields.creditorNo ?? null,
-          invoiceDate: fields.invoiceDate ?? null,
+          // The period this lands in comes from the basis the invoice itself
+          // names: the date it was booked, or the date the supplier put on the
+          // document. The column said which and nothing read it.
+          invoiceDate: fiscalPeriodDate(fields.basisForFiscalPeriod, {
+            bookingDate: fields.bookingDate,
+            documentDate: fields.invoiceDate,
+          }),
           amountExclVat: summary.totalExclVat,
           vatAmount: summary.vatTotal,
           creditRestriction: summary.creditRestriction,
@@ -400,7 +446,10 @@ export const createPurchaseInvoice = async (
           // The lines are what became stock — each one is priced at exactly the
           // figure its lot is valued at below. Surcharges bought no material, so
           // they stay a cost of buying rather than inflating the shelf.
-          inventoryValue: summary.materials,
+          //
+          // A processing or customer-materials order buys no stock at all, so
+          // its whole invoice is a cost of buying rather than an asset.
+          inventoryValue: capitalisesStock ? summary.materials : 0,
           userId,
         }),
       );

@@ -1664,6 +1664,36 @@ And what is available at a delivery address decides what has to drive there:
 unloadingRequirements turns crane unloading into vehicleWithCrane on the order,
 so nobody has to remember it per order.
 
+15.19 — What a purchase order is for
+
+The three purchase order types were three different things that all posted to
+inventory. Only one of them buys stock: a processing order buys labour on metal
+we already own, and a customer-materials order works on metal that was never
+ours. Booking either to inventory puts a value on the shelf twice, or puts
+somebody else's metal on it.
+
+PURCHASE_ORDER_TYPE_META answers four things per type — does it become stock,
+does anything physically arrive, is what is bought work rather than material,
+and does the material belong to the customer. createPurchaseInvoice capitalises
+only when every line it bills comes from a materials order; otherwise the whole
+invoice is a cost of buying. An order with no type set still capitalises, which
+is what the system did before types were read at all.
+
+The fiscal basis is the same kind of decision on the invoice. A purchase invoice
+lands in the period of either the date it was booked or the date the supplier
+put on the document, the column saying which was never read, and the posting
+always used the document date. fiscalPeriodDate reads the basis and falls back
+to whichever date is present, because a period has to come from somewhere.
+
+A purchasing unit is a count: ST is a piece and HS is a hundred of them, so a
+quantity of 3 in HS is 300 pieces and a price per HS is a hundredth of a price
+per piece. purchasingUnitToPieces and purchasingUnitPricePerPiece convert both.
+
+And a tier basis is a grouping key: tierAccumulationKey returns the id the tier,
+surcharge or discount accumulates against — the order line, the group product,
+or the product group — and null when the caller holds no id for what the basis
+names, which is what stops a tier being applied against the wrong total.
+
 ===============================================================================
 PART 16 — Quick map of the derivations
 ===============================================================================

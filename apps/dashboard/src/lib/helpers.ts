@@ -11,6 +11,8 @@ import {
   CompanyClassification,
   CompanyLang,
   ContactSalutation,
+  ContractDiscountBasedOnType,
+  ContractSurchargePerType,
   ContractType,
   ComplaintCategory,
   CountWorkorderMethod,
@@ -44,6 +46,7 @@ import {
   OrderOption,
   PaymentMethod,
   OrderWeightType,
+  PriceTierBase,
   PrinterEntry,
   PrinterName,
   PrintProductCodes,
@@ -51,6 +54,9 @@ import {
   ProductDimensionShape,
   ProductShape,
   PurchaseOrderStatus,
+  PurchaseInvoiceFiscalBase,
+  PurchaseOrderType,
+  PurchasingUnit,
   PurchaseQuoteStatus,
   PurchaseRequestStatus,
   QuoteOption,
@@ -6079,6 +6085,149 @@ export const unloadingRequirements = (
   needsVehicleWithCrane: available === "crane_unloading",
   unloadsByForklift: available === "forklift_unloading",
 });
+
+// ---------------------------------------------------------------------------
+// What a purchase order is for, and what a tier is measured against
+//
+// A purchase order type said whether we were buying metal, buying a processing
+// step, or having a customer's own metal worked on — three different things
+// that nonetheless all posted to inventory and all expected a goods receipt.
+// Only the first buys stock: paying a processor buys labour, and a customer's
+// material was never ours to capitalise.
+//
+// The fiscal basis is the same kind of decision on the invoice: the period a
+// purchase invoice lands in is either the date it was booked or the date the
+// supplier put on it, and the column that says which was never read.
+// ---------------------------------------------------------------------------
+
+export type PurchaseOrderTypeMeta = {
+  /** The goods become our stock, so the invoice capitalises rather than expenses. */
+  becomesStock: boolean;
+  /** Goods physically arrive, so a receipt is expected against the order. */
+  expectsGoodsReceipt: boolean;
+  /** What is bought is work on material rather than the material itself. */
+  buysProcessing: boolean;
+  /** The material belongs to the customer throughout. */
+  customerOwnedMaterial: boolean;
+};
+
+export const PURCHASE_ORDER_TYPE_META: Record<
+  PurchaseOrderType,
+  PurchaseOrderTypeMeta
+> = {
+  materials: {
+    becomesStock: true,
+    expectsGoodsReceipt: true,
+    buysProcessing: false,
+    customerOwnedMaterial: false,
+  },
+  // A processor's invoice buys labour on metal we already own. The labour is a
+  // cost of the goods, not a second lot of goods.
+  processing: {
+    becomesStock: false,
+    expectsGoodsReceipt: false,
+    buysProcessing: true,
+    customerOwnedMaterial: false,
+  },
+  // The customer's own metal, worked on and sent back. It arrives and leaves
+  // again, and it was never ours to put a value on.
+  customer_materials: {
+    becomesStock: false,
+    expectsGoodsReceipt: true,
+    buysProcessing: true,
+    customerOwnedMaterial: true,
+  },
+};
+
+/** What a purchase order type implies, or null when an order carries none. */
+export const purchaseOrderTypeMetaOf = (
+  type: PurchaseOrderType | null | undefined,
+): PurchaseOrderTypeMeta | null =>
+  type ? PURCHASE_ORDER_TYPE_META[type] : null;
+
+/**
+ * Whether the goods on this kind of order become stock we own. Defaults to true
+ * when no type is set, since an untyped purchase order is a material order —
+ * which is what the system did before types were read at all.
+ */
+export const purchaseBecomesStock = (
+  type: PurchaseOrderType | null | undefined,
+): boolean => purchaseOrderTypeMetaOf(type)?.becomesStock ?? true;
+
+/**
+ * The date a purchase invoice's fiscal period is taken from: the date it was
+ * booked, or the date the supplier put on the document. Falls back to whichever
+ * of the two is present, because a period has to come from somewhere.
+ */
+export const fiscalPeriodDate = (
+  basis: PurchaseInvoiceFiscalBase | null | undefined,
+  dates: {
+    bookingDate?: Date | string | null;
+    documentDate?: Date | string | null;
+  },
+): Date | string | null => {
+  if (basis === "document_date") {
+    return dates.documentDate ?? dates.bookingDate ?? null;
+  }
+  return dates.bookingDate ?? dates.documentDate ?? null;
+};
+
+/**
+ * How many pieces one purchasing unit is. `ST` is a piece; `HS` is a hundred of
+ * them, which is why a quantity of 3 in HS is 300 pieces and a price per HS is a
+ * hundredth of a price per piece.
+ */
+export const purchasingUnitPieces = (
+  unit: PurchasingUnit | null | undefined,
+): number => (unit === "HS" ? 100 : 1);
+
+/** A quantity expressed in a purchasing unit, converted to pieces. */
+export const purchasingUnitToPieces = (
+  quantity: number,
+  unit: PurchasingUnit | null | undefined,
+): number => quantity * purchasingUnitPieces(unit);
+
+/** A price per purchasing unit, converted to a price per piece. */
+export const purchasingUnitPricePerPiece = (
+  price: number,
+  unit: PurchasingUnit | null | undefined,
+): number => price / purchasingUnitPieces(unit);
+
+/**
+ * The key a price tier, surcharge or discount is accumulated against: the
+ * single order line, the group product, or the whole product group. Null when
+ * the basis names something the caller has no id for, which is what stops a
+ * tier being applied against the wrong total.
+ */
+export const tierAccumulationKey = (
+  basis: PriceTierBase | ContractSurchargePerType | null | undefined,
+  ids: {
+    orderLineUuid?: string | null;
+    groupProductUuid?: string | null;
+    productGroupUuid?: string | null;
+  },
+): string | null => {
+  if (basis === "order_line") {
+    return ids.orderLineUuid ?? null;
+  }
+  if (basis === "group_product") {
+    return ids.groupProductUuid ?? null;
+  }
+  if (basis === "product_group") {
+    return ids.productGroupUuid ?? null;
+  }
+  return null;
+};
+
+/** The same for a contract discount, which is measured against two of the three. */
+export const discountAccumulationKey = (
+  basis: ContractDiscountBasedOnType | null | undefined,
+  ids: { groupProductUuid?: string | null; productGroupUuid?: string | null },
+): string | null =>
+  tierAccumulationKey(basis, {
+    groupProductUuid: ids.groupProductUuid,
+    productGroupUuid: ids.productGroupUuid,
+  });
 
 // ---------------------------------------------------------------------------
 // Label lookups
