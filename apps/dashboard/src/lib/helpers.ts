@@ -10,6 +10,7 @@ import {
   ContractType,
   ComplaintCategory,
   CountWorkorderMethod,
+  Currency,
   CustomerLabelOption,
   EdiOption,
   GroupLinesByDescription,
@@ -37,6 +38,7 @@ import {
   OrderDeblockType,
   OrderLineStatus,
   OrderOption,
+  PaymentMethod,
   OrderWeightType,
   PrinterEntry,
   PrinterName,
@@ -5613,6 +5615,211 @@ export const orderDocumentLines = <T>(
     return byGroup !== 0 ? byGroup : left.lineNumber - right.lineNumber;
   });
 };
+
+// ---------------------------------------------------------------------------
+// Currencies and how money actually moved
+//
+// A currency was a label on the customer, so a limit agreed in dollars was
+// printed with a euro sign, and a payment method was a label on the payment, so
+// cash, a card and an offset all posted to the bank account. An offset moves no
+// money at all — treating it as a bank receipt says the bank balance went up
+// when nothing arrived.
+// ---------------------------------------------------------------------------
+
+export type CurrencyMeta = {
+  /** ISO 4217 code, which is what Intl formats by. */
+  code: string;
+  symbol: string;
+  decimals: number;
+  /** The currency the ledger is kept in. Everything else needs converting. */
+  isBase: boolean;
+  /**
+   * The smallest step cash can actually be paid in, in minor units. The
+   * one-cent coins are gone in the euro area, so cash settles to the nearest
+   * five; Hong Kong rounds to ten.
+   */
+  cashRoundingStep: number;
+};
+
+/** Where a settlement lands, named rather than numbered: the chart is server-side. */
+export type SettlementAccountKey =
+  | "bank"
+  | "cash"
+  | "card_clearing"
+  | "offsets";
+
+export type PaymentMethodMeta = {
+  settlementAccount: SettlementAccountKey;
+  /** Money is ours the same day, with nothing to clear. */
+  settlesImmediately: boolean;
+  /** Cannot be used without the counterparty's bank details on file. */
+  requiresBankDetails: boolean;
+  /** No money moves: the settlement is on paper against another document. */
+  cashless: boolean;
+  /** Working days before the money is actually available. */
+  clearingDays: number;
+};
+
+export const CURRENCY_META: Record<Currency, CurrencyMeta> = {
+  eur: {
+    code: "EUR",
+    symbol: "€",
+    decimals: 2,
+    isBase: true,
+    cashRoundingStep: 5,
+  },
+  usd: {
+    code: "USD",
+    symbol: "$",
+    decimals: 2,
+    isBase: false,
+    cashRoundingStep: 1,
+  },
+  gbp: {
+    code: "GBP",
+    symbol: "£",
+    decimals: 2,
+    isBase: false,
+    cashRoundingStep: 1,
+  },
+  hkd: {
+    code: "HKD",
+    symbol: "HK$",
+    decimals: 2,
+    isBase: false,
+    cashRoundingStep: 10,
+  },
+};
+
+/** The currency the ledger is kept in. */
+export const BASE_CURRENCY: Currency = "eur";
+
+export const PAYMENT_METHOD_META: Record<PaymentMethod, PaymentMethodMeta> = {
+  bank_transfer: {
+    settlementAccount: "bank",
+    settlesImmediately: false,
+    requiresBankDetails: true,
+    cashless: false,
+    clearingDays: 1,
+  },
+  // We collect it ourselves, which is why it needs a mandate and why it can
+  // still be pulled back for weeks.
+  direct_debit: {
+    settlementAccount: "bank",
+    settlesImmediately: false,
+    requiresBankDetails: true,
+    cashless: false,
+    clearingDays: 3,
+  },
+  cash: {
+    settlementAccount: "cash",
+    settlesImmediately: true,
+    requiresBankDetails: false,
+    cashless: false,
+    clearingDays: 0,
+  },
+  // The acquirer holds it for a couple of days, so it sits in a clearing
+  // account until the bank statement shows it.
+  card: {
+    settlementAccount: "card_clearing",
+    settlesImmediately: false,
+    requiresBankDetails: false,
+    cashless: false,
+    clearingDays: 2,
+  },
+  // Settled against another document rather than with money. Posting it to the
+  // bank would say the balance went up when nothing arrived.
+  offset: {
+    settlementAccount: "offsets",
+    settlesImmediately: true,
+    requiresBankDetails: false,
+    cashless: true,
+    clearingDays: 0,
+  },
+};
+
+/** What a currency is, falling back to the base currency when none is set. */
+export const currencyMetaOf = (
+  currency: Currency | null | undefined,
+): CurrencyMeta => CURRENCY_META[currency ?? BASE_CURRENCY];
+
+/** Whether an amount in this currency needs converting before it can be posted. */
+export const needsCurrencyConversion = (
+  currency: Currency | null | undefined,
+): boolean => !currencyMetaOf(currency).isBase;
+
+/**
+ * An amount in a given currency, with that currency's own symbol and decimals.
+ * A company that agreed a limit in dollars should not see it printed in euro.
+ */
+export const formatCurrencyAmount = (
+  value: number | string | null | undefined,
+  currency: Currency | null | undefined,
+): string => {
+  const meta = currencyMetaOf(currency);
+  return `${meta.symbol} ${Number(value ?? 0).toLocaleString("en-US", {
+    minimumFractionDigits: meta.decimals,
+    maximumFractionDigits: meta.decimals,
+  })}`;
+};
+
+/**
+ * An amount rounded to the smallest step cash can be paid in — five cents in
+ * the euro area, ten in Hong Kong, one where the smallest coin still exists.
+ */
+export const roundToCashStep = (
+  value: number,
+  currency: Currency | null | undefined,
+): number => {
+  const meta = currencyMetaOf(currency);
+  const minorUnits = 10 ** meta.decimals;
+  const step = meta.cashRoundingStep;
+  return Math.round((value * minorUnits) / step) * (step / minorUnits);
+};
+
+/** Whether an amount can actually be handed over in cash in this currency. */
+export const isPayableInCash = (
+  value: number,
+  currency: Currency | null | undefined,
+): boolean => Math.abs(roundToCashStep(value, currency) - value) < 0.0005;
+
+/** What a payment method implies, or null when a payment carries none. */
+export const paymentMethodMetaOf = (
+  method: PaymentMethod | null | undefined,
+): PaymentMethodMeta | null => (method ? PAYMENT_METHOD_META[method] : null);
+
+/**
+ * Where a settlement by this method lands. Defaults to the bank, which is where
+ * a payment nobody classified almost certainly arrived.
+ */
+export const settlementAccountFor = (
+  method: PaymentMethod | null | undefined,
+): SettlementAccountKey =>
+  paymentMethodMetaOf(method)?.settlementAccount ?? "bank";
+
+/** Whether money physically moves, as opposed to being netted on paper. */
+export const paymentMovesMoney = (
+  method: PaymentMethod | null | undefined,
+): boolean => !paymentMethodMetaOf(method)?.cashless;
+
+/** Whether this method cannot be used without bank details on file. */
+export const paymentRequiresBankDetails = (
+  method: PaymentMethod | null | undefined,
+): boolean => Boolean(paymentMethodMetaOf(method)?.requiresBankDetails);
+
+/**
+ * The date the money is actually available, counting the method's clearing days
+ * as working days from the payment date. Null on bad input.
+ */
+export const paymentClearsOn = (
+  method: PaymentMethod | null | undefined,
+  paymentDate: string | null | undefined,
+): string | null =>
+  addLeadTime(
+    paymentDate,
+    paymentMethodMetaOf(method)?.clearingDays ?? 0,
+    "working_days",
+  );
 
 // ---------------------------------------------------------------------------
 // Label lookups

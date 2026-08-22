@@ -2,12 +2,13 @@ import "server-only";
 
 import { InsertJournalEntries } from "@/db/schema/journal-entries";
 import { InsertLedgerAccounts } from "@/db/schema/ledger-accounts";
-import { LedgerAccountType } from "@/lib/enums";
+import { LedgerAccountType, PaymentMethod } from "@/lib/enums";
 import {
   debitCredit,
   financialPeriodFor,
   generateUuid,
   postingBalance,
+  settlementAccountFor,
 } from "@/lib/helpers";
 
 export type PurchasePosting = {
@@ -118,13 +119,26 @@ export type SettlementPosting = {
  * with the counter-accounts they were always implying.
  */
 export const LEDGER_ACCOUNTS = {
+  /** Notes and coin in the till. A cash payment never touches the bank. */
+  cash: "1000",
   bank: "1100",
+  /**
+   * Card takings the acquirer is still holding. They are ours, but they are not
+   * in the bank until the settlement lands, which is why they wait here.
+   */
+  cardClearing: "1150",
   debtors: "1300",
   vatReclaimable: "1520",
   vatPayable: "1530",
   creditors: "1600",
   /** Differences between a supplier's typed total and what its lines explain. */
   differences: "1999",
+  /**
+   * Settlements netted against another document rather than paid. An offset
+   * clears one balance by moving it here, and the counter-document clears it
+   * back out; a balance left standing is an offset only half done.
+   */
+  settlementOffsets: "1900",
   /** What the stock on the shelves is worth. Reconciles to the Stock table. */
   inventory: "3000",
   /**
@@ -168,7 +182,18 @@ type ChartEntry = {
  * moment a new account is introduced.
  */
 export const DEFAULT_CHART_OF_ACCOUNTS: ChartEntry[] = [
+  { number: LEDGER_ACCOUNTS.cash, name: "Cash in hand", type: "asset" },
   { number: LEDGER_ACCOUNTS.bank, name: "Bank", type: "asset" },
+  {
+    number: LEDGER_ACCOUNTS.cardClearing,
+    name: "Card takings not yet settled",
+    type: "asset",
+  },
+  {
+    number: LEDGER_ACCOUNTS.settlementOffsets,
+    name: "Settlement offsets",
+    type: "liability",
+  },
   {
     number: LEDGER_ACCOUNTS.debtors,
     name: "Trade debtors",
@@ -180,7 +205,11 @@ export const DEFAULT_CHART_OF_ACCOUNTS: ChartEntry[] = [
     name: "VAT reclaimable",
     type: "asset",
   },
-  { number: LEDGER_ACCOUNTS.vatPayable, name: "VAT payable", type: "liability" },
+  {
+    number: LEDGER_ACCOUNTS.vatPayable,
+    name: "VAT payable",
+    type: "liability",
+  },
   {
     number: LEDGER_ACCOUNTS.creditors,
     name: "Trade creditors",
@@ -213,7 +242,11 @@ export const DEFAULT_CHART_OF_ACCOUNTS: ChartEntry[] = [
     name: "Credit restriction",
     type: "revenue",
   },
-  { number: LEDGER_ACCOUNTS.costOfSales, name: "Cost of sales", type: "expense" },
+  {
+    number: LEDGER_ACCOUNTS.costOfSales,
+    name: "Cost of sales",
+    type: "expense",
+  },
   {
     number: LEDGER_ACCOUNTS.purchaseCosts,
     name: "Purchase costs and freight",
@@ -230,6 +263,27 @@ export const DEFAULT_CHART_OF_ACCOUNTS: ChartEntry[] = [
     type: "revenue",
   },
 ];
+
+/**
+ * The account a settlement lands in, from how the money actually moved. Cash
+ * goes to the till, a card to the acquirer's clearing account, an offset to the
+ * offsets account because nothing arrived, and everything else to the bank.
+ */
+export const settlementAccountNumber = (
+  method: PaymentMethod | null | undefined,
+): string => {
+  const key = settlementAccountFor(method);
+  if (key === "cash") {
+    return LEDGER_ACCOUNTS.cash;
+  }
+  if (key === "card_clearing") {
+    return LEDGER_ACCOUNTS.cardClearing;
+  }
+  if (key === "offsets") {
+    return LEDGER_ACCOUNTS.settlementOffsets;
+  }
+  return LEDGER_ACCOUNTS.bank;
+};
 
 export const chartOfAccountsRows = (): InsertLedgerAccounts[] =>
   DEFAULT_CHART_OF_ACCOUNTS.map((account) => ({

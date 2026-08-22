@@ -1592,6 +1592,43 @@ customerMiscPolicy (occasional customer, portal login, bill of lading per order,
 waybills, consignment, neutral labels, label per sawn piece) and ediPolicy
 (product features, PDF attachment).
 
+15.16 — How the money moved decides where it lands
+
+Every settlement posted to the bank, whatever its method. So a till full of
+notes, a card payment the acquirer is still holding, and a credit note netted
+against an invoice all read as money in the bank account — and an offset, where
+nothing arrives at all, said the bank balance went up.
+
+PAYMENT_METHOD_META gives each of the five a settlement account, whether it
+settles the same day, whether it needs the counterparty's bank details, whether
+any money moves at all, and how many working days it takes to clear. Three
+accounts join the chart to receive them: cash in hand (1000), card takings not
+yet settled (1150), and settlement offsets (1900).
+
+settlementAccountNumber turns the method into the account, and registerPayment
+uses it for all four postings — customer receipt, supplier payment, and both
+reversals, the reversal reading the method off the payment it is undoing.
+A direct debit is refused against a counterparty with no IBAN and no bank
+account on file, because it is collected by us and there is nothing to collect
+from. paymentClearsOn dates the money's availability in working days.
+
+15.17 — A currency is not a label
+
+CURRENCY_META carries each currency's ISO code, symbol, decimals, whether it is
+the currency the ledger is kept in, and the smallest step cash can actually be
+paid in — five cents in the euro area, where the one-cent coins are gone, ten in
+Hong Kong, one where the smallest coin still exists.
+
+formatCurrencyAmount prints an amount with its own currency's symbol, so the
+three credit limits on the company screen now read in the currency they were
+agreed in rather than all in euro. needsCurrencyConversion says whether a figure
+has to be converted before it can be compared with a ledger balance, and the
+screen says so. roundToCashStep and isPayableInCash answer whether an amount can
+physically be handed over.
+
+No exchange rate is invented anywhere. The system stores no rates, so it says
+when a conversion is needed and leaves the conversion to whoever has the rate.
+
 ===============================================================================
 PART 16 — Quick map of the derivations
 ===============================================================================

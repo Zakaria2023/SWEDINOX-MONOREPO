@@ -10,15 +10,18 @@ import { PaymentMethod } from "@/lib/enums";
 import {
   buildSettlementEntry,
   LEDGER_ACCOUNTS,
+  settlementAccountNumber,
 } from "@/lib/server/ledger";
 import {
   allowedCreditRestrictionDeduction,
   allowedEarlyPaymentDiscount,
   describeError,
   generateUuid,
+  paymentRequiresBankDetails,
   toDateString,
   todayDateString,
 } from "@/lib/helpers";
+import { PAYMENT_METHOD_LABELS } from "@/lib/labels";
 import { currentUser } from "@clerk/nextjs/server";
 import { desc, eq, getTableColumns } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -114,11 +117,15 @@ const settlementDeductions = (
   };
 };
 
-// The cash and discount accounts these settlements post to, from the chart of
-// accounts rather than from a local guess. The discount account moved from 8600
-// to 4700: a discount granted is a cost of collecting early, not negative
-// revenue, and 8xxx is the revenue range.
-const BANK_ACCOUNT = LEDGER_ACCOUNTS.bank;
+// Where a settlement lands is decided by how the money moved, not assumed:
+// settlementAccountNumber sends cash to the till, a card to the acquirer's
+// clearing account, an offset to the offsets account because nothing arrived,
+// and a transfer or direct debit to the bank. Everything used to post to the
+// bank, so a till full of notes and a netted credit note both read as money in
+// the bank account.
+//
+// The discount account moved from 8600 to 4700: a discount granted is a cost of
+// collecting early, not negative revenue, and 8xxx is the revenue range.
 const DISCOUNT_GRANTED_ACCOUNT = LEDGER_ACCOUNTS.discountGranted;
 
 export const getPayments = async (): Promise<PaymentListItem[]> => {
@@ -230,7 +237,8 @@ export const registerPayment = async (
 
     if (isSales === isPurchase) {
       return {
-        error: "A payment settles either a sales invoice or a purchase invoice.",
+        error:
+          "A payment settles either a sales invoice or a purchase invoice.",
       };
     }
 
@@ -238,6 +246,25 @@ export const registerPayment = async (
     if (!Number.isFinite(amount) || amount <= 0) {
       return { error: "Enter an amount greater than zero." };
     }
+
+    // A direct debit is collected by us, so it cannot be registered against a
+    // counterparty whose account details nobody has recorded.
+    const bankDetailsMissing = async (
+      companyUuid: string | null,
+    ): Promise<boolean> => {
+      if (!paymentRequiresBankDetails(input.method) || !companyUuid) {
+        return false;
+      }
+      const [holder] = await db
+        .select({ iban: Companies.iban, bankAccount: Companies.bankAccount })
+        .from(Companies)
+        .where(eq(Companies.uuid, companyUuid))
+        .limit(1);
+      return !holder?.iban?.trim() && !holder?.bankAccount?.trim();
+    };
+    const bankDetailsError = `A ${PAYMENT_METHOD_LABELS[
+      input.method
+    ].toLowerCase()} needs the counterparty's bank details on file.`;
 
     const user = await currentUser();
     const userId = user?.id ?? null;
@@ -262,6 +289,9 @@ export const registerPayment = async (
       const outstanding = Number(invoice.outstanding);
       if (outstanding <= 0) {
         return { error: "This invoice is already settled." };
+      }
+      if (await bankDetailsMissing(invoice.companyUuid)) {
+        return { error: bankDetailsError };
       }
 
       // Deductions are only ever offered, never forced — a customer who pays
@@ -305,7 +335,7 @@ export const registerPayment = async (
             debCreditor: invoice.debtorNo,
             paymentDate,
             amount,
-            account: BANK_ACCOUNT,
+            account: settlementAccountNumber(input.method),
             description: "Customer payment received",
             userId,
           }),
@@ -352,6 +382,9 @@ export const registerPayment = async (
       if (outstanding <= 0) {
         return { error: "This purchase invoice is already settled." };
       }
+      if (await bankDetailsMissing(purchaseInvoice.companyUuid)) {
+        return { error: bankDetailsError };
+      }
       if (amount - outstanding > 0.005) {
         return {
           error: `That pays more than is outstanding (€${outstanding.toFixed(2)} remaining).`,
@@ -385,7 +418,7 @@ export const registerPayment = async (
             paymentDate,
             // Paying a supplier moves cash out.
             amount: -amount,
-            account: BANK_ACCOUNT,
+            account: settlementAccountNumber(input.method),
             description: "Supplier payment made",
             userId,
           }),
@@ -467,7 +500,7 @@ export const reversePayment = async (
               debCreditor: invoice.debtorNo,
               paymentDate: payment.paymentDate,
               amount: -amount,
-              account: BANK_ACCOUNT,
+              account: settlementAccountNumber(payment.method),
               description: "Customer payment reversed",
               userId,
             }),
@@ -518,7 +551,7 @@ export const reversePayment = async (
               debCreditor: purchaseInvoice.creditorNo,
               paymentDate: payment.paymentDate,
               amount,
-              account: BANK_ACCOUNT,
+              account: settlementAccountNumber(payment.method),
               description: "Supplier payment reversed",
               userId,
             }),

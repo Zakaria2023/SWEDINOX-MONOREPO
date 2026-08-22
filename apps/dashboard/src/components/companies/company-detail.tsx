@@ -12,8 +12,10 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { MONTHS } from "@/lib/constants";
 import {
   daysInSystem,
+  formatCurrencyAmount,
   formatDateValue,
   formatRevenue,
+  needsCurrencyConversion,
   userName,
   yesNo,
 } from "@/lib/helpers";
@@ -448,18 +450,27 @@ export const CompanyDetailView = ({ company, invoices, userNames }: Props) => {
           <Field label="COC number" value={company.cocNumber} />
           <Field label="Journal code" value={company.journalCode} />
           {/* A blank credit limit is not a limit of zero — nobody set one, and
-              the credit check never blocks on it. Left as an em dash. */}
+              the credit check never blocks on it. Left as an em dash.
+
+              The three limits print in the currency the customer agreed them
+              in. A limit settled in dollars shown with a euro sign reads as a
+              different number entirely. */}
           <Field
             label="Credit limit"
             value={
-              company.creditLimit ? formatRevenue(company.creditLimit) : null
+              company.creditLimit
+                ? formatCurrencyAmount(company.creditLimit, company.currency)
+                : null
             }
           />
           <Field
             label="Credit limit insurance"
             value={
               company.creditLimitInsurance
-                ? formatRevenue(company.creditLimitInsurance)
+                ? formatCurrencyAmount(
+                    company.creditLimitInsurance,
+                    company.currency,
+                  )
                 : null
             }
           />
@@ -467,7 +478,20 @@ export const CompanyDetailView = ({ company, invoices, userNames }: Props) => {
             label="Credit limit uninsured"
             value={
               company.creditLimitUninsured
-                ? formatRevenue(company.creditLimitUninsured)
+                ? formatCurrencyAmount(
+                    company.creditLimitUninsured,
+                    company.currency,
+                  )
+                : null
+            }
+          />
+          {/* The ledger is kept in euro, so a limit agreed in anything else has
+              to be converted before it can be compared with a balance. */}
+          <Field
+            label="Needs conversion"
+            value={
+              company.currency
+                ? yesNo(needsCurrencyConversion(company.currency))
                 : null
             }
           />
