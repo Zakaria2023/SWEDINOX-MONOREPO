@@ -1,16 +1,22 @@
 "use server";
 
-import { describeError } from "@/lib/helpers";
+import { describeError, revenueGroupKindFromName } from "@/lib/helpers";
 import { db } from "@/db";
 import { InvoiceItems } from "@/db/schema/invoice-items";
 import { Invoices } from "@/db/schema/invoices";
 import { Products } from "@/db/schema/products";
 import { RevenueGroups } from "@/db/schema/revenue-groups";
+import { RevenueGroupKind } from "@/lib/enums";
 import { eq, sql } from "drizzle-orm";
 
 export type RevenueGroupTotals = {
   revenueGroupNumber: number | null;
   revenueGroupName: string | null;
+  // What the group is — traded material, processing, a freight recharge, an
+  // allowance or an adjustment. A margin only means something on the material
+  // rows, so the report has to say which those are.
+  kind: RevenueGroupKind;
+  countsTowardMaterialMargin: boolean;
   salesKg: number;
   revenue: number;
   profit: number;
@@ -45,9 +51,12 @@ export const getRevenuePerRevenueGroup = async (): Promise<
     return rows.map((row) => {
       const revenue = Number(row.revenue);
       const profit = revenue - Number(row.cost);
+      const kind = revenueGroupKindFromName(row.revenueGroupName);
       return {
         revenueGroupNumber: row.revenueGroupNumber,
         revenueGroupName: row.revenueGroupName,
+        kind,
+        countsTowardMaterialMargin: kind === "material",
         salesKg: Number(row.salesKg),
         revenue,
         profit,

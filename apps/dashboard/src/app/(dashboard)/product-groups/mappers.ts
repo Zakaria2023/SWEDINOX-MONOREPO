@@ -1,8 +1,10 @@
 import { SelectProductGroupSuppliers } from "@/db/schema/product-group-suppliers";
 import { SelectProductGroups } from "@/db/schema/product-groups";
 import {
+  articleGroupMetaOf,
   derivedWeightColumns,
   DIMENSION_SHAPE_FOR_PRODUCT_SHAPE,
+  revenueGroupForMaterialGrade,
 } from "@/lib/helpers";
 import { ProductGroupFields, ProductGroupSupplierInput } from "./actions";
 import {
@@ -211,6 +213,15 @@ export const formValuesToProductGroupFields = (
     values.featuresQuality,
   );
 
+  // A revenue group nobody picked is not a blank: the grade says which metal is
+  // being sold and the article group says which group its articles roll into,
+  // and either answers it. The grade wins, being the more specific of the two.
+  const revenueGroup =
+    values.revenueGroup ||
+    revenueGroupForMaterialGrade(values.featuresQuality) ||
+    articleGroupMetaOf(values.articleGroup)?.revenueGroup ||
+    null;
+
   return {
     parentUuid: values.parentUuid || null,
     name: values.name,
@@ -314,7 +325,7 @@ export const formValuesToProductGroupFields = (
     pacClassification: values.pacClassification || null,
     orderAdviceCode: values.orderAdviceCode || null,
 
-    revenueGroup: values.revenueGroup || null,
+    revenueGroup,
     salesUnit: values.salesUnit || null,
     salesUnitPrice: values.salesUnitPrice || null,
     vatCode: values.vatCode || null,

@@ -1844,3 +1844,17 @@ export const surchargeBases = [
 ] as const satisfies readonly string[];
 
 export type SurchargeBasis = (typeof surchargeBases)[number];
+
+// What a revenue group actually is. A revenue report that adds trading revenue
+// to a freight recharge and a price difference reports a margin nobody earned,
+// so each group says which of the five it belongs to.
+export const revenueGroupKinds = [
+  "material",
+  "processing",
+  "freight",
+  "allowance",
+  "adjustment",
+  "other",
+] as const satisfies readonly string[];
+
+export type RevenueGroupKind = (typeof revenueGroupKinds)[number];

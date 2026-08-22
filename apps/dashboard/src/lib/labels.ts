@@ -12,6 +12,7 @@ import {
   DispatchStrategy,
   MaterialFamily,
   MaterialSurfaceFinish,
+  RevenueGroupKind,
   SurchargeBasis,
   PriceTierBase,
   ProductDimensionShape,
@@ -1769,4 +1770,13 @@ export const SURCHARGE_BASIS_LABELS: Record<SurchargeBasis, string> = {
   per_line: "Per line",
   per_pallet: "Per pallet",
   per_certificate: "Per certificate",
+};
+
+export const REVENUE_GROUP_KIND_LABELS: Record<RevenueGroupKind, string> = {
+  material: "Material",
+  processing: "Processing",
+  freight: "Freight",
+  allowance: "Allowance",
+  adjustment: "Adjustment",
+  other: "Other",
 };

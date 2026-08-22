@@ -1376,6 +1376,36 @@ wherever it is used. The invoice form no longer copies the rate into the amount:
 it cannot, because the weight and value being billed are only known on the
 server.
 
+15.9 — A revenue group says what kind of revenue it is
+
+Revenue per revenue group added traded metal, a freight recharge and a price
+difference into one column and printed a margin on the total. REVENUE_GROUP_META
+classifies all twenty-six: eight material, six processing, two freight, one
+allowance, six adjustment, three other. Each also carries the ledger account
+type it belongs to, whether it is a deduction, and whether it counts toward the
+material margin — which only the eight material groups do.
+
+The report now prints the kind, shows a margin only on the rows a margin can be
+earned on, and subtotals material apart from everything else. It groups by the
+RevenueGroups table, whose rows are named by hand, so revenueGroupFromName
+matches a stored name against the labels; a name nobody recognises reads as
+"other", which is the kind that claims nothing about the figures beneath it.
+
+revenueGroupForMaterialGrade reads the group off the grade instead: 316 in any
+finish reports under SS 316, 321 under SS 321, the heat-resistant grades under
+High Alloys, ferritic and martensitic under SS 430, the rest of austenitic under
+SS 304, aluminium under Aluminium, brass, bronze and copper under Other
+products, and everything else under Steel. All 157 grades resolve.
+
+ARTICLE_GROUP_META says the same one level up: CK is coil, PW and PK are sheet,
+PTA is sheet at the thickness its code carries (PTA2,5 is 2.5 mm), PDIVA is the
+mixed group. Each names the family, the shape and the revenue group its articles
+roll into.
+
+A product group's revenue group is therefore no longer a blank when nobody picks
+one: the grade answers it, and the article group answers it if there is no
+grade. The grade wins, being the more specific of the two.
+
 ===============================================================================
 PART 16 — Quick map of the derivations
 ===============================================================================

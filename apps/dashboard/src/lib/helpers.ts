@@ -3,6 +3,7 @@ import { twMerge } from "tailwind-merge";
 import {
   AgeingBucket,
   ageingBuckets,
+  ArticleGroup,
   CertificaatOption,
   ContractableRole,
   contractableRoles,
@@ -19,6 +20,7 @@ import {
   InvoiceVatScenario,
   InvoiceSurchargeDescription,
   LeadTimeMethod,
+  LedgerAccountType,
   MaterialFamily,
   MaterialSurfaceFinish,
   OrderDeblockType,
@@ -32,6 +34,8 @@ import {
   ReminderStage,
   reminderStages,
   RevenueGroup,
+  revenueGroups,
+  RevenueGroupKind,
   ReturnOrderReason,
   ReturnOrderStatus,
   SalesRepresentative,
@@ -48,6 +52,7 @@ import {
   CONTRACT_TYPE_LABELS,
   CUSTOMER_GROUP_LABELS,
   INVOICE_PAYMENT_TERM_LABELS,
+  REVENUE_GROUP_LABELS,
   ORDER_DEBLOCK_TYPE_LABELS,
   ORDER_LINE_STATUS_LABELS,
   PURCHASE_ORDER_STATUS_LABELS,
@@ -3582,6 +3587,422 @@ export const resolveSurchargeAmounts = <
       context,
     ).toFixed(2),
   }));
+
+// ---------------------------------------------------------------------------
+// What a revenue group and an article group mean
+//
+// A revenue group was a name on a dropdown, which left every revenue report
+// adding trading revenue, a freight recharge and a price difference into one
+// column and printing a margin on the total. Each group now says what it is,
+// which side of the ledger it belongs on, and whether it counts toward the
+// material margin at all.
+//
+// The material groups also say which metal they are for, which is what lets a
+// grade choose its own revenue group instead of somebody remembering that 316L
+// belongs under SS 316. An article group says the same thing one level up: the
+// codes carry a metal, a shape and sometimes a thickness, and every article in
+// the group rolls into the same revenue group.
+// ---------------------------------------------------------------------------
+
+export type RevenueGroupMeta = {
+  kind: RevenueGroupKind;
+  /** Which side of the two statements this group lands on. */
+  ledgerAccountType: LedgerAccountType;
+  /**
+   * Counts toward the material margin. Only traded metal does: a freight
+   * recharge, an allowance and a price difference all move the total without
+   * being anything a margin can be earned on.
+   */
+  countsTowardMaterialMargin: boolean;
+  /** Reduces revenue rather than adding to it. */
+  deduction: boolean;
+  /**
+   * The metal this group is for, where it is a material group. Null for the
+   * processing, freight and adjustment groups, which are not about a metal.
+   */
+  materialFamily: MaterialFamily | null;
+};
+
+export type ArticleGroupMeta = {
+  materialFamily: MaterialFamily;
+  /** The shape every article in the group is made in. */
+  shape: ProductShape;
+  /**
+   * The nominal thickness in millimetres the code carries, where it carries
+   * one — PTA2,5 is 2.5 mm. Null where the code says nothing about thickness.
+   */
+  nominalThicknessMm: number | null;
+  /** The revenue group every article in this group rolls into. */
+  revenueGroup: RevenueGroup;
+};
+
+export const REVENUE_GROUP_META: Record<RevenueGroup, RevenueGroupMeta> = {
+  ss_304: {
+    kind: "material",
+    ledgerAccountType: "revenue",
+    countsTowardMaterialMargin: true,
+    deduction: false,
+    materialFamily: "stainless_austenitic",
+  },
+  ss_316: {
+    kind: "material",
+    ledgerAccountType: "revenue",
+    countsTowardMaterialMargin: true,
+    deduction: false,
+    materialFamily: "stainless_austenitic",
+  },
+  ss_321: {
+    kind: "material",
+    ledgerAccountType: "revenue",
+    countsTowardMaterialMargin: true,
+    deduction: false,
+    materialFamily: "stainless_austenitic",
+  },
+  ss_430: {
+    kind: "material",
+    ledgerAccountType: "revenue",
+    countsTowardMaterialMargin: true,
+    deduction: false,
+    materialFamily: "stainless_ferritic",
+  },
+  high_alloys: {
+    kind: "material",
+    ledgerAccountType: "revenue",
+    countsTowardMaterialMargin: true,
+    deduction: false,
+    materialFamily: "stainless_heat_resistant",
+  },
+  aluminium: {
+    kind: "material",
+    ledgerAccountType: "revenue",
+    countsTowardMaterialMargin: true,
+    deduction: false,
+    materialFamily: "aluminium",
+  },
+  steel: {
+    kind: "material",
+    ledgerAccountType: "revenue",
+    countsTowardMaterialMargin: true,
+    deduction: false,
+    materialFamily: "carbon_steel",
+  },
+  // The webshop's own revenue line. It sells the same metal, but it is reported
+  // apart from the trade counter because it is a different channel.
+  roestvast_nl: {
+    kind: "material",
+    ledgerAccountType: "revenue",
+    countsTowardMaterialMargin: true,
+    deduction: false,
+    materialFamily: "stainless_austenitic",
+  },
+  foil_consumption_and_sales: {
+    kind: "processing",
+    ledgerAccountType: "revenue",
+    countsTowardMaterialMargin: false,
+    deduction: false,
+    materialFamily: null,
+  },
+  // Offcuts and scrap sold on. Metal, but not at a trading margin — it is what
+  // is left rather than what was bought to sell.
+  sales_residual_material: {
+    kind: "other",
+    ledgerAccountType: "revenue",
+    countsTowardMaterialMargin: false,
+    deduction: false,
+    materialFamily: null,
+  },
+  other_pallets_etc: {
+    kind: "other",
+    ledgerAccountType: "revenue",
+    countsTowardMaterialMargin: false,
+    deduction: false,
+    materialFamily: null,
+  },
+  other_products: {
+    kind: "other",
+    ledgerAccountType: "revenue",
+    countsTowardMaterialMargin: false,
+    deduction: false,
+    materialFamily: null,
+  },
+  decoiling: {
+    kind: "processing",
+    ledgerAccountType: "revenue",
+    countsTowardMaterialMargin: false,
+    deduction: false,
+    materialFamily: null,
+  },
+  grinding_foiling: {
+    kind: "processing",
+    ledgerAccountType: "revenue",
+    countsTowardMaterialMargin: false,
+    deduction: false,
+    materialFamily: null,
+  },
+  cutting: {
+    kind: "processing",
+    ledgerAccountType: "revenue",
+    countsTowardMaterialMargin: false,
+    deduction: false,
+    materialFamily: null,
+  },
+  lasering: {
+    kind: "processing",
+    ledgerAccountType: "revenue",
+    countsTowardMaterialMargin: false,
+    deduction: false,
+    materialFamily: null,
+  },
+  other_processing: {
+    kind: "processing",
+    ledgerAccountType: "revenue",
+    countsTowardMaterialMargin: false,
+    deduction: false,
+    materialFamily: null,
+  },
+  freight_costs: {
+    kind: "freight",
+    ledgerAccountType: "expense",
+    countsTowardMaterialMargin: false,
+    deduction: false,
+    materialFamily: null,
+  },
+  freight_costs_external: {
+    kind: "freight",
+    ledgerAccountType: "expense",
+    countsTowardMaterialMargin: false,
+    deduction: false,
+    materialFamily: null,
+  },
+  credit_notes_yet_to_be_received: {
+    kind: "adjustment",
+    ledgerAccountType: "asset",
+    countsTowardMaterialMargin: false,
+    deduction: true,
+    materialFamily: null,
+  },
+  vat_credit_restriction_creditor: {
+    kind: "adjustment",
+    ledgerAccountType: "liability",
+    countsTowardMaterialMargin: false,
+    deduction: false,
+    materialFamily: null,
+  },
+  price_differences: {
+    kind: "adjustment",
+    ledgerAccountType: "expense",
+    countsTowardMaterialMargin: false,
+    deduction: false,
+    materialFamily: null,
+  },
+  other_allowances: {
+    kind: "allowance",
+    ledgerAccountType: "revenue",
+    countsTowardMaterialMargin: false,
+    deduction: true,
+    materialFamily: null,
+  },
+  eu_import_duties: {
+    kind: "adjustment",
+    ledgerAccountType: "expense",
+    countsTowardMaterialMargin: false,
+    deduction: false,
+    materialFamily: null,
+  },
+  // Reports the spread between Asian and European material, which is a
+  // comparison of two material revenues rather than a revenue of its own.
+  revenue_asia_vs_eu_material: {
+    kind: "adjustment",
+    ledgerAccountType: "revenue",
+    countsTowardMaterialMargin: false,
+    deduction: false,
+    materialFamily: null,
+  },
+  import_costs: {
+    kind: "adjustment",
+    ledgerAccountType: "expense",
+    countsTowardMaterialMargin: false,
+    deduction: false,
+    materialFamily: null,
+  },
+};
+
+/**
+ * The article groups. `CK` is coil, `PW` and `PK` are sheet, `PTA` is a
+ * thickness-graded sheet, and `PDIVA` is the mixed group everything that fits
+ * no other lands in.
+ */
+export const ARTICLE_GROUP_META: Record<ArticleGroup, ArticleGroupMeta> = {
+  ck304: {
+    materialFamily: "stainless_austenitic",
+    shape: "coil",
+    nominalThicknessMm: null,
+    revenueGroup: "ss_304",
+  },
+  ck316: {
+    materialFamily: "stainless_austenitic",
+    shape: "coil",
+    nominalThicknessMm: null,
+    revenueGroup: "ss_316",
+  },
+  ck430: {
+    materialFamily: "stainless_ferritic",
+    shape: "coil",
+    nominalThicknessMm: null,
+    revenueGroup: "ss_430",
+  },
+  ckm304: {
+    materialFamily: "stainless_austenitic",
+    shape: "coil",
+    nominalThicknessMm: null,
+    revenueGroup: "ss_304",
+  },
+  pdiva: {
+    materialFamily: "stainless_austenitic",
+    shape: "piece_article",
+    nominalThicknessMm: null,
+    revenueGroup: "other_products",
+  },
+  pk304: {
+    materialFamily: "stainless_austenitic",
+    shape: "sheet",
+    nominalThicknessMm: null,
+    revenueGroup: "ss_304",
+  },
+  pta2_5: {
+    materialFamily: "stainless_austenitic",
+    shape: "sheet",
+    nominalThicknessMm: 2.5,
+    revenueGroup: "ss_304",
+  },
+  pta3: {
+    materialFamily: "stainless_austenitic",
+    shape: "sheet",
+    nominalThicknessMm: 3,
+    revenueGroup: "ss_304",
+  },
+  pta3_5: {
+    materialFamily: "stainless_austenitic",
+    shape: "sheet",
+    nominalThicknessMm: 3.5,
+    revenueGroup: "ss_304",
+  },
+  pta5: {
+    materialFamily: "stainless_austenitic",
+    shape: "sheet",
+    nominalThicknessMm: 5,
+    revenueGroup: "ss_304",
+  },
+  pw304: {
+    materialFamily: "stainless_austenitic",
+    shape: "sheet",
+    nominalThicknessMm: null,
+    revenueGroup: "ss_304",
+  },
+  pw316: {
+    materialFamily: "stainless_austenitic",
+    shape: "sheet",
+    nominalThicknessMm: null,
+    revenueGroup: "ss_316",
+  },
+  pw430: {
+    materialFamily: "stainless_ferritic",
+    shape: "sheet",
+    nominalThicknessMm: null,
+    revenueGroup: "ss_430",
+  },
+};
+
+/** What a revenue group is, or null when a row carries none. */
+export const revenueGroupMetaOf = (
+  group: RevenueGroup | null | undefined,
+): RevenueGroupMeta | null => (group ? REVENUE_GROUP_META[group] : null);
+
+/** What an article group implies, or null when a row carries none. */
+export const articleGroupMetaOf = (
+  group: ArticleGroup | null | undefined,
+): ArticleGroupMeta | null => (group ? ARTICLE_GROUP_META[group] : null);
+
+/**
+ * The revenue group a grade belongs under, read off the grade itself. The four
+ * stainless groups are named after a base grade, so a 316 in any finish reports
+ * under SS 316; the heat-resistant grades go to high alloys, and everything
+ * outside stainless and aluminium to steel.
+ *
+ * Null when no grade is set, because an article nobody has graded has no
+ * revenue group to be defaulted to.
+ */
+export const revenueGroupForMaterialGrade = (
+  grade: FeaturesQuality | string | null | undefined,
+): RevenueGroup | null => {
+  const meta = materialGradeMeta(grade);
+  if (!meta) {
+    return null;
+  }
+  // The heat-resistant grades are austenitic too and their codes start with
+  // 309/310, so they have to be taken out before the 30x test below.
+  if (meta.base.family === "stainless_heat_resistant") {
+    return "high_alloys";
+  }
+  const base = meta.base.code;
+  if (base.startsWith("316")) {
+    return "ss_316";
+  }
+  if (base.startsWith("321")) {
+    return "ss_321";
+  }
+  if (meta.base.family === "stainless_austenitic") {
+    return "ss_304";
+  }
+  if (
+    meta.base.family === "stainless_ferritic" ||
+    meta.base.family === "stainless_martensitic"
+  ) {
+    return "ss_430";
+  }
+  if (meta.base.family === "aluminium") {
+    return "aluminium";
+  }
+  if (
+    meta.base.family === "brass" ||
+    meta.base.family === "bronze" ||
+    meta.base.family === "copper"
+  ) {
+    return "other_products";
+  }
+  return "steel";
+};
+
+/**
+ * A stored revenue-group row matched back to the group it is one of, by name.
+ *
+ * The reports read the RevenueGroups table, whose rows are named by hand, so
+ * this is the only join available between what a report groups by and what the
+ * group means. A name nobody recognises returns null and is reported as
+ * unclassified rather than being pushed into a kind it may not belong to.
+ */
+export const revenueGroupFromName = (
+  name: string | null | undefined,
+): RevenueGroup | null => {
+  if (!name) {
+    return null;
+  }
+  const wanted = name.trim().toLowerCase();
+  const match = revenueGroups.find(
+    (group) => REVENUE_GROUP_LABELS[group].toLowerCase() === wanted,
+  );
+  return match ?? null;
+};
+
+/**
+ * The kind a stored revenue-group name reports under. `null` name, unmatched
+ * name, or a group nobody classified all read as "other", which is the kind
+ * that claims nothing about the figures beneath it.
+ */
+export const revenueGroupKindFromName = (
+  name: string | null | undefined,
+): RevenueGroupKind =>
+  revenueGroupMetaOf(revenueGroupFromName(name))?.kind ?? "other";
 
 // ---------------------------------------------------------------------------
 // Label lookups
