@@ -1781,3 +1781,51 @@ export const reminderStages = [
 ] as const satisfies readonly string[];
 
 export type ReminderStage = (typeof reminderStages)[number];
+
+// The metal family a grade belongs to. Derived from the grade code rather than
+// picked, because the code already says it — see `materialGradeMeta`.
+export const materialFamilies = [
+  "stainless_austenitic",
+  "stainless_ferritic",
+  "stainless_martensitic",
+  "stainless_heat_resistant",
+  "carbon_steel",
+  "quenched_tempered_steel",
+  "free_cutting_steel",
+  "tool_steel",
+  "reinforcement_steel",
+  "coated_steel",
+  "aluminium",
+  "brass",
+  "bronze",
+  "copper",
+] as const satisfies readonly string[];
+
+export type MaterialFamily = (typeof materialFamilies)[number];
+
+// The surface a grade's suffix describes, or the condition it is delivered in.
+// `316L2B` is bright cold rolled, `C45+QT` is quenched and tempered.
+export const materialSurfaceFinishes = [
+  "mill",
+  "hot_rolled_pickled",
+  "hot_rolled_plate",
+  "cold_rolled_dull",
+  "cold_rolled_bright",
+  "cold_rolled_extra_bright",
+  "cold_rolled_descaled",
+  "bright_annealed",
+  "ground",
+  "brushed",
+  "polished",
+  "decorative",
+  "mixed",
+  "annealed",
+  "strain_hardened",
+  "heat_treated",
+  "cold_drawn",
+  "stress_relieved",
+  "electro_galvanised",
+  "hot_dip_galvanised",
+] as const satisfies readonly string[];
+
+export type MaterialSurfaceFinish = (typeof materialSurfaceFinishes)[number];

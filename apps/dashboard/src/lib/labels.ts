@@ -10,6 +10,8 @@ import {
   CustomerLabelOption,
   DeliveryTimeUnit,
   DispatchStrategy,
+  MaterialFamily,
+  MaterialSurfaceFinish,
   PriceTierBase,
   ProductDimensionShape,
   StockLabelBreakdown,
@@ -1714,4 +1716,47 @@ export const REMINDER_STAGE_LABELS: Record<ReminderStage, string> = {
   first: "First reminder",
   second: "Second reminder",
   final: "Final notice",
+};
+
+export const MATERIAL_FAMILY_LABELS: Record<MaterialFamily, string> = {
+  stainless_austenitic: "Stainless — austenitic",
+  stainless_ferritic: "Stainless — ferritic",
+  stainless_martensitic: "Stainless — martensitic",
+  stainless_heat_resistant: "Stainless — heat resistant",
+  carbon_steel: "Carbon steel",
+  quenched_tempered_steel: "Quenched and tempered steel",
+  free_cutting_steel: "Free-cutting steel",
+  tool_steel: "Tool steel",
+  reinforcement_steel: "Reinforcement steel",
+  coated_steel: "Coated steel",
+  aluminium: "Aluminium",
+  brass: "Brass",
+  bronze: "Bronze",
+  copper: "Copper",
+};
+
+export const MATERIAL_SURFACE_FINISH_LABELS: Record<
+  MaterialSurfaceFinish,
+  string
+> = {
+  mill: "Mill finish",
+  hot_rolled_pickled: "Hot rolled, pickled (1D)",
+  hot_rolled_plate: "Hot rolled plate (WGW)",
+  cold_rolled_dull: "Cold rolled, dull (2D)",
+  cold_rolled_bright: "Cold rolled, bright (2B)",
+  cold_rolled_extra_bright: "Cold rolled, extra bright (2BB)",
+  cold_rolled_descaled: "Cold rolled, descaled (2E)",
+  bright_annealed: "Bright annealed (BA)",
+  ground: "Ground (4N)",
+  brushed: "Brushed (SB)",
+  polished: "Polished",
+  decorative: "Decorative",
+  mixed: "Mixed finishes",
+  annealed: "Annealed",
+  strain_hardened: "Strain hardened",
+  heat_treated: "Heat treated",
+  cold_drawn: "Cold drawn",
+  stress_relieved: "Stress relieved",
+  electro_galvanised: "Electro-galvanised",
+  hot_dip_galvanised: "Hot-dip galvanised",
 };

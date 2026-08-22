@@ -13,13 +13,18 @@ import {
   DeliveryTerm,
   DeliveryTimeUnit,
   DeliveryType,
+  FeaturesQuality,
   InvoicePaymentTerm,
   InvoiceDocumentType,
   InvoiceVatScenario,
   LeadTimeMethod,
+  MaterialFamily,
+  MaterialSurfaceFinish,
   OrderDeblockType,
   OrderLineStatus,
   OrderWeightType,
+  ProductDimensionShape,
+  ProductShape,
   PurchaseOrderStatus,
   PurchaseQuoteStatus,
   PurchaseRequestStatus,
@@ -1920,6 +1925,1343 @@ export const resolveDeliveryDate = (
     return isoWeekToDate(context.week, context.year);
   }
   return context.date ? context.date.slice(0, 10) : null;
+};
+
+// ---------------------------------------------------------------------------
+// Material grades and cross-sections
+//
+// A grade code is metallurgy, not a label. It fixes the density every
+// theoretical weight is computed from, the alloy content an alloy surcharge is
+// charged on, whether the surface has to be protected in transit, and whether
+// the material is magnetic — which is how the yard tells a 300-series offcut
+// from a 400-series one. None of that can be typed per article without
+// drifting, so it is read off the grade instead.
+//
+// A grade is parsed as a base grade plus a surface/condition suffix, because
+// that is how the codes are built: `316L2B` is 316L in a 2B finish, `C45+QT`
+// is C45 quenched and tempered. The base decides the metal, the suffix decides
+// the surface.
+//
+// The cross-section formula that turns dimensions into kilograms is read off
+// the shape in the same way: a round bar's area comes from its diameter, a
+// tube's from its wall, and a beam's from a profile table the system does not
+// hold — so a beam keeps the weight per metre that was typed for it rather
+// than being given an invented one.
+// ---------------------------------------------------------------------------
+
+/**
+ * The alloying elements an alloy surcharge is charged on, as mass percentages.
+ * Only the three the scrap market prices separately are held, plus titanium,
+ * which is what distinguishes a stabilised grade from its plain counterpart.
+ */
+export type MaterialAlloyContent = {
+  chromium: number;
+  nickel: number;
+  molybdenum: number;
+  titanium: number;
+};
+
+/** What a base grade code means, before any surface suffix. */
+export type MaterialBaseGrade = {
+  /** The base code itself, e.g. `316L`. */
+  code: string;
+  family: MaterialFamily;
+  /** kg/dm³ — the figure every theoretical weight is computed from. */
+  density: number;
+  alloy: MaterialAlloyContent;
+  /**
+   * Corrosion resistance class per EN 1993-1-4, where a higher class survives a
+   * harsher environment. Null for grades the standard does not class, which is
+   * every non-stainless one.
+   */
+  corrosionClass: 1 | 2 | 3 | 4 | 5 | null;
+  /** Ferritic and martensitic grades are magnetic; austenitic ones are not. */
+  magnetic: boolean;
+};
+
+/** What a surface/condition suffix means. */
+export type MaterialFinish = {
+  finish: MaterialSurfaceFinish;
+  /** The surface is damaged by handling, so it travels under foil. */
+  requiresProtectiveFoil: boolean;
+  /** The surface stays visible in the finished product. */
+  decorative: boolean;
+  /** Cold rolled, and so held to a tighter thickness tolerance. */
+  coldRolled: boolean;
+  /** Carries a metallic coating, so cut edges need touching up. */
+  coated: boolean;
+};
+
+/** Everything a grade code decides, base and surface together. */
+export type MaterialGradeMeta = {
+  base: MaterialBaseGrade;
+  surface: MaterialFinish;
+};
+
+/**
+ * The dimensions a shape actually uses, and whether its cross-section can be
+ * derived from them at all.
+ */
+export type DimensionShapeGeometry = {
+  usesLength: boolean;
+  usesWidthDiameter: boolean;
+  usesThickness: boolean;
+  /**
+   * False when the cross-section comes from a profile table rather than from
+   * the three dimensions on the article — a beam, in other words.
+   */
+  derivable: boolean;
+};
+
+/** The dimensions of a single article, in millimetres. */
+export type ArticleDimensions = {
+  length?: number | null;
+  widthDiameter?: number | null;
+  thickness?: number | null;
+};
+
+/** The three derived weight/surface figures an article carries. */
+export type DerivedArticleWeights = {
+  /** kg per running metre. */
+  weightPerM1: number;
+  /** m² of paintable surface per running metre. */
+  paintSurfacePerM1: number;
+  /** kg for one piece at the article's own length. */
+  weightTheoretical: number;
+};
+
+/**
+ * The base grades, longest code first so that `304L2B` matches `304L` and not
+ * `304`. Densities are the accepted figures for each family; alloy contents are
+ * the mid-points of the composition ranges, which is what an alloy surcharge is
+ * charged on.
+ */
+export const MATERIAL_BASE_GRADES: readonly MaterialBaseGrade[] = [
+  // ── Austenitic stainless ────────────────────────────────────────────────
+  {
+    code: "300-serie",
+    family: "stainless_austenitic",
+    density: 7.9,
+    alloy: { chromium: 18, nickel: 8, molybdenum: 0, titanium: 0 },
+    corrosionClass: 3,
+    magnetic: false,
+  },
+  {
+    code: "304-serie",
+    family: "stainless_austenitic",
+    density: 7.9,
+    alloy: { chromium: 18.1, nickel: 8.1, molybdenum: 0, titanium: 0 },
+    corrosionClass: 3,
+    magnetic: false,
+  },
+  {
+    code: "316-serie",
+    family: "stainless_austenitic",
+    density: 8.0,
+    alloy: { chromium: 16.9, nickel: 10.2, molybdenum: 2.1, titanium: 0 },
+    corrosionClass: 4,
+    magnetic: false,
+  },
+  {
+    code: "301",
+    family: "stainless_austenitic",
+    density: 7.9,
+    alloy: { chromium: 17, nickel: 7, molybdenum: 0, titanium: 0 },
+    corrosionClass: 3,
+    magnetic: false,
+  },
+  {
+    code: "303",
+    family: "stainless_austenitic",
+    density: 7.9,
+    alloy: { chromium: 17.5, nickel: 8.5, molybdenum: 0, titanium: 0 },
+    corrosionClass: 2,
+    magnetic: false,
+  },
+  {
+    code: "304L",
+    family: "stainless_austenitic",
+    density: 7.9,
+    alloy: { chromium: 18.2, nickel: 10, molybdenum: 0, titanium: 0 },
+    corrosionClass: 3,
+    magnetic: false,
+  },
+  {
+    code: "304",
+    family: "stainless_austenitic",
+    density: 7.9,
+    alloy: { chromium: 18.1, nickel: 8.1, molybdenum: 0, titanium: 0 },
+    corrosionClass: 3,
+    magnetic: false,
+  },
+  {
+    code: "309H",
+    family: "stainless_heat_resistant",
+    density: 7.9,
+    alloy: { chromium: 22, nickel: 13, molybdenum: 0, titanium: 0 },
+    corrosionClass: 3,
+    magnetic: false,
+  },
+  {
+    code: "309",
+    family: "stainless_heat_resistant",
+    density: 7.9,
+    alloy: { chromium: 22, nickel: 13, molybdenum: 0, titanium: 0 },
+    corrosionClass: 3,
+    magnetic: false,
+  },
+  {
+    code: "310S",
+    family: "stainless_heat_resistant",
+    density: 7.9,
+    alloy: { chromium: 24.5, nickel: 19.5, molybdenum: 0, titanium: 0 },
+    corrosionClass: 3,
+    magnetic: false,
+  },
+  {
+    code: "310",
+    family: "stainless_heat_resistant",
+    density: 7.9,
+    alloy: { chromium: 24.5, nickel: 19.5, molybdenum: 0, titanium: 0 },
+    corrosionClass: 3,
+    magnetic: false,
+  },
+  {
+    code: "316L",
+    family: "stainless_austenitic",
+    density: 8.0,
+    alloy: { chromium: 17, nickel: 10.1, molybdenum: 2.1, titanium: 0 },
+    corrosionClass: 4,
+    magnetic: false,
+  },
+  {
+    code: "316T",
+    family: "stainless_austenitic",
+    density: 8.0,
+    alloy: { chromium: 16.9, nickel: 11, molybdenum: 2.1, titanium: 0.4 },
+    corrosionClass: 4,
+    magnetic: false,
+  },
+  {
+    code: "316",
+    family: "stainless_austenitic",
+    density: 8.0,
+    alloy: { chromium: 16.9, nickel: 10.2, molybdenum: 2.1, titanium: 0 },
+    corrosionClass: 4,
+    magnetic: false,
+  },
+  {
+    code: "321",
+    family: "stainless_austenitic",
+    density: 7.9,
+    alloy: { chromium: 17.5, nickel: 9.2, molybdenum: 0, titanium: 0.4 },
+    corrosionClass: 3,
+    magnetic: false,
+  },
+  {
+    code: "4835",
+    family: "stainless_heat_resistant",
+    density: 7.8,
+    alloy: { chromium: 21, nickel: 11, molybdenum: 0, titanium: 0 },
+    corrosionClass: 3,
+    magnetic: false,
+  },
+  // ── Ferritic and martensitic stainless ──────────────────────────────────
+  {
+    code: "400-serie",
+    family: "stainless_ferritic",
+    density: 7.7,
+    alloy: { chromium: 16.5, nickel: 0, molybdenum: 0, titanium: 0 },
+    corrosionClass: 2,
+    magnetic: true,
+  },
+  {
+    code: "4003",
+    family: "stainless_ferritic",
+    density: 7.7,
+    alloy: { chromium: 11.5, nickel: 0, molybdenum: 0, titanium: 0 },
+    corrosionClass: 1,
+    magnetic: true,
+  },
+  {
+    code: "4510Ti",
+    family: "stainless_ferritic",
+    density: 7.7,
+    alloy: { chromium: 17.5, nickel: 0, molybdenum: 0, titanium: 0.4 },
+    corrosionClass: 2,
+    magnetic: true,
+  },
+  {
+    code: "4513",
+    family: "stainless_ferritic",
+    density: 7.7,
+    alloy: { chromium: 17.5, nickel: 0, molybdenum: 1.2, titanium: 0.4 },
+    corrosionClass: 4,
+    magnetic: true,
+  },
+  {
+    code: "409",
+    family: "stainless_ferritic",
+    density: 7.7,
+    alloy: { chromium: 11.2, nickel: 0, molybdenum: 0, titanium: 0.2 },
+    corrosionClass: 1,
+    magnetic: true,
+  },
+  {
+    code: "410S",
+    family: "stainless_martensitic",
+    density: 7.7,
+    alloy: { chromium: 12.5, nickel: 0, molybdenum: 0, titanium: 0 },
+    corrosionClass: 1,
+    magnetic: true,
+  },
+  {
+    code: "430",
+    family: "stainless_ferritic",
+    density: 7.7,
+    alloy: { chromium: 16.5, nickel: 0, molybdenum: 0, titanium: 0 },
+    corrosionClass: 2,
+    magnetic: true,
+  },
+  {
+    code: "431",
+    family: "stainless_martensitic",
+    density: 7.7,
+    alloy: { chromium: 16, nickel: 2, molybdenum: 0, titanium: 0 },
+    corrosionClass: 2,
+    magnetic: true,
+  },
+  {
+    code: "439",
+    family: "stainless_ferritic",
+    density: 7.7,
+    alloy: { chromium: 17.5, nickel: 0, molybdenum: 0, titanium: 0.3 },
+    corrosionClass: 2,
+    magnetic: true,
+  },
+  {
+    code: "441",
+    family: "stainless_ferritic",
+    density: 7.7,
+    alloy: { chromium: 18, nickel: 0, molybdenum: 0, titanium: 0.2 },
+    corrosionClass: 2,
+    magnetic: true,
+  },
+  {
+    code: "444",
+    family: "stainless_ferritic",
+    density: 7.7,
+    alloy: { chromium: 18, nickel: 0, molybdenum: 2, titanium: 0.2 },
+    corrosionClass: 4,
+    magnetic: true,
+  },
+  // ── Aluminium ───────────────────────────────────────────────────────────
+  {
+    code: "A1050",
+    family: "aluminium",
+    density: 2.705,
+    alloy: { chromium: 0, nickel: 0, molybdenum: 0, titanium: 0 },
+    corrosionClass: null,
+    magnetic: false,
+  },
+  {
+    code: "A3103",
+    family: "aluminium",
+    density: 2.73,
+    alloy: { chromium: 0, nickel: 0, molybdenum: 0, titanium: 0 },
+    corrosionClass: null,
+    magnetic: false,
+  },
+  {
+    code: "A5005",
+    family: "aluminium",
+    density: 2.7,
+    alloy: { chromium: 0, nickel: 0, molybdenum: 0, titanium: 0 },
+    corrosionClass: null,
+    magnetic: false,
+  },
+  {
+    code: "A5083",
+    family: "aluminium",
+    density: 2.66,
+    alloy: { chromium: 0.1, nickel: 0, molybdenum: 0, titanium: 0 },
+    corrosionClass: null,
+    magnetic: false,
+  },
+  {
+    code: "A5754",
+    family: "aluminium",
+    density: 2.67,
+    alloy: { chromium: 0, nickel: 0, molybdenum: 0, titanium: 0 },
+    corrosionClass: null,
+    magnetic: false,
+  },
+  {
+    code: "A6082",
+    family: "aluminium",
+    density: 2.7,
+    alloy: { chromium: 0.1, nickel: 0, molybdenum: 0, titanium: 0 },
+    corrosionClass: null,
+    magnetic: false,
+  },
+  {
+    code: "AlCuBiPb",
+    family: "aluminium",
+    density: 2.85,
+    alloy: { chromium: 0, nickel: 0, molybdenum: 0, titanium: 0 },
+    corrosionClass: null,
+    magnetic: false,
+  },
+  {
+    code: "AlCuMgPb",
+    family: "aluminium",
+    density: 2.82,
+    alloy: { chromium: 0, nickel: 0, molybdenum: 0, titanium: 0 },
+    corrosionClass: null,
+    magnetic: false,
+  },
+  {
+    code: "AlMg4.5Mn0.7",
+    family: "aluminium",
+    density: 2.66,
+    alloy: { chromium: 0.1, nickel: 0, molybdenum: 0, titanium: 0 },
+    corrosionClass: null,
+    magnetic: false,
+  },
+  {
+    code: "AlMgSi0.5",
+    family: "aluminium",
+    density: 2.7,
+    alloy: { chromium: 0, nickel: 0, molybdenum: 0, titanium: 0 },
+    corrosionClass: null,
+    magnetic: false,
+  },
+  {
+    code: "AlMgSi1",
+    family: "aluminium",
+    density: 2.7,
+    alloy: { chromium: 0.1, nickel: 0, molybdenum: 0, titanium: 0 },
+    corrosionClass: null,
+    magnetic: false,
+  },
+  {
+    code: "Alu",
+    family: "aluminium",
+    density: 2.7,
+    alloy: { chromium: 0, nickel: 0, molybdenum: 0, titanium: 0 },
+    corrosionClass: null,
+    magnetic: false,
+  },
+  // ── Carbon, alloy and coated steel ──────────────────────────────────────
+  {
+    code: "115CrV3",
+    family: "tool_steel",
+    density: 7.8,
+    alloy: { chromium: 0.6, nickel: 0, molybdenum: 0, titanium: 0 },
+    corrosionClass: null,
+    magnetic: true,
+  },
+  {
+    code: "11SMnPb30",
+    family: "free_cutting_steel",
+    density: 7.85,
+    alloy: { chromium: 0, nickel: 0, molybdenum: 0, titanium: 0 },
+    corrosionClass: null,
+    magnetic: true,
+  },
+  {
+    code: "11SMn30",
+    family: "free_cutting_steel",
+    density: 7.85,
+    alloy: { chromium: 0, nickel: 0, molybdenum: 0, titanium: 0 },
+    corrosionClass: null,
+    magnetic: true,
+  },
+  {
+    code: "34CrNiMo6",
+    family: "quenched_tempered_steel",
+    density: 7.85,
+    alloy: { chromium: 1.5, nickel: 1.5, molybdenum: 0.2, titanium: 0 },
+    corrosionClass: null,
+    magnetic: true,
+  },
+  {
+    code: "42CrMoS4",
+    family: "quenched_tempered_steel",
+    density: 7.85,
+    alloy: { chromium: 1.05, nickel: 0, molybdenum: 0.22, titanium: 0 },
+    corrosionClass: null,
+    magnetic: true,
+  },
+  {
+    code: "42MnV7",
+    family: "quenched_tempered_steel",
+    density: 7.85,
+    alloy: { chromium: 0, nickel: 0, molybdenum: 0, titanium: 0 },
+    corrosionClass: null,
+    magnetic: true,
+  },
+  {
+    code: "A105N",
+    family: "carbon_steel",
+    density: 7.85,
+    alloy: { chromium: 0, nickel: 0, molybdenum: 0, titanium: 0 },
+    corrosionClass: null,
+    magnetic: true,
+  },
+  {
+    code: "A106 Grade B",
+    family: "carbon_steel",
+    density: 7.85,
+    alloy: { chromium: 0, nickel: 0, molybdenum: 0, titanium: 0 },
+    corrosionClass: null,
+    magnetic: true,
+  },
+  {
+    code: "A234 Grade WPB",
+    family: "carbon_steel",
+    density: 7.85,
+    alloy: { chromium: 0, nickel: 0, molybdenum: 0, titanium: 0 },
+    corrosionClass: null,
+    magnetic: true,
+  },
+  {
+    code: "B500A-HKN",
+    family: "reinforcement_steel",
+    density: 7.85,
+    alloy: { chromium: 0, nickel: 0, molybdenum: 0, titanium: 0 },
+    corrosionClass: null,
+    magnetic: true,
+  },
+  {
+    code: "B500B-HWL",
+    family: "reinforcement_steel",
+    density: 7.85,
+    alloy: { chromium: 0, nickel: 0, molybdenum: 0, titanium: 0 },
+    corrosionClass: null,
+    magnetic: true,
+  },
+  {
+    code: "C15R",
+    family: "carbon_steel",
+    density: 7.85,
+    alloy: { chromium: 0, nickel: 0, molybdenum: 0, titanium: 0 },
+    corrosionClass: null,
+    magnetic: true,
+  },
+  {
+    code: "C22",
+    family: "carbon_steel",
+    density: 7.85,
+    alloy: { chromium: 0, nickel: 0, molybdenum: 0, titanium: 0 },
+    corrosionClass: null,
+    magnetic: true,
+  },
+  {
+    code: "C35R",
+    family: "carbon_steel",
+    density: 7.85,
+    alloy: { chromium: 0, nickel: 0, molybdenum: 0, titanium: 0 },
+    corrosionClass: null,
+    magnetic: true,
+  },
+  {
+    code: "C35",
+    family: "carbon_steel",
+    density: 7.85,
+    alloy: { chromium: 0, nickel: 0, molybdenum: 0, titanium: 0 },
+    corrosionClass: null,
+    magnetic: true,
+  },
+  {
+    code: "C45",
+    family: "carbon_steel",
+    density: 7.85,
+    alloy: { chromium: 0, nickel: 0, molybdenum: 0, titanium: 0 },
+    corrosionClass: null,
+    magnetic: true,
+  },
+  {
+    code: "C60R",
+    family: "carbon_steel",
+    density: 7.85,
+    alloy: { chromium: 0, nickel: 0, molybdenum: 0, titanium: 0 },
+    corrosionClass: null,
+    magnetic: true,
+  },
+  {
+    code: "C85S",
+    family: "tool_steel",
+    density: 7.85,
+    alloy: { chromium: 0, nickel: 0, molybdenum: 0, titanium: 0 },
+    corrosionClass: null,
+    magnetic: true,
+  },
+  {
+    code: "DC01",
+    family: "carbon_steel",
+    density: 7.85,
+    alloy: { chromium: 0, nickel: 0, molybdenum: 0, titanium: 0 },
+    corrosionClass: null,
+    magnetic: true,
+  },
+  {
+    code: "DX51D",
+    family: "coated_steel",
+    density: 7.85,
+    alloy: { chromium: 0, nickel: 0, molybdenum: 0, titanium: 0 },
+    corrosionClass: null,
+    magnetic: true,
+  },
+  {
+    code: "E195",
+    family: "carbon_steel",
+    density: 7.85,
+    alloy: { chromium: 0, nickel: 0, molybdenum: 0, titanium: 0 },
+    corrosionClass: null,
+    magnetic: true,
+  },
+  {
+    code: "E220",
+    family: "carbon_steel",
+    density: 7.85,
+    alloy: { chromium: 0, nickel: 0, molybdenum: 0, titanium: 0 },
+    corrosionClass: null,
+    magnetic: true,
+  },
+  {
+    code: "E-Cu",
+    family: "copper",
+    density: 8.93,
+    alloy: { chromium: 0, nickel: 0, molybdenum: 0, titanium: 0 },
+    corrosionClass: null,
+    magnetic: false,
+  },
+  // A house grouping rather than a standardised grade; carbon steel is what
+  // every article in it has turned out to be, so it is weighed as such.
+  {
+    code: "HA-serie",
+    family: "carbon_steel",
+    density: 7.85,
+    alloy: { chromium: 0, nickel: 0, molybdenum: 0, titanium: 0 },
+    corrosionClass: null,
+    magnetic: true,
+  },
+  {
+    code: "Laserpress 240",
+    family: "carbon_steel",
+    density: 7.85,
+    alloy: { chromium: 0, nickel: 0, molybdenum: 0, titanium: 0 },
+    corrosionClass: null,
+    magnetic: true,
+  },
+  {
+    code: "Ms58",
+    family: "brass",
+    density: 8.47,
+    alloy: { chromium: 0, nickel: 0, molybdenum: 0, titanium: 0 },
+    corrosionClass: null,
+    magnetic: false,
+  },
+  {
+    code: "Ms63",
+    family: "brass",
+    density: 8.44,
+    alloy: { chromium: 0, nickel: 0, molybdenum: 0, titanium: 0 },
+    corrosionClass: null,
+    magnetic: false,
+  },
+  {
+    code: "P195T",
+    family: "carbon_steel",
+    density: 7.85,
+    alloy: { chromium: 0, nickel: 0, molybdenum: 0, titanium: 0 },
+    corrosionClass: null,
+    magnetic: true,
+  },
+  {
+    code: "P235GH",
+    family: "carbon_steel",
+    density: 7.85,
+    alloy: { chromium: 0, nickel: 0, molybdenum: 0, titanium: 0 },
+    corrosionClass: null,
+    magnetic: true,
+  },
+  {
+    code: "P235TR1",
+    family: "carbon_steel",
+    density: 7.85,
+    alloy: { chromium: 0, nickel: 0, molybdenum: 0, titanium: 0 },
+    corrosionClass: null,
+    magnetic: true,
+  },
+  {
+    code: "P250GH",
+    family: "carbon_steel",
+    density: 7.85,
+    alloy: { chromium: 0, nickel: 0, molybdenum: 0, titanium: 0 },
+    corrosionClass: null,
+    magnetic: true,
+  },
+  {
+    code: "Rg12",
+    family: "bronze",
+    density: 8.6,
+    alloy: { chromium: 0, nickel: 0, molybdenum: 0, titanium: 0 },
+    corrosionClass: null,
+    magnetic: false,
+  },
+  {
+    code: "Rg7",
+    family: "bronze",
+    density: 8.8,
+    alloy: { chromium: 0, nickel: 0, molybdenum: 0, titanium: 0 },
+    corrosionClass: null,
+    magnetic: false,
+  },
+  {
+    code: "S195T",
+    family: "carbon_steel",
+    density: 7.85,
+    alloy: { chromium: 0, nickel: 0, molybdenum: 0, titanium: 0 },
+    corrosionClass: null,
+    magnetic: true,
+  },
+];
+
+/**
+ * The surface/condition suffixes, longest token first so that `+C/SH` is read
+ * as drawn-and-peeled rather than as a plain `+C`.
+ */
+export const MATERIAL_FINISHES: readonly (MaterialFinish & {
+  token: string;
+})[] = [
+  {
+    token: "+ZE25/25APC",
+    finish: "electro_galvanised",
+    requiresProtectiveFoil: false,
+    decorative: false,
+    coldRolled: true,
+    coated: true,
+  },
+  {
+    token: "+Z275MAC",
+    finish: "hot_dip_galvanised",
+    requiresProtectiveFoil: false,
+    decorative: false,
+    coldRolled: false,
+    coated: true,
+  },
+  {
+    token: "+C/SH",
+    finish: "cold_drawn",
+    requiresProtectiveFoil: false,
+    decorative: false,
+    coldRolled: true,
+    coated: false,
+  },
+  {
+    token: "AF/SB",
+    finish: "brushed",
+    requiresProtectiveFoil: true,
+    decorative: true,
+    coldRolled: true,
+    coated: false,
+  },
+  {
+    token: "O2TR",
+    finish: "annealed",
+    requiresProtectiveFoil: false,
+    decorative: false,
+    coldRolled: true,
+    coated: false,
+  },
+  {
+    token: "O5TR",
+    finish: "annealed",
+    requiresProtectiveFoil: false,
+    decorative: false,
+    coldRolled: true,
+    coated: false,
+  },
+  {
+    token: "DECO",
+    finish: "decorative",
+    requiresProtectiveFoil: true,
+    decorative: true,
+    coldRolled: true,
+    coated: false,
+  },
+  {
+    token: "H111",
+    finish: "strain_hardened",
+    requiresProtectiveFoil: false,
+    decorative: false,
+    coldRolled: false,
+    coated: false,
+  },
+  {
+    token: "WGW",
+    finish: "hot_rolled_plate",
+    requiresProtectiveFoil: false,
+    decorative: false,
+    coldRolled: false,
+    coated: false,
+  },
+  {
+    token: "NO4",
+    finish: "polished",
+    requiresProtectiveFoil: true,
+    decorative: true,
+    coldRolled: true,
+    coated: false,
+  },
+  {
+    token: "POL",
+    finish: "polished",
+    requiresProtectiveFoil: true,
+    decorative: true,
+    coldRolled: true,
+    coated: false,
+  },
+  {
+    token: "DIV",
+    finish: "mixed",
+    requiresProtectiveFoil: false,
+    decorative: false,
+    coldRolled: false,
+    coated: false,
+  },
+  {
+    token: "2BB",
+    finish: "cold_rolled_extra_bright",
+    requiresProtectiveFoil: true,
+    decorative: true,
+    coldRolled: true,
+    coated: false,
+  },
+  {
+    token: "H14",
+    finish: "strain_hardened",
+    requiresProtectiveFoil: false,
+    decorative: false,
+    coldRolled: true,
+    coated: false,
+  },
+  {
+    token: "H22",
+    finish: "strain_hardened",
+    requiresProtectiveFoil: false,
+    decorative: false,
+    coldRolled: true,
+    coated: false,
+  },
+  {
+    token: "H24",
+    finish: "strain_hardened",
+    requiresProtectiveFoil: false,
+    decorative: false,
+    coldRolled: true,
+    coated: false,
+  },
+  {
+    token: "+QT",
+    finish: "heat_treated",
+    requiresProtectiveFoil: false,
+    decorative: false,
+    coldRolled: false,
+    coated: false,
+  },
+  {
+    token: "+SL",
+    finish: "stress_relieved",
+    requiresProtectiveFoil: false,
+    decorative: false,
+    coldRolled: false,
+    coated: false,
+  },
+  {
+    token: "-Am",
+    finish: "mill",
+    requiresProtectiveFoil: false,
+    decorative: false,
+    coldRolled: true,
+    coated: false,
+  },
+  {
+    token: "+C",
+    finish: "cold_drawn",
+    requiresProtectiveFoil: false,
+    decorative: false,
+    coldRolled: true,
+    coated: false,
+  },
+  {
+    token: "+N",
+    finish: "annealed",
+    requiresProtectiveFoil: false,
+    decorative: false,
+    coldRolled: false,
+    coated: false,
+  },
+  {
+    token: "1D",
+    finish: "hot_rolled_pickled",
+    requiresProtectiveFoil: false,
+    decorative: false,
+    coldRolled: false,
+    coated: false,
+  },
+  {
+    token: "2B",
+    finish: "cold_rolled_bright",
+    requiresProtectiveFoil: true,
+    decorative: true,
+    coldRolled: true,
+    coated: false,
+  },
+  {
+    token: "2D",
+    finish: "cold_rolled_dull",
+    requiresProtectiveFoil: false,
+    decorative: false,
+    coldRolled: true,
+    coated: false,
+  },
+  {
+    token: "2E",
+    finish: "cold_rolled_descaled",
+    requiresProtectiveFoil: false,
+    decorative: false,
+    coldRolled: true,
+    coated: false,
+  },
+  {
+    token: "4N",
+    finish: "ground",
+    requiresProtectiveFoil: true,
+    decorative: true,
+    coldRolled: true,
+    coated: false,
+  },
+  {
+    token: "BA",
+    finish: "bright_annealed",
+    requiresProtectiveFoil: true,
+    decorative: true,
+    coldRolled: true,
+    coated: false,
+  },
+  {
+    token: "SB",
+    finish: "brushed",
+    requiresProtectiveFoil: true,
+    decorative: true,
+    coldRolled: true,
+    coated: false,
+  },
+  {
+    token: "T6",
+    finish: "heat_treated",
+    requiresProtectiveFoil: false,
+    decorative: false,
+    coldRolled: false,
+    coated: false,
+  },
+];
+
+/** What a grade with no recognised suffix is delivered as. */
+export const MILL_FINISH: MaterialFinish = {
+  finish: "mill",
+  requiresProtectiveFoil: false,
+  decorative: false,
+  coldRolled: false,
+  coated: false,
+};
+
+/**
+ * The grade a code falls back to when it matches no base at all. Carbon steel
+ * at 7.85 is the least surprising assumption for an unrecognised steel code,
+ * and it keeps a weight computation from returning zero for want of a density.
+ */
+export const UNKNOWN_BASE_GRADE: MaterialBaseGrade = {
+  code: "",
+  family: "carbon_steel",
+  density: 7.85,
+  alloy: { chromium: 0, nickel: 0, molybdenum: 0, titanium: 0 },
+  corrosionClass: null,
+  magnetic: true,
+};
+
+// Both lookups match on the longest code first, so that `304L2B` is read as
+// 304L rather than as 304, and `+C/SH` as drawn-and-peeled rather than as a
+// plain `+C`. Sorting here rather than relying on the order the tables happen
+// to be written in means a grade added in the wrong place still resolves.
+const BASE_GRADES_LONGEST_FIRST = [...MATERIAL_BASE_GRADES].sort(
+  (a, b) => b.code.length - a.code.length,
+);
+
+const FINISHES_LONGEST_FIRST = [...MATERIAL_FINISHES].sort(
+  (a, b) => b.token.length - a.token.length,
+);
+
+/**
+ * Splits a grade code into the base grade and the surface suffix it was built
+ * from. `316L2B` is 316L in a 2B finish; `C45+QT` is C45 quenched and tempered;
+ * `4510Ti BA` is the same with a space the code happens to carry.
+ */
+export const materialGradeMeta = (
+  grade: FeaturesQuality | string | null | undefined,
+): MaterialGradeMeta | null => {
+  if (!grade) {
+    return null;
+  }
+  const code = grade.trim();
+  const base = BASE_GRADES_LONGEST_FIRST.find((candidate) =>
+    code.startsWith(candidate.code),
+  );
+  if (!base) {
+    return { base: { ...UNKNOWN_BASE_GRADE, code }, surface: MILL_FINISH };
+  }
+  const suffix = code.slice(base.code.length).trim();
+  const surface =
+    FINISHES_LONGEST_FIRST.find((candidate) => suffix === candidate.token) ??
+    FINISHES_LONGEST_FIRST.find((candidate) =>
+      suffix.startsWith(candidate.token),
+    ) ??
+    MILL_FINISH;
+  return { base, surface };
+};
+
+/** The metal family a grade belongs to, or null when none is set. */
+export const materialFamilyOf = (
+  grade: FeaturesQuality | string | null | undefined,
+): MaterialFamily | null => materialGradeMeta(grade)?.base.family ?? null;
+
+/**
+ * The density in kg/dm³ every theoretical weight for this grade is computed
+ * from. Null when no grade is set, because guessing a density would put a
+ * fabricated weight on the article.
+ */
+export const materialDensityOf = (
+  grade: FeaturesQuality | string | null | undefined,
+): number | null => materialGradeMeta(grade)?.base.density ?? null;
+
+/** The surface a grade is delivered in, or null when none is set. */
+export const materialSurfaceFinishOf = (
+  grade: FeaturesQuality | string | null | undefined,
+): MaterialSurfaceFinish | null =>
+  materialGradeMeta(grade)?.surface.finish ?? null;
+
+/** The alloy content an alloy surcharge on this grade is charged against. */
+export const materialAlloyContentOf = (
+  grade: FeaturesQuality | string | null | undefined,
+): MaterialAlloyContent | null => materialGradeMeta(grade)?.base.alloy ?? null;
+
+/** Whether a grade is stainless, in any of its families. */
+export const isStainlessMaterial = (
+  grade: FeaturesQuality | string | null | undefined,
+): boolean => {
+  const family = materialFamilyOf(grade);
+  return (
+    family === "stainless_austenitic" ||
+    family === "stainless_ferritic" ||
+    family === "stainless_martensitic" ||
+    family === "stainless_heat_resistant"
+  );
+};
+
+/**
+ * Whether the yard can separate this grade with a magnet. Ferritic and
+ * martensitic stainless and every carbon steel are magnetic; austenitic
+ * stainless, aluminium and the copper alloys are not.
+ */
+export const isMagneticMaterial = (
+  grade: FeaturesQuality | string | null | undefined,
+): boolean => materialGradeMeta(grade)?.base.magnetic ?? false;
+
+/**
+ * Whether the surface has to travel under protective foil. A bright, ground,
+ * brushed or polished surface is the product; a mill or pickled one is not.
+ */
+export const materialRequiresProtectiveFoil = (
+  grade: FeaturesQuality | string | null | undefined,
+): boolean => materialGradeMeta(grade)?.surface.requiresProtectiveFoil ?? false;
+
+/** Which of the three dimensions each cross-section actually uses. */
+export const DIMENSION_SHAPE_GEOMETRY: Record<
+  ProductDimensionShape,
+  DimensionShapeGeometry
+> = {
+  round: {
+    usesLength: true,
+    usesWidthDiameter: true,
+    usesThickness: false,
+    derivable: true,
+  },
+  square: {
+    usesLength: true,
+    usesWidthDiameter: true,
+    usesThickness: false,
+    derivable: true,
+  },
+  flat: {
+    usesLength: true,
+    usesWidthDiameter: true,
+    usesThickness: true,
+    derivable: true,
+  },
+  rectangular: {
+    usesLength: true,
+    usesWidthDiameter: true,
+    usesThickness: true,
+    derivable: true,
+  },
+  hexagonal: {
+    usesLength: true,
+    usesWidthDiameter: true,
+    usesThickness: false,
+    derivable: true,
+  },
+  octagonal: {
+    usesLength: true,
+    usesWidthDiameter: true,
+    usesThickness: false,
+    derivable: true,
+  },
+  tube_round: {
+    usesLength: true,
+    usesWidthDiameter: true,
+    usesThickness: true,
+    derivable: true,
+  },
+  tube_square: {
+    usesLength: true,
+    usesWidthDiameter: true,
+    usesThickness: true,
+    derivable: true,
+  },
+  tube_rectangular: {
+    usesLength: true,
+    usesWidthDiameter: true,
+    usesThickness: true,
+    derivable: true,
+  },
+  sheet: {
+    usesLength: true,
+    usesWidthDiameter: true,
+    usesThickness: true,
+    derivable: true,
+  },
+  plate: {
+    usesLength: true,
+    usesWidthDiameter: true,
+    usesThickness: true,
+    derivable: true,
+  },
+  // A beam's area comes from its profile table, which this system does not
+  // hold, so its weight per metre stays whatever was typed for it.
+  beam: {
+    usesLength: true,
+    usesWidthDiameter: true,
+    usesThickness: true,
+    derivable: false,
+  },
+  angle: {
+    usesLength: true,
+    usesWidthDiameter: true,
+    usesThickness: true,
+    derivable: true,
+  },
+};
+
+/**
+ * The coarse product shape a group is set up under, expressed as the
+ * cross-section its articles are weighed with when the group carries no finer
+ * shape of its own. A piece article has no cross-section at all.
+ */
+export const DIMENSION_SHAPE_FOR_PRODUCT_SHAPE: Record<
+  ProductShape,
+  ProductDimensionShape | null
+> = {
+  bar_steel: "round",
+  coil: "sheet",
+  piece_article: null,
+  sheet: "sheet",
+  tube: "tube_round",
+  beam_steel: "beam",
+  profile: "angle",
+};
+
+/**
+ * The cross-sectional area in mm² a shape has at the given dimensions, or null
+ * when the shape is not derivable or a dimension it needs is missing.
+ *
+ * `tube_rectangular` is treated as a square tube on the width it carries: the
+ * article holds one width and one thickness, and inventing the second side
+ * would put a wrong weight on the line rather than an absent one.
+ */
+export const crossSectionAreaMm2 = (
+  shape: ProductDimensionShape | null | undefined,
+  dimensions: ArticleDimensions,
+): number | null => {
+  if (!shape || !DIMENSION_SHAPE_GEOMETRY[shape].derivable) {
+    return null;
+  }
+  const width = dimensions.widthDiameter ?? 0;
+  const thickness = dimensions.thickness ?? 0;
+  if (width <= 0) {
+    return null;
+  }
+  const needsThickness = DIMENSION_SHAPE_GEOMETRY[shape].usesThickness;
+  if (needsThickness && thickness <= 0) {
+    return null;
+  }
+  switch (shape) {
+    case "round":
+      return (Math.PI / 4) * width * width;
+    case "square":
+      return width * width;
+    case "hexagonal":
+      return (Math.sqrt(3) / 2) * width * width;
+    case "octagonal":
+      return 2 * (Math.SQRT2 - 1) * width * width;
+    case "tube_round":
+      return Math.PI * thickness * (width - thickness);
+    case "tube_square":
+    case "tube_rectangular":
+      return 4 * thickness * (width - thickness);
+    case "angle":
+      return thickness * (2 * width - thickness);
+    default:
+      // flat, rectangular, sheet and plate are all width times thickness.
+      return width * thickness;
+  }
+};
+
+/**
+ * The paintable outside surface in mm per running metre of the shape — its
+ * outer perimeter. Null when the shape has no derivable cross-section.
+ */
+export const crossSectionPerimeterMm = (
+  shape: ProductDimensionShape | null | undefined,
+  dimensions: ArticleDimensions,
+): number | null => {
+  if (!shape || !DIMENSION_SHAPE_GEOMETRY[shape].derivable) {
+    return null;
+  }
+  const width = dimensions.widthDiameter ?? 0;
+  const thickness = dimensions.thickness ?? 0;
+  if (width <= 0) {
+    return null;
+  }
+  switch (shape) {
+    case "round":
+    case "tube_round":
+      return Math.PI * width;
+    case "square":
+    case "tube_square":
+    case "tube_rectangular":
+    case "angle":
+      return 4 * width;
+    case "hexagonal":
+      return 2 * Math.sqrt(3) * width;
+    case "octagonal":
+      return 8 * Math.tan(Math.PI / 8) * width;
+    default:
+      // A flat, sheet or plate is painted on both faces plus its two edges.
+      return 2 * (width + thickness);
+  }
+};
+
+/**
+ * The kilograms one running metre of this shape weighs in this grade.
+ *
+ * A cross-section in mm² over a metre is area/1000 dm³, so the weight is the
+ * density times that. Null when either the geometry or the density is unknown,
+ * which is what keeps a typed-in weight from being overwritten with a guess.
+ */
+export const weightPerMetreOf = (
+  shape: ProductDimensionShape | null | undefined,
+  dimensions: ArticleDimensions,
+  grade: FeaturesQuality | string | null | undefined,
+): number | null => {
+  const area = crossSectionAreaMm2(shape, dimensions);
+  const density = materialDensityOf(grade);
+  if (area === null || density === null) {
+    return null;
+  }
+  return (area * density) / 1000;
+};
+
+/** The square metres of paintable surface one running metre carries. */
+export const paintSurfacePerMetreOf = (
+  shape: ProductDimensionShape | null | undefined,
+  dimensions: ArticleDimensions,
+): number | null => {
+  const perimeter = crossSectionPerimeterMm(shape, dimensions);
+  if (perimeter === null) {
+    return null;
+  }
+  return perimeter / 1000;
+};
+
+/**
+ * The three derived figures an article carries once its shape, its dimensions
+ * and its grade are known: weight per metre, paintable surface per metre, and
+ * the weight of one piece at its own length.
+ *
+ * Each is returned only when it is genuinely derivable. A caller keeps whatever
+ * was typed for the rest — a beam's weight per metre, or the weight of an
+ * article whose grade nobody has picked yet.
+ */
+export const deriveArticleWeights = (
+  shape: ProductDimensionShape | null | undefined,
+  dimensions: ArticleDimensions,
+  grade: FeaturesQuality | string | null | undefined,
+): Partial<DerivedArticleWeights> => {
+  const weightPerM1 = weightPerMetreOf(shape, dimensions, grade);
+  const paintSurfacePerM1 = paintSurfacePerMetreOf(shape, dimensions);
+  const length = dimensions.length ?? 0;
+  const derived: Partial<DerivedArticleWeights> = {};
+  if (weightPerM1 !== null) {
+    derived.weightPerM1 = weightPerM1;
+    if (length > 0) {
+      derived.weightTheoretical = (weightPerM1 * length) / 1000;
+    }
+  }
+  if (paintSurfacePerM1 !== null) {
+    derived.paintSurfacePerM1 = paintSurfacePerM1;
+  }
+  return derived;
+};
+
+/**
+ * The same three figures as decimal strings at the scale their columns hold,
+ * ready to spread over the fields a product or product group is written with.
+ *
+ * A figure that cannot be derived is simply absent from the result, which is
+ * what lets a caller overwrite a stale weight without wiping the one a person
+ * had to type — a beam's weight per metre, say, or an article whose grade
+ * nobody has picked yet.
+ */
+export const derivedWeightColumns = (
+  shape: ProductDimensionShape | null | undefined,
+  dimensions: ArticleDimensions,
+  grade: FeaturesQuality | string | null | undefined,
+): Partial<Record<keyof DerivedArticleWeights, string>> => {
+  const derived = deriveArticleWeights(shape, dimensions, grade);
+  const columns: Partial<Record<keyof DerivedArticleWeights, string>> = {};
+  if (derived.weightPerM1 !== undefined) {
+    columns.weightPerM1 = derived.weightPerM1.toFixed(4);
+  }
+  if (derived.paintSurfacePerM1 !== undefined) {
+    columns.paintSurfacePerM1 = derived.paintSurfacePerM1.toFixed(4);
+  }
+  if (derived.weightTheoretical !== undefined) {
+    columns.weightTheoretical = derived.weightTheoretical.toFixed(3);
+  }
+  return columns;
 };
 
 // ---------------------------------------------------------------------------

@@ -2,7 +2,10 @@
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { deleteProduct, ProductDetail } from "@/app/(dashboard)/products/actions";
+import {
+  deleteProduct,
+  ProductDetail,
+} from "@/app/(dashboard)/products/actions";
 import { Button } from "@/components/shadcn/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FormError } from "@/components/ui/form-error";
@@ -10,10 +13,13 @@ import {
   formatDateColumn,
   formatMoney,
   formatNumber,
+  materialGradeMeta,
   yesNo,
 } from "@/lib/helpers";
 import {
   DISPATCH_STRATEGY_LABELS,
+  MATERIAL_FAMILY_LABELS,
+  MATERIAL_SURFACE_FINISH_LABELS,
   PRODUCT_DIMENSION_SHAPE_LABELS,
   SALES_UNIT_LABELS,
 } from "@/lib/labels";
@@ -50,6 +56,10 @@ export const ProductDetailView = ({ product }: Props) => {
     0,
   );
 
+  // What the grade code itself says: the family, the surface, and the density
+  // the theoretical weight above was computed from.
+  const material = materialGradeMeta(product.featuresQuality);
+
   return (
     <div className="space-y-6">
       {error && <FormError>{error}</FormError>}
@@ -60,12 +70,18 @@ export const ProductDetailView = ({ product }: Props) => {
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
           <ProductField label="Product" value={product.productCode} />
           <ProductField label="Name" value={product.name} />
-          <ProductField label="Product group" value={product.productGroupName} />
+          <ProductField
+            label="Product group"
+            value={product.productGroupName}
+          />
           <ProductField label="Price" value={product.priceGroup} />
           <ProductField label="EAN" value={product.ean} />
           <ProductField label="Material group" value={product.materialGroup} />
           <ProductField label="Commodity" value={product.commodityCode} />
-          <ProductField label="Old product code" value={product.oldProductCode} />
+          <ProductField
+            label="Old product code"
+            value={product.oldProductCode}
+          />
           <ProductField label="Search code 1" value={product.searchCode1} />
           <ProductField label="Search code 2" value={product.searchCode2} />
           <ProductField label="Search code 3" value={product.searchCode3} />
@@ -81,7 +97,10 @@ export const ProductDetailView = ({ product }: Props) => {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <ProductField label="Group long" value={product.groupLongDesc} />
           <ProductField label="Group short" value={product.groupShortDesc} />
-          <ProductField label="Product short" value={product.productShortDesc} />
+          <ProductField
+            label="Product short"
+            value={product.productShortDesc}
+          />
         </div>
       </section>
 
@@ -113,6 +132,34 @@ export const ProductDetailView = ({ product }: Props) => {
           />
           <ProductField label="Quality" value={product.featuresQuality} />
           <ProductField
+            label="Material"
+            value={
+              material ? MATERIAL_FAMILY_LABELS[material.base.family] : null
+            }
+          />
+          <ProductField
+            label="Surface"
+            value={
+              material
+                ? MATERIAL_SURFACE_FINISH_LABELS[material.surface.finish]
+                : null
+            }
+          />
+          <ProductField
+            label="Density (kg/dm³)"
+            value={material ? material.base.density.toFixed(3) : null}
+          />
+          <ProductField
+            label="Magnetic"
+            value={material ? yesNo(material.base.magnetic) : null}
+          />
+          <ProductField
+            label="Travels under foil"
+            value={
+              material ? yesNo(material.surface.requiresProtectiveFoil) : null
+            }
+          />
+          <ProductField
             label="Standard — quality"
             value={product.standardsQuality}
           />
@@ -124,7 +171,10 @@ export const ProductDetailView = ({ product }: Props) => {
           />
           <ProductField label="Trade weight" value={product.weightTrade} />
           <ProductField label="German weight" value={product.weightGerman} />
-          <ProductField label="Industry number" value={product.industryNumber} />
+          <ProductField
+            label="Industry number"
+            value={product.industryNumber}
+          />
           <ProductField
             label="Print dimensions"
             value={yesNo(product.printDimensions)}

@@ -1300,6 +1300,43 @@ stays neutral rather than being guessed at.
   enumOptions           every dropdown leads with an "Empty" entry, because
                         unset is a real choice on the document screens
 
+15.7 — A material grade is metallurgy, and a shape is a formula
+
+A grade code is not a label. materialGradeMeta splits it the way the codes are
+built — a base grade plus a surface suffix — so 316L2B is 316L in a 2B finish
+and C45+QT is C45 quenched and tempered. Both halves are matched longest-first,
+which is what keeps 304L2B from being read as 304, and +C/SH from being read as
+a plain +C. A code that matches no base is weighed as carbon steel at 7.85
+rather than yielding no weight at all, and that fallback is stated in the table
+so nobody mistakes it for a measurement.
+
+The base decides four things: the metal family, the density every theoretical
+weight is computed from, the alloy content an alloy surcharge is charged on
+(chromium, nickel, molybdenum, and the titanium that marks a stabilised grade),
+and whether the material is magnetic — which is how the yard separates a
+300-series offcut from a 400-series one. The suffix decides the surface: whether
+it travels under foil, whether it is decorative, whether it was cold rolled, and
+whether it carries a metallic coating whose cut edges need touching up.
+
+The shape decides the cross-section. crossSectionAreaMm2 is the real formula per
+shape — π/4·d² for a round bar, π·t·(d−t) for a round tube, t·(2w−t) for an
+angle, width times thickness for anything flat — and crossSectionPerimeterMm is
+the outer perimeter the paintable surface comes from. A cross-section in mm²
+over one metre is area/1000 dm³, so weight per metre is the density times that.
+
+Two shapes deliberately yield nothing. A beam's section comes from a profile
+table this system does not hold, so it is marked not derivable and keeps the
+weight per metre that was typed for it. A rectangular tube carries one width and
+one thickness on the article, so it is weighed as a square tube on the width it
+has: inventing the second side would put a wrong weight on the line instead of
+an absent one.
+
+deriveArticleWeights returns only what it can actually derive, and
+derivedWeightColumns turns that into the decimal strings the columns hold. Both
+createProduct and updateProduct run it, and so does the product group mapper, so
+a change of dimension, shape or grade cannot leave a weight behind that belongs
+to the previous one. What cannot be derived is never overwritten.
+
 ===============================================================================
 PART 16 — Quick map of the derivations
 ===============================================================================

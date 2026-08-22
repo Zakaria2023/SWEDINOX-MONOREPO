@@ -61,7 +61,11 @@ import {
   StockMovements,
 } from "@/db/schema/stock-movements";
 import { SelectWarehouses, Warehouses } from "@/db/schema/warehouses";
-import { describeError, generateUuid } from "@/lib/helpers";
+import {
+  derivedWeightColumns,
+  describeError,
+  generateUuid,
+} from "@/lib/helpers";
 import {
   EMPTY_PURCHASE_COST,
   loadPurchaseCost,
@@ -431,6 +435,30 @@ const EMPTY_CHILDREN: ProductChildren = {
   sawingPrices: [],
 };
 
+/**
+ * Re-derives the weight columns from the article's own shape, dimensions and
+ * grade before it is written.
+ *
+ * These three are geometry, not opinions: a 20 mm round bar in 304 weighs
+ * 2.4819 kg/m and nothing a person types about it makes that a different
+ * number. Deriving them on the way in stops a stale figure surviving a change
+ * of dimension or grade. Where the geometry genuinely does not yield them — a
+ * beam, whose section comes from a profile table this system does not hold —
+ * whatever was typed is kept.
+ */
+const withDerivedWeights = (fields: ProductFields): ProductFields => ({
+  ...fields,
+  ...derivedWeightColumns(
+    fields.dimensionShape,
+    {
+      length: Number(fields.length ?? 0),
+      widthDiameter: Number(fields.widthDiameter ?? 0),
+      thickness: Number(fields.thickness ?? 0),
+    },
+    fields.featuresQuality,
+  ),
+});
+
 export const createProduct = async (
   fields: ProductFields,
   children: ProductChildren = EMPTY_CHILDREN,
@@ -438,7 +466,7 @@ export const createProduct = async (
   const uuid = generateUuid();
   try {
     await db.transaction(async (tx) => {
-      await tx.insert(Products).values({ ...fields, uuid });
+      await tx.insert(Products).values({ ...withDerivedWeights(fields), uuid });
       await writeProductChildren(tx, uuid, children);
     });
     revalidatePath("/products");
@@ -468,7 +496,10 @@ export const updateProduct = async (
     }
 
     await db.transaction(async (tx) => {
-      await tx.update(Products).set(fields).where(eq(Products.uuid, uuid));
+      await tx
+        .update(Products)
+        .set(withDerivedWeights(fields))
+        .where(eq(Products.uuid, uuid));
       await writeProductChildren(tx, uuid, children);
     });
   } catch (error) {

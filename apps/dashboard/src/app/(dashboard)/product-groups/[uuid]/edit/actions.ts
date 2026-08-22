@@ -53,6 +53,12 @@ const SECTION_COLUMNS = {
     "searchCode2",
     "searchCode3",
     "articleGroup",
+    // The shape lives in this section but decides the three derived weight
+    // figures the basis section shows, so changing it here rewrites them
+    // rather than leaving a weight that belongs to the previous shape.
+    "weight",
+    "paintSurface",
+    "weightTheoretical",
   ],
   basis: [
     "length",
@@ -236,7 +242,10 @@ const saveSection = async (
   columns: Partial<ProductGroupFields>,
 ): Promise<ProductGroupActionResult> => {
   try {
-    await db.update(ProductGroups).set(columns).where(eq(ProductGroups.uuid, uuid));
+    await db
+      .update(ProductGroups)
+      .set(columns)
+      .where(eq(ProductGroups.uuid, uuid));
   } catch (error) {
     return { error: describeError(error, "Failed to update product group") };
   }
@@ -257,7 +266,10 @@ export const updateProductGroupGeneral = async (
 
   return saveSection(
     uuid,
-    pickColumns(formValuesToProductGroupFields(values), SECTION_COLUMNS.general),
+    pickColumns(
+      formValuesToProductGroupFields(values),
+      SECTION_COLUMNS.general,
+    ),
   );
 };
 
