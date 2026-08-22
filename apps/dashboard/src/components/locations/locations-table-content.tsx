@@ -12,7 +12,11 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
-import { buildColumnVisibility } from "@/lib/helpers";
+import {
+  buildColumnVisibility,
+  warehouseLocationTypeMetaOf,
+  yesNo,
+} from "@/lib/helpers";
 import {
   WAREHOUSE_BLOCK_REASON_LABELS,
   WAREHOUSE_LOADING_LOCATION_LABELS,
@@ -30,6 +34,9 @@ type ColumnKey =
   | "name"
   | "pickingSequence"
   | "locationType"
+  | "sellable"
+  | "pickable"
+  | "countable"
   | "loadingLocation"
   | "blocked"
   | "blockReason"
@@ -45,6 +52,11 @@ const ALL_COLUMNS: Array<{
   { key: "name", label: "Name", defaultVisible: true },
   { key: "pickingSequence", label: "Picking Sequence", defaultVisible: true },
   { key: "locationType", label: "Location Type", defaultVisible: true },
+  // What the type means. Derived from it, not stored: a pick face is walked to
+  // and sellable, a scrap heap is neither.
+  { key: "sellable", label: "Sellable", defaultVisible: true },
+  { key: "pickable", label: "Picked from", defaultVisible: false },
+  { key: "countable", label: "Counted", defaultVisible: false },
   { key: "loadingLocation", label: "Loading Location", defaultVisible: true },
   { key: "blocked", label: "Blocked", defaultVisible: true },
   { key: "blockReason", label: "Reason", defaultVisible: false },
@@ -113,6 +125,42 @@ export const LocationsTable = ({ locations }: Props) => {
               : "—"}
           </TableCell>
         );
+      case "sellable":
+        return (
+          <TableCell key={key}>
+            {location.locationType
+              ? yesNo(
+                  warehouseLocationTypeMetaOf(
+                    location.locationType as WarehouseLocationType,
+                  )?.sellable,
+                )
+              : "—"}
+          </TableCell>
+        );
+      case "pickable":
+        return (
+          <TableCell key={key}>
+            {location.locationType
+              ? yesNo(
+                  warehouseLocationTypeMetaOf(
+                    location.locationType as WarehouseLocationType,
+                  )?.pickable,
+                )
+              : "—"}
+          </TableCell>
+        );
+      case "countable":
+        return (
+          <TableCell key={key}>
+            {location.locationType
+              ? yesNo(
+                  warehouseLocationTypeMetaOf(
+                    location.locationType as WarehouseLocationType,
+                  )?.countable,
+                )
+              : "—"}
+          </TableCell>
+        );
       case "loadingLocation":
         return (
           <TableCell key={key}>
@@ -130,11 +178,17 @@ export const LocationsTable = ({ locations }: Props) => {
       case "blockReason":
         return (
           <TableCell key={key}>
-            {location.blockReason
-              ? WAREHOUSE_BLOCK_REASON_LABELS[
-                  location.blockReason as WarehouseBlockReason
-                ]
-              : "—"}
+            {/* A reason typed on the location wins; otherwise the one its type
+                implies, so a scrap or inspection location explains itself. */}
+            {(() => {
+              const reason =
+                (location.blockReason as WarehouseBlockReason | null) ??
+                warehouseLocationTypeMetaOf(
+                  location.locationType as WarehouseLocationType | null,
+                )?.blockReason ??
+                null;
+              return reason ? WAREHOUSE_BLOCK_REASON_LABELS[reason] : "—";
+            })()}
           </TableCell>
         );
       case "blockedForOptimization":

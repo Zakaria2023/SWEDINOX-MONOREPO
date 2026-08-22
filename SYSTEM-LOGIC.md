@@ -1488,6 +1488,37 @@ asTransportMode and asTransportRegion narrow the free-text columns the sales and
 purchase order headers hold, returning null for anything unrecognised rather
 than letting a stray string reach the metadata.
 
+15.13 — A location type says what state the goods are in
+
+A location's type was recorded and never consulted, so a lot on the scrap heap,
+waiting at the inspection bench, or already staged at the loading bay was
+offered to a sales order exactly like a lot on a pick face.
+
+WAREHOUSE_LOCATION_TYPE_META answers four questions per type — does it hold
+stock, may a sales order draw from it, does a picker walk to it, is it counted —
+and, for the types whose stock is not free, why. Three are sellable: pick, bulk
+and put-away (received but not yet shelved: our stock, standing in the wrong
+place). Eight are not, and each says why: inspection is awaiting a verdict,
+call-off is held against a contract, and production, processing, sorting, load,
+collection and scrap are all spoken for or on their way somewhere.
+
+That rule is enforced where stock is offered and where it is allocated:
+getAvailableStockForSelect, getPendingStockForCompany and the quote-line
+allocation now exclude blocked lots and lots standing anywhere non-sellable. A
+location with no type recorded stays sellable — most locations are ordinary
+shelves, and refusing every unclassified one would empty the warehouse on paper.
+The locations overview prints sellable, picked-from and counted, and falls back
+to the type's own block reason where none was typed.
+
+The seven work-order line types are the moves between those location kinds:
+unloading brings goods in from outside to put-away, put-away shelves them into
+bulk, transfer replenishes the pick face, picking stages onto the loading bay,
+loading takes them out, processing sends them to a machine, and inspection sends
+them to the bench. Each says its from, its to, whether it is a stock in, out or
+move, and whether it is closed by a scan. workOrderLineTypeForMove names the
+operation for a move, and returns null for one no operation describes — which is
+what makes an unsupported move visible rather than silently allowed.
+
 ===============================================================================
 PART 16 — Quick map of the derivations
 ===============================================================================

@@ -54,8 +54,13 @@ import {
   TransportMode,
   transportModes,
   VatCode,
+  WarehouseBlockReason,
+  WarehouseLocationType,
+  warehouseLocationTypes,
   WarehouseTransportRegion,
   warehouseTransportRegions,
+  WarehouseWorkOrderLineType,
+  warehouseWorkOrderLineTypes,
 } from "./enums";
 import {
   CONTRACT_TYPE_LABELS,
@@ -4685,6 +4690,269 @@ export const asTransportRegion = (
   const found = warehouseTransportRegions.find((region) => region === value);
   return found ?? null;
 };
+
+// ---------------------------------------------------------------------------
+// What a location type means
+//
+// A location's type was recorded and never consulted, so a lot standing on the
+// scrap heap, waiting at the inspection bench or already staged at the loading
+// bay was offered to a sales order exactly like a lot on a pick face. The type
+// is the only thing that says what state the goods are in.
+//
+// Each type answers four questions: does it hold stock at all, may a sales
+// order draw from it, does a picker walk to it, and is it counted. A type whose
+// stock is not sellable also says why, which is the block reason a lot standing
+// there carries.
+//
+// The work-order line types are the moves between them. A line type says where
+// the goods come from and where they go, which is what makes "transfer" and
+// "put away" different operations rather than two words for the same one.
+// ---------------------------------------------------------------------------
+
+export type WarehouseLocationTypeMeta = {
+  /** Holds stock that counts as on hand. */
+  holdsStock: boolean;
+  /** A sales order may draw from a lot standing here. */
+  sellable: boolean;
+  /** A picker walks to it on a picking round. */
+  pickable: boolean;
+  /** Stock here is counted on the periodic count. */
+  countable: boolean;
+  /** Goods here are on their way somewhere rather than at rest. */
+  inTransit: boolean;
+  /**
+   * Why a lot standing here is not sellable. Null for the types whose stock is
+   * sellable, since there is nothing to explain.
+   */
+  blockReason: WarehouseBlockReason | null;
+};
+
+export type WarehouseWorkOrderLineTypeMeta = {
+  /** Where the goods come from; null means from outside the warehouse. */
+  from: WarehouseLocationType | null;
+  /** Where they go; null means out of the warehouse. */
+  to: WarehouseLocationType | null;
+  /** What the line does to the warehouse's stock. */
+  stockEffect: "in" | "out" | "move";
+  /** The line is closed by scanning, not by typing. */
+  requiresScan: boolean;
+};
+
+export const WAREHOUSE_LOCATION_TYPE_META: Record<
+  WarehouseLocationType,
+  WarehouseLocationTypeMeta
+> = {
+  pick: {
+    holdsStock: true,
+    sellable: true,
+    pickable: true,
+    countable: true,
+    inTransit: false,
+    blockReason: null,
+  },
+  // Bulk replenishes the pick face rather than being walked to itself, but the
+  // goods are ours and sellable.
+  bulk: {
+    holdsStock: true,
+    sellable: true,
+    pickable: false,
+    countable: true,
+    inTransit: false,
+    blockReason: null,
+  },
+  // Received and not yet shelved. Still sellable — it is our stock, standing in
+  // the wrong place.
+  put_away: {
+    holdsStock: true,
+    sellable: true,
+    pickable: false,
+    countable: true,
+    inTransit: true,
+    blockReason: null,
+  },
+  production: {
+    holdsStock: true,
+    sellable: false,
+    pickable: false,
+    countable: true,
+    inTransit: true,
+    blockReason: "location_type_setting",
+  },
+  processing: {
+    holdsStock: true,
+    sellable: false,
+    pickable: false,
+    countable: true,
+    inTransit: true,
+    blockReason: "location_type_setting",
+  },
+  sorting: {
+    holdsStock: true,
+    sellable: false,
+    pickable: false,
+    countable: true,
+    inTransit: true,
+    blockReason: "location_type_setting",
+  },
+  // Goods waiting for a verdict. Not sellable until they pass.
+  inspection: {
+    holdsStock: true,
+    sellable: false,
+    pickable: false,
+    countable: true,
+    inTransit: false,
+    blockReason: "disapproval",
+  },
+  // Staged for a truck: already picked for somebody, so not free to sell again.
+  load: {
+    holdsStock: true,
+    sellable: false,
+    pickable: false,
+    countable: false,
+    inTransit: true,
+    blockReason: "location_type_setting",
+  },
+  // Waiting for the customer to collect it — picked, and theirs.
+  collection: {
+    holdsStock: true,
+    sellable: false,
+    pickable: false,
+    countable: false,
+    inTransit: true,
+    blockReason: "location_type_setting",
+  },
+  // Held against a call-off contract, so it belongs to that customer's
+  // agreement rather than to the free stock.
+  call_off: {
+    holdsStock: true,
+    sellable: false,
+    pickable: false,
+    countable: true,
+    inTransit: false,
+    blockReason: "reserved_for_customer",
+  },
+  // Waste. It is still physically there, which is why it holds stock, but it is
+  // not sellable and there is nothing to count.
+  scrap: {
+    holdsStock: true,
+    sellable: false,
+    pickable: false,
+    countable: false,
+    inTransit: false,
+    blockReason: "location_type_setting",
+  },
+};
+
+export const WAREHOUSE_WORK_ORDER_LINE_TYPE_META: Record<
+  WarehouseWorkOrderLineType,
+  WarehouseWorkOrderLineTypeMeta
+> = {
+  unloading: {
+    from: null,
+    to: "put_away",
+    stockEffect: "in",
+    requiresScan: true,
+  },
+  put_away: {
+    from: "put_away",
+    to: "bulk",
+    stockEffect: "move",
+    requiresScan: true,
+  },
+  transfer: {
+    from: "bulk",
+    to: "pick",
+    stockEffect: "move",
+    requiresScan: true,
+  },
+  picking: {
+    from: "pick",
+    to: "load",
+    stockEffect: "move",
+    requiresScan: true,
+  },
+  processing: {
+    from: "pick",
+    to: "processing",
+    stockEffect: "move",
+    requiresScan: true,
+  },
+  inspection: {
+    from: "put_away",
+    to: "inspection",
+    stockEffect: "move",
+    requiresScan: false,
+  },
+  loading: {
+    from: "load",
+    to: null,
+    stockEffect: "out",
+    requiresScan: true,
+  },
+};
+
+/** What a location type means, or null when a location carries none. */
+export const warehouseLocationTypeMetaOf = (
+  type: WarehouseLocationType | null | undefined,
+): WarehouseLocationTypeMeta | null =>
+  type ? WAREHOUSE_LOCATION_TYPE_META[type] : null;
+
+/** The location types a sales order may draw stock from. */
+export const SELLABLE_LOCATION_TYPES: WarehouseLocationType[] =
+  warehouseLocationTypes.filter(
+    (type) => WAREHOUSE_LOCATION_TYPE_META[type].sellable,
+  );
+
+/**
+ * The location types whose stock is not free to sell. A lot standing on one of
+ * these is spoken for, on its way somewhere, or waiting for a verdict.
+ */
+export const NON_SELLABLE_LOCATION_TYPES: WarehouseLocationType[] =
+  warehouseLocationTypes.filter(
+    (type) => !WAREHOUSE_LOCATION_TYPE_META[type].sellable,
+  );
+
+/**
+ * Whether a sales order may draw from a lot standing on this type of location.
+ *
+ * A location with no type recorded is treated as sellable: the great majority
+ * of locations are ordinary shelves, and refusing to sell from every location
+ * nobody has classified would empty the warehouse on paper.
+ */
+export const isSellableLocationType = (
+  type: WarehouseLocationType | null | undefined,
+): boolean => (type ? WAREHOUSE_LOCATION_TYPE_META[type].sellable : true);
+
+/**
+ * Why a lot standing on this type of location is blocked, or null when it is
+ * not blocked at all.
+ */
+export const blockReasonForLocationType = (
+  type: WarehouseLocationType | null | undefined,
+): WarehouseBlockReason | null =>
+  warehouseLocationTypeMetaOf(type)?.blockReason ?? null;
+
+/**
+ * The work-order line type that describes moving goods from one kind of
+ * location to another, or null when no operation does — which is what makes an
+ * unsupported move visible instead of silently allowed.
+ */
+export const workOrderLineTypeForMove = (
+  from: WarehouseLocationType | null,
+  to: WarehouseLocationType | null,
+): WarehouseWorkOrderLineType | null => {
+  const found = warehouseWorkOrderLineTypes.find((type) => {
+    const meta = WAREHOUSE_WORK_ORDER_LINE_TYPE_META[type];
+    return meta.from === from && meta.to === to;
+  });
+  return found ?? null;
+};
+
+/** What a work-order line type does, or null when a line carries none. */
+export const workOrderLineTypeMetaOf = (
+  type: WarehouseWorkOrderLineType | null | undefined,
+): WarehouseWorkOrderLineTypeMeta | null =>
+  type ? WAREHOUSE_WORK_ORDER_LINE_TYPE_META[type] : null;
 
 // ---------------------------------------------------------------------------
 // Label lookups

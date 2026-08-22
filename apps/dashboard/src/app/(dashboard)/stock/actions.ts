@@ -7,6 +7,7 @@ import {
   StockMovements,
 } from "@/db/schema/stock-movements";
 import { Products, SelectProducts } from "@/db/schema/products";
+import { Warehouses } from "@/db/schema/warehouses";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import {
   PurchaseOrders,
@@ -21,6 +22,7 @@ import { StockCorrectionReason, StockMovementType } from "@/lib/enums";
 import {
   describeError,
   generateUuid,
+  NON_SELLABLE_LOCATION_TYPES,
   restateLotValue,
   todayDateString,
 } from "@/lib/helpers";
@@ -50,7 +52,18 @@ import {
 } from "@/lib/table-query";
 import { exportRows } from "@/lib/server/excel";
 import { STOCK_COLUMNS } from "@/app/(dashboard)/stock/columns";
-import { and, count, desc, eq, getTableColumns, gt, sql } from "drizzle-orm";
+import {
+  and,
+  count,
+  desc,
+  eq,
+  getTableColumns,
+  gt,
+  isNull,
+  notInArray,
+  or,
+  sql,
+} from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 export type StockListItem = SelectStock & {
@@ -199,6 +212,19 @@ export const getStock = async (
 // minus whatever open sales-order reservations already hold on the lot.
 const availableQuantity = sql<string>`(${Stock.quantity} - ${Stock.reservedQuantity})`;
 
+// A lot is only free to sell if it is standing somewhere a sales order may draw
+// from. Scrap, inspection, the loading bay, the collection point, a machine and
+// a call-off shelf all hold real stock that is spoken for, on its way somewhere,
+// or waiting for a verdict — offering it again would sell the same steel twice.
+// A location with no type recorded stays sellable: most locations are ordinary
+// shelves, and refusing every unclassified one would empty the warehouse on
+// paper.
+const standingSomewhereSellable = or(
+  isNull(Stock.locationUuid),
+  isNull(Warehouses.locationType),
+  notInArray(Warehouses.locationType, NON_SELLABLE_LOCATION_TYPES),
+);
+
 export const getPendingStockForCompany = async (
   companyUuid: string,
 ): Promise<PendingStockOption[]> =>
@@ -212,11 +238,14 @@ export const getPendingStockForCompany = async (
     })
     .from(Stock)
     .innerJoin(Products, eq(Stock.productUuid, Products.uuid))
+    .leftJoin(Warehouses, eq(Stock.locationUuid, Warehouses.uuid))
     .where(
       and(
         eq(Products.companyUuid, companyUuid),
         eq(Stock.status, "pending"),
+        eq(Stock.blocked, false),
         gt(availableQuantity, "0"),
+        standingSomewhereSellable,
       ),
     )
     .orderBy(desc(Stock.createdAt));
@@ -236,7 +265,15 @@ export const getAvailableStockForSelect = async (): Promise<
     })
     .from(Stock)
     .innerJoin(Products, eq(Stock.productUuid, Products.uuid))
-    .where(and(eq(Stock.status, "pending"), gt(availableQuantity, "0")))
+    .leftJoin(Warehouses, eq(Stock.locationUuid, Warehouses.uuid))
+    .where(
+      and(
+        eq(Stock.status, "pending"),
+        eq(Stock.blocked, false),
+        gt(availableQuantity, "0"),
+        standingSomewhereSellable,
+      ),
+    )
     .orderBy(desc(Stock.createdAt));
 
 export const createStockCorrection = async (

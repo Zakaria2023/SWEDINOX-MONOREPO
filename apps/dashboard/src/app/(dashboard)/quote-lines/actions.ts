@@ -15,14 +15,29 @@ import { QuoteItems, SelectQuoteItems } from "@/db/schema/quote-items";
 import { Quotes, SelectQuotes } from "@/db/schema/quotes";
 import { RevenueGroups, SelectRevenueGroups } from "@/db/schema/revenue-groups";
 import { SelectStock, Stock } from "@/db/schema/stock";
+import { Warehouses } from "@/db/schema/warehouses";
 import {
   describeError,
   generateUuid,
+  NON_SELLABLE_LOCATION_TYPES,
   quoteLineFinancials,
   resolveOrderTypeLabel,
 } from "@/lib/helpers";
 import { buildOrderSummary } from "@/app/(dashboard)/orders/actions";
-import { and, asc, count, desc, eq, gte, isNull, SQL, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  getTableColumns,
+  gte,
+  isNull,
+  notInArray,
+  or,
+  SQL,
+  sql,
+} from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 export type QuoteLineRow = SelectQuoteItems & {
@@ -266,14 +281,25 @@ export const convertQuoteToOrder = async (
         continue;
       }
 
+      // Only lots standing somewhere a sales order may draw from. Scrap,
+      // inspection, the loading bay and a machine all hold real stock that is
+      // spoken for or not yet approved; allocating from one of those would
+      // promise a customer steel that is already somebody else's or not yet
+      // passed.
       const lots = await db
-        .select()
+        .select(getTableColumns(Stock))
         .from(Stock)
+        .leftJoin(Warehouses, eq(Stock.locationUuid, Warehouses.uuid))
         .where(
           and(
             eq(Stock.productUuid, item.productUuid),
             eq(Stock.status, "pending"),
             eq(Stock.blocked, false),
+            or(
+              isNull(Stock.locationUuid),
+              isNull(Warehouses.locationType),
+              notInArray(Warehouses.locationType, NON_SELLABLE_LOCATION_TYPES),
+            ),
           ),
         )
         .orderBy(asc(Stock.receiptDate), asc(Stock.id));
