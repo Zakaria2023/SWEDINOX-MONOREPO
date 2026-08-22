@@ -23,10 +23,13 @@ import DocumentEmail, {
 } from "@/emails/templates/document-email";
 import {
   daysOverdue,
+  DocumentPrintPolicy,
+  documentPrintPolicy,
   formatDateValue,
   formatMoney,
   formatNumber,
   invoiceReference,
+  orderDocumentLines,
 } from "@/lib/helpers";
 import {
   INVOICE_DOCUMENT_TYPE_LABELS,
@@ -100,7 +103,9 @@ const deliver = async (
     ),
   );
 
-  const failed = results.filter((result) => result.status === "rejected").length;
+  const failed = results.filter(
+    (result) => result.status === "rejected",
+  ).length;
   return { sent: results.length - failed, failed };
 };
 
@@ -138,6 +143,25 @@ const productLabel = (
   code: string | null,
   name: string | null,
 ): [string, string] => [code ?? "—", name ?? "—"];
+
+/**
+ * The product code a document leads with: the customer's own catalogue code
+ * where they asked for it, ours otherwise, and nothing at all where they asked
+ * for no code. A customer whose external code we do not hold still gets ours —
+ * a blank column identifies nothing.
+ */
+const printedProductCode = (
+  item: { productCode: string | null; externalProductCode: string | null },
+  policy: DocumentPrintPolicy,
+): string | null => {
+  if (policy.productCode === "none") {
+    return null;
+  }
+  if (policy.productCode === "external") {
+    return item.externalProductCode ?? item.productCode;
+  }
+  return item.productCode;
+};
 
 const money = (value: string | number | null): string =>
   formatMoney(Number(value ?? 0));
@@ -381,6 +405,15 @@ export const sendInvoiceEmail = async (
       companyName: Companies.companyName,
       invoiceEmailEnabled: Companies.invoiceEmailEnabled,
       invoiceEmailTo: Companies.invoiceEmailTo,
+      // How this customer's documents are supposed to print: whether prices
+      // appear at all, whether only the line total does, which product code
+      // leads, and what order the lines go in.
+      quoteOrderInvoiceSettings: Companies.quoteOrderInvoiceSettings,
+      orderSettings: Companies.orderSettings,
+      printProductCodesOnOutgoingDocuments:
+        Companies.printProductCodesOnOutgoingDocuments,
+      groupLinesByLongProductGroupDescription:
+        Companies.groupLinesByLongProductGroupDescription,
     })
     .from(Invoices)
     .leftJoin(Companies, eq(Invoices.companyUuid, Companies.uuid))
@@ -391,18 +424,37 @@ export const sendInvoiceEmail = async (
     return NOTHING_SENT;
   }
 
-  const items = await db
+  const lineRows = await db
     .select({
       quantity: InvoiceItems.quantity,
       netPrice: InvoiceItems.netPrice,
       amount: InvoiceItems.amount,
       weightKg: InvoiceItems.weightKg,
+      // The originating order line's number, which is what "lowest order line"
+      // groups by — an invoice line carries no number of its own.
+      lineNumber: OrderItems.lineNumber,
       productCode: Products.productCode,
+      externalProductCode: Products.externalProductCode,
       productName: Products.name,
     })
     .from(InvoiceItems)
     .leftJoin(Products, eq(InvoiceItems.productUuid, Products.uuid))
+    .leftJoin(OrderItems, eq(InvoiceItems.orderItemUuid, OrderItems.uuid))
     .where(eq(InvoiceItems.invoiceUuid, invoiceUuid));
+
+  const printPolicy = documentPrintPolicy({
+    invoiceSettings: invoice.quoteOrderInvoiceSettings,
+    orderSettings: invoice.orderSettings,
+    printProductCodes: invoice.printProductCodesOnOutgoingDocuments,
+    groupLines: invoice.groupLinesByLongProductGroupDescription,
+  });
+
+  // The customer decides the order its lines print in — as entered, by
+  // description, or grouped by the lowest line number each description carries.
+  const items = orderDocumentLines(lineRows, printPolicy, (line) => ({
+    description: line.productName ?? "",
+    lineNumber: line.lineNumber ?? 0,
+  }));
 
   const surcharges = await db
     .select({
@@ -473,30 +525,44 @@ export const sendInvoiceEmail = async (
           "Description",
           "Quantity",
           "Weight (kg)",
-          "Unit price",
-          "Amount",
+          // "Do not print prices" drops both money columns; "total amount per
+          // line" keeps the total and drops the unit price it came from.
+          ...(printPolicy.printPrices && !printPolicy.totalAmountPerLine
+            ? ["Unit price"]
+            : []),
+          ...(printPolicy.printPrices ? ["Amount"] : []),
         ],
         alignRightFrom: 2,
         rows: items.map((item) => [
-          ...productLabel(item.productCode, item.productName),
+          ...productLabel(
+            printedProductCode(item, printPolicy),
+            item.productName,
+          ),
           quantity(item.quantity),
           quantity(item.weightKg),
-          money(item.netPrice),
-          money(item.amount),
+          ...(printPolicy.printPrices && !printPolicy.totalAmountPerLine
+            ? [money(item.netPrice)]
+            : []),
+          ...(printPolicy.printPrices ? [money(item.amount)] : []),
         ]),
         emptyNote: "This invoice bills surcharges only.",
       },
       {
         caption: "Surcharges",
-        columns: ["Description", "Unit", "Rate", "Amount"],
+        columns: [
+          "Description",
+          "Unit",
+          ...(printPolicy.printPrices ? ["Rate", "Amount"] : []),
+        ],
         alignRightFrom: 2,
         rows: surcharges.map((surcharge) => [
           surcharge.description
             ? INVOICE_SURCHARGE_DESCRIPTION_LABELS[surcharge.description]
             : "—",
           surcharge.unit ?? "—",
-          money(surcharge.surcharge),
-          money(surcharge.amount),
+          ...(printPolicy.printPrices
+            ? [money(surcharge.surcharge), money(surcharge.amount)]
+            : []),
         ]),
         emptyNote: "No surcharges on this invoice.",
       },
@@ -593,7 +659,13 @@ export const sendPaymentReminderEmail = async (
     tables: [
       {
         caption: "Open item",
-        columns: ["Document", "Invoice date", "Due date", "Days overdue", "Outstanding"],
+        columns: [
+          "Document",
+          "Invoice date",
+          "Due date",
+          "Days overdue",
+          "Outstanding",
+        ],
         alignRightFrom: 3,
         rows: [
           [
@@ -613,7 +685,11 @@ export const sendPaymentReminderEmail = async (
       ...(paid > 0.005
         ? [{ label: "Received so far", value: formatMoney(paid) }]
         : []),
-      { label: "Still outstanding", value: money(invoice.outstanding), emphasis: true },
+      {
+        label: "Still outstanding",
+        value: money(invoice.outstanding),
+        emphasis: true,
+      },
     ],
   });
 };

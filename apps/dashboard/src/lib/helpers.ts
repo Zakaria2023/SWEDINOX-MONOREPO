@@ -11,6 +11,8 @@ import {
   ComplaintCategory,
   CountWorkorderMethod,
   CustomerLabelOption,
+  EdiOption,
+  GroupLinesByDescription,
   ComplaintSolution,
   CustomerGroup,
   DeliveryTerm,
@@ -20,7 +22,9 @@ import {
   InvoicePaymentTerm,
   InvoiceDocumentType,
   InvoiceVatScenario,
+  InvoiceFrequency,
   InvoiceSurchargeDescription,
+  InvoicingMethod,
   LeadTimeMethod,
   LedgerAccountType,
   MachineCapacityUnit,
@@ -29,17 +33,23 @@ import {
   machineProductionTypes,
   MaterialFamily,
   MaterialSurfaceFinish,
+  MiscellaneousOption,
   OrderDeblockType,
   OrderLineStatus,
+  OrderOption,
   OrderWeightType,
   PrinterEntry,
   PrinterName,
+  PrintProductCodes,
   ProcessingEditing,
   ProductDimensionShape,
   ProductShape,
   PurchaseOrderStatus,
   PurchaseQuoteStatus,
   PurchaseRequestStatus,
+  QuoteOption,
+  QuoteOrderInvoiceOption,
+  QuoteOrderOption,
   ReminderStage,
   reminderStages,
   RevenueGroup,
@@ -1183,12 +1193,24 @@ export type CreditAssessmentInput = {
   paymentTerms: InvoicePaymentTerm | null | undefined;
   /** The company has been stopped by hand, whatever its balance says. */
   companyBlocked: boolean;
+  /**
+   * The customer's order settings waive financial blocking, so an overrun is
+   * recorded but does not hold the order. Set from `orderBlockingPolicy`.
+   */
+  financialBlockingWaived?: boolean;
 };
 
 export type CreditAssessment = {
   blocked: boolean;
   /** Why it was held, short enough for `Orders.blockingReason` (varchar 255). */
   reason: string | null;
+  /**
+   * The limit was exceeded but the customer's order settings waive financial
+   * blocking, so the order passes with the overrun recorded against it. A
+   * blocked customer is still blocked: that is a decision somebody took by
+   * hand, not a limit being reached.
+   */
+  waived: boolean;
   creditLimit: number;
   openReceivables: number;
   committedOrders: number;
@@ -1264,6 +1286,7 @@ export const assessCredit = ({
   orderAmount,
   paymentTerms,
   companyBlocked,
+  financialBlockingWaived = false,
 }: CreditAssessmentInput): CreditAssessment => {
   const extendsCredit = paymentTermExtendsCredit(paymentTerms);
   const owed = openReceivables + committedOrders;
@@ -1276,6 +1299,7 @@ export const assessCredit = ({
     // billed — an order taken is a receivable waiting to happen.
     creditSpace: creditLimit - owed,
     exposure,
+    waived: false,
   };
 
   if (companyBlocked) {
@@ -1290,11 +1314,21 @@ export const assessCredit = ({
     return { ...standing, blocked: false, reason: null };
   }
 
-  return {
-    ...standing,
-    blocked: true,
-    reason: `Credit limit exceeded — ${formatMoney(owed)} owed and on order plus ${formatMoney(orderAmount)} on this one against a ${formatMoney(creditLimit)} limit`,
-  };
+  const overrun = `Credit limit exceeded — ${formatMoney(owed)} owed and on order plus ${formatMoney(orderAmount)} on this one against a ${formatMoney(creditLimit)} limit`;
+
+  // The customer's order settings can waive financial blocking. The overrun is
+  // still recorded against the order — somebody has to be able to see it — but
+  // the order is not held.
+  if (financialBlockingWaived) {
+    return {
+      ...standing,
+      waived: true,
+      blocked: false,
+      reason: `${overrun} (not blocked: financial blocking waived)`,
+    };
+  }
+
+  return { ...standing, blocked: true, reason: overrun };
 };
 
 export type EarlyPaymentDiscountInput = {
@@ -5304,6 +5338,281 @@ export const countStockColumn = (
   type: WarehouseCountStockType | null | undefined,
 ): "technical" | "available" =>
   type === "available_stock" ? "available" : "technical";
+
+// ---------------------------------------------------------------------------
+// The customer's own document and blocking settings
+//
+// A company carries six sets of options — quote, order, quote/order,
+// quote/order/invoice, miscellaneous and EDI — as arrays of enum values, and
+// not one of them was ever read. So a customer set up with "no financial
+// blockage" was blocked by the credit rule anyway, one set up with "do not
+// print prices" was sent an invoice with a price column, and one whose
+// documents were supposed to lead with its own product code got ours.
+//
+// Each option below is one decision, taken from the value itself.
+// ---------------------------------------------------------------------------
+
+export type DocumentBlockingPolicy = {
+  /**
+   * The commercial block — margin floors, missing data — is waived for this
+   * customer.
+   */
+  commercialBlockingWaived: boolean;
+  /** The credit rule does not hold this customer's orders. */
+  financialBlockingWaived: boolean;
+};
+
+export type DocumentPrintPolicy = {
+  /** Prices appear on the document at all. */
+  printPrices: boolean;
+  /** Only the line total, not the unit price it came from. */
+  totalAmountPerLine: boolean;
+  /** Options are rolled into their line rather than listed separately. */
+  condenseOptions: boolean;
+  /** Option prices are folded into the material price. */
+  optionPricesInMaterialPrices: boolean;
+  /** Gross price and discount are suppressed; only the net price is shown. */
+  netPricesOnly: boolean;
+  /** The scrap surcharge is a line of its own rather than being priced in. */
+  scrapSurchargeSeparate: boolean;
+  /** Which product code the document leads with. */
+  productCode: "none" | "external" | "own";
+  /** The order the lines are printed in. */
+  lineOrder: "entered" | "alphabetical" | "lowest_line";
+  /** Group headings are printed above the lines belonging to them. */
+  printGroupTitles: boolean;
+};
+
+export type CustomerMiscPolicy = {
+  /** A one-off buyer: no standing terms, no visit schedule. */
+  occasionalCustomer: boolean;
+  /** Has a login for the portal. */
+  hasPortalLogin: boolean;
+  /** One bill of lading per order rather than per consignment. */
+  billOfLadingPerOrder: boolean;
+  printWaybills: boolean;
+  /** Holds our stock on consignment, so a delivery is not yet a sale. */
+  consignmentCustomer: boolean;
+  /** Labels carry no sender's name — the customer resells the goods as its own. */
+  neutralLabels: boolean;
+  /** Every sawn piece gets its own label. */
+  labelPerSawedPiece: boolean;
+};
+
+export type QuoteOrderPolicy = {
+  /** A document without the customer's own reference is refused. */
+  referenceRequired: boolean;
+  /** Part deliveries are not accepted: everything ships together. */
+  completeDelivery: boolean;
+  roundWeightPerPieceUp: boolean;
+  /** A certificate accompanies the goods as a matter of course. */
+  certificateRequired: boolean;
+  /** Over-length material is acceptable. */
+  allowOverlength: boolean;
+  /** New documents are pickup rather than delivery unless said otherwise. */
+  defaultPickup: boolean;
+};
+
+export type EdiPolicy = {
+  /** Product features travel with the EDI message. */
+  sendProductFeatures: boolean;
+  /** A PDF of the document is attached as well. */
+  sendPdf: boolean;
+};
+
+/**
+ * Whether one of a company's option arrays holds a given option. A null array —
+ * a customer nobody has configured — holds nothing.
+ */
+export const hasSetting = <T extends string>(
+  settings: readonly T[] | null | undefined,
+  option: T,
+): boolean => Boolean(settings?.includes(option));
+
+/** What a customer's order settings waive. */
+export const orderBlockingPolicy = (
+  settings: readonly OrderOption[] | null | undefined,
+): DocumentBlockingPolicy => ({
+  commercialBlockingWaived: hasSetting(settings, "no_commercial_blocking"),
+  financialBlockingWaived: hasSetting(settings, "no_financial_blockage"),
+});
+
+/** The same for its quote settings, which carry the two options separately. */
+export const quoteBlockingPolicy = (
+  settings: readonly QuoteOption[] | null | undefined,
+): DocumentBlockingPolicy => ({
+  commercialBlockingWaived: hasSetting(settings, "no_commercial_blocking"),
+  financialBlockingWaived: hasSetting(settings, "no_financial_blockage"),
+});
+
+/** Everything the customer's settings decide about how a document prints. */
+export const documentPrintPolicy = ({
+  invoiceSettings,
+  orderSettings,
+  printProductCodes,
+  groupLines,
+}: {
+  invoiceSettings?: readonly QuoteOrderInvoiceOption[] | null;
+  orderSettings?: readonly OrderOption[] | null;
+  printProductCodes?: PrintProductCodes | null;
+  groupLines?: GroupLinesByDescription | null;
+}): DocumentPrintPolicy => ({
+  printPrices: !hasSetting(invoiceSettings, "do_not_print_prices"),
+  totalAmountPerLine: hasSetting(invoiceSettings, "total_amount_per_line"),
+  condenseOptions: hasSetting(invoiceSettings, "condensing_options"),
+  optionPricesInMaterialPrices: hasSetting(
+    invoiceSettings,
+    "include_option_prices_in_material_prices",
+  ),
+  netPricesOnly: hasSetting(orderSettings, "net_prices_only"),
+  scrapSurchargeSeparate: hasSetting(
+    orderSettings,
+    "scrap_surcharge_separately",
+  ),
+  productCode:
+    printProductCodes === "print_easy2trade"
+      ? "external"
+      : printProductCodes === "print_company"
+        ? "own"
+        : printProductCodes === "do_not_print"
+          ? "none"
+          : "own",
+  lineOrder:
+    groupLines === "alphabetical_order"
+      ? "alphabetical"
+      : groupLines === "lowest_order_line"
+        ? "lowest_line"
+        : "entered",
+  printGroupTitles: groupLines === "print_group_titles",
+});
+
+/** What a customer's miscellaneous settings say about it. */
+export const customerMiscPolicy = (
+  settings: readonly MiscellaneousOption[] | null | undefined,
+): CustomerMiscPolicy => ({
+  occasionalCustomer: hasSetting(settings, "occasional_customer"),
+  hasPortalLogin: hasSetting(settings, "customer_has_login_code"),
+  billOfLadingPerOrder: hasSetting(settings, "bill_of_ladings_per_order"),
+  printWaybills: hasSetting(settings, "print_waybills"),
+  consignmentCustomer: hasSetting(settings, "consignment_customer"),
+  neutralLabels: hasSetting(settings, "neutral_labels"),
+  labelPerSawedPiece: hasSetting(settings, "label_per_sawed_piece"),
+});
+
+/** What a customer's quote/order settings require of a new document. */
+export const quoteOrderPolicy = (
+  settings: readonly QuoteOrderOption[] | null | undefined,
+): QuoteOrderPolicy => ({
+  referenceRequired: hasSetting(settings, "reference_required"),
+  completeDelivery: hasSetting(settings, "complete_delivery"),
+  roundWeightPerPieceUp: hasSetting(settings, "round_weight_per_piece_up"),
+  certificateRequired: hasSetting(settings, "certificate"),
+  allowOverlength: hasSetting(settings, "overlength"),
+  defaultPickup: hasSetting(settings, "default_pickup"),
+});
+
+/** What travels with a customer's EDI messages. */
+export const ediPolicy = (
+  settings: readonly EdiOption[] | null | undefined,
+): EdiPolicy => ({
+  sendProductFeatures: hasSetting(settings, "product_features"),
+  sendPdf: hasSetting(settings, "send_pdf"),
+});
+
+/**
+ * The key deliveries group into invoices by. Per delivery, one invoice each;
+ * per order, everything from one order on one invoice; per order line, an
+ * invoice for every line. Null when the customer has not said, which leaves the
+ * caller to group as it always did.
+ */
+export const invoiceGroupKeyFor = (
+  method: InvoicingMethod | null | undefined,
+  ids: {
+    deliveryUuid?: string | null;
+    orderUuid?: string | null;
+    orderItemUuid?: string | null;
+  },
+): string | null => {
+  if (method === "per_delivery") {
+    return ids.deliveryUuid ?? null;
+  }
+  if (method === "per_order") {
+    return ids.orderUuid ?? null;
+  }
+  if (method === "per_order_line") {
+    return ids.orderItemUuid ?? null;
+  }
+  return null;
+};
+
+/**
+ * The next date an invoice run reaches this customer, counting from a
+ * YYYY-MM-DD date: tomorrow when it is billed daily, next Monday when weekly,
+ * the first of next month when monthly. Null on bad input.
+ */
+export const nextInvoiceRunDate = (
+  frequency: InvoiceFrequency | null | undefined,
+  from: string | null | undefined,
+): string | null => {
+  if (!from) {
+    return null;
+  }
+  const date = new Date(`${from.slice(0, 10)}T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+  if (frequency === "monthly") {
+    return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 1))
+      .toISOString()
+      .split("T")[0];
+  }
+  if (frequency === "weekly") {
+    // Monday is 1; a Monday rolls forward a full week rather than standing
+    // still, because the run for this week has already gone out.
+    const daysToMonday = (8 - date.getUTCDay()) % 7 || 7;
+    date.setUTCDate(date.getUTCDate() + daysToMonday);
+    return date.toISOString().split("T")[0];
+  }
+  date.setUTCDate(date.getUTCDate() + 1);
+  return date.toISOString().split("T")[0];
+};
+
+/**
+ * Document lines in the order the customer's settings ask for: as entered, by
+ * description, or by the lowest line number in each description's group — which
+ * is what keeps the lines of one product group together while still leading
+ * with whichever of them was typed first.
+ */
+export const orderDocumentLines = <T>(
+  lines: readonly T[],
+  policy: Pick<DocumentPrintPolicy, "lineOrder">,
+  read: (line: T) => { description: string; lineNumber: number },
+): T[] => {
+  if (policy.lineOrder === "entered") {
+    return [...lines];
+  }
+  if (policy.lineOrder === "alphabetical") {
+    return [...lines].sort((a, b) =>
+      read(a).description.localeCompare(read(b).description),
+    );
+  }
+  const lowestByDescription = new Map<string, number>();
+  for (const line of lines) {
+    const { description, lineNumber } = read(line);
+    const current = lowestByDescription.get(description);
+    if (current === undefined || lineNumber < current) {
+      lowestByDescription.set(description, lineNumber);
+    }
+  }
+  return [...lines].sort((a, b) => {
+    const left = read(a);
+    const right = read(b);
+    const byGroup =
+      (lowestByDescription.get(left.description) ?? 0) -
+      (lowestByDescription.get(right.description) ?? 0);
+    return byGroup !== 0 ? byGroup : left.lineNumber - right.lineNumber;
+  });
+};
 
 // ---------------------------------------------------------------------------
 // Label lookups

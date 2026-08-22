@@ -11,6 +11,7 @@ import {
   assessCredit,
   CreditAssessment,
   grossUpCommittedOrderValue,
+  orderBlockingPolicy,
 } from "@/lib/helpers";
 import { InvoicePaymentTerm } from "@/lib/enums";
 
@@ -175,6 +176,10 @@ export const checkCredit = async (
     .select({
       creditLimit: Companies.creditLimit,
       blockedByUserId: Companies.blockedByUserId,
+      // "No financial blockage" on the customer's order settings means exactly
+      // that: the credit rule may record an overrun against the order but must
+      // not hold it.
+      orderSettings: Companies.orderSettings,
     })
     .from(Companies)
     .where(eq(Companies.uuid, companyUuid))
@@ -194,5 +199,7 @@ export const checkCredit = async (
     orderAmount,
     paymentTerms,
     companyBlocked: !!company?.blockedByUserId,
+    financialBlockingWaived: orderBlockingPolicy(company?.orderSettings)
+      .financialBlockingWaived,
   });
 };

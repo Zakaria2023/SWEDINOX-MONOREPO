@@ -1550,6 +1550,48 @@ line's own label plus one per bundle, one per bundle alone, or a fixed number pe
 line. stickerPerPickCount is none, one for the order, or one per line. The
 warehouse work-order detail now shows how many labels each line has to produce.
 
+15.15 — The customer's own document settings
+
+A company carries six sets of options — quote, order, quote/order,
+quote/order/invoice, miscellaneous and EDI — as arrays of enum values, and not
+one of them was read. So a customer set up with "no financial blockage" was
+blocked by the credit rule anyway, one set up with "do not print prices" was
+sent an invoice with a price column, and one whose documents were supposed to
+lead with its own catalogue code got ours.
+
+Blocking. orderBlockingPolicy and quoteBlockingPolicy read the two waivers off
+the arrays, and assessCredit takes financialBlockingWaived. A waived overrun is
+not blocked but is still written to Orders.blockingReason with "(not blocked:
+financial blocking waived)" after it, because somebody has to be able to see
+that the order went over the limit. A customer blocked by hand stays blocked
+whatever the waiver says: that was a decision, not a limit being reached.
+
+Quote/order. quoteOrderPolicy gives six requirements. Two are enforced on
+createOrder: "reference required" refuses an order that does not quote the
+customer's own reference, and "default pickup" and "complete delivery" default
+those flags on a new order rather than leaving them false.
+
+Printing. documentPrintPolicy folds four settings into one answer — whether
+prices print at all, whether only the line total does, whether options are
+condensed and folded into the material price, whether gross prices are
+suppressed, which product code leads (the customer's external one, ours, or
+none), what order the lines print in, and whether group titles print. The
+invoice email honours it: "do not print prices" drops the unit-price and amount
+columns from both tables, "total amount per line" drops the unit price and keeps
+the total, and orderDocumentLines sorts the lines as entered, alphabetically, or
+grouped by the lowest order-line number each description carries.
+
+Invoicing rhythm. invoiceGroupKeyFor gives the key deliveries group into
+invoices by — the delivery, the order, or the order line — and nextInvoiceRunDate
+the next date a run reaches the customer: tomorrow when daily, next Monday when
+weekly (a Monday rolls forward a full week, since this week's run has gone), the
+first of next month when monthly.
+
+The rest are read the same way and available to the screens that need them:
+customerMiscPolicy (occasional customer, portal login, bill of lading per order,
+waybills, consignment, neutral labels, label per sawn piece) and ediPolicy
+(product features, PDF attachment).
+
 ===============================================================================
 PART 16 — Quick map of the derivations
 ===============================================================================

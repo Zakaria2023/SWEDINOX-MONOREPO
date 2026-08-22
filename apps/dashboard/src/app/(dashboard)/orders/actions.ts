@@ -21,6 +21,7 @@ import {
   generateUuid,
   getQuoteVatRatePercent,
   quoteLineFinancials,
+  quoteOrderPolicy,
   resolveSurchargeAmounts,
 } from "@/lib/helpers";
 import { invoicePaymentTerms, orderStatuses } from "@/lib/enums";
@@ -312,6 +313,29 @@ export const createOrder = async (
 ): Promise<OrderActionResult> => {
   const uuid = generateUuid();
   try {
+    // What the customer's own quote/order settings require of a new document.
+    // "Reference required" means the customer will not accept a document that
+    // does not quote their reference back at them, and "default pickup" means
+    // they collect unless somebody says otherwise.
+    const [customer] = await db
+      .select({ quoteOrderSettings: Companies.quoteOrderSettings })
+      .from(Companies)
+      .where(eq(Companies.uuid, fields.companyUuid))
+      .limit(1);
+    const policy = quoteOrderPolicy(customer?.quoteOrderSettings);
+
+    if (policy.referenceRequired && !fields.customerRef?.trim()) {
+      return {
+        error: "This customer requires their own reference on every order.",
+      };
+    }
+
+    const orderFields: OrderFields = {
+      ...fields,
+      isPickup: fields.isPickup ?? policy.defaultPickup,
+      completeDelivery: fields.completeDelivery ?? policy.completeDelivery,
+    };
+
     // Validate stock availability before opening the transaction.
     const stockByUuid = new Map<string, SelectStock>();
     if (items.length > 0) {
@@ -365,7 +389,7 @@ export const createOrder = async (
     );
 
     await db.transaction(async (tx) => {
-      await tx.insert(Orders).values({ ...fields, uuid });
+      await tx.insert(Orders).values({ ...orderFields, uuid });
 
       // Only items whose stock lot still exists become order lines; the line
       // number counts those, not the raw submitted rows.
@@ -517,9 +541,10 @@ export const createOrder = async (
         .update(Orders)
         .set({
           ...summary,
-          ...(credit.blocked
-            ? { financialBlockage: true, blockingReason: credit.reason }
-            : {}),
+          // A waived overrun still gets written down — the order passes, but
+          // somebody has to be able to see that it went over the limit.
+          ...(credit.reason ? { blockingReason: credit.reason } : {}),
+          ...(credit.blocked ? { financialBlockage: true } : {}),
         })
         .where(eq(Orders.uuid, uuid));
     });
