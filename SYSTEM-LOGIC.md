@@ -1694,6 +1694,34 @@ surcharge or discount accumulates against — the order line, the group product,
 or the product group — and null when the caller holds no id for what the basis
 names, which is what stops a tier being applied against the wrong total.
 
+15.20 — A standard demands a certificate
+
+A CE standard was a dropdown and nothing more, so a structural hollow section —
+a CE-marked product that may not leave without its inspection certificate — was
+released on exactly the same terms as a length of ordinary bar. Every
+certificate expectation was opened with "mandatory, ignore document" set, so
+nothing was ever actually held for its paperwork.
+
+CE_STANDARD_META says what each of the four governs, that all four are CE marked
+under the Construction Products Regulation and travel with a Declaration of
+Performance, and which EN 10204 certificate each demands: a works certificate
+(2.1) for threaded tube, an inspection certificate (3.1) for the three
+structural standards, which go into load-bearing frames under EN 1090-2 and need
+real test results rather than a declaration of compliance.
+
+requiredCertificateFor resolves what a consignment must carry. The CE standard
+wins where one is set; failing that the product's own setting, failing that the
+line's ordered options, failing everything the 2.1 that always accompanies the
+goods. A 3.1 already promised on the order or on the product is never downgraded
+— somebody agreed to supply one.
+
+generateCertificates uses both: the certificate it opens is the one the article
+actually owes, and mandatoryIgnoreDocument is now the negation of
+certificateIsMandatory rather than a hard-coded true, so goods under a CE
+standard are held until the document is on hand. The product screen prints the
+certificate required, whether the goods are held for it, and the dimensional
+tolerance standard its quality standard implies.
+
 ===============================================================================
 PART 16 — Quick map of the derivations
 ===============================================================================

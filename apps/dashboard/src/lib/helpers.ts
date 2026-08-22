@@ -5,6 +5,7 @@ import {
   ageingBuckets,
   ArticleGroup,
   AvailableAt,
+  CeStandard,
   CertificaatOption,
   ContractableRole,
   contractableRoles,
@@ -48,6 +49,7 @@ import {
   OrderWeightType,
   PriceTierBase,
   PrinterEntry,
+  ProductQualityStandard,
   PrinterName,
   PrintProductCodes,
   ProcessingEditing,
@@ -6228,6 +6230,147 @@ export const discountAccumulationKey = (
     groupProductUuid: ids.groupProductUuid,
     productGroupUuid: ids.productGroupUuid,
   });
+
+// ---------------------------------------------------------------------------
+// Standards and the certificates they demand
+//
+// A CE standard was a dropdown on the product and nothing more, so a structural
+// hollow section — a CE-marked product that may not leave without its
+// inspection certificate — was released on exactly the same terms as a length
+// of ordinary bar. Every certificate expectation was opened with "mandatory,
+// ignore document" set, meaning no consignment was ever actually held for its
+// paperwork.
+//
+// A standard says three things: what kind of product it governs, whether the
+// product is CE marked and therefore needs a Declaration of Performance, and
+// which grade of EN 10204 certificate has to travel with it.
+// ---------------------------------------------------------------------------
+
+export type CeStandardMeta = {
+  /** What the standard governs. */
+  scope:
+    | "threaded_tube"
+    | "hollow_section_cold_formed"
+    | "hollow_section_hot_finished"
+    | "structural_steel";
+  /**
+   * The product is CE marked under the Construction Products Regulation, so a
+   * Declaration of Performance travels with it.
+   */
+  requiresDeclarationOfPerformance: boolean;
+  /** The EN 10204 certificate the standard demands. */
+  requiredCertificate: CertificaatOption;
+  /** The execution standard the product is CE marked under, where there is one. */
+  executionStandard: string | null;
+};
+
+export type QualityStandardMeta = {
+  /** What the standard fixes. */
+  governs: "mechanical_properties" | "dimensions_and_tolerances";
+  /** The dimensional tolerance standard that goes with it. */
+  toleranceStandard: string;
+};
+
+export const CE_STANDARD_META: Record<CeStandard, CeStandardMeta> = {
+  // Non-alloy steel tubes for welding and threading. CE marked, and bought with
+  // a works certificate rather than an inspection one.
+  en_10255: {
+    scope: "threaded_tube",
+    requiresDeclarationOfPerformance: true,
+    requiredCertificate: "en10204_2_1",
+    executionStandard: null,
+  },
+  // Cold formed welded structural hollow sections. Structural: it goes into a
+  // load-bearing frame, so it needs an inspection certificate with real test
+  // results on it, not a declaration of compliance.
+  en_10219_1: {
+    scope: "hollow_section_cold_formed",
+    requiresDeclarationOfPerformance: true,
+    requiredCertificate: "en10204_3_1",
+    executionStandard: "EN 1090-2",
+  },
+  // Hot finished structural hollow sections. Same duty.
+  en_10210_1: {
+    scope: "hollow_section_hot_finished",
+    requiresDeclarationOfPerformance: true,
+    requiredCertificate: "en10204_3_1",
+    executionStandard: "EN 1090-2",
+  },
+  // Hot rolled structural steel, general delivery conditions.
+  en_10025_1: {
+    scope: "structural_steel",
+    requiresDeclarationOfPerformance: true,
+    requiredCertificate: "en10204_3_1",
+    executionStandard: "EN 1090-2",
+  },
+};
+
+export const QUALITY_STANDARD_META: Record<
+  ProductQualityStandard,
+  QualityStandardMeta
+> = {
+  en_10025_2: {
+    governs: "mechanical_properties",
+    toleranceStandard: "EN 10029",
+  },
+  en_10219_1: {
+    governs: "dimensions_and_tolerances",
+    toleranceStandard: "EN 10219-2",
+  },
+};
+
+/** What a CE standard implies, or null when a product carries none. */
+export const ceStandardMetaOf = (
+  standard: CeStandard | null | undefined,
+): CeStandardMeta | null => (standard ? CE_STANDARD_META[standard] : null);
+
+/** What a quality standard implies, or null when a product carries none. */
+export const qualityStandardMetaOf = (
+  standard: ProductQualityStandard | null | undefined,
+): QualityStandardMeta | null =>
+  standard ? QUALITY_STANDARD_META[standard] : null;
+
+/**
+ * Whether goods under this standard may not leave until their certificate is on
+ * hand. A CE-marked product may not: the certificate is part of what makes the
+ * marking true. A product under no CE standard travels on the usual terms.
+ */
+export const certificateIsMandatory = (
+  standard: CeStandard | null | undefined,
+): boolean =>
+  Boolean(ceStandardMetaOf(standard)?.requiresDeclarationOfPerformance);
+
+/**
+ * The certificate a consignment has to carry.
+ *
+ * The CE standard wins where there is one — a structural section needs its 3.1
+ * whatever the purchase line was ordered under. Failing that, the product's own
+ * setting, and failing that the 2.1 declaration of compliance that always
+ * accompanies the goods.
+ */
+export const requiredCertificateFor = ({
+  ceStandard,
+  productCertificate,
+  orderedCertificate,
+}: {
+  ceStandard?: CeStandard | null;
+  productCertificate?: CertificaatOption | null;
+  orderedCertificate?: CertificaatOption | null;
+}): CertificaatOption => {
+  const required = ceStandardMetaOf(ceStandard)?.requiredCertificate;
+  if (required === "en10204_3_1") {
+    return required;
+  }
+  // A 3.1 already promised on the order or on the product is never downgraded:
+  // somebody agreed to supply one.
+  if (
+    orderedCertificate === "en10204_3_1" ||
+    productCertificate === "en10204_3_1"
+  ) {
+    return "en10204_3_1";
+  }
+  return required ?? productCertificate ?? orderedCertificate ?? "en10204_2_1";
+};
 
 // ---------------------------------------------------------------------------
 // Label lookups

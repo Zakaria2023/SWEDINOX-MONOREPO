@@ -10,13 +10,17 @@ import { Button } from "@/components/shadcn/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FormError } from "@/components/ui/form-error";
 import {
+  certificateIsMandatory,
   formatDateColumn,
   formatMoney,
   formatNumber,
   materialGradeMeta,
+  qualityStandardMetaOf,
+  requiredCertificateFor,
   yesNo,
 } from "@/lib/helpers";
 import {
+  CERTIFICAAT_LABELS,
   DISPATCH_STRATEGY_LABELS,
   MATERIAL_FAMILY_LABELS,
   MATERIAL_SURFACE_FINISH_LABELS,
@@ -165,6 +169,31 @@ export const ProductDetailView = ({ product }: Props) => {
           />
           <ProductField label="Tolerance" value={product.tolerance} />
           <ProductField label="CE" value={product.ce} />
+          {/* What the standards on this article actually demand: which EN 10204
+              certificate has to travel with it, and whether the goods may leave
+              before the document is on hand. */}
+          <ProductField
+            label="Certificate required"
+            value={
+              CERTIFICAAT_LABELS[
+                requiredCertificateFor({
+                  ceStandard: product.ce,
+                  productCertificate: product.certificaat,
+                })
+              ]
+            }
+          />
+          <ProductField
+            label="Held for certificate"
+            value={yesNo(certificateIsMandatory(product.ce))}
+          />
+          <ProductField
+            label="Tolerance standard"
+            value={
+              qualityStandardMetaOf(product.tolerance)?.toleranceStandard ??
+              null
+            }
+          />
           <ProductField
             label="Theoretical weight"
             value={product.weightTheoretical}

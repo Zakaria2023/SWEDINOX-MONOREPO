@@ -14,8 +14,10 @@ import {
   SelectPurchaseOrders,
 } from "@/db/schema/purchase-orders";
 import {
+  certificateIsMandatory,
   describeError,
   generateUuid,
+  requiredCertificateFor,
   resolveCertificateFromOptions,
   todayDateString,
 } from "@/lib/helpers";
@@ -170,10 +172,12 @@ export const getCertificateDetail = async (
 
 // Opens the certificate every registered batch is owed.
 //
-// Which certificate is owed comes from the options the purchase line was
-// ordered under — the processing options name it directly, so a line bought
-// with a 3.1 gets a 3.1 and everything else gets the 2.1 declaration that
-// always accompanies the goods. The purchase line number, its reference and the
+// Which certificate is owed comes from the article and from the options the
+// purchase line was ordered under. A CE-marked product needs its 3.1 whatever
+// the line said; otherwise the processing options name the certificate directly,
+// so a line bought with a 3.1 gets a 3.1 and everything else gets the 2.1
+// declaration that always accompanies the goods. A 3.1 already promised is
+// never downgraded. The purchase line number, its reference and the
 // order's own reference (used as the bill of lading) are carried across so the
 // certificate can be matched to the shipment it arrived with.
 //
@@ -191,6 +195,11 @@ export const generateCertificates =
           lineOptions: PurchaseOrderItems.options,
           orderReference: PurchaseOrders.reference,
           orderInternalReference: PurchaseOrders.internalReference,
+          // What the article itself is held to. A CE-marked product may not
+          // leave without its inspection certificate — the certificate is part
+          // of what makes the marking true.
+          ceStandard: Products.ce,
+          productCertificate: Products.certificaat,
         })
         .from(Batches)
         .leftJoin(
@@ -200,7 +209,8 @@ export const generateCertificates =
         .leftJoin(
           PurchaseOrders,
           eq(Batches.purchaseOrderUuid, PurchaseOrders.uuid),
-        );
+        )
+        .leftJoin(Products, eq(Batches.productUuid, Products.uuid));
 
       if (batches.length === 0) {
         return {
@@ -231,12 +241,18 @@ export const generateCertificates =
         purchaseLineNumber: row.lineNumber,
         lineReference: row.orderInternalReference,
         billOfLading: row.orderReference,
-        documentCertificate: resolveCertificateFromOptions(
-          row.lineOptions ?? row.batch.options,
-        ),
+        documentCertificate: requiredCertificateFor({
+          ceStandard: row.ceStandard,
+          productCertificate: row.productCertificate,
+          orderedCertificate: resolveCertificateFromOptions(
+            row.lineOptions ?? row.batch.options,
+          ),
+        }),
         producer: row.batch.producer,
-        // Outstanding until the document arrives; the goods are not held for it.
-        mandatoryIgnoreDocument: true,
+        // Goods under a CE standard are held until the document is on hand;
+        // everything else is outstanding but travels without it. This was
+        // hard-coded true, so nothing was ever held for its paperwork.
+        mandatoryIgnoreDocument: !certificateIsMandatory(row.ceStandard),
       }));
 
       await db.insert(BatchCertificates).values(rows);
