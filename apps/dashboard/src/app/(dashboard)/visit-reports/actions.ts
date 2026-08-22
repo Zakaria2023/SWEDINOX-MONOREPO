@@ -10,7 +10,11 @@ import {
   SelectVisitReports,
   VisitReports,
 } from "@/db";
-import { generateUuid, todayDateString } from "@/lib/helpers";
+import {
+  generateUuid,
+  nextVisitDateForReason,
+  todayDateString,
+} from "@/lib/helpers";
 import { asc, count, desc, eq, getTableColumns } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -211,6 +215,9 @@ export const resolveVisitReport = async (
         uuid: VisitReports.uuid,
         hasTakenPlace: VisitReports.hasTakenPlace,
         visitDate: VisitReports.visitDate,
+        visitReason: VisitReports.visitReason,
+        nextVisitReason: VisitReports.nextVisitReason,
+        targetDateNextVisit: VisitReports.targetDateNextVisit,
       })
       .from(VisitReports)
       .where(eq(VisitReports.uuid, uuid))
@@ -223,11 +230,28 @@ export const resolveVisitReport = async (
       return { error: "This visit report is already resolved." };
     }
 
+    const visitDate = report.visitDate ?? todayDateString();
+
+    // Why the visit happened says when to come back: a complaint in four weeks,
+    // a quote chase in two, a customer whose turnover is slipping in eight. A
+    // reason that fixes no interval — an introduction, or a visit the customer
+    // asked for — leaves the date to be decided, and a date somebody already
+    // typed is never overwritten.
+    const derivedNextVisit = report.targetDateNextVisit
+      ? null
+      : nextVisitDateForReason(
+          report.nextVisitReason ?? report.visitReason,
+          visitDate,
+        );
+
     await db
       .update(VisitReports)
       .set({
         hasTakenPlace: true,
-        visitDate: report.visitDate ?? todayDateString(),
+        visitDate,
+        ...(derivedNextVisit
+          ? { targetDateNextVisit: new Date(`${derivedNextVisit}T00:00:00`) }
+          : {}),
       })
       .where(eq(VisitReports.uuid, uuid));
   } catch (error) {

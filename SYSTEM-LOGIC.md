@@ -1629,6 +1629,41 @@ physically be handed over.
 No exchange rate is invented anywhere. The system stores no rates, so it says
 when a conversion is needed and leaves the conversion to whoever has the rate.
 
+15.18 — A classification is a calling frequency
+
+A company's A/B/C classification was a letter nobody read, so the visit schedule
+had no frequency to work from and its "next call" and "next visit" columns were
+literally hard-coded to null.
+
+COMPANY_CLASSIFICATION_META is that frequency: an A customer is seen monthly and
+called fortnightly, a B customer quarterly and monthly, a C customer twice and
+four times a year — and their credit limits are looked at again every six,
+twelve and twenty-four months. contactIntervalWeeks turns it into an interval,
+and the customer's own typed frequency always beats it, because the
+classification is the default rather than the rule.
+
+nextContactDate is the last contact plus that interval, and a customer nobody
+has ever called is due today rather than never. A customer with neither a
+frequency nor a classification gets no due date at all, which keeps it off the
+list instead of on it every single day. The visit schedule fills all four
+columns from this.
+
+VISIT_REASON_META says when to come back, per reason: four weeks after a
+complaint, two after chasing a quote, eight when turnover is slipping. An
+introduction and a visit the customer asked for fix no interval — whether to
+come back at all is the point of the first, and the second was their idea — so
+they return null rather than a made-up date. Resolving a visit report stamps the
+next target date from its reason, and never overwrites one somebody typed.
+
+A language and a salutation together make a greeting: salutationLine writes
+"Geachte heer de Vries", "Dear Mr de Vries" or "السيد de Vries", and falls back
+to a name-only greeting where no salutation is on file rather than guessing one.
+documentLocale and isRightToLeftLanguage answer the rest.
+
+And what is available at a delivery address decides what has to drive there:
+unloadingRequirements turns crane unloading into vehicleWithCrane on the order,
+so nobody has to remember it per order.
+
 ===============================================================================
 PART 16 — Quick map of the derivations
 ===============================================================================

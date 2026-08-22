@@ -11,6 +11,7 @@ import {
 import { OrderItems, SelectOrderItems } from "@/db/schema/order-items";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
+import { CompanyAddresses } from "@/db/schema/company-addresses";
 import { Contracts, SelectContracts } from "@/db/schema/contracts";
 import { Products, SelectProducts } from "@/db/schema/products";
 import { SelectStock, Stock } from "@/db/schema/stock";
@@ -23,6 +24,7 @@ import {
   quoteLineFinancials,
   quoteOrderPolicy,
   resolveSurchargeAmounts,
+  unloadingRequirements,
 } from "@/lib/helpers";
 import { invoicePaymentTerms, orderStatuses } from "@/lib/enums";
 import { checkCredit } from "@/lib/server/credit-control";
@@ -330,10 +332,25 @@ export const createOrder = async (
       };
     }
 
+    // What is available at the delivery address to get the goods off the lorry
+    // decides what kind of lorry has to bring them. A site that unloads by crane
+    // needs one with a crane on it, and nobody should have to remember that per
+    // order.
+    const [deliveryAddress] = fields.deliveryAddressUuid
+      ? await db
+          .select({ availableAt: CompanyAddresses.availableAt })
+          .from(CompanyAddresses)
+          .where(eq(CompanyAddresses.uuid, fields.deliveryAddressUuid))
+          .limit(1)
+      : [];
+    const unloading = unloadingRequirements(deliveryAddress?.availableAt);
+
     const orderFields: OrderFields = {
       ...fields,
       isPickup: fields.isPickup ?? policy.defaultPickup,
       completeDelivery: fields.completeDelivery ?? policy.completeDelivery,
+      vehicleWithCrane:
+        fields.vehicleWithCrane || unloading.needsVehicleWithCrane,
     };
 
     // Validate stock availability before opening the transaction.

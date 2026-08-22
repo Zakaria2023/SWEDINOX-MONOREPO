@@ -4,9 +4,13 @@ import {
   AgeingBucket,
   ageingBuckets,
   ArticleGroup,
+  AvailableAt,
   CertificaatOption,
   ContractableRole,
   contractableRoles,
+  CompanyClassification,
+  CompanyLang,
+  ContactSalutation,
   ContractType,
   ComplaintCategory,
   CountWorkorderMethod,
@@ -72,6 +76,8 @@ import {
   TransporterPriceUnit,
   TransportMode,
   transportModes,
+  VisitReportContactMethod,
+  VisitReportReason,
   VatCode,
   WarehouseBlockReason,
   WarehouseCountStockType,
@@ -5820,6 +5826,259 @@ export const paymentClearsOn = (
     paymentMethodMetaOf(method)?.clearingDays ?? 0,
     "working_days",
   );
+
+// ---------------------------------------------------------------------------
+// How often a customer is called on, and in what language
+//
+// A company's A/B/C classification was a letter nobody read, so the visit
+// schedule had no frequency to work from and every "next call" and "next visit"
+// column on it was blank. The classification is exactly that frequency: an A
+// customer is seen monthly and called fortnightly, a C customer twice a year.
+//
+// A customer's own visit frequency, where somebody has typed one, always wins —
+// the classification is the default, not the rule.
+// ---------------------------------------------------------------------------
+
+export type CompanyClassificationMeta = {
+  /** In-person visits a year. */
+  visitsPerYear: number;
+  /** Telephone calls a year. */
+  callsPerYear: number;
+  /** How often the credit limit is looked at again, in months. */
+  creditReviewMonths: number;
+};
+
+export type VisitReasonMeta = {
+  /** The visit needs a follow-up recorded before it can be closed. */
+  needsFollowUp: boolean;
+  /**
+   * Weeks until the next visit this reason implies, or null when the reason
+   * says nothing about when to come back — a first introduction does not.
+   */
+  nextVisitWeeks: number | null;
+  /** The visit exists because of a complaint. */
+  fromComplaint: boolean;
+  /** The visit exists to chase a quote. */
+  fromQuote: boolean;
+};
+
+export const COMPANY_CLASSIFICATION_META: Record<
+  CompanyClassification,
+  CompanyClassificationMeta
+> = {
+  A: { visitsPerYear: 12, callsPerYear: 26, creditReviewMonths: 6 },
+  B: { visitsPerYear: 4, callsPerYear: 12, creditReviewMonths: 12 },
+  C: { visitsPerYear: 2, callsPerYear: 4, creditReviewMonths: 24 },
+};
+
+export const VISIT_REASON_META: Record<VisitReportReason, VisitReasonMeta> = {
+  // The schedule's own reason: come back when the frequency says so, which the
+  // classification already answers.
+  visit_frequency: {
+    needsFollowUp: false,
+    nextVisitWeeks: null,
+    fromComplaint: false,
+    fromQuote: false,
+  },
+  turnover_is_lagging_behind: {
+    needsFollowUp: true,
+    nextVisitWeeks: 8,
+    fromComplaint: false,
+    fromQuote: false,
+  },
+  complaint: {
+    needsFollowUp: true,
+    nextVisitWeeks: 4,
+    fromComplaint: true,
+    fromQuote: false,
+  },
+  quotation_follow_up: {
+    needsFollowUp: true,
+    nextVisitWeeks: 2,
+    fromComplaint: false,
+    fromQuote: true,
+  },
+  at_customers_request: {
+    needsFollowUp: false,
+    nextVisitWeeks: null,
+    fromComplaint: false,
+    fromQuote: false,
+  },
+  // A first call on somebody new. Whether to come back at all is the point of
+  // the visit, so it fixes no interval.
+  introduction: {
+    needsFollowUp: true,
+    nextVisitWeeks: null,
+    fromComplaint: false,
+    fromQuote: false,
+  },
+};
+
+/** What a classification implies, or null when a company carries none. */
+export const classificationMetaOf = (
+  classification: CompanyClassification | null | undefined,
+): CompanyClassificationMeta | null =>
+  classification ? COMPANY_CLASSIFICATION_META[classification] : null;
+
+/** What a visit reason implies, or null when a report carries none. */
+export const visitReasonMetaOf = (
+  reason: VisitReportReason | null | undefined,
+): VisitReasonMeta | null => (reason ? VISIT_REASON_META[reason] : null);
+
+/**
+ * Weeks between contacts of a given kind: the customer's own frequency where
+ * one is set, otherwise the one its classification implies. Null when neither
+ * says anything, which is what keeps an unclassified customer off the due list
+ * rather than putting it there every day.
+ */
+export const contactIntervalWeeks = (
+  kind: VisitReportContactMethod,
+  {
+    classification,
+    visitsPerYear,
+    callsPerYear,
+  }: {
+    classification?: CompanyClassification | null;
+    visitsPerYear?: number | null;
+    callsPerYear?: number | null;
+  },
+): number | null => {
+  const own = kind === "visit" ? visitsPerYear : callsPerYear;
+  const meta = classificationMetaOf(classification);
+  const perYear =
+    own && own > 0
+      ? own
+      : kind === "visit"
+        ? (meta?.visitsPerYear ?? 0)
+        : (meta?.callsPerYear ?? 0);
+  if (perYear <= 0) {
+    return null;
+  }
+  return Math.max(1, Math.round(52 / perYear));
+};
+
+/**
+ * When the next contact of this kind is due: the last one plus the interval, or
+ * today when there has never been one — somebody nobody has ever called is due
+ * now, not never. Null when no interval applies.
+ */
+export const nextContactDate = (
+  lastContact: string | null | undefined,
+  intervalWeeks: number | null,
+  today: string,
+): string | null => {
+  if (intervalWeeks === null) {
+    return null;
+  }
+  if (!lastContact) {
+    return today;
+  }
+  return addLeadTime(lastContact.slice(0, 10), intervalWeeks, "weeks");
+};
+
+/** Whether a due date has arrived. A date nobody could compute is not due. */
+export const isContactDue = (dueDate: string | null, today: string): boolean =>
+  Boolean(dueDate) && (dueDate ?? "") <= today;
+
+/**
+ * When the credit limit should next be looked at, from the date it was last
+ * set. An unclassified customer gets no review date rather than an invented
+ * one.
+ */
+export const nextCreditReviewDate = (
+  classification: CompanyClassification | null | undefined,
+  lastReviewed: string | null | undefined,
+): string | null => {
+  const meta = classificationMetaOf(classification);
+  if (!meta || !lastReviewed) {
+    return null;
+  }
+  return addLeadTime(
+    lastReviewed.slice(0, 10),
+    meta.creditReviewMonths,
+    "months",
+  );
+};
+
+/**
+ * The date a visit's reason says to come back, or null when the reason fixes no
+ * interval — an introduction and a visit the customer asked for both leave the
+ * next one to be decided.
+ */
+export const nextVisitDateForReason = (
+  reason: VisitReportReason | null | undefined,
+  visitDate: string | null | undefined,
+): string | null => {
+  const weeks = visitReasonMetaOf(reason)?.nextVisitWeeks ?? null;
+  if (weeks === null || !visitDate) {
+    return null;
+  }
+  return addLeadTime(visitDate.slice(0, 10), weeks, "weeks");
+};
+
+/** The locale a customer's documents are written in. */
+export const documentLocale = (
+  language: CompanyLang | null | undefined,
+): string => {
+  if (language === "dutch") {
+    return "nl-NL";
+  }
+  if (language === "arabic") {
+    return "ar";
+  }
+  return "en-GB";
+};
+
+/** Whether a customer's documents read right-to-left. */
+export const isRightToLeftLanguage = (
+  language: CompanyLang | null | undefined,
+): boolean => language === "arabic";
+
+/**
+ * The greeting a document opens with, in the contact's own language. Falls back
+ * to a name-only greeting where no salutation is recorded, rather than guessing
+ * one.
+ */
+export const salutationLine = (
+  salutation: ContactSalutation | null | undefined,
+  language: CompanyLang | null | undefined,
+  lastName: string | null | undefined,
+): string => {
+  const name = (lastName ?? "").trim();
+  const dutch = language === "dutch";
+  const arabic = language === "arabic";
+  if (!salutation) {
+    if (arabic) {
+      return name ? `تحية طيبة ${name}` : "تحية طيبة";
+    }
+    if (dutch) {
+      return name ? `Geachte ${name}` : "Geachte heer, mevrouw";
+    }
+    return name ? `Dear ${name}` : "Dear Sir or Madam";
+  }
+  if (arabic) {
+    const title = salutation === "mr" ? "السيد" : "السيدة";
+    return name ? `${title} ${name}` : title;
+  }
+  if (dutch) {
+    const title = salutation === "mr" ? "heer" : "mevrouw";
+    return name ? `Geachte ${title} ${name}` : `Geachte ${title}`;
+  }
+  const title = salutation === "mr" ? "Mr" : "Mrs";
+  return name ? `Dear ${title} ${name}` : `Dear ${title}`;
+};
+
+/**
+ * What has to be at the delivery address to get the goods off the lorry — and
+ * therefore what kind of vehicle has to bring them. A site that unloads by
+ * crane needs a lorry with one.
+ */
+export const unloadingRequirements = (
+  available: AvailableAt | null | undefined,
+): { needsVehicleWithCrane: boolean; unloadsByForklift: boolean } => ({
+  needsVehicleWithCrane: available === "crane_unloading",
+  unloadsByForklift: available === "forklift_unloading",
+});
 
 // ---------------------------------------------------------------------------
 // Label lookups

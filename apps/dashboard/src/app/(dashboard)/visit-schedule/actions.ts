@@ -4,6 +4,12 @@ import { Companies } from "@/db/schema/companies";
 import { Contacts } from "@/db/schema/contacts";
 import { VisitReports } from "@/db/schema/visit-reports";
 import { db, SelectCompanies, SelectContacts } from "@/db";
+import {
+  contactIntervalWeeks,
+  isContactDue,
+  nextContactDate,
+  todayDateString,
+} from "@/lib/helpers";
 import { and, asc, eq, max, min, or, sql } from "drizzle-orm";
 
 export type VisitScheduleRow = Pick<
@@ -35,8 +41,12 @@ export type VisitScheduleRow = Pick<
     lastCallDate: string | null;
     lastVisitDate: string | null;
     /**
-     * No schema field stores a per-customer call/visit frequency target,
-     * so there's nothing to compute an "upcoming" due-date from yet.
+     * When the next call and the next visit are due: the last one plus the
+     * interval the customer's own frequency asks for, or the one its A/B/C
+     * classification implies where no frequency was typed. A customer nobody
+     * has ever called is due now rather than never; one with neither a
+     * frequency nor a classification has no due date at all, which keeps it off
+     * the list instead of on it every day.
      */
     callUpcoming: string | null;
     visitUpcoming: string | null;
@@ -139,6 +149,9 @@ export const getVisitSchedule = async (): Promise<VisitScheduleRow[]> => {
       representative: Companies.representative,
       customerGroup: Companies.customerGroup,
       region: Companies.region,
+      classification: Companies.classification,
+      visitFrequency: Companies.visitFrequency,
+      callFrequencyPerYear: Companies.callFrequencyPerYear,
       contactFirstName: primaryContact.firstName,
       contactLastName: primaryContact.lastName,
       contactEmail: primaryContact.email,
@@ -167,8 +180,25 @@ export const getVisitSchedule = async (): Promise<VisitScheduleRow[]> => {
     )
     .orderBy(asc(Companies.companyName));
 
-  return rows.map(
-    (row): VisitScheduleRow => ({
+  const today = todayDateString();
+
+  return rows.map((row): VisitScheduleRow => {
+    const callInterval = contactIntervalWeeks("telephone_contact", {
+      classification: row.classification,
+      callsPerYear: row.callFrequencyPerYear,
+    });
+    const visitInterval = contactIntervalWeeks("visit", {
+      classification: row.classification,
+      visitsPerYear: row.visitFrequency,
+    });
+    const callUpcoming = nextContactDate(row.lastCallDate, callInterval, today);
+    const visitUpcoming = nextContactDate(
+      row.lastVisitDate,
+      visitInterval,
+      today,
+    );
+
+    return {
       companyUuid: row.companyUuid,
       companyCode: row.companyCode,
       companyName: row.companyName,
@@ -191,10 +221,10 @@ export const getVisitSchedule = async (): Promise<VisitScheduleRow[]> => {
       visitTelephone: row.visitTelephone ?? null,
       lastCallDate: row.lastCallDate ?? null,
       lastVisitDate: row.lastVisitDate ?? null,
-      callUpcoming: null,
-      visitUpcoming: null,
-      callDue: false,
-      visitDue: false,
-    }),
-  );
+      callUpcoming,
+      visitUpcoming,
+      callDue: isContactDue(callUpcoming, today),
+      visitDue: isContactDue(visitUpcoming, today),
+    };
+  });
 };
