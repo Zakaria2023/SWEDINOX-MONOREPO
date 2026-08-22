@@ -9,7 +9,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
-import { formatDateValue, formatMoney, formatNumber } from "@/lib/helpers";
+import {
+  formatDateValue,
+  formatMoney,
+  formatNumber,
+  yesNo,
+} from "@/lib/helpers";
 import { TableExportButton } from "@/components/ui/table-export-button";
 
 type Props = {
@@ -44,14 +49,15 @@ export const CbsDocumentationTable = ({ rows }: Props) => (
             <TableHead>Stat</TableHead>
             <TableHead>Transactioncode</TableHead>
             <TableHead>Partner Id</TableHead>
-            <TableHead>Transportcode</TableHead>
+            <TableHead className="text-right">Transportcode</TableHead>
+            <TableHead>Intra-community</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {rows.length === 0 ? (
             <TableRow>
               <TableCell
-                colSpan={16}
+                colSpan={17}
                 className="h-24 text-center text-muted-foreground"
               >
                 No CBS documentation entries found.
@@ -85,7 +91,14 @@ export const CbsDocumentationTable = ({ rows }: Props) => (
                 <TableCell className="text-muted-foreground">—</TableCell>
                 <TableCell className="text-muted-foreground">—</TableCell>
                 <TableCell>{row.partnerId ?? "—"}</TableCell>
-                <TableCell className="text-muted-foreground">—</TableCell>
+                <TableCell className="text-right">
+                  {row.transportCode ?? "—"}
+                </TableCell>
+                <TableCell>
+                  {row.intraCommunity === null
+                    ? "—"
+                    : yesNo(row.intraCommunity)}
+                </TableCell>
               </TableRow>
             ))
           )}

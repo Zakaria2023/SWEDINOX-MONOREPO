@@ -40,6 +40,7 @@ import { mailDocument, sendInvoiceEmail } from "@/emails/documents";
 import { ReturnOrderReason } from "@/lib/enums";
 import {
   describeError,
+  defaultTransportModeFor,
   generateUuid,
   getInvoiceVatRatePercent,
   getQuoteVatRatePercent,
@@ -1281,6 +1282,12 @@ export const createReturnOrder = async (
         ...fields,
         uuid,
         orderDate: fields.orderDate ?? todayDateString(),
+        // Where the goods are coming back from decides how they travel: road
+        // within Europe, sea from Asia and South America. Nobody should have to
+        // pick the obvious one.
+        transportMode:
+          fields.transportMode ??
+          defaultTransportModeFor(fields.transportRegion),
       });
 
       // Lines were previously dropped on the floor here — a return order was

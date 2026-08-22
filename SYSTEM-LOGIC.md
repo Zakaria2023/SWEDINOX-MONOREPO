@@ -1444,6 +1444,50 @@ that can — preferring the machine already set up for it. A line sold no
 processing at all is still planned, on no particular option, which is what it
 was before.
 
+15.12 — A mode of transport is an Intrastat code
+
+The eight transport modes are not a house list: they are the Intrastat
+mode-of-transport code list, and the numbers are what a statutory return
+declares — 1 sea, 2 rail, 3 road, 4 air, 5 post, 7 fixed installations, 8 inland
+waterway, 9 own propulsion. TRANSPORT_MODE_META carries those codes, so the CBS
+export declares the transport code from the order's own transport mode instead
+of printing a dash. A mode nobody recorded still prints a dash: a statutory
+return may not guess.
+
+Each mode also carries what one consignment can lift (24 t by road, 5 t by air,
+30 kg by post, no practical limit by sea or barge), how much longer it takes than
+the road journey the region's transit time is quoted for, and the consignment
+note it travels under — CMR, bill of lading, air waybill, CIM.
+
+TRANSPORT_REGION_META answers the rest for the twelve regions: whether it is
+domestic, whether it is inside the EU customs union (the UK is not, since
+Brexit; "Eastern Europe" here is the non-member part, the Baltic states having
+their own region), the road transit time in working days, the mode a consignment
+goes by unless told otherwise, and how much more the freight costs than a
+domestic delivery.
+
+What that gives:
+
+  estimatedTransitDays      the region's road time stretched by the mode, so
+                            Asia is 36 working days by sea and 2 by air
+  requiresCustomsDocuments  outside the customs union only; a region nobody set
+                            reads as domestic, on the same reasoning as
+                            isDomesticCountry
+  defaultTransportModeFor   road within Europe, sea from Asia and South America
+  freightCostForRegion      the transporter's rate plus the region's distance
+                            surcharge
+  consignmentsNeeded        how many loads a weight needs by that mode
+
+The order form's transport region and mode were free-text boxes, so neither
+could be asked any of this. Both are now selects over their enums, and the form
+prints the transit time and whether export documents travel with the goods while
+the order is being written. A return order and a purchase return order default
+their mode from their region.
+
+asTransportMode and asTransportRegion narrow the free-text columns the sales and
+purchase order headers hold, returning null for anything unrecognised rather
+than letting a stray string reach the metadata.
+
 ===============================================================================
 PART 16 — Quick map of the derivations
 ===============================================================================

@@ -51,7 +51,11 @@ import {
   SurchargeBasis,
   TextUsageCategory,
   TransporterPriceUnit,
+  TransportMode,
+  transportModes,
   VatCode,
+  WarehouseTransportRegion,
+  warehouseTransportRegions,
 } from "./enums";
 import {
   CONTRACT_TYPE_LABELS,
@@ -4378,6 +4382,309 @@ export const machineOptionForProcessing = (
   editing: ProcessingEditing | null | undefined,
 ): MachineOptionType | null =>
   editing ? MACHINE_OPTION_FOR_PROCESSING[editing] : null;
+
+// ---------------------------------------------------------------------------
+// Transport regions and modes
+//
+// A region and a mode of transport were two dropdowns nothing read, which is
+// why the CBS/Intrastat export had no transport code to declare and no way to
+// say whether a consignment left the customs union.
+//
+// The mode is not a house list: it is the Intrastat mode-of-transport code
+// list, and the numbers matter — a statutory return declares 1 for sea, 3 for
+// road, 4 for air. The region decides how long the journey takes, whether
+// customs paperwork is needed at all, and how much further the freight has to
+// travel than a domestic delivery.
+// ---------------------------------------------------------------------------
+
+export type TransportModeMeta = {
+  /** The Intrastat mode-of-transport code a statutory return declares. */
+  cbsCode: number;
+  /**
+   * Payload one consignment can carry, in kilograms. Null where the mode has no
+   * practical limit at this scale — a ship, a barge, a pipeline — or where the
+   * goods carry themselves.
+   */
+  maxPayloadKg: number | null;
+  /**
+   * How much longer this mode takes than the road journey the region's transit
+   * time is quoted for. Air is faster, sea very much slower.
+   */
+  transitDayFactor: number;
+  /** The consignment note this mode travels under, where it has a named one. */
+  consignmentNote: "cmr" | "bill_of_lading" | "air_waybill" | "cim" | null;
+};
+
+export type TransportRegionMeta = {
+  /** The company's own country: no border, no customs, shortest journey. */
+  domestic: boolean;
+  /**
+   * Inside the EU customs union, so goods move without an export declaration.
+   * The UK is outside it since Brexit, and "Eastern Europe" here is the
+   * non-member part of it — the Baltic states have their own region.
+   */
+  inEuCustomsUnion: boolean;
+  /** Road transit time in working days from the warehouse. */
+  roadTransitDays: number;
+  /** The mode a consignment to this region goes by unless told otherwise. */
+  defaultMode: TransportMode;
+  /**
+   * How much more the freight costs than a domestic delivery, as a percentage
+   * on top of the transporter's rate.
+   */
+  freightSurchargePercent: number;
+};
+
+export const TRANSPORT_MODE_META: Record<TransportMode, TransportModeMeta> = {
+  sea_transport: {
+    cbsCode: 1,
+    maxPayloadKg: null,
+    transitDayFactor: 6,
+    consignmentNote: "bill_of_lading",
+  },
+  rail_transport: {
+    cbsCode: 2,
+    maxPayloadKg: 60000,
+    transitDayFactor: 1.5,
+    consignmentNote: "cim",
+  },
+  road_transport: {
+    cbsCode: 3,
+    maxPayloadKg: 24000,
+    transitDayFactor: 1,
+    consignmentNote: "cmr",
+  },
+  air_transport: {
+    cbsCode: 4,
+    maxPayloadKg: 5000,
+    transitDayFactor: 0.25,
+    consignmentNote: "air_waybill",
+  },
+  postal_shipments: {
+    cbsCode: 5,
+    maxPayloadKg: 30,
+    transitDayFactor: 2,
+    consignmentNote: null,
+  },
+  fixed_transport_facilities: {
+    cbsCode: 7,
+    maxPayloadKg: null,
+    transitDayFactor: 1,
+    consignmentNote: null,
+  },
+  inland_waterway_transport: {
+    cbsCode: 8,
+    maxPayloadKg: null,
+    transitDayFactor: 3,
+    consignmentNote: "bill_of_lading",
+  },
+  // The goods move under their own power — a vehicle driven away. Nothing
+  // carries it, so there is no payload and no transit to plan.
+  own_power: {
+    cbsCode: 9,
+    maxPayloadKg: null,
+    transitDayFactor: 0,
+    consignmentNote: null,
+  },
+};
+
+export const TRANSPORT_REGION_META: Record<
+  WarehouseTransportRegion,
+  TransportRegionMeta
+> = {
+  ned: {
+    domestic: true,
+    inEuCustomsUnion: true,
+    roadTransitDays: 1,
+    defaultMode: "road_transport",
+    freightSurchargePercent: 0,
+  },
+  bel: {
+    domestic: false,
+    inEuCustomsUnion: true,
+    roadTransitDays: 1,
+    defaultMode: "road_transport",
+    freightSurchargePercent: 5,
+  },
+  lux: {
+    domestic: false,
+    inEuCustomsUnion: true,
+    roadTransitDays: 2,
+    defaultMode: "road_transport",
+    freightSurchargePercent: 8,
+  },
+  dui: {
+    domestic: false,
+    inEuCustomsUnion: true,
+    roadTransitDays: 2,
+    defaultMode: "road_transport",
+    freightSurchargePercent: 10,
+  },
+  fra: {
+    domestic: false,
+    inEuCustomsUnion: true,
+    roadTransitDays: 3,
+    defaultMode: "road_transport",
+    freightSurchargePercent: 15,
+  },
+  ita: {
+    domestic: false,
+    inEuCustomsUnion: true,
+    roadTransitDays: 4,
+    defaultMode: "road_transport",
+    freightSurchargePercent: 25,
+  },
+  sp_po: {
+    domestic: false,
+    inEuCustomsUnion: true,
+    roadTransitDays: 5,
+    defaultMode: "road_transport",
+    freightSurchargePercent: 30,
+  },
+  bal: {
+    domestic: false,
+    inEuCustomsUnion: true,
+    roadTransitDays: 5,
+    defaultMode: "road_transport",
+    freightSurchargePercent: 30,
+  },
+  oe: {
+    domestic: false,
+    inEuCustomsUnion: false,
+    roadTransitDays: 5,
+    defaultMode: "road_transport",
+    freightSurchargePercent: 30,
+  },
+  eng: {
+    domestic: false,
+    inEuCustomsUnion: false,
+    roadTransitDays: 4,
+    defaultMode: "road_transport",
+    freightSurchargePercent: 20,
+  },
+  azie: {
+    domestic: false,
+    inEuCustomsUnion: false,
+    roadTransitDays: 6,
+    defaultMode: "sea_transport",
+    freightSurchargePercent: 100,
+  },
+  zd_am: {
+    domestic: false,
+    inEuCustomsUnion: false,
+    roadTransitDays: 5,
+    defaultMode: "sea_transport",
+    freightSurchargePercent: 90,
+  },
+};
+
+/** What a mode of transport implies, or null when a document names none. */
+export const transportModeMetaOf = (
+  mode: TransportMode | null | undefined,
+): TransportModeMeta | null => (mode ? TRANSPORT_MODE_META[mode] : null);
+
+/** What a transport region implies, or null when a document names none. */
+export const transportRegionMetaOf = (
+  region: WarehouseTransportRegion | null | undefined,
+): TransportRegionMeta | null =>
+  region ? TRANSPORT_REGION_META[region] : null;
+
+/**
+ * The Intrastat mode-of-transport code to declare, or null when the document
+ * does not say how the goods travelled. A statutory return cannot guess.
+ */
+export const transportModeCbsCode = (
+  mode: TransportMode | null | undefined,
+): number | null => transportModeMetaOf(mode)?.cbsCode ?? null;
+
+/**
+ * Whether a consignment to this region needs export paperwork. Inside the
+ * customs union it does not; a region nobody set is treated as needing none,
+ * since an unrecorded destination is far more likely to be a local delivery
+ * than an export.
+ */
+export const requiresCustomsDocuments = (
+  region: WarehouseTransportRegion | null | undefined,
+): boolean => {
+  const meta = transportRegionMetaOf(region);
+  return meta ? !meta.inEuCustomsUnion : false;
+};
+
+/** The mode a consignment to a region goes by unless a person says otherwise. */
+export const defaultTransportModeFor = (
+  region: WarehouseTransportRegion | null | undefined,
+): TransportMode | null => transportRegionMetaOf(region)?.defaultMode ?? null;
+
+/**
+ * Working days in transit for a region by a given mode: the region's road time
+ * stretched or shortened by the mode. Null when the region is unknown, because
+ * there is nothing to base a promise on. Goods moving under their own power
+ * arrive the same day.
+ */
+export const estimatedTransitDays = (
+  region: WarehouseTransportRegion | null | undefined,
+  mode: TransportMode | null | undefined,
+): number | null => {
+  const regionMeta = transportRegionMetaOf(region);
+  if (!regionMeta) {
+    return null;
+  }
+  const modeMeta =
+    transportModeMetaOf(mode) ?? TRANSPORT_MODE_META[regionMeta.defaultMode];
+  return Math.ceil(regionMeta.roadTransitDays * modeMeta.transitDayFactor);
+};
+
+/**
+ * The freight rate for a region: the transporter's own cost with the region's
+ * distance surcharge on top. A region nobody set carries no surcharge.
+ */
+export const freightCostForRegion = (
+  baseCost: number,
+  region: WarehouseTransportRegion | null | undefined,
+): number => {
+  const surcharge = transportRegionMetaOf(region)?.freightSurchargePercent ?? 0;
+  return baseCost * (1 + surcharge / 100);
+};
+
+/**
+ * How many consignments a load needs by a given mode. One, where the mode has
+ * no practical payload limit; otherwise the load divided by what one carries.
+ * A load of nothing needs no transport at all.
+ */
+export const consignmentsNeeded = (
+  mode: TransportMode | null | undefined,
+  weightKg: number,
+): number => {
+  if (weightKg <= 0) {
+    return 0;
+  }
+  const payload = transportModeMetaOf(mode)?.maxPayloadKg;
+  if (!payload) {
+    return 1;
+  }
+  return Math.ceil(weightKg / payload);
+};
+
+/**
+ * A stored free-text transport mode read back as one of the modes, or null when
+ * it is blank or something nobody recognises. The sales and purchase order
+ * headers hold these as varchars, so they have to be narrowed before the
+ * metadata above can be asked anything.
+ */
+export const asTransportMode = (
+  value: string | null | undefined,
+): TransportMode | null => {
+  const found = transportModes.find((mode) => mode === value);
+  return found ?? null;
+};
+
+/** The same for a stored free-text transport region. */
+export const asTransportRegion = (
+  value: string | null | undefined,
+): WarehouseTransportRegion | null => {
+  const found = warehouseTransportRegions.find((region) => region === value);
+  return found ?? null;
+};
 
 // ---------------------------------------------------------------------------
 // Label lookups

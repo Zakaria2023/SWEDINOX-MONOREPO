@@ -19,7 +19,10 @@ import {
   PurchaseOrderItems,
   SelectPurchaseOrderItems,
 } from "@/db/schema/purchase-order-items";
-import { PurchaseOrders, SelectPurchaseOrders } from "@/db/schema/purchase-orders";
+import {
+  PurchaseOrders,
+  SelectPurchaseOrders,
+} from "@/db/schema/purchase-orders";
 import { PurchaseInvoiceItems } from "@/db/schema/purchase-invoice-items";
 import {
   PurchaseInvoices,
@@ -35,6 +38,7 @@ import { PurchaseReturnOrderReason } from "@/lib/enums";
 import {
   describeError,
   generateUuid,
+  defaultTransportModeFor,
   getPaymentTermDueDate,
   isPurchaseReturnOrderEditable,
   restateLotValue,
@@ -140,12 +144,17 @@ export const getPurchaseReturnOrders = async (): Promise<
         contactLastName: Contacts.lastName,
       })
       .from(PurchaseReturnOrders)
-      .leftJoin(Companies, eq(PurchaseReturnOrders.supplierUuid, Companies.uuid))
+      .leftJoin(
+        Companies,
+        eq(PurchaseReturnOrders.supplierUuid, Companies.uuid),
+      )
       .leftJoin(Contacts, eq(PurchaseReturnOrders.contactUuid, Contacts.uuid))
       .orderBy(desc(PurchaseReturnOrders.createdAt));
     return rows;
   } catch (error) {
-    throw new Error(describeError(error, "Failed to fetch purchase return orders"));
+    throw new Error(
+      describeError(error, "Failed to fetch purchase return orders"),
+    );
   }
 };
 
@@ -220,8 +229,7 @@ export const getReturnablePurchaseLines = async (
   );
 
   return rows.flatMap((row) => {
-    const alreadyReturned =
-      returnedByLine.get(row.purchaseOrderItemUuid) ?? 0;
+    const alreadyReturned = returnedByLine.get(row.purchaseOrderItemUuid) ?? 0;
     const onShelf =
       Number(row.stockQuantity ?? 0) - Number(row.stockReserved ?? 0);
     // Goods already sold on can't be sent back, however much was received.
@@ -403,7 +411,10 @@ export const dispatchPurchaseReturnOrder = async (
     if (!returnOrder) {
       return { error: "Purchase return order not found." };
     }
-    if (returnOrder.status === "received" || returnOrder.status === "credited") {
+    if (
+      returnOrder.status === "received" ||
+      returnOrder.status === "credited"
+    ) {
       return { error: "These goods have already been sent back." };
     }
     if (returnOrder.status === "cancelled") {
@@ -861,7 +872,15 @@ export const createPurchaseReturnOrder = async (
     }
 
     await db.transaction(async (tx) => {
-      await tx.insert(PurchaseReturnOrders).values({ ...fields, uuid });
+      await tx.insert(PurchaseReturnOrders).values({
+        ...fields,
+        uuid,
+        // Where the goods are going back to decides how they travel: road within
+        // Europe, sea to Asia and South America.
+        transportMode:
+          fields.transportMode ??
+          defaultTransportModeFor(fields.transportRegion),
+      });
 
       // Lines were previously dropped here, exactly as they were on the sales
       // side — which is why a purchase return could never move stock or money.

@@ -6,7 +6,14 @@ import { Invoices, SelectInvoices } from "@/db/schema/invoices";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { OrderItems, SelectOrderItems } from "@/db/schema/order-items";
 import { Orders, SelectOrders } from "@/db/schema/orders";
-import { describeError } from "@/lib/helpers";
+import {
+  asTransportMode,
+  asTransportRegion,
+  describeError,
+  requiresCustomsDocuments,
+  transportModeCbsCode,
+  transportRegionMetaOf,
+} from "@/lib/helpers";
 import { desc, eq } from "drizzle-orm";
 
 export type CbsDocumentationRow = {
@@ -20,16 +27,26 @@ export type CbsDocumentationRow = {
   orderType: SelectOrders["orderCategory"];
   orderCode: SelectOrders["id"];
   orderLineNr: SelectOrderItems["lineNumber"];
+  // The Intrastat mode-of-transport code the return declares — 1 sea, 3 road,
+  // 4 air — and whether the consignment left the customs union at all. Null
+  // where the order does not say how the goods travelled: a statutory return
+  // may not guess.
+  transportCode: number | null;
+  intraCommunity: boolean | null;
+  customsDocumentRequired: boolean | null;
 };
 
 // CBS / Intrastat documentation export — one row per invoiced goods line, with
-// its invoice, customer and originating order line. The CBS-specific codes
-// (rubric, Intrastat commodity code, origin, container, statistical value,
-// transaction/transport codes) aren't captured in this system yet, so those
-// columns have no source.
+// its invoice, customer and originating order line.
+//
+// The mode-of-transport code is the order's own transport mode read as its
+// Intrastat code, and whether the consignment was intra-community comes from
+// its transport region. The remaining CBS codes (rubric, commodity code,
+// origin, container, statistical value, transaction code) aren't captured in
+// this system yet, so those columns still have no source.
 export const getCbsDocumentation = async (): Promise<CbsDocumentationRow[]> => {
   try {
-    return await db
+    const rows = await db
       .select({
         key: InvoiceItems.uuid,
         invoiceDate: Invoices.invoiceDate,
@@ -44,6 +61,8 @@ export const getCbsDocumentation = async (): Promise<CbsDocumentationRow[]> => {
         orderType: Orders.orderCategory,
         orderCode: Orders.id,
         orderLineNr: OrderItems.lineNumber,
+        transportMode: Orders.transportMode,
+        transportRegion: Orders.transportRegion,
       })
       .from(InvoiceItems)
       .innerJoin(Invoices, eq(InvoiceItems.invoiceUuid, Invoices.uuid))
@@ -51,6 +70,19 @@ export const getCbsDocumentation = async (): Promise<CbsDocumentationRow[]> => {
       .innerJoin(OrderItems, eq(InvoiceItems.orderItemUuid, OrderItems.uuid))
       .innerJoin(Orders, eq(OrderItems.orderUuid, Orders.uuid))
       .orderBy(desc(Invoices.invoiceDate), desc(Invoices.id));
+
+    return rows.map((row) => {
+      const region = asTransportRegion(row.transportRegion);
+      const regionMeta = transportRegionMetaOf(region);
+      return {
+        ...row,
+        transportCode: transportModeCbsCode(asTransportMode(row.transportMode)),
+        intraCommunity: regionMeta ? regionMeta.inEuCustomsUnion : null,
+        customsDocumentRequired: region
+          ? requiresCustomsDocuments(region)
+          : null,
+      };
+    });
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch CBS documentation"));
   }
