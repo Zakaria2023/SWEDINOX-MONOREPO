@@ -29,6 +29,7 @@ import {
   getQuoteVatRatePercent,
   quoteLineFinancials,
   QuoteSummary,
+  resolveSurchargeAmounts,
 } from "@/lib/helpers";
 import {
   loadSalesPricingContext,
@@ -426,11 +427,22 @@ const buildQuoteSummary = async (
 
 // Surcharge rows ready to insert, numbered in the order they were typed so the
 // grid reads back the way it was entered.
+//
+// The amount each row charges is resolved here from its own rate and the basis
+// its description implies, measured against the lines the quote actually
+// carries: a decoil surcharge per kilo of them, a project discount as a
+// percentage of their value, an order surcharge once. The form only knows the
+// rate, so it cannot do this itself.
 const surchargeRows = (
   quoteUuid: string,
   surcharges: QuoteSurchargeInput[],
+  lines: readonly { amount?: string | null; weightKg?: string | null }[],
 ): InsertQuoteSurcharges[] =>
-  surcharges.map((surcharge, index) => ({
+  resolveSurchargeAmounts(surcharges, {
+    goodsValue: lines.reduce((sum, line) => sum + Number(line.amount ?? 0), 0),
+    weightKg: lines.reduce((sum, line) => sum + Number(line.weightKg ?? 0), 0),
+    lineCount: lines.length,
+  }).map((surcharge, index) => ({
     ...surcharge,
     uuid: generateUuid(),
     quoteUuid,
@@ -470,7 +482,7 @@ export const createQuote = async (
       if (surcharges.length > 0) {
         await tx
           .insert(QuoteSurcharges)
-          .values(surchargeRows(uuid, surcharges));
+          .values(surchargeRows(uuid, surcharges, pricedLines));
       }
 
       const summary = await buildQuoteSummary(tx, uuid, {
@@ -682,7 +694,7 @@ export const updateQuote = async (
       if (surcharges.length > 0) {
         await tx
           .insert(QuoteSurcharges)
-          .values(surchargeRows(uuid, surcharges));
+          .values(surchargeRows(uuid, surcharges, pricedLines));
       }
 
       const summary = await buildQuoteSummary(tx, uuid, {

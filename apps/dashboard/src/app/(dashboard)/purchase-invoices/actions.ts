@@ -34,6 +34,7 @@ import { VatCode } from "@/lib/enums";
 import {
   generateUuid,
   getPaymentTermDueDate,
+  resolveSurchargeAmounts,
   restateLotValue,
   summarisePurchaseInvoice,
   toDateString,
@@ -340,9 +341,23 @@ export const createPurchaseInvoice = async (
       };
     });
 
+    // A surcharge charges its rate on the basis its description implies, so the
+    // amount is resolved against what this invoice actually booked rather than
+    // taken from the form, which only knows the rate.
+    const pricedSurcharges = resolveSurchargeAmounts(surcharges, {
+      goodsValue: bookedLines.reduce((sum, line) => sum + line.amount, 0),
+      weightKg: items.reduce(
+        (sum, item) => sum + Number(item.quantity ?? 0),
+        0,
+      ),
+      lineCount: bookedLines.length,
+    });
+
     const summary = summarisePurchaseInvoice({
       lines: bookedLines,
-      surcharges: surcharges.map((surcharge) => Number(surcharge.amount ?? 0)),
+      surcharges: pricedSurcharges.map((surcharge) =>
+        Number(surcharge.amount ?? 0),
+      ),
       creditRestriction: Number(fields.creditRestriction ?? 0),
       invoiceTotal: Number(fields.invoiceTotal ?? 0),
     });
@@ -482,9 +497,9 @@ export const createPurchaseInvoice = async (
         });
       }
 
-      if (surcharges.length > 0) {
+      if (pricedSurcharges.length > 0) {
         await tx.insert(PurchaseInvoiceSurcharges).values(
-          surcharges.map((surcharge) => ({
+          pricedSurcharges.map((surcharge) => ({
             ...surcharge,
             uuid: generateUuid(),
             purchaseInvoiceUuid: uuid,

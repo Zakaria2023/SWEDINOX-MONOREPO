@@ -21,6 +21,7 @@ import {
   generateUuid,
   getQuoteVatRatePercent,
   quoteLineFinancials,
+  resolveSurchargeAmounts,
 } from "@/lib/helpers";
 import { invoicePaymentTerms, orderStatuses } from "@/lib/enums";
 import { checkCredit } from "@/lib/server/credit-control";
@@ -373,6 +374,11 @@ export const createOrder = async (
         return stockRow ? [{ item, stockRow }] : [];
       });
 
+      // What the surcharges below are measured against, accumulated as the
+      // lines are priced: a per-kilo surcharge needs the order's weight and a
+      // percentage one its value, and neither is known until then.
+      const lineTotals = { goodsValue: 0, weightKg: 0 };
+
       for (const [index, { item, stockRow }] of reservableItems.entries()) {
         const nextReserved = (
           Number(stockRow.reservedQuantity) + Number(item.quantity)
@@ -449,11 +455,18 @@ export const createOrder = async (
           profitReplPrice: financials.profitReplPrice.toFixed(2),
           profitTooLow: financials.profitTooLow,
         });
+
+        lineTotals.goodsValue += financials.amount;
+        lineTotals.weightKg += financials.weightKg;
       }
 
       if (extras.surcharges.length > 0) {
         await tx.insert(OrderSurcharges).values(
-          extras.surcharges.map((surcharge) => ({
+          resolveSurchargeAmounts(extras.surcharges, {
+            goodsValue: lineTotals.goodsValue,
+            weightKg: lineTotals.weightKg,
+            lineCount: reservableItems.length,
+          }).map((surcharge) => ({
             ...surcharge,
             uuid: generateUuid(),
             orderUuid: uuid,

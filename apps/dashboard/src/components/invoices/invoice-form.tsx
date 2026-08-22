@@ -85,7 +85,10 @@ export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
   // Auto-fill the due date from the payment term whenever it (or the invoice
   // date) changes and the term implies a determinate due date.
   useEffect(() => {
-    const due = getPaymentTermDueDate(paymentTerms ?? null, invoiceDate ?? null);
+    const due = getPaymentTermDueDate(
+      paymentTerms ?? null,
+      invoiceDate ?? null,
+    );
     if (due) {
       form.setValue("expirationDate", due);
     }
@@ -160,7 +163,11 @@ export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
       surcharge: surchargeVal,
       unit: values.unit || undefined,
       surchargePercentage: "0.00",
-      amount: surchargeVal,
+      // The rate is what a person agrees; what it charges depends on the basis
+      // its description implies and on the weight and value this invoice ends
+      // up billing. Only the server knows those, so it resolves the amount —
+      // copying the rate here charged a per-kilo surcharge once.
+      amount: "0.00",
       profit: values.profit || "0.00",
     };
     if (editingIndex !== null) {

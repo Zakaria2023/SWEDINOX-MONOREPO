@@ -22,6 +22,7 @@ import { Payments, SelectPayments } from "@/db/schema/payments";
 import { Orders } from "@/db/schema/orders";
 import { Products, SelectProducts } from "@/db/schema/products";
 import { mailDocument, sendInvoiceEmail } from "@/emails/documents";
+import { INVOICE_SURCHARGE_DESCRIPTION_LABELS } from "@/lib/labels";
 import { buildSalesJournalEntry } from "@/lib/server/ledger";
 import {
   computeQuoteSummary,
@@ -31,7 +32,9 @@ import {
   getPaymentTermDueDate,
   QUANTITY_EPSILON,
   remainingToInvoice,
+  resolveSurchargeAmounts,
   sliceOrderLineAmounts,
+  surchargeAllowedOnSales,
   toDateString,
 } from "@/lib/helpers";
 import { currentUser } from "@clerk/nextjs/server";
@@ -337,6 +340,17 @@ export const createInvoice = async (
           "The same order line was selected more than once on this invoice.",
       };
     }
+
+    // The reconciliation surcharges exist to explain what a supplier billed.
+    // Charging one to a customer would bill them for our own bookkeeping.
+    const purchaseOnly = surcharges.find(
+      (surcharge) => !surchargeAllowedOnSales(surcharge.description),
+    )?.description;
+    if (purchaseOnly) {
+      return {
+        error: `"${INVOICE_SURCHARGE_DESCRIPTION_LABELS[purchaseOnly]}" belongs on a purchase invoice, not on a customer invoice.`,
+      };
+    }
     const orderItemRows =
       orderItemUuids.length > 0
         ? await db
@@ -445,6 +459,24 @@ export const createInvoice = async (
       });
     }
 
+    // A surcharge charges its rate on the basis its description implies — a
+    // decoil surcharge per kilo, a project discount as a percentage, an order
+    // surcharge once — so the amount is resolved here against what this invoice
+    // actually bills rather than taken from the form, which only knows the rate.
+    const billedGoodsValue = billableLines.reduce(
+      (sum, line) => sum + Number(line.amount ?? 0),
+      0,
+    );
+    const billedWeightKg = billableLines.reduce(
+      (sum, line) => sum + Number(line.weightKg ?? 0),
+      0,
+    );
+    const pricedSurcharges = resolveSurchargeAmounts(surcharges, {
+      goodsValue: billedGoodsValue,
+      weightKg: billedWeightKg,
+      lineCount: billableLines.length,
+    });
+
     // The invoice's worth, rolled up from those lines and its own surcharges.
     // Materials were previously left out of the header entirely — an invoice
     // reported only its surcharges as revenue, so the goods it billed showed as
@@ -458,7 +490,7 @@ export const createInvoice = async (
         weightKg: Number(line.weightKg ?? 0),
         theoreticalWeightKg: Number(line.weightKg ?? 0),
       })),
-      surcharges: surcharges.map((surcharge) => ({
+      surcharges: pricedSurcharges.map((surcharge) => ({
         amount: Number(surcharge.amount ?? 0),
         profit: Number(surcharge.profit ?? 0),
       })),
@@ -539,7 +571,7 @@ export const createInvoice = async (
         }),
       );
 
-      for (const surcharge of surcharges) {
+      for (const surcharge of pricedSurcharges) {
         await tx.insert(InvoiceSurcharges).values({
           ...surcharge,
           uuid: generateUuid(),

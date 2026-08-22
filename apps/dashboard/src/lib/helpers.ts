@@ -17,6 +17,7 @@ import {
   InvoicePaymentTerm,
   InvoiceDocumentType,
   InvoiceVatScenario,
+  InvoiceSurchargeDescription,
   LeadTimeMethod,
   MaterialFamily,
   MaterialSurfaceFinish,
@@ -30,6 +31,7 @@ import {
   PurchaseRequestStatus,
   ReminderStage,
   reminderStages,
+  RevenueGroup,
   ReturnOrderReason,
   ReturnOrderStatus,
   SalesRepresentative,
@@ -37,6 +39,7 @@ import {
   StockMode,
   StockUnit,
   StockMovementType,
+  SurchargeBasis,
   TextUsageCategory,
   TransporterPriceUnit,
   VatCode,
@@ -3263,6 +3266,322 @@ export const derivedWeightColumns = (
   }
   return columns;
 };
+
+// ---------------------------------------------------------------------------
+// What a surcharge description means
+//
+// Every surcharge row carries a rate and an amount, and until now the amount
+// was the rate: a project discount of 5 charged five euro instead of taking
+// five percent off, and a decoil surcharge of 0.02 charged two cents for the
+// whole consignment instead of two cents a kilo. The description already says
+// which it is, so it decides the basis, and the amount is computed rather than
+// copied.
+//
+// The description also decides three things nothing else could know: whether it
+// adds to the document or comes off it, whether it belongs on a purchase
+// document rather than a sales one, and which revenue group it is reported
+// under.
+// ---------------------------------------------------------------------------
+
+export type SurchargeMeta = {
+  /** What the rate is a rate of. */
+  basis: SurchargeBasis;
+  /** Comes off the document rather than being added to it. */
+  deduction: boolean;
+  /**
+   * Recharges a cost the company itself incurred — bought-in freight, an
+   * outsourced cut — so the row is expected to carry a cost of its own and
+   * contributes margin rather than pure profit.
+   */
+  costRecharge: boolean;
+  /**
+   * Belongs only on a purchase document. These exist to reconcile what a
+   * supplier billed against what its lines explain; a customer invoice that
+   * carried one would be charging the customer for our own bookkeeping.
+   */
+  purchaseOnly: boolean;
+  /**
+   * Carries VAT at the document's own rate. A pure financial adjustment — a
+   * rounding difference, a credit note still to be received, a duty already
+   * taxed at the border — does not.
+   */
+  vatable: boolean;
+  /** The revenue group the amount is reported under. */
+  revenueGroup: RevenueGroup;
+};
+
+/** The context a surcharge's basis is measured against. */
+export type SurchargeContext = {
+  /** Net value of the goods on the document, for a percentage surcharge. */
+  goodsValue?: number;
+  /** Billed weight, for a per-kilogram surcharge. */
+  weightKg?: number;
+  /** How many goods lines the document carries. */
+  lineCount?: number;
+  /** How many pallets the consignment occupies. */
+  pallets?: number;
+  /** How many certificates the consignment needs. */
+  certificates?: number;
+};
+
+export const SURCHARGE_META: Record<
+  InvoiceSurchargeDescription,
+  SurchargeMeta
+> = {
+  project_discount: {
+    basis: "percentage",
+    deduction: true,
+    costRecharge: false,
+    purchaseOnly: false,
+    vatable: true,
+    revenueGroup: "other_allowances",
+  },
+  certificate_costs: {
+    basis: "per_certificate",
+    deduction: false,
+    costRecharge: false,
+    purchaseOnly: false,
+    vatable: true,
+    revenueGroup: "other_products",
+  },
+  cutting_surcharge: {
+    basis: "per_line",
+    deduction: false,
+    costRecharge: true,
+    purchaseOnly: false,
+    vatable: true,
+    revenueGroup: "cutting",
+  },
+  decoil_surcharge: {
+    basis: "per_kg",
+    deduction: false,
+    costRecharge: true,
+    purchaseOnly: false,
+    vatable: true,
+    revenueGroup: "decoiling",
+  },
+  order_surcharge: {
+    basis: "fixed",
+    deduction: false,
+    costRecharge: false,
+    purchaseOnly: false,
+    vatable: true,
+    revenueGroup: "other_products",
+  },
+  packaging_surcharge: {
+    basis: "per_line",
+    deduction: false,
+    costRecharge: true,
+    purchaseOnly: false,
+    vatable: true,
+    revenueGroup: "other_pallets_etc",
+  },
+  pallet_surcharge: {
+    basis: "per_pallet",
+    deduction: false,
+    costRecharge: true,
+    purchaseOnly: false,
+    vatable: true,
+    revenueGroup: "other_pallets_etc",
+  },
+  administration_costs: {
+    basis: "fixed",
+    deduction: false,
+    costRecharge: false,
+    purchaseOnly: false,
+    vatable: true,
+    revenueGroup: "other_products",
+  },
+  transport_costs: {
+    basis: "fixed",
+    deduction: false,
+    costRecharge: true,
+    purchaseOnly: false,
+    vatable: true,
+    revenueGroup: "freight_costs",
+  },
+  transport_costs_internal: {
+    basis: "fixed",
+    deduction: false,
+    costRecharge: true,
+    purchaseOnly: false,
+    vatable: true,
+    revenueGroup: "freight_costs",
+  },
+  maut_costs: {
+    basis: "fixed",
+    deduction: false,
+    costRecharge: true,
+    purchaseOnly: false,
+    vatable: true,
+    revenueGroup: "freight_costs",
+  },
+  return_costs: {
+    basis: "fixed",
+    deduction: false,
+    costRecharge: true,
+    purchaseOnly: false,
+    vatable: true,
+    revenueGroup: "freight_costs",
+  },
+  import_costs: {
+    basis: "percentage",
+    deduction: false,
+    costRecharge: true,
+    purchaseOnly: false,
+    vatable: true,
+    revenueGroup: "import_costs",
+  },
+  costs: {
+    basis: "fixed",
+    deduction: false,
+    costRecharge: true,
+    purchaseOnly: false,
+    vatable: true,
+    revenueGroup: "other_products",
+  },
+  other: {
+    basis: "fixed",
+    deduction: false,
+    costRecharge: false,
+    purchaseOnly: false,
+    vatable: true,
+    revenueGroup: "other_products",
+  },
+  purchasing_rounding_differences: {
+    basis: "fixed",
+    deduction: false,
+    costRecharge: false,
+    purchaseOnly: true,
+    vatable: false,
+    revenueGroup: "price_differences",
+  },
+  credit_notes_to_be_received_third_party: {
+    basis: "fixed",
+    deduction: true,
+    costRecharge: false,
+    purchaseOnly: true,
+    vatable: false,
+    revenueGroup: "credit_notes_yet_to_be_received",
+  },
+  credit_notes_to_be_received: {
+    basis: "fixed",
+    deduction: true,
+    costRecharge: false,
+    purchaseOnly: true,
+    vatable: false,
+    revenueGroup: "credit_notes_yet_to_be_received",
+  },
+  eu_import_duties: {
+    basis: "percentage",
+    deduction: false,
+    costRecharge: true,
+    purchaseOnly: true,
+    vatable: false,
+    revenueGroup: "eu_import_duties",
+  },
+  price_differences: {
+    basis: "fixed",
+    deduction: false,
+    costRecharge: false,
+    purchaseOnly: true,
+    vatable: false,
+    revenueGroup: "price_differences",
+  },
+  price_differences_eu_non_eu: {
+    basis: "fixed",
+    deduction: false,
+    costRecharge: false,
+    purchaseOnly: true,
+    vatable: false,
+    revenueGroup: "price_differences",
+  },
+  external_transport: {
+    basis: "fixed",
+    deduction: false,
+    costRecharge: true,
+    purchaseOnly: false,
+    vatable: true,
+    revenueGroup: "freight_costs_external",
+  },
+};
+
+/** What a surcharge description means, or null when the row has none set. */
+export const surchargeMetaOf = (
+  description: InvoiceSurchargeDescription | null | undefined,
+): SurchargeMeta | null => (description ? SURCHARGE_META[description] : null);
+
+/**
+ * What a surcharge row actually charges: its rate applied on the basis its
+ * description implies, signed negative when the description takes money off.
+ *
+ * A basis with no context to measure against yields zero rather than a guess —
+ * the same rule `computeTransportCost` follows. A description that isn't set
+ * yields zero too, because a row nobody has described charges nothing.
+ */
+export const computeSurchargeAmount = (
+  description: InvoiceSurchargeDescription | null | undefined,
+  rate: number,
+  context: SurchargeContext = {},
+): number => {
+  const meta = surchargeMetaOf(description);
+  if (!meta || !Number.isFinite(rate)) {
+    return 0;
+  }
+  const sign = meta.deduction ? -1 : 1;
+  const magnitude = Math.abs(rate);
+  if (meta.basis === "fixed") {
+    return sign * magnitude;
+  }
+  if (meta.basis === "percentage") {
+    return (sign * magnitude * (context.goodsValue ?? 0)) / 100;
+  }
+  if (meta.basis === "per_kg") {
+    return sign * magnitude * (context.weightKg ?? 0);
+  }
+  if (meta.basis === "per_line") {
+    return sign * magnitude * (context.lineCount ?? 0);
+  }
+  if (meta.basis === "per_pallet") {
+    return sign * magnitude * (context.pallets ?? 0);
+  }
+  return sign * magnitude * (context.certificates ?? 0);
+};
+
+/**
+ * Whether a description may appear on a sales document — a quote, an order or a
+ * customer invoice. The reconciliation descriptions may not: they exist to
+ * explain a supplier's total, and charging one to a customer would bill them
+ * for our own bookkeeping.
+ */
+export const surchargeAllowedOnSales = (
+  description: InvoiceSurchargeDescription | null | undefined,
+): boolean => !surchargeMetaOf(description)?.purchaseOnly;
+
+/**
+ * The surcharge rows of a document with their amounts resolved from their own
+ * rates and the document's context, ready to be stored. The rate is left
+ * exactly as typed — it is what a person agreed — and only the amount it
+ * implies is computed.
+ */
+export const resolveSurchargeAmounts = <
+  T extends {
+    description?: InvoiceSurchargeDescription | null;
+    surcharge?: string | null;
+    amount?: string | null;
+  },
+>(
+  rows: readonly T[],
+  context: SurchargeContext,
+): T[] =>
+  rows.map((row) => ({
+    ...row,
+    amount: computeSurchargeAmount(
+      row.description,
+      Number(row.surcharge ?? 0),
+      context,
+    ).toFixed(2),
+  }));
 
 // ---------------------------------------------------------------------------
 // Label lookups

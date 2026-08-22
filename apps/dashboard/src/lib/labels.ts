@@ -12,6 +12,7 @@ import {
   DispatchStrategy,
   MaterialFamily,
   MaterialSurfaceFinish,
+  SurchargeBasis,
   PriceTierBase,
   ProductDimensionShape,
   StockLabelBreakdown,
@@ -1759,4 +1760,13 @@ export const MATERIAL_SURFACE_FINISH_LABELS: Record<
   stress_relieved: "Stress relieved",
   electro_galvanised: "Electro-galvanised",
   hot_dip_galvanised: "Hot-dip galvanised",
+};
+
+export const SURCHARGE_BASIS_LABELS: Record<SurchargeBasis, string> = {
+  fixed: "Flat amount",
+  percentage: "% of the goods value",
+  per_kg: "Per kilogram",
+  per_line: "Per line",
+  per_pallet: "Per pallet",
+  per_certificate: "Per certificate",
 };

@@ -14,7 +14,11 @@ import { Input } from "@/components/shadcn/input";
 import { Select } from "@/components/shadcn/select";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import { invoiceSurchargeDescriptions } from "@/lib/enums";
-import { INVOICE_SURCHARGE_DESCRIPTION_LABELS } from "@/lib/labels";
+import { surchargeMetaOf } from "@/lib/helpers";
+import {
+  INVOICE_SURCHARGE_DESCRIPTION_LABELS,
+  SURCHARGE_BASIS_LABELS,
+} from "@/lib/labels";
 import { Controller, UseFormReturn } from "react-hook-form";
 
 type SurchargeDialogProps = {
@@ -39,6 +43,10 @@ export const SurchargeDialog = ({
       label: INVOICE_SURCHARGE_DESCRIPTION_LABELS[d],
     })),
   ];
+
+  // The description decides what the rate below is a rate of, so say which it
+  // is rather than leaving "Surcharge: 0.02" to be read as two cents.
+  const basis = surchargeMetaOf(surchargeForm.watch("description"))?.basis;
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -76,9 +84,7 @@ export const SurchargeDialog = ({
                   )}
                 />
                 <FormFieldError
-                  message={
-                    surchargeForm.formState.errors.description?.message
-                  }
+                  message={surchargeForm.formState.errors.description?.message}
                 />
               </div>
             </div>
@@ -94,6 +100,11 @@ export const SurchargeDialog = ({
                   placeholder="0.00"
                   {...surchargeForm.register("surcharge")}
                 />
+                {basis && (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {SURCHARGE_BASIS_LABELS[basis]}
+                  </p>
+                )}
               </div>
               <div>
                 <FormLabel htmlFor="surchargeUnit">Unit</FormLabel>

@@ -1829,3 +1829,18 @@ export const materialSurfaceFinishes = [
 ] as const satisfies readonly string[];
 
 export type MaterialSurfaceFinish = (typeof materialSurfaceFinishes)[number];
+
+// What the rate on a surcharge row is a rate *of*. A decoil surcharge of 0.02
+// is two cents a kilo; a project discount of 5 is five percent; an order
+// surcharge of 15 is fifteen euro once. Without this the rate and the amount
+// are the same number, which is only right for the flat ones.
+export const surchargeBases = [
+  "fixed",
+  "percentage",
+  "per_kg",
+  "per_line",
+  "per_pallet",
+  "per_certificate",
+] as const satisfies readonly string[];
+
+export type SurchargeBasis = (typeof surchargeBases)[number];

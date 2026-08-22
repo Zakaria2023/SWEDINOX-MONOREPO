@@ -1337,6 +1337,45 @@ createProduct and updateProduct run it, and so does the product group mapper, so
 a change of dimension, shape or grade cannot leave a weight behind that belongs
 to the previous one. What cannot be derived is never overwritten.
 
+15.8 — A surcharge description is a formula, not a caption
+
+A surcharge row carries a rate and an amount, and the amount used to be the
+rate. That is right for exactly the flat ones: a project discount of 5 charged
+five euro instead of taking five percent off, and a decoil surcharge of 0.02
+charged two cents for the whole consignment instead of two cents a kilo.
+
+SURCHARGE_META gives each of the twenty-two descriptions four decisions:
+
+  basis         what the rate is a rate of — a flat amount, a percentage of the
+                goods value, per kilogram, per line, per pallet, per certificate
+  deduction     comes off the document rather than being added to it: a project
+                discount, and the two credit notes still to be received
+  costRecharge  recharges a cost the company itself incurred, so the row is
+                expected to carry a cost and contributes margin, not pure profit
+  purchaseOnly  exists to reconcile what a supplier billed against what its
+                lines explain — rounding differences, price differences, EU
+                import duties, credit notes to be received. Six of the
+                twenty-two. A customer invoice that carried one would be
+                billing the customer for our own bookkeeping, so createInvoice
+                refuses it by name.
+
+Each description also names the revenue group it is reported under, which is
+what lets freight, cutting, decoiling and the allowances land in the right place
+without a second mapping.
+
+computeSurchargeAmount applies the rate on its basis and signs the result from
+`deduction`. A basis with no context to measure against yields zero rather than
+a guess, the same rule computeTransportCost follows, and a row whose description
+is not set charges nothing.
+
+resolveSurchargeAmounts does that for every row of a document, leaving the rate
+exactly as typed — it is what a person agreed — and computing only the amount it
+implies. Quotes, orders, sales invoices and purchase invoices all run it against
+their own lines, so the same rate on the same description charges the same thing
+wherever it is used. The invoice form no longer copies the rate into the amount:
+it cannot, because the weight and value being billed are only known on the
+server.
+
 ===============================================================================
 PART 16 — Quick map of the derivations
 ===============================================================================
