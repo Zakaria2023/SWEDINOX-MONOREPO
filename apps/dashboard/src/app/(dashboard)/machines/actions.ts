@@ -16,8 +16,13 @@ import { ProductGroups, SelectProductGroups } from "@/db/schema/product-groups";
 import { Products, SelectProducts } from "@/db/schema/products";
 import { SelectWarehouses, Warehouses } from "@/db/schema/warehouses";
 import { MachineProductionType } from "@/lib/enums";
-import { describeError, generateUuid } from "@/lib/helpers";
-import { MACHINE_PRODUCTION_LABELS } from "@/lib/labels";
+import {
+  canMachinePerform,
+  describeError,
+  generateUuid,
+  machineCapacityUnitFor,
+} from "@/lib/helpers";
+import { MACHINE_OPTION_LABELS, MACHINE_PRODUCTION_LABELS } from "@/lib/labels";
 import { desc, eq, getTableColumns } from "drizzle-orm";
 
 export type MachineFields = Omit<
@@ -156,8 +161,26 @@ export const createMachine = async (
       };
     }
 
+    // A production line runs a known set of options. A decoiler cannot run a
+    // laser, and planning a job onto one that cannot do it would put the work
+    // on a machine that has to hand it straight back.
+    if (!canMachinePerform(fields.production, fields.option)) {
+      return {
+        error: `${MACHINE_PRODUCTION_LABELS[fields.production]} cannot run ${MACHINE_OPTION_LABELS[fields.option]}.`,
+      };
+    }
+
     await db.transaction(async (tx) => {
-      await tx.insert(Machines).values({ ...fields, uuid });
+      await tx.insert(Machines).values({
+        ...fields,
+        uuid,
+        // A day of laser time is measured in cutting metres and a day of
+        // grinding in square metres. The option knows which; nobody should
+        // have to remember it.
+        averageDailyCapacityUnit:
+          fields.averageDailyCapacityUnit ??
+          machineCapacityUnitFor(fields.option, fields.production),
+      });
 
       if (products.length > 0) {
         await tx.insert(MachineProducts).values(

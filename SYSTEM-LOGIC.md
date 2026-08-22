@@ -1406,6 +1406,44 @@ A product group's revenue group is therefore no longer a blank when nobody picks
 one: the grade answers it, and the article group answers it if there is no
 grade. The grade wins, being the more specific of the two.
 
+15.10 — A machine's option and its production line have to agree
+
+A machine carried an option and a production line as two free choices, so a
+decoiler could be set up to run a laser and nothing objected.
+MACHINE_PRODUCTION_META names what each of the six lines performs — decoiler:
+decoiling and slitting; shearing: shear cut; laser 1 and laser 2: laser;
+grinding/foiling: grinding, brushing, polishing and the four foil steps;
+internal processing: the remaining eleven. Every one of the twenty-two options
+is performed by at least one line, and canMachinePerform is checked on both
+create and edit.
+
+MACHINE_OPTION_META gives each option the unit a machine running it measures its
+day in — a laser in cutting metres, a grinder in square metres, a decoiler in
+kilos, a saw in pieces — so a new machine's capacity unit is defaulted from its
+option rather than picked from a list of thirteen. It also records what the run
+does to the goods: whether material is cut away (the seven cutting steps),
+whether foil is applied or stripped, whether the surface itself is changed so
+the finish the grade names no longer describes it, and the setup time lost
+before the run starts.
+
+15.11 — A production run is planned from what was sold
+
+The sold-processing vocabulary is the same list plus three steps no machine
+performs: paper interleaving and the two certificates.
+MACHINE_OPTION_FOR_PROCESSING maps the twenty-five onto the twenty-two, with
+those three mapping to nothing rather than to a pretend option.
+
+generateProductionWorkOrders used to put every reserved line on whichever
+machine came back first and record no option at all — the shop floor was told to
+process something without being told what to do to it. It now reads each line's
+sold options, turns each into the machine option that performs it, and opens one
+work order per machine and option. A line sold two steps is planned onto both,
+because both have to happen to it. A machine out of business cannot take work,
+and one whose line cannot perform the option is passed over in favour of one
+that can — preferring the machine already set up for it. A line sold no
+processing at all is still planned, on no particular option, which is what it
+was before.
+
 ===============================================================================
 PART 16 — Quick map of the derivations
 ===============================================================================

@@ -11,12 +11,17 @@ import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { Machines, SelectMachines } from "@/db/schema/machines";
 import { OrderItems } from "@/db/schema/order-items";
 import { Orders } from "@/db/schema/orders";
+import { OrderItemOptions } from "@/db/schema/order-item-options";
 import { Products, SelectProducts } from "@/db/schema/products";
+import { SalesOptions } from "@/db/schema/sales-options";
 import { Stock } from "@/db/schema/stock";
 import { StockMovements } from "@/db/schema/stock-movements";
+import { MachineOptionType } from "@/lib/enums";
 import {
+  canMachinePerform,
   describeError,
   generateUuid,
+  machineOptionForProcessing,
   productionYield,
   profitMarginPercent,
   restateLotValue,
@@ -123,19 +128,29 @@ export const getProductionWorkOrderLineDetail = async (
   return row ?? null;
 };
 
-// Turns the order lines into production work-order lines to run — one line per
-// order item, grouped under a single work order on the first machine. Order
-// lines that already have a production line are skipped, so it can be re-run as
-// new orders come in.
+// Turns the order lines into production work-order lines to run — one work
+// order per machine and option, one line per order item. Order lines that
+// already have a production line are skipped, so it can be re-run as new orders
+// come in.
+//
+// The option comes from what the customer actually bought: an order line's sold
+// options each name a processing step, and a step names the machine option that
+// performs it. Every line used to land on whichever machine came back first,
+// with no option recorded at all, so the shop floor was told to process
+// something without being told what to do to it.
 export const generateProductionWorkOrders =
   async (): Promise<WorkOrderActionResult> => {
     try {
-      const [machine] = await db
-        .select({ uuid: Machines.uuid })
-        .from(Machines)
-        .limit(1);
+      const machines = await db
+        .select({
+          uuid: Machines.uuid,
+          option: Machines.option,
+          production: Machines.production,
+          outOfBusiness: Machines.outOfBusiness,
+        })
+        .from(Machines);
 
-      if (!machine) {
+      if (machines.length === 0) {
         return { error: "Create a machine first (Logistics → Machines)." };
       }
 
@@ -190,35 +205,126 @@ export const generateProductionWorkOrders =
         return { error: "All order lines are already planned." };
       }
 
+      // What each line was sold: every option on it names a processing step, and
+      // the step names the machine option that performs it. A step no machine
+      // performs — paper interleaving, a certificate — yields nothing to plan.
+      const soldOptions = await db
+        .select({
+          orderItemUuid: OrderItemOptions.orderItemUuid,
+          editing: SalesOptions.editing,
+        })
+        .from(OrderItemOptions)
+        .innerJoin(
+          SalesOptions,
+          eq(OrderItemOptions.optionUuid, SalesOptions.uuid),
+        )
+        .where(
+          inArray(
+            OrderItemOptions.orderItemUuid,
+            newItems.map((item) => item.orderItemUuid),
+          ),
+        );
+
+      const optionsByItem = new Map<string, MachineOptionType[]>();
+      for (const sold of soldOptions) {
+        const option = machineOptionForProcessing(sold.editing);
+        if (!option) {
+          continue;
+        }
+        const current = optionsByItem.get(sold.orderItemUuid) ?? [];
+        if (!current.includes(option)) {
+          optionsByItem.set(sold.orderItemUuid, [...current, option]);
+        }
+      }
+
+      // A machine that is out of business cannot take the work, and one whose
+      // production line does not perform the option would hand it straight back.
+      // Preferring the machine already set up for the option keeps a job off a
+      // line that merely could do it.
+      const available = machines.filter((machine) => !machine.outOfBusiness);
+      const machineFor = (option: MachineOptionType) =>
+        available.find(
+          (candidate) =>
+            candidate.option === option &&
+            canMachinePerform(candidate.production, option),
+        ) ??
+        available.find((candidate) =>
+          canMachinePerform(candidate.production, option),
+        ) ??
+        null;
+
+      // One run per machine and option. A line bought with two processing steps
+      // is planned onto both, because both have to happen to it. A line bought
+      // with none still gets planned — it has to be picked and handled — but on
+      // no particular option, which is what it was before.
+      const fallbackMachine = available[0] ?? machines[0];
+      const runs = new Map<
+        string,
+        {
+          machineUuid: string;
+          option: MachineOptionType | null;
+          items: typeof newItems;
+        }
+      >();
+
+      const addToRun = (
+        machineUuid: string,
+        option: MachineOptionType | null,
+        item: (typeof newItems)[number],
+      ) => {
+        const key = `${machineUuid}:${option ?? ""}`;
+        const run = runs.get(key);
+        if (run) {
+          run.items.push(item);
+          return;
+        }
+        runs.set(key, { machineUuid, option, items: [item] });
+      };
+
+      for (const item of newItems) {
+        const options = optionsByItem.get(item.orderItemUuid) ?? [];
+        if (options.length === 0) {
+          addToRun(fallbackMachine.uuid, null, item);
+          continue;
+        }
+        for (const option of options) {
+          const machine = machineFor(option);
+          addToRun(machine?.uuid ?? fallbackMachine.uuid, option, item);
+        }
+      }
+
       const today = todayDateString();
-      const workOrderUuid = generateUuid();
 
       await db.transaction(async (tx) => {
-        await tx.insert(ProductionWorkOrders).values({
-          uuid: workOrderUuid,
-          machineUuid: machine.uuid,
-          date: today,
-          status: "new",
-        });
-
-        for (const item of newItems) {
-          await tx.insert(ProductionWorkOrderLines).values({
-            uuid: generateUuid(),
-            workOrderUuid,
+        for (const run of runs.values()) {
+          const workOrderUuid = generateUuid();
+          await tx.insert(ProductionWorkOrders).values({
+            uuid: workOrderUuid,
+            machineUuid: run.machineUuid,
             date: today,
             status: "new",
-            productUuid: item.productUuid,
-            productCode: item.productCode,
-            orderNumber: String(item.orderId),
-            orderItemUuid: item.orderItemUuid,
-            companyUuid: item.companyUuid,
-            thicknessMm: item.thicknessMm,
-            qtyPlanned: item.qtyPlanned ?? item.quantity,
-            unitPlanned: item.unit,
-            kgPlanned: item.kgPlanned,
-            deliverOn: item.deliveryDate,
-            isPickup: item.isPickup ?? false,
+            option: run.option,
           });
+
+          for (const item of run.items) {
+            await tx.insert(ProductionWorkOrderLines).values({
+              uuid: generateUuid(),
+              workOrderUuid,
+              date: today,
+              status: "new",
+              productUuid: item.productUuid,
+              productCode: item.productCode,
+              orderNumber: String(item.orderId),
+              orderItemUuid: item.orderItemUuid,
+              companyUuid: item.companyUuid,
+              thicknessMm: item.thicknessMm,
+              qtyPlanned: item.qtyPlanned ?? item.quantity,
+              unitPlanned: item.unit,
+              kgPlanned: item.kgPlanned,
+              deliverOn: item.deliveryDate,
+              isPickup: item.isPickup ?? false,
+            });
+          }
         }
       });
 

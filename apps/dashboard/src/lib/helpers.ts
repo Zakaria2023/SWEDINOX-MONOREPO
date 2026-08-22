@@ -21,11 +21,16 @@ import {
   InvoiceSurchargeDescription,
   LeadTimeMethod,
   LedgerAccountType,
+  MachineCapacityUnit,
+  MachineOptionType,
+  MachineProductionType,
+  machineProductionTypes,
   MaterialFamily,
   MaterialSurfaceFinish,
   OrderDeblockType,
   OrderLineStatus,
   OrderWeightType,
+  ProcessingEditing,
   ProductDimensionShape,
   ProductShape,
   PurchaseOrderStatus,
@@ -4003,6 +4008,376 @@ export const revenueGroupKindFromName = (
   name: string | null | undefined,
 ): RevenueGroupKind =>
   revenueGroupMetaOf(revenueGroupFromName(name))?.kind ?? "other";
+
+// ---------------------------------------------------------------------------
+// What a machine can do, and what a processing step needs
+//
+// A machine carried an option and a production line as two free choices, so a
+// decoiler could be set up to run a laser and nothing objected. A production
+// line performs a known set of options and no others, and that is what decides
+// which machine a job can be planned onto.
+//
+// The option also decides how the machine measures its day — a laser in cutting
+// metres, a grinder in square metres, a decoiler in kilos — and whether the run
+// changes the goods in a way the rest of the system has to know about: material
+// cut away, foil applied or stripped, a surface changed so the finish the grade
+// names no longer describes it.
+//
+// The processing vocabulary sold to customers is the same list plus three steps
+// no machine performs: paper interleaving and the two certificates. Mapping the
+// two is what lets an order line's sold options choose the machine that has to
+// run them.
+// ---------------------------------------------------------------------------
+
+export type MachineOptionMeta = {
+  /** The unit a machine running this option measures its daily capacity in. */
+  capacityUnit: MachineCapacityUnit;
+  /**
+   * Material is cut away, so what leaves the machine weighs less than what went
+   * in. Only the cutting family loses enough for a yield check to care.
+   */
+  removesMaterial: boolean;
+  /** Applies protective foil, which is consumed by the run. */
+  consumesFoil: boolean;
+  /** Strips protective foil off. */
+  removesFoil: boolean;
+  /**
+   * Changes the surface itself, so the finish the material's grade names no
+   * longer describes what comes out.
+   */
+  surfaceTreatment: boolean;
+  /** Minutes lost setting the machine up before the run starts. */
+  setupMinutes: number;
+};
+
+export type MachineProductionMeta = {
+  /** The options this production line can run, and no others. */
+  performs: readonly MachineOptionType[];
+  /** What a line of this kind measures its day in when nobody says otherwise. */
+  defaultCapacityUnit: MachineCapacityUnit;
+};
+
+export const MACHINE_OPTION_META: Record<MachineOptionType, MachineOptionMeta> =
+  {
+    decoiling: {
+      capacityUnit: "kg",
+      removesMaterial: false,
+      consumesFoil: false,
+      removesFoil: false,
+      surfaceTreatment: false,
+      setupMinutes: 45,
+    },
+    grinding: {
+      capacityUnit: "m2",
+      removesMaterial: false,
+      consumesFoil: false,
+      removesFoil: false,
+      surfaceTreatment: true,
+      setupMinutes: 20,
+    },
+    shear_cut: {
+      capacityUnit: "line",
+      removesMaterial: true,
+      consumesFoil: false,
+      removesFoil: false,
+      surfaceTreatment: false,
+      setupMinutes: 15,
+    },
+    laser: {
+      capacityUnit: "m1",
+      removesMaterial: true,
+      consumesFoil: false,
+      removesFoil: false,
+      surfaceTreatment: false,
+      setupMinutes: 30,
+    },
+    duplo: {
+      capacityUnit: "st",
+      removesMaterial: false,
+      consumesFoil: false,
+      removesFoil: false,
+      surfaceTreatment: false,
+      setupMinutes: 15,
+    },
+    brushing: {
+      capacityUnit: "m2",
+      removesMaterial: false,
+      consumesFoil: false,
+      removesFoil: false,
+      surfaceTreatment: true,
+      setupMinutes: 20,
+    },
+    blue_foil: {
+      capacityUnit: "m2",
+      removesMaterial: false,
+      consumesFoil: true,
+      removesFoil: false,
+      surfaceTreatment: false,
+      setupMinutes: 10,
+    },
+    laser_foil: {
+      capacityUnit: "m2",
+      removesMaterial: false,
+      consumesFoil: true,
+      removesFoil: false,
+      surfaceTreatment: false,
+      setupMinutes: 10,
+    },
+    uv_foil: {
+      capacityUnit: "m2",
+      removesMaterial: false,
+      consumesFoil: true,
+      removesFoil: false,
+      surfaceTreatment: false,
+      setupMinutes: 10,
+    },
+    remove_foil: {
+      capacityUnit: "m2",
+      removesMaterial: false,
+      consumesFoil: false,
+      removesFoil: true,
+      surfaceTreatment: false,
+      setupMinutes: 5,
+    },
+    anodizing: {
+      capacityUnit: "m2",
+      removesMaterial: false,
+      consumesFoil: false,
+      removesFoil: false,
+      surfaceTreatment: true,
+      setupMinutes: 60,
+    },
+    pickling: {
+      capacityUnit: "m2",
+      removesMaterial: false,
+      consumesFoil: false,
+      removesFoil: false,
+      surfaceTreatment: true,
+      setupMinutes: 60,
+    },
+    coating: {
+      capacityUnit: "m2",
+      removesMaterial: false,
+      consumesFoil: false,
+      removesFoil: false,
+      surfaceTreatment: true,
+      setupMinutes: 60,
+    },
+    embossing: {
+      capacityUnit: "m2",
+      removesMaterial: false,
+      consumesFoil: false,
+      removesFoil: false,
+      surfaceTreatment: true,
+      setupMinutes: 30,
+    },
+    perforate: {
+      capacityUnit: "m2",
+      removesMaterial: true,
+      consumesFoil: false,
+      removesFoil: false,
+      surfaceTreatment: false,
+      setupMinutes: 30,
+    },
+    bending: {
+      capacityUnit: "line",
+      removesMaterial: false,
+      consumesFoil: false,
+      removesFoil: false,
+      surfaceTreatment: false,
+      setupMinutes: 20,
+    },
+    polished: {
+      capacityUnit: "m2",
+      removesMaterial: false,
+      consumesFoil: false,
+      removesFoil: false,
+      surfaceTreatment: true,
+      setupMinutes: 25,
+    },
+    punching: {
+      capacityUnit: "st",
+      removesMaterial: true,
+      consumesFoil: false,
+      removesFoil: false,
+      surfaceTreatment: false,
+      setupMinutes: 20,
+    },
+    slitting: {
+      capacityUnit: "kg",
+      removesMaterial: true,
+      consumesFoil: false,
+      removesFoil: false,
+      surfaceTreatment: false,
+      setupMinutes: 40,
+    },
+    rolling: {
+      capacityUnit: "kg",
+      removesMaterial: false,
+      consumesFoil: false,
+      removesFoil: false,
+      surfaceTreatment: false,
+      setupMinutes: 30,
+    },
+    stamping: {
+      capacityUnit: "st",
+      removesMaterial: false,
+      consumesFoil: false,
+      removesFoil: false,
+      surfaceTreatment: false,
+      setupMinutes: 25,
+    },
+    sawing: {
+      capacityUnit: "st",
+      removesMaterial: true,
+      consumesFoil: false,
+      removesFoil: false,
+      surfaceTreatment: false,
+      setupMinutes: 15,
+    },
+  };
+
+export const MACHINE_PRODUCTION_META: Record<
+  MachineProductionType,
+  MachineProductionMeta
+> = {
+  decoiler: {
+    performs: ["decoiling", "slitting"],
+    defaultCapacityUnit: "kg",
+  },
+  shearing: {
+    performs: ["shear_cut"],
+    defaultCapacityUnit: "line",
+  },
+  laser_1: {
+    performs: ["laser"],
+    defaultCapacityUnit: "m1",
+  },
+  laser_2: {
+    performs: ["laser"],
+    defaultCapacityUnit: "m1",
+  },
+  grinding_foiling: {
+    performs: [
+      "grinding",
+      "brushing",
+      "polished",
+      "blue_foil",
+      "laser_foil",
+      "uv_foil",
+      "remove_foil",
+    ],
+    defaultCapacityUnit: "m2",
+  },
+  // The general shop: everything the specialised lines above do not do.
+  internal_processing: {
+    performs: [
+      "duplo",
+      "anodizing",
+      "pickling",
+      "coating",
+      "embossing",
+      "perforate",
+      "bending",
+      "punching",
+      "rolling",
+      "stamping",
+      "sawing",
+    ],
+    defaultCapacityUnit: "st",
+  },
+};
+
+/**
+ * The machine option a sold processing step needs. Paper interleaving and the
+ * two certificates are steps no machine performs — they are a packing
+ * instruction and two documents — so they map to nothing rather than to a
+ * pretend option.
+ */
+export const MACHINE_OPTION_FOR_PROCESSING: Record<
+  ProcessingEditing,
+  MachineOptionType | null
+> = {
+  stamping: "stamping",
+  polished: "polished",
+  paper_interleaving: null,
+  pickling: "pickling",
+  laser: "laser",
+  blue_foil: "blue_foil",
+  bending: "bending",
+  uv_foil: "uv_foil",
+  rolling: "rolling",
+  anodizing: "anodizing",
+  slitting: "slitting",
+  brushing: "brushing",
+  remove_foil: "remove_foil",
+  certificate_2_1: null,
+  sawing: "sawing",
+  coating: "coating",
+  punching: "punching",
+  grinding: "grinding",
+  decoiling: "decoiling",
+  duplo: "duplo",
+  embossing: "embossing",
+  shear_cut: "shear_cut",
+  laser_foil: "laser_foil",
+  perforate: "perforate",
+  certificate_3_1: null,
+};
+
+/** What running an option involves, or null when a row carries none. */
+export const machineOptionMetaOf = (
+  option: MachineOptionType | null | undefined,
+): MachineOptionMeta | null => (option ? MACHINE_OPTION_META[option] : null);
+
+/** Whether a production line can run a given option at all. */
+export const canMachinePerform = (
+  production: MachineProductionType | null | undefined,
+  option: MachineOptionType | null | undefined,
+): boolean => {
+  if (!production || !option) {
+    return false;
+  }
+  return MACHINE_PRODUCTION_META[production].performs.includes(option);
+};
+
+/** The production lines able to run an option. */
+export const productionTypesForOption = (
+  option: MachineOptionType | null | undefined,
+): MachineProductionType[] => {
+  if (!option) {
+    return [];
+  }
+  return machineProductionTypes.filter((production) =>
+    MACHINE_PRODUCTION_META[production].performs.includes(option),
+  );
+};
+
+/**
+ * The capacity unit a machine should measure its day in: the one the option it
+ * runs is measured in, falling back to what its production line uses.
+ */
+export const machineCapacityUnitFor = (
+  option: MachineOptionType | null | undefined,
+  production: MachineProductionType | null | undefined,
+): MachineCapacityUnit | null => {
+  const fromOption = machineOptionMetaOf(option)?.capacityUnit;
+  if (fromOption) {
+    return fromOption;
+  }
+  return production
+    ? MACHINE_PRODUCTION_META[production].defaultCapacityUnit
+    : null;
+};
+
+/**
+ * The machine option a sold processing step needs, or null when the step needs
+ * no machine at all.
+ */
+export const machineOptionForProcessing = (
+  editing: ProcessingEditing | null | undefined,
+): MachineOptionType | null =>
+  editing ? MACHINE_OPTION_FOR_PROCESSING[editing] : null;
 
 // ---------------------------------------------------------------------------
 // Label lookups

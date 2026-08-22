@@ -22,8 +22,13 @@ import {
   MachineOptionType,
   MachineProductionType,
 } from "@/lib/enums";
-import { describeError, generateUuid, toIntOrNull } from "@/lib/helpers";
-import { MACHINE_PRODUCTION_LABELS } from "@/lib/labels";
+import {
+  canMachinePerform,
+  describeError,
+  generateUuid,
+  toIntOrNull,
+} from "@/lib/helpers";
+import { MACHINE_OPTION_LABELS, MACHINE_PRODUCTION_LABELS } from "@/lib/labels";
 import { and, eq, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -161,10 +166,20 @@ export const updateMachineGeneral = async (
     return { error: describeError(error, "Failed to update machine") };
   }
 
+  const option = values.option as MachineOptionType;
+
+  // A production line runs a known set of options and no others, so changing
+  // either has to leave the pair something a real machine could be.
+  if (!canMachinePerform(production, option)) {
+    return {
+      error: `${MACHINE_PRODUCTION_LABELS[production]} cannot run ${MACHINE_OPTION_LABELS[option]}.`,
+    };
+  }
+
   return saveSection(uuid, {
     code,
     name: values.name.trim(),
-    option: values.option as MachineOptionType,
+    option,
     production,
     loading: values.loading as MachineLoadingType,
     stockLocationUuid: values.stockLocationUuid,
