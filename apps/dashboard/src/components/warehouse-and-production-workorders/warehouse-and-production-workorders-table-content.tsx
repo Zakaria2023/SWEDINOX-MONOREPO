@@ -11,16 +11,16 @@ import {
 } from "@/components/shadcn/table";
 import { cn, formatDateColumn, formatNumber, orDash } from "@/lib/helpers";
 import {
-  WAREHOUSE_WORK_ORDER_STATUS_LABELS,
   WORK_ORDER_STATUS_LABELS,
+  TRANSPORT_WORK_ORDER_STATUS_LABELS,
 } from "@/lib/labels";
 
 // The list merges two kinds of work order, and the warehouse ladder is not the
 // production one — so a status is looked up in both vocabularies. They agree on
 // the one value they share, "new".
 const STATUS_LABELS: Record<string, string> = {
+  ...TRANSPORT_WORK_ORDER_STATUS_LABELS,
   ...WORK_ORDER_STATUS_LABELS,
-  ...WAREHOUSE_WORK_ORDER_STATUS_LABELS,
 };
 import { TableExportButton } from "@/components/ui/table-export-button";
 

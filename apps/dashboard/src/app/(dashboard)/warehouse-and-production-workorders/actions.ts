@@ -77,8 +77,10 @@ export const getWarehouseAndProductionWorkOrders = async (): Promise<
       db
         .select({
           uuid: ProductionWorkOrderLines.uuid,
-          workOrderNumber: ProductionWorkOrders.id,
-          date: ProductionWorkOrderLines.date,
+          workOrderNumber: ProductionWorkOrders.number,
+          // The day the run is planned for lives on the order, not the line:
+          // every line of one work order goes through the machine the same day.
+          date: ProductionWorkOrders.plannedDate,
           status: ProductionWorkOrderLines.status,
           qtyPlanned: ProductionWorkOrderLines.qtyPlanned,
           qtyActual: ProductionWorkOrderLines.qtyActual,
@@ -91,7 +93,7 @@ export const getWarehouseAndProductionWorkOrders = async (): Promise<
           ProductionWorkOrders,
           eq(ProductionWorkOrderLines.workOrderUuid, ProductionWorkOrders.uuid),
         )
-        .orderBy(desc(ProductionWorkOrderLines.date)),
+        .orderBy(desc(ProductionWorkOrders.plannedDate)),
     ]);
 
     // Line numbers are per workorder, so they are assigned while grouping

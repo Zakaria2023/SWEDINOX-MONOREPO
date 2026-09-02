@@ -337,11 +337,13 @@ export const ReturnOrderDetailView = ({ returnOrder }: Props) => {
                           href={`/production-workorders/${line.workOrderUuid}`}
                           className="text-primary hover:underline"
                         >
-                          #{orDash(line.workOrderId)}
+                          #{orDash(line.workOrderNumber)}
                         </Link>
                       </TableCell>
                       <TableCell>{orDash(line.machineName)}</TableCell>
-                      <TableCell>{formatDateColumn(line.date)}</TableCell>
+                      <TableCell>
+                        {formatDateColumn(line.plannedDate)}
+                      </TableCell>
                       <TableCell>
                         <StatusBadge
                           value={line.status}

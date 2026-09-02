@@ -269,10 +269,12 @@ export type ReturnOrderLineDetail = SelectReturnOrderItems & {
 // the original order line, which is the only link the workorder carries.
 export type ReturnWorkOrderLine = {
   uuid: SelectProductionWorkOrderLines["uuid"];
-  workOrderId: SelectProductionWorkOrders["id"] | null;
+  // The number the floor calls the run by, which is drawn from the counter it
+  // shares with the warehouse — not the row's own primary key.
+  workOrderNumber: SelectProductionWorkOrders["number"] | null;
   workOrderUuid: SelectProductionWorkOrderLines["workOrderUuid"];
   machineName: SelectMachines["name"] | null;
-  date: SelectProductionWorkOrderLines["date"];
+  plannedDate: SelectProductionWorkOrders["plannedDate"] | null;
   status: SelectProductionWorkOrderLines["status"];
   productCode: SelectProductionWorkOrderLines["productCode"];
   qtyPlanned: SelectProductionWorkOrderLines["qtyPlanned"];
@@ -427,10 +429,10 @@ export const getReturnOrderDetail = async (
           db
             .select({
               uuid: ProductionWorkOrderLines.uuid,
-              workOrderId: ProductionWorkOrders.id,
+              workOrderNumber: ProductionWorkOrders.number,
               workOrderUuid: ProductionWorkOrderLines.workOrderUuid,
               machineName: Machines.name,
-              date: ProductionWorkOrderLines.date,
+              plannedDate: ProductionWorkOrders.plannedDate,
               status: ProductionWorkOrderLines.status,
               productCode: ProductionWorkOrderLines.productCode,
               qtyPlanned: ProductionWorkOrderLines.qtyPlanned,
@@ -452,7 +454,7 @@ export const getReturnOrderDetail = async (
             .where(
               inArray(ProductionWorkOrderLines.orderItemUuid, orderItemUuids),
             )
-            .orderBy(desc(ProductionWorkOrderLines.date)),
+            .orderBy(desc(ProductionWorkOrders.plannedDate)),
 
           db
             .select({
