@@ -28,7 +28,7 @@ import {
 import {
   AvailableStockOption,
   getAvailableStockForSelect,
-} from "@/app/(dashboard)/stock/actions";
+} from "@/app/(dashboard)/warehouse-work-orders/actions";
 import { SelectOption } from "@/components/shadcn/select";
 import {
   deliveryTerms,
