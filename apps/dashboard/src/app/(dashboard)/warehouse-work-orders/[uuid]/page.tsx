@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { getWarehouseWorkOrderDetail } from "@/app/(dashboard)/warehouse-work-orders/actions";
+import { getAvailableStockForSelect } from "@/app/(dashboard)/warehouse-work-orders/actions";
+import { getLocationsForSelect } from "@/app/(dashboard)/locations/actions";
 import { WarehouseWorkOrderDetailView } from "@/components/warehouse-work-orders/warehouse-work-order-detail";
 import { PageHeading } from "@/components/layout/page-heading";
 
@@ -18,6 +20,10 @@ const WarehouseWorkOrderDetailPage = async ({ params }: Props) => {
     notFound();
   }
 
+  // Sequential rather than concurrent: this database caps connections.
+  const stockOptions = await getAvailableStockForSelect();
+  const locations = await getLocationsForSelect();
+
   return (
     <div className="space-y-4">
       <div>
@@ -29,8 +35,12 @@ const WarehouseWorkOrderDetailPage = async ({ params }: Props) => {
           Warehouse Work Orders
         </Link>
       </div>
-      <PageHeading title={`Work order #${workOrder.id}`} />
-      <WarehouseWorkOrderDetailView workOrder={workOrder} />
+      <PageHeading title={`Work order ${workOrder.number}`} />
+      <WarehouseWorkOrderDetailView
+        workOrder={workOrder}
+        stockOptions={stockOptions}
+        locations={locations}
+      />
     </div>
   );
 };

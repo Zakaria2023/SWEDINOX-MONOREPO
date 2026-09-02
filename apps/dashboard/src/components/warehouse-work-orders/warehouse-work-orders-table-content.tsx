@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import {
+  exportWarehouseWorkOrders,
+  WorkOrderListItem,
+} from "@/app/(dashboard)/warehouse-work-orders/actions";
 import {
   Table,
   TableBody,
@@ -10,129 +13,97 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
-import { ColumnSelector } from "@/components/ui/column-selector";
-import { buildColumnVisibility } from "@/lib/helpers";
-import { WAREHOUSE_WORK_ORDER_STATUS_LABELS } from "@/lib/labels";
-import { WarehouseWorkOrderStatus } from "@/lib/enums";
-import { WorkOrderListItem } from "@/app/(dashboard)/warehouse-work-orders/actions";
-import { TableExportButton } from "@/components/ui/table-export-button";
-
-type ColumnKey = "id" | "warehouseName" | "status" | "createdAt";
-
-const ALL_COLUMNS: Array<{
-  defaultVisible: boolean;
-  key: ColumnKey;
-  label: string;
-}> = [
-  { key: "id", label: "Code", defaultVisible: true },
-  { key: "warehouseName", label: "Warehouse", defaultVisible: true },
-  { key: "status", label: "Status", defaultVisible: true },
-  { key: "createdAt", label: "Created At", defaultVisible: true },
-];
+import { PagedTableExportButton } from "@/components/ui/table-export-button";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { TablePagination } from "@/components/ui/table-pagination";
+import { TableSortHeader } from "@/components/ui/table-sort-header";
+import { TableToolbar } from "@/components/ui/table-toolbar";
+import { formatDateColumn } from "@/lib/helpers";
+import {
+  WAREHOUSE_WORK_ORDER_STATUS_LABELS,
+  WAREHOUSE_WORK_ORDER_TYPE_LABELS,
+} from "@/lib/labels";
+import { Paged, TableFilterControl } from "@/lib/table-query";
 
 type Props = {
-  workOrders: WorkOrderListItem[];
+  page: Paged<WorkOrderListItem>;
+  filters: TableFilterControl[];
 };
 
-export const WarehouseWorkOrdersTable = ({ workOrders }: Props) => {
-  const [columnVisibility, setColumnVisibility] = useState<
-    Record<ColumnKey, boolean>
-  >(buildColumnVisibility(ALL_COLUMNS));
-
-  const toggleColumn = (key: string) => {
-    setColumnVisibility((prev) => ({
-      ...prev,
-      [key]: !prev[key as ColumnKey],
-    }));
-  };
-
-  const visibleColumns = ALL_COLUMNS.filter(
-    (column) => columnVisibility[column.key],
-  );
-
-  const renderCell = (workOrder: WorkOrderListItem, key: ColumnKey) => {
-    switch (key) {
-      case "id":
-        return (
-          <TableCell key={key} className="font-medium">
-            <Link
-              href={`/warehouse-work-orders/${workOrder.uuid}`}
-              className="text-primary hover:underline"
-            >
-              {workOrder.id}
-            </Link>
-          </TableCell>
-        );
-      case "warehouseName":
-        return (
-          <TableCell key={key}>{workOrder.warehouseName ?? "—"}</TableCell>
-        );
-      case "status":
-        return (
-          <TableCell key={key}>
-            {WAREHOUSE_WORK_ORDER_STATUS_LABELS[
-              workOrder.status as WarehouseWorkOrderStatus
-            ] ?? workOrder.status}
-          </TableCell>
-        );
-      case "createdAt":
-        return (
-          <TableCell key={key}>
-            {new Date(workOrder.createdAt).toLocaleDateString("en-GB")}
-          </TableCell>
-        );
-    }
-  };
-
-  return (
+export const WarehouseWorkOrdersTable = ({ page, filters }: Props) => (
     <div className="space-y-4">
-      <div className="flex items-start justify-end gap-2">
-        <ColumnSelector
-          columns={ALL_COLUMNS.map((column) => ({
-            key: column.key,
-            label: column.label,
-          }))}
-          visibility={columnVisibility}
-          onToggle={toggleColumn}
-        />
-        <TableExportButton
-          tableId="warehouse-work-orders-table"
+      <TableToolbar
+        searchPlaceholder="Search number, order or product…"
+        filters={filters}
+      >
+        <PagedTableExportButton
           fileName="warehouse-work-orders"
-          sheetName="Warehouse Work Orders"
+          action={exportWarehouseWorkOrders}
         />
-      </div>
+      </TableToolbar>
 
       <div>
-        <Table id="warehouse-work-orders-table">
+        <Table>
           <TableHeader>
             <TableRow>
-              {visibleColumns.map((column) => (
-                <TableHead key={column.key}>{column.label}</TableHead>
-              ))}
+              <TableSortHeader sortKey="number">Number</TableSortHeader>
+              <TableSortHeader sortKey="plannedDate">Planned</TableSortHeader>
+              <TableSortHeader sortKey="type">Type</TableSortHeader>
+              <TableHead>Warehouse</TableHead>
+              <TableSortHeader sortKey="status">Status</TableSortHeader>
+              <TableHead className="text-right">Lines</TableHead>
+              <TableHead className="text-right">Qty planned / actual</TableHead>
+              <TableHead className="text-right">Kg planned / actual</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {workOrders.length === 0 ? (
+            {page.rows.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={visibleColumns.length}
-                  className="h-24 text-center"
+                  colSpan={8}
+                  className="h-24 text-center text-muted-foreground"
                 >
-                  No warehouse work orders found
+                  No warehouse work orders found.
                 </TableCell>
               </TableRow>
             ) : (
-              workOrders.map((workOrder) => (
-                <TableRow key={workOrder.id}>
-                  {visibleColumns.map((column) =>
-                    renderCell(workOrder, column.key),
-                  )}
+              page.rows.map((row) => (
+                <TableRow key={row.uuid}>
+                  <TableCell className="font-medium">
+                    <Link
+                      href={`/warehouse-work-orders/${row.uuid}`}
+                      className="text-primary underline-offset-4 hover:underline"
+                    >
+                      {row.number}
+                    </Link>
+                  </TableCell>
+                  <TableCell>{formatDateColumn(row.plannedDate)}</TableCell>
+                  <TableCell>
+                    {WAREHOUSE_WORK_ORDER_TYPE_LABELS[row.type]}
+                  </TableCell>
+                  <TableCell>{row.warehouseName ?? "—"}</TableCell>
+                  <TableCell>
+                    <StatusBadge
+                      value={row.status}
+                      label={WAREHOUSE_WORK_ORDER_STATUS_LABELS[row.status]}
+                    />
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {row.lineCount}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {row.qtyPlanned} / {row.qtyActual}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {row.kgPlanned} / {row.kgActual}
+                  </TableCell>
                 </TableRow>
               ))
             )}
           </TableBody>
         </Table>
       </div>
+
+      <TablePagination page={page} singular="work order" plural="work orders" />
     </div>
   );
-};
