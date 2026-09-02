@@ -1,180 +1,357 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import Link from "next/link";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { Ban, CheckCircle2, Info, Package, Printer } from "lucide-react";
 import {
-  ProductionWorkOrderLineItem,
-  completeProductionWorkOrderLine,
+  approveProductionWorkOrder,
+  cancelProductionWorkOrder,
+  exportProductionWorkOrders,
+  getProductionWorkOrderDetail,
+  getProductionWorkOrderLineDetail,
+  ProductionTreeRow,
+  ProductionWorkOrderDetail,
+  ProductionWorkOrderTree,
+  releaseProductionWorkOrder,
+  saveProductionWorkOrderPackaging,
 } from "@/app/(dashboard)/production-workorders/actions";
+import { AvailableStockOption } from "@/app/(dashboard)/warehouse-work-orders/actions";
+import { LocationOption } from "@/app/(dashboard)/locations/actions";
 import { Button } from "@/components/shadcn/button";
+import { FormError } from "@/components/ui/form-error";
+import { PagedTableExportButton } from "@/components/ui/table-export-button";
+import { TablePagination } from "@/components/ui/table-pagination";
+import { TableToolbar } from "@/components/ui/table-toolbar";
+import { CancelWorkOrderDialog } from "@/components/work-orders/cancel-work-order-dialog";
+import { LineDetailDialog } from "@/components/work-orders/line-detail-dialog";
+import { PackagingDialog } from "@/components/work-orders/packaging-dialog";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/shadcn/table";
-import { StatusBadge } from "@/components/ui/status-badge";
-import {
-  MACHINE_OPTION_LABELS,
-  WORK_ORDER_STATUS_LABELS,
-} from "@/lib/labels";
-import { TableExportButton } from "@/components/ui/table-export-button";
+  TreeColumn,
+  WorkOrderTree,
+} from "@/components/work-orders/work-order-tree";
+import { WorkOrderStatus } from "@/lib/enums";
+import { orDash } from "@/lib/helpers";
+import { STOCK_UNIT_LABELS } from "@/lib/labels";
+import { TableFilterControl } from "@/lib/table-query";
+import { ReportCutDialog } from "./report-cut-dialog";
+import { ReportTreatmentDialog } from "./report-treatment-dialog";
 
 type Props = {
-  lines: ProductionWorkOrderLineItem[];
+  tree: ProductionWorkOrderTree;
+  filters: TableFilterControl[];
+  stockOptions: AvailableStockOption[];
+  locations: LocationOption[];
 };
 
-type CompleteButtonProps = {
-  lineUuid: string;
-};
+const num = (value: string | null) => Number(value ?? 0);
 
-const CompleteButton = ({ lineUuid }: CompleteButtonProps) => {
+// The columns the reference system shows to the right of the tree.
+const COLUMNS: TreeColumn<ProductionTreeRow>[] = [
+  {
+    key: "extraOptions",
+    header: "Extra options",
+    cell: (row) => orDash(row.extraOptions),
+  },
+  {
+    key: "productCode",
+    header: "Product code",
+    cell: (row) => orDash(row.productCode),
+  },
+  { key: "order", header: "Order", cell: (row) => orDash(row.orderNumber) },
+  { key: "thickness", header: "Dikte", cell: (row) => orDash(row.thickness) },
+  {
+    key: "qtyPlanned",
+    header: "Qty(p)",
+    align: "right",
+    cell: (row) => orDash(row.qtyPlanned),
+    sum: (row) => num(row.qtyPlanned),
+  },
+  {
+    key: "qtyActual",
+    header: "Qty(a)",
+    align: "right",
+    cell: (row) => orDash(row.qtyActual),
+    sum: (row) => num(row.qtyActual),
+  },
+  {
+    key: "unitPlanned",
+    header: "U(p)",
+    cell: (row) => (row.unitPlanned ? STOCK_UNIT_LABELS[row.unitPlanned] : "—"),
+  },
+  {
+    key: "unitActual",
+    header: "U(a)",
+    cell: (row) => (row.unitActual ? STOCK_UNIT_LABELS[row.unitActual] : "—"),
+  },
+  {
+    key: "kgPlanned",
+    header: "Kg(p)",
+    align: "right",
+    cell: (row) => orDash(row.kgPlanned),
+    sum: (row) => num(row.kgPlanned),
+  },
+  {
+    key: "kgActual",
+    header: "Kg(a)",
+    align: "right",
+    cell: (row) => orDash(row.kgActual),
+    sum: (row) => num(row.kgActual),
+  },
+  { key: "back", header: "Back", cell: (row) => row.backLocationName ?? "—" },
+  { key: "from", header: "From", cell: (row) => row.fromLocationName ?? "—" },
+  { key: "to", header: "To", cell: (row) => row.toLocationName ?? "—" },
+  {
+    key: "company",
+    header: "Company",
+    cell: (row) => orDash(row.companyName),
+  },
+];
+
+export const ProductionWorkOrdersTable = ({
+  tree,
+  filters,
+  stockOptions,
+  locations,
+}: Props) => {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [actionError, setActionError] = useState<string | undefined>();
+  const [cancelling, setCancelling] = useState<string | null>(null);
+  const [packaging, setPackaging] = useState<ProductionWorkOrderDetail | null>(
+    null,
+  );
+  const [detailLine, setDetailLine] = useState<ProductionTreeRow | null>(null);
+  const [reportingLine, setReportingLine] = useState<ProductionTreeRow | null>(
+    null,
+  );
+  const [reportingCut, setReportingCut] =
+    useState<ProductionWorkOrderDetail | null>(null);
 
-  const onClick = () =>
+  const picked = useMemo(
+    () => tree.rows.filter((row) => selected.has(row.lineUuid)),
+    [tree.rows, selected],
+  );
+
+  // The toolbar acts on work orders even though the ticks are on lines: release
+  // and approve are decisions about the whole job, which is why the reference
+  // system greys them the moment a selection spans two of them.
+  const pickedOrders = useMemo(
+    () => [...new Set(picked.map((row) => row.workOrderUuid))],
+    [picked],
+  );
+  const oneOrder = pickedOrders.length === 1 ? pickedOrders[0] : null;
+  const oneLine = picked.length === 1 ? picked[0] : null;
+  const statuses = new Set(picked.map((row) => row.workOrderStatus));
+  const only = (status: WorkOrderStatus) =>
+    statuses.size === 1 && statuses.has(status);
+
+  const run = (
+    action: () => Promise<{ error?: string; success?: boolean }>,
+  ) => {
+    setActionError(undefined);
     startTransition(async () => {
-      setError(null);
-      const result = await completeProductionWorkOrderLine(lineUuid);
-      if (result.error) {
-        setError(result.error);
+      const result = await action();
+      if (result.success) {
+        setSelected(new Set());
+        router.refresh();
         return;
       }
-      router.refresh();
+      setActionError(result.error);
+    });
+  };
+
+  const forEachOrder = (
+    action: (uuid: string) => Promise<{ error?: string; success?: boolean }>,
+  ) =>
+    run(async () => {
+      for (const uuid of pickedOrders) {
+        const result = await action(uuid);
+        if (!result.success) {
+          return result;
+        }
+      }
+      return { success: true };
     });
 
+  // The cut dialog needs the whole run — its fetched lots and its remainders —
+  // which the overview does not carry, so it is fetched on the way in.
+  const openWithDetail = (
+    uuid: string,
+    open: (detail: ProductionWorkOrderDetail) => void,
+  ) => {
+    setActionError(undefined);
+    startTransition(async () => {
+      const detail = await getProductionWorkOrderDetail(uuid);
+      if (!detail) {
+        setActionError("That work order could not be loaded.");
+        return;
+      }
+      open(detail);
+    });
+  };
+
+  const reportCompletion = () => {
+    if (!oneOrder) {
+      return;
+    }
+    const row = picked[0];
+    if (row.cuts) {
+      openWithDetail(oneOrder, setReportingCut);
+      return;
+    }
+    if (oneLine) {
+      setReportingLine(oneLine);
+    }
+  };
+
+  const canReport =
+    oneOrder !== null &&
+    only("released") &&
+    (picked[0]?.cuts === true || oneLine !== null);
+
   return (
-    <div className="flex flex-col items-end gap-1">
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        onClick={onClick}
-        disabled={isPending}
-      >
-        {isPending ? "Completing…" : "Complete"}
-      </Button>
-      {error && <span className="text-xs text-destructive">{error}</span>}
+    <div className="space-y-4">
+      {/* The floor selects rows and acts on them from here, rather than opening
+          each job in turn. */}
+      <div className="flex flex-wrap items-center gap-2 rounded-lg border p-2">
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => setDetailLine(oneLine)}
+          disabled={!oneLine || isPending}
+        >
+          <Info className="size-4" />
+          Details
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          onClick={() => forEachOrder(releaseProductionWorkOrder)}
+          disabled={pickedOrders.length === 0 || !only("new") || isPending}
+        >
+          <Printer className="size-4" />
+          Release
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={reportCompletion}
+          disabled={!canReport || isPending}
+        >
+          Report completion
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => forEachOrder(approveProductionWorkOrder)}
+          disabled={pickedOrders.length === 0 || !only("ready") || isPending}
+        >
+          <CheckCircle2 className="size-4" />
+          Approve
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => oneOrder && openWithDetail(oneOrder, setPackaging)}
+          disabled={!oneOrder || isPending}
+        >
+          <Package className="size-4" />
+          Package
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => setCancelling(oneOrder)}
+          disabled={!oneOrder || only("approved") || isPending}
+        >
+          <Ban className="size-4" />
+          Cancel
+        </Button>
+        <div className="ms-auto">
+          {/* "Print" in the reference system saves the selection as a document;
+              this is the same thing in the form this application already has. */}
+          <PagedTableExportButton
+            fileName="production-work-orders"
+            action={exportProductionWorkOrders}
+          />
+        </div>
+      </div>
+
+      <FormError>{actionError}</FormError>
+
+      <TableToolbar
+        searchPlaceholder="Search number, order or product…"
+        filters={filters}
+      />
+
+      <WorkOrderTree
+        rows={tree.rows}
+        columns={COLUMNS}
+        selected={selected}
+        onSelectedChange={setSelected}
+        workOrderHref={(row) => `/production-workorders/${row.workOrderUuid}`}
+        emptyMessage="No production work orders found."
+      />
+
+      <TablePagination
+        page={tree.page}
+        singular="work order"
+        plural="work orders"
+      />
+
+      <LineDetailDialog
+        line={detailLine}
+        load={getProductionWorkOrderLineDetail}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDetailLine(null);
+          }
+        }}
+      />
+      <ReportTreatmentDialog
+        line={reportingLine}
+        onOpenChange={(open) => {
+          if (!open) {
+            setReportingLine(null);
+          }
+        }}
+      />
+      <ReportCutDialog
+        workOrder={reportingCut}
+        stockOptions={stockOptions}
+        locations={locations}
+        onOpenChange={(open) => {
+          if (!open) {
+            setReportingCut(null);
+          }
+        }}
+      />
+      <PackagingDialog
+        workOrderUuid={packaging?.uuid ?? null}
+        existing={packaging?.packagings ?? []}
+        save={saveProductionWorkOrderPackaging}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPackaging(null);
+          }
+        }}
+      />
+      <CancelWorkOrderDialog
+        workOrderUuid={cancelling}
+        cancel={cancelProductionWorkOrder}
+        returnTo="/production-workorders"
+        onOpenChange={(open) => {
+          if (!open) {
+            setCancelling(null);
+          }
+        }}
+      />
     </div>
   );
 };
-
-export const ProductionWorkOrdersTable = ({ lines }: Props) => (
-  <div>
-    <div className="space-y-4">
-      <div className="flex justify-end">
-        <TableExportButton
-          tableId="production-workorders-table"
-          fileName="production-workorders"
-          sheetName="Production workorders"
-        />
-      </div>
-      <Table id="production-workorders-table">
-        <TableHeader>
-          <TableRow>
-            <TableHead>Date</TableHead>
-            <TableHead>Machine / Option</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Product code</TableHead>
-            <TableHead>Order</TableHead>
-            <TableHead>Company</TableHead>
-            <TableHead className="text-right">Dikte</TableHead>
-            <TableHead className="text-right">Qty(p)</TableHead>
-            <TableHead className="text-right">Qty(a)</TableHead>
-            <TableHead className="text-right">Kg(p)</TableHead>
-            <TableHead>From</TableHead>
-            <TableHead>To</TableHead>
-            <TableHead>Deliver on</TableHead>
-            <TableHead className="text-center">Rush</TableHead>
-            <TableHead className="text-right">Priority</TableHead>
-            <TableHead>Charge</TableHead>
-            <TableHead data-export-ignore className="text-right">
-              Action
-            </TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {lines.length === 0 ? (
-            <TableRow>
-              <TableCell
-                colSpan={17}
-                className="h-24 text-center text-muted-foreground"
-              >
-                No production work orders found.
-              </TableCell>
-            </TableRow>
-          ) : (
-            lines.map((row) => (
-              <TableRow key={row.uuid}>
-                <TableCell className="font-medium">
-                  <Link
-                    href={`/production-workorders/${row.uuid}`}
-                    className="text-primary hover:underline"
-                  >
-                    {row.date ?? row.workOrderDate ?? `Line #${row.id}`}
-                  </Link>
-                </TableCell>
-                <TableCell>
-                  {[
-                    row.machineName,
-                    row.option ? MACHINE_OPTION_LABELS[row.option] : null,
-                  ]
-                    .filter(Boolean)
-                    .join(" · ") || "—"}
-                </TableCell>
-                <TableCell>
-                  <StatusBadge
-                    value={row.status}
-                    label={
-                      row.status
-                        ? WORK_ORDER_STATUS_LABELS[row.status]
-                        : null
-                    }
-                  />
-                </TableCell>
-                <TableCell className="font-medium">
-                  {row.productCode ?? "—"}
-                </TableCell>
-                <TableCell>{row.orderNumber ?? "—"}</TableCell>
-                <TableCell>{row.companyName ?? "—"}</TableCell>
-                <TableCell className="text-right">
-                  {row.thicknessMm ?? "—"}
-                </TableCell>
-                <TableCell className="text-right">
-                  {row.qtyPlanned ?? "—"}
-                </TableCell>
-                <TableCell className="text-right">
-                  {row.qtyActual ?? "—"}
-                </TableCell>
-                <TableCell className="text-right">
-                  {row.kgPlanned ?? "—"}
-                </TableCell>
-                <TableCell>{row.fromLocation ?? "—"}</TableCell>
-                <TableCell>{row.toLocation ?? "—"}</TableCell>
-                <TableCell>{row.deliverOn ?? "—"}</TableCell>
-                <TableCell className="text-center">
-                  {row.rush ? "Yes" : ""}
-                </TableCell>
-                <TableCell className="text-right">
-                  {row.priority ?? "—"}
-                </TableCell>
-                <TableCell>{row.charge ?? "—"}</TableCell>
-                <TableCell className="text-right">
-                  {row.status === "completed" ? (
-                    "—"
-                  ) : (
-                    <CompleteButton lineUuid={row.uuid} />
-                  )}
-                </TableCell>
-              </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
-    </div>
-  </div>
-);
