@@ -1,7 +1,7 @@
 import { getJournalEntries } from "@/app/(dashboard)/journal-entries/actions";
 import { journalEntryFilters } from "@/app/(dashboard)/journal-entries/filters";
 import { getCompaniesForSelect } from "@/app/(dashboard)/companies/actions";
-import { getLedgerAccounts } from "@/app/(dashboard)/trial-balance/actions";
+import { getLedgerAccounts } from "@/app/(dashboard)/journal-entries/actions";
 import { JournalEntriesTable } from "@/components/journal-entries/journal-entries-table-content";
 import { PageHeading } from "@/components/layout/page-heading";
 import { parseTableQuery, SearchParams } from "@/lib/table-query";

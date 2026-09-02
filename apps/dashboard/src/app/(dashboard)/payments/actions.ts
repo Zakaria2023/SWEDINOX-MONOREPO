@@ -1,10 +1,10 @@
 "use server";
 
 import { db } from "@/db";
-import { Companies, SelectCompanies } from "@/db/schema/companies";
+import { Companies } from "@/db/schema/companies";
 import { Invoices, SelectInvoices } from "@/db/schema/invoices";
 import { JournalEntries } from "@/db/schema/journal-entries";
-import { Payments, SelectPayments } from "@/db/schema/payments";
+import { Payments } from "@/db/schema/payments";
 import { PurchaseInvoices } from "@/db/schema/purchase-invoices";
 import { PaymentMethod } from "@/lib/enums";
 import {
@@ -15,7 +15,6 @@ import {
 import {
   allowedCreditRestrictionDeduction,
   allowedEarlyPaymentDiscount,
-  describeError,
   generateUuid,
   paymentRequiresBankDetails,
   toDateString,
@@ -23,28 +22,13 @@ import {
 } from "@/lib/helpers";
 import { PAYMENT_METHOD_LABELS } from "@/lib/labels";
 import { currentUser } from "@clerk/nextjs/server";
-import { desc, eq, getTableColumns } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 export type PaymentActionResult = {
   paymentUuid?: string;
   error?: string;
   success?: boolean;
-};
-
-export type PaymentListItem = SelectPayments & {
-  companyName: SelectCompanies["companyName"] | null;
-  invoiceId: number | null;
-  purchaseInvoiceId: number | null;
-};
-
-export type PaymentDetail = PaymentListItem & {
-  invoiceDocumentType: SelectInvoices["documentType"] | null;
-  invoiceDate: SelectInvoices["invoiceDate"] | null;
-  invoiceOutstanding: SelectInvoices["outstanding"] | null;
-  invoicePaymentTerms: SelectInvoices["paymentTerms"] | null;
-  /** Cash plus the discount taken — what the payment settled in total. */
-  settledAmount: number;
 };
 
 export type RegisterPaymentInput = {
@@ -127,82 +111,6 @@ const settlementDeductions = (
 // The discount account moved from 8600 to 4700: a discount granted is a cost of
 // collecting early, not negative revenue, and 8xxx is the revenue range.
 const DISCOUNT_GRANTED_ACCOUNT = LEDGER_ACCOUNTS.discountGranted;
-
-export const getPayments = async (): Promise<PaymentListItem[]> => {
-  try {
-    return await db
-      .select({
-        ...getTableColumns(Payments),
-        companyName: Companies.companyName,
-        invoiceId: Invoices.id,
-        purchaseInvoiceId: PurchaseInvoices.id,
-      })
-      .from(Payments)
-      .leftJoin(Companies, eq(Payments.companyUuid, Companies.uuid))
-      .leftJoin(Invoices, eq(Payments.invoiceUuid, Invoices.uuid))
-      .leftJoin(
-        PurchaseInvoices,
-        eq(Payments.purchaseInvoiceUuid, PurchaseInvoices.uuid),
-      )
-      .orderBy(desc(Payments.paymentDate), desc(Payments.id));
-  } catch (error) {
-    throw new Error(describeError(error, "Failed to fetch payments"));
-  }
-};
-
-/**
- * One payment with the counterparty and the invoice it settled.
- *
- * `settledAmount` is the cash plus the early-payment discount taken: an invoice
- * can close in full even though less money arrived than was billed, and the
- * cash figure alone does not show that.
- */
-export const getPaymentDetail = async (
-  uuid: string,
-): Promise<PaymentDetail | null> => {
-  try {
-    const [row] = await db
-      .select({
-        ...getTableColumns(Payments),
-        companyName: Companies.companyName,
-        invoiceId: Invoices.id,
-        invoiceDocumentType: Invoices.documentType,
-        invoiceDate: Invoices.invoiceDate,
-        invoiceOutstanding: Invoices.outstanding,
-        invoicePaymentTerms: Invoices.paymentTerms,
-        purchaseInvoiceId: PurchaseInvoices.id,
-      })
-      .from(Payments)
-      .leftJoin(Companies, eq(Payments.companyUuid, Companies.uuid))
-      .leftJoin(Invoices, eq(Payments.invoiceUuid, Invoices.uuid))
-      .leftJoin(
-        PurchaseInvoices,
-        eq(Payments.purchaseInvoiceUuid, PurchaseInvoices.uuid),
-      )
-      .where(eq(Payments.uuid, uuid))
-      .limit(1);
-
-    if (!row) {
-      return null;
-    }
-
-    return {
-      ...row,
-      settledAmount: Number(row.amount) + Number(row.discountAmount),
-    };
-  } catch (error) {
-    throw new Error(describeError(error, "Failed to fetch payment"));
-  }
-};
-
-export const getPaymentsForInvoice = async (
-  invoiceUuid: string,
-): Promise<SelectPayments[]> =>
-  db
-    .select()
-    .from(Payments)
-    .where(eq(Payments.invoiceUuid, invoiceUuid))
-    .orderBy(desc(Payments.paymentDate));
 
 export const getInvoicePaymentPreview = async (
   invoiceUuid: string,

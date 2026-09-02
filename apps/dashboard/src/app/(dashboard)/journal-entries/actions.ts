@@ -30,6 +30,8 @@ import { exportRows } from "@/lib/server/excel";
 import { JOURNAL_ENTRY_COLUMNS } from "@/app/(dashboard)/journal-entries/columns";
 import { asc, count, desc, eq, getTableColumns } from "drizzle-orm";
 
+export type LedgerAccountRow = SelectLedgerAccounts;
+
 export type JournalEntryListItem = SelectJournalEntries & {
   companyName: SelectCompanies["companyName"] | null;
   accountName: SelectLedgerAccounts["name"] | null;
@@ -135,6 +137,18 @@ export const exportJournalEntries = async (
     columnKeys,
     rows: journalEntryRows(parseTableQuery(params)),
   });
+
+/** The chart of accounts, for the ledger-account filter on this overview. */
+export const getLedgerAccounts = async (): Promise<LedgerAccountRow[]> => {
+  try {
+    return await db
+      .select()
+      .from(LedgerAccounts)
+      .orderBy(asc(LedgerAccounts.number));
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch ledger accounts"));
+  }
+};
 
 export const getJournalEntries = async (
   query: TableQuery,

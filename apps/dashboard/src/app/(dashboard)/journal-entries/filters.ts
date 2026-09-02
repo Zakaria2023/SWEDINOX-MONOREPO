@@ -1,5 +1,5 @@
 import { CompanyOption } from "@/app/(dashboard)/companies/actions";
-import { LedgerAccountRow } from "@/app/(dashboard)/trial-balance/actions";
+import { LedgerAccountRow } from "@/app/(dashboard)/journal-entries/actions";
 import { companyOptionLabel } from "@/lib/helpers";
 import { TableFilterControl } from "@/lib/table-query";
 
