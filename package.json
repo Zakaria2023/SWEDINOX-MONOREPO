@@ -7,7 +7,7 @@
     "lint": "turbo run lint --filter=@swedinox/dashboard",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,css}\" --ignore-path .gitignore",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,css}\" --ignore-path .gitignore",
-    "clean": "turbo run clean && rm -rf node_modules",
+    "clean": "turbo run clean && node -e \"require('fs').rmSync('node_modules',{recursive:true,force:true})\"",
     "db:push": "pnpm --filter @swedinox/dashboard db:push",
     "db:generate": "pnpm --filter @swedinox/dashboard db:generate",
     "db:migrate": "pnpm --filter @swedinox/dashboard db:migrate",
