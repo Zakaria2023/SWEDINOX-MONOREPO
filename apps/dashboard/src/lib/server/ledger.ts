@@ -152,6 +152,12 @@ export const LEDGER_ACCOUNTS = {
    * mirror: goods a customer sent back that we have not credited yet.
    */
   goodsDeliveredNotInvoiced: "3200",
+  /**
+   * The mirror of the account above, on the buying side: goods the warehouse
+   * has booked in but the supplier has not billed yet. Physically ours, and a
+   * liability standing here until the purchase invoice clears it.
+   */
+  goodsReceivedNotInvoiced: "3300",
   discountGranted: "4700",
   creditRestriction: "4750",
   /** What the goods sold cost us, charged when the sale is invoiced. */
@@ -231,6 +237,11 @@ export const DEFAULT_CHART_OF_ACCOUNTS: ChartEntry[] = [
     number: LEDGER_ACCOUNTS.goodsDeliveredNotInvoiced,
     name: "Goods delivered, not yet invoiced",
     type: "asset",
+  },
+  {
+    number: LEDGER_ACCOUNTS.goodsReceivedNotInvoiced,
+    name: "Goods received, not yet invoiced",
+    type: "liability",
   },
   {
     number: LEDGER_ACCOUNTS.discountGranted,
