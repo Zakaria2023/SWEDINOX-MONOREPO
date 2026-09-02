@@ -1,13 +1,14 @@
 "use client";
 
-import { useFieldArray, useFormContext } from "react-hook-form";
+import { Controller, useFieldArray, useFormContext } from "react-hook-form";
 import { Plus, X } from "lucide-react";
+import { useState } from "react";
 import { TextCategoryOption } from "@/app/(dashboard)/text-categories/actions";
 import { ReturnOrderFormValues } from "@/app/(dashboard)/return-orders/validation";
 import { Input } from "@/components/shadcn/input";
 import { Textarea } from "@/components/shadcn/textarea";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
-import { FormSelectField } from "@/components/ui/form-select-field";
+import { TextCategoryField } from "@/components/text-categories/text-category-field";
 
 type Props = {
   textCategories: TextCategoryOption[];
@@ -30,13 +31,10 @@ export const TextsSection = ({ textCategories }: Props) => {
     name: "texts",
   });
 
-  const categoryOptions = [
-    { value: "", label: "Empty" },
-    ...textCategories.map((category) => ({
-      value: category.uuid,
-      label: category.name,
-    })),
-  ];
+  // A category added from any row is held here, so the rest of the rows on
+  // this form can use it too without a round trip.
+  const [added, setAdded] = useState<TextCategoryOption[]>([]);
+  const categories = [...textCategories, ...added];
 
   return (
     <section className="space-y-4">
@@ -74,13 +72,20 @@ export const TextsSection = ({ textCategories }: Props) => {
                   message={errors.texts?.[index]?.title?.message}
                 />
               </div>
-              <FormSelectField
+              <Controller
                 control={control}
-                id={`texts.${index}.textCategoryUuid`}
                 name={`texts.${index}.textCategoryUuid`}
-                label="Category"
-                options={categoryOptions}
-                emptyValue=""
+                render={({ field }) => (
+                  <TextCategoryField
+                    id={`texts.${index}.textCategoryUuid`}
+                    value={field.value ?? ""}
+                    onChange={field.onChange}
+                    categories={categories}
+                    onCreated={(category) =>
+                      setAdded((prev) => [...prev, category])
+                    }
+                  />
+                )}
               />
             </div>
 

@@ -37,6 +37,10 @@ export const CompanyTextsEditor = ({
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingUuid, setEditingUuid] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<SelectTexts | null>(null);
+  // Categories added from inside the dialog, so the list survives it closing.
+  const [addedCategories, setAddedCategories] = useState<TextCategoryOption[]>(
+    [],
+  );
 
   const [saveState, dispatchSave, isSaving] = useActionState(
     saveCompanyText,
@@ -195,8 +199,11 @@ export const CompanyTextsEditor = ({
         onCancel={handleCancel}
         onSave={handleSave}
         form={textForm}
-        textCategories={textCategories}
+        textCategories={[...textCategories, ...addedCategories]}
         handleCategorySelect={handleCategorySelect}
+        onCategoryCreated={(category) =>
+          setAddedCategories((prev) => [...prev, category])
+        }
         submitLabel={editingUuid ? "Save Changes" : "Add Text"}
       />
 

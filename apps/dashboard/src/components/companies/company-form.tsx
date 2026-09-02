@@ -4,6 +4,7 @@ import {
   CompanyOption,
   DebtorCompanyOption,
 } from "@/app/(dashboard)/companies/actions";
+import { useState } from "react";
 import { IndustryOption } from "@/app/(dashboard)/industries/actions";
 import { useCompanySubmit } from "@/app/(dashboard)/companies/use-company-submit";
 import {
@@ -291,6 +292,12 @@ export const CompanyForm = ({
     currentUserName: user?.fullName ?? undefined,
   });
 
+  // Categories added from inside the text dialog, so the list survives it
+  // closing and the next text on this form can use them too.
+  const [addedCategories, setAddedCategories] = useState<TextCategoryOption[]>(
+    [],
+  );
+
   const isCustomerOrProspect =
     selectedRoles.includes("customer") || selectedRoles.includes("prospect");
 
@@ -571,8 +578,11 @@ export const CompanyForm = ({
         onCancel={handleCancelText}
         onSave={handleSaveText}
         form={textForm}
-        textCategories={textCategories_}
+        textCategories={[...textCategories_, ...addedCategories]}
         handleCategorySelect={handleCategorySelect}
+        onCategoryCreated={(category) =>
+          setAddedCategories((prev) => [...prev, category])
+        }
       />
 
       <ContactDialog

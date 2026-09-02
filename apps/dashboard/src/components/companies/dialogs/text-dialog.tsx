@@ -5,6 +5,7 @@ import {
   USAGE_CATEGORY_FIELDS,
 } from "@/app/(dashboard)/companies/validation";
 import { TextCategoryOption } from "@/app/(dashboard)/text-categories/actions";
+import { TextCategoryField } from "@/components/text-categories/text-category-field";
 import { Checkbox } from "@/components/shadcn/checkbox";
 import {
   Dialog,
@@ -13,7 +14,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/shadcn/dialog";
-import { Select } from "@/components/shadcn/select";
 import { Textarea } from "@/components/shadcn/textarea";
 import { DialogFormFooter } from "@/components/ui/dialog-form-footer";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
@@ -30,6 +30,8 @@ type Props = {
   form: UseFormReturn<TextDialogValues>;
   textCategories: TextCategoryOption[];
   handleCategorySelect: (uuid: string) => void;
+  /** A category made from inside the dialog, handed up so the list survives it. */
+  onCategoryCreated: (category: TextCategoryOption) => void;
   submitLabel?: string;
 };
 
@@ -41,6 +43,7 @@ export const TextDialog = ({
   form,
   textCategories,
   handleCategorySelect,
+  onCategoryCreated,
   submitLabel = "Add Text",
 }: Props) => (
   <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -59,36 +62,26 @@ export const TextDialog = ({
       <form onSubmit={onSave} className="flex min-h-0 flex-1 flex-col">
         <div className="flex min-h-0 flex-1 gap-0">
           <div className="flex w-64 shrink-0 flex-col gap-4 overflow-y-auto border-r p-6">
-            <div>
-              <FormLabel htmlFor="txt-category" required>
-                Text Category
-              </FormLabel>
-              <Controller
-                name="textCategoryUuid"
-                control={form.control}
-                render={({ field }) => (
-                  <Select
-                    id="txt-category"
-                    options={[
-                      { value: "", label: "Select" },
-                      ...textCategories.map((c) => ({
-                        value: c.uuid,
-                        label: c.name,
-                      })),
-                    ]}
-                    value={field.value}
-                    onValueChange={(value) => {
-                      field.onChange(value);
-                      handleCategorySelect(value);
-                    }}
-                    placeholder="Select"
-                  />
-                )}
-              />
-              <FormFieldError
-                message={form.formState.errors.textCategoryUuid?.message}
-              />
-            </div>
+            <Controller
+              name="textCategoryUuid"
+              control={form.control}
+              render={({ field }) => (
+                <TextCategoryField
+                  id="txt-category"
+                  label="Text Category"
+                  value={field.value ?? ""}
+                  onChange={(value) => {
+                    field.onChange(value);
+                    // Choosing a category fills the usage checkboxes from it,
+                    // which is the whole reason the picker sits first.
+                    handleCategorySelect(value);
+                  }}
+                  categories={textCategories}
+                  onCreated={onCategoryCreated}
+                  errorMessage={form.formState.errors.textCategoryUuid?.message}
+                />
+              )}
+            />
           </div>
 
           <div className="flex flex-1 flex-col gap-4 overflow-y-auto border-r p-6">
