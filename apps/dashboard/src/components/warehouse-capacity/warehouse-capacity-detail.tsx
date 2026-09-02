@@ -6,7 +6,7 @@ import {
   formatFixed2,
   formatPercent,
 } from "@/lib/helpers";
-import { WAREHOUSE_WORK_ORDER_LINE_TYPE_LABELS } from "@/lib/labels";
+import { WAREHOUSE_WORK_ORDER_TYPE_LABELS } from "@/lib/labels";
 
 type Props = {
   capacity: WarehouseCapacityDetail;
@@ -30,7 +30,7 @@ export const WarehouseCapacityDetailView = ({ capacity }: Props) => (
           label="Workorder type"
           value={
             capacity.workOrderType
-              ? WAREHOUSE_WORK_ORDER_LINE_TYPE_LABELS[capacity.workOrderType]
+              ? WAREHOUSE_WORK_ORDER_TYPE_LABELS[capacity.workOrderType]
               : null
           }
         />

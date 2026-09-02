@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
-import { WAREHOUSE_WORK_ORDER_LINE_TYPE_LABELS } from "@/lib/labels";
+import { WAREHOUSE_WORK_ORDER_TYPE_LABELS } from "@/lib/labels";
 import { formatDateValue } from "@/lib/helpers";
 import { TableExportButton } from "@/components/ui/table-export-button";
 
@@ -65,7 +65,7 @@ export const WarehouseCapacityTable = ({ capacity }: Props) => (
                 <TableCell>{row.subsection ?? "—"}</TableCell>
                 <TableCell>
                   {row.workOrderType
-                    ? WAREHOUSE_WORK_ORDER_LINE_TYPE_LABELS[row.workOrderType]
+                    ? WAREHOUSE_WORK_ORDER_TYPE_LABELS[row.workOrderType]
                     : "—"}
                 </TableCell>
                 <TableCell className="text-right">{row.occupied}</TableCell>

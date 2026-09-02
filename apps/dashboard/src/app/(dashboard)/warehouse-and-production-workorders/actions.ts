@@ -52,9 +52,11 @@ export const getWarehouseAndProductionWorkOrders = async (): Promise<
       db
         .select({
           uuid: WarehouseWorkOrderLines.uuid,
-          workOrderNumber: WarehouseWorkOrders.id,
+          workOrderNumber: WarehouseWorkOrders.number,
           warehouseName: Warehouses.name,
-          date: WarehouseWorkOrderLines.date,
+          // The day the job is planned for lives on the order, not the line:
+          // every line of one work order is worked on the same day.
+          date: WarehouseWorkOrders.plannedDate,
           status: WarehouseWorkOrderLines.status,
           qtyPlanned: WarehouseWorkOrderLines.qtyPlanned,
           qtyActual: WarehouseWorkOrderLines.qtyActual,
@@ -70,7 +72,7 @@ export const getWarehouseAndProductionWorkOrders = async (): Promise<
           Warehouses,
           eq(WarehouseWorkOrders.warehouseUuid, Warehouses.uuid),
         )
-        .orderBy(desc(WarehouseWorkOrderLines.date)),
+        .orderBy(desc(WarehouseWorkOrders.plannedDate)),
 
       db
         .select({

@@ -126,7 +126,9 @@ import {
   WorkorderSlipType,
   WorkorderProcessingMethod,
   WarehouseWorkOrderStatus,
-  WarehouseWorkOrderLineType,
+  WarehouseWorkOrderType,
+  WorkOrderStatus,
+  PackagingType,
 } from "@/lib/enums";
 
 export const ADDRESS_CATEGORY_LABELS: Record<AddressCategory, string> = {
@@ -907,6 +909,10 @@ export const STOCK_MOVEMENT_REASON_LABELS: Record<StockMovementReason, string> =
     sawing_waste: "Sawing Waste",
     sales_return: "Sales Return",
     purchase_return: "Purchase Return",
+    warehouse_receipt: "Warehouse Receipt",
+    warehouse_issue: "Warehouse Issue",
+    warehouse_transfer: "Warehouse Transfer",
+    warehouse_scrapped: "Scrapped",
   };
 
 export const CUSTOMER_LABEL_OPTION_LABELS: Record<CustomerLabelOption, string> =
@@ -1577,27 +1583,49 @@ export const WORKORDER_PROCESSING_METHOD_LABELS: Record<
   order_picking: "Order Picking",
 };
 
-export const WAREHOUSE_WORK_ORDER_STATUS_LABELS: Record<
-  WarehouseWorkOrderStatus,
-  string
-> = {
+export const WORK_ORDER_STATUS_LABELS: Record<WorkOrderStatus, string> = {
   new: "New",
   in_progress: "In Progress",
   completed: "Completed",
   cancelled: "Cancelled",
 };
 
-export const WAREHOUSE_WORK_ORDER_LINE_TYPE_LABELS: Record<
-  WarehouseWorkOrderLineType,
+export const WAREHOUSE_WORK_ORDER_STATUS_LABELS: Record<
+  WarehouseWorkOrderStatus,
   string
 > = {
-  unloading: "Unloading",
-  loading: "Loading",
-  transfer: "Transfer",
-  processing: "Processing",
-  inspection: "Inspection",
-  put_away: "Put Away",
+  new: "New",
+  released: "Released",
+  ready: "Ready",
+  approved: "Approved",
+};
+
+export const WAREHOUSE_WORK_ORDER_TYPE_LABELS: Record<
+  WarehouseWorkOrderType,
+  string
+> = {
+  arranging: "Arranging",
+  counting_location: "Counting (Location)",
+  counting_product: "Counting (Product)",
+  fetching: "Fetching",
   picking: "Picking",
+  pick_up: "Pick-up",
+  relocating: "Relocating",
+  restocking: "Restocking",
+  scrapping: "Scrapping",
+  transferring: "Transferring",
+  unloading: "Unloading",
+};
+
+export const PACKAGING_TYPE_LABELS: Record<PackagingType, string> = {
+  p2m: "Pallet 2m",
+  p2_5m: "Pallet 2.5m",
+  p3m: "Pallet 3m",
+  p4m: "Pallet 4m",
+  euro: "Euro pallet",
+  coil: "Coil",
+  bundles: "Bundle(s)",
+  colli: "Colli",
 };
 
 export const PURCHASE_INVOICE_BLOCK_REASON_LABELS: Record<

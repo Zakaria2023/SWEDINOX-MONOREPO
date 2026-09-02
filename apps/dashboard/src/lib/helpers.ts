@@ -102,8 +102,10 @@ import {
   WarehouseProductType,
   WarehouseTransportRegion,
   warehouseTransportRegions,
-  WarehouseWorkOrderLineType,
-  warehouseWorkOrderLineTypes,
+  WarehouseStockEffect,
+  WarehouseWorkOrderType,
+  warehouseWorkOrderTypes,
+  StockMovementReason,
   WorkorderPrintMethod,
   WorkorderReleaseMethod,
   WorkorderSlipType,
@@ -177,6 +179,33 @@ export const toDecimalAmount = (
 ): string => {
   const trimmed = (value ?? "").trim();
   if (!DECIMAL_AMOUNT_PATTERN.test(trimmed)) {
+    return fallback;
+  }
+  return trimmed.replace(",", ".");
+};
+
+/**
+ * The same shape, for a quantity rather than an amount: three decimals instead
+ * of two, because that is what the stock columns hold. A field that accepted
+ * only two would silently round 3.999 to 4.00 and put a piece on the shelf
+ * that nobody ever picked.
+ */
+export const DECIMAL_QUANTITY_PATTERN = /^-?\d+(?:[.,]\d{1,3})?$/;
+
+/**
+ * A hand-typed quantity as the plain decimal string MySQL accepts.
+ *
+ * Accepts either separator deliberately. A warehouse keyboard set to a Dutch
+ * or German locale types `3,999`, and `Number("3,999")` is `NaN` — so a field
+ * that only understood a dot would reject a perfectly good quantity, and a
+ * browser `type="number"` would swallow the keystroke without saying why.
+ */
+export const toDecimalQuantity = (
+  value: string | null | undefined,
+  fallback = "0.000",
+): string => {
+  const trimmed = (value ?? "").trim();
+  if (!DECIMAL_QUANTITY_PATTERN.test(trimmed)) {
     return fallback;
   }
   return trimmed.replace(",", ".");
@@ -4797,15 +4826,35 @@ export type WarehouseLocationTypeMeta = {
   blockReason: WarehouseBlockReason | null;
 };
 
-export type WarehouseWorkOrderLineTypeMeta = {
-  /** Where the goods come from; null means from outside the warehouse. */
+export type WarehouseWorkOrderTypeMeta = {
+  /**
+   * The route this type of work normally takes. A line carries the real
+   * locations it was raised for, which may differ — a pick feeding a machine
+   * ends at the machine rather than at the call-off shelf — so these are what
+   * the type means, not a constraint on where a line may go.
+   *
+   * `null` on either side is the company boundary: goods arriving from outside,
+   * or leaving for good.
+   */
   from: WarehouseLocationType | null;
-  /** Where they go; null means out of the warehouse. */
   to: WarehouseLocationType | null;
-  /** What the line does to the warehouse's stock. */
-  stockEffect: "in" | "out" | "move";
+  /** What reporting a line of this type completed does to stock. */
+  stockEffect: WarehouseStockEffect;
+  /** The reason the resulting stock movements are logged under. */
+  movementReason: StockMovementReason;
   /** The line is closed by scanning, not by typing. */
   requiresScan: boolean;
+  /**
+   * What raised the line, and therefore what it must point at.
+   *
+   * Work is not invented on the floor — it is generated from a document. A pick
+   * exists because somebody ordered the material; an unloading exists because
+   * somebody bought it. Only the housekeeping types answer to nothing: a count,
+   * a relocation or a write-off serves no counterparty, which is why the old
+   * system left the Company and Order columns blank on those and filled them on
+   * every other.
+   */
+  serves: "order" | "purchase" | null;
 };
 
 export const WAREHOUSE_LOCATION_TYPE_META: Record<
@@ -4913,51 +4962,106 @@ export const WAREHOUSE_LOCATION_TYPE_META: Record<
   },
 };
 
-export const WAREHOUSE_WORK_ORDER_LINE_TYPE_META: Record<
-  WarehouseWorkOrderLineType,
-  WarehouseWorkOrderLineTypeMeta
+export const WAREHOUSE_WORK_ORDER_TYPE_META: Record<
+  WarehouseWorkOrderType,
+  WarehouseWorkOrderTypeMeta
 > = {
+  // The two boundary crossings. Goods arrive off a purchase order and land in
+  // receiving; goods leave when the customer collects them. These are the only
+  // types that change how much stock the company holds in total.
   unloading: {
     from: null,
     to: "put_away",
     stockEffect: "in",
+    movementReason: "warehouse_receipt",
     requiresScan: true,
+    serves: "purchase",
   },
-  put_away: {
+  pick_up: {
+    from: "collection",
+    to: null,
+    stockEffect: "out",
+    movementReason: "warehouse_issue",
+    requiresScan: true,
+    serves: "order",
+  },
+  // A write-off. The material is still physically there when the line is
+  // raised, but it stops being stock the moment the line is reported.
+  scrapping: {
+    from: "pick",
+    to: null,
+    stockEffect: "out",
+    movementReason: "warehouse_scrapped",
+    requiresScan: false,
+    serves: null,
+  },
+  // The internal moves. None of them change the total; each takes a lot off one
+  // location and puts it on another.
+  restocking: {
     from: "put_away",
     to: "bulk",
     stockEffect: "move",
+    movementReason: "warehouse_transfer",
     requiresScan: true,
+    serves: null,
   },
-  transfer: {
+  transferring: {
     from: "bulk",
     to: "pick",
     stockEffect: "move",
+    movementReason: "warehouse_transfer",
     requiresScan: true,
+    serves: null,
+  },
+  relocating: {
+    from: "bulk",
+    to: "bulk",
+    stockEffect: "move",
+    movementReason: "warehouse_transfer",
+    requiresScan: true,
+    serves: null,
+  },
+  arranging: {
+    from: "sorting",
+    to: "pick",
+    stockEffect: "move",
+    movementReason: "warehouse_transfer",
+    requiresScan: false,
+    serves: null,
   },
   picking: {
     from: "pick",
-    to: "load",
+    to: "call_off",
     stockEffect: "move",
+    movementReason: "warehouse_transfer",
     requiresScan: true,
+    serves: "order",
   },
-  processing: {
-    from: "pick",
+  fetching: {
+    from: "put_away",
     to: "processing",
     stockEffect: "move",
+    movementReason: "warehouse_transfer",
     requiresScan: true,
+    serves: "order",
   },
-  inspection: {
-    from: "put_away",
-    to: "inspection",
-    stockEffect: "move",
-    requiresScan: false,
-  },
-  loading: {
-    from: "load",
+  // Counting moves nothing. It reconciles a lot to what was found on the shelf,
+  // so the reported quantity is the new quantity rather than an amount to shift.
+  counting_location: {
+    from: null,
     to: null,
-    stockEffect: "out",
-    requiresScan: true,
+    stockEffect: "count",
+    movementReason: "count_correction",
+    requiresScan: false,
+    serves: null,
+  },
+  counting_product: {
+    from: null,
+    to: null,
+    stockEffect: "count",
+    movementReason: "count_correction",
+    requiresScan: false,
+    serves: null,
   },
 };
 
@@ -5003,26 +5107,31 @@ export const blockReasonForLocationType = (
   warehouseLocationTypeMetaOf(type)?.blockReason ?? null;
 
 /**
- * The work-order line type that describes moving goods from one kind of
- * location to another, or null when no operation does — which is what makes an
- * unsupported move visible instead of silently allowed.
+ * The work-order type that describes moving goods from one kind of location to
+ * another, or null when no operation does — which is what makes an unsupported
+ * move visible instead of silently allowed.
+ *
+ * Counting is skipped: it carries no route, so both counting types would match
+ * a nowhere-to-nowhere move and the first of them would win by accident.
  */
-export const workOrderLineTypeForMove = (
+export const warehouseWorkOrderTypeForMove = (
   from: WarehouseLocationType | null,
   to: WarehouseLocationType | null,
-): WarehouseWorkOrderLineType | null => {
-  const found = warehouseWorkOrderLineTypes.find((type) => {
-    const meta = WAREHOUSE_WORK_ORDER_LINE_TYPE_META[type];
-    return meta.from === from && meta.to === to;
+): WarehouseWorkOrderType | null => {
+  const found = warehouseWorkOrderTypes.find((type) => {
+    const meta = WAREHOUSE_WORK_ORDER_TYPE_META[type];
+    return (
+      meta.stockEffect !== "count" && meta.from === from && meta.to === to
+    );
   });
   return found ?? null;
 };
 
-/** What a work-order line type does, or null when a line carries none. */
-export const workOrderLineTypeMetaOf = (
-  type: WarehouseWorkOrderLineType | null | undefined,
-): WarehouseWorkOrderLineTypeMeta | null =>
-  type ? WAREHOUSE_WORK_ORDER_LINE_TYPE_META[type] : null;
+/** What a work-order type does, or null when an order carries none. */
+export const warehouseWorkOrderTypeMetaOf = (
+  type: WarehouseWorkOrderType | null | undefined,
+): WarehouseWorkOrderTypeMeta | null =>
+  type ? WAREHOUSE_WORK_ORDER_TYPE_META[type] : null;
 
 // ---------------------------------------------------------------------------
 // Printers, slips and labels
@@ -7945,6 +8054,7 @@ const STATUS_TONES: Record<string, StatusTone> = {
   partially_invoiced: "active",
   ready: "active",
   completed: "done",
+  approved: "done",
   done: "done",
   delivered: "done",
   invoiced: "done",

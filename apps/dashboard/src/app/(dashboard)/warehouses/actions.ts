@@ -263,7 +263,6 @@ export const createWarehouse = async (
   fields: WarehouseFields,
 ): Promise<WarehouseActionResult> => {
   const uuid = generateUuid();
-  const workOrderUuid = generateUuid();
 
   // A slip sent to a device that cannot produce it, or a paper tray on a device
   // with no trays, only shows up as a bad print run on the floor.
@@ -273,13 +272,10 @@ export const createWarehouse = async (
   }
 
   try {
-    await db.transaction(async (tx) => {
-      await tx.insert(Warehouses).values({ ...fields, uuid });
-      await tx.insert(WarehouseWorkOrders).values({
-        uuid: workOrderUuid,
-        warehouseUuid: uuid,
-      });
-    });
+    // No work order is raised here. One is a job for the floor — a move of real
+    // goods between two real locations — and a warehouse that has just been
+    // created has no goods and nothing to move.
+    await db.insert(Warehouses).values({ ...fields, uuid });
     return { success: true, warehouseUuid: uuid };
   } catch (error) {
     return {

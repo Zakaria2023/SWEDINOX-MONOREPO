@@ -4,7 +4,7 @@ import { DetailField } from "@/components/ui/detail-field";
 import { formatDateColumn, formatDateValue, yesNo } from "@/lib/helpers";
 import {
   MACHINE_OPTION_LABELS,
-  WAREHOUSE_WORK_ORDER_STATUS_LABELS,
+  WORK_ORDER_STATUS_LABELS,
 } from "@/lib/labels";
 
 type Props = {
@@ -28,7 +28,7 @@ export const ProductionWorkOrderLineDetailView = ({ line }: Props) => (
           label="Work order status"
           value={
             line.workOrderStatus
-              ? WAREHOUSE_WORK_ORDER_STATUS_LABELS[line.workOrderStatus]
+              ? WORK_ORDER_STATUS_LABELS[line.workOrderStatus]
               : null
           }
         />
@@ -62,7 +62,7 @@ export const ProductionWorkOrderLineDetailView = ({ line }: Props) => (
         <DetailField label="Date" value={formatDateColumn(line.date)} />
         <DetailField
           label="Line status"
-          value={WAREHOUSE_WORK_ORDER_STATUS_LABELS[line.status]}
+          value={WORK_ORDER_STATUS_LABELS[line.status]}
         />
         <DetailField label="Order number" value={line.orderNumber} />
         <div>

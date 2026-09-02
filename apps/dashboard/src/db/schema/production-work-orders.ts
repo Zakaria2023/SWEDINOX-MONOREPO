@@ -14,7 +14,7 @@ import {
 } from "drizzle-orm/mysql-core";
 import {
   machineOptionTypes,
-  warehouseWorkOrderStatuses,
+  workOrderStatuses,
 } from "../../lib/enums";
 import { Companies } from "./companies";
 import { Machines } from "./machines";
@@ -31,7 +31,7 @@ export const ProductionWorkOrders = mysqlTable(
     machineUuid: char("machine_uuid", { length: 36 }),
     option: mysqlEnum("option", machineOptionTypes),
     date: date("date", { mode: "string" }),
-    status: mysqlEnum("status", warehouseWorkOrderStatuses).default("new"),
+    status: mysqlEnum("status", workOrderStatuses).default("new"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
   },
@@ -52,7 +52,7 @@ export const ProductionWorkOrderLines = mysqlTable(
     uuid: char("uuid", { length: 36 }).notNull().unique(),
     workOrderUuid: char("work_order_uuid", { length: 36 }).notNull(),
     date: date("date", { mode: "string" }),
-    status: mysqlEnum("status", warehouseWorkOrderStatuses)
+    status: mysqlEnum("status", workOrderStatuses)
       .notNull()
       .default("new"),
     productUuid: char("product_uuid", { length: 36 }),

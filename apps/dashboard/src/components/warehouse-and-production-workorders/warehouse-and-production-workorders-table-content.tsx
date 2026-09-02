@@ -10,7 +10,18 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { cn, formatDateColumn, formatNumber, orDash } from "@/lib/helpers";
-import { WAREHOUSE_WORK_ORDER_STATUS_LABELS } from "@/lib/labels";
+import {
+  WAREHOUSE_WORK_ORDER_STATUS_LABELS,
+  WORK_ORDER_STATUS_LABELS,
+} from "@/lib/labels";
+
+// The list merges two kinds of work order, and the warehouse ladder is not the
+// production one — so a status is looked up in both vocabularies. They agree on
+// the one value they share, "new".
+const STATUS_LABELS: Record<string, string> = {
+  ...WORK_ORDER_STATUS_LABELS,
+  ...WAREHOUSE_WORK_ORDER_STATUS_LABELS,
+};
 import { TableExportButton } from "@/components/ui/table-export-button";
 
 type Props = {
@@ -91,9 +102,8 @@ export const WarehouseAndProductionWorkOrdersTable = ({ rows }: Props) => (
                 <TableCell>{formatDateColumn(row.workOrderDate)}</TableCell>
                 <TableCell>
                   {row.workOrderStatus
-                    ? (WAREHOUSE_WORK_ORDER_STATUS_LABELS[
-                        row.workOrderStatus as keyof typeof WAREHOUSE_WORK_ORDER_STATUS_LABELS
-                      ] ?? row.workOrderStatus)
+                    ? (STATUS_LABELS[row.workOrderStatus] ??
+                      row.workOrderStatus)
                     : "—"}
                 </TableCell>
               </TableRow>

@@ -10,7 +10,7 @@ import {
   timestamp,
   varchar,
 } from "drizzle-orm/mysql-core";
-import { warehouseWorkOrderLineTypes } from "../../lib/enums";
+import { warehouseWorkOrderTypes } from "../../lib/enums";
 
 // Warehouse capacity — the Logistics "Warehouse capacity" overview. One row
 // per date / section / subsection / workorder type, showing how much of that
@@ -28,7 +28,7 @@ export const WarehouseCapacity = mysqlTable(
     // kind of work it covers ("Workorder type").
     warehouseSection: varchar("warehouse_section", { length: 255 }),
     subsection: varchar("subsection", { length: 255 }),
-    workOrderType: mysqlEnum("work_order_type", warehouseWorkOrderLineTypes),
+    workOrderType: mysqlEnum("work_order_type", warehouseWorkOrderTypes),
 
     // Capacity already taken, capacity ready to run, and what is left.
     occupied: decimal("occupied", { precision: 15, scale: 2 })

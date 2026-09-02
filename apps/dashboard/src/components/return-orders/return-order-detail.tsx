@@ -39,7 +39,7 @@ import {
   INVOICE_SURCHARGE_DESCRIPTION_LABELS,
   RETURN_ORDER_REASON_LABELS,
   RETURN_ORDER_STATUS_LABELS,
-  WAREHOUSE_WORK_ORDER_STATUS_LABELS,
+  WORK_ORDER_STATUS_LABELS,
 } from "@/lib/labels";
 
 type Props = {
@@ -347,7 +347,7 @@ export const ReturnOrderDetailView = ({ returnOrder }: Props) => {
                           value={line.status}
                           label={
                             line.status
-                              ? WAREHOUSE_WORK_ORDER_STATUS_LABELS[line.status]
+                              ? WORK_ORDER_STATUS_LABELS[line.status]
                               : null
                           }
                         />

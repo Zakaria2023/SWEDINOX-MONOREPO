@@ -529,19 +529,18 @@ export const stockMovementReasons = [
   "sales_return",
   // Goods sent back to the supplier, taken out of the lot they arrived in.
   "purchase_return",
+  // The four a warehouse work order logs when a line is reported completed.
+  // Unloading brings goods in off a purchase order; a pick-up takes them out to
+  // the customer collecting them; every internal type moves a lot from one
+  // location to another, which is logged as an "out" of the source lot and an
+  // "in" of the destination one; scrapping writes a lot off the shelf.
+  "warehouse_receipt",
+  "warehouse_issue",
+  "warehouse_transfer",
+  "warehouse_scrapped",
 ] as const satisfies readonly string[];
 
 export type StockMovementReason = (typeof stockMovementReasons)[number];
-
-// The subset of stockMovementReasons a staff member can pick when manually
-// correcting stock — the others are only ever written by the system itself.
-export const stockCorrectionReasons = [
-  "manual_correction",
-  "count_correction",
-  "damaged",
-] as const satisfies readonly string[];
-
-export type StockCorrectionReason = (typeof stockCorrectionReasons)[number];
 
 // Stock unit ("StkU") a stock lot is counted in — kg for coil/plate, pieces
 // for cut items, running/square/cubic metres for profiles.
@@ -1487,28 +1486,82 @@ export const printerEntries = [
 
 export type PrinterEntry = (typeof printerEntries)[number];
 
-export const warehouseWorkOrderStatuses = [
+// How far a production or transport work order has got. The warehouse has its
+// own, different ladder below — the two were one enum until the warehouse gained
+// a release step that neither of the others has.
+export const workOrderStatuses = [
   "new",
   "in_progress",
   "completed",
   "cancelled",
 ] as const satisfies readonly string[];
 
+export type WorkOrderStatus = (typeof workOrderStatuses)[number];
+
+// How far a warehouse work order has got, and what may be done to it.
+//
+// `new` is a basket lines can still be added to. `release` freezes it and prints
+// the papers, and only a released order can be cancelled back — nothing physical
+// has happened yet. Reporting a line completed is what actually moves the stock,
+// and it lands straight on `approved`: `ready` is kept for parity with the floor
+// terminals, which report through a path this application does not drive.
+export const warehouseWorkOrderStatuses = [
+  "new",
+  "released",
+  "ready",
+  "approved",
+] as const satisfies readonly string[];
+
 export type WarehouseWorkOrderStatus =
   (typeof warehouseWorkOrderStatuses)[number];
 
-export const warehouseWorkOrderLineTypes = [
-  "unloading",
-  "loading",
-  "transfer",
-  "processing",
-  "inspection",
-  "put_away",
+// What a warehouse work order is for. Every type is a move between two places;
+// what separates them is which two, and whether the move crosses the company
+// boundary — see WAREHOUSE_WORK_ORDER_TYPE_META for the route each one takes.
+export const warehouseWorkOrderTypes = [
+  "arranging",
+  "counting_location",
+  "counting_product",
+  "fetching",
   "picking",
+  "pick_up",
+  "relocating",
+  "restocking",
+  "scrapping",
+  "transferring",
+  "unloading",
 ] as const satisfies readonly string[];
 
-export type WarehouseWorkOrderLineType =
-  (typeof warehouseWorkOrderLineTypes)[number];
+export type WarehouseWorkOrderType = (typeof warehouseWorkOrderTypes)[number];
+
+// What reporting a warehouse work order line completed does to stock. A move
+// only changes where a lot sits; `in` and `out` are the two boundary crossings
+// that change how much of it there is; `count` reconciles a lot to what was
+// actually found on the shelf. This is what the completion routine branches on,
+// so a type without one could not be reported at all.
+export const warehouseStockEffects = [
+  "in",
+  "out",
+  "move",
+  "count",
+] as const satisfies readonly string[];
+
+export type WarehouseStockEffect = (typeof warehouseStockEffects)[number];
+
+// Returnable packaging the goods went out on, counted per work order. Pallets
+// are sized by the length they carry, which is why there are four of them.
+export const packagingTypes = [
+  "p2m",
+  "p2_5m",
+  "p3m",
+  "p4m",
+  "euro",
+  "coil",
+  "bundles",
+  "colli",
+] as const satisfies readonly string[];
+
+export type PackagingType = (typeof packagingTypes)[number];
 
 export const purchaseInvoiceBlockReasons = [
   "price_mismatch",
