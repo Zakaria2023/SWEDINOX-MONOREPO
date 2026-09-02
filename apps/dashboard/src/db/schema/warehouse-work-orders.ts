@@ -15,7 +15,7 @@ import {
 } from "drizzle-orm/mysql-core";
 import {
   packagingTypes,
-  warehouseWorkOrderStatuses,
+  workOrderStatuses,
   warehouseWorkOrderTypes,
 } from "../../lib/enums";
 import { Companies } from "./companies";
@@ -58,7 +58,7 @@ export const WarehouseWorkOrders = mysqlTable(
     // job without one would not appear on anybody's list.
     plannedDate: date("planned_date", { mode: "string" }),
 
-    status: mysqlEnum("status", warehouseWorkOrderStatuses)
+    status: mysqlEnum("status", workOrderStatuses)
       .notNull()
       .default("new"),
 
@@ -126,7 +126,7 @@ export const WarehouseWorkOrderLines = mysqlTable(
     // value and make every margin drawn from it a fiction.
     purchaseOrderItemUuid: char("purchase_order_item_uuid", { length: 36 }),
 
-    status: mysqlEnum("status", warehouseWorkOrderStatuses)
+    status: mysqlEnum("status", workOrderStatuses)
       .notNull()
       .default("new"),
 

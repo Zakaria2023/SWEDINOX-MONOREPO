@@ -41,6 +41,7 @@ import {
   LeadTimeMethod,
   LedgerAccountType,
   MachineCapacityUnit,
+  cuttingMachineOptions,
   MachineOptionType,
   MachineProductionType,
   machineProductionTypes,
@@ -4433,6 +4434,19 @@ export const MACHINE_OPTION_FOR_PROCESSING: Record<
   certificate_3_1: null,
 };
 
+/**
+ * Whether an option divides the material into different pieces from the ones
+ * that went in. A cut has to be reported against a kilo balance because what
+ * comes off the machine is not what went on it; a treatment does not, because
+ * it is.
+ */
+export const machineOptionCuts = (
+  option: MachineOptionType | null | undefined,
+): boolean =>
+  option
+    ? (cuttingMachineOptions as readonly MachineOptionType[]).includes(option)
+    : false;
+
 /** What running an option involves, or null when a row carries none. */
 export const machineOptionMetaOf = (
   option: MachineOptionType | null | undefined,
@@ -7175,66 +7189,92 @@ export const restateLotValue = ({
   return previousValue * (remainingQuantity / previousQuantity);
 };
 
-export type ProductionYieldInput = {
-  /** Material taken to the machine, out of the lot the order line reserved. */
-  consumed: number;
-  /** Finished goods the order line will be delivered from. */
-  produced: number;
-  /** Usable offcut going back to stock as a lot of its own. */
-  remnant: number;
-  /** What one unit of the input lot is carried at. */
-  inputUnitCost: number;
+// The tolerance the kilo balance is struck at. Weights are held to two
+// decimals, so three rounded figures can miss zero by a cent of a kilo without
+// anything being wrong. Anything larger is a real discrepancy.
+const PRODUCTION_BALANCE_TOLERANCE_KG = 0.01;
+
+export type ProductionRunLot = {
+  /** Weight in kilograms. */
+  kg: number;
+  /** What a kilogram of it is carried at. */
+  costPerKg: number;
 };
 
-export type ProductionYield = {
-  /** Material that came out as neither goods nor remnant. */
-  waste: number;
-  /** True when more came out than went in — impossible, so a caller must refuse. */
-  impossible: boolean;
+export type ProductionRunBalanceInput = {
+  /** Every lot taken to the machine, with what each is carried at. */
+  fetched: ProductionRunLot[];
+  /** Weight of the finished goods, across every line being reported. */
+  componentKg: number;
+  /** Usable offcut going back to the rack: the same material, so the same cost. */
+  remnantKg: number;
+  /** Swarf and drop. It leaves at no value, so its cost lands on the goods. */
+  scrapKg: number;
+};
+
+export type ProductionRunBalance = {
+  fetchedKg: number;
+  /** fetched − components − remnant − scrap. */
+  differenceKg: number;
+  /** Whether the run may be reported at all. */
+  balanced: boolean;
+  fetchedCost: number;
   remnantCost: number;
-  producedCost: number;
-  producedUnitCost: number;
+  componentCost: number;
+  componentCostPerKg: number;
 };
 
 /**
- * Splits the cost of the material a production run consumed across what it
- * produced and what it put back.
+ * Strikes a production run's balance, in kilograms.
  *
- * Sawing a bar destroys the lot it came from: what leaves the machine is
- * customer goods, a usable offcut, and waste. So the quantities have to close —
+ * Cutting steel destroys the lots it came from: what leaves the machine is
+ * customer goods, usable offcut, and scrap. Pieces are no guide to whether that
+ * adds up — two plates can legitimately become five pieces — so the books are
+ * kept in weight, and the run only closes when
  *
- *   consumed = produced + remnant + waste
+ *   fetched = components + remnant + scrap
  *
- * — and the money has to close with them, or stock value drifts every run.
+ * A run that does not balance is not a run that lost a little material; it is a
+ * run somebody has mistyped. Reporting it anyway would invent or destroy steel
+ * that physically exists, so the caller refuses instead.
  *
- * The remnant is carried at the input's unit cost, because it is the same
- * material in a shorter length and anyone may order it next. Everything else,
- * waste included, lands on the produced goods. That is deliberate: yield loss is
- * a cost of the output that caused it, so a run that wastes half a bar shows the
- * goods costing nearly twice the raw material — which is exactly the signal that
- * makes bad sawing visible in the margin instead of hiding it in stock.
- *
- * Producing more than was consumed is flagged rather than silently absorbed. It
- * means the figures are wrong, and inventing material to reconcile them is how a
- * stock ledger starts lying.
+ * The money follows the same split. The offcut is carried at what the input was
+ * carried at, because it is the same material in a smaller size and anyone may
+ * order it next. Scrap leaves at nothing. Everything remaining — the scrap's
+ * cost included — lands on the finished goods. That is deliberate: yield loss
+ * belongs to the output that caused it, so a wasteful cut shows up as thin
+ * margin on the line that caused it rather than disappearing into the
+ * valuation of what is left on the shelf.
  */
-export const productionYield = ({
-  consumed,
-  produced,
-  remnant,
-  inputUnitCost,
-}: ProductionYieldInput): ProductionYield => {
-  const waste = consumed - produced - remnant;
-  const consumedCost = consumed * inputUnitCost;
-  const remnantCost = remnant * inputUnitCost;
-  const producedCost = consumedCost - remnantCost;
+export const productionRunBalance = ({
+  fetched,
+  componentKg,
+  remnantKg,
+  scrapKg,
+}: ProductionRunBalanceInput): ProductionRunBalance => {
+  const fetchedKg = fetched.reduce((total, lot) => total + lot.kg, 0);
+  const fetchedCost = fetched.reduce(
+    (total, lot) => total + lot.kg * lot.costPerKg,
+    0,
+  );
+
+  const differenceKg = fetchedKg - componentKg - remnantKg - scrapKg;
+
+  // Averaged over everything fetched, because a cut mixes the lots it was fed:
+  // once two coils are on the same bed there is no telling which one a given
+  // offcut came off.
+  const costPerKg = fetchedKg > 0 ? fetchedCost / fetchedKg : 0;
+  const remnantCost = remnantKg * costPerKg;
+  const componentCost = fetchedCost - remnantCost;
 
   return {
-    waste,
-    impossible: waste < 0,
+    fetchedKg,
+    differenceKg,
+    balanced: Math.abs(differenceKg) <= PRODUCTION_BALANCE_TOLERANCE_KG,
+    fetchedCost,
     remnantCost,
-    producedCost,
-    producedUnitCost: produced > 0 ? producedCost / produced : 0,
+    componentCost,
+    componentCostPerKg: componentKg > 0 ? componentCost / componentKg : 0,
   };
 };
 
