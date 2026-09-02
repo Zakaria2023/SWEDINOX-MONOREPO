@@ -878,6 +878,30 @@ export const machineOptionTypes = [
 
 export type MachineOptionType = (typeof machineOptionTypes)[number];
 
+// The options that divide the material into different pieces from the ones that
+// went in, rather than treating the pieces they were handed.
+//
+// This is the difference between the two ways a production line is reported
+// back. Grinding two plates gives two ground plates: the count is unchanged,
+// nothing is left over, and the floor only has to say what it actually did. But
+// shearing two plates can give five pieces and a bin of offcuts, so what came
+// out has to be described separately from what went in, and the kilos of the two
+// have to reconcile — see productionRemainderBalance.
+//
+// Punching and perforating are treatments by this measure. They make holes and
+// they do drop swarf, but the plate that comes off the bed is the same plate
+// that went on it, and it is the piece count that decides whether the output
+// needs describing at all.
+export const cuttingMachineOptions = [
+  "decoiling",
+  "laser",
+  "sawing",
+  "shear_cut",
+  "slitting",
+] as const satisfies readonly MachineOptionType[];
+
+export type CuttingMachineOption = (typeof cuttingMachineOptions)[number];
+
 export const machineProductionTypes = [
   "decoiler",
   "internal_processing",
@@ -1486,34 +1510,41 @@ export const printerEntries = [
 
 export type PrinterEntry = (typeof printerEntries)[number];
 
-// How far a production or transport work order has got. The warehouse has its
-// own, different ladder below — the two were one enum until the warehouse gained
-// a release step that neither of the others has.
-export const workOrderStatuses = [
+// How far a transport work order has got. Warehouse and production work orders
+// share the ladder below instead — both are released to the floor, reported back
+// and approved — where a trip is simply picked up and driven.
+export const transportWorkOrderStatuses = [
   "new",
   "in_progress",
   "completed",
   "cancelled",
 ] as const satisfies readonly string[];
 
-export type WorkOrderStatus = (typeof workOrderStatuses)[number];
+export type TransportWorkOrderStatus =
+  (typeof transportWorkOrderStatuses)[number];
 
-// How far a warehouse work order has got, and what may be done to it.
+// How far a work order has got, and what may be done to it. Warehouse and
+// production work orders run the same ladder, which is why they also share one
+// number sequence: raising a sales order hands out consecutive numbers across
+// both kinds in a single click.
 //
 // `new` is a basket lines can still be added to. `release` freezes it and prints
 // the papers, and only a released order can be cancelled back — nothing physical
-// has happened yet. Reporting a line completed is what actually moves the stock,
-// and it lands straight on `approved`: `ready` is kept for parity with the floor
-// terminals, which report through a path this application does not drive.
-export const warehouseWorkOrderStatuses = [
+// has happened yet. Reporting a line completed is what actually moves the stock.
+//
+// The two kinds part company at the end. A warehouse order lands straight on
+// `approved` when it is reported, because there is nothing to check: the floor
+// either moved the goods or it did not. A production order stops at `ready` and
+// waits to be approved, because what came off the machine has to be looked at
+// before it counts.
+export const workOrderStatuses = [
   "new",
   "released",
   "ready",
   "approved",
 ] as const satisfies readonly string[];
 
-export type WarehouseWorkOrderStatus =
-  (typeof warehouseWorkOrderStatuses)[number];
+export type WorkOrderStatus = (typeof workOrderStatuses)[number];
 
 // What a warehouse work order is for. Every type is a move between two places;
 // what separates them is which two, and whether the move crosses the company
@@ -1562,6 +1593,21 @@ export const packagingTypes = [
 ] as const satisfies readonly string[];
 
 export type PackagingType = (typeof packagingTypes)[number];
+
+// What is left on the floor when a cutting work order is reported back.
+//
+// A remainder is weighed rather than counted, because the balance a completion
+// has to satisfy is in kilos: everything fetched must come out again as goods
+// plus remainders. Where it goes is what separates the two — a usable offcut
+// returns to the rack the material came from and can be sold again, while scrap
+// goes to the scrap location at no value. Collapsing them would mean either
+// writing off every offcut or putting swarf back on the shelf as stock.
+export const remainderCategories = [
+  "remnant",
+  "scrap",
+] as const satisfies readonly string[];
+
+export type RemainderCategory = (typeof remainderCategories)[number];
 
 export const purchaseInvoiceBlockReasons = [
   "price_mismatch",

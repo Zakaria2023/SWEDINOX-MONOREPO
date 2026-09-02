@@ -11,7 +11,7 @@ import {
   timestamp,
   varchar,
 } from "drizzle-orm/mysql-core";
-import { workOrderStatuses } from "../../lib/enums";
+import { transportWorkOrderStatuses } from "../../lib/enums";
 import { Companies } from "./companies";
 import { Products } from "./products";
 
@@ -25,7 +25,7 @@ export const TransportWorkOrders = mysqlTable(
     tripNumber: int("trip_number"),
     date: date("date", { mode: "string" }),
     vehicle: varchar("vehicle", { length: 255 }),
-    status: mysqlEnum("status", workOrderStatuses).default("new"),
+    status: mysqlEnum("status", transportWorkOrderStatuses).default("new"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
   },
@@ -44,7 +44,7 @@ export const TransportWorkOrderLines = mysqlTable(
     orderNumber: varchar("order_number", { length: 50 }),
     action: varchar("action", { length: 100 }),
     sourceStatus: varchar("source_status", { length: 100 }),
-    status: mysqlEnum("status", workOrderStatuses)
+    status: mysqlEnum("status", transportWorkOrderStatuses)
       .notNull()
       .default("new"),
     lengthMm: int("length_mm"),

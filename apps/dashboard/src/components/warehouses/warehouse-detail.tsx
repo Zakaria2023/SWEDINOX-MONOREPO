@@ -29,7 +29,7 @@ import {
   WAREHOUSE_LOADING_LOCATION_LABELS,
   WAREHOUSE_LOCATION_TYPE_LABELS,
   WAREHOUSE_TYPE_LABELS,
-  WAREHOUSE_WORK_ORDER_STATUS_LABELS,
+  WORK_ORDER_STATUS_LABELS,
   WORKORDER_PRINT_METHOD_LABELS,
   WORKORDER_PROCESSING_METHOD_LABELS,
   WORKORDER_RELEASE_METHOD_LABELS,
@@ -669,7 +669,7 @@ export const WarehouseDetailView = ({ warehouse }: Props) => {
                         value={row.status}
                         label={
                           row.status
-                            ? WAREHOUSE_WORK_ORDER_STATUS_LABELS[row.status]
+                            ? WORK_ORDER_STATUS_LABELS[row.status]
                             : null
                         }
                       />

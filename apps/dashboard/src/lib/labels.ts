@@ -125,10 +125,11 @@ import {
   WorkorderPrintMethod,
   WorkorderSlipType,
   WorkorderProcessingMethod,
-  WarehouseWorkOrderStatus,
-  WarehouseWorkOrderType,
   WorkOrderStatus,
+  WarehouseWorkOrderType,
+  TransportWorkOrderStatus,
   PackagingType,
+  RemainderCategory,
 } from "@/lib/enums";
 
 export const ADDRESS_CATEGORY_LABELS: Record<AddressCategory, string> = {
@@ -1583,17 +1584,17 @@ export const WORKORDER_PROCESSING_METHOD_LABELS: Record<
   order_picking: "Order Picking",
 };
 
-export const WORK_ORDER_STATUS_LABELS: Record<WorkOrderStatus, string> = {
+export const TRANSPORT_WORK_ORDER_STATUS_LABELS: Record<
+  TransportWorkOrderStatus,
+  string
+> = {
   new: "New",
   in_progress: "In Progress",
   completed: "Completed",
   cancelled: "Cancelled",
 };
 
-export const WAREHOUSE_WORK_ORDER_STATUS_LABELS: Record<
-  WarehouseWorkOrderStatus,
-  string
-> = {
+export const WORK_ORDER_STATUS_LABELS: Record<WorkOrderStatus, string> = {
   new: "New",
   released: "Released",
   ready: "Ready",
@@ -1615,6 +1616,11 @@ export const WAREHOUSE_WORK_ORDER_TYPE_LABELS: Record<
   scrapping: "Scrapping",
   transferring: "Transferring",
   unloading: "Unloading",
+};
+
+export const REMAINDER_CATEGORY_LABELS: Record<RemainderCategory, string> = {
+  remnant: "Remnant",
+  scrap: "Scrap",
 };
 
 export const PACKAGING_TYPE_LABELS: Record<PackagingType, string> = {

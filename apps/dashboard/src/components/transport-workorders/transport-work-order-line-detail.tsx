@@ -2,7 +2,7 @@ import Link from "next/link";
 import { TransportWorkOrderLineDetail } from "@/app/(dashboard)/transport-workorders/actions";
 import { DetailField } from "@/components/ui/detail-field";
 import { formatDateColumn, formatDateValue } from "@/lib/helpers";
-import { WORK_ORDER_STATUS_LABELS } from "@/lib/labels";
+import { TRANSPORT_WORK_ORDER_STATUS_LABELS } from "@/lib/labels";
 
 type Props = {
   line: TransportWorkOrderLineDetail;
@@ -27,7 +27,7 @@ export const TransportWorkOrderLineDetailView = ({ line }: Props) => (
           label="Work order status"
           value={
             line.workOrderStatus
-              ? WORK_ORDER_STATUS_LABELS[line.workOrderStatus]
+              ? TRANSPORT_WORK_ORDER_STATUS_LABELS[line.workOrderStatus]
               : null
           }
         />
@@ -39,7 +39,7 @@ export const TransportWorkOrderLineDetailView = ({ line }: Props) => (
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         <DetailField
           label="Line status"
-          value={WORK_ORDER_STATUS_LABELS[line.status]}
+          value={TRANSPORT_WORK_ORDER_STATUS_LABELS[line.status]}
         />
         <DetailField label="Source status" value={line.sourceStatus} />
         <DetailField label="Action" value={line.action} />
