@@ -3,19 +3,7 @@
 import { db } from "@/db";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { OrderItems } from "@/db/schema/order-items";
-import {
-  OrderItemOptions,
-  SelectOrderItemOptions,
-} from "@/db/schema/order-item-options";
-import { Orders, SelectOrders } from "@/db/schema/orders";
-import { Contacts, SelectContacts } from "@/db/schema/contacts";
-import { CompanyAddresses } from "@/db/schema/company-addresses";
-import { SalesOptions, SelectSalesOptions } from "@/db/schema/sales-options";
-import { SelectTexts, Texts } from "@/db/schema/texts";
-import {
-  SelectTextCategories,
-  TextCategories,
-} from "@/db/schema/text-categories";
+import { Orders } from "@/db/schema/orders";
 import { Products, SelectProducts } from "@/db/schema/products";
 import { PurchaseOrderItems } from "@/db/schema/purchase-order-items";
 import { JournalEntries } from "@/db/schema/journal-entries";
@@ -34,7 +22,7 @@ import {
 import { SelectWarehouses, Warehouses } from "@/db/schema/warehouses";
 import {
   PackagingType,
-  warehouseWorkOrderStatuses,
+  workOrderStatuses,
   warehouseWorkOrderTypes,
 } from "@/lib/enums";
 import {
@@ -51,8 +39,16 @@ import {
   todayDateString,
   WAREHOUSE_WORK_ORDER_TYPE_META,
 } from "@/lib/helpers";
-import { STOCK_MOVEMENT_REASON_LABELS } from "@/lib/labels";
+import {
+  STOCK_MOVEMENT_REASON_LABELS,
+  WAREHOUSE_WORK_ORDER_TYPE_LABELS,
+} from "@/lib/labels";
 import { recordFreightMovement } from "@/lib/server/freight";
+import { applyMove } from "@/lib/server/stock-movements";
+import {
+  getWorkOrderLineDetail,
+  LineDetail,
+} from "@/lib/server/work-order-line-detail";
 import {
   buildInventoryMovementEntry,
   LEDGER_ACCOUNTS,
@@ -130,66 +126,13 @@ export type WorkOrderLineListItem = SelectWarehouseWorkOrderLines & {
  * shelf: what else is available, in what sizes, and under which charge. It is
  * why the panel lists lots the line has nothing to do with.
  */
-export type LineStockRow = {
-  uuid: SelectStock["uuid"];
-  locationName: SelectWarehouses["name"] | null;
-  productName: SelectProducts["name"] | null;
-  lengthMm: SelectStock["lengthMm"];
-  widthMm: SelectStock["widthMm"];
-  thicknessMm: SelectStock["thicknessMm"];
-  // Technical is what stands on the shelf, reserved is what is spoken for, and
-  // available is the difference — which goes negative when more has been
-  // promised than held, and is left that way rather than clamped.
-  technical: number;
-  reserved: number;
-  available: number;
-  charge: SelectStock["charge"];
-  internalCharge: SelectStock["internalCharge"];
-  quality: SelectStock["quality"];
-  remark: SelectStock["remark"];
-};
-
-/** The sales order behind the line, as the floor needs to read it. */
-export type LineOrderContext = {
-  orderUuid: SelectOrders["uuid"];
-  orderNumber: SelectOrders["id"];
-  companyUuid: SelectCompanies["uuid"] | null;
-  companyName: SelectCompanies["companyName"] | null;
-  status: SelectOrders["status"];
-  deliveryDate: SelectOrders["deliveryDate"];
-  customerRef: SelectOrders["customerRef"];
-  seller: SelectOrders["seller"];
-  contactName: string | null;
-  telephone: SelectContacts["telephone"] | null;
-  deliveryAddress: string | null;
-};
-
-export type LineOptionRow = {
-  uuid: SelectOrderItemOptions["uuid"];
-  // The order the options were added in. No column records it, so it is the
-  // row's position rather than a stored sequence — enough to keep a two-step
-  // finish in the order somebody meant it, which is what the floor reads it for.
-  sequenceNumber: number;
-  name: SelectSalesOptions["name"] | null;
-  code: SelectSalesOptions["code"] | null;
-  quantity: SelectOrderItemOptions["quantity"];
-  unit: SelectOrderItemOptions["unit"];
-};
-
-export type LineTextRow = {
-  uuid: SelectTexts["uuid"];
-  categoryName: SelectTextCategories["name"] | null;
-  title: SelectTexts["title"];
-  textBlock: SelectTexts["textBlock"];
-};
-
-/** Everything the Details panel shows for one line, in one round trip. */
-export type LineDetail = {
-  stock: LineStockRow[];
-  order: LineOrderContext | null;
-  options: LineOptionRow[];
-  texts: LineTextRow[];
-};
+export type {
+  LineDetail,
+  LineOptionRow,
+  LineOrderContext,
+  LineStockRow,
+  LineTextRow,
+} from "@/lib/server/work-order-line-detail";
 
 /**
  * The lots a line may be drawn from: still on the shelf, not blocked, and not
@@ -207,6 +150,30 @@ export type WorkOrderPickRow = SelectWarehouseWorkOrderPicks & {
   stockInternalCharge: SelectStock["internalCharge"] | null;
   stockQuantity: SelectStock["quantity"] | null;
   fromLocationName: SelectWarehouses["name"] | null;
+};
+
+/**
+ * A line carrying the three levels above it, so the overview can be read as a
+ * tree without nesting the query. The floor works day first, then by what kind
+ * of job it is, then by order.
+ */
+export type WarehouseTreeRow = WorkOrderLineListItem & {
+  lineUuid: string;
+  workOrderNumber: SelectWarehouseWorkOrders["number"];
+  // The job has a status of its own, and it is what Release and Cancel are
+  // decisions about — a line can be reported while the job is still open.
+  workOrderStatus: SelectWarehouseWorkOrders["status"];
+  plannedDate: SelectWarehouseWorkOrders["plannedDate"];
+  type: SelectWarehouseWorkOrders["type"];
+  /** Level 2, as the floor reads it: "Picking". */
+  groupLabel: string;
+  /** Level 4: "1 Cold-rolled plate 304 1,5mm". */
+  lineLabel: string;
+};
+
+export type WarehouseWorkOrderTree = {
+  page: Paged<WorkOrderListItem>;
+  rows: WarehouseTreeRow[];
 };
 
 export type WorkOrderDetail = WorkOrderListItem & {
@@ -298,7 +265,7 @@ const WORK_ORDER_SORTABLE = {
 // how far along it is, and which warehouse it belongs to.
 const WORK_ORDER_FILTERS = {
   type: enumFilter(WarehouseWorkOrders.type, warehouseWorkOrderTypes),
-  status: enumFilter(WarehouseWorkOrders.status, warehouseWorkOrderStatuses),
+  status: enumFilter(WarehouseWorkOrders.status, workOrderStatuses),
   warehouse: relationFilter(WarehouseWorkOrders.warehouseUuid),
   plannedDate: dateRangeFilter(WarehouseWorkOrders.plannedDate),
 };
@@ -420,9 +387,12 @@ export const exportWarehouseWorkOrders = async (
 
 // Not exported: every export in a "use server" file becomes a callable
 // endpoint, and only the detail page needs these.
-const getWarehouseWorkOrderLines = async (
-  workOrderUuid: string,
+export const getWarehouseWorkOrderLines = async (
+  workOrderUuids: string[],
 ): Promise<WorkOrderLineListItem[]> => {
+  if (workOrderUuids.length === 0) {
+    return [];
+  }
   const rows = await db
     .select({
       ...getTableColumns(WarehouseWorkOrderLines),
@@ -451,7 +421,7 @@ const getWarehouseWorkOrderLines = async (
       ToLocation,
       eq(WarehouseWorkOrderLines.toLocationUuid, ToLocation.uuid),
     )
-    .where(eq(WarehouseWorkOrderLines.workOrderUuid, workOrderUuid))
+    .where(inArray(WarehouseWorkOrderLines.workOrderUuid, workOrderUuids))
     .orderBy(WarehouseWorkOrderLines.lineNumber, WarehouseWorkOrderLines.id);
 
   return rows.map(
@@ -528,7 +498,6 @@ export const getWarehouseWorkOrderLineDetail = async (
     .select({
       productUuid: WarehouseWorkOrderLines.productUuid,
       orderItemUuid: WarehouseWorkOrderLines.orderItemUuid,
-      companyUuid: WarehouseWorkOrderLines.companyUuid,
     })
     .from(WarehouseWorkOrderLines)
     .where(eq(WarehouseWorkOrderLines.uuid, lineUuid))
@@ -538,171 +507,7 @@ export const getWarehouseWorkOrderLineDetail = async (
     return null;
   }
 
-  const empty: LineDetail = { stock: [], order: null, options: [], texts: [] };
-
-  // Sequential rather than concurrent: this database caps connections.
-  const stockRows = line.productUuid
-    ? await db
-        .select({
-          uuid: Stock.uuid,
-          locationName: Warehouses.name,
-          productName: Products.name,
-          lengthMm: Stock.lengthMm,
-          widthMm: Stock.widthMm,
-          thicknessMm: Stock.thicknessMm,
-          quantity: Stock.quantity,
-          reservedQuantity: Stock.reservedQuantity,
-          charge: Stock.charge,
-          internalCharge: Stock.internalCharge,
-          quality: Stock.quality,
-          remark: Stock.remark,
-        })
-        .from(Stock)
-        .leftJoin(Warehouses, eq(Stock.locationUuid, Warehouses.uuid))
-        .leftJoin(Products, eq(Stock.productUuid, Products.uuid))
-        .where(eq(Stock.productUuid, line.productUuid))
-        .orderBy(Warehouses.name, Stock.charge)
-    : [];
-
-  const stock: LineStockRow[] = stockRows.map((row) => {
-    const technical = Number(row.quantity ?? 0);
-    const reserved = Number(row.reservedQuantity ?? 0);
-    return {
-      uuid: row.uuid,
-      locationName: row.locationName ?? null,
-      productName: row.productName ?? null,
-      lengthMm: row.lengthMm,
-      widthMm: row.widthMm,
-      thicknessMm: row.thicknessMm,
-      technical,
-      reserved,
-      // Deliberately not clamped: more can be promised than held, and hiding
-      // that would tell the floor there is stock to pick when there is not.
-      available: technical - reserved,
-      charge: row.charge,
-      internalCharge: row.internalCharge,
-      quality: row.quality,
-      remark: row.remark,
-    };
-  });
-
-  if (!line.orderItemUuid) {
-    return { ...empty, stock };
-  }
-
-  const [orderRow] = await db
-    .select({
-      orderUuid: Orders.uuid,
-      orderNumber: Orders.id,
-      companyUuid: Companies.uuid,
-      companyName: Companies.companyName,
-      status: Orders.status,
-      deliveryDate: Orders.deliveryDate,
-      customerRef: Orders.customerRef,
-      seller: Orders.seller,
-      firstName: Contacts.firstName,
-      lastName: Contacts.lastName,
-      telephone: Contacts.telephone,
-      street: CompanyAddresses.streetAndNo,
-      postalCode: CompanyAddresses.postalCode,
-      city: CompanyAddresses.city,
-      country: CompanyAddresses.country,
-    })
-    .from(OrderItems)
-    .innerJoin(Orders, eq(OrderItems.orderUuid, Orders.uuid))
-    .leftJoin(Companies, eq(Orders.companyUuid, Companies.uuid))
-    .leftJoin(Contacts, eq(Orders.contactUuid, Contacts.uuid))
-    .leftJoin(
-      CompanyAddresses,
-      eq(Orders.deliveryAddressUuid, CompanyAddresses.uuid),
-    )
-    .where(eq(OrderItems.uuid, line.orderItemUuid))
-    .limit(1);
-
-  const optionRows = await db
-    .select({
-      uuid: OrderItemOptions.uuid,
-      name: SalesOptions.name,
-      code: SalesOptions.code,
-      quantity: OrderItemOptions.quantity,
-      unit: OrderItemOptions.unit,
-    })
-    .from(OrderItemOptions)
-    .leftJoin(SalesOptions, eq(OrderItemOptions.optionUuid, SalesOptions.uuid))
-    .where(eq(OrderItemOptions.orderItemUuid, line.orderItemUuid))
-    .orderBy(OrderItemOptions.id);
-
-  // A note reaches the floor either because it was written on this order or
-  // because it stands against the customer for every order they place — the
-  // goods-reception hours on a delivery address are the second kind.
-  const textRows = orderRow
-    ? await db
-        .select({
-          uuid: Texts.uuid,
-          categoryName: TextCategories.name,
-          title: Texts.title,
-          textBlock: Texts.textBlock,
-        })
-        .from(Texts)
-        .leftJoin(
-          TextCategories,
-          eq(Texts.textCategoryUuid, TextCategories.uuid),
-        )
-        .where(
-          orderRow.companyUuid
-            ? or(
-                eq(Texts.orderUuid, orderRow.orderUuid),
-                eq(Texts.companyUuid, orderRow.companyUuid),
-              )
-            : eq(Texts.orderUuid, orderRow.orderUuid),
-        )
-        .orderBy(Texts.sequenceNumber, Texts.id)
-    : [];
-
-  const contactName =
-    [orderRow?.firstName, orderRow?.lastName].filter(Boolean).join(" ") || null;
-
-  const deliveryAddress =
-    [
-      orderRow?.street,
-      [orderRow?.postalCode, orderRow?.city].filter(Boolean).join(" "),
-      orderRow?.country,
-    ]
-      .filter((part) => part && part.trim() !== "")
-      .join(", ") || null;
-
-  return {
-    stock,
-    order: orderRow
-      ? {
-          orderUuid: orderRow.orderUuid,
-          orderNumber: orderRow.orderNumber,
-          companyUuid: orderRow.companyUuid ?? null,
-          companyName: orderRow.companyName ?? null,
-          status: orderRow.status,
-          deliveryDate: orderRow.deliveryDate,
-          customerRef: orderRow.customerRef,
-          seller: orderRow.seller,
-          contactName,
-          telephone: orderRow.telephone ?? null,
-          deliveryAddress,
-        }
-      : null,
-    options: optionRows.map((row, index) => ({
-      uuid: row.uuid,
-      sequenceNumber: (index + 1) * 10,
-      name: row.name ?? null,
-      code: row.code ?? null,
-      quantity: row.quantity,
-      unit: row.unit,
-    })),
-    texts: textRows.map((row) => ({
-      uuid: row.uuid,
-      categoryName: row.categoryName ?? null,
-      title: row.title,
-      textBlock: row.textBlock,
-    })),
-  };
+  return getWorkOrderLineDetail(line);
 };
 
 export const getWarehouseWorkOrderPicks = async (
@@ -738,6 +543,47 @@ export const getWarehouseWorkOrderPicks = async (
  * One work order with the warehouse it belongs to, every line on it and the
  * packaging its goods went out on.
  */
+/**
+ * The overview, as the four-level tree the floor reads.
+ *
+ * Paged by work order rather than by line: a job's lines belong together, and
+ * splitting one across two pages would show a total that means nothing.
+ */
+export const getWarehouseWorkOrderTree = async (
+  query: TableQuery,
+): Promise<WarehouseWorkOrderTree> => {
+  const page = await getWarehouseWorkOrders(query);
+  const lines = await getWarehouseWorkOrderLines(
+    page.rows.map((workOrder) => workOrder.uuid),
+  );
+
+  const byUuid = new Map(page.rows.map((row) => [row.uuid, row]));
+
+  return {
+    page,
+    rows: lines.flatMap((line) => {
+      const workOrder = byUuid.get(line.workOrderUuid);
+      if (!workOrder) {
+        return [];
+      }
+      return [
+        {
+          ...line,
+          lineUuid: line.uuid,
+          workOrderNumber: workOrder.number,
+          workOrderStatus: workOrder.status,
+          plannedDate: workOrder.plannedDate,
+          type: workOrder.type,
+          groupLabel: WAREHOUSE_WORK_ORDER_TYPE_LABELS[workOrder.type],
+          lineLabel: [line.lineNumber, line.productName ?? line.productCode]
+            .filter((part) => part !== null && part !== undefined)
+            .join(" "),
+        },
+      ];
+    }),
+  };
+};
+
 export const getWarehouseWorkOrderDetail = async (
   uuid: string,
 ): Promise<WorkOrderDetail | null> => {
@@ -765,7 +611,7 @@ export const getWarehouseWorkOrderDetail = async (
   }
 
   // Sequential rather than concurrent: this database caps connections.
-  const lines = await getWarehouseWorkOrderLines(uuid);
+  const lines = await getWarehouseWorkOrderLines([uuid]);
   const packagings = await db
     .select()
     .from(WarehouseWorkOrderPackagings)
@@ -1039,169 +885,6 @@ export const prepareWarehouseWorkOrderLine = async (
   } catch (error) {
     return { error: describeError(error, "Failed to prepare the line") };
   }
-};
-
-/**
- * Move a lot from one location to another.
- *
- * The quantity leaves the source lot and joins a lot of the same material
- * standing at the destination, or starts one if none is there. Value travels
- * with it, so the two lots together are worth exactly what the one was — which
- * is why an internal move posts nothing to the ledger.
- *
- * The reservation travels too. A lot picked for a customer arrives at the
- * staging shelf spoken for, which is what stops the same steel being sold twice
- * while it waits to be loaded.
- */
-const applyMove = async (
-  tx: Transaction,
-  params: {
-    source: SelectStock;
-    quantity: number;
-    toLocationUuid: string;
-    committedToOrder: boolean;
-    reason: "warehouse_transfer";
-    userId: string;
-    orderUuid: string | null;
-  },
-): Promise<void> => {
-  const { source, quantity } = params;
-  const previousQuantity = Number(source.quantity);
-
-  if (quantity > previousQuantity) {
-    throw new Error(
-      `Cannot move ${quantity} — the lot only holds ${previousQuantity}.`,
-    );
-  }
-
-  // Moving a lot to where it already stands would split it in two for no
-  // reason. Nothing has to happen, so nothing does.
-  if (source.locationUuid === params.toLocationUuid) {
-    return;
-  }
-
-  const unitCost = Number(source.valuationPrice ?? 0);
-  const previousValue = Number(source.valuationEuro ?? 0);
-  const remainingQuantity = previousQuantity - quantity;
-  const remainingValue = restateLotValue({
-    previousQuantity,
-    remainingQuantity,
-    unitCost,
-    previousValue,
-  });
-  const valueMoved = previousValue - remainingValue;
-
-  // The reservation follows the goods, capped at what is actually there to
-  // release. A lot picked for a customer arrives spoken for even when the bin
-  // it came out of held no reservation at all — being picked is what commits
-  // it, which is what stops the same steel being sold twice while it waits on
-  // the staging shelf.
-  const carried = Math.min(quantity, Number(source.reservedQuantity ?? 0));
-  const arrivingReserved = params.committedToOrder ? quantity : carried;
-
-  const [updated] = await tx
-    .update(Stock)
-    .set({
-      quantity: remainingQuantity.toFixed(3),
-      reservedQuantity: (
-        Number(source.reservedQuantity ?? 0) - carried
-      ).toFixed(3),
-      valuationEuro: remainingValue.toFixed(2),
-    })
-    .where(and(eq(Stock.uuid, source.uuid), eq(Stock.quantity, source.quantity)));
-
-  if (updated.affectedRows === 0) {
-    throw new Error(
-      "The lot changed while moving it — please refresh and try again.",
-    );
-  }
-
-  // Candidates are narrowed in SQL and matched in code: a lot is the same lot
-  // as this one when its charge and internal charge agree, and NULL does not
-  // compare equal to NULL in SQL.
-  const candidates = await tx
-    .select()
-    .from(Stock)
-    .where(
-      and(
-        eq(Stock.productUuid, source.productUuid),
-        eq(Stock.locationUuid, params.toLocationUuid),
-        eq(Stock.status, "pending"),
-        ne(Stock.uuid, source.uuid),
-      ),
-    );
-
-  const destination = candidates.find(
-    (lot) =>
-      lot.charge === source.charge &&
-      lot.internalCharge === source.internalCharge &&
-      lot.quality === source.quality,
-  );
-
-  const destinationUuid = destination?.uuid ?? generateUuid();
-
-  if (destination) {
-    await tx
-      .update(Stock)
-      .set({
-        quantity: (Number(destination.quantity) + quantity).toFixed(3),
-        reservedQuantity: (
-          Number(destination.reservedQuantity ?? 0) + arrivingReserved
-        ).toFixed(3),
-        valuationEuro: (
-          Number(destination.valuationEuro ?? 0) + valueMoved
-        ).toFixed(2),
-      })
-      .where(eq(Stock.uuid, destination.uuid));
-  } else {
-    const {
-      id: _id,
-      uuid: _uuid,
-      createdAt: _createdAt,
-      updatedAt: _updatedAt,
-      ...attributes
-    } = source;
-
-    // Everything else about the lot travels with it — its charge, its quality,
-    // its supplier, the purchase it arrived on, whether it is blocked — because
-    // it is the same steel standing somewhere else. Only where it is, how much
-    // of it there is and what that much is worth are new. The status is stated
-    // rather than copied: a lot that has just been put down is holding goods.
-    await tx.insert(Stock).values({
-      ...attributes,
-      uuid: destinationUuid,
-      locationUuid: params.toLocationUuid,
-      status: "pending",
-      quantity: quantity.toFixed(3),
-      reservedQuantity: arrivingReserved.toFixed(3),
-      valuationEuro: valueMoved.toFixed(2),
-    });
-  }
-
-  // Two movements, because two lots changed. Netting them into one would leave
-  // the stock ledger unable to say where the material actually went.
-  await tx.insert(StockMovements).values([
-    {
-      uuid: generateUuid(),
-      productUuid: source.productUuid,
-      stockUuid: source.uuid,
-      type: "out",
-      reason: params.reason,
-      quantity: quantity.toFixed(3),
-      orderUuid: params.orderUuid,
-      createdByUserId: params.userId,
-    },
-    {
-      uuid: generateUuid(),
-      productUuid: source.productUuid,
-      stockUuid: destinationUuid,
-      type: "in",
-      reason: params.reason,
-      quantity: quantity.toFixed(3),
-      orderUuid: params.orderUuid,
-      createdByUserId: params.userId,
-    },
-  ]);
 };
 
 /**

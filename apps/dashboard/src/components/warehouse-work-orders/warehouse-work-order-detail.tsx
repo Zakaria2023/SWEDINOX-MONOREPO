@@ -5,7 +5,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Ban, Package, Plus, Printer, Tag } from "lucide-react";
 import {
+  cancelWarehouseWorkOrder,
+  getWarehouseWorkOrderLineDetail,
   releaseWarehouseWorkOrder,
+  saveWarehouseWorkOrderPackaging,
   WorkOrderDetail,
   WorkOrderLineListItem,
 } from "@/app/(dashboard)/warehouse-work-orders/actions";
@@ -32,13 +35,13 @@ import {
 } from "@/lib/helpers";
 import {
   PACKAGING_TYPE_LABELS,
-  WAREHOUSE_WORK_ORDER_STATUS_LABELS,
+  WORK_ORDER_STATUS_LABELS,
   WAREHOUSE_WORK_ORDER_TYPE_LABELS,
 } from "@/lib/labels";
+import { CancelWorkOrderDialog } from "@/components/work-orders/cancel-work-order-dialog";
+import { LineDetailDialog } from "@/components/work-orders/line-detail-dialog";
+import { PackagingDialog } from "@/components/work-orders/packaging-dialog";
 import { AddLineDialog } from "./add-line-dialog";
-import { CancelWorkOrderDialog } from "./cancel-work-order-dialog";
-import { PackagingDialog } from "./packaging-dialog";
-import { LineDetailDialog } from "./line-detail-dialog";
 import { PrepareLineDialog } from "./prepare-line-dialog";
 import { ReportCompletionDialog } from "./report-completion-dialog";
 
@@ -187,7 +190,7 @@ export const WarehouseWorkOrderDetailView = ({
             <div className="mt-1">
               <StatusBadge
                 value={workOrder.status}
-                label={WAREHOUSE_WORK_ORDER_STATUS_LABELS[workOrder.status]}
+                label={WORK_ORDER_STATUS_LABELS[workOrder.status]}
               />
             </div>
           </div>
@@ -278,7 +281,7 @@ export const WarehouseWorkOrderDetailView = ({
                       <StatusBadge
                         value={line.status}
                         label={
-                          WAREHOUSE_WORK_ORDER_STATUS_LABELS[line.status]
+                          WORK_ORDER_STATUS_LABELS[line.status]
                         }
                       />
                     </TableCell>
@@ -398,6 +401,7 @@ export const WarehouseWorkOrderDetailView = ({
       />
       <LineDetailDialog
         line={detailLine}
+        load={getWarehouseWorkOrderLineDetail}
         onOpenChange={(open) => {
           if (!open) {
             setDetailLine(null);
@@ -425,10 +429,13 @@ export const WarehouseWorkOrderDetailView = ({
       <PackagingDialog
         workOrderUuid={packaging ? workOrder.uuid : null}
         existing={workOrder.packagings}
+        save={saveWarehouseWorkOrderPackaging}
         onOpenChange={setPackaging}
       />
       <CancelWorkOrderDialog
         workOrderUuid={cancelling ? workOrder.uuid : null}
+        cancel={cancelWarehouseWorkOrder}
+        returnTo="/warehouse-work-orders"
         onOpenChange={setCancelling}
       />
     </div>

@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { packagingTypes } from "@/lib/enums";
 import {
   DECIMAL_AMOUNT_PATTERN,
   DECIMAL_QUANTITY_PATTERN,
@@ -124,15 +123,3 @@ export const reportCompletionSchema = z.object({
 });
 
 export type ReportCompletionFormValues = z.infer<typeof reportCompletionSchema>;
-
-export const packagingSchema = z.object({
-  entries: z.array(
-    z.object({
-      packaging: z.enum(packagingTypes),
-      quantity: z.string(),
-      specification: z.string().optional(),
-    }),
-  ),
-});
-
-export type PackagingFormValues = z.infer<typeof packagingSchema>;

@@ -23,7 +23,7 @@ import {
   machineCapacityUnitFor,
 } from "@/lib/helpers";
 import { MACHINE_OPTION_LABELS, MACHINE_PRODUCTION_LABELS } from "@/lib/labels";
-import { desc, eq, getTableColumns } from "drizzle-orm";
+import { asc, desc, eq, getTableColumns } from "drizzle-orm";
 
 export type MachineFields = Omit<
   InsertMachines,
@@ -62,6 +62,9 @@ export type MachineDetail = MachineListItem & {
   postProcessings: SelectMachinePostProcessings[];
 };
 
+/** A machine as a dropdown entry — enough to name it and pick it. */
+export type MachineOption = Pick<SelectMachines, "uuid" | "name" | "option">;
+
 export const getMachines = async (): Promise<MachineListItem[]> => {
   try {
     return await db
@@ -76,6 +79,24 @@ export const getMachines = async (): Promise<MachineListItem[]> => {
     throw new Error(describeError(error, "Failed to fetch machines"));
   }
 };
+
+/**
+ * The machines a job can be put on.
+ *
+ * A machine that is out of business is left out: it cannot take work, and
+ * offering it on a dropdown only invites somebody to plan a run onto a line
+ * that will hand it straight back.
+ */
+export const getMachinesForSelect = async (): Promise<MachineOption[]> =>
+  db
+    .select({
+      uuid: Machines.uuid,
+      name: Machines.name,
+      option: Machines.option,
+    })
+    .from(Machines)
+    .where(eq(Machines.outOfBusiness, false))
+    .orderBy(asc(Machines.name));
 
 /**
  * One machine with everything recorded on it: its own settings, the stock

@@ -2,10 +2,6 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import {
-  cancelWarehouseWorkOrder,
-  CancelWorkOrderMode,
-} from "@/app/(dashboard)/warehouse-work-orders/actions";
 import { Button } from "@/components/shadcn/button";
 import {
   Dialog,
@@ -19,8 +15,18 @@ import {
 import { FormError } from "@/components/ui/form-error";
 import { cn } from "@/lib/helpers";
 
+export type CancelWorkOrderMode = "restore" | "close_at_zero";
+
+export type CancelWorkOrder = (
+  workOrderUuid: string,
+  mode: CancelWorkOrderMode,
+) => Promise<{ error?: string; success?: boolean }>;
+
 type Props = {
   workOrderUuid: string | null;
+  cancel: CancelWorkOrder;
+  /** Where to go once the job is gone — its overview. */
+  returnTo: string;
   onOpenChange: (open: boolean) => void;
 };
 
@@ -43,12 +49,14 @@ const MODE_OPTIONS: ModeOption[] = [
     value: "close_at_zero",
     label: "Cancel the order by delivering nothing",
     description:
-      "The order lines are finished short. Nothing will be picked for them.",
+      "The order lines are finished short. Nothing will be made or picked for them.",
   },
 ];
 
 export const CancelWorkOrderDialog = ({
   workOrderUuid,
+  cancel,
+  returnTo,
   onOpenChange,
 }: Props) => {
   const router = useRouter();
@@ -68,11 +76,11 @@ export const CancelWorkOrderDialog = ({
       return;
     }
     startTransition(async () => {
-      const result = await cancelWarehouseWorkOrder(workOrderUuid, mode);
+      const result = await cancel(workOrderUuid, mode);
 
       if (result.success) {
         onOpenChange(false);
-        router.push("/warehouse-work-orders");
+        router.push(returnTo);
         router.refresh();
         return;
       }
@@ -115,7 +123,7 @@ export const CancelWorkOrderDialog = ({
                 <span className="block text-sm font-medium">
                   {option.label}
                 </span>
-                <span className="block text-sm text-muted-foreground">
+                <span className="text-muted-foreground block text-sm">
                   {option.description}
                 </span>
               </span>

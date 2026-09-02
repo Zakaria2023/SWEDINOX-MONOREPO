@@ -1,7 +1,7 @@
 import { WorkOrderListItem } from "@/app/(dashboard)/warehouse-work-orders/actions";
 import { dateCell, ExportColumn, numberCell, textCell } from "@/lib/excel";
 import {
-  WAREHOUSE_WORK_ORDER_STATUS_LABELS,
+  WORK_ORDER_STATUS_LABELS,
   WAREHOUSE_WORK_ORDER_TYPE_LABELS,
 } from "@/lib/labels";
 
@@ -54,7 +54,7 @@ export const WAREHOUSE_WORK_ORDER_COLUMNS: Array<
     key: "status",
     label: "Status",
     defaultVisible: true,
-    value: (row) => textCell(WAREHOUSE_WORK_ORDER_STATUS_LABELS[row.status]),
+    value: (row) => textCell(WORK_ORDER_STATUS_LABELS[row.status]),
   },
   {
     key: "lineCount",

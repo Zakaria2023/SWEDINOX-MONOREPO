@@ -1,10 +1,7 @@
 import { WarehouseOption } from "@/app/(dashboard)/warehouses/actions";
+import { workOrderStatuses, warehouseWorkOrderTypes } from "@/lib/enums";
 import {
-  warehouseWorkOrderStatuses,
-  warehouseWorkOrderTypes,
-} from "@/lib/enums";
-import {
-  WAREHOUSE_WORK_ORDER_STATUS_LABELS,
+  WORK_ORDER_STATUS_LABELS,
   WAREHOUSE_WORK_ORDER_TYPE_LABELS,
 } from "@/lib/labels";
 import { TableFilterControl } from "@/lib/table-query";
@@ -30,9 +27,9 @@ export const warehouseWorkOrderFilters = (
     kind: "select",
     label: "Status",
     placeholder: "Any status",
-    options: warehouseWorkOrderStatuses.map((status) => ({
+    options: workOrderStatuses.map((status) => ({
       value: status,
-      label: WAREHOUSE_WORK_ORDER_STATUS_LABELS[status],
+      label: WORK_ORDER_STATUS_LABELS[status],
     })),
   },
   {

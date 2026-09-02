@@ -1,13 +1,8 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { ReactNode, useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { Building2, Package, ReceiptText } from "lucide-react";
-import {
-  getWarehouseWorkOrderLineDetail,
-  LineDetail,
-  WorkOrderLineListItem,
-} from "@/app/(dashboard)/warehouse-work-orders/actions";
 import { buttonVariants } from "@/components/shadcn/button";
 import {
   Dialog,
@@ -29,19 +24,37 @@ import { FormError } from "@/components/ui/form-error";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { cn, formatDateColumn } from "@/lib/helpers";
 import { ORDER_STATUS_LABELS, STOCK_UNIT_LABELS } from "@/lib/labels";
+import type { LineDetail } from "@/lib/server/work-order-line-detail";
 
 const TABS = ["stock", "order", "options", "texts"] as const;
 
 type Tab = (typeof TABS)[number];
 
+/**
+ * The little a line has to be able to say about itself for the panel's header
+ * and its three jump buttons. Warehouse and production lines both satisfy it,
+ * which is what lets one panel serve both.
+ */
+export type DetailLine = {
+  uuid: string;
+  lineNumber: number | null;
+  productCode: string | null;
+  productName: string | null;
+  charge: string | null;
+  companyUuid: string | null;
+  productUuid: string | null;
+};
+
 type Props = {
-  line: WorkOrderLineListItem | null;
+  line: DetailLine | null;
+  /** The Server Action that reads the panel for this kind of work order. */
+  load: (lineUuid: string) => Promise<LineDetail | null>;
   onOpenChange: (open: boolean) => void;
 };
 
 type FieldProps = {
   label: string;
-  children: React.ReactNode;
+  children: ReactNode;
 };
 
 const TAB_LABELS: Record<Tab, string> = {
@@ -72,7 +85,7 @@ const Field = ({ label, children }: FieldProps) => (
   </div>
 );
 
-export const LineDetailDialog = ({ line, onOpenChange }: Props) => {
+export const LineDetailDialog = ({ line, load, onOpenChange }: Props) => {
   const [tab, setTab] = useState<Tab>("stock");
   const [detail, setDetail] = useState<LineDetail | null>(null);
   const [loadError, setLoadError] = useState<string | undefined>();
@@ -87,12 +100,12 @@ export const LineDetailDialog = ({ line, onOpenChange }: Props) => {
     setLoadError(undefined);
     startTransition(async () => {
       try {
-        setDetail(await getWarehouseWorkOrderLineDetail(line.uuid));
+        setDetail(await load(line.uuid));
       } catch {
         setLoadError("Could not load the details for this line.");
       }
     });
-  }, [line]);
+  }, [line, load]);
 
   return (
     <Dialog open={line !== null} onOpenChange={onOpenChange}>
@@ -114,7 +127,9 @@ export const LineDetailDialog = ({ line, onOpenChange }: Props) => {
             {line?.companyUuid ? (
               <Link
                 href={`/companies/${line.companyUuid}`}
-                className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+                className={cn(
+                  buttonVariants({ variant: "outline", size: "sm" }),
+                )}
               >
                 <Building2 className="size-4" />
                 Company
@@ -123,7 +138,9 @@ export const LineDetailDialog = ({ line, onOpenChange }: Props) => {
             {detail?.order ? (
               <Link
                 href={`/orders/${detail.order.orderUuid}`}
-                className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+                className={cn(
+                  buttonVariants({ variant: "outline", size: "sm" }),
+                )}
               >
                 <ReceiptText className="size-4" />
                 Order
@@ -132,7 +149,9 @@ export const LineDetailDialog = ({ line, onOpenChange }: Props) => {
             {line?.productUuid ? (
               <Link
                 href={`/products/${line.productUuid}`}
-                className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+                className={cn(
+                  buttonVariants({ variant: "outline", size: "sm" }),
+                )}
               >
                 <Package className="size-4" />
                 Product

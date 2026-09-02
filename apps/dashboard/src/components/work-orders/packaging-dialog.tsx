@@ -4,14 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  saveWarehouseWorkOrderPackaging,
-  WorkOrderDetail,
-} from "@/app/(dashboard)/warehouse-work-orders/actions";
-import {
-  packagingSchema,
-  PackagingFormValues,
-} from "@/app/(dashboard)/warehouse-work-orders/validation";
+import { z } from "zod";
 import { Button } from "@/components/shadcn/button";
 import {
   Dialog,
@@ -32,18 +25,51 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { FormError } from "@/components/ui/form-error";
-import { packagingTypes } from "@/lib/enums";
+import { PackagingType, packagingTypes } from "@/lib/enums";
 import { PACKAGING_TYPE_LABELS } from "@/lib/labels";
+
+// Shared by the warehouse and the machines: a load is packed as a load either
+// way, and the grid is the same one. The schema lives here rather than in a
+// route folder because this component is its only reader.
+const packagingSchema = z.object({
+  entries: z.array(
+    z.object({
+      packaging: z.enum(packagingTypes),
+      quantity: z.string(),
+      specification: z.string().optional(),
+    }),
+  ),
+});
+
+type PackagingFormValues = z.infer<typeof packagingSchema>;
+
+export type PackagingRow = {
+  uuid: string;
+  packaging: PackagingType;
+  quantity: number;
+  specification: string | null;
+};
+
+export type SavePackaging = (
+  workOrderUuid: string,
+  entries: {
+    packaging: PackagingType;
+    quantity: number;
+    specification?: string | null;
+  }[],
+) => Promise<{ error?: string; success?: boolean }>;
 
 type Props = {
   workOrderUuid: string | null;
-  existing: WorkOrderDetail["packagings"];
+  existing: PackagingRow[];
+  save: SavePackaging;
   onOpenChange: (open: boolean) => void;
 };
 
 export const PackagingDialog = ({
   workOrderUuid,
   existing,
+  save,
   onOpenChange,
 }: Props) => {
   const router = useRouter();
@@ -85,7 +111,7 @@ export const PackagingDialog = ({
       return;
     }
     startTransition(async () => {
-      const result = await saveWarehouseWorkOrderPackaging(
+      const result = await save(
         workOrderUuid,
         values.entries.map((entry) => ({
           packaging: entry.packaging,
