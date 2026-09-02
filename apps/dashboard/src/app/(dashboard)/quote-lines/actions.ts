@@ -477,7 +477,6 @@ export const convertQuoteToOrder = async (
     revalidatePath("/quote-lines");
     revalidatePath("/quotes");
     revalidatePath("/orders");
-    revalidatePath("/stock");
     return { success: true, orderUuid };
   } catch (error) {
     return {

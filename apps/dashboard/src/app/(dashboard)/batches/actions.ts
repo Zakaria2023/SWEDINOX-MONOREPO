@@ -315,7 +315,6 @@ export const generateBatches = async (): Promise<GenerateBatchesResult> => {
     });
 
     revalidatePath("/batches");
-    revalidatePath("/stock");
     return { success: true, createdBatches: rows.length };
   } catch (error) {
     return {

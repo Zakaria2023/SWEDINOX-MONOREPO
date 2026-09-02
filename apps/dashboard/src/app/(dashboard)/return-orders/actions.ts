@@ -871,8 +871,6 @@ export const receiveReturnOrder = async (
 
     revalidatePath("/return-orders");
     revalidatePath(`/return-orders/${uuid}`);
-    revalidatePath("/stock");
-    revalidatePath("/stock-movements");
     return { success: true, returnOrderUuid: uuid };
   } catch (error) {
     return {

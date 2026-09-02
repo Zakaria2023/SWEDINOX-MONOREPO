@@ -423,8 +423,6 @@ export const createPurchaseOrder = async (
     );
 
     revalidatePath("/purchase-orders");
-    revalidatePath("/stock");
-    revalidatePath("/stock-movements");
     return { success: true, purchaseOrderUuid: uuid };
   } catch (error) {
     return {
@@ -598,8 +596,6 @@ export const cancelPurchaseOrder = async (
 
     revalidatePath("/purchase-orders");
     revalidatePath(`/purchase-orders/${uuid}`);
-    revalidatePath("/stock");
-    revalidatePath("/stock-movements");
     return { success: true, purchaseOrderUuid: uuid };
   } catch (error) {
     return {

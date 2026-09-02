@@ -557,8 +557,6 @@ export const dispatchPurchaseReturnOrder = async (
 
     revalidatePath("/purchase-return-orders");
     revalidatePath(`/purchase-return-orders/${uuid}`);
-    revalidatePath("/stock");
-    revalidatePath("/stock-movements");
     return { success: true, purchaseReturnOrderUuid: uuid };
   } catch (error) {
     return {

@@ -573,8 +573,6 @@ export const createPurchaseInvoice = async (
   );
 
   revalidatePath("/purchase-invoices");
-  revalidatePath("/stock");
-  revalidatePath("/stock-movements");
   redirect("/purchase-invoices");
 };
 
@@ -860,8 +858,6 @@ export const cancelPurchaseInvoice = async (
 
     revalidatePath("/purchase-invoices");
     revalidatePath(`/purchase-invoices/${uuid}`);
-    revalidatePath("/stock");
-    revalidatePath("/stock-movements");
     return { success: true, purchaseInvoiceUuid: uuid };
   } catch (error) {
     return {

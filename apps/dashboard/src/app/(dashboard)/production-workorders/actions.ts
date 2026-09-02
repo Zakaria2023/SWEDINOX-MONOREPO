@@ -630,8 +630,6 @@ export const completeProductionWorkOrderLine = async (
     });
 
     revalidatePath("/production-workorders");
-    revalidatePath("/stock");
-    revalidatePath("/stock-movements");
     revalidatePath("/control-sawing-waste");
     revalidatePath("/deliveries");
     return { success: true };

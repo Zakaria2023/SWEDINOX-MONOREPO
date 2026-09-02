@@ -277,9 +277,6 @@ export const deliverOrderItem = async (
     );
 
     revalidatePath("/deliveries");
-    revalidatePath("/stock");
-    revalidatePath("/stock-movements");
-    revalidatePath("/reservations");
     return { success: true };
   } catch (error) {
     return {

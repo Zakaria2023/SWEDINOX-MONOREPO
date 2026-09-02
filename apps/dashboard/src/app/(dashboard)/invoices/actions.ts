@@ -629,8 +629,6 @@ export const createInvoice = async (
 
     revalidatePath("/invoices");
     revalidatePath("/orders");
-    revalidatePath("/stock");
-    revalidatePath("/stock-movements");
     return { success: true, invoiceUuid: uuid };
   } catch (error) {
     return {
@@ -810,8 +808,6 @@ export const cancelInvoice = async (
     revalidatePath("/invoices");
     revalidatePath(`/invoices/${uuid}`);
     revalidatePath("/orders");
-    revalidatePath("/stock");
-    revalidatePath("/stock-movements");
     return { success: true, invoiceUuid: uuid };
   } catch (error) {
     return {

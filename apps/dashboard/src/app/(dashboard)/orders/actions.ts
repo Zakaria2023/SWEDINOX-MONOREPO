@@ -567,7 +567,6 @@ export const createOrder = async (
     });
 
     revalidatePath("/orders");
-    revalidatePath("/stock");
     revalidatePath("/financially-blocked");
     return { success: true, orderUuid: uuid };
   } catch (error) {
@@ -687,7 +686,6 @@ export const cancelOrder = async (uuid: string): Promise<OrderActionResult> => {
 
     revalidatePath("/orders");
     revalidatePath(`/orders/${uuid}`);
-    revalidatePath("/stock");
     return { success: true, orderUuid: uuid };
   } catch (error) {
     return {
