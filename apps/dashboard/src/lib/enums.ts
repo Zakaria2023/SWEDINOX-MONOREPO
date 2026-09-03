@@ -370,8 +370,14 @@ export const articleGroups = [
 export type ArticleGroup = (typeof articleGroups)[number];
 
 export const purchasingUnits = [
+  "HK",
+  "HM",
   "HS",
+  "KG",
+  "M1",
+  "MM",
   "ST",
+  "TN",
 ] as const satisfies readonly string[];
 
 export type PurchasingUnit = (typeof purchasingUnits)[number];

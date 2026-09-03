@@ -66,6 +66,7 @@ import {
   PurchaseInvoiceFiscalBase,
   PurchaseOrderType,
   PurchasingUnit,
+  SalesUnit,
   PurchaseQuoteStatus,
   PurchaseRequestStatus,
   QuoteOption,
@@ -6897,6 +6898,62 @@ export const recentMonths = (
  */
 export const firstCount = (rows: Array<{ value: number }>): number =>
   Number(rows[0]?.value ?? 0);
+
+/**
+ * A weight restated in whichever unit a product is bought by.
+ *
+ * The order-advice grid mixes units on purpose: the position and the demand are
+ * in kilos, because that is what the shop weighs, while the advice and the
+ * order are in the unit the supplier sells by — a mill quotes tonnes, so 28 kg
+ * of stock reads as 0,03 on the purchase-unit column.
+ *
+ * Two factors carry the whole list. A weight per piece answers the counted
+ * units, a weight per running metre the measured ones, and the hundred-unit
+ * codes are those two divided by a hundred. `M2` has neither factor, so it
+ * converts to nothing.
+ *
+ * Null where the factor is not something the product records. Guessing one
+ * would put a number in front of a buyer that looks like an order quantity and
+ * is not, which is worse than an empty cell.
+ */
+export const convertKgToUnit = (
+  kg: number,
+  unit: SalesUnit | PurchasingUnit | null | undefined,
+  weightPerPiece: number | null,
+  weightPerM1: number | null,
+): number | null => {
+  const pieces =
+    weightPerPiece && weightPerPiece > 0 ? kg / weightPerPiece : null;
+  const metres = weightPerM1 && weightPerM1 > 0 ? kg / weightPerM1 : null;
+
+  switch (unit) {
+    case "KG":
+      return kg;
+    case "HK":
+      return kg / 100;
+    case "TN":
+      return kg / 1000;
+    case "ST":
+      return pieces;
+    case "HS":
+      return pieces === null ? null : pieces / 100;
+    case "M1":
+      return metres;
+    case "HM":
+      return metres === null ? null : metres / 100;
+    case "MM":
+      return metres === null ? null : metres * 1000;
+    default:
+      return null;
+  }
+};
+
+/**
+ * The advised weight as the buyer is shown it. Steel is not bought to the gram,
+ * so the advice is a whole number of kilos.
+ */
+export const roundAdviceWeight = (kg: number): number =>
+  kg > 0 ? Math.round(kg) : 0;
 
 /**
  * Rounds an advised order quantity up to the supplier's order series, never

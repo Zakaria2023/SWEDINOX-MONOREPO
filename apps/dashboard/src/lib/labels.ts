@@ -927,8 +927,14 @@ export const CUSTOMER_LABEL_OPTION_LABELS: Record<CustomerLabelOption, string> =
   };
 
 export const PURCHASING_UNIT_LABELS: Record<PurchasingUnit, string> = {
+  HK: "One hundred kilograms",
+  HM: "One hundred meters",
   HS: "One hundred pieces",
+  KG: "Kilogram",
+  M1: "Meter",
+  MM: "Millimeter",
   ST: "Pieces",
+  TN: "Tonnage",
 };
 
 export const DELIVERY_TIME_UNIT_LABELS: Record<DeliveryTimeUnit, string> = {
