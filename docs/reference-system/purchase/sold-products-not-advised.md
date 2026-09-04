@@ -8,78 +8,220 @@ period but which the advice does not cover — so a buyer can see demand the
 stocking policy is silent about. Typically a non-stock or non-standard product
 somebody keeps selling.
 
-**Filters**: `Product code` (from / to), `Invoice date` (from / to — defaulted to
-today on both sides in the capture), `Show Data`.
+**Filters**: `Product code` (from / `u/i`, the upper bound left as
+`zzzzzzzzzzzzzz`), `Invoice date` (from / `u/i`, captured as `11-1-2023` →
+`4-9-2026`, i.e. wide open to today), `Show Data`.
 **Toolbar**: Save as Excel · Show in Excel · Print · Show Product · Purchase
 lines · Warehouse workorders · Orders and Quotes · Production workorders.
 **View open when captured**: none selected (blank).
-**Grid was empty** in the capture, so no example values were readable.
 
-## Columns — captured, not yet matched
+## Columns — matched
 
-| # | Reference heading | Notes |
+All 13, in the reference system's own order, sorted on `Main group`.
+
+| # | Reference heading | Our field | Where ours gets it |
+|---|---|---|---|
+| 1 | Main group | `mainGroup` | root of the group hierarchy — `COALESCE(parent.name, group.name)` |
+| 2 | Product group | `productGroup` | the product's own group, but only when it has a parent |
+| 3 | Product code | `productCode` | `Products.productCode` |
+| 4 | Description | `productName` | `Products.name` |
+| 5 | Stock product | `stockProduct` | `Products.stockProduct` — a tick |
+| 6 | Standard product | `standardProduct` | `Products.standardProduct` — a tick |
+| 7 | Avg. Monthly consumption last year (Stk.U.) | `avgMonthlyConsumption` | invoiced `weightKg` ÷ 12, restated in the stock unit |
+| 8 | Revenue | `revenue` | `SUM(InvoiceItems.amount)` — money |
+| 9 | Sales | `sales` | `SUM(InvoiceItems.weightKg)` — a weight in kilos |
+| 10 | Stock (Stk.U.) | `stock` | `SUM(Stock.quantity)`, own & unblocked |
+| 11 | Available (StkU) | `available` | stock − reserved |
+| 12 | Stock U. | `stockUnit` | `Products.stockUnit` |
+| 13 | PAC-Code | `pacClassification` | `ProductGroups.pacClassification` |
+
+The suffix on 10 and 11 is inconsistent in the reference system itself —
+`(Stk.U.)` on one, `(StkU)` on the next. Ours copies both verbatim rather than
+tidying them, so the columns stay recognisable to anyone moving between the two
+systems.
+
+## Sample rows, as the reference system printed them
+
+Kept as an answer key: these are real figures to reconcile ours against once we
+have equivalent data.
+
+| Main group | Product group | Product code | Stock | Std | Avg | Revenue | Sales | Stock (Stk.U.) | Stock U. |
+|---|---|---|---|---|---|---|---|---|---|
+| Aluminum | *(blank)* | `PCSA10500010` | ✓ | ✓ | 0,0 | € 504,25 | 28,30 | 0,00 | ST |
+| Aluminum | Aluminium coils A5754 | `CAA5754025` | ☐ | ☐ | 0,0 | € 10.409,28 | 2.096,00 | 0,00 | ST |
+| Aluminum | *(blank)* | `CAA5754200` | ✓ | ✓ | 0,0 | € 93.910,79 | 23.350,00 | 0,00 | ST |
+| Stainless Steel | Cold-rolled plate 316L | `PK316L08025125` | ✓ | ✓ | 0,0 | € 4.006,00 | 920,00 | 46,00 | ST |
+| Stainless Steel | Cold-rolled plate 304L | `PK304L100415` | ✓ | ✓ | 0,0 | € 16.114,56 | 5.232,00 | 15,00 | ST |
+
+## Answered
+
+**1. The product hierarchy — two levels of one tree, read from the root down.**
+This is the question that was blocking three screens, and this grid settles it
+by showing both levels at once.
+
+`Main group` takes a handful of material families — `Aluminum`,
+`Stainless Steel`. `Product group` is specific — `Aluminium coils A5754`,
+`Cold-rolled plate 316L`. So it is one hierarchy, and our self-referencing
+`ProductGroups.parentUuid` models it correctly.
+
+The catch is the direction it is read in. Three rows show a `Main group` with an
+**empty** `Product group` — `PCSA10500010`, `CAA5754200`, `PC605007T5` — while
+their neighbours in the same family show both. A product can therefore hang
+straight off a main group without sitting in any sub-group, and the reference
+system prints that as *main group filled, product group blank*.
+
+Ours had it backwards: it read the product's own group into `Product group` and
+that group's parent into `Main group`, so a product attached directly to
+`Aluminum` would have printed `Aluminum` under **Product group** with **Main
+group** empty — the mirror image of what the reference system shows.
+
+**Implemented** in both screens:
+
+- `Main group` = `COALESCE(parent.name, group.name)` — always the root.
+- `Product group` = the group's own name, but `NULL` when it has no parent.
+
+[Order advice](order-advice.md) shows only `Main group`, and it was reading the
+product's own group. It now reads the same root, so the two screens agree on
+what family a product belongs to.
+
+**Update — the tree is four levels, not two.** Walking "Show product group"
+from a sized plate climbs `Aluminum` → `Aluminium plates` → `Aluminium plate
+semi-rigid 1S (Al 99.5)` → the plate itself, each naming its parent in a
+`Material group` field. So "the root" can be three hops up, not one, and both
+screens now climb the whole way. The full walk is in the
+[README](../README.md#the-product-hierarchy--answered).
+
+**4. `Revenue` is money, `Sales` is a weight — both proved to the cent.**
+`PCSA10500010`'s own product screen lists the three orders behind its row:
+
+| Order | Qty | Kg | Net price |
+|---|---|---|---|
+| `O101160` | 95 ST | 1,7 | € 0,55 /ST |
+| `O100559` | 130 ST | 2,3 | € 0,40 /ST |
+| `O100606` | 500 ST | 24,1 | € 0,80 /ST |
+
+Its grid row reads **Revenue € 504,25** and **Sales 28,30**.
+
+```
+95×0,55 + 130×0,40 + 500×0,80 = 52,25 + 52,00 + 400,00 = 504,25   ✓ exact
+```
+
+So `Revenue` = `SUM(quantity × net price)` = `SUM(InvoiceItems.amount)`, which
+is what ours already computed.
+
+And `Sales` tracks the **Kg** column, not the Qty column: `1,7 + 2,3 + 24,1 =
+28,1` against a shown 28,30, where the quantities sum to 725 ST — nowhere near.
+`Sales` is a **weight in kilograms**. (The 0,2 gap is a fourth line below the
+fold or the Kg column's own rounding.)
+
+This is the independent confirmation of the unit finding in question 7 below.
+
+**6. `Stock U.` as a column.** Confirmed, and it genuinely varies: `ST` on
+most rows but `KG` on `SC304`. The grid mixes products stocked in different
+units, which is exactly why the unit is a column rather than a heading suffix.
+
+**3. Answered — "Standard product" is derived, not set by hand.**
+On the product screen's *Stock control* panel the two sit together:
+
+```
+☑ Stock product      27-12-2024
+☑ Standard product   ← greyed out
+```
+
+`Stock product` is editable and carries the date it was set; `Standard product`
+is greyed, so the system maintains it. That explains the pattern in the grid,
+where the two flags never disagreed across two dozen rows.
+
+We keep `Products.standardProduct` as a stored column for now, because the rule
+that derives it is still unknown — a product could be "standard" because it is
+stocked, or because it is the canonical variant of its group. Nothing depends
+on it beyond being displayed, so a wrong guess here costs one column.
+
+## 🔴 Still open
+
+**2. Answered — the exclusion is per product, and it is a clean set difference.**
+Exporting both screens settles it. They share **20 product groups** but **not a
+single product code**: 0 of 175. So the rule is a plain complement of what
+Order advice includes.
+
+What it cannot be is a group-level flag. Eighty-three of these rows are
+`Stock product` **ticked** *and* sit in a group that also feeds Order advice —
+`CAA1050020` appears here while `CAA1050030`, in the same group and equally a
+stock product, appears there. One flag on the group could not produce both.
+
+**Implemented** — both screens now read `Products.makingOrderAdvices` rather
+than the group's copy. The column already existed on `Products` as well as
+`ProductGroups`, so nothing had to change in the schema; only the two queries
+were looking at the wrong table. The group keeps its copy as the default the
+product form starts from.
+
+## Verified against the reference
+
+The 175-row export was seeded and our screen diffed against it, the same way
+[Order advice](order-advice.md) was:
+
+| Column | Match | Differ |
 |---|---|---|
-| 1 | Main group | the grid was sorted on this |
-| 2 | Product group | a second level below main group — ours joins only one |
-| 3 | Product code | |
-| 4 | Description | |
-| 5 | Stock product | checkbox |
-| 6 | Standard product | checkbox — tooltip confirmed |
-| 7 | Avg. Monthly consumption last year (Stk.U.) | tooltip confirmed — **stock unit here, not Kg** |
-| 8 | Revenue | money |
-| 9 | Sales | money or quantity — unknown |
-| 10 | Stock (Stk.U.) | |
-| 11 | Available (StkU) | |
-| 12 | Stock U. | the unit itself, as a column |
-| 13 | PAC-Code | tooltip confirmed |
+| Avg. Monthly consumption last year | **175** | 0 |
+| Revenue | **175** | 0 |
+| Sales | **175** | 0 |
+| Stock (Stk.U.) | **175** | 0 |
+| Available (StkU) | **175** | 0 |
+| Main group | **175** | 0 |
+| Product group | **175** | 0 |
+| Stock U. | **175** | 0 |
 
-## 🔴 What is needed before this can be built
+Exactly 175 rows come back — none of the 5,398 products on Order advice leak
+in, which is the per-product flag doing its job.
 
-**1. Two grouping levels, not one.**
-This screen shows `Main group` *and* `Product group`. Ours joins `ProductGroups`
-once and calls it the main group. Are these two levels of one hierarchy — a
-parent group and its child — or two separate fields on the product?
-→ *In the old system:* open a product and look at its group fields. If there is
-one field whose value has a parent, it is a hierarchy; if there are two fields,
-we need a second column.
+The fixture gives each product two invoice lines: one inside the trailing
+twelve months carrying the quantity that makes the consumption figure, and one
+well outside it carrying the money and the weight, because `Revenue` and
+`Sales` are summed over the whole filter period while consumption is not.
 
-**2. What "not on the order recommendation" actually excludes.**
-The obvious reading is "sold in the period, but absent from Order advice" — and
-Order advice only lists `Stock product = true`. But this screen has a
-`Stock product` column, which implies some rows *are* stock products, so the
-exclusion must be something else or something more.
-→ *In the old system:* press `Show Data` with a wide invoice-date range, then
-compare the product codes here against the codes on `Order advice`. If nothing
-overlaps, the rule is simply set difference. If some overlap, the rule is
-narrower and we need to know what it is.
+**5. `PAC-Code` — found, but never filled.**
+It lives on the product, in the *Stock policy* panel, labelled
+**`PAC-classification`**, next to a second field called **`Order advice code`**
+— which is the same `Order advice code` column the full Order advice view
+shows. Both were empty on the product inspected, so what they hold is still
+unknown, but we now know where they are configured and that they are
+product-level, not group-level.
 
-**3. "Standard product" — where does it live?**
-A product's own screen shows a greyed `Standard product` checkbox next to
-`Stock product`, so the field exists; ours has `Products.stockProduct` but needs
-checking for a standard-product equivalent.
-→ *In the old system:* open a product and find the field, then note whether it
-is editable or derived.
+**7. Answered — the zeros were an empty window, not a wrong definition.**
 
-**4. `Revenue` vs `Sales` — what is the difference?**
-Two adjacent money-looking columns. Revenue is probably invoiced value; Sales
-could be ordered value, or a quantity, or the count of orders.
-→ *In the old system:* widen both columns on a row with data and read their
-values against that product's invoice history. If Sales carries a unit or a
-count, it is not money.
+Re-run with `Invoice date` narrowed to `4-9-2025` → `4-9-2026` (the last 12
+months), the grid dropped from 24 rows to 2 — and both showed a **non-zero**
+consumption. So the earlier zeros simply meant those products had not been
+invoiced for over a year.
 
-**5. `PAC-Code` — what is it?**
-Appears nowhere else that has been captured. It may be a purchasing
-classification, a customs/commodity code, or a supplier's article code.
-→ *In the old system:* open a product and search its screens for the field, or
-right-click the column for a description. Its dropdown or format will say what
-it is.
+| Product | Stock U. | Revenue | Sales | Avg. Monthly consumption |
+|---|---|---|---|---|
+| `SC304` Stainless steel scrap | KG | € 45,23 | 45,23 | **3,8** |
+| `CK3040010` Coil Cold-rolled 304 | ST | € 20.000,00 | 10.000,00 | **0,3** |
 
-**6. `Stock U.` as a column.**
-The stock unit shown as data rather than as a suffix, because this grid mixes
-products stocked in different units. Ours has `Products.stockUnit`, so this is
-just a column to add.
+`SC304` settles the arithmetic exactly — `45,23 ÷ 12 = 3,769`, shown as `3,8`.
+That confirms two picks at once, both of which we had guessed right:
+[QUESTIONS #1](../QUESTIONS.md) (trailing 12 months, not a calendar year) and
+[QUESTIONS #4](../QUESTIONS.md) (counted from **invoices**).
 
-**7. Which period the consumption column uses.**
-It says "last year", same as Order advice — so whatever answer question 2 in
-[order-advice.md](order-advice.md#-open-questions) gets applies here too, except
-it is counted in the **stock unit** rather than kilos.
+**And it exposed one we had wrong.** `CK3040010` does not reconcile the same
+way: `10.000 ÷ 12 = 833`, not `0,3`. The two columns are in different units.
+Its stock unit is `ST` and `SC304`'s is `KG` — the one that reconciled
+directly is the one already stocked in kilos.
+
+So `Sales` is a **weight in kilograms**, and the consumption column is that
+weight ÷ 12 **converted into the product's stock unit** — which is what its
+`(Stk.U.)` suffix said all along. The implied factor on `CK3040010` is
+`10.000 ÷ (0,3 × 12) ≈ 2.778` kg per coil, a believable weight for a
+cold-rolled 304 coil. The prices corroborate it: € 2,00/kg for 304 coil and
+€ 1,00/kg for stainless scrap are both realistic, where per-piece readings
+would not be.
+
+**Implemented** — `sales` now sums `InvoiceItems.weightKg` instead of
+`quantity`, and `avgMonthlyConsumption` runs the monthly kilo figure through
+`convertKgToUnit` against `Products.stockUnit`. A product with no conversion
+factor shows `—`.
+
+→ *Worth one spot-check:* find a second non-`KG` product and divide its Sales
+by twelve times its consumption. If that also lands on a believable kg-per-piece
+for the product, the conversion is settled.

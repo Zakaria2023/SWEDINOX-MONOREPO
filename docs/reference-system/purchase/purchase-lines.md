@@ -24,10 +24,10 @@ is a filter somebody built.
 | # | Reference heading | Notes |
 |---|---|---|
 | 1 | Date Created | |
-| 2 | *(truncated)* | tooltip read **Purchase order type** — see question 1 |
+| 2 | Purchase order type | the same field as column 5 — see below |
 | 3 | No. | the purchase order number |
 | 4 | Line | line number within the order |
-| 5 | *(truncated)* | tooltip read **Purchase order type** — see question 1 |
+| 5 | Purchase order type | a duplicate of column 2 |
 | 6 | Line type | tooltip confirmed |
 | 7 | Status | |
 | 8 | Product | the description |
@@ -51,13 +51,15 @@ column strip.
 
 ## 🔴 What is needed before this can be built
 
-**1. Two columns whose tooltips both said "Purchase order type".**
-Positions 2 and 5 are both truncated and both showed the same tooltip. They
-cannot be the same field twice in a default view. One is probably the order's
-*type* and the other its *reference* or *kind of line*, but the captures cannot
-tell them apart.
-→ *In the old system:* widen both columns until the headings are fully readable,
-with data on screen so their values can be compared.
+**1. Answered — it is one field, shown twice.**
+Positions 2 and 5 both read `Purchase order type`, confirmed by hovering each
+in turn. They are not two fields with a shared tooltip; the saved view simply
+carries the column twice, which is easy to do by dragging in a grid like this.
+Both headings also show the same ▽ filter glyph, matching the user filter at
+the bottom of the screen (`Purchase order type = Purchase order`).
+
+So this is **one database column**, and our single type field on
+`PurchaseOrders` is right. Ours prints it once.
 
 **2. `Only current purchasing lines` — what does "current" mean?**
 It is checked by default, so it is the normal way this screen is read. It could

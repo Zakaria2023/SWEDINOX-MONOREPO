@@ -120,3 +120,69 @@ and `% Difference` together and check whether the percentage is
 **10. Same product-hierarchy question as everywhere else** — `Main group` +
 `Product group` here, tracked centrally in the
 [README](../README.md#the-one-question-that-unblocks-the-most).
+
+## Where StockOp is configured — and whether it is used at all
+
+A product's *Stock policy* panel carries the whole StockOp parameter set, which
+answers most of what this screen's columns were asking:
+
+```
+StockOp Parameters
+  Lead time Method:                Manually
+  Lead time (L):                   0 days
+  Review period (R):               0 days
+  Order Costs (purchasing side) A1: 0,00 €/order
+  Order Costs (Logistics) A2:      0,00 €/order
+  Order series:                    0 Kg
+  Minimum order qty.:              0 Kg
+  [Adopt of preferred supplier]
+
+Parameters for StockOp simulation version
+  Capital cost (r1):     0,00 €/€/year
+  Warehouse cost (r2):   0,0000 €/Kg/year
+  B (% per u. stockout): 0%   (two of these)
+  Handling:              0,0000 €/Kg
+  Transport:             0,0000 €/Kg
+  [Use product type parameters from easy2config]
+
+StockOn order parameters
+  ☐ Use StockOp for this product?
+  "StockOp parameters zijn nog nooit berekend."
+
+StockOn ordering/evaluation
+  ☑ Monday ☑ Tuesday ☑ Wednesday ☑ Thursday ☑ Friday
+
+PAC-classification: [empty]
+Order advice code:  [empty]
+```
+
+### What this settles
+
+- **`Lead time` and `Review time` are in days**, labelled `(L)` and `(R)` —
+  the classic periodic-review notation.
+- **`Lead time Method`** is a dropdown, and `Manually` is one of its values.
+- **"Determined by StockOp"** on the grid is this screen's
+  `Use StockOp for this product?` checkbox.
+- **"Evaluate/decide today?"** is these five weekday checkboxes. A product is
+  reconsidered only on its ticked days, so the column is not a property of the
+  product — it is *today* tested against that set.
+- **The order series is held twice, in different units.** The *Purchase* panel
+  has `Order series: 0 ST`; this panel has `Order series: 0 Kg`. They are not
+  the same field, and ours reads only one of them.
+
+### The scope question this raises
+
+The parameter list — order costs, capital cost, warehouse cost, a stockout
+penalty, handling and transport per kilo — is a full inventory-optimisation
+model, the machinery behind an economic order quantity and a reorder level. It
+is a genuinely different engine from Order advice, which is just a min/max
+policy against average consumption.
+
+**But on the product inspected it is switched off and has never been run:**
+`Use StockOp for this product?` is unticked, every parameter is zero, and the
+system says in as many words that the parameters *have never been calculated*.
+
+If that holds across the catalogue, StockOn advice is dormant in this business
+— and like [Import purchase invoices](import-purchase-invoices.md), it may not
+need building at all. That is worth establishing before any of the column
+questions on this page are worth answering.

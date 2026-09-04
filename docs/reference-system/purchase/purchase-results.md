@@ -80,3 +80,45 @@ per-month.
 **5. The percentage's denominator.**
 `(purchase − replacement) / purchase` and `/ replacement` give different numbers.
 → *In the old system:* read one row's three value columns and divide it out.
+
+## The hierarchy behind `Main group` and `Subgroup`
+
+Settled on the product screens rather than here. The group tree is a single
+self-referencing entity, at least four levels deep, with each record naming its
+parent in a **`Material group`** field:
+
+```
+Aluminum  →  Aluminium plates  →  Aluminium plate semi-rigid 1S (Al 99.5)  →  …3000x1500x4mm
+```
+
+`Main group` is the root of that chain. Ours now climbs to it rather than
+stopping at the immediate parent. Full detail in the
+[README](../README.md#the-product-hierarchy--answered).
+
+**`Subgroup` is now settled too.** An export of this screen — 1,800 rows, kept
+as `exports/purchase-results.tsv` — prints its Main group / Subgroup / Product
+triples directly:
+
+| Main group | Subgroup | Product |
+|---|---|---|
+| Aluminum | Aluminium plate semi-rigid 1S (Al 99.5) | Aluminium plate semi-rigid 1S (Al 99.5) |
+| Aluminum | Aluminium coils A1050 | Aluminium coils A1050 |
+| Aluminum | Aluminium plate tears 54S (AlMg 3) | Aluminium plate tears 54S (AlMg 3) |
+
+`Subgroup` holds the level directly above the product — the same level
+[Sold products](sold-products-not-advised.md) calls `Product group` — with
+`Main group` the root above it. Level two of the tree is skipped in the
+display, exactly as it is there. Note also that `Product` repeats the subgroup
+name rather than naming an individual product, so this screen aggregates at the
+subgroup.
+
+`Main group` takes two values across the export: `Stainless Steel` (1,675) and
+`Aluminum` (125).
+
+## 🔴 Dead columns
+
+`Replacement value` is **zero on every one of the 1,800 rows**, which makes
+`Purchase -/- replacement value (€)` and `(%)` dead with it — the percentage
+cannot be reconstructed because there is nothing to divide. Either the business
+does not maintain replacement prices, or this screen never receives them. Worth
+one glance before building those three columns at all.

@@ -1,0 +1,6 @@
+# Real business data exported from easy2trade. Kept out of git by default —
+# it is the company's own trading history, not source. Delete these two lines
+# if a given export is deliberately meant to be committed as seed data.
+*
+!.gitignore
+!README.md
