@@ -56,7 +56,7 @@ export const OrderAdviceTable = ({ rows }: Props) => (
             <TableHead>Description</TableHead>
             <TableHead>Main group</TableHead>
             <TableHead className="text-right">Stock (Pur.U.)</TableHead>
-            <TableHead className="text-right">Reserved</TableHead>
+            <TableHead className="text-right">Reserved (Pur.U.)</TableHead>
             <TableHead className="text-right">Available (Kg)</TableHead>
             <TableHead className="text-right">
               To be received short term (Kg)
@@ -107,7 +107,7 @@ export const OrderAdviceTable = ({ rows }: Props) => (
                   {orDash(row.stockPurchaseUnit)}
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
-                  {formatNumber(row.reservedKg)}
+                  {orDash(row.reservedPurchaseUnit)}
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
                   {formatNumber(row.availableKg)}
@@ -164,7 +164,7 @@ export const OrderAdviceTable = ({ rows }: Props) => (
                 {`Σ=${formatNumber(sum(rows, (row) => row.stockPurchaseUnit ?? 0))}`}
               </TableCell>
               <TableCell className="text-right tabular-nums">
-                {`Σ=${formatNumber(sum(rows, (row) => row.reservedKg))}`}
+                {`Σ=${formatNumber(sum(rows, (row) => row.reservedPurchaseUnit ?? 0))}`}
               </TableCell>
               <TableCell className="text-right tabular-nums">
                 {`Σ=${formatNumber(sum(rows, (row) => row.availableKg))}`}
