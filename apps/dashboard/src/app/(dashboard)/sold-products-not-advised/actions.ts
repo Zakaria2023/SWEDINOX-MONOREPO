@@ -20,7 +20,8 @@ export type SoldProductNotAdvisedRow = {
   mainGroup: SelectProductGroups["name"] | null;
   productGroup: SelectProductGroups["name"] | null;
   pacClassification: SelectProductGroups["pacClassification"] | null;
-  avgMonthlyConsumption: number;
+  /** Null when the product records no factor to convert kilos by. */
+  avgMonthlyConsumption: number | null;
   revenue: number;
   sales: number;
   stock: number;
@@ -35,7 +36,20 @@ export const getSoldProductsNotAdvised = async (): Promise<
   SoldProductNotAdvisedRow[]
 > => {
   try {
-    const MainGroups = alias(ProductGroups, "main_groups");
+    // The hierarchy runs deeper than one level. Walking it in the reference
+    // system — "Aluminum" → "Aluminium plates" → "Aluminium plate semi-rigid
+    // 1S" → the sized plate itself — shows four levels, each pointing at its
+    // parent through a "Material group" field. "Main group" is the **root** of
+    // that chain, not the immediate parent, so the climb has to keep going
+    // until it runs out of parents.
+    //
+    // Bounded at three hops rather than done as a recursive CTE: the deepest
+    // chain seen is three groups above a product, and a fixed set of joins
+    // stays a single query the planner can index. If a fifth level ever
+    // appears, add another alias.
+    const Parent = alias(ProductGroups, "group_parent");
+    const Grandparent = alias(ProductGroups, "group_grandparent");
+    const Root = alias(ProductGroups, "group_root");
 
     const base = await db
       .select({
@@ -43,12 +57,22 @@ export const getSoldProductsNotAdvised = async (): Promise<
         productCode: Products.productCode,
         productName: Products.name,
         stockUnit: Products.stockUnit,
+        theoreticalWeight: Products.theoreticalWeight,
+        weightPerM1: Products.weightPerM1,
         stockProduct: Products.stockProduct,
         standardProduct: Products.standardProduct,
-        productGroup: ProductGroups.name,
-        mainGroup: MainGroups.name,
+        // The reference system reads the hierarchy from the root down, not
+        // from the product up: a product hung straight off "Aluminum" shows
+        // that as its Main group and leaves Product group empty, rather than
+        // showing it as a product group with no main group above it.
+        productGroup: sql<
+          string | null
+        >`CASE WHEN ${ProductGroups.parentUuid} IS NULL THEN NULL ELSE ${ProductGroups.name} END`,
+        mainGroup: sql<
+          string | null
+        >`COALESCE(${Root.name}, ${Grandparent.name}, ${Parent.name}, ${ProductGroups.name})`,
         pacClassification: ProductGroups.pacClassification,
-        sales: sql<string>`COALESCE(SUM(${InvoiceItems.quantity}), 0)`,
+        sales: sql<string>`COALESCE(SUM(${InvoiceItems.weightKg}), 0)`,
         // The invoice line's own snapshot — see revenue-per-revenue-group.
         revenue: sql<string>`COALESCE(SUM(${InvoiceItems.amount}), 0)`,
       })
@@ -59,24 +83,37 @@ export const getSoldProductsNotAdvised = async (): Promise<
         ProductGroups,
         eq(Products.productGroupUuid, ProductGroups.uuid),
       )
-      .leftJoin(MainGroups, eq(ProductGroups.parentUuid, MainGroups.uuid))
+      .leftJoin(Parent, eq(ProductGroups.parentUuid, Parent.uuid))
+      .leftJoin(Grandparent, eq(Parent.parentUuid, Grandparent.uuid))
+      .leftJoin(Root, eq(Grandparent.parentUuid, Root.uuid))
       .where(
-        // Not on the order recommendation: group not making advices OR not a
-        // stock product (null group counts as not-advised too).
-        sql`NOT (COALESCE(${ProductGroups.makingOrderAdvices}, 0) = 1 AND COALESCE(${Products.stockProduct}, 0) = 1)`,
+        // Not on the order recommendation: the exact complement of what
+        // Order advice includes, read off the product rather than its group —
+        // the two screens share groups but never share a product, and 83
+        // products sit on this screen while a sibling in the same group sits
+        // on the other one.
+        sql`NOT (COALESCE(${Products.makingOrderAdvices}, 0) = 1 AND COALESCE(${Products.stockProduct}, 0) = 1)`,
       )
       .groupBy(
         Products.uuid,
         Products.productCode,
         Products.name,
         Products.stockUnit,
+        Products.theoreticalWeight,
+        Products.weightPerM1,
         Products.stockProduct,
         Products.standardProduct,
         ProductGroups.name,
-        MainGroups.name,
+        ProductGroups.parentUuid,
+        Parent.name,
+        Grandparent.name,
+        Root.name,
         ProductGroups.pacClassification,
       )
-      .orderBy(Products.productCode);
+      .orderBy(
+        sql`COALESCE(${Root.name}, ${Grandparent.name}, ${Parent.name}, ${ProductGroups.name})`,
+        Products.productCode,
+      );
 
     if (base.length === 0) {
       return [];
@@ -109,7 +146,9 @@ export const getSoldProductsNotAdvised = async (): Promise<
       ]),
     );
 
-    // Average monthly demand over the trailing 12 months.
+    // Average monthly demand over the trailing 12 months, weighed. The
+    // reference system's own heading says "(Stk.U.)", so this is restated in
+    // the product's stock unit below rather than reported in kilos.
     const consumptionRows = await db
       .select({
         productUuid: InvoiceItems.productUuid,

@@ -1,6 +1,7 @@
 "use client";
 
 import { SoldProductNotAdvisedRow } from "@/app/(dashboard)/sold-products-not-advised/actions";
+import { Checkbox } from "@/components/shadcn/checkbox";
 import {
   Table,
   TableBody,
@@ -9,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
-import { formatMoney, formatNumber, yesNo } from "@/lib/helpers";
+import { formatMoney, formatNumber } from "@/lib/helpers";
 import { TableExportButton } from "@/components/ui/table-export-button";
 
 type Props = {
@@ -35,13 +36,15 @@ export const SoldProductsNotAdvisedTable = ({ rows }: Props) => (
             <TableHead>Description</TableHead>
             <TableHead className="text-center">Stock product</TableHead>
             <TableHead className="text-center">Standard product</TableHead>
-            <TableHead className="text-right">Avg. monthly cons.</TableHead>
+            <TableHead className="text-right">
+              Avg. Monthly consumption last year (Stk.U.)
+            </TableHead>
             <TableHead className="text-right">Revenue</TableHead>
             <TableHead className="text-right">Sales</TableHead>
-            <TableHead className="text-right">Stock</TableHead>
-            <TableHead className="text-right">Available</TableHead>
+            <TableHead className="text-right">Stock (Stk.U.)</TableHead>
+            <TableHead className="text-right">Available (StkU)</TableHead>
             <TableHead>Stock U.</TableHead>
-            <TableHead>PAC</TableHead>
+            <TableHead>PAC-Code</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -64,13 +67,15 @@ export const SoldProductsNotAdvisedTable = ({ rows }: Props) => (
                 </TableCell>
                 <TableCell>{row.productName}</TableCell>
                 <TableCell className="text-center">
-                  {yesNo(row.stockProduct)}
+                  <Checkbox checked={row.stockProduct ?? false} disabled />
                 </TableCell>
                 <TableCell className="text-center">
-                  {yesNo(row.standardProduct)}
+                  <Checkbox checked={row.standardProduct ?? false} disabled />
                 </TableCell>
                 <TableCell className="text-right">
-                  {formatNumber(row.avgMonthlyConsumption)}
+                  {row.avgMonthlyConsumption === null
+                    ? "—"
+                    : formatNumber(row.avgMonthlyConsumption)}
                 </TableCell>
                 <TableCell className="text-right whitespace-nowrap">
                   {formatMoney(row.revenue)}
