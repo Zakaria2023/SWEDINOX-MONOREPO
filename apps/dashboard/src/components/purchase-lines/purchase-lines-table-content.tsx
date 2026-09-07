@@ -20,7 +20,7 @@ import {
 } from "@/components/shadcn/table";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { ORDER_LINE_STATUS_LABELS, STOCK_UNIT_LABELS } from "@/lib/labels";
-import { formatMoney, formatNumber } from "@/lib/helpers";
+import { formatLengthMm, formatMoney, formatNumber } from "@/lib/helpers";
 
 type Props = {
   page: Paged<PurchaseLineItem>;
@@ -115,7 +115,7 @@ export const PurchaseLinesTable = ({ page, filters }: Props) => (
               <TableCell>{row.stockCategory ?? "—"}</TableCell>
               <TableCell>{row.options ?? "—"}</TableCell>
               <TableCell className="text-right">
-                {row.lengthMm ?? "—"}
+                {formatLengthMm(row.lengthMm)}
               </TableCell>
               <TableCell className="text-right">{row.widthMm ?? "—"}</TableCell>
               <TableCell className="text-right">{row.qtyPlanned}</TableCell>

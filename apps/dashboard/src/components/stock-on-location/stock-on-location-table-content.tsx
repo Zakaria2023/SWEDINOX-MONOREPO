@@ -10,7 +10,7 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { STOCK_UNIT_LABELS } from "@/lib/labels";
-import { formatMoney, formatNumber } from "@/lib/helpers";
+import { formatLengthMm, formatMoney, formatNumber } from "@/lib/helpers";
 import { TableExportButton } from "@/components/ui/table-export-button";
 
 type Props = {
@@ -76,7 +76,7 @@ export const StockOnLocationTable = ({ stock }: Props) => (
                 <TableCell>{row.stockCategory ?? "—"}</TableCell>
                 <TableCell>{row.options ?? "—"}</TableCell>
                 <TableCell className="text-right">
-                  {row.lengthMm ?? "—"}
+                  {formatLengthMm(row.lengthMm)}
                 </TableCell>
                 <TableCell className="text-right">
                   {row.widthMm ?? "—"}

@@ -13,8 +13,10 @@ import {
   SalesOptions,
   SelectSalesOptions,
 } from "@/db/schema/sales-options";
-import { describeError,
+import {
+  describeError,
   generateUuid,
+  optionAmount,
   profitMarginPercent,
   todayDateString,
 } from "@/lib/helpers";
@@ -132,6 +134,10 @@ export const generateOptionCharges =
           quantity: OrderItems.quantity,
           unit: OrderItems.unit,
           weightKg: OrderItems.kgPlanned,
+          // Dimensions come along because a surface treatment is charged by
+          // area, not by piece.
+          lengthMm: OrderItems.lengthMm,
+          widthMm: OrderItems.widthMm,
           lineStatus: OrderItems.lineStatus,
           productRevenueGroupUuid: Products.revenueGroupUuid,
         })
@@ -209,8 +215,19 @@ export const generateOptionCharges =
         for (const price of linePrices) {
           const unitPrice = Number(price.basePrice ?? 0);
           const unitCost = Number(price.costPrice ?? 0);
-          const amount = unitPrice * quantity;
-          const cost = unitCost * quantity;
+
+          // An option's price carries the basis it is struck in, so the charge
+          // is that measure of the line rather than its piece count. Grinding
+          // at EUR 1,70 per m2 on ten 2000 x 1000 sheets is EUR 34,00, not
+          // EUR 17,00.
+          const measured = {
+            quantity,
+            weightKg: Number(line.weightKg ?? 0),
+            lengthMm: line.lengthMm,
+            widthMm: line.widthMm,
+          };
+          const amount = optionAmount(unitPrice, price.priceUnit, measured);
+          const cost = optionAmount(unitCost, price.priceUnit, measured);
 
           rows.push({
             uuid: generateUuid(),

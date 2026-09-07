@@ -1134,9 +1134,16 @@ export const orderItemStatuses = [
 export type OrderItemStatus = (typeof orderItemStatuses)[number];
 
 // Fulfilment state of an order/return line (the "Line status" column).
+// The lifecycle a purchase line walks, in order. "Provisional" is where a
+// line converted from a quote starts — the order exists but has not been made
+// final — and "checked" sits between released and the first receipt, for a
+// line somebody has verified against the supplier's confirmation. Both were
+// read off the reference's own saved filters and status column.
 export const orderLineStatuses = [
+  "provisional",
   "in_progress",
   "released",
+  "checked",
   "partially_delivered",
   "delivered",
   "partially_invoiced",

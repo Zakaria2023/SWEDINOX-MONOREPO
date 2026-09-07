@@ -1,6 +1,7 @@
 import { PurchaseLineItem } from "@/app/(dashboard)/purchase-lines/actions";
 import { dateCell, ExportColumn, numberCell, textCell } from "@/lib/excel";
 import { ORDER_LINE_STATUS_LABELS, STOCK_UNIT_LABELS } from "@/lib/labels";
+import { COIL_LENGTH_SENTINEL } from "@/lib/helpers";
 
 /**
  * The purchase lines overview as a sheet — see app/(dashboard)/orders/columns.ts.
@@ -101,9 +102,11 @@ export const PURCHASE_LINE_COLUMNS: Array<
   },
   {
     key: "lengthMm",
-    label: "Length",
+    label: "Length (mm)",
     defaultVisible: true,
-    value: (row) => numberCell(row.lengthMm),
+    // 999999 is the reference's mark for coil, not a 999 metre bar.
+    value: (row) =>
+      row.lengthMm === COIL_LENGTH_SENTINEL ? null : numberCell(row.lengthMm),
   },
   {
     key: "widthMm",

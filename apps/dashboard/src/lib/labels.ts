@@ -1155,8 +1155,10 @@ export const ORDER_METHOD_LABELS: Record<OrderMethod, string> = {
 };
 
 export const ORDER_LINE_STATUS_LABELS: Record<OrderLineStatus, string> = {
+  provisional: "Provisional",
   in_progress: "In progress",
   released: "Released",
+  checked: "Checked",
   partially_delivered: "Partially delivered",
   delivered: "Delivered",
   partially_invoiced: "Partially invoiced",

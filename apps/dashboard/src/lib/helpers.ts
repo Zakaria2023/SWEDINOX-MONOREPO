@@ -404,6 +404,42 @@ export const financialPeriodFor = (
   return { financialYear: date.getFullYear(), period: date.getMonth() + 1 };
 };
 
+// The reference writes DateTime.MinValue for "never" and MaxValue for
+// "forever" rather than leaving a date empty — 1-1-0001 turns up in a
+// confirmation date that has not happened, 31-12-9999 in an insurance policy
+// with no end. Neither is a date anyone should read, so both show as blank.
+const SENTINEL_DATES = ["0001-01-01", "9999-12-31"];
+
+/**
+ * Whether a date is one of the reference's stand-ins for "no date at all".
+ * Ours stores null, but data imported from the old system carries these.
+ */
+export const isSentinelDate = (value: string | Date | null): boolean => {
+  if (!value) {
+    return false;
+  }
+  const iso =
+    typeof value === "string" ? value.slice(0, 10) : value.toISOString().slice(0, 10);
+  return SENTINEL_DATES.includes(iso);
+};
+
+/**
+ * A length of 999999 mm is the reference's mark for coil — endless material
+ * with no cut length — not a 999 metre bar. Shown blank, like the sentinel
+ * dates, so nobody reads it as a measurement.
+ */
+export const COIL_LENGTH_SENTINEL = 999999;
+
+export const formatLengthMm = (
+  value: number | string | null | undefined,
+): string => {
+  const length = Number(value ?? 0);
+  if (!length || length === COIL_LENGTH_SENTINEL) {
+    return "—";
+  }
+  return formatNumber(length);
+};
+
 /**
  * Formats the value of a Drizzle `date` column (typed `string | Date`) for
  * display, falling back to `fallback` (an em dash by default) when the value is
@@ -413,7 +449,7 @@ export const formatDateValue = (
   value: string | Date | null,
   fallback = "—",
 ): string => {
-  if (!value) {
+  if (!value || isSentinelDate(value)) {
     return fallback;
   }
   return new Date(value).toLocaleDateString("en-GB");
@@ -426,7 +462,7 @@ export const formatDateValue = (
  * localised.
  */
 export const formatDateColumn = (value: string | Date | null): string => {
-  if (!value) {
+  if (!value || isSentinelDate(value)) {
     return "—";
   }
   return typeof value === "string" ? value : value.toISOString().slice(0, 10);
@@ -8159,6 +8195,11 @@ const STATUS_TONES: Record<string, StatusTone> = {
   credited: "done",
   awarded: "done",
   ok: "done",
+  // A purchase line starts provisional and is checked against the supplier's
+  // confirmation before anything arrives — neither is finished, neither is
+  // wrong.
+  provisional: "neutral",
+  checked: "active",
   full: "done",
   on_hold: "attention",
   warning: "attention",
@@ -8295,3 +8336,64 @@ export const productPieceWeightKg = (product: {
   const stored = Number(product.theoreticalWeight ?? 0);
   return stored > 0 ? stored : null;
 };
+
+/**
+ * How much of a line an option is charged against, in the unit its price is
+ * struck in.
+ *
+ * A processing option carries its own basis — the reference shows it as a
+ * `Per` column on the option row, so two options on the same line can be
+ * charged two different ways. Surface treatments go by area, decoiling by
+ * weight, sawing by piece.
+ *
+ * Returns null for a basis that cannot be worked out from what the line knows,
+ * so a caller can leave the amount alone rather than invent one.
+ */
+export const optionMeasureFor = (
+  priceUnit: string | null | undefined,
+  line: {
+    quantity: number;
+    weightKg: number;
+    lengthMm?: number | null;
+    widthMm?: number | null;
+  },
+): number | null => {
+  const metres = (line.lengthMm ?? 0) / 1000;
+  const width = (line.widthMm ?? 0) / 1000;
+  switch ((priceUnit ?? "").trim().toUpperCase()) {
+    case "M2":
+      return metres * width * line.quantity;
+    case "M1":
+      return metres * line.quantity;
+    case "KG":
+      return line.weightKg;
+    case "TN":
+      return line.weightKg / 1000;
+    case "ST":
+      return line.quantity;
+    default:
+      return null;
+  }
+};
+
+/**
+ * What an option costs on a line: its price times the measure that price is
+ * struck against.
+ *
+ * Proved to the cent against the reference's own order 400904 — Blue Foil at
+ * €1,40 per m² on 28 sheets of 2200 × 1000 comes to €86,24, and Decoilen at
+ * €110 per tonne on the same line comes to €66,49.
+ *
+ * When the basis is unknown the measure falls back to the piece count, which
+ * is the reading the system had before options carried a basis at all.
+ */
+export const optionAmount = (
+  price: number,
+  priceUnit: string | null | undefined,
+  line: {
+    quantity: number;
+    weightKg: number;
+    lengthMm?: number | null;
+    widthMm?: number | null;
+  },
+): number => price * (optionMeasureFor(priceUnit, line) ?? line.quantity);
