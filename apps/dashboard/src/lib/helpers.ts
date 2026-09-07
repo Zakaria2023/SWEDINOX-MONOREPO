@@ -8171,3 +8171,95 @@ const STATUS_TONES: Record<string, StatusTone> = {
 
 export const statusTone = (value: string | null | undefined): StatusTone =>
   value ? (STATUS_TONES[value] ?? "neutral") : "neutral";
+
+// ---------------------------------------------------------------------------
+// Purchase and stock arithmetic
+//
+// Every rule below was proved against real rows exported from the reference
+// system, not inferred — the working is in docs/reference-system/. They live
+// here so the same figure cannot be derived two different ways on two screens.
+// ---------------------------------------------------------------------------
+
+/**
+ * The theoretical weight of one piece, from its dimensions and the material's
+ * density. This is the figure behind every kilo column in the system: a
+ * purchase line's `Kg(pur)`, a receival's `Kg(p)`, an invoice line's `Kg` and a
+ * lot's `Stock (Kg)` are all this number times a quantity.
+ *
+ * Density is the product's own figure in kg/m³ (7 850 for stainless), not a
+ * grade default — the reference stores it per product, and a 300-series
+ * default of 7 900 is 0,6 % out on every weight.
+ *
+ * Returns null when the product is not dimensioned. A piece article carries no
+ * length, width or thickness at all and stores its weight per piece directly,
+ * so there is nothing to derive.
+ */
+export const pieceWeightKg = (
+  lengthMm: number | null | undefined,
+  widthMm: number | null | undefined,
+  thicknessMm: number | null | undefined,
+  densityKgPerM3: number | null | undefined,
+): number | null => {
+  if (!lengthMm || !widthMm || !thicknessMm || !densityKgPerM3) {
+    return null;
+  }
+  return (
+    (lengthMm / 1000) * (widthMm / 1000) * (thicknessMm / 1000) * densityKgPerM3
+  );
+};
+
+/**
+ * What a weight costs at a price quoted in that price's own unit.
+ *
+ * A purchase price always carries the unit it is struck in — `PriceU` on a
+ * line, `Per` on an option, "€ 1.950,00 per TN" on the order. A tonne price
+ * divides the weight by a thousand; a kilo price does not.
+ *
+ * Anything else falls back to the tonne, which is what all but a handful of
+ * lines use, rather than returning nothing and losing the amount entirely.
+ */
+export const amountForWeight = (
+  pricePerUnit: number,
+  priceUnit: string | null | undefined,
+  weightKg: number,
+): number =>
+  (priceUnit ?? "").trim().toUpperCase() === "KG"
+    ? pricePerUnit * weightKg
+    : pricePerUnit * (weightKg / 1000);
+
+/**
+ * What a lot of stock is worth. The valuation price is per tonne, like every
+ * other price in the system.
+ *
+ * A negative valuation price is a data error rather than a business case, but
+ * it exists in the reference's own data, so this multiplies it out rather than
+ * clamping and hiding it.
+ */
+export const stockValueFromWeight = (
+  weightKg: number,
+  valuationPricePerTonne: number,
+): number => weightKg * (valuationPricePerTonne / 1000);
+
+/**
+ * What is still coming on a purchase line and not yet promised to anyone —
+ * ordered, less what has already arrived, less what is reserved against it.
+ *
+ * This is *not* the warehouse's "available". A lot on the shelf is available
+ * when it is unreserved; a purchase line is available when it is still
+ * inbound. Both exist, and conflating them double-counts.
+ */
+export const openQuantityOnPurchaseLine = (
+  qtyPlanned: number,
+  qtyReceived: number,
+  reservedQty: number,
+): number => Math.max(0, qtyPlanned - qtyReceived - reservedQty);
+
+/**
+ * Free stock on a lot. The reference rounds this to whole units for display —
+ * kilograms included, so 55,41 kg shows as 55 — but the underlying quantity
+ * keeps its decimals. Round on render, never in the query.
+ */
+export const availableStockQuantity = (
+  quantity: number,
+  reservedQuantity: number,
+): number => Math.max(0, quantity - reservedQuantity);
