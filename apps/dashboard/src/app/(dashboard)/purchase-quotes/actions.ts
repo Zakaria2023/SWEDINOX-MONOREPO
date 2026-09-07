@@ -26,6 +26,7 @@ import {
   generateUuid,
   getQuoteVatRatePercent,
   isPurchaseQuoteEditable,
+  netPriceAfterDiscounts,
   todayDateString,
 } from "@/lib/helpers";
 import { and, desc, eq, getTableColumns, ne } from "drizzle-orm";
@@ -166,12 +167,25 @@ export const createPurchaseQuote = async (
       // Lines were previously dropped on the floor — PurchaseQuoteItems was
       // never written by anything, so a quote had a supplier and no content.
       for (const [index, item] of items.entries()) {
-        const netPrice = Number(item.netPrice ?? 0);
+        // A quoted price arrives one of two ways: a net price typed straight
+        // in, or a gross price with the group and line discounts that come off
+        // it. When a gross is given it wins, because net is then a result
+        // rather than something anyone should have to keep in step by hand.
+        const gross = Number(item.grossPrice ?? 0);
+        const netPrice =
+          gross > 0
+            ? netPriceAfterDiscounts(
+                gross,
+                Number(item.groupDiscountPercent ?? 0),
+                Number(item.lineDiscountPercent ?? 0),
+              )
+            : Number(item.netPrice ?? 0);
 
         await tx.insert(PurchaseQuoteItems).values({
           ...item,
           uuid: generateUuid(),
           purchaseQuoteUuid: uuid,
+          netPrice: netPrice.toFixed(2),
           lineNumber: item.lineNumber ?? index + 1,
           // The line's weight at the price's own unit, never the piece count:
           // ten plates weighing 314 kg at EUR 1.930 per tonne is EUR 606,02.

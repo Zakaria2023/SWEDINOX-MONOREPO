@@ -8281,60 +8281,47 @@ export const stockValueFromWeight = (
   valuationPricePerTonne: number,
 ): number => weightKg * (valuationPricePerTonne / 1000);
 
-/**
- * What is still coming on a purchase line and not yet promised to anyone —
- * ordered, less what has already arrived, less what is reserved against it.
- *
- * This is *not* the warehouse's "available". A lot on the shelf is available
- * when it is unreserved; a purchase line is available when it is still
- * inbound. Both exist, and conflating them double-counts.
- */
-export const openQuantityOnPurchaseLine = (
-  qtyPlanned: number,
-  qtyReceived: number,
-  reservedQty: number,
-): number => Math.max(0, qtyPlanned - qtyReceived - reservedQty);
-
-/**
- * Free stock on a lot. The reference rounds this to whole units for display —
- * kilograms included, so 55,41 kg shows as 55 — but the underlying quantity
- * keeps its decimals. Round on render, never in the query.
- */
-export const availableStockQuantity = (
-  quantity: number,
-  reservedQuantity: number,
-): number => Math.max(0, quantity - reservedQuantity);
+// "Available" means two different things and both are computed in SQL, in the
+// query that needs them, rather than here:
+//
+//   a purchase line   still inbound and unpromised — qty(p) − qty(a) − reserved
+//   a warehouse lot   free on the shelf — quantity − reserved
+//
+// They are not interchangeable, and conflating them double-counts. Kept as a
+// note rather than as helpers nothing calls, so there is one definition of
+// each rather than two that can drift.
 
 /**
  * The weight of one unit of a product, in kilograms.
  *
- * A dimensioned product — plate, sheet, coil — derives it from its own
- * dimensions and its own density, which is the figure the reference stores per
- * product (7 850 kg/m³ for stainless) rather than looking up per grade. A
- * grade default of 7 900 is 0,6 % out on every weight in the system.
+ * Prefers `weightTheoretical`, which the product form already derives from the
+ * article's dimensions and its grade's density and stores on save. A piece
+ * article has no dimensions to derive from and carries its weight per unit
+ * directly, so that is the fallback.
  *
- * A piece article has no dimensions at all and stores its weight per piece
- * directly, so that is used when there is nothing to derive from. Returns null
- * when neither is known, so a caller can tell "weighs nothing" from "unknown".
+ * Returns null when neither is known, so a caller can tell "weighs nothing"
+ * from "nobody has said".
+ *
+ * ⚠️ Our density comes from the grade table (7 900 kg/m³ for the 300 series)
+ * where the reference stores one per product and shows 7 850 for a 316L plate
+ * — a 0,6 % difference on every derived weight. Ours has nowhere to keep a
+ * per-product density yet; see docs/reference-system/STEPS.md.
  */
 export const productPieceWeightKg = (product: {
-  length?: string | number | null;
-  widthDiameter?: string | number | null;
-  thickness?: string | number | null;
   weightTheoretical?: string | number | null;
   theoreticalWeight?: string | number | null;
 }): number | null => {
-  const derived = pieceWeightKg(
-    Number(product.length ?? 0),
-    Number(product.widthDiameter ?? 0),
-    Number(product.thickness ?? 0),
-    Number(product.weightTheoretical ?? 0),
-  );
-  if (derived !== null) {
-    return derived;
+  // `weightTheoretical` is already the weight of one piece: the product form
+  // derives it from the article's dimensions and its grade's density and
+  // writes it on save, so there is nothing left to multiply out here.
+  const perPiece = Number(product.weightTheoretical ?? 0);
+  if (perPiece > 0) {
+    return perPiece;
   }
-  const stored = Number(product.theoreticalWeight ?? 0);
-  return stored > 0 ? stored : null;
+  // A product with no dimensions to derive from — a piece article — carries
+  // its weight per unit directly instead.
+  const perUnit = Number(product.theoreticalWeight ?? 0);
+  return perUnit > 0 ? perUnit : null;
 };
 
 /**

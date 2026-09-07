@@ -378,14 +378,12 @@ export const createPurchaseOrder = async (
     }
 
     const productUuids = items.map((item) => item.productUuid);
-    // The dimensions and density come back with the uuid because a line's
-    // weight is derived from them, and its amount is derived from the weight.
+    // The weights come back with the uuid because a line's weight is the
+    // product's weight per piece times the quantity, and its amount is derived
+    // from that weight rather than from the piece count.
     const validProducts = await db
       .select({
         uuid: Products.uuid,
-        length: Products.length,
-        widthDiameter: Products.widthDiameter,
-        thickness: Products.thickness,
         weightTheoretical: Products.weightTheoretical,
         theoreticalWeight: Products.theoreticalWeight,
       })
