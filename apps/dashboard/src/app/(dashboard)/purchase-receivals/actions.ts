@@ -1,6 +1,7 @@
 "use server";
 
-import { describeError } from "@/lib/helpers";
+import { describeError, generateUuid } from "@/lib/helpers";
+import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import {
   PurchaseLineReceivals,
@@ -36,6 +37,11 @@ export type PurchaseReceivalDetail = PurchaseReceivalItem & {
   purchaseOrderId: SelectPurchaseOrders["id"] | null;
   /** The batch registered against this receipt, if one has been. */
   batch: PurchaseReceivalBatchRow | null;
+};
+
+export type PurchaseReceivalActionResult = {
+  success?: boolean;
+  error?: string;
 };
 
 export type PurchaseReceivalBatchRow = Pick<
@@ -202,5 +208,75 @@ export const getPurchaseReceivalDetail = async (
     return { ...receival, batch: batch ?? null };
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch purchase receival"));
+  }
+};
+
+/**
+ * `Split` — divide a reception into two instalments.
+ *
+ * This is the mechanism behind a purchase line showing several rows on the
+ * receivals overview: one reception is created against the line and then split,
+ * which is why only the weights, the arrival date and the status differ between
+ * those rows while everything else repeats from the line.
+ *
+ * The weights of the parts always sum to the whole, so a split cannot create or
+ * destroy kilos.
+ */
+export const splitPurchaseReceival = async (
+  uuid: string,
+  splitKg: number,
+): Promise<PurchaseReceivalActionResult> => {
+  try {
+    const [receival] = await db
+      .select()
+      .from(PurchaseLineReceivals)
+      .where(eq(PurchaseLineReceivals.uuid, uuid))
+      .limit(1);
+
+    if (!receival) {
+      return { error: "Receipt not found." };
+    }
+    if (Number(receival.kgActual ?? 0) > 0) {
+      return { error: "A receipt that has already arrived cannot be split." };
+    }
+
+    const plannedKg = Number(receival.kgPlanned ?? 0);
+    if (!Number.isFinite(splitKg) || splitKg <= 0 || splitKg >= plannedKg) {
+      return {
+        error: `Enter a weight between 0 and ${plannedKg} kg to split off.`,
+      };
+    }
+
+    await db.transaction(async (tx) => {
+      await tx
+        .update(PurchaseLineReceivals)
+        .set({ kgPlanned: (plannedKg - splitKg).toFixed(2) })
+        .where(eq(PurchaseLineReceivals.uuid, uuid));
+
+      // The new instalment is the same reception in every respect except its
+      // weight: same line, same planned date, nothing arrived yet.
+      const { id: _id, uuid: _uuid, createdAt, updatedAt, ...rest } = receival;
+      void _id;
+      void _uuid;
+      void createdAt;
+      void updatedAt;
+      await tx.insert(PurchaseLineReceivals).values({
+        ...rest,
+        uuid: generateUuid(),
+        kgPlanned: splitKg.toFixed(2),
+        kgActual: "0.00",
+        deliveryDateActual: null,
+        receiptStatus: receival.receiptStatus,
+      });
+    });
+
+    revalidatePath("/purchase-receivals");
+    revalidatePath(`/purchase-receivals/${uuid}`);
+    return { success: true };
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error ? error.message : "Failed to split the receipt",
+    };
   }
 };

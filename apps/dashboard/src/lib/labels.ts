@@ -1314,6 +1314,7 @@ export const PURCHASE_ORDER_TYPE_LABELS: Record<PurchaseOrderType, string> = {
 
 export const PURCHASE_ORDER_STATUS_LABELS: Record<PurchaseOrderStatus, string> =
   {
+    provisional: "Provisional",
     open: "Open",
     confirmed: "Confirmed",
     pre_notified: "Pre-notified",

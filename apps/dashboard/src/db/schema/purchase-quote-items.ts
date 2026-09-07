@@ -43,6 +43,21 @@ export const PurchaseQuoteItems = mysqlTable(
     kg: decimal("kg", { precision: 15, scale: 2 }).default("0.00"),
 
     // ── Pricing ───────────────────────────────────────────────────────────────
+    // What the supplier quoted before discounts, and the two percentages that
+    // come off it — the group's, then the line's. The reference shows all four
+    // side by side on a quote line, with net as the result rather than a
+    // separate figure somebody types.
+    grossPrice: decimal("gross_price", { precision: 15, scale: 4 }).default(
+      "0.0000",
+    ),
+    groupDiscountPercent: decimal("group_discount_percent", {
+      precision: 6,
+      scale: 2,
+    }).default("0.00"),
+    lineDiscountPercent: decimal("line_discount_percent", {
+      precision: 6,
+      scale: 2,
+    }).default("0.00"),
     netPrice: decimal("net_price", { precision: 15, scale: 2 }).default("0.00"),
     priceUnit: varchar("price_unit", { length: 10 }),
     amount: decimal("amount", { precision: 15, scale: 2 }).default("0.00"),

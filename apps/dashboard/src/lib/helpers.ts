@@ -8397,3 +8397,26 @@ export const optionAmount = (
     widthMm?: number | null;
   },
 ): number => price * (optionMeasureFor(priceUnit, line) ?? line.quantity);
+
+/**
+ * A purchase line's net price: the gross price less the group discount and
+ * then the line discount, both percentages.
+ *
+ * ⚠️ The order is cascading — the line discount comes off what is left after
+ * the group discount, not off the gross. That is the ordinary trade
+ * convention, but it is **not proved against the reference**: every captured
+ * row carried 0 % in both boxes, where cascading and additive give the same
+ * answer. On a EUR 50.000 line with 5 % and 3 % the two readings differ by
+ * about EUR 75.
+ *
+ * One quote line with a real figure typed into both boxes settles it. Until
+ * then this is the assumption, stated where it can be found.
+ */
+export const netPriceAfterDiscounts = (
+  grossPrice: number,
+  groupDiscountPercent: number,
+  lineDiscountPercent: number,
+): number =>
+  grossPrice *
+  (1 - (groupDiscountPercent || 0) / 100) *
+  (1 - (lineDiscountPercent || 0) / 100);

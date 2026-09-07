@@ -1320,7 +1320,10 @@ export const purchaseOrderTypes = [
 
 export type PurchaseOrderType = (typeof purchaseOrderTypes)[number];
 
+// An order converted from a quote lands here: it exists, but nobody has made
+// it final yet, so nothing can be received against it.
 export const purchaseOrderStatuses = [
+  "provisional",
   "open",
   "confirmed",
   "pre_notified",

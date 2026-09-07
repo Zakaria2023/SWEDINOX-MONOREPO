@@ -47,6 +47,18 @@ export const PurchaseOrderItems = mysqlTable(
     qtyReceived: decimal("qty_received", { precision: 15, scale: 3 }).default(
       "0.000",
     ),
+    // Whether the order has actually gone to the supplier, and whether they
+    // have acknowledged it — each either zero or the whole line, so a partial
+    // confirmation can be held. The reference shows them as "Qty ordered" and
+    // "Qty confirmed", and its confusingly named "Received Qty" on the
+    // receivals overview is this confirmed figure rather than a receipt.
+    qtyOrdered: decimal("qty_ordered", { precision: 15, scale: 3 }).default(
+      "0.000",
+    ),
+    qtyConfirmed: decimal("qty_confirmed", { precision: 15, scale: 3 }).default(
+      "0.000",
+    ),
+
     reservedQty: decimal("reserved_qty", { precision: 15, scale: 3 }).default(
       "0.000",
     ),
@@ -63,6 +75,21 @@ export const PurchaseOrderItems = mysqlTable(
     // A received lot is valued at this price, which is what makes a sales order
     // line's cost — and therefore its margin — a true figure rather than a
     // stand-in for the replacement price.
+    // What the supplier quoted before discounts, and the two percentages that
+    // come off it — the group's, then the line's. The reference shows all four
+    // side by side on a quote line, with net as the result rather than a
+    // separate figure somebody types.
+    grossPrice: decimal("gross_price", { precision: 15, scale: 4 }).default(
+      "0.0000",
+    ),
+    groupDiscountPercent: decimal("group_discount_percent", {
+      precision: 6,
+      scale: 2,
+    }).default("0.00"),
+    lineDiscountPercent: decimal("line_discount_percent", {
+      precision: 6,
+      scale: 2,
+    }).default("0.00"),
     netPrice: decimal("net_price", { precision: 15, scale: 4 }).default(
       "0.0000",
     ),

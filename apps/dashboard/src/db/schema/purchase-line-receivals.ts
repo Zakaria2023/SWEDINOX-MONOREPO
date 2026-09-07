@@ -71,6 +71,11 @@ export const PurchaseLineReceivals = mysqlTable(
 
     // ── Dates / people ────────────────────────────────────────────────────────
     receiptDate: date("receipt_date", { mode: "string" }),
+    // Stamped when the supplier pre-advises a delivery, which is what the
+    // order's Pre-notify action does.
+    preAnnouncedDeliveryDate: date("pre_announced_delivery_date", {
+      mode: "string",
+    }),
     deliveryDatePlanned: date("delivery_date_planned", { mode: "string" }),
     deliveryDateActual: date("delivery_date_actual", { mode: "string" }),
     purchaser: varchar("purchaser", { length: 255 }),

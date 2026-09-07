@@ -672,3 +672,115 @@ export const updatePurchaseOrder = async (
   revalidatePath(`/purchase-orders/${uuid}`);
   redirect(`/purchase-orders/${uuid}`);
 };
+
+/**
+ * `Make final` — the action that only exists on a provisional order.
+ *
+ * An order converted from a quote arrives provisional: it exists, its
+ * reception is already created, but nothing can be received against it and the
+ * whole Receipts panel is read-only. Making it final opens it.
+ */
+export const makePurchaseOrderFinal = async (
+  uuid: string,
+): Promise<PurchaseOrderActionResult> => {
+  try {
+    const [order] = await db
+      .select({ status: PurchaseOrders.status })
+      .from(PurchaseOrders)
+      .where(eq(PurchaseOrders.uuid, uuid))
+      .limit(1);
+
+    if (!order) {
+      return { error: "Purchase order not found." };
+    }
+    if (order.status !== "provisional") {
+      return { error: "Only a provisional purchase order can be made final." };
+    }
+
+    await db.transaction(async (tx) => {
+      await tx
+        .update(PurchaseOrders)
+        .set({ status: "open" })
+        .where(eq(PurchaseOrders.uuid, uuid));
+
+      // The lines follow the header out of provisional, and the order is now
+      // genuinely with the supplier.
+      await tx
+        .update(PurchaseOrderItems)
+        .set({
+          status: "released",
+          qtyOrdered: sql`${PurchaseOrderItems.qtyPlanned}`,
+        })
+        .where(eq(PurchaseOrderItems.purchaseOrderUuid, uuid));
+    });
+
+    revalidatePath("/purchase-orders");
+    revalidatePath(`/purchase-orders/${uuid}`);
+    revalidatePath("/purchase-lines");
+    return { success: true, purchaseOrderUuid: uuid };
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to make purchase order final",
+    };
+  }
+};
+
+/**
+ * `Confirm` — the supplier has acknowledged the order.
+ *
+ * This is what fills the quantity the reference calls "Qty confirmed", and
+ * what the receivals overview confusingly labels "Received Qty": a figure that
+ * is non-zero long before anything arrives, because it records a promise
+ * rather than a receipt.
+ */
+export const confirmPurchaseOrder = async (
+  uuid: string,
+): Promise<PurchaseOrderActionResult> => {
+  try {
+    const [order] = await db
+      .select({ status: PurchaseOrders.status })
+      .from(PurchaseOrders)
+      .where(eq(PurchaseOrders.uuid, uuid))
+      .limit(1);
+
+    if (!order) {
+      return { error: "Purchase order not found." };
+    }
+    if (order.status === "provisional") {
+      return {
+        error: "Make the purchase order final before confirming it.",
+      };
+    }
+    if (order.status === "cancelled") {
+      return { error: "A cancelled purchase order cannot be confirmed." };
+    }
+
+    await db.transaction(async (tx) => {
+      await tx
+        .update(PurchaseOrders)
+        .set({ status: "confirmed" })
+        .where(eq(PurchaseOrders.uuid, uuid));
+
+      await tx
+        .update(PurchaseOrderItems)
+        .set({ qtyConfirmed: sql`${PurchaseOrderItems.qtyPlanned}` })
+        .where(eq(PurchaseOrderItems.purchaseOrderUuid, uuid));
+    });
+
+    revalidatePath("/purchase-orders");
+    revalidatePath(`/purchase-orders/${uuid}`);
+    revalidatePath("/purchase-lines");
+    revalidatePath("/purchase-receivals");
+    return { success: true, purchaseOrderUuid: uuid };
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to confirm purchase order",
+    };
+  }
+};
