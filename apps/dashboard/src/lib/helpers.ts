@@ -3344,9 +3344,18 @@ export const weightPerMetreOf = (
   shape: ProductDimensionShape | null | undefined,
   dimensions: ArticleDimensions,
   grade: FeaturesQuality | string | null | undefined,
+  /**
+   * kg/dm3 held on the article itself. The reference stores a density per
+   * product rather than looking one up per grade, so when a product carries
+   * its own it wins — a 316L plate at 7,850 rather than the 300 series' 7,900.
+   */
+  densityOverride?: number | null,
 ): number | null => {
   const area = crossSectionAreaMm2(shape, dimensions);
-  const density = materialDensityOf(grade);
+  const density =
+    densityOverride && densityOverride > 0
+      ? densityOverride
+      : materialDensityOf(grade);
   if (area === null || density === null) {
     return null;
   }
@@ -3378,8 +3387,14 @@ export const deriveArticleWeights = (
   shape: ProductDimensionShape | null | undefined,
   dimensions: ArticleDimensions,
   grade: FeaturesQuality | string | null | undefined,
+  densityOverride?: number | null,
 ): Partial<DerivedArticleWeights> => {
-  const weightPerM1 = weightPerMetreOf(shape, dimensions, grade);
+  const weightPerM1 = weightPerMetreOf(
+    shape,
+    dimensions,
+    grade,
+    densityOverride,
+  );
   const paintSurfacePerM1 = paintSurfacePerMetreOf(shape, dimensions);
   const length = dimensions.length ?? 0;
   const derived: Partial<DerivedArticleWeights> = {};
@@ -3408,8 +3423,14 @@ export const derivedWeightColumns = (
   shape: ProductDimensionShape | null | undefined,
   dimensions: ArticleDimensions,
   grade: FeaturesQuality | string | null | undefined,
+  densityOverride?: number | null,
 ): Partial<Record<keyof DerivedArticleWeights, string>> => {
-  const derived = deriveArticleWeights(shape, dimensions, grade);
+  const derived = deriveArticleWeights(
+    shape,
+    dimensions,
+    grade,
+    densityOverride,
+  );
   const columns: Partial<Record<keyof DerivedArticleWeights, string>> = {};
   if (derived.weightPerM1 !== undefined) {
     columns.weightPerM1 = derived.weightPerM1.toFixed(4);
@@ -8302,10 +8323,10 @@ export const stockValueFromWeight = (
  * Returns null when neither is known, so a caller can tell "weighs nothing"
  * from "nobody has said".
  *
- * ⚠️ Our density comes from the grade table (7 900 kg/m³ for the 300 series)
- * where the reference stores one per product and shows 7 850 for a 316L plate
- * — a 0,6 % difference on every derived weight. Ours has nowhere to keep a
- * per-product density yet; see docs/reference-system/STEPS.md.
+ * The density behind that stored figure comes from the product's own
+ * `densityKgDm3` when it has one, and from the grade table otherwise — the
+ * reference keeps a density per product, and for a 316L plate its 7,850
+ * differs from our grade table's 8,000 by 1,9 %.
  */
 export const productPieceWeightKg = (product: {
   weightTheoretical?: string | number | null;

@@ -111,7 +111,12 @@ export const ColumnChart = ({
         </ul>
       )}
 
-      <div className="relative">
+      {/* The viewBox is 720 x 260 and the svg has no intrinsic height, so a
+          full-width card scales the whole drawing — text included — by however
+          wide it happens to be. On a 1800px screen that is 2.5x, which turns
+          11px axis labels into 28px ones. Capping the width at the design width
+          keeps the chart at its own scale and lets it shrink, never grow. */}
+      <div className="relative mx-auto w-full" style={{ maxWidth: VIEW_WIDTH }}>
         <svg
           viewBox={`0 0 ${VIEW_WIDTH} ${VIEW_HEIGHT}`}
           className="w-full"

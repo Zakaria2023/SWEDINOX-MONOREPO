@@ -456,6 +456,7 @@ const withDerivedWeights = (fields: ProductFields): ProductFields => ({
       thickness: Number(fields.thickness ?? 0),
     },
     fields.featuresQuality,
+    Number(fields.densityKgDm3 ?? 0) || null,
   ),
 });
 

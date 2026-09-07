@@ -173,6 +173,14 @@ export const Products = mysqlTable(
     ),
     printDimensions: boolean("print_dimensions").default(false),
 
+    // The density every derived weight is computed from, in kg/dm3.
+    //
+    // The reference keeps one per product and shows 7,850 for a 316L plate,
+    // where our grade table maps 316 to 8,000 — which makes that plate 64,0 kg
+    // instead of 62,8, out by 1,9 %. Set this and the product's own figure
+    // wins; leave it null and the grade still decides, as before.
+    densityKgDm3: decimal("density_kg_dm3", { precision: 6, scale: 3 }),
+
     weightTheoretical: decimal("weight_theoretical", {
       precision: 15,
       scale: 3,
