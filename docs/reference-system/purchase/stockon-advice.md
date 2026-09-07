@@ -183,6 +183,7 @@ policy against average consumption.
 system says in as many words that the parameters *have never been calculated*.
 
 If that holds across the catalogue, StockOn advice is dormant in this business
-— and like [Import purchase invoices](import-purchase-invoices.md), it may not
+— and like Import purchase invoices, which has now left scope entirely, it may
+not
 need building at all. That is worth establishing before any of the column
 questions on this page are worth answering.

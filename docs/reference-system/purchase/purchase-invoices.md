@@ -11,7 +11,9 @@ lines, this is the payables view of the documents.
 Show Purchase invoice · Purchase lines · Warehouse workorders ·
 Production workorders.
 **View open when captured**: none selected (blank).
-**Grid was empty**, so no example values were readable.
+**The overview grid was empty**, but **one invoice detail has been captured** —
+`600000`, Quarto Deutschland Gmbh — and it answers four of the questions below
+outright.
 
 ## Columns — captured, not yet matched
 
@@ -39,6 +41,91 @@ Production workorders.
 | 20 | Bank Country | |
 | 21 | Booking period | tooltip confirmed — the accounting period |
 
+## ✅ The invoice detail screen — `600000`
+
+Title: `Purchase invoice 600000, Quarto Deutschland Gmbh, Tel: …, Fax: … -
+Released`, and under it an audit line: *"Invoice status was last changed by
+Raymond Wattez on 22-1-2025 at 12:08."* So the status carries **who changed it
+and when** — a field trio ours does not have.
+
+**Toolbar**: Final · Show company · Show purchase order · Unblock (greyed)
+
+| Header field | Value |
+|---|---|
+| `Company` | `12804` Quarto Deutschland Gmbh |
+| `Invoice sent by` | `12804` — **a second company field**, so an invoice can arrive from someone other than the supplier (a factor, or a group billing entity) |
+| `Booking date` | **`Automatically`** — not a date, a mode |
+| `Invoice date` | 22-1-2025, with `Exp. date` 21-2-2025 beside it |
+| `Invoice number supplier` | `611076` |
+| `Invoice total` | € 7 881,60 |
+| `Purchase order` | **`IO400166`** — the order number with an `IO` prefix (*InkoopOrder*) |
+| `Payment terms` | Within 30 days from date of invoice |
+| `Blocked` ☐ + `Blocking reason` | so blocking **is** separate from status |
+| `Cred.No` | `50988`, printed twice |
+| `Basis for Fiscal Period` | radio: **`Booking date`** ● / `Document date` ○ |
+
+The summary block on the right: `Materials` · `Options` · `Surcharges` ·
+`Tot. excl. VAT` · **`VAT high` / `VAT middle` / `VAT low`** ·
+`Tot. incl. VAT` · `Credit restriction` · `Remainde` · `Tot. general`.
+Three VAT buckets, not one rate. (`Remainde` is a truncation of *Remainder*.)
+
+### Lines — and they reconcile to the cent
+
+`3 lines`. Toolbar: New · Delete · Purchase order · Product · `View: Standaard`.
+Columns: `Booked` ☑ · `Item` · `Purchase order` · `Product` · `Qty` · `U` ·
+`Kg` · `Length` · `U` · `Price` · **`Per`** · `Material` · `Options` ·
+`Total` · `VAT rate` · `Delivery date`
+
+| Item | Qty | Kg | Price | Per | Material | Total |
+|---|---|---|---|---|---|---|
+| 10 | 1 ST | 800 | € 2 800 | **TN** | € 2 240,00 | € 2 240,00 |
+| 30 | 1 ST | 576 | € 4 350 | TN | € 2 505,60 | € 2 505,60 |
+| 20 | 1 ST | 1 120 | € 2 800 | TN | € 3 136,00 | € 3 136,00 |
+
+`2800 × 0,800 = 2240,00` · `4350 × 0,576 = 2505,60` ·
+`2800 × 1,120 = 3136,00`, and the three sum to **7 881,60 — the header
+`Invoice total` exactly**. So:
+
+- **`Material` = price × weight ÷ 1000**, where `Per` names the weight unit.
+  `Per` is a **column of its own** holding the price basis — the third
+  independent sighting of the same idea, after `Net Price / TN` on
+  [the order](purchase-order-detail.md#lines) and
+  `Price quantity (in gross price U.)` on
+  [receivals](purchase-receivals.md).
+- **`Total` = `Material` + `Options`.**
+- **Question 7 is answered: `Invoice amount` is net.** `Materials` 7 881,60 →
+  `Tot. excl. VAT` 7 881,60 → VAT 0,00 → `Tot. incl. VAT` 7 881,60. The total
+  is net plus VAT.
+
+### Question 1 is answered: the dates
+
+`Booking date` is not a date at all on this invoice — it reads
+**`Automatically`**, i.e. the system derives it. And `Basis for Fiscal Period`
+is a **radio between `Booking date` and `Document date`**, which is exactly our
+`purchaseInvoiceFiscalBases` enum (`booking_date | document_date`). So the
+concept lines up after all: the invoice stores *which basis* to post on, and the
+period follows from the chosen date rather than being typed.
+
+`Booking period` on the overview is therefore **derived**, not a stored field.
+
+### Question 2 is answered: creditor no. vs supplier code
+
+They are different keys on the same company, and the
+[company detail screen](../company-detail.md) shows both: `Company code`
+**12804**, `Creditor` **50988** — and a `Debtor` number **12088** as well,
+because this company is both a supplier and a customer. So payables is keyed on
+the creditor number, purchasing on the company code, and receivables on the
+debtor number. **Three numbers, one company.**
+
+### Question 3: `Credit restriction` is a real amount
+
+It has its own line in the summary block, between `Tot. incl. VAT` and
+`Tot. general` — so it is money that changes what is owed, not a note. It is
+€ 0,00 on this invoice, so the *percentage* behind it is still unread.
+→ *In the old system:* find an invoice with a non-zero credit restriction.
+
+---
+
 **Four dates on one row**: creation, invoice, expiration, and a booking period.
 Together with the two date checkboxes on
 [Purchase invoice line](purchase-invoice-line.md#-what-is-needed-before-this-can-be-built),
@@ -47,43 +134,14 @@ that is at least five date concepts on a purchase invoice, where our
 
 ## 🔴 What is needed before this can be built
 
-**1. Which date is which, and which one the books use.**
-`Creation date` (when it was entered here), `Invoice date` (the supplier's),
-`Expiration date` (when it is due), `Booking period` (which period it posts to).
-Our schema has a fiscal-basis enum — `purchaseInvoiceFiscalBases` is
-`booking_date | document_date` — so the concept exists but the field set does not
-line up.
-→ *In the old system:* open one purchase invoice and read all four off its
-header, then check whether `Booking period` is derived from a date or set by
-hand. If it can be set independently, it is its own field and not a formatting
-of a date.
-
-**2. Three ways to identify the same supplier.**
-`Creditor no.`, `Supplier code` and `Supplier`. Ours has one company record.
-`Creditor no.` is likely the finance ledger account and `Supplier code` the
-purchasing code — which would mean a company carries both, and payables is keyed
-on the creditor number.
-→ *In the old system:* open a supplier company and look for both numbers on it.
-If they differ, note whether one is editable and one generated. Also check
-`Overviews → Finance → Journal entries` to see which of the two a posting
-carries.
-
-**3. `Credit restriction` — the Dutch *kredietbeperking*?**
-That is a surcharge added to an invoice which the buyer may deduct if they pay
-inside the discount period. If so it is a real amount that changes what is owed
-depending on when it is paid, not a note — and nothing in ours models it.
-→ *In the old system:* find an invoice with a non-zero value here and check
-whether the amount payable changes when it is paid early, and whether the
-supplier's own record carries a credit-restriction percentage.
-
-**4. `Weight` on an invoice header.**
+**1. `Weight` on an invoice header.**
 Presumably the sum of its lines' weights, carried on the header so payables can
 sanity-check a tonnage price without opening the lines.
 → *In the old system:* open an invoice, note the header weight, then add up its
 lines' weights. If they match it is derived and we compute it rather than store
 it.
 
-**5. `IBAN` and `Bank Country` — snapshotted or joined?**
+**2. `IBAN` and `Bank Country` — snapshotted or joined?**
 If they are read live from the supplier, changing the supplier's bank rewrites
 history on every old invoice — which is exactly the sort of thing that hides a
 payment-fraud change. A snapshot taken when the invoice was entered is safer and
@@ -91,15 +149,15 @@ is probably what this does.
 → *In the old system:* find an invoice from a supplier whose bank details were
 changed at some point, and see whether the old invoice still shows the old IBAN.
 
-**6. `Status` — what are its values?**
+**3. `Status` — what are its values?**
 Ours has `purchaseInvoiceBlockReasons` (`price_mismatch`,
 `awaiting_goods_receipt`, `awaiting_approval`, `duplicate`, `disputed`, `other`),
-which is a *block* reason rather than a status.
+which is a *block* reason rather than a status — and the detail screen confirms
+that split, carrying `Blocked` ☐ and `Blocking reason` **separately** from a
+status of `Released`. `Released` is one status value; the rest are unknown.
+The toolbar's `Final` button suggests another.
 → *In the old system:* drag the `Status` header into the group bar to list every
 distinct value with counts, and note whether a blocked invoice shows as a status
 or carries a separate block flag.
 
-**7. Is `Invoice amount` net or gross?**
-There is a separate `VAT amount`, which suggests `Invoice amount` is net and the
-total is the two added — but plenty of systems show gross alongside VAT.
-→ *In the old system:* read one invoice's three figures against its printed total.
+Questions 1, 2, 3 and 7 of the original seven are answered above.

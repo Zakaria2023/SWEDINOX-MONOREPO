@@ -1,26 +1,49 @@
 # Steps
 
-Sorted by what a wrong answer costs, not by screen.
+Sorted by what a wrong answer costs, not by screen. Everything already settled
+lives in [ANSWERED.md](ANSWERED.md); this file is only what is still open.
 
 - **Tier 1** changes the database or the logic. Worth your time.
 - **Tier 2** is lists of values. Only needed when we build that screen.
 - **Tier 3** is labels. I will guess, and fix it in one line if I guess wrong.
 
-If you only ever do one section, do Tier 1. It is four items.
+If you only ever do one section, do Tier 1. It is three items — and **one of
+them needs no data created at all**. See
+[TIER1-RECIPES.md](TIER1-RECIPES.md) for the exact click paths, including the
+one document chain question 1 needs.
+
+Every action button seen anywhere is inventoried in [ACTIONS.md](ACTIONS.md),
+including a list of the ones **never opened** — worth one screenshot each if
+their screen comes into scope.
+
+Questions that need a **person** rather than a click — what a field is for,
+whether a process is still used — live in
+[MANAGER-QUESTIONS.md](MANAGER-QUESTIONS.md). Everything about **Purchase
+quotes** is there: the screen has at most one row in three years and that row is
+a test entry, so it stays a read-only table and its questions are no longer
+steps.
 
 ## Tier 1 — the ones that change code
 
-1. **Purchase quotes** → find a quote with "Consignation" ticked, follow it
-   through to the purchase order and receipt, and check whether the received
-   lot is excluded from stock value. [doc](purchase/purchase-quotes.md)
-2. **Purchase receivals** → find a purchase line received in two separate
-   deliveries and check whether it produces one row or two. Compare "Qty(a)"
-   and "Received Qty" on each. [doc](purchase/purchase-receivals.md)
-3. **Import purchase invoices** → do purchase invoices actually arrive
-   electronically today (EDI, supplier portal, e-mail parsing), or does this
-   screen sit unused? If unused, the whole screen leaves scope.
-   [doc](purchase/import-purchase-invoices.md)
-4. **StockOn advice** → on the product screen, "Use StockOp for this product?"
+1. **Consignment stock** → *half done.* A test quote was created with
+   `Consignatie` ticked (it is a **header** checkbox under `Overlength`, not a
+   line field) and converted to order `401154`, which came out `Provisional`
+   with its reception already created. Three clicks remain:
+   press **`Make final`**, then fill `Kg(a)`=314 / `Qty(a)`=10 on the existing
+   reception, then read the lot's `Stock (€)` on Stock on location. If it is
+   €0,00 while ordinary lots carry value, consignment is excluded from stock
+   value. ⚠️ Note the order header has **no** `Consignatie` checkbox at all —
+   see [MANAGER-QUESTIONS.md](MANAGER-QUESTIONS.md) §3.
+   [recipe](TIER1-RECIPES.md)
+2. **Purchase order → the `Pricing` panel** → the `Options` half of this is
+   now answered: an option row carries its own **`Per`** column, reading `M2`
+   for Grinding, so the pricing basis is per option. What is still unexplained
+   is why `Previous orders` bills 4 pieces weighing 94,2 kg as **100 kg** —
+   trade weight is ruled out. Expand the **`Pricing`** panel on order `400650`
+   (never opened), and optionally type a `Gross price` of `1,70` on a Grinding
+   option to confirm it lands on €34,00 for 20 m².
+   [doc](purchase/purchase-order-detail.md)
+3. **StockOn advice** → on the product screen, "Use StockOp for this product?"
    is unticked and the system says its parameters have never been calculated.
    Check a handful of other products for the same. If StockOp is switched off
    everywhere, the whole StockOn advice screen leaves scope.
@@ -28,224 +51,166 @@ If you only ever do one section, do Tier 1. It is four items.
 
 ## Tier 2 — lists of values, needed when we build that screen
 
-5. **Sold products** → find a second product whose "Stock U." is not KG. Read
+4. **Sold products** → find a second product whose "Stock U." is not KG. Read
    its "Sales" against its "Avg. Monthly consumption last year" and divide out
    the factor, to confirm the consumption column is in the stock unit while
    Sales is in kilos.
-6. **Purchase lines** → group the grid by "Line type" to see every distinct
-   value with counts.
-7. **Purchase lines** → group by "Status". Check whether two lines of one
-   order ever show different statuses.
-8. **Purchase quotes** → find a lapsed quote and open its "Expiration reason"
-   dropdown to list every option. Group by that column to see which are used.
-9. **Purchase quotes** → group by "Status" to see every distinct value.
-10. **Purchase invoices** → group by "Status". Note whether a blocked invoice
-    is a status or a separate flag. [doc](purchase/purchase-invoices.md)
-11. **Purchase receivals** → group by "Line status", then by "Receipt status".
-    Check whether they ever disagree on the same row.
-12. **Orders and quotes** → group by "Status". Check whether quote-type and
-    order-type values mix or stay separate.
-    [doc](purchase/purchase-orders-and-quotes.md)
-13. **Orders and quotes** → open the "Order method" dropdown to list every
-    option.
-14. **Orders and quotes** → open the "Classification code" dropdown to list
-    every option.
-15. **StockOn advice** → open the "Lead time method" dropdown on a product's
-    setup screen and list every value. [doc](purchase/stockon-advice.md)
-16. **StockOn advice** → widen "Determined by StockOp" with data on screen and
+5. **Purchase invoices** → group by "Status". Note whether a blocked invoice
+   is a status or a separate flag. [doc](purchase/purchase-invoices.md)
+6. **Orders and quotes** → group by "Status". Check whether quote-type and
+   order-type values mix or stay separate.
+   [doc](purchase/purchase-orders-and-quotes.md)
+7. **Orders and quotes** → open the "Order method" dropdown to list every
+   option.
+8. **Orders and quotes** → open the "Classification code" dropdown to list
+   every option.
+9. **StockOn advice** → open the "Lead time method" dropdown on a product's
+   setup screen and list every value. [doc](purchase/stockon-advice.md)
+10. **StockOn advice** → widen "Determined by StockOp" with data on screen and
     list its values. Check a product's screen for where "StockOp" is set.
-17. **Net prices** → widen "Net priceU" across several rows and list every
+11. **Net prices** → widen "Net priceU" across several rows and list every
     value it takes. [doc](purchase/net-prices.md)
-18. **Net prices** → select a row, click "Show Contract", and list every field
+12. **Net prices** → select a row, click "Show Contract", and list every field
     the contract screen shows.
+13. **Product** → scroll the "Options" list to the bottom on product
+    PK316L40021 and open one row's state dropdown. Six are visible (Duplo,
+    Decoilen, Grinding, Brushing, ShearCut, Laser Foil), all reading
+    "Possible", but "Knippen" appears on Purchase receivals and not in that
+    list — so the enum has at least seven members, and its other states are
+    unknown. [doc](product-detail.md)
+14. **Product** → open the "Price" dropdown on the same product. It reads
+    "Algemeen" (General); its other values are unknown.
+15. **Company** → on the companies overview, filter or group by the "Processor"
+    and "Transporter" role checkboxes. If any company carries them, it changes
+    how work orders are assigned. [doc](company-detail.md)
+16. **Company** → open the "Journal code" dropdown on either the Creditor or
+    Debtor panel. It reads 0 for the creditor and 11 for the debtor.
 
 ## Tier 3 — labels and details, skip unless something looks wrong
 
 ### Purchase lines
 
-19. Note the row count with "Only current purchasing lines" checked. Uncheck
+17. Note the row count with "Only current purchasing lines" checked. Uncheck
     it, press Show Data, and compare what the extra rows have in common.
-20. Open a product and look for "Stock Category" and "Quality Code" fields.
-21. Expand one of the older date groups and check whether those lines are
-    still open.
 
-### Purchase quotes
+18. Check whether the `Hego Prod` view's second filter clause actually applies.
+    It reads `Not Product In [Blauwe Folie, Decoilen, Knippen, Laser Folie,
+Slijpen]`, yet Blue Foil and Grinding rows are in its 131 results.
+19. Open line `20` of order `400648` — the one row where `Qty ordered` (173)
+    is neither zero nor the full `Qty(p)` (187), while `Qty confirmed` is 187.
+    Check which of the three is editable.
 
-22. Open a quote with all three reference fields filled. Check whether
-    "Purchase Reference" matches a purchase order number.
-23. Open a quote line. Check whether "Revenue group" is editable there or
-    comes from the product.
-24. Find a row where "Initials purchaser" and "Purchaser" disagree.
-25. Compare "Company code" against the supplier on the same row — constant
-    down the grid, or matching the supplier's number?
 
 ### Purchase results
 
-26. Note the value for an old receipt. Check it again after the replacement
+20. Note the value for an old receipt. Check it again after the replacement
     price has changed on that product — or check "Control Revaluation of stock
     due to FSP-changes" for a version history.
-27. Find a purchase line received in two goes. Check whether it appears once
-    or twice here.
-28. Press Show Data over a month where one product was received twice on
-    different dates. Count the rows.
 
 ### Purchase invoice line
 
-29. Set "Bookings date" to a month with invoices and note the row count.
+21. Set "Bookings date" to a month with invoices and note the row count.
     Uncheck each of the two date checkboxes in turn, re-running each time.
     [doc](purchase/purchase-invoice-line.md)
-30. Open a product and look for a CBS/commodity-code field.
-31. Widen the "Revenue products" column with data on screen and read what it
+22. Widen the "Revenue products" column with data on screen and read what it
     holds.
-32. Find an invoice from a supplier whose goods came from a third country and
+23. Find an invoice from a supplier whose goods came from a third country and
     check what "Country" shows.
-33. Open the "View" dropdown and list every saved view.
-34. Check two rows with different products but the same CBS no. Check whether
+24. Open the "View" dropdown and list every saved view.
+25. Check two rows with different products but the same CBS no. Check whether
     their "Qty" is comparable.
 
 ### Purchase invoices
 
-35. Open one invoice and read all four dates off its header (Creation,
-    Invoice, Expiration, Booking period). Check whether "Booking period" is
-    derived or set by hand.
-36. Open a supplier and look for both "Creditor no." and "Supplier code". Note
-    which is editable and which is generated, and which one a posting carries
-    under Overviews to Finance to Journal entries.
-37. Find an invoice with a non-zero "Credit restriction". Check whether the
+26. Find an invoice with a non-zero "Credit restriction". Check whether the
     amount payable changes when paid early, and whether the supplier carries a
     credit-restriction percentage.
-38. Open an invoice, note the header "Weight", and add up its lines' weights.
-39. Find an invoice from a supplier whose bank details changed. Check whether
+27. Open an invoice, note the header "Weight", and add up its lines' weights.
+28. Find an invoice from a supplier whose bank details changed. Check whether
     the old invoice still shows the old IBAN.
-40. Read one invoice's "Invoice amount" and "VAT amount" against its printed
-    total.
 
 ### Net prices
 
-41. Open a product with "Group product" ticked and note what is different.
-42. Find a product with more than one net price row and check whether
+29. Open a product with "Group product" ticked and note what is different.
+30. Find a product with more than one net price row and check whether
     "FromQty" differs between them.
-43. Open a contract. Compare its validity dates against the "Valid from" and
+31. Open a contract. Compare its validity dates against the "Valid from" and
     "Valid u/i" on each of its price rows.
-44. Open a product carrying a "Product no. (old)" value and check what it is
+32. Open a product carrying a "Product no. (old)" value and check what it is
     used for.
 
 ### StockOn advice
 
-45. Pick a product on both Order advice and StockOn advice. Check whether Order
+33. Pick a product on both Order advice and StockOn advice. Check whether Order
     advice's figure can be reconstructed from "Order Level",
     "Techn. Stk. + To receive", lead time and review time.
-46. Read "Order Level (Kg. or Psc.)" against "Order Level", and
+34. Read "Order Level (Kg. or Psc.)" against "Order Level", and
     "To order (Kg. or Psc.)" against "To order" — same figure in two units, or
     two different values?
-47. Widen "1e productie/wals da..." and "productie/wals door" to read the full
+35. Widen "1e productie/wals da..." and "productie/wals door" to read the full
     headings.
-48. Read "Priority 1" and "Priority 2" across several rows and note their
+36. Read "Priority 1" and "Priority 2" across several rows and note their
     format.
-49. Read one row's "Techn. Stk. + To receive", "Order Level" and
+37. Read one row's "Techn. Stk. + To receive", "Order Level" and
     "% Difference" together. Check whether the percentage is
     (Techn. Stk. + To receive minus Order Level) divided by Order Level.
 
-### Purchase receivals
+### Action buttons
 
-50. Widen columns 1 to 4 (the ones whose tooltip showed a raw field name) until
-    each heading is readable without the tooltip.
-51. Open a purchase line with a non-zero "Price quantity (in gross price U.)"
-    and compare it against the line's ordinary "Purchase U." and "Qty(p)".
-52. Open a receipt row with a non-zero "Invoiced (Prod.)" value and check
-    whether it points at a purchase invoice line or a production work order.
-53. Set "Scheduled delivery date" to a narrow range and check whether every
-    row's "Delivery date (p)" falls inside it.
-54. Compare "Company code" and "Company name" on a receipt row against the
-    supplier on that line's purchase order.
+38. Work through the **"Buttons never opened"** table at the bottom of
+    [ACTIONS.md](ACTIONS.md) — one screenshot each. The ones that matter most
+    are `Return` / `Par. return` (do they raise a Purchase return order?),
+    `Relocate`, `Workorder`, and `Correct products and stock` (which is
+    probably what books the `Hego Voorraadcorrectie` receipts).
+39. Identify the three unlabelled option quick buttons — `NG`, `F` and
+    `DUPK320` — by pressing each on a test line and reading the `Option` row
+    it adds.
 
-### Import purchase invoices
+### Stock on location
 
-55. Widen "Final destination" and "Specification" on a row with data.
-56. Widen "Role" and read a few values.
-57. Open a row and check whether double-clicking opens a specific screen, to
-    see what "Work panel" names.
-58. Open a row with data in "Receive data" or "Data sent" and use "Show File"
-    to check whether it opens the raw payload.
+40. Press **Change APP…** and **Toon reserveringen…** (*show reservations*) on
+    a lot. `APP` is now known to be a **per-tonne price** (`2050 / TN` in the
+    product-search dialog); what is unknown is how it differs from the
+    `Purchase price` column beside it. [doc](stock-on-location.md)
+41. Find out what **Gip** stands for. The product master has
+    `Gip → Artikelgroep` reading `PK316`; Stock on location has `Gipgroup`
+    reading `P3040K15`. Open either dropdown.
+42. Group Stock on location by `Warehouse` to list them — only the `Controle`
+    view shows the column and it reads `00 He…` on every row, so there may be
+    just one.
+
+### Product and company master
+
+43. Find a product bought from a German mill and check whether its `German`
+    weight is populated — it is 0 on `PK316L40021`, so its purpose is unknown.
+44. Expand `Counter Orders` and `Visit reports` on a company that has some —
+    two panels seen nowhere else, captured by name only.
+
+### Purchase order detail
+
+45. Expand the **Workorders** panel on order `400253` — the link to the
+    warehouse and production work orders a receipt raises. (The `Options` panel
+    is answered: its own grid, with a `Per` column holding the pricing basis.)
+46. Open the **Product Receipt Documents** panel, the last one on the order —
+    captured by name only.
 
 ### Purchase orders and quotes
 
-59. Open one quote row and one order row. Check whether both open the same kind
-    of window with an "Order type" field, or two different screens.
-60. Find a quote converted to an order. Check whether "Converted from/to" shows
-    the other document's number on both rows.
-61. Widen "Time frame" on a row with data and read its value.
-62. Find a row with "Deliberately not sent" ticked and check what stops it
+47. Widen "Time frame" on a row with data and read its value.
+48. Find a row with "Deliberately not sent" ticked and check what stops it
     being sent. Check whether "Send" and "Must be sent" are ever both true, or
     both false.
-63. Open a row's "Affiliate company details". Check whether the same set of
+49. Open a row's "Affiliate company details". Check whether the same set of
     affiliates appears on the unexplained company columns on Purchase quotes,
     Purchase receivals and Purchase invoices.
-64. Open a document on both this screen and Purchase quotes. Compare
+50. Open a document on both this screen and Purchase quotes. Compare
     "Reference" here against "Purchase Reference" there.
-65. Find a row with "Consignment" ticked and check whether "Customer code" is
+51. Find a row with "Consignment" ticked and check whether "Customer code" is
     populated there specifically, and empty on ordinary stock purchases.
-66. Open one order's lines, sum their weights, and compare against the header
+52. Open one order's lines, sum their weights, and compare against the header
     "Weight (kg)" here.
 
-## Answered and removed
+## Answered
 
-Kept as a record of what your checks have already settled, so nothing gets
-asked twice.
-
-- The product hierarchy — one tree, read from the root down.
-  [see](purchase/sold-products-not-advised.md#answered)
-- "Revenue" is money, "Sales" is a weight in kilos.
-- "Avg. Monthly consumption last year" — trailing 12 months, divided by 12.
-  [see](QUESTIONS.md)
-- Consumption is counted from **invoices**, not deliveries or stock movements.
-- "Reserved" on Order advice is in the purchase unit, not kilos.
-  [see](purchase/order-advice.md)
-- "To be received short term" excludes the reserved part of an open line.
-- The purchasing unit list — eight values, not two.
-- **Order advice is settled outright** by a 5,535-row export of both views,
-  kept in [`exports/`](exports/). Every formula on the screen is proved:
-  the ÷12 / ÷24 / ÷36 consumption windows, the min/max rounding, both
-  coverages, the advice rule, and the fact that the engine runs in **purchase
-  units**, not kilos. "To be received long term", "Not reserved call-off",
-  "Consign.", "Order advice code" and "PAC-Code" are unused on every row.
-  See [order-advice.md](purchase/order-advice.md).
-- The group hierarchy is four levels deep, linked by "Material group".
-- "Classification features → Product group" is the product's shape, not its
-  place in the hierarchy.
-- "Standard product" is greyed out, so the system derives it.
-- Purchase lines shows "Purchase order type" twice — one field, not two.
-- **Order advice is verified**, not just matched: the export was seeded into our
-  own database, the real Server Action driven against it, and all six checkable
-  columns agree on **262 of 262** rows — the same two products advised, at the
-  same quantities. Two logic bugs fell out of that and are fixed:
-  - the position is held **natively in purchase units**, never converted from a
-    weight, which is how the reference prints a stock for a product whose
-    weight per piece is blank;
-  - coverage divides by the **printed** average, rounded to one decimal —
-    `489 / 0,9 = 543,3`, not `489 / (11/12) = 533,5`.
-- **Sold products**: consumption counts **stock units ÷ 12** while the `Sales`
-  column beside it is **kilograms**. Proved on `SC304`, stocked in KG, where
-  `45,22865 / 12 = 3,76905416666667` to the last decimal, and on the coil
-  products, whose consumption is a small whole number of coils over twelve.
-- **Purchase results**: `Subgroup` is the group **directly above the product** —
-  the same level Sold products calls `Product group`, with `Main group` the
-  root above it. Read off the export's own Main group / Subgroup / Product
-  triples.
-- **Purchase results**: `Replacement value` is **zero on all 1,800 rows**, so
-  both difference columns are dead and the percentage cannot be reconstructed.
-- **"Making order advices" is a property of the product, not of its group.**
-  The two exports share 20 groups but not a single product code, and 83
-  products sit on Sold products while a sibling **in the same group**, equally
-  a stock product, sits on Order advice — `CAA1050020` excluded where
-  `CAA1050030` is included. Both screens now read `Products.makingOrderAdvices`;
-  the group keeps its copy as a default for the form. The column already
-  existed on both tables, so no schema change was needed.
-- **Sold products is verified**, the same way Order advice was: its 175-row
-  export seeded and diffed against our screen — **175 of 175 on all eight
-  checkable columns**, and exactly 175 rows returned, so none of the 5,398
-  Order-advice products leak in.
-
-## Done
-
-All 12 Purchase screens are captured. No more screens to send for this group.
+Everything settled so far has moved to **[ANSWERED.md](ANSWERED.md)** — this
+file is only the open questions.

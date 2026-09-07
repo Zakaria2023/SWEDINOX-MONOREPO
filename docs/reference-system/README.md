@@ -14,25 +14,56 @@ One file per screen, grouped the way its own `Overviews` tree groups them.
 |---|---|---|
 | [Order advice](purchase/order-advice.md) | `/order-advice` | **verified 262/262** against a real export; full 74-column palette inventoried |
 | [Sold products not on the order recommendation](purchase/sold-products-not-advised.md) | `/sold-products-not-advised` | **verified 175/175** against a real export |
-| [Purchase lines](purchase/purchase-lines.md) | `/purchase-lines` | columns captured, not yet matched |
-| [Purchase quotes](purchase/purchase-quotes.md) | `/purchase-quotes` | columns captured, not yet matched |
-| [Purchase results](purchase/purchase-results.md) | `/purchase-results` | columns captured, not yet matched |
+| [Purchase lines](purchase/purchase-lines.md) | `/purchase-lines` | **~50 columns matched** from 9 saved views; option pricing proved |
+| [Purchase quotes](purchase/purchase-quotes.md) | `/purchase-quotes` | all 27 columns matched; **stays a read-only table** — at most one row in three years, questions moved to [MANAGER-QUESTIONS](MANAGER-QUESTIONS.md) |
+| [Purchase results](purchase/purchase-results.md) | `/purchase-results` | grain settled against a 1,800-row export; 3 dead columns |
 | [Purchase invoice line](purchase/purchase-invoice-line.md) | `/purchase-invoice-line` | columns captured, not yet matched |
-| [Purchase invoices](purchase/purchase-invoices.md) | `/purchase-invoices` | columns captured, not yet matched |
+| [Purchase invoices](purchase/purchase-invoices.md) | `/purchase-invoices` | one invoice detail captured; 4 of 7 questions answered |
 | [Net prices](purchase/net-prices.md) | not yet built | columns captured, not yet matched |
 | [StockOn advice](purchase/stockon-advice.md) | not yet built | columns captured, not yet matched |
-| [Purchase receivals](purchase/purchase-receivals.md) | not yet built | columns captured, not yet matched |
-| [Import purchase invoices](purchase/import-purchase-invoices.md) | not yet built | columns captured — integration log, may be out of scope |
+| [Purchase receivals](purchase/purchase-receivals.md) | not yet built | **all 25 columns matched** against a 151-row export; nothing left blocking |
 | [Purchase orders and quotes](purchase/purchase-orders-and-quotes.md) | not yet built | columns captured, not yet matched |
+| [Purchase order detail](purchase/purchase-order-detail.md) | not yet built | header, lines and 10 panels captured from order `400253` |
 
-All 12 Purchase screens are now captured. Next: implement, once the open
-questions in [STEPS.md](STEPS.md) are answered.
+Two **master** screens are shared by every group, so they sit outside the
+Purchase table:
 
-## Steps
+| Screen | Ours | State |
+|---|---|---|
+| [Product master](product-detail.md) | the `/products` form | header and `Basis` panel captured; **the weight formula is proved here** |
+| [Stock on location](stock-on-location.md) | `/stock-on-location` | ~26 columns and 7 views matched; stock value and availability both proved |
+| [Company master](company-detail.md) | the `/companies` form | 9 roles, creditor/debtor, and 17 panels captured |
 
-[STEPS.md](STEPS.md) — every "go check the old system" action from every
-screen above, as one flat numbered checklist. No questions, no reasoning — just
-what to do, in order.
+All 12 Purchase screens are now captured, plus the purchase order detail
+screen. Next: implement, once the open questions in [STEPS.md](STEPS.md) are
+answered.
+
+## Steps and answers
+
+Two more files sit alongside them:
+
+- **[TIER1-RECIPES.md](TIER1-RECIPES.md)** — step-by-step recipes for creating
+  the records the Tier 1 questions need, since the test system holds no example
+  of what they ask about.
+- **[MANAGER-QUESTIONS.md](MANAGER-QUESTIONS.md)** — questions that cannot be
+  answered by clicking. They need someone who knows how the business works:
+  what a field is *for*, whether a process is still used. Everything about
+  **Purchase quotes** lives there.
+- **[ACTIONS.md](ACTIONS.md)** — every action button, menu and grid affordance
+  seen anywhere in the reference, per screen, with what it does and whether it
+  is built. This is the list we build the UI from.
+
+
+
+Two files, and the split matters:
+
+- **[STEPS.md](STEPS.md)** — only what is still **open**. Every "go check the
+  old system" action from every screen above, as one flat numbered checklist.
+  No questions, no reasoning — just what to do, in order.
+- **[ANSWERED.md](ANSWERED.md)** — everything already settled, grouped by
+  subject, with what changed in the code because of it. When a step is
+  answered it moves out of STEPS.md and into here, so the checklist only ever
+  shrinks.
 
 ### The product hierarchy — answered
 
