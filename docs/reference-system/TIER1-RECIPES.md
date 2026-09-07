@@ -35,37 +35,27 @@ The question: when consignment goods arrive, are they **excluded from stock
 value**? Consignment stock is the supplier's until we draw it, so it should
 carry € 0 value while still showing a quantity.
 
-The `Consignation` tick lives on a **quote line** — that is the one place it has
-actually been seen — so start there and convert.
+### ✅ 1a. Create the quote — **DONE**
 
-### 1a. Create the quote
+Quote `900000`: supplier `11692`, one line of `PK304L20021`, 10 ST at
+€1 930/TN, with **`Consignatie` ticked**.
 
-1. `Nieuw → Purchase quote`
-2. `Supplier`: `11692` (Holland Stainless Int) — any supplier is fine
-3. `Purchase order type`: **`Materials`**
-4. `Purchaser`: yourself
-5. In the `Lines` panel press **`New`** and fill:
-   - `Product`: **`PK304L20021`** (2000 × 1000 × 2 mm, 304L — a product I have
-     already proved the weight maths on)
-   - `Qty(p)`: **`10`** `ST`
-   - `Net Price`: **`1930`** per `TN`
-6. **Tick `Consignation` on the line.** If you cannot find it on the line grid,
-   scroll the line columns right, or set `View` to `-empty-`.
-   → *If there is no `Consignation` tick on the quote line at all, screenshot
-   the line grid and the header and stop here — tell me, and I will re-plan.*
-7. Save
+**Correction learned here:** `Consignation` is a **header** checkbox spelled
+`Consignatie`, sitting under `Overlength` — *not* a line field, as the
+overview's `Consignation` column had suggested.
 
-📸 **Screenshot 1**: the whole quote with the line visible, `Consignation`
-ticked.
+Three formulas confirmed on the way past: `Kg(p)` = **314** (10 × 31,4),
+`Amount` = **€ 606,02** (1 930 × 0,314), `VAT` = **€ 127,26** (21 %).
 
-### 1b. Turn it into an order
+### ✅ 1b. Turn it into an order — **DONE**
 
-8. With the quote open, press **`Purchase order`** in the toolbar (it is greyed
-   only on expired quotes; a fresh one should allow it)
-9. Note the order number it creates
+`Purchase order` converted it, after a dialog reading *"This converts the
+entire purchase quote into a purchase order."* Result: order **`401154`**,
+status **`Provisional`**, header printing **`Converted from quote 900000`**.
 
-📸 **Screenshot 2**: the new purchase order's header **and** its line, so I can
-see whether `Consignation` survived the conversion.
+⚠️ **The order header has no `Consignatie` checkbox at all.** Either the
+conversion drops it or it lives somewhere unlooked-at. Now
+[manager question 3](MANAGER-QUESTIONS.md).
 
 ### 1c. Make the order final — **do this first**
 
@@ -129,48 +119,47 @@ would confirm what feeds it.
 
 ---
 
-## 2. Purchase order Pricing and Options — **no record needed, then one edit**
+## 2. The `Pricing` panel — **the Options half is already answered**
 
-I have proved that processing options are **priced per m² or per tonne** from
-Purchase lines. What is unconfirmed is how that money reaches the order header,
-and why `Previous orders` bills 4 pieces weighing 94,2 kg as 100 kg.
+### ✅ 2a. The `Options` panel — **DONE**
 
-### 2a. Just look (no changes)
+Pressing `K320` on quote `900000` opened it, and it is **its own grid**, not
+columns on the line:
 
-1. `Overviews → Purchase → Purchase lines`, find order **`400253`**, press
-   `Show Purchase order`
-2. Expand the **`Pricing`** panel — never opened
+| Seq. | Option | Qty | U | Gross price | **Per** | Discount | U | Amount | Reference factor | Net price | Specificatie |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 10 | `Grinding` | 10 | ST | € 0,00 | **`M2`** | 0,00 | % | € 0,00 | 1 | € 0,00 | `K320` |
 
-📸 **Screenshot 6**: the `Pricing` panel in full.
+**`Per` = `M2`.** The pricing basis is a **field on the option row**, so it is
+per option rather than global — confirming structurally what the Purchase lines
+arithmetic implied. `Amount` is €0,00 only because no `Gross price` is
+maintained for this option with this supplier.
 
-3. Expand the **`Options`** panel — never opened
+### 🔴 2b. What is still open
 
-📸 **Screenshot 7**: the `Options` panel in full.
+**Two things, and neither needs a new record.**
 
-### 2b. Then add one option, on a fresh line
+1. **Expand the `Pricing` panel** on order `400253` or `400650` — never opened
+   on either. It is the one place that should explain why `Previous orders`
+   bills 4 pieces weighing 94,2 kg as **100 kg**. Trade weight is ruled out
+   (that would be 96,0 kg), so options or a minimum billed weight are the
+   remaining candidates.
 
-Do this on a **new** order so nothing real changes:
+   📸 the `Pricing` panel in full.
 
-4. `Nieuw → Purchase order`, supplier `11692`, type `Materials`
-5. Add a line: `PK304L20021`, `Qty(p)` **`10`** `ST`, `Net Price` **`1930`** /
-   `TN`
-6. Note the `Summary` figures on the right — `Materials`, `Options`,
-   `Surcharges`, `Tot. excl. VAT`
-7. Select the line and press **`Options…`** in the toolbar (or one of the quick
-   buttons `K320` / `BF F L K` under the line grid) and add **`Slijpen (K320)`**
-   — grinding
-8. Save
+2. *(optional, one number)* On the existing Grinding option row, type
+   **`1,70`** into `Gross price` and Tab.
 
-📸 **Screenshot 8**: the line grid now showing **both** rows (the material line
-and the option line), with `Qty(p)`, `Kg(p)`, `Net Price` and `Amount` visible.
+   📸 the Options row + the `Summary` block.
 
-📸 **Screenshot 9**: the `Summary` block, so I can see whether the option money
-lands in `Options` or in `Surcharges`.
+   | Amount | Meaning |
+   |---|---|
+   | **€ 34,00** | per m² **of the parent** — 10 × 2,0 × 1,0 = 20 m². Confirms the model outright. |
+   | € 17,00 | 10 × 1,70 — it uses the piece count and `M2` is only a label |
+   | € 0,53 | per tonne, and `Per` is ignored |
 
-**What decides it:** the grinding line should come out at €1,70 per m² of the
-parent — `2,0 × 1,0 × 10 = 20 m² → € 34,00`. If it does, the model is confirmed
-and I can build option pricing. If it comes out per tonne instead
-(`0,314 t × 1,70`), the basis is per-option and I need the full list.
+   The `Summary` block also shows whether option money lands in `Options` or
+   in `Surcharges`.
 
 ---
 
@@ -204,11 +193,29 @@ what lets me reconstruct the formula.
 
 ## Summary of what I need back
 
-| # | Question | Records to create | Screenshots |
+| # | Question | State | Left to do |
 |---|---|---|---|
-| 1 | Consignment stock value | 1 quote → 1 order → 1 receipt | 5 |
-| 2 | Option / surcharge pricing | 1 order with an option line | 4 |
-| 3 | Is StockOp used? | **none** (unless one is ticked) | 1–2 |
+| 1 | Consignment stock value | **quote and order done** — `401154` is `Provisional` with its reception already created | `Make final` → fill `Kg(a)`/`Qty(a)` → read the lot's `Stock (€)`. **3 clicks, 3 screenshots** |
+| 2 | Option / surcharge pricing | **Options answered** — `Per` = `M2`, a field per option row | expand the `Pricing` panel; optionally set one `Gross price`. **No records needed** |
+| 3 | Is StockOp used? | untouched | 4 product screenshots. **No records needed** |
 
-Question 3 needs nothing created. Question 1 is the only one needing a full
-document chain, and it is the one that changes the database.
+**Nothing else needs creating.** Question 1's document chain already exists —
+what remains is three clicks on order `401154`. Questions 2 and 3 are pure
+looking.
+
+## What these recipes have already settled
+
+Not open any more, and recorded in [ANSWERED.md](ANSWERED.md):
+
+- `Consignation` is a **header** field spelled `Consignatie`, not a line field
+- `Kg(p)`, `Amount` and `VAT` all confirmed live — the density formula, price ×
+  weight in the price's own unit, and **21 %** for `VAT high`
+- `Options` is its own table, and **`Per` names the pricing basis per option**
+- Converting a quote yields a **`Provisional`** order that prints
+  `Converted from quote 900000` and **creates its reception automatically**
+- That reception is **read-only until `Make final`** — which is why the recipe
+  now starts there
+- `Bev. Nettoprijs` is a *confirm net price* action, and `Confirm` /
+  `Make final` exist only on a provisional order
+- `APP` is a **per-tonne price**, so Stock on location's `Change APP…` is a
+  price action
