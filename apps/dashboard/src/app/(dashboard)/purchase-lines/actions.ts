@@ -32,7 +32,9 @@ import {
 import { exportRows } from "@/lib/server/excel";
 import { PURCHASE_LINE_COLUMNS } from "@/app/(dashboard)/purchase-lines/columns";
 
-export type PurchaseLineItem = SelectPurchaseOrderItems & {
+export type PurchaseLineItem = Omit<SelectPurchaseOrderItems, "amount"> & {
+  /** Net price x weight, in the price's own unit — derived, never stale. */
+  amount: number;
   purchaseOrderId: SelectPurchaseOrders["id"] | null;
   orderDate: SelectPurchaseOrders["orderDate"] | null;
   supplierName: SelectCompanies["companyName"] | null;
@@ -83,6 +85,15 @@ const reservedKgSql = sql<number>`(
 )`;
 
 const purchaseLineDerived = {
+  // Derived rather than read from the stored column, exactly as the reference
+  // does it. A stored amount goes stale the moment a line is re-priced or its
+  // weight corrected, and nothing recomputes it.
+  amount: sql<number>`
+    COALESCE(${PurchaseOrderItems.netPrice}, 0) *
+    CASE WHEN UPPER(COALESCE(${PurchaseOrderItems.priceUnit}, 'TN')) = 'KG'
+      THEN COALESCE(${PurchaseOrderItems.kgPurchased}, 0)
+      ELSE COALESCE(${PurchaseOrderItems.kgPurchased}, 0) / 1000
+    END`.mapWith(Number),
   kgActual: sql<number>`${kgActualSql}`.mapWith(Number),
   kgStillToReceive:
     sql<number>`GREATEST(0, COALESCE(${PurchaseOrderItems.kgPurchased}, 0) - ${kgActualSql})`.mapWith(
