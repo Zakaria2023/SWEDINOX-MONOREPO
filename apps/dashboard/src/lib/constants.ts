@@ -120,7 +120,6 @@ const VIEW_GROUPS: NavGroup[] = [
         label: "Purchase orders and quotes",
         href: "/purchase-orders-and-quotes",
       },
-      { label: "Import purchase invoices", href: "/import-purchase-invoices" },
     ],
   },
   {
