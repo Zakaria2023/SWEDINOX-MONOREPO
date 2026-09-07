@@ -23,6 +23,7 @@ import { Contacts, SelectContacts } from "@/db/schema/contacts";
 import { Products, SelectProducts } from "@/db/schema/products";
 import { resolveCompanyType } from "@/app/(dashboard)/companies/actions";
 import {
+  amountForWeight,
   canEditPurchaseRequestLines,
   describeError,
   generateUuid,
@@ -458,7 +459,13 @@ export const convertPurchaseRequestToOrder = async (
           qualityCode: item.qualityCode,
           stockCategory: item.stockCategory,
           netPrice: netPrice.toFixed(4),
-          amount: (netPrice * Number(quantity)).toFixed(2),
+          // The request carries the weight it asked for, and a purchase price
+          // is struck against weight rather than piece count. No price unit
+          // travels with a request, so this takes the tonne that all but a
+          // handful of lines are priced in.
+          amount: amountForWeight(netPrice, null, Number(item.kg ?? 0)).toFixed(
+            2,
+          ),
         });
       }
     });

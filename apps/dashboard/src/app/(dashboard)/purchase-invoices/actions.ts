@@ -33,12 +33,14 @@ import { buildPurchaseJournalEntry } from "@/lib/server/ledger";
 import { recordFreightMovement } from "@/lib/server/freight";
 import { PurchaseOrderType, VatCode } from "@/lib/enums";
 import {
+  amountForWeight,
   fiscalPeriodDate,
   generateUuid,
   getPaymentTermDueDate,
   purchaseBecomesStock,
   resolveSurchargeAmounts,
   restateLotValue,
+  stockValueFromWeight,
   summarisePurchaseInvoice,
   toDateString,
 } from "@/lib/helpers";
@@ -74,6 +76,27 @@ import {
 } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+
+/**
+ * The weight an invoice line covers — the purchase line's weight scaled to the
+ * quantity being invoiced, because a line is routinely invoiced in parts.
+ *
+ * Falls back to the line's whole weight when the planned quantity is unknown,
+ * which is the only reading that does not silently value goods at nothing.
+ */
+const invoicedWeightKg = (
+  poItem:
+    | Pick<SelectPurchaseOrderItems, "qtyPlanned" | "kgPurchased">
+    | undefined,
+  invoicedQuantity: string | number,
+): number => {
+  const lineWeight = Number(poItem?.kgPurchased ?? 0);
+  const plannedQty = Number(poItem?.qtyPlanned ?? 0);
+  if (plannedQty <= 0) {
+    return lineWeight;
+  }
+  return lineWeight * (Number(invoicedQuantity) / plannedQty);
+};
 
 export type PurchaseInvoiceActionResult = {
   purchaseInvoiceUuid?: string;
@@ -361,7 +384,14 @@ export const createPurchaseInvoice = async (
       const poItem = poItemByUuid.get(item.purchaseOrderItemUuid);
       const netPrice = Number(poItem?.netPrice ?? 0);
       return {
-        amount: netPrice * Number(item.quantity),
+        // A purchase price is struck per tonne far more often than per piece,
+        // so what the journal takes is the weight at that price — the piece
+        // count times a tonne price is out by three orders of magnitude.
+        amount: amountForWeight(
+          netPrice,
+          poItem?.priceUnit ?? null,
+          invoicedWeightKg(poItem, item.quantity),
+        ),
         vatCode: poItem
           ? (vatCodeByProduct.get(poItem.productUuid) ?? null)
           : null,
@@ -496,6 +526,10 @@ export const createPurchaseInvoice = async (
         // this lot is costed against this figure, so a lot received without one
         // would make every downstream margin a fiction.
         const valuationPrice = Number(poItem.netPrice ?? 0);
+        // The lot's weight comes with it: every kilo figure downstream — the
+        // stock position, its value, the goods-flow return — is this number,
+        // and a lot received without one weighs nothing for ever after.
+        const receivedWeightKg = invoicedWeightKg(poItem, item.quantity);
         const stockUuid = generateUuid();
         await tx.insert(Stock).values({
           uuid: stockUuid,
@@ -504,9 +538,14 @@ export const createPurchaseInvoice = async (
           purchaseOrderItemUuid: poItem.uuid,
           supplierUuid: fields.companyUuid ?? null,
           quantity: item.quantity,
+          quantityKg: receivedWeightKg.toFixed(2),
           status: "pending",
           valuationPrice: valuationPrice.toFixed(4),
-          valuationEuro: (valuationPrice * Number(item.quantity)).toFixed(2),
+          // The valuation price is per tonne, like every other price here.
+          valuationEuro: stockValueFromWeight(
+            receivedWeightKg,
+            valuationPrice,
+          ).toFixed(2),
         });
 
         await tx.insert(PurchaseInvoiceItems).values({
@@ -519,7 +558,11 @@ export const createPurchaseInvoice = async (
           // Snapshotted at receipt: re-pricing the purchase order afterwards
           // must not rewrite an invoice already posted.
           netPrice: valuationPrice.toFixed(4),
-          amount: (valuationPrice * Number(item.quantity)).toFixed(2),
+          amount: amountForWeight(
+            valuationPrice,
+            poItem.priceUnit,
+            receivedWeightKg,
+          ).toFixed(2),
           vatCode: vatCodeByProduct.get(poItem.productUuid) ?? null,
         });
 

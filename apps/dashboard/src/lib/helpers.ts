@@ -8263,3 +8263,35 @@ export const availableStockQuantity = (
   quantity: number,
   reservedQuantity: number,
 ): number => Math.max(0, quantity - reservedQuantity);
+
+/**
+ * The weight of one unit of a product, in kilograms.
+ *
+ * A dimensioned product — plate, sheet, coil — derives it from its own
+ * dimensions and its own density, which is the figure the reference stores per
+ * product (7 850 kg/m³ for stainless) rather than looking up per grade. A
+ * grade default of 7 900 is 0,6 % out on every weight in the system.
+ *
+ * A piece article has no dimensions at all and stores its weight per piece
+ * directly, so that is used when there is nothing to derive from. Returns null
+ * when neither is known, so a caller can tell "weighs nothing" from "unknown".
+ */
+export const productPieceWeightKg = (product: {
+  length?: string | number | null;
+  widthDiameter?: string | number | null;
+  thickness?: string | number | null;
+  weightTheoretical?: string | number | null;
+  theoreticalWeight?: string | number | null;
+}): number | null => {
+  const derived = pieceWeightKg(
+    Number(product.length ?? 0),
+    Number(product.widthDiameter ?? 0),
+    Number(product.thickness ?? 0),
+    Number(product.weightTheoretical ?? 0),
+  );
+  if (derived !== null) {
+    return derived;
+  }
+  const stored = Number(product.theoreticalWeight ?? 0);
+  return stored > 0 ? stored : null;
+};

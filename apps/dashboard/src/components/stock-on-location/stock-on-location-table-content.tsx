@@ -10,6 +10,7 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { STOCK_UNIT_LABELS } from "@/lib/labels";
+import { formatMoney, formatNumber } from "@/lib/helpers";
 import { TableExportButton } from "@/components/ui/table-export-button";
 
 type Props = {
@@ -62,52 +63,48 @@ export const StockOnLocationTable = ({ stock }: Props) => (
               </TableCell>
             </TableRow>
           ) : (
-            stock.map((row) => {
-              const available = (
-                Number(row.quantity) - Number(row.reservedQuantity)
-              ).toFixed(3);
-
-              return (
-                <TableRow key={row.uuid}>
-                  <TableCell>{row.locationName ?? "—"}</TableCell>
-                  <TableCell className="text-center">
-                    {row.blocked ? "Yes" : ""}
-                  </TableCell>
-                  <TableCell className="font-medium">
-                    {row.productCode ?? "—"}
-                  </TableCell>
-                  <TableCell>{row.quality ?? "—"}</TableCell>
-                  <TableCell>{row.stockCategory ?? "—"}</TableCell>
-                  <TableCell>{row.options ?? "—"}</TableCell>
-                  <TableCell className="text-right">
-                    {row.lengthMm ?? "—"}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {row.widthMm ?? "—"}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {row.thicknessMm ?? "—"}
-                  </TableCell>
-                  <TableCell className="text-right">{row.quantity}</TableCell>
-                  <TableCell className="text-right">
-                    {row.reservedQuantity}
-                  </TableCell>
-                  <TableCell className="text-right">{available}</TableCell>
-                  <TableCell>
-                    {row.unit ? STOCK_UNIT_LABELS[row.unit] : "—"}
-                  </TableCell>
-                  <TableCell className="text-right">{row.quantityKg}</TableCell>
-                  <TableCell>{row.charge ?? "—"}</TableCell>
-                  <TableCell>{row.bundle ?? "—"}</TableCell>
-                  <TableCell>{row.internalCharge ?? "—"}</TableCell>
-                  <TableCell>{row.supplierName ?? "—"}</TableCell>
-                  <TableCell>{row.receiptDate ?? "—"}</TableCell>
-                  <TableCell className="text-right whitespace-nowrap">
-                    € {row.valuationEuro}
-                  </TableCell>
-                </TableRow>
-              );
-            })
+            stock.map((row) => (
+              <TableRow key={row.uuid}>
+                <TableCell>{row.locationName ?? "—"}</TableCell>
+                <TableCell className="text-center">
+                  {row.blocked ? "Yes" : ""}
+                </TableCell>
+                <TableCell className="font-medium">
+                  {row.productCode ?? "—"}
+                </TableCell>
+                <TableCell>{row.quality ?? "—"}</TableCell>
+                <TableCell>{row.stockCategory ?? "—"}</TableCell>
+                <TableCell>{row.options ?? "—"}</TableCell>
+                <TableCell className="text-right">
+                  {row.lengthMm ?? "—"}
+                </TableCell>
+                <TableCell className="text-right">
+                  {row.widthMm ?? "—"}
+                </TableCell>
+                <TableCell className="text-right">
+                  {row.thicknessMm ?? "—"}
+                </TableCell>
+                <TableCell className="text-right">{row.quantity}</TableCell>
+                <TableCell className="text-right">
+                  {row.reservedQuantity}
+                </TableCell>
+                <TableCell className="text-right">
+                  {formatNumber(row.available)}
+                </TableCell>
+                <TableCell>
+                  {row.unit ? STOCK_UNIT_LABELS[row.unit] : "—"}
+                </TableCell>
+                <TableCell className="text-right">{row.quantityKg}</TableCell>
+                <TableCell>{row.charge ?? "—"}</TableCell>
+                <TableCell>{row.bundle ?? "—"}</TableCell>
+                <TableCell>{row.internalCharge ?? "—"}</TableCell>
+                <TableCell>{row.supplierName ?? "—"}</TableCell>
+                <TableCell>{row.receiptDate ?? "—"}</TableCell>
+                <TableCell className="text-right whitespace-nowrap">
+                  {formatMoney(row.stockValue)}
+                </TableCell>
+              </TableRow>
+            ))
           )}
         </TableBody>
       </Table>

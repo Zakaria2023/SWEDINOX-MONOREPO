@@ -23,6 +23,16 @@ export type PurchaseLineColumnKey =
   | "unit"
   | "reservedQty"
   | "kgPurchased"
+  | "qtyReceived"
+  | "kgActual"
+  | "kgStillToReceive"
+  | "availableQty"
+  | "availableKg"
+  | "thicknessMm"
+  | "netPrice"
+  | "priceUnit"
+  | "amount"
+  | "amountYetToBeReceived"
   | "receiptDate"
   | "purchaser";
 
@@ -124,6 +134,66 @@ export const PURCHASE_LINE_COLUMNS: Array<
     label: "Kg(pur)",
     defaultVisible: true,
     value: (row) => numberCell(row.kgPurchased),
+  },
+  {
+    key: "qtyReceived",
+    label: "Qty(a) (Pur.U.)",
+    defaultVisible: true,
+    value: (row) => numberCell(row.qtyReceived),
+  },
+  {
+    key: "kgActual",
+    label: "Kg(a)",
+    defaultVisible: true,
+    value: (row) => numberCell(row.kgActual),
+  },
+  {
+    key: "kgStillToReceive",
+    label: "Kg. still to be received",
+    defaultVisible: true,
+    value: (row) => numberCell(row.kgStillToReceive),
+  },
+  {
+    key: "availableQty",
+    label: "Available (Pur.U.)",
+    defaultVisible: true,
+    value: (row) => numberCell(row.availableQty),
+  },
+  {
+    key: "availableKg",
+    label: "Available (kg)",
+    defaultVisible: false,
+    value: (row) => numberCell(row.availableKg),
+  },
+  {
+    key: "thicknessMm",
+    label: "Thickness",
+    defaultVisible: false,
+    value: (row) => numberCell(row.thicknessMm),
+  },
+  {
+    key: "netPrice",
+    label: "Net Purchase Price",
+    defaultVisible: true,
+    value: (row) => numberCell(row.netPrice),
+  },
+  {
+    key: "priceUnit",
+    label: "PriceU",
+    defaultVisible: true,
+    value: (row) => textCell(row.priceUnit),
+  },
+  {
+    key: "amount",
+    label: "Amount(p)",
+    defaultVisible: true,
+    value: (row) => numberCell(row.amount),
+  },
+  {
+    key: "amountYetToBeReceived",
+    label: "Amount yet to be received",
+    defaultVisible: true,
+    value: (row) => numberCell(row.amountYetToBeReceived),
   },
   {
     key: "receiptDate",

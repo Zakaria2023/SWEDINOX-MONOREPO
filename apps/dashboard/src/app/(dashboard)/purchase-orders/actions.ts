@@ -33,7 +33,12 @@ import {
 } from "@/db/schema/purchase-return-orders";
 import { mailDocument, sendPurchaseOrderEmail } from "@/emails/documents";
 import { purchaseOrderStatuses } from "@/lib/enums";
-import { describeError, generateUuid } from "@/lib/helpers";
+import {
+  amountForWeight,
+  describeError,
+  generateUuid,
+  productPieceWeightKg,
+} from "@/lib/helpers";
 import {
   dateRangeFilter,
   enumFilter,
@@ -373,11 +378,21 @@ export const createPurchaseOrder = async (
     }
 
     const productUuids = items.map((item) => item.productUuid);
+    // The dimensions and density come back with the uuid because a line's
+    // weight is derived from them, and its amount is derived from the weight.
     const validProducts = await db
-      .select({ uuid: Products.uuid })
+      .select({
+        uuid: Products.uuid,
+        length: Products.length,
+        widthDiameter: Products.widthDiameter,
+        thickness: Products.thickness,
+        weightTheoretical: Products.weightTheoretical,
+        theoreticalWeight: Products.theoreticalWeight,
+      })
       .from(Products)
       .where(inArray(Products.uuid, productUuids));
     const validProductUuids = new Set(validProducts.map((p) => p.uuid));
+    const productByUuid = new Map(validProducts.map((p) => [p.uuid, p]));
 
     if (
       productUuids.some((productUuid) => !validProductUuids.has(productUuid))
@@ -400,6 +415,16 @@ export const createPurchaseOrder = async (
       for (const [index, item] of items.entries()) {
         const netPrice = Number(item.netPrice ?? 0);
 
+        const quantity = Number(item.quantity);
+        const product = productByUuid.get(item.productUuid);
+
+        // A purchase price is struck per tonne far more often than per piece,
+        // so the amount is the weight times the price in that price's own
+        // unit — never the piece count times the price. Eleven plates at
+        // EUR 1.930 per tonne cost EUR 666,62, not EUR 21.230.
+        const pieceWeight = product ? productPieceWeightKg(product) : null;
+        const weightKg = (pieceWeight ?? 0) * quantity;
+
         await tx.insert(PurchaseOrderItems).values({
           uuid: generateUuid(),
           purchaseOrderUuid: uuid,
@@ -409,7 +434,12 @@ export const createPurchaseOrder = async (
           lineNumber: index + 1,
           netPrice: netPrice.toFixed(4),
           priceUnit: item.priceUnit ?? null,
-          amount: (netPrice * Number(item.quantity)).toFixed(2),
+          kgPurchased: weightKg.toFixed(2),
+          amount: amountForWeight(
+            netPrice,
+            item.priceUnit ?? null,
+            weightKg,
+          ).toFixed(2),
         });
       }
     });

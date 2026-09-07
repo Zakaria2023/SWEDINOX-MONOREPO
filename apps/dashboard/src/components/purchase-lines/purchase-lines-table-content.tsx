@@ -20,6 +20,7 @@ import {
 } from "@/components/shadcn/table";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { ORDER_LINE_STATUS_LABELS, STOCK_UNIT_LABELS } from "@/lib/labels";
+import { formatMoney, formatNumber } from "@/lib/helpers";
 
 type Props = {
   page: Paged<PurchaseLineItem>;
@@ -56,6 +57,16 @@ export const PurchaseLinesTable = ({ page, filters }: Props) => (
           <TableHead>U</TableHead>
           <TableHead className="text-right">Reserved</TableHead>
           <TableHead className="text-right">Kg(pur)</TableHead>
+          <TableHead className="text-right">Qty(a) (Pur.U.)</TableHead>
+          <TableHead className="text-right">Kg(a)</TableHead>
+          <TableHead className="text-right">Kg. still to be received</TableHead>
+          <TableHead className="text-right">Available (Pur.U.)</TableHead>
+          <TableHead className="text-right">Net Purchase Price</TableHead>
+          <TableHead>PriceU</TableHead>
+          <TableHead className="text-right">Amount(p)</TableHead>
+          <TableHead className="text-right">
+            Amount yet to be received
+          </TableHead>
           <TableHead>Receipt date</TableHead>
           <TableHead>Purchaser</TableHead>
         </TableRow>
@@ -113,6 +124,26 @@ export const PurchaseLinesTable = ({ page, filters }: Props) => (
               </TableCell>
               <TableCell className="text-right">{row.reservedQty}</TableCell>
               <TableCell className="text-right">{row.kgPurchased}</TableCell>
+              <TableCell className="text-right">{row.qtyReceived}</TableCell>
+              <TableCell className="text-right">
+                {formatNumber(row.kgActual)}
+              </TableCell>
+              <TableCell className="text-right">
+                {formatNumber(row.kgStillToReceive)}
+              </TableCell>
+              <TableCell className="text-right">
+                {formatNumber(row.availableQty)}
+              </TableCell>
+              <TableCell className="text-right">
+                {formatMoney(Number(row.netPrice))}
+              </TableCell>
+              <TableCell>{row.priceUnit ?? "—"}</TableCell>
+              <TableCell className="text-right">
+                {formatMoney(Number(row.amount))}
+              </TableCell>
+              <TableCell className="text-right">
+                {formatMoney(row.amountYetToBeReceived)}
+              </TableCell>
               <TableCell>{row.receiptDate ?? "—"}</TableCell>
               <TableCell>{row.purchaser ?? "—"}</TableCell>
             </TableRow>

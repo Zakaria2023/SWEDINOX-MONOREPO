@@ -13,7 +13,8 @@ import {
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { Products, SelectProducts } from "@/db/schema/products";
 import { getClerkUsersForSelect } from "@/lib/server/clerk";
-import { count, desc, eq, getTableColumns } from "drizzle-orm";
+import { count, desc, eq, getTableColumns, sql } from "drizzle-orm";
+import { PurchaseLineReceivals } from "@/db/schema/purchase-line-receivals";
 import {
   dateRangeFilter,
   numberRangeFilter,
@@ -37,12 +38,70 @@ export type PurchaseLineItem = SelectPurchaseOrderItems & {
   supplierName: SelectCompanies["companyName"] | null;
   productCode: SelectProducts["productCode"] | null;
   productName: SelectProducts["name"] | null;
+  /** Weight actually booked in against the line, summed over its receivals. */
+  kgActual: number;
+  /** Ordered weight less what has arrived. */
+  kgStillToReceive: number;
+  /** That outstanding weight at the line's own price. */
+  amountYetToBeReceived: number;
+  /** Still inbound and not yet promised to anyone, in the purchase unit. */
+  availableQty: number;
+  /** The same, in kilograms. */
+  availableKg: number;
 };
 
 export type PurchaseLineDetail = PurchaseLineItem & {
   supplierUuid: SelectCompanies["uuid"] | null;
   purchaseOrderStatus: SelectPurchaseOrders["status"] | null;
   purchaseOrderReference: SelectPurchaseOrders["reference"] | null;
+};
+
+// What is still coming, and what it is worth.
+//
+// Weight received is summed from the line's receivals rather than stored on
+// the line, because a line is received in instalments and only the receivals
+// know how much of it has actually turned up.
+//
+// "Available" on a purchase line means still inbound and unpromised — a
+// different thing from a warehouse lot's available, which is quantity less
+// reserved. Both exist; conflating them double-counts.
+const kgActualSql = sql<number>`(
+  SELECT COALESCE(SUM(${PurchaseLineReceivals.kgActual}), 0)
+  FROM ${PurchaseLineReceivals}
+  WHERE ${PurchaseLineReceivals.purchaseOrderItemUuid} = ${PurchaseOrderItems.uuid}
+)`;
+
+// Reserved is held in purchase units, so its weight is that share of the
+// line's weight.
+const reservedKgSql = sql<number>`(
+  CASE WHEN COALESCE(${PurchaseOrderItems.qtyPlanned}, 0) > 0
+    THEN COALESCE(${PurchaseOrderItems.kgPurchased}, 0)
+       * COALESCE(${PurchaseOrderItems.reservedQty}, 0)
+       / ${PurchaseOrderItems.qtyPlanned}
+    ELSE 0
+  END
+)`;
+
+const purchaseLineDerived = {
+  kgActual: sql<number>`${kgActualSql}`.mapWith(Number),
+  kgStillToReceive:
+    sql<number>`GREATEST(0, COALESCE(${PurchaseOrderItems.kgPurchased}, 0) - ${kgActualSql})`.mapWith(
+      Number,
+    ),
+  amountYetToBeReceived: sql<number>`
+    COALESCE(${PurchaseOrderItems.netPrice}, 0) *
+    CASE WHEN UPPER(COALESCE(${PurchaseOrderItems.priceUnit}, 'TN')) = 'KG'
+      THEN GREATEST(0, COALESCE(${PurchaseOrderItems.kgPurchased}, 0) - ${kgActualSql})
+      ELSE GREATEST(0, COALESCE(${PurchaseOrderItems.kgPurchased}, 0) - ${kgActualSql}) / 1000
+    END`.mapWith(Number),
+  availableQty: sql<number>`GREATEST(0,
+    COALESCE(${PurchaseOrderItems.qtyPlanned}, 0)
+    - COALESCE(${PurchaseOrderItems.qtyReceived}, 0)
+    - COALESCE(${PurchaseOrderItems.reservedQty}, 0))`.mapWith(Number),
+  availableKg:
+    sql<number>`GREATEST(0, COALESCE(${PurchaseOrderItems.kgPurchased}, 0) - ${kgActualSql} - ${reservedKgSql})`.mapWith(
+      Number,
+    ),
 };
 
 const PURCHASE_LINE_SEARCH = [
@@ -81,6 +140,7 @@ const purchaseLineRows =
     const rows = await db
       .select({
         ...getTableColumns(PurchaseOrderItems),
+        ...purchaseLineDerived,
         purchaseOrderId: PurchaseOrders.id,
         orderDate: PurchaseOrders.orderDate,
         supplierName: Companies.companyName,
@@ -188,6 +248,7 @@ export const getPurchaseLineDetail = async (
     const [row] = await db
       .select({
         ...getTableColumns(PurchaseOrderItems),
+        ...purchaseLineDerived,
         purchaseOrderId: PurchaseOrders.id,
         purchaseOrderStatus: PurchaseOrders.status,
         purchaseOrderReference: PurchaseOrders.reference,

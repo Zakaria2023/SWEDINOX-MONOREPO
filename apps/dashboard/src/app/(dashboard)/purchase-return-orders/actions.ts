@@ -36,15 +36,16 @@ import { SelectTexts } from "@/db/schema/texts";
 import { InsertTexts, Texts } from "@/db/schema/texts";
 import { PurchaseReturnOrderReason } from "@/lib/enums";
 import {
+  amountForWeight,
+  defaultTransportModeFor,
   describeError,
   generateUuid,
-  defaultTransportModeFor,
   getPaymentTermDueDate,
   isPurchaseReturnOrderEditable,
   restateLotValue,
   summarisePurchaseInvoice,
-  todayDateString,
   toDateString,
+  todayDateString,
 } from "@/lib/helpers";
 import { recordFreightMovement } from "@/lib/server/freight";
 import {
@@ -108,6 +109,8 @@ export type ReturnablePurchaseLine = {
   productName: SelectProducts["name"] | null;
   unit: SelectPurchaseOrderItems["unit"];
   receivedQuantity: SelectPurchaseOrderItems["qtyReceived"];
+  plannedQuantity: SelectPurchaseOrderItems["qtyPlanned"];
+  kgPurchased: SelectPurchaseOrderItems["kgPurchased"];
   netPrice: SelectPurchaseOrderItems["netPrice"];
   priceUnit: SelectPurchaseOrderItems["priceUnit"];
   stockUuid: SelectStock["uuid"] | null;
@@ -180,6 +183,8 @@ export const getReturnablePurchaseLines = async (
       productName: Products.name,
       unit: PurchaseOrderItems.unit,
       receivedQuantity: PurchaseOrderItems.qtyReceived,
+      plannedQuantity: PurchaseOrderItems.qtyPlanned,
+      kgPurchased: PurchaseOrderItems.kgPurchased,
       netPrice: PurchaseOrderItems.netPrice,
       priceUnit: PurchaseOrderItems.priceUnit,
       stockUuid: Stock.uuid,
@@ -253,6 +258,8 @@ export const getReturnablePurchaseLines = async (
         productName: row.productName,
         unit: row.unit,
         receivedQuantity: row.receivedQuantity,
+        plannedQuantity: row.plannedQuantity,
+        kgPurchased: row.kgPurchased,
         netPrice: row.netPrice,
         priceUnit: row.priceUnit,
         stockUuid: row.stockUuid,
@@ -891,6 +898,15 @@ export const createPurchaseReturnOrder = async (
         const returnQty = Number(item.returnQty);
         const netPrice = Number(line.netPrice ?? 0);
 
+        // Only part of a line usually goes back, so the weight returned is the
+        // line's weight scaled to the quantity going with it. Money follows
+        // the weight, because the price is struck per tonne.
+        const plannedQty = Number(line.plannedQuantity ?? 0);
+        const returnedWeightKg =
+          plannedQty > 0
+            ? Number(line.kgPurchased ?? 0) * (returnQty / plannedQty)
+            : 0;
+
         await tx.insert(PurchaseReturnOrderItems).values({
           uuid: generateUuid(),
           purchaseReturnOrderUuid: uuid,
@@ -908,7 +924,12 @@ export const createPurchaseReturnOrder = async (
           returnReason: item.returnReason ?? fields.returnReason ?? null,
           netPrice: netPrice.toFixed(4),
           priceUnit: line.priceUnit,
-          amount: (netPrice * returnQty).toFixed(2),
+          weightKg: returnedWeightKg.toFixed(2),
+          amount: amountForWeight(
+            netPrice,
+            line.priceUnit,
+            returnedWeightKg,
+          ).toFixed(2),
           returnDate: fields.returnDate
             ? toDateString(new Date(fields.returnDate))
             : todayDateString(),

@@ -21,6 +21,7 @@ import { PurchaseRequests } from "@/db/schema/purchase-requests";
 import { resolveCompanyType } from "@/app/(dashboard)/companies/actions";
 import { mailDocument, sendPurchaseOrderEmail } from "@/emails/documents";
 import {
+  amountForWeight,
   describeError,
   generateUuid,
   getQuoteVatRatePercent,
@@ -165,7 +166,6 @@ export const createPurchaseQuote = async (
       // Lines were previously dropped on the floor — PurchaseQuoteItems was
       // never written by anything, so a quote had a supplier and no content.
       for (const [index, item] of items.entries()) {
-        const quantity = Number(item.quantity ?? 0);
         const netPrice = Number(item.netPrice ?? 0);
 
         await tx.insert(PurchaseQuoteItems).values({
@@ -173,7 +173,13 @@ export const createPurchaseQuote = async (
           uuid: generateUuid(),
           purchaseQuoteUuid: uuid,
           lineNumber: item.lineNumber ?? index + 1,
-          amount: (netPrice * quantity).toFixed(2),
+          // The line's weight at the price's own unit, never the piece count:
+          // ten plates weighing 314 kg at EUR 1.930 per tonne is EUR 606,02.
+          amount: amountForWeight(
+            netPrice,
+            item.priceUnit ?? null,
+            Number(item.kg ?? 0),
+          ).toFixed(2),
         });
       }
 
@@ -327,7 +333,11 @@ export const recordPurchaseQuotePrices = async (
           .set({
             netPrice: netPrice.toFixed(2),
             priceUnit: price.priceUnit ?? item.priceUnit,
-            amount: (netPrice * Number(item.quantity ?? 0)).toFixed(2),
+            amount: amountForWeight(
+              netPrice,
+              price.priceUnit ?? item.priceUnit,
+              Number(item.kg ?? 0),
+            ).toFixed(2),
           })
           .where(eq(PurchaseQuoteItems.uuid, price.itemUuid));
       }
