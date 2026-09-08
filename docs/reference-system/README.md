@@ -32,6 +32,7 @@ Purchase table:
 |---|---|---|
 | [Product master](product-detail.md) | the `/products` form | header and `Basis` panel captured; **the weight formula is proved here** |
 | [Stock on location](stock-on-location.md) | `/stock-on-location` | ~26 columns and 7 views matched; stock value and availability both proved |
+| [Warehouse work orders](warehouse-workorders.md) | `/warehouse-workorders` | barely captured, but probably how goods are booked in |
 | [Company master](company-detail.md) | the `/companies` form | 9 roles, creditor/debtor, and 17 panels captured |
 
 All 12 Purchase screens are now captured, plus the purchase order detail
@@ -52,6 +53,10 @@ Two more files sit alongside them:
 - **[ACTIONS.md](ACTIONS.md)** — every action button, menu and grid affordance
   seen anywhere in the reference, per screen, with what it does and whether it
   is built. This is the list we build the UI from.
+- **[IMPLEMENTATION-PLAN.md](IMPLEMENTATION-PLAN.md)** — what is built, what is
+  next in order, what is blocked and on which answer, and the assumptions that
+  are in the code waiting to be revisited. Read this first when picking the
+  work back up.
 
 
 
