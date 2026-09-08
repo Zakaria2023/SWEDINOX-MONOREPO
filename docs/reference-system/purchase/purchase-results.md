@@ -1,5 +1,8 @@
 # Purchase results
 
+**✅ Built** at the grain proved below — one row per receipt, not aggregated,
+with `Subgroup` beside `Main group` and the three dead columns left out.
+
 `Overviews → Purchase → Purchase results`. Ours: `/purchase-results`.
 
 Did we buy well? Each receipt's purchase value set against what the same

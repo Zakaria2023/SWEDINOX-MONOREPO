@@ -19,6 +19,7 @@ assumption with what would settle it.
 | `eaf5e49` | purchase line amount derived, not trusted |
 | `361dc08` | the product's stored piece weight, not its dimensions |
 | `5f3359d` | the chart bounded; a density per product |
+| *(this one)* | Purchase results rebuilt at the right grain |
 
 **The rules now in code**, each proved against the reference's own figures:
 
@@ -104,14 +105,27 @@ amounts on an invoice line taken from it when present, from theoretical when
 not. Ours has one weight per line today, which is why our own orders reconcile
 exactly and the reference's real ones do not.
 
-### 4. Purchase results — a screen, not a fix
+### 4. ✅ Purchase results — done
 
-Not built. One row per **receipt line**, no aggregation — 1 800 rows cover 466
-(subgroup, date) pairs, and one subgroup on one day produces 29 rows with 29
-different values. `Year` and `Month` are derived from `Receipt date`.
+It was built, but **aggregated**: a `GROUP BY` over group, product, year and
+month, which the export disproves outright — 1 800 rows cover only 466
+(subgroup, date) pairs and one subgroup on one day carries 29 rows with 29
+different values. Now one row per receipt, ordered newest first, with `Year`
+and `Month` derived from the receipt date and a `Subgroup` column it never
+had.
 
-`Replacement value` is **zero on all 1 800 rows**, so it and both difference
-columns are dead — build the screen without them and say why.
+`Purchase value` is that receipt's own weight at its line's price, so a line
+received in instalments contributes once per instalment and the parts sum to
+the line.
+
+The three dead columns are **left out**: `Replacement value` is zero on all
+1 800 rows, which makes both difference columns dead with it and the percentage
+impossible to reconstruct. The old code computed a replacement value from the
+last purchase price — inventing a number the reference does not have. Say the
+word and they go back in.
+
+Verified: 10 checks, including that the middle level of the hierarchy is
+skipped and that the three dead columns are genuinely absent.
 
 ### 5. Smaller, unblocked
 

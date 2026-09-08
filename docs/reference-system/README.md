@@ -16,7 +16,7 @@ One file per screen, grouped the way its own `Overviews` tree groups them.
 | [Sold products not on the order recommendation](purchase/sold-products-not-advised.md) | `/sold-products-not-advised` | **verified 175/175** against a real export |
 | [Purchase lines](purchase/purchase-lines.md) | `/purchase-lines` | **~50 columns matched** from 9 saved views; option pricing proved |
 | [Purchase quotes](purchase/purchase-quotes.md) | `/purchase-quotes` | all 27 columns matched; **stays a read-only table** — at most one row in three years, questions moved to [MANAGER-QUESTIONS](MANAGER-QUESTIONS.md) |
-| [Purchase results](purchase/purchase-results.md) | `/purchase-results` | grain settled against a 1,800-row export; 3 dead columns |
+| [Purchase results](purchase/purchase-results.md) | `/purchase-results` | **built** at the right grain; 3 dead columns left out |
 | [Purchase invoice line](purchase/purchase-invoice-line.md) | `/purchase-invoice-line` | columns captured, not yet matched |
 | [Purchase invoices](purchase/purchase-invoices.md) | `/purchase-invoices` | one invoice detail captured; 4 of 7 questions answered |
 | [Net prices](purchase/net-prices.md) | not yet built | columns captured, not yet matched |
