@@ -56,8 +56,9 @@ what is left, and the three bugs it found.
 | [Stock on location](stock-on-location.md) | `/stock-on-location` | ~26 columns and 7 views matched; stock value and availability both proved |
 | [Machines · Deliveries to arrange](machines-and-small-screens.md) | `/machines`, `/deliveries-to-arrange` | six machines, **no rate on any of them**; both screens fully answered |
 
-Checked by `pnpm --filter @swedinox/dashboard verify-logistics` — 64 cases, each
-one a figure printed on one of those screens.
+Checked by the local harness `apps/dashboard/scripts/verify-logistics.ts` — 64
+cases, each one a figure printed on one of those screens. See
+[LOGISTICS-BUILT.md](LOGISTICS-BUILT.md) for how to run it.
 
 ## Steps and answers
 

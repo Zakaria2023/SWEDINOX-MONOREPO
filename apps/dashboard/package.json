@@ -7,7 +7,6 @@
     "build": "next build",
     "start": "next start --port 3000",
     "lint": "eslint .",
-    "verify-logistics": "tsx scripts/verify-logistics.ts",
     "clean": "node -e \"const fs=require('fs');for(const d of ['.next','.turbo'])fs.rmSync(d,{recursive:true,force:true})\"",
     "email:dev": "email dev --dir src/emails --port 3001",
     "db:push": "dotenv -e .env.local -- drizzle-kit push",

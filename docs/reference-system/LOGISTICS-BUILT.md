@@ -3,8 +3,17 @@
 Written **8-9-2026**, after the whole Logistics group arrived in one batch.
 Read this before touching any of it again.
 
-Verified by `pnpm --filter @swedinox/dashboard verify-logistics` — **64 cases**,
-each one a figure printed on a reference screen. `tsc` and `eslint` clean.
+Checked by the local harness `apps/dashboard/scripts/verify-logistics.ts` —
+**64 cases**, each one a figure printed on a reference screen, not a figure this
+code produced. `apps/dashboard/scripts` is gitignored, so it lives outside the
+repo; run it with
+
+```
+cd apps/dashboard
+node ../../node_modules/.pnpm/tsx@4.22.4/node_modules/tsx/dist/cli.mjs scripts/verify-logistics.ts
+```
+
+`tsc` and `eslint` clean.
 
 ---
 
@@ -134,13 +143,16 @@ Four schema changes are written and **not yet applied**:
 Only the fourth needs care. Its current values are the reference's own, in mixed
 case, and must be normalised **before** the column type changes:
 
-```sql
-UPDATE PurchaseLineReceivals SET receipt_status = 'new'                WHERE receipt_status = 'New';
-UPDATE PurchaseLineReceivals SET receipt_status = 'released'           WHERE receipt_status = 'Released';
-UPDATE PurchaseLineReceivals SET receipt_status = 'workorders_created' WHERE receipt_status = 'Workorders created';
-UPDATE PurchaseLineReceivals SET receipt_status = 'invoiced'           WHERE receipt_status = 'Invoiced';
--- 'received' is already lower case
 ```
+cd apps/dashboard
+node scripts/widen-enums.mjs           # reports, changes nothing
+node scripts/widen-enums.mjs --apply   # does it
+```
+
+It finds the columns from `information_schema` rather than the schema files,
+normalises the receipt statuses first, reinstates each column's nullability,
+default and comment, and takes every column's row count and value distribution
+before and after — any difference aborts the run.
 
 Counts before: `received` 53 · `Workorders created` 53 · `Released` 33 ·
 `New` 19 · `Invoiced` 3 = **161**.

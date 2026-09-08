@@ -53,8 +53,8 @@ plus the Customers, Companies and Finance menus.
 | [Stock mutations](stock-mutations.md) | every movement names the work order that caused it |
 | [Machines](machines-and-small-screens.md) | six machines, and **no rate on any of them** |
 
-All of it is built and checked — `pnpm verify-logistics`, 64 cases against the
-figures those screens printed.
+All of it is built and checked — 64 cases against the figures those screens
+printed. See [LOGISTICS-BUILT.md](LOGISTICS-BUILT.md).
 
 ## ~~3.~~ `Receipts` — the screen I did not know existed
 
