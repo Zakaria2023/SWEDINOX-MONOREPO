@@ -3,6 +3,12 @@
 import Link from "next/link";
 import { PurchaseReceivalItem } from "@/app/(dashboard)/purchase-receivals/actions";
 import {
+  formatDateColumn,
+  formatLengthMm,
+  formatMoney,
+  formatNumber,
+} from "@/lib/helpers";
+import {
   Table,
   TableBody,
   TableCell,
@@ -33,10 +39,15 @@ export const PurchaseReceivalsTable = ({ receivals }: Props) => (
           <TableRow>
             <TableHead>Purchase order</TableHead>
             <TableHead className="text-right">Line</TableHead>
+            <TableHead>Supplier code</TableHead>
             <TableHead>Supplier</TableHead>
+            <TableHead>Purchase order date</TableHead>
             <TableHead>Product code</TableHead>
             <TableHead>Product</TableHead>
             <TableHead className="text-right">Line amount</TableHead>
+            <TableHead className="text-right">
+              Price quantity (in gross price U.)
+            </TableHead>
             <TableHead className="text-right">Qty(p)</TableHead>
             <TableHead>Unit</TableHead>
             <TableHead className="text-right">Qty(a)</TableHead>
@@ -50,6 +61,8 @@ export const PurchaseReceivalsTable = ({ receivals }: Props) => (
             <TableHead>Delivery date (a)</TableHead>
             <TableHead className="text-right">Kg(p)</TableHead>
             <TableHead className="text-right">Kg(a)</TableHead>
+            <TableHead className="text-right">Length</TableHead>
+            <TableHead>Initials</TableHead>
             <TableHead>Purchaser</TableHead>
           </TableRow>
         </TableHeader>
@@ -77,13 +90,18 @@ export const PurchaseReceivalsTable = ({ receivals }: Props) => (
                 <TableCell className="text-right">
                   {row.lineNumber ?? "—"}
                 </TableCell>
+                <TableCell>{row.supplierCode ?? "—"}</TableCell>
                 <TableCell>{row.supplierName ?? "—"}</TableCell>
+                <TableCell>{formatDateColumn(row.purchaseOrderDate)}</TableCell>
                 <TableCell className="font-medium">
                   {row.productCode ?? "—"}
                 </TableCell>
                 <TableCell>{row.productName ?? "—"}</TableCell>
                 <TableCell className="text-right whitespace-nowrap">
-                  € {row.lineAmount}
+                  {formatMoney(row.lineAmount)}
+                </TableCell>
+                <TableCell className="text-right">
+                  {formatNumber(row.priceQuantity)}
                 </TableCell>
                 <TableCell className="text-right">{row.qtyPlanned}</TableCell>
                 <TableCell>
@@ -111,6 +129,10 @@ export const PurchaseReceivalsTable = ({ receivals }: Props) => (
                 <TableCell>{row.deliveryDateActual ?? "—"}</TableCell>
                 <TableCell className="text-right">{row.kgPlanned}</TableCell>
                 <TableCell className="text-right">{row.kgActual}</TableCell>
+                <TableCell className="text-right">
+                  {formatLengthMm(row.lengthMm)}
+                </TableCell>
+                <TableCell>{row.initials ?? "—"}</TableCell>
                 <TableCell>{row.purchaser ?? "—"}</TableCell>
               </TableRow>
             ))

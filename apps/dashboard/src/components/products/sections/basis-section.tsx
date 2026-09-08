@@ -193,6 +193,19 @@ export const BasisSection = ({ productOptions }: Props) => {
         <h3 className="text-sm font-medium text-muted-foreground">Weights</h3>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <div>
+            <FormLabel htmlFor="densityKgDm3">Density (kg/dm³)</FormLabel>
+            <Input
+              id="densityKgDm3"
+              inputMode="decimal"
+              placeholder="from the grade"
+              {...register("densityKgDm3")}
+            />
+            <p className="mt-1 text-xs text-muted-foreground">
+              Overrides the grade&rsquo;s density when set. Every weight below
+              is derived from it.
+            </p>
+          </div>
+          <div>
             <FormLabel htmlFor="weightTheoretical">Theoretically</FormLabel>
             <Input
               id="weightTheoretical"

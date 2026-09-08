@@ -448,6 +448,10 @@ const EMPTY_CHILDREN: ProductChildren = {
  */
 const withDerivedWeights = (fields: ProductFields): ProductFields => ({
   ...fields,
+  // Left blank the product has no density of its own and falls back to its
+  // grade, so an empty box has to reach the column as null rather than as an
+  // empty string a decimal cannot hold.
+  densityKgDm3: fields.densityKgDm3?.trim() ? fields.densityKgDm3 : null,
   ...derivedWeightColumns(
     fields.dimensionShape,
     {

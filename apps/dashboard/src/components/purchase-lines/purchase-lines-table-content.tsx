@@ -57,6 +57,8 @@ export const PurchaseLinesTable = ({ page, filters }: Props) => (
           <TableHead>U</TableHead>
           <TableHead className="text-right">Reserved</TableHead>
           <TableHead className="text-right">Kg(pur)</TableHead>
+          <TableHead className="text-right">Qty ordered</TableHead>
+          <TableHead className="text-right">Qty confirmed</TableHead>
           <TableHead className="text-right">Qty(a) (Pur.U.)</TableHead>
           <TableHead className="text-right">Kg(a)</TableHead>
           <TableHead className="text-right">Kg. still to be received</TableHead>
@@ -124,6 +126,8 @@ export const PurchaseLinesTable = ({ page, filters }: Props) => (
               </TableCell>
               <TableCell className="text-right">{row.reservedQty}</TableCell>
               <TableCell className="text-right">{row.kgPurchased}</TableCell>
+              <TableCell className="text-right">{row.qtyOrdered}</TableCell>
+              <TableCell className="text-right">{row.qtyConfirmed}</TableCell>
               <TableCell className="text-right">{row.qtyReceived}</TableCell>
               <TableCell className="text-right">
                 {formatNumber(row.kgActual)}

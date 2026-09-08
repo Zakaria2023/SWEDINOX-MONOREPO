@@ -9,43 +9,26 @@ diffs (151/151 receivals, 107/107 purchase lines) passing.
 
 ---
 
-## 🟢 Can be done now — nothing is blocking these
+## ✅ Done — the four that were not blocking
 
-### 1. Two columns are computed and then never shown
+All four are built and verified; 16 checks drive the real actions.
 
-`Confirm` fills `qtyOrdered` and `qtyConfirmed` on every line of an order, and
-`Make final` fills `qtyOrdered`. Both are written, both are correct, and
-**neither appears on any screen**. The reference shows them on Purchase lines
-as `Qty ordered` and `Qty confirmed`.
-
-*Fix:* two columns on the Purchase lines table and its export. Half an hour.
-
-### 2. `preAnnouncedDeliveryDate` is dead
-
-Added to `PurchaseLineReceivals` because the reference's reception carries it
-and `Pre-notify` is what fills it. **Nothing reads or writes it.**
-
-*Fix:* either build the `Pre-notify` action that stamps it, or drop the column.
-Building it is the better half-hour — it is a real step in the reference's
-chain, between confirming an order and receiving it.
-
-### 3. A density can be stored but not typed
-
-`Products.densityKgDm3` exists, `weightPerMetreOf` honours it, and it is proved
-to reproduce the reference's 62,800 kg exactly. **The product form has no field
-for it**, so no product can ever have one.
-
-*Fix:* one field on the product form, beside the existing weights.
-
-### 4. The receivals screen shows 20 of 25 columns
-
-Matched in the docs but missing from the table: `Company code`,
-`Purchase order date`, `Price quantity (in gross price U.)`, `Initials`,
-`Length`. The action already returns the first three.
-
-*Fix:* five columns. An hour, including the export.
-
----
+1. **`Qty ordered` and `Qty confirmed` reach the screen.** Purchase lines
+   shows both, and both are export columns — hidden by default, since the
+   reference keeps them off its own default view too.
+2. **`Pre-notify` exists.** It stamps the advised date on every reception of
+   an order that has **not** arrived yet and leaves the arrived ones alone,
+   because pre-advising the past is nonsense. The order moves to
+   `pre_notified`. `preAnnouncedDeliveryDate` is no longer a dead column.
+3. **A density can be typed.** One field on the product form, above the three
+   weights, with a note that it overrides the grade. Blank reaches the column
+   as null rather than as an empty string, so leaving it alone still falls back
+   to the grade — 31,6 kg for a 2 mm 304L plate from the table, 31,4 with the
+   reference's own 7,850.
+4. **The receivals table shows all 25 columns.** `Supplier code`,
+   `Purchase order date`, `Price quantity (in gross price U.)`, `Initials`
+   and `Length` were the five missing; length now renders the coil sentinel
+   blank like everywhere else.
 
 ## 🟡 Needs one answer first — small once it arrives
 

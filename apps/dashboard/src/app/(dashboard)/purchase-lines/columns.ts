@@ -25,6 +25,8 @@ export type PurchaseLineColumnKey =
   | "reservedQty"
   | "kgPurchased"
   | "qtyReceived"
+  | "qtyOrdered"
+  | "qtyConfirmed"
   | "kgActual"
   | "kgStillToReceive"
   | "availableQty"
@@ -137,6 +139,18 @@ export const PURCHASE_LINE_COLUMNS: Array<
     label: "Kg(pur)",
     defaultVisible: true,
     value: (row) => numberCell(row.kgPurchased),
+  },
+  {
+    key: "qtyOrdered",
+    label: "Qty ordered",
+    defaultVisible: false,
+    value: (row) => numberCell(row.qtyOrdered),
+  },
+  {
+    key: "qtyConfirmed",
+    label: "Qty confirmed",
+    defaultVisible: false,
+    value: (row) => numberCell(row.qtyConfirmed),
   },
   {
     key: "qtyReceived",

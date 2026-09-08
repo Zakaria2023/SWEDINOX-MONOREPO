@@ -727,6 +727,71 @@ export const makePurchaseOrderFinal = async (
 };
 
 /**
+ * `Pre-notify` — the supplier has advised when the goods are coming.
+ *
+ * Stamps the advised date on every reception of the order that has not arrived
+ * yet, which is the column the reference calls `Pre-announced delivery` on the
+ * reception. A reception that already has its actuals is left alone: it has
+ * arrived, and pre-advising the past would be nonsense.
+ */
+export const preNotifyPurchaseOrder = async (
+  uuid: string,
+  advisedDate: string,
+): Promise<PurchaseOrderActionResult> => {
+  try {
+    const [order] = await db
+      .select({ status: PurchaseOrders.status })
+      .from(PurchaseOrders)
+      .where(eq(PurchaseOrders.uuid, uuid))
+      .limit(1);
+
+    if (!order) {
+      return { error: "Purchase order not found." };
+    }
+    if (order.status === "provisional") {
+      return {
+        error: "Make the purchase order final before pre-notifying it.",
+      };
+    }
+    if (order.status === "cancelled") {
+      return { error: "A cancelled purchase order cannot be pre-notified." };
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(advisedDate)) {
+      return { error: "Enter the advised delivery date." };
+    }
+
+    await db.transaction(async (tx) => {
+      await tx
+        .update(PurchaseOrders)
+        .set({ status: "pre_notified" })
+        .where(eq(PurchaseOrders.uuid, uuid));
+
+      await tx
+        .update(PurchaseLineReceivals)
+        .set({ preAnnouncedDeliveryDate: advisedDate })
+        .where(
+          and(
+            eq(PurchaseLineReceivals.purchaseOrderUuid, uuid),
+            eq(PurchaseLineReceivals.kgActual, "0.00"),
+          ),
+        );
+    });
+
+    revalidatePath("/purchase-orders");
+    revalidatePath(`/purchase-orders/${uuid}`);
+    revalidatePath("/purchase-receivals");
+    return { success: true, purchaseOrderUuid: uuid };
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to pre-notify purchase order",
+    };
+  }
+};
+
+/**
  * `Confirm` — the supplier has acknowledged the order.
  *
  * This is what fills the quantity the reference calls "Qty confirmed", and
