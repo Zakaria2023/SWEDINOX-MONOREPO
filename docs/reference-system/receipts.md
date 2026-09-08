@@ -52,12 +52,18 @@ New → Released → Workorders created → Partially received → Received → 
 | `Partially received` | — *(seen only in the saved filter)* | yes | partly |
 | `Received` | 53 | yes | yes |
 | `Invoiced` | 3 | yes | yes |
+| **`Expired`** | — *(2 in the 3 088-row export)* | — | **no, and never will be** |
 
 **`Workorders created` is the state our build had no concept of**, and it is the
 one that explains the whole gap. At that point the reception exists, the
 Unloading work order has been raised, the paperwork is complete — and **nothing
 is in stock**. Ours created the stock lot when the purchase invoice was posted,
 three steps past this.
+
+`Expired` is a **seventh** status, and only the 3 088-row export shows it — a
+reception that lapsed without its goods ever arriving. It is terminal like
+`invoiced` rather than a step beyond `received`, and both of its rows carry a
+zero accrual.
 
 Built as `receiptStatuses` in `lib/enums.ts`, with `RECEIPT_STATUS_META` and
 `receiptStatusAfterUnloading` in `lib/helpers.ts`.

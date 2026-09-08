@@ -1615,6 +1615,7 @@ export const RECEIPT_STATUS_LABELS: Record<ReceiptStatus, string> = {
   partially_received: "Partially received",
   received: "Received",
   invoiced: "Invoiced",
+  expired: "Expired",
 };
 
 export const WORK_ORDER_STATUS_LABELS: Record<WorkOrderStatus, string> = {

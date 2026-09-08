@@ -23,6 +23,10 @@ proves it, and every other row is consistent with it:
 Four work orders booked into that subsection that day, of which one is finished
 and three are still to be worked.
 
+**Proved on a 3 087-row export: exact on every single row.** Nearly all of them
+read `n/n/0` — the day's work was finished — with 51 rows of `1/0/1` and a long
+tail of partly-done sections.
+
 Which means **the capacity booked for the day is `Occupied` on its own.**
 
 ⚠️ Ours computed `totalCapacity = occupied + ready + remaining` and an
@@ -43,33 +47,47 @@ see [warehouse-and-production-workorders.md](warehouse-and-production-workorders
 
 ---
 
-## 🔑 `Fetching` is subtyped by its destination machine
+## 🔑 `Fetching` is ten jobs, not one
 
-The `Workorder type` column is in Dutch and reveals something the English
-Warehouse workorders screen hides:
+The `Workorder type` column is in Dutch here, and it reveals what the English
+Warehouse workorders screen hides. The export carries **fifteen** distinct types, not the six the Warehouse
+workorders screen shows — because `Aanhalen` (Fetching) is really **ten**
+separate jobs:
 
-| Dutch here | English elsewhere |
-|---|---|
-| `Picken` | `Picking` |
-| `Lossen` | `Unloading` |
-| `Afhalen` | `Pick-up` |
-| **`Aanhalen Slijpen`** | `Fetching` → grinding |
-| **`Aanhalen Knippen`** | `Fetching` → cutting |
-| **`Aanhalen UV Folie`** | `Fetching` → UV film |
+| Type | Rows | English |
+|---|---|---|
+| `Picken` | 1 286 | Picking |
+| `Lossen` | 444 | Unloading |
+| `Verplaatsen` | 406 | Relocating |
+| **`Aanhalen Laser`** | **284** | Fetching → laser |
+| **`Aanhalen Slijpen`** | **266** | Fetching → grinding |
+| **`Aanhalen Laser Folie`** | **152** | Fetching → laser, filmed |
+| `Afhalen` | 95 | Pick-up |
+| **`Aanhalen Knippen`** | **56** | Fetching → cutting |
+| **`Aanhalen Borstelen`** | **32** | Fetching → brushing |
+| **`Aanhalen UV Folie`** | **25** | Fetching → UV film |
+| **`Aanhalen Blauwe Folie`** | **23** | Fetching → blue film |
+| **`Aanhalen Decoilen`** | **11** | Fetching → decoiling |
+| **`Aanhalen Folie verwijderen`** | **4** | Fetching → film removal |
+| **`Aanhalen Duplo`** | **2** | Fetching → duplex |
+| `Verschrotten` | 1 | Scrapping |
 
-So capacity is not booked per type but per **type-and-machine**. `Fetching` on
-the Warehouse workorders screen collapses three different jobs that compete for
-three different resources — and the export confirms it, showing `Fetching` rows
-going `To-location` `Slijpen/Foliën`, `Laser 1` and `Knip`.
+So capacity is not booked per type but per **type-and-treatment**, and the ten
+`Aanhalen` variants line up one-for-one with the processing options bought as
+service lines on a purchase order — Slijpen, Decoilen, Blue Foil, UV Foil,
+Borstelen. The same list, seen from the warehouse rather than from the invoice.
 
-⚠️ Our `warehouseWorkOrderTypes` has a flat `fetching`. The machine it is
-fetching *to* is what decides which capacity pool it draws on, so a capacity
-check that ignores it would draw on the wrong pool. Noted in
-[IMPLEMENTATION-PLAN.md](IMPLEMENTATION-PLAN.md).
+⚠️ Our `warehouseWorkOrderTypes` has a flat `fetching`. What it is fetching
+*for* is what decides which capacity pool it draws on, so a capacity check that
+ignores it draws on the wrong pool — and there are ten pools, not three. Noted
+in [IMPLEMENTATION-PLAN.md](IMPLEMENTATION-PLAN.md).
 
 ---
 
 ## Sections and subsections
+
+The export carries **17 warehouse sections and 48 subsections**, against the
+twelve and fourteen visible on screen.
 
 | Section | Subsections seen |
 |---|---|

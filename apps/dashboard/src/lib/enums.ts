@@ -1589,6 +1589,11 @@ export const receiptStatuses = [
   "partially_received",
   "received",
   "invoiced",
+  // A reception that lapsed without ever being fulfilled. Off the ladder
+  // rather than at the end of it: the goods never came, so nothing downstream
+  // of it ever happened. Two of the 3 088 rows in the reference's own Receipts
+  // export are in this state, and both carry an accrual of nothing.
+  "expired",
 ] as const satisfies readonly string[];
 
 export type ReceiptStatus = (typeof receiptStatuses)[number];

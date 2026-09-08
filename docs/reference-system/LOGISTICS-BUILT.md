@@ -130,18 +130,86 @@ end of a large batch was the wrong risk to take. **This is the top follow-up.**
 
 ---
 
-## ⚠️ `pnpm db:push` has NOT been run
+## ✅ The units are populated, and one of them deliberately is not
 
-Four schema changes are written and **not yet applied**:
+The migration exposed something the code alone could not: **`price_unit` was
+NULL on all 5 626 products**, so `priceMeasureFor` fell back to charging by the
+piece for every line — meaning the money fix above was correct and completely
+inert. `sales_unit`, meanwhile, was filled on all but three:
 
-1. `TransportWorkOrders.status` → `tripStatuses` *(table empty — free)*
-2. `TransportWorkOrderLines.status` → `tripStatuses` *(empty)*
-3. `TransportStatusAdjustments.trip_status` → `tripStatuses` *(empty)*
-4. `PurchaseLineReceivals.receipt_status` `varchar(100)` → `mysqlEnum` *(**161
-   rows**)*
+```
+TN 2 927    ST 1 972    M1 722    KG 2    NULL 3
+```
 
-Only the fourth needs care. Its current values are the reference's own, in mixed
-case, and must be normalised **before** the column type changes:
+`price_unit` is a field the product form writes, so this was incomplete import
+data rather than a missing feature. `scripts/backfill-price-unit.mjs` filled it
+from `sales_unit` — 5 623 rows, 5 626 intact, none disagreeing afterwards.
+
+### 🚫 `weight_unit` was deliberately left alone
+
+The obvious next step would have been to stamp `M3` on `weight_unit` to match
+the reference. **That would have been a disaster**, and checking first is the
+only reason it was not taken:
+
+| our `theoretical_weight` | rows |
+|---|---|
+| looks like a per-piece weight (< 1 000 kg) | **3 570** |
+| zero | 2 054 |
+| in the 6 000–9 000 density range | **0** |
+
+Our column holds per-piece kilograms. The reference's holds a density. Stamping
+`M3` on ours would have made `theoreticalPieceWeightKg` multiply 3 570 real
+weights by their own volume. Left NULL, the helper's default branch reads the
+column as the per-piece figure it actually is — which is the right answer for
+our data and stays right.
+
+### And a flaw in the helper, found by the same check
+
+114 products are sold by weight (`TN` or `KG`) and carry **no weight at all**.
+`priceMeasureFor` returned `0` for those, where the area and volume bases
+already returned `null` when their dimension was missing — so backfilling
+`price_unit` would have billed those 114 products at nothing, silently. The
+three weight bases now return `null` too, and a weightless line falls back to
+the piece count exactly as before.
+
+---
+
+## ✅ `pnpm db:push` has been run
+
+Not through drizzle-kit's own path. It flagged all twelve column changes as
+data loss that cannot be reverted, because it cannot tell an enum being
+*widened* from one being narrowed — eleven of the twelve add a single member
+and take nothing away.
+
+`scripts/widen-enums.mjs` does it with plain `ALTER TABLE MODIFY COLUMN`,
+finding the columns from `information_schema` rather than the schema files —
+which turned up **15**, not 12, since three empty ones gave push nothing to warn
+about. It reinstates each column's nullability, default and comment, and takes
+every column's row count and value distribution before and after; any
+difference aborts.
+
+The one real conversion was `receipt_status`, varchar to enum over 161 rows in
+the reference's own casing. MySQL turns a value outside an enum into the empty
+string **without complaining**, so those are normalised first and anything left
+over aborts rather than being lost. That was the only place the warning applied.
+
+Applied: 161 receivals intact and renamed, 5 626 products intact across five
+columns, `OrderItems` still 194. `pnpm db:push` afterwards reports
+`Changes applied` with no warnings and no prompt.
+
+```
+cd apps/dashboard
+node scripts/widen-enums.mjs           # reports, changes nothing
+node scripts/widen-enums.mjs --apply   # does it
+```
+
+🚫 **Never `drizzle-kit push --force` on this database.** It tried to
+`TRUNCATE OrderItems` (194 rows) to widen an enum once already.
+
+## ~~⚠️~~ The four UPDATEs, for reference
+
+The normalisation the script performs, written out in case it is ever needed
+by hand:
 
 ```
 cd apps/dashboard
@@ -155,7 +223,7 @@ default and comment, and takes every column's row count and value distribution
 before and after — any difference aborts the run.
 
 Counts before: `received` 53 · `Workorders created` 53 · `Released` 33 ·
-`New` 19 · `Invoiced` 3 = **161**.
+`New` 19 · `Invoiced` 3 = **161**. Counts after, unchanged in total.
 
 🚫 **Never `drizzle-kit push --force` on this database.** It tried to
 `TRUNCATE OrderItems` (194 rows) to widen an enum once already. Widen enums with
@@ -200,7 +268,7 @@ substantial piece of work.
 ## Follow-ups, in the order they are worth doing
 
 1. **The 222 `.toFixed(2)` sites** → `moneyString`. Money, app-wide, mechanical.
-2. **`pnpm db:push`**, with the four `UPDATE`s above run first.
+2. ~~`pnpm db:push`~~ — done, by hand, with every row verified.
 3. **The receipt chain** — move lot creation from the invoice to the approval of
    the Unloading, and add the work-order link to `StockMovements`.
 4. **A call-off line is blocked by the customer**, which is a fourth kind of
@@ -212,6 +280,46 @@ substantial piece of work.
    discount columns and reads 0 % on every row, so even the best-placed screen
    in the system did not settle it. One quote line with real figures in both
    boxes still would.
+
+---
+
+## Four exports arrived with the screenshots
+
+7 293 rows, read out of the running Excel and kept in
+`docs/reference-system/exports` (gitignored):
+
+| File | Rows | What it settled |
+|---|---|---|
+| `warehouse-capacity.tsv` | 3 087 | `Remaining = Occupied − Ready` **exact on every row** |
+| `receipts-full-view.tsv` | 3 088 | all 2 078 invoiced receipts carry a zero accrual |
+| `receipts-per-day.tsv` | 1 008 | the accrual on 254 priced rows, to the cent |
+| `nesting.tsv` | 10 | `Kg(p)` is **not** derived from the displayed density |
+
+The verification harness now reads all of it, so the claims are pinned to the
+reference's own figures rather than to my transcription of a screenshot.
+
+Three things only the exports could have told us:
+
+**`Expired` is a seventh receipt status.** Two rows of the 3 088 carry it, both
+with a zero accrual. It was missing from the enum that had just been pushed;
+added, and it is terminal like `invoiced` rather than a step further along.
+
+**`Fetching` is ten jobs, not one.** The capacity export carries fifteen work
+order types where the Warehouse workorders screen shows six, because
+`Aanhalen` splits into Laser, Slijpen, Laser Folie, Knippen, Borstelen, UV
+Folie, Blauwe Folie, Decoilen, Folie verwijderen and Duplo — one for one with
+the processing options bought as service lines on a purchase order. Ten capacity
+pools, not three. See [warehouse-capacity.md](warehouse-capacity.md).
+
+**Receipts include returns.** 62 of the 3 088 rows have `Order type: Return`,
+with positive weights, so a return comes back in through the same door the goods
+went out of.
+
+And a fourth, which is the export confirming the code rather than correcting it:
+four of the 254 priced receipt rows hold values ending in exactly `,xx5` —
+`67 100,855`, `4 405,135`, `2 610,745`, `2 848,105`. The screen prints them
+rounded half-up. That is the same half-cent boundary `roundToCents` was written
+for, met again in the reference's own stored data.
 
 ---
 

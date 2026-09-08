@@ -8543,13 +8543,19 @@ export const priceMeasureFor = (
   const width = (line.widthMm ?? 0) / 1000;
   const thickness = (line.thicknessMm ?? 0) / 1000;
   switch ((priceUnit ?? "").trim().toUpperCase()) {
+    // The three weight bases return null on a weightless line rather than
+    // zero, for the same reason an area price returns null without a width: a
+    // measure nobody can work out is not a measure of nothing. Returning zero
+    // would bill the line at nothing at all, silently. 114 products in the
+    // catalogue are sold by the tonne and carry no weight, so this is the
+    // ordinary case rather than a defensive flourish.
     case "KG":
-      return line.weightKg;
+      return line.weightKg > 0 ? line.weightKg : null;
     case "TN":
-      return line.weightKg / 1000;
+      return line.weightKg > 0 ? line.weightKg / 1000 : null;
     // A hundred kilograms — the metric quintal, still quoted on thin coil.
     case "HK":
-      return line.weightKg / 100;
+      return line.weightKg > 0 ? line.weightKg / 100 : null;
     case "M1":
       return metres > 0 ? metres * line.quantity : null;
     case "HM":
@@ -8749,6 +8755,10 @@ export const RECEIPT_STATUS_META: Record<ReceiptStatus, ReceiptStatusMeta> = {
   partially_received: { step: 3, workOrderRaised: true, goodsAreIn: true },
   received: { step: 4, workOrderRaised: true, goodsAreIn: true },
   invoiced: { step: 5, workOrderRaised: true, goodsAreIn: true },
+  // Terminal, and not the top of the ladder — a lapsed reception never got its
+  // goods, so it shares a step with the state it lapsed out of rather than
+  // claiming to be further along than "received".
+  expired: { step: 5, workOrderRaised: false, goodsAreIn: false },
 };
 
 export const receiptStatusMetaOf = (status: ReceiptStatus): ReceiptStatusMeta =>
@@ -8776,7 +8786,10 @@ export const receiptStatusAfterUnloading = ({
   kgExpected: number;
   kgReceived: number;
 }): ReceiptStatus => {
-  if (status === "invoiced" || kgReceived <= 0) {
+  // Both terminal states are left alone: an invoiced reception has had its
+  // money move, and an expired one is closed. A late work order against either
+  // is a data problem, not a receipt.
+  if (status === "invoiced" || status === "expired" || kgReceived <= 0) {
     return status;
   }
   // Weights are reported off a weighbridge, so an exact match is luck rather
@@ -8810,7 +8823,12 @@ export const materialStillToInvoice = ({
   pricePerUnit: number;
   priceUnit: string | null;
 }): number => {
-  if (status === "invoiced" || kgReceived <= 0 || pricePerUnit <= 0) {
+  if (
+    status === "invoiced" ||
+    status === "expired" ||
+    kgReceived <= 0 ||
+    pricePerUnit <= 0
+  ) {
     return 0;
   }
   return roundToCents(amountForWeight(pricePerUnit, priceUnit, kgReceived));

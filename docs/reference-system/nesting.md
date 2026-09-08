@@ -40,6 +40,36 @@ So the unit column is not decoration — **it decides how the figure is read**:
 A 3 000 × 1 500 × 2 mm plate at 7 850 kg/m³ weighs **70,65 kg**. Read without
 the unit it would be 7 850 kg — out by a factor of 111.
 
+### ⚠️ But the displayed density is **not** what `Kg(p)` is computed from
+
+A ten-row export settles this, and it is the opposite of what the screen
+suggests. Every row shows `7 850 per M3`, yet the weight each row actually
+carries implies a different density:
+
+| Product | Size | `Kg(p)` per piece | implied density |
+|---|---|---|---|
+| `PK304L200315` | 3 000 × 1 500 × 2 | 72,0000 | **8 000** |
+| `PK304L15025125` | 2 500 × 1 250 × 1,5 | 37,5000 | **8 000** |
+| `PK430080` | 2 000 × 1 000 × 0,8 | 12,8000 | **8 000** |
+| `PK316L600` | 395 × 395 × 6 | 7,4903 | 8 001 |
+| `PK304L150` | 1 500 × 180 × 1,5 | 3,1793 | **7 850** |
+| `PC304L150` | 750 × 500 × 1,5 | 4,4200 | 7 858 |
+| `PC304L150` | 550 × 450 × 1,5 | 2,9500 | 7 946 |
+
+Five of ten land on 8 000 and the rest scatter between 7 850 and 7 946 — while
+the column beside them says 7 850 on every single row.
+
+So `Kg(p)` comes from **the product's own stored per-piece weight**, not from
+re-deriving it against the density this screen prints. The density column is a
+default shown for the material, and the per-product figure that actually
+produced the weight differs — which is exactly what `Products.densityKgDm3`
+exists for, and matches the earlier finding that a 316L plate reads 7,850 here
+where our grade table says 8,000.
+
+**Which is why `productPieceWeightKg` prefers the stored `weightTheoretical`
+and only derives from a density when there is none.** That ordering is not a
+convenience; it is the only ordering that reproduces the reference.
+
 ### ⚠️ What this fixed
 
 1. **`salesUnitOptions` had no `M3`.** The one value the reference actually uses
