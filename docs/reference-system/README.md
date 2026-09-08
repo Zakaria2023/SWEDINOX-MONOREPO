@@ -41,6 +41,10 @@ answered.
 
 ## Steps and answers
 
+**[WHAT-I-NEED-FROM-YOU.md](WHAT-I-NEED-FROM-YOU.md)** is the one to hand
+somebody sitting in front of the old system: every outstanding question as a
+numbered click path, ranked, with the three that matter at the top.
+
 Two more files sit alongside them:
 
 - **[TIER1-RECIPES.md](TIER1-RECIPES.md)** — step-by-step recipes for creating
