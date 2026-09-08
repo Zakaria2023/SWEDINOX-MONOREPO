@@ -87,6 +87,9 @@ import {
   StockLabelType,
   StockUnit,
   StockMovementType,
+  TripStatus,
+  tripStatuses,
+  ReceiptStatus,
   SurchargeBasis,
   TextUsageCategory,
   TransporterPriceUnit,
@@ -578,6 +581,26 @@ export const fullName = (
 /**
  * A number with exactly two decimals, thousands separated (no currency symbol).
  */
+/**
+ * Rounds an amount to the cent, half-up, the way a ledger does.
+ *
+ * `Number.prototype.toFixed` does not: it rounds the binary approximation of
+ * the number rather than the decimal, so it lands a cent **low** on an exact
+ * half-cent. 462,9 kg at EUR 2 550/TN comes to EUR 1 180,395, which the
+ * reference prints as EUR 1 180,40 and `toFixed(2)` writes as EUR 1 180,39.
+ * Two of eighteen priced lines read off the reference's Blocked deliveries
+ * screen land on that boundary, so it is common enough to matter.
+ *
+ * Anything storing money should round with this first and only then format, so
+ * that what is written matches what the reference would have written.
+ */
+export const roundToCents = (value: number): number =>
+  Math.round(value * 100) / 100;
+
+/** An amount as a decimal string, rounded to the cent the way a ledger does. */
+export const moneyString = (value: number): string =>
+  roundToCents(value).toFixed(2);
+
 export const formatFixed2 = (value: number): string =>
   value.toLocaleString("en-US", {
     minimumFractionDigits: 2,
@@ -700,7 +723,24 @@ export const isPathActive = (href: string, pathname: string): boolean =>
  *   - creditRestrictionPercentage: the Dutch "kredietbeperking" surcharge —
  *     see DEFAULT_CREDIT_RESTRICTION_PERCENTAGE below.
  */
-export type PaymentTermMeta = {
+export type TripStatusMeta = {
+  /** Position on the ladder; a trip only ever moves up it. */
+  readonly step: number;
+  /** True once the goods are physically on the vehicle. */
+  readonly isLoaded: boolean;
+  /** True once the loading bay has nothing left to do with the trip. */
+  readonly leftTheYard: boolean;
+};
+
+type ReceiptStatusMeta = {
+  readonly step: number;
+  /** True once an Unloading work order exists for the reception. */
+  readonly workOrderRaised: boolean;
+  /** True once some or all of the goods are physically in stock. */
+  readonly goodsAreIn: boolean;
+};
+
+type PaymentTermMeta = {
   netDays: number | null;
   endOfMonth: boolean;
   prepaymentPercentage: number;
@@ -7145,6 +7185,16 @@ export type QuoteLineFinancialsInput = {
   lengthMm: number;
   /** Margin floor from the product group; 0 disables the too-low flag. */
   minProfitMargin: number;
+  /**
+   * The unit the prices are struck in — the line's `PriceU`. Steel is sold by
+   * the tonne far more often than by the piece, and getting this wrong scales
+   * the whole line by its own piece count. Omit it and the line is treated as
+   * priced per piece, which is what it meant before prices carried a unit.
+   */
+  priceUnit?: string | null;
+  /** Needed only for an area or volume price. */
+  widthMm?: number | null;
+  thicknessMm?: number | null;
 };
 
 export type QuoteLineFinancials = {
@@ -7181,12 +7231,34 @@ export const quoteLineFinancials = ({
   theoreticalWeight,
   lengthMm,
   minProfitMargin,
+  priceUnit,
+  widthMm,
+  thicknessMm,
 }: QuoteLineFinancialsInput): QuoteLineFinancials => {
-  const amount = netPrice * quantity;
+  const weightKg = quantity * theoreticalWeight;
+
+  // What every price on the line is charged against. All three of them — sale,
+  // purchase and replacement — are struck in the same unit, because the line
+  // carries one `PriceU` for the material it is made of. Pricing the sale by
+  // weight and the cost by piece would make the margin meaningless.
+  const measure =
+    priceMeasureFor(priceUnit, {
+      quantity,
+      weightKg,
+      lengthMm,
+      widthMm,
+      thicknessMm,
+    }) ?? quantity;
+
+  // Every figure below is money the line will be billed for, so each is
+  // rounded to the cent here rather than left to a caller's toFixed — which
+  // rounds the wrong way on an exact half-cent. Profit is then the difference
+  // between two rounded amounts, which is what an invoice shows.
+  const amount = roundToCents(netPrice * measure);
   const costPrice = purchasePrice > 0 ? purchasePrice : replacementPrice;
-  const costAmount = costPrice * quantity;
-  const replacementCost = replacementPrice * quantity;
-  const profit = amount - costAmount;
+  const costAmount = roundToCents(costPrice * measure);
+  const replacementCost = roundToCents(replacementPrice * measure);
+  const profit = roundToCents(amount - costAmount);
   const profitMargin = profitMarginPercent(amount, profit);
 
   return {
@@ -7197,8 +7269,8 @@ export const quoteLineFinancials = ({
     replacementCost,
     profit,
     profitMargin,
-    profitReplPrice: amount - replacementCost,
-    weightKg: quantity * theoreticalWeight,
+    profitReplPrice: roundToCents(amount - replacementCost),
+    weightKg,
     m1PerPiece: lengthMm / 1000,
     profitTooLow: minProfitMargin > 0 && profitMargin < minProfitMargin,
   };
@@ -7398,9 +7470,21 @@ export type QuoteLinePreviewInput = {
   basePrice: number;
   replacementPrice: number;
   purchasePrice: number;
+  /**
+   * The weight of one piece — already resolved, not the raw catalogue column,
+   * which holds a density when the product's weight unit says M3.
+   */
   theoreticalWeight: number;
   productLengthMm: number;
   minProfitMargin: number;
+  /**
+   * The unit the product's prices are struck in. The preview has to agree with
+   * the server on this or the grid totals a tonne-priced line by its piece
+   * count and the saved line comes back a thousandfold different.
+   */
+  priceUnit?: string | null;
+  widthMm?: number | null;
+  thicknessMm?: number | null;
 };
 
 /**
@@ -7421,6 +7505,9 @@ export const previewQuoteLine = ({
   theoreticalWeight,
   productLengthMm,
   minProfitMargin,
+  priceUnit,
+  widthMm,
+  thicknessMm,
 }: QuoteLinePreviewInput): QuoteLineFinancials & { netPrice: number } => {
   const netPrice = basePrice > 0 ? basePrice : replacementPrice;
 
@@ -7434,6 +7521,9 @@ export const previewQuoteLine = ({
       theoreticalWeight,
       lengthMm: lengthMm !== null && lengthMm > 0 ? lengthMm : productLengthMm,
       minProfitMargin,
+      priceUnit,
+      widthMm,
+      thicknessMm,
     }),
   };
 };
@@ -8313,17 +8403,91 @@ export const stockValueFromWeight = (
 // each rather than two that can drift.
 
 /**
+ * What a product's stored "Theor. Weight" figure has to be multiplied by to
+ * become the weight of one piece, given the "Theor. Weight U." beside it.
+ *
+ * This is the whole reason the unit column exists, and reading the figure
+ * without it is how a density gets mistaken for a weight. The reference's own
+ * Nesting screen shows a cold-rolled 304L plate with a "Theor. Weight" of
+ * 7.850 and a "Theor. Weight U." of `M3` — that is 7 850 kg per cubic metre,
+ * the density of stainless steel, not a 7,85-tonne plate.
+ *
+ * `null` means the unit gives no way to reach a piece weight from dimensions
+ * the product may not have, so the caller should fall back rather than invent
+ * a number.
+ */
+export const THEORETICAL_WEIGHT_BASIS: Partial<
+  Record<SalesUnit, "per_piece" | "per_metre" | "per_square_metre" | "density">
+> = {
+  KG: "per_piece",
+  ST: "per_piece",
+  M1: "per_metre",
+  M2: "per_square_metre",
+  M3: "density",
+};
+
+/**
+ * The weight of one piece, worked out from the product's stored theoretical
+ * weight and the unit that says how to read it.
+ *
+ * Each basis needs a different slice of the article's dimensions, and any one
+ * of them being missing means the figure cannot be reached — so this returns
+ * null rather than silently treating an absent width as zero and reporting a
+ * weightless plate.
+ */
+export const theoreticalPieceWeightKg = (product: {
+  theoreticalWeight?: string | number | null;
+  weightUnit?: SalesUnit | null;
+  lengthMm?: number | null;
+  widthMm?: number | null;
+  thicknessMm?: string | number | null;
+}): number | null => {
+  const stored = Number(product.theoreticalWeight ?? 0);
+  if (!(stored > 0)) {
+    return null;
+  }
+
+  const basis = product.weightUnit
+    ? THEORETICAL_WEIGHT_BASIS[product.weightUnit]
+    : undefined;
+  const metres = (product.lengthMm ?? 0) / 1000;
+  const width = (product.widthMm ?? 0) / 1000;
+  const thickness = Number(product.thicknessMm ?? 0) / 1000;
+
+  switch (basis) {
+    case "per_piece":
+      return stored;
+    case "per_metre":
+      return metres > 0 ? stored * metres : null;
+    case "per_square_metre":
+      return metres > 0 && width > 0 ? stored * metres * width : null;
+    case "density":
+      return metres > 0 && width > 0 && thickness > 0
+        ? stored * metres * width * thickness
+        : null;
+    default:
+      // No unit recorded. Every other basis needs one to be read at all, so
+      // the only safe reading left is the one the figure's own name suggests.
+      return stored;
+  }
+};
+
+/**
  * The weight of one unit of a product, in kilograms.
  *
  * Prefers `weightTheoretical`, which the product form already derives from the
- * article's dimensions and its grade's density and stores on save. A piece
- * article has no dimensions to derive from and carries its weight per unit
- * directly, so that is the fallback.
+ * article's dimensions and its grade's density and stores on save — that column
+ * is a finished per-piece weight and needs no unit to interpret.
+ *
+ * Falls back to `theoreticalWeight`, which does, and hands it to
+ * theoreticalPieceWeightKg with the dimensions the caller passed. That is where
+ * the reference keeps 7 850 kg/m3 for a stainless plate, so reading it as a
+ * per-piece figure would overstate the plate by five orders of magnitude.
  *
  * Returns null when neither is known, so a caller can tell "weighs nothing"
  * from "nobody has said".
  *
- * The density behind that stored figure comes from the product's own
+ * The density behind the stored figure comes from the product's own
  * `densityKgDm3` when it has one, and from the grade table otherwise — the
  * reference keeps a density per product, and for a 316L plate its 7,850
  * differs from our grade table's 8,000 by 1,9 %.
@@ -8331,6 +8495,10 @@ export const stockValueFromWeight = (
 export const productPieceWeightKg = (product: {
   weightTheoretical?: string | number | null;
   theoreticalWeight?: string | number | null;
+  weightUnit?: SalesUnit | null;
+  lengthMm?: number | null;
+  widthMm?: number | null;
+  thicknessMm?: string | number | null;
 }): number | null => {
   // `weightTheoretical` is already the weight of one piece: the product form
   // derives it from the article's dimensions and its grade's density and
@@ -8339,23 +8507,80 @@ export const productPieceWeightKg = (product: {
   if (perPiece > 0) {
     return perPiece;
   }
-  // A product with no dimensions to derive from — a piece article — carries
-  // its weight per unit directly instead.
-  const perUnit = Number(product.theoreticalWeight ?? 0);
-  return perUnit > 0 ? perUnit : null;
+  return theoreticalPieceWeightKg(product);
 };
 
 /**
- * How much of a line an option is charged against, in the unit its price is
+ * How much of a line a price is charged against, in the unit that price is
  * struck in.
  *
- * A processing option carries its own basis — the reference shows it as a
- * `Per` column on the option row, so two options on the same line can be
- * charged two different ways. Surface treatments go by area, decoiling by
- * weight, sawing by piece.
+ * Every price in the system carries its unit beside it — `PriceU` on a line,
+ * `Per` on an option, "€ 1.950,00 per TN" on a purchase order — and the unit is
+ * not decoration. A tonne price multiplied by a piece count is wrong by roughly
+ * the piece count, which is how a €666 delivery becomes a €21 230 one.
  *
- * Returns null for a basis that cannot be worked out from what the line knows,
- * so a caller can leave the amount alone rather than invent one.
+ * Proved to the cent on the reference's own Blocked deliveries screen, where
+ * twenty-odd lines at four different tonne prices all satisfy
+ * `amount = price × Kg(p) ÷ 1000`: 3 893,6 kg at €2 550/TN bills €9 928,68 and
+ * 5 184 kg at €3 300/TN bills €17 107,20.
+ *
+ * The three "per hundred" units are the reason this is a lookup and not two
+ * branches. Returns null for a basis that cannot be worked out from what the
+ * line knows — an area price on a line with no width — so a caller can fall
+ * back rather than invent a number.
+ */
+export const priceMeasureFor = (
+  priceUnit: string | null | undefined,
+  line: {
+    quantity: number;
+    weightKg: number;
+    lengthMm?: number | null;
+    widthMm?: number | null;
+    thicknessMm?: number | null;
+  },
+): number | null => {
+  const metres = (line.lengthMm ?? 0) / 1000;
+  const width = (line.widthMm ?? 0) / 1000;
+  const thickness = (line.thicknessMm ?? 0) / 1000;
+  switch ((priceUnit ?? "").trim().toUpperCase()) {
+    case "KG":
+      return line.weightKg;
+    case "TN":
+      return line.weightKg / 1000;
+    // A hundred kilograms — the metric quintal, still quoted on thin coil.
+    case "HK":
+      return line.weightKg / 100;
+    case "M1":
+      return metres > 0 ? metres * line.quantity : null;
+    case "HM":
+      return metres > 0 ? (metres * line.quantity) / 100 : null;
+    case "M2":
+      return metres > 0 && width > 0 ? metres * width * line.quantity : null;
+    case "M3":
+      return metres > 0 && width > 0 && thickness > 0
+        ? metres * width * thickness * line.quantity
+        : null;
+    case "MM":
+      return (line.lengthMm ?? 0) > 0
+        ? (line.lengthMm ?? 0) * line.quantity
+        : null;
+    case "ST":
+      return line.quantity;
+    case "HS":
+      return line.quantity / 100;
+    default:
+      return null;
+  }
+};
+
+/**
+ * How much of a line an option is charged against.
+ *
+ * An option's basis comes from the `Per` column on the option row rather than
+ * the line's own `PriceU`, so two options on one line can be charged two
+ * different ways — surface treatments by area, decoiling by weight, sawing by
+ * piece. Which basis to use is the only thing that differs; how to measure it
+ * is the same question, so this defers to priceMeasureFor.
  */
 export const optionMeasureFor = (
   priceUnit: string | null | undefined,
@@ -8365,24 +8590,7 @@ export const optionMeasureFor = (
     lengthMm?: number | null;
     widthMm?: number | null;
   },
-): number | null => {
-  const metres = (line.lengthMm ?? 0) / 1000;
-  const width = (line.widthMm ?? 0) / 1000;
-  switch ((priceUnit ?? "").trim().toUpperCase()) {
-    case "M2":
-      return metres * width * line.quantity;
-    case "M1":
-      return metres * line.quantity;
-    case "KG":
-      return line.weightKg;
-    case "TN":
-      return line.weightKg / 1000;
-    case "ST":
-      return line.quantity;
-    default:
-      return null;
-  }
-};
+): number | null => priceMeasureFor(priceUnit, line);
 
 /**
  * What an option costs on a line: its price times the measure that price is
@@ -8428,3 +8636,182 @@ export const netPriceAfterDiscounts = (
   grossPrice *
   (1 - (groupDiscountPercent || 0) / 100) *
   (1 - (lineDiscountPercent || 0) / 100);
+
+/**
+ * How far a warehouse or production work order has missed its planned weight,
+ * as a percentage of what was planned.
+ *
+ * This is the reference's "Weight deviation" column, and it is **not** the same
+ * figure as `Kg(dif)` on the Warehouse workorders screen. Both compare planned
+ * against actual and they point opposite ways:
+ *
+ *   Kg(dif)           Kg(a) - Kg(p), in kilograms, negative when short
+ *   Weight deviation  (Kg(p) - Kg(a)) / Kg(p) x 100, positive when short
+ *
+ * Proved on the reference's own combined workorder screen: every `New` row
+ * reads 100,00 - nothing has been reported, so the whole planned weight is
+ * outstanding - and every `Approved` row that came in on plan reads 0,00.
+ *
+ * Returns null when nothing was planned, since a share of zero is not a
+ * hundred per cent short, it is unanswerable.
+ */
+export const weightDeviationPercent = (
+  kgPlanned: number,
+  kgActual: number,
+): number | null =>
+  kgPlanned === 0 ? null : ((kgPlanned - kgActual) / kgPlanned) * 100;
+
+/**
+ * What is still to be called off on a line the customer releases in batches.
+ *
+ * Proved to the kilogram on the reference's Blocked deliveries screen, where a
+ * line planned at 5 184 kg with 3 024 kg already delivered shows exactly
+ * 2 160 kg of call-off left, and every untouched line shows its full planned
+ * figure. The same subtraction gives `Qty(call-off)` from the quantities.
+ *
+ * Floored at zero: over-delivering is a real thing that happens, and it means
+ * nothing is left to call off, not that the customer owes us goods back.
+ */
+export const callOffRemaining = (planned: number, actual: number): number =>
+  Math.max(0, planned - actual);
+
+/**
+ * How much of a day's booked warehouse capacity is still to be worked.
+ *
+ * The reference's Warehouse capacity screen counts work orders, not hours, and
+ * its three columns are not three independent totals - `Remaining` is what is
+ * left of `Occupied` once `Ready` is taken off. A section showing 4 occupied,
+ * 1 ready and 3 remaining has four work orders booked, of which one is done.
+ *
+ * Which means the capacity booked for the day is `occupied` on its own. Adding
+ * the three together counts the same work orders twice over.
+ */
+export const capacityRemaining = (occupied: number, ready: number): number =>
+  Math.max(0, occupied - ready);
+
+/**
+ * The seven states a trip passes through, and what each one means for the
+ * goods. Read off the reference's "Transport status adjustments" screen, which
+ * is an audit log of this column: one row per change, with the modifier, the
+ * timestamp, the bill of lading and the order line it applied to.
+ *
+ * The distinction that matters is `isLoaded`. Up to `loading_list` the goods
+ * are still on the shelf and the trip can be re-planned freely. From `loaded`
+ * they are on the vehicle, so cancelling means unloading it again.
+ */
+export const TRIP_STATUS_META: Record<TripStatus, TripStatusMeta> = {
+  new: { step: 0, isLoaded: false, leftTheYard: false },
+  scheduled: { step: 1, isLoaded: false, leftTheYard: false },
+  loading_list: { step: 2, isLoaded: false, leftTheYard: false },
+  loaded: { step: 3, isLoaded: true, leftTheYard: false },
+  loading_done: { step: 4, isLoaded: true, leftTheYard: false },
+  in_transit: { step: 5, isLoaded: true, leftTheYard: true },
+  completed: { step: 6, isLoaded: true, leftTheYard: true },
+};
+
+export const tripStatusMetaOf = (status: TripStatus): TripStatusMeta =>
+  TRIP_STATUS_META[status];
+
+/** The next state up the ladder, or null when the trip is finished. */
+export const nextTripStatus = (status: TripStatus): TripStatus | null =>
+  tripStatuses[TRIP_STATUS_META[status].step + 1] ?? null;
+
+/**
+ * Whether a trip may be moved from one status to another.
+ *
+ * Forwards one step at a time, and backwards only while the goods are still on
+ * the shelf. Once a trip is loaded, undoing the paperwork without unloading the
+ * lorry would leave stock the system thinks is in two places.
+ */
+export const canMoveTripTo = (from: TripStatus, to: TripStatus): boolean => {
+  const a = TRIP_STATUS_META[from];
+  const b = TRIP_STATUS_META[to];
+  if (b.step === a.step + 1) {
+    return true;
+  }
+  return b.step < a.step && !a.isLoaded;
+};
+
+/**
+ * The six states a reception passes through, and the two questions each one
+ * answers: does a work order exist yet, and are the goods actually here.
+ *
+ * These are the reference's own values, read off a 151-row export of its
+ * Purchase receivals screen. `workorders_created` is the state that explains
+ * why our own build received goods three steps too late: the reception is not
+ * the receipt. Raising the reception only promises the goods; approving the
+ * Unloading warehouse work order it spawns is what puts them on a shelf.
+ */
+export const RECEIPT_STATUS_META: Record<ReceiptStatus, ReceiptStatusMeta> = {
+  new: { step: 0, workOrderRaised: false, goodsAreIn: false },
+  released: { step: 1, workOrderRaised: false, goodsAreIn: false },
+  workorders_created: { step: 2, workOrderRaised: true, goodsAreIn: false },
+  partially_received: { step: 3, workOrderRaised: true, goodsAreIn: true },
+  received: { step: 4, workOrderRaised: true, goodsAreIn: true },
+  invoiced: { step: 5, workOrderRaised: true, goodsAreIn: true },
+};
+
+export const receiptStatusMetaOf = (status: ReceiptStatus): ReceiptStatusMeta =>
+  RECEIPT_STATUS_META[status];
+
+/**
+ * Where a reception stands once an Unloading work order against it has been
+ * approved.
+ *
+ * Approving the work order is the moment the goods exist, so this is the single
+ * transition the whole receipt chain turns on. Whether it lands on `received`
+ * or `partially_received` depends on whether the weight reported on the floor
+ * covers what the reception was expecting - the reference keeps both values and
+ * its Receipts screen filters on exactly that pair.
+ *
+ * A reception already invoiced is left where it is: the money has moved, and a
+ * late work order does not un-bill it.
+ */
+export const receiptStatusAfterUnloading = ({
+  status,
+  kgExpected,
+  kgReceived,
+}: {
+  status: ReceiptStatus;
+  kgExpected: number;
+  kgReceived: number;
+}): ReceiptStatus => {
+  if (status === "invoiced" || kgReceived <= 0) {
+    return status;
+  }
+  // Weights are reported off a weighbridge, so an exact match is luck rather
+  // than the rule. Anything within the quantity epsilon counts as complete.
+  return kgReceived + QUANTITY_EPSILON >= kgExpected
+    ? "received"
+    : "partially_received";
+};
+
+/**
+ * What a receipt is still owed an invoice for, in euros.
+ *
+ * The reference's Receipts screen carries this as "Material still to be
+ * invoiced", and it is a value, not a quantity - the received weight priced at
+ * what the purchase line agreed, dropping to zero once the supplier's invoice
+ * is posted. Proved to the cent on thirteen rows across five suppliers:
+ * 1 861 kg at EUR 2 050/TN shows EUR 3 815,05, and 706,5 kg at EUR 1 000/TN
+ * shows EUR 706,50.
+ *
+ * This is the accrual behind Finance's "Purchase invoices to be received":
+ * goods on our shelves that nobody has billed us for yet.
+ */
+export const materialStillToInvoice = ({
+  status,
+  kgReceived,
+  pricePerUnit,
+  priceUnit,
+}: {
+  status: ReceiptStatus | null;
+  kgReceived: number;
+  pricePerUnit: number;
+  priceUnit: string | null;
+}): number => {
+  if (status === "invoiced" || kgReceived <= 0 || pricePerUnit <= 0) {
+    return 0;
+  }
+  return roundToCents(amountForWeight(pricePerUnit, priceUnit, kgReceived));
+};

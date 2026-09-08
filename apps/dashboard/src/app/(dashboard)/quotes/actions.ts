@@ -27,6 +27,7 @@ import {
   generateUuid,
   fullName,
   getQuoteVatRatePercent,
+  productPieceWeightKg,
   quoteLineFinancials,
   QuoteSummary,
   resolveSurchargeAmounts,
@@ -292,16 +293,32 @@ const priceQuoteLines = async ({
 
     // A pick-up quote is priced ex works, so it is held to the ex-works margin
     // floor; anything delivered from stock is held to the stock floor.
+    const effectiveLengthMm =
+      lengthMm !== null && lengthMm > 0 ? lengthMm : Number(product.length ?? 0);
+    const widthMm = Number(product.widthDiameter ?? 0);
+    const thicknessMm = Number(product.thickness ?? 0);
+
     const financials = quoteLineFinancials({
       netPrice,
       quantity,
       purchasePrice,
       replacementPrice,
-      theoreticalWeight: Number(product.theoreticalWeight ?? 0),
-      lengthMm:
-        lengthMm !== null && lengthMm > 0
-          ? lengthMm
-          : Number(product.length ?? 0),
+      // Never `product.theoreticalWeight` on its own: that column holds a
+      // density when the product's weight unit says M3, and reading it as a
+      // per-piece weight overstates the line by orders of magnitude.
+      theoreticalWeight:
+        productPieceWeightKg({
+          weightTheoretical: product.weightTheoretical,
+          theoreticalWeight: product.theoreticalWeight,
+          weightUnit: product.weightUnit,
+          lengthMm: effectiveLengthMm,
+          widthMm,
+          thicknessMm,
+        }) ?? 0,
+      lengthMm: effectiveLengthMm,
+      widthMm,
+      thicknessMm,
+      priceUnit: product.priceUnit,
       minProfitMargin: minimumMarginFor(product, isPickup),
     });
 

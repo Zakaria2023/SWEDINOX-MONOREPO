@@ -7,7 +7,7 @@ import {
 } from "@/db/schema/contract-net-prices";
 import { Contracts, SelectContracts } from "@/db/schema/contracts";
 import { ProductGroups } from "@/db/schema/product-groups";
-import { Products } from "@/db/schema/products";
+import { Products, SelectProducts } from "@/db/schema/products";
 import { applyPriceDiscounts, resolveTierDiscount } from "@/lib/helpers";
 import {
   EMPTY_PURCHASE_COST,
@@ -30,8 +30,19 @@ export type PricedProduct = {
   averagePurchasePrice: number;
   priceUnit: string | null;
   revenueGroupUuid: string | null;
+  /**
+   * The catalogue weight figure and the unit that says how to read it. On the
+   * reference these hold 7 850 and `M3` for a stainless plate — a density, not
+   * a weight — so the two travel together and are only ever read through
+   * productPieceWeightKg.
+   */
   theoreticalWeight: string | null;
+  weightUnit: SelectProducts["weightUnit"];
+  /** The finished per-piece weight, when the product form has derived one. */
+  weightTheoretical: string | null;
   length: string | null;
+  widthDiameter: string | null;
+  thickness: string | null;
   minProfitMarginStock: string | null;
   minProfitMarginExWorks: string | null;
 };
@@ -81,7 +92,11 @@ export const loadSalesPricingContext = async (
         priceUnit: Products.priceUnit,
         revenueGroupUuid: Products.revenueGroupUuid,
         theoreticalWeight: Products.theoreticalWeight,
+        weightUnit: Products.weightUnit,
+        weightTheoretical: Products.weightTheoretical,
         length: Products.length,
+        widthDiameter: Products.widthDiameter,
+        thickness: Products.thickness,
         minProfitMarginStock: ProductGroups.minProfitMarginStock,
         minProfitMarginExWorks: ProductGroups.minProfitMarginExWorks,
       })

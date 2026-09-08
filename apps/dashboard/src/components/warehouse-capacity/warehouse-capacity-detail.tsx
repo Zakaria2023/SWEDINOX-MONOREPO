@@ -61,15 +61,15 @@ export const WarehouseCapacityDetailView = ({ capacity }: Props) => (
           value={formatFixed2(Number(capacity.remaining))}
         />
         <DetailField
-          label="Total"
-          value={formatFixed2(capacity.totalCapacity)}
+          label="Remaining (derived)"
+          value={formatFixed2(capacity.derivedRemaining)}
         />
         <DetailField
-          label="Occupied share"
+          label="Ready share"
           value={
-            capacity.occupiedPercent === null
-              ? "No capacity recorded"
-              : formatPercent(capacity.occupiedPercent)
+            capacity.readyPercent === null
+              ? "Nothing booked"
+              : formatPercent(capacity.readyPercent)
           }
         />
       </div>

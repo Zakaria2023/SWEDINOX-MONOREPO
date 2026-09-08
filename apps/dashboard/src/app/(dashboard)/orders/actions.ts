@@ -21,6 +21,7 @@ import {
   describeError,
   generateUuid,
   getQuoteVatRatePercent,
+  productPieceWeightKg,
   quoteLineFinancials,
   quoteOrderPolicy,
   resolveSurchargeAmounts,
@@ -457,13 +458,30 @@ export const createOrder = async (
         // is valued at — not an average across every lot of the product. That
         // is the whole reason an order can report a truer margin than the quote
         // it came from.
+        const lineLengthMm = Number(product?.length ?? 0);
+        const lineWidthMm = Number(product?.widthDiameter ?? 0);
+        const lineThicknessMm = Number(product?.thickness ?? 0);
+
         const financials = quoteLineFinancials({
           netPrice,
           quantity,
           purchasePrice: Number(stockRow.valuationPrice ?? 0),
           replacementPrice: Number(product?.replacementPrice ?? 0),
-          theoreticalWeight: Number(product?.theoreticalWeight ?? 0),
-          lengthMm: Number(product?.length ?? 0),
+          // `theoreticalWeight` is a density when the weight unit says M3, so
+          // it is only ever read through the helper that checks the unit.
+          theoreticalWeight:
+            productPieceWeightKg({
+              weightTheoretical: product?.weightTheoretical,
+              theoreticalWeight: product?.theoreticalWeight,
+              weightUnit: product?.weightUnit,
+              lengthMm: lineLengthMm,
+              widthMm: lineWidthMm,
+              thicknessMm: lineThicknessMm,
+            }) ?? 0,
+          lengthMm: lineLengthMm,
+          widthMm: lineWidthMm,
+          thicknessMm: lineThicknessMm,
+          priceUnit: product?.priceUnit,
           minProfitMargin: minimumMarginFor(product, fields.isPickup ?? false),
         });
 

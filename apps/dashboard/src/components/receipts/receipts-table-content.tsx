@@ -9,7 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
-import { formatNumber } from "@/lib/helpers";
+import { formatMoney, formatNumber } from "@/lib/helpers";
 import { TableExportButton } from "@/components/ui/table-export-button";
 
 type Props = {
@@ -74,7 +74,7 @@ export const ReceiptsTable = ({ rows }: Props) => (
                 <TableCell>{row.purchaseOrderCode ?? "—"}</TableCell>
                 <TableCell>{row.receiptStatus ?? "—"}</TableCell>
                 <TableCell className="text-right">
-                  {formatNumber(row.materialStillToReceive)}
+                  {formatMoney(row.materialStillToInvoice)}
                 </TableCell>
               </TableRow>
             ))

@@ -1,6 +1,6 @@
 "use server";
 
-import { describeError } from "@/lib/helpers";
+import { capacityRemaining, describeError } from "@/lib/helpers";
 import { db } from "@/db";
 import {
   SelectWarehouseCapacity,
@@ -11,10 +11,13 @@ import { asc, desc, eq } from "drizzle-orm";
 export type WarehouseCapacityListItem = SelectWarehouseCapacity;
 
 export type WarehouseCapacityDetail = SelectWarehouseCapacity & {
-  /** Occupied + ready + remaining — what the day's capacity adds up to. */
-  totalCapacity: number;
-  /** Occupied as a share of the total, or null when there is no capacity. */
-  occupiedPercent: number | null;
+  /**
+   * Work orders still to be worked, derived rather than read from the stored
+   * column so the three figures can never disagree on screen.
+   */
+  derivedRemaining: number;
+  /** Ready as a share of what was booked, or null when nothing was booked. */
+  readyPercent: number | null;
 };
 
 export const getWarehouseCapacity = async (): Promise<
@@ -35,9 +38,13 @@ export const getWarehouseCapacity = async (): Promise<
 };
 
 /**
- * One capacity snapshot — a day, a section and a workorder type — with the
- * total and the occupied share derived rather than stored, so the three figures
- * can never disagree with the percentage shown beside them.
+ * One capacity snapshot — a day, a section and a workorder type.
+ *
+ * The reference counts work orders here, not hours, and its three columns are
+ * not three independent totals: a section reading 4 occupied, 1 ready and 3
+ * remaining has four work orders booked, of which one is finished. So the
+ * capacity booked for the day is `occupied` on its own — adding the three
+ * together counts the same work orders twice over.
  */
 export const getWarehouseCapacityDetail = async (
   uuid: string,
@@ -53,12 +60,11 @@ export const getWarehouseCapacityDetail = async (
   }
 
   const occupied = Number(row.occupied);
-  const totalCapacity = occupied + Number(row.ready) + Number(row.remaining);
+  const ready = Number(row.ready);
 
   return {
     ...row,
-    totalCapacity,
-    occupiedPercent:
-      totalCapacity === 0 ? null : (occupied / totalCapacity) * 100,
+    derivedRemaining: capacityRemaining(occupied, ready),
+    readyPercent: occupied === 0 ? null : (ready / occupied) * 100,
   };
 };

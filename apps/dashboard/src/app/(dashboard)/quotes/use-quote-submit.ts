@@ -30,6 +30,7 @@ import {
   computeQuoteSummary,
   getQuoteVatRatePercent,
   previewQuoteLine,
+  productPieceWeightKg,
 } from "@/lib/helpers";
 import { DELIVERY_TERM_LABELS, INVOICE_PAYMENT_TERM_LABELS, ORDER_METHOD_LABELS, ORDER_WEIGHT_TYPE_LABELS } from "@/lib/labels";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -100,7 +101,20 @@ export const useQuoteSubmit = ({
         basePrice: Number(product?.basePrice ?? 0),
         replacementPrice: Number(product?.replacementPrice ?? 0),
         purchasePrice: Number(product?.averagePurchasePrice ?? 0),
-        theoreticalWeight: Number(product?.theoreticalWeight ?? 0),
+        // The catalogue column is a density when the weight unit says
+        // M3, so it is read through the helper that checks the unit.
+        theoreticalWeight:
+          productPieceWeightKg({
+            weightTheoretical: product?.weightTheoretical,
+            theoreticalWeight: product?.theoreticalWeight,
+            weightUnit: product?.weightUnit,
+            lengthMm: Number(product?.length ?? 0),
+            widthMm: Number(product?.widthDiameter ?? 0),
+            thicknessMm: Number(product?.thickness ?? 0),
+          }) ?? 0,
+        priceUnit: product?.priceUnit,
+        widthMm: Number(product?.widthDiameter ?? 0),
+        thicknessMm: Number(product?.thickness ?? 0),
         productLengthMm: Number(product?.length ?? 0),
         minProfitMargin: 0,
       });

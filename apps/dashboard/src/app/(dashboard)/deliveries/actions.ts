@@ -21,7 +21,7 @@ import {
   LEDGER_ACCOUNTS,
 } from "@/lib/server/ledger";
 import { currentUser } from "@clerk/nextjs/server";
-import { and, desc, eq, getTableColumns, ne, or } from "drizzle-orm";
+import { and, asc, desc, eq, getTableColumns, ne, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 export type DeliveryActionResult = {
@@ -296,7 +296,10 @@ export const getDeliveriesToArrange = async (): Promise<DeliveryLineItem[]> => {
       .leftJoin(Companies, eq(Orders.companyUuid, Companies.uuid))
       .leftJoin(Products, eq(OrderItems.productUuid, Products.uuid))
       .where(eq(OrderItems.qtyReserved, "0.000"))
-      .orderBy(desc(OrderItems.createdAt));
+      // A worklist is worked customer by customer, so the sort is part of the
+      // screen rather than a default — the reference orders by customer, then
+      // by the date the promise falls due.
+      .orderBy(asc(Companies.companyName), asc(OrderItems.deliveryDate));
   } catch (error) {
     throw new Error(
       describeError(error, "Failed to fetch deliveries to arrange"),

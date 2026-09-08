@@ -10,7 +10,7 @@ import {
   WarehouseWorkOrderLines,
   WarehouseWorkOrders,
 } from "@/db/schema/warehouse-work-orders";
-import { describeError } from "@/lib/helpers";
+import { describeError, weightDeviationPercent } from "@/lib/helpers";
 import { desc, eq } from "drizzle-orm";
 
 // A line from either workorder stream, in the shape the combined overview
@@ -27,7 +27,12 @@ export type CombinedWorkOrderLine = {
   qtyUnit: string | null;
   kgPlanned: number;
   kgActual: number;
-  weightDeviation: number;
+  /**
+   * How far short of plan the line came in, as a percentage of what was
+   * planned — the reference's "Weight deviation". Null when nothing was
+   * planned, which is not the same as being on target.
+   */
+  weightDeviation: number | null;
   workOrderType: "Warehouse" | "Production";
   workOrderDate: string | null;
   workOrderStatus: string | null;
@@ -119,7 +124,7 @@ export const getWarehouseAndProductionWorkOrders = async (): Promise<
           qtyUnit: null,
           kgPlanned,
           kgActual,
-          weightDeviation: kgActual - kgPlanned,
+          weightDeviation: weightDeviationPercent(kgPlanned, kgActual),
           workOrderType: "Warehouse" as const,
           workOrderDate: asDateString(line.date),
           workOrderStatus: line.status,
@@ -138,7 +143,7 @@ export const getWarehouseAndProductionWorkOrders = async (): Promise<
           qtyUnit: line.unitPlanned,
           kgPlanned,
           kgActual,
-          weightDeviation: kgActual - kgPlanned,
+          weightDeviation: weightDeviationPercent(kgPlanned, kgActual),
           workOrderType: "Production" as const,
           workOrderDate: asDateString(line.date),
           workOrderStatus: line.status,

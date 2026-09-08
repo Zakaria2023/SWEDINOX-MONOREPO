@@ -419,12 +419,16 @@ export const convertQuoteToOrder = async (
           quantity: allocation.quantity,
           purchasePrice: Number(allocation.stock.valuationPrice ?? 0),
           replacementPrice: Number(allocation.line.replacementPrice ?? 0),
+          // The quote line already stores a finished weight for its whole
+          // quantity, so the per-piece figure is a division rather than a
+          // catalogue lookup — no unit to interpret.
           theoreticalWeight:
             allocation.quantity === 0
               ? 0
               : Number(allocation.line.weightKg ?? 0) /
                 Number(allocation.line.quantity ?? 1),
           lengthMm: allocation.line.lengthMm ?? 0,
+          priceUnit: allocation.line.priceUnit,
           minProfitMargin: 0,
         });
 

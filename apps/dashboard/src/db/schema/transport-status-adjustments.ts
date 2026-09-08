@@ -9,7 +9,7 @@ import {
   timestamp,
   varchar,
 } from "drizzle-orm/mysql-core";
-import { deliveryStatuses } from "../../lib/enums";
+import { tripStatuses } from "../../lib/enums";
 import { Orders } from "./orders";
 import { OrderItems } from "./order-items";
 
@@ -26,9 +26,11 @@ export const TransportStatusAdjustments = mysqlTable(
     modifier: varchar("modifier", { length: 255 }),
     timeModified: timestamp("time_modified").notNull(),
 
-    // The status the trip was set to ("Trip status") — reuses the delivery
-    // status vocabulary.
-    tripStatus: mysqlEnum("trip_status", deliveryStatuses),
+    // The status the trip was set to ("Trip status"). Seven states, not the
+    // four a delivery has — the reference logs `loading_list`, `loaded` and
+    // `loading_done` separately because the loading bay needs to tell them
+    // apart, and this screen exists to record exactly those transitions.
+    tripStatus: mysqlEnum("trip_status", tripStatuses),
 
     // What the change applies to: the "Bill of lading" reference and the
     // linked "Order" / "Order line".

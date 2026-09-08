@@ -11,7 +11,7 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { DELIVERY_STATUS_LABELS } from "@/lib/labels";
+import { TRIP_STATUS_LABELS } from "@/lib/labels";
 import { TableExportButton } from "@/components/ui/table-export-button";
 
 type Props = {
@@ -68,7 +68,7 @@ export const TransportStatusAdjustmentsTable = ({ adjustments }: Props) => (
                     value={row.tripStatus}
                     label={
                       row.tripStatus
-                        ? DELIVERY_STATUS_LABELS[row.tripStatus]
+                        ? TRIP_STATUS_LABELS[row.tripStatus]
                         : null
                     }
                   />

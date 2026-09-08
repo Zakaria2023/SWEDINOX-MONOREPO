@@ -158,7 +158,17 @@ export type ProductOption = Pick<
 export type ProductPricingOption = ProductOption &
   Pick<
     SelectProducts,
-    "basePrice" | "theoreticalWeight" | "priceUnit" | "stockUnit" | "length"
+    | "basePrice"
+    | "theoreticalWeight"
+    // The unit that says how to read the figure above. Without it a density of
+    // 7 850 kg/m3 reads as a 7,85-tonne piece.
+    | "weightUnit"
+    | "weightTheoretical"
+    | "priceUnit"
+    | "stockUnit"
+    | "length"
+    | "widthDiameter"
+    | "thickness"
   > & {
     productGroupName: SelectProductGroups["name"] | null;
     minProfitMarginStock: SelectProductGroups["minProfitMarginStock"] | null;
@@ -327,9 +337,13 @@ export const getProductsForPricing = async (): Promise<
         productGroupUuid: Products.productGroupUuid,
         basePrice: Products.basePrice,
         theoreticalWeight: Products.theoreticalWeight,
+        weightUnit: Products.weightUnit,
+        weightTheoretical: Products.weightTheoretical,
         priceUnit: Products.priceUnit,
         stockUnit: Products.stockUnit,
         length: Products.length,
+        widthDiameter: Products.widthDiameter,
+        thickness: Products.thickness,
         productGroupName: ProductGroups.name,
         minProfitMarginStock: ProductGroups.minProfitMarginStock,
         minProfitMarginExWorks: ProductGroups.minProfitMarginExWorks,

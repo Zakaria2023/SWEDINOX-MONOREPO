@@ -310,6 +310,11 @@ export const warehouseBlockReasons = [
   "other",
   "consignment",
   "location_type_setting",
+  // The customer has bought the goods and will say when to send them. The only
+  // blocking reason on the reference's entire "Blocked deliveries" screen, and
+  // the reason a call-off order exists at all: the line is finished, wanted,
+  // and deliberately not moving.
+  "wait_for_call",
 ] as const satisfies readonly string[];
 
 export type WarehouseBlockReason = (typeof warehouseBlockReasons)[number];
@@ -428,6 +433,11 @@ export const salesUnitOptions = [
   "KG",
   "M1",
   "M2",
+  // The unit a theoretical weight is nearly always struck in. A product whose
+  // "Theor. Weight" reads 7.850 and whose "Theor. Weight U." reads M3 is
+  // carrying a density in kg/m3, not a weight — see THEORETICAL_WEIGHT_BASIS
+  // for what each unit makes the stored figure mean.
+  "M3",
   "MM",
   "ST",
   "TN",
@@ -544,6 +554,17 @@ export const stockMovementReasons = [
   "warehouse_issue",
   "warehouse_transfer",
   "warehouse_scrapped",
+  // Goods coming back from an outside processor — the reference's "Ontvangst
+  // From processor". They left as our stock, were worked on by somebody else
+  // and came back worth more than they went out, which is why Finance keeps a
+  // "Control Stock increase due to external processing" list watching exactly
+  // this reason.
+  "external_processing_return",
+  // The opening balance a lot was migrated in with. The reference's own data
+  // carries thousands of these stamped within the same three seconds on
+  // 31-12-2024, all reason "Conversion" — they are not movements anybody made
+  // and must never be read as trading activity.
+  "data_conversion",
 ] as const satisfies readonly string[];
 
 export type StockMovementReason = (typeof stockMovementReasons)[number];
@@ -1526,18 +1547,51 @@ export const printerEntries = [
 
 export type PrinterEntry = (typeof printerEntries)[number];
 
-// How far a transport work order has got. Warehouse and production work orders
-// share the ladder below instead — both are released to the floor, reported back
-// and approved — where a trip is simply picked up and driven.
-export const transportWorkOrderStatuses = [
+// How far a trip has got. A transport work order *is* a trip — the warehouse
+// work order that rides on it carries the same "Trip number" and "Trip status" —
+// so both screens read this one ladder.
+//
+// Warehouse and production work orders run the separate ladder below instead:
+// they are released to the floor, reported back and approved. A trip is loaded
+// and driven, which is a different sequence of things going right.
+//
+// Read off the reference's own "Transport status adjustments" screen, which logs
+// every change of this column with who made it and when. The three states in
+// the middle are the ones a four-state reading collapses and the loading bay
+// cares about most: a loading list exists, the goods are on the lorry, the bay
+// is finished with it.
+export const tripStatuses = [
   "new",
-  "in_progress",
+  "scheduled",
+  "loading_list",
+  "loaded",
+  "loading_done",
+  "in_transit",
   "completed",
-  "cancelled",
 ] as const satisfies readonly string[];
 
-export type TransportWorkOrderStatus =
-  (typeof transportWorkOrderStatuses)[number];
+export type TripStatus = (typeof tripStatuses)[number];
+
+// Where a reception has got to, which is a different question from where its
+// goods have got to. Taken verbatim from the reference's own "Receipt status"
+// column across a 151-row export of the Purchase receivals screen.
+//
+// The middle state is the one that matters and the one a purchase-only reading
+// of the system misses entirely: `workorders_created` means the Unloading
+// warehouse work order has been raised but not yet approved. The goods are
+// promised, the paperwork exists, and nothing is in stock. Approving that work
+// order is what moves a reception to `received` — see RECEIPT_STATUS_META
+// and receiptStatusAfterUnloading.
+export const receiptStatuses = [
+  "new",
+  "released",
+  "workorders_created",
+  "partially_received",
+  "received",
+  "invoiced",
+] as const satisfies readonly string[];
+
+export type ReceiptStatus = (typeof receiptStatuses)[number];
 
 // How far a work order has got, and what may be done to it. Warehouse and
 // production work orders run the same ladder, which is why they also share one

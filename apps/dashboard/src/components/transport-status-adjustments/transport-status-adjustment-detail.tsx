@@ -2,7 +2,7 @@ import Link from "next/link";
 import { TransportStatusAdjustmentDetail } from "@/app/(dashboard)/transport-status-adjustments/actions";
 import { DetailField } from "@/components/ui/detail-field";
 import { formatDateValue, formatTimeValue } from "@/lib/helpers";
-import { DELIVERY_STATUS_LABELS } from "@/lib/labels";
+import { TRIP_STATUS_LABELS } from "@/lib/labels";
 
 type Props = {
   adjustment: TransportStatusAdjustmentDetail;
@@ -19,7 +19,7 @@ export const TransportStatusAdjustmentDetailView = ({ adjustment }: Props) => (
           label="Trip status set to"
           value={
             adjustment.tripStatus
-              ? DELIVERY_STATUS_LABELS[adjustment.tripStatus]
+              ? TRIP_STATUS_LABELS[adjustment.tripStatus]
               : null
           }
         />

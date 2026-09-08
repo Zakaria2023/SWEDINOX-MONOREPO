@@ -9,17 +9,20 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
-import { cn, formatDateColumn, formatNumber, orDash } from "@/lib/helpers";
 import {
-  WORK_ORDER_STATUS_LABELS,
-  TRANSPORT_WORK_ORDER_STATUS_LABELS,
-} from "@/lib/labels";
+  cn,
+  formatDateColumn,
+  formatNumber,
+  formatPercent,
+  orDash,
+} from "@/lib/helpers";
+import { TRIP_STATUS_LABELS, WORK_ORDER_STATUS_LABELS } from "@/lib/labels";
 
 // The list merges two kinds of work order, and the warehouse ladder is not the
-// production one — so a status is looked up in both vocabularies. They agree on
-// the one value they share, "new".
+// trip one — so a status is looked up in both vocabularies. They agree on the
+// one value they share, "new".
 const STATUS_LABELS: Record<string, string> = {
-  ...TRANSPORT_WORK_ORDER_STATUS_LABELS,
+  ...TRIP_STATUS_LABELS,
   ...WORK_ORDER_STATUS_LABELS,
 };
 import { TableExportButton } from "@/components/ui/table-export-button";
@@ -91,12 +94,15 @@ export const WarehouseAndProductionWorkOrdersTable = ({ rows }: Props) => (
                 <TableCell
                   className={cn(
                     "text-right tabular-nums",
-                    // A short delivery is the one worth noticing: it means the
-                    // floor reported less weight than the plan called for.
-                    row.weightDeviation < 0 && "text-destructive",
+                    // A short delivery is the one worth noticing, and here it
+                    // reads positive: the column is how far *short of plan* the
+                    // floor came in, as a share of what was planned.
+                    (row.weightDeviation ?? 0) > 0 && "text-destructive",
                   )}
                 >
-                  {formatNumber(row.weightDeviation)}
+                  {row.weightDeviation === null
+                    ? "—"
+                    : formatPercent(row.weightDeviation)}
                 </TableCell>
                 <TableCell>{row.workOrderType}</TableCell>
                 <TableCell>{formatDateColumn(row.workOrderDate)}</TableCell>

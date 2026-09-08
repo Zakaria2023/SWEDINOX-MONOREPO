@@ -11,7 +11,7 @@ import {
   timestamp,
   varchar,
 } from "drizzle-orm/mysql-core";
-import { orderLineStatuses, stockUnits } from "../../lib/enums";
+import { orderLineStatuses, receiptStatuses, stockUnits } from "../../lib/enums";
 import { Companies } from "./companies";
 import { Products } from "./products";
 import { PurchaseOrders } from "./purchase-orders";
@@ -36,7 +36,11 @@ export const PurchaseLineReceivals = mysqlTable(
     lineStatus: mysqlEnum("line_status", orderLineStatuses).default(
       "in_progress",
     ),
-    receiptStatus: varchar("receipt_status", { length: 100 }),
+    // How far the reception has got. `workorders_created` is the state that
+    // separates a promised delivery from goods on a shelf: the Unloading work
+    // order exists but nobody has approved it yet, so nothing is in stock.
+    // See RECEIPT_STATUS_META.
+    receiptStatus: mysqlEnum("receipt_status", receiptStatuses).default("new"),
     options: varchar("options", { length: 255 }),
 
     // ── Quantities ────────────────────────────────────────────────────────────

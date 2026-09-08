@@ -20,6 +20,7 @@ import {
   formatNumber,
   formatPercent,
   previewQuoteLine,
+  productPieceWeightKg,
 } from "@/lib/helpers";
 import { PRODUCT_QUALITY_STANDARD_LABELS, STOCK_UNIT_LABELS } from "@/lib/labels";
 import { AlertTriangle, Plus, Trash2 } from "lucide-react";
@@ -232,7 +233,20 @@ export const QuoteLinesEditor = ({ control, products, isPickup }: Props) => {
                   basePrice: Number(product?.basePrice ?? 0),
                   replacementPrice: Number(product?.replacementPrice ?? 0),
                   purchasePrice: Number(product?.averagePurchasePrice ?? 0),
-                  theoreticalWeight: Number(product?.theoreticalWeight ?? 0),
+                  // The catalogue column is a density when the weight unit says
+                  // M3, so it is read through the helper that checks the unit.
+                  theoreticalWeight:
+                    productPieceWeightKg({
+                      weightTheoretical: product?.weightTheoretical,
+                      theoreticalWeight: product?.theoreticalWeight,
+                      weightUnit: product?.weightUnit,
+                      lengthMm: Number(product?.length ?? 0),
+                      widthMm: Number(product?.widthDiameter ?? 0),
+                      thicknessMm: Number(product?.thickness ?? 0),
+                    }) ?? 0,
+                  priceUnit: product?.priceUnit,
+                  widthMm: Number(product?.widthDiameter ?? 0),
+                  thicknessMm: Number(product?.thickness ?? 0),
                   productLengthMm: Number(product?.length ?? 0),
                   minProfitMargin: Number(
                     (isPickup

@@ -127,7 +127,8 @@ import {
   WorkorderProcessingMethod,
   WorkOrderStatus,
   WarehouseWorkOrderType,
-  TransportWorkOrderStatus,
+  TripStatus,
+  ReceiptStatus,
   PackagingType,
   RemainderCategory,
 } from "@/lib/enums";
@@ -416,6 +417,7 @@ export const WAREHOUSE_BLOCK_REASON_LABELS: Record<
   other: "Other",
   consignment: "Consignment",
   location_type_setting: "Location Type Setting",
+  wait_for_call: "Wait for call",
 };
 
 export const WAREHOUSE_PRODUCT_TYPE_LABELS: Record<
@@ -816,6 +818,7 @@ export const SALES_UNIT_LABELS: Record<SalesUnit, string> = {
   KG: "Kilogram",
   M1: "Meter",
   M2: "Square meters",
+  M3: "Cubic meters",
   MM: "Millimeter",
   ST: "Pieces",
   TN: "Tonnage",
@@ -914,6 +917,8 @@ export const STOCK_MOVEMENT_REASON_LABELS: Record<StockMovementReason, string> =
     warehouse_issue: "Warehouse Issue",
     warehouse_transfer: "Warehouse Transfer",
     warehouse_scrapped: "Scrapped",
+    external_processing_return: "Returned from Processor",
+    data_conversion: "Opening Balance (Conversion)",
   };
 
 export const CUSTOMER_LABEL_OPTION_LABELS: Record<CustomerLabelOption, string> =
@@ -1593,14 +1598,23 @@ export const WORKORDER_PROCESSING_METHOD_LABELS: Record<
   order_picking: "Order Picking",
 };
 
-export const TRANSPORT_WORK_ORDER_STATUS_LABELS: Record<
-  TransportWorkOrderStatus,
-  string
-> = {
+export const TRIP_STATUS_LABELS: Record<TripStatus, string> = {
   new: "New",
-  in_progress: "In Progress",
+  scheduled: "Scheduled",
+  loading_list: "Loading list",
+  loaded: "Loaded",
+  loading_done: "Loading done",
+  in_transit: "In transit",
   completed: "Completed",
-  cancelled: "Cancelled",
+};
+
+export const RECEIPT_STATUS_LABELS: Record<ReceiptStatus, string> = {
+  new: "New",
+  released: "Released",
+  workorders_created: "Workorders created",
+  partially_received: "Partially received",
+  received: "Received",
+  invoiced: "Invoiced",
 };
 
 export const WORK_ORDER_STATUS_LABELS: Record<WorkOrderStatus, string> = {
