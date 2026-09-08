@@ -31,14 +31,33 @@ Purchase table:
 | Screen | Ours | State |
 |---|---|---|
 | [Product master](product-detail.md) | the `/products` form | header and `Basis` panel captured; **the weight formula is proved here** |
-| [Stock on location](stock-on-location.md) | `/stock-on-location` | ~26 columns and 7 views matched; stock value and availability both proved |
-| [Warehouse work orders](warehouse-workorders.md) | `/warehouse-workorders` | barely captured, but probably how goods are booked in |
-| [Transport work orders](transport-workorders.md) | `/transport-workorders` | the trip plan — and inbound goods are collected by one |
 | [Company master](company-detail.md) | the `/companies` form | 9 roles, creditor/debtor, and 17 panels captured |
 
 All 12 Purchase screens are now captured, plus the purchase order detail
-screen. Next: implement, once the open questions in [STEPS.md](STEPS.md) are
-answered.
+screen.
+
+## Logistics
+
+The whole group arrived on **8-9-2026** and is captured, built and checked.
+**[LOGISTICS-BUILT.md](LOGISTICS-BUILT.md)** is the one to read: what changed,
+what is left, and the three bugs it found.
+
+| Screen | Ours | State |
+|---|---|---|
+| [Warehouse work orders](warehouse-workorders.md) | `/warehouse-work-orders` | **11 625-row export**; this is how goods are booked in |
+| [Warehouse- and production workorders](warehouse-and-production-workorders.md) | `/warehouse-and-production-workorders` | `Weight deviation` is a **percentage**; releasing books a half-hour slot |
+| [Receipts](receipts.md) | `/receipts` | the **six-state receipt ladder**; `Material still to be invoiced` is money |
+| [Blocked deliveries](blocked-deliveries.md) | `/blocked-deliveries` | **proves the sales pricing rule to the cent** — and found a six-place bug |
+| [Nesting](nesting.md) | `/nesting` | `Theor. Weight` is a **density** when its unit says `M3` |
+| [Warehouse capacity](warehouse-capacity.md) | `/warehouse-capacity` | `Remaining = Occupied − Ready`; `Fetching` is subtyped by machine |
+| [Transport status adjustments](transport-status-adjustments.md) | `/transport-status-adjustments` | the **seven**-state trip ladder |
+| [Stock mutations](stock-mutations.md) | `/stock-movements` | every movement names the **work order** that caused it |
+| [Transport work orders](transport-workorders.md) | `/transport-workorders` | the trip plan — and inbound goods are collected by one |
+| [Stock on location](stock-on-location.md) | `/stock-on-location` | ~26 columns and 7 views matched; stock value and availability both proved |
+| [Machines · Deliveries to arrange](machines-and-small-screens.md) | `/machines`, `/deliveries-to-arrange` | six machines, **no rate on any of them**; both screens fully answered |
+
+Checked by `pnpm --filter @swedinox/dashboard verify-logistics` — 64 cases, each
+one a figure printed on one of those screens.
 
 ## Steps and answers
 

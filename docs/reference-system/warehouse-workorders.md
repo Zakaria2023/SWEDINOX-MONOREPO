@@ -147,11 +147,35 @@ purchase order
 See [IMPLEMENTATION-PLAN.md](IMPLEMENTATION-PLAN.md) §1. This is no longer
 blocked.
 
+## ✅ 1 and 2 are answered
+
+**1. Approving an `Unloading` does write the reception's `Kg(a)`.** The
+[Receipts](receipts.md) screen prints `290049/10` at **353,3 kg**, and the work
+order export has `290049/10` as an approved `Unloading` with `Kg(p)` 494,6 and
+`Kg(a)` 353,3 — the same 141,3 kg short delivery, in both places. They are one
+movement seen twice, and the reception's status ladder
+(`… → Workorders created → Received`) turns on the approval.
+
+**2. Releasing is scheduling; approving is reporting.** The
+[Warehouse- and production workorders](warehouse-and-production-workorders.md)
+screen carries two columns this one does not — `Date released` and a
+`Time period` of **half-hour slots**. A `New` row has neither, nor a section; a
+`Released` row has a date, a section and a named slot; an `Approved` row also
+has `Reported as completed on` and its actuals. Which is why
+[Warehouse capacity](warehouse-capacity.md) can count work orders per section
+per day: releasing is what consumes a slot.
+
+The batch scheduler is not what moves them — people do, and the four `New`
+unloadings against `Swedinox, HELSINBORG` are the ones raised on the test
+install that nobody could approve.
+
 ## 🔴 What is still open
 
-1. **Does approving an `Unloading` also write the reception's `Kg(a)`**, or are
-   the two independent? 53 of 151 receptions read `Workorders created`, which
-   suggests the work order is raised *from* the reception.
-2. **`New` → `Released` → `Approved`** — what moves a work order between them,
-   and does the batch scheduler do it.
-3. **`Section`** — a level above location we do not model at all.
+1. **`Section`** — a level above location we do not model at all. See
+   [warehouse-capacity.md](warehouse-capacity.md) for the twelve of them, of
+   which only `00 Hego Almere` is current.
+2. **`Fetching` is subtyped by machine.** Warehouse capacity books
+   `Aanhalen Slijpen`, `Aanhalen Knippen` and `Aanhalen UV Folie` separately,
+   so one flat `fetching` type draws on the wrong capacity pool.
+3. **`Resource`** is `-leeg-` on every row of both screens, so what it holds is
+   still unknown.

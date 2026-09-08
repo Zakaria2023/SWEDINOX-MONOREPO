@@ -33,9 +33,30 @@ order of type `Unloading`. Nothing further is needed from it.
 
 ---
 
-# 🔴 Next — the one that closes the loop
+# ✅ Everything asked for has arrived
 
-## 3. `Receipts` — the screen I did not know existed
+On **8-9-2026** the whole group came in one batch: Receipts, Stock mutations,
+Warehouse- and production workorders, Warehouse capacity, Blocked deliveries,
+Deliveries to be arranged, Transport status adjustments, Nesting and Machines —
+plus the Customers, Companies and Finance menus.
+
+**What it settled**, each with its own file:
+
+| Screen | What it proved |
+|---|---|
+| [Receipts](receipts.md) | the six-state receipt ladder, and that `Material still to be invoiced` is money |
+| [Blocked deliveries](blocked-deliveries.md) | **sales amount = Kg(p) × price in the price's own unit** — the same six-place bug as purchase |
+| [Nesting](nesting.md) | `Theor. Weight` is a **density** when its unit says `M3` |
+| [Warehouse- and production workorders](warehouse-and-production-workorders.md) | `Weight deviation` is a percentage; releasing books a half-hour slot |
+| [Warehouse capacity](warehouse-capacity.md) | `Remaining = Occupied − Ready`; `Fetching` is subtyped by machine |
+| [Transport status adjustments](transport-status-adjustments.md) | the **seven**-state trip ladder |
+| [Stock mutations](stock-mutations.md) | every movement names the work order that caused it |
+| [Machines](machines-and-small-screens.md) | six machines, and **no rate on any of them** |
+
+All of it is built and checked — `pnpm verify-logistics`, 64 cases against the
+figures those screens printed.
+
+## ~~3.~~ `Receipts` — the screen I did not know existed
 
 It sits directly above `Warehouse workorders` in the menu, and the purchase
 order's own panel is called `Receipts` too. If a reception and an `Unloading`
