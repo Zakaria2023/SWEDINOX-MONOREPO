@@ -54,10 +54,21 @@ goods in at **receipt**, via a warehouse work order — 53 of 151 receptions rea
 goods exist too late and the invoice is doing the warehouse's job — the same
 mistake already corrected on the sales side.
 
-**Blocked on** [manager question 3](MANAGER-QUESTIONS.md): *when a lorry
+**Blocked on** [manager question 4](MANAGER-QUESTIONS.md): *when a lorry
 arrives, which screen do you open?* See
 [warehouse-workorders.md](warehouse-workorders.md) — the batch scheduler being
 off on the test install is the likely reason nothing could be received.
+
+**Half of it is now answered.**
+[Transport work orders](transport-workorders.md) shows inbound goods being
+**collected**: a line's `Action` is `Pick-up` for a purchase and `Deliver`
+for a sale, and the detail panel under a `Pick-up` line names the purchase
+order it belongs to — `401059 HW-Inox GmbH`, status `Partially received`. So
+a purchase order is planned onto a trip, the trip walks
+`Loading list → Loading document → Loaded → departed`, and the lot is moved
+to a real stock location (`Laad`, or `Bewerkers` when it goes out for
+processing). What is still unknown is only the last link: whether completing a
+pick-up is what fills a reception's `Kg(a)`.
 
 **When answered, the shape is:**
 

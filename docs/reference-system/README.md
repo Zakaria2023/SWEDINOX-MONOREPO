@@ -33,6 +33,7 @@ Purchase table:
 | [Product master](product-detail.md) | the `/products` form | header and `Basis` panel captured; **the weight formula is proved here** |
 | [Stock on location](stock-on-location.md) | `/stock-on-location` | ~26 columns and 7 views matched; stock value and availability both proved |
 | [Warehouse work orders](warehouse-workorders.md) | `/warehouse-workorders` | barely captured, but probably how goods are booked in |
+| [Transport work orders](transport-workorders.md) | `/transport-workorders` | the trip plan — and inbound goods are collected by one |
 | [Company master](company-detail.md) | the `/companies` form | 9 roles, creditor/debtor, and 17 panels captured |
 
 All 12 Purchase screens are now captured, plus the purchase order detail
