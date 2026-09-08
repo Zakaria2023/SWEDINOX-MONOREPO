@@ -58,7 +58,19 @@ than a business one. The real list is unread.
 be stored and labelled. If a reason triggers a re-quote, warns about a supplier,
 or feeds a report, it is a real field. If it is only a note, it is a text column.
 
-**3. How are goods actually booked in?**
+**3. Is the batch scheduler meant to be switched off?**
+Every screen captured, all session, carries `Batchscheduler is not active.` in
+its status bar.
+
+*Why it matters:* if the scheduler is what turns a released reception into a
+warehouse work order, then it being off explains — in one stroke — why `Kg(a)`
+could not be typed, why `Batch registration` stayed greyed, why
+`Warehouse workorders` did nothing, and why no work order exists for the order
+we built while one exists for a coil somebody received earlier. It would also
+answer question 4 on its own. Needs whoever administers the install; nobody
+reachable can say yet.
+
+**4. How are goods actually booked in?**
 A reception cannot be typed into: `Kg(a)` and `Qty(a)` will not take focus,
 and `New`, `Split`, `Batch registration` and `Charge aanpassen…` are greyed
 even on a released order. `Warehouse workorders` from the order does nothing.
@@ -71,7 +83,7 @@ work order, our goods exist too late and the invoice is doing the warehouse's
 job. Somebody who receives deliveries can answer it in one sentence: *when a
 lorry arrives, which screen do you open?*
 
-**4. What does ticking `Consignatie` change — and where does it go?**
+**5. What does ticking `Consignatie` change — and where does it go?**
 It is a **header** checkbox on a quote, spelled `Consignatie` (Dutch,
 untranslated) and sitting under `Overlength` — *not* a line field, as the
 overview's `Consignation` column had suggested. A test quote was created with it
@@ -93,7 +105,7 @@ on the quote (`401156` and `401157`); neither could be received, because a
 reception cannot be filled in by hand — see question 3. Until goods can be
 booked in, no lot exists to read a value off.
 
-**5. Three reference fields — which is which?**
+**6. Three reference fields — which is which?**
 `Quote nr. supplier`, `Onze referentie` (*our reference*) and
 `Purchase Reference`. All three are blank on the only row. The quote header's
 own `Quote No` is also blank while the overview shows `900000`, so I have
@@ -102,7 +114,7 @@ inferred, not proved.
 *Why it matters:* three reference fields is either a real distinction worth
 copying, or historical clutter worth collapsing into one.
 
-**6. Is `Revenue group` chosen on the quote line, or inherited from the
+**7. Is `Revenue group` chosen on the quote line, or inherited from the
 product?**
 The one row reads `2900 / Other products`. Revenue groups are a sales-and-finance
 concept everywhere else in the system.
@@ -110,13 +122,13 @@ concept everywhere else in the system.
 against a different group than the product's own, and we need the column on the
 line. If it is inherited, we join it.
 
-**7. What are `Afhalen` and `Hego Prod - Lossen` for?**
+**8. What are `Afhalen` and `Hego Prod - Lossen` for?**
 Two toolbar buttons on the quote detail — *collect* and *unload* — that appear
 on a purchase document. Warehouse actions on a quote is an odd pairing.
 *Why it matters:* if they raise real warehouse movements, the quote is not
 merely a request for a price and our model is wrong about what a quote is.
 
-**8. Why does a quote have the same delivery block as an order?**
+**9. Why does a quote have the same delivery block as an order?**
 The quote header carries `Delivery terms`, `Delivery address`,
 `Arrange transport`, `Pick up/Drop-off CD-purchases`, and the same
 `Date` + `Rem` / `Week` + `Year` radio pair. A quote is a question about price,
@@ -152,7 +164,7 @@ Two document types appear in the `Nieuw` menu that no captured screen has ever
 shown: **`Purchase request`** and **`Purchase return order`**. The company
 master has a `Purchase returns` panel, which is the return order's overview.
 
-**9. Are either of these used?**
+**10. Are either of these used?**
 *Why it matters:* a purchase request is usually an internal "please buy this"
 that becomes an order — a step before the quote. A return order sends goods back
 to a supplier, which has to reverse stock and money. Neither is in scope, and

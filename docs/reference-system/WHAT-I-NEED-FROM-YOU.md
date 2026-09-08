@@ -3,11 +3,11 @@
 Everything not yet obtained, in one place, as click steps. Nothing here needs
 explaining first — open the screen, do the thing, send the picture.
 
-**Ranked.** The first three are worth more than all the rest together.
+**Ranked.** The first two are worth more than all the rest together.
 
 ---
 
-# 🔴 The three that matter
+# 🔴 The two that matter
 
 ## 1. When a lorry arrives, which screen do you open?
 
@@ -46,15 +46,10 @@ the code I cannot work out by reasoning.
 
 ---
 
-## 3. Is the batch scheduler meant to be off?
-
-**Ask whoever administers the install.**
-
-Every screen all session has read `Batchscheduler is not active.` at the
-bottom. If that is what turns a receipt into a warehouse work order, it
-explains why nothing could be received — and question 1 answers itself.
-
-**Send:** yes or no.
+> **The third one moved.** Whether the batch scheduler is meant to be off needs
+> an administrator, who is not reachable yet, so it now sits with the other
+> questions waiting on a person — see
+> [MANAGER-QUESTIONS.md](MANAGER-QUESTIONS.md).
 
 ---
 
