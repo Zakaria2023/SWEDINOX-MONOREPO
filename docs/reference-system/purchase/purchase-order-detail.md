@@ -278,6 +278,101 @@ panels to confirm the extra is an option and not a weight adjustment.
 `Days in system` reads `542` on all six rows, so it belongs to the order, not
 the line.
 
+## ✅ The `Pricing` panel — opened at last
+
+Two orders were built to get here (`401156` and `401157`, from quotes
+`900001` and `900002`), and expanding `Pricing` shows the whole price
+build-up. It is richer than the quote line's four columns suggested.
+
+**Left — the money, in order:**
+
+```
+  Base price
++ Quantity surcharge
++ Color surcharge
++ Lengtetoeslag            (Dutch: length surcharge)
+─────────────────────────
+= Gross Price
+− Line discount        %
+− Extra discount       %
+  Line discount tot.   %   (line + extra, computed)
+− Group discount       %
+─────────────────────────
+= Net price
+```
+
+So there are **four discounts and three named surcharges**, where the quote
+line grid shows only `Line Discount` and `Group Discount`. `Extra discount`
+and the three surcharges are new, and `Line discount tot.` looks derived
+rather than typed.
+
+Two checkboxes head the panel: **`Transfer price setting to order line`** and
+**`Transfer pricing determination to o[rder line]`**, both ticked. So the
+build-up is computed here and pushed down to the line, which is why the line's
+`Net Price` is a result rather than something anyone types.
+
+**Right — the same again, per option**, in a grid: `Option` · `Base price` ·
+`Surcharge` · `Gross price` · `U` · `Qty Discount` · `Extra Discount` ·
+`Reference factor` · `Net price` · `Contract`. An option carries its own
+gross-to-net chain, not just the `Per` basis already known.
+
+## 🔑 Amounts are billed on the **weighed** weight
+
+This is what [`Previous orders`](#previous-orders) never reconciled against,
+and the answer was printed on the purchase order all along. Its standing terms
+read:
+
+> *"De door u geleverde materialen worden gecontroleerd met onze inkooporder.
+> Uitsluitend het gewogen gewicht wordt ons als basis voor de facturering
+> geaccepteerd, tenzij stuksprijzen of meterprijzen zijn afgesproken."*
+>
+> — Only the **weighed** weight is accepted as the basis for invoicing, unless
+> piece prices or metre prices were agreed.
+
+That explains the drift in both directions, which no surcharge could:
+
+| Line | Theoretical kg | Billed kg (amount ÷ price) | |
+|---|---|---|---|
+| `400656/10` | 1 475,8 | **1 438,0** | billed **under** |
+| `400474/30` | 5 809,0 | **5 825,8** | billed **over** |
+| `401154/10` | 314,0 | **314,0** | exact — never weighed |
+
+Our own `401154` reconciles perfectly (`314 kg × €1.930/TN = €606,02`)
+precisely because nothing was ever put on a scale. So the theoretical weight is
+what an order is *placed* on, and the weighed weight is what it is *billed* on.
+A received lot needs both.
+
+## 🔴 A reception cannot be filled in by hand
+
+The whole point of the consignment test was to receive goods and read the lot's
+value. It could not be done, and why is itself a finding.
+
+On order `401157`, made final so the reception's status went `New` →
+`Released`:
+
+- **`Kg(a)` and `Qty(a)` are not editable.** Not a locked cell — the grid will
+  not take focus there at all.
+- **`New`, `Split`, `Batch registration` and `Charge aanpassen…` are all
+  greyed**, on a released order with an open reception.
+- **The `Warehouse workorders` button does nothing** when pressed from the
+  order.
+- **`Confirm` could not be completed.** Its dialog takes `Confirmation number`,
+  `Confirmation date`, `Confirmed delivery date` and `Document supplier`, and
+  copies them onto the selected lines. With all four filled and the line
+  ticked, `OK` stayed greyed — the line's own `Conf. No.` never populated.
+
+Put beside the 151-row export, where **53 of 151 receptions read
+`Receipt status = Workorders created`** — the commonest status after
+`Received` — the reading is that goods are booked in by a **warehouse work
+order**, raised somewhere other than the purchase order, and that filling
+`Kg(a)` is its consequence rather than a data-entry step.
+
+⚠️ **That matters more than the flag we set out to test.** Ours creates the
+stock lot when the *purchase invoice* arrives. If the reference books goods in
+at receipt, from a work order, then in ours the goods exist too late and the
+invoice is doing the warehouse's job — the same mistake already corrected on
+the sales side, where work orders move stock and invoices no longer do.
+
 ## 🔴 What is still needed here
 
 1. **The `Pricing` panel was never expanded** — it is the one that should
