@@ -42,6 +42,10 @@ answered.
 
 ## Steps and answers
 
+**[PURCHASE-REMAINING.md](PURCHASE-REMAINING.md)** is the short answer to
+"what is left in Purchase" — four things that can be done today, one waiting on
+a thirty-second check, and two properly blocked on how goods actually arrive.
+
 **[WHAT-I-NEED-FROM-YOU.md](WHAT-I-NEED-FROM-YOU.md)** is the one to hand
 somebody sitting in front of the old system: every outstanding question as a
 numbered click path, ranked, with the three that matter at the top.
