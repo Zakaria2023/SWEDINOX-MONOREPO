@@ -45,7 +45,7 @@ They need three jiti stubs to run outside Next: `server-only`,
 
 ## 🔜 Next, in order
 
-### 1. The receipt chain — blocked, and the biggest gap
+### 1. The receipt chain — **no longer blocked**
 
 **The problem.** Ours creates the stock lot when the **purchase invoice**
 arrives (`purchase-invoices/actions.ts`). The reference almost certainly books
@@ -54,10 +54,22 @@ goods in at **receipt**, via a warehouse work order — 53 of 151 receptions rea
 goods exist too late and the invoice is doing the warehouse's job — the same
 mistake already corrected on the sales side.
 
-**Blocked on** [manager question 4](MANAGER-QUESTIONS.md): *when a lorry
-arrives, which screen do you open?* See
-[warehouse-workorders.md](warehouse-workorders.md) — the batch scheduler being
-off on the test install is the likely reason nothing could be received.
+**Answered by an 11 625-row export of
+[Warehouse work orders](warehouse-workorders.md).** Goods are booked in by
+approving a work order of type **`Unloading`** — the only type with no
+`From-location` (3 179 of 3 179), against purchase orders (3 117) and never
+against a sales order. `Kg(a)` is filled on 100 % of `Approved` rows and 5 %
+of `New` ones, so **approving is the step that receives the goods**.
+
+The chain:
+
+```
+purchase order
+  → transport work order   Pick-up: fetch it from the supplier
+  → warehouse work order   Unloading: no source, into Ontvangst or a rack
+  → approve it             fills Kg(a); the goods now exist
+  → purchase invoice       values what is already there
+```
 
 **Half of it is now answered.**
 [Transport work orders](transport-workorders.md) shows inbound goods being
@@ -80,7 +92,10 @@ pick-up is what fills a reception's `Kg(a)`.
   there
 - receipt status walks `New → Released → Workorders created → Received`
 
-**Do not start this before the answer.** The transition points are guesses.
+**Now buildable.** What is still unknown is narrow: whether approving an
+`Unloading` also writes the reception's `Kg(a)` or whether the two are
+independent, and what moves a work order `New → Released → Approved`. Both can
+be settled from the export or by reading one work order, not by guessing.
 
 ### 2. The price build-up
 

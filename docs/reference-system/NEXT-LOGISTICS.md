@@ -8,16 +8,50 @@ can be done in any order, or not at all until we build that screen.
 
 ---
 
-# 🔴 First — these two
+# ✅ 1 and 2 are done
 
-## 1. The menu itself
+**The menu**, in its own order:
 
-Open **`Overviews → Logistics`** and expand it.
+Deviations in count lists · Products · Warehouse- and production workorders ·
+**Receipts** · **Warehouse workorders** · Production workorders ·
+Production batches · Transport workorders · **Trip data** · **Reservations** ·
+Stock · Stock on location · Klant voorraad op locatie · Locaties ·
+Stock history · Stock mutations · **Freight movement** ·
+**Revenue per product** · Freight flow (SFN) · Pick statistic · Machines ·
+Blocked deliveries · Deliveries to be arranged without stock reservation ·
+Sawing layouts · Warehouse capacity · Production capacity ·
+Production capacity details · Capacity checks · Time registration ·
+(Re)optimize · Nesten · Transport status adjustments
 
-📸 The whole menu, so I can see every screen in the group and plan the rest
-against it rather than guessing.
+Five I had not guessed: **Receipts**, **Trip data**, **Reservations**,
+**Freight movement** and **Revenue per product**. `Receipts` is the one to
+look at next — see item 3.
 
-## 2. Warehouse work orders — the screen that finishes Purchase
+**Warehouse work orders** gave an 11 625-row export and
+[answered how goods are received](warehouse-workorders.md): approving a work
+order of type `Unloading`. Nothing further is needed from it.
+
+---
+
+# 🔴 Next — the one that closes the loop
+
+## 3. `Receipts` — the screen I did not know existed
+
+It sits directly above `Warehouse workorders` in the menu, and the purchase
+order's own panel is called `Receipts` too. If a reception and an `Unloading`
+work order are the same thing seen twice, this is where that shows.
+
+1. `Overviews → Logistics → Receipts`
+2. `View` = **`-empty-`**, dates from `1-1-2024`, `Show Data`
+
+📸 The grid.
+
+Then press **`Show in Excel`** and tell me — an export beats any screenshot.
+
+**What I am after:** whether a receipt row carries a work order number, and
+whether its `Kg(a)` matches the work order's.
+
+## ~~2.~~ Warehouse work orders — the screen that finishes Purchase
 
 This is the one that matters. Everything in the purchase chain now hangs on how
 goods actually get booked into stock, and this is where that happens.

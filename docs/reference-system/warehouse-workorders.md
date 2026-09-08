@@ -1,75 +1,157 @@
 # Warehouse work orders
 
-Reached with the `Warehouse workorders` button that sits on nearly every
-purchase screen. Ours: `/warehouse-workorders`.
+`Overviews → Logistics → Warehouse workorders`. Ours: `/warehouse-workorders`.
 
-Barely captured — one screen, one order — but what it shows matters, because
-this is very likely how goods are actually booked into stock.
+**Every movement of stock inside the building.** One row per line of a work
+order, saying what moves, from where, to where, and why.
 
-## The tree
+**Filters**: `Product code` from / u/i, `Workorder date` from / u/i, `Show Data`.
+**Toolbar**: Save as Excel · Show in Excel · Print · Show Product · Show… |
+Purchase lines · Warehouse workorders · Orders and Quotes ·
+Production workorders
 
-Not a flat grid. Three levels above the line:
+**Backed by an export** — 11 625 work orders over `1-1-2024 … 8-9-2026`, kept as
+`exports/warehouse-workorders.tsv`. Everything below is read off it.
 
-```
-9-9-2026                            ← the day's work
- └ Fetching                         ← work order type
-    └ 306693                        ← work order number, a 6-digit series
-       └ 1 Coil Cold-rolled 304 1mm ← the line
-```
+---
 
-Every level carries its own `Status` (all `New` here) and a count.
+## 🔑 This is how goods are received
 
-## The line
+The question the whole purchase chain hung on, answered outright.
 
-| Column | Value |
+### `Unloading` is the receipt
+
+| | |
 |---|---|
-| description | `1 Coil Cold-rolled 304 1 mm` |
-| counterparty | **`Hego Production, ALMERE`** — the in-house production department |
-| product | `CK3040010` |
-| charge | `102189` |
-| status | `New` |
-| from | **`Ontva…`** — `Ontvangst`, the goods-in location |
-| to | **`Decoiler`** — a machine |
-| length · width · thickness | `999999` · `1500` · `1,000` |
+| rows | **3 179** |
+| with **no** `From-location` | **3 179** — every single one |
+| against a **purchase** order (`4xxxxx`) | **3 117** |
+| against a **sales** order (`1xxxxx`) | **0** |
+| naming a supplier in `Delivery/reception company name` | **3 179** |
 
-So a warehouse work order **moves a lot from one place to another** — here from
-goods-in to a decoiler — and `Fetching` is the type of move.
+Nothing else in the system has no source. Goods come from outside the building,
+which is exactly what an inbound receipt is, and no other type behaves this way.
 
-`999999` is the coil sentinel again, which fits: a coil has no cut length.
+### Approving it is what books the goods in
 
-## 🚩 Why this probably blocks the receipt chain
+| Status | Rows | `Kg(a)` filled |
+|---|---|---|
+| `New` | 116 | **6** (5 %) |
+| `Released` | 122 | **11** (9 %) |
+| **`Approved`** | 11 387 | **11 352 (100 %)** |
 
-The status bar reads **`Batchscheduler is not active.`** — on every screen
-captured today, all session.
+A work order is planned with `Kg(p)`, sits at `New` or `Released` with nothing
+in `Kg(a)`, and **approving it fills the actuals**. That is the step that could
+not be reached on the test install, and it explains everything: `Kg(a)` on a
+reception is not typed, it is *reported* by the work order that moved the goods.
 
-Set that beside what could *not* be done on purchase order `401157`:
+### A receipt does not always land in goods-in
 
-- `Kg(a)` and `Qty(a)` on its reception would not take focus
-- `New`, `Split`, `Batch registration` and `Charge aanpassen…` were greyed even
-  after `Make final` put the reception into `Released`
-- `Warehouse workorders` pressed from the order did nothing
-- no work order for `401157` appears in this tree
+`Ontvangst` takes 887 of the 3 179, and the rest go straight to a rack:
 
-…while work order `306693` **does** exist, for a coil from Hego Production.
-Something created it earlier.
+| To | Rows |
+|---|---|
+| `Ontvangst` | 887 |
+| `7Z1` · `7W1` · `5A` · `7Y` · `6A` · `SC` | 1 151 between them |
+| `Laad` | 263 — unloaded straight into despatch, presumably a cross-dock |
 
-The reading: **a released reception is turned into a warehouse work order by
-the batch scheduler**, and with the scheduler off nothing will ever pick a new
-reception up. That would explain all four blockages at once, and it fits the
-151-row export where **53 of 151 receptions read
-`Receipt status = Workorders created`** — the commonest status after
-`Received`.
+So goods-in is a default, not a rule.
 
-It is a reading, not a proof. See
-[MANAGER-QUESTIONS.md](MANAGER-QUESTIONS.md) question 3.
+---
 
-## 🔴 What is needed
+## The six types
 
-1. **Is the batch scheduler meant to be off on `HEGO TEST`, and is it what
-   raises warehouse work orders from receptions?** One sentence from whoever
-   administers the install settles the entire receipt chain.
-2. **The full list of work order types.** `Fetching` is the only one seen.
-   → *In the old system:* open the type column's filter, or group the tree by
-   it.
-3. **What a work order looks like when it is finished** — the export's
-   `Workorders created` receptions became `Received` somehow.
+| Type | Rows | From | To | Against |
+|---|---|---|---|---|
+| **`Picking`** | 3 936 | a rack | `Laad` (3 420) | sales orders (3 721) |
+| **`Unloading`** | 3 179 | **nothing** | `Ontvangst` or a rack | **purchase orders (3 117)** |
+| **`Relocating`** | 2 405 | a rack | a rack | **no order at all** |
+| **`Fetching`** | 1 244 | a rack | `Slijpen/Foliën`, `Laser 1`, `Knip` | sales orders (1 207) |
+| **`Pick-up`** | 860 | `Afhaal` | — | sales orders (860) |
+| **`Scrapping`** | 1 | | | |
+
+`Relocating` carries no order because nobody ordered it — it is the warehouse
+tidying itself.
+
+`Fetching` goes to a **machine**, not a location: `Slijpen/Foliën` (grinding and
+film), `Laser 1`, `Knip` (cutting). Those are the processing options bought as
+service lines on a purchase order, seen from the other side.
+
+---
+
+## ✅ `Kg(dif)` = `Kg(a)` − `Kg(p)`
+
+Exact on **11 625 of 11 625** rows. 493 came up short of plan.
+
+Six approved unloadings differ, and they read like real life:
+
+| Order | Planned | Actual | Difference |
+|---|---|---|---|
+| `290049/10` | 494,6 | 353,3 | **−141,3** |
+| `401059/10` | 942 | 0 | −942 |
+| `400472/20` | 3 073,3 | 0 | −3 073,3 |
+
+A short delivery, and two that never came at all. This is the third place the
+weighed weight shows up — planned against actual, with the difference kept
+rather than the plan overwritten.
+
+---
+
+## Columns — all 44
+
+**Identity** `Type` · `Workorder#` · `Line#` · `Workorder date` · `Status`
+
+**What moves** `Product no.` · `Product` · `Length (mm)` · `Width (mm)` ·
+`Thickness` · `Quality Code` · `Stock Category` · `Internal Bundle` ·
+`Bundle quantity` · `Batch information`
+
+**Where** `From-location` · `To-location` · `Section` · `Loading location` ·
+`Resource`
+
+**How much** `Qty(p)` · `U.` · `Kg(p)` · `Qty(a)` · `Kg(a)` · `Qty(dif)` ·
+`Kg(dif)` · `Max. Bundle weight`
+
+**Why** `Order` · `Order line` · `Company` ·
+`Delivery/reception company name`
+
+**Transport** `Vehicle` · `Transport date` · `Trip number` · `Trip status` ·
+`Transport region` · `Bill of lading` · `Loading instructions`
+
+**Audit** `Created by` · `Created on` · `Order created on` · `Modified by` ·
+`Reported as completed on`
+
+`Section` is a level above location — `00 Hego Almere`, `04-OUD/OLD`,
+`Productie-OUD`. `Trip number` and `Trip status` tie a work order to the trip on
+[Transport work orders](transport-workorders.md), so the two screens are two
+views of one movement.
+
+⚠️ **A fourth null sentinel.** `Transport date` is `1-1-1900` on **7 400 of
+11 625** rows — Excel serial `1`. Add it to `1-1-0001`, `31-12-9999` and the
+`999999` coil length. All four must render blank.
+
+---
+
+## What this means for our code
+
+Ours creates the stock lot when the **purchase invoice** is posted. The
+reference does not, and now we know exactly what it does instead:
+
+```
+purchase order
+  → transport work order   (Pick-up: fetch it from the supplier)
+  → warehouse work order   (Unloading: no source, into Ontvangst or a rack)
+  → approve it             (fills Kg(a), and the goods exist)
+  → purchase invoice       (values what is already there)
+```
+
+See [IMPLEMENTATION-PLAN.md](IMPLEMENTATION-PLAN.md) §1. This is no longer
+blocked.
+
+## 🔴 What is still open
+
+1. **Does approving an `Unloading` also write the reception's `Kg(a)`**, or are
+   the two independent? 53 of 151 receptions read `Workorders created`, which
+   suggests the work order is raised *from* the reception.
+2. **`New` → `Released` → `Approved`** — what moves a work order between them,
+   and does the batch scheduler do it.
+3. **`Section`** — a level above location we do not model at all.

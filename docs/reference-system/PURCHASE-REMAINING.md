@@ -57,7 +57,7 @@ seconds and settles the whole thing.
 
 ---
 
-## 🔴 Blocked properly — do not build on a guess
+## 🟠 Unblocked — the answer arrived
 
 ### 6. Goods are received too late
 
@@ -76,12 +76,15 @@ So the chain is almost certainly
 `purchase order → transport pick-up → warehouse work order → stock`, and ours
 skips all three middle steps.
 
-*Blocked on:* [manager question 4](MANAGER-QUESTIONS.md) — *when a lorry
-arrives, which screen do you open?* Nothing could be received on the test
-install, most likely because `Batchscheduler is not active`.
+**✅ Answered.** An 11 625-row export of
+[Warehouse work orders](warehouse-workorders.md) shows goods being booked in by
+approving a work order of type **`Unloading`** — the only type with no
+`From-location`, always against a purchase order, never against a sale, and
+with `Kg(a)` filled on 100 % of approved rows against 5 % of new ones.
 
-**Do not start this before the answer.** Every transition in it is a guess, and
-guessing is how the weight bug got in.
+So the chain is
+`purchase order → transport pick-up → warehouse unloading → approve → invoice`,
+and it can now be built rather than guessed at.
 
 ### 7. Weighed weight beside theoretical
 
@@ -127,8 +130,9 @@ that is where the weighing happens.
 |---|---|
 | **Can do now** | items 1–4 — about half a day |
 | **One 30-second answer away** | item 5 |
-| **Properly blocked** | items 6–7, the receipt chain |
+| **Now buildable** | items 6–7, the receipt chain — the answer arrived |
 
-Items 1–4 are worth doing whenever there is a gap. Items 6–7 are the only
-reason Purchase is not finished, and neither can be started honestly until
-somebody says how goods arrive.
+Items 1–4 are done. Item 5 waits on thirty seconds of typing. Items 6–7 are
+the only reason Purchase is not finished, and both are now buildable — the
+receipt chain is understood, and the weighed weight belongs with it because
+that is where the weighing happens.

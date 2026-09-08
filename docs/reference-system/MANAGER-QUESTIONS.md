@@ -70,18 +70,17 @@ we built while one exists for a coil somebody received earlier. It would also
 answer question 4 on its own. Needs whoever administers the install; nobody
 reachable can say yet.
 
-**4. How are goods actually booked in?**
-A reception cannot be typed into: `Kg(a)` and `Qty(a)` will not take focus,
-and `New`, `Split`, `Batch registration` and `Charge aanpassen…` are greyed
-even on a released order. `Warehouse workorders` from the order does nothing.
-Yet 53 of the 151 receptions in the export read `Workorders created`.
+**4. ✅ ANSWERED — how goods are booked in**
 
-*Why it matters:* this is the biggest open question in the whole purchase
-chain, bigger than consignment. Ours creates the stock lot when the purchase
-invoice arrives. If the reference books goods in at receipt, from a warehouse
-work order, our goods exist too late and the invoice is doing the warehouse's
-job. Somebody who receives deliveries can answer it in one sentence: *when a
-lorry arrives, which screen do you open?*
+By approving a **warehouse work order of type `Unloading`**. An 11 625-row
+export settles it: all 3 179 unloadings have **no** `From-location` — nothing
+else in the system does — 3 117 of them are against a purchase order and none
+against a sales order, and every one names its supplier. `Kg(a)` is filled on
+**100 %** of `Approved` rows against 5 % of `New` ones, so approving is the
+step that books the goods in.
+
+Nothing needs asking. See
+[warehouse-workorders.md](warehouse-workorders.md).
 
 **5. What does ticking `Consignatie` change — and where does it go?**
 It is a **header** checkbox on a quote, spelled `Consignatie` (Dutch,
