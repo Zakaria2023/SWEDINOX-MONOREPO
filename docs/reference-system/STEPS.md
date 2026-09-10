@@ -1,5 +1,9 @@
 # Steps
 
+> **Superseded by [WHAT-IS-LEFT.md](WHAT-IS-LEFT.md)**, which carries every
+> still-open item from this file, renumbered. Kept for the reasoning and for
+> what has already been answered.
+
 Sorted by what a wrong answer costs, not by screen. Everything already settled
 lives in [ANSWERED.md](ANSWERED.md); this file is only what is still open.
 

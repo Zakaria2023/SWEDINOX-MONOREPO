@@ -1,5 +1,9 @@
 # What I need from the Logistics group
 
+> **Superseded by [WHAT-IS-LEFT.md](WHAT-IS-LEFT.md)**, which carries every
+> still-open item from this file, renumbered. Kept for the reasoning and for
+> what has already been answered.
+
 Same shape as the Purchase list: open the screen, do the thing, send the
 picture with its number.
 

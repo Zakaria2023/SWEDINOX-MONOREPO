@@ -1,5 +1,9 @@
 # What I still need from the old system
 
+> **Superseded by [WHAT-IS-LEFT.md](WHAT-IS-LEFT.md)**, which carries every
+> still-open item from this file, renumbered. Kept for the reasoning and for
+> what has already been answered.
+
 Everything not yet obtained, in one place, as click steps. Nothing here needs
 explaining first — open the screen, do the thing, send the picture.
 

@@ -6,7 +6,12 @@ that system from screenshots: the columns each overview shows, where each figure
 comes from, and — where it is not yet known — exactly what to do in the old
 system to find out.
 
-> **Start here for the current state:**
+> **🔴 Start here: [WHAT-IS-LEFT.md](WHAT-IS-LEFT.md)** — the one list of
+> everything still to be taken out of the old system, numbered, with the clicks
+> for each. It supersedes WHAT-I-NEED-FROM-YOU.md, STEPS.md and the round lists
+> in NEXT-LOGISTICS.md, which stay only as history.
+
+> **For the current state:**
 > [COVERAGE.md](COVERAGE.md) — **how much is actually built** ·
 > [chart-of-accounts.md](chart-of-accounts.md) — the 27 accounts ·
 > [LOGISTICS-BUILT.md](LOGISTICS-BUILT.md) — what is built ·
