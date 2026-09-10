@@ -6,6 +6,7 @@ import { OrderItems, SelectOrderItems } from "@/db/schema/order-items";
 import { Orders, SelectOrders } from "@/db/schema/orders";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { Products, SelectProducts } from "@/db/schema/products";
+import { Reservations } from "@/db/schema/reservations";
 import { Stock } from "@/db/schema/stock";
 import { StockMovements } from "@/db/schema/stock-movements";
 import { mailDocument, sendDeliveryNoteEmail } from "@/emails/documents";
@@ -232,6 +233,13 @@ export const deliverOrderItem = async (
             "Stock changed while delivering — please refresh and try again.",
           );
         }
+
+        // Delivered metal is no longer reserved, it is gone. The claim goes
+        // with it: `Stock.reservedQuantity` is decremented above, and the row
+        // that said who was holding it has nothing left to say.
+        await tx
+          .delete(Reservations)
+          .where(eq(Reservations.orderItemUuid, orderItem.uuid));
 
         await tx.insert(StockMovements).values({
           uuid: generateUuid(),

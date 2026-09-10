@@ -11,10 +11,13 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import {
+  RESERVATION_STATUS_LABELS,
+  RESERVATION_TYPE_LABELS,
   STOCK_UNIT_LABELS,
   WAREHOUSE_LOCATION_TYPE_LABELS,
 } from "@/lib/labels";
 import { TableExportButton } from "@/components/ui/table-export-button";
+import { formatDateColumn } from "@/lib/helpers";
 
 type Props = {
   records: ReservationRecord[];
@@ -46,14 +49,16 @@ export const ReservationRecordsTable = ({ records }: Props) => (
             <TableHead className="text-right">Order</TableHead>
             <TableHead className="text-right">Order line</TableHead>
             <TableHead>Company</TableHead>
-            <TableHead>Reservation type</TableHead>
+            <TableHead>Type</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Date</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {records.length === 0 ? (
             <TableRow>
               <TableCell
-                colSpan={14}
+                colSpan={16}
                 className="h-24 text-center text-muted-foreground"
               >
                 No reservations found.
@@ -98,7 +103,9 @@ export const ReservationRecordsTable = ({ records }: Props) => (
                   {row.lineNumber ?? "—"}
                 </TableCell>
                 <TableCell>{row.companyName ?? "—"}</TableCell>
-                <TableCell>{row.reservationType}</TableCell>
+                <TableCell>{RESERVATION_TYPE_LABELS[row.type]}</TableCell>
+                <TableCell>{RESERVATION_STATUS_LABELS[row.status]}</TableCell>
+                <TableCell>{formatDateColumn(row.reservedFor)}</TableCell>
               </TableRow>
             ))
           )}

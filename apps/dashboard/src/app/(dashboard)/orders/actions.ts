@@ -9,6 +9,7 @@ import {
   SelectOrders,
 } from "@/db/schema/orders";
 import { OrderItems, SelectOrderItems } from "@/db/schema/order-items";
+import { Reservations } from "@/db/schema/reservations";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
 import { CompanyAddresses } from "@/db/schema/company-addresses";
@@ -486,8 +487,10 @@ export const createOrder = async (
           minProfitMargin: minimumMarginFor(product, fields.isPickup ?? false),
         });
 
+        const orderItemUuid = generateUuid();
+
         await tx.insert(OrderItems).values({
-          uuid: generateUuid(),
+          uuid: orderItemUuid,
           orderUuid: uuid,
           stockUuid: item.stockUuid,
           productUuid: stockRow.productUuid,
@@ -514,6 +517,22 @@ export const createOrder = async (
           profitMargin: financials.profitMargin.toFixed(2),
           profitReplPrice: moneyString(financials.profitReplPrice),
           profitTooLow: financials.profitTooLow,
+        });
+
+        // The reservation, said out loud. `Stock.reservedQuantity` above holds
+        // the number; this holds who is holding it, which is what the
+        // reference's `Toon reserveringen` panel shows and a bare number
+        // cannot: one lot can be spoken for by several lines at once.
+        await tx.insert(Reservations).values({
+          uuid: generateUuid(),
+          stockUuid: item.stockUuid,
+          orderItemUuid,
+          type: "sale",
+          status: "definitive",
+          quantity: item.quantity,
+          unit: stockRow.unit ?? "st",
+          quantityKg: financials.weightKg.toFixed(2),
+          reservedFor: fields.deliveryDate ?? null,
         });
 
         lineTotals.goodsValue += financials.amount;
@@ -700,6 +719,13 @@ export const cancelOrder = async (uuid: string): Promise<OrderActionResult> => {
           .update(Stock)
           .set({ reservedQuantity: releasedReserved })
           .where(eq(Stock.uuid, item.stockUuid));
+
+        // A cancelled line releases its claim as well as its quantity. The
+        // reference's panel offers `Delete` and no status for a lapsed
+        // reservation, so a released one leaves no row behind.
+        await tx
+          .delete(Reservations)
+          .where(eq(Reservations.orderItemUuid, item.uuid));
       }
     });
 

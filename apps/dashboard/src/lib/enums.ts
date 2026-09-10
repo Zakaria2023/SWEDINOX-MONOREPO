@@ -582,6 +582,35 @@ export const stockUnits = [
 
 export type StockUnit = (typeof stockUnits)[number];
 
+/**
+ * What kind of demand is holding a lot.
+ *
+ * `Sale` is the only value the reference has been seen to write — reservation
+ * O100742/50 on the `Laad` lot of product 6010015315, read off `Toon
+ * reserveringen` on 10-9-2026. Its own column is called `Type`, which says
+ * plainly that it expects more, and a cut reserving its material is the obvious
+ * candidate.
+ *
+ * Only the proved value is listed here on purpose. Widening a `mysqlEnum` later
+ * is free; inventing a member now and finding the reference spells it
+ * differently is not.
+ */
+export const reservationTypes = ["sale"] as const satisfies readonly string[];
+
+export type ReservationType = (typeof reservationTypes)[number];
+
+/**
+ * How firm a reservation is. `Definitive` is the only value seen, and it
+ * decides something real: a definitive reservation is what makes a lot's
+ * `Available` fall below its `Technical` quantity. See [reservationTypes] on
+ * why the list is not padded out with guesses.
+ */
+export const reservationStatuses = [
+  "definitive",
+] as const satisfies readonly string[];
+
+export type ReservationStatus = (typeof reservationStatuses)[number];
+
 // How a counterparty counts in the steel federation (SFN) goods-flow return:
 // a mill that makes the material, a fellow federation member, or anyone else.
 // Combined with whether the counterparty sits at home or abroad, this decides

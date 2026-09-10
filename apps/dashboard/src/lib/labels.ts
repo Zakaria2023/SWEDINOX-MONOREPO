@@ -75,6 +75,8 @@ import {
   StockLabelType,
   StockMode,
   SfnCounterpartyRole,
+  ReservationStatus,
+  ReservationType,
   StockUnit,
   StockMovementReason,
   StockMovementType,
@@ -855,6 +857,14 @@ export const STOCK_UNIT_LABELS: Record<StockUnit, string> = {
   m2: "M2",
   m3: "M3",
   mm: "MM",
+};
+
+export const RESERVATION_TYPE_LABELS: Record<ReservationType, string> = {
+  sale: "Sale",
+};
+
+export const RESERVATION_STATUS_LABELS: Record<ReservationStatus, string> = {
+  definitive: "Definitive",
 };
 
 export const LEAD_TIME_METHOD_LABELS: Record<LeadTimeMethod, string> = {
