@@ -1,17 +1,38 @@
-# `Stk` and `CD` — the order type that runs through everything
+# `Stk` and `CD` — the line type that runs through everything
 
-`Order type` turned up on six screens on 10-9-2026 and it is a real dimension,
-not a label. Two values are in use.
+🔴 **Corrected 10-9-2026, after this page was first written.** The heading used
+to say _"the order type"_, and that was wrong in a way worth keeping on the
+page, because the reference caused it.
+
+**The reference labels two different fields `Order type`.** Its Production
+capacity details export prints both, side by side, and they share nothing:
+
+```
+Order type   Normal 1.933    Call-off 29    Rush 8
+Line type    Stk    1.935    Stk+CD   31    CD    4
+```
+
+So `Stk` / `CD` is the **line type** — where the metal comes from. On the
+revenue screens it is rolled up from the lines and the column is headed `Order
+type`, which is where the confusion came from. The order's own `Order type` is
+the urgency, and it is the `Normal` dropdown at the top of the order-type block
+on order 100742.
+
+**And there is a third value.** `Stk+CD`, on 31 of 1.970 lines: a line filled
+partly from stock and partly by buying in. A page written from the revenue
+screens alone would never have seen it.
+
+Two values are in use on the revenue screens because those aggregate.
 
 ## The split
 
 From `Revenue per product` (2 782 rows, invoice dates through the export
 window):
 
-| Order type | Revenue | Profit | Weight | Margin |
-| ---------- | ------- | ------ | ------ | ------ |
-| **`Stk`** | € 6 930 267 | € 1 392 273 | 2 580 020 kg | **20,09 %** |
-| **`CD`** | € 2 102 335 | € 221 722 | 793 310 kg | **10,55 %** |
+| Order type | Revenue     | Profit      | Weight       | Margin      |
+| ---------- | ----------- | ----------- | ------------ | ----------- |
+| **`Stk`**  | € 6 930 267 | € 1 392 273 | 2 580 020 kg | **20,09 %** |
+| **`CD`**   | € 2 102 335 | € 221 722   | 793 310 kg   | **10,55 %** |
 
 `Revenue per revenue group` prints the same two figures for CD to the cent —
 € 2 102 334,97 and € 221 722,15 — from a different screen and a different
@@ -42,20 +63,22 @@ panel shows which lot each line came out of.
 
 Lower margin follows: no stock was carried, no handling was done, and the
 purchase price is known before the sale is priced. The screen's `Purchase value
+
 - Stock value` column is there precisely to watch that margin.
 
 ## Where it appears
 
-| Screen | How |
-| ------ | --- |
-| `Revenue per product` | a column; splits every product's revenue |
-| `Revenue per revenue group` | a **grouping level**, above revenue group |
-| `Purchases and sales per revenue group` | a column |
-| `Revenue w.r.t. Budget` | a column, budgeted separately |
-| `Supplier revenue per revenue group` | a grouping level — so it splits **purchases** too |
-| `CBS Documentatie` | as `Ordertype` `V` / `I`, which is a *different* axis — sales vs purchase, not Stk vs CD |
-| Sales order lines | `Type` on each line |
-| `Production capacity details` | `Order type` per line |
+| Screen                                  | How                                                                                                |
+| --------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `Production capacity details`           | as **`Line type`** — the only screen that names it correctly, and the only one that shows `Stk+CD` |
+| `Revenue per product`                   | a column headed `Order type`; splits every product's revenue                                       |
+| `Revenue per revenue group`             | a **grouping level**, above revenue group                                                          |
+| `Purchases and sales per revenue group` | a column                                                                                           |
+| `Revenue w.r.t. Budget`                 | a column, budgeted separately                                                                      |
+| `Supplier revenue per revenue group`    | a grouping level — so it splits **purchases** too                                                  |
+| `CBS Documentatie`                      | as `Ordertype` `V` / `I`, which is a _different_ axis — sales vs purchase, not Stk vs CD           |
+| Sales order lines                       | `Type` on each line                                                                                |
+| `Production capacity details`           | `Order type` here is the **urgency**: Normal / Call-off / Rush                                     |
 
 `Supplier revenue per revenue group` splitting by the same `Stk` / `CD` values
 (Σ 909 375 kg CD against Σ 1 782 497 kg Stk) confirms it is a property of the
@@ -67,12 +90,22 @@ margin, described as `Price differences`. That is not a trading type; it is wher
 price corrections land. Whatever the blank means, it is not a third way of
 selling steel.
 
-## What we have
+## What was built
 
-Nothing. `Orders` has no order-type column, and both figures above would be
-unsplittable in our system today. `CD` also implies a link from a sales order
-line to the purchase order line that covers it, which we do not model — our
-`PurchaseOrderItems` has no sales-side reference.
+Both fields, since they are both real:
 
-Written up as item 4 of
-[PLANNED-CODE-CHANGES-2.md](PLANNED-CODE-CHANGES-2.md). **No code was changed.**
+- **`Orders.orderType`** — `normal` / `call_off` / `rush`, with a select on the
+  order form's own Order Type section, a hidden-by-default column on the
+  overview and a filter. Hidden by default because 1.933 of 1.970 rows are
+  `Normal`; it earns its width only when somebody is hunting the call-offs.
+- **`OrderItems.sourceType`** — `stock` / `stock_and_cross_dock` /
+  `cross_dock`, shown by default on the Order lines screen, which is the only
+  screen that lists lines one at a time.
+- **`OrderItems.purchaseOrderItemUuid`** — the purchase line that covers a
+  cross-docked sale, which is what `CD deliveries in progress` prints. A real
+  foreign key: nothing in the purchase chain imports `order-items.ts`, so it
+  closes no module cycle, unlike `Stock.orderItemUuid`.
+
+⚠️ Not to be confused with our own `OrderItems.lineType`, which holds
+`material` and is a different axis — the reference keeps options and surcharges
+in separate tables rather than in a column.

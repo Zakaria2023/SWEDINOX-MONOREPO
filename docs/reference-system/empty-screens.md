@@ -6,20 +6,20 @@ wrong**, and the way it was wrong is the most useful thing on the page.
 ## 🔴 The correction
 
 An earlier pass recorded eight screens as returning zero rows and concluded they
-were *"the fourth feature-group this system ships switched off."* Three of them
+were _"the fourth feature-group this system ships switched off."_ Three of them
 then arrived as exports with thousands of rows in them:
 
-| Screen | Claimed | Actually |
-| ------ | ------- | -------- |
-| `Revenue per product` | empty | **2 782 rows** |
-| `Production capacity` | not captured | **403 rows** |
+| Screen                        | Claimed      | Actually       |
+| ----------------------------- | ------------ | -------------- |
+| `Revenue per product`         | empty        | **2 782 rows** |
+| `Production capacity`         | not captured | **403 rows**   |
 | `Production capacity details` | not captured | **1 970 rows** |
 
 ## Why they looked empty: `Year` / `Month`, not `from` / `to`
 
 Most overviews filter on a **date range** — `from 1-1-2024 u/i 10-9-2026` — and
-the standing rule is *never leave the `from` box blank, because a blank `from`
-voids the filter and returns nothing.*
+the standing rule is _never leave the `from` box blank, because a blank `from`
+voids the filter and returns nothing._
 
 But a second kind of screen exists, and it filters on **year and month**:
 
@@ -37,7 +37,7 @@ Year/Month with `View = -empty-` gives nothing, and the saved view `Omzet per
 groep` over `1-1-2024 → 10-9-2026` gives three groups and €9 million of revenue.
 
 **The general rule, restated:** an empty grid in this system is a claim about
-the *filter* until you have read the filter. There are at least three ways for a
+the _filter_ until you have read the filter. There are at least three ways for a
 filter to return nothing while looking untouched — a blank `from`, a blank
 `Year`/`Month`, and a `View` that hides the columns the rows are in.
 
@@ -46,12 +46,12 @@ filter to return nothing while looking untouched — a blank `from`, a blank
 These were run over a real date range — `1-1-2024` to `10-9-2026`, the same
 window that returns 13.562 stock movements — and returned nothing:
 
-| Screen | Filter used | Columns it would have |
-| ------ | ----------- | --------------------- |
-| `Capacity checks` | `Workorder date` 1-1-2024 → 10-9-2026 | `Status`, `Check`, `Type`, `Occupied capacity`, `Capacity u.`, `Maximum Capacity`, `Date`, `Time alert email`, `Time max warning`, `Warning capacity` |
-| `Time registration` | `Date` 1-1-2024 → 10-9-2026 | `Date Time`, `User`, `Extra User`, `Scan code`, `Context`, `Context ref.`, `Action`, `Action reference` |
-| `Control Revaluation of stock due to FSP-changes` | `Mutation date` 1-1-2024 → 10-9-2026, product code `zzzzzzzzzzzzzzz` | see [fsp.md](fsp.md) |
-| `Purchases and sales per revenue group` | ⚠️ **Year/Month blank** — so this one is unproved | `Revenue group no.`, `Revenue group`, `Year`, `Month`, `Order type`, `Purchase (kg)`, `Purchase revenue`, `Weight`, `Revenue`, `Profit`, `Profit %`, `Avg. Sales Price/Kg` |
+| Screen                                            | Filter used                                                          | Columns it would have                                                                                                                                                      |
+| ------------------------------------------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Capacity checks`                                 | `Workorder date` 1-1-2024 → 10-9-2026                                | `Status`, `Check`, `Type`, `Occupied capacity`, `Capacity u.`, `Maximum Capacity`, `Date`, `Time alert email`, `Time max warning`, `Warning capacity`                      |
+| `Time registration`                               | `Date` 1-1-2024 → 10-9-2026                                          | `Date Time`, `User`, `Extra User`, `Scan code`, `Context`, `Context ref.`, `Action`, `Action reference`                                                                    |
+| `Control Revaluation of stock due to FSP-changes` | `Mutation date` 1-1-2024 → 10-9-2026, product code `zzzzzzzzzzzzzzz` | see [fsp.md](fsp.md)                                                                                                                                                       |
+| `Purchases and sales per revenue group`           | ⚠️ **Year/Month blank** — so this one is unproved                    | `Revenue group no.`, `Revenue group`, `Year`, `Month`, `Order type`, `Purchase (kg)`, `Purchase revenue`, `Weight`, `Revenue`, `Profit`, `Profit %`, `Avg. Sales Price/Kg` |
 
 ## Still unproved either way
 
@@ -62,7 +62,7 @@ These returned nothing, but their filter rows were not captured, so it is not
 known whether they are empty or were asked about September 2026. **They are not
 evidence of anything yet.**
 
-Two more joined them on the same day, and these two are *known* to have been
+Two more joined them on the same day, and these two are _known_ to have been
 asked with a blank `Year`/`Month`, so they are certainly unproved:
 
 - **`SFN statistics Product-Market`** — `sfn_no`, `Year`, `Month`,
@@ -91,6 +91,21 @@ export rather than an empty screen — which is the difference that matters:
 **A column that is blank on every row of a full export is evidence. An empty
 grid is not.** The first is the system telling you it does not use something;
 the second is usually you telling the system the wrong dates.
+
+## A sixth, found the right way round
+
+`Production capacity details` has 1 970 rows, and four of its 48 columns are
+blank on **every one of them**:
+
+```
+Sawing workorder status   Sawing machine   Sawing type   Standing
+```
+
+So the sawing detail this screen exists to show is not filled in — which fits
+`Sawing layouts` returning nothing and `Machines` having no detail screen. The
+saw is used; the system's sawing _planning_ is not.
+
+That is a full export with a blank column, so it counts as evidence.
 
 ## What was built
 

@@ -7,6 +7,8 @@ comes from, and — where it is not yet known — exactly what to do in the old
 system to find out.
 
 > **Start here for the current state:**
+> [COVERAGE.md](COVERAGE.md) — **how much is actually built** ·
+> [chart-of-accounts.md](chart-of-accounts.md) — the 27 accounts ·
 > [LOGISTICS-BUILT.md](LOGISTICS-BUILT.md) — what is built ·
 > [receipt-chain.md](receipt-chain.md) — how goods become stock ·
 > [PLANNED-CODE-CHANGES.md](PLANNED-CODE-CHANGES.md) — every edit, and why ·
