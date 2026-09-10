@@ -392,3 +392,48 @@ purchase side, so it cannot record where 1 371 of 2 247 lots came from.
   `Standard product`, `Fixed dimensions`.
 - `Gipgroup` / `Gip product group` (`P3040020` / `PK304`) — still unexplained,
   as noted above.
+
+---
+
+# How a lot is identified — six fields, seen together at last (10-9-2026)
+
+The Stock panel on the reference's **order 100742** prints them side by side for
+the first time. They are not interchangeable and we had two of them under the
+wrong names.
+
+| Reference column | Example values | What it is | Ours |
+| ---------------- | -------------- | ---------- | ---- |
+| `Charge` | `1125372` · `030325` · `4A2829D` | the mill's heat number | `charge` |
+| `Internal charge` | `25AAEY` · `25ACBP` · `22JDEI` | ours: year + four letters | `internal_charge` |
+| `Internal batch` | `385385` · `388066` · `379348` | ours: a six-digit running number | `internal_batch` ⚠️ **renamed** |
+| `Batch` | `P01558765` · `269338` · `21B07832-1` | the **supplier's** batch | `bundle` |
+| `Factory number` | — | the mill's works number | `factory_number` 🆕 |
+| `Plate no.` | — | the plate within its heat | `plate_number` |
+
+Two of them coincide on one row — `4A2829D` is both the charge and the batch —
+and differ on every other, which is exactly why both are kept. One charge can
+cover many batches: `030325` arrived as `269335`, `269336`, `269337`, `269338`,
+`269339`, `269353` and `269354`, one per bundle.
+
+⚠️ **`internal_bundle` was the wrong name.** It was added 9-9-2026 from a
+truncated column header reading `Interne …`, and the full header is `Internal
+batch`. The reference keeps a separate `Batch` beside it, so the old name
+invited precisely the confusion the rename removes. The column had never been
+written to, so it was renamed in place rather than dropped.
+
+`Factory number` and `Plate no.` are blank on all thirteen lots of this order
+and on every lot seen before it. They are recorded because the reference carries
+them, not because anything uses them.
+
+## The lot also names its own origin
+
+The same panel carries `Purchase order`, `Receipt date` and `Supplier` on every
+row — `IO400372 / 26-3-2025 / Vig Metal Sales`. Independent confirmation of
+[receipt-chain.md](receipt-chain.md): a lot knows the purchase order that
+brought it in, for years afterwards.
+
+⚠️ And it corrects the number series. Those purchase orders read `IO400018` but
+also **`IO100042`**, `IO100035`, `IO100076` — purchase orders in the `1xxxxx`
+range, all of them from 2022 and 2024. The prefix is what disambiguates: `O` for
+a sales order, `IO` for an *inkooporder*. The `1xxxxx = sales` rule holds for
+recent records and is not a law. See [order-detail.md](order-detail.md).

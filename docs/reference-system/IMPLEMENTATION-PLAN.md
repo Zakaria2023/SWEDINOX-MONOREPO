@@ -115,10 +115,10 @@ applies two of the four. **To add:** the three surcharges, `extraDiscountPercent
 and the two `Transfer … to order line` flags that say the build-up is computed
 on the order and pushed to the line.
 
-⚠️ **The discount order is an assumption.** Cascading, not additive — every
-captured row had 0 % in both boxes, where the two agree. €1.000 at 5 % and 3 %
-is €921,50 cascading and €920,00 additive. **One quote line with real figures
-in both boxes settles it.**
+✅ **The discount order is cascading, and now proved.** Every captured row had
+0 % in both boxes, where the two readings agree, so it took a line typed by
+hand: quote 900003 printed €921,50 on €1.000 at 5 % and 3 %, against €920,00
+for additive. See [discount-basis.md](discount-basis.md).
 
 ### 3. Weighed weight beside theoretical
 

@@ -9,7 +9,17 @@ system to find out.
 > **Start here for the current state:**
 > [LOGISTICS-BUILT.md](LOGISTICS-BUILT.md) — what is built ·
 > [receipt-chain.md](receipt-chain.md) — how goods become stock ·
-> [PLANNED-CODE-CHANGES.md](PLANNED-CODE-CHANGES.md) — queued edits, none applied ·
+> [PLANNED-CODE-CHANGES.md](PLANNED-CODE-CHANGES.md) — every edit, and why ·
+> [discount-basis.md](discount-basis.md) — the discounts cascade ·
+> [reservations.md](reservations.md) — a reservation binds a lot ·
+> [order-detail.md](order-detail.md) — a sales order, and the four price bases ·
+> [customer-stock.md](customer-stock.md) — whose metal is in the rack ·
+> [credit-and-blocking.md](credit-and-blocking.md) — creditspace, and 3 holds ·
+> [order-types.md](order-types.md) — Stk vs CD ·
+> [finance-screens.md](finance-screens.md) · [contracts.md](contracts.md) ·
+> [PLANNED-CODE-CHANGES-2.md](PLANNED-CODE-CHANGES-2.md) — **queued, none applied** ·
+> [fsp.md](fsp.md) — the price stock is carried at ·
+> [empty-screens.md](empty-screens.md) — and the filter that lies ·
 > [locations.md](locations.md) · [trip-data.md](trip-data.md) ·
 > [exports/README.md](exports/README.md) — how to capture one, and what is on disk ·
 > [NEXT-LOGISTICS.md](NEXT-LOGISTICS.md) — what to capture next

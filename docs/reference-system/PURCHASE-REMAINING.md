@@ -47,13 +47,11 @@ this:
 Ours has `grossPrice`, `groupDiscountPercent` and `lineDiscountPercent` —
 **three of the seven**. Missing: the three surcharges and `extraDiscountPercent`.
 
-⚠️ **And the order the discounts apply in is a guess.** Cascading, not
-additive. Every captured row had 0 % in both boxes, where the two agree.
-€1.000 at 5 % and 3 % is €921,50 cascading against €920,00 additive.
-
-*Blocked on:* one quote line with real figures typed into both discount boxes.
-See [WHAT-I-NEED-FROM-YOU.md](WHAT-I-NEED-FROM-YOU.md) item 2 — it takes thirty
-seconds and settles the whole thing.
+✅ **The order the discounts apply in is cascading, and no longer a guess.**
+Every captured row had 0 % in both boxes, where the two readings agree, so it
+took a line typed by hand on 10-9-2026: quote 900003 printed €921,50 on €1.000
+at 5 % and 3 %, against €920,00 for additive. See
+[discount-basis.md](discount-basis.md).
 
 ---
 

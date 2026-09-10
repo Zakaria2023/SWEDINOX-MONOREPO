@@ -3,8 +3,169 @@
 Same shape as the Purchase list: open the screen, do the thing, send the
 picture with its number.
 
-**Round 2 is the live list** — everything below it has already arrived and is
-kept for the record.
+**Round 3 is the live list.** Round 2 below it is complete except for the
+discount basis, which is repeated as Block A. Everything under Round 2 has
+arrived and is kept for the record.
+
+---
+
+# 🔴 Round 3 — the full-day worksheet (10-9-2026)
+
+**This is the live list.** Round 2 below it is complete except for its item 2,
+which is repeated here as Block A because it is still the one thing blocking
+code.
+
+Fourteen screens, four records, one one-minute test. Priority is strictly
+**A → B → C → D**; if the day runs short, stop wherever you are and the blocks
+above still stand on their own.
+
+## The four rules of an export
+
+1. **`View` = `-empty-` first**, always. The default view *hides* columns rather
+   than scrolling them — Trip data shows 7 of its 20.
+2. **Dates from `1-1-2024`.** Never leave the `from` box blank: a blank `from`
+   voids the filter and returns zero rows.
+3. **`Show in Excel`**, never `Save as Excel` — blocked on this install.
+4. **Leave every workbook open.** They are read out of the running Excel
+   instance. Work in batches of four, then wait for confirmation before closing.
+
+---
+
+## Block A — the blocker · ✅ done 10-9-2026
+
+### A1. ~~The discount basis~~ ✅
+
+Answered on purchase quote **`900003`**: gross 1.000,00 at 5 % line and 3 %
+group printed a `Net Price` of **921,50**. **The discounts cascade.**
+
+`netPriceAfterDiscounts` already multiplied the two, so no code changed — but
+the same screenshot priced the line at 70,7 kg and exposed a **real rounding
+bug**: `roundToCents` was returning a cent low on every exact half-cent, having
+carried a doc comment for months claiming it did the opposite. Full write-up in
+[discount-basis.md](discount-basis.md).
+
+**Block A is closed. Start at Block B.**
+
+---
+
+## Block B — ✅ B1 and B3 answered 10-9-2026
+
+### B1. ~~`Reservations`~~ ✅ — **a reservation binds a specific lot**
+
+Worth the trip. The reservation hides behind a right-click (`Toon
+reserveringen`), it names the order **line**, one lot can be held by several
+lines at once, and it corrected a rule we had invented — `Definitive` has
+nothing to do with being invoiced. Built as a real table.
+[reservations.md](reservations.md).
+
+### B3. ~~`Stock history`~~ ✅ — **zero rows**, like six others.
+[empty-screens.md](empty-screens.md).
+
+### B2. ~~`Klant voorraad op locatie`~~ ✅ — **94 rows, and it found a bug**
+
+No new column: ownership is carried by `Stock category = 3rd party inventory`
+with the owner in the `Supplier` field. But customer metal sits on ordinary
+`Pick` locations, unblocked, and our sales stock picker had nothing excluding
+it — **a customer's own plate was sellable to a different customer.** Fixed.
+[customer-stock.md](customer-stock.md).
+
+<details><summary>The original asks, kept for the record</summary>
+
+### B1. `Reservations`
+
+Recipe → 📸 grid → Excel. Then 📸 **one reservation opened**.
+
+**After:** whether a reservation binds a **specific lot** or only a quantity of a
+product, and whether it carries its own status. Lot-level means a foreign key;
+quantity-level means a number. Two screens already built point straight at this
+one — `Blocked deliveries` and `Deliveries to be arranged without stock
+reservation` — and `reservations/` was built blind from the menu name.
+
+### B2. `Klant voorraad op locatie` — customer stock on location
+
+Recipe → 📸 grid → Excel.
+
+**After:** whose metal it is. Customer-owned stock in our racks must never be
+sellable, never valued in the stock figure and never counted in order advice.
+`Stock` has **no owner column at all**, so this is the likeliest remaining
+column in the whole list.
+
+### B3. `Stock history`
+
+Recipe → 📸 grid → Excel.
+
+**After:** how it differs from `Stock mutations`, of which 13 562 rows are
+already captured. A dated snapshot per product is a table we do not have; the
+same movements grouped differently is a view, and the route should then go.
+
+</details>
+
+---
+
+## Block C — five screens built from menu names only · ~40 min
+
+Each exists as a route, built from column headers, and has **never been seen
+with a real row in it**. Recipe → 📸 grid → Excel. No detail screens needed.
+
+✅ **All five returned zero rows on 10-9-2026**, as did `Capacity checks` and
+`Time registration` from Block D. That is an answer and not a failed capture: it
+is the **fourth** feature-group this system ships switched off.
+[empty-screens.md](empty-screens.md).
+
+| # | Screen | Result |
+|---|---|---|
+| C1 | `Production batches` | ✅ empty |
+| C2 | `Freight movement` | ✅ empty |
+| C3 | `Revenue per product` | ✅ empty |
+| C4 | `Freight flow (SFN)` | ✅ empty — but `FSP` is explained elsewhere now, see [order-detail.md](order-detail.md) |
+| C5 | `Sawing layouts` | ✅ empty |
+
+---
+
+## Block D — ✅ mostly answered; two screens have data after all
+
+⚠️ **`Production capacity` (403 rows) and `Production capacity details` (1.970
+rows) are not empty** — an earlier note said otherwise and was wrong. The 403
+rows confirmed `capacityRemaining` from a second screen and found one row the
+old clamp was hiding.
+
+## Block D — the planning set · ~30 min
+
+Worth doing only as a **set**, because one question spans all five: **is
+processing planned against machine capacity, or merely recorded after the
+fact?** `Aanhalen` turned out to be ten separate capacity pools rather than one,
+which is what makes it matter.
+
+- **D1** `Production capacity` — 🟠 not captured
+- **D2** `Production capacity details` — 🟠 not captured
+- **D3** ~~`Capacity checks`~~ — ✅ **empty**; its ten columns are recorded
+- **D4** ~~`Time registration`~~ — ✅ **empty**; its eight columns are recorded
+- **D5** `(Re)optimize` — 🟠 not captured
+
+Two of the five are answered and both are empty, which makes the set's own
+question mostly answered: **processing is not planned against machine capacity
+here.** [empty-screens.md](empty-screens.md).
+
+⚠️ **Empty is an answer.** `Resource` and transport costing both shipped
+switched off. If this set comes back empty too, that settles it and we do not
+build a third dead feature.
+
+---
+
+## Block E — four records opened · ~15 min
+
+Screenshots only. Each answers something a grid cannot.
+
+- **E1** 📸 **one trip**, every tab. 438 trip rows are captured and a trip has
+  never been seen. Specifically: a `Bill of lading` numbered `300813` against a
+  `Trip number` numbered `600249` — two series, two documents, one delivery,
+  and the pair is unexplained.
+- **E2** 📸 **one production batch**, every tab.
+- **E3** 📸 **one remnant lot** (an offcut the saw made), showing its
+  **`Supplier`** — us, or the original mill? It decides whether a remnant traces
+  back to the heat it was cut from.
+- **E4** 📸 **one `Bewerker` lot** — any lot at an external-processor location.
+  All 36 are blocked; which screen sets that, and can it be lifted by hand?
 
 ---
 
@@ -17,20 +178,20 @@ ones that actually change code.**
 ## 🟢 The code side is finished
 
 Everything these screens could settle has been built and verified —
-**87 checks passing** against ~71 000 exported rows. See
+**95 checks passing** against ~71 000 exported rows. See
 [PLANNED-CODE-CHANGES.md](PLANNED-CODE-CHANGES.md).
 
-**One thing is still outstanding and it needs you, not code:** the discount
-basis. One quote line — gross `1000`, line discount `5`, group discount `3` —
-and the `Net Price` it prints. `950` means both come off the gross; `921,50`
-means the second comes off what the first left.
+The one item that needed a person rather than an export — the discount basis —
+was answered on 10-9-2026: **they cascade**, and the same screenshot turned up a
+rounding bug worth more than the question did.
+[discount-basis.md](discount-basis.md).
 
 ## Status after the 9-9-2026 walkthrough
 
 | # | | |
 |---|---|---|
 | 1 | the receipt chain | ✅ **answered** — the lot exists before the invoice. [receipt-chain.md](receipt-chain.md) |
-| 2 | the discount basis | 🔴 still open, still 60 seconds |
+| 2 | the discount basis | ✅ **answered 10-9-2026** — they cascade. [discount-basis.md](discount-basis.md) |
 | 3 | `Trip data` | ✅ **arrived twice** — 438 trips, and the `-empty-` view proves **transport costing is switched off** (`Driver`/`Km`/`Cost price` empty on all 438). [trip-data.md](trip-data.md) |
 | 4 | `Reservations` | 🟠 partly — `Reserved` is a column on every lot, but the screen itself is unseen |
 | 5 | a customer-held delivery | ✅ **answered** — it is a **location type** (`Afroep`), not a boolean |
@@ -79,7 +240,7 @@ and the docs are wrong. One order answers it.
 
 ---
 
-## 2. The discount basis — 30 seconds, and it has been open for three rounds
+## 2. ✅ The discount basis — answered 10-9-2026 on quote 900003: **921,50**, they cascade
 
 Still the cheapest unanswered question in the whole system. Blocked deliveries
 prints both discount columns and reads `0 %` on every row, so even the

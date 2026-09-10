@@ -302,9 +302,10 @@ locations under `Productie`. Null on every type that needs no splitting.
 
 # ⚪ Cannot be done here
 
-**The discount basis.** One quote line — gross `1000`, line discount `5`, group
-discount `3` — and the `Net Price` it prints. `950` means both come off the
-gross; `921,50` means the second comes off what the first left.
+~~**The discount basis.**~~ ✅ **Done 10-9-2026** — quote 900003 printed
+**921,50**, so the discounts cascade and `netPriceAfterDiscounts` was already
+right. The same screenshot exposed a rounding bug that was not:
+[discount-basis.md](discount-basis.md).
 
 `netPriceAfterDiscounts` currently multiplies the two, and no export settles it:
 Blocked deliveries prints both discount columns and reads `0 %` on every row.

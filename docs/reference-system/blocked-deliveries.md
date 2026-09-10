@@ -111,11 +111,15 @@ it. All zero across the sample — nothing here is bought to order.
 
 ---
 
-## ⚠️ Still not proved: the discount basis
+## ✅ The discount basis — settled elsewhere
 
 `Line discount` and `Group discount` are printed side by side on every row — and
-read **0 %** on every single one. So this screen, which is the best-placed one
-in the system to settle whether the two discounts cascade or add, does not.
+read **0 %** on every single one. So this screen, the best-placed one in the
+system to settle whether the two discounts cascade or add, did not.
 
-That remains [WHAT-I-NEED-FROM-YOU.md](WHAT-I-NEED-FROM-YOU.md) item 2: one
-quote line with real figures typed into both boxes.
+✅ **Answered 10-9-2026 on purchase quote 900003.** The discounts **cascade**:
+gross 1.000,00 with a 5 % line discount printed a `Net Price` of 950,00, and
+with a 3 % group discount added it printed **921,50**. Additive would have
+printed 920,00. `netPriceAfterDiscounts` already multiplied the two, so no code
+changed — what changed is that it is now proved. See
+[discount-basis.md](discount-basis.md).

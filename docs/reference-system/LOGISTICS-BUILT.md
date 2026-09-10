@@ -290,11 +290,12 @@ substantial piece of work.
    `Warehouses`, a self-referencing tree that already carries `locationType`,
    `blocked`, `blockReason` and the maximum dimensions. See
    [locations.md](locations.md).
-7. **The discount basis** — 🔴 **the only thing still open, and the only one
-   that cannot be closed from here.** Blocked deliveries prints both discount
-   columns and reads 0 % on every row, so even the best-placed screen did not
-   settle it. One quote line: gross `1000`, line `5`, group `3`, and the
-   `Net Price` it prints. `950` or `921,50`.
+7. ~~**The discount basis**~~ — ✅ **closed 10-9-2026.** Blocked deliveries
+   prints both discount columns and reads 0 % on every row, so it took a line
+   typed by hand: quote 900003 printed **921,50**, and the discounts cascade.
+   No code changed — `netPriceAfterDiscounts` already multiplied the two — but
+   the same screenshot did expose a real rounding bug. See
+   [discount-basis.md](discount-basis.md).
 
 ---
 

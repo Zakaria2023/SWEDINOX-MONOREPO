@@ -26,23 +26,19 @@ chain.
 
 ---
 
-## 2. Two numbers in a quote — 30 seconds
+## 2. ✅ Two numbers in a quote — done 10-9-2026
 
-1. Open purchase quote `900002`
-2. On the line, set `Gross Price` = **1000**
-3. Set `Line Discount` = **5**
-4. Set `Group Discount` = **3**
-5. Press Tab
+Quote **900003**, gross 1.000,00 at 5 % line and 3 % group, printed a `Net
+Price` of **921,50**.
 
-📸 **The `Net Price` cell.**
-
-| It shows | Meaning |
+| It showed | Meaning |
 |---|---|
-| **921,50** | discounts cascade — my code is right |
-| **920,00** | discounts add up — I change one line |
+| **921,50** ✅ | discounts cascade — the code was right |
+| ~~920,00~~ | discounts add up — not what happened |
 
-Why: on a €50.000 order these are €75 apart, and it is the one money rule in
-the code I cannot work out by reasoning.
+The line was captured twice seconds apart, once before the group discount was
+committed (950,00) and once after (921,50), so both readings come off the same
+line. [discount-basis.md](discount-basis.md).
 
 ---
 
