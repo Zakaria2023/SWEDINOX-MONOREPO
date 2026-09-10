@@ -633,11 +633,38 @@ export const fullName = (
  * Two of eighteen priced lines read off the reference's Blocked deliveries
  * screen land on that boundary, so it is common enough to matter.
  *
+ * ⚠️ `Math.round(value * 100) / 100` does not fix it either, which this
+ * function claimed to do for months and did not. The drift is already in the
+ * argument: 462,9 x 2,55 evaluates to 1 180,394999999999 and 950 x 0,0707 to
+ * 67,16499999999999, both a hair **below** the midpoint, so an honest rounder
+ * is right to round them down. The decimal the arithmetic meant is gone before
+ * this function is called.
+ *
+ * So recover it first. Twelve significant digits is far inside a double's
+ * fifteen-to-seventeen, which means `toPrecision` restores the intended
+ * decimal without touching a value that genuinely sits below the boundary:
+ * 67,16499 and even 67,1649999999 still round down. Across 600.000 random
+ * amounts this differs from the naive form on one, and that one is a true
+ * half-cent. Above 1e9 cents there is no slack left to recover, so it steps
+ * aside.
+ *
+ * The 950/921,50 pair is the reference's own arithmetic, off purchase quote
+ * 900003: 70,7 kg at EUR 950/TN prints EUR 67,17, at EUR 921,50/TN EUR 65,15.
+ *
+ * ⚠️ One behaviour changes for negative amounts. Half-up means toward +∞, so a
+ * credit line landing exactly on -67,165 now reads -67,16 where it used to
+ * read -67,17. That is the consistent reading rather than a new rule — the old
+ * answer came from drift, not from a decision — but no negative half-cent has
+ * been seen in the reference, so it is an assumption and not a proof.
+ *
  * Anything storing money should round with this first and only then format, so
  * that what is written matches what the reference would have written.
  */
-export const roundToCents = (value: number): number =>
-  Math.round(value * 100) / 100;
+export const roundToCents = (value: number): number => {
+  const scaled = value * 100;
+  const meant = Math.abs(scaled) < 1e9 ? Number(scaled.toPrecision(12)) : scaled;
+  return Math.round(meant) / 100;
+};
 
 /** An amount as a decimal string, rounded to the cent the way a ledger does. */
 export const moneyString = (value: number): string =>
@@ -8724,15 +8751,23 @@ export const optionAmount = (
  * A purchase line's net price: the gross price less the group discount and
  * then the line discount, both percentages.
  *
- * ⚠️ The order is cascading — the line discount comes off what is left after
- * the group discount, not off the gross. That is the ordinary trade
- * convention, but it is **not proved against the reference**: every captured
- * row carried 0 % in both boxes, where cascading and additive give the same
- * answer. On a EUR 50.000 line with 5 % and 3 % the two readings differ by
- * about EUR 75.
+ * The discounts **cascade** — the second comes off what the first left, not off
+ * the gross. Proved on purchase quote 900003, typed into the reference on
+ * 10-9-2026 for exactly this question, because every row captured before it
+ * carried 0 % in both boxes and 0 % cannot tell the two readings apart:
  *
- * One quote line with a real figure typed into both boxes settles it. Until
- * then this is the assumption, stated where it can be found.
+ *   gross 1.000,00  line 5 %  group  —     Net Price   950,00
+ *   gross 1.000,00  line 5 %  group 3 %     Net Price   921,50
+ *
+ * The first line is the same quote caught mid-edit, before the group discount
+ * was committed, so both readings come from one line seconds apart. 950 x 0,97
+ * is 921,50; additive would have printed 920,00. Multiplication is commutative,
+ * so which discount is applied first does not matter and the argument order
+ * here is free.
+ *
+ * The same screenshot settles a second thing in passing: `Amount` is the net
+ * price times the weight in the price's own unit, not times the piece count.
+ * 921,50 per tonne on 70,7 kg prints EUR 65,15, and at 950 it printed 67,17.
  */
 export const netPriceAfterDiscounts = (
   grossPrice: number,
@@ -8799,9 +8834,23 @@ export const callOffRemaining = (planned: number, actual: number): number =>
  *
  * Which means the capacity booked for the day is `occupied` on its own. Adding
  * the three together counts the same work orders twice over.
+ *
+ * Confirmed a second time on 10-9-2026, from a different screen: all 403 rows
+ * of the Production capacity export satisfy it, across both its squared and its
+ * un-squared column families.
+ *
+ * ⚠️ **It is not clamped at zero, and it used to be.** One of those 403 rows —
+ * `Knip` / ShearCut — reads 2.180 occupied against 2.296 ready and the
+ * reference prints `Remaining -116`. More work was reported ready than was ever
+ * booked, and that is worth seeing. Clamping turned it into a tidy zero and
+ * threw away the only signal that the day's numbers do not add up.
+ *
+ * This is the opposite decision to [callOffRemaining], deliberately: there,
+ * over-delivery means nothing is left to call off, and a negative would read as
+ * the customer owing us goods back. Here a negative has a plain meaning.
  */
 export const capacityRemaining = (occupied: number, ready: number): number =>
-  Math.max(0, occupied - ready);
+  occupied - ready;
 
 /**
  * The seven states a trip passes through, and what each one means for the
