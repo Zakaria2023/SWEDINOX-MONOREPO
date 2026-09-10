@@ -15,6 +15,7 @@ import {
   stockUnits,
 } from "../../lib/enums";
 import { OrderItems } from "./order-items";
+import { PurchaseOrderItems } from "./purchase-order-items";
 import { Stock } from "./stock";
 
 // A claim on one lot by one order line — the reference's `Reservations` screen,
@@ -49,12 +50,25 @@ export const Reservations = mysqlTable(
       .notNull()
       .references(() => Stock.uuid, { onDelete: "cascade" }),
 
-    // What is holding it: `O100742/50` is order 100742, line 50. The reference
-    // prints the pair as one string and we keep the line's own key, which is
-    // the same fact said properly.
-    orderItemUuid: char("order_item_uuid", { length: 36 })
-      .notNull()
-      .references(() => OrderItems.uuid, { onDelete: "cascade" }),
+    // What is holding it, and it is polymorphic — the same shape as a stock
+    // movement's cause. `O100742/50` is sales order 100742, line 50; a purchase
+    // reservation names a `4xxxxx` purchase line instead.
+    //
+    // **Both are nullable, and exactly one is normally set.** Two independent
+    // reasons, each from the reference's own 435-row export:
+    //
+    //   * 23 reservations are on the **purchase** side — a coil out at an
+    //     external processor, held by the purchase order for the work.
+    //   * 5 are `Temporary` and their `Order` column reads **0**. Somebody is
+    //     holding metal with no document behind it at all, and a notNull column
+    //     would make that unrecordable.
+    orderItemUuid: char("order_item_uuid", { length: 36 }).references(
+      () => OrderItems.uuid,
+      { onDelete: "cascade" },
+    ),
+    purchaseOrderItemUuid: char("purchase_order_item_uuid", {
+      length: 36,
+    }).references(() => PurchaseOrderItems.uuid, { onDelete: "cascade" }),
 
     // `Company` on the panel is the customer behind that order line. It is not
     // stored: it is one join away and storing it would let the two disagree.
@@ -90,6 +104,9 @@ export const Reservations = mysqlTable(
   (table) => [
     index("idx_reservations_stock_uuid").on(table.stockUuid),
     index("idx_reservations_order_item_uuid").on(table.orderItemUuid),
+    index("idx_reservations_purchase_order_item_uuid").on(
+      table.purchaseOrderItemUuid,
+    ),
     index("idx_reservations_reserved_for").on(table.reservedFor),
   ],
 );

@@ -1,7 +1,7 @@
 import { OrderListItem } from "@/app/(dashboard)/orders/actions";
 import { OrderMethod } from "@/lib/enums";
 import { dateCell, ExportColumn, textCell } from "@/lib/excel";
-import { ORDER_METHOD_LABELS } from "@/lib/labels";
+import { ORDER_METHOD_LABELS, ORDER_TYPE_LABELS } from "@/lib/labels";
 
 /**
  * The orders overview as a sheet: the columns it shows, and the plain value
@@ -16,6 +16,7 @@ export type OrderColumnKey =
   | "id"
   | "companyName"
   | "contact"
+  | "orderType"
   | "orderMethod"
   | "deliveryDate"
   | "createdAt";
@@ -37,6 +38,15 @@ export const ORDER_COLUMNS: Array<ExportColumn<OrderListItem, OrderColumnKey>> =
         textCell(
           [row.contactFirstName, row.contactLastName].filter(Boolean).join(" "),
         ),
+    },
+    {
+      key: "orderType",
+      label: "Order type",
+      // Hidden by default: 1.933 of the reference's 1.970 lines are Normal, so
+      // the column is nearly all one value and only earns its width when
+      // somebody is looking for the call-offs and the rushes.
+      defaultVisible: false,
+      value: (row) => ORDER_TYPE_LABELS[row.orderType],
     },
     {
       key: "orderMethod",

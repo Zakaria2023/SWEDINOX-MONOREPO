@@ -1,21 +1,9 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
-import { useFieldArray, useForm } from "react-hook-form";
-import {
-  ContractOption,
-  createOrder,
-  getContractsByCompanyUuid,
-  OrderActionResult,
-  OrderExtras,
-} from "./actions";
 import {
   AddressOption,
   getAddressesForCompany,
 } from "@/app/(dashboard)/addresses/actions";
-import { DEFAULT_ORDER, orderSchema, OrderFormValues } from "./validation";
 import {
   CompanyOption,
   getProjectsForCompany,
@@ -31,17 +19,37 @@ import {
 } from "@/app/(dashboard)/warehouse-work-orders/actions";
 import { SelectOption } from "@/components/shadcn/select";
 import {
-  deliveryTerms,
-  invoicePaymentTerms,
-  orderMethods,
-  orderWeightTypes,
   DeliveryTerm,
+  deliveryTerms,
   InvoicePaymentTerm,
+  invoicePaymentTerms,
   OrderMethod,
+  orderMethods,
+  OrderType,
+  orderTypes,
   OrderWeightType,
+  orderWeightTypes,
 } from "@/lib/enums";
-import { DELIVERY_TERM_LABELS, INVOICE_PAYMENT_TERM_LABELS, ORDER_METHOD_LABELS, ORDER_WEIGHT_TYPE_LABELS } from "@/lib/labels";
 import { toDecimal } from "@/lib/helpers";
+import {
+  DELIVERY_TERM_LABELS,
+  INVOICE_PAYMENT_TERM_LABELS,
+  ORDER_METHOD_LABELS,
+  ORDER_TYPE_LABELS,
+  ORDER_WEIGHT_TYPE_LABELS,
+} from "@/lib/labels";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useRouter } from "next/navigation";
+import { useEffect, useState, useTransition } from "react";
+import { useFieldArray, useForm } from "react-hook-form";
+import {
+  ContractOption,
+  createOrder,
+  getContractsByCompanyUuid,
+  OrderActionResult,
+  OrderExtras,
+} from "./actions";
+import { DEFAULT_ORDER, OrderFormValues, orderSchema } from "./validation";
 
 type UseOrderSubmitParams = {
   companies: CompanyOption[];
@@ -150,6 +158,14 @@ export const useOrderSubmit = ({ companies }: UseOrderSubmitParams) => {
     ORDER_WEIGHT_TYPE_LABELS as Record<OrderWeightType, string>,
   );
 
+  // Normal, Call-off or Rush — the reference's own dropdown at the top of its
+  // order-type block, and not the same field as the `Order type` column on its
+  // revenue screens. That one is the line's sourcing.
+  const orderTypeOptions = makeOptions(
+    orderTypes,
+    ORDER_TYPE_LABELS as Record<OrderType, string>,
+  );
+
   const paymentTermOptions = makeOptions(
     invoicePaymentTerms,
     INVOICE_PAYMENT_TERM_LABELS as Record<InvoicePaymentTerm, string>,
@@ -231,6 +247,7 @@ export const useOrderSubmit = ({ companies }: UseOrderSubmitParams) => {
           consignmentDuration: values.consignmentDuration,
           isInternalProduction: values.isInternalProduction,
           isCustomerMaterial: values.isCustomerMaterial,
+          orderType: values.orderType,
           weightType: values.weightType || null,
           isOverlength: values.isOverlength,
           isPrinted: values.isPrinted,
@@ -301,6 +318,7 @@ export const useOrderSubmit = ({ companies }: UseOrderSubmitParams) => {
     addressOptions,
     orderMethodOptions,
     deliveryTermOptions,
+    orderTypeOptions,
     weightTypeOptions,
     paymentTermOptions,
     contracts,

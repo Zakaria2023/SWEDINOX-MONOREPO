@@ -1,23 +1,23 @@
 "use client";
 
-import { FormProvider } from "react-hook-form";
-import { useOrderSubmit } from "@/app/(dashboard)/orders/use-order-submit";
-import { ClerkUserOption } from "@/lib/server/clerk";
 import { CompanyOption } from "@/app/(dashboard)/companies/actions";
+import { useOrderSubmit } from "@/app/(dashboard)/orders/use-order-submit";
 import { TextCategoryOption } from "@/app/(dashboard)/text-categories/actions";
 import { FormActions } from "@/components/ui/form-actions";
 import { FormError } from "@/components/ui/form-error";
+import { ClerkUserOption } from "@/lib/server/clerk";
+import { FormProvider } from "react-hook-form";
+import { ContractsSection } from "./sections/contracts-section";
+import { DeliverySection } from "./sections/delivery-section";
+import { DocumentsSection } from "./sections/documents-section";
+import { FinancesSection } from "./sections/finances-section";
+import { LogisticsSection } from "./sections/logistics-section";
 import { OrderInformationSection } from "./sections/order-information-section";
 import { OrderItemsSection } from "./sections/order-items-section";
 import { OrderTypeSection } from "./sections/order-type-section";
-import { DeliverySection } from "./sections/delivery-section";
-import { LogisticsSection } from "./sections/logistics-section";
-import { FinancesSection } from "./sections/finances-section";
-import { ContractsSection } from "./sections/contracts-section";
-import { SurchargesSection } from "./sections/surcharges-section";
 import { RemarksSection } from "./sections/remarks-section";
+import { SurchargesSection } from "./sections/surcharges-section";
 import { TextsSection } from "./sections/texts-section";
-import { DocumentsSection } from "./sections/documents-section";
 
 type Props = {
   companies: CompanyOption[];
@@ -40,6 +40,7 @@ export const OrderForm = ({ companies, clerkUsers, textCategories }: Props) => {
     addressOptions,
     orderMethodOptions,
     deliveryTermOptions,
+    orderTypeOptions,
     weightTypeOptions,
     paymentTermOptions,
     contracts,
@@ -76,6 +77,7 @@ export const OrderForm = ({ companies, clerkUsers, textCategories }: Props) => {
 
         <OrderTypeSection
           isConsignment={isConsignment}
+          orderTypeOptions={orderTypeOptions}
           weightTypeOptions={weightTypeOptions}
         />
 

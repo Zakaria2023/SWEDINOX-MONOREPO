@@ -1,7 +1,11 @@
 import { CompanyOption } from "@/app/(dashboard)/companies/actions";
-import { invoicePaymentTerms, orderStatuses } from "@/lib/enums";
+import { invoicePaymentTerms, orderStatuses, orderTypes } from "@/lib/enums";
 import { companyOptionLabel } from "@/lib/helpers";
-import { INVOICE_PAYMENT_TERM_LABELS, ORDER_STATUS_LABELS } from "@/lib/labels";
+import {
+  INVOICE_PAYMENT_TERM_LABELS,
+  ORDER_STATUS_LABELS,
+  ORDER_TYPE_LABELS,
+} from "@/lib/labels";
 import { TableFilterControl } from "@/lib/table-query";
 
 export const orderFilters = (
@@ -14,6 +18,16 @@ export const orderFilters = (
     options: orderStatuses.map((status) => ({
       value: status,
       label: ORDER_STATUS_LABELS[status],
+    })),
+  },
+  {
+    key: "orderType",
+    kind: "select",
+    label: "Order type",
+    placeholder: "Any",
+    options: orderTypes.map((type) => ({
+      value: type,
+      label: ORDER_TYPE_LABELS[type],
     })),
   },
   {

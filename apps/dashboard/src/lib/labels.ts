@@ -75,6 +75,8 @@ import {
   StockLabelType,
   StockMode,
   SfnCounterpartyRole,
+  OrderSourceType,
+  OrderType,
   ReservationStatus,
   ReservationType,
   StockUnit,
@@ -859,12 +861,28 @@ export const STOCK_UNIT_LABELS: Record<StockUnit, string> = {
   mm: "MM",
 };
 
+export const ORDER_TYPE_LABELS: Record<OrderType, string> = {
+  normal: "Normal",
+  call_off: "Call-off",
+  rush: "Rush",
+};
+
+export const ORDER_SOURCE_TYPE_LABELS: Record<OrderSourceType, string> = {
+  stock: "Stk",
+  stock_and_cross_dock: "Stk+CD",
+  cross_dock: "CD",
+};
+
 export const RESERVATION_TYPE_LABELS: Record<ReservationType, string> = {
   sale: "Sale",
+  purchase: "Purchase",
+  scrap: "Scrap",
 };
 
 export const RESERVATION_STATUS_LABELS: Record<ReservationStatus, string> = {
   definitive: "Definitive",
+  provisional: "Provisional",
+  temporary: "Temporary",
 };
 
 export const LEAD_TIME_METHOD_LABELS: Record<LeadTimeMethod, string> = {

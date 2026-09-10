@@ -1,4 +1,3 @@
-import { z } from "zod";
 import {
   contractTierUnits,
   deliveryTerms,
@@ -6,9 +5,11 @@ import {
   invoicePaymentTerms,
   invoiceSurchargeDescriptions,
   orderMethods,
+  orderTypes,
   orderWeightTypes,
 } from "@/lib/enums";
-import { todayDateString, currentYear } from "@/lib/helpers";
+import { currentYear, todayDateString } from "@/lib/helpers";
+import { z } from "zod";
 
 export const orderItemSchema = z.object({
   stockUuid: z.string().min(1, "Stock item is required"),
@@ -59,6 +60,7 @@ export const orderSchema = z.object({
   consignmentDuration: z.string().optional(),
   isInternalProduction: z.boolean(),
   isCustomerMaterial: z.boolean(),
+  orderType: z.enum(orderTypes),
   weightType: z.enum(orderWeightTypes).optional(),
   isOverlength: z.boolean(),
   isPrinted: z.boolean(),
@@ -149,6 +151,7 @@ export const DEFAULT_ORDER: OrderFormValues = {
   consignmentDuration: "",
   isInternalProduction: false,
   isCustomerMaterial: false,
+  orderType: "normal" as const,
   weightType: undefined,
   isOverlength: false,
   isPrinted: false,

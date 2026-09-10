@@ -1,17 +1,20 @@
 "use server";
-import { describeError, remainingToInvoice } from "@/lib/helpers";
 
+import { orderLineColumns } from "@/app/(dashboard)/order-lines/columns";
 import { db } from "@/db";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { OrderItems, SelectOrderItems } from "@/db/schema/order-items";
 import { Orders, SelectOrders } from "@/db/schema/orders";
+import { Products, SelectProducts } from "@/db/schema/products";
 import {
   PurchaseOrders,
   SelectPurchaseOrders,
 } from "@/db/schema/purchase-orders";
-import { Products, SelectProducts } from "@/db/schema/products";
 import { SelectStock, Stock } from "@/db/schema/stock";
-import { orderLineStatuses } from "@/lib/enums";
+import { orderLineStatuses, orderSourceTypes } from "@/lib/enums";
+import { describeError, remainingToInvoice } from "@/lib/helpers";
+import { getClerkUserNames } from "@/lib/server/clerk";
+import { exportRows } from "@/lib/server/excel";
 import {
   dateRangeFilter,
   enumFilter,
@@ -27,9 +30,6 @@ import {
   SearchParams,
   TableQuery,
 } from "@/lib/table-query";
-import { exportRows } from "@/lib/server/excel";
-import { orderLineColumns } from "@/app/(dashboard)/order-lines/columns";
-import { getClerkUserNames } from "@/lib/server/clerk";
 import { count, desc, eq, getTableColumns } from "drizzle-orm";
 
 export type OrderLineRow = {
@@ -41,6 +41,7 @@ export type OrderLineRow = {
   orderId: SelectOrders["id"] | null;
   lineNumber: SelectOrderItems["lineNumber"];
   lineStatus: SelectOrderItems["lineStatus"];
+  sourceType: SelectOrderItems["sourceType"];
   productCode: SelectProducts["productCode"] | null;
   description: SelectProducts["name"] | null;
   options: SelectOrderItems["options"];
@@ -101,6 +102,7 @@ const ORDER_LINE_SORTABLE = {
   customer: Companies.companyName,
   order: Orders.id,
   lineStatus: OrderItems.lineStatus,
+  sourceType: OrderItems.sourceType,
   productCode: Products.productCode,
   quantity: OrderItems.quantity,
   amount: OrderItems.amount,
@@ -111,6 +113,7 @@ const ORDER_LINE_SORTABLE = {
 // the table that grows fastest and a status filter on it must not be a scan.
 const ORDER_LINE_FILTERS = {
   lineStatus: enumFilter(OrderItems.lineStatus, orderLineStatuses),
+  sourceType: enumFilter(OrderItems.sourceType, orderSourceTypes),
   company: relationFilter(Orders.companyUuid),
   product: relationFilter(OrderItems.productUuid),
   deliveryDate: dateRangeFilter(OrderItems.deliveryDate),
@@ -143,6 +146,7 @@ const orderLineRows =
         orderId: Orders.id,
         lineNumber: OrderItems.lineNumber,
         lineStatus: OrderItems.lineStatus,
+        sourceType: OrderItems.sourceType,
         productCode: Products.productCode,
         description: Products.name,
         options: OrderItems.options,
@@ -195,6 +199,7 @@ const orderLineRows =
         orderId: row.orderId,
         lineNumber: row.lineNumber,
         lineStatus: row.lineStatus,
+        sourceType: row.sourceType,
         productCode: row.productCode,
         description: row.description,
         options: row.options,

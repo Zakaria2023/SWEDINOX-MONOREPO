@@ -595,18 +595,110 @@ export type StockUnit = (typeof stockUnits)[number];
  * is free; inventing a member now and finding the reference spells it
  * differently is not.
  */
-export const reservationTypes = ["sale"] as const satisfies readonly string[];
+/**
+ * How an order is being handled — the `Normal` dropdown in the reference's
+ * order-type block, read off 1.970 lines of its Production capacity details
+ * export:
+ *
+ *   Normal 1.933    Call-off 29    Rush 8
+ *
+ * ⚠️ **The reference labels two different fields `Order type`.** On the order
+ * itself and on Production capacity details it is this one — the urgency. On
+ * the revenue screens it is [orderSourceTypes] below, rolled up from the lines.
+ * The two share a header and share nothing else, and reading the revenue
+ * screens' header as this field is the mistake an earlier version of the notes
+ * made.
+ */
+export const orderTypes = [
+  "normal",
+  "call_off",
+  "rush",
+] as const satisfies readonly string[];
+
+export type OrderType = (typeof orderTypes)[number];
+
+/**
+ * Where the metal on a line comes from — the reference's `Line type`.
+ *
+ * It runs through the whole system as a column or a grouping level, and it
+ * splits purchases as well as sales. It is not a label:
+ *
+ *   Stk  EUR 6.930.267 revenue   2.580.020 kg   20,09 % margin
+ *   CD   EUR 2.102.335 revenue     793.310 kg   10,55 % margin
+ *
+ * A quarter of the volume at half the margin, which follows from what CD is:
+ * the goods are bought against a specific sale rather than taken out of stock,
+ * so nothing was carried and nothing was handled. Its own screen — `CD
+ * deliveries in progress` — prints the sales line and the purchase line on one
+ * row, which is what `OrderItems.purchaseOrderItemUuid` records.
+ *
+ * `Stk+CD` is a real third value, on 31 of 1.970 lines: a line filled partly
+ * from stock and partly by buying in.
+ *
+ * 🚫 Both revenue screens also show an unlabelled group carrying `Price
+ * differences` (94.091 kg at a 68 % margin). That is where price corrections
+ * land, not a way of selling steel, so it is not a member here.
+ *
+ * ⚠️ Not to be confused with `OrderItems.lineType`, which is ours and holds
+ * `material` — a different axis that the reference keeps in separate tables
+ * rather than in a column.
+ */
+export const orderSourceTypes = [
+  "stock",
+  "stock_and_cross_dock",
+  "cross_dock",
+] as const satisfies readonly string[];
+
+export type OrderSourceType = (typeof orderSourceTypes)[number];
+
+/**
+ * What kind of demand is holding a lot.
+ *
+ * Built from a single popup row reading `Sale`, then widened when the screen's
+ * own 435-row export arrived: its `Reservation type` column is a cross product
+ * of this and [reservationStatuses], and 23 rows are on the purchase side.
+ *
+ * A **purchase** reservation is external processing: 15 of the 23 stand at a
+ * `Bewerker` location and the company is the processor — Metalfinish, Decomecc,
+ * Demar Laser, Hego Production. Material goes out to be ground, foiled, slit or
+ * lasered and the purchase order for that work holds it. Coils and plates
+ * alike: 13 coils against 10 plates, so it is not a coil-only arrangement. The
+ * same flow the `Control Stock increase due to external processing` screen
+ * posts to GLA 3100.
+ *
+ * **`scrap`** appears once in 435 rows: two plates on a `Pick` location with no
+ * order behind them, waiting to be written off. One row is thin evidence for a
+ * member, but the reference prints the word and a scrap hold is a different
+ * thing from a sale — reading it as either of the other two would be worse.
+ *
+ * This is why the list was kept to the one proved value rather than padded out
+ * with guesses: widening a `mysqlEnum` costs nothing, and the guess would have
+ * been "production", which is not what any of the other three turned out to be.
+ */
+export const reservationTypes = [
+  "sale",
+  "purchase",
+  "scrap",
+] as const satisfies readonly string[];
 
 export type ReservationType = (typeof reservationTypes)[number];
 
 /**
- * How firm a reservation is. `Definitive` is the only value seen, and it
- * decides something real: a definitive reservation is what makes a lot's
- * `Available` fall below its `Technical` quantity. See [reservationTypes] on
- * why the list is not padded out with guesses.
+ * How firm a reservation is, and it is a progression rather than a label —
+ * across the reference's 435 reservations:
+ *
+ *   Temporary     5   `Order` is **0** on every one: a hold with no document
+ *   Provisional  66   a real order, but 64 of the 66 still at a `Pick` location
+ *   Definitive  364   169 of them at `Laad`, staged for a truck
+ *
+ * So a reservation starts as somebody holding metal by hand, becomes
+ * provisional when an order exists, and definitive once the goods are committed.
+ * `Temporary` is why `Reservations.orderItemUuid` is nullable.
  */
 export const reservationStatuses = [
   "definitive",
+  "provisional",
+  "temporary",
 ] as const satisfies readonly string[];
 
 export type ReservationStatus = (typeof reservationStatuses)[number];

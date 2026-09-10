@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { ReservationRecord } from "@/app/(dashboard)/reservations/actions";
 import {
   Table,
@@ -10,14 +9,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { TableExportButton } from "@/components/ui/table-export-button";
+import { formatDateColumn } from "@/lib/helpers";
 import {
   RESERVATION_STATUS_LABELS,
   RESERVATION_TYPE_LABELS,
   STOCK_UNIT_LABELS,
   WAREHOUSE_LOCATION_TYPE_LABELS,
 } from "@/lib/labels";
-import { TableExportButton } from "@/components/ui/table-export-button";
-import { formatDateColumn } from "@/lib/helpers";
+import Link from "next/link";
 
 type Props = {
   records: ReservationRecord[];
@@ -97,12 +97,14 @@ export const ReservationRecordsTable = ({ records }: Props) => (
                   {row.unit ? STOCK_UNIT_LABELS[row.unit] : "—"}
                 </TableCell>
                 <TableCell className="text-right">
-                  {row.orderId ?? "—"}
+                  {row.orderId ?? row.purchaseOrderId ?? "—"}
                 </TableCell>
                 <TableCell className="text-right">
-                  {row.lineNumber ?? "—"}
+                  {row.lineNumber ?? row.purchaseLineNumber ?? "—"}
                 </TableCell>
-                <TableCell>{row.companyName ?? "—"}</TableCell>
+                <TableCell>
+                  {row.companyName ?? row.supplierName ?? "—"}
+                </TableCell>
                 <TableCell>{RESERVATION_TYPE_LABELS[row.type]}</TableCell>
                 <TableCell>{RESERVATION_STATUS_LABELS[row.status]}</TableCell>
                 <TableCell>{formatDateColumn(row.reservedFor)}</TableCell>

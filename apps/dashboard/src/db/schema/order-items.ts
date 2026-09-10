@@ -16,12 +16,14 @@ import {
   deliveryStatuses,
   orderItemStatuses,
   orderLineStatuses,
+  orderSourceTypes,
   stockUnits,
 } from "../../lib/enums";
 import { Orders } from "./orders";
-import { Stock } from "./stock";
 import { Products } from "./products";
+import { PurchaseOrderItems } from "./purchase-order-items";
 import { PurchaseOrders } from "./purchase-orders";
+import { Stock } from "./stock";
 
 export const OrderItems = mysqlTable(
   "OrderItems",
@@ -56,7 +58,33 @@ export const OrderItems = mysqlTable(
 
     // ── Line identity ─────────────────────────────────────────────────────────
     lineNumber: int("line_number"),
+    // Ours: `material` and its siblings. The reference has no such column —
+    // options and surcharges are separate tables there — so this is not the
+    // reference's `Line type`. That one is `sourceType` below.
     lineType: varchar("line_type", { length: 50 }),
+
+    // Where this line's metal comes from — the reference's `Line type`, and the
+    // `Order type` column on its revenue screens once it is rolled up.
+    //
+    //   Stk     1.935 lines     bought out of stock
+    //   Stk+CD     31 lines     partly stock, partly bought in
+    //   CD          4 lines     bought against this sale
+    //
+    // Worth a column of its own because the two trade at very different
+    // margins: 20,09 % on Stk against 10,55 % on CD, over a quarter of the
+    // volume. See `docs/reference-system/order-types.md`.
+    sourceType: mysqlEnum("source_type", orderSourceTypes)
+      .default("stock")
+      .notNull(),
+    // The purchase line that covers a cross-docked sale. The reference's `CD
+    // deliveries in progress` prints both keys on one row, which is the whole
+    // point of a cross-dock: these goods were bought for this sale.
+    //
+    // A real foreign key, unlike `Stock.orderItemUuid`: nothing in the purchase
+    // chain imports this file, so pointing at it closes no module cycle.
+    purchaseOrderItemUuid: char("purchase_order_item_uuid", {
+      length: 36,
+    }).references(() => PurchaseOrderItems.uuid, { onDelete: "set null" }),
     seller: varchar("seller", { length: 255 }),
 
     // ── Fulfilment / delivery ─────────────────────────────────────────────────

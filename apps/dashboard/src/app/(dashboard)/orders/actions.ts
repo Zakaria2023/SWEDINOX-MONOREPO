@@ -1,6 +1,12 @@
 "use server";
 
+import { ORDER_COLUMNS } from "@/app/(dashboard)/orders/columns";
 import { db } from "@/db";
+import { Companies, SelectCompanies } from "@/db/schema/companies";
+import { CompanyAddresses } from "@/db/schema/company-addresses";
+import { Contacts, SelectContacts } from "@/db/schema/contacts";
+import { Contracts, SelectContracts } from "@/db/schema/contracts";
+import { OrderItems, SelectOrderItems } from "@/db/schema/order-items";
 import {
   InsertOrders,
   InsertOrderSurcharges,
@@ -8,15 +14,11 @@ import {
   OrderSurcharges,
   SelectOrders,
 } from "@/db/schema/orders";
-import { OrderItems, SelectOrderItems } from "@/db/schema/order-items";
-import { Reservations } from "@/db/schema/reservations";
-import { Companies, SelectCompanies } from "@/db/schema/companies";
-import { Contacts, SelectContacts } from "@/db/schema/contacts";
-import { CompanyAddresses } from "@/db/schema/company-addresses";
-import { Contracts, SelectContracts } from "@/db/schema/contracts";
 import { Products, SelectProducts } from "@/db/schema/products";
+import { Reservations } from "@/db/schema/reservations";
 import { SelectStock, Stock } from "@/db/schema/stock";
 import { InsertTexts, Texts } from "@/db/schema/texts";
+import { invoicePaymentTerms, orderStatuses, orderTypes } from "@/lib/enums";
 import {
   computeQuoteSummary,
   describeError,
@@ -29,8 +31,8 @@ import {
   resolveSurchargeAmounts,
   unloadingRequirements,
 } from "@/lib/helpers";
-import { invoicePaymentTerms, orderStatuses } from "@/lib/enums";
 import { checkCredit } from "@/lib/server/credit-control";
+import { exportRows } from "@/lib/server/excel";
 import {
   loadSalesPricingContext,
   minimumMarginFor,
@@ -46,8 +48,6 @@ import {
   tableOrderBy,
   tableWhere,
 } from "@/lib/server/table-query";
-import { ORDER_COLUMNS } from "@/app/(dashboard)/orders/columns";
-import { exportRows } from "@/lib/server/excel";
 import {
   Paged,
   parseTableQuery,
@@ -158,6 +158,7 @@ const ORDER_SORTABLE = {
 // looking for. See /financially-blocked, which is this filter as a screen.
 const ORDER_FILTERS = {
   status: enumFilter(Orders.status, orderStatuses),
+  orderType: enumFilter(Orders.orderType, orderTypes),
   company: relationFilter(Orders.companyUuid),
   paymentTerms: enumFilter(Orders.paymentTerms, invoicePaymentTerms),
   deliveryDate: dateRangeFilter(Orders.deliveryDate),

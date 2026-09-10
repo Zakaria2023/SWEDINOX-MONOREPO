@@ -1,5 +1,6 @@
 import { OrderLineRow } from "@/app/(dashboard)/order-lines/actions";
 import { dateCell, ExportColumn, numberCell, textCell } from "@/lib/excel";
+import { ORDER_SOURCE_TYPE_LABELS } from "@/lib/labels";
 import { orderLineStatusLabel, userName } from "@/lib/helpers";
 
 /**
@@ -19,6 +20,7 @@ export type OrderLineColumnKey =
   | "orderId"
   | "lineNumber"
   | "lineStatus"
+  | "sourceType"
   | "productCode"
   | "description"
   | "options"
@@ -79,6 +81,15 @@ export const orderLineColumns = (
     label: "Line status",
     defaultVisible: true,
     value: (row) => orderLineStatusLabel(row.lineStatus),
+  },
+  {
+    key: "sourceType",
+    label: "Type",
+    // The reference's `Line type`: Stk, Stk+CD or CD. Shown by default because
+    // the two trade at very different margins — 20,09 % against 10,55 % — and
+    // this is the only screen that lists lines one by one.
+    defaultVisible: true,
+    value: (row) => ORDER_SOURCE_TYPE_LABELS[row.sourceType],
   },
   {
     key: "productCode",

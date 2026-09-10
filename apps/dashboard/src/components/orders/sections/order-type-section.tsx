@@ -9,11 +9,13 @@ import { Controller, useFormContext } from "react-hook-form";
 
 type Props = {
   isConsignment: boolean;
+  orderTypeOptions: SelectOption[];
   weightTypeOptions: SelectOption[];
 };
 
 export const OrderTypeSection = ({
   isConsignment,
+  orderTypeOptions,
   weightTypeOptions,
 }: Props) => {
   const { register, control } = useFormContext<OrderFormValues>();
@@ -111,6 +113,14 @@ export const OrderTypeSection = ({
       </div>
 
       <div className="grid grid-cols-2 gap-4">
+        <FormSelectField
+          control={control}
+          id="orderType"
+          name="orderType"
+          label="Order type"
+          options={orderTypeOptions}
+        />
+
         <FormSelectField
           control={control}
           id="weightType"

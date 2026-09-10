@@ -1,8 +1,11 @@
 import { CompanyOption } from "@/app/(dashboard)/companies/actions";
 import { ProductOption } from "@/app/(dashboard)/products/actions";
 import { companyOptionLabel } from "@/lib/helpers";
-import { orderLineStatuses } from "@/lib/enums";
-import { ORDER_LINE_STATUS_LABELS } from "@/lib/labels";
+import { orderLineStatuses, orderSourceTypes } from "@/lib/enums";
+import {
+  ORDER_LINE_STATUS_LABELS,
+  ORDER_SOURCE_TYPE_LABELS,
+} from "@/lib/labels";
 import { TableFilterControl } from "@/lib/table-query";
 
 /**
@@ -14,6 +17,16 @@ export const orderLineFilters = (
   companies: CompanyOption[],
   products: ProductOption[],
 ): TableFilterControl[] => [
+  {
+    key: "sourceType",
+    kind: "select",
+    label: "Type",
+    placeholder: "Any",
+    options: orderSourceTypes.map((type) => ({
+      value: type,
+      label: ORDER_SOURCE_TYPE_LABELS[type],
+    })),
+  },
   {
     key: "lineStatus",
     kind: "select",

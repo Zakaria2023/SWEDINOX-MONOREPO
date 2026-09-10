@@ -22,6 +22,7 @@ import {
   invoiceSurchargeDescriptions,
   orderMethods,
   orderStatuses,
+  orderTypes,
   orderWeightTypes,
 } from "../../lib/enums";
 import { Companies } from "./companies";
@@ -49,6 +50,14 @@ export const Orders = mysqlTable(
     status: mysqlEnum("status", orderStatuses).default("open").notNull(),
 
     // ── Order type ────────────────────────────────────────────────────────────
+    // The `Normal` dropdown at the top of the reference's own order-type block.
+    // 1.933 Normal, 29 Call-off and 8 Rush across its Production capacity
+    // details export.
+    //
+    // ⚠️ Not the `Order type` column on the revenue screens. That one is the
+    // line's sourcing — `OrderItems.sourceType` — rolled up. The reference uses
+    // one header for two fields.
+    orderType: mysqlEnum("order_type", orderTypes).default("normal").notNull(),
     isPickup: boolean("is_pickup").default(false),
     isIncidental: boolean("is_incidental").default(false),
     isConsignment: boolean("is_consignment").default(false),

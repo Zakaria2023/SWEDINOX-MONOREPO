@@ -1,14 +1,22 @@
 "use server";
 
-import { describeError } from "@/lib/helpers";
 import { db } from "@/db";
-import { Reservations, SelectReservations } from "@/db/schema/reservations";
-import { Stock } from "@/db/schema/stock";
-import { Products, SelectProducts } from "@/db/schema/products";
+import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { OrderItems, SelectOrderItems } from "@/db/schema/order-items";
 import { Orders, SelectOrders } from "@/db/schema/orders";
-import { Companies, SelectCompanies } from "@/db/schema/companies";
+import { Products, SelectProducts } from "@/db/schema/products";
+import {
+  PurchaseOrderItems,
+  SelectPurchaseOrderItems,
+} from "@/db/schema/purchase-order-items";
+import {
+  PurchaseOrders,
+  SelectPurchaseOrders,
+} from "@/db/schema/purchase-orders";
+import { Reservations, SelectReservations } from "@/db/schema/reservations";
+import { Stock } from "@/db/schema/stock";
 import { SelectWarehouses, Warehouses } from "@/db/schema/warehouses";
+import { describeError } from "@/lib/helpers";
 import { desc, eq, getTableColumns, sql, sum } from "drizzle-orm";
 import { alias } from "drizzle-orm/mysql-core";
 
@@ -33,6 +41,12 @@ export type ReservationRecord = SelectReservations & {
   orderId: SelectOrders["id"] | null;
   lineNumber: SelectOrderItems["lineNumber"] | null;
   companyName: SelectCompanies["companyName"] | null;
+  // The purchase side of the same question. A purchase reservation is a coil
+  // out at an external processor, held by the purchase order for the work —
+  // 23 of the reference's 435.
+  purchaseOrderId: SelectPurchaseOrders["id"] | null;
+  purchaseLineNumber: SelectPurchaseOrderItems["lineNumber"] | null;
+  supplierName: SelectCompanies["companyName"] | null;
 };
 
 // Technical stock vs. what open sales orders hold, aggregated per product.
@@ -82,6 +96,7 @@ export const getReservationRecords = async (): Promise<ReservationRecord[]> => {
   try {
     const location = alias(Warehouses, "res_location");
     const section = alias(Warehouses, "res_section");
+    const supplier = alias(Companies, "res_supplier");
 
     const rows = await db
       .select({
@@ -97,6 +112,9 @@ export const getReservationRecords = async (): Promise<ReservationRecord[]> => {
         orderId: Orders.id,
         lineNumber: OrderItems.lineNumber,
         companyName: Companies.companyName,
+        purchaseOrderId: PurchaseOrders.id,
+        purchaseLineNumber: PurchaseOrderItems.lineNumber,
+        supplierName: supplier.companyName,
       })
       .from(Reservations)
       .innerJoin(Stock, eq(Reservations.stockUuid, Stock.uuid))
@@ -106,10 +124,21 @@ export const getReservationRecords = async (): Promise<ReservationRecord[]> => {
       .leftJoin(OrderItems, eq(Reservations.orderItemUuid, OrderItems.uuid))
       .leftJoin(Orders, eq(OrderItems.orderUuid, Orders.uuid))
       .leftJoin(Companies, eq(Orders.companyUuid, Companies.uuid))
+      .leftJoin(
+        PurchaseOrderItems,
+        eq(Reservations.purchaseOrderItemUuid, PurchaseOrderItems.uuid),
+      )
+      .leftJoin(
+        PurchaseOrders,
+        eq(PurchaseOrderItems.purchaseOrderUuid, PurchaseOrders.uuid),
+      )
+      .leftJoin(supplier, eq(PurchaseOrders.supplierUuid, supplier.uuid))
       .orderBy(desc(Reservations.createdAt));
 
     return rows;
   } catch (error) {
-    throw new Error(describeError(error, "Failed to fetch reservation records"));
+    throw new Error(
+      describeError(error, "Failed to fetch reservation records"),
+    );
   }
 };
