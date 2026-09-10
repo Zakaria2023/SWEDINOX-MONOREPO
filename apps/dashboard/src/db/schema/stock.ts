@@ -57,14 +57,39 @@ export const Stock = mysqlTable(
     // touches stock. The column is the reference to an order line all the same.
     orderItemUuid: char("order_item_uuid", { length: 36 }),
 
+    // ── How a lot is identified ───────────────────────────────────────────────
+    //
+    // Six fields, and it took until 10-9-2026 to see them together. The Stock
+    // panel on the reference's order 100742 prints them side by side, and they
+    // are not interchangeable:
+    //
+    //   Charge          1125372  030325   4A2829D    the mill's heat number
+    //   Internal charge 25AAEY   25ACBP   22JDEI     ours: year + four letters
+    //   Internal batch  385385   388066   379348     ours: a six-digit series
+    //   Batch           P01558765 269338  4A2829D    the supplier's own batch
+    //   Factory number  -        -        -          never populated
+    //   Plate no.       -        -        -          never populated
+    //
+    // Two of them coincide on one row (`4A2829D` is both charge and batch) and
+    // differ on every other, which is exactly why both are kept.
+
     // The plate's own number within its heat — `Plaatnummer` on the reception
-    // and `Plate no.` on the location's stock panel. Never yet seen populated,
-    // so its format is unknown; recorded because the lot identity is a triple
-    // of charge, plate number and internal charge, and we held only two.
+    // and `Plate no.` on the location's stock panel. Not populated on any of
+    // the 13 lots read off order 100742 either, so its format is still unknown.
     plateNumber: varchar("plate_number", { length: 60 }),
-    // Six digits, e.g. 366558 / 389755. Carried on both the lot and the
-    // warehouse work order line that made it.
-    internalBundle: varchar("internal_bundle", { length: 60 }),
+    // Our own six-digit running number for the physical bundle, e.g. 385385 /
+    // 379348. Carried on the lot and on the warehouse work order line that made
+    // it.
+    //
+    // ⚠️ Named `internal_bundle` until 10-9-2026, when the order's Stock panel
+    // showed the reference calls it **`Internal batch`** and keeps a separate
+    // `Batch` beside it. The old name invited exactly the confusion that
+    // renaming it removes. It had never been written to.
+    internalBatch: varchar("internal_batch", { length: 60 }),
+    // `Factory number` on the panel — the mill's own works number, blank on all
+    // 13 lots read off order 100742 and on every lot seen since. Recorded
+    // because it is a field the reference carries, not because it is used.
+    factoryNumber: varchar("factory_number", { length: 60 }),
 
     // ── Ownership ─────────────────────────────────────────────────────────────
     // The supplier the lot was sourced from (shown as "Supplier" on the grid).
@@ -86,6 +111,9 @@ export const Stock = mysqlTable(
     thicknessMm: decimal("thickness_mm", { precision: 10, scale: 2 }),
     charge: varchar("charge", { length: 100 }),
     internalCharge: varchar("internal_charge", { length: 100 }),
+    // `Batch` on the reference's stock panels — the supplier's batch number,
+    // which is not the heat: charge `030325` arrived as batches 269335, 269336,
+    // 269337, 269338, 269339, 269353 and 269354, one per bundle.
     bundle: varchar("bundle", { length: 100 }),
     receiptDate: date("receipt_date", { mode: "string" }),
     remark: varchar("remark", { length: 255 }),
