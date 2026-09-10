@@ -2,7 +2,12 @@ import { db } from "@/db";
 import { SelectStock, Stock } from "@/db/schema/stock";
 import { StockMovements } from "@/db/schema/stock-movements";
 import { StockMovementReason } from "@/lib/enums";
-import { generateUuid, restateLotValue } from "@/lib/helpers";
+import {
+  generateUuid,
+  moneyString,
+  normaliseCharge,
+  restateLotValue,
+} from "@/lib/helpers";
 import { and, eq, ne } from "drizzle-orm";
 
 // The Drizzle transaction handle passed into db.transaction(async (tx) => ...).
@@ -16,6 +21,13 @@ type ApplyMoveParams = {
   reason: "warehouse_transfer";
   userId: string;
   orderUuid: string | null;
+  /**
+   * The work order line that moved the metal. The reference puts this in a
+   * column of its own and fills it on 10.464 of its 10.584 real movements,
+   * leaving it empty on every one of its 2.978 corrections — so an empty one
+   * means somebody adjusted the books rather than shifted anything.
+   */
+  warehouseWorkOrderLineUuid?: string | null;
 };
 
 type ApplyProductionConsumeParams = {
@@ -23,6 +35,8 @@ type ApplyProductionConsumeParams = {
   quantity: number;
   userId: string;
   orderUuid: string | null;
+  /** The production line that took this material to the machine. */
+  productionWorkOrderLineUuid?: string | null;
 };
 
 type ApplyProductionOutputParams = {
@@ -45,6 +59,8 @@ type ApplyProductionOutputParams = {
   remark: string | null;
   userId: string;
   orderUuid: string | null;
+  /** The production line that made it. */
+  productionWorkOrderLineUuid?: string | null;
 };
 
 export type ProductionConsumption = {
@@ -111,7 +127,7 @@ export const applyMove = async (
       reservedQuantity: (
         Number(source.reservedQuantity ?? 0) - carried
       ).toFixed(3),
-      valuationEuro: remainingValue.toFixed(2),
+      valuationEuro: moneyString(remainingValue),
     })
     .where(
       and(eq(Stock.uuid, source.uuid), eq(Stock.quantity, source.quantity)),
@@ -155,9 +171,9 @@ export const applyMove = async (
         reservedQuantity: (
           Number(destination.reservedQuantity ?? 0) + arrivingReserved
         ).toFixed(3),
-        valuationEuro: (
-          Number(destination.valuationEuro ?? 0) + valueMoved
-        ).toFixed(2),
+        valuationEuro: moneyString(
+          Number(destination.valuationEuro ?? 0) + valueMoved,
+        ),
       })
       .where(eq(Stock.uuid, destination.uuid));
   } else {
@@ -181,7 +197,7 @@ export const applyMove = async (
       status: "pending",
       quantity: quantity.toFixed(3),
       reservedQuantity: arrivingReserved.toFixed(3),
-      valuationEuro: valueMoved.toFixed(2),
+      valuationEuro: moneyString(valueMoved),
     });
   }
 
@@ -196,6 +212,7 @@ export const applyMove = async (
       reason: params.reason,
       quantity: quantity.toFixed(3),
       orderUuid: params.orderUuid,
+      warehouseWorkOrderLineUuid: params.warehouseWorkOrderLineUuid,
       createdByUserId: params.userId,
     },
     {
@@ -206,6 +223,7 @@ export const applyMove = async (
       reason: params.reason,
       quantity: quantity.toFixed(3),
       orderUuid: params.orderUuid,
+      warehouseWorkOrderLineUuid: params.warehouseWorkOrderLineUuid,
       createdByUserId: params.userId,
     },
   ]);
@@ -261,7 +279,7 @@ export const applyProductionConsume = async (
       reservedQuantity: (
         Number(source.reservedQuantity ?? 0) - released
       ).toFixed(3),
-      valuationEuro: remainingValue.toFixed(2),
+      valuationEuro: moneyString(remainingValue),
     })
     .where(
       and(eq(Stock.uuid, source.uuid), eq(Stock.quantity, source.quantity)),
@@ -281,6 +299,7 @@ export const applyProductionConsume = async (
     reason: "production_input",
     quantity: quantity.toFixed(3),
     orderUuid: params.orderUuid,
+    productionWorkOrderLineUuid: params.productionWorkOrderLineUuid,
     createdByUserId: params.userId,
   });
 
@@ -329,11 +348,11 @@ export const applyProductionOutput = async (
     quantity: quantity.toFixed(3),
     reservedQuantity: params.reserved ? quantity.toFixed(3) : "0.000",
     quantityKg: params.quantityKg.toFixed(2),
-    charge: params.charge,
-    internalCharge: params.internalCharge,
+    charge: normaliseCharge(params.charge),
+    internalCharge: normaliseCharge(params.internalCharge),
     remark: params.remark,
     valuationPrice: (quantity > 0 ? params.value / quantity : 0).toFixed(4),
-    valuationEuro: params.value.toFixed(2),
+    valuationEuro: moneyString(params.value),
   });
 
   await tx.insert(StockMovements).values({
@@ -344,6 +363,7 @@ export const applyProductionOutput = async (
     reason: params.reason,
     quantity: quantity.toFixed(3),
     orderUuid: params.orderUuid,
+    productionWorkOrderLineUuid: params.productionWorkOrderLineUuid,
     createdByUserId: params.userId,
   });
 

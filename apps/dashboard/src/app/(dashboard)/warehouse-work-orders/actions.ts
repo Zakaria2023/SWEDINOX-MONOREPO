@@ -28,15 +28,20 @@ import {
 import {
   customerLabelCount,
   customerLabelMedium,
-  NON_SELLABLE_LOCATION_TYPES,
   describeError,
   generateUuid,
+  moneyString,
+  NON_SELLABLE_LOCATION_TYPES,
+  normaliseCharge,
+  priceMeasureFor,
   PrintMedium,
+  productPieceWeightKg,
   restateLotValue,
+  roundToCents,
   stockLabelCount,
+  todayDateString,
   toDecimalAmount,
   toDecimalQuantity,
-  todayDateString,
   WAREHOUSE_WORK_ORDER_TYPE_META,
 } from "@/lib/helpers";
 import {
@@ -904,6 +909,13 @@ const applyIssue = async (
     orderUuid: string | null;
     companyUuid: string | null;
     documentNo: string;
+  /**
+   * The work order line that moved the metal. The reference puts this in a
+   * column of its own and fills it on 10.464 of its 10.584 real movements,
+   * leaving it empty on every one of its 2.978 corrections — so an empty one
+   * means somebody adjusted the books rather than shifted anything.
+   */
+    warehouseWorkOrderLineUuid: string | null;
   },
 ): Promise<void> => {
   const { source, quantity } = params;
@@ -934,7 +946,7 @@ const applyIssue = async (
       reservedQuantity: (
         Number(source.reservedQuantity ?? 0) - released
       ).toFixed(3),
-      valuationEuro: remainingValue.toFixed(2),
+      valuationEuro: moneyString(remainingValue),
       status: remainingQuantity > 0 ? "pending" : "received",
     })
     .where(and(eq(Stock.uuid, source.uuid), eq(Stock.quantity, source.quantity)));
@@ -953,6 +965,7 @@ const applyIssue = async (
     reason: params.reason,
     quantity: quantity.toFixed(3),
     orderUuid: params.orderUuid,
+    warehouseWorkOrderLineUuid: params.warehouseWorkOrderLineUuid,
     createdByUserId: params.userId,
   });
 
@@ -994,6 +1007,16 @@ const applyIssue = async (
  * the moment a cost enters the business — every sale later drawn from this lot
  * is costed against the figure set here. The supplier has not billed yet, so
  * the other side of the entry waits on the goods-received account.
+ *
+ * ⚠️ The purchase price is per the line's **own** unit — `TN` on 2 191 of the
+ * reference's 2 247 lots — so it cannot be multiplied by a piece count. The
+ * reference's own figures settle it: `Stock (€) = valuation price × the measure
+ * that unit names`, exact to the cent on 2 114 of 2 115 priced lots. Eighteen
+ * plates at € 2 158/TN are worth € 101,66, not € 38 844.
+ *
+ * `Stock.valuationPrice` stays a **per-piece** cost, because that is what the
+ * eight `restateLotValue` callers assume when they scale a lot down after a
+ * partial issue. So the line price is converted here rather than stored raw.
  */
 const applyReceipt = async (
   tx: Transaction,
@@ -1007,6 +1030,7 @@ const applyReceipt = async (
     userId: string;
     companyUuid: string | null;
     documentNo: string;
+    warehouseWorkOrderLineUuid: string | null;
   },
 ): Promise<void> => {
   const { quantity } = params;
@@ -1029,8 +1053,54 @@ const applyReceipt = async (
     );
   }
 
-  const unitCost = Number(purchaseLine.netPrice ?? 0);
-  const value = unitCost * quantity;
+  // The weight arrives with the goods, and everything downstream — the stock
+  // position, the value, the goods-flow return — is this number. The line's own
+  // planned weight is the best answer; failing that, the product's density is
+  // what the reference falls back on.
+  const [product] = await tx
+    .select({
+      theoreticalWeight: Products.theoreticalWeight,
+      weightUnit: Products.weightUnit,
+      weightTheoretical: Products.weightTheoretical,
+    })
+    .from(Products)
+    .where(eq(Products.uuid, params.productUuid))
+    .limit(1);
+
+  const lengthMm = purchaseLine.lengthMm;
+  const widthMm = purchaseLine.widthMm;
+  const thicknessMm = Number(purchaseLine.thicknessMm ?? 0);
+  const plannedQty =
+    Number(purchaseLine.qtyPlanned ?? 0) || Number(purchaseLine.quantity ?? 0);
+  const lineKg = Number(purchaseLine.kgPurchased ?? 0);
+  const pieceKg =
+    plannedQty > 0 && lineKg > 0
+      ? lineKg / plannedQty
+      : (product
+          ? productPieceWeightKg({
+              weightTheoretical: product.weightTheoretical,
+              theoreticalWeight: product.theoreticalWeight,
+              weightUnit: product.weightUnit,
+              lengthMm,
+              widthMm,
+              thicknessMm,
+            })
+          : null) ?? 0;
+  const weightKg = pieceKg * quantity;
+
+  const pricePerUnit = Number(purchaseLine.netPrice ?? 0);
+  // A measure nobody can work out falls back to the piece, which is what the
+  // line was charged by before any unit was recorded.
+  const measure =
+    priceMeasureFor(purchaseLine.priceUnit, {
+      quantity,
+      weightKg,
+      lengthMm,
+      widthMm,
+      thicknessMm,
+    }) ?? quantity;
+  const value = roundToCents(pricePerUnit * measure);
+  const unitCost = quantity > 0 ? value / quantity : 0;
   const stockUuid = generateUuid();
 
   await tx.insert(Stock).values({
@@ -1041,12 +1111,16 @@ const applyReceipt = async (
     supplierUuid: params.companyUuid,
     locationUuid: params.toLocationUuid,
     quantity: quantity.toFixed(3),
+    quantityKg: weightKg.toFixed(2),
     status: "pending",
-    charge: params.charge,
-    internalCharge: params.internalCharge,
+    // Folded through the sentinels: `nvt`, `ntv` and `-` are all how somebody
+    // wrote "no heat number", and a lot must not end up traceable to a heat
+    // called "ntv".
+    charge: normaliseCharge(params.charge),
+    internalCharge: normaliseCharge(params.internalCharge),
     receiptDate: todayDateString(),
     valuationPrice: unitCost.toFixed(4),
-    valuationEuro: value.toFixed(2),
+    valuationEuro: moneyString(value),
   });
 
   await tx
@@ -1064,6 +1138,7 @@ const applyReceipt = async (
     reason: "warehouse_receipt",
     quantity: quantity.toFixed(3),
     purchaseOrderUuid: purchaseLine.purchaseOrderUuid,
+    warehouseWorkOrderLineUuid: params.warehouseWorkOrderLineUuid,
     createdByUserId: params.userId,
   });
 
@@ -1136,7 +1211,7 @@ const applyCount = async (
     .update(Stock)
     .set({
       quantity: countedQuantity.toFixed(3),
-      valuationEuro: nextValue.toFixed(2),
+      valuationEuro: moneyString(nextValue),
       status: countedQuantity > 0 ? "pending" : "received",
     })
     .where(and(eq(Stock.uuid, source.uuid), eq(Stock.quantity, source.quantity)));
@@ -1308,6 +1383,7 @@ export const reportWarehouseWorkOrderLineCompletion = async (
               userId,
               companyUuid: line.companyUuid,
               documentNo,
+              warehouseWorkOrderLineUuid: input.lineUuid,
             });
           } else {
             if (!source) {
@@ -1329,6 +1405,7 @@ export const reportWarehouseWorkOrderLineCompletion = async (
                 reason: "warehouse_transfer",
                 userId,
                 orderUuid,
+                warehouseWorkOrderLineUuid: input.lineUuid,
               });
             } else if (meta.stockEffect === "out") {
               await applyIssue(tx, {
@@ -1342,8 +1419,13 @@ export const reportWarehouseWorkOrderLineCompletion = async (
                 orderUuid,
                 companyUuid: line.companyUuid,
                 documentNo,
+                warehouseWorkOrderLineUuid: input.lineUuid,
               });
             } else {
+              // No work order is stamped on the movement this writes. A
+              // count difference is a `Correctie` in the reference, and not one
+              // of its 2.978 corrections names the document behind it — the
+              // books were adjusted, nothing was carried anywhere.
               await applyCount(tx, {
                 source,
                 countedQuantity: quantity,

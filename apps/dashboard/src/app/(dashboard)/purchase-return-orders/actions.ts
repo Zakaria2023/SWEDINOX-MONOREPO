@@ -42,6 +42,7 @@ import {
   generateUuid,
   getPaymentTermDueDate,
   isPurchaseReturnOrderEditable,
+  moneyString,
   restateLotValue,
   summarisePurchaseInvoice,
   toDateString,
@@ -326,12 +327,12 @@ const buildPurchaseReturnSummary = async (
   );
 
   return {
-    materialsRevenue: summary.materials.toFixed(2),
-    optionsRevenue: summary.optionsAmount.toFixed(2),
-    surchargesRevenue: summary.surcharges.toFixed(2),
-    totalExclVat: summary.totalExclVat.toFixed(2),
-    vatAmount: summary.vatTotal.toFixed(2),
-    totalInclVat: summary.totalInclVat.toFixed(2),
+    materialsRevenue: moneyString(summary.materials),
+    optionsRevenue: moneyString(summary.optionsAmount),
+    surchargesRevenue: moneyString(summary.surcharges),
+    totalExclVat: moneyString(summary.totalExclVat),
+    vatAmount: moneyString(summary.vatTotal),
+    totalInclVat: moneyString(summary.totalInclVat),
     totalWeightKg: totalWeightKg.toFixed(2),
   };
 };
@@ -504,7 +505,7 @@ export const dispatchPurchaseReturnOrder = async (
           .update(Stock)
           .set({
             quantity: nextQuantity,
-            valuationEuro: nextValue.toFixed(2),
+            valuationEuro: moneyString(nextValue),
             status: Number(nextQuantity) > 0 ? "pending" : "received",
           })
           .where(
@@ -702,18 +703,18 @@ export const creditPurchaseReturnOrder = async (
         expirationDate: dueDate ? new Date(`${dueDate}T00:00:00`) : null,
         paymentTerms: returnOrder.paymentTerms,
         purchaseOrderNumber: returnOrder.purchaseOrderReference,
-        materials: summary.materials.toFixed(2),
-        optionsAmount: summary.optionsAmount.toFixed(2),
-        surcharges: summary.surcharges.toFixed(2),
+        materials: moneyString(summary.materials),
+        optionsAmount: moneyString(summary.optionsAmount),
+        surcharges: moneyString(summary.surcharges),
         // Reversed in the same three bands the goods were received under, so
         // the VAT return nets each rate off against itself.
-        vatHigh: summary.vatHigh.toFixed(2),
-        vatMiddle: summary.vatMiddle.toFixed(2),
-        vatLow: summary.vatLow.toFixed(2),
-        remainder: summary.remainder.toFixed(2),
-        invoiceTotal: summary.totalGeneral.toFixed(2),
+        vatHigh: moneyString(summary.vatHigh),
+        vatMiddle: moneyString(summary.vatMiddle),
+        vatLow: moneyString(summary.vatLow),
+        remainder: moneyString(summary.remainder),
+        invoiceTotal: moneyString(summary.totalGeneral),
         // Negative: this reduces what we owe rather than adding to it.
-        outstanding: summary.totalGeneral.toFixed(2),
+        outstanding: moneyString(summary.totalGeneral),
         remarks: `Supplier credit note for purchase return ${returnOrder.id}`,
       });
 
@@ -925,11 +926,11 @@ export const createPurchaseReturnOrder = async (
           netPrice: netPrice.toFixed(4),
           priceUnit: line.priceUnit,
           weightKg: returnedWeightKg.toFixed(2),
-          amount: amountForWeight(
-            netPrice,
-            line.priceUnit,
-            returnedWeightKg,
-          ).toFixed(2),
+          amount: moneyString(
+            amountForWeight(netPrice, line.priceUnit, returnedWeightKg, {
+              quantity: returnQty,
+            }),
+          ),
           returnDate: fields.returnDate
             ? toDateString(new Date(fields.returnDate))
             : todayDateString(),

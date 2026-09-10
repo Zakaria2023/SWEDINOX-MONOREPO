@@ -17,6 +17,9 @@ import { PurchaseOrders } from "./purchase-orders";
 import { PurchaseInvoices } from "./purchase-invoices";
 import { Orders } from "./orders";
 import { Invoices } from "./invoices";
+import { WarehouseWorkOrderLines } from "./warehouse-work-orders";
+import { ProductionWorkOrderLines } from "./production-work-orders";
+import { TransportWorkOrders } from "./transport-work-orders";
 
 export const StockMovements = mysqlTable(
   "StockMovements",
@@ -45,6 +48,27 @@ export const StockMovements = mysqlTable(
     // Sales invoice this movement is tied to — the "out" consumption, or the
     // "in" reversal logged when that invoice is cancelled.
     invoiceUuid: char("invoice_uuid", { length: 36 }),
+
+    // ── What actually moved the metal ─────────────────────────────────────
+    // The four links above answer "which order is this about". These answer
+    // "what moved it", which is a different question and the one the reference
+    // puts in a column of its own.
+    //
+    // In its 13.562-movement export, 10.464 of the 10.584 real movements name
+    // the document behind them and not one of the 2.978 corrections does. So a
+    // movement with none of these set is a correction — somebody adjusted the
+    // books — and that is the whole taxonomy.
+    //
+    // The cause is polymorphic, which is why there are three: goods arrive on a
+    // warehouse work order, but 4.189 of the 5.043 customer deliveries leave on
+    // a TRIP, against 854 on a work order.
+    warehouseWorkOrderLineUuid: char("warehouse_work_order_line_uuid", {
+      length: 36,
+    }),
+    productionWorkOrderLineUuid: char("production_work_order_line_uuid", {
+      length: 36,
+    }),
+    transportWorkOrderUuid: char("transport_work_order_uuid", { length: 36 }),
 
     // Clerk user id of whoever triggered this movement.
     createdByUserId: varchar("created_by_user_id", { length: 255 }).notNull(),
@@ -99,6 +123,21 @@ export const StockMovements = mysqlTable(
       name: "fk_stock_movements_invoice",
       columns: [table.invoiceUuid],
       foreignColumns: [Invoices.uuid],
+    }),
+    foreignKey({
+      name: "fk_stock_movements_warehouse_work_order_line",
+      columns: [table.warehouseWorkOrderLineUuid],
+      foreignColumns: [WarehouseWorkOrderLines.uuid],
+    }),
+    foreignKey({
+      name: "fk_stock_movements_production_work_order_line",
+      columns: [table.productionWorkOrderLineUuid],
+      foreignColumns: [ProductionWorkOrderLines.uuid],
+    }),
+    foreignKey({
+      name: "fk_stock_movements_transport_work_order",
+      columns: [table.transportWorkOrderUuid],
+      foreignColumns: [TransportWorkOrders.uuid],
     }),
   ],
 );

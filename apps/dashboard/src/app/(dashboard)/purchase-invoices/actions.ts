@@ -33,14 +33,15 @@ import { buildPurchaseJournalEntry } from "@/lib/server/ledger";
 import { recordFreightMovement } from "@/lib/server/freight";
 import { PurchaseOrderType, VatCode } from "@/lib/enums";
 import {
-  amountForWeight,
   fiscalPeriodDate,
   generateUuid,
   getPaymentTermDueDate,
+  moneyString,
+  priceMeasureFor,
   purchaseBecomesStock,
   resolveSurchargeAmounts,
   restateLotValue,
-  stockValueFromWeight,
+  roundToCents,
   summarisePurchaseInvoice,
   toDateString,
 } from "@/lib/helpers";
@@ -383,15 +384,21 @@ export const createPurchaseInvoice = async (
     const bookedLines = items.map((item) => {
       const poItem = poItemByUuid.get(item.purchaseOrderItemUuid);
       const netPrice = Number(poItem?.netPrice ?? 0);
+      const quantity = Number(item.quantity);
+      // A purchase price is struck per tonne far more often than per piece, so
+      // what the journal takes is the measure the price's own unit names — a
+      // piece count times a tonne price is out by three orders of magnitude,
+      // and a tonne measure against a per-piece price is wrong the other way.
+      const measure =
+        priceMeasureFor(poItem?.priceUnit, {
+          quantity,
+          weightKg: invoicedWeightKg(poItem, item.quantity),
+          lengthMm: poItem?.lengthMm,
+          widthMm: poItem?.widthMm,
+          thicknessMm: Number(poItem?.thicknessMm ?? 0),
+        }) ?? quantity;
       return {
-        // A purchase price is struck per tonne far more often than per piece,
-        // so what the journal takes is the weight at that price — the piece
-        // count times a tonne price is out by three orders of magnitude.
-        amount: amountForWeight(
-          netPrice,
-          poItem?.priceUnit ?? null,
-          invoicedWeightKg(poItem, item.quantity),
-        ),
+        amount: roundToCents(netPrice * measure),
         vatCode: poItem
           ? (vatCodeByProduct.get(poItem.productUuid) ?? null)
           : null,
@@ -437,17 +444,17 @@ export const createPurchaseInvoice = async (
         ...fields,
         expirationDate: derivedExpiration,
         uuid,
-        materials: summary.materials.toFixed(2),
-        optionsAmount: summary.optionsAmount.toFixed(2),
-        surcharges: summary.surcharges.toFixed(2),
-        vatHigh: summary.vatHigh.toFixed(2),
-        vatMiddle: summary.vatMiddle.toFixed(2),
-        vatLow: summary.vatLow.toFixed(2),
-        remainder: summary.remainder.toFixed(2),
+        materials: moneyString(summary.materials),
+        optionsAmount: moneyString(summary.optionsAmount),
+        surcharges: moneyString(summary.surcharges),
+        vatHigh: moneyString(summary.vatHigh),
+        vatMiddle: moneyString(summary.vatMiddle),
+        vatLow: moneyString(summary.vatLow),
+        remainder: moneyString(summary.remainder),
         // Owed to the supplier in full until payments are registered against
         // it. The document's own bottom line, which reconciles to the total on
         // their paperwork.
-        outstanding: summary.totalGeneral.toFixed(2),
+        outstanding: moneyString(summary.totalGeneral),
       });
 
       const [inserted] = await tx
@@ -518,35 +525,67 @@ export const createPurchaseInvoice = async (
           );
         }
 
-        // The goods physically arrive now: create the stock lot and log the
-        // "in". This is the receipt — the purchase order only recorded intent.
-        //
         // The lot is valued at what was agreed to pay for it. This is the
         // moment a cost enters the business: every sales order later drawn from
         // this lot is costed against this figure, so a lot received without one
         // would make every downstream margin a fiction.
-        const valuationPrice = Number(poItem.netPrice ?? 0);
+        const linePrice = Number(poItem.netPrice ?? 0);
         // The lot's weight comes with it: every kilo figure downstream — the
         // stock position, its value, the goods-flow return — is this number,
         // and a lot received without one weighs nothing for ever after.
         const receivedWeightKg = invoicedWeightKg(poItem, item.quantity);
-        const stockUuid = generateUuid();
-        await tx.insert(Stock).values({
-          uuid: stockUuid,
-          productUuid: poItem.productUuid,
-          purchaseOrderUuid: poItem.purchaseOrderUuid,
-          purchaseOrderItemUuid: poItem.uuid,
-          supplierUuid: fields.companyUuid ?? null,
-          quantity: item.quantity,
-          quantityKg: receivedWeightKg.toFixed(2),
-          status: "pending",
-          valuationPrice: valuationPrice.toFixed(4),
-          // The valuation price is per tonne, like every other price here.
-          valuationEuro: stockValueFromWeight(
-            receivedWeightKg,
-            valuationPrice,
-          ).toFixed(2),
-        });
+        const invoicedQty = Number(item.quantity);
+
+        // The price is per the line's own unit, so it cannot be multiplied by a
+        // piece count. Proved on the reference's 2 247 lots: `Stock (€) =
+        // valuation price × the measure that unit names`, right to the cent on
+        // 2 114 of the 2 115 that carry a price.
+        const measure =
+          priceMeasureFor(poItem.priceUnit, {
+            quantity: invoicedQty,
+            weightKg: receivedWeightKg,
+            lengthMm: poItem.lengthMm,
+            widthMm: poItem.widthMm,
+            thicknessMm: Number(poItem.thicknessMm ?? 0),
+          }) ?? invoicedQty;
+        const lineAmount = roundToCents(linePrice * measure);
+        // `Stock.valuationPrice` is a per-piece cost — that is what the eight
+        // `restateLotValue` callers assume when they scale a lot down after a
+        // partial issue — so the line price is converted rather than stored raw.
+        const unitCost = invoicedQty > 0 ? lineAmount / invoicedQty : 0;
+
+        // 🔴 The goods do NOT arrive now. They arrive when an `Unloading`
+        // warehouse work order is approved, which is what creates the lot —
+        // purchase order 400130 in the reference is `Received`, still owes
+        // € 0,11, and already has its metal on the shelf. Creating a lot here
+        // as well would put the same steel in the warehouse twice.
+        //
+        // So: link the lot the unloading already made, and only create one when
+        // there is none. That fallback is not ceremony — no approved unloading
+        // exists in our data yet, so today every purchase still receives through
+        // this path. Removing it outright would stop stock being created at all.
+        const [receivedLot] = await tx
+          .select({ uuid: Stock.uuid })
+          .from(Stock)
+          .where(eq(Stock.purchaseOrderItemUuid, poItem.uuid))
+          .limit(1);
+
+        const stockUuid = receivedLot?.uuid ?? generateUuid();
+
+        if (!receivedLot) {
+          await tx.insert(Stock).values({
+            uuid: stockUuid,
+            productUuid: poItem.productUuid,
+            purchaseOrderUuid: poItem.purchaseOrderUuid,
+            purchaseOrderItemUuid: poItem.uuid,
+            supplierUuid: fields.companyUuid ?? null,
+            quantity: item.quantity,
+            quantityKg: receivedWeightKg.toFixed(2),
+            status: "pending",
+            valuationPrice: unitCost.toFixed(4),
+            valuationEuro: moneyString(lineAmount),
+          });
+        }
 
         await tx.insert(PurchaseInvoiceItems).values({
           uuid: generateUuid(),
@@ -557,12 +596,8 @@ export const createPurchaseInvoice = async (
           quantity: item.quantity,
           // Snapshotted at receipt: re-pricing the purchase order afterwards
           // must not rewrite an invoice already posted.
-          netPrice: valuationPrice.toFixed(4),
-          amount: amountForWeight(
-            valuationPrice,
-            poItem.priceUnit,
-            receivedWeightKg,
-          ).toFixed(2),
+          netPrice: linePrice.toFixed(4),
+          amount: moneyString(lineAmount),
           vatCode: vatCodeByProduct.get(poItem.productUuid) ?? null,
         });
 
@@ -691,14 +726,14 @@ export const updatePurchaseInvoice = async (
       .set({
         ...fields,
         expirationDate,
-        materials: summary.materials.toFixed(2),
-        optionsAmount: summary.optionsAmount.toFixed(2),
-        surcharges: summary.surcharges.toFixed(2),
-        vatHigh: summary.vatHigh.toFixed(2),
-        vatMiddle: summary.vatMiddle.toFixed(2),
-        vatLow: summary.vatLow.toFixed(2),
-        remainder: summary.remainder.toFixed(2),
-        outstanding: outstanding.toFixed(2),
+        materials: moneyString(summary.materials),
+        optionsAmount: moneyString(summary.optionsAmount),
+        surcharges: moneyString(summary.surcharges),
+        vatHigh: moneyString(summary.vatHigh),
+        vatMiddle: moneyString(summary.vatMiddle),
+        vatLow: moneyString(summary.vatLow),
+        remainder: moneyString(summary.remainder),
+        outstanding: moneyString(outstanding),
       })
       .where(eq(PurchaseInvoices.uuid, uuid));
   } catch (error) {
@@ -856,12 +891,14 @@ export const cancelPurchaseInvoice = async (
           .set({
             quantity: remainingQuantity,
             status: "cancelled",
-            valuationEuro: restateLotValue({
-              previousQuantity: Number(stockRow.quantity),
-              remainingQuantity: Number(remainingQuantity),
-              unitCost: Number(stockRow.valuationPrice ?? 0),
-              previousValue: Number(stockRow.valuationEuro ?? 0),
-            }).toFixed(2),
+            valuationEuro: moneyString(
+              restateLotValue({
+                previousQuantity: Number(stockRow.quantity),
+                remainingQuantity: Number(remainingQuantity),
+                unitCost: Number(stockRow.valuationPrice ?? 0),
+                previousValue: Number(stockRow.valuationEuro ?? 0),
+              }),
+            ),
           })
           .where(eq(Stock.uuid, item.stockUuid));
 

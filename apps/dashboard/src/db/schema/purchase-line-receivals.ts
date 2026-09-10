@@ -1,5 +1,6 @@
 import { InferInsertModel, InferSelectModel } from "drizzle-orm";
 import {
+  boolean,
   char,
   date,
   decimal,
@@ -74,6 +75,36 @@ export const PurchaseLineReceivals = mysqlTable(
     }).default("0.00"),
 
     // ── Dates / people ────────────────────────────────────────────────────────
+    // ── Lot identity, as the reception records it ─────────────────────────
+    // `Charge aanpassen...` on a reception edits three fields, and the
+    // WarehouseWorkOrderLines already hold all three — the reception, which is
+    // where they are first keyed, held none.
+    //
+    // The supplier's melt number. Dirty free text: across 2.247 lots it is
+    // blank 607 times, `nvt` 145, `-` 33 and `ntv` 32 — a typo of `nvt` that
+    // somebody made three dozen times. All four mean nothing.
+    charge: varchar("charge", { length: 60 }),
+    // Ours, chosen from a registry rather than typed: two-digit year plus four
+    // characters (25AAWO, 23EHGI, 21GFFI).
+    internalCharge: varchar("internal_charge", { length: 60 }),
+    plateNumber: varchar("plate_number", { length: 60 }),
+
+    // Goods-in can be held until its mill certificate is attached. The
+    // `Partijregistratie instellingen` dialogue offers exactly one setting —
+    // "ignore document obligations for the above receipt" — and warns that the
+    // line may then drop out of view. That is the mechanism behind the
+    // `documents` block reason.
+    documentObligationWaived: boolean("document_obligation_waived").default(
+      false,
+    ),
+
+    // Who called the delivery ahead, by initials (AVD), and the code they
+    // quoted. `intern` on an internal movement, a 300xxx bill of lading
+    // otherwise.
+    preReportedBy: varchar("pre_reported_by", { length: 20 }),
+    preNotifyCode: varchar("pre_notify_code", { length: 60 }),
+    billOfLading: varchar("bill_of_lading", { length: 60 }),
+
     receiptDate: date("receipt_date", { mode: "string" }),
     // Stamped when the supplier pre-advises a delivery, which is what the
     // order's Pre-notify action does.

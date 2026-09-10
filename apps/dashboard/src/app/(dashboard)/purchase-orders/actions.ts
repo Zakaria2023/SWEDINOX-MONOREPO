@@ -37,6 +37,7 @@ import {
   amountForWeight,
   describeError,
   generateUuid,
+  moneyString,
   productPieceWeightKg,
 } from "@/lib/helpers";
 import {
@@ -433,11 +434,11 @@ export const createPurchaseOrder = async (
           netPrice: netPrice.toFixed(4),
           priceUnit: item.priceUnit ?? null,
           kgPurchased: weightKg.toFixed(2),
-          amount: amountForWeight(
-            netPrice,
-            item.priceUnit ?? null,
-            weightKg,
-          ).toFixed(2),
+          amount: moneyString(
+            amountForWeight(netPrice, item.priceUnit ?? null, weightKg, {
+              quantity: Number(item.quantity ?? 0),
+            }),
+          ),
         });
       }
     });

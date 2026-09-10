@@ -433,6 +433,48 @@ export const isSentinelDate = (value: string | Date | null): boolean => {
  */
 export const COIL_LENGTH_SENTINEL = 999999;
 
+/**
+ * What the reference types into a text filter's upper bound to mean "no upper
+ * bound". It is a real value being compared against, not an empty box, which is
+ * why clearing it returns nothing rather than everything.
+ *
+ * Ours uses an empty field. Kept here because every export captured from that
+ * system carries it, and an importer that treats it as data will filter on a
+ * product code of fifteen z's.
+ */
+export const TEXT_FILTER_UPPER_BOUND_SENTINEL = "zzzzzzzzzzzzzzz";
+
+/**
+ * How the reference renders "nothing chosen" in a dropdown — `-empty-` in the
+ * English build, `-leeg-` where a screen was never translated. Both are display
+ * text for null, and both turn up in exports.
+ */
+const EMPTY_SELECTION_SENTINELS = ["-empty-", "-leeg-"];
+
+export const isEmptySelection = (value: string | null | undefined): boolean =>
+  EMPTY_SELECTION_SENTINELS.includes((value ?? "").trim().toLowerCase());
+
+/**
+ * A heat number nobody recorded, written as free text.
+ *
+ * `Charge` is not a controlled field in the reference and its 2.247 lots prove
+ * it: 607 blank, 145 `nvt` (Dutch *n.v.t.*, not applicable), 33 `-`, and 32
+ * `ntv` — the same abbreviation transposed, typed three dozen times. All four
+ * mean the same nothing, and a lot whose charge reads "ntv" must not be
+ * traceable to a heat called "ntv".
+ */
+const ABSENT_CHARGE_SENTINELS = ["nvt", "ntv", "n.v.t.", "-", "--", "n/a"];
+
+export const normaliseCharge = (
+  value: string | null | undefined,
+): string | null => {
+  const charge = (value ?? "").trim();
+  if (!charge || ABSENT_CHARGE_SENTINELS.includes(charge.toLowerCase())) {
+    return null;
+  }
+  return charge;
+};
+
 export const formatLengthMm = (
   value: number | string | null | undefined,
 ): string => {
@@ -3793,11 +3835,11 @@ export const resolveSurchargeAmounts = <
 ): T[] =>
   rows.map((row) => ({
     ...row,
-    amount: computeSurchargeAmount(
+    amount: moneyString(computeSurchargeAmount(
       row.description,
       Number(row.surcharge ?? 0),
       context,
-    ).toFixed(2),
+    )),
   }));
 
 // ---------------------------------------------------------------------------
@@ -5001,14 +5043,20 @@ export const WAREHOUSE_LOCATION_TYPE_META: Record<
     inTransit: true,
     blockReason: null,
   },
+  // At a machine. Not free to sell — it is spoken for by the run — but not
+  // blocked either: 22 of the reference's 23 lots at a `Productie` location are
+  // unblocked.
   production: {
     holdsStock: true,
     sellable: false,
     pickable: false,
     countable: true,
     inTransit: true,
-    blockReason: "location_type_setting",
+    blockReason: null,
   },
+  // Out at an external processor. **Blocked**, and the reference is absolute
+  // about it: all 36 of its lots at a `Bewerker` location carry the flag. The
+  // metal is off the premises and in somebody else's hands.
   processing: {
     holdsStock: true,
     sellable: false,
@@ -5034,23 +5082,26 @@ export const WAREHOUSE_LOCATION_TYPE_META: Record<
     inTransit: false,
     blockReason: "disapproval",
   },
-  // Staged for a truck: already picked for somebody, so not free to sell again.
+  // Staged for a truck: already picked for somebody, so not free to sell again
+  // — but not blocked. None of the reference's 168 lots at a `Laad` location
+  // carries the flag, and rightly: the metal is ours and on its way out.
   load: {
     holdsStock: true,
     sellable: false,
     pickable: false,
     countable: false,
     inTransit: true,
-    blockReason: "location_type_setting",
+    blockReason: null,
   },
-  // Waiting for the customer to collect it — picked, and theirs.
+  // Waiting for the customer to collect it — picked, and theirs. Both the
+  // reference's `Afhaal` lots are unblocked.
   collection: {
     holdsStock: true,
     sellable: false,
     pickable: false,
     countable: false,
     inTransit: true,
-    blockReason: "location_type_setting",
+    blockReason: null,
   },
   // Held against a call-off contract, so it belongs to that customer's
   // agreement rather than to the free stock.
@@ -5064,13 +5115,16 @@ export const WAREHOUSE_LOCATION_TYPE_META: Record<
   },
   // Waste. It is still physically there, which is why it holds stock, but it is
   // not sellable and there is nothing to count.
+  // Written off, not held back: all 27 of the reference's `Schroot` lots are
+  // unblocked. Scrap is unsellable because it is scrap, not because anybody
+  // stopped it.
   scrap: {
     holdsStock: true,
     sellable: false,
     pickable: false,
     countable: false,
     inTransit: false,
-    blockReason: "location_type_setting",
+    blockReason: null,
   },
 };
 
@@ -5212,6 +5266,21 @@ export const isSellableLocationType = (
 /**
  * Why a lot standing on this type of location is blocked, or null when it is
  * not blocked at all.
+ *
+ * ⚠️ Blocked is **not** the same question as sellable, and conflating them was
+ * an error this table used to carry. Metal staged for loading is not free to
+ * sell and not blocked either; scrap is unsellable because it is scrap. The
+ * reference's 2.247 lots settle which types really carry the flag:
+ *
+ *   Bewerker  36 of 36 blocked      Afroep    12 of 12 blocked
+ *   Productie  1 of 23              Laad       0 of 168
+ *   Schroot    0 of 27              Afhaal     0 of 2
+ *   Pick       0 of 1.934           Bulk       0 of 45
+ *
+ * So only two types block by their nature — the metal is off the premises, or
+ * it belongs to a customer's call-off. Everything else that reads "blocked" was
+ * blocked by hand, which is what `Warehouses.blocked` and `Stock.blocked` are
+ * for.
  */
 export const blockReasonForLocationType = (
   type: WarehouseLocationType | null | undefined,
@@ -7779,10 +7848,10 @@ export const invoiceSummaryFromSnapshot = (
     ...invoice,
     totalExclVat: invoice.invoiceAmountExclVat,
     totalInclVat: invoice.invoiceAmountInclVat,
-    vatAmount: (
+    vatAmount: moneyString((
       Number(invoice.invoiceAmountInclVat ?? 0) -
       Number(invoice.invoiceAmountExclVat ?? 0)
-    ).toFixed(2),
+    )),
   });
 
 // ---------------------------------------------------------------------------
@@ -8374,10 +8443,31 @@ export const amountForWeight = (
   pricePerUnit: number,
   priceUnit: string | null | undefined,
   weightKg: number,
-): number =>
-  (priceUnit ?? "").trim().toUpperCase() === "KG"
-    ? pricePerUnit * weightKg
-    : pricePerUnit * (weightKg / 1000);
+  line?: Omit<PriceMeasureLine, "weightKg">,
+): number => {
+  // Given the rest of the line, every unit can be read — the piece, the metre,
+  // the square metre — and not only the three that are weights. A line priced
+  // `ST` valued off its weight is out by whatever the piece happens to weigh.
+  //
+  // A caller that knows the quantity but not the dimensions still fixes `ST`;
+  // an area or volume price falls through to the weight reading below, which is
+  // what it did before.
+  if (line) {
+    const measure = priceMeasureFor(priceUnit, { ...line, weightKg });
+    if (measure !== null) {
+      return roundToCents(pricePerUnit * measure);
+    }
+  }
+
+  // Without a line there is only the weight to go on, so the weight units are
+  // all this can read. Anything else falls back to the tonne, which is what all
+  // but a handful of purchase lines are struck in.
+  return roundToCents(
+    (priceUnit ?? "").trim().toUpperCase() === "KG"
+      ? pricePerUnit * weightKg
+      : pricePerUnit * (weightKg / 1000),
+  );
+};
 
 /**
  * What a lot of stock is worth. The valuation price is per tonne, like every
@@ -8441,6 +8531,7 @@ export const theoreticalPieceWeightKg = (product: {
   lengthMm?: number | null;
   widthMm?: number | null;
   thicknessMm?: string | number | null;
+  theoreticalThicknessMm?: string | number | null;
 }): number | null => {
   const stored = Number(product.theoreticalWeight ?? 0);
   if (!(stored > 0)) {
@@ -8452,7 +8543,14 @@ export const theoreticalPieceWeightKg = (product: {
     : undefined;
   const metres = (product.lengthMm ?? 0) / 1000;
   const width = (product.widthMm ?? 0) / 1000;
-  const thickness = Number(product.thicknessMm ?? 0) / 1000;
+  // The metal's real thickness, not the size it is sold as. Steel is rolled a
+  // little over or under nominal, the reference records both, and it is the
+  // rolled figure the weight comes from: with it, density x volume reproduces
+  // all 1.932 dimensioned lots in the reference's own export; with the nominal
+  // one, 110 of them are out by up to a few per cent.
+  const rolled = Number(product.theoreticalThicknessMm ?? 0);
+  const thickness =
+    (rolled > 0 ? rolled : Number(product.thicknessMm ?? 0)) / 1000;
 
   switch (basis) {
     case "per_piece":
@@ -8529,15 +8627,17 @@ export const productPieceWeightKg = (product: {
  * line knows — an area price on a line with no width — so a caller can fall
  * back rather than invent a number.
  */
+export type PriceMeasureLine = {
+  quantity: number;
+  weightKg: number;
+  lengthMm?: number | null;
+  widthMm?: number | null;
+  thicknessMm?: number | null;
+};
+
 export const priceMeasureFor = (
   priceUnit: string | null | undefined,
-  line: {
-    quantity: number;
-    weightKg: number;
-    lengthMm?: number | null;
-    widthMm?: number | null;
-    thicknessMm?: number | null;
-  },
+  line: PriceMeasureLine,
 ): number | null => {
   const metres = (line.lengthMm ?? 0) / 1000;
   const width = (line.widthMm ?? 0) / 1000;
@@ -8651,21 +8751,29 @@ export const netPriceAfterDiscounts = (
  * figure as `Kg(dif)` on the Warehouse workorders screen. Both compare planned
  * against actual and they point opposite ways:
  *
- *   Kg(dif)           Kg(a) - Kg(p), in kilograms, negative when short
- *   Weight deviation  (Kg(p) - Kg(a)) / Kg(p) x 100, positive when short
+ *   Kg(dif)           Kg(a) - Kg(p), in kilograms, signed
+ *   Weight deviation  |Kg(p) - Kg(a)| / Kg(p) x 100, a magnitude
  *
- * Proved on the reference's own combined workorder screen: every `New` row
- * reads 100,00 - nothing has been reported, so the whole planned weight is
- * outstanding - and every `Approved` row that came in on plan reads 0,00.
+ * The numerator is an absolute value and the denominator is not. That is not a
+ * guess: it is the only reading that fits all 13.583 lines of the reference's
+ * own 13.610-line export, including the single line planned at -125 kg, which
+ * prints -176 rather than 176 because the sign of Kg(p) survives.
  *
- * Returns null when nothing was planned, since a share of zero is not a
- * hundred per cent short, it is unanswerable.
+ * So the column answers "by how much did this miss", not "which way". 337 lines
+ * came in heavier than planned and the reference prints every one of them
+ * positive. An earlier version of this helper returned them negative.
+ *
+ * Zero planned reads 0, not blank - all 27 such lines in the export do, one of
+ * them having taken 46 kg against nothing planned. Arguably that should be
+ * unanswerable rather than on-target, but the screen is what we are matching.
  */
 export const weightDeviationPercent = (
   kgPlanned: number,
   kgActual: number,
-): number | null =>
-  kgPlanned === 0 ? null : ((kgPlanned - kgActual) / kgPlanned) * 100;
+): number =>
+  kgPlanned === 0
+    ? 0
+    : (Math.abs(kgPlanned - kgActual) / kgPlanned) * 100;
 
 /**
  * What is still to be called off on a line the customer releases in batches.

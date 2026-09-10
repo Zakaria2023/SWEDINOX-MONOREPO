@@ -41,6 +41,31 @@ export const Stock = mysqlTable(
     locationUuid: char("location_uuid", { length: 36 }),
     blocked: boolean("blocked").default(false),
 
+    // The sales line that cut this lot, when it is a remnant. Most of the
+    // warehouse is remnants: of the reference's 2.247 lots, 1.371 name a
+    // 1xxxxx sales order as their origin against only 782 naming a purchase.
+    // Cut a plate for a customer and what is left goes back on the shelf still
+    // carrying the order that cut it.
+    //
+    // Nullable beside the purchase pair, and both are nullable together: a
+    // Customer Materials lot carries no origin at all, no supplier and no
+    // charge, because the metal was never ours.
+    //
+    // No foreign key, unlike its purchase-side twin: `order-items.ts` already
+    // imports this file, so importing `OrderItems` back closes a module cycle
+    // and Drizzle's inference collapses to `any` across every query that
+    // touches stock. The column is the reference to an order line all the same.
+    orderItemUuid: char("order_item_uuid", { length: 36 }),
+
+    // The plate's own number within its heat — `Plaatnummer` on the reception
+    // and `Plate no.` on the location's stock panel. Never yet seen populated,
+    // so its format is unknown; recorded because the lot identity is a triple
+    // of charge, plate number and internal charge, and we held only two.
+    plateNumber: varchar("plate_number", { length: 60 }),
+    // Six digits, e.g. 366558 / 389755. Carried on both the lot and the
+    // warehouse work order line that made it.
+    internalBundle: varchar("internal_bundle", { length: 60 }),
+
     // ── Ownership ─────────────────────────────────────────────────────────────
     // The supplier the lot was sourced from (shown as "Supplier" on the grid).
     supplierUuid: char("supplier_uuid", { length: 36 }),

@@ -30,11 +30,12 @@ import {
   describeError,
   generateUuid,
   machineOptionCuts,
+  moneyString,
   productionRunBalance,
   profitMarginPercent,
+  todayDateString,
   toDecimalAmount,
   toDecimalQuantity,
-  todayDateString,
 } from "@/lib/helpers";
 import { exportRows } from "@/lib/server/excel";
 import { recordFreightMovement } from "@/lib/server/freight";
@@ -1004,6 +1005,10 @@ export const reportProductionCutCompletion = async (
 
         const quantity = Number(row.qtyActual);
         if (quantity > 0) {
+          // No production line is stamped on this one. A cut fetches lots for
+          // the whole run and the bed mixes them, so the steel that goes on it
+          // belongs to no single line — which is why `ReportCutFetchedInput`
+          // carries no line either. The same goes for the offcuts below.
           await applyProductionConsume(tx, {
             source,
             quantity,
@@ -1072,6 +1077,7 @@ export const reportProductionCutCompletion = async (
                 remark: null,
                 userId,
                 orderUuid: await orderUuidForItem(line.orderItemUuid),
+                productionWorkOrderLineUuid: line.uuid,
               })
             : null;
 
@@ -1424,15 +1430,15 @@ const pointOrderLineAtProducedLot = async (
       stockUuid: params.producedStockUuid,
       quantity: params.quantity.toFixed(3),
       qtyReserved: params.quantity.toFixed(3),
-      amount: amount.toFixed(2),
+      amount: moneyString(amount),
       costPrice: (params.quantity > 0
         ? params.cost / params.quantity
         : 0
       ).toFixed(4),
-      costAmount: params.cost.toFixed(2),
-      profit: profit.toFixed(2),
+      costAmount: moneyString(params.cost),
+      profit: moneyString(profit),
       profitMargin: profitMarginPercent(amount, profit).toFixed(2),
-      profitReplPrice: (amount - replacementPrice * params.quantity).toFixed(2),
+      profitReplPrice: moneyString(amount - replacementPrice * params.quantity),
     })
     .where(eq(OrderItems.uuid, params.orderItemUuid));
 };

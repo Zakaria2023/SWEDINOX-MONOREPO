@@ -64,6 +64,16 @@ export const Products = mysqlTable(
     length: decimal("length", { precision: 10, scale: 2 }),
     widthDiameter: decimal("width_diameter", { precision: 10, scale: 2 }),
     thickness: decimal("thickness", { precision: 10, scale: 2 }),
+    // What the metal actually measures, against the size it is sold as. A 1 mm
+    // plate is rolled at 1,019 mm and a 2 mm at 2,058, and it is this figure —
+    // not the nominal one — that every derived weight is computed from:
+    // `kg = density x length x width x THIS x quantity` reproduces the
+    // reference exactly on 1.932 of 1.932 lots, where the nominal thickness
+    // misses 110 of them. 319 of 2.187 lots have the two differing.
+    theoreticalThickness: decimal("theoretical_thickness", {
+      precision: 10,
+      scale: 3,
+    }),
 
     technicalStock: decimal("technical_stock", {
       precision: 15,

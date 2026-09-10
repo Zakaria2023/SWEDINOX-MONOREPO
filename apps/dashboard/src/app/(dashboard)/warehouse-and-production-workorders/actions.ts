@@ -28,11 +28,11 @@ export type CombinedWorkOrderLine = {
   kgPlanned: number;
   kgActual: number;
   /**
-   * How far short of plan the line came in, as a percentage of what was
-   * planned — the reference's "Weight deviation". Null when nothing was
-   * planned, which is not the same as being on target.
+   * By how much the line missed its planned weight, as a percentage of what was
+   * planned — the reference's "Weight deviation". A magnitude, so a line that
+   * came in heavy reads positive too. Zero when nothing was planned.
    */
-  weightDeviation: number | null;
+  weightDeviation: number;
   workOrderType: "Warehouse" | "Production";
   workOrderDate: string | null;
   workOrderStatus: string | null;

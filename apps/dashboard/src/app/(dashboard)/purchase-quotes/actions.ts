@@ -26,6 +26,7 @@ import {
   generateUuid,
   getQuoteVatRatePercent,
   isPurchaseQuoteEditable,
+  moneyString,
   netPriceAfterDiscounts,
   todayDateString,
 } from "@/lib/helpers";
@@ -144,11 +145,11 @@ const buildPurchaseQuoteSummary = async (
   const vatAmount = totalExclVat * (vatRate / 100);
 
   return {
-    materials: materials.toFixed(2),
-    surcharges: surchargeTotal.toFixed(2),
-    totalExclVat: totalExclVat.toFixed(2),
-    vatAmount: vatAmount.toFixed(2),
-    totalInclVat: (totalExclVat + vatAmount).toFixed(2),
+    materials: moneyString(materials),
+    surcharges: moneyString(surchargeTotal),
+    totalExclVat: moneyString(totalExclVat),
+    vatAmount: moneyString(vatAmount),
+    totalInclVat: moneyString(totalExclVat + vatAmount),
     totalWeightKg: totalWeightKg.toFixed(2),
   };
 };
@@ -185,15 +186,21 @@ export const createPurchaseQuote = async (
           ...item,
           uuid: generateUuid(),
           purchaseQuoteUuid: uuid,
-          netPrice: netPrice.toFixed(2),
+          netPrice: moneyString(netPrice),
           lineNumber: item.lineNumber ?? index + 1,
           // The line's weight at the price's own unit, never the piece count:
           // ten plates weighing 314 kg at EUR 1.930 per tonne is EUR 606,02.
-          amount: amountForWeight(
+          amount: moneyString(amountForWeight(
             netPrice,
             item.priceUnit ?? null,
             Number(item.kg ?? 0),
-          ).toFixed(2),
+            {
+              quantity: Number(item.quantity ?? 0),
+              lengthMm: item.lengthMm,
+              widthMm: item.widthMm,
+              thicknessMm: Number(item.thicknessMm ?? 0),
+            },
+          )),
         });
       }
 
@@ -345,13 +352,19 @@ export const recordPurchaseQuotePrices = async (
         await tx
           .update(PurchaseQuoteItems)
           .set({
-            netPrice: netPrice.toFixed(2),
+            netPrice: moneyString(netPrice),
             priceUnit: price.priceUnit ?? item.priceUnit,
-            amount: amountForWeight(
+            amount: moneyString(amountForWeight(
               netPrice,
               price.priceUnit ?? item.priceUnit,
               Number(item.kg ?? 0),
-            ).toFixed(2),
+              {
+                quantity: Number(item.quantity ?? 0),
+                lengthMm: item.lengthMm,
+                widthMm: item.widthMm,
+                thicknessMm: Number(item.thicknessMm ?? 0),
+              },
+            )),
           })
           .where(eq(PurchaseQuoteItems.uuid, price.itemUuid));
       }
@@ -500,7 +513,7 @@ export const convertPurchaseQuoteToOrder = async (
         deliveryRemark: quote.deliveryRemark,
         status: "open",
         orderDate: todayDateString(),
-        amount: amount.toFixed(2),
+        amount: moneyString(amount),
         weightKg: weightKg.toFixed(3),
       });
 

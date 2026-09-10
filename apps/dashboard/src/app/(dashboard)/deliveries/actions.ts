@@ -12,6 +12,7 @@ import { mailDocument, sendDeliveryNoteEmail } from "@/emails/documents";
 import {
   describeError,
   generateUuid,
+  moneyString,
   restateLotValue,
   todayDateString,
 } from "@/lib/helpers";
@@ -90,8 +91,21 @@ export const getBlockedDeliveries = async (): Promise<DeliveryLineItem[]> => {
 // warehouse. It consumes the reserved stock and writes the "out" movement, so
 // invoicing afterwards is purely financial. Cancelling the invoice does NOT
 // bring the stock back — the goods have already shipped.
+/**
+ * Deliver one reserved line.
+ *
+ * The trip is optional and usually absent, which is a real difference from the
+ * reference rather than an oversight. There, goods leave on a trip: of its 5.043
+ * customer deliveries, 4.189 name a `6xxxxx` trip as the document that moved
+ * them and only 854 a warehouse work order — a lorry takes several orders at
+ * once, so the trip is the unit of despatch and this screen's line is not.
+ *
+ * Until deliveries are planned onto trips here, a caller that knows the trip can
+ * still say so, and the movement records it.
+ */
 export const deliverOrderItem = async (
   orderItemUuid: string,
+  transportWorkOrderUuid: string | null = null,
 ): Promise<DeliveryActionResult> => {
   try {
     const [orderItem] = await db
@@ -203,7 +217,7 @@ export const deliverOrderItem = async (
             // quantity alone left the remainder carrying the whole lot's value,
             // so stock valuation climbed a little with every delivery and never
             // came back down.
-            valuationEuro: nextValue.toFixed(2),
+            valuationEuro: moneyString(nextValue),
           })
           .where(
             and(
@@ -227,6 +241,7 @@ export const deliverOrderItem = async (
           reason: "sale_consumption",
           quantity: orderItem.quantity,
           orderUuid: orderItem.orderUuid,
+          transportWorkOrderUuid,
           createdByUserId: userId,
         });
 

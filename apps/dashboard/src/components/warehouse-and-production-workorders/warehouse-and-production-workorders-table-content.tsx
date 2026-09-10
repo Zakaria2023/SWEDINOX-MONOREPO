@@ -94,15 +94,14 @@ export const WarehouseAndProductionWorkOrdersTable = ({ rows }: Props) => (
                 <TableCell
                   className={cn(
                     "text-right tabular-nums",
-                    // A short delivery is the one worth noticing, and here it
-                    // reads positive: the column is how far *short of plan* the
-                    // floor came in, as a share of what was planned.
-                    (row.weightDeviation ?? 0) > 0 && "text-destructive",
+                    // Any deviation is worth noticing. The column is a
+                    // magnitude, so a line that came in heavy flags the same as
+                    // one that came in short — which is how the reference
+                    // prints them.
+                    row.weightDeviation > 0 && "text-destructive",
                   )}
                 >
-                  {row.weightDeviation === null
-                    ? "—"
-                    : formatPercent(row.weightDeviation)}
+                  {formatPercent(row.weightDeviation)}
                 </TableCell>
                 <TableCell>{row.workOrderType}</TableCell>
                 <TableCell>{formatDateColumn(row.workOrderDate)}</TableCell>
