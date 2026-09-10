@@ -1035,6 +1035,13 @@ const applyReceipt = async (
     purchaseOrderItemUuid: string | null;
     charge: string | null;
     internalCharge: string | null;
+    /**
+     * Our own six-digit number for the physical bundle. The unloading line
+     * already records it — `WarehouseWorkOrderPicks.internalBatch` — and until
+     * now the lot that unloading created did not, so a bundle that was
+     * identified on the way in became anonymous the moment it hit the rack.
+     */
+    internalBatch: string | null;
     userId: string;
     companyUuid: string | null;
     documentNo: string;
@@ -1126,6 +1133,7 @@ const applyReceipt = async (
     // called "ntv".
     charge: normaliseCharge(params.charge),
     internalCharge: normaliseCharge(params.internalCharge),
+    internalBatch: params.internalBatch,
     receiptDate: todayDateString(),
     valuationPrice: unitCost.toFixed(4),
     valuationEuro: moneyString(value),
@@ -1388,6 +1396,7 @@ export const reportWarehouseWorkOrderLineCompletion = async (
               purchaseOrderItemUuid: line.purchaseOrderItemUuid,
               charge: pick.charge ?? null,
               internalCharge: pick.internalCharge ?? null,
+              internalBatch: pick.internalBatch ?? null,
               userId,
               companyUuid: line.companyUuid,
               documentNo,
