@@ -19,6 +19,7 @@ import { Warehouses } from "@/db/schema/warehouses";
 import {
   describeError,
   generateUuid,
+  moneyString,
   NON_SELLABLE_LOCATION_TYPES,
   quoteLineFinancials,
   resolveOrderTypeLabel,
@@ -456,14 +457,14 @@ export const convertQuoteToOrder = async (
           groupDiscount: allocation.line.groupDiscount,
           lineDiscount: allocation.line.lineDiscount,
           netPrice: allocation.line.netPrice,
-          amount: financials.amount.toFixed(2),
+          amount: moneyString(financials.amount),
 
           costPrice: financials.costPrice.toFixed(4),
-          costAmount: financials.costAmount.toFixed(2),
+          costAmount: moneyString(financials.costAmount),
           replacementPrice: allocation.line.replacementPrice,
-          profit: financials.profit.toFixed(2),
+          profit: moneyString(financials.profit),
           profitMargin: financials.profitMargin.toFixed(2),
-          profitReplPrice: financials.profitReplPrice.toFixed(2),
+          profitReplPrice: moneyString(financials.profitReplPrice),
         });
       }
 

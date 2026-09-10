@@ -22,6 +22,7 @@ import {
   complaintSolutionReturnsGoods,
   describeError,
   generateUuid,
+  moneyString,
   returnReasonForComplaintCategory,
 } from "@/lib/helpers";
 import { currentUser } from "@clerk/nextjs/server";
@@ -554,7 +555,7 @@ export const createComplaint = async (
           createdByUserId: user?.id ?? null,
           qty: qty.toFixed(3),
           // The complained-about share of what the line was worth and weighed.
-          amount: ((Number(line.amount ?? 0) / deliveredQty) * qty).toFixed(2),
+          amount: moneyString((Number(line.amount ?? 0) / deliveredQty) * qty),
           weightKg: ((Number(line.weightKg ?? 0) / deliveredQty) * qty).toFixed(
             2,
           ),

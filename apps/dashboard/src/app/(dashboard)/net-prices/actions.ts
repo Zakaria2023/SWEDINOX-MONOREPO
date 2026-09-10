@@ -1,5 +1,7 @@
 "use server";
 
+import { moneyString } from "@/lib/helpers";
+
 import { db } from "@/db";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import {
@@ -294,9 +296,9 @@ export const generateNetPrices = async (): Promise<GenerateNetPricesResult> => {
             uuid: generateUuid(),
             contractUuid: contract.uuid,
             productUuid: product.uuid,
-            netPrice: netPrice.toFixed(2),
+            netPrice: moneyString(netPrice),
             netPriceUnit: product.priceUnit ?? product.stockUnit,
-            discountPercent: totalDiscount.toFixed(2),
+            discountPercent: moneyString(totalDiscount),
             fromQty: threshold.toFixed(3),
             fromQtyUnit: product.stockUnit,
             validFrom: contract.startingDate,

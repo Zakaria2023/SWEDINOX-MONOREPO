@@ -14,7 +14,7 @@ import {
 } from "@/components/shadcn/table";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { WorkOrderStatus } from "@/lib/enums";
-import { cn, formatDateColumn } from "@/lib/helpers";
+import { cn, formatDateColumn, moneyString } from "@/lib/helpers";
 import { WORK_ORDER_STATUS_LABELS } from "@/lib/labels";
 
 /**
@@ -83,7 +83,7 @@ const groupBy = <T,>(rows: T[], key: (row: T) => string): Map<string, T[]> => {
 };
 
 const formatTotal = (value: number) =>
-  Number.isInteger(value) ? String(value) : value.toFixed(2);
+  Number.isInteger(value) ? String(value) : moneyString(value);
 
 export const WorkOrderTree = <T extends WorkOrderTreeRow>({
   rows,

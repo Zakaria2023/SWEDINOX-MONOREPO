@@ -16,6 +16,7 @@ import {
 import {
   describeError,
   generateUuid,
+  moneyString,
   optionAmount,
   profitMarginPercent,
   todayDateString,
@@ -240,12 +241,12 @@ export const generateOptionCharges =
             quantity: quantity.toFixed(3),
             unit: line.unit,
             weightKg: line.weightKg ?? "0.00",
-            price: unitPrice.toFixed(2),
+            price: moneyString(unitPrice),
             priceUnit: price.priceUnit,
-            costPrice: unitCost.toFixed(2),
-            amount: amount.toFixed(2),
-            cost: cost.toFixed(2),
-            profit: (amount - cost).toFixed(2),
+            costPrice: moneyString(unitCost),
+            amount: moneyString(amount),
+            cost: moneyString(cost),
+            profit: moneyString(amount - cost),
           });
         }
       }

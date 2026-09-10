@@ -1,5 +1,7 @@
 "use client";
 
+import { moneyString } from "@/lib/helpers";
+
 import { Controller } from "react-hook-form";
 import { useComplaintSubmit } from "@/app/(dashboard)/complaints/use-complaint-submit";
 import { CompanyOption } from "@/app/(dashboard)/companies/actions";
@@ -376,7 +378,7 @@ export const ComplaintForm = ({
           <div className="grid grid-cols-[10rem_8rem_1fr] items-center gap-3">
             <span className="text-sm font-semibold">Total costs</span>
             <span className="text-sm font-semibold">
-              € {totalCosts.toFixed(2)}
+              € {moneyString(totalCosts)}
             </span>
           </div>
         </div>

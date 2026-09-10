@@ -1,5 +1,7 @@
 "use client";
 
+import { moneyString } from "@/lib/helpers";
+
 import { createSalesOption } from "@/app/(dashboard)/option-prices-per-product/actions";
 import { Button } from "@/components/shadcn/button";
 import {
@@ -96,8 +98,8 @@ export const NewOptionDialog = () => {
         priceUnit: values.priceUnit
           ? (values.priceUnit as (typeof salesUnitOptions)[number])
           : null,
-        basePrice: values.basePrice.toFixed(2),
-        costPrice: values.costPrice.toFixed(2),
+        basePrice: moneyString(values.basePrice),
+        costPrice: moneyString(values.costPrice),
         isActive: true,
       });
 

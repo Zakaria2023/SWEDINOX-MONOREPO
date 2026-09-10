@@ -21,6 +21,7 @@ import {
   describeError,
   generateUuid,
   getQuoteVatRatePercent,
+  moneyString,
   productPieceWeightKg,
   quoteLineFinancials,
   quoteOrderPolicy,
@@ -296,15 +297,15 @@ export const buildOrderSummary = async (
   });
 
   return {
-    materialsRevenue: summary.materials.revenue.toFixed(2),
-    materialsProfit: summary.materials.profit.toFixed(2),
-    materialsProfitReplPrice: summary.materials.profitReplPrice.toFixed(2),
-    surchargesRevenue: summary.surcharges.revenue.toFixed(2),
-    surchargesProfit: summary.surcharges.profit.toFixed(2),
-    totalExclVat: summary.total.revenue.toFixed(2),
-    vatAmount: summary.vatAmount.toFixed(2),
-    totalInclVat: summary.totalInclVat.toFixed(2),
-    avgKiloPrice: summary.avgKiloPrice.toFixed(2),
+    materialsRevenue: moneyString(summary.materials.revenue),
+    materialsProfit: moneyString(summary.materials.profit),
+    materialsProfitReplPrice: moneyString(summary.materials.profitReplPrice),
+    surchargesRevenue: moneyString(summary.surcharges.revenue),
+    surchargesProfit: moneyString(summary.surcharges.profit),
+    totalExclVat: moneyString(summary.total.revenue),
+    vatAmount: moneyString(summary.vatAmount),
+    totalInclVat: moneyString(summary.totalInclVat),
+    avgKiloPrice: moneyString(summary.avgKiloPrice),
     totalWeightKg: summary.totalWeightKg.toFixed(2),
   };
 };
@@ -499,19 +500,19 @@ export const createOrder = async (
           lineNumber: index + 1,
           status: "reserved",
 
-          grossPrice: grossPrice.toFixed(2),
+          grossPrice: moneyString(grossPrice),
           priceUnit: product?.priceUnit ?? null,
-          groupDiscount: groupDiscount.toFixed(2),
-          lineDiscount: lineDiscount.toFixed(2),
-          netPrice: netPrice.toFixed(2),
-          amount: financials.amount.toFixed(2),
+          groupDiscount: moneyString(groupDiscount),
+          lineDiscount: moneyString(lineDiscount),
+          netPrice: moneyString(netPrice),
+          amount: moneyString(financials.amount),
 
           costPrice: financials.costPrice.toFixed(4),
-          costAmount: financials.costAmount.toFixed(2),
-          replacementPrice: Number(product?.replacementPrice ?? 0).toFixed(2),
-          profit: financials.profit.toFixed(2),
+          costAmount: moneyString(financials.costAmount),
+          replacementPrice: moneyString(Number(product?.replacementPrice ?? 0)),
+          profit: moneyString(financials.profit),
           profitMargin: financials.profitMargin.toFixed(2),
-          profitReplPrice: financials.profitReplPrice.toFixed(2),
+          profitReplPrice: moneyString(financials.profitReplPrice),
           profitTooLow: financials.profitTooLow,
         });
 

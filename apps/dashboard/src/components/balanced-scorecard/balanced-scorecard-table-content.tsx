@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
-import { cn } from "@/lib/helpers";
+import { cn, moneyString } from "@/lib/helpers";
 import { ArrowDown, ArrowRight, ArrowUp } from "lucide-react";
 import { TableExportButton } from "@/components/ui/table-export-button";
 
@@ -65,7 +65,7 @@ export const BalancedScorecardTable = ({ rows }: Props) => (
               <TableCell>{row.category}</TableCell>
               <TableCell className="font-medium">{row.kpi}</TableCell>
               <TableCell className="text-right">
-                {row.value.toFixed(2)}
+                {moneyString(row.value)}
               </TableCell>
               <TableCell className="text-right">
                 {row.target.toFixed(2)}

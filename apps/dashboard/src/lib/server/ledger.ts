@@ -7,6 +7,7 @@ import {
   debitCredit,
   financialPeriodFor,
   generateUuid,
+  moneyString,
   postingBalance,
   settlementAccountFor,
 } from "@/lib/helpers";
@@ -363,9 +364,9 @@ const buildEntry = (
       debCreditor: context.debCreditor,
       description: draft.description ?? context.description,
       reference: context.reference ?? null,
-      debit: debit.toFixed(2),
-      credit: credit.toFixed(2),
-      amount: draft.amount.toFixed(2),
+      debit: moneyString(debit),
+      credit: moneyString(credit),
+      amount: moneyString(draft.amount),
       vat: "0.00",
       companyUuid: context.companyUuid,
       invoiceUuid: context.invoiceUuid ?? null,
@@ -384,7 +385,7 @@ const buildEntry = (
 
   if (!balance.balanced) {
     throw new Error(
-      `Refusing to post an unbalanced entry for ${context.description}: debits ${balance.totalDebit.toFixed(2)} against credits ${balance.totalCredit.toFixed(2)}.`,
+      `Refusing to post an unbalanced entry for ${context.description}: debits ${moneyString(balance.totalDebit)} against credits ${moneyString(balance.totalCredit)}.`,
     );
   }
 

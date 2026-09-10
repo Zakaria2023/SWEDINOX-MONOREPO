@@ -39,11 +39,12 @@ import { StockMovements } from "@/db/schema/stock-movements";
 import { mailDocument, sendInvoiceEmail } from "@/emails/documents";
 import { ReturnOrderReason } from "@/lib/enums";
 import {
-  describeError,
   defaultTransportModeFor,
+  describeError,
   generateUuid,
   getInvoiceVatRatePercent,
   getQuoteVatRatePercent,
+  moneyString,
   proRataSlice,
   QUANTITY_EPSILON,
   todayDateString,
@@ -684,14 +685,14 @@ const buildReturnOrderSummary = async (
   const vatAmount = totalExclVat * (vatRate / 100);
 
   return {
-    materialsRevenue: materialsRevenue.toFixed(2),
+    materialsRevenue: moneyString(materialsRevenue),
     // Options aren't priced separately anywhere yet, so this stays zero rather
     // than quietly folding option value into materials.
     optionsRevenue: "0.00",
-    surchargesRevenue: surchargesRevenue.toFixed(2),
-    totalExclVat: totalExclVat.toFixed(2),
-    vatAmount: vatAmount.toFixed(2),
-    totalInclVat: (totalExclVat + vatAmount).toFixed(2),
+    surchargesRevenue: moneyString(surchargesRevenue),
+    totalExclVat: moneyString(totalExclVat),
+    vatAmount: moneyString(vatAmount),
+    totalInclVat: moneyString(totalExclVat + vatAmount),
     totalWeightKg: totalWeightKg.toFixed(2),
   };
 };
@@ -814,7 +815,7 @@ export const receiveReturnOrder = async (
           .update(Stock)
           .set({
             quantity: nextQuantity,
-            valuationEuro: nextValue.toFixed(2),
+            valuationEuro: moneyString(nextValue),
             // Anything back on the shelf is sellable again.
             status: "pending",
           })
@@ -1125,18 +1126,17 @@ export const creditReturnOrder = async (
         expirationDate: new Date(),
         paymentTerms: returnOrder.paymentTerms ?? first?.paymentTerms ?? null,
         vatScenario: first?.vatScenario ?? null,
-        invoiceAmountExclVat: (-exclVat).toFixed(2),
-        invoiceAmountInclVat: (-inclVat).toFixed(2),
+        invoiceAmountExclVat: moneyString(-exclVat),
+        invoiceAmountInclVat: moneyString(-inclVat),
         // A credit note extends no credit, so it carries no surcharge for it.
         creditRestriction: "0.00",
-        invoiceTotal: (-inclVat).toFixed(2),
-        outstanding: (-inclVat).toFixed(2),
-        materialsRevenue: (-materials).toFixed(2),
-        surchargesRevenue: (-surchargeTotal).toFixed(2),
-        totalWeightKg: (-creditLines.reduce(
-          (sum, line) => sum + line.weightKg,
-          0,
-        )).toFixed(2),
+        invoiceTotal: moneyString(-inclVat),
+        outstanding: moneyString(-inclVat),
+        materialsRevenue: moneyString(-materials),
+        surchargesRevenue: moneyString(-surchargeTotal),
+        totalWeightKg: moneyString(
+          -creditLines.reduce((sum, line) => sum + line.weightKg, 0),
+        ),
         explanation: `Credit note for return order ${returnOrder.id}`,
       });
 
@@ -1205,19 +1205,18 @@ export const creditReturnOrder = async (
           orderItemUuid: line.orderItemUuid,
           productUuid: line.productUuid,
           quantity: (-line.quantity).toFixed(3),
-          netPrice: line.netPrice.toFixed(2),
-          amount: amount.toFixed(2),
+          netPrice: moneyString(line.netPrice),
+          amount: moneyString(amount),
           costPrice: line.costPrice.toFixed(4),
-          costAmount: costAmount.toFixed(2),
-          replacementPrice: line.replacementPrice.toFixed(2),
+          costAmount: moneyString(costAmount),
+          replacementPrice: moneyString(line.replacementPrice),
           // Margin reverses with the sale: the profit booked on the original
           // line is given back along with the revenue.
-          profit: (amount - costAmount).toFixed(2),
+          profit: moneyString(amount - costAmount),
           profitMargin: "0.00",
-          profitReplPrice: (
-            amount +
-            line.replacementPrice * line.quantity
-          ).toFixed(2),
+          profitReplPrice: moneyString(
+            amount + line.replacementPrice * line.quantity,
+          ),
           weightKg: (-line.weightKg).toFixed(2),
         });
       }
@@ -1316,12 +1315,11 @@ export const createReturnOrder = async (
           quantity: line.quantity,
           returnQty: returnQty.toFixed(3),
           returnReason: item.returnReason ?? fields.returnReason ?? null,
-          netPrice: netPrice.toFixed(2),
-          amount: (netPrice * returnQty).toFixed(2),
-          weightKg: (
-            (Number(line.weightKg ?? 0) / invoicedQty) *
-            returnQty
-          ).toFixed(2),
+          netPrice: moneyString(netPrice),
+          amount: moneyString(netPrice * returnQty),
+          weightKg: moneyString(
+            (Number(line.weightKg ?? 0) / invoicedQty) * returnQty,
+          ),
         });
       }
 

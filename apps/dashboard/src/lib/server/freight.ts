@@ -5,7 +5,7 @@ import {
   Products,
   Stock,
 } from "@/db";
-import { generateUuid } from "@/lib/helpers";
+import { generateUuid, moneyString } from "@/lib/helpers";
 import { eq, sql } from "drizzle-orm";
 
 // The Drizzle transaction handle passed into db.transaction(async (tx) => ...).
@@ -62,9 +62,9 @@ export const recordFreightMovement = async (
     mutationQuantity: params.quantity,
     reason: params.reason,
     startingStockQty: startingQty.toFixed(3),
-    startingStockValue: (startingQty * unitPrice).toFixed(2),
+    startingStockValue: moneyString(startingQty * unitPrice),
     closingStockQty: closingQty.toFixed(3),
-    closingStockValue: (closingQty * unitPrice).toFixed(2),
+    closingStockValue: moneyString(closingQty * unitPrice),
     revenueGroupUuid: product?.revenueGroupUuid ?? null,
     companyUuid: params.companyUuid ?? null,
     orderUuid: params.orderUuid ?? null,

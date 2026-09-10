@@ -30,6 +30,7 @@ import {
   generateUuid,
   getInvoiceVatRatePercent,
   getPaymentTermDueDate,
+  moneyString,
   QUANTITY_EPSILON,
   remainingToInvoice,
   resolveSurchargeAmounts,
@@ -438,15 +439,15 @@ export const createInvoice = async (
         productUuid: row.productUuid,
         quantity: billing.toFixed(3),
         netPrice: row.netPrice,
-        amount: sliced.amount.toFixed(2),
+        amount: moneyString(sliced.amount),
         costPrice: row.costPrice,
-        costAmount: sliced.costAmount.toFixed(2),
+        costAmount: moneyString(sliced.costAmount),
         replacementPrice: row.replacementPrice,
-        profit: sliced.profit.toFixed(2),
+        profit: moneyString(sliced.profit),
         // A percentage of a slice is the percentage of the whole — nothing to
         // apportion.
         profitMargin: row.profitMargin,
-        profitReplPrice: sliced.profitReplPrice.toFixed(2),
+        profitReplPrice: moneyString(sliced.profitReplPrice),
         weightKg: sliced.weightKg.toFixed(2),
       });
 
@@ -535,16 +536,18 @@ export const createInvoice = async (
         ...fields,
         expirationDate: derivedExpiration,
         uuid,
-        invoiceAmountExclVat: exclVat.toFixed(2),
-        invoiceAmountInclVat: inclVat.toFixed(2),
-        creditRestriction: creditRestriction.toFixed(2),
-        invoiceTotal: invoiceTotal.toFixed(2),
-        outstanding: outstanding.toFixed(2),
-        materialsRevenue: summary.materials.revenue.toFixed(2),
-        materialsProfit: summary.materials.profit.toFixed(2),
-        materialsProfitReplPrice: summary.materials.profitReplPrice.toFixed(2),
-        surchargesRevenue: summary.surcharges.revenue.toFixed(2),
-        surchargesProfit: summary.surcharges.profit.toFixed(2),
+        invoiceAmountExclVat: moneyString(exclVat),
+        invoiceAmountInclVat: moneyString(inclVat),
+        creditRestriction: moneyString(creditRestriction),
+        invoiceTotal: moneyString(invoiceTotal),
+        outstanding: moneyString(outstanding),
+        materialsRevenue: moneyString(summary.materials.revenue),
+        materialsProfit: moneyString(summary.materials.profit),
+        materialsProfitReplPrice: moneyString(
+          summary.materials.profitReplPrice,
+        ),
+        surchargesRevenue: moneyString(summary.surcharges.revenue),
+        surchargesProfit: moneyString(summary.surcharges.profit),
         avgKiloPrice: summary.avgKiloPrice.toFixed(4),
         totalWeightKg: summary.totalWeightKg.toFixed(2),
       });
@@ -902,11 +905,11 @@ export const updateInvoice = async (
           .set({
             ...headerFields,
             expirationDate,
-            invoiceAmountExclVat: exclVat.toFixed(2),
-            invoiceAmountInclVat: inclVat.toFixed(2),
-            creditRestriction: creditRestriction.toFixed(2),
-            invoiceTotal: invoiceTotal.toFixed(2),
-            outstanding: outstanding.toFixed(2),
+            invoiceAmountExclVat: moneyString(exclVat),
+            invoiceAmountInclVat: moneyString(inclVat),
+            creditRestriction: moneyString(creditRestriction),
+            invoiceTotal: moneyString(invoiceTotal),
+            outstanding: moneyString(outstanding),
           })
           .where(eq(Invoices.uuid, uuid));
 

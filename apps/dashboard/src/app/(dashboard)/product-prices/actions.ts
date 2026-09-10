@@ -8,7 +8,7 @@ import {
   SelectProductGroupSuppliers,
 } from "@/db/schema/product-group-suppliers";
 import { Products, SelectProducts } from "@/db/schema/products";
-import { describeError, todayDateString } from "@/lib/helpers";
+import { describeError, moneyString, todayDateString } from "@/lib/helpers";
 import {
   EMPTY_PURCHASE_COST,
   loadPurchaseCostByProduct,
@@ -177,7 +177,7 @@ export const recalculateProductPrices = async (
         .update(Products)
         .set({
           markup: markup.toFixed(2),
-          basePrice: basePrice.toFixed(2),
+          basePrice: moneyString(basePrice),
           priceDate,
         })
         .where(eq(Products.uuid, product.uuid));

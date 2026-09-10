@@ -16,6 +16,7 @@ import {
   allowedCreditRestrictionDeduction,
   allowedEarlyPaymentDiscount,
   generateUuid,
+  moneyString,
   paymentRequiresBankDetails,
   toDateString,
   todayDateString,
@@ -212,7 +213,7 @@ export const registerPayment = async (
       const settled = amount + discountAmount;
       if (settled - outstanding > 0.005) {
         return {
-          error: `That settles more than is outstanding (€${outstanding.toFixed(2)} remaining).`,
+          error: `That settles more than is outstanding (€${moneyString(outstanding)} remaining).`,
         };
       }
 
@@ -222,8 +223,8 @@ export const registerPayment = async (
           invoiceUuid,
           companyUuid: invoice.companyUuid,
           paymentDate,
-          amount: amount.toFixed(2),
-          discountAmount: discountAmount.toFixed(2),
+          amount: moneyString(amount),
+          discountAmount: moneyString(discountAmount),
           method: input.method,
           reference: input.reference ?? null,
           createdByUserId: userId,
@@ -231,7 +232,7 @@ export const registerPayment = async (
 
         await tx
           .update(Invoices)
-          .set({ outstanding: (outstanding - settled).toFixed(2) })
+          .set({ outstanding: moneyString(outstanding - settled) })
           .where(eq(Invoices.uuid, invoiceUuid));
 
         await tx.insert(JournalEntries).values(
@@ -295,7 +296,7 @@ export const registerPayment = async (
       }
       if (amount - outstanding > 0.005) {
         return {
-          error: `That pays more than is outstanding (€${outstanding.toFixed(2)} remaining).`,
+          error: `That pays more than is outstanding (€${moneyString(outstanding)} remaining).`,
         };
       }
 
@@ -305,7 +306,7 @@ export const registerPayment = async (
           purchaseInvoiceUuid,
           companyUuid: purchaseInvoice.companyUuid,
           paymentDate,
-          amount: amount.toFixed(2),
+          amount: moneyString(amount),
           method: input.method,
           reference: input.reference ?? null,
           createdByUserId: userId,
@@ -313,7 +314,7 @@ export const registerPayment = async (
 
         await tx
           .update(PurchaseInvoices)
-          .set({ outstanding: (outstanding - amount).toFixed(2) })
+          .set({ outstanding: moneyString(outstanding - amount) })
           .where(eq(PurchaseInvoices.uuid, purchaseInvoiceUuid));
 
         await tx.insert(JournalEntries).values(
@@ -395,7 +396,7 @@ export const reversePayment = async (
           await tx
             .update(Invoices)
             .set({
-              outstanding: (Number(invoice.outstanding) + settled).toFixed(2),
+              outstanding: moneyString(Number(invoice.outstanding) + settled),
             })
             .where(eq(Invoices.uuid, payment.invoiceUuid));
 
@@ -444,9 +445,9 @@ export const reversePayment = async (
           await tx
             .update(PurchaseInvoices)
             .set({
-              outstanding: (
-                Number(purchaseInvoice.outstanding) + amount
-              ).toFixed(2),
+              outstanding: moneyString(
+                Number(purchaseInvoice.outstanding) + amount,
+              ),
             })
             .where(eq(PurchaseInvoices.uuid, payment.purchaseInvoiceUuid));
 

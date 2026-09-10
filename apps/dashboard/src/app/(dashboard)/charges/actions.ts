@@ -8,7 +8,12 @@ import { Orders, OrderSurcharges, SelectOrders } from "@/db/schema/orders";
 import { Products } from "@/db/schema/products";
 import { RevenueGroups, SelectRevenueGroups } from "@/db/schema/revenue-groups";
 import { Stock } from "@/db/schema/stock";
-import { describeError, generateUuid, todayDateString } from "@/lib/helpers";
+import {
+  describeError,
+  generateUuid,
+  moneyString,
+  todayDateString,
+} from "@/lib/helpers";
 import { INVOICE_SURCHARGE_DESCRIPTION_LABELS } from "@/lib/labels";
 import { desc, eq, getTableColumns } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -150,9 +155,9 @@ export const generateChargesFromOrders =
           creationDate: today,
           deliveryDate: line.deliveryDate,
           surcharge: line.productName ?? "Order line",
-          amount: amount.toFixed(2),
-          cost: cost.toFixed(2),
-          profit: (amount - cost).toFixed(2),
+          amount: moneyString(amount),
+          cost: moneyString(cost),
+          profit: moneyString(amount - cost),
           weightKg: line.kgPlanned ?? "0.00",
           status: "open",
         });
@@ -169,9 +174,9 @@ export const generateChargesFromOrders =
           surcharge: surcharge.description
             ? INVOICE_SURCHARGE_DESCRIPTION_LABELS[surcharge.description]
             : "Surcharge",
-          amount: amount.toFixed(2),
+          amount: moneyString(amount),
           cost: "0.00",
-          profit: (Number(surcharge.profit ?? 0) || amount).toFixed(2),
+          profit: moneyString(Number(surcharge.profit ?? 0) || amount),
           status: "open",
         });
       }

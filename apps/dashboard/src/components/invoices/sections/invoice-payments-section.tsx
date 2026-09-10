@@ -27,7 +27,12 @@ import {
   PaymentMethod,
   paymentMethods,
 } from "@/lib/enums";
-import { enumOptions, formatMoney, todayDateString } from "@/lib/helpers";
+import {
+  enumOptions,
+  formatMoney,
+  moneyString,
+  todayDateString,
+} from "@/lib/helpers";
 import { PAYMENT_METHOD_LABELS } from "@/lib/labels";
 import { Undo2 } from "lucide-react";
 
@@ -99,7 +104,7 @@ export const InvoicePaymentsSection = ({
       const result = await registerPayment({
         invoiceUuid,
         paymentDate,
-        amount: amount || suggested.toFixed(2),
+        amount: amount || moneyString(suggested),
         method,
         reference: reference || undefined,
         claimDiscount,
@@ -210,7 +215,7 @@ export const InvoicePaymentsSection = ({
                 type="number"
                 step="0.01"
                 min="0"
-                placeholder={suggested.toFixed(2)}
+                placeholder={moneyString(suggested)}
                 value={amount}
                 onChange={(event) => setAmount(event.target.value)}
                 disabled={isPending}
