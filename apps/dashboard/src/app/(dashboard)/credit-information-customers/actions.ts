@@ -1,10 +1,9 @@
 "use server";
-import { describeError } from "@/lib/helpers";
-
 import { db } from "@/db";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
 import { Invoices } from "@/db/schema/invoices";
+import { describeError, effectiveCreditLimit } from "@/lib/helpers";
 import {
   getCommittedOrderValueByCompany,
   getOpenReceivablesByCompany,
@@ -139,7 +138,17 @@ export const getCreditInformationCustomers = async (
         creditInsuranceDate: row.creditInsuranceDate,
         outstanding,
         currentOrders,
-        creditSpace: creditLimit - outstanding - currentOrders,
+        // Both limits, not just the insured one, and the uninsured one only
+        // while it is still valid. 187 of the reference's 2.593 customers have
+        // no insured limit at all and trade entirely on the uninsured one.
+        creditSpace:
+          effectiveCreditLimit(
+            creditLimit,
+            Number(row.creditLimitUninsured ?? 0),
+            row.creditInsuranceDate ?? null,
+          ) -
+          outstanding -
+          currentOrders,
         oldestInvoiceDate: row.oldestInvoiceDate,
         oldestDueDate: row.oldestDueDate,
         blocked: row.blockedByUserId !== null,
@@ -150,6 +159,8 @@ export const getCreditInformationCustomers = async (
       };
     });
   } catch (error) {
-    throw new Error(describeError(error, "Failed to fetch credit information customers"));
+    throw new Error(
+      describeError(error, "Failed to fetch credit information customers"),
+    );
   }
 };

@@ -1378,8 +1378,29 @@ export const assessReminder = ({
 };
 
 export type CreditAssessmentInput = {
-  /** The debtor's agreed limit. 0 or absent means no limit has been set. */
+  /**
+   * The debtor's **insured** limit — what the credit insurer will cover. 0 or
+   * absent means nobody has set one.
+   */
   creditLimit: number;
+  /**
+   * The limit the merchant carries on its own book, on top of the insured one.
+   * The reference calls it `Credit limit uninsured` / `Onverzekerd Limiet`, and
+   * a customer's room is the **sum** of the two.
+   */
+  creditLimitUninsured?: number;
+  /**
+   * When the uninsured limit lapses. Past that date it does not count. Usually
+   * the `31-12-9999` sentinel, which means it never lapses.
+   */
+  creditLimitUninsuredValidUntil?: string | Date | null;
+  /**
+   * The due date of the oldest receivable still open. Null when nothing is
+   * open, or when the oldest one carries no derivable due date.
+   */
+  oldestOpenDueDate?: string | Date | null;
+  /** The day the assessment is made on. Defaults to today. */
+  asOf?: string;
   /** What the customer already owes on invoices that still stand. */
   openReceivables: number;
   /**
@@ -1413,8 +1434,17 @@ export type CreditAssessment = {
    */
   waived: boolean;
   creditLimit: number;
+  /** The uninsured limit that counted — 0 once it has lapsed. */
+  creditLimitUninsured: number;
+  /** Both limits together: what `creditSpace` is measured against. */
+  totalCreditLimit: number;
   openReceivables: number;
   committedOrders: number;
+  /**
+   * How many days past due the oldest open receivable is, or null when there is
+   * nothing open or no due date to measure from.
+   */
+  oldestPostDaysOverdue: number | null;
   /** Room left before the limit is reached; negative once it is exceeded. */
   creditSpace: number;
   /** Everything owed and promised, including this order. */
@@ -1464,24 +1494,97 @@ export const grossUpCommittedOrderValue = (
   netAmount * (1 + getQuoteVatRatePercent(true, companyCalculatesVat) / 100);
 
 /**
+ * How many days past due the oldest open receivable may be before an order is
+ * held, regardless of how much room the customer has left.
+ *
+ * WARNING: this number is an assumption and the exports cannot settle it. The
+ * reference's `Financially blocked quotes and orders` names the reason —
+ * `Post(s) outstanding for too long` — but the threshold lives on a settings
+ * screen nobody has captured. Cross-referencing the two exports does not pin it
+ * either: that screen only lists debtors who *have* an order right now, so the
+ * 153 customers who are overdue and absent from it are mostly customers with
+ * nothing to block, not evidence of a higher threshold.
+ *
+ * What the data does give is a ceiling. All eleven debtors held for this reason
+ * are between **496 and 614 days** past due, so any threshold from 1 to 496
+ * reproduces every observed block. 30 days past the agreed due date is ordinary
+ * trade practice and sits safely inside that range.
+ *
+ * Confirm it with Swedinox and change this one constant.
+ */
+export const OVERDUE_POST_BLOCK_DAYS = 30;
+
+/**
+ * A debtor's total credit limit: the insured one plus the uninsured one, unless
+ * the uninsured one has lapsed.
+ *
+ * Kept as its own function because two places need it and they must not
+ * disagree — `assessCredit`, which decides whether to hold an order, and the
+ * Credit information customers screen, which shows the operator the number the
+ * order will be held against. The screen used to compute its own, from the
+ * insured limit alone.
+ */
+export const effectiveCreditLimit = (
+  creditLimit: number,
+  creditLimitUninsured: number,
+  uninsuredValidUntil: string | Date | null = null,
+  asOf: string = todayDateString(),
+): number => {
+  const stillValid =
+    uninsuredValidUntil === null ||
+    isSentinelDate(uninsuredValidUntil) ||
+    (daysOverdue(uninsuredValidUntil, asOf) ?? 0) <= 0;
+  return creditLimit + (stillValid ? creditLimitUninsured : 0);
+};
+
+/**
  * Decides whether an order should be held for credit reasons.
  *
  * The exposure being tested is what the customer would owe once this order is
  * invoiced: everything outstanding today, plus this order's gross value. That
- * is compared against the limit recorded on the debtor.
+ * is compared against the limits recorded on the debtor.
+ *
+ * **There are two limits.** `creditLimit` is what the credit insurer covers —
+ * 346 of the 351 customers in the reference who have one also carry an
+ * insurance policy number — and `creditLimitUninsured` is what the merchant
+ * carries on its own book on top. A customer's room is the sum, proved on all
+ * 2.593 rows of the reference's `Credit information customers` export and again
+ * on all 31 rows of its blocked-order screen:
+ *
+ *   Creditspace = Credit limit + Credit limit uninsured
+ *               - Outstanding entrees - Current orders
+ *
+ * Using the insured limit alone is not a rounding error. **187 of those 2.593
+ * customers have no insured limit at all** and trade entirely on the uninsured
+ * one; every one of them would compute a credit space of `0 - owed` and be held
+ * the moment they owed anything.
+ *
+ * **Three reasons hold an order, and they are independent.** Of the reference's
+ * 31 held orders: 18 for outstanding posts, 11 for the limit, 2 for a blocked
+ * customer. Seventeen of those eighteen have more room than the order needs —
+ * an age-of-debt rule is not an amount rule, and it is the most common reason
+ * an order is held in that system.
  *
  * Two deliberate refusals to block:
- *   - A debtor with no limit recorded (0 or blank) is not blocked. A blank
- *     field means "nobody has set one", not "this customer may owe nothing" —
- *     reading it the other way would hold every order in the system.
+ *   - A debtor with no limit recorded (0 or blank on both) is not blocked. A
+ *     blank field means "nobody has set one", not "this customer may owe
+ *     nothing" — reading it the other way would hold every order in the system.
  *   - An order paid for up front is not blocked however much is outstanding,
  *     because it adds nothing to what the customer owes.
  *
- * A company stopped by hand is blocked regardless of either, since that flag
+ * Neither refusal covers the overdue rule: money already late is late whoever
+ * is paying for the next order, so that test runs first and applies even to a
+ * customer with no limit and even to prepayment.
+ *
+ * A company stopped by hand is blocked regardless of all of it, since that flag
  * exists precisely to override the arithmetic.
  */
 export const assessCredit = ({
   creditLimit,
+  creditLimitUninsured = 0,
+  creditLimitUninsuredValidUntil = null,
+  oldestOpenDueDate = null,
+  asOf = todayDateString(),
   openReceivables,
   committedOrders = 0,
   orderAmount,
@@ -1492,13 +1595,26 @@ export const assessCredit = ({
   const extendsCredit = paymentTermExtendsCredit(paymentTerms);
   const owed = openReceivables + committedOrders;
   const exposure = owed + (extendsCredit ? orderAmount : 0);
+
+  const totalCreditLimit = effectiveCreditLimit(
+    creditLimit,
+    creditLimitUninsured,
+    creditLimitUninsuredValidUntil,
+    asOf,
+  );
+  const uninsured = totalCreditLimit - creditLimit;
+  const oldestPostDaysOverdue = daysOverdue(oldestOpenDueDate, asOf);
+
   const standing = {
     creditLimit,
+    creditLimitUninsured: uninsured,
+    totalCreditLimit,
     openReceivables,
     committedOrders,
+    oldestPostDaysOverdue,
     // Room left before the limit, counting what is promised as well as what is
     // billed — an order taken is a receivable waiting to happen.
-    creditSpace: creditLimit - owed,
+    creditSpace: totalCreditLimit - owed,
     exposure,
     waived: false,
   };
@@ -1511,11 +1627,29 @@ export const assessCredit = ({
     };
   }
 
-  if (!extendsCredit || creditLimit <= 0 || exposure <= creditLimit) {
+  // Before the limit test, and before the prepayment let-off: money already
+  // late is late whoever is paying for the next order.
+  if (
+    oldestPostDaysOverdue !== null &&
+    oldestPostDaysOverdue > OVERDUE_POST_BLOCK_DAYS
+  ) {
+    const stale = `Post(s) outstanding for too long — the oldest is ${oldestPostDaysOverdue} days past due`;
+    if (financialBlockingWaived) {
+      return {
+        ...standing,
+        waived: true,
+        blocked: false,
+        reason: `${stale} (not blocked: financial blocking waived)`,
+      };
+    }
+    return { ...standing, blocked: true, reason: stale };
+  }
+
+  if (!extendsCredit || totalCreditLimit <= 0 || exposure <= totalCreditLimit) {
     return { ...standing, blocked: false, reason: null };
   }
 
-  const overrun = `Credit limit exceeded — ${formatMoney(owed)} owed and on order plus ${formatMoney(orderAmount)} on this one against a ${formatMoney(creditLimit)} limit`;
+  const overrun = `Credit limit exceeded — ${formatMoney(owed)} owed and on order plus ${formatMoney(orderAmount)} on this one against a ${formatMoney(totalCreditLimit)} limit`;
 
   // The customer's order settings can waive financial blocking. The overrun is
   // still recorded against the order — somebody has to be able to see it — but

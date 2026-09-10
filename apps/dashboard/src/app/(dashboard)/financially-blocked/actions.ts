@@ -1,13 +1,17 @@
 "use server";
 
-import { requireAuth } from "@/lib/auth";
-import { describeError, generateUuid } from "@/lib/helpers";
-import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { db } from "@/db";
+import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { OrderDeblocks } from "@/db/schema/order-deblocks";
 import { OrderItems } from "@/db/schema/order-items";
 import { Orders, SelectOrders } from "@/db/schema/orders";
 import { Quotes, SelectQuotes } from "@/db/schema/quotes";
+import { requireAuth } from "@/lib/auth";
+import {
+  describeError,
+  effectiveCreditLimit,
+  generateUuid,
+} from "@/lib/helpers";
 import {
   getCommittedOrderValueByCompany,
   getOpenReceivablesByCompany,
@@ -60,8 +64,7 @@ export const unblockOrder = async (
     return { success: true };
   } catch (error) {
     return {
-      error:
-        error instanceof Error ? error.message : "Failed to unblock order",
+      error: error instanceof Error ? error.message : "Failed to unblock order",
     };
   }
 };
@@ -91,6 +94,8 @@ export const getFinanciallyBlocked = async (): Promise<
         blockingReason: Orders.blockingReason,
         paymentTerms: Orders.paymentTerms,
         creditLimit: Companies.creditLimit,
+        creditLimitUninsured: Companies.creditLimitUninsured,
+        creditLimitUninsuredDate: Companies.creditLimitUninsuredDate,
         blockedByUserId: Companies.blockedByUserId,
         amount: sql<string>`COALESCE(SUM(${OrderItems.amount}), 0)`,
       })
@@ -108,6 +113,8 @@ export const getFinanciallyBlocked = async (): Promise<
         Orders.blockingReason,
         Orders.paymentTerms,
         Companies.creditLimit,
+        Companies.creditLimitUninsured,
+        Companies.creditLimitUninsuredDate,
         Companies.blockedByUserId,
       );
 
@@ -122,6 +129,8 @@ export const getFinanciallyBlocked = async (): Promise<
         blockingReason: Quotes.blockingReason,
         paymentTerms: Quotes.paymentTerms,
         creditLimit: Companies.creditLimit,
+        creditLimitUninsured: Companies.creditLimitUninsured,
+        creditLimitUninsuredDate: Companies.creditLimitUninsuredDate,
         blockedByUserId: Companies.blockedByUserId,
         amount: Quotes.totalExclVat,
       })
@@ -141,13 +150,22 @@ export const getFinanciallyBlocked = async (): Promise<
         blockingReason: SelectOrders["blockingReason"];
         paymentTerms: SelectOrders["paymentTerms"];
         creditLimit: SelectCompanies["creditLimit"];
+        creditLimitUninsured: SelectCompanies["creditLimitUninsured"];
+        creditLimitUninsuredDate: SelectCompanies["creditLimitUninsuredDate"];
         blockedByUserId: SelectCompanies["blockedByUserId"];
         amount: string | null;
       },
     ): FinanciallyBlockedRow => {
       const openEntrees = openByCompany.get(row.companyUuid) ?? 0;
       const committed = committedByCompany.get(row.companyUuid) ?? 0;
-      const creditLimit = Number(row.creditLimit ?? 0);
+      // Both limits, and the uninsured one only while it is still valid.
+      // 187 of the reference's 2.593 customers have no insured limit at all
+      // and trade entirely on the uninsured one.
+      const creditLimit = effectiveCreditLimit(
+        Number(row.creditLimit ?? 0),
+        Number(row.creditLimitUninsured ?? 0),
+        row.creditLimitUninsuredDate ?? null,
+      );
       return {
         kind,
         uuid: row.uuid,
@@ -172,6 +190,11 @@ export const getFinanciallyBlocked = async (): Promise<
       ...quoteRows.map((row) => build("Quote", row)),
     ].sort((a, b) => a.debtor.localeCompare(b.debtor));
   } catch (error) {
-    throw new Error(describeError(error, "Failed to fetch financially blocked quotes and orders"));
+    throw new Error(
+      describeError(
+        error,
+        "Failed to fetch financially blocked quotes and orders",
+      ),
+    );
   }
 };

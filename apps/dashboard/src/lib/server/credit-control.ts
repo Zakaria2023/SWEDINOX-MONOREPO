@@ -1,19 +1,18 @@
 import "server-only";
 
-import { and, eq, inArray, isNotNull, ne, sql } from "drizzle-orm";
-
 import { db } from "@/db";
 import { Companies } from "@/db/schema/companies";
 import { Invoices } from "@/db/schema/invoices";
 import { OrderItems } from "@/db/schema/order-items";
 import { Orders } from "@/db/schema/orders";
+import { InvoicePaymentTerm } from "@/lib/enums";
 import {
   assessCredit,
   CreditAssessment,
   grossUpCommittedOrderValue,
   orderBlockingPolicy,
 } from "@/lib/helpers";
-import { InvoicePaymentTerm } from "@/lib/enums";
+import { and, eq, inArray, isNotNull, ne, sql } from "drizzle-orm";
 
 type CreditQuery = Pick<typeof db, "select">;
 
@@ -51,6 +50,39 @@ export const getOpenReceivables = async (
     );
 
   return Number(row?.outstanding ?? 0);
+};
+
+/**
+ * The due date of the oldest invoice this debtor still owes money on.
+ *
+ * `expirationDate` is the due date and is nullable — an invoice on a letter of
+ * credit or against documents has no derivable deadline — and those are excluded rather than treated as
+ * infinitely overdue: `assessCredit` must not hold an order on a date nobody
+ * agreed to. Cancelled invoices are void and excluded for the same reason they
+ * are excluded from the balance.
+ *
+ * Only invoices with something still outstanding count. A paid invoice that was
+ * once late is not a reason to hold anything.
+ */
+export const getOldestOpenDueDate = async (
+  tx: CreditQuery,
+  companyUuid: string,
+): Promise<string | null> => {
+  const [row] = await tx
+    .select({
+      oldestDueDate: sql<string | null>`MIN(${Invoices.expirationDate})`,
+    })
+    .from(Invoices)
+    .where(
+      and(
+        eq(Invoices.companyUuid, companyUuid),
+        eq(Invoices.cancelled, false),
+        isNotNull(Invoices.expirationDate),
+        sql`${Invoices.outstanding} > 0`,
+      ),
+    );
+
+  return row?.oldestDueDate ?? null;
 };
 
 /** Open receivables for every debtor at once, for the overview queries. */
@@ -175,6 +207,11 @@ export const checkCredit = async (
   const [company] = await tx
     .select({
       creditLimit: Companies.creditLimit,
+      // The second limit. A customer's room is the two together — see
+      // `assessCredit`, and `docs/reference-system/credit-and-blocking.md` for
+      // the 2.593 rows it was proved on.
+      creditLimitUninsured: Companies.creditLimitUninsured,
+      creditLimitUninsuredDate: Companies.creditLimitUninsuredDate,
       blockedByUserId: Companies.blockedByUserId,
       // "No financial blockage" on the customer's order settings means exactly
       // that: the credit rule may record an overrun against the order but must
@@ -186,6 +223,7 @@ export const checkCredit = async (
     .limit(1);
 
   const openReceivables = await getOpenReceivables(tx, companyUuid);
+  const oldestOpenDueDate = await getOldestOpenDueDate(tx, companyUuid);
   const committedOrders = await getCommittedOrderValue(
     tx,
     companyUuid,
@@ -194,6 +232,9 @@ export const checkCredit = async (
 
   return assessCredit({
     creditLimit: Number(company?.creditLimit ?? 0),
+    creditLimitUninsured: Number(company?.creditLimitUninsured ?? 0),
+    creditLimitUninsuredValidUntil: company?.creditLimitUninsuredDate ?? null,
+    oldestOpenDueDate,
     openReceivables,
     committedOrders,
     orderAmount,
