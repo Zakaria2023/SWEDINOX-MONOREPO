@@ -484,6 +484,14 @@ export const getAvailableStockForSelect = async (): Promise<
         eq(Stock.status, "pending"),
         eq(Stock.blocked, false),
         gt(availableQuantity, "0"),
+        // Somebody else's metal is never ours to promise. The reference keeps
+        // it on a screen of its own — `Klant voorraad op locatie`, 94 rows of
+        // it — and marks it `Stock category = 3rd party inventory` with the
+        // owning company in the `Supplier` field. It sits on ordinary `Pick`
+        // locations (85 of 94), is unblocked on every row, and has stock and a
+        // location like anything else, so nothing else in this WHERE clause
+        // would have kept it out of a sales line.
+        isNull(Stock.ownerCompanyUuid),
         // A lot with no location, or on a location whose type says nothing
         // about sellability, is assumed free; only the named unsellable kinds
         // are excluded.
