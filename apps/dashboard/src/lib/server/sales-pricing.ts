@@ -101,7 +101,10 @@ export const loadSalesPricingContext = async (
         minProfitMarginExWorks: ProductGroups.minProfitMarginExWorks,
       })
       .from(Products)
-      .leftJoin(ProductGroups, eq(Products.productGroupUuid, ProductGroups.uuid))
+      .leftJoin(
+        ProductGroups,
+        eq(Products.productGroupUuid, ProductGroups.uuid),
+      )
       .where(inArray(Products.uuid, productUuids)),
 
     contractUuid
@@ -196,7 +199,23 @@ export const resolveLineNetPrice = (
   }
 
   const { contract } = context;
-  if (!contract) {
+  // A contract that is not about the price does not touch the price.
+  //
+  // Every contract in the reference declares what part of the build-up it
+  // adjusts, and its ten rows use three of the six values we hold: `Certificaat
+  // 3.1` is an **option**, `Toeslagen voor EU import` and `Pallet costs` are
+  // **surcharges**, and only the rest restate a price. An options contract that
+  // happened to carry a gross price would silently reprice the material, which
+  // is not what anybody agreed to.
+  //
+  // A contract with no type recorded is left alone rather than assumed
+  // harmless: that is the older data, and it priced lines before this column
+  // existed.
+  if (
+    !contract ||
+    contract.contractType === "options" ||
+    contract.contractType === "surcharges"
+  ) {
     return {
       grossPrice: listPrice,
       groupDiscount: 0,
@@ -238,6 +257,7 @@ export const minimumMarginFor = (
   isPickup: boolean,
 ): number =>
   Number(
-    (isPickup ? product?.minProfitMarginExWorks : product?.minProfitMarginStock) ??
-      0,
+    (isPickup
+      ? product?.minProfitMarginExWorks
+      : product?.minProfitMarginStock) ?? 0,
   );
