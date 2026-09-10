@@ -267,19 +267,34 @@ substantial piece of work.
 
 ## Follow-ups, in the order they are worth doing
 
-1. **The 222 `.toFixed(2)` sites** → `moneyString`. Money, app-wide, mechanical.
+1. ~~**The 222 `.toFixed(2)` sites**~~ — ✅ **done 9-9-2026.** 178 money
+   sites converted across 29 files; the 47 that remain are weights, counts
+   and percentages, and are meant to stay. See
+   [PLANNED-CODE-CHANGES.md §7](PLANNED-CODE-CHANGES.md).
 2. ~~`pnpm db:push`~~ — done, by hand, with every row verified.
-3. **The receipt chain** — move lot creation from the invoice to the approval of
-   the Unloading, and add the work-order link to `StockMovements`.
-4. **A call-off line is blocked by the customer**, which is a fourth kind of
-   hold our three booleans cannot express. See
-   [blocked-deliveries.md](blocked-deliveries.md).
-5. **`Fetching` subtyped by machine**, so capacity draws on the right pool.
-6. **`Section`**, a level above location — twelve of them, one current.
-7. **The discount basis** — still unproved. Blocked deliveries prints both
-   discount columns and reads 0 % on every row, so even the best-placed screen
-   in the system did not settle it. One quote line with real figures in both
-   boxes still would.
+3. ~~**The receipt chain**~~ — ✅ **answered 9-9-2026**, and in our favour: the
+   work-order path already creates the lot at unloading. What is wrong is that
+   the *invoice* creates a second one. See [receipt-chain.md](receipt-chain.md)
+   and [PLANNED-CODE-CHANGES.md §1.2](PLANNED-CODE-CHANGES.md).
+4. ~~**A call-off line is blocked by the customer**~~ — ✅ **answered**. It was
+   never a fourth boolean: it is a **location type** (`Afroep`), and every lot
+   in one is blocked by construction. See
+   [stock-on-location.md](stock-on-location.md#location-type--eight-of-them-and-they-carry-the-block).
+5. ~~**`Fetching` subtyped by machine**~~ — ✅ **done**, but not by machine:
+   `Machines` has no detail screen and `Decoiler` / `Laser 1` / `Knip` are
+   themselves locations under `Productie`, so the discriminator is the
+   **destination location**. `WarehouseCapacity.toLocationUuid` added.
+6. ~~**`Section`**~~ — ✅ the 17 sections, the 8 location types and a
+   1 940-row master export are all captured. 🔴 And the claim that followed
+   this one — *"there is no locations table at all"* — **was wrong**: it is
+   `Warehouses`, a self-referencing tree that already carries `locationType`,
+   `blocked`, `blockReason` and the maximum dimensions. See
+   [locations.md](locations.md).
+7. **The discount basis** — 🔴 **the only thing still open, and the only one
+   that cannot be closed from here.** Blocked deliveries prints both discount
+   columns and reads 0 % on every row, so even the best-placed screen did not
+   settle it. One quote line: gross `1000`, line `5`, group `3`, and the
+   `Net Price` it prints. `950` or `921,50`.
 
 ---
 

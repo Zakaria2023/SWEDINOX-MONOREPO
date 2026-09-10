@@ -3,10 +3,185 @@
 Same shape as the Purchase list: open the screen, do the thing, send the
 picture with its number.
 
-**Start with 1 and 2.** Everything after them is ordinary column-capture and
-can be done in any order, or not at all until we build that screen.
+**Round 2 is the live list** — everything below it has already arrived and is
+kept for the record.
 
 ---
+
+# 🔴 Round 2 — what I need next (9-9-2026)
+
+Everything in the list below this section has arrived. These are the eight
+things still missing, in the order they are worth doing. **Items 1–3 are the
+ones that actually change code.**
+
+## 🟢 The code side is finished
+
+Everything these screens could settle has been built and verified —
+**87 checks passing** against ~71 000 exported rows. See
+[PLANNED-CODE-CHANGES.md](PLANNED-CODE-CHANGES.md).
+
+**One thing is still outstanding and it needs you, not code:** the discount
+basis. One quote line — gross `1000`, line discount `5`, group discount `3` —
+and the `Net Price` it prints. `950` means both come off the gross; `921,50`
+means the second comes off what the first left.
+
+## Status after the 9-9-2026 walkthrough
+
+| # | | |
+|---|---|---|
+| 1 | the receipt chain | ✅ **answered** — the lot exists before the invoice. [receipt-chain.md](receipt-chain.md) |
+| 2 | the discount basis | 🔴 still open, still 60 seconds |
+| 3 | `Trip data` | ✅ **arrived twice** — 438 trips, and the `-empty-` view proves **transport costing is switched off** (`Driver`/`Km`/`Cost price` empty on all 438). [trip-data.md](trip-data.md) |
+| 4 | `Reservations` | 🟠 partly — `Reserved` is a column on every lot, but the screen itself is unseen |
+| 5 | a customer-held delivery | ✅ **answered** — it is a **location type** (`Afroep`), not a boolean |
+| 6 | `Locations` | ✅ **answered** — 1 940 locations, a three-level tree. `Locatie soort` is blank in the *grid* but populated on the detail (right-click → `Toon locatie`). [locations.md](locations.md) |
+| 7 | a machine, opened | ✅ **answered** — there is no detail screen. A machine **is** a `Productie` location. [machines-and-small-screens.md](machines-and-small-screens.md) |
+| 8 | `Stock mutations` as an export | ✅ **arrived** — 13 562 movements. Every one names the work order or **trip** that caused it. [stock-mutations.md](stock-mutations.md) |
+
+### Also arrived 9-9-2026, unasked
+
+| Screen | What it gave |
+|---|---|
+| **Warehouse- and production workorders** | a **13 610-line** export that **corrected `Weight deviation`** to a magnitude — the one thing built from this batch. Also: 3 statuses not 4, 33 half-hour slots, `Resource` empty throughout |
+| **Deviations in count lists** | zero rows in both views, but its 22 columns identify it as the **stock-count correction** screen |
+| **Deliveries to be arranged** | re-captured; confirmed the nine columns and the `Customer` sort fix. Its toolbar jumps to `Purchase lines` / `Warehouse workorders`, which ours lacks |
+| **Locations** | `Toon locatie` is a **right-click**; the location carries `Location type` **and its own `Blocked` + `Reason`** |
+| **Pick statistic** | a **1 332-row** export. `Picks` counts trips to the rack, and `Stock product = False` means **tube and pipe are not stocked** |
+
+Newly opened by that walkthrough, in
+[PLANNED-CODE-CHANGES.md §8](PLANNED-CODE-CHANGES.md): the aluminium weight
+basis, `Plaatnummer`, the three bundle fields, and whether a remnant's supplier
+is us or the original mill.
+
+---
+
+## 1. One purchase order traced end to end — the receipt chain
+
+**This is the biggest gap in the build.** Our system creates the stock lot at
+the *purchase invoice*. The reference creates it three steps earlier and I
+cannot see exactly where. Everything about goods-in hangs on this.
+
+Pick **one** purchase order that has been fully received — order number
+`4xxxxx` — and walk it, screenshotting each step with the order number visible:
+
+1. 📸 The order's own **`Receipts`** panel — the reception rows.
+2. 📸 `Overviews → Logistics → Receipts`, filtered to that order.
+3. 📸 `Overviews → Logistics → Warehouse workorders`, filtered to the same
+   order — the `Unloading` work order(s) it produced.
+4. 📸 The **stock lot** that resulted (`Stock on location`, filtered to the
+   product) — I want its **lot/batch number**.
+5. 📸 `Stock mutations`, filtered to that lot — the movement rows.
+
+**What I am after:** which of those five things carries the *same* number as
+which. If the lot number appears on the work order, the lot is created when the
+work order is approved. If it first appears at the invoice, our model is right
+and the docs are wrong. One order answers it.
+
+---
+
+## 2. The discount basis — 30 seconds, and it has been open for three rounds
+
+Still the cheapest unanswered question in the whole system. Blocked deliveries
+prints both discount columns and reads `0 %` on every row, so even the
+best-placed screen did not settle it.
+
+1. Open purchase quote **`900002`** (or any quote you can safely edit)
+2. On one line put gross price **`1000`**, line discount **`5`**, group
+   discount **`3`**
+3. 📸 The line, showing **`Net Price`**
+
+`950` means the discounts stack on the gross. `921,50` means the second applies
+to what the first left. Two different numbers, one screenshot.
+
+---
+
+## 3. `Trip data` — the screen the trip ladder was inferred from, never seen
+
+The seven trip states came from `Transport status adjustments`, which is an
+*audit log of changes*, not the trips themselves. I have never seen a trip.
+
+1. `Overviews → Logistics → Trip data`
+2. `View` = **`-empty-`**, dates from `1-1-2024`, `Show Data`
+3. 📸 The grid, then **`Show in Excel`**
+4. 📸 Open **one** trip — its detail screen and its lines
+
+**What I am after:** what a trip actually holds (carrier, vehicle, driver,
+route, cost), and the unexplained pair — a `Bill of lading` numbered `300813`
+against a `Trip number` numbered `600249`. Two series, two documents, one
+delivery.
+
+---
+
+## 4. `Reservations` — a whole screen never captured
+
+Two screens I have built point straight at it (`Blocked deliveries`, and
+`Deliveries to be arranged **without stock reservation**`) and I have never
+seen the thing itself.
+
+`View` = `-empty-`, wide dates, 📸 the grid, then **`Show in Excel`**.
+
+**What I am after:** whether a reservation binds a *lot* or just a quantity,
+and whether it has its own status.
+
+---
+
+## 5. A blocked delivery that is held by the customer
+
+Our model has three block booleans. The reference showed a fourth kind of hold —
+a call-off line the customer is sitting on — that none of them can express.
+
+1. `Blocked deliveries`, find a row whose reason is the customer / awaiting
+   call-off
+2. 📸 The row, and **whatever screen sets that block** (open the order line and
+   find the tick that caused it)
+
+---
+
+## 6. `Locations` — with sections
+
+The capacity export carried **17 sections and 48 subsections**; the screens show
+twelve and fourteen. `Section` is a level above location and we do not model it.
+
+`Overviews → Logistics → Locations`, `View` = `-empty-`, 📸 grid + **Excel**.
+
+---
+
+## 7. A machine, opened
+
+Asked for last round and not delivered. Six machines, and **no rate on any of
+them** in the list — so if a rate or a capacity exists, it is on the detail.
+
+📸 One machine's detail screen, every tab.
+
+**What I am after:** whether processing (`Slijpen`, `Laser`, `Decoilen`) is
+planned against machine capacity, because `Fetching` turned out to be ten
+separate capacity pools rather than one.
+
+---
+
+## 8. `Stock mutations`, as an export
+
+I have the screenshot; I want the rows. A movement in the reference names the
+work order that caused it, and ours has four document links of which **none is
+a work order**.
+
+`View` = `-empty-`, dates from `1-1-2024`, 📸 grid, then **`Show in Excel`**.
+
+---
+
+## ⚪ Never seen, low priority — only when we build them
+
+`Freight movement` · `Revenue per product` · `Freight flow (SFN)` ·
+`Pick statistic` · `Sawing layouts` · `Production capacity details` ·
+`Capacity checks` · `Time registration` · `(Re)optimize` ·
+`Deviations in count lists` · `Klant voorraad op locatie`
+
+And one loose end: an order from the **`29xxxx`** series, opened. It behaves
+like a purchase order but is not numbered like one, and I still cannot say what
+it is.
+
+---
+
 
 # ✅ 1 and 2 are done
 

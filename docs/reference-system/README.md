@@ -6,6 +6,14 @@ that system from screenshots: the columns each overview shows, where each figure
 comes from, and — where it is not yet known — exactly what to do in the old
 system to find out.
 
+> **Start here for the current state:**
+> [LOGISTICS-BUILT.md](LOGISTICS-BUILT.md) — what is built ·
+> [receipt-chain.md](receipt-chain.md) — how goods become stock ·
+> [PLANNED-CODE-CHANGES.md](PLANNED-CODE-CHANGES.md) — queued edits, none applied ·
+> [locations.md](locations.md) · [trip-data.md](trip-data.md) ·
+> [exports/README.md](exports/README.md) — how to capture one, and what is on disk ·
+> [NEXT-LOGISTICS.md](NEXT-LOGISTICS.md) — what to capture next
+
 One file per screen, grouped the way its own `Overviews` tree groups them.
 
 ## Purchase

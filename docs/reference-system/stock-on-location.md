@@ -215,3 +215,180 @@ Three things worth having:
    → *In the old system:* group by `Warehouse` to list them.
 5. **The negative valuation price** on the `SC / SC304 304L1D` lot — confirm it
    is a data error and not something the reference does deliberately.
+
+---
+
+# The 2 247-lot export
+
+**9-9-2026.** `View` = `-empty-`, `u/i` left at its `zzzzzzzzzzzzzzz` sentinel,
+`Show in Excel` → `exports/stock-on-location-Sheet1.tsv`, **2 247 rows × 54
+columns**. Everything below is checked against those rows, not against a
+screenshot.
+
+## Three formulas, proved
+
+### `Available (StkU) = round(Stock (Stk.U.) − Reserved (Stk.U.))`
+
+**2 247 / 2 247 exact.** Not a single exception in the whole file.
+
+The rounding matters: 45 lots are counted in kilos (`StkU = KG`) and carry
+fractional stock, so `9 714,550995 − 0` prints as **`9715`** — round-half-up to
+a whole unit, the same boundary behaviour `roundToCents` was written for.
+
+### `Stock (€) = Valuation price × the measure the `PriceU` names`
+
+**2 115 / 2 115 exact to the cent.**
+
+This is the same rule as sales amount and purchase amount, met on a fourth
+screen. `PK30430021`: `Valuation price 2158,43984` at `PriceU TN`, `Stock (Kg)
+47,1` → 0,0471 TN × 2158,43984 = **€ 101,66**, and the export says `101.66`.
+
+`PriceU` really does vary, so a hardcoded per-tonne divisor is wrong:
+
+| `PriceU` | lots |
+|---|---|
+| `TN` | 2 191 |
+| `ST` | 44 |
+| `KG` | 6 |
+| `HK` | 4 |
+| `M1` | 2 |
+
+One `M1`-priced lot exports its `M1` column as `0` while its value implies 42 m.
+Reading the metres from `Length (mm)` instead — which is what the code does —
+that lot comes out right too, and the rule is exact on every priced lot in the
+file.
+
+### `Stock (Kg) = Theoretical Wt. × volume × quantity`, when `Theor. Wt. U. = M3`
+
+**1 932 / 1 932.** Every dimensioned lot in the file, aluminium included — but
+only once the **right thickness** is used.
+
+> 🔴 **The weight comes from `Theoretical thickness`, not `Thickness`.**
+
+That is the plate's **as-rolled** measurement against the size it is sold as: a
+1 mm plate is rolled at **1,019 mm**, a 2 mm at **2,058**, a 1,2 mm at **1,326**.
+**319 of 2 187 lots** have the two differing.
+
+| Thickness used | Exact on |
+|---|---|
+| nominal `Thickness` | 1 819 / 1 929 |
+| **`Theoretical thickness`** | **1 932 / 1 932** |
+
+⚠️ **This corrects what I first wrote here.** I had recorded that the rule was
+*"exact at 7 850 and off by ±3 % on all 201 aluminium (2 755) lots, so the
+aluminium density is nominal"*. **That was wrong** — I had used the nominal
+thickness, and aluminium happens to be milled furthest from nominal, which made
+the error look like a property of the material. Worked at the rolled thickness,
+`PC304L100` at 2500 × 435 × **1,019** mm × 7 850 × 13 pieces = **113,09 kg**,
+and the lot reads `113.1`.
+
+Densities are therefore all real, none nominal:
+
+| `Theoretical Wt.` | lots | |
+|---|---|---|
+| `7850` | 2 029 | stainless |
+| `2755` | 201 | aluminium |
+| `8000` | 3 | |
+| `2700` | 2 | |
+| `0.1`, `1`, `1.87`, `2.5`, `0.226` | 12 | junk, on `…DIV…` catch-all articles |
+
+`Theor. Wt. U.` is `M3` on **2 238**, `ST` on 6, `M1` on 3.
+
+| `Theoretical Wt.` | lots | |
+|---|---|---|
+| `7850` | 2 029 | stainless — exact |
+| `2755` | 201 | aluminium — nominal, ±3 % |
+| `8000` | 3 | |
+| `2700` | 2 | |
+| `0.1`, `1`, `1.87`, `2.5`, `0.226` | 12 | junk, on `…DIV…` catch-all articles |
+
+`Theor. Wt. U.` is `M3` on **2 238**, `ST` on 6, `M1` on 3.
+
+## `Location type` — eight of them, and they carry the block
+
+| Type | Lots | Blocked | |
+|---|---|---|---|
+| `Pick` | 1 934 | — | the ordinary shelf |
+| `Laad` | 168 | — | loading |
+| `Bulk` | 45 | — | |
+| **`Bewerker`** | 36 | **36 / 36 ☑** | out at an external processor |
+| `Schroot` | 27 | — | scrap |
+| `Productie` | 23 | 1 of 23 | at a machine |
+| **`Afroep`** | 12 | **12 / 12 ☑** | **call-off** |
+| `Afhaal` | 2 | — | awaiting customer pick-up |
+
+> **`Blocked` is not an independent flag — it follows from where the metal is.**
+> Every lot at an external processor is blocked; every lot on call-off is
+> blocked; everything else is free, bar a single `Productie` row.
+
+⚠️ **This answers follow-up 4.** The customer hold I could not express with our
+three block booleans is not a boolean at all — **it is a location type.** Metal
+a customer is sitting on physically lives in an `Afroep` location, and that is
+what blocks it. See [blocked-deliveries.md](blocked-deliveries.md).
+
+It also confirms the earlier note that *"almost every `Bewerkers` row is
+`Blocked` ☑"* — it is **every** one of them, by construction.
+
+## `Stock category`
+
+| | Lots |
+|---|---|
+| ‹blank› — first choice | 1 620 |
+| `2nd choice` | 604 |
+| `Scrap` | 21 |
+| `Remaining` | 2 |
+
+Blank is the norm, so the column means *"something is off with this parcel"*
+rather than *"which grade is it"*. It matches the saved view
+`Stock category In [2nd choice, Remaining]` recorded above.
+
+## 🔴 A lot's origin document can be a **sales** order
+
+`Purchase order` is filled on **2 153 of 2 247** lots, always prefixed **`IO`** —
+and the number behind the prefix belongs to either series:
+
+| Origin | Lots |
+|---|---|
+| `IO1xxxxx` — **a sales order** | **1 371** |
+| `IO4xxxxx` — a purchase order | 782 |
+
+**Most of the warehouse was created by a sales order, not a purchase.** That is
+the remnant: cut a plate for a customer, and what is left goes back on the shelf
+carrying the sales order that cut it.
+
+The supplier column on those sales-origin lots proves it twice over:
+
+| `Supplier` on `IO1xxxxx` lots | Lots |
+|---|---|
+| **`Swedinox`** — us | **467** |
+| `Dabbagh Inox` | 155 |
+| `Holland Stainless Int` | 142 |
+| `Hyundai Corporation` | 90 |
+| `Outokumpu Stainles Oy` | 62 |
+| `Aperam Stainless Belgium NV` | 43 |
+
+A remnant we cut ourselves is supplied by *us*; a remnant cut from bought metal
+keeps **the original mill**. So the melt origin survives the cut — which is the
+whole point of charge tracking.
+
+⚠️ Our `Stock.purchaseOrderUuid` / `purchaseOrderItemUuid` can only hold the
+purchase side, so it cannot record where 1 371 of 2 247 lots came from.
+
+## Other columns worth having
+
+- **`Stk-general ledger account no` / `…account`** — `3000` / `Stock`. A lot
+  carries its own GL account, so stock value posts per lot.
+- **`Quality` splits.** `Quality 3042B` = `Main quality 304` +
+  `Quality specification 2B`.
+- **`Thickness`** and **`Theoretical thickness`** are two separate columns, and
+  the second is the one every weight is computed from. See above.
+- **`Receipt date`** runs `27-2-2017` → `26-8-2026`, blank on 77 lots. Real
+  dates, unlike the `1-1-0001` sentinel the detail panel shows.
+- **`Length (mm) = 999999`** is a sentinel for a coil — continuous, no discrete
+  length. Seen on `CK3040010`, a 1500 × 1 mm 304 coil of 2 500 kg.
+- `Order advice code` and `PAC-Code` are filled on **zero** rows, so neither is
+  in use here.
+- Booleans on every lot: `Apply optimization`, `Stock product`, `Group product`,
+  `Standard product`, `Fixed dimensions`.
+- `Gipgroup` / `Gip product group` (`P3040020` / `PK304`) — still unexplained,
+  as noted above.

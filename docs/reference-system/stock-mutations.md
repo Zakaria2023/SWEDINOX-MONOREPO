@@ -123,3 +123,164 @@ order, `IO400645/70` for an internal one against a purchase order line.
    the second). The second looks like a supplier's own heat number.
 2. **`MutationQty (M1)`** — filled on one row in the sample (`389493`), which is
    an implausible running-metre figure and may be a mis-scaled column.
+
+---
+
+# The 13 562-movement export
+
+**9-9-2026.** `View` = `-empty-`, dates from `1-1-2024`, `Show in Excel` →
+`exports/stock-mutations.tsv`, **13 562 rows × 36 columns**. This is the ledger
+behind [stock-on-location.md](stock-on-location.md)'s snapshot.
+
+## 🔴 Every movement names the work order that caused it — or it is a correction
+
+`Workorder#` is a column, and how it is filled is the whole model:
+
+| Mutation reason | Rows | Names a work order |
+|---|---|---|
+| `Levering To customer` | 5 163 | 5 043 |
+| `Ontvangst From supplier` | 2 654 | **2 654** |
+| `Productie Origin of production` | 1 200 | **1 200** |
+| `Productie Consumed` | 513 | **513** |
+| `Ontvangst From processor` | 316 | **316** |
+| `Productie Scrap production` | 264 | **264** |
+| `Productie Rest production` | 191 | **191** |
+| `Levering To processor` | 167 | **167** |
+| `Ontvangst Return customer` | 60 | **60** |
+| `Ontvangst Van klant` | 56 | **56** |
+| `Conversion Conversion` | 2 316 | **0** |
+| `Correctie Stock correction` | 313 | **0** |
+| `Correctie Transfer length` | 241 | **0** |
+| `Correctie Stock difference` | 87 | **0** |
+| `Overboeking Transfer` | 8 | **0** |
+| `Schroot Scrap` | 8 | **0** |
+| `Correctie` × 3 others | 5 | **0** |
+
+> **Metal moves because a work order moved it, or because a human corrected the
+> books.** 10 464 movements carry one; the 2 978 corrections, conversions,
+> transfers and scrappings carry **none at all** — that half is exact.
+
+⚠️ The other half is a strong tendency rather than a law: **120 customer
+deliveries carry no causing document** either. So "no work order" does not prove
+"correction", though "correction" does prove "no work order".
+
+⚠️ Our `StockMovements` has four document links — `purchaseOrderUuid`,
+`purchaseInvoiceUuid`, `orderUuid`, `invoiceUuid` — and **not one of them is a
+work order or a trip.** So we cannot record the cause of any of those 10 483.
+
+## 🔴 A delivery to a customer is caused by a **trip**, not a work order
+
+Splitting `Workorder#` by its number series shows the column holds two different
+documents:
+
+| Series | Reason | Rows |
+|---|---|---|
+| **`6xxxxx` — a trip** | `Levering To customer` | **4 189** |
+| `3xxxxx` — a work order | `Ontvangst From supplier` | 2 652 |
+| `3xxxxx` | `Productie Origin of production` | 1 200 |
+| `3xxxxx` | `Levering To customer` | 854 |
+| `3xxxxx` | `Productie Consumed` | 513 |
+| `3xxxxx` | everything else | 1 054 |
+
+So goods leave on a **trip** (`6xxxxx`) 4 189 times and on a warehouse work
+order (`3xxxxx`) 854 times — a customer collecting, most likely, against the
+`Afhaal` / pick-up path. Goods *arrive* only ever on a `3xxxxx`.
+
+That makes the causing document polymorphic: a movement points at a warehouse or
+production work order **or** at a trip. Two nullable links, not one.
+
+## Conservation holds: 733 of 735 products balance
+
+`Starting stock` and `Closing stock` are **not** running balances — they are the
+product's position at the two ends of the *filter period* (`Start date 1-1-2024`,
+`End date 9-9-2026`), repeated identically on every row of that product. Only 2
+of 735 products show them varying.
+
+Which makes the real law testable:
+
+> **Σ `MutationQty (Kg)` per product = `Closing stock (Kg)` − `Starting stock
+> (Kg)`** — **733 / 735 products**.
+
+The two that miss are `PK316L20021` (57 movements, sum 6 656,8 against a
+3 108,6 swing) and `20101025125` (4 movements, off by nothing — it balances on
+kilos but its Starting/Closing vary). Worth one look, but 99,7 % of a
+13 562-row ledger closing to the kilo is the strongest conservation evidence in
+any export so far.
+
+## The reason code is two words: a category and a reason
+
+Nineteen reasons across **seven** categories:
+
+| Category | Reasons |
+|---|---|
+| `Ontvangst` *(receipt)* | `From supplier` · `From processor` · `Return customer` · `Van klant` |
+| `Levering` *(delivery)* | `To customer` · `To processor` |
+| `Productie` | `Origin of production` · `Consumed` · `Scrap production` · `Rest production` |
+| `Correctie` | `Stock correction` · `Transfer length` · `Stock difference` · `Inventory rejection` · `Rejected material` · `Internal damage` |
+| `Conversion` | `Conversion` |
+| `Overboeking` *(transfer)* | `Transfer` |
+| `Schroot` *(scrap)* | `Scrap` |
+
+`Ontvangst Van klant` is **untranslated in the reference itself** — the English
+build still prints the Dutch. It is the customer-materials receipt, distinct from
+`Return customer`.
+
+`Conversion Conversion` at 2 316 rows is the data migration that created the
+opening position, which is why our own `data_conversion` reason exists.
+
+## Two things are always worth nothing
+
+| | Rows | `MutationQty (€) = 0` |
+|---|---|---|
+| `Productie Scrap production` | 264 | **264 / 264** |
+| `Ontvangst Van klant` | 56 | **56 / 56** |
+
+**Scrap carries no value, and customer material carries no value.** Both are
+absolute across the export — and the second confirms from the ledger side what
+[receipt-chain.md](receipt-chain.md) found on the order: customer metal is
+anonymous and unvalued, because it was never ours.
+
+## Direction is fixed by the reason
+
+| Reason | `MutationQty (Kg) < 0` |
+|---|---|
+| every `Ontvangst *` | **0 of 3 086** — a receipt is never negative |
+| `Productie Consumed` | **513 of 513** — always out |
+| `Levering To customer` | 4 923 of 5 163 |
+| `Levering To processor` | 134 of 167 |
+| `Correctie Transfer length` | 228 of 241 |
+
+So the reason decides the sign, rather than the sign being free — which is what
+`stockMovementReasons` should be enforcing.
+
+## Order prefixes discriminate — on this screen
+
+| Prefix | Series | Rows | |
+|---|---|---|---|
+| `O` | `10xxxx` | 7 296 | sales order |
+| `IO` | `40xxxx` | 3 193 | purchase order |
+| **`R`** | **`29xxxx`** | **60** | **return** |
+
+`R290050`, `R290049`, `R290048` — **a third independent confirmation that
+`29xxxx` is the return series**, and the 60 rows match `Ontvangst Return
+customer` exactly.
+
+⚠️ But the convention is **not** system-wide: `Stock on location`'s
+`Purchase order` column prefixes *everything* `IO`, including sales numbers
+(`IO100032`). So `O`/`IO`/`R` discriminates within this screen's `Order` column
+and nowhere else. Do not build a type off the prefix.
+
+## Smaller notes
+
+- **`Mutation operator`** is initials: `FS` 3 896 · `RVS` 2 926 · `AVD` 2 913 ·
+  `IN` 2 582 · `AA` 1 092 · `HD` 109 · `CVR` 23 · `SP` 14 · `VG` 7. `AVD` is
+  André van der Veen, who also appeared as `Pre-reported by` on a reception.
+  `IN` at 2 582 is likely the import/system account rather than a person.
+- **`Text`** holds the bare order number on only **653 of 10 549** rows, so it is
+  a free remark that sometimes repeats the order — not a derived field.
+- The movement carries the **lot's whole identity** alongside its own figures:
+  `Charge`, `Internal charge`, `Internal Bundle`, `Purchase order`, `Receipt
+  date`, `Supplier`. So a movement is readable without joining back to the lot.
+- `General ledger account# Stock` = `3000` on every row — the same account the
+  lot carries.
+- `MutationQty` comes in **four units at once**: `StkU`, `Kg`, `€` and `M1`.
