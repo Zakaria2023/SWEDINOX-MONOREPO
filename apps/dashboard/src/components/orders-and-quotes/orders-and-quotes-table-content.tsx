@@ -18,12 +18,29 @@ import {
   orDash,
   userName,
 } from "@/lib/helpers";
+import {
+  ORDER_STATUS_LABELS,
+  SALES_DOCUMENT_KIND_LABELS,
+} from "@/lib/labels";
+import { OrderStatus } from "@/lib/enums";
 import { TableExportButton } from "@/components/ui/table-export-button";
 
 type Props = {
   rows: OrderOrQuoteRow[];
   /** Clerk id -> name, for the seller column. */
   userNames: Record<string, string>;
+};
+
+/**
+ * Return orders and counter orders run their own status lists, so anything the
+ * sales ladder does not name is shown as the reference stores it rather than
+ * blanked.
+ */
+const statusLabel = (status: string | null): string | null => {
+  if (!status) {
+    return null;
+  }
+  return ORDER_STATUS_LABELS[status as OrderStatus] ?? status;
 };
 
 export const OrdersAndQuotesTable = ({ rows, userNames }: Props) => (
@@ -41,6 +58,7 @@ export const OrdersAndQuotesTable = ({ rows, userNames }: Props) => (
           <TableRow>
             <TableHead>Creation date</TableHead>
             <TableHead>Delivery date</TableHead>
+            <TableHead>Type</TableHead>
             <TableHead>Order / Quote</TableHead>
             <TableHead className="text-right">Lines</TableHead>
             <TableHead>Status</TableHead>
@@ -63,7 +81,7 @@ export const OrdersAndQuotesTable = ({ rows, userNames }: Props) => (
           {rows.length === 0 ? (
             <TableRow>
               <TableCell
-                colSpan={18}
+                colSpan={19}
                 className="h-24 text-center text-muted-foreground"
               >
                 No orders or quotes found.
@@ -74,19 +92,21 @@ export const OrdersAndQuotesTable = ({ rows, userNames }: Props) => (
               <TableRow key={`${row.kind}-${row.uuid}`}>
                 <TableCell>{formatDateColumn(row.createdAt)}</TableCell>
                 <TableCell>{formatDateColumn(row.deliveryDate)}</TableCell>
+                <TableCell className="whitespace-nowrap">
+                  {SALES_DOCUMENT_KIND_LABELS[row.kind]}
+                </TableCell>
                 <TableCell className="font-medium whitespace-nowrap">
                   <Link
                     href={row.href}
                     className="text-primary hover:underline"
                   >
-                    {row.kind === "order" ? "Order" : "Quote"} #
-                    {row.documentNumber}
+                    {row.documentCode}
                   </Link>
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
                   {row.lineCount}
                 </TableCell>
-                <TableCell>{orDash(row.status)}</TableCell>
+                <TableCell>{orDash(statusLabel(row.status))}</TableCell>
                 <TableCell>{row.orderType}</TableCell>
                 <TableCell>{orDash(row.customerName)}</TableCell>
                 <TableCell>{orDash(row.reference)}</TableCell>

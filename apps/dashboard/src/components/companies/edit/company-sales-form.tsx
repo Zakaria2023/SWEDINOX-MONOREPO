@@ -9,6 +9,7 @@ import {
   type CompanySalesFormValues,
 } from "@/app/(dashboard)/companies/[uuid]/edit/sales/validation";
 import { Button } from "@/components/shadcn/button";
+import { DatePicker } from "@/components/shadcn/date-picker";
 import { Input } from "@/components/shadcn/input";
 import { Select } from "@/components/shadcn/select";
 import { FormError } from "@/components/ui/form-error";
@@ -62,6 +63,11 @@ export const CompanySalesForm = ({ company }: Props) => {
         memberOf: company.memberOf ?? "",
         miscellaneousSettings: company.miscellaneousSettings ?? [],
         deliveryCondition: company.deliveryCondition ?? "",
+        completeDelivery: company.completeDelivery ?? false,
+        printConsignment: company.printConsignment ?? false,
+        requiresCertificate: company.requiresCertificate ?? false,
+        customerSince: company.customerSince ?? "",
+        competitors: company.competitors ?? "",
         devTheorWt: company.devTheorWt ?? "",
         defTransport: company.defTransport ?? "",
         quoteOrderSettings: company.quoteOrderSettings ?? [],
@@ -257,6 +263,59 @@ export const CompanySalesForm = ({ company }: Props) => {
                   disabled={isPending}
                 />
               </div>
+              <div>
+                <FormLabel htmlFor="sl-customerSince">Customer since</FormLabel>
+                <Controller
+                  name="customerSince"
+                  control={control}
+                  render={({ field }) => (
+                    <DatePicker
+                      id="sl-customerSince"
+                      value={field.value ?? ""}
+                      onChange={field.onChange}
+                    />
+                  )}
+                />
+              </div>
+              <div>
+                <FormLabel htmlFor="sl-competitors">Competitors</FormLabel>
+                <Input
+                  id="sl-competitors"
+                  {...register("competitors")}
+                  disabled={isPending}
+                />
+              </div>
+            </div>
+            <div className="mb-3 flex flex-wrap gap-x-6 gap-y-2">
+              {/* Whether a line may be split across deliveries at all. */}
+              <label className="flex cursor-pointer items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  className="size-4 rounded border-border accent-primary"
+                  {...register("completeDelivery")}
+                  disabled={isPending}
+                />
+                Complete delivery only
+              </label>
+              <label className="flex cursor-pointer items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  className="size-4 rounded border-border accent-primary"
+                  {...register("printConsignment")}
+                  disabled={isPending}
+                />
+                Print consignment
+              </label>
+              {/* Pairs with option A21 and a contract typed `options`. */}
+              <label className="flex cursor-pointer items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  className="size-4 rounded border-border accent-primary"
+                  {...register("requiresCertificate")}
+                  disabled={isPending}
+                />
+                Requires certificate
+              </label>
               <div>
                 <FormLabel htmlFor="sl-devTheorWt">Dev. Theor. Wt.</FormLabel>
                 <Controller

@@ -1520,9 +1520,9 @@ export const reportWarehouseWorkOrderLineCompletion = async (
             .set({
               qtyActual: deliveredQty.toFixed(3),
               kgActual: (Number(orderItem.kgActual ?? 0) + kgActual).toFixed(2),
-              deliveryStatus: "delivered",
+              deliveryStatus: "completed",
               lineStatus:
-                deliveredQty >= owed ? "delivered" : "partially_delivered",
+                deliveredQty >= owed ? "completed" : "partially_delivered",
             })
             .where(eq(OrderItems.uuid, line.orderItemUuid));
         }
@@ -1602,13 +1602,13 @@ export const cancelWarehouseWorkOrder = async (
               ? {
                   // Back to waiting to be planned, with no job holding it.
                   lineStatus: "released",
-                  deliveryStatus: "not_ready",
+                  deliveryStatus: "new",
                   lastWarehouseWorkOrder: null,
                 }
               : {
                   // The goods are never going. The demand is finished, short.
                   lineStatus: "cancelled",
-                  deliveryStatus: "not_ready",
+                  deliveryStatus: "new",
                   lastWarehouseWorkOrder: null,
                 },
           )

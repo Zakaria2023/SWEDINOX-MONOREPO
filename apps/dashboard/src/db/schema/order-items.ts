@@ -92,7 +92,7 @@ export const OrderItems = mysqlTable(
       "in_progress",
     ),
     deliveryStatus: mysqlEnum("delivery_status", deliveryStatuses).default(
-      "not_ready",
+      "new",
     ),
     deliveryDate: date("delivery_date", { mode: "string" }),
     reservationDate: date("reservation_date", { mode: "string" }),

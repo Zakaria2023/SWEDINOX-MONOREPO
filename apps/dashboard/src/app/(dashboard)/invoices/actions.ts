@@ -799,7 +799,7 @@ export const cancelInvoice = async (
             invoicedQuantity: unbilled.toFixed(3),
             lineStatus:
               unbilled <= QUANTITY_EPSILON
-                ? "delivered"
+                ? "completed"
                 : fullyBilled
                   ? "invoiced"
                   : "partially_invoiced",

@@ -1279,8 +1279,8 @@ export const cancelProductionWorkOrder = async (
           .update(OrderItems)
           .set(
             mode === "restore"
-              ? { lineStatus: "released", deliveryStatus: "not_ready" }
-              : { lineStatus: "cancelled", deliveryStatus: "not_ready" },
+              ? { lineStatus: "released", deliveryStatus: "new" }
+              : { lineStatus: "cancelled", deliveryStatus: "new" },
           )
           .where(inArray(OrderItems.uuid, orderItemUuids));
       }

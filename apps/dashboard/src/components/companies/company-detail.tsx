@@ -226,6 +226,20 @@ export const CompanyDetailView = ({ company, invoices, userNames }: Props) => {
           <Field label="Member of" value={company.memberOf} />
           <Field label="Delivery condition" value={company.deliveryCondition} />
           <Field
+            label="Complete delivery only"
+            value={yesNo(company.completeDelivery)}
+          />
+          <Field
+            label="Print consignment"
+            value={yesNo(company.printConsignment)}
+          />
+          <Field
+            label="Requires certificate"
+            value={yesNo(company.requiresCertificate)}
+          />
+          <Field label="Customer since" value={company.customerSince} />
+          <Field label="Competitors" value={company.competitors} />
+          <Field
             label="Dev. theor. wt."
             value={
               company.devTheorWt

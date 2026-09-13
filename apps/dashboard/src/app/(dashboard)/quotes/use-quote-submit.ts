@@ -23,6 +23,7 @@ import {
   invoicePaymentTerms,
   OrderMethod,
   orderMethods,
+  OrderStatus,
   OrderWeightType,
   orderWeightTypes,
 } from "@/lib/enums";
@@ -48,6 +49,16 @@ type UseQuoteSubmitParams = {
   quoteUuid?: string;
   defaultValues?: QuoteFormValues;
 };
+
+/**
+ * The rung a quote sits on, from the one thing the form asks about it.
+ *
+ * A quote climbs the same ladder as an order and expiry is one of its rungs,
+ * so the checkbox has to move the status with it — otherwise a quote could
+ * read `expired` on one screen and `provisional` on the next.
+ */
+const quoteStatusFor = (expired: boolean): OrderStatus =>
+  expired ? "expired" : "provisional";
 
 const emptyOpt = { value: "", label: "Empty" };
 
@@ -305,7 +316,11 @@ export const useQuoteSubmit = ({
         deliveryYear: values.deliveryYear ? Number(values.deliveryYear) : null,
         deliveryRemark: values.deliveryRemark || null,
 
+        // `expired` is the rung a salesperson toggles directly; the status is
+        // the ladder it sits on. Both are written from the one checkbox so the
+        // quotes list, which filters on each, can never show them disagreeing.
         expired: values.expired,
+        status: quoteStatusFor(values.expired),
 
         remarks: values.remarks || null,
         documents: values.documents?.length ? values.documents : null,

@@ -20,6 +20,12 @@ export const InvoiceItems = mysqlTable(
 
     invoiceUuid: char("invoice_uuid", { length: 36 }).notNull(),
     // The reservation this line bills — always invoiced in full.
+    //
+    // Charge lines are NOT here. The reference shows both in one grid, told
+    // apart by a `Linetype` of `Orderline` (5.180 lines) or `Surcharge` (470),
+    // but a charge already has its own table in `InvoiceSurcharges` — so the
+    // combined grid is built by unioning the two, the way the Orders and
+    // Quotes overview unions four document tables.
     orderItemUuid: char("order_item_uuid", { length: 36 }).notNull(),
     productUuid: char("product_uuid", { length: 36 }).notNull(),
 
@@ -51,6 +57,33 @@ export const InvoiceItems = mysqlTable(
     profitMargin: decimal("profit_margin", { precision: 6, scale: 2 }).default(
       "0.00",
     ),
+
+    // ── The metal and the processing, reported apart ──────────────────────────
+    // The reference bills both on one line and then splits them, so a line's
+    // revenue and profit each come in three: products, options, and the sum.
+    // Both identities hold exactly across its 5.650 invoice lines.
+    //
+    //   revenue = revenueProducts + revenueOptions
+    //   profit  = profitProducts  + profitOptions
+    //
+    // `amount` and `profit` above are the sums. These are the halves, and the
+    // option half is nearly always zero because an option is sold at cost.
+    revenueProducts: decimal("revenue_products", {
+      precision: 15,
+      scale: 2,
+    }).default("0.00"),
+    revenueOptions: decimal("revenue_options", {
+      precision: 15,
+      scale: 2,
+    }).default("0.00"),
+    profitProducts: decimal("profit_products", {
+      precision: 15,
+      scale: 2,
+    }).default("0.00"),
+    profitOptions: decimal("profit_options", {
+      precision: 15,
+      scale: 2,
+    }).default("0.00"),
     profitReplPrice: decimal("profit_repl_price", {
       precision: 15,
       scale: 2,

@@ -1,0 +1,246 @@
+# Orders and Quotes — the sales document header
+
+**Item B1 of [WHAT-IS-LEFT.md](WHAT-IS-LEFT.md), captured 13-9-2026.**
+`Overviews → Sales → Orders and Quotes`, `View` = `-empty-`, creation date from
+`1-1-2024`. **40 columns, 2 091 rows** — `exports/b1-orders-and-quotes.tsv`.
+
+This is the first export ever taken from the Sales menu. Everything the rebuild
+believed about the selling side came from screenshots of one or two documents;
+this is the whole population.
+
+The filter caught everything the database holds: creation dates run
+**2024-12-31 → 2026-09-09**, so 2 091 is not a sample, it is the total.
+
+---
+
+## 1. 🔴 One screen, one status ladder, **four number series**
+
+The screen is not "orders, and also quotes". It is one header table holding
+**three different document types**, told apart only by the letter on the number.
+
+| Prefix | Range | Rows | What it is |
+| --- | --- | --- | --- |
+| `O` | 100000 – 102190 | 2 041 | Sales orders |
+| `R` | 290000 – 290051 | 43 | **Sales return orders** |
+| `Q` | 300001 – 300006 | 6 | Quotes |
+| `B` | 250000 | 1 | Unknown — see §8 |
+
+**This answers item G11.** The `29xxxx` series that kept turning up in the
+logistics exports with no home is the sales **return order**. It is not a
+separate screen and it is not a credit note — it sits in the same grid as the
+orders, with the same columns.
+
+The `O` series has **154 gaps** in its span (2 037 distinct numbers across
+2 191 slots). Numbers are consumed and not always kept.
+
+---
+
+## 2. 🔴 `Status` has **ten** values, not four
+
+The code ships `orderStatuses = ["open", "confirmed", "completed",
+"cancelled"]`. None of those four strings exist in the reference. The real list,
+counted across all 2 091 rows:
+
+| Status | Rows | Seen on |
+| --- | --- | --- |
+| `Invoiced` | 1 657 | O, R |
+| `Released` | 195 | O, R, Q |
+| `In progress` | 99 | O |
+| `Provisional` | 71 | O, R, Q, B |
+| `Partially invoiced` | 22 | O |
+| `Partially delivered` | 17 | O |
+| `Completed` | 17 | O |
+| `Checked` | 7 | O, R |
+| `Received` | 4 | **R only** |
+| `Expired` | 2 | **Q only** |
+
+Read as a ladder: `Provisional → Released → Checked → In progress → Partially
+delivered → Partially invoiced → Invoiced → Completed`, with `Received` a
+return-only rung and `Expired` a quote-only terminus.
+
+**Quotes share the ladder.** Our `Quotes` table has no `status` column at all —
+it carries a `expired` boolean instead. The reference puts `Provisional`,
+`Released` **and** `Expired` on quotes, so `expired` is one value of a status,
+not a flag beside it.
+
+`Returns` fare better: `returnOrderStatuses` already holds `received`, but not
+`provisional`, `checked` or `invoiced`.
+
+---
+
+## 3. 🔴 `Profit margin` divides by the **absolute** revenue
+
+```
+Profit margin = round( Profit / |Revenue| × 100 , 1 )
+```
+
+**0 mismatches across 2 091 rows.** The naive `profit / revenue` fails on 44 of
+them — every return order, because a return carries negative revenue and the
+sign flips.
+
+The zero case is its own rule, and it is not zero:
+
+| Revenue | Profit | Margin |
+| --- | --- | --- |
+| 0 | 0 | `0` |
+| 0 | > 0 | `100` |
+| 0 | < 0 | `-100` |
+
+`O100756` is the proof of the last row: revenue `0`, profit `-0.11`, margin
+`-100`.
+
+`lib/helpers.ts` currently holds:
+
+```ts
+export const profitMarginPercent = (revenue: number, profit: number): number =>
+  revenue === 0 ? 0 : (profit / revenue) * 100;
+```
+
+— which is wrong on both counts, and is used by the dashboard tile, the options
+screen and `orders/actions.ts`. Four more screens inline the same wrong
+expression.
+
+---
+
+## 4. A return is a **negative** order, not a separate shape
+
+All 41 return orders that carry values carry them negative — revenue, weight and
+line counts alike:
+
+```
+R290043  lines 2   wt -14339   rev -38285.13   profit -2796.10
+R290051  lines 1   wt -10000   rev -20000      profit -10000
+```
+
+**Every row with negative revenue in the whole export is `R`-prefixed**, and
+every one of those has weight ≤ 0. The two exceptions are a `Provisional` return
+with nothing on it yet (`R290047`) and a `Received` return awaiting pricing
+(`R290050`, weight `-707`, revenue `0`).
+
+Profit is *not* always negative — `R290002`, `R290014`, `R290033` and `R290044`
+come back with a positive profit, meaning the goods were credited for less than
+they cost to take back.
+
+---
+
+## 5. `Order type` gains a fourth value
+
+| Order type | Rows |
+| --- | --- |
+| `Normal` | 2 069 |
+| `Call-off` | 16 |
+| `Rush` | 5 |
+| **`Ex works`** | **1** |
+
+`orderTypes` in `lib/enums.ts` holds three. `Ex works` is missing.
+
+This also **confirms** the note already in the enum's comment: the `Order type`
+column on this screen really is the header dropdown (Normal / Call-off / Rush),
+not the line sourcing that the revenue screens put under the same header.
+
+`Pick-up` is a separate boolean and does not track it — 307 `Normal` orders are
+pick-ups, all 16 `Call-off`s are not, and 3 of 5 `Rush` orders are.
+
+---
+
+## 6. Two fields the header has and we do not
+
+- **`Representative`** — four values on 2 091 rows: `Hego` (2 082), `Export`
+  (4), `Arian Bloks` (3), `BNL` (2). Not the seller: `O101734`'s representative
+  is `Arian Bloks` while its seller is `André van der Veen`, and all four
+  `Export` rows belong to one Ukrainian customer. This is a channel/agency on
+  the header, and `Orders` has no column for it.
+- **`Affiliate company details`** — `HEGO TEST Stainless Steel & Aluminium` on
+  every row. The owning legal entity. Single-valued here, so nothing to build,
+  but it is why the reference can run more than one company on one database.
+
+---
+
+## 7. What is switched off
+
+Seven of the forty columns are blank on **every one of 2 091 rows**. Per the
+standing rule — *a column blank on every row of a full export is evidence* —
+these features exist and are unused:
+
+- `Pick-up slip`
+- `Converted from/to`
+- `Last follow-up`, `Last follow-up reason`
+- `Internal Text`
+- `Classification code`, `Classification`
+
+Two more are effectively off: `Decision date` and `Last follow-up date` are `0`
+on all 2 091 rows, **including the six quotes**. The quote follow-up machinery
+is modelled in the reference and has never been used.
+
+⚠️ **`Converted from/to` is the weak one.** Only six quotes exist in the entire
+database and none was converted, so its emptiness says the feature is unused —
+not that quote-to-order conversion is absent from the product.
+
+---
+
+## 8. Small things worth keeping
+
+- **`Time frame`** is derived, not stored: the creation timestamp floored to the
+  half hour, printed `HH:MM - HH:MM`. **0 mismatches / 2 091.** Same for
+  `Year (Creation Date)` and `Month (Creation Date)`.
+- **`Delivery date` is never empty** — all 2 091 rows carry one, including every
+  `Provisional` document. It is `NOT NULL` on the header.
+- **`Quote date` / `Valid u/i` are quote-only.** `0` on all 2 085 non-quotes.
+  All four quotes that have one are valid for **3 days** except `Q300006`
+  (1 day). There is no long validity window in the data.
+- **`Order method`** is nullable — blank on 169 rows (8 %), which is *every*
+  return order (43) plus 125 orders and one quote. Values seen: `Telephone`
+  (1 190), `E-Mail` (719), `Counter` (12), `Oral` (1). Our enum's `representative`,
+  `website`, `edi` and `ai_read_email` appear nowhere.
+- **The send flags are a set of three**, and only four combinations occur:
+
+  | Send | Deliberately not sent | Must be sent | Rows |
+  | --- | --- | --- | --- |
+  | True | False | True | 1 482 |
+  | False | True | True | 337 |
+  | False | False | True | 227 |
+  | False | False | False | 45 |
+
+  `Send = True` never coexists with `Deliberately not sent = True`. The 227 are
+  the real outstanding queue: must be sent, not sent, not waived.
+- **`Onze referentie` is untranslated** in the reference itself — "our
+  reference", beside the customer's `Reference`. We already have both
+  (`ourReference`, `customerRef`). 13 rows of 2 091 fill it.
+- **`Customer code` ↔ `Customer` is 1:1** across all 335 customers. No code
+  carries two names, no name two codes.
+- **`Lines = 0`** on 56 rows — all `Provisional` (39) or `Released` (17). Eight
+  of them still carry a revenue, which means the header total is stored, not
+  summed from lines at read time.
+- **Two rows have no seller at all** (`O100016`, `O100043`), so `seller` is
+  nullable.
+
+---
+
+## ⚪ Two things this export does not settle
+
+- **`B250000`.** One row, prefix `B`, its own series. `Provisional`, order type
+  `Rush`, pick-up, order method `Oral`, seller `Hamza Dabbagh`, customer
+  `zakaria test`, revenue €15 with 0 lines, created 2026-06-30. It is test data
+  somebody typed, but the prefix is a fourth document type the menu never names.
+  **Ask what `B` is.**
+- **Four orders appear twice.** `O102166`–`O102169` each occupy two rows that
+  are identical in 37 of 40 columns — same customer, same single line, same
+  revenue, same delivery date. They differ only in `Creation date`, and its two
+  derived columns. The first row of each pair was created 2026-07-28 at its own
+  time; the second row of all four carries the **exact same** timestamp,
+  2026-09-09 11:16:26. Something re-stamped four orders in one action without
+  giving them new numbers. Nothing else in the export explains it.
+
+---
+
+## What it means for the rebuild
+
+Queued in [PLANNED-CODE-CHANGES-3.md](PLANNED-CODE-CHANGES-3.md). In short: the
+status enum is wrong, the margin formula is wrong on returns, `Ex works` is
+missing, quotes need a status instead of a boolean, and `Representative` has no
+column.
+
+**Still unproved.** This is the header only. Nothing here touches the price
+build-up, the discounts, the `Stk`/`CD` split or the VAT scenarios — those are
+**B2 (Order lines)** and **B3/B4 (Invoices, Invoice lines)**. Discounts
+cascading is still proved on exactly one quote line.

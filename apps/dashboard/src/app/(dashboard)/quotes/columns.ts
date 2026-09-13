@@ -1,7 +1,7 @@
 import { QuoteListItem } from "@/app/(dashboard)/quotes/actions";
-import { OrderMethod } from "@/lib/enums";
+import { OrderMethod, OrderStatus } from "@/lib/enums";
 import { dateCell, ExportColumn, textCell } from "@/lib/excel";
-import { ORDER_METHOD_LABELS } from "@/lib/labels";
+import { ORDER_METHOD_LABELS, ORDER_STATUS_LABELS } from "@/lib/labels";
 
 /** The quotes overview as a sheet — see app/(dashboard)/orders/columns.ts. */
 
@@ -9,6 +9,7 @@ export type QuoteColumnKey =
   | "id"
   | "companyName"
   | "contact"
+  | "status"
   | "requestMethod"
   | "validUntil"
   | "createdAt";
@@ -16,6 +17,13 @@ export type QuoteColumnKey =
 export const QUOTE_COLUMNS: Array<ExportColumn<QuoteListItem, QuoteColumnKey>> =
   [
     { key: "id", label: "#", defaultVisible: true, value: (row) => row.id },
+    {
+      key: "status",
+      label: "Status",
+      defaultVisible: true,
+      value: (row) =>
+        textCell(ORDER_STATUS_LABELS[row.status as OrderStatus] ?? row.status),
+    },
     {
       key: "companyName",
       label: "Customer",

@@ -114,6 +114,7 @@ export const Invoices = mysqlTable(
     cancelled: boolean("cancelled").default(false).notNull(),
 
     vatScenario: mysqlEnum("vat_scenario", invoiceVatScenarios),
+
     paymentTerms: mysqlEnum("payment_terms", invoicePaymentTerms),
     explanation: text("explanation"),
 

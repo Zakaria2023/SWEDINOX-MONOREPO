@@ -68,6 +68,26 @@ export const Companies = mysqlTable(
       .$type<MiscellaneousOption[]>()
       .default([]),
     deliveryCondition: varchar("delivery_condition", { length: 255 }),
+
+    // ── Per-customer switches, off the reference's Customers and Prospects ────
+    // Deliver the whole order in one go, or let it go out in parts. This is
+    // what decides whether a line may be split across deliveries at all —
+    // the `#Deliveries` count the reference shows runs from 1 to 12.
+    completeDelivery: boolean("complete_delivery").default(false),
+    // Whether this customer's paperwork is printed rather than emailed.
+    printConsignment: boolean("print_consignment").default(false),
+    // Whether this customer requires a material certificate. The other two
+    // halves of that feature are already here: option `A21` (2.1 Certificate)
+    // is sold as an option, and a contract typed `options` prices it.
+    requiresCertificate: boolean("requires_certificate").default(false),
+
+    // When the relationship started, as against when the record was made. A
+    // prospect that becomes a customer keeps its original `createdAt` and
+    // gains a later `customerSince`.
+    customerSince: date("customer_since", { mode: "string" }),
+    // Who else sells to this customer. Free text in the reference, and pure
+    // CRM — nothing reads it.
+    competitors: varchar("competitors", { length: 255 }),
     devTheorWt: mysqlEnum("dev_theor_wt", devTheorWtOptions),
     defTransport: varchar("def_transport", { length: 255 }),
     quoteOrderSettings: json("quote_order_settings")

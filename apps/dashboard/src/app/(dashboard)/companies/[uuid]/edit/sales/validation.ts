@@ -33,6 +33,11 @@ export const companySalesSchema = z.object({
   memberOf: z.string().optional(),
   miscellaneousSettings: z.array(z.enum(miscellaneousOptions)),
   deliveryCondition: z.string().optional(),
+  completeDelivery: z.boolean(),
+  printConsignment: z.boolean(),
+  requiresCertificate: z.boolean(),
+  customerSince: z.string().optional(),
+  competitors: z.string().optional(),
   devTheorWt: z.union([
     z.enum(devTheorWtOptions),
     z.literal(""),

@@ -20,7 +20,7 @@ import {
 } from "@/db/schema/quote-surcharges";
 import { InsertQuotes, Quotes, SelectQuotes } from "@/db/schema/quotes";
 import { SalesOptions, SelectSalesOptions } from "@/db/schema/sales-options";
-import { StockUnit } from "@/lib/enums";
+import { orderStatuses, StockUnit } from "@/lib/enums";
 import {
   computeQuoteSummary,
   describeError,
@@ -170,11 +170,14 @@ const QUOTE_SORTABLE = {
   totalInclVat: Quotes.totalInclVat,
 };
 
-// A quote has no status column — what it is worth, when it was given, how long
-// it stands, and whether it has run out. `expired` is the one a salesperson
-// actually reaches for, since a live quote list is the point of the screen.
+// A quote climbs the same ladder as an order — the reference's six quotes read
+// `Provisional`, `Released` and `Expired` from the column its orders use — so
+// expiry is a rung rather than a flag beside one. `expired` is kept alongside
+// it because a live quote list is the point of the screen and a salesperson
+// reaches for that question directly.
 const QUOTE_FILTERS = {
   company: relationFilter(Quotes.companyUuid),
+  status: enumFilter(Quotes.status, orderStatuses),
   paymentTerms: enumFilter(Quotes.paymentTerms, invoicePaymentTerms),
   quoteDate: dateRangeFilter(Quotes.quoteDate),
   validUntil: dateRangeFilter(Quotes.validUntil),

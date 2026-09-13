@@ -1,7 +1,10 @@
 import { CompanyOption } from "@/app/(dashboard)/companies/actions";
-import { invoicePaymentTerms } from "@/lib/enums";
+import { invoicePaymentTerms, orderStatuses } from "@/lib/enums";
 import { companyOptionLabel } from "@/lib/helpers";
-import { INVOICE_PAYMENT_TERM_LABELS } from "@/lib/labels";
+import {
+  INVOICE_PAYMENT_TERM_LABELS,
+  ORDER_STATUS_LABELS,
+} from "@/lib/labels";
 import { TableFilterControl } from "@/lib/table-query";
 
 export const quoteFilters = (
@@ -29,6 +32,15 @@ export const quoteFilters = (
   { key: "quoteDate", kind: "dateRange", label: "Quote date" },
   { key: "validUntil", kind: "dateRange", label: "Valid until" },
   { key: "total", kind: "numberRange", label: "Total incl. VAT" },
+  {
+    key: "status",
+    kind: "select",
+    label: "Status",
+    options: orderStatuses.map((status) => ({
+      value: status,
+      label: ORDER_STATUS_LABELS[status],
+    })),
+  },
   {
     key: "expired",
     kind: "select",

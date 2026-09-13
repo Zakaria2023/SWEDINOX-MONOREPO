@@ -25,13 +25,13 @@ The `Overviews` tree has **112 screens** across nine groups.
 | Logistics | 32 | ✅ all captured |
 | Finance | 14 | ✅ all captured |
 | Suppliers | 5 | ✅ all captured |
-| **Sales** | 19 | 🔴 **2 captured, 17 left** |
-| **Customers** | 15 | 🔴 **none captured** |
+| **Sales** | 19 | 🟡 **15 captured, 4 left** |
+| **Customers** | 15 | 🟡 **2 captured, 13 left** |
 | **Companies** | 6 | 🔴 **none captured** |
 | **Batch registration** | 5 | 🔴 **none captured** |
 | **Other** | 5 | 🔴 **none captured** |
 
-**64 captured. 48 left, and all 48 sit in those five groups.**
+**77 captured. 35 left.** Sales is nearly done; the 35 sit in four groups.
 
 ### ⚠️ "But I sent you the Sales sheets"
 
@@ -98,6 +98,22 @@ conclusion once, published and retracted.
 database is dense January–May 2025 and nearly empty after, so January 2025 is
 where the rows are.
 
+### ⚠️ When `-empty-` itself breaks the screen
+
+`Customers and Prospects` (C1) answers `View` = `-empty-` with a **Database
+error**:
+
+> The column "DeliveryTerm" was expected but did not occur in
+> "GetReportData_CustomerAndProspect".
+
+That is a bug in the reference, not a mistake in the capture: the `-empty-` view
+asks for a column the report procedure does not return. **Fall back to any other
+view**, export it, and say which view it was — a short column list is worth more
+than an error box. If the screen has two views, export both and the hidden
+columns can be recovered by diffing them.
+
+---
+
 ### ⚠️ Two date filters
 
 Some screens have two (`Deviations in count lists` does). They `AND` together,
@@ -152,30 +168,32 @@ setting would live there.
 
 ---
 
-# Part B — Sales · 17 screens
+# Part B — Sales · 4 screens left
 
-🔴 **The biggest hole in the whole rebuild.** Purchase, Logistics and Finance
-are proved to the cent against ~130 000 exported rows. The selling side — the
-orders, the invoices, the deliveries, the prices — has never been exported once.
+🟡 **Was the biggest hole in the whole rebuild; now mostly filled.** On
+13-9-2026 twelve Sales exports were taken in one sitting — **~43 000 rows** —
+covering the whole order-to-cash chain: orders, quotes, lines, deliveries,
+invoices, invoice lines, returns, charges and options. What is left is five
+screens, and two of them are statistics.
 
 Standard recipe. Filters below are the ones to set; everything else stays.
 
 | # | Screen | Filter |
 |---|---|---|
-| **B1** | **Orders and Quotes** | order/quote date from `1-1-2024`. ⚠️ **the most valuable single export left** |
-| **B2** | **Order lines** | creation date from `1-1-2024` |
-| **B3** | **Invoices** | invoice date from `1-1-2024` |
-| **B4** | **Invoice lines** | invoice date from `1-1-2024` |
-| **B5** | **Deliveries** | delivery date from `1-1-2024` |
-| **B6** | Quote lines | creation date from `1-1-2024` |
-| **B7** | Return lines | date from `1-1-2024` |
-| **B8** | Charges | whatever date it offers, from `1-1-2024` |
-| **B9** | Options | no date? just `Show Data` |
-| **B10** | Option prices per product | product code sentinel, `Show Data` |
-| **B11** | Product prices | valid-from `1-1-2024` |
-| **B12** | Net prices | ⚠️ same screen as Purchase → Net prices; export it once here with `View` = `-empty-` |
-| **B13** | Order lines still to be called | `Show Data` |
-| **B14** | Orders still to be called | `Show Data` |
+| ~~**B1**~~ | ~~**Orders and Quotes**~~ | ✅ **captured 13-9-2026** — 2 091 rows × 40 columns → [orders-and-quotes.md](orders-and-quotes.md), queued in [PLANNED-CODE-CHANGES-3.md](PLANNED-CODE-CHANGES-3.md) |
+| ~~**B2**~~ | ~~**Order lines**~~ | ✅ 4 975 × 54 → [order-lines.md](order-lines.md) |
+| ~~**B3**~~ | ~~**Invoices**~~ | ✅ 1 683 × 27 → [invoice-lines.md](invoice-lines.md) Part 2 — **VAT settled** |
+| ~~**B4**~~ | ~~**Invoice lines**~~ | ✅ 5 650 × 43 → [invoice-lines.md](invoice-lines.md) |
+| ~~**B5**~~ | ~~**Deliveries**~~ | ✅ 6 134 × 54 → [deliveries.md](deliveries.md) |
+| ~~**B6**~~ | ~~Quote lines~~ | ✅ 9 × 46 → [order-lines.md](order-lines.md) §10 — discount **shape** proved, every value `0 %` |
+| ~~**B7**~~ | ~~Return lines~~ | ✅ 88 × 64 → [returns-and-complaints.md](returns-and-complaints.md) |
+| ~~**B8**~~ | ~~Charges~~ | ✅ 1 504 × 24 → [charges.md](charges.md) — names the `B` series |
+| ~~**B9**~~ | ~~Options~~ | ✅ 2 890 × 31 → [sales-options-and-calloff.md](sales-options-and-calloff.md) |
+| ~~**B10**~~ | ~~Option prices per product~~ | ✅ 54 × 16 → [product-prices.md](product-prices.md) §3 |
+| **B11** | **Product prices** | ⚠️ **captured but must be re-run** — 19 383 × 47, and every price column is `0` because `Price date` is a **snapshot** date, not a range. Re-run with the **`Price date` at today**. See [product-prices.md](product-prices.md) §1 |
+| ~~**B12**~~ | ~~Net prices~~ | ✅ **proved empty 13-9-2026** — filter block photographed, all sentinels correct, 1-1-2024→13-9-2026, zero rows. No contract is typed `Net prices` either. See [product-prices.md](product-prices.md) |
+| ~~**B13**~~ | ~~Order lines still to be called~~ | ✅ 55 × 26 → [sales-options-and-calloff.md](sales-options-and-calloff.md) §6 |
+| ~~**B14**~~ | ~~Orders still to be called~~ | ✅ 691 × 49 → [sales-options-and-calloff.md](sales-options-and-calloff.md) §6 |
 | **B15** | Order lines capacity overflow | `Show Data` |
 | **B16** | SFN statistics Product-Market combinations | ⚠️ `Year` = `2025`, `Month` = `1` — it was captured blank and proves nothing |
 | **B17** | Revenue w.r.t. Budget | ⚠️ `Year` = `2025`, `Month` = `1` — same, and this one also needs its **second view** exported |
@@ -187,10 +205,12 @@ Already done: `Contracts` and `Contractgroups` ✅.
 These five are the whole order-to-cash chain, and each one settles something
 that is guessed today:
 
-- **B1** — does a quote number and an order number share one series? What does
-  a quote's `Status` take? Does `Order method` decide anything? Our `Orders`
-  table has an `orderType` (Normal / Call-off / Rush) proved from a screenshot
-  of *one* order; this export proves or breaks it across thousands.
+- ~~**B1**~~ ✅ **answered.** No — there are **four** series, not one:
+  `O` orders, `R` **return orders** (this is the `29xxxx` series of item G11),
+  `Q` quotes and one stray `B`. A quote's `Status` comes from the **same
+  ten-value ladder** as an order's, and our four-value `orderStatuses` matches
+  none of it. `orderType` survives and gains a fourth value, `Ex works`.
+  `Order method` is nullable and uses four of our eight values.
 - **B2** — the sales equivalent of the purchase-lines export that proved six
   formulas. This is where the price build-up, the discounts and the `Stk`/`CD`
   split get proved on the selling side. **We proved discounts cascade from a
@@ -210,8 +230,8 @@ customer — fifteen screens built from menu names alone.
 
 | # | Screen | Filter |
 |---|---|---|
-| **C1** | **Customers and Prospects** | text sentinel, `Show Data`. ⚠️ **do this one first** — it says what makes a prospect different from a customer |
-| **C2** | **Customer overview** | `Show Data` |
+| ~~**C1**~~ | ~~**Customers and Prospects**~~ | 🟡 **columns captured 13-9-2026, no rows** — `-empty-` triggers a reference bug (`DeliveryTerm` missing from `GetReportData_CustomerAndProspect`). 44 columns + toolbar photographed → [customers-and-prospects.md](customers-and-prospects.md). **A prospect is a checkbox, not a table.** Rows still wanted: try another `View` |
+| ~~**C2**~~ | ~~**Customer overview**~~ | ✅ **1 679 × 47, 13-9-2026** → [customers-and-prospects.md](customers-and-prospects.md) Part 2 — the whole document family counted per customer, complaints included |
 | **C3** | Contact persons Customers and Prospects | `Show Data` |
 | **C4** | Addresses | `Show Data` |
 | **C5** | Remarks per company | `Show Data` |
@@ -293,7 +313,7 @@ screenshots only: open it, and photograph **every tab and every panel expanded**
 | **G8** | One production batch, every tab | |
 | **G9** | **One remnant lot** (an offcut the saw made) — and read its **`Supplier`** | Us, or the original mill? It decides whether a remnant traces back to the heat it was cut from |
 | **G10** | **One `Bewerker` lot** — any lot at an external-processor location | All 36 are blocked. Which screen set that, and can it be lifted by hand? |
-| **G11** | An order from the **`29xxxx`** series | It behaves like a purchase order and is not numbered like one. Still unexplained |
+| **G11** | An order from the **`29xxxx`** series | ⚠️ **half answered by B1** — it is a **sales return order** (`R290000`–`R290051`, 43 of them), negative revenue and weight, in the same grid as the orders. Still worth opening **one** to see its lines |
 | **G12** | One customer company, **`Debtor`** panel fully expanded | Where the credit limits, the journal code and possibly the overdue-days setting live |
 
 ---

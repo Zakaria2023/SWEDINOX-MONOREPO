@@ -613,6 +613,9 @@ export const orderTypes = [
   "normal",
   "call_off",
   "rush",
+  // One header of 2.091 carries it. Thin for a distribution, conclusive for
+  // membership: the value is in the reference's list.
+  "ex_works",
 ] as const satisfies readonly string[];
 
 export type OrderType = (typeof orderTypes)[number];
@@ -1170,9 +1173,20 @@ export type InvoiceSurchargeDescription =
 // its amounts negated — same numbering, same ledger, same ageing — so it lives
 // in the same table rather than a parallel one that every report would have to
 // learn about separately.
+/**
+ * What the document is for. Counted across the reference's 1.683 invoices:
+ * 1.616 Debit, 32 Credit, 29 Surcharge, 6 Correction.
+ *
+ * A credit note is a whole document carrying a negative amount rather than a
+ * negative line on an invoice — which is what pairs it with a return order. A
+ * `surcharge` document has no order behind it at all: 135 of the reference's
+ * invoice lines bill charges alone.
+ */
 export const invoiceDocumentTypes = [
   "invoice",
   "credit_note",
+  "surcharge",
+  "correction",
 ] as const satisfies readonly string[];
 
 export type InvoiceDocumentType = (typeof invoiceDocumentTypes)[number];
@@ -1254,14 +1268,57 @@ export const orderMethods = [
 
 export type OrderMethod = (typeof orderMethods)[number];
 
+/**
+ * The ladder a sales document climbs, counted across all 2.091 headers the
+ * reference holds: 1.657 Invoiced, 195 Released, 99 In progress, 71
+ * Provisional, 22 Partially invoiced, 17 Partially delivered, 17 Completed,
+ * 7 Checked, 4 Received, 2 Expired.
+ *
+ * One list for four document types. `received` only ever appears on a return
+ * order and `expired` only on a quote, but they are rungs of the same ladder
+ * rather than separate vocabularies — which is why a quote carries a status
+ * here instead of the boolean it used to have.
+ *
+ * There is no `cancelled`. The reference deletes a document rather than
+ * cancelling it, which is what the 154 gaps in its order-number series are.
+ */
 export const orderStatuses = [
-  "open",
-  "confirmed",
+  "provisional",
+  "released",
+  "checked",
+  "in_progress",
+  "partially_delivered",
+  "partially_invoiced",
+  "invoiced",
   "completed",
+  // Return orders only — goods are back, not yet credited.
+  "received",
+  // Quotes only, and terminal.
+  "expired",
+  // Not a rung the reference has. It deletes a document rather than
+  // cancelling one, which is what the 154 gaps in its order-number series
+  // are — but this app cancels, and keeps the record.
   "cancelled",
 ] as const satisfies readonly string[];
 
 export type OrderStatus = (typeof orderStatuses)[number];
+
+/**
+ * Which document series a sales header belongs to.
+ *
+ * The reference tells them apart by the letter on the number and by the
+ * `Verkoopordertype` column on its Charges screen, which names all four:
+ * `O` order (2.041), `R` return (43), `Q` quote (6), `B` counter order (1).
+ */
+export const salesDocumentKinds = [
+  "order",
+  "return",
+  "quote",
+  // A walk-in sale over the counter — the reference's `Balieorder`.
+  "counter_order",
+] as const satisfies readonly string[];
+
+export type SalesDocumentKind = (typeof salesDocumentKinds)[number];
 
 export const orderItemStatuses = [
   "reserved",
@@ -1281,29 +1338,83 @@ export type OrderItemStatus = (typeof orderItemStatuses)[number];
 // final — and "checked" sits between released and the first receipt, for a
 // line somebody has verified against the supplier's confirmation. Both were
 // read off the reference's own saved filters and status column.
+/**
+ * A line climbs the same ladder as its header. Counted on 4.975 order lines:
+ * 4.195 Invoiced, 335 Released, 260 In progress, 58 Completed, 43 Partially
+ * invoiced, 39 Provisional, 32 Partially delivered, 9 Checked, 4 Received.
+ *
+ * `expired` is here because the Deliveries screen shows it on 70 lines; the
+ * Order lines screen hides it, along with one further state.
+ *
+ * The reference numbers these in hundreds so states can be inserted between
+ * them, and two screens print the number instead of the word: `010`
+ * provisional, `210` released, `310` in_progress, `610` partially_delivered,
+ * `805` partially_invoiced, `810` invoiced, `830` cancelled.
+ */
 export const orderLineStatuses = [
   "provisional",
-  "in_progress",
   "released",
   "checked",
+  "in_progress",
   "partially_delivered",
-  "delivered",
   "partially_invoiced",
   "invoiced",
+  // What the reference calls a line that is fully delivered and not yet
+  // invoiced — 58 lines, paired with delivery status `Completed` on all 58.
+  "completed",
+  "received",
+  "expired",
+  // Status `830`. Two lines carry it and the Order lines screen shows neither,
+  // so the word is ours; the behaviour — hidden, terminal — is the
+  // reference's.
   "cancelled",
 ] as const satisfies readonly string[];
 
 export type OrderLineStatus = (typeof orderLineStatuses)[number];
 
-// Whether a line is ready to physically leave the warehouse.
+/**
+ * Where the goods are, which is not where the line is. A delivery line carries
+ * three independent statuses: `orderLineStatuses` for the paperwork, this for
+ * the metal, and `transportStatuses` for the lorry.
+ *
+ * Counted on 6.134 delivery lines: 5.156 Invoiced, 362 Released, 189 Ready,
+ * 113 In progress, 111 Expired, 65 Partially delivered, 58 Completed, 41 New,
+ * 39 Workorders created. The two ladders move together but not in lockstep —
+ * an `in_progress` line sits on a `ready` delivery 178 times and on an
+ * `in_progress` one 113 times.
+ */
 export const deliveryStatuses = [
-  "not_ready",
+  "new",
+  "workorders_created",
+  "in_progress",
   "ready",
   "released",
-  "delivered",
+  "partially_delivered",
+  "completed",
+  "invoiced",
+  "expired",
 ] as const satisfies readonly string[];
 
 export type DeliveryStatus = (typeof deliveryStatuses)[number];
+
+/**
+ * Where the lorry is. Blank until the line is on a trip, which is why 1.463 of
+ * 6.134 delivery lines carry none.
+ *
+ * A line with a transport blockage never reaches any of these: 895 blocked
+ * lines, 895 without a trip number, 4.297 unblocked lines all with one, no
+ * exceptions in 6.134 rows.
+ */
+export const transportStatuses = [
+  "new",
+  "scheduled",
+  "loading_list",
+  "loaded",
+  "loading_done",
+  "completed",
+] as const satisfies readonly string[];
+
+export type TransportStatus = (typeof transportStatuses)[number];
 
 export const deliveryTerms = [
   "exw",

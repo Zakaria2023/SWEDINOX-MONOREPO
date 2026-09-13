@@ -47,7 +47,12 @@ export const Orders = mysqlTable(
     priceDate: date("price_date"),
     orderCategory: varchar("order_category", { length: 100 }),
     handlingBlocked: boolean("handling_blocked").default(false),
-    status: mysqlEnum("status", orderStatuses).default("open").notNull(),
+    // The reference's first rung: a freshly typed document that nobody has
+    // released. 71 of its 2.091 headers sit here, and every header with no
+    // lines yet is one of them.
+    status: mysqlEnum("status", orderStatuses)
+      .default("provisional")
+      .notNull(),
 
     // ── Order type ────────────────────────────────────────────────────────────
     // The `Normal` dropdown at the top of the reference's own order-type block.

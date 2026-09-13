@@ -31,10 +31,17 @@ import { getOpenReceivableItems } from "@/lib/server/receivables";
 const MONTHS_ON_CHART = 12;
 const TOP_CUSTOMER_LIMIT = 8;
 
-/** The order states still being worked on, as against completed or cancelled. */
+/**
+ * The order states still being worked on, as against invoiced, completed or
+ * cancelled. Every rung below `invoiced` on the reference's ladder.
+ */
 const LIVE_ORDER_STATUSES: Array<NonNullable<SelectOrders["status"]>> = [
-  "open",
-  "confirmed",
+  "provisional",
+  "released",
+  "checked",
+  "in_progress",
+  "partially_delivered",
+  "partially_invoiced",
 ];
 
 const LIVE_PURCHASE_STATUSES: Array<

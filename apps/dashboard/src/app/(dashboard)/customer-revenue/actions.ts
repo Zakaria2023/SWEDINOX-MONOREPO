@@ -1,6 +1,6 @@
 "use server";
 
-import { describeError } from "@/lib/helpers";
+import { describeError, profitMarginPercent } from "@/lib/helpers";
 import { db } from "@/db";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
@@ -89,7 +89,7 @@ export const getCustomerRevenue = async (): Promise<CustomerRevenueRow[]> => {
         revenue,
         weightKg: Number(row.weightKg),
         profit,
-        profitMargin: revenue === 0 ? 0 : (profit / revenue) * 100,
+        profitMargin: profitMarginPercent(revenue, profit),
       };
     });
   } catch (error) {

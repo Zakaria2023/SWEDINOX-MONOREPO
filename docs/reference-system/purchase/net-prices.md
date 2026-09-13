@@ -13,6 +13,15 @@ Show Contract · Purchase lines · Production workorders.
 **View open when captured**: none selected (blank).
 **Grid was empty**, so no example values were readable.
 
+> ✅ **Resolved 13-9-2026.** This was not a filter problem. The screen was
+> re-opened from the Sales menu with the filter block photographed and every
+> sentinel correct — `Contract valid between` widened to `1-1-2024` →
+> `13-9-2026`, `Contract code` and `Company code` holding their `zzzz…` upper
+> bounds — and it still returned **zero rows**. The `Contracts` screen agrees:
+> of its ten contracts, four are typed `Gross prices`, three `Surcharges` and
+> three `Options`, and **none is typed `Net prices`**. The table is empty.
+> See [../product-prices.md](../product-prices.md).
+
 ## Columns — captured, not yet matched
 
 | # | Reference heading | Notes |

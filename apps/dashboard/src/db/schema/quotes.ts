@@ -19,6 +19,7 @@ import {
   deliveryTypes,
   invoicePaymentTerms,
   orderMethods,
+  orderStatuses,
   orderWeightTypes,
 } from "../../lib/enums";
 import { Companies } from "./companies";
@@ -93,8 +94,21 @@ export const Quotes = mysqlTable(
     deliveryYear: int("delivery_year"),
     deliveryRemark: varchar("delivery_remark", { length: 255 }),
 
+    // ── Status ────────────────────────────────────────────────────────────────
+    // A quote climbs the same ladder as an order. The reference's six quotes
+    // read `Provisional` (2), `Released` (2) and `Expired` (2) from the same
+    // column its orders use, so expiry is a rung rather than a flag beside
+    // one: a `provisional` quote is not "not expired", it is earlier.
+    status: mysqlEnum("status", orderStatuses).default("provisional").notNull(),
+
     // ── Follow-up ─────────────────────────────────────────────────────────────
+    // Kept in step with `status === "expired"` so the existing filters and
+    // indexes keep working; the status is what decides.
     expired: boolean("expired").default(false),
+    // Free text, and rare — one of the reference's 2.091 headers fills it,
+    // with "Customer not accepted - price." One sample proves nothing about a
+    // list, so it stays a string.
+    expirationReason: varchar("expiration_reason", { length: 255 }),
 
     // ── Summary (computed snapshot, read-only in the UI) ─────────────────────
     materialsRevenue: decimal("materials_revenue", {

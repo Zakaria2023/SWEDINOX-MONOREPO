@@ -106,6 +106,8 @@ import {
   OrderItemStatus,
   OrderLineStatus,
   DeliveryStatus,
+  TransportStatus,
+  SalesDocumentKind,
   DeliveryTerm,
   TransporterCountry,
   TransporterPriceUnit,
@@ -688,6 +690,8 @@ export const INVOICE_DOCUMENT_TYPE_LABELS: Record<InvoiceDocumentType, string> =
   {
     invoice: "Invoice",
     credit_note: "Credit note",
+    surcharge: "Surcharge",
+    correction: "Correction",
   };
 
 export const INVOICE_PAYMENT_TERM_LABELS: Record<InvoicePaymentTerm, string> = {
@@ -865,6 +869,7 @@ export const ORDER_TYPE_LABELS: Record<OrderType, string> = {
   normal: "Normal",
   call_off: "Call-off",
   rush: "Rush",
+  ex_works: "Ex works",
 };
 
 export const ORDER_SOURCE_TYPE_LABELS: Record<OrderSourceType, string> = {
@@ -1189,29 +1194,87 @@ export const ORDER_METHOD_LABELS: Record<OrderMethod, string> = {
 
 export const ORDER_LINE_STATUS_LABELS: Record<OrderLineStatus, string> = {
   provisional: "Provisional",
-  in_progress: "In progress",
   released: "Released",
   checked: "Checked",
+  in_progress: "In progress",
   partially_delivered: "Partially delivered",
-  delivered: "Delivered",
   partially_invoiced: "Partially invoiced",
   invoiced: "Invoiced",
+  completed: "Completed",
+  received: "Received",
+  expired: "Expired",
   cancelled: "Cancelled",
+};
+
+/**
+ * What the reference prints instead of the word on the two call-off screens.
+ * Numbered in hundreds so states can be inserted between them.
+ */
+export const ORDER_LINE_STATUS_CODES: Record<OrderLineStatus, string> = {
+  provisional: "010",
+  released: "210",
+  checked: "110",
+  in_progress: "310",
+  partially_delivered: "610",
+  partially_invoiced: "805",
+  invoiced: "810",
+  completed: "820",
+  received: "710",
+  expired: "840",
+  cancelled: "830",
 };
 
 export const DELIVERY_STATUS_LABELS: Record<DeliveryStatus, string> = {
-  not_ready: "Not ready",
+  new: "New",
+  workorders_created: "Workorders created",
+  in_progress: "In progress",
   ready: "Ready",
   released: "Released",
-  delivered: "Delivered",
+  partially_delivered: "Partially delivered",
+  completed: "Completed",
+  invoiced: "Invoiced",
+  expired: "Expired",
+};
+
+export const TRANSPORT_STATUS_LABELS: Record<TransportStatus, string> = {
+  new: "New",
+  scheduled: "Scheduled",
+  loading_list: "Loading list",
+  loaded: "Loaded",
+  loading_done: "Loading done",
+  completed: "Completed",
 };
 
 export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
-  open: "Open",
-  confirmed: "Confirmed",
+  provisional: "Provisional",
+  released: "Released",
+  checked: "Checked",
+  in_progress: "In progress",
+  partially_delivered: "Partially delivered",
+  partially_invoiced: "Partially invoiced",
+  invoiced: "Invoiced",
   completed: "Completed",
+  received: "Received",
+  expired: "Expired",
   cancelled: "Cancelled",
 };
+
+export const SALES_DOCUMENT_KIND_LABELS: Record<SalesDocumentKind, string> = {
+  order: "Order",
+  return: "Return",
+  quote: "Quote",
+  counter_order: "Counter order",
+};
+
+/** The letter the reference puts in front of the number. */
+export const SALES_DOCUMENT_KIND_PREFIXES: Record<SalesDocumentKind, string> = {
+  order: "O",
+  return: "R",
+  quote: "Q",
+  counter_order: "B",
+};
+
+
 
 export const ORDER_ITEM_STATUS_LABELS: Record<OrderItemStatus, string> = {
   reserved: "Reserved",

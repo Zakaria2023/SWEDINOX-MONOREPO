@@ -12,7 +12,11 @@ import {
 } from "@/db/schema/purchase-orders";
 import { SelectStock, Stock } from "@/db/schema/stock";
 import { orderLineStatuses, orderSourceTypes } from "@/lib/enums";
-import { describeError, remainingToInvoice } from "@/lib/helpers";
+import {
+  describeError,
+  documentProfitMarginPercent,
+  remainingToInvoice,
+} from "@/lib/helpers";
 import { getClerkUserNames } from "@/lib/server/clerk";
 import { exportRows } from "@/lib/server/excel";
 import {
@@ -214,7 +218,7 @@ const orderLineRows =
         costPrice,
         amount,
         profit,
-        profitMargin: amount === 0 ? 0 : (profit / amount) * 100,
+        profitMargin: documentProfitMarginPercent(amount, profit),
         seller: row.seller,
       };
     });

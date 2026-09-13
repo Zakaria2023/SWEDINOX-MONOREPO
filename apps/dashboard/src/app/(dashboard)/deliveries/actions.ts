@@ -169,8 +169,11 @@ export const deliverOrderItem = async (
         .update(OrderItems)
         .set({
           status: "delivered",
-          deliveryStatus: "delivered",
-          lineStatus: "delivered",
+          // The reference has no `delivered` rung. A line that has left the
+          // warehouse and is not yet invoiced reads `Completed` on both
+          // ladders — 58 of 58 lines pair that way in its Deliveries export.
+          deliveryStatus: "completed",
+          lineStatus: "completed",
           deliveryDate: todayDateString(),
         })
         .where(

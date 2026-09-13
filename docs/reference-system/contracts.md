@@ -84,3 +84,72 @@ surcharges or options, so every contract is treated as a price agreement.
 
 Written up as item 5 of
 [PLANNED-CODE-CHANGES-2.md](PLANNED-CODE-CHANGES-2.md). **No code was changed.**
+
+---
+
+# The two screens themselves — 13-9-2026
+
+Photographed as part of the Part-B sweep. Ten contracts, three contract groups.
+
+## Contracts — the grid
+
+| Contract code | Description | Contract group | Website sorting | Type |
+| --- | --- | --- | --- | --- |
+| `AZIE IMPORT` | Toeslagen voor EU import | — | **0** | Surcharges |
+| `BB` | bb | Pallet costs | 10 | Gross prices |
+| `CERTIFICATEN` | Certificaat 3.1 | Certificates | 10 | **Options** |
+| `CODE` | new contract | Pallet costs | 10 | Gross prices |
+| `HEGO PRODUC…` | Hego Productie | — | 10 | **Options** |
+| `KK` | kk | Pallet costs | 10 | Gross prices |
+| `PACKAGING C…` | Packaging costs | — | 10 | Surcharges |
+| `PALLET COSTS` | Pallet costs | Pallet costs | 10 | Surcharges |
+| `SS` | ss | — | 10 | **Options** |
+| `ZZ` | zz | Certificates | 10 | Gross prices |
+
+🔴 **The contract type is a real, populated column.** The doc above said
+*"nothing says whether a contract adjusts gross prices, surcharges or options"*
+— it does, and the tooltip gives the internal name:
+**`ContractInfo_ContractTypes`**. Three of the six values we ship are in use
+here: `Surcharges` (3), `Options` (3), `Gross prices` (4). `net_prices`,
+`cost_price` and `allowances` are unused, not absent.
+
+**Our model is already right.** `contractTypes` in `lib/enums.ts` carries all
+six, `searchCode1/2/3` exist, and `websiteSorting` defaults to **10** — which is
+exactly the value nine of the ten rows carry. Nothing to change.
+
+`Searchcode 1/2/3` are filled on **one** row (`Azie` / `EU` / `import`): free
+keywords for finding a contract, not a classification.
+
+Four contracts have **no group**, so `contractGroupUuid` stays nullable.
+
+## Contractgroups — a group is a **main group plus a subgroup**
+
+| Contract group | Main group | Main seq. | Subgroup | Sub seq. |
+| --- | --- | --- | --- | --- |
+| Certificates | Certificates | 0 | Certificate costs | 0 |
+| Hego Productie | **Production** | 0 | Internal production | 0 |
+| Pallet costs | **Packaging** | 0 | Pallet costs | 0 |
+
+Both sequences are `0` on all three — confirming the earlier note that contract
+group sequences are switched off.
+
+⚠️ **Our `ContractGroups` carries `contractSubgroupUuid` and
+`sequenceWithinSubgroup` — one level, one sequence.** The reference has
+**two** levels with a sequence each: a main group (`Certificates`,
+`Production`, `Packaging`) above the subgroup (`Certificate costs`,
+`Internal production`, `Pallet costs`). Queued as item 12 of
+[PLANNED-CODE-CHANGES-3.md](PLANNED-CODE-CHANGES-3.md).
+
+## Where the contracts actually bite
+
+[charges.md](charges.md) §4 finds `Packaging costs` and `Pallet costs` named in
+the `Contract` column of eight charge rows — the same two contract codes. So a
+`Surcharges` contract does what its type says: it sets the surcharge instead of
+the standing tariff. That is the first observed link between a contract and a
+line of money.
+
+`CERTIFICATEN` — *Certificaat 3.1* — typed as **`Options`**, pairs with option
+code `A21` *2.1 Certificate*
+([sales-options-and-calloff.md](sales-options-and-calloff.md) §1). Certificates
+are sold as options and priced by contract. That is most of Part E answered
+before Part E was opened.

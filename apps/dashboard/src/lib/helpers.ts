@@ -2284,11 +2284,52 @@ export const resolveTierDiscount = (
     .at(-1)?.percentage ?? 0;
 
 /**
- * Profit margin as a percentage of revenue. Revenue of 0 has no margin to
- * report, so it yields 0 rather than dividing by zero.
+ * Profit margin as a percentage of revenue.
+ *
+ * This is the **reporting** rule, and its divisor is signed. A credit line on
+ * the Revenue per product screen reading -502,20 revenue and -36,26 profit
+ * prints a margin of +7,2 %, and 36 of its 2.702 rows do the same — dividing
+ * by the absolute revenue would make every one of them negative. The invoice
+ * line's own `Profit margin line` agrees.
+ *
+ * Revenue of nothing reports a margin of nothing: all 80 zero-revenue rows on
+ * that screen print 0, including the ten that carry a profit.
+ *
+ * The **sales documents** answer both questions differently — see
+ * `documentProfitMarginPercent`. Two screens, two conventions, and neither can
+ * be reproduced by the other.
+ *
+ * The result is deliberately unrounded. Each screen rounds differently — the
+ * order header to one decimal, the order lines not at all, the invoice line to
+ * two — so rounding here would be wrong somewhere. Round at the edge.
  */
 export const profitMarginPercent = (revenue: number, profit: number): number =>
   revenue === 0 ? 0 : (profit / revenue) * 100;
+
+/**
+ * The same margin as a **sales document** reports it.
+ *
+ * Identical to `profitMarginPercent` except when the document earned nothing:
+ * an order that sells for zero has made all of its profit as margin, so it
+ * reads ±100 by the sign. `O100756` in the reference sells for nothing at a
+ * cost of eleven cents and prints -100, and 473 of its 4.975 order lines read
+ * exactly 100 for the same reason.
+ *
+ * Two screens, two answers to one division by zero. Keeping them apart is the
+ * only way both can be reproduced.
+ */
+export const documentProfitMarginPercent = (
+  revenue: number,
+  profit: number,
+): number => {
+  if (revenue === 0) {
+    if (profit === 0) {
+      return 0;
+    }
+    return profit > 0 ? 100 : -100;
+  }
+  return (profit / Math.abs(revenue)) * 100;
+};
 
 /**
  * The Monday of a given ISO week/year, as a YYYY-MM-DD string — used to turn a
