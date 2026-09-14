@@ -42,6 +42,44 @@ accepts). Everything else stays. Then `Show Data` and `Show in Excel` as usual.
 The product *attributes* came through fine — this is not an empty grid, it is a
 full grid with an empty price column, so everything in §2 below stands.
 
+### ✅ Re-run 14-9-2026 — the zeros are real
+
+`exports/b11-product-prices-2026-09-14.tsv` (`Product prices 14-9-2026.xlsx`),
+**19 383 × 47**, `Price date` = **14-9-2026** on every row. Same rows, same
+headers, same attributes as the first run. What changed:
+
+| Column | 1-1-2024 run | 14-9-2026 run |
+| --- | --- | --- |
+| `Gross price/Base price`, `Markup`, `PriceA`–`PriceD` | 0 | **still 0 on all 19 383** |
+| `Replacement price`, `FSP`, scrap/quality/colour surcharges, blasting, sawing | 0 | **still 0** |
+| **`APP`** (average purchase price) | 81 rows | **451 rows** |
+| **`LPP`** (last purchase price) | 0 | **366 rows** |
+| `Valid from` / `Valid u/i` | 0 | **16 rows** |
+
+So the first run was not the whole story. **With a current price date there is
+still no sales price anywhere in the catalogue.** The trap was real, but it hid
+nothing. This settles §"So where does a price come from?" for good: **no gross
+price, no markup, no price list A–D** — the selling price is typed on the order
+line.
+
+What the date *did* unlock is cost:
+
+- **`APP` and `LPP` are purchase figures, per `PriceU`** (400 of the 451 `APP`
+  rows are `TN`). They agree on only **40 of the 267** products that have both —
+  an average and a last price are different numbers, as they should be.
+- 347 of the 569 products that sold have an `APP`, 321 an `LPP`.
+- ⚠️ **`APP` is dirty**: six are **negative** (−1 981.85, −1 880.77, …) and 18 are
+  `0.01` / `0.001` placeholders. `PC304200` has `LPP` = `0.2` per tonne. A moving
+  average that goes negative means receipts and issues were booked out of order.
+  **Never import `APP` as a cost price without cleaning it.**
+- **The 16 dated rows are all packaging** — `EMPASU4 Super_Pallet_4m`,
+  `EMBIGR3 Large_Biplex_3m`, `EMKAKL2 Small_Cardboard_2m`, the deck pallets —
+  valid **5-2-2024 → 31-12-9999**, every price `0`. These are the items the
+  `PACKAGING COSTS` / `PALLET COSTS` contracts charge for
+  ([customers-and-prospects.md](customers-and-prospects.md) §31), and the only
+  products with a validity period at all.
+- `Sawing price U.` = `ST` on 54 products, with every sawing price `0`.
+
 ---
 
 ## 2. What B11 proves anyway — the product hierarchy

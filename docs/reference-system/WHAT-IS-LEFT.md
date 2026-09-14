@@ -25,13 +25,13 @@ The `Overviews` tree has **112 screens** across nine groups.
 | Logistics | 32 | ✅ all captured |
 | Finance | 14 | ✅ all captured |
 | Suppliers | 5 | ✅ all captured |
-| **Sales** | 19 | 🟡 **15 captured, 4 left** |
-| **Customers** | 15 | 🟡 **2 captured, 13 left** |
+| **Sales** | 19 | 🟡 **17 captured, 2 left** (B16, B17) |
+| **Customers** | 15 | ✅ all captured |
 | **Companies** | 6 | 🔴 **none captured** |
-| **Batch registration** | 5 | 🔴 **none captured** |
+| **Batch registration** | 5 | 🟡 **4 captured, 1 left** (E1 Batches) |
 | **Other** | 5 | 🔴 **none captured** |
 
-**77 captured. 35 left.** Sales is nearly done; the 35 sit in four groups.
+**96 captured. 16 left.** Sales is nearly done; the 16 sit in four groups.
 
 ### ⚠️ "But I sent you the Sales sheets"
 
@@ -130,12 +130,64 @@ photograph that too.
 
 | # | Menu | Why it matters |
 |---|---|---|
-| **A1** | **`Extra`** | Settings live here. **This is where the overdue-days number is**, see below |
-| **A2** | `Acties` (Actions) | Every action the system can run that is not a screen |
-| **A3** | `Batch Taken` (Batch Tasks) | Scheduled jobs. Whether the batch scheduler is off is an open question |
-| **A4** | `Logistiek` and `Financiën` | Two top menus that are *not* the `Overviews` tree — they hold something else |
-| **A5** | `Bestand` and `Beeld` | Probably file/view housekeeping, but nobody has looked |
+| **A1** | **`Extra`** | 🟡 **opened 14-9-2026 — no settings in it.** Four items only: `Optimalisatie per zaagmachine…` (optimisation per saw machine), `Telopdracht artikelen…` (stock-count assignment for articles), `Import ▸`, `Export ▸`. The overdue-days number is **not** here, and G12 proved it is not on the customer either — it is a system setting in some other menu. **Submenus photographed:** `Import ▸` = `Import artikelprijzen…` (article prices), `Import artikel instellingen…` (article settings), `Import op- en afboekingen…` (stock postings in/out), `Import orderbericht…` (order message — an EDI-style order import), `Import bedrijf instellingen` (company settings). `Export ▸` = `Exporteer producten` only. **Five bulk imports exist** — prices, product settings, stock postings, incoming orders, company settings; our app has none |
+| ~~**A2**~~ | ~~`Acties` (Actions)~~ | ✅ **14-9-2026** — two items only: `Show Word File`, `Activate` (greyed). Nothing else |
+| ~~**A3**~~ | ~~`Batch Taken` (Batch Tasks)~~ | ✅ **14-9-2026** — 🔴 **eight jobs, three of them sync with AFAS**: `Aanmaken facturen` (create invoices), **`AFAS Synchroniseer openstaande posten`** (open posts), **`AFAS Synchroniseer bedrijven`** (companies), **`AFAS Synchroniseer journaalposten`** (journal entries), `Bijwerken Inkoopordersamenvattingen` / `Bijwerken Ordersamenvattingen` (refresh purchase / sales order summaries), `Maand statistiek`, `Statistiek`. See **"The ledger is AFAS"** below |
+| ~~**A4**~~ | ~~`Logistiek` and `Financiën`~~ | ✅ **14-9-2026** — `Logistiek`: `Magazijn opdrachten`, `Productie opdrachten`, `Transport opdrachten` (warehouse / production / transport work orders), `Productieschema Leveranciers` (supplier production schedule). `Financiën`: **`GIP groepen` only** |
+| ~~**A5**~~ | ~~`Bestand` and `Beeld`~~ | ✅ **14-9-2026** — `Bestand`: `Nieuw ▸` (22 document types, below), `Bewaar`, `Vernieuw`, `Delete`, `Sluit Werkpaneel`, `Wachtwoord wijzigen…`, `Afsluiten`. `Beeld`: `Terug`, `Alles Dichtklappen`, panels (`Zoekpaneel`, `Takenpaneel`, `Overzichten`, `Magazijn`, `Assortiment`, `Website`), `Werkbalken ▸`, `Herstellen`. **No settings screen in either** |
 | **A6** | `Nieuw` → `Purchase request`, and `Nieuw` → `Purchase return order` | The two document types in the New menu that no screen has ever shown. Open each, photograph the empty form, close without saving |
+
+## ✅ Every menu is now open — 14-9-2026
+
+The menu bar is `Bestand · Beeld · Logistiek · Financiën · Batch Taken · Acties
+· Extra · Help`, and every one has been photographed. Three conclusions:
+
+### 1. There is no settings screen anywhere
+
+Not in `Bestand`, `Beeld`, `Extra`, `Financiën` or `Acties`, and not on the
+customer's `Debtor` panel (G12). **The overdue-days threshold cannot be read
+from the application.** It is either hard-coded by the vendor or stored in the
+database where no screen shows it. K1 now needs a person — most likely INAD
+(K11), not Swedinox.
+
+### 2. 🔴 The ledger is AFAS
+
+Three batch jobs synchronise with **AFAS** — a Dutch accounting package:
+**open posts**, **companies** and **journal entries**. So:
+
+- **easy2trade is not the books.** Invoices are raised here; receivables, payments
+  and the general ledger live in AFAS, and the open posts come *back* from it.
+- **`Open entrees`, `Oldest due date open entrees` and the whole
+  `Post(s) outstanding for too long` rule run on AFAS data.**
+- And the status bar has said **`Batchscheduler is not active`** on every
+  screenshot. If the AFAS sync is not running, open posts are **frozen at the
+  last sync** — payments made since never arrive. That would explain why
+  **every** order held for overdue posts is 496–614 days overdue: the posts may
+  be paid in AFAS and still open here. ⚠️ **Hypothesis, not proved** — but it
+  makes K10 (is the scheduler meant to be off?) a blocking question.
+
+Nothing in `apps/dashboard` knows AFAS exists. Whether the rebuild replaces
+AFAS or syncs with it is a decision, and it decides how `Journal entries`,
+payments and credit control are built.
+
+### 3. The statistics are batch-built
+
+`Maand statistiek`, `Statistiek`, `Bijwerken Ordersamenvattingen` and
+`Bijwerken Inkoopordersamenvattingen` are jobs. Summary and statistics tables
+are **filled by a batch, not live** — which is the likeliest reason the
+`… last month` columns of Customer revenue are `0`
+([customers-and-prospects.md](customers-and-prospects.md) §35) while the live
+invoice-based columns beside them are exact. Also a hypothesis.
+
+### `Bestand → Nieuw` — the 22 things a user can create
+
+Action, Company, Complaint, Contract, Contract group, Counter order, Invoice,
+Location, Machine, Order, Product, Product group, Purchase invoice, Purchase
+order, Purchase quote, **Purchase request**, **Purchase return order**, Quote,
+Return order, Visit report, Warehouse section, Warehouse subsection.
+
+`Purchase request` and `Purchase return order` **appear greyed** in the
+screenshot — possibly not available to this login. A6 is still worth one try.
 
 ## 🔴 A1 in detail — the one red unknown in the code
 
@@ -190,11 +242,11 @@ Standard recipe. Filters below are the ones to set; everything else stays.
 | ~~**B8**~~ | ~~Charges~~ | ✅ 1 504 × 24 → [charges.md](charges.md) — names the `B` series |
 | ~~**B9**~~ | ~~Options~~ | ✅ 2 890 × 31 → [sales-options-and-calloff.md](sales-options-and-calloff.md) |
 | ~~**B10**~~ | ~~Option prices per product~~ | ✅ 54 × 16 → [product-prices.md](product-prices.md) §3 |
-| **B11** | **Product prices** | ⚠️ **captured but must be re-run** — 19 383 × 47, and every price column is `0` because `Price date` is a **snapshot** date, not a range. Re-run with the **`Price date` at today**. See [product-prices.md](product-prices.md) §1 |
+| ~~**B11**~~ | ~~**Product prices**~~ | ✅ **re-run 14-9-2026 with `Price date` = today** → [product-prices.md](product-prices.md) §1 — **still no sales price on any of 19 383 products** (gross, markup, A–D all 0). Only `APP`/`LPP` purchase costs appear (451/366), and `APP` is dirty (negatives) |
 | ~~**B12**~~ | ~~Net prices~~ | ✅ **proved empty 13-9-2026** — filter block photographed, all sentinels correct, 1-1-2024→13-9-2026, zero rows. No contract is typed `Net prices` either. See [product-prices.md](product-prices.md) |
 | ~~**B13**~~ | ~~Order lines still to be called~~ | ✅ 55 × 26 → [sales-options-and-calloff.md](sales-options-and-calloff.md) §6 |
 | ~~**B14**~~ | ~~Orders still to be called~~ | ✅ 691 × 49 → [sales-options-and-calloff.md](sales-options-and-calloff.md) §6 |
-| **B15** | Order lines capacity overflow | `Show Data` |
+| ~~**B15**~~ | ~~Order lines capacity overflow~~ | 🟡 **columns captured, no rows, 14-9-2026** → [capacity-overflow.md](capacity-overflow.md) — **crashes**: `Thickness` missing from `GetReportData_CapacityOverrides` (same bug class as C1). 8 override + 46 order-line columns photographed; our `OrderLineCapacityOverflows` already has the override's shape |
 | **B16** | SFN statistics Product-Market combinations | ⚠️ `Year` = `2025`, `Month` = `1` — it was captured blank and proves nothing |
 | **B17** | Revenue w.r.t. Budget | ⚠️ `Year` = `2025`, `Month` = `1` — same, and this one also needs its **second view** exported |
 
@@ -230,21 +282,21 @@ customer — fifteen screens built from menu names alone.
 
 | # | Screen | Filter |
 |---|---|---|
-| ~~**C1**~~ | ~~**Customers and Prospects**~~ | 🟡 **columns captured 13-9-2026, no rows** — `-empty-` triggers a reference bug (`DeliveryTerm` missing from `GetReportData_CustomerAndProspect`). 44 columns + toolbar photographed → [customers-and-prospects.md](customers-and-prospects.md). **A prospect is a checkbox, not a table.** Rows still wanted: try another `View` |
+| ~~**C1**~~ | ~~**Customers and Prospects**~~ | 🟡 **columns captured 13-9-2026, no rows** — `-empty-` triggers a reference bug (`DeliveryTerm` missing from `GetReportData_CustomerAndProspect`). 44 columns + toolbar photographed → [customers-and-prospects.md](customers-and-prospects.md). **A prospect is a checkbox, not a table.** ✅ **closed 14-9-2026** — the `Standard` view breaks the same way, so rows cannot be had from this screen. Not needed: C2 already carries every customer row, and C3/C4 carry the prospects' contacts and addresses |
 | ~~**C2**~~ | ~~**Customer overview**~~ | ✅ **1 679 × 47, 13-9-2026** → [customers-and-prospects.md](customers-and-prospects.md) Part 2 — the whole document family counted per customer, complaints included |
-| **C3** | Contact persons Customers and Prospects | `Show Data` |
-| **C4** | Addresses | `Show Data` |
-| **C5** | Remarks per company | `Show Data` |
-| **C6** | Contracts per Customer / Prospect | `Show Data` |
-| **C7** | **Unblocked orders** | date from `1-1-2024`. ⚠️ **this is the other half of the blocking rule** — who unblocks, and on what grounds |
-| **C8** | Customer revenue | `Year` = `2025`, `Month` = `1` |
-| **C9** | Customer revenue per product group | `Year` = `2025`, `Month` = `1` |
-| **C10** | Customer revenue per revenue group | `Year` = `2025`, `Month` = `1` |
-| **C11** | Customer revenue per revenue group with split order types | `Year` = `2025`, `Month` = `1`. ⚠️ splits by `Stk`/`CD` — a second proof of the order-type model |
-| **C12** | Customerrevenue, -sales and -visits | `Year` = `2025`, `Month` = `1` |
-| **C13** | Visit schedule | date from `1-1-2024` |
-| **C14** | To visit/call | `Show Data` |
-| **C15** | Change visit schedule | 📸 the screen only — do **not** change anything |
+| ~~**C3**~~ | ~~Contact persons Customers and Prospects~~ | ✅ **6 796 × 48, 14-9-2026** → [customers-and-prospects.md](customers-and-prospects.md) Part 4 — customer **xor** prospect proved; the contact row carries the company |
+| ~~**C4**~~ | ~~Addresses~~ | ✅ **4 739 × 33, 14-9-2026** → [customers-and-prospects.md](customers-and-prospects.md) Part 5 — exactly one visiting and one correspondence address per company |
+| ~~**C5**~~ | ~~Remarks per company~~ | ✅ **14-9-2026** → [customers-and-prospects.md](customers-and-prospects.md) Part 6 — a **Report**, not a grid; Excel gets one column, pairs rebuilt: 985 remarks on 2 531 companies |
+| ~~**C6**~~ | ~~Contracts per Customer / Prospect~~ | ✅ **173 × 18, 14-9-2026** → [customers-and-prospects.md](customers-and-prospects.md) Part 9 — `Link to new customer` copies the two charge contracts onto every new company |
+| ~~**C7**~~ | ~~**Unblocked orders**~~ | ✅ **571 × 14, 14-9-2026** → [customers-and-prospects.md](customers-and-prospects.md) Part 3 — **two** types (financial, commercial), no reason stored, and a block can come back |
+| ~~**C8**~~ | ~~Customer revenue~~ | ✅ **1 724 × 75, 14-9-2026** → [customers-and-prospects.md](customers-and-prospects.md) Part 10 — `Company code` from `0`, **Year `2025`, Month `5`**. "This year" = the selected month; material/options exact on 90 of 90 customers |
+| ~~**C9**~~ | ~~Customer revenue per product group~~ | ✅ **2 241 × 25, 14-9-2026** → [customers-and-prospects.md](customers-and-prospects.md) Part 7 — **product revenue only**, reconciles to B4 to the cent |
+| ~~**C10**~~ | ~~Customer revenue per revenue group~~ | ✅ **1 720 × 26, 14-9-2026** → Part 7 — splits each line into product and **option** groups, and charges get their own rows. Our screen does neither |
+| ~~**C11**~~ | ~~Customer revenue per revenue group with split order types~~ | ✅ **1 778 × 27, 14-9-2026** → Part 8 — splits on **`orderType`** (Normal/Call-off/Rush) *and* `Stk`/`CD`; reconciles to C10 cell for cell |
+| ~~**C12**~~ | ~~Customerrevenue, -sales and -visits~~ | ✅ **809 × 21, 14-9-2026** → [customers-and-prospects.md](customers-and-prospects.md) Part 11 — `Current year` = 2025 (no month); **809 of 809 cells equal C10**. Visits all `0`. `Company code` ≠ `Debtor number` |
+| ~~**C13**~~ | ~~Visit schedule~~ | ✅ **2 531 × 25, 14-9-2026** → [customers-and-prospects.md](customers-and-prospects.md) Part 12 — C14 plus `Month`/`Call`/`Visit`; **nothing planned** |
+| ~~**C14**~~ | ~~To visit/call~~ | ✅ **2 531 × 22, 14-9-2026** → Part 12 — `Revenue last 12 months` is live and exact |
+| ~~**C15**~~ | ~~Change visit schedule~~ | ✅ **2 531 × 24, 14-9-2026** → [customers-and-prospects.md](customers-and-prospects.md) §42 — the editable form of C13 (`Call`/`Visit` tick boxes), identical data, nothing ticked |
 
 **C7 matters more than its position suggests.** We built three blocking reasons
 and a rule for each. Nothing in the code knows how a block is *lifted*, who may
@@ -274,10 +326,10 @@ certificate has to follow the metal to the customer. We store `charge` and
 | # | Screen | Filter |
 |---|---|---|
 | **E1** | **Batches** | `Show Data`. ⚠️ start here — it is the master |
-| **E2** | Certificates received | date from `1-1-2024` |
-| **E3** | Certificates to be linked | `Show Data` — what "linked" means is the whole question |
-| **E4** | Sending certificates | date from `1-1-2024` |
-| **E5** | Deliveries from the missing batch | `Show Data` — a delivery that went out with no certificate behind it |
+| ~~**E2**~~ | ~~Certificates received~~ | ✅ **2 540 × 27, 14-9-2026** → [batch-registration.md](batch-registration.md) — internal charge `25ACRT` on every row; **no certificate document ever attached** |
+| ~~**E3**~~ | ~~Certificates to be linked~~ | ✅ **empty, columns photographed** → §6 — an electronic certificate-exchange **message log**, nothing ever received |
+| ~~**E4**~~ | ~~Sending certificates~~ | ✅ **3 271 × 35** → §3 — every sold charge traces to its receipt, **1 662 of 1 662** (heat, PO, receipt date); never sent |
+| ~~**E5**~~ | ~~Deliveries from the missing batch~~ | ✅ **empty, columns photographed** → §7 — correctly empty: no delivered line lacks a batch |
 
 Also: **📸 one batch opened**, every tab. See item G6.
 
@@ -314,7 +366,7 @@ screenshots only: open it, and photograph **every tab and every panel expanded**
 | **G9** | **One remnant lot** (an offcut the saw made) — and read its **`Supplier`** | Us, or the original mill? It decides whether a remnant traces back to the heat it was cut from |
 | **G10** | **One `Bewerker` lot** — any lot at an external-processor location | All 36 are blocked. Which screen set that, and can it be lifted by hand? |
 | **G11** | An order from the **`29xxxx`** series | ⚠️ **half answered by B1** — it is a **sales return order** (`R290000`–`R290051`, 43 of them), negative revenue and weight, in the same grid as the orders. Still worth opening **one** to see its lines |
-| **G12** | One customer company, **`Debtor`** panel fully expanded | Where the credit limits, the journal code and possibly the overdue-days setting live |
+| ~~**G12**~~ | ~~One customer company, **`Debtor`** panel fully expanded~~ | ✅ **Mercainox, 14-9-2026** → [credit-and-blocking.md](credit-and-blocking.md) — credit space exact on the record; `Credit limit insurance` is a **policy number**; **no overdue-days setting on the customer**, so it is system-wide (A1) |
 
 ---
 
@@ -397,7 +449,7 @@ somebody clicking.
 
 | # | Question | Why it matters |
 |---|---|---|
-| **K1** | 🔴 **How many days overdue is "too long"?** | The one assumption sitting in shipped code. If A1 finds the setting, this is answered without asking anybody |
+| **K1** | 🔴 **How many days overdue is "too long"?** | The one assumption sitting in shipped code. **14-9-2026: every menu and the Debtor panel have been opened and no screen holds the setting** — ask INAD (K11) or Swedinox's administrator. And see K10: if the AFAS sync is off, the overdue days themselves may be stale |
 | **K2** | **Should customer-owned stock carry value?** | €40 833 does today in the reference. That is an accounting policy call, not a code fact |
 | **K3** | **Are these six features wanted at all?** | The reference ships them and does not use them: transport costing, `Resource`, `Pickvolgorde`, `Zelfbeoordeling`, FSP revaluation, sawing planning. **Six features we can decline to build** |
 | **K4** | What does `FSP` stand for, and what does `LIP` stand for? | FSP's *behaviour* is established — the price stock is carried at, versioned, revalued through two GL accounts. Only the letters are unknown |
@@ -406,7 +458,9 @@ somebody clicking.
 | **K7** | Are `Purchase request` and `Purchase return order` used? | Two document types in the `Nieuw` menu that no screen has shown |
 | **K8** | Are any companies `Processor` or `Transporter`? | Would change how work orders are assigned |
 | **K9** | What does ticking `Consignatie` change commercially? | J1 answers the accounting half; this is the business half |
-| **K10** | Is the batch scheduler meant to be switched off? | Needs an administrator |
+| **K10** | Is the batch scheduler meant to be switched off? | Needs an administrator. 🔴 **Now blocking (14-9-2026):** three of the batch jobs sync open posts, companies and journal entries with **AFAS**. If the scheduler is off, the overdue-posts rule runs on frozen data |
+| **K12** | **Does the rebuild replace AFAS, or sync with it?** | AFAS holds the ledger, receivables and payments (A3). This decides how journal entries, payments and credit control are built in `apps/dashboard` |
+| **K11** | Is **`INAD`** a real person, or a shared or system account? | **Half answered:** INAD is the software vendor — `INAD Industrie Software B.V.` is a company in the C4 address file and the test company's contact is `@inad.nl`. What is left: do their support staff lift blocks on request, or does a job run under that login? It lifted **63 of 571** order blocks in the C7 `Unblocked orders` export (62 financial, 1 commercial), spread over 2025–2026. Every other unblock carries a person's name. If it is a system account, some blocks are lifted **automatically**, and that rule exists nowhere in our code. If it is a shared login, the audit trail cannot say who did it |
 
 ---
 
