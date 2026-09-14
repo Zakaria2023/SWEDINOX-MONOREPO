@@ -1,8 +1,44 @@
 # Planned code changes — 4 (captures of 14-9-2026)
 
-What the 14-9-2026 captures change in `apps/dashboard`. **No code has been
-changed yet.** Every item names the evidence, the code it touches (checked
-against the code on 14-9-2026) and how to verify it.
+What the 14-9-2026 captures change in `apps/dashboard`. Every item names the
+evidence, the code it touches and how to verify it.
+
+## ✅ Build status — implemented 14-9-2026
+
+`pnpm build` ✓ (146 pages) · `tsc` clean · eslint clean on every changed file ·
+harness **161/161** (was 148 at the start of the round) · `pnpm db:push`
+`[✓] Changes applied`.
+
+| Item | Status |
+| --- | --- |
+| A1 hold prepayment and zero-limit customers | ✅ built — `assessCredit`, harness checks on the blocked queue |
+| A2 credit rule excl. VAT | ✅ built — receivables netted per invoice, committed orders net, `createOrder` weighs `totalExclVat`. The blocked queue now shows amount and credit space on the same basis |
+| A3 re-check after release | ✅ built — the quote→order conversion now runs the check (it had none), the delivery gate re-runs it on orders never released, and the financially-blocked queue shows **one row per order per planned delivery date** (a line's own date, else the order's) |
+| A4 financial / commercial releases | ✅ built — enum narrowed by `scripts/migrate-credit-2026-09-14.mjs`, `releaseCommercialBlock` action, **Commercial unblock** button on Blocked deliveries |
+| A5 insurance policy number | ✅ built — `varchar(50)`, text inputs, text on company detail and Credit information (which now also dates it by `insuranceValidUntil`, not the uninsured limit's date) |
+| A6 debtor number | ✅ built — `Companies.debtorNumber` (unique, added by the migration script), edit Debtor form, unblocked orders, financially blocked, revenue screens |
+| A7 Debtor section | ✅ built — total limit, credit space, open entrees and orders excl. VAT, oldest invoice and due date on company detail |
+| A8 overdue days | ✅ comment updated; constant unchanged |
+| B1–B5 revenue screens | ✅ built — one shared query `lib/server/customer-revenue.ts`; product and charge sources; tables rebuilt |
+| B2 charge revenue groups | ✅ built differently — `RevenueGroups` was **empty**; seeded with the 17 groups by `scripts/seed-revenue-groups-and-split.mjs`, charges mapped by number in `INVOICE_SURCHARGE_REVENUE_GROUP_NUMBERS` (no new columns) |
+| B — option half | ✅ **options are billed (approved 14-9-2026).** An invoice line bills its order line's options in the same share as its quantity: `amount` = products + options, `revenueOptions`/`profitOptions` filled, header keeps materials and options apart. The order summary now counts options too, so the order total and its credit check include them, and generating option charges rebuilds the affected orders' totals. Option revenue groups on the revenue screens still read 0 until invoices carry options |
+| B — invoice line split | ✅ built — `revenueProducts`/`profitProducts` were 0 on all 175 lines; backfilled, and invoice creation and credit notes now write them |
+| B6 harness | 🟡 charge-group mapping checked; per-screen reconciliation against C8–C12 exports not added (the actions need the DB) |
+| C1 customer xor prospect | ✅ built — create form, roles form, roles action |
+| C2 address rules | ✅ built — at most one visiting / correspondence / invoice address, checked on save; PO box correspondence-only. "Exactly one" not enforced: 26 of 32 companies have no address yet |
+| C3 contacts carry company copies | ✅ phase 1 built — shared `companyAddressFor(role)` in `lib/server/company-addresses.ts`; every screen that printed a city, country or address off the first contact now reads the company's visiting / correspondence address (customers and prospects, visit schedule, suppliers, inactive companies, orders and order lines still to be called, purchase invoices to be received, purchase invoice line, supplier revenue, remarks, unblocked orders, credit information) and competitors from `Companies`. Still on the contact: its own name / email / mobile. **Phase 2 built:** the **32 company-copy columns were dropped** from `Contacts` (roles, visiting address, representatives, customer group, industry, classification, credit limit, competitors, region and region code, targets, search codes, revenue, purchaser) by `scripts/migrate-contacts-drop-company-copies.mjs`, after a JSON backup in `scripts/backups/` (only the role flags held data, and the company holds those). Nothing writes them any more; the contact screens read them through `lib/server/contact-persons.ts`, revenue last/this year is computed from invoices, and region code / industry code / classification code / target year revenue / purchaser — empty in the reference — are gone from the screens. The quote detail shows the company's competitors |
+| C4 link to new customer | ✅ built — `createCompany` copies company-less contracts flagged `linkToNewCustomer` onto a new customer or prospect (none flagged yet) |
+| C5 contracts per customer | ✅ built — visiting address only (no duplicates), plus representative, customer group, starting / end date, region |
+| C6 remarks | ✅ decided: no change |
+| G1 sending certificates | ✅ built — every delivered line with a batch |
+| G2 one row per batch | ✅ built — joined through warehouse picks, qty and kg from the pick |
+| G3 bill of lading | 🟡 the supplier's number is no longer shown; no sales bill of lading exists to show instead |
+| G4 internal charge at receipt | ✅ built — `nextInternalCharge`, assigned in `applyReceipt`, shared by bundles of one unloading line |
+| G5 batch survives processing | ✅ already true; harness checks the generator and the E2 format |
+| G6 certificates to be linked | ✅ built — empty with an explanation (decision E3) |
+
+Data found on the way: `Products.revenueGroupUuid` is unset on the test data,
+so product rows show no revenue group until products are assigned one.
 
 Evidence lives in:
 
