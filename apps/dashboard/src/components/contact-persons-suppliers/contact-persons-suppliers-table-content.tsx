@@ -52,7 +52,6 @@ const ALL_COLUMNS: Array<{
     defaultVisible: true,
   },
   { key: "addressFax", label: "Correspondence Fax", defaultVisible: true },
-  { key: "purchaser", label: "Purchaser", defaultVisible: true },
   { key: "searchCode2", label: "Searchcode 2", defaultVisible: true },
   { key: "searchCode1", label: "Searchcode 1", defaultVisible: true },
   { key: "companyId", label: "Company", defaultVisible: true },
@@ -151,8 +150,6 @@ export const ContactPersonsSuppliersTable = ({ rows }: Props) => {
         return <TableCell key={key}>{row.addressTelephone ?? "—"}</TableCell>;
       case "addressFax":
         return <TableCell key={key}>{row.addressFax ?? "—"}</TableCell>;
-      case "purchaser":
-        return <TableCell key={key}>{row.purchaser ?? "—"}</TableCell>;
       case "searchCode1":
         return <TableCell key={key}>{row.searchCode1 ?? "—"}</TableCell>;
       case "searchCode2":

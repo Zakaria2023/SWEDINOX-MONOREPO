@@ -60,10 +60,8 @@ export const getCompanyContacts = async (
     .where(eq(Contacts.companyUuid, companyUuid))
     .orderBy(asc(Contacts.id));
 
-// Inserts a new contact or updates an existing one by uuid. New contacts
-// inherit the company's search codes, role flags, and zeroed revenue targets —
-// the same defaults the create-company flow applies. Updates write only the
-// dialog-editable columns.
+// Inserts a new contact or updates an existing one by uuid. A contact stores
+// only its own columns; the company's are joined wherever a contact is shown.
 export const saveCompanyContact = async (
   _prevState: CompanyActionResult,
   payload: SaveContactPayload,
@@ -97,30 +95,10 @@ export const saveCompanyContact = async (
         return { error: "Company not found" };
       }
 
-      const roles = company.roles ?? [];
-      const isSupplier = roles.includes("supplier");
-      const isCustomerOrProspect =
-        roles.includes("customer") || roles.includes("prospect");
-      const inheritsCompanyCodes = isSupplier || isCustomerOrProspect;
-
       await db.insert(Contacts).values({
         ...columns,
         uuid: generateUuid(),
         companyUuid: payload.companyUuid,
-        searchCode1: inheritsCompanyCodes ? company.searchCode1 : null,
-        searchCode2: inheritsCompanyCodes ? company.searchCode2 : null,
-        searchCode3: inheritsCompanyCodes ? company.searchCode3 : null,
-        revenueLastYear: inheritsCompanyCodes ? "0.00" : null,
-        revenueThisYear: inheritsCompanyCodes ? "0.00" : null,
-        targetYearRevenue: isCustomerOrProspect ? "0.00" : null,
-        targetAnnualSales: isCustomerOrProspect ? "0.00" : null,
-        isCustomer: roles.includes("customer"),
-        isProspect: roles.includes("prospect"),
-        isSupplier,
-        isProcessor: roles.includes("processor"),
-        isTransporter: roles.includes("transporter"),
-        isAgent: roles.includes("agent"),
-        isOther: roles.includes("other"),
       });
 
       // A contact added here gets the same welcome the create-company flow

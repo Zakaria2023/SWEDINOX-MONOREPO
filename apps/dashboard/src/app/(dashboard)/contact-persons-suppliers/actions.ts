@@ -1,22 +1,16 @@
 "use server";
 
-import { db } from "@/db";
-import { Companies, SelectCompanies } from "@/db/schema/companies";
-import { Contacts, SelectContacts } from "@/db/schema/contacts";
-import { eq, getTableColumns, sql } from "drizzle-orm";
+import { Companies } from "@/db/schema/companies";
+import {
+  ContactPersonRow,
+  getContactPersonRows,
+} from "@/lib/server/contact-persons";
+import { sql } from "drizzle-orm";
 
-export type ContactPersonSupplierRow = SelectContacts &
-  Pick<SelectCompanies, "companyName"> & {
-    companyId: SelectCompanies["id"];
-  };
+export type ContactPersonSupplierRow = ContactPersonRow;
 
-export const getContactPersonsSuppliers = async (): Promise<ContactPersonSupplierRow[]> =>
-  db
-    .select({
-      ...getTableColumns(Contacts),
-      companyName: Companies.companyName,
-      companyId: Companies.id,
-    })
-    .from(Contacts)
-    .innerJoin(Companies, eq(Companies.uuid, Contacts.companyUuid))
-    .where(sql`JSON_CONTAINS(${Companies.roles}, '"supplier"')`);
+// Every contact of a supplier, with its company's columns read from the
+// company.
+export const getContactPersonsSuppliers = async (): Promise<
+  ContactPersonSupplierRow[]
+> => getContactPersonRows(sql`JSON_CONTAINS(${Companies.roles}, '"supplier"')`);

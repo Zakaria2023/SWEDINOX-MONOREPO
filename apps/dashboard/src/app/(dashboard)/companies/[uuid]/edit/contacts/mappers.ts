@@ -2,10 +2,9 @@ import { ContactDialogValues } from "@/app/(dashboard)/companies/validation";
 import { InsertContacts, SelectContacts } from "@/db/schema/contacts";
 import { ContactCategory } from "@/lib/enums";
 
-// The contact dialog edits only a subset of the Contacts columns — these two
-// mappers convert between that subset and the stored row. Columns the dialog
-// doesn't show (role flags, revenue defaults, search codes) are never written
-// on update, so values assigned at creation survive later edits.
+// The contact dialog edits the contact's own columns — these two mappers convert
+// between the form and the stored row. Company-level values are not stored on
+// a contact at all; they are joined from the company.
 
 export const contactRowToDialogValues = (
   row: SelectContacts,
@@ -37,12 +36,6 @@ export const contactRowToDialogValues = (
   website: row.website ?? "",
   categories: row.categories,
   sequenceNumber: row.sequenceNumber,
-  purchaser: row.purchaser ?? "",
-  searchCode1: row.searchCode1 ?? "",
-  searchCode2: row.searchCode2 ?? "",
-  searchCode3: row.searchCode3 ?? "",
-  revenueLastYear: row.revenueLastYear ?? "",
-  revenueThisYear: row.revenueThisYear ?? "",
 });
 
 export const contactValuesToColumns = (

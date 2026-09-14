@@ -48,7 +48,6 @@ export const CustomerOverviewTable = ({ customers }: Props) => (
             <TableHead>Initials</TableHead>
             <TableHead>Representative</TableHead>
             <TableHead>Account manager</TableHead>
-            <TableHead>Region code</TableHead>
             <TableHead>Region</TableHead>
             <TableHead>Customer group</TableHead>
             <TableHead>VAT number</TableHead>
@@ -101,7 +100,6 @@ export const CustomerOverviewTable = ({ customers }: Props) => (
                 <TableCell>
                   {orDash(salesRepresentativeLabel(row.accountManager))}
                 </TableCell>
-                <TableCell>{orDash(row.regionCode)}</TableCell>
                 <TableCell>{orDash(row.region)}</TableCell>
                 <TableCell>
                   {orDash(customerGroupLabel(row.customerGroup))}

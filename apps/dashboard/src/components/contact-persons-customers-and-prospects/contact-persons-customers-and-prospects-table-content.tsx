@@ -13,7 +13,12 @@ import {
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { ContactSalutation } from "@/lib/enums";
-import { buildColumnVisibility, formatRevenue } from "@/lib/helpers";
+import {
+  buildColumnVisibility,
+  customerGroupLabel,
+  formatRevenue,
+  salesRepresentativeLabel,
+} from "@/lib/helpers";
 import {
   CONTACT_CATEGORY_LABELS,
   CONTACT_SALUTATION_LABELS,
@@ -70,23 +75,11 @@ const ALL_COLUMNS: Array<{
   { key: "accountManager", label: "Account Manager", defaultVisible: true },
   { key: "representative", label: "Representative", defaultVisible: true },
   { key: "customerGroup", label: "Customer Group", defaultVisible: true },
-  { key: "industryCode", label: "Industry Code", defaultVisible: false },
   { key: "industry", label: "Industry", defaultVisible: true },
-  {
-    key: "classificationCode",
-    label: "Classification Code",
-    defaultVisible: false,
-  },
   { key: "classification", label: "Classification", defaultVisible: true },
   { key: "creditLimit", label: "Credit Limit", defaultVisible: true },
   { key: "competitors", label: "Competitors", defaultVisible: true },
-  { key: "customerRegionCode", label: "Region Code", defaultVisible: false },
   { key: "customerRegion", label: "Region", defaultVisible: true },
-  {
-    key: "targetYearRevenue",
-    label: "Target Year Revenue",
-    defaultVisible: true,
-  },
   {
     key: "targetAnnualSales",
     label: "Target Annual Sales",
@@ -241,17 +234,23 @@ export const ContactPersonsCustomersAndProspectsTable = ({ rows }: Props) => {
       case "addressFax":
         return <TableCell key={key}>{row.addressFax ?? "—"}</TableCell>;
       case "accountManager":
-        return <TableCell key={key}>{row.accountManager ?? "—"}</TableCell>;
+        return (
+          <TableCell key={key}>
+            {salesRepresentativeLabel(row.accountManager)}
+          </TableCell>
+        );
       case "representative":
-        return <TableCell key={key}>{row.representative ?? "—"}</TableCell>;
+        return (
+          <TableCell key={key}>
+            {salesRepresentativeLabel(row.representative)}
+          </TableCell>
+        );
       case "customerGroup":
-        return <TableCell key={key}>{row.customerGroup ?? "—"}</TableCell>;
-      case "industryCode":
-        return <TableCell key={key}>{row.industryCode ?? "—"}</TableCell>;
+        return (
+          <TableCell key={key}>{customerGroupLabel(row.customerGroup)}</TableCell>
+        );
       case "industry":
         return <TableCell key={key}>{row.industry ?? "—"}</TableCell>;
-      case "classificationCode":
-        return <TableCell key={key}>{row.classificationCode ?? "—"}</TableCell>;
       case "classification":
         return <TableCell key={key}>{row.classification ?? "—"}</TableCell>;
       case "creditLimit":
@@ -262,16 +261,8 @@ export const ContactPersonsCustomersAndProspectsTable = ({ rows }: Props) => {
         );
       case "competitors":
         return <TableCell key={key}>{row.competitors ?? "—"}</TableCell>;
-      case "customerRegionCode":
-        return <TableCell key={key}>{row.customerRegionCode ?? "—"}</TableCell>;
       case "customerRegion":
         return <TableCell key={key}>{row.customerRegion ?? "—"}</TableCell>;
-      case "targetYearRevenue":
-        return (
-          <TableCell key={key} className="text-right">
-            {formatRevenue(row.targetYearRevenue)}
-          </TableCell>
-        );
       case "targetAnnualSales":
         return (
           <TableCell key={key} className="text-right">

@@ -491,37 +491,14 @@ export const QuoteDetailView = ({ quote, userNames }: Props) => {
 
         <CollapsibleSection
           title="Competitors"
-          summary={
-            quote.competitors.length === 0
-              ? "None recorded"
-              : pluralize(quote.competitors.length, "contact")
-          }
+          summary={quote.competitors ? "Recorded" : "None recorded"}
         >
-          {quote.competitors.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No competitors recorded against this customer&apos;s contacts.
-            </p>
+          {quote.competitors ? (
+            <p className="text-sm whitespace-pre-wrap">{quote.competitors}</p>
           ) : (
-            <div>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Contact</TableHead>
-                    <TableHead>Firms</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {quote.competitors.map((competitor) => (
-                    <TableRow key={competitor.contactUuid}>
-                      <TableCell className="font-medium">
-                        {competitor.contactName}
-                      </TableCell>
-                      <TableCell>{competitor.competitors}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+            <p className="text-sm text-muted-foreground">
+              No competitors recorded for this customer.
+            </p>
           )}
         </CollapsibleSection>
 

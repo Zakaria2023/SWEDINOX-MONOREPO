@@ -96,7 +96,6 @@ const ALL_COLUMNS: Array<{
     label: "Contact mobile no.",
     defaultVisible: true,
   },
-  { key: "customerRegionCode", label: "Region code", defaultVisible: true },
   { key: "region", label: "Region", defaultVisible: true },
   {
     key: "accountManager",
@@ -276,8 +275,6 @@ export const CustomersAndProspectsTable = ({ rows }: Props) => {
         return <TableCell key={key}>{row.contactEmail ?? "—"}</TableCell>;
       case "contactMobile":
         return <TableCell key={key}>{row.contactMobile ?? "—"}</TableCell>;
-      case "customerRegionCode":
-        return <TableCell key={key}>{row.customerRegionCode ?? "—"}</TableCell>;
       case "region":
         return <TableCell key={key}>{row.region ?? "—"}</TableCell>;
       case "accountManager":

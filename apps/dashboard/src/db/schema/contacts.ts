@@ -2,7 +2,6 @@ import { InferInsertModel, InferSelectModel } from "drizzle-orm";
 import {
   boolean,
   char,
-  decimal,
   foreignKey,
   index,
   int,
@@ -15,6 +14,13 @@ import {
 import { ContactCategory, contactSalutations } from "../../lib/enums";
 import { Companies } from "./companies";
 
+// A contact person: the person's own name, phones, email, postal details,
+// categories and sequence. Everything about the *company* — its roles, visiting
+// address, representative, customer group, credit limit, revenue — lives on
+// `Companies` / `CompanyAddresses` and is joined in. The reference proves it:
+// every contact of a company prints the same company values (2 188 of 2 188).
+// Those used to be copied onto each contact and drifted; they were dropped on
+// 14-9-2026 (scripts/migrate-contacts-drop-company-copies.mjs).
 export const Contacts = mysqlTable(
   "Contacts",
   {
@@ -49,49 +55,6 @@ export const Contacts = mysqlTable(
     addressFax: varchar("address_fax", { length: 100 }),
     addressEmail: varchar("address_email", { length: 255 }),
     website: varchar("website", { length: 255 }),
-
-    purchaser: varchar("purchaser", { length: 255 }),
-    searchCode1: varchar("search_code_1", { length: 100 }),
-    searchCode2: varchar("search_code_2", { length: 100 }),
-    searchCode3: varchar("search_code_3", { length: 100 }),
-
-    revenueLastYear: decimal("revenue_last_year", { precision: 15, scale: 2 }),
-    revenueThisYear: decimal("revenue_this_year", { precision: 15, scale: 2 }),
-
-    accountManager: varchar("account_manager", { length: 255 }),
-    representative: varchar("representative", { length: 255 }),
-    customerGroup: varchar("customer_group", { length: 255 }),
-    industryCode: varchar("industry_code", { length: 100 }),
-    industry: varchar("industry", { length: 255 }),
-    classificationCode: varchar("classification_code", { length: 100 }),
-    classification: varchar("classification", { length: 255 }),
-    creditLimit: decimal("credit_limit", { precision: 15, scale: 2 }),
-    competitors: varchar("competitors", { length: 500 }),
-    customerRegionCode: varchar("customer_region_code", { length: 100 }),
-    customerRegion: varchar("customer_region", { length: 255 }),
-    targetYearRevenue: decimal("target_year_revenue", {
-      precision: 15,
-      scale: 2,
-    }),
-    targetAnnualSales: decimal("target_annual_sales", {
-      precision: 15,
-      scale: 2,
-    }),
-
-    isCustomer: boolean("is_customer").default(false).notNull(),
-    isProspect: boolean("is_prospect").default(false).notNull(),
-    isSupplier: boolean("is_supplier").default(false).notNull(),
-    isProcessor: boolean("is_processor").default(false).notNull(),
-    isTransporter: boolean("is_transporter").default(false).notNull(),
-    isAgent: boolean("is_agent").default(false).notNull(),
-    isOther: boolean("is_other").default(false).notNull(),
-
-    visitStreetAndNo: varchar("visit_street_and_no", { length: 255 }),
-    visitPostalCode: varchar("visit_postal_code", { length: 50 }),
-    visitCity: varchar("visit_city", { length: 150 }),
-    visitCountry: varchar("visit_country", { length: 100 }),
-    visitTelephone: varchar("visit_telephone", { length: 100 }),
-    visitFax: varchar("visit_fax", { length: 100 }),
 
     categories: json("categories")
       .$type<ContactCategory[]>()

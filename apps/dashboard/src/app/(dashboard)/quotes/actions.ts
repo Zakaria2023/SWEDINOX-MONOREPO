@@ -24,7 +24,6 @@ import { orderStatuses, StockUnit } from "@/lib/enums";
 import {
   computeQuoteSummary,
   describeError,
-  fullName,
   generateUuid,
   getQuoteVatRatePercent,
   moneyString,
@@ -118,15 +117,6 @@ export type QuoteSurchargeDetail = SelectQuoteSurcharges & {
   companyName: SelectCompanies["companyName"] | null;
 };
 
-// A competitor the customer's contacts have named. The schema records these as
-// free text against a contact, so the quote screen lists who said what rather
-// than inventing a revenue share the app has nowhere to store.
-export type QuoteCompetitor = {
-  contactUuid: SelectContacts["uuid"];
-  contactName: string;
-  competitors: NonNullable<SelectContacts["competitors"]>;
-};
-
 export type QuoteDetail = SelectQuotes & {
   companyName: SelectCompanies["companyName"] | null;
   companyCalculatesVat: SelectCompanies["calculateVat"] | null;
@@ -139,7 +129,9 @@ export type QuoteDetail = SelectQuotes & {
   // Customer-scoped context the reference system shows alongside a quote.
   complaints: SelectComplaints[];
   followUps: SelectFollowUps[];
-  competitors: QuoteCompetitor[];
+  // The customer's competitors, as free text on the company — the reference's
+  // `Competitors` is a company column, not a contact's.
+  competitors: SelectCompanies["competitors"];
 };
 
 // One priced quote line, ready to insert. The price is derived, never supplied
@@ -552,7 +544,7 @@ export const getQuoteDetail = async (
     return null;
   }
 
-  const [items, options, surcharges, complaints, followUps, contacts] =
+  const [items, options, surcharges, complaints, followUps, [company]] =
     await Promise.all([
       db
         .select({
@@ -607,19 +599,10 @@ export const getQuoteDetail = async (
         )
         .orderBy(desc(FollowUps.createdAt)),
       db
-        .select({
-          uuid: Contacts.uuid,
-          firstName: Contacts.firstName,
-          lastName: Contacts.lastName,
-          competitors: Contacts.competitors,
-        })
-        .from(Contacts)
-        .where(
-          and(
-            eq(Contacts.companyUuid, quote.companyUuid),
-            isNotNull(Contacts.competitors),
-          ),
-        ),
+        .select({ competitors: Companies.competitors })
+        .from(Companies)
+        .where(eq(Companies.uuid, quote.companyUuid))
+        .limit(1),
     ]);
 
   return {
@@ -629,14 +612,7 @@ export const getQuoteDetail = async (
     surcharges,
     complaints,
     followUps,
-    competitors: contacts
-      .filter((contact) => Boolean(contact.competitors))
-      .map((contact) => ({
-        contactUuid: contact.uuid,
-        contactName:
-          fullName(contact.firstName, contact.lastName) || contact.uuid,
-        competitors: contact.competitors ?? "",
-      })),
+    competitors: company?.competitors || null,
   };
 };
 

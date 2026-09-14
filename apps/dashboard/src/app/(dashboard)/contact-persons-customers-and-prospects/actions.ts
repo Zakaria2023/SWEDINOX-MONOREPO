@@ -1,27 +1,22 @@
 "use server";
 
-import { db } from "@/db";
-import { Companies, SelectCompanies } from "@/db/schema/companies";
-import { Contacts, SelectContacts } from "@/db/schema/contacts";
-import { eq, getTableColumns, or, sql } from "drizzle-orm";
+import { Companies } from "@/db/schema/companies";
+import {
+  ContactPersonRow,
+  getContactPersonRows,
+} from "@/lib/server/contact-persons";
+import { or, sql } from "drizzle-orm";
 
-export type ContactPersonCustomerProspectRow = SelectContacts &
-  Pick<SelectCompanies, "companyName"> & {
-    companyId: SelectCompanies["id"];
-  };
+export type ContactPersonCustomerProspectRow = ContactPersonRow;
 
-export const getContactPersonsCustomersAndProspects = async (): Promise<ContactPersonCustomerProspectRow[]> =>
-  db
-    .select({
-      ...getTableColumns(Contacts),
-      companyName: Companies.companyName,
-      companyId: Companies.id,
-    })
-    .from(Contacts)
-    .innerJoin(Companies, eq(Companies.uuid, Contacts.companyUuid))
-    .where(
-      or(
-        sql`JSON_CONTAINS(${Companies.roles}, '"customer"')`,
-        sql`JSON_CONTAINS(${Companies.roles}, '"prospect"')`,
-      ),
-    );
+// Every contact of a customer or prospect, with its company's columns read
+// from the company.
+export const getContactPersonsCustomersAndProspects = async (): Promise<
+  ContactPersonCustomerProspectRow[]
+> =>
+  getContactPersonRows(
+    or(
+      sql`JSON_CONTAINS(${Companies.roles}, '"customer"')`,
+      sql`JSON_CONTAINS(${Companies.roles}, '"prospect"')`,
+    ),
+  );

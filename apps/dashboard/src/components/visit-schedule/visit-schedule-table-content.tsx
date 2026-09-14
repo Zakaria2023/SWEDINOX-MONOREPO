@@ -43,11 +43,6 @@ const ALL_COLUMNS: Array<{
   { key: "visitTelephone", label: "Telephone", defaultVisible: true },
   { key: "accountManager", label: "Account Manager", defaultVisible: true },
   { key: "representative", label: "Representative", defaultVisible: true },
-  {
-    key: "targetYearRevenue",
-    label: "Target Year Revenue",
-    defaultVisible: true,
-  },
   { key: "revenueLastYear", label: "Revenue Last Year", defaultVisible: true },
   { key: "revenueThisYear", label: "Revenue This Year", defaultVisible: true },
   { key: "customerGroup", label: "Customer Group", defaultVisible: true },
@@ -62,7 +57,6 @@ const ALL_COLUMNS: Array<{
     label: "Contact Mobile No.",
     defaultVisible: true,
   },
-  { key: "customerRegionCode", label: "Region Code", defaultVisible: false },
   { key: "region", label: "Region", defaultVisible: true },
   { key: "callDue", label: "Call", defaultVisible: true },
   { key: "visitDue", label: "Visit", defaultVisible: true },
@@ -116,12 +110,6 @@ export const VisitScheduleTable = ({ rows }: Props) => {
         return <TableCell key={key}>{row.accountManager ?? "—"}</TableCell>;
       case "representative":
         return <TableCell key={key}>{row.representative ?? "—"}</TableCell>;
-      case "targetYearRevenue":
-        return (
-          <TableCell key={key} className="text-right">
-            {formatRevenue(row.targetYearRevenue)}
-          </TableCell>
-        );
       case "revenueLastYear":
         return (
           <TableCell key={key} className="text-right">
@@ -162,8 +150,6 @@ export const VisitScheduleTable = ({ rows }: Props) => {
         return <TableCell key={key}>{row.contactEmail ?? "—"}</TableCell>;
       case "contactMobile":
         return <TableCell key={key}>{row.contactMobile ?? "—"}</TableCell>;
-      case "customerRegionCode":
-        return <TableCell key={key}>{row.customerRegionCode ?? "—"}</TableCell>;
       case "region":
         return <TableCell key={key}>{row.region ?? "—"}</TableCell>;
       case "callDue":

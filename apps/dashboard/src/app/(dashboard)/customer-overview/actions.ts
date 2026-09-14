@@ -39,7 +39,6 @@ export type CustomerOverviewRow = Pick<
   addressEmail: SelectCompanyAddresses["email"] | null;
   initials: SelectContacts["initials"] | null;
   contactEmail: SelectContacts["email"] | null;
-  regionCode: SelectContacts["customerRegionCode"] | null;
   quotes: number;
   orders: number;
   invoices: number;
@@ -95,7 +94,6 @@ export const getCustomerOverview = async (): Promise<CustomerOverviewRow[]> => {
         companyUuid: Contacts.companyUuid,
         initials: Contacts.initials,
         email: Contacts.email,
-        customerRegionCode: Contacts.customerRegionCode,
       })
       .from(Contacts)
       .innerJoin(primaryContactId, eq(Contacts.id, primaryContactId.minId))
@@ -178,7 +176,6 @@ export const getCustomerOverview = async (): Promise<CustomerOverviewRow[]> => {
         addressEmail: primaryAddress.email,
         initials: primaryContact.initials,
         contactEmail: primaryContact.email,
-        regionCode: primaryContact.customerRegionCode,
         quotes: quoteCounts.value,
         orders: orderStats.value,
         lastOrderDate: orderStats.lastOrderDate,
@@ -232,7 +229,6 @@ export const getCustomerOverview = async (): Promise<CustomerOverviewRow[]> => {
         addressEmail: row.addressEmail ?? null,
         initials: row.initials ?? null,
         contactEmail: row.contactEmail ?? null,
-        regionCode: row.regionCode ?? null,
         quotes: row.quotes ?? 0,
         orders: row.orders ?? 0,
         invoices: invoiceCount,
