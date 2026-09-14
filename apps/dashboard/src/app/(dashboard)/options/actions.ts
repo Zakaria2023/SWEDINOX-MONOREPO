@@ -6,7 +6,9 @@ import {
   SelectOrderItemOptions,
 } from "@/db/schema/order-item-options";
 import { OrderItems } from "@/db/schema/order-items";
+import { Orders } from "@/db/schema/orders";
 import { Products } from "@/db/schema/products";
+import { buildOrderSummary } from "@/app/(dashboard)/orders/actions";
 import { RevenueGroups, SelectRevenueGroups } from "@/db/schema/revenue-groups";
 import {
   ProductOptionPrices,
@@ -28,6 +30,7 @@ import {
   desc,
   eq,
   gte,
+  inArray,
   isNull,
   lte,
   or,
@@ -260,7 +263,25 @@ export const generateOptionCharges =
 
       await db.insert(OrderItemOptions).values(rows);
 
+      // Options are revenue of the order they ride on, so each order they were
+      // added to has its totals — and the figure its credit check weighs —
+      // rebuilt.
+      const orderUuids = [
+        ...new Set(rows.map((row) => row.orderUuid)),
+      ];
+      const orders = await db
+        .select({ uuid: Orders.uuid, companyUuid: Orders.companyUuid })
+        .from(Orders)
+        .where(inArray(Orders.uuid, orderUuids));
+      for (const order of orders) {
+        await db
+          .update(Orders)
+          .set(await buildOrderSummary(db, order.uuid, order.companyUuid))
+          .where(eq(Orders.uuid, order.uuid));
+      }
+
       revalidatePath("/options");
+      revalidatePath("/orders");
       return { success: true, createdCharges: rows.length };
     } catch (error) {
       return {
