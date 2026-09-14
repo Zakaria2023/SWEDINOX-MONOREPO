@@ -1,31 +1,31 @@
 "use server";
 
+import { SelectCompanies } from "@/db/schema/companies";
+import { SelectCompanyAddresses } from "@/db/schema/company-addresses";
+import { SelectOrderItems } from "@/db/schema/order-items";
+import { SelectOrders } from "@/db/schema/orders";
+import { SelectRevenueGroups } from "@/db/schema/revenue-groups";
 import { describeError, profitMarginPercent } from "@/lib/helpers";
-import { db } from "@/db";
-import { Companies, SelectCompanies } from "@/db/schema/companies";
-import { Contacts, SelectContacts } from "@/db/schema/contacts";
-import { InvoiceItems } from "@/db/schema/invoice-items";
-import { Invoices } from "@/db/schema/invoices";
-import { OrderItems } from "@/db/schema/order-items";
-import { Orders } from "@/db/schema/orders";
-import { Products } from "@/db/schema/products";
-import { RevenueGroups } from "@/db/schema/revenue-groups";
-import { count, eq, min, sql } from "drizzle-orm";
+import {
+  getRevenueCompanies,
+  getRevenueFacts,
+} from "@/lib/server/customer-revenue";
 
 export type CustomerRevenueSplitRow = {
   representative: SelectCompanies["representative"] | null;
   customerGroup: SelectCompanies["customerGroup"] | null;
-  customerCode: SelectCompanies["id"] | null;
+  debtorNumber: SelectCompanies["debtorNumber"] | null;
   customerName: SelectCompanies["companyName"] | null;
-  city: SelectContacts["city"] | null;
-  country: SelectContacts["addressCountry"] | null;
+  city: SelectCompanyAddresses["city"] | null;
+  country: SelectCompanyAddresses["country"] | null;
   accountManager: SelectCompanies["accountManager"] | null;
   region: SelectCompanies["region"] | null;
-  revenueGroupNumber: number | null;
-  revenueGroupName: string | null;
-  orderType: string;
-  year: number | null;
-  month: number | null;
+  revenueGroupNumber: SelectRevenueGroups["number"] | null;
+  revenueGroupName: SelectRevenueGroups["name"] | null;
+  orderType: SelectOrders["orderType"];
+  sourceType: SelectOrderItems["sourceType"] | null;
+  year: number;
+  month: number;
   weightKg: number;
   revenue: number;
   profit: number;
@@ -33,120 +33,66 @@ export type CustomerRevenueSplitRow = {
   invoiceLines: number;
 };
 
-// Order type is a set of boolean flags on the order, not a single column, so
-// it's collapsed into a single label here (first matching flag wins).
-const orderTypeLabel = sql<string>`CASE
-  WHEN ${Orders.isConsignment} = 1 THEN 'Consignment'
-  WHEN ${Orders.isIncidental} = 1 THEN 'Incidental'
-  WHEN ${Orders.isInternalProduction} = 1 THEN 'Internal production'
-  WHEN ${Orders.isCustomerMaterial} = 1 THEN 'Customer material'
-  WHEN ${Orders.isPickup} = 1 THEN 'Pickup'
-  ELSE 'Normal'
-END`;
-
-// Sales turnover per customer × revenue group × order type × invoice period.
+// C10 with the order split out — and "order type" means two things there, so
+// both are columns: the order's type (Normal / Call-off / Rush / Ex works) and
+// the line's source (Stk / CD). The reference's C11 sums to C10 cell for cell,
+// call-off and rush exact; a charge always counts as Normal and has no source.
+// This used to be derived from the consignment/pickup flags, which is not the
+// axis the reference splits on.
 export const getCustomerRevenueSplit = async (): Promise<
   CustomerRevenueSplitRow[]
 > => {
   try {
-    const year = sql<number>`YEAR(${Invoices.invoiceDate})`;
-    const month = sql<number>`MONTH(${Invoices.invoiceDate})`;
+    const [facts, companies] = await Promise.all([
+      getRevenueFacts(),
+      getRevenueCompanies(),
+    ]);
 
-    const primaryContactId = db
-      .select({
-        companyUuid: Contacts.companyUuid,
-        minId: min(Contacts.id).as("min_id"),
-      })
-      .from(Contacts)
-      .groupBy(Contacts.companyUuid)
-      .as("primary_contact_id");
-
-    const primaryContact = db
-      .select({
-        companyUuid: Contacts.companyUuid,
-        city: Contacts.city,
-        addressCountry: Contacts.addressCountry,
-      })
-      .from(Contacts)
-      .innerJoin(primaryContactId, eq(Contacts.id, primaryContactId.minId))
-      .as("primary_contact");
-
-    const rows = await db
-      .select({
-        representative: Companies.representative,
-        customerGroup: Companies.customerGroup,
-        customerCode: Companies.id,
-        customerName: Companies.companyName,
-        city: primaryContact.city,
-        country: primaryContact.addressCountry,
-        accountManager: Companies.accountManager,
-        region: Companies.region,
-        revenueGroupNumber: RevenueGroups.number,
-        revenueGroupName: RevenueGroups.name,
-        orderType: orderTypeLabel,
-        year,
-        month,
-        // The invoice line's own snapshot — see revenue-per-revenue-group. The
-        // order stays joined only to classify the order type.
-        weightKg: sql<string>`COALESCE(SUM(${InvoiceItems.weightKg}), 0)`,
-        revenue: sql<string>`COALESCE(SUM(${InvoiceItems.amount}), 0)`,
-        cost: sql<string>`COALESCE(SUM(${InvoiceItems.costAmount}), 0)`,
-        invoiceLines: count(InvoiceItems.uuid),
-      })
-      .from(InvoiceItems)
-      .innerJoin(Invoices, eq(InvoiceItems.invoiceUuid, Invoices.uuid))
-      .innerJoin(OrderItems, eq(InvoiceItems.orderItemUuid, OrderItems.uuid))
-      .innerJoin(Orders, eq(OrderItems.orderUuid, Orders.uuid))
-      .innerJoin(Products, eq(InvoiceItems.productUuid, Products.uuid))
-      .innerJoin(Companies, eq(Invoices.companyUuid, Companies.uuid))
-      .leftJoin(
-        RevenueGroups,
-        eq(Products.revenueGroupUuid, RevenueGroups.uuid),
-      )
-      .leftJoin(primaryContact, eq(Companies.uuid, primaryContact.companyUuid))
-      .groupBy(
-        Companies.uuid,
-        Companies.representative,
-        Companies.customerGroup,
-        Companies.id,
-        Companies.companyName,
-        Companies.accountManager,
-        Companies.region,
-        primaryContact.city,
-        primaryContact.addressCountry,
-        RevenueGroups.uuid,
-        RevenueGroups.number,
-        RevenueGroups.name,
-        orderTypeLabel,
-        year,
-        month,
-      )
-      .orderBy(Companies.companyName);
-
-    return rows.map((row) => {
-      const revenue = Number(row.revenue);
-      const profit = revenue - Number(row.cost);
-      return {
-        representative: row.representative,
-        customerGroup: row.customerGroup,
-        customerCode: row.customerCode,
-        customerName: row.customerName,
-        city: row.city ?? null,
-        country: row.country ?? null,
-        accountManager: row.accountManager,
-        region: row.region,
-        revenueGroupNumber: row.revenueGroupNumber,
-        revenueGroupName: row.revenueGroupName,
-        orderType: row.orderType,
-        year: row.year != null ? Number(row.year) : null,
-        month: row.month != null ? Number(row.month) : null,
-        weightKg: Number(row.weightKg),
-        revenue,
-        profit,
-        profitMargin: profitMarginPercent(revenue, profit),
-        invoiceLines: Number(row.invoiceLines),
+    const rows = new Map<string, CustomerRevenueSplitRow>();
+    for (const fact of facts) {
+      const orderType = fact.orderType ?? "normal";
+      const key = `${fact.companyUuid}|${fact.revenueGroupNumber}|${orderType}|${fact.sourceType}|${fact.year}|${fact.month}`;
+      const company = companies.get(fact.companyUuid);
+      const row = rows.get(key) ?? {
+        representative: company?.representative ?? null,
+        customerGroup: company?.customerGroup ?? null,
+        debtorNumber: company?.debtorNumber ?? null,
+        customerName: company?.companyName ?? null,
+        city: company?.city ?? null,
+        country: company?.country ?? null,
+        accountManager: company?.accountManager ?? null,
+        region: company?.region ?? null,
+        revenueGroupNumber: fact.revenueGroupNumber,
+        revenueGroupName: fact.revenueGroupName,
+        orderType,
+        sourceType: fact.sourceType,
+        year: fact.year,
+        month: fact.month,
+        weightKg: 0,
+        revenue: 0,
+        profit: 0,
+        profitMargin: 0,
+        invoiceLines: 0,
       };
-    });
+      row.revenue += fact.revenue;
+      row.profit += fact.profit;
+      row.weightKg += fact.weightKg;
+      row.invoiceLines += fact.lines;
+      rows.set(key, row);
+    }
+
+    return [...rows.values()]
+      .map((row) => ({
+        ...row,
+        profitMargin: profitMarginPercent(row.revenue, row.profit),
+      }))
+      .sort(
+        (a, b) =>
+          (a.customerName ?? "").localeCompare(b.customerName ?? "") ||
+          b.year - a.year ||
+          b.month - a.month ||
+          (a.revenueGroupNumber ?? 0) - (b.revenueGroupNumber ?? 0),
+      );
   } catch (error) {
     throw new Error(
       describeError(

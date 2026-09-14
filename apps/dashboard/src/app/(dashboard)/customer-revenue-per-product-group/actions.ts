@@ -1,25 +1,31 @@
 "use server";
 
-import { describeError, profitMarginPercent } from "@/lib/helpers";
 import { db } from "@/db";
-import { Companies, SelectCompanies } from "@/db/schema/companies";
-import { Contacts, SelectContacts } from "@/db/schema/contacts";
+import { SelectCompanies } from "@/db/schema/companies";
+import { SelectCompanyAddresses } from "@/db/schema/company-addresses";
 import { InvoiceItems } from "@/db/schema/invoice-items";
 import { Invoices } from "@/db/schema/invoices";
+import { OrderItems, SelectOrderItems } from "@/db/schema/order-items";
 import { ProductGroups, SelectProductGroups } from "@/db/schema/product-groups";
 import { Products } from "@/db/schema/products";
-import { count, eq, min, sql } from "drizzle-orm";
+import { describeError, profitMarginPercent } from "@/lib/helpers";
+import { getRevenueCompanies } from "@/lib/server/customer-revenue";
+import { and, count, eq, isNotNull, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/mysql-core";
 
 export type CustomerRevenuePerProductGroupRow = {
   representative: SelectCompanies["representative"] | null;
   customerGroup: SelectCompanies["customerGroup"] | null;
-  customerCode: SelectCompanies["id"] | null;
+  debtorNumber: SelectCompanies["debtorNumber"] | null;
   customerName: SelectCompanies["companyName"] | null;
-  city: SelectContacts["city"] | null;
-  productGroupName: SelectProductGroups["name"] | null;
+  city: SelectCompanyAddresses["city"] | null;
   region: SelectCompanies["region"] | null;
-  year: number | null;
-  month: number | null;
+  productGroupName: SelectProductGroups["name"] | null;
+  subgroup1Name: SelectProductGroups["name"] | null;
+  subgroup2Name: SelectProductGroups["name"] | null;
+  sourceType: SelectOrderItems["sourceType"];
+  year: number;
+  month: number;
   weightKg: number;
   revenue: number;
   profit: number;
@@ -27,8 +33,16 @@ export type CustomerRevenuePerProductGroupRow = {
   invoiceLines: number;
 };
 
-// Sales turnover per customer × product group × invoice period, read from the
-// invoice line's own snapshot of revenue, cost and weight.
+const parentGroup = alias(ProductGroups, "parent_group");
+const grandparentGroup = alias(ProductGroups, "grandparent_group");
+
+// The product half of invoiced revenue per customer × product group × month.
+// Options and charges are not in it: the reference's C9 totals exactly the
+// invoice lines' `Revenue products` (9 032 601.62) and their product profit.
+//
+// The group is shown three levels deep, top first — `Roestvast staal` /
+// `RVS platen` / `Plaat Koudgewalst 304` — walked up from the product's own
+// group, since a product may sit at any of the three levels.
 export const getCustomerRevenuePerProductGroup = async (): Promise<
   CustomerRevenuePerProductGroupRow[]
 > => {
@@ -36,85 +50,86 @@ export const getCustomerRevenuePerProductGroup = async (): Promise<
     const year = sql<number>`YEAR(${Invoices.invoiceDate})`;
     const month = sql<number>`MONTH(${Invoices.invoiceDate})`;
 
-    const primaryContactId = db
-      .select({
-        companyUuid: Contacts.companyUuid,
-        minId: min(Contacts.id).as("min_id"),
-      })
-      .from(Contacts)
-      .groupBy(Contacts.companyUuid)
-      .as("primary_contact_id");
+    const [rows, companies] = await Promise.all([
+      db
+        .select({
+          companyUuid: Invoices.companyUuid,
+          ownGroup: ProductGroups.name,
+          parentGroup: parentGroup.name,
+          grandparentGroup: grandparentGroup.name,
+          sourceType: OrderItems.sourceType,
+          year,
+          month,
+          weightKg: sql<string>`COALESCE(SUM(${InvoiceItems.weightKg}), 0)`,
+          revenue: sql<string>`COALESCE(SUM(${InvoiceItems.revenueProducts}), 0)`,
+          profit: sql<string>`COALESCE(SUM(${InvoiceItems.profitProducts}), 0)`,
+          invoiceLines: count(InvoiceItems.uuid),
+        })
+        .from(InvoiceItems)
+        .innerJoin(Invoices, eq(InvoiceItems.invoiceUuid, Invoices.uuid))
+        .innerJoin(OrderItems, eq(InvoiceItems.orderItemUuid, OrderItems.uuid))
+        .innerJoin(Products, eq(InvoiceItems.productUuid, Products.uuid))
+        .leftJoin(
+          ProductGroups,
+          eq(Products.productGroupUuid, ProductGroups.uuid),
+        )
+        .leftJoin(parentGroup, eq(ProductGroups.parentUuid, parentGroup.uuid))
+        .leftJoin(
+          grandparentGroup,
+          eq(parentGroup.parentUuid, grandparentGroup.uuid),
+        )
+        .where(
+          and(eq(Invoices.cancelled, false), isNotNull(Invoices.companyUuid)),
+        )
+        .groupBy(
+          Invoices.companyUuid,
+          ProductGroups.uuid,
+          ProductGroups.name,
+          parentGroup.name,
+          grandparentGroup.name,
+          OrderItems.sourceType,
+          year,
+          month,
+        ),
+      getRevenueCompanies(),
+    ]);
 
-    const primaryContact = db
-      .select({
-        companyUuid: Contacts.companyUuid,
-        city: Contacts.city,
+    return rows
+      .map((row) => {
+        const company = companies.get(row.companyUuid ?? "");
+        // Top level first, whatever depth the product's own group sits at.
+        const [productGroupName = null, subgroup1Name = null, subgroup2Name = null] =
+          [row.grandparentGroup, row.parentGroup, row.ownGroup].filter(
+            (name): name is string => name !== null,
+          );
+        const revenue = Number(row.revenue);
+        const profit = Number(row.profit);
+        return {
+          representative: company?.representative ?? null,
+          customerGroup: company?.customerGroup ?? null,
+          debtorNumber: company?.debtorNumber ?? null,
+          customerName: company?.companyName ?? null,
+          city: company?.city ?? null,
+          region: company?.region ?? null,
+          productGroupName,
+          subgroup1Name,
+          subgroup2Name,
+          sourceType: row.sourceType,
+          year: Number(row.year),
+          month: Number(row.month),
+          weightKg: Number(row.weightKg),
+          revenue,
+          profit,
+          profitMargin: profitMarginPercent(revenue, profit),
+          invoiceLines: Number(row.invoiceLines),
+        };
       })
-      .from(Contacts)
-      .innerJoin(primaryContactId, eq(Contacts.id, primaryContactId.minId))
-      .as("primary_contact");
-
-    const rows = await db
-      .select({
-        representative: Companies.representative,
-        customerGroup: Companies.customerGroup,
-        customerCode: Companies.id,
-        customerName: Companies.companyName,
-        city: primaryContact.city,
-        region: Companies.region,
-        productGroupName: ProductGroups.name,
-        year,
-        month,
-        // The invoice line's own snapshot — see revenue-per-revenue-group.
-        weightKg: sql<string>`COALESCE(SUM(${InvoiceItems.weightKg}), 0)`,
-        revenue: sql<string>`COALESCE(SUM(${InvoiceItems.amount}), 0)`,
-        cost: sql<string>`COALESCE(SUM(${InvoiceItems.costAmount}), 0)`,
-        invoiceLines: count(InvoiceItems.uuid),
-      })
-      .from(InvoiceItems)
-      .innerJoin(Invoices, eq(InvoiceItems.invoiceUuid, Invoices.uuid))
-      .innerJoin(Products, eq(InvoiceItems.productUuid, Products.uuid))
-      .innerJoin(Companies, eq(Invoices.companyUuid, Companies.uuid))
-      .leftJoin(
-        ProductGroups,
-        eq(Products.productGroupUuid, ProductGroups.uuid),
-      )
-      .leftJoin(primaryContact, eq(Companies.uuid, primaryContact.companyUuid))
-      .groupBy(
-        Companies.uuid,
-        Companies.representative,
-        Companies.customerGroup,
-        Companies.id,
-        Companies.companyName,
-        Companies.region,
-        primaryContact.city,
-        ProductGroups.uuid,
-        ProductGroups.name,
-        year,
-        month,
-      )
-      .orderBy(Companies.companyName);
-
-    return rows.map((row) => {
-      const revenue = Number(row.revenue);
-      const profit = revenue - Number(row.cost);
-      return {
-        representative: row.representative,
-        customerGroup: row.customerGroup,
-        customerCode: row.customerCode,
-        customerName: row.customerName,
-        city: row.city ?? null,
-        region: row.region,
-        productGroupName: row.productGroupName,
-        year: row.year != null ? Number(row.year) : null,
-        month: row.month != null ? Number(row.month) : null,
-        weightKg: Number(row.weightKg),
-        revenue,
-        profit,
-        profitMargin: profitMarginPercent(revenue, profit),
-        invoiceLines: Number(row.invoiceLines),
-      };
-    });
+      .sort(
+        (a, b) =>
+          (a.customerName ?? "").localeCompare(b.customerName ?? "") ||
+          b.year - a.year ||
+          b.month - a.month,
+      );
   } catch (error) {
     throw new Error(
       describeError(

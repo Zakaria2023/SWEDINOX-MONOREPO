@@ -17,6 +17,7 @@ import {
   SelectInvoiceItems,
 } from "@/db/schema/invoice-items";
 import { JournalEntries } from "@/db/schema/journal-entries";
+import { OrderItemOptions } from "@/db/schema/order-item-options";
 import { OrderItems, SelectOrderItems } from "@/db/schema/order-items";
 import { Payments, SelectPayments } from "@/db/schema/payments";
 import { Orders } from "@/db/schema/orders";
@@ -363,6 +364,32 @@ export const createInvoice = async (
       orderItemRows.map((row) => [row.uuid, row]),
     );
 
+    // The options charged on each selected line — grinding, foil, laser. The
+    // reference bills them on the same invoice line as the material: its
+    // `Revenue line` is `Revenue products` + `Revenue options` on all 5 650
+    // lines. They are billed in the same share as the line's quantity.
+    const optionRows =
+      orderItemUuids.length > 0
+        ? await db
+            .select({
+              orderItemUuid: OrderItemOptions.orderItemUuid,
+              amount: sql<string>`COALESCE(SUM(${OrderItemOptions.amount}), 0)`,
+              cost: sql<string>`COALESCE(SUM(${OrderItemOptions.cost}), 0)`,
+              profit: sql<string>`COALESCE(SUM(${OrderItemOptions.profit}), 0)`,
+            })
+            .from(OrderItemOptions)
+            .where(inArray(OrderItemOptions.orderItemUuid, orderItemUuids))
+            .groupBy(OrderItemOptions.orderItemUuid)
+        : [];
+    const optionsByOrderItem = new Map(
+      optionRows.map((row) => [row.orderItemUuid, row]),
+    );
+    // Per billed line, the product and option parts kept apart for the header.
+    const billedParts: {
+      product: { amount: number; costAmount: number; replacementCost: number; weightKg: number };
+      option: { amount: number; cost: number };
+    }[] = [];
+
     // An invoice line carries the order line's already-resolved per-unit price
     // and cost verbatim rather than pricing anything a second time. The order
     // line resolved both at reservation — the price from the customer's
@@ -434,21 +461,53 @@ export const createInvoice = async (
         slice,
       );
 
+      const lineOptions = optionsByOrderItem.get(selection.orderItemUuid);
+      const optionSlice = sliceOrderLineAmounts(
+        {
+          amount: Number(lineOptions?.amount ?? 0),
+          costAmount: Number(lineOptions?.cost ?? 0),
+          weightKg: 0,
+          profit: Number(lineOptions?.profit ?? 0),
+          profitReplPrice: Number(lineOptions?.profit ?? 0),
+        },
+        slice,
+      );
+
+      billedParts.push({
+        product: {
+          amount: sliced.amount,
+          costAmount: sliced.costAmount,
+          replacementCost:
+            Number(row.replacementPrice ?? 0) * billing,
+          weightKg: sliced.weightKg,
+        },
+        option: { amount: optionSlice.amount, cost: optionSlice.costAmount },
+      });
+
       billableLines.push({
         orderItemUuid: selection.orderItemUuid,
         productUuid: row.productUuid,
         quantity: billing.toFixed(3),
         netPrice: row.netPrice,
-        amount: moneyString(sliced.amount),
+        // The line bills its material and its options together.
+        amount: moneyString(sliced.amount + optionSlice.amount),
         costPrice: row.costPrice,
-        costAmount: moneyString(sliced.costAmount),
+        costAmount: moneyString(sliced.costAmount + optionSlice.costAmount),
         replacementPrice: row.replacementPrice,
-        profit: moneyString(sliced.profit),
+        profit: moneyString(sliced.profit + optionSlice.profit),
         // A percentage of a slice is the percentage of the whole — nothing to
         // apportion.
         profitMargin: row.profitMargin,
-        profitReplPrice: moneyString(sliced.profitReplPrice),
+        profitReplPrice: moneyString(
+          sliced.profitReplPrice + optionSlice.profitReplPrice,
+        ),
         weightKg: sliced.weightKg.toFixed(2),
+        // And keeps the two halves apart, as the reference's revenue screens
+        // report them separately.
+        revenueProducts: moneyString(sliced.amount),
+        profitProducts: moneyString(sliced.profit),
+        revenueOptions: moneyString(optionSlice.amount),
+        profitOptions: moneyString(optionSlice.profit),
       });
 
       claims.push({
@@ -483,14 +542,14 @@ export const createInvoice = async (
     // reported only its surcharges as revenue, so the goods it billed showed as
     // nothing.
     const summary = computeQuoteSummary({
-      lines: billableLines.map((line) => ({
-        amount: Number(line.amount ?? 0),
-        costAmount: Number(line.costAmount ?? 0),
-        replacementCost:
-          Number(line.replacementPrice ?? 0) * Number(line.quantity ?? 0),
-        weightKg: Number(line.weightKg ?? 0),
-        theoreticalWeightKg: Number(line.weightKg ?? 0),
+      lines: billedParts.map(({ product }) => ({
+        amount: product.amount,
+        costAmount: product.costAmount,
+        replacementCost: product.replacementCost,
+        weightKg: product.weightKg,
+        theoreticalWeightKg: product.weightKg,
       })),
+      options: billedParts.map(({ option }) => option),
       surcharges: pricedSurcharges.map((surcharge) => ({
         amount: Number(surcharge.amount ?? 0),
         profit: Number(surcharge.profit ?? 0),

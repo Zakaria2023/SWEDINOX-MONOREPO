@@ -15,6 +15,7 @@ import {
   formatNumber,
   salesRepresentativeLabel,
 } from "@/lib/helpers";
+import { ORDER_SOURCE_TYPE_LABELS, ORDER_TYPE_LABELS } from "@/lib/labels";
 import { TableExportButton } from "@/components/ui/table-export-button";
 
 type Props = {
@@ -39,8 +40,10 @@ export const CustomerRevenuePerRevenueGroupSplitTable = ({ rows }: Props) => (
             <TableHead className="text-right">Debtor number</TableHead>
             <TableHead>Customer</TableHead>
             <TableHead>City</TableHead>
-            <TableHead className="text-right">Revenue group</TableHead>
-            <TableHead>Revenue group name</TableHead>
+            <TableHead className="text-right">Revenue group number</TableHead>
+            <TableHead>Revenue group</TableHead>
+            {/* Two different "order types": the line's source, then the order's. */}
+            <TableHead>Stk / CD</TableHead>
             <TableHead>Order type</TableHead>
             <TableHead className="text-right">Year</TableHead>
             <TableHead className="text-right">Month</TableHead>
@@ -58,7 +61,7 @@ export const CustomerRevenuePerRevenueGroupSplitTable = ({ rows }: Props) => (
           {rows.length === 0 ? (
             <TableRow>
               <TableCell
-                colSpan={18}
+                colSpan={19}
                 className="h-24 text-center text-muted-foreground"
               >
                 No customer revenue found.
@@ -72,7 +75,7 @@ export const CustomerRevenuePerRevenueGroupSplitTable = ({ rows }: Props) => (
                 </TableCell>
                 <TableCell>{customerGroupLabel(row.customerGroup)}</TableCell>
                 <TableCell className="text-right">
-                  {row.customerCode ?? "—"}
+                  {row.debtorNumber ?? "—"}
                 </TableCell>
                 <TableCell className="font-medium">
                   {row.customerName ?? "—"}
@@ -82,9 +85,14 @@ export const CustomerRevenuePerRevenueGroupSplitTable = ({ rows }: Props) => (
                   {row.revenueGroupNumber ?? "—"}
                 </TableCell>
                 <TableCell>{row.revenueGroupName ?? "—"}</TableCell>
-                <TableCell>{row.orderType}</TableCell>
-                <TableCell className="text-right">{row.year ?? "—"}</TableCell>
-                <TableCell className="text-right">{row.month ?? "—"}</TableCell>
+                <TableCell>
+                  {row.sourceType
+                    ? ORDER_SOURCE_TYPE_LABELS[row.sourceType]
+                    : "—"}
+                </TableCell>
+                <TableCell>{ORDER_TYPE_LABELS[row.orderType]}</TableCell>
+                <TableCell className="text-right">{row.year}</TableCell>
+                <TableCell className="text-right">{row.month}</TableCell>
                 <TableCell className="text-right whitespace-nowrap">
                   {formatMoney(row.revenue)}
                 </TableCell>
@@ -98,7 +106,9 @@ export const CustomerRevenuePerRevenueGroupSplitTable = ({ rows }: Props) => (
                   {formatNumber(row.weightKg)}
                 </TableCell>
                 <TableCell>{row.country ?? "—"}</TableCell>
-                <TableCell>{row.accountManager ?? "—"}</TableCell>
+                <TableCell>
+                  {salesRepresentativeLabel(row.accountManager)}
+                </TableCell>
                 <TableCell>{row.region ?? "—"}</TableCell>
                 <TableCell className="text-right">{row.invoiceLines}</TableCell>
               </TableRow>

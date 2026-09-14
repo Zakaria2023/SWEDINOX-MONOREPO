@@ -1213,6 +1213,10 @@ export const creditReturnOrder = async (
           // Margin reverses with the sale: the profit booked on the original
           // line is given back along with the revenue.
           profit: moneyString(amount - costAmount),
+          // A returned line gives back product revenue; its options stay with
+          // the original invoice line until a return names them.
+          revenueProducts: moneyString(amount),
+          profitProducts: moneyString(amount - costAmount),
           profitMargin: "0.00",
           profitReplPrice: moneyString(
             amount + line.replacementPrice * line.quantity,

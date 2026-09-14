@@ -32,19 +32,22 @@ export const CustomerRevenuePerRevenueGroupTable = ({ rows }: Props) => (
             <TableHead className="text-right">Debtor number</TableHead>
             <TableHead>Customer</TableHead>
             <TableHead>City</TableHead>
-            <TableHead className="text-right">Revenue group</TableHead>
-            <TableHead>Revenue group name</TableHead>
+            <TableHead className="text-right">Revenue group number</TableHead>
+            <TableHead>Revenue group</TableHead>
             <TableHead className="text-right">Year</TableHead>
             <TableHead className="text-right">Month</TableHead>
-            <TableHead className="text-right">Weight (kg)</TableHead>
             <TableHead className="text-right">Revenue</TableHead>
+            <TableHead className="text-right">Profit</TableHead>
+            <TableHead className="text-right">Profit margin</TableHead>
+            <TableHead className="text-right">Weight (kg)</TableHead>
+            <TableHead className="text-right">#Invoice lines</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {rows.length === 0 ? (
             <TableRow>
               <TableCell
-                colSpan={9}
+                colSpan={12}
                 className="h-24 text-center text-muted-foreground"
               >
                 No customer revenue found.
@@ -54,7 +57,7 @@ export const CustomerRevenuePerRevenueGroupTable = ({ rows }: Props) => (
             rows.map((row, index) => (
               <TableRow key={index}>
                 <TableCell className="text-right">
-                  {row.customerCode ?? "—"}
+                  {row.debtorNumber ?? "—"}
                 </TableCell>
                 <TableCell className="font-medium">
                   {row.customerName ?? "—"}
@@ -64,14 +67,22 @@ export const CustomerRevenuePerRevenueGroupTable = ({ rows }: Props) => (
                   {row.revenueGroupNumber ?? "—"}
                 </TableCell>
                 <TableCell>{row.revenueGroupName ?? "—"}</TableCell>
-                <TableCell className="text-right">{row.year ?? "—"}</TableCell>
-                <TableCell className="text-right">{row.month ?? "—"}</TableCell>
-                <TableCell className="text-right">
-                  {formatNumber(row.weightKg)}
-                </TableCell>
+                <TableCell className="text-right">{row.year}</TableCell>
+                <TableCell className="text-right">{row.month}</TableCell>
                 <TableCell className="text-right whitespace-nowrap">
                   {formatMoney(row.revenue)}
                 </TableCell>
+                <TableCell className="text-right whitespace-nowrap">
+                  {formatMoney(row.profit)}
+                </TableCell>
+                <TableCell className="text-right">
+                  {formatNumber(row.profitMargin)}%
+                </TableCell>
+                {/* Weight rides on product rows only; a charge row weighs nothing. */}
+                <TableCell className="text-right">
+                  {formatNumber(row.weightKg)}
+                </TableCell>
+                <TableCell className="text-right">{row.invoiceLines}</TableCell>
               </TableRow>
             ))
           )}

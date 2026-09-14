@@ -15,6 +15,7 @@ import {
   formatNumber,
   salesRepresentativeLabel,
 } from "@/lib/helpers";
+import { ORDER_SOURCE_TYPE_LABELS } from "@/lib/labels";
 import { TableExportButton } from "@/components/ui/table-export-button";
 
 type Props = {
@@ -40,8 +41,11 @@ export const CustomerRevenuePerProductGroupTable = ({ rows }: Props) => (
             <TableHead>Customer</TableHead>
             <TableHead>City</TableHead>
             <TableHead>Product group</TableHead>
+            <TableHead>Subgroup 1</TableHead>
+            <TableHead>Subgroup 2</TableHead>
             <TableHead className="text-right">Year</TableHead>
             <TableHead className="text-right">Month</TableHead>
+            <TableHead>Order type</TableHead>
             <TableHead className="text-right">Weight (kg)</TableHead>
             <TableHead className="text-right">Revenue</TableHead>
             <TableHead className="text-right">Profit</TableHead>
@@ -54,7 +58,7 @@ export const CustomerRevenuePerProductGroupTable = ({ rows }: Props) => (
           {rows.length === 0 ? (
             <TableRow>
               <TableCell
-                colSpan={14}
+                colSpan={17}
                 className="h-24 text-center text-muted-foreground"
               >
                 No customer revenue found.
@@ -68,15 +72,19 @@ export const CustomerRevenuePerProductGroupTable = ({ rows }: Props) => (
                 </TableCell>
                 <TableCell>{customerGroupLabel(row.customerGroup)}</TableCell>
                 <TableCell className="text-right">
-                  {row.customerCode ?? "—"}
+                  {row.debtorNumber ?? "—"}
                 </TableCell>
                 <TableCell className="font-medium">
                   {row.customerName ?? "—"}
                 </TableCell>
                 <TableCell>{row.city ?? "—"}</TableCell>
                 <TableCell>{row.productGroupName ?? "—"}</TableCell>
-                <TableCell className="text-right">{row.year ?? "—"}</TableCell>
-                <TableCell className="text-right">{row.month ?? "—"}</TableCell>
+                <TableCell>{row.subgroup1Name ?? "—"}</TableCell>
+                <TableCell>{row.subgroup2Name ?? "—"}</TableCell>
+                <TableCell className="text-right">{row.year}</TableCell>
+                <TableCell className="text-right">{row.month}</TableCell>
+                {/* The reference heads this `Order type`; it is Stk or CD. */}
+                <TableCell>{ORDER_SOURCE_TYPE_LABELS[row.sourceType]}</TableCell>
                 <TableCell className="text-right">
                   {formatNumber(row.weightKg)}
                 </TableCell>

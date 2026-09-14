@@ -13,6 +13,44 @@ import {
   Users,
   Warehouse,
 } from "lucide-react";
+import { InvoiceSurchargeDescription } from "./enums";
+
+/**
+ * The revenue group a charge line is reported under, by group number.
+ *
+ * In the reference's revenue-per-group screens a charge is a row of its own,
+ * under its own group — `Vrachtkosten` 8100, `Vrachtkosten extern` 8150,
+ * `Decoilen` 3000, `Prijsverschillen` 8600, and `Overige toeslagen` 8900 for the
+ * rest (C10, 18 855.71 exact against B4's surcharge lines). The number is looked
+ * up in `RevenueGroups` at query time.
+ */
+export const INVOICE_SURCHARGE_REVENUE_GROUP_NUMBERS: Record<
+  InvoiceSurchargeDescription,
+  number
+> = {
+  project_discount: 8900,
+  certificate_costs: 8900,
+  cutting_surcharge: 3020,
+  decoil_surcharge: 3000,
+  order_surcharge: 8900,
+  packaging_surcharge: 8900,
+  pallet_surcharge: 8900,
+  administration_costs: 8900,
+  transport_costs: 8100,
+  transport_costs_internal: 8100,
+  maut_costs: 8100,
+  return_costs: 8900,
+  import_costs: 8900,
+  costs: 8900,
+  other: 8900,
+  purchasing_rounding_differences: 8900,
+  credit_notes_to_be_received_third_party: 8900,
+  credit_notes_to_be_received: 8900,
+  eu_import_duties: 8900,
+  price_differences: 8600,
+  price_differences_eu_non_eu: 8600,
+  external_transport: 8150,
+};
 
 export const MONTHS = [
   "January",
