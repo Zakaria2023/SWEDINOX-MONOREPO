@@ -32,6 +32,7 @@ import {
   generateUuid,
   moneyString,
   NON_SELLABLE_LOCATION_TYPES,
+  nextInternalCharge,
   normaliseCharge,
   priceMeasureFor,
   PrintMedium,
@@ -1118,6 +1119,46 @@ const applyReceipt = async (
   const unitCost = quantity > 0 ? value / quantity : 0;
   const stockUuid = generateUuid();
 
+  // Every receipt gets an internal charge — the key a delivered sheet traces
+  // back by. A typed one wins (imported history, a label already on the
+  // bundle). Otherwise bundles unloaded on the same line share one, as the
+  // reference's 82 multi-row charges do, and a new line takes the next number.
+  const typedCharge = normaliseCharge(params.internalCharge);
+  const [sameReceipt] =
+    !typedCharge && params.warehouseWorkOrderLineUuid
+      ? await tx
+          .select({ internalCharge: Stock.internalCharge })
+          .from(StockMovements)
+          .innerJoin(Stock, eq(StockMovements.stockUuid, Stock.uuid))
+          .where(
+            and(
+              eq(
+                StockMovements.warehouseWorkOrderLineUuid,
+                params.warehouseWorkOrderLineUuid,
+              ),
+              eq(StockMovements.reason, "warehouse_receipt"),
+              sql`${Stock.internalCharge} IS NOT NULL`,
+            ),
+          )
+          .limit(1)
+      : [];
+  const year = new Date().getFullYear();
+  const [lastOfYear] =
+    typedCharge || sameReceipt?.internalCharge
+      ? []
+      : await tx
+          .select({
+            charge: sql<string | null>`MAX(${Stock.internalCharge})`,
+          })
+          .from(Stock)
+          .where(
+            sql`${Stock.internalCharge} REGEXP ${`^${String(year % 100).padStart(2, "0")}[A-Z]{4}$`}`,
+          );
+  const internalCharge =
+    typedCharge ??
+    sameReceipt?.internalCharge ??
+    nextInternalCharge(year, lastOfYear?.charge ?? null);
+
   await tx.insert(Stock).values({
     uuid: stockUuid,
     productUuid: params.productUuid,
@@ -1132,7 +1173,7 @@ const applyReceipt = async (
     // wrote "no heat number", and a lot must not end up traceable to a heat
     // called "ntv".
     charge: normaliseCharge(params.charge),
-    internalCharge: normaliseCharge(params.internalCharge),
+    internalCharge,
     internalBatch: params.internalBatch,
     receiptDate: todayDateString(),
     valuationPrice: unitCost.toFixed(4),

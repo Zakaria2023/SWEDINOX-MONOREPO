@@ -8,6 +8,11 @@ const CertificatesToBeLinkedPage = async () => {
   return (
     <div className="space-y-4">
       <PageHeading title="Certificates to be Linked" />
+      <p className="text-sm text-muted-foreground">
+        This list shows certificate messages received from suppliers through
+        an electronic certificate exchange, waiting to be linked to a batch.
+        No exchange is connected yet, so it stays empty.
+      </p>
       <CertificatesToBeLinkedTable rows={rows} />
     </div>
   );
