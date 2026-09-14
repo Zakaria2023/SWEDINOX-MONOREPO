@@ -10,7 +10,11 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
-import { buildColumnVisibility } from "@/lib/helpers";
+import {
+  buildColumnVisibility,
+  customerGroupLabel,
+  salesRepresentativeLabel,
+} from "@/lib/helpers";
 import { COMPANY_ROLE_LABELS } from "@/lib/labels";
 import { useState } from "react";
 import { TableExportButton } from "@/components/ui/table-export-button";
@@ -61,7 +65,7 @@ const ALL_COLUMNS: Array<{
     defaultVisible: false,
   },
   { key: "regionCode", label: "Region Code", defaultVisible: false },
-  { key: "region", label: "Region", defaultVisible: false },
+  { key: "region", label: "Region", defaultVisible: true },
 ];
 
 type Props = { rows: ContractPerCustomerRow[] };
@@ -104,9 +108,15 @@ export const ContractsPerCustomerTable = ({ rows }: Props) => {
       case "city":
         return <TableCell key={key}>{row.city ?? "—"}</TableCell>;
       case "representative":
-        return <TableCell key={key}>—</TableCell>;
+        return (
+          <TableCell key={key}>
+            {salesRepresentativeLabel(row.representative)}
+          </TableCell>
+        );
       case "customerGroup":
-        return <TableCell key={key}>—</TableCell>;
+        return (
+          <TableCell key={key}>{customerGroupLabel(row.customerGroup)}</TableCell>
+        );
       case "code":
         return (
           <TableCell key={key} className="font-mono font-medium">
@@ -120,9 +130,9 @@ export const ContractsPerCustomerTable = ({ rows }: Props) => {
       case "priceDate":
         return <TableCell key={key}>{row.priceDate ?? "—"}</TableCell>;
       case "startingDate":
-        return <TableCell key={key}>—</TableCell>;
+        return <TableCell key={key}>{row.startingDate ?? "—"}</TableCell>;
       case "endDate":
-        return <TableCell key={key}>—</TableCell>;
+        return <TableCell key={key}>{row.endDate ?? "—"}</TableCell>;
       case "preference":
         return (
           <TableCell key={key} className="text-right">
@@ -146,7 +156,7 @@ export const ContractsPerCustomerTable = ({ rows }: Props) => {
       case "regionCode":
         return <TableCell key={key}>—</TableCell>;
       case "region":
-        return <TableCell key={key}>—</TableCell>;
+        return <TableCell key={key}>{row.region ?? "—"}</TableCell>;
     }
   };
 

@@ -44,7 +44,11 @@ export const updateCompanyRoles = async (
   const { companyUuid, ...values } = payload;
   const parsed = companyRolesSchema.safeParse(values);
   if (!parsed.success) {
-    return { error: "Invalid roles — select at least one role and try again" };
+    return {
+      error:
+        parsed.error.issues[0]?.message ??
+        "Invalid roles — select at least one role and try again",
+    };
   }
 
   try {

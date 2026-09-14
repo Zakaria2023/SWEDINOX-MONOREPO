@@ -90,7 +90,19 @@ export const createAddressSchema = () =>
     maxLength: z.string().optional(),
     maxBundleWeight: z.string().optional(),
     loadingInstructions: z.string().optional(),
-  });
+  })
+  // You cannot visit, bill or deliver to a post box: 744 of the reference's
+  // 745 PO box addresses are correspondence and nothing else.
+  .refine(
+    (address) =>
+      !address.poBox ||
+      (address.category.length === 1 &&
+        address.category[0] === "correspondence"),
+    {
+      message: "A PO box can only be a correspondence address",
+      path: ["category"],
+    },
+  );
 
 export const DEFAULT_ADDRESS: CompanyFormValues["address"] = {
   category: [],
@@ -130,7 +142,14 @@ export const createCompanySchema = () =>
     correspName: z.string().optional(),
     remarks: z.string().optional(),
     lang: z.union([z.enum(companyLangs), z.literal(""), z.undefined()]),
-    roles: z.array(z.enum(companyRoles)).min(1, "Select at least one role"),
+    // Customer and prospect exclude each other (6 796 of 6 796 rows, C3).
+    roles: z
+      .array(z.enum(companyRoles))
+      .min(1, "Select at least one role")
+      .refine(
+        (roles) => !(roles.includes("customer") && roles.includes("prospect")),
+        "A company is either a customer or a prospect, not both",
+      ),
     searchCode1: z.string().optional(),
     searchCode2: z.string().optional(),
     searchCode3: z.string().optional(),
@@ -276,12 +295,6 @@ export const contactDialogSchema = z.object({
   website: z.string().optional(),
   categories: z.array(z.string()),
   sequenceNumber: z.number().int().min(1),
-  purchaser: z.string().optional(),
-  searchCode1: z.string().optional(),
-  searchCode2: z.string().optional(),
-  searchCode3: z.string().optional(),
-  revenueLastYear: z.string().optional(),
-  revenueThisYear: z.string().optional(),
 });
 
 export type ContactDialogValues = z.infer<typeof contactDialogSchema>;
@@ -314,12 +327,6 @@ export const DEFAULT_CONTACT: ContactDialogValues = {
   website: "",
   categories: [],
   sequenceNumber: 1,
-  purchaser: "",
-  searchCode1: "",
-  searchCode2: "",
-  searchCode3: "",
-  revenueLastYear: "",
-  revenueThisYear: "",
 };
 
 // ── Text Dialog ──────────────────────────────────────────────────────────────

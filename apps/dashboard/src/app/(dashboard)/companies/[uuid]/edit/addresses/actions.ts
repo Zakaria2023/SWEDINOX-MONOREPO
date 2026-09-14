@@ -26,7 +26,15 @@ import {
 } from "@/lib/helpers";
 import { and, asc, count, eq, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { ADDRESS_CATEGORY_LABELS } from "@/lib/labels";
+import { AddressCategory } from "@/lib/enums";
 import { addressValuesToColumns } from "./mappers";
+
+const ADDRESS_ROLES_ONE_PER_COMPANY: AddressCategory[] = [
+  "visit",
+  "correspondence",
+  "invoice",
+];
 
 export type SaveAddressPayload = {
   companyUuid: string;
@@ -61,10 +69,40 @@ export const saveCompanyAddress = async (
 ): Promise<CompanyActionResult> => {
   const parsed = createAddressSchema().safeParse(payload.values);
   if (!parsed.success) {
-    return { error: "Invalid address data — check the fields and try again" };
+    return {
+      error:
+        parsed.error.issues[0]?.message ??
+        "Invalid address data — check the fields and try again",
+    };
   }
 
   try {
+    // A company has one visiting address, one correspondence address and at
+    // most one invoice address — on 3 414 of 3 414 companies in the reference.
+    // Delivery addresses are unlimited. Checked against the company's other
+    // addresses, so moving a role means taking it off the old row first.
+    const others = await db
+      .select({
+        uuid: CompanyAddresses.uuid,
+        category: CompanyAddresses.category,
+      })
+      .from(CompanyAddresses)
+      .where(eq(CompanyAddresses.companyUuid, payload.companyUuid));
+
+    const taken = ADDRESS_ROLES_ONE_PER_COMPANY.find(
+      (role) =>
+        parsed.data.category.includes(role) &&
+        others.some(
+          (other) =>
+            other.uuid !== payload.addressUuid && other.category.includes(role),
+        ),
+    );
+    if (taken) {
+      return {
+        error: `This company already has ${ADDRESS_CATEGORY_LABELS[taken].toLowerCase()} address — a company has only one`,
+      };
+    }
+
     const columns = addressValuesToColumns(parsed.data);
 
     if (payload.addressUuid) {

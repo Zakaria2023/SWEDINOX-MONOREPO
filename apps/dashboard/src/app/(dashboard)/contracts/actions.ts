@@ -45,6 +45,7 @@ import {
   getTableColumns,
   inArray,
   isNotNull,
+  sql,
 } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -73,9 +74,12 @@ export type ContractListItem = SelectContracts & {
 
 export type ContractPerCustomerRow = Pick<
   SelectContracts,
-  "role" | "code" | "description" | "priceDate"
+  "role" | "code" | "description" | "priceDate" | "startingDate" | "endDate"
 > &
-  Pick<SelectCompanies, "id" | "companyName"> & {
+  Pick<
+    SelectCompanies,
+    "id" | "companyName" | "representative" | "customerGroup" | "region"
+  > & {
     city: SelectCompanyAddresses["city"] | null;
     contractGroupName: SelectContractGroups["name"] | null;
   };
@@ -218,26 +222,53 @@ export const getContracts = async (
   });
 };
 
+// The city a contract list prints is the company's visiting address — one per
+// company in the reference. Joining every address instead repeated each
+// contract once per address a company had.
+const visitingCity = () => {
+  const visitingId = db
+    .select({
+      companyUuid: CompanyAddresses.companyUuid,
+      minId: sql<number>`MIN(${CompanyAddresses.id})`.as("min_id"),
+    })
+    .from(CompanyAddresses)
+    .where(sql`JSON_CONTAINS(${CompanyAddresses.category}, '"visit"')`)
+    .groupBy(CompanyAddresses.companyUuid)
+    .as("visiting_id");
+
+  return db
+    .select({
+      companyUuid: CompanyAddresses.companyUuid,
+      city: CompanyAddresses.city,
+    })
+    .from(CompanyAddresses)
+    .innerJoin(visitingId, eq(CompanyAddresses.id, visitingId.minId))
+    .as("visiting");
+};
+
 export const getContractsPerCustomer = async (): Promise<
   ContractPerCustomerRow[]
-> =>
-  db
+> => {
+  const visiting = visitingCity();
+  const rows = await db
     .select({
       role: Contracts.role,
       id: Companies.id,
       companyName: Companies.companyName,
-      city: CompanyAddresses.city,
+      representative: Companies.representative,
+      customerGroup: Companies.customerGroup,
+      region: Companies.region,
+      city: visiting.city,
       code: Contracts.code,
       description: Contracts.description,
       contractGroupName: ContractGroups.name,
       priceDate: Contracts.priceDate,
+      startingDate: Contracts.startingDate,
+      endDate: Contracts.endDate,
     })
     .from(Contracts)
     .innerJoin(Companies, eq(Companies.uuid, Contracts.companyUuid))
-    .leftJoin(
-      CompanyAddresses,
-      eq(CompanyAddresses.companyUuid, Companies.uuid),
-    )
+    .leftJoin(visiting, eq(visiting.companyUuid, Companies.uuid))
     .leftJoin(
       ContractGroups,
       eq(ContractGroups.uuid, Contracts.contractGroupUuid),
@@ -248,15 +279,18 @@ export const getContractsPerCustomer = async (): Promise<
         isNotNull(Contracts.companyUuid),
       ),
     );
+  return rows.map((row) => ({ ...row, city: row.city ?? null }));
+};
 
 export const getContractsPerSupplier = async (): Promise<
   ContractPerSupplierRow[]
-> =>
-  db
+> => {
+  const visiting = visitingCity();
+  const rows = await db
     .select({
       id: Companies.id,
       companyName: Companies.companyName,
-      city: CompanyAddresses.city,
+      city: visiting.city,
       code: Contracts.code,
       description: Contracts.description,
       contractGroupName: ContractGroups.name,
@@ -265,10 +299,7 @@ export const getContractsPerSupplier = async (): Promise<
     })
     .from(Contracts)
     .innerJoin(Companies, eq(Companies.uuid, Contracts.companyUuid))
-    .leftJoin(
-      CompanyAddresses,
-      eq(CompanyAddresses.companyUuid, Companies.uuid),
-    )
+    .leftJoin(visiting, eq(visiting.companyUuid, Companies.uuid))
     .leftJoin(
       ContractGroups,
       eq(ContractGroups.uuid, Contracts.contractGroupUuid),
@@ -276,6 +307,8 @@ export const getContractsPerSupplier = async (): Promise<
     .where(
       and(eq(Contracts.role, "supplier"), isNotNull(Contracts.companyUuid)),
     );
+  return rows.map((row) => ({ ...row, city: row.city ?? null }));
+};
 
 // A contract as its own screen reads it: the header, who it is with, and the
 // agreed net prices that make it worth having.
