@@ -6,6 +6,7 @@ import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { CompanyAddresses } from "@/db/schema/company-addresses";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
 import { Contracts, SelectContracts } from "@/db/schema/contracts";
+import { OrderItemOptions } from "@/db/schema/order-item-options";
 import { OrderItems, SelectOrderItems } from "@/db/schema/order-items";
 import {
   InsertOrders,
@@ -267,8 +268,14 @@ export const buildOrderSummary = async (
   orderUuid: string,
   companyUuid: string,
 ) => {
-  const [lines, surcharges, [company]] = await Promise.all([
+  const [lines, options, surcharges, [company]] = await Promise.all([
     tx.select().from(OrderItems).where(eq(OrderItems.orderUuid, orderUuid)),
+    // The options charged on the order's lines are revenue of the order too —
+    // they are billed with the lines they ride on.
+    tx
+      .select({ amount: OrderItemOptions.amount, cost: OrderItemOptions.cost })
+      .from(OrderItemOptions)
+      .where(eq(OrderItemOptions.orderUuid, orderUuid)),
     tx
       .select()
       .from(OrderSurcharges)
@@ -288,6 +295,10 @@ export const buildOrderSummary = async (
         Number(line.replacementPrice ?? 0) * Number(line.quantity ?? 0),
       weightKg: Number(line.kgPlanned ?? 0),
       theoreticalWeightKg: Number(line.kgPlanned ?? 0),
+    })),
+    options: options.map((option) => ({
+      amount: Number(option.amount ?? 0),
+      cost: Number(option.cost ?? 0),
     })),
     surcharges: surcharges.map((surcharge) => ({
       amount: Number(surcharge.amount ?? 0),
@@ -586,8 +597,8 @@ export const createOrder = async (
       // already marked blocked stays blocked whatever the arithmetic says.
       const credit = await checkCredit(tx, {
         companyUuid: fields.companyUuid,
-        orderAmount: Number(summary.totalInclVat),
-        paymentTerms: fields.paymentTerms,
+        // Excl. VAT, like everything else the rule weighs.
+        orderAmount: Number(summary.totalExclVat),
         // This order's lines are already written, so they are excluded from
         // the committed total and counted once as orderAmount.
         excludeOrderUuid: uuid,

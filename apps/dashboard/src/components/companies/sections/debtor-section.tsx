@@ -188,8 +188,8 @@ export const DebtorSection = ({
           </FormLabel>
           <Input
             id="creditLimitInsurance"
-            type="number"
-            step="0.01"
+            maxLength={50}
+            placeholder="Policy number"
             {...register("creditLimitInsurance")}
             disabled={isPending}
           />

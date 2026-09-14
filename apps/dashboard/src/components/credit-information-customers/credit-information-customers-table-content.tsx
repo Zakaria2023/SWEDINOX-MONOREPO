@@ -87,8 +87,8 @@ export const CreditInformationCustomersTable = ({ rows }: Props) => (
                 <TableCell className="text-right whitespace-nowrap">
                   {formatMoney(row.creditLimitUninsured)}
                 </TableCell>
-                <TableCell className="text-right whitespace-nowrap">
-                  {formatMoney(row.creditInsurance)}
+                <TableCell className="whitespace-nowrap">
+                  {row.creditInsurance || "—"}
                 </TableCell>
                 <TableCell className="whitespace-nowrap">
                   {formatDateValue(row.creditInsuranceDate)}

@@ -160,6 +160,10 @@ export const Companies = mysqlTable(
       .default([]),
 
     // Debtor fields
+    // The ledger's account number for this customer — not the company code.
+    // Mercainox is company 12368 and debtor 10059; the reference's credit,
+    // unblock and revenue-per-group screens key by this one.
+    debtorNumber: varchar("debtor_number", { length: 20 }).unique(),
     debtorCompanyUuid: char("debtor_company_uuid", { length: 36 }),
     iban: varchar("iban", { length: 34 }),
     bic: varchar("bic", { length: 11 }),
@@ -175,10 +179,10 @@ export const Companies = mysqlTable(
       false,
     ),
     insuranceValidUntil: date("insurance_valid_until"),
-    creditLimitInsurance: decimal("credit_limit_insurance", {
-      precision: 15,
-      scale: 2,
-    }),
+    // The credit insurer's policy number, not an amount — `0016184861` on the
+    // reference's Debtor panel, leading zeros and all. `insuranceValidUntil`
+    // is its end date.
+    creditLimitInsurance: varchar("credit_limit_insurance", { length: 50 }),
     creditLimit: decimal("credit_limit", { precision: 15, scale: 2 }),
     creditLimitUninsured: decimal("credit_limit_uninsured", {
       precision: 15,

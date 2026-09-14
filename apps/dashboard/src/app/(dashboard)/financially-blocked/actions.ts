@@ -23,10 +23,12 @@ export type UnblockOrderResult = { success?: boolean; error?: string };
 
 export type FinanciallyBlockedRow = {
   kind: "Order" | "Quote";
+  /** Unique per row: an order appears once per planned delivery date. */
+  key: string;
   uuid: string;
   code: SelectOrders["ourReference"];
   debtor: SelectCompanies["companyName"];
-  debtorNumber: SelectCompanies["id"];
+  debtorNumber: SelectCompanies["debtorNumber"];
   deliveryDate: SelectOrders["deliveryDate"];
   blockingReason: SelectOrders["blockingReason"];
   paymentTerms: SelectOrders["paymentTerms"];
@@ -83,14 +85,23 @@ export const getFinanciallyBlocked = async (): Promise<
       getCommittedOrderValueByCompany(db),
     ]);
 
+    // One row per order per planned delivery date. The reference's queue is
+    // worked by delivery: `O102167` and `O102168` each appear twice, with
+    // `Delivery date 1st delivery` 26-6-2026 and 14-8-2026 — the same order,
+    // held once per delivery. A line with no date of its own falls back to the
+    // order's.
+    const lineDeliveryDate = sql<
+      SelectOrders["deliveryDate"]
+    >`COALESCE(${OrderItems.deliveryDate}, ${Orders.deliveryDate})`;
+
     const orderRows = await db
       .select({
         uuid: Orders.uuid,
         companyUuid: Orders.companyUuid,
         code: Orders.ourReference,
         debtor: Companies.companyName,
-        debtorNumber: Companies.id,
-        deliveryDate: Orders.deliveryDate,
+        debtorNumber: Companies.debtorNumber,
+        deliveryDate: lineDeliveryDate,
         blockingReason: Orders.blockingReason,
         paymentTerms: Orders.paymentTerms,
         creditLimit: Companies.creditLimit,
@@ -108,8 +119,8 @@ export const getFinanciallyBlocked = async (): Promise<
         Orders.companyUuid,
         Orders.ourReference,
         Companies.companyName,
-        Companies.id,
-        Orders.deliveryDate,
+        Companies.debtorNumber,
+        lineDeliveryDate,
         Orders.blockingReason,
         Orders.paymentTerms,
         Companies.creditLimit,
@@ -124,7 +135,7 @@ export const getFinanciallyBlocked = async (): Promise<
         companyUuid: Quotes.companyUuid,
         code: Quotes.ourReference,
         debtor: Companies.companyName,
-        debtorNumber: Companies.id,
+        debtorNumber: Companies.debtorNumber,
         deliveryDate: Quotes.deliveryDate,
         blockingReason: Quotes.blockingReason,
         paymentTerms: Quotes.paymentTerms,
@@ -145,7 +156,7 @@ export const getFinanciallyBlocked = async (): Promise<
         companyUuid: string;
         code: SelectOrders["ourReference"] | SelectQuotes["ourReference"];
         debtor: SelectCompanies["companyName"];
-        debtorNumber: SelectCompanies["id"];
+        debtorNumber: SelectCompanies["debtorNumber"];
         deliveryDate: SelectOrders["deliveryDate"];
         blockingReason: SelectOrders["blockingReason"];
         paymentTerms: SelectOrders["paymentTerms"];
@@ -168,6 +179,7 @@ export const getFinanciallyBlocked = async (): Promise<
       );
       return {
         kind,
+        key: `${kind}-${row.uuid}-${row.deliveryDate ?? ""}`,
         uuid: row.uuid,
         code: row.code,
         debtor: row.debtor,

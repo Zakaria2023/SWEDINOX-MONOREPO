@@ -2,6 +2,7 @@
 
 import { db } from "@/db";
 import { JournalEntries } from "@/db/schema/journal-entries";
+import { OrderDeblocks } from "@/db/schema/order-deblocks";
 import { OrderItems, SelectOrderItems } from "@/db/schema/order-items";
 import { Orders, SelectOrders } from "@/db/schema/orders";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
@@ -17,6 +18,7 @@ import {
   restateLotValue,
   todayDateString,
 } from "@/lib/helpers";
+import { checkCredit } from "@/lib/server/credit-control";
 import { recordFreightMovement } from "@/lib/server/freight";
 import {
   buildInventoryMovementEntry,
@@ -88,6 +90,63 @@ export const getBlockedDeliveries = async (): Promise<DeliveryLineItem[]> => {
   }
 };
 
+/**
+ * Release an order's commercial block — every line of the order at once — and
+ * record it as a `commercial` release in the audit trail.
+ *
+ * The reference's `Unblocked orders` has two release types and this is the
+ * second: 27 `Commerciële deblokkering` against 544 financial. They are done by
+ * different people (15 of the 27 by one commercial manager) and take days, not
+ * the hour a financial release takes — a margin or price review. A release is
+ * per order there, so it is per order here.
+ */
+export const releaseCommercialBlock = async (
+  orderUuid: string,
+): Promise<DeliveryActionResult> => {
+  try {
+    const user = await currentUser();
+    if (!user?.id) {
+      return { error: "User not authenticated" };
+    }
+    const userId = user.id;
+
+    await db.transaction(async (tx) => {
+      const [update] = await tx
+        .update(OrderItems)
+        .set({ commercialBlock: false })
+        .where(
+          and(
+            eq(OrderItems.orderUuid, orderUuid),
+            eq(OrderItems.commercialBlock, true),
+          ),
+        );
+
+      if (update.affectedRows === 0) {
+        throw new Error("This order has no commercially blocked lines.");
+      }
+
+      await tx.insert(OrderDeblocks).values({
+        uuid: generateUuid(),
+        orderUuid,
+        deblockType: "commercial",
+        deblockedByUserId: userId,
+      });
+    });
+
+    revalidatePath("/blocked-deliveries");
+    revalidatePath("/unblocked-orders");
+    revalidatePath("/deliveries");
+    return { success: true };
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to release the commercial block",
+    };
+  }
+};
+
 // Deliver a reserved order line: this is where stock physically leaves the
 // warehouse. It consumes the reserved stock and writes the "out" movement, so
 // invoicing afterwards is purely financial. Cancelling the invoice does NOT
@@ -154,6 +213,42 @@ export const deliverOrderItem = async (
           ? `This order is financially blocked — ${order.blockingReason}. Release it on the Financially Blocked overview before delivering.`
           : "This order is financially blocked. Release it on the Financially Blocked overview before delivering.",
       };
+    }
+
+    // The credit rule is not only an order-entry test. In the reference 3 of
+    // the 29 orders held on 14-9-2026 had been released before and were held
+    // again, and 78 of 451 orders were released more than once: invoices go
+    // overdue and limits fill up after an order is taken. So the rule runs
+    // again before goods leave.
+    //
+    // A release is respected. Someone with the authority looked at this order
+    // and let it go; holding it again at the very next step would make the
+    // release worthless, and our orders cannot be re-priced after entry, so
+    // nothing about the order itself can have changed since.
+    if (order) {
+      const [released] = await db
+        .select({ uuid: OrderDeblocks.uuid })
+        .from(OrderDeblocks)
+        .where(eq(OrderDeblocks.orderUuid, orderItem.orderUuid))
+        .limit(1);
+
+      if (!released) {
+        const credit = await checkCredit(db, {
+          companyUuid: order.companyUuid,
+          orderAmount: 0,
+          // Its own lines are already committed, so they count once, there.
+        });
+        if (credit.blocked) {
+          await db
+            .update(Orders)
+            .set({ financialBlockage: true, blockingReason: credit.reason })
+            .where(eq(Orders.uuid, orderItem.orderUuid));
+          revalidatePath("/financially-blocked");
+          return {
+            error: `This order is now financially blocked — ${credit.reason}. Release it on the Financially Blocked overview before delivering.`,
+          };
+        }
+      }
     }
 
     const user = await currentUser();

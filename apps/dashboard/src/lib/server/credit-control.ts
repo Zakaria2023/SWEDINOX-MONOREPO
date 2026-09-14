@@ -5,11 +5,9 @@ import { Companies } from "@/db/schema/companies";
 import { Invoices } from "@/db/schema/invoices";
 import { OrderItems } from "@/db/schema/order-items";
 import { Orders } from "@/db/schema/orders";
-import { InvoicePaymentTerm } from "@/lib/enums";
 import {
   assessCredit,
   CreditAssessment,
-  grossUpCommittedOrderValue,
   orderBlockingPolicy,
 } from "@/lib/helpers";
 import { and, eq, inArray, isNotNull, ne, sql } from "drizzle-orm";
@@ -18,9 +16,8 @@ type CreditQuery = Pick<typeof db, "select">;
 
 export type CreditCheckInput = {
   companyUuid: string;
-  /** Gross value of the order being placed. */
+  /** The order being placed, excluding VAT. */
   orderAmount: number;
-  paymentTerms: InvoicePaymentTerm | null | undefined;
   /**
    * The order being assessed. Its lines are already written when the check
    * runs, so they are left out of the committed total and counted once, as
@@ -30,7 +27,24 @@ export type CreditCheckInput = {
 };
 
 /**
- * What a debtor still owes us.
+ * An invoice's outstanding amount with its VAT taken out.
+ *
+ * `Invoices.outstanding` carries VAT, and the credit rule is excl. VAT (see
+ * `assessCredit`). The share still open is assumed to carry VAT in the same
+ * proportion as the invoice, so it is scaled by excl ÷ incl. An invoice with no
+ * incl. total recorded is taken as it stands.
+ */
+const netOutstanding = sql<string>`COALESCE(SUM(
+  CASE
+    WHEN ${Invoices.invoiceAmountInclVat} <> 0
+      THEN ${Invoices.outstanding} * ${Invoices.invoiceAmountExclVat} /
+           ${Invoices.invoiceAmountInclVat}
+    ELSE ${Invoices.outstanding}
+  END
+), 0)`;
+
+/**
+ * What a debtor still owes us, excluding VAT.
  *
  * Cancelled invoices are excluded. A cancelled invoice is void — the customer
  * owes nothing on it — so counting it would hold orders against money that was
@@ -42,7 +56,7 @@ export const getOpenReceivables = async (
 ): Promise<number> => {
   const [row] = await tx
     .select({
-      outstanding: sql<string>`COALESCE(SUM(${Invoices.outstanding}), 0)`,
+      outstanding: netOutstanding,
     })
     .from(Invoices)
     .where(
@@ -85,6 +99,31 @@ export const getOldestOpenDueDate = async (
   return row?.oldestDueDate ?? null;
 };
 
+/**
+ * The invoice date of the oldest invoice this debtor still owes money on — the
+ * reference Debtor panel's `Oldest invoice date open entrees`, beside the
+ * oldest due date.
+ */
+export const getOldestOpenInvoiceDate = async (
+  tx: CreditQuery,
+  companyUuid: string,
+): Promise<string | null> => {
+  const [row] = await tx
+    .select({
+      oldestInvoiceDate: sql<string | null>`MIN(${Invoices.invoiceDate})`,
+    })
+    .from(Invoices)
+    .where(
+      and(
+        eq(Invoices.companyUuid, companyUuid),
+        eq(Invoices.cancelled, false),
+        sql`${Invoices.outstanding} > 0`,
+      ),
+    );
+
+  return row?.oldestInvoiceDate ?? null;
+};
+
 /** Open receivables for every debtor at once, for the overview queries. */
 export const getOpenReceivablesByCompany = async (
   tx: CreditQuery,
@@ -92,7 +131,7 @@ export const getOpenReceivablesByCompany = async (
   const rows = await tx
     .select({
       companyUuid: Invoices.companyUuid,
-      outstanding: sql<string>`COALESCE(SUM(${Invoices.outstanding}), 0)`,
+      outstanding: netOutstanding,
     })
     .from(Invoices)
     .where(and(isNotNull(Invoices.companyUuid), eq(Invoices.cancelled, false)))
@@ -132,8 +171,8 @@ const uninvoicedLineAmount = sql<string>`COALESCE(SUM(
  * never become receivables at all. A part-billed line stays at "delivered" and
  * contributes only its unbilled share.
  *
- * Line amounts are stored net and are grossed up here, because the receivables
- * they are added to are gross — see `grossUpCommittedOrderValue`.
+ * Line amounts are stored excl. VAT, which is what the credit rule weighs, so
+ * they are summed as they stand.
  *
  * `excludeOrderUuid` leaves out the order being assessed, whose lines are
  * already written by the time the credit check runs.
@@ -144,26 +183,18 @@ export const getCommittedOrderValue = async (
   excludeOrderUuid?: string,
 ): Promise<number> => {
   const [row] = await tx
-    .select({
-      amount: uninvoicedLineAmount,
-      calculateVat: Companies.calculateVat,
-    })
+    .select({ amount: uninvoicedLineAmount })
     .from(OrderItems)
     .innerJoin(Orders, eq(OrderItems.orderUuid, Orders.uuid))
-    .innerJoin(Companies, eq(Orders.companyUuid, Companies.uuid))
     .where(
       and(
         eq(Orders.companyUuid, companyUuid),
         inArray(OrderItems.status, ["reserved", "delivered"]),
         excludeOrderUuid ? ne(Orders.uuid, excludeOrderUuid) : undefined,
       ),
-    )
-    .groupBy(Companies.calculateVat);
+    );
 
-  return grossUpCommittedOrderValue(
-    Number(row?.amount ?? 0),
-    row?.calculateVat,
-  );
+  return Number(row?.amount ?? 0);
 };
 
 /** Committed order value for every customer at once, for the overviews. */
@@ -174,19 +205,14 @@ export const getCommittedOrderValueByCompany = async (
     .select({
       companyUuid: Orders.companyUuid,
       amount: uninvoicedLineAmount,
-      calculateVat: Companies.calculateVat,
     })
     .from(OrderItems)
     .innerJoin(Orders, eq(OrderItems.orderUuid, Orders.uuid))
-    .innerJoin(Companies, eq(Orders.companyUuid, Companies.uuid))
     .where(inArray(OrderItems.status, ["reserved", "delivered"]))
-    .groupBy(Orders.companyUuid, Companies.calculateVat);
+    .groupBy(Orders.companyUuid);
 
   return new Map(
-    rows.map((row) => [
-      row.companyUuid,
-      grossUpCommittedOrderValue(Number(row.amount), row.calculateVat),
-    ]),
+    rows.map((row) => [row.companyUuid, Number(row.amount)]),
   );
 };
 
@@ -197,12 +223,7 @@ export const getCommittedOrderValueByCompany = async (
  */
 export const checkCredit = async (
   tx: CreditQuery,
-  {
-    companyUuid,
-    orderAmount,
-    paymentTerms,
-    excludeOrderUuid,
-  }: CreditCheckInput,
+  { companyUuid, orderAmount, excludeOrderUuid }: CreditCheckInput,
 ): Promise<CreditAssessment> => {
   const [company] = await tx
     .select({
@@ -238,7 +259,6 @@ export const checkCredit = async (
     openReceivables,
     committedOrders,
     orderAmount,
-    paymentTerms,
     companyBlocked: !!company?.blockedByUserId,
     financialBlockingWaived: orderBlockingPolicy(company?.orderSettings)
       .financialBlockingWaived,

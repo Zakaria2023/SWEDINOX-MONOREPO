@@ -26,6 +26,7 @@ import {
   sortLotsForDispatch,
 } from "@/lib/helpers";
 import { buildOrderSummary } from "@/app/(dashboard)/orders/actions";
+import { checkCredit } from "@/lib/server/credit-control";
 import {
   and,
   asc,
@@ -473,9 +474,23 @@ export const convertQuoteToOrder = async (
         .set({ convertedToOrderUuid: orderUuid, status: "released" })
         .where(eq(QuoteItems.quoteUuid, quoteUuid));
 
+      const summary = await buildOrderSummary(tx, orderUuid, quote.companyUuid);
+
+      // A converted quote is a new order and meets the same credit rule as one
+      // typed by hand — see `createOrder`.
+      const credit = await checkCredit(tx, {
+        companyUuid: quote.companyUuid,
+        orderAmount: Number(summary.totalExclVat),
+        excludeOrderUuid: orderUuid,
+      });
+
       await tx
         .update(Orders)
-        .set(await buildOrderSummary(tx, orderUuid, quote.companyUuid))
+        .set({
+          ...summary,
+          ...(credit.reason ? { blockingReason: credit.reason } : {}),
+          ...(credit.blocked ? { financialBlockage: true } : {}),
+        })
         .where(eq(Orders.uuid, orderUuid));
     });
 

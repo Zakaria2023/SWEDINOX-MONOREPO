@@ -63,9 +63,20 @@ import {
 } from "@/db/schema/customer-stock";
 import { sendCompanyWelcomeEmails } from "@/emails/actions";
 import { PurchaseCompanyType } from "@/lib/enums";
-import { describeError, generateUuid } from "@/lib/helpers";
+import {
+  describeError,
+  effectiveCreditLimit,
+  generateUuid,
+  todayDateString,
+} from "@/lib/helpers";
+import {
+  getCommittedOrderValue,
+  getOldestOpenDueDate,
+  getOldestOpenInvoiceDate,
+  getOpenReceivables,
+} from "@/lib/server/credit-control";
 import { currentUser } from "@clerk/nextjs/server";
-import { asc, desc, eq, inArray, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 export type CompanyOption = Pick<
@@ -218,7 +229,20 @@ export type CompanyActionResult = {
   success?: boolean;
 };
 
+// The reference's Debtor panel summary: the total limit, the credit space, and
+// what they are measured from — all excl. VAT, through the same helpers the
+// blocking rule uses so the page can never disagree with a hold.
+export type CompanyCreditStanding = {
+  totalCreditLimit: number;
+  openReceivables: number;
+  committedOrders: number;
+  creditSpace: number;
+  oldestOpenInvoiceDate: string | null;
+  oldestOpenDueDate: string | null;
+};
+
 export type CompanyDetail = SelectCompanies & {
+  creditStanding: CompanyCreditStanding;
   addresses: SelectCompanyAddresses[];
   counterOrders: SelectCounterOrders[];
   visitReports: SelectVisitReports[];
@@ -355,8 +379,24 @@ export const getCompanyDetail = async (
         .limit(1)
     : [];
 
+  const openReceivables = await getOpenReceivables(db, uuid);
+  const committedOrders = await getCommittedOrderValue(db, uuid);
+  const totalCreditLimit = effectiveCreditLimit(
+    Number(company.creditLimit ?? 0),
+    Number(company.creditLimitUninsured ?? 0),
+    company.creditLimitUninsuredDate ?? null,
+  );
+
   return {
     ...company,
+    creditStanding: {
+      totalCreditLimit,
+      openReceivables,
+      committedOrders,
+      creditSpace: totalCreditLimit - openReceivables - committedOrders,
+      oldestOpenInvoiceDate: await getOldestOpenInvoiceDate(db, uuid),
+      oldestOpenDueDate: await getOldestOpenDueDate(db, uuid),
+    },
     addresses,
     counterOrders,
     visitReports,
@@ -558,6 +598,46 @@ export const createCompany = async (
           uuid: generateUuid(),
           companyUuid: uuid,
         });
+      }
+
+      // `Link to new customer` copies a contract onto every customer or
+      // prospect created after it. In the reference the two charge contracts
+      // sit on 82 new companies, each pair with the company's creation day as
+      // its starting date. The template is the contract that belongs to no
+      // company; one the form already attached is not copied twice.
+      const roles = companyFields.roles ?? [];
+      if (roles.includes("customer") || roles.includes("prospect")) {
+        const attachedCodes = new Set(contracts.map((contract) => contract.code));
+        const templates = await tx
+          .select()
+          .from(Contracts)
+          .where(
+            and(
+              eq(Contracts.linkToNewCustomer, true),
+              isNull(Contracts.companyUuid),
+            ),
+          );
+        const role = roles.includes("customer") ? "customer" : "prospect";
+        for (const template of templates) {
+          if (attachedCodes.has(template.code)) {
+            continue;
+          }
+          const { id, uuid: templateUuid, createdAt, updatedAt, ...fields } =
+            template;
+          void id;
+          void templateUuid;
+          void createdAt;
+          void updatedAt;
+          await tx.insert(Contracts).values({
+            ...fields,
+            uuid: generateUuid(),
+            companyUuid: uuid,
+            role,
+            linkToNewCustomer: false,
+            startingDate: todayDateString(),
+            endDate: fields.endDate ?? "9999-12-31",
+          });
+        }
       }
 
       const contactUuids: string[] = [];

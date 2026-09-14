@@ -67,7 +67,7 @@ export const FinanciallyBlockedTable = ({ rows }: Props) => (
             <TableHead>Code</TableHead>
             <TableHead>Debtor</TableHead>
             <TableHead className="text-right">Debtor no.</TableHead>
-            <TableHead>1st delivery date</TableHead>
+            <TableHead>Delivery date</TableHead>
             <TableHead>Blocking reason</TableHead>
             <TableHead>Payment term</TableHead>
             <TableHead className="text-right">Order amount</TableHead>
@@ -92,7 +92,7 @@ export const FinanciallyBlockedTable = ({ rows }: Props) => (
             </TableRow>
           ) : (
             rows.map((row) => (
-              <TableRow key={`${row.kind}-${row.uuid}`}>
+              <TableRow key={row.key}>
                 <TableCell>{row.kind}</TableCell>
                 <TableCell className="font-medium whitespace-nowrap">
                   {row.code ?? "—"}

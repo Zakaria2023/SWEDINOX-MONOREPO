@@ -980,11 +980,15 @@ export const returnOrderStatuses = [
 
 export type ReturnOrderStatus = (typeof returnOrderStatuses)[number];
 
+/**
+ * Which block a release lifted. The reference's `Unblocked orders` shows exactly
+ * two on 571 releases: `Financiële deblokkering` 544 and `Commerciële
+ * deblokkering` 27. Financial releases the credit rule's hold on the order;
+ * commercial releases the lines' commercial block (margin, missing data).
+ */
 export const orderDeblockTypes = [
   "financial",
-  "invoice",
-  "transport",
-  "handling",
+  "commercial",
 ] as const satisfies readonly string[];
 
 export type OrderDeblockType = (typeof orderDeblockTypes)[number];

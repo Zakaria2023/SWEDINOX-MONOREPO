@@ -242,7 +242,7 @@ export const buildColumnVisibility = <K extends string>(
     columns.map((col) => [col.key, col.defaultVisible]),
   ) as Record<K, boolean>;
 
-export const formatRevenue = (value: string | null) => {
+export const formatRevenue = (value: string | number | null) => {
   if (!value) return "€ 0,00";
   return new Intl.NumberFormat("nl-NL", {
     style: "currency",
@@ -473,6 +473,56 @@ export const normaliseCharge = (
     return null;
   }
   return charge;
+};
+
+/**
+ * The internal charge that follows `lastCharge` in `year` — the batch identity
+ * this business gives received material.
+ *
+ * The reference's format, on all 2 540 received rows: the two-digit year and
+ * four capital letters, counted up (`25AAAM`, `25ACRT`, `25ADPY`), starting
+ * again at `AAAA` when the year turns. The mill's own heat number is `charge`;
+ * this one is ours, and it is the key every delivered sheet traces back by —
+ * 1 662 of 1 662 shipped charges to the same heat, purchase order and receipt.
+ */
+export const nextInternalCharge = (
+  year: number,
+  lastCharge: string | null,
+): string => {
+  const prefix = String(year % 100).padStart(2, "0");
+  if (
+    !lastCharge ||
+    !lastCharge.startsWith(prefix) ||
+    !/^\d{2}[A-Z]{4}$/.test(lastCharge)
+  ) {
+    return `${prefix}AAAA`;
+  }
+
+  // Base-26 over A–Z: add one to the last letter and carry leftwards past Z.
+  const { letters, carry } = lastCharge
+    .slice(2)
+    .split("")
+    .reduceRight<{ letters: string[]; carry: boolean }>(
+      (state, letter) => {
+        if (!state.carry) {
+          return { letters: [letter, ...state.letters], carry: false };
+        }
+        return letter === "Z"
+          ? { letters: ["A", ...state.letters], carry: true }
+          : {
+              letters: [
+                String.fromCharCode(letter.charCodeAt(0) + 1),
+                ...state.letters,
+              ],
+              carry: false,
+            };
+      },
+      { letters: [], carry: true },
+    );
+  if (carry) {
+    throw new Error(`No internal charge left after ${lastCharge} in ${year}`);
+  }
+  return `${prefix}${letters.join("")}`;
 };
 
 export const formatLengthMm = (
@@ -1401,18 +1451,20 @@ export type CreditAssessmentInput = {
   oldestOpenDueDate?: string | Date | null;
   /** The day the assessment is made on. Defaults to today. */
   asOf?: string;
-  /** What the customer already owes on invoices that still stand. */
+  /**
+   * What the customer already owes on invoices that still stand, excluding
+   * VAT — the reference's `Open entrees` / `Open posten excl BTW`.
+   */
   openReceivables: number;
   /**
-   * Orders taken but not yet invoiced. These are receivables in waiting: the
-   * goods are promised, so the exposure is real even though no invoice exists
-   * yet. Excludes the order being assessed, which is counted separately.
+   * Orders taken but not yet invoiced, excluding VAT. These are receivables in
+   * waiting: the goods are promised, so the exposure is real even though no
+   * invoice exists yet. Excludes the order being assessed, which is counted
+   * separately.
    */
   committedOrders?: number;
-  /** Gross value of the order being placed — what it will become owed. */
+  /** The order being placed, excluding VAT — the reference's `Order amount`. */
   orderAmount: number;
-  /** The order's payment term; some terms extend no credit at all. */
-  paymentTerms: InvoicePaymentTerm | null | undefined;
   /** The company has been stopped by hand, whatever its balance says. */
   companyBlocked: boolean;
   /**
@@ -1452,48 +1504,6 @@ export type CreditAssessment = {
 };
 
 /**
- * Whether a payment term actually lends the customer money. A term settled on
- * the invoice date — cash, or full prepayment — extends no credit, so the
- * debtor's limit has no bearing on an order placed under it: the goods are paid
- * for before they go anywhere.
- *
- * Everything else does extend credit, including terms whose due date can't be
- * derived (letters of credit, "against documents"). An unknown term is treated
- * as extending credit, because the safe assumption is the one that checks.
- */
-export const paymentTermExtendsCredit = (
-  term: InvoicePaymentTerm | null | undefined,
-): boolean => {
-  if (!term) {
-    return true;
-  }
-  const meta = PAYMENT_TERM_META[term];
-  return !(meta.netDays === 0 || meta.prepaymentPercentage === 100);
-};
-
-/**
- * What a committed order will actually be worth as a receivable.
- *
- * Exposure has to be measured in one currency of value. Receivables are gross
- * (`Invoices.outstanding` carries VAT) and the order being placed is already
- * weighed gross (`Orders.totalInclVat`), but order *lines* are stored net — so
- * summing them raw understates every uninvoiced order by its VAT. At the
- * standard rate that hands a debtor about a fifth of their limit again in credit
- * space that does not exist, and the shortfall only appears when the invoice
- * lands, which reads as the customer consuming limit for no reason.
- *
- * The rate is the one the order's own summary applied — the customer's
- * `calculateVat` flag — not the eventual invoice's VAT scenario. This is a
- * forecast of an invoice that does not exist yet, and its job is to agree with
- * the figure `createOrder` weighs against the limit.
- */
-export const grossUpCommittedOrderValue = (
-  netAmount: number,
-  companyCalculatesVat: boolean | null | undefined,
-): number =>
-  netAmount * (1 + getQuoteVatRatePercent(true, companyCalculatesVat) / 100);
-
-/**
  * How many days past due the oldest open receivable may be before an order is
  * held, regardless of how much room the customer has left.
  *
@@ -1511,6 +1521,13 @@ export const grossUpCommittedOrderValue = (
  * trade practice and sits safely inside that range.
  *
  * Confirm it with Swedinox and change this one constant.
+ *
+ * 14-9-2026: every menu of the reference (`Bestand` … `Extra`) and a blocked
+ * customer's `Debtor` panel have been opened — no screen holds this setting.
+ * It is not per customer, so it is system-wide and hidden. Only INAD (the
+ * vendor) or Swedinox's administrator can give the number (question K1). Note
+ * too that open posts reach the reference from AFAS by a batch job that appears
+ * switched off, so the overdue days it blocks on may be stale (K10).
  */
 export const OVERDUE_POST_BLOCK_DAYS = 30;
 
@@ -1565,16 +1582,16 @@ export const effectiveCreditLimit = (
  * an age-of-debt rule is not an amount rule, and it is the most common reason
  * an order is held in that system.
  *
- * Two deliberate refusals to block:
- *   - A debtor with no limit recorded (0 or blank on both) is not blocked. A
- *     blank field means "nobody has set one", not "this customer may owe
- *     nothing" — reading it the other way would hold every order in the system.
- *   - An order paid for up front is not blocked however much is outstanding,
- *     because it adds nothing to what the customer owes.
+ * **Every amount is excluding VAT.** The formula holds on the reference's
+ * excl.-VAT pair and breaks on 315 rows with the incl.-VAT one, and its
+ * `Order amount` equals the order's revenue excl. VAT on 436 of 436 orders.
  *
- * Neither refusal covers the overdue rule: money already late is late whoever
- * is paying for the next order, so that test runs first and applies even to a
- * customer with no limit and even to prepayment.
+ * **A zero limit is a limit of zero, and prepayment is no exemption.** Of the
+ * reference's 11 `Credit limit exceeded` orders, 8 are `Prepayment` customers,
+ * and 9 of its 10 prepayment rows have `Credit limit` 0. They are held: a
+ * customer with no credit gets no credit, and a prepayment order waits for the
+ * money. The hold *is* the prepayment mechanism — there is no separate status.
+ * (An earlier version refused to block both cases; the queue proved it wrong.)
  *
  * A company stopped by hand is blocked regardless of all of it, since that flag
  * exists precisely to override the arithmetic.
@@ -1588,13 +1605,11 @@ export const assessCredit = ({
   openReceivables,
   committedOrders = 0,
   orderAmount,
-  paymentTerms,
   companyBlocked,
   financialBlockingWaived = false,
 }: CreditAssessmentInput): CreditAssessment => {
-  const extendsCredit = paymentTermExtendsCredit(paymentTerms);
   const owed = openReceivables + committedOrders;
-  const exposure = owed + (extendsCredit ? orderAmount : 0);
+  const exposure = owed + orderAmount;
 
   const totalCreditLimit = effectiveCreditLimit(
     creditLimit,
@@ -1627,8 +1642,7 @@ export const assessCredit = ({
     };
   }
 
-  // Before the limit test, and before the prepayment let-off: money already
-  // late is late whoever is paying for the next order.
+  // Before the limit test: money already late is late whatever the room.
   if (
     oldestPostDaysOverdue !== null &&
     oldestPostDaysOverdue > OVERDUE_POST_BLOCK_DAYS
@@ -1645,7 +1659,7 @@ export const assessCredit = ({
     return { ...standing, blocked: true, reason: stale };
   }
 
-  if (!extendsCredit || totalCreditLimit <= 0 || exposure <= totalCreditLimit) {
+  if (exposure <= totalCreditLimit) {
     return { ...standing, blocked: false, reason: null };
   }
 

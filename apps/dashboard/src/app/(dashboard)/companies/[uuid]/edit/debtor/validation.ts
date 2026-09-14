@@ -2,6 +2,10 @@ import { currencies, invoicePaymentTerms } from "@/lib/enums";
 import { z } from "zod";
 
 export const companyDebtorSchema = z.object({
+  debtorNumber: z
+    .string()
+    .max(20, "A debtor number is at most 20 characters")
+    .optional(),
   debtorCompanyUuid: z.string().optional(),
   iban: z.string().optional(),
   bic: z.string().optional(),

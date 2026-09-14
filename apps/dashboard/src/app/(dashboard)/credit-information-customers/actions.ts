@@ -1,7 +1,9 @@
 "use server";
 import { db } from "@/db";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
+import { SelectCompanyAddresses } from "@/db/schema/company-addresses";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
+import { companyAddressFor } from "@/lib/server/company-addresses";
 import { Invoices } from "@/db/schema/invoices";
 import { describeError, effectiveCreditLimit } from "@/lib/helpers";
 import {
@@ -13,14 +15,14 @@ import { eq, min, sql } from "drizzle-orm";
 export type CreditInformationRow = {
   customerCode: SelectCompanies["id"];
   companyName: SelectCompanies["companyName"];
-  city: SelectContacts["city"] | null;
+  city: SelectCompanyAddresses["city"] | null;
   initials: SelectContacts["initials"] | null;
   representative: SelectCompanies["representative"] | null;
   paymentTerms: SelectCompanies["paymentTerms"] | null;
   creditLimit: number;
   creditLimitUninsured: number;
-  creditInsurance: number;
-  creditInsuranceDate: string | Date | null;
+  creditInsurance: SelectCompanies["creditLimitInsurance"];
+  creditInsuranceDate: SelectCompanies["insuranceValidUntil"];
   outstanding: number;
   currentOrders: number;
   creditSpace: number;
@@ -51,12 +53,14 @@ export const getCreditInformationCustomers = async (
     const primaryContact = db
       .select({
         companyUuid: Contacts.companyUuid,
-        city: Contacts.city,
         initials: Contacts.initials,
       })
       .from(Contacts)
       .innerJoin(primaryContactId, eq(Contacts.id, primaryContactId.minId))
       .as("primary_contact");
+
+    // The city is the company's visiting address.
+    const visiting = companyAddressFor("visit", "visiting_address");
 
     const arStats = db
       .select({
@@ -97,14 +101,15 @@ export const getCreditInformationCustomers = async (
       .select({
         customerCode: Companies.id,
         companyName: Companies.companyName,
-        city: primaryContact.city,
+        city: visiting.city,
         initials: primaryContact.initials,
         representative: Companies.representative,
         paymentTerms: Companies.paymentTerms,
         creditLimit: Companies.creditLimit,
         creditLimitUninsured: Companies.creditLimitUninsured,
         creditInsurance: Companies.creditLimitInsurance,
-        creditInsuranceDate: Companies.creditLimitUninsuredDate,
+        creditInsuranceDate: Companies.insuranceValidUntil,
+        creditLimitUninsuredDate: Companies.creditLimitUninsuredDate,
         companyUuid: Companies.uuid,
         oldestInvoiceDate: arStats.oldestInvoiceDate,
         oldestDueDate: arStats.oldestDueDate,
@@ -116,6 +121,7 @@ export const getCreditInformationCustomers = async (
       })
       .from(Companies)
       .leftJoin(primaryContact, eq(Companies.uuid, primaryContact.companyUuid))
+      .leftJoin(visiting, eq(Companies.uuid, visiting.companyUuid))
       .leftJoin(arStats, eq(Companies.uuid, arStats.companyUuid))
       .leftJoin(revenueStats, eq(Companies.uuid, revenueStats.companyUuid))
       .where(sql`JSON_CONTAINS(${Companies.roles}, '"customer"')`)
@@ -134,7 +140,7 @@ export const getCreditInformationCustomers = async (
         paymentTerms: row.paymentTerms,
         creditLimit,
         creditLimitUninsured: Number(row.creditLimitUninsured ?? 0),
-        creditInsurance: Number(row.creditInsurance ?? 0),
+        creditInsurance: row.creditInsurance,
         creditInsuranceDate: row.creditInsuranceDate,
         outstanding,
         currentOrders,
@@ -145,7 +151,8 @@ export const getCreditInformationCustomers = async (
           effectiveCreditLimit(
             creditLimit,
             Number(row.creditLimitUninsured ?? 0),
-            row.creditInsuranceDate ?? null,
+            // The uninsured limit lapses on its own date, not the policy's.
+            row.creditLimitUninsuredDate ?? null,
           ) -
           outstanding -
           currentOrders,

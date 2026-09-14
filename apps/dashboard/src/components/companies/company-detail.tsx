@@ -428,7 +428,49 @@ export const CompanyDetailView = ({ company, invoices, userNames }: Props) => {
           Debtor
         </h2>
         <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <Field label="Debtor" value={company.debtorCompanyName} />
+          <Field label="Debtor number" value={company.debtorNumber} />
+          <Field label="Debtor company" value={company.debtorCompanyName} />
+          {/* The reference panel's summary line: both limits together, and
+              the room left against them. Excl. VAT, as the credit rule weighs. */}
+          <Field
+            label="Total credit limit"
+            value={formatCurrencyAmount(
+              company.creditStanding.totalCreditLimit,
+              company.currency,
+            )}
+          />
+          <Field
+            label="Credit space"
+            value={formatCurrencyAmount(
+              company.creditStanding.creditSpace,
+              company.currency,
+            )}
+          />
+          <Field
+            label="Open entrees (excl. VAT)"
+            value={formatCurrencyAmount(
+              company.creditStanding.openReceivables,
+              company.currency,
+            )}
+          />
+          <Field
+            label="Open orders (excl. VAT)"
+            value={formatCurrencyAmount(
+              company.creditStanding.committedOrders,
+              company.currency,
+            )}
+          />
+          <Field
+            label="Oldest invoice date open entrees"
+            value={formatDateValue(
+              company.creditStanding.oldestOpenInvoiceDate,
+              na,
+            )}
+          />
+          <Field
+            label="Oldest due date open entrees"
+            value={formatDateValue(company.creditStanding.oldestOpenDueDate, na)}
+          />
           <Field label="Purchase org." value={company.purchaseOrgCompanyName} />
           <Field
             label="Member number purchase org."
@@ -477,16 +519,10 @@ export const CompanyDetailView = ({ company, invoices, userNames }: Props) => {
                 : null
             }
           />
+          {/* The insurer's policy number, not an amount. */}
           <Field
             label="Credit limit insurance"
-            value={
-              company.creditLimitInsurance
-                ? formatCurrencyAmount(
-                    company.creditLimitInsurance,
-                    company.currency,
-                  )
-                : null
-            }
+            value={company.creditLimitInsurance || null}
           />
           <Field
             label="Credit limit uninsured"

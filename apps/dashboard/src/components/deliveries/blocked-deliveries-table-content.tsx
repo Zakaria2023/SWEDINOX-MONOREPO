@@ -1,7 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { DeliveryLineItem } from "@/app/(dashboard)/deliveries/actions";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
+import {
+  DeliveryLineItem,
+  releaseCommercialBlock,
+} from "@/app/(dashboard)/deliveries/actions";
+import { Button } from "@/components/shadcn/button";
 import {
   Table,
   TableBody,
@@ -16,6 +22,41 @@ import { TableExportButton } from "@/components/ui/table-export-button";
 
 type Props = {
   lines: DeliveryLineItem[];
+};
+
+type ReleaseCommercialButtonProps = {
+  orderUuid: string;
+};
+
+// A commercial release covers the whole order, as it does in the reference.
+const ReleaseCommercialButton = ({
+  orderUuid,
+}: ReleaseCommercialButtonProps) => {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  const handleRelease = () =>
+    startTransition(async () => {
+      const result = await releaseCommercialBlock(orderUuid);
+      setError(result.error ?? null);
+      router.refresh();
+    });
+
+  return (
+    <div className="space-y-1">
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        disabled={isPending}
+        onClick={handleRelease}
+      >
+        {isPending ? "Releasing..." : "Commercial unblock"}
+      </Button>
+      {error ? <p className="text-xs text-destructive">{error}</p> : null}
+    </div>
+  );
 };
 
 export const BlockedDeliveriesTable = ({ lines }: Props) => (
@@ -49,13 +90,14 @@ export const BlockedDeliveriesTable = ({ lines }: Props) => (
             <TableHead>Reservation date</TableHead>
             <TableHead className="text-right">Qty(res)</TableHead>
             <TableHead className="text-right">Kg(res)</TableHead>
+            <TableHead>Action</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {lines.length === 0 ? (
             <TableRow>
               <TableCell
-                colSpan={18}
+                colSpan={19}
                 className="h-24 text-center text-muted-foreground"
               >
                 No blocked deliveries found.
@@ -117,6 +159,11 @@ export const BlockedDeliveriesTable = ({ lines }: Props) => (
                 <TableCell>{row.reservationDate ?? "—"}</TableCell>
                 <TableCell className="text-right">{row.qtyReserved}</TableCell>
                 <TableCell className="text-right">{row.kgReserved}</TableCell>
+                <TableCell>
+                  {row.commercialBlock ? (
+                    <ReleaseCommercialButton orderUuid={row.orderUuid} />
+                  ) : null}
+                </TableCell>
               </TableRow>
             ))
           )}

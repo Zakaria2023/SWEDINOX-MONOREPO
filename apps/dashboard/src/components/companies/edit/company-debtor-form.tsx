@@ -55,6 +55,7 @@ export const CompanyDebtorForm = ({
   } = useForm<CompanyDebtorFormValues>({
     resolver: zodResolver(companyDebtorSchema),
     defaultValues: {
+      debtorNumber: company.debtorNumber ?? "",
       debtorCompanyUuid: company.debtorCompanyUuid ?? "",
       iban: company.iban ?? "",
       bic: company.bic ?? "",
@@ -122,11 +123,23 @@ export const CompanyDebtorForm = ({
           Debtor
         </h2>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          {/* The ledger account number — not the company code. */}
+          <div className="space-y-2">
+            <FormLabel htmlFor="debtorNumber">Debtor number</FormLabel>
+            <Input
+              id="debtorNumber"
+              maxLength={20}
+              {...register("debtorNumber")}
+              disabled={isPending}
+            />
+            <FormFieldError message={errors.debtorNumber?.message} />
+          </div>
+
           <FormSelectField
             control={control}
             name="debtorCompanyUuid"
             id="debtorCompanyUuid"
-            label="Debtor number"
+            label="Debtor company"
             options={debtorCompanyOptions}
             disabled={isPending}
           />
@@ -266,8 +279,8 @@ export const CompanyDebtorForm = ({
             </FormLabel>
             <Input
               id="creditLimitInsurance"
-              type="number"
-              step="0.01"
+              maxLength={50}
+              placeholder="Policy number"
               {...register("creditLimitInsurance")}
               disabled={isPending}
             />

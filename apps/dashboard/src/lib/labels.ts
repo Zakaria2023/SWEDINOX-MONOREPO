@@ -495,10 +495,8 @@ export const RETURN_ORDER_REASON_LABELS: Record<ReturnOrderReason, string> = {
 };
 
 export const ORDER_DEBLOCK_TYPE_LABELS: Record<OrderDeblockType, string> = {
-  financial: "Financial",
-  invoice: "Invoice",
-  transport: "Transport",
-  handling: "Handling",
+  financial: "Financial unblock",
+  commercial: "Commercial unblock",
 };
 
 export const PURCHASE_RETURN_ORDER_REASON_LABELS: Record<

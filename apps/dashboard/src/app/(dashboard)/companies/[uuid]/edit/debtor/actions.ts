@@ -17,6 +17,7 @@ export type CompanyDebtorData = Pick<
   SelectCompanies,
   | "uuid"
   | "roles"
+  | "debtorNumber"
   | "debtorCompanyUuid"
   | "iban"
   | "bic"
@@ -53,6 +54,7 @@ export const getCompanyDebtor = async (
     .select({
       uuid: Companies.uuid,
       roles: Companies.roles,
+      debtorNumber: Companies.debtorNumber,
       debtorCompanyUuid: Companies.debtorCompanyUuid,
       iban: Companies.iban,
       bic: Companies.bic,
@@ -122,9 +124,26 @@ export const updateCompanyDebtor = async (
     const isCustomerOrProspect =
       roles.includes("customer") || roles.includes("prospect");
 
+    // One ledger account per customer: the column is unique, so say which
+    // company already holds the number instead of surfacing a driver error.
+    const debtorNumber = parsed.data.debtorNumber?.trim() || null;
+    if (debtorNumber) {
+      const [holder] = await db
+        .select({ uuid: Companies.uuid, companyName: Companies.companyName })
+        .from(Companies)
+        .where(eq(Companies.debtorNumber, debtorNumber))
+        .limit(1);
+      if (holder && holder.uuid !== companyUuid) {
+        return {
+          error: `Debtor number ${debtorNumber} already belongs to ${holder.companyName}`,
+        };
+      }
+    }
+
     await db
       .update(Companies)
       .set({
+        debtorNumber,
         debtorCompanyUuid: parsed.data.debtorCompanyUuid || null,
         iban: parsed.data.iban || null,
         bic: parsed.data.bic || null,

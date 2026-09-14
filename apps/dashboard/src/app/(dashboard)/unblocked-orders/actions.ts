@@ -3,17 +3,18 @@
 import { describeError } from "@/lib/helpers";
 import { db } from "@/db";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
-import { Contacts, SelectContacts } from "@/db/schema/contacts";
+import { SelectCompanyAddresses } from "@/db/schema/company-addresses";
+import { companyAddressFor } from "@/lib/server/company-addresses";
 import { OrderDeblocks, SelectOrderDeblocks } from "@/db/schema/order-deblocks";
 import { OrderItems } from "@/db/schema/order-items";
 import { Orders, SelectOrders } from "@/db/schema/orders";
 import { getClerkUsersForSelect } from "@/lib/server/clerk";
-import { desc, eq, min, sql } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 
 export type UnblockedOrderRow = {
   customerName: SelectCompanies["companyName"] | null;
-  city: SelectContacts["city"] | null;
-  debtorNumber: SelectCompanies["id"] | null;
+  city: SelectCompanyAddresses["city"] | null;
+  debtorNumber: SelectCompanies["debtorNumber"] | null;
   deblockType: SelectOrderDeblocks["deblockType"];
   year: number | null;
   month: number | null;
@@ -23,7 +24,6 @@ export type UnblockedOrderRow = {
   orderId: SelectOrders["id"] | null;
   orderCreatedAt: string | null;
   orderAmount: number;
-  regionCode: SelectContacts["customerRegionCode"] | null;
   region: SelectCompanies["region"] | null;
 };
 
@@ -34,24 +34,8 @@ export const getUnblockedOrders = async (): Promise<UnblockedOrderRow[]> => {
     const year = sql<number>`YEAR(${OrderDeblocks.createdAt})`;
     const month = sql<number>`MONTH(${OrderDeblocks.createdAt})`;
 
-    const primaryContactId = db
-      .select({
-        companyUuid: Contacts.companyUuid,
-        minId: min(Contacts.id).as("min_id"),
-      })
-      .from(Contacts)
-      .groupBy(Contacts.companyUuid)
-      .as("primary_contact_id");
-
-    const primaryContact = db
-      .select({
-        companyUuid: Contacts.companyUuid,
-        city: Contacts.city,
-        customerRegionCode: Contacts.customerRegionCode,
-      })
-      .from(Contacts)
-      .innerJoin(primaryContactId, eq(Contacts.id, primaryContactId.minId))
-      .as("primary_contact");
+    // The city is the company's visiting address.
+    const visiting = companyAddressFor("visit", "visiting_address");
 
     const orderAmounts = db
       .select({
@@ -67,8 +51,8 @@ export const getUnblockedOrders = async (): Promise<UnblockedOrderRow[]> => {
     const rows = await db
       .select({
         customerName: Companies.companyName,
-        city: primaryContact.city,
-        debtorNumber: Companies.id,
+        city: visiting.city,
+        debtorNumber: Companies.debtorNumber,
         deblockType: OrderDeblocks.deblockType,
         deblockDate: OrderDeblocks.createdAt,
         deblockedByUserId: OrderDeblocks.deblockedByUserId,
@@ -78,13 +62,12 @@ export const getUnblockedOrders = async (): Promise<UnblockedOrderRow[]> => {
         orderId: Orders.id,
         orderCreatedAt: Orders.createdAt,
         orderAmount: orderAmounts.amount,
-        regionCode: primaryContact.customerRegionCode,
         region: Companies.region,
       })
       .from(OrderDeblocks)
       .innerJoin(Orders, eq(OrderDeblocks.orderUuid, Orders.uuid))
       .innerJoin(Companies, eq(Orders.companyUuid, Companies.uuid))
-      .leftJoin(primaryContact, eq(Companies.uuid, primaryContact.companyUuid))
+      .leftJoin(visiting, eq(Companies.uuid, visiting.companyUuid))
       .leftJoin(orderAmounts, eq(Orders.uuid, orderAmounts.orderUuid))
       .orderBy(desc(OrderDeblocks.createdAt));
 
@@ -109,7 +92,6 @@ export const getUnblockedOrders = async (): Promise<UnblockedOrderRow[]> => {
         ? row.orderCreatedAt.toISOString()
         : null,
       orderAmount: Number(row.orderAmount ?? 0),
-      regionCode: row.regionCode ?? null,
       region: row.region,
     }));
   } catch (error) {

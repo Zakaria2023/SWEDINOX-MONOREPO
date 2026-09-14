@@ -761,12 +761,9 @@ export const useCompanySubmit = ({
     setIsContactDialogOpen(false);
   };
 
+  // A contact stores only its own columns; the company's roles, search codes,
+  // representatives and revenue are joined from the company when shown.
   const handleSaveContact = contactForm.handleSubmit((values) => {
-    const companyValues = form.getValues();
-    const isSupplier = selectedRoles.includes("supplier");
-    const isCustomerOrProspect =
-      selectedRoles.includes("customer") || selectedRoles.includes("prospect");
-
     setContacts((prev) => [
       ...prev,
       {
@@ -798,49 +795,6 @@ export const useCompanySubmit = ({
         website: values.website || undefined,
         categories: values.categories as ContactCategory[],
         sequenceNumber: values.sequenceNumber,
-        purchaser: undefined,
-        searchCode1:
-          isSupplier || isCustomerOrProspect
-            ? companyValues.searchCode1 || undefined
-            : undefined,
-        searchCode2:
-          isSupplier || isCustomerOrProspect
-            ? companyValues.searchCode2 || undefined
-            : undefined,
-        searchCode3:
-          isSupplier || isCustomerOrProspect
-            ? companyValues.searchCode3 || undefined
-            : undefined,
-        revenueLastYear:
-          isSupplier || isCustomerOrProspect ? "0.00" : undefined,
-        revenueThisYear:
-          isSupplier || isCustomerOrProspect ? "0.00" : undefined,
-        isCustomer: selectedRoles.includes("customer"),
-        isProspect: selectedRoles.includes("prospect"),
-        isSupplier: selectedRoles.includes("supplier"),
-        isProcessor: selectedRoles.includes("processor"),
-        isTransporter: selectedRoles.includes("transporter"),
-        isAgent: selectedRoles.includes("agent"),
-        isOther: selectedRoles.includes("other"),
-        visitStreetAndNo: undefined,
-        visitPostalCode: undefined,
-        visitCity: undefined,
-        visitCountry: undefined,
-        visitTelephone: undefined,
-        visitFax: undefined,
-        accountManager: undefined,
-        representative: undefined,
-        customerGroup: undefined,
-        industryCode: undefined,
-        industry: undefined,
-        classificationCode: undefined,
-        classification: undefined,
-        creditLimit: undefined,
-        competitors: undefined,
-        customerRegionCode: undefined,
-        customerRegion: undefined,
-        targetYearRevenue: isCustomerOrProspect ? "0.00" : undefined,
-        targetAnnualSales: isCustomerOrProspect ? "0.00" : undefined,
       },
     ]);
     contactForm.reset(DEFAULT_CONTACT);
@@ -1911,9 +1865,7 @@ export const useCompanySubmit = ({
         insuranceValidUntil: insuranceValidUntil
           ? new Date(insuranceValidUntil)
           : null,
-        creditLimitInsurance: creditLimitInsurance
-          ? String(creditLimitInsurance)
-          : undefined,
+        creditLimitInsurance: creditLimitInsurance || undefined,
         creditLimit: creditLimit ? String(creditLimit) : undefined,
         creditLimitUninsured: creditLimitUninsured
           ? String(creditLimitUninsured)

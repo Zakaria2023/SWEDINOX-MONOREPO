@@ -46,7 +46,6 @@ export const UnblockedOrdersTable = ({ rows }: Props) => (
             <TableHead>Order</TableHead>
             <TableHead>Creation date of Order</TableHead>
             <TableHead className="text-right">Order amount</TableHead>
-            <TableHead>Region code</TableHead>
             <TableHead>Region</TableHead>
           </TableRow>
         </TableHeader>
@@ -87,7 +86,6 @@ export const UnblockedOrdersTable = ({ rows }: Props) => (
                 <TableCell className="text-right whitespace-nowrap">
                   {formatMoney(row.orderAmount)}
                 </TableCell>
-                <TableCell>{row.regionCode ?? "—"}</TableCell>
                 <TableCell>{row.region ?? "—"}</TableCell>
               </TableRow>
             ))
