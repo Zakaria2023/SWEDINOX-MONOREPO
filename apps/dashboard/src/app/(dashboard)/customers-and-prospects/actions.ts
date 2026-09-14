@@ -3,7 +3,9 @@
 import { CompanyAddresses } from "@/db/schema/company-addresses";
 import { Companies } from "@/db/schema/companies";
 import { Contacts } from "@/db/schema/contacts";
-import { db, SelectCompanies, SelectContacts } from "@/db";
+import { db, SelectCompanies, SelectCompanyAddresses, SelectContacts } from "@/db";
+import { companyAddressFor } from "@/lib/server/company-addresses";
+import { companyRevenueByYear } from "@/lib/server/customer-revenue";
 import { eq, min, or, asc, sql } from "drizzle-orm";
 
 export type CustomerProspectRow = Pick<
@@ -18,38 +20,36 @@ export type CustomerProspectRow = Pick<
   | "customerGroup"
   | "creditLimit"
   | "cocNumber"
+  | "competitors"
   | "createdAt"
 > &
-  Pick<
-    SelectContacts,
-    | "revenueLastYear"
-    | "revenueThisYear"
-    | "competitors"
-    | "customerRegionCode"
-    | "visitStreetAndNo"
-    | "visitPostalCode"
-    | "visitCity"
-    | "visitCountry"
-    | "visitTelephone"
-    | "visitFax"
-  > & {
+  {
     companyUuid: SelectCompanies["uuid"];
+    /** Invoiced revenue excl. VAT, from the company's invoices. */
+    revenueLastYear: number;
+    revenueThisYear: number;
     companyCode: SelectCompanies["id"];
     contactFirstName: SelectContacts["firstName"] | null;
     contactLastName: SelectContacts["lastName"] | null;
     contactEmail: SelectContacts["email"] | null;
     contactMobile: SelectContacts["mobile"] | null;
     contactCreatedAt: SelectContacts["createdAt"] | null;
-    correspondenceStreetAndNo: SelectContacts["streetAndNo"] | null;
-    correspondencePostalCode: SelectContacts["postalCode"] | null;
-    correspondenceCity: SelectContacts["city"] | null;
-    correspondenceCountry: SelectContacts["addressCountry"] | null;
-    correspondenceTelephone: SelectContacts["addressTelephone"] | null;
-    correspondenceFax: SelectContacts["addressFax"] | null;
-    deliveryStreetAndNo: string | null;
-    deliveryPostalCode: string | null;
-    deliveryCity: string | null;
-    deliveryCountry: string | null;
+    visitStreetAndNo: SelectCompanyAddresses["streetAndNo"] | null;
+    visitPostalCode: SelectCompanyAddresses["postalCode"] | null;
+    visitCity: SelectCompanyAddresses["city"] | null;
+    visitCountry: SelectCompanyAddresses["country"] | null;
+    visitTelephone: SelectCompanyAddresses["telephone"] | null;
+    visitFax: SelectCompanyAddresses["fax"] | null;
+    correspondenceStreetAndNo: SelectCompanyAddresses["streetAndNo"] | null;
+    correspondencePostalCode: SelectCompanyAddresses["postalCode"] | null;
+    correspondenceCity: SelectCompanyAddresses["city"] | null;
+    correspondenceCountry: SelectCompanyAddresses["country"] | null;
+    correspondenceTelephone: SelectCompanyAddresses["telephone"] | null;
+    correspondenceFax: SelectCompanyAddresses["fax"] | null;
+    deliveryStreetAndNo: SelectCompanyAddresses["streetAndNo"] | null;
+    deliveryPostalCode: SelectCompanyAddresses["postalCode"] | null;
+    deliveryCity: SelectCompanyAddresses["city"] | null;
+    deliveryCountry: SelectCompanyAddresses["country"] | null;
     isCustomer: boolean;
     isProspect: boolean;
     isSupplier: boolean;
@@ -61,6 +61,11 @@ export type CustomerProspectRow = Pick<
     targetVisitsPerYear: number;
   };
 
+// The reference's Customers and Prospects is contact × company × address: the
+// contact columns are the contact's own, and everything else is the company's
+// (17 columns identical across every contact of a company, 2 188 of 2 188).
+// So the visiting and correspondence addresses and the competitors come from
+// the company, not from a copy on its first contact.
 export const getCustomersAndProspects = async (): Promise<
   CustomerProspectRow[]
 > => {
@@ -83,26 +88,17 @@ export const getCustomersAndProspects = async (): Promise<
       email: Contacts.email,
       mobile: Contacts.mobile,
       createdAt: Contacts.createdAt,
-      revenueLastYear: Contacts.revenueLastYear,
-      revenueThisYear: Contacts.revenueThisYear,
-      competitors: Contacts.competitors,
-      customerRegionCode: Contacts.customerRegionCode,
-      visitStreetAndNo: Contacts.visitStreetAndNo,
-      visitPostalCode: Contacts.visitPostalCode,
-      visitCity: Contacts.visitCity,
-      visitCountry: Contacts.visitCountry,
-      visitTelephone: Contacts.visitTelephone,
-      visitFax: Contacts.visitFax,
-      streetAndNo: Contacts.streetAndNo,
-      postalCode: Contacts.postalCode,
-      city: Contacts.city,
-      addressCountry: Contacts.addressCountry,
-      addressTelephone: Contacts.addressTelephone,
-      addressFax: Contacts.addressFax,
     })
     .from(Contacts)
     .innerJoin(primaryContactId, eq(Contacts.id, primaryContactId.minId))
     .as("primary_contact");
+
+  const revenue = companyRevenueByYear("company_revenue");
+  const visiting = companyAddressFor("visit", "visiting_address");
+  const correspondence = companyAddressFor(
+    "correspondence",
+    "correspondence_address",
+  );
 
   // Delivery address with the lowest id per company, restricted to
   // addresses categorized as "delivery".
@@ -145,6 +141,7 @@ export const getCustomersAndProspects = async (): Promise<
       customerGroup: Companies.customerGroup,
       creditLimit: Companies.creditLimit,
       cocNumber: Companies.cocNumber,
+      competitors: Companies.competitors,
       createdAt: Companies.createdAt,
       roles: Companies.roles,
       quoteOrderSettings: Companies.quoteOrderSettings,
@@ -153,22 +150,20 @@ export const getCustomersAndProspects = async (): Promise<
       contactEmail: primaryContact.email,
       contactMobile: primaryContact.mobile,
       contactCreatedAt: primaryContact.createdAt,
-      revenueLastYear: primaryContact.revenueLastYear,
-      revenueThisYear: primaryContact.revenueThisYear,
-      competitors: primaryContact.competitors,
-      customerRegionCode: primaryContact.customerRegionCode,
-      visitStreetAndNo: primaryContact.visitStreetAndNo,
-      visitPostalCode: primaryContact.visitPostalCode,
-      visitCity: primaryContact.visitCity,
-      visitCountry: primaryContact.visitCountry,
-      visitTelephone: primaryContact.visitTelephone,
-      visitFax: primaryContact.visitFax,
-      correspondenceStreetAndNo: primaryContact.streetAndNo,
-      correspondencePostalCode: primaryContact.postalCode,
-      correspondenceCity: primaryContact.city,
-      correspondenceCountry: primaryContact.addressCountry,
-      correspondenceTelephone: primaryContact.addressTelephone,
-      correspondenceFax: primaryContact.addressFax,
+      revenueLastYear: revenue.revenueLastYear,
+      revenueThisYear: revenue.revenueThisYear,
+      visitStreetAndNo: visiting.streetAndNo,
+      visitPostalCode: visiting.postalCode,
+      visitCity: visiting.city,
+      visitCountry: visiting.country,
+      visitTelephone: visiting.telephone,
+      visitFax: visiting.fax,
+      correspondenceStreetAndNo: correspondence.streetAndNo,
+      correspondencePostalCode: correspondence.postalCode,
+      correspondenceCity: correspondence.city,
+      correspondenceCountry: correspondence.country,
+      correspondenceTelephone: correspondence.telephone,
+      correspondenceFax: correspondence.fax,
       deliveryStreetAndNo: deliveryAddress.streetAndNo,
       deliveryPostalCode: deliveryAddress.postalCode,
       deliveryCity: deliveryAddress.city,
@@ -176,6 +171,9 @@ export const getCustomersAndProspects = async (): Promise<
     })
     .from(Companies)
     .leftJoin(primaryContact, eq(Companies.uuid, primaryContact.companyUuid))
+    .leftJoin(revenue, eq(Companies.uuid, revenue.companyUuid))
+    .leftJoin(visiting, eq(Companies.uuid, visiting.companyUuid))
+    .leftJoin(correspondence, eq(Companies.uuid, correspondence.companyUuid))
     .leftJoin(deliveryAddress, eq(Companies.uuid, deliveryAddress.companyUuid))
     .where(
       or(
@@ -199,6 +197,7 @@ export const getCustomersAndProspects = async (): Promise<
       customerGroup: row.customerGroup,
       creditLimit: row.creditLimit,
       cocNumber: row.cocNumber,
+      competitors: row.competitors,
       createdAt: row.createdAt,
 
       contactFirstName: row.contactFirstName ?? null,
@@ -206,10 +205,8 @@ export const getCustomersAndProspects = async (): Promise<
       contactEmail: row.contactEmail ?? null,
       contactMobile: row.contactMobile ?? null,
       contactCreatedAt: row.contactCreatedAt ?? null,
-      revenueLastYear: row.revenueLastYear ?? null,
-      revenueThisYear: row.revenueThisYear ?? null,
-      competitors: row.competitors ?? null,
-      customerRegionCode: row.customerRegionCode ?? null,
+      revenueLastYear: Number(row.revenueLastYear ?? 0),
+      revenueThisYear: Number(row.revenueThisYear ?? 0),
       visitStreetAndNo: row.visitStreetAndNo ?? null,
       visitPostalCode: row.visitPostalCode ?? null,
       visitCity: row.visitCity ?? null,

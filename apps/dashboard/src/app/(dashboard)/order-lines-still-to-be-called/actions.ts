@@ -3,12 +3,13 @@
 import { describeError } from "@/lib/helpers";
 import { db } from "@/db";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
-import { Contacts, SelectContacts } from "@/db/schema/contacts";
+import { SelectCompanyAddresses } from "@/db/schema/company-addresses";
+import { companyAddressFor } from "@/lib/server/company-addresses";
 import { OrderItems, SelectOrderItems } from "@/db/schema/order-items";
 import { Orders, SelectOrders } from "@/db/schema/orders";
 import { Products, SelectProducts } from "@/db/schema/products";
 import { RevenueGroups, SelectRevenueGroups } from "@/db/schema/revenue-groups";
-import { asc, eq, min, sql } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
 
 export type OrderLineToCallRow = {
   revenueGroupName: SelectRevenueGroups["name"] | null;
@@ -19,7 +20,7 @@ export type OrderLineToCallRow = {
   orderId: SelectOrders["id"] | null;
   customerCode: SelectCompanies["id"] | null;
   customerName: SelectCompanies["companyName"] | null;
-  city: SelectContacts["city"] | null;
+  city: SelectCompanyAddresses["city"] | null;
   reference: SelectOrders["customerRef"] | null;
   lineStatus: SelectOrderItems["lineStatus"];
   deliveryDate: SelectOrderItems["deliveryDate"];
@@ -42,23 +43,8 @@ export const getOrderLinesStillToBeCalled = async (): Promise<
   OrderLineToCallRow[]
 > => {
   try {
-    const primaryContactId = db
-      .select({
-        companyUuid: Contacts.companyUuid,
-        minId: min(Contacts.id).as("min_id"),
-      })
-      .from(Contacts)
-      .groupBy(Contacts.companyUuid)
-      .as("primary_contact_id");
-
-    const primaryContact = db
-      .select({
-        companyUuid: Contacts.companyUuid,
-        city: Contacts.city,
-      })
-      .from(Contacts)
-      .innerJoin(primaryContactId, eq(Contacts.id, primaryContactId.minId))
-      .as("primary_contact");
+    // The city is the company's visiting address.
+    const visiting = companyAddressFor("visit", "visiting_address");
 
     const rows = await db
       .select({
@@ -70,7 +56,7 @@ export const getOrderLinesStillToBeCalled = async (): Promise<
         orderId: Orders.id,
         customerCode: Companies.id,
         customerName: Companies.companyName,
-        city: primaryContact.city,
+        city: visiting.city,
         reference: Orders.customerRef,
         lineStatus: OrderItems.lineStatus,
         deliveryDate: OrderItems.deliveryDate,
@@ -93,7 +79,7 @@ export const getOrderLinesStillToBeCalled = async (): Promise<
         RevenueGroups,
         eq(Products.revenueGroupUuid, RevenueGroups.uuid),
       )
-      .leftJoin(primaryContact, eq(Companies.uuid, primaryContact.companyUuid))
+      .leftJoin(visiting, eq(Companies.uuid, visiting.companyUuid))
       .where(sql`${OrderItems.qtyPlanned} > ${OrderItems.qtyCallOff}`)
       .orderBy(asc(OrderItems.deliveryDate));
 

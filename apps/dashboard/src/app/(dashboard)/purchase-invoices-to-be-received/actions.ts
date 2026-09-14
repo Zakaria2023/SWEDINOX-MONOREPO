@@ -2,8 +2,9 @@
 import { describeError } from "@/lib/helpers";
 
 import { Companies, SelectCompanies } from "@/db/schema/companies";
-import { Contacts, SelectContacts } from "@/db/schema/contacts";
+import { SelectCompanyAddresses } from "@/db/schema/company-addresses";
 import { db } from "@/db";
+import { companyAddressFor } from "@/lib/server/company-addresses";
 import { PurchaseInvoiceItems } from "@/db/schema/purchase-invoice-items";
 import {
   PurchaseLineReceivals,
@@ -14,14 +15,14 @@ import {
   SelectPurchaseOrders,
 } from "@/db/schema/purchase-orders";
 import { Stock } from "@/db/schema/stock";
-import { and, asc, eq, isNotNull, max, min, notInArray, sql } from "drizzle-orm";
+import { and, asc, eq, isNotNull, max, notInArray, sql } from "drizzle-orm";
 
 export type PurchaseInvoiceToReceiveRow = {
   purchaseOrderUuid: SelectPurchaseOrders["uuid"];
   reference: SelectPurchaseOrders["reference"];
   supplierName: SelectCompanies["companyName"] | null;
   companyCode: SelectCompanies["id"] | null;
-  city: SelectContacts["city"] | null;
+  city: SelectCompanyAddresses["city"] | null;
   orderDate: SelectPurchaseOrders["orderDate"];
   paymentTerms: SelectPurchaseOrders["paymentTerms"];
   scheduledDeliveryDate: SelectPurchaseOrders["deliveryDate"];
@@ -60,23 +61,8 @@ export const getPurchaseInvoicesToBeReceived = async (): Promise<
       .groupBy(PurchaseLineReceivals.purchaseOrderUuid)
       .as("receivals");
 
-    const primaryContactId = db
-      .select({
-        companyUuid: Contacts.companyUuid,
-        minId: min(Contacts.id).as("min_id"),
-      })
-      .from(Contacts)
-      .groupBy(Contacts.companyUuid)
-      .as("primary_contact_id");
-
-    const primaryContact = db
-      .select({
-        companyUuid: Contacts.companyUuid,
-        city: Contacts.city,
-      })
-      .from(Contacts)
-      .innerJoin(primaryContactId, eq(Contacts.id, primaryContactId.minId))
-      .as("primary_contact");
+    // The supplier's city is its visiting address.
+    const visiting = companyAddressFor("visit", "visiting_address");
 
     const rows = await db
       .select({
@@ -84,7 +70,7 @@ export const getPurchaseInvoicesToBeReceived = async (): Promise<
         reference: PurchaseOrders.reference,
         supplierName: Companies.companyName,
         companyCode: Companies.id,
-        city: primaryContact.city,
+        city: visiting.city,
         orderDate: PurchaseOrders.orderDate,
         paymentTerms: PurchaseOrders.paymentTerms,
         scheduledDeliveryDate: PurchaseOrders.deliveryDate,
@@ -97,7 +83,7 @@ export const getPurchaseInvoicesToBeReceived = async (): Promise<
         receivals,
         eq(receivals.purchaseOrderUuid, PurchaseOrders.uuid),
       )
-      .leftJoin(primaryContact, eq(Companies.uuid, primaryContact.companyUuid))
+      .leftJoin(visiting, eq(Companies.uuid, visiting.companyUuid))
       .where(
         and(
           sql`${PurchaseOrders.status} <> 'cancelled'`,

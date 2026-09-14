@@ -2,18 +2,19 @@
 
 import { describeError } from "@/lib/helpers";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
-import { Contacts, SelectContacts } from "@/db/schema/contacts";
+import { SelectCompanyAddresses } from "@/db/schema/company-addresses";
 import { db } from "@/db";
 import { PurchaseInvoiceItems } from "@/db/schema/purchase-invoice-items";
 import { PurchaseInvoices } from "@/db/schema/purchase-invoices";
 import { Stock } from "@/db/schema/stock";
-import { eq, min, sql } from "drizzle-orm";
+import { companyAddressFor } from "@/lib/server/company-addresses";
+import { eq, sql } from "drizzle-orm";
 
 export type SupplierRevenueRow = {
   supplierName: SelectCompanies["companyName"] | null;
   supplierCode: SelectCompanies["id"] | null;
-  city: SelectContacts["city"] | null;
-  country: SelectContacts["addressCountry"] | null;
+  city: SelectCompanyAddresses["city"] | null;
+  country: SelectCompanyAddresses["country"] | null;
   year: number | null;
   month: number | null;
   revenue: number;
@@ -28,31 +29,15 @@ export const getSupplierRevenue = async (): Promise<SupplierRevenueRow[]> => {
     const year = sql<number>`YEAR(${PurchaseInvoices.invoiceDate})`;
     const month = sql<number>`MONTH(${PurchaseInvoices.invoiceDate})`;
 
-    const primaryContactId = db
-      .select({
-        companyUuid: Contacts.companyUuid,
-        minId: min(Contacts.id).as("min_id"),
-      })
-      .from(Contacts)
-      .groupBy(Contacts.companyUuid)
-      .as("primary_contact_id");
-
-    const primaryContact = db
-      .select({
-        companyUuid: Contacts.companyUuid,
-        city: Contacts.city,
-        addressCountry: Contacts.addressCountry,
-      })
-      .from(Contacts)
-      .innerJoin(primaryContactId, eq(Contacts.id, primaryContactId.minId))
-      .as("primary_contact");
+    // City and country are the supplier's visiting address.
+    const visiting = companyAddressFor("visit", "visiting_address");
 
     const rows = await db
       .select({
         supplierName: Companies.companyName,
         supplierCode: Companies.id,
-        city: primaryContact.city,
-        country: primaryContact.addressCountry,
+        city: visiting.city,
+        country: visiting.country,
         year,
         month,
         revenue: sql<string>`COALESCE(SUM(${Stock.valuationPrice} * ${PurchaseInvoiceItems.quantity}), 0)`,
@@ -65,13 +50,13 @@ export const getSupplierRevenue = async (): Promise<SupplierRevenueRow[]> => {
       )
       .innerJoin(Companies, eq(PurchaseInvoices.companyUuid, Companies.uuid))
       .leftJoin(Stock, eq(PurchaseInvoiceItems.stockUuid, Stock.uuid))
-      .leftJoin(primaryContact, eq(Companies.uuid, primaryContact.companyUuid))
+      .leftJoin(visiting, eq(Companies.uuid, visiting.companyUuid))
       .groupBy(
         Companies.uuid,
         Companies.companyName,
         Companies.id,
-        primaryContact.city,
-        primaryContact.addressCountry,
+        visiting.city,
+        visiting.country,
         year,
         month,
       )

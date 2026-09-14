@@ -3,13 +3,15 @@
 import { Companies } from "@/db/schema/companies";
 import { Contacts } from "@/db/schema/contacts";
 import { VisitReports } from "@/db/schema/visit-reports";
-import { db, SelectCompanies, SelectContacts } from "@/db";
+import { db, SelectCompanies, SelectCompanyAddresses, SelectContacts } from "@/db";
 import {
   contactIntervalWeeks,
   isContactDue,
   nextContactDate,
   todayDateString,
 } from "@/lib/helpers";
+import { companyAddressFor } from "@/lib/server/company-addresses";
+import { companyRevenueByYear } from "@/lib/server/customer-revenue";
 import { and, asc, eq, max, min, or, sql } from "drizzle-orm";
 
 export type VisitScheduleRow = Pick<
@@ -20,20 +22,17 @@ export type VisitScheduleRow = Pick<
   | "customerGroup"
   | "region"
 > &
-  Pick<
-    SelectContacts,
-    | "targetYearRevenue"
-    | "revenueLastYear"
-    | "revenueThisYear"
-    | "customerRegionCode"
-    | "visitStreetAndNo"
-    | "visitPostalCode"
-    | "visitCity"
-    | "visitCountry"
-    | "visitTelephone"
-  > & {
+  {
     companyUuid: SelectCompanies["uuid"];
+    /** Invoiced revenue excl. VAT, from the company's invoices. */
+    revenueLastYear: number;
+    revenueThisYear: number;
     companyCode: SelectCompanies["id"];
+    visitStreetAndNo: SelectCompanyAddresses["streetAndNo"] | null;
+    visitPostalCode: SelectCompanyAddresses["postalCode"] | null;
+    visitCity: SelectCompanyAddresses["city"] | null;
+    visitCountry: SelectCompanyAddresses["country"] | null;
+    visitTelephone: SelectCompanyAddresses["telephone"] | null;
     contactFirstName: SelectContacts["firstName"] | null;
     contactLastName: SelectContacts["lastName"] | null;
     contactEmail: SelectContacts["email"] | null;
@@ -55,9 +54,9 @@ export type VisitScheduleRow = Pick<
   };
 
 export const getVisitSchedule = async (): Promise<VisitScheduleRow[]> => {
-  // Contact with the lowest id per company (id is a global PK, so matching
-  // on it alone is enough to pick the right row) — same approach as
-  // customers-and-prospects/actions.ts.
+  // Contact with the lowest id per company — the reference's visit screens
+  // take the first contact too (C13 §41). Only the contact's own columns come
+  // from it.
   const primaryContactId = db
     .select({
       companyUuid: Contacts.companyUuid,
@@ -74,39 +73,15 @@ export const getVisitSchedule = async (): Promise<VisitScheduleRow[]> => {
       lastName: Contacts.lastName,
       email: Contacts.email,
       mobile: Contacts.mobile,
-      customerRegionCode: Contacts.customerRegionCode,
-      targetYearRevenue: Contacts.targetYearRevenue,
-      revenueLastYear: Contacts.revenueLastYear,
-      revenueThisYear: Contacts.revenueThisYear,
-      // Fall back to the contact's main address/phone when no separate
-      // visiting address was entered, so these columns still surface data.
-      visitStreetAndNo: sql<
-        string | null
-      >`COALESCE(${Contacts.visitStreetAndNo}, ${Contacts.streetAndNo})`.as(
-        "visit_street_and_no",
-      ),
-      visitPostalCode: sql<
-        string | null
-      >`COALESCE(${Contacts.visitPostalCode}, ${Contacts.postalCode})`.as(
-        "visit_postal_code",
-      ),
-      visitCity: sql<
-        string | null
-      >`COALESCE(${Contacts.visitCity}, ${Contacts.city})`.as("visit_city"),
-      visitCountry: sql<
-        string | null
-      >`COALESCE(${Contacts.visitCountry}, ${Contacts.addressCountry})`.as(
-        "visit_country",
-      ),
-      visitTelephone: sql<
-        string | null
-      >`COALESCE(${Contacts.visitTelephone}, ${Contacts.addressTelephone}, ${Contacts.telephone})`.as(
-        "visit_telephone",
-      ),
     })
     .from(Contacts)
     .innerJoin(primaryContactId, eq(Contacts.id, primaryContactId.minId))
     .as("primary_contact");
+
+  // The visiting address is the company's — 2 531 of 2 531 rows in the
+  // reference's Visit schedule equal the company's visiting-address row.
+  const visiting = companyAddressFor("visit", "visiting_address");
+  const revenue = companyRevenueByYear("company_revenue");
 
   // Most recent completed phone contact per company.
   const lastCall = db
@@ -156,20 +131,20 @@ export const getVisitSchedule = async (): Promise<VisitScheduleRow[]> => {
       contactLastName: primaryContact.lastName,
       contactEmail: primaryContact.email,
       contactMobile: primaryContact.mobile,
-      customerRegionCode: primaryContact.customerRegionCode,
-      targetYearRevenue: primaryContact.targetYearRevenue,
-      revenueLastYear: primaryContact.revenueLastYear,
-      revenueThisYear: primaryContact.revenueThisYear,
-      visitStreetAndNo: primaryContact.visitStreetAndNo,
-      visitPostalCode: primaryContact.visitPostalCode,
-      visitCity: primaryContact.visitCity,
-      visitCountry: primaryContact.visitCountry,
-      visitTelephone: primaryContact.visitTelephone,
+      revenueLastYear: revenue.revenueLastYear,
+      revenueThisYear: revenue.revenueThisYear,
+      visitStreetAndNo: visiting.streetAndNo,
+      visitPostalCode: visiting.postalCode,
+      visitCity: visiting.city,
+      visitCountry: visiting.country,
+      visitTelephone: visiting.telephone,
       lastCallDate: lastCall.lastCallDate,
       lastVisitDate: lastVisit.lastVisitDate,
     })
     .from(Companies)
     .leftJoin(primaryContact, eq(Companies.uuid, primaryContact.companyUuid))
+    .leftJoin(visiting, eq(Companies.uuid, visiting.companyUuid))
+    .leftJoin(revenue, eq(Companies.uuid, revenue.companyUuid))
     .leftJoin(lastCall, eq(Companies.uuid, lastCall.companyUuid))
     .leftJoin(lastVisit, eq(Companies.uuid, lastVisit.companyUuid))
     .where(
@@ -210,10 +185,8 @@ export const getVisitSchedule = async (): Promise<VisitScheduleRow[]> => {
       contactLastName: row.contactLastName ?? null,
       contactEmail: row.contactEmail ?? null,
       contactMobile: row.contactMobile ?? null,
-      customerRegionCode: row.customerRegionCode ?? null,
-      targetYearRevenue: row.targetYearRevenue ?? null,
-      revenueLastYear: row.revenueLastYear ?? null,
-      revenueThisYear: row.revenueThisYear ?? null,
+      revenueLastYear: Number(row.revenueLastYear ?? 0),
+      revenueThisYear: Number(row.revenueThisYear ?? 0),
       visitStreetAndNo: row.visitStreetAndNo ?? null,
       visitPostalCode: row.visitPostalCode ?? null,
       visitCity: row.visitCity ?? null,

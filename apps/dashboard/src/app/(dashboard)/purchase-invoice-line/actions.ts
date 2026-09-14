@@ -3,7 +3,8 @@
 import { describeError } from "@/lib/helpers";
 import { db } from "@/db";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
-import { Contacts, SelectContacts } from "@/db/schema/contacts";
+import { SelectCompanyAddresses } from "@/db/schema/company-addresses";
+import { companyAddressFor } from "@/lib/server/company-addresses";
 import { Products, SelectProducts } from "@/db/schema/products";
 import {
   PurchaseInvoiceItems,
@@ -14,7 +15,7 @@ import {
   SelectPurchaseInvoices,
 } from "@/db/schema/purchase-invoices";
 import { SelectStock, Stock } from "@/db/schema/stock";
-import { desc, eq, getTableColumns, min } from "drizzle-orm";
+import { desc, eq, getTableColumns } from "drizzle-orm";
 
 export type PurchaseInvoiceLineRow = {
   uuid: SelectPurchaseInvoiceItems["uuid"];
@@ -22,7 +23,7 @@ export type PurchaseInvoiceLineRow = {
   invoiceDate: SelectPurchaseInvoices["invoiceDate"] | null;
   purchaseOrderNumber: SelectPurchaseInvoices["purchaseOrderNumber"] | null;
   supplierName: SelectCompanies["companyName"] | null;
-  country: SelectContacts["addressCountry"] | null;
+  country: SelectCompanyAddresses["country"] | null;
   vatNumber: SelectCompanies["vatNumber"] | null;
   productCode: SelectProducts["productCode"] | null;
   productName: SelectProducts["name"] | null;
@@ -36,7 +37,7 @@ export type PurchaseInvoiceLineDetail = SelectPurchaseInvoiceItems & {
   purchaseOrderNumber: SelectPurchaseInvoices["purchaseOrderNumber"] | null;
   supplierName: SelectCompanies["companyName"] | null;
   supplierUuid: SelectCompanies["uuid"] | null;
-  country: SelectContacts["addressCountry"] | null;
+  country: SelectCompanyAddresses["country"] | null;
   vatNumber: SelectCompanies["vatNumber"] | null;
   productCode: SelectProducts["productCode"] | null;
   productName: SelectProducts["name"] | null;
@@ -51,23 +52,8 @@ export const getPurchaseInvoiceLines = async (): Promise<
   PurchaseInvoiceLineRow[]
 > => {
   try {
-    const primaryContactId = db
-      .select({
-        companyUuid: Contacts.companyUuid,
-        minId: min(Contacts.id).as("min_id"),
-      })
-      .from(Contacts)
-      .groupBy(Contacts.companyUuid)
-      .as("primary_contact_id");
-
-    const primaryContact = db
-      .select({
-        companyUuid: Contacts.companyUuid,
-        addressCountry: Contacts.addressCountry,
-      })
-      .from(Contacts)
-      .innerJoin(primaryContactId, eq(Contacts.id, primaryContactId.minId))
-      .as("primary_contact");
+    // The supplier's country is its visiting address.
+    const visiting = companyAddressFor("visit", "visiting_address");
 
     const rows = await db
       .select({
@@ -76,7 +62,7 @@ export const getPurchaseInvoiceLines = async (): Promise<
         invoiceDate: PurchaseInvoices.invoiceDate,
         purchaseOrderNumber: PurchaseInvoices.purchaseOrderNumber,
         supplierName: Companies.companyName,
-        country: primaryContact.addressCountry,
+        country: visiting.country,
         vatNumber: Companies.vatNumber,
         productCode: Products.productCode,
         productName: Products.name,
@@ -89,7 +75,7 @@ export const getPurchaseInvoiceLines = async (): Promise<
         eq(PurchaseInvoiceItems.purchaseInvoiceUuid, PurchaseInvoices.uuid),
       )
       .leftJoin(Companies, eq(PurchaseInvoices.companyUuid, Companies.uuid))
-      .leftJoin(primaryContact, eq(Companies.uuid, primaryContact.companyUuid))
+      .leftJoin(visiting, eq(Companies.uuid, visiting.companyUuid))
       .leftJoin(Products, eq(PurchaseInvoiceItems.productUuid, Products.uuid))
       .leftJoin(Stock, eq(PurchaseInvoiceItems.stockUuid, Stock.uuid))
       .orderBy(desc(PurchaseInvoices.invoiceDate));
@@ -118,30 +104,13 @@ export const getPurchaseInvoiceLines = async (): Promise<
  * One purchase invoice line with the invoice, supplier, product and the stock
  * lot valuation behind its purchased value.
  *
- * The supplier's country comes off their first contact, the same primary-contact
- * rule the overview uses.
+ * The supplier's country comes off their visiting address, as in the overview.
  */
 export const getPurchaseInvoiceLineDetail = async (
   uuid: string,
 ): Promise<PurchaseInvoiceLineDetail | null> => {
   try {
-    const primaryContactId = db
-      .select({
-        companyUuid: Contacts.companyUuid,
-        minId: min(Contacts.id).as("min_id"),
-      })
-      .from(Contacts)
-      .groupBy(Contacts.companyUuid)
-      .as("primary_contact_id");
-
-    const primaryContact = db
-      .select({
-        companyUuid: Contacts.companyUuid,
-        addressCountry: Contacts.addressCountry,
-      })
-      .from(Contacts)
-      .innerJoin(primaryContactId, eq(Contacts.id, primaryContactId.minId))
-      .as("primary_contact");
+    const visiting = companyAddressFor("visit", "visiting_address");
 
     const [row] = await db
       .select({
@@ -151,7 +120,7 @@ export const getPurchaseInvoiceLineDetail = async (
         purchaseOrderNumber: PurchaseInvoices.purchaseOrderNumber,
         supplierName: Companies.companyName,
         supplierUuid: Companies.uuid,
-        country: primaryContact.addressCountry,
+        country: visiting.country,
         vatNumber: Companies.vatNumber,
         productCode: Products.productCode,
         productName: Products.name,
@@ -163,7 +132,7 @@ export const getPurchaseInvoiceLineDetail = async (
         eq(PurchaseInvoiceItems.purchaseInvoiceUuid, PurchaseInvoices.uuid),
       )
       .leftJoin(Companies, eq(PurchaseInvoices.companyUuid, Companies.uuid))
-      .leftJoin(primaryContact, eq(Companies.uuid, primaryContact.companyUuid))
+      .leftJoin(visiting, eq(Companies.uuid, visiting.companyUuid))
       .leftJoin(Products, eq(PurchaseInvoiceItems.productUuid, Products.uuid))
       .leftJoin(Stock, eq(PurchaseInvoiceItems.stockUuid, Stock.uuid))
       .where(eq(PurchaseInvoiceItems.uuid, uuid))

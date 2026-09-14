@@ -2,8 +2,10 @@
 
 import { describeError } from "@/lib/helpers";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
+import { SelectCompanyAddresses } from "@/db/schema/company-addresses";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
 import { db } from "@/db";
+import { companyAddressFor } from "@/lib/server/company-addresses";
 import { asc, eq, min, sql } from "drizzle-orm";
 
 export type SupplierRow = Pick<
@@ -19,17 +21,17 @@ export type SupplierRow = Pick<
 > & {
   companyUuid: SelectCompanies["uuid"];
   companyCode: SelectCompanies["id"];
-  visitCity: SelectContacts["visitCity"] | null;
+  visitCity: SelectCompanyAddresses["city"] | null;
   contactFirstName: SelectContacts["firstName"] | null;
   contactLastName: SelectContacts["lastName"] | null;
   contactEmail: SelectContacts["email"] | null;
   contactMobile: SelectContacts["mobile"] | null;
-  correspondenceStreetAndNo: SelectContacts["streetAndNo"] | null;
-  correspondencePostalCode: SelectContacts["postalCode"] | null;
-  correspondenceCity: SelectContacts["city"] | null;
-  correspondenceCountry: SelectContacts["addressCountry"] | null;
-  correspondenceTelephone: SelectContacts["addressTelephone"] | null;
-  correspondenceFax: SelectContacts["addressFax"] | null;
+  correspondenceStreetAndNo: SelectCompanyAddresses["streetAndNo"] | null;
+  correspondencePostalCode: SelectCompanyAddresses["postalCode"] | null;
+  correspondenceCity: SelectCompanyAddresses["city"] | null;
+  correspondenceCountry: SelectCompanyAddresses["country"] | null;
+  correspondenceTelephone: SelectCompanyAddresses["telephone"] | null;
+  correspondenceFax: SelectCompanyAddresses["fax"] | null;
   isSupplier: boolean;
   isProcessor: boolean;
   isTransporter: boolean;
@@ -59,17 +61,17 @@ export const getSuppliers = async (): Promise<SupplierRow[]> => {
         lastName: Contacts.lastName,
         email: Contacts.email,
         mobile: Contacts.mobile,
-        visitCity: Contacts.visitCity,
-        streetAndNo: Contacts.streetAndNo,
-        postalCode: Contacts.postalCode,
-        city: Contacts.city,
-        addressCountry: Contacts.addressCountry,
-        addressTelephone: Contacts.addressTelephone,
-        addressFax: Contacts.addressFax,
       })
       .from(Contacts)
       .innerJoin(primaryContactId, eq(Contacts.id, primaryContactId.minId))
       .as("primary_contact");
+
+    // The addresses are the company's, not a copy on its first contact.
+    const visiting = companyAddressFor("visit", "visiting_address");
+    const correspondence = companyAddressFor(
+      "correspondence",
+      "correspondence_address",
+    );
 
     const rows = await db
       .select({
@@ -84,20 +86,22 @@ export const getSuppliers = async (): Promise<SupplierRow[]> => {
         region: Companies.region,
         createdAt: Companies.createdAt,
         roles: Companies.roles,
-        visitCity: primaryContact.visitCity,
+        visitCity: visiting.city,
         contactFirstName: primaryContact.firstName,
         contactLastName: primaryContact.lastName,
         contactEmail: primaryContact.email,
         contactMobile: primaryContact.mobile,
-        correspondenceStreetAndNo: primaryContact.streetAndNo,
-        correspondencePostalCode: primaryContact.postalCode,
-        correspondenceCity: primaryContact.city,
-        correspondenceCountry: primaryContact.addressCountry,
-        correspondenceTelephone: primaryContact.addressTelephone,
-        correspondenceFax: primaryContact.addressFax,
+        correspondenceStreetAndNo: correspondence.streetAndNo,
+        correspondencePostalCode: correspondence.postalCode,
+        correspondenceCity: correspondence.city,
+        correspondenceCountry: correspondence.country,
+        correspondenceTelephone: correspondence.telephone,
+        correspondenceFax: correspondence.fax,
       })
       .from(Companies)
       .leftJoin(primaryContact, eq(Companies.uuid, primaryContact.companyUuid))
+      .leftJoin(visiting, eq(Companies.uuid, visiting.companyUuid))
+      .leftJoin(correspondence, eq(Companies.uuid, correspondence.companyUuid))
       .where(sql`JSON_CONTAINS(${Companies.roles}, '"supplier"')`)
       .orderBy(asc(Companies.companyName));
 

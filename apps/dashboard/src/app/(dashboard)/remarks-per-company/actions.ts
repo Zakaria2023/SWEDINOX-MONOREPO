@@ -2,42 +2,29 @@
 
 import { describeError } from "@/lib/helpers";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
-import { Contacts, SelectContacts } from "@/db/schema/contacts";
+import { SelectCompanyAddresses } from "@/db/schema/company-addresses";
 import { db } from "@/db";
-import { and, asc, eq, isNotNull, min, ne, sql } from "drizzle-orm";
+import { companyAddressFor } from "@/lib/server/company-addresses";
+import { and, asc, eq, isNotNull, ne, sql } from "drizzle-orm";
 
 export type RemarkPerCompanyRow = {
   companyUuid: SelectCompanies["uuid"];
   companyCode: SelectCompanies["id"];
   customer: SelectCompanies["companyName"];
   representative: SelectCompanies["representative"];
-  city: SelectContacts["city"] | null;
+  city: SelectCompanyAddresses["city"] | null;
   remarks: NonNullable<SelectCompanies["remarks"]>;
 };
 
 // Companies that carry a free-text remark, with their representative and city —
-// the "Customer remarks" report.
+// the "Customer remarks" report. Only companies with a remark are listed
+// (decided 14-9-2026; the reference prints all).
 export const getRemarksPerCompany = async (): Promise<
   RemarkPerCompanyRow[]
 > => {
   try {
-    const primaryContactId = db
-      .select({
-        companyUuid: Contacts.companyUuid,
-        minId: min(Contacts.id).as("min_id"),
-      })
-      .from(Contacts)
-      .groupBy(Contacts.companyUuid)
-      .as("primary_contact_id");
-
-    const primaryContact = db
-      .select({
-        companyUuid: Contacts.companyUuid,
-        city: Contacts.city,
-      })
-      .from(Contacts)
-      .innerJoin(primaryContactId, eq(Contacts.id, primaryContactId.minId))
-      .as("primary_contact");
+    // The city is the company's visiting address.
+    const visiting = companyAddressFor("visit", "visiting_address");
 
     const rows = await db
       .select({
@@ -45,11 +32,11 @@ export const getRemarksPerCompany = async (): Promise<
         companyCode: Companies.id,
         customer: Companies.companyName,
         representative: Companies.representative,
-        city: primaryContact.city,
+        city: visiting.city,
         remarks: Companies.remarks,
       })
       .from(Companies)
-      .leftJoin(primaryContact, eq(Companies.uuid, primaryContact.companyUuid))
+      .leftJoin(visiting, eq(Companies.uuid, visiting.companyUuid))
       .where(and(isNotNull(Companies.remarks), ne(Companies.remarks, sql`''`)))
       .orderBy(asc(Companies.companyName));
 

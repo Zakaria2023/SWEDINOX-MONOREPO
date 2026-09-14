@@ -3,15 +3,16 @@ import { describeError } from "@/lib/helpers";
 
 import { db } from "@/db";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
-import { Contacts, SelectContacts } from "@/db/schema/contacts";
+import { SelectCompanyAddresses } from "@/db/schema/company-addresses";
 import { Orders } from "@/db/schema/orders";
-import { and, asc, eq, isNull, lt, max, min, or, sql } from "drizzle-orm";
+import { companyAddressFor } from "@/lib/server/company-addresses";
+import { and, asc, eq, isNull, lt, max, or, sql } from "drizzle-orm";
 
 export type InactiveCompanyRow = {
   companyUuid: SelectCompanies["uuid"];
   companyCode: SelectCompanies["id"];
   companyName: SelectCompanies["companyName"];
-  city: SelectContacts["city"] | null;
+  city: SelectCompanyAddresses["city"] | null;
   representative: SelectCompanies["representative"] | null;
   customerGroup: SelectCompanies["customerGroup"] | null;
   region: SelectCompanies["region"] | null;
@@ -22,23 +23,8 @@ export type InactiveCompanyRow = {
 // candidates to re-engage or archive.
 export const getInactiveCompanies = async (): Promise<InactiveCompanyRow[]> => {
   try {
-    const primaryContactId = db
-      .select({
-        companyUuid: Contacts.companyUuid,
-        minId: min(Contacts.id).as("min_id"),
-      })
-      .from(Contacts)
-      .groupBy(Contacts.companyUuid)
-      .as("primary_contact_id");
-
-    const primaryContact = db
-      .select({
-        companyUuid: Contacts.companyUuid,
-        city: Contacts.city,
-      })
-      .from(Contacts)
-      .innerJoin(primaryContactId, eq(Contacts.id, primaryContactId.minId))
-      .as("primary_contact");
+    // The city is the company's visiting address.
+    const visiting = companyAddressFor("visit", "visiting_address");
 
     const orderStats = db
       .select({
@@ -54,14 +40,14 @@ export const getInactiveCompanies = async (): Promise<InactiveCompanyRow[]> => {
         companyUuid: Companies.uuid,
         companyCode: Companies.id,
         companyName: Companies.companyName,
-        city: primaryContact.city,
+        city: visiting.city,
         representative: Companies.representative,
         customerGroup: Companies.customerGroup,
         region: Companies.region,
         lastOrderDate: orderStats.lastOrderDate,
       })
       .from(Companies)
-      .leftJoin(primaryContact, eq(Companies.uuid, primaryContact.companyUuid))
+      .leftJoin(visiting, eq(Companies.uuid, visiting.companyUuid))
       .leftJoin(orderStats, eq(Companies.uuid, orderStats.companyUuid))
       .where(
         // Either flagged inactive by hand, or a customer/prospect where nothing
