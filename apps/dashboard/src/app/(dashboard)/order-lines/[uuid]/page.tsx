@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { getOrderLineDetail } from "@/app/(dashboard)/order-lines/actions";
+import { OrderLineBlockControl } from "@/components/order-lines/order-line-block-control";
 import { OrderLineDetailView } from "@/components/order-lines/order-line-detail";
 import { PageHeading } from "@/components/layout/page-heading";
 import { getClerkUserNames } from "@/lib/server/clerk";
@@ -40,6 +41,12 @@ const OrderLineDetailPage = async ({ params }: Props) => {
             ? `Line #${line.id}`
             : `Order #${line.orderId} — line ${line.lineNumber ?? "?"}`
         }
+      />
+      <OrderLineBlockControl
+        orderItemUuid={line.uuid}
+        orderUuid={line.orderUuid}
+        status={line.status}
+        commercialBlock={line.commercialBlock}
       />
       <OrderLineDetailView line={line}  userNames={userNames} />
     </div>

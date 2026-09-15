@@ -13,6 +13,10 @@ import {
   MaterialFamily,
   MaterialSurfaceFinish,
   RevenueGroupKind,
+  SystemLogCategory,
+  WorkPanelType,
+  RevenueVsBudgetView,
+  WorkListKey,
   SurchargeBasis,
   PriceTierBase,
   ProductDimensionShape,
@@ -1926,4 +1930,42 @@ export const REVENUE_GROUP_KIND_LABELS: Record<RevenueGroupKind, string> = {
   allowance: "Allowance",
   adjustment: "Adjustment",
   other: "Other",
+};
+
+export const SYSTEM_LOG_CATEGORY_LABELS: Record<SystemLogCategory, string> = {
+  delivery_date_changed: "Delivery date changed",
+  financial_block: "Financial block",
+  financial_unblock: "Financial unblock",
+  commercial_block: "Commercial block",
+  commercial_unblock: "Commercial unblock",
+  order_changed_after_release: "Order changed after release",
+  lock_removed: "Lock removed",
+  settings_changed: "Settings changed",
+};
+
+export const WORK_PANEL_TYPE_LABELS: Record<WorkPanelType, string> = {
+  order: "Order",
+  company: "Company",
+};
+
+export const REVENUE_VS_BUDGET_VIEW_LABELS: Record<RevenueVsBudgetView, string> =
+  {
+    revenue_group: "Per revenue group",
+    month: "Per month",
+  };
+
+export const WORK_LIST_LABELS: Record<WorkListKey, string> = {
+  orders_financially_blocked: "Orders with financial blocking",
+  customers_blocked: "Unblock customers",
+  customers_without_debtor_number: "Customers without debtor number",
+  order_lines_manually_blocked: "Order lines with manually blocked deliveries",
+  orders_transport_blocked: "Orders with transport blocking",
+  orders_invoice_blocked: "Orders with invoice blocking",
+  order_lines_late: "Order lines that are late",
+  order_lines_incomplete: "Order lines with incomplete deliveries",
+  purchase_order_lines_overdue: "Purchase order lines not yet received",
+  customer_contracts_expiring: "Expiring customer contracts",
+  customer_complaints_open: "Handle customer complaints",
+  incomplete_delivery_addresses: "Incomplete delivery addresses",
+  visit_reports_to_read: "Read customer visit reports",
 };

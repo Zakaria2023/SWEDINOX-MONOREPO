@@ -6,7 +6,11 @@ import { OrderDeblocks } from "@/db/schema/order-deblocks";
 import { OrderItems } from "@/db/schema/order-items";
 import { Orders, SelectOrders } from "@/db/schema/orders";
 import { Quotes, SelectQuotes } from "@/db/schema/quotes";
-import { requireAuth } from "@/lib/auth";
+import {
+  currentUserHasRole,
+  FINANCIAL_RELEASE_ROLES,
+  requireAuth,
+} from "@/lib/auth";
 import {
   describeError,
   effectiveCreditLimit,
@@ -16,7 +20,8 @@ import {
   getCommittedOrderValueByCompany,
   getOpenReceivablesByCompany,
 } from "@/lib/server/credit-control";
-import { eq, sql } from "drizzle-orm";
+import { writeSystemLog } from "@/lib/server/system-log";
+import { and, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 export type UnblockOrderResult = { success?: boolean; error?: string };
@@ -32,6 +37,8 @@ export type FinanciallyBlockedRow = {
   deliveryDate: SelectOrders["deliveryDate"];
   blockingReason: SelectOrders["blockingReason"];
   paymentTerms: SelectOrders["paymentTerms"];
+  /** Held by hand on the order form rather than by the credit rule. */
+  financialBlockManual: NonNullable<SelectOrders["financialBlockManual"]>;
   amount: number;
   creditLimit: number;
   openEntrees: number;
@@ -41,15 +48,41 @@ export type FinanciallyBlockedRow = {
 
 // Release an order's financial block and record the event in the deblock audit
 // trail (which block, when, and by which user).
+//
+// Only Finance or an administrator may: the reference hides both the queue and
+// its `Deblokkeren` from its sales and logistics profiles.
 export const unblockOrder = async (
   orderUuid: string,
 ): Promise<UnblockOrderResult> => {
   const userId = await requireAuth();
+  if (!(await currentUserHasRole(FINANCIAL_RELEASE_ROLES))) {
+    return {
+      error: "Only Finance or an administrator can release a financial block.",
+    };
+  }
   try {
     await db.transaction(async (tx) => {
+      const [order] = await tx
+        .select({ id: Orders.id })
+        .from(Orders)
+        .where(
+          and(eq(Orders.uuid, orderUuid), eq(Orders.financialBlockage, true)),
+        )
+        .limit(1);
+
+      if (!order) {
+        throw new Error("This order is not financially blocked.");
+      }
+
+      // A release covers the order as it stands now, so the "changed since"
+      // flag starts over with it.
       await tx
         .update(Orders)
-        .set({ financialBlockage: false })
+        .set({
+          financialBlockage: false,
+          financialBlockManual: false,
+          changedAfterFinancialDeblock: false,
+        })
         .where(eq(Orders.uuid, orderUuid));
 
       await tx.insert(OrderDeblocks).values({
@@ -57,6 +90,13 @@ export const unblockOrder = async (
         orderUuid,
         deblockType: "financial",
         deblockedByUserId: userId,
+      });
+
+      await writeSystemLog(tx, {
+        category: "financial_unblock",
+        message: `Order ${order.id} released from its financial block`,
+        orderUuid,
+        userId,
       });
     });
     revalidatePath("/financially-blocked");
@@ -104,6 +144,7 @@ export const getFinanciallyBlocked = async (): Promise<
         deliveryDate: lineDeliveryDate,
         blockingReason: Orders.blockingReason,
         paymentTerms: Orders.paymentTerms,
+        financialBlockManual: Orders.financialBlockManual,
         creditLimit: Companies.creditLimit,
         creditLimitUninsured: Companies.creditLimitUninsured,
         creditLimitUninsuredDate: Companies.creditLimitUninsuredDate,
@@ -123,6 +164,7 @@ export const getFinanciallyBlocked = async (): Promise<
         lineDeliveryDate,
         Orders.blockingReason,
         Orders.paymentTerms,
+        Orders.financialBlockManual,
         Companies.creditLimit,
         Companies.creditLimitUninsured,
         Companies.creditLimitUninsuredDate,
@@ -160,6 +202,7 @@ export const getFinanciallyBlocked = async (): Promise<
         deliveryDate: SelectOrders["deliveryDate"];
         blockingReason: SelectOrders["blockingReason"];
         paymentTerms: SelectOrders["paymentTerms"];
+        financialBlockManual: SelectOrders["financialBlockManual"];
         creditLimit: SelectCompanies["creditLimit"];
         creditLimitUninsured: SelectCompanies["creditLimitUninsured"];
         creditLimitUninsuredDate: SelectCompanies["creditLimitUninsuredDate"];
@@ -187,6 +230,7 @@ export const getFinanciallyBlocked = async (): Promise<
         deliveryDate: row.deliveryDate,
         blockingReason: row.blockingReason,
         paymentTerms: row.paymentTerms,
+        financialBlockManual: row.financialBlockManual ?? false,
         amount: Number(row.amount ?? 0),
         creditLimit,
         openEntrees,
@@ -199,7 +243,10 @@ export const getFinanciallyBlocked = async (): Promise<
 
     return [
       ...orderRows.map((row) => build("Order", row)),
-      ...quoteRows.map((row) => build("Quote", row)),
+      // A quote carries no manual flag; its hold is the credit rule's.
+      ...quoteRows.map((row) =>
+        build("Quote", { ...row, financialBlockManual: false }),
+      ),
     ].sort((a, b) => a.debtor.localeCompare(b.debtor));
   } catch (error) {
     throw new Error(

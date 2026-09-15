@@ -27,6 +27,7 @@ import {
 } from "@/lib/helpers";
 import { buildOrderSummary } from "@/app/(dashboard)/orders/actions";
 import { checkCredit } from "@/lib/server/credit-control";
+import { writeSystemLog } from "@/lib/server/system-log";
 import {
   and,
   asc,
@@ -489,9 +490,19 @@ export const convertQuoteToOrder = async (
         .set({
           ...summary,
           ...(credit.reason ? { blockingReason: credit.reason } : {}),
-          ...(credit.blocked ? { financialBlockage: true } : {}),
+          ...(credit.blocked
+            ? { financialBlockage: true, financialBlockManual: false }
+            : {}),
         })
         .where(eq(Orders.uuid, orderUuid));
+
+      if (credit.blocked) {
+        await writeSystemLog(tx, {
+          category: "financial_block",
+          message: `Order converted from a quote and held by the credit rule — ${credit.reason}`,
+          orderUuid,
+        });
+      }
     });
 
     revalidatePath("/quote-lines");

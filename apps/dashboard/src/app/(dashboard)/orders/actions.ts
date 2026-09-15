@@ -6,6 +6,7 @@ import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { CompanyAddresses } from "@/db/schema/company-addresses";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
 import { Contracts, SelectContracts } from "@/db/schema/contracts";
+import { OrderDeblocks } from "@/db/schema/order-deblocks";
 import { OrderItemOptions } from "@/db/schema/order-item-options";
 import { OrderItems, SelectOrderItems } from "@/db/schema/order-items";
 import {
@@ -19,10 +20,12 @@ import { Products, SelectProducts } from "@/db/schema/products";
 import { Reservations } from "@/db/schema/reservations";
 import { SelectStock, Stock } from "@/db/schema/stock";
 import { InsertTexts, Texts } from "@/db/schema/texts";
+import { requireAuth } from "@/lib/auth";
 import { invoicePaymentTerms, orderStatuses, orderTypes } from "@/lib/enums";
 import {
   computeQuoteSummary,
   describeError,
+  formatDateColumn,
   generateUuid,
   getQuoteVatRatePercent,
   moneyString,
@@ -34,6 +37,11 @@ import {
 } from "@/lib/helpers";
 import { checkCredit } from "@/lib/server/credit-control";
 import { exportRows } from "@/lib/server/excel";
+import { writeSystemLog } from "@/lib/server/system-log";
+import {
+  assertWorkPanelFree,
+  releaseWorkPanelLockFor,
+} from "@/lib/server/work-panel-locks";
 import {
   loadSalesPricingContext,
   minimumMarginFor,
@@ -421,7 +429,14 @@ export const createOrder = async (
     );
 
     await db.transaction(async (tx) => {
-      await tx.insert(Orders).values({ ...orderFields, uuid });
+      await tx.insert(Orders).values({
+        ...orderFields,
+        uuid,
+        // A block ticked on the form is somebody's decision, not the credit
+        // rule's, and the queue shows which is which.
+        financialBlockManual: Boolean(orderFields.financialBlockage),
+        changedAfterFinancialDeblock: false,
+      });
 
       // Only items whose stock lot still exists become order lines; the line
       // number counts those, not the raw submitted rows.
@@ -614,6 +629,20 @@ export const createOrder = async (
           ...(credit.blocked ? { financialBlockage: true } : {}),
         })
         .where(eq(Orders.uuid, uuid));
+
+      if (orderFields.financialBlockage) {
+        await writeSystemLog(tx, {
+          category: "financial_block",
+          message: "Order entered with a financial block set by hand",
+          orderUuid: uuid,
+        });
+      } else if (credit.blocked) {
+        await writeSystemLog(tx, {
+          category: "financial_block",
+          message: `Order held by the credit rule — ${credit.reason}`,
+          orderUuid: uuid,
+        });
+      }
     });
 
     revalidatePath("/orders");
@@ -751,13 +780,34 @@ export const cancelOrder = async (uuid: string): Promise<OrderActionResult> => {
   }
 };
 
+/**
+ * Save the order header.
+ *
+ * Three things ride on a save besides the columns:
+ *
+ * - **The lock.** While someone else has the order open for editing the save is
+ *   refused, and a successful save closes this user's own panel.
+ * - **The delivery date's history.** The reference logs every move — `Leverdatum
+ *   gewijzigd: 100009/10 van 6-1-2025 naar 10-1-2025`, 149 times — so a promise
+ *   that slipped can be seen to have slipped.
+ * - **A change after a financial release.** The release covered the order as it
+ *   was; once it is edited, the credit rule runs again before goods leave
+ *   (`deliverOrderItem`).
+ */
 export const updateOrder = async (
   uuid: string,
   fields: OrderHeaderEdit,
 ): Promise<OrderActionResult> => {
+  const userId = await requireAuth();
   try {
     const [order] = await db
-      .select({ status: Orders.status })
+      .select({
+        id: Orders.id,
+        status: Orders.status,
+        deliveryDate: Orders.deliveryDate,
+        financialBlockage: Orders.financialBlockage,
+        changedAfterFinancialDeblock: Orders.changedAfterFinancialDeblock,
+      })
       .from(Orders)
       .where(eq(Orders.uuid, uuid))
       .limit(1);
@@ -769,7 +819,53 @@ export const updateOrder = async (
       return { error: "Cannot edit a cancelled order." };
     }
 
-    await db.update(Orders).set(fields).where(eq(Orders.uuid, uuid));
+    const [released] = await db
+      .select({ uuid: OrderDeblocks.uuid })
+      .from(OrderDeblocks)
+      .where(
+        and(
+          eq(OrderDeblocks.orderUuid, uuid),
+          eq(OrderDeblocks.deblockType, "financial"),
+        ),
+      )
+      .limit(1);
+    const changedAfterRelease = Boolean(released) && !order.financialBlockage;
+
+    await db.transaction(async (tx) => {
+      await assertWorkPanelFree(tx, "order", uuid, userId);
+
+      await tx
+        .update(Orders)
+        .set({
+          ...fields,
+          ...(changedAfterRelease ? { changedAfterFinancialDeblock: true } : {}),
+        })
+        .where(eq(Orders.uuid, uuid));
+
+      if (fields.deliveryDate !== undefined) {
+        const before = formatDateColumn(order.deliveryDate);
+        const after = formatDateColumn(fields.deliveryDate);
+        if (before !== after) {
+          await writeSystemLog(tx, {
+            category: "delivery_date_changed",
+            message: `Delivery date of order ${order.id} changed from ${before} to ${after}`,
+            orderUuid: uuid,
+            userId,
+          });
+        }
+      }
+
+      if (changedAfterRelease && !order.changedAfterFinancialDeblock) {
+        await writeSystemLog(tx, {
+          category: "order_changed_after_release",
+          message: `Order ${order.id} was changed after its financial release; the credit rule runs again before delivery`,
+          orderUuid: uuid,
+          userId,
+        });
+      }
+
+      await releaseWorkPanelLockFor(tx, "order", uuid, userId);
+    });
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : "Failed to update order",

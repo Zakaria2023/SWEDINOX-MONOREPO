@@ -2268,3 +2268,65 @@ export const revenueGroupKinds = [
 ] as const satisfies readonly string[];
 
 export type RevenueGroupKind = (typeof revenueGroupKinds)[number];
+
+// A Clerk `publicMetadata.role`. The reference gives releasing a financial
+// block to its Finance and admin profiles only — sales may see the queue but not
+// work it (docs/reference-system/system-info.md §6) — so a role decides whether
+// the Unblock button is offered and whether the release goes through.
+export const userRoles = ["admin", "finance"] as const satisfies readonly string[];
+
+export type UserRole = (typeof userRoles)[number];
+
+// What an entry in the system log records. The reference's `Errors` screen is
+// mostly the application writing down what it did on somebody's behalf —
+// a delivery date moved, an order held, a lock cleared (error-log.md §4).
+// The category decides which filter an entry sits under.
+export const systemLogCategories = [
+  "delivery_date_changed",
+  "financial_block",
+  "financial_unblock",
+  "commercial_block",
+  "commercial_unblock",
+  "order_changed_after_release",
+  "lock_removed",
+  "settings_changed",
+] as const satisfies readonly string[];
+
+export type SystemLogCategory = (typeof systemLogCategories)[number];
+
+// A record that takes a lock while somebody has it open for editing — the
+// reference's `Geopende werkpanelen`. The type decides which save refuses
+// while another user holds the lock.
+export const workPanelTypes = ["order", "company"] as const satisfies readonly string[];
+
+export type WorkPanelType = (typeof workPanelTypes)[number];
+
+// The two views of `Revenue w.r.t. Budget`: per revenue group, or — the
+// reference's second view — per month with the group columns dropped. The view
+// decides what the rows are grouped by.
+export const revenueVsBudgetViews = [
+  "revenue_group",
+  "month",
+] as const satisfies readonly string[];
+
+export type RevenueVsBudgetView = (typeof revenueVsBudgetViews)[number];
+
+// The worklists of the reference's task panel that this app can answer. Each
+// key decides the query that counts it and the screen it opens.
+export const workListKeys = [
+  "orders_financially_blocked",
+  "customers_blocked",
+  "customers_without_debtor_number",
+  "order_lines_manually_blocked",
+  "orders_transport_blocked",
+  "orders_invoice_blocked",
+  "order_lines_late",
+  "order_lines_incomplete",
+  "purchase_order_lines_overdue",
+  "customer_contracts_expiring",
+  "customer_complaints_open",
+  "incomplete_delivery_addresses",
+  "visit_reports_to_read",
+] as const satisfies readonly string[];
+
+export type WorkListKey = (typeof workListKeys)[number];

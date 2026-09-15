@@ -9,6 +9,7 @@ import {
   MessageSquareWarning,
   PackageCheck,
   Plus,
+  Settings,
   ShoppingCart,
   Users,
   Warehouse,
@@ -373,6 +374,7 @@ const VIEW_GROUPS: NavGroup[] = [
         href: "/sfn-statistics-product-market",
       },
       { label: "Revenue w.r.t. Budget", href: "/revenue-vs-budget" },
+      { label: "Revenue budgets", href: "/revenue-budgets" },
       { label: "Invoices", href: "/invoices" },
       { label: "Return lines", href: "/return-lines" },
     ],
@@ -410,10 +412,21 @@ const VIEW_GROUPS: NavGroup[] = [
       },
     ],
   },
+  {
+    key: "system-info",
+    label: "System info",
+    icon: Settings,
+    items: [
+      { label: "Errors", href: "/system-log" },
+      { label: "Open work panels", href: "/open-work-panels" },
+      { label: "Settings", href: "/settings" },
+    ],
+  },
 ];
 
 /** The shop floor's own toolbar: the work in hand and what is going out. */
 const WORK_ITEMS: NavItem[] = [
+  { label: "Tasks", href: "/tasks" },
   { label: "Warehouse workorders", href: "/warehouse-work-orders" },
   { label: "Production workorders", href: "/production-workorders" },
   {

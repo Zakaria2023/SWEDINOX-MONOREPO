@@ -1,5 +1,6 @@
 import { CompanyDetailsForm } from "@/components/companies/edit/company-details-form";
 import { PageHeading } from "@/components/layout/page-heading";
+import { WorkPanelLockNotice } from "@/components/open-work-panels/work-panel-lock-notice";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -29,6 +30,11 @@ const CompanyDetailsPage = async ({ params }: Props) => {
         </Link>
       </div>
       <PageHeading title={`Company Details — ${company.companyName}`} />
+      <WorkPanelLockNotice
+        panelType="company"
+        recordUuid={uuid}
+        description={company.companyName}
+      />
       <CompanyDetailsForm company={company} />
     </div>
   );

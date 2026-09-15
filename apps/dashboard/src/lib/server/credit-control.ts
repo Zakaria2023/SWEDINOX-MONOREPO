@@ -10,6 +10,7 @@ import {
   CreditAssessment,
   orderBlockingPolicy,
 } from "@/lib/helpers";
+import { getBranchSettings } from "@/lib/server/branch-settings";
 import { and, eq, inArray, isNotNull, ne, sql } from "drizzle-orm";
 
 type CreditQuery = Pick<typeof db, "select">;
@@ -250,8 +251,11 @@ export const checkCredit = async (
     companyUuid,
     excludeOrderUuid,
   );
+  // The overdue threshold is a branch setting, not a constant in code.
+  const { overduePostBlockDays } = await getBranchSettings(tx);
 
   return assessCredit({
+    overduePostBlockDays,
     creditLimit: Number(company?.creditLimit ?? 0),
     creditLimitUninsured: Number(company?.creditLimitUninsured ?? 0),
     creditLimitUninsuredValidUntil: company?.creditLimitUninsuredDate ?? null,

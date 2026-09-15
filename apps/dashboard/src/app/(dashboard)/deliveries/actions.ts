@@ -20,6 +20,11 @@ import {
 } from "@/lib/helpers";
 import { checkCredit } from "@/lib/server/credit-control";
 import { recordFreightMovement } from "@/lib/server/freight";
+import { writeSystemLog } from "@/lib/server/system-log";
+import {
+  BlockDeliveryFormValues,
+  blockDeliverySchema,
+} from "@/app/(dashboard)/deliveries/validation";
 import {
   buildInventoryMovementEntry,
   LEDGER_ACCOUNTS,
@@ -31,6 +36,10 @@ import { revalidatePath } from "next/cache";
 export type DeliveryActionResult = {
   error?: string;
   success?: boolean;
+};
+
+export type BlockDeliveryPayload = BlockDeliveryFormValues & {
+  orderItemUuid: string;
 };
 
 export type DeliveryLineItem = SelectOrderItems & {
@@ -131,6 +140,13 @@ export const releaseCommercialBlock = async (
         deblockType: "commercial",
         deblockedByUserId: userId,
       });
+
+      await writeSystemLog(tx, {
+        category: "commercial_unblock",
+        message: `Commercial block released on ${update.affectedRows} line(s) of the order`,
+        orderUuid,
+        userId,
+      });
     });
 
     revalidatePath("/blocked-deliveries");
@@ -143,6 +159,86 @@ export const releaseCommercialBlock = async (
         error instanceof Error
           ? error.message
           : "Failed to release the commercial block",
+    };
+  }
+};
+
+/**
+ * Hold one line's delivery by hand, with the reason written on it.
+ *
+ * The reference's task panel keeps `Order lines with manually blocked
+ * deliveries` apart from the automatic ones, and a delivery line carries its
+ * own block reason. Until now nothing here could set a commercial block at all,
+ * so the release on Blocked deliveries had nothing to release.
+ *
+ * Only a line still waiting to ship can be held; one that has left is past
+ * stopping.
+ */
+export const blockOrderLineDelivery = async (
+  _prevState: DeliveryActionResult,
+  { orderItemUuid, ...values }: BlockDeliveryPayload,
+): Promise<DeliveryActionResult> => {
+  const parsed = blockDeliverySchema.safeParse(values);
+  if (!parsed.success) {
+    return {
+      error: parsed.error.issues[0]?.message ?? "Invalid block reason",
+    };
+  }
+
+  try {
+    const user = await currentUser();
+    if (!user?.id) {
+      return { error: "User not authenticated" };
+    }
+    const userId = user.id;
+
+    const [line] = await db
+      .select({
+        orderUuid: OrderItems.orderUuid,
+        lineNumber: OrderItems.lineNumber,
+      })
+      .from(OrderItems)
+      .where(eq(OrderItems.uuid, orderItemUuid))
+      .limit(1);
+
+    if (!line) {
+      return { error: "Order line not found." };
+    }
+
+    await db.transaction(async (tx) => {
+      const [update] = await tx
+        .update(OrderItems)
+        .set({ commercialBlock: true, blockingReason: parsed.data.reason })
+        .where(
+          and(
+            eq(OrderItems.uuid, orderItemUuid),
+            eq(OrderItems.status, "reserved"),
+            eq(OrderItems.commercialBlock, false),
+          ),
+        );
+
+      if (update.affectedRows === 0) {
+        throw new Error(
+          "Only a reserved line without a commercial block can be blocked.",
+        );
+      }
+
+      await writeSystemLog(tx, {
+        category: "commercial_block",
+        message: `Delivery of line ${line.lineNumber ?? "?"} blocked by hand — ${parsed.data.reason}`,
+        orderUuid: line.orderUuid,
+        userId,
+      });
+    });
+
+    revalidatePath("/blocked-deliveries");
+    revalidatePath("/deliveries");
+    revalidatePath(`/order-lines/${orderItemUuid}`);
+    return { success: true };
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error ? error.message : "Failed to block the delivery",
     };
   }
 };
@@ -202,6 +298,7 @@ export const deliverOrderItem = async (
         companyUuid: Orders.companyUuid,
         financialBlockage: Orders.financialBlockage,
         blockingReason: Orders.blockingReason,
+        changedAfterFinancialDeblock: Orders.changedAfterFinancialDeblock,
       })
       .from(Orders)
       .where(eq(Orders.uuid, orderItem.orderUuid))
@@ -223,26 +320,47 @@ export const deliverOrderItem = async (
     //
     // A release is respected. Someone with the authority looked at this order
     // and let it go; holding it again at the very next step would make the
-    // release worthless, and our orders cannot be re-priced after entry, so
-    // nothing about the order itself can have changed since.
+    // release worthless.
+    //
+    // Unless the order changed afterwards: the release covered the order as it
+    // stood, and the reference flags an edit made since
+    // (`CHANGEDAFTERFINANCIALDEBLOCK`). Only a *financial* release counts — a
+    // commercial one says nothing about credit.
     if (order) {
       const [released] = await db
         .select({ uuid: OrderDeblocks.uuid })
         .from(OrderDeblocks)
-        .where(eq(OrderDeblocks.orderUuid, orderItem.orderUuid))
+        .where(
+          and(
+            eq(OrderDeblocks.orderUuid, orderItem.orderUuid),
+            eq(OrderDeblocks.deblockType, "financial"),
+          ),
+        )
         .limit(1);
 
-      if (!released) {
+      if (!released || order.changedAfterFinancialDeblock) {
         const credit = await checkCredit(db, {
           companyUuid: order.companyUuid,
           orderAmount: 0,
           // Its own lines are already committed, so they count once, there.
         });
         if (credit.blocked) {
-          await db
-            .update(Orders)
-            .set({ financialBlockage: true, blockingReason: credit.reason })
-            .where(eq(Orders.uuid, orderItem.orderUuid));
+          await db.transaction(async (tx) => {
+            await tx
+              .update(Orders)
+              .set({
+                financialBlockage: true,
+                financialBlockManual: false,
+                changedAfterFinancialDeblock: false,
+                blockingReason: credit.reason,
+              })
+              .where(eq(Orders.uuid, orderItem.orderUuid));
+            await writeSystemLog(tx, {
+              category: "financial_block",
+              message: `Order held again at delivery by the credit rule — ${credit.reason}`,
+              orderUuid: orderItem.orderUuid,
+            });
+          });
           revalidatePath("/financially-blocked");
           return {
             error: `This order is now financially blocked — ${credit.reason}. Release it on the Financially Blocked overview before delivering.`,

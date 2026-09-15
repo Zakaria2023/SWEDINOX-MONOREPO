@@ -151,6 +151,25 @@ export const describeError = (error: unknown, fallback: string): string =>
 export const todayDateString = () => new Date().toISOString().split("T")[0];
 
 /**
+ * A `year` query parameter as a year, or the current year when it is blank or
+ * not a year — the reference's "leave blank for current year".
+ */
+export const parseYearParam = (value: string | undefined): number => {
+  const year = Number(value);
+  return Number.isInteger(year) && year >= 2000 && year <= 2100
+    ? year
+    : new Date().getFullYear();
+};
+
+/** A `month` query parameter as 1–12, or null (the whole year) otherwise. */
+export const parseMonthParam = (value: string | undefined): number | null => {
+  const month = Number(value);
+  return value && Number.isInteger(month) && month >= 1 && month <= 12
+    ? month
+    : null;
+};
+
+/**
  * Returns the current calendar year.
  */
 export const currentYear = () => new Date().getFullYear();
@@ -1472,6 +1491,11 @@ export type CreditAssessmentInput = {
    * recorded but does not hold the order. Set from `orderBlockingPolicy`.
    */
   financialBlockingWaived?: boolean;
+  /**
+   * Days past due before the oldest open post holds an order — the branch
+   * setting. Defaults to `OVERDUE_POST_BLOCK_DAYS`.
+   */
+  overduePostBlockDays?: number;
 };
 
 export type CreditAssessment = {
@@ -1528,6 +1552,11 @@ export type CreditAssessment = {
  * vendor) or Swedinox's administrator can give the number (question K1). Note
  * too that open posts reach the reference from AFAS by a batch job that appears
  * switched off, so the overdue days it blocks on may be stale (K10).
+ *
+ * 15-9-2026: the reference's security profiles prove a settings screen exists
+ * (`Vestigingsgegevens`), so the number is a setting, not code. It now lives in
+ * `BranchSettings.overduePostBlockDays`, editable on Settings; this constant is
+ * the default for a branch that has not set one.
  */
 export const OVERDUE_POST_BLOCK_DAYS = 30;
 
@@ -1607,6 +1636,7 @@ export const assessCredit = ({
   orderAmount,
   companyBlocked,
   financialBlockingWaived = false,
+  overduePostBlockDays = OVERDUE_POST_BLOCK_DAYS,
 }: CreditAssessmentInput): CreditAssessment => {
   const owed = openReceivables + committedOrders;
   const exposure = owed + orderAmount;
@@ -1645,7 +1675,7 @@ export const assessCredit = ({
   // Before the limit test: money already late is late whatever the room.
   if (
     oldestPostDaysOverdue !== null &&
-    oldestPostDaysOverdue > OVERDUE_POST_BLOCK_DAYS
+    oldestPostDaysOverdue > overduePostBlockDays
   ) {
     const stale = `Post(s) outstanding for too long — the oldest is ${oldestPostDaysOverdue} days past due`;
     if (financialBlockingWaived) {

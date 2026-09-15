@@ -108,6 +108,17 @@ export const Orders = mysqlTable(
       false,
     ),
     financialBlockage: boolean("financial_blockage").default(false),
+    // Set by hand on the order form rather than by the credit rule. The
+    // reference keeps the two apart (`SALES_FINANCE.FINANCIALBLOCKMANUAL`): a
+    // hold somebody chose is not re-decided by arithmetic, and the queue says
+    // which kind each one is.
+    financialBlockManual: boolean("financial_block_manual").default(false),
+    // The order was edited after a financial release. The reference flags this
+    // (`CHANGEDAFTERFINANCIALDEBLOCK`) because a release covers the order as it
+    // stood; once it changes, the credit rule runs again before goods leave.
+    changedAfterFinancialDeblock: boolean(
+      "changed_after_financial_deblock",
+    ).default(false),
     invoiceBlockage: boolean("invoice_blockage").default(false),
     onlyTotalAmountOnInvoice: boolean("only_total_amount_on_invoice").default(
       false,

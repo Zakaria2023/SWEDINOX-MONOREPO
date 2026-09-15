@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import {
   FinanciallyBlockedRow,
   unblockOrder,
@@ -21,6 +21,8 @@ import { TableExportButton } from "@/components/ui/table-export-button";
 
 type Props = {
   rows: FinanciallyBlockedRow[];
+  /** Finance or an administrator: the only ones who may release a block. */
+  canRelease: boolean;
 };
 
 type UnblockButtonProps = {
@@ -30,30 +32,40 @@ type UnblockButtonProps = {
 const UnblockButton = ({ orderUuid }: UnblockButtonProps) => {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
 
   const handleUnblock = () =>
     startTransition(async () => {
-      await unblockOrder(orderUuid);
+      const result = await unblockOrder(orderUuid);
+      setError(result.error ?? null);
       router.refresh();
     });
 
   return (
-    <Button
-      type="button"
-      size="sm"
-      variant="outline"
-      disabled={isPending}
-      onClick={handleUnblock}
-    >
-      {isPending ? "Unblocking..." : "Unblock"}
-    </Button>
+    <div className="space-y-1">
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        disabled={isPending}
+        onClick={handleUnblock}
+      >
+        {isPending ? "Unblocking..." : "Unblock"}
+      </Button>
+      {error ? <p className="text-xs text-destructive">{error}</p> : null}
+    </div>
   );
 };
 
-export const FinanciallyBlockedTable = ({ rows }: Props) => (
+export const FinanciallyBlockedTable = ({ rows, canRelease }: Props) => (
   <div>
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex items-center justify-between gap-4">
+        <p className="text-sm text-muted-foreground">
+          {canRelease
+            ? "Releasing a block is recorded against your name."
+            : "Only Finance or an administrator can release a financial block."}
+        </p>
         <TableExportButton
           tableId="financially-blocked-table"
           fileName="financially-blocked"
@@ -69,6 +81,7 @@ export const FinanciallyBlockedTable = ({ rows }: Props) => (
             <TableHead className="text-right">Debtor no.</TableHead>
             <TableHead>Delivery date</TableHead>
             <TableHead>Blocking reason</TableHead>
+            <TableHead>Block</TableHead>
             <TableHead>Payment term</TableHead>
             <TableHead className="text-right">Order amount</TableHead>
             <TableHead className="text-right">Open entrees</TableHead>
@@ -84,7 +97,7 @@ export const FinanciallyBlockedTable = ({ rows }: Props) => (
           {rows.length === 0 ? (
             <TableRow>
               <TableCell
-                colSpan={13}
+                colSpan={14}
                 className="h-24 text-center text-muted-foreground"
               >
                 No financially blocked quotes or orders.
@@ -103,6 +116,9 @@ export const FinanciallyBlockedTable = ({ rows }: Props) => (
                   {formatDateColumn(row.deliveryDate)}
                 </TableCell>
                 <TableCell>{row.blockingReason ?? "—"}</TableCell>
+                <TableCell>
+                  {row.financialBlockManual ? "Manual" : "Automatic"}
+                </TableCell>
                 <TableCell>
                   {row.paymentTerms
                     ? INVOICE_PAYMENT_TERM_LABELS[row.paymentTerms]
@@ -129,7 +145,7 @@ export const FinanciallyBlockedTable = ({ rows }: Props) => (
                   {row.companyBlocked ? "Yes" : "No"}
                 </TableCell>
                 <TableCell className="text-right">
-                  {row.kind === "Order" ? (
+                  {row.kind === "Order" && canRelease ? (
                     <UnblockButton orderUuid={row.uuid} />
                   ) : (
                     "—"

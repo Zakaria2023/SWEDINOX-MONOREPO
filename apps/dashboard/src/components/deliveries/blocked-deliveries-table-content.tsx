@@ -29,7 +29,7 @@ type ReleaseCommercialButtonProps = {
 };
 
 // A commercial release covers the whole order, as it does in the reference.
-const ReleaseCommercialButton = ({
+export const ReleaseCommercialButton = ({
   orderUuid,
 }: ReleaseCommercialButtonProps) => {
   const router = useRouter();

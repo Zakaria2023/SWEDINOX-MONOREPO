@@ -3,7 +3,12 @@
 import { CompanyActionResult } from "@/app/(dashboard)/companies/actions";
 import { db, SelectCompanies } from "@/db";
 import { Companies, InsertCompanies } from "@/db/schema/companies";
+import { requireAuth } from "@/lib/auth";
 import { describeError } from "@/lib/helpers";
+import {
+  assertWorkPanelFree,
+  releaseWorkPanelLockFor,
+} from "@/lib/server/work-panel-locks";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -53,6 +58,7 @@ export const updateCompanyDetails = async (
   _prevState: CompanyActionResult,
   payload: UpdateCompanyDetailsPayload,
 ): Promise<CompanyActionResult> => {
+  const userId = await requireAuth();
   const { companyUuid, ...values } = payload;
   const parsed = companyDetailsSchema.safeParse(values);
   if (!parsed.success) {
@@ -62,18 +68,25 @@ export const updateCompanyDetails = async (
   }
 
   try {
-    await db
-      .update(Companies)
-      .set({
-        companyName: parsed.data.companyName,
-        correspName: parsed.data.correspName || null,
-        lang: (parsed.data.lang || null) as InsertCompanies["lang"],
-        remarks: parsed.data.remarks || null,
-        searchCode1: parsed.data.searchCode1 || null,
-        searchCode2: parsed.data.searchCode2 || null,
-        searchCode3: parsed.data.searchCode3 || null,
-      })
-      .where(eq(Companies.uuid, companyUuid));
+    await db.transaction(async (tx) => {
+      // Refused while someone else has the company open for editing.
+      await assertWorkPanelFree(tx, "company", companyUuid, userId);
+
+      await tx
+        .update(Companies)
+        .set({
+          companyName: parsed.data.companyName,
+          correspName: parsed.data.correspName || null,
+          lang: (parsed.data.lang || null) as InsertCompanies["lang"],
+          remarks: parsed.data.remarks || null,
+          searchCode1: parsed.data.searchCode1 || null,
+          searchCode2: parsed.data.searchCode2 || null,
+          searchCode3: parsed.data.searchCode3 || null,
+        })
+        .where(eq(Companies.uuid, companyUuid));
+
+      await releaseWorkPanelLockFor(tx, "company", companyUuid, userId);
+    });
   } catch (error) {
     return { error: describeError(error, "Failed to update company details") };
   }
