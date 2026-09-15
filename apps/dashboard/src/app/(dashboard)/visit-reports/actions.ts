@@ -10,11 +10,14 @@ import {
   SelectVisitReports,
   VisitReports,
 } from "@/db";
+import { SelectCompanyAddresses } from "@/db/schema/company-addresses";
 import {
+  formatDateColumn,
   generateUuid,
   nextVisitDateForReason,
   todayDateString,
 } from "@/lib/helpers";
+import { companyAddressFor } from "@/lib/server/company-addresses";
 import { asc, count, desc, eq, getTableColumns } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -54,10 +57,29 @@ export type ContactOption = Pick<
   "uuid" | "firstName" | "lastName"
 >;
 
+// The report, plus what it shows about the company visited — read from the
+// company, never stored on the report.
 export type VisitReportDetail = VisitReportListItem & {
   companyId: SelectCompanies["id"] | null;
   contactFirstName: SelectContacts["firstName"] | null;
   contactLastName: SelectContacts["lastName"] | null;
+  visitStreetAndNo: SelectCompanyAddresses["streetAndNo"] | null;
+  visitPostalCode: SelectCompanyAddresses["postalCode"] | null;
+  visitCity: SelectCompanyAddresses["city"] | null;
+  visitTelephone: SelectCompanyAddresses["telephone"] | null;
+  visitFax: SelectCompanyAddresses["fax"] | null;
+  companyIndustry: SelectCompanies["industry"];
+  companyClassification: SelectCompanies["classification"];
+  companyVisitFrequency: SelectCompanies["visitFrequency"];
+  companyCallFrequencyPerYear: SelectCompanies["callFrequencyPerYear"];
+  companyTargetDateNextVisit: SelectCompanies["targetDateNextVisit"];
+  companyNextVisitReason: SelectCompanies["visitReason"];
+  companyPotentialAnnualRevenue: SelectCompanies["potentialAnnualRevenue"];
+  companyTargetAnnualRevenue: SelectCompanies["targetAnnualRevenue"];
+  companyPotentialAnnualSales: SelectCompanies["potentialAnnualSales"];
+  companyTargetAnnualSales: SelectCompanies["targetAnnualSales"];
+  companyNumberOfEmployees: SelectCompanies["numberOfEmployees"];
+  companyVisitPlanning: SelectCompanies["visitPlanning"];
 };
 
 const VISIT_REPORT_SEARCH = [
@@ -147,11 +169,14 @@ export const getVisitReports = async (
 };
 
 /**
- * One visit report with the company visited and the contact seen.
+ * One visit report with the company visited, its visiting address and
+ * marketing, and the contact seen.
  */
 export const getVisitReportDetail = async (
   uuid: string,
 ): Promise<VisitReportDetail | null> => {
+  const visitAddress = companyAddressFor("visit", "visit_address");
+
   const [row] = await db
     .select({
       ...getTableColumns(VisitReports),
@@ -159,9 +184,27 @@ export const getVisitReportDetail = async (
       companyId: Companies.id,
       contactFirstName: Contacts.firstName,
       contactLastName: Contacts.lastName,
+      visitStreetAndNo: visitAddress.streetAndNo,
+      visitPostalCode: visitAddress.postalCode,
+      visitCity: visitAddress.city,
+      visitTelephone: visitAddress.telephone,
+      visitFax: visitAddress.fax,
+      companyIndustry: Companies.industry,
+      companyClassification: Companies.classification,
+      companyVisitFrequency: Companies.visitFrequency,
+      companyCallFrequencyPerYear: Companies.callFrequencyPerYear,
+      companyTargetDateNextVisit: Companies.targetDateNextVisit,
+      companyNextVisitReason: Companies.visitReason,
+      companyPotentialAnnualRevenue: Companies.potentialAnnualRevenue,
+      companyTargetAnnualRevenue: Companies.targetAnnualRevenue,
+      companyPotentialAnnualSales: Companies.potentialAnnualSales,
+      companyTargetAnnualSales: Companies.targetAnnualSales,
+      companyNumberOfEmployees: Companies.numberOfEmployees,
+      companyVisitPlanning: Companies.visitPlanning,
     })
     .from(VisitReports)
     .innerJoin(Companies, eq(Companies.uuid, VisitReports.companyUuid))
+    .leftJoin(visitAddress, eq(visitAddress.companyUuid, VisitReports.companyUuid))
     .leftJoin(Contacts, eq(Contacts.uuid, VisitReports.contactUuid))
     .where(eq(VisitReports.uuid, uuid))
     .limit(1);
@@ -213,13 +256,17 @@ export const resolveVisitReport = async (
     const [report] = await db
       .select({
         uuid: VisitReports.uuid,
+        companyUuid: VisitReports.companyUuid,
         hasTakenPlace: VisitReports.hasTakenPlace,
         visitDate: VisitReports.visitDate,
         visitReason: VisitReports.visitReason,
-        nextVisitReason: VisitReports.nextVisitReason,
-        targetDateNextVisit: VisitReports.targetDateNextVisit,
+        // The next visit is the company's (the reference's
+        // `COMPANY_MARKETING.NEXTVISIT` / `VISITREASON`), not the report's.
+        nextVisitReason: Companies.visitReason,
+        targetDateNextVisit: Companies.targetDateNextVisit,
       })
       .from(VisitReports)
+      .innerJoin(Companies, eq(Companies.uuid, VisitReports.companyUuid))
       .where(eq(VisitReports.uuid, uuid))
       .limit(1);
 
@@ -235,25 +282,35 @@ export const resolveVisitReport = async (
     // Why the visit happened says when to come back: a complaint in four weeks,
     // a quote chase in two, a customer whose turnover is slipping in eight. A
     // reason that fixes no interval — an introduction, or a visit the customer
-    // asked for — leaves the date to be decided, and a date somebody already
-    // typed is never overwritten.
-    const derivedNextVisit = report.targetDateNextVisit
+    // asked for — leaves the date to be decided. A next visit somebody already
+    // planned for after this one is never overwritten; one this visit has now
+    // passed is.
+    const plannedNextVisit = formatDateColumn(report.targetDateNextVisit);
+    const stillAhead = plannedNextVisit !== "—" && plannedNextVisit > visitDate;
+    const derivedNextVisit = stillAhead
       ? null
       : nextVisitDateForReason(
           report.nextVisitReason ?? report.visitReason,
           visitDate,
         );
 
-    await db
-      .update(VisitReports)
-      .set({
-        hasTakenPlace: true,
-        visitDate,
-        ...(derivedNextVisit
-          ? { targetDateNextVisit: new Date(`${derivedNextVisit}T00:00:00`) }
-          : {}),
-      })
-      .where(eq(VisitReports.uuid, uuid));
+    await db.transaction(async (tx) => {
+      await tx
+        .update(VisitReports)
+        .set({ hasTakenPlace: true, visitDate })
+        .where(eq(VisitReports.uuid, uuid));
+
+      if (derivedNextVisit) {
+        await tx
+          .update(Companies)
+          .set({
+            targetDateNextVisit: new Date(`${derivedNextVisit}T00:00:00`),
+          })
+          .where(eq(Companies.uuid, report.companyUuid));
+      }
+    });
+
+    revalidatePath(`/companies/${report.companyUuid}`);
   } catch (error) {
     return {
       error:

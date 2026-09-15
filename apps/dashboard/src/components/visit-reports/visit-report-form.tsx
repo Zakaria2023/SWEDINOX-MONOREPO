@@ -2,7 +2,6 @@
 
 import { FormProvider } from "react-hook-form";
 import { CompanyOption } from "@/app/(dashboard)/companies/actions";
-import { IndustryOption } from "@/app/(dashboard)/industries/actions";
 import { DashboardUserOption } from "@/lib/server/clerk";
 import {
   ContactOption,
@@ -18,19 +17,17 @@ import { AddressAndContactSection } from "./sections/address-and-contact-section
 import { DetailsSection } from "./sections/details-section";
 import { CategoriesSection } from "./sections/categories-section";
 import { ReadersSection } from "./sections/readers-section";
-import { MarketingSection } from "./sections/marketing-section";
-import { VisitPlanningSection } from "./sections/visit-planning-section";
 
 type VisitReportFormProps = {
   companies: CompanyOption[];
   adminUsers: DashboardUserOption[];
-  industries: IndustryOption[];
 };
 
+// A new visit report. The company's marketing and visit planning are not part
+// of it — they are the company's, edited on the company.
 export const VisitReportForm = ({
   companies,
   adminUsers,
-  industries,
 }: VisitReportFormProps) => {
   const router = useRouter();
   const { form, isPending, onSubmit, state } = useVisitReportSubmit();
@@ -75,10 +72,6 @@ export const VisitReportForm = ({
         <CategoriesSection isPending={isPending} />
 
         <ReadersSection isPending={isPending} adminUsers={adminUsers} />
-
-        <MarketingSection isPending={isPending} industries={industries} />
-
-        <VisitPlanningSection isPending={isPending} />
 
         <FormError>{state.error}</FormError>
 

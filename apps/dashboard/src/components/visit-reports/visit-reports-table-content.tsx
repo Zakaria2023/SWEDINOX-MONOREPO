@@ -150,32 +150,6 @@ export const VisitReportsTable = ({
             {visitReport.contactUuid ?? fallbackValue}
           </TableCell>
         );
-      case "city":
-        return (
-          <TableCell key={key}>{visitReport.city ?? fallbackValue}</TableCell>
-        );
-      case "postalCode":
-        return (
-          <TableCell key={key}>
-            {visitReport.postalCode ?? fallbackValue}
-          </TableCell>
-        );
-      case "telephone":
-        return (
-          <TableCell key={key}>
-            {visitReport.telephone ?? fallbackValue}
-          </TableCell>
-        );
-      case "fax":
-        return (
-          <TableCell key={key}>{visitReport.fax ?? fallbackValue}</TableCell>
-        );
-      case "address":
-        return (
-          <TableCell key={key}>
-            {visitReport.address ?? fallbackValue}
-          </TableCell>
-        );
       case "attentionPoint":
         return (
           <TableCell key={key}>

@@ -20,11 +20,6 @@ export type VisitReportColumnKey =
   | "representative"
   | "visitTime"
   | "contactUuid"
-  | "city"
-  | "postalCode"
-  | "telephone"
-  | "fax"
-  | "address"
   | "attentionPoint"
   | "remarks"
   | "createdAt";
@@ -90,36 +85,6 @@ export const VISIT_REPORT_COLUMNS: Array<
     label: "Contact",
     defaultVisible: false,
     value: (row) => textCell(row.contactUuid),
-  },
-  {
-    key: "city",
-    label: "City",
-    defaultVisible: false,
-    value: (row) => textCell(row.city),
-  },
-  {
-    key: "postalCode",
-    label: "Postal Code",
-    defaultVisible: false,
-    value: (row) => textCell(row.postalCode),
-  },
-  {
-    key: "telephone",
-    label: "Telephone",
-    defaultVisible: false,
-    value: (row) => textCell(row.telephone),
-  },
-  {
-    key: "fax",
-    label: "Fax",
-    defaultVisible: false,
-    value: (row) => textCell(row.fax),
-  },
-  {
-    key: "address",
-    label: "Address",
-    defaultVisible: false,
-    value: (row) => textCell(row.address),
   },
   {
     key: "attentionPoint",

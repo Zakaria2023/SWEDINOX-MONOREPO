@@ -21,6 +21,12 @@ import { redirect } from "next/navigation";
 export type VisitReportEditOverview = {
   report: SelectVisitReports;
   companyName: SelectCompanies["companyName"] | null;
+  // Marketing and visit planning belong to the company; the overview links to
+  // the company's own Marketing section for them.
+  companyIndustry: SelectCompanies["industry"] | null;
+  companyClassification: SelectCompanies["classification"] | null;
+  companyNextVisitReason: SelectCompanies["visitReason"] | null;
+  companyVisitPlanning: SelectCompanies["visitPlanning"] | null;
 };
 
 // Which columns each section owns, so saving one never carries a half-finished
@@ -36,31 +42,10 @@ const SECTION_COLUMNS = {
     "hasTakenPlace",
     "visitReason",
   ],
-  addressAndContact: [
-    "address",
-    "postalCode",
-    "city",
-    "telephone",
-    "fax",
-    "contactUuid",
-  ],
+  addressAndContact: ["contactUuid"],
   details: ["attentionPoint", "remarks"],
   categories: ["categories"],
   readers: ["readers"],
-  marketing: [
-    "industry",
-    "classification",
-    "visitFrequency",
-    "callFrequencyPerYear",
-    "targetDateNextVisit",
-    "nextVisitReason",
-    "potentialAnnualRevenue",
-    "targetAnnualRevenue",
-    "potentialAnnualSales",
-    "targetAnnualSales",
-    "numberOfEmployees",
-  ],
-  visitPlanning: ["visitPlanning"],
 } as const satisfies Record<string, readonly (keyof VisitReportInput)[]>;
 
 const pickColumns = <K extends keyof VisitReportInput>(
@@ -92,7 +77,14 @@ export const getVisitReportEditOverview = async (
   uuid: string,
 ): Promise<VisitReportEditOverview | null> => {
   const [row] = await db
-    .select({ report: VisitReports, companyName: Companies.companyName })
+    .select({
+      report: VisitReports,
+      companyName: Companies.companyName,
+      companyIndustry: Companies.industry,
+      companyClassification: Companies.classification,
+      companyNextVisitReason: Companies.visitReason,
+      companyVisitPlanning: Companies.visitPlanning,
+    })
     .from(VisitReports)
     .leftJoin(Companies, eq(Companies.uuid, VisitReports.companyUuid))
     .where(eq(VisitReports.uuid, uuid))
@@ -102,7 +94,14 @@ export const getVisitReportEditOverview = async (
     return null;
   }
 
-  return { report: row.report, companyName: row.companyName ?? null };
+  return {
+    report: row.report,
+    companyName: row.companyName ?? null,
+    companyIndustry: row.companyIndustry ?? null,
+    companyClassification: row.companyClassification ?? null,
+    companyNextVisitReason: row.companyNextVisitReason ?? null,
+    companyVisitPlanning: row.companyVisitPlanning ?? null,
+  };
 };
 
 const saveSection = async (
@@ -180,28 +179,4 @@ export const updateVisitReportReaders = async (
   saveSection(
     uuid,
     pickColumns(formValuesToVisitReportInput(values), SECTION_COLUMNS.readers),
-  );
-
-export const updateVisitReportMarketing = async (
-  uuid: string,
-  values: VisitReportFormValues,
-): Promise<VisitReportActionResult> =>
-  saveSection(
-    uuid,
-    pickColumns(
-      formValuesToVisitReportInput(values),
-      SECTION_COLUMNS.marketing,
-    ),
-  );
-
-export const updateVisitReportVisitPlanning = async (
-  uuid: string,
-  values: VisitReportFormValues,
-): Promise<VisitReportActionResult> =>
-  saveSection(
-    uuid,
-    pickColumns(
-      formValuesToVisitReportInput(values),
-      SECTION_COLUMNS.visitPlanning,
-    ),
   );

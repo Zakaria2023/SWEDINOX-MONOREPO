@@ -30,12 +30,21 @@ const VisitReportEditPage = async ({ params }: Props) => {
     notFound();
   }
 
-  const { report, companyName } = overview;
+  const {
+    report,
+    companyName,
+    companyIndustry,
+    companyClassification,
+    companyNextVisitReason,
+    companyVisitPlanning,
+  } = overview;
   const base = `/visit-reports/${uuid}/edit`;
+  // Marketing and planning are the company's, edited on the company.
+  const companyMarketingHref = `/companies/${report.companyUuid}/edit/marketing`;
 
   const categories = report.categories ?? [];
   const readers = report.readers ?? [];
-  const plannedMonths = (report.visitPlanning ?? []).filter(
+  const plannedMonths = (companyVisitPlanning ?? []).filter(
     (month) => month.call || month.visit,
   ).length;
 
@@ -56,11 +65,10 @@ const VisitReportEditPage = async ({ params }: Props) => {
       href: `${base}/report`,
     },
     {
-      title: "Address & Contact",
-      summary:
-        [report.address, report.postalCode, report.city]
-          .filter(Boolean)
-          .join(", ") || "No address recorded",
+      title: "Contact",
+      summary: report.contactUuid
+        ? "The contact person seen"
+        : "No contact person picked",
       href: `${base}/address`,
     },
     {
@@ -69,20 +77,20 @@ const VisitReportEditPage = async ({ params }: Props) => {
       href: `${base}/details`,
     },
     {
-      title: "Marketing",
+      title: "Company marketing",
       summary:
         [
-          report.industry,
-          report.classification
-            ? COMPANY_CLASSIFICATION_LABELS[report.classification]
+          companyIndustry,
+          companyClassification
+            ? COMPANY_CLASSIFICATION_LABELS[companyClassification]
             : null,
-          report.nextVisitReason
-            ? `Next: ${VISIT_REPORT_REASON_LABELS[report.nextVisitReason]}`
+          companyNextVisitReason
+            ? `Next: ${VISIT_REPORT_REASON_LABELS[companyNextVisitReason]}`
             : null,
         ]
           .filter(Boolean)
-          .join(" · ") || "Not set",
-      href: `${base}/marketing`,
+          .join(" · ") || "Not set on the company",
+      href: companyMarketingHref,
     },
   ];
 
@@ -103,9 +111,9 @@ const VisitReportEditPage = async ({ params }: Props) => {
       count: readers.length,
     },
     {
-      title: "Visit Planning",
-      summary: "Which months to call and which to visit",
-      href: `${base}/visit-planning`,
+      title: "Company visit planning",
+      summary: "Which months to call and which to visit — kept on the company",
+      href: companyMarketingHref,
       count: plannedMonths,
     },
   ];

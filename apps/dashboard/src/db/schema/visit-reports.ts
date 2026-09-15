@@ -2,8 +2,6 @@ import { InferInsertModel, InferSelectModel } from "drizzle-orm";
 import {
   boolean,
   char,
-  date,
-  decimal,
   foreignKey,
   index,
   int,
@@ -15,16 +13,22 @@ import {
   varchar,
 } from "drizzle-orm/mysql-core";
 import {
-  companyClassifications,
   visitReportContactMethods,
   visitReportReasons,
-  VisitPlanningEntry,
   VisitReportCategory,
   VisitReportReader,
 } from "@/lib/enums";
 import { Companies } from "./companies";
 import { Contacts } from "./contacts";
 
+// One visit or call: who went, when, why, whom they saw and what was said.
+//
+// Nothing about the *company* is stored here. The reference's `VISITREPORT`
+// holds no address, phone, industry, classification, frequency, target or
+// planning — those live on the company (`COMPANY_ADDRESS`, `COMPANY_MARKETING`,
+// `COMPANY_VISITPLANNING`) and a report reads them. Copies used to be kept on
+// each report and drifted from the company's; they were dropped on 15-9-2026
+// (scripts/migrate-remaining-2026-09-15.mjs, backup in scripts/backups/).
 export const VisitReports = mysqlTable(
   "VisitReports",
   {
@@ -34,12 +38,6 @@ export const VisitReports = mysqlTable(
     companyUuid: char("company_uuid", { length: 36 }).notNull(),
     representative: varchar("representative", { length: 255 }),
     visitedBy: varchar("visited_by", { length: 255 }),
-
-    address: varchar("address", { length: 255 }),
-    postalCode: varchar("postal_code", { length: 50 }),
-    city: varchar("city", { length: 150 }),
-    telephone: varchar("telephone", { length: 100 }),
-    fax: varchar("fax", { length: 100 }),
     contactUuid: char("contact_uuid", { length: 36 }),
 
     contactMethod: mysqlEnum("contact_method", visitReportContactMethods),
@@ -56,39 +54,6 @@ export const VisitReports = mysqlTable(
 
     // ── Readers ───────────────────────────────────────────────────────────────
     readers: json("readers").$type<VisitReportReader[]>().default([]),
-
-    // ── Marketing ─────────────────────────────────────────────────────────────
-    // industry stores the SBI code (Industries.id); a logical reference to the
-    // Industries lookup table.
-    industry: varchar("industry", { length: 10 }),
-    classification: mysqlEnum("classification", companyClassifications),
-    visitFrequency: int("visit_frequency").default(0),
-    callFrequencyPerYear: int("call_frequency_per_year").default(0),
-    targetDateNextVisit: date("target_date_next_visit"),
-    nextVisitReason: mysqlEnum("next_visit_reason", visitReportReasons),
-    potentialAnnualRevenue: decimal("potential_annual_revenue", {
-      precision: 15,
-      scale: 2,
-    }),
-    targetAnnualRevenue: decimal("target_annual_revenue", {
-      precision: 15,
-      scale: 2,
-    }),
-    potentialAnnualSales: decimal("potential_annual_sales", {
-      precision: 15,
-      scale: 3,
-    }),
-    targetAnnualSales: decimal("target_annual_sales", {
-      precision: 15,
-      scale: 3,
-    }),
-    numberOfEmployees: int("number_of_employees").default(0),
-
-    // ── Visit planning ────────────────────────────────────────────────────────
-    // Yearly grid, ordered January (index 0) → December (index 11).
-    visitPlanning: json("visit_planning")
-      .$type<VisitPlanningEntry[]>()
-      .default([]),
 
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
