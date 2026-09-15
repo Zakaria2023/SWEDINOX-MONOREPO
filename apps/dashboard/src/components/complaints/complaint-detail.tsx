@@ -288,7 +288,8 @@ export const ComplaintDetailView = ({ complaint, userNames }: Props) => {
                   <TableHead>Order</TableHead>
                   <TableHead>Product</TableHead>
                   <TableHead>Description</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>Delivery date</TableHead>
+                  <TableHead>Completed</TableHead>
                   <TableHead className="text-right">Qty</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
                   <TableHead className="text-right">Weight (kg)</TableHead>
@@ -298,7 +299,7 @@ export const ComplaintDetailView = ({ complaint, userNames }: Props) => {
                 {complaint.items.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={8}
+                      colSpan={9}
                       className="h-24 text-center text-muted-foreground"
                     >
                       No lines on this complaint.
@@ -337,16 +338,10 @@ export const ComplaintDetailView = ({ complaint, userNames }: Props) => {
                         )}
                       </TableCell>
                       <TableCell>{orDash(item.description)}</TableCell>
-                      <TableCell>
-                        <StatusBadge
-                          value={item.status}
-                          label={
-                            item.status
-                              ? COMPLAINT_STATUS_LABELS[item.status]
-                              : null
-                          }
-                        />
+                      <TableCell className="whitespace-nowrap">
+                        {formatDateColumn(item.deliveryDate)}
                       </TableCell>
+                      <TableCell>{item.completed ? "Yes" : "No"}</TableCell>
                       <TableCell className="text-right tabular-nums">
                         {formatNumber(Number(item.qty ?? 0))}
                       </TableCell>

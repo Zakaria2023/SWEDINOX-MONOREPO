@@ -86,6 +86,7 @@ export type ComplainableLine = {
   amount: SelectOrderItems["amount"];
   weightKg: SelectOrderItems["kgActual"];
   status: SelectOrderItems["status"];
+  deliveryDate: SelectOrderItems["deliveryDate"];
 };
 
 export type ComplaintListItem = SelectComplaints & {
@@ -366,6 +367,7 @@ export const getComplainableLines = async (
       amount: OrderItems.amount,
       weightKg: OrderItems.kgActual,
       status: OrderItems.status,
+      deliveryDate: OrderItems.deliveryDate,
     })
     .from(OrderItems)
     .innerJoin(Orders, eq(OrderItems.orderUuid, Orders.uuid))
@@ -550,8 +552,8 @@ export const createComplaint = async (
           description: item.description ?? null,
           category: fields.category ?? null,
           complaintType: fields.complaintType ?? null,
-          status: fields.status ?? "new",
-          responsibleUserId: fields.responsibleUserId ?? null,
+          // Handling (status, responsible) is recorded once, on the complaint.
+          deliveryDate: line.deliveryDate,
           createdByUserId: user?.id ?? null,
           qty: qty.toFixed(3),
           // The complained-about share of what the line was worth and weighed.

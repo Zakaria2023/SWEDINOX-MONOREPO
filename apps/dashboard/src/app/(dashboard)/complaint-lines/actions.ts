@@ -13,7 +13,8 @@ import { Orders, SelectOrders } from "@/db/schema/orders";
 import { Products, SelectProducts } from "@/db/schema/products";
 import { Stock } from "@/db/schema/stock";
 import { SelectWarehouses, Warehouses } from "@/db/schema/warehouses";
-import { describeError, generateUuid, todayDateString } from "@/lib/helpers";
+import { requireAuth } from "@/lib/auth";
+import { describeError, generateUuid } from "@/lib/helpers";
 import { getClerkUsersForSelect } from "@/lib/server/clerk";
 import { aliasedTable, and, asc, desc, eq, SQL, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -23,6 +24,15 @@ const StockLocations = aliasedTable(Warehouses, "stock_locations");
 export type ComplaintLineRow = SelectComplaintItems & {
   complaintNumber: SelectComplaints["id"] | null;
   reportDate: SelectComplaints["reportDate"] | null;
+  // Handling is the complaint's; every line shows its complaint's.
+  status: SelectComplaints["status"] | null;
+  deadline: SelectComplaints["deadline"] | null;
+  cause: SelectComplaints["cause"] | null;
+  explanationOfCause: SelectComplaints["explanationOfCause"] | null;
+  solution: SelectComplaints["solution"] | null;
+  explanationOfSolution: SelectComplaints["explanationOfSolution"] | null;
+  /** The date of the complaint's latest status change. */
+  statusDate: string | null;
   companyCode: SelectCompanies["id"] | null;
   companyName: SelectCompanies["companyName"] | null;
   companyUuid: SelectCompanies["uuid"] | null;
@@ -34,7 +44,7 @@ export type ComplaintLineRow = SelectComplaintItems & {
   productCode: SelectProducts["productCode"] | null;
   productName: SelectProducts["name"] | null;
   warehouseSection: SelectWarehouses["name"] | null;
-  // Resolved from the Clerk user id stored on the line.
+  // Resolved from the Clerk user ids on the complaint and the line.
   responsibleName: string | null;
   createdByName: string | null;
   // Derived from the report date, so the overview can group by period.
@@ -46,6 +56,11 @@ export type GenerateComplaintLinesResult = {
   error?: string;
   success?: boolean;
   createdLines?: number;
+};
+
+export type ComplaintLineActionResult = {
+  error?: string;
+  success?: boolean;
 };
 
 // Every complaint line, joined to its complaint, that complaint's company, the
@@ -61,6 +76,14 @@ const selectComplaintLines = async (
       item: ComplaintItems,
       complaintNumber: Complaints.id,
       reportDate: Complaints.reportDate,
+      status: Complaints.status,
+      deadline: Complaints.deadline,
+      cause: Complaints.cause,
+      explanationOfCause: Complaints.explanationOfCause,
+      solution: Complaints.solution,
+      explanationOfSolution: Complaints.explanationOfSolution,
+      statusHistory: Complaints.statusHistory,
+      responsibleUserId: Complaints.responsibleUserId,
       companyCode: Companies.id,
       companyName: Companies.companyName,
       companyUuid: Companies.uuid,
@@ -91,15 +114,22 @@ const selectComplaintLines = async (
     asc(ComplaintItems.lineNumber),
   );
 
-  // Clerk owns the user list, so the ids stored on the line are resolved to
-  // names here rather than joined.
+  // Clerk owns the user list, so the ids stored are resolved to names here
+  // rather than joined.
   const users = await getClerkUsersForSelect();
   const nameById = new Map(users.map((user) => [user.value, user.label]));
 
-  return rows.map(({ item, ...rest }) => ({
+  return rows.map(({ item, statusHistory, responsibleUserId, ...rest }) => ({
     ...item,
     complaintNumber: rest.complaintNumber,
     reportDate: rest.reportDate,
+    status: rest.status,
+    deadline: rest.deadline,
+    cause: rest.cause,
+    explanationOfCause: rest.explanationOfCause,
+    solution: rest.solution,
+    explanationOfSolution: rest.explanationOfSolution,
+    statusDate: statusHistory?.at(-1)?.statusDate ?? null,
     companyCode: rest.companyCode,
     companyName: rest.companyName,
     companyUuid: rest.companyUuid,
@@ -111,8 +141,8 @@ const selectComplaintLines = async (
     productCode: rest.productCode,
     productName: rest.productName,
     warehouseSection: rest.warehouseSection,
-    responsibleName: item.responsibleUserId
-      ? (nameById.get(item.responsibleUserId) ?? item.responsibleUserId)
+    responsibleName: responsibleUserId
+      ? (nameById.get(responsibleUserId) ?? responsibleUserId)
       : null,
     createdByName: item.createdByUserId
       ? (nameById.get(item.createdByUserId) ?? item.createdByUserId)
@@ -145,15 +175,44 @@ export const getComplaintLineDetail = async (
   }
 };
 
+/**
+ * Tick a line off — or back on. A complaint about four deliveries is often
+ * settled one delivery at a time, and the complaint stays open until the last.
+ */
+export const setComplaintLineCompleted = async (
+  uuid: string,
+  completed: boolean,
+): Promise<ComplaintLineActionResult> => {
+  await requireAuth();
+  try {
+    const [update] = await db
+      .update(ComplaintItems)
+      .set({ completed })
+      .where(eq(ComplaintItems.uuid, uuid));
+
+    if (update.affectedRows === 0) {
+      return { error: "Complaint line not found." };
+    }
+  } catch (error) {
+    return { error: describeError(error, "Failed to update the line") };
+  }
+
+  revalidatePath("/complaint-lines");
+  revalidatePath(`/complaint-lines/${uuid}`);
+  revalidatePath("/complaints");
+  return { success: true };
+};
+
 // Breaks each complaint that has no lines yet down into the lines it is
 // actually about.
 //
 // A complaint names a company and (usually) a product. Every order line that
 // customer has for that product becomes its own complaint line, carrying the
-// order, the order line number, the seller and the warehouse section the stock
-// sat in — that is what makes a complaint actionable per delivery. A complaint
-// whose product was never ordered by that customer still gets one line, taken
-// straight from the complaint header, so nothing is silently dropped.
+// order, the order line number, the delivery date, the seller and the
+// warehouse section the stock sat in — that is what makes a complaint
+// actionable per delivery. A complaint whose product was never ordered by that
+// customer still gets one line, taken straight from the complaint header, so
+// nothing is silently dropped.
 //
 // Complaints that already have lines are skipped, so it can be re-run.
 export const generateComplaintLines =
@@ -186,7 +245,6 @@ export const generateComplaintLines =
         return { error: "Every complaint already has lines." };
       }
 
-      const statusDate = todayDateString();
       const rows: (typeof ComplaintItems.$inferInsert)[] = [];
 
       for (const {
@@ -206,6 +264,7 @@ export const generateComplaintLines =
                 quantity: OrderItems.quantity,
                 weightKg: OrderItems.kgPlanned,
                 amount: OrderItems.amount,
+                deliveryDate: OrderItems.deliveryDate,
                 seller: Orders.seller,
                 // Stock sits in a location, which is a leaf of the Warehouses
                 // tree; the section is that location's parent (or the location
@@ -233,14 +292,6 @@ export const generateComplaintLines =
           description: complaint.description,
           category: complaint.category,
           complaintType: complaint.complaintType,
-          status: complaint.status,
-          statusDate,
-          deadline: complaint.deadline,
-          cause: complaint.cause,
-          explanationOfCause: complaint.explanationOfCause,
-          solution: complaint.solution,
-          explanationOfSolution: complaint.explanationOfSolution,
-          responsibleUserId: complaint.responsibleUserId,
           createdByUserId: complaint.responsibleUserId,
           correspondenceName,
         };
@@ -267,6 +318,7 @@ export const generateComplaintLines =
             productUuid: line.productUuid,
             warehouseSectionUuid: line.locationParentUuid ?? line.locationUuid,
             purchaserSeller: line.seller,
+            deliveryDate: line.deliveryDate,
             lineNumber: index + 1,
             qty: line.quantity ?? "0.000",
             amount: line.amount ?? "0.00",

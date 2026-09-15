@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ComplaintLineRow } from "@/app/(dashboard)/complaint-lines/actions";
+import { ComplaintLineCompletedButton } from "@/components/complaint-lines/complaint-line-completed-button";
 import { DetailField } from "@/components/ui/detail-field";
 import {
   formatDateColumn,
@@ -167,7 +168,24 @@ export const ComplaintLineDetailView = ({ line }: Props) => (
     </section>
 
     <section className="space-y-4">
-      <h2 className="border-b pb-2 text-base font-semibold">Handling</h2>
+      <h2 className="border-b pb-2 text-base font-semibold">This line</h2>
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+        <DetailField
+          label="Delivery date"
+          value={formatDateColumn(line.deliveryDate)}
+        />
+        <DetailField label="Completed" value={line.completed ? "Yes" : "No"} />
+      </div>
+      <ComplaintLineCompletedButton
+        lineUuid={line.uuid}
+        completed={line.completed}
+      />
+    </section>
+
+    <section className="space-y-4">
+      <h2 className="border-b pb-2 text-base font-semibold">
+        Handling of the complaint
+      </h2>
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         <DetailField
           label="Status"

@@ -1,5 +1,6 @@
 import { InferInsertModel, InferSelectModel } from "drizzle-orm";
 import {
+  boolean,
   char,
   date,
   decimal,
@@ -12,23 +13,22 @@ import {
   timestamp,
   varchar,
 } from "drizzle-orm/mysql-core";
-import {
-  complaintCauses,
-  complaintCategories,
-  complaintSolutions,
-  complaintStatuses,
-  complaintTypes,
-} from "../../lib/enums";
+import { complaintCategories, complaintTypes } from "../../lib/enums";
 import { Complaints } from "./complaints";
 import { OrderItems } from "./order-items";
 import { Orders } from "./orders";
 import { Products } from "./products";
 import { Warehouses } from "./warehouses";
 
-// One complained-about line of a complaint. A complaint is raised against a
-// company, but what actually went wrong is per order line — a different product,
-// cause, solution, owner and deadline each time. Backs the "Complaint lines"
-// overview.
+// One complained-about line of a complaint: which delivered goods, how many,
+// from where. Backs the "Complaint lines" overview.
+//
+// The handling — status, cause, solution, deadline, who is responsible — is
+// the complaint's, not the line's. The reference keeps it in its own
+// `COMPLAINT_HANDLING` table on the complaint and gives `COMPLAINT_LINE` only
+// the delivery facts and a `COMPLETED` tick. Lines used to repeat the
+// complaint's handling and could disagree with it; those columns were dropped
+// on 15-9-2026, and every line now shows its complaint's handling.
 export const ComplaintItems = mysqlTable(
   "ComplaintItems",
   {
@@ -47,17 +47,14 @@ export const ComplaintItems = mysqlTable(
     category: mysqlEnum("category", complaintCategories),
     complaintType: mysqlEnum("complaint_type", complaintTypes),
 
-    // ── Handling ──────────────────────────────────────────────────────────────
-    status: mysqlEnum("status", complaintStatuses).default("new"),
-    statusDate: date("status_date", { mode: "string" }),
-    deadline: date("deadline", { mode: "string" }),
-    cause: mysqlEnum("cause", complaintCauses),
-    explanationOfCause: text("explanation_of_cause"),
-    solution: mysqlEnum("solution", complaintSolutions),
-    explanationOfSolution: text("explanation_of_solution"),
+    // When the complained-about goods were delivered — the reference's
+    // `COMPLAINT_LINE.DELIVERYDATE`, taken from the order line.
+    deliveryDate: date("delivery_date", { mode: "string" }),
+    // This line is dealt with, whatever the complaint as a whole still waits
+    // on — the reference's `COMPLAINT_LINE.COMPLETED`.
+    completed: boolean("completed").default(false).notNull(),
 
     // ── People (Clerk user ids / free text names) ─────────────────────────────
-    responsibleUserId: varchar("responsible_user_id", { length: 255 }),
     createdByUserId: varchar("created_by_user_id", { length: 255 }),
     // The buyer or seller the line belongs to, copied from the order.
     purchaserSeller: varchar("purchaser_seller", { length: 255 }),
