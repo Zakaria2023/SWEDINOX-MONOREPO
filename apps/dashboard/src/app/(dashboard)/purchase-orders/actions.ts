@@ -56,6 +56,7 @@ import {
   TableQuery,
 } from "@/lib/table-query";
 import { exportRows } from "@/lib/server/excel";
+import { syncPurchaseLineReceiptDates } from "@/lib/server/purchase-lines";
 import { PURCHASE_ORDER_COLUMNS } from "@/app/(dashboard)/purchase-orders/columns";
 import { currentUser } from "@clerk/nextjs/server";
 import {
@@ -441,6 +442,9 @@ export const createPurchaseOrder = async (
           ),
         });
       }
+
+      // A line is expected when the order is: its planned receipt date.
+      await syncPurchaseLineReceiptDates(tx, uuid);
     });
 
     // The supplier is told what we ordered as soon as the order stands. Sent
@@ -654,10 +658,15 @@ export const updatePurchaseOrder = async (
       return { error: "Cannot edit a cancelled purchase order." };
     }
 
-    await db
-      .update(PurchaseOrders)
-      .set(fields)
-      .where(eq(PurchaseOrders.uuid, uuid));
+    await db.transaction(async (tx) => {
+      await tx
+        .update(PurchaseOrders)
+        .set(fields)
+        .where(eq(PurchaseOrders.uuid, uuid));
+
+      // A moved delivery date moves the receipt date of what is still to come.
+      await syncPurchaseLineReceiptDates(tx, uuid);
+    });
   } catch (error) {
     return {
       error:

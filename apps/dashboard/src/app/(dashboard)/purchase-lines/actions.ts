@@ -13,8 +13,17 @@ import {
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { Products, SelectProducts } from "@/db/schema/products";
 import { getClerkUsersForSelect } from "@/lib/server/clerk";
-import { count, desc, eq, getTableColumns, sql } from "drizzle-orm";
-import { PurchaseLineReceivals } from "@/db/schema/purchase-line-receivals";
+import {
+  and,
+  count,
+  desc,
+  eq,
+  getTableColumns,
+  isNull,
+  notInArray,
+  or,
+  sql,
+} from "drizzle-orm";
 import {
   dateRangeFilter,
   numberRangeFilter,
@@ -60,17 +69,21 @@ export type PurchaseLineDetail = PurchaseLineItem & {
 
 // What is still coming, and what it is worth.
 //
-// Weight received is summed from the line's receivals rather than stored on
-// the line, because a line is received in instalments and only the receivals
-// know how much of it has actually turned up.
+// Weight received is the line's weight for the quantity that has arrived. Every
+// receipt — a receival, an unloading, a purchase invoice — raises the line's
+// received quantity and weighs the lot it makes by that same share, so the
+// quantity is the one figure all three keep up to date.
 //
 // "Available" on a purchase line means still inbound and unpromised — a
 // different thing from a warehouse lot's available, which is quantity less
 // reserved. Both exist; conflating them double-counts.
 const kgActualSql = sql<number>`(
-  SELECT COALESCE(SUM(${PurchaseLineReceivals.kgActual}), 0)
-  FROM ${PurchaseLineReceivals}
-  WHERE ${PurchaseLineReceivals.purchaseOrderItemUuid} = ${PurchaseOrderItems.uuid}
+  CASE WHEN COALESCE(${PurchaseOrderItems.qtyPlanned}, 0) > 0
+    THEN COALESCE(${PurchaseOrderItems.kgPurchased}, 0)
+       * COALESCE(${PurchaseOrderItems.qtyReceived}, 0)
+       / ${PurchaseOrderItems.qtyPlanned}
+    ELSE 0
+  END
 )`;
 
 // Reserved is held in purchase units, so its weight is that share of the
@@ -129,12 +142,29 @@ const PURCHASE_LINE_SORTABLE = {
   quantity: PurchaseOrderItems.quantity,
 };
 
-// Whose order it was on, which article, and when it was placed.
+// Whose order it was on, who bought it, which article, and when it was placed.
 const PURCHASE_LINE_FILTERS = {
   supplier: relationFilter(PurchaseOrders.supplierUuid),
+  purchaser: relationFilter(PurchaseOrders.purchaser),
   product: relationFilter(PurchaseOrderItems.productUuid),
   orderDate: dateRangeFilter(PurchaseOrders.orderDate),
   quantity: numberRangeFilter(PurchaseOrderItems.quantity),
+  // The reference's "Only current purchasing lines": still to arrive or to be
+  // invoiced, on an order that has been neither completed nor called off.
+  lines: (values: string[]) =>
+    values[0] === "current"
+      ? and(
+          or(
+            isNull(PurchaseOrderItems.status),
+            notInArray(PurchaseOrderItems.status, [
+              "received",
+              "invoiced",
+              "cancelled",
+            ]),
+          ),
+          notInArray(PurchaseOrders.status, ["completed", "cancelled"]),
+        )
+      : undefined,
 };
 
 /**

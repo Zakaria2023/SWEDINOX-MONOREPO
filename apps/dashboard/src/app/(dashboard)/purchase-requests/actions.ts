@@ -22,6 +22,7 @@ import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
 import { Products, SelectProducts } from "@/db/schema/products";
 import { resolveCompanyType } from "@/app/(dashboard)/companies/actions";
+import { syncPurchaseLineReceiptDates } from "@/lib/server/purchase-lines";
 import {
   amountForWeight,
   canEditPurchaseRequestLines,
@@ -468,6 +469,8 @@ export const convertPurchaseRequestToOrder = async (
           ),
         });
       }
+
+      await syncPurchaseLineReceiptDates(tx, orderUuid);
     });
 
     // The supplier is told what we ordered, exactly as they are when the order

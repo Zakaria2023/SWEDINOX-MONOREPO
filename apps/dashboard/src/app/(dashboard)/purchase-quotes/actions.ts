@@ -20,6 +20,7 @@ import { PurchaseOrders } from "@/db/schema/purchase-orders";
 import { PurchaseRequests } from "@/db/schema/purchase-requests";
 import { resolveCompanyType } from "@/app/(dashboard)/companies/actions";
 import { mailDocument, sendPurchaseOrderEmail } from "@/emails/documents";
+import { syncPurchaseLineReceiptDates } from "@/lib/server/purchase-lines";
 import {
   amountForWeight,
   describeError,
@@ -542,6 +543,8 @@ export const convertPurchaseQuoteToOrder = async (
           amount: item.amount,
         });
       }
+
+      await syncPurchaseLineReceiptDates(tx, orderUuid);
 
       // Everyone else who quoted for this request has lost it.
       if (quote.purchaseRequestUuid) {

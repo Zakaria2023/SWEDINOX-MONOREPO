@@ -14,6 +14,7 @@ import {
 import { RevenueGroups, SelectRevenueGroups } from "@/db/schema/revenue-groups";
 import { PurchaseLineReceivals } from "@/db/schema/purchase-line-receivals";
 import { getClerkUsersForSelect } from "@/lib/server/clerk";
+import { refreshPurchaseLineStatus } from "@/lib/server/purchase-lines";
 import { describeError, generateUuid, todayDateString } from "@/lib/helpers";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -139,6 +140,11 @@ const applyLineReceipt = async (
   const outstanding = (
     Number(line.quantity) - Number(line.qtyReceived ?? 0)
   ).toFixed(3);
+  // The weight that arrives is the line's weight for the quantity arriving.
+  const lineQty = Number(line.quantity);
+  const lineKg = Number(line.kgPurchased ?? 0);
+  const outstandingKg =
+    lineQty > 0 ? (lineKg * Number(outstanding)) / lineQty : lineKg;
 
   await tx.insert(PurchaseLineReceivals).values({
     uuid: generateUuid(),
@@ -154,6 +160,7 @@ const applyLineReceipt = async (
     qtyActual: outstanding,
     receivedQty: outstanding,
     kgPlanned: line.kgPurchased,
+    kgActual: outstandingKg.toFixed(2),
     receiptDate: today,
     deliveryDateActual: today,
   });
@@ -162,6 +169,8 @@ const applyLineReceipt = async (
     .update(PurchaseOrderItems)
     .set({ qtyReceived: line.quantity })
     .where(eq(PurchaseOrderItems.uuid, line.itemUuid));
+
+  await refreshPurchaseLineStatus(tx, line.itemUuid);
 };
 
 const revalidateReceiptPaths = () => {

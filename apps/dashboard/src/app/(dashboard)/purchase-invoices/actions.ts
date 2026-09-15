@@ -31,6 +31,7 @@ import { JournalEntries } from "@/db/schema/journal-entries";
 import { mailDocument, sendPurchaseInvoiceEmail } from "@/emails/documents";
 import { buildPurchaseJournalEntry } from "@/lib/server/ledger";
 import { recordFreightMovement } from "@/lib/server/freight";
+import { refreshPurchaseLineStatus } from "@/lib/server/purchase-lines";
 import { PurchaseOrderType, VatCode } from "@/lib/enums";
 import {
   fiscalPeriodDate,
@@ -624,6 +625,13 @@ export const createPurchaseInvoice = async (
         });
       }
 
+      // Every line this invoice touched is now received and invoiced further.
+      for (const item of items) {
+        if (poItemByUuid.has(item.purchaseOrderItemUuid)) {
+          await refreshPurchaseLineStatus(tx, item.purchaseOrderItemUuid);
+        }
+      }
+
       if (pricedSurcharges.length > 0) {
         await tx.insert(PurchaseInvoiceSurcharges).values(
           pricedSurcharges.map((surcharge) => ({
@@ -932,6 +940,14 @@ export const cancelPurchaseInvoice = async (
               qtyReceived: sql`GREATEST(${PurchaseOrderItems.qtyReceived} - ${item.quantity}, 0)`,
             })
             .where(eq(PurchaseOrderItems.uuid, stockRow.purchaseOrderItemUuid));
+
+          // The invoice is already marked cancelled above, so it no longer
+          // counts towards the line's invoiced quantity.
+          await refreshPurchaseLineStatus(
+            tx,
+            stockRow.purchaseOrderItemUuid,
+            true,
+          );
         }
       }
     });

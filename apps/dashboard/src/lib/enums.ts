@@ -1366,6 +1366,9 @@ export const orderLineStatuses = [
   // What the reference calls a line that is fully delivered and not yet
   // invoiced — 58 lines, paired with delivery status `Completed` on all 58.
   "completed",
+  // A purchase line some of whose goods have arrived — the reference's own
+  // status column on Purchase lines shows it.
+  "partially_received",
   "received",
   "expired",
   // Status `830`. Two lines carry it and the Order lines screen shows neither,

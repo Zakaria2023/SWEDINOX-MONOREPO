@@ -4,6 +4,7 @@ import { PageHeading } from "@/components/layout/page-heading";
 import { purchaseLineFilters } from "@/app/(dashboard)/purchase-lines/filters";
 import { getCompaniesForSelect } from "@/app/(dashboard)/companies/actions";
 import { getProductsForSelect } from "@/app/(dashboard)/products/actions";
+import { getClerkUsersForSelect } from "@/lib/server/clerk";
 import { parseTableQuery, SearchParams } from "@/lib/table-query";
 
 type Props = {
@@ -15,6 +16,7 @@ const PurchaseLinesPage = async ({ searchParams }: Props) => {
   // Sequential rather than concurrent: this database caps connections.
   const lines = await getPurchaseLines(query);
   const suppliers = await getCompaniesForSelect();
+  const purchasers = await getClerkUsersForSelect();
   const products = await getProductsForSelect();
 
   return (
@@ -22,7 +24,7 @@ const PurchaseLinesPage = async ({ searchParams }: Props) => {
       <PageHeading title="Purchase lines" />
       <PurchaseLinesTable
         page={lines}
-        filters={purchaseLineFilters(suppliers, products)}
+        filters={purchaseLineFilters(suppliers, purchasers, products)}
       />
     </div>
   );

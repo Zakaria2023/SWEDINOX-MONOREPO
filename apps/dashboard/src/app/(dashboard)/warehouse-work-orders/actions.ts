@@ -51,6 +51,7 @@ import {
 } from "@/lib/labels";
 import { recordFreightMovement } from "@/lib/server/freight";
 import { applyMove } from "@/lib/server/stock-movements";
+import { refreshPurchaseLineStatus } from "@/lib/server/purchase-lines";
 import {
   getWorkOrderLineDetail,
   LineDetail,
@@ -1186,6 +1187,8 @@ const applyReceipt = async (
       qtyReceived: sql`${PurchaseOrderItems.qtyReceived} + ${quantity.toFixed(3)}`,
     })
     .where(eq(PurchaseOrderItems.uuid, purchaseLine.uuid));
+
+  await refreshPurchaseLineStatus(tx, purchaseLine.uuid);
 
   await tx.insert(StockMovements).values({
     uuid: generateUuid(),

@@ -1,12 +1,21 @@
 import { CompanyOption } from "@/app/(dashboard)/companies/actions";
 import { ProductOption } from "@/app/(dashboard)/products/actions";
 import { companyOptionLabel } from "@/lib/helpers";
+import { ClerkUserOption } from "@/lib/server/clerk";
 import { TableFilterControl } from "@/lib/table-query";
 
 export const purchaseLineFilters = (
   suppliers: CompanyOption[],
+  purchasers: ClerkUserOption[],
   products: ProductOption[],
 ): TableFilterControl[] => [
+  {
+    key: "lines",
+    kind: "select",
+    label: "Lines",
+    placeholder: "All lines",
+    options: [{ value: "current", label: "Only current purchasing lines" }],
+  },
   {
     key: "supplier",
     kind: "select",
@@ -16,6 +25,13 @@ export const purchaseLineFilters = (
       value: supplier.uuid,
       label: companyOptionLabel(supplier),
     })),
+  },
+  {
+    key: "purchaser",
+    kind: "select",
+    label: "Purchaser",
+    placeholder: "All purchasers",
+    options: purchasers,
   },
   {
     key: "product",

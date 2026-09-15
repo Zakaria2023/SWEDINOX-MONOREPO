@@ -1203,6 +1203,7 @@ export const ORDER_LINE_STATUS_LABELS: Record<OrderLineStatus, string> = {
   partially_invoiced: "Partially invoiced",
   invoiced: "Invoiced",
   completed: "Completed",
+  partially_received: "Partially received",
   received: "Received",
   expired: "Expired",
   cancelled: "Cancelled",
@@ -1221,6 +1222,8 @@ export const ORDER_LINE_STATUS_CODES: Record<OrderLineStatus, string> = {
   partially_invoiced: "805",
   invoiced: "810",
   completed: "820",
+  // Never seen printed as a number; ours, placed just below received.
+  partially_received: "705",
   received: "710",
   expired: "840",
   cancelled: "830",
