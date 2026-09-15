@@ -14,6 +14,7 @@ import {
   SelectPurchaseOrders,
 } from "@/db/schema/purchase-orders";
 import { SelectStock, Stock } from "@/db/schema/stock";
+import { StockBatches } from "@/db/schema/stock-batches";
 import {
   describeError,
   formatInternalChargeNumber,
@@ -304,8 +305,27 @@ export const generateBatches = async (): Promise<GenerateBatchesResult> => {
       });
     }
 
+    // The lot each batch was received on holds all of it to begin with. Later
+    // moves may spread a batch over several lots, which is why the link is a
+    // table of its own rather than `Batches.stockUuid`.
+    const stockLinks = rows.flatMap((row) =>
+      row.stockUuid
+        ? [
+            {
+              uuid: generateUuid(),
+              stockUuid: row.stockUuid,
+              batchUuid: row.uuid,
+              quantity: row.qty ?? "0.000",
+            },
+          ]
+        : [],
+    );
+
     await db.transaction(async (tx) => {
       await tx.insert(Batches).values(rows);
+      if (stockLinks.length > 0) {
+        await tx.insert(StockBatches).values(stockLinks);
+      }
       for (const update of chargeUpdates) {
         await tx
           .update(Stock)

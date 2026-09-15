@@ -6,6 +6,7 @@ import { Orders, SelectOrders } from "@/db/schema/orders";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { Products, SelectProducts } from "@/db/schema/products";
 import { Batches, SelectBatches } from "@/db/schema/batches";
+import { StockBatches } from "@/db/schema/stock-batches";
 import {
   BatchCertificates,
   SelectBatchCertificates,
@@ -99,7 +100,8 @@ export const getDeliveryCertificateRows = async (
 
     const rows = await db
       .select({
-        key: sql<string>`COALESCE(${WarehouseWorkOrderPicks.uuid}, ${OrderItems.uuid})`,
+        // One row per pick per batch in the lot it drew on.
+        key: sql<string>`CONCAT(COALESCE(${WarehouseWorkOrderPicks.uuid}, ${OrderItems.uuid}), '-', COALESCE(${Batches.uuid}, ''))`,
         salesOrder: Orders.id,
         salesLine: OrderItems.lineNumber,
         customerCode: Companies.id,
@@ -153,7 +155,10 @@ export const getDeliveryCertificateRows = async (
           isNotNull(WarehouseWorkOrderPicks.stockUuid),
         ),
       )
-      .leftJoin(Batches, eq(Batches.stockUuid, shippedLot))
+      // A lot can hold several batches (the reference's `STOCKBATCH`), so the
+      // lot is traced through the link table, not `Batches.stockUuid`.
+      .leftJoin(StockBatches, eq(StockBatches.stockUuid, shippedLot))
+      .leftJoin(Batches, eq(Batches.uuid, StockBatches.batchUuid))
       .leftJoin(
         BatchCertificates,
         eq(Batches.uuid, BatchCertificates.batchUuid),
