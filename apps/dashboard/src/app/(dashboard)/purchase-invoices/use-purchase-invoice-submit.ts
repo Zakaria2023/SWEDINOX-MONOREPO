@@ -29,6 +29,7 @@ export const usePurchaseInvoiceSubmit = () => {
     defaultValues: {
       companyUuid: "",
       items: [],
+      invoiceSentByCompanyUuid: "",
       invoiceSentByContactUuid: "",
       bookingDate: "",
       invoiceDate: "",
@@ -87,6 +88,8 @@ export const usePurchaseInvoiceSubmit = () => {
       const result = await createPurchaseInvoice(
         {
           companyUuid: values.companyUuid || undefined,
+          invoiceSentByCompanyUuid:
+            values.invoiceSentByCompanyUuid || undefined,
           invoiceSentByContactUuid:
             values.invoiceSentByContactUuid || undefined,
           bookingDate: values.bookingDate ? new Date(values.bookingDate) : null,

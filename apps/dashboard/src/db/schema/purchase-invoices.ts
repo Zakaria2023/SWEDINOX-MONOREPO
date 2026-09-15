@@ -20,6 +20,7 @@ import {
   invoiceSurchargeDescriptions,
   purchaseInvoiceBlockReasons,
   purchaseInvoiceFiscalBases,
+  purchaseInvoiceStatuses,
 } from "../../lib/enums";
 import { Companies } from "./companies";
 import { Contacts } from "./contacts";
@@ -31,6 +32,11 @@ export const PurchaseInvoices = mysqlTable(
     uuid: char("uuid", { length: 36 }).notNull().unique(),
 
     companyUuid: char("company_uuid", { length: 36 }),
+    // Who billed us, when that is not the supplier — a factor or a group
+    // billing entity. The reference carries it as a second company field.
+    invoiceSentByCompanyUuid: char("invoice_sent_by_company_uuid", {
+      length: 36,
+    }),
     invoiceSentByContactUuid: char("invoice_sent_by_contact_uuid", {
       length: 36,
     }),
@@ -71,6 +77,20 @@ export const PurchaseInvoices = mysqlTable(
     purchaseOrderNumber: varchar("purchase_order_number", { length: 100 }),
 
     paymentTerms: mysqlEnum("pi_payment_terms", invoicePaymentTerms),
+    // Where the document stands, and who moved it there. The reference prints
+    // that audit line under the title: "Invoice status was last changed by
+    // Raymond Wattez on 22-1-2025 at 12:08."
+    status: mysqlEnum("status", purchaseInvoiceStatuses)
+      .default("new")
+      .notNull(),
+    statusChangedByUserId: varchar("status_changed_by_user_id", { length: 255 }),
+    statusChangedAt: timestamp("status_changed_at"),
+
+    // The bank the invoice is paid to, snapshotted when it is entered: a
+    // supplier's bank details can change, and an old invoice must keep the
+    // account it was actually paid to rather than quietly following the new one.
+    iban: varchar("iban", { length: 34 }),
+
     blocked: boolean("blocked").default(false),
     blockReason: mysqlEnum("block_reason", purchaseInvoiceBlockReasons),
     cancelled: boolean("cancelled").default(false).notNull(),

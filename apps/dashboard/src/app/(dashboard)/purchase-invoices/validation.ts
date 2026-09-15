@@ -34,6 +34,8 @@ export const createPurchaseInvoiceSchema = () =>
     .object({
       companyUuid: z.string().optional(),
       items: z.array(purchaseInvoiceItemSchema).optional(),
+      // Who billed us, when that is not the supplier themselves.
+      invoiceSentByCompanyUuid: z.string().optional(),
       invoiceSentByContactUuid: z.string().optional(),
       bookingDate: z.string().optional(),
       invoiceDate: z.string().optional(),

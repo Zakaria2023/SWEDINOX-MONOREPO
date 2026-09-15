@@ -24,10 +24,15 @@ import { TableSortHeader } from "@/components/ui/table-sort-header";
 import { TableToolbar } from "@/components/ui/table-toolbar";
 import { selectorColumns } from "@/lib/excel";
 import { Paged, TableFilterControl } from "@/lib/table-query";
-import { buildColumnVisibility } from "@/lib/helpers";
+import {
+  buildColumnVisibility,
+  formatMoney,
+  formatNumber,
+} from "@/lib/helpers";
 import {
   INVOICE_PAYMENT_TERM_LABELS,
   PURCHASE_INVOICE_BLOCK_REASON_LABELS,
+  PURCHASE_INVOICE_STATUS_LABELS,
 } from "@/lib/labels";
 import { useState } from "react";
 
@@ -40,6 +45,7 @@ const ALL_COLUMNS = selectorColumns(PURCHASE_INVOICE_COLUMNS);
 
 // The columns a header may sort on, matching the keys actions.ts declared.
 const SORTABLE: Partial<Record<ColumnKey, string>> = {
+  createdAt: "createdAt",
   companyName: "supplier",
   invoiceDate: "invoiceDate",
   expirationDate: "expirationDate",
@@ -66,6 +72,86 @@ export const PurchaseInvoicesTable = ({ page, filters }: Props) => {
 
   const renderCell = (inv: PurchaseInvoiceListItem, key: ColumnKey) => {
     switch (key) {
+      case "createdAt":
+        return (
+          <TableCell key={key} className="whitespace-nowrap">
+            {inv.createdAt.toLocaleDateString("en-GB")}
+          </TableCell>
+        );
+      case "status":
+        return (
+          <TableCell key={key} className="whitespace-nowrap">
+            {inv.cancelled
+              ? "Cancelled"
+              : PURCHASE_INVOICE_STATUS_LABELS[inv.status]}
+          </TableCell>
+        );
+      case "sentByCompanyName":
+        return (
+          <TableCell key={key} className="whitespace-nowrap">
+            {inv.sentByCompanyName ?? "—"}
+          </TableCell>
+        );
+      case "invoiceNumberSupplier":
+        return (
+          <TableCell key={key} className="whitespace-nowrap">
+            {inv.invoiceNumberSupplier ?? "—"}
+          </TableCell>
+        );
+      case "creditorNo":
+        return (
+          <TableCell key={key} className="whitespace-nowrap">
+            {inv.creditorNo ?? "—"}
+          </TableCell>
+        );
+      case "city":
+        return <TableCell key={key}>{inv.city ?? "—"}</TableCell>;
+      case "country":
+        return <TableCell key={key}>{inv.country ?? "—"}</TableCell>;
+      case "vatNumber":
+        return (
+          <TableCell key={key} className="whitespace-nowrap">
+            {inv.vatNumber ?? "—"}
+          </TableCell>
+        );
+      case "bookingPeriod":
+        return (
+          <TableCell key={key} className="whitespace-nowrap">
+            {inv.bookingPeriod ?? "—"}
+          </TableCell>
+        );
+      case "vatAmount":
+        return (
+          <TableCell key={key} className="text-right whitespace-nowrap">
+            {formatMoney(inv.vatAmount)}
+          </TableCell>
+        );
+      case "creditRestriction":
+        return (
+          <TableCell key={key} className="text-right whitespace-nowrap">
+            {formatMoney(Number(inv.creditRestriction ?? 0))}
+          </TableCell>
+        );
+      case "weightKg":
+        return (
+          <TableCell key={key} className="text-right whitespace-nowrap">
+            {formatNumber(inv.weightKg)}
+          </TableCell>
+        );
+      case "iban":
+        return (
+          <TableCell key={key} className="whitespace-nowrap">
+            {inv.iban ?? "—"}
+          </TableCell>
+        );
+      case "bankCountry":
+        return <TableCell key={key}>{inv.bankCountry ?? "—"}</TableCell>;
+      case "paymentTermsCode":
+        return (
+          <TableCell key={key} className="whitespace-nowrap">
+            {inv.paymentTerms ?? "—"}
+          </TableCell>
+        );
       case "id":
         return (
           <TableCell key={key} className="font-medium whitespace-nowrap">

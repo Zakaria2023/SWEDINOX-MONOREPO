@@ -1946,6 +1946,23 @@ export const purchaseInvoiceBlockReasons = [
 export type PurchaseInvoiceBlockReason =
   (typeof purchaseInvoiceBlockReasons)[number];
 
+/**
+ * Where a supplier invoice stands, and what may still be done to it.
+ *
+ * `new` is keyed but not approved; `released` is approved for payment — the
+ * status the reference's captured invoice carries; `final` is closed by the
+ * reference's own `Final` button, after which nothing may be edited or
+ * cancelled. Cancelling is a flag of its own, as the reference keeps blocking
+ * separate from status.
+ */
+export const purchaseInvoiceStatuses = [
+  "new",
+  "released",
+  "final",
+] as const satisfies readonly string[];
+
+export type PurchaseInvoiceStatus = (typeof purchaseInvoiceStatuses)[number];
+
 export const purchaseInvoiceFiscalBases = [
   "booking_date",
   "document_date",

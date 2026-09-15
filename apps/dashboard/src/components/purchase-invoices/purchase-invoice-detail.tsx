@@ -4,9 +4,13 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import {
   cancelPurchaseInvoice,
+  finalisePurchaseInvoice,
   PurchaseInvoiceDetail,
+  releasePurchaseInvoice,
+  setPurchaseInvoiceBlocked,
 } from "@/app/(dashboard)/purchase-invoices/actions";
 import { Button } from "@/components/shadcn/button";
+import { Select } from "@/components/shadcn/select";
 import {
   Table,
   TableBody,
@@ -16,7 +20,29 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { DetailField } from "@/components/ui/detail-field";
 import { FormError } from "@/components/ui/form-error";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { PurchaseInvoiceBlockReason, purchaseInvoiceBlockReasons } from "@/lib/enums";
+import {
+  enumOptions,
+  formatDateColumn,
+  formatDateValue,
+  formatMoney,
+  formatNumber,
+} from "@/lib/helpers";
+import {
+  INVOICE_PAYMENT_TERM_LABELS,
+  PURCHASE_INVOICE_BLOCK_REASON_LABELS,
+  PURCHASE_INVOICE_STATUS_LABELS,
+} from "@/lib/labels";
+import { Ban, Check, Lock, ShieldCheck } from "lucide-react";
+
+const blockReasonOptions = enumOptions(
+  purchaseInvoiceBlockReasons,
+  PURCHASE_INVOICE_BLOCK_REASON_LABELS,
+  "— Choose a reason —",
+);
 
 type Props = {
   purchaseInvoice: PurchaseInvoiceDetail;
@@ -26,10 +52,12 @@ export const PurchaseInvoiceDetailView = ({ purchaseInvoice }: Props) => {
   const [isPending, startTransition] = useTransition();
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [error, setError] = useState<string | undefined>();
+  const [holdReason, setHoldReason] = useState("");
 
-  const handleCancel = () => {
+  const run = (action: () => Promise<{ error?: string }>) => {
+    setError(undefined);
     startTransition(async () => {
-      const result = await cancelPurchaseInvoice(purchaseInvoice.uuid);
+      const result = await action();
       if (result.error) {
         setError(result.error);
       }
@@ -45,149 +73,304 @@ export const PurchaseInvoiceDetailView = ({ purchaseInvoice }: Props) => {
     .reduce((sum, m) => sum + Number(m.quantity), 0);
   const netReceived = totalReceived - totalReversed;
 
+  const isFinal = purchaseInvoice.status === "final";
+  const isClosed = isFinal || purchaseInvoice.cancelled;
+
   return (
     <div className="space-y-6">
       {error && <FormError>{error}</FormError>}
 
-      <div className="grid grid-cols-2 gap-4 rounded-lg border p-4 sm:grid-cols-3">
-        <div>
-          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-            Company
+      <div className="flex flex-wrap items-center gap-3">
+        <StatusBadge
+          value={purchaseInvoice.cancelled ? "cancelled" : purchaseInvoice.status}
+          label={
+            purchaseInvoice.cancelled
+              ? "Cancelled"
+              : PURCHASE_INVOICE_STATUS_LABELS[purchaseInvoice.status]
+          }
+        />
+        {purchaseInvoice.blocked && (
+          <span className="rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-700">
+            Held
+            {purchaseInvoice.blockReason
+              ? `: ${PURCHASE_INVOICE_BLOCK_REASON_LABELS[purchaseInvoice.blockReason]}`
+              : ""}
+          </span>
+        )}
+        {purchaseInvoice.statusChangedAt && (
+          <p className="text-sm text-muted-foreground">
+            Invoice status was last changed by{" "}
+            {purchaseInvoice.statusChangedByName ?? "someone"} on{" "}
+            {formatDateValue(purchaseInvoice.statusChangedAt)}.
           </p>
-          <p className="text-sm">{purchaseInvoice.companyName ?? "—"}</p>
-        </div>
-        <div>
-          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-            Invoice Sent By
-          </p>
-          <p className="text-sm">
-            {[purchaseInvoice.contactFirstName, purchaseInvoice.contactLastName]
-              .filter(Boolean)
-              .join(" ") || "—"}
-          </p>
-        </div>
-        <div>
-          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-            Status
-          </p>
-          <p className="text-sm">
-            {purchaseInvoice.cancelled ? "Cancelled" : "Active"}
-          </p>
-        </div>
-        <div>
-          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-            Invoice Date
-          </p>
-          <p className="text-sm">
-            {purchaseInvoice.invoiceDate?.toLocaleDateString("en-GB") ?? "—"}
-          </p>
-        </div>
-        <div>
-          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-            Invoice Number (Supplier)
-          </p>
-          <p className="text-sm">
-            {purchaseInvoice.invoiceNumberSupplier ?? "—"}
-          </p>
-        </div>
-        <div>
-          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-            Invoice Total
-          </p>
-          <p className="text-sm">€{purchaseInvoice.invoiceTotal}</p>
-        </div>
+        )}
       </div>
 
-      <div className="space-y-3">
+      <section className="space-y-4">
+        <h2 className="border-b pb-2 text-base font-semibold">Invoice</h2>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+          <DetailField label="Company" value={purchaseInvoice.companyName} />
+          <DetailField
+            label="Invoice sent by"
+            value={
+              purchaseInvoice.sentByCompanyName ??
+              [
+                purchaseInvoice.contactFirstName,
+                purchaseInvoice.contactLastName,
+              ]
+                .filter(Boolean)
+                .join(" ")
+            }
+          />
+          <DetailField label="Supplier code" value={purchaseInvoice.supplierCode} />
+          <DetailField label="Creditor no." value={purchaseInvoice.creditorNo} />
+          <DetailField label="City" value={purchaseInvoice.city} />
+          <DetailField label="Country" value={purchaseInvoice.country} />
+          <DetailField label="VAT number" value={purchaseInvoice.vatNumber} />
+          <DetailField
+            label="Invoice no. supplier"
+            value={purchaseInvoice.invoiceNumberSupplier}
+          />
+          <DetailField
+            label="Invoice date"
+            value={formatDateColumn(purchaseInvoice.invoiceDate)}
+          />
+          <DetailField
+            label="Exp. date"
+            value={formatDateColumn(purchaseInvoice.expirationDate)}
+          />
+          <DetailField
+            label="Booking date"
+            value={formatDateColumn(purchaseInvoice.bookingDate)}
+          />
+          <DetailField
+            label="Booking period"
+            value={purchaseInvoice.bookingPeriod}
+          />
+          <DetailField
+            label="Payment terms"
+            value={
+              purchaseInvoice.paymentTerms
+                ? INVOICE_PAYMENT_TERM_LABELS[purchaseInvoice.paymentTerms]
+                : null
+            }
+          />
+          <DetailField label="IBAN" value={purchaseInvoice.iban} />
+          <DetailField label="Bank country" value={purchaseInvoice.bankCountry} />
+          <DetailField
+            label="Weight (kg)"
+            value={formatNumber(purchaseInvoice.weightKg)}
+          />
+        </div>
+      </section>
+
+      <section className="space-y-4">
         <h2 className="border-b pb-2 text-base font-semibold">Summary</h2>
-        <div className="rounded-md border bg-muted/50 p-3 text-sm">
-          <div className="flex justify-between py-1">
-            <span className="text-muted-foreground">Total Received</span>
-            <span className="font-medium">{totalReceived.toFixed(3)}</span>
-          </div>
-          {totalReversed > 0 && (
-            <div className="flex justify-between py-1">
-              <span className="text-muted-foreground">Total Reversed</span>
-              <span className="font-medium">{totalReversed.toFixed(3)}</span>
-            </div>
-          )}
-          <div className="flex justify-between border-t pt-2 font-semibold">
-            <span>Net Received</span>
-            <span>{netReceived.toFixed(3)}</span>
-          </div>
-          <div className="flex justify-between pt-1 text-xs text-muted-foreground">
-            <span>Stock Movements</span>
-            <span>{purchaseInvoice.movements.length}</span>
-          </div>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+          <DetailField
+            label="Materials"
+            value={formatMoney(Number(purchaseInvoice.materials ?? 0))}
+          />
+          <DetailField
+            label="Options"
+            value={formatMoney(Number(purchaseInvoice.optionsAmount ?? 0))}
+          />
+          <DetailField
+            label="Surcharges"
+            value={formatMoney(Number(purchaseInvoice.surcharges ?? 0))}
+          />
+          <DetailField
+            label="VAT amount"
+            value={formatMoney(purchaseInvoice.vatAmount)}
+          />
+          <DetailField
+            label="Credit restriction"
+            value={formatMoney(Number(purchaseInvoice.creditRestriction ?? 0))}
+          />
+          <DetailField
+            label="Remainder"
+            value={formatMoney(Number(purchaseInvoice.remainder ?? 0))}
+          />
+          <DetailField
+            label="Invoice total"
+            value={formatMoney(Number(purchaseInvoice.invoiceTotal ?? 0))}
+          />
+          <DetailField
+            label="Outstanding"
+            value={formatMoney(Number(purchaseInvoice.outstanding ?? 0))}
+          />
         </div>
-      </div>
+        <p className="text-sm text-muted-foreground">
+          Received {formatNumber(netReceived)} on{" "}
+          {purchaseInvoice.movements.length} stock movement
+          {purchaseInvoice.movements.length === 1 ? "" : "s"}
+          {totalReversed > 0
+            ? ` (${formatNumber(totalReversed)} reversed)`
+            : ""}
+          .
+        </p>
+      </section>
 
-      <div className="space-y-3">
-        <h2 className="border-b pb-2 text-base font-semibold">
-          Stock Items Received
-        </h2>
-        <div>
-          <Table>
-            <TableHeader>
+      <section className="space-y-3">
+        <h2 className="border-b pb-2 text-base font-semibold">Lines</h2>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Purchase order</TableHead>
+              <TableHead className="text-right">Line</TableHead>
+              <TableHead>Product</TableHead>
+              <TableHead className="text-right">Qty</TableHead>
+              <TableHead>U</TableHead>
+              <TableHead className="text-right">Kg</TableHead>
+              <TableHead className="text-right">Length</TableHead>
+              <TableHead className="text-right">Price</TableHead>
+              <TableHead>Per</TableHead>
+              <TableHead className="text-right">Material</TableHead>
+              <TableHead>VAT rate</TableHead>
+              <TableHead>Delivery date</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {purchaseInvoice.items.length === 0 ? (
               <TableRow>
-                <TableHead>Product</TableHead>
-                <TableHead className="text-right">Quantity</TableHead>
+                <TableCell
+                  colSpan={12}
+                  className="h-24 text-center text-muted-foreground"
+                >
+                  No lines on this invoice.
+                </TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {purchaseInvoice.items.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={2}
-                    className="h-24 text-center text-muted-foreground"
-                  >
-                    No stock items received on this invoice.
+            ) : (
+              purchaseInvoice.items.map((item) => (
+                <TableRow key={item.uuid}>
+                  <TableCell>{item.purchaseOrderId ?? "—"}</TableCell>
+                  <TableCell className="text-right">
+                    {item.lineNumber ?? "—"}
                   </TableCell>
+                  <TableCell className="font-medium">
+                    {[item.productCode, item.productName]
+                      .filter(Boolean)
+                      .join(" — ") || "—"}
+                  </TableCell>
+                  <TableCell className="text-right">{item.quantity}</TableCell>
+                  <TableCell>{item.unit ?? "—"}</TableCell>
+                  <TableCell className="text-right">
+                    {formatNumber(item.weightKg)}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {item.lengthMm ?? "—"}
+                  </TableCell>
+                  <TableCell className="text-right whitespace-nowrap">
+                    {formatMoney(Number(item.netPrice ?? 0))}
+                  </TableCell>
+                  <TableCell>{item.priceUnit ?? "—"}</TableCell>
+                  <TableCell className="text-right whitespace-nowrap">
+                    {formatMoney(Number(item.amount ?? 0))}
+                  </TableCell>
+                  <TableCell>{item.vatCode ?? "—"}</TableCell>
+                  <TableCell>{formatDateColumn(item.deliveryDate)}</TableCell>
                 </TableRow>
-              ) : (
-                purchaseInvoice.items.map((item) => (
-                  <TableRow key={item.uuid}>
-                    <TableCell className="font-medium">
-                      {[item.productCode, item.productName]
-                        .filter(Boolean)
-                        .join(" — ")}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {item.quantity}
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </div>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </section>
 
-      {!purchaseInvoice.cancelled && (
-        <div className="flex gap-2">
+      {!isClosed && (
+        <div className="flex flex-wrap items-end gap-2">
           <Button
             variant="outline"
             render={
               <Link href={`/purchase-invoices/${purchaseInvoice.uuid}/edit`} />
             }
           >
-            Edit Details
+            Edit details
           </Button>
+
+          {purchaseInvoice.status === "new" && (
+            <Button
+              type="button"
+              onClick={() => run(() => releasePurchaseInvoice(purchaseInvoice.uuid))}
+              disabled={isPending}
+            >
+              <ShieldCheck className="mr-1.5 size-4" />
+              Release for payment
+            </Button>
+          )}
+
+          {purchaseInvoice.status === "released" && (
+            <Button
+              type="button"
+              onClick={() => run(() => finalisePurchaseInvoice(purchaseInvoice.uuid))}
+              disabled={isPending}
+            >
+              <Lock className="mr-1.5 size-4" />
+              Final
+            </Button>
+          )}
+
+          {purchaseInvoice.blocked ? (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() =>
+                run(() => setPurchaseInvoiceBlocked(purchaseInvoice.uuid, false))
+              }
+              disabled={isPending}
+            >
+              <Check className="mr-1.5 size-4" />
+              Unblock
+            </Button>
+          ) : (
+            <div className="flex items-end gap-2">
+              <Select
+                id="holdReason"
+                value={holdReason}
+                options={blockReasonOptions}
+                onValueChange={setHoldReason}
+                disabled={isPending}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() =>
+                  run(() =>
+                    setPurchaseInvoiceBlocked(
+                      purchaseInvoice.uuid,
+                      true,
+                      (holdReason || null) as PurchaseInvoiceBlockReason | null,
+                    ),
+                  )
+                }
+                disabled={isPending}
+              >
+                <Ban className="mr-1.5 size-4" />
+                Hold
+              </Button>
+            </div>
+          )}
+
           <Button
             type="button"
             variant="destructive"
             onClick={() => setIsConfirmOpen(true)}
             disabled={isPending}
           >
-            Cancel Purchase Invoice
+            Cancel purchase invoice
           </Button>
         </div>
+      )}
+
+      {isFinal && (
+        <p className="text-sm text-muted-foreground">
+          This invoice is final: it can no longer be edited, held or cancelled.
+        </p>
       )}
 
       <ConfirmDialog
         open={isConfirmOpen}
         onOpenChange={setIsConfirmOpen}
-        onConfirm={handleCancel}
+        onConfirm={() => run(() => cancelPurchaseInvoice(purchaseInvoice.uuid))}
         isPending={isPending}
         title="Cancel purchase invoice"
         description="This cancels the invoice and removes the stock it received. It's blocked if any of that stock has already been reserved or sold. This cannot be undone."

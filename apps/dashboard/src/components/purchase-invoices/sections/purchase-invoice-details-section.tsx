@@ -62,8 +62,30 @@ export const PurchaseInvoiceDetailsSection = ({
         </div>
 
         <div>
+          <FormLabel htmlFor="invoiceSentByCompanyUuid">
+            Invoice Sent By (company)
+          </FormLabel>
+          <Controller
+            name="invoiceSentByCompanyUuid"
+            control={control}
+            render={({ field }) => (
+              <Select
+                id="invoiceSentByCompanyUuid"
+                options={supplierOptions}
+                value={field.value ?? ""}
+                onValueChange={(v) => field.onChange(v || undefined)}
+                disabled={isPending}
+              />
+            )}
+          />
+          <p className="mt-1 text-xs text-muted-foreground">
+            Only when somebody other than the supplier bills us.
+          </p>
+        </div>
+
+        <div>
           <FormLabel htmlFor="invoiceSentByContactUuid">
-            Invoice Sent By
+            Invoice Sent By (contact)
           </FormLabel>
           <Controller
             name="invoiceSentByContactUuid"

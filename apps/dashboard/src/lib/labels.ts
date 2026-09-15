@@ -118,6 +118,7 @@ import {
   OrderWeightType,
   PaymentMethod,
   PurchaseCompanyType,
+  PurchaseInvoiceStatus,
   PurchaseQuoteExpirationReason,
   PurchaseQuoteStatus,
   PurchaseRequestStatus,
@@ -1761,6 +1762,15 @@ export const PACKAGING_TYPE_LABELS: Record<PackagingType, string> = {
   coil: "Coil",
   bundles: "Bundle(s)",
   colli: "Colli",
+};
+
+export const PURCHASE_INVOICE_STATUS_LABELS: Record<
+  PurchaseInvoiceStatus,
+  string
+> = {
+  new: "New",
+  released: "Released",
+  final: "Final",
 };
 
 export const PURCHASE_INVOICE_BLOCK_REASON_LABELS: Record<

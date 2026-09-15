@@ -1,9 +1,14 @@
 import { CompanyOption } from "@/app/(dashboard)/companies/actions";
-import { invoiceDocumentTypes, purchaseInvoiceBlockReasons } from "@/lib/enums";
+import {
+  invoiceDocumentTypes,
+  purchaseInvoiceBlockReasons,
+  purchaseInvoiceStatuses,
+} from "@/lib/enums";
 import { companyOptionLabel } from "@/lib/helpers";
 import {
   INVOICE_DOCUMENT_TYPE_LABELS,
   PURCHASE_INVOICE_BLOCK_REASON_LABELS,
+  PURCHASE_INVOICE_STATUS_LABELS,
 } from "@/lib/labels";
 import { TableFilterControl } from "@/lib/table-query";
 
@@ -17,6 +22,16 @@ export const purchaseInvoiceFilters = (
     options: invoiceDocumentTypes.map((type) => ({
       value: type,
       label: INVOICE_DOCUMENT_TYPE_LABELS[type],
+    })),
+  },
+  {
+    key: "status",
+    kind: "select",
+    label: "Status",
+    placeholder: "All statuses",
+    options: purchaseInvoiceStatuses.map((status) => ({
+      value: status,
+      label: PURCHASE_INVOICE_STATUS_LABELS[status],
     })),
   },
   {
