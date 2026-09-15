@@ -142,13 +142,29 @@ photograph that too.
 The menu bar is `Bestand · Beeld · Logistiek · Financiën · Batch Taken · Acties
 · Extra · Help`, and every one has been photographed. Three conclusions:
 
-### 1. There is no settings screen anywhere
+### 1. There is no settings screen in the menu bar
 
 Not in `Bestand`, `Beeld`, `Extra`, `Financiën` or `Acties`, and not on the
 customer's `Debtor` panel (G12). **The overdue-days threshold cannot be read
-from the application.** It is either hard-coded by the vendor or stored in the
-database where no screen shows it. K1 now needs a person — most likely INAD
-(K11), not Swedinox.
+from the application.** K1 now needs a person — most likely INAD (K11), not
+Swedinox.
+
+> ⚠️ **Correction 15-9-2026:** the left tree has a **`System info`** group that
+> was never opened — `Database tables`, `Errors`, `Geopende werkpanelen`,
+> `Active Logins`, `Security profiles`, `Task profiles`, `EDI`,
+> `Stock value check`. `Database tables` is now captured
+> ([database-schema.md](database-schema.md)): the threshold is **stored as data**,
+> almost certainly in `TASK_PARAMETER` (an int per stored procedure). One SQL
+> query by someone with database access answers K1.
+> `Errors` is captured too ([error-log.md](error-log.md)): it answers K11 and
+> reshapes K10/K12 — the ledger during live use was **Multivers**, and the
+> database is a copy frozen around **mid-May 2025**.
+> The other six System info screens are captured too ([system-info.md](system-info.md)).
+> 🔴 **The security profiles prove the settings screens exist:**
+> `Vestigingsgegevens` → `Instellingen Verkoop` (`Klant instellingen`,
+> `Order Instellingen`) / `Instellingen Financiën` / … — never opened. **K1 is
+> almost certainly there.** `Stock value check` must be redone with
+> `Year` = `2025`, `Month` = `5`.
 
 ### 2. 🔴 The ledger is AFAS
 
@@ -449,7 +465,7 @@ somebody clicking.
 
 | # | Question | Why it matters |
 |---|---|---|
-| **K1** | 🔴 **How many days overdue is "too long"?** | The one assumption sitting in shipped code. **14-9-2026: every menu and the Debtor panel have been opened and no screen holds the setting** — ask INAD (K11) or Swedinox's administrator. And see K10: if the AFAS sync is off, the overdue days themselves may be stale |
+| **K1** | 🔴 **How many days overdue is "too long"?** | The one assumption sitting in shipped code. **14-9-2026: every menu and the Debtor panel have been opened and no screen holds the setting** — ask INAD (K11) or Swedinox's administrator. And see K10: if the AFAS sync is off, the overdue days themselves may be stale. **15-9-2026 lead:** the schema has no column for it, so it is data — most likely `TASK_PARAMETER`. Whoever has database access runs `SELECT Task_StoredProc, Parameter, Value FROM TASK_PARAMETER` ([database-schema.md](database-schema.md) §1) |
 | **K2** | **Should customer-owned stock carry value?** | €40 833 does today in the reference. That is an accounting policy call, not a code fact |
 | **K3** | **Are these six features wanted at all?** | The reference ships them and does not use them: transport costing, `Resource`, `Pickvolgorde`, `Zelfbeoordeling`, FSP revaluation, sawing planning. **Six features we can decline to build** |
 | **K4** | What does `FSP` stand for, and what does `LIP` stand for? | FSP's *behaviour* is established — the price stock is carried at, versioned, revalued through two GL accounts. Only the letters are unknown |
@@ -458,9 +474,9 @@ somebody clicking.
 | **K7** | Are `Purchase request` and `Purchase return order` used? | Two document types in the `Nieuw` menu that no screen has shown |
 | **K8** | Are any companies `Processor` or `Transporter`? | Would change how work orders are assigned |
 | **K9** | What does ticking `Consignatie` change commercially? | J1 answers the accounting half; this is the business half |
-| **K10** | Is the batch scheduler meant to be switched off? | Needs an administrator. 🔴 **Now blocking (14-9-2026):** three of the batch jobs sync open posts, companies and journal entries with **AFAS**. If the scheduler is off, the overdue-posts rule runs on frozen data |
-| **K12** | **Does the rebuild replace AFAS, or sync with it?** | AFAS holds the ledger, receivables and payments (A3). This decides how journal entries, payments and credit control are built in `apps/dashboard` |
-| **K11** | Is **`INAD`** a real person, or a shared or system account? | **Half answered:** INAD is the software vendor — `INAD Industrie Software B.V.` is a company in the C4 address file and the test company's contact is `@inad.nl`. What is left: do their support staff lift blocks on request, or does a job run under that login? It lifted **63 of 571** order blocks in the C7 `Unblocked orders` export (62 financial, 1 commercial), spread over 2025–2026. Every other unblock carries a person's name. If it is a system account, some blocks are lifted **automatically**, and that rule exists nowhere in our code. If it is a shared login, the audit trail cannot say who did it |
+| **K10** | Is the batch scheduler meant to be switched off? | Needs an administrator. 🔴 **Now blocking (14-9-2026):** three of the batch jobs sync open posts, companies and journal entries with **AFAS**. If the scheduler is off, the overdue-posts rule runs on frozen data. **15-9-2026 lead:** `SCHEDULED_TASK.LAST_EXECUTED` on the three AFAS jobs, and `SCHEDULED_TASK_LOG.FAILED`, answer this from the database ([database-schema.md](database-schema.md) §2). **15-9-2026, error log:** jobs run as user `BATCH`, which logs nothing after **13-5-2025** — the date the test copy was taken. The scheduler being off on `HEGO TEST` is expected; ask about the **live** system instead ([error-log.md](error-log.md) §2) |
+| **K12** | **Does the rebuild replace AFAS, or sync with it?** | AFAS holds the ledger, receivables and payments (A3). This decides how journal entries, payments and credit control are built in `apps/dashboard`. **15-9-2026, error log:** during live use (Jan–May 2025) the batch sync went to **Multivers**; the AFAS jobs and a cloud "tenant id" set-up appear only afterwards. Ask which ledger the **live** system posts to today ([error-log.md](error-log.md) §2) |
+| **K11** | Is **`INAD`** a real person, or a shared or system account? | **Half answered:** INAD is the software vendor — `INAD Industrie Software B.V.` is a company in the C4 address file and the test company's contact is `@inad.nl`. What is left: do their support staff lift blocks on request, or does a job run under that login? It lifted **63 of 571** order blocks in the C7 `Unblocked orders` export (62 financial, 1 commercial), spread over 2025–2026. Every other unblock carries a person's name. If it is a system account, some blocks are lifted **automatically**, and that rule exists nowhere in our code. If it is a shared login, the audit trail cannot say who did it. **15-9-2026 lead:** `USERS.ISBATCH` marks a batch account — one look at the `INAD` user record settles it ([database-schema.md](database-schema.md) §3). ✅ **Answered 15-9-2026 by the error log:** jobs run as a separate `BATCH` user; `INAD`'s entries are interactive (deleting unload lines, overriding warnings, printing, changing dates) plus one migration script on 25-9-2024. **INAD is the vendor's support login used by people — the 63 unblocks were manual.** Only "on whose request" is left ([error-log.md](error-log.md) §3) |
 
 ---
 
