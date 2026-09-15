@@ -5,6 +5,7 @@ import {
   formatDateColumn,
   formatDateValue,
   formatMoney,
+  formatNumber,
 } from "@/lib/helpers";
 
 type Props = {
@@ -38,8 +39,16 @@ export const PurchaseInvoiceLineDetailView = ({ line }: Props) => (
           value={formatDateColumn(line.invoiceDate)}
         />
         <DetailField
-          label="Purchase order number"
-          value={line.purchaseOrderNumber}
+          label="Purchase order"
+          value={
+            line.purchaseOrderId === null
+              ? line.purchaseOrderNumber
+              : `${line.purchaseOrderId} / line ${line.lineNumber ?? "—"}`
+          }
+        />
+        <DetailField
+          label="Status"
+          value={line.cancelled ? "Cancelled invoice" : "Booked"}
         />
         <div>
           <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
@@ -86,7 +95,9 @@ export const PurchaseInvoiceLineDetailView = ({ line }: Props) => (
             <p className="text-sm">—</p>
           )}
         </div>
+        <DetailField label="CBS no." value={line.commodityCode} />
         <DetailField label="Quantity" value={line.quantity} />
+        <DetailField label="Weight (kg)" value={formatNumber(line.weightKg)} />
         <div>
           <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
             Stock lot
@@ -110,14 +121,16 @@ export const PurchaseInvoiceLineDetailView = ({ line }: Props) => (
               : formatMoney(Number(line.valuationPrice))
           }
         />
+        <DetailField label="Net price" value={line.netPrice} />
         <DetailField
-          label="Purchased value"
-          value={formatMoney(line.revenue)}
+          label="Invoiced amount"
+          value={formatMoney(Number(line.amount ?? 0))}
         />
       </div>
       <p className="text-sm text-muted-foreground">
-        Purchased value is the stock lot&rsquo;s valuation price times the
-        invoiced quantity.
+        The invoiced amount is what this line was booked at, kept as a snapshot
+        so a later revaluation of the stock lot does not change it. The weight
+        is the purchase line&rsquo;s weight for the quantity invoiced.
       </p>
     </section>
   </div>
