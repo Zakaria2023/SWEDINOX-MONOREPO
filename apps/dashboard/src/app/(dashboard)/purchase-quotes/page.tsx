@@ -1,10 +1,20 @@
 import Link from "next/link";
-import { getPurchaseQuotes } from "@/app/(dashboard)/purchase-quotes/actions";
+import { getCompaniesForSelect } from "@/app/(dashboard)/companies/actions";
+import { getPurchaseQuoteLines } from "@/app/(dashboard)/purchase-quotes/actions";
+import { purchaseQuoteFilters } from "@/app/(dashboard)/purchase-quotes/filters";
 import { PurchaseQuotesTable } from "@/components/purchase-quotes/purchase-quotes-table-content";
 import { PageHeading } from "@/components/layout/page-heading";
+import { parseTableQuery, SearchParams } from "@/lib/table-query";
 
-const PurchaseQuotesPage = async () => {
-  const purchaseQuotes = await getPurchaseQuotes();
+type Props = {
+  searchParams: Promise<SearchParams>;
+};
+
+const PurchaseQuotesPage = async ({ searchParams }: Props) => {
+  const query = parseTableQuery(await searchParams);
+  // Sequential rather than concurrent: this database caps connections.
+  const lines = await getPurchaseQuoteLines(query);
+  const companies = await getCompaniesForSelect();
 
   return (
     <div className="space-y-4">
@@ -17,7 +27,10 @@ const PurchaseQuotesPage = async () => {
           New Purchase Quote
         </Link>
       </div>
-      <PurchaseQuotesTable purchaseQuotes={purchaseQuotes} />
+      <PurchaseQuotesTable
+        page={lines}
+        filters={purchaseQuoteFilters(companies)}
+      />
     </div>
   );
 };

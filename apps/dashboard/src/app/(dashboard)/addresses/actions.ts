@@ -23,7 +23,15 @@ import {
   tableOrderBy,
   tableWhere,
 } from "@/lib/server/table-query";
-import { and, asc, count, desc, eq, getTableColumns } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  getTableColumns,
+  sql,
+} from "drizzle-orm";
 
 export type AddressListItem = {
   CompanyAddresses: SelectCompanyAddresses;
@@ -172,6 +180,26 @@ export const getAddressesForCompany = async (
     .from(CompanyAddresses)
     .where(eq(CompanyAddresses.companyUuid, companyUuid))
     .orderBy(asc(CompanyAddresses.sequenceNumber));
+
+/**
+ * Our own addresses — every address of a company with the `internal` role.
+ * A purchase is delivered to us, so this is what a delivery address picks from.
+ */
+export const getInternalAddressesForSelect = async (): Promise<
+  AddressOption[]
+> =>
+  db
+    .select({
+      uuid: CompanyAddresses.uuid,
+      streetAndNo: CompanyAddresses.streetAndNo,
+      city: CompanyAddresses.city,
+      postalCode: CompanyAddresses.postalCode,
+      altName: CompanyAddresses.altName,
+    })
+    .from(CompanyAddresses)
+    .innerJoin(Companies, eq(CompanyAddresses.companyUuid, Companies.uuid))
+    .where(sql`JSON_CONTAINS(${Companies.roles}, '"internal"')`)
+    .orderBy(asc(Companies.companyName), asc(CompanyAddresses.sequenceNumber));
 
 /**
  * One address with everything recorded on it and the company it belongs to.

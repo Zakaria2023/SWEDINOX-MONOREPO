@@ -1,4 +1,6 @@
+import { getInternalAddressesForSelect } from "@/app/(dashboard)/addresses/actions";
 import { getCompaniesForSelect } from "@/app/(dashboard)/companies/actions";
+import { getProductsForSelect } from "@/app/(dashboard)/products/actions";
 import { getPurchaseQuoteForEdit } from "@/app/(dashboard)/purchase-quotes/actions";
 import { purchaseQuoteToFormValues } from "@/app/(dashboard)/purchase-quotes/mappers";
 import { PageHeading } from "@/components/layout/page-heading";
@@ -17,15 +19,18 @@ type Props = {
 const EditPurchaseQuotePage = async ({ params }: Props) => {
   const { uuid } = await params;
 
-  const [quote, companies, clerkUsers] = await Promise.all([
-    getPurchaseQuoteForEdit(uuid),
-    getCompaniesForSelect(),
-    getClerkUsersForSelect(),
-  ]);
+  // Sequential rather than concurrent: this database caps connections.
+  const found = await getPurchaseQuoteForEdit(uuid);
 
-  if (!quote) {
+  if (!found) {
     notFound();
   }
+
+  const { quote, items } = found;
+  const companies = await getCompaniesForSelect();
+  const clerkUsers = await getClerkUsersForSelect();
+  const products = await getProductsForSelect();
+  const internalAddresses = await getInternalAddressesForSelect();
 
   const heading = quote.quoteNumber
     ? `Edit Purchase Quote ${quote.quoteNumber}`
@@ -48,8 +53,10 @@ const EditPurchaseQuotePage = async ({ params }: Props) => {
         <PurchaseQuoteForm
           companies={companies}
           clerkUsers={clerkUsers}
+          products={products}
+          internalAddresses={internalAddresses}
           purchaseQuoteUuid={uuid}
-          defaultValues={purchaseQuoteToFormValues(quote)}
+          defaultValues={purchaseQuoteToFormValues(quote, items)}
         />
       ) : (
         <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
@@ -58,7 +65,8 @@ const EditPurchaseQuotePage = async ({ params }: Props) => {
             ? ` (${PURCHASE_QUOTE_STATUS_LABELS[quote.status]})`
             : ""}
           . An awarded quote is what the purchase order raised from it is priced
-          on, so its terms can no longer be changed.
+          on, and an expired or lost one is closed, so its terms can no longer
+          be changed.
         </div>
       )}
     </div>

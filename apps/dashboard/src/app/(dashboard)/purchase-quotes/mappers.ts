@@ -1,6 +1,33 @@
 import { SelectPurchaseQuotes } from "@/db";
+import { SelectPurchaseQuoteItems } from "@/db/schema/purchase-quote-items";
 import { toDateInput } from "@/lib/helpers";
-import { PurchaseQuoteFormValues } from "./validation";
+import {
+  DEFAULT_PURCHASE_QUOTE_ITEM,
+  PurchaseQuoteFormValues,
+  PurchaseQuoteItemFormValues,
+} from "./validation";
+
+const numberInput = (value: string | number | null): string =>
+  value === null || Number(value) === 0 ? "" : String(value);
+
+const quoteItemToFormValues = (
+  item: SelectPurchaseQuoteItems,
+): PurchaseQuoteItemFormValues => ({
+  productUuid: item.productUuid ?? "",
+  description: item.description ?? "",
+  quantity: numberInput(item.quantity),
+  unit: item.unit ?? "st",
+  kg: numberInput(item.kg),
+  lengthMm: numberInput(item.lengthMm),
+  widthMm: numberInput(item.widthMm),
+  thicknessMm: numberInput(item.thicknessMm),
+  grossPrice: numberInput(item.grossPrice),
+  groupDiscountPercent: numberInput(item.groupDiscountPercent),
+  lineDiscountPercent: numberInput(item.lineDiscountPercent),
+  netPrice: numberInput(item.netPrice),
+  priceUnit: item.priceUnit ?? "TN",
+  internalText: item.internalText ?? "",
+});
 
 /**
  * A stored quote in the shape its form edits.
@@ -12,6 +39,7 @@ import { PurchaseQuoteFormValues } from "./validation";
  */
 export const purchaseQuoteToFormValues = (
   quote: SelectPurchaseQuotes,
+  items: SelectPurchaseQuoteItems[],
 ): PurchaseQuoteFormValues => ({
   supplierUuid:
     quote.companyType === "agent" ? "" : (quote.companyUuid ?? ""),
@@ -45,4 +73,9 @@ export const purchaseQuoteToFormValues = (
   deliveryRemark: quote.deliveryRemark ?? "",
 
   documents: quote.documents ?? [],
+
+  items:
+    items.length > 0
+      ? items.map(quoteItemToFormValues)
+      : [DEFAULT_PURCHASE_QUOTE_ITEM],
 });

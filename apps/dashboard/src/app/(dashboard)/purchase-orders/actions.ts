@@ -722,6 +722,13 @@ export const makePurchaseOrderFinal = async (
         .where(eq(PurchaseOrderItems.purchaseOrderUuid, uuid));
     });
 
+    // Only now is the order with the supplier, so this is when they get it.
+    // A provisional order from a quote has not been sent before this point.
+    await mailDocument(
+      () => sendPurchaseOrderEmail(uuid),
+      `Purchase order ${uuid}`,
+    );
+
     revalidatePath("/purchase-orders");
     revalidatePath(`/purchase-orders/${uuid}`);
     revalidatePath("/purchase-lines");

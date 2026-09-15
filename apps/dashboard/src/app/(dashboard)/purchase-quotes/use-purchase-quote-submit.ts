@@ -9,6 +9,7 @@ import {
   ContactOption,
   getContactsForCompany,
 } from "@/app/(dashboard)/contacts/actions";
+import { ProductOption } from "@/app/(dashboard)/products/actions";
 import { SelectOption } from "@/components/shadcn/select";
 import {
   DeliveryTerm,
@@ -25,14 +26,16 @@ import { ClerkUserOption } from "@/lib/server/clerk";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
+import { useFieldArray, useForm } from "react-hook-form";
 import {
   createPurchaseQuote,
   PurchaseQuoteActionResult,
+  PurchaseQuoteItemInput,
   updatePurchaseQuote,
 } from "./actions";
 import {
   DEFAULT_PURCHASE_QUOTE,
+  DEFAULT_PURCHASE_QUOTE_ITEM,
   PurchaseQuoteFormValues,
   purchaseQuoteSchema,
 } from "./validation";
@@ -40,12 +43,18 @@ import {
 type UsePurchaseQuoteSubmitParams = {
   companies: CompanyOption[];
   clerkUsers: ClerkUserOption[];
+  products: ProductOption[];
+  /** Our own addresses — where a purchase is delivered. */
+  internalAddresses: AddressOption[];
   /** Set when editing an existing quote; omitted when creating one. */
   purchaseQuoteUuid?: string;
   defaultValues?: PurchaseQuoteFormValues;
 };
 
 const emptyOpt = { value: "", label: "Empty" };
+
+const optionalNumber = (value: string | undefined): number | null =>
+  value && Number.isFinite(Number(value)) ? Number(value) : null;
 
 const makeOptions = <T extends string>(
   values: readonly T[],
@@ -62,6 +71,8 @@ const addressLabel = (a: AddressOption) =>
 export const usePurchaseQuoteSubmit = ({
   companies,
   clerkUsers,
+  products,
+  internalAddresses,
   purchaseQuoteUuid,
   defaultValues,
 }: UsePurchaseQuoteSubmitParams) => {
@@ -76,6 +87,12 @@ export const usePurchaseQuoteSubmit = ({
     resolver: zodResolver(purchaseQuoteSchema),
     defaultValues: defaultValues ?? DEFAULT_PURCHASE_QUOTE,
   });
+
+  const {
+    fields: itemFields,
+    append: appendItem,
+    remove: removeItem,
+  } = useFieldArray({ control: form.control, name: "items" });
 
   const arrangeTransport = form.watch("arrangeTransport");
   const deliveryType = form.watch("deliveryType");
@@ -112,6 +129,21 @@ export const usePurchaseQuoteSubmit = ({
   const supplierAddressOptions: SelectOption[] = [
     emptyOpt,
     ...addresses.map((a) => ({ value: a.uuid, label: addressLabel(a) })),
+  ];
+
+  // A purchase comes to us, so its delivery address is one of ours — never
+  // one of the supplier's.
+  const deliveryAddressOptions: SelectOption[] = [
+    emptyOpt,
+    ...internalAddresses.map((a) => ({ value: a.uuid, label: addressLabel(a) })),
+  ];
+
+  const productOptions: SelectOption[] = [
+    emptyOpt,
+    ...products.map((p) => ({
+      value: p.uuid,
+      label: `${p.productCode} — ${p.name}`,
+    })),
   ];
 
   const purchaseOrderTypeOptions = makeOptions(
@@ -186,6 +218,32 @@ export const usePurchaseQuoteSubmit = ({
     );
 
   const onSubmit = form.handleSubmit((values) => {
+    // A blank row is the field array's starting state, not a line somebody
+    // meant to quote — drop anything with neither a product nor a description.
+    const items: PurchaseQuoteItemInput[] = values.items
+      .filter((item) => item.productUuid || item.description)
+      .map((item, index) => ({
+        productUuid: item.productUuid || null,
+        description: item.description || null,
+        lineNumber: (index + 1) * 10,
+        quantity: item.quantity || "0.000",
+        unit: item.unit ?? "st",
+        kg: item.kg || "0.00",
+        lengthMm: optionalNumber(item.lengthMm),
+        widthMm: optionalNumber(item.widthMm),
+        thicknessMm: item.thicknessMm || null,
+        grossPrice: item.grossPrice || "0.0000",
+        groupDiscountPercent: item.groupDiscountPercent || "0.00",
+        lineDiscountPercent: item.lineDiscountPercent || "0.00",
+        netPrice: item.netPrice || "0.00",
+        priceUnit: item.priceUnit || null,
+        internalText: item.internalText || null,
+        purchaser: values.purchaser || null,
+        ourReference: values.ourReference || null,
+        purchaseReference: values.reference || null,
+        isConsignment: values.isConsignment,
+      }));
+
     startTransition(async () => {
       const fields = {
         companyUuid: values.supplierUuid || values.agentUuid || null,
@@ -227,11 +285,11 @@ export const usePurchaseQuoteSubmit = ({
       // Updating redirects from inside the action, so only the create path has
       // a result worth navigating on.
       if (purchaseQuoteUuid) {
-        setState(await updatePurchaseQuote(purchaseQuoteUuid, fields));
+        setState(await updatePurchaseQuote(purchaseQuoteUuid, fields, items));
         return;
       }
 
-      const result = await createPurchaseQuote(fields);
+      const result = await createPurchaseQuote(fields, items);
       setState(result);
       if (result.success) {
         router.push("/purchase-quotes");
@@ -251,6 +309,8 @@ export const usePurchaseQuoteSubmit = ({
     agentOptions,
     contactOptions,
     supplierAddressOptions,
+    deliveryAddressOptions,
+    productOptions,
     purchaseOrderTypeOptions,
     weightTypeOptions,
     deliveryTermOptions,
@@ -260,5 +320,8 @@ export const usePurchaseQuoteSubmit = ({
     handleSupplierChange,
     handleAgentChange,
     handleCancel,
+    itemFields,
+    appendItem: () => appendItem(DEFAULT_PURCHASE_QUOTE_ITEM),
+    removeItem,
   };
 };

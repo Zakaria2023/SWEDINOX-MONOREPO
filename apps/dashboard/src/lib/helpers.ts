@@ -294,6 +294,19 @@ export const formatNumber = (value: number): string =>
 export const formatPercent = (value: number): string =>
   `${formatNumber(value)}%`;
 
+/** A person's initials from their name — "Benno Vos" → "BV". */
+export const personInitials = (name: string | null): string | null => {
+  if (!name) {
+    return null;
+  }
+  const initials = name
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join("");
+  return initials || null;
+};
+
 /**
  * A count with the noun it counts — `1 order`, `12 orders` — for the one-line
  * summaries under a figure.
@@ -8311,7 +8324,8 @@ export const describeOrderType = (flags: OrderTypeFlags): string => {
  */
 export const isPurchaseQuoteEditable = (
   status: PurchaseQuoteStatus | null,
-): boolean => status !== "awarded" && status !== "lost";
+): boolean =>
+  status !== "awarded" && status !== "lost" && status !== "expired";
 
 /**
  * Whether a purchase request's header may still be edited — the same terminal

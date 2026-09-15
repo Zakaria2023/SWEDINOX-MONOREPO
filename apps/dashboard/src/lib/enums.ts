@@ -1631,6 +1631,17 @@ export const purchaseQuoteStatuses = [
 
 export type PurchaseQuoteStatus = (typeof purchaseQuoteStatuses)[number];
 
+// Why a purchase quote was expired. `incorrectly_entered` is the reference's
+// own reason, chosen by a buyer; `validity_expired` is set by the system once
+// the quote's "Valid u/i" date has passed.
+export const purchaseQuoteExpirationReasons = [
+  "incorrectly_entered",
+  "validity_expired",
+] as const satisfies readonly string[];
+
+export type PurchaseQuoteExpirationReason =
+  (typeof purchaseQuoteExpirationReasons)[number];
+
 export const purchaseCompanyTypes = [
   "supplier",
   "agent",

@@ -2,8 +2,11 @@
 
 import { Controller } from "react-hook-form";
 import { usePurchaseQuoteSubmit } from "@/app/(dashboard)/purchase-quotes/use-purchase-quote-submit";
+import { AddressOption } from "@/app/(dashboard)/addresses/actions";
 import { CompanyOption } from "@/app/(dashboard)/companies/actions";
+import { ProductOption } from "@/app/(dashboard)/products/actions";
 import { PurchaseQuoteFormValues } from "@/app/(dashboard)/purchase-quotes/validation";
+import { QuoteItemsSection } from "@/components/purchase-quotes/sections/quote-items-section";
 import { DatePicker } from "@/components/shadcn/date-picker";
 import { Input } from "@/components/shadcn/input";
 import { Select } from "@/components/shadcn/select";
@@ -18,6 +21,8 @@ import { ClerkUserOption } from "@/lib/server/clerk";
 type Props = {
   companies: CompanyOption[];
   clerkUsers: ClerkUserOption[];
+  products: ProductOption[];
+  internalAddresses: AddressOption[];
   /** Set when editing an existing quote; omitted when creating one. */
   purchaseQuoteUuid?: string;
   defaultValues?: PurchaseQuoteFormValues;
@@ -26,6 +31,8 @@ type Props = {
 export const PurchaseQuoteForm = ({
   companies,
   clerkUsers,
+  products,
+  internalAddresses,
   purchaseQuoteUuid,
   defaultValues,
 }: Props) => {
@@ -41,6 +48,11 @@ export const PurchaseQuoteForm = ({
     agentOptions,
     contactOptions,
     supplierAddressOptions,
+    deliveryAddressOptions,
+    productOptions,
+    itemFields,
+    appendItem,
+    removeItem,
     purchaseOrderTypeOptions,
     weightTypeOptions,
     deliveryTermOptions,
@@ -53,6 +65,8 @@ export const PurchaseQuoteForm = ({
   } = usePurchaseQuoteSubmit({
     companies,
     clerkUsers,
+    products,
+    internalAddresses,
     purchaseQuoteUuid,
     defaultValues,
   });
@@ -242,7 +256,7 @@ export const PurchaseQuoteForm = ({
             name="isConsignment"
             render={({ field }) => (
               <FormCheckboxCard
-                label="Consignatie"
+                label="Consignment"
                 checked={field.value}
                 active={field.value}
                 onChange={(e) => field.onChange(e.target.checked)}
@@ -286,7 +300,7 @@ export const PurchaseQuoteForm = ({
             id="deliveryAddressUuid"
             name="deliveryAddressUuid"
             label="Delivery Address"
-            options={supplierAddressOptions}
+            options={deliveryAddressOptions}
             emptyValue=""
           />
         </div>
@@ -420,6 +434,15 @@ export const PurchaseQuoteForm = ({
           )}
         </div>
       </section>
+
+      <QuoteItemsSection
+        productOptions={productOptions}
+        control={control}
+        register={register}
+        itemFields={itemFields}
+        appendItem={appendItem}
+        removeItem={removeItem}
+      />
 
       {/* ── Documents ─────────────────────────────────────────────────── */}
       <section className="space-y-4">

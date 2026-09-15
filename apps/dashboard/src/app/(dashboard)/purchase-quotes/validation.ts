@@ -5,8 +5,49 @@ import {
   invoicePaymentTerms,
   orderWeightTypes,
   purchaseOrderTypes,
+  stockUnits,
 } from "@/lib/enums";
 import { todayDateString, currentYear } from "@/lib/helpers";
+
+// One quoted line. A gross price with its two discounts, or a net price typed
+// straight in — when a gross price is given the server derives the net from it.
+export const purchaseQuoteItemSchema = z.object({
+  productUuid: z.string().optional(),
+  description: z.string().optional(),
+  quantity: z.string().optional(),
+  unit: z.enum(stockUnits).optional(),
+  kg: z.string().optional(),
+  lengthMm: z.string().optional(),
+  widthMm: z.string().optional(),
+  thicknessMm: z.string().optional(),
+  grossPrice: z.string().optional(),
+  groupDiscountPercent: z.string().optional(),
+  lineDiscountPercent: z.string().optional(),
+  netPrice: z.string().optional(),
+  priceUnit: z.string().optional(),
+  internalText: z.string().optional(),
+});
+
+export type PurchaseQuoteItemFormValues = z.infer<
+  typeof purchaseQuoteItemSchema
+>;
+
+export const DEFAULT_PURCHASE_QUOTE_ITEM: PurchaseQuoteItemFormValues = {
+  productUuid: "",
+  description: "",
+  quantity: "",
+  unit: "st",
+  kg: "",
+  lengthMm: "",
+  widthMm: "",
+  thicknessMm: "",
+  grossPrice: "",
+  groupDiscountPercent: "",
+  lineDiscountPercent: "",
+  netPrice: "",
+  priceUnit: "TN",
+  internalText: "",
+};
 
 export const purchaseQuoteSchema = z
   .object({
@@ -49,6 +90,9 @@ export const purchaseQuoteSchema = z
     documents: z
       .array(z.object({ id: z.string(), fileName: z.string() }))
       .optional(),
+
+    // What is quoted
+    items: z.array(purchaseQuoteItemSchema),
   })
   .refine((data) => !!data.supplierUuid !== !!data.agentUuid, {
     message: "Select either a supplier or an agent, not both",
@@ -89,4 +133,6 @@ export const DEFAULT_PURCHASE_QUOTE: PurchaseQuoteFormValues = {
   deliveryRemark: "",
 
   documents: [],
+
+  items: [DEFAULT_PURCHASE_QUOTE_ITEM],
 };

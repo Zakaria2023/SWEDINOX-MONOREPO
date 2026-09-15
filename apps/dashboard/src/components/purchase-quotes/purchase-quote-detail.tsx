@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import {
   convertPurchaseQuoteToOrder,
+  expirePurchaseQuote,
   PurchaseQuoteDetail,
   recordPurchaseQuotePrices,
 } from "@/app/(dashboard)/purchase-quotes/actions";
@@ -21,8 +22,11 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FormError } from "@/components/ui/form-error";
 import { PurchaseQuoteStatus } from "@/lib/enums";
 import { formatMoney, isPurchaseQuoteEditable } from "@/lib/helpers";
-import { PURCHASE_QUOTE_STATUS_LABELS } from "@/lib/labels";
-import { Check, Save } from "lucide-react";
+import {
+  PURCHASE_QUOTE_EXPIRATION_REASON_LABELS,
+  PURCHASE_QUOTE_STATUS_LABELS,
+} from "@/lib/labels";
+import { Ban, Check, Save } from "lucide-react";
 
 type Props = {
   quote: PurchaseQuoteDetail;
@@ -32,6 +36,7 @@ export const PurchaseQuoteDetailView = ({ quote }: Props) => {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | undefined>();
   const [isAwardOpen, setIsAwardOpen] = useState(false);
+  const [isExpireOpen, setIsExpireOpen] = useState(false);
   const [prices, setPrices] = useState<Record<string, string>>(() =>
     Object.fromEntries(
       quote.items.map((item) => [item.uuid, item.netPrice ?? "0.00"]),
@@ -67,6 +72,20 @@ export const PurchaseQuoteDetailView = ({ quote }: Props) => {
     });
   };
 
+  const expireAsIncorrect = () => {
+    setError(undefined);
+    startTransition(async () => {
+      const result = await expirePurchaseQuote(
+        quote.uuid,
+        "incorrectly_entered",
+      );
+      if (result.error) {
+        setError(result.error);
+      }
+      setIsExpireOpen(false);
+    });
+  };
+
   // What the quote comes to at the prices currently on screen, so the effect of
   // a change is visible before it is saved.
   const previewTotal = quote.items.reduce(
@@ -95,6 +114,12 @@ export const PurchaseQuoteDetailView = ({ quote }: Props) => {
               quote.status as PurchaseQuoteStatus
             ] ?? quote.status}
           </p>
+          {quote.expirationReason && (
+            <p className="text-xs text-muted-foreground">
+              Expired because:{" "}
+              {PURCHASE_QUOTE_EXPIRATION_REASON_LABELS[quote.expirationReason]}
+            </p>
+          )}
         </div>
         <div>
           <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
@@ -215,6 +240,15 @@ export const PurchaseQuoteDetailView = ({ quote }: Props) => {
           >
             Edit Quote
           </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setIsExpireOpen(true)}
+            disabled={isPending}
+          >
+            <Ban className="mr-1.5 size-4" />
+            Expire: incorrectly entered
+          </Button>
         </div>
       )}
 
@@ -244,6 +278,23 @@ export const PurchaseQuoteDetailView = ({ quote }: Props) => {
         description="This creates a purchase order at these prices and marks the other quotes for this request as lost. The price agreed here is what received stock will be valued at, so it drives the margin on everything sold from it."
         confirmLabel="Award"
       />
+
+      <ConfirmDialog
+        open={isExpireOpen}
+        onOpenChange={setIsExpireOpen}
+        onConfirm={expireAsIncorrect}
+        isPending={isPending}
+        title="Expire this quote"
+        description="The quote is closed as incorrectly entered. It can no longer be priced, edited or turned into a purchase order."
+        confirmLabel="Expire"
+      />
+
+      {!isDecided && (
+        <p className="text-sm text-muted-foreground">
+          The purchase order an award creates starts Provisional. It is sent to
+          the supplier once it is made final on the purchase order.
+        </p>
+      )}
     </div>
   );
 };

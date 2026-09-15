@@ -21,6 +21,7 @@ import {
   orderWeightTypes,
   purchaseCompanyTypes,
   purchaseOrderTypes,
+  purchaseQuoteExpirationReasons,
   purchaseQuoteStatuses,
 } from "../../lib/enums";
 import { Companies } from "./companies";
@@ -48,6 +49,11 @@ export const PurchaseQuotes = mysqlTable(
     status: mysqlEnum("status", purchaseQuoteStatuses)
       .default("open")
       .notNull(),
+    // The reference's "Expired because" — set together with status `expired`.
+    expirationReason: mysqlEnum(
+      "expiration_reason",
+      purchaseQuoteExpirationReasons,
+    ),
     // Purchaser here is the Clerk user ID that is logged in to the system and is creating the purchase quote
     purchaser: varchar("purchaser", { length: 255 }),
     reference: varchar("reference", { length: 255 }),
