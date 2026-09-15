@@ -51,7 +51,10 @@ import {
 } from "@/lib/labels";
 import { recordFreightMovement } from "@/lib/server/freight";
 import { applyMove } from "@/lib/server/stock-movements";
-import { refreshPurchaseLineStatus } from "@/lib/server/purchase-lines";
+import {
+  recordPurchaseLineReceipt,
+  refreshPurchaseLineStatus,
+} from "@/lib/server/purchase-lines";
 import {
   getWorkOrderLineDetail,
   LineDetail,
@@ -1189,6 +1192,14 @@ const applyReceipt = async (
     .where(eq(PurchaseOrderItems.uuid, purchaseLine.uuid));
 
   await refreshPurchaseLineStatus(tx, purchaseLine.uuid);
+
+  // The unloading is the moment goods arrive, so it completes the reception.
+  await recordPurchaseLineReceipt(tx, {
+    purchaseOrderItemUuid: purchaseLine.uuid,
+    quantity,
+    kg: weightKg,
+    date: todayDateString(),
+  });
 
   await tx.insert(StockMovements).values({
     uuid: generateUuid(),

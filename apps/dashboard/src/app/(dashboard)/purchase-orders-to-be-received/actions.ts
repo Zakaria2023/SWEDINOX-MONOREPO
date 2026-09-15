@@ -12,10 +12,12 @@ import {
   SelectPurchaseOrders,
 } from "@/db/schema/purchase-orders";
 import { RevenueGroups, SelectRevenueGroups } from "@/db/schema/revenue-groups";
-import { PurchaseLineReceivals } from "@/db/schema/purchase-line-receivals";
 import { getClerkUsersForSelect } from "@/lib/server/clerk";
-import { refreshPurchaseLineStatus } from "@/lib/server/purchase-lines";
-import { describeError, generateUuid, todayDateString } from "@/lib/helpers";
+import {
+  recordPurchaseLineReceipt,
+  refreshPurchaseLineStatus,
+} from "@/lib/server/purchase-lines";
+import { describeError, todayDateString } from "@/lib/helpers";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
@@ -146,23 +148,13 @@ const applyLineReceipt = async (
   const outstandingKg =
     lineQty > 0 ? (lineKg * Number(outstanding)) / lineQty : lineKg;
 
-  await tx.insert(PurchaseLineReceivals).values({
-    uuid: generateUuid(),
-    purchaseOrderUuid: line.purchaseOrderUuid,
+  // Fills the line's open receptions first, so a planned reception is marked
+  // received rather than left open beside a second, duplicate one.
+  await recordPurchaseLineReceipt(tx, {
     purchaseOrderItemUuid: line.itemUuid,
-    productUuid: line.productUuid,
-    companyUuid: line.supplierUuid,
-    purchaseOrderCode: String(line.purchaseOrderId),
-    lineNumber: line.lineNumber,
-    receiptStatus: "received",
-    unit: line.unit,
-    qtyPlanned: line.quantity,
-    qtyActual: outstanding,
-    receivedQty: outstanding,
-    kgPlanned: line.kgPurchased,
-    kgActual: outstandingKg.toFixed(2),
-    receiptDate: today,
-    deliveryDateActual: today,
+    quantity: Number(outstanding),
+    kg: outstandingKg,
+    date: today,
   });
 
   await tx

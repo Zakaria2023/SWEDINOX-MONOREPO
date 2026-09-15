@@ -3,10 +3,15 @@ import "server-only";
 import { db } from "@/db";
 import { PurchaseInvoiceItems } from "@/db/schema/purchase-invoice-items";
 import { PurchaseInvoices } from "@/db/schema/purchase-invoices";
+import {
+  PurchaseLineReceivals,
+  SelectPurchaseLineReceivals,
+} from "@/db/schema/purchase-line-receivals";
 import { PurchaseOrderItems } from "@/db/schema/purchase-order-items";
 import { PurchaseOrders } from "@/db/schema/purchase-orders";
-import { OrderLineStatus } from "@/lib/enums";
-import { and, eq, lt, sql } from "drizzle-orm";
+import { OrderLineStatus, ReceiptStatus } from "@/lib/enums";
+import { generateUuid, receiptStatusAfterUnloading } from "@/lib/helpers";
+import { and, asc, eq, inArray, lt, sql } from "drizzle-orm";
 
 // A line that was never made final, or was called off, is not moved by what
 // arrives or is invoiced against it.
@@ -31,7 +36,29 @@ const RECEIPT_STATUSES: readonly OrderLineStatus[] = [
   "invoiced",
 ];
 
-type PurchaseLineWriter = Pick<typeof db, "select" | "update">;
+// A reception still waiting for goods — what an arriving delivery fills first.
+const OPEN_RECEIPT_STATUSES: ReceiptStatus[] = [
+  "new",
+  "released",
+  "workorders_created",
+  "partially_received",
+];
+
+type PurchaseLineWriter = Pick<typeof db, "select" | "update" | "insert">;
+
+type PurchaseLineReceiptInput = {
+  purchaseOrderItemUuid: string;
+  quantity: number;
+  kg: number;
+  /** yyyy-MM-dd */
+  date: string;
+};
+
+type ReceivalAllocation = {
+  receival: SelectPurchaseLineReceivals;
+  kg: number;
+  quantity: number;
+};
 
 type PurchaseLinePosition = {
   quantity: number;
@@ -159,4 +186,128 @@ export const syncPurchaseLineReceiptDates = async (
         lt(PurchaseOrderItems.qtyReceived, PurchaseOrderItems.quantity),
       ),
     );
+};
+
+/**
+ * Record goods arriving against a purchase line on its receptions.
+ *
+ * Every way goods come in — Receive on "Purchase orders to be received", an
+ * approved unloading, a purchase invoice that creates the lot — calls this, so
+ * the receptions are the one complete record of what arrived, when, and how
+ * heavy. Open receptions are filled in order, each up to its planned weight,
+ * with anything left over on the last; a line with no open reception gets a
+ * new one, already received.
+ */
+export const recordPurchaseLineReceipt = async (
+  tx: PurchaseLineWriter,
+  { purchaseOrderItemUuid, quantity, kg, date }: PurchaseLineReceiptInput,
+): Promise<void> => {
+  if (quantity <= 0 && kg <= 0) {
+    return;
+  }
+
+  const [line] = await tx
+    .select({
+      purchaseOrderUuid: PurchaseOrderItems.purchaseOrderUuid,
+      productUuid: PurchaseOrderItems.productUuid,
+      lineNumber: PurchaseOrderItems.lineNumber,
+      unit: PurchaseOrderItems.unit,
+      orderId: PurchaseOrders.id,
+      supplierUuid: PurchaseOrders.supplierUuid,
+    })
+    .from(PurchaseOrderItems)
+    .innerJoin(
+      PurchaseOrders,
+      eq(PurchaseOrderItems.purchaseOrderUuid, PurchaseOrders.uuid),
+    )
+    .where(eq(PurchaseOrderItems.uuid, purchaseOrderItemUuid))
+    .limit(1);
+
+  if (!line) {
+    return;
+  }
+
+  const open = await tx
+    .select()
+    .from(PurchaseLineReceivals)
+    .where(
+      and(
+        eq(PurchaseLineReceivals.purchaseOrderItemUuid, purchaseOrderItemUuid),
+        inArray(PurchaseLineReceivals.receiptStatus, OPEN_RECEIPT_STATUSES),
+      ),
+    )
+    .orderBy(asc(PurchaseLineReceivals.id));
+
+  if (open.length === 0) {
+    await tx.insert(PurchaseLineReceivals).values({
+      uuid: generateUuid(),
+      purchaseOrderUuid: line.purchaseOrderUuid,
+      purchaseOrderItemUuid,
+      productUuid: line.productUuid,
+      companyUuid: line.supplierUuid,
+      purchaseOrderCode: String(line.orderId),
+      lineNumber: line.lineNumber,
+      receiptStatus: "received",
+      unit: line.unit,
+      qtyPlanned: quantity.toFixed(3),
+      qtyActual: quantity.toFixed(3),
+      kgPlanned: kg.toFixed(2),
+      kgActual: kg.toFixed(2),
+      receiptDate: date,
+      deliveryDateActual: date,
+    });
+    return;
+  }
+
+  // Each open reception takes what it still has room for; the last one takes
+  // whatever is left, so no kilo that arrived goes unrecorded. The quantity
+  // follows the weight's share. A weightless delivery lands on the first.
+  const allocations: ReceivalAllocation[] =
+    kg <= 0
+      ? [{ receival: open[0], kg: 0, quantity }]
+      : open
+          .reduce<{ remaining: number; rows: ReceivalAllocation[] }>(
+            (acc, receival, index) => {
+              const room = Math.max(
+                0,
+                Number(receival.kgPlanned ?? 0) - Number(receival.kgActual ?? 0),
+              );
+              const share =
+                index === open.length - 1
+                  ? acc.remaining
+                  : Math.min(acc.remaining, room);
+              return {
+                remaining: acc.remaining - share,
+                rows: [
+                  ...acc.rows,
+                  { receival, kg: share, quantity: quantity * (share / kg) },
+                ],
+              };
+            },
+            { remaining: kg, rows: [] },
+          )
+          .rows.filter((row) => row.kg > 0);
+
+  for (const { receival, kg: addedKg, quantity: addedQty } of allocations) {
+    const kgReceived = Number(receival.kgActual ?? 0) + addedKg;
+    await tx
+      .update(PurchaseLineReceivals)
+      .set({
+        kgActual: kgReceived.toFixed(2),
+        qtyActual: (Number(receival.qtyActual ?? 0) + addedQty).toFixed(3),
+        // A weightless article cannot be weighed against its plan, so its
+        // arrival completes the reception outright.
+        receiptStatus:
+          kg <= 0
+            ? "received"
+            : receiptStatusAfterUnloading({
+                status: receival.receiptStatus ?? "new",
+                kgExpected: Number(receival.kgPlanned ?? 0),
+                kgReceived,
+              }),
+        receiptDate: date,
+        deliveryDateActual: date,
+      })
+      .where(eq(PurchaseLineReceivals.uuid, receival.uuid));
+  }
 };

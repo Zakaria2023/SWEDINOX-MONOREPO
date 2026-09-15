@@ -1,6 +1,9 @@
 "use client";
 
-import { PurchaseResultRow } from "@/app/(dashboard)/purchase-results/actions";
+import {
+  exportPurchaseResults,
+  PurchaseResultRow,
+} from "@/app/(dashboard)/purchase-results/actions";
 import {
   Table,
   TableBody,
@@ -9,37 +12,43 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { PagedTableExportButton } from "@/components/ui/table-export-button";
+import { TablePagination } from "@/components/ui/table-pagination";
+import { TableSortHeader } from "@/components/ui/table-sort-header";
+import { TableToolbar } from "@/components/ui/table-toolbar";
 import { formatDateColumn, formatMoney } from "@/lib/helpers";
-import { TableExportButton } from "@/components/ui/table-export-button";
+import { Paged, TableFilterControl } from "@/lib/table-query";
 
 type Props = {
-  rows: PurchaseResultRow[];
+  page: Paged<PurchaseResultRow>;
+  filters: TableFilterControl[];
 };
 
-export const PurchaseResultsTable = ({ rows }: Props) => (
+export const PurchaseResultsTable = ({ page, filters }: Props) => (
   <div className="space-y-4">
-    <div className="flex justify-end">
-      <TableExportButton
-        tableId="purchase-results-table"
+    <TableToolbar searchPlaceholder="Search product or group…" filters={filters}>
+      <PagedTableExportButton
         fileName="purchase-results"
-        sheetName="Purchase results"
+        action={exportPurchaseResults}
       />
-    </div>
-    <Table id="purchase-results-table">
+    </TableToolbar>
+    <Table>
       <TableHeader>
         <TableRow>
           <TableHead>Main group</TableHead>
           <TableHead>Subgroup</TableHead>
-          <TableHead>Product code</TableHead>
+          <TableSortHeader sortKey="productCode">Product code</TableSortHeader>
           <TableHead>Product</TableHead>
           <TableHead className="text-right">Year</TableHead>
           <TableHead className="text-right">Month</TableHead>
-          <TableHead>Receipt date</TableHead>
-          <TableHead className="text-right">Purchase value</TableHead>
+          <TableSortHeader sortKey="receiptDate">Receipt date</TableSortHeader>
+          <TableSortHeader sortKey="purchaseValue" className="text-right">
+            Purchase value
+          </TableSortHeader>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {rows.length === 0 ? (
+        {page.rows.length === 0 ? (
           <TableRow>
             <TableCell
               colSpan={8}
@@ -49,7 +58,7 @@ export const PurchaseResultsTable = ({ rows }: Props) => (
             </TableCell>
           </TableRow>
         ) : (
-          rows.map((row) => (
+          page.rows.map((row) => (
             <TableRow key={row.uuid}>
               <TableCell>{row.mainGroup ?? "—"}</TableCell>
               <TableCell>{row.subgroup ?? "—"}</TableCell>
@@ -68,5 +77,10 @@ export const PurchaseResultsTable = ({ rows }: Props) => (
         )}
       </TableBody>
     </Table>
+    <TablePagination
+      page={page}
+      singular="purchase result"
+      plural="purchase results"
+    />
   </div>
 );

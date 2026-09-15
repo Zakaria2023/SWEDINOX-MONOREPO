@@ -31,7 +31,10 @@ import { JournalEntries } from "@/db/schema/journal-entries";
 import { mailDocument, sendPurchaseInvoiceEmail } from "@/emails/documents";
 import { buildPurchaseJournalEntry } from "@/lib/server/ledger";
 import { recordFreightMovement } from "@/lib/server/freight";
-import { refreshPurchaseLineStatus } from "@/lib/server/purchase-lines";
+import {
+  recordPurchaseLineReceipt,
+  refreshPurchaseLineStatus,
+} from "@/lib/server/purchase-lines";
 import { PurchaseOrderType, VatCode } from "@/lib/enums";
 import {
   fiscalPeriodDate,
@@ -45,6 +48,7 @@ import {
   roundToCents,
   summarisePurchaseInvoice,
   toDateString,
+  todayDateString,
 } from "@/lib/helpers";
 import { currentUser } from "@clerk/nextjs/server";
 import { invoiceDocumentTypes, purchaseInvoiceBlockReasons } from "@/lib/enums";
@@ -585,6 +589,16 @@ export const createPurchaseInvoice = async (
             status: "pending",
             valuationPrice: unitCost.toFixed(4),
             valuationEuro: moneyString(lineAmount),
+          });
+
+          // No unloading brought these goods in, so this invoice is their
+          // receipt — record it on the line's receptions. When an unloading
+          // did make the lot, it has already recorded the arrival.
+          await recordPurchaseLineReceipt(tx, {
+            purchaseOrderItemUuid: poItem.uuid,
+            quantity: invoicedQty,
+            kg: receivedWeightKg,
+            date: todayDateString(),
           });
         }
 
