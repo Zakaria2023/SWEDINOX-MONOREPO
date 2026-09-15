@@ -9,15 +9,21 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { MONTHS } from "@/lib/constants";
+import { RevenueVsBudgetView } from "@/lib/enums";
 import { formatMoney, formatNumber } from "@/lib/helpers";
 import { TableExportButton } from "@/components/ui/table-export-button";
 
 type Props = {
   rows: RevenueVsBudgetRow[];
+  view: RevenueVsBudgetView;
 };
 
-export const RevenueVsBudgetTable = ({ rows }: Props) => (
-  <div>
+export const RevenueVsBudgetTable = ({ rows, view }: Props) => {
+  const byMonth = view === "month";
+  const columnCount = byMonth ? 11 : 12;
+
+  return (
     <div className="space-y-4">
       <div className="flex justify-end">
         <TableExportButton
@@ -29,8 +35,14 @@ export const RevenueVsBudgetTable = ({ rows }: Props) => (
       <Table id="revenue-vs-budget-table">
         <TableHeader>
           <TableRow>
-            <TableHead className="text-right">Revenue group no.</TableHead>
-            <TableHead>Revenue group</TableHead>
+            {byMonth ? (
+              <TableHead>Month</TableHead>
+            ) : (
+              <>
+                <TableHead className="text-right">Revenue group no.</TableHead>
+                <TableHead>Revenue group</TableHead>
+              </>
+            )}
             <TableHead className="text-right">Weight</TableHead>
             <TableHead className="text-right">Weight Budget</TableHead>
             <TableHead className="text-right">Revenue</TableHead>
@@ -39,9 +51,9 @@ export const RevenueVsBudgetTable = ({ rows }: Props) => (
             <TableHead className="text-right">Profit budget</TableHead>
             <TableHead className="text-right">Profit %</TableHead>
             <TableHead className="text-right">Profit % Budget</TableHead>
-            <TableHead className="text-right">Avg. Sales Price</TableHead>
+            <TableHead className="text-right">Avg. Sales Price/Kg</TableHead>
             <TableHead className="text-right">
-              Avg. Sales Price Budget
+              Avg. Sales Price/Kg Budget
             </TableHead>
           </TableRow>
         </TableHeader>
@@ -49,21 +61,29 @@ export const RevenueVsBudgetTable = ({ rows }: Props) => (
           {rows.length === 0 ? (
             <TableRow>
               <TableCell
-                colSpan={12}
+                colSpan={columnCount}
                 className="h-24 text-center text-muted-foreground"
               >
-                No data found.
+                No sales and no budget in this period.
               </TableCell>
             </TableRow>
           ) : (
-            rows.map((row, index) => (
-              <TableRow key={index}>
-                <TableCell className="text-right">
-                  {row.revenueGroupNumber ?? "—"}
-                </TableCell>
-                <TableCell className="font-medium">
-                  {row.revenueGroupName ?? "Ungrouped"}
-                </TableCell>
+            rows.map((row) => (
+              <TableRow key={row.key}>
+                {byMonth ? (
+                  <TableCell className="font-medium">
+                    {row.month === null ? "—" : MONTHS[row.month - 1]}
+                  </TableCell>
+                ) : (
+                  <>
+                    <TableCell className="text-right">
+                      {row.revenueGroupNumber ?? "—"}
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      {row.revenueGroupName ?? "Ungrouped"}
+                    </TableCell>
+                  </>
+                )}
                 <TableCell className="text-right">
                   {formatNumber(row.weight)}
                 </TableCell>
@@ -100,5 +120,5 @@ export const RevenueVsBudgetTable = ({ rows }: Props) => (
         </TableBody>
       </Table>
     </div>
-  </div>
-);
+  );
+};
