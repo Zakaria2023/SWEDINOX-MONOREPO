@@ -56,7 +56,10 @@ import {
   TableQuery,
 } from "@/lib/table-query";
 import { exportRows } from "@/lib/server/excel";
-import { syncPurchaseLineReceiptDates } from "@/lib/server/purchase-lines";
+import {
+  syncPurchaseLineReceipts,
+  syncPurchaseLineReceiptDates,
+} from "@/lib/server/purchase-lines";
 import { PURCHASE_ORDER_COLUMNS } from "@/app/(dashboard)/purchase-orders/columns";
 import { currentUser } from "@clerk/nextjs/server";
 import {
@@ -445,6 +448,10 @@ export const createPurchaseOrder = async (
 
       // A line is expected when the order is: its planned receipt date.
       await syncPurchaseLineReceiptDates(tx, uuid);
+      // The order now expects goods, so the receptions that expect them exist
+      // too — that is what makes Purchase receivals a planned-vs-actual screen
+      // rather than a list of arrivals.
+      await syncPurchaseLineReceipts(tx, uuid);
     });
 
     // The supplier is told what we ordered as soon as the order stands. Sent
@@ -666,6 +673,10 @@ export const updatePurchaseOrder = async (
 
       // A moved delivery date moves the receipt date of what is still to come.
       await syncPurchaseLineReceiptDates(tx, uuid);
+      // The order now expects goods, so the receptions that expect them exist
+      // too — that is what makes Purchase receivals a planned-vs-actual screen
+      // rather than a list of arrivals.
+      await syncPurchaseLineReceipts(tx, uuid);
     });
   } catch (error) {
     return {

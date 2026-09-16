@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { PurchaseReceivalItem } from "@/app/(dashboard)/purchase-receivals/actions";
 import {
-  formatDateColumn,
-  formatLengthMm,
-  formatMoney,
-  formatNumber,
-} from "@/lib/helpers";
+  exportPurchaseReceivals,
+  PurchaseReceivalRow,
+} from "@/app/(dashboard)/purchase-receivals/actions";
+import {
+  PURCHASE_RECEIVAL_COLUMNS,
+  PurchaseReceivalColumnKey,
+} from "@/app/(dashboard)/purchase-receivals/columns";
 import {
   Table,
   TableBody,
@@ -16,129 +17,348 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { ColumnSelector } from "@/components/ui/column-selector";
+import { RowAction } from "@/components/ui/row-action";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { ORDER_LINE_STATUS_LABELS, STOCK_UNIT_LABELS } from "@/lib/labels";
-import { TableExportButton } from "@/components/ui/table-export-button";
+import { PagedTableExportButton } from "@/components/ui/table-export-button";
+import { TablePagination } from "@/components/ui/table-pagination";
+import { TableSortHeader } from "@/components/ui/table-sort-header";
+import { TableToolbar } from "@/components/ui/table-toolbar";
+import { selectorColumns } from "@/lib/excel";
+import {
+  buildColumnVisibility,
+  formatDateColumn,
+  formatLengthMm,
+  formatMoney,
+  formatNumber,
+} from "@/lib/helpers";
+import {
+  ORDER_LINE_STATUS_LABELS,
+  RECEIPT_STATUS_LABELS,
+  STOCK_UNIT_LABELS,
+} from "@/lib/labels";
+import { Paged, TableFilterControl } from "@/lib/table-query";
+import { Eye, Factory, Rows3, Warehouse } from "lucide-react";
+import { useState } from "react";
+
+type ColumnKey = PurchaseReceivalColumnKey;
 
 type Props = {
-  receivals: PurchaseReceivalItem[];
+  page: Paged<PurchaseReceivalRow>;
+  filters: TableFilterControl[];
 };
 
-export const PurchaseReceivalsTable = ({ receivals }: Props) => (
-  <div>
-    <div className="space-y-4">
-      <div className="flex justify-end">
-        <TableExportButton
-          tableId="purchase-receivals-table"
-          fileName="purchase-receivals"
-          sheetName="Purchase receivals"
-        />
-      </div>
-      <Table id="purchase-receivals-table">
-        <TableHeader>
-          <TableRow>
-            <TableHead>Purchase order</TableHead>
-            <TableHead className="text-right">Line</TableHead>
-            <TableHead>Supplier code</TableHead>
-            <TableHead>Supplier</TableHead>
-            <TableHead>Purchase order date</TableHead>
-            <TableHead>Product code</TableHead>
-            <TableHead>Product</TableHead>
-            <TableHead className="text-right">Line amount</TableHead>
-            <TableHead className="text-right">
-              Price quantity (in gross price U.)
-            </TableHead>
-            <TableHead className="text-right">Qty(p)</TableHead>
-            <TableHead>Unit</TableHead>
-            <TableHead className="text-right">Qty(a)</TableHead>
-            <TableHead className="text-right">Received Qty</TableHead>
-            <TableHead className="text-right">Invoiced</TableHead>
-            <TableHead>Options</TableHead>
-            <TableHead>Line status</TableHead>
-            <TableHead>Receipt status</TableHead>
-            <TableHead>Receipt date</TableHead>
-            <TableHead>Delivery date (p)</TableHead>
-            <TableHead>Delivery date (a)</TableHead>
-            <TableHead className="text-right">Kg(p)</TableHead>
-            <TableHead className="text-right">Kg(a)</TableHead>
-            <TableHead className="text-right">Length</TableHead>
-            <TableHead>Initials</TableHead>
-            <TableHead>Purchaser</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {receivals.length === 0 ? (
-            <TableRow>
-              <TableCell
-                colSpan={20}
-                className="h-24 text-center text-muted-foreground"
+// The column selector and the export read the same declaration, so a column
+// cannot be on screen and missing from the file.
+const ALL_COLUMNS = selectorColumns(PURCHASE_RECEIVAL_COLUMNS);
+
+const SORTABLE: Partial<Record<ColumnKey, string>> = {
+  purchaseOrderCode: "purchaseOrderCode",
+  supplierName: "supplierName",
+  productCode: "productCode",
+  purchaseOrderDate: "purchaseOrderDate",
+  receiptDate: "receiptDate",
+  deliveryDatePlanned: "deliveryDatePlanned",
+  deliveryDateActual: "deliveryDateActual",
+  kgPlanned: "kgPlanned",
+  kgActual: "kgActual",
+  lineAmount: "lineAmount",
+};
+
+const amount = (value: string | number | null) =>
+  value === null ? "—" : formatNumber(Number(value));
+
+export const PurchaseReceivalsTable = ({ page, filters }: Props) => {
+  const [columnVisibility, setColumnVisibility] = useState<
+    Record<ColumnKey, boolean>
+  >(buildColumnVisibility(ALL_COLUMNS));
+
+  const toggleColumn = (key: string) =>
+    setColumnVisibility((prev) => ({
+      ...prev,
+      [key]: !prev[key as ColumnKey],
+    }));
+
+  const visibleColumns = ALL_COLUMNS.filter((col) => columnVisibility[col.key]);
+
+  const renderCell = (row: PurchaseReceivalRow, key: ColumnKey) => {
+    switch (key) {
+      case "purchaseOrderCode":
+        return (
+          <TableCell key={key} className="font-medium whitespace-nowrap">
+            {row.purchaseOrderUuid ? (
+              <Link
+                href={`/purchase-orders/${row.purchaseOrderUuid}`}
+                className="text-primary hover:underline"
               >
-                No purchase receivals found.
-              </TableCell>
-            </TableRow>
-          ) : (
-            receivals.map((row) => (
-              <TableRow key={row.uuid}>
-                <TableCell className="font-medium">
-                  <Link
-                    href={`/purchase-receivals/${row.uuid}`}
-                    className="text-primary hover:underline"
-                  >
-                    {row.purchaseOrderCode ?? `Receipt #${row.id}`}
-                  </Link>
-                </TableCell>
-                <TableCell className="text-right">
-                  {row.lineNumber ?? "—"}
-                </TableCell>
-                <TableCell>{row.supplierCode ?? "—"}</TableCell>
-                <TableCell>{row.supplierName ?? "—"}</TableCell>
-                <TableCell>{formatDateColumn(row.purchaseOrderDate)}</TableCell>
-                <TableCell className="font-medium">
-                  {row.productCode ?? "—"}
-                </TableCell>
-                <TableCell>{row.productName ?? "—"}</TableCell>
-                <TableCell className="text-right whitespace-nowrap">
-                  {formatMoney(row.lineAmount)}
-                </TableCell>
-                <TableCell className="text-right">
-                  {formatNumber(row.priceQuantity)}
-                </TableCell>
-                <TableCell className="text-right">{row.qtyPlanned}</TableCell>
-                <TableCell>
-                  {row.unit ? STOCK_UNIT_LABELS[row.unit] : "—"}
-                </TableCell>
-                <TableCell className="text-right">{row.qtyActual}</TableCell>
-                <TableCell className="text-right">{row.receivedQty}</TableCell>
-                <TableCell className="text-right whitespace-nowrap">
-                  € {row.invoicedPrice}
-                </TableCell>
-                <TableCell>{row.options ?? "—"}</TableCell>
-                <TableCell>
-                  <StatusBadge
-                    value={row.lineStatus}
-                    label={
-                      row.lineStatus
-                        ? ORDER_LINE_STATUS_LABELS[row.lineStatus]
-                        : null
-                    }
-                  />
-                </TableCell>
-                <TableCell>{row.receiptStatus ?? "—"}</TableCell>
-                <TableCell>{row.receiptDate ?? "—"}</TableCell>
-                <TableCell>{row.deliveryDatePlanned ?? "—"}</TableCell>
-                <TableCell>{row.deliveryDateActual ?? "—"}</TableCell>
-                <TableCell className="text-right">{row.kgPlanned}</TableCell>
-                <TableCell className="text-right">{row.kgActual}</TableCell>
-                <TableCell className="text-right">
-                  {formatLengthMm(row.lengthMm)}
-                </TableCell>
-                <TableCell>{row.initials ?? "—"}</TableCell>
-                <TableCell>{row.purchaser ?? "—"}</TableCell>
-              </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
+                {row.purchaseOrderCode ?? `#${row.purchaseOrderId ?? row.id}`}
+              </Link>
+            ) : (
+              (row.purchaseOrderCode ?? "—")
+            )}
+          </TableCell>
+        );
+      case "lineNumber":
+        return (
+          <TableCell key={key} className="text-right">
+            {row.lineNumber ?? "—"}
+          </TableCell>
+        );
+      case "supplierCode":
+        return <TableCell key={key}>{row.supplierCode ?? "—"}</TableCell>;
+      case "supplierName":
+        return (
+          <TableCell key={key}>
+            {row.companyUuid && row.supplierName ? (
+              <Link
+                href={`/companies/${row.companyUuid}`}
+                className="text-primary hover:underline"
+              >
+                {row.supplierName}
+              </Link>
+            ) : (
+              (row.supplierName ?? "—")
+            )}
+          </TableCell>
+        );
+      case "purchaseOrderDate":
+        return (
+          <TableCell key={key} className="whitespace-nowrap">
+            {formatDateColumn(row.purchaseOrderDate)}
+          </TableCell>
+        );
+      case "lineAmount":
+        return (
+          <TableCell key={key} className="text-right whitespace-nowrap">
+            {formatMoney(row.lineAmount)}
+          </TableCell>
+        );
+      case "qtyPlanned":
+        return (
+          <TableCell key={key} className="text-right">
+            {amount(row.qtyPlanned)}
+          </TableCell>
+        );
+      case "unit":
+        return (
+          <TableCell key={key}>
+            {row.unit ? STOCK_UNIT_LABELS[row.unit] : "—"}
+          </TableCell>
+        );
+      case "qtyActual":
+        return (
+          <TableCell key={key} className="text-right">
+            {amount(row.qtyActual)}
+          </TableCell>
+        );
+      case "confirmedQty":
+        return (
+          <TableCell key={key} className="text-right">
+            {amount(row.confirmedQty)}
+          </TableCell>
+        );
+      case "priceQuantity":
+      case "invoicedProduction":
+        // One field under two headings, and a quantity rather than money — the
+        // reference's own grid masks it as a currency, which it is not.
+        return (
+          <TableCell key={key} className="text-right">
+            {formatNumber(row.priceQuantity)}
+          </TableCell>
+        );
+      case "options":
+        return <TableCell key={key}>{row.options ?? "—"}</TableCell>;
+      case "lineStatus":
+        return (
+          <TableCell key={key}>
+            <StatusBadge
+              value={row.lineStatus}
+              label={
+                row.lineStatus ? ORDER_LINE_STATUS_LABELS[row.lineStatus] : null
+              }
+            />
+          </TableCell>
+        );
+      case "receiptDate":
+        return (
+          <TableCell key={key} className="whitespace-nowrap">
+            {formatDateColumn(row.receiptDate)}
+          </TableCell>
+        );
+      case "purchaser":
+        return <TableCell key={key}>{row.purchaser ?? "—"}</TableCell>;
+      case "purchaserInitials":
+        return (
+          <TableCell key={key}>{row.purchaserInitials ?? "—"}</TableCell>
+        );
+      case "productCode":
+        return (
+          <TableCell key={key} className="font-medium whitespace-nowrap">
+            {row.productUuid && row.productCode ? (
+              <Link
+                href={`/products/${row.productUuid}`}
+                className="text-primary hover:underline"
+              >
+                {row.productCode}
+              </Link>
+            ) : (
+              (row.productCode ?? "—")
+            )}
+          </TableCell>
+        );
+      case "productName":
+        return <TableCell key={key}>{row.productName ?? "—"}</TableCell>;
+      case "kgActual":
+        return (
+          <TableCell key={key} className="text-right">
+            {amount(row.kgActual)}
+          </TableCell>
+        );
+      case "lengthMm":
+        return (
+          <TableCell key={key} className="text-right">
+            {formatLengthMm(row.lengthMm)}
+          </TableCell>
+        );
+      case "receiptStatus":
+        return (
+          <TableCell key={key}>
+            <StatusBadge
+              value={row.receiptStatus}
+              label={
+                row.receiptStatus
+                  ? RECEIPT_STATUS_LABELS[row.receiptStatus]
+                  : null
+              }
+            />
+          </TableCell>
+        );
+      case "deliveryDateActual":
+        return (
+          <TableCell key={key} className="whitespace-nowrap">
+            {formatDateColumn(row.deliveryDateActual)}
+          </TableCell>
+        );
+      case "deliveryDatePlanned":
+        return (
+          <TableCell key={key} className="whitespace-nowrap">
+            {formatDateColumn(row.deliveryDatePlanned)}
+          </TableCell>
+        );
+      case "kgPlanned":
+        return (
+          <TableCell key={key} className="text-right">
+            {amount(row.kgPlanned)}
+          </TableCell>
+        );
+    }
+  };
+
+  // Shown instead of the grid rather than inside it: twenty-five columns make a
+  // row wider than the window, and a sentence stretched across that width has
+  // to be scrolled sideways to be read.
+  const emptyState = (
+    <div className="flex flex-col items-center gap-1 rounded-lg border border-dashed px-6 py-10 text-center">
+      <p className="font-medium">No receipts match this view</p>
+      <p className="max-w-md text-sm text-muted-foreground">
+        A receipt appears here as soon as a purchase order expects goods, and
+        fills in as they arrive. Widen the scheduled delivery date or clear the
+        filters to see more.
+      </p>
     </div>
-  </div>
-);
+  );
+
+  return (
+    <div className="space-y-4">
+      <TableToolbar
+        searchPlaceholder="Search order, product or supplier…"
+        filters={filters}
+      >
+        <ColumnSelector
+          columns={ALL_COLUMNS.map((col) => ({
+            key: col.key,
+            label: col.label,
+          }))}
+          visibility={columnVisibility}
+          onToggle={toggleColumn}
+        />
+        <PagedTableExportButton
+          fileName="purchase-receivals"
+          columnKeys={visibleColumns.map((column) => column.key)}
+          action={exportPurchaseReceivals}
+        />
+      </TableToolbar>
+
+      {page.rows.length === 0 ? (
+        emptyState
+      ) : (
+        <>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                {visibleColumns.map((col) => {
+                  const sortKey = SORTABLE[col.key];
+                  return sortKey ? (
+                    <TableSortHeader key={col.key} sortKey={sortKey}>
+                      {col.label}
+                    </TableSortHeader>
+                  ) : (
+                    <TableHead key={col.key}>{col.label}</TableHead>
+                  );
+                })}
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {page.rows.map((row) => (
+                <TableRow key={row.uuid}>
+                  {visibleColumns.map((col) => renderCell(row, col.key))}
+                  <TableCell>
+                    <div className="flex items-center justify-end gap-1">
+                      <RowAction
+                        label="Open this receipt"
+                        tone="view"
+                        href={`/purchase-receivals/${row.uuid}`}
+                      >
+                        <Eye className="size-4" />
+                      </RowAction>
+                      {row.purchaseOrderItemUuid && (
+                        <RowAction
+                          label="Purchase line"
+                          href={`/purchase-lines/${row.purchaseOrderItemUuid}`}
+                        >
+                          <Rows3 className="size-4" />
+                        </RowAction>
+                      )}
+                      {row.purchaseOrderCode && (
+                        <>
+                          <RowAction
+                            label="Warehouse work orders"
+                            href={`/warehouse-work-orders?q=${encodeURIComponent(row.purchaseOrderCode)}`}
+                          >
+                            <Warehouse className="size-4" />
+                          </RowAction>
+                          <RowAction
+                            label="Production work orders"
+                            href={`/production-workorders?q=${encodeURIComponent(row.purchaseOrderCode)}`}
+                          >
+                            <Factory className="size-4" />
+                          </RowAction>
+                        </>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          <TablePagination
+            page={page}
+            singular="receipt"
+            plural="receipts"
+          />
+        </>
+      )}
+    </div>
+  );
+};

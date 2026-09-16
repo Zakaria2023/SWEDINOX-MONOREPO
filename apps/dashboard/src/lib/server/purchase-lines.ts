@@ -189,6 +189,136 @@ export const syncPurchaseLineReceiptDates = async (
 };
 
 /**
+ * Create the receptions an order expects, and keep them in step with it.
+ *
+ * A reception is not only the record of goods that turned up — it is the
+ * expectation of goods that have not. Without this, "Purchase receivals" can
+ * only ever show arrivals, and the planned-against-actual comparison the whole
+ * screen exists for has nothing planned in it.
+ *
+ * One reception per line, carrying the line's whole weight and the order's
+ * delivery date. A line delivered in instalments splits that reception later,
+ * which is why a line that already has more than one is left alone here: the
+ * split is somebody's deliberate act and must not be flattened by an edit to
+ * the order.
+ */
+export const syncPurchaseLineReceipts = async (
+  tx: PurchaseLineWriter,
+  purchaseOrderUuid: string,
+): Promise<void> => {
+  const [order] = await tx
+    .select({
+      id: PurchaseOrders.id,
+      status: PurchaseOrders.status,
+      supplierUuid: PurchaseOrders.supplierUuid,
+      deliveryDate: PurchaseOrders.deliveryDate,
+    })
+    .from(PurchaseOrders)
+    .where(eq(PurchaseOrders.uuid, purchaseOrderUuid))
+    .limit(1);
+
+  if (!order) {
+    return;
+  }
+
+  // A provisional order is a draft: the goods are not expected of anybody yet.
+  // Once it stands, the reception is released and the warehouse can plan for it.
+  const receiptStatus: ReceiptStatus =
+    order.status === "provisional" ? "new" : "released";
+  const deliveryDate = order.deliveryDate
+    ? new Date(order.deliveryDate).toISOString().slice(0, 10)
+    : null;
+
+  const lines = await tx
+    .select({
+      uuid: PurchaseOrderItems.uuid,
+      productUuid: PurchaseOrderItems.productUuid,
+      lineNumber: PurchaseOrderItems.lineNumber,
+      unit: PurchaseOrderItems.unit,
+      status: PurchaseOrderItems.status,
+      quantity: PurchaseOrderItems.quantity,
+      kgPurchased: PurchaseOrderItems.kgPurchased,
+      lengthMm: PurchaseOrderItems.lengthMm,
+      options: PurchaseOrderItems.options,
+      purchaser: PurchaseOrderItems.purchaser,
+    })
+    .from(PurchaseOrderItems)
+    .where(eq(PurchaseOrderItems.purchaseOrderUuid, purchaseOrderUuid));
+
+  for (const line of lines) {
+    if (line.status === "cancelled") {
+      continue;
+    }
+
+    const existing = await tx
+      .select({
+        uuid: PurchaseLineReceivals.uuid,
+        kgActual: PurchaseLineReceivals.kgActual,
+        receiptStatus: PurchaseLineReceivals.receiptStatus,
+      })
+      .from(PurchaseLineReceivals)
+      .where(eq(PurchaseLineReceivals.purchaseOrderItemUuid, line.uuid))
+      .orderBy(asc(PurchaseLineReceivals.id));
+
+    if (existing.length === 0) {
+      await tx.insert(PurchaseLineReceivals).values({
+        uuid: generateUuid(),
+        purchaseOrderUuid,
+        purchaseOrderItemUuid: line.uuid,
+        productUuid: line.productUuid,
+        companyUuid: order.supplierUuid,
+        purchaseOrderCode: String(order.id),
+        lineNumber: line.lineNumber,
+        lineStatus: line.status,
+        receiptStatus,
+        unit: line.unit,
+        qtyPlanned: line.quantity,
+        qtyActual: "0.000",
+        kgPlanned: line.kgPurchased ?? "0.00",
+        kgActual: "0.00",
+        lengthMm: line.lengthMm,
+        options: line.options,
+        purchaser: line.purchaser,
+        receiptDate: deliveryDate,
+        deliveryDatePlanned: deliveryDate,
+      });
+      continue;
+    }
+
+    // Nothing has arrived yet, so the expectation still follows the order. The
+    // weight is only restated where a single reception covers the line; with
+    // several, the split decides how the kilos are divided and this must not
+    // overrule it.
+    const untouched = existing.filter(
+      (receival) => Number(receival.kgActual ?? 0) <= 0,
+    );
+    if (untouched.length === 0) {
+      continue;
+    }
+
+    await tx
+      .update(PurchaseLineReceivals)
+      .set({
+        deliveryDatePlanned: deliveryDate,
+        receiptDate: deliveryDate,
+        lineStatus: line.status,
+        ...(existing.length === 1
+          ? {
+              qtyPlanned: line.quantity,
+              kgPlanned: line.kgPurchased ?? "0.00",
+            }
+          : {}),
+      })
+      .where(
+        inArray(
+          PurchaseLineReceivals.uuid,
+          untouched.map((receival) => receival.uuid),
+        ),
+      );
+  }
+};
+
+/**
  * Record goods arriving against a purchase line on its receptions.
  *
  * Every way goods come in — Receive on "Purchase orders to be received", an
