@@ -45,6 +45,18 @@ export const contractableRoles = [
 
 export type ContractableRole = (typeof contractableRoles)[number];
 
+/**
+ * Which side of the business an agreed price belongs to, and therefore which
+ * contracts it is read from: a purchase price is what a supplier or processor
+ * charges us, a sales price what a customer or prospect pays.
+ */
+export const netPriceSides = [
+  "purchase",
+  "sales",
+] as const satisfies readonly string[];
+
+export type NetPriceSide = (typeof netPriceSides)[number];
+
 export const contractTypes = [
   "gross_prices",
   "options",

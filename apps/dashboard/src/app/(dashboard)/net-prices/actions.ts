@@ -1,7 +1,5 @@
 "use server";
 
-import { moneyString } from "@/lib/helpers";
-
 import { db } from "@/db";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import {
@@ -9,55 +7,56 @@ import {
   SelectContractNetPrices,
 } from "@/db/schema/contract-net-prices";
 import { Contracts, SelectContracts } from "@/db/schema/contracts";
-import { OrderItems } from "@/db/schema/order-items";
-import { Orders } from "@/db/schema/orders";
 import { ProductGroups, SelectProductGroups } from "@/db/schema/product-groups";
 import {
   ProductGroupSuppliers,
   SelectProductGroupSuppliers,
 } from "@/db/schema/product-group-suppliers";
 import { Products, SelectProducts } from "@/db/schema/products";
-import { describeError,
-  applyPriceDiscounts,
-  generateUuid,
-  normaliseDiscountTiers,
-  resolveTierDiscount,
-} from "@/lib/helpers";
-import { lastPurchasePriceSql } from "@/lib/server/purchase-pricing";
-import { aliasedTable, and, asc, eq, inArray, SQL, sql } from "drizzle-orm";
+import { NET_PRICE_COLUMNS } from "@/app/(dashboard)/net-prices/columns";
+import { ContractableRole, NetPriceSide } from "@/lib/enums";
+import { describeError, generateUuid, moneyString } from "@/lib/helpers";
+import { exportRows } from "@/lib/server/excel";
+import {
+  relationFilter,
+  runPaged,
+  tableOrderBy,
+  tableWhere,
+} from "@/lib/server/table-query";
+import {
+  Paged,
+  parseTableQuery,
+  SearchParams,
+  TableQuery,
+} from "@/lib/table-query";
+import {
+  aliasedTable,
+  and,
+  asc,
+  count,
+  eq,
+  gte,
+  isNull,
+  lte,
+  ne,
+  or,
+  sql,
+} from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
-export type NetPriceRow = SelectContractNetPrices & {
-  contractCode: SelectContracts["code"] | null;
-  contractDescription: SelectContracts["description"] | null;
-  companyCode: SelectCompanies["id"] | null;
-  companyName: SelectCompanies["companyName"] | null;
-  productCode: SelectProducts["productCode"] | null;
-  oldProductCode: SelectProducts["oldProductCode"] | null;
-  productName: SelectProducts["name"] | null;
-  groupProduct: SelectProducts["groupProduct"] | null;
-  stockProduct: SelectProducts["stockProduct"] | null;
-  standardProduct: SelectProducts["standardProduct"] | null;
-  basePrice: SelectProducts["basePrice"] | null;
-  mainGroup: SelectProductGroups["name"] | null;
-  subGroup: SelectProductGroups["name"] | null;
-  preferredSupplier: SelectCompanies["companyName"] | null;
-  supplierProductCode:
-    | SelectProductGroupSuppliers["externalProductCode"]
-    | null;
-};
-
-export type GenerateNetPricesResult = {
-  error?: string;
-  success?: boolean;
-  createdRows?: number;
+// Which contracts each side reads from. A purchase price is what a supplier or
+// a processor charges us; a sales price is what a customer pays.
+const SIDE_ROLES: Record<NetPriceSide, ContractableRole[]> = {
+  purchase: ["supplier", "processor"],
+  sales: ["customer", "prospect"],
 };
 
 const ParentGroups = aliasedTable(ProductGroups, "parent_groups");
 
-// The preferred supplier of the product's group, resolved per row as
-// correlated scalar subqueries. Companies must be joined under an alias here
-// because the outer query already joins Companies for the contract's company.
+// The preferred supplier of the product's group, resolved per row as correlated
+// scalar subqueries. Companies must be joined under an alias here because the
+// outer query already joins Companies for the contract's company.
 const SupplierCompanies = aliasedTable(Companies, "supplier_companies");
 
 const preferredSupplierRow = db
@@ -90,16 +89,118 @@ const supplierProductCodeRow = db
 
 const supplierProductCode = sql<string | null>`(${supplierProductCodeRow})`;
 
-// Every agreed price, joined to its contract, that contract's company and the
-// product it prices.
-// The overview and the detail screen show the same row, so they share one query
-// and differ only in the filter applied. `where` is left off for the overview.
-const selectNetPrices = async (where?: SQL): Promise<NetPriceRow[]> => {
-  const base = db
-    .select({
+const NET_PRICE_SEARCH = [
+  Products.productCode,
+  Products.name,
+  Contracts.code,
+  Companies.companyName,
+] as const;
+
+const NET_PRICE_SORTABLE = {
+  contractCode: Contracts.code,
+  productCode: Products.productCode,
+  netPrice: ContractNetPrices.netPrice,
+  validFrom: ContractNetPrices.validFrom,
+  fromQty: ContractNetPrices.fromQty,
+};
+
+const NET_PRICE_FILTERS = {
+  side: (values: string[]) => {
+    const side = values[0];
+    return side === "purchase" || side === "sales"
+      ? sideCondition(side)
+      : undefined;
+  },
+  contract: relationFilter(ContractNetPrices.contractUuid),
+  company: relationFilter(Contracts.companyUuid),
+  product: relationFilter(ContractNetPrices.productUuid),
+  // Prices in force during the period, the way the reference's "Contract valid
+  // between" reads: a row counts when its own window overlaps the range.
+  validBetween: (values: string[]) => {
+    const [from, to] = (values[0] ?? "").split("..");
+    return and(
+      from
+        ? or(
+            isNull(ContractNetPrices.validUntil),
+            gte(ContractNetPrices.validUntil, from),
+          )
+        : undefined,
+      to
+        ? or(
+            isNull(ContractNetPrices.validFrom),
+            lte(ContractNetPrices.validFrom, to),
+          )
+        : undefined,
+    );
+  },
+};
+
+export type NetPriceRow = SelectContractNetPrices & {
+  contractCode: SelectContracts["code"] | null;
+  contractDescription: SelectContracts["description"] | null;
+  contractRole: SelectContracts["role"] | null;
+  companyCode: SelectCompanies["id"] | null;
+  companyName: SelectCompanies["companyName"] | null;
+  productCode: SelectProducts["productCode"] | null;
+  oldProductCode: SelectProducts["oldProductCode"] | null;
+  productName: SelectProducts["name"] | null;
+  groupProduct: SelectProducts["groupProduct"] | null;
+  stockProduct: SelectProducts["stockProduct"] | null;
+  standardProduct: SelectProducts["standardProduct"] | null;
+  basePrice: SelectProducts["basePrice"] | null;
+  mainGroup: SelectProductGroups["name"] | null;
+  subGroup: SelectProductGroups["name"] | null;
+  preferredSupplier: SelectCompanies["companyName"] | null;
+  supplierProductCode:
+    | SelectProductGroupSuppliers["externalProductCode"]
+    | null;
+};
+
+/** What a person types when agreeing one price. */
+export type NetPriceInput = {
+  contractUuid: string;
+  productUuid: string;
+  netPrice: string;
+  netPriceUnit: SelectContractNetPrices["netPriceUnit"];
+  fromQty: string;
+  fromQtyUnit: SelectContractNetPrices["fromQtyUnit"];
+  validFrom: string | null;
+  validUntil: string | null;
+};
+
+export type NetPriceActionResult = {
+  netPriceUuid?: string;
+  error?: string;
+  success?: boolean;
+};
+
+const sideCondition = (side: NetPriceSide) =>
+  or(...SIDE_ROLES[side].map((role) => eq(Contracts.role, role)));
+
+// The purchase side is what this screen is for, so it stands unless the filter
+// says otherwise — the reference reaches it from the Purchase menu.
+const netPriceWhere = (query: TableQuery) =>
+  tableWhere({
+    query,
+    search: NET_PRICE_SEARCH,
+    filters: NET_PRICE_FILTERS,
+    scope:
+      (query.filters?.side ?? []).length > 0 ? [] : [sideCondition("purchase")],
+  });
+
+/**
+ * Every agreed price, joined to its contract, that contract's company and the
+ * product it prices. The overview, the export and the detail screen share it.
+ */
+const netPriceRows =
+  (query: TableQuery) =>
+  async (limit: number, offset: number): Promise<NetPriceRow[]> => {
+    const rows = await db
+      .select({
         netPrice: ContractNetPrices,
         contractCode: Contracts.code,
         contractDescription: Contracts.description,
+        contractRole: Contracts.role,
         companyCode: Companies.id,
         companyName: Companies.companyName,
         productCode: Products.productCode,
@@ -119,22 +220,29 @@ const selectNetPrices = async (where?: SQL): Promise<NetPriceRow[]> => {
       .innerJoin(Contracts, eq(ContractNetPrices.contractUuid, Contracts.uuid))
       .leftJoin(Companies, eq(Contracts.companyUuid, Companies.uuid))
       .innerJoin(Products, eq(ContractNetPrices.productUuid, Products.uuid))
-      .leftJoin(
-        ProductGroups,
-        eq(Products.productGroupUuid, ProductGroups.uuid),
+      .leftJoin(ProductGroups, eq(Products.productGroupUuid, ProductGroups.uuid))
+      .leftJoin(ParentGroups, eq(ProductGroups.parentUuid, ParentGroups.uuid))
+      .where(netPriceWhere(query))
+      .orderBy(
+        ...tableOrderBy(
+          NET_PRICE_SORTABLE,
+          query,
+          [
+            asc(Contracts.code),
+            asc(Products.productCode),
+            asc(ContractNetPrices.fromQty),
+          ],
+          ContractNetPrices.id,
+        ),
       )
-    .leftJoin(ParentGroups, eq(ProductGroups.parentUuid, ParentGroups.uuid));
+      .limit(limit)
+      .offset(offset);
 
-  const rows = await (where ? base.where(where) : base).orderBy(
-    asc(Contracts.code),
-    asc(Products.productCode),
-    asc(ContractNetPrices.fromQty),
-  );
-
-  return rows.map((row) => ({
+    return rows.map((row) => ({
       ...row.netPrice,
       contractCode: row.contractCode,
       contractDescription: row.contractDescription,
+      contractRole: row.contractRole,
       companyCode: row.companyCode,
       companyName: row.companyName,
       productCode: row.productCode,
@@ -146,185 +254,256 @@ const selectNetPrices = async (where?: SQL): Promise<NetPriceRow[]> => {
       basePrice: row.basePrice,
       mainGroup: row.groupParentUuid ? row.parentName : row.groupName,
       subGroup: row.groupParentUuid ? row.groupName : null,
-    preferredSupplier: row.preferredSupplier,
-    supplierProductCode: row.supplierProductCode,
-  }));
-};
+      preferredSupplier: row.preferredSupplier,
+      supplierProductCode: row.supplierProductCode,
+    }));
+  };
 
-export const getNetPrices = async (): Promise<NetPriceRow[]> => {
+/** Every net price the current view matches, as a workbook. */
+export const exportNetPrices = async (
+  params: SearchParams,
+  columnKeys: string[],
+): Promise<string> =>
+  exportRows({
+    name: "Net prices",
+    columns: NET_PRICE_COLUMNS,
+    columnKeys,
+    rows: netPriceRows(parseTableQuery(params)),
+  });
+
+export const getNetPrices = async (
+  query: TableQuery,
+): Promise<Paged<NetPriceRow>> => {
   try {
-    return await selectNetPrices();
+    return await runPaged(query, {
+      rows: netPriceRows(query),
+      count: async () => {
+        const [row] = await db
+          .select({ value: count() })
+          .from(ContractNetPrices)
+          .innerJoin(
+            Contracts,
+            eq(ContractNetPrices.contractUuid, Contracts.uuid),
+          )
+          .leftJoin(Companies, eq(Contracts.companyUuid, Companies.uuid))
+          .innerJoin(Products, eq(ContractNetPrices.productUuid, Products.uuid))
+          .where(netPriceWhere(query));
+        return Number(row?.value ?? 0);
+      },
+    });
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch net prices"));
   }
 };
 
 /**
- * One agreed net price with its contract, the customer that contract is with,
+ * One agreed net price with its contract, the company that contract is with,
  * the product and the product's group and preferred supplier.
  */
 export const getNetPriceDetail = async (
   uuid: string,
 ): Promise<NetPriceRow | null> => {
   try {
-    const [row] = await selectNetPrices(eq(ContractNetPrices.uuid, uuid));
-    return row ?? null;
+    const [found] = await db
+      .select({
+        netPrice: ContractNetPrices,
+        contractCode: Contracts.code,
+        contractDescription: Contracts.description,
+        contractRole: Contracts.role,
+        companyCode: Companies.id,
+        companyName: Companies.companyName,
+        productCode: Products.productCode,
+        oldProductCode: Products.oldProductCode,
+        productName: Products.name,
+        groupProduct: Products.groupProduct,
+        stockProduct: Products.stockProduct,
+        standardProduct: Products.standardProduct,
+        basePrice: Products.basePrice,
+        groupName: ProductGroups.name,
+        groupParentUuid: ProductGroups.parentUuid,
+        parentName: ParentGroups.name,
+        preferredSupplier: preferredSupplierName,
+        supplierProductCode,
+      })
+      .from(ContractNetPrices)
+      .innerJoin(Contracts, eq(ContractNetPrices.contractUuid, Contracts.uuid))
+      .leftJoin(Companies, eq(Contracts.companyUuid, Companies.uuid))
+      .innerJoin(Products, eq(ContractNetPrices.productUuid, Products.uuid))
+      .leftJoin(ProductGroups, eq(Products.productGroupUuid, ProductGroups.uuid))
+      .leftJoin(ParentGroups, eq(ProductGroups.parentUuid, ParentGroups.uuid))
+      .where(eq(ContractNetPrices.uuid, uuid))
+      .limit(1);
+
+    if (!found) {
+      return null;
+    }
+
+    return {
+      ...found.netPrice,
+      contractCode: found.contractCode,
+      contractDescription: found.contractDescription,
+      contractRole: found.contractRole,
+      companyCode: found.companyCode,
+      companyName: found.companyName,
+      productCode: found.productCode,
+      oldProductCode: found.oldProductCode,
+      productName: found.productName,
+      groupProduct: found.groupProduct,
+      stockProduct: found.stockProduct,
+      standardProduct: found.standardProduct,
+      basePrice: found.basePrice,
+      mainGroup: found.groupParentUuid ? found.parentName : found.groupName,
+      subGroup: found.groupParentUuid ? found.groupName : null,
+      preferredSupplier: found.preferredSupplier,
+      supplierProductCode: found.supplierProductCode,
+    };
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch net price"));
   }
 };
 
-// Prices every customer contract that has no net prices yet.
-//
-// The products priced are the ones that customer has actually ordered; a
-// customer with no order history gets the standard product catalogue. Each
-// product is priced from its base price with the contract's own discounts
-// applied — the group discount and the line discount stack, and a contract with
-// an extra discount takes that off on top. A contract that overrides the gross
-// price uses that value as the starting point instead of the product's.
-//
-// A contract with quantity tiers produces one row per tier, so the overview
-// shows the price break the way the contract negotiated it. Contracts that
-// already have net prices are skipped, so this can be re-run.
-export const generateNetPrices = async (): Promise<GenerateNetPricesResult> => {
-  try {
-    const contracts = await db
-      .select()
-      .from(Contracts)
-      .where(inArray(Contracts.role, ["customer", "prospect"]));
+// What a price of this size means against the product's list price, kept so the
+// overview can explain the number without re-deriving it.
+const discountAgainstBasePrice = async (
+  productUuid: string,
+  netPrice: number,
+): Promise<string> => {
+  const [product] = await db
+    .select({ basePrice: Products.basePrice })
+    .from(Products)
+    .where(eq(Products.uuid, productUuid))
+    .limit(1);
 
-    if (contracts.length === 0) {
-      return { error: "No customer contracts yet. Create one first." };
-    }
+  const basePrice = Number(product?.basePrice ?? 0);
+  return moneyString(
+    basePrice > 0 ? (1 - netPrice / basePrice) * 100 : 0,
+  );
+};
 
-    const existing = await db
-      .select({ contractUuid: ContractNetPrices.contractUuid })
-      .from(ContractNetPrices);
-    const contractsWithPrices = new Set(
-      existing.map((row) => row.contractUuid),
-    );
-
-    const emptyContracts = contracts.filter(
-      (contract) => !contractsWithPrices.has(contract.uuid),
-    );
-    if (emptyContracts.length === 0) {
-      return { error: "Every customer contract already has net prices." };
-    }
-
-    const rows: (typeof ContractNetPrices.$inferInsert)[] = [];
-
-    for (const contract of emptyContracts) {
-      const orderedProducts = contract.companyUuid
-        ? await db
-            .selectDistinct({
-              uuid: Products.uuid,
-              basePrice: Products.basePrice,
-              replacementPrice: lastPurchasePriceSql(Products.uuid),
-              priceUnit: Products.priceUnit,
-              stockUnit: Products.stockUnit,
-            })
-            .from(OrderItems)
-            .innerJoin(Orders, eq(OrderItems.orderUuid, Orders.uuid))
-            .innerJoin(Products, eq(OrderItems.productUuid, Products.uuid))
-            .where(eq(Orders.companyUuid, contract.companyUuid))
-        : [];
-
-      const products =
-        orderedProducts.length > 0
-          ? orderedProducts
-          : await db
-              .select({
-                uuid: Products.uuid,
-                basePrice: Products.basePrice,
-                replacementPrice: lastPurchasePriceSql(Products.uuid),
-                priceUnit: Products.priceUnit,
-                stockUnit: Products.stockUnit,
-              })
-              .from(Products)
-              .where(eq(Products.standardProduct, true));
-
-      if (products.length === 0) {
-        continue;
-      }
-
-      const groupDiscountTiers = contract.groupDiscount
-        ? normaliseDiscountTiers(contract.groupDiscountTiers)
-        : normaliseDiscountTiers([]);
-      const lineDiscountTiers = contract.lineDiscount
-        ? normaliseDiscountTiers(contract.lineDiscountTiers)
-        : normaliseDiscountTiers([]);
-      const extraDiscount = contract.extraDiscount
-        ? Number(contract.extraDiscountValue ?? 0)
-        : 0;
-      const contractGrossPrice = contract.grossPrice
-        ? Number(contract.grossPriceValue ?? 0)
-        : 0;
-
-      // One row per quantity break the contract negotiated — the union of
-      // both tier ladders, so neither discount's break points are lost.
-      const thresholds = Array.from(
-        new Set([
-          ...groupDiscountTiers.map((tier) => tier.from),
-          ...lineDiscountTiers.map((tier) => tier.from),
-        ]),
-      ).sort((a, b) => a - b);
-
-      for (const product of products) {
-        const listPrice =
-          contractGrossPrice > 0
-            ? contractGrossPrice
-            : Number(product.basePrice ?? 0) > 0
-              ? Number(product.basePrice)
-              : Number(product.replacementPrice ?? 0);
-
-        for (const threshold of thresholds) {
-          const groupPercent = resolveTierDiscount(
-            groupDiscountTiers,
-            threshold,
-          );
-          const linePercent = resolveTierDiscount(lineDiscountTiers, threshold);
-          const afterTiers = applyPriceDiscounts(
-            listPrice,
-            groupPercent,
-            linePercent,
-          );
-          const netPrice = afterTiers * (1 - extraDiscount / 100);
-          const totalDiscount =
-            listPrice === 0 ? 0 : (1 - netPrice / listPrice) * 100;
-
-          rows.push({
-            uuid: generateUuid(),
-            contractUuid: contract.uuid,
-            productUuid: product.uuid,
-            netPrice: moneyString(netPrice),
-            netPriceUnit: product.priceUnit ?? product.stockUnit,
-            discountPercent: moneyString(totalDiscount),
-            fromQty: threshold.toFixed(3),
-            fromQtyUnit: product.stockUnit,
-            validFrom: contract.startingDate,
-            validUntil: contract.endDate,
-          });
-        }
-      }
-    }
-
-    if (rows.length === 0) {
-      return {
-        error:
-          "Nothing to price — the contracts' customers have no order history and there are no standard products.",
-      };
-    }
-
-    await db.insert(ContractNetPrices).values(rows);
-
-    revalidatePath("/net-prices");
-    return { success: true, createdRows: rows.length };
-  } catch (error) {
-    return {
-      error:
-        error instanceof Error
-          ? error.message
-          : "Failed to generate net prices",
-    };
+// An agreed price is a promise about one product at one quantity break, so the
+// same contract cannot hold two of them.
+const netPriceProblem = async (
+  input: NetPriceInput,
+  ignoreUuid?: string,
+): Promise<string | null> => {
+  if (!input.contractUuid) {
+    return "Choose the contract this price was agreed under.";
   }
+  if (!input.productUuid) {
+    return "Choose the product this price is for.";
+  }
+  if (!Number.isFinite(Number(input.netPrice)) || Number(input.netPrice) < 0) {
+    return "Enter the agreed price.";
+  }
+  if (!Number.isFinite(Number(input.fromQty)) || Number(input.fromQty) < 0) {
+    return "Enter the quantity this price applies from.";
+  }
+  if (
+    input.validFrom &&
+    input.validUntil &&
+    input.validUntil < input.validFrom
+  ) {
+    return "The price cannot stop being valid before it starts.";
+  }
+
+  const [duplicate] = await db
+    .select({ uuid: ContractNetPrices.uuid })
+    .from(ContractNetPrices)
+    .where(
+      and(
+        eq(ContractNetPrices.contractUuid, input.contractUuid),
+        eq(ContractNetPrices.productUuid, input.productUuid),
+        eq(ContractNetPrices.fromQty, Number(input.fromQty).toFixed(3)),
+        ignoreUuid ? ne(ContractNetPrices.uuid, ignoreUuid) : undefined,
+      ),
+    )
+    .limit(1);
+
+  return duplicate
+    ? "This contract already prices that product at that quantity."
+    : null;
+};
+
+export const createNetPrice = async (
+  input: NetPriceInput,
+): Promise<NetPriceActionResult> => {
+  const uuid = generateUuid();
+  try {
+    const problem = await netPriceProblem(input);
+    if (problem) {
+      return { error: problem };
+    }
+
+    await db.insert(ContractNetPrices).values({
+      uuid,
+      contractUuid: input.contractUuid,
+      productUuid: input.productUuid,
+      netPrice: moneyString(Number(input.netPrice)),
+      netPriceUnit: input.netPriceUnit,
+      discountPercent: await discountAgainstBasePrice(
+        input.productUuid,
+        Number(input.netPrice),
+      ),
+      fromQty: Number(input.fromQty).toFixed(3),
+      fromQtyUnit: input.fromQtyUnit,
+      validFrom: input.validFrom,
+      validUntil: input.validUntil,
+    });
+  } catch (error) {
+    return { error: describeError(error, "Failed to save the net price") };
+  }
+
+  revalidatePath("/net-prices");
+  redirect(`/net-prices/${uuid}`);
+};
+
+export const updateNetPrice = async (
+  uuid: string,
+  input: NetPriceInput,
+): Promise<NetPriceActionResult> => {
+  try {
+    const problem = await netPriceProblem(input, uuid);
+    if (problem) {
+      return { error: problem };
+    }
+
+    await db
+      .update(ContractNetPrices)
+      .set({
+        contractUuid: input.contractUuid,
+        productUuid: input.productUuid,
+        netPrice: moneyString(Number(input.netPrice)),
+        netPriceUnit: input.netPriceUnit,
+        discountPercent: await discountAgainstBasePrice(
+          input.productUuid,
+          Number(input.netPrice),
+        ),
+        fromQty: Number(input.fromQty).toFixed(3),
+        fromQtyUnit: input.fromQtyUnit,
+        validFrom: input.validFrom,
+        validUntil: input.validUntil,
+      })
+      .where(eq(ContractNetPrices.uuid, uuid));
+  } catch (error) {
+    return { error: describeError(error, "Failed to save the net price") };
+  }
+
+  revalidatePath("/net-prices");
+  revalidatePath(`/net-prices/${uuid}`);
+  redirect(`/net-prices/${uuid}`);
+};
+
+export const deleteNetPrice = async (
+  uuid: string,
+): Promise<NetPriceActionResult> => {
+  try {
+    await db
+      .delete(ContractNetPrices)
+      .where(eq(ContractNetPrices.uuid, uuid));
+  } catch (error) {
+    return { error: describeError(error, "Failed to delete the net price") };
+  }
+
+  revalidatePath("/net-prices");
+  redirect("/net-prices");
 };

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { NetPriceRow } from "@/app/(dashboard)/net-prices/actions";
+import { NetPriceActions } from "@/components/net-prices/net-price-actions";
 import { DetailField } from "@/components/ui/detail-field";
 import {
   formatDateColumn,
@@ -33,8 +34,8 @@ export const NetPriceDetailView = ({ netPrice }: Props) => (
           label="Contract description"
           value={netPrice.contractDescription}
         />
-        <DetailField label="Customer" value={netPrice.companyName} />
-        <DetailField label="Customer code" value={netPrice.companyCode} />
+        <DetailField label="Company" value={netPrice.companyName} />
+        <DetailField label="Company code" value={netPrice.companyCode} />
       </div>
     </section>
 
@@ -117,6 +118,10 @@ export const NetPriceDetailView = ({ netPrice }: Props) => (
           value={formatDateColumn(netPrice.validFrom)}
         />
         <DetailField
+          label="Valid u/i"
+          value={formatDateColumn(netPrice.validUntil)}
+        />
+        <DetailField
           label="Created"
           value={formatDateValue(netPrice.createdAt)}
         />
@@ -126,5 +131,7 @@ export const NetPriceDetailView = ({ netPrice }: Props) => (
         />
       </div>
     </section>
+
+    <NetPriceActions netPriceUuid={netPrice.uuid} />
   </div>
 );

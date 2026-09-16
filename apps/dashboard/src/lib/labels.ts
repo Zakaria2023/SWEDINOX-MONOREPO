@@ -118,6 +118,7 @@ import {
   OrderWeightType,
   PaymentMethod,
   PurchaseCompanyType,
+  NetPriceSide,
   PurchaseInvoiceStatus,
   PurchaseQuoteExpirationReason,
   PurchaseQuoteStatus,
@@ -1762,6 +1763,11 @@ export const PACKAGING_TYPE_LABELS: Record<PackagingType, string> = {
   coil: "Coil",
   bundles: "Bundle(s)",
   colli: "Colli",
+};
+
+export const NET_PRICE_SIDE_LABELS: Record<NetPriceSide, string> = {
+  purchase: "Purchase (supplier)",
+  sales: "Sales (customer)",
 };
 
 export const PURCHASE_INVOICE_STATUS_LABELS: Record<
