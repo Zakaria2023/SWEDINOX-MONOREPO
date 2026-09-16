@@ -7402,6 +7402,82 @@ export const roundToOrderQty = (
 };
 
 /**
+ * A supplier's delivery time as calendar days, whatever unit it was agreed in.
+ *
+ * Everything the reorder policy does is struck in days, because the demand it
+ * covers accrues every day — including the ones nobody works. So working days
+ * are stretched back onto the calendar at five to the week rather than counted
+ * as they stand: a ten-working-day lead time is a fortnight of consumption, not
+ * ten days of it.
+ */
+export const deliveryTimeInDays = (
+  value: number | null | undefined,
+  unit: DeliveryTimeUnit | null | undefined,
+): number => {
+  const amount = Number(value ?? 0);
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return 0;
+  }
+  switch (unit) {
+    case "months":
+      return Math.round(amount * 30);
+    case "weeks":
+      return amount * 7;
+    case "working_days":
+      return Math.round((amount * 7) / 5);
+    default:
+      return amount;
+  }
+};
+
+/**
+ * Working days from today up to a date, counting Monday to Friday and excluding
+ * today itself — "how many more working days have I got before this lands".
+ *
+ * A date that has already passed answers 0 rather than a negative: the receipt
+ * is overdue, and no amount of counting backwards makes it less so.
+ */
+export const workingDaysUntil = (
+  date: string | Date | null | undefined,
+  from: Date = new Date(),
+): number | null => {
+  if (!date) {
+    return null;
+  }
+  const target = date instanceof Date ? new Date(date) : new Date(`${date}`);
+  if (Number.isNaN(target.getTime())) {
+    return null;
+  }
+
+  // Whole days since the epoch, so the count is arithmetic rather than a walk
+  // through a calendar: a date a decade out must not cost ten thousand steps.
+  // Both ends are taken at midnight local time, because a receipt due tomorrow
+  // is due tomorrow whatever o'clock it is now.
+  const dayNumber = (value: Date): number =>
+    Math.floor(
+      Date.UTC(value.getFullYear(), value.getMonth(), value.getDate()) /
+        86_400_000,
+    );
+
+  const start = dayNumber(from);
+  const span = dayNumber(target) - start;
+  if (span <= 0) {
+    return 0;
+  }
+
+  // Every whole week contributes its five, and only the days that do not make
+  // up a week have to be looked at one by one.
+  const wholeWeeks = Math.floor(span / 7);
+  const remainder = Array.from(
+    { length: span % 7 },
+    // The epoch fell on a Thursday, so day n is weekday (n + 4) mod 7.
+    (_, offset) => (start + wholeWeeks * 7 + offset + 1 + 4) % 7,
+  ).filter((weekday) => weekday !== 0 && weekday !== 6).length;
+
+  return wholeWeeks * 5 + remainder;
+};
+
+/**
  * One revenue-bearing block of a quote's summary: what it brings in, what it
  * makes against actual cost, and what it makes against today's replacement
  * price. The two profit figures diverge whenever the market has moved since the
