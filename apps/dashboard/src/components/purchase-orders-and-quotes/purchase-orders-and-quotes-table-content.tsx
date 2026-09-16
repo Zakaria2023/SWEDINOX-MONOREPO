@@ -259,6 +259,7 @@ export const PurchaseOrdersAndQuotesTable = ({ page, filters }: Props) => {
       case "affiliateCompany":
         return <TableCell key={key}>{row.affiliateCompany ?? "—"}</TableCell>;
       case "classificationCode":
+      case "classification":
         return (
           <TableCell key={key}>{row.classificationCode ?? "—"}</TableCell>
         );

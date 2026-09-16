@@ -51,6 +51,7 @@ export type PurchaseOrderQuoteColumnKey =
   | "validUntil"
   | "affiliateCompany"
   | "classificationCode"
+  | "classification"
   | "reference"
   | "ourReference";
 
@@ -227,6 +228,17 @@ export const PURCHASE_ORDER_QUOTE_COLUMNS: Array<
   },
   {
     key: "classificationCode",
+    label: "Classification code",
+    defaultVisible: false,
+    value: (row) => textCell(row.classificationCode),
+  },
+  {
+    // The reference carries the code and its description as two columns, the
+    // same pair as "Payment terms code" and "Payment terms" on Purchase
+    // invoices. Nobody has captured the list of codes, so the description
+    // falls back to the code itself until that list exists — the column is
+    // here, and it stops being a repetition the moment the lookup lands.
+    key: "classification",
     label: "Classification",
     defaultVisible: false,
     value: (row) => textCell(row.classificationCode),

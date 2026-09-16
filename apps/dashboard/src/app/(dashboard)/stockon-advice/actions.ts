@@ -96,8 +96,8 @@ export type StockOnAdviceRow = {
   // ── What is still coming, in the unit the product is bought by ───────────
   /** "To be received short term (Pur.U.)" — free of what is already promised. */
   toBeReceivedShortTerm: number | null;
-  /** "To be received long term (Pur.U.)" — everything outstanding. */
-  toBeReceivedLongTerm: number | null;
+  /** "To be received long term (Pur.U.)" — unused by this business; see below. */
+  toBeReceivedLongTerm: number;
 
   // ── The decision, struck in purchase units ───────────────────────────────
   /** The free position the order level is compared against. */
@@ -492,26 +492,20 @@ const stockOnAdviceRows = async (): Promise<StockOnAdviceRow[]> => {
     ]),
   );
 
-  // Still coming, on the two horizons the grid shows side by side.
+  // Still coming. Short term is the part of the open order book that will
+  // actually reach free stock — the reserved portion of a line is already
+  // promised to a sales order and will be picked the day it lands, so counting
+  // it would show cover that nobody can sell. That is the reading Order
+  // advice's "to be received short term" column was proved on.
   //
-  // Long term is everything outstanding on an open order. Short term is the
-  // part of it that will actually reach free stock — the reserved portion of a
-  // line is already promised to a sales order and will be picked the day it
-  // lands, so counting it would show cover that nobody can sell. That is the
-  // same reading Order advice's single "to be received" column was proved on.
+  // Long term is not the rest of the order book. The same pair of columns on
+  // Order advice reads zero on all 5,535 rows of the reference's export while
+  // short term is filled, so long term is a different kind of expectation —
+  // capacity booked at a mill, a call-off not yet drawn — that this business
+  // does not use. It reads zero here for the same reason.
   const onOrderRows = await db
     .select({
       productUuid: PurchaseOrderItems.productUuid,
-      longTermQty: sql<string>`COALESCE(SUM(
-        GREATEST(${PurchaseOrderItems.quantity} - COALESCE(${PurchaseOrderItems.qtyReceived}, 0), 0)
-      ), 0)`,
-      longTermKg: sql<string>`COALESCE(SUM(
-        CASE
-          WHEN ${PurchaseOrderItems.quantity} > 0
-          THEN ${PurchaseOrderItems.kgPurchased} * (GREATEST(${PurchaseOrderItems.quantity} - COALESCE(${PurchaseOrderItems.qtyReceived}, 0), 0) / ${PurchaseOrderItems.quantity})
-          ELSE 0
-        END
-      ), 0)`,
       shortTermQty: sql<string>`COALESCE(SUM(
         GREATEST(
           ${PurchaseOrderItems.quantity}
@@ -545,8 +539,6 @@ const stockOnAdviceRows = async (): Promise<StockOnAdviceRow[]> => {
     onOrderRows.map((row) => [
       row.productUuid,
       {
-        longTermQty: Number(row.longTermQty),
-        longTermKg: Number(row.longTermKg),
         shortTermQty: Number(row.shortTermQty),
         shortTermKg: Number(row.shortTermKg),
       },
@@ -681,7 +673,6 @@ const stockOnAdviceRows = async (): Promise<StockOnAdviceRow[]> => {
 
     const onOrder = onOrderByProduct.get(row.productUuid);
     const toBeReceivedShortTermKg = onOrder?.shortTermKg ?? 0;
-    const toBeReceivedLongTermKg = onOrder?.longTermKg ?? 0;
 
     // A purchase order line is counted in the unit the product is bought by, so
     // its own count leads and the weight is only converted when the product is
@@ -694,10 +685,6 @@ const stockOnAdviceRows = async (): Promise<StockOnAdviceRow[]> => {
     const toBeReceivedShortTerm = inPurchaseUnit(
       onOrder?.shortTermQty ?? 0,
       toBeReceivedShortTermKg,
-    );
-    const toBeReceivedLongTerm = inPurchaseUnit(
-      onOrder?.longTermQty ?? 0,
-      toBeReceivedLongTermKg,
     );
 
     // "Techn. Stk. + To receive" is headed in stock units like the columns it
@@ -871,7 +858,7 @@ const stockOnAdviceRows = async (): Promise<StockOnAdviceRow[]> => {
       technicalPlusToReceive,
 
       toBeReceivedShortTerm,
-      toBeReceivedLongTerm,
+      toBeReceivedLongTerm: 0,
 
       economicStock,
       orderLevel,

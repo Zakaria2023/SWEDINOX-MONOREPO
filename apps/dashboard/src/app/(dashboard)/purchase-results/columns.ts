@@ -13,7 +13,10 @@ export type PurchaseResultColumnKey =
   | "year"
   | "month"
   | "receiptDate"
-  | "purchaseValue";
+  | "purchaseValue"
+  | "replacementValue"
+  | "purchaseMinusReplacement"
+  | "purchaseMinusReplacementPercent";
 
 export const PURCHASE_RESULT_COLUMNS: Array<
   ExportColumn<PurchaseResultRow, PurchaseResultColumnKey>
@@ -65,5 +68,23 @@ export const PURCHASE_RESULT_COLUMNS: Array<
     label: "Purchase value",
     defaultVisible: true,
     value: (row) => numberCell(row.purchaseValue),
+  },
+  {
+    key: "replacementValue",
+    label: "Replacement value",
+    defaultVisible: false,
+    value: (row) => numberCell(row.replacementValue),
+  },
+  {
+    key: "purchaseMinusReplacement",
+    label: "Purchase -/- replacement value (€)",
+    defaultVisible: false,
+    value: (row) => numberCell(row.purchaseMinusReplacement),
+  },
+  {
+    key: "purchaseMinusReplacementPercent",
+    label: "Purchase -/- replacement value (%)",
+    defaultVisible: false,
+    value: (row) => numberCell(row.purchaseMinusReplacementPercent),
   },
 ];

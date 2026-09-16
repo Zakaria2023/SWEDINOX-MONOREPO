@@ -1,5 +1,5 @@
 "use server";
-import { describeError } from "@/lib/helpers";
+import { describeError, personInitials } from "@/lib/helpers";
 
 import { db } from "@/db";
 import {
@@ -11,8 +11,12 @@ import {
   SelectPurchaseOrders,
 } from "@/db/schema/purchase-orders";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
+import { CompanyAddresses } from "@/db/schema/company-addresses";
+import { ProductGroups, SelectProductGroups } from "@/db/schema/product-groups";
 import { Products, SelectProducts } from "@/db/schema/products";
+import { RevenueGroups, SelectRevenueGroups } from "@/db/schema/revenue-groups";
 import { getClerkUsersForSelect } from "@/lib/server/clerk";
+import { alias } from "drizzle-orm/mysql-core";
 import {
   and,
   count,
@@ -59,6 +63,34 @@ export type PurchaseLineItem = Omit<SelectPurchaseOrderItems, "amount"> & {
   availableQty: number;
   /** The same, in kilograms. */
   availableKg: number;
+  /** Still owed in pieces, and the reserved share of the line's weight. */
+  qtyStillToReceive: number;
+  reservedKg: number;
+  /** Gross less net, per unit of the price; null with no gross price. */
+  margin: number | null;
+
+  // ── The context the reference prints beside every line ──────────────────
+  /** The supplier's own code, and the country it ships from. */
+  companyCode: SelectCompanies["searchCode1"] | null;
+  country: string | null;
+  /** The buyer's initials, beside the name. */
+  purchaserInitials: string | null;
+  /** What kind of buying this is: materials, processing, customer materials. */
+  orderType: SelectPurchaseOrders["purchaseOrderType"];
+  /** Stock or cross-docked straight through to a customer. */
+  lineType: string;
+  /** The root of the product hierarchy, and the group the product sits in. */
+  mainGroup: SelectProductGroups["name"] | null;
+  subgroup: SelectProductGroups["name"] | null;
+  revenueGroupNumber: SelectRevenueGroups["number"] | null;
+  revenueGroupName: SelectRevenueGroups["name"] | null;
+  /** The two references the order carries, and the order's own deadline. */
+  purchaseReference: SelectPurchaseOrders["reference"] | null;
+  ourReference: SelectPurchaseOrders["ourReference"] | null;
+  deadline: SelectPurchaseOrders["deliveryDate"] | null;
+  /** The construction-products pair: the standard and its declaration. */
+  ceStandard: SelectProducts["ce"] | null;
+  dop: SelectProducts["classificationPerformance"] | null;
 };
 
 export type PurchaseLineDetail = PurchaseLineItem & {
@@ -77,6 +109,13 @@ export type PurchaseLineDetail = PurchaseLineItem & {
 // "Available" on a purchase line means still inbound and unpromised — a
 // different thing from a warehouse lot's available, which is quantity less
 // reserved. Both exist; conflating them double-counts.
+// "Main group" is the root of the product hierarchy and "Subgroup" the group
+// the product sits in directly — the same two levels Sold products shows side
+// by side, and the same three-hop climb Order advice uses to find the root.
+const Parent = alias(ProductGroups, "group_parent");
+const Grandparent = alias(ProductGroups, "group_grandparent");
+const Root = alias(ProductGroups, "group_root");
+
 const kgActualSql = sql<number>`(
   CASE WHEN COALESCE(${PurchaseOrderItems.qtyPlanned}, 0) > 0
     THEN COALESCE(${PurchaseOrderItems.kgPurchased}, 0)
@@ -126,6 +165,51 @@ const purchaseLineDerived = {
     sql<number>`GREATEST(0, COALESCE(${PurchaseOrderItems.kgPurchased}, 0) - ${kgActualSql} - ${reservedKgSql})`.mapWith(
       Number,
     ),
+  // What the line is still owed, in pieces — the quantity twin of "Kg. still
+  // to be received".
+  qtyStillToReceive: sql<number>`GREATEST(0,
+    COALESCE(${PurchaseOrderItems.quantity}, 0)
+    - COALESCE(${PurchaseOrderItems.qtyReceived}, 0))`.mapWith(Number),
+  reservedKg: sql<number>`${reservedKgSql}`.mapWith(Number),
+  // What the discount off the list price is worth, per unit of the price. The
+  // reference calls this the margin; it is the gap between what the supplier
+  // asks and what we agreed. Without a gross price there is no gap to measure —
+  // subtracting the net price from nothing reads as a loss of the whole price.
+  margin: sql<number | null>`CASE
+    WHEN COALESCE(${PurchaseOrderItems.grossPrice}, 0) = 0 THEN NULL
+    ELSE ${PurchaseOrderItems.grossPrice} - COALESCE(${PurchaseOrderItems.netPrice}, 0)
+  END`.mapWith((value) => (value === null ? null : Number(value))),
+};
+
+// The context columns the reference prints beside a line: whose order it is on,
+// what kind of buying it is, where the product sits in the hierarchy, and the
+// references and standards that travel with it. Declared once so the overview
+// and the detail read the same fields from the same joins.
+const purchaseLineContext = {
+  companyCode: Companies.searchCode1,
+  // The supplier's country lives on its address rather than on the company, so
+  // it is read from the first address the supplier has.
+  country: sql<string | null>`(
+    SELECT ${CompanyAddresses.country} FROM ${CompanyAddresses}
+    WHERE ${CompanyAddresses.companyUuid} = ${Companies.uuid}
+      AND ${CompanyAddresses.country} IS NOT NULL
+    ORDER BY ${CompanyAddresses.id} LIMIT 1
+  )`,
+  orderType: PurchaseOrders.purchaseOrderType,
+  // Cross-docking is agreed on the order: goods that never touch our shelves go
+  // straight through, which is what "CD" means here.
+  lineType: sql<string>`CASE WHEN ${PurchaseOrders.pickupDropoffCdPurchases} = 1 THEN 'CD' ELSE 'Stk' END`,
+  mainGroup: sql<
+    SelectProductGroups["name"] | null
+  >`COALESCE(${Root.name}, ${Grandparent.name}, ${Parent.name}, ${ProductGroups.name})`,
+  subgroup: ProductGroups.name,
+  revenueGroupNumber: RevenueGroups.number,
+  revenueGroupName: RevenueGroups.name,
+  purchaseReference: PurchaseOrders.reference,
+  ourReference: PurchaseOrders.ourReference,
+  deadline: PurchaseOrders.deliveryDate,
+  ceStandard: Products.ce,
+  dop: Products.classificationPerformance,
 };
 
 const PURCHASE_LINE_SEARCH = [
@@ -189,6 +273,8 @@ const purchaseLineRows =
         productName: Products.name,
         // The buyer is recorded on the order header as a Clerk user id.
         orderPurchaserId: PurchaseOrders.purchaser,
+
+        ...purchaseLineContext,
       })
       .from(PurchaseOrderItems)
       .leftJoin(
@@ -197,6 +283,11 @@ const purchaseLineRows =
       )
       .leftJoin(Companies, eq(PurchaseOrders.supplierUuid, Companies.uuid))
       .leftJoin(Products, eq(PurchaseOrderItems.productUuid, Products.uuid))
+      .leftJoin(ProductGroups, eq(Products.productGroupUuid, ProductGroups.uuid))
+      .leftJoin(Parent, eq(ProductGroups.parentUuid, Parent.uuid))
+      .leftJoin(Grandparent, eq(Parent.parentUuid, Grandparent.uuid))
+      .leftJoin(Root, eq(Grandparent.parentUuid, Root.uuid))
+      .leftJoin(RevenueGroups, eq(Products.revenueGroupUuid, RevenueGroups.uuid))
       .where(
         tableWhere({
           query,
@@ -220,14 +311,14 @@ const purchaseLineRows =
     const users = await getClerkUsersForSelect();
     const nameById = new Map(users.map((user) => [user.value, user.label]));
 
-    return rows.map(({ orderPurchaserId, ...row }) => ({
-      ...row,
-      purchaser:
+    return rows.map(({ orderPurchaserId, ...row }) => {
+      const purchaser =
         row.purchaser ??
         (orderPurchaserId
           ? (nameById.get(orderPurchaserId) ?? orderPurchaserId)
-          : null),
-    }));
+          : null);
+      return { ...row, purchaser, purchaserInitials: personInitials(purchaser) };
+    });
   };
 
 /** Every purchase line the current view matches, as a workbook. */
@@ -299,6 +390,7 @@ export const getPurchaseLineDetail = async (
         productCode: Products.productCode,
         productName: Products.name,
         orderPurchaserId: PurchaseOrders.purchaser,
+        ...purchaseLineContext,
       })
       .from(PurchaseOrderItems)
       .leftJoin(
@@ -307,6 +399,11 @@ export const getPurchaseLineDetail = async (
       )
       .leftJoin(Companies, eq(PurchaseOrders.supplierUuid, Companies.uuid))
       .leftJoin(Products, eq(PurchaseOrderItems.productUuid, Products.uuid))
+      .leftJoin(ProductGroups, eq(Products.productGroupUuid, ProductGroups.uuid))
+      .leftJoin(Parent, eq(ProductGroups.parentUuid, Parent.uuid))
+      .leftJoin(Grandparent, eq(Parent.parentUuid, Grandparent.uuid))
+      .leftJoin(Root, eq(Grandparent.parentUuid, Root.uuid))
+      .leftJoin(RevenueGroups, eq(Products.revenueGroupUuid, RevenueGroups.uuid))
       .where(eq(PurchaseOrderItems.uuid, uuid))
       .limit(1);
 
@@ -319,14 +416,13 @@ export const getPurchaseLineDetail = async (
 
     const { orderPurchaserId, ...line } = row;
 
-    return {
-      ...line,
-      purchaser:
-        line.purchaser ??
-        (orderPurchaserId
-          ? (nameById.get(orderPurchaserId) ?? orderPurchaserId)
-          : null),
-    };
+    const purchaser =
+      line.purchaser ??
+      (orderPurchaserId
+        ? (nameById.get(orderPurchaserId) ?? orderPurchaserId)
+        : null);
+
+    return { ...line, purchaser, purchaserInitials: personInitials(purchaser) };
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch purchase line"));
   }

@@ -5,24 +5,35 @@ import {
   describeError,
   roundAdviceWeight,
   roundToOrderQty,
+  todayDateString,
 } from "@/lib/helpers";
 import { db } from "@/db";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { InvoiceItems } from "@/db/schema/invoice-items";
 import { Invoices } from "@/db/schema/invoices";
-import { ProductGroupSuppliers } from "@/db/schema/product-group-suppliers";
+import { ProductFspHistory } from "@/db/schema/product-details";
+import {
+  ProductGroupSuppliers,
+  SelectProductGroupSuppliers,
+} from "@/db/schema/product-group-suppliers";
 import { ProductGroups, SelectProductGroups } from "@/db/schema/product-groups";
 import { Products, SelectProducts } from "@/db/schema/products";
 import { PurchaseOrderItems } from "@/db/schema/purchase-order-items";
 import { PurchaseOrders } from "@/db/schema/purchase-orders";
+import { RevenueGroups, SelectRevenueGroups } from "@/db/schema/revenue-groups";
 import { Stock } from "@/db/schema/stock";
-import { and, eq, inArray, isNull, sql } from "drizzle-orm";
-import { alias } from "drizzle-orm/mysql-core";
+import { and, desc, eq, gte, inArray, isNull, lte, or, sql } from "drizzle-orm";
+import { alias, AnyMySqlColumn } from "drizzle-orm/mysql-core";
 
 /**
  * One line of the order advice, column for column as the reference system lists
  * it — the names here are its own column headings, taken from their tooltips
  * where the heading itself is truncated on screen.
+ *
+ * The first eighteen are the saved view the buyers work from. The rest are the
+ * screen's whole palette, which the reference reveals with its view cleared:
+ * the same query with nothing hidden. They are carried here so every one of
+ * them can be switched on, as it can there.
  *
  * The units are mixed deliberately and it matters which is which. The demand
  * and the free position are kilos, because that is what the shop weighs and
@@ -32,6 +43,8 @@ import { alias } from "drizzle-orm/mysql-core";
  */
 export type OrderAdviceRow = {
   productUuid: SelectProducts["uuid"];
+
+  // ── The saved view, in its own order ───────────────────────────────────
   /** "Product code" */
   productCode: SelectProducts["productCode"];
   /** "Description" */
@@ -68,8 +81,100 @@ export type OrderAdviceRow = {
   adviceQtyPurchaseUnit: number | null;
   /** "OrderQty (Pur.U.)" */
   orderQtyPurchaseUnit: number | null;
-  /** The unit the two figures above are counted in, for the column heading. */
+  /** The unit the purchase-unit figures are counted in. */
   purchaseUnit: SelectProducts["purchasingUnit"];
+
+  // ── Identity and classification ────────────────────────────────────────
+  /** "Product group" — the group the product sits in directly. */
+  productGroup: SelectProductGroups["name"] | null;
+  /** "Quality" — the material grade. */
+  quality: SelectProducts["featuresQuality"];
+  revenueGroupNumber: SelectRevenueGroups["number"] | null;
+  revenueGroupName: SelectRevenueGroups["name"] | null;
+  /** "PAC-Code" */
+  pacCode: SelectProducts["pacClassification"];
+  orderAdviceCode: SelectProducts["orderAdviceCode"];
+  orderAdviceNotes: SelectProducts["orderingAdviceNotes"];
+
+  // ── Conversion factors and units ───────────────────────────────────────
+  /** "Theoretical Weight/Pcs." */
+  theoreticalWeight: number | null;
+  /** "U(replacement price)" */
+  replacementPriceUnit: string | null;
+
+  // ── Supplier terms ─────────────────────────────────────────────────────
+  supplierCode: SelectCompanies["searchCode1"] | null;
+  /** "Product no. sup." — the supplier's own article number for our product. */
+  supplierProductNo: SelectProductGroupSuppliers["externalProductCode"] | null;
+  /** "Deliver time" and "U.(delivery time)" */
+  deliveryTime: number;
+  deliveryTimeUnit: SelectProductGroupSuppliers["deliveryTimeUnit"] | null;
+  /** "Min. OrderQty." and "U.(Moq.)" */
+  minOrderQty: number;
+  minOrderQtyUnit: string | null;
+  /** "Order series" and "U(order series)" */
+  orderSeries: number;
+  orderSeriesUnit: string | null;
+
+  // ── The stocking policy, exposed ───────────────────────────────────────
+  /** "Min. Stock (Pur.U.)" and "Max. Stock (Pur.U.)" */
+  minStock: number | null;
+  maxStock: number | null;
+  /** "Min. Stk. Method (Pur.U.)" — the level with its method named, as there. */
+  minStockMethod: string | null;
+  minStockFixedValue: number;
+  minStockFactor: number;
+  maxStockMethod: string | null;
+  maxStockFixedValue: number;
+  maxStockFactor: number;
+
+  // ── The position, in the purchase unit ─────────────────────────────────
+  /** "Available (Pur.U.)" */
+  availablePurchaseUnit: number | null;
+  /** "Not reserved call-off (Pur.U.)" */
+  notReservedCallOff: number;
+  /** "Not reserved other (Pur.U.)" */
+  notReservedOther: number | null;
+  /** "Not covered other (Pur.U.)" */
+  notCoveredOther: number | null;
+  /** "Blocked (Pur.U.)" */
+  blockedPurchaseUnit: number | null;
+  /** "Econ. stock (Pur.U.)" */
+  economicStockPurchaseUnit: number | null;
+  /** "Consign." and "Consign.KG" */
+  consignment: number;
+  consignmentKg: number;
+
+  // ── Incoming ───────────────────────────────────────────────────────────
+  /** "To be received short term (Pur.U.)" */
+  toBeReceivedShortTermPurchaseUnit: number | null;
+  /** "To be received long term (Kg)" and "(Pur.U.)" */
+  toBeReceivedLongTermKg: number;
+  toBeReceivedLongTermPurchaseUnit: number;
+
+  // ── Demand, in both units ──────────────────────────────────────────────
+  consumptionPreviousMonth: number | null;
+  consumptionLast3Months: number | null;
+  consumptionLast3MonthsKg: number;
+  consumptionLastYear: number | null;
+  consumptionLastYearKg: number;
+  avgMonthlyConsumptionLast3Months: number | null;
+  avgMonthlyConsumptionPreviousYear: number | null;
+  avgMonthlyConsumptionLast2Years: number | null;
+  avgMonthlyConsumptionLast2YearsKg: number;
+  avgMonthlyConsumptionLast3Years: number | null;
+  /** "Avg. Monthly consumption 3 w.r.t. 1 year (%)" — a ratio, despite the %. */
+  consumptionTrend: number | null;
+
+  // ── Advice and money ───────────────────────────────────────────────────
+  /** "Advice Qty. rounded" */
+  adviceQtyRounded: number | null;
+  /** "Replacement price" */
+  replacementPrice: number | null;
+  /** "Amount" — the advice at the replacement price. */
+  amount: number | null;
+  /** "Turnover rate" */
+  turnoverRate: number | null;
 };
 
 // Order advice: for every stock product, compare its economic stock — what is
@@ -110,7 +215,13 @@ export const getOrderAdvice = async (): Promise<OrderAdviceRow[]> => {
         theoreticalWeight: Products.theoreticalWeight,
         weightPerM1: Products.weightPerM1,
         productOrderSeries: Products.orderSeries,
+        productOrderSeriesUnit: Products.orderSeriesUnit,
         productMinOrderQty: Products.minOrderQty,
+        productMinOrderQtyUnit: Products.minOrderQtyUnit,
+        quality: Products.featuresQuality,
+        pacCode: Products.pacClassification,
+        orderAdviceCode: Products.orderAdviceCode,
+        orderAdviceNotes: Products.orderingAdviceNotes,
         // The root of the hierarchy, not the product's own group. A product
         // sitting directly under "Aluminum" shows "Aluminum" here; one under
         // "Aluminium coils A5754" shows "Aluminum" too, because that is the
@@ -119,6 +230,9 @@ export const getOrderAdvice = async (): Promise<OrderAdviceRow[]> => {
         mainGroup: sql<
           string | null
         >`COALESCE(${Root.name}, ${Grandparent.name}, ${Parent.name}, ${ProductGroups.name})`,
+        productGroup: ProductGroups.name,
+        revenueGroupNumber: RevenueGroups.number,
+        revenueGroupName: RevenueGroups.name,
         minStockMode: ProductGroups.minStockMode,
         minStockMultiplier: ProductGroups.minStockMultiplier,
         minStockFixedValue: ProductGroups.minStockFixedValue,
@@ -128,8 +242,14 @@ export const getOrderAdvice = async (): Promise<OrderAdviceRow[]> => {
         groupOrderSeries: ProductGroups.stockOpOrderSeries,
         groupMinOrderQty: ProductGroups.minOrderQty,
         supplierOrderSeries: ProductGroupSuppliers.orderSeries,
+        supplierOrderSeriesUnit: ProductGroupSuppliers.orderSeriesUnit,
         supplierMoq: ProductGroupSuppliers.moq,
+        supplierMoqUnit: ProductGroupSuppliers.moqUnit,
+        supplierDeliveryTime: ProductGroupSuppliers.deliveryTime,
+        supplierDeliveryTimeUnit: ProductGroupSuppliers.deliveryTimeUnit,
+        supplierProductNo: ProductGroupSuppliers.externalProductCode,
         supplierName: Companies.companyName,
+        supplierCode: Companies.searchCode1,
       })
       .from(Products)
       .leftJoin(
@@ -139,6 +259,10 @@ export const getOrderAdvice = async (): Promise<OrderAdviceRow[]> => {
       .leftJoin(Parent, eq(ProductGroups.parentUuid, Parent.uuid))
       .leftJoin(Grandparent, eq(Parent.parentUuid, Grandparent.uuid))
       .leftJoin(Root, eq(Grandparent.parentUuid, Root.uuid))
+      .leftJoin(
+        RevenueGroups,
+        eq(Products.revenueGroupUuid, RevenueGroups.uuid),
+      )
       .leftJoin(
         ProductGroupSuppliers,
         and(
@@ -216,6 +340,33 @@ export const getOrderAdvice = async (): Promise<OrderAdviceRow[]> => {
       ]),
     );
 
+    // The blocked lots the position above leaves out. The reference counts
+    // them in a column of their own rather than silently dropping them, so a
+    // buyer can see stock that exists but cannot be sold.
+    const blockedRows = await db
+      .select({
+        productUuid: Stock.productUuid,
+        qty: sql<string>`COALESCE(SUM(${Stock.quantity}), 0)`,
+        kg: sql<string>`COALESCE(SUM(${Stock.quantityKg}), 0)`,
+      })
+      .from(Stock)
+      .where(
+        and(
+          inArray(Stock.productUuid, productUuids),
+          eq(Stock.status, "pending"),
+          eq(Stock.blocked, true),
+          isNull(Stock.ownerCompanyUuid),
+        ),
+      )
+      .groupBy(Stock.productUuid);
+
+    const blockedByProduct = new Map(
+      blockedRows.map((row) => [
+        row.productUuid,
+        { qty: Number(row.qty), kg: Number(row.kg) },
+      ]),
+    );
+
     // Still coming, and not already spoken for. "Short term" is not a date
     // horizon: the reference system leaves out the reserved part of an open
     // line, because that quantity is already promised to an order and will
@@ -264,16 +415,31 @@ export const getOrderAdvice = async (): Promise<OrderAdviceRow[]> => {
       ]),
     );
 
-    // Demand, in kilos, over the three windows the grid shows side by side:
-    // the trailing year it averages, the month just gone, and the trailing
-    // three years that smooth a seasonal product out.
+    // Demand, counted and weighed, over every window the palette shows.
+    //
+    // "Last year" is the trailing twelve months and "previous year" the twelve
+    // before that — two different windows, which is why the reference carries
+    // both. Proved on `601003021`: a previous-year average of 26 and a last
+    // year of 11 give 312 + 11 = 323 against a two-year total of 13,5 × 24 =
+    // 324. The two- and three-year averages divide by 24 and 36 flat.
+    const windowSql = (months: number, column: AnyMySqlColumn) =>
+      sql<string>`COALESCE(SUM(CASE WHEN ${Invoices.invoiceDate} >= DATE_SUB(CURDATE(), INTERVAL ${sql.raw(String(months))} MONTH) THEN ${column} ELSE 0 END), 0)`;
+
     const consumptionRows = await db
       .select({
         productUuid: InvoiceItems.productUuid,
-        lastYearQty: sql<string>`COALESCE(SUM(CASE WHEN ${Invoices.invoiceDate} >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH) THEN ${InvoiceItems.quantity} ELSE 0 END), 0)`,
-        lastYearKg: sql<string>`COALESCE(SUM(CASE WHEN ${Invoices.invoiceDate} >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH) THEN ${InvoiceItems.weightKg} ELSE 0 END), 0)`,
+        lastYearQty: windowSql(12, InvoiceItems.quantity),
+        lastYearKg: windowSql(12, InvoiceItems.weightKg),
+        last3MonthsQty: windowSql(3, InvoiceItems.quantity),
+        last3MonthsKg: windowSql(3, InvoiceItems.weightKg),
+        last2YearsQty: windowSql(24, InvoiceItems.quantity),
+        last2YearsKg: windowSql(24, InvoiceItems.weightKg),
+        last3YearsQty: windowSql(36, InvoiceItems.quantity),
+        last3YearsKg: windowSql(36, InvoiceItems.weightKg),
+        previousMonthQty: sql<string>`COALESCE(SUM(CASE WHEN ${Invoices.invoiceDate} >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 MONTH), '%Y-%m-01') AND ${Invoices.invoiceDate} < DATE_FORMAT(CURDATE(), '%Y-%m-01') THEN ${InvoiceItems.quantity} ELSE 0 END), 0)`,
         previousMonthKg: sql<string>`COALESCE(SUM(CASE WHEN ${Invoices.invoiceDate} >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 MONTH), '%Y-%m-01') AND ${Invoices.invoiceDate} < DATE_FORMAT(CURDATE(), '%Y-%m-01') THEN ${InvoiceItems.weightKg} ELSE 0 END), 0)`,
-        last3YearsKg: sql<string>`COALESCE(SUM(CASE WHEN ${Invoices.invoiceDate} >= DATE_SUB(CURDATE(), INTERVAL 36 MONTH) THEN ${InvoiceItems.weightKg} ELSE 0 END), 0)`,
+        previousYearQty: sql<string>`COALESCE(SUM(CASE WHEN ${Invoices.invoiceDate} >= DATE_SUB(CURDATE(), INTERVAL 24 MONTH) AND ${Invoices.invoiceDate} < DATE_SUB(CURDATE(), INTERVAL 12 MONTH) THEN ${InvoiceItems.quantity} ELSE 0 END), 0)`,
+        previousYearKg: sql<string>`COALESCE(SUM(CASE WHEN ${Invoices.invoiceDate} >= DATE_SUB(CURDATE(), INTERVAL 24 MONTH) AND ${Invoices.invoiceDate} < DATE_SUB(CURDATE(), INTERVAL 12 MONTH) THEN ${InvoiceItems.weightKg} ELSE 0 END), 0)`,
       })
       .from(InvoiceItems)
       .innerJoin(Invoices, eq(InvoiceItems.invoiceUuid, Invoices.uuid))
@@ -286,11 +452,57 @@ export const getOrderAdvice = async (): Promise<OrderAdviceRow[]> => {
         {
           lastYearQty: Number(row.lastYearQty),
           lastYearKg: Number(row.lastYearKg),
-          previousMonthKg: Number(row.previousMonthKg),
+          last3MonthsQty: Number(row.last3MonthsQty),
+          last3MonthsKg: Number(row.last3MonthsKg),
+          last2YearsQty: Number(row.last2YearsQty),
+          last2YearsKg: Number(row.last2YearsKg),
+          last3YearsQty: Number(row.last3YearsQty),
           last3YearsKg: Number(row.last3YearsKg),
+          previousMonthQty: Number(row.previousMonthQty),
+          previousMonthKg: Number(row.previousMonthKg),
+          previousYearQty: Number(row.previousYearQty),
+          previousYearKg: Number(row.previousYearKg),
         },
       ]),
     );
+
+    // Today's replacement price, from the dated price history: the row whose
+    // period covers today. The advice is a decision taken now, so it is priced
+    // at what the goods cost now — unlike Purchase results, which prices a
+    // past receipt at the price of its own day.
+    const today = todayDateString();
+    const priceRows = await db
+      .select({
+        productUuid: ProductFspHistory.productUuid,
+        replacementPrice: ProductFspHistory.replacementPrice,
+        priceUnit: ProductFspHistory.priceUnit,
+        startDate: ProductFspHistory.startDate,
+      })
+      .from(ProductFspHistory)
+      .where(
+        and(
+          inArray(ProductFspHistory.productUuid, productUuids),
+          lte(ProductFspHistory.startDate, today),
+          or(
+            isNull(ProductFspHistory.endDate),
+            gte(ProductFspHistory.endDate, today),
+          ),
+        ),
+      )
+      .orderBy(desc(ProductFspHistory.startDate));
+
+    const priceByProduct = new Map<
+      string,
+      { price: number; unit: string | null }
+    >();
+    for (const row of priceRows) {
+      if (!priceByProduct.has(row.productUuid)) {
+        priceByProduct.set(row.productUuid, {
+          price: Number(row.replacementPrice ?? 0),
+          unit: row.priceUnit,
+        });
+      }
+    }
 
     return base.map((row) => {
       const stock = stockByProduct.get(row.productUuid);
@@ -339,6 +551,19 @@ export const getOrderAdvice = async (): Promise<OrderAdviceRow[]> => {
         economicStockCount,
         economicStockKg,
       );
+      const availablePurchaseUnit =
+        stockPurchaseUnit === null || reservedPurchaseUnit === null
+          ? null
+          : stockPurchaseUnit - reservedPurchaseUnit;
+      const toBeReceivedShortTermPurchaseUnit = inPurchaseUnit(
+        onOrder?.qty ?? 0,
+        toBeReceivedShortTermKg,
+      );
+      const blocked = blockedByProduct.get(row.productUuid);
+      const blockedPurchaseUnit = inPurchaseUnit(
+        blocked?.qty ?? 0,
+        blocked?.kg ?? 0,
+      );
 
       const consumption = consumptionByProduct.get(row.productUuid);
       const avgMonthlyConsumptionLastYearKg =
@@ -351,19 +576,26 @@ export const getOrderAdvice = async (): Promise<OrderAdviceRow[]> => {
       // matches the buying unit no conversion is needed — and a weightless
       // product still gets a demand figure, which is what lets the policy work
       // for the two thirds of the catalogue that records no weight per piece.
-      const consumptionLastYearPurchaseUnit =
-        row.purchasingUnit !== null && row.salesUnit === row.purchasingUnit
-          ? (consumption?.lastYearQty ?? 0)
-          : toPurchaseUnit(consumption?.lastYearKg ?? 0);
+      const soldAsBought =
+        row.purchasingUnit !== null && row.salesUnit === row.purchasingUnit;
+      const demandInPurchaseUnit = (count: number, kg: number) =>
+        soldAsBought ? count : toPurchaseUnit(kg);
+
+      const consumptionLastYearPurchaseUnit = demandInPurchaseUnit(
+        consumption?.lastYearQty ?? 0,
+        consumption?.lastYearKg ?? 0,
+      );
       // Rounded to one decimal, which is not cosmetic: the reference system
       // divides by the figure it prints, not by the exact quotient. A product
       // with eleven units sold shows an average of 0,9 and a coverage of
       // 543,3 against an economic stock of 489 — and 489 / 0,9 is 543,3, where
       // 489 / (11/12) would be 533,5.
-      const avgMonthlyConsumptionLastYear =
-        consumptionLastYearPurchaseUnit === null
-          ? null
-          : Math.round((consumptionLastYearPurchaseUnit / 12) * 10) / 10;
+      const oneDecimal = (value: number | null, divisor: number) =>
+        value === null ? null : Math.round((value / divisor) * 10) / 10;
+      const avgMonthlyConsumptionLastYear = oneDecimal(
+        consumptionLastYearPurchaseUnit,
+        12,
+      );
 
       // The monthly average is rounded to a whole purchase unit BEFORE either
       // factor is applied. Proved on the export: an average of 2,3 yields a
@@ -429,6 +661,42 @@ export const getOrderAdvice = async (): Promise<OrderAdviceRow[]> => {
         Number(row.groupMinOrderQty ?? 0) ||
         Number(row.productMinOrderQty ?? 0);
 
+      // The level with its method named, which is how the reference prints the
+      // method column — "2 (Factor x Avg.Mnt.Usg.)" on a row whose minimum is 2.
+      const methodLabel = (
+        level: number | null,
+        mode: SelectProductGroups["minStockMode"],
+      ) =>
+        level === null
+          ? null
+          : `${level} (${mode === "fixed_value" ? "Fixed value" : "Factor x Avg.Mnt.Usg."})`;
+
+      const price = priceByProduct.get(row.productUuid);
+      // The advice weight priced in the replacement price's own unit, the same
+      // tonne-or-kilo split every purchase amount uses.
+      const adviceKg =
+        adviceQtyPurchaseUnit === null || unitsPerKg === null || unitsPerKg <= 0
+          ? null
+          : adviceQtyPurchaseUnit / unitsPerKg;
+      const amount =
+        price === undefined || adviceKg === null
+          ? null
+          : price.price *
+            (convertKgToUnit(
+              adviceKg,
+              price.unit as SelectProducts["purchasingUnit"],
+              weightPerPiece,
+              weightPerM1,
+            ) ?? 0);
+
+      const avgMonthlyConsumptionLast3Years = oneDecimal(
+        demandInPurchaseUnit(
+          consumption?.last3YearsQty ?? 0,
+          consumption?.last3YearsKg ?? 0,
+        ),
+        36,
+      );
+
       return {
         productUuid: row.productUuid,
         productCode: row.productCode,
@@ -444,8 +712,6 @@ export const getOrderAdvice = async (): Promise<OrderAdviceRow[]> => {
         consumptionPreviousMonthKg,
         avgMonthlyConsumptionLast3YearsKg,
         adviceWeightRounded,
-        // Struck against the trailing year's average, which is the figure the
-        // policy itself is built on.
         // Months of cover, struck in purchase units on both sides. A ratio
         // is unit-invariant only while both halves share a unit, and the kilo
         // halves are simply absent for a product that records no weight — so
@@ -469,6 +735,121 @@ export const getOrderAdvice = async (): Promise<OrderAdviceRow[]> => {
             ? null
             : roundToOrderQty(adviceQtyPurchaseUnit, orderSeries, minOrderQty),
         purchaseUnit: row.purchasingUnit,
+
+        productGroup: row.productGroup,
+        quality: row.quality,
+        revenueGroupNumber: row.revenueGroupNumber,
+        revenueGroupName: row.revenueGroupName,
+        pacCode: row.pacCode,
+        orderAdviceCode: row.orderAdviceCode,
+        orderAdviceNotes: row.orderAdviceNotes,
+
+        theoreticalWeight:
+          row.theoreticalWeight === null ? null : Number(row.theoreticalWeight),
+        replacementPriceUnit: price?.unit ?? null,
+
+        supplierCode: row.supplierCode,
+        supplierProductNo: row.supplierProductNo,
+        deliveryTime: Number(row.supplierDeliveryTime ?? 0),
+        deliveryTimeUnit: row.supplierDeliveryTimeUnit,
+        minOrderQty,
+        minOrderQtyUnit: row.supplierMoqUnit ?? row.productMinOrderQtyUnit,
+        orderSeries,
+        orderSeriesUnit:
+          row.supplierOrderSeriesUnit ?? row.productOrderSeriesUnit,
+
+        minStock,
+        maxStock,
+        minStockMethod: methodLabel(minStock, row.minStockMode),
+        minStockFixedValue: minFixed,
+        minStockFactor: minMultiplier,
+        maxStockMethod: methodLabel(maxStock, row.maxStockMode),
+        maxStockFixedValue: maxFixed,
+        maxStockFactor: maxMultiplier,
+
+        availablePurchaseUnit,
+        // Call-off reservations are a separate bucket in the reference, and it
+        // is zero on every one of its 5,535 rows: the business does not reserve
+        // against call-offs. With that bucket empty, all unreserved stock is
+        // "other", and stock not matched to demand is the same figure — which
+        // is exactly what the export shows for "Not covered other".
+        notReservedCallOff: 0,
+        notReservedOther: availablePurchaseUnit,
+        notCoveredOther: availablePurchaseUnit,
+        blockedPurchaseUnit,
+        economicStockPurchaseUnit,
+        // Consignment stock and long-term receipts: never populated across the
+        // reference's whole export. The business uses neither, so they read
+        // zero here as they do there, rather than being left off the screen.
+        consignment: 0,
+        consignmentKg: 0,
+
+        toBeReceivedShortTermPurchaseUnit,
+        toBeReceivedLongTermKg: 0,
+        toBeReceivedLongTermPurchaseUnit: 0,
+
+        consumptionPreviousMonth: demandInPurchaseUnit(
+          consumption?.previousMonthQty ?? 0,
+          consumption?.previousMonthKg ?? 0,
+        ),
+        consumptionLast3Months: demandInPurchaseUnit(
+          consumption?.last3MonthsQty ?? 0,
+          consumption?.last3MonthsKg ?? 0,
+        ),
+        consumptionLast3MonthsKg: consumption?.last3MonthsKg ?? 0,
+        consumptionLastYear: consumptionLastYearPurchaseUnit,
+        consumptionLastYearKg: consumption?.lastYearKg ?? 0,
+        avgMonthlyConsumptionLast3Months: oneDecimal(
+          demandInPurchaseUnit(
+            consumption?.last3MonthsQty ?? 0,
+            consumption?.last3MonthsKg ?? 0,
+          ),
+          3,
+        ),
+        avgMonthlyConsumptionPreviousYear: oneDecimal(
+          demandInPurchaseUnit(
+            consumption?.previousYearQty ?? 0,
+            consumption?.previousYearKg ?? 0,
+          ),
+          12,
+        ),
+        avgMonthlyConsumptionLast2Years: oneDecimal(
+          demandInPurchaseUnit(
+            consumption?.last2YearsQty ?? 0,
+            consumption?.last2YearsKg ?? 0,
+          ),
+          24,
+        ),
+        avgMonthlyConsumptionLast2YearsKg:
+          (consumption?.last2YearsKg ?? 0) / 24,
+        avgMonthlyConsumptionLast3Years,
+        // Three-year average against one-year average, as a plain ratio: the
+        // reference heads it with a % but stores 1,2 ÷ 2,3 = 0,5217 unmultiplied.
+        consumptionTrend:
+          avgMonthlyConsumptionLast3Years !== null &&
+          avgMonthlyConsumptionLastYear !== null &&
+          avgMonthlyConsumptionLastYear > 0
+            ? avgMonthlyConsumptionLast3Years / avgMonthlyConsumptionLastYear
+            : null,
+
+        // No order series or minimum is recorded on any product the reference
+        // advised, so its rounded advice equals the advice; ours rounds up to a
+        // whole purchase unit, which is what "rounded" means for a count.
+        adviceQtyRounded:
+          adviceQtyPurchaseUnit === null
+            ? null
+            : Math.ceil(adviceQtyPurchaseUnit),
+        replacementPrice: price?.price ?? null,
+        amount,
+        // Consumption over the year against the stock on hand. The reference
+        // divides by an average stock it does not export, so this matches it on
+        // nine of eleven rows rather than on all of them.
+        turnoverRate:
+          consumptionLastYearPurchaseUnit !== null &&
+          stockPurchaseUnit !== null &&
+          stockPurchaseUnit > 0
+            ? consumptionLastYearPurchaseUnit / stockPurchaseUnit
+            : null,
       };
     });
   } catch (error) {

@@ -9,6 +9,7 @@ import { ProductGroups, SelectProductGroups } from "@/db/schema/product-groups";
 import { Products, SelectProducts } from "@/db/schema/products";
 import { PurchaseOrderItems } from "@/db/schema/purchase-order-items";
 import { PURCHASE_RESULT_COLUMNS } from "@/app/(dashboard)/purchase-results/columns";
+import { ProductFspHistory } from "@/db/schema/product-details";
 import { ReceiptStatus } from "@/lib/enums";
 import { describeError } from "@/lib/helpers";
 import { exportRows } from "@/lib/server/excel";
@@ -60,6 +61,29 @@ const purchaseValueSql = sql<number>`
     ELSE COALESCE(${PurchaseLineReceivals.kgActual}, 0) / 1000
   END`;
 
+// What the same goods would cost to buy again — priced as at the day they
+// arrived, not as at today. A purchase result is a historic fact, and comparing
+// it against a price struck months later would move every past row every time
+// somebody edits a price. The fixed-settlement-price history is dated for
+// exactly this reason, so the row whose period covers the receipt date is the
+// one that answers.
+// ...in the unit that price is struck in, the same tonne-or-kilo split the
+// purchase value uses.
+const replacementValueSql = sql<number>`(
+  SELECT COALESCE(${ProductFspHistory.replacementPrice}, 0) *
+    CASE WHEN UPPER(COALESCE(${ProductFspHistory.priceUnit}, 'TN')) = 'KG'
+      THEN COALESCE(${PurchaseLineReceivals.kgActual}, 0)
+      ELSE COALESCE(${PurchaseLineReceivals.kgActual}, 0) / 1000
+    END
+  FROM ${ProductFspHistory}
+  WHERE ${ProductFspHistory.productUuid} = ${PurchaseLineReceivals.productUuid}
+    AND ${ProductFspHistory.startDate} <= ${receiptDateSql}
+    AND (${ProductFspHistory.endDate} IS NULL
+         OR ${ProductFspHistory.endDate} >= ${receiptDateSql})
+  ORDER BY ${ProductFspHistory.startDate} DESC
+  LIMIT 1
+)`;
+
 const PURCHASE_RESULT_SEARCH = [
   Products.productCode,
   Products.name,
@@ -70,6 +94,7 @@ const PURCHASE_RESULT_SORTABLE = {
   receiptDate: receiptDateSql,
   productCode: Products.productCode,
   purchaseValue: purchaseValueSql,
+  replacementValue: replacementValueSql,
 };
 
 const PURCHASE_RESULT_FILTER_BINDINGS = {
@@ -98,6 +123,12 @@ export type PurchaseResultRow = {
   month: number | null;
   /** What the goods that arrived cost, at the line's own price. */
   purchaseValue: number;
+  /** What they would cost to buy again, at the replacement price of the day. */
+  replacementValue: number | null;
+  /** The difference, which is the whole point of putting them side by side. */
+  purchaseMinusReplacement: number | null;
+  /** The same difference against the purchase value, as a percentage. */
+  purchaseMinusReplacementPercent: number | null;
 };
 
 /**
@@ -109,8 +140,10 @@ export type PurchaseResultRow = {
  * (Receive, an approved unloading, a purchase invoice that creates the lot)
  * records its arrival on the receptions, so they are complete.
  *
- * `Replacement value` and the two differences against it are left out: they
- * were zero on all 1,800 reference rows.
+ * `Replacement value` and the two differences against it are zero on all 1,800
+ * rows of the reference's own export, because that system holds no replacement
+ * prices. Ours reads the dated FSP history, so the columns answer whenever a
+ * price has been recorded and read zero when none has.
  */
 const purchaseResultRows =
   (query: TableQuery) =>
@@ -128,6 +161,14 @@ const purchaseResultRows =
         year: sql<number | null>`YEAR(${receiptDateSql})`.mapWith(Number),
         month: sql<number | null>`MONTH(${receiptDateSql})`.mapWith(Number),
         purchaseValue: purchaseValueSql.mapWith(Number),
+        // Null, not zero, when no replacement price is on record: "we do not
+        // know what it would cost" and "it would cost nothing" are different
+        // answers, and only the second one belongs in a comparison.
+        replacementValue: sql<
+          number | null
+        >`${replacementValueSql}`.mapWith((value) =>
+          value === null ? null : Number(value),
+        ),
       })
       .from(PurchaseLineReceivals)
       .innerJoin(Products, eq(PurchaseLineReceivals.productUuid, Products.uuid))
@@ -158,7 +199,25 @@ const purchaseResultRows =
         ),
       )
       .limit(limit)
-      .offset(offset);
+      .offset(offset)
+      .then((rows) =>
+        rows.map((row) => {
+          const difference =
+            row.replacementValue === null
+              ? null
+              : row.purchaseValue - row.replacementValue;
+          return {
+            ...row,
+            purchaseMinusReplacement: difference,
+            // Against the purchase value, which is the figure the buyer is
+            // judging. Nothing bought means nothing to be a percentage of.
+            purchaseMinusReplacementPercent:
+              difference !== null && row.purchaseValue !== 0
+                ? (difference / row.purchaseValue) * 100
+                : null,
+          };
+        }),
+      );
 
 /** Every row the current view matches, as a workbook. */
 export const exportPurchaseResults = async (
