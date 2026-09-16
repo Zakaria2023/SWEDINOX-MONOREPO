@@ -215,6 +215,7 @@ export const usePurchaseOrderSubmit = ({
           isMailed: values.isMailed,
           isFaxed: values.isFaxed,
           messageSentViaStaalWeb: values.messageSentViaStaalWeb,
+          deliberatelyNotSent: values.deliberatelyNotSent,
           doNotPrintPrices: values.doNotPrintPrices,
 
           paymentTerms: values.paymentTerms || null,

@@ -87,6 +87,10 @@ export const PurchaseOrderTypeSection = ({
           <input type="checkbox" {...register("messageSentViaStaalWeb")} />
           Message sent via StaalWeb
         </label>
+        <label className="flex cursor-pointer items-center gap-2 text-sm">
+          <input type="checkbox" {...register("deliberatelyNotSent")} />
+          Deliberately not sent
+        </label>
       </div>
     </section>
   );

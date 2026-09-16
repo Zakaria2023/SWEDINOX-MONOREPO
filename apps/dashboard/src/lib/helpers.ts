@@ -123,6 +123,7 @@ import {
   ORDER_DEBLOCK_TYPE_LABELS,
   ORDER_LINE_STATUS_LABELS,
   PURCHASE_ORDER_STATUS_LABELS,
+  PURCHASE_QUOTE_STATUS_LABELS,
   SALES_REPRESENTATIVE_LABELS,
   STOCK_UNIT_LABELS,
   TEXT_USAGE_CATEGORY_LABELS,
@@ -7247,6 +7248,26 @@ export const purchaseOrderStatusLabel = (
   value
     ? (PURCHASE_ORDER_STATUS_LABELS[value as PurchaseOrderStatus] ?? value)
     : "—";
+
+/**
+ * The label for a status on a screen carrying both purchase documents.
+ *
+ * An order and a quote each walk their own ladder, and the two share no values,
+ * so which map to read follows from the kind of document rather than from the
+ * value — that is what let a quote's status read blank when the screen only
+ * knew the order ladder.
+ */
+export const documentStatusLabel = (
+  kind: "Order" | "Quote",
+  value: string | null | undefined,
+): string => {
+  if (!value) {
+    return "—";
+  }
+  return kind === "Quote"
+    ? (PURCHASE_QUOTE_STATUS_LABELS[value as PurchaseQuoteStatus] ?? value)
+    : (PURCHASE_ORDER_STATUS_LABELS[value as PurchaseOrderStatus] ?? value);
+};
 
 /** The display label for an order deblock type. */
 export const orderDeblockTypeLabel = (

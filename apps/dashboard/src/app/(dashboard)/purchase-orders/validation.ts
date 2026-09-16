@@ -44,6 +44,7 @@ export const purchaseOrderSchema = z.object({
   isMailed: z.boolean(),
   isFaxed: z.boolean(),
   messageSentViaStaalWeb: z.boolean(),
+  deliberatelyNotSent: z.boolean(),
   doNotPrintPrices: z.boolean(),
 
   // Finances
@@ -98,6 +99,7 @@ export const DEFAULT_PURCHASE_ORDER: PurchaseOrderFormValues = {
   isMailed: false,
   isFaxed: false,
   messageSentViaStaalWeb: false,
+  deliberatelyNotSent: false,
   doNotPrintPrices: false,
 
   paymentTerms: undefined,

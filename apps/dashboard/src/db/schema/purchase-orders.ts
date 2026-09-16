@@ -58,6 +58,11 @@ export const PurchaseOrders = mysqlTable(
     isMailed: boolean("is_mailed").default(false),
     isFaxed: boolean("is_faxed").default(false),
     messageSentViaStaalWeb: boolean("message_sent_via_staalweb").default(false),
+    // Held back on purpose. The three flags above say how the order reached
+    // the supplier; this one says a buyer decided it should not — a phoned
+    // order, a hold while a price is renegotiated — so the "still to be sent"
+    // list can leave it alone instead of nagging about it forever.
+    deliberatelyNotSent: boolean("deliberately_not_sent").default(false),
     doNotPrintPrices: boolean("do_not_print_prices").default(false),
 
     // ── Finances ──────────────────────────────────────────────────────────────
