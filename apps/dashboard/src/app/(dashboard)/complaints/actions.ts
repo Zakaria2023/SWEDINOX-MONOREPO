@@ -1,37 +1,57 @@
 "use server";
 
+import { COMPLAINT_COLUMNS } from "@/app/(dashboard)/complaints/columns";
+import { createReturnOrder } from "@/app/(dashboard)/return-orders/actions";
 import { db } from "@/db";
+import { Companies, SelectCompanies } from "@/db/schema/companies";
+import {
+  ComplaintItems,
+  SelectComplaintItems,
+} from "@/db/schema/complaint-items";
 import {
   Complaints,
   InsertComplaints,
   SelectComplaints,
 } from "@/db/schema/complaints";
-import {
-  ComplaintItems,
-  SelectComplaintItems,
-} from "@/db/schema/complaint-items";
-import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
+import { CounterOrders } from "@/db/schema/counter-orders";
 import { OrderItems, SelectOrderItems } from "@/db/schema/order-items";
 import { Orders, SelectOrders } from "@/db/schema/orders";
 import { Products, SelectProducts } from "@/db/schema/products";
+import { PurchaseOrders } from "@/db/schema/purchase-orders";
+import { PurchaseQuotes } from "@/db/schema/purchase-quotes";
+import { Quotes } from "@/db/schema/quotes";
 import { ReturnOrderItems } from "@/db/schema/return-order-items";
 import { ReturnOrders, SelectReturnOrders } from "@/db/schema/return-orders";
-import { createReturnOrder } from "@/app/(dashboard)/return-orders/actions";
-import {
-  complaintSolutionReturnsGoods,
-  describeError,
-  generateUuid,
-  moneyString,
-  returnReasonForComplaintCategory,
-} from "@/lib/helpers";
-import { currentUser } from "@clerk/nextjs/server";
+import { Stock } from "@/db/schema/stock";
+import { SelectWarehouses, Warehouses } from "@/db/schema/warehouses";
+import { requireAuth } from "@/lib/auth";
 import {
   complaintCategories,
   complaintCauses,
   complaintSolutions,
   complaintStatuses,
+  ComplaintType,
+  complaintTypes,
 } from "@/lib/enums";
+import {
+  calendarDaysBetween,
+  complaintDocumentCode,
+  complaintDocumentColumns,
+  complaintSolutionReturnsGoods,
+  describeError,
+  generateUuid,
+  moneyString,
+  returnReasonForComplaintCategory,
+  todayDateString,
+} from "@/lib/helpers";
+import { getClerkUserNames } from "@/lib/server/clerk";
+import {
+  COMPLAINT_OVERVIEW_FIELDS,
+  ComplaintOverviewFields,
+  toComplaintOverviewFields,
+} from "@/lib/server/complaint-overview";
+import { exportRows } from "@/lib/server/excel";
 import {
   dateRangeFilter,
   enumFilter,
@@ -46,55 +66,22 @@ import {
   SearchParams,
   TableQuery,
 } from "@/lib/table-query";
-import { exportRows } from "@/lib/server/excel";
-import { COMPLAINT_COLUMNS } from "@/app/(dashboard)/complaints/columns";
-import { and, count, desc, eq, getTableColumns, inArray } from "drizzle-orm";
+import { currentUser } from "@clerk/nextjs/server";
+import {
+  aliasedTable,
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  getTableColumns,
+  inArray,
+} from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-export type ComplaintFields = Omit<
-  InsertComplaints,
-  "id" | "uuid" | "createdAt" | "updatedAt"
->;
-
-export type ComplaintActionResult = {
-  complaintUuid?: string;
-  returnOrderUuid?: string;
-  error?: string;
-  success?: boolean;
-};
-
-// Which delivered line the customer is complaining about, and how much of it.
-export type ComplaintItemInput = {
-  orderItemUuid: string;
-  qty: string;
-  description?: string | null;
-};
-
-// A line the customer could complain about: anything that actually reached
-// them. A reserved line hasn't left the warehouse, so there is nothing yet to
-// be wrong with it.
-export type ComplainableLine = {
-  orderItemUuid: SelectOrderItems["uuid"];
-  orderUuid: SelectOrderItems["orderUuid"];
-  orderId: SelectOrders["id"];
-  lineNumber: SelectOrderItems["lineNumber"];
-  productUuid: SelectOrderItems["productUuid"];
-  productCode: SelectProducts["productCode"] | null;
-  productName: SelectProducts["name"] | null;
-  quantity: SelectOrderItems["quantity"];
-  amount: SelectOrderItems["amount"];
-  weightKg: SelectOrderItems["kgActual"];
-  status: SelectOrderItems["status"];
-  deliveryDate: SelectOrderItems["deliveryDate"];
-};
-
-export type ComplaintListItem = SelectComplaints & {
-  companyName: SelectCompanies["companyName"] | null;
-  contactFirstName: SelectContacts["firstName"] | null;
-  contactLastName: SelectContacts["lastName"] | null;
-  productCode: SelectProducts["productCode"] | null;
-};
+const StockLocations = aliasedTable(Warehouses, "stock_locations");
+const ExchangeProducts = aliasedTable(Products, "exchange_products");
 
 const COMPLAINT_SEARCH = [
   Complaints.description,
@@ -103,6 +90,7 @@ const COMPLAINT_SEARCH = [
 ] as const;
 
 const COMPLAINT_SORTABLE = {
+  complaintNumber: Complaints.id,
   createdAt: Complaints.createdAt,
   reportDate: Complaints.reportDate,
   deadline: Complaints.deadline,
@@ -115,12 +103,111 @@ const COMPLAINT_SORTABLE = {
 // whether goods physically come back — see complaintSolutionReturnsGoods.
 const COMPLAINT_FILTERS = {
   status: enumFilter(Complaints.status, complaintStatuses),
+  complaintType: enumFilter(Complaints.complaintType, complaintTypes),
   category: enumFilter(Complaints.category, complaintCategories),
   cause: enumFilter(Complaints.cause, complaintCauses),
   solution: enumFilter(Complaints.solution, complaintSolutions),
   company: relationFilter(Complaints.companyUuid),
   product: relationFilter(Complaints.productUuid),
   reportDate: dateRangeFilter(Complaints.reportDate),
+};
+
+// Only goods that reached the customer can be complained about. A reserved
+// line has not left the warehouse, so there is nothing yet to be wrong with it.
+const DELIVERED_LINE_STATUSES = ["delivered", "invoiced"] as const;
+
+export type ComplaintFields = Omit<
+  InsertComplaints,
+  | "id"
+  | "uuid"
+  | "createdAt"
+  | "updatedAt"
+  | "createdByUserId"
+  | "modifiedByUserId"
+>;
+
+export type ComplaintActionResult = {
+  complaintUuid?: string;
+  returnOrderUuid?: string;
+  error?: string;
+  success?: boolean;
+};
+
+export type ComplaintListItem = ComplaintOverviewFields & {
+  productUuid: SelectComplaints["productUuid"];
+  productCode: SelectProducts["productCode"] | null;
+  productDescription: SelectProducts["name"] | null;
+};
+
+// One line on the record's `Lines` panel, in the reference's columns.
+export type ComplaintItemDetail = SelectComplaintItems & {
+  orderId: SelectOrders["id"] | null;
+  orderLineNumber: SelectOrderItems["lineNumber"] | null;
+  lengthMm: SelectOrderItems["lengthMm"] | null;
+  widthMm: SelectOrderItems["widthMm"] | null;
+  thicknessMm: SelectOrderItems["thicknessMm"] | null;
+  options: SelectOrderItems["options"] | null;
+  productCode: SelectProducts["productCode"] | null;
+  productName: SelectProducts["name"] | null;
+  exchangeProductCode: SelectProducts["productCode"] | null;
+  exchangeProductName: SelectProducts["name"] | null;
+  warehouseSection: SelectWarehouses["name"] | null;
+};
+
+export type ComplaintDetail = SelectComplaints & {
+  companyName: SelectCompanies["companyName"] | null;
+  accountManager: SelectCompanies["accountManager"] | null;
+  representative: SelectCompanies["representative"] | null;
+  contactFirstName: SelectContacts["firstName"] | null;
+  contactLastName: SelectContacts["lastName"] | null;
+  productCode: SelectProducts["productCode"] | null;
+  productName: SelectProducts["name"] | null;
+  // The document the header names, the way the reference prints it.
+  documentCode: string | null;
+  // `Days in system` on every line: today less the report date. It keeps
+  // counting on a closed complaint (566 on 40025, Done since the day it came
+  // in) — unlike the overview's resolution time.
+  daysInSystem: number | null;
+  items: ComplaintItemDetail[];
+  // Return orders raised off the back of this complaint — the link between a
+  // customer's grievance and the goods actually coming back.
+  returnOrders: SelectReturnOrders[];
+};
+
+export type ComplaintDocumentOption = {
+  value: string;
+  label: string;
+};
+
+// What the form reads off the company once one is picked: the two people the
+// reference shows read-only under it, and the documents its type can name.
+export type ComplaintCompanyContext = {
+  accountManager: SelectCompanies["accountManager"] | null;
+  representative: SelectCompanies["representative"] | null;
+  documents: ComplaintDocumentOption[];
+};
+
+// A delivered line of the complaint's order, offered on the Lines panel.
+export type ComplaintOrderLine = {
+  orderItemUuid: SelectOrderItems["uuid"];
+  lineNumber: SelectOrderItems["lineNumber"];
+  productCode: SelectProducts["productCode"] | null;
+  productName: SelectProducts["name"] | null;
+  quantity: SelectOrderItems["quantity"];
+  unit: SelectOrderItems["unit"];
+  deliveryDate: SelectOrderItems["deliveryDate"];
+};
+
+export type ComplaintLineDeleteInput = {
+  lineUuid: string;
+};
+
+export type ComplaintLineInput = {
+  complaintUuid: string;
+  orderItemUuid: string;
+  billOfLading: string;
+  qtyShortfall: string;
+  exchangeProductUuid: string;
 };
 
 /**
@@ -130,19 +217,33 @@ const COMPLAINT_FILTERS = {
  */
 const complaintRows =
   (query: TableQuery) =>
-  (limit: number, offset: number): Promise<ComplaintListItem[]> =>
-    db
+  async (limit: number, offset: number): Promise<ComplaintListItem[]> => {
+    const rows = await db
       .select({
-        ...getTableColumns(Complaints),
-        companyName: Companies.companyName,
-        contactFirstName: Contacts.firstName,
-        contactLastName: Contacts.lastName,
+        ...COMPLAINT_OVERVIEW_FIELDS,
+        productUuid: Complaints.productUuid,
         productCode: Products.productCode,
+        productDescription: Products.name,
       })
       .from(Complaints)
       .leftJoin(Companies, eq(Complaints.companyUuid, Companies.uuid))
       .leftJoin(Contacts, eq(Complaints.contactUuid, Contacts.uuid))
       .leftJoin(Products, eq(Complaints.productUuid, Products.uuid))
+      .leftJoin(Orders, eq(Complaints.orderUuid, Orders.uuid))
+      .leftJoin(Quotes, eq(Complaints.quoteUuid, Quotes.uuid))
+      .leftJoin(
+        CounterOrders,
+        eq(Complaints.counterOrderUuid, CounterOrders.uuid),
+      )
+      .leftJoin(
+        PurchaseOrders,
+        eq(Complaints.purchaseOrderUuid, PurchaseOrders.uuid),
+      )
+      .leftJoin(
+        PurchaseQuotes,
+        eq(Complaints.purchaseQuoteUuid, PurchaseQuotes.uuid),
+      )
+      .leftJoin(ReturnOrders, eq(Complaints.returnOrderUuid, ReturnOrders.uuid))
       .where(
         tableWhere({
           query,
@@ -160,6 +261,20 @@ const complaintRows =
       )
       .limit(limit)
       .offset(offset);
+
+    if (rows.length === 0) {
+      return [];
+    }
+    const nameById = new Map(Object.entries(await getClerkUserNames()));
+    return rows.map(
+      ({ productUuid, productCode, productDescription, ...raw }) => ({
+        ...toComplaintOverviewFields(raw, nameById),
+        productUuid,
+        productCode,
+        productDescription,
+      }),
+    );
+  };
 
 /** Every complaint the current view matches, as a workbook. */
 export const exportComplaints = async (
@@ -201,27 +316,6 @@ export const getComplaints = async (
   }
 };
 
-// A complaint line, with the order it was raised against resolved. This is the
-// link the schema has always carried and nothing surfaced: a complaint is only
-// actionable once you can see which order line it is about.
-export type ComplaintItemDetail = SelectComplaintItems & {
-  orderId: SelectOrders["id"] | null;
-  productCode: SelectProducts["productCode"] | null;
-  productName: SelectProducts["name"] | null;
-};
-
-export type ComplaintDetail = SelectComplaints & {
-  companyName: SelectCompanies["companyName"] | null;
-  contactFirstName: SelectContacts["firstName"] | null;
-  contactLastName: SelectContacts["lastName"] | null;
-  productCode: SelectProducts["productCode"] | null;
-  productName: SelectProducts["name"] | null;
-  items: ComplaintItemDetail[];
-  // Return orders raised off the back of this complaint — the link between a
-  // customer's grievance and the goods actually coming back.
-  returnOrders: SelectReturnOrders[];
-};
-
 export const getComplaintDetail = async (
   uuid: string,
 ): Promise<ComplaintDetail | null> => {
@@ -229,15 +323,35 @@ export const getComplaintDetail = async (
     .select({
       ...getTableColumns(Complaints),
       companyName: Companies.companyName,
+      accountManager: Companies.accountManager,
+      representative: Companies.representative,
       contactFirstName: Contacts.firstName,
       contactLastName: Contacts.lastName,
       productCode: Products.productCode,
       productName: Products.name,
+      orderId: Orders.id,
+      quoteId: Quotes.id,
+      counterOrderId: CounterOrders.id,
+      purchaseOrderId: PurchaseOrders.id,
+      purchaseQuoteId: PurchaseQuotes.id,
+      returnOrderId: ReturnOrders.id,
     })
     .from(Complaints)
     .leftJoin(Companies, eq(Complaints.companyUuid, Companies.uuid))
     .leftJoin(Contacts, eq(Complaints.contactUuid, Contacts.uuid))
     .leftJoin(Products, eq(Complaints.productUuid, Products.uuid))
+    .leftJoin(Orders, eq(Complaints.orderUuid, Orders.uuid))
+    .leftJoin(Quotes, eq(Complaints.quoteUuid, Quotes.uuid))
+    .leftJoin(CounterOrders, eq(Complaints.counterOrderUuid, CounterOrders.uuid))
+    .leftJoin(
+      PurchaseOrders,
+      eq(Complaints.purchaseOrderUuid, PurchaseOrders.uuid),
+    )
+    .leftJoin(
+      PurchaseQuotes,
+      eq(Complaints.purchaseQuoteUuid, PurchaseQuotes.uuid),
+    )
+    .leftJoin(ReturnOrders, eq(Complaints.returnOrderUuid, ReturnOrders.uuid))
     .where(eq(Complaints.uuid, uuid))
     .limit(1);
 
@@ -249,14 +363,31 @@ export const getComplaintDetail = async (
     .select({
       ...getTableColumns(ComplaintItems),
       orderId: Orders.id,
+      orderLineNumber: OrderItems.lineNumber,
+      lengthMm: OrderItems.lengthMm,
+      widthMm: OrderItems.widthMm,
+      thicknessMm: OrderItems.thicknessMm,
+      options: OrderItems.options,
       productCode: Products.productCode,
       productName: Products.name,
+      exchangeProductCode: ExchangeProducts.productCode,
+      exchangeProductName: ExchangeProducts.name,
+      warehouseSection: Warehouses.name,
     })
     .from(ComplaintItems)
     .leftJoin(Orders, eq(ComplaintItems.orderUuid, Orders.uuid))
+    .leftJoin(OrderItems, eq(ComplaintItems.orderItemUuid, OrderItems.uuid))
     .leftJoin(Products, eq(ComplaintItems.productUuid, Products.uuid))
+    .leftJoin(
+      ExchangeProducts,
+      eq(ComplaintItems.exchangeProductUuid, ExchangeProducts.uuid),
+    )
+    .leftJoin(
+      Warehouses,
+      eq(ComplaintItems.warehouseSectionUuid, Warehouses.uuid),
+    )
     .where(eq(ComplaintItems.complaintUuid, uuid))
-    .orderBy(ComplaintItems.lineNumber);
+    .orderBy(asc(ComplaintItems.lineNumber), asc(ComplaintItems.id));
 
   // Reached through the return lines, since it is the line that records which
   // complaint sent it back.
@@ -270,8 +401,158 @@ export const getComplaintDetail = async (
     .where(eq(ReturnOrderItems.complaintUuid, uuid))
     .orderBy(desc(ReturnOrders.createdAt));
 
-  return { ...complaint, items, returnOrders };
+  const {
+    orderId,
+    quoteId,
+    counterOrderId,
+    purchaseOrderId,
+    purchaseQuoteId,
+    returnOrderId,
+    ...rest
+  } = complaint;
+
+  return {
+    ...rest,
+    documentCode: complaintDocumentCode({
+      complaintType: complaint.complaintType,
+      orderId,
+      quoteId,
+      counterOrderId,
+      purchaseOrderId,
+      purchaseQuoteId,
+      returnOrderId,
+    }),
+    daysInSystem: complaint.reportDate
+      ? calendarDaysBetween(complaint.reportDate, todayDateString())
+      : null,
+    items,
+    returnOrders,
+  };
 };
+
+// The documents of one kind a company can have a complaint about, newest first.
+const documentsFor = async (
+  companyUuid: string,
+  complaintType: ComplaintType,
+): Promise<ComplaintDocumentOption[]> => {
+  const option = (prefix: string) => (row: { uuid: string; id: number }) => ({
+    value: row.uuid,
+    label: `${prefix}${row.id}`,
+  });
+
+  switch (complaintType) {
+    case "order":
+      return (
+        await db
+          .select({ uuid: Orders.uuid, id: Orders.id })
+          .from(Orders)
+          .where(eq(Orders.companyUuid, companyUuid))
+          .orderBy(desc(Orders.id))
+      ).map(option("O"));
+    case "quote":
+      return (
+        await db
+          .select({ uuid: Quotes.uuid, id: Quotes.id })
+          .from(Quotes)
+          .where(eq(Quotes.companyUuid, companyUuid))
+          .orderBy(desc(Quotes.id))
+      ).map(option("Q"));
+    case "counter_order":
+      return (
+        await db
+          .select({ uuid: CounterOrders.uuid, id: CounterOrders.id })
+          .from(CounterOrders)
+          .where(eq(CounterOrders.companyUuid, companyUuid))
+          .orderBy(desc(CounterOrders.id))
+      ).map(option("C"));
+    case "purchase_order":
+      return (
+        await db
+          .select({ uuid: PurchaseOrders.uuid, id: PurchaseOrders.id })
+          .from(PurchaseOrders)
+          .where(eq(PurchaseOrders.supplierUuid, companyUuid))
+          .orderBy(desc(PurchaseOrders.id))
+      ).map(option("IO"));
+    case "purchase_quote":
+      return (
+        await db
+          .select({ uuid: PurchaseQuotes.uuid, id: PurchaseQuotes.id })
+          .from(PurchaseQuotes)
+          .where(eq(PurchaseQuotes.companyUuid, companyUuid))
+          .orderBy(desc(PurchaseQuotes.id))
+      ).map(option("IQ"));
+    case "return_order":
+      return (
+        await db
+          .select({ uuid: ReturnOrders.uuid, id: ReturnOrders.id })
+          .from(ReturnOrders)
+          .where(eq(ReturnOrders.companyUuid, companyUuid))
+          .orderBy(desc(ReturnOrders.id))
+      ).map(option("R"));
+    case "general":
+      return [];
+  }
+};
+
+export const getComplaintCompanyContext = async (
+  companyUuid: string,
+  complaintType: ComplaintType | null,
+): Promise<ComplaintCompanyContext> => {
+  await requireAuth();
+  const [company] = await db
+    .select({
+      accountManager: Companies.accountManager,
+      representative: Companies.representative,
+    })
+    .from(Companies)
+    .where(eq(Companies.uuid, companyUuid))
+    .limit(1);
+
+  return {
+    accountManager: company?.accountManager ?? null,
+    representative: company?.representative ?? null,
+    documents:
+      company && complaintType
+        ? await documentsFor(companyUuid, complaintType)
+        : [],
+  };
+};
+
+// The document the fields name has to be one of the company's own, of the kind
+// the type says — the picker only offers those, and the server holds to it.
+const assertDocumentFits = async (fields: ComplaintFields): Promise<void> => {
+  const links = complaintDocumentColumns(
+    fields.complaintType,
+    fields.orderUuid ??
+      fields.quoteUuid ??
+      fields.counterOrderUuid ??
+      fields.purchaseOrderUuid ??
+      fields.purchaseQuoteUuid ??
+      fields.returnOrderUuid,
+  );
+  const chosen = Object.values(links).find((value) => value !== null);
+  if (!chosen || !fields.complaintType) {
+    return;
+  }
+  const allowed = await documentsFor(fields.companyUuid, fields.complaintType);
+  if (!allowed.some((document) => document.value === chosen)) {
+    throw new Error("The chosen document does not belong to this company.");
+  }
+};
+
+// Keeps only the document link the type calls for.
+const withDocumentLink = (fields: ComplaintFields): ComplaintFields => ({
+  ...fields,
+  ...complaintDocumentColumns(
+    fields.complaintType,
+    fields.orderUuid ??
+      fields.quoteUuid ??
+      fields.counterOrderUuid ??
+      fields.purchaseOrderUuid ??
+      fields.purchaseQuoteUuid ??
+      fields.returnOrderUuid,
+  ),
+});
 
 export const updateComplaint = async (
   uuid: string,
@@ -290,6 +571,9 @@ export const updateComplaint = async (
     if (!existing) {
       return { error: "Complaint not found." };
     }
+
+    const linked = withDocumentLink(fields);
+    await assertDocumentFits(linked);
 
     // The status trail is append-only, and only grows when the status actually
     // moves — re-saving a complaint without touching its status should not
@@ -314,7 +598,11 @@ export const updateComplaint = async (
 
     await db
       .update(Complaints)
-      .set({ ...fields, statusHistory })
+      .set({
+        ...linked,
+        statusHistory,
+        modifiedByUserId: user?.id ?? null,
+      })
       .where(eq(Complaints.uuid, uuid));
   } catch (error) {
     return {
@@ -324,6 +612,7 @@ export const updateComplaint = async (
   }
 
   revalidatePath("/complaints");
+  revalidatePath("/complaint-lines");
   revalidatePath(`/complaints/${uuid}`);
   redirect(`/complaints/${uuid}`);
 };
@@ -350,35 +639,205 @@ export const deleteComplaint = async (
   redirect("/complaints");
 };
 
-// Delivered or invoiced lines for a customer — what they can complain about.
-export const getComplainableLines = async (
-  companyUuid: string,
-): Promise<ComplainableLine[]> =>
-  db
+/**
+ * The delivered lines of the order a complaint names — what its Lines panel can
+ * add. Lines exist only on an `Order` complaint: all 23 reference complaints
+ * with lines were of that type, and every line named the complaint's own order.
+ */
+export const getComplaintOrderLines = async (
+  complaintUuid: string,
+): Promise<ComplaintOrderLine[]> => {
+  const [complaint] = await db
+    .select({ orderUuid: Complaints.orderUuid })
+    .from(Complaints)
+    .where(eq(Complaints.uuid, complaintUuid))
+    .limit(1);
+
+  if (!complaint?.orderUuid) {
+    return [];
+  }
+
+  return db
     .select({
       orderItemUuid: OrderItems.uuid,
-      orderUuid: OrderItems.orderUuid,
-      orderId: Orders.id,
       lineNumber: OrderItems.lineNumber,
-      productUuid: OrderItems.productUuid,
       productCode: Products.productCode,
       productName: Products.name,
       quantity: OrderItems.quantity,
-      amount: OrderItems.amount,
-      weightKg: OrderItems.kgActual,
-      status: OrderItems.status,
+      unit: OrderItems.unit,
       deliveryDate: OrderItems.deliveryDate,
     })
     .from(OrderItems)
-    .innerJoin(Orders, eq(OrderItems.orderUuid, Orders.uuid))
     .leftJoin(Products, eq(OrderItems.productUuid, Products.uuid))
     .where(
       and(
-        eq(Orders.companyUuid, companyUuid),
-        inArray(OrderItems.status, ["delivered", "invoiced"]),
+        eq(OrderItems.orderUuid, complaint.orderUuid),
+        inArray(OrderItems.status, [...DELIVERED_LINE_STATUSES]),
       ),
     )
-    .orderBy(desc(OrderItems.createdAt));
+    .orderBy(asc(OrderItems.lineNumber));
+};
+
+/**
+ * Adds one delivered order line to an order complaint — the `New` button of the
+ * reference's Lines panel.
+ *
+ * A line records which delivery is meant and how much of it is in dispute. The
+ * disputed quantity may be 0 (complaint 40043 lists three deliveries, all 0, to
+ * say which lines an invoicing complaint is about) and never exceeds what the
+ * delivery brought. The same order line may be added again for a second
+ * delivery, which is how the reference comes to list one order line twice.
+ */
+export const addComplaintLine = async (
+  _prevState: ComplaintActionResult,
+  input: ComplaintLineInput,
+): Promise<ComplaintActionResult> => {
+  const userId = await requireAuth();
+  try {
+    const [complaint] = await db
+      .select({
+        uuid: Complaints.uuid,
+        orderUuid: Complaints.orderUuid,
+        complaintType: Complaints.complaintType,
+        category: Complaints.category,
+        description: Complaints.description,
+      })
+      .from(Complaints)
+      .where(eq(Complaints.uuid, input.complaintUuid))
+      .limit(1);
+
+    if (!complaint) {
+      return { error: "Complaint not found." };
+    }
+    if (complaint.complaintType !== "order" || !complaint.orderUuid) {
+      return {
+        error:
+          "Only an order complaint has lines. Set the complaint type to Order and choose its order first.",
+      };
+    }
+
+    const [line] = await db
+      .select({
+        orderItemUuid: OrderItems.uuid,
+        orderUuid: OrderItems.orderUuid,
+        productUuid: OrderItems.productUuid,
+        lineNumber: OrderItems.lineNumber,
+        quantity: OrderItems.quantity,
+        unit: OrderItems.unit,
+        amount: OrderItems.amount,
+        weightKg: OrderItems.kgActual,
+        deliveryDate: OrderItems.deliveryDate,
+        status: OrderItems.status,
+        seller: Orders.seller,
+        locationUuid: StockLocations.uuid,
+        locationParentUuid: StockLocations.parentUuid,
+      })
+      .from(OrderItems)
+      .innerJoin(Orders, eq(OrderItems.orderUuid, Orders.uuid))
+      .leftJoin(Stock, eq(OrderItems.stockUuid, Stock.uuid))
+      .leftJoin(StockLocations, eq(Stock.locationUuid, StockLocations.uuid))
+      .where(eq(OrderItems.uuid, input.orderItemUuid))
+      .limit(1);
+
+    if (!line || line.orderUuid !== complaint.orderUuid) {
+      return { error: "That line is not on this complaint's order." };
+    }
+    if (
+      !DELIVERED_LINE_STATUSES.some((status) => status === line.status)
+    ) {
+      return {
+        error:
+          "That line has not been delivered yet, so there is nothing to complain about.",
+      };
+    }
+
+    const shortfall = Number(input.qtyShortfall);
+    const delivered = Number(line.quantity);
+    if (!Number.isFinite(shortfall) || shortfall < 0) {
+      return { error: "The disputed quantity cannot be negative." };
+    }
+    if (shortfall > delivered) {
+      return {
+        error: `The disputed quantity cannot exceed what was delivered (${delivered}).`,
+      };
+    }
+
+    // The disputed share of what the delivery was worth and weighed.
+    const share = delivered > 0 ? shortfall / delivered : 0;
+
+    await db.insert(ComplaintItems).values({
+      uuid: generateUuid(),
+      complaintUuid: complaint.uuid,
+      orderUuid: line.orderUuid,
+      orderItemUuid: line.orderItemUuid,
+      productUuid: line.productUuid,
+      // Stock sits in a location, a leaf of the Warehouses tree; the section is
+      // that location's parent, or the location itself off the warehouse root.
+      warehouseSectionUuid: line.locationParentUuid ?? line.locationUuid,
+      // The reference numbers a complaint line by its order line (40025: 20).
+      lineNumber: line.lineNumber,
+      description: complaint.description,
+      category: complaint.category,
+      complaintType: complaint.complaintType,
+      deliveryDate: line.deliveryDate,
+      billOfLading: input.billOfLading.trim() || null,
+      createdByUserId: userId,
+      purchaserSeller: line.seller,
+      qtyDelivered: delivered.toFixed(3),
+      unit: line.unit,
+      qty: shortfall.toFixed(3),
+      exchangeProductUuid: input.exchangeProductUuid || null,
+      amount: moneyString(Number(line.amount ?? 0) * share),
+      weightKg: (Number(line.weightKg ?? 0) * share).toFixed(2),
+    });
+  } catch (error) {
+    return { error: describeError(error, "Failed to add the line") };
+  }
+
+  revalidatePath(`/complaints/${input.complaintUuid}`);
+  revalidatePath("/complaint-lines");
+  return { success: true, complaintUuid: input.complaintUuid };
+};
+
+export const deleteComplaintLine = async (
+  _prevState: ComplaintActionResult,
+  input: ComplaintLineDeleteInput,
+): Promise<ComplaintActionResult> => {
+  await requireAuth();
+  const { lineUuid } = input;
+  try {
+    const [line] = await db
+      .select({ complaintUuid: ComplaintItems.complaintUuid })
+      .from(ComplaintItems)
+      .where(eq(ComplaintItems.uuid, lineUuid))
+      .limit(1);
+
+    if (!line) {
+      return { error: "Complaint line not found." };
+    }
+
+    // A line a return order was raised from is part of that return's record.
+    const [returned] = await db
+      .select({ uuid: ReturnOrderItems.uuid })
+      .from(ReturnOrderItems)
+      .where(eq(ReturnOrderItems.complaintUuid, line.complaintUuid))
+      .limit(1);
+    if (returned) {
+      return {
+        error:
+          "A return order has been raised from this complaint, so its lines stay.",
+      };
+    }
+
+    await db.delete(ComplaintItems).where(eq(ComplaintItems.uuid, lineUuid));
+
+    revalidatePath(`/complaints/${line.complaintUuid}`);
+    revalidatePath("/complaint-lines");
+    return { success: true, complaintUuid: line.complaintUuid };
+  } catch (error) {
+    return { error: describeError(error, "Failed to delete the line") };
+  }
+};
 
 /**
  * Raises the return order a complaint calls for.
@@ -415,11 +874,15 @@ export const convertComplaintToReturnOrder = async (
       .from(ComplaintItems)
       .where(eq(ComplaintItems.complaintUuid, complaintUuid));
 
-    const withOrderLine = items.filter((item) => !!item.orderItemUuid);
+    // Only the disputed part comes back; a line listed with nothing in dispute
+    // says which delivery is meant and returns nothing.
+    const withOrderLine = items.filter(
+      (item) => !!item.orderItemUuid && Number(item.qty ?? 0) > 0,
+    );
     if (withOrderLine.length === 0) {
       return {
         error:
-          "This complaint has no lines pointing at an order line, so there is nothing to return.",
+          "This complaint has no lines with a disputed quantity, so there is nothing to return.",
       };
     }
 
@@ -482,7 +945,6 @@ export const convertComplaintToReturnOrder = async (
 
 export const createComplaint = async (
   fields: ComplaintFields,
-  items: ComplaintItemInput[] = [],
 ): Promise<ComplaintActionResult> => {
   const uuid = generateUuid();
   try {
@@ -503,66 +965,15 @@ export const createComplaint = async (
       },
     ];
 
-    // Resolve the complained-about lines before writing, so a complaint can
-    // only ever point at goods this customer actually received.
-    const complainable = await getComplainableLines(fields.companyUuid);
-    const byUuid = new Map(
-      complainable.map((line) => [line.orderItemUuid, line]),
-    );
+    const linked = withDocumentLink(fields);
+    await assertDocumentFits(linked);
 
-    for (const item of items) {
-      const line = byUuid.get(item.orderItemUuid);
-      if (!line) {
-        return {
-          error:
-            "One or more selected lines were not delivered to this customer.",
-        };
-      }
-      if (Number(item.qty) <= 0) {
-        return { error: "Every complaint line needs a quantity." };
-      }
-      if (Number(item.qty) > Number(line.quantity)) {
-        return {
-          error: `Cannot complain about more than was delivered (${Number(line.quantity).toFixed(3)}).`,
-        };
-      }
-    }
-
-    await db.transaction(async (tx) => {
-      await tx.insert(Complaints).values({ ...fields, uuid, statusHistory });
-
-      // Lines were previously discarded here, so a complaint was only ever a
-      // header — which is why nothing could act on one.
-      for (const [index, item] of items.entries()) {
-        const line = byUuid.get(item.orderItemUuid);
-        if (!line) {
-          continue;
-        }
-
-        const qty = Number(item.qty);
-        const deliveredQty = Number(line.quantity) || 1;
-
-        await tx.insert(ComplaintItems).values({
-          uuid: generateUuid(),
-          complaintUuid: uuid,
-          orderUuid: line.orderUuid,
-          orderItemUuid: line.orderItemUuid,
-          productUuid: line.productUuid,
-          lineNumber: index + 1,
-          description: item.description ?? null,
-          category: fields.category ?? null,
-          complaintType: fields.complaintType ?? null,
-          // Handling (status, responsible) is recorded once, on the complaint.
-          deliveryDate: line.deliveryDate,
-          createdByUserId: user?.id ?? null,
-          qty: qty.toFixed(3),
-          // The complained-about share of what the line was worth and weighed.
-          amount: moneyString((Number(line.amount ?? 0) / deliveredQty) * qty),
-          weightKg: ((Number(line.weightKg ?? 0) / deliveredQty) * qty).toFixed(
-            2,
-          ),
-        });
-      }
+    await db.insert(Complaints).values({
+      ...linked,
+      uuid,
+      statusHistory,
+      createdByUserId: user?.id ?? null,
+      modifiedByUserId: user?.id ?? null,
     });
 
     revalidatePath("/complaints");

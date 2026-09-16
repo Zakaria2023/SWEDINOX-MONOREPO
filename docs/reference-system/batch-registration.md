@@ -229,3 +229,23 @@ receipt, and only when someone presses **Generate batches**. Against E1:
    label` are missing; `Show File` / `Open file location` belong with the
    certificate upload.
 6. The overview should carry exactly the 23 columns above.
+
+### ✅ Built 16-9-2026
+
+- `lib/server/batches.ts`: `registerBatchForLot` writes the Batches row and its
+  `StockBatches` link. Called on **unloading** (`applyReceipt`, linked to the
+  reception) and on **production output and remnants** (`applyProductionOutput`,
+  dated the day of the run, keeping the source heat and internal charge).
+  `carryLotBatches` moves batch shares along with a relocated lot.
+- The **Generate batches** button is gone.
+- `/batches`: the 23 columns with column picker, search, filters (receipt date,
+  supplier, product, Mand. ign. doc.), paging and export; row actions Show
+  product / company / purchase order, **Adjust charge…** (new heat and sheet
+  number, or an existing internal charge picked, never typed; the lots still
+  showing the old identity change with it) and **Stock label**
+  (`/batches/[uuid]/label`, printable).
+- `scripts/backfill-batches-2026-09-16.mjs` (report first): 549 lots have no
+  batch; 544 have no purchase order and no internal charge, so it would issue
+  `26AAAA…` charges and mark them excused from the certificate. **Not applied**
+  — waiting on a decision.
+- Not built: `Show File` / `Open file location` (no certificate file ever filed).

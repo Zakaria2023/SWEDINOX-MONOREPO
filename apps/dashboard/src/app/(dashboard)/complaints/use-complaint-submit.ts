@@ -6,7 +6,9 @@ import { useCallback, useEffect, useState, useTransition } from "react";
 import { useForm, Resolver } from "react-hook-form";
 import {
   ComplaintActionResult,
+  ComplaintCompanyContext,
   createComplaint,
+  getComplaintCompanyContext,
   updateComplaint,
 } from "./actions";
 import {
@@ -29,6 +31,7 @@ import {
   complaintSolutions,
   complaintStatuses,
   complaintTypes,
+  stockUnits,
   ComplaintCategory,
   ComplaintCause,
   ComplaintReport,
@@ -42,7 +45,9 @@ import {
   COMPLAINT_SOLUTION_LABELS,
   COMPLAINT_STATUS_LABELS,
   COMPLAINT_TYPE_LABELS,
+  STOCK_UNIT_LABELS,
 } from "@/lib/labels";
+import { complaintDocumentColumns } from "@/lib/helpers";
 
 type UseComplaintSubmitParams = {
   companies: CompanyOption[];
@@ -75,6 +80,11 @@ export const useComplaintSubmit = ({
   const [state, setState] = useState<ComplaintActionResult>({});
   const [contacts, setContacts] = useState<ContactOption[]>([]);
   const [isLoadingContacts, setIsLoadingContacts] = useState(false);
+  const [companyContext, setCompanyContext] = useState<ComplaintCompanyContext>({
+    accountManager: null,
+    representative: null,
+    documents: [],
+  });
 
   const form = useForm<ComplaintFormValues>({
     resolver: zodResolver(complaintSchema) as Resolver<ComplaintFormValues>,
@@ -98,6 +108,27 @@ export const useComplaintSubmit = ({
     }
     loadContacts(editingCompanyUuid);
   }, [editingCompanyUuid, loadContacts]);
+
+  // The company decides the account manager and representative shown under it,
+  // and together with the type which documents the `Order` picker offers.
+  const companyUuid = form.watch("companyUuid");
+  const complaintType = form.watch("complaintType");
+  useEffect(() => {
+    if (!companyUuid) {
+      return;
+    }
+    const request = { cancelled: false };
+    getComplaintCompanyContext(companyUuid, complaintType ?? null).then(
+      (context) => {
+        if (!request.cancelled) {
+          setCompanyContext(context);
+        }
+      },
+    );
+    return () => {
+      request.cancelled = true;
+    };
+  }, [companyUuid, complaintType]);
 
   const companyOptions: SelectOption[] = [
     emptyOption,
@@ -153,6 +184,16 @@ export const useComplaintSubmit = ({
     COMPLAINT_SOLUTION_LABELS as Record<ComplaintSolution, string>,
   );
 
+  const documentOptions: SelectOption[] = [
+    emptyOption,
+    ...companyContext.documents,
+  ];
+
+  const qtyUnitOptions: SelectOption[] = [
+    emptyOption,
+    ...stockUnits.map((unit) => ({ value: unit, label: STOCK_UNIT_LABELS[unit] })),
+  ];
+
   const responsibleOptions: SelectOption[] = [
     emptyOption,
     ...responsibleUsers.map((u) => ({ value: u.id, label: u.label })),
@@ -161,6 +202,7 @@ export const useComplaintSubmit = ({
   const handleCompanyChange = (uuid: string) => {
     form.setValue("companyUuid", uuid);
     form.setValue("contactUuid", "");
+    form.setValue("documentUuid", "");
     setContacts([]);
     if (!uuid) {
       return;
@@ -177,12 +219,14 @@ export const useComplaintSubmit = ({
         companyUuid: values.companyUuid,
         contactUuid: values.contactUuid || null,
         complaintType: values.complaintType,
+        ...complaintDocumentColumns(values.complaintType, values.documentUuid),
         report: values.report,
         reportDate: values.reportDate ? new Date(values.reportDate) : null,
         description: values.description,
         category: values.category,
         productUuid: values.productUuid || null,
         qty: values.qty,
+        qtyUnit: values.qtyUnit ?? null,
         amount: values.amount,
         weight: values.weight,
         status: values.status,
@@ -228,6 +272,9 @@ export const useComplaintSubmit = ({
     contactOptions,
     productOptions,
     complaintTypeOptions,
+    documentOptions,
+    qtyUnitOptions,
+    companyContext,
     complaintReportOptions,
     complaintCategoryOptions,
     statusOptions,

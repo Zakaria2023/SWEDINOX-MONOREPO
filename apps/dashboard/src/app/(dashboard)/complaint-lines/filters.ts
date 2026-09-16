@@ -2,25 +2,23 @@ import { CompanyOption } from "@/app/(dashboard)/companies/actions";
 import { ProductOption } from "@/app/(dashboard)/products/actions";
 import {
   complaintCategories,
-  complaintCauses,
-  complaintSolutions,
   complaintStatuses,
   complaintTypes,
 } from "@/lib/enums";
 import { companyOptionLabel } from "@/lib/helpers";
 import {
   COMPLAINT_CATEGORY_LABELS,
-  COMPLAINT_CAUSE_LABELS,
-  COMPLAINT_SOLUTION_LABELS,
   COMPLAINT_STATUS_LABELS,
   COMPLAINT_TYPE_LABELS,
 } from "@/lib/labels";
 import { TableFilterControl } from "@/lib/table-query";
 
-export const complaintFilters = (
+export const complaintLineFilters = (
   companies: CompanyOption[],
   products: ProductOption[],
 ): TableFilterControl[] => [
+  // The reference's one filter.
+  { key: "reportDate", kind: "dateRange", label: "Report date" },
   {
     key: "status",
     kind: "select",
@@ -49,22 +47,14 @@ export const complaintFilters = (
     })),
   },
   {
-    key: "cause",
+    key: "completed",
     kind: "select",
-    label: "Cause",
-    options: complaintCauses.map((cause) => ({
-      value: cause,
-      label: COMPLAINT_CAUSE_LABELS[cause],
-    })),
-  },
-  {
-    key: "solution",
-    kind: "select",
-    label: "Solution",
-    options: complaintSolutions.map((solution) => ({
-      value: solution,
-      label: COMPLAINT_SOLUTION_LABELS[solution],
-    })),
+    label: "Line completed",
+    placeholder: "Completed or not",
+    options: [
+      { value: "false", label: "Open" },
+      { value: "true", label: "Completed" },
+    ],
   },
   {
     key: "company",
@@ -86,5 +76,4 @@ export const complaintFilters = (
       label: `${product.productCode} — ${product.name}`,
     })),
   },
-  { key: "reportDate", kind: "dateRange", label: "Report date" },
 ];

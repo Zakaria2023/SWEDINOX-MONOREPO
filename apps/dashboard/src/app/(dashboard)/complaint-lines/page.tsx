@@ -1,16 +1,27 @@
-import { getComplaintLines } from "@/app/(dashboard)/complaint-lines/actions";
+import { getComplaintLineOverview } from "@/app/(dashboard)/complaint-lines/actions";
+import { complaintLineFilters } from "@/app/(dashboard)/complaint-lines/filters";
+import { getCompaniesForSelect } from "@/app/(dashboard)/companies/actions";
+import { getProductsForSelect } from "@/app/(dashboard)/products/actions";
 import { ComplaintLinesTable } from "@/components/complaint-lines/complaint-lines-table-content";
-import { GenerateComplaintLinesButton } from "@/components/complaint-lines/generate-complaint-lines-button";
+import { parseTableQuery, SearchParams } from "@/lib/table-query";
 
-const ComplaintLinesPage = async () => {
-  const rows = await getComplaintLines();
+type Props = {
+  searchParams: Promise<SearchParams>;
+};
+
+const ComplaintLinesPage = async ({ searchParams }: Props) => {
+  const query = parseTableQuery(await searchParams);
+  // Sequential rather than concurrent: this database caps connections.
+  const page = await getComplaintLineOverview(query);
+  const companies = await getCompaniesForSelect();
+  const products = await getProductsForSelect();
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-start justify-end gap-4">
-        <GenerateComplaintLinesButton />
-      </div>
-      <ComplaintLinesTable rows={rows} />
+      <ComplaintLinesTable
+        page={page}
+        filters={complaintLineFilters(companies, products)}
+      />
     </div>
   );
 };

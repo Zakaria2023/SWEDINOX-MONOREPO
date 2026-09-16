@@ -194,7 +194,13 @@ vehicle — separate transports to the same stop.
 
 ### Against `apps/dashboard`
 
-`/transport-by-region` reads `TransportTrips` — **one row per trip**, the wrong
+✅ **Built 16-9-2026:** one row per transport work order line group (trip +
+destination + postal code + action), the 13 columns with picker, region from
+the destination's address at that postal code, lowest source status ranked
+Expired < New < Released < Workorders created < In progress < Ready, filters
+transport date / region / trip status / action, company link. Before:
+
+`/transport-by-region` read `TransportTrips` — **one row per trip**, the wrong
 grain — and says region, address, statuses and length "have no source". It
 also shows a `Delivery address code` column the reference does not have, and
 lacks `Lines` and `Action`. To match: one row per transport work order, address

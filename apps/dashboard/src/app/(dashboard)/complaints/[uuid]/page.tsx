@@ -1,7 +1,11 @@
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getComplaintDetail } from "@/app/(dashboard)/complaints/actions";
+import {
+  getComplaintDetail,
+  getComplaintOrderLines,
+} from "@/app/(dashboard)/complaints/actions";
+import { getProductsForSelect } from "@/app/(dashboard)/products/actions";
 import { ComplaintDetailView } from "@/components/complaints/complaint-detail";
 import { PageHeading } from "@/components/layout/page-heading";
 import { getClerkUserNames } from "@/lib/server/clerk";
@@ -19,9 +23,11 @@ const ComplaintDetailPage = async ({ params }: Props) => {
     notFound();
   }
 
-  // These columns store a Clerk id; Clerk owns the names.
-
+  // These columns store a Clerk id; Clerk owns the names. Sequential rather
+  // than concurrent: this database caps connections.
   const userNames = await getClerkUserNames();
+  const orderLines = await getComplaintOrderLines(uuid);
+  const products = await getProductsForSelect();
 
   return (
     <div className="space-y-4">
@@ -35,7 +41,12 @@ const ComplaintDetailPage = async ({ params }: Props) => {
         </Link>
       </div>
       <PageHeading title={`Complaint #${complaint.id}`} />
-      <ComplaintDetailView complaint={complaint} userNames={userNames} />
+      <ComplaintDetailView
+        complaint={complaint}
+        userNames={userNames}
+        orderLines={orderLines}
+        products={products}
+      />
     </div>
   );
 };

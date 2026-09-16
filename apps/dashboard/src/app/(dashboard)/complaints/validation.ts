@@ -6,6 +6,7 @@ import {
   complaintSolutions,
   complaintStatuses,
   complaintTypes,
+  stockUnits,
 } from "@/lib/enums";
 import { todayDateString } from "@/lib/helpers";
 
@@ -13,12 +14,15 @@ export const complaintSchema = z.object({
   companyUuid: z.string().min(1, "Company is required"),
   contactUuid: z.string().optional(),
   complaintType: z.enum(complaintTypes).optional(),
+  // The one `Order:` picker; the type decides which kind of document it holds.
+  documentUuid: z.string().optional(),
   report: z.enum(complaintReports).optional(),
   reportDate: z.string().optional(),
   description: z.string().optional(),
   category: z.enum(complaintCategories).optional(),
   productUuid: z.string().optional(),
   qty: z.string(),
+  qtyUnit: z.enum(stockUnits).optional(),
   amount: z.string(),
   weight: z.string(),
   // Handling
@@ -42,16 +46,40 @@ export const complaintSchema = z.object({
 
 export type ComplaintFormValues = z.infer<typeof complaintSchema>;
 
+// One delivered order line added to an order complaint's Lines panel.
+export const complaintLineSchema = z.object({
+  orderItemUuid: z.string().min(1, "Choose the delivered line"),
+  billOfLading: z.string().max(100, "At most 100 characters"),
+  qtyShortfall: z
+    .string()
+    .refine(
+      (value) => value.trim() !== "" && Number(value) >= 0,
+      "Enter the disputed quantity (0 or more)",
+    ),
+  exchangeProductUuid: z.string(),
+});
+
+export type ComplaintLineFormValues = z.infer<typeof complaintLineSchema>;
+
+export const DEFAULT_COMPLAINT_LINE: ComplaintLineFormValues = {
+  orderItemUuid: "",
+  billOfLading: "",
+  qtyShortfall: "0",
+  exchangeProductUuid: "",
+};
+
 export const DEFAULT_COMPLAINT: ComplaintFormValues = {
   companyUuid: "",
   contactUuid: "",
   complaintType: undefined,
+  documentUuid: "",
   report: undefined,
   reportDate: todayDateString(),
   description: "",
   category: undefined,
   productUuid: "",
   qty: "0.000",
+  qtyUnit: undefined,
   amount: "0.00",
   weight: "0.000",
   status: "new",

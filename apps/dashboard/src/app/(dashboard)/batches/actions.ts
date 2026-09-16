@@ -1,5 +1,10 @@
 "use server";
 
+import { BATCH_COLUMNS } from "@/app/(dashboard)/batches/columns";
+import {
+  adjustChargeSchema,
+  AdjustChargeValues,
+} from "@/app/(dashboard)/batches/validation";
 import { db } from "@/db";
 import {
   BatchCertificates,
@@ -8,20 +13,57 @@ import {
 import { Batches, SelectBatches } from "@/db/schema/batches";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { Products, SelectProducts } from "@/db/schema/products";
-import { PurchaseLineReceivals } from "@/db/schema/purchase-line-receivals";
 import {
   PurchaseOrders,
   SelectPurchaseOrders,
 } from "@/db/schema/purchase-orders";
 import { SelectStock, Stock } from "@/db/schema/stock";
 import { StockBatches } from "@/db/schema/stock-batches";
+import { requireAuth } from "@/lib/auth";
+import { describeError, normaliseCharge } from "@/lib/helpers";
+import { exportRows } from "@/lib/server/excel";
 import {
-  describeError,
-  formatInternalChargeNumber,
-  generateUuid,
-} from "@/lib/helpers";
-import { asc, count, desc, eq, isNotNull, sql } from "drizzle-orm";
+  booleanFilter,
+  dateRangeFilter,
+  FilterBindings,
+  relationFilter,
+  runPaged,
+  SortableColumns,
+  tableOrderBy,
+  tableWhere,
+} from "@/lib/server/table-query";
+import {
+  Paged,
+  parseTableQuery,
+  SearchParams,
+  TableQuery,
+} from "@/lib/table-query";
+import { and, asc, count, desc, eq, inArray, isNotNull, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+
+const BATCH_SEARCH = [
+  Batches.internalCharge,
+  Batches.charge,
+  Batches.purchaseOrderCode,
+  Products.productCode,
+  Companies.companyName,
+] as const;
+
+const BATCH_FILTERS: FilterBindings = {
+  receiptDate: dateRangeFilter(Batches.receiptDate),
+  supplier: relationFilter(Batches.supplierUuid),
+  product: relationFilter(Batches.productUuid),
+  mandatoryIgnoreDocument: booleanFilter(Batches.mandatoryIgnoreDocument),
+};
+
+const BATCH_SORTABLE: SortableColumns = {
+  purchaseOrder: Batches.purchaseOrderCode,
+  supplier: Companies.companyName,
+  productCode: Products.productCode,
+  internalCharge: Batches.internalCharge,
+  receiptDate: Batches.receiptDate,
+  kg: Batches.kg,
+};
 
 export type BatchRow = SelectBatches & {
   purchaseOrderId: SelectPurchaseOrders["id"] | null;
@@ -29,12 +71,6 @@ export type BatchRow = SelectBatches & {
   supplierName: SelectCompanies["companyName"] | null;
   productCode: SelectProducts["productCode"] | null;
   productName: SelectProducts["name"] | null;
-};
-
-export type GenerateBatchesResult = {
-  error?: string;
-  success?: boolean;
-  createdBatches?: number;
 };
 
 export type BatchCertificateRow = Pick<
@@ -67,10 +103,23 @@ export type BatchDetail = BatchRow & {
   stock: BatchStockRow | null;
 };
 
-// Every registered batch, joined to the purchase order it arrived on, its
-// supplier and its product.
-export const getBatches = async (): Promise<BatchRow[]> => {
-  try {
+export type BatchActionResult = {
+  error?: string;
+  success?: boolean;
+};
+
+export type AdjustBatchChargeInput = AdjustChargeValues & {
+  batchUuid: string;
+};
+
+export type InternalChargeOption = {
+  value: string;
+  label: string;
+};
+
+const batchRows =
+  (query: TableQuery) =>
+  async (limit: number, offset: number): Promise<BatchRow[]> => {
     const rows = await db
       .select({
         batch: Batches,
@@ -87,7 +136,19 @@ export const getBatches = async (): Promise<BatchRow[]> => {
       )
       .leftJoin(Companies, eq(Batches.supplierUuid, Companies.uuid))
       .leftJoin(Products, eq(Batches.productUuid, Products.uuid))
-      .orderBy(desc(Batches.receiptDate), asc(Batches.internalCharge));
+      .where(
+        tableWhere({ query, search: BATCH_SEARCH, filters: BATCH_FILTERS }),
+      )
+      .orderBy(
+        ...tableOrderBy(
+          BATCH_SORTABLE,
+          query,
+          [desc(Batches.receiptDate), asc(Batches.internalCharge)],
+          Batches.id,
+        ),
+      )
+      .limit(limit)
+      .offset(offset);
 
     return rows.map((row) => ({
       ...row.batch,
@@ -97,10 +158,46 @@ export const getBatches = async (): Promise<BatchRow[]> => {
       productCode: row.productCode,
       productName: row.productName,
     }));
+  };
+
+/**
+ * Every batch row: one per receipt, and one more for every processing output
+ * booked back into stock under the same internal charge — the reference's
+ * 2 910 rows against 2 226 receipts.
+ */
+export const getBatches = async (
+  query: TableQuery,
+): Promise<Paged<BatchRow>> => {
+  try {
+    return await runPaged(query, {
+      rows: batchRows(query),
+      count: async () => {
+        const [row] = await db
+          .select({ value: count() })
+          .from(Batches)
+          .leftJoin(Companies, eq(Batches.supplierUuid, Companies.uuid))
+          .leftJoin(Products, eq(Batches.productUuid, Products.uuid))
+          .where(
+            tableWhere({ query, search: BATCH_SEARCH, filters: BATCH_FILTERS }),
+          );
+        return Number(row?.value ?? 0);
+      },
+    });
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch batches"));
   }
 };
+
+export const exportBatches = async (
+  params: SearchParams,
+  columnKeys: string[],
+): Promise<string> =>
+  exportRows({
+    name: "Batches",
+    columns: BATCH_COLUMNS,
+    columnKeys,
+    rows: batchRows(parseTableQuery(params)),
+  });
 
 /**
  * One batch with its full traceability: the purchase order and supplier it
@@ -177,169 +274,125 @@ export const getBatchDetail = async (
   };
 };
 
-// Registers a batch for every goods receipt that has none yet.
-//
-// The receival says what arrived and when; the stock lot it created carries the
-// physical detail — the mill's charge number, quality, stock category and
-// dimensions — so the two are combined into one traceable batch. A lot that has
-// no internal charge number yet is given the next one for the receipt year, and
-// the number is written back to the lot so stock and batch agree.
-//
-// Receivals that already have a batch are skipped, so it can be re-run after
-// receiving more goods.
-export const generateBatches = async (): Promise<GenerateBatchesResult> => {
-  try {
-    const receivals = await db
-      .select({
-        receival: PurchaseLineReceivals,
-        supplierUuid: PurchaseOrders.supplierUuid,
-        stockUuid: Stock.uuid,
-        stockCharge: Stock.charge,
-        stockInternalCharge: Stock.internalCharge,
-        stockCategory: Stock.stockCategory,
-        stockQuality: Stock.quality,
-        stockOptions: Stock.options,
-        stockLengthMm: Stock.lengthMm,
-        stockWidthMm: Stock.widthMm,
-        stockThicknessMm: Stock.thicknessMm,
-        stockBundle: Stock.bundle,
-      })
-      .from(PurchaseLineReceivals)
-      .leftJoin(
-        PurchaseOrders,
-        eq(PurchaseLineReceivals.purchaseOrderUuid, PurchaseOrders.uuid),
-      )
-      .leftJoin(
-        Stock,
-        eq(
-          PurchaseLineReceivals.purchaseOrderItemUuid,
-          Stock.purchaseOrderItemUuid,
-        ),
-      );
+/**
+ * The internal charges `Adjust charge…` can move a batch under — every other
+ * one already issued. The reference's field is not typed: a `Select` button
+ * picks an existing charge, so two batches that are really one heat can be
+ * joined, but a new number cannot be invented here.
+ */
+export const getInternalChargeOptions = async (
+  batchUuid: string,
+): Promise<InternalChargeOption[]> => {
+  await requireAuth();
+  const [batch] = await db
+    .select({ internalCharge: Batches.internalCharge })
+    .from(Batches)
+    .where(eq(Batches.uuid, batchUuid))
+    .limit(1);
 
-    if (receivals.length === 0) {
-      return {
-        error:
-          "No goods receipts yet. Receive a purchase order on /purchase-orders-to-be-received first.",
-      };
-    }
+  const rows = await db
+    .selectDistinct({ internalCharge: Batches.internalCharge })
+    .from(Batches)
+    .where(
+      and(
+        isNotNull(Batches.internalCharge),
+        batch?.internalCharge
+          ? ne(Batches.internalCharge, batch.internalCharge)
+          : undefined,
+      ),
+    )
+    .orderBy(desc(Batches.internalCharge));
 
-    const registered = new Set(
-      (
-        await db
-          .select({
-            purchaseLineReceivalUuid: Batches.purchaseLineReceivalUuid,
-          })
-          .from(Batches)
-          .where(isNotNull(Batches.purchaseLineReceivalUuid))
-      ).map((row) => row.purchaseLineReceivalUuid),
-    );
+  return rows.flatMap((row) =>
+    row.internalCharge
+      ? [{ value: row.internalCharge, label: row.internalCharge }]
+      : [],
+  );
+};
 
-    const openReceivals = receivals.filter(
-      (row) => !registered.has(row.receival.uuid),
-    );
-    if (openReceivals.length === 0) {
-      return { error: "Every goods receipt already has a batch." };
-    }
-
-    // Next internal charge sequence per year, continuing from what has already
-    // been issued rather than restarting at 1.
-    const issued = await db
-      .select({
-        year: sql<number>`YEAR(${Batches.receiptDate})`,
-        count: count(Batches.uuid),
-      })
-      .from(Batches)
-      .where(isNotNull(Batches.internalCharge))
-      .groupBy(sql`YEAR(${Batches.receiptDate})`);
-
-    const sequenceByYear = new Map<number, number>(
-      issued.map((row) => [Number(row.year), Number(row.count)]),
-    );
-
-    const rows: (typeof Batches.$inferInsert)[] = [];
-    const chargeUpdates: Array<{ stockUuid: string; internalCharge: string }> =
-      [];
-
-    const nextInternalCharge = (year: number) => {
-      const nextSequence = (sequenceByYear.get(year) ?? 0) + 1;
-      sequenceByYear.set(year, nextSequence);
-      return formatInternalChargeNumber(year, nextSequence);
-    };
-
-    for (const row of openReceivals) {
-      const { receival } = row;
-      const receiptDate = receival.receiptDate;
-      const year = receiptDate
-        ? Number(receiptDate.slice(0, 4))
-        : new Date().getFullYear();
-
-      const internalCharge =
-        row.stockInternalCharge || nextInternalCharge(year);
-      if (!row.stockInternalCharge && row.stockUuid) {
-        chargeUpdates.push({ stockUuid: row.stockUuid, internalCharge });
-      }
-
-      rows.push({
-        uuid: generateUuid(),
-        purchaseOrderUuid: receival.purchaseOrderUuid,
-        purchaseOrderItemUuid: receival.purchaseOrderItemUuid,
-        purchaseLineReceivalUuid: receival.uuid,
-        stockUuid: row.stockUuid,
-        productUuid: receival.productUuid,
-        supplierUuid: row.supplierUuid ?? receival.companyUuid,
-        purchaseOrderCode: receival.purchaseOrderCode,
-        receiptDate,
-        lengthMm: row.stockLengthMm ?? receival.lengthMm,
-        widthMm: row.stockWidthMm,
-        thicknessMm: row.stockThicknessMm,
-        qty: receival.receivedQty ?? "0.000",
-        unit: receival.unit ?? "st",
-        kg: receival.kgActual ?? "0.00",
-        charge: row.stockCharge,
-        internalCharge,
-        sheetNumber: row.stockBundle,
-        stockCategory: row.stockCategory,
-        qualityCode: row.stockQuality,
-        options: row.stockOptions ?? receival.options,
-      });
-    }
-
-    // The lot each batch was received on holds all of it to begin with. Later
-    // moves may spread a batch over several lots, which is why the link is a
-    // table of its own rather than `Batches.stockUuid`.
-    const stockLinks = rows.flatMap((row) =>
-      row.stockUuid
-        ? [
-            {
-              uuid: generateUuid(),
-              stockUuid: row.stockUuid,
-              batchUuid: row.uuid,
-              quantity: row.qty ?? "0.000",
-            },
-          ]
-        : [],
-    );
-
-    await db.transaction(async (tx) => {
-      await tx.insert(Batches).values(rows);
-      if (stockLinks.length > 0) {
-        await tx.insert(StockBatches).values(stockLinks);
-      }
-      for (const update of chargeUpdates) {
-        await tx
-          .update(Stock)
-          .set({ internalCharge: update.internalCharge })
-          .where(eq(Stock.uuid, update.stockUuid));
-      }
-    });
-
-    revalidatePath("/batches");
-    return { success: true, createdBatches: rows.length };
-  } catch (error) {
+/**
+ * `Adjust charge…`: correct a batch's heat number and sheet number after the
+ * fact, and optionally move it under another existing internal charge.
+ *
+ * The lots holding the batch carry the same identity on their labels, so they
+ * change with it — but only the lots that still show the batch's old identity,
+ * never a lot that combines this batch with others under a charge of its own.
+ */
+export const adjustBatchCharge = async (
+  _prevState: BatchActionResult,
+  input: AdjustBatchChargeInput,
+): Promise<BatchActionResult> => {
+  await requireAuth();
+  const parsed = adjustChargeSchema.safeParse(input);
+  if (!parsed.success) {
     return {
-      error:
-        error instanceof Error ? error.message : "Failed to generate batches",
+      error: parsed.error.issues[0]?.message ?? "Check the fields and try again",
     };
   }
+
+  try {
+    const [batch] = await db
+      .select({
+        uuid: Batches.uuid,
+        charge: Batches.charge,
+        sheetNumber: Batches.sheetNumber,
+        internalCharge: Batches.internalCharge,
+      })
+      .from(Batches)
+      .where(eq(Batches.uuid, input.batchUuid))
+      .limit(1);
+
+    if (!batch) {
+      return { error: "Batch not found." };
+    }
+
+    const newInternalCharge = parsed.data.internalCharge || batch.internalCharge;
+    if (newInternalCharge && newInternalCharge !== batch.internalCharge) {
+      const [exists] = await db
+        .select({ uuid: Batches.uuid })
+        .from(Batches)
+        .where(eq(Batches.internalCharge, newInternalCharge))
+        .limit(1);
+      if (!exists) {
+        return {
+          error: "Choose an internal charge that already exists.",
+        };
+      }
+    }
+
+    const charge = normaliseCharge(parsed.data.charge);
+    const sheetNumber = parsed.data.sheetNumber.trim() || null;
+
+    await db.transaction(async (tx) => {
+      await tx
+        .update(Batches)
+        .set({ charge, sheetNumber, internalCharge: newInternalCharge })
+        .where(eq(Batches.uuid, batch.uuid));
+
+      const lotUuids = (
+        await tx
+          .select({ stockUuid: StockBatches.stockUuid })
+          .from(StockBatches)
+          .where(eq(StockBatches.batchUuid, batch.uuid))
+      ).map((link) => link.stockUuid);
+
+      if (lotUuids.length > 0 && batch.internalCharge) {
+        await tx
+          .update(Stock)
+          .set({ charge, plateNumber: sheetNumber, internalCharge: newInternalCharge })
+          .where(
+            and(
+              inArray(Stock.uuid, lotUuids),
+              eq(Stock.internalCharge, batch.internalCharge),
+            ),
+          );
+      }
+    });
+  } catch (error) {
+    return { error: describeError(error, "Failed to adjust the charge") };
+  }
+
+  revalidatePath("/batches");
+  revalidatePath(`/batches/${input.batchUuid}`);
+  return { success: true };
 };

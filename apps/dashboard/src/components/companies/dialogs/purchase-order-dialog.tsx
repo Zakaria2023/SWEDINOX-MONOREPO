@@ -235,7 +235,7 @@ export const PurchaseOrderDialog = ({
           <div className="grid grid-cols-2 gap-4">
             <TextField
               id="po-inkoper"
-              label="Inkoper"
+              label="Purchaser"
               form={form}
               name="inkoper"
             />

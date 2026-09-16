@@ -2,6 +2,7 @@
 
 import { CompanyActionResult } from "@/app/(dashboard)/companies/actions";
 import { db, SelectCompanies } from "@/db";
+import { requireAuth } from "@/lib/auth";
 import { Companies, InsertCompanies } from "@/db/schema/companies";
 import { describeError } from "@/lib/helpers";
 import { eq } from "drizzle-orm";
@@ -69,6 +70,7 @@ export const updateCompanyMarketing = async (
   _prevState: CompanyActionResult,
   payload: UpdateCompanyMarketingPayload,
 ): Promise<CompanyActionResult> => {
+  const userId = await requireAuth();
   const { companyUuid, ...values } = payload;
   const parsed = companyMarketingSchema.safeParse(values);
   if (!parsed.success) {
@@ -81,6 +83,7 @@ export const updateCompanyMarketing = async (
     await db
       .update(Companies)
       .set({
+        modifiedByUserId: userId,
         industry: parsed.data.industry || null,
         classification: (parsed.data.classification ||
           null) as InsertCompanies["classification"],

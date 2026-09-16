@@ -1,7 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { ComplaintLineRow } from "@/app/(dashboard)/complaint-lines/actions";
+import {
+  ComplaintLineOverviewRow,
+  exportComplaintLines,
+} from "@/app/(dashboard)/complaint-lines/actions";
+import {
+  COMPLAINT_LINE_COLUMNS,
+  ComplaintLineColumnKey,
+} from "@/app/(dashboard)/complaint-lines/columns";
+import { ComplaintOverviewCell } from "@/components/complaints/complaint-overview-cell";
 import {
   Table,
   TableBody,
@@ -10,180 +18,133 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
-import { StatusBadge } from "@/components/ui/status-badge";
-import { formatDateValue } from "@/lib/helpers";
-import {
-  COMPLAINT_CATEGORY_LABELS,
-  COMPLAINT_CAUSE_LABELS,
-  COMPLAINT_SOLUTION_LABELS,
-  COMPLAINT_STATUS_LABELS,
-  COMPLAINT_TYPE_LABELS,
-  CUSTOMER_GROUP_LABELS,
-  SALES_REPRESENTATIVE_LABELS,
-} from "@/lib/labels";
-import { TableExportButton } from "@/components/ui/table-export-button";
+import { ColumnSelector } from "@/components/ui/column-selector";
+import { PagedTableExportButton } from "@/components/ui/table-export-button";
+import { TablePagination } from "@/components/ui/table-pagination";
+import { TableSortHeader } from "@/components/ui/table-sort-header";
+import { TableToolbar } from "@/components/ui/table-toolbar";
+import { selectorColumns } from "@/lib/excel";
+import { buildColumnVisibility } from "@/lib/helpers";
+import { Paged, TableFilterControl } from "@/lib/table-query";
+import { useState } from "react";
 
 type Props = {
-  rows: ComplaintLineRow[];
+  page: Paged<ComplaintLineOverviewRow>;
+  filters: TableFilterControl[];
 };
 
-const COLUMN_COUNT = 28;
+type LineCellProps = {
+  row: ComplaintLineOverviewRow;
+  column: ComplaintLineColumnKey;
+};
 
-export const ComplaintLinesTable = ({ rows }: Props) => (
-  <div>
+const ALL_COLUMNS = selectorColumns(COMPLAINT_LINE_COLUMNS);
+
+const SORTABLE: Partial<Record<ComplaintLineColumnKey, string>> = {
+  complaintNumber: "complaintNumber",
+  reportDate: "reportDate",
+  companyName: "customer",
+  status: "status",
+  deadline: "deadline",
+  creationDate: "createdAt",
+};
+
+const LineCell = ({ row, column }: LineCellProps) => {
+  switch (column) {
+    case "orderLine":
+      return (
+        <TableCell className="text-right">
+          <Link
+            href={`/complaint-lines/${row.lineUuid}`}
+            className="text-primary hover:underline"
+          >
+            {row.orderLine ?? "—"}
+          </Link>
+        </TableCell>
+      );
+    case "warehouseSection":
+      return <TableCell>{row.warehouseSection ?? "—"}</TableCell>;
+    default:
+      return <ComplaintOverviewCell row={row} column={column} />;
+  }
+};
+
+export const ComplaintLinesTable = ({ page, filters }: Props) => {
+  const [columnVisibility, setColumnVisibility] = useState<
+    Record<ComplaintLineColumnKey, boolean>
+  >(buildColumnVisibility(ALL_COLUMNS));
+
+  const toggleColumn = (key: string) =>
+    setColumnVisibility((prev) => ({
+      ...prev,
+      [key]: !prev[key as ComplaintLineColumnKey],
+    }));
+
+  const visibleColumns = ALL_COLUMNS.filter((col) => columnVisibility[col.key]);
+
+  return (
     <div className="space-y-4">
-      <div className="flex justify-end">
-        <TableExportButton
-          tableId="complaint-lines-table"
-          fileName="complaint-lines"
-          sheetName="Complaint lines"
+      <TableToolbar
+        searchPlaceholder="Search description, customer or product…"
+        filters={filters}
+      >
+        <ColumnSelector
+          columns={ALL_COLUMNS.map((col) => ({
+            key: col.key,
+            label: col.label,
+          }))}
+          visibility={columnVisibility}
+          onToggle={toggleColumn}
         />
-      </div>
-      <Table id="complaint-lines-table">
-        <TableHeader>
-          <TableRow>
-            <TableHead className="text-right">Year</TableHead>
-            <TableHead className="text-right">Month</TableHead>
-            <TableHead>Report date</TableHead>
-            <TableHead className="text-right">Complaint number</TableHead>
-            <TableHead className="text-right">Company code</TableHead>
-            <TableHead>Company</TableHead>
-            <TableHead>Customer group</TableHead>
-            <TableHead>Category</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Status date</TableHead>
-            <TableHead>Complaint description</TableHead>
-            <TableHead>Cause</TableHead>
-            <TableHead>Explanation cause</TableHead>
-            <TableHead>Solution</TableHead>
-            <TableHead>Explanation solution</TableHead>
-            <TableHead>Complaint type</TableHead>
-            <TableHead>Correspondence name</TableHead>
-            <TableHead>Deadline</TableHead>
-            <TableHead className="text-right">Order</TableHead>
-            <TableHead className="text-right">Order line</TableHead>
-            <TableHead>Product code</TableHead>
-            <TableHead>Product description</TableHead>
-            <TableHead>Responsible</TableHead>
-            <TableHead>Created by</TableHead>
-            <TableHead>Purchaser / seller</TableHead>
-            <TableHead>Representative</TableHead>
-            <TableHead>Warehouse section</TableHead>
-            <TableHead>Creation date</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {rows.length === 0 ? (
-            <TableRow>
-              <TableCell
-                colSpan={COLUMN_COUNT}
-                className="h-24 text-center text-muted-foreground"
-              >
-                No complaint lines found.
-              </TableCell>
-            </TableRow>
-          ) : (
-            rows.map((row) => (
-              <TableRow key={row.uuid}>
-                <TableCell className="text-right font-medium">
-                  <Link
-                    href={`/complaint-lines/${row.uuid}`}
-                    className="text-primary hover:underline"
-                  >
-                    {row.reportYear ?? `#${row.id}`}
-                  </Link>
-                </TableCell>
-                <TableCell className="text-right">
-                  {row.reportMonth ?? "—"}
-                </TableCell>
-                <TableCell className="whitespace-nowrap">
-                  {formatDateValue(row.reportDate)}
-                </TableCell>
-                <TableCell className="text-right font-medium">
-                  {row.complaintNumber ?? "—"}
-                </TableCell>
-                <TableCell className="text-right">
-                  {row.companyCode ?? "—"}
-                </TableCell>
-                <TableCell className="font-medium">
-                  {row.companyName ?? "—"}
-                </TableCell>
-                <TableCell>
-                  {row.customerGroup
-                    ? CUSTOMER_GROUP_LABELS[row.customerGroup]
-                    : "—"}
-                </TableCell>
-                <TableCell>
-                  {row.category ? COMPLAINT_CATEGORY_LABELS[row.category] : "—"}
-                </TableCell>
-                <TableCell>
-                  <StatusBadge
-                    value={row.status}
-                    label={
-                      row.status ? COMPLAINT_STATUS_LABELS[row.status] : null
-                    }
-                  />
-                </TableCell>
-                <TableCell className="whitespace-nowrap">
-                  {formatDateValue(row.statusDate)}
-                </TableCell>
-                <TableCell className="max-w-64">
-                  <span className="line-clamp-2">{row.description ?? "—"}</span>
-                </TableCell>
-                <TableCell>
-                  {row.cause ? COMPLAINT_CAUSE_LABELS[row.cause] : "—"}
-                </TableCell>
-                <TableCell className="max-w-64">
-                  <span className="line-clamp-2">
-                    {row.explanationOfCause ?? "—"}
-                  </span>
-                </TableCell>
-                <TableCell>
-                  {row.solution ? COMPLAINT_SOLUTION_LABELS[row.solution] : "—"}
-                </TableCell>
-                <TableCell className="max-w-64">
-                  <span className="line-clamp-2">
-                    {row.explanationOfSolution ?? "—"}
-                  </span>
-                </TableCell>
-                <TableCell>
-                  {row.complaintType
-                    ? COMPLAINT_TYPE_LABELS[row.complaintType]
-                    : "—"}
-                </TableCell>
-                <TableCell>{row.correspondenceName ?? "—"}</TableCell>
-                <TableCell className="whitespace-nowrap">
-                  {formatDateValue(row.deadline)}
-                </TableCell>
-                <TableCell className="text-right">
-                  {row.orderId ?? "—"}
-                </TableCell>
-                <TableCell className="text-right">
-                  {row.orderLineNumber ?? "—"}
-                </TableCell>
-                <TableCell className="whitespace-nowrap">
-                  {row.productCode ?? "—"}
-                </TableCell>
-                <TableCell>{row.productName ?? "—"}</TableCell>
-                <TableCell>{row.responsibleName ?? "—"}</TableCell>
-                <TableCell>{row.createdByName ?? "—"}</TableCell>
-                <TableCell>
-                  {row.purchaserSeller ?? row.orderSeller ?? "—"}
-                </TableCell>
-                <TableCell>
-                  {row.representative
-                    ? SALES_REPRESENTATIVE_LABELS[row.representative]
-                    : "—"}
-                </TableCell>
-                <TableCell>{row.warehouseSection ?? "—"}</TableCell>
-                <TableCell className="whitespace-nowrap">
-                  {formatDateValue(row.createdAt)}
-                </TableCell>
+        <PagedTableExportButton
+          fileName="complaint-lines"
+          columnKeys={visibleColumns.map((column) => column.key)}
+          action={exportComplaintLines}
+        />
+      </TableToolbar>
+
+      {page.rows.length === 0 ? (
+        <div className="flex flex-col items-center gap-1 rounded-lg border border-dashed px-6 py-10 text-center">
+          <p className="font-medium">No complaint lines match this view</p>
+          <p className="max-w-md text-sm text-muted-foreground">
+            An order complaint gets its lines on the complaint itself: open it
+            and add the delivered order lines it is about.
+          </p>
+        </div>
+      ) : (
+        <>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                {visibleColumns.map((col) => {
+                  const sortKey = SORTABLE[col.key];
+                  return sortKey ? (
+                    <TableSortHeader key={col.key} sortKey={sortKey}>
+                      {col.label}
+                    </TableSortHeader>
+                  ) : (
+                    <TableHead key={col.key}>{col.label}</TableHead>
+                  );
+                })}
               </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
+            </TableHeader>
+            <TableBody>
+              {page.rows.map((row) => (
+                <TableRow key={row.lineUuid}>
+                  {visibleColumns.map((col) => (
+                    <LineCell key={col.key} row={row} column={col.key} />
+                  ))}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          <TablePagination
+            page={page}
+            singular="complaint line"
+            plural="complaint lines"
+          />
+        </>
+      )}
     </div>
-  </div>
-);
+  );
+};

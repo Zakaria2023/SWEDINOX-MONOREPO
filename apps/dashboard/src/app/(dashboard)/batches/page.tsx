@@ -1,16 +1,24 @@
 import { getBatches } from "@/app/(dashboard)/batches/actions";
+import { batchFilters } from "@/app/(dashboard)/batches/filters";
+import { getCompaniesForSelect } from "@/app/(dashboard)/companies/actions";
+import { getProductsForSelect } from "@/app/(dashboard)/products/actions";
 import { BatchesTable } from "@/components/batches/batches-table-content";
-import { GenerateBatchesButton } from "@/components/batches/generate-batches-button";
+import { parseTableQuery, SearchParams } from "@/lib/table-query";
 
-const BatchesPage = async () => {
-  const rows = await getBatches();
+type Props = {
+  searchParams: Promise<SearchParams>;
+};
+
+const BatchesPage = async ({ searchParams }: Props) => {
+  const query = parseTableQuery(await searchParams);
+  // Sequential rather than concurrent: this database caps connections.
+  const page = await getBatches(query);
+  const suppliers = await getCompaniesForSelect();
+  const products = await getProductsForSelect();
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-start justify-end gap-4">
-        <GenerateBatchesButton />
-      </div>
-      <BatchesTable rows={rows} />
+      <BatchesTable page={page} filters={batchFilters(suppliers, products)} />
     </div>
   );
 };

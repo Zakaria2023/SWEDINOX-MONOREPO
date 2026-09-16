@@ -27,6 +27,8 @@ import {
   EdiOption,
   GroupLinesByDescription,
   ComplaintSolution,
+  ComplaintStatus,
+  ComplaintType,
   CustomerGroup,
   DeliveryTerm,
   DeliveryTimeUnit,
@@ -369,15 +371,6 @@ export const resolveCertificateFromOptions = (
   }
   return "en10204_2_1";
 };
-
-/**
- * The internal charge number a received batch is traced by: the receipt year
- * plus a zero-padded sequence within that year, e.g. `IC-2026-0001`.
- */
-export const formatInternalChargeNumber = (
-  year: number,
-  sequence: number,
-): string => `IC-${year}-${String(sequence).padStart(4, "0")}`;
 
 /**
  * The initials of a person's name ("Jan de Vries" -> "JdV"), used by the
@@ -1886,6 +1879,90 @@ export const runningMeters = ({
     return 0;
   }
   return (quantity * lengthMm) / 1000;
+};
+
+/** The calendar day a date or timestamp falls on, as "yyyy-MM-dd". */
+const calendarDay = (value: string | Date): string =>
+  typeof value === "string" ? value.slice(0, 10) : value.toISOString().slice(0, 10);
+
+/**
+ * Whole calendar days from one date to another, ignoring the time of day —
+ * 8-4-2025 14:43 to 9-4-2025 11:29 is 1.
+ */
+export const calendarDaysBetween = (
+  from: string | Date,
+  to: string | Date,
+): number =>
+  Math.round(
+    (Date.parse(calendarDay(to)) - Date.parse(calendarDay(from))) / 86_400_000,
+  );
+
+/**
+ * A complaint's `Resolution time (calendar days)`, proved on 74 of 74
+ * reference rows: from the report date to the day the status became Done. An
+ * open complaint reads 0 — not the days it has been open so far, which is what
+ * `Days in system` on its lines counts instead.
+ */
+export const complaintResolutionDays = (
+  status: ComplaintStatus | null | undefined,
+  reportDate: string | Date | null | undefined,
+  statusDate: string | Date | null | undefined,
+): number =>
+  status === "done" && reportDate && statusDate
+    ? Math.max(0, calendarDaysBetween(reportDate, statusDate))
+    : 0;
+
+/**
+ * The document a complaint names, the way the reference prints it in
+ * `Order/quote`: its series letter and number — `O100070` for a sales order,
+ * `IO400057` for a purchase order. The complaint type decides which one.
+ */
+export const complaintDocumentCode = (document: {
+  complaintType: ComplaintType | null | undefined;
+  orderId: number | null;
+  quoteId: number | null;
+  counterOrderId: number | null;
+  purchaseOrderId: number | null;
+  purchaseQuoteId: number | null;
+  returnOrderId: number | null;
+}): string | null => {
+  const series: Array<[string, number | null]> = [
+    ["O", document.orderId],
+    ["Q", document.quoteId],
+    ["C", document.counterOrderId],
+    ["IO", document.purchaseOrderId],
+    ["IQ", document.purchaseQuoteId],
+    ["R", document.returnOrderId],
+  ];
+  const found = series.find(([, id]) => id !== null);
+  return found ? `${found[0]}${found[1]}` : null;
+};
+
+/**
+ * The six document links of a complaint with only the one its type calls for
+ * set. The reference offers a single `Order:` picker whose meaning the type
+ * decides, so a type change must not leave the previous kind's link behind.
+ */
+export const complaintDocumentColumns = (
+  complaintType: ComplaintType | null | undefined,
+  documentUuid: string | null | undefined,
+): {
+  orderUuid: string | null;
+  quoteUuid: string | null;
+  counterOrderUuid: string | null;
+  purchaseOrderUuid: string | null;
+  purchaseQuoteUuid: string | null;
+  returnOrderUuid: string | null;
+} => {
+  const uuid = documentUuid || null;
+  return {
+    orderUuid: complaintType === "order" ? uuid : null,
+    quoteUuid: complaintType === "quote" ? uuid : null,
+    counterOrderUuid: complaintType === "counter_order" ? uuid : null,
+    purchaseOrderUuid: complaintType === "purchase_order" ? uuid : null,
+    purchaseQuoteUuid: complaintType === "purchase_quote" ? uuid : null,
+    returnOrderUuid: complaintType === "return_order" ? uuid : null,
+  };
 };
 
 /**

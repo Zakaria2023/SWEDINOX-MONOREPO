@@ -5,9 +5,12 @@ import { useState, useTransition } from "react";
 import { PackageCheck } from "lucide-react";
 import {
   ComplaintDetail,
+  ComplaintOrderLine,
   convertComplaintToReturnOrder,
   deleteComplaint,
 } from "@/app/(dashboard)/complaints/actions";
+import { ProductOption } from "@/app/(dashboard)/products/actions";
+import { ComplaintLinesPanel } from "./complaint-lines-panel";
 import { Button } from "@/components/shadcn/button";
 import {
   Table,
@@ -30,6 +33,7 @@ import {
   fullName,
   orDash,
   pluralize,
+  salesRepresentativeLabel,
   userName,
 } from "@/lib/helpers";
 import {
@@ -39,15 +43,24 @@ import {
   COMPLAINT_SOLUTION_LABELS,
   COMPLAINT_STATUS_LABELS,
   COMPLAINT_TYPE_LABELS,
+  STOCK_UNIT_LABELS,
 } from "@/lib/labels";
 
 type Props = {
   /** Clerk id -> name; these columns store the id, not the name. */
   userNames: Record<string, string>;
   complaint: ComplaintDetail;
+  /** The delivered lines of the order the complaint names. */
+  orderLines: ComplaintOrderLine[];
+  products: ProductOption[];
 };
 
-export const ComplaintDetailView = ({ complaint, userNames }: Props) => {
+export const ComplaintDetailView = ({
+  complaint,
+  userNames,
+  orderLines,
+  products,
+}: Props) => {
   const [isPending, startTransition] = useTransition();
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [error, setError] = useState<string | undefined>();
@@ -63,6 +76,15 @@ export const ComplaintDetailView = ({ complaint, userNames }: Props) => {
   };
 
   const returnsGoods = complaintSolutionReturnsGoods(complaint.solution);
+  const canAddLines =
+    complaint.complaintType === "order" && !!complaint.orderUuid;
+  const documentHref = complaint.orderUuid
+    ? `/orders/${complaint.orderUuid}`
+    : complaint.purchaseOrderUuid
+      ? `/purchase-orders/${complaint.purchaseOrderUuid}`
+      : complaint.returnOrderUuid
+        ? `/return-orders/${complaint.returnOrderUuid}`
+        : null;
   const hasReturn = complaint.returnOrders.length > 0;
 
   const handleRaiseReturn = () => {
@@ -85,10 +107,27 @@ export const ComplaintDetailView = ({ complaint, userNames }: Props) => {
     <div className="space-y-6">
       {error && <FormError>{error}</FormError>}
 
+      {/* The reference heads the record with who recorded it and who touched
+          it last. */}
+      <p className="text-sm text-muted-foreground">
+        Recorded by {userName(complaint.createdByUserId, userNames)} on{" "}
+        {formatDateColumn(complaint.createdAt)}; last changed by{" "}
+        {userName(complaint.modifiedByUserId, userNames)} on{" "}
+        {formatDateColumn(complaint.updatedAt)}
+      </p>
+
       <section className="space-y-4">
         <h2 className="border-b pb-2 text-base font-semibold">Complaint</h2>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
           <DetailField label="Company" value={complaint.companyName} />
+          <DetailField
+            label="Account manager"
+            value={salesRepresentativeLabel(complaint.accountManager)}
+          />
+          <DetailField
+            label="Representative"
+            value={salesRepresentativeLabel(complaint.representative)}
+          />
           <DetailField
             label="Contact"
             value={fullName(
@@ -104,6 +143,21 @@ export const ComplaintDetailView = ({ complaint, userNames }: Props) => {
                 : null
             }
           />
+          <div>
+            <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+              Order
+            </p>
+            {documentHref && complaint.documentCode ? (
+              <Link
+                href={documentHref}
+                className="text-sm text-primary hover:underline"
+              >
+                {complaint.documentCode}
+              </Link>
+            ) : (
+              <p className="text-sm">{orDash(complaint.documentCode)}</p>
+            )}
+          </div>
           <DetailField
             label="Report"
             value={
@@ -163,7 +217,9 @@ export const ComplaintDetailView = ({ complaint, userNames }: Props) => {
           </div>
           <DetailField
             label="Qty"
-            value={formatNumber(Number(complaint.qty ?? 0))}
+            value={`${formatNumber(Number(complaint.qty ?? 0))}${
+              complaint.qtyUnit ? ` ${STOCK_UNIT_LABELS[complaint.qtyUnit]}` : ""
+            }`}
           />
           <DetailField
             label="Amount"
@@ -276,87 +332,18 @@ export const ComplaintDetailView = ({ complaint, userNames }: Props) => {
         {/* The order link the schema has always carried — this is the first
             screen that surfaces which order line a complaint is about. */}
         <CollapsibleSection
-          title="Complaint lines"
+          title="Lines"
           summary={pluralize(complaint.items.length, "line")}
-          defaultOpen={complaint.items.length > 0}
+          defaultOpen={complaint.items.length > 0 || canAddLines}
         >
-          <div>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-right">Line</TableHead>
-                  <TableHead>Order</TableHead>
-                  <TableHead>Product</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead>Delivery date</TableHead>
-                  <TableHead>Completed</TableHead>
-                  <TableHead className="text-right">Qty</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                  <TableHead className="text-right">Weight (kg)</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {complaint.items.length === 0 ? (
-                  <TableRow>
-                    <TableCell
-                      colSpan={9}
-                      className="h-24 text-center text-muted-foreground"
-                    >
-                      No lines on this complaint.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  complaint.items.map((item) => (
-                    <TableRow key={item.uuid}>
-                      <TableCell className="text-right tabular-nums">
-                        {orDash(item.lineNumber)}
-                      </TableCell>
-                      <TableCell>
-                        {item.orderUuid ? (
-                          <Link
-                            href={`/orders/${item.orderUuid}`}
-                            className="text-primary hover:underline"
-                          >
-                            #{orDash(item.orderId)}
-                          </Link>
-                        ) : (
-                          "—"
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {item.productUuid ? (
-                          <Link
-                            href={`/products/${item.productUuid}`}
-                            className="text-primary hover:underline"
-                          >
-                            {[item.productCode, item.productName]
-                              .filter(Boolean)
-                              .join(" — ") || item.productUuid}
-                          </Link>
-                        ) : (
-                          "—"
-                        )}
-                      </TableCell>
-                      <TableCell>{orDash(item.description)}</TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        {formatDateColumn(item.deliveryDate)}
-                      </TableCell>
-                      <TableCell>{item.completed ? "Yes" : "No"}</TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {formatNumber(Number(item.qty ?? 0))}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {formatMoney(Number(item.amount ?? 0))}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {formatNumber(Number(item.weightKg ?? 0))}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
+          <ComplaintLinesPanel
+            complaintUuid={complaint.uuid}
+            canAddLines={canAddLines}
+            daysInSystem={complaint.daysInSystem}
+            items={complaint.items}
+            orderLines={orderLines}
+            products={products}
+          />
         </CollapsibleSection>
 
         <CollapsibleSection

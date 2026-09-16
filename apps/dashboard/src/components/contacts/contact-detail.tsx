@@ -103,7 +103,7 @@ export const ContactDetailView = ({ contact }: Props) => {
           <DetailField label="Fax" value={contact.fax} />
           <DetailField label="Email" value={contact.email} />
           <DetailField label="Website" value={contact.website} />
-          <DetailField label="BTW number" value={contact.btwNumber} />
+          <DetailField label="VAT number" value={contact.btwNumber} />
         </div>
       </section>
 

@@ -48,7 +48,7 @@ const COLUMNS: TreeColumn<WarehouseTreeRow>[] = [
   { key: "order", header: "Order", cell: (row) => orDash(row.orderNumber) },
   { key: "length", header: "Length", cell: (row) => orDash(row.length) },
   { key: "width", header: "Width", cell: (row) => orDash(row.width) },
-  { key: "thickness", header: "Dikte", cell: (row) => orDash(row.thickness) },
+  { key: "thickness", header: "Thickness", cell: (row) => orDash(row.thickness) },
   {
     key: "qtyPlanned",
     header: "Qty(p)",

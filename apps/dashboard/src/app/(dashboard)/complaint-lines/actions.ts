@@ -1,5 +1,7 @@
 "use server";
 
+import { COMPLAINT_LINE_COLUMNS } from "@/app/(dashboard)/complaint-lines/columns";
+import { ComplaintOverviewRow } from "@/app/(dashboard)/complaints/columns";
 import { db } from "@/db";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import {
@@ -8,18 +10,84 @@ import {
 } from "@/db/schema/complaint-items";
 import { Complaints, SelectComplaints } from "@/db/schema/complaints";
 import { Contacts } from "@/db/schema/contacts";
-import { OrderItems } from "@/db/schema/order-items";
+import { CounterOrders } from "@/db/schema/counter-orders";
+import { OrderItems, SelectOrderItems } from "@/db/schema/order-items";
 import { Orders, SelectOrders } from "@/db/schema/orders";
 import { Products, SelectProducts } from "@/db/schema/products";
-import { Stock } from "@/db/schema/stock";
+import { PurchaseOrders } from "@/db/schema/purchase-orders";
+import { PurchaseQuotes } from "@/db/schema/purchase-quotes";
+import { Quotes } from "@/db/schema/quotes";
+import { ReturnOrders } from "@/db/schema/return-orders";
 import { SelectWarehouses, Warehouses } from "@/db/schema/warehouses";
 import { requireAuth } from "@/lib/auth";
-import { describeError, generateUuid } from "@/lib/helpers";
-import { getClerkUsersForSelect } from "@/lib/server/clerk";
-import { aliasedTable, and, asc, desc, eq, SQL, sql } from "drizzle-orm";
+import {
+  complaintCategories,
+  complaintStatuses,
+  complaintTypes,
+} from "@/lib/enums";
+import { describeError } from "@/lib/helpers";
+import {
+  getClerkUserNames,
+  getClerkUsersForSelect,
+} from "@/lib/server/clerk";
+import {
+  COMPLAINT_OVERVIEW_FIELDS,
+  toComplaintOverviewFields,
+} from "@/lib/server/complaint-overview";
+import { exportRows } from "@/lib/server/excel";
+import {
+  booleanFilter,
+  dateRangeFilter,
+  enumFilter,
+  relationFilter,
+  runPaged,
+  tableOrderBy,
+  tableWhere,
+} from "@/lib/server/table-query";
+import {
+  Paged,
+  parseTableQuery,
+  SearchParams,
+  TableQuery,
+} from "@/lib/table-query";
+import { asc, count, desc, eq, SQL, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
-const StockLocations = aliasedTable(Warehouses, "stock_locations");
+const COMPLAINT_LINE_SEARCH = [
+  Complaints.description,
+  Companies.companyName,
+  Products.productCode,
+] as const;
+
+const COMPLAINT_LINE_SORTABLE = {
+  complaintNumber: Complaints.id,
+  reportDate: Complaints.reportDate,
+  customer: Companies.companyName,
+  status: Complaints.status,
+  deadline: Complaints.deadline,
+  createdAt: Complaints.createdAt,
+};
+
+const COMPLAINT_LINE_FILTERS = {
+  status: enumFilter(Complaints.status, complaintStatuses),
+  complaintType: enumFilter(Complaints.complaintType, complaintTypes),
+  category: enumFilter(Complaints.category, complaintCategories),
+  company: relationFilter(Complaints.companyUuid),
+  product: relationFilter(ComplaintItems.productUuid),
+  reportDate: dateRangeFilter(Complaints.reportDate),
+  completed: booleanFilter(ComplaintItems.completed),
+};
+
+// A line names the order line it is about; its order is the complaint's
+// (34 of 34 reference lines), and the line's own stands in when the complaint
+// header was saved without one.
+const lineOrderUuid = sql`COALESCE(${Complaints.orderUuid}, ${ComplaintItems.orderUuid})`;
+
+export type ComplaintLineOverviewRow = ComplaintOverviewRow & {
+  lineUuid: SelectComplaintItems["uuid"];
+  orderLine: SelectOrderItems["lineNumber"] | null;
+  warehouseSection: SelectWarehouses["name"] | null;
+};
 
 export type ComplaintLineRow = SelectComplaintItems & {
   complaintNumber: SelectComplaints["id"] | null;
@@ -52,22 +120,143 @@ export type ComplaintLineRow = SelectComplaintItems & {
   reportYear: number | null;
 };
 
-export type GenerateComplaintLinesResult = {
-  error?: string;
-  success?: boolean;
-  createdLines?: number;
-};
-
 export type ComplaintLineActionResult = {
   error?: string;
   success?: boolean;
 };
 
-// Every complaint line, joined to its complaint, that complaint's company, the
+/**
+ * The Complaint lines overview: the complaint's own 29 columns on every line,
+ * plus the two that belong to the line — which order line, and the warehouse
+ * section.
+ */
+const complaintLineOverviewRows =
+  (query: TableQuery) =>
+  async (
+    limit: number,
+    offset: number,
+  ): Promise<ComplaintLineOverviewRow[]> => {
+    const rows = await db
+      .select({
+        ...COMPLAINT_OVERVIEW_FIELDS,
+        lineUuid: ComplaintItems.uuid,
+        lineOrderUuid: sql<string | null>`${lineOrderUuid}`,
+        orderLine: OrderItems.lineNumber,
+        warehouseSection: Warehouses.name,
+        productCode: Products.productCode,
+        productDescription: Products.name,
+      })
+      .from(ComplaintItems)
+      .innerJoin(Complaints, eq(ComplaintItems.complaintUuid, Complaints.uuid))
+      .leftJoin(Companies, eq(Complaints.companyUuid, Companies.uuid))
+      .leftJoin(Contacts, eq(Complaints.contactUuid, Contacts.uuid))
+      .leftJoin(Products, eq(ComplaintItems.productUuid, Products.uuid))
+      .leftJoin(Orders, sql`${Orders.uuid} = ${lineOrderUuid}`)
+      .leftJoin(OrderItems, eq(ComplaintItems.orderItemUuid, OrderItems.uuid))
+      .leftJoin(Quotes, eq(Complaints.quoteUuid, Quotes.uuid))
+      .leftJoin(
+        CounterOrders,
+        eq(Complaints.counterOrderUuid, CounterOrders.uuid),
+      )
+      .leftJoin(
+        PurchaseOrders,
+        eq(Complaints.purchaseOrderUuid, PurchaseOrders.uuid),
+      )
+      .leftJoin(
+        PurchaseQuotes,
+        eq(Complaints.purchaseQuoteUuid, PurchaseQuotes.uuid),
+      )
+      .leftJoin(ReturnOrders, eq(Complaints.returnOrderUuid, ReturnOrders.uuid))
+      .leftJoin(
+        Warehouses,
+        eq(ComplaintItems.warehouseSectionUuid, Warehouses.uuid),
+      )
+      .where(
+        tableWhere({
+          query,
+          search: COMPLAINT_LINE_SEARCH,
+          filters: COMPLAINT_LINE_FILTERS,
+        }),
+      )
+      .orderBy(
+        ...tableOrderBy(
+          COMPLAINT_LINE_SORTABLE,
+          query,
+          [desc(Complaints.id), asc(ComplaintItems.lineNumber)],
+          ComplaintItems.id,
+        ),
+      )
+      .limit(limit)
+      .offset(offset);
+
+    if (rows.length === 0) {
+      return [];
+    }
+    const nameById = new Map(Object.entries(await getClerkUserNames()));
+    return rows.map(
+      ({
+        lineUuid,
+        lineOrderUuid: orderUuid,
+        orderLine,
+        warehouseSection,
+        productCode,
+        productDescription,
+        ...raw
+      }) => ({
+        ...toComplaintOverviewFields({ ...raw, orderUuid }, nameById),
+        lineUuid,
+        orderLine,
+        warehouseSection,
+        productCode,
+        productDescription,
+      }),
+    );
+  };
+
+export const getComplaintLineOverview = async (
+  query: TableQuery,
+): Promise<Paged<ComplaintLineOverviewRow>> => {
+  try {
+    return await runPaged(query, {
+      rows: complaintLineOverviewRows(query),
+      count: async () => {
+        const [row] = await db
+          .select({ value: count() })
+          .from(ComplaintItems)
+          .innerJoin(
+            Complaints,
+            eq(ComplaintItems.complaintUuid, Complaints.uuid),
+          )
+          .leftJoin(Companies, eq(Complaints.companyUuid, Companies.uuid))
+          .leftJoin(Products, eq(ComplaintItems.productUuid, Products.uuid))
+          .where(
+            tableWhere({
+              query,
+              search: COMPLAINT_LINE_SEARCH,
+              filters: COMPLAINT_LINE_FILTERS,
+            }),
+          );
+        return Number(row?.value ?? 0);
+      },
+    });
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch complaint lines"));
+  }
+};
+
+export const exportComplaintLines = async (
+  params: SearchParams,
+  columnKeys: string[],
+): Promise<string> =>
+  exportRows({
+    name: "Complaint lines",
+    columns: COMPLAINT_LINE_COLUMNS,
+    columnKeys,
+    rows: complaintLineOverviewRows(parseTableQuery(params)),
+  });
+
+// One complaint line, joined to its complaint, that complaint's company, the
 // order line it is about and the section the goods sat in.
-//
-// The overview and the detail screen show the same row, so they share one query
-// and differ only in the filter applied. `where` is left off for the overview.
 const selectComplaintLines = async (
   where?: SQL,
 ): Promise<ComplaintLineRow[]> => {
@@ -152,14 +341,6 @@ const selectComplaintLines = async (
   }));
 };
 
-export const getComplaintLines = async (): Promise<ComplaintLineRow[]> => {
-  try {
-    return await selectComplaintLines();
-  } catch (error) {
-    throw new Error(describeError(error, "Failed to fetch complaint lines"));
-  }
-};
-
 /**
  * One complaint line with its complaint, the customer, the order line it is
  * about, the product and the warehouse section the goods sat in.
@@ -202,142 +383,3 @@ export const setComplaintLineCompleted = async (
   revalidatePath("/complaints");
   return { success: true };
 };
-
-// Breaks each complaint that has no lines yet down into the lines it is
-// actually about.
-//
-// A complaint names a company and (usually) a product. Every order line that
-// customer has for that product becomes its own complaint line, carrying the
-// order, the order line number, the delivery date, the seller and the
-// warehouse section the stock sat in — that is what makes a complaint
-// actionable per delivery. A complaint whose product was never ordered by that
-// customer still gets one line, taken straight from the complaint header, so
-// nothing is silently dropped.
-//
-// Complaints that already have lines are skipped, so it can be re-run.
-export const generateComplaintLines =
-  async (): Promise<GenerateComplaintLinesResult> => {
-    try {
-      const complaints = await db
-        .select({
-          complaint: Complaints,
-          contactFirstName: Contacts.firstName,
-          contactLastName: Contacts.lastName,
-        })
-        .from(Complaints)
-        .leftJoin(Contacts, eq(Complaints.contactUuid, Contacts.uuid));
-
-      if (complaints.length === 0) {
-        return { error: "No complaints yet. Create one first." };
-      }
-
-      const existing = await db
-        .select({ complaintUuid: ComplaintItems.complaintUuid })
-        .from(ComplaintItems);
-      const complaintsWithLines = new Set(
-        existing.map((row) => row.complaintUuid),
-      );
-
-      const openComplaints = complaints.filter(
-        (row) => !complaintsWithLines.has(row.complaint.uuid),
-      );
-      if (openComplaints.length === 0) {
-        return { error: "Every complaint already has lines." };
-      }
-
-      const rows: (typeof ComplaintItems.$inferInsert)[] = [];
-
-      for (const {
-        complaint,
-        contactFirstName,
-        contactLastName,
-      } of openComplaints) {
-        const correspondenceName =
-          [contactFirstName, contactLastName].filter(Boolean).join(" ") || null;
-
-        const orderLines = complaint.productUuid
-          ? await db
-              .select({
-                orderUuid: OrderItems.orderUuid,
-                orderItemUuid: OrderItems.uuid,
-                productUuid: OrderItems.productUuid,
-                quantity: OrderItems.quantity,
-                weightKg: OrderItems.kgPlanned,
-                amount: OrderItems.amount,
-                deliveryDate: OrderItems.deliveryDate,
-                seller: Orders.seller,
-                // Stock sits in a location, which is a leaf of the Warehouses
-                // tree; the section is that location's parent (or the location
-                // itself when it hangs straight off the warehouse).
-                locationUuid: StockLocations.uuid,
-                locationParentUuid: StockLocations.parentUuid,
-              })
-              .from(OrderItems)
-              .innerJoin(Orders, eq(OrderItems.orderUuid, Orders.uuid))
-              .leftJoin(Stock, eq(OrderItems.stockUuid, Stock.uuid))
-              .leftJoin(
-                StockLocations,
-                eq(Stock.locationUuid, StockLocations.uuid),
-              )
-              .where(
-                and(
-                  eq(Orders.companyUuid, complaint.companyUuid),
-                  eq(OrderItems.productUuid, complaint.productUuid),
-                ),
-              )
-          : [];
-
-        const shared = {
-          complaintUuid: complaint.uuid,
-          description: complaint.description,
-          category: complaint.category,
-          complaintType: complaint.complaintType,
-          createdByUserId: complaint.responsibleUserId,
-          correspondenceName,
-        };
-
-        if (orderLines.length === 0) {
-          rows.push({
-            ...shared,
-            uuid: generateUuid(),
-            productUuid: complaint.productUuid,
-            lineNumber: 1,
-            qty: complaint.qty ?? "0.000",
-            amount: complaint.amount ?? "0.00",
-            weightKg: Number(complaint.weight ?? 0).toFixed(2),
-          });
-          continue;
-        }
-
-        for (const [index, line] of orderLines.entries()) {
-          rows.push({
-            ...shared,
-            uuid: generateUuid(),
-            orderUuid: line.orderUuid,
-            orderItemUuid: line.orderItemUuid,
-            productUuid: line.productUuid,
-            warehouseSectionUuid: line.locationParentUuid ?? line.locationUuid,
-            purchaserSeller: line.seller,
-            deliveryDate: line.deliveryDate,
-            lineNumber: index + 1,
-            qty: line.quantity ?? "0.000",
-            amount: line.amount ?? "0.00",
-            weightKg: line.weightKg ?? "0.00",
-          });
-        }
-      }
-
-      await db.insert(ComplaintItems).values(rows);
-
-      revalidatePath("/complaint-lines");
-      revalidatePath("/complaints");
-      return { success: true, createdLines: rows.length };
-    } catch (error) {
-      return {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Failed to generate complaint lines",
-      };
-    }
-  };

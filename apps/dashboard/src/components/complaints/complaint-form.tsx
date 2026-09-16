@@ -18,6 +18,7 @@ import { Select } from "@/components/shadcn/select";
 import { DocumentUploader } from "@/components/document-uploader";
 import { WorkordersSection } from "./sections/workorders-section";
 import { COMPLAINT_STATUS_LABELS } from "@/lib/labels";
+import { salesRepresentativeLabel } from "@/lib/helpers";
 import { DashboardUserOption } from "@/lib/server/clerk";
 import { useUser } from "@clerk/nextjs";
 import { X } from "lucide-react";
@@ -49,6 +50,9 @@ export const ComplaintForm = ({
     contactOptions,
     productOptions,
     complaintTypeOptions,
+    documentOptions,
+    qtyUnitOptions,
+    companyContext,
     complaintReportOptions,
     complaintCategoryOptions,
     statusOptions,
@@ -75,6 +79,7 @@ export const ComplaintForm = ({
   } = form;
 
   const documents = watch("documents");
+  const complaintType = watch("complaintType");
   const currentStatus = watch("status");
   const totalCosts =
     (Number(watch("costsCustomer")) || 0) +
@@ -136,13 +141,13 @@ export const ComplaintForm = ({
           <div>
             <FormLabel>Account Manager</FormLabel>
             <div className="flex h-8 items-center rounded-lg border border-input bg-input/50 px-2.5 text-sm text-muted-foreground">
-              Hego
+              {salesRepresentativeLabel(companyContext.accountManager)}
             </div>
           </div>
           <div>
             <FormLabel>Representative</FormLabel>
             <div className="flex h-8 items-center rounded-lg border border-input bg-input/50 px-2.5 text-sm text-muted-foreground">
-              Hego
+              {salesRepresentativeLabel(companyContext.representative)}
             </div>
           </div>
         </div>
@@ -160,6 +165,22 @@ export const ComplaintForm = ({
             options={complaintTypeOptions}
             emptyValue=""
           />
+
+          {/* The type decides what this names: a sales order for an Order
+              complaint, a purchase order for a Purchase order one. A General
+              complaint names nothing, so the picker is not offered. */}
+          {complaintType && complaintType !== "general" ? (
+            <FormSelectField
+              control={control}
+              id="documentUuid"
+              name="documentUuid"
+              label="Order"
+              options={documentOptions}
+              emptyValue=""
+            />
+          ) : (
+            <div />
+          )}
 
           <FormSelectField
             control={control}
@@ -220,9 +241,19 @@ export const ComplaintForm = ({
               emptyValue=""
             />
           </div>
-          <div>
-            <FormLabel htmlFor="qty">Qty</FormLabel>
-            <Input id="qty" type="number" step="0.001" {...register("qty")} />
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <FormLabel htmlFor="qty">Qty</FormLabel>
+              <Input id="qty" type="number" step="0.001" {...register("qty")} />
+            </div>
+            <FormSelectField
+              control={control}
+              id="qtyUnit"
+              name="qtyUnit"
+              label="Unit"
+              options={qtyUnitOptions}
+              emptyValue=""
+            />
           </div>
           <div>
             <FormLabel htmlFor="amount">Amount (€)</FormLabel>

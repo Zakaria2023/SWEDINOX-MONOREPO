@@ -331,9 +331,9 @@ export const syncPurchaseLineReceipts = async (
 export const recordPurchaseLineReceipt = async (
   tx: PurchaseLineWriter,
   { purchaseOrderItemUuid, quantity, kg, date }: PurchaseLineReceiptInput,
-): Promise<void> => {
+): Promise<string | null> => {
   if (quantity <= 0 && kg <= 0) {
-    return;
+    return null;
   }
 
   const [line] = await tx
@@ -354,7 +354,7 @@ export const recordPurchaseLineReceipt = async (
     .limit(1);
 
   if (!line) {
-    return;
+    return null;
   }
 
   const open = await tx
@@ -369,8 +369,9 @@ export const recordPurchaseLineReceipt = async (
     .orderBy(asc(PurchaseLineReceivals.id));
 
   if (open.length === 0) {
+    const receivalUuid = generateUuid();
     await tx.insert(PurchaseLineReceivals).values({
-      uuid: generateUuid(),
+      uuid: receivalUuid,
       purchaseOrderUuid: line.purchaseOrderUuid,
       purchaseOrderItemUuid,
       productUuid: line.productUuid,
@@ -386,7 +387,7 @@ export const recordPurchaseLineReceipt = async (
       receiptDate: date,
       deliveryDateActual: date,
     });
-    return;
+    return receivalUuid;
   }
 
   // Each open reception takes what it still has room for; the last one takes
@@ -440,4 +441,7 @@ export const recordPurchaseLineReceipt = async (
       })
       .where(eq(PurchaseLineReceivals.uuid, receival.uuid));
   }
+
+  // The reception the goods landed on — the first one they filled.
+  return allocations[0]?.receival.uuid ?? null;
 };

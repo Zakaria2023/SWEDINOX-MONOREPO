@@ -1,103 +1,127 @@
 "use client";
 
-import Link from "next/link";
 import {
   ComplaintListItem,
   exportComplaints,
 } from "@/app/(dashboard)/complaints/actions";
-import { PagedTableExportButton } from "@/components/ui/table-export-button";
-import { TablePagination } from "@/components/ui/table-pagination";
-import { TableSortHeader } from "@/components/ui/table-sort-header";
-import { TableToolbar } from "@/components/ui/table-toolbar";
-import { Paged, TableFilterControl } from "@/lib/table-query";
+import {
+  COMPLAINT_COLUMNS,
+  ComplaintColumnKey,
+} from "@/app/(dashboard)/complaints/columns";
 import {
   Table,
   TableBody,
-  TableCell,
   TableHead,
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
-import { COMPLAINT_CATEGORY_LABELS, COMPLAINT_TYPE_LABELS } from "@/lib/labels";
-import { ComplaintCategory, ComplaintType } from "@/lib/enums";
+import { ColumnSelector } from "@/components/ui/column-selector";
+import { PagedTableExportButton } from "@/components/ui/table-export-button";
+import { TablePagination } from "@/components/ui/table-pagination";
+import { TableSortHeader } from "@/components/ui/table-sort-header";
+import { TableToolbar } from "@/components/ui/table-toolbar";
+import { selectorColumns } from "@/lib/excel";
+import { buildColumnVisibility } from "@/lib/helpers";
+import { Paged, TableFilterControl } from "@/lib/table-query";
+import { useState } from "react";
+import { ComplaintOverviewCell } from "./complaint-overview-cell";
 
 type Props = {
   page: Paged<ComplaintListItem>;
   filters: TableFilterControl[];
 };
 
-export const ComplaintsTableContent = ({ page, filters }: Props) => (
-  <div className="space-y-4">
-    <TableToolbar
-      searchPlaceholder="Search description, customer or product…"
-      filters={filters}
-    >
-      <PagedTableExportButton fileName="complaints" action={exportComplaints} />
-    </TableToolbar>
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>ID</TableHead>
-          <TableSortHeader sortKey="customer">Company</TableSortHeader>
-          <TableHead>Contact</TableHead>
-          <TableHead>Type</TableHead>
-          <TableHead>Category</TableHead>
-          <TableSortHeader sortKey="reportDate">Report Date</TableSortHeader>
-          <TableHead>Product</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {page.rows.length === 0 ? (
-          <TableRow>
-            <TableCell
-              colSpan={7}
-              className="h-24 text-center text-muted-foreground"
-            >
-              No complaints found.
-            </TableCell>
-          </TableRow>
-        ) : (
-          page.rows.map((row) => (
-            <TableRow key={row.uuid}>
-              <TableCell>
-                <Link
-                  href={`/complaints/${row.uuid}`}
-                  className="font-medium text-foreground underline-offset-4 hover:underline"
-                >
-                  {row.id}
-                </Link>
-              </TableCell>
-              <TableCell>{row.companyName ?? "—"}</TableCell>
-              <TableCell>
-                {[row.contactFirstName, row.contactLastName]
-                  .filter(Boolean)
-                  .join(" ") || "—"}
-              </TableCell>
-              <TableCell>
-                {row.complaintType
-                  ? (COMPLAINT_TYPE_LABELS[
-                      row.complaintType as ComplaintType
-                    ] ?? row.complaintType)
-                  : "—"}
-              </TableCell>
-              <TableCell>
-                {row.category
-                  ? (COMPLAINT_CATEGORY_LABELS[
-                      row.category as ComplaintCategory
-                    ] ?? row.category)
-                  : "—"}
-              </TableCell>
-              <TableCell>
-                {row.reportDate
-                  ? new Date(row.reportDate).toLocaleDateString("en-GB")
-                  : "—"}
-              </TableCell>
-              <TableCell>{row.productCode ?? "—"}</TableCell>
-            </TableRow>
-          ))
-        )}
-      </TableBody>
-    </Table>
-    <TablePagination page={page} singular="complaint" plural="complaints" />
-  </div>
-);
+const ALL_COLUMNS = selectorColumns(COMPLAINT_COLUMNS);
+
+const SORTABLE: Partial<Record<ComplaintColumnKey, string>> = {
+  complaintNumber: "complaintNumber",
+  reportDate: "reportDate",
+  companyName: "customer",
+  status: "status",
+  deadline: "deadline",
+  creationDate: "createdAt",
+};
+
+export const ComplaintsTableContent = ({ page, filters }: Props) => {
+  const [columnVisibility, setColumnVisibility] = useState<
+    Record<ComplaintColumnKey, boolean>
+  >(buildColumnVisibility(ALL_COLUMNS));
+
+  const toggleColumn = (key: string) =>
+    setColumnVisibility((prev) => ({
+      ...prev,
+      [key]: !prev[key as ComplaintColumnKey],
+    }));
+
+  const visibleColumns = ALL_COLUMNS.filter((col) => columnVisibility[col.key]);
+
+  return (
+    <div className="space-y-4">
+      <TableToolbar
+        searchPlaceholder="Search description, customer or product…"
+        filters={filters}
+      >
+        <ColumnSelector
+          columns={ALL_COLUMNS.map((col) => ({
+            key: col.key,
+            label: col.label,
+          }))}
+          visibility={columnVisibility}
+          onToggle={toggleColumn}
+        />
+        <PagedTableExportButton
+          fileName="complaints"
+          columnKeys={visibleColumns.map((column) => column.key)}
+          action={exportComplaints}
+        />
+      </TableToolbar>
+
+      {page.rows.length === 0 ? (
+        <div className="flex flex-col items-center gap-1 rounded-lg border border-dashed px-6 py-10 text-center">
+          <p className="font-medium">No complaints match this view</p>
+          <p className="max-w-md text-sm text-muted-foreground">
+            Record a complaint with New Complaint, or clear the search and the
+            filters to see more.
+          </p>
+        </div>
+      ) : (
+        <>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                {visibleColumns.map((col) => {
+                  const sortKey = SORTABLE[col.key];
+                  return sortKey ? (
+                    <TableSortHeader key={col.key} sortKey={sortKey}>
+                      {col.label}
+                    </TableSortHeader>
+                  ) : (
+                    <TableHead key={col.key}>{col.label}</TableHead>
+                  );
+                })}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {page.rows.map((row) => (
+                <TableRow key={row.complaintUuid}>
+                  {visibleColumns.map((col) => (
+                    <ComplaintOverviewCell
+                      key={col.key}
+                      row={row}
+                      column={col.key}
+                    />
+                  ))}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          <TablePagination
+            page={page}
+            singular="complaint"
+            plural="complaints"
+          />
+        </>
+      )}
+    </div>
+  );
+};

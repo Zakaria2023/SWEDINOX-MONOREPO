@@ -385,9 +385,8 @@ export const exportPurchaseReceivals = async (
  * One goods receipt with its supplier, product, purchase order, the other
  * instalments of the same line, and the batch registered against it.
  *
- * A receipt that has not been turned into a batch yet has none — the batch is
- * registered by a separate step on /batches, so its absence is a normal state
- * rather than missing data.
+ * The batch is written when the goods are unloaded, so a reception still
+ * waiting for its goods has none — a normal state rather than missing data.
  */
 export const getPurchaseReceivalDetail = async (
   uuid: string,

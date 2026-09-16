@@ -2,6 +2,7 @@
 
 import { CompanyActionResult } from "@/app/(dashboard)/companies/actions";
 import { db, SelectCompanies } from "@/db";
+import { requireAuth } from "@/lib/auth";
 import { Companies } from "@/db/schema/companies";
 import { describeError } from "@/lib/helpers";
 import { eq } from "drizzle-orm";
@@ -41,6 +42,7 @@ export const updateCompanyRoles = async (
   _prevState: CompanyActionResult,
   payload: UpdateCompanyRolesPayload,
 ): Promise<CompanyActionResult> => {
+  const userId = await requireAuth();
   const { companyUuid, ...values } = payload;
   const parsed = companyRolesSchema.safeParse(values);
   if (!parsed.success) {
@@ -54,7 +56,7 @@ export const updateCompanyRoles = async (
   try {
     await db
       .update(Companies)
-      .set({ roles: parsed.data.roles })
+      .set({ roles: parsed.data.roles, modifiedByUserId: userId })
       .where(eq(Companies.uuid, companyUuid));
   } catch (error) {
     return { error: describeError(error, "Failed to update company roles") };

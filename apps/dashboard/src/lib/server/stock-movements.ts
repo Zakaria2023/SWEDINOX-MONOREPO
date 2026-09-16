@@ -7,7 +7,9 @@ import {
   moneyString,
   normaliseCharge,
   restateLotValue,
+  todayDateString,
 } from "@/lib/helpers";
+import { carryLotBatches, registerBatchForLot } from "@/lib/server/batches";
 import { and, eq, ne } from "drizzle-orm";
 
 // The Drizzle transaction handle passed into db.transaction(async (tx) => ...).
@@ -201,6 +203,10 @@ export const applyMove = async (
     });
   }
 
+  // The batches travel with the steel, so a sheet on its new rack still traces
+  // to the receipt it came in on.
+  await carryLotBatches(tx, source.uuid, destinationUuid, quantity);
+
   // Two movements, because two lots changed. Netting them into one would leave
   // the stock ledger unable to say where the material actually went.
   await tx.insert(StockMovements).values([
@@ -354,6 +360,11 @@ export const applyProductionOutput = async (
     valuationPrice: (quantity > 0 ? params.value / quantity : 0).toFixed(4),
     valuationEuro: moneyString(params.value),
   });
+
+  // What comes off the machine is a batch row of its own under the heat and
+  // internal charge it was cut from, dated today — the reference's decoil and
+  // production rows. Waste carries no charge and registers nothing.
+  await registerBatchForLot(tx, stockUuid, { date: todayDateString() });
 
   await tx.insert(StockMovements).values({
     uuid: generateUuid(),

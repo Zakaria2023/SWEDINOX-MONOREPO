@@ -13,7 +13,11 @@ import {
   timestamp,
   varchar,
 } from "drizzle-orm/mysql-core";
-import { complaintCategories, complaintTypes } from "../../lib/enums";
+import {
+  complaintCategories,
+  complaintTypes,
+  stockUnits,
+} from "../../lib/enums";
 import { Complaints } from "./complaints";
 import { OrderItems } from "./order-items";
 import { Orders } from "./orders";
@@ -50,6 +54,10 @@ export const ComplaintItems = mysqlTable(
     // When the complained-about goods were delivered — the reference's
     // `COMPLAINT_LINE.DELIVERYDATE`, taken from the order line.
     deliveryDate: date("delivery_date", { mode: "string" }),
+    // The delivery the goods went out on — `Bill of lading` on the record's
+    // Lines panel (40025: 300302). One order line can go out in several
+    // deliveries, which is why a complaint can list the same order line twice.
+    billOfLading: varchar("bill_of_lading", { length: 100 }),
     // This line is dealt with, whatever the complaint as a whole still waits
     // on — the reference's `COMPLAINT_LINE.COMPLETED`.
     completed: boolean("completed").default(false).notNull(),
@@ -61,7 +69,16 @@ export const ComplaintItems = mysqlTable(
     correspondenceName: varchar("correspondence_name", { length: 255 }),
 
     // ── Quantities ────────────────────────────────────────────────────────────
+    // `Qty(a)`: what that delivery brought, in `unit`.
+    qtyDelivered: decimal("qty_delivered", { precision: 15, scale: 3 }).default(
+      "0.000",
+    ),
+    unit: mysqlEnum("unit", stockUnits),
+    // `Qty(shortfall)`: the part of the delivery in dispute — 9 of 14 on 40025,
+    // and 0 on a line listed only to say which delivery is meant (40043).
     qty: decimal("qty", { precision: 15, scale: 3 }).default("0.000"),
+    // A product the customer gets instead (`Exchange product`).
+    exchangeProductUuid: char("exchange_product_uuid", { length: 36 }),
     amount: decimal("amount", { precision: 15, scale: 2 }).default("0.00"),
     weightKg: decimal("weight_kg", { precision: 15, scale: 2 }).default("0.00"),
 
@@ -94,6 +111,11 @@ export const ComplaintItems = mysqlTable(
     foreignKey({
       name: "fk_complaint_items_product",
       columns: [table.productUuid],
+      foreignColumns: [Products.uuid],
+    }),
+    foreignKey({
+      name: "fk_complaint_items_exchange_product",
+      columns: [table.exchangeProductUuid],
       foreignColumns: [Products.uuid],
     }),
     foreignKey({

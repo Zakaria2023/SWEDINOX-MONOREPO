@@ -203,6 +203,10 @@ export const Companies = mysqlTable(
     // Manually flagged as inactive — surfaces the company on the Inactive
     // Companies overview regardless of its order history.
     isInactive: boolean("is_inactive").default(false),
+    // The Clerk user who last saved this company — the reference's
+    // `Last modified by`, which the Inactive companies overview prints beside
+    // `updatedAt`. Empty on rows no person has edited since the column existed.
+    modifiedByUserId: varchar("modified_by_user_id", { length: 255 }),
 
     // Invoicing settings (customer)
     invoicingMethod: mysqlEnum("invoicing_method", invoicingMethods),

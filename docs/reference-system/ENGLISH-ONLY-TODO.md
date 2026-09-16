@@ -3,9 +3,10 @@
 **Rule:** every word the app shows is English. Dutch labels from easy2trade
 screenshots are translated when a screen is built, never copied.
 
-**Status:** 🔴 to update. Found 16-9-2026 by scanning every label, column
-header, sidebar entry, placeholder and label map in `apps/dashboard/src`
-(4 338 strings). Not fixed yet — this note is the reminder.
+**Status:** ✅ §1 and §2 fixed 16-9-2026 — a rescan finds only a person's
+name. §3 (stored data) is still open. Found the same day by scanning every
+label, column header, sidebar entry, placeholder and label map in
+`apps/dashboard/src` (4 338 strings).
 
 ---
 

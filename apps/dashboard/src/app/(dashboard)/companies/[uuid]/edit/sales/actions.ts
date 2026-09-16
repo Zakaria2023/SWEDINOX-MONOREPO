@@ -5,6 +5,7 @@ import {
   CustomerSalesInput,
 } from "@/app/(dashboard)/companies/actions";
 import { db, SelectCompanies } from "@/db";
+import { requireAuth } from "@/lib/auth";
 import { Companies } from "@/db/schema/companies";
 import { describeError } from "@/lib/helpers";
 import { eq } from "drizzle-orm";
@@ -79,6 +80,7 @@ export const updateCompanySales = async (
   _prevState: CompanyActionResult,
   payload: UpdateCompanySalesPayload,
 ): Promise<CompanyActionResult> => {
+  const userId = await requireAuth();
   const { companyUuid, ...values } = payload;
   const parsed = companySalesSchema.safeParse(values);
   if (!parsed.success) {
@@ -89,6 +91,7 @@ export const updateCompanySales = async (
     await db
       .update(Companies)
       .set({
+        modifiedByUserId: userId,
         customerGroup: parsed.data.customerGroup || null,
         representative: parsed.data.representative || null,
         accountManager: parsed.data.accountManager || null,

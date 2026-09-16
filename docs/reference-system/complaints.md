@@ -327,3 +327,27 @@ values seen. Gaps:
 9. **Complaint lines overview**: the 30 columns of §5d — the complaint's fields
    repeated, plus order line and warehouse section. Lines only for `Order`
    complaints.
+
+### ✅ Built 16-9-2026
+
+- Schema: `Complaints` gains one document link per kind (order, quote, counter
+  order, purchase order, purchase quote, return order — only the one the type
+  calls for is kept), `qtyUnit`, `createdByUserId`, `modifiedByUserId`.
+  `ComplaintItems` gains `billOfLading`, `qtyDelivered`, `unit`,
+  `exchangeProductUuid`; `qty` is Qty(shortfall). `db:push` applied.
+- `/complaints`: all 29 columns with picker; resolution time (§5 rule), status
+  date, total costs, Order/quote, purchaser/seller read through the link,
+  account manager, representative, captured by. Complaint-type filter added.
+- `/complaint-lines`: paged, the 30 columns (the complaint's, plus Order line
+  and Warehouse section), filters incl. line completed. The **Generate complaint
+  lines** button is gone — lines are picked on the complaint.
+- Form: `Order` picker offered by type and company (only that company's
+  documents, checked server-side), qty unit, account manager and representative
+  read from the company (no longer hard-coded "Hego").
+- Record: "Recorded by … on …; last changed by … on …", Order link, Lines panel
+  in the reference's columns (Days in system = today − report date) with **Add
+  line** (a delivered line of the complaint's order, bill of lading, disputed
+  quantity ≤ delivered, optional exchange product) and delete. Raising a return
+  order now only takes lines with a disputed quantity.
+- Not built: `Shortfall` / `Commercial shortfall` / `Exchanging` (what they
+  create is unseen), the line `Location` (Ontvangst), live Workorders panel.

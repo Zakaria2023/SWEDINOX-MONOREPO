@@ -43,7 +43,11 @@ screenshot came with it.
   into 2026 in F4 — so a **vehicle is its own list**, not a link to the
   transporter company.
 
-### Against `apps/dashboard`
+### Against `apps/dashboard` — ✅ built 16-9-2026
+
+`Companies.modifiedByUserId` added and stamped by every company save; the
+overview now shows only flagged companies with the 16 columns, role and
+date-last-modified filters, and paging. Before:
 
 `/inactive-companies` lists companies flagged `isInactive` **or** customers /
 prospects with no order in 12 months, with columns code, company, city,

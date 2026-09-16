@@ -196,7 +196,7 @@ const VIEW_GROUPS: NavGroup[] = [
         href: "/contracts-per-customer",
       },
       {
-        label: "Customerrevenue, -sales and -visits",
+        label: "Customer revenue, sales and visits",
         href: "/customer-revenue-sales-and-visits",
       },
     ],
@@ -265,7 +265,7 @@ const VIEW_GROUPS: NavGroup[] = [
         href: "/control-stock-revaluation-fsp",
       },
       { label: "Control sawing waste", href: "/control-sawing-waste" },
-      { label: "CBS Documentatie", href: "/cbs-documentation" },
+      { label: "CBS documentation", href: "/cbs-documentation" },
     ],
   },
   {
@@ -330,7 +330,7 @@ const VIEW_GROUPS: NavGroup[] = [
       { label: "Capacity checks", href: "/capacity-checks" },
       { label: "Time registration", href: "/time-registration" },
       { label: "(Re)optimize", href: "/reoptimize" },
-      { label: "Nesten", href: "/nesting" },
+      { label: "Nesting", href: "/nesting" },
       {
         label: "Transport status adjustments",
         href: "/transport-status-adjustments",
@@ -362,7 +362,7 @@ const VIEW_GROUPS: NavGroup[] = [
       { label: "Deliveries", href: "/deliveries" },
       { label: "Charges", href: "/charges" },
       { label: "Contracts", href: "/contracts" },
-      { label: "Contractgroups", href: "/contract-groups" },
+      { label: "Contract groups", href: "/contract-groups" },
       { label: "Product prices", href: "/product-prices" },
       {
         label: "Option prices per product",
@@ -407,7 +407,7 @@ const VIEW_GROUPS: NavGroup[] = [
       { label: "Balanced Scorecard", href: "/balanced-scorecard" },
       { label: "Transport by region", href: "/transport-by-region" },
       {
-        label: "SigmaNest geblokkeerde orders",
+        label: "SigmaNest blocked orders",
         href: "/sigmanest-blocked-orders",
       },
     ],

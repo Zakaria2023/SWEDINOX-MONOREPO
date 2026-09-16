@@ -12,12 +12,21 @@ export const complaintDetailToFormValues = (
   companyUuid: complaint.companyUuid,
   contactUuid: toFormString(complaint.contactUuid),
   complaintType: complaint.complaintType ?? undefined,
+  documentUuid: toFormString(
+    complaint.orderUuid ??
+      complaint.quoteUuid ??
+      complaint.counterOrderUuid ??
+      complaint.purchaseOrderUuid ??
+      complaint.purchaseQuoteUuid ??
+      complaint.returnOrderUuid,
+  ),
   report: complaint.report ?? undefined,
   reportDate: toDateInput(complaint.reportDate),
   description: toFormString(complaint.description),
   category: complaint.category ?? undefined,
   productUuid: toFormString(complaint.productUuid),
   qty: toFormString(complaint.qty, "0.000"),
+  qtyUnit: complaint.qtyUnit ?? undefined,
   amount: toFormString(complaint.amount, "0.00"),
   weight: toFormString(complaint.weight, "0.000"),
 

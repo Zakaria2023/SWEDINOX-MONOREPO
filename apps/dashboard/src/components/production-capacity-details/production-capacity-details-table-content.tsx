@@ -57,8 +57,8 @@ export const ProductionCapacityDetailsTable = ({ details }: Props) => (
             <TableHead>Product</TableHead>
             <TableHead className="text-right">Length (mm)</TableHead>
             <TableHead className="text-right">Width (mm)</TableHead>
-            <TableHead className="text-right">Dikte</TableHead>
-            <TableHead>Kwaliteit</TableHead>
+            <TableHead className="text-right">Thickness</TableHead>
+            <TableHead>Quality</TableHead>
             <TableHead>Categorie</TableHead>
             <TableHead className="text-center">Fixed dim.</TableHead>
             <TableHead className="text-right">Sawing speed</TableHead>

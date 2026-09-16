@@ -1,6 +1,14 @@
 "use client";
 
-import { TransportByRegionRow } from "@/app/(dashboard)/transport-by-region/actions";
+import Link from "next/link";
+import {
+  exportTransportByRegion,
+  TransportByRegionRow,
+} from "@/app/(dashboard)/transport-by-region/actions";
+import {
+  TRANSPORT_BY_REGION_COLUMNS,
+  TransportByRegionColumnKey,
+} from "@/app/(dashboard)/transport-by-region/columns";
 import {
   Table,
   TableBody,
@@ -9,90 +17,190 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
-import { formatDateValue, formatNumber } from "@/lib/helpers";
-import { TableExportButton } from "@/components/ui/table-export-button";
+import { ColumnSelector } from "@/components/ui/column-selector";
+import { PagedTableExportButton } from "@/components/ui/table-export-button";
+import { TablePagination } from "@/components/ui/table-pagination";
+import { TableSortHeader } from "@/components/ui/table-sort-header";
+import { TableToolbar } from "@/components/ui/table-toolbar";
+import { selectorColumns } from "@/lib/excel";
+import {
+  buildColumnVisibility,
+  formatDateColumn,
+  formatLengthMm,
+  formatNumber,
+} from "@/lib/helpers";
+import { TRIP_STATUS_LABELS } from "@/lib/labels";
+import { Paged, TableFilterControl } from "@/lib/table-query";
+import { useState } from "react";
+
+type ColumnKey = TransportByRegionColumnKey;
 
 type Props = {
-  rows: TransportByRegionRow[];
+  page: Paged<TransportByRegionRow>;
+  filters: TableFilterControl[];
 };
 
-const Dash = () => <span className="text-muted-foreground">—</span>;
+const ALL_COLUMNS = selectorColumns(TRANSPORT_BY_REGION_COLUMNS);
 
-export const TransportByRegionTable = ({ rows }: Props) => (
-  <div>
-    <div className="space-y-4">
-      <div className="flex justify-end">
-        <TableExportButton
-          tableId="transport-by-region-table"
-          fileName="transport-by-region"
-          sheetName="Transport by Region"
-        />
-      </div>
-      <Table id="transport-by-region-table">
-        <TableHeader>
-          <TableRow>
-            <TableHead>Transport date</TableHead>
-            <TableHead>Delivery address code</TableHead>
-            <TableHead>Region</TableHead>
-            <TableHead>Delivery address name</TableHead>
-            <TableHead>Vehicle</TableHead>
-            <TableHead>Delivery address city</TableHead>
-            <TableHead className="text-right">Kg (p) total</TableHead>
-            <TableHead className="text-right">Kg (a) total</TableHead>
-            <TableHead className="text-right">Length (largest)</TableHead>
-            <TableHead>Trip status</TableHead>
-            <TableHead>Source status (lowest)</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {rows.length === 0 ? (
-            <TableRow>
-              <TableCell
-                colSpan={11}
-                className="h-24 text-center text-muted-foreground"
+const SORTABLE: Partial<Record<ColumnKey, string>> = {
+  transportDate: "transportDate",
+  city: "city",
+  region: "region",
+  vehicle: "vehicle",
+  kgPlannedTotal: "kgPlanned",
+  kgActualTotal: "kgActual",
+};
+
+export const TransportByRegionTable = ({ page, filters }: Props) => {
+  const [columnVisibility, setColumnVisibility] = useState<
+    Record<ColumnKey, boolean>
+  >(buildColumnVisibility(ALL_COLUMNS));
+
+  const toggleColumn = (key: string) =>
+    setColumnVisibility((prev) => ({
+      ...prev,
+      [key]: !prev[key as ColumnKey],
+    }));
+
+  const visibleColumns = ALL_COLUMNS.filter((col) => columnVisibility[col.key]);
+
+  const renderCell = (row: TransportByRegionRow, key: ColumnKey) => {
+    switch (key) {
+      case "transportDate":
+        return (
+          <TableCell key={key} className="whitespace-nowrap">
+            {formatDateColumn(row.transportDate)}
+          </TableCell>
+        );
+      case "city":
+        return <TableCell key={key}>{row.city ?? "—"}</TableCell>;
+      case "region":
+        return <TableCell key={key}>{row.region ?? "—"}</TableCell>;
+      case "postalCode":
+        return (
+          <TableCell key={key} className="whitespace-nowrap">
+            {row.postalCode ?? "—"}
+          </TableCell>
+        );
+      case "vehicle":
+        return <TableCell key={key}>{row.vehicle ?? "—"}</TableCell>;
+      case "deliveryName":
+        // The reference's only row action is Show Company.
+        return (
+          <TableCell key={key} className="font-medium">
+            {row.destinationCompanyUuid ? (
+              <Link
+                href={`/companies/${row.destinationCompanyUuid}`}
+                className="text-primary hover:underline"
               >
-                No transport trips found.
-              </TableCell>
-            </TableRow>
-          ) : (
-            rows.map((row) => (
-              <TableRow key={row.key}>
-                <TableCell className="whitespace-nowrap">
-                  {formatDateValue(row.transportDate)}
-                </TableCell>
-                <TableCell>
-                  <Dash />
-                </TableCell>
-                <TableCell>
-                  <Dash />
-                </TableCell>
-                <TableCell>
-                  <Dash />
-                </TableCell>
-                <TableCell>{row.vehicle ?? "—"}</TableCell>
-                <TableCell>
-                  <Dash />
-                </TableCell>
-                <TableCell className="text-right">
-                  {formatNumber(Number(row.kgPlannedTotal ?? 0))}
-                </TableCell>
-                <TableCell className="text-right">
-                  <Dash />
-                </TableCell>
-                <TableCell className="text-right">
-                  <Dash />
-                </TableCell>
-                <TableCell>
-                  <Dash />
-                </TableCell>
-                <TableCell>
-                  <Dash />
-                </TableCell>
+                {row.deliveryName ?? "—"}
+              </Link>
+            ) : (
+              (row.deliveryName ?? "—")
+            )}
+          </TableCell>
+        );
+      case "kgPlannedTotal":
+        return (
+          <TableCell key={key} className="text-right">
+            {formatNumber(row.kgPlannedTotal)}
+          </TableCell>
+        );
+      case "kgActualTotal":
+        return (
+          <TableCell key={key} className="text-right">
+            {formatNumber(row.kgActualTotal)}
+          </TableCell>
+        );
+      case "lengthLargest":
+        return (
+          <TableCell key={key} className="text-right">
+            {formatLengthMm(row.lengthLargest)}
+          </TableCell>
+        );
+      case "tripStatus":
+        return (
+          <TableCell key={key}>
+            {row.tripStatus ? TRIP_STATUS_LABELS[row.tripStatus] : "—"}
+          </TableCell>
+        );
+      case "sourceStatusLowest":
+        return (
+          <TableCell key={key}>{row.sourceStatusLowest ?? "—"}</TableCell>
+        );
+      case "lines":
+        return (
+          <TableCell key={key} className="text-right">
+            {row.lines}
+          </TableCell>
+        );
+      case "action":
+        return <TableCell key={key}>{row.action ?? "—"}</TableCell>;
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <TableToolbar
+        searchPlaceholder="Search vehicle, company or postal code…"
+        filters={filters}
+      >
+        <ColumnSelector
+          columns={ALL_COLUMNS.map((col) => ({
+            key: col.key,
+            label: col.label,
+          }))}
+          visibility={columnVisibility}
+          onToggle={toggleColumn}
+        />
+        <PagedTableExportButton
+          fileName="transport-by-region"
+          columnKeys={visibleColumns.map((column) => column.key)}
+          action={exportTransportByRegion}
+        />
+      </TableToolbar>
+
+      {page.rows.length === 0 ? (
+        <div className="flex flex-col items-center gap-1 rounded-lg border border-dashed px-6 py-10 text-center">
+          <p className="font-medium">No transports match this view</p>
+          <p className="max-w-md text-sm text-muted-foreground">
+            A row appears for every stop a transport work order makes — a
+            delivery or a pick-up at one address. Plan transports on Transport
+            workorders, or clear the filters to see more.
+          </p>
+        </div>
+      ) : (
+        <>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                {visibleColumns.map((col) => {
+                  const sortKey = SORTABLE[col.key];
+                  return sortKey ? (
+                    <TableSortHeader key={col.key} sortKey={sortKey}>
+                      {col.label}
+                    </TableSortHeader>
+                  ) : (
+                    <TableHead key={col.key}>{col.label}</TableHead>
+                  );
+                })}
               </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
+            </TableHeader>
+            <TableBody>
+              {page.rows.map((row) => (
+                <TableRow key={row.key}>
+                  {visibleColumns.map((col) => renderCell(row, col.key))}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          <TablePagination
+            page={page}
+            singular="transport"
+            plural="transports"
+          />
+        </>
+      )}
     </div>
-  </div>
-);
+  );
+};

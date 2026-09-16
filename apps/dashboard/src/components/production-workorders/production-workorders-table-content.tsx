@@ -58,7 +58,7 @@ const COLUMNS: TreeColumn<ProductionTreeRow>[] = [
     cell: (row) => orDash(row.productCode),
   },
   { key: "order", header: "Order", cell: (row) => orDash(row.orderNumber) },
-  { key: "thickness", header: "Dikte", cell: (row) => orDash(row.thickness) },
+  { key: "thickness", header: "Thickness", cell: (row) => orDash(row.thickness) },
   {
     key: "qtyPlanned",
     header: "Qty(p)",

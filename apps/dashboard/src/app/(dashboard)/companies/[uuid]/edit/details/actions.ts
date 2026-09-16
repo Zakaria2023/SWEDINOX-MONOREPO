@@ -75,6 +75,7 @@ export const updateCompanyDetails = async (
       await tx
         .update(Companies)
         .set({
+        modifiedByUserId: userId,
           companyName: parsed.data.companyName,
           correspName: parsed.data.correspName || null,
           lang: (parsed.data.lang || null) as InsertCompanies["lang"],

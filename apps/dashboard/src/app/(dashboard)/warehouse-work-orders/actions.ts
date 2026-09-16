@@ -50,6 +50,7 @@ import {
   WAREHOUSE_WORK_ORDER_TYPE_LABELS,
 } from "@/lib/labels";
 import { recordFreightMovement } from "@/lib/server/freight";
+import { registerBatchForLot } from "@/lib/server/batches";
 import { applyMove } from "@/lib/server/stock-movements";
 import {
   recordPurchaseLineReceipt,
@@ -1194,10 +1195,17 @@ const applyReceipt = async (
   await refreshPurchaseLineStatus(tx, purchaseLine.uuid);
 
   // The unloading is the moment goods arrive, so it completes the reception.
-  await recordPurchaseLineReceipt(tx, {
+  const receivalUuid = await recordPurchaseLineReceipt(tx, {
     purchaseOrderItemUuid: purchaseLine.uuid,
     quantity,
     kg: weightKg,
+    date: todayDateString(),
+  });
+
+  // And it is where the batch is born: the reference writes a Batches row for
+  // every receipt, carrying the heat and internal charge the lot now holds.
+  await registerBatchForLot(tx, stockUuid, {
+    purchaseLineReceivalUuid: receivalUuid,
     date: todayDateString(),
   });
 

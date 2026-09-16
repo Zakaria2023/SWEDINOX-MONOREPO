@@ -75,6 +75,7 @@ import {
   getOldestOpenInvoiceDate,
   getOpenReceivables,
 } from "@/lib/server/credit-control";
+import { requireAuth } from "@/lib/auth";
 import { currentUser } from "@clerk/nextjs/server";
 import { and, asc, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -279,10 +280,11 @@ export const setCompanyInactive = async (
   companyUuid: string,
   isInactive: boolean,
 ): Promise<CompanyActionResult> => {
+  const userId = await requireAuth();
   try {
     await db
       .update(Companies)
-      .set({ isInactive })
+      .set({ isInactive, modifiedByUserId: userId })
       .where(eq(Companies.uuid, companyUuid));
     revalidatePath("/companies");
     revalidatePath("/inactive-companies");
@@ -574,6 +576,7 @@ export const createCompany = async (
         ...companyFields,
         uuid,
         blockedByUserId: isBlocked ? userId : null,
+        modifiedByUserId: userId,
       });
 
       for (const address of addresses) {

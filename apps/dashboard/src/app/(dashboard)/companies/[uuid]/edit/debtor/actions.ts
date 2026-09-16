@@ -143,6 +143,7 @@ export const updateCompanyDebtor = async (
     await db
       .update(Companies)
       .set({
+        modifiedByUserId: userId,
         debtorNumber,
         debtorCompanyUuid: parsed.data.debtorCompanyUuid || null,
         iban: parsed.data.iban || null,
