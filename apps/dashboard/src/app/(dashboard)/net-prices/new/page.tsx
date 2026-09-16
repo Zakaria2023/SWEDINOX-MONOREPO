@@ -2,7 +2,6 @@ import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { getContractsForSelect } from "@/app/(dashboard)/contracts/actions";
 import { getProductsForSelect } from "@/app/(dashboard)/products/actions";
-import { PageHeading } from "@/components/layout/page-heading";
 import { NetPriceForm } from "@/components/net-prices/net-price-form";
 
 const NewNetPricePage = async () => {
@@ -21,7 +20,6 @@ const NewNetPricePage = async () => {
           Net prices
         </Link>
       </div>
-      <PageHeading title="New net price" />
       <NetPriceForm contracts={contracts} products={products} />
     </div>
   );

@@ -3,7 +3,6 @@ import { getProductGroupsForSelect } from "@/app/(dashboard)/product-groups/acti
 import { getProductsForSelect } from "@/app/(dashboard)/products/actions";
 import { counterOrderToFormValues } from "@/app/(dashboard)/counter-orders/mappers";
 import { CounterOrderLinesEditor } from "@/components/counter-orders/edit/counter-order-lines-editor";
-import { PageHeading } from "@/components/layout/page-heading";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -36,7 +35,6 @@ const CounterOrderLinesPage = async ({ params }: Props) => {
           Back to edit overview
         </Link>
       </div>
-      <PageHeading title="Order Lines" />
       <CounterOrderLinesEditor
         counterOrderUuid={uuid}
         defaultValues={counterOrderToFormValues(order, order)}

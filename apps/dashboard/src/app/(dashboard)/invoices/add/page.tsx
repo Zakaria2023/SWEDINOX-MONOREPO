@@ -2,7 +2,6 @@ import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { getCompaniesForSelect } from "@/app/(dashboard)/companies/actions";
 import { InvoiceForm } from "@/components/invoices/invoice-form";
-import { PageHeading } from "@/components/layout/page-heading";
 
 const AddInvoicePage = async () => {
   const availableCompanies = await getCompaniesForSelect();
@@ -18,7 +17,6 @@ const AddInvoicePage = async () => {
           Invoices
         </Link>
       </div>
-      <PageHeading title="New Invoice" />
       <InvoiceForm availableCompanies={availableCompanies} />
     </div>
   );

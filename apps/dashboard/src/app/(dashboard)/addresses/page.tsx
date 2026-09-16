@@ -2,7 +2,6 @@ import { getAddresses } from "@/app/(dashboard)/addresses/actions";
 import { addressFilters } from "@/app/(dashboard)/addresses/filters";
 import { getCompaniesForSelect } from "@/app/(dashboard)/companies/actions";
 import { AddressesTable } from "@/components/addresses/addresses-table-content";
-import { PageHeading } from "@/components/layout/page-heading";
 import { parseTableQuery, SearchParams } from "@/lib/table-query";
 
 type Props = {
@@ -18,7 +17,6 @@ const AddressesPage = async ({ searchParams }: Props) => {
 
   return (
     <div className="space-y-4">
-      <PageHeading title="Addresses" />
       <AddressesTable page={addresses} filters={addressFilters(companies)} />
     </div>
   );

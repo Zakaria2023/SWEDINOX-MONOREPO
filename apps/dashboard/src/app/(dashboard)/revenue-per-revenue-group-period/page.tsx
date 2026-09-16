@@ -1,5 +1,4 @@
 import { getRevenuePerRevenueGroupPeriod } from "@/app/(dashboard)/revenue-per-revenue-group-period/actions";
-import { PageHeading } from "@/components/layout/page-heading";
 import { RevenuePerRevenueGroupPeriodTable } from "@/components/revenue-per-revenue-group-period/revenue-per-revenue-group-period-table-content";
 
 const RevenuePerRevenueGroupPeriodPage = async () => {
@@ -7,7 +6,6 @@ const RevenuePerRevenueGroupPeriodPage = async () => {
 
   return (
     <div className="space-y-4">
-      <PageHeading title="Revenue per revenue group (period)" />
       <RevenuePerRevenueGroupPeriodTable rows={rows} />
     </div>
   );

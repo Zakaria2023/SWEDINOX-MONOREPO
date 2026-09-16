@@ -1,5 +1,4 @@
 import { getSigmaNestBlockedOrders } from "@/app/(dashboard)/sigmanest-blocked-orders/actions";
-import { PageHeading } from "@/components/layout/page-heading";
 import { SigmaNestBlockedOrdersTable } from "@/components/sigmanest-blocked-orders/sigmanest-blocked-orders-table-content";
 
 const SigmaNestBlockedOrdersPage = async () => {
@@ -7,7 +6,6 @@ const SigmaNestBlockedOrdersPage = async () => {
 
   return (
     <div className="space-y-4">
-      <PageHeading title="SigmaNest blocked orders" />
       <SigmaNestBlockedOrdersTable rows={rows} />
     </div>
   );

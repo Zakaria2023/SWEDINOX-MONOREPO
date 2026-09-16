@@ -1,13 +1,11 @@
 import { getReceipts } from "@/app/(dashboard)/receipts/actions";
 import { ReceiptsTable } from "@/components/receipts/receipts-table-content";
-import { PageHeading } from "@/components/layout/page-heading";
 
 const ReceiptsPage = async () => {
   const rows = await getReceipts();
 
   return (
     <div className="space-y-4">
-      <PageHeading title="Receipts" />
       <ReceiptsTable rows={rows} />
     </div>
   );

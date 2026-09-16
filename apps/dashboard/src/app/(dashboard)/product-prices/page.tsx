@@ -1,5 +1,4 @@
 import { getProductPrices } from "@/app/(dashboard)/product-prices/actions";
-import { PageHeading } from "@/components/layout/page-heading";
 import { ProductPricesTable } from "@/components/product-prices/product-prices-table-content";
 import { RecalculatePricesButton } from "@/components/product-prices/recalculate-prices-button";
 
@@ -8,8 +7,7 @@ const ProductPricesPage = async () => {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <PageHeading title="Product prices" />
+      <div className="flex flex-wrap items-start justify-end gap-4">
         <RecalculatePricesButton />
       </div>
       <ProductPricesTable rows={rows} />

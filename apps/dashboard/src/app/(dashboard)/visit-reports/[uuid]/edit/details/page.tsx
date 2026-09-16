@@ -1,6 +1,5 @@
 import { getVisitReportForEdit } from "@/app/(dashboard)/visit-reports/[uuid]/edit/actions";
 import { visitReportToFormValues } from "@/app/(dashboard)/visit-reports/mappers";
-import { PageHeading } from "@/components/layout/page-heading";
 import { VisitReportDetailsEditor } from "@/components/visit-reports/edit/visit-report-details-editor";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
@@ -29,7 +28,6 @@ const VisitReportDetailsPage = async ({ params }: Props) => {
           Back to edit overview
         </Link>
       </div>
-      <PageHeading title="Details" />
       <VisitReportDetailsEditor
         visitReportUuid={uuid}
         defaultValues={visitReportToFormValues(report)}

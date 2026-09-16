@@ -4,7 +4,6 @@ import {
 } from "@/app/(dashboard)/warehouses/actions";
 import { getCompaniesForSelect } from "@/app/(dashboard)/companies/actions";
 import { WarehouseForm } from "@/components/warehouses/warehouse-form";
-import { PageHeading } from "@/components/layout/page-heading";
 
 const AddWarehousePage = async () => {
   const [existingWarehouses, companies, warehouseLocations] = await Promise.all(
@@ -17,7 +16,6 @@ const AddWarehousePage = async () => {
 
   return (
     <div className="space-y-4">
-      <PageHeading title="Add Warehouse" />
       <WarehouseForm
         existingWarehouses={existingWarehouses}
         companies={companies}

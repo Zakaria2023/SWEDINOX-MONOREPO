@@ -3,7 +3,6 @@ import { orderLineFilters } from "@/app/(dashboard)/order-lines/filters";
 import { getCompaniesForSelect } from "@/app/(dashboard)/companies/actions";
 import { getProductsForSelect } from "@/app/(dashboard)/products/actions";
 import { OrderLinesTable } from "@/components/order-lines/order-lines-table-content";
-import { PageHeading } from "@/components/layout/page-heading";
 import { getClerkUserNames } from "@/lib/server/clerk";
 import { parseTableQuery, SearchParams } from "@/lib/table-query";
 
@@ -23,7 +22,6 @@ const OrderLinesPage = async ({ searchParams }: Props) => {
 
   return (
     <div className="space-y-4">
-      <PageHeading title="Order lines" />
       <OrderLinesTable
         page={rows}
         filters={orderLineFilters(companies, products)}

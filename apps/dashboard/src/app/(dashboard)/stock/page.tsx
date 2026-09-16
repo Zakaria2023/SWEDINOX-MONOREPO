@@ -4,7 +4,6 @@ import { getCompaniesForSelect } from "@/app/(dashboard)/companies/actions";
 import { getLocationsForSelect } from "@/app/(dashboard)/locations/actions";
 import { getProductsForSelect } from "@/app/(dashboard)/products/actions";
 import { StockTable } from "@/components/stock/stock-table-content";
-import { PageHeading } from "@/components/layout/page-heading";
 import { parseTableQuery, SearchParams } from "@/lib/table-query";
 
 type Props = {
@@ -21,7 +20,6 @@ const StockPage = async ({ searchParams }: Props) => {
 
   return (
     <div className="space-y-4">
-      <PageHeading title="Stock" />
       <StockTable
         page={stock}
         filters={stockFilters(products, locations, suppliers)}

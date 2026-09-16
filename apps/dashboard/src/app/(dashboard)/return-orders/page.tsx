@@ -4,7 +4,6 @@ import { ReturnOrdersTable } from "@/components/return-orders/return-orders-tabl
 import { returnOrderFilters } from "@/app/(dashboard)/return-orders/filters";
 import { getCompaniesForSelect } from "@/app/(dashboard)/companies/actions";
 import { parseTableQuery, SearchParams } from "@/lib/table-query";
-import { PageHeading } from "@/components/layout/page-heading";
 
 type Props = {
   searchParams: Promise<SearchParams>;
@@ -18,8 +17,7 @@ const ReturnOrdersPage = async ({ searchParams }: Props) => {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-start justify-between">
-        <PageHeading title="Return Orders" />
+      <div className="flex items-start justify-end">
         <Link
           href="/return-orders/new"
           className="inline-flex h-8 items-center justify-center rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/80"

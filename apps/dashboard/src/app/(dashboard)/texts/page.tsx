@@ -1,6 +1,5 @@
 import { getTexts } from "@/app/(dashboard)/texts/actions";
 import { TextsTable } from "@/components/texts/texts-table-content";
-import { PageHeading } from "@/components/layout/page-heading";
 import { textFilters } from "@/app/(dashboard)/texts/filters";
 import { getCompaniesForSelect } from "@/app/(dashboard)/companies/actions";
 import { getTextCategoriesForSelect } from "@/app/(dashboard)/text-categories/actions";
@@ -19,7 +18,6 @@ const TextsPage = async ({ searchParams }: Props) => {
 
   return (
     <div className="space-y-4">
-      <PageHeading title="Texts" />
       <TextsTable page={texts} filters={textFilters(companies, categories)} />
     </div>
   );

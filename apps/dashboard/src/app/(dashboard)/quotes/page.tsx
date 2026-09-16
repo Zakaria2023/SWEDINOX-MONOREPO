@@ -4,7 +4,6 @@ import { quoteFilters } from "@/app/(dashboard)/quotes/filters";
 import { getCompaniesForSelect } from "@/app/(dashboard)/companies/actions";
 import { parseTableQuery, SearchParams } from "@/lib/table-query";
 import { QuotesTable } from "@/components/quotes/quotes-table-content";
-import { PageHeading } from "@/components/layout/page-heading";
 
 type Props = {
   searchParams: Promise<SearchParams>;
@@ -18,8 +17,7 @@ const QuotesPage = async ({ searchParams }: Props) => {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-start justify-between">
-        <PageHeading title="Quotes" />
+      <div className="flex items-start justify-end">
         <Link
           href="/quotes/new"
           className="inline-flex h-8 items-center justify-center rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/80"

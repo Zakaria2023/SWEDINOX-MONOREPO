@@ -6,7 +6,6 @@ import { getLocationsForSelect } from "@/app/(dashboard)/locations/actions";
 // so the lookup is reused rather than written twice.
 import { getAvailableStockForSelect } from "@/app/(dashboard)/warehouse-work-orders/actions";
 import { ProductionWorkOrdersTable } from "@/components/production-workorders/production-workorders-table-content";
-import { PageHeading } from "@/components/layout/page-heading";
 import { parseTableQuery, SearchParams } from "@/lib/table-query";
 
 type Props = {
@@ -23,7 +22,6 @@ const ProductionWorkOrdersPage = async ({ searchParams }: Props) => {
 
   return (
     <div className="space-y-4">
-      <PageHeading title="Production Work Orders" />
       <ProductionWorkOrdersTable
         tree={tree}
         filters={productionWorkOrderFilters(machines)}

@@ -5,7 +5,6 @@ import { getContractsForSelect } from "@/app/(dashboard)/contracts/actions";
 import { getNetPrices } from "@/app/(dashboard)/net-prices/actions";
 import { netPriceFilters } from "@/app/(dashboard)/net-prices/filters";
 import { getProductsForSelect } from "@/app/(dashboard)/products/actions";
-import { PageHeading } from "@/components/layout/page-heading";
 import { NetPricesTable } from "@/components/net-prices/net-prices-table-content";
 import { parseTableQuery, SearchParams } from "@/lib/table-query";
 
@@ -23,8 +22,7 @@ const NetPricesPage = async ({ searchParams }: Props) => {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <PageHeading title="Net prices" />
+      <div className="flex flex-wrap items-start justify-end gap-4">
         <Link
           href="/net-prices/new"
           className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"

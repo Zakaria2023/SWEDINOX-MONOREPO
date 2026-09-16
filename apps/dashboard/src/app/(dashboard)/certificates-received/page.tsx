@@ -1,15 +1,13 @@
 import { getCertificatesReceived } from "@/app/(dashboard)/certificates-received/actions";
 import { CertificatesTable } from "@/components/certificates-received/certificates-table-content";
 import { GenerateCertificatesButton } from "@/components/certificates-received/generate-certificates-button";
-import { PageHeading } from "@/components/layout/page-heading";
 
 const CertificatesReceivedPage = async () => {
   const rows = await getCertificatesReceived();
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <PageHeading title="Certificates received" />
+      <div className="flex flex-wrap items-start justify-end gap-4">
         <GenerateCertificatesButton />
       </div>
       <CertificatesTable rows={rows} />

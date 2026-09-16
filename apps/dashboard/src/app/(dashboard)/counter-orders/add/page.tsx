@@ -5,7 +5,6 @@ import { getTextCategoriesForSelect } from "@/app/(dashboard)/text-categories/ac
 import { getProductsForSelect } from "@/app/(dashboard)/products/actions";
 import { getProductGroupsForSelect } from "@/app/(dashboard)/product-groups/actions";
 import { CounterOrderForm } from "@/components/counter-orders/counter-order-form";
-import { PageHeading } from "@/components/layout/page-heading";
 
 const AddCounterOrderPage = async () => {
   const [companies, textCategories, products, productGroups] =
@@ -27,7 +26,6 @@ const AddCounterOrderPage = async () => {
           Counter Orders
         </Link>
       </div>
-      <PageHeading title="New Counter Order" />
       <CounterOrderForm
         companies={companies}
         textCategories={textCategories}

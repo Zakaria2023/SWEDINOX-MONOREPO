@@ -5,7 +5,6 @@ import {
   getProductsForSelect,
   getRevenueGroupsForSelect,
 } from "@/app/(dashboard)/products/actions";
-import { PageHeading } from "@/components/layout/page-heading";
 import { ProductForm } from "@/components/products/product-form";
 
 const NewProductPage = async () => {
@@ -20,7 +19,6 @@ const NewProductPage = async () => {
 
   return (
     <div className="space-y-4">
-      <PageHeading title="Add Product" />
       <ProductForm
         productGroups={productGroups}
         suppliers={suppliers}

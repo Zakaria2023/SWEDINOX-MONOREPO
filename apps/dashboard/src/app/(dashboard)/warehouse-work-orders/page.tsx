@@ -2,7 +2,6 @@ import { getWarehouseWorkOrderTree } from "@/app/(dashboard)/warehouse-work-orde
 import { warehouseWorkOrderFilters } from "@/app/(dashboard)/warehouse-work-orders/filters";
 import { getWarehousesForSelect } from "@/app/(dashboard)/warehouses/actions";
 import { WarehouseWorkOrdersTable } from "@/components/warehouse-work-orders/warehouse-work-orders-table-content";
-import { PageHeading } from "@/components/layout/page-heading";
 import { parseTableQuery, SearchParams } from "@/lib/table-query";
 
 type Props = {
@@ -17,7 +16,6 @@ const WarehouseWorkOrdersPage = async ({ searchParams }: Props) => {
 
   return (
     <div className="space-y-4">
-      <PageHeading title="Warehouse Work Orders" />
       <WarehouseWorkOrdersTable
         tree={tree}
         filters={warehouseWorkOrderFilters(warehouses)}

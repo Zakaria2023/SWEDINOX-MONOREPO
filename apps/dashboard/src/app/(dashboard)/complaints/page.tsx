@@ -2,7 +2,6 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { ComplaintsTable } from "@/components/complaints/complaints-table";
 import { parseTableQuery, SearchParams } from "@/lib/table-query";
-import { PageHeading } from "@/components/layout/page-heading";
 import { DataTableFallback } from "@/components/ui/data-table-fallback";
 
 type Props = {
@@ -17,8 +16,7 @@ const ComplaintsPage = async ({ searchParams }: Props) => {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-start justify-between">
-        <PageHeading title="Complaints" />
+      <div className="flex items-start justify-end">
         <Link
           href="/complaints/new"
           className="inline-flex h-8 items-center justify-center rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/80"

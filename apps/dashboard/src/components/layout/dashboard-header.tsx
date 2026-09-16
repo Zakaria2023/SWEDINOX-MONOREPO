@@ -1,4 +1,5 @@
 import { currentUser } from "@clerk/nextjs/server";
+import { HeaderPageTitle } from "@/components/layout/header-page-title";
 import { SidebarTrigger } from "@/components/shadcn/sidebar";
 import { SignOutButton } from "@clerk/nextjs";
 
@@ -12,6 +13,10 @@ export const DashboardHeader = async () => {
   return (
     <header className="flex h-12 items-center border-b px-4">
       <SidebarTrigger />
+
+      <div className="ms-3 min-w-0">
+        <HeaderPageTitle />
+      </div>
 
       <div className="ms-auto flex items-center gap-3">
         <SignOutButton>

@@ -1,5 +1,4 @@
 import { DeliveriesCertificateTable } from "@/components/deliveries-certificates/deliveries-certificate-table";
-import { PageHeading } from "@/components/layout/page-heading";
 import { getDeliveryCertificateRows } from "../sending-certificates/actions";
 
 const DeliveriesFromMissingBatchPage = async () => {
@@ -7,7 +6,6 @@ const DeliveriesFromMissingBatchPage = async () => {
 
   return (
     <div className="space-y-4">
-      <PageHeading title="Deliveries from the Missing Batch" />
       <DeliveriesCertificateTable
         rows={rows}
         emptyMessage="No deliveries with a missing batch."

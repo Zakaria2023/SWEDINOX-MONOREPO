@@ -3,7 +3,6 @@ import { getProductsForSelect } from "@/app/(dashboard)/products/actions";
 import { getPurchaseReceivals } from "@/app/(dashboard)/purchase-receivals/actions";
 import { purchaseReceivalFilters } from "@/app/(dashboard)/purchase-receivals/filters";
 import { PurchaseReceivalsTable } from "@/components/purchase-receivals/purchase-receivals-table-content";
-import { PageHeading } from "@/components/layout/page-heading";
 import { parseTableQuery, SearchParams } from "@/lib/table-query";
 
 type Props = {
@@ -19,7 +18,6 @@ const PurchaseReceivalsPage = async ({ searchParams }: Props) => {
 
   return (
     <div className="space-y-4">
-      <PageHeading title="Purchase receivals" />
       <PurchaseReceivalsTable
         page={page}
         filters={purchaseReceivalFilters(suppliers, products)}

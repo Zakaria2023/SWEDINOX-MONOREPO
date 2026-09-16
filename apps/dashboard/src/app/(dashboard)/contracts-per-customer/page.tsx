@@ -1,13 +1,11 @@
 import { getContractsPerCustomer } from "@/app/(dashboard)/contracts/actions";
 import { ContractsPerCustomerTable } from "@/components/contracts-per-customer/contracts-per-customer-table-content";
-import { PageHeading } from "@/components/layout/page-heading";
 
 const ContractsPerCustomerPage = async () => {
   const rows = await getContractsPerCustomer();
 
   return (
     <div className="space-y-4">
-      <PageHeading title="Contracts per Customer / Prospect" />
       <ContractsPerCustomerTable rows={rows} />
     </div>
   );

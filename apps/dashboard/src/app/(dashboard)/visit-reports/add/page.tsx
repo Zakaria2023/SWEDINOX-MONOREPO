@@ -3,7 +3,6 @@ import { ChevronLeft } from "lucide-react";
 import { getCustomerAndProspectCompaniesForSelect } from "@/app/(dashboard)/companies/actions";
 import { getClerkAdminUsers } from "@/lib/server/clerk";
 import { VisitReportForm } from "@/components/visit-reports/visit-report-form";
-import { PageHeading } from "@/components/layout/page-heading";
 
 const AddVisitReportPage = async () => {
   const [companies, adminUsers] = await Promise.all([
@@ -22,7 +21,6 @@ const AddVisitReportPage = async () => {
           Visit Reports
         </Link>
       </div>
-      <PageHeading title="New Visit Report" />
       <VisitReportForm companies={companies} adminUsers={adminUsers} />
     </div>
   );

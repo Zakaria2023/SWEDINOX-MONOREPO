@@ -5,7 +5,6 @@ import {
   getSuppliersForSelect,
 } from "@/app/(dashboard)/companies/actions";
 import { PurchaseInvoiceForm } from "@/components/purchase-invoices/purchase-invoice-form";
-import { PageHeading } from "@/components/layout/page-heading";
 
 const AddPurchaseInvoicePage = async () => {
   const [availableSuppliers, availableContacts] = await Promise.all([
@@ -24,7 +23,6 @@ const AddPurchaseInvoicePage = async () => {
           Purchase Invoices
         </Link>
       </div>
-      <PageHeading title="New Purchase Invoice" />
       <PurchaseInvoiceForm
         availableSuppliers={availableSuppliers}
         availableContacts={availableContacts}

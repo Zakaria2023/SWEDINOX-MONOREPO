@@ -4,7 +4,6 @@ import { getInvoices } from "@/app/(dashboard)/invoices/actions";
 import { invoiceFilters } from "@/app/(dashboard)/invoices/filters";
 import { getCompaniesForSelect } from "@/app/(dashboard)/companies/actions";
 import { InvoicesTable } from "@/components/invoices/invoices-table-content";
-import { PageHeading } from "@/components/layout/page-heading";
 import { parseTableQuery, SearchParams } from "@/lib/table-query";
 
 type Props = {
@@ -19,8 +18,7 @@ const InvoicesPage = async ({ searchParams }: Props) => {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-start justify-between">
-        <PageHeading title="Invoices" />
+      <div className="flex items-start justify-end">
         <Link
           href="/invoices/add"
           className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"

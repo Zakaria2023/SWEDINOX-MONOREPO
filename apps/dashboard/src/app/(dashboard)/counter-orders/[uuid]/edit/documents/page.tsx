@@ -1,7 +1,6 @@
 import { getCounterOrderForEdit } from "@/app/(dashboard)/counter-orders/[uuid]/edit/actions";
 import { counterOrderToFormValues } from "@/app/(dashboard)/counter-orders/mappers";
 import { CounterOrderDocumentsEditor } from "@/components/counter-orders/edit/counter-order-documents-editor";
-import { PageHeading } from "@/components/layout/page-heading";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -29,7 +28,6 @@ const CounterOrderDocumentsPage = async ({ params }: Props) => {
           Back to edit overview
         </Link>
       </div>
-      <PageHeading title="Documents" />
       <CounterOrderDocumentsEditor
         counterOrderUuid={uuid}
         defaultValues={counterOrderToFormValues(order, order)}

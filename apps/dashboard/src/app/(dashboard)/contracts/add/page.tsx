@@ -3,7 +3,6 @@ import { ChevronLeft } from "lucide-react";
 import { getContractGroups } from "@/app/(dashboard)/contract-groups/actions";
 import { getCompaniesForSelect } from "@/app/(dashboard)/companies/actions";
 import { ContractForm } from "@/components/contracts/contract-form";
-import { PageHeading } from "@/components/layout/page-heading";
 
 const AddContractPage = async () => {
   const [groups, companies] = await Promise.all([
@@ -22,7 +21,6 @@ const AddContractPage = async () => {
           Contracts
         </Link>
       </div>
-      <PageHeading title="New Contract" />
       <ContractForm groups={groups} availableCompanies={companies} />
     </div>
   );

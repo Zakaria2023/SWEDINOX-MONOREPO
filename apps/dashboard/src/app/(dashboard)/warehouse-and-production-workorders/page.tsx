@@ -1,5 +1,4 @@
 import { getWarehouseAndProductionWorkOrders } from "@/app/(dashboard)/warehouse-and-production-workorders/actions";
-import { PageHeading } from "@/components/layout/page-heading";
 import { WarehouseAndProductionWorkOrdersTable } from "@/components/warehouse-and-production-workorders/warehouse-and-production-workorders-table-content";
 
 const WarehouseAndProductionWorkOrdersPage = async () => {
@@ -7,7 +6,6 @@ const WarehouseAndProductionWorkOrdersPage = async () => {
 
   return (
     <div className="space-y-4">
-      <PageHeading title="Warehouse- and production workorders" />
       <WarehouseAndProductionWorkOrdersTable rows={rows} />
     </div>
   );

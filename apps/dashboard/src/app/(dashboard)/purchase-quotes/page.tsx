@@ -3,7 +3,6 @@ import { getCompaniesForSelect } from "@/app/(dashboard)/companies/actions";
 import { getPurchaseQuoteLines } from "@/app/(dashboard)/purchase-quotes/actions";
 import { purchaseQuoteFilters } from "@/app/(dashboard)/purchase-quotes/filters";
 import { PurchaseQuotesTable } from "@/components/purchase-quotes/purchase-quotes-table-content";
-import { PageHeading } from "@/components/layout/page-heading";
 import { parseTableQuery, SearchParams } from "@/lib/table-query";
 
 type Props = {
@@ -18,8 +17,7 @@ const PurchaseQuotesPage = async ({ searchParams }: Props) => {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-start justify-between">
-        <PageHeading title="Purchase Quotes" />
+      <div className="flex items-start justify-end">
         <Link
           href="/purchase-quotes/new"
           className="inline-flex h-8 items-center justify-center rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/80"

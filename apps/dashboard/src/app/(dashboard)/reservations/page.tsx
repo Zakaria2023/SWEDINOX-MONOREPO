@@ -4,7 +4,6 @@ import {
 } from "@/app/(dashboard)/reservations/actions";
 import { ReservationsTable } from "@/components/reservations/reservations-table-content";
 import { ReservationRecordsTable } from "@/components/reservations/reservation-records-table-content";
-import { PageHeading } from "@/components/layout/page-heading";
 
 const ReservationsPage = async () => {
   const [records, reservations] = await Promise.all([
@@ -15,7 +14,6 @@ const ReservationsPage = async () => {
   return (
     <div className="space-y-6">
       <div className="space-y-4">
-        <PageHeading title="Reservations" />
         <ReservationRecordsTable records={records} />
       </div>
 

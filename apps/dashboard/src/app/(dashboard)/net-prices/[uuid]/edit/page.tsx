@@ -4,7 +4,6 @@ import { ChevronLeft } from "lucide-react";
 import { getContractsForSelect } from "@/app/(dashboard)/contracts/actions";
 import { getNetPriceDetail } from "@/app/(dashboard)/net-prices/actions";
 import { getProductsForSelect } from "@/app/(dashboard)/products/actions";
-import { PageHeading } from "@/components/layout/page-heading";
 import { NetPriceForm } from "@/components/net-prices/net-price-form";
 import { toDateInput } from "@/lib/helpers";
 
@@ -36,7 +35,6 @@ const EditNetPricePage = async ({ params }: Props) => {
           Back to net price
         </Link>
       </div>
-      <PageHeading title="Edit net price" />
       <NetPriceForm
         contracts={contracts}
         products={products}

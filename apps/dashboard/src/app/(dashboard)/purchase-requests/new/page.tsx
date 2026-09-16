@@ -2,7 +2,6 @@ import { getCompaniesForSelect } from "@/app/(dashboard)/companies/actions";
 import { getProductsForSelect } from "@/app/(dashboard)/products/actions";
 import { getClerkUsersForSelect } from "@/lib/server/clerk";
 import { PurchaseRequestForm } from "@/components/purchase-requests/purchase-request-form";
-import { PageHeading } from "@/components/layout/page-heading";
 
 const NewPurchaseRequestPage = async () => {
   const [companies, clerkUsers, products] = await Promise.all([
@@ -21,7 +20,6 @@ const NewPurchaseRequestPage = async () => {
 
   return (
     <div className="space-y-4">
-      <PageHeading title="New Purchase Request" />
       <PurchaseRequestForm
         companies={companies}
         clerkUsers={clerkUsers}

@@ -3,7 +3,6 @@ import { getContractsForProjects } from "@/app/(dashboard)/contracts/actions";
 import { getProductsForPricing } from "@/app/(dashboard)/products/actions";
 import { getClerkUsersForSelect } from "@/lib/server/clerk";
 import { QuoteForm } from "@/components/quotes/quote-form";
-import { PageHeading } from "@/components/layout/page-heading";
 
 const NewQuotePage = async () => {
   const [companies, clerkUsers, contracts, products] = await Promise.all([
@@ -15,7 +14,6 @@ const NewQuotePage = async () => {
 
   return (
     <div className="space-y-4">
-      <PageHeading title="New Quote" />
       <QuoteForm
         companies={companies}
         clerkUsers={clerkUsers}

@@ -4,7 +4,6 @@ import {
 } from "@/app/(dashboard)/freight-flow/actions";
 import { FreightFlowTable } from "@/components/freight-flow/freight-flow-table-content";
 import { SfnCounterpartiesPanel } from "@/components/freight-flow/sfn-counterparties-panel";
-import { PageHeading } from "@/components/layout/page-heading";
 
 const FreightFlowPage = async () => {
   const [rows, counterparties] = await Promise.all([
@@ -14,7 +13,6 @@ const FreightFlowPage = async () => {
 
   return (
     <div className="space-y-4">
-      <PageHeading title="Freight flow (SFN)" />
       <SfnCounterpartiesPanel counterparties={counterparties} />
       <FreightFlowTable rows={rows} />
     </div>

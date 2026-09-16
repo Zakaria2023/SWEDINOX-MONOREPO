@@ -1,15 +1,13 @@
 import Link from "next/link";
 import { getLocations } from "@/app/(dashboard)/locations/actions";
 import { LocationsTable } from "@/components/locations/locations-table-content";
-import { PageHeading } from "@/components/layout/page-heading";
 
 const LocationsPage = async () => {
   const locations = await getLocations();
 
   return (
     <div className="space-y-4">
-      <div className="flex items-start justify-between">
-        <PageHeading title="Locations" />
+      <div className="flex items-start justify-end">
         <Link
           href="/locations/add"
           className="inline-flex h-8 items-center justify-center rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/80"

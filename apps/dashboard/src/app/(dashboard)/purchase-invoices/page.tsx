@@ -5,7 +5,6 @@ import { purchaseInvoiceFilters } from "@/app/(dashboard)/purchase-invoices/filt
 import { getCompaniesForSelect } from "@/app/(dashboard)/companies/actions";
 import { parseTableQuery, SearchParams } from "@/lib/table-query";
 import { PurchaseInvoicesTable } from "@/components/purchase-invoices/purchase-invoices-table-content";
-import { PageHeading } from "@/components/layout/page-heading";
 
 type Props = {
   searchParams: Promise<SearchParams>;
@@ -19,8 +18,7 @@ const PurchaseInvoicesPage = async ({ searchParams }: Props) => {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-start justify-between">
-        <PageHeading title="Purchase Invoices" />
+      <div className="flex items-start justify-end">
         <Link
           href="/purchase-invoices/add"
           className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"

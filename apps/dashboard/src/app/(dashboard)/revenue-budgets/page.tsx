@@ -2,7 +2,6 @@ import {
   getRevenueBudgets,
   getRevenueGroupOptions,
 } from "@/app/(dashboard)/revenue-budgets/actions";
-import { PageHeading } from "@/components/layout/page-heading";
 import { RevenueBudgetForm } from "@/components/revenue-budgets/revenue-budget-form";
 import { RevenueBudgetsTable } from "@/components/revenue-budgets/revenue-budgets-table";
 import { PeriodFilter } from "@/components/revenue-vs-budget/period-filter";
@@ -24,8 +23,7 @@ const RevenueBudgetsPage = async ({ searchParams }: Props) => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <PageHeading title="Revenue budgets" />
+      <div className="flex flex-wrap items-center justify-end gap-4">
         <Link
           href={`/revenue-vs-budget?year=${year}`}
           className="text-sm text-primary hover:underline"

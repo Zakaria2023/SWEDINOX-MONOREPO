@@ -2,7 +2,6 @@ import { getCounterOrderForEdit } from "@/app/(dashboard)/counter-orders/[uuid]/
 import { getAddressesByCompanyUuid } from "@/app/(dashboard)/counter-orders/actions";
 import { counterOrderToFormValues } from "@/app/(dashboard)/counter-orders/mappers";
 import { CounterOrderFinancesEditor } from "@/components/counter-orders/edit/counter-order-finances-editor";
-import { PageHeading } from "@/components/layout/page-heading";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -34,7 +33,6 @@ const CounterOrderFinancesPage = async ({ params }: Props) => {
           Back to edit overview
         </Link>
       </div>
-      <PageHeading title="Finances" />
       <CounterOrderFinancesEditor
         counterOrderUuid={uuid}
         defaultValues={counterOrderToFormValues(order, order)}

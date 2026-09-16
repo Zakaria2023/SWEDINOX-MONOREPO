@@ -39,7 +39,7 @@ import { FocusEvent, useEffect, useMemo, useRef, useState } from "react";
 // ("Customer revenue per revenue group") only differ in the last word, so a
 // clipped label is not just untidy, it stops naming the page.
 const LINK_CLASS =
-  "h-auto min-h-9 items-start gap-2 rounded-lg px-2.5 py-2 leading-snug whitespace-normal text-sidebar-foreground/75 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground";
+  "h-auto min-h-9 items-start gap-2 rounded-lg px-2.5 py-2 text-xs leading-snug whitespace-normal text-sidebar-foreground/75 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground";
 
 // The page you are on: filled, in full-strength ink, with a bar down its left
 // edge that lines up with the group's guide line.
@@ -52,7 +52,7 @@ const ACTIVE_GROUP_CLASS =
   "data-active:bg-sidebar-accent/60 data-active:font-medium data-active:text-sidebar-foreground";
 
 const GROUP_BUTTON_CLASS =
-  "h-10 gap-3 rounded-lg px-2.5 text-base font-medium text-sidebar-foreground/80 transition-colors group-data-[collapsible=icon]:mx-auto hover:bg-sidebar-accent hover:text-sidebar-foreground [&>svg]:text-sidebar-foreground/60 [&>svg]:transition-colors hover:[&>svg]:text-sidebar-foreground";
+  "h-10 gap-3 rounded-lg px-2.5 text-sm font-medium text-sidebar-foreground/80 transition-colors group-data-[collapsible=icon]:mx-auto hover:bg-sidebar-accent hover:text-sidebar-foreground [&>svg]:text-sidebar-foreground/60 [&>svg]:transition-colors hover:[&>svg]:text-sidebar-foreground";
 
 /** The tab a path belongs to, so navigation lands on the right one. */
 const tabForPath = (pathname: string): string => {
@@ -265,7 +265,7 @@ export const AppSidebar = () => {
                         <Search />
                       ) : (
                         <>
-                          <span className="w-full text-sm leading-snug">
+                          <span className="w-full text-xs leading-snug">
                             {item.label}
                           </span>
                           <span className="text-sidebar-foreground/55 text-xs">
@@ -289,7 +289,7 @@ export const AppSidebar = () => {
                   <SearchX size={16} />
                 </span>
               ) : (
-                <p className="text-sidebar-foreground/60 px-2.5 py-2 text-sm">
+                <p className="text-sidebar-foreground/60 px-2.5 py-2 text-xs">
                   No results for “{query.trim()}”
                 </p>
               ))}
@@ -318,7 +318,12 @@ export const AppSidebar = () => {
                   aria-label="Navigation"
                   className={cn(
                     "my-1 flex gap-0.5",
-                    isCollapsed ? "flex-col items-center" : "flex-row",
+                    // Sized to their labels rather than to a third of the row
+                    // each: "Work orders" is half again as long as "Views", and
+                    // equal thirds were breaking it across two lines.
+                    isCollapsed
+                      ? "flex-col items-center"
+                      : "flex-row justify-between",
                   )}
                 >
                   {NAV_TABS.map((tab) => {
@@ -333,8 +338,8 @@ export const AppSidebar = () => {
                         title={tab.label}
                         onClick={() => setActiveTab(tab.key)}
                         className={cn(
-                          "flex items-center justify-center gap-2 rounded-lg text-sm font-medium transition-colors",
-                          isCollapsed ? "size-8" : "flex-1 px-2 py-2",
+                          "flex items-center justify-center gap-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors",
+                          isCollapsed ? "size-8" : "px-2.5 py-2",
                           isActive
                             ? "bg-sidebar-accent text-sidebar-foreground"
                             : "text-sidebar-foreground/65 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",

@@ -12,7 +12,6 @@ import { getProductGroupsForSelect } from "@/app/(dashboard)/product-groups/acti
 import { getProductsForSelect } from "@/app/(dashboard)/products/actions";
 import { getTextCategoriesForSelect } from "@/app/(dashboard)/text-categories/actions";
 import { CompanyForm } from "@/components/companies/company-form";
-import { PageHeading } from "@/components/layout/page-heading";
 
 const AddCompanyPage = async () => {
   const [
@@ -39,7 +38,6 @@ const AddCompanyPage = async () => {
 
   return (
     <div className="space-y-4">
-      <PageHeading title="Add Company" />
       <CompanyForm
         availableContracts={availableContracts}
         projectContracts={projectContracts}

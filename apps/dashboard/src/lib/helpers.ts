@@ -851,6 +851,23 @@ export const contractableRolesOf = (
 export const isPathActive = (href: string, pathname: string): boolean =>
   pathname === href || pathname.startsWith(`${href}/`);
 
+/**
+ * A readable name for a path the menu does not carry — "/system-log" reads as
+ * "System log". A uuid segment is skipped, since a page is never named after
+ * the record it happens to be showing.
+ */
+export const titleFromPath = (pathname: string): string => {
+  const segment = pathname
+    .split("/")
+    .filter(Boolean)
+    .find((part) => !/^[0-9a-f]{8}-/i.test(part));
+  if (!segment) {
+    return "Dashboard";
+  }
+  const words = segment.replace(/-/g, " ");
+  return words.charAt(0).toUpperCase() + words.slice(1);
+};
+
 // ---------------------------------------------------------------------------
 // Enum-driven business logic
 //
