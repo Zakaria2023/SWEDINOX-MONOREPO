@@ -17,7 +17,7 @@ happened, and it comes off the list.
 
 ## The score
 
-The `Overviews` tree has **112 screens** across nine groups.
+The `Overviews` tree has **116 screens** across nine groups (112 until 16-9-2026, when the `Other` group was photographed open and turned out to hold 9, not 5).
 
 | | Screens | State |
 |---|---|---|
@@ -27,11 +27,11 @@ The `Overviews` tree has **112 screens** across nine groups.
 | Suppliers | 5 | ✅ all captured |
 | **Sales** | 19 | 🟡 **17 captured, 2 left** (B16, B17) |
 | **Customers** | 15 | ✅ all captured |
-| **Companies** | 6 | 🔴 **none captured** |
-| **Batch registration** | 5 | 🟡 **4 captured, 1 left** (E1 Batches) |
-| **Other** | 5 | 🔴 **none captured** |
+| **Companies** | 6 | 🟡 **1 captured, 5 left** |
+| **Batch registration** | 5 | ✅ all captured |
+| **Other** | 9 | ✅ all captured |
 
-**96 captured. 16 left.** Sales is nearly done; the 16 sit in four groups.
+**109 captured. 7 left** (recounted 16-9-2026): `B16`, `B17` in Sales and `D2`–`D6` in Companies.
 
 ### ⚠️ "But I sent you the Sales sheets"
 
@@ -324,7 +324,7 @@ lift it, or whether lifting it is recorded. This screen is the record.
 
 | # | Screen | Filter |
 |---|---|---|
-| **D1** | Inactive companies | `Show Data` — what makes a company inactive? |
+| ~~**D1**~~ | ~~Inactive companies~~ | ✅ **93 × 16, 16-9-2026** → [companies-group.md](companies-group.md) — **a manual flag, on every role**, not an order-age rule; 54 came in switched off at go-live |
 | **D2** | Texts | `Show Data` — and 📸 one text opened, so we see what it attaches to |
 | **D3** | Communication settings | `Show Data` — 📸 one row opened. This is probably how documents get emailed |
 | **D4** | Visits made | date from `1-1-2024` |
@@ -341,7 +341,7 @@ certificate has to follow the metal to the customer. We store `charge` and
 
 | # | Screen | Filter |
 |---|---|---|
-| **E1** | **Batches** | `Show Data`. ⚠️ start here — it is the master |
+| ~~**E1**~~ | ~~**Batches**~~ | ✅ **2 910 × 23, 16-9-2026** → [batch-registration.md](batch-registration.md) Part 2 — a batch row is also written for **processing output**; opening stock came in on 13 empty `1000xx` orders; `Adjust charge…` photographed |
 | ~~**E2**~~ | ~~Certificates received~~ | ✅ **2 540 × 27, 14-9-2026** → [batch-registration.md](batch-registration.md) — internal charge `25ACRT` on every row; **no certificate document ever attached** |
 | ~~**E3**~~ | ~~Certificates to be linked~~ | ✅ **empty, columns photographed** → §6 — an electronic certificate-exchange **message log**, nothing ever received |
 | ~~**E4**~~ | ~~Sending certificates~~ | ✅ **3 271 × 35** → §3 — every sold charge traces to its receipt, **1 662 of 1 662** (heat, PO, receipt date); never sent |
@@ -351,15 +351,21 @@ Also: **📸 one batch opened**, every tab. See item G6.
 
 ---
 
-# Part F — Other · 5 screens
+# Part F — Other · 9 screens
+
+The tree, photographed 16-9-2026: `Complaints`, `Complaint lines`, **`External documents`**, **`Read external documents`**, **`Actions`**, `Balanced Scorecard`, `Transport by region`, `SigmaNest geblokkeerde orders`, **`Scanners purchase and sales`**. The four in bold were not on this list before, and our sidebar has none of them.
 
 | # | Screen | Filter |
 |---|---|---|
-| **F1** | **Complaints** | date from `1-1-2024`. We have a `/complaints` screen and a form built from nothing |
-| **F2** | Complaint lines | date from `1-1-2024` — does a complaint line name an invoice line, or a delivery? |
-| **F3** | Balanced Scorecard | `Show Data` — 📸 the filter block especially; we have no idea what it scores |
-| **F4** | Transport by region | `Show Data` |
-| **F5** | SigmaNest geblokkeerde orders | `Show Data` — SigmaNest is the nesting software; this is its reject queue |
+| ~~**F1**~~ | ~~**Complaints**~~ | ✅ **74 × 29, 16-9-2026** → [complaints.md](complaints.md) — resolution time proved 74/74; the complaint type decides which document it names |
+| ~~**F2**~~ | ~~Complaint lines~~ | ✅ **34 × 30, 16-9-2026** → [complaints.md](complaints.md) §5d — a line names an **order line** (and on the record, its delivery); every other column is the complaint's |
+| ~~**F3**~~ | ~~Balanced Scorecard~~ | ✅ **16-9-2026** → [other-group.md](other-group.md) — 9 KPIs in 3 categories, no filter, target and history dialogs; **never measured, no target ever set** |
+| ~~**F4**~~ | ~~Transport by region~~ | ✅ **1 439 × 13, 16-9-2026** → [other-group.md](other-group.md) — one row per **transport**, not per trip; region is the address's field; ours has the wrong grain |
+| ~~**F5**~~ | ~~SigmaNest geblokkeerde orders~~ | ✅ **empty, no filter, 16-9-2026** → [other-group.md](other-group.md) — work order / customer / delivery date / purchase order / sales order; read live from SigmaNest |
+| ~~**F6**~~ | ~~External documents~~ | ✅ **empty, no filter exists, 16-9-2026** → [other-group.md](other-group.md) — `Sequence`, `Code`, `Description`, `Filename`, `Read`, `Last read`; never used |
+| ~~**F7**~~ | ~~Read external documents~~ | ✅ **empty, no filter exists, 16-9-2026** → [other-group.md](other-group.md) — `User`, `Document`, `Code`, `Read`, `Last read`: who has read which F6 document; never used |
+| ~~**F8**~~ | ~~Actions~~ | ✅ **empty, 16-9-2026** (Deadline 1-1-2024 → 16-9-2026) → [other-group.md](other-group.md) — a typed to-do with deadline and completion; schema has `ACTION`, `ACTION_TYPE`, auto-assignment per type; never used |
+| ~~**F9**~~ | ~~Scanners purchase and sales~~ | ✅ **empty, 90 columns, 16-9-2026** → [other-group.md](other-group.md) — Order advice + the sales/purchase line a warehouse scan created; never used |
 
 ---
 
@@ -375,8 +381,8 @@ screenshots only: open it, and photograph **every tab and every panel expanded**
 | **G2** | 🔴 **One sales invoice, every panel** | Nothing posts to the ledger yet. The invoice is where the posting is decided |
 | **G3** | **One delivery**, every panel | The document between an order line and a stock movement |
 | **G4** | One quote that became an order | Does the order keep the quote's number? Its prices? Its discounts? |
-| **G5** | One complaint, every tab | |
-| **G6** | One batch, every tab | Part E's master record |
+| ~~**G5**~~ | ~~One complaint, every tab~~ | ✅ **40055, 16-9-2026** → [complaints.md](complaints.md) §2 |
+| ~~**G6**~~ | ~~One batch, every tab~~ | ✅ **16-9-2026 — a batch has no record of its own.** The Batches row menu offers `Show Product`, `Show Company`, `Show Purchase order`, `Show File`, `Open file location`, `Adjust charge…`, `Stock label` — no `Show Batch` → [batch-registration.md](batch-registration.md) §11 |
 | **G7** | **One trip** — bill of lading `300813` against trip number `600249` | Two numbers, two documents, one delivery, and the pair is unexplained. 438 trips are captured and not one has been opened |
 | **G8** | One production batch, every tab | |
 | **G9** | **One remnant lot** (an offcut the saw made) — and read its **`Supplier`** | Us, or the original mill? It decides whether a remnant traces back to the heat it was cut from |
@@ -472,7 +478,7 @@ somebody clicking.
 | **K5** | What is `Gip`? | The product has `Gip → Artikelgroep`, stock has `Gipgroup`. Believed to be average purchase price. Not confirmed |
 | **K6** | Does the business raise **purchase quotes** at all? | One exists in three years and it is a test entry |
 | **K7** | Are `Purchase request` and `Purchase return order` used? | Two document types in the `Nieuw` menu that no screen has shown |
-| **K8** | Are any companies `Processor` or `Transporter`? | Would change how work orders are assigned |
+| **K8** | Are any companies `Processor` or `Transporter`? ✅ **yes (D1, 16-9-2026)** — 2 processors and 8 transporters among the inactive companies alone | Would change how work orders are assigned |
 | **K9** | What does ticking `Consignatie` change commercially? | J1 answers the accounting half; this is the business half |
 | **K10** | Is the batch scheduler meant to be switched off? | Needs an administrator. 🔴 **Now blocking (14-9-2026):** three of the batch jobs sync open posts, companies and journal entries with **AFAS**. If the scheduler is off, the overdue-posts rule runs on frozen data. **15-9-2026 lead:** `SCHEDULED_TASK.LAST_EXECUTED` on the three AFAS jobs, and `SCHEDULED_TASK_LOG.FAILED`, answer this from the database ([database-schema.md](database-schema.md) §2). **15-9-2026, error log:** jobs run as user `BATCH`, which logs nothing after **13-5-2025** — the date the test copy was taken. The scheduler being off on `HEGO TEST` is expected; ask about the **live** system instead ([error-log.md](error-log.md) §2) |
 | **K12** | **Does the rebuild replace AFAS, or sync with it?** | AFAS holds the ledger, receivables and payments (A3). This decides how journal entries, payments and credit control are built in `apps/dashboard`. **15-9-2026, error log:** during live use (Jan–May 2025) the batch sync went to **Multivers**; the AFAS jobs and a cloud "tenant id" set-up appear only afterwards. Ask which ledger the **live** system posts to today ([error-log.md](error-log.md) §2) |

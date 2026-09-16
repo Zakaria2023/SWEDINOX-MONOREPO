@@ -11,6 +11,10 @@ system to find out.
 > for each. It supersedes WHAT-I-NEED-FROM-YOU.md, STEPS.md and the round lists
 > in NEXT-LOGISTICS.md, which stay only as history.
 
+> **🔴 To update: [ENGLISH-ONLY-TODO.md](ENGLISH-ONLY-TODO.md)** — Dutch page
+> names in the sidebar and Dutch column/field labels still in the app, each with
+> its file, line and English replacement.
+
 > **For the current state:**
 > [COVERAGE.md](COVERAGE.md) — **how much is actually built** ·
 > [chart-of-accounts.md](chart-of-accounts.md) — the 27 accounts ·
