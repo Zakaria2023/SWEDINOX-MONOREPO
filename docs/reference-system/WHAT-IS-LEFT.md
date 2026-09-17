@@ -27,11 +27,11 @@ The `Overviews` tree has **116 screens** across nine groups (112 until 16-9-2026
 | Suppliers | 5 | ✅ all captured |
 | **Sales** | 19 | 🟡 **17 captured, 2 left** (B16, B17) |
 | **Customers** | 15 | ✅ all captured |
-| **Companies** | 6 | 🟡 **1 captured, 5 left** |
+| **Companies** | 6 | ✅ all captured |
 | **Batch registration** | 5 | ✅ all captured |
 | **Other** | 9 | ✅ all captured |
 
-**109 captured. 7 left** (recounted 16-9-2026): `B16`, `B17` in Sales and `D2`–`D6` in Companies.
+**114 captured. 2 left** (17-9-2026): `B16` and `B17`, both Sales statistics screens. Every other group is complete.
 
 ### ⚠️ "But I sent you the Sales sheets"
 
@@ -325,11 +325,11 @@ lift it, or whether lifting it is recorded. This screen is the record.
 | # | Screen | Filter |
 |---|---|---|
 | ~~**D1**~~ | ~~Inactive companies~~ | ✅ **93 × 16, 16-9-2026** → [companies-group.md](companies-group.md) — **a manual flag, on every role**, not an order-age rule; 54 came in switched off at go-live |
-| **D2** | Texts | `Show Data` — and 📸 one text opened, so we see what it attaches to |
-| **D3** | Communication settings | `Show Data` — 📸 one row opened. This is probably how documents get emailed |
-| **D4** | Visits made | date from `1-1-2024` |
-| **D5** | Visit reports | date from `1-1-2024` — 📸 one report opened |
-| **D6** | Address distances | `Show Data` — distance between addresses, presumably for trip planning |
+| ~~**D2**~~ | ~~Texts~~ | ✅ **259 × 29, 17-9-2026** → [companies-group.md](companies-group.md) — a note stuck to a **company** with a tick per document it prints on; `Categories` is those ticks written out, proved 258/259. Only 8 of 18 documents ever ticked. ✅ our `/texts` already matches |
+| ~~**D3**~~ | ~~Communication settings~~ | ✅ **3 rows × 11 columns, 17-9-2026** → [companies-group.md](companies-group.md) — an **override**, not the sending rule: two real rows in three years, both mailing a copy to a `@hego.nl` address. `Shape` is the payload (`PDF`, **`SCSN`**); the recipient is a **contact or a typed address**, which our schema did not separate — ✅ built 17-9-2026 |
+| ~~**D4**~~ | ~~Visits made~~ | ✅ **166 × 16, 17-9-2026** → [companies-group.md](companies-group.md) — 🔴 **the visit side is alive** (C13/C14's zeros are stale batch statistics); 154 calls to 12 visits; `Bezoekredenen` is **multi-valued** with a 7th value we lacked; 16 rows did not take place and are listed anyway — ✅ built 17-9-2026 |
+| ~~**D5**~~ | ~~Visit reports~~ | ✅ **17-9-2026** → [companies-group.md](companies-group.md) — a **Report**, not a grid: the same 166 visits printed four lines each, reconciled to D4 block for block. Adds the **time**; carries **none of the free text** |
+| ~~**D6**~~ | ~~Address distances~~ | ✅ **481 × 5, 17-9-2026** → [companies-group.md](companies-group.md) — 🔴 **not** between two addresses: the distance **from our depot** (proved by 13 zero rows, all `Bolderweg 10 Almere`), fetched **from Google one row at a time by hand**. It feeds `TransporterCosts.fromKm`/`untilKm` — a chain nothing in our app closes. ✅ screen built 17-9-2026; the costing chain waits on a decision |
 
 ---
 

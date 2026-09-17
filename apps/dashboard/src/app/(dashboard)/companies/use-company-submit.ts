@@ -1284,7 +1284,7 @@ export const useCompanySubmit = ({
       visitTime: report.visitTime ?? "",
       contactMethod: report.contactMethod ?? "",
       hasTakenPlace: report.hasTakenPlace ?? false,
-      visitReason: report.visitReason ?? "",
+      visitReasons: report.visitReasons ?? [],
       contactIndex:
         report.contactIndex != null ? String(report.contactIndex) : "",
     });
@@ -1310,8 +1310,7 @@ export const useCompanySubmit = ({
       contactMethod: (values.contactMethod ||
         undefined) as VisitReportInput["contactMethod"],
       hasTakenPlace: values.hasTakenPlace,
-      visitReason: (values.visitReason ||
-        undefined) as VisitReportInput["visitReason"],
+      visitReasons: values.visitReasons,
       contactIndex,
       representative: contact ? contactLabel(contact) : undefined,
     };

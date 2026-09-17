@@ -132,24 +132,35 @@ export const VisitReportDialog = ({
             </div>
 
             <div>
-              <FormLabel htmlFor="vr-reason">Reason</FormLabel>
+              <FormLabel htmlFor="vr-reasons">Reasons</FormLabel>
               <Controller
-                name="visitReason"
+                name="visitReasons"
                 control={form.control}
                 render={({ field }) => (
-                  <Select
-                    id="vr-reason"
-                    options={[
-                      { value: "", label: "Empty" },
-                      ...visitReportReasons.map((reason) => ({
-                        value: reason,
-                        label: VISIT_REPORT_REASON_LABELS[reason],
-                      })),
-                    ]}
-                    value={field.value ?? ""}
-                    onValueChange={field.onChange}
-                    placeholder="Select"
-                  />
+                  <div id="vr-reasons" className="space-y-1">
+                    {visitReportReasons.map((reason) => (
+                      <label
+                        key={reason}
+                        className="flex cursor-pointer items-center gap-2 rounded-md border border-border bg-background px-3 py-2"
+                      >
+                        <Checkbox
+                          checked={(field.value ?? []).includes(reason)}
+                          onChange={() =>
+                            field.onChange(
+                              (field.value ?? []).includes(reason)
+                                ? (field.value ?? []).filter(
+                                    (held) => held !== reason,
+                                  )
+                                : [...(field.value ?? []), reason],
+                            )
+                          }
+                        />
+                        <span className="text-sm text-foreground">
+                          {VISIT_REPORT_REASON_LABELS[reason]}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
                 )}
               />
             </div>

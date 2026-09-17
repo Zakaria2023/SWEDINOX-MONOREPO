@@ -363,6 +363,7 @@ export const VISIT_REPORT_REASON_LABELS: Record<VisitReportReason, string> = {
   quotation_follow_up: "Quotation follow-up",
   at_customers_request: "At customer's request",
   introduction: "Introduction",
+  potential_customer_prospect: "Potential customer (prospect)",
 };
 export const CONTACT_SALUTATION_LABELS: Record<ContactSalutation, string> = {
   mr: "Mr.",

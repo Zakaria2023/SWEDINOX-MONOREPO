@@ -40,10 +40,9 @@ const SECTION_COLUMNS = {
     "visitDate",
     "visitTime",
     "hasTakenPlace",
-    "visitReason",
   ],
   addressAndContact: ["contactUuid"],
-  details: ["attentionPoint", "remarks"],
+  details: ["visitReasons", "attentionPoint", "remarks", "visitResult"],
   categories: ["categories"],
   readers: ["readers"],
 } as const satisfies Record<string, readonly (keyof VisitReportInput)[]>;

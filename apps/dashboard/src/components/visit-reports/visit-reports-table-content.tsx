@@ -16,10 +16,8 @@ import {
   VISIT_REPORT_COLUMNS,
   VisitReportColumnKey,
 } from "@/app/(dashboard)/visit-reports/columns";
-import {
-  VISIT_REPORT_CONTACT_METHOD_LABELS,
-  VISIT_REPORT_REASON_LABELS,
-} from "@/lib/labels";
+import { visitReasonsLabel } from "@/lib/helpers";
+import { VISIT_REPORT_CONTACT_METHOD_LABELS } from "@/lib/labels";
 import {
   Table,
   TableBody,
@@ -136,12 +134,10 @@ export const VisitReportsTable = ({
             )}
           </TableCell>
         );
-      case "visitReason":
+      case "visitReasons":
         return (
           <TableCell key={key}>
-            {visitReport.visitReason
-              ? VISIT_REPORT_REASON_LABELS[visitReport.visitReason]
-              : fallbackValue}
+            {visitReasonsLabel(visitReport.visitReasons) ?? fallbackValue}
           </TableCell>
         );
       case "contactUuid":
@@ -154,6 +150,14 @@ export const VisitReportsTable = ({
         return (
           <TableCell key={key}>
             {visitReport.attentionPoint ?? fallbackValue}
+          </TableCell>
+        );
+      case "visitResult":
+        return (
+          <TableCell key={key} className="max-w-xs">
+            <span className="line-clamp-3">
+              {visitReport.visitResult ?? fallbackValue}
+            </span>
           </TableCell>
         );
       case "remarks":

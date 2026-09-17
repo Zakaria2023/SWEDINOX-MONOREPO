@@ -129,6 +129,7 @@ import {
   SALES_REPRESENTATIVE_LABELS,
   STOCK_UNIT_LABELS,
   TEXT_USAGE_CATEGORY_LABELS,
+  VISIT_REPORT_REASON_LABELS,
 } from "./labels";
 
 /**
@@ -6573,6 +6574,14 @@ export const VISIT_REASON_META: Record<VisitReportReason, VisitReasonMeta> = {
     fromComplaint: false,
     fromQuote: false,
   },
+  // Somebody who does not buy yet. Same shape as an introduction: worth
+  // following up, with no interval the reason itself can fix.
+  potential_customer_prospect: {
+    needsFollowUp: true,
+    nextVisitWeeks: null,
+    fromComplaint: false,
+    fromQuote: false,
+  },
 };
 
 /** What a classification implies, or null when a company carries none. */
@@ -6676,6 +6685,37 @@ export const nextVisitDateForReason = (
   }
   return addLeadTime(visitDate.slice(0, 10), weeks, "weeks");
 };
+
+/**
+ * The same, for the several reasons one visit may carry — the reference's
+ * `Bezoekredenen` is a list, and two of its 166 rows name more than one. The
+ * soonest date wins: a visit made both because turnover is slipping (8 weeks)
+ * and to chase a quote (2 weeks) is due back in 2, because the quote will not
+ * wait for the turnover.
+ */
+/**
+ * A visit's reasons as one line, the way the reference's `Bezoekredenen` column
+ * writes them: the labels of the reasons it carries, comma separated, and null
+ * when it carries none.
+ */
+export const visitReasonsLabel = (
+  reasons: readonly VisitReportReason[] | null | undefined,
+): string | null =>
+  reasons && reasons.length > 0
+    ? reasons.map((reason) => VISIT_REPORT_REASON_LABELS[reason]).join(", ")
+    : null;
+
+export const nextVisitDateForReasons = (
+  reasons: readonly VisitReportReason[] | null | undefined,
+  visitDate: string | null | undefined,
+): string | null =>
+  (reasons ?? [])
+    .map((reason) => nextVisitDateForReason(reason, visitDate))
+    .filter((date): date is string => date !== null)
+    .reduce<string | null>(
+      (soonest, date) => (soonest === null || date < soonest ? date : soonest),
+      null,
+    );
 
 /** The locale a customer's documents are written in. */
 export const documentLocale = (

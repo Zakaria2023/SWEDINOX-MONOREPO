@@ -17,11 +17,10 @@ export const createVisitReportSchema = () =>
     visitDate: z.string().optional(),
     visitTime: z.string().optional(),
     hasTakenPlace: z.boolean(),
-    visitReason: z
-      .union([z.enum(visitReportReasons), z.literal("")])
-      .optional(),
+    visitReasons: z.array(z.enum(visitReportReasons)),
     attentionPoint: z.string().optional(),
     remarks: z.string().optional(),
+    visitResult: z.string().optional(),
 
     // Categories
     categories: z.array(z.enum(visitReportCategories)),

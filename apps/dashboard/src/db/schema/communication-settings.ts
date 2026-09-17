@@ -10,6 +10,7 @@ import {
   varchar,
 } from "drizzle-orm/mysql-core";
 import { Companies } from "./companies";
+import { Contacts } from "./contacts";
 import {
   communicationSettingDocumentTypes,
   communicationSettingShapes,
@@ -30,6 +31,10 @@ export const CommunicationSettings = mysqlTable(
       communicationSettingTypes,
     ).notNull(),
     shape: mysqlEnum("shape", communicationSettingShapes),
+    // The reference splits the recipient in three: a contact of the company,
+    // whose address it then shows, or a `Custom contact` typed by hand. A
+    // contact wins, and its address is read live so it follows the contact.
+    contactUuid: char("contact_uuid", { length: 36 }),
     email: varchar("email", { length: 255 }),
     fax: varchar("fax", { length: 100 }),
     modifiedByUserId: varchar("modified_by_user_id", { length: 255 }).notNull(),
@@ -42,10 +47,16 @@ export const CommunicationSettings = mysqlTable(
     index("idx_communication_settings_communication_type").on(
       table.communicationType,
     ),
+    index("idx_communication_settings_contact_uuid").on(table.contactUuid),
     foreignKey({
       name: "fk_communication_settings_company",
       columns: [table.companyUuid],
       foreignColumns: [Companies.uuid],
+    }),
+    foreignKey({
+      name: "fk_communication_settings_contact",
+      columns: [table.contactUuid],
+      foreignColumns: [Contacts.uuid],
     }),
   ],
 );

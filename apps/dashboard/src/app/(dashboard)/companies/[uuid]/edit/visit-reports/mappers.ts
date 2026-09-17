@@ -20,7 +20,7 @@ export const visitReportRowToDialogValues = (
   visitTime: row.visitTime ?? "",
   contactMethod: row.contactMethod ?? "",
   hasTakenPlace: row.hasTakenPlace,
-  visitReason: row.visitReason ?? "",
+  visitReasons: row.visitReasons ?? [],
   contactIndex: row.contactUuid ?? "",
 });
 
@@ -32,8 +32,7 @@ export const visitReportValuesToColumns = (
   contactMethod: (values.contactMethod ||
     null) as InsertVisitReports["contactMethod"],
   hasTakenPlace: values.hasTakenPlace,
-  visitReason: (values.visitReason ||
-    null) as InsertVisitReports["visitReason"],
+  visitReasons: values.visitReasons,
 });
 
 export const contactDisplayName = (

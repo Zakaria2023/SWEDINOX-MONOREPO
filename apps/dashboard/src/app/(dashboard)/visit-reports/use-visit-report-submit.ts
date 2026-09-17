@@ -22,9 +22,10 @@ export const useVisitReportSubmit = () => {
       visitDate: "",
       visitTime: "",
       hasTakenPlace: false,
-      visitReason: "",
+      visitReasons: [],
       attentionPoint: "",
       remarks: "",
+      visitResult: "",
 
       categories: [],
       readers: [],

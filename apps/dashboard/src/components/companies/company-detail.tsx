@@ -17,6 +17,7 @@ import {
   formatRevenue,
   needsCurrencyConversion,
   userName,
+  visitReasonsLabel,
   yesNo,
 } from "@/lib/helpers";
 import { SelectInvoices } from "@/db";
@@ -773,9 +774,7 @@ export const CompanyDetailView = ({ company, invoices, userNames }: Props) => {
                     </TableCell>
                     <TableCell>{report.hasTakenPlace ? "Yes" : "No"}</TableCell>
                     <TableCell>
-                      {report.visitReason
-                        ? VISIT_REPORT_REASON_LABELS[report.visitReason]
-                        : na}
+                      {visitReasonsLabel(report.visitReasons) ?? na}
                     </TableCell>
                     <TableCell>{report.representative ?? na}</TableCell>
                     <TableCell className="text-right">

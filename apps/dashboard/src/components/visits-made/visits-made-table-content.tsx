@@ -1,6 +1,14 @@
 "use client";
 
-import { VisitMadeRow } from "@/app/(dashboard)/visits-made/actions";
+import Link from "next/link";
+import {
+  exportVisitsMade,
+  VisitMadeRow,
+} from "@/app/(dashboard)/visits-made/actions";
+import {
+  VISIT_MADE_COLUMNS,
+  VisitMadeColumnKey,
+} from "@/app/(dashboard)/visits-made/columns";
 import {
   Table,
   TableBody,
@@ -9,97 +17,212 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
-import { fullName, orDash, yesNo } from "@/lib/helpers";
+import { ColumnSelector } from "@/components/ui/column-selector";
+import { PagedTableExportButton } from "@/components/ui/table-export-button";
+import { TablePagination } from "@/components/ui/table-pagination";
+import { TableSortHeader } from "@/components/ui/table-sort-header";
+import { TableToolbar } from "@/components/ui/table-toolbar";
+import { selectorColumns } from "@/lib/excel";
+import {
+  buildColumnVisibility,
+  formatDateColumn,
+  orDash,
+  visitReasonsLabel,
+  yesNo,
+} from "@/lib/helpers";
 import {
   CUSTOMER_GROUP_LABELS,
+  VISIT_REPORT_CATEGORY_LABELS,
   VISIT_REPORT_CONTACT_METHOD_LABELS,
-  VISIT_REPORT_REASON_LABELS,
 } from "@/lib/labels";
-import { TableExportButton } from "@/components/ui/table-export-button";
+import { Paged, TableFilterControl } from "@/lib/table-query";
+import { useState } from "react";
+
+type ColumnKey = VisitMadeColumnKey;
 
 type Props = {
-  rows: VisitMadeRow[];
+  page: Paged<VisitMadeRow>;
+  filters: TableFilterControl[];
 };
 
-export const VisitsMadeTable = ({ rows }: Props) => (
-  <div>
-    <div className="space-y-4">
-      <div className="flex justify-end">
-        <TableExportButton
-          tableId="visits-made-table"
-          fileName="visits-made"
-          sheetName="Visits made"
-        />
-      </div>
-      <Table id="visits-made-table">
-        <TableHeader>
-          <TableRow>
-            <TableHead>Representative</TableHead>
-            <TableHead>Customer code</TableHead>
-            <TableHead>Company</TableHead>
-            <TableHead>Postal code</TableHead>
-            <TableHead>City</TableHead>
-            <TableHead>Visiting date</TableHead>
-            <TableHead>Visited by</TableHead>
-            <TableHead>Contact person</TableHead>
-            <TableHead>Categories</TableHead>
-            <TableHead>Contact</TableHead>
-            <TableHead>Took place</TableHead>
-            <TableHead>Visit reason</TableHead>
-            <TableHead>Region</TableHead>
-            <TableHead>Customer group</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {rows.length === 0 ? (
-            <TableRow>
-              <TableCell
-                colSpan={14}
-                className="h-24 text-center text-muted-foreground"
+const ALL_COLUMNS = selectorColumns(VISIT_MADE_COLUMNS);
+
+const SORTABLE: Partial<Record<ColumnKey, string>> = {
+  visitDate: "visitDate",
+  companyName: "company",
+  customerCode: "customerCode",
+};
+
+export const VisitsMadeTable = ({ page, filters }: Props) => {
+  const [columnVisibility, setColumnVisibility] = useState<
+    Record<ColumnKey, boolean>
+  >(buildColumnVisibility(ALL_COLUMNS));
+
+  const toggleColumn = (key: string) =>
+    setColumnVisibility((prev) => ({
+      ...prev,
+      [key]: !prev[key as ColumnKey],
+    }));
+
+  const visibleColumns = ALL_COLUMNS.filter((col) => columnVisibility[col.key]);
+
+  const renderCell = (row: VisitMadeRow, key: ColumnKey) => {
+    switch (key) {
+      case "representative":
+        return <TableCell key={key}>{orDash(row.representative)}</TableCell>;
+      case "customerCode":
+        return <TableCell key={key}>{orDash(row.customerCode)}</TableCell>;
+      case "companyName":
+        return (
+          <TableCell key={key} className="font-medium">
+            {row.companyUuid ? (
+              <Link
+                href={`/companies/${row.companyUuid}`}
+                className="text-primary hover:underline"
               >
-                No visits recorded.
-              </TableCell>
-            </TableRow>
-          ) : (
-            rows.map((row) => (
-              <TableRow key={row.uuid}>
-                <TableCell className="font-medium">
-                  {orDash(row.representative)}
-                </TableCell>
-                <TableCell>{orDash(row.customerCode)}</TableCell>
-                <TableCell>{orDash(row.companyName)}</TableCell>
-                <TableCell>{orDash(row.postalCode)}</TableCell>
-                <TableCell>{orDash(row.city)}</TableCell>
-                <TableCell>{orDash(row.visitDate)}</TableCell>
-                <TableCell>{orDash(row.visitedBy)}</TableCell>
-                <TableCell>
-                  {fullName(row.contactFirstName, row.contactLastName) || "—"}
-                </TableCell>
-                <TableCell>
-                  {row.categories?.length ? row.categories.join(", ") : "—"}
-                </TableCell>
-                <TableCell>
-                  {row.contactMethod
-                    ? VISIT_REPORT_CONTACT_METHOD_LABELS[row.contactMethod]
-                    : "—"}
-                </TableCell>
-                <TableCell>{yesNo(row.hasTakenPlace)}</TableCell>
-                <TableCell>
-                  {row.visitReason
-                    ? VISIT_REPORT_REASON_LABELS[row.visitReason]
-                    : "—"}
-                </TableCell>
-                <TableCell>{orDash(row.region)}</TableCell>
-                <TableCell>
-                  {row.customerGroup
-                    ? CUSTOMER_GROUP_LABELS[row.customerGroup]
-                    : "—"}
-                </TableCell>
+                {orDash(row.companyName)}
+              </Link>
+            ) : (
+              orDash(row.companyName)
+            )}
+          </TableCell>
+        );
+      case "postalCode":
+        return (
+          <TableCell key={key} className="whitespace-nowrap">
+            {orDash(row.postalCode)}
+          </TableCell>
+        );
+      case "city":
+        return <TableCell key={key}>{orDash(row.city)}</TableCell>;
+      case "visitDate":
+        return (
+          <TableCell key={key} className="whitespace-nowrap">
+            <Link
+              href={`/visit-reports/${row.uuid}`}
+              className="text-primary hover:underline"
+            >
+              {formatDateColumn(row.visitDate)}
+            </Link>
+          </TableCell>
+        );
+      case "visitTime":
+        return (
+          <TableCell key={key} className="whitespace-nowrap">
+            {orDash(row.visitTime)}
+          </TableCell>
+        );
+      case "visitedBy":
+        return <TableCell key={key}>{orDash(row.visitedBy)}</TableCell>;
+      case "contactPerson":
+        return (
+          <TableCell key={key}>
+            {orDash(
+              [row.contactFirstName, row.contactLastName]
+                .filter(Boolean)
+                .join(" ") || null,
+            )}
+          </TableCell>
+        );
+      case "categories":
+        return (
+          <TableCell key={key}>
+            {orDash(
+              row.categories && row.categories.length > 0
+                ? row.categories
+                    .map((category) => VISIT_REPORT_CATEGORY_LABELS[category])
+                    .join(", ")
+                : null,
+            )}
+          </TableCell>
+        );
+      case "contactMethod":
+        return (
+          <TableCell key={key}>
+            {orDash(
+              row.contactMethod
+                ? VISIT_REPORT_CONTACT_METHOD_LABELS[row.contactMethod]
+                : null,
+            )}
+          </TableCell>
+        );
+      case "hasTakenPlace":
+        return <TableCell key={key}>{yesNo(row.hasTakenPlace)}</TableCell>;
+      case "visitReasons":
+        return (
+          <TableCell key={key}>
+            {orDash(visitReasonsLabel(row.visitReasons))}
+          </TableCell>
+        );
+      case "region":
+        return <TableCell key={key}>{orDash(row.region)}</TableCell>;
+      case "customerGroup":
+        return (
+          <TableCell key={key}>
+            {orDash(
+              row.customerGroup
+                ? CUSTOMER_GROUP_LABELS[row.customerGroup]
+                : null,
+            )}
+          </TableCell>
+        );
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <TableToolbar searchPlaceholder="Search company…" filters={filters}>
+        <ColumnSelector
+          columns={ALL_COLUMNS.map((col) => ({
+            key: col.key,
+            label: col.label,
+          }))}
+          visibility={columnVisibility}
+          onToggle={toggleColumn}
+        />
+        <PagedTableExportButton
+          fileName="visits-made"
+          columnKeys={visibleColumns.map((column) => column.key)}
+          action={exportVisitsMade}
+        />
+      </TableToolbar>
+
+      {page.rows.length === 0 ? (
+        <div className="flex flex-col items-center gap-1 rounded-lg border border-dashed px-6 py-10 text-center">
+          <p className="font-medium">No visits recorded</p>
+          <p className="max-w-md text-sm text-muted-foreground">
+            Visits and calls appear here once a representative writes one up,
+            whether or not it took place.
+          </p>
+        </div>
+      ) : (
+        <>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                {visibleColumns.map((col) => {
+                  const sortKey = SORTABLE[col.key];
+                  return sortKey ? (
+                    <TableSortHeader key={col.key} sortKey={sortKey}>
+                      {col.label}
+                    </TableSortHeader>
+                  ) : (
+                    <TableHead key={col.key}>{col.label}</TableHead>
+                  );
+                })}
               </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
+            </TableHeader>
+            <TableBody>
+              {page.rows.map((row) => (
+                <TableRow key={row.uuid}>
+                  {visibleColumns.map((col) => renderCell(row, col.key))}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          <TablePagination page={page} singular="visit" plural="visits" />
+        </>
+      )}
     </div>
-  </div>
-);
+  );
+};

@@ -14,7 +14,7 @@ import { SelectCompanyAddresses } from "@/db/schema/company-addresses";
 import {
   formatDateColumn,
   generateUuid,
-  nextVisitDateForReason,
+  nextVisitDateForReasons,
   todayDateString,
 } from "@/lib/helpers";
 import { companyAddressFor } from "@/lib/server/company-addresses";
@@ -24,7 +24,7 @@ import { redirect } from "next/navigation";
 import { visitReportReasons } from "@/lib/enums";
 import {
   dateRangeFilter,
-  enumFilter,
+  jsonArrayFilter,
   relationFilter,
   runPaged,
   tableOrderBy,
@@ -97,7 +97,7 @@ const VISIT_REPORT_SORTABLE = {
 // place from what is merely planned — see /visits-made, which is that filter.
 const VISIT_REPORT_FILTERS = {
   company: relationFilter(VisitReports.companyUuid),
-  visitReason: enumFilter(VisitReports.visitReason, visitReportReasons),
+  visitReason: jsonArrayFilter(VisitReports.visitReasons, visitReportReasons),
   visitDate: dateRangeFilter(VisitReports.visitDate),
 };
 
@@ -259,7 +259,7 @@ export const resolveVisitReport = async (
         companyUuid: VisitReports.companyUuid,
         hasTakenPlace: VisitReports.hasTakenPlace,
         visitDate: VisitReports.visitDate,
-        visitReason: VisitReports.visitReason,
+        visitReasons: VisitReports.visitReasons,
         // The next visit is the company's (the reference's
         // `COMPANY_MARKETING.NEXTVISIT` / `VISITREASON`), not the report's.
         nextVisitReason: Companies.visitReason,
@@ -289,8 +289,8 @@ export const resolveVisitReport = async (
     const stillAhead = plannedNextVisit !== "—" && plannedNextVisit > visitDate;
     const derivedNextVisit = stillAhead
       ? null
-      : nextVisitDateForReason(
-          report.nextVisitReason ?? report.visitReason,
+      : nextVisitDateForReasons(
+          report.nextVisitReason ? [report.nextVisitReason] : report.visitReasons,
           visitDate,
         );
 

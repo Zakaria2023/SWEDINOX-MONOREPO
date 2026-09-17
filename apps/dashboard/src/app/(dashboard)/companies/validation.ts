@@ -573,11 +573,7 @@ export const visitReportDialogSchema = z.object({
     z.undefined(),
   ]),
   hasTakenPlace: z.boolean(),
-  visitReason: z.union([
-    z.enum(visitReportReasons),
-    z.literal(""),
-    z.undefined(),
-  ]),
+  visitReasons: z.array(z.enum(visitReportReasons)),
   // Index into the in-progress contacts array — not a real uuid yet, since
   // the company and its contacts aren't persisted until submit.
   contactIndex: z.string().optional(),
@@ -590,7 +586,7 @@ export const DEFAULT_VISIT_REPORT: VisitReportDialogValues = {
   visitTime: "",
   contactMethod: "",
   hasTakenPlace: false,
-  visitReason: "",
+  visitReasons: [],
   contactIndex: "",
 };
 

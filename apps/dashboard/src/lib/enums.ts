@@ -139,6 +139,7 @@ export const visitReportReasons = [
   "quotation_follow_up",
   "at_customers_request",
   "introduction",
+  "potential_customer_prospect",
 ] as const satisfies readonly string[];
 
 export type VisitReportReason = (typeof visitReportReasons)[number];

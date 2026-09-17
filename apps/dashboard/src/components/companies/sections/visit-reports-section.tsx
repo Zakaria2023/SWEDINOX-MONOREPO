@@ -1,10 +1,8 @@
 "use client";
 
 import { VisitReportInput } from "@/app/(dashboard)/companies/actions";
-import {
-  VISIT_REPORT_CONTACT_METHOD_LABELS,
-  VISIT_REPORT_REASON_LABELS,
-} from "@/lib/labels";
+import { visitReasonsLabel } from "@/lib/helpers";
+import { VISIT_REPORT_CONTACT_METHOD_LABELS } from "@/lib/labels";
 import { ClipboardList, Pencil, Plus, X } from "lucide-react";
 import { RowAction } from "@/components/ui/row-action";
 
@@ -44,9 +42,9 @@ export const VisitReportsSection = ({
                 {VISIT_REPORT_CONTACT_METHOD_LABELS[report.contactMethod]}
               </span>
             )}
-            {report.visitReason && (
-              <span className="truncate text-muted-foreground">
-                {VISIT_REPORT_REASON_LABELS[report.visitReason]}
+            {visitReasonsLabel(report.visitReasons) && (
+              <span className="line-clamp-1 text-muted-foreground">
+                {visitReasonsLabel(report.visitReasons)}
               </span>
             )}
             {report.representative && (

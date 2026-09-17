@@ -7,6 +7,7 @@ import {
   formatMoney,
   formatDateValue,
   fullName,
+  visitReasonsLabel,
   yesNo,
 } from "@/lib/helpers";
 import {
@@ -80,12 +81,8 @@ export const VisitReportDetailView = ({ report }: Props) => {
             value={yesNo(report.hasTakenPlace)}
           />
           <DetailField
-            label="Visit reason"
-            value={
-              report.visitReason
-                ? VISIT_REPORT_REASON_LABELS[report.visitReason]
-                : null
-            }
+            label="Visit reasons"
+            value={visitReasonsLabel(report.visitReasons)}
           />
           <DetailField
             label="Categories"

@@ -14,11 +14,8 @@ import { VisitReportDialog } from "@/components/companies/dialogs/visit-report-d
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FormError } from "@/components/ui/form-error";
 import { SelectVisitReports } from "@/db/schema/visit-reports";
-import { daysInSystem, pluralize } from "@/lib/helpers";
-import {
-  VISIT_REPORT_CONTACT_METHOD_LABELS,
-  VISIT_REPORT_REASON_LABELS,
-} from "@/lib/labels";
+import { daysInSystem, pluralize, visitReasonsLabel } from "@/lib/helpers";
+import { VISIT_REPORT_CONTACT_METHOD_LABELS } from "@/lib/labels";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ClipboardList, Pencil, Plus, Trash2 } from "lucide-react";
 import { startTransition, useActionState, useEffect, useState } from "react";
@@ -148,9 +145,9 @@ export const CompanyVisitReportsEditor = ({
                     {VISIT_REPORT_CONTACT_METHOD_LABELS[report.contactMethod]}
                   </span>
                 )}
-                {report.visitReason && (
+                {visitReasonsLabel(report.visitReasons) && (
                   <span className="line-clamp-1 text-muted-foreground">
-                    {VISIT_REPORT_REASON_LABELS[report.visitReason]}
+                    {visitReasonsLabel(report.visitReasons)}
                   </span>
                 )}
                 {report.representative && (

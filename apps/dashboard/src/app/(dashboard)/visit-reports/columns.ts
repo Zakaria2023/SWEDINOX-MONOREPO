@@ -1,9 +1,7 @@
 import { VisitReportListItem } from "@/app/(dashboard)/visit-reports/actions";
 import { dateCell, ExportColumn, textCell, yesNoCell } from "@/lib/excel";
-import {
-  VISIT_REPORT_CONTACT_METHOD_LABELS,
-  VISIT_REPORT_REASON_LABELS,
-} from "@/lib/labels";
+import { visitReasonsLabel } from "@/lib/helpers";
+import { VISIT_REPORT_CONTACT_METHOD_LABELS } from "@/lib/labels";
 
 /**
  * The visit reports overview as a sheet — see app/(dashboard)/orders/columns.ts.
@@ -16,12 +14,13 @@ export type VisitReportColumnKey =
   | "contactMethod"
   | "visitDate"
   | "hasTakenPlace"
-  | "visitReason"
+  | "visitReasons"
   | "representative"
   | "visitTime"
   | "contactUuid"
   | "attentionPoint"
   | "remarks"
+  | "visitResult"
   | "createdAt";
 
 export const VISIT_REPORT_COLUMNS: Array<
@@ -62,11 +61,10 @@ export const VISIT_REPORT_COLUMNS: Array<
     value: (row) => yesNoCell(row.hasTakenPlace),
   },
   {
-    key: "visitReason",
-    label: "Visit Reason",
+    key: "visitReasons",
+    label: "Visit Reasons",
     defaultVisible: true,
-    value: (row) =>
-      row.visitReason ? VISIT_REPORT_REASON_LABELS[row.visitReason] : null,
+    value: (row) => textCell(visitReasonsLabel(row.visitReasons)),
   },
   {
     key: "representative",
@@ -97,6 +95,12 @@ export const VISIT_REPORT_COLUMNS: Array<
     label: "Remarks",
     defaultVisible: false,
     value: (row) => textCell(row.remarks),
+  },
+  {
+    key: "visitResult",
+    label: "Visit Result",
+    defaultVisible: false,
+    value: (row) => textCell(row.visitResult),
   },
   {
     key: "createdAt",

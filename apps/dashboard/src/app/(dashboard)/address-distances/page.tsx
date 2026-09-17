@@ -1,12 +1,28 @@
-import { getAddressDistances } from "@/app/(dashboard)/address-distances/actions";
+import {
+  getAddressDistanceCountries,
+  getAddressDistances,
+} from "@/app/(dashboard)/address-distances/actions";
+import { addressDistanceFilters } from "@/app/(dashboard)/address-distances/filters";
+import { getCompaniesForSelect } from "@/app/(dashboard)/companies/actions";
 import { AddressDistancesTable } from "@/components/address-distances/address-distances-table-content";
+import { parseTableQuery, SearchParams } from "@/lib/table-query";
 
-const AddressDistancesPage = async () => {
-  const addressDistances = await getAddressDistances();
+type Props = {
+  searchParams: Promise<SearchParams>;
+};
+
+const AddressDistancesPage = async ({ searchParams }: Props) => {
+  const query = parseTableQuery(await searchParams);
+  const page = await getAddressDistances(query);
+  const countries = await getAddressDistanceCountries();
+  const companies = await getCompaniesForSelect();
 
   return (
     <div className="space-y-4">
-      <AddressDistancesTable addressDistances={addressDistances} />
+      <AddressDistancesTable
+        page={page}
+        filters={addressDistanceFilters(countries, companies)}
+      />
     </div>
   );
 };

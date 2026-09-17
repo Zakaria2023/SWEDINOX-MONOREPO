@@ -14,9 +14,9 @@ import {
 } from "drizzle-orm/mysql-core";
 import {
   visitReportContactMethods,
-  visitReportReasons,
   VisitReportCategory,
   VisitReportReader,
+  VisitReportReason,
 } from "@/lib/enums";
 import { Companies } from "./companies";
 import { Contacts } from "./contacts";
@@ -45,9 +45,14 @@ export const VisitReports = mysqlTable(
     visitTime: varchar("visit_time", { length: 8 }),
     hasTakenPlace: boolean("has_taken_place").default(false).notNull(),
 
-    visitReason: mysqlEnum("visit_reason", visitReportReasons),
+    // `Bezoekredenen` on the reference's own export is plural, and two of its
+    // 166 rows name several reasons at once. One reason is the common case, not
+    // the rule.
+    visitReasons: json("visit_reasons").$type<VisitReportReason[]>().default([]),
     attentionPoint: text("attention_point"),
     remarks: text("remarks"),
+    // The record's third free-text panel, below the report itself.
+    visitResult: text("visit_result"),
 
     // ── Categories ────────────────────────────────────────────────────────────
     categories: json("categories").$type<VisitReportCategory[]>().default([]),

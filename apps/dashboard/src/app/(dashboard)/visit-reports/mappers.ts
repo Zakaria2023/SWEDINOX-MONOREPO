@@ -14,9 +14,10 @@ export const visitReportToFormValues = (
   visitDate: report.visitDate ?? "",
   visitTime: report.visitTime ?? "",
   hasTakenPlace: report.hasTakenPlace,
-  visitReason: report.visitReason ?? "",
+  visitReasons: report.visitReasons ?? [],
   attentionPoint: report.attentionPoint ?? "",
   remarks: report.remarks ?? "",
+  visitResult: report.visitResult ?? "",
 
   categories: report.categories ?? [],
   readers: report.readers ?? [],
@@ -39,9 +40,10 @@ export const formValuesToVisitReportInput = (
   visitDate: values.visitDate || null,
   visitTime: values.visitTime || null,
   hasTakenPlace: values.hasTakenPlace,
-  visitReason: values.visitReason || null,
+  visitReasons: values.visitReasons,
   attentionPoint: values.attentionPoint || null,
   remarks: values.remarks || null,
+  visitResult: values.visitResult || null,
 
   categories: values.categories,
   readers: values.readers,
