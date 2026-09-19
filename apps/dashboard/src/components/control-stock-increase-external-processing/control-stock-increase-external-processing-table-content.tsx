@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { StockIncreaseExtProcessingRow } from "@/app/(dashboard)/control-stock-increase-external-processing/actions";
 import {
   Table,
@@ -9,11 +10,35 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
-import { formatDateValue, formatNumber } from "@/lib/helpers";
+import { cn, formatDateValue, formatMoney, formatNumber } from "@/lib/helpers";
 import { TableExportButton } from "@/components/ui/table-export-button";
 
 type Props = {
   rows: StockIncreaseExtProcessingRow[];
+};
+
+type SignedProps = {
+  value: number | null;
+  format: (value: number) => string;
+};
+
+/**
+ * A signed measure, with the outbound leg marked.
+ *
+ * The list carries both legs of the trip to the processor, so a negative figure
+ * is metal leaving rather than an error. Colouring it is the only way to read
+ * the two apart at a glance when the rows are interleaved by date.
+ */
+const SignedCell = ({ value, format }: SignedProps) => {
+  if (value === null) {
+    return <span className="text-muted-foreground">—</span>;
+  }
+
+  return (
+    <span className={cn("tabular-nums", value < 0 && "text-muted-foreground")}>
+      {format(value)}
+    </span>
+  );
 };
 
 export const StockIncreaseExternalProcessingTable = ({ rows }: Props) => (
@@ -31,15 +56,15 @@ export const StockIncreaseExternalProcessingTable = ({ rows }: Props) => (
           <TableRow>
             <TableHead>Product code</TableHead>
             <TableHead>Description</TableHead>
-            <TableHead>Company code</TableHead>
+            <TableHead className="text-right">Company code</TableHead>
             <TableHead>Company</TableHead>
             <TableHead className="text-right">Financial year</TableHead>
-            <TableHead className="text-right">Financial period</TableHead>
-            <TableHead>GLA# Stock Increase</TableHead>
+            <TableHead className="text-right">Financial month</TableHead>
+            <TableHead>GLA# Stock Increase ext.edit.</TableHead>
             <TableHead>GLA Stock Increase ext.edit.</TableHead>
             <TableHead>Mutation date / time</TableHead>
-            <TableHead className="text-right">Mutation qty (p)</TableHead>
-            <TableHead className="text-right">Mutation qty (a)</TableHead>
+            <TableHead className="text-right">Mutation qty (€)</TableHead>
+            <TableHead className="text-right">Mutation qty (StkU)</TableHead>
             <TableHead>StkU</TableHead>
             <TableHead className="text-right">Mutation qty (kg)</TableHead>
             <TableHead className="text-right">Revenue group #</TableHead>
@@ -64,35 +89,52 @@ export const StockIncreaseExternalProcessingTable = ({ rows }: Props) => (
                   {row.productCode ?? "—"}
                 </TableCell>
                 <TableCell>{row.description ?? "—"}</TableCell>
-                <TableCell className="text-muted-foreground">—</TableCell>
-                <TableCell className="text-muted-foreground">—</TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {row.companyCode ?? "—"}
+                </TableCell>
+                <TableCell>{row.companyName ?? "—"}</TableCell>
                 <TableCell className="text-right">
                   {row.financialYear ?? "—"}
                 </TableCell>
                 <TableCell className="text-right">
                   {row.financialPeriod ?? "—"}
                 </TableCell>
-                <TableCell className="text-muted-foreground">—</TableCell>
-                <TableCell className="text-muted-foreground">—</TableCell>
+                <TableCell>{row.glAccountNumber}</TableCell>
+                <TableCell>{row.glAccountName}</TableCell>
                 <TableCell className="whitespace-nowrap">
                   {formatDateValue(row.mutationDateTime)}
                 </TableCell>
                 <TableCell className="text-right">
-                  {formatNumber(Number(row.mutationQty ?? 0))}
+                  <SignedCell
+                    value={row.mutationValueEur}
+                    format={formatMoney}
+                  />
                 </TableCell>
                 <TableCell className="text-right">
-                  {formatNumber(Number(row.mutationQty ?? 0))}
+                  <SignedCell value={row.mutationQty} format={formatNumber} />
                 </TableCell>
+                {/* Printed as stored: this is the product's stock unit
+                    (`ST`, `KG`), which the reference prints verbatim in its
+                    `StkU` column. */}
                 <TableCell>{row.stockUnit ?? "—"}</TableCell>
-                <TableCell className="text-right text-muted-foreground">
-                  —
+                <TableCell className="text-right">
+                  <SignedCell value={row.mutationKg} format={formatNumber} />
                 </TableCell>
                 <TableCell className="text-right">
                   {row.revenueGroupNumber ?? "—"}
                 </TableCell>
                 <TableCell>{row.revenueGroupName ?? "—"}</TableCell>
                 <TableCell className="text-right">
-                  {row.orderId ?? "—"}
+                  {row.purchaseOrderUuid && row.purchaseOrderId !== null ? (
+                    <Link
+                      href={`/purchase-orders/${row.purchaseOrderUuid}`}
+                      className="font-medium text-foreground underline-offset-4 hover:underline"
+                    >
+                      {row.purchaseOrderId}
+                    </Link>
+                  ) : (
+                    "—"
+                  )}
                 </TableCell>
               </TableRow>
             ))

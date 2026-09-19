@@ -567,11 +567,22 @@ export const stockMovementReasons = [
   "warehouse_issue",
   "warehouse_transfer",
   "warehouse_scrapped",
-  // Goods coming back from an outside processor — the reference's "Ontvangst
-  // From processor". They left as our stock, were worked on by somebody else
-  // and came back worth more than they went out, which is why Finance keeps a
-  // "Control Stock increase due to external processing" list watching exactly
-  // this reason.
+  // The two legs of sending metal out to be worked on by somebody else.
+  //
+  // It leaves as our stock (`_issue`) and comes back as our stock
+  // (`_return`) — the processor never owns it, which is why both legs are
+  // stock movements rather than a sale and a purchase. Finance keeps a
+  // "Control Stock increase due to external processing" list watching this
+  // pair, and both legs hang off the PURCHASE order that bought the
+  // processing: all 483 rows of the 18-9-2026 export carry an `IO4` number.
+  //
+  // ⚠️ Corrected 19-9-2026. The comment here used to say the goods "came back
+  // worth more than they went out". The export says otherwise — across 112
+  // orders with both legs the median value ratio is **0,759**, 72 of them lose
+  // value, and the file nets to **−€ 146.964**. Weight is roughly conserved
+  // (median yield 0,998); value is not. The list is a control on that loss,
+  // not a celebration of a gain.
+  "external_processing_issue",
   "external_processing_return",
   // The opening balance a lot was migrated in with. The reference's own data
   // carries thousands of these stamped within the same three seconds on

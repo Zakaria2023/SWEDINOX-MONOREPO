@@ -36,6 +36,7 @@ export const CreditInformationCustomersTable = ({ rows }: Props) => (
           <TableRow>
             <TableHead className="text-right">Customer code</TableHead>
             <TableHead>Company</TableHead>
+            <TableHead>Debtor number</TableHead>
             <TableHead>City</TableHead>
             <TableHead>Initials</TableHead>
             <TableHead>Representative</TableHead>
@@ -50,17 +51,27 @@ export const CreditInformationCustomersTable = ({ rows }: Props) => (
             <TableHead>Oldest invoice date</TableHead>
             <TableHead>Oldest due date</TableHead>
             <TableHead className="text-center">Blocked</TableHead>
+            <TableHead className="text-center">Reminder</TableHead>
             <TableHead>VAT number</TableHead>
             <TableHead className="text-right">Revenue this year</TableHead>
             <TableHead className="text-right">Revenue last year</TableHead>
             <TableHead className="text-right">Revenue 2 years ago</TableHead>
+            <TableHead className="text-right">
+              Revenue this year (excl. VAT)
+            </TableHead>
+            <TableHead className="text-right">
+              Revenue last year (excl. VAT)
+            </TableHead>
+            <TableHead className="text-right">
+              Revenue 2 years ago (excl. VAT)
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {rows.length === 0 ? (
             <TableRow>
               <TableCell
-                colSpan={20}
+                colSpan={25}
                 className="h-24 text-center text-muted-foreground"
               >
                 No customers found.
@@ -73,6 +84,7 @@ export const CreditInformationCustomersTable = ({ rows }: Props) => (
                 <TableCell className="font-medium">
                   {row.companyName ?? "—"}
                 </TableCell>
+                <TableCell>{row.debtorNumber ?? "—"}</TableCell>
                 <TableCell>{row.city ?? "—"}</TableCell>
                 <TableCell>{row.initials ?? "—"}</TableCell>
                 <TableCell>
@@ -111,6 +123,11 @@ export const CreditInformationCustomersTable = ({ rows }: Props) => (
                 <TableCell className="text-center">
                   {row.blocked ? "Yes" : "No"}
                 </TableCell>
+                {/* True on all but seven of the reference's 2.593 customers,
+                    so the interesting reading is "No". */}
+                <TableCell className="text-center">
+                  {row.reminder ? "Yes" : "No"}
+                </TableCell>
                 <TableCell>{row.vatNumber ?? "—"}</TableCell>
                 <TableCell className="text-right whitespace-nowrap">
                   {formatMoney(row.revenueThisYear)}
@@ -120,6 +137,19 @@ export const CreditInformationCustomersTable = ({ rows }: Props) => (
                 </TableCell>
                 <TableCell className="text-right whitespace-nowrap">
                   {formatMoney(row.revenueTwoYearsAgo)}
+                </TableCell>
+                {/* The excl.-VAT trio is not the incl. one divided by a rate:
+                    110 of the reference's 290 customers with revenue are
+                    invoiced no VAT at all, so the two columns are equal there
+                    and 21 % apart everywhere else. */}
+                <TableCell className="text-right whitespace-nowrap">
+                  {formatMoney(row.revenueThisYearExclVat)}
+                </TableCell>
+                <TableCell className="text-right whitespace-nowrap">
+                  {formatMoney(row.revenueLastYearExclVat)}
+                </TableCell>
+                <TableCell className="text-right whitespace-nowrap">
+                  {formatMoney(row.revenueTwoYearsAgoExclVat)}
                 </TableCell>
               </TableRow>
             ))

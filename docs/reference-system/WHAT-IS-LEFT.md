@@ -19,6 +19,21 @@ happened, and it comes off the list.
 
 ---
 
+## Re-captured 18-9-2026 — three Finance screens, verified again
+
+Not new screens: `Credit information customers`, `Financially blocked quotes and
+orders` and `Control Stock increase due to external processing` had all been
+captured before. Re-exported and re-read on 18-9-2026, they still **changed the
+code**, which is the argument for re-exporting a screen you think you know.
+
+| Screen | Rows | What it changed |
+| --- | --- | --- |
+| `Credit information customers` | 2 593 × 35 | Every credit rule re-proved (2 593/2 593). Gave the **age-of-debt column**, and four more switched-off features. See [credit-and-blocking.md](credit-and-blocking.md) |
+| `Financially blocked quotes and orders` | 31 × 13 | All three blocking rules re-proved. 18/18 held orders have an oldest-due date |
+| `Control Stock increase ext. processing` | 483 × 16 | 🔴 Found our screen reading the **wrong movement reason**, joining the **wrong document**, and hiding **167 of 483 rows**. See [external-processing.md](external-processing.md) |
+
+---
+
 ## The score
 
 The `Overviews` tree has **116 screens** across nine groups (112 until 16-9-2026, when the `Other` group was photographed open and turned out to hold 9, not 5).

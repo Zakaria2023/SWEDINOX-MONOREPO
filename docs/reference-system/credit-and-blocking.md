@@ -192,3 +192,104 @@ limit: € 215.952,53` — **the total limit, then the credit space**.
    `blockedByNote`. ✅
 4. The panel summary shows **total limit** and **credit space**, not the insured
    limit — worth copying on our company page.
+
+---
+
+## Re-captured 18-9-2026 — and the age-of-debt rule gets a column
+
+Both exports taken again: `Credit information customers` (**2 593 × 35**) and
+`Financially blocked quotes and orders` (**31 × 13**). Scratchpad
+`credit-info-18sep.tsv` and `fin-blocked-18sep.tsv`.
+
+### Everything above re-proves, unchanged
+
+| Rule | Result |
+| --- | --- |
+| `Creditspace = Credit limit + uninsured − outstanding − current orders` | **2 593 / 2 593** |
+| …using the insured limit alone | **2 406 / 2 593** — the same **187** failures |
+| `Credit limit exceeded` ⇒ order amount > creditspace | **11 / 11** |
+| `Customer blocked` ⇒ `Company blocked?` is True | **2 / 2** |
+| Outstanding-posts rows with creditspace ≥ order amount | **17 / 18** |
+| Reason split | 18 / 11 / 2, unchanged since 10-9 |
+| 31 rows are 29 orders (`O102167`, `O102168` twice) | unchanged |
+| Prepayment rows, and those with a zero limit | 10, of which 9 |
+| `Order changed?` True | 5 |
+| Negative creditspace / blocked / both | 49 / 59 / **3** |
+| `Zelfbeoordeling` | **`0` on all 2 593**, and `0` on all 31 blocked rows |
+
+Three exports across nine days, every rule holding each time. The credit model
+is as settled as anything in this reference.
+
+### 🔴 `Oldest due date for open entrees` is the age-of-debt column
+
+The doc above called the outstanding-posts block "an **age-of-debt rule, not an
+amount rule**" but had no column to compute it from. This export has one.
+
+**All 18 orders held for `Post(s) outstanding for too long` belong to a customer
+carrying a non-null `Oldest due date for open entrees` — 18 of 18, none
+unmatched.** 164 of the 2 593 customers have one; so does every held order's
+customer.
+
+⚠️ **But it is necessary, not sufficient, and the threshold is not in the data.**
+Those 18 rows are only **11 distinct customers**, whose oldest due dates run
+4-1-2025 to 2-5-2025. **125 customers who are *not* held carry debt at least as
+old**, reaching back to 11-8-2023. So there is no date cutoff that separates the
+two groups, and nothing else here separates them either:
+
+| | Held (11) | Not held (153) |
+| --- | --- | --- |
+| `Reminder` True | 11 / 11 | 152 / 153 |
+| Has current orders | 11 / 11 | 70 / 153 |
+| Prepayment terms | 0 | 13 |
+
+"Has current orders" is a tautology — you cannot hold an order that does not
+exist. The real gate is an overdue-days threshold, and
+[[project-ledger-is-afas]] already records that **no screen in this reference
+exposes one**. So: the column to age from is now known; the number to compare it
+against is still not.
+
+### Four more features shipped switched off
+
+Empty on **all 2 593 rows**, joining `Zelfbeoordeling` on the list of things not
+to model:
+
+- `Purchase organization code` / `name` / `Mem. no. Purchase organization`
+- `Contact e-mail`
+- `Last follow-up` **and** `Last follow-up date`
+
+The last one matters: we have a `FollowUps` table, and the reference's own
+follow-up columns on its credit screen are empty on every customer.
+
+### `Reminder` is real, and it is nearly always on
+
+`Reminder` is a boolean: **True on 2 586, False on 7**. A per-debtor switch for
+whether payment reminders go out at all — so the seven exceptions are the whole
+point of the column. `Companies.reminder` already existed and defaulted to
+`true`; the screen simply never read it.
+
+### Revenue comes in two bases, and they are not a rate apart
+
+The export carries `Revenue this / last / two years ago` **twice**, incl. and
+excl. VAT. The ratio is **exactly 1,21** where there is VAT — but **110 of the
+290 customers with last-year revenue sit at 1,00**, invoiced no VAT at all
+(export and reverse-charge customers). So the excl.-VAT figure cannot be derived
+from the incl.-VAT one by dividing; both have to be summed.
+
+Also worth recording: **`Revenue this year` is non-zero on only 2 customers**
+against 290 for last year — consistent with the database being frozen early in
+the year, see [[project-reference-database-schema]].
+
+### `Credit insurance valid until` has its own sentinel
+
+`9999-12-31` on 2 586 rows, with 7 real dates. A policy number is present on
+1 343 customers.
+
+## What changed in `apps/dashboard` (19-9-2026)
+
+| Finding | What was done |
+| --- | --- |
+| `Debtor number` is on this screen too | Added — the column existed on `Companies`, unread here |
+| `Reminder` is a real per-debtor switch | Added — likewise already stored |
+| Revenue in both VAT bases | Three excl.-VAT columns added, summed separately rather than derived |
+| `Zelfbeoordeling`, purchase organisation, contact e-mail, last follow-up | **Deliberately not modelled** — empty on every row |
+| The age-of-debt threshold | **Not built.** The column to age from is known; the cutoff is not, so guessing one would hold orders on a number nobody agreed |

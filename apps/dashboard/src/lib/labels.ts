@@ -959,7 +959,8 @@ export const STOCK_MOVEMENT_REASON_LABELS: Record<StockMovementReason, string> =
     warehouse_issue: "Warehouse Issue",
     warehouse_transfer: "Warehouse Transfer",
     warehouse_scrapped: "Scrapped",
-    external_processing_return: "Returned from Processor",
+    external_processing_issue: "Sent to Processor",
+  external_processing_return: "Returned from Processor",
     data_conversion: "Opening Balance (Conversion)",
   };
 

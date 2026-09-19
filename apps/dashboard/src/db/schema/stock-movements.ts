@@ -33,6 +33,19 @@ export const StockMovements = mysqlTable(
     type: mysqlEnum("type", stockMovementTypes).notNull(),
     reason: mysqlEnum("reason", stockMovementReasons).notNull(),
     quantity: decimal("quantity", { precision: 15, scale: 3 }).notNull(),
+    // The same movement measured the other two ways the reference reports it.
+    // Its `Stock mutations` and `Control stock increase` exports both print
+    // `MutationQty` three times — in the lot's own stock unit, in kilos and in
+    // euros — and the three are not derivable from one another here: the kilos
+    // are weighed rather than calculated, and the euro value is struck at the
+    // lot's valuation price at the moment the movement happened, which a later
+    // revaluation must not move.
+    //
+    // Both are nullable: a movement recorded before this pair existed has no
+    // truthful answer, and zero is a real value that must stay distinguishable
+    // from "not recorded".
+    quantityKg: decimal("quantity_kg", { precision: 15, scale: 2 }),
+    valueEur: decimal("value_eur", { precision: 15, scale: 2 }),
     note: varchar("note", { length: 255 }),
 
     // Purchase order this movement is tied to — the original "in" receipt,

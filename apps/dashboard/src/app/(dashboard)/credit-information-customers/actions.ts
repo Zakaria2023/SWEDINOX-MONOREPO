@@ -1,4 +1,6 @@
 "use server";
+
+import { AnyMySqlColumn } from "drizzle-orm/mysql-core";
 import { db } from "@/db";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { SelectCompanyAddresses } from "@/db/schema/company-addresses";
@@ -18,7 +20,11 @@ export type CreditInformationRow = {
   city: SelectCompanyAddresses["city"] | null;
   initials: SelectContacts["initials"] | null;
   representative: SelectCompanies["representative"] | null;
+  debtorNumber: SelectCompanies["debtorNumber"];
   paymentTerms: SelectCompanies["paymentTerms"] | null;
+  /** Whether this debtor is sent payment reminders at all. True on 2.586 of
+   *  the reference's 2.593 customers, so the seven exceptions are the point. */
+  reminder: NonNullable<SelectCompanies["reminder"]>;
   creditLimit: number;
   creditLimitUninsured: number;
   creditInsurance: SelectCompanies["creditLimitInsurance"];
@@ -33,6 +39,9 @@ export type CreditInformationRow = {
   revenueThisYear: number;
   revenueLastYear: number;
   revenueTwoYearsAgo: number;
+  revenueThisYearExclVat: number;
+  revenueLastYearExclVat: number;
+  revenueTwoYearsAgoExclVat: number;
 };
 
 // Per-customer credit picture: limits and insurance, open receivables, current
@@ -81,17 +90,49 @@ export const getCreditInformationCustomers = async (
       getCommittedOrderValueByCompany(db),
     ]);
 
-    const revenueFor = (y: number, col: string) =>
-      sql<string>`COALESCE(SUM(CASE WHEN YEAR(${Invoices.invoiceDate}) = ${y} THEN ${Invoices.invoiceAmountInclVat} ELSE 0 END), 0)`.as(
+    // The reference prints three years of revenue TWICE, once incl. VAT and
+    // once excl. It is not one figure and a rate: on the 18-9-2026 export the
+    // two sit at exactly 1,21 for domestic customers but at 1,00 for 110 of
+    // the 290 with revenue — the export and reverse-charge ones, who are
+    // invoiced no VAT at all. So both have to be summed, not one derived.
+    const revenueFor = (y: number, col: string, amount: AnyMySqlColumn) =>
+      sql<string>`COALESCE(SUM(CASE WHEN YEAR(${Invoices.invoiceDate}) = ${y} THEN ${amount} ELSE 0 END), 0)`.as(
         col,
       );
 
     const revenueStats = db
       .select({
         companyUuid: Invoices.companyUuid,
-        thisYear: revenueFor(currentYear, "rev_this_year"),
-        lastYear: revenueFor(currentYear - 1, "rev_last_year"),
-        twoYearsAgo: revenueFor(currentYear - 2, "rev_two_years_ago"),
+        thisYear: revenueFor(
+          currentYear,
+          "rev_this_year",
+          Invoices.invoiceAmountInclVat,
+        ),
+        lastYear: revenueFor(
+          currentYear - 1,
+          "rev_last_year",
+          Invoices.invoiceAmountInclVat,
+        ),
+        twoYearsAgo: revenueFor(
+          currentYear - 2,
+          "rev_two_years_ago",
+          Invoices.invoiceAmountInclVat,
+        ),
+        thisYearExclVat: revenueFor(
+          currentYear,
+          "rev_this_year_excl",
+          Invoices.invoiceAmountExclVat,
+        ),
+        lastYearExclVat: revenueFor(
+          currentYear - 1,
+          "rev_last_year_excl",
+          Invoices.invoiceAmountExclVat,
+        ),
+        twoYearsAgoExclVat: revenueFor(
+          currentYear - 2,
+          "rev_two_years_ago_excl",
+          Invoices.invoiceAmountExclVat,
+        ),
       })
       .from(Invoices)
       .groupBy(Invoices.companyUuid)
@@ -104,7 +145,9 @@ export const getCreditInformationCustomers = async (
         city: visiting.city,
         initials: primaryContact.initials,
         representative: Companies.representative,
+        debtorNumber: Companies.debtorNumber,
         paymentTerms: Companies.paymentTerms,
+        reminder: Companies.reminder,
         creditLimit: Companies.creditLimit,
         creditLimitUninsured: Companies.creditLimitUninsured,
         creditInsurance: Companies.creditLimitInsurance,
@@ -118,6 +161,9 @@ export const getCreditInformationCustomers = async (
         revenueThisYear: revenueStats.thisYear,
         revenueLastYear: revenueStats.lastYear,
         revenueTwoYearsAgo: revenueStats.twoYearsAgo,
+        revenueThisYearExclVat: revenueStats.thisYearExclVat,
+        revenueLastYearExclVat: revenueStats.lastYearExclVat,
+        revenueTwoYearsAgoExclVat: revenueStats.twoYearsAgoExclVat,
       })
       .from(Companies)
       .leftJoin(primaryContact, eq(Companies.uuid, primaryContact.companyUuid))
@@ -137,7 +183,9 @@ export const getCreditInformationCustomers = async (
         city: row.city ?? null,
         initials: row.initials ?? null,
         representative: row.representative,
+        debtorNumber: row.debtorNumber,
         paymentTerms: row.paymentTerms,
+        reminder: row.reminder ?? false,
         creditLimit,
         creditLimitUninsured: Number(row.creditLimitUninsured ?? 0),
         creditInsurance: row.creditInsurance,
@@ -163,6 +211,9 @@ export const getCreditInformationCustomers = async (
         revenueThisYear: Number(row.revenueThisYear ?? 0),
         revenueLastYear: Number(row.revenueLastYear ?? 0),
         revenueTwoYearsAgo: Number(row.revenueTwoYearsAgo ?? 0),
+        revenueThisYearExclVat: Number(row.revenueThisYearExclVat ?? 0),
+        revenueLastYearExclVat: Number(row.revenueLastYearExclVat ?? 0),
+        revenueTwoYearsAgoExclVat: Number(row.revenueTwoYearsAgoExclVat ?? 0),
       };
     });
   } catch (error) {
