@@ -9,6 +9,7 @@ import {
   CountStockBasis,
   CustomerLabelOption,
   DeliveryTimeUnit,
+  DiscountUnit,
   DispatchStrategy,
   MaterialFamily,
   MaterialSurfaceFinish,
@@ -57,6 +58,7 @@ import {
   QuoteOrderInvoiceOption,
   QuoteOrderOption,
   SalesRepresentative,
+  InvoiceLineType,
   InvoiceFrequency,
   InvoicePaymentTerm,
   InvoiceSurchargeDescription,
@@ -99,6 +101,7 @@ import {
   WarehouseProductType,
   WarehouseTransportRegion,
   WarehouseType,
+  TransportDirection,
   TransportMode,
   ReminderStage,
   ReturnOrderReason,
@@ -1997,4 +2000,19 @@ export const WORK_LIST_LABELS: Record<WorkListKey, string> = {
   customer_complaints_open: "Handle customer complaints",
   incomplete_delivery_addresses: "Incomplete delivery addresses",
   visit_reports_to_read: "Read customer visit reports",
+};
+
+export const DISCOUNT_UNIT_LABELS: Record<DiscountUnit, string> = {
+  percent: "%",
+  amount: "€",
+};
+
+export const TRANSPORT_DIRECTION_LABELS: Record<TransportDirection, string> = {
+  deliver: "Deliver",
+  collect: "Collect",
+};
+
+export const INVOICE_LINE_TYPE_LABELS: Record<InvoiceLineType, string> = {
+  debit: "Debit",
+  credit: "Credit",
 };

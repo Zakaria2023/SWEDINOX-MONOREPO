@@ -174,8 +174,11 @@ Three things fall out:
 
 1. **`Item` is the order-line code.** 10, 50, 60, 70, 80 are order lines 10, 50,
    60, 70 and 80. So a warehouse work order line points at an order line, and one
-   work order (`304211`) serves four of them. **Our `WarehouseWorkOrders` has no
-   link to an order line at all.**
+   work order (`304211`) serves four of them. ✅ **Corrected 19-9-2026:** I wrote
+   here that our schema had no such link. It does —
+   `WarehouseWorkOrderLines.orderItemUuid` has carried a real foreign key to
+   `OrderItems.uuid` since the warehouse rebuild. What was missing was not the
+   column but the *screen*: nothing read it back onto the order.
 2. **`From` is a pick location, `To` is always `Laad`.** Picking moves metal from
    its bin to the loading area — which is why `Laad` is a location *type* and why
    its lots are never blocked. The movement is proved here on five rows.
@@ -375,18 +378,34 @@ sales order can receive goods back, which is the return path (**H12**).
 | Order header, order type, delivery, blockages, weights | ✅ already modelled in Part 1 |
 | `Financial` / `Invoice blockage` + `Blocking reason` | ✅ confirmed correct |
 | Tonne pricing, `profitTooLow`, the four profit bases | ✅ confirmed |
-| **Warehouse work order line → order line** | 🔴 missing link |
-| **`From` / `To` on a picking work order** | 🔴 missing |
-| **Transport WO: `Direction`, `Qty(loaded)`, bill-of-lading grouping** | 🔴 missing |
-| **`basePrice`, `quantitySurcharge`, `colorSurcharge`, `lengthSurcharge`, `extraDiscount`** | 🔴 missing from `OrderItems` |
-| **`RdU` / `GdU`** — a unit per discount | 🔴 missing |
-| **Invoice line `Type` (Debit/Credit)** | 🔴 missing |
-| **`Charge` on the invoice line** | 🔴 missing — our chain stops at the delivery |
-| **Per-line `Printed` / `Mailed` + timestamp + address** | 🔴 missing |
-| **`Previous orders` / `Previous quotes`** | 🔴 missing entirely |
-| **Line-scoped panels** | 🔴 our order page is order-scoped throughout |
-| `Expired` order status | 🔴 not in `orderStatuses` |
+| **Warehouse work order line → order line** | ✅ the column already existed; the screen now reads it |
+| **`From` / `To` on a picking work order** | ✅ already on the line; now joined and shown |
+| **Transport WO: `Direction`, `Qty(loaded)`, bill-of-lading grouping** | ✅ built 19-9-2026 — `direction`, `billOfLading`, `orderItemUuid` added |
+| **`basePrice`, `quantitySurcharge`, `colorSurcharge`, `lengthSurcharge`, `extraDiscount`** | ✅ built 19-9-2026 on `OrderItems` |
+| **`RdU` / `GdU`** — a unit per discount | ✅ built 19-9-2026 — `discountUnits`, on both the order line and the invoice line |
+| **Invoice line `Type` (Debit/Credit)** | ✅ built 19-9-2026 — `invoiceLineTypes` |
+| **`Charge` on the invoice line** | ✅ built 19-9-2026 — `charge`, `purchaseOrderNumber`, `receiptDate` |
+| **Per-line `Printed` / `Mailed` + timestamp + address** | ✅ built 19-9-2026 |
+| **`Previous orders` / `Previous quotes`** | ✅ built 19-9-2026 — same company, same article |
+| **Line-scoped panels** | ✅ built 19-9-2026 — selection lives in `?line=`, panels render server-side for it |
+| `Expired` order status | ✅ it was already in `orderStatuses`; only the comment was wrong |
 | `Stock other affiliates` — multicompany | ⚠️ exists; out of scope for now |
+
+### Built 19-9-2026
+
+Everything above marked ✅ was implemented in one pass, against this capture.
+Two things are worth stating plainly, because they are where the build had to
+make a judgement the capture does not settle:
+
+- **The cascade's arithmetic is written down but still unproved.** `priceCascade`
+  in `lib/helpers.ts` implements the order of operations the panel lays out —
+  line + extra subtotal, then group discount on the remainder. Every captured box
+  read € 0,00, so no non-zero line has ever tested it. The helper carries that
+  warning in its own comment.
+- **A typed price is not a built-up price.** A line with a real `grossPrice` and
+  a zero build-up — which is all nine lines of `100742` — would otherwise render
+  a € 0,00 gross. `getOrderLinePanels` falls back to the stored gross and net in
+  that case, so the panel reports what was actually charged.
 
 **None of this is a rewrite.** The header and the money were right. What was
 missing is the **downstream** — how an order reaches the warehouse, the lorry and

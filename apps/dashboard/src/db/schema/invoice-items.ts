@@ -1,13 +1,18 @@
 import { InferInsertModel, InferSelectModel } from "drizzle-orm";
 import {
+  boolean,
   char,
+  date,
   decimal,
   foreignKey,
   index,
   int,
+  mysqlEnum,
   mysqlTable,
   timestamp,
+  varchar,
 } from "drizzle-orm/mysql-core";
+import { discountUnits, invoiceLineTypes, stockUnits } from "../../lib/enums";
 import { Invoices } from "./invoices";
 import { OrderItems } from "./order-items";
 import { Products } from "./products";
@@ -29,9 +34,66 @@ export const InvoiceItems = mysqlTable(
     orderItemUuid: char("order_item_uuid", { length: 36 }).notNull(),
     productUuid: char("product_uuid", { length: 36 }).notNull(),
 
-    quantity: decimal("quantity", { precision: 15, scale: 3 }).notNull(),
+    // The number this line prints under, taken from the order line it bills
+    // rather than from a counter of its own — so invoice `501106` carries
+    // lines 60, 70 and 80 and has no line 10.
+    lineNumber: int("line_number"),
 
-    // ── Price and cost, snapshotted from the order line at invoicing ──────────
+    // Whether this line charges or refunds. The reference has no separate
+    // credit-note document: a credit is a line type, which is how one invoice
+    // can correct another in place.
+    type: mysqlEnum("type", invoiceLineTypes).default("debit").notNull(),
+
+    description: varchar("description", { length: 255 }),
+    // The day the goods this line bills actually went out. Not the invoice
+    // date — order `100742` shipped in February and again in March, and the
+    // two invoices are dated by their shipment, not by the order.
+    deliveryDate: date("delivery_date", { mode: "string" }),
+
+    quantity: decimal("quantity", { precision: 15, scale: 3 }).notNull(),
+    unit: mysqlEnum("unit", stockUnits),
+
+    lengthMm: int("length_mm"),
+    widthMm: int("width_mm"),
+    thicknessMm: decimal("thickness_mm", { precision: 10, scale: 2 }),
+
+    // ── What the customer is actually charged, as the invoice prints it ──────
+    // The line is priced per unit of `priceUnit`, and `priceQty` is how many
+    // of that unit this line bills — 64 pieces weighing 1209,6 kg invoice as
+    // `1,2096 TN`. The identity holds to the cent on every line of order
+    // `100742`:
+    //
+    //     amount = priceQty × grossPrice, less the discounts below
+    //
+    // Stored rather than derived from `quantity` and `weightKg` because the
+    // conversion is the scale's, not arithmetic's: the tonnage billed is what
+    // the goods weighed when they were loaded.
+    priceQty: decimal("price_qty", { precision: 15, scale: 4 }).default(
+      "0.0000",
+    ),
+    priceUnit: varchar("price_unit", { length: 10 }),
+    grossPrice: decimal("gross_price", { precision: 15, scale: 2 }).default(
+      "0.00",
+    ),
+    lineDiscount: decimal("line_discount", { precision: 15, scale: 2 }).default(
+      "0.00",
+    ),
+    // The `RdU` and `GdU` columns: what the two discounts beside them are
+    // denominated in. Without these a discount of `5` is unreadable.
+    lineDiscountUnit: mysqlEnum("line_discount_unit", discountUnits)
+      .default("percent")
+      .notNull(),
+    groupDiscount: decimal("group_discount", {
+      precision: 15,
+      scale: 2,
+    }).default("0.00"),
+    groupDiscountUnit: mysqlEnum("group_discount_unit", discountUnits)
+      .default("percent")
+      .notNull(),
+    netPrice: decimal("net_price", { precision: 15, scale: 2 }).default("0.00"),
+    amount: decimal("amount", { precision: 15, scale: 2 }).default("0.00"),
+
+    // ── Cost and margin, snapshotted from the order line at invoicing ────────
     // An invoice is the financial record of a sale, so it has to be able to say
     // on its own what it was worth and what it made. Reading back through the
     // order line would leave both open to drift: the order can be re-priced or
@@ -41,8 +103,6 @@ export const InvoiceItems = mysqlTable(
     // These are copied, not recomputed — the order line resolved them from the
     // contract and its allocated stock lot at reservation, and that resolution
     // is the one being billed.
-    netPrice: decimal("net_price", { precision: 15, scale: 2 }).default("0.00"),
-    amount: decimal("amount", { precision: 15, scale: 2 }).default("0.00"),
     costPrice: decimal("cost_price", { precision: 15, scale: 4 }).default(
       "0.0000",
     ),
@@ -89,6 +149,27 @@ export const InvoiceItems = mysqlTable(
       scale: 2,
     }).default("0.00"),
     weightKg: decimal("weight_kg", { precision: 15, scale: 2 }).default("0.00"),
+
+    // ── The certificate chain, arriving ──────────────────────────────────────
+    // The melt the billed metal came from, the purchase order that bought it
+    // and the day it was received. These travel all the way down — mill, to
+    // goods-in, to the pick, to the lorry, to here — so a customer asking
+    // "which heat was on invoice 501106 line 70" is answered from the invoice
+    // without walking back up the chain. `batch-registration.md` §3 proved the
+    // same link from the other end on 1.662 of 1.662 rows.
+    charge: varchar("charge", { length: 100 }),
+    purchaseOrderNumber: varchar("purchase_order_number", { length: 50 }),
+    receiptDate: date("receipt_date", { mode: "string" }),
+
+    // ── Sending, recorded per line ───────────────────────────────────────────
+    // Not per invoice: the reference stamps each line with its own print and
+    // mail state, address included. On order `100742` all four lines read
+    // printed ☐ / mailed ☑ with the timestamp the mail actually left.
+    printed: boolean("printed").default(false).notNull(),
+    printedAt: timestamp("printed_at"),
+    mailed: boolean("mailed").default(false).notNull(),
+    mailedAt: timestamp("mailed_at"),
+    mailedTo: varchar("mailed_to", { length: 255 }),
 
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),

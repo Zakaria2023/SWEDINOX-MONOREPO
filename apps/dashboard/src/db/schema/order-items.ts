@@ -14,6 +14,7 @@ import {
 } from "drizzle-orm/mysql-core";
 import {
   deliveryStatuses,
+  discountUnits,
   orderItemStatuses,
   orderLineStatuses,
   orderSourceTypes,
@@ -148,17 +149,65 @@ export const OrderItems = mysqlTable(
     ),
 
     // ── Pricing ───────────────────────────────────────────────────────────────
+    // The build-up, left column of the reference's `Pricing` panel. Four
+    // additive components make the gross price:
+    //
+    //     grossPrice = basePrice
+    //                + quantitySurcharge + colorSurcharge + lengthSurcharge
+    //
+    // Stored rather than derived because a seller may override the gross price
+    // outright — order `100742` types € 3.640,00 / TN and leaves every
+    // component at zero — and the difference between "built up to 3640" and
+    // "typed 3640" is exactly what a re-price needs to know. Keeping only the
+    // answer, as this table did before, makes a line impossible to reprice or
+    // to explain to the customer who asks how the number was reached.
+    basePrice: decimal("base_price", { precision: 15, scale: 2 }).default(
+      "0.00",
+    ),
+    quantitySurcharge: decimal("quantity_surcharge", {
+      precision: 15,
+      scale: 2,
+    }).default("0.00"),
+    colorSurcharge: decimal("color_surcharge", {
+      precision: 15,
+      scale: 2,
+    }).default("0.00"),
+    // `Lengtetoeslag` on the reference panel — charged on lengths that are
+    // awkward to cut, handle or load rather than on the metal itself.
+    lengthSurcharge: decimal("length_surcharge", {
+      precision: 15,
+      scale: 2,
+    }).default("0.00"),
     grossPrice: decimal("gross_price", { precision: 15, scale: 2 }).default(
       "0.00",
     ),
     priceUnit: varchar("price_unit", { length: 10 }),
+
+    // The cascade down, right column of the same panel. Line and extra
+    // discount subtotal first — the reference prints that subtotal as
+    // `Line discount tot.` — and the group discount then applies to what is
+    // left, which is why the three do not simply add up.
     lineDiscount: decimal("line_discount", { precision: 6, scale: 2 }).default(
       "0.00",
     ),
+    extraDiscount: decimal("extra_discount", {
+      precision: 6,
+      scale: 2,
+    }).default("0.00"),
     groupDiscount: decimal("group_discount", {
       precision: 6,
       scale: 2,
     }).default("0.00"),
+    // What the two discount figures above are denominated in. The reference
+    // carries a unit column beside each (`RdU`, `GdU`), so a discount is a
+    // percentage or a flat amount and the row says which. Defaulting to
+    // percent keeps every existing row reading as it did.
+    lineDiscountUnit: mysqlEnum("line_discount_unit", discountUnits)
+      .default("percent")
+      .notNull(),
+    groupDiscountUnit: mysqlEnum("group_discount_unit", discountUnits)
+      .default("percent")
+      .notNull(),
     netPrice: decimal("net_price", { precision: 15, scale: 2 }).default("0.00"),
     amount: decimal("amount", { precision: 15, scale: 2 }).default("0.00"),
 

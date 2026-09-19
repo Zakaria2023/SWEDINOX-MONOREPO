@@ -2,7 +2,18 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
+import {
+  OrderInvoiceLineRow,
+  OrderLinePanels,
+  OrderWorkOrders,
+} from "@/app/(dashboard)/orders/[uuid]/actions";
 import { cancelOrder, OrderDetail } from "@/app/(dashboard)/orders/actions";
+import { OrderLinePanelsView } from "@/components/orders/panels/order-line-panels";
+import {
+  OrderFinancesPanel,
+  OrderInvoiceLinesPanel,
+} from "@/components/orders/panels/order-invoice-lines-panel";
+import { OrderWorkOrdersPanel } from "@/components/orders/panels/order-work-orders-panel";
 import { Button } from "@/components/shadcn/button";
 import {
   Table,
@@ -26,14 +37,33 @@ import { ORDER_ITEM_STATUS_LABELS, ORDER_STATUS_LABELS } from "@/lib/labels";
 
 type Props = {
   order: OrderDetail;
+  workOrders: OrderWorkOrders;
+  invoiceLines: OrderInvoiceLineRow[];
+  /** Null only when the order has no lines at all to select from. */
+  linePanels: OrderLinePanels | null;
 };
 
-export const OrderDetailView = ({ order }: Props) => {
+export const OrderDetailView = ({
+  order,
+  workOrders,
+  invoiceLines,
+  linePanels,
+}: Props) => {
   const [isPending, startTransition] = useTransition();
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [error, setError] = useState<string | undefined>();
 
   const canCancel = order.status !== "cancelled";
+
+  const selectedLine = order.items.find(
+    (item) => item.uuid === linePanels?.orderItemUuid,
+  );
+  const selectedLineLabel = [
+    selectedLine?.lineNumber ?? "",
+    selectedLine?.productCode ?? "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   const handleCancel = () => {
     startTransition(async () => {
@@ -86,6 +116,7 @@ export const OrderDetailView = ({ order }: Props) => {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Line</TableHead>
                 <TableHead>Product</TableHead>
                 <TableHead className="text-right">Reserved</TableHead>
                 <TableHead>Status</TableHead>
@@ -100,7 +131,7 @@ export const OrderDetailView = ({ order }: Props) => {
               {order.items.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={8}
+                    colSpan={9}
                     className="h-24 text-center text-muted-foreground"
                   >
                     No products on this order.
@@ -108,7 +139,27 @@ export const OrderDetailView = ({ order }: Props) => {
                 </TableRow>
               ) : (
                 order.items.map((item) => (
-                  <TableRow key={item.uuid}>
+                  <TableRow
+                    key={item.uuid}
+                    className={cn(
+                      item.uuid === linePanels?.orderItemUuid &&
+                        "bg-primary/5 outline outline-primary/20",
+                    )}
+                  >
+                    <TableCell>
+                      <Link
+                        href={`/orders/${order.uuid}?line=${item.uuid}`}
+                        scroll={false}
+                        aria-current={
+                          item.uuid === linePanels?.orderItemUuid
+                            ? "true"
+                            : undefined
+                        }
+                        className="font-medium text-foreground underline-offset-4 hover:underline"
+                      >
+                        {item.lineNumber ?? "—"}
+                      </Link>
+                    </TableCell>
                     <TableCell className="font-medium">
                       {[item.productCode, item.productName]
                         .filter(Boolean)
@@ -153,6 +204,25 @@ export const OrderDetailView = ({ order }: Props) => {
             </TableBody>
           </Table>
         </div>
+      </div>
+
+      {/* Scoped to the SELECTED line, the way the reference scopes them: a
+          seller picks a line and then asks what stock there is, what this
+          customer paid before, and what has shipped. See
+          `docs/reference-system/order-detail.md` §10. */}
+      {linePanels && (
+        <OrderLinePanelsView
+          panels={linePanels}
+          lineLabel={selectedLineLabel}
+        />
+      )}
+
+      {/* Scoped to the ORDER, unlike everything above. */}
+      <div className="space-y-3">
+        <h2 className="border-b pb-2 text-base font-semibold">Order</h2>
+        <OrderWorkOrdersPanel workOrders={workOrders} />
+        <OrderInvoiceLinesPanel rows={invoiceLines} />
+        <OrderFinancesPanel order={order} />
       </div>
 
       {/* The order's own rollup — costed against the stock lots actually

@@ -1310,7 +1310,9 @@ export const orderStatuses = [
   "completed",
   // Return orders only — goods are back, not yet credited.
   "received",
-  // Quotes only, and terminal.
+  // Terminal, and not only on quotes: the `Previous orders` panel of order
+  // `100742` shows two order LINES sitting at `Expired` 589 days after they
+  // were written, so a sales line ages out the same way an offer does.
   "expired",
   // Not a rung the reference has. It deletes a document rather than
   // cancelling one, which is what the 154 gaps in its order-number series
@@ -2374,3 +2376,50 @@ export const workListKeys = [
 ] as const satisfies readonly string[];
 
 export type WorkListKey = (typeof workListKeys)[number];
+
+/**
+ * Whether a discount is a percentage off or a flat amount off.
+ *
+ * The reference prints a unit column immediately after each discount —
+ * `RdU` after `Line discount`, `GdU` after `Group discount` — on its invoice
+ * lines. A bare `5` in a discount column is therefore ambiguous on its own: it
+ * is 5 % or € 5,00 depending on the unit beside it, and the two give different
+ * money on every line they touch.
+ *
+ * Captured 18-9-2026 on order `100742`; see
+ * `docs/reference-system/order-detail.md` §15.
+ */
+export const discountUnits = [
+  "percent",
+  "amount",
+] as const satisfies readonly string[];
+
+export type DiscountUnit = (typeof discountUnits)[number];
+
+/**
+ * Which way the goods travel on a transport work order line.
+ *
+ * A trip is not always an outbound delivery — the same lorry collects, which is
+ * how a return reaches the warehouse and how goods come back from an external
+ * processor. Without this the line cannot say which.
+ */
+export const transportDirections = [
+  "deliver",
+  "collect",
+] as const satisfies readonly string[];
+
+export type TransportDirection = (typeof transportDirections)[number];
+
+/**
+ * Whether an invoice line charges or refunds.
+ *
+ * This is how the reference models a credit note: not as a separate document
+ * but as a `Type` on the line, so one invoice can carry both. It is the answer
+ * to the open question in H12.
+ */
+export const invoiceLineTypes = [
+  "debit",
+  "credit",
+] as const satisfies readonly string[];
+
+export type InvoiceLineType = (typeof invoiceLineTypes)[number];

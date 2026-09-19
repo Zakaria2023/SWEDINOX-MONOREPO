@@ -33,6 +33,7 @@ import {
   DeliveryTerm,
   DeliveryTimeUnit,
   DeliveryType,
+  DiscountUnit,
   FeaturesQuality,
   InvoicePaymentTerm,
   InvoiceDocumentType,
@@ -9453,4 +9454,119 @@ export const materialStillToInvoice = ({
     return 0;
   }
   return roundToCents(amountForWeight(pricePerUnit, priceUnit, kgReceived));
+};
+
+// ── The order-line price build-up ───────────────────────────────────────────
+// The shape of the reference's `Pricing` panel, captured on order `100742`
+// (`docs/reference-system/order-detail.md` §12). The left column builds a
+// gross price out of four additive components; the right column takes three
+// discounts off it to reach net.
+//
+// ⚠️ The arithmetic below is the panel's layout made literal, not a proof.
+// Every box on the captured line read € 0,00 because that price was typed
+// rather than built up, so the cascade is still numerically unverified against
+// a real non-zero line. What IS certain from the panel is the ORDER of
+// operations — line and extra discount subtotal first, and the group discount
+// applies to what is left of the gross price afterwards, which is why the
+// three percentages do not simply add together.
+
+export type PriceBuildUp = {
+  basePrice: number;
+  quantitySurcharge: number;
+  colorSurcharge: number;
+  lengthSurcharge: number;
+};
+
+export type PriceDiscounts = {
+  lineDiscount: number;
+  lineDiscountUnit: DiscountUnit;
+  extraDiscount: number;
+  groupDiscount: number;
+  groupDiscountUnit: DiscountUnit;
+};
+
+export type PriceCascade = {
+  grossPrice: number;
+  /** What line + extra together take off — the panel's `Line discount tot.` */
+  lineDiscountTotalAmount: number;
+  /** That same figure as a percentage of gross, which is how the panel shows it. */
+  lineDiscountTotalPercent: number;
+  groupDiscountAmount: number;
+  netPrice: number;
+};
+
+/**
+ * Gross price from its four components.
+ *
+ *     gross = base + quantity surcharge + colour surcharge + length surcharge
+ */
+export const grossPriceFromBuildUp = ({
+  basePrice,
+  quantitySurcharge,
+  colorSurcharge,
+  lengthSurcharge,
+}: PriceBuildUp): number =>
+  roundToCents(
+    basePrice + quantitySurcharge + colorSurcharge + lengthSurcharge,
+  );
+
+/**
+ * One discount applied to a base, in whichever unit it is denominated.
+ *
+ * A percentage scales with the base; an amount does not. The reference carries
+ * a unit column beside each discount precisely so that a bare `5` is not read
+ * as 5 % when € 5,00 was meant.
+ */
+export const discountAmount = (
+  base: number,
+  discount: number,
+  unit: DiscountUnit,
+): number =>
+  roundToCents(unit === "percent" ? (base * discount) / 100 : discount);
+
+/**
+ * The whole cascade: four components up to gross, three discounts down to net.
+ *
+ * The extra discount is taken on the same base as the line discount — they are
+ * subtotalled together before the group discount is applied — so the group
+ * discount bites on the already-reduced price, not on gross.
+ */
+export const priceCascade = (
+  buildUp: PriceBuildUp,
+  discounts: PriceDiscounts,
+): PriceCascade => {
+  const grossPrice = grossPriceFromBuildUp(buildUp);
+
+  const lineAmount = discountAmount(
+    grossPrice,
+    discounts.lineDiscount,
+    discounts.lineDiscountUnit,
+  );
+  // The panel prints `Extra discount` with no unit column of its own, so it
+  // follows the line discount's unit — the two share a subtotal row.
+  const extraAmount = discountAmount(
+    grossPrice,
+    discounts.extraDiscount,
+    discounts.lineDiscountUnit,
+  );
+
+  const lineDiscountTotalAmount = roundToCents(lineAmount + extraAmount);
+  const afterLine = roundToCents(grossPrice - lineDiscountTotalAmount);
+
+  const groupDiscountAmount = discountAmount(
+    afterLine,
+    discounts.groupDiscount,
+    discounts.groupDiscountUnit,
+  );
+
+  return {
+    grossPrice,
+    lineDiscountTotalAmount,
+    lineDiscountTotalPercent:
+      grossPrice === 0
+        ? 0
+        : roundToCents((lineDiscountTotalAmount / grossPrice) * 100),
+    groupDiscountAmount,
+    netPrice: roundToCents(afterLine - groupDiscountAmount),
+  };
 };
