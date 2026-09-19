@@ -1,6 +1,9 @@
 "use client";
 
-import { OrderAdviceRow } from "@/app/(dashboard)/order-advice/actions";
+import {
+  exportOrderAdvice,
+  OrderAdviceRow,
+} from "@/app/(dashboard)/order-advice/actions";
 import {
   ORDER_ADVICE_COLUMNS,
   OrderAdviceColumnKey,
@@ -16,7 +19,11 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
-import { TableExportButton } from "@/components/ui/table-export-button";
+import { PagedTableExportButton } from "@/components/ui/table-export-button";
+import { TablePagination } from "@/components/ui/table-pagination";
+import { TableSortHeader } from "@/components/ui/table-sort-header";
+import { TableToolbar } from "@/components/ui/table-toolbar";
+import { Paged, TableFilterControl } from "@/lib/table-query";
 import { selectorColumns } from "@/lib/excel";
 import { buildColumnVisibility, cn, formatNumber } from "@/lib/helpers";
 import { DELIVERY_TIME_UNIT_LABELS } from "@/lib/labels";
@@ -25,7 +32,8 @@ import { useState } from "react";
 type ColumnKey = OrderAdviceColumnKey;
 
 type Props = {
-  rows: OrderAdviceRow[];
+  page: Paged<OrderAdviceRow>;
+  filters: TableFilterControl[];
 };
 
 // The column selector and the export read the same declaration, so a column
@@ -79,6 +87,11 @@ const FOOTER_AVERAGES = new Set<ColumnKey>([
   "turnoverRate",
 ]);
 
+// Sorting runs in the database, so only the columns it can order by are
+// offered — everything else on this screen is computed after the rows come
+// back, and a header that sorted one page of a computed column would be lying.
+const SORTABLE = new Set<ColumnKey>(["productCode", "description"]);
+
 const orDash = (value: number | null) =>
   value === null ? "—" : formatNumber(value);
 
@@ -106,7 +119,8 @@ const footerFor = (rows: OrderAdviceRow[], key: ColumnKey): string => {
   return "";
 };
 
-export const OrderAdviceTable = ({ rows }: Props) => {
+export const OrderAdviceTable = ({ page, filters }: Props) => {
+  const rows = page.rows;
   const [columnVisibility, setColumnVisibility] = useState<
     Record<ColumnKey, boolean>
   >(buildColumnVisibility(ALL_COLUMNS));
@@ -231,7 +245,10 @@ export const OrderAdviceTable = ({ rows }: Props) => {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-start justify-end gap-2">
+      <TableToolbar
+        searchPlaceholder="Search product code or description…"
+        filters={filters}
+      >
         <ColumnSelector
           columns={ALL_COLUMNS.map((col) => ({
             key: col.key,
@@ -240,19 +257,26 @@ export const OrderAdviceTable = ({ rows }: Props) => {
           visibility={columnVisibility}
           onToggle={toggleColumn}
         />
-        <TableExportButton
-          tableId="order-advice-table"
+        <PagedTableExportButton
           fileName="order-advice"
+          columnKeys={visibleColumns.map((column) => column.key)}
+          action={exportOrderAdvice}
         />
-      </div>
+      </TableToolbar>
 
       <div className="overflow-x-auto">
-        <Table id="order-advice-table">
+        <Table>
           <TableHeader>
             <TableRow>
-              {visibleColumns.map((col) => (
-                <TableHead key={col.key}>{col.label}</TableHead>
-              ))}
+              {visibleColumns.map((col) =>
+                SORTABLE.has(col.key) ? (
+                  <TableSortHeader key={col.key} sortKey={col.key}>
+                    {col.label}
+                  </TableSortHeader>
+                ) : (
+                  <TableHead key={col.key}>{col.label}</TableHead>
+                ),
+              )}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -262,7 +286,8 @@ export const OrderAdviceTable = ({ rows }: Props) => {
                   colSpan={Math.max(visibleColumns.length, 1)}
                   className="h-24 text-center text-muted-foreground"
                 >
-                  No stock products to advise on.
+                  No stock products to advise on. Try clearing the search or the
+                  filters.
                 </TableCell>
               </TableRow>
             ) : (
@@ -293,6 +318,15 @@ export const OrderAdviceTable = ({ rows }: Props) => {
           )}
         </Table>
       </div>
+
+      {/* The footer totals the rows on screen, not the whole advice. Saying so
+          matters: before this screen was paged the two were the same number,
+          and a buyer reading "Σ=" has no other way to tell which one it is. */}
+      <p className="text-xs text-muted-foreground">
+        Totals are for this page only.
+      </p>
+
+      <TablePagination page={page} singular="product" plural="products" />
     </div>
   );
 };

@@ -119,6 +119,7 @@ import {
   WorkorderSlipType,
 } from "./enums";
 import {
+  CONTACT_SALUTATION_LABELS,
   CONTRACT_TYPE_LABELS,
   CUSTOMER_GROUP_LABELS,
   INVOICE_PAYMENT_TERM_LABELS,
@@ -9639,4 +9640,23 @@ export const visitPlanPeriod = (
     year: validYear ? parsedYear : now.getFullYear(),
     month: validMonth ? parsedMonth : now.getMonth() + 1,
   };
+};
+
+/**
+ * A contact's name as the contact screens print it: the title, then the first
+ * and last name, skipping whatever is missing. Null when nothing is recorded,
+ * so a caller can decide what an unnamed contact looks like.
+ */
+export const contactPersonName = (contact: {
+  salutation?: ContactSalutation | null;
+  firstName?: string | null;
+  lastName?: string | null;
+}): string | null => {
+  const parts = [
+    contact.salutation ? CONTACT_SALUTATION_LABELS[contact.salutation] : null,
+    contact.firstName,
+    contact.lastName,
+  ].filter(Boolean);
+
+  return parts.length > 0 ? parts.join(" ") : null;
 };

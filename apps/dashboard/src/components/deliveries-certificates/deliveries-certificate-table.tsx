@@ -12,25 +12,69 @@ import {
 import { StatusBadge } from "@/components/ui/status-badge";
 import { DELIVERY_STATUS_LABELS, STOCK_UNIT_LABELS } from "@/lib/labels";
 import { formatDateValue, formatNumber } from "@/lib/helpers";
-import { TableExportButton } from "@/components/ui/table-export-button";
+import { DELIVERY_CERTIFICATE_COLUMNS } from "@/app/(dashboard)/sending-certificates/columns";
+import {
+  PagedTableExportButton,
+  TableExportButton,
+} from "@/components/ui/table-export-button";
+import { TablePagination } from "@/components/ui/table-pagination";
+import { TableToolbar } from "@/components/ui/table-toolbar";
+import { Paged, SearchParams, TableFilterControl } from "@/lib/table-query";
 
 type Props = {
   rows: DeliveryCertificateRow[];
   emptyMessage: string;
+  /**
+   * Set on the paged screen. Left off, the table renders the rows it was given
+   * with no toolbar and no pager — which is what `Deliveries from the missing
+   * batch` wants, since that list is correctly empty and has nothing to search.
+   */
+  page?: Paged<DeliveryCertificateRow>;
+  filters?: TableFilterControl[];
+  exportAction?: (
+    params: SearchParams,
+    columnKeys: string[],
+  ) => Promise<string>;
+  exportFileName?: string;
 };
 
+// The placeholder for the six columns the reference shows and nothing backs:
+// no certificate has ever been requested or sent, so there is no date, no
+// recipient and no project to print.
 const Dash = () => <span className="text-muted-foreground">—</span>;
 
-export const DeliveriesCertificateTable = ({ rows, emptyMessage }: Props) => (
+export const DeliveriesCertificateTable = ({
+  rows,
+  emptyMessage,
+  page,
+  filters,
+  exportAction,
+  exportFileName,
+}: Props) => (
   <div>
     <div className="space-y-4">
-      <div className="flex justify-end">
-        <TableExportButton
-          tableId="deliveries-from-missing-batch-table"
-          fileName="deliveries-from-missing-batch"
-          sheetName="Deliveries from the Missing Batch"
-        />
-      </div>
+      {page && exportAction && exportFileName ? (
+        <TableToolbar
+          searchPlaceholder="Search customer, product or charge…"
+          filters={filters}
+        >
+          <PagedTableExportButton
+            fileName={exportFileName}
+            columnKeys={DELIVERY_CERTIFICATE_COLUMNS.map(
+              (column) => column.key,
+            )}
+            action={exportAction}
+          />
+        </TableToolbar>
+      ) : (
+        <div className="flex justify-end">
+          <TableExportButton
+            tableId="deliveries-from-missing-batch-table"
+            fileName="deliveries-from-missing-batch"
+            sheetName="Deliveries from the Missing Batch"
+          />
+        </div>
+      )}
       <Table id="deliveries-from-missing-batch-table">
         <TableHeader>
           <TableRow>
@@ -173,6 +217,7 @@ export const DeliveriesCertificateTable = ({ rows, emptyMessage }: Props) => (
           )}
         </TableBody>
       </Table>
+      {page && <TablePagination page={page} singular="line" plural="lines" />}
     </div>
   </div>
 );

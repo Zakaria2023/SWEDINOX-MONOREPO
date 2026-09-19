@@ -6,7 +6,31 @@ import { SelectCompanyAddresses } from "@/db/schema/company-addresses";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
 import { companyAddressFor } from "@/lib/server/company-addresses";
 import { companyRevenueByYear } from "@/lib/server/customer-revenue";
-import { eq, getTableColumns, SQL } from "drizzle-orm";
+import {
+  enumFilter,
+  FilterBindings,
+  jsonArrayFilter,
+  SortableColumns,
+  tableOrderBy,
+  tableWhere,
+  valueFilter,
+} from "@/lib/server/table-query";
+import { TableQuery } from "@/lib/table-query";
+import {
+  companyClassifications,
+  contactCategories,
+  customerGroups,
+  salesRepresentatives,
+} from "@/lib/enums";
+import {
+  and,
+  asc,
+  count,
+  eq,
+  getTableColumns,
+  isNotNull,
+  SQL,
+} from "drizzle-orm";
 
 /**
  * A contact person as the reference's contact screens print it: the contact's
@@ -50,13 +74,24 @@ export type ContactPersonRow = SelectContacts & {
   searchCode3: SelectCompanies["searchCode3"] | null;
 };
 
-export const getContactPersonRows = async (
+/**
+ * Every contact within `where`, unpaged. Still used by the contact screens that
+ * have not been converted yet; prefer `contactPersonRows`.
+ */
+type ContactPersonPage = {
+  limit: number;
+  offset: number;
+  orderBy: ReturnType<typeof tableOrderBy>;
+};
+
+const selectContactPersonRows = async (
   where: SQL | undefined,
+  page?: ContactPersonPage,
 ): Promise<ContactPersonRow[]> => {
   const visiting = companyAddressFor("visit", "visiting_address");
   const revenue = companyRevenueByYear("company_revenue");
 
-  const rows = await db
+  const base = db
     .select({
       ...getTableColumns(Contacts),
       companyName: Companies.companyName,
@@ -87,7 +122,17 @@ export const getContactPersonRows = async (
     .leftJoin(Companies, eq(Companies.uuid, Contacts.companyUuid))
     .leftJoin(visiting, eq(visiting.companyUuid, Contacts.companyUuid))
     .leftJoin(revenue, eq(revenue.companyUuid, Contacts.companyUuid))
-    .where(where);
+    .where(where)
+    .$dynamic();
+
+  // Ordered and limited only when a page was asked for. A LIMIT standing in for
+  // "no limit" would still make the database sort and count its way there.
+  const rows = await (page
+    ? base
+        .orderBy(...page.orderBy)
+        .limit(page.limit)
+        .offset(page.offset)
+    : base);
 
   return rows.map((row) => {
     const roles = row.companyRoles ?? [];
@@ -110,4 +155,108 @@ export const getContactPersonRows = async (
       revenueThisYear: Number(row.revenueThisYear ?? 0),
     };
   });
+};
+
+// ---------------------------------------------------------------------------
+// The paged form
+//
+// The contact screens carry one row per contact — 6 796 of them on the
+// reference's customers-and-prospects list alone — and used to fetch every one,
+// with the company's address and both revenue figures joined per row, before
+// handing the lot to the browser. What a reader wants from a list that size is
+// to find one person, so it is searched and filtered on the server and paged
+// like every other overview.
+//
+// Search and filters live here rather than on either screen, because both
+// screens show the same row and a contact should be findable the same way
+// whichever of them you opened.
+// ---------------------------------------------------------------------------
+
+const CONTACT_PERSON_SEARCH = [
+  Contacts.firstName,
+  Contacts.lastName,
+  Contacts.email,
+  Companies.companyName,
+  Companies.searchCode1,
+] as const;
+
+const CONTACT_PERSON_FILTERS: FilterBindings = {
+  category: jsonArrayFilter(Contacts.categories, contactCategories),
+  accountManager: enumFilter(Companies.accountManager, salesRepresentatives),
+  representative: enumFilter(Companies.representative, salesRepresentatives),
+  customerGroup: enumFilter(Companies.customerGroup, customerGroups),
+  classification: enumFilter(Companies.classification, companyClassifications),
+  region: valueFilter(Companies.region),
+};
+
+const CONTACT_PERSON_SORTABLE: SortableColumns = {
+  company: Companies.companyName,
+  companyCode: Companies.id,
+  lastName: Contacts.lastName,
+  firstName: Contacts.firstName,
+};
+
+/** Every contact within `where`, unpaged. */
+export const getContactPersonRows = async (
+  where: SQL | undefined,
+): Promise<ContactPersonRow[]> => selectContactPersonRows(where);
+
+/** One page of contacts within `scope`, narrowed by the reader's own query. */
+export const contactPersonRows =
+  (scope: SQL | undefined, query: TableQuery) =>
+  async (limit: number, offset: number): Promise<ContactPersonRow[]> =>
+    selectContactPersonRows(
+      tableWhere({
+        query,
+        search: CONTACT_PERSON_SEARCH,
+        filters: CONTACT_PERSON_FILTERS,
+        scope: [scope],
+      }),
+      {
+        limit,
+        offset,
+        orderBy: tableOrderBy(
+          CONTACT_PERSON_SORTABLE,
+          query,
+          [asc(Companies.companyName), asc(Contacts.lastName)],
+          Contacts.id,
+        ),
+      },
+    );
+
+/** How many contacts that same query matches. */
+export const countContactPersons = async (
+  scope: SQL | undefined,
+  query: TableQuery,
+): Promise<number> => {
+  const [row] = await db
+    .select({ value: count() })
+    .from(Contacts)
+    .leftJoin(Companies, eq(Companies.uuid, Contacts.companyUuid))
+    .where(
+      tableWhere({
+        query,
+        search: CONTACT_PERSON_SEARCH,
+        filters: CONTACT_PERSON_FILTERS,
+        scope: [scope],
+      }),
+    );
+
+  return Number(row?.value ?? 0);
+};
+
+/** The regions the contacts' companies carry, for the overviews' filter. */
+export const getContactPersonRegions = async (
+  scope: SQL | undefined,
+): Promise<string[]> => {
+  const rows = await db
+    .selectDistinct({ region: Companies.region })
+    .from(Contacts)
+    .innerJoin(Companies, eq(Companies.uuid, Contacts.companyUuid))
+    .where(and(scope, isNotNull(Companies.region)))
+    .orderBy(asc(Companies.region));
+
+  return rows
+    .map((row) => row.region)
+    .filter((region): region is string => region !== null && region !== "");
 };

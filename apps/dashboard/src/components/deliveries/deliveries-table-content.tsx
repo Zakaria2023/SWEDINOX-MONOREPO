@@ -7,7 +7,9 @@ import { useRouter } from "next/navigation";
 import {
   DeliveryLineItem,
   deliverOrderItem,
+  exportDeliveries,
 } from "@/app/(dashboard)/deliveries/actions";
+import { DELIVERY_COLUMNS } from "@/app/(dashboard)/deliveries/columns";
 import { Button } from "@/components/shadcn/button";
 import {
   Table,
@@ -23,12 +25,17 @@ import {
   ORDER_LINE_STATUS_LABELS,
   STOCK_UNIT_LABELS,
 } from "@/lib/labels";
-import { TableExportButton } from "@/components/ui/table-export-button";
+import { PagedTableExportButton } from "@/components/ui/table-export-button";
+import { TablePagination } from "@/components/ui/table-pagination";
+import { TableSortHeader } from "@/components/ui/table-sort-header";
+import { TableToolbar } from "@/components/ui/table-toolbar";
+import { Paged, TableFilterControl } from "@/lib/table-query";
 
 type Props = {
-  lines: DeliveryLineItem[];
+  page: Paged<DeliveryLineItem>;
   /** Clerk id -> name, for the seller column. */
   userNames: Record<string, string>;
+  filters: TableFilterControl[];
 };
 
 type DeliverButtonProps = {
@@ -67,24 +74,32 @@ const DeliverButton = ({ orderItemUuid }: DeliverButtonProps) => {
   );
 };
 
-export const DeliveriesTable = ({ lines, userNames }: Props) => (
-  <div>
-    <div className="space-y-4">
-      <div className="flex justify-end">
-        <TableExportButton
-          tableId="deliveries-table"
-          fileName="deliveries"
-          sheetName="Deliveries"
-        />
-      </div>
-      <Table id="deliveries-table">
+export const DeliveriesTable = ({ page, userNames, filters }: Props) => (
+  <div className="space-y-4">
+    <TableToolbar
+      searchPlaceholder="Search customer, product or option…"
+      filters={filters}
+    >
+      <PagedTableExportButton
+        fileName="deliveries"
+        columnKeys={DELIVERY_COLUMNS.map((column) => column.key)}
+        action={exportDeliveries}
+      />
+    </TableToolbar>
+
+    <div>
+      <Table>
         <TableHeader>
           <TableRow>
             <TableHead>Order type</TableHead>
             <TableHead>Line status</TableHead>
-            <TableHead className="text-right">Order</TableHead>
-            <TableHead className="text-right">Line</TableHead>
-            <TableHead>Customer</TableHead>
+            <TableSortHeader sortKey="order" className="text-right">
+              Order
+            </TableSortHeader>
+            <TableSortHeader sortKey="line" className="text-right">
+              Line
+            </TableSortHeader>
+            <TableSortHeader sortKey="customer">Customer</TableSortHeader>
             <TableHead>Seller</TableHead>
             <TableHead className="text-center">Pick-up</TableHead>
             <TableHead>Product code</TableHead>
@@ -95,7 +110,9 @@ export const DeliveriesTable = ({ lines, userNames }: Props) => (
             <TableHead className="text-right">Line Qty(p)</TableHead>
             <TableHead>StkU</TableHead>
             <TableHead>Delivery status</TableHead>
-            <TableHead>Delivery date</TableHead>
+            <TableSortHeader sortKey="deliveryDate">
+              Delivery date
+            </TableSortHeader>
             <TableHead>Blocking reason</TableHead>
             <TableHead data-export-ignore className="text-right">
               Action
@@ -103,17 +120,17 @@ export const DeliveriesTable = ({ lines, userNames }: Props) => (
           </TableRow>
         </TableHeader>
         <TableBody>
-          {lines.length === 0 ? (
+          {page.rows.length === 0 ? (
             <TableRow>
               <TableCell
                 colSpan={18}
                 className="h-24 text-center text-muted-foreground"
               >
-                No deliveries found.
+                No deliverable lines. Try clearing the search or the filters.
               </TableCell>
             </TableRow>
           ) : (
-            lines.map((row) => (
+            page.rows.map((row) => (
               <TableRow key={row.uuid}>
                 <TableCell className="font-medium">
                   <Link
@@ -186,5 +203,7 @@ export const DeliveriesTable = ({ lines, userNames }: Props) => (
         </TableBody>
       </Table>
     </div>
+
+    <TablePagination page={page} singular="line" plural="lines" />
   </div>
 );

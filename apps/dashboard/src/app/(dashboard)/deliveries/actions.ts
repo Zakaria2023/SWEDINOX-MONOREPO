@@ -18,7 +18,27 @@ import {
   restateLotValue,
   todayDateString,
 } from "@/lib/helpers";
+import { DELIVERY_COLUMNS } from "@/app/(dashboard)/deliveries/columns";
+import { deliveryStatuses, orderLineStatuses } from "@/lib/enums";
 import { checkCredit } from "@/lib/server/credit-control";
+import { exportRows } from "@/lib/server/excel";
+import {
+  booleanFilter,
+  dateRangeFilter,
+  enumFilter,
+  FilterBindings,
+  relationFilter,
+  runPaged,
+  SortableColumns,
+  tableOrderBy,
+  tableWhere,
+} from "@/lib/server/table-query";
+import {
+  Paged,
+  parseTableQuery,
+  SearchParams,
+  TableQuery,
+} from "@/lib/table-query";
 import { recordFreightMovement } from "@/lib/server/freight";
 import { writeSystemLog } from "@/lib/server/system-log";
 import {
@@ -30,7 +50,16 @@ import {
   LEDGER_ACCOUNTS,
 } from "@/lib/server/ledger";
 import { currentUser } from "@clerk/nextjs/server";
-import { and, asc, desc, eq, getTableColumns, ne, or } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  getTableColumns,
+  ne,
+  or,
+} from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 export type DeliveryActionResult = {
@@ -61,21 +90,130 @@ const lineColumns = {
   productName: Products.name,
 };
 
-// Deliverable order lines — everything not cancelled, newest first.
-export const getDeliveries = async (): Promise<DeliveryLineItem[]> => {
-  try {
-    return await db
+// Everything that is not cancelled — the deliverable lines.
+const DELIVERABLE = ne(OrderItems.status, "cancelled");
+
+const DELIVERY_SEARCH = [
+  Companies.companyName,
+  Products.productCode,
+  Products.name,
+  OrderItems.options,
+] as const;
+
+const DELIVERY_FILTERS: FilterBindings = {
+  lineStatus: enumFilter(OrderItems.lineStatus, orderLineStatuses),
+  deliveryStatus: enumFilter(OrderItems.deliveryStatus, deliveryStatuses),
+  deliveryDate: dateRangeFilter(OrderItems.deliveryDate),
+  isPickup: booleanFilter(OrderItems.isPickup),
+  customer: relationFilter(Orders.companyUuid),
+};
+
+const DELIVERY_SORTABLE: SortableColumns = {
+  order: Orders.id,
+  line: OrderItems.lineNumber,
+  customer: Companies.companyName,
+  deliveryDate: OrderItems.deliveryDate,
+  productCode: Products.productCode,
+};
+
+/**
+ * One page of deliverable order lines.
+ *
+ * Paged, because this is one row per order line and the reference's export is
+ * 6 134 of them. The screen used to fetch every line, join the order, the
+ * customer and the product to each, and hand the lot to the browser — where
+ * each row also renders a button that can deliver it.
+ */
+const deliveryRows =
+  (query: TableQuery) =>
+  (limit: number, offset: number): Promise<DeliveryLineItem[]> =>
+    db
       .select(lineColumns)
       .from(OrderItems)
       .leftJoin(Orders, eq(OrderItems.orderUuid, Orders.uuid))
       .leftJoin(Companies, eq(Orders.companyUuid, Companies.uuid))
       .leftJoin(Products, eq(OrderItems.productUuid, Products.uuid))
-      .where(ne(OrderItems.status, "cancelled"))
-      .orderBy(desc(OrderItems.createdAt));
+      .where(
+        tableWhere({
+          query,
+          search: DELIVERY_SEARCH,
+          filters: DELIVERY_FILTERS,
+          scope: [DELIVERABLE],
+        }),
+      )
+      .orderBy(
+        ...tableOrderBy(
+          DELIVERY_SORTABLE,
+          query,
+          [desc(OrderItems.createdAt)],
+          OrderItems.id,
+        ),
+      )
+      .limit(limit)
+      .offset(offset);
+
+export const getDeliveries = async (
+  query: TableQuery,
+): Promise<Paged<DeliveryLineItem>> => {
+  try {
+    return await runPaged(query, {
+      rows: deliveryRows(query),
+      count: async () => {
+        const [row] = await db
+          .select({ value: count() })
+          .from(OrderItems)
+          .leftJoin(Orders, eq(OrderItems.orderUuid, Orders.uuid))
+          .leftJoin(Companies, eq(Orders.companyUuid, Companies.uuid))
+          .leftJoin(Products, eq(OrderItems.productUuid, Products.uuid))
+          .where(
+            tableWhere({
+              query,
+              search: DELIVERY_SEARCH,
+              filters: DELIVERY_FILTERS,
+              scope: [DELIVERABLE],
+            }),
+          );
+        return Number(row?.value ?? 0);
+      },
+    });
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch deliveries"));
   }
 };
+
+/**
+ * The customers that actually have a deliverable line, for the overview's
+ * filter. Drawn from the lines rather than from the company list, so the
+ * dropdown holds the few hundred customers with something going out rather than
+ * every company on file.
+ */
+export const getDeliveryCustomers = async (): Promise<
+  Array<{ uuid: string; name: string }>
+> => {
+  const rows = await db
+    .selectDistinct({
+      uuid: Companies.uuid,
+      name: Companies.companyName,
+    })
+    .from(OrderItems)
+    .innerJoin(Orders, eq(OrderItems.orderUuid, Orders.uuid))
+    .innerJoin(Companies, eq(Orders.companyUuid, Companies.uuid))
+    .where(DELIVERABLE)
+    .orderBy(asc(Companies.companyName));
+
+  return rows.filter((row) => Boolean(row.name));
+};
+
+export const exportDeliveries = async (
+  params: SearchParams,
+  columnKeys: string[],
+): Promise<string> =>
+  exportRows({
+    name: "Deliveries",
+    columns: DELIVERY_COLUMNS,
+    columnKeys,
+    rows: deliveryRows(parseTableQuery(params)),
+  });
 
 // Lines held back by a commercial, financial or transport block.
 export const getBlockedDeliveries = async (): Promise<DeliveryLineItem[]> => {

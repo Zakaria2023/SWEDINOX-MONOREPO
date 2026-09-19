@@ -15,10 +15,28 @@ import {
   WarehouseWorkOrderLines,
   WarehouseWorkOrderPicks,
 } from "@/db/schema/warehouse-work-orders";
+import { DELIVERY_CERTIFICATE_COLUMNS } from "@/app/(dashboard)/sending-certificates/columns";
 import { describeError } from "@/lib/helpers";
+import { exportRows } from "@/lib/server/excel";
+import {
+  dateRangeFilter,
+  FilterBindings,
+  relationFilter,
+  runPaged,
+  SortableColumns,
+  tableOrderBy,
+  tableWhere,
+} from "@/lib/server/table-query";
+import {
+  Paged,
+  parseTableQuery,
+  SearchParams,
+  TableQuery,
+} from "@/lib/table-query";
 import {
   and,
   asc,
+  count,
   desc,
   eq,
   inArray,
@@ -68,8 +86,38 @@ export type DeliveryCertificateRow = {
   producer: SelectBatches["producer"] | null;
 };
 
+const CERTIFICATE_SEARCH = [
+  Companies.companyName,
+  Products.productCode,
+  Products.name,
+  Batches.charge,
+  Batches.internalCharge,
+] as const;
+
+const CERTIFICATE_FILTERS: FilterBindings = {
+  deliveryDate: dateRangeFilter(OrderItems.deliveryDate),
+  customer: relationFilter(Orders.companyUuid),
+  product: relationFilter(OrderItems.productUuid),
+};
+
+const CERTIFICATE_SORTABLE: SortableColumns = {
+  salesOrder: Orders.id,
+  salesLine: OrderItems.lineNumber,
+  customer: Companies.companyName,
+  deliveryDate: OrderItems.deliveryDate,
+};
+
+/**
+ * A delivered sales line, once per batch it was picked from.
+ *
+ * Paged. The reference lists 3 271 rows here — one per pick per batch, so a
+ * line that left from five lots is five rows — and the screen used to build
+ * every one through six joins before the browser saw any of them.
+ */
 export const getDeliveryCertificateRows = async (
   mode: DeliveryCertificateMode,
+  query?: TableQuery,
+  page?: { limit: number; offset: number },
 ): Promise<DeliveryCertificateRow[]> => {
   try {
     // The lot a line actually shipped from is the one its warehouse pick drew
@@ -84,7 +132,10 @@ export const getDeliveryCertificateRows = async (
       isNotNull(WarehouseWorkOrderPicks.internalCharge),
     );
 
-    const deliveredLines = inArray(OrderItems.status, ["delivered", "invoiced"]);
+    const deliveredLines = inArray(OrderItems.status, [
+      "delivered",
+      "invoiced",
+    ]);
     // "Sending certificates" is every delivered line that traces to a batch,
     // certificate or not: the reference lists 3 271 such rows and not one has a
     // certificate document. "Missing batch" is a delivered line that traces to
@@ -98,7 +149,7 @@ export const getDeliveryCertificateRows = async (
             isNull(WarehouseWorkOrderPicks.internalCharge),
           );
 
-    const rows = await db
+    const base = db
       .select({
         // One row per pick per batch in the lot it drew on.
         key: sql<string>`CONCAT(COALESCE(${WarehouseWorkOrderPicks.uuid}, ${OrderItems.uuid}), '-', COALESCE(${Batches.uuid}, ''))`,
@@ -151,7 +202,10 @@ export const getDeliveryCertificateRows = async (
       .leftJoin(
         WarehouseWorkOrderPicks,
         and(
-          eq(WarehouseWorkOrderPicks.workOrderLineUuid, WarehouseWorkOrderLines.uuid),
+          eq(
+            WarehouseWorkOrderPicks.workOrderLineUuid,
+            WarehouseWorkOrderLines.uuid,
+          ),
           isNotNull(WarehouseWorkOrderPicks.stockUuid),
         ),
       )
@@ -163,8 +217,31 @@ export const getDeliveryCertificateRows = async (
         BatchCertificates,
         eq(Batches.uuid, BatchCertificates.batchUuid),
       )
-      .where(filter)
-      .orderBy(desc(Orders.id), asc(OrderItems.lineNumber));
+      .where(
+        query
+          ? tableWhere({
+              query,
+              search: CERTIFICATE_SEARCH,
+              filters: CERTIFICATE_FILTERS,
+              scope: [filter],
+            })
+          : filter,
+      )
+      .orderBy(
+        ...(query
+          ? tableOrderBy(
+              CERTIFICATE_SORTABLE,
+              query,
+              [desc(Orders.id), asc(OrderItems.lineNumber)],
+              OrderItems.id,
+            )
+          : [desc(Orders.id), asc(OrderItems.lineNumber)]),
+      )
+      .$dynamic();
+
+    const rows = await (page
+      ? base.limit(page.limit).offset(page.offset)
+      : base);
 
     return rows.map((row) => ({
       ...row,
@@ -181,7 +258,77 @@ export const getDeliveryCertificateRows = async (
   }
 };
 
+const sendingCertificateRows =
+  (query: TableQuery) =>
+  (limit: number, offset: number): Promise<DeliveryCertificateRow[]> =>
+    getDeliveryCertificateRows("certificate-received", query, {
+      limit,
+      offset,
+    });
+
 // Delivered lines that trace to a batch, ready to have their certificate sent.
-export const getSendingCertificates = async (): Promise<
-  DeliveryCertificateRow[]
-> => getDeliveryCertificateRows("certificate-received");
+export const getSendingCertificates = async (
+  query: TableQuery,
+): Promise<Paged<DeliveryCertificateRow>> =>
+  runPaged(query, {
+    rows: sendingCertificateRows(query),
+    count: async () => {
+      const [row] = await db
+        .select({ value: count() })
+        .from(OrderItems)
+        .innerJoin(Orders, eq(OrderItems.orderUuid, Orders.uuid))
+        .leftJoin(Companies, eq(Orders.companyUuid, Companies.uuid))
+        .leftJoin(Products, eq(OrderItems.productUuid, Products.uuid))
+        .leftJoin(
+          WarehouseWorkOrderLines,
+          eq(WarehouseWorkOrderLines.orderItemUuid, OrderItems.uuid),
+        )
+        .leftJoin(
+          WarehouseWorkOrderPicks,
+          and(
+            eq(
+              WarehouseWorkOrderPicks.workOrderLineUuid,
+              WarehouseWorkOrderLines.uuid,
+            ),
+            isNotNull(WarehouseWorkOrderPicks.stockUuid),
+          ),
+        )
+        .leftJoin(
+          StockBatches,
+          eq(
+            StockBatches.stockUuid,
+            sql`COALESCE(${WarehouseWorkOrderPicks.stockUuid}, ${OrderItems.stockUuid})`,
+          ),
+        )
+        .leftJoin(Batches, eq(Batches.uuid, StockBatches.batchUuid))
+        .where(
+          tableWhere({
+            query,
+            search: CERTIFICATE_SEARCH,
+            filters: CERTIFICATE_FILTERS,
+            scope: [
+              and(
+                inArray(OrderItems.status, ["delivered", "invoiced"]),
+                or(
+                  isNotNull(Batches.uuid),
+                  isNotNull(WarehouseWorkOrderPicks.internalCharge),
+                ),
+              ),
+            ],
+          }),
+        );
+
+      return Number(row?.value ?? 0);
+    },
+  });
+
+export const exportSendingCertificates = async (
+  params: SearchParams,
+  columnKeys: string[],
+): Promise<string> =>
+  exportRows({
+    name: "Sending certificates",
+    columns: DELIVERY_CERTIFICATE_COLUMNS,
+    columnKeys,
+    rows: sendingCertificateRows(parseTableQuery(params)),
+  });
