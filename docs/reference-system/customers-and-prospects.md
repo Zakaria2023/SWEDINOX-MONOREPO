@@ -910,3 +910,88 @@ schedule.
 - Nothing is ticked, consistent with §40. The three screens are one table
   seen three ways: the list (C14), the plan (C13), and the place the plan is
   edited (C15).
+
+---
+
+## 43. Built against `apps/dashboard` — 19-9-2026
+
+The three screens existed and were **the same file three times**: one query, one
+grid, no heading, no month, no plan. What follows is what changed to make them
+the reference's three.
+
+### The three are three again
+
+| Route | Reference | Columns | Plan |
+| --- | --- | --- | --- |
+| `/to-visit-call` | C14 | the 21 list columns + 2 ours | none |
+| `/visit-schedule` | C13 | + `Month`, `Call`, `Visit` | read-only |
+| `/change-visit-schedule` | C15 | + `Call`, `Visit`, no `Month` | tick boxes |
+
+Each now carries its own heading, and the export that used to be called
+`change-visit-schedule` from all three is named after the screen it came from.
+
+### 🔴 The revenue column was on the wrong basis
+
+The screens read `companyRevenueByYear` — **calendar** this-year and last-year.
+The reference's `Revenue last 12 months` is a **rolling** window, and §41 proved
+it exact on the three companies that have any. In September the two are nine
+months apart, so a representative was reading a number their old screen never
+showed them.
+
+`companyRevenueRolling` replaces it, and `Revenue last month` and
+`Target year revenue` — both `0` on all 2 531 reference rows, both never shown
+here — are now columns. `Region number` stays out: it is `0` on all 2 531, a
+sentinel, exactly like the two left out of `Visits made` (D4).
+
+### 🔴 `Call` and `Visit` meant the opposite of what was built
+
+Ours were **derived** — last contact plus the interval the frequency or the
+A/B/C letter implies. The reference's are **decided** — boxes a person ticks for
+a month on C15, which C13 reads back. One is a calculation, the other is an
+intention, and there was nowhere in this app to record an intention at all.
+
+Both now exist, named apart: `Call` / `Visit` are the plan, `Call due` /
+`Visit due` are the calculation. The plan lives in a new `VisitPlans` table,
+unique on company + year + month.
+
+One thing the table's shape decides: **only the box that moved is written.**
+Sending both would mean each checkbox carrying its own copy of the other, and
+two ticked in quick succession would each save the value the page was rendered
+with — the second quietly undoing the first.
+
+### What the `upcoming month` columns mean is still open
+
+`Call upcoming month` and `Visit upcoming month` are empty on all 2 531 rows,
+and two readings fit that equally well: the month a contact is **due** (empty
+because every frequency there is `0`), or the month one is **planned** (empty
+because nothing is ticked). The export cannot separate them.
+
+Ours takes the due reading, because a plan is chosen one month at a time and a
+column echoing the month the screen is already showing would say nothing. If
+Swedinox says otherwise it is one expression to change.
+
+### The rest of the machinery
+
+Server-side search, paging and filters on region, customer group,
+classification, account manager, representative and — on the two screens that
+show a month — what is planned in it. The grid used to hand the browser all
+2 531 rows with no way to ask "who is due".
+
+### Verified against the live database
+
+Paging (page 2 repeats nothing from page 1), the classification filter, the
+plan upsert (ticking `Call` then `Visit` leaves both set; unticking one leaves
+the other), month scoping (next month sees nothing), and the planned filter as
+a partition — `planned=either` plus `planned=none` equals the total exactly.
+
+⚠️ The working database holds **32 companies, 5 of them customers or
+prospects**, not the reference's 2 531. The mechanics are proved; the figures
+are not the reference's figures.
+
+### Still assumed, not proved
+
+The A/B/C intervals — A is 12 visits and 26 calls a year, B 4 and 12, C 2 and 4
+— are **ours**. The reference stores the letter and reads it nowhere, which is
+why every `upcoming` column on its screen is blank and `Visit frequency` is `0`
+on all 1 679 customers (§35). The letter was given a meaning so the screen could
+work at all. One constant to change when Swedinox names the real intervals.

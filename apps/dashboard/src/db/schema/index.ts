@@ -20,6 +20,7 @@ export * from "./purchase-invoices";
 export * from "./purchase-invoice-items";
 export * from "./warehouses";
 export * from "./visit-reports";
+export * from "./visit-plans";
 export * from "./warehouse-work-orders";
 export * from "./orders";
 export * from "./order-items";

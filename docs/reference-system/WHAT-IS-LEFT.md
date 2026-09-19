@@ -330,9 +330,9 @@ customer — fifteen screens built from menu names alone.
 | ~~**C10**~~ | ~~Customer revenue per revenue group~~ | ✅ **1 720 × 26, 14-9-2026** → Part 7 — splits each line into product and **option** groups, and charges get their own rows. Our screen does neither |
 | ~~**C11**~~ | ~~Customer revenue per revenue group with split order types~~ | ✅ **1 778 × 27, 14-9-2026** → Part 8 — splits on **`orderType`** (Normal/Call-off/Rush) *and* `Stk`/`CD`; reconciles to C10 cell for cell |
 | ~~**C12**~~ | ~~Customerrevenue, -sales and -visits~~ | ✅ **809 × 21, 14-9-2026** → [customers-and-prospects.md](customers-and-prospects.md) Part 11 — `Current year` = 2025 (no month); **809 of 809 cells equal C10**. Visits all `0`. `Company code` ≠ `Debtor number` |
-| ~~**C13**~~ | ~~Visit schedule~~ | ✅ **2 531 × 25, 14-9-2026** → [customers-and-prospects.md](customers-and-prospects.md) Part 12 — C14 plus `Month`/`Call`/`Visit`; **nothing planned** |
-| ~~**C14**~~ | ~~To visit/call~~ | ✅ **2 531 × 22, 14-9-2026** → Part 12 — `Revenue last 12 months` is live and exact |
-| ~~**C15**~~ | ~~Change visit schedule~~ | ✅ **2 531 × 24, 14-9-2026** → [customers-and-prospects.md](customers-and-prospects.md) §42 — the editable form of C13 (`Call`/`Visit` tick boxes), identical data, nothing ticked |
+| ~~**C13**~~ | ~~Visit schedule~~ | ✅ **2 531 × 25, 14-9-2026** → [customers-and-prospects.md](customers-and-prospects.md) Part 12 — C14 plus `Month`/`Call`/`Visit`; **nothing planned**. 🔨 **Built 19-9-2026** (§43) |
+| ~~**C14**~~ | ~~To visit/call~~ | ✅ **2 531 × 22, 14-9-2026** → Part 12 — `Revenue last 12 months` is live and exact. 🔨 **Built 19-9-2026** (§43) |
+| ~~**C15**~~ | ~~Change visit schedule~~ | ✅ **2 531 × 24, 14-9-2026** → [customers-and-prospects.md](customers-and-prospects.md) §42 — the editable form of C13 (`Call`/`Visit` tick boxes), identical data, nothing ticked. 🔨 **Built 19-9-2026** (§43) — the plan now has a table |
 
 **C7 matters more than its position suggests.** We built three blocking reasons
 and a rule for each. Nothing in the code knows how a block is *lifted*, who may

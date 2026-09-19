@@ -11,10 +11,7 @@ import { InvoiceSurcharges, Invoices } from "@/db/schema/invoices";
 import { OrderItems, SelectOrderItems } from "@/db/schema/order-items";
 import { Orders, SelectOrders } from "@/db/schema/orders";
 import { Products } from "@/db/schema/products";
-import {
-  RevenueGroups,
-  SelectRevenueGroups,
-} from "@/db/schema/revenue-groups";
+import { RevenueGroups, SelectRevenueGroups } from "@/db/schema/revenue-groups";
 import { INVOICE_SURCHARGE_REVENUE_GROUP_NUMBERS } from "@/lib/constants";
 import { and, count, eq, isNotNull, min, sql } from "drizzle-orm";
 
@@ -260,12 +257,48 @@ export const companyRevenueByYear = (
   db
     .select({
       companyUuid: Invoices.companyUuid,
-      revenueThisYear: sql<string>`COALESCE(SUM(CASE WHEN YEAR(${Invoices.invoiceDate}) = ${currentYear} THEN ${Invoices.invoiceAmountExclVat} ELSE 0 END), 0)`.as(
-        `${name}_this_year`,
-      ),
-      revenueLastYear: sql<string>`COALESCE(SUM(CASE WHEN YEAR(${Invoices.invoiceDate}) = ${currentYear - 1} THEN ${Invoices.invoiceAmountExclVat} ELSE 0 END), 0)`.as(
-        `${name}_last_year`,
-      ),
+      revenueThisYear:
+        sql<string>`COALESCE(SUM(CASE WHEN YEAR(${Invoices.invoiceDate}) = ${currentYear} THEN ${Invoices.invoiceAmountExclVat} ELSE 0 END), 0)`.as(
+          `${name}_this_year`,
+        ),
+      revenueLastYear:
+        sql<string>`COALESCE(SUM(CASE WHEN YEAR(${Invoices.invoiceDate}) = ${currentYear - 1} THEN ${Invoices.invoiceAmountExclVat} ELSE 0 END), 0)`.as(
+          `${name}_last_year`,
+        ),
+    })
+    .from(Invoices)
+    .where(and(eq(Invoices.cancelled, false), isNotNull(Invoices.companyUuid)))
+    .groupBy(Invoices.companyUuid)
+    .as(name);
+
+/**
+ * Invoiced revenue on the two bases the visit schedule shows: the rolling
+ * twelve months, and the calendar month before this one.
+ *
+ * Not the calendar year. The reference's `Revenue last 12 months` is a rolling
+ * window, and it is live: it is non-zero on exactly three of its 2 531
+ * companies — `Douma Staal` 296.43, `Universal Steel Holland` 14 400 and
+ * `SHS Lochbleche Butzbach` 20 000 — each equal to that company's invoices from
+ * 14-9-2025 onward ex VAT, on a file taken 14-9-2026. A calendar year would
+ * have shown nine months on that date, which is why the schedule reads this
+ * rather than `companyRevenueByYear`.
+ *
+ * `Revenue last month` is `0` on all 2 531 rows there, because it is fed by a
+ * batch job that stopped running before the copy was taken. Ours is computed,
+ * so it will show the real figure.
+ */
+export const companyRevenueRolling = (name: string) =>
+  db
+    .select({
+      companyUuid: Invoices.companyUuid,
+      revenueLast12Months:
+        sql<string>`COALESCE(SUM(CASE WHEN ${Invoices.invoiceDate} >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH) THEN ${Invoices.invoiceAmountExclVat} ELSE 0 END), 0)`.as(
+          `${name}_last_12_months`,
+        ),
+      revenueLastMonth:
+        sql<string>`COALESCE(SUM(CASE WHEN ${Invoices.invoiceDate} >= DATE_SUB(DATE_FORMAT(CURDATE(), '%Y-%m-01'), INTERVAL 1 MONTH) AND ${Invoices.invoiceDate} < DATE_FORMAT(CURDATE(), '%Y-%m-01') THEN ${Invoices.invoiceAmountExclVat} ELSE 0 END), 0)`.as(
+          `${name}_last_month`,
+        ),
     })
     .from(Invoices)
     .where(and(eq(Invoices.cancelled, false), isNotNull(Invoices.companyUuid)))

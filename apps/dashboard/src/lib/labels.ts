@@ -2017,3 +2017,21 @@ export const INVOICE_LINE_TYPE_LABELS: Record<InvoiceLineType, string> = {
   debit: "Debit",
   credit: "Credit",
 };
+
+// The twelve months, for the screens that name one rather than show a date.
+// The visit schedule plans by month, so its `Month` column and its upcoming
+// columns print one of these instead of a day nobody chose.
+export const MONTH_LABELS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+] as const satisfies readonly string[];

@@ -2,7 +2,14 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { VisitScheduleRow } from "@/app/(dashboard)/visit-schedule/actions";
+import {
+  exportVisitSchedule,
+  VisitScheduleRow,
+} from "@/app/(dashboard)/visit-schedule/actions";
+import {
+  VISIT_SCHEDULE_COLUMNS,
+  VisitScheduleColumnKey,
+} from "@/app/(dashboard)/visit-schedule/columns";
 import {
   Table,
   TableBody,
@@ -12,66 +19,77 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
-import { formatDateValue, formatRevenue } from "@/lib/helpers";
-import { TableExportButton } from "@/components/ui/table-export-button";
+import { PagedTableExportButton } from "@/components/ui/table-export-button";
+import { TablePagination } from "@/components/ui/table-pagination";
+import { TableSortHeader } from "@/components/ui/table-sort-header";
+import { TableToolbar } from "@/components/ui/table-toolbar";
+import { VisitPlanMonthPicker } from "@/components/visit-schedule/visit-plan-month-picker";
+import { VisitPlanToggle } from "@/components/visit-schedule/visit-plan-toggle";
+import { selectorColumns } from "@/lib/excel";
+import {
+  buildColumnVisibility,
+  formatDateColumn,
+  formatMoneyOrDash,
+  monthOfDate,
+  orDash,
+  yesNo,
+} from "@/lib/helpers";
+import { CUSTOMER_GROUP_LABELS } from "@/lib/labels";
+import { Paged, TableFilterControl } from "@/lib/table-query";
 
-type ColumnKey = keyof VisitScheduleRow | "contactPerson";
+type ColumnKey = VisitScheduleColumnKey;
 
-const ALL_COLUMNS: Array<{
-  key: ColumnKey;
-  label: string;
-  defaultVisible: boolean;
-}> = [
-  { key: "companyCode", label: "Company Code", defaultVisible: true },
-  { key: "companyName", label: "Company", defaultVisible: true },
-  {
-    key: "visitStreetAndNo",
-    label: "Visiting Address Street",
-    defaultVisible: true,
-  },
-  {
-    key: "visitPostalCode",
-    label: "Visiting Address Postal Code",
-    defaultVisible: true,
-  },
-  { key: "visitCity", label: "Visiting Address City", defaultVisible: true },
-  {
-    key: "visitCountry",
-    label: "Visiting Address Country",
-    defaultVisible: true,
-  },
-  { key: "visitTelephone", label: "Telephone", defaultVisible: true },
-  { key: "accountManager", label: "Account Manager", defaultVisible: true },
-  { key: "representative", label: "Representative", defaultVisible: true },
-  { key: "revenueLastYear", label: "Revenue Last Year", defaultVisible: true },
-  { key: "revenueThisYear", label: "Revenue This Year", defaultVisible: true },
-  { key: "customerGroup", label: "Customer Group", defaultVisible: true },
-  { key: "lastCallDate", label: "Last Call Date", defaultVisible: true },
-  { key: "callUpcoming", label: "Call Upcoming", defaultVisible: true },
-  { key: "lastVisitDate", label: "Last Visit Date", defaultVisible: true },
-  { key: "visitUpcoming", label: "Visit Upcoming", defaultVisible: true },
-  { key: "contactPerson", label: "Contact Person", defaultVisible: true },
-  { key: "contactEmail", label: "Contact E-mail", defaultVisible: true },
-  {
-    key: "contactMobile",
-    label: "Contact Mobile No.",
-    defaultVisible: true,
-  },
-  { key: "region", label: "Region", defaultVisible: true },
-  { key: "callDue", label: "Call", defaultVisible: true },
-  { key: "visitDue", label: "Visit", defaultVisible: true },
-];
+/**
+ * Which of the three screens this is.
+ *
+ * `list` is the reference's `To visit/call`, `plan` its `Visit schedule` with
+ * the month's ticks read back, and `edit` its `Change visit schedule` where
+ * those ticks are set. One grid, because the reference's three are one table:
+ * their shared columns are identical on 2 531 of 2 531 rows.
+ */
+type VisitScheduleVariant = "list" | "plan" | "edit";
 
-const initialVisibility = ALL_COLUMNS.reduce(
-  (acc, col) => ({ ...acc, [col.key]: col.defaultVisible }),
-  {} as Record<ColumnKey, boolean>,
-);
+type Props = {
+  page: Paged<VisitScheduleRow>;
+  filters: TableFilterControl[];
+  columnKeys: ColumnKey[];
+  variant: VisitScheduleVariant;
+  period: { year: number; month: number };
+  fileName: string;
+};
 
-type Props = { rows: VisitScheduleRow[] };
+const SORTABLE: Partial<Record<ColumnKey, string>> = {
+  companyName: "company",
+  companyCode: "companyCode",
+  region: "region",
+  customerGroup: "customerGroup",
+  accountManager: "accountManager",
+  representative: "representative",
+};
 
-export const VisitScheduleTable = ({ rows }: Props) => {
-  const [columnVisibility, setColumnVisibility] =
-    useState<Record<ColumnKey, boolean>>(initialVisibility);
+const RIGHT_ALIGNED = new Set<ColumnKey>([
+  "companyCode",
+  "targetYearRevenue",
+  "revenueLast12Months",
+  "revenueLastMonth",
+]);
+
+export const VisitScheduleTable = ({
+  page,
+  filters,
+  columnKeys,
+  variant,
+  period,
+  fileName,
+}: Props) => {
+  const columns = VISIT_SCHEDULE_COLUMNS.filter((column) =>
+    columnKeys.includes(column.key),
+  );
+  const allColumns = selectorColumns(columns);
+
+  const [columnVisibility, setColumnVisibility] = useState<
+    Record<ColumnKey, boolean>
+  >(buildColumnVisibility(allColumns));
 
   const toggleColumn = (key: string) =>
     setColumnVisibility((prev) => ({
@@ -79,143 +97,246 @@ export const VisitScheduleTable = ({ rows }: Props) => {
       [key]: !prev[key as ColumnKey],
     }));
 
-  const visibleColumns = ALL_COLUMNS.filter((col) => columnVisibility[col.key]);
+  const visibleColumns = allColumns.filter((col) => columnVisibility[col.key]);
+
+  // A contact that has come round is the whole reason to open this screen, so
+  // it is a word rather than a tick: an em dash column scans as empty and this
+  // one is not.
+  const dueCell = (due: boolean) =>
+    due ? <span className="font-medium text-primary">Due</span> : "—";
+
+  const planCell = (row: VisitScheduleRow, kind: "visit" | "call") => {
+    const planned = kind === "visit" ? row.planVisit : row.planCall;
+
+    if (variant !== "edit") {
+      return yesNo(planned);
+    }
+
+    return (
+      <VisitPlanToggle
+        companyUuid={row.companyUuid}
+        companyName={row.companyName}
+        year={period.year}
+        month={period.month}
+        kind={kind === "visit" ? "visit" : "telephone_contact"}
+        planned={planned}
+      />
+    );
+  };
 
   const renderCell = (row: VisitScheduleRow, key: ColumnKey) => {
     switch (key) {
       case "companyCode":
-        return <TableCell key={key}>{row.companyCode}</TableCell>;
+        return (
+          <TableCell key={key} className="text-right tabular-nums">
+            {row.companyCode}
+          </TableCell>
+        );
       case "companyName":
         return (
           <TableCell key={key} className="font-medium">
             <Link
               href={`/companies/${row.companyUuid}`}
-              className="underline-offset-4 hover:underline"
+              className="text-primary hover:underline"
             >
-              {row.companyName}
+              {orDash(row.companyName)}
             </Link>
           </TableCell>
         );
       case "visitStreetAndNo":
-        return <TableCell key={key}>{row.visitStreetAndNo ?? "—"}</TableCell>;
+        return <TableCell key={key}>{orDash(row.visitStreetAndNo)}</TableCell>;
       case "visitPostalCode":
-        return <TableCell key={key}>{row.visitPostalCode ?? "—"}</TableCell>;
-      case "visitCity":
-        return <TableCell key={key}>{row.visitCity ?? "—"}</TableCell>;
-      case "visitCountry":
-        return <TableCell key={key}>{row.visitCountry ?? "—"}</TableCell>;
-      case "visitTelephone":
-        return <TableCell key={key}>{row.visitTelephone ?? "—"}</TableCell>;
-      case "accountManager":
-        return <TableCell key={key}>{row.accountManager ?? "—"}</TableCell>;
-      case "representative":
-        return <TableCell key={key}>{row.representative ?? "—"}</TableCell>;
-      case "revenueLastYear":
         return (
-          <TableCell key={key} className="text-right">
-            {formatRevenue(row.revenueLastYear)}
+          <TableCell key={key} className="whitespace-nowrap">
+            {orDash(row.visitPostalCode)}
           </TableCell>
         );
-      case "revenueThisYear":
+      case "visitCity":
+        return <TableCell key={key}>{orDash(row.visitCity)}</TableCell>;
+      case "visitCountry":
+        return <TableCell key={key}>{orDash(row.visitCountry)}</TableCell>;
+      case "visitTelephone":
         return (
-          <TableCell key={key} className="text-right">
-            {formatRevenue(row.revenueThisYear)}
+          <TableCell key={key} className="whitespace-nowrap">
+            {orDash(row.visitTelephone)}
+          </TableCell>
+        );
+      case "accountManager":
+        return <TableCell key={key}>{orDash(row.accountManager)}</TableCell>;
+      case "representative":
+        return <TableCell key={key}>{orDash(row.representative)}</TableCell>;
+      case "targetYearRevenue":
+        return (
+          <TableCell key={key} className="text-right tabular-nums">
+            {formatMoneyOrDash(row.targetYearRevenue)}
+          </TableCell>
+        );
+      case "revenueLast12Months":
+        return (
+          <TableCell key={key} className="text-right tabular-nums">
+            {formatMoneyOrDash(row.revenueLast12Months)}
+          </TableCell>
+        );
+      case "revenueLastMonth":
+        return (
+          <TableCell key={key} className="text-right tabular-nums">
+            {formatMoneyOrDash(row.revenueLastMonth)}
           </TableCell>
         );
       case "customerGroup":
-        return <TableCell key={key}>{row.customerGroup ?? "—"}</TableCell>;
+        return (
+          <TableCell key={key}>
+            {orDash(
+              row.customerGroup
+                ? CUSTOMER_GROUP_LABELS[row.customerGroup]
+                : null,
+            )}
+          </TableCell>
+        );
       case "lastCallDate":
         return (
-          <TableCell key={key}>{formatDateValue(row.lastCallDate)}</TableCell>
+          <TableCell key={key} className="whitespace-nowrap">
+            {formatDateColumn(row.lastCallDate)}
+          </TableCell>
         );
-      case "callUpcoming":
+      case "callUpcomingMonth":
         return (
-          <TableCell key={key}>{formatDateValue(row.callUpcoming)}</TableCell>
+          <TableCell key={key} className="whitespace-nowrap">
+            {orDash(monthOfDate(row.callUpcoming))}
+          </TableCell>
         );
       case "lastVisitDate":
         return (
-          <TableCell key={key}>{formatDateValue(row.lastVisitDate)}</TableCell>
+          <TableCell key={key} className="whitespace-nowrap">
+            {formatDateColumn(row.lastVisitDate)}
+          </TableCell>
         );
-      case "visitUpcoming":
+      case "visitUpcomingMonth":
         return (
-          <TableCell key={key}>{formatDateValue(row.visitUpcoming)}</TableCell>
+          <TableCell key={key} className="whitespace-nowrap">
+            {orDash(monthOfDate(row.visitUpcoming))}
+          </TableCell>
         );
-      case "contactPerson": {
-        const parts = [row.contactFirstName, row.contactLastName].filter(
-          Boolean,
+      case "contactPerson":
+        return (
+          <TableCell key={key}>
+            {orDash(
+              [row.contactFirstName, row.contactLastName]
+                .filter(Boolean)
+                .join(" ") || null,
+            )}
+          </TableCell>
         );
-        return <TableCell key={key}>{parts.join(" ") || "—"}</TableCell>;
-      }
       case "contactEmail":
-        return <TableCell key={key}>{row.contactEmail ?? "—"}</TableCell>;
+        return <TableCell key={key}>{orDash(row.contactEmail)}</TableCell>;
       case "contactMobile":
-        return <TableCell key={key}>{row.contactMobile ?? "—"}</TableCell>;
+        return (
+          <TableCell key={key} className="whitespace-nowrap">
+            {orDash(row.contactMobile)}
+          </TableCell>
+        );
       case "region":
-        return <TableCell key={key}>{row.region ?? "—"}</TableCell>;
+        return <TableCell key={key}>{orDash(row.region)}</TableCell>;
+      case "planMonth":
+        return (
+          <TableCell key={key} className="whitespace-nowrap">
+            {orDash(row.planPeriodLabel)}
+          </TableCell>
+        );
+      case "planCall":
+        return (
+          <TableCell key={key} className="text-center">
+            {planCell(row, "call")}
+          </TableCell>
+        );
+      case "planVisit":
+        return (
+          <TableCell key={key} className="text-center">
+            {planCell(row, "visit")}
+          </TableCell>
+        );
       case "callDue":
         return (
           <TableCell key={key} className="text-center">
-            {row.callDue ? "✓" : ""}
+            {dueCell(row.callDue)}
           </TableCell>
         );
       case "visitDue":
         return (
           <TableCell key={key} className="text-center">
-            {row.visitDue ? "✓" : ""}
+            {dueCell(row.visitDue)}
           </TableCell>
         );
-      default:
-        return <TableCell key={key}>—</TableCell>;
     }
   };
 
   return (
     <div className="space-y-4">
-      <div className="flex items-start justify-end gap-2">
+      <TableToolbar searchPlaceholder="Search company…" filters={filters}>
+        {variant !== "list" && (
+          <VisitPlanMonthPicker year={period.year} month={period.month} />
+        )}
         <ColumnSelector
-          columns={ALL_COLUMNS.map((col) => ({
+          columns={allColumns.map((col) => ({
             key: col.key,
             label: col.label,
           }))}
           visibility={columnVisibility}
           onToggle={toggleColumn}
         />
-        <TableExportButton
-          tableId="change-visit-schedule-table"
-          fileName="change-visit-schedule"
-          sheetName="Change visit schedule"
+        <PagedTableExportButton
+          fileName={fileName}
+          columnKeys={visibleColumns.map((column) => column.key)}
+          action={exportVisitSchedule}
         />
-      </div>
+      </TableToolbar>
 
-      <div>
-        <Table id="change-visit-schedule-table">
-          <TableHeader>
-            <TableRow>
-              {visibleColumns.map((col) => (
-                <TableHead key={col.key}>{col.label}</TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.length === 0 ? (
+      {page.rows.length === 0 ? (
+        <div className="flex flex-col items-center gap-1 rounded-lg border border-dashed px-6 py-10 text-center">
+          <p className="font-medium">No customers or prospects</p>
+          <p className="max-w-md text-sm text-muted-foreground">
+            Companies appear here once they are marked as a customer or a
+            prospect.
+          </p>
+        </div>
+      ) : (
+        <>
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell
-                  colSpan={visibleColumns.length}
-                  className="h-24 text-center"
-                >
-                  No customers or prospects found.
-                </TableCell>
+                {visibleColumns.map((col) => {
+                  const sortKey = SORTABLE[col.key];
+                  if (sortKey) {
+                    return (
+                      <TableSortHeader key={col.key} sortKey={sortKey}>
+                        {col.label}
+                      </TableSortHeader>
+                    );
+                  }
+                  return (
+                    <TableHead
+                      key={col.key}
+                      className={
+                        RIGHT_ALIGNED.has(col.key) ? "text-right" : undefined
+                      }
+                    >
+                      {col.label}
+                    </TableHead>
+                  );
+                })}
               </TableRow>
-            ) : (
-              rows.map((row) => (
+            </TableHeader>
+            <TableBody>
+              {page.rows.map((row) => (
                 <TableRow key={row.companyUuid}>
                   {visibleColumns.map((col) => renderCell(row, col.key))}
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+              ))}
+            </TableBody>
+          </Table>
+          <TablePagination page={page} singular="company" plural="companies" />
+        </>
+      )}
     </div>
   );
 };

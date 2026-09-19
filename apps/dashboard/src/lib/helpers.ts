@@ -122,6 +122,7 @@ import {
   CONTRACT_TYPE_LABELS,
   CUSTOMER_GROUP_LABELS,
   INVOICE_PAYMENT_TERM_LABELS,
+  MONTH_LABELS,
   REVENUE_GROUP_LABELS,
   ORDER_DEBLOCK_TYPE_LABELS,
   ORDER_LINE_STATUS_LABELS,
@@ -9568,5 +9569,74 @@ export const priceCascade = (
         : roundToCents((lineDiscountTotalAmount / grossPrice) * 100),
     groupDiscountAmount,
     netPrice: roundToCents(afterLine - groupDiscountAmount),
+  };
+};
+
+// ---------------------------------------------------------------------------
+// The month the visit schedule plans in
+//
+// The reference plans contact by month, not by day: its screen picks a month,
+// and the `Call` and `Visit` boxes belong to that month rather than to any date
+// in it. These turn a month into something printable and read one back out of
+// a URL.
+// ---------------------------------------------------------------------------
+
+/** A month's name, or null when the number is not one of the twelve. */
+export const monthLabel = (month: number | null | undefined): string | null => {
+  if (month === null || month === undefined) {
+    return null;
+  }
+  return MONTH_LABELS[month - 1] ?? null;
+};
+
+/** `September 2026` — how the schedule names the month it is planning for. */
+export const monthAndYearLabel = (
+  year: number | null | undefined,
+  month: number | null | undefined,
+): string | null => {
+  const name = monthLabel(month);
+  if (name === null || year === null || year === undefined) {
+    return null;
+  }
+  return `${name} ${year}`;
+};
+
+/**
+ * The month a computed date falls in, which is all the reference's `upcoming
+ * month` columns ever showed. A date nobody could compute has no month.
+ */
+export const monthOfDate = (date: string | null | undefined): string | null => {
+  const value = (date ?? "").slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return null;
+  }
+  return monthAndYearLabel(
+    Number(value.slice(0, 4)),
+    Number(value.slice(5, 7)),
+  );
+};
+
+/**
+ * The month a schedule screen is showing, from the URL. Anything missing or
+ * out of range falls back to the month we are in, so a hand-typed link lands on
+ * this month rather than on an empty one.
+ */
+export const visitPlanPeriod = (
+  year: string | string[] | null | undefined,
+  month: string | string[] | null | undefined,
+): { year: number; month: number } => {
+  const now = new Date();
+  const first = (value: string | string[] | null | undefined) =>
+    Array.isArray(value) ? value[0] : value;
+  const parsedYear = Number(first(year));
+  const parsedMonth = Number(first(month));
+  const validYear =
+    Number.isInteger(parsedYear) && parsedYear >= 2000 && parsedYear <= 2100;
+  const validMonth =
+    Number.isInteger(parsedMonth) && parsedMonth >= 1 && parsedMonth <= 12;
+
+  return {
+    year: validYear ? parsedYear : now.getFullYear(),
+    month: validMonth ? parsedMonth : now.getMonth() + 1,
   };
 };
