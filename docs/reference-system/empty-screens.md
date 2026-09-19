@@ -53,14 +53,23 @@ window that returns 13.562 stock movements — and returned nothing:
 | `Control Revaluation of stock due to FSP-changes` | `Mutation date` 1-1-2024 → 10-9-2026, product code `zzzzzzzzzzzzzzz` | see [fsp.md](fsp.md)                                                                                                                                                       |
 | `Purchases and sales per revenue group`           | ⚠️ **Year/Month blank** — so this one is unproved                    | `Revenue group no.`, `Revenue group`, `Year`, `Month`, `Order type`, `Purchase (kg)`, `Purchase revenue`, `Weight`, `Revenue`, `Profit`, `Profit %`, `Avg. Sales Price/Kg` |
 
-## Still unproved either way
+## ✅ All five settled — 18-9-2026
 
-`Stock history` · `Production batches` · `Freight movement` ·
-`Freight flow (SFN)` · `Sawing layouts`
+Re-run `1-1-2024` → `18-9-2026`, `View` = `-empty-`, filter captured.
+**Two of the five had data all along** → [stock-history.md](stock-history.md).
 
-These returned nothing, but their filter rows were not captured, so it is not
-known whether they are empty or were asked about September 2026. **They are not
-evidence of anything yet.**
+| Screen | Verdict |
+|---|---|
+| `Stock history` | 🔴 **33 211 × 55** — monthly snapshots of every lot, 15 of them. `Stk-general ledger account` = **`3000 Stock`** on every row |
+| `Freight flow (SFN)` | 🔴 **390 × 16** — a monthly tonnage balance per revenue group. `Ending → next Starting` closes **338/338**; `Stock difference` proved **390/390** |
+| `Production batches` | ✅ **genuinely empty** — 4 columns, still in Dutch (`Code`, `Aangemaakt`, `Machine`, `Naar Locatie`) |
+| `Freight movement` | ✅ **genuinely empty** — 34 columns; it is a *stock-mutation* screen, not a transport one, and nearly duplicates `Stock mutations`, which has 13 562 rows |
+| `Sawing layouts` | ✅ **genuinely empty** — 43 columns incl. ten `Qty n`/`Length n` pairs. Third confirmation that sawing planning is switched off |
+
+**So the score on this page is two for three again.** The first correction on
+this page was three screens wrongly called empty; this round it is two more. The
+rule has now been paid for twice: **an empty grid is a claim about the filter
+until the filter has been read.**
 
 Two more joined them on the same day, and these two are _known_ to have been
 asked with a blank `Year`/`Month`, so they are certainly unproved:
@@ -87,6 +96,10 @@ export rather than an empty screen — which is the difference that matters:
   trips in a 438-row export
 - **`Resource`** — empty on all 13.610 work order lines in a 13.610-row export
 - **`Pickvolgorde`** — unused across the 1.940-row location master
+- **Sawing planning** — `Sawing layouts` empty over 1-1-2024 → 18-9-2026 with
+  the filter captured (18-9-2026), which is the third independent confirmation
+- **Budgets** — B17's five budget columns are `0` on all 109 rows
+  ([sales-statistics.md](sales-statistics.md) §2a)
 
 **A column that is blank on every row of a full export is evidence. An empty
 grid is not.** The first is the system telling you it does not use something;

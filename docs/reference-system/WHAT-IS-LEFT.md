@@ -12,6 +12,10 @@ happened, and it comes off the list.
 > Where this sits: [COVERAGE.md](COVERAGE.md) says how much is built.
 > **This file says what is still unknown.** When this list is empty, there is
 > nothing left to discover — only code to write.
+>
+> **To actually do the work, use [CAPTURE-RUNSHEET.md](CAPTURE-RUNSHEET.md)** —
+> the same items, everything still open, reordered into seven sittings with the
+> clicks spelled out. This file stays the record of *why* each one matters.
 
 ---
 
@@ -25,13 +29,13 @@ The `Overviews` tree has **116 screens** across nine groups (112 until 16-9-2026
 | Logistics | 32 | ✅ all captured |
 | Finance | 14 | ✅ all captured |
 | Suppliers | 5 | ✅ all captured |
-| **Sales** | 19 | 🟡 **17 captured, 2 left** (B16, B17) |
+| Sales | 19 | ✅ all captured |
 | **Customers** | 15 | ✅ all captured |
 | **Companies** | 6 | ✅ all captured |
 | **Batch registration** | 5 | ✅ all captured |
 | **Other** | 9 | ✅ all captured |
 
-**114 captured. 2 left** (17-9-2026): `B16` and `B17`, both Sales statistics screens. Every other group is complete.
+🎉 **116 captured. 0 left** (18-9-2026). **Every screen in the `Overviews` tree has now been seen.** What remains is not screens: records to open (Part G), flows to watch (Part H), retries (Part I), small items (Part J) and questions for a person (Part K).
 
 ### ⚠️ "But I sent you the Sales sheets"
 
@@ -48,8 +52,9 @@ was a Sales screen.** Checked against each file's own header row:
 From the Sales menu itself came **four screenshots**: `Contracts` and
 `Contractgroups` (both ✅ done — `Contracts` proved that a contract declares
 what it adjusts), plus `SFN statistics` and `Revenue w.r.t. Budget`, whose grids
-were empty because `Year`/`Month` was blank. That is why the count is 19 − 2 =
-**17**.
+were empty because `Year`/`Month` was blank. ✅ **Both re-run 18-9-2026 with
+`2025` / `1` and both have data** → [sales-statistics.md](sales-statistics.md),
+which closes the Sales group at 19.
 
 **Three of those files look like sales screens and are not.** `Revenue per
 product`, `CD-deliveries in progress` and `Credit information customers` carry
@@ -263,8 +268,8 @@ Standard recipe. Filters below are the ones to set; everything else stays.
 | ~~**B13**~~ | ~~Order lines still to be called~~ | ✅ 55 × 26 → [sales-options-and-calloff.md](sales-options-and-calloff.md) §6 |
 | ~~**B14**~~ | ~~Orders still to be called~~ | ✅ 691 × 49 → [sales-options-and-calloff.md](sales-options-and-calloff.md) §6 |
 | ~~**B15**~~ | ~~Order lines capacity overflow~~ | 🟡 **columns captured, no rows, 14-9-2026** → [capacity-overflow.md](capacity-overflow.md) — **crashes**: `Thickness` missing from `GetReportData_CapacityOverrides` (same bug class as C1). 8 override + 46 order-line columns photographed; our `OrderLineCapacityOverflows` already has the override's shape |
-| **B16** | SFN statistics Product-Market combinations | ⚠️ `Year` = `2025`, `Month` = `1` — it was captured blank and proves nothing |
-| **B17** | Revenue w.r.t. Budget | ⚠️ `Year` = `2025`, `Month` = `1` — same, and this one also needs its **second view** exported |
+| ~~**B16**~~ | ~~SFN statistics Product-Market combinations~~ | ✅ **826 × 7, 18-9-2026** → [sales-statistics.md](sales-statistics.md) — 🔴 **it was wrongly called dead; it has data.** A **CBS statistics return**: weight by commodity code by 2-digit postal district. `sfn_no` = `0` and `SBI code` = `Unknown SBI` on **all 826 rows**, so the two classifying columns are never filled |
+| ~~**B17**~~ | ~~Revenue w.r.t. Budget~~ | ✅ **109 × 15, 18-9-2026** → [sales-statistics.md](sales-statistics.md) — 🔴 **all five budget columns are `0` on all 109 rows: no budget has ever been set.** Gives the complete **17 revenue groups** (1xxx–2xxx material, 3xxx processing, 8xxx charges) and €9 042 028,23, matching its sibling. Second view no longer needed |
 
 Already done: `Contracts` and `Contractgroups` ✅.
 
@@ -377,7 +382,7 @@ screenshots only: open it, and photograph **every tab and every panel expanded**
 
 | # | Open this | What it settles |
 |---|---|---|
-| **G1** | 🔴 **One sales order, every tab and panel** | The single most valuable record left. We built the order model from one screenshot of order `100742`. Take any order with several lines, at least one option, and a delivery against it |
+| ~~**G1**~~ | ~~🔴 **One sales order, every tab and panel**~~ | ✅ **18-9-2026, order `100742`, all twelve panels** → [order-detail.md](order-detail.md) Part 2. 🔴 **The lower panels are scoped to the *selected line*, not the order.** `Workorders` is three panels and a warehouse WO line names its **order line** (`From` a bin, `To` `Laad`); a transport WO carries `Direction`, `Qty(loaded)` and a bill of lading that **groups lines onto a trip** (bears on G7). `Pricing` shows the whole build-up (base + qty + colour + length surcharges → gross; line + extra + group discounts → net) — 5 of those columns are missing from `OrderItems`. The invoice line carries `Charge`, a `Debit`/`Credit` type, `RdU`/`GdU` discount units and its own mail timestamp. Still open: the cascade is **numerically** unproved (all zeros), and no option has yet been seen on a real line |
 | **G2** | 🔴 **One sales invoice, every panel** | Nothing posts to the ledger yet. The invoice is where the posting is decided |
 | **G3** | **One delivery**, every panel | The document between an order line and a stock movement |
 | **G4** | One quote that became an order | Does the order keep the quote's number? Its prices? Its discounts? |
@@ -429,17 +434,23 @@ Each of these returned nothing, but the filter that produced the nothing was not
 captured — so it is unknown whether the screen is genuinely unused or was simply
 asked about the wrong month.
 
+> ✅ **Six of seven settled 18-9-2026.** **Two of them had data** — `Stock
+> history` (33 211 rows) and `Freight flow (SFN)` (390) — and three are
+> confirmed empty with the filter captured. **Only I6 is left**, and it is in
+> `Overviews → Finance`, not Sales. The rule has now been paid for twice on this
+> list: an empty grid is a claim about the filter until the filter is read.
+
 **The rule:** a column blank on every row of a **full** export is evidence. An
 empty grid is not.
 
 | # | Screen | Run it again with |
 |---|---|---|
-| **I1** | Stock history | date from `1-1-2024`, 📸 **the filter block** |
-| **I2** | Production batches | date from `1-1-2024`, 📸 the filter block |
-| **I3** | Freight movement | date from `1-1-2024`, 📸 the filter block |
-| **I4** | Freight flow (SFN) | date from `1-1-2024`, 📸 the filter block |
-| **I5** | Sawing layouts | date from `1-1-2024`, 📸 the filter block |
-| **I6** | Purchases and sales per revenue group | ⚠️ `Year` = `2025`, `Month` = `1`. Its sibling `Revenue per revenue group` returns **€9 million** from the same window once the filter is right, so expect data |
+| ~~**I1**~~ | ~~Stock history~~ | 🔴 **33 211 × 55, 18-9-2026** → [stock-history.md](stock-history.md) — **it had data all along.** Fifteen monthly snapshots of every lot; ~2 400 t / €5,03 M / 2 230 lots per snapshot. `Stk-general ledger account` = **`3000 Stock`** on every row, which answers S8's missing column. ⚠️ snapshots run to **2026-06** on a database said to be frozen at mid-May 2025 — new doubt on K10 |
+| ~~**I2**~~ | ~~Production batches~~ | ✅ **genuinely empty, 18-9-2026**, filter photographed (`1-1-2024` → `18-9-2026`, `-empty-`) → [empty-screens.md](empty-screens.md) — 4 columns, still Dutch: `Code`, `Aangemaakt`, `Machine`, `Naar Locatie`. **Leaves scope** |
+| ~~**I3**~~ | ~~Freight movement~~ | ✅ **genuinely empty, 34 columns captured, 18-9-2026** → [stock-history.md](stock-history.md) §3 — ⚠️ it is a **stock-mutation** screen, not a transport one, and nearly duplicates `Stock mutations` (13 562 rows). **Leaves scope** |
+| ~~**I4**~~ | ~~Freight flow (SFN)~~ | 🔴 **390 × 16, 18-9-2026** → [stock-history.md](stock-history.md) §2 — **it had data too.** A monthly **tonnage balance** per revenue group, 15 months × 26 groups exactly. `Ending → next Starting` closes **338/338**; `Stock difference = (start + receipts − supplies) − ending` proved **390/390**. 🔴 the revenue-group master is **26, not 17**. `Supplied SFN` = `0` on all 390 rows |
+| ~~**I5**~~ | ~~Sawing layouts~~ | ✅ **genuinely empty, 43 columns captured, 18-9-2026** → [stock-history.md](stock-history.md) §3 — ten `Qty n`/`Length n` pairs hold the cutting pattern. **Third confirmation that sawing planning is switched off** (K3). **Leaves scope** |
+| **I6** | Purchases and sales per revenue group — **`Overviews → Finance`**, 7th item | ⚠️ `Year` = `2025`, `Month` = `1`. **18-9-2026: the filter is a *from*, not an equals** (proved on B16/B17), so 2025/1 returns January onwards. B17 returned €9 042 028,23 from that window, so expect data |
 | **I7** | Deviations in count lists | ⚠️ it has **two** date filters that `AND` together. Widen one at a time |
 
 If a screen still returns nothing **with a photographed filter block over
@@ -471,16 +482,17 @@ somebody clicking.
 
 | # | Question | Why it matters |
 |---|---|---|
-| **K1** | 🔴 **How many days overdue is "too long"?** | The one assumption sitting in shipped code. **14-9-2026: every menu and the Debtor panel have been opened and no screen holds the setting** — ask INAD (K11) or Swedinox's administrator. And see K10: if the AFAS sync is off, the overdue days themselves may be stale. **15-9-2026 lead:** the schema has no column for it, so it is data — most likely `TASK_PARAMETER`. Whoever has database access runs `SELECT Task_StoredProc, Parameter, Value FROM TASK_PARAMETER` ([database-schema.md](database-schema.md) §1) |
+| **K1** | 🔴 **How many days overdue is "too long"?** | The one assumption sitting in shipped code. **18-9-2026: the `Vestigingsgegevens` settings tree cannot be found in the application either** — the security profiles name its 72 rights, so it exists and this login cannot reach it. 🔴 **No screen route to K1 remains. It is now the SQL query or a person.** **14-9-2026: every menu and the Debtor panel have been opened and no screen holds the setting** — ask INAD (K11) or Swedinox's administrator. And see K10: if the AFAS sync is off, the overdue days themselves may be stale. **15-9-2026 lead:** the schema has no column for it, so it is data — most likely `TASK_PARAMETER`. Whoever has database access runs `SELECT Task_StoredProc, Parameter, Value FROM TASK_PARAMETER` ([database-schema.md](database-schema.md) §1) |
 | **K2** | **Should customer-owned stock carry value?** | €40 833 does today in the reference. That is an accounting policy call, not a code fact |
-| **K3** | **Are these six features wanted at all?** | The reference ships them and does not use them: transport costing, `Resource`, `Pickvolgorde`, `Zelfbeoordeling`, FSP revaluation, sawing planning. **Six features we can decline to build** |
+| **K3** | **Are these eight features wanted at all?** | The reference ships them and does not use them: transport costing, `Resource`, `Pickvolgorde`, `Zelfbeoordeling`, FSP revaluation, sawing planning, **the Balanced Scorecard** (F3 — 9 KPIs, no target ever set) and **budgets** (B17, 18-9-2026 — all five budget columns `0` on all 109 rows). **Eight features we can decline to build** |
 | **K4** | What does `FSP` stand for, and what does `LIP` stand for? | FSP's *behaviour* is established — the price stock is carried at, versioned, revalued through two GL accounts. Only the letters are unknown |
 | **K5** | What is `Gip`? | The product has `Gip → Artikelgroep`, stock has `Gipgroup`. Believed to be average purchase price. Not confirmed |
 | **K6** | Does the business raise **purchase quotes** at all? | One exists in three years and it is a test entry |
 | **K7** | Are `Purchase request` and `Purchase return order` used? | Two document types in the `Nieuw` menu that no screen has shown |
 | **K8** | Are any companies `Processor` or `Transporter`? ✅ **yes (D1, 16-9-2026)** — 2 processors and 8 transporters among the inactive companies alone | Would change how work orders are assigned |
 | **K9** | What does ticking `Consignatie` change commercially? | J1 answers the accounting half; this is the business half |
-| **K10** | Is the batch scheduler meant to be switched off? | Needs an administrator. 🔴 **Now blocking (14-9-2026):** three of the batch jobs sync open posts, companies and journal entries with **AFAS**. If the scheduler is off, the overdue-posts rule runs on frozen data. **15-9-2026 lead:** `SCHEDULED_TASK.LAST_EXECUTED` on the three AFAS jobs, and `SCHEDULED_TASK_LOG.FAILED`, answer this from the database ([database-schema.md](database-schema.md) §2). **15-9-2026, error log:** jobs run as user `BATCH`, which logs nothing after **13-5-2025** — the date the test copy was taken. The scheduler being off on `HEGO TEST` is expected; ask about the **live** system instead ([error-log.md](error-log.md) §2) |
+| **K10** | Is the batch scheduler meant to be switched off? ⚠️ **New doubt 18-9-2026:** `Stock history` holds a monthly snapshot for **every month from 2025-05 to 2026-06** on a database said to be frozen at mid-May 2025, so something has kept running. The `Batchtaken` last-run column (S7) settles it | Needs an administrator. 🔴 **Now blocking (14-9-2026):** three of the batch jobs sync open posts, companies and journal entries with **AFAS**. If the scheduler is off, the overdue-posts rule runs on frozen data. **15-9-2026 lead:** `SCHEDULED_TASK.LAST_EXECUTED` on the three AFAS jobs, and `SCHEDULED_TASK_LOG.FAILED`, answer this from the database ([database-schema.md](database-schema.md) §2). **15-9-2026, error log:** jobs run as user `BATCH`, which logs nothing after **13-5-2025** — the date the test copy was taken. The scheduler being off on `HEGO TEST` is expected; ask about the **live** system instead ([error-log.md](error-log.md) §2) |
+| **K13** | **Does Swedinox file CBS statistics returns out of easy2trade, or from somewhere else?** | New 18-9-2026. B16 computes a real CBS return — weight by commodity code by postal district, 826 rows — but `sfn_no` is `0` and `SBI code` is `Unknown SBI` on **every** row, so the two classifying fields are never filled. Building it needs a CN commodity code per product and an SBI code per company, neither of which we have. **Ask before building** |
 | **K12** | **Does the rebuild replace AFAS, or sync with it?** | AFAS holds the ledger, receivables and payments (A3). This decides how journal entries, payments and credit control are built in `apps/dashboard`. **15-9-2026, error log:** during live use (Jan–May 2025) the batch sync went to **Multivers**; the AFAS jobs and a cloud "tenant id" set-up appear only afterwards. Ask which ledger the **live** system posts to today ([error-log.md](error-log.md) §2) |
 | **K11** | Is **`INAD`** a real person, or a shared or system account? | **Half answered:** INAD is the software vendor — `INAD Industrie Software B.V.` is a company in the C4 address file and the test company's contact is `@inad.nl`. What is left: do their support staff lift blocks on request, or does a job run under that login? It lifted **63 of 571** order blocks in the C7 `Unblocked orders` export (62 financial, 1 commercial), spread over 2025–2026. Every other unblock carries a person's name. If it is a system account, some blocks are lifted **automatically**, and that rule exists nowhere in our code. If it is a shared login, the audit trail cannot say who did it. **15-9-2026 lead:** `USERS.ISBATCH` marks a batch account — one look at the `INAD` user record settles it ([database-schema.md](database-schema.md) §3). ✅ **Answered 15-9-2026 by the error log:** jobs run as a separate `BATCH` user; `INAD`'s entries are interactive (deleting unload lines, overriding warnings, printing, changing dates) plus one migration script on 25-9-2024. **INAD is the vendor's support login used by people — the 63 unblocks were manual.** Only "on whose request" is left ([error-log.md](error-log.md) §3) |
 

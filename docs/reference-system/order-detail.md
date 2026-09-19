@@ -116,3 +116,291 @@ every `IO4xxxxx`.
 The rule recorded elsewhere in these docs — *`1xxxxx` sales, `4xxxxx` purchase* —
 holds for everything created recently and **is not a law**. Read the prefix, not
 the range.
+
+---
+
+# Part 2 — Every panel, opened · 18-9-2026 (G1)
+
+The same order `100742`, this time with **every panel expanded**. Part 1 above
+was the header and the lines; this is the twelve panels underneath, which had
+never been seen. Item **G1** on the capture list, and it was the highest-value
+item left on it.
+
+## 🔴 10. The lower panels belong to the *selected line*, not the order
+
+This is the structural finding, and most of what follows depends on it.
+
+The order has **9 lines** and `Deliveries` says **`1 delivery`**. That is not a
+contradiction: line 10 is the highlighted row, and the panel is showing line
+10's delivery. `Revenue+Profit` agrees — it reads **€ 4.402,94**, which is line
+10's `Amount` exactly, not the order's € 92.874,60.
+
+| Panel | Scope |
+|---|---|
+| `Workorders` (all three) | the **order** |
+| `Order lines` · `Options` | the order |
+| `Deliveries` · `Revenue+Profit` · `Receipts` · `Pricing` · `Stock` · `Stock other affiliates` · `Previous orders` · `Previous quotes` | the **selected line** |
+| `Invoice lines` · `Finances` | the order |
+
+**Our `/orders/[uuid]` has eleven sections and every one of them is
+order-scoped.** There is no notion of selecting a line and having the panels
+below follow it. That is a UI shape rather than a schema change, but it is the
+shape the reference works in — a seller picks a line and then asks "what stock is
+there, what did this customer pay last time, what has shipped".
+
+## 11. 🔴 `Workorders` is three panels, and it ties to the order line
+
+The one thing the order model never had: **how an order reaches the warehouse.**
+
+### Warehouse workorders
+
+`Item` · `Workorder` · `Line` · `Workorder date` · `Type` · `Status` ·
+`Product` · `Length` · `Width` · `Dikte` · `Qty(p)` · `Qty(a)` · `U(p)` ·
+`Kg(p)` · `Kg(a)` · `From` · `To` · `Deviation reason` · `Batch information` ·
+`Date finished` · `Charge` · `Purchase order` · `Receipt date` · `Resource(a)` ·
+`Voorraadcategorie` · `Kwaliteitscode` · `Colli`
+
+Five rows on this order:
+
+| Item | Workorder | Line | Date | Type | Status | From | To | Charge | Purchase order | Receipt date |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 10 | 302106 | 1 | 11-2-2025 | Picking | Approved | 4B1 | Laad | 4A2829F | IO100076 | 27-9-2024 |
+| 50 | 304211 | 1 | 25-3-2025 | Picking | Approved | 3CC | Laad | 4A2829D | IO100076 | 27-9-2024 |
+| 60 | 304211 | 2 | 25-3-2025 | Picking | Approved | 3CC | Laad | 4A2829H | IO100076 | 27-9-2024 |
+| 70 | 304211 | 3 | 25-3-2025 | Picking | Approved | 4B1 | Laad | 130125 | IO400047 | 11-2-2025 |
+| 80 | 304211 | 4 | 25-3-2025 | Picking | Approved | 4D1 | Laad | 1124860 | IO400251 | 13-2-2025 |
+
+Three things fall out:
+
+1. **`Item` is the order-line code.** 10, 50, 60, 70, 80 are order lines 10, 50,
+   60, 70 and 80. So a warehouse work order line points at an order line, and one
+   work order (`304211`) serves four of them. **Our `WarehouseWorkOrders` has no
+   link to an order line at all.**
+2. **`From` is a pick location, `To` is always `Laad`.** Picking moves metal from
+   its bin to the loading area — which is why `Laad` is a location *type* and why
+   its lots are never blocked. The movement is proved here on five rows.
+3. **`Charge` / `Purchase order` / `Receipt date` travel with the work order
+   line**, so the heat is fixed at picking, not at delivery.
+
+Only 5 of the 9 lines have a work order. The four that do not (20, 30, 40 and
+one more) are `Released` with delivery dates in June — **nothing is picked until
+it is due**, which is the first evidence of when picking is triggered.
+
+### Production workorders
+
+Present and **empty** on this order — it is a plain stock order, nothing cut.
+
+### Transport workorders
+
+`Product` · `Description` · `Kwaliteitscode` · `Voorraadcategorie` · `Length` ·
+`Width` · `Dikte` · `Delivery date` · `Trip` · `Status` · `Vehicle` ·
+`Direction` · `Bill of lading` · `Qty(p)` · `Qty(a)` · **`Qty(loaded)`** ·
+`U(p)` · `Kg(p)` · `Kg(a)` · `U(loaded)` · `Charge`
+
+| Item | Delivery date | Trip | Status | Vehicle | Direction | Bill of lading | Qty(loaded) |
+|---|---|---|---|---|---|---|---|
+| 10 | 12-02-2025 | 12-2-2025 | Completed | ADO NL | Deliver | 300358 | 64 |
+| 50 | 01-12-2025 | 1-12-2025 | **New** | — | Deliver | — | **0** |
+| 60 | 18-02-2025 | 26-3-2025 | Completed | ADO NL | Deliver | 300804 | 61 |
+| 70 | 18-02-2025 | 26-3-2025 | Completed | ADO NL | Deliver | 300804 | 57 |
+| 80 | 18-02-2025 | 26-3-2025 | Completed | ADO NL | Deliver | 300804 | 42 |
+
+- **`Trip` renders as a date here, not a number**, while `Bill of lading` is the
+  number. Three lines share bill of lading `300804` on one trip. That bears
+  directly on **G7**, where bill of lading `300813` and trip `600249` are an
+  unexplained pair: **the bill of lading groups the lines, the trip is the
+  journey.**
+- **`Direction` = `Deliver`** — a transport work order has a direction, so
+  collection must be the other value.
+- **`Qty(loaded)` is a third quantity**, distinct from planned and actual, and it
+  is `0` on the one `New` row. Loading is its own event, recorded separately.
+- A line can ship long after its delivery date (18-02 planned, 26-3 shipped).
+  **`Delivery date` is the promise; `Trip` is what happened.**
+
+## 12. 🔴 `Pricing` — the price build-up, finally on screen
+
+The discount cascade was previously *"proved on one quote line"*. Here is the
+form it is built in:
+
+```
+Base price              € 0,00      Line discount:       0 %   € 0,00
+Quantity surcharge      € 0,00      Extra discount:      0 %   € 0,00
+Color surcharge         € 0,00      ─────────────────────────────────
+Lengtetoeslag           € 0,00      Line discount tot.:  0 %   € 0,00
+──────────────────────              Group discount:      0 %   € 0,00
+Gross Price             € 0,00      Net price:                 € 0,00
+```
+
+**The left column builds up, the right column discounts down.** Four additive
+components make the gross price; three discounts reduce it to net, and
+`Line discount tot.` is the subtotal of line + extra *before* the group discount
+applies — which is the cascade, drawn.
+
+Every figure reads `€ 0,00` because this line's price was **typed**
+(`€ 3.640,00 / TN`) rather than built up. So the panel shows the machinery and
+this order does not use it. ⚠️ That also means the cascade is **still** unproved
+numerically — the form is now known, the arithmetic is not.
+
+Two checkboxes govern it: **`Transfer price setting to order line`** (unticked)
+and **`Transfer pricing determination to o…`** (ticked). Beside them sits a table
+of the line's **options**, each with its own `Base price`, `Surcharge`,
+`Gross price`, `Qty Discount`, `Extra Discount`, `Reference f…`, `Net price` and
+**`Contract`** — so an option is priced through the same cascade, and a
+**contract can be named per option line**, which is exactly what
+[contracts.md](contracts.md) said a contract declares.
+
+**Against `apps/dashboard`:** `OrderItems` has `grossPrice`, `lineDiscount`,
+`groupDiscount`, `netPrice`. It is missing **`basePrice`, `quantitySurcharge`,
+`colorSurcharge`, `lengthSurcharge` and `extraDiscount`** — the four components
+that make the gross price, and one of the three discounts. We store the answer
+and not the sum, so we cannot reproduce or re-price a line.
+
+## 13. `Stock` — what the seller sees while quoting
+
+Tabs `Stock` / `Purchase`, and buttons `Article` · `Group` · `Alternative`, so
+one panel answers "this article", "its group" and "something else that would do".
+
+`Code` · `Article` · `Dimensions` · `Length` · `Width` · `Location` ·
+`Location type` · `Blocked` · **`Technical`** · `Kg Technical` ·
+**`Reserved`** · `Kg Reserved` · **`Available`** · `Kg Available` · `Quality` ·
+`Charge` · `Purchase order` · `Receipt date` · `Supplier` · `Internal charge` ·
+`Opties` · `Stk cat.` · `Remark` · `Factory number` · **`Internal batch`** ·
+**`Batch`**
+
+- **Three quantities, each in pieces and kilos: technical, reserved, available.**
+  The `Laad` row reads 64 ST technical / 64 reserved / **0 available**, so
+  `Available = Technical − Reserved`, confirmed on the one row where it bites.
+- **Four identifiers on one lot** — `Charge` (1125372), `Internal charge`
+  (25AAEY), `Batch` (P01558765) and `Internal batch` (385385) — plus
+  `Factory number` as a fifth. We hold `charge` and `internalBatch`; the other
+  pair is unmodelled.
+- ⚠️ The `Laad` row's kilos read **1.190** where the order line and the warehouse
+  work order both read **1209,6** for the same 64 pieces.
+  1209,6 × (25104,9 / 25515) = 1190,1 — the ratio of this order's theoretical to
+  trade weight. So the **`Stock` panel most likely shows theoretical weight while
+  the order and the work order show trade weight.** One rounded figure on one row
+  is not a proof; worth confirming on a second order before relying on it.
+
+`Stock other affiliates` sits directly below — **a multicompany panel**, matching
+`Applicatie Instellingen → Multicompany` in the rights tree. Nothing in our app
+knows another branch exists.
+
+## 14. `Previous orders` — the panel that sells
+
+`Order / Line` · `Creation date` · `Status` · `Qty` · `U` · `Dimensions` ·
+`Weight` · `Gross price` · `Line discount` · `Group discount` · `Net price` ·
+`Amount` · **`Days in system`**
+
+| Order / Line | Created | Status | Qty | Weight | Net price | Days in system |
+|---|---|---|---|---|---|---|
+| 100694/10 | 6-2-2025 | **Expired** | 61 ST | 1152,9 | € 3.640,00 | 589 |
+| 100694/20 | 6-2-2025 | **Expired** | 64 ST | 1209,6 | € 3.640,00 | 589 |
+
+**This is "what did we charge this customer for this product last time".** Same
+price, € 3.640,00, four days before this order — which is very likely *why* the
+seller typed the price instead of building it up. `Previous quotes` is the same
+panel for quotes.
+
+`Expired` is an order status we do not have in `orderStatuses`. `Days in system`
+is an age in days on a **line**, computed rather than stored.
+
+## 15. `Invoice lines` — traceability reaches the invoice
+
+`Line` · `Invoice` · **`Type`** · `Delivery date` · `Qty` · `U` · `Description` ·
+`Dimensions` · **`PriceQty`** · `Per` · `Gross price` · `Line discount` ·
+**`RdU`** · `Group discount` · **`GdU`** · `Amount` · `Printed` · `Print date` ·
+`Mailed` · `E-mail date` · `E-mail address` · `Charge` · `Purchase order` ·
+`Receipt date`
+
+| Line | Invoice | Type | PriceQty | Per | Amount | Mailed | Charge |
+|---|---|---|---|---|---|---|---|
+| 10 | **500509** | Debit | 1,2096 | TN | € 4.402,94 | 12-02-2025 09:51 | 4A2829F |
+| 60 | **501106** | Debit | 1,1529 | TN | € 4.196,56 | 27-03-2025 09:27 | 4A2829H |
+| 70 | 501106 | Debit | 1,0773 | TN | € 3.921,37 | 27-03-2025 09:27 | 130125 |
+| 80 | 501106 | Debit | 1,0584 | TN | € 3.852,58 | 27-03-2025 09:27 | 1124860 |
+
+- **One order, two invoices.** Lines are invoiced as they ship, not in one batch
+  at the end.
+- **`PriceQty` is the tonnage**, and `Amount = PriceQty × Gross price` on all
+  four rows to the cent (1,2096 × 3640 = 4402,94). Tonne pricing again — this
+  time with the multiplier stored as its own column rather than derived from kg.
+- **`Type: Debit`** — an invoice line is debit or credit, which is how a credit
+  note is a *line type* rather than a separate document (**H12**).
+- **`RdU` and `GdU`** sit immediately after `Line discount` and `Group discount`:
+  **a unit per discount**, so a discount can be a percentage or an amount and the
+  column says which. We store both as plain decimals with no unit, which silently
+  assumes percentages.
+- **`Charge` / `Purchase order` / `Receipt date` are on the invoice line.** The
+  heat traces from the mill, through picking, through the delivery, onto the
+  invoice. That closes the certificate chain from this end;
+  [batch-registration.md](batch-registration.md) §3 proved the same link from the
+  other on 1 662 of 1 662 rows.
+- `Printed` unticked and `Mailed` ticked on all four, with a timestamp and the
+  address (`administratie@hd…`). **Sending is recorded per line**, not per
+  invoice.
+
+## 16. `Finances` — two blockages and six switches
+
+> Payment terms: **Within 30 days from date of invoice**
+
+| Control | State |
+|---|---|
+| `Show net price` | ☐ |
+| `Scrap surcharge separately` | ☐ |
+| `Calculate VAT if applicable` | ☑ (greyed) |
+| **`Financial blockage`** | ☐ |
+| **`Invoice blockage`** | ☐ |
+| `Only total amount on invoice` | ☐ |
+| `Include option prices in material prices` | ☑ |
+| `Payment terms` | dropdown |
+| `Billing address` | Emrikweg 14, 2031 BT, HAARLEM |
+| **`Blocking reason`** | `-empty-` dropdown |
+
+✅ **Our schema already has this.** `financialBlockage`, `invoiceBlockage`,
+`blockingReason` and `paymentTerms` are all on `Orders`, and the two blockages
+being separate flags sharing one reason matches what C7 found. Confirmation
+rather than new work.
+
+`Include option prices in material prices` is worth noting: it decides whether
+the summary's `Options` row folds into `Materials`, which is why this order shows
+€ 0,00 options against € 92.874,60 of materials.
+
+`Receipts` exists as a panel on a **sales** order and reads `0 receipts` — so a
+sales order can receive goods back, which is the return path (**H12**).
+
+## 17. What this changes in `apps/dashboard`
+
+| Finding | State |
+|---|---|
+| Order header, order type, delivery, blockages, weights | ✅ already modelled in Part 1 |
+| `Financial` / `Invoice blockage` + `Blocking reason` | ✅ confirmed correct |
+| Tonne pricing, `profitTooLow`, the four profit bases | ✅ confirmed |
+| **Warehouse work order line → order line** | 🔴 missing link |
+| **`From` / `To` on a picking work order** | 🔴 missing |
+| **Transport WO: `Direction`, `Qty(loaded)`, bill-of-lading grouping** | 🔴 missing |
+| **`basePrice`, `quantitySurcharge`, `colorSurcharge`, `lengthSurcharge`, `extraDiscount`** | 🔴 missing from `OrderItems` |
+| **`RdU` / `GdU`** — a unit per discount | 🔴 missing |
+| **Invoice line `Type` (Debit/Credit)** | 🔴 missing |
+| **`Charge` on the invoice line** | 🔴 missing — our chain stops at the delivery |
+| **Per-line `Printed` / `Mailed` + timestamp + address** | 🔴 missing |
+| **`Previous orders` / `Previous quotes`** | 🔴 missing entirely |
+| **Line-scoped panels** | 🔴 our order page is order-scoped throughout |
+| `Expired` order status | 🔴 not in `orderStatuses` |
+| `Stock other affiliates` — multicompany | ⚠️ exists; out of scope for now |
+
+**None of this is a rewrite.** The header and the money were right. What was
+missing is the **downstream** — how an order reaches the warehouse, the lorry and
+the invoice, and the fact that a seller works one line at a time.
+
+## 18. What G1 did *not* settle
+
+Worth writing down so it is not assumed later:
+
+- **The discount cascade is still unproved numerically.** Every box on the
+  `Pricing` panel is zero.
+- **`Options` was collapsed** and this order has none, so an option has still
+  never been seen on a real order line.
+- **The theoretical-vs-trade weight reading in §13 is one rounded row**, not a
+  proof.
+- **`Production workorders` is empty here**, so the order → cut → order chain is
+  still unseen. That is **G8** and **H10**.
