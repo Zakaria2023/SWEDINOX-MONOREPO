@@ -44,12 +44,18 @@ export type AddressColumnKey =
   | "billingAttentionAdditional"
   | "sequenceNumber"
   | "category"
+  | "isBillingAddress"
+  | "isVisitingAddress"
+  | "isCorrespondenceAddress"
+  | "isDeliveryAddress"
   | "addressComplete"
   | "needCrane"
   | "canopyRequired"
   | "bundleSeparately"
   | "specialTransport"
   | "availableAt"
+  | "forkliftUnloading"
+  | "craneUnloading"
   | "unloadingStartTime"
   | "unloadingEndTime"
   | "maxLength"
@@ -182,8 +188,13 @@ export const ADDRESS_COLUMNS: Array<
     value: (row) => numberCell(row.CompanyAddresses.sequenceNumber),
   },
   {
+    // The reference prints this string too, and gets it wrong: on 2 913 of its
+    // 4 739 rows a delivery address reads `Bezoek` a second time instead of
+    // `Levering`. Its own advice is to read the flags and never parse the text,
+    // so the four columns below are the truth and this one is rendered from
+    // them rather than stored.
     key: "category",
-    label: "Category",
+    label: "Categories",
     defaultVisible: true,
     value: (row) =>
       textCell(
@@ -191,6 +202,33 @@ export const ADDRESS_COLUMNS: Array<
           .map((category) => ADDRESS_CATEGORY_LABELS[category])
           .join(", "),
       ),
+  },
+  {
+    key: "isBillingAddress",
+    label: "Is Billing Address",
+    defaultVisible: true,
+    value: (row) =>
+      yesNoCell(row.CompanyAddresses.category.includes("invoice")),
+  },
+  {
+    key: "isVisitingAddress",
+    label: "Is Visiting Address",
+    defaultVisible: true,
+    value: (row) => yesNoCell(row.CompanyAddresses.category.includes("visit")),
+  },
+  {
+    key: "isCorrespondenceAddress",
+    label: "Is Correspondence address",
+    defaultVisible: true,
+    value: (row) =>
+      yesNoCell(row.CompanyAddresses.category.includes("correspondence")),
+  },
+  {
+    key: "isDeliveryAddress",
+    label: "Is Delivery Address",
+    defaultVisible: true,
+    value: (row) =>
+      yesNoCell(row.CompanyAddresses.category.includes("delivery")),
   },
   {
     key: "addressComplete",
@@ -230,6 +268,23 @@ export const ADDRESS_COLUMNS: Array<
       const availableAt = row.CompanyAddresses.availableAt;
       return availableAt ? AVAILABLE_AT_LABELS[availableAt] : null;
     },
+  },
+  {
+    // The reference carries these as two separate ticks. They are never both
+    // on one row there, which is why one column holds them here — these two
+    // are that one column, read the way its screen reads it.
+    key: "forkliftUnloading",
+    label: "Forklift Unloading",
+    defaultVisible: false,
+    value: (row) =>
+      yesNoCell(row.CompanyAddresses.availableAt === "forklift_unloading"),
+  },
+  {
+    key: "craneUnloading",
+    label: "Crane Unloading",
+    defaultVisible: false,
+    value: (row) =>
+      yesNoCell(row.CompanyAddresses.availableAt === "crane_unloading"),
   },
   {
     key: "unloadingStartTime",

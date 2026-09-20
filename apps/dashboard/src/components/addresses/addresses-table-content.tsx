@@ -196,6 +196,33 @@ export const AddressesTable = ({
             </div>
           </TableCell>
         );
+      // The four roles an address may hold, each its own flag. The reference
+      // shows them as four columns and warns not to read its category text
+      // instead, which mislabels delivery on 2 913 of its 4 739 rows.
+      case "isBillingAddress":
+        return (
+          <TableCell key={key}>
+            {boolCell(address.category.includes("invoice"))}
+          </TableCell>
+        );
+      case "isVisitingAddress":
+        return (
+          <TableCell key={key}>
+            {boolCell(address.category.includes("visit"))}
+          </TableCell>
+        );
+      case "isCorrespondenceAddress":
+        return (
+          <TableCell key={key}>
+            {boolCell(address.category.includes("correspondence"))}
+          </TableCell>
+        );
+      case "isDeliveryAddress":
+        return (
+          <TableCell key={key}>
+            {boolCell(address.category.includes("delivery"))}
+          </TableCell>
+        );
       case "addressComplete":
         return (
           <TableCell key={key}>
@@ -232,6 +259,18 @@ export const AddressesTable = ({
             {address.availableAt
               ? AVAILABLE_AT_LABELS[address.availableAt]
               : fallbackValue}
+          </TableCell>
+        );
+      case "forkliftUnloading":
+        return (
+          <TableCell key={key}>
+            {boolCell(address.availableAt === "forklift_unloading")}
+          </TableCell>
+        );
+      case "craneUnloading":
+        return (
+          <TableCell key={key}>
+            {boolCell(address.availableAt === "crane_unloading")}
           </TableCell>
         );
       case "unloadingStartTime":

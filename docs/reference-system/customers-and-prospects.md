@@ -491,6 +491,23 @@ The rest is history: English aliases (`Bookkeeping` 873, `Sales` 481,
 - Ten company names own more than one code — `Dubbel` ×4, `Zie Eribel1` ×2,
   and real duplicates such as `Aalco Metals Limited` `10495`/`10496`.
 
+### Against `apps/dashboard` — checked 20-9-2026
+
+`/contact-persons-customers-and-prospects` carried 43 of the reference's 48
+columns. Of the five it did not:
+
+- **`Sequence number` was the only real one, and it is now carried.** It is
+  where the contact sits in the company's own list — `1` on 6 369 rows, `2` on
+  237, up to a sixteenth. The column already existed on the table; nothing
+  showed it.
+- **`Industry code`, `Industry:`, `Classification code` and `Classification`
+  are empty on all 6 796 rows.** We carry `Industry` and `Classification`
+  already, which is more than the reference has data for.
+- **`Region number`, `Target year revenue` and `Target annual sales` are `0` on
+  all 6 796** — the same dead sentinels as everywhere else.
+
+`Mobile` is ours alone and stays.
+
 ---
 
 # Part 5 — Addresses (item C4)
@@ -556,6 +573,25 @@ means *delivery*. **Read the flags; never parse the text.**
   matters lives on the company** (C3, 23 values).
 - `Invoice attention 1/2` is filled 15 times, mostly test junk (`s`, `dsa`).
 - `E-mail` holds a website on 5 rows. `x` is a street 7 times.
+
+### Against `apps/dashboard` — fixed 20-9-2026
+
+`/addresses` showed the four address roles as **one category column** and none
+of the four flags the reference carries as columns 30–33. It now carries all
+four — `Is Billing Address`, `Is Visiting Address`, `Is Correspondence address`,
+`Is Delivery Address` — read from the category array, which is the same fact
+stored as a list instead of four booleans.
+
+This matters more than a missing column. §21 proved the reference's own
+`Categories` **text** is wrong on 2 913 of its 4 739 rows: a delivery address
+prints `Bezoek` twice instead of naming delivery. Its advice is to read the
+flags and never parse the text. Ours renders that string **from** the flags, so
+it says `Delivery` where theirs says `Bezoek` — the text column is now a
+rendering of the truth rather than a second copy of it.
+
+Also added: **`Forklift Unloading`** and **`Crane Unloading`**, the reference's
+two ticks, read from our single `availableAt` field — they are never both set on
+one row there (146 crane, 2 forklift), which is why one column holds them here.
 
 ---
 
