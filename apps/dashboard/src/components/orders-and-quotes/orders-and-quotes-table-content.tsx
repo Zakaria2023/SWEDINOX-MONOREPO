@@ -1,7 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { OrderOrQuoteRow } from "@/app/(dashboard)/orders-and-quotes/actions";
+import { useState } from "react";
+import {
+  exportOrdersAndQuotes,
+  OrderOrQuoteRow,
+} from "@/app/(dashboard)/orders-and-quotes/actions";
+import {
+  ORDER_OR_QUOTE_COLUMNS,
+  OrderOrQuoteColumnKey,
+} from "@/app/(dashboard)/orders-and-quotes/columns";
 import {
   Table,
   TableBody,
@@ -10,129 +18,272 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { ColumnSelector } from "@/components/ui/column-selector";
+import { PagedTableExportButton } from "@/components/ui/table-export-button";
+import { TablePagination } from "@/components/ui/table-pagination";
+import { TableToolbar } from "@/components/ui/table-toolbar";
+import { selectorColumns } from "@/lib/excel";
 import {
-  formatDateColumn,
-  formatMoney,
-  formatNumber,
-  formatPercent,
+  buildColumnVisibility,
+  formatDateValue,
+  monthLabel,
   orDash,
+  salesDocumentStatusLabel,
+  salesRepresentativeLabel,
+  timeFrameOf,
   userName,
 } from "@/lib/helpers";
-import {
-  ORDER_STATUS_LABELS,
-  SALES_DOCUMENT_KIND_LABELS,
-} from "@/lib/labels";
-import { OrderStatus } from "@/lib/enums";
-import { TableExportButton } from "@/components/ui/table-export-button";
+import { ORDER_METHOD_LABELS } from "@/lib/labels";
+import { Paged, TableFilterControl } from "@/lib/table-query";
+
+type ColumnKey = OrderOrQuoteColumnKey;
 
 type Props = {
-  rows: OrderOrQuoteRow[];
+  page: Paged<OrderOrQuoteRow>;
   /** Clerk id -> name, for the seller column. */
   userNames: Record<string, string>;
+  filters: TableFilterControl[];
 };
 
-/**
- * Return orders and counter orders run their own status lists, so anything the
- * sales ladder does not name is shown as the reference stores it rather than
- * blanked.
- */
-const statusLabel = (status: string | null): string | null => {
-  if (!status) {
+const ALL_COLUMNS = selectorColumns(ORDER_OR_QUOTE_COLUMNS);
+
+const MONEY_KEYS = new Set<ColumnKey>([
+  "weightKg",
+  "revenue",
+  "profit",
+  "profitMargin",
+]);
+
+const YES_NO_KEYS = new Set<ColumnKey>([
+  "isConsignment",
+  "stillToSend",
+  "deliberatelyNotSent",
+  "mustBeSent",
+  "isPickup",
+  "isIncidental",
+]);
+
+const decimal = (value: number): string =>
+  value.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
+const initialsOf = (name: string | null): string | null => {
+  if (!name) {
     return null;
   }
-  return ORDER_STATUS_LABELS[status as OrderStatus] ?? status;
+  const words = name.split(" ").filter(Boolean);
+  if (words.length < 2) {
+    return null;
+  }
+  return words.map((word) => word[0]?.toUpperCase() ?? "").join("");
 };
 
-export const OrdersAndQuotesTable = ({ rows, userNames }: Props) => (
-  <div>
-    <div className="space-y-4">
-      <div className="flex justify-end">
-        <TableExportButton
-          tableId="orders-and-quotes-table"
-          fileName="orders-and-quotes"
-          sheetName="Orders and Quotes"
-        />
-      </div>
-      <Table id="orders-and-quotes-table">
-        <TableHeader>
-          <TableRow>
-            <TableHead>Creation date</TableHead>
-            <TableHead>Delivery date</TableHead>
-            <TableHead>Type</TableHead>
-            <TableHead>Order / Quote</TableHead>
-            <TableHead className="text-right">Lines</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Order type</TableHead>
-            <TableHead>Customer</TableHead>
-            <TableHead>Reference</TableHead>
-            <TableHead className="text-right">Weight (kg)</TableHead>
-            <TableHead className="text-right">Revenue</TableHead>
-            <TableHead className="text-right">Profit</TableHead>
-            <TableHead className="text-right">Profit margin</TableHead>
-            <TableHead>Seller</TableHead>
-            <TableHead>Converted from / to</TableHead>
-            <TableHead>Quote date</TableHead>
-            <TableHead>Decision date</TableHead>
-            <TableHead>Valid u/i</TableHead>
-            <TableHead>Expiration reason</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {rows.length === 0 ? (
-            <TableRow>
-              <TableCell
-                colSpan={19}
-                className="h-24 text-center text-muted-foreground"
-              >
-                No orders or quotes found.
-              </TableCell>
-            </TableRow>
-          ) : (
-            rows.map((row) => (
-              <TableRow key={`${row.kind}-${row.uuid}`}>
-                <TableCell>{formatDateColumn(row.createdAt)}</TableCell>
-                <TableCell>{formatDateColumn(row.deliveryDate)}</TableCell>
-                <TableCell className="whitespace-nowrap">
-                  {SALES_DOCUMENT_KIND_LABELS[row.kind]}
-                </TableCell>
-                <TableCell className="font-medium whitespace-nowrap">
-                  <Link
-                    href={row.href}
-                    className="text-primary hover:underline"
-                  >
-                    {row.documentCode}
-                  </Link>
-                </TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {row.lineCount}
-                </TableCell>
-                <TableCell>{orDash(statusLabel(row.status))}</TableCell>
-                <TableCell>{row.orderType}</TableCell>
-                <TableCell>{orDash(row.customerName)}</TableCell>
-                <TableCell>{orDash(row.reference)}</TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {formatNumber(row.weightKg)}
-                </TableCell>
-                <TableCell className="text-right tabular-nums whitespace-nowrap">
-                  {formatMoney(row.revenue)}
-                </TableCell>
-                <TableCell className="text-right tabular-nums whitespace-nowrap">
-                  {formatMoney(row.profit)}
-                </TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {formatPercent(row.profitMargin)}
-                </TableCell>
-                <TableCell>{userName(row.seller, userNames)}</TableCell>
-                <TableCell>{orDash(row.convertedFromTo)}</TableCell>
-                <TableCell>{formatDateColumn(row.quoteDate)}</TableCell>
-                <TableCell>{formatDateColumn(row.decisionDate)}</TableCell>
-                <TableCell>{formatDateColumn(row.validUntil)}</TableCell>
-                <TableCell>{orDash(row.expirationReason)}</TableCell>
-              </TableRow>
-            ))
+export const OrdersAndQuotesTable = ({ page, userNames, filters }: Props) => {
+  const [columnVisibility, setColumnVisibility] = useState<
+    Record<ColumnKey, boolean>
+  >(buildColumnVisibility(ALL_COLUMNS));
+
+  const toggleColumn = (key: string) =>
+    setColumnVisibility((prev) => ({
+      ...prev,
+      [key]: !prev[key as ColumnKey],
+    }));
+
+  const visibleColumns = ALL_COLUMNS.filter((col) => columnVisibility[col.key]);
+
+  const renderCell = (row: OrderOrQuoteRow, key: ColumnKey) => {
+    if (MONEY_KEYS.has(key)) {
+      return (
+        <TableCell key={key} className="text-right tabular-nums">
+          {decimal(
+            row[key as "weightKg" | "revenue" | "profit" | "profitMargin"],
           )}
-        </TableBody>
-      </Table>
+        </TableCell>
+      );
+    }
+
+    if (YES_NO_KEYS.has(key)) {
+      return (
+        <TableCell key={key}>
+          {row[key as keyof OrderOrQuoteRow] ? "Yes" : "No"}
+        </TableCell>
+      );
+    }
+
+    switch (key) {
+      case "createdAt":
+        return (
+          <TableCell key={key}>{formatDateValue(row.createdAt)}</TableCell>
+        );
+      case "year":
+        return (
+          <TableCell key={key} className="text-right tabular-nums">
+            {row.createdAt.getFullYear()}
+          </TableCell>
+        );
+      case "month":
+        return (
+          <TableCell key={key}>
+            {monthLabel(row.createdAt.getMonth() + 1)}
+          </TableCell>
+        );
+      case "timeFrame":
+        return (
+          <TableCell key={key} className="whitespace-nowrap tabular-nums">
+            {timeFrameOf(row.createdAt)}
+          </TableCell>
+        );
+      case "documentCode":
+        return (
+          <TableCell key={key} className="font-medium">
+            <Link href={row.href} className="text-primary hover:underline">
+              {row.documentCode}
+            </Link>
+          </TableCell>
+        );
+      case "sellerInitials":
+        return (
+          <TableCell key={key}>
+            {orDash(initialsOf(userName(row.seller, userNames)))}
+          </TableCell>
+        );
+      case "seller":
+        return (
+          <TableCell key={key}>{userName(row.seller, userNames)}</TableCell>
+        );
+      case "status":
+        return (
+          <TableCell key={key}>
+            {orDash(salesDocumentStatusLabel(row.status))}
+          </TableCell>
+        );
+      case "convertedFromTo":
+        return <TableCell key={key}>{orDash(row.convertedFromTo)}</TableCell>;
+      case "lineCount":
+        return (
+          <TableCell key={key} className="text-right tabular-nums">
+            {row.lineCount}
+          </TableCell>
+        );
+      case "customerName":
+        return (
+          <TableCell key={key} className="font-medium">
+            {row.companyUuid ? (
+              <Link
+                href={`/companies/${row.companyUuid}`}
+                className="text-primary hover:underline"
+              >
+                {orDash(row.customerName)}
+              </Link>
+            ) : (
+              orDash(row.customerName)
+            )}
+          </TableCell>
+        );
+      case "deliveryDate":
+        return (
+          <TableCell key={key}>{formatDateValue(row.deliveryDate)}</TableCell>
+        );
+      case "orderType":
+        return <TableCell key={key}>{row.orderType}</TableCell>;
+      case "representative":
+        return (
+          <TableCell key={key}>
+            {salesRepresentativeLabel(row.representative)}
+          </TableCell>
+        );
+      case "expirationReason":
+        return <TableCell key={key}>{orDash(row.expirationReason)}</TableCell>;
+      case "quoteDate":
+        return (
+          <TableCell key={key}>{formatDateValue(row.quoteDate)}</TableCell>
+        );
+      case "decisionDate":
+        return (
+          <TableCell key={key}>{formatDateValue(row.decisionDate)}</TableCell>
+        );
+      case "orderMethod":
+        return (
+          <TableCell key={key}>
+            {row.orderMethod
+              ? (ORDER_METHOD_LABELS[
+                  row.orderMethod as keyof typeof ORDER_METHOD_LABELS
+                ] ?? row.orderMethod)
+              : "—"}
+          </TableCell>
+        );
+      case "customerCode":
+        return (
+          <TableCell key={key} className="text-right tabular-nums">
+            {row.customerCode ?? "—"}
+          </TableCell>
+        );
+      case "validUntil":
+        return (
+          <TableCell key={key}>{formatDateValue(row.validUntil)}</TableCell>
+        );
+      case "ourReference":
+        return <TableCell key={key}>{orDash(row.ourReference)}</TableCell>;
+      case "reference":
+        return <TableCell key={key}>{orDash(row.reference)}</TableCell>;
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <TableToolbar
+        searchPlaceholder="Search document, customer or reference…"
+        filters={filters}
+      >
+        <ColumnSelector
+          columns={ALL_COLUMNS.map((col) => ({
+            key: col.key,
+            label: col.label,
+          }))}
+          visibility={columnVisibility}
+          onToggle={toggleColumn}
+        />
+        <PagedTableExportButton
+          fileName="orders-and-quotes"
+          columnKeys={visibleColumns.map((column) => column.key)}
+          action={exportOrdersAndQuotes}
+        />
+      </TableToolbar>
+
+      {page.rows.length === 0 ? (
+        <div className="flex flex-col items-center gap-1 rounded-lg border border-dashed px-6 py-10 text-center">
+          <p className="font-medium">No sales documents</p>
+          <p className="max-w-md text-sm text-muted-foreground">
+            Orders, returns, quotes and counter orders all appear here, told
+            apart by the letter on the number. Try clearing the search or the
+            filters.
+          </p>
+        </div>
+      ) : (
+        <>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  {visibleColumns.map((col) => (
+                    <TableHead key={col.key}>{col.label}</TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {page.rows.map((row) => (
+                  <TableRow key={`${row.kind}-${row.uuid}`}>
+                    {visibleColumns.map((col) => renderCell(row, col.key))}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          <TablePagination page={page} singular="document" plural="documents" />
+        </>
+      )}
     </div>
-  </div>
-);
+  );
+};

@@ -16,6 +16,14 @@ import {
 } from "@/lib/helpers";
 import { SALES_DOCUMENT_KIND_PREFIXES } from "@/lib/labels";
 import { SalesDocumentKind } from "@/lib/enums";
+import { exportRows } from "@/lib/server/excel";
+import {
+  Paged,
+  parseTableQuery,
+  SearchParams,
+  TableQuery,
+} from "@/lib/table-query";
+import { ORDER_OR_QUOTE_COLUMNS } from "@/app/(dashboard)/orders-and-quotes/columns";
 import { desc, eq, sql } from "drizzle-orm";
 
 // One row of the combined sales overview.
@@ -54,6 +62,21 @@ export type OrderOrQuoteRow = {
   decisionDate: string | null;
   validUntil: string | null;
   expirationReason: string | null;
+  customerCode: number | null;
+  companyUuid: string | null;
+  /** The account's owner, which is not the seller who typed the document. */
+  representative: string | null;
+  orderMethod: string | null;
+  ourReference: string | null;
+  mustBeSent: boolean;
+  deliberatelyNotSent: boolean;
+  /** Printed, mailed or faxed at least once. */
+  alreadySent: boolean;
+  /** Still to be sent: meant to go, not held back, and not yet gone out. */
+  stillToSend: boolean;
+  isPickup: boolean;
+  isIncidental: boolean;
+  isConsignment: boolean;
 };
 
 const asDateString = (value: Date | string | null): string | null => {
@@ -65,13 +88,33 @@ const asDateString = (value: Date | string | null): string | null => {
     : value.toISOString().slice(0, 10);
 };
 
+/**
+ * Whether a document is still waiting to go out.
+ *
+ * The reference's `Send` column is true on 1 482 of its 2 091 rows, which is
+ * exactly the must-send-and-not-held-back set of 1 709 less the 227 that had
+ * already been printed, mailed or faxed.
+ */
+const stillToSendFrom = (row: {
+  mustBeSent: boolean;
+  deliberatelyNotSent: boolean;
+  isPrinted?: boolean | null;
+  isMailed?: boolean | null;
+  isFaxed?: boolean | null;
+}): boolean =>
+  row.mustBeSent &&
+  !row.deliberatelyNotSent &&
+  !(row.isPrinted || row.isMailed || row.isFaxed);
+
 const documentCodeFor = (kind: SalesDocumentKind, id: number): string =>
   `${SALES_DOCUMENT_KIND_PREFIXES[kind]}${id}`;
 
-export const getOrdersAndQuotes = async (): Promise<OrderOrQuoteRow[]> => {
+const allDocuments = async (): Promise<OrderOrQuoteRow[]> => {
   try {
-    const [orderRows, quoteRows, returnRows, counterRows] = await Promise.all([
-      db
+    // Sequential rather than concurrent: this database caps connections, and
+    // four large reads at once is how that cap gets hit.
+    const [orderRows, quoteRows, returnRows, counterRows] = [
+      await db
         .select({
           uuid: Orders.uuid,
           id: Orders.id,
@@ -81,6 +124,16 @@ export const getOrdersAndQuotes = async (): Promise<OrderOrQuoteRow[]> => {
           customerRef: Orders.customerRef,
           seller: Orders.seller,
           companyName: Companies.companyName,
+          companyUuid: Companies.uuid,
+          customerCode: Companies.id,
+          representative: Companies.representative,
+          orderMethod: Orders.orderMethod,
+          ourReference: Orders.ourReference,
+          mustBeSent: Orders.mustBeSent,
+          deliberatelyNotSent: Orders.deliberatelyNotSent,
+          isPrinted: Orders.isPrinted,
+          isMailed: Orders.isMailed,
+          isFaxed: Orders.isFaxed,
           isPickup: Orders.isPickup,
           isIncidental: Orders.isIncidental,
           isConsignment: Orders.isConsignment,
@@ -100,7 +153,7 @@ export const getOrdersAndQuotes = async (): Promise<OrderOrQuoteRow[]> => {
         .groupBy(Orders.uuid)
         .orderBy(desc(Orders.createdAt)),
 
-      db
+      await db
         .select({
           uuid: Quotes.uuid,
           id: Quotes.id,
@@ -114,6 +167,16 @@ export const getOrdersAndQuotes = async (): Promise<OrderOrQuoteRow[]> => {
           status: Quotes.status,
           expirationReason: Quotes.expirationReason,
           companyName: Companies.companyName,
+          companyUuid: Companies.uuid,
+          customerCode: Companies.id,
+          representative: Companies.representative,
+          orderMethod: Quotes.requestMethod,
+          ourReference: Quotes.ourReference,
+          mustBeSent: Quotes.mustBeSent,
+          deliberatelyNotSent: Quotes.deliberatelyNotSent,
+          isPrinted: Quotes.isPrinted,
+          isMailed: Quotes.isMailed,
+          isFaxed: Quotes.isFaxed,
           isPickup: Quotes.isPickup,
           isIncidental: Quotes.isIncidental,
           isConsignment: Quotes.isConsignment,
@@ -133,7 +196,7 @@ export const getOrdersAndQuotes = async (): Promise<OrderOrQuoteRow[]> => {
         .groupBy(Quotes.uuid)
         .orderBy(desc(Quotes.createdAt)),
 
-      db
+      await db
         .select({
           uuid: ReturnOrders.uuid,
           id: ReturnOrders.id,
@@ -141,6 +204,16 @@ export const getOrdersAndQuotes = async (): Promise<OrderOrQuoteRow[]> => {
           status: ReturnOrders.status,
           customerRef: ReturnOrders.customerRef,
           companyName: Companies.companyName,
+          companyUuid: Companies.uuid,
+          customerCode: Companies.id,
+          representative: Companies.representative,
+          ourReference: ReturnOrders.ourReference,
+          mustBeSent: ReturnOrders.mustBeSent,
+          deliberatelyNotSent: ReturnOrders.deliberatelyNotSent,
+          isPrinted: ReturnOrders.isPrinted,
+          isMailed: ReturnOrders.isMailed,
+          isFaxed: ReturnOrders.isFaxed,
+          isPickup: ReturnOrders.isPickup,
           revenue: ReturnOrders.totalExclVat,
           weightKg: ReturnOrders.totalWeightKg,
           lineCount: sql<string>`COUNT(${ReturnOrderItems.uuid})`,
@@ -160,7 +233,7 @@ export const getOrdersAndQuotes = async (): Promise<OrderOrQuoteRow[]> => {
         .groupBy(ReturnOrders.uuid)
         .orderBy(desc(ReturnOrders.createdAt)),
 
-      db
+      await db
         .select({
           uuid: CounterOrders.uuid,
           id: CounterOrders.id,
@@ -170,13 +243,25 @@ export const getOrdersAndQuotes = async (): Promise<OrderOrQuoteRow[]> => {
           customerRef: CounterOrders.customerRef,
           seller: CounterOrders.seller,
           companyName: Companies.companyName,
+          companyUuid: Companies.uuid,
+          customerCode: Companies.id,
+          representative: Companies.representative,
+          orderMethod: CounterOrders.orderMethod,
+          ourReference: CounterOrders.ourReference,
+          mustBeSent: CounterOrders.mustBeSent,
+          deliberatelyNotSent: CounterOrders.deliberatelyNotSent,
+          isPrinted: CounterOrders.isPrinted,
+          isMailed: CounterOrders.isMailed,
+          isFaxed: CounterOrders.isFaxed,
+          isPickup: CounterOrders.isPickup,
+          isIncidental: CounterOrders.isIncidental,
           revenue: CounterOrders.amountExVat,
           weightKg: CounterOrders.weightKg,
         })
         .from(CounterOrders)
         .leftJoin(Companies, eq(CounterOrders.companyUuid, Companies.uuid))
         .orderBy(desc(CounterOrders.createdAt)),
-    ]);
+    ];
 
     const orders: OrderOrQuoteRow[] = orderRows.map((row) => {
       const revenue = Number(row.revenue ?? 0);
@@ -210,6 +295,18 @@ export const getOrdersAndQuotes = async (): Promise<OrderOrQuoteRow[]> => {
         decisionDate: null,
         validUntil: null,
         expirationReason: null,
+        customerCode: row.customerCode,
+        companyUuid: row.companyUuid,
+        representative: row.representative,
+        mustBeSent: row.mustBeSent,
+        deliberatelyNotSent: row.deliberatelyNotSent,
+        alreadySent: Boolean(row.isPrinted || row.isMailed || row.isFaxed),
+        stillToSend: stillToSendFrom(row),
+        orderMethod: row.orderMethod,
+        ourReference: row.ourReference,
+        isPickup: row.isPickup ?? false,
+        isIncidental: row.isIncidental ?? false,
+        isConsignment: row.isConsignment ?? false,
       };
     });
 
@@ -248,6 +345,18 @@ export const getOrdersAndQuotes = async (): Promise<OrderOrQuoteRow[]> => {
         decisionDate: asDateString(row.decisionDate),
         validUntil: asDateString(row.validUntil),
         expirationReason: row.expirationReason,
+        customerCode: row.customerCode,
+        companyUuid: row.companyUuid,
+        representative: row.representative,
+        mustBeSent: row.mustBeSent,
+        deliberatelyNotSent: row.deliberatelyNotSent,
+        alreadySent: Boolean(row.isPrinted || row.isMailed || row.isFaxed),
+        stillToSend: stillToSendFrom(row),
+        orderMethod: row.orderMethod,
+        ourReference: row.ourReference,
+        isPickup: row.isPickup ?? false,
+        isIncidental: row.isIncidental ?? false,
+        isConsignment: row.isConsignment ?? false,
       };
     });
 
@@ -262,7 +371,8 @@ export const getOrdersAndQuotes = async (): Promise<OrderOrQuoteRow[]> => {
       // R290002, R290014, R290033 and R290044 do: the metal was credited for
       // less than it cost.
       const profit =
-        -Math.abs(Number(row.amount ?? 0)) + Math.abs(Number(row.costAmount ?? 0));
+        -Math.abs(Number(row.amount ?? 0)) +
+        Math.abs(Number(row.costAmount ?? 0));
       return {
         uuid: row.uuid,
         kind: "return",
@@ -286,6 +396,20 @@ export const getOrdersAndQuotes = async (): Promise<OrderOrQuoteRow[]> => {
         decisionDate: null,
         validUntil: null,
         expirationReason: null,
+        customerCode: row.customerCode,
+        companyUuid: row.companyUuid,
+        representative: row.representative,
+        mustBeSent: row.mustBeSent,
+        deliberatelyNotSent: row.deliberatelyNotSent,
+        alreadySent: Boolean(row.isPrinted || row.isMailed || row.isFaxed),
+        stillToSend: stillToSendFrom(row),
+        // A return is raised against goods already delivered, so it has no
+        // order method of its own.
+        orderMethod: null,
+        ourReference: row.ourReference,
+        isPickup: row.isPickup ?? false,
+        isIncidental: false,
+        isConsignment: false,
       };
     });
 
@@ -314,6 +438,18 @@ export const getOrdersAndQuotes = async (): Promise<OrderOrQuoteRow[]> => {
         decisionDate: null,
         validUntil: null,
         expirationReason: null,
+        customerCode: row.customerCode,
+        companyUuid: row.companyUuid,
+        representative: row.representative,
+        mustBeSent: row.mustBeSent,
+        deliberatelyNotSent: row.deliberatelyNotSent,
+        alreadySent: Boolean(row.isPrinted || row.isMailed || row.isFaxed),
+        stillToSend: stillToSendFrom(row),
+        orderMethod: row.orderMethod,
+        ourReference: row.ourReference,
+        isPickup: row.isPickup ?? false,
+        isIncidental: row.isIncidental ?? false,
+        isConsignment: false,
       };
     });
 
@@ -323,4 +459,75 @@ export const getOrdersAndQuotes = async (): Promise<OrderOrQuoteRow[]> => {
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch orders and quotes"));
   }
+};
+
+/**
+ * The documents one view of the screen shows.
+ *
+ * Four series in one grid, told apart by the letter on the number -- `O`
+ * orders, `R` returns, `Q` quotes, `B` counter orders -- so the filtering and
+ * the paging happen after the four reads rather than inside any one of them.
+ */
+const filteredDocuments = async (
+  query: TableQuery,
+): Promise<OrderOrQuoteRow[]> => {
+  const all = await allDocuments();
+
+  const term = query.q?.toLowerCase() ?? null;
+  const kinds = query.filters.kind ?? [];
+  const statuses = query.filters.status ?? [];
+  const send = query.filters.stillToSend ?? [];
+
+  return all.filter((row) => {
+    if (
+      term &&
+      !`${row.documentCode} ${row.customerName ?? ""} ${row.reference ?? ""}`
+        .toLowerCase()
+        .includes(term)
+    ) {
+      return false;
+    }
+    if (kinds.length > 0 && !kinds.includes(row.kind)) {
+      return false;
+    }
+    if (statuses.length > 0 && !statuses.includes(row.status ?? "")) {
+      return false;
+    }
+    if (send.includes("yes") && !row.stillToSend) {
+      return false;
+    }
+    if (send.includes("no") && row.stillToSend) {
+      return false;
+    }
+    return true;
+  });
+};
+
+export const getOrdersAndQuotes = async (
+  query: TableQuery,
+): Promise<Paged<OrderOrQuoteRow>> => {
+  const rows = await filteredDocuments(query);
+  const start = (query.page - 1) * query.pageSize;
+
+  return {
+    rows: rows.slice(start, start + query.pageSize),
+    total: rows.length,
+    page: query.page,
+    pageSize: query.pageSize,
+  };
+};
+
+export const exportOrdersAndQuotes = async (
+  params: SearchParams,
+  columnKeys: string[],
+): Promise<string> => {
+  const rows = await filteredDocuments(parseTableQuery(params));
+
+  return exportRows({
+    name: "Orders and quotes",
+    columns: ORDER_OR_QUOTE_COLUMNS,
+    columnKeys,
+    rows: (limit, offset) =>
+      Promise.resolve(rows.slice(offset, offset + limit)),
+  });
 };

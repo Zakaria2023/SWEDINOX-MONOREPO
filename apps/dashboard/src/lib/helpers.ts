@@ -65,6 +65,7 @@ import {
   ProcessingEditing,
   ProductDimensionShape,
   ProductShape,
+  OrderStatus,
   PurchaseOrderStatus,
   PurchaseInvoiceFiscalBase,
   PurchaseOrderType,
@@ -127,6 +128,7 @@ import {
   REVENUE_GROUP_LABELS,
   ORDER_DEBLOCK_TYPE_LABELS,
   ORDER_LINE_STATUS_LABELS,
+  ORDER_STATUS_LABELS,
   PURCHASE_ORDER_STATUS_LABELS,
   PURCHASE_QUOTE_STATUS_LABELS,
   SALES_REPRESENTATIVE_LABELS,
@@ -7425,6 +7427,40 @@ export const representativeInitials = (
   }
   return words.map((word) => word[0]?.toUpperCase() ?? "").join("");
 };
+
+/**
+ * The half-hour window a document was created in, as the reference prints it.
+ *
+ * Derived, never stored: the creation time floored to the half hour and
+ * written `HH:MM - HH:MM`. It reproduces all 2 091 rows of the reference's own
+ * `Time frame` column.
+ */
+export const timeFrameOf = (value: Date | string): string => {
+  const at = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(at.getTime())) {
+    return "";
+  }
+  const half = at.getMinutes() < 30 ? 0 : 30;
+  const startHours = String(at.getHours()).padStart(2, "0");
+  const endMinutes = half === 0 ? 30 : 0;
+  const endHours = String(
+    half === 0 ? at.getHours() : (at.getHours() + 1) % 24,
+  ).padStart(2, "0");
+  return `${startHours}:${String(half).padStart(2, "0")} - ${endHours}:${String(
+    endMinutes,
+  ).padStart(2, "0")}`;
+};
+
+/**
+ * A sales document's status as a label.
+ *
+ * The four series run their own status lists, so a value the order ladder does
+ * not know is printed as it stands rather than dropped.
+ */
+export const salesDocumentStatusLabel = (
+  status: string | null,
+): string | null =>
+  status ? (ORDER_STATUS_LABELS[status as OrderStatus] ?? status) : null;
 
 /** The display label for a customer group. */
 export const customerGroupLabel = (

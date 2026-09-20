@@ -50,9 +50,7 @@ export const Orders = mysqlTable(
     // The reference's first rung: a freshly typed document that nobody has
     // released. 71 of its 2.091 headers sit here, and every header with no
     // lines yet is one of them.
-    status: mysqlEnum("status", orderStatuses)
-      .default("provisional")
-      .notNull(),
+    status: mysqlEnum("status", orderStatuses).default("provisional").notNull(),
 
     // ── Order type ────────────────────────────────────────────────────────────
     // The `Normal` dropdown at the top of the reference's own order-type block.
@@ -71,6 +69,17 @@ export const Orders = mysqlTable(
     isCustomerMaterial: boolean("is_customer_material").default(false),
     weightType: mysqlEnum("weight_type", orderWeightTypes),
     isOverlength: boolean("is_overlength").default(false),
+    // Whether the document is meant to go to the customer at all, and whether
+    // somebody deliberately held it back. The reference carries both, and its
+    // `Send` column -- still to be sent -- is the two of them with the
+    // already-sent flags: must be sent, not held back, not yet printed,
+    // mailed or faxed. Its own cross-tab proves the reading: `Send` is true on
+    // 1 482 rows, exactly the must-send-and-not-held-back set of 1 709 less
+    // the 227 that had already gone out.
+    mustBeSent: boolean("must_be_sent").default(true).notNull(),
+    deliberatelyNotSent: boolean("deliberately_not_sent")
+      .default(false)
+      .notNull(),
     isPrinted: boolean("is_printed").default(false),
     isMailed: boolean("is_mailed").default(false),
     isFaxed: boolean("is_faxed").default(false),

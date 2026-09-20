@@ -244,3 +244,53 @@ column.
 build-up, the discounts, the `Stk`/`CD` split or the VAT scenarios — those are
 **B2 (Order lines)** and **B3/B4 (Invoices, Invoice lines)**. Discounts
 cascading is still proved on exactly one quote line.
+
+---
+
+### Against `apps/dashboard` — rebuilt 20-9-2026
+
+The substance was already right: four series in one grid, the ten-value status
+ladder, the margin divided by the **absolute** revenue so a return does not
+report a loss as a gain, and the quote's own dates. What the screen lacked was
+half its columns and any paging at all.
+
+It now carries **32 columns**, paged, searchable and filterable, with an export.
+
+🔴 **The three send flags resolve.** `Must be sent`, `Deliberately not sent` and
+`Send` are not three views of one thing: the first two are stored and `Send`
+means **still to be sent**. The reference's own cross-tab proves it —
+
+| Must be sent | Deliberately not sent | Send | Rows |
+|---|---|---|---|
+| False | False | False | 45 |
+| True | False | **True** | **1 482** |
+| True | False | False | 227 |
+| True | True | False | 337 |
+
+`Send` is true on exactly the must-send-and-not-held-back set of 1 709 **less
+the 227 that had already gone out**. `mustBeSent` and `deliberatelyNotSent`
+were added to `Orders`, `Quotes`, `ReturnOrders` and `CounterOrders`; `Send` is
+derived from the pair and the printed/mailed/faxed flags, and the live check
+asserts the identity on every row.
+
+**`Time frame` is derived, not stored** — the creation time floored to the half
+hour — and reproduces the reference's format exactly, including the roll at
+`11:59 → 11:30 - 12:00`.
+
+**`Representative` is the customer's, not the seller's.** The reference shows
+documents typed by one person against another's account, and its four values
+match the customer distribution. It is read from the company rather than
+snapshotted, which is the same trade-off the invoice address has: right for a
+current view, wrong for a reprint of an old document.
+
+Seven columns are not carried because they are blank on **every one of 2 091
+rows** — `Pick-up slip`, `Converted from/to`, `Last follow-up`, `Last follow-up
+reason`, `Internal Text`, `Classification code`, `Classification` — plus
+`Affiliate company details`, which is one constant. ⚠️ `Converted from/to`
+being blank says the feature is unused, **not** that quote-to-order conversion
+is absent: only six quotes exist there and none was converted.
+
+The four reads also run one after another now rather than through a
+`Promise.all`; four large queries at once is how the connection cap gets hit.
+
+Verified live, 24/24.
