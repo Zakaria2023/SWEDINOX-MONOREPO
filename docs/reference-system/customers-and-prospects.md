@@ -377,6 +377,37 @@ re-evaluates.
   all 571 (fourth screen).
 - Unblocks happen 08:00–17:00 on weekdays, with a thin tail to 21:00.
 
+### Against `apps/dashboard` — rebuilt 20-9-2026
+
+The table was already the right shape — `OrderDeblocks` records who, when and
+which block, and nothing else, which is exactly what the reference stores — and
+`orderDeblockTypes` had already been cut to the two types that occur. The
+screen was the problem: it loaded every release ever recorded, with no paging,
+search, filter, column picker or export.
+
+`/unblocked-orders` now carries **13 of the reference's 14 columns**, paged,
+with filters on deblock type, the person who lifted it, the date and the region.
+
+Two things changed beyond paging:
+
+- **`Deblock time` is carried.** The reference prints the same serial twice, as
+  a date and as a time, and it looked like a duplicate — but the hour is the
+  interesting half on this screen: a financial release lands within the hour and
+  a commercial one takes days.
+- **`Order amount` reads the order header's `totalExclVat`** instead of
+  re-summing the order lines. That is the figure the reference prints, equal to
+  the Orders and Quotes screen's `Revenue` on all 436 orders that appear on
+  both, and the header rollup exists precisely so an overview does not have to
+  re-aggregate.
+
+`Region number` is not carried — `0` on all 571 rows, the fourth screen to show
+it dead.
+
+**Still open, and not a screen problem:** §12 stands. Our
+`financially-blocked` action inserts one release row and nothing ever
+re-evaluates, while the reference re-checks and can hold an order it already let
+go — 78 of its 451 orders were released more than once.
+
 ---
 
 # Part 4 — Contact persons Customers and Prospects (item C3)

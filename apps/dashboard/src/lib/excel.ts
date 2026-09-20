@@ -152,6 +152,28 @@ export const dateCell = (
 };
 
 /**
+ * The clock time of a timestamp, as text.
+ *
+ * Written as words rather than as a fraction of a day: a sheet that shows
+ * "08:41" is readable, and a time cell of 0.362 is not. The date half travels
+ * in its own column, the way the reference splits it.
+ */
+export const timeCell = (
+  value: string | Date | null | undefined,
+): ExportCellValue => {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+  const at = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(at.getTime())) {
+    return null;
+  }
+  const hours = String(at.getHours()).padStart(2, "0");
+  const minutes = String(at.getMinutes()).padStart(2, "0");
+  return `${hours}:${minutes}`;
+};
+
+/**
  * A yes/no column as the words the table shows, not TRUE/FALSE — the reader is
  * scanning the same column in both places and it should read the same way.
  */
