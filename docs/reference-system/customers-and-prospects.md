@@ -1076,6 +1076,25 @@ the visible number matches only 672 of 1 720 rows, and by accident.
 - Only customers **with 2025 revenue** appear (290), unlike C8 which lists all
   1 724.
 
+### C12 against `apps/dashboard` — rebuilt 20-9-2026
+
+The revenue half was already right and inherits C10's split. Verified live:
+every C12 cell equals C10 summed over the year, which is the reference's own
+identity for this screen (809 of 809 there).
+
+Four columns were missing and are now carried: **`Target #visits / year`**,
+read off the company, and **`#Visits current year` / `last year` /
+`2 years ago`**, counted from the visit reports. The reference prints all four
+as `0` on all 809 of its rows — the screen is named for visits and its counters
+are batch statistics that stopped running, the same staleness C2, C13 and C14
+show. `Region` was also missing.
+
+`Region number` and `Competitors (Revenue share)` are not carried: `0` and empty
+on every row.
+
+The screen is now paged, searchable, filterable and exportable, and only
+customers with revenue in the window appear — 290 of the reference's 1 724.
+
 ---
 
 # Part 12 — Visit schedule (C13) and To visit/call (C14)

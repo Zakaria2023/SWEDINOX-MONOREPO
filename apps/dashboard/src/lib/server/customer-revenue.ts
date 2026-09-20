@@ -79,6 +79,7 @@ export type RevenueCompany = Pick<
   | "customerGroup"
   | "region"
   | "isInactive"
+  | "visitFrequency"
 > & {
   city: SelectCompanyAddresses["city"] | null;
   postalCode: SelectCompanyAddresses["postalCode"] | null;
@@ -347,6 +348,7 @@ export const getRevenueCompanies = async (
       customerGroup: Companies.customerGroup,
       region: Companies.region,
       isInactive: Companies.isInactive,
+      visitFrequency: Companies.visitFrequency,
       city: visiting.city,
       postalCode: visiting.postalCode,
       country: visiting.country,

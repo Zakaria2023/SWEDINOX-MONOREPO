@@ -1,6 +1,14 @@
 "use client";
 
-import { CustomerRevenueSalesVisitsRow } from "@/app/(dashboard)/customer-revenue-sales-and-visits/actions";
+import { useState } from "react";
+import {
+  CustomerRevenueSalesVisitsRow,
+  exportCustomerRevenueSalesVisits,
+} from "@/app/(dashboard)/customer-revenue-sales-and-visits/actions";
+import {
+  CUSTOMER_REVENUE_SALES_VISITS_COLUMNS,
+  CustomerRevenueSalesVisitsColumnKey,
+} from "@/app/(dashboard)/customer-revenue-sales-and-visits/columns";
 import {
   Table,
   TableBody,
@@ -9,98 +17,165 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { ColumnSelector } from "@/components/ui/column-selector";
+import { PagedTableExportButton } from "@/components/ui/table-export-button";
+import { TablePagination } from "@/components/ui/table-pagination";
+import { TableToolbar } from "@/components/ui/table-toolbar";
+import { selectorColumns } from "@/lib/excel";
 import {
-  formatMoney,
-  formatNumber,
+  buildColumnVisibility,
+  orDash,
   salesRepresentativeLabel,
 } from "@/lib/helpers";
-import { TableExportButton } from "@/components/ui/table-export-button";
+import { Paged, TableFilterControl } from "@/lib/table-query";
+
+type ColumnKey = CustomerRevenueSalesVisitsColumnKey;
 
 type Props = {
-  rows: CustomerRevenueSalesVisitsRow[];
+  page: Paged<CustomerRevenueSalesVisitsRow>;
+  filters: TableFilterControl[];
 };
 
-export const CustomerRevenueSalesVisitsTable = ({ rows }: Props) => (
-  <div>
+const ALL_COLUMNS = selectorColumns(CUSTOMER_REVENUE_SALES_VISITS_COLUMNS);
+
+const MONEY_KEYS = new Set<ColumnKey>([
+  "revenueCurrentYear",
+  "revenueLastYear",
+  "revenueTwoYearsAgo",
+  "kgCurrentYear",
+  "kgLastYear",
+  "kgTwoYearsAgo",
+]);
+
+const COUNT_KEYS = new Set<ColumnKey>([
+  "companyCode",
+  "revenueGroupNumber",
+  "currentYear",
+  "targetVisitsPerYear",
+  "visitsCurrentYear",
+  "visitsLastYear",
+  "visitsTwoYearsAgo",
+]);
+
+const decimal = (value: number): string =>
+  value.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
+export const CustomerRevenueSalesVisitsTable = ({ page, filters }: Props) => {
+  const [columnVisibility, setColumnVisibility] = useState<
+    Record<ColumnKey, boolean>
+  >(buildColumnVisibility(ALL_COLUMNS));
+
+  const toggleColumn = (key: string) =>
+    setColumnVisibility((prev) => ({
+      ...prev,
+      [key]: !prev[key as ColumnKey],
+    }));
+
+  const visibleColumns = ALL_COLUMNS.filter((col) => columnVisibility[col.key]);
+
+  const renderCell = (row: CustomerRevenueSalesVisitsRow, key: ColumnKey) => {
+    if (MONEY_KEYS.has(key)) {
+      return (
+        <TableCell key={key} className="text-right tabular-nums">
+          {decimal(row[key as keyof CustomerRevenueSalesVisitsRow] as number)}
+        </TableCell>
+      );
+    }
+
+    if (COUNT_KEYS.has(key)) {
+      const value = row[key as keyof CustomerRevenueSalesVisitsRow];
+      return (
+        <TableCell key={key} className="text-right tabular-nums">
+          {value === null ? "—" : String(value)}
+        </TableCell>
+      );
+    }
+
+    switch (key) {
+      case "representative":
+        return (
+          <TableCell key={key}>
+            {salesRepresentativeLabel(row.representative)}
+          </TableCell>
+        );
+      case "companyName":
+        return (
+          <TableCell key={key} className="font-medium">
+            {orDash(row.companyName)}
+          </TableCell>
+        );
+      case "visitPostalCode":
+        return <TableCell key={key}>{orDash(row.visitPostalCode)}</TableCell>;
+      case "visitCity":
+        return <TableCell key={key}>{orDash(row.visitCity)}</TableCell>;
+      case "revenueGroupName":
+        return (
+          <TableCell key={key} className="font-medium">
+            {orDash(row.revenueGroupName)}
+          </TableCell>
+        );
+      case "region":
+        return <TableCell key={key}>{orDash(row.region)}</TableCell>;
+    }
+  };
+
+  return (
     <div className="space-y-4">
-      <div className="flex justify-end">
-        <TableExportButton
-          tableId="customer-revenue-sales-and-visits-table"
-          fileName="customer-revenue-sales-and-visits"
-          sheetName="Customer revenue, sales and visits"
+      <TableToolbar
+        searchPlaceholder="Search company or revenue group…"
+        filters={filters}
+      >
+        <ColumnSelector
+          columns={ALL_COLUMNS.map((col) => ({
+            key: col.key,
+            label: col.label,
+          }))}
+          visibility={columnVisibility}
+          onToggle={toggleColumn}
         />
-      </div>
-      <Table id="customer-revenue-sales-and-visits-table">
-        <TableHeader>
-          <TableRow>
-            <TableHead>Representative</TableHead>
-            <TableHead className="text-right">Company code</TableHead>
-            <TableHead>Company</TableHead>
-            <TableHead>Visit-Postal</TableHead>
-            <TableHead>Visit-City</TableHead>
-            <TableHead className="text-right">Revenue group</TableHead>
-            <TableHead>Revenue group name</TableHead>
-            <TableHead className="text-right">Current year</TableHead>
-            <TableHead className="text-right">Revenue current year</TableHead>
-            <TableHead className="text-right">Revenue last year</TableHead>
-            <TableHead className="text-right">Revenue 2 years ago</TableHead>
-            <TableHead className="text-right">Kg current year</TableHead>
-            <TableHead className="text-right">Kg last year</TableHead>
-            <TableHead className="text-right">Kg 2 years ago</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {rows.length === 0 ? (
-            <TableRow>
-              <TableCell
-                colSpan={14}
-                className="h-24 text-center text-muted-foreground"
-              >
-                No customer revenue found.
-              </TableCell>
-            </TableRow>
-          ) : (
-            rows.map((row, index) => (
-              <TableRow key={index}>
-                <TableCell>
-                  {salesRepresentativeLabel(row.representative)}
-                </TableCell>
-                <TableCell className="text-right">
-                  {row.companyCode ?? "—"}
-                </TableCell>
-                <TableCell className="font-medium">
-                  {row.companyName ?? "—"}
-                </TableCell>
-                <TableCell>{row.visitPostalCode ?? "—"}</TableCell>
-                <TableCell>{row.visitCity ?? "—"}</TableCell>
-                <TableCell className="text-right">
-                  {row.revenueGroupNumber ?? "—"}
-                </TableCell>
-                <TableCell>{row.revenueGroupName ?? "—"}</TableCell>
-                <TableCell className="text-right">{row.currentYear}</TableCell>
-                <TableCell className="text-right whitespace-nowrap">
-                  {formatMoney(row.revenueCurrentYear)}
-                </TableCell>
-                <TableCell className="text-right whitespace-nowrap">
-                  {formatMoney(row.revenueLastYear)}
-                </TableCell>
-                <TableCell className="text-right whitespace-nowrap">
-                  {formatMoney(row.revenueTwoYearsAgo)}
-                </TableCell>
-                <TableCell className="text-right">
-                  {formatNumber(row.kgCurrentYear)}
-                </TableCell>
-                <TableCell className="text-right">
-                  {formatNumber(row.kgLastYear)}
-                </TableCell>
-                <TableCell className="text-right">
-                  {formatNumber(row.kgTwoYearsAgo)}
-                </TableCell>
-              </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
+        <PagedTableExportButton
+          fileName="customer-revenue-sales-and-visits"
+          columnKeys={visibleColumns.map((column) => column.key)}
+          action={exportCustomerRevenueSalesVisits}
+        />
+      </TableToolbar>
+
+      {page.rows.length === 0 ? (
+        <div className="flex flex-col items-center gap-1 rounded-lg border border-dashed px-6 py-10 text-center">
+          <p className="font-medium">No revenue in the last three years</p>
+          <p className="max-w-md text-sm text-muted-foreground">
+            Only customers with revenue in the window appear here. Try clearing
+            the search or the filters.
+          </p>
+        </div>
+      ) : (
+        <>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  {visibleColumns.map((col) => (
+                    <TableHead key={col.key}>{col.label}</TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {page.rows.map((row, index) => (
+                  <TableRow
+                    key={`${row.companyCode}-${row.revenueGroupNumber}-${index}`}
+                  >
+                    {visibleColumns.map((col) => renderCell(row, col.key))}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          <TablePagination page={page} singular="row" plural="rows" />
+        </>
+      )}
     </div>
-  </div>
-);
+  );
+};
