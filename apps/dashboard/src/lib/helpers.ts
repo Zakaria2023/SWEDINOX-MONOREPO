@@ -142,15 +142,60 @@ import {
 export const cn = (...inputs: ClassValue[]) => twMerge(clsx(inputs));
 
 /**
- * A readable error message for a server-action catch block: the human-friendly
- * fallback, followed by the underlying error's own message when there is one.
- * Used so a failed query surfaces its real cause to the client (e.g. a missing
- * column or a connection timeout) instead of only a generic "Failed to …".
+ * What the database driver says went wrong, in words.
+ *
+ * A failed query arrives with the driver's own error hidden in `cause`, while
+ * `message` holds the whole statement. Printing the statement told a reader
+ * nothing they could act on: "Too many connections" read as three hundred
+ * characters of SELECT.
  */
-export const describeError = (error: unknown, fallback: string): string =>
-  error instanceof Error && error.message
+const DRIVER_FAULTS: Record<string, string> = {
+  ER_CON_COUNT_ERROR:
+    "the database is refusing new connections — too many are already open",
+  ER_TOO_MANY_USER_CONNECTIONS:
+    "the database is refusing new connections for this user",
+  PROTOCOL_CONNECTION_LOST: "the database closed the connection",
+  ECONNREFUSED: "the database refused the connection",
+  ETIMEDOUT: "the database did not answer in time",
+  ER_LOCK_WAIT_TIMEOUT: "the database timed out waiting for a lock",
+  ER_NO_SUCH_TABLE: "a table this screen reads does not exist",
+  ER_BAD_FIELD_ERROR: "a column this screen reads does not exist",
+  ER_DUP_ENTRY: "a record with that key already exists",
+};
+
+/** The driver fault behind an error, however deeply it is wrapped. */
+const driverFault = (error: unknown, depth: number = 0): string | null => {
+  if (depth > 4 || typeof error !== "object" || error === null) {
+    return null;
+  }
+  if ("code" in error) {
+    const code = (error as { code?: unknown }).code;
+    if (typeof code === "string" && DRIVER_FAULTS[code]) {
+      return DRIVER_FAULTS[code];
+    }
+  }
+  if ("cause" in error) {
+    return driverFault((error as { cause?: unknown }).cause, depth + 1);
+  }
+  return null;
+};
+
+/**
+ * A readable error message for a server-action catch block: the human-friendly
+ * fallback, followed by what actually went wrong.
+ *
+ * The driver's own fault wins when there is one, because that is the sentence
+ * a reader can act on. Otherwise the error's message is used, as before.
+ */
+export const describeError = (error: unknown, fallback: string): string => {
+  const fault = driverFault(error);
+  if (fault) {
+    return `${fallback}: ${fault}`;
+  }
+  return error instanceof Error && error.message
     ? `${fallback}: ${error.message}`
     : fallback;
+};
 
 /**
  * Returns today's date as a YYYY-MM-DD string.
