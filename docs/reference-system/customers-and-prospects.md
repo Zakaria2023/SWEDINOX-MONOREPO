@@ -637,6 +637,25 @@ It is a **hand-kept log and a warning board**, not a description:
   the rest has to be shown at the moment an order is typed.
 - A remark cross-references other records by number: `Zie ook bedrijfsnr 4614`.
 
+### Against `apps/dashboard` — fixed 20-9-2026
+
+Two things, both from §24.
+
+**The screen hid most of its subject.** `/remarks-per-company` listed only the
+companies that carry a remark; the reference's report prints **every** company
+and leaves the line blank — 2 531 lines of which 1 546 are empty. That blankness
+is the finding: most accounts have never been written up. Every company is now
+listed, with a `Has a remark` filter that brings the old view back.
+
+**`Initials` was missing.** The report's own lines are `Klant no.`, `Customer`,
+`City`, `Representative`, `Initials`, then the remark — and the initials are the
+representative's, the same rule C2 proved.
+
+One bug found while building the filter: negating the remark test without
+parentheses bound the `NOT` to the first clause alone and silently dropped every
+company whose remark is null — which is most of them. Caught by a conservation
+check, `with + without = all`.
+
 ---
 
 # Part 7 — Customer revenue per product group (C9) and per revenue group (C10)

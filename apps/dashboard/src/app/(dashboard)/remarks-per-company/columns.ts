@@ -1,13 +1,18 @@
 import { RemarkPerCompanyRow } from "@/app/(dashboard)/remarks-per-company/actions";
 import { ExportColumn, numberCell, textCell } from "@/lib/excel";
-import { salesRepresentativeLabel } from "@/lib/helpers";
+import {
+  representativeInitials,
+  salesRepresentativeLabel,
+} from "@/lib/helpers";
 
 /**
  * Remarks per company as a sheet.
  *
  * The reference prints this as a Report rather than a grid — Excel gets one
- * column and the pairs have to be rebuilt — so these five columns are the
- * shape the report's lines carry, not a column list copied off a screen.
+ * column and the pairs have to be rebuilt — so these columns are the shape the
+ * report's own lines carry (`Klant no.`, `Customer`, `City`, `Representative`,
+ * `Initials`, then the remark underneath), not a column list copied off a
+ * screen.
  */
 
 export type RemarkPerCompanyColumnKey =
@@ -15,6 +20,7 @@ export type RemarkPerCompanyColumnKey =
   | "customer"
   | "city"
   | "representative"
+  | "initials"
   | "remarks";
 
 export const REMARK_PER_COMPANY_COLUMNS: Array<
@@ -48,6 +54,12 @@ export const REMARK_PER_COMPANY_COLUMNS: Array<
           ? salesRepresentativeLabel(row.representative)
           : null,
       ),
+  },
+  {
+    key: "initials",
+    label: "Initials",
+    defaultVisible: true,
+    value: (row) => textCell(representativeInitials(row.representative)),
   },
   {
     key: "remarks",

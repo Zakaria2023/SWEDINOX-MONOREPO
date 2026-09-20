@@ -22,14 +22,19 @@ import {
   SearchParams,
   TableQuery,
 } from "@/lib/table-query";
-import { and, asc, count, eq, isNotNull, ne, sql } from "drizzle-orm";
+import { asc, count, eq, not, sql } from "drizzle-orm";
 
-// Only companies that carry a remark (decided 14-9-2026; the reference prints
-// all 2 531 companies and leaves 1 546 of the lines blank).
-const HAS_A_REMARK = and(
-  isNotNull(Companies.remarks),
-  ne(Companies.remarks, sql`''`),
-);
+/**
+ * Whether a company carries a remark.
+ *
+ * The reference prints every company, remark or not -- 2 531 lines of which
+ * 1 546 are blank -- so this is a filter rather than the screen. Hiding the
+ * blanks by default hid the fact that most accounts have never been written
+ * up, which is itself worth seeing.
+ */
+// Parenthesised on purpose: negated for the "without one" filter, an unbraced
+// NOT would bind to the first clause alone and quietly drop every null.
+const HAS_A_REMARK = sql`(${Companies.remarks} IS NOT NULL AND ${Companies.remarks} <> '')`;
 
 // The remark itself is searchable, which the reference's report has no way of
 // doing — its Excel output is one column of 998 lines with no header.
@@ -41,6 +46,15 @@ const REMARK_SEARCH = [
 
 const REMARK_FILTERS: FilterBindings = {
   representative: enumFilter(Companies.representative, salesRepresentatives),
+  hasRemark: (values) => {
+    if (values.includes("yes")) {
+      return HAS_A_REMARK;
+    }
+    if (values.includes("no")) {
+      return not(HAS_A_REMARK);
+    }
+    return undefined;
+  },
 };
 
 const REMARK_SORTABLE: SortableColumns = {
@@ -86,7 +100,6 @@ const remarkRows =
           query,
           search: REMARK_SEARCH,
           filters: REMARK_FILTERS,
-          scope: [HAS_A_REMARK],
         }),
       )
       .orderBy(
@@ -126,7 +139,6 @@ export const getRemarksPerCompany = async (
               query,
               search: REMARK_SEARCH,
               filters: REMARK_FILTERS,
-              scope: [HAS_A_REMARK],
             }),
           );
         return Number(row?.value ?? 0);

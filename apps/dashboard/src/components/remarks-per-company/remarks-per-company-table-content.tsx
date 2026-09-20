@@ -27,6 +27,7 @@ import { selectorColumns } from "@/lib/excel";
 import {
   buildColumnVisibility,
   orDash,
+  representativeInitials,
   salesRepresentativeLabel,
 } from "@/lib/helpers";
 import { Paged, TableFilterControl } from "@/lib/table-query";
@@ -85,12 +86,19 @@ export const RemarksPerCompanyTable = ({ page, filters }: Props) => {
             {salesRepresentativeLabel(row.representative)}
           </TableCell>
         );
+      case "initials":
+        return (
+          <TableCell key={key}>
+            {orDash(representativeInitials(row.representative))}
+          </TableCell>
+        );
       case "remarks":
         // A remark is a paragraph, not a cell: kept wrapping so it can be read
-        // rather than clipped.
+        // rather than clipped. Most companies have none, and the reference
+        // prints those lines blank too.
         return (
           <TableCell key={key} className="max-w-md whitespace-pre-wrap">
-            {row.remarks}
+            {orDash(row.remarks)}
           </TableCell>
         );
     }
@@ -119,10 +127,10 @@ export const RemarksPerCompanyTable = ({ page, filters }: Props) => {
 
       {page.rows.length === 0 ? (
         <div className="flex flex-col items-center gap-1 rounded-lg border border-dashed px-6 py-10 text-center">
-          <p className="font-medium">No company remarks</p>
+          <p className="font-medium">No companies</p>
           <p className="max-w-md text-sm text-muted-foreground">
-            A company appears here once somebody writes a remark on it. Try
-            clearing the search or the filter.
+            Every company is listed here, with its remark when it has one. Try
+            clearing the search or the filters.
           </p>
         </div>
       ) : (
@@ -151,7 +159,7 @@ export const RemarksPerCompanyTable = ({ page, filters }: Props) => {
               ))}
             </TableBody>
           </Table>
-          <TablePagination page={page} singular="remark" plural="remarks" />
+          <TablePagination page={page} singular="company" plural="companies" />
         </>
       )}
     </div>
