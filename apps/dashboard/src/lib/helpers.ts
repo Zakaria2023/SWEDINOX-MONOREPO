@@ -497,7 +497,9 @@ export const isSentinelDate = (value: string | Date | null): boolean => {
     return false;
   }
   const iso =
-    typeof value === "string" ? value.slice(0, 10) : value.toISOString().slice(0, 10);
+    typeof value === "string"
+      ? value.slice(0, 10)
+      : value.toISOString().slice(0, 10);
   return SENTINEL_DATES.includes(iso);
 };
 
@@ -787,7 +789,8 @@ export const fullName = (
  */
 export const roundToCents = (value: number): number => {
   const scaled = value * 100;
-  const meant = Math.abs(scaled) < 1e9 ? Number(scaled.toPrecision(12)) : scaled;
+  const meant =
+    Math.abs(scaled) < 1e9 ? Number(scaled.toPrecision(12)) : scaled;
   return Math.round(meant) / 100;
 };
 
@@ -1932,7 +1935,9 @@ export const runningMeters = ({
 
 /** The calendar day a date or timestamp falls on, as "yyyy-MM-dd". */
 const calendarDay = (value: string | Date): string =>
-  typeof value === "string" ? value.slice(0, 10) : value.toISOString().slice(0, 10);
+  typeof value === "string"
+    ? value.slice(0, 10)
+    : value.toISOString().slice(0, 10);
 
 /**
  * Whole calendar days from one date to another, ignoring the time of day —
@@ -2506,6 +2511,24 @@ export const resolveTierDiscount = (
  */
 export const profitMarginPercent = (revenue: number, profit: number): number =>
   revenue === 0 ? 0 : (profit / revenue) * 100;
+
+/**
+ * The same margin over an **unsigned** denominator.
+ *
+ * The invoice line reports two margins side by side and they do not agree on a
+ * credit note. `Profit margin line` divides by the signed revenue, so invoice
+ * `501253` — revenue -13 400.25, profit -1 210.29 — prints **+9.03**. `Profit
+ * margin products` divides by its size and prints the same figure negative.
+ * Both are on the same row of the same grid, so neither can be called the
+ * mistake; they are two conventions and the screen uses both.
+ *
+ * Unrounded, like its sibling: the products column rounds to one decimal and
+ * the line column to two.
+ */
+export const absoluteProfitMarginPercent = (
+  revenue: number,
+  profit: number,
+): number => (revenue === 0 ? 0 : (profit / Math.abs(revenue)) * 100);
 
 /**
  * The same margin as a **sales document** reports it.
@@ -4238,11 +4261,13 @@ export const resolveSurchargeAmounts = <
 ): T[] =>
   rows.map((row) => ({
     ...row,
-    amount: moneyString(computeSurchargeAmount(
-      row.description,
-      Number(row.surcharge ?? 0),
-      context,
-    )),
+    amount: moneyString(
+      computeSurchargeAmount(
+        row.description,
+        Number(row.surcharge ?? 0),
+        context,
+      ),
+    ),
   }));
 
 // ---------------------------------------------------------------------------
@@ -5704,9 +5729,7 @@ export const warehouseWorkOrderTypeForMove = (
 ): WarehouseWorkOrderType | null => {
   const found = warehouseWorkOrderTypes.find((type) => {
     const meta = WAREHOUSE_WORK_ORDER_TYPE_META[type];
-    return (
-      meta.stockEffect !== "count" && meta.from === from && meta.to === to
-    );
+    return meta.stockEffect !== "count" && meta.from === from && meta.to === to;
   });
   return found ?? null;
 };
@@ -8407,10 +8430,10 @@ export const invoiceSummaryFromSnapshot = (
     ...invoice,
     totalExclVat: invoice.invoiceAmountExclVat,
     totalInclVat: invoice.invoiceAmountInclVat,
-    vatAmount: moneyString((
+    vatAmount: moneyString(
       Number(invoice.invoiceAmountInclVat ?? 0) -
-      Number(invoice.invoiceAmountExclVat ?? 0)
-    )),
+        Number(invoice.invoiceAmountExclVat ?? 0),
+    ),
   });
 
 // ---------------------------------------------------------------------------
@@ -8631,8 +8654,7 @@ export const describeOrderType = (flags: OrderTypeFlags): string => {
  */
 export const isPurchaseQuoteEditable = (
   status: PurchaseQuoteStatus | null,
-): boolean =>
-  status !== "awarded" && status !== "lost" && status !== "expired";
+): boolean => status !== "awarded" && status !== "lost" && status !== "expired";
 
 /**
  * Whether a purchase request's header may still be edited — the same terminal
@@ -9346,9 +9368,7 @@ export const weightDeviationPercent = (
   kgPlanned: number,
   kgActual: number,
 ): number =>
-  kgPlanned === 0
-    ? 0
-    : (Math.abs(kgPlanned - kgActual) / kgPlanned) * 100;
+  kgPlanned === 0 ? 0 : (Math.abs(kgPlanned - kgActual) / kgPlanned) * 100;
 
 /**
  * What is still to be called off on a line the customer releases in batches.

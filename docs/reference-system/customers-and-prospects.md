@@ -1084,9 +1084,9 @@ does not explain it: April 2025 holds 2 116 324.53 that should have appeared.
 Copying a column nobody can explain would be copying a bug, so they are not
 carried.
 
-⚠️ **Not verified live.** The shared database was at its connection cap
-(`ER_CON_COUNT_ERROR`) while this was finished, so the C8 harness could not
-run. Types, lint and build are green; the live checks are outstanding.
+Verified live once the database freed up — 19/19, including that the screen
+totals the same 3 394 100.68 as the revenue-group screen, that revenue and
+profit each equal their three parts, and that kilos are whole.
 
 One fix made on the way: the page was building the whole fact set twice per
 render, once for the rows and once to learn which years to offer in the filter.

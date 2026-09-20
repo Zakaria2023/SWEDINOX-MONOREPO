@@ -133,6 +133,39 @@ the revenue and invoice screens it is the line's sourcing. Keep them apart.
   carries the four values from the header export.
 - **30 rows have no `Order`** — surcharge lines raised directly on an invoice.
 
+### Against `apps/dashboard` — rebuilt 20-9-2026
+
+`/invoice-lines` read **only `InvoiceItems`**, so the 470 surcharge lines were
+not on the screen at all — a tenth of the invoiced rows, and the same omission
+the revenue-group screen had. It showed 10 of the reference's 43 columns.
+
+It now carries **40 columns and both kinds of line**. A surcharge row has no
+order, no order line and no product; its revenue group comes from its
+description — packaging and pallet to 8900, transport to 8100, **decoiling to
+3000**, the processing band, because the band follows the thing sold rather
+than the kind of line — and it is quantified in euros, as the reference's
+`QtyU = Euro` says.
+
+🔴 **The three margins use two conventions, and both are kept.** `Profit margin
+products` divides by the size of the revenue and rounds to one decimal;
+`Profit margin line` divides by the signed revenue and rounds to two. §3 said
+not to build one shared helper, and this is why: on the credit note's figures
+(revenue −13 400.25, profit −1 210.29) the live check reproduces the
+reference's own pair exactly — **+9.03 on the line, −9.03 on the products**.
+`absoluteProfitMarginPercent` was added beside `profitMarginPercent` so neither
+can quietly replace the other.
+
+Verified live, 15/15: every order line and every surcharge line is listed
+(367 and 3 here), the surcharge money totals the surcharges to the cent,
+`Revenue line = products + options` and `Profit line = products + options` hold
+on every row, a surcharge carries no order line, and the `Linetype` filter
+splits the screen exactly.
+
+Three columns are not carried: `Region number` (`0` on all 5 650),
+`Member SFN` (`False` on all 5 650) and `Affiliate company details` (one
+constant). `Order type` is labelled `Order type (supply)`, since on this screen
+it is the line's sourcing and not the order's own type.
+
 ---
 
 # Part 2 — the invoice **header** (item B3)
