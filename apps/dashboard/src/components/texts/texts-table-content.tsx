@@ -85,17 +85,6 @@ export const TextsTable = ({ page, filters }: TextsTableContentProps) => {
     }
 
     switch (key) {
-      case "title":
-        return (
-          <TableCell key={key} className="font-medium">
-            <Link
-              href={`/texts/${text.uuid}`}
-              className="text-primary hover:underline"
-            >
-              {text.title}
-            </Link>
-          </TableCell>
-        );
       case "companyId":
         return (
           <TableCell key={key} className="font-medium">
@@ -103,9 +92,19 @@ export const TextsTable = ({ page, filters }: TextsTableContentProps) => {
           </TableCell>
         );
       case "companyName":
+        // The reference row menu holds one jump, to the company. This is it.
         return (
           <TableCell key={key} className="font-medium">
-            {text.companyName ?? fallback}
+            {text.companyUuid && text.companyName ? (
+              <Link
+                href={`/companies/${text.companyUuid}`}
+                className="text-primary hover:underline"
+              >
+                {text.companyName}
+              </Link>
+            ) : (
+              fallback
+            )}
           </TableCell>
         );
       case "city":
@@ -139,9 +138,17 @@ export const TextsTable = ({ page, filters }: TextsTableContentProps) => {
           <TableCell key={key}>{text.textCategoryName ?? fallback}</TableCell>
         );
       case "textBlock":
+        // The note is the row. It is shown whole and wrapped, the way the
+        // reference shows it — an opening time cut off at "Warenannahme Vre…"
+        // tells nobody anything. Clicking it opens the text itself.
         return (
-          <TableCell key={key} className="max-w-xs truncate">
-            {text.textBlock}
+          <TableCell key={key} className="max-w-md">
+            <Link
+              href={`/texts/${text.uuid}`}
+              className="whitespace-pre-wrap hover:underline"
+            >
+              {text.textBlock}
+            </Link>
           </TableCell>
         );
       case "categories": {

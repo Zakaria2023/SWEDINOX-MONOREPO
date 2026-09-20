@@ -29,6 +29,7 @@ import {
   customerStockReasons,
   TextUsageCategory,
 } from "@/lib/enums";
+import { TEXT_USAGE_CATEGORY_FIELDS } from "@/lib/helpers";
 import { z } from "zod";
 
 const createOptionalEmailSchema = () =>
@@ -332,7 +333,10 @@ export const DEFAULT_CONTACT: ContactDialogValues = {
 // ── Text Dialog ──────────────────────────────────────────────────────────────
 
 export const textDialogSchema = z.object({
-  textCategoryUuid: z.string().min(1, "Please select a text category"),
+  // Optional: the reference fills a text group on two rows in two hundred and
+  // fifty-nine. What people actually write here is an opening time or a customs
+  // sentence, and demanding a group first is a wall in front of that.
+  textCategoryUuid: z.string(),
   textBlock: z.string().min(1, "Text block is required"),
   visitReport: z.boolean(),
   purchaseQuoteRequest: z.boolean(),
@@ -360,29 +364,12 @@ export type TextBooleanField = keyof Omit<
   "textCategoryUuid" | "textBlock"
 >;
 
+// The dialog ticks the same eighteen documents the overview lists, in the same
+// order, so the list is not written twice.
 export const USAGE_CATEGORY_FIELDS: Array<{
   key: TextUsageCategory;
   field: TextBooleanField;
-}> = [
-  { key: "visit_report", field: "visitReport" },
-  { key: "purchase_quote_request", field: "purchaseQuoteRequest" },
-  { key: "purchase_order", field: "purchaseOrder" },
-  { key: "purchase_order_tool_tip", field: "purchaseOrderToolTip" },
-  { key: "purchase_return_order", field: "purchaseReturnOrder" },
-  { key: "sales_quote", field: "salesQuote" },
-  { key: "sales_order", field: "salesOrder" },
-  { key: "sales_order_tool_tip", field: "salesOrderToolTip" },
-  { key: "sales_invoice", field: "salesInvoice" },
-  { key: "warehouse_order", field: "warehouseOrder" },
-  { key: "production_order", field: "productionOrder" },
-  { key: "loadlist", field: "loadlist" },
-  { key: "waybill", field: "waybill" },
-  { key: "ride_list", field: "rideList" },
-  { key: "customer_label", field: "customerLabel" },
-  { key: "transport_planning", field: "transportPlanning" },
-  { key: "website_in_advance", field: "websiteInAdvance" },
-  { key: "website_after", field: "websiteAfter" },
-];
+}> = TEXT_USAGE_CATEGORY_FIELDS;
 
 // ── Counter Order Dialog ─────────────────────────────────────────────────────
 

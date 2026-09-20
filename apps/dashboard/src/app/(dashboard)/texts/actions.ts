@@ -29,7 +29,7 @@ import {
   SelectCompanyAddresses,
   SelectTextCategories,
 } from "@/db";
-import { count, desc, eq, getTableColumns } from "drizzle-orm";
+import { count, desc, eq, getTableColumns, isNotNull } from "drizzle-orm";
 import {
   relationFilter,
   runPaged,
@@ -78,6 +78,16 @@ const TEXT_SORTABLE = {
   category: TextCategories.name,
 };
 
+/**
+ * Company texts only.
+ *
+ * A text can also hang off an order, a quote or a purchase document, and this
+ * screen is the companies one — the reference lists the notes stuck to a
+ * company and nothing else. A text written on one order belongs on that order,
+ * and is shown there.
+ */
+const COMPANY_TEXT = [isNotNull(Texts.companyUuid)];
+
 // Whose text it is and which category it prints under.
 const TEXT_FILTERS = {
   company: relationFilter(Texts.companyUuid),
@@ -107,7 +117,14 @@ const textRows =
         eq(CompanyAddresses.companyUuid, Texts.companyUuid),
       )
       .leftJoin(TextCategories, eq(TextCategories.uuid, Texts.textCategoryUuid))
-      .where(tableWhere({ query, search: TEXT_SEARCH, filters: TEXT_FILTERS }))
+      .where(
+        tableWhere({
+          query,
+          search: TEXT_SEARCH,
+          filters: TEXT_FILTERS,
+          scope: COMPANY_TEXT,
+        }),
+      )
       .orderBy(
         ...tableOrderBy(
           TEXT_SORTABLE,
@@ -138,6 +155,7 @@ export const getTexts = async (
     query,
     search: TEXT_SEARCH,
     filters: TEXT_FILTERS,
+    scope: COMPANY_TEXT,
   });
 
   return runPaged(query, {

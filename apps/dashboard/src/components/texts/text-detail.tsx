@@ -27,7 +27,6 @@ export const TextDetailView = ({ text, userNames }: Props) => {
       <section className="space-y-4">
         <h2 className="border-b pb-2 text-base font-semibold">Text</h2>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          <DetailField label="Title" value={text.title} />
           <DetailField label="Text group" value={text.textCategoryName} />
           <DetailField
             label="Group description"

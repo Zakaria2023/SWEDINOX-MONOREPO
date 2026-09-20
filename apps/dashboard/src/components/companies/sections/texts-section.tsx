@@ -33,8 +33,8 @@ export const TextsSection = ({
         >
           <div className="flex min-w-0 items-center gap-2 text-sm">
             <AlignLeft className="size-4 shrink-0 text-muted-foreground" />
-            <span className="font-medium text-foreground truncate">
-              {text.title}
+            <span className="line-clamp-1 font-medium text-foreground">
+              {text.textBlock}
             </span>
             {(() => {
               const cat = textCategories.find(

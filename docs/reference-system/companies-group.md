@@ -175,16 +175,41 @@ company link, the `TextCategories` lookup (`Text group`), and the overview's
 columns are the same 29 in the same grouping. `textUsageCategories` renders the
 `Categories` string from the ticks, which is what the reference does.
 
-Three differences worth a decision, none urgent:
+Three differences were found and closed on 20-9-2026:
 
-- **`Texts.title` is `notNull` in our schema and the reference has no title
-  column at all** — not in the grid, and not in the company panel, which shows
-  only `Categorieën` and `Tekst`. Either the reference has no title, or it is
-  hidden from both. Our forms force one. Leave it, but do not rely on it.
-- **Our `Texts` can hang off ten other documents** (order, quote, purchase
-  order, product group, …). The reference screen shows only company texts. Those
-  links may well exist there too — this screen would not show them.
-- Our tick column order differs from the reference's; the set is identical.
+- **The title.** `Texts.title` is `notNull` in our schema and the reference has
+  no title column at all — not in the grid, and not in the company panel, which
+  shows only `Categorieën` and `Tekst`. Ours held a copy of the text group's
+  name, so the grid printed the same word twice. The column is gone from the
+  overview, the export, the detail page and both company panels, which now show
+  the text itself. The database column stays, because a text written on an
+  *order* does carry a real title — a company text writes the group name, or
+  nothing.
+- **The scope.** Our `Texts` can hang off ten other documents (order, quote,
+  purchase order, product group, …) and the overview listed all of them. The
+  reference screen shows company texts only, so ours does now; a text written on
+  one order belongs on that order.
+- **The tick order.** Same eighteen, different sequence. The list now follows
+  the reference's grid order, and it is declared once — the edit dialog reads
+  the same array as the overview, so the two cannot drift.
+
+Two more, decided at the same time:
+
+- **The text group is no longer required.** The reference fills it on 2 rows of
+  259. Ours refused to save without one, which is a wall in front of the only
+  thing anybody does here — type an opening time and tick the warehouse.
+- **The grid no longer clips the text.** An opening time cut off at
+  `Warenannahme Vre…` tells nobody anything, and the reference shows it whole.
+
+### 🔴 What still does not match: nothing prints
+
+We store all eighteen ticks, show them, export them — and **no document we
+generate reads one**. Ticking `Waybill` on the export declaration changes
+nothing about the waybill. The record matches the reference; the consequence
+does not exist yet. Until the printing side reads these ticks, this screen is an
+archive rather than a working feature — which matters most for the export
+declaration, where the missing sentence is a customs problem, not a cosmetic
+one.
 
 The company record carries the same list: a **`Texts` panel** between
 `Selectioncodes` and `Total revenue`, with `New` / `Delete` / `View` and two

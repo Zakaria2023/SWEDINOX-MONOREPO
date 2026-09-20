@@ -34,7 +34,9 @@ const TextDetailPage = async ({ params }: Props) => {
           Texts
         </Link>
       </div>
-      <PageHeading title={text.title} />
+      <PageHeading
+        title={text.companyName ? `Text — ${text.companyName}` : "Text"}
+      />
       <TextDetailView text={text} userNames={userNames} />
     </div>
   );

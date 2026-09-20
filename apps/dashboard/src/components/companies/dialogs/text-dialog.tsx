@@ -54,8 +54,8 @@ export const TextDialog = ({
           Text
         </DialogTitle>
         <DialogDescription>
-          Select a category to auto-fill the usage checkboxes, then fill in the
-          title and text block.
+          Write the note, then tick the documents it should print on. A text
+          group is optional, and picking one fills the ticks for you.
         </DialogDescription>
       </DialogHeader>
 

@@ -39,11 +39,12 @@ export const getTextsForCompany = async (
     .where(eq(Texts.companyUuid, companyUuid))
     .orderBy(asc(Texts.id));
 
-// Inserts a new text or updates an existing one by uuid. The title is
-// resolved server-side from the selected category's name (falling back to an
-// empty string), exactly like the legacy save handler. New texts record the
-// current Clerk user as createdByUserId, matching createCompany; updates
-// write only the dialog-editable columns.
+// Inserts a new text or updates an existing one by uuid. No screen shows a
+// title any more — the reference has no such column — but the column is still
+// notNull because texts written on an order do carry one, so a company text
+// stores the chosen group's name, or nothing when no group was chosen. New
+// texts record the current Clerk user as createdByUserId, matching
+// createCompany; updates write only the dialog-editable columns.
 export const saveCompanyText = async (
   _prevState: CompanyActionResult,
   payload: SaveTextPayload,
@@ -54,11 +55,13 @@ export const saveCompanyText = async (
   }
 
   try {
-    const [category] = await db
-      .select({ name: TextCategories.name })
-      .from(TextCategories)
-      .where(eq(TextCategories.uuid, parsed.data.textCategoryUuid))
-      .limit(1);
+    const [category] = parsed.data.textCategoryUuid
+      ? await db
+          .select({ name: TextCategories.name })
+          .from(TextCategories)
+          .where(eq(TextCategories.uuid, parsed.data.textCategoryUuid))
+          .limit(1)
+      : [];
 
     const columns = textValuesToColumns(parsed.data, category?.name ?? "");
 

@@ -143,7 +143,7 @@ export const CompanyTextsEditor = ({
               <div className="flex min-w-0 items-center gap-2 text-sm">
                 <AlignLeft className="size-4 shrink-0 text-muted-foreground" />
                 <span className="line-clamp-1 font-medium text-foreground">
-                  {text.title}
+                  {text.textBlock}
                 </span>
                 {category && (
                   <span className="shrink-0 rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">
@@ -215,9 +215,7 @@ export const CompanyTextsEditor = ({
           }
         }}
         title="Delete text"
-        description={`Delete ${
-          deleteTarget?.title || "this text"
-        }? This can't be undone.`}
+        description={`Delete ${"this text"}? This can't be undone.`}
         confirmLabel="Delete"
         isPending={isDeleting}
         onConfirm={handleConfirmDelete}

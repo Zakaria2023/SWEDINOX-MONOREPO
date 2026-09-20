@@ -8411,7 +8411,14 @@ export type TextAttachmentSource = {
   purchaseReturnOrderId: number | null;
 };
 
-/** Each usage category paired with the `Texts` column that records it. */
+/**
+ * Each usage category paired with the `Texts` column that records it.
+ *
+ * The order is the reference system's column order on its Texts overview, not
+ * an alphabetical or grouped one. It is the single list: the overview columns,
+ * the export, the detail page and the edit dialog all read it, so the ticks
+ * cannot drift out of step with each other.
+ */
 export const TEXT_USAGE_CATEGORY_FIELDS: Array<{
   key: TextUsageCategory;
   field: TextUsageCategoryField;
@@ -8421,19 +8428,19 @@ export const TEXT_USAGE_CATEGORY_FIELDS: Array<{
   { key: "purchase_order", field: "purchaseOrder" },
   { key: "purchase_order_tool_tip", field: "purchaseOrderToolTip" },
   { key: "purchase_return_order", field: "purchaseReturnOrder" },
+  { key: "customer_label", field: "customerLabel" },
+  { key: "loadlist", field: "loadlist" },
+  { key: "warehouse_order", field: "warehouseOrder" },
   { key: "sales_quote", field: "salesQuote" },
   { key: "sales_order", field: "salesOrder" },
   { key: "sales_order_tool_tip", field: "salesOrderToolTip" },
-  { key: "sales_invoice", field: "salesInvoice" },
-  { key: "warehouse_order", field: "warehouseOrder" },
   { key: "production_order", field: "productionOrder" },
-  { key: "loadlist", field: "loadlist" },
-  { key: "waybill", field: "waybill" },
   { key: "ride_list", field: "rideList" },
-  { key: "customer_label", field: "customerLabel" },
   { key: "transport_planning", field: "transportPlanning" },
-  { key: "website_in_advance", field: "websiteInAdvance" },
+  { key: "sales_invoice", field: "salesInvoice" },
+  { key: "waybill", field: "waybill" },
   { key: "website_after", field: "websiteAfter" },
+  { key: "website_in_advance", field: "websiteInAdvance" },
 ];
 
 /**

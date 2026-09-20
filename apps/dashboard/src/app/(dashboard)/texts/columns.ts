@@ -14,10 +14,13 @@ import { TEXT_USAGE_CATEGORY_LABELS } from "@/lib/labels";
  * boolean per document it may appear on, and those columns are declared once in
  * TEXT_USAGE_CATEGORY_FIELDS. Spelling them out here would be a second list to
  * keep in step with the schema.
+ *
+ * There is no title column. The reference has none either — not on the grid and
+ * not on the company panel — and ours only ever held a copy of the text group's
+ * name, so it printed the same word twice on every row.
  */
 
 export type TextColumnKey =
-  | "title"
   | "companyId"
   | "companyName"
   | "city"
@@ -32,12 +35,6 @@ export type TextColumnKey =
   | TextUsageCategoryField;
 
 const BASE_COLUMNS: Array<ExportColumn<TextListItem, TextColumnKey>> = [
-  {
-    key: "title",
-    label: "Title",
-    defaultVisible: true,
-    value: (row) => textCell(row.title),
-  },
   {
     key: "companyId",
     label: "Company code",
