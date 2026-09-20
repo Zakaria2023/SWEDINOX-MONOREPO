@@ -13,7 +13,7 @@ import { Orders, SelectOrders } from "@/db/schema/orders";
 import { Products } from "@/db/schema/products";
 import { RevenueGroups, SelectRevenueGroups } from "@/db/schema/revenue-groups";
 import { INVOICE_SURCHARGE_REVENUE_GROUP_NUMBERS } from "@/lib/constants";
-import { and, count, eq, isNotNull, min, sql } from "drizzle-orm";
+import { and, count, eq, inArray, isNotNull, min, sql } from "drizzle-orm";
 
 /**
  * One aggregated slice of invoiced revenue. The reference's customer revenue
@@ -186,10 +186,17 @@ export const getRevenueFacts = async (): Promise<RevenueFact[]> => {
  * The company columns the revenue screens print, keyed by company uuid. City,
  * postcode and country come from the company's **visiting** address — the
  * reference has exactly one per company — not from a contact's copy.
+ *
+ * `companyUuids` narrows it to the companies on the page. Left off it loads
+ * every company, which is what the unpaged revenue screens still want.
  */
-export const getRevenueCompanies = async (): Promise<
-  Map<string, RevenueCompany>
-> => {
+export const getRevenueCompanies = async (
+  companyUuids?: string[],
+): Promise<Map<string, RevenueCompany>> => {
+  if (companyUuids && companyUuids.length === 0) {
+    return new Map();
+  }
+
   const visitingId = db
     .select({
       companyUuid: CompanyAddresses.companyUuid,
@@ -227,7 +234,8 @@ export const getRevenueCompanies = async (): Promise<
       country: visiting.country,
     })
     .from(Companies)
-    .leftJoin(visiting, eq(Companies.uuid, visiting.companyUuid));
+    .leftJoin(visiting, eq(Companies.uuid, visiting.companyUuid))
+    .where(companyUuids ? inArray(Companies.uuid, companyUuids) : undefined);
 
   return new Map(
     rows.map((row) => [

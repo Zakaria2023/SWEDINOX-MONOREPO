@@ -754,6 +754,38 @@ check must read it as "no margin", not as a huge negative. Our reporting helper
 
 `Region number` is `0` on every row of both — screens five and six.
 
+### C9 against `apps/dashboard` — rebuilt 20-9-2026
+
+The revenue basis was already right: `/customer-revenue-per-product-group` sums
+`revenueProducts` and `profitProducts`, which is the product half §26 proves the
+reference reports. Verified against the live database — the screen totals
+3 389 918.68 and the invoice lines' product revenue totals 3 389 918.68.
+
+⚠️ On the working database `revenueProducts` currently equals the whole line
+amount, because no option has been priced there yet, so that check confirms the
+column read rather than discriminating between the two bases. The reference's
+own numbers do discriminate: 9 032 601.62 products against 11 236.90 options.
+
+What was missing was most of the screen. It carried 17 of the reference's 25
+columns, at the wrong grain, with no paging, search, filter, column picker or
+export. Now 23 columns, paged, and at the reference's grain:
+
+- **Per invoice date, not per month.** §27 proves the grain is unique on all
+  2 241 rows only when the day is part of it. Year and month are printed beside
+  the date rather than instead of it.
+- **`Option 1` and `Option 2`** — two option slots per line, split out of the
+  single options string at the first comma, the way the reference splits them.
+- **`Sales (PriceU)` and `PriceU`** — the sold quantity restated in the unit the
+  line was priced in: tonnes are kilos over a thousand, kilos are the weight,
+  anything else is the quantity as invoiced.
+- **`Transport region`** — the third region axis, the country group a load ships
+  to, which is neither the customer's zone nor the country.
+
+Two reference columns are not carried: `Region number` is `0` on every row —
+the fifth screen to show it dead — and `Loading address` reads `HEGO` or blank
+and never names another warehouse, with nothing in our schema recording which
+depot a line was loaded at.
+
 ---
 
 # Part 8 — Customer revenue per revenue group with split order types (C11)
