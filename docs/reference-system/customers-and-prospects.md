@@ -863,6 +863,27 @@ inherits both C10 bugs (options in the product's group, charges dropped).
 Minor: the grid key is not unique on 39 rows — two rows can share every visible
 dimension, so the reference groups on something it does not display.
 
+### C11 against `apps/dashboard` — rebuilt 20-9-2026
+
+The axis was already right: the screen splits on `Orders.orderType`, not on the
+consignment/pickup flags §30 warned about. It also inherits C10's option fix
+automatically, since both read the same revenue facts.
+
+What it needed was the price unit in its grain and the whole overview
+apparatus. It now carries **21 columns** — C10's twenty plus the second order
+axis — paged, searchable, filterable and exportable.
+
+**The reference prints two columns both named `Order type`.** They are
+different axes: the line's supply route (`Stk` / `CD`, blank on a charge) and
+the order's own type (`Normal` / `Call-off` / `Rush` / `Ex works`). Ours names
+them `Order type (supply)` and `Order type (order)` — a grid with the same
+header twice cannot be read.
+
+Verified live against C10, which is the reference's own identity for this
+screen: revenue, profit, kilos and invoice lines all total identically
+(3 394 100.68 / 3 350.00 / 1 257 869.81 / 370), **every C10 cell equals the sum
+of its C11 split rows**, and every charge row counts as `Normal`.
+
 ---
 
 # Part 9 — Contracts per Customer / Prospect (C6)
