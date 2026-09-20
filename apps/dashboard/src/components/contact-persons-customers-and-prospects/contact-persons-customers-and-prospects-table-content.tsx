@@ -269,6 +269,12 @@ export const ContactPersonsCustomersAndProspectsTable = ({
         );
       case "lastName":
         return <TableCell key={key}>{orDash(row.lastName)}</TableCell>;
+      case "sequenceNumber":
+        return (
+          <TableCell key={key} className="text-right tabular-nums">
+            {row.sequenceNumber}
+          </TableCell>
+        );
       case "mobile":
         return (
           <TableCell key={key} className="whitespace-nowrap">

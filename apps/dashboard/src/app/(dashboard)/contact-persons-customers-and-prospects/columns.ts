@@ -63,6 +63,7 @@ export type ContactPersonColumnKey =
   | "initials"
   | "firstName"
   | "lastName"
+  | "sequenceNumber"
   | "mobile";
 
 const categoriesLabel = (row: ContactPersonRow): string | null => {
@@ -353,6 +354,16 @@ export const CONTACT_PERSON_COLUMNS: Array<
     value: (row) => textCell(row.lastName),
   },
   {
+    // Where the contact sits in the company's own list. 6 369 of the
+    // reference's 6 796 are the first, 237 the second, up to a sixteenth —
+    // so it is the order somebody put them in, not a code.
+    key: "sequenceNumber",
+    label: "Sequence number",
+    defaultVisible: true,
+    value: (row) => numberCell(row.sequenceNumber),
+  },
+  {
+    // Ours alone: the reference has no mobile column on this screen.
     key: "mobile",
     label: "Mobile",
     defaultVisible: false,
