@@ -1,6 +1,14 @@
 "use client";
 
-import { CustomerRevenueRow } from "@/app/(dashboard)/customer-revenue/actions";
+import { useState } from "react";
+import {
+  CustomerRevenueRow,
+  exportCustomerRevenue,
+} from "@/app/(dashboard)/customer-revenue/actions";
+import {
+  CUSTOMER_REVENUE_COLUMNS,
+  CustomerRevenueColumnKey,
+} from "@/app/(dashboard)/customer-revenue/columns";
 import {
   Table,
   TableBody,
@@ -9,108 +17,197 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
-import { formatMoney, formatNumber, yesNo } from "@/lib/helpers";
-import { TableExportButton } from "@/components/ui/table-export-button";
+import { ColumnSelector } from "@/components/ui/column-selector";
+import { PagedTableExportButton } from "@/components/ui/table-export-button";
+import { TablePagination } from "@/components/ui/table-pagination";
+import { TableToolbar } from "@/components/ui/table-toolbar";
+import { selectorColumns } from "@/lib/excel";
+import {
+  buildColumnVisibility,
+  customerGroupLabel,
+  formatDateValue,
+  monthLabel,
+  orDash,
+  salesRepresentativeLabel,
+} from "@/lib/helpers";
+import { Paged, TableFilterControl } from "@/lib/table-query";
+
+type ColumnKey = CustomerRevenueColumnKey;
 
 type Props = {
-  rows: CustomerRevenueRow[];
+  page: Paged<CustomerRevenueRow>;
+  filters: TableFilterControl[];
 };
 
-export const CustomerRevenueTable = ({ rows }: Props) => (
-  <div>
+const ALL_COLUMNS = selectorColumns(CUSTOMER_REVENUE_COLUMNS);
+
+const MONEY_KEYS = new Set<ColumnKey>([
+  "materialRevenue",
+  "optionsRevenue",
+  "surchargesRevenue",
+  "revenue",
+  "materialProfit",
+  "optionsProfit",
+  "surchargesProfit",
+  "profit",
+  "profitMargin",
+]);
+
+const COUNT_KEYS = new Set<ColumnKey>([
+  "customerCode",
+  "year",
+  "weightKg",
+  "invoices",
+  "invoiceLines",
+  "calledThisYear",
+  "visitsThisYear",
+]);
+
+const decimal = (value: number): string =>
+  value.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
+export const CustomerRevenueTable = ({ page, filters }: Props) => {
+  const [columnVisibility, setColumnVisibility] = useState<
+    Record<ColumnKey, boolean>
+  >(buildColumnVisibility(ALL_COLUMNS));
+
+  const toggleColumn = (key: string) =>
+    setColumnVisibility((prev) => ({
+      ...prev,
+      [key]: !prev[key as ColumnKey],
+    }));
+
+  const visibleColumns = ALL_COLUMNS.filter((col) => columnVisibility[col.key]);
+
+  const renderCell = (row: CustomerRevenueRow, key: ColumnKey) => {
+    if (MONEY_KEYS.has(key)) {
+      return (
+        <TableCell key={key} className="text-right tabular-nums">
+          {decimal(row[key as keyof CustomerRevenueRow] as number)}
+        </TableCell>
+      );
+    }
+
+    if (COUNT_KEYS.has(key)) {
+      const value = row[key as keyof CustomerRevenueRow];
+      return (
+        <TableCell key={key} className="text-right tabular-nums">
+          {value === null ? "—" : String(value)}
+        </TableCell>
+      );
+    }
+
+    switch (key) {
+      case "customerName":
+        return (
+          <TableCell key={key} className="font-medium">
+            {orDash(row.customerName)}
+          </TableCell>
+        );
+      case "city":
+        return <TableCell key={key}>{orDash(row.city)}</TableCell>;
+      case "country":
+        return <TableCell key={key}>{orDash(row.country)}</TableCell>;
+      case "region":
+        return <TableCell key={key}>{orDash(row.region)}</TableCell>;
+      case "representative":
+        return (
+          <TableCell key={key}>
+            {salesRepresentativeLabel(row.representative)}
+          </TableCell>
+        );
+      case "accountManager":
+        return (
+          <TableCell key={key}>
+            {salesRepresentativeLabel(row.accountManager)}
+          </TableCell>
+        );
+      case "customerGroup":
+        return (
+          <TableCell key={key}>
+            {customerGroupLabel(row.customerGroup)}
+          </TableCell>
+        );
+      case "active":
+        return <TableCell key={key}>{row.active ? "Yes" : "No"}</TableCell>;
+      case "month":
+        return <TableCell key={key}>{monthLabel(row.month)}</TableCell>;
+      case "lastOrderDate":
+        return (
+          <TableCell key={key}>{formatDateValue(row.lastOrderDate)}</TableCell>
+        );
+      case "lastCallDate":
+        return (
+          <TableCell key={key}>{formatDateValue(row.lastCallDate)}</TableCell>
+        );
+      case "lastVisitDate":
+        return (
+          <TableCell key={key}>{formatDateValue(row.lastVisitDate)}</TableCell>
+        );
+      case "pointOfAttention":
+        // The company's own remark, which is a paragraph rather than a cell.
+        return (
+          <TableCell key={key} className="max-w-md whitespace-pre-wrap">
+            {orDash(row.pointOfAttention)}
+          </TableCell>
+        );
+    }
+  };
+
+  return (
     <div className="space-y-4">
-      <div className="flex justify-end">
-        <TableExportButton
-          tableId="customer-revenue-table"
-          fileName="customer-revenue"
-          sheetName="Customer revenue"
+      <TableToolbar searchPlaceholder="Search customer…" filters={filters}>
+        <ColumnSelector
+          columns={ALL_COLUMNS.map((col) => ({
+            key: col.key,
+            label: col.label,
+          }))}
+          visibility={columnVisibility}
+          onToggle={toggleColumn}
         />
-      </div>
-      <Table id="customer-revenue-table">
-        <TableHeader>
-          <TableRow>
-            <TableHead>Customer</TableHead>
-            <TableHead className="text-right">Customer code</TableHead>
-            <TableHead>City</TableHead>
-            <TableHead>Country</TableHead>
-            <TableHead>Active</TableHead>
-            <TableHead className="text-right">Year</TableHead>
-            <TableHead className="text-right">Month</TableHead>
-            <TableHead className="text-right">Revenue of material</TableHead>
-            <TableHead className="text-right">Revenue options</TableHead>
-            <TableHead className="text-right">Revenue surcharges</TableHead>
-            <TableHead className="text-right">Revenue</TableHead>
-            <TableHead className="text-right">Profit material</TableHead>
-            <TableHead className="text-right">Profit options</TableHead>
-            <TableHead className="text-right">Profit surcharges</TableHead>
-            <TableHead className="text-right">Profit</TableHead>
-            <TableHead className="text-right">Profit margin</TableHead>
-            <TableHead className="text-right">Kg</TableHead>
-            <TableHead className="text-right">#Invoices</TableHead>
-            <TableHead className="text-right">#Invoice lines</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {rows.length === 0 ? (
-            <TableRow>
-              <TableCell
-                colSpan={19}
-                className="h-24 text-center text-muted-foreground"
-              >
-                No customer revenue found.
-              </TableCell>
-            </TableRow>
-          ) : (
-            rows.map((row, index) => (
-              <TableRow key={index}>
-                <TableCell className="font-medium">
-                  {row.customerName ?? "—"}
-                </TableCell>
-                <TableCell className="text-right">
-                  {row.customerCode ?? "—"}
-                </TableCell>
-                <TableCell>{row.city ?? "—"}</TableCell>
-                <TableCell>{row.country ?? "—"}</TableCell>
-                <TableCell>{yesNo(row.active)}</TableCell>
-                <TableCell className="text-right">{row.year}</TableCell>
-                <TableCell className="text-right">{row.month}</TableCell>
-                <TableCell className="text-right whitespace-nowrap">
-                  {formatMoney(row.materialRevenue)}
-                </TableCell>
-                <TableCell className="text-right whitespace-nowrap">
-                  {formatMoney(row.optionsRevenue)}
-                </TableCell>
-                <TableCell className="text-right whitespace-nowrap">
-                  {formatMoney(row.surchargesRevenue)}
-                </TableCell>
-                <TableCell className="text-right whitespace-nowrap font-medium">
-                  {formatMoney(row.revenue)}
-                </TableCell>
-                <TableCell className="text-right whitespace-nowrap">
-                  {formatMoney(row.materialProfit)}
-                </TableCell>
-                <TableCell className="text-right whitespace-nowrap">
-                  {formatMoney(row.optionsProfit)}
-                </TableCell>
-                <TableCell className="text-right whitespace-nowrap">
-                  {formatMoney(row.surchargesProfit)}
-                </TableCell>
-                <TableCell className="text-right whitespace-nowrap font-medium">
-                  {formatMoney(row.profit)}
-                </TableCell>
-                <TableCell className="text-right">
-                  {formatNumber(row.profitMargin)}%
-                </TableCell>
-                <TableCell className="text-right">
-                  {formatNumber(row.weightKg)}
-                </TableCell>
-                <TableCell className="text-right">{row.invoices}</TableCell>
-                <TableCell className="text-right">{row.invoiceLines}</TableCell>
-              </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
+        <PagedTableExportButton
+          fileName="customer-revenue"
+          columnKeys={visibleColumns.map((column) => column.key)}
+          action={exportCustomerRevenue}
+        />
+      </TableToolbar>
+
+      {page.rows.length === 0 ? (
+        <div className="flex flex-col items-center gap-1 rounded-lg border border-dashed px-6 py-10 text-center">
+          <p className="font-medium">No invoiced revenue</p>
+          <p className="max-w-md text-sm text-muted-foreground">
+            Material, options and surcharges are each reported on their own. Try
+            clearing the search, the period or the filters.
+          </p>
+        </div>
+      ) : (
+        <>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  {visibleColumns.map((col) => (
+                    <TableHead key={col.key}>{col.label}</TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {page.rows.map((row, index) => (
+                  <TableRow
+                    key={`${row.customerCode}-${row.year}-${row.month}-${index}`}
+                  >
+                    {visibleColumns.map((col) => renderCell(row, col.key))}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          <TablePagination page={page} singular="row" plural="rows" />
+        </>
+      )}
     </div>
-  </div>
-);
+  );
+};

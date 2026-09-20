@@ -1056,6 +1056,42 @@ and computes profit as `amount − costAmount` across **every** invoice line. Th
 reference splits material / options / surcharges, counts only order lines in
 `#Invoice lines`, and rounds kilos. It also has no `Active` column.
 
+### C8 against `apps/dashboard` — finished 20-9-2026
+
+The arithmetic was already right and had been proved on May 2025: the
+material / options / surcharges split, `#Invoice lines` counting order lines
+only, whole kilos, and `Active` as the archive flag.
+
+Added now: the **CRM half the reference maintains** — `Last order date`,
+`Last call date`, `Last visit date`, `Called this year`, `Visits this year` —
+plus `Point of attention` (the company's own remark, the same text C5 prints),
+`Representative`, `Account manager`, `Customer group` and `Region`. A call and
+a visit are the same record, told apart by how the contact was made.
+
+The screen is now paged with a `Year` / `Month` period filter. ⚠️ The reference
+shows one row per customer and reads its period off that pair, and with
+Year 2025 / Month 5 its `… this year` columns hold **May 2025 only**. Ours puts
+the month in a column so the period a number belongs to is visible rather than
+implied, and the same filter narrows to one month.
+
+**29 columns of its 75.** Everything left out is dead in the reference: every
+target and potential, `Visit frequency`, `Call frequency`, `Employees`,
+`Classification`, `Latest visit report`, `Competitors (Revenue share)`, the
+three `Purchase organization` columns, `Region number` and `Customer group
+code`. The ten `… last year` columns are `0` correctly — the first invoice in
+that database is 7-1-2025. The ten `… last month` columns are `0` and the data
+does not explain it: April 2025 holds 2 116 324.53 that should have appeared.
+Copying a column nobody can explain would be copying a bug, so they are not
+carried.
+
+⚠️ **Not verified live.** The shared database was at its connection cap
+(`ER_CON_COUNT_ERROR`) while this was finished, so the C8 harness could not
+run. Types, lint and build are green; the live checks are outstanding.
+
+One fix made on the way: the page was building the whole fact set twice per
+render, once for the rows and once to learn which years to offer in the filter.
+The years are now read straight off the invoices.
+
 ---
 
 # Part 11 — Customerrevenue, -sales and -visits (C12)

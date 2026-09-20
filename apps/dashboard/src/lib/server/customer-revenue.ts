@@ -11,6 +11,7 @@ import { OrderItemOptions } from "@/db/schema/order-item-options";
 import { InvoiceSurcharges, Invoices } from "@/db/schema/invoices";
 import { OrderItems, SelectOrderItems } from "@/db/schema/order-items";
 import { Orders, SelectOrders } from "@/db/schema/orders";
+import { VisitReports } from "@/db/schema/visit-reports";
 import { Products } from "@/db/schema/products";
 import { RevenueGroups, SelectRevenueGroups } from "@/db/schema/revenue-groups";
 import { INVOICE_SURCHARGE_REVENUE_GROUP_NUMBERS } from "@/lib/constants";
@@ -80,6 +81,7 @@ export type RevenueCompany = Pick<
   | "region"
   | "isInactive"
   | "visitFrequency"
+  | "remarks"
 > & {
   city: SelectCompanyAddresses["city"] | null;
   postalCode: SelectCompanyAddresses["postalCode"] | null;
@@ -349,6 +351,7 @@ export const getRevenueCompanies = async (
       region: Companies.region,
       isInactive: Companies.isInactive,
       visitFrequency: Companies.visitFrequency,
+      remarks: Companies.remarks,
       city: visiting.city,
       postalCode: visiting.postalCode,
       country: visiting.country,
@@ -368,6 +371,79 @@ export const getRevenueCompanies = async (
       },
     ]),
   );
+};
+
+/** What the CRM half of the customer revenue screen reports per company. */
+export type ContactCounters = {
+  lastOrderDate: Date | null;
+  lastCallDate: string | null;
+  lastVisitDate: string | null;
+  calledThisYear: number;
+  visitsThisYear: number;
+};
+
+/**
+ * The customer-contact counters, per company.
+ *
+ * The reference maintains these and barely uses them -- 337 companies have a
+ * last order date, 95 a last call, 2 a last visit -- but they are what the
+ * screen is read for beside the money. A call and a visit are the same record
+ * there, told apart by how the contact was made.
+ */
+export const getContactCounters = async (
+  currentYear: number = new Date().getFullYear(),
+): Promise<Map<string, ContactCounters>> => {
+  const held = new Map<string, ContactCounters>();
+  const at = (uuid: string): ContactCounters => {
+    const existing = held.get(uuid);
+    if (existing) {
+      return existing;
+    }
+    const fresh: ContactCounters = {
+      lastOrderDate: null,
+      lastCallDate: null,
+      lastVisitDate: null,
+      calledThisYear: 0,
+      visitsThisYear: 0,
+    };
+    held.set(uuid, fresh);
+    return fresh;
+  };
+
+  const orderRows = await db
+    .select({
+      companyUuid: Orders.companyUuid,
+      lastOrderDate: sql<string | null>`MAX(${Orders.createdAt})`,
+    })
+    .from(Orders)
+    .groupBy(Orders.companyUuid);
+  for (const row of orderRows) {
+    at(row.companyUuid).lastOrderDate = row.lastOrderDate
+      ? new Date(row.lastOrderDate)
+      : null;
+  }
+
+  const contactRows = await db
+    .select({
+      companyUuid: VisitReports.companyUuid,
+      contactMethod: VisitReports.contactMethod,
+      last: sql<string | null>`MAX(${VisitReports.visitDate})`,
+      thisYear: sql<number>`SUM(CASE WHEN YEAR(${VisitReports.visitDate}) = ${currentYear} THEN 1 ELSE 0 END)`,
+    })
+    .from(VisitReports)
+    .groupBy(VisitReports.companyUuid, VisitReports.contactMethod);
+  for (const row of contactRows) {
+    const counters = at(row.companyUuid);
+    if (row.contactMethod === "telephone_contact") {
+      counters.lastCallDate = row.last;
+      counters.calledThisYear = Number(row.thisYear ?? 0);
+    } else {
+      counters.lastVisitDate = row.last;
+      counters.visitsThisYear = Number(row.thisYear ?? 0);
+    }
+  }
+
+  return held;
 };
 
 /**
