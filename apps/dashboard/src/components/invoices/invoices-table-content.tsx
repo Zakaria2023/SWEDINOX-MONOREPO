@@ -24,7 +24,11 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
-import { buildColumnVisibility, invoiceReference } from "@/lib/helpers";
+import {
+  buildColumnVisibility,
+  formatDateValue,
+  invoiceReference,
+} from "@/lib/helpers";
 import {
   INVOICE_DOCUMENT_TYPE_LABELS,
   INVOICE_PAYMENT_TERM_LABELS,
@@ -165,6 +169,58 @@ export const InvoicesTable = ({ page, filters }: Props) => {
             {inv.paymentTerms
               ? INVOICE_PAYMENT_TERM_LABELS[inv.paymentTerms]
               : "—"}
+          </TableCell>
+        );
+      case "streetAndNo":
+        return <TableCell key={key}>{inv.streetAndNo ?? "—"}</TableCell>;
+      case "country":
+        return <TableCell key={key}>{inv.country ?? "—"}</TableCell>;
+      case "postalCode":
+        return <TableCell key={key}>{inv.postalCode ?? "—"}</TableCell>;
+      case "city":
+        return <TableCell key={key}>{inv.city ?? "—"}</TableCell>;
+      case "cocNumber":
+        return <TableCell key={key}>{inv.cocNumber ?? "—"}</TableCell>;
+      case "vatNumber":
+        return <TableCell key={key}>{inv.vatNumber ?? "—"}</TableCell>;
+      case "debtorNo":
+        return <TableCell key={key}>{inv.debtorNo ?? "—"}</TableCell>;
+      // The tax the header decides: 21 % in the Netherlands, zero elsewhere.
+      case "vatAmount":
+        return (
+          <TableCell key={key} className="text-right tabular-nums">
+            {(
+              Number(inv.invoiceAmountInclVat ?? 0) -
+              Number(inv.invoiceAmountExclVat ?? 0)
+            ).toFixed(2)}
+          </TableCell>
+        );
+      // The stored code, not a number of days: `V` is prepayment, `C` cash,
+      // and the 1xx band is the early-payment discount schemes.
+      case "paymentTermsCode":
+        return <TableCell key={key}>{inv.paymentTerms ?? "—"}</TableCell>;
+      case "printed":
+        return <TableCell key={key}>{inv.printed ? "Yes" : "No"}</TableCell>;
+      case "mailed":
+        return <TableCell key={key}>{inv.mailed ? "Yes" : "No"}</TableCell>;
+      case "printedAt":
+        return (
+          <TableCell key={key}>{formatDateValue(inv.printedAt)}</TableCell>
+        );
+      case "mailedAt":
+        return <TableCell key={key}>{formatDateValue(inv.mailedAt)}</TableCell>;
+      case "mailedTo":
+        return <TableCell key={key}>{inv.mailedTo ?? "—"}</TableCell>;
+      case "orderId":
+        return (
+          <TableCell key={key} className="text-right tabular-nums">
+            {inv.orderId ?? "—"}
+          </TableCell>
+        );
+      case "totalWeightKg":
+        return (
+          <TableCell key={key} className="text-right tabular-nums">
+            {inv.totalWeightKg ?? "—"}
           </TableCell>
         );
       case "status":

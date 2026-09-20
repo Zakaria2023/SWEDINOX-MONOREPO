@@ -12,6 +12,10 @@ import {
   SelectInvoiceSurcharges,
 } from "@/db";
 import {
+  CompanyAddresses,
+  SelectCompanyAddresses,
+} from "@/db/schema/company-addresses";
+import {
   InsertInvoiceItems,
   InvoiceItems,
   SelectInvoiceItems,
@@ -105,6 +109,14 @@ export type InvoiceSurchargeInput = Omit<
 export type InvoiceWithCompany = SelectInvoices & {
   companyName: SelectCompanies["companyName"] | null;
   companyCode: SelectCompanies["id"] | null;
+  cocNumber: SelectCompanies["cocNumber"] | null;
+  vatNumber: SelectCompanies["vatNumber"] | null;
+  streetAndNo: SelectCompanyAddresses["streetAndNo"] | null;
+  postalCode: SelectCompanyAddresses["postalCode"] | null;
+  city: SelectCompanyAddresses["city"] | null;
+  country: SelectCompanyAddresses["country"] | null;
+  /** The order this invoice bills, when its lines all name one. */
+  orderId: number | null;
 };
 
 export type ReservedOrderItemOption = {
@@ -193,6 +205,26 @@ const INVOICE_FILTERS = {
   cancelled: booleanFilter(Invoices.cancelled),
 };
 
+/** The customer's visiting address, which is the one an invoice prints. */
+const invoiceVisiting = db
+  .select({
+    companyUuid: CompanyAddresses.companyUuid,
+    streetAndNo: sql<string | null>`MIN(${CompanyAddresses.streetAndNo})`.as(
+      "invoice_street",
+    ),
+    postalCode: sql<string | null>`MIN(${CompanyAddresses.postalCode})`.as(
+      "invoice_postal",
+    ),
+    city: sql<string | null>`MIN(${CompanyAddresses.city})`.as("invoice_city"),
+    country: sql<string | null>`MIN(${CompanyAddresses.country})`.as(
+      "invoice_country",
+    ),
+  })
+  .from(CompanyAddresses)
+  .where(sql`JSON_CONTAINS(${CompanyAddresses.category}, '"visit"')`)
+  .groupBy(CompanyAddresses.companyUuid)
+  .as("invoice_visiting");
+
 /**
  * The rows one view of the invoices overview selects, as a window onto them.
  * Shared by the page and the export.
@@ -205,9 +237,29 @@ const invoiceRows =
         ...getTableColumns(Invoices),
         companyName: Companies.companyName,
         companyCode: Companies.id,
+        cocNumber: Companies.cocNumber,
+        vatNumber: Companies.vatNumber,
+        streetAndNo: invoiceVisiting.streetAndNo,
+        postalCode: invoiceVisiting.postalCode,
+        city: invoiceVisiting.city,
+        country: invoiceVisiting.country,
+        // A surcharge invoice has no order behind it -- 135 of the
+        // reference's rows print `Order = 0` for exactly that reason -- and an
+        // invoice that bills two orders cannot name one, so both read empty.
+        orderId: sql<number | null>`(
+          SELECT CASE WHEN COUNT(DISTINCT o.id) = 1 THEN MIN(o.id) END
+          FROM ${InvoiceItems} ii
+          JOIN ${OrderItems} oi ON oi.uuid = ii.order_item_uuid
+          JOIN ${Orders} o ON o.uuid = oi.order_uuid
+          WHERE ii.invoice_uuid = ${Invoices.uuid}
+        )`,
       })
       .from(Invoices)
       .leftJoin(Companies, eq(Invoices.companyUuid, Companies.uuid))
+      .leftJoin(
+        invoiceVisiting,
+        eq(invoiceVisiting.companyUuid, Companies.uuid),
+      )
       .where(
         tableWhere({ query, search: INVOICE_SEARCH, filters: INVOICE_FILTERS }),
       )
@@ -386,7 +438,12 @@ export const createInvoice = async (
     );
     // Per billed line, the product and option parts kept apart for the header.
     const billedParts: {
-      product: { amount: number; costAmount: number; replacementCost: number; weightKg: number };
+      product: {
+        amount: number;
+        costAmount: number;
+        replacementCost: number;
+        weightKg: number;
+      };
       option: { amount: number; cost: number };
     }[] = [];
 
@@ -477,8 +534,7 @@ export const createInvoice = async (
         product: {
           amount: sliced.amount,
           costAmount: sliced.costAmount,
-          replacementCost:
-            Number(row.replacementPrice ?? 0) * billing,
+          replacementCost: Number(row.replacementPrice ?? 0) * billing,
           weightKg: sliced.weightKg,
         },
         option: { amount: optionSlice.amount, cost: optionSlice.costAmount },

@@ -110,7 +110,14 @@ export const Invoices = mysqlTable(
 
     calculateVat: boolean("calculate_vat").default(false).notNull(),
     printed: boolean("printed").default(false).notNull(),
+    // When it was printed and when it was e-mailed, and to whom. The reference
+    // carries all three on the invoice header -- its `Print date`, `E-mail
+    // date` and `Email` -- and they are what tells a clerk whether a customer
+    // has actually been sent the document. The line already recorded its own.
+    printedAt: timestamp("printed_at"),
     mailed: boolean("mailed").default(false).notNull(),
+    mailedAt: timestamp("mailed_at"),
+    mailedTo: varchar("mailed_to", { length: 255 }),
     cancelled: boolean("cancelled").default(false).notNull(),
 
     vatScenario: mysqlEnum("vat_scenario", invoiceVatScenarios),
