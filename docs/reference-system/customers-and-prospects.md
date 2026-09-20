@@ -786,6 +786,44 @@ the fifth screen to show it dead — and `Loading address` reads `HEGO` or blank
 and never names another warehouse, with nothing in our schema recording which
 depot a line was loaded at.
 
+### C10 against `apps/dashboard` — rebuilt 20-9-2026
+
+§26 said our screen put option revenue under the **product's** revenue group
+and dropped every charge. Half of that had already been fixed — charges get
+their own rows — and the option half had not: the revenue facts carried the
+option money on the product row, under the product's group, which is exactly
+what §26 says is wrong.
+
+**Option revenue now lands under the option's own revenue group** — grinding to
+3010, cutting to 3020, lasering to 3030. The money is still the invoice's
+(`Revenue options` on the line, which is what the reference's option groups
+total to the cent), but a line carrying two options in two different groups has
+that money split between them in proportion to what each option was priced at.
+
+Proved against the live database: the screen's revenue equals products +
+options + charges, 3 394 100.68 on both sides, with the charge rows totalling
+the surcharges exactly. ⚠️ No option has been priced on that database yet, so
+the option path is model-correct but numerically unexercised there; the
+reference's own 11 236.90 of option revenue is what will exercise it.
+
+Two deliberate divergences from the reference, both in our favour:
+
+- **Kilos and line counts may be summed here.** The reference repeats the parent
+  line's weight and line count on every option row, which is why its own totals
+  come to 4 527 322 kg against a true 3 373 330, and 8 691 lines against 5 650.
+  Our option rows carry no weight and no line count, so the columns add up.
+- The screen is paged, searchable and filterable, and exports.
+
+The grain now matches: customer × revenue group × order type × year × month ×
+**price unit**, which is what makes the reference's 1 720 rows unique. `Sales
+(PriceU)`, `PriceU`, `Country` and `Account manager` are carried; six columns
+are not — `Region number` (dead), the four all-zero or empty ones, and
+`Affiliate`, which is one constant reading `HEGO TEST …`.
+
+`/customer-revenue` was checked at the same time and has not moved: it takes its
+option money from the product rows, so the new option facts are skipped there
+rather than counted twice. Its total is unchanged at 3 394 100.68.
+
 ---
 
 # Part 8 — Customer revenue per revenue group with split order types (C11)

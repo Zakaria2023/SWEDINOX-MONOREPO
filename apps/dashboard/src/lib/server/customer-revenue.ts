@@ -7,6 +7,7 @@ import {
   SelectCompanyAddresses,
 } from "@/db/schema/company-addresses";
 import { InvoiceItems } from "@/db/schema/invoice-items";
+import { OrderItemOptions } from "@/db/schema/order-item-options";
 import { InvoiceSurcharges, Invoices } from "@/db/schema/invoices";
 import { OrderItems, SelectOrderItems } from "@/db/schema/order-items";
 import { Orders, SelectOrders } from "@/db/schema/orders";
@@ -29,7 +30,7 @@ import { and, count, eq, inArray, isNotNull, min, sql } from "drizzle-orm";
  * group. Options are not billed on our invoices yet, so it has no rows here.
  */
 export type RevenueFact = {
-  kind: "product" | "charge";
+  kind: "product" | "option" | "charge";
   companyUuid: string;
   year: number;
   month: number;
@@ -39,9 +40,23 @@ export type RevenueFact = {
   orderType: SelectOrders["orderType"] | null;
   /** Stock or cross-dock. Null on a charge. */
   sourceType: SelectOrderItems["sourceType"] | null;
+  /**
+   * The unit the line was priced in. Part of the reference's own grain on the
+   * revenue-group screens, and what `Sales (PriceU)` restates the quantity in.
+   * Null on a charge, which is priced as a lump sum.
+   */
+  priceUnit: string | null;
+  /** Invoiced quantity, for the units that are neither kilos nor tonnes. */
+  quantity: number;
   revenue: number;
   profit: number;
-  /** Option revenue riding on these product lines; 0 on a charge. */
+  /**
+   * Option revenue riding on these product lines; 0 on an option or a charge
+   * row. It is the same money an `option` fact carries -- the product row
+   * reports it beside the material it was bought with, the option row reports
+   * it under the revenue group of the option itself. A screen reads one or the
+   * other, never both.
+   */
   optionRevenue: number;
   optionProfit: number;
   /**
@@ -95,6 +110,8 @@ export const getRevenueFacts = async (): Promise<RevenueFact[]> => {
       revenueGroupName: RevenueGroups.name,
       orderType: Orders.orderType,
       sourceType: OrderItems.sourceType,
+      priceUnit: InvoiceItems.priceUnit,
+      quantity: sql<string>`COALESCE(SUM(${InvoiceItems.quantity}), 0)`,
       revenue: sql<string>`COALESCE(SUM(${InvoiceItems.revenueProducts}), 0)`,
       profit: sql<string>`COALESCE(SUM(${InvoiceItems.profitProducts}), 0)`,
       optionRevenue: sql<string>`COALESCE(SUM(${InvoiceItems.revenueOptions}), 0)`,
@@ -117,6 +134,7 @@ export const getRevenueFacts = async (): Promise<RevenueFact[]> => {
       RevenueGroups.name,
       Orders.orderType,
       OrderItems.sourceType,
+      InvoiceItems.priceUnit,
     );
 
   const charges = await db
@@ -142,6 +160,82 @@ export const getRevenueFacts = async (): Promise<RevenueFact[]> => {
       RevenueGroups.name,
     );
 
+  /**
+   * The option half of an invoiced line, under the option's own revenue group.
+   *
+   * The money is the invoice's -- `Revenue options` on the line, which is what
+   * the reference's option groups total to the cent -- but the group is the
+   * option's: grinding to 3010, cutting to 3020, lasering to 3030. A line can
+   * carry two options in two different groups, so the line's option revenue is
+   * split between them in proportion to what each option was priced at. The
+   * window sum is that proportion's denominator.
+   *
+   * Weight and line counts are deliberately 0. The reference repeats the
+   * parent line's kilos and line count on every option row, which is why its
+   * own totals come to 4 527 322 kg against a true 3 373 330 -- only revenue
+   * and profit may be summed across revenue groups there. Ours does not
+   * double-count, so they may be summed here.
+   */
+  const optionShare = db
+    .select({
+      companyUuid: Invoices.companyUuid,
+      year: invoiceYear.as("option_year"),
+      month: invoiceMonth.as("option_month"),
+      revenueGroupUuid: OrderItemOptions.revenueGroupUuid,
+      orderType: Orders.orderType,
+      sourceType: OrderItems.sourceType,
+      priceUnit: OrderItemOptions.priceUnit,
+      quantity: OrderItemOptions.quantity,
+      revenue: sql<string>`
+        ${InvoiceItems.revenueOptions} * ${OrderItemOptions.amount}
+        / NULLIF(SUM(${OrderItemOptions.amount}) OVER (PARTITION BY ${InvoiceItems.uuid}), 0)
+      `.as("option_revenue"),
+      profit: sql<string>`
+        ${InvoiceItems.profitOptions} * ${OrderItemOptions.amount}
+        / NULLIF(SUM(${OrderItemOptions.amount}) OVER (PARTITION BY ${InvoiceItems.uuid}), 0)
+      `.as("option_profit"),
+    })
+    .from(InvoiceItems)
+    .innerJoin(Invoices, eq(InvoiceItems.invoiceUuid, Invoices.uuid))
+    .innerJoin(OrderItems, eq(InvoiceItems.orderItemUuid, OrderItems.uuid))
+    .innerJoin(Orders, eq(OrderItems.orderUuid, Orders.uuid))
+    .innerJoin(
+      OrderItemOptions,
+      eq(OrderItemOptions.orderItemUuid, OrderItems.uuid),
+    )
+    .where(and(eq(Invoices.cancelled, false), isNotNull(Invoices.companyUuid)))
+    .as("option_share");
+
+  const options = await db
+    .select({
+      companyUuid: optionShare.companyUuid,
+      year: optionShare.year,
+      month: optionShare.month,
+      revenueGroupNumber: RevenueGroups.number,
+      revenueGroupName: RevenueGroups.name,
+      orderType: optionShare.orderType,
+      sourceType: optionShare.sourceType,
+      priceUnit: optionShare.priceUnit,
+      quantity: sql<string>`COALESCE(SUM(${optionShare.quantity}), 0)`,
+      revenue: sql<string>`COALESCE(SUM(${optionShare.revenue}), 0)`,
+      profit: sql<string>`COALESCE(SUM(${optionShare.profit}), 0)`,
+    })
+    .from(optionShare)
+    .leftJoin(
+      RevenueGroups,
+      eq(optionShare.revenueGroupUuid, RevenueGroups.uuid),
+    )
+    .groupBy(
+      optionShare.companyUuid,
+      optionShare.year,
+      optionShare.month,
+      RevenueGroups.number,
+      RevenueGroups.name,
+      optionShare.orderType,
+      optionShare.sourceType,
+      optionShare.priceUnit,
+    );
+
   return [
     ...products.map(
       (row): RevenueFact => ({
@@ -153,12 +247,34 @@ export const getRevenueFacts = async (): Promise<RevenueFact[]> => {
         revenueGroupName: row.revenueGroupName,
         orderType: row.orderType,
         sourceType: row.sourceType,
+        priceUnit: row.priceUnit,
+        quantity: Number(row.quantity),
         revenue: Number(row.revenue),
         profit: Number(row.profit),
         optionRevenue: Number(row.optionRevenue),
         optionProfit: Number(row.optionProfit),
         weightKg: Number(row.weightKg),
         lines: Number(row.lines),
+      }),
+    ),
+    ...options.map(
+      (row): RevenueFact => ({
+        kind: "option",
+        companyUuid: row.companyUuid ?? "",
+        year: Number(row.year),
+        month: Number(row.month),
+        revenueGroupNumber: row.revenueGroupNumber,
+        revenueGroupName: row.revenueGroupName,
+        orderType: row.orderType,
+        sourceType: row.sourceType,
+        priceUnit: row.priceUnit,
+        quantity: Number(row.quantity),
+        revenue: Number(row.revenue),
+        profit: Number(row.profit),
+        optionRevenue: 0,
+        optionProfit: 0,
+        weightKg: 0,
+        lines: 0,
       }),
     ),
     ...charges.map(
@@ -171,6 +287,8 @@ export const getRevenueFacts = async (): Promise<RevenueFact[]> => {
         revenueGroupName: row.revenueGroupName,
         orderType: null,
         sourceType: null,
+        priceUnit: null,
+        quantity: 0,
         revenue: Number(row.revenue),
         profit: Number(row.profit),
         optionRevenue: 0,

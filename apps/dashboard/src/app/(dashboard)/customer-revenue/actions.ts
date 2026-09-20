@@ -72,11 +72,15 @@ export const getCustomerRevenue = async (): Promise<CustomerRevenueRow[]> => {
       if (fact.kind === "product") {
         row.materialRevenue += fact.revenue;
         row.materialProfit += fact.profit;
+        // The option money comes from the product row, where it is the
+        // invoice's own `Revenue options`. The separate `option` facts carry
+        // the same money split by the option's revenue group, which this
+        // screen does not report -- counting both would double it.
         row.optionsRevenue += fact.optionRevenue;
         row.optionsProfit += fact.optionProfit;
         row.weightKg += fact.weightKg;
         row.invoiceLines += fact.lines;
-      } else {
+      } else if (fact.kind === "charge") {
         row.surchargesRevenue += fact.revenue;
         row.surchargesProfit += fact.profit;
       }
