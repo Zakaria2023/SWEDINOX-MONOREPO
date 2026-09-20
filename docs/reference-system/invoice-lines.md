@@ -264,3 +264,46 @@ screens show.
   (287 values). Invoices go out by email by default; printing is the exception.
 - **`Street + No`, `Postal code`, `City`, `Country`** are on the invoice — the
   address is snapshotted, not joined.
+
+---
+
+### B3 against `apps/dashboard` — rebuilt 20-9-2026
+
+`/invoices` carried 14 columns against the reference's 27. It now carries
+**26 of them** — all but `Affiliate company details`, which is one constant —
+plus four of ours: `Incl. VAT`, `Total`, `VAT scenario` and `Status`.
+
+Newly carried: the customer's `Street + No`, `Postal code`, `City` and
+`Country`, `C. of C. no.`, `VAT number`, `Debtor no.`, `Kg`, the **`VAT`
+amount itself** (the difference between the two stored amounts), the **`Order`**
+the invoice bills, and the whole sending half — `Printed?`, `Print date`,
+`Mailed?`, `E-mail date` and `Email`.
+
+Three columns were added to `Invoices` for that last group: `printedAt`,
+`mailedAt` and `mailedTo`. The invoice **line** already recorded its own; the
+header did not, so the screen could say whether a customer had been sent the
+document but never when or to where. Pushed with `pnpm db:push`.
+
+**`Order` is derived, not stored.** An invoice names one order when all of its
+lines come from one, and nothing otherwise — which is what the reference's 135
+`Order = 0` rows are: charges billed with no order behind them.
+
+⚠️ **`Payment terms code` is the code, not a number of days.** §9 proved it is
+not an integer, and our `invoicePaymentTerms` already holds the discount
+schemes.
+
+Verified live, 28/28.
+
+### 🔴 Two things this screen still gets wrong
+
+1. **The address is joined, not snapshotted.** §10 says the reference keeps
+   `Street + No`, `Postal code`, `City` and `Country` **on the invoice**. Ours
+   reads them from the company's visiting address at display time, so moving a
+   customer silently rewrites the address on every invoice they have ever had.
+   That is right for a current view and wrong for a reprint. Fixing it means
+   four columns on `Invoices`, written when the invoice is raised — worth doing
+   before anyone reprints an old document.
+2. **The early-payment discount does nothing.** 531 of the reference's
+   invoices — a third — offer 1–3 % for paying inside 8 to 14 days. The terms
+   are stored and labelled; no discount is ever calculated or offered. That
+   belongs with the payment screens.
