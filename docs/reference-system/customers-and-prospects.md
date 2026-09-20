@@ -261,6 +261,54 @@ it dead. The region has a name and no number, anywhere.
   staff type the status into the name. **Any import must not treat these as real
   companies**, and the rebuild should give them the flag the reference lacks.
 
+### Against `apps/dashboard` — rebuilt 20-9-2026
+
+`/customer-overview` carried 25 fields against the reference's 47, loaded every
+customer on every request with eight aggregates over the whole database, and had
+no paging, search, filter, column picker or export. It now carries **44 of the
+47 columns in the reference's order**, paged, with the tallies computed for the
+ten customers on the page rather than for all of them.
+
+Four things were wrong, not merely missing:
+
+- 🔴 **`Avg. Order size` divided by the wrong number.** Ours was revenue over
+  the *invoice* count. The reference's identity — exact on all 1 679 of its rows
+  — is **`Invoiced orders revenue` / `Invoiced orders`**, revenue over the
+  *orders* that were invoiced. Both the divisor and the dividend were wrong:
+  ours summed invoice totals **including VAT** and counted cancelled invoices.
+- 🔴 **`Initials` was the first contact's.** It is the **representative's**:
+  the reference fills it on exactly the three customers repped by
+  `Arian Bloks` (`AB`) and leaves it empty for the desk names `Hego`, `Export`
+  and `BNL`. Reproduced by taking the initials of a multi-word representative
+  only.
+- 🔴 **`Email to` / `To email` read the wrong pair of columns.** Ours showed
+  `actionEmailTo` / `releaseActionEmailTo`; the reference's pair is the
+  **invoice** e-mail override, `invoiceEmailEnabled` / `invoiceEmailTo`.
+- 🟡 **The address was whichever one had the lowest id.** It is the **visiting**
+  address, the same one D1 uses.
+
+Newly carried: the outstanding counts on all five document families, the line
+counts, **counter orders as a first-class document** with its own three columns,
+**complaints and outstanding complaints on the customer**, the **six
+small-order counters** (`<200` / `<500` / `<2000`, euros and kilos, cumulative
+and nested), `Invoiced orders`, and the two columns that **stamp the reference
+window back onto every row**. The window is a filter here; unbounded means the
+whole history, which the reference cannot express, and the columns then read
+`All`.
+
+Three reference columns are deliberately not carried:
+
+- **`Region number`** and **`Customer group code`** are dead sentinels — `0` on
+  all 1 679 rows (`Customer group code` has one `30`) — left out for the same
+  reason Visits made leaves the same two out.
+- **`Converted quotes`** is `0` on every row and nothing in our schema links an
+  order back to the quote it came from. It belongs with the conversion flow.
+
+One deliberate divergence: **`Visit` counts the visit reports.** The reference
+shows a visit against 2 of its 1 679 customers while its own `Visits made`
+screen holds 166 — its counter is a batch statistic that has not run since the
+copy was taken, the same staleness C13/C14 showed.
+
 ---
 
 # Part 3 — Unblocked orders (item C7)

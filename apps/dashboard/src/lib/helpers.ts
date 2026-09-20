@@ -7337,6 +7337,27 @@ export const salesRepresentativeLabel = (
     ? (SALES_REPRESENTATIVE_LABELS[value as SalesRepresentative] ?? value)
     : "—";
 
+/**
+ * The representative's initials, the way the customer overview prints them.
+ *
+ * The reference fills this column on exactly the three customers whose
+ * representative is a named person, and leaves it empty for the desk names
+ * (`Hego`, `Export`, `BNL`) — so it is the initials of a personal name, not a
+ * stored field. A single-word representative is a desk, and gets none.
+ */
+export const representativeInitials = (
+  value: SalesRepresentative | string | null | undefined,
+): string | null => {
+  if (!value) {
+    return null;
+  }
+  const words = salesRepresentativeLabel(value).split(" ").filter(Boolean);
+  if (words.length < 2) {
+    return null;
+  }
+  return words.map((word) => word[0]?.toUpperCase() ?? "").join("");
+};
+
 /** The display label for a customer group. */
 export const customerGroupLabel = (
   value: CustomerGroup | string | null | undefined,
