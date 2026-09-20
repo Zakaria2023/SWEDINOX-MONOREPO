@@ -951,6 +951,30 @@ C4 proved there is exactly one visiting address per company — join on that.
 The screen also lacks `Representative`, `Customer group`, `Starting date`,
 `End date` and `Region`.
 
+### C6 against `apps/dashboard` — finished 20-9-2026
+
+Both findings in §31 and §33 had already been closed: the city comes from the
+company's one **visiting** address rather than from every address (the join that
+showed a company with three addresses three times per contract), and
+`Link to new customer` does something — `createCompany` copies every template
+contract onto a new customer or prospect with the company's creation day as the
+starting date, which is the act that put the two charge contracts on 82 of the
+reference's companies.
+
+What was left was the overview itself. `/contracts-per-customer` had no paging,
+no search, no filters and no export, and its table hard-coded a column list that
+still included the five dead ones. It now carries the **13 live columns** of the
+reference's 18, paged, with filters on contract code, company role and
+representative.
+
+The five not carried: `Preference`, `Sales` and `Revenue` are `0` and
+`Most recent invoice date` is empty on all 173 rows — per-link counters that are
+never maintained — and `Region number` is `0`, the seventh screen to show it
+dead.
+
+Verified live that the duplication cannot come back: the row count equals the
+number of contract links, not the number of address-contract pairs.
+
 ---
 
 # Part 10 — Customer revenue (C8)

@@ -20,13 +20,20 @@ import { Orders } from "@/db/schema/orders";
 import { Products, SelectProducts } from "@/db/schema/products";
 import { Quotes } from "@/db/schema/quotes";
 import { generateUuid } from "@/lib/helpers";
-import { contractableRoles, contractTypes } from "@/lib/enums";
+import {
+  contractableRoles,
+  contractTypes,
+  salesRepresentatives,
+} from "@/lib/enums";
 import {
   enumFilter,
+  FilterBindings,
   relationFilter,
   runPaged,
+  SortableColumns,
   tableOrderBy,
   tableWhere,
+  valueFilter,
 } from "@/lib/server/table-query";
 import {
   Paged,
@@ -35,6 +42,7 @@ import {
   TableQuery,
 } from "@/lib/table-query";
 import { CONTRACT_COLUMNS } from "@/app/(dashboard)/contracts/columns";
+import { CONTRACT_PER_CUSTOMER_COLUMNS } from "@/app/(dashboard)/contracts-per-customer/columns";
 import { exportRows } from "@/lib/server/excel";
 import {
   and,
@@ -225,6 +233,25 @@ export const getContracts = async (
 // The city a contract list prints is the company's visiting address — one per
 // company in the reference. Joining every address instead repeated each
 // contract once per address a company had.
+const CONTRACT_PER_CUSTOMER_SEARCH = [
+  Companies.companyName,
+  Contracts.code,
+  Contracts.description,
+] as const;
+
+const CONTRACT_PER_CUSTOMER_FILTERS: FilterBindings = {
+  role: enumFilter(Contracts.role, contractableRoles),
+  representative: enumFilter(Companies.representative, salesRepresentatives),
+  code: valueFilter(Contracts.code),
+};
+
+const CONTRACT_PER_CUSTOMER_SORTABLE: SortableColumns = {
+  companyName: Companies.companyName,
+  companyCode: Companies.id,
+  code: Contracts.code,
+  startingDate: Contracts.startingDate,
+};
+
 const visitingCity = () => {
   const visitingId = db
     .select({
@@ -246,41 +273,122 @@ const visitingCity = () => {
     .as("visiting");
 };
 
-export const getContractsPerCustomer = async (): Promise<
-  ContractPerCustomerRow[]
-> => {
-  const visiting = visitingCity();
+/**
+ * One row per contract linked to a customer or a prospect.
+ *
+ * The city comes from the company's **visiting** address, of which there is
+ * exactly one; joining every address instead showed a company with three
+ * addresses three times per contract.
+ */
+const contractPerCustomerRows =
+  (query: TableQuery) =>
+  async (limit: number, offset: number): Promise<ContractPerCustomerRow[]> => {
+    const visiting = visitingCity();
+    const rows = await db
+      .select({
+        role: Contracts.role,
+        id: Companies.id,
+        companyName: Companies.companyName,
+        representative: Companies.representative,
+        customerGroup: Companies.customerGroup,
+        region: Companies.region,
+        city: visiting.city,
+        code: Contracts.code,
+        description: Contracts.description,
+        contractGroupName: ContractGroups.name,
+        priceDate: Contracts.priceDate,
+        startingDate: Contracts.startingDate,
+        endDate: Contracts.endDate,
+      })
+      .from(Contracts)
+      .innerJoin(Companies, eq(Companies.uuid, Contracts.companyUuid))
+      .leftJoin(visiting, eq(visiting.companyUuid, Companies.uuid))
+      .leftJoin(
+        ContractGroups,
+        eq(ContractGroups.uuid, Contracts.contractGroupUuid),
+      )
+      .where(
+        tableWhere({
+          query,
+          search: CONTRACT_PER_CUSTOMER_SEARCH,
+          filters: CONTRACT_PER_CUSTOMER_FILTERS,
+          scope: [
+            inArray(Contracts.role, ["customer", "prospect"]),
+            isNotNull(Contracts.companyUuid),
+          ],
+        }),
+      )
+      .orderBy(
+        ...tableOrderBy(
+          CONTRACT_PER_CUSTOMER_SORTABLE,
+          query,
+          [asc(Companies.companyName)],
+          Contracts.id,
+        ),
+      )
+      .limit(limit)
+      .offset(offset);
+
+    return rows.map((row) => ({ ...row, city: row.city ?? null }));
+  };
+
+export const getContractsPerCustomer = async (
+  query: TableQuery,
+): Promise<Paged<ContractPerCustomerRow>> =>
+  runPaged(query, {
+    rows: contractPerCustomerRows(query),
+    count: async () => {
+      const visiting = visitingCity();
+      const [row] = await db
+        .select({ value: count() })
+        .from(Contracts)
+        .innerJoin(Companies, eq(Companies.uuid, Contracts.companyUuid))
+        .leftJoin(visiting, eq(visiting.companyUuid, Companies.uuid))
+        .leftJoin(
+          ContractGroups,
+          eq(ContractGroups.uuid, Contracts.contractGroupUuid),
+        )
+        .where(
+          tableWhere({
+            query,
+            search: CONTRACT_PER_CUSTOMER_SEARCH,
+            filters: CONTRACT_PER_CUSTOMER_FILTERS,
+            scope: [
+              inArray(Contracts.role, ["customer", "prospect"]),
+              isNotNull(Contracts.companyUuid),
+            ],
+          }),
+        );
+      return Number(row?.value ?? 0);
+    },
+  });
+
+/** The contract codes actually linked to a customer, for the filter. */
+export const getContractCodesForCustomers = async (): Promise<string[]> => {
   const rows = await db
-    .select({
-      role: Contracts.role,
-      id: Companies.id,
-      companyName: Companies.companyName,
-      representative: Companies.representative,
-      customerGroup: Companies.customerGroup,
-      region: Companies.region,
-      city: visiting.city,
-      code: Contracts.code,
-      description: Contracts.description,
-      contractGroupName: ContractGroups.name,
-      priceDate: Contracts.priceDate,
-      startingDate: Contracts.startingDate,
-      endDate: Contracts.endDate,
-    })
+    .selectDistinct({ code: Contracts.code })
     .from(Contracts)
-    .innerJoin(Companies, eq(Companies.uuid, Contracts.companyUuid))
-    .leftJoin(visiting, eq(visiting.companyUuid, Companies.uuid))
-    .leftJoin(
-      ContractGroups,
-      eq(ContractGroups.uuid, Contracts.contractGroupUuid),
-    )
     .where(
       and(
         inArray(Contracts.role, ["customer", "prospect"]),
         isNotNull(Contracts.companyUuid),
       ),
-    );
-  return rows.map((row) => ({ ...row, city: row.city ?? null }));
+    )
+    .orderBy(asc(Contracts.code));
+
+  return rows.map((row) => row.code);
 };
+
+export const exportContractsPerCustomer = async (
+  params: SearchParams,
+  columnKeys: string[],
+): Promise<string> =>
+  exportRows({
+    name: "Contracts per customer",
+    columns: CONTRACT_PER_CUSTOMER_COLUMNS,
+    columnKeys,
+    rows: contractPerCustomerRows(parseTableQuery(params)),
+  });
 
 export const getContractsPerSupplier = async (): Promise<
   ContractPerSupplierRow[]

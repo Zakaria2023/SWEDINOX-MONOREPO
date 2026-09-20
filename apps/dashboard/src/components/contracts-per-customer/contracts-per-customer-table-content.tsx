@@ -1,6 +1,14 @@
 "use client";
 
-import { ContractPerCustomerRow } from "@/app/(dashboard)/contracts/actions";
+import { useState } from "react";
+import {
+  ContractPerCustomerRow,
+  exportContractsPerCustomer,
+} from "@/app/(dashboard)/contracts/actions";
+import {
+  CONTRACT_PER_CUSTOMER_COLUMNS,
+  ContractPerCustomerColumnKey,
+} from "@/app/(dashboard)/contracts-per-customer/columns";
 import {
   Table,
   TableBody,
@@ -10,67 +18,38 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
+import { PagedTableExportButton } from "@/components/ui/table-export-button";
+import { TablePagination } from "@/components/ui/table-pagination";
+import { TableSortHeader } from "@/components/ui/table-sort-header";
+import { TableToolbar } from "@/components/ui/table-toolbar";
+import { selectorColumns } from "@/lib/excel";
 import {
   buildColumnVisibility,
   customerGroupLabel,
+  formatDateValue,
+  orDash,
   salesRepresentativeLabel,
 } from "@/lib/helpers";
 import { COMPANY_ROLE_LABELS } from "@/lib/labels";
-import { useState } from "react";
-import { TableExportButton } from "@/components/ui/table-export-button";
+import { Paged, TableFilterControl } from "@/lib/table-query";
 
-type ColumnKey =
-  | "role"
-  | "id"
-  | "companyName"
-  | "city"
-  | "representative"
-  | "customerGroup"
-  | "code"
-  | "description"
-  | "contractGroupName"
-  | "priceDate"
-  | "startingDate"
-  | "endDate"
-  | "preference"
-  | "sales"
-  | "revenue"
-  | "mostRecentInvoiceDate"
-  | "regionCode"
-  | "region";
+type ColumnKey = ContractPerCustomerColumnKey;
 
-const ALL_COLUMNS: Array<{
-  key: ColumnKey;
-  label: string;
-  defaultVisible: boolean;
-}> = [
-  { key: "role", label: "Role", defaultVisible: true },
-  { key: "id", label: "Customer Code", defaultVisible: true },
-  { key: "companyName", label: "Customer", defaultVisible: true },
-  { key: "city", label: "City", defaultVisible: true },
-  { key: "representative", label: "Representative", defaultVisible: true },
-  { key: "customerGroup", label: "Customer Group", defaultVisible: true },
-  { key: "code", label: "Contract Code", defaultVisible: true },
-  { key: "description", label: "Description", defaultVisible: true },
-  { key: "contractGroupName", label: "Contract Group", defaultVisible: true },
-  { key: "priceDate", label: "Price Date", defaultVisible: true },
-  { key: "startingDate", label: "Starting Date", defaultVisible: true },
-  { key: "endDate", label: "End Date", defaultVisible: true },
-  { key: "preference", label: "Preference", defaultVisible: true },
-  { key: "sales", label: "Sales (kg)", defaultVisible: true },
-  { key: "revenue", label: "Revenue", defaultVisible: false },
-  {
-    key: "mostRecentInvoiceDate",
-    label: "Most Recent Invoice Date",
-    defaultVisible: false,
-  },
-  { key: "regionCode", label: "Region Code", defaultVisible: false },
-  { key: "region", label: "Region", defaultVisible: true },
-];
+type Props = {
+  page: Paged<ContractPerCustomerRow>;
+  filters: TableFilterControl[];
+};
 
-type Props = { rows: ContractPerCustomerRow[] };
+const ALL_COLUMNS = selectorColumns(CONTRACT_PER_CUSTOMER_COLUMNS);
 
-export const ContractsPerCustomerTable = ({ rows }: Props) => {
+const SORTABLE: Partial<Record<ColumnKey, string>> = {
+  companyName: "companyName",
+  companyCode: "companyCode",
+  code: "code",
+  startingDate: "startingDate",
+};
+
+export const ContractsPerCustomerTable = ({ page, filters }: Props) => {
   const [columnVisibility, setColumnVisibility] = useState<
     Record<ColumnKey, boolean>
   >(buildColumnVisibility(ALL_COLUMNS));
@@ -88,25 +67,23 @@ export const ContractsPerCustomerTable = ({ rows }: Props) => {
       case "role":
         return (
           <TableCell key={key}>
-            <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
-              {row.role
-                ? COMPANY_ROLE_LABELS[
-                    row.role as keyof typeof COMPANY_ROLE_LABELS
-                  ]
-                : "—"}
-            </span>
+            {row.role ? COMPANY_ROLE_LABELS[row.role] : "—"}
           </TableCell>
         );
-      case "id":
-        return <TableCell key={key}>{row.id}</TableCell>;
+      case "companyCode":
+        return (
+          <TableCell key={key} className="text-right tabular-nums">
+            {row.id}
+          </TableCell>
+        );
       case "companyName":
         return (
           <TableCell key={key} className="font-medium">
-            {row.companyName}
+            {orDash(row.companyName)}
           </TableCell>
         );
       case "city":
-        return <TableCell key={key}>{row.city ?? "—"}</TableCell>;
+        return <TableCell key={key}>{orDash(row.city)}</TableCell>;
       case "representative":
         return (
           <TableCell key={key}>
@@ -115,54 +92,41 @@ export const ContractsPerCustomerTable = ({ rows }: Props) => {
         );
       case "customerGroup":
         return (
-          <TableCell key={key}>{customerGroupLabel(row.customerGroup)}</TableCell>
+          <TableCell key={key}>
+            {customerGroupLabel(row.customerGroup)}
+          </TableCell>
         );
       case "code":
         return (
-          <TableCell key={key} className="font-mono font-medium">
-            {row.code}
+          <TableCell key={key} className="font-medium">
+            {orDash(row.code)}
           </TableCell>
         );
       case "description":
-        return <TableCell key={key}>{row.description || "—"}</TableCell>;
+        return <TableCell key={key}>{orDash(row.description)}</TableCell>;
       case "contractGroupName":
-        return <TableCell key={key}>{row.contractGroupName ?? "—"}</TableCell>;
+        return <TableCell key={key}>{orDash(row.contractGroupName)}</TableCell>;
       case "priceDate":
-        return <TableCell key={key}>{row.priceDate ?? "—"}</TableCell>;
+        return (
+          <TableCell key={key}>{formatDateValue(row.priceDate)}</TableCell>
+        );
       case "startingDate":
-        return <TableCell key={key}>{row.startingDate ?? "—"}</TableCell>;
+        return (
+          <TableCell key={key}>{formatDateValue(row.startingDate)}</TableCell>
+        );
       case "endDate":
-        return <TableCell key={key}>{row.endDate ?? "—"}</TableCell>;
-      case "preference":
-        return (
-          <TableCell key={key} className="text-right">
-            0
-          </TableCell>
-        );
-      case "sales":
-        return (
-          <TableCell key={key} className="text-right">
-            0
-          </TableCell>
-        );
-      case "revenue":
-        return (
-          <TableCell key={key} className="text-right">
-            0
-          </TableCell>
-        );
-      case "mostRecentInvoiceDate":
-        return <TableCell key={key}>—</TableCell>;
-      case "regionCode":
-        return <TableCell key={key}>—</TableCell>;
+        return <TableCell key={key}>{formatDateValue(row.endDate)}</TableCell>;
       case "region":
-        return <TableCell key={key}>{row.region ?? "—"}</TableCell>;
+        return <TableCell key={key}>{orDash(row.region)}</TableCell>;
     }
   };
 
   return (
     <div className="space-y-4">
-      <div className="flex items-start justify-end gap-2">
+      <TableToolbar
+        searchPlaceholder="Search company or contract…"
+        filters={filters}
+      >
         <ColumnSelector
           columns={ALL_COLUMNS.map((col) => ({
             key: col.key,
@@ -171,42 +135,53 @@ export const ContractsPerCustomerTable = ({ rows }: Props) => {
           visibility={columnVisibility}
           onToggle={toggleColumn}
         />
-        <TableExportButton
-          tableId="contracts-per-customer-table"
+        <PagedTableExportButton
           fileName="contracts-per-customer"
-          sheetName="Contracts per Customer / Prospect"
+          columnKeys={visibleColumns.map((column) => column.key)}
+          action={exportContractsPerCustomer}
         />
-      </div>
+      </TableToolbar>
 
-      <div>
-        <Table id="contracts-per-customer-table">
-          <TableHeader>
-            <TableRow>
-              {visibleColumns.map((col) => (
-                <TableHead key={col.key}>{col.label}</TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={visibleColumns.length}
-                  className="h-24 text-center"
-                >
-                  No contracts found for customers or prospects.
-                </TableCell>
-              </TableRow>
-            ) : (
-              rows.map((row, index) => (
-                <TableRow key={index}>
-                  {visibleColumns.map((col) => renderCell(row, col.key))}
+      {page.rows.length === 0 ? (
+        <div className="flex flex-col items-center gap-1 rounded-lg border border-dashed px-6 py-10 text-center">
+          <p className="font-medium">No contracts linked</p>
+          <p className="max-w-md text-sm text-muted-foreground">
+            A contract marked <em>Link to new customer</em> is attached to every
+            customer and prospect created after it. Try clearing the search or
+            the filters.
+          </p>
+        </div>
+      ) : (
+        <>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  {visibleColumns.map((col) => {
+                    const sortKey = SORTABLE[col.key];
+                    if (sortKey) {
+                      return (
+                        <TableSortHeader key={col.key} sortKey={sortKey}>
+                          {col.label}
+                        </TableSortHeader>
+                      );
+                    }
+                    return <TableHead key={col.key}>{col.label}</TableHead>;
+                  })}
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+              </TableHeader>
+              <TableBody>
+                {page.rows.map((row, index) => (
+                  <TableRow key={`${row.id}-${row.code}-${index}`}>
+                    {visibleColumns.map((col) => renderCell(row, col.key))}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          <TablePagination page={page} singular="contract" plural="contracts" />
+        </>
+      )}
     </div>
   );
 };
