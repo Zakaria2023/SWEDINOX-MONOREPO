@@ -604,6 +604,31 @@ export const nextInternalCharge = (
   return `${prefix}${letters.join("")}`;
 };
 
+/**
+ * The internal batch that follows `lastBatch` — the number that identifies one
+ * physical bundle.
+ *
+ * 🔴 Not the same thing as the internal charge, and the two were the wrong way
+ * round here until the receipt of purchase order 401141 was watched on
+ * 21-9-2026. One lorry-load became five lots. All five shared internal charge
+ * `26ADRC`, and each took its own consecutive number — 389823, 389824, 389825,
+ * 389826, 389827.
+ *
+ * So the charge names the **receipt** and this names the **lot**. It is a plain
+ * running series with no year in it, which is why numbers from 2024 (385178)
+ * and 2026 (389823) sit in one sequence. The reference calls it `Internal
+ * batch` on its panels, `Bundle` in its exports and `Interne partij` in its lot
+ * picker; all three are this number.
+ *
+ * Six digits is the width every observed value has, not a ceiling — the series
+ * is allowed to outgrow it rather than wrap.
+ */
+export const nextInternalBatch = (lastBatch: string | null): string => {
+  const previous = Number(lastBatch ?? 0);
+  const next = Number.isFinite(previous) && previous > 0 ? previous + 1 : 1;
+  return String(next).padStart(6, "0");
+};
+
 export const formatLengthMm = (
   value: number | string | null | undefined,
 ): string => {

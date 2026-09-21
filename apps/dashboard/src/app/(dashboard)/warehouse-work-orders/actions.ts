@@ -32,6 +32,7 @@ import {
   generateUuid,
   moneyString,
   NON_SELLABLE_LOCATION_TYPES,
+  nextInternalBatch,
   nextInternalCharge,
   normaliseCharge,
   priceMeasureFor,
@@ -1164,6 +1165,24 @@ const applyReceipt = async (
     sameReceipt?.internalCharge ??
     nextInternalCharge(year, lastOfYear?.charge ?? null);
 
+  // The bundle's own number, which is not the charge above. Watched on
+  // 21-9-2026: one lorry-load became five lots, all sharing internal charge
+  // `26ADRC` and each taking the next number — 389823 … 389827. The charge
+  // names the receipt; this names the lot.
+  //
+  // A typed one wins, for imported history and for bundles that arrive already
+  // labelled. Otherwise the series continues.
+  const [lastBatch] = params.internalBatch
+    ? []
+    : await tx
+        .select({
+          batch: sql<string | null>`MAX(CAST(${Stock.internalBatch} AS UNSIGNED))`,
+        })
+        .from(Stock)
+        .where(sql`${Stock.internalBatch} REGEXP '^[0-9]+$'`);
+  const internalBatch =
+    params.internalBatch ?? nextInternalBatch(lastBatch?.batch ?? null);
+
   await tx.insert(Stock).values({
     uuid: stockUuid,
     productUuid: params.productUuid,
@@ -1179,7 +1198,7 @@ const applyReceipt = async (
     // called "ntv".
     charge: normaliseCharge(params.charge),
     internalCharge,
-    internalBatch: params.internalBatch,
+    internalBatch,
     receiptDate: todayDateString(),
     valuationPrice: unitCost.toFixed(4),
     valuationEuro: moneyString(value),
