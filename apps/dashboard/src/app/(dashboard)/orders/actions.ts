@@ -53,6 +53,11 @@ import {
   unloadingRequirements,
 } from "@/lib/helpers";
 import { checkCredit } from "@/lib/server/credit-control";
+import {
+  findSellableStock,
+  StockSearchFilters,
+  StockSearchResult,
+} from "@/lib/server/stock-search";
 import { exportRows } from "@/lib/server/excel";
 import { writeSystemLog } from "@/lib/server/system-log";
 import { nextWorkOrderNumber } from "@/lib/server/work-order-numbers";
@@ -1216,4 +1221,20 @@ export const makeOrderFinal = async (
   } catch (error) {
     return { error: describeError(error, "Failed to make the order final") };
   }
+};
+
+
+/**
+ * The stock search a sales line is entered through — see
+ * `lib/server/stock-search.ts` for what it does and why it looks like this.
+ *
+ * The query lives there rather than here so quotes can use the same one, and so
+ * it can be exercised without a request context: the auth check is the only
+ * part of this that needs one.
+ */
+export const searchSellableStock = async (
+  filters: StockSearchFilters,
+): Promise<StockSearchResult> => {
+  await requireAuth();
+  return findSellableStock(filters);
 };
