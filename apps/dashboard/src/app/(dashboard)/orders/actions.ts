@@ -1087,18 +1087,30 @@ export const makeOrderFinal = async (
         throw new Error("An order with no lines has nothing to make final.");
       }
 
-      // Where the picked metal is staged. The reference sends a picking to a
-      // load location on 3 420 of its 3 936 picking rows, and the one raised on
-      // order 102191 went there too.
+      // Where the picked metal is staged.
+      //
+      // The reference uses exactly three destinations for a picking, and this
+      // is their order of preference because it is their order of frequency
+      // across its own 3 936 picking rows: `Laad` 3 420, `Afhaal` 287,
+      // `Afroep` 39. Order 102191's picking went to `Laad`.
+      //
+      // The fallback is not ceremony. Our warehouse tree has no `load` location
+      // at all — six rows, four `pick`, one `call_off`, one `collection` — so
+      // insisting on one would refuse every order ever made final.
       const [loadLocation] = await tx
         .select({ uuid: Warehouses.uuid })
         .from(Warehouses)
-        .where(eq(Warehouses.locationType, "load"))
+        .where(
+          inArray(Warehouses.locationType, ["load", "collection", "call_off"]),
+        )
+        .orderBy(
+          sql`FIELD(${Warehouses.locationType}, 'load', 'collection', 'call_off')`,
+        )
         .limit(1);
 
       if (!loadLocation) {
         throw new Error(
-          "No loading location exists, so there is nowhere to pick this order to.",
+          "No loading, collection or call-off location exists, so there is nowhere to pick this order to. Add one on the warehouses screen first.",
         );
       }
 
