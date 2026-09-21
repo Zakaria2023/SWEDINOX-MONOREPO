@@ -5650,9 +5650,17 @@ export const WAREHOUSE_WORK_ORDER_TYPE_META: Record<
     requiresScan: false,
     serves: null,
   },
+  // 🔴 Picking ends at the loading bay, not at a call-off shelf.
+  //
+  // Corrected 21-9-2026, first by watching order 102191 raise a picking that
+  // ran `From Ontvangst` `To Laad`, then against the reference's own 3.936
+  // picking rows: **3 420 go to `Laad`**, 287 to `Afhaal` (collection), 190 are
+  // blank, and only **39** to `Afroep` — the call-off location this had as its
+  // destination. A route nobody takes on 1 % of rows was standing in for the
+  // one taken on 87 %, so an ordinary pick did not match any known route.
   picking: {
     from: "pick",
-    to: "call_off",
+    to: "load",
     stockEffect: "move",
     movementReason: "warehouse_transfer",
     requiresScan: true,

@@ -1972,6 +1972,7 @@ export const SYSTEM_LOG_CATEGORY_LABELS: Record<SystemLogCategory, string> = {
   commercial_block: "Commercial block",
   commercial_unblock: "Commercial unblock",
   order_changed_after_release: "Order changed after release",
+  order_made_final: "Order made final",
   lock_removed: "Lock removed",
   settings_changed: "Settings changed",
 };

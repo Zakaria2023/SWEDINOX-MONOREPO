@@ -7,7 +7,11 @@ import {
   OrderLinePanels,
   OrderWorkOrders,
 } from "@/app/(dashboard)/orders/[uuid]/actions";
-import { cancelOrder, OrderDetail } from "@/app/(dashboard)/orders/actions";
+import {
+  cancelOrder,
+  makeOrderFinal,
+  OrderDetail,
+} from "@/app/(dashboard)/orders/actions";
 import { OrderLinePanelsView } from "@/components/orders/panels/order-line-panels";
 import {
   OrderFinancesPanel,
@@ -54,6 +58,10 @@ export const OrderDetailView = ({
   const [error, setError] = useState<string | undefined>();
 
   const canCancel = order.status !== "cancelled";
+  // Making an order final is the one press that raises the picking and the
+  // transport job, so it is only offered while the order is still a typed
+  // document nobody has released.
+  const canMakeFinal = order.status === "provisional";
 
   const selectedLine = order.items.find(
     (item) => item.uuid === linePanels?.orderItemUuid,
@@ -64,6 +72,13 @@ export const OrderDetailView = ({
   ]
     .filter(Boolean)
     .join(" · ");
+
+  const handleMakeFinal = () => {
+    startTransition(async () => {
+      const result = await makeOrderFinal(order.uuid);
+      setError(result.error);
+    });
+  };
 
   const handleCancel = () => {
     startTransition(async () => {
@@ -237,6 +252,11 @@ export const OrderDetailView = ({
           >
             Edit Details
           </Button>
+          {canMakeFinal && (
+            <Button type="button" onClick={handleMakeFinal} disabled={isPending}>
+              {isPending ? "Making final..." : "Make Final"}
+            </Button>
+          )}
           <Button
             type="button"
             variant="destructive"

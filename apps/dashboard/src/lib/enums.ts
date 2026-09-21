@@ -2345,6 +2345,10 @@ export const systemLogCategories = [
   "commercial_block",
   "commercial_unblock",
   "order_changed_after_release",
+  // Made final: the order was released and the work orders it raises exist.
+  // Logged because that press is what puts steel on somebody's picking list,
+  // and the warehouse work order it created is the only other trace of it.
+  "order_made_final",
   "lock_removed",
   "settings_changed",
 ] as const satisfies readonly string[];

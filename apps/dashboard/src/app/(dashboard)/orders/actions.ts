@@ -18,6 +18,15 @@ import {
 } from "@/db/schema/orders";
 import { Products, SelectProducts } from "@/db/schema/products";
 import { Reservations } from "@/db/schema/reservations";
+import {
+  TransportWorkOrderLines,
+  TransportWorkOrders,
+} from "@/db/schema/transport-work-orders";
+import {
+  WarehouseWorkOrderLines,
+  WarehouseWorkOrders,
+} from "@/db/schema/warehouse-work-orders";
+import { Warehouses } from "@/db/schema/warehouses";
 import { SelectStock, Stock } from "@/db/schema/stock";
 import { InsertTexts, Texts } from "@/db/schema/texts";
 import { requireAuth } from "@/lib/auth";
@@ -38,11 +47,14 @@ import {
   quoteLineFinancials,
   quoteOrderPolicy,
   resolveSurchargeAmounts,
+  toDateString,
+  todayDateString,
   unloadingRequirements,
 } from "@/lib/helpers";
 import { checkCredit } from "@/lib/server/credit-control";
 import { exportRows } from "@/lib/server/excel";
 import { writeSystemLog } from "@/lib/server/system-log";
+import { nextWorkOrderNumber } from "@/lib/server/work-order-numbers";
 import {
   assertWorkPanelFree,
   releaseWorkPanelLockFor,
@@ -77,6 +89,7 @@ import {
   getTableColumns,
   gte,
   inArray,
+  ne,
   sql,
 } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -949,4 +962,232 @@ export const updateOrder = async (
   revalidatePath("/orders");
   revalidatePath(`/orders/${uuid}`);
   redirect(`/orders/${uuid}`);
+};
+
+/**
+ * Walk a location up its tree to the warehouse it belongs to.
+ *
+ * The reference's tree is four levels — `00 Hego Almere` → section `01` →
+ * subsection `1A` → bin `1A-1` — and some bins go deeper still, so a fixed
+ * number of joins would not reach the top. The bound is a guard against a
+ * parent cycle, not a claim about the depth.
+ */
+type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+const rootWarehouseOf = async (
+  tx: Transaction,
+  locationUuid: string,
+): Promise<string | null> => {
+  const seen = new Set<string>();
+  const climb = async (uuid: string): Promise<string | null> => {
+    if (seen.has(uuid) || seen.size > 16) {
+      return null;
+    }
+    seen.add(uuid);
+    const [row] = await tx
+      .select({ parentUuid: Warehouses.parentUuid })
+      .from(Warehouses)
+      .where(eq(Warehouses.uuid, uuid))
+      .limit(1);
+    if (!row) {
+      return null;
+    }
+    return row.parentUuid ? climb(row.parentUuid) : uuid;
+  };
+  return climb(locationUuid);
+};
+
+/**
+ * Make an order final — the one button that turns a typed document into work.
+ *
+ * Watched on 21-9-2026, on order 102191. A single press produced all of this:
+ *
+ *   - the order confirmation printed
+ *   - the order moved to `Vrijgegeven, Printed` and its line to `Released`
+ *   - **warehouse work order 306697** appeared — `Picking`, `From Ontvangst`
+ *     `To Laad`, 5 ST / 540 kg, status `New`
+ *   - a **transport work order** appeared — direction `Deliver`, the delivery
+ *     date, and `Trip` and `Bill of lading` both empty
+ *   - no production work order, because a plain stock line needs no cutting
+ *
+ * So the two work orders are a consequence of releasing the order, not
+ * something a planner raises afterwards. Until now nothing in this app created
+ * a warehouse work order header at all, and the transport side could only be
+ * assembled by hand from the deliveries screen.
+ *
+ * The transport order is deliberately left with no trip number: on the
+ * reference it waits to be put on a lorry, and that is precisely what puts it
+ * on the list of deliveries still to be arranged.
+ */
+export const makeOrderFinal = async (
+  orderUuid: string,
+): Promise<OrderActionResult> => {
+  const userId = await requireAuth();
+  try {
+    await db.transaction(async (tx) => {
+      const [order] = await tx
+        .select()
+        .from(Orders)
+        .where(eq(Orders.uuid, orderUuid))
+        .limit(1);
+
+      if (!order) {
+        throw new Error("Order not found.");
+      }
+      if (order.status !== "provisional") {
+        throw new Error(
+          "Only a provisional order can be made final — this one has already been released.",
+        );
+      }
+      // A held order must not reach the floor. The reference gates delivery on
+      // the same flag, which is the whole point of the queue that lists them.
+      if (order.financialBlockage) {
+        throw new Error(
+          "This order is financially blocked. Release the block before making it final.",
+        );
+      }
+
+      const items = await tx
+        .select({
+          uuid: OrderItems.uuid,
+          lineNumber: OrderItems.lineNumber,
+          stockUuid: OrderItems.stockUuid,
+          productUuid: OrderItems.productUuid,
+          quantity: OrderItems.quantity,
+          kgPlanned: OrderItems.kgPlanned,
+          lengthMm: OrderItems.lengthMm,
+          widthMm: OrderItems.widthMm,
+          thicknessMm: OrderItems.thicknessMm,
+          productCode: Products.productCode,
+          locationUuid: Stock.locationUuid,
+        })
+        .from(OrderItems)
+        .leftJoin(Products, eq(OrderItems.productUuid, Products.uuid))
+        .leftJoin(Stock, eq(OrderItems.stockUuid, Stock.uuid))
+        .where(
+          and(
+            eq(OrderItems.orderUuid, orderUuid),
+            ne(OrderItems.status, "cancelled"),
+          ),
+        );
+
+      if (items.length === 0) {
+        throw new Error("An order with no lines has nothing to make final.");
+      }
+
+      // Where the picked metal is staged. The reference sends a picking to a
+      // load location on 3 420 of its 3 936 picking rows, and the one raised on
+      // order 102191 went there too.
+      const [loadLocation] = await tx
+        .select({ uuid: Warehouses.uuid })
+        .from(Warehouses)
+        .where(eq(Warehouses.locationType, "load"))
+        .limit(1);
+
+      if (!loadLocation) {
+        throw new Error(
+          "No loading location exists, so there is nowhere to pick this order to.",
+        );
+      }
+
+      const firstLocation = items.find(
+        (item) => item.locationUuid,
+      )?.locationUuid;
+      const warehouseUuid = firstLocation
+        ? await rootWarehouseOf(tx, firstLocation)
+        : null;
+
+      if (!warehouseUuid) {
+        throw new Error(
+          "The lots on this order do not sit in any warehouse, so no picking can be planned.",
+        );
+      }
+
+      const number = await nextWorkOrderNumber(tx);
+      const workOrderUuid = generateUuid();
+
+      await tx.insert(WarehouseWorkOrders).values({
+        uuid: workOrderUuid,
+        number,
+        warehouseUuid,
+        type: "picking",
+        // `Orders.deliveryDate` is a Date, the work order's planned date a
+        // string, so the conversion is explicit rather than left to Drizzle.
+        plannedDate: order.deliveryDate
+          ? toDateString(order.deliveryDate)
+          : todayDateString(),
+        status: "new",
+      });
+
+      for (const [index, item] of items.entries()) {
+        await tx.insert(WarehouseWorkOrderLines).values({
+          uuid: generateUuid(),
+          workOrderUuid,
+          lineNumber: item.lineNumber ?? index + 1,
+          orderItemUuid: item.uuid,
+          orderNumber: String(order.id),
+          companyUuid: order.companyUuid,
+          stockUuid: item.stockUuid,
+          productUuid: item.productUuid,
+          productCode: item.productCode,
+          fromLocationUuid: item.locationUuid,
+          toLocationUuid: loadLocation.uuid,
+          length: item.lengthMm,
+          width: item.widthMm,
+          thickness: item.thicknessMm ? Number(item.thicknessMm) : null,
+          qtyPlanned: item.quantity,
+          kgPlanned: item.kgPlanned,
+          status: "new",
+        });
+      }
+
+      const transportUuid = generateUuid();
+      await tx.insert(TransportWorkOrders).values({
+        uuid: transportUuid,
+        tripNumber: null,
+        date: order.deliveryDate ? toDateString(order.deliveryDate) : null,
+        status: "new",
+      });
+
+      for (const item of items) {
+        await tx.insert(TransportWorkOrderLines).values({
+          uuid: generateUuid(),
+          workOrderUuid: transportUuid,
+          destinationCompanyUuid: order.companyUuid,
+          productUuid: item.productUuid,
+          productCode: item.productCode,
+          orderItemUuid: item.uuid,
+          orderNumber: String(order.id),
+          direction: "deliver",
+          status: "new",
+          lengthMm: item.lengthMm,
+          widthMm: item.widthMm,
+          thicknessMm: item.thicknessMm,
+          qtyPlanned: item.quantity,
+          kgPlanned: item.kgPlanned,
+        });
+      }
+
+      await tx
+        .update(Orders)
+        .set({ status: "released", isPrinted: true })
+        .where(eq(Orders.uuid, orderUuid));
+
+      await writeSystemLog(tx, {
+        category: "order_made_final",
+        message: `Order ${order.id} made final — warehouse work order ${number} and a transport work order raised`,
+        orderUuid,
+        userId,
+      });
+    });
+
+    revalidatePath("/orders");
+    revalidatePath(`/orders/${orderUuid}`);
+    revalidatePath("/warehouse-work-orders");
+    revalidatePath("/transport-workorders");
+    revalidatePath("/deliveries-to-arrange");
+    return { success: true, orderUuid };
+  } catch (error) {
+    return { error: describeError(error, "Failed to make the order final") };
+  }
 };
