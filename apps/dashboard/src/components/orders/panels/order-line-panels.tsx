@@ -210,6 +210,19 @@ const RevenueAndProfitPanel = ({ revenueAndProfit }: RevenueProps) => (
       label="Profit on replacement"
       value={formatMoney(revenueAndProfit.profitReplPrice)}
     />
+    {/* The third basis the reference measures against. Its own panel prints
+        four — APP, FSP, replacement price and LIP — and shows FSP as € 0,00 on
+        a product that carries no settlement price, which is what an em dash
+        says here. LIP is absent on purpose: what it stands for is still
+        unknown, and a column of zeros would read as an answer. */}
+    <DetailField
+      label="Profit on FSP"
+      value={
+        revenueAndProfit.profitFsp
+          ? formatMoney(revenueAndProfit.profitFsp)
+          : "—"
+      }
+    />
     <DetailField
       label="Margin too low"
       value={yesNo(revenueAndProfit.profitTooLow)}

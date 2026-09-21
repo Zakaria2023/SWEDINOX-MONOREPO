@@ -299,6 +299,7 @@ const priceQuoteLines = async ({
       quantity,
       purchasePrice,
       replacementPrice,
+      fspPrice: product.fsp,
       // Never `product.theoreticalWeight` on its own: that column holds a
       // density when the product's weight unit says M3, and reading it as a
       // per-piece weight overstates the line by orders of magnitude.
@@ -347,6 +348,7 @@ const priceQuoteLines = async ({
       costAmount: moneyString(financials.costAmount),
       profit: moneyString(financials.profit),
       profitReplPrice: moneyString(financials.profitReplPrice),
+      profitFsp: moneyString(financials.profitFsp),
       profitMargin: financials.profitMargin.toFixed(2),
       profitTooLow: financials.profitTooLow,
       isConsignment,

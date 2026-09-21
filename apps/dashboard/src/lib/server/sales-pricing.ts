@@ -6,14 +6,19 @@ import {
   SelectContractNetPrices,
 } from "@/db/schema/contract-net-prices";
 import { Contracts, SelectContracts } from "@/db/schema/contracts";
+import { ProductFspHistory } from "@/db/schema/product-details";
 import { ProductGroups } from "@/db/schema/product-groups";
 import { Products, SelectProducts } from "@/db/schema/products";
-import { applyPriceDiscounts, resolveTierDiscount } from "@/lib/helpers";
+import {
+  applyPriceDiscounts,
+  resolveTierDiscount,
+  todayDateString,
+} from "@/lib/helpers";
 import {
   EMPTY_PURCHASE_COST,
   loadPurchaseCostByProduct,
 } from "@/lib/server/purchase-pricing";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNull, lte, or } from "drizzle-orm";
 
 /**
  * The product facts a sales line is priced and costed from. Loaded once per
@@ -28,6 +33,12 @@ export type PricedProduct = {
   basePrice: string | null;
   replacementPrice: number;
   averagePurchasePrice: number;
+  /**
+   * The fixed settlement price in force today, or 0 when the article carries
+   * none. A third basis a line's profit is reported against, beside APP and the
+   * replacement price — the reference prints all three side by side.
+   */
+  fsp: number;
   priceUnit: string | null;
   revenueGroupUuid: string | null;
   /**
@@ -91,7 +102,8 @@ export const loadSalesPricingContext = async (
     };
   }
 
-  const [products, contracts, netPriceRows, purchaseCosts] = await Promise.all([
+  const [products, contracts, netPriceRows, purchaseCosts, fspRows] =
+    await Promise.all([
     db
       .select({
         uuid: Products.uuid,
@@ -138,7 +150,37 @@ export const loadSalesPricingContext = async (
       : Promise.resolve([]),
 
     loadPurchaseCostByProduct(productUuids),
+
+    // The settlement price whose period covers today. Dated history rather than
+    // a column, so a line priced now is measured against the figure in force
+    // now — the same window `Order advice` reads for the replacement price.
+    db
+      .select({
+        productUuid: ProductFspHistory.productUuid,
+        fsp: ProductFspHistory.fsp,
+        startDate: ProductFspHistory.startDate,
+      })
+      .from(ProductFspHistory)
+      .where(
+        and(
+          inArray(ProductFspHistory.productUuid, productUuids),
+          lte(ProductFspHistory.startDate, todayDateString()),
+          or(
+            isNull(ProductFspHistory.endDate),
+            gte(ProductFspHistory.endDate, todayDateString()),
+          ),
+        ),
+      )
+      .orderBy(desc(ProductFspHistory.startDate)),
   ]);
+
+  // Newest first, so the first row seen for a product is the one in force.
+  const fspByProduct = new Map<string, number>();
+  fspRows.forEach((row) => {
+    if (!fspByProduct.has(row.productUuid)) {
+      fspByProduct.set(row.productUuid, Number(row.fsp ?? 0));
+    }
+  });
 
   return {
     productByUuid: new Map(
@@ -149,6 +191,7 @@ export const loadSalesPricingContext = async (
           {
             ...product,
             averagePurchasePrice: cost.averagePurchasePrice,
+            fsp: fspByProduct.get(product.uuid) ?? 0,
             // What re-buying the article costs today is the last price a
             // supplier invoiced it at.
             replacementPrice: cost.lastPurchasePrice,

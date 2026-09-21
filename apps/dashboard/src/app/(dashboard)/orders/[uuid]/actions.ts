@@ -152,6 +152,7 @@ export type OrderLineRevenueAndProfit = {
   profitMargin: number;
   replacementCost: number;
   profitReplPrice: number;
+  profitFsp: number;
   profitTooLow: boolean;
 };
 
@@ -365,6 +366,7 @@ export const getOrderLinePanels = async (
     profitMargin: toNumber(item.profitMargin),
     replacementCost: toNumber(item.replacementPrice),
     profitReplPrice: toNumber(item.profitReplPrice),
+    profitFsp: toNumber(item.profitFsp),
     profitTooLow: item.profitTooLow ?? false,
   };
 

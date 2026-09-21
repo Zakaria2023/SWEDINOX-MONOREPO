@@ -8006,6 +8006,14 @@ export type QuoteLineFinancialsInput = {
   /** Average purchase price per unit. Falls back to the replacement price. */
   purchasePrice: number;
   replacementPrice: number;
+  /**
+   * The fixed settlement price the article is carried at, when one is in force.
+   * A third basis the same line is measured against — the reference prints
+   * profit against APP, FSP and the replacement price side by side, because a
+   * line can look healthy against what it cost and poor against what the
+   * business has decided the metal is worth.
+   */
+  fspPrice?: number;
   /** Weight of one unit as the physics gives it. This is what the line costs. */
   theoreticalWeight: number;
   /**
@@ -8044,6 +8052,7 @@ export type QuoteLineFinancials = {
   profit: number;
   profitMargin: number;
   profitReplPrice: number;
+  profitFsp: number;
   /** What the line is billed on — the trade weight when the order uses one. */
   weightKg: number;
   /** What the line is costed on. Equal to `weightKg` on a theoretical order. */
@@ -8069,6 +8078,7 @@ export const quoteLineFinancials = ({
   quantity,
   purchasePrice,
   replacementPrice,
+  fspPrice = 0,
   theoreticalWeight,
   tradeWeight,
   lengthMm,
@@ -8119,6 +8129,10 @@ export const quoteLineFinancials = ({
   const costPrice = purchasePrice > 0 ? purchasePrice : replacementPrice;
   const costAmount = roundToCents(costPrice * costMeasure);
   const replacementCost = roundToCents(replacementPrice * costMeasure);
+  // A product with no settlement price in force has no FSP profit to report —
+  // zero here means "no basis", which is exactly what the reference showed for
+  // `PK304L300315`, whose FSP column read € 0,00 beside a live APP figure.
+  const fspCost = roundToCents(fspPrice * costMeasure);
   const profit = roundToCents(amount - costAmount);
   const profitMargin = profitMarginPercent(amount, profit);
 
@@ -8131,6 +8145,7 @@ export const quoteLineFinancials = ({
     profit,
     profitMargin,
     profitReplPrice: roundToCents(amount - replacementCost),
+    profitFsp: fspPrice > 0 ? roundToCents(amount - fspCost) : 0,
     weightKg,
     theoreticalWeightKg,
     m1PerPiece: lengthMm / 1000,

@@ -584,6 +584,7 @@ export const createOrder = async (
           quantity,
           purchasePrice: Number(stockRow.valuationPrice ?? 0),
           replacementPrice: Number(product?.replacementPrice ?? 0),
+          fspPrice: product?.fsp ?? 0,
           // `theoreticalWeight` is a density when the weight unit says M3, so
           // it is only ever read through the helper that checks the unit.
           theoreticalWeight:
@@ -642,6 +643,7 @@ export const createOrder = async (
           profit: moneyString(financials.profit),
           profitMargin: financials.profitMargin.toFixed(2),
           profitReplPrice: moneyString(financials.profitReplPrice),
+          profitFsp: moneyString(financials.profitFsp),
           profitTooLow: financials.profitTooLow,
         });
 

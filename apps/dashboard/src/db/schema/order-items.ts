@@ -247,6 +247,20 @@ export const OrderItems = mysqlTable(
       precision: 15,
       scale: 2,
     }).default("0.00"),
+    // The third basis the reference measures a line against.
+    //
+    // Its `Revenue+Profit` panel — watched on order 102191, 21-9-2026 — prints
+    // four side by side: `w.r.t. APP`, `w.r.t. FSP`, `w.r.t. Repl. price` and
+    // `w.r.t. LIP`. APP is the cost above and Repl. price is the column beside
+    // this one, so FSP is the one that was missing.
+    //
+    // ⚠️ **LIP is deliberately absent.** Its behaviour is known — it is a price
+    // basis profit is measured against — and what it stands for is not (K4).
+    // There is no column anywhere that could fill it, and a fourth basis
+    // reading zero on every line would look like a real answer.
+    profitFsp: decimal("profit_fsp", { precision: 15, scale: 2 }).default(
+      "0.00",
+    ),
     // Flagged when the line's margin falls under the product group's floor.
     profitTooLow: boolean("profit_too_low").default(false),
 
