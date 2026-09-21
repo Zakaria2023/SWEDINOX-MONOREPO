@@ -20,6 +20,41 @@ wrong stock. 5–12 are missing mechanism. 13–20 are missing fields and screen
 
 ---
 
+## Where this stands — 21-9-2026, eight commits
+
+**Everything that was demonstrably *wrong* is fixed.** What is left is new
+feature work and two genuinely blocked items.
+
+| | Item | State |
+|---|---|---|
+| ✅ | **1** two weights | `b56515e` — 12 checks reproduce the observed line to the cent |
+| ✅ | **2** invoice creates no stock | `d0afe74` |
+| 🟡 | **3** valuation on receipt | `33c2920` — ledger half was already right; lot half blocked on **O9** |
+| ✅ | **4** charge mandatory per bundle | `dfc5aa6` — server rule + disabled button |
+| ✅ | **5** lot number vs receipt charge | `69575db` — `nextInternalBatch` |
+| ⬜ | **6** stock picker / nullable reservation | **Not started.** Deliberately whole: loosening `Reservations.stockUuid` with nothing to write it is worse than leaving it |
+| ✅ | **7** unblock clears its reason | `a03a643` |
+| ✅ | **8** `Make final` raises both work orders | `e8c5cda` — also corrected picking's destination |
+| ✅ | **9** ladder self-approves | already correct; **4** locked it in |
+| ✅ | **10** internal move is not a mutation | `33c2920` — 19 reasons, none a relocation |
+| ⬜ | **11** four profit bases | **Not started.** APP and replacement exist; FSP is reachable; **LIP has no source** (K4) |
+| 🔴 | **12** picking allocation | Blocked on **O2**/**O3** |
+| ✅ | **13** order fields | `a55e249` — most already existed; transport/handling costs added |
+| ✅ | **14** customer defaults | `a55e249` |
+| ⬜ | **15** confirmation document | **Not started.** Needs the factoring answer (**O8**) first |
+| ✅ | **16** minimum margin | already built; confirmed correct |
+| ⬜ | **17** panels | **Not started.** Presentation work, no logic at risk |
+| 🔴 | **18** discount cascade | Cannot be built from evidence |
+| ⬜ | **19** location tree | Verification only |
+| ✅ | **20** smaller confirmations | no change needed |
+| ✅ | **21** product record | `d987957` — unblocked item 1 |
+
+**Two schema pushes**, both applied: `transport_costs` / `handling_costs` on
+orders, `delivery_terms` / `weight_type` on companies, and one new system-log
+category.
+
+---
+
 ## 🔴 1. Revenue is billed on trade weight; cost is taken on theoretical weight
 
 **The single most expensive finding of the day.** Proved on order `102191`
@@ -188,13 +223,30 @@ reference calls **APP**, and which also appears on lots received in April 2025
 against a different order.
 
 It is **not FSP**: order 102191's profit panel prints `w.r.t. APP` at € 2 058,82
-and `w.r.t. FSP` at € 0,00 **side by side** for the same product. We hold
-`ProductFspHistory` and no APP at all, and *"average purchase price"* says
-nothing about the window or the weighting.
+and `w.r.t. FSP` at € 0,00 **side by side** for the same product.
 
-Inventing a rule would misvalue every lot in the warehouse. The paid price
-stands, the divergence is commented at the point it is set, and this waits on
-**O9**.
+⚠️ **Correction, same day.** An earlier draft of this said *"we have no APP at
+all"*. That was wrong. `lib/server/purchase-pricing.ts` already derives an
+`averagePurchasePrice` per product from the purchase invoices, and
+`loadSalesPricingContext` hands it to every sales line. So the **concept** is
+there; what is missing is narrower and sharper:
+
+1. **Whether the reference's APP is the same average.** Ours is computed from
+   invoices; theirs is carried on the product and on the lot. Same idea, and no
+   evidence yet that the two produce the same number.
+2. **The two revaluation accounts.** Receiving at the carried price while paying
+   a different one *creates* a difference that has to be posted, and which pair
+   of accounts takes it is unknown. `control-stock-revaluation-fsp` is the
+   screen that reports it.
+
+The chicken-and-egg resolves cleanly, which is encouraging: the receipt precedes
+the invoice, so APP at receipt is the *standing* average excluding this delivery,
+and the gap against what was paid is exactly the revaluation. That is what the
+reference shows — lot at 2 058,82, paid 2 000,00.
+
+The paid price stands until (2) is answered, because a lot valued correctly with
+its revaluation unposted is a worse state than one valued consistently. The
+divergence is commented at the point it is set.
 
 **Reconciliation to keep as a test:** the mutation rows carry a running
 product-level balance that closed exactly — € 35 311,54 → € 56 506,54
@@ -640,7 +692,8 @@ four levels, and that the picker is a search rather than a dropdown.
 | **O6** | After reporting, work order `306675` read `Qty(p) 10 / Kg(p) 1 060,2`, down from 100 / 10 598, with no child rows | Cosmetic — the stock is right either way — but unexplained |
 | **O7** | The unloading dialog balanced its last bundle to the order's **rounded** `Kg(p)` (1 060,2) and stock stored the theoretical 1 059,75 | **Do not reproduce the dialog's arithmetic as if it were stored** |
 | **O8** | **Is the factoring arrangement with Boozt24 current?** | Item 15. Ask before building anything that clears an open post |
-| **O9** | 🔴 **Where does APP come from?** A lot is valued at € 2 058,8151 while € 2 000,00 was paid, and the same figure appears on lots from a different order five months earlier. It is not FSP — the profit panel prints both, and FSP is € 0,00 | Item 3's lot side. **Read the product record**: the `Basis` block was captured but the price blocks below it were not. If APP is a stored field, this closes in one screenshot |
+| **O9** | 🔴 **Which two accounts take the revaluation?** A lot comes in valued at the product's APP (€ 2 058,8151) while € 2 000,00 was paid. That gap has to be posted and we do not know where | Item 3's lot side. We already derive an average purchase price, so the valuation itself is reachable — but valuing the lot correctly while leaving the difference unposted is worse than valuing it consistently. `control-stock-revaluation-fsp` is the screen that reports it |
+| **O10** | Is the reference's **APP** the same average we compute? | Ours comes from purchase invoices, theirs is carried on the product and the lot. Same idea; nothing yet says the same number. **Read the product record's price blocks** — the `Basis` block was captured on 21-9-2026 and the ones below it were not |
 
 ---
 

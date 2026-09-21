@@ -1140,11 +1140,15 @@ const applyReceipt = async (
   // It is not FSP: order 102191's own profit panel prints `w.r.t. APP` at
   // € 2 058,82 and `w.r.t. FSP` at € 0,00 side by side for this product.
   //
-  // We have `ProductFspHistory` and no APP at all, and no rule for deriving one
-  // — "average purchase price" says nothing about the window or the weighting.
-  // Inventing one would misvalue every lot in the warehouse, so the paid price
-  // stands until the product record has been read. See
-  // PLANNED-CODE-CHANGES-6.md item 3 / O9.
+  // We do derive an average purchase price per product already
+  // (`lib/server/purchase-pricing.ts`), so valuing the lot that way is within
+  // reach. What is missing is where the difference goes: receiving at the
+  // carried price while paying another *creates* a revaluation, and which pair
+  // of accounts takes it is unknown.
+  //
+  // A lot valued correctly with its revaluation unposted is a worse state than
+  // one valued consistently, so the paid price stands until that is answered.
+  // See PLANNED-CODE-CHANGES-6.md item 3 / O9 / O10.
   const unitCost = quantity > 0 ? value / quantity : 0;
   const stockUuid = generateUuid();
 
