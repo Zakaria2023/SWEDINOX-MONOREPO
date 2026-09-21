@@ -1,5 +1,7 @@
 "use server";
 
+import { Paged, TableQuery } from "@/lib/table-query";
+
 import { db } from "@/db";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import {
@@ -207,7 +209,7 @@ const selectQuoteLines = async (where?: SQL): Promise<QuoteLineRow[]> => {
   }));
 };
 
-export const getQuoteLines = async (): Promise<QuoteLineRow[]> => {
+const allQuoteLines = async (): Promise<QuoteLineRow[]> => {
   try {
     return await selectQuoteLines();
   } catch (error) {
@@ -537,4 +539,34 @@ export const getConvertibleQuotes = async (): Promise<ConvertibleQuote[]> => {
     .orderBy(desc(Quotes.id));
 
   return rows.map((row) => ({ ...row, lineCount: Number(row.lineCount) }));
+};
+
+/**
+ * One page of the list.
+ *
+ * The rows are read in full and then sliced, because this screen is built from
+ * more than one query and the grain is settled in code rather than in SQL.
+ * What it stops is the screen rendering every row it has ever had.
+ */
+export const getQuoteLines = async (
+  query: TableQuery,
+): Promise<Paged<QuoteLineRow>> => {
+  const rows = await allQuoteLines();
+  const term = query.q?.toLowerCase() ?? null;
+  const matched = term
+    ? rows.filter((row) =>
+        Object.values(row as Record<string, unknown>).some(
+          (value) =>
+            typeof value === "string" && value.toLowerCase().includes(term),
+        ),
+      )
+    : rows;
+  const start = (query.page - 1) * query.pageSize;
+
+  return {
+    rows: matched.slice(start, start + query.pageSize),
+    total: matched.length,
+    page: query.page,
+    pageSize: query.pageSize,
+  };
 };

@@ -1,5 +1,8 @@
 "use client";
 
+import { Paged } from "@/lib/table-query";
+
+import { TablePagination } from "@/components/ui/table-pagination";
 import { OrderStillToCallRow } from "@/app/(dashboard)/orders-still-to-be-called/actions";
 import {
   Table,
@@ -18,10 +21,10 @@ import {
 import { TableExportButton } from "@/components/ui/table-export-button";
 
 type Props = {
-  rows: OrderStillToCallRow[];
+  page: Paged<OrderStillToCallRow>;
 };
 
-export const OrdersStillToBeCalledTable = ({ rows }: Props) => (
+export const OrdersStillToBeCalledTable = ({ page }: Props) => (
   <div>
     <div className="space-y-4">
       <div className="flex justify-end">
@@ -61,7 +64,7 @@ export const OrdersStillToBeCalledTable = ({ rows }: Props) => (
           </TableRow>
         </TableHeader>
         <TableBody>
-          {rows.length === 0 ? (
+          {page.rows.length === 0 ? (
             <TableRow>
               <TableCell
                 colSpan={24}
@@ -71,7 +74,7 @@ export const OrdersStillToBeCalledTable = ({ rows }: Props) => (
               </TableCell>
             </TableRow>
           ) : (
-            rows.map((row, index) => (
+            page.rows.map((row, index) => (
               <TableRow key={index}>
                 <TableCell className="text-right">
                   {row.orderId ?? "—"}
@@ -135,5 +138,6 @@ export const OrdersStillToBeCalledTable = ({ rows }: Props) => (
         </TableBody>
       </Table>
     </div>
+    <TablePagination page={page} singular="order" plural="orders" />
   </div>
 );

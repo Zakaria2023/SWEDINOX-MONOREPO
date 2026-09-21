@@ -73,9 +73,7 @@ export const ReturnLineDetailView = ({ line }: Props) => (
     </section>
 
     <section className="space-y-4">
-      <h2 className="border-b pb-2 text-base font-semibold">
-        Line and origin
-      </h2>
+      <h2 className="border-b pb-2 text-base font-semibold">Line and origin</h2>
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         <DetailField label="Line number" value={line.lineNumber} />
         <DetailField label="Line type" value={line.lineType} />
@@ -103,9 +101,7 @@ export const ReturnLineDetailView = ({ line }: Props) => (
               href={`/products/${line.productUuid}`}
               className="text-sm text-primary hover:underline"
             >
-              {[line.productCode, line.productName]
-                .filter(Boolean)
-                .join(" — ")}
+              {[line.productCode, line.productName].filter(Boolean).join(" — ")}
             </Link>
           ) : (
             <p className="text-sm">—</p>

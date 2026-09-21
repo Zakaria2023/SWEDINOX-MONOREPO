@@ -1,6 +1,9 @@
 "use client";
 
+import { Paged } from "@/lib/table-query";
+
 import Link from "next/link";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { ReturnLineItem } from "@/app/(dashboard)/return-lines/actions";
 import {
   Table,
@@ -20,10 +23,10 @@ import {
 import { TableExportButton } from "@/components/ui/table-export-button";
 
 type Props = {
-  lines: ReturnLineItem[];
+  page: Paged<ReturnLineItem>;
 };
 
-export const ReturnLinesTable = ({ lines }: Props) => (
+export const ReturnLinesTable = ({ page }: Props) => (
   <div>
     <div className="space-y-4">
       <div className="flex justify-end">
@@ -56,7 +59,7 @@ export const ReturnLinesTable = ({ lines }: Props) => (
           </TableRow>
         </TableHeader>
         <TableBody>
-          {lines.length === 0 ? (
+          {page.rows.length === 0 ? (
             <TableRow>
               <TableCell
                 colSpan={17}
@@ -66,7 +69,7 @@ export const ReturnLinesTable = ({ lines }: Props) => (
               </TableCell>
             </TableRow>
           ) : (
-            lines.map((row) => (
+            page.rows.map((row) => (
               <TableRow key={row.uuid}>
                 <TableCell className="text-right font-medium">
                   <Link
@@ -127,5 +130,6 @@ export const ReturnLinesTable = ({ lines }: Props) => (
         </TableBody>
       </Table>
     </div>
+    <TablePagination page={page} singular="return line" plural="return lines" />
   </div>
 );

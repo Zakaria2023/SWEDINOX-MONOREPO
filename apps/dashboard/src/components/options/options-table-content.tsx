@@ -1,5 +1,8 @@
 "use client";
 
+import { Paged } from "@/lib/table-query";
+
+import { TablePagination } from "@/components/ui/table-pagination";
 import { OptionRevenueRow } from "@/app/(dashboard)/options/actions";
 import {
   Table,
@@ -20,13 +23,15 @@ import { ORDER_LINE_STATUS_LABELS } from "@/lib/labels";
 import { TableExportButton } from "@/components/ui/table-export-button";
 
 type Props = {
-  rows: OptionRevenueRow[];
+  page: Paged<OptionRevenueRow>;
 };
 
 const COLUMN_COUNT = 10;
 
-export const OptionsTable = ({ rows }: Props) => {
-  const totals = rows.reduce(
+export const OptionsTable = ({ page }: Props) => {
+  // Totals for the rows on this page, not for the whole list -- the footer
+  // says so, because before paging the two were the same number.
+  const totals = page.rows.reduce(
     (accumulator, row) => ({
       weightKg: accumulator.weightKg + row.weightKg,
       revenue: accumulator.revenue + row.revenue,
@@ -61,7 +66,7 @@ export const OptionsTable = ({ rows }: Props) => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {rows.length === 0 ? (
+            {page.rows.length === 0 ? (
               <TableRow>
                 <TableCell
                   colSpan={COLUMN_COUNT}
@@ -72,7 +77,7 @@ export const OptionsTable = ({ rows }: Props) => {
               </TableRow>
             ) : (
               <>
-                {rows.map((row, index) => (
+                {page.rows.map((row, index) => (
                   <TableRow
                     key={`${row.optionCode}-${row.lineStatus}-${index}`}
                   >
@@ -133,6 +138,7 @@ export const OptionsTable = ({ rows }: Props) => {
           </TableBody>
         </Table>
       </div>
+      <TablePagination page={page} singular="option" plural="options" />
     </div>
   );
 };

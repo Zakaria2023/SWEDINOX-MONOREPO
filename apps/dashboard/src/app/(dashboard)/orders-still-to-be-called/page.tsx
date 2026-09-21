@@ -1,12 +1,18 @@
+import { parseTableQuery, SearchParams } from "@/lib/table-query";
 import { getOrdersStillToBeCalled } from "@/app/(dashboard)/orders-still-to-be-called/actions";
 import { OrdersStillToBeCalledTable } from "@/components/orders-still-to-be-called/orders-still-to-be-called-table-content";
 
-const OrdersStillToBeCalledPage = async () => {
-  const rows = await getOrdersStillToBeCalled();
+type Props = {
+  searchParams: Promise<SearchParams>;
+};
+
+const OrdersStillToBeCalledPage = async ({ searchParams }: Props) => {
+  const query = parseTableQuery(await searchParams);
+  const rows = await getOrdersStillToBeCalled(query);
 
   return (
     <div className="space-y-4">
-      <OrdersStillToBeCalledTable rows={rows} />
+      <OrdersStillToBeCalledTable page={rows} />
     </div>
   );
 };

@@ -1,5 +1,7 @@
 "use server";
 
+import { Paged, TableQuery } from "@/lib/table-query";
+
 import { describeError } from "@/lib/helpers";
 import { db } from "@/db";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
@@ -39,8 +41,7 @@ export type OrderLineToCallRow = {
 
 // Order lines that still have quantity to be called off (planned quantity not
 // yet fully called). The "to be called" figures are the remaining balance.
-export const getOrderLinesStillToBeCalled = async (): Promise<
-  OrderLineToCallRow[]
+const allOrderLinesStillToBeCalled = async (): Promise<OrderLineToCallRow[]
 > => {
   try {
     // The city is the company's visiting address.
@@ -120,4 +121,34 @@ export const getOrderLinesStillToBeCalled = async (): Promise<
       describeError(error, "Failed to fetch order lines still to be called"),
     );
   }
+};
+
+/**
+ * One page of the list.
+ *
+ * The rows are read in full and then sliced, because this screen is built from
+ * more than one query and the grain is settled in code rather than in SQL.
+ * What it stops is the screen rendering every row it has ever had.
+ */
+export const getOrderLinesStillToBeCalled = async (
+  query: TableQuery,
+): Promise<Paged<OrderLineToCallRow>> => {
+  const rows = await allOrderLinesStillToBeCalled();
+  const term = query.q?.toLowerCase() ?? null;
+  const matched = term
+    ? rows.filter((row) =>
+        Object.values(row as Record<string, unknown>).some(
+          (value) =>
+            typeof value === "string" && value.toLowerCase().includes(term),
+        ),
+      )
+    : rows;
+  const start = (query.page - 1) * query.pageSize;
+
+  return {
+    rows: matched.slice(start, start + query.pageSize),
+    total: matched.length,
+    page: query.page,
+    pageSize: query.pageSize,
+  };
 };

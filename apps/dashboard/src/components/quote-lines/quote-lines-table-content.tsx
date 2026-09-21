@@ -1,6 +1,9 @@
 "use client";
 
+import { Paged } from "@/lib/table-query";
+
 import Link from "next/link";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { QuoteLineRow } from "@/app/(dashboard)/quote-lines/actions";
 import {
   Table,
@@ -27,14 +30,14 @@ import {
 import { TableExportButton } from "@/components/ui/table-export-button";
 
 type Props = {
-  rows: QuoteLineRow[];
+  page: Paged<QuoteLineRow>;
   /** Clerk id -> name, for the seller column. */
   userNames: Record<string, string>;
 };
 
 const COLUMN_COUNT = 46;
 
-export const QuoteLinesTable = ({ rows, userNames }: Props) => (
+export const QuoteLinesTable = ({ page, userNames }: Props) => (
   <div>
     <div className="space-y-4">
       <div className="flex justify-end">
@@ -96,7 +99,7 @@ export const QuoteLinesTable = ({ rows, userNames }: Props) => (
           </TableRow>
         </TableHeader>
         <TableBody>
-          {rows.length === 0 ? (
+          {page.rows.length === 0 ? (
             <TableRow>
               <TableCell
                 colSpan={COLUMN_COUNT}
@@ -106,7 +109,7 @@ export const QuoteLinesTable = ({ rows, userNames }: Props) => (
               </TableCell>
             </TableRow>
           ) : (
-            rows.map((row) => (
+            page.rows.map((row) => (
               <TableRow key={row.uuid}>
                 <TableCell className="text-right font-medium">
                   <Link
@@ -242,5 +245,6 @@ export const QuoteLinesTable = ({ rows, userNames }: Props) => (
         </TableBody>
       </Table>
     </div>
+    <TablePagination page={page} singular="quote line" plural="quote lines" />
   </div>
 );

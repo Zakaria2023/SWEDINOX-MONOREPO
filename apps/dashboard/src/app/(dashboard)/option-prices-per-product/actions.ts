@@ -1,5 +1,7 @@
 "use server";
 
+import { Paged, TableQuery } from "@/lib/table-query";
+
 import { db } from "@/db";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { ProductGroups, SelectProductGroups } from "@/db/schema/product-groups";
@@ -149,7 +151,7 @@ const selectOptionPrices = async (where?: SQL): Promise<OptionPriceRow[]> => {
   }));
 };
 
-export const getOptionPrices = async (): Promise<OptionPriceRow[]> => {
+const allOptionPrices = async (): Promise<OptionPriceRow[]> => {
   try {
     return await selectOptionPrices();
   } catch (error) {
@@ -279,3 +281,33 @@ export const generateOptionPrices =
       };
     }
   };
+
+/**
+ * One page of the list.
+ *
+ * The rows are read in full and then sliced, because this screen is built from
+ * more than one query and the grain is settled in code rather than in SQL.
+ * What it stops is the screen rendering every row it has ever had.
+ */
+export const getOptionPrices = async (
+  query: TableQuery,
+): Promise<Paged<OptionPriceRow>> => {
+  const rows = await allOptionPrices();
+  const term = query.q?.toLowerCase() ?? null;
+  const matched = term
+    ? rows.filter((row) =>
+        Object.values(row as Record<string, unknown>).some(
+          (value) =>
+            typeof value === "string" && value.toLowerCase().includes(term),
+        ),
+      )
+    : rows;
+  const start = (query.page - 1) * query.pageSize;
+
+  return {
+    rows: matched.slice(start, start + query.pageSize),
+    total: matched.length,
+    page: query.page,
+    pageSize: query.pageSize,
+  };
+};

@@ -1,6 +1,9 @@
 "use client";
 
+import { Paged } from "@/lib/table-query";
+
 import Link from "next/link";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { OptionPriceRow } from "@/app/(dashboard)/option-prices-per-product/actions";
 import {
   Table,
@@ -15,12 +18,12 @@ import { formatDateValue, formatMoney } from "@/lib/helpers";
 import { TableExportButton } from "@/components/ui/table-export-button";
 
 type Props = {
-  rows: OptionPriceRow[];
+  page: Paged<OptionPriceRow>;
 };
 
 const COLUMN_COUNT = 17;
 
-export const OptionPricesTable = ({ rows }: Props) => (
+export const OptionPricesTable = ({ page }: Props) => (
   <div>
     <div className="space-y-4">
       <div className="flex justify-end">
@@ -53,7 +56,7 @@ export const OptionPricesTable = ({ rows }: Props) => (
           </TableRow>
         </TableHeader>
         <TableBody>
-          {rows.length === 0 ? (
+          {page.rows.length === 0 ? (
             <TableRow>
               <TableCell
                 colSpan={COLUMN_COUNT}
@@ -63,7 +66,7 @@ export const OptionPricesTable = ({ rows }: Props) => (
               </TableCell>
             </TableRow>
           ) : (
-            rows.map((row) => (
+            page.rows.map((row) => (
               <TableRow key={row.uuid}>
                 <TableCell className="font-medium whitespace-nowrap">
                   <Link
@@ -114,5 +117,6 @@ export const OptionPricesTable = ({ rows }: Props) => (
         </TableBody>
       </Table>
     </div>
+    <TablePagination page={page} singular="price" plural="prices" />
   </div>
 );

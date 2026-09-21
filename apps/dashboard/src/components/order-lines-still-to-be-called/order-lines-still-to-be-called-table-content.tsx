@@ -1,5 +1,8 @@
 "use client";
 
+import { Paged } from "@/lib/table-query";
+
+import { TablePagination } from "@/components/ui/table-pagination";
 import { OrderLineToCallRow } from "@/app/(dashboard)/order-lines-still-to-be-called/actions";
 import {
   Table,
@@ -18,10 +21,10 @@ import {
 import { TableExportButton } from "@/components/ui/table-export-button";
 
 type Props = {
-  rows: OrderLineToCallRow[];
+  page: Paged<OrderLineToCallRow>;
 };
 
-export const OrderLinesStillToBeCalledTable = ({ rows }: Props) => (
+export const OrderLinesStillToBeCalledTable = ({ page }: Props) => (
   <div>
     <div className="space-y-4">
       <div className="flex justify-end">
@@ -60,7 +63,7 @@ export const OrderLinesStillToBeCalledTable = ({ rows }: Props) => (
           </TableRow>
         </TableHeader>
         <TableBody>
-          {rows.length === 0 ? (
+          {page.rows.length === 0 ? (
             <TableRow>
               <TableCell
                 colSpan={23}
@@ -70,7 +73,7 @@ export const OrderLinesStillToBeCalledTable = ({ rows }: Props) => (
               </TableCell>
             </TableRow>
           ) : (
-            rows.map((row, index) => (
+            page.rows.map((row, index) => (
               <TableRow key={index}>
                 <TableCell>{row.revenueGroupName ?? "—"}</TableCell>
                 <TableCell>{row.ourReference ?? "—"}</TableCell>
@@ -131,5 +134,6 @@ export const OrderLinesStillToBeCalledTable = ({ rows }: Props) => (
         </TableBody>
       </Table>
     </div>
+    <TablePagination page={page} singular="line" plural="lines" />
   </div>
 );

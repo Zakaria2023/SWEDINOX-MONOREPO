@@ -1,10 +1,16 @@
+import { parseTableQuery, SearchParams } from "@/lib/table-query";
 import { getOptionPrices } from "@/app/(dashboard)/option-prices-per-product/actions";
 import { GenerateOptionPricesButton } from "@/components/option-prices-per-product/generate-option-prices-button";
 import { NewOptionDialog } from "@/components/option-prices-per-product/new-option-dialog";
 import { OptionPricesTable } from "@/components/option-prices-per-product/option-prices-table-content";
 
-const OptionPricesPerProductPage = async () => {
-  const rows = await getOptionPrices();
+type Props = {
+  searchParams: Promise<SearchParams>;
+};
+
+const OptionPricesPerProductPage = async ({ searchParams }: Props) => {
+  const query = parseTableQuery(await searchParams);
+  const rows = await getOptionPrices(query);
 
   return (
     <div className="space-y-4">
@@ -14,7 +20,7 @@ const OptionPricesPerProductPage = async () => {
           <GenerateOptionPricesButton />
         </div>
       </div>
-      <OptionPricesTable rows={rows} />
+      <OptionPricesTable page={rows} />
     </div>
   );
 };
