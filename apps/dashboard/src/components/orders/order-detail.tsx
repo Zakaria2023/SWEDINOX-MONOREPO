@@ -73,9 +73,12 @@ export const OrderDetailView = ({
     .filter(Boolean)
     .join(" · ");
 
-  const handleMakeFinal = () => {
+  // Sending is a separate decision from releasing, which is how the reference
+  // puts it: its dialog defaults to `Don't send`, so the plain button does not
+  // and the second one says out loud that it will.
+  const handleMakeFinal = (send: boolean) => {
     startTransition(async () => {
-      const result = await makeOrderFinal(order.uuid);
+      const result = await makeOrderFinal(order.uuid, send);
       setError(result.error);
     });
   };
@@ -253,9 +256,23 @@ export const OrderDetailView = ({
             Edit Details
           </Button>
           {canMakeFinal && (
-            <Button type="button" onClick={handleMakeFinal} disabled={isPending}>
-              {isPending ? "Making final..." : "Make Final"}
-            </Button>
+            <>
+              <Button
+                type="button"
+                onClick={() => handleMakeFinal(false)}
+                disabled={isPending}
+              >
+                {isPending ? "Making final..." : "Make Final"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => handleMakeFinal(true)}
+                disabled={isPending}
+              >
+                Make Final &amp; Send
+              </Button>
+            </>
           )}
           <Button
             type="button"

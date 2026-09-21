@@ -52,6 +52,10 @@ import {
   todayDateString,
   unloadingRequirements,
 } from "@/lib/helpers";
+import {
+  mailDocument,
+  sendOrderConfirmationEmail,
+} from "@/emails/documents";
 import { checkCredit } from "@/lib/server/credit-control";
 import {
   findSellableStock,
@@ -1040,6 +1044,15 @@ const rootWarehouseOf = async (
  */
 export const makeOrderFinal = async (
   orderUuid: string,
+  /**
+   * Whether the confirmation goes to the customer now.
+   *
+   * The reference asks. Making order 102191 final opened a dialog offering
+   * `Don't send` — the default — against `Immediately send the following`, with
+   * e-mail, fax and Staalweb beneath it. So sending is a separate decision from
+   * releasing, and the safe answer is the one it starts on.
+   */
+  send = false,
 ): Promise<OrderActionResult> => {
   const userId = await requireAuth();
   try {
@@ -1211,6 +1224,17 @@ export const makeOrderFinal = async (
         userId,
       });
     });
+
+    // After the transaction, never inside it: mail cannot be rolled back with
+    // a database write, and a confirmation that fails to send must not undo the
+    // work orders the warehouse is already looking at.
+    if (send) {
+      await mailDocument(
+        () => sendOrderConfirmationEmail(orderUuid),
+        `Order confirmation for ${orderUuid}`,
+        { documentType: "order", documentUuid: orderUuid, userId },
+      );
+    }
 
     revalidatePath("/orders");
     revalidatePath(`/orders/${orderUuid}`);

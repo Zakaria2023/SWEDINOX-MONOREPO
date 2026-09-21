@@ -35,7 +35,9 @@ import {
 } from "@/lib/helpers";
 import {
   INVOICE_DOCUMENT_TYPE_LABELS,
+  DELIVERY_TERM_LABELS,
   INVOICE_PAYMENT_TERM_LABELS,
+  ORDER_WEIGHT_TYPE_LABELS,
   INVOICE_SURCHARGE_DESCRIPTION_LABELS,
   INVOICE_VAT_SCENARIO_LABELS,
   REMINDER_STAGE_LABELS,
@@ -849,5 +851,156 @@ export const sendDeliveryNoteEmail = async (
       },
     ],
     totals: [],
+  });
+};
+
+
+/**
+ * The order confirmation — the document `Make final` prints.
+ *
+ * Modelled on the `ORDERBEVESTIGING` produced for order 102191 on 21-9-2026:
+ * both references, the contact, the seller and the representative, a line table
+ * grouped under the article's family, the delivery and payment conditions, and
+ * the totals with VAT.
+ *
+ * 🔴 **The quantity column prints the TRADE weight.** That paper shows
+ * `540 KG × € 2.500,00 per TN = € 1.350,00` on a line whose metal physically
+ * weighs 529,9 kg. It is not an internal display quirk — it is what the customer
+ * is billed on, which is the whole reason the two weights had to be separated.
+ *
+ * ⚠️ **The footer is deliberately absent.** The reference's carries *"Deze
+ * Vordering is verkocht en gecedeerd aan Boozt24 Finance B.V. Bevrijdende
+ * betaling kan uitsluitend plaatsvinden aan Boozt24 Finance B.V."* — the
+ * receivables are factored, and payment discharges only to the factor. Printing
+ * that on our paper would tell a customer where to send money, and whether the
+ * arrangement is current is an open question (O8). A wrong answer there is
+ * somebody's money going to the wrong bank, so nothing is printed until it is
+ * confirmed.
+ */
+export const sendOrderConfirmationEmail = async (
+  orderUuid: string,
+): Promise<EmailDeliveryResult> => {
+  const [order] = await db
+    .select({
+      id: Orders.id,
+      companyUuid: Orders.companyUuid,
+      contactUuid: Orders.contactUuid,
+      customerRef: Orders.customerRef,
+      ourReference: Orders.ourReference,
+      orderDate: Orders.createdAt,
+      deliveryDate: Orders.deliveryDate,
+      deliveryTerms: Orders.deliveryTerms,
+      paymentTerms: Orders.paymentTerms,
+      seller: Orders.seller,
+      weightType: Orders.weightType,
+      totalExclVat: Orders.totalExclVat,
+      vatAmount: Orders.vatAmount,
+      totalInclVat: Orders.totalInclVat,
+      totalWeightKg: Orders.totalWeightKg,
+      companyName: Companies.companyName,
+    })
+    .from(Orders)
+    .leftJoin(Companies, eq(Orders.companyUuid, Companies.uuid))
+    .where(eq(Orders.uuid, orderUuid))
+    .limit(1);
+
+  if (!order) {
+    return NOTHING_SENT;
+  }
+
+  const lines = await db
+    .select({
+      lineNumber: OrderItems.lineNumber,
+      quantity: OrderItems.quantity,
+      unit: OrderItems.unit,
+      lengthMm: OrderItems.lengthMm,
+      widthMm: OrderItems.widthMm,
+      thicknessMm: OrderItems.thicknessMm,
+      kgPlanned: OrderItems.kgPlanned,
+      netPrice: OrderItems.netPrice,
+      priceUnit: OrderItems.priceUnit,
+      amount: OrderItems.amount,
+      deliveryDate: OrderItems.deliveryDate,
+      productCode: Products.productCode,
+      productName: Products.name,
+    })
+    .from(OrderItems)
+    .leftJoin(Products, eq(OrderItems.productUuid, Products.uuid))
+    .where(eq(OrderItems.orderUuid, orderUuid))
+    .orderBy(asc(OrderItems.lineNumber));
+
+  if (lines.length === 0) {
+    return NOTHING_SENT;
+  }
+
+  const reference = `OC-${order.id}`;
+  const recipients = await resolveRecipients({
+    companyUuid: order.companyUuid,
+    contactUuid: order.contactUuid,
+  });
+
+  return deliver(recipients, `Order confirmation ${order.id}`, {
+    documentLabel: "Order confirmation",
+    reference,
+    companyName: order.companyName ?? "Customer",
+    intro:
+      "Thank you for your order. We confirm the delivery of the materials below.",
+    fields: fieldsOf([
+      ["Order number", String(order.id)],
+      ["Order date", formatDateValue(order.orderDate, "")],
+      ["Delivery date", formatDateValue(order.deliveryDate, "")],
+      ["Your reference", order.customerRef],
+      ["Our reference", order.ourReference],
+      ["Seller", order.seller],
+      [
+        "Delivery terms",
+        order.deliveryTerms ? DELIVERY_TERM_LABELS[order.deliveryTerms] : null,
+      ],
+      ["Payment terms", paymentTermLabel(order.paymentTerms)],
+      [
+        "Weight basis",
+        order.weightType ? ORDER_WEIGHT_TYPE_LABELS[order.weightType] : null,
+      ],
+    ]),
+    tables: [
+      {
+        caption: "Confirmed",
+        columns: [
+          "Line",
+          "Product",
+          "Description",
+          "Dimensions (mm)",
+          "Quantity",
+          "Weight (kg)",
+          "Price",
+          "Per",
+          "Amount",
+        ],
+        alignRightFrom: 4,
+        rows: lines.map((line) => [
+          line.lineNumber ? String(line.lineNumber) : "—",
+          ...productLabel(line.productCode, line.productName),
+          [line.lengthMm, line.widthMm, Number(line.thicknessMm ?? 0) || null]
+            .filter(Boolean)
+            .join(" × ") || "—",
+          quantity(line.quantity),
+          // The billed weight, which is what the reference's own paper prints.
+          quantity(line.kgPlanned),
+          money(line.netPrice),
+          line.priceUnit ?? "—",
+          money(line.amount),
+        ]),
+      },
+    ],
+    totals: [
+      { label: "Total weight", value: `${quantity(order.totalWeightKg)} kg` },
+      { label: "Total excl. VAT", value: money(order.totalExclVat) },
+      { label: "VAT", value: money(order.vatAmount) },
+      {
+        label: "Total incl. VAT",
+        value: money(order.totalInclVat),
+        emphasis: true,
+      },
+    ],
   });
 };
