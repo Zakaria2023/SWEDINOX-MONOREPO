@@ -207,6 +207,26 @@ export const applyMove = async (
   // to the receipt it came in on.
   await carryLotBatches(tx, source.uuid, destinationUuid, quantity);
 
+  // 🔴 An internal relocation is not a mutation.
+  //
+  // Proved twice. Watched on 21-9-2026: picking five plates from `Ontvangst` to
+  // `Laad` moved the stock and produced **no** row on the reference's `Stock
+  // mutations` for that day — the only five rows were that morning's receipt.
+  // And its own 13.562-row mutations export carries nineteen reasons, not one
+  // of which is a location-to-location move: goods in, goods out, production,
+  // conversion, corrections and the two external-processing legs, and nothing
+  // else.
+  //
+  // So the mutations ledger books what changes how much the company holds or
+  // what it is worth. Shifting a lot across the yard changes neither. Writing
+  // two rows for it inflated the ledger with traffic and made it disagree with
+  // the reference on every internal move.
+  //
+  // The lots still move; `Stock` above is what records where the material is.
+  if (params.reason === "warehouse_transfer") {
+    return;
+  }
+
   // Two movements, because two lots changed. Netting them into one would leave
   // the stock ledger unable to say where the material actually went.
   await tx.insert(StockMovements).values([

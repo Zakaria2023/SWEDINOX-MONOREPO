@@ -1121,7 +1121,30 @@ const applyReceipt = async (
       widthMm,
       thicknessMm,
     }) ?? quantity;
+  // What the receipt is worth to the ledger: the price actually agreed on the
+  // purchase line. Confirmed on 21-9-2026 — the five mutation rows purchase
+  // order 401141 produced read € 4.239,00 / € 5.298,75 / € 4.239,00 /
+  // € 5.298,75 / € 2.119,50, and every one of them divides out to exactly
+  // € 2.000,00 per tonne, the price on the line. The running balance closed on
+  // it too: € 35.311,54 → € 56.506,54.
   const value = roundToCents(pricePerUnit * measure);
+
+  // ⚠️ The LOT is valued differently, and we cannot yet reproduce it.
+  //
+  // Those same five lots carry `Valuation price` **2 058,8151**, not the
+  // 2 000,00 that was paid — and the same 2 058,8151 appears on lots received
+  // against a different purchase order in April 2025. So it is a price carried
+  // by the product, which the reference calls **APP**, and the gap between it
+  // and the paid price is what the two revaluation accounts are for.
+  //
+  // It is not FSP: order 102191's own profit panel prints `w.r.t. APP` at
+  // € 2 058,82 and `w.r.t. FSP` at € 0,00 side by side for this product.
+  //
+  // We have `ProductFspHistory` and no APP at all, and no rule for deriving one
+  // — "average purchase price" says nothing about the window or the weighting.
+  // Inventing one would misvalue every lot in the warehouse, so the paid price
+  // stands until the product record has been read. See
+  // PLANNED-CODE-CHANGES-6.md item 3 / O9.
   const unitCost = quantity > 0 ? value / quantity : 0;
   const stockUuid = generateUuid();
 

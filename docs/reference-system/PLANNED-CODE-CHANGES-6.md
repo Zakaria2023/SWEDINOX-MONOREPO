@@ -175,6 +175,27 @@ exist for, and nothing in our receipt path produces it.
   (`unitCost = lineAmount / invoicedQty`). That is the paid price **and** it is
   per piece, where the reference's is per price unit. Both halves are wrong.
 
+### 🟡 Half of this was already right — 21-9-2026, while implementing
+
+The **ledger** side needs no change. The receipt already books
+`value = purchase line price × measure`, and that is exactly what the reference
+did: its five mutation rows divide out to € 2 000,00/TN to the cent, and the
+running balance closes on it.
+
+🔴 **The lot side is blocked, and not on effort.** The lots carry
+`Valuation price` **2 058,8151** — a price belonging to the *product*, which the
+reference calls **APP**, and which also appears on lots received in April 2025
+against a different order.
+
+It is **not FSP**: order 102191's profit panel prints `w.r.t. APP` at € 2 058,82
+and `w.r.t. FSP` at € 0,00 **side by side** for the same product. We hold
+`ProductFspHistory` and no APP at all, and *"average purchase price"* says
+nothing about the window or the weighting.
+
+Inventing a rule would misvalue every lot in the warehouse. The paid price
+stands, the divergence is commented at the point it is set, and this waits on
+**O9**.
+
 **Reconciliation to keep as a test:** the mutation rows carry a running
 product-level balance that closed exactly — € 35 311,54 → € 56 506,54
 (+€ 21 195,00), 16 955,982 kg → 27 553,482 kg (+10 597,5), 160 → 260 pieces.
@@ -619,6 +640,7 @@ four levels, and that the picker is a search rather than a dropdown.
 | **O6** | After reporting, work order `306675` read `Qty(p) 10 / Kg(p) 1 060,2`, down from 100 / 10 598, with no child rows | Cosmetic — the stock is right either way — but unexplained |
 | **O7** | The unloading dialog balanced its last bundle to the order's **rounded** `Kg(p)` (1 060,2) and stock stored the theoretical 1 059,75 | **Do not reproduce the dialog's arithmetic as if it were stored** |
 | **O8** | **Is the factoring arrangement with Boozt24 current?** | Item 15. Ask before building anything that clears an open post |
+| **O9** | 🔴 **Where does APP come from?** A lot is valued at € 2 058,8151 while € 2 000,00 was paid, and the same figure appears on lots from a different order five months earlier. It is not FSP — the profit panel prints both, and FSP is € 0,00 | Item 3's lot side. **Read the product record**: the `Basis` block was captured but the price blocks below it were not. If APP is a stored field, this closes in one screenshot |
 
 ---
 
