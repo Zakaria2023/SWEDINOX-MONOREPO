@@ -37,10 +37,7 @@ import { JournalEntries } from "@/db/schema/journal-entries";
 import { mailDocument, sendPurchaseInvoiceEmail } from "@/emails/documents";
 import { buildPurchaseJournalEntry } from "@/lib/server/ledger";
 import { recordFreightMovement } from "@/lib/server/freight";
-import {
-  recordPurchaseLineReceipt,
-  refreshPurchaseLineStatus,
-} from "@/lib/server/purchase-lines";
+import { refreshPurchaseLineStatus } from "@/lib/server/purchase-lines";
 import {
   PurchaseInvoiceBlockReason,
   PurchaseInvoiceStatus,
@@ -697,53 +694,31 @@ export const createPurchaseInvoice = async (
             thicknessMm: Number(poItem.thicknessMm ?? 0),
           }) ?? invoicedQty;
         const lineAmount = roundToCents(linePrice * measure);
-        // `Stock.valuationPrice` is a per-piece cost — that is what the eight
-        // `restateLotValue` callers assume when they scale a lot down after a
-        // partial issue — so the line price is converted rather than stored raw.
-        const unitCost = invoicedQty > 0 ? lineAmount / invoicedQty : 0;
-
-        // 🔴 The goods do NOT arrive now. They arrive when an `Unloading`
-        // warehouse work order is approved, which is what creates the lot —
-        // purchase order 400130 in the reference is `Received`, still owes
-        // € 0,11, and already has its metal on the shelf. Creating a lot here
-        // as well would put the same steel in the warehouse twice.
+        // 🔴 An invoice never creates stock. Watched end to end on 21-9-2026:
+        // purchase order 401141 was released, confirmed, pre-notified and had
+        // both its reception and its unloading work order standing — with
+        // `Kg(a)` 0 on every panel and no lot anywhere. The five lots appeared
+        // at the moment the work order was *reported*, and no invoice was
+        // involved at any point.
         //
-        // So: link the lot the unloading already made, and only create one when
-        // there is none. That fallback is not ceremony — no approved unloading
-        // exists in our data yet, so today every purchase still receives through
-        // this path. Removing it outright would stop stock being created at all.
+        // This used to create a lot when it could not find one. That fallback
+        // was written when no approved unloading existed in our data, and it is
+        // now the thing that would put the same steel in the warehouse twice.
+        // An invoice for goods nobody booked in is a real problem upstream, so
+        // it is surfaced rather than papered over.
         const [receivedLot] = await tx
           .select({ uuid: Stock.uuid })
           .from(Stock)
           .where(eq(Stock.purchaseOrderItemUuid, poItem.uuid))
           .limit(1);
 
-        const stockUuid = receivedLot?.uuid ?? generateUuid();
-
         if (!receivedLot) {
-          await tx.insert(Stock).values({
-            uuid: stockUuid,
-            productUuid: poItem.productUuid,
-            purchaseOrderUuid: poItem.purchaseOrderUuid,
-            purchaseOrderItemUuid: poItem.uuid,
-            supplierUuid: fields.companyUuid ?? null,
-            quantity: item.quantity,
-            quantityKg: receivedWeightKg.toFixed(2),
-            status: "pending",
-            valuationPrice: unitCost.toFixed(4),
-            valuationEuro: moneyString(lineAmount),
-          });
-
-          // No unloading brought these goods in, so this invoice is their
-          // receipt — record it on the line's receptions. When an unloading
-          // did make the lot, it has already recorded the arrival.
-          await recordPurchaseLineReceipt(tx, {
-            purchaseOrderItemUuid: poItem.uuid,
-            quantity: invoicedQty,
-            kg: receivedWeightKg,
-            date: todayDateString(),
-          });
+          throw new Error(
+            `Line ${poItem.lineNumber ?? ""} has no stock: nothing was ever booked in against it. Report the unloading work order for this purchase order first, then invoice it.`,
+          );
         }
+
+        const stockUuid = receivedLot.uuid;
 
         await tx.insert(PurchaseInvoiceItems).values({
           uuid: generateUuid(),
