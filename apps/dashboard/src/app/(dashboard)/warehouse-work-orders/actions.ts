@@ -1420,6 +1420,32 @@ export const reportWarehouseWorkOrderLineCompletion = async (
       return { error: "Report at least one row." };
     }
 
+    // 🔴 A heat number per bundle, or the metal does not become stock.
+    //
+    // Watched on 21-9-2026, reporting the unloading of purchase order 401141.
+    // Its dialog offered five bundles and kept `OK` greyed out through every
+    // other attempt — ticking rows, committing cells, filling `By:` — until
+    // every row carrying a quantity had a `Charge`. It is the hardest
+    // validation rule found anywhere in the reference, and it is the reason a
+    // delivered sheet can always be traced back to the heat it was rolled from.
+    //
+    // Only on the way in. A pick takes its charge from the lot it draws on, and
+    // a move carries whatever the lot already holds.
+    if (meta.stockEffect === "in") {
+      const missing = reported.filter(
+        (pick) =>
+          Number(pick.qtyActual) > 0 && !normaliseCharge(pick.charge ?? null),
+      );
+      if (missing.length > 0) {
+        return {
+          error:
+            missing.length === reported.length
+              ? "Every bundle needs its charge — the heat number from the certificate — before these goods can become stock."
+              : `${missing.length} of ${reported.length} bundles have no charge. Every bundle needs the heat number from its certificate before these goods can become stock.`,
+        };
+      }
+    }
+
     const documentNo = `WWO-${workOrder.number}`;
     const executedAt = new Date(input.executedAt);
     if (Number.isNaN(executedAt.getTime())) {

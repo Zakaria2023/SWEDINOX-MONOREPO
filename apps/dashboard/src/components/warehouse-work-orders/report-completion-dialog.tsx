@@ -38,7 +38,11 @@ import {
 import { FormError } from "@/components/ui/form-error";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import { WarehouseWorkOrderType } from "@/lib/enums";
-import { todayDateString, warehouseWorkOrderTypeMetaOf } from "@/lib/helpers";
+import {
+  cn,
+  todayDateString,
+  warehouseWorkOrderTypeMetaOf,
+} from "@/lib/helpers";
 
 type Props = {
   line: WorkOrderLineListItem | null;
@@ -61,6 +65,7 @@ export const ReportCompletionDialog = ({
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors },
   } = useForm<ReportCompletionFormValues>({
     resolver: zodResolver(reportCompletionSchema),
@@ -161,6 +166,24 @@ export const ReportCompletionDialog = ({
 
   const meta = warehouseWorkOrderTypeMetaOf(workOrderType);
   const isCount = meta?.stockEffect === "count";
+  // Goods coming in, where every bundle owes a heat number.
+  const isReceipt = meta?.stockEffect === "in";
+
+  // 🔴 The rule that stops metal becoming stock without traceability.
+  //
+  // The reference keeps its own `OK` greyed out until every bundle carrying a
+  // quantity has a `Charge` — watched on 21-9-2026 while reporting the
+  // unloading of purchase order 401141, where nothing else unlocked it. The
+  // server enforces this too; the button is disabled so the floor sees why
+  // before it fills the dialog in rather than after.
+  const watchedPicks = watch("picks");
+  const bundlesMissingCharge = isReceipt
+    ? (watchedPicks ?? []).filter(
+        (pick) =>
+          Number(String(pick?.qtyActual ?? "").replace(",", ".")) > 0 &&
+          !String(pick?.charge ?? "").trim(),
+      ).length
+    : 0;
 
   return (
     <Dialog open={!!line} onOpenChange={onOpenChange}>
@@ -256,6 +279,18 @@ export const ReportCompletionDialog = ({
                           <Input
                             {...register(`picks.${index}.charge`)}
                             disabled={isPending}
+                            className={cn(
+                              isReceipt &&
+                                Number(
+                                  String(
+                                    watchedPicks?.[index]?.qtyActual ?? "",
+                                  ).replace(",", "."),
+                                ) > 0 &&
+                                !String(
+                                  watchedPicks?.[index]?.charge ?? "",
+                                ).trim() &&
+                                "border-destructive",
+                            )}
                           />
                         </TableCell>
                         <TableCell>
@@ -313,6 +348,16 @@ export const ReportCompletionDialog = ({
               Add row
             </Button>
 
+            {bundlesMissingCharge > 0 ? (
+              <p className="text-sm text-muted-foreground">
+                {bundlesMissingCharge === 1
+                  ? "One bundle still has no charge."
+                  : `${bundlesMissingCharge} bundles still have no charge.`}{" "}
+                Every bundle needs the heat number from its certificate before
+                these goods can become stock.
+              </p>
+            ) : null}
+
             <FormError>{formError}</FormError>
           </DialogBody>
           <DialogFooter>
@@ -324,7 +369,10 @@ export const ReportCompletionDialog = ({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isPending || loading}>
+            <Button
+              type="submit"
+              disabled={isPending || loading || bundlesMissingCharge > 0}
+            >
               {isPending ? "Reporting..." : "Report completion"}
             </Button>
           </DialogFooter>
