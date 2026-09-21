@@ -308,7 +308,14 @@ export const recalculateProductPrices = async (
 
     const priceDate = todayDateString();
 
-    for (const product of products) {
+    // Work out every new price first, then write them in batches.
+    //
+    // This used to issue one UPDATE per product inside the loop. On 5 626
+    // products that is 5 626 round trips to a database this app already has to
+    // ration connections to — and none of it was in a transaction, so a failure
+    // halfway left half the catalogue repriced and the rest on yesterday's
+    // figures, with nothing to say where the boundary was.
+    const repriced = products.map((product) => {
       const cost = costs.get(product.uuid) ?? EMPTY_PURCHASE_COST;
       const costBasis =
         cost.lastPurchasePrice > 0
@@ -322,15 +329,44 @@ export const recalculateProductPrices = async (
       const basePrice =
         fixedSalesPrice > 0 ? fixedSalesPrice : costBasis * (1 + markup / 100);
 
-      await db
-        .update(Products)
-        .set({
-          markup: markup.toFixed(2),
-          basePrice: moneyString(basePrice),
-          priceDate,
-        })
-        .where(eq(Products.uuid, product.uuid));
-    }
+      return {
+        uuid: product.uuid,
+        markup: markup.toFixed(2),
+        basePrice: moneyString(basePrice),
+      };
+    });
+
+    // One statement per batch, each a CASE over the batch's own uuids. Small
+    // enough to keep the generated SQL well inside any statement limit, large
+    // enough to turn thousands of round trips into a couple of dozen.
+    const BATCH_SIZE = 250;
+
+    const batches = Array.from(
+      { length: Math.ceil(repriced.length / BATCH_SIZE) },
+      (_, index) =>
+        repriced.slice(index * BATCH_SIZE, (index + 1) * BATCH_SIZE),
+    );
+
+    await db.transaction(async (tx) => {
+      for (const batch of batches) {
+        const uuids = batch.map((row) => row.uuid);
+
+        const caseFor = (pick: (row: (typeof batch)[number]) => string) =>
+          sql`CASE ${Products.uuid} ${sql.join(
+            batch.map((row) => sql`WHEN ${row.uuid} THEN ${pick(row)}`),
+            sql` `,
+          )} END`;
+
+        await tx
+          .update(Products)
+          .set({
+            markup: caseFor((row) => row.markup),
+            basePrice: caseFor((row) => row.basePrice),
+            priceDate,
+          })
+          .where(inArray(Products.uuid, uuids));
+      }
+    });
 
     revalidatePath("/product-prices");
     revalidatePath("/products");
