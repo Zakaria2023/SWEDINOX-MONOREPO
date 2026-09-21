@@ -117,6 +117,17 @@ export const getReservationRecords = async (): Promise<ReservationRecord[]> => {
         supplierName: supplier.companyName,
       })
       .from(Reservations)
+      // Deliberately an inner join, and it excludes something.
+      //
+      // `Reservations.stockUuid` became nullable on 21-9-2026, because goods
+      // are committed to customers before they arrive — purchase order 401141
+      // had 90 of its 100 pieces spoken for while the metal was at the mill. A
+      // hold like that names a purchase line and no lot, so it drops out here.
+      //
+      // That is right for this screen. The reference's `Reservations` is a
+      // **stock grid** with the holds behind a right-click, so a row with no
+      // lot has nothing to be a row of. Incoming commitments show on the
+      // purchase order's own Stock panel, which is where they were found.
       .innerJoin(Stock, eq(Reservations.stockUuid, Stock.uuid))
       .innerJoin(Products, eq(Stock.productUuid, Products.uuid))
       .leftJoin(location, eq(Stock.locationUuid, location.uuid))

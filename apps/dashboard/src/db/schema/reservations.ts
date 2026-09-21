@@ -46,9 +46,22 @@ export const Reservations = mysqlTable(
     // the location as well as the article ("Reservations Laad Aluminium plate
     // semi-rigid 1S"), and an empty panel on a different location of the same
     // product proves the two are counted apart.
-    stockUuid: char("stock_uuid", { length: 36 })
-      .notNull()
-      .references(() => Stock.uuid, { onDelete: "cascade" }),
+    // 🔴 Nullable since 21-9-2026, and it has to be.
+    //
+    // Purchase order 401141's own Stock panel read `Qty(p) 100 · Qty(r) 90 ·
+    // Available 10` while the metal was still at the mill, and the receipt then
+    // handed the warehouseman exactly that 20/25/20/25 + 10 allocation to
+    // confirm. So goods are committed to customers before any lot exists to
+    // bind — the `Purchase` tab of the stock window is where that is done.
+    //
+    // **Exactly one of `stockUuid` and `purchaseOrderItemUuid` is set.** A hold
+    // on the shelf names a lot; a hold on incoming supply names the purchase
+    // line it is coming in on. Neither set is the `Temporary` case below, which
+    // the reference also has — 5 of its 435 reservations hold metal with no
+    // document behind them at all.
+    stockUuid: char("stock_uuid", { length: 36 }).references(() => Stock.uuid, {
+      onDelete: "cascade",
+    }),
 
     // What is holding it, and it is polymorphic — the same shape as a stock
     // movement's cause. `O100742/50` is sales order 100742, line 50; a purchase
