@@ -7462,6 +7462,113 @@ export const salesDocumentStatusLabel = (
 ): string | null =>
   status ? (ORDER_STATUS_LABELS[status as OrderStatus] ?? status) : null;
 
+/**
+ * What a sales line is charged **per**, in the unit it is priced in.
+ *
+ * One formula per price unit, proved on 4 571 of the reference's 4 975 order
+ * lines and on every single `ST`, `M1` and `HK` row:
+ *
+ *     TN -> kilos / 1000     KG -> kilos
+ *     HK -> kilos / 100      ST -> pieces
+ *     M1 -> pieces x length in metres
+ *
+ * `Amount = basis x net price`, and `Profit = Amount - cost price x basis`.
+ * The cost is measured in the **line's** unit, not the product's: using the
+ * product's drops the fit from 98.5 % to 91 % and leaves errors in the
+ * thousands.
+ *
+ * The 400 `TN` rows that miss are nearly all invoiced, and they are billed on
+ * what actually left the warehouse rather than on the line's own weight.
+ */
+export const priceBasis = (
+  priceUnit: string | null | undefined,
+  line: { weightKg: number; quantity: number; lengthMm?: number | null },
+): number => {
+  switch (priceUnit) {
+    case "TN":
+      return line.weightKg / 1000;
+    case "KG":
+      return line.weightKg;
+    case "HK":
+      return line.weightKg / 100;
+    case "M1":
+      return (line.quantity * (line.lengthMm ?? 0)) / 1000;
+    default:
+      return line.quantity;
+  }
+};
+
+/**
+ * How many of the product's own unit one piece weighs.
+ *
+ * The bridge between the two units a line carries: what the customer is billed
+ * in and what the product is held in. Proved on all 841 of the reference's
+ * lines where they differ -- 632 `ST` sold against a tonne-held product, 209
+ * against a `HK` one, no exceptions.
+ */
+export const unitsPerPiece = (
+  productPriceUnit: string | null | undefined,
+  line: { weightKg: number; quantity: number },
+): number => {
+  if (line.quantity === 0) {
+    return 0;
+  }
+  const kilosPerPiece = line.weightKg / line.quantity;
+  switch (productPriceUnit) {
+    case "TN":
+      return kilosPerPiece / 1000;
+    case "HK":
+      return kilosPerPiece / 100;
+    case "KG":
+      return kilosPerPiece;
+    default:
+      return 1;
+  }
+};
+
+/**
+ * The net price restated in the unit the **product** is held in.
+ *
+ * Where the two units are the same the price is unchanged, which is what the
+ * reference shows on all 4 134 of its matching rows.
+ */
+export const netPriceInProductUnit = (
+  netPrice: number,
+  priceUnit: string | null | undefined,
+  productPriceUnit: string | null | undefined,
+  line: { weightKg: number; quantity: number },
+): number => {
+  if (!priceUnit || !productPriceUnit || priceUnit === productPriceUnit) {
+    return netPrice;
+  }
+  const per = unitsPerPiece(productPriceUnit, line);
+  return per === 0 ? netPrice : netPrice / per;
+};
+
+/**
+ * The cost price restated in the unit the product is held in.
+ *
+ * 🔴 The reference does **not** do this. Its `Price -/- Cost price` column
+ * subtracts the cost straight from the net price in the product's unit -- euros
+ * per piece from euros per tonne -- and reconciles on all 4 975 rows because
+ * both sides of its own subtraction are wrong together. Order `O100220` line
+ * 20 reads 5 466.32 where the real per-tonne margin is about 760. The column is
+ * carried here with the cost converted first, so ours disagrees with theirs on
+ * the 841 lines where the units differ, and is right on all of them.
+ */
+export const costPriceInProductUnit = (
+  costPrice: number,
+  priceUnit: string | null | undefined,
+  productPriceUnit: string | null | undefined,
+  line: { weightKg: number; quantity: number },
+): number => {
+  if (!priceUnit || !productPriceUnit || priceUnit === productPriceUnit) {
+    return costPrice;
+  }
+  const per = unitsPerPiece(productPriceUnit, line);
+  return per === 0 ? costPrice : costPrice / per;
+};
+
 /** The display label for a customer group. */
 export const customerGroupLabel = (
   value: CustomerGroup | string | null | undefined,

@@ -103,6 +103,13 @@ export const OrderItems = mysqlTable(
     }),
 
     // ── Blocking ──────────────────────────────────────────────────────────────
+    // Sold below an agreed commercial minimum. The reference flags 2 of its
+    // 4 975 lines, so it is an exception somebody ticks rather than a rule the
+    // system enforces -- but it is the only column on that screen which says
+    // why a line was let through at the price it carries.
+    commercialShortfall: boolean("commercial_shortfall")
+      .default(false)
+      .notNull(),
     commercialBlock: boolean("commercial_block").default(false),
     financialBlock: boolean("financial_block").default(false),
     transportBlock: boolean("transport_block").default(false),

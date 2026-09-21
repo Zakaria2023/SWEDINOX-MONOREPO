@@ -254,3 +254,52 @@ open an order with one (item G1).
 **VAT.** Nothing on this screen, and nothing on the invoice **line** either
 ([invoice-lines.md](invoice-lines.md)). VAT is decided on the invoice
 **header** — item **B3**, still uncaptured.
+
+---
+
+### B2 against `apps/dashboard` — rebuilt 21-9-2026
+
+`/order-lines` carried 23 columns against the reference's 54, and its profit
+was wrong. It now carries **46**, with a column picker, and the arithmetic the
+capture proved.
+
+🔴 **Profit multiplied the cost by the quantity.** §3 proves it is the cost
+times the **basis of the line's price unit** — kilos over a thousand on a
+tonne-priced line, not pieces. On a 1 059,8 kg line of 6 pieces the old
+formula charged six times the cost where it should have charged 1,0598. The
+five bases are now one helper, `priceBasis`, proved against §2's table.
+
+🔴 **`Price -/- Cost price` deliberately disagrees with the reference.** Its
+column subtracts the cost straight from the net price in the product's unit —
+euros per piece from euros per tonne — and reconciles on all 4 975 of its rows
+because both sides of its own subtraction are wrong together. `O100220` line 20
+reads 5 466,32 where the real per-tonne margin is about 760. Ours converts the
+cost first, so it differs on the 841 lines where the units differ and is right
+on all of them. The live check asserts the disagreement rather than hiding it.
+
+**Both price units are carried**, with the net price restated in each:
+`PriceU`/`Net price (PriceU)` is what the customer is billed in,
+`Product PriceU.`/`Net price (ProdPriceU)` what the product is held in. The
+conversion is §1's, proved there on all 841 differing lines.
+
+**Both type columns are carried, named as the reference names them.**
+`Line type` is the supply — `Stk` 4 261, `CD` 630, `Stk+CD` 83, `EXW` 1 — and
+`Order type` is the order's own — `Normal` 4 888, `Call-off` 77, `Rush` 9,
+`Ex works` 1. We had only the first, under the heading `Type`.
+
+Also added: `APP` with `Price -/- APP` and its margin, `#Deliveries`,
+`Quality Code`, `Stock category`, `Country`, `Destination country`, `Region`,
+`Representative`, `Initials`, `Revenue group`, `Customer code`, `City`,
+`Consignment`, and **`Commercial shortfall`**, which needed a column on
+`OrderItems` — the reference flags 2 of its 4 975 lines, and it is the only
+column on that screen which says why a line was let through at its price.
+
+Eight columns are not carried: `FSP` and `Replacement price` are `0` on every
+row, which makes `Price -/- FSP`, `Price -/- Replacement price` and
+`Profit margin w.r.t. replacement price` decorative — the net price restated
+and a margin that reads 100 whenever the price is not zero. `Classification`
+and its code are blank on every row, and `Affiliate` is one constant.
+
+Verified live, 33/33, plus a guard that every declared column has a cell in the
+table: a header with no cell shifts the whole row, which is how the missing
+`Order type` cell was caught.

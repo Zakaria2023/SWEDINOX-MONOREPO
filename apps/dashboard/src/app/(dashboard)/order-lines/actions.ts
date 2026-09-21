@@ -13,10 +13,14 @@ import {
 import { SelectStock, Stock } from "@/db/schema/stock";
 import { orderLineStatuses, orderSourceTypes } from "@/lib/enums";
 import {
+  costPriceInProductUnit,
   describeError,
   documentProfitMarginPercent,
+  netPriceInProductUnit,
+  priceBasis,
   remainingToInvoice,
 } from "@/lib/helpers";
+import { loadPurchaseCostByProduct } from "@/lib/server/purchase-pricing";
 import { getClerkUserNames } from "@/lib/server/clerk";
 import { exportRows } from "@/lib/server/excel";
 import {
@@ -34,7 +38,33 @@ import {
   SearchParams,
   TableQuery,
 } from "@/lib/table-query";
-import { count, desc, eq, getTableColumns } from "drizzle-orm";
+import { CompanyAddresses } from "@/db/schema/company-addresses";
+import { RevenueGroups } from "@/db/schema/revenue-groups";
+import { WarehouseWorkOrderLines } from "@/db/schema/warehouse-work-orders";
+import { count, desc, eq, getTableColumns, sql } from "drizzle-orm";
+
+/** The customer's own city and country. */
+const lineVisiting = db
+  .select({
+    companyUuid: CompanyAddresses.companyUuid,
+    city: sql<string | null>`MIN(${CompanyAddresses.city})`.as("line_city"),
+    country: sql<string | null>`MIN(${CompanyAddresses.country})`.as(
+      "line_country",
+    ),
+  })
+  .from(CompanyAddresses)
+  .where(sql`JSON_CONTAINS(${CompanyAddresses.category}, '"visit"')`)
+  .groupBy(CompanyAddresses.companyUuid)
+  .as("line_visiting");
+
+/** Where the order is being delivered, which need not be the customer. */
+const lineDelivery = db
+  .select({
+    addressUuid: CompanyAddresses.uuid,
+    country: CompanyAddresses.country,
+  })
+  .from(CompanyAddresses)
+  .as("line_delivery");
 
 export type OrderLineRow = {
   uuid: SelectOrderItems["uuid"];
@@ -55,13 +85,41 @@ export type OrderLineRow = {
   quantity: number;
   unit: SelectOrderItems["unit"];
   weightKg: number;
+  /** The agreed price, in the unit the customer is billed in. */
   price: number;
   priceUnit: SelectOrderItems["priceUnit"];
+  /** The same price restated in the unit the product is held in. */
+  priceInProductUnit: number;
+  productPriceUnit: string | null;
   costPrice: number;
   amount: number;
   profit: number;
   profitMargin: number;
   seller: SelectOrderItems["seller"];
+  ourReference: SelectOrders["ourReference"] | null;
+  customerCode: SelectCompanies["id"] | null;
+  companyUuid: SelectCompanies["uuid"] | null;
+  city: string | null;
+  country: string | null;
+  /** Where the goods go, which is not always where the customer is. */
+  destinationCountry: string | null;
+  region: SelectCompanies["region"] | null;
+  representative: SelectCompanies["representative"] | null;
+  revenueGroupNumber: number | null;
+  revenueGroupName: string | null;
+  qualityCode: SelectStock["quality"] | null;
+  stockCategory: SelectStock["stockCategory"] | null;
+  commercialShortfall: boolean;
+  isConsignment: boolean;
+  /** The order's own type: Normal, Call-off, Rush or Ex works. */
+  orderType: SelectOrders["orderType"];
+  deliveries: number;
+  /** Weighted average of every booked purchase invoice for the product. */
+  averagePurchasePrice: number;
+  priceMinusApp: number;
+  marginVsApp: number;
+  /** The cost converted into the product's unit before subtracting. */
+  priceMinusCost: number;
 };
 
 export type OrderLineDetail = SelectOrderItems & {
@@ -165,12 +223,45 @@ const orderLineRows =
         costPrice: Stock.valuationPrice,
         amount: OrderItems.amount,
         seller: OrderItems.seller,
+        productUuid: OrderItems.productUuid,
+        productPriceUnit: Products.priceUnit,
+        ourReference: Orders.ourReference,
+        customerCode: Companies.id,
+        companyUuid: Companies.uuid,
+        region: Companies.region,
+        representative: Companies.representative,
+        revenueGroupNumber: RevenueGroups.number,
+        revenueGroupName: RevenueGroups.name,
+        qualityCode: Stock.quality,
+        stockCategory: Stock.stockCategory,
+        commercialShortfall: OrderItems.commercialShortfall,
+        isConsignment: Orders.isConsignment,
+        orderType: Orders.orderType,
+        city: lineVisiting.city,
+        country: lineVisiting.country,
+        destinationCountry: lineDelivery.country,
+        // How many times the line has been taken to the warehouse floor. The
+        // reference counts 1 on 4 398 of its lines and up to 3 on the rest: a
+        // line can be picked more than once.
+        deliveries: sql<number>`(
+          SELECT COUNT(*) FROM ${WarehouseWorkOrderLines} wl
+          WHERE wl.order_item_uuid = ${OrderItems.uuid}
+        )`,
       })
       .from(OrderItems)
       .innerJoin(Orders, eq(OrderItems.orderUuid, Orders.uuid))
       .innerJoin(Companies, eq(Orders.companyUuid, Companies.uuid))
       .innerJoin(Products, eq(OrderItems.productUuid, Products.uuid))
+      .leftJoin(
+        RevenueGroups,
+        eq(Products.revenueGroupUuid, RevenueGroups.uuid),
+      )
       .leftJoin(Stock, eq(OrderItems.stockUuid, Stock.uuid))
+      .leftJoin(lineVisiting, eq(lineVisiting.companyUuid, Companies.uuid))
+      .leftJoin(
+        lineDelivery,
+        eq(lineDelivery.addressUuid, Orders.deliveryAddressUuid),
+      )
       .where(
         tableWhere({
           query,
@@ -189,11 +280,31 @@ const orderLineRows =
       .limit(limit)
       .offset(offset);
 
+    // The average purchase price is per product, so it is fetched once for the
+    // products on this page rather than per line.
+    const costs = await loadPurchaseCostByProduct(
+      rows.map((row) => row.productUuid),
+    );
+
     return rows.map((row) => {
       const amount = Number(row.amount ?? 0);
       const quantity = Number(row.quantity ?? 0);
+      const weightKg = Number(row.weightKg ?? 0);
       const costPrice = Number(row.costPrice ?? 0);
-      const profit = amount - costPrice * quantity;
+      const price = Number(row.price ?? 0);
+      const measure = { weightKg, quantity, lengthMm: row.lengthMm };
+      // The cost is charged per unit of the SAME basis the line is priced on,
+      // which is what makes a tonne-priced line cost kilos over a thousand
+      // rather than pieces.
+      const basis = priceBasis(row.priceUnit, measure);
+      const profit = amount - costPrice * basis;
+      const priceInProductUnit = netPriceInProductUnit(
+        price,
+        row.priceUnit,
+        row.productPriceUnit,
+        measure,
+      );
+      const app = costs.get(row.productUuid)?.averagePurchasePrice ?? 0;
       return {
         uuid: row.uuid,
         createdAt: row.createdAt ? row.createdAt.toISOString() : null,
@@ -213,13 +324,47 @@ const orderLineRows =
         quantity,
         unit: row.unit,
         weightKg: Number(row.weightKg ?? 0),
-        price: Number(row.price ?? 0),
+        price,
         priceUnit: row.priceUnit,
+        priceInProductUnit,
+        productPriceUnit: row.productPriceUnit,
         costPrice,
         amount,
         profit,
         profitMargin: documentProfitMarginPercent(amount, profit),
         seller: row.seller,
+        ourReference: row.ourReference,
+        customerCode: row.customerCode,
+        companyUuid: row.companyUuid,
+        city: row.city ?? null,
+        country: row.country ?? null,
+        destinationCountry: row.destinationCountry ?? row.country ?? null,
+        region: row.region,
+        representative: row.representative,
+        revenueGroupNumber: row.revenueGroupNumber,
+        revenueGroupName: row.revenueGroupName,
+        qualityCode: row.qualityCode ?? null,
+        stockCategory: row.stockCategory ?? null,
+        commercialShortfall: row.commercialShortfall,
+        isConsignment: row.isConsignment ?? false,
+        orderType: row.orderType,
+        deliveries: Number(row.deliveries ?? 0),
+        averagePurchasePrice: app,
+        priceMinusApp: priceInProductUnit - app,
+        marginVsApp: documentProfitMarginPercent(
+          priceInProductUnit,
+          priceInProductUnit - app,
+        ),
+        // The cost converted into the product's unit first -- the reference
+        // does not, and subtracts euros per piece from euros per tonne.
+        priceMinusCost:
+          priceInProductUnit -
+          costPriceInProductUnit(
+            costPrice,
+            row.priceUnit,
+            row.productPriceUnit,
+            measure,
+          ),
       };
     });
   };
