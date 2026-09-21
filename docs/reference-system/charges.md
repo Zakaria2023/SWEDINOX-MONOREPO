@@ -142,3 +142,39 @@ they differ, the charge carries margin.
   band but not the weight. The band is copied down from the order when the
   charge is raised.
 - **`Region number` is `0` on all 1 504**, as on the invoice line.
+
+---
+
+### Against `apps/dashboard` — rebuilt 21-9-2026
+
+The `Charges` table already held everything the reference stores. The screen
+did not: it loaded every charge on every request with no paging, search, filter,
+column picker or export, and showed a fraction of the columns.
+
+It now carries **23 columns**, paged, with filters on the surcharge type and
+the creation date.
+
+🔴 **`Profit` is two numeric columns here, not one string.** The reference packs
+the amount and the margin into a single Dutch-formatted cell — `€ 85,00
+(100 %)` — and renders `( %)` when the revenue is zero. A number that cannot be
+summed or sorted is not a number, so ours are `Profit` and `Profit margin`,
+both figures.
+
+⚠️ **The weight bounds carry three sentinels.** Only `External transport` uses
+real bands. `0–125` on every non-freight surcharge means *no band, flat
+charge*; `0–999999` means unbounded, the same sentinel a coil's length uses.
+Reading 125 as kilos would invent a tariff that does not exist, so the columns
+are named `From (kg)` / `Up to (kg)` and the meaning is recorded beside them.
+
+⚠️ **A surcharge is not always in euros.** `Decoil surcharge` and `Cutting
+surcharge` are charged per tonne and post to the 3000 processing band — they
+are processing charges wearing a surcharge coat. `Project discount` is a
+negative charge.
+
+Two columns are not carried: `Region number` is `0` on every row, and
+`Bedrag valuta` — the amount in a foreign currency — is non-zero on **3 of
+1 504 rows** and we have no currency model at all, so there is nothing to put
+in it. Multi-currency exists there and is barely used; that is the finding,
+not a column.
+
+Verified live, 16/16.

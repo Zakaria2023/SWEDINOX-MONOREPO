@@ -15,11 +15,30 @@ import {
   todayDateString,
 } from "@/lib/helpers";
 import { INVOICE_SURCHARGE_DESCRIPTION_LABELS } from "@/lib/labels";
-import { desc, eq, getTableColumns } from "drizzle-orm";
+import { CHARGE_COLUMNS } from "@/app/(dashboard)/charges/columns";
+import { exportRows } from "@/lib/server/excel";
+import {
+  dateRangeFilter,
+  FilterBindings,
+  runPaged,
+  SortableColumns,
+  tableOrderBy,
+  tableWhere,
+  valueFilter,
+} from "@/lib/server/table-query";
+import {
+  Paged,
+  parseTableQuery,
+  SearchParams,
+  TableQuery,
+} from "@/lib/table-query";
+import { count, desc, eq, getTableColumns } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 export type ChargeListItem = SelectCharges & {
   customerName: SelectCompanies["companyName"] | null;
+  customerCode: SelectCompanies["id"] | null;
+  companyUuid: SelectCompanies["uuid"] | null;
   revenueGroupName: SelectRevenueGroups["name"] | null;
 };
 
@@ -33,18 +52,79 @@ export type ChargeDetail = ChargeListItem & {
   revenueGroupNumber: SelectRevenueGroups["number"] | null;
 };
 
-export const getCharges = async (): Promise<ChargeListItem[]> => {
-  try {
-    return await db
+const CHARGE_SEARCH = [
+  Companies.companyName,
+  Charges.code,
+  Charges.surcharge,
+] as const;
+
+const CHARGE_FILTERS: FilterBindings = {
+  surcharge: valueFilter(Charges.surcharge),
+  status: valueFilter(Charges.status),
+  region: valueFilter(Charges.region),
+  creationDate: dateRangeFilter(Charges.creationDate),
+};
+
+const CHARGE_SORTABLE: SortableColumns = {
+  creationDate: Charges.creationDate,
+  customer: Companies.companyName,
+  amount: Charges.amount,
+  surcharge: Charges.surcharge,
+};
+
+const chargeRows =
+  (query: TableQuery) =>
+  (limit: number, offset: number): Promise<ChargeListItem[]> =>
+    db
       .select({
         ...getTableColumns(Charges),
         customerName: Companies.companyName,
+        customerCode: Companies.id,
+        companyUuid: Companies.uuid,
         revenueGroupName: RevenueGroups.name,
       })
       .from(Charges)
       .leftJoin(Companies, eq(Charges.companyUuid, Companies.uuid))
       .leftJoin(RevenueGroups, eq(Charges.revenueGroupUuid, RevenueGroups.uuid))
-      .orderBy(desc(Charges.creationDate));
+      .where(
+        tableWhere({
+          query,
+          search: CHARGE_SEARCH,
+          filters: CHARGE_FILTERS,
+        }),
+      )
+      .orderBy(
+        ...tableOrderBy(
+          CHARGE_SORTABLE,
+          query,
+          [desc(Charges.creationDate)],
+          Charges.id,
+        ),
+      )
+      .limit(limit)
+      .offset(offset);
+
+export const getCharges = async (
+  query: TableQuery,
+): Promise<Paged<ChargeListItem>> => {
+  try {
+    return await runPaged(query, {
+      rows: chargeRows(query),
+      count: async () => {
+        const [row] = await db
+          .select({ value: count() })
+          .from(Charges)
+          .leftJoin(Companies, eq(Charges.companyUuid, Companies.uuid))
+          .where(
+            tableWhere({
+              query,
+              search: CHARGE_SEARCH,
+              filters: CHARGE_FILTERS,
+            }),
+          );
+        return Number(row?.value ?? 0);
+      },
+    });
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch charges"));
   }
@@ -61,6 +141,8 @@ export const getChargeDetail = async (
       .select({
         ...getTableColumns(Charges),
         customerName: Companies.companyName,
+        customerCode: Companies.id,
+        companyUuid: Companies.uuid,
         revenueGroupName: RevenueGroups.name,
         revenueGroupNumber: RevenueGroups.number,
         orderId: Orders.id,
@@ -194,3 +276,27 @@ export const generateChargesFromOrders =
       };
     }
   };
+
+/** Every charge the current view matches, as a workbook. */
+export const exportCharges = async (
+  params: SearchParams,
+  columnKeys: string[],
+): Promise<string> =>
+  exportRows({
+    name: "Charges",
+    columns: CHARGE_COLUMNS,
+    columnKeys,
+    rows: chargeRows(parseTableQuery(params)),
+  });
+
+/** The surcharge types actually raised, for the filter. */
+export const getChargeSurcharges = async (): Promise<string[]> => {
+  const rows = await db
+    .selectDistinct({ surcharge: Charges.surcharge })
+    .from(Charges)
+    .orderBy(Charges.surcharge);
+
+  return rows
+    .map((row) => row.surcharge)
+    .filter((value): value is string => Boolean(value));
+};
