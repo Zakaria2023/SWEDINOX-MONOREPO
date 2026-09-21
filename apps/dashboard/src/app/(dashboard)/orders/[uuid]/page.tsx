@@ -4,6 +4,8 @@ import { ChevronLeft } from "lucide-react";
 import {
   getOrderInvoiceLines,
   getOrderLinePanels,
+  getOrderCommunications,
+  getOrderCompetitors,
   getOrderWorkOrders,
 } from "@/app/(dashboard)/orders/[uuid]/actions";
 import { getOrderDetail } from "@/app/(dashboard)/orders/actions";
@@ -39,6 +41,8 @@ const OrderDetailPage = async ({ params, searchParams }: Props) => {
   const linePanels = selectedUuid
     ? await getOrderLinePanels(selectedUuid)
     : null;
+  const communications = await getOrderCommunications(uuid);
+  const competitors = await getOrderCompetitors(uuid);
 
   return (
     <div className="space-y-4">
@@ -57,6 +61,8 @@ const OrderDetailPage = async ({ params, searchParams }: Props) => {
         workOrders={workOrders}
         invoiceLines={invoiceLines}
         linePanels={linePanels}
+        communications={communications}
+        competitors={competitors}
       />
     </div>
   );

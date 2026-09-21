@@ -3,7 +3,12 @@
 import { and, desc, eq, getTableColumns, ne } from "drizzle-orm";
 import { alias } from "drizzle-orm/mysql-core";
 import { db } from "@/db";
+import { Communications, SelectCommunications } from "@/db/schema/communications";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
+import {
+  CompanyCompetitors,
+  SelectCompanyCompetitors,
+} from "@/db/schema/company-competitors";
 import { InvoiceItems, SelectInvoiceItems } from "@/db/schema/invoice-items";
 import { Invoices, SelectInvoices } from "@/db/schema/invoices";
 import { OrderItems, SelectOrderItems } from "@/db/schema/order-items";
@@ -492,4 +497,97 @@ export const getOrderLinePanels = async (
       daysInSystem: daysInSystem(row.createdAt),
     })),
   };
+};
+
+
+export type OrderCommunicationRow = {
+  uuid: SelectCommunications["uuid"];
+  channel: NonNullable<SelectCommunications["channel"]>;
+  recipient: SelectCommunications["recipient"];
+  subject: SelectCommunications["subject"];
+  sentAt: SelectCommunications["sentAt"];
+  deliveredCount: NonNullable<SelectCommunications["deliveredCount"]>;
+  failedCount: NonNullable<SelectCommunications["failedCount"]>;
+  failureReason: SelectCommunications["failureReason"];
+  sentByUserId: SelectCommunications["sentByUserId"];
+};
+
+export type OrderCompetitorRow = {
+  uuid: SelectCompanyCompetitors["uuid"];
+  firm: SelectCompanyCompetitors["firm"];
+  revenueSharePercent: SelectCompanyCompetitors["revenueSharePercent"];
+  customerSatisfaction: SelectCompanyCompetitors["customerSatisfaction"];
+  remarks: SelectCompanyCompetitors["remarks"];
+};
+
+/**
+ * Every attempt to send this order to the customer, successful or not.
+ *
+ * The panel exists to answer one question — *did the confirmation reach them?*
+ * — which until now had no answer anywhere: a failed send wrote
+ * `console.error` and returned. A row that reports `0 delivered, 1 refused`
+ * with the reason beside it is the whole point, so failures are listed rather
+ * than filtered out.
+ */
+export const getOrderCommunications = async (
+  orderUuid: string,
+): Promise<OrderCommunicationRow[]> => {
+  await requireAuth();
+
+  return db
+    .select({
+      uuid: Communications.uuid,
+      channel: Communications.channel,
+      recipient: Communications.recipient,
+      subject: Communications.subject,
+      sentAt: Communications.sentAt,
+      deliveredCount: Communications.deliveredCount,
+      failedCount: Communications.failedCount,
+      failureReason: Communications.failureReason,
+      sentByUserId: Communications.sentByUserId,
+    })
+    .from(Communications)
+    .where(
+      and(
+        eq(Communications.documentType, "order"),
+        eq(Communications.documentUuid, orderUuid),
+      ),
+    )
+    .orderBy(desc(Communications.sentAt));
+};
+
+/**
+ * Who else is selling to this order's customer.
+ *
+ * Read through the order's company rather than stored against the order: a
+ * rival's share of a customer's spend is a fact about the relationship, and a
+ * copy per order would let the same figure disagree with itself across that
+ * customer's orders.
+ */
+export const getOrderCompetitors = async (
+  orderUuid: string,
+): Promise<OrderCompetitorRow[]> => {
+  await requireAuth();
+
+  const [order] = await db
+    .select({ companyUuid: Orders.companyUuid })
+    .from(Orders)
+    .where(eq(Orders.uuid, orderUuid))
+    .limit(1);
+
+  if (!order?.companyUuid) {
+    return [];
+  }
+
+  return db
+    .select({
+      uuid: CompanyCompetitors.uuid,
+      firm: CompanyCompetitors.firm,
+      revenueSharePercent: CompanyCompetitors.revenueSharePercent,
+      customerSatisfaction: CompanyCompetitors.customerSatisfaction,
+      remarks: CompanyCompetitors.remarks,
+    })
+    .from(CompanyCompetitors)
+    .where(eq(CompanyCompetitors.companyUuid, order.companyUuid))
+    .orderBy(desc(CompanyCompetitors.revenueSharePercent));
 };

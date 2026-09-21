@@ -4,7 +4,8 @@ import { PageHeading } from "@/components/layout/page-heading";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getCompanyMarketing } from "./actions";
+import { CompanyCompetitorsEditor } from "@/components/companies/edit/company-competitors-editor";
+import { getCompanyCompetitors, getCompanyMarketing } from "./actions";
 
 type Props = {
   params: Promise<{ uuid: string }>;
@@ -12,10 +13,11 @@ type Props = {
 
 const CompanyMarketingPage = async ({ params }: Props) => {
   const { uuid } = await params;
-  const [company, industries] = await Promise.all([
-    getCompanyMarketing(uuid),
-    getIndustriesForSelect(),
-  ]);
+  // Sequential rather than parallel: the shared MySQL instance caps
+  // connections, and three reads on one page do not justify three at once.
+  const company = await getCompanyMarketing(uuid);
+  const industries = await getIndustriesForSelect();
+  const competitors = await getCompanyCompetitors(uuid);
 
   if (!company) {
     notFound();
@@ -34,6 +36,7 @@ const CompanyMarketingPage = async ({ params }: Props) => {
       </div>
       <PageHeading title={`Marketing — ${company.companyName}`} />
       <CompanyMarketingForm company={company} industries={industries} />
+      <CompanyCompetitorsEditor companyUuid={uuid} competitors={competitors} />
     </div>
   );
 };

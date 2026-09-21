@@ -12,11 +12,19 @@ import {
   makeOrderFinal,
   OrderDetail,
 } from "@/app/(dashboard)/orders/actions";
+import {
+  OrderCommunicationRow,
+  OrderCompetitorRow,
+} from "@/app/(dashboard)/orders/[uuid]/actions";
 import { OrderLinePanelsView } from "@/components/orders/panels/order-line-panels";
 import {
   OrderFinancesPanel,
   OrderInvoiceLinesPanel,
 } from "@/components/orders/panels/order-invoice-lines-panel";
+import {
+  OrderCommunicationPanel,
+  OrderCompetitorsPanel,
+} from "@/components/orders/panels/order-communication-panel";
 import { OrderWorkOrdersPanel } from "@/components/orders/panels/order-work-orders-panel";
 import { Button } from "@/components/shadcn/button";
 import {
@@ -42,6 +50,8 @@ import { ORDER_ITEM_STATUS_LABELS, ORDER_STATUS_LABELS } from "@/lib/labels";
 type Props = {
   order: OrderDetail;
   workOrders: OrderWorkOrders;
+  communications: OrderCommunicationRow[];
+  competitors: OrderCompetitorRow[];
   invoiceLines: OrderInvoiceLineRow[];
   /** Null only when the order has no lines at all to select from. */
   linePanels: OrderLinePanels | null;
@@ -52,6 +62,8 @@ export const OrderDetailView = ({
   workOrders,
   invoiceLines,
   linePanels,
+  communications,
+  competitors,
 }: Props) => {
   const [isPending, startTransition] = useTransition();
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
@@ -239,6 +251,8 @@ export const OrderDetailView = ({
       <div className="space-y-3">
         <h2 className="border-b pb-2 text-base font-semibold">Order</h2>
         <OrderWorkOrdersPanel workOrders={workOrders} />
+        <OrderCommunicationPanel rows={communications} />
+        <OrderCompetitorsPanel rows={competitors} />
         <OrderInvoiceLinesPanel rows={invoiceLines} />
         <OrderFinancesPanel order={order} />
       </div>
