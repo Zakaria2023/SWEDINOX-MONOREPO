@@ -40,6 +40,14 @@ export type PricedProduct = {
   weightUnit: SelectProducts["weightUnit"];
   /** The finished per-piece weight, when the product form has derived one. */
   weightTheoretical: string | null;
+  /**
+   * The other two bases the same product can be billed on. The reference keeps
+   * three side by side — theoretical, trade and German — and the order's weight
+   * type picks which one bills the line. Zero means the basis is not offered on
+   * this product, not that it weighs nothing.
+   */
+  weightTrade: string | null;
+  weightGerman: string | null;
   length: string | null;
   widthDiameter: string | null;
   thickness: string | null;
@@ -94,6 +102,8 @@ export const loadSalesPricingContext = async (
         theoreticalWeight: Products.theoreticalWeight,
         weightUnit: Products.weightUnit,
         weightTheoretical: Products.weightTheoretical,
+        weightTrade: Products.weightTrade,
+        weightGerman: Products.weightGerman,
         length: Products.length,
         widthDiameter: Products.widthDiameter,
         thickness: Products.thickness,

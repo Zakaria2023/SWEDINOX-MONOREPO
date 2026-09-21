@@ -43,6 +43,7 @@ import {
   generateUuid,
   getQuoteVatRatePercent,
   moneyString,
+  pieceWeightForBasis,
   productPieceWeightKg,
   quoteLineFinancials,
   quoteOrderPolicy,
@@ -594,6 +595,17 @@ export const createOrder = async (
               widthMm: lineWidthMm,
               thicknessMm: lineThicknessMm,
             }) ?? 0,
+          // What the customer is billed on, which is not what the line costs.
+          // The order's weight type — inherited from the customer — picks which
+          // of the product's weights bills it.
+          tradeWeight:
+            pieceWeightForBasis(
+              {
+                weightTrade: product?.weightTrade,
+                weightGerman: product?.weightGerman,
+              },
+              fields.weightType,
+            ) ?? undefined,
           lengthMm: lineLengthMm,
           widthMm: lineWidthMm,
           thicknessMm: lineThicknessMm,

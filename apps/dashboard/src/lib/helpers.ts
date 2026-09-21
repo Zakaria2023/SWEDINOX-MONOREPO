@@ -8006,8 +8006,19 @@ export type QuoteLineFinancialsInput = {
   /** Average purchase price per unit. Falls back to the replacement price. */
   purchasePrice: number;
   replacementPrice: number;
-  /** Weight of one unit, used for both the line weight and the kilo price. */
+  /** Weight of one unit as the physics gives it. This is what the line costs. */
   theoreticalWeight: number;
+  /**
+   * Weight of one unit as the customer is billed for it, when the order is
+   * struck on a trade basis. Omit it and the theoretical weight bills the line,
+   * which is what happens on a product that declares no trade weight.
+   *
+   * 🔴 The two are not the same number and the difference is not rounding.
+   * Product `PK304L300315` carries three densities side by side — theoretical
+   * 7 850, trade 8 000, German 0 — and the order's weight type picks which one
+   * multiplies the volume. Five plates weigh 529,875 kg and bill as 540,0.
+   */
+  tradeWeight?: number;
   /** The line's own length in mm, or the product's when the line has none. */
   lengthMm: number;
   /** Margin floor from the product group; 0 disables the too-low flag. */
@@ -8033,7 +8044,10 @@ export type QuoteLineFinancials = {
   profit: number;
   profitMargin: number;
   profitReplPrice: number;
+  /** What the line is billed on — the trade weight when the order uses one. */
   weightKg: number;
+  /** What the line is costed on. Equal to `weightKg` on a theoretical order. */
+  theoreticalWeightKg: number;
   m1PerPiece: number;
   profitTooLow: boolean;
 };
@@ -8056,26 +8070,46 @@ export const quoteLineFinancials = ({
   purchasePrice,
   replacementPrice,
   theoreticalWeight,
+  tradeWeight,
   lengthMm,
   minProfitMargin,
   priceUnit,
   widthMm,
   thicknessMm,
 }: QuoteLineFinancialsInput): QuoteLineFinancials => {
-  const weightKg = quantity * theoreticalWeight;
+  const theoreticalWeightKg = quantity * theoreticalWeight;
+  // A product with no trade weight bills on the physics, which is what every
+  // line did before this distinction was found.
+  const weightKg =
+    tradeWeight && tradeWeight > 0 ? quantity * tradeWeight : theoreticalWeightKg;
 
-  // What every price on the line is charged against. All three of them — sale,
-  // purchase and replacement — are struck in the same unit, because the line
-  // carries one `PriceU` for the material it is made of. Pricing the sale by
-  // weight and the cost by piece would make the margin meaningless.
-  const measure =
+  // 🔴 Two weights, one price unit.
+  //
+  // All three prices — sale, purchase and replacement — are struck in the same
+  // unit, because the line carries one `PriceU` for the material it is made of.
+  // That has not changed: pricing the sale by weight and the cost by piece
+  // would still make the margin meaningless.
+  //
+  // What changed is *which weight* each is charged against. Watched on order
+  // 102191, 21-9-2026: five plates at € 2 500,00 / TN billed € 1 350,00 —
+  // 540,0 kg, the **trade** weight, and the figure printed on the confirmation
+  // the customer receives — while costing € 1 090,91, which is 529,88 kg at
+  // € 2 058,8151, the **theoretical** weight. Profit € 259,09, margin 19,2 %,
+  // and the order header prints both weights side by side to say so.
+  //
+  // Using one weight for both overstated the margin on every trade-weight
+  // order, and trade weight is what a customer record defaults to.
+  const measureFor = (kg: number) =>
     priceMeasureFor(priceUnit, {
       quantity,
-      weightKg,
+      weightKg: kg,
       lengthMm,
       widthMm,
       thicknessMm,
     }) ?? quantity;
+
+  const measure = measureFor(weightKg);
+  const costMeasure = measureFor(theoreticalWeightKg);
 
   // Every figure below is money the line will be billed for, so each is
   // rounded to the cent here rather than left to a caller's toFixed — which
@@ -8083,8 +8117,8 @@ export const quoteLineFinancials = ({
   // between two rounded amounts, which is what an invoice shows.
   const amount = roundToCents(netPrice * measure);
   const costPrice = purchasePrice > 0 ? purchasePrice : replacementPrice;
-  const costAmount = roundToCents(costPrice * measure);
-  const replacementCost = roundToCents(replacementPrice * measure);
+  const costAmount = roundToCents(costPrice * costMeasure);
+  const replacementCost = roundToCents(replacementPrice * costMeasure);
   const profit = roundToCents(amount - costAmount);
   const profitMargin = profitMarginPercent(amount, profit);
 
@@ -8098,6 +8132,7 @@ export const quoteLineFinancials = ({
     profitMargin,
     profitReplPrice: roundToCents(amount - replacementCost),
     weightKg,
+    theoreticalWeightKg,
     m1PerPiece: lengthMm / 1000,
     profitTooLow: minProfitMargin > 0 && profitMargin < minProfitMargin,
   };
@@ -9380,6 +9415,50 @@ export const productPieceWeightKg = (product: {
     return perPiece;
   }
   return theoreticalPieceWeightKg(product);
+};
+
+/**
+ * The weight of one unit on the basis a document is struck on.
+ *
+ * 🔴 A product carries three, and they are different numbers. The reference's
+ * `PK304L300315` prints them together:
+ *
+ *     Theoretically  7.850,000
+ *     Trade          8.000,000
+ *     German             0,000
+ *
+ * — densities, beside `Weight: 7.850,000 KG/M3` which is the first of them
+ * again. The order's weight type picks which one multiplies the volume, and
+ * nothing else about the line changes. Five 3000×1500×3 plates come to 529,875
+ * kg theoretical and 540,0 kg trade, a ratio of 8 000 ÷ 7 850 = 1,0191.
+ *
+ * Returns null when the basis has no figure — `German` is 0,000 on that product,
+ * which means "not offered" rather than "weighs nothing" — so the caller falls
+ * back to the theoretical weight rather than billing the customer for zero.
+ *
+ * `weighed` has no answer here by definition: it is whatever the scale said, and
+ * that lives on the line.
+ */
+export const pieceWeightForBasis = (
+  product: {
+    weightTheoretical?: string | number | null;
+    weightTrade?: string | number | null;
+    weightGerman?: string | number | null;
+    theoreticalWeight?: string | number | null;
+    weightUnit?: SalesUnit | null;
+    lengthMm?: number | null;
+    widthMm?: number | null;
+    thicknessMm?: string | number | null;
+  },
+  basis: OrderWeightType | null | undefined,
+): number | null => {
+  const stored =
+    basis === "trade_weight"
+      ? Number(product.weightTrade ?? 0)
+      : basis === "german_trade_weight"
+        ? Number(product.weightGerman ?? 0)
+        : 0;
+  return stored > 0 ? stored : null;
 };
 
 /**
