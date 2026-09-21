@@ -8448,9 +8448,12 @@ export const computeQuoteSummary = ({
 
 /**
  * The summary columns an order header stores. Narrower than a quote's: an order
- * has no options, no transport/handling costs of its own and no separate
- * theoretical weight, because by the time it exists the goods have been
- * allocated and their real weight is known.
+ * has no options block of its own.
+ *
+ * ⚠️ It used to be narrower still. Order 102191, watched being made on
+ * 21-9-2026, prints `Transport costs` and `Handling costs` on its summary just
+ * as a quote does — so the claim that an order has none was wrong, and a quote
+ * converted to an order was quietly dropping both.
  */
 export type OrderSummarySnapshot = Pick<
   QuoteSummarySnapshot,
@@ -8464,6 +8467,8 @@ export type OrderSummarySnapshot = Pick<
   | "totalInclVat"
   | "avgKiloPrice"
   | "totalWeightKg"
+  | "transportCosts"
+  | "handlingCosts"
 >;
 
 /**
@@ -8483,8 +8488,6 @@ export const orderSummaryFromSnapshot = (
     // Surcharges are agreed at a margin, so their profit is the same figure
     // whichever cost basis is used.
     surchargesProfitReplPrice: order.surchargesProfit,
-    transportCosts: null,
-    handlingCosts: null,
     theorWeightKg: order.totalWeightKg,
   });
 
@@ -8577,6 +8580,12 @@ export const invoiceSummaryFromSnapshot = (
       Number(invoice.invoiceAmountInclVat ?? 0) -
         Number(invoice.invoiceAmountExclVat ?? 0),
     ),
+    // An invoice stores neither, and whether the reference's does is unknown:
+    // no invoice has been watched being raised. Left null rather than carried
+    // over from the order, since a guess here would show a cost the document
+    // may never have had. H3 settles it.
+    transportCosts: null,
+    handlingCosts: null,
   });
 
 // ---------------------------------------------------------------------------

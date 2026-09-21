@@ -374,6 +374,12 @@ export const convertQuoteToOrder = async (
         isInternalProduction: quote.isInternalProduction,
         isCustomerMaterial: quote.isCustomerMaterial,
         weightType: quote.weightType,
+        // Both were being dropped on conversion, so an order made from a quote
+        // came out more profitable than the quote that won it. They are costs
+        // that earn nothing, and the reference prints them on the order's own
+        // summary — watched on order 102191, 21-9-2026.
+        transportCosts: quote.transportCosts,
+        handlingCosts: quote.handlingCosts,
         remarks: quote.remarks,
       });
 

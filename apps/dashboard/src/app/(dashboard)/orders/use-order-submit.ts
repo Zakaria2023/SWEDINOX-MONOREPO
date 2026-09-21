@@ -46,6 +46,7 @@ import {
   ContractOption,
   createOrder,
   getContractsByCompanyUuid,
+  getOrderCustomerDefaults,
   OrderActionResult,
   OrderExtras,
 } from "./actions";
@@ -191,13 +192,46 @@ export const useOrderSubmit = ({ companies }: UseOrderSubmitParams) => {
       getProjectsForCompany(uuid),
       getAddressesForCompany(uuid),
       getContractsByCompanyUuid(uuid),
-    ]).then(([newContacts, newProjects, newAddresses, newContracts]) => {
-      setContacts(newContacts);
-      setProjects(newProjects);
-      setAddresses(newAddresses);
-      setContracts(newContracts);
-      setIsLoadingCompanyData(false);
-    });
+      getOrderCustomerDefaults(uuid),
+    ]).then(
+      ([newContacts, newProjects, newAddresses, newContracts, defaults]) => {
+        setContacts(newContacts);
+        setProjects(newProjects);
+        setAddresses(newAddresses);
+        setContracts(newContracts);
+
+        // The customer brings the terms with it. Watched on 21-9-2026: typing a
+        // customer into a blank order filled the contact, both addresses, the
+        // payment terms, the delivery terms and the weight type before a line
+        // existed.
+        //
+        // 🔴 The weight type is the one that matters — it decides which of the
+        // product's densities the line is billed on, so leaving it empty prices
+        // the order on the wrong steel.
+        if (defaults) {
+          if (defaults.paymentTerms) {
+            form.setValue("paymentTerms", defaults.paymentTerms);
+          }
+          if (defaults.deliveryTerms) {
+            form.setValue("deliveryTerms", defaults.deliveryTerms);
+          }
+          if (defaults.weightType) {
+            form.setValue("weightType", defaults.weightType);
+          }
+          if (defaults.contactUuid) {
+            form.setValue("contactUuid", defaults.contactUuid);
+          }
+          if (defaults.deliveryAddressUuid) {
+            form.setValue("deliveryAddressUuid", defaults.deliveryAddressUuid);
+          }
+          if (defaults.billingAddressUuid) {
+            form.setValue("billingAddressUuid", defaults.billingAddressUuid);
+          }
+        }
+
+        setIsLoadingCompanyData(false);
+      },
+    );
   };
 
   const handleCancel = () => router.push("/orders");

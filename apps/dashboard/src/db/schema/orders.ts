@@ -182,6 +182,24 @@ export const Orders = mysqlTable(
       precision: 10,
       scale: 2,
     }).default("0.00"),
+    // Two costs that sit on the summary and earn nothing — they reduce the
+    // order's profit without touching its revenue, which is why they are
+    // beneath the three revenue blocks rather than among them.
+    //
+    // 🔴 21-9-2026: this is where a trip's cost lands. Until order 102191 was
+    // watched being made, nothing in this app had a home for it, and the
+    // reference's own 438 trips carry no cost at all — the fields exist on the
+    // trip and are empty on every one. So the money is expected here, not
+    // there. Quotes have carried both since they were built; an order made from
+    // a quote must bring them across or the margin moves on conversion.
+    transportCosts: decimal("transport_costs", {
+      precision: 15,
+      scale: 2,
+    }).default("0.00"),
+    handlingCosts: decimal("handling_costs", {
+      precision: 15,
+      scale: 2,
+    }).default("0.00"),
 
     // ── Remark ────────────────────────────────────────────────────────────────
     remarks: text("remarks"),

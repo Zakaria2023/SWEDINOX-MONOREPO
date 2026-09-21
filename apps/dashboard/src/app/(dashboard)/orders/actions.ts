@@ -21,7 +21,12 @@ import { Reservations } from "@/db/schema/reservations";
 import { SelectStock, Stock } from "@/db/schema/stock";
 import { InsertTexts, Texts } from "@/db/schema/texts";
 import { requireAuth } from "@/lib/auth";
-import { invoicePaymentTerms, orderStatuses, orderTypes } from "@/lib/enums";
+import {
+  AddressCategory,
+  invoicePaymentTerms,
+  orderStatuses,
+  orderTypes,
+} from "@/lib/enums";
 import {
   computeQuoteSummary,
   describeError,
@@ -138,6 +143,16 @@ export type OrderHeaderEdit = Pick<
   OrderFields,
   "customerRef" | "ourReference" | "deliveryDate" | "deliveryRemark" | "remarks"
 >;
+
+export type OrderCustomerDefaults = {
+  paymentTerms: SelectCompanies["paymentTerms"];
+  deliveryTerms: SelectCompanies["deliveryTerms"];
+  weightType: SelectCompanies["weightType"];
+  /** The company's only contact, when it has exactly one. */
+  contactUuid: SelectContacts["uuid"] | null;
+  deliveryAddressUuid: string | null;
+  billingAddressUuid: string | null;
+};
 
 export const getOrdersForCompany = async (
   companyUuid: string,
@@ -263,6 +278,65 @@ export const getContractsByCompanyUuid = async (
       ),
     )
     .orderBy(asc(Contracts.code));
+
+/**
+ * What a new order for this customer starts out as.
+ *
+ * Watched on 21-9-2026: typing customer 13000 into a blank order filled the
+ * contact, the delivery address, the billing address, the payment terms,
+ * `(FCA) Free carrier` and `Trade weight` — all before a line existed.
+ *
+ * 🔴 `weightType` is the one that earns its keep. It decides which of the
+ * product's two densities a line is billed on, and on that order it meant the
+ * customer was invoiced for 540 kg of steel that physically weighs 529,9. It is
+ * a property of the customer, so a line can neither infer it nor default it.
+ *
+ * An address is only offered when the customer has exactly one of that kind.
+ * Picking the first of several would be a guess, and a delivery address chosen
+ * for the wrong site is worse than an empty field somebody has to fill.
+ */
+export const getOrderCustomerDefaults = async (
+  companyUuid: string,
+): Promise<OrderCustomerDefaults | null> => {
+  const [company] = await db
+    .select({
+      paymentTerms: Companies.paymentTerms,
+      deliveryTerms: Companies.deliveryTerms,
+      weightType: Companies.weightType,
+    })
+    .from(Companies)
+    .where(eq(Companies.uuid, companyUuid))
+    .limit(1);
+
+  if (!company) {
+    return null;
+  }
+
+  const contacts = await db
+    .select({ uuid: Contacts.uuid })
+    .from(Contacts)
+    .where(eq(Contacts.companyUuid, companyUuid))
+    .limit(2);
+
+  const addresses = await db
+    .select({ uuid: CompanyAddresses.uuid, category: CompanyAddresses.category })
+    .from(CompanyAddresses)
+    .where(eq(CompanyAddresses.companyUuid, companyUuid));
+
+  const onlyAddressFor = (category: AddressCategory): string | null => {
+    const matching = addresses.filter((address) =>
+      address.category.includes(category),
+    );
+    return matching.length === 1 ? matching[0].uuid : null;
+  };
+
+  return {
+    ...company,
+    contactUuid: contacts.length === 1 ? contacts[0].uuid : null,
+    deliveryAddressUuid: onlyAddressFor("delivery"),
+    billingAddressUuid: onlyAddressFor("invoice"),
+  };
+};
 
 /**
  * Rolls an order's saved lines and surcharges into its header snapshot.

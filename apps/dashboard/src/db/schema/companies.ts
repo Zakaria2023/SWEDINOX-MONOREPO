@@ -19,6 +19,8 @@ import {
   companyLangs,
   currencies,
   customerGroups,
+  deliveryTerms,
+  orderWeightTypes,
   sfnCounterpartyRoles,
   devTheorWtOptions,
   groupLinesByDescriptionOptions,
@@ -194,6 +196,17 @@ export const Companies = mysqlTable(
       "different_payment_terms_ex_works",
       invoicePaymentTerms,
     ),
+    // What a new order for this customer starts out as. Watched on 21-9-2026:
+    // typing customer 13000 into a blank order filled the contact, the delivery
+    // address, the billing address, the payment terms, `(FCA) Free carrier` and
+    // `Trade weight` — all of it before a line existed.
+    //
+    // 🔴 `weightType` is the one that matters. It decides which of the
+    // product's densities the line is billed on, and on that order it meant the
+    // customer paid for 540 kg of steel that physically weighs 529,9. Defaulted
+    // per customer, so it cannot be inferred from the product or the line.
+    deliveryTerms: mysqlEnum("delivery_terms", deliveryTerms),
+    weightType: mysqlEnum("weight_type", orderWeightTypes),
     journalCode: int("journal_code"),
     vatNumber: varchar("vat_number", { length: 50 }),
     cocNumber: varchar("coc_number", { length: 50 }),
