@@ -61,10 +61,52 @@ trade weight is the default for this customer.
   tonne-priced lines) was proved against the reference's own export; this second
   correction moves the same numbers again and the export must still reconcile.
 
-**Open:** where the trade weight comes from. It is 540 against a theoretical
-529,875 — **108,0 kg per piece against 105,975**, a ratio of 1,0191. Not a round
-uplift. It is most likely a per-product `Trade weight` field we have not read.
-**Do not invent a formula.** Read the product record before implementing.
+### ✅ Answered the same day — the product carries three densities
+
+Product `PK304L300315`, the `Basis → Weights` block:
+
+```
+Theoretically:  7.850,000
+Trade:          8.000,000
+German:             0,000
+```
+
+They are **densities in kg/m³, not weights**, and they sit beside
+`Features → Weight: 7.850,000 KG/M3` which is the same number again.
+
+| Basis | Working | Screen |
+|---|---|---|
+| Theoretical | 0,0135 m³ × **7 850** = 105,975/piece × 5 | **529,875 → 529,9** ✓ |
+| Trade | 0,0135 m³ × **8 000** = 108,000/piece × 5 | **540,0** ✓ |
+
+8 000 ÷ 7 850 = 1,01911 — exactly the unexplained factor.
+
+> **The order's weight type selects which density to multiply the volume by.**
+> Nothing else. `orderWeightTypes` already holds all four values
+> (`theoretical_weight`, `trade_weight`, `german_trade_weight`, `weighed`);
+> three of them pick a column here and `weighed` presumably takes a measured
+> figure.
+
+`German` is `0,000` on this product, so a German-trade-weight order would
+compute nothing — treat a zero density as "not offered" rather than as zero
+kilograms.
+
+`Number of decimal places we[ight]` = **1**, which is why 529,875 prints as
+529,9.
+
+**Change:**
+
+- `db/schema/products.ts` — `theoretical_weight` holds 7 850 today. Add
+  **`trade_weight_density`** and **`german_weight_density`** beside it.
+  ⚠️ See the density/per-piece import defect already recorded in
+  [receipt-chain.md](receipt-chain.md) — our column names disagree with the
+  reference's and the import filled the wrong one. Fix that first or the new
+  columns inherit the confusion.
+- `lib/helpers.ts` — `productPieceWeightKg` takes a weight **basis** and reads
+  the matching density. Revenue passes the order's basis; cost passes
+  `theoretical`.
+- Purchase is unaffected: purchase order `401141` used 100 × 105,975 = 10 597,5,
+  the **theoretical** density. Only the sales side chooses.
 
 ---
 
@@ -570,7 +612,6 @@ four levels, and that the picker is a search rather than a dropdown.
 
 | # | Question | Why it blocks |
 |---|---|---|
-| **O1** | 🔴 **Where does the trade weight come from?** 540 against a theoretical 529,875 — 108,0 kg/piece against 105,975. Not a round uplift | Item 1 cannot be implemented without it. **Read the product record.** |
 | **O2** | 🔴 **Lot `389825` lost 5 pieces when the picker named `389827`.** Totals conserve (100 pieces, 10 597,5 kg before and after) and a new `389827` row appeared at `Laad` with 5, while `389827` at `Ontvangst` kept its 10 and gained a reservation of 5 | Either the six-digit number is a reusable label rather than a lot identity, or the pick debited a different lot than it displayed. Item 12 depends on which. The mutations ledger cannot settle it (item 10) |
 | **O3** | The picker showed `Available` as the full quantity on lots the stock screen showed at `Available 0` | An availability rule cannot be written while the two disagree |
 | **O4** | **What computed the 20/25/20/25/10 bundle split?** Offered pre-filled and accepted unchanged | Item 4 offers one row until this is known |
@@ -597,5 +638,50 @@ One flow's worth of change per commit, smallest blast radius first.
 9. **1** — the two weights ⚠️ **last, and re-run every margin check**
 10. **11**, **17**, **19** — panels and presentation
 
-**Blocked until answered:** item 1 needs O1. Item 12 needs O2 and O3. Item 18
-cannot be built at all from what exists.
+**Blocked until answered:** item 12 needs O2 and O3. Item 18 cannot be built at
+all from what exists. ✅ Item 1 is unblocked — the product carries the density.
+
+---
+
+## 21. Three more answers off one product screen
+
+Product `PK304L300315` was opened only to settle item 1. It closed three other
+items on the way past.
+
+### 🔴 The CN commodity code exists — `Commodity: 72193310`
+
+K13 (do we file CBS returns?) had been written off as unbuildable because
+*"it needs a CN commodity code per product and an SBI code per company, neither
+of which we have."* **Half of that is wrong.** The code is a field on the product
+record and has been all along. `72193310` is the correct CN heading for
+cold-rolled stainless flat product.
+
+**Change:** `db/schema/products.ts` — a `commodity_code`. The CBS screen then
+needs only the **SBI code per company**, which is still missing. K13 goes from
+"cannot build" to "one field short".
+
+### `Price: Algemeen` — why the cascade was empty
+
+The product's price list is `Algemeen` (general). That is the direct reason item
+18's `Pricing` panel derived nothing: the product is on the general list with no
+customer agreement behind it. Confirms the diagnosis rather than changing it.
+
+### J5 — the product `Options` list
+
+Six, all reading `Possible`: `Duplo · Decoilen · Grinding · Brushing ·
+ShearCut · Laser Foil`. ⚠️ `Knippen` appears on purchase receivals and **not**
+here, so the enum still has at least a seventh member.
+
+### Other fields on the record, for completeness
+
+`Material group` · `Commodity` · `Scrap` ☐ · `Packaging` ☐ · `Description
+sales/purchase can be overwritten` ☐ · three **search codes** · `Gip
+Artikelgroep` · three description levels (group long / group short / product
+short) · `Fixed dimensions` ✓ · `Paint surface (M2/M1)` · `Standards`
+(quality / tolerance / CE, all empty) · `Classification features` (product
+group, material, quality group, main/sub shape, **procedure = `Cold-rolled`**,
+appearance, performance) · `Print dimensions` ☐ · `Industry number`.
+
+Toolbar: `Show product group` · **`Correct products and stock`** (live — this is
+the H3 adjust-a-lot entry point) · `Activate` (greyed) · `Production workorder
+for stock` (greyed) · `Copy product (group) and…`.
