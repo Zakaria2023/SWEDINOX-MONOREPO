@@ -20,7 +20,7 @@ wrong stock. 5–12 are missing mechanism. 13–20 are missing fields and screen
 
 ---
 
-## Where this stands — 21-9-2026, fourteen commits
+## Where this stands — 21-9-2026, twenty commits
 
 **Everything that was demonstrably *wrong* is fixed.** What is left is new
 feature work and two genuinely blocked items.
@@ -32,7 +32,7 @@ feature work and two genuinely blocked items.
 | 🟡 | **3** valuation on receipt | `33c2920` — ledger half was already right; lot half blocked on **O9** |
 | ✅ | **4** charge mandatory per bundle | `dfc5aa6` — server rule + disabled button |
 | ✅ | **5** lot number vs receipt charge | `69575db` — `nextInternalBatch` |
-| 🟡 | **6** stock picker | `4977929` — **server half done**: search with the ±5 % margin, variant grouping, and the `Purchase` tab that sells goods before they arrive. 13 checks. The **dialog** and the nullable reservation are still to come, and stay paired: loosening `Reservations.stockUuid` with nothing to write it is worse than leaving it |
+| ✅ | **6** stock picker | `4977929` + `a948733` + `b5ed4f3` — search, dialog and the nullable reservation. `Use selected product` resolves to the fullest lot rather than leaving the line open, because our line writes a reservation and a reservation binds a lot. `Internal production` is not offered: never seen holding anything |
 | ✅ | **7** unblock clears its reason | `a03a643` |
 | ✅ | **8** `Make final` raises both work orders | `e8c5cda` — also corrected picking's destination |
 | ✅ | **9** ladder self-approves | already correct; **4** locked it in |
@@ -41,9 +41,9 @@ feature work and two genuinely blocked items.
 | 🔴 | **12** picking allocation | Blocked on **O2**/**O3** |
 | ✅ | **13** order fields | `a55e249` — most already existed; transport/handling costs added |
 | ✅ | **14** customer defaults | `a55e249` |
-| ⬜ | **15** confirmation document | **Not started.** Needs the factoring answer (**O8**) first |
+| 🟡 | **15** confirmation document | `2e56830` — built, and sending is its own decision as the reference makes it (`Don't send` is the default). The **footer is deliberately absent**: printing *"payment discharges only to Boozt24 Finance"* tells a customer where to send money, and **O8** is unanswered. A wrong answer there is somebody's money in the wrong bank |
 | ✅ | **16** minimum margin | already built; confirmed correct |
-| 🟡 | **17** panels | ⚠️ **`Previous orders` and `Previous quotes` already existed** — this entry was wrong. What is left is `Competitors`, `Communication` and `PDF Documents`, all needing a table each, and **all three have only ever been seen empty**. Building storage for something never observed holding anything is speculation, not a gap |
+| 🟡 | **17** panels | `c51aea8`. `Previous orders`/`Previous quotes` already existed. **Competitors** built from its four captured columns, against the **company** rather than the order — a share of a customer's spend must not disagree with itself across their orders. **Communication** turned out not to be speculation: we send documents and recorded failures to `console.error` alone, so "did we send it?" had no answer. ⚠️ Its *shape* is ours, not the reference's — only the panel's name was ever captured. **PDF Documents** not built: orders already carry a `documents` column and R2 behind it |
 | 🔴 | **18** discount cascade | Cannot be built from evidence |
 | ✅ | **19** location tree | `94a32ed` — and it earned its keep. Ours reaches **3 levels, not 4**, and carries **no `load` location at all**, so `makeOrderFinal` would have refused every order. Now falls back through the reference's own three picking destinations in its own order of frequency |
 | ✅ | **20** smaller confirmations | no change needed |
