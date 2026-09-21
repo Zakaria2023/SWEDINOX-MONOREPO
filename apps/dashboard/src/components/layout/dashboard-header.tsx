@@ -1,5 +1,6 @@
 import { currentUser } from "@clerk/nextjs/server";
 import { HeaderPageTitle } from "@/components/layout/header-page-title";
+import { GlobalSearch } from "@/components/search/global-search";
 import { SidebarTrigger } from "@/components/shadcn/sidebar";
 import { SignOutButton } from "@clerk/nextjs";
 
@@ -11,21 +12,23 @@ export const DashboardHeader = async () => {
   }
 
   return (
-    <header className="flex h-12 items-center border-b px-4">
+    <header className="flex h-12 items-center gap-3 border-b px-4">
       <SidebarTrigger />
 
-      <div className="ms-3 min-w-0">
+      <div className="min-w-0 shrink">
         <HeaderPageTitle />
       </div>
 
-      <div className="ms-auto flex items-center gap-3">
+      <div className="ms-auto flex min-w-0 flex-1 items-center justify-end gap-3">
+        <GlobalSearch />
+
         <SignOutButton>
-          <button className="text-sm text-muted-foreground cursor-pointer">
+          <button className="shrink-0 cursor-pointer text-sm text-muted-foreground">
             Logout
           </button>
         </SignOutButton>
 
-        <span className="hidden text-sm text-muted-foreground sm:inline">
+        <span className="hidden shrink-0 text-sm text-muted-foreground sm:inline">
           {userFullname}
         </span>
       </div>
