@@ -20,7 +20,7 @@ wrong stock. 5–12 are missing mechanism. 13–20 are missing fields and screen
 
 ---
 
-## Where this stands — 21-9-2026, eight commits
+## Where this stands — 21-9-2026, fourteen commits
 
 **Everything that was demonstrably *wrong* is fixed.** What is left is new
 feature work and two genuinely blocked items.
@@ -32,20 +32,20 @@ feature work and two genuinely blocked items.
 | 🟡 | **3** valuation on receipt | `33c2920` — ledger half was already right; lot half blocked on **O9** |
 | ✅ | **4** charge mandatory per bundle | `dfc5aa6` — server rule + disabled button |
 | ✅ | **5** lot number vs receipt charge | `69575db` — `nextInternalBatch` |
-| ⬜ | **6** stock picker / nullable reservation | **Not started.** Deliberately whole: loosening `Reservations.stockUuid` with nothing to write it is worse than leaving it |
+| 🟡 | **6** stock picker | `4977929` — **server half done**: search with the ±5 % margin, variant grouping, and the `Purchase` tab that sells goods before they arrive. 13 checks. The **dialog** and the nullable reservation are still to come, and stay paired: loosening `Reservations.stockUuid` with nothing to write it is worse than leaving it |
 | ✅ | **7** unblock clears its reason | `a03a643` |
 | ✅ | **8** `Make final` raises both work orders | `e8c5cda` — also corrected picking's destination |
 | ✅ | **9** ladder self-approves | already correct; **4** locked it in |
 | ✅ | **10** internal move is not a mutation | `33c2920` — 19 reasons, none a relocation |
-| ⬜ | **11** four profit bases | **Not started.** APP and replacement exist; FSP is reachable; **LIP has no source** (K4) |
+| 🟡 | **11** profit bases | `c30569d` — **three of four.** APP and replacement were already there; FSP now comes from the dated settlement history. **LIP is deliberately absent**: its behaviour is known, its meaning is not (K4), and a column of zeros would read as an answer |
 | 🔴 | **12** picking allocation | Blocked on **O2**/**O3** |
 | ✅ | **13** order fields | `a55e249` — most already existed; transport/handling costs added |
 | ✅ | **14** customer defaults | `a55e249` |
 | ⬜ | **15** confirmation document | **Not started.** Needs the factoring answer (**O8**) first |
 | ✅ | **16** minimum margin | already built; confirmed correct |
-| ⬜ | **17** panels | **Not started.** Presentation work, no logic at risk |
+| 🟡 | **17** panels | ⚠️ **`Previous orders` and `Previous quotes` already existed** — this entry was wrong. What is left is `Competitors`, `Communication` and `PDF Documents`, all needing a table each, and **all three have only ever been seen empty**. Building storage for something never observed holding anything is speculation, not a gap |
 | 🔴 | **18** discount cascade | Cannot be built from evidence |
-| ⬜ | **19** location tree | Verification only |
+| ✅ | **19** location tree | `94a32ed` — and it earned its keep. Ours reaches **3 levels, not 4**, and carries **no `load` location at all**, so `makeOrderFinal` would have refused every order. Now falls back through the reference's own three picking destinations in its own order of frequency |
 | ✅ | **20** smaller confirmations | no change needed |
 | ✅ | **21** product record | `d987957` — unblocked item 1 |
 
