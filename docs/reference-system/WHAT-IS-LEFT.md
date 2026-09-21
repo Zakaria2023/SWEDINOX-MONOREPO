@@ -16,6 +16,26 @@ happened, and it comes off the list.
 > **To actually do the work, use [CAPTURE-RUNSHEET.md](CAPTURE-RUNSHEET.md)** —
 > the same items, everything still open, reordered into seven sittings with the
 > clicks spelled out. This file stays the record of *why* each one matters.
+>
+> **Part H has its own runsheet: [FLOWS.md](FLOWS.md)** — the twelve write-flows,
+> each with the record codes picked out of the exports so the flow starts from a
+> record already in the right state, and what changes in the code when it lands.
+
+---
+
+## ✅ Answered 21-9-2026 — live is the same as test
+
+**Swedinox confirms the live system is exactly the same as `HEGO TEST`** — same
+ledger, same batch jobs.
+
+This was the last open qualifier on the whole project, and it is a good answer:
+every finding taken off `HEGO TEST` — ~130 000 exported rows, the AFAS sync, the
+eight batch jobs, the security profiles, the error log — now describes the
+**live** system too. **No capture needs repeating against a second environment.**
+
+It also removes an excuse. `Batchscheduler is not active` had been set aside as
+an artefact of a test copy; it is the live configuration, so the overdue-posts
+rule may genuinely be running on frozen open posts. See K10 and K12.
 
 ---
 
@@ -423,19 +443,27 @@ including the dialog that opens, what it asks, and what the screen looks like
 afterwards. A short screen recording is better than screenshots if that is
 easier.
 
+> 🔵 **21-9-2026 — [FLOWS.md](FLOWS.md) is the runsheet for this part.** Every
+> flow now names the **record code to use**, picked out of the exports so it
+> starts from a record already in the state the flow needs (`IO400118` still to
+> be received, `PK304L200315` with 23 free at `9B`, `O102167` blocked,
+> `IO400151` a processing order, complaint `K40055`). It also lists, per flow,
+> **what changes in the code when the screens land** — so a flow that arrives
+> and moves nothing gets struck rather than chased.
+
 | # | The flow | Why |
 |---|---|---|
-| **H1** | 🔴 **A lorry arrives → the goods become stock.** Which screen, which button, in what order | *Still the number one question in the whole project.* We create stock when the **purchase invoice** arrives. If the reference books it in at **receipt**, ours does it too late and the chain has to be rebuilt. 53 of 151 receival rows read `Workorders created`, so something creates them |
+| ~~**H1**~~ | ~~**A lorry arrives → the goods become stock**~~ ✅ **ANSWERED 21-9-2026** → [receipt-chain.md](receipt-chain.md) §H1.1 + §H1.2. **Reporting the unloading work order creates the stock** — order `401141`, work order `306675`, five lots `389823`–`389827`, 100 pieces / 10 597,5 kg, 90 of them arriving already reserved. **No invoice in the chain.** Release prints labels and creates nothing; reporting self-approves. 🔴 **Every bundle must carry a `Charge` before `OK` will enable** — a heat number per lot is mandatory before metal may become stock. 🔴 **`Internal charge` identifies the receipt (one code for all five lots, system-assigned); the six-digit running number identifies the lot.** 🔴 **A lot is valued at the product's carried price (2 058,8151), not the € 2 000,00 paid for it.** Only gap left: whether the work order was raised by the `Workorder` button or automatically by `Confirm`/`Pre-notifiy` |
 | **H2** | **Create a reservation by hand** | We can read reservations; we cannot make one |
 | **H3** | **Adjust a lot by hand** — correct a weight or a quantity | `Correct products and stock` on the product screen |
 | **H4** | **Plan a trip** — from deliveries waiting to a trip with a bill of lading | The whole transport side is read-only in ours |
-| **H5** | **Take an order from entry to delivery**, one line, every button | The spine of the selling side |
+| **H5** | 🟡 **Take an order from entry to delivery**, one line, every button | **Captured 21-9-2026 on order `102191`** → [order-to-delivery.md](order-to-delivery.md). Entry → priced → blocked → unblocked → `Make final` → picked to `Laad`, drawing on the very lots H1 created ninety minutes earlier. 🔴 **Revenue is billed on trade weight (540 kg) and cost taken on theoretical weight (529,9 kg)** — every margin we show on a trade-weight order is wrong. 🔴 A line is entered through a **stock search** with `Stock` / `Purchase` / `Internal production` tabs, so goods are sold before they arrive. 🔴 `Make final` prints the confirmation and raises the **warehouse and transport work orders** itself. 🔴 The confirmation's footer shows the receivables are **factored to Boozt24 Finance**. ⚠️ The pricing cascade reads zeros because the product has no sales price — the answer, not a failed capture. 🔴 **Still owed:** trip, delivery note, invoice, payment |
 | **H6** | **Send an invoice** — from an order delivered to an invoice sent | |
 | **H7** | **Take a payment** against an invoice | |
-| **H8** | **Block, then unblock, one order** | Three blocking rules are built and no unblocking exists |
+| ~~**H8**~~ | ~~**Block, then unblock, one order**~~ ✅ **ANSWERED 21-9-2026** → [order-to-delivery.md](order-to-delivery.md) §4, on a block we caused ourselves. Order `102191` saved as `Provisional, Blocked`, reason **`Post(s) outstanding for too long`**. **Unticking `Financial blockage` lifts it** — no confirmation, no reason asked, reason clears to `-empty-`, and it **survived a close and reopen**. `Blocking reason` is **disabled**: system-set, never chosen — so the audit trail is whoever saved the record, which is exactly why 63 releases carry only the vendor's login. 🔴 A second independent **`Invoice blockage`** flag exists. ⚠️ The margin warning does **not** block; it only ticks `Profit too low`. ⚠️ Scheduler is off, so a scheduled re-check is untested |
 | **H9** | **Send material out for external processing, and take it back** | Purchase reservations are this flow, inferred from 23 rows |
 | **H10** | **Report a saw cut** — the two report dialogs, and the kilos balancing | Modelled from a screenshot; never watched |
-| **H11** | **Link a certificate to a batch** | Part E |
+| **H11** | **Link a certificate to a batch** | Part E. 🟡 **21-9-2026 (H1.1): the entry point is found** — a **`Batch registration`** button on the purchase order's `Receipts` toolbar, beside `Charge aanpassen…` (greyed until a charge exists). Since `Charge` and `Internal charge` are blank on the reception until the goods are booked in, **H11 and H1 are the same panel** and are best watched in one sitting |
 | **H12** | **Raise a credit note / return** | `Return order` and `Return lines` exist as menu items and nothing else |
 
 **Start with H1.** It is the oldest open question in the project and everything
@@ -482,7 +510,7 @@ Carried over from the Purchase rounds. Smaller, but each one is a real gap.
 | **J1** | **Consignment stock — finish it** | Order `401154` exists, `Provisional`, reception created. Three clicks: press **`Make final`** → fill `Kg(a)`=314 / `Qty(a)`=10 on the reception → read that lot's `Stock (€)` on `Stock on location`. **€0,00 means consignment is excluded from stock value** |
 | **J2** | **The `Pricing` panel on purchase order `400650`** | `Overviews → Purchase → Purchase lines`, find order `400650`, `Show Purchase order`, expand `Pricing`. 📸 the whole panel. 4 pieces weighing 94,2 kg are billed as 100 kg and we cannot say where that weight is held |
 | **J3** | **Is StockOp used at all?** | `Purchase lines` → any row → `Show Product` → find *"Use StockOp for this product?"*. Check `PK304L20021`, `PK316L40021`, `SC304`, `CK3040010`. **All four unticked = the whole `StockOn advice` screen leaves scope and gets deleted** |
-| **J4** | **A purchase line received in two goes** | `Purchase lines`, creation date from `1-1-2024`, find a line where `Qty(a)` is above 0 but below `Qty(p)` → `Show Purchase order` → expand `Receipts`. 📸 — two instalments on one line, one `Received`, one `Released` |
+| **J4** | **A purchase line received in two goes** | `Purchase lines`, creation date from `1-1-2024`, find a line where `Qty(a)` is above 0 but below `Qty(p)` → `Show Purchase order` → expand `Receipts`. 📸 — two instalments on one line, one `Received`, one `Released`. 🟡 **21-9-2026 (H1.1):** the mechanism is found — a **`Split`** button on the Receipts toolbar, with `New` and `Delete` greyed beside it. So a part-receipt is made by **splitting the existing reception**, never by adding a second one. What is left is watching `Split` open |
 | **J5** | **The product `Options` list, to the bottom** | Product `PK316L40021` → scroll `Options` to the end → open one row's state dropdown. Six read `Possible`; `Knippen` appears on Purchase receivals and **not** in that list, so the enum has at least seven members |
 | **J6** | **Value lists — drag the header into the grey bar** | The bar reading *"Drag a column header here to group by that column"*. It lists every value with counts. Do it for: `Purchase invoices → Status`, `Orders and quotes → Status`, `Purchase lines → Line type` |
 | **J7** | **Dropdowns — open and photograph the list** | `Orders and quotes → Order method` · `Orders and quotes → Classification code` · Product → `Price` (reads `Algemeen`) · Company → `Journal code` (`0` and `11` seen) · `Net prices → Net priceU` |
@@ -506,9 +534,9 @@ somebody clicking.
 | **K7** | Are `Purchase request` and `Purchase return order` used? | Two document types in the `Nieuw` menu that no screen has shown |
 | **K8** | Are any companies `Processor` or `Transporter`? ✅ **yes (D1, 16-9-2026)** — 2 processors and 8 transporters among the inactive companies alone | Would change how work orders are assigned |
 | **K9** | What does ticking `Consignatie` change commercially? | J1 answers the accounting half; this is the business half |
-| **K10** | Is the batch scheduler meant to be switched off? ⚠️ **New doubt 18-9-2026:** `Stock history` holds a monthly snapshot for **every month from 2025-05 to 2026-06** on a database said to be frozen at mid-May 2025, so something has kept running. The `Batchtaken` last-run column (S7) settles it | Needs an administrator. 🔴 **Now blocking (14-9-2026):** three of the batch jobs sync open posts, companies and journal entries with **AFAS**. If the scheduler is off, the overdue-posts rule runs on frozen data. **15-9-2026 lead:** `SCHEDULED_TASK.LAST_EXECUTED` on the three AFAS jobs, and `SCHEDULED_TASK_LOG.FAILED`, answer this from the database ([database-schema.md](database-schema.md) §2). **15-9-2026, error log:** jobs run as user `BATCH`, which logs nothing after **13-5-2025** — the date the test copy was taken. The scheduler being off on `HEGO TEST` is expected; ask about the **live** system instead ([error-log.md](error-log.md) §2) |
+| **K10** | Is the batch scheduler meant to be switched off? ⚠️ **New doubt 18-9-2026:** `Stock history` holds a monthly snapshot for **every month from 2025-05 to 2026-06** on a database said to be frozen at mid-May 2025, so something has kept running. The `Batchtaken` last-run column (S7) settles it | Needs an administrator. 🔴 **Now blocking (14-9-2026):** three of the batch jobs sync open posts, companies and journal entries with **AFAS**. If the scheduler is off, the overdue-posts rule runs on frozen data. **15-9-2026 lead:** `SCHEDULED_TASK.LAST_EXECUTED` on the three AFAS jobs, and `SCHEDULED_TASK_LOG.FAILED`, answer this from the database ([database-schema.md](database-schema.md) §2). **15-9-2026, error log:** jobs run as user `BATCH`, which logs nothing after **13-5-2025** — the date the test copy was taken. The scheduler being off on `HEGO TEST` is expected; ask about the **live** system instead ([error-log.md](error-log.md) §2). 🔴 **21-9-2026 — that escape is gone. Live is the same as test**, so `Batchscheduler is not active` is the live configuration, not a copy artefact. Either the scheduler is deliberately off and the AFAS open posts are stale — which would explain every held order reading 496–614 days overdue — or it runs somewhere the status bar does not report. **This is now the question to ask an administrator, and it is blocking K1** |
 | **K13** | **Does Swedinox file CBS statistics returns out of easy2trade, or from somewhere else?** | New 18-9-2026. B16 computes a real CBS return — weight by commodity code by postal district, 826 rows — but `sfn_no` is `0` and `SBI code` is `Unknown SBI` on **every** row, so the two classifying fields are never filled. Building it needs a CN commodity code per product and an SBI code per company, neither of which we have. **Ask before building** |
-| **K12** | **Does the rebuild replace AFAS, or sync with it?** | AFAS holds the ledger, receivables and payments (A3). This decides how journal entries, payments and credit control are built in `apps/dashboard`. **15-9-2026, error log:** during live use (Jan–May 2025) the batch sync went to **Multivers**; the AFAS jobs and a cloud "tenant id" set-up appear only afterwards. Ask which ledger the **live** system posts to today ([error-log.md](error-log.md) §2) |
+| **K12** | **Does the rebuild replace AFAS, or sync with it?** | AFAS holds the ledger, receivables and payments (A3). This decides how journal entries, payments and credit control are built in `apps/dashboard`. **15-9-2026, error log:** during live use (Jan–May 2025) the batch sync went to **Multivers**; the AFAS jobs and a cloud "tenant id" set-up appear only afterwards. Ask which ledger the **live** system posts to today ([error-log.md](error-log.md) §2). ✅ **21-9-2026 — half answered. Live is the same as test**, so live posts to **AFAS**, and the Multivers entries are simply the older configuration the log caught mid-migration. What is left is no longer a fact about the system: it is the **decision** — does the rebuild replace AFAS, or sync with it? Nothing else can be discovered by looking; it needs Swedinox |
 | **K11** | Is **`INAD`** a real person, or a shared or system account? | **Half answered:** INAD is the software vendor — `INAD Industrie Software B.V.` is a company in the C4 address file and the test company's contact is `@inad.nl`. What is left: do their support staff lift blocks on request, or does a job run under that login? It lifted **63 of 571** order blocks in the C7 `Unblocked orders` export (62 financial, 1 commercial), spread over 2025–2026. Every other unblock carries a person's name. If it is a system account, some blocks are lifted **automatically**, and that rule exists nowhere in our code. If it is a shared login, the audit trail cannot say who did it. **15-9-2026 lead:** `USERS.ISBATCH` marks a batch account — one look at the `INAD` user record settles it ([database-schema.md](database-schema.md) §3). ✅ **Answered 15-9-2026 by the error log:** jobs run as a separate `BATCH` user; `INAD`'s entries are interactive (deleting unload lines, overriding warnings, printing, changing dates) plus one migration script on 25-9-2024. **INAD is the vendor's support login used by people — the 63 unblocks were manual.** Only "on whose request" is left ([error-log.md](error-log.md) §3) |
 
 ---
@@ -544,7 +572,12 @@ conclusions in this project got made.
 
 **Part H is not testing, it is discovery.** Until a lorry arriving has been
 watched end to end, the warehouse write paths cannot be built, and what cannot
-be built cannot be tested.
+be built cannot be tested. It has a runsheet of its own now: [FLOWS.md](FLOWS.md).
+
+✅ **21-9-2026 — nothing needs re-checking against live.** Live is the same as
+test, so every proved rule in this file is proved about the system that is
+actually running. There is no second environment to re-capture, and no finding
+carries an "on the test copy" qualifier any more.
 
 ---
 

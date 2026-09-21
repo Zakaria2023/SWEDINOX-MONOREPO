@@ -29,6 +29,18 @@ this says the database we are looking at is a **copy taken around mid-May
 2025**, kept afterwards as a test system (`HEGO TEST`). Anything "overdue by
 500+ days" or "last month = 0" is measured against a frozen copy.
 
+> ⚠️ **21-9-2026 — read this carefully, the two things are different.**
+> Swedinox confirms **live is exactly the same as test**: same ledger (AFAS),
+> same batch jobs, same configuration. That is a statement about the
+> **application**, not about the **rows**.
+>
+> So: every *rule* proved here holds on live and needs no re-capture. But the
+> *data* in `HEGO TEST` is still a copy frozen around mid-May 2025, and the
+> stale-looking numbers above are still stale. Do not turn "live is the same"
+> into "the 500-day overdue posts are real on live" — that remains open, and it
+> is now K10's whole weight, because the scheduler being off is the **live**
+> configuration too.
+
 ## 2. 🔴 The batch account, and the ledger was Multivers (K10, K12)
 
 - Recurring jobs run as a separate user: **`BATCH`**, 14 entries, all of type
