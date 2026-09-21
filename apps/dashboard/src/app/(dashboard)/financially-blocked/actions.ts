@@ -76,12 +76,19 @@ export const unblockOrder = async (
 
       // A release covers the order as it stands now, so the "changed since"
       // flag starts over with it.
+      //
+      // The reason goes with the flag. Watched on 21-9-2026: unticking
+      // `Financial blockage` on order 102191 left `Blocking reason` reading
+      // `-empty-`, and the order stayed released across a close and reopen. A
+      // reason left behind on a released order reads as a hold that is still
+      // in force, which is exactly what `/financially-blocked` lists on.
       await tx
         .update(Orders)
         .set({
           financialBlockage: false,
           financialBlockManual: false,
           changedAfterFinancialDeblock: false,
+          blockingReason: null,
         })
         .where(eq(Orders.uuid, orderUuid));
 

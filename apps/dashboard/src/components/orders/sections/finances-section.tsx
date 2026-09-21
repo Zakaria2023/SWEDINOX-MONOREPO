@@ -127,9 +127,17 @@ export const FinancesSection = ({ addressOptions, paymentTermOptions }: Props) =
           disabled={addressOptions.length <= 1}
         />
 
+        {/* Read-only on purpose. The reference greys this field out: a hold is
+            explained by the rule that applied it, never chosen by the person
+            looking at it, and it clears itself when the hold is released. */}
         <div>
           <FormLabel htmlFor="blockingReason">Blocking Reason</FormLabel>
-          <Input id="blockingReason" {...register("blockingReason")} />
+          <Input
+            id="blockingReason"
+            readOnly
+            className="bg-muted text-muted-foreground"
+            {...register("blockingReason")}
+          />
         </div>
       </div>
     </section>
