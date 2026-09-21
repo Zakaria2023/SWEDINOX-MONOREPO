@@ -194,3 +194,48 @@ This is the first export that shows the reference keeps a per-row audit trail.
 Our schema stores `modifiedByUserId` as a Clerk id on some tables; this says the
 reference does it on delivery lines too, and that the user list on the shop
 floor is bigger than the six sellers the header knows about.
+
+---
+
+### Against `apps/dashboard` — rebuilt 21-9-2026
+
+Both status ladders were already right: `deliveryStatuses` holds the nine
+values §4 proves and `transportStatuses` the six of §5. The screen was the
+problem — 17 columns against the reference's 54, hard-coded headers, and no
+column picker.
+
+It now carries **35 columns**, columns-driven, with the picker and the export
+reading the same declaration.
+
+Newly carried:
+
+- **The three blocking flags**, `Commercial blocked`, `Financially blocked` and
+  `Transport blockage`. The live check asserts §1's exact rule — **a
+  transport-blocked line is never on a trip**, zero exceptions — and that the
+  three barely overlap.
+- **The planned-against-actual pairs**: `Line Qty(a)`, `Kg(p)`, `Kg(a)` and the
+  actual delivery date beside the planned one.
+- **The trip**: `Trip number`, `Vehicle` and `Transport status`, read through
+  the transport work order. The trip is empty exactly where the transport block
+  is set, which is the same fact from the other side.
+- **The invoice**: `Invoice no.` and the invoiced amount split into
+  `Invoiced (Prod.)` and `Invoiced (Opt.)` — the same split the invoice line
+  makes.
+- ⚠️ **`Theor. weight` with its unit.** In `M3` the figure is a **density** in
+  kilos per cubic metre — 7 850 steel, 8 000 stainless, 2 700 aluminium — not a
+  weight, on 6 023 of the reference's 6 134 rows. The unit is carried beside it
+  so the number can never be read as kilos by accident.
+- `Line type`, `Stock product` and `Modified on`.
+
+Nine columns are not carried because they are constant on all 6 134 rows: the
+whole sawing and drilling apparatus — `Bls`, `Bls+P`, `Sawing`, `Sawing type`,
+the two saw angles, `Machine`, `Drilling` and `Drilling holes`. The feature is
+off, not absent.
+
+**Still open: the grain.** The reference has 6 134 delivery lines against 4 975
+order lines, because a line delivered in parts appears once per part. Ours is
+one row per order line, so a split delivery collapses into a single row. That
+needs a delivery-line record of its own, and it is the one structural difference
+left on this screen.
+
+Verified live, 27/27.

@@ -50,6 +50,12 @@ import {
   LEDGER_ACCOUNTS,
 } from "@/lib/server/ledger";
 import { currentUser } from "@clerk/nextjs/server";
+import { InvoiceItems } from "@/db/schema/invoice-items";
+import { Invoices, SelectInvoices } from "@/db/schema/invoices";
+import {
+  TransportWorkOrderLines,
+  TransportWorkOrders,
+} from "@/db/schema/transport-work-orders";
 import {
   and,
   asc,
@@ -59,6 +65,7 @@ import {
   getTableColumns,
   ne,
   or,
+  sql,
 } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
@@ -78,6 +85,26 @@ export type DeliveryLineItem = SelectOrderItems & {
   customerRef: SelectOrders["customerRef"] | null;
   productCode: SelectProducts["productCode"] | null;
   productName: SelectProducts["name"] | null;
+  companyUuid: SelectCompanies["uuid"] | null;
+  isPickup: SelectOrders["isPickup"] | null;
+  orderType: SelectOrders["orderType"] | null;
+  /** The lorry, when the line has been put on one. */
+  tripNumber: number | null;
+  vehicle: string | null;
+  /** Where the lorry is, which is a different ladder from the goods. */
+  transportStatus: string | null;
+  /** The invoice this line was billed on, when it has been. */
+  invoiceId: SelectInvoices["id"] | null;
+  invoicedProducts: string;
+  invoicedOptions: string;
+  /**
+   * The product's theoretical weight and the unit it is quoted in. ⚠️ `M3`
+   * means the figure is a **density** in kilos per cubic metre, not a weight:
+   * 7 850 for steel, 8 000 for stainless, 2 700 for aluminium.
+   */
+  theoreticalWeight: SelectProducts["theoreticalWeight"] | null;
+  theoreticalWeightUnit: SelectProducts["weightUnit"] | null;
+  stockProduct: SelectProducts["stockProduct"] | null;
 };
 
 const lineColumns = {
@@ -88,6 +115,52 @@ const lineColumns = {
   customerRef: Orders.customerRef,
   productCode: Products.productCode,
   productName: Products.name,
+  companyUuid: Companies.uuid,
+  isPickup: Orders.isPickup,
+  orderType: Orders.orderType,
+  theoreticalWeight: Products.theoreticalWeight,
+  theoreticalWeightUnit: Products.weightUnit,
+  stockProduct: Products.stockProduct,
+  // The lorry. A transport-blocked line is never on one -- the reference has
+  // zero exceptions in 6 134 rows -- so this is empty exactly where the
+  // blocking flag is set.
+  tripNumber: sql<number | null>`(
+    SELECT two.trip_number FROM ${TransportWorkOrderLines} twl
+    JOIN ${TransportWorkOrders} two ON two.uuid = twl.work_order_uuid
+    WHERE twl.order_item_uuid = ${OrderItems.uuid}
+    ORDER BY twl.id DESC LIMIT 1
+  )`,
+  vehicle: sql<string | null>`(
+    SELECT two.vehicle FROM ${TransportWorkOrderLines} twl
+    JOIN ${TransportWorkOrders} two ON two.uuid = twl.work_order_uuid
+    WHERE twl.order_item_uuid = ${OrderItems.uuid}
+    ORDER BY twl.id DESC LIMIT 1
+  )`,
+  transportStatus: sql<string | null>`(
+    SELECT twl.status FROM ${TransportWorkOrderLines} twl
+    WHERE twl.order_item_uuid = ${OrderItems.uuid}
+    ORDER BY twl.id DESC LIMIT 1
+  )`,
+  // A delivery line carries its invoice number directly; there is no join
+  // table in the reference either.
+  invoiceId: sql<number | null>`(
+    SELECT i.id FROM ${InvoiceItems} ii
+    JOIN ${Invoices} i ON i.uuid = ii.invoice_uuid
+    WHERE ii.order_item_uuid = ${OrderItems.uuid} AND i.cancelled = FALSE
+    ORDER BY ii.id DESC LIMIT 1
+  )`,
+  // The invoiced amount split into metal and processing, the same split the
+  // invoice line makes.
+  invoicedProducts: sql<string>`(
+    SELECT COALESCE(SUM(ii.revenue_products), 0) FROM ${InvoiceItems} ii
+    JOIN ${Invoices} i ON i.uuid = ii.invoice_uuid
+    WHERE ii.order_item_uuid = ${OrderItems.uuid} AND i.cancelled = FALSE
+  )`,
+  invoicedOptions: sql<string>`(
+    SELECT COALESCE(SUM(ii.revenue_options), 0) FROM ${InvoiceItems} ii
+    JOIN ${Invoices} i ON i.uuid = ii.invoice_uuid
+    WHERE ii.order_item_uuid = ${OrderItems.uuid} AND i.cancelled = FALSE
+  )`,
 };
 
 // Everything that is not cancelled — the deliverable lines.
