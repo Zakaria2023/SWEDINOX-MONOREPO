@@ -4,6 +4,7 @@ import { createElement } from "react";
 import { asc, eq } from "drizzle-orm";
 
 import { db } from "@/db";
+import { Communications } from "@/db/schema/communications";
 import { Companies } from "@/db/schema/companies";
 import { Contacts } from "@/db/schema/contacts";
 import { InvoiceItems } from "@/db/schema/invoice-items";
@@ -17,6 +18,7 @@ import { PurchaseOrderItems } from "@/db/schema/purchase-order-items";
 import { PurchaseOrders } from "@/db/schema/purchase-orders";
 import { selectRecipientAddresses } from "@/emails/recipients";
 import { sendEmail } from "@/emails/resend";
+import { generateUuid } from "@/lib/helpers";
 import DocumentEmail, {
   DocumentEmailField,
   DocumentEmailProps,
@@ -112,12 +114,50 @@ const deliver = async (
 /**
  * Runs a document send without letting a mail failure surface as a document
  * failure. By the time this runs the document is already committed, and mail
- * can't be rolled back with it — so a failed send is logged, never thrown.
+ * can't be rolled back with it — so a failed send is recorded, never thrown.
+ *
+ * 🔴 It used to be recorded to `console.error` and nowhere else, which meant a
+ * confirmation that never reached the customer left no trace anybody would ever
+ * look at, and "did we send it?" had no answer. Every send now writes a row to
+ * `Communications`, successful or not.
+ *
+ * The record is best-effort on purpose. A document that went out and a log that
+ * failed to write is a smaller problem than a send aborted because its log
+ * could not be written, so the write is caught and swallowed in its turn.
  */
 export const mailDocument = async (
   send: () => Promise<EmailDeliveryResult>,
   describe: string,
+  about?: CommunicationSubject,
 ): Promise<void> => {
+  const record = async (
+    delivered: number,
+    failed: number,
+    failureReason: string | null,
+  ) => {
+    if (!about) {
+      return;
+    }
+    try {
+      await db.insert(Communications).values({
+        uuid: generateUuid(),
+        documentType: about.documentType,
+        documentUuid: about.documentUuid ?? null,
+        documentLabel: about.documentLabel ?? describe,
+        companyUuid: about.companyUuid ?? null,
+        channel: "email",
+        recipient: about.recipient ?? null,
+        subject: describe,
+        deliveredCount: delivered,
+        failedCount: failed,
+        failureReason,
+        sentByUserId: about.userId ?? null,
+      });
+    } catch (error) {
+      console.error(`${describe}: could not be recorded as sent.`, error);
+    }
+  };
+
   try {
     const { sent, failed } = await send();
     if (failed > 0) {
@@ -125,9 +165,34 @@ export const mailDocument = async (
         `${describe}: ${failed} of ${sent + failed} email(s) failed to send.`,
       );
     }
+    await record(
+      sent,
+      failed,
+      failed > 0 ? `${failed} of ${sent + failed} recipients refused it` : null,
+    );
   } catch (error) {
     console.error(`${describe}: could not be emailed.`, error);
+    await record(
+      0,
+      1,
+      error instanceof Error ? error.message : "The send threw",
+    );
   }
+};
+
+/**
+ * What a send was about, so the record can be found again from the document it
+ * belongs to. Optional on `mailDocument`: a caller that cannot say is still
+ * allowed to send, it simply leaves no trail.
+ */
+export type CommunicationSubject = {
+  /** `order`, `invoice`, `delivery`, `purchase_order`, … */
+  documentType: string;
+  documentUuid?: string | null;
+  documentLabel?: string | null;
+  companyUuid?: string | null;
+  recipient?: string | null;
+  userId?: string | null;
 };
 
 /** Header rows, with anything the document left blank dropped rather than shown empty. */

@@ -5,6 +5,7 @@ import {
   AvailableAt,
   CeStandard,
   CertificaatOption,
+  CommunicationChannel,
   CommunicationSettingDocumentType,
   CountStockBasis,
   CustomerLabelOption,
@@ -1964,6 +1965,13 @@ export const REVENUE_GROUP_KIND_LABELS: Record<RevenueGroupKind, string> = {
   adjustment: "Adjustment",
   other: "Other",
 };
+
+export const COMMUNICATION_CHANNEL_LABELS: Record<CommunicationChannel, string> =
+  {
+    email: "E-mail",
+    fax: "Fax",
+    staalweb: "Staalweb",
+  };
 
 export const SYSTEM_LOG_CATEGORY_LABELS: Record<SystemLogCategory, string> = {
   delivery_date_changed: "Delivery date changed",

@@ -2338,6 +2338,21 @@ export type UserRole = (typeof userRoles)[number];
 // mostly the application writing down what it did on somebody's behalf —
 // a delivery date moved, an order held, a lock cleared (error-log.md §4).
 // The category decides which filter an entry sits under.
+// How a document reaches the customer.
+//
+// The three the reference's own send dialog offers, watched on 21-9-2026 when
+// order 102191 was made final: `E-mail to …`, `Fax to` and `Send message by
+// Staalweb`. Fax and Staalweb are unticked and greyed on that dialog, so they
+// are offered and not used — kept because the send record has to be able to say
+// which of the three was chosen, including for history imported from there.
+export const communicationChannels = [
+  "email",
+  "fax",
+  "staalweb",
+] as const satisfies readonly string[];
+
+export type CommunicationChannel = (typeof communicationChannels)[number];
+
 export const systemLogCategories = [
   "delivery_date_changed",
   "financial_block",
