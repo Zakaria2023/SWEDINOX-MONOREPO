@@ -1473,6 +1473,34 @@ export const reportWarehouseWorkOrderLineCompletion = async (
       }
     }
 
+    // 🔴 And on the way out: a lot per row, or there is nothing to take from.
+    //
+    // Watched on 29-9-2026. The reference does not guard this. `Report
+    // completion` was pressed on picking work order `312722`, whose five lines
+    // all carried `Charge` = `-`, and `ez2Lib.Shared 3.13.0.508` threw a
+    // `NullReferenceException` and offered nothing but `Close application` —
+    // twice, on two different work orders.
+    //
+    // The cause is the mirror of the rule above. On an unloading the charge is
+    // typed; on a picking it is *pre-filled from the allocated lot*. With no
+    // lot there is nothing to pre-fill, and the dialog dereferences it.
+    //
+    // So allocation is a step of its own, before reporting. The reference
+    // leaves that implicit and crashes when it is skipped. We say it out loud.
+    if (meta.stockEffect === "out" || meta.stockEffect === "move") {
+      const unallocated = reported.filter(
+        (pick) => Number(pick.qtyActual) > 0 && !pick.stockUuid,
+      );
+      if (unallocated.length > 0) {
+        return {
+          error:
+            unallocated.length === reported.length
+              ? "No row has a lot to draw from. Allocate stock to this line before reporting it."
+              : `${unallocated.length} of ${reported.length} rows have no lot to draw from. Allocate stock to every row before reporting it.`,
+        };
+      }
+    }
+
     const documentNo = `WWO-${workOrder.number}`;
     const executedAt = new Date(input.executedAt);
     if (Number.isNaN(executedAt.getTime())) {
