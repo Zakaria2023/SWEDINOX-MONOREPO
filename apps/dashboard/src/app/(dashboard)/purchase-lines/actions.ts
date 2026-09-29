@@ -45,7 +45,10 @@ import {
 import { exportRows } from "@/lib/server/excel";
 import { PURCHASE_LINE_COLUMNS } from "@/app/(dashboard)/purchase-lines/columns";
 
-export type PurchaseLineItem = Omit<SelectPurchaseOrderItems, "amount"> & {
+export type PurchaseLineItem = Omit<
+  SelectPurchaseOrderItems,
+  "amount" | "kgActual"
+> & {
   /** Net price x weight, in the price's own unit — derived, never stale. */
   amount: number;
   purchaseOrderId: SelectPurchaseOrders["id"] | null;
@@ -116,13 +119,27 @@ const Parent = alias(ProductGroups, "group_parent");
 const Grandparent = alias(ProductGroups, "group_grandparent");
 const Root = alias(ProductGroups, "group_root");
 
+// 🔴 The weighed kilos when there are any, and only then an estimate.
+//
+// This used to be the estimate alone — the theoretical weight scaled by the
+// share of pieces received — which is the same mistake item 23 found on the
+// billing side, showing up again in the read path. A column headed "weight
+// actually booked in" was never showing an actual weight at all.
+//
+// `kgActual` on the line is the sum of what the weighbridge said, rolled up
+// from the receivals by `rebillPurchaseLineOnWeighedKilos`. Until the first
+// delivery is weighed it is null, and the pro-rata figure is the best estimate
+// available — so it stays, as the fallback it always should have been.
 const kgActualSql = sql<number>`(
-  CASE WHEN COALESCE(${PurchaseOrderItems.qtyPlanned}, 0) > 0
-    THEN COALESCE(${PurchaseOrderItems.kgPurchased}, 0)
-       * COALESCE(${PurchaseOrderItems.qtyReceived}, 0)
-       / ${PurchaseOrderItems.qtyPlanned}
-    ELSE 0
-  END
+  COALESCE(
+    ${PurchaseOrderItems.kgActual},
+    CASE WHEN COALESCE(${PurchaseOrderItems.qtyPlanned}, 0) > 0
+      THEN COALESCE(${PurchaseOrderItems.kgPurchased}, 0)
+         * COALESCE(${PurchaseOrderItems.qtyReceived}, 0)
+         / ${PurchaseOrderItems.qtyPlanned}
+      ELSE 0
+    END
+  )
 )`;
 
 // Reserved is held in purchase units, so its weight is that share of the

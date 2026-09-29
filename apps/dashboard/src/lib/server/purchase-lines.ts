@@ -10,7 +10,13 @@ import {
 import { PurchaseOrderItems } from "@/db/schema/purchase-order-items";
 import { PurchaseOrders } from "@/db/schema/purchase-orders";
 import { OrderLineStatus, ReceiptStatus } from "@/lib/enums";
-import { generateUuid, receiptStatusAfterUnloading } from "@/lib/helpers";
+import {
+  amountForWeight,
+  billingWeightKg,
+  generateUuid,
+  moneyString,
+  receiptStatusAfterUnloading,
+} from "@/lib/helpers";
 import { and, asc, eq, inArray, lt, sql } from "drizzle-orm";
 
 // A line that was never made final, or was called off, is not moved by what
@@ -442,6 +448,71 @@ export const recordPurchaseLineReceipt = async (
       .where(eq(PurchaseLineReceivals.uuid, receival.uuid));
   }
 
+  await rebillPurchaseLineOnWeighedKilos(tx, purchaseOrderItemUuid);
+
   // The reception the goods landed on — the first one they filled.
   return allocations[0]?.receival.uuid ?? null;
+};
+
+/**
+ * Roll the weighbridge up to the line, and re-bill the line on it.
+ *
+ * 🔴 A purchase line is paid on what was weighed, not on what was calculated —
+ * proved to the cent on purchase order `402532`, and written out in full on
+ * `PurchaseOrderItems.kgActual`. The receivals already hold the weighed figure
+ * per arrival; nothing was carrying it up to the line, so every line in the
+ * system was billed on its theoretical weight.
+ *
+ * Called after each receipt, because a line is billed on what has arrived so
+ * far: three of four bundles in means three bundles' worth of weight, and the
+ * amount moves again when the fourth lands.
+ *
+ * A line with no weighed kilos yet is left exactly as it was — `billingWeightKg`
+ * falls back to the theoretical, which is what the order showed when it was
+ * placed and what it should keep showing until a lorry arrives.
+ */
+export const rebillPurchaseLineOnWeighedKilos = async (
+  tx: PurchaseLineWriter,
+  purchaseOrderItemUuid: string,
+): Promise<void> => {
+  const [line] = await tx
+    .select({
+      kgPurchased: PurchaseOrderItems.kgPurchased,
+      netPrice: PurchaseOrderItems.netPrice,
+      priceUnit: PurchaseOrderItems.priceUnit,
+      quantity: PurchaseOrderItems.quantity,
+    })
+    .from(PurchaseOrderItems)
+    .where(eq(PurchaseOrderItems.uuid, purchaseOrderItemUuid))
+    .limit(1);
+
+  if (!line) {
+    return;
+  }
+
+  const [weighed] = await tx
+    .select({ kg: sql<string | null>`SUM(${PurchaseLineReceivals.kgActual})` })
+    .from(PurchaseLineReceivals)
+    .where(
+      eq(PurchaseLineReceivals.purchaseOrderItemUuid, purchaseOrderItemUuid),
+    );
+
+  const kgActual = Number(weighed?.kg ?? 0);
+  if (!Number.isFinite(kgActual) || kgActual <= 0) {
+    return;
+  }
+
+  const billingKg = billingWeightKg(line.kgPurchased, kgActual);
+
+  await tx
+    .update(PurchaseOrderItems)
+    .set({
+      kgActual: kgActual.toFixed(2),
+      amount: moneyString(
+        amountForWeight(Number(line.netPrice ?? 0), line.priceUnit, billingKg, {
+          quantity: Number(line.quantity ?? 0),
+        }),
+      ),
+    })
+    .where(eq(PurchaseOrderItems.uuid, purchaseOrderItemUuid));
 };

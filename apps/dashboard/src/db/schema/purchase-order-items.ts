@@ -62,9 +62,40 @@ export const PurchaseOrderItems = mysqlTable(
     reservedQty: decimal("reserved_qty", { precision: 15, scale: 3 }).default(
       "0.000",
     ),
+    // ── The two weights ───────────────────────────────────────────────────────
+    //
+    // 🔴 A purchase line is billed on the weighed kilos, not the theoretical
+    // ones. Proved on purchase order `402532` (Holland Stainless Int) on
+    // 29-9-2026, to the cent, on both its lines:
+    //
+    //     line 10   Kg(p) 22 608   Kg(a) 22 655   @ EUR 1.970,00 / TN
+    //               22 608 x 1,97 = 44 537,76     <- not the amount
+    //               22 655 x 1,97 = 44 630,35     <- the amount
+    //
+    //     line 20   Kg(p) 25 434   Kg(a) 25 829
+    //               25 829 x 1,97 = 50 883,13     <- exact
+    //
+    // And the document follows: Materials 95 513,48, VAT at 21 % 20 057,83,
+    // incl. 115 571,31, and the header's own total weight 48 484 — which is the
+    // sum of Kg(a), not of Kg(p) (that would be 48 042).
+    //
+    // `kgPurchased` is the THEORETICAL weight: piece weight from the product's
+    // density times the quantity. 22 608 / 160 = 141,30 kg a plate, which is
+    // exactly 3,0 x 1,5 x 0,004 x 7 850.
+    //
+    // `kgActual` is what the weighbridge said, rolled up from the receivals.
+    // 22 655 / 160 = 141,59. The reference insists on it: reporting a `Weighed`
+    // order back with the theoretical figure untouched raises
+    // "Geen gewogen gewicht — the work order must be reported back with weighed
+    // weights", which is the mechanism that makes the two diverge at all.
+    //
+    // Nothing is billed on `kgActual` until goods actually arrive, so it stays
+    // null until the first receival reports a weight. `billingWeightKg` picks
+    // between them.
     kgPurchased: decimal("kg_purchased", { precision: 15, scale: 2 }).default(
       "0.00",
     ),
+    kgActual: decimal("kg_actual", { precision: 15, scale: 2 }),
 
     // ── Price ─────────────────────────────────────────────────────────────────
     // What was agreed to pay the supplier. Held at four decimals because a

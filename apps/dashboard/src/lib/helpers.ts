@@ -9315,6 +9315,36 @@ export const stockValueFromWeight = (
   valuationPricePerTonne: number,
 ): number => weightKg * (valuationPricePerTonne / 1000);
 
+/**
+ * Which of a purchase line's two weights the supplier is actually paid on.
+ *
+ * 🔴 The weighed one, whenever there is one. Proved to the cent on purchase
+ * order `402532` — see the comment on `PurchaseOrderItems.kgActual` for the
+ * arithmetic and the whole-document check.
+ *
+ * Before any goods arrive there is nothing on the scale, so the theoretical
+ * weight stands in: an order has to show a value the moment it is placed, and
+ * that value is the best estimate until the lorry comes. Once a receival
+ * reports a weight, that weight is the truth and the amount is recomputed
+ * against it.
+ *
+ * Zero is treated as "not weighed yet" rather than "weighs nothing", because a
+ * line that has genuinely received nothing must keep showing what it is
+ * expected to cost. A line that really did arrive empty has no receival to roll
+ * up from either, so the two cases do not collide.
+ */
+export const billingWeightKg = (
+  kgTheoretical: string | number | null | undefined,
+  kgActual: string | number | null | undefined,
+): number => {
+  const actual = Number(kgActual ?? 0);
+  if (Number.isFinite(actual) && actual > 0) {
+    return actual;
+  }
+  const theoretical = Number(kgTheoretical ?? 0);
+  return Number.isFinite(theoretical) ? theoretical : 0;
+};
+
 // "Available" means two different things and both are computed in SQL, in the
 // query that needs them, rather than here:
 //
