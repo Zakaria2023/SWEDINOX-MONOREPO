@@ -516,6 +516,18 @@ export type StockStatus = (typeof stockStatuses)[number];
 export const stockMovementTypes = [
   "in",
   "out",
+  // 🔴 A movement that moves nothing. Added 29-9-2026 to close the gap item
+  // 26b found: the reference ran `Correction…` twice on lot `404763`, the
+  // second downgrading it `Standaard` → `2nd choice`, and wrote **no mutation
+  // either time**. A prime bundle became 2nd choice with no record of who did
+  // it, when, or what it had been.
+  //
+  // The category is not cosmetic — it decides what the metal can be sold as and
+  // it is the basis of the 2nd-choice split in the stock analysis — so ours
+  // records the change even though nothing physical happened. An `adjust` row
+  // carries quantity 0 and names the attribute, the value before and the value
+  // after instead.
+  "adjust",
 ] as const satisfies readonly string[];
 
 export type StockMovementType = (typeof stockMovementTypes)[number];
@@ -592,6 +604,58 @@ export const stockMovementReasons = [
 ] as const satisfies readonly string[];
 
 export type StockMovementReason = (typeof stockMovementReasons)[number];
+
+/**
+ * The reasons `Correction…` offers, read off the open `Reden` dropdown on
+ * 29-9-2026 — eight of them, and the reference will not let `OK` come alive
+ * until one is chosen, so a reason is mandatory here rather than nice to have.
+ *
+ * They are not interchangeable, which is why they are their own list rather
+ * than being folded into `stockMovementReasons`. Each one decides two things,
+ * both in `stockCorrectionReasonRules`: which movement reason the row is filed
+ * under, and whether it is allowed to touch quantity at all.
+ *
+ * 🔴 The eighth is the odd one: `Opmerking voorraad toevoegen/aanpassen`
+ * — *add / adjust stock remark* — is not a physical movement of anything. It
+ * pairs with the dialog's characteristics checkbox and its remark field, so
+ * the one dialog does double duty: it corrects metal, and it corrects notes.
+ * Without it every remark edit would look like a stock movement.
+ */
+export const stockCorrectionReasons = [
+  "rejected_material",
+  "inventory_rejection",
+  "stock_difference",
+  "stock_correction",
+  "transfer_length",
+  "internal_damage",
+  "scrap",
+  "stock_remark",
+] as const satisfies readonly string[];
+
+export type StockCorrectionReason = (typeof stockCorrectionReasons)[number];
+
+/**
+ * What a correction is allowed to change about a lot without moving any of it.
+ *
+ * The dialog's second half — `Voorraad kenmerk correctie`, which is unticked by
+ * default and greys its own section. `Categorie` is a dropdown, `Kwaliteit` a
+ * field, the three dimensions are fields, and the remark is free text.
+ *
+ * Each of these gets a movement row of its own when it changes, because
+ * "category and quality both changed" is two facts and a single row could only
+ * hold one of them.
+ */
+export const stockCorrectableAttributes = [
+  "stock_category",
+  "quality",
+  "length_mm",
+  "width_mm",
+  "thickness_mm",
+  "remark",
+] as const satisfies readonly string[];
+
+export type StockCorrectableAttribute =
+  (typeof stockCorrectableAttributes)[number];
 
 // Stock unit ("StkU") a stock lot is counted in — kg for coil/plate, pieces
 // for cut items, running/square/cubic metres for profiles.

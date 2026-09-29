@@ -1,12 +1,19 @@
 import { db } from "@/db";
 import { SelectStock, Stock } from "@/db/schema/stock";
-import { StockMovements } from "@/db/schema/stock-movements";
-import { StockMovementReason } from "@/lib/enums";
+import {
+  InsertStockMovements,
+  StockMovements,
+} from "@/db/schema/stock-movements";
+import { StockCorrectionReason, StockMovementReason } from "@/lib/enums";
 import {
   generateUuid,
   moneyString,
   normaliseCharge,
   restateLotValue,
+  stockAttributeChanges,
+  StockAttributeChange,
+  StockCorrectableValues,
+  stockCorrectionReasonRules,
   todayDateString,
 } from "@/lib/helpers";
 import { carryLotBatches, registerBatchForLot } from "@/lib/server/batches";
@@ -39,6 +46,30 @@ type ApplyProductionConsumeParams = {
   orderUuid: string | null;
   /** The production line that took this material to the machine. */
   productionWorkOrderLineUuid?: string | null;
+};
+
+type ApplyStockCorrectionParams = {
+  source: SelectStock;
+  /** The reference's `Reden`, which it will not let you leave empty. */
+  reason: StockCorrectionReason;
+  /** Its `Voorraadmutatie omschrijving` — free text, carried onto every row. */
+  description: string | null;
+  /**
+   * The quantity leg, from `Voorraad hoeveelheid correctie`. Left out when that
+   * checkbox is unticked, which is not the same as correcting to the figure the
+   * lot already holds.
+   */
+  quantity?: number;
+  quantityKg?: number;
+  /** The characteristic leg, from `Voorraad kenmerk correctie`. */
+  attributes?: StockCorrectableValues;
+  userId: string;
+};
+
+type StockCorrectionOutcome = {
+  /** How many rows went into the ledger — the reference writes none. */
+  movements: number;
+  attributeChanges: StockAttributeChange[];
 };
 
 type ApplyProductionOutputParams = {
@@ -399,4 +430,209 @@ export const applyProductionOutput = async (
   });
 
   return stockUuid;
+};
+
+/** A dimension off a form, as the integer column wants it or not at all. */
+const numberOrNull = (value: string | number | null | undefined) => {
+  if (value === null || value === undefined || String(value).trim() === "") {
+    return null;
+  }
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? Math.round(parsed) : null;
+};
+
+/**
+ * Correct a lot by hand — the reference's `Correction…`, with the hole in it
+ * filled.
+ *
+ * 🔴 Item 26b. Watched on 29-9-2026: the dialog was run twice on lot `404763`,
+ * the second time downgrading it `Standaard` → `2nd choice`. The change took —
+ * `Stock on location` reads `2nd choice` on that bundle now — and **no mutation
+ * was written either time**, checked with the day's date on both sides of the
+ * filter and nothing in the search box. One mutation exists for the whole of
+ * that day and it is the return's receipt.
+ *
+ * So the reference's ledger records quantity and value movement and nothing
+ * else. A prime bundle became 2nd choice and the books show who did it: nobody,
+ * never, from nothing. That matters because the category decides what the metal
+ * may be sold as, it is the basis of the 2nd-choice split in the stock
+ * analysis, and item 22 showed the order-line picker offers both choices
+ * together unless somebody filters — so a silent downgrade moves tonnage
+ * between those buckets invisibly.
+ *
+ * Ours writes it down. One `adjust` row per attribute that actually changed,
+ * carrying the value before, the value after, the reason and the operator.
+ *
+ * The rest follows the dialog as watched:
+ *
+ * - **A reason is mandatory.** `OK` stays greyed until `Reden` is chosen, so
+ *   this refuses without one rather than defaulting to a catch-all.
+ * - **A correction is two corrections**, each with its own checkbox, and either
+ *   or both may run. A quantity correction moves metal; a characteristic
+ *   correction does not.
+ * - **`Opmerking voorraad toevoegen/aanpassen` may not move metal at all.** It
+ *   is annotation. A remark edit that wrote a stock movement would put a
+ *   phantom row in a ledger finance reconciles against.
+ * - **There is no valuation field anywhere in the dialog**, so this does not
+ *   offer one either. A correction cannot repair the € 0 on a returned lot;
+ *   `Change APP…` or a finance screen has to, which is what makes O9 the only
+ *   route left for item 25's zero-valued lot.
+ *
+ * Reserved quantity is the one thing a quantity correction cannot ignore: a lot
+ * corrected down below what is already spoken for would leave reservations
+ * pointing at metal that is not there, so it is refused rather than silently
+ * releasing somebody's claim.
+ */
+export const applyStockCorrection = async (
+  tx: Transaction,
+  params: ApplyStockCorrectionParams,
+): Promise<StockCorrectionOutcome> => {
+  const { source, reason, userId } = params;
+  const rules = stockCorrectionReasonRules[reason];
+
+  const previousQuantity = Number(source.quantity);
+  const nextQuantity = params.quantity ?? previousQuantity;
+  const quantityDelta = nextQuantity - previousQuantity;
+
+  if (quantityDelta !== 0 && !rules.movesMetal) {
+    throw new Error(
+      "A stock remark correction cannot change the quantity. Choose a reason that moves metal.",
+    );
+  }
+
+  if (nextQuantity < 0) {
+    throw new Error("A lot cannot be corrected to a negative quantity.");
+  }
+
+  const reserved = Number(source.reservedQuantity ?? 0);
+  if (nextQuantity < reserved) {
+    throw new Error(
+      `${reserved} is already reserved on this lot — it cannot be corrected below that. Release the reservations first.`,
+    );
+  }
+
+  const changes = stockAttributeChanges(
+    {
+      stock_category: source.stockCategory,
+      quality: source.quality,
+      length_mm: source.lengthMm,
+      width_mm: source.widthMm,
+      thickness_mm: source.thicknessMm,
+      remark: source.remark,
+    },
+    params.attributes ?? {
+      stock_category: source.stockCategory,
+      quality: source.quality,
+      length_mm: source.lengthMm,
+      width_mm: source.widthMm,
+      thickness_mm: source.thicknessMm,
+      remark: source.remark,
+    },
+  );
+
+  const previousKg = Number(source.quantityKg ?? 0);
+  const nextKg = params.quantityKg ?? previousKg;
+  const kgDelta = nextKg - previousKg;
+
+  if (quantityDelta === 0 && kgDelta === 0 && changes.length === 0) {
+    throw new Error("Nothing was changed, so there is nothing to correct.");
+  }
+
+  // The value follows the quantity at the lot's own carried price, which is
+  // what every other movement does. A correction has no price field of its own,
+  // so it cannot revalue — only restate what the remaining quantity is worth.
+  const unitCost = Number(source.valuationPrice ?? 0);
+  const previousValue = Number(source.valuationEuro ?? 0);
+  const nextValue =
+    quantityDelta === 0
+      ? previousValue
+      : restateLotValue({
+          previousQuantity,
+          remainingQuantity: nextQuantity,
+          unitCost,
+          previousValue,
+        });
+
+  const [updated] = await tx
+    .update(Stock)
+    .set({
+      quantity: nextQuantity.toFixed(3),
+      quantityKg: nextKg.toFixed(2),
+      valuationEuro: moneyString(nextValue),
+      stockCategory: params.attributes?.stock_category
+        ? String(params.attributes.stock_category)
+        : source.stockCategory,
+      quality: params.attributes?.quality
+        ? String(params.attributes.quality)
+        : source.quality,
+      lengthMm: numberOrNull(params.attributes?.length_mm) ?? source.lengthMm,
+      widthMm: numberOrNull(params.attributes?.width_mm) ?? source.widthMm,
+      thicknessMm:
+        params.attributes?.thickness_mm !== undefined &&
+        params.attributes?.thickness_mm !== null &&
+        String(params.attributes.thickness_mm).trim() !== ""
+          ? String(params.attributes.thickness_mm)
+          : source.thicknessMm,
+      remark:
+        params.attributes?.remark !== undefined
+          ? (params.attributes.remark as string | null)
+          : source.remark,
+    })
+    .where(
+      and(eq(Stock.uuid, source.uuid), eq(Stock.quantity, source.quantity)),
+    );
+
+  if (updated.affectedRows === 0) {
+    throw new Error(
+      "The lot changed while the correction was open — reload it and correct it again.",
+    );
+  }
+
+  const rows: InsertStockMovements[] = [];
+
+  // The quantity leg. One row, signed by the direction it went, because a
+  // correction that finds less metal than the books say is an issue and one
+  // that finds more is a receipt — the reason decides which reason code, the
+  // sign decides the type.
+  if (quantityDelta !== 0 || kgDelta !== 0) {
+    rows.push({
+      uuid: generateUuid(),
+      productUuid: source.productUuid,
+      stockUuid: source.uuid,
+      type: quantityDelta < 0 || kgDelta < 0 ? "out" : "in",
+      reason: rules.movementReason,
+      correctionReason: reason,
+      quantity: Math.abs(quantityDelta).toFixed(3),
+      quantityKg: Math.abs(kgDelta).toFixed(2),
+      valueEur: moneyString(Math.abs(nextValue - previousValue)),
+      note: params.description,
+      createdByUserId: userId,
+    });
+  }
+
+  // 🔴 And the leg the reference does not write at all.
+  changes.forEach((change) => {
+    rows.push({
+      uuid: generateUuid(),
+      productUuid: source.productUuid,
+      stockUuid: source.uuid,
+      type: "adjust",
+      reason: rules.movementReason,
+      correctionReason: reason,
+      attribute: change.attribute,
+      valueBefore: change.before,
+      valueAfter: change.after,
+      // Nothing moved, and that is the point of the row: it is here so the
+      // change is on the record, not so the totals shift.
+      quantity: "0.000",
+      quantityKg: "0.00",
+      valueEur: "0.00",
+      note: params.description,
+      createdByUserId: userId,
+    });
+  });
+
+  await tx.insert(StockMovements).values(rows);
+
+  return { movements: rows.length, attributeChanges: changes };
 };

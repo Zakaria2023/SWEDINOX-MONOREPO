@@ -10,7 +10,12 @@ import {
   timestamp,
   varchar,
 } from "drizzle-orm/mysql-core";
-import { stockMovementReasons, stockMovementTypes } from "../../lib/enums";
+import {
+  stockCorrectableAttributes,
+  stockCorrectionReasons,
+  stockMovementReasons,
+  stockMovementTypes,
+} from "../../lib/enums";
 import { Products } from "./products";
 import { Stock } from "./stock";
 import { PurchaseOrders } from "./purchase-orders";
@@ -47,6 +52,31 @@ export const StockMovements = mysqlTable(
     quantityKg: decimal("quantity_kg", { precision: 15, scale: 2 }),
     valueEur: decimal("value_eur", { precision: 15, scale: 2 }),
     note: varchar("note", { length: 255 }),
+
+    // ── A correction, and what it changed ───────────────────────────────
+    //
+    // 🔴 Item 26b. `Correction…` was run twice on lot `404763` on 29-9-2026,
+    // the second time downgrading it `Standaard` → `2nd choice`, and the
+    // reference wrote **no mutation either time** — checked with the date set to
+    // that day on both sides and no search filter, so every mutation in the
+    // system that day was in view. One row exists for the whole day and it is
+    // the return's receipt.
+    //
+    // So its ledger records quantity and value movement and nothing else: it
+    // can say how much of a lot there has ever been, never what the lot was.
+    // That is a gap to close rather than a behaviour to copy, because the
+    // category decides what the metal may be sold as and is the basis of the
+    // 2nd-choice split in the stock analysis — a silent downgrade moves tonnage
+    // between those buckets with no record of who moved it.
+    //
+    // `correctionReason` is the reference's own eight-value `Reden`, which it
+    // will not let you leave empty. `attribute` names what changed and the two
+    // values say what it was and what it became; all three are null on the
+    // movements that actually move metal.
+    correctionReason: mysqlEnum("correction_reason", stockCorrectionReasons),
+    attribute: mysqlEnum("attribute", stockCorrectableAttributes),
+    valueBefore: varchar("value_before", { length: 255 }),
+    valueAfter: varchar("value_after", { length: 255 }),
 
     // Purchase order this movement is tied to — the original "in" receipt,
     // or the "out" reversal logged when that order is cancelled.

@@ -90,6 +90,9 @@ import {
   StockLabelBreakdown,
   StockLabelType,
   StockUnit,
+  StockCorrectableAttribute,
+  stockCorrectableAttributes,
+  StockCorrectionReason,
   StockMovementType,
   TripStatus,
   tripStatuses,
@@ -9333,6 +9336,100 @@ export const stockValueFromWeight = (
  * expected to cost. A line that really did arrive empty has no receival to roll
  * up from either, so the two cases do not collide.
  */
+/** A lot's correctable attributes, as the correction dialog reads them. */
+export type StockCorrectableValues = Record<
+  StockCorrectableAttribute,
+  string | number | null | undefined
+>;
+
+/** One attribute that changed, and what it changed from and to. */
+export type StockAttributeChange = {
+  attribute: StockCorrectableAttribute;
+  before: string;
+  after: string;
+};
+
+/**
+ * One attribute value as it is compared and stored.
+ *
+ * Numbers arrive from the database as strings and from a form as strings too,
+ * but `4` and `4.00` are the same thickness, so a numeric value is compared as
+ * a number and an empty one as the empty string. Nothing is stored as null:
+ * "was blank, now says something" is a change worth reading back.
+ */
+const normaliseAttributeValue = (
+  value: string | number | null | undefined,
+): string => {
+  if (value === null || value === undefined) {
+    return "";
+  }
+  const text = String(value).trim();
+  if (text === "") {
+    return "";
+  }
+  const asNumber = Number(text);
+  return Number.isFinite(asNumber) && /^-?\d*[.,]?\d+$/.test(text)
+    ? String(asNumber)
+    : text;
+};
+
+/**
+ * What each of the eight correction reasons decides.
+ *
+ * Two things, and both of them matter:
+ *
+ * `movementReason` — the coarse reason the resulting row is filed under, so
+ * the movement ledger stays readable with 22 reasons instead of 30. `Rejected
+ * material` and `Inventory rejection` are both write-offs of metal that failed
+ * inspection; `Stock difference` and `Stock correction` are both somebody
+ * squaring the books. The correction reason itself is kept on the row beside
+ * it, so nothing is lost by the grouping.
+ *
+ * `movesMetal` — whether the reason may touch quantity at all. Only the remark
+ * reason may not: it is annotation, and a remark edit that wrote a stock
+ * movement would put a phantom row in a ledger finance reconciles against.
+ */
+export const stockCorrectionReasonRules: Record<
+  StockCorrectionReason,
+  { movementReason: StockMovementReason; movesMetal: boolean }
+> = {
+  rejected_material: { movementReason: "damaged", movesMetal: true },
+  inventory_rejection: { movementReason: "damaged", movesMetal: true },
+  stock_difference: { movementReason: "count_correction", movesMetal: true },
+  stock_correction: { movementReason: "manual_correction", movesMetal: true },
+  transfer_length: { movementReason: "manual_correction", movesMetal: true },
+  internal_damage: { movementReason: "damaged", movesMetal: true },
+  scrap: { movementReason: "warehouse_scrapped", movesMetal: true },
+  stock_remark: { movementReason: "manual_correction", movesMetal: false },
+};
+
+/**
+ * Which of a lot's attributes a correction changed, as the pairs worth
+ * recording.
+ *
+ * 🔴 This is the whole of item 26b. The reference changed lot `404763` from
+ * `Standaard` to `2nd choice` and wrote nothing down — so its movement ledger
+ * can tell you how much of a lot there has ever been, and nothing at all about
+ * what it was. Ours writes a row per changed attribute, which is why this
+ * returns a list rather than a flag.
+ *
+ * Only genuine changes come back. Re-saving the dialog with nothing touched is
+ * a no-op here, the way it was in the reference — the difference is that ours
+ * says so rather than silently succeeding.
+ */
+export const stockAttributeChanges = (
+  before: StockCorrectableValues,
+  after: StockCorrectableValues,
+): StockAttributeChange[] =>
+  stockCorrectableAttributes.flatMap((attribute) => {
+    const from = normaliseAttributeValue(before[attribute]);
+    const to = normaliseAttributeValue(after[attribute]);
+    if (from === to) {
+      return [];
+    }
+    return [{ attribute, before: from, after: to }];
+  });
+
 export const billingWeightKg = (
   kgTheoretical: string | number | null | undefined,
   kgActual: string | number | null | undefined,

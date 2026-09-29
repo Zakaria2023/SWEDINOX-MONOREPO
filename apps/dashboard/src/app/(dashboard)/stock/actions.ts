@@ -18,6 +18,13 @@ import {
 } from "@/db/schema/purchase-order-items";
 import { describeError } from "@/lib/helpers";
 import { stockStatuses } from "@/lib/enums";
+import { requireAuth } from "@/lib/auth";
+import { applyStockCorrection } from "@/lib/server/stock-movements";
+import {
+  StockCorrectionFormValues,
+  stockCorrectionSchema,
+} from "@/app/(dashboard)/stock/validation";
+import { revalidatePath } from "next/cache";
 import {
   booleanFilter,
   dateRangeFilter,
@@ -48,6 +55,13 @@ export type StockListItem = SelectStock & {
 
 export type StockDetail = StockListItem & {
   movements: SelectStockMovements[];
+};
+
+export type StockCorrectionResult = {
+  error?: string;
+  success?: boolean;
+  /** How many ledger rows the correction wrote, for the confirmation. */
+  movements?: number;
 };
 
 const STOCK_SEARCH = [
@@ -193,4 +207,74 @@ export const getStockDetail = async (
     .orderBy(desc(StockMovements.createdAt));
 
   return { ...stockRow, movements };
+};
+
+/**
+ * `Correction…` on a lot.
+ *
+ * 🔴 The whole of item 26b lives under this: the reference changed lot `404763`
+ * from `Standaard` to `2nd choice` on 29-9-2026 and wrote nothing to the
+ * mutation ledger, so nobody can tell from the books that a prime bundle was
+ * downgraded. Ours writes a row per changed attribute. `applyStockCorrection`
+ * carries the reasoning and the rules; this resolves the lot, validates, and
+ * keeps it all in one transaction so a half-applied correction cannot exist.
+ */
+export const correctStockLot = async (
+  _prevState: StockCorrectionResult,
+  input: StockCorrectionFormValues,
+): Promise<StockCorrectionResult> => {
+  const userId = await requireAuth();
+
+  const parsed = stockCorrectionSchema.safeParse(input);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid correction" };
+  }
+  const values = parsed.data;
+
+  try {
+    const movements = await db.transaction(async (tx) => {
+      const [lot] = await tx
+        .select()
+        .from(Stock)
+        .where(eq(Stock.uuid, values.stockUuid))
+        .limit(1);
+
+      if (!lot) {
+        throw new Error("Stock lot not found");
+      }
+
+      const outcome = await applyStockCorrection(tx, {
+        source: lot,
+        reason: values.reason,
+        description: values.description?.trim() || null,
+        quantity: values.correctQuantity ? Number(values.quantity) : undefined,
+        quantityKg:
+          values.correctQuantity && values.quantityKg
+            ? Number(values.quantityKg)
+            : undefined,
+        attributes: values.correctCharacteristics
+          ? {
+              stock_category: values.stockCategory,
+              quality: values.quality,
+              length_mm: values.lengthMm,
+              width_mm: values.widthMm,
+              thickness_mm: values.thicknessMm,
+              remark: values.remark,
+            }
+          : undefined,
+        userId,
+      });
+
+      return outcome.movements;
+    });
+
+    revalidatePath(`/stock/${values.stockUuid}`);
+    revalidatePath("/stock");
+    revalidatePath("/stock-movements");
+    revalidatePath("/stock-on-location");
+
+    return { success: true, movements };
+  } catch (error) {
+    return { error: describeError(error, "Failed to correct the stock lot") };
+  }
 };

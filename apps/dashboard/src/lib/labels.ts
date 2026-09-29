@@ -87,6 +87,8 @@ import {
   ReservationStatus,
   ReservationType,
   StockUnit,
+  StockCorrectableAttribute,
+  StockCorrectionReason,
   StockMovementReason,
   StockMovementType,
   StockStatus,
@@ -928,6 +930,35 @@ export const STOCK_STATUS_LABELS: Record<StockStatus, string> = {
 export const STOCK_MOVEMENT_TYPE_LABELS: Record<StockMovementType, string> = {
   in: "In",
   out: "Out",
+  adjust: "Adjustment",
+};
+
+export const STOCK_CORRECTION_REASON_LABELS: Record<
+  StockCorrectionReason,
+  string
+> = {
+  rejected_material: "Rejected material",
+  inventory_rejection: "Inventory rejection",
+  stock_difference: "Stock difference",
+  stock_correction: "Stock correction",
+  transfer_length: "Transfer length",
+  internal_damage: "Internal damage",
+  scrap: "Scrap",
+  // The reference prints this one in Dutch even on the English build:
+  // `Opmerking voorraad toevoegen/aanpassen`.
+  stock_remark: "Add / adjust stock remark",
+};
+
+export const STOCK_CORRECTABLE_ATTRIBUTE_LABELS: Record<
+  StockCorrectableAttribute,
+  string
+> = {
+  stock_category: "Category",
+  quality: "Quality",
+  length_mm: "Length (mm)",
+  width_mm: "Width (mm)",
+  thickness_mm: "Thickness (mm)",
+  remark: "Remark",
 };
 
 export const LEDGER_ACCOUNT_TYPE_LABELS: Record<LedgerAccountType, string> = {
