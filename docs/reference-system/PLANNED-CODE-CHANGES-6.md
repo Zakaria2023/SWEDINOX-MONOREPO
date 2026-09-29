@@ -20,6 +20,23 @@ wrong stock. 5–12 are missing mechanism. 13–20 are missing fields and screen
 
 ---
 
+## ▶️ Code resumed, 29-9-2026 (same evening)
+
+The capture-first pause set earlier on 29-9 was **lifted the same evening** by
+Swedinox: build what tonight's flow produced. Items **22–26b** are back to being
+a work queue.
+
+Order of work, smallest blast radius first:
+
+1. **24** — the `reportPicking` guard (no arithmetic, pure refusal)
+2. **25a** — the `returnReasons` enum
+3. **26b** — a correction writes a movement for attribute changes
+4. **22** — picker semantics: physical-stock filter, ±5 % dimensional margin
+5. **23** — the purchase line's two weights ⚠️ **last**, and re-run every
+   purchase margin check after it
+
+---
+
 ## Where this stands — 21-9-2026, twenty commits
 
 **Everything that was demonstrably *wrong* is fixed.** What is left is new
@@ -32,13 +49,13 @@ feature work and two genuinely blocked items.
 | 🟡 | **3** valuation on receipt | `33c2920` — ledger half was already right; lot half blocked on **O9** |
 | ✅ | **4** charge mandatory per bundle | `dfc5aa6` — server rule + disabled button |
 | ✅ | **5** lot number vs receipt charge | `69575db` — `nextInternalBatch` |
-| ✅ | **6** stock picker | `4977929` + `a948733` + `b5ed4f3` — search, dialog and the nullable reservation. `Use selected product` resolves to the fullest lot rather than leaving the line open, because our line writes a reservation and a reservation binds a lot. `Internal production` is not offered: never seen holding anything |
+| ✅ | **6** stock picker | `4977929` + `a948733` + `b5ed4f3` — search, dialog and the nullable reservation. `Use selected product` resolves to the fullest lot rather than leaving the line open, because our line writes a reservation and a reservation binds a lot. `Internal production` is not offered: never seen holding anything. **29-9-2026:** re-read against the stock screen — it respects reservations, `Only products with available stock` filters on *physical* stock, and it searches dimensions at ±5 % (item 22) |
 | ✅ | **7** unblock clears its reason | `a03a643` |
 | ✅ | **8** `Make final` raises both work orders | `e8c5cda` — also corrected picking's destination |
 | ✅ | **9** ladder self-approves | already correct; **4** locked it in |
 | ✅ | **10** internal move is not a mutation | `33c2920` — 19 reasons, none a relocation |
 | 🟡 | **11** profit bases | `c30569d` — **three of four.** APP and replacement were already there; FSP now comes from the dated settlement history. **LIP is deliberately absent**: its behaviour is known, its meaning is not (K4), and a column of zeros would read as an answer |
-| 🔴 | **12** picking allocation | Blocked on **O2**/**O3** |
+| 🔴 | **12** picking allocation | Blocked on **O2** and the warehouse half of **O3** — the sales half of O3 closed 29-9-2026 (item 22) |
 | ✅ | **13** order fields | `a55e249` — most already existed; transport/handling costs added |
 | ✅ | **14** customer defaults | `a55e249` |
 | 🟡 | **15** confirmation document | `2e56830` — built, and sending is its own decision as the reference makes it (`Don't send` is the default). The **footer is deliberately absent**: printing *"payment discharges only to Boozt24 Finance"* tells a customer where to send money, and **O8** is unanswered. A wrong answer there is somebody's money in the wrong bank |
@@ -48,6 +65,12 @@ feature work and two genuinely blocked items.
 | ✅ | **19** location tree | `94a32ed` — and it earned its keep. Ours reaches **3 levels, not 4**, and carries **no `load` location at all**, so `makeOrderFinal` would have refused every order. Now falls back through the reference's own three picking destinations in its own order of frequency |
 | ✅ | **20** smaller confirmations | no change needed |
 | ✅ | **21** product record | `d987957` — unblocked item 1 |
+| 📄 | **22** order-line stock picker re-read | 29-9-2026 — respects reservations; `Only products with available stock` filters on *physical* stock; ±5 % dimension margin. Sales half of **O3** closed |
+| 🟡 | **23** purchase bills weighed kilos | 29-9-2026 — `Amount = Kg(a) x price`, proved to the cent on PO `402532`. **Built:** `kg_actual` on the line, `billingWeightKg`, `rebillPurchaseLineOnWeighedKilos` after each receipt, and the purchase-lines read path no longer calls a pro-rata estimate "actual". ⚠️ **`pnpm db:push` has not run** — the column does not exist in the database yet |
+| ✅ | **24** `Report completion` crashes | 29-9-2026 — `NullReferenceException` on a picking with no lots assigned, twice. **Built:** a pre-flight guard refuses an out/move report whose rows carry no lot, with a stated error instead of a crash. O2 and the warehouse half of O3 stay parked |
+| 🔴 | **25** flow H12, a return end to end | 29-9-2026 — a return raises an **Unloading** work order with no purchase order, and the lot lands at **€ 0, prime, sellable, undated, no charge**. Six-value `Return reason` enum. No link to the original sale anywhere. **Not yet built** | ✅ **25a built:** `returnOrderReasons` is now the reference's six, with labels and the complaint mapping. The rest — lot valuation, `receivedAt`, the link to the original sale — is not |
+| 🔴 | **26** the return's stock mutation | 29-9-2026 — kg +35,325 and **value +€ 0,00** against account `3000`. Reason `Ontvangst Return customer`. The mutation carries `R290247` / `290247/10` / workorder `327396` and **stored running balances**, where the document itself links to nothing |
+| 🔴 | **26b** `Correction…` is silent | 29-9-2026 — ran twice on lot `404763`; the second downgraded it `Standaard` → `2nd choice` and **no mutation was written** either time. The ledger records quantity and value, never attributes |
 
 **Two schema pushes**, both applied: `transport_costs` / `handling_costs` on
 orders, `delivery_terms` / `weight_type` on companies, and one new system-log
@@ -686,7 +709,7 @@ four levels, and that the picker is a search rather than a dropdown.
 | # | Question | Why it blocks |
 |---|---|---|
 | **O2** | 🔴 **Lot `389825` lost 5 pieces when the picker named `389827`.** Totals conserve (100 pieces, 10 597,5 kg before and after) and a new `389827` row appeared at `Laad` with 5, while `389827` at `Ontvangst` kept its 10 and gained a reservation of 5 | Either the six-digit number is a reusable label rather than a lot identity, or the pick debited a different lot than it displayed. Item 12 depends on which. The mutations ledger cannot settle it (item 10) |
-| **O3** | The picker showed `Available` as the full quantity on lots the stock screen showed at `Available 0` | An availability rule cannot be written while the two disagree |
+| **O3** | 🟡 **Narrowed 29-9-2026.** The *order-line* `Stock` picker was re-read against the stock screen on `PK316T05013` and **agrees** — `Available 0` on both, at group and lot level (item 22). The disagreement was seen on the *picking* `Report completion` `Charge` picker, which is a different dialog and is **still unread** | An availability rule cannot be written for the warehouse side while the two disagree. The sales side is now settled |
 | **O4** | **What computed the 20/25/20/25/10 bundle split?** Offered pre-filled and accepted unchanged | Item 4 offers one row until this is known |
 | **O5** | Was work order `306675` raised by the `Workorder` button, or automatically by `Confirm` / `Pre-notifiy`? | The only gap left in H1 |
 | **O6** | After reporting, work order `306675` read `Qty(p) 10 / Kg(p) 1 060,2`, down from 100 / 10 598, with no child rows | Cosmetic — the stock is right either way — but unexplained |
@@ -760,3 +783,555 @@ appearance, performance) · `Print dimensions` ☐ · `Industry number`.
 Toolbar: `Show product group` · **`Correct products and stock`** (live — this is
 the H3 adjust-a-lot entry point) · `Activate` (greyed) · `Production workorder
 for stock` (greyed) · `Copy product (group) and…`.
+
+---
+
+## 22. The order-line stock picker, read against the stock screen — 29-9-2026
+
+One product, `PK316T05013`, opened twice: on `Stock on location` and then in the
+`Stock` search window that `New` raises on an order line. Four lots, one receipt
+(`IO403918`, 15-7-2026, charge `0477979`, Acciai Speciali Terni).
+
+### What the stock screen says
+
+| Bundle | Location | Stock | Reserved | Available | Kg | € | €/TN |
+|---|---|---|---|---|---|---|---|
+| `403911` | `9C` | 156 | 156 | **0** | 1 990 | 7 038,52 | 3 536,99 |
+| `403912` | `9C` | 156 | 156 | **0** | 1 990 | 7 038,52 | 3 536,99 |
+| `403916` | `9C` | 53 | 53 | **0** | 676 | 2 391,29 | 3 536,99 |
+| `403917` | `4A1` | 30 | 0 | **30** | 383 | 1 378,66 | **3 602,57** |
+
+`Available = Stock − Reserved`, exactly, on all four.
+
+### What the order-line picker says
+
+The upper grid groups the lots by quality/option/choice, and the lower grid
+lists the lots of the selected group:
+
+| Upper row | Technical | Reserved | Available | is |
+|---|---|---|---|---|
+| 316T, no option | 209 ST | 209 ST | **0 ST** | `403912` + `403916` |
+| 316T, `Stempelen` | 156 ST | 156 ST | **0 ST** | `403911` |
+| 316T, `2nd choice` | 30 ST | 0 ST | **30 ST** | `403917` |
+
+The lower grid reads `Available 0 ST` on `403912` and `403916` individually.
+
+**The order-line picker respects reservations.** It does not show free metal
+that is already committed, at either level.
+
+⚠️ **This is not O3.** O3 was raised on the *picking* `Report completion`
+dialog's `Charge` lot picker (item 12), which is a different window. What this
+settles is that the **sales-side** picker is safe to copy; the warehouse-side
+one is still unread. See the amended O3 below.
+
+### Three behaviours to copy, and one not to
+
+1. 🔴 **`Only products with available stock` does not filter on availability.**
+   It was ticked while two rows showed `Available 0 ST`. The grid's own filter
+   chip reads `TotalPhysicalStock ≠ 0`. So the checkbox means *physical stock
+   exists*, not *available > 0* — the obvious implementation is the wrong one.
+2. **`Search with margin` — ±5 % on length, width and thickness**, defaulted on
+   with 5 in each box. Asking for 2500 × 1300 also offers 2540 × 1250. Ours has
+   no dimensional tolerance at all.
+3. **`Use selected stock` is disabled until a lot is ticked** in the lower grid;
+   `Use selected product` is always live. That is the two-level commitment of
+   item 6, enforced in the UI.
+4. `1e keus` / `2e keus` are the stock-category filter, both unticked by default,
+   so both choices are offered together — a 2nd-choice lot is a normal candidate
+   unless somebody excludes it.
+
+### The revaluation gap, on a second record
+
+The lower grid prints both prices side by side: **`APP 3537 / TN` against
+`Purchase 3500 / TN`** on `403912` and `403916`. The same €37/TN shape as
+purchase order `401141`, now seen on an unrelated receipt — so it is the rule,
+not an artefact of the flow we watched.
+
+And the fourth lot sharpens it. `403917` is the **2nd choice** downgrade off the
+same receipt, created `02-09-2026 16:44` against `18-08-2026 12:20` for the other
+three, and it is valued **above** them — €3 602,57/TN against €3 536,99/TN.
+
+**A lot takes the product's carried average on the day the lot is created, not
+the price on the receipt it came from.** Two weeks of APP drift is why the
+downgraded lot is worth more per tonne than the prime metal beside it. This is
+item 3's mechanism, and it is what makes **O9** urgent rather than academic: the
+gap is posted on every receipt and on every later lot split.
+
+### Amended: O3 narrows, it does not close
+
+| | Before | Now |
+|---|---|---|
+| Order-line `Stock` picker (item 6) | unknown | ✅ respects reservations |
+| Picking `Report completion` lot picker (item 12) | disagrees with stock screen | 🔴 still unread |
+
+The two dialogs may legitimately differ — a salesman must not commit reserved
+metal, while a warehouseman consuming stock arguably should see everything
+physically on the shelf. **Item 12 stays blocked**, now on O2 and the warehouse
+half of O3 only.
+
+### Also noted
+
+`Finance` is absent from the `Overviews` tree on the login used for this
+capture — ten groups, not the eleven recorded on 10-9-2026. A rights difference,
+not a missing module. **The ledger work needs a login with Finance rights**, and
+the `Journal entries` re-capture is parked until then.
+
+---
+
+## 🔴 23. A purchase line is billed on the **weighed** kilos, and stock keeps the **theoretical** ones — 29-9-2026
+
+Purchase order **`402532`** (Holland Stainless Int, supplier `11692`, created
+3-12-2025, purchaser Cherice van Rooyen), opened from a warehouse work order
+row. Two lines, sixteen receipts, twelve lots still on the floor.
+
+### First, a structural answer nobody had asked for
+
+**A warehouse work order has no record of its own.** Right-clicking a row on
+`Warehouse workorders` offers exactly two things — `Show Product` and
+`Show Purchase order` — and nothing opens a work-order detail screen. The work
+order lives as a **panel on its parent document**: the purchase order carries
+`Workorders` with three sub-grids (`Warehouse` · `Production` · `Transport`),
+and that is the only place its lines are editable.
+
+⚠️ **Consequence for us:** there must be no standalone work-order detail route.
+The picking `Report completion` dialog is reached from the *sales order*, not
+from the work-order overview — which is why the O3 warehouse half is still
+unread.
+
+### The arithmetic — every figure to the cent
+
+| Line | Product | Qty | `Kg(p)` | `Kg(a)` | Net price | Amount |
+|---|---|---|---|---|---|---|
+| 10 | `PW304L04315` | 160 ST | 22 608 | **22 655** | € 1 970,00 / TN | € 44 630,35 |
+| 20 | `PW304L05315` | 144 ST | 25 434 | **25 829** | € 1 970,00 / TN | € 50 883,13 |
+
+```
+Kg(p) x 1,97 = 44 537,76    <- NOT the amount
+Kg(a) x 1,97 = 44 630,35    <- exact, both lines
+```
+
+🔴 **`Amount = Kg(a) x net price`.** The planned weight bills nothing. And the
+whole document follows from it:
+
+| | Computed | Shown |
+|---|---|---|
+| Materials | 95 513,48 | 95 513,48 ✅ |
+| VAT @ 21 % | 20 057,83 | 20 057,83 ✅ |
+| Incl. VAT | 115 571,31 | 115 571,31 ✅ |
+| Total weight | **sum of `Kg(a)`** = 48 484 | 48 484 ✅ (sum of `Kg(p)` is 48 042) |
+
+### Where the two kilos come from
+
+The product record settles it. `PW304L04315`, `Weights` block:
+
+```
+Theoretically:  7 850,000      Trade:  8 000,000      German:  0,000
+```
+
+A 3000 x 1500 x 4 mm plate:
+
+| Basis | kg/piece |
+|---|---|
+| theoretical, 7 850 kg/m³ | **141,3** |
+| trade, 8 000 kg/m³ | 144,0 |
+| actually weighed (`Kg(a)` / 160) | **141,59** |
+
+- `Kg(p)` 22 608 / 160 = **141,30** — the theoretical weight, exactly
+- Stock's `Kg (t)` 1 413 per 10 pieces = **141,3** — theoretical, exactly
+- `Kg(a)` 22 655 / 160 = **141,59** — the weighbridge
+
+🔴 **So the purchase pays for 141,59 kg a plate and stock carries 141,30.** On
+this one order that is **442 kg bought and never stocked** (48 484 − 48 042),
+about € 871 at the line price. It is not an error — it is the same two-weight
+split as item 1, seen from the buying side, and it is where `5300 Price
+differences on purchase invoices` and the O9 revaluation gap come from.
+
+**Change:**
+
+- `purchase-order-items` must carry **both** weights and bill on the actual one.
+  Ours has a single weight, so every purchase line is billed on theory.
+- The receipt grain already holds both — the `Receipts` panel prints `Kg(p)`
+  1 413 against `Kg(a)` 1 405 per receival, with `Qty(p)` in `ST` and `Qty(a)`
+  in `Pieces`.
+- The order header's total weight is the **actual** sum, not the planned one.
+
+### The stock panel's toolbar — the write actions, named
+
+On the product record, the `Stock` panel carries the verbs we have been guessing
+at:
+
+```
+New · Relocating… · Restocking… (greyed) · Correction… · Scrapping… ·
+Transfering… · Batch registration… · Reservations… · Stock label ·
+Opties bewerken · Splits
+```
+
+**`Correction…` is the H8 "adjust a lot by hand" entry point**, and `Splits`,
+`Scrapping` and `Transfering` are three more write paths we list read-only.
+`Restocking…` is greyed — another of the switched-off features.
+
+### Smaller things off the same document
+
+- **`Text lines`** is a panel with a **category** enum — one row here, category
+  `InkoopOrder`, text *"Please note that this position was changed"*. Free text
+  is categorised per document, not a single notes field.
+- The purchase-order toolbar carries **`Return`** and **`Par. return`** — the
+  purchase-return flow, beside `Confirm`, `Pre-notify`, `Workorder`, `Options…`
+  and `Relocate`.
+- **`Pricing` is empty again** — every box € 0,00 and greyed, on a second
+  document. Item 18's diagnosis holds: the cascade derives nothing when the
+  product sits on the general price list.
+- `Previous orders` shows three prior buys of the same product with a
+  **`Days in system`** column (257 / 391 / 460) — the age of the order, offered
+  as a buying aid.
+- Lots from one receipt carry **two different charges** — `0476884` and
+  `0477095` — against one purchase order `IO402532` and one receipt date. So a
+  charge is per *receival*, not per purchase order, confirming item 5.
+
+---
+
+## 24. `Report completion` crashes on an unassigned picking — 29-9-2026
+
+Two attempts, two identical crashes, so this is the behaviour and not a fluke.
+
+```
+Unexpected application Error
+ExceptionManager.FullName: ez2Lib.Shared, Version=3.13.0.508
+Exception Type: System.NullReferenceException
+Message: Object reference not set to an instance of an object.
+```
+
+Only button offered: `Close application`.
+
+### What was being reported
+
+Work order **`312722`** (Picking, 15-10-2025, order `103015` Mercainox,
+7 lines / 4 673,7 kg / 95 pieces planned, **0 ready**), selected on the
+operational screen and reported with the toolbar's `Report completion...`.
+
+🔑 **Every line of `312722` carries `Charge` = `-`.** The sibling work order on
+the same sales order, `312991`, carries charge `519108` on its line — and
+`312991` crashed too.
+
+### What it implies
+
+A picking cannot be reported until its lines have lots assigned, and the
+reference does not guard the case: it dereferences the allocation and throws.
+So **charge assignment is a step of its own, before reporting** — which is most
+of what item 12 was trying to establish.
+
+**Change:** our `reportPicking` must refuse a line with no allocated lot with a
+stated error, not proceed. That is a guard the reference itself lacks.
+
+### O2 and the warehouse half of O3 stay open, and are now expensive
+
+Reaching that dialog needs a picking whose lines already carry charges, which in
+practice means watching one picked from the start rather than opening an
+existing one. **Park both until a flow session.** They block only item 12.
+
+### Route notes, so nobody hunts for this again
+
+- `Overviews → Logistics → Warehouse workorders` is a **report grid**.
+  **`Logistics → Warehouse workorders`** (the top menu, not Overviews) is the
+  **operational screen** — that is where work is released, reported, approved.
+- Its toolbar: `Select All` · `Details` · `Release` · `Vrijgeven zonder
+  voorraadlabels` · `To prepare` · **`Report completion...`** · `Approve` ·
+  `Cancel` · `Package` · `Print`. Filters: `Date` · `Section` · `Subsection` ·
+  `Type` · `Status` · `To`, plus priority buttons `1 2 3 4`.
+- Queue buttons across the top: `Afhalen` · `Hego Prod - Lossen` ·
+  `Hego Prod - Picken` · `Lossen` · `To Do Slijp+Knip` · `Alles`.
+- The sales order's `Actions` menu does **not** report work orders. It holds
+  `Print` · `Send` · `Return` · `Par. return` · `Show company` · `PAC` ·
+  `Cancel` · `Optimize` · `Copy` · `Workorder` · `Invoice` · `Options…` ·
+  `Prices…` · `Optimize (input)` · `Manual sawing workorders…` · `Show quote` ·
+  `Pro-forma invoice…` · `Delivery dates…` · `Print order status…` ·
+  `Send order status…` · `DSTV Import` · `Print packing list` ·
+  `Send certificates` · `Bill of lading` · `Opties inkopen…`.
+- `Logistics` menu: `Warehouse workorders` · `Production workorders` ·
+  `Transport workorders` · `Production schedule Suppliers`.
+
+### Item 17's sixteen panels, confirmed by name
+
+The order's panel-jump menu lists them exactly: `Workorders` · `Order lines` ·
+**`Competitors`** · `Contracts` · `Invoice lines` · `Finances` ·
+`Purchase lines` · `Complaints` · `Logistics` · `Remark` · `Return lines` ·
+`Texts` · `Surcharges` · `Documents` · **`Communication`** ·
+**`PDF Documents`**. Sixteen, and the three we were least sure of are real.
+
+### One more order header field
+
+Order `108034` and `103015` both carry a **`Normal` / `Weighed`** dropdown in the
+order-type block, and the summary prints **`Avg. kilo price`** — € 2,55 on
+`108034` (71 349,00 ÷ 27 980, exact) and € 2,57 on `103015`. The header also
+prints `Total weight` beside `Theor. wt.`: equal on `108034` (27 980 / 27 980,0),
+**different on `103015` — 18 578,4 against 18 397,3**. The same two weights as
+item 23, now on the selling side of a delivered order.
+
+---
+
+## 🔴 25. Flow H12 — a return, watched end to end — 29-9-2026
+
+Return order **`290247`** (Mercainox `12368`), created, made final and reported
+in `HEGO TEST`. One line, `PK304L100315`, 1 ST, 35,325 kg. The first write-flow
+watched since 21-9, and the one that answers what a return actually does.
+
+### The document
+
+- Entering the customer **creates the document immediately** — number `290247`,
+  status `Provisional`, before anything is on it.
+- `Contact`, `Sales` (the rep), `Pick-up` and `Delivery address` all fill from
+  the customer record. 🔑 **The two addresses are inverted against a sales
+  order**: `Pick-up` is the customer's address, `Delivery address` is ours
+  (`Bolderweg 10, 1332AT, Almere`). Goods travel customer → us.
+- 🔴 **`Sales order` on the header is greyed and cannot be filled.** There is no
+  header-level link to the original sale.
+- 🔴 **The line's `Order line` stays `0`.** Nothing links the return to the sale
+  it reverses — not on the header, not on the line, not through the charge.
+
+### `Return reason` — a six-value enum we did not have
+
+```
+Damaged · Wrong quantity · Wrong material delivered ·
+Delivered too late · Not delivered / not collected · Transport damage
+```
+
+**Change:** `lib/enums.ts` gets `returnReasons`, `lib/labels.ts` its labels. It
+decides nothing yet — but see [[feedback-enums-must-carry-behaviour]]: find out
+whether `Transport damage` routes differently before shipping it as a label.
+
+### Picking the line
+
+`New` on `Order lines` adds an **inline row**, not a dialog. The `Product` cell's
+`…` opens **the same `Stock` search window as a sales order** — same three tabs,
+same `TotalPhysicalStock ≠ 0` chip, same ±5 % margin. So a return line is chosen
+from **our own stock**, identifying what the metal *becomes*, not what it was.
+
+`Reserveringen…` is greyed here where it is live on a sales order.
+
+🔴 **No price cascades.** With the product picked and `Qty(p) = 1` entered,
+`Gross Price` stayed `€ 0,00`, `Amount € 0,00`, `Materials € 0,00`. A return
+does not price itself from the original invoice, nor from the product list. The
+credit value is typed by hand, or it is nothing.
+
+`Kg(p)` filled itself: **35,4** on screen, **35,325** in stock — the exact
+theoretical (3,0 × 1,5 × 0,001 × 7 850). The grid rounds to one decimal; the lot
+keeps four.
+
+### `Make final`
+
+Silent — no dialog, no confirmation. Status `Provisional → Released` on header
+and line, `Customer` and `Return date` lock, `Make final` leaves the toolbar and
+`Workorder` / `Invoice` come alive.
+
+🔴 **It accepted `€ 0,00` without objection.** A return can be made final
+carrying no money at all.
+
+### 🔑 A return raises an `Unloading` work order
+
+Work order **`327396`**, Type **`Unloading`** — the *same type as a supplier
+receipt*. Status `New`, `To` = **`Ontvangst`**, `Qty(p) 1 ST`, `Kg(p) 35,4`.
+
+- **There is no "return" movement type.** Goods coming back use the same verb as
+  goods arriving from a mill. One inbound movement, two possible causes.
+- 🔴 **`Purchase order` is `-leeg-`.** An unloading work order exists with **no
+  purchase order behind it**. If our schema requires one, a return cannot be
+  booked at all.
+- It lands at **`Ontvangst`**, not a pick location, and starts at `New` — a rung
+  below the `Released` that picking starts at.
+
+### Reporting it
+
+`Release` first (the screen also offers `Vrijgeven zonder voorraadlabels` —
+release *without* stock labels, so a normal release prints them), then
+`Report completion…`.
+
+The dialog opened **without crashing**, which confirms item 24: the
+`NullReferenceException` is specific to a *picking* whose lines carry no
+allocated lot, not to reporting in general.
+
+- `OK` is **greyed until `Charge` is filled** — item 4 holds on the return path
+  too: a charge is mandatory per bundle.
+- `Charge` is **free text**, no picker. So the charge is no route back to the
+  original sale either.
+- Columns we do not model: `Gross weight`, `Weight claimed`, `Side`,
+  `Factory number`, `Internal batch`, and `For order line` — which is a
+  **checkbox**, not a lookup.
+
+🔑 **And then this, on `OK`:**
+
+> **Geen gewogen gewicht** — *"De opdracht moet met gewogen gewichten
+> teruggemeld worden. Het gewicht is niet gewijzigd. Doorgaan?"*
+> *(The work order must be reported back with weighed weights. The weight has
+> not been changed. Continue?)*
+
+**This is the mechanism behind item 23.** The order is type `Weighed`, and the
+system insists the reported weight be the one off the scale, warning when the
+theoretical figure is left untouched. That is how `Kg(a)` comes to differ from
+`Kg(p)` — and why a purchase line bills on `Kg(a)`.
+
+### 🔴 The finding that matters: a returned lot enters stock at ZERO
+
+Lot **`404763`**, read straight off `Stock on location`:
+
+| Field | Value |
+|---|---|
+| Location / type | `Ontvangst` / `Pick` |
+| Warehouse section | `00 Hego Almere` |
+| Stock | 1 ST · **35,325 kg** |
+| **Valuation price** | **0** |
+| **Stock (€)** | **0** |
+| Stk-GL account | **`3000` Stock** |
+| `Charge` | **empty** |
+| `Internal charge` | **empty** |
+| `Purchase order` | **empty** |
+| `Supplier` | **empty** |
+| `Receipt date` | **0** |
+| `Blocked` | False |
+| `Stock category` | *(blank — prime)* |
+| `Available (StkU)` | **1** |
+
+Three consequences, each worth code:
+
+1. 🔴 **The metal is on the books at € 0, prime, unblocked and immediately
+   sellable.** Sell it and the margin reads 100 %. Nothing revalues it; nothing
+   flags it. This is `3550 Stock revaluation`'s job and it is not being done —
+   which sharpens **O9** from an accounting question into a live distortion.
+2. 🔴 **The typed charge did not persist.** `RET290247` was entered in the
+   reporting dialog and the lot carries no charge, no internal charge, no
+   supplier. **Traceability breaks on every return** — you cannot get from the
+   lot back to who sent it.
+3. 🔴 **`Receipt date` is `0`.** The lot is undated, so every age-based report
+   skips it. In the 22-9 stock analysis **38 of 2 035 lots had no receipt date**
+   and were dropped from the ageing — returns are very likely most of them.
+
+**Change:**
+
+- `stock-lots` created by a return must carry a value. Decide the basis
+  (original sale price, product APP, or zero-and-flag) — this is a business
+  call, and it belongs with **O9**.
+- The reported charge must persist to the lot.
+- `receivedAt` must be set on a return, or the ageing reports lie.
+- A return must be linkable to the sale it reverses. The reference does not do
+  it; **we should**, because without it a credit cannot be checked against what
+  was charged.
+
+### What is still not answered
+
+`Invoice` came alive on the return after `Make final` and was **not pressed** —
+so the credit note itself, and whether it prices from the original invoice, is
+the one part of H12 still unwatched. That is the natural first step next time.
+
+---
+
+## 🔴 26. The return's stock mutation — value does not move — 29-9-2026
+
+The mutation written when lot `404763` landed, read off
+`Overviews → Logistics → Stock mutations`, every column.
+
+| Field | Value |
+|---|---|
+| Mutation date / time | `29-9-2026 17:34:44` |
+| Mutation operator | `A.K` |
+| **Mutation reason** | **`Ontvangst Return customer`** |
+| Product | `PK304L100315`, 3000 x 1500 x 1 |
+| Mutation qty | **1 ST** · **35,325 kg** |
+| **Mutation value** | **€ 0,00** |
+| **Workorder#** | **`327396`** |
+| **Order** | **`R290247`** |
+| **Text** | **`290247/10`** |
+| General ledger | **`3000`** |
+| Revenue group | `SS 304` / `1000` |
+| Company | `12368` Mercainox |
+| Internal Bundle | `404763` |
+| Charge · Purchase order · Supplier · Internal charge · Receipt date | **all empty** |
+
+### 🔴 The kilos moved and the money did not
+
+The mutation carries running balances, before and after, in all three units:
+
+```
+kg    16 695,298  ->  16 730,623     +35,325   ✅ exactly the lot
+qty          452  ->         453     +1
+EUR   18 232,39   ->   18 232,39     +0,00     🔴 value did not move
+```
+
+**35,325 kg of prime, sellable 304L entered stock against account `3000` and
+added nothing to its value.** Item 25 saw this on the lot; here it is in the
+movement ledger, which is what any stock valuation report would read. The stock
+quantity and the stock value are now out of step by one bundle, permanently,
+until somebody revalues it by hand.
+
+This is what makes **O9** urgent. It is not an accounting nicety about where a
+revaluation posts — the reference is putting metal on the books at zero and
+nothing catches it.
+
+### 🔑 A mutation is better linked than the document it came from
+
+Item 25 found that a return links to nothing — no sales order on the header, no
+`Order line` on the line, no charge. But the **mutation** carries:
+
+- `Order` = **`R290247`** — with the `R` prefix, which is where the `R2900xx`
+  numbers in the invoice-line export come from
+- `Text` = **`290247/10`** — order number **slash line number**
+- `Workorder#` = **`327396`**
+
+So the audit trail exists one level down. Our `stock_movements` should carry the
+same three, and a return's movement must name its return order and line.
+
+### Running balances are stored, not computed
+
+`Starting stock` and `Closing stock` are held **on the mutation row** in €, kg
+and pieces. So the reference keeps a running per-product balance and stamps it
+into every movement. That is worth copying: it makes any historical stock
+position readable without replaying the whole ledger — and it is how a
+stock-value report can be produced for a past date.
+
+### 🔴 `Correction…` changes a lot silently — no mutation, either way
+
+Run **twice** on lot `404763`, and `Stock mutations` read after each with the
+date set to `29-9-2026` on both sides and **no search filter** — so every
+mutation in the system that day was in view.
+
+| | What was set | Did it apply? | Mutation written? |
+|---|---|---|---|
+| 1st | reason `Stock correction`, description typed, **nothing else changed** | n/a | **No** |
+| 2nd | reason `Stock correction`, **`Categorie` `Standaard` → `2nd choice`** | ✅ **Yes** — `Stock on location` now reads `2nd choice` on bundle `404763` | **No** |
+
+`OK` came alive both times and was pressed both times. **One mutation row exists
+for the whole of 29-9-2026, and it is the return's receipt.**
+
+🔴 **So a prime bundle was downgraded to 2nd choice and the movement ledger
+shows nothing** — not who did it, not when, not what it was before. The change
+is real and it is invisible.
+
+That matters because the category is not cosmetic. It decides what the metal can
+be sold as, it is the basis of the 2nd-choice split in the stock analysis
+(487,4 t of 1 601,8 t), and item 22 showed the order-line picker offers both
+choices together unless somebody filters. A silent downgrade moves tonnage
+between those buckets with no record.
+
+**Change:** our correction action **must** write a `stock_movements` row for an
+attribute change — category, quality, thickness — carrying the old value, the
+new value, the reason and the operator. The reference does not, and that is a
+gap to close rather than a behaviour to copy.
+
+### What the mutation ledger actually records
+
+Putting the two together: the ledger records **quantity and value movement**,
+nothing else. A receipt of 35,325 kg wrote a row. A downgrade of the same lot
+wrote none. So `Stock mutations` cannot be used to reconstruct what a lot *was*
+— only how much of it there has been.
+
+⚠️ **Still unread:** whether a correction that changes the *quantity* writes a
+mutation, and whether its value column can move. Both remain open, and the
+second is the one that matters — a correction is the only warehouse movement
+that could carry a revaluation. If it cannot, nothing in the warehouse can
+repair a € 0 lot and **O9 is the only route left**.
+
+### The state lot `404763` is now in
+
+Worth writing down, because it is a compact illustration of everything above:
+
+**35,325 kg of `2nd choice` 304L, at `Ontvangst`, valued at € 0,00, with no
+charge, no supplier, no purchase order, no receipt date, unblocked and
+available to sell** — and an audit trail that shows only that it arrived.

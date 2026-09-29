@@ -365,7 +365,24 @@ whole interface ([batch-registration.md](batch-registration.md) §11).
 
 ---
 
-### H12 · Credit note / return
+### H12 · Credit note / return 🟡 **half done 29-9-2026**
+
+> 🟡 **Captured 29-9-2026 on return order `290247`** (Mercainox `12368`),
+> written up as **item 25** of
+> [PLANNED-CODE-CHANGES-6.md](PLANNED-CODE-CHANGES-6.md). Order created, made
+> final, its `Unloading` work order released and reported, lot `404763` landed.
+>
+> **What it settled:** a return raises an `Unloading` work order with **no
+> purchase order**; the lot enters stock at **€ 0, prime, sellable, undated and
+> with no charge**; no price cascades and `Make final` accepts `€ 0,00`;
+> `Return reason` is a six-value enum; and **nothing links a return to the sale
+> it reverses** — not the header, not the line, not the charge.
+>
+> ⚠️ **Still unwatched:** the credit note itself. `Invoice` came alive on the
+> return after `Make final` and was not pressed, so whether the credit prices
+> from the original invoice is open. **That is the first step next time.**
+> The complaint → return route (`K40055`) was not used either — this return was
+> raised directly, which is itself an answer: a complaint is not required.
 
 Complaint `K40055` → return order in the `R290000` shape → credit.
 
@@ -393,8 +410,10 @@ A return is driven by a complaint first; `K4xxxx` is a sixth number series, and
    `docs/reference-system/`, not here. This file stays a runsheet.
 2. **Tick the flow off in [WHAT-IS-LEFT.md](WHAT-IS-LEFT.md) Part H** with the
    date and the record number, the way Parts B, C and D were ticked.
-3. **Make the code change named above**, as its own commit — one flow per
-   commit, never a batch of them.
+3. ▶️ **Make the code change named above** — *resumed 29-9-2026.* The capture-
+   first pause was lifted the same evening. Write the finding up in
+   [PLANNED-CODE-CHANGES-6.md](PLANNED-CODE-CHANGES-6.md) first, then build it;
+   one flow per commit, never a batch of them.
 4. **Re-run the checks** if the flow touched money or kilos — the conservation
    identities, not expected values.
 5. **Update the memory note** for that area (warehouse model, purchase model,
