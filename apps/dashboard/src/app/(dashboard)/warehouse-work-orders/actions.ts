@@ -1139,6 +1139,9 @@ const applyReturnReceipt = async (
     quantityKg: weightKg.toFixed(2),
     valueEur: moneyString(value),
     orderUuid: originalLine?.orderUuid ?? null,
+    // Item 26: the return document links to nothing, but its movement does.
+    returnOrderUuid: returnLine.returnOrderUuid,
+    returnOrderItemUuid: returnLine.uuid,
     warehouseWorkOrderLineUuid: params.warehouseWorkOrderLineUuid,
     createdByUserId: params.userId,
   });

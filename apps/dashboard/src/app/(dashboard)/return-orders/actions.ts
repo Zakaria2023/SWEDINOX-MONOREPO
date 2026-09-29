@@ -781,6 +781,9 @@ const receiveReturnAsNewLot = async (
     quantityKg: weightKg.toFixed(2),
     valueEur: moneyString(value),
     orderUuid: params.orderUuid,
+    // Item 26: the return document links to nothing, but its movement does.
+    returnOrderUuid: item.returnOrderUuid,
+    returnOrderItemUuid: item.uuid,
     createdByUserId: params.userId,
   });
 
@@ -975,6 +978,8 @@ export const receiveReturnOrder = async (
           reason: "sales_return",
           quantity: item.returnQty ?? "0.000",
           orderUuid: orderItem.orderUuid,
+          returnOrderUuid: item.returnOrderUuid,
+          returnOrderItemUuid: item.uuid,
           createdByUserId: userId,
         });
 

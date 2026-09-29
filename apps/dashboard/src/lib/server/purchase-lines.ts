@@ -477,6 +477,7 @@ export const rebillPurchaseLineOnWeighedKilos = async (
 ): Promise<void> => {
   const [line] = await tx
     .select({
+      purchaseOrderUuid: PurchaseOrderItems.purchaseOrderUuid,
       kgPurchased: PurchaseOrderItems.kgPurchased,
       netPrice: PurchaseOrderItems.netPrice,
       priceUnit: PurchaseOrderItems.priceUnit,
@@ -515,4 +516,52 @@ export const rebillPurchaseLineOnWeighedKilos = async (
       ),
     })
     .where(eq(PurchaseOrderItems.uuid, purchaseOrderItemUuid));
+
+  // The line just changed what it weighs and what it costs, so the header is
+  // now wrong. It is refreshed from the lines rather than nudged by the delta:
+  // a sum that is recomputed cannot drift, and a purchase order is a handful of
+  // lines, not a ledger.
+  await refreshPurchaseOrderTotals(tx, line.purchaseOrderUuid);
+};
+
+/**
+ * Restate a purchase order's header from its lines.
+ *
+ * 🔴 Both figures were stored and neither was ever written. The header
+ * carried the € 0,00 and the 0,000 kg it was created with while its lines said
+ * otherwise, which is the kind of defect no screen shows you — the detail page
+ * reads the lines, so it looked right.
+ *
+ * Purchase order `402532` settles what each one is, on 29-9-2026:
+ *
+ *     Materials    95 513,48   = 44 630,35 + 50 883,13, the sum of line amounts
+ *     Weight       48 484      = 22 655 + 25 829, the sum of Kg(a)
+ *                                 — NOT 48 042, which is the sum of Kg(p)
+ *
+ * So the header weight is the **billing** weight: the weighbridge figure where
+ * there is one, the theoretical where there is not. Same rule as the amount
+ * beside it, which is the point — a header that summed a different weight from
+ * the one its lines were billed on would disagree with its own total.
+ */
+export const refreshPurchaseOrderTotals = async (
+  tx: PurchaseLineWriter,
+  purchaseOrderUuid: string,
+): Promise<void> => {
+  const [totals] = await tx
+    .select({
+      amount: sql<string | null>`SUM(${PurchaseOrderItems.amount})`,
+      weightKg: sql<string | null>`SUM(
+        COALESCE(${PurchaseOrderItems.kgActual}, ${PurchaseOrderItems.kgPurchased}, 0)
+      )`,
+    })
+    .from(PurchaseOrderItems)
+    .where(eq(PurchaseOrderItems.purchaseOrderUuid, purchaseOrderUuid));
+
+  await tx
+    .update(PurchaseOrders)
+    .set({
+      amount: moneyString(Number(totals?.amount ?? 0)),
+      weightKg: Number(totals?.weightKg ?? 0).toFixed(3),
+    })
+    .where(eq(PurchaseOrders.uuid, purchaseOrderUuid));
 };

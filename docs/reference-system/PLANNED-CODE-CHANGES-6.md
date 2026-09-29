@@ -38,10 +38,11 @@ Order of work, smallest blast radius first:
 **All five are built as of 30-9-2026**, in that order, across five commits.
 What is left of the queue is not code:
 
-- ⚠️ **`pnpm db:push` has not run.** Four schema changes wait on it —
-  `kg_actual` on a purchase line, `correction_reason` / `attribute` /
-  `value_before` / `value_after` on a movement, the `adjust` movement type, and
-  `return_order_item_uuid` on a work order line. The Aiven host times out from
+- ⚠️ **`pnpm db:push` has not run.** Five schema changes wait on it —
+  `kg_actual` on a purchase line; `correction_reason` / `attribute` /
+  `value_before` / `value_after` on a movement; the `adjust` movement type;
+  `return_order_item_uuid` on a work order line; and `return_order_uuid` /
+  `return_order_item_uuid` on a movement. The Aiven host times out from
   the machine this was built on. **Nothing in items 23, 25 or 26b works until
   it is pushed from a machine that can reach the database.**
 - **O9** still decides what a returned lot is worth in the general case, and
@@ -81,10 +82,10 @@ feature work and two genuinely blocked items.
 | ✅ | **20** smaller confirmations | no change needed |
 | ✅ | **21** product record | `d987957` — unblocked item 1 |
 | ✅ | **22** order-line stock picker re-read | 29-9-2026 — respects reservations; `Only products with available stock` filters on *physical* stock; ±5 % dimension margin. Sales half of **O3** closed. **Built:** the checkbox now filters `quantity ≠ 0` and is labelled for what it does, and the `1e keus` / `2e keus` choice filter is there, both unticked. The ±5 % margin and the two-level commitment were already correct |
-| 🟡 | **23** purchase bills weighed kilos | 29-9-2026 — `Amount = Kg(a) x price`, proved to the cent on PO `402532`. **Built:** `kg_actual` on the line, `billingWeightKg`, `rebillPurchaseLineOnWeighedKilos` after each receipt, and the purchase-lines read path no longer calls a pro-rata estimate "actual". ⚠️ **`pnpm db:push` has not run** — the column does not exist in the database yet |
+| 🟡 | **23** purchase bills weighed kilos | 29-9-2026 — `Amount = Kg(a) x price`, proved to the cent on PO `402532`. **Built:** `kg_actual` on the line, `billingWeightKg`, `rebillPurchaseLineOnWeighedKilos` after each receipt, and the purchase-lines read path no longer calls a pro-rata estimate "actual". Plus `refreshPurchaseOrderTotals`, because the header's amount and weight were stored columns nothing ever wrote — € 95.513,48 and 48.484 kg are both sums of the lines, and the weight sums `Kg(a)`. ⚠️ **`pnpm db:push` has not run** — the column does not exist in the database yet |
 | ✅ | **24** `Report completion` crashes | 29-9-2026 — `NullReferenceException` on a picking with no lots assigned, twice. **Built:** a pre-flight guard refuses an out/move report whose rows carry no lot, with a stated error instead of a crash. O2 and the warehouse half of O3 stay parked |
 | 🟡 | **25** flow H12, a return end to end | 29-9-2026 — a return raises an **Unloading** work order with no purchase order, and the lot lands at **€ 0, prime, sellable, undated, no charge**. Six-value `Return reason` enum. No link to the original sale anywhere. **Built 30-9-2026:** the six reasons with labels and the complaint mapping; `returnOrderItemUuid` on a work order line so an unloading with **no purchase order** is bookable; `applyReturnReceipt`, which values the lot at what it cost to go out, persists the typed charge, sets `receiptDate` and names the sales line it came back off; and `receiveReturnOrder` no longer silently skips a line whose original lot is gone. ⚠️ `pnpm db:push` not run. **Still unwatched:** the credit note — `Invoice` came alive after `Make final` and was not pressed |
-| 🔴 | **26** the return's stock mutation | 29-9-2026 — kg +35,325 and **value +€ 0,00** against account `3000`. Reason `Ontvangst Return customer`. The mutation carries `R290247` / `290247/10` / workorder `327396` and **stored running balances**, where the document itself links to nothing |
+| 🟡 | **26** the return's stock mutation | 29-9-2026 — kg +35,325 and **value +€ 0,00** against account `3000`. Reason `Ontvangst Return customer`. The mutation carries `R290247` / `290247/10` / workorder `327396` and **stored running balances**, where the document itself links to nothing. **Built 30-9-2026:** `return_order_uuid` / `return_order_item_uuid` on a movement, set on every return leg, so the audit trail the document cannot hold lives in the ledger as references rather than a formatted string. **Not built:** the stored running balances — our ledger recomputes, and a stamped balance is only worth its cost once a stock-value-at-a-past-date report exists to read it |
 | ✅ | **26b** `Correction…` is silent | 29-9-2026 — ran twice on lot `404763`; the second downgraded it `Standaard` → `2nd choice` and **no mutation was written** either time. The ledger records quantity and value, never attributes. **Built 30-9-2026:** the eight `Reden` values as `stockCorrectionReasons` with the rules each one carries, a third movement type `adjust`, `correction_reason` / `attribute` / `value_before` / `value_after` on the ledger, `applyStockCorrection` writing a row per changed attribute, and the two-checkbox dialog on the lot. No valuation field, because the reference has none either. ⚠️ `pnpm db:push` not run |
 
 **Two schema pushes**, both applied: `transport_costs` / `handling_costs` on

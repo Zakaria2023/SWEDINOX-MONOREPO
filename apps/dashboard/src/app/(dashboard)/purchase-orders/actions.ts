@@ -57,6 +57,7 @@ import {
 } from "@/lib/table-query";
 import { exportRows } from "@/lib/server/excel";
 import {
+  refreshPurchaseOrderTotals,
   syncPurchaseLineReceipts,
   syncPurchaseLineReceiptDates,
 } from "@/lib/server/purchase-lines";
@@ -452,6 +453,10 @@ export const createPurchaseOrder = async (
       // too — that is what makes Purchase receivals a planned-vs-actual screen
       // rather than a list of arrivals.
       await syncPurchaseLineReceipts(tx, uuid);
+      // And the header says what the lines add up to — € 95.513,48 and 48.484 kg
+      // on purchase order `402532`, both sums of the lines rather than figures
+      // anybody types.
+      await refreshPurchaseOrderTotals(tx, uuid);
     });
 
     // The supplier is told what we ordered as soon as the order stands. Sent
@@ -677,6 +682,10 @@ export const updatePurchaseOrder = async (
       // too — that is what makes Purchase receivals a planned-vs-actual screen
       // rather than a list of arrivals.
       await syncPurchaseLineReceipts(tx, uuid);
+      // And the header says what the lines add up to — € 95.513,48 and 48.484 kg
+      // on purchase order `402532`, both sums of the lines rather than figures
+      // anybody types.
+      await refreshPurchaseOrderTotals(tx, uuid);
     });
   } catch (error) {
     return {

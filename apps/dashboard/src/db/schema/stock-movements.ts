@@ -88,6 +88,22 @@ export const StockMovements = mysqlTable(
     // Sales order this movement is tied to — set for the reservation's
     // eventual "out" consumption once billed.
     orderUuid: char("order_uuid", { length: 36 }),
+
+    // 🔑 The return the goods came back on, and which line of it.
+    //
+    // Item 26. The return document itself links to nothing — `Sales order` on
+    // its header is greyed and cannot be filled, and its line's `Order line`
+    // stays `0` — but the *mutation* it writes is better linked than the
+    // document: `Order` reads `R290247` with an `R` prefix, `Text` reads
+    // `290247/10`, the order number slash the line number, and `Workorder#`
+    // reads `327396`.
+    //
+    // So the reference's audit trail for a return exists one level down, in the
+    // ledger rather than on the paperwork. These two are that trail, held as
+    // references instead of as a formatted string, so "what came back on this
+    // return" is a query rather than a text search.
+    returnOrderUuid: char("return_order_uuid", { length: 36 }),
+    returnOrderItemUuid: char("return_order_item_uuid", { length: 36 }),
     // Sales invoice this movement is tied to — the "out" consumption, or the
     // "in" reversal logged when that invoice is cancelled.
     invoiceUuid: char("invoice_uuid", { length: 36 }),
@@ -130,6 +146,7 @@ export const StockMovements = mysqlTable(
       table.purchaseInvoiceUuid,
     ),
     index("idx_stock_movements_order_uuid").on(table.orderUuid),
+    index("idx_stock_movements_return_order_uuid").on(table.returnOrderUuid),
     index("idx_stock_movements_invoice_uuid").on(table.invoiceUuid),
     // "Everything that went out" is the common narrowing on this list, and the
     // column has two values — so an index on it is what turns that question
