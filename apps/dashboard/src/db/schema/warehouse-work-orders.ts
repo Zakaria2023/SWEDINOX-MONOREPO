@@ -126,6 +126,20 @@ export const WarehouseWorkOrderLines = mysqlTable(
     // value and make every margin drawn from it a fiction.
     purchaseOrderItemUuid: char("purchase_order_item_uuid", { length: 36 }),
 
+    // 🔑 And the other thing an unloading can be receiving: goods coming back.
+    //
+    // Watched on 29-9-2026. Return order `290247` raised work order `327396` of
+    // type **`Unloading`** — the same type as a supplier receipt — with
+    // `Purchase order` reading `-leeg-`. There is no "return" movement type in
+    // the reference: goods coming back use the same verb as goods arriving from
+    // a mill, and one of these two columns says which cause it was.
+    //
+    // So an unloading with no purchase line is legal, and a schema that
+    // insisted on one could not book a return at all. Exactly one of the two is
+    // set; both empty is a receipt from nowhere and is refused when it is
+    // reported.
+    returnOrderItemUuid: char("return_order_item_uuid", { length: 36 }),
+
     status: mysqlEnum("status", workOrderStatuses)
       .notNull()
       .default("new"),

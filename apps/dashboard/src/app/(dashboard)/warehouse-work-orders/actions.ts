@@ -3,6 +3,10 @@
 import { db } from "@/db";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { OrderItems } from "@/db/schema/order-items";
+import {
+  ReturnOrderItems,
+  SelectReturnOrderItems,
+} from "@/db/schema/return-order-items";
 import { Orders } from "@/db/schema/orders";
 import { Products, SelectProducts } from "@/db/schema/products";
 import { PurchaseOrderItems } from "@/db/schema/purchase-order-items";
@@ -208,6 +212,8 @@ export type AddWorkOrderLineInput = {
   productUuid?: string | null;
   productCode?: string | null;
   purchaseOrderItemUuid?: string | null;
+  /** Set instead of the purchase line when the unloading is a return. */
+  returnOrderItemUuid?: string | null;
   fromLocationUuid?: string | null;
   toLocationUuid?: string | null;
   qtyPlanned: string;
@@ -719,6 +725,7 @@ export const addWarehouseWorkOrderLine = async (
       internalCharge: lot?.internalCharge ?? null,
       quality: lot?.quality ?? null,
       purchaseOrderItemUuid: input.purchaseOrderItemUuid ?? null,
+      returnOrderItemUuid: input.returnOrderItemUuid ?? null,
       fromLocationUuid: lot?.locationUuid ?? input.fromLocationUuid ?? null,
       toLocationUuid: input.toLocationUuid ?? null,
       // Either decimal separator is accepted on the way in; the column only
@@ -1016,6 +1023,156 @@ const applyIssue = async (
 };
 
 /**
+ * Book goods a customer sent back onto the shelf.
+ *
+ * 🔴 Item 25, and the finding that matters in it. Return order `290247` was
+ * watched end to end on 29-9-2026. It raised an `Unloading` work order with no
+ * purchase order behind it, the goods were reported back with charge
+ * `RET290247` typed into the dialog, and the lot that appeared — `404763` —
+ * read like this:
+ *
+ *     Valuation price  0        Charge           (empty)
+ *     Stock (€)        0        Internal charge  (empty)
+ *     Receipt date     0        Supplier         (empty)
+ *     Stock category   (prime)  Blocked          False
+ *
+ * 35,325 kg of prime, unblocked, immediately sellable metal, on the books at
+ * nothing, undated, and untraceable to whoever sent it. Sell it and the margin
+ * reads 100 %. Three separate defects, so three separate things this fixes:
+ *
+ * 1. **It carries a value.** The cost the line went out at — the same figure
+ *    the credit note hands back, so the two agree and the account holding the
+ *    cost in between clears to nothing. The return line's own cost price first,
+ *    then the sale it reverses. A return worth nothing is bookable only when
+ *    the sale genuinely cost nothing.
+ * 2. **The typed charge persists.** It was entered and the reference dropped
+ *    it, which breaks traceability on every return — there is no route from
+ *    the lot back to who sent it, and the charge is free text so it is no route
+ *    either.
+ * 3. **It is dated.** `receiptDate` set, because an undated lot is skipped by
+ *    every age-based report. In the 22-9 stock analysis 38 of 2 035 lots had no
+ *    receipt date and dropped out of the ageing entirely.
+ *
+ * And one thing the reference does not do at all: the lot names the sales line
+ * it came back off, so a credit can be checked against what was charged.
+ */
+const applyReturnReceipt = async (
+  tx: Transaction,
+  params: {
+    productUuid: string;
+    quantity: number;
+    toLocationUuid: string;
+    charge: string | null;
+    internalCharge: string | null;
+    internalBatch: string | null;
+    returnLine: SelectReturnOrderItems;
+    userId: string;
+    companyUuid: string | null;
+    documentNo: string;
+    warehouseWorkOrderLineUuid: string | null;
+  },
+): Promise<void> => {
+  const { returnLine, quantity } = params;
+
+  const [originalLine] = returnLine.originalOrderItemUuid
+    ? await tx
+        .select({
+          costPrice: OrderItems.costPrice,
+          stockUuid: OrderItems.stockUuid,
+          orderUuid: OrderItems.orderUuid,
+          quantity: OrderItems.quantity,
+        })
+        .from(OrderItems)
+        .where(eq(OrderItems.uuid, returnLine.originalOrderItemUuid))
+        .limit(1)
+    : [];
+
+  // Per piece, both of them: `costPrice` on a sales line is what one of them
+  // cost, which is what `restateLotValue` assumes when a lot is drawn down.
+  const unitCost =
+    Number(returnLine.costPrice ?? 0) || Number(originalLine?.costPrice ?? 0);
+  const value = roundToCents(unitCost * quantity);
+
+  const weightKg =
+    Number(returnLine.weightKg ?? 0) > 0
+      ? (Number(returnLine.weightKg) * quantity) /
+        Math.max(Number(returnLine.returnQty ?? 0) || quantity, 1)
+      : 0;
+
+  const stockUuid = generateUuid();
+
+  await tx.insert(Stock).values({
+    uuid: stockUuid,
+    productUuid: params.productUuid,
+    // 🔑 No purchase order, and that is legal here. What the lot names
+    // instead is the sales line it came back off — the reference names nothing
+    // at all, and without this a credit cannot be checked against what was
+    // charged.
+    orderItemUuid: returnLine.originalOrderItemUuid,
+    locationUuid: params.toLocationUuid,
+    quantity: quantity.toFixed(3),
+    quantityKg: weightKg.toFixed(2),
+    status: "pending",
+    charge: normaliseCharge(params.charge),
+    internalCharge: normaliseCharge(params.internalCharge),
+    internalBatch: params.internalBatch,
+    receiptDate: todayDateString(),
+    quality: returnLine.qualityCode,
+    stockCategory: returnLine.stockCategory,
+    options: returnLine.options,
+    lengthMm: returnLine.lengthMm,
+    widthMm: returnLine.widthMm,
+    thicknessMm: returnLine.thicknessMm,
+    valuationPrice: unitCost.toFixed(4),
+    valuationEuro: moneyString(value),
+  });
+
+  await registerBatchForLot(tx, stockUuid, { date: todayDateString() });
+
+  await tx.insert(StockMovements).values({
+    uuid: generateUuid(),
+    productUuid: params.productUuid,
+    stockUuid,
+    type: "in",
+    reason: "sales_return",
+    quantity: quantity.toFixed(3),
+    quantityKg: weightKg.toFixed(2),
+    valueEur: moneyString(value),
+    orderUuid: originalLine?.orderUuid ?? null,
+    warehouseWorkOrderLineUuid: params.warehouseWorkOrderLineUuid,
+    createdByUserId: params.userId,
+  });
+
+  await recordFreightMovement(tx, {
+    productUuid: params.productUuid,
+    quantity: quantity.toFixed(3),
+    type: "in",
+    reason: "sales_return",
+    orderUuid: originalLine?.orderUuid ?? null,
+    valuationPrice: unitCost.toFixed(4),
+    operator: params.userId,
+  });
+
+  // The mirror of a delivery: the metal is back, and its cost is owed back to
+  // the customer but not credited yet.
+  if (Math.abs(value) >= 0.005) {
+    await tx.insert(JournalEntries).values(
+      buildInventoryMovementEntry({
+        bookingDate: todayDateString(),
+        documentNo: params.documentNo,
+        description: "Warehouse — Sales Return",
+        companyUuid: params.companyUuid,
+        debCreditor: null,
+        inventoryValue: value,
+        counterAccount: LEDGER_ACCOUNTS.goodsDeliveredNotInvoiced,
+        reference: `Return order line ${returnLine.uuid}`,
+        userId: params.userId,
+      }),
+    );
+  }
+};
+
+/**
  * Book arriving goods onto the shelf.
  *
  * The lot is valued at what the purchase order agreed to pay, because this is
@@ -1049,6 +1206,13 @@ const applyReceipt = async (
      * identified on the way in became anonymous the moment it hit the rack.
      */
     internalBatch: string | null;
+    /**
+     * 🔑 The other thing an unloading can be receiving. Return order
+     * `290247` raised an `Unloading` work order with `Purchase order` empty on
+     * 29-9-2026 — goods coming back use the same verb as goods arriving from a
+     * mill — so one of these two says which cause it was.
+     */
+    returnOrderItemUuid: string | null;
     userId: string;
     companyUuid: string | null;
     documentNo: string;
@@ -1068,6 +1232,36 @@ const applyReceipt = async (
         .where(eq(PurchaseOrderItems.uuid, params.purchaseOrderItemUuid))
         .limit(1)
     : [];
+
+  const [returnLine] =
+    !purchaseLine && params.returnOrderItemUuid
+      ? await tx
+          .select()
+          .from(ReturnOrderItems)
+          .where(eq(ReturnOrderItems.uuid, params.returnOrderItemUuid))
+          .limit(1)
+      : [];
+
+  if (!purchaseLine && !returnLine) {
+    throw new Error(
+      "An unloading needs the line it is receiving — a purchase line or a return line. Without one the goods would go on the shelf at no value.",
+    );
+  }
+
+  // 🔴 Goods coming back are received here too, and they are received
+  // *valued*. Item 25: the reference put returned lot `404763` on the shelf at
+  // € 0 — prime, unblocked, immediately sellable, with no charge, no supplier
+  // and `Receipt date` reading 0. Sell it and the margin reads 100 %.
+  //
+  // Nothing in the reference repairs that, so this does not copy it. The return
+  // comes back at what it cost to go out, which is the same figure the credit
+  // note hands back, so the two agree and the account holding the cost in
+  // between clears to nothing. The line's own cost price is the first answer;
+  // the sale it reverses is the second.
+  if (returnLine) {
+    await applyReturnReceipt(tx, { ...params, returnLine, quantity });
+    return;
+  }
 
   if (!purchaseLine) {
     throw new Error(
@@ -1557,6 +1751,7 @@ export const reportWarehouseWorkOrderLineCompletion = async (
               quantity,
               toLocationUuid,
               purchaseOrderItemUuid: line.purchaseOrderItemUuid,
+              returnOrderItemUuid: line.returnOrderItemUuid,
               charge: pick.charge ?? null,
               internalCharge: pick.internalCharge ?? null,
               internalBatch: pick.internalBatch ?? null,

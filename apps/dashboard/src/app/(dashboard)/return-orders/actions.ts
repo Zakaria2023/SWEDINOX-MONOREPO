@@ -46,7 +46,9 @@ import {
   getQuoteVatRatePercent,
   moneyString,
   proRataSlice,
+  normaliseCharge,
   QUANTITY_EPSILON,
+  roundToCents,
   todayDateString,
 } from "@/lib/helpers";
 import {
@@ -55,6 +57,7 @@ import {
   LEDGER_ACCOUNTS,
 } from "@/lib/server/ledger";
 import { recordFreightMovement } from "@/lib/server/freight";
+import { registerBatchForLot } from "@/lib/server/batches";
 import { currentUser } from "@clerk/nextjs/server";
 import { returnOrderReasons, returnOrderStatuses } from "@/lib/enums";
 import {
@@ -146,6 +149,18 @@ export type ReturnInvoiceLine = {
   netPrice: SelectInvoiceItems["netPrice"];
   amount: SelectInvoiceItems["amount"];
 };
+
+type ReceiveReturnAsNewLotParams = {
+  item: SelectReturnOrderItems;
+  productUuid: string | null;
+  orderUuid: string | null;
+  fallbackCostPrice: string | null;
+  companyUuid: string;
+  documentNo: string;
+  userId: string;
+};
+
+type ReturnTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 export type ReturnOrderActionResult = {
   returnOrderUuid?: string;
@@ -698,6 +713,105 @@ const buildReturnOrderSummary = async (
 };
 
 /**
+ * A returned line that has no lot to go back onto, given a lot of its own.
+ *
+ * 🔴 Item 25, watched on 29-9-2026 on return order `290247`. The reference
+ * created lot `404763` for exactly this case and left it at € 0, undated, with
+ * no charge, no supplier and nothing naming the sale it reversed — prime,
+ * unblocked and immediately sellable. Sell it and the margin reads 100 %.
+ *
+ * So this fills in every one of those. The value is what the goods cost to go
+ * out, which is the figure the credit note hands back; the date is today, so
+ * the lot appears in the ageing instead of dropping out of it the way 38 of
+ * 2 035 lots did in the 22-9 analysis; and the lot names the sales line it came
+ * back off, which the reference does not record anywhere at all.
+ *
+ * The lot goes in unlocated on purpose. Nobody has told us which rack the metal
+ * was put on, and inventing one would make the stock-on-location screens lie
+ * about where it is — a relocation is the screen that answers that.
+ */
+const receiveReturnAsNewLot = async (
+  tx: ReturnTransaction,
+  params: ReceiveReturnAsNewLotParams,
+): Promise<void> => {
+  const { item } = params;
+  const quantity = Number(item.returnQty ?? 0);
+
+  if (!params.productUuid || quantity <= 0) {
+    throw new Error(
+      `Return line ${item.lineNumber ?? item.uuid} names no product, so the goods cannot be booked in. Give the line a product first.`,
+    );
+  }
+
+  const unitCost =
+    Number(item.costPrice ?? 0) || Number(params.fallbackCostPrice ?? 0);
+  const value = roundToCents(unitCost * quantity);
+  const weightKg = Number(item.weightKg ?? 0);
+
+  const stockUuid = generateUuid();
+
+  await tx.insert(Stock).values({
+    uuid: stockUuid,
+    productUuid: params.productUuid,
+    orderItemUuid: item.originalOrderItemUuid,
+    quantity: quantity.toFixed(3),
+    quantityKg: weightKg.toFixed(2),
+    status: "pending",
+    charge: normaliseCharge(item.reference),
+    receiptDate: todayDateString(),
+    quality: item.qualityCode,
+    stockCategory: item.stockCategory,
+    options: item.options,
+    lengthMm: item.lengthMm,
+    widthMm: item.widthMm,
+    thicknessMm: item.thicknessMm,
+    valuationPrice: unitCost.toFixed(4),
+    valuationEuro: moneyString(value),
+  });
+
+  await registerBatchForLot(tx, stockUuid, { date: todayDateString() });
+
+  await tx.insert(StockMovements).values({
+    uuid: generateUuid(),
+    productUuid: params.productUuid,
+    stockUuid,
+    type: "in",
+    reason: "sales_return",
+    quantity: quantity.toFixed(3),
+    quantityKg: weightKg.toFixed(2),
+    valueEur: moneyString(value),
+    orderUuid: params.orderUuid,
+    createdByUserId: params.userId,
+  });
+
+  await recordFreightMovement(tx, {
+    productUuid: params.productUuid,
+    quantity: quantity.toFixed(3),
+    type: "in",
+    reason: "sales_return",
+    orderUuid: params.orderUuid,
+    valuationPrice: unitCost.toFixed(4),
+    operator: params.userId,
+  });
+
+  if (Math.abs(value) >= 0.005) {
+    await tx.insert(JournalEntries).values(
+      buildInventoryMovementEntry({
+        bookingDate: todayDateString(),
+        documentNo: params.documentNo,
+        description: "Returned goods received",
+        companyUuid: params.companyUuid,
+        debCreditor: null,
+        inventoryValue: value,
+        counterAccount: LEDGER_ACCOUNTS.goodsDeliveredNotInvoiced,
+        reference: `Return order line ${item.uuid}`,
+        userId: params.userId,
+      }),
+    );
+  }
+};
+
+/**
  * Books a received return back into stock and marks it received.
  *
  * The goods go back onto the exact lot they were picked from, at the value they
@@ -708,6 +822,13 @@ const buildReturnOrderSummary = async (
  * Receiving is separate from crediting on purpose. Goods arriving and money
  * being handed back are two different decisions, and the reference system
  * carries two statuses for exactly that reason.
+ *
+ * 🔴 A line whose original lot cannot be found gets a lot of its own rather
+ * than being skipped. Item 25: the reference put a returned bundle on the shelf
+ * at € 0, undated, with no charge and nothing naming where it came from — and
+ * skipping the line here was worse still, because the metal came back and the
+ * books never heard about it. A lot that says "35 kg of this, from that sale,
+ * today, at this cost" is the least that has to happen.
  */
 export const receiveReturnOrder = async (
   uuid: string,
@@ -769,36 +890,50 @@ export const receiveReturnOrder = async (
       }
 
       for (const item of items) {
-        if (!item.originalOrderItemUuid) {
+        const returnedQty = Number(item.returnQty ?? 0);
+        if (returnedQty <= 0) {
           continue;
         }
 
-        const [orderItem] = await tx
-          .select({
-            stockUuid: OrderItems.stockUuid,
-            productUuid: OrderItems.productUuid,
-            orderUuid: OrderItems.orderUuid,
-            costPrice: OrderItems.costPrice,
-          })
-          .from(OrderItems)
-          .where(eq(OrderItems.uuid, item.originalOrderItemUuid))
-          .limit(1);
+        const [orderItem] = item.originalOrderItemUuid
+          ? await tx
+              .select({
+                stockUuid: OrderItems.stockUuid,
+                productUuid: OrderItems.productUuid,
+                orderUuid: OrderItems.orderUuid,
+                costPrice: OrderItems.costPrice,
+              })
+              .from(OrderItems)
+              .where(eq(OrderItems.uuid, item.originalOrderItemUuid))
+              .limit(1)
+          : [];
 
-        if (!orderItem) {
+        const [stockRow] = orderItem?.stockUuid
+          ? await tx
+              .select()
+              .from(Stock)
+              .where(eq(Stock.uuid, orderItem.stockUuid))
+              .limit(1)
+          : [];
+
+        // No lot to go back onto — the line named no sale, the sale named no
+        // lot, or the lot has since been consumed. The metal is still on the
+        // yard, so it becomes a lot of its own carrying everything the
+        // reference left blank.
+        if (!orderItem || !stockRow) {
+          await receiveReturnAsNewLot(tx, {
+            item,
+            productUuid: item.productUuid ?? orderItem?.productUuid ?? null,
+            orderUuid: orderItem?.orderUuid ?? null,
+            fallbackCostPrice: orderItem?.costPrice ?? null,
+            companyUuid: returnOrder.companyUuid,
+            documentNo: String(returnOrder.id),
+            userId,
+          });
           continue;
         }
 
-        const [stockRow] = await tx
-          .select()
-          .from(Stock)
-          .where(eq(Stock.uuid, orderItem.stockUuid))
-          .limit(1);
-
-        if (!stockRow) {
-          continue;
-        }
-
-        const returned = Number(item.returnQty ?? 0);
+        const returned = returnedQty;
         const nextQuantity = (Number(stockRow.quantity) + returned).toFixed(3);
 
         // Goods coming back have to bring their value with them. Adding the
