@@ -2059,25 +2059,34 @@ export const complaintSolutionReturnsGoods = (
   solution === "return_goods_credit_redeliver";
 
 /**
- * The return reason a complaint category implies. The two vocabularies were
- * written for different screens and only partly overlap, so anything without a
- * clear counterpart lands on "other" rather than being forced into a reason
- * that would misreport why the goods came back.
+ * The return reason a complaint category implies.
+ *
+ * Once the reference's own six reasons replaced the invented ones, the two
+ * vocabularies turned out to be almost the same list — so this is nearly an
+ * identity, and the mapping is safe rather than a guess.
+ *
+ * Two complaint categories have no counterpart and get **no reason at all**:
+ * `wrong_price_calculated` is about money, not goods, and
+ * `incorrect_delivery_address` says where it went rather than what came back.
+ * The column is nullable in the reference too, so an unset reason is a legal
+ * state — better than forcing one that would misreport why the metal returned.
  */
 export const returnReasonForComplaintCategory = (
   category: ComplaintCategory | null | undefined,
-): ReturnOrderReason => {
+): ReturnOrderReason | null => {
   switch (category) {
     case "damaged":
+      return "damaged";
     case "transport_damage":
-      return "damaged_goods";
+      return "transport_damage";
     case "wrong_material_delivered":
-    case "incorrect_delivery_address":
-      return "wrong_delivery";
+      return "wrong_material_delivered";
     case "wrong_quantity":
-      return "excess_delivery";
+      return "wrong_quantity";
+    case "delivered_too_late":
+      return "delivered_too_late";
     default:
-      return "other";
+      return null;
   }
 };
 

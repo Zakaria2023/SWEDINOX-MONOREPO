@@ -982,14 +982,27 @@ export const transportModes = [
 
 export type TransportMode = (typeof transportModes)[number];
 
+// The reference's own list, read off the `Return reason` dropdown of return
+// order `290247` on 29-9-2026. Six values, and the field is the only thing on a
+// return that says why the goods came back — there is no link to the sale it
+// reverses, on the header, the line or the charge.
+//
+// The seven that used to be here were invented before the screen was ever
+// opened. `quality_issue`, `customer_changed_mind` and `other` are not offered
+// by the reference at all; `wrong_delivery` and `excess_delivery` were guesses
+// at `wrong_material_delivered` and `wrong_quantity`.
+//
+// ⚠️ Close to `purchaseReturnOrderReasons` but not the same list: the purchase
+// side offers `incorrect_delivery_address` too, and says `Not delivered` where
+// this one says `Not delivered / not collected` — a sale can fail because the
+// customer never came to collect.
 export const returnOrderReasons = [
-  "wrong_delivery",
-  "damaged_goods",
-  "quality_issue",
-  "wrong_order",
-  "excess_delivery",
-  "customer_changed_mind",
-  "other",
+  "damaged",
+  "wrong_quantity",
+  "wrong_material_delivered",
+  "delivered_too_late",
+  "not_delivered_or_collected",
+  "transport_damage",
 ] as const satisfies readonly string[];
 
 export type ReturnOrderReason = (typeof returnOrderReasons)[number];

@@ -1,5 +1,6 @@
 import { ReturnOrderDetail } from "@/app/(dashboard)/return-orders/actions";
 import { ReturnOrderFormValues } from "@/app/(dashboard)/return-orders/validation";
+import { ReturnOrderReason } from "@/lib/enums";
 import { toDateInput, toFormString } from "@/lib/helpers";
 
 /**
@@ -26,7 +27,11 @@ export const returnOrderDetailToFormValues = (
   pickupAddress: toFormString(returnOrder.pickupAddress),
   deliveryAddressUuid: toFormString(returnOrder.deliveryAddressUuid),
 
-  returnReason: returnOrder.returnReason ?? "other",
+  // The reference offers no "other", and its own field is nullable — an
+  // unstated reason opens the form unset rather than being filed under a
+  // catch-all that would misreport why the goods came back. The same shape the
+  // purchase return side already uses, and zod still requires one to save.
+  returnReason: (returnOrder.returnReason ?? "") as ReturnOrderReason,
 
   calculateVatIfApplicable: returnOrder.calculateVatIfApplicable ?? false,
   invoiceBlockage: returnOrder.invoiceBlockage ?? false,

@@ -497,13 +497,12 @@ export const TRANSPORT_MODE_LABELS: Record<TransportMode, string> = {
 };
 
 export const RETURN_ORDER_REASON_LABELS: Record<ReturnOrderReason, string> = {
-  wrong_delivery: "Wrong delivery",
-  damaged_goods: "Damaged goods",
-  quality_issue: "Quality issue",
-  wrong_order: "Wrong order",
-  excess_delivery: "Excess delivery",
-  customer_changed_mind: "Customer changed mind",
-  other: "Other",
+  damaged: "Damaged",
+  wrong_quantity: "Wrong quantity",
+  wrong_material_delivered: "Wrong material delivered",
+  delivered_too_late: "Delivered too late",
+  not_delivered_or_collected: "Not delivered / not collected",
+  transport_damage: "Transport damage",
 };
 
 export const ORDER_DEBLOCK_TYPE_LABELS: Record<OrderDeblockType, string> = {
