@@ -25,8 +25,24 @@ import {
 } from "drizzle-orm";
 import { MySqlColumn } from "drizzle-orm/mysql-core";
 
-/** What a lot has left once its reservations are taken off. */
-const availableQuantity = sql<string>`(${Stock.quantity} - ${Stock.reservedQuantity})`;
+/**
+ * What the reference calls a lot's **choice**, and the two values it has been
+ * seen carrying. `stockCategory` is free text — the reference lets a warehouse
+ * name its own categories — so this matches rather than enumerates, and a
+ * category nobody recognises counts as first choice, which is what the
+ * reference's own grid does when neither box is ticked.
+ *
+ * Dutch and English both appear: the correction dialog writes `2nd choice` and
+ * the filter chip is labelled `2e keus`.
+ */
+const SECOND_CHOICE_CATEGORIES = ["2nd choice", "2e keus", "2de keus"];
+
+const isSecondChoiceSql = sql<boolean>`(
+  LOWER(COALESCE(${Stock.stockCategory}, '')) IN (${sql.join(
+    SECOND_CHOICE_CATEGORIES.map((value) => sql`${value}`),
+    sql`, `,
+  )})
+)`;
 
 /**
  * The stock search a sales line is entered through.
@@ -59,7 +75,25 @@ export type StockSearchFilters = {
   thicknessMm?: number | null;
   /** The reference offers 5 % per dimension and defaults to it. */
   marginPercent?: number | null;
-  onlyWithAvailableStock?: boolean;
+  /**
+   * 🔴 The reference's `Only products with available stock`, and it does **not**
+   * mean what it says. It was ticked on 29-9-2026 while two of the four rows
+   * read `Available 0 ST`, and the grid's own filter chip read
+   * `TotalPhysicalStock ≠ 0`. So it hides articles that are not on the shelf at
+   * all, not articles that are spoken for — a salesman still has to see metal
+   * somebody else has reserved, because reservations move.
+   *
+   * Named for what it filters on rather than what the label says, so nobody
+   * implements the obvious and wrong thing again.
+   */
+  onlyWithPhysicalStock?: boolean;
+  /**
+   * The reference's `1e keus` / `2e keus`, both unticked by default — so both
+   * choices are offered together and a downgraded lot is a normal candidate
+   * unless somebody excludes it. Ticking both is the same as ticking neither.
+   */
+  includeFirstChoice?: boolean;
+  includeSecondChoice?: boolean;
   source?: StockSearchSource;
 };
 
@@ -153,6 +187,17 @@ export const findSellableStock = async (
   const searchCode = text(filters.searchCode);
   const quality = text(filters.quality);
 
+  // Neither box or both boxes means everything, which is how the reference
+  // opens: a 2nd-choice lot is a normal candidate until somebody says otherwise.
+  const wantsFirst = filters.includeFirstChoice ?? false;
+  const wantsSecond = filters.includeSecondChoice ?? false;
+  const choiceFilter =
+    wantsFirst === wantsSecond
+      ? undefined
+      : wantsSecond
+        ? eq(isSecondChoiceSql, true)
+        : eq(isSecondChoiceSql, false);
+
   // Goods already on the shelf. Everything `getAvailableStockForSelect` excludes
   // is excluded here too — blocked lots, somebody else's metal, and locations
   // whose type puts stock out of reach — because a search that offers metal a
@@ -199,9 +244,10 @@ export const findSellableStock = async (
           withinMargin(Stock.lengthMm, filters.lengthMm, margin),
           withinMargin(Stock.widthMm, filters.widthMm, margin),
           withinMargin(Stock.thicknessMm, filters.thicknessMm, margin),
-          filters.onlyWithAvailableStock === false
+          filters.onlyWithPhysicalStock === false
             ? undefined
-            : gt(availableQuantity, "0"),
+            : ne(Stock.quantity, "0"),
+          choiceFilter,
         ),
       )
       .orderBy(desc(Stock.receiptDate))

@@ -70,7 +70,9 @@ type Filters = {
   widthMm: string;
   thicknessMm: string;
   marginPercent: string;
-  onlyWithAvailableStock: boolean;
+  onlyWithPhysicalStock: boolean;
+  includeFirstChoice: boolean;
+  includeSecondChoice: boolean;
   source: StockSearchSource;
 };
 
@@ -83,7 +85,11 @@ const EMPTY_FILTERS: Filters = {
   thicknessMm: "",
   // The reference's own default, printed beside each dimension.
   marginPercent: "5",
-  onlyWithAvailableStock: true,
+  onlyWithPhysicalStock: true,
+  // Both unticked, the way the reference opens: both choices are offered
+  // together until somebody narrows it.
+  includeFirstChoice: false,
+  includeSecondChoice: false,
   source: "stock",
 };
 
@@ -134,7 +140,9 @@ export const StockSearchDialog = ({
         widthMm: num(next.widthMm),
         thicknessMm: num(next.thicknessMm),
         marginPercent: Number(next.marginPercent) || 0,
-        onlyWithAvailableStock: next.onlyWithAvailableStock,
+        onlyWithPhysicalStock: next.onlyWithPhysicalStock,
+        includeFirstChoice: next.includeFirstChoice,
+        includeSecondChoice: next.includeSecondChoice,
         source: next.source,
       });
       setVariants(found.variants);
@@ -264,20 +272,56 @@ export const StockSearchDialog = ({
             </div>
           </div>
 
-          <label className="flex items-center gap-2 text-sm">
-            <Checkbox
-              checked={filters.onlyWithAvailableStock}
-              onChange={(event) => {
-                const next = {
-                  ...filters,
-                  onlyWithAvailableStock: event.target.checked,
-                };
-                setFilters(next);
-                runSearch(next);
-              }}
-            />
-            Only articles with stock available
-          </label>
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+            {/*
+              🔴 The reference's label says "available" and its filter says
+              `TotalPhysicalStock ≠ 0`. Ours says what it does: metal that is
+              spoken for is still metal a salesman has to be able to see, because
+              reservations move.
+            */}
+            <label className="flex items-center gap-2">
+              <Checkbox
+                checked={filters.onlyWithPhysicalStock}
+                onChange={(event) => {
+                  const next = {
+                    ...filters,
+                    onlyWithPhysicalStock: event.target.checked,
+                  };
+                  setFilters(next);
+                  runSearch(next);
+                }}
+              />
+              Only articles physically in stock
+            </label>
+            <label className="flex items-center gap-2">
+              <Checkbox
+                checked={filters.includeFirstChoice}
+                onChange={(event) => {
+                  const next = {
+                    ...filters,
+                    includeFirstChoice: event.target.checked,
+                  };
+                  setFilters(next);
+                  runSearch(next);
+                }}
+              />
+              1st choice
+            </label>
+            <label className="flex items-center gap-2">
+              <Checkbox
+                checked={filters.includeSecondChoice}
+                onChange={(event) => {
+                  const next = {
+                    ...filters,
+                    includeSecondChoice: event.target.checked,
+                  };
+                  setFilters(next);
+                  runSearch(next);
+                }}
+              />
+              2nd choice
+            </label>
+          </div>
 
           <div>
             <p className="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
