@@ -209,7 +209,12 @@ But the five pieces came off **`389825`**, while the parcel that landed at `Laad
 is labelled **`389827`** — and `389827` at `Ontvangst` did not shrink at all; it
 gained a reservation of 5.
 
-🔴 **This is unresolved and is not being guessed at.** Either the six-digit
+✅ **RESOLVED 30-9-2026** — see [picking-flow.md](picking-flow.md#6). Reproduced
+deliberately: a bundle number is a **printed label, not an identity**, and two
+lots that a shelf cannot tell apart are interchangeable to the system. The
+original note is kept below as it was written.
+
+🔴 **This was unresolved and was not guessed at.** Either the six-digit
 number is a reusable bundle label rather than a lot identity, or the pick debited
 a different lot than it displayed. It is **O2** in
 [PLANNED-CODE-CHANGES-6.md](PLANNED-CODE-CHANGES-6.md).
