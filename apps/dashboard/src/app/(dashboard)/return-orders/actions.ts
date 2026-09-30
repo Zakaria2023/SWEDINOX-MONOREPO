@@ -50,6 +50,7 @@ import {
   QUANTITY_EPSILON,
   roundToCents,
   todayDateString,
+  unitCostString,
 } from "@/lib/helpers";
 import {
   buildInventoryMovementEntry,
@@ -765,7 +766,7 @@ const receiveReturnAsNewLot = async (
     lengthMm: item.lengthMm,
     widthMm: item.widthMm,
     thicknessMm: item.thicknessMm,
-    valuationPrice: unitCost.toFixed(4),
+    valuationPrice: unitCostString(unitCost),
     valuationEuro: moneyString(value),
   });
 
@@ -793,7 +794,7 @@ const receiveReturnAsNewLot = async (
     type: "in",
     reason: "sales_return",
     orderUuid: params.orderUuid,
-    valuationPrice: unitCost.toFixed(4),
+    valuationPrice: unitCostString(unitCost),
     operator: params.userId,
   });
 

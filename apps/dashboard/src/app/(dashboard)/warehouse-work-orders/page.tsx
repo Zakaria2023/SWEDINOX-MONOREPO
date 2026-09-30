@@ -1,6 +1,8 @@
 import { getWarehouseWorkOrderTree } from "@/app/(dashboard)/warehouse-work-orders/actions";
 import { warehouseWorkOrderFilters } from "@/app/(dashboard)/warehouse-work-orders/filters";
 import { getWarehousesForSelect } from "@/app/(dashboard)/warehouses/actions";
+import { getLocationsForSelect } from "@/app/(dashboard)/locations/actions";
+import { getClerkUsersForSelect } from "@/lib/server/clerk";
 import { WarehouseWorkOrdersTable } from "@/components/warehouse-work-orders/warehouse-work-orders-table-content";
 import { parseTableQuery, SearchParams } from "@/lib/table-query";
 
@@ -13,12 +15,16 @@ const WarehouseWorkOrdersPage = async ({ searchParams }: Props) => {
   // Sequential rather than concurrent: this database caps connections.
   const tree = await getWarehouseWorkOrderTree(query);
   const warehouses = await getWarehousesForSelect();
+  const locations = await getLocationsForSelect();
+  const users = await getClerkUsersForSelect();
 
   return (
     <div className="space-y-4">
       <WarehouseWorkOrdersTable
         tree={tree}
         filters={warehouseWorkOrderFilters(warehouses)}
+        locations={locations}
+        users={users}
       />
     </div>
   );

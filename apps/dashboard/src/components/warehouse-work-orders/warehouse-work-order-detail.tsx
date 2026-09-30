@@ -14,6 +14,7 @@ import {
 } from "@/app/(dashboard)/warehouse-work-orders/actions";
 import { AvailableStockOption } from "@/app/(dashboard)/warehouse-work-orders/actions";
 import { LocationOption } from "@/app/(dashboard)/locations/actions";
+import { ClerkUserOption } from "@/lib/server/clerk";
 import { Button } from "@/components/shadcn/button";
 import {
   Table,
@@ -49,6 +50,7 @@ type Props = {
   workOrder: WorkOrderDetail;
   stockOptions: AvailableStockOption[];
   locations: LocationOption[];
+  users: ClerkUserOption[];
 };
 
 // What the goods do when a line of this job is reported, said in the words the
@@ -64,6 +66,7 @@ export const WarehouseWorkOrderDetailView = ({
   workOrder,
   stockOptions,
   locations,
+  users,
 }: Props) => {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -420,6 +423,8 @@ export const WarehouseWorkOrderDetailView = ({
       <ReportCompletionDialog
         line={reportingLine}
         workOrderType={workOrder.type}
+        locations={locations}
+        users={users}
         onOpenChange={(open) => {
           if (!open) {
             setReportingLine(null);

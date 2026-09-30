@@ -108,6 +108,10 @@ export type PrepareLineFormValues = z.infer<typeof prepareLineSchema>;
 // real answer — it is how a delivery is cancelled — so it must survive.
 export const reportPickSchema = z.object({
   uuid: z.string().optional(),
+  // Which parcel this row came off. Chosen per row rather than per line,
+  // because `+ New` on the reference's dialog is how one planned line is
+  // reported as several parcels — and the second parcel is routinely a
+  // different lot on a different shelf.
   stockUuid: z.string().optional(),
   qtyPlanned: z.string(),
   qtyActual: reportedQuantity("Actual quantity"),
@@ -119,6 +123,18 @@ export const reportPickSchema = z.object({
 
 export const reportCompletionSchema = z.object({
   executedAt: z.string().min(1, "Say when it was done"),
+  // The reference's `Executed on:` is a datetime and opens on the minute the
+  // dialog was opened — `30-9-2026 17:59`. A picking reported at 08:05 and one
+  // reported at 17:59 are a shift apart, and a date alone cannot tell them.
+  executedTime: z
+    .string()
+    .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Use a time like 17:59"),
+  // `By:` — the operator. Blank in the reference and not mandatory there
+  // either, so an unnamed report is a report, not an error.
+  executedByUserId: z.string().optional(),
+  // `To Location:`, which the reference defaults to `Laad` and lets the floor
+  // change. Blank falls back to what the line already says.
+  toLocationUuid: z.string().optional(),
   picks: z.array(reportPickSchema),
 });
 

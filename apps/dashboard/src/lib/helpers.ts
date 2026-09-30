@@ -208,6 +208,20 @@ export const describeError = (error: unknown, fallback: string): string => {
 export const todayDateString = () => new Date().toISOString().split("T")[0];
 
 /**
+ * The current time as the 24-hour `HH:mm` string `TimePicker` reads and emits.
+ *
+ * Local rather than UTC, because it is offered as the default on dialogs the
+ * floor fills in — the reference's `Report completion` opens on `17:59` when it
+ * is 17:59 in the warehouse.
+ */
+export const nowTimeString = () =>
+  new Date().toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+
+/**
  * A `year` query parameter as a year, or the current year when it is blank or
  * not a year — the reference's "leave blank for current year".
  */
@@ -827,6 +841,17 @@ export const roundToCents = (value: number): number => {
 /** An amount as a decimal string, rounded to the cent the way a ledger does. */
 export const moneyString = (value: number): string =>
   roundToCents(value).toFixed(2);
+
+/**
+ * A cost per unit as a decimal string, at the five decimals a lot's valuation
+ * price carries.
+ *
+ * Not `moneyString`: this is not an amount anybody is paid, it is the rate the
+ * stock value is derived from, and the reference keeps five decimals of it
+ * (`1537,61789`). Rounding it to the cent — or even to four places — makes the
+ * stock value disagree with the reference's by cents on every sizeable lot.
+ */
+export const unitCostString = (value: number): string => value.toFixed(5);
 
 export const formatFixed2 = (value: number): string =>
   value.toLocaleString("en-US", {

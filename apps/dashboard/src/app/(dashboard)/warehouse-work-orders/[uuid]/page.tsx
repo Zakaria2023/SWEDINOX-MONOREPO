@@ -4,6 +4,7 @@ import { ChevronLeft } from "lucide-react";
 import { getWarehouseWorkOrderDetail } from "@/app/(dashboard)/warehouse-work-orders/actions";
 import { getAvailableStockForSelect } from "@/app/(dashboard)/warehouse-work-orders/actions";
 import { getLocationsForSelect } from "@/app/(dashboard)/locations/actions";
+import { getClerkUsersForSelect } from "@/lib/server/clerk";
 import { WarehouseWorkOrderDetailView } from "@/components/warehouse-work-orders/warehouse-work-order-detail";
 import { PageHeading } from "@/components/layout/page-heading";
 
@@ -23,6 +24,7 @@ const WarehouseWorkOrderDetailPage = async ({ params }: Props) => {
   // Sequential rather than concurrent: this database caps connections.
   const stockOptions = await getAvailableStockForSelect();
   const locations = await getLocationsForSelect();
+  const users = await getClerkUsersForSelect();
 
   return (
     <div className="space-y-4">
@@ -40,6 +42,7 @@ const WarehouseWorkOrderDetailPage = async ({ params }: Props) => {
         workOrder={workOrder}
         stockOptions={stockOptions}
         locations={locations}
+        users={users}
       />
     </div>
   );

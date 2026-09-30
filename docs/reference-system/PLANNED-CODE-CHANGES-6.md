@@ -38,17 +38,24 @@ Order of work, smallest blast radius first:
 **All five are built as of 30-9-2026**, in that order, across five commits.
 What is left of the queue is not code:
 
-- ⚠️ **`pnpm db:push` has not run.** Five schema changes wait on it —
+- ⚠️ **`pnpm db:push` has not run.** Six schema changes wait on it —
   `kg_actual` on a purchase line; `correction_reason` / `attribute` /
   `value_before` / `value_after` on a movement; the `adjust` movement type;
-  `return_order_item_uuid` on a work order line; and `return_order_uuid` /
-  `return_order_item_uuid` on a movement. The Aiven host times out from
-  the machine this was built on. **Nothing in items 23, 25 or 26b works until
-  it is pushed from a machine that can reach the database.**
+  `return_order_item_uuid` on a work order line; `return_order_uuid` /
+  `return_order_item_uuid` on a movement; and **`Stock.valuation_price` widened
+  from `decimal(15,4)` to `decimal(15,5)`** (item 12, 30-9-2026). The Aiven host
+  times out from the machine this was built on. **Nothing in items 23, 25 or 26b
+  works until it is pushed from a machine that can reach the database**, and
+  until then every lot's valuation price is still being rounded to four
+  decimals on the way in.
 - **O9** still decides what a returned lot is worth in the general case, and
   **O8** still blocks the confirmation footer. Both need a person.
-- **Item 12** stays parked on **O2** and the warehouse half of **O3**, which
-  need a pick watched from the start.
+- ✅ **Item 12 is built.** A picking was driven end to end on 30-9-2026 —
+  **O2 and O3 are both closed** — and the code went in the same evening. See
+  [picking-flow.md](picking-flow.md) for the flow and item 12 below for what was
+  written. Two new findings came with it, **neither of them copied**: reporting a
+  line **deletes and re-raises** the rest of the work order, and the work order's
+  kg disagrees with the stock row's (**O11**).
 - The credit note is the one part of H12 nobody has watched.
 
 ---
@@ -71,7 +78,7 @@ feature work and two genuinely blocked items.
 | ✅ | **9** ladder self-approves | already correct; **4** locked it in |
 | ✅ | **10** internal move is not a mutation | `33c2920` — 19 reasons, none a relocation |
 | 🟡 | **11** profit bases | `c30569d` — **three of four.** APP and replacement were already there; FSP now comes from the dated settlement history. **LIP is deliberately absent**: its behaviour is known, its meaning is not (K4), and a column of zeros would read as an answer |
-| 🔴 | **12** picking allocation | Blocked on **O2** and the warehouse half of **O3** — the sales half of O3 closed 29-9-2026 (item 22) |
+| 🟡 | **12** picking allocation | ✅ **Built 30-9-2026**, once O2 and O3 were closed by driving work order `323526` from `New` to `Approved` ([picking-flow.md](picking-flow.md)). No allocation UI was needed — lots are allocated when the picking is raised, and `makeOrderFinal` now carries the lot's heat onto the line. The report path went in with it: a per-row lot picker on physical stock, `+ New` as a real parcel split, a date **and** time, `By` and `To location`, and — the one that was silently wrong — **a relocation now moves the lot row instead of minting a new uuid at the destination**. 🟡 only because `valuation_price` moved to 5 decimals and **`pnpm db:push` has not run** |
 | ✅ | **13** order fields | `a55e249` — most already existed; transport/handling costs added |
 | ✅ | **14** customer defaults | `a55e249` |
 | 🟡 | **15** confirmation document | `2e56830` — built, and sending is its own decision as the reference makes it (`Don't send` is the default). The **footer is deliberately absent**: printing *"payment discharges only to Boozt24 Finance"* tells a customer where to send money, and **O8** is unanswered. A wrong answer there is somebody's money in the wrong bank |
@@ -562,6 +569,45 @@ customer.** So the system suggests free metal first and a picker may override.
   `Available 0`. The two disagree. **Do not implement an availability rule until
   this is settled** (see Open Questions).
 
+### ✅ Built 30-9-2026, after the flow closed O2 and O3
+
+The availability rule the warning above was holding back is now settled, and
+five things went in with it. What was **not** copied is listed at the end.
+
+| | What | Where |
+|---|---|---|
+| 1 | **A relocation moves the row, it does not mint a new identity.** Moving a whole lot now updates its `location_uuid` in place — same uuid, same valuation, same stock category, same reservation. Only a *partial* move splits a row off | `lib/server/stock-movements.ts` — `applyMove` |
+| 2 | **What a split may merge into.** A part that travelled joins a lot at the destination only when the parcel number, the heat, the internal charge, the quality, the stock category **and the valuation price** all agree | same |
+| 3 | **The warehouse lot picker.** `getPickableLotsForLine` — physical stock, reservations shown but never subtracted, scoped to the line's `From location` with the scope removable, exactly as the reference's `Location = 2C7` chip behaves | `warehouse-work-orders/actions.ts` |
+| 4 | **Allocation at creation.** `makeOrderFinal` copies the lot's `charge` / `internalCharge` / `internalBatch` / `quality` onto the work-order line, so a `New` picking already names the metal it is for | `orders/actions.ts` |
+| 5 | **The dialog, per line.** `Executed on` is now a date *and* a time defaulting to now, `By` is an operator select, `To location` is a select defaulting to the line's destination, and each row carries its own lot picker — which is what makes `+ New` a genuine parcel split rather than five rows against one lot | `report-completion-dialog.tsx` |
+
+Three smaller ones came out of the same evidence:
+
+- **`valuation_price` is `decimal(15,5)`, not `(15,4)`.** The reference carries
+  `1537,61789` and its `Stock (€)` reconciles to the cent off the fifth decimal.
+  A new `unitCostString` helper writes all seven call sites so they cannot drift
+  from the column again. ⚠️ **Schema change — `pnpm db:push` not run.**
+- **The reported lot's identity is what the line keeps.** A floor that walked to
+  a different parcel than the one planned leaves the line naming the heat it
+  really shipped, and the pick row records the lot's own `From location` rather
+  than the line's.
+- **`Stock.bundle` carries a warning.** The `Stock on location` export's column
+  named `Bundle` is `internalBatch`, not this column. Mapping it here on an
+  import would file the parcel number under the supplier's batch.
+
+**Deliberately not copied:**
+
+- **The re-plan.** Reporting one line does not delete and re-raise the rest
+  (§7 of [picking-flow.md](picking-flow.md)). Ours decrements the reported line
+  and leaves the others, their reservations and their printed paper alone.
+- **The pre-filled weight on a short pick.** The reference leaves `Kg(a)` at the
+  planned figure whatever quantity is then typed, so reporting 20 of 50 pieces
+  reports all 50 pieces' worth of metal. Ours clears it — and clears it rather
+  than recalculating it, because `Kg(a)` is what the parcel weighed and the
+  reference's own two densities disagree by 1,9 % (**O11**). A computed weight
+  presented as a measured one is the mistake O11 is about.
+
 ---
 
 ## 13. Sales order fields we do not have
@@ -724,8 +770,8 @@ four levels, and that the picker is a search rather than a dropdown.
 
 | # | Question | Why it blocks |
 |---|---|---|
-| **O2** | 🔴 **Lot `389825` lost 5 pieces when the picker named `389827`.** Totals conserve (100 pieces, 10 597,5 kg before and after) and a new `389827` row appeared at `Laad` with 5, while `389827` at `Ontvangst` kept its 10 and gained a reservation of 5 | Either the six-digit number is a reusable label rather than a lot identity, or the pick debited a different lot than it displayed. Item 12 depends on which. The mutations ledger cannot settle it (item 10) |
-| **O3** | 🟡 **Narrowed 29-9-2026.** The *order-line* `Stock` picker was re-read against the stock screen on `PK316T05013` and **agrees** — `Available 0` on both, at group and lot level (item 22). The disagreement was seen on the *picking* `Report completion` `Charge` picker, which is a different dialog and is **still unread** | An availability rule cannot be written for the warehouse side while the two disagree. The sales side is now settled |
+| **O2** | ✅ **CLOSED 30-9-2026.** Reproduced deliberately on `PK44115025125`: shelf `4A5` held bundles `402152` and `402153` with identical heat, internal charge, purchase order, receipt date, valuation and dimensions. After the pick, `402153` was **gone** and `402152` existed **twice** (50 @ `4A5` + 50 @ `Laad`), 511 pieces and 18 801,731 kg conserved exactly. The two shelves holding one candidate each moved cleanly and kept their numbers | **A bundle number is a printed label, not an identity.** Our uuid primary key is already correct and stays. `Stock.bundle` is a non-unique label field, never a foreign key, and no movement is ever keyed on it. Any import de-duplicates on `(product, location, charge, internalCharge, valuationPrice)` |
+| **O3** | ✅ **CLOSED 30-9-2026.** The `Report completion` `Charge` picker offered lot `402158` as **`Available 50`** while `Stock on location` read **`Available 0,00`** for the same lot at the same moment. The picker is also scoped to the line's `From location` (chip `Location = 2C7`) | **The two dialogs run different rules on purpose.** Sales order-line picker: `Available = Stock − Reserved`, so a salesman cannot sell committed metal. Warehouse report picker: `Available = physical stock`, because the picker is consuming metal for the very order that reserved it. Both halves settled |
 | **O4** | **What computed the 20/25/20/25/10 bundle split?** Offered pre-filled and accepted unchanged | Item 4 offers one row until this is known |
 | **O5** | Was work order `306675` raised by the `Workorder` button, or automatically by `Confirm` / `Pre-notifiy`? | The only gap left in H1 |
 | **O6** | After reporting, work order `306675` read `Qty(p) 10 / Kg(p) 1 060,2`, down from 100 / 10 598, with no child rows | Cosmetic — the stock is right either way — but unexplained |
@@ -733,6 +779,7 @@ four levels, and that the picker is a search rather than a dropdown.
 | **O8** | **Is the factoring arrangement with Boozt24 current?** | Item 15. Ask before building anything that clears an open post |
 | **O9** | 🔴 **Which two accounts take the revaluation?** A lot comes in valued at the product's APP (€ 2 058,8151) while € 2 000,00 was paid. That gap has to be posted and we do not know where | Item 3's lot side. We already derive an average purchase price, so the valuation itself is reachable — but valuing the lot correctly while leaving the difference unposted is worse than valuing it consistently. `control-stock-revaluation-fsp` is the screen that reports it |
 | **O10** | Is the reference's **APP** the same average we compute? | Ours comes from purchase invoices, theirs is carried on the product and the lot. Same idea; nothing yet says the same number. **Read the product record's price blocks** — the `Basis` block was captured on 21-9-2026 and the ones below it were not |
+| **O11** | 🔴 **The work order and the stock row disagree on density.** Work order `323526` plans **1 875 kg** for 50 pieces of `PK44115025125`; the stock rows weigh **1 839,84375 kg** — density **8000** against the product's stored **7850**. A 1,9 % gap, same product, same system, same moment | `Report completion` pre-fills `Kg(a)` with the **work order's** figure, so accepting the default reports 1,9 % more metal than moved. Until this is explained, **do not copy the pre-fill** — ours fills `Kg(a)` from the lot |
 
 ---
 
@@ -752,7 +799,7 @@ One flow's worth of change per commit, smallest blast radius first.
 9. **1** — the two weights ⚠️ **last, and re-run every margin check**
 10. **11**, **17**, **19** — panels and presentation
 
-**Blocked until answered:** item 12 needs O2 and O3. Item 18 cannot be built at
+**Blocked until answered:** ~~item 12 needs O2 and O3~~ — ✅ both closed 30-9-2026, item 12 is unblocked. Item 18 cannot be built at
 all from what exists. ✅ Item 1 is unblocked — the product carries the density.
 
 ---

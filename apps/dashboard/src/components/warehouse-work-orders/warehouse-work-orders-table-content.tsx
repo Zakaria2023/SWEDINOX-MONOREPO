@@ -14,6 +14,7 @@ import {
   WarehouseWorkOrderTree,
   WorkOrderDetail,
 } from "@/app/(dashboard)/warehouse-work-orders/actions";
+import { LocationOption } from "@/app/(dashboard)/locations/actions";
 import { Button } from "@/components/shadcn/button";
 import { FormError } from "@/components/ui/form-error";
 import { PagedTableExportButton } from "@/components/ui/table-export-button";
@@ -28,12 +29,15 @@ import {
 } from "@/components/work-orders/work-order-tree";
 import { WorkOrderStatus } from "@/lib/enums";
 import { orDash } from "@/lib/helpers";
+import { ClerkUserOption } from "@/lib/server/clerk";
 import { TableFilterControl } from "@/lib/table-query";
 import { ReportCompletionDialog } from "./report-completion-dialog";
 
 type Props = {
   tree: WarehouseWorkOrderTree;
   filters: TableFilterControl[];
+  locations: LocationOption[];
+  users: ClerkUserOption[];
 };
 
 const num = (value: string | null) => Number(value ?? 0);
@@ -89,7 +93,12 @@ const COLUMNS: TreeColumn<WarehouseTreeRow>[] = [
   },
 ];
 
-export const WarehouseWorkOrdersTable = ({ tree, filters }: Props) => {
+export const WarehouseWorkOrdersTable = ({
+  tree,
+  filters,
+  locations,
+  users,
+}: Props) => {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -274,6 +283,8 @@ export const WarehouseWorkOrdersTable = ({ tree, filters }: Props) => {
       <ReportCompletionDialog
         line={reportingLine}
         workOrderType={reportingLine?.type ?? "picking"}
+        locations={locations}
+        users={users}
         onOpenChange={(open) => {
           if (!open) {
             setReportingLine(null);

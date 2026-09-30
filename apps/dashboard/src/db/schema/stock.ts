@@ -114,14 +114,27 @@ export const Stock = mysqlTable(
     // `Batch` on the reference's stock panels — the supplier's batch number,
     // which is not the heat: charge `030325` arrived as batches 269335, 269336,
     // 269337, 269338, 269339, 269353 and 269354, one per bundle.
+    //
+    // ⚠️ Do not map the `Stock on location` export's column named **`Bundle`**
+    // onto this one. That column carries the six-digit parcel number — `402152`
+    // on the 30-9-2026 export — which is `internalBatch` above. The screen has
+    // no column for the supplier's batch at all. Mapping it here would file the
+    // parcel number under the supplier's and leave both fields wrong.
     bundle: varchar("bundle", { length: 100 }),
     receiptDate: date("receipt_date", { mode: "string" }),
     remark: varchar("remark", { length: 255 }),
 
     // ── Valuation (the bridge to accounting / COGS) ───────────────────────────
     // Cost per unit and the resulting stock value ("Valuation price" / "Stock (€)").
-    valuationPrice: decimal("valuation_price", { precision: 15, scale: 4 })
-      .default("0.0000")
+    //
+    // Five decimals, not four. The reference carries `1537,61789` and
+    // `1345,19975` on the 30-9-2026 stock export, and `Stock (€)` reconciles to
+    // the cent off the fifth: 1 839,84375 kg / 1000 × 1 537,61789 = € 2 828,98.
+    // Rounding the price to four decimals first makes that check fail by cents
+    // on every large lot, which is exactly the kind of drift nobody can trace
+    // back afterwards.
+    valuationPrice: decimal("valuation_price", { precision: 15, scale: 5 })
+      .default("0.00000")
       .notNull(),
     valuationEuro: decimal("valuation_euro", { precision: 15, scale: 2 })
       .default("0.00")

@@ -48,6 +48,7 @@ import {
   todayDateString,
   toDecimalAmount,
   toDecimalQuantity,
+  unitCostString,
   WAREHOUSE_WORK_ORDER_TYPE_META,
 } from "@/lib/helpers";
 import {
@@ -159,6 +160,43 @@ export type AvailableStockOption = Pick<SelectStock, "uuid" | "quantity"> & {
   productUuid: SelectProducts["uuid"];
   productCode: SelectProducts["productCode"];
   productName: SelectProducts["name"];
+};
+
+/**
+ * 🔴 A lot as the **warehouse** picker has to see it — which is not how the
+ * sales picker sees it.
+ *
+ * Answered on 30-9-2026 and it closes O3. Clicking `Charge` on the reference's
+ * `Report completion` dialog for line `323526/5` offered two lots, both reading
+ * **`Available 50`**, while `Stock on location` read **`Available 0,00`** for
+ * the same lot at the same moment: it held 50 and 50 were reserved.
+ *
+ * So `available` here is **physical stock, reservations ignored**, and that is
+ * deliberate rather than a bug. The man on the floor is consuming metal *for
+ * the very order that reserved it*; netting reservations off would leave him
+ * looking at an empty shelf. The sales picker nets them off for the opposite
+ * reason — a salesman must not sell metal somebody else is owed.
+ *
+ * `reserved` comes back beside it so the dialog can say who the metal is
+ * spoken for by, without that ever deciding what may be picked.
+ */
+export type PickableLot = {
+  uuid: SelectStock["uuid"];
+  locationUuid: SelectStock["locationUuid"];
+  locationName: SelectWarehouses["name"] | null;
+  charge: SelectStock["charge"];
+  internalCharge: SelectStock["internalCharge"];
+  /** The six-digit parcel number — the reference's `Interne partij`. */
+  internalBatch: SelectStock["internalBatch"];
+  quality: SelectStock["quality"];
+  stockCategory: SelectStock["stockCategory"];
+  receiptDate: SelectStock["receiptDate"];
+  valuationPrice: SelectStock["valuationPrice"];
+  /** Physical stock. Not `quantity - reserved`. */
+  available: number;
+  reserved: number;
+  /** True when the lot is on the location the line says to pick from. */
+  onLineLocation: boolean;
 };
 
 export type WorkOrderPickRow = SelectWarehouseWorkOrderPicks & {
@@ -534,6 +572,74 @@ export const getWarehouseWorkOrderLineDetail = async (
   }
 
   return getWorkOrderLineDetail(line);
+};
+
+/**
+ * The lots the floor may report this line against.
+ *
+ * Scoped to the line's product, and ordered so the line's own `From location`
+ * comes first — the reference scopes it harder still, opening with a filter
+ * chip reading `Location = 2C7` and offering 2 of the product's 14 lots. The
+ * chip is removable there, so the other locations are returned too and the
+ * dialog decides which to show.
+ *
+ * Blocked lots and other people's metal stay out, as everywhere else. What does
+ * *not* filter anything here is the reservation — see `PickableLot`.
+ */
+export const getPickableLotsForLine = async (
+  lineUuid: string,
+): Promise<PickableLot[]> => {
+  const [line] = await db
+    .select({
+      productUuid: WarehouseWorkOrderLines.productUuid,
+      fromLocationUuid: WarehouseWorkOrderLines.fromLocationUuid,
+    })
+    .from(WarehouseWorkOrderLines)
+    .where(eq(WarehouseWorkOrderLines.uuid, lineUuid))
+    .limit(1);
+
+  if (!line?.productUuid) {
+    return [];
+  }
+
+  const rows = await db
+    .select({
+      uuid: Stock.uuid,
+      locationUuid: Stock.locationUuid,
+      locationName: Warehouses.name,
+      charge: Stock.charge,
+      internalCharge: Stock.internalCharge,
+      internalBatch: Stock.internalBatch,
+      quality: Stock.quality,
+      stockCategory: Stock.stockCategory,
+      receiptDate: Stock.receiptDate,
+      valuationPrice: Stock.valuationPrice,
+      quantity: Stock.quantity,
+      reserved: Stock.reservedQuantity,
+    })
+    .from(Stock)
+    .leftJoin(Warehouses, eq(Stock.locationUuid, Warehouses.uuid))
+    .where(
+      and(
+        eq(Stock.productUuid, line.productUuid),
+        eq(Stock.status, "pending"),
+        eq(Stock.blocked, false),
+        isNull(Stock.ownerCompanyUuid),
+        gt(Stock.quantity, "0"),
+      ),
+    )
+    .orderBy(desc(Stock.receiptDate));
+
+  return rows
+    .map(({ quantity, reserved, ...lot }) => ({
+      ...lot,
+      available: Number(quantity ?? 0),
+      reserved: Number(reserved ?? 0),
+      onLineLocation:
+        line.fromLocationUuid !== null &&
+        lot.locationUuid === line.fromLocationUuid,
+    }))
+    .sort((a, b) => Number(b.onLineLocation) - Number(a.onLineLocation));
 };
 
 export const getWarehouseWorkOrderPicks = async (
@@ -1123,7 +1229,7 @@ const applyReturnReceipt = async (
     lengthMm: returnLine.lengthMm,
     widthMm: returnLine.widthMm,
     thicknessMm: returnLine.thicknessMm,
-    valuationPrice: unitCost.toFixed(4),
+    valuationPrice: unitCostString(unitCost),
     valuationEuro: moneyString(value),
   });
 
@@ -1152,7 +1258,7 @@ const applyReturnReceipt = async (
     type: "in",
     reason: "sales_return",
     orderUuid: originalLine?.orderUuid ?? null,
-    valuationPrice: unitCost.toFixed(4),
+    valuationPrice: unitCostString(unitCost),
     operator: params.userId,
   });
 
@@ -1424,7 +1530,7 @@ const applyReceipt = async (
     internalCharge,
     internalBatch,
     receiptDate: todayDateString(),
-    valuationPrice: unitCost.toFixed(4),
+    valuationPrice: unitCostString(unitCost),
     valuationEuro: moneyString(value),
   });
 
@@ -1471,7 +1577,7 @@ const applyReceipt = async (
     reason: "warehouse_receipt",
     purchaseOrderUuid: purchaseLine.purchaseOrderUuid,
     supplierUuid: params.companyUuid,
-    valuationPrice: unitCost.toFixed(4),
+    valuationPrice: unitCostString(unitCost),
     operator: params.userId,
   });
 
@@ -1716,6 +1822,17 @@ export const reportWarehouseWorkOrderLineCompletion = async (
       : null;
 
     await db.transaction(async (tx) => {
+      // What the line ends up carrying, in the order it was reported. A floor
+      // that walked to a different parcel than the one planned has to leave the
+      // line naming the heat it really shipped, or the delivery note traces to
+      // metal that never left the building — so these are resolved against the
+      // lot each row drew on, not against what the dialog arrived holding.
+      const reportedIdentities: {
+        charge: string | null;
+        internalCharge: string | null;
+        internalBatch: string | null;
+      }[] = [];
+
       for (const pick of reported) {
         const quantity = Number(pick.qtyActual);
 
@@ -1730,17 +1847,22 @@ export const reportWarehouseWorkOrderLineCompletion = async (
         // nothing rather than left standing at whatever it claimed to hold.
         const isCount = meta.stockEffect === "count";
 
-        if (quantity > 0 || isCount) {
-          const source = pick.stockUuid
-            ? (
-                await tx
-                  .select()
-                  .from(Stock)
-                  .where(eq(Stock.uuid, pick.stockUuid))
-                  .limit(1)
-              )[0]
-            : undefined;
+        // Read before the branch, because the row records where the metal
+        // actually came from as well as what it did. A split report may draw
+        // its second parcel off a lot on another shelf than the line names —
+        // which is the whole point of the reference's `+ New` — so the line's
+        // own `From location` is a default, not the answer.
+        const source = pick.stockUuid
+          ? (
+              await tx
+                .select()
+                .from(Stock)
+                .where(eq(Stock.uuid, pick.stockUuid))
+                .limit(1)
+            )[0]
+          : undefined;
 
+        if (quantity > 0 || isCount) {
           if (meta.stockEffect === "in") {
             const toLocationUuid = pick.toLocationUuid ?? line.toLocationUuid;
             if (!toLocationUuid) {
@@ -1817,14 +1939,19 @@ export const reportWarehouseWorkOrderLineCompletion = async (
         const values = {
           workOrderLineUuid: input.lineUuid,
           stockUuid: pick.stockUuid,
-          fromLocationUuid: line.fromLocationUuid,
+          fromLocationUuid: source?.locationUuid ?? line.fromLocationUuid,
           toLocationUuid: pick.toLocationUuid ?? line.toLocationUuid,
           qtyPlanned: pick.qtyPlanned,
           qtyActual: pick.qtyActual,
           kgActual: pick.kgActual ?? null,
-          charge: pick.charge ?? null,
-          internalCharge: pick.internalCharge ?? null,
-          internalBatch: pick.internalBatch ?? null,
+          // On the way out the three identifiers belong to the lot, not to
+          // whatever the dialog was carrying: the reference pre-fills them from
+          // the allocated lot and its own `Report completion` grid shows
+          // `Internal batch 0` where it failed to. Typed values are kept only
+          // on an unloading, where there is no lot yet to read them off.
+          charge: source?.charge ?? pick.charge ?? null,
+          internalCharge: source?.internalCharge ?? pick.internalCharge ?? null,
+          internalBatch: source?.internalBatch ?? pick.internalBatch ?? null,
           executedAt,
           executedByUserId: input.executedByUserId ?? userId,
         };
@@ -1838,6 +1965,14 @@ export const reportWarehouseWorkOrderLineCompletion = async (
           await tx
             .insert(WarehouseWorkOrderPicks)
             .values({ ...values, uuid: generateUuid() });
+        }
+
+        if (quantity > 0) {
+          reportedIdentities.push({
+            charge: values.charge,
+            internalCharge: values.internalCharge,
+            internalBatch: values.internalBatch,
+          });
         }
       }
 
@@ -1856,9 +1991,11 @@ export const reportWarehouseWorkOrderLineCompletion = async (
           status: "approved",
           qtyActual: qtyActual.toFixed(3),
           kgActual: kgActual.toFixed(2),
-          charge: reported[0]?.charge ?? line.charge,
-          internalCharge: reported[0]?.internalCharge ?? line.internalCharge,
-          internalBatch: reported[0]?.internalBatch ?? line.internalBatch,
+          charge: reportedIdentities[0]?.charge ?? line.charge,
+          internalCharge:
+            reportedIdentities[0]?.internalCharge ?? line.internalCharge,
+          internalBatch:
+            reportedIdentities[0]?.internalBatch ?? line.internalBatch,
         })
         .where(eq(WarehouseWorkOrderLines.uuid, input.lineUuid));
 

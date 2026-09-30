@@ -1092,6 +1092,18 @@ export const makeOrderFinal = async (
           thicknessMm: OrderItems.thicknessMm,
           productCode: Products.productCode,
           locationUuid: Stock.locationUuid,
+          // 🔑 A `New` picking already names the metal it is for.
+          //
+          // Watched on 30-9-2026: every line of every unreleased picking in the
+          // reference already carried `Internal batch`, `Charge`, `Internal
+          // charge` and `Kwaliteit` — allocation happens when the work order is
+          // raised, not in a step after it. So they are copied off the lot here
+          // rather than left for the floor to discover, and the floor can read
+          // which parcel it is walking to before anything is released.
+          charge: Stock.charge,
+          internalCharge: Stock.internalCharge,
+          internalBatch: Stock.internalBatch,
+          quality: Stock.quality,
         })
         .from(OrderItems)
         .leftJoin(Products, eq(OrderItems.productUuid, Products.uuid))
@@ -1181,6 +1193,10 @@ export const makeOrderFinal = async (
           thickness: item.thicknessMm ? Number(item.thicknessMm) : null,
           qtyPlanned: item.quantity,
           kgPlanned: item.kgPlanned,
+          charge: item.charge,
+          internalCharge: item.internalCharge,
+          internalBatch: item.internalBatch,
+          quality: item.quality,
           status: "new",
         });
       }

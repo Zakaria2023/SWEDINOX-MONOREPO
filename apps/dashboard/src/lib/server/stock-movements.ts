@@ -15,6 +15,7 @@ import {
   StockCorrectableValues,
   stockCorrectionReasonRules,
   todayDateString,
+  unitCostString,
 } from "@/lib/helpers";
 import { carryLotBatches, registerBatchForLot } from "@/lib/server/batches";
 import { and, eq, ne } from "drizzle-orm";
@@ -106,10 +107,11 @@ export type ProductionConsumption = {
 /**
  * Move a lot from one location to another.
  *
- * The quantity leaves the source lot and joins a lot of the same material
- * standing at the destination, or starts one if none is there. Value travels
- * with it, so the two lots together are worth exactly what the one was — which
- * is why an internal move posts nothing to the ledger.
+ * Moving **all** of it relocates the row — same uuid, same valuation, same
+ * everything, standing somewhere else. Moving **part** of it splits a new lot
+ * off for the part that travelled. Value travels either way, so what stands
+ * afterwards is worth exactly what stood before, which is why an internal move
+ * posts nothing to the ledger.
  *
  * The reservation travels too. A lot picked for a customer arrives at the
  * staging shelf spoken for, which is what stops the same steel being sold twice
@@ -153,6 +155,43 @@ export const applyMove = async (
   const carried = Math.min(quantity, Number(source.reservedQuantity ?? 0));
   const arrivingReserved = params.committedToOrder ? quantity : carried;
 
+  // 🔴 A relocation moves the row. It does not mint a new identity.
+  //
+  // Proved on 30-9-2026 by driving picking work order `323526` end to end and
+  // exporting `Stock on location` before and after: **14 rows before, 14 rows
+  // after**. Three lots left their shelves for `Laad` and three rows changed
+  // location. Nothing was created, nothing was left behind at zero, and every
+  // lot kept its valuation price and its stock category.
+  //
+  // Splitting the whole lot in two — drawing the source down to nothing and
+  // inserting a fresh uuid at the destination — is how this used to work, and
+  // it was wrong twice over. It left a zero-quantity ghost at the old location
+  // for every pick ever made, and it silently changed the lot's uuid, which is
+  // the one identifier we have that the reference does not. Everything holding
+  // that uuid — the order line that reserved it, its batch certificates, its
+  // movements — would have been left pointing at an empty row.
+  if (remainingQuantity === 0) {
+    const [relocated] = await tx
+      .update(Stock)
+      .set({
+        locationUuid: params.toLocationUuid,
+        reservedQuantity: arrivingReserved.toFixed(3),
+      })
+      .where(
+        and(eq(Stock.uuid, source.uuid), eq(Stock.quantity, source.quantity)),
+      );
+
+    if (relocated.affectedRows === 0) {
+      throw new Error(
+        "The lot changed while moving it — please refresh and try again.",
+      );
+    }
+
+    // Same lot, so there is nothing to carry and nothing the ledger would
+    // learn from two rows naming one uuid twice.
+    return;
+  }
+
   const [updated] = await tx
     .update(Stock)
     .set({
@@ -187,11 +226,27 @@ export const applyMove = async (
       ),
     );
 
+  // 🔴 What the part that travelled is allowed to join.
+  //
+  // The same 30-9-2026 export settles this too. `Laad` ended the day holding
+  // `402156` and `402158` as **two rows** — same heat `SD40826`, same internal
+  // charge `26AOCX`, same price — because they are two parcels. And it held
+  // `402152` at € 1 537,61789 beside `402155` at € 1 345,19975 under the one
+  // internal charge `26AOCW`. So neither the parcel number nor the price may be
+  // folded away.
+  //
+  // Price is the one that costs money. Merging a lot into a neighbour carried
+  // at a different price leaves the receiving row's `valuation_euro` no longer
+  // equal to its quantity times its `valuation_price`, and every margin drawn
+  // off that lot afterwards is taken at a rate nothing on the row justifies.
   const destination = candidates.find(
     (lot) =>
       lot.charge === source.charge &&
       lot.internalCharge === source.internalCharge &&
-      lot.quality === source.quality,
+      lot.internalBatch === source.internalBatch &&
+      lot.quality === source.quality &&
+      lot.stockCategory === source.stockCategory &&
+      Number(lot.valuationPrice ?? 0) === unitCost,
   );
 
   const destinationUuid = destination?.uuid ?? generateUuid();
@@ -408,7 +463,7 @@ export const applyProductionOutput = async (
     charge: normaliseCharge(params.charge),
     internalCharge: normaliseCharge(params.internalCharge),
     remark: params.remark,
-    valuationPrice: (quantity > 0 ? params.value / quantity : 0).toFixed(4),
+    valuationPrice: unitCostString(quantity > 0 ? params.value / quantity : 0),
     valuationEuro: moneyString(params.value),
   });
 
