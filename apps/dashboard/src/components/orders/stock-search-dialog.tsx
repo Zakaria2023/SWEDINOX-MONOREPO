@@ -146,13 +146,21 @@ export const StockSearchDialog = ({
 }: Props) => {
   const allowedSources: StockSearchSource[] = sources ?? ["stock", "purchase"];
   const firstSource = allowedSources[0] ?? "stock";
-  const [filters, setFilters] = useState<Filters>({
+
+  // How this document opens the search. The effect below reseeds from here when
+  // the dialog opens — seeding from EMPTY_FILTERS instead put every caller back
+  // on the shelf, so a purchase order searched stock it does not have and the
+  // article's own dimensions never reached the grid.
+  const openingFilters = (): Filters => ({
     ...EMPTY_FILTERS,
     source: firstSource,
     // A catalogue search is about articles, not what happens to be on the
     // shelf, so the physical-stock filter would hide almost everything.
     onlyWithPhysicalStock: firstSource !== "catalogue",
+    productCode: initialProductCode ?? "",
   });
+
+  const [filters, setFilters] = useState<Filters>(openingFilters);
   const [variants, setVariants] = useState<StockSearchVariant[]>([]);
   const [lots, setLots] = useState<StockSearchLot[]>([]);
   const [truncated, setTruncated] = useState(false);
@@ -191,16 +199,28 @@ export const StockSearchDialog = ({
     if (!open) {
       return;
     }
-    const seeded = { ...EMPTY_FILTERS, productCode: initialProductCode ?? "" };
+    const seeded: Filters = {
+      ...EMPTY_FILTERS,
+      source: firstSource,
+      onlyWithPhysicalStock: firstSource !== "catalogue",
+      productCode: initialProductCode ?? "",
+    };
     setFilters(seeded);
     runSearch(seeded);
-  }, [open, initialProductCode]);
+  }, [open, initialProductCode, firstSource]);
 
   const set = <K extends keyof Filters>(key: K, value: Filters[K]) =>
     setFilters((current) => ({ ...current, [key]: value }));
 
   const chooseSource = (source: StockSearchSource) => {
-    const next = { ...filters, source };
+    const next = {
+      ...filters,
+      source,
+      // The catalogue is the article list. Filtering it by what happens to be
+      // on the shelf would hide exactly the articles somebody is here to buy.
+      onlyWithPhysicalStock:
+        source === "catalogue" ? false : filters.onlyWithPhysicalStock,
+    };
     setFilters(next);
     runSearch(next);
   };
@@ -221,11 +241,19 @@ export const StockSearchDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-6xl">
         <DialogHeader>
-          <DialogTitle>Stock</DialogTitle>
+          <DialogTitle>
+            {filters.source === "catalogue"
+              ? "Products"
+              : filters.source === "purchase"
+                ? "Incoming purchases"
+                : "Stock"}
+          </DialogTitle>
           <DialogDescription>
-            Search the shelf, then take either the article or one particular lot.
-            Dimensions match within the margin, so a plate a little off the size
-            asked for still shows up.
+            {filters.source === "catalogue"
+              ? "Search the article list, whether or not any of it is on the shelf. Dimensions match within the margin, so a plate a little off the size asked for still shows up."
+              : filters.source === "purchase"
+                ? "Search goods that have been ordered and have not arrived. Dimensions match within the margin."
+                : "Search the shelf, then take either the article or one particular lot. Dimensions match within the margin, so a plate a little off the size asked for still shows up."}
           </DialogDescription>
         </DialogHeader>
 
@@ -310,20 +338,24 @@ export const StockSearchDialog = ({
               spoken for is still metal a salesman has to be able to see, because
               reservations move.
             */}
-            <label className="flex items-center gap-2">
-              <Checkbox
-                checked={filters.onlyWithPhysicalStock}
-                onChange={(event) => {
-                  const next = {
-                    ...filters,
-                    onlyWithPhysicalStock: event.target.checked,
-                  };
-                  setFilters(next);
-                  runSearch(next);
-                }}
-              />
-              Only articles physically in stock
-            </label>
+            {/* Meaningless against the article list, where nothing is on a
+                shelf by definition. */}
+            {filters.source !== "catalogue" && (
+              <label className="flex items-center gap-2">
+                <Checkbox
+                  checked={filters.onlyWithPhysicalStock}
+                  onChange={(event) => {
+                    const next = {
+                      ...filters,
+                      onlyWithPhysicalStock: event.target.checked,
+                    };
+                    setFilters(next);
+                    runSearch(next);
+                  }}
+                />
+                Only articles physically in stock
+              </label>
+            )}
             <label className="flex items-center gap-2">
               <Checkbox
                 checked={filters.includeFirstChoice}
