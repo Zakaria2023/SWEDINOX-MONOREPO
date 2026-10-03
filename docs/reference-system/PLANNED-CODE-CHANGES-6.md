@@ -2396,7 +2396,22 @@ So this was not a schema round. It was the logic round.
 - **27e** three margins exist and are read; **27g** is a decision not to build.
 - **28b** `Simuleer` — needs a UI pattern, not just an action.
 - **31b** `Options` as a join table rather than a column.
-- 🔴 **`pnpm db:push` still has not run.** The host does not resolve from this
-  machine (`ENOTFOUND`, re-tested 3-10-2026). The queue is now the six changes
-  from 30-9 plus roughly a dozen from today. **Nothing above reaches the
-  database until it is pushed from a machine that can see it.**
+- 🔴 **`pnpm db:push` still has not run — attempted again 3-10-2026, twice.**
+
+  ```
+  Error: connect ETIMEDOUT
+      at connectToMySQL (drizzle-kit/bin.cjs)
+  ```
+
+  Tried inside the sandbox and outside it, same result, so it is not the sandbox.
+  **DNS resolves and the TCP connect times out**, which is the signature of an
+  **IP allowlist or a firewall on the port** — not bad credentials, which would
+  fail fast with an auth error instead of hanging.
+
+  > **What unblocks it:** add this machine's public IP to the database's allowed
+  > addresses (Aiven calls it *IP filter*), or run `pnpm db:push` from a machine
+  > already on the list. Nothing in the code needs to change.
+
+  The queue is the six changes from 30-9 plus roughly a dozen from 2–3-10.
+  **Nothing above reaches the database until it is pushed from somewhere that can
+  reach the host**, and items 23, 25 and 26b stay broken until it is.
