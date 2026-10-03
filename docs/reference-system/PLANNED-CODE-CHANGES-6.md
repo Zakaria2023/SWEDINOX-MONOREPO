@@ -772,14 +772,14 @@ four levels, and that the picker is a search rather than a dropdown.
 |---|---|---|
 | **O2** | ✅ **CLOSED 30-9-2026.** Reproduced deliberately on `PK44115025125`: shelf `4A5` held bundles `402152` and `402153` with identical heat, internal charge, purchase order, receipt date, valuation and dimensions. After the pick, `402153` was **gone** and `402152` existed **twice** (50 @ `4A5` + 50 @ `Laad`), 511 pieces and 18 801,731 kg conserved exactly. The two shelves holding one candidate each moved cleanly and kept their numbers | **A bundle number is a printed label, not an identity.** Our uuid primary key is already correct and stays. `Stock.bundle` is a non-unique label field, never a foreign key, and no movement is ever keyed on it. Any import de-duplicates on `(product, location, charge, internalCharge, valuationPrice)` |
 | **O3** | ✅ **CLOSED 30-9-2026.** The `Report completion` `Charge` picker offered lot `402158` as **`Available 50`** while `Stock on location` read **`Available 0,00`** for the same lot at the same moment. The picker is also scoped to the line's `From location` (chip `Location = 2C7`) | **The two dialogs run different rules on purpose.** Sales order-line picker: `Available = Stock − Reserved`, so a salesman cannot sell committed metal. Warehouse report picker: `Available = physical stock`, because the picker is consuming metal for the very order that reserved it. Both halves settled |
-| **O4** | **What computed the 20/25/20/25/10 bundle split?** Offered pre-filled and accepted unchanged | Item 4 offers one row until this is known |
-| **O5** | Was work order `306675` raised by the `Workorder` button, or automatically by `Confirm` / `Pre-notifiy`? | The only gap left in H1 |
+| **O4** | 🟡 **NARROWED 2-10-2026, not closed.** The `Receipts` grid carries four EDI columns and one is literally **`EDI Bundels`**, beside `EDI Charge`, `EDI Vrachtbrief` and `EDI Leverdatum`; the header has `Message sent via StaalWeb`. **Best hypothesis: the mill sends the bundle breakdown and nobody computes it.** ⚠️ Unproved — blank on the order read, which was placed by `Order method: Telephone`. ⚠️ **And `401141` did not open the H1 document**: the grid showed a 2025 Terninox **coil**, 1 line, 1 reception, 4 340 kg — either the overview was scoped to the previous tab's product or the test order is gone | Item 4 offers one row until this is known. **Next:** find the real order via `Stock on location` → internal charge `26ADRC` → `Show purchase order`; then read an order whose `Order method` is EDI/StaalWeb |
+| **O5** | Was work order `306675` raised by the `Workorder` button, or automatically by `Confirm` / `Pre-notifiy`? — 2-10-2026: the order's `Workorders` panel is **three sub-panels** (`Warehouse` / `Production` / `Transport`) and `Pre-notify` turns out to sit on the **`Lines`** toolbar as well as the order's, so it is a per-line act | The only gap left in H1 |
 | **O6** | After reporting, work order `306675` read `Qty(p) 10 / Kg(p) 1 060,2`, down from 100 / 10 598, with no child rows | Cosmetic — the stock is right either way — but unexplained |
 | **O7** | The unloading dialog balanced its last bundle to the order's **rounded** `Kg(p)` (1 060,2) and stock stored the theoretical 1 059,75 | **Do not reproduce the dialog's arithmetic as if it were stored** |
 | **O8** | **Is the factoring arrangement with Boozt24 current?** | Item 15. Ask before building anything that clears an open post |
 | **O9** | 🔴 **Which two accounts take the revaluation?** A lot comes in valued at the product's APP (€ 2 058,8151) while € 2 000,00 was paid. That gap has to be posted and we do not know where | Item 3's lot side. We already derive an average purchase price, so the valuation itself is reachable — but valuing the lot correctly while leaving the difference unposted is worse than valuing it consistently. `control-stock-revaluation-fsp` is the screen that reports it |
-| **O10** | Is the reference's **APP** the same average we compute? | Ours comes from purchase invoices, theirs is carried on the product and the lot. Same idea; nothing yet says the same number. **Read the product record's price blocks** — the `Basis` block was captured on 21-9-2026 and the ones below it were not |
-| **O11** | 🔴 **The work order and the stock row disagree on density.** Work order `323526` plans **1 875 kg** for 50 pieces of `PK44115025125`; the stock rows weigh **1 839,84375 kg** — density **8000** against the product's stored **7850**. A 1,9 % gap, same product, same system, same moment | `Report completion` pre-fills `Kg(a)` with the **work order's** figure, so accepting the default reports 1,9 % more metal than moved. Until this is explained, **do not copy the pre-fill** — ours fills `Kg(a)` from the lot |
+| **O10** | ✅ **CLOSED 2-10-2026.** The `Valuation` panel on `PK44115025125` prints `APP = € 1.587,63` per TN with a five-decimal input mask, and `History APP` keeps a dated row per change, each referenced **`Inslag inkooporder IO400201`** — one per goods receipt | **Same average, different mechanism.** The reference recalculates APP **at receipt time** and keeps the history; ours recomputes from purchase invoices on read. So a lot's `valuation_price` is the APP *as it stood when that lot arrived*, and recomputing from today's invoices will not reproduce a historic lot. Confirms `decimal(15,5)` for the third time |
+| **O11** | ✅ **CLOSED 2-10-2026.** Not a disagreement — two bases, both correct. Every stock row and every stock mutation on the product is **theoretical 7 850** to the gram (24 pieces stored as `883,125`). The `Orders` panel shows seventeen lines split by **customer**: Bergen Stainless at trade 8 000 (150 → 5 625), Thermo Products and MATINA EXIM at theoretical (51 → 1 876,7). `Make final` copies the **order line's** `Kg(p)` onto the work order, so a trade-weight customer's picking plans 1 875 against a shelf holding 1 839,84 | **The reference does not reconcile them, it tolerates them.** `Warehouse control` allows a picking to be reported **5 %** off plan; the trade/theoretical gap is 1,911 %. Keep `Kg(p)` from the order line, compute `Kg(a)` from the lot at **theoretical** density, and validate the difference against the product's tolerance instead of demanding equality |
 
 ---
 
@@ -1398,3 +1398,1005 @@ Worth writing down, because it is a compact illustration of everything above:
 **35,325 kg of `2nd choice` 304L, at `Ontvangst`, valued at € 0,00, with no
 charge, no supplier, no purchase order, no receipt date, unblocked and
 available to sell** — and an audit trail that shows only that it arrived.
+
+---
+
+## 🔴 27. Eleven panels below `Basis` — the product record, read to the bottom — 2-10-2026
+
+Product `PK44115025125` opened to settle **O11**. It closed **O10** as well and
+produced six changes nobody had queued. Full capture in
+[product-detail.md](product-detail.md).
+
+### 27a. 🔴 A report has a tolerance, and nothing checks it
+
+`Warehouse control → Tolerances when reporting as completed`, **per product**:
+
+| Workorder type | Qty | Kg |
+|---|---|---|
+| Unloading wo | 5 % | 5 % |
+| Count workorder | **0 %** | **0 %** |
+| Picking workorder | 5 % | 5 % |
+| Production workorder | — | **0 %** |
+
+Our `reportCompletion` accepts whatever is typed. The reference refuses a report
+outside the product's tolerance, and the four rows are three different rules:
+
+- **Production must balance exactly.** This settles **G9** and the kilo-balance
+  half of **H10** without running a saw cut.
+- **A count must be exact**, which is what makes it a count.
+- **Picking and unloading may be 5 % out**, which is the slack that absorbs the
+  trade/theoretical density gap of 1,911 %.
+
+**Change:**
+
+- `db/schema/products.ts` — four tolerance pairs, one `decimal(5,2)` per cell.
+- `warehouse-work-orders/actions.ts` and the production equivalent —
+  `reportCompletion` compares reported against planned and refuses outside
+  tolerance, naming the product's own percentage in the message.
+- ⚠️ Default to the reference's values for a product that carries none, not to
+  0 %. A zero default would reject every honest picking.
+
+### 27b. 🔴 `Approve` is never pressed because approval is automatic
+
+```
+Always approve manually:
+  Warehouse workorder line   ☐
+  Production workorder line  ☐
+```
+
+Both off. **Reporting a line approves it** unless the product opts in. The state
+machine we built is right and the "missing" button was never missing — but the
+flag is real and belongs on the product.
+
+**Change:** `db/schema/products.ts` — `always_approve_warehouse_line` and
+`always_approve_production_line`, both defaulting false. The report actions
+already self-approve; they must stop when the flag is on.
+
+### 27c. 🔴 The lot picker has a dispatch strategy, and it is LIFO
+
+`Stock control → Dispatch strategy: LIFO`, per product.
+
+`getPickableLotsForLine` sorts the line's own location first and says nothing
+about age. That is a sensible tiebreak, not the rule. The rule is on the
+product, and on this one the **newest** bundle goes first.
+
+**Change:**
+
+- `lib/enums.ts` — a `dispatchStrategies` const array. ⚠️ Only `LIFO` is
+  evidenced; the dropdown was not opened, so the list is incomplete.
+- `db/schema/products.ts` — `dispatch_strategy`, storing what the import finds
+  rather than defaulting until a second product confirms a default.
+- `getPickableLotsForLine` — order by the product's strategy first, then by the
+  line's location.
+
+### 27d. APP is maintained at receipt, with a history
+
+`Valuation` prints `APP = € 1.587,63` per TN; `History APP` keeps a dated row per
+change, each referenced **`Inslag inkooporder <PO>`** — one per goods receipt —
+ending at the `31-12-9999` sentinel.
+
+> Ours recomputes an average from purchase invoices on read. Theirs is **stamped
+> when the metal lands**. A lot's `valuation_price` is therefore the APP *as it
+> stood that day*, which is why two bundles under one internal charge hold
+> € 1 537,61789 and € 1 345,19975 — and why recomputing from today's invoices
+> cannot reproduce a historic lot.
+
+**Change:**
+
+- A `ProductValuationHistory` table — product, `valid_from`, `valid_to`, `app`
+  `decimal(15,5)`, reason, purchase order. Written by the receipt action, never
+  recomputed.
+- The receipt action stamps the new APP onto the lot rather than reading an
+  average later.
+- ⚠️ `decimal(15,5)` is now confirmed three ways — the `€ 0,00000` input mask,
+  the `107,20071` history rows and the `1 537,61789` lot export. The widening
+  already queued for `pnpm db:push` is right.
+- ⚠️ Five history rows dated 4-2-2025 read `107,20071`–`108,36518`, two orders
+  of magnitude below everything else on the product and inside the frozen
+  migration window. **An importer must not trust them.**
+
+### 27e. There are three minimum margins, not one
+
+`Sales → Minimum profit margins`: **Stock 7,00 % · Ex works 7,00 % ·
+Cross Docking 7,00 %**. Item 16 recorded one margin per product. It is one per
+**delivery mode**.
+
+**Change:** item 16's single column becomes three, and the margin check picks the
+one matching the order's delivery mode.
+
+### 27f. Automatic reservation is a product flag
+
+`Sales → Always reserve stock ☑`. We treated auto-reservation as system
+behaviour; it is per product — which is also why 12 of this product's 14 lots
+are fully reserved and the only two that are not carry a `Slechte…` (*bad*)
+remark.
+
+**Change:** `db/schema/products.ts` — `always_reserve_stock`, and the order-line
+action reserves only when it is set.
+
+### 27g. Order advice is min/max, and StockOp is dead
+
+```
+Min. stock: 1 times the avg. monthly consumption
+Max. stock: 3 times the avg. monthly consumption
+
+Use StockOp for this product?  ☐
+StockOp parameters zijn nog nooit berekend.
+```
+
+Every StockOp field — lead time, review period, order costs A1/A2, capital cost,
+warehouse cost, stock-out percentages, handling, transport — is greyed and zero,
+and the panel says outright that the parameters have never been calculated.
+
+> **The advanced replenishment engine was bought and never switched on.** We do
+> not need to build it. Order advice is the min/max multiple, generated
+> Monday–Friday.
+
+This narrows the order-advice work rather than widening it.
+
+### Smaller things worth copying
+
+- **`Preferred location(s)`** — one row: preference 1, location `Ontvangst`,
+  type `Pick`. That is where an unloading puts goods when nobody says otherwise.
+  The `RestockLevel`/`RestockLocation`/`RestockQty` trio belongs to the greyed
+  `Restocking…` button — the feature is off.
+- **`Count settings`** — frequency 1, counted against **technical** stock below
+  **1.000 KG**, with a `Count now` button. Counting is the 0 %-tolerance flow.
+- **`Scrap product: SC430`** — a *different product code*, so scrapping converts
+  between products instead of reducing a quantity.
+- **`Charge` ☑ greyed** — a fourth confirmation that a charge is mandatory; it
+  cannot be switched off even here.
+- **Bought and sold in `ST`, priced in `TN`** on both the purchase and sales
+  panels. Movement unit and pricing unit are separate fields, and we have
+  conflated them in places.
+- **`Suggest last used charge in scanner`** — there is a barcode scanner client
+  against this system that we have never seen.
+- **`Optimization criteria`** — the saw nesting cost function, with a preferred
+  minimum offcut of **1000 mm** and weights for bundles, cuts, offcuts, scrap
+  pieces and short offcuts, plus `Allow the longest possible offcuts to be
+  create ☑`. Not needed to report a cut, but it is the whole of H10's optimiser
+  if we ever plan one.
+
+### 27h. H9 is visible without running it
+
+The `Purchase orders` panel lists sixteen lines of `Purchase type: Processing`
+to supplier **`Hego Production`** at **€ 0,00**, against one `Materials` line
+from APERAM at € 1 505,00/TN. `IO404206` is open right now.
+
+> **External processing is a purchase order of type `Processing`, priced at
+> zero.** The material keeps its value; the purchase order is the vehicle for
+> the round trip, not a cost.
+
+The same panel disambiguates the quantity columns: on an open order
+`Qty(r) 24 / Qty(a) 0`, on an invoiced one `Qty(r) 0 / Qty(a) 6` — so **`Qty(r)`
+is what is still to come** and **`Qty(a)` is what arrived**.
+
+It also carries `Kwaliteit` and `Voorraadcategorie` **per purchase line**:
+quality and stock category are chosen when buying, not derived from the product.
+
+### 27i. A movement names its own origin
+
+`Stock mutations` carries `Supplier` and `Purchase order` **on outbound delivery
+rows** — a 14-8-2026 delivery to Bergen Stainless reads `Supplier: Swedinox`,
+`Purchase order: IO403283`. Full origin traceability denormalised onto the
+movement, so "where did this plate come from" is one row, not a walk.
+
+**Change:** `db/schema/stock-movements.ts` — carry the lot's origin supplier and
+purchase order onto every movement, copied from the lot at write time. ⚠️ Copy,
+do not join: the point is that the answer survives the lot being consumed.
+
+---
+
+## 🔴 28. `Correct products and stock` is not what we assumed — 2-10-2026
+
+The dialog behind the Product master's toolbar button is titled
+**`Corrigeren lengte artikel en voorraad`** — *correct the **length** of an
+article and its stock*.
+
+```
+Artikel:  PK44115025125                          […]
+Reden:    ‹dropdown›
+
+☐ Kenmerken aanpassen            (adjust characteristics)
+    Huidige lengte      → Nieuwe lengte
+    Huidige overlengte  → Nieuwe overlengte
+
+☐ Voorraadbesturing aanpassen    (adjust stock control)
+    Huidige vrd eh: ST  → Nieuwe vrd eh: ‹KG · M1 · M2 · ST›
+
+      [Simuleer]   [OK]   [Annuleren]
+      ┌──────────────────────────────┐
+      │  (empty output pane)         │
+      └──────────────────────────────┘
+```
+
+> ⚠️ **It does not change a quantity.** It changes a product's **length** and
+> **over-length**, or its **stock unit**, and rewrites every lot to match. The
+> per-lot `Correction…` on the `Stock` panel is the quantity tool, and flow
+> **H3 still needs that one** — this button is a different animal.
+
+Three things to copy.
+
+### 28a. 🔴 The correction reason enum, in full
+
+The `Reden` dropdown, pooled across both scroll positions — **eight values**:
+
+| Value | |
+|---|---|
+| `Rejected material` | |
+| `Inventory rejection` | |
+| `Stock difference` | |
+| `Stock correction` | |
+| `Transfer length` | |
+| `Internal damage` | |
+| `Scrap` | |
+| `Opmerking voorraad toevoegen/aanpassen` | *add/adjust a stock remark* — the only Dutch one left |
+
+**Change:** `lib/enums.ts` — `stockCorrectionReasons`, and `lib/labels.ts` for
+the English of the last one. The `correction_reason` column already queued for
+`pnpm db:push` becomes a `mysqlEnum` over these rather than free text.
+
+That last value is worth noticing: **adding a remark to a lot is itself a
+correction reason**, which is consistent with item 26 — a downgrade wrote a
+remark and no mutation.
+
+### 28b. 🔴 `Simuleer` — a dry run before a mass change
+
+The button beside `OK`, with an output pane under it. Nothing in our application
+does this, and this dialog rewrites every lot of a product at once.
+
+**Change:** any action that touches more than one lot gets a simulate path that
+returns the rows it *would* write without a transaction. Start with this one and
+with the `Stock` panel's `Correction…`.
+
+### 28c. Stock unit is per product and changeable
+
+`Eenheid`: **`KG` · `M1` · `M2` · `ST`**. Four units, and a product's unit can be
+migrated after the fact — which is why `Voorraadbesturing aanpassen` exists at
+all.
+
+`Overlengte` (*over-length*) is a product attribute we do not have: a nominal
+length plus an agreed overshoot.
+
+## 🔴 The `Stock` search dialog — the lot finder the whole system uses
+
+The `…` beside `Artikel` opens a dialog we have seen the output of many times
+and never the input.
+
+**Filters:** `Product code` · `Search code` · `Company` (greyed) ·
+`Product group` · `Quality` · `Processes`, plus `Length` / `Width` / `Thickness`
+as **From – Until and incl.** ranges with **`Search with margin` ☑ 5 %** on each,
+`Only products with available stock` ☑, and `1e keus` ☐ / `2e keus` ☐.
+
+> **Dimensional search is fuzzy by default — ±5 % on each of three dimensions.**
+> That is how the floor finds a plate that is *close enough*, and our product
+> search is exact-match only.
+
+**Upper grid — one row per (product, quality, stock category):**
+
+`Product` · `Quality` · `Stk. cat.` · `Options` · `Length` · `Width` ·
+`Thickness` · `Technical` · `Reserved` · `Available` · `Kg (t.)` · `Kg (r.)` ·
+`Kg (a.)` · **`Total len.`** · **`C. Kg`** · **`C. ST`**
+
+Five rows for this one product code, split by quality and choice:
+
+| Quality | Stk. cat. | Tech | Res | Avail | Kg (t.) | Total len. |
+|---|---|---|---|---|---|---|
+| `4412D` | 2nd ch. | 1 | 0 | 1 | 35 | 2,5 |
+| `441` | | 33 | 29 | 4 | 1.214 | 82,5 |
+| `4412B` | | 150 | 150 | 0 | 5.520 | 375 |
+| `4412B` | 2nd ch. | 27 | 27 | 0 | 994 | 67,5 |
+| `441BA` | 2nd ch. | 300 | 300 | 0 | 11.039 | 750 |
+
+`Total len.` is quantity × length in metres — 33 × 2,5 = 82,5 ✓, 300 × 2,5 =
+750 ✓. The filter chip reads **`TotalPhysicalStock ≠ 0`** with an `Edit Filter`
+button, so the grid is a saved filter the user can change.
+
+**Lower grid — the lots, under three tabs:**
+
+```
+Stock  |  Purchase  |  Internal production
+```
+
+> **Three sources, one picker.** A line can be satisfied from stock, from an
+> incoming **purchase**, or from **internal production**. We offer stock only.
+
+Its columns: `Order qty.` · `Length` · `Width` · `Thick…` · `Technical` ·
+`Reserved` · `Available` · **`Unopened`** ☑ · `Kg (avail.)` · `Options` ·
+`Remarks` · `Quality` · **`APP`** · **`Purchas…`** · `Interne …` · `Stk. cat.`,
+and a footer carrying `Charge` · `Internal charge` · `Location` · `Purchase`.
+
+The single row, which is the lot already familiar from item 26:
+
+```
+0 | 2500 | 1250 | 1,44 | 1 ST | 0 | 1 ST | ☑ | 35 | | Slechte 2e keus! |
+4412D | 950 / TN | 1679 / TN | 365542 | 2nd choice
+
+Charge 68107 1 · Internal charge 21FFEC · Location 4A3
+Purchase 12-1-2024 / IO100020 / Outokumpu Stainles Oy
+```
+
+### 🔑 A lot carries its own thickness, and the weight follows the lot
+
+The product is **1,50 mm**. This lot is **1,44 mm**.
+
+```
+2,5 × 1,25 × 0,00144 × 7 850 = 35,325 kg
+```
+
+which is exactly the `Kg (avail.)` shown, and exactly the 35,325 kg recorded in
+item 26.
+
+> **Weight is not `product dimensions × density`. It is `lot dimensions ×
+> density`.** A rolled plate comes in under nominal, the lot records what it
+> actually measures, and every kilo downstream follows the lot.
+
+This corrects the formula as written in
+[product-detail.md](product-detail.md) — that derivation is right for a
+*planned* quantity and wrong for a *held* one.
+
+**Change:** `db/schema/stock.ts` already carries length/width/thickness. Every
+weight computed from a lot must read the lot's dimensions, never the product's.
+Audit: `getPickableLotsForLine`, the report-completion `Kg(a)` fill, and the
+stock overviews.
+
+### 🔴 `APP 950 / TN` beside `Purchase 1679 / TN`
+
+Two prices on one lot, and they disagree by 43 %. The lot is flagged
+`Slechte 2e keus!` (*bad second choice*) and was bought from Outokumpu on
+12-1-2024 at 1 679/TN.
+
+So a lot's carried value **can be written down below what was paid for it**, and
+the screen shows both numbers side by side rather than replacing one with the
+other.
+
+⚠️ This is **O9's gap made visible on a lot** — the difference between what was
+paid and what the lot is now carried at. It does not say where the difference
+was posted, so O9 stays open, but it confirms the gap is real, routine, and
+displayed rather than hidden.
+
+### `Unopened` — a lot flag we do not have
+
+A ticked checkbox on the lot. An unopened bundle is worth more to a customer
+than a broken one, and it is the natural companion to the bundle/parcel model.
+
+**Change:** `db/schema/stock.ts` — `unopened` boolean. ⚠️ It must be cleared the
+first time a partial quantity is picked off the lot.
+
+---
+
+## 🔴 29. Purchase order `401141` — the wrong document, and an EDI channel nobody knew about — 2-10-2026
+
+### ⚠️ First, this is not the document H1 was watched on
+
+`Purchase orders and quotes`, creation date 1-1-2024 → 2-10-2026, `Find 401141`
+returns **exactly one row**:
+
+| Creation | Time frame | Order | Purchaser | Status | Lines | Weight | Revenue | Supplier |
+|---|---|---|---|---|---|---|---|---|
+| 30-5-2025 | 11:00 - 11:30 | `IO401141` | Marco Borsboom | Invoiced | **1** | **4 340 kg** | € 8 246,00 | **Terninox S.p.A.** |
+
+Its single receipt is **one coil** — `Coil Cold-rolled 3…`, length `999999`,
+width 1522, 1,5 mm, **1 ST, 4 340 kg**. One line, one reception, nothing to
+split.
+
+The H1 order is described consistently across three of our files as 100 pieces
+of `PK304L300315` at € 2 000/TN from **Holland Stainless Int**, created
+**6-8-2026**, received 21-9-2026 under internal charge `26ADRC` as lots
+`389823`–`389827` — and [order-to-delivery.md](order-to-delivery.md) quotes the
+lot picker printing `IO401141` against charge `TEST-H1`. So our notes agree with
+each other; it is this grid that disagrees with them.
+
+**Two explanations, and the screenshot cannot separate them:**
+
+1. **The grid is scoped or stale.** It was opened from the `Stock on location`
+   tab, which is still beside it, and `Show Data` sits unpressed in the corner.
+   An overview inheriting the previous tab's product would show only the orders
+   for that product — and would legitimately hide a `PK304L300315` order.
+2. **The H1 test order is gone**, which would be unremarkable for a deliberately
+   created test document with a charge literally typed `TEST-H1`.
+
+> **Either way, O4 could not have been answered from this screen** — a
+> one-piece coil has no bundle split. ⚠️ Do not rewrite the `401141`
+> references in our docs on the strength of this grid; confirm first.
+
+**How to find it without guessing a number:** `Overviews → Stock →
+Stock on location`, search internal charge **`26ADRC`**, select any of the five
+lots, then `Show purchase order`. That lands on the right document whatever it
+is numbered.
+
+### 29a. 🔴 A receipt has four EDI columns
+
+Scrolled right, the `Receipts` grid ends with:
+
+```
+Sheet number | EDI Charge | EDI Bundels | EDI Vrachtbrief | EDI Leverdatum
+             |            |             |                 |  1-1-0001
+```
+
+and the order header carries **`Message sent via StaalWeb` ☐** beside `Printed`,
+`Mailed` and `Faxed`.
+
+> 🔑 **There is an EDI channel into goods receipt, and one of its columns is
+> literally `EDI Bundels` — "EDI bundles".**
+>
+> That is the best available answer to **what pre-computes a bundle split**: the
+> mill sends its charge, its **bundle breakdown**, its bill of lading and its
+> delivery date electronically, and the unloading dialog offers them. Nobody
+> computed 20/25/20/25/10 — the supplier did.
+
+⚠️ **This is a hypothesis with a named column behind it, not a proof.** It is
+blank on this order, which was placed by `Order method: Telephone`. The check
+that settles it: find an order whose `Order method` is EDI/StaalWeb and read
+whether `EDI Bundels` is populated and whether its receipt split matches.
+
+**Change (once confirmed):** `db/schema/purchase-order-receipts.ts` — the four
+`edi_*` columns are kept **beside** the entered values, not merged into them.
+The point of the pair is that you can see what the supplier claimed against what
+was actually counted.
+
+`EDI Leverdatum = 1-1-0001` is the null-date sentinel this system uses — year 1,
+not NULL. An importer must map it to NULL.
+
+### 29b. Delivery date is a date **or** a week
+
+```
+● Date:  9-6-2025     Rem: ___
+○ Week:  24           Year: 2025
+```
+
+A radio pair, not two fields. **Steel is bought "week 24"**, and the order stores
+which form was used.
+
+**Change:** `db/schema/purchase-orders.ts` — `delivery_week` / `delivery_year`
+beside `delivery_date`, plus the discriminator. ⚠️ Do not resolve a week into a
+date on the way in: the whole point is that the supplier has not committed to a
+day.
+
+### 29c. The header, field by field
+
+| Field | Value |
+|---|---|
+| Title | `Purchase order 401141, Terninox S.p.A., Tel: +390744490861, Fax: -` **`Invoiced, Printed, Mailed`** |
+| `Creation date` | 30-5-2025 |
+| `Supplier` | `13249` Terninox S.p.A. |
+| `Agent` | -empty- |
+| `Contact` | `Giorgio Frontini` |
+| `Purchaser` | `Marco Borsboom` |
+| `Order category` | -empty- |
+| `Reference` | blank |
+| `Purchase order type` | **`Materials`** + a second, unlabelled -empty- dropdown |
+| **`Overlength`** | ☑ greyed |
+| `Printed` / `Mailed` | ☑ ☑ **in red** |
+| `Faxed` · `Message sent via StaalWeb` · `Do not print prices` | ☐ ☐ ☐ |
+| `Payment terms` | `Within 8 days from date of invoice` |
+| `Delivery terms` | `(CIP) Carriage and insurance paid to` |
+| `Delivery address` | `Bolderweg 10, 1332AT, Almere` |
+| `Arrange transport` · `Pick up/Drop-off CD-purchases` | ☐ ☐ |
+
+Three things to copy:
+
+- **The status line is three flags, not one state** — `Invoiced` is the status,
+  `Printed` and `Mailed` are dispatch facts, and they print together in the
+  title. `Faxed` and `StaalWeb` are the other two channels.
+- **`Overlength` is on the purchase order**, a second sighting today after
+  `overlengte` on the correction dialog. A nominal length plus an agreed
+  overshoot, agreed when buying.
+- **`Delivery terms` is an Incoterm** — `(CIP)` is spelled out in the label, so
+  the enum carries both code and text.
+
+### 29d. The summary is three buckets
+
+```
+                    Revenue
+Materials:        € 8.246,00
+Options:          €     0,00   [ ]
+Surcharges:       €     0,00
+-----------------------------
+Tot. excl. VAT:   € 8.246,00
+VAT:              €     0,00
+Tot. incl. VAT:   € 8.246,00
+Total weight:         4340 Kg
+```
+
+**Materials / Options / Surcharges** are separate subtotals, which matches
+options being purchased as their own lines
+([purchase-lines.md](purchase/purchase-lines.md)). `VAT € 0,00` on an Italian
+supplier is the intra-EU reverse charge, so **a zero VAT line is correct and must
+not be treated as missing data**.
+
+### 29e. Toolbars, named
+
+**`Lines`** (`1 line`):
+
+```
+New · Delete · Sawing specifications · ⬦ · ⬦ · ⬦ · Calculate · Pre-notify
+```
+
+> **`Sawing specifications` sits on a purchase line.** Cuts can be specified at
+> buying time, not only on a production work order — which is a route into H10
+> we had not considered.
+
+`Pre-notify` is here as well as on the order toolbar, so pre-notification is a
+**per-line** act.
+
+**`Receipts`** (`1 reception`):
+
+```
+New · Delete · Split · Batch registration · Charge aanpassen…
+```
+
+**`Split`** confirms a reception can be broken into bundles *after* it exists —
+relevant to O4 whichever way the EDI question lands.
+
+**`Workorders`** is a panel of three: `Warehouse workorders`,
+`Production workorders`, `Transport workorders`, all collapsed here.
+
+### 29f. The receipt row, in full
+
+| | |
+|---|---|
+| `Status` | `Invoiced` |
+| `Delivery date` | 10-6-2025 |
+| `Delivery dat…` | ✅ `Pre-notifi…` |
+| `Bill of lading` | **`401141`** — same as the order number |
+| `Product` | `Coil Cold-rolled 3…` |
+| `Length` / `Width` / `Dikte` | **999999** / 1522 / 1,5 |
+| `Kg(p)` / `Qty(p)` / `U(p)` | 4340 / 1 / **`ST`** |
+| `Kg(a)` / `Qty(a)` / `U(a)` | 4340 / 1 / **`Pieces`** |
+| `Pre-announced deli…` | 9-6-2025 |
+| `Pre-reported by` | **`MOK`** |
+| `Charge` / `Internal charge` | `U0901221` / `25AECW` |
+| `Sheet number` | blank |
+| `Transfer address` / `Transfer q…` | blank / `0,` |
+
+- **`Length 999999` is the coil sentinel.** A coil is one piece of indefinite
+  length, and the weight is what is real about it. ⚠️ Any dimension-driven weight
+  formula must skip a product whose length is this value.
+- **`U(p)` reads `ST` and `U(a)` reads `Pieces`** on the same row — planned and
+  actual units are rendered from different vocabularies. Ours must not assume one
+  enum.
+- **`Pre-reported by`** is a user stamp on the receipt, distinct from the
+  purchaser.
+- `Sheet number` is a receipt column we do not have — the mill's sheet
+  identifier, blank for a coil.
+
+### 29g. Overview columns worth having
+
+Beyond the familiar: `Time frame` (**`11:00 - 11:30`** — the creation slot),
+`Initials` (`MB`), `Converted fr…`, `Expiration reason`, `Quote date`,
+`Internal Text`, `Consignment` ☐, **`Send` ☑ / `Must be sent` ☑**,
+**`Order method: Telephone`**, `Deliberately …` ☐, `Valid u/i`,
+**`Affiliate company det…: TEST HEGO Stainless …`**, `Classification…`,
+`Classification`, `Reference`, `Onze referentie`.
+
+- **`Order method`** is the enum the EDI question turns on — this one is
+  `Telephone`.
+- **`Send` / `Must be sent`** is a two-flag outbox: one says it should go, the
+  other says it went.
+- **`Affiliate company`** names the buying entity, so purchase orders are scoped
+  per company and we have one tenant.
+
+---
+
+## 30. Why `IO400003` has no batches — and why H11 was the wrong ask — 2-10-2026
+
+The capture came back empty: **no batch rows on that purchase order.** Two
+reasons, both already on record and both missed when the step was written.
+
+### 30a. `Batch registration` is a per-product opt-in, and it is off
+
+From the product record read earlier today, `Stock control`:
+
+```
+☐ Batch registration
+    ☐ Length   Minimum 0   Interval 0
+    ☐ Width    Minimum 0   Interval 0
+    ☑ Charge        Dispatch strategy LIFO
+    ☐ Do not split stock per batch
+    ☐ Plate number
+    ☑ Batch number
+```
+
+**Unticked, with its sub-options greyed.** A product that has not opted in has no
+batches at all, so `Batch registration` on its receipt has nothing to show. The
+2 910 batches in [batch-registration.md](batch-registration.md) belong to the
+products that *have* opted in.
+
+**Change:** `db/schema/products.ts` — `batch_registration` boolean plus the
+`length`/`width` minimum+interval pairs it gates, `plate_number` and
+`do_not_split_stock_per_batch`. The receipt action creates batch rows **only**
+when the flag is set.
+
+### 30b. ⚠️ Nobody has ever linked a certificate
+
+[batch-registration.md](batch-registration.md) §1 already concluded it, on the
+whole population rather than a sample:
+
+> On **all 2 540** received rows and **all 3 271** sent rows, `Document code`,
+> `Filename`, `Document certificate`, `Sheet number`, `Requested certificate`
+> and `Internal reference` are **empty**, and `Document sent on` is `0`.
+> `Certificates to be linked` is empty.
+
+**So H11 as written — "watch a certificate being linked to a batch" — asks for a
+thing this business does not do.** The screens exist and the certificate half of
+them has never been used. What *is* used, on every one of those rows, is the
+**batch** half: which heat and which internal batch a sheet came from, and which
+customer it went to.
+
+> 🔑 **Replace H11.** The question worth answering is **how a batch gets
+> registered**, not how a certificate gets attached. Route: `Overviews →
+> Batch registration → Batches` (2 910 rows) → take a recent row → note its
+> `Internal charge` → open that purchase order → `Receipts` →
+> `Batch registration`. That lands on a product that has the flag on.
+
+### 30c. The `Overviews` tree, confirmed complete
+
+The navigation pane was captured open on `Purchase` and `Logistics`. Every item
+in both groups is already captured and written up — `Production batches`,
+`Sawing layouts`, `Freight flow (SFN)`, `Pick statistic` and
+`Deviations in count lists` included, the first two
+[genuinely empty](empty-screens.md). **No unseen screen in either group**, which
+is worth knowing before another hunt starts.
+
+The window's own toolbars, for the record: menus `Bestand · Beeld · Logistiek ·
+Financiën · Batch Taken · Acties · Extra · Help`, and a row of saved work
+queues — **`Afhalen` · `Hego Prod - Lossen` · `Hego Prod - Picken` · `Lossen` ·
+`To Do Slijp+Knip` · `Alles`**. Those six are the floor's actual working views,
+and we have no equivalent: our overviews open unfiltered.
+
+---
+
+## 🔴 31. The `Batches` register — and `Kg(a)` is measured on coil, computed on plate — 2-10-2026
+
+`Overviews → Batch registration → Batches`, receipt date 1-1-2024 → 2-10-2026.
+23 rows read in full across three horizontal positions.
+
+**Columns:** `Purchase order` · `Supplier code` · `Supplier` · `Product code` ·
+`Product` · `Length` · `Width` · `Qty(a)` · `Qty U` · `Kg(a)` · `Charge` ·
+`Internal charge` · `Sheet number` · `Document code` · `Filename` ·
+`Mand. ign. doc.` · `Receipt date` · `Thickness` · `Stock Category` ·
+`Quality Code` · `Document certificate` · `Producer` · `Options`.
+
+Toolbar: `Show Product` · `Show Company` · `Show Purchase order` ·
+**`Show File`** · **`Open file location`** — the last two are the certificate
+attachment path, live but pointing at nothing.
+
+### 31a. 🔑 One column, two kinds of number
+
+Every row's `Kg(a)` was checked against `length × width × thickness × 7 850 ×
+quantity`. The result splits cleanly by product code:
+
+| | Implied density | Spread |
+|---|---|---|
+| **`PK…` plate** (7 rows) | **7 844 – 7 860** | 0,20 % |
+| **`CK…` coil, 0,8 mm** (6 rows) | 7 545 – 7 583 | 0,51 % |
+| **`CK…` coil, 1,5 mm** (6 rows) | 7 650 – 7 704 | 0,71 % |
+
+The plate rows reproduce the formula **exactly**:
+
+| Product | Working | Screen |
+|---|---|---|
+| `PK316L200415` | 3,0 × 1,5 × 0,002 × 2 × 7 850 | **141,3** ✓ |
+| `PK304L120415` | 3,2 × 1,0 × 0,0012 × 10 × 7 850 = 301,44 | **301,5** ✓ |
+| `PK304L05021` | 2,0 × 1,0 × 0,0005 × 5 × 7 850 = 39,25 | **39,3** ✓ |
+| `PK30405031` | 3,0 × 1,0 × 0,0005 × 20 × 7 850 | **235,5** ✓ |
+
+Their whole 0,20 % spread is the rounding to one decimal — which is exactly the
+product record's `Number of decimal places weight: 1`.
+
+The coil rows do not. Six rows of **one product, one charge, one internal charge,
+one receipt date** imply six *different* densities spanning 0,51 %. A stored
+density cannot vary within itself.
+
+> **So `Kg(a)` is computed on plate and measured on coil**, in the same column.
+> You can tell which by whether it lands on the formula.
+
+And the shortfall is not noise — it is one-sided, 2–4 % under nominal:
+
+```
+CK441 nominal 0,8 mm  →  really 0,769 – 0,773 mm
+CK441 nominal 1,5 mm  →  really 1,462 – 1,472 mm
+```
+
+which is the same band as the lot read on the `Stock` search dialog earlier
+today: **1,44 mm against a nominal 1,50 — 96,0 %**.
+
+**Cold-rolled coil runs under nominal thickness, and the batch records what it
+really weighed.** Every one of these coil rows carries `Options: Decoilen` or
+`Knippen` — they are coil that has been cut into sheets, and somebody weighed the
+result.
+
+**Change:**
+
+- This is item 23's rule, proved a second way and on a different screen. ⚠️ It
+  also means **a weight that matches the formula exactly is evidence that nobody
+  weighed it** — useful when deciding whether to trust an imported figure.
+- The 2–4 % shortfall sits inside the **5 %** unloading tolerance from §27a,
+  which is presumably why it has never caused an argument.
+- ⚠️ Do **not** "correct" a coil weight to the nominal computation on import.
+
+### 31b. 🔴 `Options` is multi-valued per batch
+
+```
+Decoilen
+Knippen
+Knippen, Blauwe Folie
+Borstelen, UV Folie
+Slijpen, Blauwe Folie
+```
+
+**Two options on one batch, comma-separated.** We have treated the option enum as
+a single value chosen per line. A batch carries a **set** — a cutting operation
+plus a film, which is the natural pairing.
+
+**Change:** the option link becomes a join table (batch ↔ option), not a column.
+⚠️ Check the purchase-line side too: `Purchase lines` showed options as their own
+lines, which may be the same set modelled differently.
+
+This also adds `Blauwe Folie` (*blue film*) to the enum beside `UV Folie`, and
+confirms `Borstelen`, `Slijpen`, `Knippen` and `Decoilen` all appear here in
+Dutch.
+
+### 31c. 🔴 `Mand. ign. doc.` is ticked on every row — and that contradicts E2
+
+Every one of the 23 batches has **`Mand. ign. doc.` ☑**.
+
+[batch-registration.md](batch-registration.md) §1 recorded the opposite on the
+`Certificates received` export: *"`Mand. ign. doc.` is `False` everywhere"*, all
+2 540 rows.
+
+> **Mandatory-document-ignore is `True` on every batch and `False` on every
+> received certificate.** Two screens, two populations, opposite values.
+
+If the column means "ignore the requirement that this batch carry a document",
+then it being `True` everywhere **explains why no certificate has ever been
+attached**: the requirement is switched off, batch by batch, rather than being
+forgotten. That is a materially different story from neglect, and it changes
+whether we build the requirement at all.
+
+⚠️ **Unresolved.** It needs one look at the column's meaning before anything is
+built on it. Until then, record the flag and enforce nothing.
+
+### 31d. The certificate columns are empty here too
+
+`Sheet number`, `Document code`, `Filename`, `Document certificate` and
+**`Producer`** are blank on all 23 rows — a fourth independent confirmation,
+now on the `Batches` register itself, that the certificate half has never been
+used. `Show File` and `Open file location` sit live in the toolbar with nothing
+to open.
+
+`Producer` is a column we do not have: the mill that made the metal, distinct
+from the supplier that sold it. Blank everywhere, but the distinction is real and
+cheap to carry.
+
+### 31e. Smaller things, all load-bearing
+
+- **A scrap batch is measured in kilos.** The first row: `Qty U` = **`KG`**,
+  `Length` and `Width` **0**, `Qty(a)` 20, `Kg(a)` 20,0, `Stock Category` =
+  **`Scrap`**. So `Qty U` is per batch and dimensions are optional — scrap has no
+  shape, only weight. That is the other end of the product record's
+  `Scrap product: SC430`.
+- **One charge spans many batches**, confirmed again: `574651` carries 7 rows,
+  `76365 4` carries 6. Charge formats seen: bare digits (`574651`, `57676`),
+  digits + space + a sequence (`67193 3`, `64878 1`, `70764 5`, `76365 4`), and
+  letter-prefixed (`E12911`, `E12879`, `SD52980`). ⚠️ Never parse a charge.
+- **`76365 4` appears with two different receipt dates** — 11-03-2025 on five
+  rows and 10-11-2025 on one — under one internal charge `23EFFC`. So an internal
+  charge is not confined to a single receipt date.
+- **The coil length sentinel again**: `CK304L0015` and `CK3040015` carry
+  `Length 999999` with a real width (156, 105) and a real weight.
+- ⚠️ **Purchase orders `100020`, `100021`, `100024` look like migration
+  umbrellas.** `100020` alone holds 7 product codes and 7 internal charges with
+  receipt dates from 31-01-2025 to 10-11-2025 — ten months on one purchase order.
+  The `Stock` search dialog's footer showed `Purchase 12-1-2024 / IO100020 /
+  Outokumpu Stainles Oy` for a lot received much later, and the `History APP`
+  rows of that era read `Conversie`. **Do not treat these as real purchase
+  orders**, and do not derive a lead time from them.
+- The filter block is `Receipt date` + `Company code` + `Product code`, the last
+  two defaulting to the `zzzzzzzzz` upper-bound sentinel.
+
+---
+
+## 🔴 32. Production work orders — a pair, a surface treatment, and a sales order — 2-10-2026
+
+`Overviews → Logistics → Production workorders`, product `PK304L200415`
+(4000 × 1500 × 2 mm, 304L), 1-1-2024 → 2-10-2026, `View: Standaard`.
+**Eleven rows, the product's entire production history.**
+
+**Columns:** `Workorder date` · `Status` · `Production workorder` · `Line` ·
+`Order` · `Order line` · **`Machine`** · **`Extra options`** · `Product code` ·
+`Product` · `Length (mm)` · `Width (mm)` · `Qty(p)` · `Qty(a)` · `Kg(p)` ·
+`Kg(a)` · `Company` · **`Created by`** · **`Reported as completed`** ·
+**`Previous warehouse workorder`**.
+
+### 32a. 🔑 Every production work order is paired with a warehouse work order, N−1
+
+| Production WO | `Previous warehouse workorder` |
+|---|---|
+| 303126 | **303125** |
+| 307933 | **307932** |
+| 316707 | **316706** |
+| 324792 | **324791** |
+| 326757 | **326756** |
+| 326752 | **326751** |
+| 327292 | **327291** |
+| 327027 | **327026** |
+| 327353 | **327352** |
+
+**Nine for nine, exactly one less.**
+
+> **A production job is raised as a pair.** A warehouse work order fetches the
+> metal, and the production work order that processes it takes the very next
+> number. Warehouse and production work orders share **one number sequence**, and
+> the link is a stored column — `Previous warehouse workorder` — not something
+> inferred.
+
+**Change:**
+
+- `db/schema/warehouse-work-orders.ts` / `production-work-orders.ts` — a stored
+  `previous_warehouse_work_order_uuid` on the production side.
+- The number series must be **shared**, not per-type. ⚠️ Check what we do today;
+  two independent sequences cannot reproduce this.
+- Raising a production job creates **both**, in that order, in one transaction.
+
+### 32b. 🔴 These are not cuts — the dimensions never change
+
+`Machine` is **`Slijpen/Foliën`** (*grinding / filming*) on all eleven rows, and
+`Extra options` is **`Laser Foil`** on nine of them, blank on two.
+
+**`Length 4000` and `Width 1500` are identical on plan and actual, every row.**
+Nothing is cut; the plate is ground and filmed and comes out the same size.
+
+> **Production here is surface treatment, not sawing.** Our production model
+> assumed a cut that changes dimensions and produces a remnant. The jobs that
+> actually exist change neither.
+
+This lines up with three things already on record: `Sawing layouts` is
+[genuinely empty](empty-screens.md), the product record's `Optimization criteria`
+has never been exercised, and the `Purchase orders` panel showed **sixteen
+`Processing` lines to `Hego Production` at € 0,00**.
+
+> 🟡 **Hypothesis worth one check: the cutting is bought, not done.** In-house
+> production is grinding and filming; sawing goes out to `Hego Production` on a
+> zero-priced `Processing` purchase order and comes back. That would explain the
+> empty sawing screens without anyone having switched a feature off.
+
+⚠️ This filter was one product, so it cannot prove no machine saws. But **H10 as
+written — "report a saw cut" — may have nothing to observe**, and should not be
+scheduled again until the hypothesis above is checked.
+
+### 32c. 🔴 Production is planned at **trade** weight, and the basis still follows the customer
+
+One plate is `4,0 × 1,5 × 0,002` = 0,012 m³, so 94,20 kg at theoretical and
+96,00 kg at trade. Ten of the eleven rows are **exactly 96,00 per piece**:
+
+| Qty(p) | `Kg(p)` | Per piece | Density |
+|---|---|---|---|
+| 20 | 1 920,00 | 96,00 | **8 000** |
+| 15 | 1 440,00 | 96,00 | **8 000** |
+| 13 | 1 248,00 | 96,00 | **8 000** |
+| 11 | 1 056,00 | 96,00 | **8 000** |
+| 1 | 96,00 | 96,00 | **8 000** |
+| **2** | **188,40** | **94,20** | **7 850** |
+
+No scatter whatsoever — these are computed, not weighed. And the single
+theoretical row is for a different customer (`RVS accuraat, Lemmer`) from the ten
+trade rows (Groku Kampen, Betinoc, Holland Filter, Rovasta, Van Raak).
+
+**That is the third independent confirmation today that the weight basis follows
+the customer** — after the `Orders` panel and the work-order/stock gap in O11 —
+and it is the first showing the basis propagating all the way into a *production*
+work order.
+
+**Change:** whatever carries the order's weight type must reach the production
+work order too, not just the warehouse one.
+
+### 32d. The kilo balance, on the one under-delivery
+
+| | Qty(p) | Qty(a) | Kg(p) | Kg(a) |
+|---|---|---|---|---|
+| WO `324792` line 1 | 10 | **9** | 960,00 | **864,00** |
+
+`960 × 9 ÷ 10 = 864,00` — exact.
+
+So when less is produced than planned, **the kilos scale with the quantity and
+nothing is lost**. That is consistent with §27a's `Production workorder Kg: 0 %`
+tolerance, and it is what a 0 % balance means on a job that does not cut: in
+equals out, piece for piece.
+
+⚠️ It does **not** settle what happens to kilos on a job that *does* cut — the
+remnant question G9 asks. That stays open, and §32b casts doubt on whether it can
+be watched here at all.
+
+### 32e. 🔴 `Reported as completed` can precede the work order date
+
+| Production WO | `Workorder date` | `Reported as completed` |
+|---|---|---|
+| 327292 | **21-9-2026** | **18-09-2026** — 3 days earlier |
+| 327027 | **23-9-2026** | **16-09-2026** — 7 days earlier |
+
+> **`Workorder date` is a planned date, not a creation date.** The work was done
+> early and the plan left where it was.
+
+⚠️ **Do not validate `reportedAt >= workOrderDate`.** Two of eleven rows would
+fail.
+
+### 32f. Smaller things
+
+- **Production is made to order, never to stock.** Every row carries an `Order`
+  and an `Order line` — `101020/10`, `105157/10`, `108178/70`. That is why
+  `Production workorder for stock` is **greyed** on the product master toolbar.
+- **One production work order holds several lines**: `316707` lines 1 and 2,
+  `324792` lines 1 and 2, and `327027` is line **5**. The pair in `324792`
+  reported 10 and 9 against identical plans, so lines are reported
+  independently.
+- `Created by` names a person (`Benno Vos`, `Sharif Pasaribu`,
+  `Richard van Sloo…`, `Vincent Groenew…`, `Arian Bloks`) — five operators.
+- `Status` reads `Approved` on ten rows and `Released` on the one with
+  `Qty(a) 0`, which matches the ladder we built.
+- `Machine` and `Extra options` are two columns we do not have. `Machine` is the
+  work centre; `Extra options` is an operation added to it, and `Laser Foil` is
+  already in our options enum.
+
+---
+
+## ▶️ Built 3-10-2026 — sections 27–32, the logic half
+
+Swedinox: *"build the server actions and pages all of it"*, with the remaining
+sittings two days out.
+
+**The first finding was that the schema was already there.** Tolerances,
+`alwaysApproveManually*`, three minimum margins, `alwaysReserveStock`,
+`batchDispatchStrategy`, every `batch*` flag, the count settings and the whole
+sawing `opt*` block had been built from the 21-9-2026 product capture. Every one
+of them appeared in exactly four places — the schema, the form's validation, its
+mapper and its section component — **and nowhere else.**
+
+> They were stored and displayed and they decided nothing, which is precisely
+> what this repo's own rule about enums carrying behaviour exists to prevent.
+
+So this was not a schema round. It was the logic round.
+
+| | What changed |
+|---|---|
+| ✅ **27a** | `breachedTolerance` (`lib/server/tolerances.ts`), called by the warehouse and production report actions. The reference's four workorder-type rows map onto our four stock effects exactly, so the branch is the one the completion routine already made |
+| ✅ **27a** | ⚠️ **We had the production row backwards.** Our form offered `Production Qty` and showed `—` for Kg; the reference is the other way round. `toleranceProductionKg` added, the form cells swapped |
+| ✅ **27a** | Tolerance columns made **nullable**. `0` and blank had been collapsing into one value, and they are opposite rules — blank is *no rule*, zero is the strictest there is. A `0.00` default would have refused every honest picking |
+| ✅ **27b** | Reporting stops at `ready` when the product ticks `Always approve manually`, plus `approveWarehouseWorkOrderLine` and an `Approve` button to get it the rest of the way. On every other product reporting still *is* approval — which is why the reference's button sits unpressed |
+| ✅ **27c** | `getPickableLotsForLine` reads `batchDispatchStrategy`. It was hard-coded to newest-first, which is right for this product and wrong as a rule |
+| ✅ **27f** | An order line reserves only when the product says to. ⚠️ Absent reads as *reserve*, and the column now defaults `true` — failing to hold metal that has been sold is the expensive direction |
+| ✅ **27i** | `originSupplierUuid` / `originPurchaseOrderUuid` on a movement, stamped from the lot on the way out via `lotOrigin`. Copied, never joined: a lot drawn to zero is exactly when somebody asks where its steel came from |
+| ✅ **31/28** | 🔑 **`lotPieceWeightKg`** — weight from the **lot's** dimensions, not the product's. `productPieceWeightKg` returns the stored per-piece figure before it ever looks at the dimensions it is handed, so a 1,44 mm lot was being weighed as 1,50. Now used by the receipt path and the order line |
+| ✅ **29f** | `COIL_LENGTH_SENTINEL` (999999), so no dimension formula turns one coil into several thousand tonnes |
+| ✅ **—** | `Stock.unopened`, cleared on every partial draw-down and on the part that travels. An intact bundle cannot become intact again |
+| ✅ **32a** | `previousWarehouseWorkOrderUuid` on a production work order. The **shared counter already existed** and was already documented — `nextWorkOrderNumbers` reads the high-water mark across both tables — so only the stored link was missing |
+| ✅ **32b** | `extraOption` on a production work order (`Laser Foil` beside `Slijpen/Foliën`) |
+| ✅ **32e** | Audited: **no `reportedAt >= plannedDate` validation exists**, so nothing had to be removed. The column comments now say why one must never be added |
+| ✅ **29a** | The four `edi_*` columns, `sheetNumber` and `producer` on a receival — kept **beside** the entered values, because the point of the pair is seeing what the supplier claimed against what was counted |
+
+`tsc` and `eslint` clean across the lot.
+
+### Already correct, checked rather than changed
+
+- **The shared work-order counter** (§32a) — built, and its comment already gave
+  the consecutive-block reasoning.
+- **The production cut path** already refuses a run whose kilos do not balance,
+  which is the 0 % rule arriving at the same answer from the other direction.
+- **Rolled-vs-nominal thickness** was already modelled on the product
+  (`theoreticalThickness`, proved against 1 932 lots). What was missing was only
+  the *lot* level.
+- **`deliveryWeek` / `deliveryYear`** (§29b) and `preReportedBy` /
+  `preAnnouncedDeliveryDate` (§29f) already existed.
+
+### Still queued, and why
+
+- **27d** the `ProductValuationHistory` table — a new table and a change to how
+  receipts value a lot. Bigger than the rest and worth its own pass.
+- **27e** three margins exist and are read; **27g** is a decision not to build.
+- **28b** `Simuleer` — needs a UI pattern, not just an action.
+- **31b** `Options` as a join table rather than a column.
+- 🔴 **`pnpm db:push` still has not run.** The host does not resolve from this
+  machine (`ENOTFOUND`, re-tested 3-10-2026). The queue is now the six changes
+  from 30-9 plus roughly a dozen from today. **Nothing above reaches the
+  database until it is pushed from a machine that can see it.**

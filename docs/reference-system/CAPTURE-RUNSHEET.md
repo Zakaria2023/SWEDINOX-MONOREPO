@@ -378,7 +378,7 @@ Everything in the warehouse hangs off this one.
 | # | The flow | Why it is needed |
 |---|---|---|
 | **H2** | Create a reservation by hand | We can read reservations; we cannot make one |
-| **H3** | Adjust a lot by hand — correct a weight or a quantity | `Correct products and stock` on the product screen |
+| **H3** | Adjust a lot by hand — correct a weight or a quantity | ⚠️ not `Correct products and stock` (that one corrects *length*) — use **`Correction…` on the `Stock` panel** |
 | **H4** | Plan a trip — from deliveries waiting to a trip with a bill of lading | The whole transport side is read-only in ours |
 | **H5** | Take an order from entry to delivery, one line, every button | The spine of the selling side |
 | **H6** | Send an invoice — from an order delivered to an invoice sent | |

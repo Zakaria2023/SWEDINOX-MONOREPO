@@ -192,7 +192,7 @@ The `Debtor` panel has its own **`Update`** button beside `Open orders` /
 
 | Button | What it does |
 |---|---|
-| `Correct products and stock` | a bulk correction tool — likely what books the `Hego Voorraadcorrectie` pseudo-supplier receipts |
+| `Correct products and stock` | ✅ **opened 2-10-2026 — it is not a stock correction.** `Corrigeren lengte artikel en voorraad`: changes a product's **length / over-length** or its **stock unit**, with a `Reden` enum and a `Simuleer` dry run. The per-lot `Correction…` on the `Stock` panel is the quantity tool |
 | `Production workorder for stock` | make-to-stock production |
 | `Copy product (group) and…` | duplicate a product or a whole group |
 | `Activate` | greyed — so a product can be inactive |
