@@ -59,6 +59,35 @@ export const ProductionWorkOrders = mysqlTable(
     // the pieces it was handed does not — see machineOptionCuts.
     option: mysqlEnum("option", machineOptionTypes),
 
+    // A second operation layered on the machine's own.
+    //
+    // 🔴 `Extra options` on the reference's `Production workorders` overview,
+    // read 2-10-2026: `Laser Foil` on nine of eleven runs whose `Machine` was
+    // `Slijpen/Foliën`. The machine says what it does; this says what else was
+    // asked for on top.
+    extraOption: mysqlEnum("extra_option", machineOptionTypes),
+
+    // 🔑 The picking that fetched the steel this run works on.
+    //
+    // Every production work order in the reference is paired with a warehouse
+    // one numbered exactly **N−1** — 303126/303125, 316707/316706,
+    // 327353/327352, nine for nine on 2-10-2026 — and the reference stores the
+    // link rather than leaving it to be inferred from the numbers. That is the
+    // whole reason the two share a counter (see `nextWorkOrderNumbers`): a
+    // production job is raised as a pair, picking first.
+    //
+    // ⚠️ Do not reconstruct this by subtracting one from the number. The
+    // numbers happen to be consecutive because the pair is allocated together;
+    // that is a consequence of the design, not the design itself.
+    previousWarehouseWorkOrderUuid: char("previous_warehouse_wo_uuid", {
+      length: 36,
+    }),
+
+    // ⚠️ A *planned* date, never a creation date, and never a floor under the
+    // date work is reported on. Two of eleven production runs in the reference
+    // were reported **before** the date on the order — `327292` dated 21-9-2026
+    // reported 18-9, `327027` dated 23-9 reported 16-9. The work was done early
+    // and nobody moved the plan. Do not validate `reportedAt >= plannedDate`.
     plannedDate: date("planned_date", { mode: "string" }),
 
     status: mysqlEnum("status", workOrderStatuses).notNull().default("new"),

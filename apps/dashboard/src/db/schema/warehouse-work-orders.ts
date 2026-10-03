@@ -56,6 +56,11 @@ export const WarehouseWorkOrders = mysqlTable(
 
     // The day the floor is meant to do it. Work is grouped by day first, so a
     // job without one would not appear on anybody's list.
+    // ⚠️ A *planned* date, never a creation date, and never a floor under the
+    // date work is reported on. Two of eleven production runs in the reference
+    // were reported **before** the date on the order — `327292` dated 21-9-2026
+    // reported 18-9, `327027` dated 23-9 reported 16-9. The work was done early
+    // and nobody moved the plan. Do not validate `reportedAt >= plannedDate`.
     plannedDate: date("planned_date", { mode: "string" }),
 
     status: mysqlEnum("status", workOrderStatuses)
