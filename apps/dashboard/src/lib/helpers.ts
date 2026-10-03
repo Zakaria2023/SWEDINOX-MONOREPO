@@ -10193,3 +10193,144 @@ export const contactPersonName = (contact: {
 
   return parts.length > 0 ? parts.join(" ") : null;
 };
+
+/**
+ * Whether a reported figure is close enough to the planned one.
+ *
+ * 🔴 The reference carries a tolerance table **per product**, read off
+ * `PK44115025125` on 2-10-2026:
+ *
+ * ```
+ * Workorder type        Qty    Kg
+ * Unloading wo          5%     5%
+ * Count workorder       0%     0%
+ * Picking workorder     5%     5%
+ * Production workorder   —     0%
+ * ```
+ *
+ * Three different rules, and the differences are the point. A count must be
+ * exact or it is not a count. A production job must close its kilo balance
+ * exactly. A picking or an unloading may be 5 % out either way — which is the
+ * slack that absorbs the 1,911 % gap between the trade and theoretical
+ * densities, and the 2–4 % by which cold-rolled coil runs under nominal.
+ *
+ * `null` means the reference leaves that cell **blank** — production has no
+ * quantity tolerance at all — and is not the same as `0`, which means it must
+ * match to the last decimal.
+ */
+export const isWithinTolerance = (
+  planned: number,
+  reported: number,
+  tolerancePercent: number,
+): boolean => {
+  const allowed = Math.abs(planned) * (tolerancePercent / 100);
+  // Decimal strings that have been through `toFixed` land a hair either side of
+  // the boundary, so an exact-match rule has to survive its own arithmetic.
+  return Math.abs(reported - planned) <= allowed + 1e-9;
+};
+
+/**
+ * A tolerance cell as a number, or `null` when the product leaves it blank.
+ *
+ * Blank is not zero: zero is a rule, blank is the absence of one.
+ */
+export const tolerancePercent = (value: string | null): number | null =>
+  value === null || value.trim() === "" ? null : Number(value);
+
+/**
+ * The length a coil carries instead of a real one.
+ *
+ * 🔴 Seen on purchase order `401141`'s reception and again on two `CK…` rows of
+ * the `Batches` register (2-10-2026): `Length 999999`, a real width, a real
+ * weight. A coil is one piece of indefinite length, and the kilos are what is
+ * true about it.
+ *
+ * Any formula that multiplies dimensions has to step around this, or a single
+ * coil weighs several thousand tonnes.
+ */
+export const COIL_LENGTH_SENTINEL = 999999;
+
+/**
+ * The weight of one piece of a **specific lot**, from that lot's own dimensions.
+ *
+ * 🔑 Weight is `lot dimensions × density`, not `product dimensions × density`.
+ *
+ * Proved on the reference's own `Stock` search dialog, 2-10-2026: a lot of
+ * nominal 1,50 mm plate measures **1,44 mm** and the screen weighs it
+ * `2,5 × 1,25 × 0,00144 × 7 850 = 35,325 kg` — exactly, and exactly the 35,325
+ * recorded against that lot everywhere else. Cold-rolled metal comes in under
+ * nominal and the lot records what it really measures.
+ *
+ * `productPieceWeightKg` cannot be used for this: it returns the product's
+ * stored per-piece figure before it ever looks at the dimensions it is handed,
+ * so a lot's own measurements are silently discarded. This one prefers them, and
+ * only falls back to the product when the lot has none — or when the lot is a
+ * coil, whose length is a sentinel rather than a measurement.
+ */
+export const lotPieceWeightKg = (
+  product: {
+    weightTheoretical?: string | number | null;
+    theoreticalWeight?: string | number | null;
+    weightUnit?: SalesUnit | null;
+    lengthMm?: number | null;
+    widthMm?: number | null;
+    thicknessMm?: string | number | null;
+  },
+  lot: {
+    lengthMm?: number | null;
+    widthMm?: number | null;
+    thicknessMm?: string | number | null;
+  },
+): number | null => {
+  const lengthMm = lot.lengthMm ?? 0;
+  const widthMm = lot.widthMm ?? 0;
+  const thicknessMm = Number(lot.thicknessMm ?? 0);
+
+  const measured =
+    lengthMm > 0 &&
+    lengthMm !== COIL_LENGTH_SENTINEL &&
+    widthMm > 0 &&
+    thicknessMm > 0;
+
+  if (measured) {
+    const fromLot = theoreticalPieceWeightKg({
+      theoreticalWeight: product.theoreticalWeight,
+      weightUnit: product.weightUnit,
+      lengthMm,
+      widthMm,
+      thicknessMm,
+    });
+    if (fromLot !== null && fromLot > 0) {
+      return fromLot;
+    }
+  }
+
+  return productPieceWeightKg({
+    weightTheoretical: product.weightTheoretical,
+    theoreticalWeight: product.theoreticalWeight,
+    weightUnit: product.weightUnit,
+    lengthMm: product.lengthMm,
+    widthMm: product.widthMm,
+    thicknessMm: product.thicknessMm,
+  });
+};
+
+/**
+ * Where a lot originally came from, for stamping onto a movement.
+ *
+ * 🔴 The reference's `Stock mutations` names the **supplier and the purchase
+ * order** on outbound delivery rows as well as inbound ones — a delivery to
+ * Bergen Stainless on 14-8-2026 still reads `Supplier: Swedinox`,
+ * `Purchase order: IO403283`. Origin travels with the metal all the way out of
+ * the building.
+ *
+ * ⚠️ Spread this at write time rather than joining through the lot later. A lot
+ * drawn to zero is precisely when somebody asks where its steel came from.
+ */
+export const lotOrigin = (lot: {
+  supplierUuid?: string | null;
+  purchaseOrderUuid?: string | null;
+}) => ({
+  originSupplierUuid: lot.supplierUuid ?? null,
+  originPurchaseOrderUuid: lot.purchaseOrderUuid ?? null,
+});

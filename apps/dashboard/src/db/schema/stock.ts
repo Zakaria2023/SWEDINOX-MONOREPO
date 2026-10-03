@@ -106,9 +106,22 @@ export const Stock = mysqlTable(
     quality: varchar("quality", { length: 100 }),
     stockCategory: varchar("stock_category", { length: 100 }),
     options: varchar("options", { length: 255 }),
+    // 🔑 These are the lot's **own** measurements, and every kilo derived from
+    // this row has to come from them rather than from the product's nominal
+    // ones. A lot of nominal 1,50 mm plate measuring 1,44 weighs
+    // `2,5 × 1,25 × 0,00144 × 7 850 = 35,325 kg`, which is exactly what the
+    // reference's `Stock` search dialog shows against it. See `lotPieceWeightKg`.
     lengthMm: int("length_mm"),
     widthMm: int("width_mm"),
     thicknessMm: decimal("thickness_mm", { precision: 10, scale: 2 }),
+
+    // Whether the bundle is still banded as it left the mill.
+    //
+    // 🔴 `Unopened` on the reference's `Stock` search dialog (2-10-2026). An
+    // intact bundle is worth more to a customer than a broken one, and it is
+    // the natural companion to the parcel model: the first time anybody picks
+    // part of a lot, it stops being true and cannot become true again.
+    unopened: boolean("unopened").default(true).notNull(),
     charge: varchar("charge", { length: 100 }),
     internalCharge: varchar("internal_charge", { length: 100 }),
     // `Batch` on the reference's stock panels — the supplier's batch number,

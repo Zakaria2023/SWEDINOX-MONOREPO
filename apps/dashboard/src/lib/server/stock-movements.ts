@@ -7,6 +7,7 @@ import {
 import { StockCorrectionReason, StockMovementReason } from "@/lib/enums";
 import {
   generateUuid,
+  lotOrigin,
   moneyString,
   normaliseCharge,
   restateLotValue,
@@ -200,6 +201,8 @@ export const applyMove = async (
         Number(source.reservedQuantity ?? 0) - carried
       ).toFixed(3),
       valuationEuro: moneyString(remainingValue),
+      // Taking part of a bundle breaks its banding, and nothing puts that back.
+      unopened: false,
     })
     .where(
       and(eq(Stock.uuid, source.uuid), eq(Stock.quantity, source.quantity)),
@@ -286,6 +289,9 @@ export const applyMove = async (
       quantity: quantity.toFixed(3),
       reservedQuantity: arrivingReserved.toFixed(3),
       valuationEuro: moneyString(valueMoved),
+      // The part that travelled came out of a bundle somebody cut open, so it
+      // is not an intact one either.
+      unopened: false,
     });
   }
 
@@ -392,6 +398,8 @@ export const applyProductionConsume = async (
         Number(source.reservedQuantity ?? 0) - released
       ).toFixed(3),
       valuationEuro: moneyString(remainingValue),
+      // Issuing part of a bundle breaks its banding for good.
+      unopened: false,
     })
     .where(
       and(eq(Stock.uuid, source.uuid), eq(Stock.quantity, source.quantity)),
@@ -410,6 +418,7 @@ export const applyProductionConsume = async (
     type: "out",
     reason: "production_input",
     quantity: quantity.toFixed(3),
+    ...lotOrigin(source),
     orderUuid: params.orderUuid,
     productionWorkOrderLineUuid: params.productionWorkOrderLineUuid,
     createdByUserId: params.userId,

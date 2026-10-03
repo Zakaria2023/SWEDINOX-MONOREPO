@@ -78,6 +78,20 @@ export const StockMovements = mysqlTable(
     valueBefore: varchar("value_before", { length: 255 }),
     valueAfter: varchar("value_after", { length: 255 }),
 
+    // 🔑 Where the metal originally came from, copied onto every movement.
+    //
+    // The reference's `Stock mutations` panel names the **supplier and the
+    // purchase order** on *outbound delivery* rows: a 14-8-2026 delivery to
+    // Bergen Stainless reads `Supplier: Swedinox`, `Purchase order: IO403283`.
+    // So "where did this plate come from" is one row rather than a walk back up
+    // a chain.
+    //
+    // ⚠️ Copied at write time, deliberately — never joined through the lot. The
+    // whole point is that the answer survives the lot being consumed, and a lot
+    // drawn to zero is exactly when somebody asks.
+    originSupplierUuid: char("origin_supplier_uuid", { length: 36 }),
+    originPurchaseOrderUuid: char("origin_purchase_order_uuid", { length: 36 }),
+
     // Purchase order this movement is tied to — the original "in" receipt,
     // or the "out" reversal logged when that order is cancelled.
     purchaseOrderUuid: char("purchase_order_uuid", { length: 36 }),
