@@ -44,7 +44,7 @@ import {
   getQuoteVatRatePercent,
   moneyString,
   pieceWeightForBasis,
-  productPieceWeightKg,
+  lotPieceWeightKg,
   quoteLineFinancials,
   quoteOrderPolicy,
   resolveSurchargeAmounts,
@@ -525,6 +525,37 @@ export const createOrder = async (
       ],
     );
 
+    // 🔴 Whether a line holds the lot it names is the product's decision.
+    //
+    // `Sales → Always reserve stock` was ticked on `PK44115025125` (2-10-2026),
+    // and that is why every line on that product binds a lot the moment it is
+    // created. We had treated automatic reservation as something the system
+    // simply did. A product that unticks it is sold from unheld stock.
+    //
+    // ⚠️ Absent reads as *reserve*. Not holding metal that has been sold is the
+    // expensive mistake, so the flag has to be switched off on purpose.
+    const reserveByProduct = new Map<string, boolean>();
+    const reservableProductUuids = [
+      ...new Set(
+        items.flatMap((item) => {
+          const stockRow = stockByUuid.get(item.stockUuid);
+          return stockRow ? [stockRow.productUuid] : [];
+        }),
+      ),
+    ];
+    if (reservableProductUuids.length > 0) {
+      const reserveRows = await db
+        .select({
+          uuid: Products.uuid,
+          alwaysReserveStock: Products.alwaysReserveStock,
+        })
+        .from(Products)
+        .where(inArray(Products.uuid, reservableProductUuids));
+      for (const row of reserveRows) {
+        reserveByProduct.set(row.uuid, row.alwaysReserveStock !== false);
+      }
+    }
+
     await db.transaction(async (tx) => {
       await tx.insert(Orders).values({
         ...orderFields,
@@ -548,31 +579,35 @@ export const createOrder = async (
       const lineTotals = { goodsValue: 0, weightKg: 0 };
 
       for (const [index, { item, stockRow }] of reservableItems.entries()) {
-        const nextReserved = (
-          Number(stockRow.reservedQuantity) + Number(item.quantity)
-        ).toFixed(3);
+        const holdsStock = reserveByProduct.get(stockRow.productUuid) !== false;
 
-        // Guard: only reserve if the free quantity we validated above is
-        // still there — a concurrent reservation/consumption can't cause
-        // this lot to be oversold.
-        const [updateResult] = await tx
-          .update(Stock)
-          .set({ reservedQuantity: nextReserved })
-          .where(
-            and(
-              eq(Stock.uuid, item.stockUuid),
-              eq(Stock.status, "pending"),
-              gte(
-                sql`(${Stock.quantity} - ${Stock.reservedQuantity})`,
-                item.quantity,
+        if (holdsStock) {
+          const nextReserved = (
+            Number(stockRow.reservedQuantity) + Number(item.quantity)
+          ).toFixed(3);
+
+          // Guard: only reserve if the free quantity we validated above is
+          // still there — a concurrent reservation/consumption can't cause
+          // this lot to be oversold.
+          const [updateResult] = await tx
+            .update(Stock)
+            .set({ reservedQuantity: nextReserved })
+            .where(
+              and(
+                eq(Stock.uuid, item.stockUuid),
+                eq(Stock.status, "pending"),
+                gte(
+                  sql`(${Stock.quantity} - ${Stock.reservedQuantity})`,
+                  item.quantity,
+                ),
               ),
-            ),
-          );
+            );
 
-        if (updateResult.affectedRows === 0) {
-          throw new Error(
-            "Stock changed while reserving — please refresh and try again.",
-          );
+          if (updateResult.affectedRows === 0) {
+            throw new Error(
+              "Stock changed while reserving — please refresh and try again.",
+            );
+          }
         }
 
         const quantity = Number(item.quantity);
@@ -584,9 +619,20 @@ export const createOrder = async (
         // is valued at — not an average across every lot of the product. That
         // is the whole reason an order can report a truer margin than the quote
         // it came from.
-        const lineLengthMm = Number(product?.length ?? 0);
-        const lineWidthMm = Number(product?.widthDiameter ?? 0);
-        const lineThicknessMm = Number(product?.thickness ?? 0);
+        // 🔑 The lot's own measurements win over the article's nominal ones.
+        //
+        // A line is allocated to one parcel, and that parcel has been measured:
+        // nominal 1,50 mm plate that really runs 1,44 weighs 35,325 kg, not
+        // 36,797. The reference bills the metal it is shipping, so the cost
+        // basis has to be the lot in front of it rather than the catalogue.
+        const lineLengthMm =
+          stockRow.lengthMm ?? Number(product?.length ?? 0);
+        const lineWidthMm =
+          stockRow.widthMm ?? Number(product?.widthDiameter ?? 0);
+        const lineThicknessMm =
+          Number(stockRow.thicknessMm ?? 0) > 0
+            ? Number(stockRow.thicknessMm)
+            : Number(product?.thickness ?? 0);
 
         const financials = quoteLineFinancials({
           netPrice,
@@ -597,14 +643,21 @@ export const createOrder = async (
           // `theoreticalWeight` is a density when the weight unit says M3, so
           // it is only ever read through the helper that checks the unit.
           theoreticalWeight:
-            productPieceWeightKg({
-              weightTheoretical: product?.weightTheoretical,
-              theoreticalWeight: product?.theoreticalWeight,
-              weightUnit: product?.weightUnit,
-              lengthMm: lineLengthMm,
-              widthMm: lineWidthMm,
-              thicknessMm: lineThicknessMm,
-            }) ?? 0,
+            lotPieceWeightKg(
+              {
+                weightTheoretical: product?.weightTheoretical,
+                theoreticalWeight: product?.theoreticalWeight,
+                weightUnit: product?.weightUnit,
+                lengthMm: Number(product?.length ?? 0),
+                widthMm: Number(product?.widthDiameter ?? 0),
+                thicknessMm: Number(product?.thickness ?? 0),
+              },
+              {
+                lengthMm: lineLengthMm,
+                widthMm: lineWidthMm,
+                thicknessMm: lineThicknessMm,
+              },
+            ) ?? 0,
           // What the customer is billed on, which is not what the line costs.
           // The order's weight type — inherited from the customer — picks which
           // of the product's weights bills it.
@@ -660,17 +713,19 @@ export const createOrder = async (
         // the number; this holds who is holding it, which is what the
         // reference's `Toon reserveringen` panel shows and a bare number
         // cannot: one lot can be spoken for by several lines at once.
-        await tx.insert(Reservations).values({
-          uuid: generateUuid(),
-          stockUuid: item.stockUuid,
-          orderItemUuid,
-          type: "sale",
-          status: "definitive",
-          quantity: item.quantity,
-          unit: stockRow.unit ?? "st",
-          quantityKg: financials.weightKg.toFixed(2),
-          reservedFor: fields.deliveryDate ?? null,
-        });
+        if (holdsStock) {
+          await tx.insert(Reservations).values({
+            uuid: generateUuid(),
+            stockUuid: item.stockUuid,
+            orderItemUuid,
+            type: "sale",
+            status: "definitive",
+            quantity: item.quantity,
+            unit: stockRow.unit ?? "st",
+            quantityKg: financials.weightKg.toFixed(2),
+            reservedFor: fields.deliveryDate ?? null,
+          });
+        }
 
         lineTotals.goodsValue += financials.amount;
         lineTotals.weightKg += financials.weightKg;
