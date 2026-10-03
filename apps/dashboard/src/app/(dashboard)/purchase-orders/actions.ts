@@ -37,6 +37,7 @@ import {
   amountForWeight,
   describeError,
   generateUuid,
+  isWeightPriceUnit,
   moneyString,
   productPieceWeightKg,
 } from "@/lib/helpers";
@@ -413,6 +414,35 @@ export const createPurchaseOrder = async (
       productUuids.some((productUuid) => !validProductUuids.has(productUuid))
     ) {
       return { error: "One or more selected products could not be found." };
+    }
+
+    // 🔴 A price per tonne against a product with no weight bills nothing.
+    //
+    // Steel is bought by the tonne, so the amount is `price x weight` and the
+    // weight comes from the product's dimensions and density — not from the
+    // piece count. A product carrying none of those makes the weight zero, and
+    // the line saves at EUR 0,00 without complaining. The receival raised behind
+    // it then plans zero kilos, and the error travels quietly all the way to the
+    // invoice.
+    //
+    // Found on 3-10-2026: 5 624 of 5 626 products carry no dimensions at all, so
+    // this is the normal case here rather than an edge one.
+    const weightless = items.filter((item) => {
+      if (!isWeightPriceUnit(item.priceUnit)) {
+        return false;
+      }
+      const product = productByUuid.get(item.productUuid);
+      const pieceWeight = product ? productPieceWeightKg(product) : null;
+      return (pieceWeight ?? 0) * Number(item.quantity) <= 0;
+    });
+
+    if (weightless.length > 0) {
+      return {
+        error:
+          weightless.length === items.length
+            ? "This product has no weight, so a price per tonne or per kilo cannot be turned into an amount. Give the product its dimensions and density, or price the line per piece."
+            : `${weightless.length} of ${items.length} lines are priced by weight against a product that has none. Give those products their dimensions and density, or price those lines per piece.`,
+      };
     }
 
     const user = await currentUser();

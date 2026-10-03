@@ -10327,3 +10327,18 @@ export const lotOrigin = (lot: {
   originSupplierUuid: lot.supplierUuid ?? null,
   originPurchaseOrderUuid: lot.purchaseOrderUuid ?? null,
 });
+
+/**
+ * The price units that are struck on weight, and so cannot be turned into an
+ * amount without one.
+ *
+ * Almost every purchase line is one of these — steel is bought by the tonne —
+ * which is why a product with no weight silently produces a € 0,00 order rather
+ * than an obviously wrong one.
+ */
+export const WEIGHT_PRICE_UNITS = ["KG", "TN", "HK"] as const;
+
+export const isWeightPriceUnit = (priceUnit: string | null | undefined) =>
+  WEIGHT_PRICE_UNITS.includes(
+    (priceUnit ?? "").trim().toUpperCase() as (typeof WEIGHT_PRICE_UNITS)[number],
+  );
