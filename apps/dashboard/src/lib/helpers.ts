@@ -10309,6 +10309,90 @@ export const lotPieceWeightKg = (
 };
 
 /**
+ * The weight of one piece of an article, derived from geometry first.
+ *
+ * 🔴 `productPieceWeightKg` reads a **stored** figure — `weight_theoretical`,
+ * which the product form computes and writes on save. Every article that
+ * arrived by import instead of through that form has it empty, and on
+ * 3-10-2026 that was 5 624 of 5 626 products. A purchase line priced per tonne
+ * against one of them weighed nothing and billed EUR 0,00, and the receival
+ * raised behind it planned zero kilos.
+ *
+ * So geometry comes first here: shape, dimensions and density reproduce the
+ * figure the product form would have stored, and the stored column is only a
+ * fallback for the articles geometry cannot describe — a beam, whose section
+ * comes from a profile table this system does not hold.
+ *
+ * `override` carries the **line's** own dimensions, which win over the
+ * catalogue's. A document line may be struck at a size the article is not
+ * normally stocked in, and it is the line that was ordered.
+ */
+export const articlePieceWeightKg = (
+  product: {
+    dimensionShape?: ProductDimensionShape | null;
+    featuresQuality?: FeaturesQuality | string | null;
+    densityKgDm3?: string | number | null;
+    length?: string | number | null;
+    widthDiameter?: string | number | null;
+    thickness?: string | number | null;
+    theoreticalThickness?: string | number | null;
+    weightTheoretical?: string | number | null;
+    theoreticalWeight?: string | number | null;
+    weightUnit?: SalesUnit | null;
+  },
+  override?: {
+    lengthMm?: string | number | null;
+    widthMm?: string | number | null;
+    thicknessMm?: string | number | null;
+  },
+): number | null => {
+  const pick = (
+    first: string | number | null | undefined,
+    second: string | number | null | undefined,
+  ): number => {
+    const chosen = Number(first ?? 0);
+    return chosen > 0 ? chosen : Number(second ?? 0);
+  };
+
+  const length = pick(override?.lengthMm, product.length);
+  const widthDiameter = pick(override?.widthMm, product.widthDiameter);
+  // The metal's rolled thickness beats its nominal one, for the reason
+  // `theoreticalPieceWeightKg` sets out — but only when the line did not state
+  // a thickness of its own, which is a measurement rather than a nominal size.
+  const stated = Number(override?.thicknessMm ?? 0);
+  const rolled = Number(product.theoreticalThickness ?? 0);
+  const thickness =
+    stated > 0 ? stated : rolled > 0 ? rolled : Number(product.thickness ?? 0);
+
+  // A coil's length is a sentinel, not a measurement, so its volume cannot be
+  // read off it. Such a line falls through to whatever the article stores.
+  const measurable = length > 0 && length !== COIL_LENGTH_SENTINEL;
+
+  if (measurable) {
+    const derived = deriveArticleWeights(
+      product.dimensionShape,
+      { length, widthDiameter, thickness },
+      product.featuresQuality,
+      Number(product.densityKgDm3 ?? 0) || null,
+    );
+    if (
+      derived.weightTheoretical !== undefined &&
+      derived.weightTheoretical > 0
+    ) {
+      return derived.weightTheoretical;
+    }
+  }
+
+  return productPieceWeightKg({
+    weightTheoretical: product.weightTheoretical,
+    theoreticalWeight: product.theoreticalWeight,
+    weightUnit: product.weightUnit,
+    lengthMm: length > 0 ? length : null,
+    widthMm: widthDiameter > 0 ? widthDiameter : null,
+    thicknessMm: thickness > 0 ? thickness : null,
+  });
+};
+/**
  * Where a lot originally came from, for stamping onto a movement.
  *
  * 🔴 The reference's `Stock mutations` names the **supplier and the purchase

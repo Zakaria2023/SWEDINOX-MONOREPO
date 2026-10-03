@@ -25,6 +25,14 @@ export type ProductChoice = {
   lengthMm: number | null;
   widthMm: number | null;
   thicknessMm: string | null;
+  /**
+   * What one piece weighs. A purchase line is priced per tonne, so this is what
+   * turns a quantity into an amount — and the reference shows it on the line as
+   * `Kg(p)` the moment an article is chosen, rather than at save time.
+   */
+  pieceWeightKg: number | null;
+  /** The article's own purchase unit — the reference's `Per`, usually `TN`. */
+  purchasingUnit: string | null;
 };
 
 type Props = {
@@ -116,6 +124,8 @@ export const ProductSearchField = ({
             lengthMm: row.lengthMm,
             widthMm: row.widthMm,
             thicknessMm: row.thicknessMm,
+            pieceWeightKg: row.pieceWeightKg,
+            purchasingUnit: row.purchasingUnit,
           });
           setOpen(false);
         }}

@@ -6,7 +6,11 @@ import { PurchaseOrderItems } from "@/db/schema/purchase-order-items";
 import { PurchaseOrders } from "@/db/schema/purchase-orders";
 import { Stock } from "@/db/schema/stock";
 import { Warehouses } from "@/db/schema/warehouses";
-import { NON_SELLABLE_LOCATION_TYPES, toDateString } from "@/lib/helpers";
+import {
+  articlePieceWeightKg,
+  NON_SELLABLE_LOCATION_TYPES,
+  toDateString,
+} from "@/lib/helpers";
 import {
   and,
   asc,
@@ -108,6 +112,10 @@ export type StockSearchVariant = {
   lengthMm: number | null;
   widthMm: number | null;
   thicknessMm: string | null;
+  /** One piece's weight, so a line can show `Kg(p)` the moment it is picked. */
+  pieceWeightKg: number | null;
+  /** The article's own purchase unit, which a buying line's `Per` defaults to. */
+  purchasingUnit: string | null;
   technical: number;
   reserved: number;
   available: number;
@@ -137,6 +145,10 @@ export type StockSearchLot = {
   reserved: number;
   available: number;
   quantityKg: number;
+  /** One piece's weight, so a line can show `Kg(p)` the moment it is picked. */
+  pieceWeightKg: number | null;
+  /** The article's own purchase unit, which a buying line's `Per` defaults to. */
+  purchasingUnit: string | null;
   valuationPrice: number;
   /** Set on the `Purchase` tab: the order these goods are coming in on. */
   purchaseOrderId: number | null;
@@ -224,6 +236,7 @@ export const findSellableStock = async (
         reserved: Stock.reservedQuantity,
         quantityKg: Stock.quantityKg,
         valuationPrice: Stock.valuationPrice,
+        purchasingUnit: Products.purchasingUnit,
       })
       .from(Stock)
       .innerJoin(Products, eq(Stock.productUuid, Products.uuid))
@@ -253,16 +266,23 @@ export const findSellableStock = async (
       .orderBy(desc(Stock.receiptDate))
       .limit(STOCK_SEARCH_LIMIT + 1);
 
-    return rows.map((row) => ({
-      ...row,
-      quantity: Number(row.quantity ?? 0),
-      reserved: Number(row.reserved ?? 0),
-      available: Number(row.quantity ?? 0) - Number(row.reserved ?? 0),
-      quantityKg: Number(row.quantityKg ?? 0),
-      valuationPrice: Number(row.valuationPrice ?? 0),
-      purchaseOrderId: null,
-      expectedDate: null,
-    }));
+    return rows.map((row) => {
+      const quantity = Number(row.quantity ?? 0);
+      const quantityKg = Number(row.quantityKg ?? 0);
+      return {
+        ...row,
+        quantity,
+        reserved: Number(row.reserved ?? 0),
+        available: quantity - Number(row.reserved ?? 0),
+        quantityKg,
+        // A lot on the shelf has been weighed as a whole, so one piece of it is
+        // that weight shared out — nearer the truth than any formula.
+        pieceWeightKg: quantity > 0 && quantityKg > 0 ? quantityKg / quantity : null,
+        valuationPrice: Number(row.valuationPrice ?? 0),
+        purchaseOrderId: null,
+        expectedDate: null,
+      };
+    });
   };
 
   // 🔴 Goods that have not arrived. Each row is a purchase line still owing
@@ -286,6 +306,7 @@ export const findSellableStock = async (
         valuationPrice: PurchaseOrderItems.netPrice,
         purchaseOrderId: PurchaseOrders.id,
         expectedDate: PurchaseOrders.deliveryDate,
+        purchasingUnit: Products.purchasingUnit,
       })
       .from(PurchaseOrderItems)
       .innerJoin(Products, eq(PurchaseOrderItems.productUuid, Products.uuid))
@@ -335,6 +356,13 @@ export const findSellableStock = async (
       reserved: 0,
       available: Number(row.quantity ?? 0),
       quantityKg: Number(row.quantityKg ?? 0),
+      // The line it is coming in on already states its weight; one piece is
+      // that weight over the pieces still outstanding.
+      pieceWeightKg:
+        Number(row.quantity ?? 0) > 0 && Number(row.quantityKg ?? 0) > 0
+          ? Number(row.quantityKg) / Number(row.quantity)
+          : null,
+      purchasingUnit: row.purchasingUnit,
       valuationPrice: Number(row.valuationPrice ?? 0),
       purchaseOrderId: row.purchaseOrderId,
       expectedDate: row.expectedDate ? toDateString(row.expectedDate) : null,
@@ -359,6 +387,20 @@ export const findSellableStock = async (
         lengthMm: Products.length,
         widthMm: Products.widthDiameter,
         thicknessMm: Products.thickness,
+        // 🔴 Everything a weight is derived from. A buying line is priced per
+        // tonne, so an article that comes back from here without the means to
+        // weigh it bills EUR 0,00 and nobody is told why.
+        dimensionShape: Products.dimensionShape,
+        featuresQuality: Products.featuresQuality,
+        densityKgDm3: Products.densityKgDm3,
+        length: Products.length,
+        widthDiameter: Products.widthDiameter,
+        thickness: Products.thickness,
+        theoreticalThickness: Products.theoreticalThickness,
+        weightTheoretical: Products.weightTheoretical,
+        theoreticalWeight: Products.theoreticalWeight,
+        weightUnit: Products.weightUnit,
+        purchasingUnit: Products.purchasingUnit,
       })
       .from(Products)
       .where(
@@ -394,6 +436,8 @@ export const findSellableStock = async (
       reserved: 0,
       available: 0,
       quantityKg: 0,
+      pieceWeightKg: articlePieceWeightKg(row),
+      purchasingUnit: row.purchasingUnit,
       valuationPrice: 0,
       purchaseOrderId: null,
       expectedDate: null,
@@ -441,6 +485,8 @@ export const findSellableStock = async (
       lengthMm: lot.lengthMm,
       widthMm: lot.widthMm,
       thicknessMm: lot.thicknessMm,
+      pieceWeightKg: lot.pieceWeightKg,
+      purchasingUnit: lot.purchasingUnit,
       technical: lot.quantity,
       reserved: lot.reserved,
       available: lot.available,
