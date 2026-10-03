@@ -1,23 +1,10 @@
-import Link from "next/link";
 import { getMachines } from "@/app/(dashboard)/machines/actions";
 import { MachinesTable } from "@/components/machines/machines-table-content";
 
 const MachinesPage = async () => {
   const machines = await getMachines();
 
-  return (
-    <div className="space-y-4">
-      <div className="flex items-start justify-end">
-        <Link
-          href="/machines/add"
-          className="inline-flex h-8 items-center justify-center rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/80"
-        >
-          New Machine
-        </Link>
-      </div>
-      <MachinesTable machines={machines} />
-    </div>
-  );
+  return <MachinesTable machines={machines} />;
 };
 
 export default MachinesPage;

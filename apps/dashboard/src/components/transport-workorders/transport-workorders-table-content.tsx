@@ -19,6 +19,7 @@ import {
 import { StatusBadge } from "@/components/ui/status-badge";
 import { TRIP_STATUS_LABELS } from "@/lib/labels";
 import { TableExportButton } from "@/components/ui/table-export-button";
+import { GenerateTransportButton } from "@/components/transport-workorders/generate-transport-button";
 
 type Props = {
   lines: TransportWorkOrderLineItem[];
@@ -63,12 +64,13 @@ const CompleteButton = ({ lineUuid }: CompleteButtonProps) => {
 export const TransportWorkOrdersTable = ({ lines }: Props) => (
   <div>
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
         <TableExportButton
           tableId="transport-workorders-table"
           fileName="transport-workorders"
           sheetName="Transport workorders"
         />
+        <GenerateTransportButton />
       </div>
       <Table id="transport-workorders-table">
         <TableHeader>
@@ -126,11 +128,7 @@ export const TransportWorkOrdersTable = ({ lines }: Props) => (
                 <TableCell>
                   <StatusBadge
                     value={row.status}
-                    label={
-                      row.status
-                        ? TRIP_STATUS_LABELS[row.status]
-                        : null
-                    }
+                    label={row.status ? TRIP_STATUS_LABELS[row.status] : null}
                   />
                 </TableCell>
                 <TableCell className="text-right">

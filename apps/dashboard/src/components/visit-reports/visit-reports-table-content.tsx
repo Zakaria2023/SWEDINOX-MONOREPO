@@ -1,6 +1,7 @@
 "use client";
 
 import { PagedTableExportButton } from "@/components/ui/table-export-button";
+import { TableNewLink } from "@/components/ui/table-new-link";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { TableSortHeader } from "@/components/ui/table-sort-header";
 import { TableToolbar } from "@/components/ui/table-toolbar";
@@ -194,6 +195,7 @@ export const VisitReportsTable = ({
           columnKeys={visibleColumns.map((column) => column.key)}
           action={exportVisitReports}
         />
+        <TableNewLink href="/visit-reports/add">New Visit Report</TableNewLink>
       </TableToolbar>
 
       <div>

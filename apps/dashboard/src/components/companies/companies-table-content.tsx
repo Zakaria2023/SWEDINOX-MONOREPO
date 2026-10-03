@@ -19,6 +19,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { RowAction } from "@/components/ui/row-action";
 import { TableExportButton } from "@/components/ui/table-export-button";
+import { TableNewLink } from "@/components/ui/table-new-link";
 
 type ColumnKey = "id" | "companyName" | "documents" | "createdAt" | "updatedAt";
 
@@ -133,6 +134,7 @@ export const CompaniesTable = ({ companies }: CompaniesTableContentProps) => {
           fileName="companies"
           sheetName="Companies"
         />
+        <TableNewLink href="/companies/add">New Company</TableNewLink>
       </div>
 
       <div>

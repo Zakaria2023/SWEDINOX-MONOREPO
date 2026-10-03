@@ -21,6 +21,7 @@ import {
 import { BooleanFlag } from "@/components/ui/boolean-flag";
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { PagedTableExportButton } from "@/components/ui/table-export-button";
+import { RecalculatePricesButton } from "@/components/product-prices/recalculate-prices-button";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { TableSortHeader } from "@/components/ui/table-sort-header";
 import { TableToolbar } from "@/components/ui/table-toolbar";
@@ -172,6 +173,7 @@ export const ProductPricesTable = ({ page, filters }: Props) => {
           columnKeys={visibleColumns.map((column) => column.key)}
           action={exportProductPrices}
         />
+        <RecalculatePricesButton />
       </TableToolbar>
 
       {page.rows.length === 0 ? (

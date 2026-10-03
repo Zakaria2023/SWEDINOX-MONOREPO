@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { getPurchaseOrders } from "@/app/(dashboard)/purchase-orders/actions";
 import { purchaseOrderFilters } from "@/app/(dashboard)/purchase-orders/filters";
 import { getCompaniesForSelect } from "@/app/(dashboard)/companies/actions";
@@ -16,20 +15,10 @@ const PurchaseOrdersPage = async ({ searchParams }: Props) => {
   const suppliers = await getCompaniesForSelect();
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-start justify-end">
-        <Link
-          href="/purchase-orders/new"
-          className="inline-flex h-8 items-center justify-center rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/80"
-        >
-          New Purchase Order
-        </Link>
-      </div>
-      <PurchaseOrdersTable
-        page={purchaseOrders}
-        filters={purchaseOrderFilters(suppliers)}
-      />
-    </div>
+    <PurchaseOrdersTable
+      page={purchaseOrders}
+      filters={purchaseOrderFilters(suppliers)}
+    />
   );
 };
 

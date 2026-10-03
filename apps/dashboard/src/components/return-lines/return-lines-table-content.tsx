@@ -21,6 +21,7 @@ import {
   STOCK_UNIT_LABELS,
 } from "@/lib/labels";
 import { TableExportButton } from "@/components/ui/table-export-button";
+import { GenerateReturnLinesButton } from "@/components/return-lines/generate-return-lines-button";
 
 type Props = {
   page: Paged<ReturnLineItem>;
@@ -29,12 +30,13 @@ type Props = {
 export const ReturnLinesTable = ({ page }: Props) => (
   <div>
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
         <TableExportButton
           tableId="return-lines-table"
           fileName="return-lines"
           sheetName="Return lines"
         />
+        <GenerateReturnLinesButton />
       </div>
       <Table id="return-lines-table">
         <TableHeader>

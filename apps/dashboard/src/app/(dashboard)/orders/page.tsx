@@ -3,7 +3,6 @@ import { getOrders } from "@/app/(dashboard)/orders/actions";
 import { orderFilters } from "@/app/(dashboard)/orders/filters";
 import { OrdersTable } from "@/components/orders/orders-table-content";
 import { parseTableQuery, SearchParams } from "@/lib/table-query";
-import Link from "next/link";
 
 type Props = {
   searchParams: Promise<SearchParams>;
@@ -15,19 +14,7 @@ const OrdersPage = async ({ searchParams }: Props) => {
   const orders = await getOrders(query);
   const companies = await getCompaniesForSelect();
 
-  return (
-    <div className="space-y-4">
-      <div className="flex items-start justify-end">
-        <Link
-          href="/orders/new"
-          className="inline-flex h-8 items-center justify-center rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/80"
-        >
-          New Order
-        </Link>
-      </div>
-      <OrdersTable page={orders} filters={orderFilters(companies)} />
-    </div>
-  );
+  return <OrdersTable page={orders} filters={orderFilters(companies)} />;
 };
 
 export default OrdersPage;

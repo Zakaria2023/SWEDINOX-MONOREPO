@@ -16,6 +16,8 @@ import {
 import { BooleanFlag } from "@/components/ui/boolean-flag";
 import { formatDateValue, formatMoney } from "@/lib/helpers";
 import { TableExportButton } from "@/components/ui/table-export-button";
+import { GenerateOptionPricesButton } from "@/components/option-prices-per-product/generate-option-prices-button";
+import { NewOptionDialog } from "@/components/option-prices-per-product/new-option-dialog";
 
 type Props = {
   page: Paged<OptionPriceRow>;
@@ -26,12 +28,14 @@ const COLUMN_COUNT = 17;
 export const OptionPricesTable = ({ page }: Props) => (
   <div>
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
         <TableExportButton
           tableId="option-prices-per-product-table"
           fileName="option-prices-per-product"
           sheetName="Option prices per product"
         />
+        <NewOptionDialog />
+        <GenerateOptionPricesButton />
       </div>
       <Table id="option-prices-per-product-table">
         <TableHeader>

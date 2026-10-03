@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { getReturnOrders } from "@/app/(dashboard)/return-orders/actions";
 import { ReturnOrdersTable } from "@/components/return-orders/return-orders-table-content";
 import { returnOrderFilters } from "@/app/(dashboard)/return-orders/filters";
@@ -16,20 +15,10 @@ const ReturnOrdersPage = async ({ searchParams }: Props) => {
   const companies = await getCompaniesForSelect();
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-start justify-end">
-        <Link
-          href="/return-orders/new"
-          className="inline-flex h-8 items-center justify-center rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/80"
-        >
-          New Return Order
-        </Link>
-      </div>
-      <ReturnOrdersTable
-        page={returnOrders}
-        filters={returnOrderFilters(companies)}
-      />
-    </div>
+    <ReturnOrdersTable
+      page={returnOrders}
+      filters={returnOrderFilters(companies)}
+    />
   );
 };
 

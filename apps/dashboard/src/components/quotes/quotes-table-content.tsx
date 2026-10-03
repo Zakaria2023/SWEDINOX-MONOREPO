@@ -11,6 +11,7 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { PagedTableExportButton } from "@/components/ui/table-export-button";
+import { TableNewLink } from "@/components/ui/table-new-link";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { TableSortHeader } from "@/components/ui/table-sort-header";
 import { TableToolbar } from "@/components/ui/table-toolbar";
@@ -30,6 +31,7 @@ export const QuotesTable = ({ page, filters }: Props) => (
       filters={filters}
     >
       <PagedTableExportButton fileName="quotes" action={exportQuotes} />
+      <TableNewLink href="/quotes/new">New Quote</TableNewLink>
     </TableToolbar>
     <Table>
       <TableHeader>

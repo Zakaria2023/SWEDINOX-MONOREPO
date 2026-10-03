@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { getProducts } from "@/app/(dashboard)/products/actions";
 import { productFilters } from "@/app/(dashboard)/products/filters";
 import { getProductGroupsForSelect } from "@/app/(dashboard)/product-groups/actions";
@@ -18,20 +17,10 @@ const ProductsPage = async ({ searchParams }: Props) => {
   const companies = await getCompaniesForSelect();
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-start justify-end">
-        <Link
-          href="/products/new"
-          className="inline-flex h-8 items-center justify-center rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/80"
-        >
-          New Product
-        </Link>
-      </div>
-      <ProductsTable
-        page={products}
-        filters={productFilters(productGroups, companies)}
-      />
-    </div>
+    <ProductsTable
+      page={products}
+      filters={productFilters(productGroups, companies)}
+    />
   );
 };
 

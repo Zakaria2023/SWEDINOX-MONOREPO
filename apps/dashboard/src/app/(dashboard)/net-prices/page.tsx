@@ -1,5 +1,3 @@
-import Link from "next/link";
-import { Plus } from "lucide-react";
 import { getCompaniesForSelect } from "@/app/(dashboard)/companies/actions";
 import { getContractsForSelect } from "@/app/(dashboard)/contracts/actions";
 import { getNetPrices } from "@/app/(dashboard)/net-prices/actions";
@@ -21,21 +19,10 @@ const NetPricesPage = async ({ searchParams }: Props) => {
   const products = await getProductsForSelect();
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-start justify-end gap-4">
-        <Link
-          href="/net-prices/new"
-          className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
-        >
-          <Plus className="size-4" />
-          New net price
-        </Link>
-      </div>
-      <NetPricesTable
-        page={page}
-        filters={netPriceFilters(contracts, companies, products)}
-      />
-    </div>
+    <NetPricesTable
+      page={page}
+      filters={netPriceFilters(contracts, companies, products)}
+    />
   );
 };
 

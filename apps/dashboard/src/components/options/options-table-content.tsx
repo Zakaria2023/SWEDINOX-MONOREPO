@@ -21,6 +21,7 @@ import {
 } from "@/lib/helpers";
 import { ORDER_LINE_STATUS_LABELS } from "@/lib/labels";
 import { TableExportButton } from "@/components/ui/table-export-button";
+import { GenerateOptionChargesButton } from "@/components/options/generate-option-charges-button";
 
 type Props = {
   page: Paged<OptionRevenueRow>;
@@ -43,12 +44,13 @@ export const OptionsTable = ({ page }: Props) => {
   return (
     <div>
       <div className="space-y-4">
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-2">
           <TableExportButton
             tableId="options-table"
             fileName="options"
             sheetName="Options"
           />
+          <GenerateOptionChargesButton />
         </div>
         <Table id="options-table">
           <TableHeader>

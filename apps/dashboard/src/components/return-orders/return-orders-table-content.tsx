@@ -6,6 +6,7 @@ import {
   ReturnOrderListItem,
 } from "@/app/(dashboard)/return-orders/actions";
 import { PagedTableExportButton } from "@/components/ui/table-export-button";
+import { TableNewLink } from "@/components/ui/table-new-link";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { TableSortHeader } from "@/components/ui/table-sort-header";
 import { TableToolbar } from "@/components/ui/table-toolbar";
@@ -36,6 +37,7 @@ export const ReturnOrdersTable = ({ page, filters }: Props) => (
         fileName="return-orders"
         action={exportReturnOrders}
       />
+      <TableNewLink href="/return-orders/new">New Return Order</TableNewLink>
     </TableToolbar>
     <Table>
       <TableHeader>

@@ -13,6 +13,7 @@ import {
 import { ORDER_METHOD_LABELS } from "@/lib/labels";
 import { OrderMethod } from "@/lib/enums";
 import { PagedTableExportButton } from "@/components/ui/table-export-button";
+import { TableNewLink } from "@/components/ui/table-new-link";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { TableSortHeader } from "@/components/ui/table-sort-header";
 import { TableToolbar } from "@/components/ui/table-toolbar";
@@ -30,6 +31,7 @@ export const OrdersTable = ({ page, filters }: Props) => (
       filters={filters}
     >
       <PagedTableExportButton fileName="orders" action={exportOrders} />
+      <TableNewLink href="/orders/new">New Order</TableNewLink>
     </TableToolbar>
     <Table>
       <TableHeader>

@@ -20,6 +20,7 @@ import {
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { PagedTableExportButton } from "@/components/ui/table-export-button";
+import { GenerateChargesButton } from "@/components/charges/generate-charges-button";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { TableSortHeader } from "@/components/ui/table-sort-header";
 import { TableToolbar } from "@/components/ui/table-toolbar";
@@ -188,6 +189,7 @@ export const ChargesTable = ({ page, filters }: Props) => {
           columnKeys={visibleColumns.map((column) => column.key)}
           action={exportCharges}
         />
+        <GenerateChargesButton />
       </TableToolbar>
 
       {page.rows.length === 0 ? (

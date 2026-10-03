@@ -12,7 +12,10 @@ type Props = {
   /** Left off, the overview offers no free-text search. */
   searchPlaceholder?: string;
   filters?: readonly TableFilterControl[];
-  /** The column selector, an export button — whatever the overview adds. */
+  /**
+   * Table actions such as column selection, export and new-record controls.
+   * They render in a separate right-aligned row below the filters.
+   */
   children?: ReactNode;
 };
 
@@ -36,7 +39,7 @@ export const TableToolbar = ({
   }
 
   return (
-    <div className="flex flex-wrap items-end justify-between gap-3">
+    <div className="space-y-3">
       <div className="flex flex-wrap items-end gap-3">
         {searchPlaceholder && (
           <TableSearch placeholder={searchPlaceholder} className="w-64" />
@@ -57,7 +60,11 @@ export const TableToolbar = ({
           </Button>
         )}
       </div>
-      {children && <div className="flex items-end gap-2">{children}</div>}
+      {children && (
+        <div className="flex flex-wrap items-end justify-end gap-2">
+          {children}
+        </div>
+      )}
     </div>
   );
 };

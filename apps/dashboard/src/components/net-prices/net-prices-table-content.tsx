@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { exportNetPrices, NetPriceRow } from "@/app/(dashboard)/net-prices/actions";
+import {
+  exportNetPrices,
+  NetPriceRow,
+} from "@/app/(dashboard)/net-prices/actions";
 import {
   NET_PRICE_COLUMNS,
   NetPriceColumnKey,
@@ -17,6 +20,7 @@ import {
 import { BooleanFlag } from "@/components/ui/boolean-flag";
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { PagedTableExportButton } from "@/components/ui/table-export-button";
+import { TableNewLink } from "@/components/ui/table-new-link";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { TableSortHeader } from "@/components/ui/table-sort-header";
 import { TableToolbar } from "@/components/ui/table-toolbar";
@@ -77,7 +81,9 @@ export const NetPricesTable = ({ page, filters }: Props) => {
           </TableCell>
         );
       case "contractDescription":
-        return <TableCell key={key}>{row.contractDescription ?? "—"}</TableCell>;
+        return (
+          <TableCell key={key}>{row.contractDescription ?? "—"}</TableCell>
+        );
       case "companyCode":
         return (
           <TableCell key={key} className="text-right">
@@ -186,6 +192,7 @@ export const NetPricesTable = ({ page, filters }: Props) => {
           columnKeys={visibleColumns.map((column) => column.key)}
           action={exportNetPrices}
         />
+        <TableNewLink href="/net-prices/new">New net price</TableNewLink>
       </TableToolbar>
 
       <Table>

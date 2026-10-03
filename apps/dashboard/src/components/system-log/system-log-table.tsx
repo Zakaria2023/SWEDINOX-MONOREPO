@@ -42,18 +42,18 @@ const FilterLink = ({ href, label, active }: FilterLinkProps) => (
 
 export const SystemLogTable = ({ rows, selected, userNames }: Props) => (
   <div className="space-y-4">
-    <div className="flex flex-wrap items-center justify-between gap-4">
-      <div className="flex flex-wrap gap-2">
-        <FilterLink href="/system-log" label="All" active={selected === null} />
-        {systemLogCategories.map((category) => (
-          <FilterLink
-            key={category}
-            href={`/system-log?category=${category}`}
-            label={SYSTEM_LOG_CATEGORY_LABELS[category]}
-            active={selected === category}
-          />
-        ))}
-      </div>
+    <div className="flex flex-wrap gap-2">
+      <FilterLink href="/system-log" label="All" active={selected === null} />
+      {systemLogCategories.map((category) => (
+        <FilterLink
+          key={category}
+          href={`/system-log?category=${category}`}
+          label={SYSTEM_LOG_CATEGORY_LABELS[category]}
+          active={selected === category}
+        />
+      ))}
+    </div>
+    <div className="flex justify-end">
       <TableExportButton
         tableId="system-log-table"
         fileName="errors"

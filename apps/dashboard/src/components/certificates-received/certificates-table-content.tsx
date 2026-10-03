@@ -15,6 +15,7 @@ import { BooleanFlag } from "@/components/ui/boolean-flag";
 import { formatDateValue, formatNumber } from "@/lib/helpers";
 import { CERTIFICAAT_LABELS } from "@/lib/labels";
 import { TableExportButton } from "@/components/ui/table-export-button";
+import { GenerateCertificatesButton } from "@/components/certificates-received/generate-certificates-button";
 
 type Props = {
   rows: CertificateRow[];
@@ -25,12 +26,13 @@ const COLUMN_COUNT = 28;
 export const CertificatesTable = ({ rows }: Props) => (
   <div>
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
         <TableExportButton
           tableId="certificates-received-table"
           fileName="certificates-received"
           sheetName="Certificates received"
         />
+        <GenerateCertificatesButton />
       </div>
       <Table id="certificates-received-table">
         <TableHeader>

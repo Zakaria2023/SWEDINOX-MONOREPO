@@ -28,6 +28,7 @@ import {
   WarehouseLocationType,
 } from "@/lib/enums";
 import { TableExportButton } from "@/components/ui/table-export-button";
+import { TableNewLink } from "@/components/ui/table-new-link";
 
 type ColumnKey =
   | "id"
@@ -222,6 +223,7 @@ export const LocationsTable = ({ locations }: Props) => {
           fileName="locations"
           sheetName="Locations"
         />
+        <TableNewLink href="/locations/add">New Location</TableNewLink>
       </div>
 
       <div>

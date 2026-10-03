@@ -4,7 +4,6 @@ import {
 } from "@/app/(dashboard)/charges/actions";
 import { chargeFilters } from "@/app/(dashboard)/charges/filters";
 import { ChargesTable } from "@/components/charges/charges-table-content";
-import { GenerateChargesButton } from "@/components/charges/generate-charges-button";
 import { parseTableQuery, SearchParams } from "@/lib/table-query";
 
 type Props = {
@@ -17,14 +16,7 @@ const ChargesPage = async ({ searchParams }: Props) => {
   const page = await getCharges(query);
   const surcharges = await getChargeSurcharges();
 
-  return (
-    <div className="space-y-4">
-      <div className="flex items-start justify-end gap-4">
-        <GenerateChargesButton />
-      </div>
-      <ChargesTable page={page} filters={chargeFilters(surcharges)} />
-    </div>
-  );
+  return <ChargesTable page={page} filters={chargeFilters(surcharges)} />;
 };
 
 export default ChargesPage;

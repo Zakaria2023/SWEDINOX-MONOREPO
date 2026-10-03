@@ -14,6 +14,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { formatDateColumn, formatMoney, formatNumber } from "@/lib/helpers";
 import { PURCHASE_ORDER_STATUS_LABELS } from "@/lib/labels";
 import { TableExportButton } from "@/components/ui/table-export-button";
+import { ReceiveGoodsButton } from "@/components/purchase-orders-to-be-received/receive-goods-button";
 
 type Props = {
   rows: PurchaseOrderToReceiveRow[];
@@ -22,12 +23,13 @@ type Props = {
 export const PurchaseOrdersToBeReceivedTable = ({ rows }: Props) => (
   <div>
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
         <TableExportButton
           tableId="purchase-orders-to-be-received-table"
           fileName="purchase-orders-to-be-received"
           sheetName="Purchase orders to be received"
         />
+        <ReceiveGoodsButton />
       </div>
       <Table id="purchase-orders-to-be-received-table">
         <TableHeader>

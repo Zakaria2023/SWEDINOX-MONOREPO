@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { getQuotes } from "@/app/(dashboard)/quotes/actions";
 import { quoteFilters } from "@/app/(dashboard)/quotes/filters";
 import { getCompaniesForSelect } from "@/app/(dashboard)/companies/actions";
@@ -15,19 +14,7 @@ const QuotesPage = async ({ searchParams }: Props) => {
   const quotes = await getQuotes(query);
   const companies = await getCompaniesForSelect();
 
-  return (
-    <div className="space-y-4">
-      <div className="flex items-start justify-end">
-        <Link
-          href="/quotes/new"
-          className="inline-flex h-8 items-center justify-center rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/80"
-        >
-          New Quote
-        </Link>
-      </div>
-      <QuotesTable page={quotes} filters={quoteFilters(companies)} />
-    </div>
-  );
+  return <QuotesTable page={quotes} filters={quoteFilters(companies)} />;
 };
 
 export default QuotesPage;

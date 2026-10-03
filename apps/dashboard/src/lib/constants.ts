@@ -111,28 +111,28 @@ export type NavTab =
       groups: NavGroup[];
     };
 
-/** The reference system's `Nieuw` menu — one entry per kind of record. */
+/** Action shortcuts land on each record type's table overview. */
 const ACTION_ITEMS: NavItem[] = [
-  { label: "Company", href: "/companies/add" },
-  { label: "Complaint", href: "/complaints/new" },
-  { label: "Contract", href: "/contracts/add" },
-  { label: "Counter order", href: "/counter-orders/add" },
-  { label: "Invoice", href: "/invoices/add" },
-  { label: "Location", href: "/locations/add" },
-  { label: "Machine", href: "/machines/add" },
-  { label: "Order", href: "/orders/new" },
-  { label: "Product", href: "/products/new" },
-  { label: "Product group", href: "/product-groups/add" },
-  { label: "Purchase invoice", href: "/purchase-invoices/add" },
-  { label: "Purchase order", href: "/purchase-orders/new" },
-  { label: "Purchase quote", href: "/purchase-quotes/new" },
-  { label: "Purchase request", href: "/purchase-requests/new" },
-  { label: "Purchase return order", href: "/purchase-return-orders/new" },
-  { label: "Quote", href: "/quotes/new" },
-  { label: "Return order", href: "/return-orders/new" },
-  { label: "Visit report", href: "/visit-reports/add" },
-  { label: "Warehouse section", href: "/warehouses/add" },
-  { label: "Warehouse subsection", href: "/warehouse-sub-sections/add" },
+  { label: "Company", href: "/companies" },
+  { label: "Complaint", href: "/complaints" },
+  { label: "Contract", href: "/contracts" },
+  { label: "Counter order", href: "/counter-orders" },
+  { label: "Invoice", href: "/invoices" },
+  { label: "Location", href: "/locations" },
+  { label: "Machine", href: "/machines" },
+  { label: "Order", href: "/orders" },
+  { label: "Product", href: "/products" },
+  { label: "Product group", href: "/product-groups" },
+  { label: "Purchase invoice", href: "/purchase-invoices" },
+  { label: "Purchase order", href: "/purchase-orders" },
+  { label: "Purchase quote", href: "/purchase-quotes" },
+  { label: "Purchase request", href: "/purchase-requests" },
+  { label: "Purchase return order", href: "/purchase-return-orders" },
+  { label: "Quote", href: "/quotes" },
+  { label: "Return order", href: "/return-orders" },
+  { label: "Visit report", href: "/visit-reports" },
+  { label: "Warehouse section", href: "/warehouses" },
+  { label: "Warehouse subsection", href: "/warehouse-sub-sections" },
 ];
 
 /** The reference system's `Overviews` tree, group for group. */

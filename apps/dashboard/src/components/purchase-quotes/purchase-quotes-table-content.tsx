@@ -20,6 +20,7 @@ import {
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { PagedTableExportButton } from "@/components/ui/table-export-button";
+import { TableNewLink } from "@/components/ui/table-new-link";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { TableSortHeader } from "@/components/ui/table-sort-header";
 import { TableToolbar } from "@/components/ui/table-toolbar";
@@ -91,7 +92,9 @@ export const PurchaseQuotesTable = ({ page, filters }: Props) => {
       case "supplierName":
         return <TableCell key={key}>{row.supplierName ?? "—"}</TableCell>;
       case "quoteDate":
-        return <TableCell key={key}>{formatDateColumn(row.quoteDate)}</TableCell>;
+        return (
+          <TableCell key={key}>{formatDateColumn(row.quoteDate)}</TableCell>
+        );
       case "validUntil":
         return (
           <TableCell key={key}>{formatDateColumn(row.validUntil)}</TableCell>
@@ -139,9 +142,7 @@ export const PurchaseQuotesTable = ({ page, filters }: Props) => {
       case "productCode":
         return <TableCell key={key}>{row.productCode ?? "—"}</TableCell>;
       case "productDescription":
-        return (
-          <TableCell key={key}>{row.productDescription ?? "—"}</TableCell>
-        );
+        return <TableCell key={key}>{row.productDescription ?? "—"}</TableCell>;
       case "lengthMm":
         return (
           <TableCell key={key} className="text-right">
@@ -228,6 +229,9 @@ export const PurchaseQuotesTable = ({ page, filters }: Props) => {
           columnKeys={visibleColumns.map((column) => column.key)}
           action={exportPurchaseQuoteLines}
         />
+        <TableNewLink href="/purchase-quotes/new">
+          New Purchase Quote
+        </TableNewLink>
       </TableToolbar>
       <Table>
         <TableHeader>

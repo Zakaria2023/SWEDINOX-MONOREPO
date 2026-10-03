@@ -27,6 +27,7 @@ import {
   MACHINE_PRODUCTION_LABELS,
 } from "@/lib/labels";
 import { TableExportButton } from "@/components/ui/table-export-button";
+import { TableNewLink } from "@/components/ui/table-new-link";
 
 type ColumnKey =
   | "code"
@@ -198,6 +199,7 @@ export const MachinesTable = ({ machines }: Props) => {
           fileName="machines"
           sheetName="Machines"
         />
+        <TableNewLink href="/machines/add">New Machine</TableNewLink>
       </div>
 
       <div>

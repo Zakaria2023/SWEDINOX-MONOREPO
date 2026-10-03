@@ -10,6 +10,7 @@ import {
   InvoiceColumnKey,
 } from "@/app/(dashboard)/invoices/columns";
 import { PagedTableExportButton } from "@/components/ui/table-export-button";
+import { TableNewLink } from "@/components/ui/table-new-link";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { TableSortHeader } from "@/components/ui/table-sort-header";
 import { TableToolbar } from "@/components/ui/table-toolbar";
@@ -270,6 +271,7 @@ export const InvoicesTable = ({ page, filters }: Props) => {
           columnKeys={visibleColumns.map((column) => column.key)}
           action={exportInvoices}
         />
+        <TableNewLink href="/invoices/add">New Invoice</TableNewLink>
       </TableToolbar>
 
       <div>

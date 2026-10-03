@@ -1,23 +1,10 @@
-import Link from "next/link";
 import { getCompanies } from "@/app/(dashboard)/companies/actions";
 import { CompaniesTable } from "@/components/companies/companies-table-content";
 
 const CompaniesPage = async () => {
   const companies = await getCompanies();
 
-  return (
-    <div className="space-y-4">
-      <div className="flex items-start justify-end">
-        <Link
-          href="/companies/add"
-          className="inline-flex h-8 items-center justify-center rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/80"
-        >
-          New Company
-        </Link>
-      </div>
-      <CompaniesTable companies={companies} />
-    </div>
-  );
+  return <CompaniesTable companies={companies} />;
 };
 
 export default CompaniesPage;

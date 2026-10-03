@@ -11,6 +11,7 @@ import {
 import { PURCHASE_ORDER_TYPE_LABELS } from "@/lib/labels";
 import { PurchaseOrderType } from "@/lib/enums";
 import { TableExportButton } from "@/components/ui/table-export-button";
+import { TableNewLink } from "@/components/ui/table-new-link";
 
 export const PurchaseRequestsTable = async () => {
   const purchaseRequests = await getPurchaseRequests();
@@ -18,12 +19,15 @@ export const PurchaseRequestsTable = async () => {
   return (
     <div>
       <div className="space-y-4">
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-2">
           <TableExportButton
             tableId="purchase-requests-table"
             fileName="purchase-requests"
             sheetName="Purchase Requests"
           />
+          <TableNewLink href="/purchase-requests/new">
+            New Purchase Request
+          </TableNewLink>
         </div>
         <Table id="purchase-requests-table">
           <TableHeader>

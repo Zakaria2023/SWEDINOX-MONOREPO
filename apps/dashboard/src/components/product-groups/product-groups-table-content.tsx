@@ -20,6 +20,7 @@ import {
 } from "@/lib/labels";
 import { ArticleGroup, ProductShape, RevenueGroup } from "@/lib/enums";
 import { TableExportButton } from "@/components/ui/table-export-button";
+import { TableNewLink } from "@/components/ui/table-new-link";
 
 type ColumnKey =
   | "id"
@@ -127,6 +128,9 @@ export const ProductGroupsTable = ({ productGroups }: Props) => {
           fileName="product-groups"
           sheetName="Product Groups"
         />
+        <TableNewLink href="/product-groups/add">
+          New Product Group
+        </TableNewLink>
       </div>
       <div>
         <Table id="product-groups-table">

@@ -13,6 +13,7 @@ import {
 import { PURCHASE_RETURN_ORDER_REASON_LABELS } from "@/lib/labels";
 import { PurchaseReturnOrderReason } from "@/lib/enums";
 import { TableExportButton } from "@/components/ui/table-export-button";
+import { TableNewLink } from "@/components/ui/table-new-link";
 
 type Props = {
   purchaseReturnOrders: PurchaseReturnOrderListItem[];
@@ -21,12 +22,15 @@ type Props = {
 export const PurchaseReturnOrdersTable = ({ purchaseReturnOrders }: Props) => (
   <div>
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
         <TableExportButton
           tableId="purchase-return-orders-table"
           fileName="purchase-return-orders"
           sheetName="Purchase Return Orders"
         />
+        <TableNewLink href="/purchase-return-orders/new">
+          New Purchase Return Order
+        </TableNewLink>
       </div>
       <Table id="purchase-return-orders-table">
         <TableHeader>
