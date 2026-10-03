@@ -2396,22 +2396,36 @@ So this was not a schema round. It was the logic round.
 - **27e** three margins exist and are read; **27g** is a decision not to build.
 - **28b** `Simuleer` — needs a UI pattern, not just an action.
 - **31b** `Options` as a join table rather than a column.
-- 🔴 **`pnpm db:push` still has not run — attempted again 3-10-2026, twice.**
+- ✅ **`pnpm db:push` RAN, 3-10-2026.** All 23 queued columns applied, every row
+  count unchanged — `Stock` 549, `Products` 5 626, `Orders` 193,
+  `PurchaseLineReceivals` 164. **Items 23, 25 and 26b are unblocked**, and
+  `Stock.valuation_price` finally holds five decimals.
 
+  ⚠️ **It took a near-miss, and the lesson is worth more than the push.**
+  `drizzle-kit push --force` warned about exactly one statement — the
+  `decimal(15,4) → decimal(15,5)` widening, which is harmless — and then ran:
+
+  ```sql
+  truncate table Stock;
   ```
-  Error: connect ETIMEDOUT
-      at connectToMySQL (drizzle-kit/bin.cjs)
-  ```
 
-  Tried inside the sandbox and outside it, same result, so it is not the sandbox.
-  **DNS resolves and the TCP connect times out**, which is the signature of an
-  **IP allowlist or a firewall on the port** — not bad credentials, which would
-  fail fast with an auth error instead of hanging.
+  It failed only because of `fk_batches_stock`, a foreign key nobody wrote for
+  that purpose. **drizzle-kit's MySQL push strategy for a column change it deems
+  lossy is TRUNCATE-then-ALTER**, and `--force` means "run the destructive
+  statements" — which are not the ones it printed.
 
-  > **What unblocks it:** add this machine's public IP to the database's allowed
-  > addresses (Aiven calls it *IP filter*), or run `pnpm db:push` from a machine
-  > already on the list. Nothing in the code needs to change.
+  > **Never pass `--force` to this.** Without it, push refuses rather than
+  > applying, and in a non-TTY shell it errors out, which is a safe failure.
 
-  The queue is the six changes from 30-9 plus roughly a dozen from 2–3-10.
-  **Nothing above reaches the database until it is pushed from somewhere that can
-  reach the host**, and items 23, 25 and 26b stay broken until it is.
+  **What worked:** apply the lossy column by hand after checking the data cannot
+  overflow — `ALTER TABLE Stock MODIFY COLUMN valuation_price DECIMAL(15,5) NOT
+  NULL DEFAULT '0.00000'`, which kept all 549 rows (`1930.0000` → `1930.00000`)
+  — then run `pnpm db:push` normally. With no lossy change left it printed
+  `[✓] Changes applied` and added everything else without a prompt.
+
+  **Reading the aftermath:** `TRUNCATE` resets `AUTO_INCREMENT` to 1 in InnoDB,
+  so an empty table sitting above 1 was emptied by `DELETE`s, not truncated.
+  That is what proved `Batches` (ai=2), `StockMovements` (ai=51), `StockBatches`
+  (ai=2) and `ReturnOrders` (ai=14) were never touched.
+  `information_schema.TABLES.UPDATE_TIME` is NULL on this server and tells you
+  nothing.
