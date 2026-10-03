@@ -60,6 +60,21 @@ type Props = {
   onChoose: (choice: StockSearchChoice) => void;
   /** Seeds the product filter, so the dialog opens where the line already is. */
   initialProductCode?: string | null;
+  /**
+   * Which sources this document may search, in the order the buttons appear.
+   *
+   * 🔴 A **selling** document searches the shelf; a **buying** one searches the
+   * catalogue, because the whole reason to raise a purchase order is that the
+   * metal is not there. Defaults to the selling pair.
+   */
+  sources?: StockSearchSource[];
+  /**
+   * Suppresses the lot grid and `Use selected stock`.
+   *
+   * A purchase line names an article, not a parcel — there is no lot to bind
+   * to, and offering one would invite somebody to buy metal they already own.
+   */
+  productOnly?: boolean;
 };
 
 type Filters = {
@@ -93,6 +108,12 @@ const EMPTY_FILTERS: Filters = {
   source: "stock",
 };
 
+const SOURCE_LABELS: Record<StockSearchSource, string> = {
+  stock: "Stock",
+  purchase: "Purchase",
+  catalogue: "Catalogue",
+};
+
 const num = (value: string): number | null => {
   const parsed = Number(value.replace(",", "."));
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
@@ -120,8 +141,18 @@ export const StockSearchDialog = ({
   onOpenChange,
   onChoose,
   initialProductCode,
+  sources,
+  productOnly = false,
 }: Props) => {
-  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
+  const allowedSources: StockSearchSource[] = sources ?? ["stock", "purchase"];
+  const firstSource = allowedSources[0] ?? "stock";
+  const [filters, setFilters] = useState<Filters>({
+    ...EMPTY_FILTERS,
+    source: firstSource,
+    // A catalogue search is about articles, not what happens to be on the
+    // shelf, so the physical-stock filter would hide almost everything.
+    onlyWithPhysicalStock: firstSource !== "catalogue",
+  });
   const [variants, setVariants] = useState<StockSearchVariant[]>([]);
   const [lots, setLots] = useState<StockSearchLot[]>([]);
   const [truncated, setTruncated] = useState(false);
@@ -391,27 +422,24 @@ export const StockSearchDialog = ({
 
           <div>
             <div className="mb-2 flex items-center gap-2">
-              {/* The reference's three sources. `Internal production` is not
-                  offered: we have never seen it hold anything, and a tab that
-                  is always empty teaches people to stop looking at it. */}
-              <Button
-                type="button"
-                size="sm"
-                variant={filters.source === "stock" ? "default" : "outline"}
-                onClick={() => chooseSource("stock")}
-                disabled={isPending}
-              >
-                Stock
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant={filters.source === "purchase" ? "default" : "outline"}
-                onClick={() => chooseSource("purchase")}
-                disabled={isPending}
-              >
-                Purchase
-              </Button>
+              {/* The reference's sources. `Internal production` is not offered:
+                  we have never seen it hold anything, and a tab that is always
+                  empty teaches people to stop looking at it.
+
+                  Which of the rest appear is the document's decision — a buying
+                  document has no use for the shelf. */}
+              {allowedSources.map((option) => (
+                <Button
+                  key={option}
+                  type="button"
+                  size="sm"
+                  variant={filters.source === option ? "default" : "outline"}
+                  onClick={() => chooseSource(option)}
+                  disabled={isPending}
+                >
+                  {SOURCE_LABELS[option]}
+                </Button>
+              ))}
               {isIncoming && (
                 <p className="text-xs text-muted-foreground">
                   Goods still to arrive. Selling against these commits an
@@ -420,7 +448,14 @@ export const StockSearchDialog = ({
               )}
             </div>
 
-            <div className="max-h-56 overflow-y-auto rounded-lg border">
+            {/* A catalogue search has no parcels behind it — one empty row per
+                article would say nothing and invite a pointless click. */}
+            <div
+              className={cn(
+                "max-h-56 overflow-y-auto rounded-lg border",
+                productOnly && "hidden",
+              )}
+            >
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -519,17 +554,20 @@ export const StockSearchDialog = ({
           >
             Use selected product
           </Button>
-          <Button
-            type="button"
-            disabled={!chosenLot || chosenLot.available <= 0}
-            onClick={() => {
-              if (chosenLot) {
-                onChoose({ kind: "lot", lot: chosenLot });
-              }
-            }}
-          >
-            Use selected stock
-          </Button>
+          {/* A purchase line names an article, not a parcel. */}
+          {!productOnly && (
+            <Button
+              type="button"
+              disabled={!chosenLot || chosenLot.available <= 0}
+              onClick={() => {
+                if (chosenLot) {
+                  onChoose({ kind: "lot", lot: chosenLot });
+                }
+              }}
+            >
+              Use selected stock
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -14,6 +14,7 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { FormLabel } from "@/components/ui/form-field";
+import { ProductSearchField } from "@/components/ui/product-search-field";
 import { stockUnits } from "@/lib/enums";
 import {
   formatMoney,
@@ -64,13 +65,6 @@ export const QuoteLinesEditor = ({ control, products, isPickup }: Props) => {
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
   const [error, setError] = useState<string | null>(null);
 
-  const productOptions = [
-    { value: "", label: "Select a product" },
-    ...products.map((product) => ({
-      value: product.uuid,
-      label: `${product.productCode} — ${product.name}`,
-    })),
-  ];
 
   const addLine = () => {
     if (!draft.productUuid) {
@@ -112,12 +106,14 @@ export const QuoteLinesEditor = ({ control, products, isPickup }: Props) => {
       <div className="grid grid-cols-2 gap-3 rounded-lg border border-border bg-muted/20 p-4 lg:grid-cols-7">
         <div className="col-span-2 lg:col-span-2">
           <FormLabel htmlFor="line-product">Product</FormLabel>
-          <Select
+          {/* A selling document searches the shelf, and may bind the line to
+              a parcel — which is why lots stay on offer here. */}
+          <ProductSearchField
             id="line-product"
-            options={productOptions}
             value={draft.productUuid}
-            onValueChange={(value) =>
-              setDraft((d) => ({ ...d, productUuid: value }))
+            sources={["stock", "purchase"]}
+            onChange={(choice) =>
+              setDraft((d) => ({ ...d, productUuid: choice.productUuid }))
             }
           />
         </div>

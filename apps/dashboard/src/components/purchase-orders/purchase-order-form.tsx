@@ -31,7 +31,6 @@ export const PurchaseOrderForm = ({ companies, clerkUsers }: Props) => {
     agentOptions,
     contactOptions,
     supplierAddressOptions,
-    productOptions,
     itemFields,
     appendItem,
     removeItem,
@@ -62,7 +61,6 @@ export const PurchaseOrderForm = ({ companies, clerkUsers }: Props) => {
         />
 
         <PurchaseOrderItemsSection
-          productOptions={productOptions}
           itemFields={itemFields}
           appendItem={appendItem}
           removeItem={removeItem}

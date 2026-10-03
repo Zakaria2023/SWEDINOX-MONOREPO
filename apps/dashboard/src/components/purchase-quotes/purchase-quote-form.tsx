@@ -49,7 +49,6 @@ export const PurchaseQuoteForm = ({
     contactOptions,
     supplierAddressOptions,
     deliveryAddressOptions,
-    productOptions,
     itemFields,
     appendItem,
     removeItem,
@@ -436,7 +435,6 @@ export const PurchaseQuoteForm = ({
       </section>
 
       <QuoteItemsSection
-        productOptions={productOptions}
         control={control}
         register={register}
         itemFields={itemFields}

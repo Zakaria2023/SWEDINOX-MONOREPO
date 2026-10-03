@@ -10,8 +10,9 @@ import { PurchaseRequestFormValues } from "@/app/(dashboard)/purchase-requests/v
 import { Button } from "@/components/shadcn/button";
 import { DatePicker } from "@/components/shadcn/date-picker";
 import { Input } from "@/components/shadcn/input";
-import { Select, SelectOption } from "@/components/shadcn/select";
+import { Select } from "@/components/shadcn/select";
 import { FormLabel } from "@/components/ui/form-field";
+import { ProductSearchField } from "@/components/ui/product-search-field";
 import { stockUnits } from "@/lib/enums";
 import { enumOptions } from "@/lib/helpers";
 import { STOCK_UNIT_LABELS } from "@/lib/labels";
@@ -20,7 +21,6 @@ import { Plus, X } from "lucide-react";
 const unitOptions = enumOptions(stockUnits, STOCK_UNIT_LABELS);
 
 type Props = {
-  productOptions: SelectOption[];
   control: Control<PurchaseRequestFormValues>;
   register: UseFormRegister<PurchaseRequestFormValues>;
   itemFields: FieldArrayWithId<PurchaseRequestFormValues, "items", "id">[];
@@ -29,7 +29,6 @@ type Props = {
 };
 
 export const RequestItemsSection = ({
-  productOptions,
   control,
   register,
   itemFields,
@@ -60,11 +59,11 @@ export const RequestItemsSection = ({
               control={control}
               name={`items.${index}.productUuid`}
               render={({ field: productField }) => (
-                <Select
+                <ProductSearchField
                   id={`items.${index}.productUuid`}
                   value={productField.value || ""}
-                  options={productOptions}
-                  onValueChange={productField.onChange}
+                  sources={["catalogue", "purchase"]}
+                  onChange={(choice) => productField.onChange(choice.productUuid)}
                 />
               )}
             />

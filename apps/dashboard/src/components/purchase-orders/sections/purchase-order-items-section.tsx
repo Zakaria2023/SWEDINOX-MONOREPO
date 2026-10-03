@@ -10,8 +10,9 @@ import {
 import { PurchaseOrderFormValues } from "@/app/(dashboard)/purchase-orders/validation";
 import { Button } from "@/components/shadcn/button";
 import { Input } from "@/components/shadcn/input";
-import { Select, SelectOption } from "@/components/shadcn/select";
+import { Select } from "@/components/shadcn/select";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
+import { ProductSearchField } from "@/components/ui/product-search-field";
 import { purchasingUnits } from "@/lib/enums";
 import { enumOptions } from "@/lib/helpers";
 import { PURCHASING_UNIT_LABELS } from "@/lib/labels";
@@ -20,14 +21,12 @@ import { Plus, X } from "lucide-react";
 const priceUnitOptions = enumOptions(purchasingUnits, PURCHASING_UNIT_LABELS);
 
 type Props = {
-  productOptions: SelectOption[];
   itemFields: FieldArrayWithId<PurchaseOrderFormValues, "items", "id">[];
   appendItem: UseFieldArrayAppend<PurchaseOrderFormValues, "items">;
   removeItem: UseFieldArrayRemove;
 };
 
 export const PurchaseOrderItemsSection = ({
-  productOptions,
   itemFields,
   appendItem,
   removeItem,
@@ -35,6 +34,8 @@ export const PurchaseOrderItemsSection = ({
   const {
     control,
     register,
+    getValues,
+    setValue,
     formState: { errors },
   } = useFormContext<PurchaseOrderFormValues>();
 
@@ -56,16 +57,48 @@ export const PurchaseOrderItemsSection = ({
               <FormLabel htmlFor={`items.${index}.productUuid`} required>
                 Product
               </FormLabel>
+              {/* 🔴 The stock search dialog, never a dropdown — and it searches
+                  the whole catalogue, because the point of raising a purchase
+                  order is that the metal is not on the shelf. Scoping this to
+                  the supplier's own products offered one article out of 5 626. */}
               <Controller
                 control={control}
                 name={`items.${index}.productUuid`}
                 render={({ field: productField }) => (
-                  <Select
+                  <ProductSearchField
                     id={`items.${index}.productUuid`}
                     value={productField.value || ""}
-                    options={productOptions}
-                    onValueChange={productField.onChange}
+                    initialLabel={getValues(`items.${index}.productLabel`)}
+                    sources={["catalogue", "purchase"]}
                     invalid={!!errors.items?.[index]?.productUuid}
+                    onChange={(choice) => {
+                      productField.onChange(choice.productUuid);
+                      // The article's own measurements travel onto the line, so
+                      // the receival behind it can check what arrives against
+                      // what was ordered.
+                      setValue(
+                        `items.${index}.productLabel`,
+                        [choice.productCode, choice.productName]
+                          .filter(Boolean)
+                          .join(" — "),
+                      );
+                      setValue(
+                        `items.${index}.qualityCode`,
+                        choice.quality ?? "",
+                      );
+                      setValue(
+                        `items.${index}.lengthMm`,
+                        choice.lengthMm === null ? "" : String(choice.lengthMm),
+                      );
+                      setValue(
+                        `items.${index}.widthMm`,
+                        choice.widthMm === null ? "" : String(choice.widthMm),
+                      );
+                      setValue(
+                        `items.${index}.thicknessMm`,
+                        choice.thicknessMm ?? "",
+                      );
+                    }}
                   />
                 )}
               />
@@ -145,6 +178,11 @@ export const PurchaseOrderItemsSection = ({
             quantity: "",
             netPrice: "",
             priceUnit: "",
+            productLabel: "",
+            qualityCode: "",
+            lengthMm: "",
+            widthMm: "",
+            thicknessMm: "",
           })
         }
       >

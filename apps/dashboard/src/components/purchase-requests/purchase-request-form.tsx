@@ -6,7 +6,7 @@ import { CompanyOption } from "@/app/(dashboard)/companies/actions";
 import { PurchaseRequestFormValues } from "@/app/(dashboard)/purchase-requests/validation";
 import { DatePicker } from "@/components/shadcn/date-picker";
 import { Input } from "@/components/shadcn/input";
-import { Select, SelectOption } from "@/components/shadcn/select";
+import { Select } from "@/components/shadcn/select";
 import { RequestItemsSection } from "@/components/purchase-requests/sections/request-items-section";
 import { FormActions } from "@/components/ui/form-actions";
 import { FormError } from "@/components/ui/form-error";
@@ -18,7 +18,6 @@ import { ClerkUserOption } from "@/lib/server/clerk";
 type Props = {
   companies: CompanyOption[];
   clerkUsers: ClerkUserOption[];
-  productOptions: SelectOption[];
   /** Set when editing an existing request; omitted when creating one. */
   purchaseRequestUuid?: string;
   defaultValues?: PurchaseRequestFormValues;
@@ -32,7 +31,6 @@ type Props = {
 export const PurchaseRequestForm = ({
   companies,
   clerkUsers,
-  productOptions,
   purchaseRequestUuid,
   defaultValues,
   canEditLines = true,
@@ -388,7 +386,6 @@ export const PurchaseRequestForm = ({
 
       {canEditLines ? (
         <RequestItemsSection
-          productOptions={productOptions}
           control={control}
           register={register}
           itemFields={itemFields}

@@ -9,8 +9,9 @@ import {
 import { PurchaseQuoteFormValues } from "@/app/(dashboard)/purchase-quotes/validation";
 import { Button } from "@/components/shadcn/button";
 import { Input } from "@/components/shadcn/input";
-import { Select, SelectOption } from "@/components/shadcn/select";
+import { Select } from "@/components/shadcn/select";
 import { FormLabel } from "@/components/ui/form-field";
+import { ProductSearchField } from "@/components/ui/product-search-field";
 import { purchasingUnits, stockUnits } from "@/lib/enums";
 import { enumOptions } from "@/lib/helpers";
 import { PURCHASING_UNIT_LABELS, STOCK_UNIT_LABELS } from "@/lib/labels";
@@ -20,7 +21,6 @@ const unitOptions = enumOptions(stockUnits, STOCK_UNIT_LABELS);
 const priceUnitOptions = enumOptions(purchasingUnits, PURCHASING_UNIT_LABELS);
 
 type Props = {
-  productOptions: SelectOption[];
   control: Control<PurchaseQuoteFormValues>;
   register: UseFormRegister<PurchaseQuoteFormValues>;
   itemFields: FieldArrayWithId<PurchaseQuoteFormValues, "items", "id">[];
@@ -29,7 +29,6 @@ type Props = {
 };
 
 export const QuoteItemsSection = ({
-  productOptions,
   control,
   register,
   itemFields,
@@ -58,11 +57,13 @@ export const QuoteItemsSection = ({
                 control={control}
                 name={`items.${index}.productUuid`}
                 render={({ field: productField }) => (
-                  <Select
+                  <ProductSearchField
                     id={`items.${index}.productUuid`}
                     value={productField.value || ""}
-                    options={productOptions}
-                    onValueChange={productField.onChange}
+                    sources={["catalogue", "purchase"]}
+                    onChange={(choice) =>
+                      productField.onChange(choice.productUuid)
+                    }
                   />
                 )}
               />

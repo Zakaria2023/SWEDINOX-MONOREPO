@@ -242,6 +242,36 @@ This is a pnpm + Turborepo repo built on Next.js 16. Today it holds a single app
   <DatePicker value={paymentDate} onChange={setPaymentDate} />
   ```
 
+## Choosing a product
+
+- **A product is never chosen from a plain dropdown.** Every place a document
+  line names an article — sales orders, quotes, purchase orders, purchase
+  quotes, purchase requests, return orders, counter orders — opens the **stock
+  search dialog** (`components/orders/stock-search-dialog.tsx`), which is what
+  the reference system does: pressing `New` on a line opens a window titled
+  `Stock`, not a `<select>`.
+- The dialog filters on product code, search code, quality and the three
+  dimensions, each dimension with a **±5 % `Search with margin`**, and shows two
+  grids: product/quality variants above, individual lots below.
+- It searches one of three sources — `stock` (on the shelf), `purchase`
+  (ordered, not yet arrived) or `catalogue` (the article list, regardless of
+  stock). A **buying** document searches `catalogue`; a **selling** document
+  searches `stock`.
+- ⚠️ Never scope a product picker to one company's linked products. That is how
+  a form ends up offering one article out of 5 626.
+
+  ```tsx
+  // ❌ Bad — a dropdown, and scoped to the supplier's own products
+  <Select options={productOptions} onValueChange={field.onChange} />
+
+  // ✅ Good — the dialog, searching the catalogue
+  <ProductSearchField
+    value={field.value}
+    onChange={field.onChange}
+    source="catalogue"
+  />
+  ```
+
 ## Navigation
 
 - Never use a plain `<a>` tag for in-app navigation. Always use `Link` from `next/link` instead.

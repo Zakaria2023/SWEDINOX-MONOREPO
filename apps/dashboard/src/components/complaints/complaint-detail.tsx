@@ -9,7 +9,6 @@ import {
   convertComplaintToReturnOrder,
   deleteComplaint,
 } from "@/app/(dashboard)/complaints/actions";
-import { ProductOption } from "@/app/(dashboard)/products/actions";
 import { ComplaintLinesPanel } from "./complaint-lines-panel";
 import { Button } from "@/components/shadcn/button";
 import {
@@ -52,14 +51,12 @@ type Props = {
   complaint: ComplaintDetail;
   /** The delivered lines of the order the complaint names. */
   orderLines: ComplaintOrderLine[];
-  products: ProductOption[];
 };
 
 export const ComplaintDetailView = ({
   complaint,
   userNames,
   orderLines,
-  products,
 }: Props) => {
   const [isPending, startTransition] = useTransition();
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
@@ -342,7 +339,6 @@ export const ComplaintDetailView = ({
             daysInSystem={complaint.daysInSystem}
             items={complaint.items}
             orderLines={orderLines}
-            products={products}
           />
         </CollapsibleSection>
 

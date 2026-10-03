@@ -88,6 +88,17 @@ export type PurchaseOrderItemInput = {
   /** Agreed purchase price per unit — what the received lot is valued at. */
   netPrice: string;
   priceUnit?: string;
+  /**
+   * 🔑 Carried off the article the stock dialog handed back, not typed.
+   *
+   * A purchase line holds its own dimensions and quality because the receival
+   * behind it has to weigh what arrives against what was ordered — and because
+   * a lot is weighed by **its own** measurements, never the catalogue's.
+   */
+  qualityCode?: string;
+  lengthMm?: string;
+  widthMm?: string;
+  thicknessMm?: string;
 };
 
 export type PurchaseOrderActionResult = {
@@ -429,6 +440,11 @@ export const createPurchaseOrder = async (
         const pieceWeight = product ? productPieceWeightKg(product) : null;
         const weightKg = (pieceWeight ?? 0) * quantity;
 
+        const intOrNull = (value: string | undefined) => {
+          const parsed = Number(value);
+          return value && Number.isFinite(parsed) ? Math.round(parsed) : null;
+        };
+
         await tx.insert(PurchaseOrderItems).values({
           uuid: generateUuid(),
           purchaseOrderUuid: uuid,
@@ -436,6 +452,10 @@ export const createPurchaseOrder = async (
           quantity: item.quantity,
           qtyPlanned: item.quantity,
           lineNumber: index + 1,
+          qualityCode: item.qualityCode?.trim() || null,
+          lengthMm: intOrNull(item.lengthMm),
+          widthMm: intOrNull(item.widthMm),
+          thicknessMm: item.thicknessMm?.trim() || null,
           netPrice: netPrice.toFixed(4),
           priceUnit: item.priceUnit ?? null,
           kgPurchased: weightKg.toFixed(2),

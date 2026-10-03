@@ -64,7 +64,7 @@ const isSecondChoiceSql = sql<boolean>`(
  * This replaces loading every lot in the warehouse into the form and letting
  * the browser filter it.
  */
-export type StockSearchSource = "stock" | "purchase";
+export type StockSearchSource = "stock" | "purchase" | "catalogue";
 
 export type StockSearchFilters = {
   productCode?: string | null;
@@ -341,7 +341,71 @@ export const findSellableStock = async (
     }));
   };
 
-  const found = source === "purchase" ? await incoming() : await shelf();
+  // 🔴 The article list itself, regardless of whether any of it exists.
+  //
+  // A **buying** document cannot search the shelf: the whole reason to raise a
+  // purchase order is that the metal is not there. Selling searches `stock`,
+  // buying searches this. Rows come back with nothing in them — no quantity, no
+  // lot, no location — because there is nothing to report yet, and the variant
+  // grid above then shows one row per article.
+  const catalogue = async (): Promise<StockSearchLot[]> => {
+    const rows = await db
+      .select({
+        uuid: Products.uuid,
+        productUuid: Products.uuid,
+        productCode: Products.productCode,
+        productName: Products.name,
+        quality: Products.featuresQuality,
+        lengthMm: Products.length,
+        widthMm: Products.widthDiameter,
+        thicknessMm: Products.thickness,
+      })
+      .from(Products)
+      .where(
+        and(
+          productCode ? like(Products.productCode, productCode) : undefined,
+          searchCode ? like(Products.searchCode1, searchCode) : undefined,
+          quality ? like(Products.featuresQuality, quality) : undefined,
+          withinMargin(Products.length, filters.lengthMm, margin),
+          withinMargin(Products.widthDiameter, filters.widthMm, margin),
+          withinMargin(Products.thickness, filters.thicknessMm, margin),
+        ),
+      )
+      .orderBy(asc(Products.productCode))
+      .limit(STOCK_SEARCH_LIMIT + 1);
+
+    return rows.map((row) => ({
+      uuid: row.uuid,
+      productUuid: row.productUuid,
+      productCode: row.productCode,
+      productName: row.productName,
+      locationName: null,
+      quality: row.quality,
+      charge: null,
+      internalCharge: null,
+      internalBatch: null,
+      stockCategory: null,
+      options: null,
+      remark: null,
+      lengthMm: row.lengthMm === null ? null : Math.round(Number(row.lengthMm)),
+      widthMm: row.widthMm === null ? null : Math.round(Number(row.widthMm)),
+      thicknessMm: row.thicknessMm,
+      quantity: 0,
+      reserved: 0,
+      available: 0,
+      quantityKg: 0,
+      valuationPrice: 0,
+      purchaseOrderId: null,
+      expectedDate: null,
+    }));
+  };
+
+  const found =
+    source === "purchase"
+      ? await incoming()
+      : source === "catalogue"
+        ? await catalogue()
+        : await shelf();
   const truncated = found.length > STOCK_SEARCH_LIMIT;
   const lots = truncated ? found.slice(0, STOCK_SEARCH_LIMIT) : found;
 
@@ -388,8 +452,13 @@ export const findSellableStock = async (
   });
 
   return {
+    // Most available first, as the reference orders it. On a catalogue search
+    // every row is zero, so the tiebreak carries the whole ordering and it has
+    // to be the code somebody is scanning for.
     variants: [...variants.values()].sort(
-      (a, b) => b.available - a.available,
+      (a, b) =>
+        b.available - a.available ||
+        (a.productCode ?? "").localeCompare(b.productCode ?? ""),
     ),
     lots,
     truncated,

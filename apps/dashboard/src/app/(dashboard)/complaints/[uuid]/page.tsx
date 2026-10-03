@@ -5,7 +5,6 @@ import {
   getComplaintDetail,
   getComplaintOrderLines,
 } from "@/app/(dashboard)/complaints/actions";
-import { getProductsForSelect } from "@/app/(dashboard)/products/actions";
 import { ComplaintDetailView } from "@/components/complaints/complaint-detail";
 import { PageHeading } from "@/components/layout/page-heading";
 import { getClerkUserNames } from "@/lib/server/clerk";
@@ -27,7 +26,6 @@ const ComplaintDetailPage = async ({ params }: Props) => {
   // than concurrent: this database caps connections.
   const userNames = await getClerkUserNames();
   const orderLines = await getComplaintOrderLines(uuid);
-  const products = await getProductsForSelect();
 
   return (
     <div className="space-y-4">
@@ -45,7 +43,6 @@ const ComplaintDetailPage = async ({ params }: Props) => {
         complaint={complaint}
         userNames={userNames}
         orderLines={orderLines}
-        products={products}
       />
     </div>
   );

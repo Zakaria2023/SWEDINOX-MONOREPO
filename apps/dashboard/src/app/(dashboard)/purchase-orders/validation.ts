@@ -19,6 +19,18 @@ export const purchaseOrderItemSchema = z.object({
     .min(1, "Purchase price is required")
     .refine((value) => Number(value) >= 0, "Purchase price cannot be negative"),
   priceUnit: z.string().optional(),
+
+  // 🔑 Carried off the chosen article, not typed.
+  //
+  // A purchase line holds its own dimensions and quality because the receival
+  // behind it has to weigh the parcel that arrives, and a line that cannot say
+  // what size it ordered cannot check what turned up against it. The stock
+  // search dialog hands these over when somebody picks the product.
+  productLabel: z.string().optional(),
+  qualityCode: z.string().optional(),
+  lengthMm: z.string().optional(),
+  widthMm: z.string().optional(),
+  thicknessMm: z.string().optional(),
 });
 
 export const purchaseOrderSchema = z.object({
@@ -90,7 +102,19 @@ export const DEFAULT_PURCHASE_ORDER: PurchaseOrderFormValues = {
   ourReference: "",
   orderCategory: "",
 
-  items: [{ productUuid: "", quantity: "", netPrice: "", priceUnit: "" }],
+  items: [
+    {
+      productUuid: "",
+      quantity: "",
+      netPrice: "",
+      priceUnit: "",
+      productLabel: "",
+      qualityCode: "",
+      lengthMm: "",
+      widthMm: "",
+      thicknessMm: "",
+    },
+  ],
 
   purchaseOrderType: undefined,
   weightType: undefined,

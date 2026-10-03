@@ -1,13 +1,11 @@
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { getContractsForSelect } from "@/app/(dashboard)/contracts/actions";
-import { getProductsForSelect } from "@/app/(dashboard)/products/actions";
 import { NetPriceForm } from "@/components/net-prices/net-price-form";
 
 const NewNetPricePage = async () => {
   // Sequential rather than concurrent: this database caps connections.
   const contracts = await getContractsForSelect();
-  const products = await getProductsForSelect();
 
   return (
     <div className="space-y-4">
@@ -20,7 +18,7 @@ const NewNetPricePage = async () => {
           Net prices
         </Link>
       </div>
-      <NetPriceForm contracts={contracts} products={products} />
+      <NetPriceForm contracts={contracts} />
     </div>
   );
 };

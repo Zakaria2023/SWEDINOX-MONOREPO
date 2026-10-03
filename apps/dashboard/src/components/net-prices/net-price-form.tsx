@@ -4,13 +4,13 @@ import { Controller } from "react-hook-form";
 import { ContractListItem } from "@/app/(dashboard)/contracts/actions";
 import { useNetPriceSubmit } from "@/app/(dashboard)/net-prices/use-net-price-submit";
 import { NetPriceFormValues } from "@/app/(dashboard)/net-prices/validation";
-import { ProductOption } from "@/app/(dashboard)/products/actions";
 import { DatePicker } from "@/components/shadcn/date-picker";
 import { Input } from "@/components/shadcn/input";
 import { Select, SelectOption } from "@/components/shadcn/select";
 import { FormActions } from "@/components/ui/form-actions";
 import { FormError } from "@/components/ui/form-error";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
+import { ProductSearchField } from "@/components/ui/product-search-field";
 import { salesUnitOptions } from "@/lib/enums";
 import { enumOptions } from "@/lib/helpers";
 import { CONTRACTABLE_ROLE_LABELS, SALES_UNIT_LABELS } from "@/lib/labels";
@@ -19,14 +19,12 @@ const unitOptions = enumOptions(salesUnitOptions, SALES_UNIT_LABELS);
 
 type Props = {
   contracts: ContractListItem[];
-  products: ProductOption[];
   netPriceUuid?: string;
   defaultValues?: NetPriceFormValues;
 };
 
 export const NetPriceForm = ({
   contracts,
-  products,
   netPriceUuid,
   defaultValues,
 }: Props) => {
@@ -49,13 +47,6 @@ export const NetPriceForm = ({
     })),
   ];
 
-  const productOptions: SelectOption[] = [
-    { value: "", label: "— Select —" },
-    ...products.map((product) => ({
-      value: product.uuid,
-      label: `${product.productCode} — ${product.name}`,
-    })),
-  ];
 
   return (
     <form onSubmit={onSubmit} className="max-w-3xl space-y-8">
@@ -92,17 +83,19 @@ export const NetPriceForm = ({
             <FormLabel htmlFor="productUuid" required>
               Product
             </FormLabel>
+            {/* A net price is agreed per article, and there are 5 626 of them —
+                a dropdown is not a way to find one. */}
             <Controller
               control={control}
               name="productUuid"
               render={({ field }) => (
-                <Select
+                <ProductSearchField
                   id="productUuid"
                   value={field.value || ""}
-                  options={productOptions}
-                  onValueChange={field.onChange}
+                  sources={["catalogue", "stock"]}
                   invalid={!!errors.productUuid}
                   disabled={isPending}
+                  onChange={(choice) => field.onChange(choice.productUuid)}
                 />
               )}
             />

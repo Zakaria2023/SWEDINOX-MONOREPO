@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { getContractsForSelect } from "@/app/(dashboard)/contracts/actions";
 import { getNetPriceDetail } from "@/app/(dashboard)/net-prices/actions";
-import { getProductsForSelect } from "@/app/(dashboard)/products/actions";
 import { NetPriceForm } from "@/components/net-prices/net-price-form";
 import { toDateInput } from "@/lib/helpers";
 
@@ -22,7 +21,6 @@ const EditNetPricePage = async ({ params }: Props) => {
   }
 
   const contracts = await getContractsForSelect();
-  const products = await getProductsForSelect();
 
   return (
     <div className="space-y-4">
@@ -37,7 +35,6 @@ const EditNetPricePage = async ({ params }: Props) => {
       </div>
       <NetPriceForm
         contracts={contracts}
-        products={products}
         netPriceUuid={uuid}
         defaultValues={{
           contractUuid: netPrice.contractUuid,

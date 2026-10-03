@@ -16,7 +16,6 @@ import {
   complaintLineSchema,
   DEFAULT_COMPLAINT_LINE,
 } from "@/app/(dashboard)/complaints/validation";
-import { ProductOption } from "@/app/(dashboard)/products/actions";
 import { Button } from "@/components/shadcn/button";
 import { Input } from "@/components/shadcn/input";
 import { Select } from "@/components/shadcn/select";
@@ -30,6 +29,7 @@ import {
 } from "@/components/shadcn/table";
 import { FormError } from "@/components/ui/form-error";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
+import { ProductSearchField } from "@/components/ui/product-search-field";
 import { RowAction } from "@/components/ui/row-action";
 import {
   formatDateColumn,
@@ -46,7 +46,6 @@ type Props = {
   daysInSystem: number | null;
   items: ComplaintItemDetail[];
   orderLines: ComplaintOrderLine[];
-  products: ProductOption[];
 };
 
 export const ComplaintLinesPanel = ({
@@ -55,7 +54,6 @@ export const ComplaintLinesPanel = ({
   daysInSystem,
   items,
   orderLines,
-  products,
 }: Props) => {
   const [addState, dispatchAdd, isAdding] = useActionState(
     addComplaintLine,
@@ -106,13 +104,6 @@ export const ComplaintLinesPanel = ({
     })),
   ];
 
-  const productOptions = [
-    { value: "", label: "No exchange product" },
-    ...products.map((product) => ({
-      value: product.uuid,
-      label: `${product.productCode} — ${product.name}`,
-    })),
-  ];
 
   return (
     <div className="space-y-4">
@@ -267,11 +258,11 @@ export const ComplaintLinesPanel = ({
               control={control}
               name="exchangeProductUuid"
               render={({ field }) => (
-                <Select
+                <ProductSearchField
                   id="exchangeProductUuid"
                   value={field.value}
-                  options={productOptions}
-                  onValueChange={field.onChange}
+                  sources={["stock", "catalogue"]}
+                  onChange={(choice) => field.onChange(choice.productUuid)}
                 />
               )}
             />

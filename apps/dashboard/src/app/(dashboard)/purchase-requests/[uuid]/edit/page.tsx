@@ -1,5 +1,4 @@
 import { getCompaniesForSelect } from "@/app/(dashboard)/companies/actions";
-import { getProductsForSelect } from "@/app/(dashboard)/products/actions";
 import { getPurchaseRequestDetail } from "@/app/(dashboard)/purchase-requests/actions";
 import { purchaseRequestToFormValues } from "@/app/(dashboard)/purchase-requests/mappers";
 import { PageHeading } from "@/components/layout/page-heading";
@@ -20,24 +19,16 @@ type Props = {
 const EditPurchaseRequestPage = async ({ params }: Props) => {
   const { uuid } = await params;
 
-  const [request, companies, clerkUsers, products] = await Promise.all([
+  const [request, companies, clerkUsers] = await Promise.all([
     getPurchaseRequestDetail(uuid),
     getCompaniesForSelect(),
     getClerkUsersForSelect(),
-    getProductsForSelect(),
   ]);
 
   if (!request) {
     notFound();
   }
 
-  const productOptions = [
-    { value: "", label: "Not listed" },
-    ...products.map((product) => ({
-      value: product.uuid,
-      label: [product.productCode, product.name].filter(Boolean).join(" — "),
-    })),
-  ];
 
   return (
     <div className="space-y-4">
@@ -56,7 +47,6 @@ const EditPurchaseRequestPage = async ({ params }: Props) => {
         <PurchaseRequestForm
           companies={companies}
           clerkUsers={clerkUsers}
-          productOptions={productOptions}
           purchaseRequestUuid={uuid}
           defaultValues={purchaseRequestToFormValues(request)}
           canEditLines={canEditPurchaseRequestLines(request.status)}

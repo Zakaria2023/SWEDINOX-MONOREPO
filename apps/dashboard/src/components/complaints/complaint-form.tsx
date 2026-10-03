@@ -13,6 +13,7 @@ import { Textarea } from "@/components/shadcn/textarea";
 import { FormActions } from "@/components/ui/form-actions";
 import { FormError } from "@/components/ui/form-error";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
+import { ProductSearchField } from "@/components/ui/product-search-field";
 import { FormSelectField } from "@/components/ui/form-select-field";
 import { Select } from "@/components/shadcn/select";
 import { DocumentUploader } from "@/components/document-uploader";
@@ -48,7 +49,6 @@ export const ComplaintForm = ({
     state,
     companyOptions,
     contactOptions,
-    productOptions,
     complaintTypeOptions,
     documentOptions,
     qtyUnitOptions,
@@ -232,13 +232,21 @@ export const ComplaintForm = ({
         <h2 className="text-base font-semibold">Product</h2>
         <div className="grid grid-cols-2 gap-4">
           <div className="col-span-2">
-            <FormSelectField
+            {/* A complaint is about metal that was delivered, so the shelf is
+                the natural place to look for it — but the article may already
+                be gone, which is why the catalogue is offered beside it. */}
+            <FormLabel htmlFor="productUuid">Product</FormLabel>
+            <Controller
               control={control}
-              id="productUuid"
               name="productUuid"
-              label="Product"
-              options={productOptions}
-              emptyValue=""
+              render={({ field }) => (
+                <ProductSearchField
+                  id="productUuid"
+                  value={field.value || ""}
+                  sources={["stock", "catalogue"]}
+                  onChange={(choice) => field.onChange(choice.productUuid)}
+                />
+              )}
             />
           </div>
           <div className="grid grid-cols-2 gap-2">
