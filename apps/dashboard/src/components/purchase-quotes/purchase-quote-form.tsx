@@ -4,7 +4,6 @@ import { Controller } from "react-hook-form";
 import { usePurchaseQuoteSubmit } from "@/app/(dashboard)/purchase-quotes/use-purchase-quote-submit";
 import { AddressOption } from "@/app/(dashboard)/addresses/actions";
 import { CompanyOption } from "@/app/(dashboard)/companies/actions";
-import { ProductOption } from "@/app/(dashboard)/products/actions";
 import { PurchaseQuoteFormValues } from "@/app/(dashboard)/purchase-quotes/validation";
 import { QuoteItemsSection } from "@/components/purchase-quotes/sections/quote-items-section";
 import { DatePicker } from "@/components/shadcn/date-picker";
@@ -21,7 +20,6 @@ import { ClerkUserOption } from "@/lib/server/clerk";
 type Props = {
   companies: CompanyOption[];
   clerkUsers: ClerkUserOption[];
-  products: ProductOption[];
   internalAddresses: AddressOption[];
   /** Set when editing an existing quote; omitted when creating one. */
   purchaseQuoteUuid?: string;
@@ -31,7 +29,6 @@ type Props = {
 export const PurchaseQuoteForm = ({
   companies,
   clerkUsers,
-  products,
   internalAddresses,
   purchaseQuoteUuid,
   defaultValues,
@@ -64,7 +61,6 @@ export const PurchaseQuoteForm = ({
   } = usePurchaseQuoteSubmit({
     companies,
     clerkUsers,
-    products,
     internalAddresses,
     purchaseQuoteUuid,
     defaultValues,
@@ -437,6 +433,7 @@ export const PurchaseQuoteForm = ({
       <QuoteItemsSection
         control={control}
         register={register}
+        setValue={setValue}
         itemFields={itemFields}
         appendItem={appendItem}
         removeItem={removeItem}

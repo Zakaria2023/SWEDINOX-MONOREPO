@@ -68,6 +68,7 @@ export const PurchaseRequestForm = ({
   const {
     register,
     control,
+    setValue,
     formState: { errors },
   } = form;
 
@@ -388,6 +389,7 @@ export const PurchaseRequestForm = ({
         <RequestItemsSection
           control={control}
           register={register}
+          setValue={setValue}
           itemFields={itemFields}
           appendItem={appendItem}
           removeItem={removeItem}

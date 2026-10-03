@@ -9,10 +9,6 @@ import {
   ContactOption,
   getContactsForCompany,
 } from "@/app/(dashboard)/contacts/actions";
-import {
-  getProductsForCompany,
-  ProductOption,
-} from "@/app/(dashboard)/products/actions";
 import { SelectOption } from "@/components/shadcn/select";
 import {
   DeliveryTerm,
@@ -68,8 +64,6 @@ export const usePurchaseOrderSubmit = ({
     [],
   );
   const [isLoadingSupplierData, setIsLoadingSupplierData] = useState(false);
-  const [supplierProducts, setSupplierProducts] = useState<ProductOption[]>([]);
-  const [agentProducts, setAgentProducts] = useState<ProductOption[]>([]);
 
   const form = useForm<PurchaseOrderFormValues>({
     resolver: zodResolver(purchaseOrderSchema),
@@ -122,21 +116,6 @@ export const usePurchaseOrderSubmit = ({
     })),
   ];
 
-  const availableProducts = [
-    ...supplierProducts,
-    ...agentProducts.filter(
-      (product) => !supplierProducts.some((p) => p.uuid === product.uuid),
-    ),
-  ];
-
-  const productOptions: SelectOption[] = [
-    emptyOpt,
-    ...availableProducts.map((p) => ({
-      value: p.uuid,
-      label: [p.productCode, p.name].filter(Boolean).join(" — "),
-    })),
-  ];
-
   const purchaseOrderTypeOptions = makeOptions(
     purchaseOrderTypes,
     PURCHASE_ORDER_TYPE_LABELS as Record<PurchaseOrderType, string>,
@@ -159,39 +138,31 @@ export const usePurchaseOrderSubmit = ({
 
   const purchaserOptions: SelectOption[] = [emptyOpt, ...clerkUsers];
 
-  const resetItems = () =>
-    form.setValue("items", [
-      { productUuid: "", quantity: "", netPrice: "", priceUnit: "" },
-    ]);
-
+  // ⚠️ Changing the supplier used to wipe every line, because the lines could
+  // only name that supplier's own articles. They name the catalogue now, so the
+  // lines survive — a buyer who has typed out five lines and then realises the
+  // order is going to the other mill does not retype them.
   const handleSupplierChange = (uuid: string) => {
     form.setValue("supplierUuid", uuid);
     form.setValue("contactUuid", "");
     form.setValue("supplierAddressUuid", "");
     setContacts([]);
     setSupplierAddresses([]);
-    setSupplierProducts([]);
-    resetItems();
-    if (!uuid) return;
+    if (!uuid) {
+      return;
+    }
     setIsLoadingSupplierData(true);
-    Promise.all([
-      getContactsForCompany(uuid),
-      getAddressesForCompany(uuid),
-      getProductsForCompany(uuid),
-    ]).then(([newContacts, newAddresses, newProducts]) => {
-      setContacts(newContacts);
-      setSupplierAddresses(newAddresses);
-      setSupplierProducts(newProducts);
-      setIsLoadingSupplierData(false);
-    });
+    // Sequential rather than concurrent: this database caps connections.
+    getContactsForCompany(uuid)
+      .then(async (newContacts) => {
+        setContacts(newContacts);
+        setSupplierAddresses(await getAddressesForCompany(uuid));
+      })
+      .finally(() => setIsLoadingSupplierData(false));
   };
 
   const handleAgentChange = (uuid: string) => {
     form.setValue("agentUuid", uuid);
-    setAgentProducts([]);
-    resetItems();
-    if (!uuid) return;
-    getProductsForCompany(uuid).then(setAgentProducts);
   };
 
   const handleCancel = () => router.push("/purchase-orders");
@@ -271,7 +242,6 @@ export const usePurchaseOrderSubmit = ({
     agentOptions,
     contactOptions,
     supplierAddressOptions,
-    productOptions,
     itemFields,
     appendItem,
     removeItem,

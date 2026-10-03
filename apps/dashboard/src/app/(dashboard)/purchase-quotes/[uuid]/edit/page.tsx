@@ -1,6 +1,5 @@
 import { getInternalAddressesForSelect } from "@/app/(dashboard)/addresses/actions";
 import { getCompaniesForSelect } from "@/app/(dashboard)/companies/actions";
-import { getProductsForSelect } from "@/app/(dashboard)/products/actions";
 import { getPurchaseQuoteForEdit } from "@/app/(dashboard)/purchase-quotes/actions";
 import { purchaseQuoteToFormValues } from "@/app/(dashboard)/purchase-quotes/mappers";
 import { PageHeading } from "@/components/layout/page-heading";
@@ -29,7 +28,6 @@ const EditPurchaseQuotePage = async ({ params }: Props) => {
   const { quote, items } = found;
   const companies = await getCompaniesForSelect();
   const clerkUsers = await getClerkUsersForSelect();
-  const products = await getProductsForSelect();
   const internalAddresses = await getInternalAddressesForSelect();
 
   const heading = quote.quoteNumber
@@ -53,8 +51,7 @@ const EditPurchaseQuotePage = async ({ params }: Props) => {
         <PurchaseQuoteForm
           companies={companies}
           clerkUsers={clerkUsers}
-          products={products}
-          internalAddresses={internalAddresses}
+            internalAddresses={internalAddresses}
           purchaseQuoteUuid={uuid}
           defaultValues={purchaseQuoteToFormValues(quote, items)}
         />

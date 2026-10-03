@@ -9,7 +9,6 @@ import {
   ContactOption,
   getContactsForCompany,
 } from "@/app/(dashboard)/contacts/actions";
-import { ProductOption } from "@/app/(dashboard)/products/actions";
 import { SelectOption } from "@/components/shadcn/select";
 import {
   DeliveryTerm,
@@ -43,7 +42,6 @@ import {
 type UsePurchaseQuoteSubmitParams = {
   companies: CompanyOption[];
   clerkUsers: ClerkUserOption[];
-  products: ProductOption[];
   /** Our own addresses — where a purchase is delivered. */
   internalAddresses: AddressOption[];
   /** Set when editing an existing quote; omitted when creating one. */
@@ -71,7 +69,6 @@ const addressLabel = (a: AddressOption) =>
 export const usePurchaseQuoteSubmit = ({
   companies,
   clerkUsers,
-  products,
   internalAddresses,
   purchaseQuoteUuid,
   defaultValues,
@@ -136,14 +133,6 @@ export const usePurchaseQuoteSubmit = ({
   const deliveryAddressOptions: SelectOption[] = [
     emptyOpt,
     ...internalAddresses.map((a) => ({ value: a.uuid, label: addressLabel(a) })),
-  ];
-
-  const productOptions: SelectOption[] = [
-    emptyOpt,
-    ...products.map((p) => ({
-      value: p.uuid,
-      label: `${p.productCode} — ${p.name}`,
-    })),
   ];
 
   const purchaseOrderTypeOptions = makeOptions(
@@ -310,7 +299,6 @@ export const usePurchaseQuoteSubmit = ({
     contactOptions,
     supplierAddressOptions,
     deliveryAddressOptions,
-    productOptions,
     purchaseOrderTypeOptions,
     weightTypeOptions,
     deliveryTermOptions,
