@@ -26,6 +26,7 @@ import {
 import { SelectWarehouses, Warehouses } from "@/db/schema/warehouses";
 import {
   PackagingType,
+  WarehouseStockEffect,
   workOrderStatuses,
   warehouseWorkOrderTypes,
 } from "@/lib/enums";
@@ -34,6 +35,7 @@ import {
   customerLabelMedium,
   describeError,
   generateUuid,
+  lotOrigin,
   moneyString,
   NON_SELLABLE_LOCATION_TYPES,
   nextInternalBatch,
@@ -41,7 +43,7 @@ import {
   normaliseCharge,
   priceMeasureFor,
   PrintMedium,
-  productPieceWeightKg,
+  lotPieceWeightKg,
   restateLotValue,
   roundToCents,
   stockLabelCount,
@@ -58,6 +60,10 @@ import {
 import { recordFreightMovement } from "@/lib/server/freight";
 import { registerBatchForLot } from "@/lib/server/batches";
 import { applyMove } from "@/lib/server/stock-movements";
+import {
+  breachedTolerance,
+  ToleranceKind,
+} from "@/lib/server/tolerances";
 import {
   recordPurchaseLineReceipt,
   refreshPurchaseLineStatus,
@@ -89,6 +95,7 @@ import { WAREHOUSE_WORK_ORDER_COLUMNS } from "@/app/(dashboard)/warehouse-work-o
 import { currentUser } from "@clerk/nextjs/server";
 import {
   and,
+  asc,
   count,
   desc,
   eq,
@@ -105,6 +112,19 @@ import { alias } from "drizzle-orm/mysql-core";
 import { revalidatePath } from "next/cache";
 
 // The line names two places, so the warehouse tree is joined twice.
+// The reference keeps one tolerance row per workorder type, and its four rows
+// land on our four stock effects exactly: goods coming in are an unloading,
+// goods going out or moving are a picking, and a count is its own rule.
+const TOLERANCE_KIND_BY_STOCK_EFFECT: Record<
+  WarehouseStockEffect,
+  ToleranceKind
+> = {
+  in: "unloading",
+  out: "picking",
+  move: "picking",
+  count: "count",
+};
+
 const FromLocation = alias(Warehouses, "from_location");
 const ToLocation = alias(Warehouses, "to_location");
 
@@ -602,6 +622,21 @@ export const getPickableLotsForLine = async (
     return [];
   }
 
+  // 🔴 Which lot goes first is the product's decision, not ours.
+  //
+  // `Stock control → Dispatch strategy` read `LIFO` on `PK44115025125`
+  // (2-10-2026) — newest bundle first. Stainless does not perish, and the lot
+  // that arrived last is the one still reachable rather than buried at the back.
+  // We used to hard-code that ordering; now the product says, and a `FIFO`
+  // product is served oldest-first as it should be.
+  const [product] = await db
+    .select({ dispatchStrategy: Products.batchDispatchStrategy })
+    .from(Products)
+    .where(eq(Products.uuid, line.productUuid))
+    .limit(1);
+
+  const dispatchStrategy = product?.dispatchStrategy ?? "lifo";
+
   const rows = await db
     .select({
       uuid: Stock.uuid,
@@ -628,7 +663,11 @@ export const getPickableLotsForLine = async (
         gt(Stock.quantity, "0"),
       ),
     )
-    .orderBy(desc(Stock.receiptDate));
+    .orderBy(
+      dispatchStrategy === "fifo"
+        ? asc(Stock.receiptDate)
+        : desc(Stock.receiptDate),
+    );
 
   return rows
     .map(({ quantity, reserved, ...lot }) => ({
@@ -1092,6 +1131,9 @@ const applyIssue = async (
     type: "out",
     reason: params.reason,
     quantity: quantity.toFixed(3),
+    // Origin travels with the metal: the reference names the supplier and the
+    // purchase order on outbound rows too.
+    ...lotOrigin(source),
     orderUuid: params.orderUuid,
     warehouseWorkOrderLineUuid: params.warehouseWorkOrderLineUuid,
     createdByUserId: params.userId,
@@ -1401,15 +1443,19 @@ const applyReceipt = async (
   const pieceKg =
     plannedQty > 0 && lineKg > 0
       ? lineKg / plannedQty
-      : (product
-          ? productPieceWeightKg({
-              weightTheoretical: product.weightTheoretical,
-              theoreticalWeight: product.theoreticalWeight,
-              weightUnit: product.weightUnit,
-              lengthMm,
-              widthMm,
-              thicknessMm,
-            })
+      : // 🔑 The parcel's own measurements, not the article's nominal ones. A
+        // lot of nominal 1,50 mm plate that measures 1,44 weighs 35,325 kg, and
+        // the reference weighs it from the 1,44. `productPieceWeightKg` would
+        // return the stored per-piece figure and throw these away.
+        (product
+          ? lotPieceWeightKg(
+              {
+                weightTheoretical: product.weightTheoretical,
+                theoreticalWeight: product.theoreticalWeight,
+                weightUnit: product.weightUnit,
+              },
+              { lengthMm, widthMm, thicknessMm },
+            )
           : null) ?? 0;
   const weightKg = pieceKg * quantity;
 
@@ -1804,6 +1850,38 @@ export const reportWarehouseWorkOrderLineCompletion = async (
       }
     }
 
+    // 🔴 How far a report may stray from its plan is a property of the product.
+    //
+    // Read off `PK44115025125` on 2-10-2026 — unloading 5/5, count 0/0, picking
+    // 5/5, production —/0 — and the three different rules are the point. A count
+    // must be exact or it is not a count. A picking may be 5 % out, which is the
+    // slack that absorbs the 1,911 % gap between trade and theoretical density
+    // and the 2–4 % by which cold-rolled coil runs under nominal.
+    //
+    // The reference's four rows land on our four stock effects exactly, so the
+    // branch is the one the completion routine already makes.
+    const toleranceBreach = await breachedTolerance({
+      productUuid: line.productUuid,
+      kind: TOLERANCE_KIND_BY_STOCK_EFFECT[meta.stockEffect],
+      qtyPlanned: Number(line.qtyPlanned ?? 0),
+      kgPlanned: Number(line.kgPlanned ?? 0),
+      reported,
+    });
+    if (toleranceBreach) {
+      return { error: toleranceBreach };
+    }
+
+    const [approvalRule] = line.productUuid
+      ? await db
+          .select({
+            manual: Products.alwaysApproveManuallyWarehouseWorkorderLine,
+          })
+          .from(Products)
+          .where(eq(Products.uuid, line.productUuid))
+          .limit(1)
+      : [];
+    const approveManually = approvalRule?.manual === true;
+
     const documentNo = `WWO-${workOrder.number}`;
     const executedAt = new Date(input.executedAt);
     if (Number.isNaN(executedAt.getTime())) {
@@ -1985,10 +2063,16 @@ export const reportWarehouseWorkOrderLineCompletion = async (
         0,
       );
 
+      // 🔴 Reporting a line approves it — unless the product says otherwise.
+      //
+      // `Always approve manually → Warehouse workorder line` was **unticked** on
+      // `PK44115025125` (2-10-2026), and that is why nobody ever presses
+      // `Approve` in the reference: there is nothing to press. A product that
+      // opts in stops at `ready` and waits for a person.
       await tx
         .update(WarehouseWorkOrderLines)
         .set({
-          status: "approved",
+          status: approveManually ? "ready" : "approved",
           qtyActual: qtyActual.toFixed(3),
           kgActual: kgActual.toFixed(2),
           charge: reportedIdentities[0]?.charge ?? line.charge,
@@ -2061,6 +2145,89 @@ export const reportWarehouseWorkOrderLineCompletion = async (
  * moment the floor reports. Once a work order is approved it is finished, and
  * there is no way back.
  */
+/**
+ * Approve a line that was reported but held back for a person to look at.
+ *
+ * 🔴 Only products that tick `Always approve manually → Warehouse workorder
+ * line` ever reach this. On every other product reporting *is* approval, which
+ * is why the reference's `Approve` button sits there unpressed — the flag was
+ * off on every product anybody looked at.
+ *
+ * Approving the last outstanding line closes the job, exactly as reporting it
+ * would have done.
+ */
+export const approveWarehouseWorkOrderLine = async (
+  lineUuid: string,
+): Promise<WarehouseWorkOrderActionResult> => {
+  try {
+    const user = await currentUser();
+    if (!user?.id) {
+      return { error: "User not authenticated" };
+    }
+
+    const [line] = await db
+      .select({
+        uuid: WarehouseWorkOrderLines.uuid,
+        status: WarehouseWorkOrderLines.status,
+        workOrderUuid: WarehouseWorkOrderLines.workOrderUuid,
+      })
+      .from(WarehouseWorkOrderLines)
+      .where(eq(WarehouseWorkOrderLines.uuid, lineUuid))
+      .limit(1);
+
+    if (!line) {
+      return { error: "Work order line not found." };
+    }
+    if (line.status === "approved") {
+      return { error: "This line has already been approved." };
+    }
+    if (line.status !== "ready") {
+      return { error: "Report the line before approving it." };
+    }
+
+    await db.transaction(async (tx) => {
+      const [result] = await tx
+        .update(WarehouseWorkOrderLines)
+        .set({ status: "approved" })
+        .where(
+          and(
+            eq(WarehouseWorkOrderLines.uuid, lineUuid),
+            eq(WarehouseWorkOrderLines.status, "ready"),
+          ),
+        );
+
+      if (result.affectedRows === 0) {
+        throw new Error(
+          "The line changed while approving it — please refresh and try again.",
+        );
+      }
+
+      const [outstanding] = await tx
+        .select({ value: count() })
+        .from(WarehouseWorkOrderLines)
+        .where(
+          and(
+            eq(WarehouseWorkOrderLines.workOrderUuid, line.workOrderUuid),
+            ne(WarehouseWorkOrderLines.status, "approved"),
+          ),
+        );
+
+      if (Number(outstanding?.value ?? 0) === 0) {
+        await tx
+          .update(WarehouseWorkOrders)
+          .set({ status: "approved" })
+          .where(eq(WarehouseWorkOrders.uuid, line.workOrderUuid));
+      }
+    });
+
+    revalidatePath("/warehouse-work-orders");
+    revalidatePath(`/warehouse-work-orders/${line.workOrderUuid}`);
+    return { success: true };
+  } catch (error) {
+    return { error: describeError(error, "Failed to approve the line") };
+  }
+};
+
 export const cancelWarehouseWorkOrder = async (
   uuid: string,
   mode: CancelWorkOrderMode,

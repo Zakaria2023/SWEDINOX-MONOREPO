@@ -2,8 +2,9 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Ban, Info, Package, Printer, Tag } from "lucide-react";
+import { Ban, Check, Info, Package, Printer, Tag } from "lucide-react";
 import {
+  approveWarehouseWorkOrderLine,
   cancelWarehouseWorkOrder,
   exportWarehouseWorkOrders,
   getWarehouseWorkOrderDetail,
@@ -218,6 +219,23 @@ export const WarehouseWorkOrdersTable = ({
           }
         >
           Report completion
+        </Button>
+        {/* Only products that tick `Always approve manually` ever leave a line
+            at `ready`, so this stays greyed on everything else — which is
+            exactly how the reference's own `Approve` button behaves. */}
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => {
+            if (oneLine) {
+              run(() => approveWarehouseWorkOrderLine(oneLine.lineUuid));
+            }
+          }}
+          disabled={!oneLine || oneLine.status !== "ready" || isPending}
+        >
+          <Check className="size-4" />
+          Approve
         </Button>
         <Button
           type="button"

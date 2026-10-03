@@ -53,6 +53,7 @@ import {
   applyProductionOutput,
 } from "@/lib/server/stock-movements";
 import { getWorkOrderLineDetail } from "@/lib/server/work-order-line-detail";
+import { breachedTolerance } from "@/lib/server/tolerances";
 import {
   Paged,
   parseTableQuery,
@@ -732,6 +733,23 @@ export const reportProductionTreatmentCompletion = async (
 
     if (reported.length === 0) {
       return { error: "Report at least one row." };
+    }
+
+    // 🔴 A production job has no quantity rule and a weight rule of 0 %.
+    //
+    // Read off the product's own tolerance table on 2-10-2026, and confirmed by
+    // what the floor actually reports: work order `324792` line 1 reported 9
+    // pieces against a planned 10 and its kilos went 960,00 → 864,00, exactly
+    // `960 × 9 ÷ 10`. A short run is allowed; kilos that do not balance are not.
+    const toleranceBreach = await breachedTolerance({
+      productUuid: line.productUuid,
+      kind: "production",
+      qtyPlanned: Number(line.qtyPlanned ?? 0),
+      kgPlanned: Number(line.kgPlanned ?? 0),
+      reported,
+    });
+    if (toleranceBreach) {
+      return { error: toleranceBreach };
     }
 
     const executedAt = new Date(input.executedAt);
