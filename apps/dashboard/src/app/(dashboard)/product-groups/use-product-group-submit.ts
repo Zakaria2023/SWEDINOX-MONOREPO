@@ -115,6 +115,7 @@ export const useProductGroupSubmit = ({
         tolerancePickingQty: values.tolerancePickingQty,
         tolerancePickingKg: values.tolerancePickingKg,
         toleranceProductionQty: values.toleranceProductionQty,
+        toleranceProductionKg: values.toleranceProductionKg,
         customerLabelForPickingSlip: values.customerLabelForPickingSlip || null,
         customerLabelForSawingSlip: values.customerLabelForSawingSlip || null,
         customerLabelAtSurfTreatSlip:

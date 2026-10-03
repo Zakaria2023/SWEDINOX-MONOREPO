@@ -119,6 +119,7 @@ export const productGroupSchema = z.object({
   tolerancePickingQty: z.string(),
   tolerancePickingKg: z.string(),
   toleranceProductionQty: z.string(),
+  toleranceProductionKg: z.string(),
   customerLabelForPickingSlip: z.enum(customerLabelOptions).optional(),
   customerLabelForSawingSlip: z.enum(customerLabelOptions).optional(),
   customerLabelAtSurfTreatSlip: z.enum(customerLabelOptions).optional(),
@@ -251,8 +252,11 @@ export const DEFAULT_PRODUCT_GROUP: ProductGroupFormValues = {
   toleranceCountQty: "0.00",
   toleranceCountKg: "0.00",
   tolerancePickingQty: "0.00",
-  tolerancePickingKg: "0.00",
-  toleranceProductionQty: "0.00",
+  tolerancePickingKg: "5.00",
+  // Production has no quantity rule and a weight rule of 0 % — the kilos
+  // must balance exactly.
+  toleranceProductionQty: "",
+  toleranceProductionKg: "0.00",
   customerLabelForPickingSlip: undefined,
   customerLabelForSawingSlip: undefined,
   customerLabelAtSurfTreatSlip: undefined,

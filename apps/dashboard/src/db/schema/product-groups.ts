@@ -148,34 +148,49 @@ export const ProductGroups = mysqlTable(
     ),
 
     // Warehouse Control - Tolerances when reporting as completed (%)
+    // 🔴 How far a report may stray from its plan, per workorder type.
+    //
+    // Read off `PK44115025125` on 2-10-2026: unloading 5/5, count 0/0, picking
+    // 5/5, production —/0. Three different rules, and the differences carry the
+    // meaning — a count must be exact or it is not a count, a production job
+    // must close its kilo balance exactly, and a picking may be 5 % out.
+    //
+    // ⚠️ **Nullable on purpose.** The reference leaves production's quantity
+    // cell *blank* and sets count's to *0 %*, and those are not the same thing:
+    // blank is no rule, zero is the strictest rule there is. A default of
+    // `0.00` would collapse the two and refuse every honest picking.
     toleranceUnloadingQty: decimal("tolerance_unloading_qty", {
       precision: 5,
       scale: 2,
-    }).default("0.00"),
+    }),
     toleranceUnloadingKg: decimal("tolerance_unloading_kg", {
       precision: 5,
       scale: 2,
-    }).default("0.00"),
+    }),
     toleranceCountQty: decimal("tolerance_count_qty", {
       precision: 5,
       scale: 2,
-    }).default("0.00"),
+    }),
     toleranceCountKg: decimal("tolerance_count_kg", {
       precision: 5,
       scale: 2,
-    }).default("0.00"),
+    }),
     tolerancePickingQty: decimal("tolerance_picking_qty", {
       precision: 5,
       scale: 2,
-    }).default("0.00"),
+    }),
     tolerancePickingKg: decimal("tolerance_picking_kg", {
       precision: 5,
       scale: 2,
-    }).default("0.00"),
+    }),
     toleranceProductionQty: decimal("tolerance_production_qty", {
       precision: 5,
       scale: 2,
-    }).default("0.00"),
+    }),
+    toleranceProductionKg: decimal("tolerance_production_kg", {
+      precision: 5,
+      scale: 2,
+    }),
     // Warehouse Control - Customer Labels
     customerLabelForPickingSlip: mysqlEnum(
       "customer_label_picking_slip",
@@ -244,7 +259,10 @@ export const ProductGroups = mysqlTable(
     vehicleWithCanopyRequired: boolean("vehicle_with_canopy_required").default(
       false,
     ),
-    alwaysReserveStock: boolean("always_reserve_stock").default(false),
+    // 🔴 Whether an order line holds the lot it names. Ticked on every product
+    // anybody has opened, and defaulted on here deliberately: the cost of
+    // failing to hold metal is selling it twice.
+    alwaysReserveStock: boolean("always_reserve_stock").default(true),
     // Sales - Order
     maxSalesLineQty: decimal("max_sales_line_qty", {
       precision: 15,

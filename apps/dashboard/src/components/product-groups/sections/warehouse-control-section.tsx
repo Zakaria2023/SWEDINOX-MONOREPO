@@ -168,7 +168,7 @@ export const WarehouseControlSection = () => {
               { id: "toleranceCountKg", label: "Count Kg" },
               { id: "tolerancePickingQty", label: "Picking Qty" },
               { id: "tolerancePickingKg", label: "Picking Kg" },
-              { id: "toleranceProductionQty", label: "Production Qty" },
+              { id: "toleranceProductionKg", label: "Production Kg" },
             ] as const
           ).map(({ id, label }) => (
             <div key={id}>

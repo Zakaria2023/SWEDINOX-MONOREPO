@@ -107,6 +107,7 @@ const SECTION_COLUMNS = {
     "tolerancePickingQty",
     "tolerancePickingKg",
     "toleranceProductionQty",
+    "toleranceProductionKg",
     "customerLabelForPickingSlip",
     "customerLabelForSawingSlip",
     "customerLabelAtSurfTreatSlip",

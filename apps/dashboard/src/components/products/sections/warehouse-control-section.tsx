@@ -258,17 +258,21 @@ export const WarehouseControlSection = () => {
                   />
                 </TableCell>
               </TableRow>
+              {/* A production job has no quantity tolerance and a weight one
+                  of 0 % — the kilos must balance exactly. We had the two cells
+                  the wrong way round until the reference's own table was read
+                  on 2-10-2026. */}
               <TableRow>
                 <TableCell>Production workorder</TableCell>
+                <TableCell className="text-muted-foreground">—</TableCell>
                 <TableCell>
                   <Input
-                    aria-label="Production workorder quantity tolerance"
+                    aria-label="Production workorder weight tolerance"
                     inputMode="decimal"
                     className="w-24"
-                    {...register("toleranceProductionQty")}
+                    {...register("toleranceProductionKg")}
                   />
                 </TableCell>
-                <TableCell className="text-muted-foreground">—</TableCell>
               </TableRow>
             </TableBody>
           </Table>

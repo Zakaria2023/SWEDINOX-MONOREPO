@@ -90,6 +90,9 @@ export const productGroupToFormValues = (
   toleranceProductionQty:
     group.toleranceProductionQty ??
     DEFAULT_PRODUCT_GROUP.toleranceProductionQty,
+  toleranceProductionKg:
+    group.toleranceProductionKg ??
+    DEFAULT_PRODUCT_GROUP.toleranceProductionKg,
   customerLabelForPickingSlip: group.customerLabelForPickingSlip ?? undefined,
   customerLabelForSawingSlip: group.customerLabelForSawingSlip ?? undefined,
   customerLabelAtSurfTreatSlip: group.customerLabelAtSurfTreatSlip ?? undefined,
@@ -287,6 +290,7 @@ export const formValuesToProductGroupFields = (
     tolerancePickingQty: values.tolerancePickingQty,
     tolerancePickingKg: values.tolerancePickingKg,
     toleranceProductionQty: values.toleranceProductionQty,
+    toleranceProductionKg: values.toleranceProductionKg,
     customerLabelForPickingSlip: values.customerLabelForPickingSlip || null,
     customerLabelForSawingSlip: values.customerLabelForSawingSlip || null,
     customerLabelAtSurfTreatSlip: values.customerLabelAtSurfTreatSlip || null,

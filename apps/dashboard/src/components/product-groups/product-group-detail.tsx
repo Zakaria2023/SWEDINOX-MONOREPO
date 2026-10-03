@@ -346,10 +346,7 @@ export const ProductGroupDetailView = ({ group }: Props) => (
           value={group.tolerancePickingQty}
         />
         <DetailField label="Picking kg" value={group.tolerancePickingKg} />
-        <DetailField
-          label="Production quantity"
-          value={group.toleranceProductionQty}
-        />
+        <DetailField label="Production kg" value={group.toleranceProductionKg} />
       </div>
     </section>
 
