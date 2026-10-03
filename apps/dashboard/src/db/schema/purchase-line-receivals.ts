@@ -116,6 +116,35 @@ export const PurchaseLineReceivals = mysqlTable(
     purchaser: varchar("purchaser", { length: 255 }),
     initials: varchar("initials", { length: 50 }),
 
+    // The mill's own sheet identifier, where it gives one. Blank for a coil.
+    sheetNumber: varchar("sheet_number", { length: 60 }),
+    // Who actually rolled the steel, which is not who sold it.
+    producer: varchar("producer", { length: 255 }),
+
+    // ── What the supplier sent electronically ─────────────────────────────────
+    //
+    // 🔴 The reference's `Receipts` grid ends with four EDI columns —
+    // `EDI Charge`, **`EDI Bundels`**, `EDI Vrachtbrief`, `EDI Leverdatum` —
+    // and the order header carries `Message sent via StaalWeb` beside
+    // `Printed`, `Mailed` and `Faxed`.
+    //
+    // 🔑 `EDI Bundels` is literally "EDI bundles", and it is the best answer
+    // anyone has to **what pre-computes a bundle split**: the mill sends its
+    // breakdown and the unloading dialog offers it. Nobody computed
+    // 20/25/20/25/10.
+    //
+    // ⚠️ These are kept **beside** the entered values, never merged into them.
+    // The whole point of the pair is that you can see what the supplier claimed
+    // against what was actually counted on the floor.
+    //
+    // ⚠️ `EDI Leverdatum` arrives as `1-1-0001` when unset — the year-1 null
+    // sentinel this system uses. An importer maps it to NULL rather than storing
+    // a date in antiquity.
+    ediCharge: varchar("edi_charge", { length: 60 }),
+    ediBundles: int("edi_bundles"),
+    ediBillOfLading: varchar("edi_bill_of_lading", { length: 60 }),
+    ediDeliveryDate: date("edi_delivery_date", { mode: "string" }),
+
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
   },
