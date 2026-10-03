@@ -35,11 +35,11 @@ import { mailDocument, sendPurchaseOrderEmail } from "@/emails/documents";
 import { purchaseOrderStatuses } from "@/lib/enums";
 import {
   amountForWeight,
+  articlePieceWeightKg,
   describeError,
   generateUuid,
   isWeightPriceUnit,
   moneyString,
-  productPieceWeightKg,
 } from "@/lib/helpers";
 import {
   dateRangeFilter,
@@ -66,6 +66,7 @@ import { PURCHASE_ORDER_COLUMNS } from "@/app/(dashboard)/purchase-orders/column
 import { currentUser } from "@clerk/nextjs/server";
 import {
   and,
+  asc,
   count,
   desc,
   eq,
@@ -137,6 +138,21 @@ export type PurchaseOrderItemDetail = {
   productCode: string;
   productName: string;
   orderedQuantity: string;
+  // The reference's line grid, column for column: `Code` · `Delivery date` ·
+  // `Status` · `Quality` · `Length` · `Width` · `Thickness` · `Qty(p)` · `U` ·
+  // `Kg(p)` · `Net Price` · `U`. Every one of them was already stored and none
+  // of them was shown.
+  lineNumber: SelectPurchaseOrderItems["lineNumber"];
+  lineStatus: SelectPurchaseOrderItems["status"];
+  receiptDate: SelectPurchaseOrderItems["receiptDate"];
+  qualityCode: SelectPurchaseOrderItems["qualityCode"];
+  lengthMm: SelectPurchaseOrderItems["lengthMm"];
+  widthMm: SelectPurchaseOrderItems["widthMm"];
+  thicknessMm: SelectPurchaseOrderItems["thicknessMm"];
+  unit: SelectPurchaseOrderItems["unit"];
+  kgPurchased: SelectPurchaseOrderItems["kgPurchased"];
+  // What the weighbridge said, where a lorry has been. Null until one has.
+  kgActual: SelectPurchaseOrderItems["kgActual"];
   netPrice: SelectPurchaseOrderItems["netPrice"];
   priceUnit: SelectPurchaseOrderItems["priceUnit"];
   amount: SelectPurchaseOrderItems["amount"];
@@ -362,34 +378,18 @@ export const getReceivablePurchaseOrderItemsForCompany = async (
     )
     .orderBy(desc(PurchaseOrderItems.createdAt));
 
-const companyHasProducts = async (companyUuid: string): Promise<boolean> => {
-  const rows = await db
-    .select({ id: Products.id })
-    .from(Products)
-    .where(eq(Products.companyUuid, companyUuid))
-    .limit(1);
-  return rows.length > 0;
-};
-
 export const createPurchaseOrder = async (
   fields: PurchaseOrderFields,
   items: PurchaseOrderItemInput[],
 ): Promise<PurchaseOrderActionResult> => {
   const uuid = generateUuid();
   try {
-    if (!(await companyHasProducts(fields.supplierUuid))) {
-      return {
-        error:
-          "Selected supplier has no products. Add products to this company before creating a purchase order.",
-      };
-    }
-
-    if (fields.agentUuid && !(await companyHasProducts(fields.agentUuid))) {
-      return {
-        error:
-          "Selected agent has no products. Add products to this company before creating a purchase order.",
-      };
-    }
+    // ⚠️ There was a guard here refusing an order whose supplier had no
+    // products linked to it. It belonged to the era when the line's product
+    // came from a dropdown of that supplier's own articles — the arrangement
+    // that offered one article out of 5 626. A line now names anything in the
+    // catalogue, because the reason to raise a purchase order is that the metal
+    // is not here, so who has it linked decides nothing.
 
     if (items.length === 0) {
       return { error: "At least one product is required." };
@@ -399,11 +399,25 @@ export const createPurchaseOrder = async (
     // The weights come back with the uuid because a line's weight is the
     // product's weight per piece times the quantity, and its amount is derived
     // from that weight rather than from the piece count.
+    //
+    // 🔴 The geometry comes with them. Reading only the two stored weight
+    // columns was the whole of the EUR 0,00 purchase order: `weight_theoretical`
+    // is written by the product form, and 5 624 of 5 626 articles never went
+    // through it. Shape, dimensions, grade and density reproduce the figure
+    // instead of trusting a column nobody filled.
     const validProducts = await db
       .select({
         uuid: Products.uuid,
+        dimensionShape: Products.dimensionShape,
+        featuresQuality: Products.featuresQuality,
+        densityKgDm3: Products.densityKgDm3,
+        length: Products.length,
+        widthDiameter: Products.widthDiameter,
+        thickness: Products.thickness,
+        theoreticalThickness: Products.theoreticalThickness,
         weightTheoretical: Products.weightTheoretical,
         theoreticalWeight: Products.theoreticalWeight,
+        weightUnit: Products.weightUnit,
       })
       .from(Products)
       .where(inArray(Products.uuid, productUuids));
@@ -432,7 +446,7 @@ export const createPurchaseOrder = async (
         return false;
       }
       const product = productByUuid.get(item.productUuid);
-      const pieceWeight = product ? productPieceWeightKg(product) : null;
+      const pieceWeight = product ? articlePieceWeightKg(product, item) : null;
       return (pieceWeight ?? 0) * Number(item.quantity) <= 0;
     });
 
@@ -467,7 +481,10 @@ export const createPurchaseOrder = async (
         // so the amount is the weight times the price in that price's own
         // unit — never the piece count times the price. Eleven plates at
         // EUR 1.930 per tonne cost EUR 666,62, not EUR 21.230.
-        const pieceWeight = product ? productPieceWeightKg(product) : null;
+        // The line's dimensions win over the catalogue's: a line may be
+        // struck at a size the article is not normally stocked in, and it is
+        // the line that was ordered.
+        const pieceWeight = product ? articlePieceWeightKg(product, item) : null;
         const weightKg = (pieceWeight ?? 0) * quantity;
 
         const intOrNull = (value: string | undefined) => {
@@ -564,6 +581,16 @@ export const getPurchaseOrderDetail = async (
       productCode: Products.productCode,
       productName: Products.name,
       orderedQuantity: PurchaseOrderItems.quantity,
+      lineNumber: PurchaseOrderItems.lineNumber,
+      lineStatus: PurchaseOrderItems.status,
+      receiptDate: PurchaseOrderItems.receiptDate,
+      qualityCode: PurchaseOrderItems.qualityCode,
+      lengthMm: PurchaseOrderItems.lengthMm,
+      widthMm: PurchaseOrderItems.widthMm,
+      thicknessMm: PurchaseOrderItems.thicknessMm,
+      unit: PurchaseOrderItems.unit,
+      kgPurchased: PurchaseOrderItems.kgPurchased,
+      kgActual: PurchaseOrderItems.kgActual,
       netPrice: PurchaseOrderItems.netPrice,
       priceUnit: PurchaseOrderItems.priceUnit,
       amount: PurchaseOrderItems.amount,
@@ -575,7 +602,9 @@ export const getPurchaseOrderDetail = async (
     .from(PurchaseOrderItems)
     .innerJoin(Products, eq(PurchaseOrderItems.productUuid, Products.uuid))
     .leftJoin(Stock, eq(Stock.purchaseOrderItemUuid, PurchaseOrderItems.uuid))
-    .where(eq(PurchaseOrderItems.purchaseOrderUuid, uuid));
+    .where(eq(PurchaseOrderItems.purchaseOrderUuid, uuid))
+    // The reference numbers its lines 10, 20, 30 and shows them in that order.
+    .orderBy(asc(PurchaseOrderItems.lineNumber));
 
   const [receipts, contracts, returnLines, communication] = await Promise.all([
     db

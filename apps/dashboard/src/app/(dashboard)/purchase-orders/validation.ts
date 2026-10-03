@@ -31,6 +31,15 @@ export const purchaseOrderItemSchema = z.object({
   lengthMm: z.string().optional(),
   widthMm: z.string().optional(),
   thicknessMm: z.string().optional(),
+  /**
+   * What one piece weighs, carried off the chosen article so the grid can show
+   * `Kg(p)` and the amount while the order is being typed — the reference
+   * computes both on the line, not at save time.
+   *
+   * The server derives its own figure on save and does not trust this one: it
+   * is here to be shown, not to be stored.
+   */
+  pieceWeightKg: z.string().optional(),
 });
 
 export const purchaseOrderSchema = z.object({
@@ -113,6 +122,7 @@ export const DEFAULT_PURCHASE_ORDER: PurchaseOrderFormValues = {
       lengthMm: "",
       widthMm: "",
       thicknessMm: "",
+      pieceWeightKg: "",
     },
   ],
 

@@ -22,10 +22,12 @@ import { FormError } from "@/components/ui/form-error";
 import {
   cn,
   formatDateColumn,
+  formatLengthMm,
   formatMoney,
   formatNumber,
   orDash,
   pluralize,
+  runningMeters,
 } from "@/lib/helpers";
 import {
   COMMUNICATION_SETTING_DOCUMENT_TYPE_LABELS,
@@ -115,14 +117,28 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
         <div>
           <Table>
             <TableHeader>
+              {/* 🔴 The reference's own line grid, column for column:
+                  `Code` · `Delivery date` · `Status` · `Product` · `Quality` ·
+                  `Length` · `Width` · `Thickness` · `Qty(p)` · `U` · `Kg(p)` ·
+                  `M1(p)` · `Net Price` · `U`. */}
               <TableRow>
+                <TableHead className="text-right">Code</TableHead>
+                <TableHead>Delivery date</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead>Product</TableHead>
-                <TableHead className="text-right">Ordered</TableHead>
-                <TableHead className="text-right">Purchase price</TableHead>
-                <TableHead>Per</TableHead>
+                <TableHead>Quality</TableHead>
+                <TableHead className="text-right">Length</TableHead>
+                <TableHead className="text-right">Width</TableHead>
+                <TableHead className="text-right">Thickness</TableHead>
+                <TableHead className="text-right">Qty (p)</TableHead>
+                <TableHead>U</TableHead>
+                <TableHead className="text-right">Kg (p)</TableHead>
+                <TableHead className="text-right">M1 (p)</TableHead>
+                <TableHead className="text-right">Net price</TableHead>
+                <TableHead>U</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
                 <TableHead className="text-right">Remaining</TableHead>
-                <TableHead>Stock Status</TableHead>
+                <TableHead>Stock status</TableHead>
                 <TableHead className="text-right">Lot valuation</TableHead>
               </TableRow>
             </TableHeader>
@@ -130,22 +146,65 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
               {purchaseOrder.items.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={8}
+                    colSpan={18}
                     className="h-24 text-center text-muted-foreground"
                   >
-                    No products on this order.
+                    No lines on this order.
                   </TableCell>
                 </TableRow>
               ) : (
                 purchaseOrder.items.map((item) => (
                   <TableRow key={item.uuid}>
+                    <TableCell className="text-right tabular-nums">
+                      {item.lineNumber === null ? "—" : item.lineNumber * 10}
+                    </TableCell>
+                    <TableCell>{formatDateColumn(item.receiptDate)}</TableCell>
+                    <TableCell>
+                      <StatusBadge
+                        value={item.lineStatus}
+                        label={
+                          item.lineStatus
+                            ? ORDER_LINE_STATUS_LABELS[item.lineStatus]
+                            : null
+                        }
+                      />
+                    </TableCell>
                     <TableCell className="font-medium">
                       {[item.productCode, item.productName]
                         .filter(Boolean)
                         .join(" — ")}
                     </TableCell>
+                    <TableCell>{orDash(item.qualityCode)}</TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatLengthMm(item.lengthMm)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {orDash(item.widthMm)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {orDash(item.thicknessMm)}
+                    </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {item.orderedQuantity}
+                    </TableCell>
+                    <TableCell>{orDash(item.unit ? item.unit.toUpperCase() : null)}</TableCell>
+                    {/* 🔑 The weighed weight where a lorry has been, the
+                        theoretical one until then — the same figure the line is
+                        billed on, so the grid cannot disagree with its own
+                        amount. */}
+                    <TableCell className="text-right tabular-nums">
+                      {formatNumber(
+                        Number(item.kgActual ?? item.kgPurchased ?? 0),
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatNumber(
+                        runningMeters({
+                          quantity: Number(item.orderedQuantity ?? 0),
+                          unit: item.unit,
+                          lengthMm: item.lengthMm,
+                        }),
+                      )}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {formatMoney(Number(item.netPrice ?? 0))}
