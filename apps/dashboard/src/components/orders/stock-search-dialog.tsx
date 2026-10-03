@@ -236,6 +236,12 @@ export const StockSearchDialog = ({
   const chosenVariant = variants.find((v) => variantKey(v) === selectedVariant);
   const chosenLot = lots.find((lot) => lot.uuid === selectedLot);
   const isIncoming = filters.source === "purchase";
+  // 🔴 On a catalogue search nothing is on the shelf, so Technical, Reserved,
+  // Available and Lots are four columns of zeros. What a buyer needs instead is
+  // the weight of one piece: it is what a price per tonne is charged on, and it
+  // is the only thing distinguishing the six `PK304L20021` rows in this
+  // catalogue — two of which can be weighed and four of which bill € 0,00.
+  const isCatalogue = filters.source === "catalogue";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -398,10 +404,15 @@ export const StockSearchDialog = ({
                     <TableHead>Quality</TableHead>
                     <TableHead>Options</TableHead>
                     <TableHead>Dimensions</TableHead>
-                    <TableHead className="text-right">Technical</TableHead>
-                    <TableHead className="text-right">Reserved</TableHead>
-                    <TableHead className="text-right">Available</TableHead>
-                    <TableHead className="text-right">Lots</TableHead>
+                    <TableHead className="text-right">Kg/piece</TableHead>
+                    {!isCatalogue && (
+                      <>
+                        <TableHead className="text-right">Technical</TableHead>
+                        <TableHead className="text-right">Reserved</TableHead>
+                        <TableHead className="text-right">Available</TableHead>
+                        <TableHead className="text-right">Lots</TableHead>
+                      </>
+                    )}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -426,23 +437,40 @@ export const StockSearchDialog = ({
                           .join(" · ") || "—"}
                       </TableCell>
                       <TableCell>{dimensions(variant)}</TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {formatNumber(variant.technical)}
+                      {/* An article with no weight cannot be bought by the
+                          tonne, and saying so here is earlier than finding out
+                          on the line. */}
+                      <TableCell
+                        className={cn(
+                          "text-right tabular-nums",
+                          !variant.pieceWeightKg && "text-destructive",
+                        )}
+                      >
+                        {variant.pieceWeightKg
+                          ? formatNumber(variant.pieceWeightKg)
+                          : "no weight"}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {formatNumber(variant.reserved)}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {formatNumber(variant.available)}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {variant.lotCount}
-                      </TableCell>
+                      {!isCatalogue && (
+                        <>
+                          <TableCell className="text-right tabular-nums">
+                            {formatNumber(variant.technical)}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {formatNumber(variant.reserved)}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {formatNumber(variant.available)}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {variant.lotCount}
+                          </TableCell>
+                        </>
+                      )}
                     </TableRow>
                   ))}
                   {variants.length === 0 && hasSearched && !isPending && (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-muted-foreground">
+                      <TableCell colSpan={9} className="text-muted-foreground">
                         Nothing matches. Widen the margin, or clear a dimension.
                       </TableCell>
                     </TableRow>
