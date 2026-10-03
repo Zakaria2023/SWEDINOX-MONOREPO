@@ -116,9 +116,27 @@ export const AppSidebar = () => {
     if (!trimmedQuery) {
       return [];
     }
-    return NAV_ITEMS.filter((item) =>
-      item.label.toLowerCase().includes(trimmedQuery),
-    );
+
+    const matchesByHref = new Map<string, (typeof NAV_ITEMS)[number]>();
+
+    for (const item of NAV_ITEMS) {
+      if (!item.label.toLowerCase().includes(trimmedQuery)) {
+        continue;
+      }
+
+      const existing = matchesByHref.get(item.href);
+      // A page can appear in Actions and in one or more Views groups. Search
+      // should show the destination once, using the more descriptive Views
+      // group when one exists.
+      if (
+        !existing ||
+        (existing.tabKey !== "views" && item.tabKey === "views")
+      ) {
+        matchesByHref.set(item.href, item);
+      }
+    }
+
+    return Array.from(matchesByHref.values());
   }, [trimmedQuery]);
 
   // The rail opens on hover and closes again on the way out. Tab does the same,
