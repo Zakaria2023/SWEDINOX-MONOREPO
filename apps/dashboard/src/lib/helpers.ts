@@ -526,6 +526,12 @@ export const isSentinelDate = (value: string | Date | null): boolean => {
  * A length of 999999 mm is the reference's mark for coil — endless material
  * with no cut length — not a 999 metre bar. Shown blank, like the sentinel
  * dates, so nobody reads it as a measurement.
+ *
+ * 🔴 Confirmed again 2-10-2026 on purchase order `401141`'s reception and on
+ * two `CK…` rows of the `Batches` register: `Length 999999` beside a real width
+ * and a real weight. So it also has to be stepped around by anything that
+ * *multiplies* dimensions — see `lotPieceWeightKg` — or one coil weighs several
+ * thousand tonnes.
  */
 export const COIL_LENGTH_SENTINEL = 999999;
 
@@ -10236,19 +10242,6 @@ export const isWithinTolerance = (
  */
 export const tolerancePercent = (value: string | null): number | null =>
   value === null || value.trim() === "" ? null : Number(value);
-
-/**
- * The length a coil carries instead of a real one.
- *
- * 🔴 Seen on purchase order `401141`'s reception and again on two `CK…` rows of
- * the `Batches` register (2-10-2026): `Length 999999`, a real width, a real
- * weight. A coil is one piece of indefinite length, and the kilos are what is
- * true about it.
- *
- * Any formula that multiplies dimensions has to step around this, or a single
- * coil weighs several thousand tonnes.
- */
-export const COIL_LENGTH_SENTINEL = 999999;
 
 /**
  * The weight of one piece of a **specific lot**, from that lot's own dimensions.

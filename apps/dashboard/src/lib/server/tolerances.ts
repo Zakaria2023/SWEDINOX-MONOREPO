@@ -28,7 +28,10 @@ type ToleranceBand = {
 
 type ReportedRow = {
   qtyActual: string;
-  kgActual?: string;
+  // A weight the floor may simply not have given. The warehouse dialog carries
+  // `null` for an untouched cell and the production one `undefined`, and both
+  // mean the same thing: this row says nothing about kilos.
+  kgActual?: string | null;
 };
 
 type ToleranceCheckParams = {
@@ -144,14 +147,16 @@ export const breachedTolerance = async (
 
   // Weight is optional on the dialog, so a report that says nothing about kilos
   // is not a report of zero kilos.
-  const weighed = params.reported.filter(
-    (row) => row.kgActual !== undefined && row.kgActual.trim() !== "",
+  const weighed = params.reported.flatMap((row) =>
+    typeof row.kgActual === "string" && row.kgActual.trim() !== ""
+      ? [Number(row.kgActual)]
+      : [],
   );
   if (band.kg === null || weighed.length === 0 || params.kgPlanned <= 0) {
     return null;
   }
 
-  const kgReported = sum(weighed.map((row) => Number(row.kgActual)));
+  const kgReported = sum(weighed);
 
   // 🔑 Production scales its plan to what was actually made; the warehouse does
   // not.

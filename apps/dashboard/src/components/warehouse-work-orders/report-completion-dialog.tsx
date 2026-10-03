@@ -599,7 +599,7 @@ export const ReportCompletionDialog = ({
                     }
                     disabled={isPending}
                   />
-                  Only lots on {orDash(line?.fromLocationName)}
+                  Only lots on {orDash(line?.fromLocationName ?? null)}
                 </label>
               ) : null}
             </div>
