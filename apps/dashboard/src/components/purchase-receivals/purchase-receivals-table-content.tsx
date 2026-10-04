@@ -18,15 +18,19 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
-import { RowAction } from "@/components/ui/row-action";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { PagedTableExportButton } from "@/components/ui/table-export-button";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { TableSortHeader } from "@/components/ui/table-sort-header";
+import {
+  TableRowActionItem,
+  TableRowToolbar,
+} from "@/components/ui/table-row-toolbar";
 import { TableToolbar } from "@/components/ui/table-toolbar";
 import { selectorColumns } from "@/lib/excel";
 import {
   buildColumnVisibility,
+  cn,
   formatDateColumn,
   formatLengthMm,
   formatMoney,
@@ -73,6 +77,41 @@ export const PurchaseReceivalsTable = ({ page, filters }: Props) => {
   const [columnVisibility, setColumnVisibility] = useState<
     Record<ColumnKey, boolean>
   >(buildColumnVisibility(ALL_COLUMNS));
+  // The reference acts on a selected row from a toolbar at the top, so the
+  // grid has to remember which row that is.
+  const [selectedUuid, setSelectedUuid] = useState<string | null>(null);
+
+  const selected =
+    page.rows.find((row) => row.uuid === selectedUuid) ?? null;
+
+  const rowActions: TableRowActionItem[] = [
+    {
+      label: "Open receipt",
+      icon: <Eye className="size-4" />,
+      href: selected ? `/purchase-receivals/${selected.uuid}` : null,
+    },
+    {
+      label: "Purchase line",
+      icon: <Rows3 className="size-4" />,
+      href: selected?.purchaseOrderItemUuid
+        ? `/purchase-lines/${selected.purchaseOrderItemUuid}`
+        : null,
+    },
+    {
+      label: "Warehouse work orders",
+      icon: <Warehouse className="size-4" />,
+      href: selected?.purchaseOrderCode
+        ? `/warehouse-work-orders?q=${encodeURIComponent(selected.purchaseOrderCode)}`
+        : null,
+    },
+    {
+      label: "Production work orders",
+      icon: <Factory className="size-4" />,
+      href: selected?.purchaseOrderCode
+        ? `/production-workorders?q=${encodeURIComponent(selected.purchaseOrderCode)}`
+        : null,
+    },
+  ];
 
   const toggleColumn = (key: string) =>
     setColumnVisibility((prev) => ({
@@ -290,6 +329,15 @@ export const PurchaseReceivalsTable = ({ page, filters }: Props) => {
         />
       </TableToolbar>
 
+      <TableRowToolbar
+        actions={rowActions}
+        selectedLabel={
+          selected
+            ? `${selected.purchaseOrderCode ?? "—"} line ${selected.lineNumber ?? "—"}`
+            : null
+        }
+      />
+
       {page.rows.length === 0 ? (
         emptyState
       ) : (
@@ -307,48 +355,19 @@ export const PurchaseReceivalsTable = ({ page, filters }: Props) => {
                     <TableHead key={col.key}>{col.label}</TableHead>
                   );
                 })}
-                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {page.rows.map((row) => (
-                <TableRow key={row.uuid}>
+                <TableRow
+                  key={row.uuid}
+                  onClick={() => setSelectedUuid(row.uuid)}
+                  className={cn(
+                    "cursor-pointer",
+                    row.uuid === selectedUuid && "bg-muted",
+                  )}
+                >
                   {visibleColumns.map((col) => renderCell(row, col.key))}
-                  <TableCell>
-                    <div className="flex items-center justify-end gap-1">
-                      <RowAction
-                        label="Open this receipt"
-                        tone="view"
-                        href={`/purchase-receivals/${row.uuid}`}
-                      >
-                        <Eye className="size-4" />
-                      </RowAction>
-                      {row.purchaseOrderItemUuid && (
-                        <RowAction
-                          label="Purchase line"
-                          href={`/purchase-lines/${row.purchaseOrderItemUuid}`}
-                        >
-                          <Rows3 className="size-4" />
-                        </RowAction>
-                      )}
-                      {row.purchaseOrderCode && (
-                        <>
-                          <RowAction
-                            label="Warehouse work orders"
-                            href={`/warehouse-work-orders?q=${encodeURIComponent(row.purchaseOrderCode)}`}
-                          >
-                            <Warehouse className="size-4" />
-                          </RowAction>
-                          <RowAction
-                            label="Production work orders"
-                            href={`/production-workorders?q=${encodeURIComponent(row.purchaseOrderCode)}`}
-                          >
-                            <Factory className="size-4" />
-                          </RowAction>
-                        </>
-                      )}
-                    </div>
-                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

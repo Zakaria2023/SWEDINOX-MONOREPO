@@ -465,6 +465,24 @@ easier.
 | **H10** | **Report a saw cut** — the two report dialogs, and the kilos balancing | Modelled from a screenshot; never watched |
 | **H11** | **Link a certificate to a batch** | ⚠️ **REPLACE THIS — 2-10-2026.** Attempted on `IO400003`: **no batch rows**, because `Batch registration` is a **per-product opt-in** and it is unticked. Worse, `batch-registration.md` §1 already proved the certificate half is **never used** — all 2 540 received and 3 271 sent rows have every certificate column empty. **Ask instead how a batch gets registered:** `Overviews → Batch registration → Batches` → a recent row → its `Internal charge` → that purchase order → `Receipts` → `Batch registration` |
 | **H12** | **Raise a credit note / return** | `Return order` and `Return lines` exist as menu items and nothing else |
+| **H13** | 🔴 **Split a reception into instalments** — what the `Split` button actually opens | **Asked 4-10-2026.** The button is on the order's `Receipts` panel toolbar, beside `New` · `Delete` · `Batch registration` · `Charge aanpassen…`. We know splitting is real and we know what it *produces* — one purchase line showing several rows on Purchase receivals, with only `Kg(p)`, `Kg(a)`, `Delivery date (a)` and `Receipt status` differing between them, the `Kg(p)` summing back to the line (101 of 107 lines in the export). **We have never seen the dialog.** Every attempt found `Split` greyed out, on a released order with an open reception. So ours was built from the result alone: a weight box that divides the reception in two and shares the quantity out in proportion. That interface is a guess. ⚠️ **Until this is captured, do not test ours against it** — it would only be testing our own invention |
+
+### H13 in detail — exactly what to photograph
+
+1. Open a purchase order whose reception has **not** arrived (`Kg(a)` = 0).
+2. Expand the **`Receipts`** panel and select the reception row.
+3. Press **`Split`**.
+   - **If it is greyed**, that is the answer — say which order and what state its
+     reception was in, and we stop guessing and ask what enables it.
+   - **If a dialog opens**, photograph it: every field, every caption, and what
+     it offers by default.
+4. Split it, then photograph the `Receipts` panel afterwards — **both rows**,
+   scrolled right, so we can see which columns changed and which repeated.
+
+The one question behind all of it: **is a split entered as a weight, as a
+quantity, or as a number of parts?** Ours assumes a weight and derives the
+quantity from it. If the reference asks for pieces instead, our arithmetic runs
+backwards.
 
 **Start with H1.** It is the oldest open question in the project and everything
 in the warehouse hangs off it.

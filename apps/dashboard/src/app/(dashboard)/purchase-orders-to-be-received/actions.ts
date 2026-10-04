@@ -18,11 +18,19 @@ import {
   refreshPurchaseLineStatus,
 } from "@/lib/server/purchase-lines";
 import { describeError, todayDateString } from "@/lib/helpers";
-import { and, asc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 export type PurchaseOrderToReceiveRow = {
   purchaseOrderItemUuid: SelectPurchaseOrderItems["uuid"];
+  // 🔴 The order's own number, and the line's. The `Purchase order` column used
+  // to show `reference`, which is the **supplier's** reference and is empty on
+  // almost every order — so the screen named no order anywhere and a buyer
+  // could not find the one they had just placed.
+  purchaseOrderUuid: SelectPurchaseOrders["uuid"];
+  purchaseOrderId: SelectPurchaseOrders["id"];
+  lineNumber: SelectPurchaseOrderItems["lineNumber"];
+  productCode: string | null;
   reference: SelectPurchaseOrders["reference"];
   supplierName: SelectCompanies["companyName"] | null;
   companyCode: SelectCompanies["id"] | null;
@@ -71,6 +79,10 @@ export const getPurchaseOrdersToBeReceived = async (): Promise<
     const rows = await db
       .select({
         purchaseOrderItemUuid: PurchaseOrderItems.uuid,
+        purchaseOrderUuid: PurchaseOrders.uuid,
+        purchaseOrderId: PurchaseOrders.id,
+        lineNumber: PurchaseOrderItems.lineNumber,
+        productCode: Products.productCode,
         reference: PurchaseOrders.reference,
         supplierName: Companies.companyName,
         companyCode: Companies.id,
@@ -102,7 +114,10 @@ export const getPurchaseOrdersToBeReceived = async (): Promise<
           sql`${PurchaseOrderItems.quantity} - ${PurchaseOrderItems.qtyReceived} > 0`,
         ),
       )
-      .orderBy(asc(Companies.companyName), asc(PurchaseOrders.reference));
+      // Newest first. A buyer comes to this screen to receive the order they
+      // just placed, and sorting by company name alphabetically buried it
+      // hundreds of rows down with no search box to find it again.
+      .orderBy(desc(PurchaseOrders.id), asc(PurchaseOrderItems.lineNumber));
 
     // The buyer is stored on the header as a Clerk user id; resolve it to a
     // display name (falling back to the raw id if it can't be resolved).
@@ -258,6 +273,10 @@ export const receiveOutstandingGoods =
 const mapRows = (
   rows: {
     purchaseOrderItemUuid: string;
+    purchaseOrderUuid: string;
+    purchaseOrderId: number;
+    lineNumber: SelectPurchaseOrderItems["lineNumber"];
+    productCode: string | null;
     reference: SelectPurchaseOrders["reference"];
     supplierName: SelectCompanies["companyName"] | null;
     companyCode: SelectCompanies["id"] | null;
@@ -283,6 +302,10 @@ const mapRows = (
     const kgReceived = kgPurchased * receivedRatio;
     return {
       purchaseOrderItemUuid: row.purchaseOrderItemUuid,
+      purchaseOrderUuid: row.purchaseOrderUuid,
+      purchaseOrderId: row.purchaseOrderId,
+      lineNumber: row.lineNumber,
+      productCode: row.productCode,
       reference: row.reference,
       supplierName: row.supplierName,
       companyCode: row.companyCode,

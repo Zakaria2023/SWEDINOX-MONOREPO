@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { PurchaseOrderToReceiveRow } from "@/app/(dashboard)/purchase-orders-to-be-received/actions";
 import { ReceiveLineButton } from "@/components/purchase-orders-to-be-received/receive-line-button";
 import {
@@ -34,8 +36,11 @@ export const PurchaseOrdersToBeReceivedTable = ({ rows }: Props) => (
       <Table id="purchase-orders-to-be-received-table">
         <TableHeader>
           <TableRow>
-            <TableHead>Company</TableHead>
             <TableHead>Purchase order</TableHead>
+            <TableHead className="text-right">Line</TableHead>
+            <TableHead>Product</TableHead>
+            <TableHead>Company</TableHead>
+            <TableHead>Supplier reference</TableHead>
             <TableHead className="text-right">Company code</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Order date</TableHead>
@@ -55,7 +60,7 @@ export const PurchaseOrdersToBeReceivedTable = ({ rows }: Props) => (
           {rows.length === 0 ? (
             <TableRow>
               <TableCell
-                colSpan={13}
+                colSpan={16}
                 className="h-24 text-center text-muted-foreground"
               >
                 No purchase orders awaiting delivery.
@@ -64,9 +69,23 @@ export const PurchaseOrdersToBeReceivedTable = ({ rows }: Props) => (
           ) : (
             rows.map((row) => (
               <TableRow key={row.purchaseOrderItemUuid}>
-                <TableCell className="font-medium">
-                  {row.supplierName ?? "—"}
+                {/* 🔴 The order's own number, which this screen never showed.
+                    The column called `Purchase order` held the supplier's
+                    reference — empty on almost every order — so nothing here
+                    named the document a buyer came to receive. */}
+                <TableCell className="font-medium whitespace-nowrap">
+                  <Link
+                    href={`/purchase-orders/${row.purchaseOrderUuid}`}
+                    className="text-primary hover:underline"
+                  >
+                    {row.purchaseOrderId}
+                  </Link>
                 </TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {row.lineNumber === null ? "—" : row.lineNumber * 10}
+                </TableCell>
+                <TableCell>{row.productCode ?? "—"}</TableCell>
+                <TableCell>{row.supplierName ?? "—"}</TableCell>
                 <TableCell>{row.reference ?? "—"}</TableCell>
                 <TableCell className="text-right">
                   {row.companyCode ?? "—"}
