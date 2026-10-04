@@ -2233,10 +2233,21 @@ export const summarisePurchaseInvoice = ({
   const vatTotal = vatHigh + vatMiddle + vatLow;
   const totalInclVat = totalExclVat + vatTotal;
 
-  // With no supplier total to reconcile against there is nothing unexplained;
-  // the build-up stands on its own.
   const accounted = totalInclVat + creditRestriction;
-  const remainder = invoiceTotal === 0 ? 0 : invoiceTotal - accounted;
+
+  // 🔴 The gap, always — including when the supplier total reads zero.
+  //
+  // This used to return 0 whenever `invoiceTotal` was 0, on the reading that
+  // "no total keyed" means "nothing to reconcile". But zero is ambiguous: it is
+  // also what a document says when somebody fat-fingers the one figure they are
+  // asked to type, and that is precisely the case worth shouting about. An
+  // invoice booking EUR 606,02 of goods against a supplier total of EUR 0,00
+  // showed a remainder of EUR 0,00 — the reconciliation reporting that
+  // everything balanced while 606 euro went unexplained.
+  //
+  // An empty document still nets to zero on its own, because `accounted` is
+  // zero too, so the special case bought nothing and hid a real discrepancy.
+  const remainder = invoiceTotal - accounted;
 
   return {
     materials,
@@ -2250,7 +2261,10 @@ export const summarisePurchaseInvoice = ({
     totalInclVat,
     creditRestriction,
     remainder,
-    totalGeneral: accounted + remainder,
+    // What the document is worth for payment. The supplier's own total where
+    // they gave one; the build-up where they did not, so goods received are
+    // still owed for rather than written off by an unkeyed box.
+    totalGeneral: invoiceTotal > 0 ? invoiceTotal : accounted,
   };
 };
 

@@ -200,15 +200,23 @@ export const PurchaseInvoiceDetailView = ({ purchaseInvoice }: Props) => {
             value={formatMoney(Number(purchaseInvoice.outstanding ?? 0))}
           />
         </div>
-        <p className="text-sm text-muted-foreground">
-          Received {formatNumber(netReceived)} on{" "}
-          {purchaseInvoice.movements.length} stock movement
-          {purchaseInvoice.movements.length === 1 ? "" : "s"}
-          {totalReversed > 0
-            ? ` (${formatNumber(totalReversed)} reversed)`
-            : ""}
-          .
-        </p>
+        {/* Only where this invoice actually moved stock. It does not any more —
+            goods are booked in by the unloading work order and an invoice
+            records that they have been paid for — so on anything raised now
+            this read "Received 0 on 0 stock movements", which says the goods
+            never arrived when they are on the shelf. Historic invoices that did
+            move stock still show it. */}
+        {purchaseInvoice.movements.length > 0 && (
+          <p className="text-sm text-muted-foreground">
+            Received {formatNumber(netReceived)} on{" "}
+            {purchaseInvoice.movements.length} stock movement
+            {purchaseInvoice.movements.length === 1 ? "" : "s"}
+            {totalReversed > 0
+              ? ` (${formatNumber(totalReversed)} reversed)`
+              : ""}
+            .
+          </p>
+        )}
       </section>
 
       <section className="space-y-3">
