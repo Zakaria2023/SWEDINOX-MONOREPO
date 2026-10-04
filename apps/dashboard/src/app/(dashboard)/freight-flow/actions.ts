@@ -61,7 +61,11 @@ export type SfnRoleActionResult = {
 // The reasons that make a movement a purchase receipt or a sale. Everything
 // else — corrections, damage, production output, cancellations — is neither
 // bought in nor sold out, so it lands in "Stock difference".
-const RECEIPT_REASONS = new Set(["purchase_receipt"]);
+// 🔴 `warehouse_receipt` is how goods actually arrive: the unloading work order
+// is reported and the lot exists. `purchase_receipt` was written by the purchase
+// invoice as well, double-counting every arrival, and the invoice no longer
+// writes one — but historic rows carry it, so both are counted here.
+const RECEIPT_REASONS = new Set(["warehouse_receipt", "purchase_receipt"]);
 const SUPPLY_REASONS = new Set(["invoice_consumption", "sale_consumption"]);
 
 const emptyRow = (

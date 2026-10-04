@@ -734,27 +734,17 @@ export const createPurchaseInvoice = async (
           vatCode: vatCodeByProduct.get(poItem.productUuid) ?? null,
         });
 
-        await tx.insert(StockMovements).values({
-          uuid: generateUuid(),
-          productUuid: poItem.productUuid,
-          stockUuid,
-          type: "in",
-          reason: "purchase_receipt",
-          quantity: item.quantity,
-          purchaseOrderUuid: poItem.purchaseOrderUuid,
-          purchaseInvoiceUuid: uuid,
-          createdByUserId: userId,
-        });
-
-        await recordFreightMovement(tx, {
-          productUuid: poItem.productUuid,
-          quantity: item.quantity,
-          type: "in",
-          reason: "purchase_receipt",
-          purchaseOrderUuid: poItem.purchaseOrderUuid,
-          supplierUuid: fields.companyUuid ?? null,
-          operator: userId,
-        });
+        // 🔴 No movement here. The goods arrived once, and the unloading work
+        // order already recorded it — a `warehouse_receipt` row in
+        // `StockMovements` and another in `FreightMovements`, both written when
+        // the bundle was reported. Writing a second pair as `purchase_receipt`
+        // booked the same steel into both ledgers twice: `/stock-movements`
+        // showed one arrival as two `in` rows, and Freight flow counted the
+        // tonnage again.
+        //
+        // The lot lookup above stays, because an invoice for goods nobody
+        // booked in is a real problem and is surfaced rather than papered over.
+        // But paying for metal is not the metal turning up.
       }
 
       // Every line this invoice touched is now received and invoiced further.

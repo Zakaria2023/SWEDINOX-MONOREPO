@@ -138,6 +138,23 @@ export type ReceivablePurchaseOrderItem = {
   orderedQuantity: SelectPurchaseOrderItems["quantity"];
   // quantity − qtyReceived, computed in SQL, so it stays a plain string.
   remainingQuantity: string;
+  // 🔑 What the reference's invoice `Lines` grid shows beside the quantity —
+  // `Item` · `Kg` · `Length` · `Price` · `Per` · `Material` · `VAT rate` ·
+  // `Delivery date`. `Material` is price x weight in the unit `Per` names, and
+  // a clerk has to see it move as they key the quantity.
+  lineNumber: SelectPurchaseOrderItems["lineNumber"];
+  unit: SelectPurchaseOrderItems["unit"];
+  lengthMm: SelectPurchaseOrderItems["lengthMm"];
+  widthMm: SelectPurchaseOrderItems["widthMm"];
+  thicknessMm: SelectPurchaseOrderItems["thicknessMm"];
+  // The weighbridge figure where a lorry has been, the theoretical until then —
+  // the same weight the line is billed on.
+  kgBilling: string;
+  netPrice: SelectPurchaseOrderItems["netPrice"];
+  priceUnit: SelectPurchaseOrderItems["priceUnit"];
+  options: SelectPurchaseOrderItems["options"];
+  receiptDate: SelectPurchaseOrderItems["receiptDate"];
+  vatCode: SelectProducts["vatCode"] | null;
 };
 
 export type PurchaseOrderItemDetail = {
@@ -409,6 +426,17 @@ export const getReceivablePurchaseOrderItemsForCompany = async (
       purchaseOrderId: PurchaseOrders.id,
       orderedQuantity: PurchaseOrderItems.quantity,
       remainingQuantity: receivableQuantity,
+      lineNumber: PurchaseOrderItems.lineNumber,
+      unit: PurchaseOrderItems.unit,
+      lengthMm: PurchaseOrderItems.lengthMm,
+      widthMm: PurchaseOrderItems.widthMm,
+      thicknessMm: PurchaseOrderItems.thicknessMm,
+      kgBilling: sql<string>`COALESCE(${PurchaseOrderItems.kgActual}, ${PurchaseOrderItems.kgPurchased}, 0)`,
+      netPrice: PurchaseOrderItems.netPrice,
+      priceUnit: PurchaseOrderItems.priceUnit,
+      options: PurchaseOrderItems.options,
+      receiptDate: PurchaseOrderItems.receiptDate,
+      vatCode: Products.vatCode,
     })
     .from(PurchaseOrderItems)
     .innerJoin(
