@@ -11,6 +11,11 @@ import {
   SelectPurchaseOrderItems,
 } from "@/db/schema/purchase-order-items";
 import { SelectStock, Stock } from "@/db/schema/stock";
+import { Warehouses } from "@/db/schema/warehouses";
+import {
+  WarehouseWorkOrderLines,
+  WarehouseWorkOrders,
+} from "@/db/schema/warehouse-work-orders";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import {
   CommunicationSettings,
@@ -40,6 +45,7 @@ import {
   generateUuid,
   isWeightPriceUnit,
   moneyString,
+  toDateString,
   todayDateString,
 } from "@/lib/helpers";
 import {
@@ -58,6 +64,7 @@ import {
   TableQuery,
 } from "@/lib/table-query";
 import { exportRows } from "@/lib/server/excel";
+import { nextWorkOrderNumber } from "@/lib/server/work-order-numbers";
 import {
   refreshPurchaseOrderTotals,
   syncPurchaseLineReceipts,
@@ -348,6 +355,39 @@ export const getPurchaseOrders = async (
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch purchase orders"));
   }
+};
+
+// The Drizzle transaction handle passed into db.transaction(async (tx) => ...).
+type PurchaseTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/**
+ * The warehouse a location belongs to, found by climbing its parents.
+ *
+ * Locations nest — a bay inside an aisle inside a hall — and a work order is
+ * raised against the building, not the shelf. The climb is bounded because a
+ * cycle in the tree would otherwise hang the transaction.
+ */
+const rootWarehouseOfLocation = async (
+  tx: PurchaseTransaction,
+  locationUuid: string,
+): Promise<string | null> => {
+  const seen = new Set<string>();
+  const climb = async (uuid: string): Promise<string | null> => {
+    if (seen.has(uuid) || seen.size > 16) {
+      return null;
+    }
+    seen.add(uuid);
+    const [row] = await tx
+      .select({ parentUuid: Warehouses.parentUuid })
+      .from(Warehouses)
+      .where(eq(Warehouses.uuid, uuid))
+      .limit(1);
+    if (!row) {
+      return null;
+    }
+    return row.parentUuid ? climb(row.parentUuid) : uuid;
+  };
+  return climb(locationUuid);
 };
 
 // Outstanding quantity on a purchase-order line still waiting to be received:
@@ -992,6 +1032,194 @@ export const confirmPurchaseOrder = async (
         error instanceof Error
           ? error.message
           : "Failed to confirm purchase order",
+    };
+  }
+};
+
+/**
+ * `Workorder` — raise the unloading that books this order's goods in.
+ *
+ * 🔴 This is the missing rung of the ladder, and without it nothing in the
+ * system could ever create a stock lot.
+ *
+ * Watched on the reference, order `401141` / work order `306675`:
+ *
+ * ```
+ * Release the order        -> nothing
+ * Pre-notify               -> reception exists, Kg(a) 0        no stock
+ * Release the work order   -> stock labels print               no stock
+ * Report completion        -> FIVE STOCK LOTS EXIST
+ * (Approve)                -> happens by itself
+ * ```
+ *
+ * So reporting the unloading is what turns a purchase order into metal on a
+ * shelf — **not** the invoice. A warehouse work order could only be raised from
+ * a sales order until now, which is why `StockMovements` was empty: the one code
+ * path that writes a receipt movement had never been reachable.
+ *
+ * One line per outstanding purchase line, carrying what was ordered as the plan.
+ * What actually turns up is typed when the line is reported, bundle by bundle,
+ * and every bundle needs a `Charge` before it is allowed to become stock.
+ */
+export const createUnloadingWorkOrder = async (
+  purchaseOrderUuid: string,
+): Promise<PurchaseOrderActionResult> => {
+  try {
+    const [order] = await db
+      .select({
+        id: PurchaseOrders.id,
+        status: PurchaseOrders.status,
+        supplierUuid: PurchaseOrders.supplierUuid,
+        deliveryDate: PurchaseOrders.deliveryDate,
+      })
+      .from(PurchaseOrders)
+      .where(eq(PurchaseOrders.uuid, purchaseOrderUuid))
+      .limit(1);
+
+    if (!order) {
+      return { error: "Purchase order not found." };
+    }
+    if (order.status === "cancelled") {
+      return { error: "A cancelled purchase order receives nothing." };
+    }
+    // A provisional order is a draft. The reference greys the whole Receipts
+    // panel until `Make final`, so there is nothing for the warehouse to plan.
+    if (order.status === "provisional") {
+      return {
+        error:
+          "This order is still provisional, so no goods are expected of anybody yet. Make it final first.",
+      };
+    }
+
+    const workOrderUuid = generateUuid();
+
+    const outcome = await db.transaction(async (tx) => {
+      const lines = await tx
+        .select({
+          uuid: PurchaseOrderItems.uuid,
+          lineNumber: PurchaseOrderItems.lineNumber,
+          productUuid: PurchaseOrderItems.productUuid,
+          productCode: Products.productCode,
+          quality: PurchaseOrderItems.qualityCode,
+          lengthMm: PurchaseOrderItems.lengthMm,
+          widthMm: PurchaseOrderItems.widthMm,
+          thicknessMm: PurchaseOrderItems.thicknessMm,
+          quantity: PurchaseOrderItems.quantity,
+          qtyReceived: PurchaseOrderItems.qtyReceived,
+          kgPurchased: PurchaseOrderItems.kgPurchased,
+          status: PurchaseOrderItems.status,
+        })
+        .from(PurchaseOrderItems)
+        .innerJoin(Products, eq(PurchaseOrderItems.productUuid, Products.uuid))
+        .where(eq(PurchaseOrderItems.purchaseOrderUuid, purchaseOrderUuid))
+        .orderBy(asc(PurchaseOrderItems.lineNumber));
+
+      // Only what is still owed. A line already received in full has nothing
+      // left for a lorry to bring, and putting it on the slip would invite the
+      // floor to book the same metal in twice.
+      const outstanding = lines.filter(
+        (line) =>
+          line.status !== "cancelled" &&
+          Number(line.quantity) - Number(line.qtyReceived ?? 0) > 0,
+      );
+
+      if (outstanding.length === 0) {
+        return {
+          error:
+            "Every line on this order has already been received, so there is nothing to unload.",
+        };
+      }
+
+      // 🔑 Goods land in `put_away` — the reference's `Ontvangst`, a real named
+      // place in the location list rather than a state. It is where a lot sits
+      // until somebody restocks it into the racking.
+      const [goodsIn] = await tx
+        .select({ uuid: Warehouses.uuid })
+        .from(Warehouses)
+        .where(eq(Warehouses.locationType, "put_away"))
+        .limit(1);
+
+      if (!goodsIn) {
+        return {
+          error:
+            "No goods-in location exists, so there is nowhere to unload to. Give a location the `Put away` type on the warehouses screen first.",
+        };
+      }
+
+      const warehouseUuid =
+        (await rootWarehouseOfLocation(tx, goodsIn.uuid)) ?? goodsIn.uuid;
+
+      const number = await nextWorkOrderNumber(tx);
+
+      await tx.insert(WarehouseWorkOrders).values({
+        uuid: workOrderUuid,
+        number,
+        warehouseUuid,
+        type: "unloading",
+        plannedDate: order.deliveryDate
+          ? toDateString(order.deliveryDate)
+          : todayDateString(),
+        status: "new",
+      });
+
+      for (const [index, line] of outstanding.entries()) {
+        const quantity = Number(line.quantity);
+        const stillDue = quantity - Number(line.qtyReceived ?? 0);
+        // The weight follows the quantity still owed, so a part-received line
+        // plans the remainder rather than the whole order again.
+        const kgPurchased = Number(line.kgPurchased ?? 0);
+        const kgDue =
+          quantity > 0 ? (kgPurchased * stillDue) / quantity : kgPurchased;
+
+        await tx.insert(WarehouseWorkOrderLines).values({
+          uuid: generateUuid(),
+          workOrderUuid,
+          lineNumber: line.lineNumber ?? index + 1,
+          purchaseOrderItemUuid: line.uuid,
+          orderNumber: String(order.id),
+          companyUuid: order.supplierUuid,
+          productUuid: line.productUuid,
+          productCode: line.productCode,
+          // An unloading comes from outside the building, so it has no `from`.
+          fromLocationUuid: null,
+          toLocationUuid: goodsIn.uuid,
+          length: line.lengthMm,
+          width: line.widthMm,
+          thickness: line.thicknessMm ? Number(line.thicknessMm) : null,
+          qtyPlanned: stillDue.toFixed(3),
+          kgPlanned: kgDue.toFixed(2),
+          quality: line.quality,
+          status: "new",
+        });
+      }
+
+      // The goods are now expected of the warehouse rather than only of the
+      // supplier, which is the state the reference's 53 `Workorders created`
+      // receptions are in.
+      await tx
+        .update(PurchaseLineReceivals)
+        .set({ receiptStatus: "workorders_created" })
+        .where(
+          and(
+            eq(PurchaseLineReceivals.purchaseOrderUuid, purchaseOrderUuid),
+            inArray(PurchaseLineReceivals.receiptStatus, ["new", "released"]),
+          ),
+        );
+
+      return { number };
+    });
+
+    if ("error" in outcome) {
+      return { error: outcome.error };
+    }
+
+    revalidatePath(`/purchase-orders/${purchaseOrderUuid}`);
+    revalidatePath("/warehouse-work-orders");
+    revalidatePath("/purchase-receivals");
+    return { success: true, purchaseOrderUuid };
+  } catch (error) {
+    return {
+      error: describeError(error, "Failed to raise the unloading work order"),
     };
   }
 };

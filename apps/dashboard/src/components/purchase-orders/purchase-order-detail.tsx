@@ -2,8 +2,10 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
+import { Warehouse } from "lucide-react";
 import {
   cancelPurchaseOrder,
+  createUnloadingWorkOrder,
   PurchaseOrderDetail,
 } from "@/app/(dashboard)/purchase-orders/actions";
 import { Button } from "@/components/shadcn/button";
@@ -50,9 +52,24 @@ type Props = {
 export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
   const [isPending, startTransition] = useTransition();
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [raised, setRaised] = useState(false);
   const [error, setError] = useState<string | undefined>();
 
   const canCancel = purchaseOrder.status !== "cancelled";
+
+  // `Workorder` on the reference's own toolbar. Reporting the unloading it
+  // raises is what creates the stock lot — not the invoice.
+  const handleRaiseUnloading = () => {
+    setError(undefined);
+    startTransition(async () => {
+      const result = await createUnloadingWorkOrder(purchaseOrder.uuid);
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      setRaised(true);
+    });
+  };
 
   const handleCancel = () => {
     startTransition(async () => {
@@ -67,6 +84,53 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
   return (
     <div className="space-y-6">
       {error && <FormError>{error}</FormError>}
+
+      {/* 🔴 The toolbar sits above the document, as it does on every reference
+          screen: `Print… · Send… · Return · Confirm · Pre-notifiy · Show
+          company · Copy · **Workorder** · Options…`. Ours carries the ones that
+          do something. */}
+      {canCancel && (
+        <div className="flex flex-wrap gap-2 border-b pb-4">
+          <Button
+            type="button"
+            onClick={handleRaiseUnloading}
+            disabled={isPending}
+          >
+            <Warehouse className="me-1.5 size-4" />
+            {isPending ? "Raising…" : "Workorder"}
+          </Button>
+          <Button
+            variant="outline"
+            render={
+              <Link href={`/purchase-orders/${purchaseOrder.uuid}/edit`} />
+            }
+          >
+            Edit details
+          </Button>
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={() => setIsConfirmOpen(true)}
+            disabled={isPending}
+          >
+            Cancel purchase order
+          </Button>
+        </div>
+      )}
+
+      {raised && (
+        <p className="rounded-md border border-primary/30 bg-primary/5 p-3 text-sm">
+          Unloading work order raised. Release it, then report what actually
+          turns up — bundle by bundle, each with its heat number — and that is
+          what puts the metal on a shelf.{" "}
+          <Link
+            href="/warehouse-work-orders"
+            className="text-primary hover:underline"
+          >
+            Open warehouse work orders
+          </Link>
+        </p>
+      )}
 
       <div className="grid grid-cols-2 gap-4 rounded-lg border p-4 sm:grid-cols-3">
         <div>
@@ -547,27 +611,6 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
           )}
         </CollapsibleSection>
       </div>
-
-      {canCancel && (
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            render={
-              <Link href={`/purchase-orders/${purchaseOrder.uuid}/edit`} />
-            }
-          >
-            Edit Details
-          </Button>
-          <Button
-            type="button"
-            variant="destructive"
-            onClick={() => setIsConfirmOpen(true)}
-            disabled={isPending}
-          >
-            Cancel Purchase Order
-          </Button>
-        </div>
-      )}
 
       <ConfirmDialog
         open={isConfirmOpen}
