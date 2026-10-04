@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { PurchaseInvoiceToReceiveRow } from "@/app/(dashboard)/purchase-invoices-to-be-received/actions";
 import {
   Table,
@@ -33,8 +35,9 @@ export const PurchaseInvoicesToBeReceivedTable = ({ rows }: Props) => {
         <Table id="purchase-invoices-to-be-received-table">
           <TableHeader>
             <TableRow>
-              <TableHead>Company</TableHead>
               <TableHead>Purchase order</TableHead>
+              <TableHead>Company</TableHead>
+              <TableHead>Supplier reference</TableHead>
               <TableHead className="text-right">Company code</TableHead>
               <TableHead>City</TableHead>
               <TableHead>Order date</TableHead>
@@ -48,7 +51,7 @@ export const PurchaseInvoicesToBeReceivedTable = ({ rows }: Props) => {
             {rows.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={9}
+                  colSpan={10}
                   className="h-24 text-center text-muted-foreground"
                 >
                   No purchase invoices awaited.
@@ -58,9 +61,18 @@ export const PurchaseInvoicesToBeReceivedTable = ({ rows }: Props) => {
               <>
                 {rows.map((row) => (
                   <TableRow key={row.purchaseOrderUuid}>
-                    <TableCell className="font-medium">
-                      {row.supplierName ?? "—"}
+                    {/* The order's own number, which this screen never showed —
+                        its `Purchase order` column held the supplier's
+                        reference, empty on almost every order. */}
+                    <TableCell className="font-medium whitespace-nowrap">
+                      <Link
+                        href={`/purchase-orders/${row.purchaseOrderUuid}`}
+                        className="text-primary hover:underline"
+                      >
+                        {row.purchaseOrderId}
+                      </Link>
                     </TableCell>
+                    <TableCell>{row.supplierName ?? "—"}</TableCell>
                     <TableCell>{row.reference ?? "—"}</TableCell>
                     <TableCell className="text-right">
                       {row.companyCode ?? "—"}
@@ -86,7 +98,7 @@ export const PurchaseInvoicesToBeReceivedTable = ({ rows }: Props) => {
                   </TableRow>
                 ))}
                 <TableRow className="font-semibold [&>td]:border-t-2 [&>td]:border-border">
-                  <TableCell colSpan={8}>Total</TableCell>
+                  <TableCell colSpan={9}>Total</TableCell>
                   <TableCell className="text-right whitespace-nowrap">
                     {formatMoney(total)}
                   </TableCell>
