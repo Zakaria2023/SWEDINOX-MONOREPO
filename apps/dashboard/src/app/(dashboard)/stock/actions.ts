@@ -111,7 +111,14 @@ const stockRows =
       })
       .from(Stock)
       .leftJoin(Products, eq(Stock.productUuid, Products.uuid))
-      .leftJoin(Companies, eq(Products.companyUuid, Companies.uuid))
+      // 🔴 The supplier this **lot** came from, not a company linked to the
+      // article. Origin travels with the metal: the reference's Stock mutations
+      // names the supplier and the purchase order on a lot even as it leaves
+      // the building. Joining through `Products.companyUuid` showed a dash on
+      // every row, because that link is empty on almost every article — and the
+      // Supplier filter beside it already filtered on `Stock.supplierUuid`, so
+      // the column and the filter were answering different questions.
+      .leftJoin(Companies, eq(Stock.supplierUuid, Companies.uuid))
       .leftJoin(
         PurchaseOrders,
         eq(Stock.purchaseOrderUuid, PurchaseOrders.uuid),
@@ -187,7 +194,7 @@ export const getStockDetail = async (
     })
     .from(Stock)
     .leftJoin(Products, eq(Stock.productUuid, Products.uuid))
-    .leftJoin(Companies, eq(Products.companyUuid, Companies.uuid))
+    .leftJoin(Companies, eq(Stock.supplierUuid, Companies.uuid))
     .leftJoin(PurchaseOrders, eq(Stock.purchaseOrderUuid, PurchaseOrders.uuid))
     .leftJoin(
       PurchaseOrderItems,
