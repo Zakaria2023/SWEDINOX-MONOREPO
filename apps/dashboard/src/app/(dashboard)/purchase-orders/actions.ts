@@ -177,8 +177,15 @@ export type PurchaseReceiptDocument = {
   productCode: SelectProducts["productCode"] | null;
   productName: SelectProducts["name"] | null;
   qtyPlanned: SelectPurchaseLineReceivals["qtyPlanned"];
+  qtyActual: SelectPurchaseLineReceivals["qtyActual"];
   receivedQty: SelectPurchaseLineReceivals["receivedQty"];
+  // 🔑 The reference's Receipts panel pairs every planned figure with its
+  // actual one — `Kg(p)` beside `Kg(a)`, `Qty(p)` beside `Qty(a)`. Showing only
+  // the actuals is why this panel read as a row of noughts: nothing has arrived
+  // yet, which is the correct answer to a question the panel never asked.
+  kgPlanned: SelectPurchaseLineReceivals["kgPlanned"];
   kgActual: SelectPurchaseLineReceivals["kgActual"];
+  unit: SelectPurchaseLineReceivals["unit"];
   lineAmount: SelectPurchaseLineReceivals["lineAmount"];
   purchaser: SelectPurchaseLineReceivals["purchaser"];
 };
@@ -617,8 +624,11 @@ export const getPurchaseOrderDetail = async (
         productCode: Products.productCode,
         productName: Products.name,
         qtyPlanned: PurchaseLineReceivals.qtyPlanned,
+        qtyActual: PurchaseLineReceivals.qtyActual,
         receivedQty: PurchaseLineReceivals.receivedQty,
+        kgPlanned: PurchaseLineReceivals.kgPlanned,
         kgActual: PurchaseLineReceivals.kgActual,
+        unit: PurchaseLineReceivals.unit,
         lineAmount: PurchaseLineReceivals.lineAmount,
         purchaser: PurchaseLineReceivals.purchaser,
       })

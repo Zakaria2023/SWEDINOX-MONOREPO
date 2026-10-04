@@ -113,7 +113,7 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
       </div>
 
       <div className="space-y-3">
-        <h2 className="border-b pb-2 text-base font-semibold">Products</h2>
+        <h2 className="border-b pb-2 text-base font-semibold">Lines</h2>
         <div>
           <Table>
             <TableHeader>
@@ -253,12 +253,12 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
         {/* What has actually arrived. Booked against the order since receivals
             existed and never shown on it. */}
         <CollapsibleSection
-          title="Product Receipt Documents"
-          summary={pluralize(purchaseOrder.receipts.length, "receipt")}
+          title="Receipts"
+          summary={pluralize(purchaseOrder.receipts.length, "reception")}
         >
           {purchaseOrder.receipts.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              Nothing has been booked in against this order yet.
+              No receptions on this order.
             </p>
           ) : (
             <div>
@@ -270,10 +270,12 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
                     <TableHead>Product</TableHead>
                     <TableHead>Line status</TableHead>
                     <TableHead>Receipt status</TableHead>
-                    <TableHead className="text-right">Planned</TableHead>
-                    <TableHead className="text-right">Received</TableHead>
-                    <TableHead className="text-right">Kg</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead className="text-right">Qty (p)</TableHead>
+                    <TableHead className="text-right">Qty (a)</TableHead>
+                    <TableHead>U</TableHead>
+                    <TableHead className="text-right">Kg (p)</TableHead>
+                    <TableHead className="text-right">Kg (a)</TableHead>
+                    <TableHead className="text-right">Confirmed</TableHead>
                     <TableHead>Purchaser</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -306,13 +308,25 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
                         {formatNumber(Number(receipt.qtyPlanned ?? 0))}
                       </TableCell>
                       <TableCell className="text-right tabular-nums">
-                        {formatNumber(Number(receipt.receivedQty ?? 0))}
+                        {formatNumber(Number(receipt.qtyActual ?? 0))}
+                      </TableCell>
+                      <TableCell>
+                        {orDash(
+                          receipt.unit ? receipt.unit.toUpperCase() : null,
+                        )}
+                      </TableCell>
+                      {/* What this reception expects, carried off the line it
+                          belongs to. Nothing has arrived until a lorry does, so
+                          `Kg(a)` beside it is 0 by design rather than by
+                          omission. */}
+                      <TableCell className="text-right tabular-nums">
+                        {formatNumber(Number(receipt.kgPlanned ?? 0))}
                       </TableCell>
                       <TableCell className="text-right tabular-nums">
                         {formatNumber(Number(receipt.kgActual ?? 0))}
                       </TableCell>
                       <TableCell className="text-right tabular-nums">
-                        {formatMoney(Number(receipt.lineAmount ?? 0))}
+                        {formatNumber(Number(receipt.receivedQty ?? 0))}
                       </TableCell>
                       <TableCell>{orDash(receipt.purchaser)}</TableCell>
                     </TableRow>
