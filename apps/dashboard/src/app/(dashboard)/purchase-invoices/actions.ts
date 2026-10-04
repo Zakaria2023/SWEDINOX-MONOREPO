@@ -93,7 +93,6 @@ import {
   desc,
   eq,
   getTableColumns,
-  gte,
   inArray,
   sql,
 } from "drizzle-orm";
@@ -691,30 +690,21 @@ export const createPurchaseInvoice = async (
           throw new Error("User not authenticated");
         }
 
-        // Book the receipt against the PO line, guarding with the outstanding
-        // quantity so a concurrent invoice can't over-receive the same line —
-        // if another transaction already received it, affectedRows is 0 and we
-        // roll back instead of double-booking stock.
-        const [poUpdateResult] = await tx
-          .update(PurchaseOrderItems)
-          .set({
-            qtyReceived: sql`${PurchaseOrderItems.qtyReceived} + ${item.quantity}`,
-          })
-          .where(
-            and(
-              eq(PurchaseOrderItems.uuid, item.purchaseOrderItemUuid),
-              gte(
-                sql`(${PurchaseOrderItems.quantity} - ${PurchaseOrderItems.qtyReceived})`,
-                item.quantity,
-              ),
-            ),
-          );
-
-        if (poUpdateResult.affectedRows === 0) {
-          throw new Error(
-            "The order line changed while processing this invoice — please refresh and try again.",
-          );
-        }
+        // 🔴 An invoice does not receive anything, so it must not move
+        // `qtyReceived`.
+        //
+        // This used to add the invoiced quantity to it, guarded by "is there
+        // enough still outstanding to receive" — the last of three places that
+        // treated billing as receiving. The unloading work order had already
+        // taken the line to 10 of 10, so the guard asked `(10 − 10) >= 10`,
+        // found nothing to update and threw *"the order line changed while
+        // processing this invoice"* on every well-formed invoice. Had it
+        // succeeded it would have been worse: a 10-piece line would read 20
+        // received.
+        //
+        // How much of the line has been billed is read back from the invoice
+        // rows themselves, which is what `refreshPurchaseLineStatus` does below
+        // when it moves the line to `invoiced`.
 
         // The lot is valued at what was agreed to pay for it. This is the
         // moment a cost enters the business: every sales order later drawn from
