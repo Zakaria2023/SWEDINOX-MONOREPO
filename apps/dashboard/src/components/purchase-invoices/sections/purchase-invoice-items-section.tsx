@@ -268,24 +268,41 @@ export const PurchaseInvoiceItemsSection = ({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {itemFields.map((field, index) => (
-              <PurchaseInvoiceLine
-                key={field.id}
-                index={index}
-                receivableItems={receivableItems}
-                onRemove={() => removeItem(index)}
-                isPending={isPending}
-              />
-            ))}
-            <TableRow>
-              <TableCell colSpan={8} className="text-right font-medium">
-                Materials
-              </TableCell>
-              <TableCell className="text-right font-medium tabular-nums">
-                {formatMoney(materials)}
-              </TableCell>
-              <TableCell colSpan={4} />
-            </TableRow>
+            {itemFields.length === 0 ? (
+              // An empty grid with a EUR 0,00 total under it reads as a broken
+              // calculation rather than an empty document. Say there is nothing
+              // on it yet.
+              <TableRow>
+                <TableCell
+                  colSpan={13}
+                  className="h-24 text-center text-muted-foreground"
+                >
+                  No lines on this invoice yet. Add one to bill a purchase line
+                  whose goods have arrived.
+                </TableCell>
+              </TableRow>
+            ) : (
+              <>
+                {itemFields.map((field, index) => (
+                  <PurchaseInvoiceLine
+                    key={field.id}
+                    index={index}
+                    receivableItems={receivableItems}
+                    onRemove={() => removeItem(index)}
+                    isPending={isPending}
+                  />
+                ))}
+                <TableRow>
+                  <TableCell colSpan={8} className="text-right font-medium">
+                    Materials
+                  </TableCell>
+                  <TableCell className="text-right font-medium tabular-nums">
+                    {formatMoney(materials)}
+                  </TableCell>
+                  <TableCell colSpan={4} />
+                </TableRow>
+              </>
+            )}
           </TableBody>
         </Table>
       </div>
