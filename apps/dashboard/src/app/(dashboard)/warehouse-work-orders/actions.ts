@@ -1364,6 +1364,20 @@ const applyReceipt = async (
      * mill — so one of these two says which cause it was.
      */
     returnOrderItemUuid: string | null;
+    /**
+     * 🔴 What the scale said, when the floor weighed the bundle.
+     *
+     * The purchase order's own standing terms: *"Uitsluitend het gewogen
+     * gewicht wordt ons als basis voor de facturering geaccepteerd"* — only the
+     * weighed weight is accepted as the basis for invoicing. Steel is never its
+     * nominal weight: cold-rolled plate runs 2-4 % under, coil can run over, and
+     * the reference's own orders drift both ways (`400656/10` billed 1 438,0
+     * against a theoretical 1 475,8; `400474/30` billed 5 825,8 against 5 809,0).
+     *
+     * Null when nobody weighed it, and then the plan's figure stands — which is
+     * what an order shows from the moment it is placed until a lorry arrives.
+     */
+    weighedKg: number | null;
     userId: string;
     companyUuid: string | null;
     documentNo: string;
@@ -1457,7 +1471,9 @@ const applyReceipt = async (
               { lengthMm, widthMm, thicknessMm },
             )
           : null) ?? 0;
-  const weightKg = pieceKg * quantity;
+  // The scale beats the formula. Without one the plan's figure stands.
+  const weighed = Number(params.weighedKg ?? 0);
+  const weightKg = weighed > 0 ? weighed : pieceKg * quantity;
 
   const pricePerUnit = Number(purchaseLine.netPrice ?? 0);
   // A measure nobody can work out falls back to the piece, which is what the
@@ -1958,6 +1974,11 @@ export const reportWarehouseWorkOrderLineCompletion = async (
               charge: pick.charge ?? null,
               internalCharge: pick.internalCharge ?? null,
               internalBatch: pick.internalBatch ?? null,
+              // What this bundle actually weighed on the way in.
+              weighedKg:
+                pick.kgActual === null || pick.kgActual === undefined
+                  ? null
+                  : Number(pick.kgActual),
               userId,
               companyUuid: line.companyUuid,
               documentNo,
