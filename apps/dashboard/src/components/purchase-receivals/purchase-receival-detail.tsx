@@ -9,6 +9,7 @@ import {
   formatLengthMm,
   formatMoney,
   formatNumber,
+  formatPriceQuantity,
 } from "@/lib/helpers";
 import {
   ORDER_LINE_STATUS_LABELS,
@@ -189,11 +190,11 @@ export const PurchaseReceivalDetailView = ({ receival }: Props) => (
         />
         <DetailField
           label="Price quantity"
-          value={formatNumber(receival.priceQuantity)}
+          value={formatPriceQuantity(receival.priceQuantity)}
         />
         <DetailField
           label="Invoiced (Prod.)"
-          value={formatNumber(receival.priceQuantity)}
+          value={formatPriceQuantity(receival.priceQuantity)}
         />
         <DetailField
           label="Line amount"

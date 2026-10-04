@@ -31,6 +31,7 @@ import {
   formatLengthMm,
   formatMoney,
   formatNumber,
+  formatPriceQuantity,
 } from "@/lib/helpers";
 import {
   ORDER_LINE_STATUS_LABELS,
@@ -163,7 +164,7 @@ export const PurchaseReceivalsTable = ({ page, filters }: Props) => {
         // reference's own grid masks it as a currency, which it is not.
         return (
           <TableCell key={key} className="text-right">
-            {formatNumber(row.priceQuantity)}
+            {formatPriceQuantity(row.priceQuantity)}
           </TableCell>
         );
       case "options":

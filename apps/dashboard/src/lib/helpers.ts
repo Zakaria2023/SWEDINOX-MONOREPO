@@ -360,6 +360,21 @@ export const formatNumber = (value: number): string =>
   });
 
 /**
+ * A weight expressed in the unit its price is struck in — the reference's
+ * `Price quantity (in gross price U.)`.
+ *
+ * 🔴 Two decimals is not enough here. The figure is usually **tonnes**, so
+ * 314 kg is 0,314 and `formatNumber` rounds it to 0,31 — which is a different
+ * weight, 4 kg lighter, and it is the number the line's amount is computed
+ * from. The reference prints 1 224,6 kg as `1,2246`, to four.
+ */
+export const formatPriceQuantity = (value: number): string =>
+  value.toLocaleString("en-US", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 4,
+  });
+
+/**
  * Formats a percentage for the overviews, e.g. `12.5%`.
  */
 export const formatPercent = (value: number): string =>

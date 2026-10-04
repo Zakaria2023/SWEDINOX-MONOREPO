@@ -40,6 +40,7 @@ import {
   generateUuid,
   isWeightPriceUnit,
   moneyString,
+  todayDateString,
 } from "@/lib/helpers";
 import {
   dateRangeFilter,
@@ -473,7 +474,14 @@ export const createPurchaseOrder = async (
     }
 
     await db.transaction(async (tx) => {
-      await tx.insert(PurchaseOrders).values({ ...fields, uuid });
+      // 🔴 The day the order was placed. Converting a quote has always stamped
+      // this; creating an order directly never did, so every such order carried
+      // a blank `Order date` — and the receivals overview, which repeats it off
+      // the order, showed a dash where the reference shows a `Creation date`
+      // on every row. A date filter cannot find a row that has no date.
+      await tx
+        .insert(PurchaseOrders)
+        .values({ orderDate: todayDateString(), ...fields, uuid });
 
       // A purchase order only records the intent to buy — no stock exists yet.
       // Stock (and the "in" movement) is created later, when the matching
