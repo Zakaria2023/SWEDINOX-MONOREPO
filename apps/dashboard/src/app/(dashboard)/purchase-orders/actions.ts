@@ -6,6 +6,8 @@ import {
   PurchaseOrders,
   SelectPurchaseOrders,
 } from "@/db/schema/purchase-orders";
+import { PurchaseInvoiceItems } from "@/db/schema/purchase-invoice-items";
+import { PurchaseInvoices } from "@/db/schema/purchase-invoices";
 import {
   PurchaseOrderItems,
   SelectPurchaseOrderItems,
@@ -407,12 +409,32 @@ const rootWarehouseOfLocation = async (
   return climb(locationUuid);
 };
 
-// Outstanding quantity on a purchase-order line still waiting to be received:
-// what was ordered minus what earlier purchase invoices already received.
-const receivableQuantity = sql<string>`(${PurchaseOrderItems.quantity} - COALESCE(${PurchaseOrderItems.qtyReceived}, 0))`;
+// What a purchase line has already been billed for, across every invoice that
+// has not been cancelled.
+const invoicedQuantity = sql<string>`(
+  SELECT COALESCE(SUM(${PurchaseInvoiceItems.quantity}), 0)
+    FROM ${PurchaseInvoiceItems}
+    JOIN ${PurchaseInvoices}
+      ON ${PurchaseInvoices.uuid} = ${PurchaseInvoiceItems.purchaseInvoiceUuid}
+   WHERE ${PurchaseInvoiceItems.purchaseOrderItemUuid} = ${PurchaseOrderItems.uuid}
+     AND ${PurchaseInvoices.cancelled} = FALSE
+)`;
 
-// Purchase-order lines from a supplier that still have quantity left to
-// receive — the pool a purchase invoice draws from to book goods into stock.
+// What is still to be billed: goods that arrived, less what has been invoiced.
+const invoiceableQuantity = sql<string>`(COALESCE(${PurchaseOrderItems.qtyReceived}, 0) - ${invoicedQuantity})`;
+
+/**
+ * The purchase lines a supplier's invoice can bill.
+ *
+ * 🔴 This used to offer lines **still to be received** — `quantity − qtyReceived
+ * > 0` — which is exactly backwards. An invoice bills goods that have *arrived*,
+ * so a line vanished from the picker at the very moment it became invoiceable,
+ * and the only lines on offer were ones where nothing had turned up yet.
+ *
+ * A line qualifies when something has been received against it and not all of it
+ * has been billed. `remainingQuantity` is what is left to bill, which is what a
+ * clerk keys the quantity against.
+ */
 export const getReceivablePurchaseOrderItemsForCompany = async (
   supplierUuid: string,
 ): Promise<ReceivablePurchaseOrderItem[]> =>
@@ -425,7 +447,7 @@ export const getReceivablePurchaseOrderItemsForCompany = async (
       purchaseOrderUuid: PurchaseOrderItems.purchaseOrderUuid,
       purchaseOrderId: PurchaseOrders.id,
       orderedQuantity: PurchaseOrderItems.quantity,
-      remainingQuantity: receivableQuantity,
+      remainingQuantity: invoiceableQuantity,
       lineNumber: PurchaseOrderItems.lineNumber,
       unit: PurchaseOrderItems.unit,
       lengthMm: PurchaseOrderItems.lengthMm,
@@ -449,7 +471,7 @@ export const getReceivablePurchaseOrderItemsForCompany = async (
         eq(PurchaseOrders.supplierUuid, supplierUuid),
         ne(PurchaseOrders.status, "cancelled"),
         ne(PurchaseOrderItems.status, "cancelled"),
-        gt(receivableQuantity, "0"),
+        gt(invoiceableQuantity, "0"),
       ),
     )
     .orderBy(desc(PurchaseOrderItems.createdAt));

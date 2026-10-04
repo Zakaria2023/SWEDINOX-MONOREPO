@@ -468,14 +468,60 @@ export const createPurchaseInvoice = async (
             error: "One or more selected order lines could not be found.",
           };
         }
-        const remaining =
-          Number(poItem.quantity) - Number(poItem.qtyReceived ?? 0);
         if (Number(item.quantity) <= 0) {
-          return { error: "Received quantity must be greater than zero." };
+          return { error: "Invoiced quantity must be greater than zero." };
         }
-        if (Number(item.quantity) > remaining) {
+      }
+
+      // 🔴 An invoice bills what **arrived**, not what is still to come.
+      //
+      // This used to measure against `quantity − qtyReceived`, the quantity
+      // still owed by the supplier, and so refused a fully received line with
+      // "cannot receive more than the outstanding ordered quantity (0.000)" —
+      // which is every line anybody would ever want to invoice. A line becomes
+      // billable at the moment it stops being receivable.
+      const [alreadyInvoiced] = await db
+        .select({
+          purchaseOrderItemUuid: PurchaseInvoiceItems.purchaseOrderItemUuid,
+          quantity: sql<string>`COALESCE(SUM(${PurchaseInvoiceItems.quantity}), 0)`,
+        })
+        .from(PurchaseInvoiceItems)
+        .innerJoin(
+          PurchaseInvoices,
+          eq(PurchaseInvoiceItems.purchaseInvoiceUuid, PurchaseInvoices.uuid),
+        )
+        .where(
+          and(
+            inArray(PurchaseInvoiceItems.purchaseOrderItemUuid, poItemUuids),
+            eq(PurchaseInvoices.cancelled, false),
+          ),
+        )
+        .groupBy(PurchaseInvoiceItems.purchaseOrderItemUuid);
+
+      const invoicedByLine = new Map<string, number>();
+      if (alreadyInvoiced?.purchaseOrderItemUuid) {
+        invoicedByLine.set(
+          alreadyInvoiced.purchaseOrderItemUuid,
+          Number(alreadyInvoiced.quantity),
+        );
+      }
+
+      for (const item of items) {
+        const poItem = poItemByUuid.get(item.purchaseOrderItemUuid);
+        if (!poItem) {
+          continue;
+        }
+        const billable =
+          Number(poItem.qtyReceived ?? 0) -
+          (invoicedByLine.get(poItem.uuid) ?? 0);
+        if (billable <= 0) {
           return {
-            error: `Cannot receive more than the outstanding ordered quantity (${remaining.toFixed(3)}).`,
+            error: `Line ${poItem.lineNumber ?? ""} has nothing left to invoice — nothing has been received against it, or it is already fully billed.`,
+          };
+        }
+        if (Number(item.quantity) > billable) {
+          return {
+            error: `Cannot invoice more than has arrived and is still unbilled (${billable.toFixed(3)}).`,
           };
         }
       }
