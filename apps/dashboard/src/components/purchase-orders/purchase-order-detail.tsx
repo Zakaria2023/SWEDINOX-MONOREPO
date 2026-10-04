@@ -38,6 +38,7 @@ import {
   ORDER_LINE_STATUS_LABELS,
   PURCHASE_ORDER_STATUS_LABELS,
   PURCHASE_RETURN_ORDER_REASON_LABELS,
+  RECEIPT_STATUS_LABELS,
   RETURN_ORDER_STATUS_LABELS,
   STOCK_STATUS_LABELS,
 } from "@/lib/labels";
@@ -303,7 +304,19 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
                           }
                         />
                       </TableCell>
-                      <TableCell>{orDash(receipt.receiptStatus)}</TableCell>
+                      {/* A badge with its proper label, as every other status
+                          on this screen carries — the raw enum value was
+                          printing through as `received`. */}
+                      <TableCell>
+                        <StatusBadge
+                          value={receipt.receiptStatus}
+                          label={
+                            receipt.receiptStatus
+                              ? RECEIPT_STATUS_LABELS[receipt.receiptStatus]
+                              : null
+                          }
+                        />
+                      </TableCell>
                       <TableCell className="text-right tabular-nums">
                         {formatNumber(Number(receipt.qtyPlanned ?? 0))}
                       </TableCell>

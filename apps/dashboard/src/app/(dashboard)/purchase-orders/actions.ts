@@ -628,7 +628,17 @@ export const getPurchaseOrderDetail = async (
         lineNumber: PurchaseLineReceivals.lineNumber,
         receiptDate: PurchaseLineReceivals.receiptDate,
         receiptStatus: PurchaseLineReceivals.receiptStatus,
-        lineStatus: PurchaseLineReceivals.lineStatus,
+        // 🔴 The **line's** status, not the reception's stored copy of it.
+        //
+        // `PurchaseLineReceivals.lineStatus` is written once, when the reception
+        // is created, and nothing updates it afterwards. So receiving goods
+        // moved the line to `Received` in the grid above while this panel went
+        // on reading `In progress` — the same line, two statuses, on one page.
+        // Coalesced rather than joined blindly, because imported receptions
+        // exist whose line has since gone.
+        lineStatus: sql<
+          SelectPurchaseOrderItems["status"]
+        >`COALESCE(${PurchaseOrderItems.status}, ${PurchaseLineReceivals.lineStatus})`,
         productCode: Products.productCode,
         productName: Products.name,
         qtyPlanned: PurchaseLineReceivals.qtyPlanned,
@@ -642,6 +652,10 @@ export const getPurchaseOrderDetail = async (
       })
       .from(PurchaseLineReceivals)
       .leftJoin(Products, eq(PurchaseLineReceivals.productUuid, Products.uuid))
+      .leftJoin(
+        PurchaseOrderItems,
+        eq(PurchaseLineReceivals.purchaseOrderItemUuid, PurchaseOrderItems.uuid),
+      )
       .where(eq(PurchaseLineReceivals.purchaseOrderUuid, uuid))
       .orderBy(desc(PurchaseLineReceivals.receiptDate)),
 
