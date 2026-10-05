@@ -378,3 +378,32 @@ lines`** which **hides closed orders** — it is on by default and is why a
 search for an old order returns nothing. The `Find` box beside the grouping bar
 searches **rows already loaded**; it is not a server-side filter and does
 nothing until `Toon Gegevens` has run.
+
+### 🔑 The `Status` enum — grouped 5-10-2026
+
+Dragging `Status` into the grouping bar produced **five** groups:
+
+```
+Checked
+In progress
+Partially received
+Provisional
+Released
+```
+
+Three of these are new to us: **`Checked`**, **`In progress`** and
+**`Provisional`**. We only had `Released`, `Partially received`, `Received` and
+`Invoiced`, the last two from the order-detail capture.
+
+⚠️ **`Received` and `Invoiced` did not appear as groups**, although the
+order-detail capture showed both on real lines. Either the load still had
+`Only current purchasing lines` ticked — which hides closed lines — or a line
+leaves this screen once it is fully received. Worth settling, because it decides
+whether `Purchase lines` is the whole book or only the open part of it.
+
+⚠️ **The group headers carry no counts** on this grid, unlike the value-list
+groupings J6 is after. So this answers *which* values exist, not how many of
+each.
+
+Do not treat the list as complete until the `Only current purchasing lines`
+question above is settled.
