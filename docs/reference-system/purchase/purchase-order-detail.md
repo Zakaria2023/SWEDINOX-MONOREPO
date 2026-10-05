@@ -386,3 +386,114 @@ the sales side, where work orders move stock and invoices no longer do.
    is the link to the warehouse/production work orders the receipt raises.
    → *In the old system:* expand both on this order and screenshot them.
 3. **`Product Receipt Documents`** — the last panel, name only, never opened.
+
+
+---
+
+## ✅ A split reception, live — 5-10-2026
+
+Found by grouping `Purchase lines` on `Status` and opening **`Partially
+received`**, which held exactly one line:
+
+**`404150/10`** · `CK3040008` Coil Cold-rolled 304 · **Norder Band AG** ·
+3 ST · `Kg(pur)` **151** · receipt date 8-9-2026 · width **19 mm**,
+thickness **0,8 mm** (a narrow slit strip).
+
+Its `Receipts` panel reads **`2 receipts`**:
+
+| Status | Delivery date | | Bill of lading | Length | W | D | **Kg(p)** | **Qty(p)** | U(p) | **Kg(a)** | **Qty(a)** | U(a) |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| **`Received`** | 8-9-2026 | ✔ `Pre-notifi…` | `747313 2` | 999999 | 19 | 0,8 | **158** | **1** | ST | **158** | **1** | Pieces |
+| **`Released`** | 8-9-2026 | ✘ `Do not c…` | — | 999999 | 19 | 0,8 | **101** | **2** | ST | 0 | 0 | — |
+
+This is the thing we had only ever inferred from the export: **one purchase line
+carried as two receptions, one already in, one still coming.** Only `Kg(p)`,
+`Kg(a)`, `Qty(p)`, `Qty(a)`, `Status` and the bill of lading differ between
+them; product, dimensions and delivery date are identical. The receival grain,
+live.
+
+### 🔴 But the weights do **not** sum back to the line
+
+| | |
+|---|---|
+| `Qty(p)` | `1 + 2 = 3` ✅ **matches the line's 3 ST** |
+| `Kg(p)` | `158 + 101 = 259` ❌ **the line says `Kg(pur)` 151** |
+
+**One reception alone (158 kg) already exceeds the whole line's ordered 151 kg.**
+
+That contradicts the rule recorded from the export — *"the `Kg(p)` sum back to
+the line"* — which held on 101 of 107 lines there. Two readings, and we cannot
+yet choose between them:
+
+1. **The ordered weight is nominal for coil.** A mill coils whatever it coils;
+   `Kg(pur)` is what was asked for and `Kg(p)` is what the supplier said they
+   would actually send. The 999999 length sentinel marks every row here as
+   coil, and this one is a 19 mm slit strip where piece weight is not fixed by
+   geometry at all.
+2. **Splitting restates the weights** rather than apportioning them, so the two
+   receptions carry real figures that no longer relate to the original.
+
+⚠️ **Our split apportions the weight in proportion to quantity.** On this
+evidence that is wrong, or at least not always right. Do not treat the
+apportioning as settled — it is the single assumption our split rests on.
+
+### 🔴 `Split` is **still greyed**, even here
+
+The toolbar reads `+ New`(grey) · `✕ Delete`(grey) · **`Split`(grey)** ·
+`Batch registration` · `Charge aanpassen…` · `View:` · `Vertaal Weergaven`.
+
+The **`Received`** row was the selected one. **Untried: selecting the
+`Released` row first.** A reception that has already arrived cannot sensibly be
+split, so the button very likely keys off the selected reception's status.
+
+**H13 remains open**, but the condition is now much narrower than "find a
+part-received line".
+
+---
+
+## ✅ O4 — the four EDI columns, found and empty
+
+Scrolling the same `Receipts` panel right gives the rest of its columns:
+
+`Kg(a)` · `Qty(a)` · `U(a)` · `Transfer address` · `Transfer q…` ·
+`Pre-announced deli…` · `Pre-notify co…` · **`Pre-reported by`** ·
+**`Charge`** · **`Internal charge`** · `Sheet number` · **`EDI Charge`** ·
+**`EDI Bundels`** · **`EDI Vrachtbrief`** · **`EDI Leverdatum`**
+
+| | Received row | Released row |
+|---|---|---|
+| `Pre-reported by` | **`RVS`** | — |
+| `Charge` | **`110600`** | — |
+| `Internal charge` | **`26AQPW`** | — |
+| `Sheet number` | — | — |
+| **`EDI Charge`** | **empty** | empty |
+| **`EDI Bundels`** | **empty** | empty |
+| **`EDI Vrachtbrief`** | **empty** | empty |
+| **`EDI Leverdatum`** | **`1-1-0001`** | `1-1-0001` |
+
+🔴 **All four EDI columns are empty on a live September-2026 reception**, and
+`EDI Leverdatum` holds the `1-1-0001` null-date sentinel rather than a date.
+Put beside the other half of O4 — **`Order method` is blank on every order in a
+2¾-year window** — the conclusion is that **EDI is not in use**. Nothing sends
+it, nothing fills it, and the bundle breakdown the hypothesis expected from the
+mill never arrives.
+
+**O4 closes: build nothing for EDI.** Keep the four columns out of our receipts
+grid.
+
+### Three confirmations in passing
+
+- 🔑 **`Pre-reported by` holds a person's initials** (`RVS`, from the same
+  initials set as the `Purchaser` column — `BV`, `AB`, `MB`, `AVD`, `AN`, `FJ`,
+  `RVS`, `CVR`). A pre-notification is **somebody's act**, not a feed
+- 🔑 **`Charge` `110600` and `Internal charge` `26AQPW` on the same row** — the
+  mill's heat number and ours, side by side, exactly as the batch-registration
+  dialog showed
+- 🔑 **`1-1-0001` is live** as the null-date sentinel, and the **bill of
+  lading** (`747313 2`) appears only on the reception that actually arrived
+
+### One column we have no reading for
+
+`Delivery dat…` (header truncated) shows **✔ `Pre-notifi…`** on the received
+reception and **✘ `Do not c…`** on the released one — a tick/cross pair with
+text. Widen it before building anything on it.
