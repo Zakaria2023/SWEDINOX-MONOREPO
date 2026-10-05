@@ -12,7 +12,9 @@ Relocating… → 📸
 Opties bewerken → 📸
 Then in the header, open the Price dropdown (it reads Algemeen) → 📸 the list.
 
-Then open three more products — PK304L20021, PK316L40021, CK3040010 — and for each, scroll to Stock policy and photograph just the Use StockOp for this product? tickbox. Three small photos. ← closes J3, and deletes a whole screen from our build
+Then open four more products — PK304L20021, PK316L40021, SC304, CK3040010 — and for each, scroll to Stock policy and photograph just the Use StockOp for this product? tickbox. Four small photos. ← closes J3, and deletes a whole screen from our build
+
+All four, not three: they are a plate, a thicker plate, a kilo-stocked product and a coil, so if any product type uses StockOp one of those four will. SC304 is the only one not stocked in pieces, so it is the one most likely to differ.
 
 Sitting 2 — Purchase orders
 Overviews → Purchase → Purchase orders and quotes, creation date 1-1-2024 → today, press Show Data.
