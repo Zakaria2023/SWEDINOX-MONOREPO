@@ -83,15 +83,11 @@ week" / "next month".
 → *In the old system:* widen the column on a row with data and read its value.
 
 **5. The send-status cluster — `Send`, `Must be sent`, `Order method`,
-`Deliberately not sent`.**
-Reads like: how this document reaches the supplier (`Order method` — e.g. EDI,
-email, fax, print), whether it still needs transmitting (`Must be sent`), and a
-flag for intentionally holding it back (`Deliberately not sent`). `Send` may be
-a button-like action column rather than data.
-→ *In the old system:* open the `Order method` dropdown on a row to list every
-option. Find a row with `Deliberately not sent` ticked and check what stops it
-being sent automatically. Check whether `Send` and `Must be sent` are ever both
-true, or ever both false, to see if one drives the other.
+`Deliberately not sent`.** ✅ **ANSWERED 5-10-2026.** See
+[§ The send-status cluster](#-the-send-status-cluster--answered-5-10-2026)
+below. Original question, kept for the record: reads like how this document
+reaches the supplier (`Order method`), whether it still needs transmitting
+(`Must be sent`), and a flag for intentionally holding it back.
 
 **6. `Affiliate company details` — is this the answer to the recurring
 "Company code" question?**
@@ -131,3 +127,114 @@ list every option.
 **10. `Weight (kg)` and `Revenue` — confirm these are rollups, not fields.**
 → *In the old system:* open one order's lines, sum their weights, and compare
 against the header `Weight (kg)` on this screen.
+
+
+---
+
+## ✅ The send-status cluster — answered 5-10-2026
+
+Captured on `Purchase orders and quotes`, creation date `1-1-2024` → `5-10-2026`,
+grouped by `Order method`, scrolled right. 23 consecutive rows,
+`IO401479`–`IO401502`, July–August 2025.
+
+### The three flags are one state, not three
+
+| Row pattern | Count in 23 |
+|---|---|
+| `Send` ☑ · `Must be sent` ☑ · `Deliberately not sent` ☐ | 15 |
+| `Send` ☐ · `Must be sent` ☑ · `Deliberately not sent` ☑ | 8 |
+| anything else | **0** |
+
+🔑 **`Must be sent` is ticked on every single row**, and **`Send` and
+`Deliberately not sent` are mutually exclusive and exhaustive** — exactly one of
+the two is ticked, never both, never neither.
+
+So the cluster is not three independent booleans. It is:
+
+```
+Must be sent          = this document is one that goes to the supplier
+  Send                = … and it went
+  Deliberately not sent = … and somebody stopped it on purpose
+```
+
+Question 5 asked *"whether `Send` and `Must be sent` are ever both true, or ever
+both false, to see if one drives the other"*. Both true is the normal case (15 of
+23). Both false never happened. **`Must be sent` is the gate; the other two
+partition it.**
+
+⚠️ `Send` is **data, not a button** — it renders as a tickbox in the grid like
+the other two, and it is read-only there.
+
+### What gets held back
+
+Mapping the 8 suppressed rows back to their suppliers:
+
+| Supplier | Code | Suppressed |
+|---|---|---|
+| **`Hego Voorraadcorrecties`** | 11586 | **2 of 2** — always |
+| `H. Schrijver Constructiebedrijf B.V.` | 13000 | 1 of 1 — the `Customer Materials` order |
+| `B.V. Leeuwbouw` | 12172 | 1 of 1 |
+| `Nedinox B.V.` | 12528 | 1 of 1 |
+| `Hego Production` | 13660 | 2 of 8 |
+| `Holland Stainless Int` | 11692 | 1 of 4 |
+
+🔑 **`Hego Voorraadcorrecties` — "Hego stock corrections" — is a supplier.**
+Stock corrections are booked as **purchase orders against a dummy supplier**,
+with revenues of € 0,01 / € 0,02 / € 0,03, and they are **always deliberately
+not sent** — you do not email a stock correction to anybody. That is the clearest
+use of the flag.
+
+Holland Stainless appears both sent and suppressed, so the flag is **per order,
+not per supplier**.
+
+### 🔴 `Order method` is empty
+
+Grouping by `Order method` over a 2¾-year window produced a group header reading
+**`Order method:`** with **no value and no count after it** — a single, blank
+group. Every order in view sits under it.
+
+Earlier notes assumed the orders we had read were `Telephone` and that an
+EDI/StaalWeb order existed somewhere to be found. On this evidence the column is
+**simply never filled**, which would mean there is no EDI order to find and
+**O4 closes by saying the feature is unused**.
+
+⚠️ **One confirmation still owed:** collapse the group (the `−` box on the
+group header). A collapsed grouping lists every distinct value with its count on
+one line each. If one blank group holds every row, O4 is closed.
+
+### Two enums that came free
+
+**`Order type`** — and it tracks what the order is *for*:
+
+| Value | Seen against |
+|---|---|
+| `Materials` | Holland Stainless, Aperam, Outokumpu, HW-Inox, Terninox, Nedinox — buying metal |
+| `Processing` | **Hego Production** every time — sending material out to be worked |
+| `Customer Materials` | H. Schrijver — the customer's own metal coming in, **€ 0,00** |
+
+🔑 **`Processing` orders to Hego Production are the external-processing flow
+H9 is about**, visible as an order type rather than something inferred.
+
+🔑 **`Customer Materials` orders carry € 0,00 revenue** — consistent with
+customer-owned metal having no purchase value, and relevant to K2.
+
+**`Status`** — `Invoiced` and `Received` both seen on this slice.
+
+### Columns the overview carries that we do not
+
+`Year (Creation)` · `Month` · **`Time frame`** · `Initials` · `Purchaser` ·
+`Converted from` · `Lines` · `Weight (kg)` · `Revenue` · `Customer code`
+
+🔑 **`Time frame` is a half-hour bucket of the creation time** — `08:00 - 08:30`,
+`12:00 - 12:30`, `17:00 - 17:30`. That closes question 4 above: it is not a
+delivery window, it is when the order was keyed, rounded to 30 minutes.
+
+🔑 `Year` and `Month` are **derived from the creation date**, offered as
+columns so they can be dragged into the grouping bar.
+
+🔑 `Initials` (`BV`, `AB`, `MB`, `AVD`, `AN`, `FJ`, `RVS`, `CVR`) and
+`Purchaser` (the full name) are **two separate columns** on the same person.
+
+⚠️ **`Revenue` on a purchase order** means the order's value, not revenue. And
+`Customer code` on a purchase order holds the **supplier's** number — another
+instance of the one-company-table, nine-roles model.
