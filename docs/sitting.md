@@ -21,7 +21,7 @@ Overviews → Purchase → Purchase orders and quotes, creation date 1-1-2024 �
 
 2a. Drag Order method into the grey bar → 📸. Then open any order whose method is not Telephone → Receipts → scroll right → 📸 the four EDI columns. ← closes O4
 
-2b. Purchase lines → find order 400650 → Show Purchase order → expand Pricing → 📸 the whole panel. ← closes J2
+2b. ~~Purchase lines → find order 400650 → Show Purchase order → expand Pricing~~ ✅ **SKIP — already answered.** The Pricing panel was captured on 401156 and 401157, and the 94,2 → 100 kg question behind it is answered by the order's printed terms: only the weighed weight is accepted for invoicing. J2 is closed; this row was stale.
 
 2c. Find order 401154 (consignment, Provisional) → press Make final → on the reception fill Kg(a) 314 and Qty(a) 10 → report it → then find that lot on Stock on location → 📸 its Stock (€) column. ← closes J1
 

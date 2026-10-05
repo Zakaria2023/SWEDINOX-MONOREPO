@@ -288,3 +288,93 @@ the amounts only.
    `400648/20` shows `Qty(p) = 187`, `Qty ordered = 173`, `Qty confirmed = 187`
    — the one row where ordered is neither 0 nor the full quantity.
    → *In the old system:* open that line and see which figure is editable.
+
+
+---
+
+## ✅ Live re-proof, 5-10-2026 — `Amount(p) = Net Purchase Price × Kg(pur)`
+
+Captured on `Purchase lines`, creation date `1-1-2020` → `5-10-2026`,
+**`Only current purchasing lines` unticked**, 23 rows of 2026 orders
+(`404133`–`404449`, all `Released`, Aperam and Holland Stainless).
+
+This matters because every earlier proof of the formula came from the frozen
+mid-May-2025 export. These are **live rows on today's data** and they land on
+the cent.
+
+| Kg(pur) | Net Purchase Price | PriceU | Amount(p) | price × kg |
+|---|---|---|---|---|
+| 2 690 | € 3 305,00 | TN | **€ 8 890,45** | `3305 × 2,690` = 8 890,45 ✅ |
+| 1 500 | € 3 100,00 | TN | **€ 4 650,00** | `3100 × 1,500` = 4 650,00 ✅ |
+| 5 652 | € 2 490,00 | TN | **€ 14 073,48** | `2490 × 5,652` = 14 073,48 ✅ |
+| 1 000 | € 3 970,00 | TN | **€ 3 970,00** | `3970 × 1,000` = 3 970,00 ✅ |
+| 8 000 | € 3 880,00 | TN | **€ 31 040,00** | `3880 × 8,000` = 31 040,00 ✅ |
+
+🔑 **`Kg(pur)` is displayed rounded to whole kilos but stored with decimals.**
+Four rows look a cent or two out until you invert them:
+
+| Shown Kg(pur) | Amount(p) ÷ price | Actual kg |
+|---|---|---|
+| `2.014` | 4 268,83 ÷ 2 120 | **2 013,6** |
+| `7.948` | 16 850,18 ÷ 2 120 | **7 948,2** |
+| `2.120` | 4 493,34 ÷ 2 120 | **2 119,5** |
+| `1.342` | 3 476,82 ÷ 2 590 | **1 342,4** |
+
+So the grid rounds the weight for display and computes on the stored figure.
+**Our grid must do the same** — rounding the weight *before* multiplying would
+put every one of these lines a euro out.
+
+### `Qty confirmed` is a real, used field
+
+Line `404133/20`: **`Qty ordered` 42, `Qty confirmed` 38**, and `Qty(p)` reads
+**38**. The supplier came back short and the line was revised down to what they
+would actually send. `Kg. still to be delivered` follows the confirmed figure,
+not the ordered one.
+
+We hold no confirmed quantity at all. A line needs **ordered**, **confirmed**
+and **received** as three separate numbers.
+
+### Goods are reserved before they arrive
+
+`Reserved (Pur.U.)` on `Released` lines with nothing yet received:
+
+| Line | Qty(p) | Reserved |
+|---|---|---|
+| `404417/10` | 45 | **45** — all of it |
+| `404343/10` | 75 | **75** |
+| `404317/40` | 95 | **95** |
+| `404235/30` | 32 | **3** — part |
+| `404427/10` | 135 | 0 |
+
+🔑 The purchase side of what H5 found on the sales side: **metal is sold
+before it exists**, and the reservation is carried on the *purchase line* until
+the lot it becomes can take it over.
+
+### `Line type` — two values seen, meaning unknown
+
+**`Stk`** on most rows, **`CD`** on six (`404417/10`, `404316/10`, `404316/20`,
+`404247/10`, `404247/20`, `404415/10`).
+
+⚠️ **Hypothesis only:** `Stk` = goes to stock, `CD` = cross-dock / direct
+delivery. It is **not** a coil-vs-plate split — `404417` and `404415` are
+plates and carry `CD`, while plenty of coils carry `Stk`. **Do not build on
+this.** J6's grouping (`Purchase lines → Line type`) is what settles it, and
+`Stk vs CD` is already an open question from the 10-9 sales batch.
+
+### Confirmations in passing
+
+- **`999999` in `Length (mm)` is the coil sentinel**, live on six rows — all
+  `CK316L…` coils. `COIL_LENGTH_SENTINEL` is correct
+- Coil **`Width`** carries the slit width: `40`, `110`, `1000`, `1015`, `1018`
+- **`Purchase order type` on the line reads `Materials`**, the same enum the
+  order overview groups by
+- **`Kg(a)` is `0` on every row** — all `Released`, nothing weighed yet, which
+  is exactly the invariant our receipt chain depends on
+
+### The filter block, for the record
+
+`Creation date` `vanaf` / `t/m`, and a tickbox **`Only current purchasing
+lines`** which **hides closed orders** — it is on by default and is why a
+search for an old order returns nothing. The `Find` box beside the grouping bar
+searches **rows already loaded**; it is not a server-side filter and does
+nothing until `Toon Gegevens` has run.
