@@ -68,3 +68,33 @@ K1 — how many days overdue is "too long"? The setting is in no menu. It's a da
 K2 — should customer-owned stock carry value? (€40 833 does today.)
 K3 — do you want the eight features the reference ships and never uses?
 K4–K13 — what FSP/LIP/Gip mean, whether purchase quotes are used, whether INAD is a person, whether the rebuild replaces AFAS or syncs with it.
+
+---
+
+## 🔴 Read this before using any record number below (added 5-10-2026)
+
+**The record numbers in these sittings are stale.** They were taken from an
+export of data frozen in **mid-May 2025**. The live system has moved on — a
+`Purchase lines` load on 5-10-2026 returned orders `404133`–`404449` with
+receipt dates in **October 2026**, and a numeric filter for `401154`–`401158`
+returned **nothing**.
+
+Confirmed missing so far: **`400650`**, **`401154`**.
+
+**So every step must be driven by criteria, not by a number:**
+
+| Instead of | Find it by |
+|---|---|
+| order `400650` (Pricing) | ✅ not needed — J2 is already answered |
+| order `401154` (consignment) | `Purchase orders and quotes` → drag **`Consignment`** into the grouping bar → open the ticked group |
+| a part-received line (Split) | `Purchase lines` → drag **`Status`** into the grouping bar → open **`Partially received`** |
+| a released order with no work order (O5) | `Purchase lines` → group by `Status` → **`Released`**, then check its `Workorders` panel is empty |
+| `IO404206` (external processing) | `Purchase orders and quotes` → group by **`Order type`** → open **`Processing`** (they are all to Hego Production) |
+
+⚠️ Two more numbers are still unverified and may be gone the same way:
+**`101974`** and trip **`600249`** in Sitting 3, and warehouse work order
+**`306675`** in 4f. Check them before planning a sitting around them.
+
+**Also: the `Find` box is not a filter.** It searches rows already loaded in the
+grid. Nothing happens until `Toon Gegevens` has run, and
+**`Only current purchasing lines` is ticked by default and hides closed orders.**
