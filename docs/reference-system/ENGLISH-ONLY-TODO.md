@@ -115,3 +115,22 @@ change:
   print nothing but people's names.
 - Open the sidebar and each page above.
 - `tsc`, `eslint`, `pnpm build`.
+
+---
+
+# 🟡 Queued — the i18n layer's own clean-up
+
+Not urgent and nothing is broken by it. Parked here deliberately on 6-10-2026 so
+the ERP capture keeps the floor; pick it up when the capture work pauses.
+
+| # | Item | Why it matters | Size |
+|---|---|---|---|
+| **T1** | **215 Dutch and 354 Arabic phrases are still identical to the English** in `src/lang/phrases/*.json` | They render as English inside an otherwise translated screen, which reads as a bug rather than as a gap | medium — it is a translation pass, not code |
+| **T2** | **Drop `"use server"` from `src/i18n/getServerLang.ts` and `getTranslation.ts`** | They are render-time helpers, not mutations. The directive publishes both as Server Action HTTP endpoints, and `getTranslation` returns `t` — a function, which cannot cross that boundary. It works today only because its one caller is a Server Component | one line each |
+| **T3** | **Rename the camelCase files to kebab-case** — `getServerLang.ts`, `getTranslation.ts`, `i18nextClient.ts`, `i18nextServer.ts`, `providers/I18NextProvider.tsx` | The repo rule in `CLAUDE.md` is kebab-case for every file, whatever it exports | mechanical, touches the importers |
+| **T4** | **`i18nextServer.loadLocale` falls back to `ar.json`** where `defaultLanguage` is `nl` | Unreachable today, because `normalizeLanguage` guards it — but it is wrong the moment that guard changes | one line |
+| **T5** | **Filter what `i18n-audit.mjs` feeds the translator** | It scraped SQL fragments and react-hook-form field paths as if they were captions, so `COALESCE` became `KOLENCE` and `picks.${index}.charge` became `keuzes.${index}.lading`. Nine of them are neutralised in `domain-terms.ts`; the extractor will re-introduce more on the next run | small, in the audit script |
+| **T6** | **77 Dutch phrases have a placeholder glued to a word** (`heffing${line.charge}`) | Survivable only because `translateTemplate` repairs the spacing at runtime — so do not simplify that helper without fixing these first | fix in the catalogue, or leave the repair in place |
+
+⚠️ **T2 and T4 are the only ones that are strictly wrong.** T1, T3, T5 and T6
+are tidying.

@@ -497,3 +497,215 @@ grid.
 `Delivery dat…` (header truncated) shows **✔ `Pre-notifi…`** on the received
 reception and **✘ `Do not c…`** on the released one — a tick/cross pair with
 text. Widen it before building anything on it.
+
+
+---
+
+## ✅ `404150/10` again, 6-10-2026 — H13 answered, and two dialogs we had never seen
+
+Same line as 5-10, driven properly this time: both reception rows selected in
+turn, and both enabled buttons pressed.
+
+### 🔴 H13 — `Split` is greyed on **both** rows
+
+The prediction was that `Split` keys off the selected reception's status, and
+that picking the `Released` row would wake it. **It does not.** But the other
+four buttons do flip, which proves the toolbar is reading the selection and not
+simply dead:
+
+| Button | `Received` selected | `Released` selected |
+|---|---|---|
+| `New` | grey | grey |
+| `Delete` | grey | ✅ **enabled** (red ✕) |
+| **`Split`** | **grey** | **grey** |
+| `Batch registration` | ✅ **enabled** | grey |
+| `Charge aanpassen…` | ✅ **enabled** | grey |
+
+🔑 So the enablement rule is real and it is the opposite of what we guessed:
+
+- **A reception that has arrived** can have its batch registered and its charge
+  corrected — you have the metal in front of you and the certificate in your
+  hand. It cannot be deleted.
+- **A reception that has not arrived** can be deleted — nothing has happened
+  yet. It cannot carry a charge, because there is no metal to stamp.
+- **Neither can be split**, on a `Partially received` order.
+
+⚠️ **H13 stays open, and the condition is now much narrower.** `Split` is not
+gated on the reception's status, so it must be gated on the **order's** — and
+this order is `Partially received, Printed, Mailed`. Once any part of a line has
+arrived, the reception structure appears to be frozen. The remaining place to
+try is an order where **nothing** has been received: `Released` or `Confirmed`,
+`Kg(a)` = 0 on every row, with a reception carrying `Qty(p) > 1`.
+
+### 🔴 `Batch registration` on a reception is **not** the dialog we built
+
+Pressing it on the `Received` row opens **`Partijregistratie instellingen`**
+(batch registration *settings*), and it is not data entry at all:
+
+| | |
+|---|---|
+| `Order` | `404150/10` |
+| `Artikel` | `Coil Cold-rolled 304 0,8 mm` |
+| `Afmetingen / gewicht` | `19x0,8 / 158 KG(w)` |
+| `Ontvangst datum` | `8-9-2026` |
+| `Interne charge` | `26AQPW` |
+| `Charge` | `110600` |
+
+All read-only. The **only** control is one checkbox under a heading
+`Document verplichtingen negeren`:
+
+> ☐ `Document verplichtigingen negeren op bovenstaande ontvangst.`
+> *"Indien dit aangezet wordt zal het voor deze ontvangst niet meer verplicht
+> zijn om een document te koppelen. Hierdoor verdwijnt de regel mogelijk uit
+> het zicht."*
+
+— *if this is switched on it will no longer be mandatory to link a document to
+this receipt, and the line may therefore disappear from view.*
+
+🔑🔑 **So there are two different `Partijregistratie` dialogs, on two different
+objects**, and they do different jobs:
+
+| Opened from | Title | What it does |
+|---|---|---|
+| a **stock lot** (`Voorraad` toolbar) | `Voorraad partij correctie` | pick which supplier delivery the lot came from, type `Charge` + `Fabrieksnummer` |
+| a **purchase reception** (`Receipts` toolbar) | `Partijregistratie instellingen` | waive the certificate requirement on that one reception |
+
+What we built on 6-10-2026 is the **first** one, and it is right. The second is
+not built.
+
+🔑 **`documentObligationWaived` already exists on `PurchaseLineReceivals`** and
+nothing has ever written to it. This dialog is what writes it, and the warning
+says what it then does: the reception drops off the worklists that chase missing
+documents — which is exactly what `Certificates to be linked` and `Deliveries
+from missing batch` are.
+
+### 🔴 `Charge aanpassen…` — the real "change the heat number" dialog
+
+Pressed on the `Received` row:
+
+| Field | Value | Editable |
+|---|---|---|
+| `Huidige Charge` | `110600` | read-only |
+| `Huidig Plaatnummer` | *(empty)* | read-only |
+| `Huidige interne Charge` | `26AQPW` | read-only |
+| **`Nieuwe Charge`** | `110600`, prefilled | ✏️ |
+| **`Nieuw Plaatnummer`** | *(empty)* | ✏️ |
+| **`Nieuwe interne Charge`** | *(empty)* | a **`Selecteer`** picker, greyed here |
+
+Buttons `Reset` · `OK` · `Annuleer`.
+
+🔑 **Current beside new, three rows against three.** The dialog states what the
+reception says now and what it will say, which is the shape a correction to an
+identity should have.
+
+🔑 **The internal charge is changed through a picker, not a text box.** Ours is
+generated on receipt and must stay unique, so it is chosen from existing ones
+rather than typed. It was greyed here, so what the picker lists is still unseen.
+
+🔑 **`Plaatnummer` (plate number) is editable on a reception.** `Stock.plateNumber`
+exists and has never been populated; this is where it comes from.
+
+⚠️ **This splits a dialog we merged.** Our batch-registration form carries
+`Charge` and `Factory number` together. The reference keeps `Charge` +
+`Plaatnummer` + `interne charge` in `Charge aanpassen`, on the **reception**, and
+`Charge` + `Fabrieksnummer` in `Voorraad partij correctie`, on the **lot**.
+`Fabrieksnummer` and `Plaatnummer` are not the same field.
+
+### The order header, in full
+
+`Purchase order 404150, Norder Band AG, Tel: 0049 4931 17801, Fax: 0049 4931
+178581 — **Partially received, Printed, Mailed**`
+
+| | |
+|---|---|
+| Creation date | 18-8-2026 |
+| Supplier | `12579` Norder Band AG |
+| Contact | Anne Doomernik |
+| `Reference` | `Angebot nr 907135  3 ringe` |
+| Purchaser | Benno Vos |
+| `Purchase order type` | `Materials` |
+| Payment terms | `Within 30 days from date of invoice` |
+| `Delivery terms` | **`(FCA) Free carrier`** |
+| Delivery address | `Bolderweg 10, 1332AT, Almere` |
+| Delivery | ⦿ `Date` 8-9-2026 / ○ `Week` 37 `Year` 2026 |
+
+Tickboxes: ☑ `Overlength` (greyed) · ☑ `Printed` · ☑ `Mailed` · ☐ `Faxed` ·
+☐ **`Message sent via StaalWeb`** · ☐ `Do not print prices` · ☐ `Arrange
+transport` · ☐ `Pick up/Drop-off CD-purchases`
+
+🔑 **`Message sent via StaalWeb` is unticked**, which is O4's third independent
+confirmation that the EDI path is dead.
+
+🔑 **Delivery is a date *or* a week**, as a radio pair — not two fields. A
+supplier who will only commit to a week is a first-class case, not a blank date.
+
+### 🔴 The summary does not equal the line
+
+```
+Materials:       € 957,34
+Options:         €   0,00
+Surcharges:      €  10,00     ← the line knows nothing about this
+--------------------------------
+Tot. excl. VAT:  € 967,34
+VAT:             €   0,00
+Tot. incl. VAT:  € 967,34
+Total weight:        151 Kg
+```
+
+The single line carries `Amount(p)` **€ 957,34** and the order totals
+**€ 967,34**. The € 10,00 surcharge lives on the **order**, not on any line, so
+an order total can never be derived by summing its lines.
+
+✅ And the amount formula holds a sixth time, on today's data:
+`€ 6.340,00/TN × 0,151 TN = € 957,34` exactly.
+
+### The `Lines` grid, and one column we had not read
+
+`Code · For line · Delivery date · Status · Product · Description · Category ·
+Quality · Length · Width · Thick… · Qty(p) · U · Kg(p) · **M1(p)** · Net Price ·
+U · Amo…`
+
+Line `10`: `8-9-2026 · Partially rec · CK3040008 · Coil Cold-rolled 304 0.8 mm ·
+**Standaard** · 3042B · 999999 · 19 mm · 0,8 mm · 3 ST · 151 · **1265,** ·
+€ 6.340,00 TN`
+
+🔑 **`M1(p)` is running metres** — 1 265 m of 19 × 0,8 mm strip weighing 151 kg
+checks out at 7,9 kg/dm³. A coil line is quoted in tonnes, received in pieces
+and measured in metres, and all three are on the row.
+
+🔑 **`Category` on the line reads `Standaard`** while the `Stock Category` column
+on the `Purchase lines` overview is **blank** for the same line. The overview's
+column is not reading the line's category.
+
+### `Purchase lines`, scrolled the whole way right
+
+| | |
+|---|---|
+| `Kg(pur)` / `Kg(a)` | **151** ordered, **158** actually received |
+| `Qty ordered` / `Qty confirmed` / `Qty(a)` / `Qty still to b…` | 3 / 3 / 1 / **2** |
+| `Net Purchase Price` · `PriceU` | € 6.340,00 · `TN` |
+| `Amount(p)` · `Amount yet t…` | € 957,34 · € 0,00 |
+| `Line type` | **`Stk`** |
+| `Revenue group` | `1000` `SS 304` |
+| `Main group` / `Subgroup` | `Stainless Steel` / `Coil Cold-rolled 304` |
+| `Current gros…` / `Margin (€ per gro…)` | € 0,00 / **€ -6.340,00** |
+| `Quality Code` | `3042B` |
+| **`Country`** | **`Germany`** |
+| `Available (Pur.U.)` / `Available (kg)` | 2 / 0 |
+| `Purchase Refere…` | `Angebot nr 9071…` |
+| `Date Created` | 18-8-2026 |
+| `CE standard` · `Deadline/Valid until` · `DoP` · `Options` · `Onze referentie` | all empty |
+
+🔑 **`Country` is on the purchase line**, not only on the supplier — the country
+of origin travels with the metal, which is what a CBS return and a certificate
+both need.
+
+🔴 **`Margin (€ per gross…)` reads € -6.340,00** because `Current gross price` is
+€ 0,00. The article has no sales price, so the margin column reports the whole
+purchase price as a loss. It is a missing price, not a loss — but nothing on the
+screen says so, and a margin report summing this column would be nonsense.
+
+🔑 **`Available (Pur.U.)` = 2 on a line with nothing free in stock.** It is
+counting the 2 pieces still inbound, which is the purchase-side "available"
+being a different quantity from the shelf-side one — exactly the distinction
+`lib/helpers.ts` refuses to collapse into a shared helper.

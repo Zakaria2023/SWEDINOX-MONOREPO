@@ -495,10 +495,19 @@ The `Laad` location record behind the dialogs:
 location's type** — it is not chosen per location, which is what
 `project_stock_lot_model` already recorded.
 
-🔴 The status bar reads **`Batchscheduler is actief.`** Earlier captures recorded
-the batch scheduler as **off**, and H8 left "a scheduled re-check is untested"
-on that basis. It is on now. Anything we concluded from the scheduler being
-off needs re-checking.
+🔴 ~~The status bar reads `Batchscheduler is actief.`~~ **Wrong — corrected
+6-10-2026.** Read again at 16:22 the next day, on the purchase-order screen, the
+status bar reads **`Batchscheduler is niet actief.`** — *not* active. The
+negation was missed the first time.
+
+So nothing changed and nothing needs re-checking: the scheduler is **off**, as
+every earlier capture said, and K10 stands exactly where it was. The AFAS open
+posts are stale, which is still the best explanation for every held order
+reading 496–614 days overdue.
+
+⚠️ Also noted: the build is now **3.13.0.512**, against **3.13.0.508** recorded
+on 5-10-2026. The application is being updated under us, so a version is worth
+reading off the status bar with each capture.
 
 ---
 
