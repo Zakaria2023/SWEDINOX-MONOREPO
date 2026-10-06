@@ -5,6 +5,7 @@ import arabicPhrases from "@/lang/phrases/ar.json";
 import englishPhrases from "@/lang/phrases/en.json";
 import dutchPhrases from "@/lang/phrases/nl.json";
 import type { AppLanguage } from "@/i18n/config";
+import { domainOverridesFor } from "@/i18n/domain-terms";
 
 type CatalogValue = string | { [key: string]: CatalogValue };
 type PhraseCatalog = Record<string, string>;
@@ -51,26 +52,40 @@ const ARABIC_OVERRIDES: PhraseCatalog = {
   Yes: "نعم",
 };
 
-const buildCatalog = (
-  translatedBase: CatalogValue,
-  phrases: PhraseCatalog,
-  overrides: PhraseCatalog = {},
-) => {
+// The keyed base catalogue goes in first and the flat phrase map second, so a
+// phrase — and therefore a domain correction, which is merged into it — wins
+// over whatever the keyed `nl.json` / `ar.json` said for the same English.
+const buildCatalog = (translatedBase: CatalogValue, phrases: PhraseCatalog) => {
   const catalog = new Map<string, string>();
   addBaseTranslations(catalog, baseEnglish as CatalogValue, translatedBase);
   for (const [english, translated] of Object.entries(phrases)) {
     catalog.set(normalize(english), translated);
   }
-  for (const [english, translated] of Object.entries(overrides)) {
-    catalog.set(normalize(english), translated);
-  }
   return catalog;
+};
+
+/**
+ * The phrase map each language actually runs on.
+ *
+ * 🔑 The domain corrections are merged in **here**, not layered on afterwards,
+ * because the template matcher below is compiled from this map rather than from
+ * the finished catalogue. Overriding only the catalogue would fix
+ * `Internal charge` and leave `· charge ${line.charge}` saying `· heffing…`.
+ *
+ * Last writer wins, so the order is: generated phrases, then the generic
+ * Arabic verbs, then the domain terms — which are the ones we can evidence
+ * against easy2trade itself and so must not be overwritten by anything.
+ */
+const resolvedPhrases: Record<AppLanguage, PhraseCatalog> = {
+  en: englishPhrases,
+  nl: { ...dutchPhrases, ...domainOverridesFor("nl") },
+  ar: { ...arabicPhrases, ...ARABIC_OVERRIDES, ...domainOverridesFor("ar") },
 };
 
 const catalogs: Record<AppLanguage, Map<string, string>> = {
   en: buildCatalog(baseEnglish as CatalogValue, englishPhrases),
-  nl: buildCatalog(baseDutch as CatalogValue, dutchPhrases),
-  ar: buildCatalog(baseArabic as CatalogValue, arabicPhrases, ARABIC_OVERRIDES),
+  nl: buildCatalog(baseDutch as CatalogValue, resolvedPhrases.nl),
+  ar: buildCatalog(baseArabic as CatalogValue, resolvedPhrases.ar),
 };
 
 const escapeRegExp = (value: string) =>
@@ -110,8 +125,8 @@ const buildTemplates = (phrases: PhraseCatalog): TemplateTranslation[] =>
     );
 
 const templates: Record<Exclude<AppLanguage, "en">, TemplateTranslation[]> = {
-  ar: buildTemplates(arabicPhrases),
-  nl: buildTemplates(dutchPhrases),
+  ar: buildTemplates(resolvedPhrases.ar),
+  nl: buildTemplates(resolvedPhrases.nl),
 };
 
 const translateTemplate = (

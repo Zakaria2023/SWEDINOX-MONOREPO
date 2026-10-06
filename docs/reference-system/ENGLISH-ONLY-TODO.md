@@ -1,7 +1,58 @@
-# English-only — Dutch text still in the app
+# Language policy — and the Dutch text still in the app
 
-**Rule:** every word the app shows is English. Dutch labels from easy2trade
-screenshots are translated when a screen is built, never copied.
+> ## 🔴 The English-only rule was reversed on 6-10-2026
+>
+> The app now ships **Dutch, English and Arabic**, with a header switcher, and
+> **Dutch is the default**. Everything below §1–§2 still applies to *source*
+> strings — the code is written in English and translated at runtime, never
+> keyed in Dutch — but "the app shows English" is no longer true.
+>
+> ### Where the authoritative Dutch comes from
+>
+> **This directory.** `src/i18n/domain-terms.ts` holds the corrections to the
+> machine-generated catalogues, and every Dutch value in it is either read off
+> an easy2trade screenshot written up here, or deliberately left in English
+> because easy2trade's own Dutch UI leaves it in English.
+>
+> Three rules, stated in full in that file's header:
+>
+> 1. **An identifier keeps its Latin form.** easy2trade's Dutch UI shows
+>    `Charge` and `interne charge` unchanged, because a heat number is a code.
+> 2. **A captured Dutch caption is used verbatim** — `Voorraad`,
+>    `Technische voorraad`, `Overboeken`, `Verplaatsen`, `Splits voorraad`,
+>    `Charge aanpassen`, `Consignatie`, `Gewogen gewicht`. Staff cross-read the
+>    two systems; a synonym they have never seen costs more than English would.
+> 3. **Where easy2trade's Dutch shows English, keep English** — its `Reden`
+>    dropdown really reads `Rejected material` · `Transfer length`, and its
+>    category dropdown really reads `2nd choice` · `3rd party inventory`.
+>
+> ⚠️ **Arabic follows a different policy on purpose.** There is no Arabic
+> easy2trade to cross-read, so Arabic gets plain Arabic — except for codes and
+> trade designations (`Charge`, `Mill finish`), which stay Latin.
+>
+> ### What the generated catalogues got wrong, for the record
+>
+> `Charge` — the mill's heat number, the most important identifier in the system
+> — came out as `Laden` (to load), `Kosten` (costs), `heffing` (a levy),
+> `Opladen` (charging a battery) and, for `Mill charge`, `Molenlading`, with
+> "mill" read as a flour mill. In Arabic it was read as a **criminal** charge:
+> `Mill charge` → `ميل تهمة` ("mile accusation"), `Adjust charge` → `التقاضي`
+> ("litigation"). `Stock` → `Bestand` ("a file") then spread into
+> `Stock options` → `Bestandsopties` and `Stock label` → `Bestandslabel`.
+>
+> Nine entries were not captions at all — SQL fragments and react-hook-form
+> field paths the extractor scraped, with `COALESCE` becoming `KOLENCE`. Those
+> are now mapped to themselves so nothing touches them; **the real fix is
+> upstream in what `i18n-audit.mjs` feeds the translator.**
+>
+> Still outstanding on the catalogues: 215 Dutch and 354 Arabic phrases are
+> identical to the English, and 77 Dutch phrases had a placeholder glued to a
+> word (survivable only because `translateTemplate` repairs the spacing at
+> runtime).
+
+**Original rule, still true of source strings:** every word written in the code
+is English. Dutch labels from easy2trade screenshots are translated when a
+screen is built, never copied.
 
 **Status:** ✅ §1 and §2 fixed 16-9-2026 — a rescan finds only a person's
 name. §3 (stored data) is still open. Found the same day by scanning every
