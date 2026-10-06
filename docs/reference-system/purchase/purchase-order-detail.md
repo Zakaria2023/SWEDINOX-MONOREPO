@@ -579,7 +579,31 @@ says what it then does: the reception drops off the worklists that chase missing
 documents — which is exactly what `Certificates to be linked` and `Deliveries
 from missing batch` are.
 
-### 🔴 `Charge aanpassen…` — the real "change the heat number" dialog
+### ⚠️ `Charge aanpassen…` — **already documented, correcting an overstatement**
+
+This was called "a dialog we had never seen" when first written up on 6-10-2026.
+That was wrong: [batch-registration.md](../batch-registration.md) §11 captured
+the same dialog months ago, off the **right-click menu on a batch row**
+(`Show Product` · `Show Company` · `Show Purchase order` · `Show File` ·
+`Open file location` · `Adjust charge…` · `Stock label`), with the same three
+current/new pairs and the same `Select` picker on the internal charge.
+
+**What is genuinely new is only where it lives:** it is also on the purchase
+order's `Receipts` toolbar, and there it is enabled **only on a reception whose
+status is `Received`**.
+
+🔑 And §11 already drew the conclusion that matters, which this capture does
+not contradict: the internal-charge picker exists so that **two receipts that
+are really one heat can be merged under one internal charge**. It is never free
+text, because it has to name an internal charge that already exists.
+
+⚠️ **One field, two translations — do not model it twice.** §11 calls the middle
+row `sheet number`; the live dialog calls it **`Plaatnummer`**. Dutch *plaat* is
+both "plate" and "sheet", so these are the same field. `Stock.plateNumber` is
+where it belongs, and the `Sheet number` column on the `Receipts` panel is the
+same thing again.
+
+### The dialog, as read on the reception
 
 Pressed on the `Received` row:
 
