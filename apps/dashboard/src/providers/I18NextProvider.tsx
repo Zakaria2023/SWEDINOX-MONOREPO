@@ -1,0 +1,99 @@
+"use client";
+
+import i18n from "@/i18n/i18nextClient";
+import { DomTranslationBridge } from "@/components/i18n/dom-translation-bridge";
+import {
+  defaultLanguage,
+  getLanguageDirection,
+  languageCookieName,
+  normalizeLanguage,
+  type AppLanguage,
+} from "@/i18n/config";
+import {
+  createContext,
+  ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import { useRouter } from "next/navigation";
+import { I18nextProvider } from "react-i18next";
+
+type I18nContextValue = {
+  changeLanguage: (language: AppLanguage) => void;
+  dir: "ltr" | "rtl";
+  language: AppLanguage;
+};
+
+const I18nContext = createContext<I18nContextValue | null>(null);
+
+type I18nProviderProps = {
+  children: ReactNode;
+  initialLang: AppLanguage;
+};
+
+const I18nProvider = ({ children, initialLang }: I18nProviderProps) => {
+  const normalizedInitialLang = normalizeLanguage(
+    initialLang ?? defaultLanguage,
+  );
+
+  // The i18n singleton initializes at module load time. On the server,
+  // document is undefined so getStoredLang() always returns the default language,
+  // ignoring the cookie. Sync it to the server-provided initialLang here so
+  // both server and client render the same translations and hydration matches.
+  if (i18n.language !== normalizedInitialLang) {
+    void i18n.changeLanguage(normalizedInitialLang);
+  }
+
+  const router = useRouter();
+  const [language, setLanguage] = useState<AppLanguage>(normalizedInitialLang);
+
+  useEffect(() => {
+    document.documentElement.lang = language;
+    document.documentElement.dir = getLanguageDirection(language);
+    localStorage.setItem(languageCookieName, language);
+  }, [language]);
+
+  const changeLanguage = useCallback(
+    (nextLanguage: AppLanguage) => {
+      if (nextLanguage === language) return;
+
+      // Change i18n synchronously BEFORE setLanguage so React 18 batches
+      // both into one render — no flash of the previous language.
+      void i18n.changeLanguage(nextLanguage);
+      document.cookie = `${languageCookieName}=${nextLanguage}; path=/; max-age=31536000; samesite=lax`;
+      setLanguage(nextLanguage);
+      router.refresh();
+    },
+    [language, router],
+  );
+
+  const value = useMemo<I18nContextValue>(
+    () => ({
+      changeLanguage,
+      dir: getLanguageDirection(language),
+      language,
+    }),
+    [changeLanguage, language],
+  );
+
+  return (
+    <I18nextProvider i18n={i18n}>
+      <I18nContext.Provider value={value}>
+        {children}
+        <DomTranslationBridge language={language} />
+      </I18nContext.Provider>
+    </I18nextProvider>
+  );
+};
+
+export const useI18nContext = () => {
+  const context = useContext(I18nContext);
+  if (!context)
+    throw new Error("useI18nContext must be used within an I18nProvider");
+  return context;
+};
+
+export default I18nProvider;

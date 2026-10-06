@@ -1,0 +1,714 @@
+{
+  "common": {
+    "yes": "Yes",
+    "no": "No",
+    "not-available": "N/A",
+    "select-option": "Select",
+    "empty-option": "Empty",
+    "none": "None",
+    "cancel": "Cancel",
+    "ok": "OK",
+    "close": "Close",
+    "edit": "Edit",
+    "delete": "Delete",
+    "saving": "Saving..."
+  },
+  "form-actions": {
+    "cancel": "Cancel",
+    "pending": "Saving..."
+  },
+  "confirm-dialog": {
+    "cancel": "Cancel",
+    "pending": "Deleting...",
+    "confirm": "Delete"
+  },
+  "column-selector": {
+    "button": "Columns"
+  },
+  "select": {
+    "placeholder": "Select an option"
+  },
+  "date-picker": {
+    "placeholder": "Pick a date",
+    "previous-month": "Previous month",
+    "next-month": "Next month"
+  },
+  "shadcn-sidebar": {
+    "title": "Sidebar",
+    "description": "Displays the mobile sidebar.",
+    "toggle": "Toggle sidebar"
+  },
+  "language-switcher": {
+    "label": "Language",
+    "languages": {
+      "ar": "Arabic",
+      "en": "English",
+      "nl": "Dutch"
+    }
+  },
+  "dashboard-header": {
+    "logout": "Logout"
+  },
+  "app-sidebar": {
+    "brand": "Swedinox",
+    "navigation": "Navigation",
+    "groups": {
+      "customers": "Customers",
+      "company": "Company",
+      "sales": "Sales",
+      "configuration": "Configuration"
+    },
+    "items": {
+      "addresses": "Addresses",
+      "companies": "Companies",
+      "company-contacts": "Company Contacts",
+      "communication-settings": "Communication Settings",
+      "contacts": "Contacts",
+      "contact-groups": "Contact Groups",
+      "contracts": "Contracts",
+      "contract-groups": "Contract Groups",
+      "locations": "Locations",
+      "sub-locations": "Sub-locations"
+    }
+  },
+  "dashboard-page": {
+    "title": "Dashboard",
+    "description": "Welcome to the Swedinox dashboard."
+  },
+  "addresses-page": {
+    "title": "Addresses",
+    "description": "Address records and details"
+  },
+  "communication-settings-page": {
+    "title": "Communication Settings",
+    "description": "Manage communication settings per company and document type",
+    "new-setting": "New Setting"
+  },
+  "communication-settings-add-page": {
+    "title": "Add Communication Setting",
+    "description": "Create a new communication setting"
+  },
+  "companies-page": {
+    "title": "Companies",
+    "description": "Manage company records",
+    "new-company": "New Company"
+  },
+  "companies-add-page": {
+    "title": "Add Company",
+    "description": "Create a new company record"
+  },
+  "company-contacts-page": {
+    "title": "Company Contacts"
+  },
+  "contact-groups-page": {
+    "title": "Contact Groups",
+    "description": "Manage groups that can be assigned to contacts."
+  },
+  "contacts-page": {
+    "title": "Contacts",
+    "description": "Standalone contact records.",
+    "new-contact": "New Contact"
+  },
+  "contacts-add-page": {
+    "back-link": "Contacts",
+    "title": "New Contact"
+  },
+  "contract-groups-page": {
+    "title": "Contract Groups",
+    "description": "Manage groups that can be assigned to contracts."
+  },
+  "contracts-page": {
+    "title": "Contracts",
+    "description": "Standalone contract records.",
+    "new-contract": "New Contract"
+  },
+  "contracts-add-page": {
+    "back-link": "Contracts",
+    "title": "New Contract"
+  },
+  "locations-page": {
+    "title": "Locations",
+    "description": "Manage warehouse location records",
+    "new-location": "New Location",
+    "new-sub-location": "New Sub-location"
+  },
+  "locations-add-page": {
+    "title": "Add Location",
+    "description": "Create a new top-level warehouse location"
+  },
+  "locations-add-sub-page": {
+    "title": "Add Sub-location",
+    "description": "Create a new child location under an existing location"
+  },
+  "sign-in-page": {
+    "title": "Swedinox",
+    "description": "Welcome back, sign in to continue"
+  },
+  "addresses-table-content": {
+    "columns": {
+      "id": "Code",
+      "company-code": "Company Code",
+      "company-name": "Company Name",
+      "alt-name": "Alt Name",
+      "street-and-no": "Street & No.",
+      "postal-code": "Postal Code",
+      "city": "City",
+      "region": "Region",
+      "country": "Country",
+      "house": "House",
+      "po-box": "PO Box",
+      "gln": "GLN",
+      "peppol-id": "Peppol ID",
+      "telephone": "Telephone",
+      "fax": "Fax",
+      "email": "Email",
+      "website": "Website",
+      "billing-attention": "Billing Attention",
+      "billing-attention-additional": "Billing Attention 2",
+      "sequence-number": "Sequence No.",
+      "category": "Category",
+      "address-complete": "Address Complete",
+      "need-crane": "Need Crane",
+      "canopy-required": "Canopy Required",
+      "bundle-separately": "Bundle Separately",
+      "special-transport": "Special Transport",
+      "available-at": "Available At",
+      "unloading-start-time": "Unloading Start",
+      "unloading-end-time": "Unloading End",
+      "max-length": "Max Length (mm)",
+      "max-bundle-weight": "Max Bundle Weight (kg)",
+      "loading-instructions": "Loading Instructions",
+      "created-at": "Created At",
+      "updated-at": "Updated At"
+    },
+    "empty": "No addresses found"
+  },
+  "communication-settings-table-content": {
+    "columns": {
+      "id": "Code",
+      "company-name": "Company",
+      "company-code": "Company Code",
+      "document-type": "Document Type",
+      "communication-type": "Communication Type",
+      "shape": "Shape",
+      "email": "Email",
+      "fax": "Fax",
+      "created-at": "Created At",
+      "updated-at": "Updated At"
+    },
+    "empty": "No communication settings found"
+  },
+  "companies-table-content": {
+    "columns": {
+      "id": "Code",
+      "company-name": "Company Name",
+      "created-at": "Created At",
+      "updated-at": "Updated At"
+    },
+    "empty": "No companies found"
+  },
+  "company-contacts-list": {
+    "columns": {
+      "id": "Code",
+      "company-name": "Company",
+      "full-name": "Full Name",
+      "salutation": "Salutation",
+      "telephone": "Telephone",
+      "mobile": "Mobile",
+      "fax": "Fax",
+      "email": "Email",
+      "city": "City",
+      "country": "Country",
+      "category-addition": "Category Addition",
+      "is-active": "Active",
+      "created-at": "Created At"
+    },
+    "empty": "No company contacts found"
+  },
+  "contact-groups-client": {
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "new-group": "New Group",
+    "columns": {
+      "id": "Code",
+      "name": "Name",
+      "subgroup": "Subgroup",
+      "status": "Status",
+      "created-at": "Created At"
+    },
+    "empty": "No contact groups yet",
+    "actions": {
+      "edit": "Edit",
+      "delete": "Delete"
+    },
+    "dialog": {
+      "edit-title": "Edit Contact Group",
+      "create-title": "New Contact Group",
+      "edit-description": "Update the name and settings of this group.",
+      "create-description": "Create a new group that can be linked to contacts."
+    },
+    "fields": {
+      "name": "Name",
+      "contract-subgroup": "Contract subgroup",
+      "sequence-within-subgroup": "Sequence within subgroup",
+      "quickly-change-sequence-number": "Quickly change seq. no.",
+      "is-active": "Active"
+    },
+    "placeholders": {
+      "name": "e.g. Procurement"
+    },
+    "save-changes": "Save Changes",
+    "create-group": "Create Group",
+    "delete-dialog": {
+      "title": "Delete Contact Group",
+      "description": "Are you sure you want to delete \"{{name}}\"? This will also remove it from all linked contacts."
+    }
+  },
+  "contract-groups-client": {
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "new-group": "New Group",
+    "columns": {
+      "id": "Code",
+      "name": "Name",
+      "subgroup": "Subgroup",
+      "status": "Status",
+      "created-at": "Created At"
+    },
+    "empty": "No contract groups yet",
+    "actions": {
+      "edit": "Edit",
+      "delete": "Delete"
+    },
+    "dialog": {
+      "edit-title": "Edit Contract Group",
+      "create-title": "New Contract Group",
+      "edit-description": "Update the name and settings of this group.",
+      "create-description": "Create a new group that can be linked to contracts."
+    },
+    "fields": {
+      "name": "Name",
+      "contract-subgroup": "Contract subgroup",
+      "sequence-within-subgroup": "Sequence within subgroup",
+      "quickly-change-sequence-number": "Quickly change seq. no.",
+      "is-active": "Active"
+    },
+    "placeholders": {
+      "name": "e.g. Procurement"
+    },
+    "save-changes": "Save Changes",
+    "create-group": "Create Group",
+    "delete-dialog": {
+      "title": "Delete Contract Group",
+      "description": "Are you sure you want to delete \"{{name}}\"? This will also remove it from all linked contracts."
+    }
+  },
+  "contacts-table-content": {
+    "columns": {
+      "id": "Code",
+      "contact-type": "Contact Type",
+      "contact-group-name": "Contact Group",
+      "description": "Description",
+      "search-code-1": "Search Code 1",
+      "search-code-2": "Search Code 2",
+      "search-code-3": "Search Code 3",
+      "website-sorting": "Website Sort",
+      "hide-on-website": "Hide on Website",
+      "created-at": "Created At"
+    },
+    "empty": "No contacts found"
+  },
+  "contracts-table-content": {
+    "columns": {
+      "id": "Code",
+      "contract-type": "Contract Type",
+      "contract-group-name": "Contract Group",
+      "description": "Description",
+      "search-code-1": "Search Code 1",
+      "search-code-2": "Search Code 2",
+      "search-code-3": "Search Code 3",
+      "website-sorting": "Website Sort",
+      "hide-on-website": "Hide on Website",
+      "created-at": "Created At"
+    },
+    "empty": "No contracts found"
+  },
+  "locations-table-content": {
+    "columns": {
+      "id": "Code",
+      "name": "Name",
+      "location-type": "Type",
+      "picking-sequence": "Picking Sequence",
+      "is-blocked": "Blocked",
+      "blocked-for-optimization": "Blocked for Optimization",
+      "limited-dimensions": "Limited Dimensions",
+      "adopt-from": "Adopt From",
+      "adopt-position": "Adopt Position",
+      "created-at": "Created At",
+      "updated-at": "Updated At"
+    },
+    "empty": "No locations found"
+  },
+  "communication-setting-form": {
+    "sections": {
+      "setting": "Setting",
+      "contact-details": "Contact & Details"
+    },
+    "fields": {
+      "company": "Company",
+      "document-type": "Document Type",
+      "communication-type": "Communication Type",
+      "shape": "Shape",
+      "contract": "Contract",
+      "email": "Email",
+      "fax": "Fax"
+    },
+    "submit": "Create Setting",
+    "document-type-options": {
+      "order_status_message": "Order Status Message",
+      "bill_of_lading": "Bill of Lading",
+      "order_confirmation": "Order Confirmation",
+      "quote": "Quote",
+      "purchase_request": "Purchase Request",
+      "purchase_return": "Purchase Return",
+      "purchase_order": "Purchase Order",
+      "consignment_consumption_confirmation": "Consignment Consumption Confirmation",
+      "call_off_confirmation": "Call-off Confirmation",
+      "return_order_confirmation": "Return Order Confirmation",
+      "pro_forma_invoice": "Pro Forma Invoice",
+      "certificate_email": "Certificate Email",
+      "invoice": "Invoice",
+      "price_catalogue": "Price Catalogue",
+      "eta": "ETA",
+      "eta_delayed": "ETA Delayed",
+      "checklist": "Checklist"
+    },
+    "communication-type-options": {
+      "email": "Email",
+      "fax": "Fax",
+      "printing": "Printing",
+      "edi_ftp": "EDI FTP",
+      "edi_http": "EDI HTTP",
+      "edi_https": "EDI HTTPS"
+    },
+    "shape-options": {
+      "pdf": "PDF",
+      "scsn": "SCSN",
+      "sales_in_the_construction": "Sales in the Construction",
+      "edi4steel": "EDI4Steel",
+      "text": "Text",
+      "peppol": "Peppol"
+    }
+  },
+  "contact-form": {
+    "sections": {
+      "contact-type": "Contact Type",
+      "contact": "Contact",
+      "search-codes": "Search Codes",
+      "website": "Website"
+    },
+    "contact-types": {
+      "gross_prices": "Gross Prices",
+      "options": "Options",
+      "net_prices": "Net Prices",
+      "cost_price": "Cost Price",
+      "surcharges": "Surcharges",
+      "toeslagen": "Toeslagen"
+    },
+    "fields": {
+      "description": "Description",
+      "contact-group": "Contact Group",
+      "quickly-change-order": "Quickly Change Order",
+      "price-date": "Price Date",
+      "link-to-new-customer": "Link this contact to a new customer",
+      "search-code": "Search Code",
+      "website-sorting": "Website Sorting",
+      "hide-on-website": "Hide on Website"
+    },
+    "submit": "Create Contact"
+  },
+  "contract-form": {
+    "sections": {
+      "contract-type": "Contract Type",
+      "contract": "Contract",
+      "search-codes": "Search Codes",
+      "website": "Website"
+    },
+    "contract-types": {
+      "gross_prices": "Gross Prices",
+      "options": "Options",
+      "net_prices": "Net Prices",
+      "cost_price": "Cost Price",
+      "surcharges": "Surcharges",
+      "toeslagen": "Toeslagen"
+    },
+    "fields": {
+      "description": "Description",
+      "contract-group": "Contract Group",
+      "quickly-change-order": "Quickly Change Order",
+      "price-date": "Price Date",
+      "link-to-new-customer": "Link this contract to a new customer",
+      "search-code": "Search Code",
+      "website-sorting": "Website Sorting",
+      "hide-on-website": "Hide on Website"
+    },
+    "submit": "Create Contract"
+  },
+  "address-select": {
+    "empty": "Empty"
+  },
+  "location-form": {
+    "add-new-loading-location": "Add New Loading Location",
+    "cancel-new-loading-location": "Cancel new loading location",
+    "sections": {
+      "location-details": "Location Details",
+      "flags": "Flags"
+    },
+    "fields": {
+      "name": "Name",
+      "location-type": "Location Type",
+      "loading-location": "Loading Location",
+      "address": "Address",
+      "picking-sequence": "Picking Sequence",
+      "adopt-from": "Adopt From",
+      "adopt-position": "Adopt Position",
+      "blocked-reason": "Blocked Reason"
+    },
+    "placeholders": {
+      "name": "Enter location name",
+      "select-type": "Select type",
+      "new-loading-location-name": "New loading location name",
+      "picking-sequence": "e.g. 10",
+      "adopt-from": "Location to adopt from",
+      "blocked-reason": "Reason for blocking this location"
+    },
+    "flags": {
+      "is-blocked": "Blocked",
+      "blocked-for-optimization": "Blocked for Optimization",
+      "limited-dimensions": "Limited Dimensions"
+    },
+    "location-type-options": {
+      "pick": "Pick",
+      "bulk": "Bulk",
+      "production": "Production",
+      "scrap": "Scrap",
+      "loading": "Loading",
+      "inspection": "Inspection",
+      "putaway": "Putaway",
+      "sorting": "Sorting",
+      "processor": "Processor",
+      "pickup": "Pickup",
+      "call_off": "Call Off"
+    },
+    "adopt-position-options": {
+      "next": "Next",
+      "below": "Below"
+    },
+    "adopt-from-address-inherited": "Address is inherited from the parent location",
+    "submit": "Create Location"
+  },
+  "location-tree-dialog": {
+    "title": "Select Location",
+    "empty": "No locations available"
+  },
+  "sub-location-form": {
+    "fields": {
+      "parent-location": "Parent Location"
+    },
+    "placeholders": {
+      "parent-location": "Select a parent location"
+    },
+    "submit": "Create Sub-location"
+  },
+  "address-form": {
+    "sections": {
+      "basic-info": "Basic Info",
+      "address": "Address",
+      "contact": "Contact",
+      "category": "Category",
+      "billing-address-settings": "Billing Address Settings",
+      "delivery-address-settings": "Delivery Address Settings",
+      "handling-options": "Handling Options"
+    },
+    "fields": {
+      "alt-name": "Alternative Name",
+      "sequence-number": "Sequence Number",
+      "gln": "GLN",
+      "peppol-id": "Peppol ID",
+      "po-box": "PO Box",
+      "street-and-number": "Street & Number",
+      "postal-code": "Postal Code",
+      "city": "City",
+      "region": "Region",
+      "country": "Country",
+      "house": "House",
+      "telephone": "Telephone",
+      "fax": "Fax",
+      "email": "Email",
+      "website": "Website",
+      "category": "Category",
+      "billing-attention": "To the Attention Of",
+      "unloading-start-time": "Unloading Start Time",
+      "unloading-end-time": "Unloading End Time",
+      "max-length": "Max Length",
+      "max-bundle-weight": "Max Bundle Weight",
+      "loading-instructions": "Loading Instructions",
+      "available-at": "Available At"
+    },
+    "placeholders": {
+      "gln": "1234567890123",
+      "peppol-id": "1204:identifier",
+      "billing-attention-additional": "Additional billing line"
+    },
+    "category-description": "Choose how this address is used across the business flow.",
+    "handling-options-description": "Mark any special delivery or unloading requirements.",
+    "categories": {
+      "invoice": "Invoice",
+      "visit": "Visit",
+      "correspondence": "Correspondence",
+      "delivery": "Delivery"
+    },
+    "available-at-options": {
+      "crane_unloading": "Crane Unloading",
+      "forklift_unloading": "Forklift Unloading"
+    },
+    "boolean-fields": {
+      "need-crane": "Need Crane",
+      "canopy-required": "Canopy Required",
+      "bundle-separately": "Bundle Separately",
+      "address-complete": "Address Complete",
+      "special-transport": "Special Transport"
+    },
+    "units": {
+      "mm": "mm",
+      "kg": "kg"
+    }
+  },
+  "contact-dialog": {
+    "title": "Company Contact",
+    "description": "Add a contact person for this company.",
+    "default-full-name": "Contact",
+    "sections": {
+      "contact-person": "Contact Person",
+      "address": "Address",
+      "categories": "Categories"
+    },
+    "fields": {
+      "salutation": "Salutation",
+      "first-name": "First Name",
+      "initials": "Initials",
+      "last-name": "Last Name",
+      "telephone": "Telephone",
+      "mobile": "Mobile",
+      "fax": "Fax",
+      "email": "Email",
+      "category-addition": "Category Addition",
+      "btw-number": "VAT Number",
+      "country": "Country",
+      "postal-code": "Postal Code",
+      "house": "House",
+      "po-box": "P.O. Box",
+      "street-and-number": "Street + No.",
+      "annex": "Annex",
+      "city": "City",
+      "region": "Region",
+      "website": "Website",
+      "sequence-number": "Sequence Number"
+    },
+    "salutations": {
+      "mr": "Mr.",
+      "mrs": "Mrs.",
+      "ms": "Ms.",
+      "dr": "Dr.",
+      "engineer": "Engineer",
+      "professor": "Professor"
+    },
+    "categories": {
+      "procurement": "Procurement",
+      "sales": "Sales",
+      "warehouse": "Warehouse",
+      "management": "Management",
+      "bookkeeping": "Bookkeeping",
+      "certificates": "Certificates"
+    },
+    "submit": "Save Contact"
+  },
+  "company-form": {
+    "sections": {
+      "company-details": "Company Details",
+      "roles": "Roles",
+      "search-codes": "Search Codes"
+    },
+    "fields": {
+      "company-name": "Company Name",
+      "language": "Language",
+      "corresp-name": "Corresp. Name",
+      "remarks": "Remarks",
+      "search-code": "Search Code"
+    },
+    "placeholders": {
+      "company-name": "Enter the company name",
+      "remarks": "Any additional remarks..."
+    },
+    "languages": {
+      "dutch": "Dutch",
+      "arabic": "Arabic",
+      "english": "English"
+    },
+    "address-fallback": "Address",
+    "add-address": "Add Address",
+    "delivery-badge": "Delivery",
+    "remove-address": "Remove address",
+    "add-delivery-address": "Add Delivery Address",
+    "add-communication-setting": "Add Communication Setting",
+    "remove-communication-setting": "Remove communication setting",
+    "save-communication-setting": "Add Setting",
+    "roles": {
+      "customer": "Customer",
+      "prospect": "Prospect",
+      "supplier": "Supplier",
+      "processor": "Processor",
+      "transporter": "Transporter",
+      "agent": "Agent",
+      "purchasing_org": "Purchasing Org.",
+      "other": "Other",
+      "internal": "Internal"
+    },
+    "submit": "Create Company",
+    "dialogs": {
+      "primary-address": {
+        "title": "Address",
+        "description": "Fill in the address details for this company."
+      },
+      "delivery-address": {
+        "title": "Delivery Address",
+        "description": "Additional addresses are restricted to the delivery category."
+      },
+      "communication-setting": {
+        "title": "Communication Setting",
+        "description": "Add a communication setting for this company."
+      }
+    },
+    "save-address": "Save Address"
+  },
+  "validation": {
+    "invalid-email-address": "Invalid email address",
+    "invalid-website-url": "Invalid website URL",
+    "gln-too-long": "GLN must be 13 characters or less",
+    "peppol-format": "Format must be 4 digits, then a colon, then an identifier (for example 1204:identifier)",
+    "at-least-one-category": "At least one category is required",
+    "company-name-required": "Company name is required",
+    "description-required": "Description is required",
+    "location-name-required": "Location name is required",
+    "location-type-required": "Location type is required",
+    "adopt-from-required": "Parent location is required",
+    "company-required": "Company is required",
+    "document-type-required": "Document type is required",
+    "communication-type-required": "Communication type is required",
+    "name-required": "Name is required"
+  }
+}

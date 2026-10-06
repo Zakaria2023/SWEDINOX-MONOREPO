@@ -1,0 +1,714 @@
+{
+  "common": {
+    "yes": "Ja",
+    "no": "Nee",
+    "not-available": "Niet beschikbaar",
+    "select-option": "Selecteren",
+    "empty-option": "Leeg",
+    "none": "Geen",
+    "cancel": "Annuleren",
+    "ok": "OK",
+    "close": "Sluiten",
+    "edit": "Bewerken",
+    "delete": "Verwijderen",
+    "saving": "Opslaan..."
+  },
+  "form-actions": {
+    "cancel": "Annuleren",
+    "pending": "Opslaan..."
+  },
+  "confirm-dialog": {
+    "cancel": "Annuleren",
+    "pending": "Verwijderen...",
+    "confirm": "Verwijderen"
+  },
+  "column-selector": {
+    "button": "Kolommen"
+  },
+  "select": {
+    "placeholder": "Selecteer een optie"
+  },
+  "date-picker": {
+    "placeholder": "Kies een datum",
+    "previous-month": "Vorige maand",
+    "next-month": "Volgende maand"
+  },
+  "shadcn-sidebar": {
+    "title": "Zijbalk",
+    "description": "Toont de mobiele zijbalk.",
+    "toggle": "Zijbalk schakelen"
+  },
+  "language-switcher": {
+    "label": "Taal",
+    "languages": {
+      "ar": "Arabisch",
+      "en": "Engels",
+      "nl": "Nederlands"
+    }
+  },
+  "dashboard-header": {
+    "logout": "Uitloggen"
+  },
+  "app-sidebar": {
+    "brand": "Swedinox",
+    "navigation": "Navigatie",
+    "groups": {
+      "customers": "Klanten",
+      "company": "Bedrijf",
+      "sales": "Verkoop",
+      "configuration": "Configuratie"
+    },
+    "items": {
+      "addresses": "Adressen",
+      "companies": "Bedrijven",
+      "company-contacts": "Bedrijfscontacten",
+      "communication-settings": "Communicatie-instellingen",
+      "contacts": "Contacten",
+      "contact-groups": "Contactgroepen",
+      "contracts": "Contracten",
+      "contract-groups": "Contractgroepen",
+      "locations": "Locaties",
+      "sub-locations": "Sublocaties"
+    }
+  },
+  "dashboard-page": {
+    "title": "Dashboard",
+    "description": "Welkom in het Swedinox-dashboard."
+  },
+  "addresses-page": {
+    "title": "Adressen",
+    "description": "Adresgegevens en details"
+  },
+  "communication-settings-page": {
+    "title": "Communicatie-instellingen",
+    "description": "Beheer communicatie-instellingen per bedrijf en documenttype",
+    "new-setting": "Nieuwe instelling"
+  },
+  "communication-settings-add-page": {
+    "title": "Communicatie-instelling toevoegen",
+    "description": "Maak een nieuwe communicatie-instelling aan"
+  },
+  "companies-page": {
+    "title": "Bedrijven",
+    "description": "Beheer bedrijfsgegevens",
+    "new-company": "Nieuw bedrijf"
+  },
+  "companies-add-page": {
+    "title": "Bedrijf toevoegen",
+    "description": "Maak een nieuw bedrijfsrecord aan"
+  },
+  "company-contacts-page": {
+    "title": "Bedrijfscontacten"
+  },
+  "contact-groups-page": {
+    "title": "Contactgroepen",
+    "description": "Beheer groepen die aan contacten kunnen worden gekoppeld."
+  },
+  "contacts-page": {
+    "title": "Contacten",
+    "description": "Losse contactrecords.",
+    "new-contact": "Nieuw contact"
+  },
+  "contacts-add-page": {
+    "back-link": "Contacten",
+    "title": "Nieuw contact"
+  },
+  "contract-groups-page": {
+    "title": "Contractgroepen",
+    "description": "Beheer groepen die aan contracten kunnen worden gekoppeld."
+  },
+  "contracts-page": {
+    "title": "Contracten",
+    "description": "Losse contractrecords.",
+    "new-contract": "Nieuw contract"
+  },
+  "contracts-add-page": {
+    "back-link": "Contracten",
+    "title": "Nieuw contract"
+  },
+  "locations-page": {
+    "title": "Locaties",
+    "description": "Beheer magazijnlocaties",
+    "new-location": "Nieuwe locatie",
+    "new-sub-location": "Nieuwe sublocatie"
+  },
+  "locations-add-page": {
+    "title": "Locatie toevoegen",
+    "description": "Maak een nieuwe hoofdlocatie aan"
+  },
+  "locations-add-sub-page": {
+    "title": "Sublocatie toevoegen",
+    "description": "Maak een nieuwe onderliggende locatie aan"
+  },
+  "sign-in-page": {
+    "title": "Swedinox",
+    "description": "Welkom terug, meld je aan om verder te gaan"
+  },
+  "addresses-table-content": {
+    "columns": {
+      "id": "Code",
+      "company-code": "Bedrijfscode",
+      "company-name": "Bedrijfsnaam",
+      "alt-name": "Alternatieve naam",
+      "street-and-no": "Straat & Nr.",
+      "postal-code": "Postcode",
+      "city": "Plaats",
+      "region": "Regio",
+      "country": "Land",
+      "house": "Huis",
+      "po-box": "Postbus",
+      "gln": "GLN",
+      "peppol-id": "Peppol-ID",
+      "telephone": "Telefoon",
+      "fax": "Fax",
+      "email": "E-mail",
+      "website": "Website",
+      "billing-attention": "T.a.v.",
+      "billing-attention-additional": "T.a.v. 2",
+      "sequence-number": "Volgnr.",
+      "category": "Categorie",
+      "address-complete": "Adres compleet",
+      "need-crane": "Kraan nodig",
+      "canopy-required": "Overkapping vereist",
+      "bundle-separately": "Apart bundelen",
+      "special-transport": "Speciaal transport",
+      "available-at": "Beschikbaar bij",
+      "unloading-start-time": "Lossen start",
+      "unloading-end-time": "Lossen einde",
+      "max-length": "Max. lengte (mm)",
+      "max-bundle-weight": "Max. bundelgewicht (kg)",
+      "loading-instructions": "Laadinstructies",
+      "created-at": "Aangemaakt op",
+      "updated-at": "Bijgewerkt op"
+    },
+    "empty": "Geen adressen gevonden"
+  },
+  "communication-settings-table-content": {
+    "columns": {
+      "id": "Code",
+      "company-name": "Bedrijf",
+      "company-code": "Bedrijfscode",
+      "document-type": "Documenttype",
+      "communication-type": "Communicatietype",
+      "shape": "Formaat",
+      "email": "E-mail",
+      "fax": "Fax",
+      "created-at": "Aangemaakt op",
+      "updated-at": "Bijgewerkt op"
+    },
+    "empty": "Geen communicatie-instellingen gevonden"
+  },
+  "companies-table-content": {
+    "columns": {
+      "id": "Code",
+      "company-name": "Bedrijfsnaam",
+      "created-at": "Aangemaakt op",
+      "updated-at": "Bijgewerkt op"
+    },
+    "empty": "Geen bedrijven gevonden"
+  },
+  "company-contacts-list": {
+    "columns": {
+      "id": "Code",
+      "company-name": "Bedrijf",
+      "full-name": "Volledige naam",
+      "salutation": "Aanhef",
+      "telephone": "Telefoon",
+      "mobile": "Mobiel",
+      "fax": "Fax",
+      "email": "E-mail",
+      "city": "Plaats",
+      "country": "Land",
+      "category-addition": "Categorie toevoeging",
+      "is-active": "Actief",
+      "created-at": "Aangemaakt op"
+    },
+    "empty": "Geen bedrijfscontacten gevonden"
+  },
+  "contact-groups-client": {
+    "status": {
+      "active": "Actief",
+      "inactive": "Inactief"
+    },
+    "new-group": "Nieuwe groep",
+    "columns": {
+      "id": "Code",
+      "name": "Naam",
+      "subgroup": "Subgroep",
+      "status": "Status",
+      "created-at": "Aangemaakt op"
+    },
+    "empty": "Nog geen contactgroepen",
+    "actions": {
+      "edit": "Bewerken",
+      "delete": "Verwijderen"
+    },
+    "dialog": {
+      "edit-title": "Contactgroep bewerken",
+      "create-title": "Nieuwe contactgroep",
+      "edit-description": "Werk de naam en instellingen van deze groep bij.",
+      "create-description": "Maak een nieuwe groep die aan contacten kan worden gekoppeld."
+    },
+    "fields": {
+      "name": "Naam",
+      "contract-subgroup": "Contractsubgroep",
+      "sequence-within-subgroup": "Volgorde binnen subgroep",
+      "quickly-change-sequence-number": "Snel volgnummer wijzigen",
+      "is-active": "Actief"
+    },
+    "placeholders": {
+      "name": "bijv. Inkoop"
+    },
+    "save-changes": "Wijzigingen opslaan",
+    "create-group": "Groep aanmaken",
+    "delete-dialog": {
+      "title": "Contactgroep verwijderen",
+      "description": "Weet je zeker dat je \"{{name}}\" wilt verwijderen? Deze wordt ook verwijderd uit alle gekoppelde contacten."
+    }
+  },
+  "contract-groups-client": {
+    "status": {
+      "active": "Actief",
+      "inactive": "Inactief"
+    },
+    "new-group": "Nieuwe groep",
+    "columns": {
+      "id": "Code",
+      "name": "Naam",
+      "subgroup": "Subgroep",
+      "status": "Status",
+      "created-at": "Aangemaakt op"
+    },
+    "empty": "Nog geen contractgroepen",
+    "actions": {
+      "edit": "Bewerken",
+      "delete": "Verwijderen"
+    },
+    "dialog": {
+      "edit-title": "Contractgroep bewerken",
+      "create-title": "Nieuwe contractgroep",
+      "edit-description": "Werk de naam en instellingen van deze groep bij.",
+      "create-description": "Maak een nieuwe groep die aan contracten kan worden gekoppeld."
+    },
+    "fields": {
+      "name": "Naam",
+      "contract-subgroup": "Contractsubgroep",
+      "sequence-within-subgroup": "Volgorde binnen subgroep",
+      "quickly-change-sequence-number": "Snel volgnummer wijzigen",
+      "is-active": "Actief"
+    },
+    "placeholders": {
+      "name": "bijv. Inkoop"
+    },
+    "save-changes": "Wijzigingen opslaan",
+    "create-group": "Groep aanmaken",
+    "delete-dialog": {
+      "title": "Contractgroep verwijderen",
+      "description": "Weet je zeker dat je \"{{name}}\" wilt verwijderen? Deze wordt ook verwijderd uit alle gekoppelde contracten."
+    }
+  },
+  "contacts-table-content": {
+    "columns": {
+      "id": "Code",
+      "contact-type": "Contacttype",
+      "contact-group-name": "Contactgroep",
+      "description": "Omschrijving",
+      "search-code-1": "Zoekcode 1",
+      "search-code-2": "Zoekcode 2",
+      "search-code-3": "Zoekcode 3",
+      "website-sorting": "Website sortering",
+      "hide-on-website": "Verbergen op website",
+      "created-at": "Aangemaakt op"
+    },
+    "empty": "Geen contacten gevonden"
+  },
+  "contracts-table-content": {
+    "columns": {
+      "id": "Code",
+      "contract-type": "Contracttype",
+      "contract-group-name": "Contractgroep",
+      "description": "Omschrijving",
+      "search-code-1": "Zoekcode 1",
+      "search-code-2": "Zoekcode 2",
+      "search-code-3": "Zoekcode 3",
+      "website-sorting": "Website sortering",
+      "hide-on-website": "Verbergen op website",
+      "created-at": "Aangemaakt op"
+    },
+    "empty": "Geen contracten gevonden"
+  },
+  "locations-table-content": {
+    "columns": {
+      "id": "Code",
+      "name": "Naam",
+      "location-type": "Type",
+      "picking-sequence": "Pickvolgorde",
+      "is-blocked": "Geblokkeerd",
+      "blocked-for-optimization": "Geblokkeerd voor optimalisatie",
+      "limited-dimensions": "Beperkte afmetingen",
+      "adopt-from": "Overnemen van",
+      "adopt-position": "Overnamepositie",
+      "created-at": "Aangemaakt op",
+      "updated-at": "Bijgewerkt op"
+    },
+    "empty": "Geen locaties gevonden"
+  },
+  "communication-setting-form": {
+    "sections": {
+      "setting": "Instelling",
+      "contact-details": "Contact & details"
+    },
+    "fields": {
+      "company": "Bedrijf",
+      "document-type": "Documenttype",
+      "communication-type": "Communicatietype",
+      "shape": "Formaat",
+      "contract": "Contract",
+      "email": "E-mail",
+      "fax": "Fax"
+    },
+    "submit": "Instelling aanmaken",
+    "document-type-options": {
+      "order_status_message": "Orderstatusbericht",
+      "bill_of_lading": "Vrachtbrief",
+      "order_confirmation": "Orderbevestiging",
+      "quote": "Offerte",
+      "purchase_request": "Inkoopaanvraag",
+      "purchase_return": "Inkoopretour",
+      "purchase_order": "Inkooporder",
+      "consignment_consumption_confirmation": "Bevestiging consignatieverbruik",
+      "call_off_confirmation": "Afroepbevestiging",
+      "return_order_confirmation": "Retourorderbevestiging",
+      "pro_forma_invoice": "Pro-formafactuur",
+      "certificate_email": "Certificaat e-mail",
+      "invoice": "Factuur",
+      "price_catalogue": "Prijscatalogus",
+      "eta": "ETA",
+      "eta_delayed": "ETA vertraagd",
+      "checklist": "Checklist"
+    },
+    "communication-type-options": {
+      "email": "E-mail",
+      "fax": "Fax",
+      "printing": "Afdrukken",
+      "edi_ftp": "EDI FTP",
+      "edi_http": "EDI HTTP",
+      "edi_https": "EDI HTTPS"
+    },
+    "shape-options": {
+      "pdf": "PDF",
+      "scsn": "SCSN",
+      "sales_in_the_construction": "Verkoop in de bouw",
+      "edi4steel": "EDI4Steel",
+      "text": "Tekst",
+      "peppol": "Peppol"
+    }
+  },
+  "contact-form": {
+    "sections": {
+      "contact-type": "Contacttype",
+      "contact": "Contact",
+      "search-codes": "Zoekcodes",
+      "website": "Website"
+    },
+    "contact-types": {
+      "gross_prices": "Brutoprijzen",
+      "options": "Opties",
+      "net_prices": "Nettoprijzen",
+      "cost_price": "Kostprijs",
+      "surcharges": "Toeslagen",
+      "toeslagen": "Toeslagen"
+    },
+    "fields": {
+      "description": "Omschrijving",
+      "contact-group": "Contactgroep",
+      "quickly-change-order": "Snel volgorde wijzigen",
+      "price-date": "Prijsdatum",
+      "link-to-new-customer": "Koppel dit contact aan een nieuwe klant",
+      "search-code": "Zoekcode",
+      "website-sorting": "Website sortering",
+      "hide-on-website": "Verbergen op website"
+    },
+    "submit": "Contact aanmaken"
+  },
+  "contract-form": {
+    "sections": {
+      "contract-type": "Contracttype",
+      "contract": "Contract",
+      "search-codes": "Zoekcodes",
+      "website": "Website"
+    },
+    "contract-types": {
+      "gross_prices": "Brutoprijzen",
+      "options": "Opties",
+      "net_prices": "Nettoprijzen",
+      "cost_price": "Kostprijs",
+      "surcharges": "Toeslagen",
+      "toeslagen": "Toeslagen"
+    },
+    "fields": {
+      "description": "Omschrijving",
+      "contract-group": "Contractgroep",
+      "quickly-change-order": "Snel volgorde wijzigen",
+      "price-date": "Prijsdatum",
+      "link-to-new-customer": "Koppel dit contract aan een nieuwe klant",
+      "search-code": "Zoekcode",
+      "website-sorting": "Website sortering",
+      "hide-on-website": "Verbergen op website"
+    },
+    "submit": "Contract aanmaken"
+  },
+  "address-select": {
+    "empty": "Leeg"
+  },
+  "location-form": {
+    "add-new-loading-location": "Nieuwe laadlocatie toevoegen",
+    "cancel-new-loading-location": "Nieuwe laadlocatie annuleren",
+    "sections": {
+      "location-details": "Locatiegegevens",
+      "flags": "Markeringen"
+    },
+    "fields": {
+      "name": "Naam",
+      "location-type": "Locatietype",
+      "loading-location": "Laadlocatie",
+      "address": "Adres",
+      "picking-sequence": "Pickvolgorde",
+      "adopt-from": "Overnemen van",
+      "adopt-position": "Overnamepositie",
+      "blocked-reason": "Reden blokkering"
+    },
+    "placeholders": {
+      "name": "Voer locatienaam in",
+      "select-type": "Selecteer type",
+      "new-loading-location-name": "Naam nieuwe laadlocatie",
+      "picking-sequence": "bijv. 10",
+      "adopt-from": "Locatie waarvan wordt overgenomen",
+      "blocked-reason": "Reden om deze locatie te blokkeren"
+    },
+    "flags": {
+      "is-blocked": "Geblokkeerd",
+      "blocked-for-optimization": "Geblokkeerd voor optimalisatie",
+      "limited-dimensions": "Beperkte afmetingen"
+    },
+    "location-type-options": {
+      "pick": "Pick",
+      "bulk": "Bulk",
+      "production": "Productie",
+      "scrap": "Schroot",
+      "loading": "Laad",
+      "inspection": "Inspectie",
+      "putaway": "Inruim",
+      "sorting": "Uitsorteer",
+      "processor": "Bewerker",
+      "pickup": "Afhaal",
+      "call_off": "Afroep"
+    },
+    "adopt-position-options": {
+      "next": "Volgende",
+      "below": "Onder"
+    },
+    "adopt-from-address-inherited": "Adres wordt overgenomen van bovenliggende locatie",
+    "submit": "Locatie aanmaken"
+  },
+  "location-tree-dialog": {
+    "title": "Locatie selecteren",
+    "empty": "Geen locaties beschikbaar"
+  },
+  "sub-location-form": {
+    "fields": {
+      "parent-location": "Bovenliggende locatie"
+    },
+    "placeholders": {
+      "parent-location": "Selecteer een bovenliggende locatie"
+    },
+    "submit": "Sublocatie aanmaken"
+  },
+  "address-form": {
+    "sections": {
+      "basic-info": "Basisinformatie",
+      "address": "Adres",
+      "contact": "Contact",
+      "category": "Categorie",
+      "billing-address-settings": "Instellingen factuuradres",
+      "delivery-address-settings": "Instellingen afleveradres",
+      "handling-options": "Behandelopties"
+    },
+    "fields": {
+      "alt-name": "Alternatieve naam",
+      "sequence-number": "Volgnummer",
+      "gln": "GLN",
+      "peppol-id": "Peppol-ID",
+      "po-box": "Postbus",
+      "street-and-number": "Straat & nummer",
+      "postal-code": "Postcode",
+      "city": "Plaats",
+      "region": "Regio",
+      "country": "Land",
+      "house": "Huis",
+      "telephone": "Telefoon",
+      "fax": "Fax",
+      "email": "E-mail",
+      "website": "Website",
+      "category": "Categorie",
+      "billing-attention": "Ter attentie van",
+      "unloading-start-time": "Start lostijd",
+      "unloading-end-time": "Einde lostijd",
+      "max-length": "Max. lengte",
+      "max-bundle-weight": "Max. bundelgewicht",
+      "loading-instructions": "Laadinstructies",
+      "available-at": "Beschikbaar bij"
+    },
+    "placeholders": {
+      "gln": "1234567890123",
+      "peppol-id": "1204:identifier",
+      "billing-attention-additional": "Extra factuurregel"
+    },
+    "category-description": "Kies hoe dit adres in het bedrijfsproces wordt gebruikt.",
+    "handling-options-description": "Markeer eventuele speciale leverings- of losvereisten.",
+    "categories": {
+      "invoice": "Factuur",
+      "visit": "Bezoek",
+      "correspondence": "Correspondentie",
+      "delivery": "Levering"
+    },
+    "available-at-options": {
+      "crane_unloading": "Lossen met kraan",
+      "forklift_unloading": "Lossen met heftruck"
+    },
+    "boolean-fields": {
+      "need-crane": "Kraan nodig",
+      "canopy-required": "Overkapping vereist",
+      "bundle-separately": "Apart bundelen",
+      "address-complete": "Adres compleet",
+      "special-transport": "Speciaal transport"
+    },
+    "units": {
+      "mm": "mm",
+      "kg": "kg"
+    }
+  },
+  "contact-dialog": {
+    "title": "Bedrijfscontact",
+    "description": "Voeg een contactpersoon toe voor dit bedrijf.",
+    "default-full-name": "Contact",
+    "sections": {
+      "contact-person": "Contactpersoon",
+      "address": "Adres",
+      "categories": "Categorieën"
+    },
+    "fields": {
+      "salutation": "Aanhef",
+      "first-name": "Voornaam",
+      "initials": "Initialen",
+      "last-name": "Achternaam",
+      "telephone": "Telefoon",
+      "mobile": "Mobiel",
+      "fax": "Fax",
+      "email": "E-mail",
+      "category-addition": "Categorie toevoeging",
+      "btw-number": "Btw-nummer",
+      "country": "Land",
+      "postal-code": "Postcode",
+      "house": "Huis",
+      "po-box": "Postbus",
+      "street-and-number": "Straat + nr.",
+      "annex": "Bijlage",
+      "city": "Plaats",
+      "region": "Regio",
+      "website": "Website",
+      "sequence-number": "Volgnummer"
+    },
+    "salutations": {
+      "mr": "Dhr.",
+      "mrs": "Mevr.",
+      "ms": "Mw.",
+      "dr": "Dr.",
+      "engineer": "Ir.",
+      "professor": "Prof."
+    },
+    "categories": {
+      "procurement": "Inkoop",
+      "sales": "Verkoop",
+      "warehouse": "Magazijn",
+      "management": "Management",
+      "bookkeeping": "Boekhouding",
+      "certificates": "Certificaten"
+    },
+    "submit": "Contact opslaan"
+  },
+  "company-form": {
+    "sections": {
+      "company-details": "Bedrijfsgegevens",
+      "roles": "Rollen",
+      "search-codes": "Zoekcodes"
+    },
+    "fields": {
+      "company-name": "Bedrijfsnaam",
+      "language": "Taal",
+      "corresp-name": "Correspondentienaam",
+      "remarks": "Opmerkingen",
+      "search-code": "Zoekcode"
+    },
+    "placeholders": {
+      "company-name": "Voer de bedrijfsnaam in",
+      "remarks": "Eventuele aanvullende opmerkingen..."
+    },
+    "languages": {
+      "dutch": "Nederlands",
+      "arabic": "Arabisch",
+      "english": "Engels"
+    },
+    "address-fallback": "Adres",
+    "add-address": "Adres toevoegen",
+    "delivery-badge": "Levering",
+    "remove-address": "Adres verwijderen",
+    "add-delivery-address": "Afleveradres toevoegen",
+    "add-communication-setting": "Communicatie-instelling toevoegen",
+    "remove-communication-setting": "Communicatie-instelling verwijderen",
+    "save-communication-setting": "Instelling toevoegen",
+    "roles": {
+      "customer": "Klant",
+      "prospect": "Prospect",
+      "supplier": "Leverancier",
+      "processor": "Verwerker",
+      "transporter": "Transporteur",
+      "agent": "Agent",
+      "purchasing_org": "Inkooporganisatie",
+      "other": "Overig",
+      "internal": "Intern"
+    },
+    "submit": "Bedrijf aanmaken",
+    "dialogs": {
+      "primary-address": {
+        "title": "Adres",
+        "description": "Vul de adresgegevens van dit bedrijf in."
+      },
+      "delivery-address": {
+        "title": "Afleveradres",
+        "description": "Extra adressen zijn beperkt tot de leveringscategorie."
+      },
+      "communication-setting": {
+        "title": "Communicatie-instelling",
+        "description": "Voeg een communicatie-instelling toe voor dit bedrijf."
+      }
+    },
+    "save-address": "Adres opslaan"
+  },
+  "validation": {
+    "invalid-email-address": "Ongeldig e-mailadres",
+    "invalid-website-url": "Ongeldige website-URL",
+    "gln-too-long": "GLN mag maximaal 13 tekens bevatten",
+    "peppol-format": "Het formaat moet 4 cijfers bevatten, gevolgd door een dubbele punt en een identifier, bijvoorbeeld 1204:identifier",
+    "at-least-one-category": "Minimaal één categorie is verplicht",
+    "company-name-required": "Bedrijfsnaam is verplicht",
+    "description-required": "Omschrijving is verplicht",
+    "location-name-required": "Locatienaam is verplicht",
+    "location-type-required": "Locatietype is verplicht",
+    "adopt-from-required": "Bovenliggende locatie is verplicht",
+    "company-required": "Bedrijf is verplicht",
+    "document-type-required": "Documenttype is verplicht",
+    "communication-type-required": "Communicatietype is verplicht",
+    "name-required": "Naam is verplicht"
+  }
+}
