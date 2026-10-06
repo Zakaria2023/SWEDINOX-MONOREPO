@@ -1030,6 +1030,22 @@ type ReceiptStatusMeta = {
   readonly goodsAreIn: boolean;
 };
 
+/**
+ * Which of the reference's five reception-toolbar buttons are live for the
+ * selected row. Every `false` carries the sentence that says why, because a
+ * grey button with no explanation is what sent us hunting for H13 twice.
+ */
+export type ReceptionActions = {
+  readonly canDelete: boolean;
+  readonly deleteReason: string | null;
+  readonly canRegisterBatch: boolean;
+  readonly canAdjustCharge: boolean;
+  /** Covers both stamping actions — they wake and sleep together. */
+  readonly stampReason: string | null;
+  readonly canSplit: boolean;
+  readonly splitReason: string;
+};
+
 type PaymentTermMeta = {
   netDays: number | null;
   endOfMonth: boolean;
@@ -9965,6 +9981,68 @@ export const RECEIPT_STATUS_META: Record<ReceiptStatus, ReceiptStatusMeta> = {
 
 export const receiptStatusMetaOf = (status: ReceiptStatus): ReceiptStatusMeta =>
   RECEIPT_STATUS_META[status];
+
+/**
+ * What may be done to the selected reception on a purchase order, and why not
+ * when the answer is no.
+ *
+ * 🔑 **Read off the reference on 6-10-2026 by driving it**, rather than guessed.
+ * Order `404150/10` holds two receptions, one `Received` and one `Released`; the
+ * toolbar was photographed with each selected in turn:
+ *
+ * | Button | `Received` selected | `Released` selected |
+ * |---|---|---|
+ * | `New` | grey | grey |
+ * | `Delete` | grey | ✅ enabled |
+ * | `Split` | grey | grey |
+ * | `Batch registration` | ✅ enabled | grey |
+ * | `Charge aanpassen…` | ✅ enabled | grey |
+ *
+ * The prediction had been the opposite way round, and it was wrong. The rule
+ * the capture actually states is a single question — **are the goods here?** —
+ * which is precisely `RECEIPT_STATUS_META[...].goodsAreIn`, so this reads that
+ * rather than listing statuses a second time:
+ *
+ * - **Goods in.** You have the metal in front of you and the mill certificate
+ *   in your hand, so you may stamp its identity (`Charge aanpassen`) and settle
+ *   whether a document is required before it may be used
+ *   (`Partijregistratie instellingen`). You may **not** delete it — something
+ *   physical happened, and a reception is the only record that it did.
+ * - **Goods not in.** Nothing has happened, so the reception may be deleted
+ *   outright. It may **not** carry a charge, because there is no metal to
+ *   stamp one on.
+ *
+ * ⚠️ `canSplit` is always false, and that is a finding rather than a stub.
+ * `Split` was greyed on **both** rows while four other buttons flipped, so it
+ * is not gated on the reception at all — it must be gated on the **order**, and
+ * that order was `Partially received`. H13 in `WHAT-IS-LEFT.md` holds the one
+ * remaining case to try: an order with nothing received anywhere. Until that is
+ * answered, refusing the split is the honest behaviour, and `splitReason` says
+ * so rather than leaving a dead grey button on the screen.
+ */
+export const receptionActions = (
+  status: ReceiptStatus | null,
+): ReceptionActions => {
+  // A reception whose status never imported is treated as not-yet-arrived: it
+  // is the state that permits deletion and forbids stamping, which is the safe
+  // way round for a row nobody can vouch for.
+  const goodsAreIn = status ? RECEIPT_STATUS_META[status].goodsAreIn : false;
+
+  return {
+    canDelete: !goodsAreIn,
+    deleteReason: goodsAreIn
+      ? "The goods have arrived. A reception that received metal is the only record that it did, so it cannot be deleted."
+      : null,
+    canRegisterBatch: goodsAreIn,
+    canAdjustCharge: goodsAreIn,
+    stampReason: goodsAreIn
+      ? null
+      : "Nothing has arrived yet, so there is no metal to stamp a charge on.",
+    canSplit: false,
+    splitReason:
+      "Splitting a reception is not reachable from the order. The reference greys it whatever the reception's status, so the gate is on the order — see H13.",
+  };
+};
 
 /**
  * Where a reception stands once an Unloading work order against it has been

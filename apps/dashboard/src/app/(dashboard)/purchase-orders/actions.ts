@@ -24,6 +24,7 @@ import {
   SelectCommunicationSettings,
 } from "@/db/schema/communication-settings";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
+import { Batches } from "@/db/schema/batches";
 import { Contracts, SelectContracts } from "@/db/schema/contracts";
 import { Products, SelectProducts } from "@/db/schema/products";
 import {
@@ -47,6 +48,7 @@ import {
   generateUuid,
   isWeightPriceUnit,
   moneyString,
+  receptionActions,
   toDateString,
   todayDateString,
 } from "@/lib/helpers";
@@ -73,6 +75,12 @@ import {
   syncPurchaseLineReceiptDates,
 } from "@/lib/server/purchase-lines";
 import { PURCHASE_ORDER_COLUMNS } from "@/app/(dashboard)/purchase-orders/columns";
+import {
+  ReceptionBatchSettingsFormValues,
+  receptionBatchSettingsSchema,
+  ReceptionChargeFormValues,
+  receptionChargeSchema,
+} from "@/app/(dashboard)/purchase-orders/validation";
 import { currentUser } from "@clerk/nextjs/server";
 import {
   and,
@@ -83,6 +91,7 @@ import {
   getTableColumns,
   gt,
   inArray,
+  isNotNull,
   ne,
   sql,
 } from "drizzle-orm";
@@ -215,6 +224,24 @@ export type PurchaseReceiptDocument = {
   unit: SelectPurchaseLineReceivals["unit"];
   lineAmount: SelectPurchaseLineReceivals["lineAmount"];
   purchaser: SelectPurchaseLineReceivals["purchaser"];
+
+  // 🔑 The lot identity the reception carries, which the two reception dialogs
+  // captured on 6-10-2026 both read and one of them writes. The columns have
+  // existed since the receipt chain was built; no screen had ever shown them,
+  // so a reception that knew its heat number looked like one that did not.
+  charge: SelectPurchaseLineReceivals["charge"];
+  internalCharge: SelectPurchaseLineReceivals["internalCharge"];
+  plateNumber: SelectPurchaseLineReceivals["plateNumber"];
+  // Written by `Partijregistratie instellingen` and by nothing else. Never
+  // populated until now, because the dialog that sets it was not built.
+  documentObligationWaived: SelectPurchaseLineReceivals["documentObligationWaived"];
+
+  // `Afmetingen / gewicht` on `Partijregistratie instellingen` reads
+  // `19x0,8 / 158 KG(w)` — width by thickness off the line, weight off the
+  // reception. Carried here so the dialog can restate the parcel rather than
+  // make somebody trust that they selected the right row.
+  widthMm: SelectPurchaseOrderItems["widthMm"] | null;
+  thicknessMm: SelectPurchaseOrderItems["thicknessMm"] | null;
 };
 
 // A line of this order the supplier is being asked to take back.
@@ -262,6 +289,21 @@ export type PurchaseOrderHeaderEdit = Pick<
   | "deliveryRemark"
   | "remarks"
 >;
+
+/**
+ * One entry in the `Selecteer` picker behind `Nieuwe interne Charge`.
+ *
+ * ⚠️ **What the reference's picker actually lists has never been seen** — it was
+ * greyed on the captured reception. An internal charge is ours, handed out on
+ * receipt, so it cannot be minted from a text box; this lists the codes already
+ * in use, which is the reading the evidence supports. Revisit if the picker is
+ * ever captured open.
+ */
+export type InternalChargeOption = {
+  internalCharge: NonNullable<SelectPurchaseLineReceivals["internalCharge"]>;
+  /** How many receptions already carry it — a sanity check, not a filter. */
+  receptionCount: number;
+};
 
 export const getPurchaseOrdersForCompany = async (
   supplierUuid: string,
@@ -739,6 +781,13 @@ export const getPurchaseOrderDetail = async (
         unit: PurchaseLineReceivals.unit,
         lineAmount: PurchaseLineReceivals.lineAmount,
         purchaser: PurchaseLineReceivals.purchaser,
+        charge: PurchaseLineReceivals.charge,
+        internalCharge: PurchaseLineReceivals.internalCharge,
+        plateNumber: PurchaseLineReceivals.plateNumber,
+        documentObligationWaived:
+          PurchaseLineReceivals.documentObligationWaived,
+        widthMm: PurchaseOrderItems.widthMm,
+        thicknessMm: PurchaseOrderItems.thicknessMm,
       })
       .from(PurchaseLineReceivals)
       .leftJoin(Products, eq(PurchaseLineReceivals.productUuid, Products.uuid))
@@ -1271,5 +1320,248 @@ export const createUnloadingWorkOrder = async (
     return {
       error: describeError(error, "Failed to raise the unloading work order"),
     };
+  }
+};
+
+/**
+ * The codes `Nieuwe interne Charge` may be set to.
+ *
+ * ⚠️ A guess, and flagged as one. The reference offers a `Selecteer` picker
+ * here rather than a text box — an internal charge is handed out on receipt and
+ * has to stay unique, so it is *chosen*, not typed — but the picker was greyed
+ * on the captured reception, so its contents are unseen. Listing the codes
+ * already in use is what "chosen from a registry" can mean with the evidence we
+ * have, and it is strictly safer than a free-text field that would let somebody
+ * invent an identity for metal that already has one.
+ */
+export const getInternalChargeOptions = async (): Promise<
+  InternalChargeOption[]
+> => {
+  const rows = await db
+    .select({
+      internalCharge: PurchaseLineReceivals.internalCharge,
+      receptionCount: count(),
+    })
+    .from(PurchaseLineReceivals)
+    .where(isNotNull(PurchaseLineReceivals.internalCharge))
+    .groupBy(PurchaseLineReceivals.internalCharge)
+    .orderBy(PurchaseLineReceivals.internalCharge);
+
+  return rows.flatMap((row) =>
+    row.internalCharge
+      ? [
+          {
+            internalCharge: row.internalCharge,
+            receptionCount: Number(row.receptionCount),
+          },
+        ]
+      : [],
+  );
+};
+
+/**
+ * `Charge aanpassen…` — replace the lot identity a reception claims.
+ *
+ * The rule the 6-10-2026 capture states is enforced here and not only in the
+ * toolbar: the two stamping actions wake **only** once the goods are in,
+ * because a charge is copied off a mill certificate that arrives with the
+ * metal. Greying a button is a courtesy; refusing the write is the guarantee.
+ */
+export const updateReceptionCharge = async (
+  _prevState: PurchaseOrderActionResult,
+  data: ReceptionChargeFormValues,
+): Promise<PurchaseOrderActionResult> => {
+  try {
+    const parsed = receptionChargeSchema.safeParse(data);
+    if (!parsed.success) {
+      return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
+    }
+    const values = parsed.data;
+
+    const [reception] = await db
+      .select({
+        purchaseOrderUuid: PurchaseLineReceivals.purchaseOrderUuid,
+        receiptStatus: PurchaseLineReceivals.receiptStatus,
+      })
+      .from(PurchaseLineReceivals)
+      .where(eq(PurchaseLineReceivals.uuid, values.receivalUuid))
+      .limit(1);
+
+    if (!reception) {
+      return { error: "Reception not found." };
+    }
+
+    const permitted = receptionActions(reception.receiptStatus);
+    if (!permitted.canAdjustCharge) {
+      return {
+        error: permitted.stampReason ?? "This reception cannot carry a charge.",
+      };
+    }
+
+    // An internal charge is an identity, not a value. It may be pointed at one
+    // that already exists; it may not be invented here, because the code that
+    // mints them is the receipt chain and nothing else.
+    if (values.internalCharge) {
+      const known = await getInternalChargeOptions();
+      if (!known.some((row) => row.internalCharge === values.internalCharge)) {
+        return {
+          error:
+            "That internal charge does not exist. An internal charge is issued when goods are received, so it is chosen here, never created.",
+        };
+      }
+    }
+
+    await db
+      .update(PurchaseLineReceivals)
+      // An empty box clears the field. The dialog prefills `Nieuwe Charge` with
+      // the current value, so a blank one is a deliberate erasure rather than an
+      // untouched control — the opposite of the lot correction dialog, where an
+      // absent key means "the form never offered it".
+      .set({
+        charge: values.charge ? values.charge : null,
+        plateNumber: values.plateNumber ? values.plateNumber : null,
+        internalCharge: values.internalCharge ? values.internalCharge : null,
+      })
+      .where(eq(PurchaseLineReceivals.uuid, values.receivalUuid));
+
+    if (reception.purchaseOrderUuid) {
+      revalidatePath(`/purchase-orders/${reception.purchaseOrderUuid}`);
+    }
+    revalidatePath("/purchase-receivals");
+    return {
+      success: true,
+      purchaseOrderUuid: reception.purchaseOrderUuid ?? undefined,
+    };
+  } catch (error) {
+    return { error: describeError(error, "Failed to adjust the charge") };
+  }
+};
+
+/**
+ * `Partijregistratie instellingen` — waive, or reinstate, the document
+ * obligation on one reception.
+ *
+ * 🔑 This is the mechanism behind the `documents` block reason, and the first
+ * thing that has ever written `documentObligationWaived`. Switching it on drops
+ * the reception off `Certificates to be linked` and `Deliveries from missing
+ * batch`, which is exactly what the reference's own warning says it does.
+ */
+export const updateReceptionBatchSettings = async (
+  _prevState: PurchaseOrderActionResult,
+  data: ReceptionBatchSettingsFormValues,
+): Promise<PurchaseOrderActionResult> => {
+  try {
+    const parsed = receptionBatchSettingsSchema.safeParse(data);
+    if (!parsed.success) {
+      return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
+    }
+    const values = parsed.data;
+
+    const [reception] = await db
+      .select({
+        purchaseOrderUuid: PurchaseLineReceivals.purchaseOrderUuid,
+        receiptStatus: PurchaseLineReceivals.receiptStatus,
+      })
+      .from(PurchaseLineReceivals)
+      .where(eq(PurchaseLineReceivals.uuid, values.receivalUuid))
+      .limit(1);
+
+    if (!reception) {
+      return { error: "Reception not found." };
+    }
+
+    const permitted = receptionActions(reception.receiptStatus);
+    if (!permitted.canRegisterBatch) {
+      return {
+        error:
+          permitted.stampReason ??
+          "Batch settings apply once the goods have arrived.",
+      };
+    }
+
+    await db
+      .update(PurchaseLineReceivals)
+      .set({ documentObligationWaived: values.documentObligationWaived })
+      .where(eq(PurchaseLineReceivals.uuid, values.receivalUuid));
+
+    if (reception.purchaseOrderUuid) {
+      revalidatePath(`/purchase-orders/${reception.purchaseOrderUuid}`);
+    }
+    revalidatePath("/purchase-receivals");
+    revalidatePath("/certificates-to-be-linked");
+    return {
+      success: true,
+      purchaseOrderUuid: reception.purchaseOrderUuid ?? undefined,
+    };
+  } catch (error) {
+    return {
+      error: describeError(error, "Failed to save the batch settings"),
+    };
+  }
+};
+
+/**
+ * `Delete` on the reception toolbar.
+ *
+ * Live only while nothing has arrived, which is the capture's rule and also the
+ * only reading that keeps the ledger honest: a reception that received metal is
+ * the record that it happened, and deleting it would leave stock whose arrival
+ * nothing accounts for.
+ */
+export const deleteReception = async (
+  uuid: string,
+): Promise<PurchaseOrderActionResult> => {
+  try {
+    const [reception] = await db
+      .select({
+        purchaseOrderUuid: PurchaseLineReceivals.purchaseOrderUuid,
+        receiptStatus: PurchaseLineReceivals.receiptStatus,
+      })
+      .from(PurchaseLineReceivals)
+      .where(eq(PurchaseLineReceivals.uuid, uuid))
+      .limit(1);
+
+    if (!reception) {
+      return { error: "Reception not found." };
+    }
+
+    const permitted = receptionActions(reception.receiptStatus);
+    if (!permitted.canDelete) {
+      return {
+        error: permitted.deleteReason ?? "This reception cannot be deleted.",
+      };
+    }
+
+    // The status rule is about the goods; this is about the paperwork. A batch
+    // registered against the reception is a second record pointing at it, and
+    // the foreign key would refuse the delete anyway — better a sentence than a
+    // constraint violation.
+    const [batch] = await db
+      .select({ id: Batches.id })
+      .from(Batches)
+      .where(eq(Batches.purchaseLineReceivalUuid, uuid))
+      .limit(1);
+
+    if (batch) {
+      return {
+        error:
+          "A batch is registered against this reception. Remove the batch first.",
+      };
+    }
+
+    await db
+      .delete(PurchaseLineReceivals)
+      .where(eq(PurchaseLineReceivals.uuid, uuid));
+
+    if (reception.purchaseOrderUuid) {
+      revalidatePath(`/purchase-orders/${reception.purchaseOrderUuid}`);
+    }
+    revalidatePath("/purchase-receivals");
+    return {
+      success: true,
+      purchaseOrderUuid: reception.purchaseOrderUuid ?? undefined,
+    };
+  } catch (error) {
+    return { error: describeError(error, "Failed to delete the reception") };
   }
 };

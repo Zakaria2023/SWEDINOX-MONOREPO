@@ -17,6 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { ReceptionToolbar } from "@/components/purchase-orders/reception-toolbar";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { CollapsibleSection } from "@/components/ui/collapsible-section";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -54,6 +55,11 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [raised, setRaised] = useState(false);
   const [error, setError] = useState<string | undefined>();
+  // The reference's reception toolbar acts on a selected row rather than
+  // hanging a column of buttons off every one of them.
+  const [selectedReceiptUuid, setSelectedReceiptUuid] = useState<string | null>(
+    null,
+  );
 
   const canCancel = purchaseOrder.status !== "cancelled";
 
@@ -326,7 +332,15 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
               No receptions on this order.
             </p>
           ) : (
-            <div>
+            <div className="space-y-3">
+              <ReceptionToolbar
+                orderId={purchaseOrder.id}
+                selected={
+                  purchaseOrder.receipts.find(
+                    (receipt) => receipt.uuid === selectedReceiptUuid,
+                  ) ?? null
+                }
+              />
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -341,12 +355,25 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
                     <TableHead className="text-right">Kg (p)</TableHead>
                     <TableHead className="text-right">Kg (a)</TableHead>
                     <TableHead className="text-right">Confirmed</TableHead>
+                    {/* The lot identity the reception carries. Held since the
+                        receipt chain was built and never shown, so a reception
+                        that knew its heat number looked like one that did not. */}
+                    <TableHead>Charge</TableHead>
+                    <TableHead>Internal charge</TableHead>
+                    <TableHead>Documents</TableHead>
                     <TableHead>Purchaser</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {purchaseOrder.receipts.map((receipt) => (
-                    <TableRow key={receipt.uuid}>
+                    <TableRow
+                      key={receipt.uuid}
+                      onClick={() => setSelectedReceiptUuid(receipt.uuid)}
+                      className={cn(
+                        "cursor-pointer",
+                        receipt.uuid === selectedReceiptUuid && "bg-accent",
+                      )}
+                    >
                       <TableCell className="text-right tabular-nums">
                         {orDash(receipt.lineNumber)}
                       </TableCell>
@@ -404,6 +431,16 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
                       </TableCell>
                       <TableCell className="text-right tabular-nums">
                         {formatNumber(Number(receipt.receivedQty ?? 0))}
+                      </TableCell>
+                      <TableCell>{orDash(receipt.charge)}</TableCell>
+                      <TableCell>{orDash(receipt.internalCharge)}</TableCell>
+                      {/* Set by `Batch registration` and by nothing else.
+                          Worth a column because a waived reception quietly
+                          disappears from the screens that chase paperwork. */}
+                      <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
+                        {receipt.documentObligationWaived
+                          ? "Obligation waived"
+                          : "Required"}
                       </TableCell>
                       <TableCell>{orDash(receipt.purchaser)}</TableCell>
                     </TableRow>

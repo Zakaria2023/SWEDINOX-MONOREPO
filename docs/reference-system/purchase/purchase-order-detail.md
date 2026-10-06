@@ -733,3 +733,75 @@ screen says so, and a margin report summing this column would be nonsense.
 counting the 2 pieces still inbound, which is the purchase-side "available"
 being a different quantity from the shelf-side one — exactly the distinction
 `lib/helpers.ts` refuses to collapse into a shared helper.
+
+
+---
+
+## ✅ Built, 6-10-2026 — the reception toolbar and its two dialogs
+
+Everything the 6-10 capture above states is now in the code. What was **not**
+built before this is listed first, because the capture overturned two
+assumptions rather than merely adding detail.
+
+### The enablement rule, as code
+
+`receptionActions(status)` in `lib/helpers.ts` is the whole rule, and it reads
+`RECEIPT_STATUS_META[...].goodsAreIn` rather than listing statuses a second
+time — because that is exactly what the captured table turned out to be asking:
+
+| | goods **not** in | goods in |
+|---|---|---|
+| `Delete` | ✅ | ✖ "a reception that received metal is the only record that it did" |
+| `Batch registration` | ✖ | ✅ |
+| `Charge aanpassen…` | ✖ "nothing has arrived, so there is no metal to stamp" | ✅ |
+| `Split` | ✖ | ✖ |
+
+🔑 **The rule is enforced in the Server Action, not only in the toolbar.**
+Greying a button is a courtesy; refusing the write is the guarantee. All three
+actions re-read the reception's status and refuse with the same sentence the
+toolbar shows.
+
+⚠️ **`New` is not offered at all.** It was greyed on both rows, so what wakes it
+is unknown — and a button whose rule we cannot state is worse than no button.
+
+⚠️ **`Split` is rendered, permanently disabled, with its reason beneath it.**
+Hiding it would quietly lose the H13 finding; showing it dead with no
+explanation is what cost two separate hunts for the rule. It now says on screen
+that the gate is on the order rather than the reception.
+
+### `Charge aanpassen…` → `components/purchase-orders/reception-charge-dialog.tsx`
+
+Current beside new, three rows against three, with the current half greyed. The
+new charge is prefilled with the current one, as the reference prefills it — so
+the common case (a typo in a six-digit melt number) is an edit, and a blank box
+is a deliberate erasure.
+
+🔑 **`Plaatnummer` is now writable**, which is where `Stock.plateNumber` was
+always meant to come from. Nothing had ever written it.
+
+⚠️ **`Nieuwe interne Charge` is a picker, and what it lists is a reading, not a
+capture.** The reference's `Selecteer` was greyed on the captured reception, so
+its contents are unseen. `getInternalChargeOptions` lists the internal charges
+already in use, and the action **refuses an unknown one** — an internal charge
+is issued by the receipt chain, so it may be pointed at, never invented in a
+text box. Revisit if the picker is ever captured open.
+
+### `Partijregistratie instellingen` → `components/purchase-orders/reception-batch-settings-dialog.tsx`
+
+Read-only identification of the parcel — order `404150/10`, article, dimensions
+and weight, receipt date, internal charge, charge — then the single checkbox,
+with the reference's own warning kept rather than paraphrased away.
+
+🔑 **This is the first thing that has ever written
+`PurchaseLineReceivals.documentObligationWaived`.** The column has existed since
+the receipt chain was built and nothing set it, which is why the `documents`
+block reason could never fire. Saving it revalidates
+`/certificates-to-be-linked`, because taking a reception off that worklist is
+precisely what the warning says will happen.
+
+### Also shown now
+
+The `Receipts` grid carries three more columns — `Charge`, `Internal charge` and
+`Documents` (`Required` / `Obligation waived`). All three were in the schema and
+on none of our screens, so a reception that knew its heat number looked exactly
+like one that did not.

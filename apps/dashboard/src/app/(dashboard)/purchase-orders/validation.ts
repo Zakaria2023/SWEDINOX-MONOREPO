@@ -163,3 +163,73 @@ export const DEFAULT_PURCHASE_ORDER: PurchaseOrderFormValues = {
 
   remarks: "",
 };
+
+/**
+ * `Charge aanpassen…` on a reception — the reference's "change the heat number"
+ * dialog, captured 6-10-2026 off order `404150/10`.
+ *
+ * 🔑 **Current beside new, three rows against three.** The dialog states what
+ * the reception says now (read-only) and what it will say, which is the shape a
+ * correction to an *identity* should have — you are not editing a value, you
+ * are replacing a claim about which metal this is. Only the "new" half is a
+ * form field; the "current" half is rendered from the row.
+ *
+ * ⚠️ This is **not** `Voorraad partij correctie`, which hangs off a stock lot
+ * and pairs `Charge` with `Fabrieksnummer`. The reference keeps the two apart,
+ * and `Fabrieksnummer` and `Plaatnummer` are not the same field.
+ */
+export const receptionChargeSchema = z.object({
+  receivalUuid: z.string().min(1, "Reception is required"),
+
+  // The mill's melt number. Dirty free text in the reference by its own
+  // evidence — blank 607 times across 2.247 lots, plus `nvt`, `-` and 32
+  // instances of the typo `ntv` — so it is trimmed but never pattern-matched:
+  // rejecting what the mill actually wrote would simply stop the correction.
+  charge: z.string().trim().max(60, "Charge is too long").optional(),
+
+  // The mill's own plate identifier, blank for a coil. Editable here and
+  // nowhere else, which is why `Stock.plateNumber` has never been populated.
+  plateNumber: z.string().trim().max(60, "Plate number is too long").optional(),
+
+  // ⚠️ Ours, and chosen rather than typed — the reference shows a `Selecteer`
+  // picker here, not a text box, because an internal charge is handed out on
+  // receipt and has to stay unique. It was greyed on the captured reception, so
+  // **what that picker lists has never been seen**; the action resolves this
+  // against internal charges already in use and refuses an unknown one rather
+  // than minting a new identity from a text field.
+  internalCharge: z
+    .string()
+    .trim()
+    .max(60, "Internal charge is too long")
+    .optional(),
+});
+
+export type ReceptionChargeFormValues = z.infer<typeof receptionChargeSchema>;
+
+/**
+ * `Partijregistratie instellingen` — batch registration *settings*, which is
+ * not data entry at all.
+ *
+ * 🔴 Pressing `Batch registration` on a reception does **not** open the
+ * registration form we built for a stock lot. Every field it shows is
+ * read-only, and the only control on it is one checkbox:
+ *
+ * > ☐ `Document verplichtigingen negeren op bovenstaande ontvangst.`
+ * > *"Indien dit aangezet wordt zal het voor deze ontvangst niet meer verplicht
+ * > zijn om een document te koppelen. Hierdoor verdwijnt de regel mogelijk uit
+ * > het zicht."*
+ *
+ * 🔑 The warning is the important half, and it is why this is a one-field form
+ * rather than a tickbox on the grid: waiving the obligation drops the reception
+ * off the worklists that chase missing paperwork — `Certificates to be linked`
+ * and `Deliveries from missing batch` — so somebody has to be shown what they
+ * are switching off before they switch it off.
+ */
+export const receptionBatchSettingsSchema = z.object({
+  receivalUuid: z.string().min(1, "Reception is required"),
+  documentObligationWaived: z.boolean(),
+});
+
+export type ReceptionBatchSettingsFormValues = z.infer<
+  typeof receptionBatchSettingsSchema
+>;
