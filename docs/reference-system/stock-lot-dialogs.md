@@ -518,3 +518,92 @@ reading off the status bar with each capture.
   `CK3040010` — still owed for J3
 - **H13** — the `Split` on a purchase order's `Receipts` panel, which is a
   different dialog from §6
+
+---
+
+## ✅ §7 completed — the options list, end to end (6-10-2026)
+
+The `Optie` dropdown on `Voorraad opties`, scrolled from top to bottom. **27
+members**, in the reference's own order:
+
+```
+ 1 UV Foil              10 ShearCut            19 Anodizing
+ 2 Brushing             11 Rolling             20 3.1 Certificate
+ 3 Punching             12 Zagen               21 Pickling
+ 4 Embossing            13 Paper interleaving  22 Remove Foil
+ 5 Papier verwijderen   14 Laser Foil          23 Kanten
+ 6 2.1 Certificate      15 Decoilen            24 Duplo
+ 7 Coating              16 Stempels wassen     25 Slitting
+ 8 Blue Foil            17 Polished            26 Stempelen
+ 9 Grinding             18 Perforate           27 Laser
+```
+
+The 5-10 capture caught 14 with the list still scrolling. **Nine were missing
+from our enum**: `Blue Foil`, `Rolling`, `Zagen`, `Paper interleaving`,
+`Stempels wassen`, `Polished`, `Perforate`, `Anodizing` and — the important one
+— **`3.1 Certificate`**.
+
+### 🔑🔑 `3.1 Certificate` sits beside `2.1 Certificate`
+
+EN 10204 **3.1** is the inspection certificate carrying actual test results,
+signed by the mill's own inspector. It is the one customers specify and the one
+that costs money; 2.1 is only a declaration of compliance.
+
+**Both are options on a lot.** That closes the certificate question for good:
+there are two grades of certificate, neither is a field on a batch, and that is
+why every certificate column on the batch screens is empty. A certificate is
+something you *ask for*, and the reference models it as processing.
+
+### 🔑 `Knippen` is **not** in the lot's list
+
+27 members and `Knippen` is not among them — `Zagen` (sawing) is there instead.
+But `Knippen` is attested in real batch data
+([batch-registration.md](batch-registration.md)), so it is either on the
+product's list only, or historic. Kept in the enum; removing it would make
+existing batch rows unreadable.
+
+### 🔴 `Status` is **derived, not chosen** — the model was wrong
+
+Adding `Remove Foil` produced a row reading:
+
+| Optie | Specificatie | Status |
+|---|---|---|
+| `Remove Foil` | *(empty)* | **`Toevoegen`** |
+
+*"Toevoegen"* is literally **"to add"** — the same word as the button that
+created the row. And the `Toevoegen` block has **no Status field at all**, only
+`Optie` and `Specificatie`.
+
+So the grid is an **edit buffer**: `Opslaan` commits it, `Annuleren` throws it
+away, and `Status` reports the **pending edit** rather than the state of the
+metal. Our first model — `possible` / `requested` / `done`, a work lifecycle —
+was wrong and has been replaced.
+
+| Value | Evidence |
+|---|---|
+| `possible` | ✅ the **product's** panel, every row |
+| `to_add` | ✅ the **lot**, on a staged row |
+| `to_remove` | ⚠️ inferred from `Verwijder geselecteerde optie` + its confirm |
+| `applied` | ⚠️ inferred — what a **saved** row reads. Never seen |
+
+⚠️ **One capture settles the last two**, and it is the only thing still owed
+here: add an option, press **`Opslaan`**, reopen `Opties bewerken`, and read the
+Status of the saved row.
+
+### `Specificatie` is a dropdown, and it was empty
+
+Empty for `Remove Foil`. It is a **dropdown, not free text**, so its values are
+constrained — and `Specificatie = K320` is recorded elsewhere against
+*Slijpen*/Grinding, so the list is **per option** and most options have none.
+⚠️ Ours stores free text, which is the safe side of a list nobody has read in
+full.
+
+### Two smaller things
+
+- **`Verwijder geselecteerde optie` asks `Weet je dit zeker?`** before removing
+  a row. Ours deleted silently; it now confirms.
+- The product's `Opties` panel shows `Duplo · Decoilen · Grinding · Brushing ·
+  ShearCut · Laser Foil`, all `Possible`, **with a scrollbar** — so the product
+  list is longer than six and is still not fully read. It is a different list
+  from the lot's, which is why one table carries both and keys them by which of
+  `stockUuid` / `productUuid` is set.

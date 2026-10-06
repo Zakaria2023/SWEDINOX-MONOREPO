@@ -2651,13 +2651,37 @@ export type TransferReason = (typeof transferReasons)[number];
  * certificate is an option somebody asks for, not a file anybody attaches.
  */
 export const stockOptions = [
+  // ── The lot's list, read off the open `Optie` dropdown end to end ────────
+  // 27 members, in the reference's own order. The 5-10 capture caught 14 of
+  // these with the list still scrolling; this is the whole of it.
   "uv_foil",
   "brushing",
   "punching",
   "embossing",
   "remove_paper",
+  // EN 10204 2.1 — the declaration of compliance.
   "certificate_2_1",
   "coating",
+  // 🆕 Priced per m² (€ 1,40), code `BF` on the processing-code alphabet.
+  "blue_foil",
+  "grinding",
+  "shear_cut",
+  "rolling",
+  "sawing",
+  "paper_interleaving",
+  "laser_foil",
+  "decoiling",
+  // `Stempels wassen` — washing stamps **off**, the inverse of `stamping`.
+  "wash_stamps",
+  "polished",
+  "perforate",
+  "anodizing",
+  // 🔑🔑 EN 10204 **3.1** — the inspection certificate carrying actual test
+  // results, and commercially the one that matters. Finding it here beside 2.1
+  // settles the certificate question for good: a certificate is an **option on
+  // a lot**, there are two grades of it, and neither is a field on a batch.
+  // That is why every certificate column on the batch screens is empty.
+  "certificate_3_1",
   "pickling",
   "remove_foil",
   "edging",
@@ -2665,32 +2689,53 @@ export const stockOptions = [
   "slitting",
   "stamping",
   "laser",
-  "decoiling",
-  "grinding",
-  "shear_cut",
-  "laser_foil",
+
+  // ⚠️ `Knippen` is **not** in the lot dropdown, unlike the other 27.
+  //
+  // It is kept because it is attested in real data — `batch-registration.md`
+  // records `Knippen` among the option names carried on batches, beside
+  // `Decoilen`, `Slijpen`, `Laser Folie` and `Blauwe Folie`. So either the
+  // product's list offers it where the lot's does not, or it is historic.
+  // Removing it would make existing batch rows unreadable.
   "cutting",
 ] as const satisfies readonly string[];
 
 export type StockOption = (typeof stockOptions)[number];
 
 /**
- * `Status` on an option row, and the reason options are rows rather than a
- * column of text: the same option means different things at different stages.
+ * `Status` on an option row.
  *
- * `possible` is what the **product's** panel carries — this article *can* have
- * it done. `requested` and `done` are what a **lot's** panel carries, and the
- * difference between them is outstanding work: a lot with a `requested` option
- * is not finished metal, whatever its quantity says.
+ * 🔴 **Rewritten 6-10-2026, and the model changed.** The first guess was
+ * `possible` / `requested` / `done` — a *work* lifecycle. Watching the dialog
+ * says otherwise: adding `Remove Foil` to a lot produced a row whose Status
+ * read **`Toevoegen`** — literally *"to add"*, the same word as the button that
+ * created it.
  *
- * ⚠️ Only `Possible` has been read off the reference. The split between asked
- * for and performed is ours, and it is the distinction that makes the status
- * worth storing at all.
+ * And there is **no Status field in the `Toevoegen` block at all** — only
+ * `Optie` and `Specificatie`. So the status is **never chosen; it is derived**,
+ * and what it derives is the *pending edit*, not the state of the metal. The
+ * grid is an edit buffer that `Opslaan` commits and `Annuleren` throws away.
+ *
+ * | Value | Where seen |
+ * |---|---|
+ * | `possible` | ✅ on the **product's** `Opties` panel, every row |
+ * | `to_add` | ✅ on the **lot**, on a row staged but not yet saved |
+ * | `to_remove` | ⚠️ inferred — `Verwijder geselecteerde optie` asks *"Weet je dit zeker?"* and the staged row has to be marked somehow |
+ * | `applied` | ⚠️ inferred — what a row shows **after** `Opslaan`. Never seen, because the captured lot had no saved options |
+ *
+ * ⚠️ **Two of the four are inferred and one capture settles both:** add an
+ * option, press `Opslaan`, reopen `Opties bewerken`, and read the Status of the
+ * saved row. Until then do not build logic that branches on `applied`.
+ *
+ * 🔑 The product's `possible` and the lot's `to_add` are not the same kind of
+ * fact — one is a capability, the other a pending change — which is further
+ * reason the two lists stay distinguishable by which column is set.
  */
 export const stockOptionStatuses = [
   "possible",
-  "requested",
-  "done",
+  "to_add",
+  "to_remove",
+  "applied",
 ] as const satisfies readonly string[];
 
 export type StockOptionStatus = (typeof stockOptionStatuses)[number];

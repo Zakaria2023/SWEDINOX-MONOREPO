@@ -219,6 +219,9 @@ export const stockOptionSchema = z.object({
   stockUuid: z.string().min(1, "Stock lot is required"),
   option: z.enum(stockOptions, { message: "Choose an option" }),
   specification: z.string().max(255).optional(),
+  // Defaulted rather than chosen: the reference's `Toevoegen` block offers only
+  // `Optie` and `Specificatie`, and the status it produces is `Toevoegen` —
+  // a pending edit, not something a user picks.
   status: z.enum(stockOptionStatuses, { message: "Choose a status" }),
 });
 

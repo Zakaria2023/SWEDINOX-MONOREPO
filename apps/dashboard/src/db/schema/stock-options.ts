@@ -70,9 +70,11 @@ export const StockOptions = mysqlTable(
     // guess that would start rejecting legitimate rows.
     specification: varchar("specification", { length: 255 }),
 
+    // `Toevoegen` is what the reference stamps on a freshly added row, so a new
+    // option is staged rather than already true of the metal.
     status: mysqlEnum("status", stockOptionStatuses)
       .notNull()
-      .default("requested"),
+      .default("to_add"),
 
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),

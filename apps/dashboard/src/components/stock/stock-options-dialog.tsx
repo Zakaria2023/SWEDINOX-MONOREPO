@@ -38,7 +38,7 @@ import {
 } from "@/lib/labels";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Trash2 } from "lucide-react";
-import { startTransition, useActionState, useEffect } from "react";
+import { startTransition, useActionState, useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 
 type Props = {
@@ -70,6 +70,7 @@ export const StockOptionsDialog = ({ data, open, onOpenChange }: Props) => {
   const { lot, options } = data;
   const [addState, add, isAdding] = useActionState(addLotOption, {});
   const [removeState, remove, isRemoving] = useActionState(deleteLotOption, {});
+  const [confirming, setConfirming] = useState<string | null>(null);
 
   const {
     control,
@@ -81,9 +82,9 @@ export const StockOptionsDialog = ({ data, open, onOpenChange }: Props) => {
     resolver: zodResolver(stockOptionSchema),
     defaultValues: {
       stockUuid: lot.uuid,
-      option: "brushing",
+      option: "uv_foil",
       specification: "",
-      status: "requested",
+      status: "to_add",
     },
   });
 
@@ -141,19 +142,14 @@ export const StockOptionsDialog = ({ data, open, onOpenChange }: Props) => {
                       {STOCK_OPTION_STATUS_LABELS[row.status]}
                     </TableCell>
                     <TableCell>
+                      {/* The reference asks "Weet je dit zeker?" before it
+                          removes a row, so this does too. */}
                       <Button
                         type="button"
                         variant="ghost"
                         aria-label={`Remove ${STOCK_OPTION_LABELS[row.option]}`}
                         disabled={isRemoving}
-                        onClick={() =>
-                          startTransition(() =>
-                            remove({
-                              optionUuid: row.uuid,
-                              stockUuid: lot.uuid,
-                            }),
-                          )
-                        }
+                        onClick={() => setConfirming(row.uuid)}
                       >
                         <Trash2 className="size-4" />
                       </Button>
@@ -163,6 +159,34 @@ export const StockOptionsDialog = ({ data, open, onOpenChange }: Props) => {
               )}
             </TableBody>
           </Table>
+
+          {confirming ? (
+            <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-3">
+              <p className="text-sm">Remove this option from the lot?</p>
+              <div className="mt-2 flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setConfirming(null)}
+                >
+                  No
+                </Button>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  disabled={isRemoving}
+                  onClick={() =>
+                    startTransition(() => {
+                      remove({ optionUuid: confirming, stockUuid: lot.uuid });
+                      setConfirming(null);
+                    })
+                  }
+                >
+                  Yes
+                </Button>
+              </div>
+            </div>
+          ) : null}
 
           <FormError>{removeState.error}</FormError>
 
