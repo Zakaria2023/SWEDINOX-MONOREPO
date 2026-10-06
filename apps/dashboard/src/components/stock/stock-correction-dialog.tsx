@@ -1,6 +1,10 @@
 "use client";
 
-import { correctStockLot, StockDetail } from "@/app/(dashboard)/stock/actions";
+import {
+  correctStockLot,
+  SawOrderRow,
+  StockLotDialogData,
+} from "@/app/(dashboard)/stock/actions";
 import {
   StockCorrectionFormValues,
   stockCorrectionSchema,
@@ -18,53 +22,80 @@ import {
 } from "@/components/shadcn/dialog";
 import { Input } from "@/components/shadcn/input";
 import { Select } from "@/components/shadcn/select";
+import { StockLotLedger } from "@/components/stock/stock-lot-ledger";
 import { FormError } from "@/components/ui/form-error";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
-import { stockCorrectionReasons } from "@/lib/enums";
-import { STOCK_CORRECTION_REASON_LABELS } from "@/lib/labels";
+import { stockCategories, stockCorrectionReasons } from "@/lib/enums";
+import {
+  STOCK_CATEGORY_LABELS,
+  STOCK_CORRECTION_REASON_LABELS,
+  STOCK_UNIT_LABELS,
+} from "@/lib/labels";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { startTransition, useActionState, useEffect } from "react";
 import { Controller, useForm } from "react-hook-form";
 
 type Props = {
-  stock: StockDetail;
+  data: StockLotDialogData;
+  sawOrders: SawOrderRow[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
 };
 
 /**
- * The reference's `Correction…`, watched on 29-9-2026.
+ * `Correctie…` — the reference's `Corrigeren voorraad`.
  *
- * It is two corrections in one window, each behind its own checkbox —
- * `Voorraad hoeveelheid correctie` for the metal and `Voorraad kenmerk
- * correctie` for what the metal is — and either or both may run. A reason is
- * mandatory: the reference leaves `OK` greyed until `Reden` is chosen.
+ * Captured 5-10-2026, and what we had built was the right idea with the wrong
+ * halves. Two things changed:
  *
- * 🔴 What ours does that the reference does not: a characteristic change lands
- * in the movement ledger. Downgrading a lot `Standaard` → `2nd choice` there
- * left no trace at all, and the category decides what the metal may be sold as.
+ * 🔴 **The split between the two tickboxes was backwards.** We put category,
+ * quality and the three dimensions under *characteristics*. The reference puts
+ * them under **quantity**, beside `Nieuwe hoeveelheid`, and leaves exactly one
+ * field under characteristics: the stock remark. So our dialog greyed out the
+ * grade when somebody only wanted to fix the count.
  *
- * There is deliberately **no valuation field**, because the reference has none
- * either — a correction cannot repair a wrongly valued lot, and pretending it
- * could would hide that.
+ * 🔴 **There are four weights, not one.** `Gewicht`, `Gewogen gewicht`,
+ * `Brutogewicht` and `Nettogewicht`, and on the captured lot all four disagreed
+ * — 1 766,25 / 1 754 / 1 798 / 1 754. They are not derivable from each other.
+ *
+ * Two things stay as they were, both deliberate:
+ *
+ * - **`Reden` is mandatory.** The reference leaves `OK` greyed until it is set.
+ * - **There is no valuation field**, because the reference has none either. A
+ *   correction cannot repair a wrongly valued lot, and offering a box that
+ *   pretended it could would hide that.
+ *
+ * 🔑 New: **`Zaagopdracht`** — a correction can be blamed on the saw order that
+ * caused the loss, which is the missing link between a correction and the cut
+ * that ate the material.
  */
-export const StockCorrectionDialog = ({ stock, open, onOpenChange }: Props) => {
+export const StockCorrectionDialog = ({
+  data,
+  sawOrders,
+  open,
+  onOpenChange,
+}: Props) => {
+  const { lot, ledger } = data;
   const [state, dispatch, isPending] = useActionState(correctStockLot, {});
 
   const defaults: StockCorrectionFormValues = {
-    stockUuid: stock.uuid,
+    stockUuid: lot.uuid,
     reason: "stock_correction",
     description: "",
+    sawOrderUuid: "",
     correctQuantity: false,
-    quantity: stock.quantity,
-    quantityKg: stock.quantityKg ?? "",
+    quantity: lot.quantity,
+    quantityKg: lot.quantityKg ?? "",
+    quality: lot.quality ?? "",
+    stockCategory: lot.stockCategory ?? "",
+    lengthMm: lot.lengthMm === null ? "" : String(lot.lengthMm),
+    widthMm: lot.widthMm === null ? "" : String(lot.widthMm),
+    thicknessMm: lot.thicknessMm ?? "",
+    weighedWeightKg: lot.weighedWeightKg ?? "",
+    grossWeightKg: lot.grossWeightKg ?? "",
+    netWeightKg: lot.netWeightKg ?? "",
     correctCharacteristics: false,
-    stockCategory: stock.stockCategory ?? "",
-    quality: stock.quality ?? "",
-    lengthMm: stock.lengthMm === null ? "" : String(stock.lengthMm),
-    widthMm: stock.widthMm === null ? "" : String(stock.widthMm),
-    thicknessMm: stock.thicknessMm ?? "",
-    remark: stock.remark ?? "",
+    remark: lot.remark ?? "",
   };
 
   const {
@@ -81,6 +112,7 @@ export const StockCorrectionDialog = ({ stock, open, onOpenChange }: Props) => {
 
   const correctQuantity = watch("correctQuantity");
   const correctCharacteristics = watch("correctCharacteristics");
+  const reason = watch("reason");
 
   useEffect(() => {
     if (state.success) {
@@ -90,51 +122,122 @@ export const StockCorrectionDialog = ({ stock, open, onOpenChange }: Props) => {
 
   const onSubmit = handleSubmit((values) => {
     startTransition(() => {
-      dispatch({ ...values, stockUuid: stock.uuid });
+      dispatch({ ...values, stockUuid: lot.uuid });
     });
   });
 
+  const unit = lot.unit ? STOCK_UNIT_LABELS[lot.unit] : "";
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-3xl">
         <form onSubmit={onSubmit}>
           <DialogHeader>
             <DialogTitle>Correct stock</DialogTitle>
             <DialogDescription>
-              Correct the quantity, what the metal is, or both. Every change is
-              written to the movement history with what it was before.
+              Correct what this metal is and how much of it there is, the note
+              on it, or both. Every change is written to the movement history
+              with what it was before.
             </DialogDescription>
           </DialogHeader>
 
           <DialogBody className="space-y-4">
-            <div>
-              <FormLabel htmlFor="correction-reason">Reason</FormLabel>
-              <Controller
-                control={control}
-                name="reason"
-                render={({ field }) => (
-                  <Select
-                    id="correction-reason"
-                    value={field.value}
-                    options={stockCorrectionReasons.map((reason) => ({
-                      value: reason,
-                      label: STOCK_CORRECTION_REASON_LABELS[reason],
-                    }))}
-                    onValueChange={field.onChange}
-                  />
-                )}
-              />
-              <FormFieldError message={errors.reason?.message} />
+            <StockLotLedger
+              ledger={ledger}
+              unit={unit}
+              totalLabel="Total correctable"
+            />
+
+            {/* The lot's identity, shown greyed rather than hidden — the
+                reference's dialogs always say which lot they are about. */}
+            <div className="grid grid-cols-2 gap-3 rounded-lg border bg-muted/30 p-3 sm:grid-cols-4">
+              <div>
+                <p className="text-xs text-muted-foreground">Internal charge</p>
+                <p className="text-sm">{lot.internalCharge ?? "—"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Bundle</p>
+                <p className="text-sm">{lot.internalBatch ?? "—"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Charge (mill)</p>
+                <p className="text-sm">{lot.charge ?? "—"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Location</p>
+                <p className="text-sm">{lot.locationName ?? "—"}</p>
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <FormLabel htmlFor="correction-reason" required>
+                  Reason
+                </FormLabel>
+                <Controller
+                  control={control}
+                  name="reason"
+                  render={({ field }) => (
+                    <Select
+                      id="correction-reason"
+                      value={field.value}
+                      options={stockCorrectionReasons.map((value) => ({
+                        value,
+                        label: STOCK_CORRECTION_REASON_LABELS[value],
+                      }))}
+                      onValueChange={field.onChange}
+                    />
+                  )}
+                />
+                <FormFieldError message={errors.reason?.message} />
+              </div>
+
+              <div>
+                {/* `Zaagopdracht`. Offered only where the lot has been through
+                    a saw at all — an empty picker is what the reference showed
+                    on a lot that had not. */}
+                <FormLabel htmlFor="correction-saw-order">
+                  Saw order (optional)
+                </FormLabel>
+                <Controller
+                  control={control}
+                  name="sawOrderUuid"
+                  render={({ field }) => (
+                    <Select
+                      id="correction-saw-order"
+                      value={field.value ?? ""}
+                      placeholder={
+                        sawOrders.length === 0
+                          ? "This lot has not been through a saw"
+                          : "Not attributed to a cut"
+                      }
+                      disabled={sawOrders.length === 0}
+                      options={sawOrders.map((row) => ({
+                        value: row.lineUuid,
+                        label: `${row.workOrderNumber}${
+                          row.orderNumber ? ` / ${row.orderNumber}` : ""
+                        }`,
+                        description: row.plannedDate ?? undefined,
+                      }))}
+                      onValueChange={field.onChange}
+                    />
+                  )}
+                />
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Blames the loss on the cut that caused it.
+                </p>
+              </div>
             </div>
 
             <div>
               <FormLabel htmlFor="correction-description">
-                Description
+                Movement description
               </FormLabel>
               <Input id="correction-description" {...register("description")} />
               <FormFieldError message={errors.description?.message} />
             </div>
 
+            {/* ── ☑ Voorraad hoeveelheid correctie ──────────────────────── */}
             <div className="space-y-3 rounded-lg border p-3">
               <Controller
                 control={control}
@@ -145,14 +248,23 @@ export const StockCorrectionDialog = ({ stock, open, onOpenChange }: Props) => {
                       checked={field.value}
                       onChange={(event) => field.onChange(event.target.checked)}
                     />
-                    Correct the quantity
+                    Correct the quantity and what the metal is
                   </label>
                 )}
               />
               <FormFieldError message={errors.correctQuantity?.message} />
-              <div className="grid grid-cols-2 gap-3">
+
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 <div>
-                  <FormLabel htmlFor="correction-quantity">Quantity</FormLabel>
+                  <p className="mb-1 block text-sm font-medium text-muted-foreground">
+                    Current quantity
+                  </p>
+                  <Input value={`${lot.quantity} ${unit}`} readOnly disabled />
+                </div>
+                <div>
+                  <FormLabel htmlFor="correction-quantity">
+                    New quantity
+                  </FormLabel>
                   <Input
                     id="correction-quantity"
                     inputMode="decimal"
@@ -162,45 +274,23 @@ export const StockCorrectionDialog = ({ stock, open, onOpenChange }: Props) => {
                   <FormFieldError message={errors.quantity?.message} />
                 </div>
                 <div>
-                  <FormLabel htmlFor="correction-quantity-kg">
-                    Weight (kg)
-                  </FormLabel>
-                  <Input
-                    id="correction-quantity-kg"
-                    inputMode="decimal"
-                    disabled={!correctQuantity}
-                    {...register("quantityKg")}
-                  />
-                  <FormFieldError message={errors.quantityKg?.message} />
-                </div>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                The lot keeps its own valuation price, so its value follows the
-                quantity. A correction cannot revalue metal.
-              </p>
-            </div>
-
-            <div className="space-y-3 rounded-lg border p-3">
-              <Controller
-                control={control}
-                name="correctCharacteristics"
-                render={({ field }) => (
-                  <label className="flex items-center gap-2 text-sm font-medium">
-                    <Checkbox
-                      checked={field.value}
-                      onChange={(event) => field.onChange(event.target.checked)}
-                    />
-                    Correct the characteristics
-                  </label>
-                )}
-              />
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                <div>
                   <FormLabel htmlFor="correction-category">Category</FormLabel>
-                  <Input
-                    id="correction-category"
-                    disabled={!correctCharacteristics}
-                    {...register("stockCategory")}
+                  <Controller
+                    control={control}
+                    name="stockCategory"
+                    render={({ field }) => (
+                      <Select
+                        id="correction-category"
+                        value={field.value ?? ""}
+                        disabled={!correctQuantity}
+                        placeholder="Not set"
+                        options={stockCategories.map((value) => ({
+                          value,
+                          label: STOCK_CATEGORY_LABELS[value],
+                        }))}
+                        onValueChange={field.onChange}
+                      />
+                    )}
                   />
                   <FormFieldError message={errors.stockCategory?.message} />
                 </div>
@@ -208,7 +298,7 @@ export const StockCorrectionDialog = ({ stock, open, onOpenChange }: Props) => {
                   <FormLabel htmlFor="correction-quality">Quality</FormLabel>
                   <Input
                     id="correction-quality"
-                    disabled={!correctCharacteristics}
+                    disabled={!correctQuantity}
                     {...register("quality")}
                   />
                   <FormFieldError message={errors.quality?.message} />
@@ -218,7 +308,7 @@ export const StockCorrectionDialog = ({ stock, open, onOpenChange }: Props) => {
                   <Input
                     id="correction-length"
                     inputMode="numeric"
-                    disabled={!correctCharacteristics}
+                    disabled={!correctQuantity}
                     {...register("lengthMm")}
                   />
                   <FormFieldError message={errors.lengthMm?.message} />
@@ -228,7 +318,7 @@ export const StockCorrectionDialog = ({ stock, open, onOpenChange }: Props) => {
                   <Input
                     id="correction-width"
                     inputMode="numeric"
-                    disabled={!correctCharacteristics}
+                    disabled={!correctQuantity}
                     {...register("widthMm")}
                   />
                   <FormFieldError message={errors.widthMm?.message} />
@@ -240,21 +330,99 @@ export const StockCorrectionDialog = ({ stock, open, onOpenChange }: Props) => {
                   <Input
                     id="correction-thickness"
                     inputMode="decimal"
-                    disabled={!correctCharacteristics}
+                    disabled={!correctQuantity}
                     {...register("thicknessMm")}
                   />
                   <FormFieldError message={errors.thicknessMm?.message} />
                 </div>
+              </div>
+
+              {/* 🔑 All four weights. They disagree on real lots and none of
+                  them can be derived from another. */}
+              <div className="grid grid-cols-2 gap-3 border-t pt-3 sm:grid-cols-4">
                 <div>
-                  <FormLabel htmlFor="correction-remark">Remark</FormLabel>
+                  <FormLabel htmlFor="correction-weight">
+                    Theoretical (kg)
+                  </FormLabel>
                   <Input
-                    id="correction-remark"
-                    disabled={!correctCharacteristics}
-                    {...register("remark")}
+                    id="correction-weight"
+                    inputMode="decimal"
+                    disabled={!correctQuantity}
+                    {...register("quantityKg")}
                   />
-                  <FormFieldError message={errors.remark?.message} />
+                  <FormFieldError message={errors.quantityKg?.message} />
+                </div>
+                <div>
+                  <FormLabel htmlFor="correction-weighed">
+                    Weighed (kg)
+                  </FormLabel>
+                  <Input
+                    id="correction-weighed"
+                    inputMode="decimal"
+                    disabled={!correctQuantity}
+                    {...register("weighedWeightKg")}
+                  />
+                  <FormFieldError message={errors.weighedWeightKg?.message} />
+                </div>
+                <div>
+                  <FormLabel htmlFor="correction-gross">Gross (kg)</FormLabel>
+                  <Input
+                    id="correction-gross"
+                    inputMode="decimal"
+                    disabled={!correctQuantity}
+                    {...register("grossWeightKg")}
+                  />
+                  <FormFieldError message={errors.grossWeightKg?.message} />
+                </div>
+                <div>
+                  <FormLabel htmlFor="correction-net">Net (kg)</FormLabel>
+                  <Input
+                    id="correction-net"
+                    inputMode="decimal"
+                    disabled={!correctQuantity}
+                    {...register("netWeightKg")}
+                  />
+                  <FormFieldError message={errors.netWeightKg?.message} />
                 </div>
               </div>
+              <p className="text-xs text-muted-foreground">
+                Gross − tare = net = weighed, and the weighed weight is what the
+                supplier invoices on. The lot keeps its own valuation price, so
+                its value follows the quantity — a correction cannot revalue
+                metal.
+              </p>
+            </div>
+
+            {/* ── ☐ Voorraad kenmerk correctie ──────────────────────────── */}
+            <div className="space-y-3 rounded-lg border p-3">
+              <Controller
+                control={control}
+                name="correctCharacteristics"
+                render={({ field }) => (
+                  <label className="flex items-center gap-2 text-sm font-medium">
+                    <Checkbox
+                      checked={field.value}
+                      onChange={(event) => field.onChange(event.target.checked)}
+                    />
+                    Correct the stock remark
+                  </label>
+                )}
+              />
+              <div>
+                <FormLabel htmlFor="correction-remark">Stock remark</FormLabel>
+                <Input
+                  id="correction-remark"
+                  disabled={!correctCharacteristics}
+                  {...register("remark")}
+                />
+                <FormFieldError message={errors.remark?.message} />
+              </div>
+              {reason !== "stock_remark" && correctCharacteristics ? (
+                <p className="text-xs text-muted-foreground">
+                  Editing only the note? “Add / adjust stock remark” is the
+                  reason for it, and it is the one reason that cannot move metal.
+                </p>
+              ) : null}
             </div>
 
             <FormError>{state.error}</FormError>
@@ -277,7 +445,14 @@ export const StockCorrectionDialog = ({ stock, open, onOpenChange }: Props) => {
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isPending}>
+            {/* Greyed until something is actually being corrected, the way the
+                reference greys `OK` until the form is legal. */}
+            <Button
+              type="submit"
+              disabled={
+                isPending || (!correctQuantity && !correctCharacteristics)
+              }
+            >
               {isPending ? "Correcting…" : "OK"}
             </Button>
           </DialogFooter>

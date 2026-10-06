@@ -1,7 +1,13 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
-import { getStockDetail } from "@/app/(dashboard)/stock/actions";
+import {
+  getLocationTreeForPicker,
+  getSawOrdersForLot,
+  getStockDetail,
+  getStockLotDialog,
+  getSupplierDeliveriesForLot,
+} from "@/app/(dashboard)/stock/actions";
 import { StockDetailView } from "@/components/stock/stock-detail";
 import { PageHeading } from "@/components/layout/page-heading";
 
@@ -12,11 +18,24 @@ type Props = {
 const StockDetailPage = async ({ params }: Props) => {
   const { uuid } = await params;
 
+  // ⚠️ Sequential, not `Promise.all`. The shared MySQL instance caps
+  // connections, and five fan-out queries per lot page is exactly the kind of
+  // thing that exhausts the pool once two people have a lot open.
   const stock = await getStockDetail(uuid);
 
   if (!stock) {
     notFound();
   }
+
+  const dialog = await getStockLotDialog(uuid);
+
+  if (!dialog) {
+    notFound();
+  }
+
+  const locations = await getLocationTreeForPicker();
+  const deliveries = await getSupplierDeliveriesForLot(uuid);
+  const sawOrders = await getSawOrdersForLot(uuid);
 
   return (
     <div className="space-y-4">
@@ -34,7 +53,13 @@ const StockDetailPage = async ({ params }: Props) => {
           .filter(Boolean)
           .join(" — ")}
       />
-      <StockDetailView stock={stock} />
+      <StockDetailView
+        stock={stock}
+        dialog={dialog}
+        locations={locations}
+        deliveries={deliveries}
+        sawOrders={sawOrders}
+      />
     </div>
   );
 };

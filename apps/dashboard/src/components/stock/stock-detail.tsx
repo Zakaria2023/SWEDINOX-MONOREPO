@@ -1,11 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { PencilLine } from "lucide-react";
-import { StockDetail } from "@/app/(dashboard)/stock/actions";
-import { Button } from "@/components/shadcn/button";
-import { StockCorrectionDialog } from "@/components/stock/stock-correction-dialog";
+import {
+  LocationTreeRow,
+  SawOrderRow,
+  StockDetail,
+  StockLotDialogData,
+  SupplierDeliveryRow,
+} from "@/app/(dashboard)/stock/actions";
+import { StockLotToolbar } from "@/components/stock/stock-lot-toolbar";
+import {
+  StockLotLedger,
+  StockLotWeights,
+} from "@/components/stock/stock-lot-ledger";
+import { STOCK_UNIT_LABELS } from "@/lib/labels";
 import {
   Table,
   TableBody,
@@ -33,62 +41,71 @@ const MOVEMENT_TYPE_BADGE: Record<StockMovementType, string> = {
 
 type Props = {
   stock: StockDetail;
+  /** Everything the `Voorraad` toolbar's dialogs open with. */
+  dialog: StockLotDialogData;
+  locations: LocationTreeRow[];
+  deliveries: SupplierDeliveryRow[];
+  sawOrders: SawOrderRow[];
 };
 
-export const StockDetailView = ({ stock }: Props) => {
-  const [correcting, setCorrecting] = useState(false);
+export const StockDetailView = ({
+  stock,
+  dialog,
+  locations,
+  deliveries,
+  sawOrders,
+}: Props) => (
+  <div className="space-y-6">
+    {/* Actions in a toolbar above the grid, acting on this lot. */}
+    <StockLotToolbar
+      data={dialog}
+      locations={locations}
+      deliveries={deliveries}
+      sawOrders={sawOrders}
+    />
 
-  const available = (
-    Number(stock.quantity) - Number(stock.reservedQuantity)
-  ).toFixed(3);
-
-  return (
-    <div className="space-y-6">
-      <div className="flex justify-end">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => setCorrecting(true)}
-        >
-          <PencilLine className="size-4" />
-          Correct…
-        </Button>
-      </div>
-
-      <StockCorrectionDialog
-        stock={stock}
-        open={correcting}
-        onOpenChange={setCorrecting}
+    {/* 🔴 The ledger and the four weights, which we did not show at all. They
+        are the two facts that decide whether any of the actions above are
+        safe to run — the reference states both before you touch anything. */}
+    <div className="grid gap-4 lg:grid-cols-2">
+      <StockLotLedger
+        ledger={dialog.ledger}
+        unit={stock.unit ? STOCK_UNIT_LABELS[stock.unit] : ""}
+        totalLabel="Total movable"
       />
+      <StockLotWeights weights={dialog.weights} />
+    </div>
 
-      <div className="grid grid-cols-2 gap-4 rounded-lg border p-4 sm:grid-cols-4">
-        <div>
-          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-            Status
-          </p>
-          <p className="text-sm">{STOCK_STATUS_LABELS[stock.status]}</p>
-        </div>
-        <div>
-          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-            Original / Remaining
-          </p>
-          <p className="text-sm">
-            {stock.originalQuantity ?? stock.quantity} / {stock.quantity}
-          </p>
-        </div>
-        <div>
-          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-            Reserved
-          </p>
-          <p className="text-sm">{stock.reservedQuantity}</p>
-        </div>
-        <div>
-          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-            Available
-          </p>
-          <p className="text-sm">{available}</p>
-        </div>
-        <div>
+    <div className="grid grid-cols-2 gap-4 rounded-lg border p-4 sm:grid-cols-4">
+      <div>
+        <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+          Status
+        </p>
+        <p className="text-sm">{STOCK_STATUS_LABELS[stock.status]}</p>
+      </div>
+      <div>
+        <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+          Original / Remaining
+        </p>
+        <p className="text-sm">
+          {stock.originalQuantity ?? stock.quantity} / {stock.quantity}
+        </p>
+      </div>
+      <div>
+        <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+          Charge (mill) / Internal
+        </p>
+        <p className="text-sm">
+          {stock.charge ?? "—"} / {stock.internalCharge ?? "—"}
+        </p>
+      </div>
+      <div>
+        <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+          Bundle
+        </p>
+        <p className="text-sm">{stock.internalBatch ?? "—"}</p>
+      </div>
+      <div>
           <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
             Company
           </p>
@@ -198,5 +215,4 @@ export const StockDetailView = ({ stock }: Props) => {
         </div>
       </div>
     </div>
-  );
-};
+);

@@ -4,9 +4,14 @@ import {
   InsertStockMovements,
   StockMovements,
 } from "@/db/schema/stock-movements";
-import { StockCorrectionReason, StockMovementReason } from "@/lib/enums";
+import {
+  StockCorrectionReason,
+  StockMovementReason,
+  TransferReason,
+} from "@/lib/enums";
 import {
   generateUuid,
+  lotLedger,
   lotOrigin,
   moneyString,
   normaliseCharge,
@@ -63,8 +68,24 @@ type ApplyStockCorrectionParams = {
    */
   quantity?: number;
   quantityKg?: number;
-  /** The characteristic leg, from `Voorraad kenmerk correctie`. */
-  attributes?: StockCorrectableValues;
+  /**
+   * The attributes the dialog offered, and only those.
+   *
+   * Partial on purpose: an absent key means the dialog never asked about that
+   * field, which is different from asking and being given nothing. See
+   * `stockAttributeChanges`.
+   */
+  attributes?: Partial<StockCorrectableValues>;
+  /**
+   * `Zaagopdracht` on the dialog — the saw order this correction is blamed on.
+   *
+   * 🔑 The missing link between a correction and the job that caused it. When a
+   * cut loses material, the correction that writes the loss off points at the
+   * work order that ate it, which is what makes sawing waste attributable
+   * instead of just absent. The reference offers it as a two-column picker
+   * (`Opdracht` / `Ordernr`), empty on the captured lot.
+   */
+  sawOrderUuid?: string | null;
   userId: string;
 };
 
@@ -72,6 +93,67 @@ type StockCorrectionOutcome = {
   /** How many rows went into the ledger — the reference writes none. */
   movements: number;
   attributeChanges: StockAttributeChange[];
+};
+
+type ApplyStockSplitParams = {
+  source: SelectStock;
+  /** `Hoeveelheid` — how many pieces come off. Never the whole lot. */
+  quantity: number;
+  /**
+   * `Gewogen gewicht` — what the pieces coming off actually read on the scale.
+   *
+   * Stated rather than apportioned, which is the entire reason the reference's
+   * dialog carries a weight box. `null` means nobody weighed them.
+   */
+  weighedWeightKg?: number | null;
+  /** `Naar locatie`, optional — two lots on one shelf is a legal outcome. */
+  toLocationUuid?: string | null;
+  /** `Ind. reserveringen` — whether the claim travels with the pieces. */
+  includeReservations: boolean;
+  /** `Met onderhanden opdrachten` in the dialog's header ledger. */
+  onOpenWorkOrders?: number;
+  /** `Geplande verplaatsingen` in the dialog's header ledger. */
+  plannedMoves?: number;
+};
+
+type StockSplitOutcome = {
+  splitStockUuid: string;
+  remainingQuantity: number;
+  /** `Totaal splitsbaar`, so the caller can report what the ceiling was. */
+  totalSplittable: number;
+};
+
+type ApplyStockTransferParams = {
+  source: SelectStock;
+  quantity: number;
+  /** `Naar Artikel` — the field that makes this a transfer and not a move. */
+  toProductUuid: string;
+  /** `Naar locatie`, optional: a transfer may re-shelve at the same time. */
+  toLocationUuid?: string | null;
+  /** `Reden`, whose one legal value is `transfer`. */
+  reason: TransferReason;
+  /** `Vooraadmutatie omschrijving` — carried onto both ledger rows. */
+  description: string | null;
+  // 🔑 Deliberately **no** quality or dimensions.
+  //
+  // It is tempting to stamp the receiving article's nominal shape onto the lot,
+  // since a transfer re-declares what the metal is. It would be wrong: a lot's
+  // `lengthMm`/`widthMm`/`thicknessMm` are **its own measurements**, and every
+  // kilo derived from the row has to come from them rather than from the
+  // article's nominal ones. A plate of nominal 1,50 mm measuring 1,44 weighs
+  // what 1,44 weighs, and overwriting it with 1,50 would silently restate the
+  // bundle's weight.
+  //
+  // Re-classifying says "this metal was booked under the wrong code". It does
+  // not say the tape measure was wrong.
+  onOpenWorkOrders?: number;
+  plannedMoves?: number;
+  userId: string;
+};
+
+type StockTransferOutcome = {
+  transferredStockUuid: string;
+  remainingQuantity: number;
 };
 
 type ApplyProductionOutputParams = {
@@ -496,6 +578,27 @@ export const applyProductionOutput = async (
   return stockUuid;
 };
 
+/**
+ * One of the weighbridge's three figures off a form.
+ *
+ * `undefined` means the dialog never offered the field, so the lot keeps what
+ * it had. An empty string means somebody cleared it on purpose, which is a real
+ * instruction and becomes `null` — a bundle whose weight is unknown again.
+ */
+const weightOrKeep = (
+  value: string | number | null | undefined,
+  current: string | null,
+): string | null => {
+  if (value === undefined) {
+    return current;
+  }
+  if (value === null || String(value).trim() === "") {
+    return null;
+  }
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed.toFixed(3) : current;
+};
+
 /** A dimension off a form, as the integer column wants it or not at all. */
 const numberOrNull = (value: string | number | null | undefined) => {
   if (value === null || value === undefined || String(value).trim() === "") {
@@ -575,23 +678,23 @@ export const applyStockCorrection = async (
     );
   }
 
+  // What the lot says now, which is both the left-hand side of every comparison
+  // and the fallback for every field the dialog left alone.
+  const currentAttributes: StockCorrectableValues = {
+    stock_category: source.stockCategory,
+    quality: source.quality,
+    length_mm: source.lengthMm,
+    width_mm: source.widthMm,
+    thickness_mm: source.thicknessMm,
+    remark: source.remark,
+    weighed_weight_kg: source.weighedWeightKg,
+    gross_weight_kg: source.grossWeightKg,
+    net_weight_kg: source.netWeightKg,
+  };
+
   const changes = stockAttributeChanges(
-    {
-      stock_category: source.stockCategory,
-      quality: source.quality,
-      length_mm: source.lengthMm,
-      width_mm: source.widthMm,
-      thickness_mm: source.thicknessMm,
-      remark: source.remark,
-    },
-    params.attributes ?? {
-      stock_category: source.stockCategory,
-      quality: source.quality,
-      length_mm: source.lengthMm,
-      width_mm: source.widthMm,
-      thickness_mm: source.thicknessMm,
-      remark: source.remark,
-    },
+    currentAttributes,
+    params.attributes ?? {},
   );
 
   const previousKg = Number(source.quantityKg ?? 0);
@@ -641,6 +744,22 @@ export const applyStockCorrection = async (
         params.attributes?.remark !== undefined
           ? (params.attributes.remark as string | null)
           : source.remark,
+      // The weighbridge's three. Blank clears them rather than being ignored:
+      // "this bundle has not been weighed" is a state somebody has to be able
+      // to get a lot back into after a mis-keyed figure, and `gross − tare =
+      // net = weighed` only holds while the numbers on it are real.
+      weighedWeightKg: weightOrKeep(
+        params.attributes?.weighed_weight_kg,
+        source.weighedWeightKg,
+      ),
+      grossWeightKg: weightOrKeep(
+        params.attributes?.gross_weight_kg,
+        source.grossWeightKg,
+      ),
+      netWeightKg: weightOrKeep(
+        params.attributes?.net_weight_kg,
+        source.netWeightKg,
+      ),
     })
     .where(
       and(eq(Stock.uuid, source.uuid), eq(Stock.quantity, source.quantity)),
@@ -670,6 +789,7 @@ export const applyStockCorrection = async (
       quantityKg: Math.abs(kgDelta).toFixed(2),
       valueEur: moneyString(Math.abs(nextValue - previousValue)),
       note: params.description,
+      productionWorkOrderLineUuid: params.sawOrderUuid ?? null,
       createdByUserId: userId,
     });
   }
@@ -692,6 +812,7 @@ export const applyStockCorrection = async (
       quantityKg: "0.00",
       valueEur: "0.00",
       note: params.description,
+      productionWorkOrderLineUuid: params.sawOrderUuid ?? null,
       createdByUserId: userId,
     });
   });
@@ -699,4 +820,381 @@ export const applyStockCorrection = async (
   await tx.insert(StockMovements).values(rows);
 
   return { movements: rows.length, attributeChanges: changes };
+};
+
+/**
+ * Split a lot in two — the reference's `Splits voorraad`.
+ *
+ * Captured 5-10-2026, and it is the one dialog we had already guessed right.
+ * Its fields are `Hoeveelheid`, **`Gewogen gewicht`**, `Naar locatie` and
+ * ☐ `Ind. reserveringen`, and what matters is what is *missing* against
+ * `Verplaatsen`: there is **no `Reden` and no `Uitvoerdatum`**. So a split is
+ * not planned warehouse work that becomes an order — it happens when OK is
+ * pressed.
+ *
+ * 🔑 **The weighed weight is stated, not apportioned.** This is the whole
+ * reason the dialog has a weight box at all: the pieces coming off the bundle
+ * get put on the scale, and what they read is what they read. Apportioning the
+ * parent's weight by quantity would invent a figure for metal that was actually
+ * weighed — and it is exactly the assumption a live purchase split has already
+ * contradicted once, where two receptions of one 151 kg line carried 158 kg and
+ * 101 kg.
+ *
+ * The **theoretical** weight does apportion, because it is arithmetic off the
+ * article's dimensions rather than an observation. The two behave differently
+ * and that is the point of carrying both.
+ *
+ * 🔑 **A reserved lot can be split**, same as it can be moved — the ledger read
+ * `Gereserveerd en splitsbaar: 25` on a lot reserved in full. `Ind.
+ * reserveringen` decides whether the claim travels with the pieces or stays
+ * with what is left behind.
+ *
+ * No movement rows. A split changes neither how much the company holds nor what
+ * it is worth, and the reference's own nineteen mutation reasons contain nothing
+ * for it — the same rule that keeps an internal relocation out of the ledger.
+ */
+export const applyStockSplit = async (
+  tx: Transaction,
+  params: ApplyStockSplitParams,
+): Promise<StockSplitOutcome> => {
+  const { source, quantity } = params;
+  const previousQuantity = Number(source.quantity);
+  const reserved = Number(source.reservedQuantity ?? 0);
+
+  if (quantity <= 0) {
+    throw new Error("Enter how much to split off.");
+  }
+
+  // The whole lot is not a split — it is the lot. The reference greys `OK` out
+  // rather than letting somebody create a duplicate and an empty parent.
+  if (quantity >= previousQuantity) {
+    throw new Error(
+      `Splitting off ${quantity} would take the whole lot, which holds ${previousQuantity}. Relocate it instead.`,
+    );
+  }
+
+  // `Totaal splitsbaar` from the dialog's own header. Metal already committed
+  // to an open work order or already scheduled to move cannot be split away
+  // underneath the job that is waiting for it.
+  const ledger = lotLedger({
+    quantity: source.quantity,
+    reservedQuantity: source.reservedQuantity,
+    onOpenWorkOrders: params.onOpenWorkOrders ?? 0,
+    plannedMoves: params.plannedMoves ?? 0,
+  });
+
+  if (quantity > ledger.totalMovable) {
+    throw new Error(
+      `Only ${ledger.totalMovable} of this lot can be split — the rest is on an open work order or already scheduled to move.`,
+    );
+  }
+
+  // `Ind. reserveringen`: ticked, the claim goes with the pieces; unticked, it
+  // stays with the parent. Either way it is capped at what exists to carry, and
+  // leaving it behind is refused when the parent would then be holding a claim
+  // on more metal than it has.
+  const carriedReservation = params.includeReservations
+    ? Math.min(quantity, reserved)
+    : 0;
+  const remainingQuantity = previousQuantity - quantity;
+  const remainingReservation = reserved - carriedReservation;
+
+  if (remainingReservation > remainingQuantity) {
+    throw new Error(
+      `${remainingReservation} would stay reserved on a lot holding only ${remainingQuantity}. Tick "include reservations" so the claim travels with the pieces.`,
+    );
+  }
+
+  const unitCost = Number(source.valuationPrice ?? 0);
+  const previousValue = Number(source.valuationEuro ?? 0);
+  const remainingValue = restateLotValue({
+    previousQuantity,
+    remainingQuantity,
+    unitCost,
+    previousValue,
+  });
+  const valueSplit = previousValue - remainingValue;
+
+  // The theoretical weight is arithmetic, so it apportions by quantity.
+  const previousTheoretical = Number(source.quantityKg ?? 0);
+  const splitTheoretical =
+    previousQuantity === 0
+      ? 0
+      : (previousTheoretical * quantity) / previousQuantity;
+  const remainingTheoretical = previousTheoretical - splitTheoretical;
+
+  // 🔑 The weighed weight does not. What the scale said about the pieces coming
+  // off is what the new lot carries, and the parent keeps the remainder of what
+  // it had — floored at zero rather than going negative, because somebody
+  // re-weighing a bundle and finding more than the books said is a real event
+  // and not a reason to refuse the split.
+  const splitWeighed = params.weighedWeightKg ?? null;
+  const previousWeighed =
+    source.weighedWeightKg === null ? null : Number(source.weighedWeightKg);
+  const remainingWeighed =
+    previousWeighed === null
+      ? null
+      : Math.max(previousWeighed - (splitWeighed ?? 0), 0);
+
+  const [updated] = await tx
+    .update(Stock)
+    .set({
+      quantity: remainingQuantity.toFixed(3),
+      reservedQuantity: remainingReservation.toFixed(3),
+      quantityKg: remainingTheoretical.toFixed(2),
+      weighedWeightKg:
+        remainingWeighed === null ? null : remainingWeighed.toFixed(3),
+      // The gross and net figures described a bundle that no longer exists as
+      // one bundle. Clearing them says "re-weigh this" rather than leaving two
+      // halves both claiming the whole bundle's gross weight.
+      grossWeightKg: null,
+      netWeightKg: null,
+      valuationEuro: moneyString(remainingValue),
+      // Taking pieces off a bundle breaks its banding, and nothing puts it back.
+      unopened: false,
+    })
+    .where(
+      and(eq(Stock.uuid, source.uuid), eq(Stock.quantity, source.quantity)),
+    );
+
+  if (updated.affectedRows === 0) {
+    throw new Error(
+      "The lot changed while the split was open — reload it and split it again.",
+    );
+  }
+
+  const {
+    id: _id,
+    uuid: _uuid,
+    createdAt: _createdAt,
+    updatedAt: _updatedAt,
+    ...attributes
+  } = source;
+
+  const splitUuid = generateUuid();
+
+  // 🔴 A split always mints a new lot, unlike a relocation, which moves the row
+  // it already has. That is the difference between the two acts: relocating
+  // asks where one bundle is, splitting says there are now two. It is also why
+  // `Naar locatie` is optional here — the halves may well stay on the same
+  // shelf and still be two lots.
+  await tx.insert(Stock).values({
+    ...attributes,
+    uuid: splitUuid,
+    locationUuid: params.toLocationUuid ?? source.locationUuid,
+    status: "pending",
+    quantity: quantity.toFixed(3),
+    reservedQuantity: carriedReservation.toFixed(3),
+    quantityKg: splitTheoretical.toFixed(2),
+    weighedWeightKg: splitWeighed === null ? null : splitWeighed.toFixed(3),
+    grossWeightKg: null,
+    netWeightKg: null,
+    valuationEuro: moneyString(valueSplit),
+    unopened: false,
+  });
+
+  // The batches travel with the steel, so each half still traces to the receipt
+  // it arrived on.
+  await carryLotBatches(tx, source.uuid, splitUuid, quantity);
+
+  return {
+    splitStockUuid: splitUuid,
+    remainingQuantity,
+    totalSplittable: ledger.totalMovable,
+  };
+};
+
+/**
+ * Transfer a lot to **another article** — the reference's `Overboeken…`,
+ * titled `Aanmaken overboekingsopdracht`.
+ *
+ * 🔑 One field separates this from `Verplaatsen`: **`Naar Artikel`**.
+ * Relocating moves a lot to another *location*; transferring moves it to
+ * another *article*, optionally to another location at the same time. It is
+ * re-classification — the act of deciding a lot is really a different product
+ * than it was booked as, which is what happens when a receipt was keyed against
+ * the wrong code or a grade is re-read off a certificate.
+ *
+ * `Reden` has exactly one value, `Transfer`. A one-member enum is still stored,
+ * because the mutation reads it.
+ *
+ * 🔑 **Unlike every other internal act, this one writes to the ledger.** The
+ * rule that keeps relocations out is that they change neither how much the
+ * company holds nor what it is worth. A transfer breaks that rule in the first
+ * clause: article A holds less afterwards and article B holds more, so a stock
+ * report totalled by article would disagree with itself across the move. Two
+ * rows, `stock_transfer_out` and `stock_transfer_in`, for the same reason a
+ * relocation writes two — netting them would hide which article lost.
+ *
+ * ⚠️ Value travels at the source lot's own carried price. A transfer has no
+ * price field, so it cannot revalue: the receiving article inherits what the
+ * metal was already carried at, and the company's total stock value is
+ * unchanged across the move. That invariant is what makes this safe to run
+ * without a finance posting.
+ */
+export const applyStockTransfer = async (
+  tx: Transaction,
+  params: ApplyStockTransferParams,
+): Promise<StockTransferOutcome> => {
+  const { source, quantity } = params;
+  const previousQuantity = Number(source.quantity);
+
+  if (quantity <= 0) {
+    throw new Error("Enter how much to transfer.");
+  }
+
+  if (params.toProductUuid === source.productUuid) {
+    throw new Error(
+      "The lot is already booked against that article — choose a different one.",
+    );
+  }
+
+  const ledger = lotLedger({
+    quantity: source.quantity,
+    reservedQuantity: source.reservedQuantity,
+    onOpenWorkOrders: params.onOpenWorkOrders ?? 0,
+    plannedMoves: params.plannedMoves ?? 0,
+  });
+
+  if (quantity > ledger.totalMovable) {
+    throw new Error(
+      `Only ${ledger.totalMovable} of this lot can be transferred — the rest is on an open work order or already scheduled to move.`,
+    );
+  }
+
+  // 🔴 A reservation cannot cross an article boundary, and this is the one place
+  // the reference's "reserved stock is movable" finding stops applying.
+  //
+  // A reservation binds a lot to an order **line**, and that line names an
+  // article. Carrying the claim onto a different article would leave the order
+  // promising one product and holding another — the customer ordered 304L and
+  // would be shipped 316. Moving the shelf a lot stands on breaks nothing;
+  // changing what the metal *is* breaks the promise.
+  const reserved = Number(source.reservedQuantity ?? 0);
+  const free = previousQuantity - reserved;
+  if (quantity > free) {
+    throw new Error(
+      `Only ${free} of this lot is unreserved. Release the claim on the other ${quantity - free} before transferring it to another article — a reservation cannot follow metal onto a different product.`,
+    );
+  }
+
+  const unitCost = Number(source.valuationPrice ?? 0);
+  const previousValue = Number(source.valuationEuro ?? 0);
+  const remainingQuantity = previousQuantity - quantity;
+  const remainingValue = restateLotValue({
+    previousQuantity,
+    remainingQuantity,
+    unitCost,
+    previousValue,
+  });
+  const valueMoved = previousValue - remainingValue;
+
+  const previousTheoretical = Number(source.quantityKg ?? 0);
+  const movedTheoretical =
+    previousQuantity === 0
+      ? 0
+      : (previousTheoretical * quantity) / previousQuantity;
+
+  const transferUuid = generateUuid();
+
+  if (remainingQuantity === 0) {
+    // All of it. The row changes article the way a full relocation changes
+    // location — same uuid, same valuation, same charge — so everything
+    // pointing at this lot keeps pointing at it.
+    const [moved] = await tx
+      .update(Stock)
+      .set({
+        productUuid: params.toProductUuid,
+        locationUuid: params.toLocationUuid ?? source.locationUuid,
+        remark: params.description ?? source.remark,
+      })
+      .where(
+        and(eq(Stock.uuid, source.uuid), eq(Stock.quantity, source.quantity)),
+      );
+
+    if (moved.affectedRows === 0) {
+      throw new Error(
+        "The lot changed while the transfer was open — reload it and transfer it again.",
+      );
+    }
+  } else {
+    const [updated] = await tx
+      .update(Stock)
+      .set({
+        quantity: remainingQuantity.toFixed(3),
+        quantityKg: (previousTheoretical - movedTheoretical).toFixed(2),
+        valuationEuro: moneyString(remainingValue),
+        unopened: false,
+      })
+      .where(
+        and(eq(Stock.uuid, source.uuid), eq(Stock.quantity, source.quantity)),
+      );
+
+    if (updated.affectedRows === 0) {
+      throw new Error(
+        "The lot changed while the transfer was open — reload it and transfer it again.",
+      );
+    }
+
+    const {
+      id: _id,
+      uuid: _uuid,
+      createdAt: _createdAt,
+      updatedAt: _updatedAt,
+      ...attributes
+    } = source;
+
+    await tx.insert(Stock).values({
+      ...attributes,
+      uuid: transferUuid,
+      productUuid: params.toProductUuid,
+      locationUuid: params.toLocationUuid ?? source.locationUuid,
+      status: "pending",
+      quantity: quantity.toFixed(3),
+      // Nothing transferred carries a claim — see the guard above.
+      reservedQuantity: "0.000",
+      quantityKg: movedTheoretical.toFixed(2),
+      // Two articles cannot both be the bundle that was weighed, and the part
+      // that changed identity was never weighed as this article at all.
+      weighedWeightKg: null,
+      grossWeightKg: null,
+      netWeightKg: null,
+      valuationEuro: moneyString(valueMoved),
+      remark: params.description ?? source.remark,
+      unopened: false,
+    });
+
+    await carryLotBatches(tx, source.uuid, transferUuid, quantity);
+  }
+
+  const destinationUuid = remainingQuantity === 0 ? source.uuid : transferUuid;
+
+  await tx.insert(StockMovements).values([
+    {
+      uuid: generateUuid(),
+      productUuid: source.productUuid,
+      stockUuid: source.uuid,
+      type: "out",
+      reason: "stock_transfer_out",
+      quantity: quantity.toFixed(3),
+      quantityKg: movedTheoretical.toFixed(2),
+      valueEur: moneyString(valueMoved),
+      note: params.description,
+      createdByUserId: params.userId,
+    },
+    {
+      uuid: generateUuid(),
+      productUuid: params.toProductUuid,
+      stockUuid: destinationUuid,
+      type: "in",
+      reason: "stock_transfer_in",
+      quantity: quantity.toFixed(3),
+      quantityKg: movedTheoretical.toFixed(2),
+      valueEur: moneyString(valueMoved),
+      note: params.description,
+      createdByUserId: params.userId,
+    },
+  ]);
+
+  return { transferredStockUuid: destinationUuid, remainingQuantity };
 };

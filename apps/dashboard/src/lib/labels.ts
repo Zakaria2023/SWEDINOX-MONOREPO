@@ -150,6 +150,11 @@ import {
   ReceiptStatus,
   PackagingType,
   RemainderCategory,
+  StockCategory,
+  RelocationReason,
+  TransferReason,
+  StockOption,
+  StockOptionStatus,
 } from "@/lib/enums";
 
 export const ADDRESS_CATEGORY_LABELS: Record<AddressCategory, string> = {
@@ -959,6 +964,9 @@ export const STOCK_CORRECTABLE_ATTRIBUTE_LABELS: Record<
   width_mm: "Width (mm)",
   thickness_mm: "Thickness (mm)",
   remark: "Remark",
+  weighed_weight_kg: "Weighed weight (kg)",
+  gross_weight_kg: "Gross weight (kg)",
+  net_weight_kg: "Net weight (kg)",
 };
 
 export const LEDGER_ACCOUNT_TYPE_LABELS: Record<LedgerAccountType, string> = {
@@ -993,6 +1001,8 @@ export const STOCK_MOVEMENT_REASON_LABELS: Record<StockMovementReason, string> =
     external_processing_issue: "Sent to Processor",
   external_processing_return: "Returned from Processor",
     data_conversion: "Opening Balance (Conversion)",
+    stock_transfer_out: "Transferred to another article",
+    stock_transfer_in: "Transferred from another article",
   };
 
 export const CUSTOMER_LABEL_OPTION_LABELS: Record<CustomerLabelOption, string> =
@@ -2074,3 +2084,63 @@ export const MONTH_LABELS = [
   "November",
   "December",
 ] as const satisfies readonly string[];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// The lot dialogs — labels for the enums read off easy2trade on 5-10-2026.
+//
+// The reference's own captions are Dutch; these are the English the UI shows.
+// Where the Dutch is worth keeping it is in the comment, not the label.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const STOCK_CATEGORY_LABELS: Record<StockCategory, string> = {
+  standard: "Standard",
+  scrap: "Scrap",
+  second_choice: "2nd choice",
+  remaining: "Remaining",
+  third_party_inventory: "3rd party inventory",
+};
+
+export const RELOCATION_REASON_LABELS: Record<RelocationReason, string> = {
+  conversion: "Conversion",
+  to_another_location: "To another location",
+  from_another_branch: "From another branch",
+  moved: "Moved",
+};
+
+export const TRANSFER_REASON_LABELS: Record<TransferReason, string> = {
+  transfer: "Transfer",
+};
+
+/**
+ * The reference keeps several of these in Dutch on an otherwise English screen
+ * — `Papier verwijderen`, `Kanten`, `Stempelen`, `Duplo`. Ours are English
+ * throughout, with the original beside it so a screenshot can still be matched
+ * back to a row.
+ */
+export const STOCK_OPTION_LABELS: Record<StockOption, string> = {
+  uv_foil: "UV foil",
+  brushing: "Brushing",
+  punching: "Punching",
+  embossing: "Embossing",
+  remove_paper: "Remove paper",
+  certificate_2_1: "2.1 Certificate",
+  coating: "Coating",
+  pickling: "Pickling",
+  remove_foil: "Remove foil",
+  edging: "Edging",
+  duplo: "Duplo",
+  slitting: "Slitting",
+  stamping: "Stamping",
+  laser: "Laser",
+  decoiling: "Decoiling",
+  grinding: "Grinding",
+  shear_cut: "Shear cut",
+  laser_foil: "Laser foil",
+  cutting: "Cutting",
+};
+
+export const STOCK_OPTION_STATUS_LABELS: Record<StockOptionStatus, string> = {
+  possible: "Possible",
+  requested: "Requested",
+  done: "Done",
+};

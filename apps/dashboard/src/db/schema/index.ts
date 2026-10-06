@@ -61,6 +61,7 @@ export * from "./batches";
 export * from "./batch-certificates";
 export * from "./stock";
 export * from "./stock-movements";
+export * from "./stock-options";
 export * from "./freight-movements";
 export * from "./count-list-deviations";
 export * from "./pick-statistics";

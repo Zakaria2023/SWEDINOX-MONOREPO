@@ -9479,9 +9479,19 @@ export const stockCorrectionReasonRules: Record<
  */
 export const stockAttributeChanges = (
   before: StockCorrectableValues,
-  after: StockCorrectableValues,
+  after: Partial<StockCorrectableValues>,
 ): StockAttributeChange[] =>
   stockCorrectableAttributes.flatMap((attribute) => {
+    // 🔴 A key the dialog never offered is not a cleared field.
+    //
+    // The reference's two halves are independently tickable, so a correction
+    // that only touches the quantity half submits nothing at all about the
+    // remark. Reading an absent key as the empty string recorded every such
+    // correction as having wiped the remark — a change that never happened, in
+    // the one ledger that exists to be trusted about what changed.
+    if (!(attribute in after)) {
+      return [];
+    }
     const from = normaliseAttributeValue(before[attribute]);
     const to = normaliseAttributeValue(after[attribute]);
     if (from === to) {
@@ -10455,3 +10465,159 @@ export const isWeightPriceUnit = (priceUnit: string | null | undefined) =>
   WEIGHT_PRICE_UNITS.includes(
     (priceUnit ?? "").trim().toUpperCase() as (typeof WEIGHT_PRICE_UNITS)[number],
   );
+
+/**
+ * The read-only ledger every lot dialog opens with.
+ *
+ * Captured 5-10-2026. `Verplaatsen`, `Overboeken` and `Splits` all begin with
+ * the same block, and it is the single most important thing on the dialog —
+ * it states what the action is allowed to touch before you type anything:
+ *
+ *   Technische voorraad:              25
+ *   Beschikbaar:                       0
+ *     Geplande verplaatsingen:         0
+ *     Beschikbaar en verplaatsbaar:    0
+ *   Gereserveerd:                     25
+ *     Met onderhanden opdrachten:      0
+ *     Geplande verplaatsingen:         0
+ *     Gereserveerd en verplaatsbaar:  25
+ *   Totaal verplaatsbaar:             25
+ *
+ * 🔑 **`Technical = Reserved + Available`**, on every dialog and in the location
+ * grid — confirmed on neighbouring rows as `3 = 3 + 0` and `9 = 0 + 9`.
+ *
+ * 🔑 **Reserved stock is movable and splittable.** `Gereserveerd en
+ * verplaatsbaar` read 25 on a lot that was reserved in full, because a
+ * reservation binds the *lot*, not the shelf. Only two things subtract: metal
+ * already on an open work order (`Met onderhanden opdrachten`) and metal
+ * already scheduled to move (`Geplande verplaatsingen`).
+ *
+ * That second line is why a relocation is an *order* rather than a movement —
+ * raising one commits the metal, so the next dialog has to be able to see it.
+ */
+export type LotLedger = {
+  technical: number;
+  available: number;
+  availablePlannedMoves: number;
+  availableAndMovable: number;
+  reserved: number;
+  reservedOnOpenWorkOrders: number;
+  reservedPlannedMoves: number;
+  reservedAndMovable: number;
+  /** The bold total at the bottom, and the ceiling on the quantity field. */
+  totalMovable: number;
+};
+
+export type LotLedgerInput = {
+  quantity: string | number | null | undefined;
+  reservedQuantity: string | number | null | undefined;
+  /** Already committed to an open warehouse or production work order. */
+  onOpenWorkOrders?: number;
+  /** Already on a relocation or transfer order that has not been executed. */
+  plannedMoves?: number;
+};
+
+export const lotLedger = ({
+  quantity,
+  reservedQuantity,
+  onOpenWorkOrders = 0,
+  plannedMoves = 0,
+}: LotLedgerInput): LotLedger => {
+  const technical = Number(quantity ?? 0);
+  const reserved = Number(reservedQuantity ?? 0);
+  const available = Math.max(technical - reserved, 0);
+
+  // Commitments are charged against the free metal first and only then against
+  // the reserved, which is the order the reference's own two sub-lines imply:
+  // the free pile is what a planner would take from before touching somebody's
+  // claim. Anything that cannot fit under `Available` spills into the reserved
+  // half rather than vanishing.
+  const availablePlannedMoves = Math.min(plannedMoves, available);
+  const reservedPlannedMoves = plannedMoves - availablePlannedMoves;
+  const reservedOnOpenWorkOrders = Math.min(onOpenWorkOrders, reserved);
+
+  const availableAndMovable = Math.max(available - availablePlannedMoves, 0);
+  const reservedAndMovable = Math.max(
+    reserved - reservedOnOpenWorkOrders - reservedPlannedMoves,
+    0,
+  );
+
+  return {
+    technical,
+    available,
+    availablePlannedMoves,
+    availableAndMovable,
+    reserved,
+    reservedOnOpenWorkOrders,
+    reservedPlannedMoves,
+    reservedAndMovable,
+    totalMovable: availableAndMovable + reservedAndMovable,
+  };
+};
+
+/**
+ * The weighbridge, as the lot dialogs state it.
+ *
+ * Four weights live on one lot and all four disagreed on the captured bundle:
+ * theoretical 1 766,25 · weighed 1 754 · gross 1 798 · net 1 754. The two rules
+ * that hold between them are `gross − tare = net` and `net = weighed`, which
+ * makes the tare 44 kg of packing.
+ *
+ * The tare is **derived, never stored**: storing it as a fifth number would let
+ * it disagree with the three it comes from.
+ *
+ * `weighed ≠ theoretical` is not an error to be corrected — it is the drift a
+ * purchase invoice is billed on, since the order's printed terms accept only
+ * the weighed weight as the basis for invoicing.
+ */
+export type LotWeights = {
+  theoreticalKg: number | null;
+  weighedKg: number | null;
+  grossKg: number | null;
+  netKg: number | null;
+  /** `gross − net`, once both are known. */
+  tareKg: number | null;
+  /** `weighed − theoretical` — the gap the invoice is billed on. */
+  driftKg: number | null;
+  /** Whether `net` and `weighed` agree, as the reference's own lot did. */
+  netMatchesWeighed: boolean | null;
+};
+
+const weightOrNull = (value: string | number | null | undefined) => {
+  if (value === null || value === undefined || String(value).trim() === "") {
+    return null;
+  }
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+export const lotWeights = (lot: {
+  quantityKg?: string | number | null;
+  weighedWeightKg?: string | number | null;
+  grossWeightKg?: string | number | null;
+  netWeightKg?: string | number | null;
+}): LotWeights => {
+  const theoreticalKg = weightOrNull(lot.quantityKg);
+  const weighedKg = weightOrNull(lot.weighedWeightKg);
+  const grossKg = weightOrNull(lot.grossWeightKg);
+  const netKg = weightOrNull(lot.netWeightKg);
+
+  return {
+    theoreticalKg,
+    weighedKg,
+    grossKg,
+    netKg,
+    tareKg:
+      grossKg !== null && netKg !== null
+        ? Number((grossKg - netKg).toFixed(3))
+        : null,
+    driftKg:
+      weighedKg !== null && theoreticalKg !== null
+        ? Number((weighedKg - theoreticalKg).toFixed(3))
+        : null,
+    netMatchesWeighed:
+      netKg !== null && weighedKg !== null
+        ? Math.abs(netKg - weighedKg) < 0.001
+        : null,
+  };
+};

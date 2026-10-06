@@ -8,8 +8,73 @@ reference's form — same fields, same order, same enums, same thing greyed, sam
 thing mandatory. Until now the lot dialogs were guesses. They are not any more,
 so the guesses have to go.
 
-Nothing here is written yet. This is the work list, in the order it should be
-done.
+## ✅ Built 6-10-2026 — `pnpm build` green, schema pushed
+
+All eight items below are **implemented**. What each one says it needs is what
+was built; the ⚠️ notes are the places the reference gave no answer and ours had
+to choose, each flagged in the code it lives in.
+
+| # | Item | Where it lives |
+|---|---|---|
+| 1 | Reservations — no create, `Order` + release | [`stock-reservations-dialog.tsx`](../../apps/dashboard/src/components/stock/stock-reservations-dialog.tsx) |
+| 2 | Correction — two halves, four weights, saw order | [`stock-correction-dialog.tsx`](../../apps/dashboard/src/components/stock/stock-correction-dialog.tsx) |
+| 3 | Options as **rows** | [`stock-options.ts`](../../apps/dashboard/src/db/schema/stock-options.ts) · [`stock-options-dialog.tsx`](../../apps/dashboard/src/components/stock/stock-options-dialog.tsx) |
+| 4 | Batch registration as a **picker** | [`stock-batch-registration-dialog.tsx`](../../apps/dashboard/src/components/stock/stock-batch-registration-dialog.tsx) |
+| 5 | Relocate **vs** Transfer, two dialogs | [`stock-relocate-dialog.tsx`](../../apps/dashboard/src/components/stock/stock-relocate-dialog.tsx) · [`stock-transfer-dialog.tsx`](../../apps/dashboard/src/components/stock/stock-transfer-dialog.tsx) |
+| 6 | Split — weight box **plus** the ledger | [`stock-split-dialog.tsx`](../../apps/dashboard/src/components/stock/stock-split-dialog.tsx) |
+| 7 | The two pickers | [`location-search-field.tsx`](../../apps/dashboard/src/components/stock/location-search-field.tsx) |
+| 8 | Stock label | [`stock-label-dialog.tsx`](../../apps/dashboard/src/components/stock/stock-label-dialog.tsx) |
+| — | The shared ledger + weighbridge | [`stock-lot-ledger.tsx`](../../apps/dashboard/src/components/stock/stock-lot-ledger.tsx) · `lotLedger` / `lotWeights` in `lib/helpers.ts` |
+| — | The toolbar above the grid | [`stock-lot-toolbar.tsx`](../../apps/dashboard/src/components/stock/stock-lot-toolbar.tsx) |
+
+**Schema**, pushed and verified live:
+
+- `Stock` + `weighed_weight_kg`, `gross_weight_kg`, `net_weight_kg`
+- **new table `StockOptions`** — `stock_uuid` / `product_uuid` / `option` /
+  `specification` / `status`
+- `StockMovements.reason` + `stock_transfer_out`, `stock_transfer_in`
+- `StockMovements.attribute` + the three weights
+- ⚠️ The three enum widenings were **hand-ALTERed** first. `drizzle-kit push`
+  reports adding a member as data-loss and would have emitted a `TRUNCATE`;
+  `--force` was not used.
+
+### Three things the reference did not answer, and what ours does
+
+1. 🔴 **A reservation cannot cross an article boundary.** `Overboeken` is capped
+   at the *unreserved* quantity, which is the one place the reference's
+   "reserved stock is movable" finding stops applying: a reservation binds a lot
+   to an order **line**, and that line names an article. Carrying the claim onto
+   a different product would leave the order promising 304L and holding 316.
+2. 🔴 **A transfer writes to the ledger; a relocation does not.** The rule that
+   keeps internal moves out is that they change neither how much the company
+   holds nor what it is worth. A transfer breaks the first clause — article A
+   holds less, article B holds more — so it books `stock_transfer_out` and
+   `stock_transfer_in`. Value travels at the source lot's carried price, so the
+   company's total stock value is unchanged across the move.
+3. ⚠️ **A transfer does not restate the lot's dimensions.** Tempting, since
+   re-classifying says what the metal is. Wrong, because a lot's
+   length/width/thickness are **its own measurements** and every kilo on the row
+   derives from them — a nominal-1,50 plate measuring 1,44 weighs what 1,44
+   weighs. Re-classifying says the *code* was wrong, not the tape measure.
+
+Still open, and deliberately not guessed:
+
+- ⚠️ **Whether non-owned stock carries value.** `STOCK_CATEGORY_META` carries an
+  `ownStock` flag and **nothing reads it for valuation yet**. Our build values
+  `3rd party inventory` at € 40 833 today. J1/K2 settles it; the flag makes the
+  answer a one-line change rather than a hunt.
+- ⚠️ **`Specificatie` is free text, not an enum.** Its values were never seen.
+  An enum nobody has read is a guess that starts rejecting legitimate rows.
+- ⚠️ **No printer behind the label dialog.** It records the request so a print
+  is auditable and the integration has one place to read from. A label that
+  silently went nowhere would be worse than one that is queued.
+- ⚠️ **`stockOptions` has nineteen members and both dropdowns were still
+  scrolling.** It is a floor, not a ceiling.
+
+---
+
+What follows is the original work list, kept as the record of what each item
+asked for.
 
 ---
 

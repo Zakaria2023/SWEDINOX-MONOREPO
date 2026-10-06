@@ -78,6 +78,30 @@ column, the line being `20`.
 
 ---
 
+## 🔴 Correction, 6-10-2026 — our two halves were backwards
+
+Found while building this. The reference's split between its two tickboxes is
+**not** the one we had:
+
+| | We had | The reference has |
+|---|---|---|
+| ☑ quantity half | quantity + weight | quantity, **all four weights**, category, quality, the three dimensions, `Reden`, `Zaagopdracht` |
+| ☐ characteristics half | category, quality, dimensions, remark | **the stock remark, and nothing else** |
+
+So our dialog greyed out the grade the moment somebody only wanted to fix the
+count, and offered a "characteristics" section that the reference does not have.
+Corrected in `stock-correction-dialog.tsx`: the quantity half is *what and how
+much this metal is*, the characteristics half is *what somebody wrote about it*.
+
+🔑 And a consequence worth stating: because the halves are independently
+tickable, a correction that touches only one of them **says nothing at all**
+about the other. Reading an absent field as blank recorded every quantity
+correction as having wiped the remark — a change that never happened, in the one
+ledger that exists to be trusted about what changed. `stockAttributeChanges` now
+treats a key the dialog never offered as "not mentioned", not "cleared".
+
+---
+
 ## 2. `Correctie…` → **H3 is answered**
 
 Title: `Corrigeren voorraad`. This is the right door — **not**

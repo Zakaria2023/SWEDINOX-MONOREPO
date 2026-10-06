@@ -103,8 +103,41 @@ export const Stock = mysqlTable(
     quantityKg: decimal("quantity_kg", { precision: 15, scale: 2 }).default(
       "0.00",
     ),
+    // 🔴 The other three weights, added 5-10-2026 off `Corrigeren voorraad`.
+    //
+    // `quantityKg` above is the lot's **theoretical** weight — `Gewicht` on the
+    // dialog, derived from the article's dimensions and the alloy's density.
+    // These three are what the scale and the mill said instead, and on the
+    // captured lot all four disagree:
+    //
+    //   Gewicht (theoretical)  1 766,25   from the article
+    //   Gewogen gewicht        1 754      what our weighbridge read
+    //   Brutogewicht           1 798      bundle plus its packing
+    //   Nettogewicht           1 754      gross less the tare
+    //
+    // 🔑 `gross − tare = net = weighed`, so the tare is 44 kg and is not stored:
+    // it is the difference, and storing it as well would let the three disagree.
+    // 🔑 `weighed ≠ theoretical`, and the gap is exactly what a purchase invoice
+    // is billed on — the order's printed terms say only the weighed weight is
+    // accepted as the basis for invoicing.
+    //
+    // All three are nullable, because "nobody has weighed this yet" is a real
+    // state and defaulting them to 0 would read as a bundle weighing nothing.
+    weighedWeightKg: decimal("weighed_weight_kg", {
+      precision: 15,
+      scale: 3,
+    }),
+    grossWeightKg: decimal("gross_weight_kg", { precision: 15, scale: 3 }),
+    netWeightKg: decimal("net_weight_kg", { precision: 15, scale: 3 }),
+
     quality: varchar("quality", { length: 100 }),
     stockCategory: varchar("stock_category", { length: 100 }),
+    // ⚠️ Superseded by the `StockOptions` table (see `stock-options.ts`).
+    //
+    // The reference holds a lot's options as **rows** — `Optie · Specificatie ·
+    // Status` — not as a column of text, and a column cannot carry a
+    // specification or say whether the work is outstanding. Kept so the
+    // existing overviews and exports keep rendering; nothing new writes to it.
     options: varchar("options", { length: 255 }),
     // 🔑 These are the lot's **own** measurements, and every kilo derived from
     // this row has to come from them rather than from the product's nominal

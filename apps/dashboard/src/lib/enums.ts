@@ -601,6 +601,21 @@ export const stockMovementReasons = [
   // 31-12-2024, all reason "Conversion" — they are not movements anybody made
   // and must never be read as trading activity.
   "data_conversion",
+  // The two legs of `Overboeken` — the reference's `Aanmaken
+  // overboekingsopdracht`, which moves a lot to another **article**.
+  //
+  // 🔑 This is the one internal act that *is* a mutation, and the reason the
+  // relocation rule above does not cover it. Relocating a lot changes where
+  // metal sits and nothing else, so the ledger stays quiet. A transfer changes
+  // **what the metal is**: article A holds less afterwards and article B holds
+  // more, and every stock report that totals by article would otherwise
+  // disagree with itself across the move.
+  //
+  // Two reasons rather than one, for the same reason a relocation writes two
+  // rows: netting them into one would leave the ledger unable to say which
+  // article lost and which gained.
+  "stock_transfer_out",
+  "stock_transfer_in",
 ] as const satisfies readonly string[];
 
 export type StockMovementReason = (typeof stockMovementReasons)[number];
@@ -652,6 +667,26 @@ export const stockCorrectableAttributes = [
   "width_mm",
   "thickness_mm",
   "remark",
+  // 🔴 The four weights, added 5-10-2026 off the real `Corrigeren voorraad`.
+  //
+  // The dialog carries `Gewicht`, `Gewogen gewicht`, `Brutogewicht` and
+  // `Nettogewicht` as four separate editable boxes, and on the captured lot
+  // they read 1 766,25 / 1 754 / 1 798 / 1 754 — so they genuinely disagree and
+  // none of them can be derived from another. `gross − tare = net = weighed`,
+  // and the theoretical weight is a fifth number that comes from the article.
+  //
+  // Correcting one of these moves no metal and no money, so each lands as an
+  // `adjust` row naming which weight changed. Collapsing them into one
+  // attribute would make the ledger unable to say whether somebody re-weighed a
+  // bundle or re-declared what the mill said it was.
+  //
+  // ⚠️ `Gewicht` — the theoretical weight — is deliberately **not** here. It
+  // sits in the dialog's *quantity* half beside `Nieuwe hoeveelheid`, it moves
+  // with the metal, and it is already carried as the quantity leg's own kilo
+  // figure. Listing it here as well would record every receipt twice.
+  "weighed_weight_kg",
+  "gross_weight_kg",
+  "net_weight_kg",
 ] as const satisfies readonly string[];
 
 export type StockCorrectableAttribute =
@@ -2530,3 +2565,132 @@ export const invoiceLineTypes = [
 ] as const satisfies readonly string[];
 
 export type InvoiceLineType = (typeof invoiceLineTypes)[number];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// The lot dialogs, captured 5-10-2026 on `PK304L200315` at location `Laad`
+// (easy2trade 3.13.0.508). Every enum below was read off a real dropdown rather
+// than inferred — see docs/reference-system/stock-lot-dialogs.md.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * `Categorie` on `Corrigeren voorraad` — what a lot *is*, set per lot by hand.
+ *
+ * Five values, read off the open dropdown. It is not cosmetic: it decides what
+ * the metal may be sold as, and `third_party_inventory` is the one that says
+ * the metal on our shelf is not ours.
+ */
+export const stockCategories = [
+  "standard",
+  "scrap",
+  "second_choice",
+  "remaining",
+  "third_party_inventory",
+] as const satisfies readonly string[];
+
+export type StockCategory = (typeof stockCategories)[number];
+
+/**
+ * What each category decides, so that the enum carries behaviour rather than
+ * only a label.
+ *
+ * `ownStock` is the one with money behind it: metal in `third_party_inventory`
+ * belongs to a customer, so a stock valuation that counts it is counting
+ * somebody else's property as ours.
+ *
+ * ⚠️ **Not yet wired into valuation.** Whether the reference values non-owned
+ * stock at zero is still being checked (J1/K2), and guessing in either
+ * direction would move a five-figure number on no evidence. The flag is here so
+ * that the answer is a one-line change rather than a hunt.
+ */
+export const STOCK_CATEGORY_META: Record<
+  StockCategory,
+  { ownStock: boolean; sellableAsPrime: boolean }
+> = {
+  standard: { ownStock: true, sellableAsPrime: true },
+  scrap: { ownStock: true, sellableAsPrime: false },
+  second_choice: { ownStock: true, sellableAsPrime: false },
+  remaining: { ownStock: true, sellableAsPrime: true },
+  third_party_inventory: { ownStock: false, sellableAsPrime: false },
+};
+
+/**
+ * `Reden` on `Aanmaken verplaatsopdracht` — why a lot is moving shelf.
+ *
+ * The reference offers a `-leeg-` first entry, which is the absence of a value
+ * rather than a value, so it is not a member here.
+ */
+export const relocationReasons = [
+  "conversion",
+  "to_another_location",
+  "from_another_branch",
+  "moved",
+] as const satisfies readonly string[];
+
+export type RelocationReason = (typeof relocationReasons)[number];
+
+/**
+ * `Reden` on `Aanmaken overboekingsopdracht` — exactly one value.
+ *
+ * A one-member enum is still an enum: the value is stored and the stock
+ * mutation reads it, so the column cannot be dropped just because there is
+ * nothing to choose between.
+ */
+export const transferReasons = ["transfer"] as const satisfies readonly string[];
+
+export type TransferReason = (typeof transferReasons)[number];
+
+/**
+ * `Optie` on `Voorraad opties` — what has been, or can be, done to metal.
+ *
+ * 🔴 Nineteen members across two dropdowns that were **both still scrolling**,
+ * so this list is a floor and not a ceiling. It replaces the six-value guess
+ * that `J5` recorded off the product panel alone.
+ *
+ * 🔑 `certificate_2_1` is EN 10204 2.1, the declaration of compliance — and it
+ * being here is why every certificate column on the batch screens is empty. The
+ * certificate is an option somebody asks for, not a file anybody attaches.
+ */
+export const stockOptions = [
+  "uv_foil",
+  "brushing",
+  "punching",
+  "embossing",
+  "remove_paper",
+  "certificate_2_1",
+  "coating",
+  "pickling",
+  "remove_foil",
+  "edging",
+  "duplo",
+  "slitting",
+  "stamping",
+  "laser",
+  "decoiling",
+  "grinding",
+  "shear_cut",
+  "laser_foil",
+  "cutting",
+] as const satisfies readonly string[];
+
+export type StockOption = (typeof stockOptions)[number];
+
+/**
+ * `Status` on an option row, and the reason options are rows rather than a
+ * column of text: the same option means different things at different stages.
+ *
+ * `possible` is what the **product's** panel carries — this article *can* have
+ * it done. `requested` and `done` are what a **lot's** panel carries, and the
+ * difference between them is outstanding work: a lot with a `requested` option
+ * is not finished metal, whatever its quantity says.
+ *
+ * ⚠️ Only `Possible` has been read off the reference. The split between asked
+ * for and performed is ours, and it is the distinction that makes the status
+ * worth storing at all.
+ */
+export const stockOptionStatuses = [
+  "possible",
+  "requested",
+  "done",
+] as const satisfies readonly string[];
+
+export type StockOptionStatus = (typeof stockOptionStatuses)[number];
