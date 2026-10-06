@@ -1,12 +1,21 @@
 @import url("https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Cairo:wght@200..1000&display=swap");
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
 @custom-variant dark (&:is(.dark *));
 
+/* Inter has no Arabic, so an Arabic glyph falls through to whatever the system
+   happens to ship and the page changes typeface mid-sentence. Cairo covers
+   Arabic and Latin both, so it sits behind Inter everywhere and in front of it
+   when the page is Arabic. */
 body {
-  font-family: "Inter", sans-serif;
+  font-family: "Inter", "Cairo", sans-serif;
+}
+
+html[dir="rtl"] body {
+  font-family: "Cairo", "Inter", sans-serif;
 }
 
 @theme inline {
@@ -166,4 +175,59 @@ body {
   html {
     @apply font-sans;
   }
+}
+
+/* ── Mixed-script text in a right-to-left page ──────────────────────────────
+   An English caption inside `dir="rtl"` is not left alone by the browser: the
+   Unicode bidi algorithm resolves it against the *paragraph* direction, so a
+   leading number is thrown to the far end and trailing punctuation jumps to
+   the opposite side.
+
+     source            193 orders open or confirmed
+     rendered (rtl)    orders open or confirmed 193
+
+     source            Invoiced over the period shown 4,177.00 €
+     rendered (rtl)    .invoiced over the period shown 4,177.00 €
+
+   That is the algorithm working as specified — an English sentence simply does
+   not belong in an Arabic paragraph — but it makes every not-yet-translated
+   string unreadable rather than merely untranslated.
+
+   `unicode-bidi: plaintext` is the CSS form of `dir="auto"`: each run resolves
+   its own direction from its first strong character. An Arabic caption stays
+   right-to-left, a Latin one reads left-to-right, and neither is reordered
+   against the other. It is scoped to text-bearing leaves — never to a layout
+   box — so the page itself stays mirrored. */
+html[dir="rtl"]
+  :is(
+    p,
+    span,
+    a,
+    li,
+    dt,
+    dd,
+    td,
+    th,
+    label,
+    legend,
+    summary,
+    figcaption,
+    small,
+    strong,
+    em,
+    blockquote,
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6
+  ) {
+  unicode-bidi: plaintext;
+}
+
+/* An input's own value is the user's text, not the UI's, so it gets the same
+   treatment — a product code typed into an Arabic form must not be reordered. */
+html[dir="rtl"] :is(input, textarea) {
+  unicode-bidi: plaintext;
 }
