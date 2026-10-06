@@ -591,3 +591,124 @@ Two rows carry a `Remark` beginning `Slechte…` (*bad*) and show `Reserved 0`
 against `Available 1` and `4`. They are the only unreserved lots on the product,
 and both are flagged as poor quality — which is consistent with
 `Always reserve stock` ☑: everything saleable is already committed.
+
+
+---
+
+## ✅ Step 4 answered, 6-10-2026 — `Voorraadbeleid` on `SC304`, opened
+
+Captured on **`Stainless steel scrap SC304`**, the kilo-stocked article, with the
+panel expanded for the first time. The English caption is `Stock policy`; the
+Dutch panel is **`Voorraadbeleid`**, and it sits **before** `Voorraadbesturing`
+(`Stock control`), not after it — the earlier note in this file had that order
+the wrong way round.
+
+### 🔴 Step 4: **StockOp is not used, and has never been calculated**
+
+```
+StockOp bestel parameters
+  ☐ Gebruik StockOp voor dit artikel?
+  StockOp parameters zijn nog nooit berekend.
+```
+
+Every field in the `StockOp Parameters` column is **greyed and zero**, and so is
+every field in `Parameters voor StockOp simulatie versie`. So the optimiser is
+dead on this article in the same way the batch scheduler is dead
+(`Batchscheduler is niet actief.`) — and this is the article most likely to use
+it, because it is the one stocked in kilos.
+
+🔑 **This closes the question the order-advice work left open.** Order advice is
+driven by the min/max multipliers at the top of this panel and by nothing else.
+There is no optimiser output to reproduce, so there is no second formula to find.
+
+### 🔑🔑 The min/max wording, in full — and it is **not** an either/or
+
+The radio pair reads as a choice between a multiplier and a fixed value, but the
+sentence beside each multiplier says the fixed value is **still live**:
+
+| | |
+|---|---|
+| `Minimum voorraad` ⦿ `1,00` | *maal het gemiddelde maandverbruik, **maar minimaal de waarde die achter "Vaste waarde" is ingevuld*** |
+| | ○ `Vaste waarde:` `0` KG |
+| `Maximum voorraad` ⦿ `3,00` | *maal het gemiddelde maandverbruik, **maar als achter "Vaste waarde" een waarde groter dan nul is ingevuld, dan maximaal die waarde*** |
+| | ○ `Vaste waarde:` `0` KG |
+
+So on the multiplier setting the fixed value is a **floor** on the minimum and a
+**cap** on the maximum — and the two sides are deliberately asymmetrical, because
+the cap only applies when the fixed value is greater than zero while the floor
+applies always.
+
+✅ **Our code already does exactly this**, in
+`app/(dashboard)/order-advice/actions.ts`:
+
+```ts
+minStock = max(minMultiplier × baseline, minFixed)
+maxStock = maxFixed > 0 ? min(maxMultiplier × baseline, maxFixed)
+                        : maxMultiplier × baseline
+```
+
+This capture is therefore a **confirmation**, not a correction — the first time
+the Dutch sentence behind that asymmetry has actually been read, rather than
+inferred from a 5.535-row export.
+
+⚠️ The fixed values are captioned **`KG`** on this article, and `Bestelserie` and
+`Minimale bestel hvh.` are captioned `Kg`. The panel states its own unit.
+
+### 🔑 `ABC-classificatiecode` and `PAC-Code` are **one field**
+
+The Dutch panel's bottom-right box is `ABC-classificatiecode`. Every English
+export column calls the same thing **`PAC-Code`**. They are the same field, which
+settles a naming mismatch that would eventually have been "fixed" into two
+columns — our `Products.pacClassification` is correct and needs no rename.
+
+🔑 **And it is empty for a reason we already knew.** `security-profiles.tsv`
+lists a batch task `Bijwerken ABC-classificatiecodes van artikelen` — the code is
+*computed*, by a batch job, and the batch scheduler is off. That is the same
+reason `StockOp parameters zijn nog nooit berekend`, and the same reason
+`ANSWERED.md` records PAC-Code as unused on every row. One cause, three symptoms.
+
+`Besteladviescode` (`Order advice code`) is likewise empty.
+
+### Two buttons we had never recorded
+
+| Button | What it says |
+|---|---|
+| `Overnemen van voorkeursleverancier` | take the parameters over **from the preferred supplier** |
+| `Gebruik product type parameters uit easy2config` | take them from the **product type** defaults in `easy2config` |
+
+🔑 These say where the StockOp parameters are *meant* to come from: a product
+does not carry its own lead time by default, it inherits one — from the supplier
+who actually ships it, or from a product-type template held in a separate
+configuration application. ⚠️ Neither source is built, and `easy2config` is a
+system we have never seen. Not actionable yet; recorded so it is not re-derived.
+
+### The rest of the panel, as read
+
+| Field | Value | State |
+|---|---|---|
+| `Leadtime Methode` | **`Handmatig`** | greyed dropdown |
+| `Leadtime (L)` | `0` dagen | greyed |
+| `Review reriod (R)` *(sic — the reference's own typo)* | `0` dagen | greyed |
+| `Order Kosten (inkoop kant) (A1)` | `0,00` €/order | greyed |
+| `Order Kosten (Logistiek) (A2)` | `0,00` €/order | greyed |
+| `Bestelserie` | `0` Kg | greyed |
+| `Minimale bestel hvh.` | `0` Kg | greyed |
+| `Capital cost (r1)` | `0,00` €/€/jaar | greyed |
+| `Warehouse cost (r2)` | `0,0000` €/Kg/jaar | greyed |
+| `B2 (% per eh. stockout)` | `0%` | greyed |
+| `B2 (% per eh. stockout)` | `0%` | greyed |
+| `Handling` | `0,0000` €/Kg | greyed |
+| `Transport` | `0,0000` €/Kg | greyed |
+| `StockOp bestellen/evaluatie` | ☑ Mon ☑ Tue ☑ Wed ☑ Thu ☑ Fri | **live** |
+
+✅ `Leadtime Methode: Handmatig` confirms `leadTimeMethods` and our default of
+`manually`.
+
+🔴 **`B2 (% per eh. stockout)` appears twice, with an identical caption.** Two
+distinct fields, same label — a defect in the reference, not a misreading. Our
+schema already splits them as `b2StockoutPct1` / `b2StockoutPct2`, so somebody
+had seen this; it is now confirmed from the screen.
+
+✅ The five weekday tickboxes are the only live controls besides the multipliers.
+Saturday and Sunday are **absent**, not unticked — matching our five boolean
+columns with no weekend pair.
