@@ -24,6 +24,7 @@ import {
   NavItem,
 } from "@/lib/constants";
 import { cn, countLabel, isPathActive } from "@/lib/helpers";
+import { useI18nContext } from "@/providers/I18NextProvider";
 import {
   ChevronRight,
   Layers,
@@ -73,6 +74,7 @@ const itemsOf = (tabKey: string): NavItem[] => {
 export const AppSidebar = () => {
   const pathname = usePathname();
   const { isMobile, setOpen, state } = useSidebar();
+  const { dir } = useI18nContext();
   const [query, setQuery] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -184,7 +186,7 @@ export const AppSidebar = () => {
           {isItemActive && (
             <span
               aria-hidden
-              className="bg-sidebar-primary absolute top-1/2 -left-2.5 h-4 w-0.5 -translate-y-1/2 rounded-full"
+              className="bg-sidebar-primary absolute top-1/2 -start-2.5 h-4 w-0.5 -translate-y-1/2 rounded-full"
             />
           )}
           <span>{item.label}</span>
@@ -194,7 +196,19 @@ export const AppSidebar = () => {
   };
 
   return (
-    <Sidebar collapsible="icon" {...railProps}>
+    /* 🔴 `side` is a *physical* side — the shadcn primitive pins the panel with
+       `left: 0` / `right: 0`, which do not follow `dir`. So in Arabic the panel
+       stayed on the left while every other thing on the page mirrored. The
+       direction is app knowledge, not primitive knowledge, so it is resolved
+       here: `start` for this sidebar means left in Dutch and English, right in
+       Arabic. `dir` is passed too because the mobile panel is a Sheet rendered
+       in a portal, where direction is not inherited from the page. */
+    <Sidebar
+      collapsible="icon"
+      side={dir === "rtl" ? "right" : "left"}
+      dir={dir}
+      {...railProps}
+    >
       <SidebarHeader className="gap-3 overflow-hidden p-3 pb-2">
         <Link
           href={DASHBOARD_HREF}
@@ -236,7 +250,7 @@ export const AppSidebar = () => {
             {isSearching && (
               <span
                 aria-hidden
-                className="bg-sidebar-primary text-sidebar-primary-foreground absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-xs leading-none"
+                className="bg-sidebar-primary text-sidebar-primary-foreground absolute -top-0.5 -end-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-xs leading-none"
               >
                 {searchResults.length}
               </span>
@@ -244,7 +258,7 @@ export const AppSidebar = () => {
           </button>
         ) : (
           <div className="relative">
-            <Search className="text-sidebar-foreground/50 pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
+            <Search className="text-sidebar-foreground/50 pointer-events-none absolute top-1/2 start-2.5 size-4 -translate-y-1/2" />
             <SidebarInput
               ref={searchRef}
               value={query}
