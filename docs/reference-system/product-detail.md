@@ -80,7 +80,7 @@ pair. Everything below describes the **plate** layout.
 |---|---|---|
 | `Product` | `PK316L40021` | the code |
 | `Product` | `Plaat` | **a second field with the same caption** — the shape |
-| `Price` | `Algemeen` | Dutch, *General* — a price group |
+| `Price` / **`Prijsstructuur`** | `Algemeen` | a price group. 🔴 **Greyed on every product** (6-10-2026, scrap and non-scrap alike) — nobody picks it. ⚠️ Not the `Prijsstructuur` *panel* further down the same record, which is a grid of rows |
 | `EAN` | blank | |
 | `Material group` | `Cold-rolled plate 316L` | **greyed** — the hierarchy link |
 | `Commodity` | `72193210` | the customs/HS commodity code |
@@ -712,3 +712,57 @@ had seen this; it is now confirmed from the screen.
 ✅ The five weekday tickboxes are the only live controls besides the multipliers.
 Saturday and Sunday are **absent**, not unticked — matching our five boolean
 columns with no weekend pair.
+
+
+---
+
+## ✅ J7 closed on the product side, 6-10-2026 — `Prijsstructuur` is never editable
+
+Step 5 asked for the `Price` dropdown's value list. It cannot be opened, and that
+is the answer.
+
+🔴 **The field is greyed on every product.** Checked on scrap `SC304` and then on
+a non-scrap plate to rule out `Schroot ☑` being the cause. It is greyed on both,
+so it is **derived or fixed, not picked**.
+
+⚠️ **The caption cost us a step.** This file recorded it under its English
+caption `Price`; the Dutch UI calls it **`Prijsstructuur`**, and the capture was
+being done in Dutch. Both captions are now on the row above.
+
+⚠️ **`Prijsstructuur` names two different things on one record** — this header
+field, and a collapsible *panel* lower down. The panel is a grid of rows
+(`ProductPriceStructures`); the header field is a single classification. Do not
+conflate them.
+
+**Build consequence:** `Products.priceGroup` stays a `varchar` and gets **no
+picker**. The only value ever seen is `Algemeen`, and an enum of one guessed
+member would start refusing rows the moment an import carried a second. Where it
+is actually set is still unknown; the product **group** is the obvious candidate,
+since a group supplies the defaults a product diverges from.
+
+### 🔑 Three findings from the header capture that were not asked for
+
+**`Gewichten` carries three bases, not one:**
+
+| | |
+|---|---|
+| `Theoretisch` | `7.850,000` |
+| `Handels` | `8.000,000` |
+| `Duits` | `0,000` |
+
+A **trade** weight that deliberately differs from the theoretical one (7,85 vs
+8,00 kg/dm³ — the density steel is *traded* at, against the density it *has*),
+plus a German standard that is zero here. ⚠️ This is a different axis from the
+four weights on a **lot** (`Gewicht` / `Gewogen gewicht` / `Brutogewicht` /
+`Nettogewicht`): those describe one parcel of metal, these describe the
+*convention* a product is priced and declared under. Not yet modelled.
+
+**✅ `Opties` on the product confirms J5's six, from the screen:** `Duplo ·
+Decoilen · Grinding · Brushing · ShearCut · Laser Foil`, every row reading
+`Possible`. The product list and the lot list barely overlap, exactly as the
+two-table model assumes.
+
+**🔑 Scrap is a `Plaat` with a flag, not its own product type.** `Producttype:
+Plaat`, `Schroot ☑`, and `Lengte` / `Breedte` / `Dikte` all zero with
+`Vaste afmetingen` unticked. So an article with no dimensions is a legal plate,
+and nothing may assume a plate has a size.

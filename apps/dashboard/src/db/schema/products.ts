@@ -137,6 +137,16 @@ export const Products = mysqlTable(
     // group only supplies the defaults: a single article can be blocked, priced
     // or counted differently from the rest of its group, and these columns are
     // where that divergence is recorded.
+    // `Prijsstructuur` in the Dutch header, `Price` in the English one — one
+    // field, two captions, and not the `Prijsstructuur` *panel* lower down the
+    // same record (that is `ProductPriceStructures`, a grid of rows).
+    //
+    // 🔴 **Greyed on every product**, checked 6-10-2026 on scrap `SC304` and on
+    // a non-scrap plate. Nobody picks it, so this stays a `varchar` and gets no
+    // picker: the only value ever seen is `Algemeen`, and an enum of one guessed
+    // member would start refusing rows the moment an import carried a second.
+    // Where it is set is still unknown — the product group is the obvious
+    // candidate, since a group supplies the defaults a product diverges from.
     priceGroup: varchar("price_group", { length: 100 }),
     materialGroup: varchar("material_group", { length: 100 }),
     scrap: boolean("scrap").default(false),
