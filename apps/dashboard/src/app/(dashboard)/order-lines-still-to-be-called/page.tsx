@@ -1,5 +1,6 @@
 import { parseTableQuery, SearchParams } from "@/lib/table-query";
 import { getOrderLinesStillToBeCalled } from "@/app/(dashboard)/order-lines-still-to-be-called/actions";
+import { callOffFilters } from "@/app/(dashboard)/orders-still-to-be-called/filters";
 import { OrderLinesStillToBeCalledTable } from "@/components/order-lines-still-to-be-called/order-lines-still-to-be-called-table-content";
 
 type Props = {
@@ -12,7 +13,7 @@ const OrderLinesStillToBeCalledPage = async ({ searchParams }: Props) => {
 
   return (
     <div className="space-y-4">
-      <OrderLinesStillToBeCalledTable page={rows} />
+      <OrderLinesStillToBeCalledTable page={rows} filters={callOffFilters()} />
     </div>
   );
 };

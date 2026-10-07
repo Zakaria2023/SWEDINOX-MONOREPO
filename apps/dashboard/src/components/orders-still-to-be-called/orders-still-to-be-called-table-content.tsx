@@ -1,143 +1,49 @@
 "use client";
 
-import { Paged } from "@/lib/table-query";
-
-import { TablePagination } from "@/components/ui/table-pagination";
-import { OrderStillToCallRow } from "@/app/(dashboard)/orders-still-to-be-called/actions";
+import { exportOrdersStillToBeCalled } from "@/app/(dashboard)/orders-still-to-be-called/actions";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/shadcn/table";
-import {
-  formatDateValue,
-  formatMoney,
-  formatNumber,
-  orderLineStatusLabel,
-} from "@/lib/helpers";
-import { TableExportButton } from "@/components/ui/table-export-button";
+  CallOffColumnKey,
+  ORDERS_STILL_TO_BE_CALLED_COLUMNS,
+} from "@/app/(dashboard)/orders-still-to-be-called/columns";
+import { OverviewTable } from "@/components/ui/overview-table";
+import type { CallOffLineRow } from "@/lib/server/call-off-lines";
+import { Paged, TableFilterControl } from "@/lib/table-query";
+import Link from "next/link";
 
 type Props = {
-  page: Paged<OrderStillToCallRow>;
+  page: Paged<CallOffLineRow>;
+  filters: TableFilterControl[];
 };
 
-export const OrdersStillToBeCalledTable = ({ page }: Props) => (
-  <div>
-    <div className="space-y-4">
-      <div className="flex justify-end">
-        <TableExportButton
-          tableId="orders-still-to-be-called-table"
-          fileName="orders-still-to-be-called"
-          sheetName="Orders still to be called"
-        />
-      </div>
-      <Table id="orders-still-to-be-called-table">
-        <TableHeader>
-          <TableRow>
-            <TableHead className="text-right">Order</TableHead>
-            <TableHead>Our reference</TableHead>
-            <TableHead>Product code</TableHead>
-            <TableHead>Description</TableHead>
-            <TableHead className="text-right">Order line</TableHead>
-            <TableHead className="text-right">Customer code</TableHead>
-            <TableHead>Customer</TableHead>
-            <TableHead>City</TableHead>
-            <TableHead>Reference</TableHead>
-            <TableHead>Line status</TableHead>
-            <TableHead>Delivery date</TableHead>
-            <TableHead className="text-right">Quantity</TableHead>
-            <TableHead>QtyU</TableHead>
-            <TableHead className="text-right">Weight (kg)</TableHead>
-            <TableHead className="text-right">Amount</TableHead>
-            <TableHead className="text-right">Quantity not called</TableHead>
-            <TableHead className="text-right">Weight to be called</TableHead>
-            <TableHead className="text-right">Amount to be called</TableHead>
-            <TableHead>Representative</TableHead>
-            <TableHead className="text-center">Consignment</TableHead>
-            <TableHead>Revenue group</TableHead>
-            <TableHead className="text-right">Stock (kg)</TableHead>
-            <TableHead className="text-right">Reserved stock</TableHead>
-            <TableHead className="text-right">Cost price</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {page.rows.length === 0 ? (
-            <TableRow>
-              <TableCell
-                colSpan={24}
-                className="h-24 text-center text-muted-foreground"
-              >
-                No orders still to be called.
-              </TableCell>
-            </TableRow>
-          ) : (
-            page.rows.map((row, index) => (
-              <TableRow key={index}>
-                <TableCell className="text-right">
-                  {row.orderId ?? "—"}
-                </TableCell>
-                <TableCell>{row.ourReference ?? "—"}</TableCell>
-                <TableCell className="whitespace-nowrap">
-                  {row.productCode ?? "—"}
-                </TableCell>
-                <TableCell>{row.description ?? "—"}</TableCell>
-                <TableCell className="text-right">
-                  {row.lineNumber ?? "—"}
-                </TableCell>
-                <TableCell className="text-right">
-                  {row.customerCode ?? "—"}
-                </TableCell>
-                <TableCell className="font-medium">
-                  {row.customerName ?? "—"}
-                </TableCell>
-                <TableCell>{row.city ?? "—"}</TableCell>
-                <TableCell>{row.reference ?? "—"}</TableCell>
-                <TableCell>{orderLineStatusLabel(row.lineStatus)}</TableCell>
-                <TableCell className="whitespace-nowrap">
-                  {formatDateValue(row.deliveryDate)}
-                </TableCell>
-                <TableCell className="text-right">
-                  {formatNumber(row.quantity)}
-                </TableCell>
-                <TableCell>{row.unit?.toUpperCase() ?? "—"}</TableCell>
-                <TableCell className="text-right">
-                  {formatNumber(row.weightKg)}
-                </TableCell>
-                <TableCell className="text-right whitespace-nowrap">
-                  {formatMoney(row.amount)}
-                </TableCell>
-                <TableCell className="text-right">
-                  {formatNumber(row.quantityNotCalled)}
-                </TableCell>
-                <TableCell className="text-right">
-                  {formatNumber(row.weightToBeCalled)}
-                </TableCell>
-                <TableCell className="text-right whitespace-nowrap">
-                  {formatMoney(row.amountToBeCalled)}
-                </TableCell>
-                <TableCell>{row.representative ?? "—"}</TableCell>
-                <TableCell className="text-center">
-                  {row.consignment ? "✓" : ""}
-                </TableCell>
-                <TableCell>{row.revenueGroupName ?? "—"}</TableCell>
-                <TableCell className="text-right">
-                  {formatNumber(row.stockKg)}
-                </TableCell>
-                <TableCell className="text-right">
-                  {formatNumber(row.reservedStock)}
-                </TableCell>
-                <TableCell className="text-right whitespace-nowrap">
-                  {formatMoney(row.costPrice)}
-                </TableCell>
-              </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
-    </div>
-    <TablePagination page={page} singular="order" plural="orders" />
-  </div>
+const SORTABLE: Partial<Record<CallOffColumnKey, string>> = {
+  order: "order",
+  productCode: "productCode",
+  customer: "customer",
+  deliveryDate: "deliveryDate",
+};
+
+export const OrdersStillToBeCalledTable = ({ page, filters }: Props) => (
+  <OverviewTable
+    page={page}
+    filters={filters}
+    columns={ORDERS_STILL_TO_BE_CALLED_COLUMNS}
+    sortable={SORTABLE}
+    rowKey={(row) => row.uuid}
+    renderCell={(row, key) =>
+      key === "order" ? (
+        <Link
+          href={`/order-lines/${row.uuid}`}
+          className="font-medium underline-offset-4 hover:underline"
+        >
+          {row.orderId}
+        </Link>
+      ) : undefined
+    }
+    exportAction={exportOrdersStillToBeCalled}
+    fileName="orders-still-to-be-called"
+    searchPlaceholder="Search product, customer or reference…"
+    emptyText="No call-off lines."
+    singular="line"
+    plural="lines"
+  />
 );
