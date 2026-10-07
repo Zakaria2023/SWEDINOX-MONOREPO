@@ -91,13 +91,13 @@ const BASE_COLUMNS: Array<ExportColumn<TextListItem, TextColumnKey>> = [
   },
   {
     key: "updatedAt",
-    label: "Modified",
+    label: "Modified on",
     defaultVisible: true,
     value: (row) => dateCell(row.updatedAt),
   },
   {
     key: "createdAt",
-    label: "Created",
+    label: "Created on",
     defaultVisible: true,
     value: (row) => dateCell(row.createdAt),
   },

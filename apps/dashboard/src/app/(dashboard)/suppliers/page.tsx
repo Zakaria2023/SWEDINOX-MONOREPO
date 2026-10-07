@@ -1,12 +1,18 @@
 import { getSuppliers } from "@/app/(dashboard)/suppliers/actions";
 import { SuppliersTable } from "@/components/suppliers/suppliers-table-content";
+import { parseTableQuery, SearchParams } from "@/lib/table-query";
 
-const SuppliersPage = async () => {
-  const rows = await getSuppliers();
+type Props = {
+  searchParams: Promise<SearchParams>;
+};
+
+const SuppliersPage = async ({ searchParams }: Props) => {
+  const query = parseTableQuery(await searchParams);
+  const page = await getSuppliers(query);
 
   return (
     <div className="space-y-4">
-      <SuppliersTable rows={rows} />
+      <SuppliersTable page={page} />
     </div>
   );
 };

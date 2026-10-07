@@ -166,6 +166,10 @@ export const Companies = mysqlTable(
     // Mercainox is company 12368 and debtor 10059; the reference's credit,
     // unblock and revenue-per-group screens key by this one.
     debtorNumber: varchar("debtor_number", { length: 20 }).unique(),
+    // The payables twin: `Creditor 50988` on Quarto's Creditor panel, `Cred.No`
+    // on Purchase invoices — set by the ledger, never typed, like the debtor
+    // number (docs/reference-system/company-detail.md).
+    creditorNumber: varchar("creditor_number", { length: 20 }).unique(),
     debtorCompanyUuid: char("debtor_company_uuid", { length: 36 }),
     iban: varchar("iban", { length: 34 }),
     bic: varchar("bic", { length: 11 }),

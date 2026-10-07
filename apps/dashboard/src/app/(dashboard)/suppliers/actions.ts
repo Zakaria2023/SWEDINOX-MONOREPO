@@ -4,10 +4,29 @@ import { describeError } from "@/lib/helpers";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { SelectCompanyAddresses } from "@/db/schema/company-addresses";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
+import { PurchaseOrders } from "@/db/schema/purchase-orders";
 import { db } from "@/db";
+import { SUPPLIER_COLUMNS } from "@/app/(dashboard)/suppliers/columns";
+import { getClerkUserNames } from "@/lib/server/clerk";
 import { companyAddressFor } from "@/lib/server/company-addresses";
-import { asc, eq, min, sql } from "drizzle-orm";
+import { exportRows } from "@/lib/server/excel";
+import {
+  runPaged,
+  tableOrderBy,
+  tableWhere,
+} from "@/lib/server/table-query";
+import {
+  Paged,
+  parseTableQuery,
+  SearchParams,
+  TableQuery,
+} from "@/lib/table-query";
+import { asc, count, eq, min, sql } from "drizzle-orm";
 
+/**
+ * One row of `Suppliers` — all 29 columns of the reference's export (1 108
+ * suppliers, exports/supplier.tsv).
+ */
 export type SupplierRow = Pick<
   SelectCompanies,
   | "companyName"
@@ -18,6 +37,9 @@ export type SupplierRow = Pick<
   | "paymentTerms"
   | "region"
   | "createdAt"
+  | "creditorNumber"
+  | "requiresCertificate"
+  | "printConsignment"
 > & {
   companyUuid: SelectCompanies["uuid"];
   companyCode: SelectCompanies["id"];
@@ -32,6 +54,8 @@ export type SupplierRow = Pick<
   correspondenceCountry: SelectCompanyAddresses["country"] | null;
   correspondenceTelephone: SelectCompanyAddresses["telephone"] | null;
   correspondenceFax: SelectCompanyAddresses["fax"] | null;
+  /** Who buys from them: the purchaser on their latest purchase order. */
+  purchaserName: string | null;
   isSupplier: boolean;
   isProcessor: boolean;
   isTransporter: boolean;
@@ -41,38 +65,52 @@ export type SupplierRow = Pick<
   isProspect: boolean;
 };
 
-// Every company holding the "supplier" role, with its primary contact's
-// correspondence details — the supplier equivalent of the customer list.
-export const getSuppliers = async (): Promise<SupplierRow[]> => {
-  try {
-    const primaryContactId = db
-      .select({
-        companyUuid: Contacts.companyUuid,
-        minId: min(Contacts.id).as("min_id"),
-      })
-      .from(Contacts)
-      .groupBy(Contacts.companyUuid)
-      .as("primary_contact_id");
+const primaryContactId = db
+  .select({
+    companyUuid: Contacts.companyUuid,
+    minId: min(Contacts.id).as("min_id"),
+  })
+  .from(Contacts)
+  .groupBy(Contacts.companyUuid)
+  .as("primary_contact_id");
 
-    const primaryContact = db
-      .select({
-        companyUuid: Contacts.companyUuid,
-        firstName: Contacts.firstName,
-        lastName: Contacts.lastName,
-        email: Contacts.email,
-        mobile: Contacts.mobile,
-      })
-      .from(Contacts)
-      .innerJoin(primaryContactId, eq(Contacts.id, primaryContactId.minId))
-      .as("primary_contact");
+const primaryContact = db
+  .select({
+    companyUuid: Contacts.companyUuid,
+    firstName: Contacts.firstName,
+    lastName: Contacts.lastName,
+    email: Contacts.email,
+    mobile: Contacts.mobile,
+  })
+  .from(Contacts)
+  .innerJoin(primaryContactId, eq(Contacts.id, primaryContactId.minId))
+  .as("primary_contact");
 
-    // The addresses are the company's, not a copy on its first contact.
-    const visiting = companyAddressFor("visit", "visiting_address");
-    const correspondence = companyAddressFor(
-      "correspondence",
-      "correspondence_address",
-    );
+// The addresses are the company's, not a copy on its first contact.
+const visiting = companyAddressFor("visit", "visiting_address");
+const correspondence = companyAddressFor(
+  "correspondence",
+  "correspondence_address",
+);
 
+const SUPPLIER_SEARCH = [
+  Companies.companyName,
+  Companies.searchCode1,
+  Companies.searchCode2,
+  Companies.searchCode3,
+] as const;
+
+const SUPPLIER_SORTABLE = {
+  companyName: Companies.companyName,
+  companyCode: Companies.id,
+  searchCode3: Companies.searchCode3,
+};
+
+const IS_SUPPLIER = sql`JSON_CONTAINS(${Companies.roles}, '"supplier"')`;
+
+const supplierRows =
+  (query: TableQuery) =>
+  async (limit: number, offset: number): Promise<SupplierRow[]> => {
     const rows = await db
       .select({
         companyUuid: Companies.uuid,
@@ -85,6 +123,9 @@ export const getSuppliers = async (): Promise<SupplierRow[]> => {
         paymentTerms: Companies.paymentTerms,
         region: Companies.region,
         createdAt: Companies.createdAt,
+        creditorNumber: Companies.creditorNumber,
+        requiresCertificate: Companies.requiresCertificate,
+        printConsignment: Companies.printConsignment,
         roles: Companies.roles,
         visitCity: visiting.city,
         contactFirstName: primaryContact.firstName,
@@ -97,27 +138,36 @@ export const getSuppliers = async (): Promise<SupplierRow[]> => {
         correspondenceCountry: correspondence.country,
         correspondenceTelephone: correspondence.telephone,
         correspondenceFax: correspondence.fax,
+        purchaser: sql<string | null>`(
+          SELECT ${PurchaseOrders.purchaser} FROM ${PurchaseOrders}
+          WHERE ${PurchaseOrders.supplierUuid} = ${Companies.uuid}
+          ORDER BY ${PurchaseOrders.createdAt} DESC LIMIT 1
+        )`,
       })
       .from(Companies)
       .leftJoin(primaryContact, eq(Companies.uuid, primaryContact.companyUuid))
       .leftJoin(visiting, eq(Companies.uuid, visiting.companyUuid))
       .leftJoin(correspondence, eq(Companies.uuid, correspondence.companyUuid))
-      .where(sql`JSON_CONTAINS(${Companies.roles}, '"supplier"')`)
-      .orderBy(asc(Companies.companyName));
+      .where(tableWhere({ query, search: SUPPLIER_SEARCH, scope: [IS_SUPPLIER] }))
+      .orderBy(
+        ...tableOrderBy(
+          SUPPLIER_SORTABLE,
+          query,
+          [asc(Companies.companyName)],
+          Companies.id,
+        ),
+      )
+      .limit(limit)
+      .offset(offset);
 
-    return rows.map((row): SupplierRow => {
-      const roles = row.roles ?? [];
+    const names = rows.some((row) => row.purchaser)
+      ? await getClerkUserNames()
+      : {};
+
+    return rows.map(({ roles, purchaser, ...row }): SupplierRow => {
+      const held = roles ?? [];
       return {
-        companyUuid: row.companyUuid,
-        companyCode: row.companyCode,
-        companyName: row.companyName,
-        searchCode1: row.searchCode1,
-        searchCode2: row.searchCode2,
-        searchCode3: row.searchCode3,
-        representative: row.representative,
-        paymentTerms: row.paymentTerms,
-        region: row.region,
-        createdAt: row.createdAt,
+        ...row,
         visitCity: row.visitCity ?? null,
         contactFirstName: row.contactFirstName ?? null,
         contactLastName: row.contactLastName ?? null,
@@ -129,16 +179,47 @@ export const getSuppliers = async (): Promise<SupplierRow[]> => {
         correspondenceCountry: row.correspondenceCountry ?? null,
         correspondenceTelephone: row.correspondenceTelephone ?? null,
         correspondenceFax: row.correspondenceFax ?? null,
-        isSupplier: roles.includes("supplier"),
-        isProcessor: roles.includes("processor"),
-        isTransporter: roles.includes("transporter"),
-        isAgent: roles.includes("agent"),
-        isOther: roles.includes("other"),
-        isCustomer: roles.includes("customer"),
-        isProspect: roles.includes("prospect"),
+        purchaserName: purchaser ? (names[purchaser] ?? purchaser) : null,
+        isSupplier: held.includes("supplier"),
+        isProcessor: held.includes("processor"),
+        isTransporter: held.includes("transporter"),
+        isAgent: held.includes("agent"),
+        isOther: held.includes("other"),
+        isCustomer: held.includes("customer"),
+        isProspect: held.includes("prospect"),
       };
+    });
+  };
+
+// Every company holding the "supplier" role, paged in SQL.
+export const getSuppliers = async (
+  query: TableQuery,
+): Promise<Paged<SupplierRow>> => {
+  try {
+    return await runPaged(query, {
+      rows: supplierRows(query),
+      count: async () => {
+        const [row] = await db
+          .select({ value: count() })
+          .from(Companies)
+          .where(
+            tableWhere({ query, search: SUPPLIER_SEARCH, scope: [IS_SUPPLIER] }),
+          );
+        return Number(row?.value ?? 0);
+      },
     });
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch suppliers"));
   }
 };
+
+export const exportSuppliers = async (
+  params: SearchParams,
+  columnKeys: string[],
+): Promise<string> =>
+  exportRows({
+    name: "Suppliers",
+    columns: SUPPLIER_COLUMNS,
+    columnKeys,
+    rows: supplierRows(parseTableQuery(params)),
+  });

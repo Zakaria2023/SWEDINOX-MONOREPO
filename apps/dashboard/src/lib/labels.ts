@@ -710,6 +710,61 @@ export const INVOICE_DOCUMENT_TYPE_LABELS: Record<InvoiceDocumentType, string> =
     correction: "Correction",
   };
 
+/**
+ * The reference's own code for each payment term — `Payment terms (Code)` on
+ * Suppliers, read off 1 683 invoices (docs/reference-system/invoice-lines.md).
+ * Blank where no code has been seen.
+ */
+export const INVOICE_PAYMENT_TERM_CODES: Record<InvoicePaymentTerm, string> = {
+  prepayment: "V",
+  cash: "C",
+  within_7_days_after_invoice_date: "7",
+  within_8_days_from_date_of_invoice: "8",
+  within_10_days_from_date_of_invoice: "",
+  within_14_days_from_date_of_invoice: "14",
+  within_21_days_after_invoice_date: "",
+  within_30_days_from_date_of_invoice: "30",
+  within_30_days_end_of_month: "31",
+  within_45_days_from_date_of_invoice: "45",
+  within_60_days_from_date_of_invoice: "60",
+  within_90_days_after_invoice_date: "90",
+  prepayment_minus1pct_discount: "",
+  within_8_days_minus1pct_30_days_net: "102",
+  within_8_days_minus1_5pct_30_days_net: "103",
+  within_8_days_minus2pct_30_days_net: "104",
+  "5pct_prepayment_balance_cad": "",
+  "10pct_prepayment_balance_cad": "106",
+  "15pct_prepayment_balance_cad": "",
+  "20pct_prepayment_balance_cad": "",
+  "25pct_prepayment_balance_cad": "",
+  "30pct_prepayment_balance_cad": "",
+  "50pct_prepayment_balance_cad": "",
+  cash_against_documents: "",
+  lc_at_sight: "",
+  within_10_days_1_5pct_30_days_net: "",
+  within_14_days_minus2pct_30_days_net: "115",
+  within_10_days_minus1pct_30_days_net: "116",
+  within_14_days_minus1pct_30_days_net: "",
+  within_14_days_minus3pct_30_days_net: "",
+  within_10_days_minus3pct_30_days_net: "",
+  lc_120_days: "",
+  "20pct_prepayment_rest_before_shipping": "",
+  "25pct_prepayment_rest_before_shipping": "",
+  "20pct_advance_payment_remainder_copy_bl": "",
+  "30pct_advance_payment_remainder_copy_bl": "",
+  "5pct_prepayment_balance_30_days_copy_bl": "",
+  "50pct_in_advance_remainder_14_days_after_arrival_at_port": "",
+  "5pct_prepayment_balance_60_days_copy_bl": "",
+  "50pct_prepayment_remaining_15_days_after_shipment": "",
+  prepayment_minus2pct_discount: "",
+  lc_180_days: "",
+  lc_90_days: "",
+  to_be_determined: "",
+  immediately_after_receipt_of_goods: "",
+  payment_in_settlement: "998",
+  direct_debit: "",
+};
+
 export const INVOICE_PAYMENT_TERM_LABELS: Record<InvoicePaymentTerm, string> = {
   prepayment: "Prepayment",
   cash: "Cash",
