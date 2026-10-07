@@ -229,3 +229,20 @@ The header carries a `Call-off period` window.
 **What to check before building.** Whether `OrderCallOffs` (or equivalent)
 already exists in our schema; if it does, compare columns; if not, this is a
 table of its own, not fields on the order.
+
+## 15. 🟡 Purchase returns end in `delivered`, and point at their order by reference
+
+**What was found.** `Purchase orders and quotes` → `Delivered` holds three
+`IR95xxxx` purchase returns, negative kg and revenue, each with the returned
+purchase order's number in `Reference`.
+
+**What is wrong.** `PurchaseReturnOrders.status` uses `returnOrderStatuses`
+(`open · in_progress · received · credited · cancelled`), the sales return's
+ladder. A purchase return is never `received` — it is `delivered` back.
+
+**What to build.** Give purchase returns the purchase ladder from §11
+(`provisional · released · … · delivered · invoiced`) rather than the
+sales-return one, and show them in the purchase-orders overview with negative
+weight and amount, numbered in their own series. `purchaseOrderUuid` /
+`purchaseOrderReference` already exist for the link — make sure the overview
+shows the reference.

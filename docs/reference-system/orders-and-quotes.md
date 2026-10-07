@@ -460,3 +460,11 @@ PK30415021 2000×1000×1,5 9 ST 216 kg € 2.880/TN · `60` PK316L300315
 - ⚠️ Line codes `10 · 30 · 60 · 70` for a six-line order: gaps, so either the
   quote's line codes carry over with their numbering, or lines were removed and
   added. Not settled from this view.
+
+
+⚠️ **`R290157` could not be found by `Find`, 7-10-2026** — the grid was on a
+saved view named **`Aaa`** with columns `Creation date · Delivery date ·
+Order/… · Lines · Status · Order t… · Customer · Reference · Weight (kg) ·
+Revenue · Profit · Profit margin · Seller · Converted from/to`. Either that
+view filters returns out or `Find` does not match the `R` prefix. G11 stays
+open; retry with `Weergave` `-leeg-` and the number without its letter.

@@ -272,3 +272,41 @@ window was caught half-invoiced.
 
 ⚠️ Expired orders **are** listed here once grouped — so `400142`'s absence
 from the earlier searches was the `Find` box, not this screen.
+
+
+### ✅ `Delivered` = a purchase return, 7-10-2026
+
+The `Delivered` group, expanded — three rows, and all three are **purchase
+returns**, in a series of their own:
+
+| Created | No. | Purchaser | Lines | Kg | Revenue | Supplier | Delivery | Type | **Reference** |
+|---|---|---|---|---|---|---|---|---|---|
+| 8-1-2026 17:00 | **`IR950008`** | Fariël Janmaho… (FJ) | 1 | **−500** | **€ −2.190,00** | ACD Vertriebs GmbH (`10513`) | 9-1-2026 | Materials | **`402598`** |
+| 18-6-2026 15:30 | **`IR950030`** | Arian Bloks (AB) | 1 | **−295** | **€ −1.400,30** | Comhan Holland B.V. (`10956`) | 19-6-2026 | Materials | **`403492`** |
+| 8-9-2026 16:00 | **`IR950033`** | INAD (IN) | 17 | **−8 752** | **€ −44.547,68** | Albko Metallhandel GmbH & Co. KG (`13684`) | 9-9-2026 | Materials | **`404102`** |
+
+With a row selected the toolbar's button changes to **`Show Purchase
+return`** (it reads `Show Purchase order` on an order row).
+
+🔑🔑 **What this settles:**
+
+- **Purchase returns live in the same grid**, series **`IR95xxxx`** beside
+  the orders' `IO4xxxxx` — the same arrangement as the sales side's `R29xxxx`
+  returns among the `O`/`Q` rows.
+- **Weight and revenue are negative.** A return is booked as a purchase in
+  reverse, not as a separate kind of money.
+- **`Reference` holds the purchase order it returns against** —
+  `402598`, `403492`, `404102`. That is the link, typed as a number in the
+  reference field, not a foreign key the screen shows.
+- **Its last status is `Delivered`** — the goods were delivered back to the
+  supplier. That is why a purchase-side screen uses a sales word. Our
+  `returnOrderStatuses` (`open · in_progress · received · credited ·
+  cancelled`) is the sales return's ladder; a purchase return ends in
+  `delivered`, not `received`.
+- **K7 is half answered: purchase return orders are used** — three in 2026,
+  one of them seventeen lines and nearly nine tonnes.
+
+Every other column on the three rows is blank or unticked: `Consignment`,
+`Send`, `Must be sent`, `Deliberately …` ☐, `Order method`, `Valid u/i`,
+`Classification…`, `Onze referentie` blank; `Affiliate company det…` `TEST
+HEGO Stainless …`.
