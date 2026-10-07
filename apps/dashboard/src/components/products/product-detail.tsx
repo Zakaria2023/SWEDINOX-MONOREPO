@@ -7,6 +7,7 @@ import {
   ProductDetail,
 } from "@/app/(dashboard)/products/actions";
 import { Button } from "@/components/shadcn/button";
+import { RelatedRecordsBar } from "@/components/ui/related-records-bar";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FormError } from "@/components/ui/form-error";
 import {
@@ -352,6 +353,27 @@ export const ProductDetailView = ({ product }: Props) => {
 
       {/* ── Everything else, collapsed ──────────────────────────────────── */}
       <ProductPanels product={product} />
+
+      {/* `Show product group · Purchase lines` on the reference's product
+          toolbar, and `Stock on location` narrowed to the product. */}
+      <RelatedRecordsBar
+        records={[
+          {
+            label: "Show product group",
+            href: product.productGroupUuid
+              ? `/product-groups/${product.productGroupUuid}`
+              : null,
+          },
+          {
+            label: "Purchase lines",
+            href: `/purchase-lines?product=${product.uuid}`,
+          },
+          {
+            label: "Stock on location",
+            href: `/stock-on-location?product=${product.uuid}`,
+          },
+        ]}
+      />
 
       <div className="flex gap-2">
         <Button

@@ -7,6 +7,7 @@ import {
   StockLotColumnKey,
 } from "@/app/(dashboard)/stock-on-location/columns";
 import { OverviewTable } from "@/components/ui/overview-table";
+import { RelatedRecordsBar } from "@/components/ui/related-records-bar";
 import type { StockLotOverviewRow } from "@/lib/server/stock-lot-overview";
 import { Paged, TableFilterControl } from "@/lib/table-query";
 
@@ -39,6 +40,31 @@ export const renderStockLotCell = (
     </Link>
   ) : undefined;
 
+/**
+ * The reference's `Stock on location` toolbar acts on the selected lot:
+ * `Show Product · Toon reserveringen… | Purchase lines`. Reservations live on
+ * the lot's own screen, behind its `Reservations…` button. `Change APP…`
+ * revalues stock, which is a valuation (finance) action and is not built here.
+ */
+export const renderStockLotSelection = (selected: StockLotOverviewRow | null) => (
+  <RelatedRecordsBar
+    records={[
+      {
+        label: "Show product",
+        href: selected ? `/products/${selected.productUuid}` : null,
+      },
+      {
+        label: "Show lot and reservations",
+        href: selected ? `/stock/${selected.uuid}` : null,
+      },
+      {
+        label: "Purchase lines",
+        href: selected ? `/purchase-lines?product=${selected.productUuid}` : null,
+      },
+    ]}
+  />
+);
+
 export const StockOnLocationTable = ({ page, filters }: Props) => (
   <OverviewTable
     page={page}
@@ -47,6 +73,7 @@ export const StockOnLocationTable = ({ page, filters }: Props) => (
     sortable={STOCK_LOT_SORTABLE}
     rowKey={(row) => row.uuid}
     renderCell={renderStockLotCell}
+    selectionToolbar={renderStockLotSelection}
     exportAction={exportStockOnLocation}
     fileName="stock-on-location"
     searchPlaceholder="Search product, charge or bundle…"

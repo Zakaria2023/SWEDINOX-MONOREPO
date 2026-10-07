@@ -98,6 +98,8 @@ const LOT_SORTABLE = {
 // `Beschikbare voorraad` is not, `Cuvelje` is one location.
 const LOT_FILTERS: FilterBindings = {
   location: relationFilter(Stock.locationUuid),
+  // Set by the product screen's `Stock on location` button.
+  product: relationFilter(Stock.productUuid),
   blocked: booleanFilter(Stock.blocked),
   stockCategory: valueFilter(Stock.stockCategory),
   reserved: (values) => {

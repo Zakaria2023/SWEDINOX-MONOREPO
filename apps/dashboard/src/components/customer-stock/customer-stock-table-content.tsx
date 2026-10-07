@@ -4,6 +4,7 @@ import { exportCustomerStock } from "@/app/(dashboard)/customer-stock/actions";
 import { CUSTOMER_STOCK_LOT_COLUMNS } from "@/app/(dashboard)/stock-on-location/columns";
 import {
   renderStockLotCell,
+  renderStockLotSelection,
   STOCK_LOT_SORTABLE,
 } from "@/components/stock-on-location/stock-on-location-table-content";
 import { OverviewTable } from "@/components/ui/overview-table";
@@ -23,6 +24,7 @@ export const CustomerStockTable = ({ page, filters }: Props) => (
     sortable={STOCK_LOT_SORTABLE}
     rowKey={(row) => row.uuid}
     renderCell={renderStockLotCell}
+    selectionToolbar={renderStockLotSelection}
     exportAction={exportCustomerStock}
     fileName="customer-stock-on-location"
     searchPlaceholder="Search product, charge or bundle…"

@@ -16,7 +16,7 @@ import { TablePagination } from "@/components/ui/table-pagination";
 import { TableSortHeader } from "@/components/ui/table-sort-header";
 import { TableToolbar } from "@/components/ui/table-toolbar";
 import { ExportColumn, selectorColumns } from "@/lib/excel";
-import { buildColumnVisibility } from "@/lib/helpers";
+import { buildColumnVisibility, cn } from "@/lib/helpers";
 import { Paged, SearchParams, TableFilterControl } from "@/lib/table-query";
 
 type Props<T, K extends string> = {
@@ -40,6 +40,12 @@ type Props<T, K extends string> = {
   plural: string;
   /** Buttons that act on the view, beside the selector. */
   toolbar?: ReactNode;
+  /**
+   * Buttons that act on one row, the way every reference toolbar does: they
+   * sit above the grid and wake when a row is selected. Passing this makes
+   * rows selectable by clicking them.
+   */
+  selectionToolbar?: (selected: T | null) => ReactNode;
 };
 
 /**
@@ -65,7 +71,11 @@ export const OverviewTable = <T, K extends string>({
   singular,
   plural,
   toolbar,
+  selectionToolbar,
 }: Props<T, K>) => {
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const selected =
+    page.rows.find((row) => rowKey(row) === selectedKey) ?? null;
   const selectable = selectorColumns(columns);
   const [visibility, setVisibility] = useState<Record<K, boolean>>(
     buildColumnVisibility(selectable),
@@ -99,6 +109,7 @@ export const OverviewTable = <T, K extends string>({
           columnKeys={visible.map((col) => col.key)}
         />
       </TableToolbar>
+      {selectionToolbar && selectionToolbar(selected)}
       <div>
         <Table>
           <TableHeader>
@@ -128,11 +139,25 @@ export const OverviewTable = <T, K extends string>({
                 </TableCell>
               </TableRow>
             ) : (
-              page.rows.map((row) => (
-                <TableRow key={rowKey(row)}>
-                  {visible.map((col) => cell(row, col))}
-                </TableRow>
-              ))
+              page.rows.map((row) => {
+                const key = rowKey(row);
+                return selectionToolbar ? (
+                  <TableRow
+                    key={key}
+                    onClick={() => setSelectedKey(key)}
+                    className={cn(
+                      "cursor-pointer",
+                      key === selectedKey && "bg-accent",
+                    )}
+                  >
+                    {visible.map((col) => cell(row, col))}
+                  </TableRow>
+                ) : (
+                  <TableRow key={key}>
+                    {visible.map((col) => cell(row, col))}
+                  </TableRow>
+                );
+              })
             )}
           </TableBody>
         </Table>
