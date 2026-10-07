@@ -238,3 +238,37 @@ columns so they can be dragged into the grouping bar.
 ⚠️ **`Revenue` on a purchase order** means the order's value, not revenue. And
 `Customer code` on a purchase order holds the **supplier's** number — another
 instance of the one-company-table, nine-roles model.
+
+
+---
+
+## ✅ `Status` grouped, 7-10-2026
+
+`Purchase orders and quotes`, creation date `1-1-2024` → `7-10-2026`,
+`Weergave` blank, grouped on `Status`. **Nine groups**, alphabetical, no
+counts:
+
+```
+Checked · Delivered · Expired · In progress · Invoiced ·
+Partially received · Provisional · Received · Released
+```
+
+So the purchase header runs on the **same ladder as the lines**
+(`orderLineStatuses`), with `Partially received` / `Received` in place of the
+sales side's `Partially delivered` / `Delivered`, plus `Expired`. What is
+**absent** matters as much: no `Open`, `Confirmed`, `Pre-notified`,
+`Completed` or `Cancelled` — four of the six values in our
+`purchaseOrderStatuses` are not in the reference at all, and the fifth is
+spelled differently.
+
+⚠️ **`Delivered` on a purchase order is unexplained.** Goods are *received*
+on a purchase; `Delivered` is a sales word. Candidates: a purchase return
+order (goods delivered back to the supplier), or a `CD` purchase delivered
+straight to the customer. Expand that group to settle it.
+
+⚠️ `Partially invoiced` is not among the nine, though it is on the sales
+side. Either a purchase order is invoiced in one go, or no order in the
+window was caught half-invoiced.
+
+⚠️ Expired orders **are** listed here once grouped — so `400142`'s absence
+from the earlier searches was the `Find` box, not this screen.

@@ -420,11 +420,11 @@ screenshots only: open it, and photograph **every tab and every panel expanded**
 | ~~**G1**~~ | ~~🔴 **One sales order, every tab and panel**~~ | ✅ **18-9-2026, order `100742`, all twelve panels** → [order-detail.md](order-detail.md) Part 2. 🔴 **The lower panels are scoped to the *selected line*, not the order.** `Workorders` is three panels and a warehouse WO line names its **order line** (`From` a bin, `To` `Laad`); a transport WO carries `Direction`, `Qty(loaded)` and a bill of lading that **groups lines onto a trip** (bears on G7). `Pricing` shows the whole build-up (base + qty + colour + length surcharges → gross; line + extra + group discounts → net) — 5 of those columns are missing from `OrderItems`. The invoice line carries `Charge`, a `Debit`/`Credit` type, `RdU`/`GdU` discount units and its own mail timestamp. Still open: the cascade is **numerically** unproved (all zeros), and no option has yet been seen on a real line |
 | **G2** | 🔴 **One sales invoice, every panel** | Nothing posts to the ledger yet. The invoice is where the posting is decided |
 | **G3** | **One delivery**, every panel | The document between an order line and a stock movement |
-| **G4** | One quote that became an order | Does the order keep the quote's number? Its prices? Its discounts? |
+| ~~**G4**~~ | ~~One quote that became an order~~ | ✅ **7-10-2026, `Q300013` → `O106623`:** new number, prices kept to the cent, **price date = the quote's date**, reference and order method carried, profit recomputed against the reserved lots → [orders-and-quotes.md](orders-and-quotes.md) *G4* |
 | ~~**G5**~~ | ~~One complaint, every tab~~ | ✅ **40055, 16-9-2026** → [complaints.md](complaints.md) §2 |
 | ~~**G6**~~ | ~~One batch, every tab~~ | ✅ **16-9-2026 — a batch has no record of its own.** The Batches row menu offers `Show Product`, `Show Company`, `Show Purchase order`, `Show File`, `Open file location`, `Adjust charge…`, `Stock label` — no `Show Batch` → [batch-registration.md](batch-registration.md) §11 |
 | **G7** | **One trip** — bill of lading `300813` against trip number `600249` | Two numbers, two documents, one delivery, and the pair is unexplained. 438 trips are captured and not one has been opened |
-| **G8** | One production batch, every tab | |
+| ~~**G8**~~ | ~~One production batch, every tab~~ | ✅ **7-10-2026 — none exists;** `Production batches` is empty from `1-1-2024` |
 | **G9** | **One remnant lot** (an offcut the saw made) — and read its **`Supplier`** | Us, or the original mill? It decides whether a remnant traces back to the heat it was cut from |
 | **G10** | **One `Bewerker` lot** — any lot at an external-processor location | All 36 are blocked. Which screen set that, and can it be lifted by hand? |
 | **G11** | An order from the **`29xxxx`** series | ⚠️ **half answered by B1** — it is a **sales return order** (`R290000`–`R290051`, 43 of them), negative revenue and weight, in the same grid as the orders. Still worth opening **one** to see its lines |
@@ -512,7 +512,7 @@ empty grid is not.
 | ~~**I4**~~ | ~~Freight flow (SFN)~~ | 🔴 **390 × 16, 18-9-2026** → [stock-history.md](stock-history.md) §2 — **it had data too.** A monthly **tonnage balance** per revenue group, 15 months × 26 groups exactly. `Ending → next Starting` closes **338/338**; `Stock difference = (start + receipts − supplies) − ending` proved **390/390**. 🔴 the revenue-group master is **26, not 17**. `Supplied SFN` = `0` on all 390 rows |
 | ~~**I5**~~ | ~~Sawing layouts~~ | ✅ **genuinely empty, 43 columns captured, 18-9-2026** → [stock-history.md](stock-history.md) §3 — ten `Qty n`/`Length n` pairs hold the cutting pattern. **Third confirmation that sawing planning is switched off** (K3). **Leaves scope** |
 | **I6** | Purchases and sales per revenue group — **`Overviews → Finance`**, 7th item | ⚠️ `Year` = `2025`, `Month` = `1`. **18-9-2026: the filter is a *from*, not an equals** (proved on B16/B17), so 2025/1 returns January onwards. B17 returned €9 042 028,23 from that window, so expect data |
-| **I7** | Deviations in count lists | ⚠️ it has **two** date filters that `AND` together. Widen one at a time |
+| ~~**I7**~~ | ~~Deviations in count lists~~ | ✅ **7-10-2026 — genuinely empty** with both filters from `1-1-2024` → [empty-screens.md](empty-screens.md) |
 
 If a screen still returns nothing **with a photographed filter block over
 1-1-2024 → today**, it is confirmed unused and it leaves scope for good.

@@ -173,8 +173,17 @@ order header at all.
 `open`, an invoiced one as `completed`, and an expired one does not exist, so
 nothing ever ages out.
 
-**What to build — capture first.** Group `Purchase orders and quotes` on
-`Status` (the J6 move) to get the whole header list, then map: probably the
+✅ **Captured 7-10-2026:** grouping `Purchase orders and quotes` on `Status`
+gives nine — `Checked · Delivered · Expired · In progress · Invoiced ·
+Partially received · Provisional · Received · Released`.
+
+**What to build.** `purchaseOrderStatuses` = `provisional · released ·
+checked · in_progress · partially_received · received · delivered ·
+invoiced · expired`, keeping `cancelled` only as ours (the reference
+deletes). Map the existing rows `open → released`, `confirmed → released`
+(confirmation becomes a flag), `pre_notified → released` (likewise),
+`completed → invoiced`. Hand-ALTER, never `--force`. The earlier guess,
+kept for the record: probably the
 same ladder as the lines (`orderLineStatuses` already holds `provisional ·
 released · checked · in_progress · partially_received · received ·
 invoiced · expired`), rolled up from them. ⚠️ `pre_notified` and `confirmed`

@@ -124,3 +124,13 @@ That is a full export with a blank column, so it counts as evidence.
 
 Nothing was removed, and nothing new was built. All the routes already exist.
 The value of this page is the rule at the top of it.
+
+
+---
+
+## Re-checked 7-10-2026
+
+| Screen | Result |
+|---|---|
+| `Deviations in count lists` (I7) | ✅ **genuinely empty** — `Workorder date` **and** `Date reported as completed` both `1-1-2024` → `7-10-2026`, `Weergave` `-leeg-`. Columns: `Workorder… · Booked by · Location · Product · Length (mm) · Qty. · U. · Kg. · Amount · Document · Old stk. · Old stk. Kg. · New stk. · New stk. Kg. · Date repo…`. No count list since 2024 has produced a deviation |
+| `Production batches` (G8) | ✅ **still empty** from `1-1-2024`, confirming the earlier finding — there is no batch to open, so G8 closes |

@@ -410,3 +410,53 @@ Also in that group: `Q300026` (Benno Vos, 3 lines, **60 096 kg**,
 € 182.691,84 at 100,00 % — a quote with no cost yet), `R290237` (a second
 return in the `R29xxxx` series), and `Time frame` on every row — the
 half-hour slot the document was created in (`14:00 - 14:30`).
+
+
+### ✅ G4 — what a quote carries into its order, 7-10-2026
+
+Quote `Q300013` (Converted, 23-4-2026) against order **`O106623`**,
+Pustjens Metaalbewerking BV, opened side by side.
+
+Order header: *"Order 106623, Pustjens Metaalbewerking BV … - Invoiced,
+Printed, Mailed"*, *"Creation date: 24-4-2026 - Delivery planned: 30-4-2026 -
+Delivered: 29-4-2026"*, and at the foot of the delivery block **`Converted
+from quote 300013`**.
+
+| | Quote `Q300013` | Order `O106623` |
+|---|---|---|
+| Created | 23-4-2026 11:30 | **24-4-2026** |
+| `Price date` | — | **`23-4-2026`** — the *quote's* date |
+| `Customer ref.` | `24/4` | **`24/4`** |
+| `Order method` | `Telephone` | `Telephone` |
+| Seller | Arian Bloks | Arian Bloks |
+| Lines | 6 | 6 |
+| Weight | 1 334 kg | 1 333,5 kg (theor. 1 308,5) |
+| **Revenue** | **€ 4.134,46** | **€ 4.134,46** — to the cent |
+| **Profit** | **€ 989,22 (23,90 %)** | **€ 1.070,26 (25,9 %)** |
+
+The order also prints: `Order type` `Normal`, weight type **`Trade
+weight`**, `Delivery terms` `(CPT) Carriage paid to`, address Ampereweg 5,
+6101 XE ECHT, Materials € 4.084,46 (profit € 1.020,26, 25 %), **Surcharges
+€ 50,00** (100 %), VAT € 868,24, incl. € 5.002,70, avg kilo price € 3,06.
+
+Lines seen: `10` PK304200315 3000×1500×2 1 ST 72 kg € 2.950/TN · `30`
+PK30415021 2000×1000×1,5 9 ST 216 kg € 2.880/TN · `60` PK316L300315
+3000×1500×3 1 ST 108 kg € 4.400/TN · `70` PK304L15025125 2500×1250×1,5
+37,5 kg € 3.050/TN — all `Stk`, `Standaard`, `Invoiced`.
+
+🔑🔑 **What converting does:**
+
+- **The number is not kept.** The quote is `Q300013`, the order `O106623`; the
+  link is `Converted from/to` on the quote and `Converted from quote 300013`
+  on the order.
+- **The prices are kept exactly** — revenue identical to the cent, surcharges
+  included.
+- **The price date is the quote's date**, not the order's. That is what
+  freezes the price: the order is priced as of the day it was offered.
+- **The customer reference and order method carry over.**
+- **Profit is recomputed.** € 989,22 on the quote, € 1.070,26 on the order:
+  the revenue is frozen but the cost is not — the order is costed against the
+  lots it actually reserved, the quote against whatever cost was current.
+- ⚠️ Line codes `10 · 30 · 60 · 70` for a six-line order: gaps, so either the
+  quote's line codes carry over with their numbering, or lines were removed and
+  added. Not settled from this view.

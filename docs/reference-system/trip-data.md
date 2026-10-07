@@ -204,3 +204,25 @@ found work orders released into **half-hour** slots.
    bill of lading and a `6xxxxx` trip number. A trip with several stops would
    show whether the bill of lading is per stop or per trip.
 3. **Why 63 trips have no number**, if it turns out to matter.
+
+
+---
+
+## G7, 7-10-2026 — a trip cannot be opened from here
+
+Re-opened with `Trip date` `1-1-2024` → `7-10-2026`, `Weergave` **`Alles`**:
+columns `Trip · Trip date · Vehicle · Stops · Kg. · Colli · Orders per stop`,
+and the **`Trip` column is blank on every row**. Vehicles seen: `AFHAAL`,
+`ADO NL`, **`VERVALLEN Transportorders`** ("lapsed transport orders") — the
+last carrying real weight on some rows (212 kg, 2 190 kg) and `Colli 12` on
+one.
+
+**There is no way to open a trip from this screen** — no `Show` button and no
+right-click menu. So G7 cannot be done from `Trip data`. A trip has to be
+reached from the other end: a delivery's or a transport workorder's own
+panel.
+
+🔑 **`VERVALLEN Transportorders` is a pseudo-vehicle.** Transport orders that
+lapsed are parked on a "vehicle" of that name rather than deleted — the same
+habit as `Hego Reserveringen` for stock. A trip-planning rebuild must not
+count it as a lorry.
