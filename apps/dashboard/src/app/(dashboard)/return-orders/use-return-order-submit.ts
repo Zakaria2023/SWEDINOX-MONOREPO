@@ -32,7 +32,7 @@ import {
 } from "@/lib/labels";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import {
   createReturnOrder,
@@ -141,17 +141,7 @@ export const useReturnOrderSubmit = ({
     TRANSPORT_MODE_LABELS as Record<TransportMode, string>,
   );
 
-  const handleCompanyChange = (uuid: string) => {
-    form.setValue("companyUuid", uuid);
-    form.setValue("contactUuid", "");
-    form.setValue("orderUuid", "");
-    form.setValue("deliveryAddressUuid", "");
-    form.setValue("billingAddressUuid", "");
-    setContacts([]);
-    setOrders([]);
-    setAddresses([]);
-    if (!uuid) return;
-    setIsLoadingCompanyData(true);
+  const loadCompanyData = (uuid: string) =>
     Promise.all([
       getContactsForCompany(uuid),
       getOrdersForCompany(uuid),
@@ -162,6 +152,33 @@ export const useReturnOrderSubmit = ({
       setAddresses(newAddresses);
       setIsLoadingCompanyData(false);
     });
+
+  // A form that opens on a customer — editing a return, or `Par. return` on
+  // an order — needs that customer's contacts, orders and addresses offered
+  // straight away, not only after the customer is picked again.
+  const initialCompanyUuid = defaultValues?.companyUuid;
+  useEffect(() => {
+    if (initialCompanyUuid) {
+      loadCompanyData(initialCompanyUuid);
+    }
+    // Once, for the customer the form opened on; a change goes through
+    // handleCompanyChange.
+  }, [initialCompanyUuid]);
+
+  const handleCompanyChange = (uuid: string) => {
+    form.setValue("companyUuid", uuid);
+    form.setValue("contactUuid", "");
+    form.setValue("orderUuid", "");
+    form.setValue("deliveryAddressUuid", "");
+    form.setValue("billingAddressUuid", "");
+    setContacts([]);
+    setOrders([]);
+    setAddresses([]);
+    if (!uuid) {
+      return;
+    }
+    setIsLoadingCompanyData(true);
+    loadCompanyData(uuid);
   };
 
   const handleCancel = () =>

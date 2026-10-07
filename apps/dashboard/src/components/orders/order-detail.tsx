@@ -326,9 +326,10 @@ export const OrderDetailView = ({
               </Button>
             </>
           )}
-          {/* `Send… · Show company · Invoice` from the reference's order
-              toolbar. Invoicing starts the invoice form on this customer,
-              which offers what is delivered and still to bill. */}
+          {/* `Send… · Par. return · Show company · Invoice` from the
+              reference's order toolbar. A return starts on this customer and
+              order; invoicing starts on this customer, which offers what is
+              delivered and still to bill. */}
           <Button
             type="button"
             variant="outline"
@@ -337,6 +338,22 @@ export const OrderDetailView = ({
           >
             Send…
           </Button>
+          {canMakeFinal ? (
+            <Button variant="outline" disabled>
+              Par. return
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              render={
+                <Link
+                  href={`/return-orders/new?company=${order.companyUuid}&order=${order.uuid}`}
+                />
+              }
+            >
+              Par. return
+            </Button>
+          )}
           <Button
             variant="outline"
             render={<Link href={`/companies/${order.companyUuid}`} />}
