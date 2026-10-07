@@ -1,6 +1,7 @@
 import "server-only";
 
 import { db } from "@/db";
+import { Companies } from "@/db/schema/companies";
 import { Products } from "@/db/schema/products";
 import { PurchaseOrderItems } from "@/db/schema/purchase-order-items";
 import { PurchaseOrders } from "@/db/schema/purchase-orders";
@@ -120,7 +121,10 @@ export type StockSearchVariant = {
   reserved: number;
   available: number;
   kgTechnical: number;
+  kgReserved: number;
   kgAvailable: number;
+  /** The reference's `Total len.`: quantity × length in metres, summed. */
+  totalLengthM: number;
   lotCount: number;
 };
 
@@ -150,9 +154,17 @@ export type StockSearchLot = {
   /** The article's own purchase unit, which a buying line's `Per` defaults to. */
   purchasingUnit: string | null;
   valuationPrice: number;
-  /** Set on the `Purchase` tab: the order these goods are coming in on. */
+  /** The purchase order the lot arrived on, or — on the `Purchase` tab — is
+   *  coming in on. */
   purchaseOrderId: number | null;
   expectedDate: string | null;
+  /** The reference's `Ongeopend`: a bundle nobody has cut open. */
+  unopened: boolean;
+  receiptDate: string | null;
+  supplierName: string | null;
+  /** What was paid, beside `APP`: the purchase line's net price and unit. */
+  purchasePrice: number | null;
+  purchasePriceUnit: string | null;
 };
 
 export type StockSearchResult = {
@@ -237,10 +249,22 @@ export const findSellableStock = async (
         quantityKg: Stock.quantityKg,
         valuationPrice: Stock.valuationPrice,
         purchasingUnit: Products.purchasingUnit,
+        unopened: Stock.unopened,
+        receiptDate: Stock.receiptDate,
+        purchaseOrderId: PurchaseOrders.id,
+        supplierName: Companies.companyName,
+        purchasePrice: PurchaseOrderItems.netPrice,
+        purchasePriceUnit: PurchaseOrderItems.priceUnit,
       })
       .from(Stock)
       .innerJoin(Products, eq(Stock.productUuid, Products.uuid))
       .leftJoin(Warehouses, eq(Stock.locationUuid, Warehouses.uuid))
+      .leftJoin(PurchaseOrders, eq(Stock.purchaseOrderUuid, PurchaseOrders.uuid))
+      .leftJoin(
+        PurchaseOrderItems,
+        eq(Stock.purchaseOrderItemUuid, PurchaseOrderItems.uuid),
+      )
+      .leftJoin(Companies, eq(Stock.supplierUuid, Companies.uuid))
       .where(
         and(
           eq(Stock.status, "pending"),
@@ -279,8 +303,9 @@ export const findSellableStock = async (
         // that weight shared out — nearer the truth than any formula.
         pieceWeightKg: quantity > 0 && quantityKg > 0 ? quantityKg / quantity : null,
         valuationPrice: Number(row.valuationPrice ?? 0),
-        purchaseOrderId: null,
         expectedDate: null,
+        purchasePrice:
+          row.purchasePrice === null ? null : Number(row.purchasePrice),
       };
     });
   };
@@ -307,6 +332,8 @@ export const findSellableStock = async (
         purchaseOrderId: PurchaseOrders.id,
         expectedDate: PurchaseOrders.deliveryDate,
         purchasingUnit: Products.purchasingUnit,
+        supplierName: Companies.companyName,
+        purchasePriceUnit: PurchaseOrderItems.priceUnit,
       })
       .from(PurchaseOrderItems)
       .innerJoin(Products, eq(PurchaseOrderItems.productUuid, Products.uuid))
@@ -314,6 +341,7 @@ export const findSellableStock = async (
         PurchaseOrders,
         eq(PurchaseOrderItems.purchaseOrderUuid, PurchaseOrders.uuid),
       )
+      .leftJoin(Companies, eq(PurchaseOrders.supplierUuid, Companies.uuid))
       .where(
         and(
           gt(outstanding, "0"),
@@ -366,6 +394,11 @@ export const findSellableStock = async (
       valuationPrice: Number(row.valuationPrice ?? 0),
       purchaseOrderId: row.purchaseOrderId,
       expectedDate: row.expectedDate ? toDateString(row.expectedDate) : null,
+      unopened: true,
+      receiptDate: null,
+      supplierName: row.supplierName,
+      purchasePrice: Number(row.valuationPrice ?? 0),
+      purchasePriceUnit: row.purchasePriceUnit,
     }));
   };
 
@@ -441,6 +474,11 @@ export const findSellableStock = async (
       valuationPrice: 0,
       purchaseOrderId: null,
       expectedDate: null,
+      unopened: false,
+      receiptDate: null,
+      supplierName: null,
+      purchasePrice: null,
+      purchasePriceUnit: null,
     }));
   };
 
@@ -464,14 +502,18 @@ export const findSellableStock = async (
       lot.stockCategory ?? "",
       lot.options ?? "",
     ].join("|");
+    const kgAvailable =
+      lot.quantity > 0 ? (lot.quantityKg * lot.available) / lot.quantity : 0;
+    const lengthM = (lot.quantity * (lot.lengthMm ?? 0)) / 1000;
     const existing = variants.get(key);
     if (existing) {
       existing.technical += lot.quantity;
       existing.reserved += lot.reserved;
       existing.available += lot.available;
       existing.kgTechnical += lot.quantityKg;
-      existing.kgAvailable +=
-        lot.quantity > 0 ? (lot.quantityKg * lot.available) / lot.quantity : 0;
+      existing.kgReserved += lot.quantityKg - kgAvailable;
+      existing.kgAvailable += kgAvailable;
+      existing.totalLengthM += lengthM;
       existing.lotCount += 1;
       return;
     }
@@ -491,8 +533,9 @@ export const findSellableStock = async (
       reserved: lot.reserved,
       available: lot.available,
       kgTechnical: lot.quantityKg,
-      kgAvailable:
-        lot.quantity > 0 ? (lot.quantityKg * lot.available) / lot.quantity : 0,
+      kgReserved: lot.quantityKg - kgAvailable,
+      kgAvailable,
+      totalLengthM: lengthM,
       lotCount: 1,
     });
   });

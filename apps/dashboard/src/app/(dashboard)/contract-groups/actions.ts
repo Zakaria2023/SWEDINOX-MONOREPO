@@ -10,8 +10,14 @@ import { generateUuid } from "@/lib/helpers";
 import { alias } from "drizzle-orm/mysql-core";
 import { desc, eq, getTableColumns } from "drizzle-orm";
 
+// The reference's `Contractgroups` grid reads `Contract group · Main group ·
+// Main seq. · Subgroup · Sub seq.` — two levels above the group. Here a group
+// points at its subgroup, and the subgroup at its main group, so both are one
+// join away.
 export type ContractGroupItem = SelectContractGroups & {
-  subgroupName: string | null;
+  subgroupName: SelectContractGroups["name"] | null;
+  mainGroupName: SelectContractGroups["name"] | null;
+  mainGroupSequence: SelectContractGroups["sequenceWithinSubgroup"] | null;
 };
 export type ContractGroupOption = Pick<SelectContractGroups, "uuid" | "name">;
 
@@ -33,13 +39,17 @@ export const getContractGroups = async (): Promise<ContractGroupOption[]> =>
 
 export const getContractGroupsList = async (): Promise<ContractGroupItem[]> => {
   const subgroup = alias(ContractGroups, "subgroup");
+  const mainGroup = alias(ContractGroups, "main_group");
   return db
     .select({
       ...getTableColumns(ContractGroups),
       subgroupName: subgroup.name,
+      mainGroupName: mainGroup.name,
+      mainGroupSequence: subgroup.sequenceWithinSubgroup,
     })
     .from(ContractGroups)
     .leftJoin(subgroup, eq(subgroup.uuid, ContractGroups.contractSubgroupUuid))
+    .leftJoin(mainGroup, eq(mainGroup.uuid, subgroup.contractSubgroupUuid))
     .orderBy(desc(ContractGroups.createdAt));
 };
 

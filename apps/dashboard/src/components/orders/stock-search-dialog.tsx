@@ -1,8 +1,13 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { Search } from "lucide-react";
+import { ListChecks, RotateCcw, Search } from "lucide-react";
 import { searchSellableStock } from "@/app/(dashboard)/orders/actions";
+import {
+  getStockLotDialog,
+  StockLotDialogData,
+} from "@/app/(dashboard)/stock/actions";
+import { StockReservationsDialog } from "@/components/stock/stock-reservations-dialog";
 import { Button } from "@/components/shadcn/button";
 import { Checkbox } from "@/components/shadcn/checkbox";
 import {
@@ -23,8 +28,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { BooleanFlag } from "@/components/ui/boolean-flag";
 import { FormLabel } from "@/components/ui/form-field";
-import { cn, formatNumber } from "@/lib/helpers";
+import {
+  cn,
+  formatDateColumn,
+  formatMoney,
+  formatNumber,
+  orDash,
+} from "@/lib/helpers";
 import type {
   StockSearchLot,
   StockSearchSource,
@@ -119,9 +131,6 @@ const num = (value: string): number | null => {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 };
 
-const dimensions = (row: { lengthMm: number | null; widthMm: number | null }) =>
-  [row.lengthMm, row.widthMm].filter(Boolean).join(" × ") || "—";
-
 /**
  * The `Stock` window a sales line is entered through.
  *
@@ -168,6 +177,9 @@ export const StockSearchDialog = ({
   const [selectedLot, setSelectedLot] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [hasSearched, setHasSearched] = useState(false);
+  const [reservations, setReservations] = useState<StockLotDialogData | null>(
+    null,
+  );
 
   const runSearch = (next: Filters) => {
     startTransition(async () => {
@@ -211,6 +223,35 @@ export const StockSearchDialog = ({
 
   const set = <K extends keyof Filters>(key: K, value: Filters[K]) =>
     setFilters((current) => ({ ...current, [key]: value }));
+
+  // The reference has two resets, and they are not the same button. `Reset
+  // dialog` clears what was typed; `Restore default settings` puts the margin
+  // and the tickboxes back and keeps the search.
+  const resetDialog = () => {
+    const next = { ...openingFilters(), productCode: "" };
+    setFilters(next);
+    runSearch(next);
+  };
+
+  const restoreDefaults = () => {
+    const next = {
+      ...filters,
+      marginPercent: EMPTY_FILTERS.marginPercent,
+      onlyWithPhysicalStock: filters.source !== "catalogue",
+      includeFirstChoice: EMPTY_FILTERS.includeFirstChoice,
+      includeSecondChoice: EMPTY_FILTERS.includeSecondChoice,
+    };
+    setFilters(next);
+    runSearch(next);
+  };
+
+  // `Reserveringen…`: what is already holding the selected lot, before anybody
+  // commits a line to it.
+  const showReservations = (stockUuid: string) => {
+    startTransition(async () => {
+      setReservations(await getStockLotDialog(stockUuid));
+    });
+  };
 
   const chooseSource = (source: StockSearchSource) => {
     const next = {
@@ -402,15 +443,22 @@ export const StockSearchDialog = ({
                   <TableRow>
                     <TableHead>Product</TableHead>
                     <TableHead>Quality</TableHead>
+                    <TableHead>Stk. cat.</TableHead>
                     <TableHead>Options</TableHead>
-                    <TableHead>Dimensions</TableHead>
-                    <TableHead className="text-right">Kg/piece</TableHead>
-                    {!isCatalogue && (
+                    <TableHead className="text-right">Length</TableHead>
+                    <TableHead className="text-right">Width</TableHead>
+                    <TableHead className="text-right">Thickness</TableHead>
+                    {isCatalogue ? (
+                      <TableHead className="text-right">Kg/piece</TableHead>
+                    ) : (
                       <>
                         <TableHead className="text-right">Technical</TableHead>
                         <TableHead className="text-right">Reserved</TableHead>
                         <TableHead className="text-right">Available</TableHead>
-                        <TableHead className="text-right">Lots</TableHead>
+                        <TableHead className="text-right">Kg (t.)</TableHead>
+                        <TableHead className="text-right">Kg (r.)</TableHead>
+                        <TableHead className="text-right">Kg (a.)</TableHead>
+                        <TableHead className="text-right">Total len.</TableHead>
                       </>
                     )}
                   </TableRow>
@@ -430,27 +478,33 @@ export const StockSearchDialog = ({
                           .filter(Boolean)
                           .join(" — ")}
                       </TableCell>
-                      <TableCell>{variant.quality ?? "—"}</TableCell>
-                      <TableCell>
-                        {[variant.options, variant.stockCategory]
-                          .filter(Boolean)
-                          .join(" · ") || "—"}
+                      <TableCell>{orDash(variant.quality)}</TableCell>
+                      <TableCell>{orDash(variant.stockCategory)}</TableCell>
+                      <TableCell>{orDash(variant.options)}</TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {orDash(variant.lengthMm)}
                       </TableCell>
-                      <TableCell>{dimensions(variant)}</TableCell>
-                      {/* An article with no weight cannot be bought by the
-                          tonne, and saying so here is earlier than finding out
-                          on the line. */}
-                      <TableCell
-                        className={cn(
-                          "text-right tabular-nums",
-                          !variant.pieceWeightKg && "text-destructive",
-                        )}
-                      >
-                        {variant.pieceWeightKg
-                          ? formatNumber(variant.pieceWeightKg)
-                          : "no weight"}
+                      <TableCell className="text-right tabular-nums">
+                        {orDash(variant.widthMm)}
                       </TableCell>
-                      {!isCatalogue && (
+                      <TableCell className="text-right tabular-nums">
+                        {orDash(variant.thicknessMm)}
+                      </TableCell>
+                      {isCatalogue ? (
+                        // An article with no weight cannot be bought by the
+                        // tonne, and saying so here is earlier than finding out
+                        // on the line.
+                        <TableCell
+                          className={cn(
+                            "text-right tabular-nums",
+                            !variant.pieceWeightKg && "text-destructive",
+                          )}
+                        >
+                          {variant.pieceWeightKg
+                            ? formatNumber(variant.pieceWeightKg)
+                            : "no weight"}
+                        </TableCell>
+                      ) : (
                         <>
                           <TableCell className="text-right tabular-nums">
                             {formatNumber(variant.technical)}
@@ -462,7 +516,16 @@ export const StockSearchDialog = ({
                             {formatNumber(variant.available)}
                           </TableCell>
                           <TableCell className="text-right tabular-nums">
-                            {variant.lotCount}
+                            {formatNumber(variant.kgTechnical)}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {formatNumber(variant.kgReserved)}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {formatNumber(variant.kgAvailable)}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {formatNumber(variant.totalLengthM)}
                           </TableCell>
                         </>
                       )}
@@ -470,7 +533,7 @@ export const StockSearchDialog = ({
                   ))}
                   {variants.length === 0 && hasSearched && !isPending && (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-muted-foreground">
+                      <TableCell colSpan={14} className="text-muted-foreground">
                         Nothing matches. Widen the margin, or clear a dimension.
                       </TableCell>
                     </TableRow>
@@ -521,12 +584,21 @@ export const StockSearchDialog = ({
                   <TableRow>
                     <TableHead>{isIncoming ? "Expected" : "Location"}</TableHead>
                     <TableHead>Product</TableHead>
-                    <TableHead>Charge</TableHead>
-                    <TableHead>Internal batch</TableHead>
-                    <TableHead>Dimensions</TableHead>
+                    <TableHead className="text-right">Length</TableHead>
+                    <TableHead className="text-right">Width</TableHead>
+                    <TableHead className="text-right">Thick.</TableHead>
+                    <TableHead className="text-right">Technical</TableHead>
+                    <TableHead className="text-right">Reserved</TableHead>
                     <TableHead className="text-right">Available</TableHead>
-                    <TableHead className="text-right">Kg</TableHead>
-                    <TableHead>Remark</TableHead>
+                    <TableHead>Unopened</TableHead>
+                    <TableHead className="text-right">Kg (avail.)</TableHead>
+                    <TableHead>Options</TableHead>
+                    <TableHead>Remarks</TableHead>
+                    <TableHead>Quality</TableHead>
+                    <TableHead className="text-right">APP</TableHead>
+                    <TableHead className="text-right">Purchase</TableHead>
+                    <TableHead>Internal batch</TableHead>
+                    <TableHead>Stk. cat.</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -545,24 +617,59 @@ export const StockSearchDialog = ({
                           ? `${lot.expectedDate ?? "—"} · IO${lot.purchaseOrderId ?? ""}`
                           : (lot.locationName ?? "—")}
                       </TableCell>
-                      <TableCell>{lot.productCode ?? "—"}</TableCell>
-                      <TableCell>{lot.charge ?? "—"}</TableCell>
-                      <TableCell>{lot.internalBatch ?? "—"}</TableCell>
-                      <TableCell>{dimensions(lot)}</TableCell>
+                      <TableCell>{orDash(lot.productCode)}</TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {orDash(lot.lengthMm)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {orDash(lot.widthMm)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {orDash(lot.thicknessMm)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatNumber(lot.quantity)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatNumber(lot.reserved)}
+                      </TableCell>
                       <TableCell className="text-right tabular-nums">
                         {formatNumber(lot.available)}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {formatNumber(lot.quantityKg)}
+                      <TableCell>
+                        <BooleanFlag on={lot.unopened} label="Unopened" />
                       </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatNumber(
+                          lot.quantity > 0
+                            ? (lot.quantityKg * lot.available) / lot.quantity
+                            : 0,
+                        )}
+                      </TableCell>
+                      <TableCell>{orDash(lot.options)}</TableCell>
                       <TableCell className="text-muted-foreground">
                         {lot.remark ?? ""}
                       </TableCell>
+                      <TableCell>{orDash(lot.quality)}</TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {isIncoming ? "—" : `${formatMoney(lot.valuationPrice)} / TN`}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {lot.purchasePrice === null
+                          ? "—"
+                          : `${formatMoney(lot.purchasePrice)}${
+                              lot.purchasePriceUnit
+                                ? ` / ${lot.purchasePriceUnit.toUpperCase()}`
+                                : ""
+                            }`}
+                      </TableCell>
+                      <TableCell>{orDash(lot.internalBatch)}</TableCell>
+                      <TableCell>{orDash(lot.stockCategory)}</TableCell>
                     </TableRow>
                   ))}
                   {lots.length === 0 && hasSearched && !isPending && (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-muted-foreground">
+                      <TableCell colSpan={17} className="text-muted-foreground">
                         No lots.
                       </TableCell>
                     </TableRow>
@@ -570,6 +677,40 @@ export const StockSearchDialog = ({
                 </TableBody>
               </Table>
             </div>
+            {!productOnly && chosenLot && (
+              <dl className="mt-2 grid grid-cols-2 gap-x-6 gap-y-1 rounded-lg border bg-muted/30 p-3 text-sm sm:grid-cols-4">
+                <div>
+                  <dt className="text-xs text-muted-foreground">Charge</dt>
+                  <dd>{orDash(chosenLot.charge)}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted-foreground">
+                    Internal charge
+                  </dt>
+                  <dd>{orDash(chosenLot.internalCharge)}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted-foreground">Location</dt>
+                  <dd>{orDash(chosenLot.locationName)}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted-foreground">Purchase</dt>
+                  <dd>
+                    {[
+                      chosenLot.receiptDate
+                        ? formatDateColumn(chosenLot.receiptDate)
+                        : null,
+                      chosenLot.purchaseOrderId
+                        ? `IO${chosenLot.purchaseOrderId}`
+                        : null,
+                      chosenLot.supplierName,
+                    ]
+                      .filter(Boolean)
+                      .join(" / ") || "—"}
+                  </dd>
+                </div>
+              </dl>
+            )}
             {truncated && (
               <p className="mt-2 text-xs text-muted-foreground">
                 Showing the first 200 matches. Narrow the search to see the rest.
@@ -579,6 +720,38 @@ export const StockSearchDialog = ({
         </DialogBody>
 
         <DialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={resetDialog}
+            disabled={isPending}
+          >
+            <RotateCcw className="size-4" />
+            Reset dialog
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={restoreDefaults}
+            disabled={isPending}
+          >
+            Restore default settings
+          </Button>
+          {filters.source === "stock" && !productOnly && (
+            <Button
+              type="button"
+              variant="outline"
+              disabled={!chosenLot || isPending}
+              onClick={() => {
+                if (chosenLot) {
+                  showReservations(chosenLot.uuid);
+                }
+              }}
+            >
+              <ListChecks className="size-4" />
+              Reservations…
+            </Button>
+          )}
           <Button
             type="button"
             variant="outline"
@@ -630,6 +803,18 @@ export const StockSearchDialog = ({
           )}
         </DialogFooter>
       </DialogContent>
+
+      {reservations && (
+        <StockReservationsDialog
+          data={reservations}
+          open
+          onOpenChange={(next) => {
+            if (!next) {
+              setReservations(null);
+            }
+          }}
+        />
+      )}
     </Dialog>
   );
 };

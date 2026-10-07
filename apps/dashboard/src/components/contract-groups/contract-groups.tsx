@@ -148,8 +148,11 @@ export const ContractGroups = ({ groups }: Props) => {
               <TableHeader>
                 <TableRow>
                   <TableHead>Code</TableHead>
-                  <TableHead>Name</TableHead>
+                  <TableHead>Contract group</TableHead>
+                  <TableHead>Main group</TableHead>
+                  <TableHead className="text-right">Main seq.</TableHead>
                   <TableHead>Subgroup</TableHead>
+                  <TableHead className="text-right">Sub seq.</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Created At</TableHead>
                 </TableRow>
@@ -158,7 +161,7 @@ export const ContractGroups = ({ groups }: Props) => {
                 {groups.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={5}
+                      colSpan={8}
                       className="h-24 text-center text-muted-foreground"
                     >
                       No contract groups yet
@@ -172,7 +175,20 @@ export const ContractGroups = ({ groups }: Props) => {
                         {group.name}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
+                        {group.mainGroupName ?? "—"}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {group.mainGroupName === null
+                          ? "—"
+                          : (group.mainGroupSequence ?? 0)}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
                         {group.subgroupName ?? "—"}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {group.subgroupName === null
+                          ? "—"
+                          : group.sequenceWithinSubgroup}
                       </TableCell>
                       <TableCell>{activeBadge(group.isActive)}</TableCell>
                       <TableCell>
