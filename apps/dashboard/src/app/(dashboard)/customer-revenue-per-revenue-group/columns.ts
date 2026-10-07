@@ -11,15 +11,16 @@ import { ORDER_SOURCE_TYPE_LABELS } from "@/lib/labels";
  * Customer revenue per revenue group as a sheet, in the reference's column
  * order.
  *
- * Six of its twenty-six are not carried:
+ * Every reference column is carried. Six were empty or constant there and are
+ * hidden by default:
  *
- * - `Region number` is `0` on every row — the sixth screen to show it dead.
- * - `Profit w.r.t. replacement price`, its margin, and `Target annual revenue`
- *   are `0` on all 1 720 rows; `Competitors (Revenue share)` is empty on all
- *   of them.
- * - `Affiliate` reads `HEGO TEST Stainless Steel & Aluminium` on every row —
- *   one constant, and the name is itself the warning that the database those
- *   exports came from is a test copy.
+ * - `Region number` is `0` on every row and has no source here — blank.
+ * - `Profit w.r.t. replacement price` and its margin are `0` on all 1 720 rows;
+ *   ours are computed from each line's replacement price.
+ * - `Target annual revenue` and `Competitors (Revenue share)` come from the
+ *   customer record.
+ * - `Affiliate` is the branch's own legal name from the settings — `HEGO TEST
+ *   Stainless Steel & Aluminium` on every reference row.
  */
 
 export type CustomerRevenuePerRevenueGroupColumnKey =
@@ -42,7 +43,13 @@ export type CustomerRevenuePerRevenueGroupColumnKey =
   | "country"
   | "accountManager"
   | "region"
-  | "invoiceLines";
+  | "invoiceLines"
+  | "regionNumber"
+  | "replacementProfit"
+  | "replacementMargin"
+  | "targetAnnualRevenue"
+  | "competitors"
+  | "affiliateName";
 
 export const CUSTOMER_REVENUE_PER_REVENUE_GROUP_COLUMNS: Array<
   ExportColumn<
@@ -164,6 +171,13 @@ export const CUSTOMER_REVENUE_PER_REVENUE_GROUP_COLUMNS: Array<
     value: (row) => textCell(row.accountManager),
   },
   {
+    key: "regionNumber",
+    label: "Region number",
+    defaultVisible: false,
+    // `0` on every reference row, and nothing here numbers a region.
+    value: () => null,
+  },
+  {
     key: "region",
     label: "Region",
     defaultVisible: true,
@@ -174,5 +188,35 @@ export const CUSTOMER_REVENUE_PER_REVENUE_GROUP_COLUMNS: Array<
     label: "#Invoice lines",
     defaultVisible: true,
     value: (row) => numberCell(row.invoiceLines),
+  },
+  {
+    key: "replacementProfit",
+    label: "Profit w.r.t. replacement price",
+    defaultVisible: false,
+    value: (row) => numberCell(row.replacementProfit),
+  },
+  {
+    key: "replacementMargin",
+    label: "Profit margin w.r.t. replacement price",
+    defaultVisible: false,
+    value: (row) => numberCell(row.replacementMargin),
+  },
+  {
+    key: "targetAnnualRevenue",
+    label: "Target annual revenue",
+    defaultVisible: false,
+    value: (row) => numberCell(row.targetAnnualRevenue),
+  },
+  {
+    key: "competitors",
+    label: "Competitors (Revenue share)",
+    defaultVisible: false,
+    value: (row) => textCell(row.competitors),
+  },
+  {
+    key: "affiliateName",
+    label: "Affiliate",
+    defaultVisible: false,
+    value: (row) => textCell(row.affiliateName),
   },
 ];

@@ -58,6 +58,7 @@ const SORTABLE: Partial<Record<ColumnKey, string>> = {
 // Everything the screen counts. They render right-aligned, as figures.
 const COUNT_KEYS = new Set<ColumnKey>([
   "quotes",
+  "convertedQuotes",
   "outstandingQuotes",
   "outstandingOrders",
   "orderLines",

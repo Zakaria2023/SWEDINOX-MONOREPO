@@ -20,6 +20,7 @@ import {
 } from "@/components/shadcn/table";
 import { BooleanFlag } from "@/components/ui/boolean-flag";
 import { ColumnSelector } from "@/components/ui/column-selector";
+import { ExportValueCell } from "@/components/ui/export-value-cell";
 import { PagedTableExportButton } from "@/components/ui/table-export-button";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { TableSortHeader } from "@/components/ui/table-sort-header";
@@ -281,8 +282,12 @@ export const ContactPersonsCustomersAndProspectsTable = ({
             {orDash(row.mobile)}
           </TableCell>
         );
-      default:
-        return <TableCell key={key}>—</TableCell>;
+      default: {
+        const column = CONTACT_PERSON_COLUMNS.find((col) => col.key === key);
+        return (
+          <ExportValueCell key={key} value={column ? column.value(row) : null} />
+        );
+      }
     }
   };
 

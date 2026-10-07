@@ -16,6 +16,7 @@ import {
   ContractNetPrices,
   SelectContractNetPrices,
 } from "@/db/schema/contract-net-prices";
+import { Invoices } from "@/db/schema/invoices";
 import { Orders } from "@/db/schema/orders";
 import { Products, SelectProducts } from "@/db/schema/products";
 import { Quotes } from "@/db/schema/quotes";
@@ -82,7 +83,14 @@ export type ContractListItem = SelectContracts & {
 
 export type ContractPerCustomerRow = Pick<
   SelectContracts,
-  "role" | "code" | "description" | "priceDate" | "startingDate" | "endDate"
+  | "role"
+  | "code"
+  | "description"
+  | "priceDate"
+  | "startingDate"
+  | "endDate"
+  | "salesKg"
+  | "revenue"
 > &
   Pick<
     SelectCompanies,
@@ -90,6 +98,8 @@ export type ContractPerCustomerRow = Pick<
   > & {
     city: SelectCompanyAddresses["city"] | null;
     contractGroupName: SelectContractGroups["name"] | null;
+    /** The customer's latest invoice dated while the contract ran. */
+    mostRecentInvoiceDate: string | null;
   };
 
 export type ContractPerSupplierRow = Pick<
@@ -299,6 +309,19 @@ const contractPerCustomerRows =
         priceDate: Contracts.priceDate,
         startingDate: Contracts.startingDate,
         endDate: Contracts.endDate,
+        salesKg: Contracts.salesKg,
+        revenue: Contracts.revenue,
+        // An invoice line does not record the contract it was priced from, so
+        // this is the customer's latest invoice inside the contract's dates.
+        mostRecentInvoiceDate: sql<string | null>`(
+          SELECT MAX(${Invoices.invoiceDate}) FROM ${Invoices}
+          WHERE ${Invoices.companyUuid} = ${Contracts.companyUuid}
+            AND ${Invoices.cancelled} = false
+            AND (${Contracts.startingDate} IS NULL
+              OR ${Invoices.invoiceDate} >= ${Contracts.startingDate})
+            AND (${Contracts.endDate} IS NULL
+              OR ${Invoices.invoiceDate} <= ${Contracts.endDate})
+        )`,
       })
       .from(Contracts)
       .innerJoin(Companies, eq(Companies.uuid, Contracts.companyUuid))

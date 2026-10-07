@@ -12,10 +12,9 @@ import { CUSTOMER_GROUP_LABELS } from "@/lib/labels";
 /**
  * The visit schedule as a sheet — the reference's columns, in its order.
  *
- * One of its 25 is left out on purpose: `Region number` is `0` on all 2 531 of
- * its rows, a sentinel rather than data, and the named `Region` beside it
- * carries the value. The same two columns were left out of `Visits made` for
- * the same reason.
+ * All 25 are carried. `Region number` is `0` on all 2 531 of its rows, a
+ * sentinel rather than data, and the named `Region` beside it carries the
+ * value — so it prints blank and is hidden by default.
  *
  * `Month`, `Call` and `Visit` are the plan, and only the screens that show a
  * plan ask for them — `To visit/call` leaves all three off and gets the
@@ -53,7 +52,8 @@ export type VisitScheduleColumnKey =
   | "planCall"
   | "planVisit"
   | "callDue"
-  | "visitDue";
+  | "visitDue"
+  | "regionNumber";
 
 /** What `To visit/call` shows: the reference's list, with no plan on it. */
 export const VISIT_SCHEDULE_LIST_KEYS: VisitScheduleColumnKey[] = [
@@ -77,6 +77,7 @@ export const VISIT_SCHEDULE_LIST_KEYS: VisitScheduleColumnKey[] = [
   "contactPerson",
   "contactEmail",
   "contactMobile",
+  "regionNumber",
   "region",
   "callDue",
   "visitDue",
@@ -227,6 +228,13 @@ export const VISIT_SCHEDULE_COLUMNS: Array<
     label: "Contact mobile no.",
     defaultVisible: true,
     value: (row) => textCell(row.contactMobile),
+  },
+  {
+    key: "regionNumber",
+    label: "Region number",
+    defaultVisible: false,
+    // `0` on every reference row, and nothing here numbers a region.
+    value: () => null,
   },
   {
     key: "region",

@@ -11,13 +11,12 @@ import { ORDER_SOURCE_TYPE_LABELS } from "@/lib/labels";
  * Customer revenue per product group as a sheet, in the reference's column
  * order.
  *
- * Two of its twenty-five are not here:
+ * All twenty-five are carried. Two print blank and are hidden by default:
  *
  * - `Region number` is `0` on every row — the fifth screen to show it dead.
  * - `Loading address` reads `HEGO` or blank on every row and never names
  *   another warehouse. Nothing in our schema records which depot a line was
- *   loaded at, so there is nothing to print; when loading is modelled, the
- *   column comes with it.
+ *   loaded at; when loading is modelled, the column gets its source.
  */
 
 export type CustomerRevenuePerProductGroupColumnKey =
@@ -43,7 +42,9 @@ export type CustomerRevenuePerProductGroupColumnKey =
   | "profit"
   | "profitMargin"
   | "invoiceLines"
-  | "region";
+  | "region"
+  | "regionNumber"
+  | "loadingAddress";
 
 export const CUSTOMER_REVENUE_PER_PRODUCT_GROUP_COLUMNS: Array<
   ExportColumn<
@@ -124,6 +125,14 @@ export const CUSTOMER_REVENUE_PER_PRODUCT_GROUP_COLUMNS: Array<
     value: (row) => dateCell(row.invoiceDate),
   },
   {
+    key: "loadingAddress",
+    label: "Loading address",
+    defaultVisible: false,
+    // `HEGO` or blank on every reference row — never another depot. Nothing
+    // here records which depot a line was loaded at, so it prints blank.
+    value: () => null,
+  },
+  {
     key: "sourceType",
     label: "Order type",
     defaultVisible: true,
@@ -182,6 +191,13 @@ export const CUSTOMER_REVENUE_PER_PRODUCT_GROUP_COLUMNS: Array<
     label: "#Invoice lines",
     defaultVisible: true,
     value: (row) => numberCell(row.invoiceLines),
+  },
+  {
+    key: "regionNumber",
+    label: "Region number",
+    defaultVisible: false,
+    // `0` on every reference row, and nothing here numbers a region.
+    value: () => null,
   },
   {
     key: "region",

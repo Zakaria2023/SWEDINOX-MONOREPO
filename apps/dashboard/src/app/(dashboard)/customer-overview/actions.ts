@@ -18,6 +18,7 @@ import {
   SelectCompanyAddresses,
   VisitReports,
 } from "@/db";
+import { QuoteItems } from "@/db/schema/quote-items";
 import { customerGroups, salesRepresentatives } from "@/lib/enums";
 import { describeError } from "@/lib/helpers";
 import { companyAddressFor } from "@/lib/server/company-addresses";
@@ -72,6 +73,7 @@ export type CustomerOverviewRow = {
   city: SelectCompanyAddresses["city"] | null;
   postalCode: SelectCompanyAddresses["postalCode"] | null;
   quotes: number;
+  convertedQuotes: number;
   outstandingQuotes: number;
   orders: number;
   orderLines: number;
@@ -104,6 +106,7 @@ export type CustomerOverviewRow = {
 /** One customer's document tallies, before they go back on the company row. */
 type CustomerTallies = {
   quotes: number;
+  convertedQuotes: number;
   outstandingQuotes: number;
   orders: number;
   orderLines: number;
@@ -190,6 +193,7 @@ const OPEN_ORDER_STATUSES = [
 
 const EMPTY_TALLIES: CustomerTallies = {
   quotes: 0,
+  convertedQuotes: 0,
   outstandingQuotes: 0,
   orders: 0,
   orderLines: 0,
@@ -325,6 +329,12 @@ const talliesFor = async (
       companyUuid: Quotes.companyUuid,
       total: sql<number>`COUNT(*)`,
       outstanding: sql<number>`SUM(CASE WHEN ${inArray(Quotes.status, OPEN_ORDER_STATUSES)} THEN 1 ELSE 0 END)`,
+      // A quote counts as converted once any of its lines became an order.
+      converted: sql<number>`SUM(CASE WHEN EXISTS (
+        SELECT 1 FROM ${QuoteItems}
+        WHERE ${QuoteItems.quoteUuid} = ${Quotes.uuid}
+          AND ${QuoteItems.convertedToOrderUuid} IS NOT NULL
+      ) THEN 1 ELSE 0 END)`,
     })
     .from(Quotes)
     .where(
@@ -338,6 +348,7 @@ const talliesFor = async (
     const at = held(row.companyUuid);
     at.quotes = Number(row.total);
     at.outstandingQuotes = Number(row.outstanding ?? 0);
+    at.convertedQuotes = Number(row.converted ?? 0);
   }
 
   // An order has no date column of its own — the day it was written is the

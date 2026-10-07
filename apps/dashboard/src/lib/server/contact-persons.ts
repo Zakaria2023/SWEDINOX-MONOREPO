@@ -69,6 +69,7 @@ export type ContactPersonRow = SelectContacts & {
   competitors: SelectCompanies["competitors"] | null;
   customerRegion: SelectCompanies["region"] | null;
   targetAnnualSales: SelectCompanies["targetAnnualSales"] | null;
+  targetAnnualRevenue: SelectCompanies["targetAnnualRevenue"] | null;
   searchCode1: SelectCompanies["searchCode1"] | null;
   searchCode2: SelectCompanies["searchCode2"] | null;
   searchCode3: SelectCompanies["searchCode3"] | null;
@@ -114,6 +115,7 @@ const selectContactPersonRows = async (
       competitors: Companies.competitors,
       customerRegion: Companies.region,
       targetAnnualSales: Companies.targetAnnualSales,
+      targetAnnualRevenue: Companies.targetAnnualRevenue,
       searchCode1: Companies.searchCode1,
       searchCode2: Companies.searchCode2,
       searchCode3: Companies.searchCode3,

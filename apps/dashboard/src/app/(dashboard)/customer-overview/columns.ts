@@ -15,17 +15,14 @@ import {
 /**
  * The customer overview as a sheet — the reference's columns, in its order.
  *
- * Three of the reference's forty-seven are not here:
+ * All forty-seven of the reference's columns are here.
  *
  * - `Region number` and `Customer group code` are dead sentinels. Both are `0`
- *   on all 1 679 of its rows (`Customer group code` has a single `30`), the
- *   same way the region number is dead on the invoice lines and on Visits
- *   made, where the same two columns were left out for the same reason. The
- *   region and the group have a name and no number, anywhere.
+ *   on all 1 679 of its rows (`Customer group code` has a single `30`). The
+ *   region and the group have a name and no number here, so both print blank
+ *   and are hidden by default.
  * - `Converted quotes` is `0` on every row — no quote in that database has ever
- *   become an order — and nothing in our schema links an order back to the
- *   quote it came from, so there is nothing to count. The column belongs with
- *   the conversion flow, whenever that is built.
+ *   become an order. Ours counts the quotes with a line converted to an order.
  *
  * Everything else the reference shows is here, including the two columns that
  * stamp the reference window onto every row.
@@ -75,7 +72,10 @@ export type CustomerOverviewColumnKey =
   | "region"
   | "invoiceEmailEnabled"
   | "invoiceEmailTo"
-  | "vatNumber";
+  | "vatNumber"
+  | "regionNumber"
+  | "convertedQuotes"
+  | "customerGroupCode";
 
 export const CUSTOMER_OVERVIEW_COLUMNS: Array<
   ExportColumn<CustomerOverviewRow, CustomerOverviewColumnKey>
@@ -115,6 +115,14 @@ export const CUSTOMER_OVERVIEW_COLUMNS: Array<
     label: "Quotes",
     defaultVisible: true,
     value: (row) => numberCell(row.quotes),
+  },
+  {
+    key: "convertedQuotes",
+    label: "Converted quotes",
+    defaultVisible: false,
+    // Quotes with at least one line turned into an order. `0` on every
+    // reference row — no quote there had ever become an order.
+    value: (row) => numberCell(row.convertedQuotes),
   },
   {
     key: "outstandingQuotes",
@@ -255,6 +263,14 @@ export const CUSTOMER_OVERVIEW_COLUMNS: Array<
     value: (row) => numberCell(row.ordersUnder2000Kg),
   },
   {
+    key: "customerGroupCode",
+    label: "Customer group code",
+    defaultVisible: false,
+    // `0` on 1 678 of the reference's 1 679 rows; the group has a name and
+    // no number here.
+    value: () => null,
+  },
+  {
     key: "customerGroup",
     label: "Customer group",
     defaultVisible: true,
@@ -319,6 +335,13 @@ export const CUSTOMER_OVERVIEW_COLUMNS: Array<
     label: "Customer code",
     defaultVisible: true,
     value: (row) => numberCell(row.customerCode),
+  },
+  {
+    key: "regionNumber",
+    label: "Region number",
+    defaultVisible: false,
+    // `0` on every reference row, and nothing here numbers a region.
+    value: () => null,
   },
   {
     key: "region",

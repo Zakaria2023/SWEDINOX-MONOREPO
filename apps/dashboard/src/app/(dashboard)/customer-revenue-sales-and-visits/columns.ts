@@ -6,9 +6,10 @@ import { salesRepresentativeLabel } from "@/lib/helpers";
  * Customer revenue, sales and visits as a sheet, in the reference's column
  * order.
  *
- * Two of its twenty-one are not carried: `Region number` is `0` on all 809 rows
- * — the ninth screen to show it dead — and `Competitors (Revenue share)` is
- * empty on all of them.
+ * All twenty-one are carried. `Region number` is `0` on all 809 rows — the
+ * ninth screen to show it dead — and prints blank; `Competitors (Revenue
+ * share)` is empty on all of them there and reads the customer's own
+ * competitors here.
  *
  * The customer is keyed by `Company code` here and by `Debtor number` on the
  * revenue-group screens. They are different numbers for the same company.
@@ -33,7 +34,9 @@ export type CustomerRevenueSalesVisitsColumnKey =
   | "visitsCurrentYear"
   | "visitsLastYear"
   | "visitsTwoYearsAgo"
-  | "region";
+  | "region"
+  | "regionNumber"
+  | "competitors";
 
 export const CUSTOMER_REVENUE_SALES_VISITS_COLUMNS: Array<
   ExportColumn<
@@ -150,9 +153,22 @@ export const CUSTOMER_REVENUE_SALES_VISITS_COLUMNS: Array<
     value: (row) => numberCell(row.visitsTwoYearsAgo),
   },
   {
+    key: "regionNumber",
+    label: "Region number",
+    defaultVisible: false,
+    // `0` on every reference row, and nothing here numbers a region.
+    value: () => null,
+  },
+  {
     key: "region",
     label: "Region",
     defaultVisible: true,
     value: (row) => textCell(row.region),
+  },
+  {
+    key: "competitors",
+    label: "Competitors (Revenue share)",
+    defaultVisible: false,
+    value: (row) => textCell(row.competitors),
   },
 ];

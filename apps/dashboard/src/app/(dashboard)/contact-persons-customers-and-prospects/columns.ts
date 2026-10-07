@@ -6,6 +6,7 @@ import {
   salesRepresentativeLabel,
 } from "@/lib/helpers";
 import {
+  COMPANY_CLASSIFICATION_LABELS,
   CONTACT_CATEGORY_LABELS,
   CONTACT_SALUTATION_LABELS,
 } from "@/lib/labels";
@@ -64,7 +65,11 @@ export type ContactPersonColumnKey =
   | "firstName"
   | "lastName"
   | "sequenceNumber"
-  | "mobile";
+  | "mobile"
+  | "industryName"
+  | "classificationName"
+  | "regionNumber"
+  | "targetYearRevenue";
 
 const categoriesLabel = (row: ContactPersonRow): string | null => {
   const categories = row.categories ?? [];
@@ -80,10 +85,10 @@ export const CONTACT_PERSON_COLUMNS: Array<
   ExportColumn<ContactPersonRow, ContactPersonColumnKey>
 > = [
   {
-    key: "companyId",
-    label: "Company code",
+    key: "searchCode1",
+    label: "Searchcode 1",
     defaultVisible: true,
-    value: (row) => numberCell(row.companyId),
+    value: (row) => textCell(row.searchCode1),
   },
   {
     key: "companyName",
@@ -189,13 +194,13 @@ export const CONTACT_PERSON_COLUMNS: Array<
   },
   {
     key: "categories",
-    label: "Contact person category",
+    label: "Contact person category(ies)",
     defaultVisible: true,
     value: (row) => textCell(categoriesLabel(row)),
   },
   {
     key: "email",
-    label: "Contact person e-mail",
+    label: "Contact person e-mail address",
     defaultVisible: true,
     value: (row) => textCell(row.email),
   },
@@ -274,15 +279,32 @@ export const CONTACT_PERSON_COLUMNS: Array<
   },
   {
     key: "industry",
-    label: "Industry",
+    label: "Industry code",
     defaultVisible: true,
     value: (row) => textCell(row.industry),
   },
   {
+    key: "industryName",
+    label: "Industry",
+    defaultVisible: false,
+    // The company stores a ten-character industry code and there is no list
+    // of industries to name it from. Empty on every reference row too.
+    value: () => null,
+  },
+  {
     key: "classification",
-    label: "Classification",
+    label: "Classification code",
     defaultVisible: true,
     value: (row) => textCell(row.classification),
+  },
+  {
+    key: "classificationName",
+    label: "Classification",
+    defaultVisible: true,
+    value: (row) =>
+      row.classification
+        ? COMPANY_CLASSIFICATION_LABELS[row.classification]
+        : null,
   },
   {
     key: "creditLimit",
@@ -297,22 +319,29 @@ export const CONTACT_PERSON_COLUMNS: Array<
     value: (row) => textCell(row.competitors),
   },
   {
+    key: "regionNumber",
+    label: "Region number",
+    defaultVisible: false,
+    // `0` on every reference row, and nothing here numbers a region.
+    value: () => null,
+  },
+  {
     key: "customerRegion",
     label: "Region",
     defaultVisible: true,
     value: (row) => textCell(row.customerRegion),
   },
   {
+    key: "targetYearRevenue",
+    label: "Target year revenue",
+    defaultVisible: false,
+    value: (row) => numberCell(row.targetAnnualRevenue),
+  },
+  {
     key: "targetAnnualSales",
     label: "Target annual sales",
     defaultVisible: true,
     value: (row) => numberCell(row.targetAnnualSales),
-  },
-  {
-    key: "searchCode1",
-    label: "Searchcode 1",
-    defaultVisible: true,
-    value: (row) => textCell(row.searchCode1),
   },
   {
     key: "searchCode2",
@@ -325,6 +354,12 @@ export const CONTACT_PERSON_COLUMNS: Array<
     label: "Searchcode 3",
     defaultVisible: true,
     value: (row) => textCell(row.searchCode3),
+  },
+  {
+    key: "companyId",
+    label: "Company code",
+    defaultVisible: true,
+    value: (row) => numberCell(row.companyId),
   },
   {
     key: "salutation",

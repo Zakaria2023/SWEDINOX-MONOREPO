@@ -1,298 +1,62 @@
 "use client";
 
 import Link from "next/link";
-
-import { ContactPersonSupplierRow } from "@/app/(dashboard)/contact-persons-suppliers/actions";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/shadcn/table";
-import { ColumnSelector } from "@/components/ui/column-selector";
-import { ContactSalutation } from "@/lib/enums";
-import { buildColumnVisibility, formatRevenue } from "@/lib/helpers";
+  ContactPersonSupplierRow,
+  exportContactPersonsSuppliers,
+} from "@/app/(dashboard)/contact-persons-suppliers/actions";
 import {
-  CONTACT_CATEGORY_LABELS,
-  CONTACT_SALUTATION_LABELS,
-} from "@/lib/labels";
-import { useState } from "react";
-import { TableExportButton } from "@/components/ui/table-export-button";
+  CONTACT_PERSON_SUPPLIER_COLUMNS,
+  ContactPersonSupplierColumnKey,
+} from "@/app/(dashboard)/contact-persons-suppliers/columns";
+import { OverviewTable } from "@/components/ui/overview-table";
+import { orDash } from "@/lib/helpers";
+import { Paged, TableFilterControl } from "@/lib/table-query";
 
-type ColumnKey = keyof ContactPersonSupplierRow | "contactPerson";
-
-const ALL_COLUMNS: Array<{
-  key: ColumnKey;
-  label: string;
-  defaultVisible: boolean;
-}> = [
-  { key: "revenueLastYear", label: "Revenue Last Year", defaultVisible: true },
-  { key: "revenueThisYear", label: "Revenue This Year", defaultVisible: true },
-  { key: "contactPerson", label: "Contact Person", defaultVisible: true },
-  { key: "categories", label: "Contact Person Category", defaultVisible: true },
-  { key: "email", label: "Contact Person E-mail", defaultVisible: true },
-  { key: "telephone", label: "Contact Person Telephone", defaultVisible: true },
-  { key: "address", label: "Correspondence Address", defaultVisible: true },
-  {
-    key: "postalCode",
-    label: "Correspondence Postal Code",
-    defaultVisible: true,
-  },
-  { key: "city", label: "Correspondence City", defaultVisible: true },
-  {
-    key: "addressCountry",
-    label: "Correspondence Country",
-    defaultVisible: true,
-  },
-  {
-    key: "addressTelephone",
-    label: "Correspondence Telephone",
-    defaultVisible: true,
-  },
-  { key: "addressFax", label: "Correspondence Fax", defaultVisible: true },
-  { key: "searchCode2", label: "Searchcode 2", defaultVisible: true },
-  { key: "searchCode1", label: "Searchcode 1", defaultVisible: true },
-  { key: "companyId", label: "Company", defaultVisible: true },
-  { key: "salutation", label: "Title", defaultVisible: true },
-  { key: "initials", label: "Initials", defaultVisible: true },
-  { key: "firstName", label: "First Name", defaultVisible: true },
-  { key: "lastName", label: "Last Name", defaultVisible: true },
-  { key: "searchCode3", label: "Searchcode 3", defaultVisible: true },
-  { key: "companyName", label: "Company Name", defaultVisible: true },
-  { key: "isCustomer", label: "Customer", defaultVisible: true },
-  { key: "isProspect", label: "Prospect", defaultVisible: true },
-  { key: "isSupplier", label: "Supplier", defaultVisible: true },
-  { key: "isProcessor", label: "Processor", defaultVisible: true },
-  { key: "isTransporter", label: "Transporter", defaultVisible: true },
-  { key: "isAgent", label: "Agent", defaultVisible: true },
-  { key: "isOther", label: "Other", defaultVisible: true },
-  { key: "visitStreetAndNo", label: "Visiting Address", defaultVisible: true },
-  { key: "visitPostalCode", label: "Visit-Postal Code", defaultVisible: true },
-  { key: "visitCity", label: "Visit-City", defaultVisible: true },
-  { key: "visitCountry", label: "Visit-Country", defaultVisible: true },
-  { key: "visitTelephone", label: "Visit-Telephone", defaultVisible: true },
-  { key: "visitFax", label: "Visit-Fax", defaultVisible: true },
-  { key: "mobile", label: "Mobile", defaultVisible: false },
-];
-
-type Props = { rows: ContactPersonSupplierRow[] };
-
-export const ContactPersonsSuppliersTable = ({ rows }: Props) => {
-  const [columnVisibility, setColumnVisibility] = useState<
-    Record<ColumnKey, boolean>
-  >(buildColumnVisibility(ALL_COLUMNS));
-
-  const toggleColumn = (key: string) =>
-    setColumnVisibility((prev) => ({
-      ...prev,
-      [key]: !prev[key as ColumnKey],
-    }));
-
-  const visibleColumns = ALL_COLUMNS.filter((col) => columnVisibility[col.key]);
-
-  const renderCell = (row: ContactPersonSupplierRow, key: ColumnKey) => {
-    switch (key) {
-      case "revenueLastYear":
-        return (
-          <TableCell key={key} className="text-right">
-            {formatRevenue(row.revenueLastYear)}
-          </TableCell>
-        );
-      case "revenueThisYear":
-        return (
-          <TableCell key={key} className="text-right">
-            {formatRevenue(row.revenueThisYear)}
-          </TableCell>
-        );
-      case "contactPerson": {
-        const parts = [
-          row.salutation
-            ? (CONTACT_SALUTATION_LABELS[row.salutation as ContactSalutation] ??
-              row.salutation)
-            : null,
-          row.firstName,
-          row.lastName,
-        ].filter(Boolean);
-        return <TableCell key={key}>{parts.join(" ") || "—"}</TableCell>;
-      }
-      case "categories":
-        return (
-          <TableCell key={key}>
-            {(row.categories as string[]).length > 0
-              ? (row.categories as string[])
-                  .map(
-                    (c) =>
-                      CONTACT_CATEGORY_LABELS[
-                        c as keyof typeof CONTACT_CATEGORY_LABELS
-                      ] ?? c,
-                  )
-                  .join(", ")
-              : "—"}
-          </TableCell>
-        );
-      case "email":
-        return <TableCell key={key}>{row.email ?? "—"}</TableCell>;
-      case "telephone":
-        return <TableCell key={key}>{row.telephone ?? "—"}</TableCell>;
-      case "mobile":
-        return <TableCell key={key}>{row.mobile ?? "—"}</TableCell>;
-      case "address":
-        return <TableCell key={key}>{row.address ?? "—"}</TableCell>;
-      case "postalCode":
-        return <TableCell key={key}>{row.postalCode ?? "—"}</TableCell>;
-      case "city":
-        return <TableCell key={key}>{row.city ?? "—"}</TableCell>;
-      case "addressCountry":
-        return <TableCell key={key}>{row.addressCountry ?? "—"}</TableCell>;
-      case "addressTelephone":
-        return <TableCell key={key}>{row.addressTelephone ?? "—"}</TableCell>;
-      case "addressFax":
-        return <TableCell key={key}>{row.addressFax ?? "—"}</TableCell>;
-      case "searchCode1":
-        return <TableCell key={key}>{row.searchCode1 ?? "—"}</TableCell>;
-      case "searchCode2":
-        return <TableCell key={key}>{row.searchCode2 ?? "—"}</TableCell>;
-      case "searchCode3":
-        return <TableCell key={key}>{row.searchCode3 ?? "—"}</TableCell>;
-      case "companyId":
-        return <TableCell key={key}>{row.companyId}</TableCell>;
-      case "companyName":
-        return (
-          <TableCell key={key} className="font-medium">
-            {row.companyName}
-          </TableCell>
-        );
-      case "salutation":
-        return (
-          <TableCell key={key}>
-            {row.salutation
-              ? (CONTACT_SALUTATION_LABELS[
-                  row.salutation as ContactSalutation
-                ] ?? row.salutation)
-              : "—"}
-          </TableCell>
-        );
-      case "initials":
-        return <TableCell key={key}>{row.initials ?? "—"}</TableCell>;
-      case "firstName":
-        return (
-          <TableCell key={key} className="font-medium">
-            <Link
-              href={`/contacts/${row.uuid}`}
-              className="text-primary hover:underline"
-            >
-              {row.firstName ?? "View contact"}
-            </Link>
-          </TableCell>
-        );
-      case "lastName":
-        return <TableCell key={key}>{row.lastName ?? "—"}</TableCell>;
-      case "isCustomer":
-        return (
-          <TableCell key={key} className="text-center">
-            {row.isCustomer ? "✓" : ""}
-          </TableCell>
-        );
-      case "isProspect":
-        return (
-          <TableCell key={key} className="text-center">
-            {row.isProspect ? "✓" : ""}
-          </TableCell>
-        );
-      case "isSupplier":
-        return (
-          <TableCell key={key} className="text-center">
-            {row.isSupplier ? "✓" : ""}
-          </TableCell>
-        );
-      case "isProcessor":
-        return (
-          <TableCell key={key} className="text-center">
-            {row.isProcessor ? "✓" : ""}
-          </TableCell>
-        );
-      case "isTransporter":
-        return (
-          <TableCell key={key} className="text-center">
-            {row.isTransporter ? "✓" : ""}
-          </TableCell>
-        );
-      case "isAgent":
-        return (
-          <TableCell key={key} className="text-center">
-            {row.isAgent ? "✓" : ""}
-          </TableCell>
-        );
-      case "isOther":
-        return (
-          <TableCell key={key} className="text-center">
-            {row.isOther ? "✓" : ""}
-          </TableCell>
-        );
-      case "visitStreetAndNo":
-        return <TableCell key={key}>{row.visitStreetAndNo ?? "—"}</TableCell>;
-      case "visitPostalCode":
-        return <TableCell key={key}>{row.visitPostalCode ?? "—"}</TableCell>;
-      case "visitCity":
-        return <TableCell key={key}>{row.visitCity ?? "—"}</TableCell>;
-      case "visitCountry":
-        return <TableCell key={key}>{row.visitCountry ?? "—"}</TableCell>;
-      case "visitTelephone":
-        return <TableCell key={key}>{row.visitTelephone ?? "—"}</TableCell>;
-      case "visitFax":
-        return <TableCell key={key}>{row.visitFax ?? "—"}</TableCell>;
-    }
-  };
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-start justify-end gap-2">
-        <ColumnSelector
-          columns={ALL_COLUMNS.map((col) => ({
-            key: col.key,
-            label: col.label,
-          }))}
-          visibility={columnVisibility}
-          onToggle={toggleColumn}
-        />
-        <TableExportButton
-          tableId="contact-persons-suppliers-table"
-          fileName="contact-persons-suppliers"
-          sheetName="Contact Persons Suppliers"
-        />
-      </div>
-
-      <div>
-        <Table id="contact-persons-suppliers-table">
-          <TableHeader>
-            <TableRow>
-              {visibleColumns.map((col) => (
-                <TableHead key={col.key}>{col.label}</TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={visibleColumns.length}
-                  className="h-24 text-center"
-                >
-                  No contact persons found for suppliers.
-                </TableCell>
-              </TableRow>
-            ) : (
-              rows.map((row) => (
-                <TableRow key={row.uuid}>
-                  {visibleColumns.map((col) => renderCell(row, col.key))}
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
-    </div>
-  );
+type Props = {
+  page: Paged<ContactPersonSupplierRow>;
+  filters: TableFilterControl[];
 };
+
+const renderCell = (
+  row: ContactPersonSupplierRow,
+  key: ContactPersonSupplierColumnKey,
+) => {
+  if (key === "companyName" && row.companyUuid) {
+    return (
+      <Link
+        href={`/companies/${row.companyUuid}`}
+        className="font-medium text-primary hover:underline"
+      >
+        {orDash(row.companyName)}
+      </Link>
+    );
+  }
+  if (key === "firstName") {
+    return (
+      <Link
+        href={`/contacts/${row.uuid}`}
+        className="font-medium text-primary hover:underline"
+      >
+        {row.firstName ?? "View contact"}
+      </Link>
+    );
+  }
+  return undefined;
+};
+
+export const ContactPersonsSuppliersTable = ({ page, filters }: Props) => (
+  <OverviewTable
+    page={page}
+    filters={filters}
+    columns={CONTACT_PERSON_SUPPLIER_COLUMNS}
+    rowKey={(row) => row.uuid}
+    renderCell={renderCell}
+    exportAction={exportContactPersonsSuppliers}
+    fileName="contact-persons-suppliers"
+    searchPlaceholder="Search name, e-mail or company…"
+    emptyText="No supplier contacts."
+    singular="contact"
+    plural="contacts"
+  />
+);

@@ -10,10 +10,10 @@ import {
 /**
  * Visits made as a sheet — the reference's columns, in its order.
  *
- * Two of its sixteen are left out on purpose: `Region number` and
- * `Customer group code` are `0` on all 166 of its rows, sentinels rather than
- * data, and the named `Region` and `Customer group` beside them carry the
- * value.
+ * All sixteen are carried. `Region number` and `Customer group code` are `0`
+ * on all 166 of its rows, sentinels rather than data, and the named `Region`
+ * and `Customer group` beside them carry the value — so both print blank and
+ * are hidden by default.
  */
 
 export type VisitMadeColumnKey =
@@ -31,7 +31,9 @@ export type VisitMadeColumnKey =
   | "hasTakenPlace"
   | "visitReasons"
   | "region"
-  | "customerGroup";
+  | "customerGroup"
+  | "regionNumber"
+  | "customerGroupCode";
 
 export const VISIT_MADE_COLUMNS: Array<
   ExportColumn<VisitMadeRow, VisitMadeColumnKey>
@@ -129,6 +131,13 @@ export const VISIT_MADE_COLUMNS: Array<
     value: (row) => textCell(visitReasonsLabel(row.visitReasons)),
   },
   {
+    key: "regionNumber",
+    label: "Region number",
+    defaultVisible: false,
+    // `0` on every reference row, and nothing here numbers a region.
+    value: () => null,
+  },
+  {
     key: "region",
     label: "Region",
     defaultVisible: true,
@@ -140,5 +149,12 @@ export const VISIT_MADE_COLUMNS: Array<
     defaultVisible: true,
     value: (row) =>
       row.customerGroup ? CUSTOMER_GROUP_LABELS[row.customerGroup] : null,
+  },
+  {
+    key: "customerGroupCode",
+    label: "Customer group code",
+    defaultVisible: false,
+    // `0` on all 166 reference rows; the group has a name and no number here.
+    value: () => null,
   },
 ];

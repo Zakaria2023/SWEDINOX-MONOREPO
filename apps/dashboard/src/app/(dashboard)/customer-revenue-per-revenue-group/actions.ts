@@ -1,12 +1,16 @@
 "use server";
 
 import { CUSTOMER_REVENUE_PER_REVENUE_GROUP_COLUMNS } from "@/app/(dashboard)/customer-revenue-per-revenue-group/columns";
+import { db } from "@/db";
+import { SelectBranchSettings } from "@/db/schema/branch-settings";
 import { SelectCompanies } from "@/db/schema/companies";
 import { SelectCompanyAddresses } from "@/db/schema/company-addresses";
 import { SelectOrderItems } from "@/db/schema/order-items";
 import { SelectRevenueGroups } from "@/db/schema/revenue-groups";
 import { describeError, profitMarginPercent } from "@/lib/helpers";
+import { getBranchSettings } from "@/lib/server/branch-settings";
 import {
+  getCompetitorShares,
   getRevenueCompanies,
   getRevenueFacts,
   RevenueCompany,
@@ -42,6 +46,13 @@ export type CustomerRevenuePerRevenueGroupRow = {
   profit: number;
   profitMargin: number;
   invoiceLines: number;
+  /** Revenue less the replacement cost; see `RevenueFact.replacementProfit`. */
+  replacementProfit: number;
+  replacementMargin: number;
+  targetAnnualRevenue: SelectCompanies["targetAnnualRevenue"] | null;
+  competitors: string | null;
+  /** The branch's own legal name, from the settings. */
+  affiliateName: SelectBranchSettings["affiliateName"];
 };
 
 /**
@@ -62,6 +73,8 @@ export type CustomerRevenuePerRevenueGroupRow = {
 const buildRows = (
   facts: RevenueFact[],
   companies: Map<string, RevenueCompany>,
+  competitors: Map<string, string>,
+  affiliateName: string | null,
 ): CustomerRevenuePerRevenueGroupRow[] => {
   const rows = new Map<string, CustomerRevenuePerRevenueGroupRow>();
 
@@ -97,9 +110,15 @@ const buildRows = (
       profit: 0,
       profitMargin: 0,
       invoiceLines: 0,
+      replacementProfit: 0,
+      replacementMargin: 0,
+      targetAnnualRevenue: company?.targetAnnualRevenue ?? null,
+      competitors: competitors.get(fact.companyUuid) ?? null,
+      affiliateName,
     };
     row.revenue += fact.revenue;
     row.profit += fact.profit;
+    row.replacementProfit += fact.replacementProfit;
     row.weightKg += fact.weightKg;
     row.quantity += fact.quantity;
     row.invoiceLines += fact.lines;
@@ -110,6 +129,10 @@ const buildRows = (
     .map((row) => ({
       ...row,
       profitMargin: profitMarginPercent(row.revenue, row.profit),
+      replacementMargin: profitMarginPercent(
+        row.revenue,
+        row.replacementProfit,
+      ),
       // The sold quantity restated in the unit the line was priced in.
       salesPriceUnit:
         row.priceUnit === "TN"
@@ -140,7 +163,9 @@ const revenueGroupRows = async (
 ): Promise<CustomerRevenuePerRevenueGroupRow[]> => {
   const facts = await getRevenueFacts();
   const companies = await getRevenueCompanies();
-  const all = buildRows(facts, companies);
+  const competitors = await getCompetitorShares();
+  const { affiliateName } = await getBranchSettings(db);
+  const all = buildRows(facts, companies, competitors, affiliateName);
 
   const term = query.q?.toLowerCase() ?? null;
   const groups = query.filters.revenueGroup ?? [];

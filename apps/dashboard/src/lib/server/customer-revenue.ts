@@ -2,6 +2,7 @@ import "server-only";
 
 import { db } from "@/db";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
+import { CompanyCompetitors } from "@/db/schema/company-competitors";
 import {
   CompanyAddresses,
   SelectCompanyAddresses,
@@ -52,6 +53,14 @@ export type RevenueFact = {
   revenue: number;
   profit: number;
   /**
+   * Profit against the replacement price rather than the cost actually
+   * booked. A line's cost and its replacement cost share one measure — the
+   * theoretical weight in the price unit — so the replacement cost is the
+   * booked cost scaled by replacement price ÷ cost price, exactly. Options and
+   * charges have no replacement price, so theirs is their profit.
+   */
+  replacementProfit: number;
+  /**
    * Option revenue riding on these product lines; 0 on an option or a charge
    * row. It is the same money an `option` fact carries -- the product row
    * reports it beside the material it was bought with, the option row reports
@@ -82,6 +91,7 @@ export type RevenueCompany = Pick<
   | "isInactive"
   | "visitFrequency"
   | "remarks"
+  | "targetAnnualRevenue"
 > & {
   city: SelectCompanyAddresses["city"] | null;
   postalCode: SelectCompanyAddresses["postalCode"] | null;
@@ -117,6 +127,11 @@ export const getRevenueFacts = async (): Promise<RevenueFact[]> => {
       quantity: sql<string>`COALESCE(SUM(${InvoiceItems.quantity}), 0)`,
       revenue: sql<string>`COALESCE(SUM(${InvoiceItems.revenueProducts}), 0)`,
       profit: sql<string>`COALESCE(SUM(${InvoiceItems.profitProducts}), 0)`,
+      replacementProfit: sql<string>`COALESCE(SUM(
+        ${InvoiceItems.revenueProducts} - CASE WHEN ${InvoiceItems.costPrice} > 0
+          THEN ${InvoiceItems.costAmount} * ${InvoiceItems.replacementPrice} / ${InvoiceItems.costPrice}
+          ELSE 0 END
+      ), 0)`,
       optionRevenue: sql<string>`COALESCE(SUM(${InvoiceItems.revenueOptions}), 0)`,
       optionProfit: sql<string>`COALESCE(SUM(${InvoiceItems.profitOptions}), 0)`,
       weightKg: sql<string>`COALESCE(SUM(${InvoiceItems.weightKg}), 0)`,
@@ -254,6 +269,7 @@ export const getRevenueFacts = async (): Promise<RevenueFact[]> => {
         quantity: Number(row.quantity),
         revenue: Number(row.revenue),
         profit: Number(row.profit),
+        replacementProfit: Number(row.replacementProfit),
         optionRevenue: Number(row.optionRevenue),
         optionProfit: Number(row.optionProfit),
         weightKg: Number(row.weightKg),
@@ -274,6 +290,7 @@ export const getRevenueFacts = async (): Promise<RevenueFact[]> => {
         quantity: Number(row.quantity),
         revenue: Number(row.revenue),
         profit: Number(row.profit),
+        replacementProfit: Number(row.profit),
         optionRevenue: 0,
         optionProfit: 0,
         weightKg: 0,
@@ -294,6 +311,7 @@ export const getRevenueFacts = async (): Promise<RevenueFact[]> => {
         quantity: 0,
         revenue: Number(row.revenue),
         profit: Number(row.profit),
+        replacementProfit: Number(row.profit),
         optionRevenue: 0,
         optionProfit: 0,
         weightKg: 0,
@@ -352,6 +370,7 @@ export const getRevenueCompanies = async (
       isInactive: Companies.isInactive,
       visitFrequency: Companies.visitFrequency,
       remarks: Companies.remarks,
+      targetAnnualRevenue: Companies.targetAnnualRevenue,
       city: visiting.city,
       postalCode: visiting.postalCode,
       country: visiting.country,
@@ -370,6 +389,35 @@ export const getRevenueCompanies = async (
         country: row.country ?? null,
       },
     ]),
+  );
+};
+
+/**
+ * `Competitors (Revenue share)` — every competitor on a customer as
+ * `Firm (share %)`, keyed by company uuid. Empty on every reference row, so the
+ * shape is reasoned: the panel's own two columns, side by side.
+ */
+export const getCompetitorShares = async (): Promise<Map<string, string>> => {
+  const rows = await db
+    .select({
+      companyUuid: CompanyCompetitors.companyUuid,
+      firm: CompanyCompetitors.firm,
+      share: CompanyCompetitors.revenueSharePercent,
+    })
+    .from(CompanyCompetitors)
+    .orderBy(CompanyCompetitors.firm);
+
+  const held = new Map<string, string[]>();
+  for (const row of rows) {
+    const share = row.share === null ? "" : ` (${Number(row.share)} %)`;
+    held.set(row.companyUuid, [
+      ...(held.get(row.companyUuid) ?? []),
+      `${row.firm}${share}`,
+    ]);
+  }
+
+  return new Map(
+    [...held.entries()].map(([uuid, firms]) => [uuid, firms.join("; ")]),
   );
 };
 

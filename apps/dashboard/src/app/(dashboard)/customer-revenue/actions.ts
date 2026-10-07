@@ -2,7 +2,6 @@
 
 import { db } from "@/db";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
-import { CompanyCompetitors } from "@/db/schema/company-competitors";
 import { Invoices } from "@/db/schema/invoices";
 import { SelectCompanyAddresses } from "@/db/schema/company-addresses";
 import { SelectVisitReports, VisitReports } from "@/db/schema/visit-reports";
@@ -18,6 +17,7 @@ import {
   TableQuery,
 } from "@/lib/table-query";
 import {
+  getCompetitorShares,
   getContactCounters,
   getInvoiceCountsByCompanyMonth,
   getRevenueCompanies,
@@ -257,22 +257,7 @@ const customerRevenueRows = async (
       .from(Companies)
       .leftJoin(PurchaseOrg, eq(Companies.purchaseOrgCompanyUuid, PurchaseOrg.uuid));
 
-    const competitorRows = await db
-      .select({
-        companyUuid: CompanyCompetitors.companyUuid,
-        firm: CompanyCompetitors.firm,
-        share: CompanyCompetitors.revenueSharePercent,
-      })
-      .from(CompanyCompetitors)
-      .orderBy(CompanyCompetitors.firm);
-    const competitors = new Map<string, string[]>();
-    for (const row of competitorRows) {
-      const share = row.share === null ? "" : ` (${Number(row.share)} %)`;
-      competitors.set(row.companyUuid, [
-        ...(competitors.get(row.companyUuid) ?? []),
-        `${row.firm}${share}`,
-      ]);
-    }
+    const competitors = await getCompetitorShares();
 
     // The newest report per company. `Latest visit report` is empty on all
     // 1 724 reference rows, so what it prints is reasoned: the report's text,
@@ -331,7 +316,7 @@ const customerRevenueRows = async (
           memberNumberPurchaseOrg: company.memberNumberPurchaseOrg,
           pointOfAttention: company.remarks,
           active: !company.isInactive,
-          competitors: competitors.get(company.uuid)?.join("; ") ?? null,
+          competitors: competitors.get(company.uuid) ?? null,
           latestVisitReport: latestReports.get(company.uuid) ?? null,
           lastOrderDate: counters?.lastOrderDate ?? null,
           lastCallDate: counters?.lastCallDate ?? null,

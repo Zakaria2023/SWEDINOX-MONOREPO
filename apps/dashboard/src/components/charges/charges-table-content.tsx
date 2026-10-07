@@ -19,6 +19,7 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
+import { ExportValueCell } from "@/components/ui/export-value-cell";
 import { PagedTableExportButton } from "@/components/ui/table-export-button";
 import { GenerateChargesButton } from "@/components/charges/generate-charges-button";
 import { TablePagination } from "@/components/ui/table-pagination";
@@ -167,6 +168,12 @@ export const ChargesTable = ({ page, filters }: Props) => {
             {orDash(salesDocumentStatusLabel(row.status))}
           </TableCell>
         );
+      default: {
+        const column = CHARGE_COLUMNS.find((col) => col.key === key);
+        return (
+          <ExportValueCell key={key} value={column ? column.value(row) : null} />
+        );
+      }
     }
   };
 

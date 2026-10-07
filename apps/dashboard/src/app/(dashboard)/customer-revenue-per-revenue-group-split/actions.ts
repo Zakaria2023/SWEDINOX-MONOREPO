@@ -1,13 +1,17 @@
 "use server";
 
 import { CUSTOMER_REVENUE_SPLIT_COLUMNS } from "@/app/(dashboard)/customer-revenue-per-revenue-group-split/columns";
+import { db } from "@/db";
+import { SelectBranchSettings } from "@/db/schema/branch-settings";
 import { SelectCompanies } from "@/db/schema/companies";
 import { SelectCompanyAddresses } from "@/db/schema/company-addresses";
 import { SelectOrderItems } from "@/db/schema/order-items";
 import { SelectOrders } from "@/db/schema/orders";
 import { SelectRevenueGroups } from "@/db/schema/revenue-groups";
 import { describeError, profitMarginPercent } from "@/lib/helpers";
+import { getBranchSettings } from "@/lib/server/branch-settings";
 import {
+  getCompetitorShares,
   getRevenueCompanies,
   getRevenueFacts,
 } from "@/lib/server/customer-revenue";
@@ -42,6 +46,13 @@ export type CustomerRevenueSplitRow = {
   profit: number;
   profitMargin: number;
   invoiceLines: number;
+  /** Revenue less the replacement cost; see `RevenueFact.replacementProfit`. */
+  replacementProfit: number;
+  replacementMargin: number;
+  targetAnnualRevenue: SelectCompanies["targetAnnualRevenue"] | null;
+  competitors: string | null;
+  /** The branch's own legal name, from the settings. */
+  affiliateName: SelectBranchSettings["affiliateName"];
 };
 
 /**
@@ -61,6 +72,8 @@ const splitRows = async (
 ): Promise<CustomerRevenueSplitRow[]> => {
   const facts = await getRevenueFacts();
   const companies = await getRevenueCompanies();
+  const competitors = await getCompetitorShares();
+  const { affiliateName } = await getBranchSettings(db);
 
   const rows = new Map<string, CustomerRevenueSplitRow>();
   for (const fact of facts) {
@@ -100,9 +113,15 @@ const splitRows = async (
       profit: 0,
       profitMargin: 0,
       invoiceLines: 0,
+      replacementProfit: 0,
+      replacementMargin: 0,
+      targetAnnualRevenue: company?.targetAnnualRevenue ?? null,
+      competitors: competitors.get(fact.companyUuid) ?? null,
+      affiliateName,
     };
     row.revenue += fact.revenue;
     row.profit += fact.profit;
+    row.replacementProfit += fact.replacementProfit;
     row.weightKg += fact.weightKg;
     row.quantity += fact.quantity;
     row.invoiceLines += fact.lines;
@@ -113,6 +132,10 @@ const splitRows = async (
     .map((row) => ({
       ...row,
       profitMargin: profitMarginPercent(row.revenue, row.profit),
+      replacementMargin: profitMarginPercent(
+        row.revenue,
+        row.replacementProfit,
+      ),
       salesPriceUnit:
         row.priceUnit === "TN"
           ? row.weightKg / 1000

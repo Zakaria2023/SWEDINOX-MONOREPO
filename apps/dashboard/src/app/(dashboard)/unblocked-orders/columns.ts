@@ -12,9 +12,8 @@ import { monthLabel, orderDeblockTypeLabel } from "@/lib/helpers";
  * Unblocked orders as a sheet — one row per release event, in the reference's
  * column order.
  *
- * `Region number` is not here. It is `0` on all 571 of the reference's rows,
- * the fourth screen to show it dead, and is left out the way Visits made and
- * the customer overview leave it out.
+ * `Region number` is `0` on all 571 of the reference's rows, the fourth screen
+ * to show it dead. It prints blank and is hidden by default.
  *
  * `Deblock date` and `Deblock time` are one timestamp in the reference too —
  * the same serial printed twice — but the hour is the interesting half here,
@@ -35,7 +34,8 @@ export type UnblockedOrderColumnKey =
   | "order"
   | "orderCreatedAt"
   | "orderAmount"
-  | "region";
+  | "region"
+  | "regionNumber";
 
 export const UNBLOCKED_ORDER_COLUMNS: Array<
   ExportColumn<UnblockedOrderRow, UnblockedOrderColumnKey>
@@ -111,6 +111,13 @@ export const UNBLOCKED_ORDER_COLUMNS: Array<
     label: "Order amount",
     defaultVisible: true,
     value: (row) => numberCell(row.orderAmount),
+  },
+  {
+    key: "regionNumber",
+    label: "Region number",
+    defaultVisible: false,
+    // `0` on every reference row, and nothing here numbers a region.
+    value: () => null,
   },
   {
     key: "region",

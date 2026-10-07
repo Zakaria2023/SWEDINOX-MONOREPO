@@ -18,6 +18,7 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
+import { ExportValueCell } from "@/components/ui/export-value-cell";
 import { PagedTableExportButton } from "@/components/ui/table-export-button";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { TableToolbar } from "@/components/ui/table-toolbar";
@@ -153,6 +154,12 @@ export const CustomerRevenueSplitTable = ({ page, filters }: Props) => {
             {row.invoiceLines}
           </TableCell>
         );
+      default: {
+        const column = CUSTOMER_REVENUE_SPLIT_COLUMNS.find((col) => col.key === key);
+        return (
+          <ExportValueCell key={key} value={column ? column.value(row) : null} />
+        );
+      }
     }
   };
 

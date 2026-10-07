@@ -17,10 +17,10 @@ import { salesDocumentStatusLabel } from "@/lib/helpers";
  * means unbounded — the same `999999` a coil's length uses. Reading 125 as
  * kilos would invent a tariff that does not exist.
  *
- * Two of the reference's columns are not carried. `Region number` is `0` on
- * every row, and `Bedrag valuta` — the amount in a foreign currency — is
- * non-zero on **3 of its 1 504 rows** and we have no currency model at all, so
- * there is nothing to put in it.
+ * Two of the reference's columns print blank and are hidden by default.
+ * `Region number` is `0` on every row, and `Bedrag valuta` — the amount in a
+ * foreign currency — is non-zero on **3 of its 1 504 rows** and we have no
+ * currency model at all, so there is nothing to put in it.
  *
  * 🔴 **`Profit` is carried as two numbers, not one string.** The reference
  * packs the amount and the margin into a single cell in Dutch format,
@@ -51,7 +51,9 @@ export type ChargeColumnKey =
   | "region"
   | "country"
   | "vatNumber"
-  | "status";
+  | "status"
+  | "regionNumber"
+  | "amountCurrency";
 
 export const CHARGE_COLUMNS: Array<
   ExportColumn<ChargeListItem, ChargeColumnKey>
@@ -129,6 +131,14 @@ export const CHARGE_COLUMNS: Array<
     },
   },
   {
+    key: "amountCurrency",
+    label: "Amount (currency)",
+    defaultVisible: false,
+    // `Bedrag valuta`: non-zero on 3 of the reference's 1 504 rows. Every
+    // charge here is in euros, so there is no foreign amount to print.
+    value: () => null,
+  },
+  {
     key: "amount",
     label: "Amount",
     defaultVisible: true,
@@ -176,6 +186,13 @@ export const CHARGE_COLUMNS: Array<
     label: "Debtor no.",
     defaultVisible: false,
     value: (row) => textCell(row.debtorNo),
+  },
+  {
+    key: "regionNumber",
+    label: "Region number",
+    defaultVisible: false,
+    // `0` on every reference row, and nothing here numbers a region.
+    value: () => null,
   },
   {
     // The zone axis of the freight tariff: the price rises with weight and

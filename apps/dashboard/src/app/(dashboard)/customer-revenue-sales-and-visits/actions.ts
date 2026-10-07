@@ -8,6 +8,7 @@ import { SelectRevenueGroups } from "@/db/schema/revenue-groups";
 import { VisitReports } from "@/db/schema/visit-reports";
 import { describeError } from "@/lib/helpers";
 import {
+  getCompetitorShares,
   getRevenueCompanies,
   getRevenueFacts,
 } from "@/lib/server/customer-revenue";
@@ -40,6 +41,8 @@ export type CustomerRevenueSalesVisitsRow = {
   visitsLastYear: number;
   visitsTwoYearsAgo: number;
   region: SelectCompanies["region"] | null;
+  /** `Firm (share %)` for every competitor on the customer. */
+  competitors: string | null;
 };
 
 /** Visits recorded per company for the three years the screen reports. */
@@ -83,6 +86,7 @@ const salesAndVisitsRows = async (
   const facts = await getRevenueFacts();
   const companies = await getRevenueCompanies();
   const visits = await visitsByCompanyYear(currentYear);
+  const competitors = await getCompetitorShares();
 
   const rows = new Map<string, CustomerRevenueSalesVisitsRow>();
   for (const fact of facts) {
@@ -117,6 +121,7 @@ const salesAndVisitsRows = async (
       visitsTwoYearsAgo:
         visits.get(`${fact.companyUuid}|${currentYear - 2}`) ?? 0,
       region: company?.region ?? null,
+      competitors: competitors.get(fact.companyUuid) ?? null,
     };
     if (offset === 0) {
       row.revenueCurrentYear += fact.revenue;
