@@ -2,8 +2,15 @@ import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { getCompaniesForSelect } from "@/app/(dashboard)/companies/actions";
 import { InvoiceForm } from "@/components/invoices/invoice-form";
+import { SearchParams } from "@/lib/table-query";
 
-const AddInvoicePage = async () => {
+type Props = {
+  searchParams: Promise<SearchParams>;
+};
+
+const AddInvoicePage = async ({ searchParams }: Props) => {
+  // `?company=` is set by an order's `Invoice` button.
+  const { company } = await searchParams;
   const availableCompanies = await getCompaniesForSelect();
 
   return (
@@ -17,7 +24,10 @@ const AddInvoicePage = async () => {
           Invoices
         </Link>
       </div>
-      <InvoiceForm availableCompanies={availableCompanies} />
+      <InvoiceForm
+        availableCompanies={availableCompanies}
+        defaultCompanyUuid={typeof company === "string" ? company : undefined}
+      />
     </div>
   );
 };

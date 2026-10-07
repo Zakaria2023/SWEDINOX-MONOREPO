@@ -27,6 +27,8 @@ import { InvoiceSurchargesSection } from "./sections/invoice-surcharges-section"
 
 type InvoiceFormProps = {
   availableCompanies: CompanyOption[];
+  /** The customer to start on, when opened from an order. */
+  defaultCompanyUuid?: string;
 };
 
 const DEFAULT_SURCHARGE = {
@@ -37,7 +39,10 @@ const DEFAULT_SURCHARGE = {
   profit: "",
 };
 
-export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
+export const InvoiceForm = ({
+  availableCompanies,
+  defaultCompanyUuid,
+}: InvoiceFormProps) => {
   const router = useRouter();
   const [surcharges, setSurcharges] = useState<InvoiceSurchargeInput[]>([]);
   const [isSurchargeDialogOpen, setIsSurchargeDialogOpen] = useState(false);
@@ -65,7 +70,7 @@ export const InvoiceForm = ({ availableCompanies }: InvoiceFormProps) => {
     isPending,
     onSubmit: submitForm,
     state,
-  } = useInvoiceSubmit(surcharges, selections);
+  } = useInvoiceSubmit(surcharges, selections, defaultCompanyUuid);
 
   const companyUuid = form.watch("companyUuid");
   const paymentTerms = form.watch("paymentTerms");

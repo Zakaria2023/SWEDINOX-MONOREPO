@@ -1328,6 +1328,68 @@ export const makeOrderFinal = async (
 };
 
 
+
+/**
+ * `Send…` — mail the order confirmation to the customer again. `Make final &
+ * send` sends it once; this is for the customer who lost it. A send that
+ * reaches nobody is an error, every attempt is logged, and a delivered one
+ * ticks `Mailed`.
+ */
+export const sendOrderConfirmation = async (
+  orderUuid: string,
+): Promise<OrderActionResult> => {
+  const userId = await requireAuth();
+  try {
+    const [order] = await db
+      .select({
+        status: Orders.status,
+        id: Orders.id,
+        companyUuid: Orders.companyUuid,
+      })
+      .from(Orders)
+      .where(eq(Orders.uuid, orderUuid))
+      .limit(1);
+
+    if (!order) {
+      return { error: "Order not found." };
+    }
+    if (order.status === "provisional") {
+      return { error: "Make the order final before sending it." };
+    }
+    if (order.status === "cancelled") {
+      return { error: "A cancelled order cannot be sent." };
+    }
+
+    const result = await sendOrderConfirmationEmail(orderUuid);
+    await mailDocument(
+      () => Promise.resolve(result),
+      `Order confirmation for ${order.id}`,
+      {
+        documentType: "order",
+        documentUuid: orderUuid,
+        companyUuid: order.companyUuid,
+        userId,
+      },
+    );
+
+    if (result.sent === 0) {
+      return {
+        error:
+          "Nothing was sent: the customer has no e-mail address on the order's contact or the company.",
+      };
+    }
+
+    await db
+      .update(Orders)
+      .set({ isMailed: true })
+      .where(eq(Orders.uuid, orderUuid));
+
+    revalidatePath(`/orders/${orderUuid}`);
+    return { success: true, orderUuid };
+  } catch (error) {
+    return { error: describeError(error, "Failed to send the order") };
+  }
+};
 /**
  * The stock search a sales line is entered through — see
  * `lib/server/stock-search.ts` for what it does and why it looks like this.

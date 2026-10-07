@@ -14,6 +14,8 @@ import { createInvoiceSchema, InvoiceFormValues } from "./validation";
 export const useInvoiceSubmit = (
   surcharges: InvoiceSurchargeInput[],
   selections: InvoiceLineSelection[] = [],
+  // Set when the form is opened from an order's `Invoice` button.
+  defaultCompanyUuid = "",
 ) => {
   const [isPending, startTransition] = useTransition();
   const [state, setState] = useState<InvoiceActionResult>({});
@@ -21,7 +23,7 @@ export const useInvoiceSubmit = (
   const form = useForm<InvoiceFormValues>({
     resolver: zodResolver(createInvoiceSchema()),
     defaultValues: {
-      companyUuid: "",
+      companyUuid: defaultCompanyUuid,
       invoiceDate: "",
       expirationDate: "",
       calculateVat: false,

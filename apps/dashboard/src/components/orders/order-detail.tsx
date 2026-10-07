@@ -12,6 +12,7 @@ import {
 import {
   cancelOrder,
   makeOrderFinal,
+  sendOrderConfirmation,
   OrderDetail,
 } from "@/app/(dashboard)/orders/actions";
 import {
@@ -102,6 +103,13 @@ export const OrderDetailView = ({
   const handleMakeFinal = (send: boolean) => {
     startTransition(async () => {
       const result = await makeOrderFinal(order.uuid, send);
+      setError(result.error);
+    });
+  };
+
+  const handleSend = () => {
+    startTransition(async () => {
+      const result = await sendOrderConfirmation(order.uuid);
       setError(result.error);
     });
   };
@@ -317,6 +325,37 @@ export const OrderDetailView = ({
                 Make Final &amp; Send
               </Button>
             </>
+          )}
+          {/* `Send… · Show company · Invoice` from the reference's order
+              toolbar. Invoicing starts the invoice form on this customer,
+              which offers what is delivered and still to bill. */}
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleSend}
+            disabled={isPending || canMakeFinal}
+          >
+            Send…
+          </Button>
+          <Button
+            variant="outline"
+            render={<Link href={`/companies/${order.companyUuid}`} />}
+          >
+            Show company
+          </Button>
+          {canMakeFinal ? (
+            <Button variant="outline" disabled>
+              Invoice
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              render={
+                <Link href={`/invoices/add?company=${order.companyUuid}`} />
+              }
+            >
+              Invoice
+            </Button>
           )}
           <Button
             type="button"
