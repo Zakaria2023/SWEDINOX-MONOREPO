@@ -334,6 +334,7 @@ export const useQuoteSubmit = ({
         widthMm: item.widthMm ? Number(item.widthMm) : null,
         thicknessMm: item.thicknessMm || null,
         options: item.options || null,
+        sourceType: item.sourceType ?? "stock",
       }));
 
       const quoteSurcharges = values.surcharges.map((surcharge) => ({

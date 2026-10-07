@@ -15,15 +15,20 @@ import {
 } from "@/components/shadcn/table";
 import { FormLabel } from "@/components/ui/form-field";
 import { ProductSearchField } from "@/components/ui/product-search-field";
-import { stockUnits } from "@/lib/enums";
+import { stockUnits, OrderSourceType, orderSourceTypes } from "@/lib/enums";
 import {
+  marginFloorFor,
   formatMoney,
   formatNumber,
   formatPercent,
   previewQuoteLine,
   productPieceWeightKg,
 } from "@/lib/helpers";
-import { PRODUCT_QUALITY_STANDARD_LABELS, STOCK_UNIT_LABELS } from "@/lib/labels";
+import {
+  ORDER_SOURCE_TYPE_LABELS,
+  PRODUCT_QUALITY_STANDARD_LABELS,
+  STOCK_UNIT_LABELS,
+} from "@/lib/labels";
 import { AlertTriangle, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Control, useFieldArray } from "react-hook-form";
@@ -31,8 +36,6 @@ import { Control, useFieldArray } from "react-hook-form";
 type Props = {
   control: Control<QuoteFormValues>;
   products: ProductPricingOption[];
-  /** Ex-works quotes are held to the ex-works margin floor. */
-  isPickup: boolean;
 };
 
 type Draft = {
@@ -43,6 +46,7 @@ type Draft = {
   widthMm: string;
   thicknessMm: string;
   options: string;
+  sourceType: OrderSourceType;
 };
 
 const EMPTY_DRAFT: Draft = {
@@ -53,14 +57,20 @@ const EMPTY_DRAFT: Draft = {
   widthMm: "",
   thicknessMm: "",
   options: "",
+  sourceType: "stock",
 };
+
+const sourceTypeOptions = orderSourceTypes.map((type) => ({
+  value: type,
+  label: ORDER_SOURCE_TYPE_LABELS[type],
+}));
 
 const unitOptions = stockUnits.map((unit) => ({
   value: unit,
   label: STOCK_UNIT_LABELS[unit],
 }));
 
-export const QuoteLinesEditor = ({ control, products, isPickup }: Props) => {
+export const QuoteLinesEditor = ({ control, products }: Props) => {
   const { fields, append, remove } = useFieldArray({ control, name: "items" });
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
   const [error, setError] = useState<string | null>(null);
@@ -84,6 +94,7 @@ export const QuoteLinesEditor = ({ control, products, isPickup }: Props) => {
       widthMm: draft.widthMm,
       thicknessMm: draft.thicknessMm,
       options: draft.options,
+      sourceType: draft.sourceType,
     });
     setDraft(EMPTY_DRAFT);
   };
@@ -130,6 +141,19 @@ export const QuoteLinesEditor = ({ control, products, isPickup }: Props) => {
             }
           />
         </div>
+        {/* The reference's line `Type`. It picks the margin floor the line
+            is held to — stock, cross-dock or ex works. */}
+        <div>
+          <FormLabel htmlFor="line-type">Type</FormLabel>
+          <Select
+            id="line-type"
+            options={sourceTypeOptions}
+            value={draft.sourceType}
+            onValueChange={(value) =>
+              setDraft((d) => ({ ...d, sourceType: value as OrderSourceType }))
+            }
+          />
+        </div>
         <div>
           <FormLabel htmlFor="line-unit">Unit</FormLabel>
           <Select
@@ -173,7 +197,7 @@ export const QuoteLinesEditor = ({ control, products, isPickup }: Props) => {
             }
           />
         </div>
-        <div className="col-span-2 lg:col-span-6">
+        <div className="col-span-2 lg:col-span-5">
           <FormLabel htmlFor="line-options">Options</FormLabel>
           <Input
             id="line-options"
@@ -244,10 +268,9 @@ export const QuoteLinesEditor = ({ control, products, isPickup }: Props) => {
                   widthMm: Number(product?.widthDiameter ?? 0),
                   thicknessMm: Number(product?.thickness ?? 0),
                   productLengthMm: Number(product?.length ?? 0),
-                  minProfitMargin: Number(
-                    (isPickup
-                      ? product?.minProfitMarginExWorks
-                      : product?.minProfitMarginStock) ?? 0,
+                  minProfitMargin: marginFloorFor(
+                    product,
+                    field.sourceType ?? "stock",
                   ),
                 });
 
@@ -256,7 +279,9 @@ export const QuoteLinesEditor = ({ control, products, isPickup }: Props) => {
                     <TableCell className="font-medium">
                       {product?.productCode ?? "—"}
                     </TableCell>
-                    <TableCell>Material</TableCell>
+                    <TableCell>
+                      {ORDER_SOURCE_TYPE_LABELS[field.sourceType ?? "stock"]}
+                    </TableCell>
                     <TableCell>{product?.name ?? "—"}</TableCell>
                     <TableCell>{product?.productGroupName ?? "—"}</TableCell>
                     <TableCell>

@@ -14,6 +14,8 @@ import { Input } from "@/components/shadcn/input";
 import { Select, SelectOption } from "@/components/shadcn/select";
 import { StockSearchDialog } from "@/components/orders/stock-search-dialog";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
+import { orderSourceTypes } from "@/lib/enums";
+import { ORDER_SOURCE_TYPE_LABELS } from "@/lib/labels";
 import { Plus, Search, X } from "lucide-react";
 
 type Props = {
@@ -55,7 +57,7 @@ export const OrderItemsSection = ({
         {itemFields.map((field, index) => (
           <div
             key={field.id}
-            className="grid grid-cols-[1fr_auto_160px_32px] items-start gap-3"
+            className="grid grid-cols-[1fr_auto_140px_160px_32px] items-start gap-3"
           >
             <div>
               <FormLabel htmlFor={`items.${index}.stockUuid`} required>
@@ -90,6 +92,27 @@ export const OrderItemsSection = ({
               Search
             </Button>
 
+            {/* The reference's line `Type`: where this line's metal comes
+                from, and so which of the product's margin floors holds it. */}
+            <div>
+              <FormLabel htmlFor={`items.${index}.sourceType`}>Type</FormLabel>
+              <Controller
+                control={control}
+                name={`items.${index}.sourceType`}
+                render={({ field: typeField }) => (
+                  <Select
+                    id={`items.${index}.sourceType`}
+                    value={typeField.value || "stock"}
+                    options={orderSourceTypes.map((type) => ({
+                      value: type,
+                      label: ORDER_SOURCE_TYPE_LABELS[type],
+                    }))}
+                    onValueChange={typeField.onChange}
+                  />
+                )}
+              />
+            </div>
+
             <div>
               <FormLabel htmlFor={`items.${index}.quantity`} required>
                 Quantity
@@ -121,7 +144,9 @@ export const OrderItemsSection = ({
         type="button"
         variant="outline"
         size="sm"
-        onClick={() => appendItem({ stockUuid: "", quantity: "" })}
+        onClick={() =>
+          appendItem({ stockUuid: "", quantity: "", sourceType: "stock" })
+        }
       >
         <Plus className="mr-1 size-3.5" /> Add product
       </Button>

@@ -8,6 +8,7 @@ import {
   orderMethods,
   orderWeightTypes,
   stockUnits,
+  orderSourceTypes,
 } from "@/lib/enums";
 import { todayDateString, currentYear } from "@/lib/helpers";
 
@@ -24,6 +25,7 @@ export const quoteLineSchema = z.object({
   widthMm: z.string().optional(),
   thicknessMm: z.string().optional(),
   options: z.string().optional(),
+  sourceType: z.enum(orderSourceTypes).optional(),
 });
 
 export type QuoteLineFormValues = z.infer<typeof quoteLineSchema>;

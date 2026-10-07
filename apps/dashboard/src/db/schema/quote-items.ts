@@ -12,7 +12,11 @@ import {
   timestamp,
   varchar,
 } from "drizzle-orm/mysql-core";
-import { orderLineStatuses, stockUnits } from "../../lib/enums";
+import {
+  orderLineStatuses,
+  stockUnits,
+  orderSourceTypes,
+} from "../../lib/enums";
 import { Orders } from "./orders";
 import { Products } from "./products";
 import { Quotes } from "./quotes";
@@ -37,6 +41,11 @@ export const QuoteItems = mysqlTable(
     // ── Line identity ─────────────────────────────────────────────────────────
     lineNumber: int("line_number"),
     lineType: varchar("line_type", { length: 50 }),
+    // The reference's line `Type` (`Stk` · `Stk+CD` · `CD` · `EXW`), carried
+    // into the order line on conversion. It picks the margin floor.
+    sourceType: mysqlEnum("source_type", orderSourceTypes)
+      .default("stock")
+      .notNull(),
     status: mysqlEnum("status", orderLineStatuses).default("in_progress"),
     expirationReason: varchar("expiration_reason", { length: 255 }),
     description: varchar("description", { length: 255 }),

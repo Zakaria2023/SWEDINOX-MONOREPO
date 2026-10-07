@@ -621,11 +621,7 @@ export const QuoteForm = ({
       </section>
 
       {/* ── Lines ─────────────────────────────────────────────────────── */}
-      <QuoteLinesEditor
-        control={control}
-        products={products}
-        isPickup={isPickup}
-      />
+      <QuoteLinesEditor control={control} products={products} />
 
       {/* ── Surcharges ────────────────────────────────────────────────── */}
       <QuoteSurchargesSection

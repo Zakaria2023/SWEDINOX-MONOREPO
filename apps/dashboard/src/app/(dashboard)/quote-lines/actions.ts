@@ -460,6 +460,7 @@ export const convertQuoteToOrder = async (
           lineNumber: index + 1,
           status: "reserved",
           lineType: allocation.line.lineType,
+          sourceType: allocation.line.sourceType,
           seller: quote.seller,
           deliveryDate: allocation.line.deliveryDate,
           unit: allocation.line.unit,

@@ -53,6 +53,7 @@ import {
   MiscellaneousOption,
   OrderDeblockType,
   OrderLineStatus,
+  OrderSourceType,
   OrderOption,
   PaymentMethod,
   OrderWeightType,
@@ -1058,6 +1059,13 @@ export type PurchaseLineActions = {
   readonly canClose: boolean;
   /** Always a sentence — why the button is awake, or why it is not. */
   readonly closeReason: string;
+};
+
+/** A product's three minimum profit margins, as decimal strings. */
+export type MarginFloors = {
+  readonly minProfitMarginStock?: string | null;
+  readonly minProfitMarginExWorks?: string | null;
+  readonly minProfitMarginCrossDocking?: string | null;
 };
 
 type PaymentTermMeta = {
@@ -10069,6 +10077,30 @@ export const receptionActions = (
     splitReason:
       "Splitting a reception is not reachable from the order. The reference greys it whatever the reception's status, so the gate is on the order — see H13.",
   };
+};
+
+/**
+ * The margin floor a line is held to: one of the product's three, picked by the
+ * line's type.
+ *
+ * The reference keeps exactly three minimum margins on a product — `Stock ·
+ * Ex works · Cross Docking` — and they are the three line types `Stk` · `EXW` ·
+ * `CD` (7-10-2026). A mixed `Stk+CD` line is held to the cross-dock floor, the
+ * lower half's: a floor is a floor. Shared by the server's pricing and the
+ * quote editor's live preview, so the warning on screen and the one saved can
+ * never disagree.
+ */
+export const marginFloorFor = (
+  floors: MarginFloors | undefined,
+  sourceType: OrderSourceType,
+): number => {
+  const floor =
+    sourceType === "ex_works"
+      ? floors?.minProfitMarginExWorks
+      : sourceType === "stock"
+        ? floors?.minProfitMarginStock
+        : floors?.minProfitMarginCrossDocking;
+  return Number(floor ?? 0);
 };
 
 /**

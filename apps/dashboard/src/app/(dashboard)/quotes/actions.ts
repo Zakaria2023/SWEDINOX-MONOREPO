@@ -20,7 +20,7 @@ import {
 } from "@/db/schema/quote-surcharges";
 import { InsertQuotes, Quotes, SelectQuotes } from "@/db/schema/quotes";
 import { SalesOptions, SelectSalesOptions } from "@/db/schema/sales-options";
-import { orderStatuses, StockUnit } from "@/lib/enums";
+import { orderStatuses, StockUnit, OrderSourceType } from "@/lib/enums";
 import {
   computeQuoteSummary,
   describeError,
@@ -77,6 +77,8 @@ export type QuoteLineInput = {
   widthMm?: number | null;
   thicknessMm?: string | null;
   options?: string | null;
+  /** The line's `Type`; `stock` when not given. */
+  sourceType?: OrderSourceType;
 };
 
 // A surcharge row as the form submits it. `order` and `quoteUuid` are set on
@@ -142,7 +144,6 @@ type PriceQuoteLinesParams = {
   quoteUuid: string;
   contractUuid: string | null;
   isConsignment: boolean;
-  isPickup: boolean;
   reference: string | null;
   deliveryDate: string | null;
   items: QuoteLineInput[];
@@ -255,7 +256,6 @@ const priceQuoteLines = async ({
   quoteUuid,
   contractUuid,
   isConsignment,
-  isPickup,
   reference,
   deliveryDate,
   items,
@@ -287,8 +287,6 @@ const priceQuoteLines = async ({
     // otherwise the product's catalogue length.
     const lengthMm = item.lengthMm ?? null;
 
-    // A pick-up quote is priced ex works, so it is held to the ex-works margin
-    // floor; anything delivered from stock is held to the stock floor.
     const effectiveLengthMm =
       lengthMm !== null && lengthMm > 0 ? lengthMm : Number(product.length ?? 0);
     const widthMm = Number(product.widthDiameter ?? 0);
@@ -316,8 +314,7 @@ const priceQuoteLines = async ({
       widthMm,
       thicknessMm,
       priceUnit: product.priceUnit,
-      // Same carried-over assumption as on orders: pick-up read as ex works.
-      minProfitMargin: minimumMarginFor(product, isPickup ? "ex_works" : "stock"),
+      minProfitMargin: minimumMarginFor(product, item.sourceType ?? "stock"),
     });
 
     rows.push({
@@ -327,6 +324,7 @@ const priceQuoteLines = async ({
       revenueGroupUuid: product.revenueGroupUuid,
       lineNumber: index + 1,
       lineType: "material",
+      sourceType: item.sourceType ?? "stock",
       description: product.name,
       reference,
       deliveryDate,
@@ -482,7 +480,6 @@ export const createQuote = async (
       quoteUuid: uuid,
       contractUuid: fields.contractUuid ?? null,
       isConsignment: fields.isConsignment ?? false,
-      isPickup: fields.isPickup ?? false,
       reference,
       deliveryDate,
       items,
@@ -670,7 +667,6 @@ export const updateQuote = async (
       quoteUuid: uuid,
       contractUuid: fields.contractUuid ?? null,
       isConsignment: fields.isConsignment ?? false,
-      isPickup: fields.isPickup ?? false,
       reference,
       deliveryDate,
       items,

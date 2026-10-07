@@ -175,6 +175,9 @@ export type ProductPricingOption = ProductOption &
     minProfitMarginExWorks:
       | SelectProductGroups["minProfitMarginExWorks"]
       | null;
+    minProfitMarginCrossDocking:
+      | SelectProductGroups["minProfitMarginCrossDocking"]
+      | null;
     qualityStandard: SelectProductGroups["standardsQuality"] | null;
     // Cost figures come off the supplier invoices rather than the product, so
     // they are aggregates rather than columns.
@@ -347,6 +350,7 @@ export const getProductsForPricing = async (): Promise<
         productGroupName: ProductGroups.name,
         minProfitMarginStock: ProductGroups.minProfitMarginStock,
         minProfitMarginExWorks: ProductGroups.minProfitMarginExWorks,
+        minProfitMarginCrossDocking: ProductGroups.minProfitMarginCrossDocking,
         qualityStandard: ProductGroups.standardsQuality,
       })
       .from(Products)

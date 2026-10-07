@@ -35,6 +35,7 @@ import {
   invoicePaymentTerms,
   orderStatuses,
   orderTypes,
+  OrderSourceType,
 } from "@/lib/enums";
 import {
   computeQuoteSummary,
@@ -113,6 +114,8 @@ export type OrderFields = Omit<
 export type OrderItemInput = {
   stockUuid: string;
   quantity: string;
+  /** The line's `Type`; `stock` when not given. */
+  sourceType?: OrderSourceType;
 };
 
 export type OrderSurchargeInput = Omit<
@@ -673,15 +676,9 @@ export const createOrder = async (
           widthMm: lineWidthMm,
           thicknessMm: lineThicknessMm,
           priceUnit: product?.priceUnit,
-          // ⚠️ Pick-up read as ex works is an assumption carried over from
-          // before the line types were counted. The reference's `Pick-up` is
-          // a separate boolean (307 pick-up orders against one `Ex works`), so
-          // this likely over-applies the ex-works floor; it stays until the
-          // sales line carries its own type.
-          minProfitMargin: minimumMarginFor(
-            product,
-            fields.isPickup ? "ex_works" : "stock",
-          ),
+          // The line's own type picks the floor. `Pick-up` does not: the
+          // reference has 307 pick-up orders and one `Ex works` one.
+          minProfitMargin: minimumMarginFor(product, item.sourceType ?? "stock"),
         });
 
         const orderItemUuid = generateUuid();
@@ -692,6 +689,7 @@ export const createOrder = async (
           stockUuid: item.stockUuid,
           productUuid: stockRow.productUuid,
           quantity: item.quantity,
+          sourceType: item.sourceType ?? "stock",
           // Planned = the ordered amount; nothing is called off yet, so the
           // full quantity is still "to be called" until call-offs reduce it.
           qtyPlanned: item.quantity,

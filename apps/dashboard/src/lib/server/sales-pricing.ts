@@ -11,6 +11,7 @@ import { ProductGroups } from "@/db/schema/product-groups";
 import { Products, SelectProducts } from "@/db/schema/products";
 import { OrderSourceType } from "@/lib/enums";
 import {
+  marginFloorFor,
   applyPriceDiscounts,
   resolveTierDiscount,
   todayDateString,
@@ -311,18 +312,10 @@ export const resolveLineNetPrice = (
  * the type and nothing else. A mixed `Stk+CD` line is held to the cross-dock
  * floor, the lower of its two halves' — a floor is a floor.
  *
- * ⚠️ Callers still derive the mode from `isPickup`, which is an assumption
- * this function no longer makes for them. See the call sites.
+ * The line's own type decides it — set on the order or quote line, `Stk` by
+ * default. `Pick-up` is a different field and does not choose the floor.
  */
 export const minimumMarginFor = (
   product: PricedProduct | undefined,
   sourceType: OrderSourceType,
-): number => {
-  const floor =
-    sourceType === "ex_works"
-      ? product?.minProfitMarginExWorks
-      : sourceType === "stock"
-        ? product?.minProfitMarginStock
-        : product?.minProfitMarginCrossDocking;
-  return Number(floor ?? 0);
-};
+): number => marginFloorFor(product, sourceType);

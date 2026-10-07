@@ -70,6 +70,7 @@ export const quoteDetailToFormValues = (quote: QuoteDetail): QuoteFormValues => 
     widthMm: item.widthMm != null ? String(item.widthMm) : "",
     thicknessMm: item.thicknessMm ?? "",
     options: item.options ?? "",
+    sourceType: item.sourceType,
   })),
 
   surcharges: quote.surcharges.map((surcharge) => ({

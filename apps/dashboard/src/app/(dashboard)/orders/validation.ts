@@ -7,6 +7,7 @@ import {
   orderMethods,
   orderTypes,
   orderWeightTypes,
+  orderSourceTypes,
 } from "@/lib/enums";
 import { currentYear, todayDateString } from "@/lib/helpers";
 import { z } from "zod";
@@ -14,6 +15,9 @@ import { z } from "zod";
 export const orderItemSchema = z.object({
   stockUuid: z.string().min(1, "Stock item is required"),
   quantity: z.string().min(1, "Quantity is required"),
+  // The reference's line `Type` — `Stk` unless the line is cross-docked or
+  // sold ex works. It picks the margin floor the line is held to.
+  sourceType: z.enum(orderSourceTypes).optional(),
 });
 
 export const orderSurchargeSchema = z.object({
