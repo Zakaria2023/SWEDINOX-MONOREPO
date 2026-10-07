@@ -1,6 +1,11 @@
 "use server";
 
-import { Paged, TableQuery } from "@/lib/table-query";
+import {
+  Paged,
+  parseTableQuery,
+  SearchParams,
+  TableQuery,
+} from "@/lib/table-query";
 
 import { db } from "@/db";
 import {
@@ -9,12 +14,57 @@ import {
 } from "@/db/schema/return-order-items";
 import { ReturnOrders, SelectReturnOrders } from "@/db/schema/return-orders";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
-import { OrderItems } from "@/db/schema/order-items";
-import { Orders } from "@/db/schema/orders";
+import { OrderItems, SelectOrderItems } from "@/db/schema/order-items";
+import { Orders, SelectOrders } from "@/db/schema/orders";
 import { Products, SelectProducts } from "@/db/schema/products";
+import { Complaints, SelectComplaints } from "@/db/schema/complaints";
+import { CompanyAddresses } from "@/db/schema/company-addresses";
+import {
+  RevenueGroups,
+  SelectRevenueGroups,
+} from "@/db/schema/revenue-groups";
+import { WarehouseWorkOrderLines } from "@/db/schema/warehouse-work-orders";
+import { returnOrderReasons } from "@/lib/enums";
 import { describeError, generateUuid, todayDateString } from "@/lib/helpers";
-import { desc, eq, getTableColumns } from "drizzle-orm";
+import { exportRows } from "@/lib/server/excel";
+import { getClerkUserNames } from "@/lib/server/clerk";
+import {
+  dateRangeFilter,
+  enumFilter,
+  runPaged,
+  tableOrderBy,
+  tableWhere,
+} from "@/lib/server/table-query";
+import { returnLineColumns } from "@/app/(dashboard)/return-lines/columns";
+import { count, desc, eq, getTableColumns, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/mysql-core";
 import { revalidatePath } from "next/cache";
+
+const OriginalOrder = alias(Orders, "original_order");
+const OriginalLine = alias(OrderItems, "original_line");
+
+/** The customer's own city and country — its visiting address. */
+const visiting = db
+  .select({
+    companyUuid: CompanyAddresses.companyUuid,
+    city: sql<string | null>`MIN(${CompanyAddresses.city})`.as("return_city"),
+    country: sql<string | null>`MIN(${CompanyAddresses.country})`.as(
+      "return_country",
+    ),
+  })
+  .from(CompanyAddresses)
+  .where(sql`JSON_CONTAINS(${CompanyAddresses.category}, '"visit"')`)
+  .groupBy(CompanyAddresses.companyUuid)
+  .as("return_visiting");
+
+/** Where the return is collected from or delivered to. */
+const destination = db
+  .select({
+    addressUuid: CompanyAddresses.uuid,
+    country: CompanyAddresses.country,
+  })
+  .from(CompanyAddresses)
+  .as("return_destination");
 
 export type ReturnLineItem = SelectReturnOrderItems & {
   returnOrderId: SelectReturnOrders["id"] | null;
@@ -24,6 +74,39 @@ export type ReturnLineItem = SelectReturnOrderItems & {
   // Computed margin figures (no single column backs them).
   profit: number;
   profitMargin: number;
+};
+
+/**
+ * One row of `Return lines` — all 64 columns of the reference's export (88
+ * lines, docs/reference-system/returns-and-complaints.md).
+ */
+export type ReturnLineRow = SelectReturnOrderItems & {
+  returnOrderId: SelectReturnOrders["id"] | null;
+  returnOrderRef: SelectReturnOrders["customerRef"] | null;
+  ourReference: SelectReturnOrders["ourReference"] | null;
+  customerCode: SelectCompanies["id"] | null;
+  customerName: SelectCompanies["companyName"] | null;
+  representative: SelectCompanies["representative"] | null;
+  region: SelectCompanies["region"] | null;
+  city: string | null;
+  country: string | null;
+  destinationCountry: string | null;
+  productCode: SelectProducts["productCode"] | null;
+  productName: SelectProducts["name"] | null;
+  productPriceUnit: SelectProducts["priceUnit"] | null;
+  revenueGroupNumber: SelectRevenueGroups["number"] | null;
+  revenueGroupName: SelectRevenueGroups["name"] | null;
+  complaintNumber: SelectComplaints["id"] | null;
+  complaintDescription: SelectComplaints["description"] | null;
+  complaintDate: SelectComplaints["reportDate"] | null;
+  originalOrderId: SelectOrders["id"] | null;
+  originalOrderType: SelectOrders["orderType"] | null;
+  originalConsignment: SelectOrders["isConsignment"] | null;
+  originalLineNumber: SelectOrderItems["lineNumber"] | null;
+  seller: SelectOrderItems["seller"] | null;
+  // Computed.
+  deliveries: number;
+  originalBillOfLading: string | null;
 };
 
 export type GenerateReturnLinesResult = {
@@ -37,15 +120,68 @@ export type ReturnLineDetail = ReturnLineItem & {
   returnOrderStatus: SelectReturnOrders["status"] | null;
 };
 
-const allReturnLines = async (): Promise<ReturnLineItem[]> => {
-  try {
-    const rows = await db
+const RETURN_LINE_SEARCH = [
+  Products.productCode,
+  Products.name,
+  Companies.companyName,
+  ReturnOrderItems.reference,
+] as const;
+
+const RETURN_LINE_SORTABLE = {
+  order: ReturnOrders.id,
+  createdAt: ReturnOrderItems.createdAt,
+  productCode: Products.productCode,
+  customer: Companies.companyName,
+  amount: ReturnOrderItems.amount,
+  deliveryDate: ReturnOrderItems.deliveryDate,
+};
+
+const RETURN_LINE_FILTERS = {
+  returnReason: enumFilter(ReturnOrderItems.returnReason, returnOrderReasons),
+  createdAt: dateRangeFilter(ReturnOrderItems.createdAt),
+};
+
+const returnLineRows =
+  (query: TableQuery) =>
+  (limit: number, offset: number): Promise<ReturnLineRow[]> =>
+    db
       .select({
         ...getTableColumns(ReturnOrderItems),
         returnOrderId: ReturnOrders.id,
+        returnOrderRef: ReturnOrders.customerRef,
+        ourReference: ReturnOrders.ourReference,
+        customerCode: Companies.id,
         customerName: Companies.companyName,
+        representative: Companies.representative,
+        region: Companies.region,
+        city: visiting.city,
+        country: visiting.country,
+        destinationCountry: destination.country,
         productCode: Products.productCode,
         productName: Products.name,
+        productPriceUnit: Products.priceUnit,
+        revenueGroupNumber: RevenueGroups.number,
+        revenueGroupName: RevenueGroups.name,
+        complaintNumber: Complaints.id,
+        complaintDescription: Complaints.description,
+        complaintDate: Complaints.reportDate,
+        originalOrderId: OriginalOrder.id,
+        originalOrderType: OriginalOrder.orderType,
+        originalConsignment: OriginalOrder.isConsignment,
+        originalLineNumber: OriginalLine.lineNumber,
+        seller: OriginalLine.seller,
+        // How often the goods came back in: the return receipts booked
+        // against this line.
+        deliveries: sql<number>`(
+          SELECT COUNT(*) FROM ${WarehouseWorkOrderLines}
+          WHERE ${WarehouseWorkOrderLines.returnOrderItemUuid} = ${ReturnOrderItems.uuid}
+        )`.mapWith(Number),
+        // The trip the original line left on — its delivery's bill of lading.
+        originalBillOfLading: sql<string | null>`(
+          SELECT MAX(${sql.raw("`tl`.`bill_of_lading`")})
+          FROM ${sql.raw("`TransportWorkOrderLines` AS `tl`")}
+          WHERE ${sql.raw("`tl`.`order_item_uuid`")} = ${ReturnOrderItems.originalOrderItemUuid}
+        )`,
       })
       .from(ReturnOrderItems)
       .leftJoin(
@@ -53,23 +189,39 @@ const allReturnLines = async (): Promise<ReturnLineItem[]> => {
         eq(ReturnOrderItems.returnOrderUuid, ReturnOrders.uuid),
       )
       .leftJoin(Companies, eq(ReturnOrders.companyUuid, Companies.uuid))
+      .leftJoin(visiting, eq(visiting.companyUuid, Companies.uuid))
+      .leftJoin(
+        destination,
+        eq(destination.addressUuid, ReturnOrders.deliveryAddressUuid),
+      )
       .leftJoin(Products, eq(ReturnOrderItems.productUuid, Products.uuid))
-      .orderBy(desc(ReturnOrderItems.createdAt));
-
-    return rows.map((row) => {
-      const amount = Number(row.amount);
-      const cost = Number(row.costPrice) * Number(row.quantity);
-      const profit = amount - cost;
-      return {
-        ...row,
-        profit,
-        profitMargin: amount === 0 ? 0 : (profit / amount) * 100,
-      };
-    });
-  } catch (error) {
-    throw new Error(describeError(error, "Failed to fetch return lines"));
-  }
-};
+      .leftJoin(RevenueGroups, eq(Products.revenueGroupUuid, RevenueGroups.uuid))
+      .leftJoin(Complaints, eq(ReturnOrderItems.complaintUuid, Complaints.uuid))
+      .leftJoin(
+        OriginalOrder,
+        eq(ReturnOrderItems.originalOrderUuid, OriginalOrder.uuid),
+      )
+      .leftJoin(
+        OriginalLine,
+        eq(ReturnOrderItems.originalOrderItemUuid, OriginalLine.uuid),
+      )
+      .where(
+        tableWhere({
+          query,
+          search: RETURN_LINE_SEARCH,
+          filters: RETURN_LINE_FILTERS,
+        }),
+      )
+      .orderBy(
+        ...tableOrderBy(
+          RETURN_LINE_SORTABLE,
+          query,
+          [desc(ReturnOrderItems.createdAt)],
+          ReturnOrderItems.id,
+        ),
+      )
+      .limit(limit)
+      .offset(offset);
 
 /**
  * One return line with the return order, customer and product behind it. Margin
@@ -221,32 +373,45 @@ export const generateReturnLinesFromOrders =
     }
   };
 
-/**
- * One page of the list.
- *
- * The rows are read in full and then sliced, because this screen is built from
- * more than one query and the grain is settled in code rather than in SQL.
- * What it stops is the screen rendering every row it has ever had.
- */
+/** One page of `Return lines`, searched, filtered and sorted in SQL. */
 export const getReturnLines = async (
   query: TableQuery,
-): Promise<Paged<ReturnLineItem>> => {
-  const rows = await allReturnLines();
-  const term = query.q?.toLowerCase() ?? null;
-  const matched = term
-    ? rows.filter((row) =>
-        Object.values(row as Record<string, unknown>).some(
-          (value) =>
-            typeof value === "string" && value.toLowerCase().includes(term),
-        ),
-      )
-    : rows;
-  const start = (query.page - 1) * query.pageSize;
-
-  return {
-    rows: matched.slice(start, start + query.pageSize),
-    total: matched.length,
-    page: query.page,
-    pageSize: query.pageSize,
-  };
+): Promise<Paged<ReturnLineRow>> => {
+  try {
+    const where = tableWhere({
+      query,
+      search: RETURN_LINE_SEARCH,
+      filters: RETURN_LINE_FILTERS,
+    });
+    return await runPaged(query, {
+      rows: returnLineRows(query),
+      count: async () => {
+        const [row] = await db
+          .select({ value: count() })
+          .from(ReturnOrderItems)
+          .leftJoin(
+            ReturnOrders,
+            eq(ReturnOrderItems.returnOrderUuid, ReturnOrders.uuid),
+          )
+          .leftJoin(Companies, eq(ReturnOrders.companyUuid, Companies.uuid))
+          .leftJoin(Products, eq(ReturnOrderItems.productUuid, Products.uuid))
+          .where(where);
+        return Number(row?.value ?? 0);
+      },
+    });
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch return lines"));
+  }
 };
+
+/** Every return line the current view matches, as a workbook. */
+export const exportReturnLines = async (
+  params: SearchParams,
+  columnKeys: string[],
+): Promise<string> =>
+  exportRows({
+    name: "Return lines",
+    columns: returnLineColumns(await getClerkUserNames()),
+    columnKeys,
+    rows: returnLineRows(parseTableQuery(params)),
+  });
