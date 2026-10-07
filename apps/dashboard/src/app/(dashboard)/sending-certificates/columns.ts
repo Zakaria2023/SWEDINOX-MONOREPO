@@ -11,12 +11,12 @@ import { DELIVERY_STATUS_LABELS, STOCK_UNIT_LABELS } from "@/lib/labels";
 /**
  * Sending certificates as a sheet.
  *
- * The screen shows six columns this file leaves out — `Internal reference`,
- * `Requested`, `Sending to`, `Document sent`, `Project` and `Use customer
- * stock`. Nothing backs them: no certificate has ever been sent in the
- * reference, so there is no request, no recipient and no sent date to write.
- * They render as placeholders on the grid and would export as empty columns,
- * which is worse than not exporting them.
+ * All 35 of the reference's columns, in its order. Three are reasoned rather
+ * than captured: `Internal reference` is the order's own reference, `Sending
+ * to` the customer's contacts filed under `Certificates`, and `Project` the
+ * order's project. `Requested certificate`, `Document sent on` and `Use
+ * customer stock` are empty or `False` on every reference row — no
+ * certificate there was ever requested or sent — and print blank.
  *
  * `Bill of lading` is exported because the column is real even though it is
  * always empty for now: the reference prints the *sales* bill of lading here
@@ -52,7 +52,13 @@ export type DeliveryCertificateColumnKey =
   | "stockCategory"
   | "qualityCode"
   | "documentCertificate"
-  | "producer";
+  | "producer"
+  | "internalReference"
+  | "requestedCertificate"
+  | "sendingTo"
+  | "documentSentOn"
+  | "project"
+  | "useCustomerStock";
 
 export const DELIVERY_CERTIFICATE_COLUMNS: Array<
   ExportColumn<DeliveryCertificateRow, DeliveryCertificateColumnKey>
@@ -142,6 +148,12 @@ export const DELIVERY_CERTIFICATE_COLUMNS: Array<
     value: (row) => numberCell(row.kgActual),
   },
   {
+    key: "internalReference",
+    label: "Internal reference",
+    defaultVisible: false,
+    value: (row) => textCell(row.internalReference),
+  },
+  {
     key: "charge",
     label: "Charge",
     defaultVisible: true,
@@ -184,6 +196,28 @@ export const DELIVERY_CERTIFICATE_COLUMNS: Array<
     value: (row) => textCell(row.fileName),
   },
   {
+    key: "requestedCertificate",
+    label: "Requested certificate",
+    defaultVisible: false,
+    // Empty on all 3 271 reference rows: no certificate there was ever requested,
+    // and nothing here records a request.
+    value: () => null,
+  },
+  {
+    key: "sendingTo",
+    label: "Sending to",
+    defaultVisible: false,
+    value: (row) => textCell(row.sendingTo),
+  },
+  {
+    key: "documentSentOn",
+    label: "Document sent on",
+    defaultVisible: false,
+    // Empty on all 3 271: no certificate there has ever been sent, and nothing
+    // here sends one yet.
+    value: () => null,
+  },
+  {
     key: "mandatoryIgnoreDocument",
     label: "Mand. ign. doc.",
     defaultVisible: true,
@@ -221,6 +255,19 @@ export const DELIVERY_CERTIFICATE_COLUMNS: Array<
     label: "Quality code",
     defaultVisible: true,
     value: (row) => textCell(row.qualityCode),
+  },
+  {
+    key: "project",
+    label: "Project",
+    defaultVisible: false,
+    value: (row) => textCell(row.project),
+  },
+  {
+    key: "useCustomerStock",
+    label: "Use customer stock",
+    defaultVisible: false,
+    // `False` on all 3 271 reference rows; not recorded on a delivery here.
+    value: () => null,
   },
   {
     key: "documentCertificate",

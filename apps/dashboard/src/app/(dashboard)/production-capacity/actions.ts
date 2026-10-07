@@ -6,13 +6,20 @@ import {
   ProductionCapacity,
   SelectProductionCapacity,
 } from "@/db/schema/production-capacity";
-import { Machines, SelectMachines } from "@/db/schema/machines";
-import { asc, desc, eq, getTableColumns } from "drizzle-orm";
+import {
+  MachineProducts,
+  Machines,
+  SelectMachineProducts,
+  SelectMachines,
+} from "@/db/schema/machines";
+import { asc, desc, eq, getTableColumns, sql } from "drizzle-orm";
 
 export type ProductionCapacityListItem = SelectProductionCapacity & {
   machineCode: SelectMachines["code"] | null;
   machineName: SelectMachines["name"] | null;
   machineType: SelectMachines["production"] | null;
+  /** `Capacity u.` — the unit the machine counts its work in (M2, M1). */
+  capacityUnit: SelectMachineProducts["prodUnit"] | null;
 };
 
 export type ProductionCapacityDetail = ProductionCapacityListItem & {
@@ -32,6 +39,14 @@ export const getProductionCapacity = async (): Promise<
         machineCode: Machines.code,
         machineName: Machines.name,
         machineType: Machines.production,
+      // The unit on the machine's first-preference product line — the
+      // machine itself carries no production unit.
+      capacityUnit: sql<string | null>`(
+        SELECT ${MachineProducts.prodUnit} FROM ${MachineProducts}
+        WHERE ${MachineProducts.machineUuid} = ${Machines.uuid}
+          AND ${MachineProducts.prodUnit} IS NOT NULL
+        ORDER BY ${MachineProducts.preference} LIMIT 1
+      )`,
       })
       .from(ProductionCapacity)
       .leftJoin(Machines, eq(ProductionCapacity.machineUuid, Machines.uuid))
@@ -77,6 +92,14 @@ export const getProductionCapacityDetail = async (
       machineCode: Machines.code,
       machineName: Machines.name,
       machineType: Machines.production,
+      // The unit on the machine's first-preference product line — the
+      // machine itself carries no production unit.
+      capacityUnit: sql<string | null>`(
+        SELECT ${MachineProducts.prodUnit} FROM ${MachineProducts}
+        WHERE ${MachineProducts.machineUuid} = ${Machines.uuid}
+          AND ${MachineProducts.prodUnit} IS NOT NULL
+        ORDER BY ${MachineProducts.preference} LIMIT 1
+      )`,
     })
     .from(ProductionCapacity)
     .leftJoin(Machines, eq(ProductionCapacity.machineUuid, Machines.uuid))

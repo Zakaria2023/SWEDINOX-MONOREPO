@@ -25,6 +25,7 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
+import { ExportValueCell } from "@/components/ui/export-value-cell";
 import {
   buildColumnVisibility,
   formatDateValue,
@@ -249,6 +250,12 @@ export const InvoicesTable = ({ page, filters }: Props) => {
             </div>
           </TableCell>
         );
+      default: {
+        const column = INVOICE_COLUMNS.find((col) => col.key === key);
+        return (
+          <ExportValueCell key={key} value={column ? column.value(inv) : null} />
+        );
+      }
     }
   };
 

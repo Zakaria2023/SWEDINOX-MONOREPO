@@ -57,7 +57,8 @@ export type InvoiceColumnKey =
   | "invoiceAmountInclVat"
   | "invoiceTotal"
   | "vatScenario"
-  | "status";
+  | "status"
+  | "affiliateName";
 
 /**
  * The badges the status column carries, as words.
@@ -221,6 +222,12 @@ export const INVOICE_COLUMNS: Array<
     label: "Expiration date",
     defaultVisible: true,
     value: (row) => dateCell(row.expirationDate),
+  },
+  {
+    key: "affiliateName",
+    label: "Affiliate company details",
+    defaultVisible: false,
+    value: (row) => textCell(row.affiliateName),
   },
   {
     key: "orderId",

@@ -6,6 +6,11 @@ import { Orders, SelectOrders } from "@/db/schema/orders";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { Products, SelectProducts } from "@/db/schema/products";
 import { Batches, SelectBatches } from "@/db/schema/batches";
+import { Contacts } from "@/db/schema/contacts";
+import {
+  CustomerProjects,
+  SelectCustomerProjects,
+} from "@/db/schema/customer-projects";
 import { StockBatches } from "@/db/schema/stock-batches";
 import {
   BatchCertificates,
@@ -84,6 +89,11 @@ export type DeliveryCertificateRow = {
   qualityCode: SelectBatches["qualityCode"] | null;
   documentCertificate: SelectBatchCertificates["documentCertificate"] | null;
   producer: SelectBatches["producer"] | null;
+  /** The order's own `Our reference`, as the purchase side prints its own. */
+  internalReference: SelectOrders["ourReference"];
+  /** The e-mail of every customer contact filed under `Certificates`. */
+  sendingTo: string | null;
+  project: SelectCustomerProjects["projectName"] | null;
 };
 
 const CERTIFICATE_SEARCH = [
@@ -190,6 +200,18 @@ export const getDeliveryCertificateRows = async (
         qualityCode: Batches.qualityCode,
         documentCertificate: BatchCertificates.documentCertificate,
         producer: Batches.producer,
+        internalReference: Orders.ourReference,
+        sendingTo: sql<string | null>`(
+          SELECT GROUP_CONCAT(DISTINCT ${Contacts.email} ORDER BY ${Contacts.email} SEPARATOR '; ')
+          FROM ${Contacts}
+          WHERE ${Contacts.companyUuid} = ${Orders.companyUuid}
+            AND ${Contacts.email} IS NOT NULL
+            AND JSON_CONTAINS(${Contacts.categories}, '"certificates"')
+        )`,
+        project: sql<string | null>`(
+          SELECT ${CustomerProjects.projectName} FROM ${CustomerProjects}
+          WHERE ${CustomerProjects.uuid} = ${Orders.projectUuid}
+        )`,
       })
       .from(OrderItems)
       .innerJoin(Orders, eq(OrderItems.orderUuid, Orders.uuid))

@@ -21,6 +21,10 @@ import {
   InvoiceItems,
   SelectInvoiceItems,
 } from "@/db/schema/invoice-items";
+import {
+  BranchSettings,
+  SelectBranchSettings,
+} from "@/db/schema/branch-settings";
 import { JournalEntries } from "@/db/schema/journal-entries";
 import { OrderItemOptions } from "@/db/schema/order-item-options";
 import { OrderItems, SelectOrderItems } from "@/db/schema/order-items";
@@ -118,6 +122,8 @@ export type InvoiceWithCompany = SelectInvoices & {
   country: SelectCompanyAddresses["country"] | null;
   /** The order this invoice bills, when its lines all name one. */
   orderId: number | null;
+  /** The branch's own legal name, from the settings. */
+  affiliateName: SelectBranchSettings["affiliateName"];
 };
 
 export type ReservedOrderItemOption = {
@@ -253,6 +259,9 @@ const invoiceRows =
           JOIN ${OrderItems} oi ON oi.uuid = ii.order_item_uuid
           JOIN ${Orders} o ON o.uuid = oi.order_uuid
           WHERE ii.invoice_uuid = ${Invoices.uuid}
+        )`,
+        affiliateName: sql<string | null>`(
+          SELECT ${BranchSettings.affiliateName} FROM ${BranchSettings} LIMIT 1
         )`,
       })
       .from(Invoices)

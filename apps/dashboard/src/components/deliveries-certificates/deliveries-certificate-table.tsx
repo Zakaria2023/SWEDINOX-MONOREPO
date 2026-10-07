@@ -38,9 +38,9 @@ type Props = {
   exportFileName?: string;
 };
 
-// The placeholder for the six columns the reference shows and nothing backs:
-// no certificate has ever been requested or sent, so there is no date, no
-// recipient and no project to print.
+// The placeholder for the three columns the reference shows and nothing backs:
+// no certificate has ever been requested or sent there, so there is no request,
+// no sent date and no customer-stock flag to print.
 const Dash = () => <span className="text-muted-foreground">—</span>;
 
 export const DeliveriesCertificateTable = ({
@@ -100,9 +100,9 @@ export const DeliveriesCertificateTable = ({
             <TableHead>Receipt date</TableHead>
             <TableHead>Document code</TableHead>
             <TableHead>Filename</TableHead>
-            <TableHead>Requested</TableHead>
+            <TableHead>Requested certificate</TableHead>
             <TableHead>Sending to</TableHead>
-            <TableHead>Document sent</TableHead>
+            <TableHead>Document sent on</TableHead>
             <TableHead>Mand. ign. doc.</TableHead>
             <TableHead>Delivery status</TableHead>
             <TableHead>Options</TableHead>
@@ -160,9 +160,7 @@ export const DeliveriesCertificateTable = ({
                 <TableCell className="text-right">
                   {formatNumber(Number(row.kgActual ?? 0))}
                 </TableCell>
-                <TableCell>
-                  <Dash />
-                </TableCell>
+                <TableCell>{row.internalReference ?? "—"}</TableCell>
                 <TableCell>{row.charge ?? "—"}</TableCell>
                 <TableCell>{row.internalCharge ?? "—"}</TableCell>
                 <TableCell>{row.sheetNumber ?? "—"}</TableCell>
@@ -175,9 +173,7 @@ export const DeliveriesCertificateTable = ({
                 <TableCell>
                   <Dash />
                 </TableCell>
-                <TableCell>
-                  <Dash />
-                </TableCell>
+                <TableCell>{row.sendingTo ?? "—"}</TableCell>
                 <TableCell>
                   <Dash />
                 </TableCell>
@@ -204,9 +200,7 @@ export const DeliveriesCertificateTable = ({
                 </TableCell>
                 <TableCell>{row.stockCategory ?? "—"}</TableCell>
                 <TableCell>{row.qualityCode ?? "—"}</TableCell>
-                <TableCell>
-                  <Dash />
-                </TableCell>
+                <TableCell>{row.project ?? "—"}</TableCell>
                 <TableCell>
                   <Dash />
                 </TableCell>

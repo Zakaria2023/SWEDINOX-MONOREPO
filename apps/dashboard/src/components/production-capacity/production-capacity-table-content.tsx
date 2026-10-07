@@ -45,7 +45,7 @@ export const ProductionCapacityTable = ({ capacity }: Props) => (
             <TableHead>Machine</TableHead>
             <TableHead>Type of machine</TableHead>
             <TableHead className="text-right">Maximum Capacity</TableHead>
-            <TableHead className="text-right">Capacity</TableHead>
+            <TableHead>Capacity u.</TableHead>
             <TableHead className="text-right">Remaining (not square)</TableHead>
             <TableHead className="text-right">Occupied (not square)</TableHead>
             <TableHead className="text-right">Ready</TableHead>
@@ -54,13 +54,14 @@ export const ProductionCapacityTable = ({ capacity }: Props) => (
             <TableHead className="text-right">Occupied capacity</TableHead>
             <TableHead>Date</TableHead>
             <TableHead className="text-right">Warning capacity</TableHead>
+            <TableHead className="text-right">Capacity</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {capacity.length === 0 ? (
             <TableRow>
               <TableCell
-                colSpan={13}
+                colSpan={14}
                 className="h-24 text-center text-muted-foreground"
               >
                 No production capacity found.
@@ -98,9 +99,7 @@ export const ProductionCapacityTable = ({ capacity }: Props) => (
                 <TableCell className="text-right">
                   {row.maximumCapacity ?? "—"}
                 </TableCell>
-                <TableCell className="text-right">
-                  {row.capacity ?? "—"}
-                </TableCell>
+                <TableCell>{row.capacityUnit ?? "—"}</TableCell>
                 <TableCell className="text-right">
                   {row.remainingNotSquare ?? "—"}
                 </TableCell>
@@ -122,6 +121,9 @@ export const ProductionCapacityTable = ({ capacity }: Props) => (
                 </TableCell>
                 <TableCell className="text-right">
                   {row.warningCapacity ?? "—"}
+                </TableCell>
+                <TableCell className="text-right">
+                  {row.capacity ?? "—"}
                 </TableCell>
               </TableRow>
             ))
