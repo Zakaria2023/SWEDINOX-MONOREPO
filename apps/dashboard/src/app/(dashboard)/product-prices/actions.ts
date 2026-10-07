@@ -9,6 +9,14 @@ import {
   SelectProductGroupSuppliers,
 } from "@/db/schema/product-group-suppliers";
 import { Products, SelectProducts } from "@/db/schema/products";
+import {
+  ProductFspHistory,
+  SelectProductFspHistory,
+} from "@/db/schema/product-details";
+import {
+  RevenueGroups,
+  SelectRevenueGroups,
+} from "@/db/schema/revenue-groups";
 import { salesUnitOptions } from "@/lib/enums";
 import { describeError, moneyString, todayDateString } from "@/lib/helpers";
 import { exportRows } from "@/lib/server/excel";
@@ -78,9 +86,17 @@ export type ProductPriceRow = SelectProducts & {
   supplierProductCode:
     | SelectProductGroupSuppliers["externalProductCode"]
     | null;
-  // Both come off the supplier invoices rather than the product.
+  revenueGroupNumber: SelectRevenueGroups["number"] | null;
+  revenueGroupName: SelectRevenueGroups["name"] | null;
+  // Both come off the supplier invoices rather than the product: `LPP` is
+  // the last price paid, `APP` the average.
   replacementPrice: number;
   averagePurchasePrice: number;
+  // Today's row of the dated FSP history, which is where the reference keeps
+  // both — `Fixed Settlement` and `Replacement price` on the product's
+  // `Valuation` panel.
+  currentFsp: SelectProductFspHistory["fsp"] | null;
+  currentReplacementPrice: SelectProductFspHistory["replacementPrice"] | null;
 };
 
 export type RecalculatePricesResult = {
@@ -118,6 +134,16 @@ const supplierProductCodeRow = db
   .limit(1);
 
 const supplierProductCode = sql<string | null>`(${supplierProductCodeRow})`;
+
+/** One column of the FSP history row whose period covers today. */
+const currentFspColumn = (column: "fsp" | "replacementPrice") =>
+  sql<string | null>`(
+    SELECT ${ProductFspHistory[column]} FROM ${ProductFspHistory}
+    WHERE ${ProductFspHistory.productUuid} = ${Products.uuid}
+      AND ${ProductFspHistory.startDate} <= CURDATE()
+      AND (${ProductFspHistory.endDate} IS NULL OR ${ProductFspHistory.endDate} >= CURDATE())
+    ORDER BY ${ProductFspHistory.startDate} DESC LIMIT 1
+  )`;
 
 // The main group is the parent's name where there is a parent and the group's
 // own name where there is not — the same rule the column renders, written once
@@ -166,6 +192,10 @@ const productPriceRows =
         parentName: ParentGroups.name,
         preferredSupplier: preferredSupplierName,
         supplierProductCode,
+        revenueGroupNumber: RevenueGroups.number,
+        revenueGroupName: RevenueGroups.name,
+        currentFsp: currentFspColumn("fsp"),
+        currentReplacementPrice: currentFspColumn("replacementPrice"),
       })
       .from(Products)
       .leftJoin(
@@ -173,6 +203,7 @@ const productPriceRows =
         eq(Products.productGroupUuid, ProductGroups.uuid),
       )
       .leftJoin(ParentGroups, eq(ProductGroups.parentUuid, ParentGroups.uuid))
+      .leftJoin(RevenueGroups, eq(Products.revenueGroupUuid, RevenueGroups.uuid))
       .where(
         tableWhere({
           query,
@@ -205,6 +236,10 @@ const productPriceRows =
         supplierProductCode: row.supplierProductCode,
         replacementPrice: cost.lastPurchasePrice,
         averagePurchasePrice: cost.averagePurchasePrice,
+        revenueGroupNumber: row.revenueGroupNumber,
+        revenueGroupName: row.revenueGroupName,
+        currentFsp: row.currentFsp,
+        currentReplacementPrice: row.currentReplacementPrice,
       };
     });
   };
