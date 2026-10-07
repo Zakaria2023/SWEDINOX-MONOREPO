@@ -78,6 +78,8 @@ import {
 } from "@/lib/server/purchase-lines";
 import { PURCHASE_ORDER_COLUMNS } from "@/app/(dashboard)/purchase-orders/columns";
 import {
+  PreNotifyFormValues,
+  preNotifySchema,
   ReceptionBatchSettingsFormValues,
   receptionBatchSettingsSchema,
   ReceptionChargeFormValues,
@@ -1047,10 +1049,16 @@ export const makePurchaseOrderFinal = async (
  * arrived, and pre-advising the past would be nonsense.
  */
 export const preNotifyPurchaseOrder = async (
-  uuid: string,
-  advisedDate: string,
+  _prevState: PurchaseOrderActionResult,
+  data: PreNotifyFormValues,
 ): Promise<PurchaseOrderActionResult> => {
   try {
+    const parsed = preNotifySchema.safeParse(data);
+    if (!parsed.success) {
+      return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
+    }
+    const { purchaseOrderUuid: uuid, advisedDate } = parsed.data;
+
     const [order] = await db
       .select({ status: PurchaseOrders.status })
       .from(PurchaseOrders)
@@ -1067,9 +1075,6 @@ export const preNotifyPurchaseOrder = async (
     }
     if (order.status === "cancelled") {
       return { error: "A cancelled purchase order cannot be pre-notified." };
-    }
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(advisedDate)) {
-      return { error: "Enter the advised delivery date." };
     }
 
     await db.transaction(async (tx) => {

@@ -239,3 +239,16 @@ export const receptionBatchSettingsSchema = z.object({
 export type ReceptionBatchSettingsFormValues = z.infer<
   typeof receptionBatchSettingsSchema
 >;
+
+/**
+ * `Pre-notify` — the date the supplier has advised the goods will arrive. It is
+ * stamped on every reception of the order that has not arrived yet.
+ */
+export const preNotifySchema = z.object({
+  purchaseOrderUuid: z.string().min(1, "Purchase order is required"),
+  advisedDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Enter the advised delivery date"),
+});
+
+export type PreNotifyFormValues = z.infer<typeof preNotifySchema>;

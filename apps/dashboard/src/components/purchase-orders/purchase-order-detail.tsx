@@ -2,12 +2,15 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { Undo2, Warehouse } from "lucide-react";
+import { BadgeCheck, Building2, CalendarClock, CheckCircle2, Undo2, Warehouse } from "lucide-react";
 import {
   cancelPurchaseOrder,
+  confirmPurchaseOrder,
   createUnloadingWorkOrder,
+  makePurchaseOrderFinal,
   PurchaseOrderDetail,
 } from "@/app/(dashboard)/purchase-orders/actions";
+import { PreNotifyDialog } from "@/components/purchase-orders/pre-notify-dialog";
 import { startPurchaseReturnFromOrder } from "@/app/(dashboard)/purchase-return-orders/actions";
 import { Button } from "@/components/shadcn/button";
 import {
@@ -55,6 +58,7 @@ type Props = {
 export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
   const [isPending, startTransition] = useTransition();
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [isPreNotifyOpen, setIsPreNotifyOpen] = useState(false);
   const [raised, setRaised] = useState(false);
   const [error, setError] = useState<string | undefined>();
   // The reference's reception toolbar acts on a selected row rather than
@@ -65,6 +69,9 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
   const [selectedLineUuid, setSelectedLineUuid] = useState<string | null>(null);
 
   const canCancel = purchaseOrder.status !== "cancelled";
+  // `Make final` exists only on a provisional order; `Confirm` and
+  // `Pre-notify` wake once it is final — the order is with the supplier.
+  const isProvisional = purchaseOrder.status === "provisional";
   // `Par. return` wakes as soon as anything on the order has arrived — it was
   // live on `404102` with lines still `Received` and greyed on an order whose
   // every line was invoiced and gone (7-10-2026). The server re-checks that
@@ -72,6 +79,16 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
   const canPartReturn =
     canCancel &&
     purchaseOrder.items.some((item) => Number(item.qtyReceived ?? 0) > 0);
+
+  const runAction = (action: () => Promise<{ error?: string }>) => {
+    setError(undefined);
+    startTransition(async () => {
+      const result = await action();
+      if (result.error) {
+        setError(result.error);
+      }
+    });
+  };
 
   const handlePartReturn = () => {
     setError(undefined);
@@ -112,19 +129,23 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
       {error && <FormError>{error}</FormError>}
 
       {/* 🔴 The toolbar sits above the document, as it does on every reference
-          screen: `Print… · Send… · Return · Confirm · Pre-notifiy · Show
-          company · Copy · **Workorder** · Options…`. Ours carries the ones that
-          do something. */}
+          screen: `Make final · Print… · Send… · Return · Par. return · Confirm
+          · Pre-notifiy · Show company · Copy · Workorder · Options…`, in that
+          order. Ours carries the ones that do something. */}
       {canCancel && (
         <div className="flex flex-wrap gap-2 border-b pb-4">
-          <Button
-            type="button"
-            onClick={handleRaiseUnloading}
-            disabled={isPending}
-          >
-            <Warehouse className="me-1.5 size-4" />
-            {isPending ? "Raising…" : "Workorder"}
-          </Button>
+          {isProvisional && (
+            <Button
+              type="button"
+              onClick={() =>
+                runAction(() => makePurchaseOrderFinal(purchaseOrder.uuid))
+              }
+              disabled={isPending}
+            >
+              <BadgeCheck className="me-1.5 size-4" />
+              Make final
+            </Button>
+          )}
           <Button
             type="button"
             variant="outline"
@@ -133,6 +154,45 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
           >
             <Undo2 className="me-1.5 size-4" />
             Par. return
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() =>
+              runAction(() => confirmPurchaseOrder(purchaseOrder.uuid))
+            }
+            disabled={isPending || isProvisional}
+          >
+            <CheckCircle2 className="me-1.5 size-4" />
+            Confirm
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setIsPreNotifyOpen(true)}
+            disabled={isPending || isProvisional}
+          >
+            <CalendarClock className="me-1.5 size-4" />
+            Pre-notify
+          </Button>
+          {purchaseOrder.supplierUuid && (
+            <Button
+              variant="outline"
+              render={
+                <Link href={`/companies/${purchaseOrder.supplierUuid}`} />
+              }
+            >
+              <Building2 className="me-1.5 size-4" />
+              Show company
+            </Button>
+          )}
+          <Button
+            type="button"
+            onClick={handleRaiseUnloading}
+            disabled={isPending}
+          >
+            <Warehouse className="me-1.5 size-4" />
+            {isPending ? "Raising…" : "Workorder"}
           </Button>
           <Button
             variant="outline"
@@ -209,6 +269,20 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
             Reference
           </p>
           <p className="text-sm">{purchaseOrder.reference ?? "—"}</p>
+        </div>
+        <div>
+          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+            Confirmed
+          </p>
+          <p className="text-sm">{formatDateColumn(purchaseOrder.confirmedAt)}</p>
+        </div>
+        <div>
+          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+            Pre-notified
+          </p>
+          <p className="text-sm">
+            {formatDateColumn(purchaseOrder.preNotifiedAt)}
+          </p>
         </div>
       </div>
 
@@ -708,6 +782,11 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
         </CollapsibleSection>
       </div>
 
+      <PreNotifyDialog
+        purchaseOrderUuid={purchaseOrder.uuid}
+        open={isPreNotifyOpen}
+        onOpenChange={setIsPreNotifyOpen}
+      />
       <ConfirmDialog
         open={isConfirmOpen}
         onOpenChange={setIsConfirmOpen}
