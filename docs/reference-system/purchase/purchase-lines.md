@@ -541,3 +541,33 @@ it lives in the Logistics section, which was not scrolled to. Not needed — the
 address says enough.
 
 **Step 6d** opens `400142` to read the outgoing leg.
+
+
+### 🔑 `400142` from the exports, 7-10-2026 — before it was opened
+
+`400142` did not show on `Purchase lines` (the `Weergave` had drifted to
+`Aankomende ontvangsten`, which hides it) nor on `Purchase orders and quotes`.
+Two exports already hold it:
+
+- **`joumual-entires.tsv`:** `IO400142 · Aanmaken/wijzigen inkooporder ·
+  Decomecc N.V.` — **€ 1 324,16** on 17-1-2025, reversed and re-posted at
+  **€ 1 261,10** on 10-2-2025, each time `3170 Goods to be received` against
+  `1601 Invoices to be received`. No `Inslag` line: nothing was ever received
+  on it. That is the processing bill.
+- **`reversation.tsv`:** `CK304L0050 · Coil Cold-rolled 304L · 3000 · 00 Hego
+  Almere · Bewerkers · Bewerker · 1 ST · 400142 / 10 · Decomecc N.V. ·
+  Definitive (Purchase)`.
+
+🔑🔑 **That second row explains the purchase-side reservations.** The export
+holds **15** rows of `Reservation type = Definitive (Purchase)`, and every one
+is at a location of type **`Bewerker`** (processor) — sections `Hego
+Productions` and `Bewerkers` — binding one coil (`999999`, the coil sentinel,
+on most) to a purchase order line whose company is the processor: Hego
+Production, Hebels Staalservice, Decomecc. So the outgoing leg of external
+processing is a **purchase order to the processor with our coil reserved to
+it from the processor's location**, and the incoming leg is the `Ex works
+Processor` order that books the result back (`400143`). Stock-lot-model's
+"23 rows on the purchase side" were H9 all along.
+
+Still to read off the order itself: its type (expected `Processing`), its
+line, and its `Workorders` panels.
