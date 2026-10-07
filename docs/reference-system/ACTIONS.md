@@ -301,3 +301,10 @@ or we deliver (`Drop-off`).
 `PurchaseReturnOrders` has `complaintRef`, `returnDate`, `returnReason`,
 `isDropOff`, `pickupAddress`, `purchaseOrderUuid`. Two defaults differ —
 queued as PLANNED-CODE-CHANGES-7 §18.
+
+
+**`Return reason`, opened 7-10-2026:** `Damaged` · `Wrong quantity` ·
+`Wrong material delivered` · `Delivered too late` · `Not delivered` ·
+`Transport damage` · `Incorrect delivery address` — seven, plus a clear
+button. ✅ **Identical, value for value and in order, to our
+`purchaseReturnOrderReasons`.** Nothing to change.
