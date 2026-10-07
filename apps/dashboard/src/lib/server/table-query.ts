@@ -223,11 +223,30 @@ export const booleanFilter =
  * Either end may be left off, because "everything since March" and "everything
  * up to year end" are both things a person asks for. A range with neither end
  * selects everything.
+ *
+ * 🔴 A column Drizzle reads as a `Date` — every `timestamp`, and a `date`
+ * without `mode: "string"` — encodes its bound through `toISOString`, so the
+ * typed day has to arrive as a `Date` or the whole query throws
+ * (`value.toISOString is not a function`, which is what `Stock mutations`
+ * did on its `Moved` filter until 7-10-2026). Its upper end is the end of
+ * that day, so `..2026-10-07` includes what happened on the 7th.
  */
 export const dateRangeFilter =
   (column: MySqlColumn): FilterBinding =>
   (values) => {
     const [from, to] = (values[0] ?? "").split("..");
+    if (column.dataType === "date") {
+      const isDay = column.getSQLType() === "date";
+      return and(
+        from ? gte(column, new Date(`${from}T00:00:00Z`)) : undefined,
+        to
+          ? lte(
+              column,
+              new Date(isDay ? `${to}T00:00:00Z` : `${to}T23:59:59.999Z`),
+            )
+          : undefined,
+      );
+    }
     return and(
       from ? gte(column, from) : undefined,
       to ? lte(column, to) : undefined,
