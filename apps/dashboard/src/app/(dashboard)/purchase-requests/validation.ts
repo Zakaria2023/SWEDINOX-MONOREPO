@@ -7,7 +7,7 @@ import {
   purchaseOrderTypes,
   stockUnits,
 } from "@/lib/enums";
-import { todayDateString, currentYear } from "@/lib/helpers";
+import { currentYear, dateStringInDays, todayDateString } from "@/lib/helpers";
 
 // A request line says what is wanted, never what it costs — the price is the
 // question being asked, and it comes back on the supplier's quote.
@@ -99,9 +99,11 @@ export const DEFAULT_PURCHASE_REQUEST: PurchaseRequestFormValues = {
   reference: "",
   ourReference: "",
 
-  purchaseOrderType: undefined,
+  // A blank request in the reference opens as `Materials`, with `Overlength`
+  // ticked and a deadline of tomorrow (A6, 7-10-2026).
+  purchaseOrderType: "materials",
   weightType: undefined,
-  isOverlength: false,
+  isOverlength: true,
   isPrinted: false,
   isMailed: false,
   isFaxed: false,
@@ -120,7 +122,7 @@ export const DEFAULT_PURCHASE_REQUEST: PurchaseRequestFormValues = {
   deliveryYear: String(currentYear()),
   deliveryRemark: "",
 
-  deadline: "",
+  deadline: dateStringInDays(1),
 
   items: [DEFAULT_PURCHASE_REQUEST_ITEM],
 };

@@ -84,6 +84,13 @@ export const PurchaseOrderItems = mysqlTable(
     // six — `401616/50` at 6 of 17 — were closed by somebody, and this is who.
     closedAt: timestamp("closed_at"),
     closedByUserId: varchar("closed_by_user_id", { length: 255 }),
+    // `For line` on the reference's purchase line: the line of *another*
+    // purchase order this one exists for. `400143/10` reads `IO400142/` — the
+    // processed plate comes back against the processing order that sent the
+    // coil out. Soft link (no FK): it points into the same table.
+    forPurchaseOrderItemUuid: char("for_purchase_order_item_uuid", {
+      length: 36,
+    }),
     // ── The two weights ───────────────────────────────────────────────────────
     //
     // 🔴 A purchase line is billed on the weighed kilos, not the theoretical

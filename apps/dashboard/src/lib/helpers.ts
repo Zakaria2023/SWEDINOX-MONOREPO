@@ -208,6 +208,13 @@ export const describeError = (error: unknown, fallback: string): string => {
  */
 export const todayDateString = () => new Date().toISOString().split("T")[0];
 
+/** `yyyy-MM-dd`, `days` from today. */
+export const dateStringInDays = (days: number): string => {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  return date.toISOString().split("T")[0];
+};
+
 /**
  * The current time as the 24-hour `HH:mm` string `TimePicker` reads and emits.
  *
@@ -7047,6 +7054,16 @@ export const PURCHASE_ORDER_TYPE_META: Record<
     expectsGoodsReceipt: true,
     buysProcessing: true,
     customerOwnedMaterial: true,
+  },
+  // Our own metal coming back from a processor. It is received and becomes
+  // stock again — `400143`'s plate was booked to `3000 Stock` — while the
+  // work itself is billed on the processing order it returns against, so
+  // this one buys nothing but the carrier for the receipt.
+  ex_works_processor: {
+    becomesStock: true,
+    expectsGoodsReceipt: true,
+    buysProcessing: false,
+    customerOwnedMaterial: false,
   },
 };
 

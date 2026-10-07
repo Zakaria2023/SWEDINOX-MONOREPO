@@ -1463,6 +1463,7 @@ export const PURCHASE_ORDER_TYPE_LABELS: Record<PurchaseOrderType, string> = {
   materials: "Materials",
   processing: "Processing",
   customer_materials: "Customer Materials",
+  ex_works_processor: "Ex works Processor",
 };
 
 export const PURCHASE_ORDER_STATUS_LABELS: Record<PurchaseOrderStatus, string> =

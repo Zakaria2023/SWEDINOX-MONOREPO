@@ -252,11 +252,14 @@ export const CompanyDebtorForm = ({
 
           <div className="space-y-2">
             <FormLabel htmlFor="journalCode">Journal code</FormLabel>
+            {/* Set by the ledger, not typed: greyed on the creditor and debtor
+                panels of every company opened in the reference (7-10-2026). */}
             <Input
               id="journalCode"
               type="number"
+              readOnly
+              className="bg-muted text-muted-foreground"
               {...register("journalCode", { valueAsNumber: true })}
-              disabled={isPending}
             />
             <FormFieldError message={errors.journalCode?.message} />
           </div>

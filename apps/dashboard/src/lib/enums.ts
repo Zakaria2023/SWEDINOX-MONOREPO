@@ -1764,6 +1764,13 @@ export const purchaseOrderTypes = [
   "materials",
   "processing",
   "customer_materials",
+  // 🔑 The return leg of external processing (H9), read off order `400143`
+  // on 7-10-2026: the processed metal comes back on a nominal-price order
+  // raised *against a line of* the processing order (`For line IO400142/`),
+  // delivered to the processor's own address, with line type `EXW`. What its
+  // receipt must do to stock and cost is not captured yet — see
+  // PLANNED-CODE-CHANGES-7 §2 and §17.
+  "ex_works_processor",
 ] as const satisfies readonly string[];
 
 export type PurchaseOrderType = (typeof purchaseOrderTypes)[number];
