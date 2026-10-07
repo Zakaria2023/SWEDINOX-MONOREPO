@@ -33,8 +33,8 @@ export const SupplierRevenueTable = ({ rows }: Props) => (
             <TableHead className="text-right">Supplier code</TableHead>
             <TableHead>City</TableHead>
             <TableHead>Country</TableHead>
-            <TableHead className="text-right">Month</TableHead>
-            <TableHead className="text-right">Year</TableHead>
+            <TableHead className="text-right">Month (Invoice date)</TableHead>
+            <TableHead className="text-right">Year (Invoice date)</TableHead>
             <TableHead className="text-right">Revenue</TableHead>
             <TableHead className="text-right">Weight (kg)</TableHead>
           </TableRow>

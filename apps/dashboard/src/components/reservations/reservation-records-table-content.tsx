@@ -40,7 +40,7 @@ export const ReservationRecordsTable = ({ records }: Props) => (
             <TableHead>Product</TableHead>
             <TableHead className="text-center">Stock product</TableHead>
             <TableHead className="text-center">Standard product</TableHead>
-            <TableHead className="text-right">Length</TableHead>
+            <TableHead className="text-right">Length (mm)</TableHead>
             <TableHead>Section</TableHead>
             <TableHead>Location</TableHead>
             <TableHead>Location type</TableHead>
@@ -49,7 +49,7 @@ export const ReservationRecordsTable = ({ records }: Props) => (
             <TableHead className="text-right">Order</TableHead>
             <TableHead className="text-right">Order line</TableHead>
             <TableHead>Company</TableHead>
-            <TableHead>Type</TableHead>
+            <TableHead>Reservation type</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Date</TableHead>
           </TableRow>

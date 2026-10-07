@@ -83,7 +83,7 @@ export const DELIVERY_CERTIFICATE_COLUMNS: Array<
   },
   {
     key: "customerRef",
-    label: "Customer ref.",
+    label: "Customer reference",
     defaultVisible: true,
     value: (row) => textCell(row.customerRef),
   },

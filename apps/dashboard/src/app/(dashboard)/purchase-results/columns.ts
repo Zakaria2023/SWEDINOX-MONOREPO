@@ -47,13 +47,13 @@ export const PURCHASE_RESULT_COLUMNS: Array<
   },
   {
     key: "year",
-    label: "Year",
+    label: "Year (Date received)",
     defaultVisible: true,
     value: (row) => numberCell(row.year),
   },
   {
     key: "month",
-    label: "Month",
+    label: "Month (Receipt Date)",
     defaultVisible: true,
     value: (row) => numberCell(row.month),
   },

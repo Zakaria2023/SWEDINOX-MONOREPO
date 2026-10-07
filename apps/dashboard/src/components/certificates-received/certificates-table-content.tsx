@@ -21,7 +21,7 @@ type Props = {
   rows: CertificateRow[];
 };
 
-const COLUMN_COUNT = 28;
+const COLUMN_COUNT = 29;
 
 export const CertificatesTable = ({ rows }: Props) => (
   <div>
@@ -51,6 +51,8 @@ export const CertificatesTable = ({ rows }: Props) => (
             <TableHead className="text-right">Qty(a)</TableHead>
             <TableHead>Qty U</TableHead>
             <TableHead className="text-right">Kg(a)</TableHead>
+            {/* Blank on all 2 540 reference rows; nothing here fills it. */}
+            <TableHead>Internal reference</TableHead>
             <TableHead>Charge</TableHead>
             <TableHead>Internal charge</TableHead>
             <TableHead>Sheet number</TableHead>
@@ -114,6 +116,7 @@ export const CertificatesTable = ({ rows }: Props) => (
                 <TableCell className="text-right">
                   {formatNumber(Number(row.kg ?? 0))}
                 </TableCell>
+                <TableCell>—</TableCell>
                 <TableCell>{row.charge ?? "—"}</TableCell>
                 <TableCell className="font-medium whitespace-nowrap">
                   <Link

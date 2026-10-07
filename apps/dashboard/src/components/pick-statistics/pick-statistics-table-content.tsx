@@ -44,8 +44,8 @@ export const PickStatisticsTable = ({ statistics }: Props) => (
           <TableRow>
             <TableHead>Product code</TableHead>
             <TableHead>Description</TableHead>
-            <TableHead className="text-right">Year</TableHead>
-            <TableHead className="text-right">Month</TableHead>
+            <TableHead className="text-right">Year (Date completed)</TableHead>
+            <TableHead className="text-right">Month (Date completed)</TableHead>
             <TableHead className="text-right">Picks</TableHead>
             <TableHead className="text-right">Qty. Picked / Fetched</TableHead>
             <TableHead>U.</TableHead>
