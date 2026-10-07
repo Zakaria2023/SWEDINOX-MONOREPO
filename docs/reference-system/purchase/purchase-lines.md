@@ -616,3 +616,39 @@ reserved or not. No dialog sets it per lot.
 coil seen today is reserved to `400366/10`. Whether it is the same coil moved
 from one processing order to the next, or a second one, is not settled from
 this view.
+
+
+---
+
+## ✅ J4, 7-10-2026 — short lines are closed, not left open
+
+`Purchase lines` → `Toon in Excel` (16 084 lines, 50 columns), read through
+COM. Lines where `Qty(a)` is above 0 but below `Qty(p)`: **23**.
+
+**Only one is still open** — `404150/10`, `Partially received`, 1 of 3, the
+Norder Band coil already captured on 6-10 with its two receptions. So a line
+waiting for its remainder is rare: one in sixteen thousand.
+
+**The other 22 arrived short and were closed anyway** — 20 `Invoiced`, 2
+`Received`:
+
+| Short by (pieces) | Lines | Examples |
+|---|---|---|
+| ≤ 5 % | **16** | `404074/10` 80 of 81 · `403701/10` 140 of 144 · `403166/10` 182 of 185 · `402951/10` 11,979 of 12 |
+| 7,7–22 % | 5 | `403661/120` 24 of 26 · `403066/280` 7 of 8 · `401849/40` 16 of 20 · `401834/10` 85 of 108 (`Received`) · `400276/10` 42 of 54 |
+| 64,7 % | 1 | **`401616/50` — 6 of 17, `Invoiced`** |
+
+🔑🔑 **A short delivery closes the line; the shortfall is dropped, not
+carried.** Sixteen of the 22 are within the 5 % receiving tolerance every
+product carries (`Unloading wo 5 % / 5 %`), so for those the tolerance alone
+explains it. The other six are 7,7 % to 64,7 % short and closed regardless,
+so somebody also closes lines by hand — `401616/50` was invoiced at 6 of 17.
+
+🔑 **`Invoiced` means "invoiced for what arrived", not "for what was
+ordered".** A line billed on its weighed kilos (proved on `402532`) is fully
+invoiced when the received quantity is, which is why the header ladder has
+no `Partially invoiced` (purchase-orders-and-quotes.md *Status grouped*).
+
+Kilos agree with pieces on most rows (`Kg(a)` short by roughly the same
+percentage), and run *over* on a few (`401508/30` 236 of 237 pieces but
+10 245 of 10 047 kg) — the weighbridge, not the count, decides the kilos.

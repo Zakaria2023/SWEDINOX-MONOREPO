@@ -287,3 +287,29 @@ order type` `Materials`, `Overlength` ☑, `Delivery address` our own yard
 **What to build.** Default the three to the reference's values, and the
 delivery address to the company's own warehouse address. A purchase return
 already defaults `returnDate` to today, as the reference does.
+
+## 19. 🔴 Our purchase-line status strands every short delivery
+
+**What was found (J4).** 22 of the 23 short-received lines since 2024 are
+`Invoiced` or `Received`; only one is `Partially received`. Sixteen are
+within the 5 % unloading tolerance; six were closed by hand, one at 6 of 17.
+
+**What is wrong.** `derivePurchaseLineStatus` in
+`lib/server/purchase-lines.ts` returns `received` only when `received >=
+quantity` and `invoiced` only when `invoiced >= quantity`. A line that arrives
+one plate short — 80 of 81 — sits at `partially_received` forever, and once
+billed at `partially_invoiced`, a status the purchase header does not even
+have. Sixteen real lines would be wrong in ours today.
+
+**What to build.**
+1. **Received within tolerance is received.** Compare `received` against
+   `quantity × (1 − tolerance)` using the product's `toleranceUnloadingQty`
+   (and `…Kg` for kilo lines) — the same tolerance the unloading report
+   already enforces.
+2. **A buyer can close a short line by hand.** A `Close line` action that
+   sets the line to `received` (or `invoiced` once billed) at whatever
+   arrived, and drops the open remainder reception. Record who and when.
+3. **Invoiced is measured against received, not ordered.** Once a line is
+   closed, `invoiced >= received` makes it `invoiced`. `partially_invoiced`
+   stays for the sales side only.
+4. Harness check: no closed purchase line keeps an open reception.
