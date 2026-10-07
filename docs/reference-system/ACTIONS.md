@@ -250,3 +250,54 @@ Worth one screenshot each if the screen they sit on ever comes into scope:
 | `T` / `W` | product master descriptions |
 | `NG` · `F` · `DUPK320` | option quick buttons — unidentified |
 | `Print` | every overview |
+
+
+---
+
+## ✅ A6 — the two never-opened forms, 7-10-2026
+
+Both opened from `Nieuw`, photographed empty, closed without saving.
+
+### `Purchase request`
+
+Banner on open: ⚠️ *"Supplier is required"*. *"Creation date: 7-10-2026"*.
+
+| Block | Fields — and what a new one defaults to |
+|---|---|
+| Header | `Supplier` (…) · `Agent` (…) · `Contact` · `Reference` · `Purchaser` · `Order category` `-leeg-` |
+| `Finances` | `Payment terms` — **greyed until a supplier is chosen** |
+| `Delivery` | `Delivery terms` · **`Delivery address` prefilled `Bolderweg 10, 1332AT, Almere`** (our own yard) · `Arrange transport` ☐ · `Pick up/Drop-off CD-purchases` greyed until transport is arranged · `Supplier address` greyed · ⦿ `Date` **`1-1-0001`** (the null sentinel) / ○ `Week` `41` `Year` `2026` · `Rem` |
+| Right | `Purchase order type` **`Materials`** · second type `-leeg-` · **`Overlength` ☑ by default** · `Printed` · `Mailed` · `Faxed` · `Message sent via StaalWeb` greyed |
+| `Follow-up` | **`Deadline` `8-10-2026`** — creation date + 1 day |
+| Panels | `Lines` (0) · `Texts` · `Documents` (0) · `PDF Files` |
+| Toolbar | `Make final · Print… · Send… · Purchase quote · Purchase order · Show company · Copy · Options…` |
+
+🔑 **A request converts two ways** — `Purchase quote` and `Purchase order`
+are both on its toolbar. It is the step *before* buying: ask a supplier,
+then either collect a quote or order outright.
+
+### `Purchase return order`
+
+No creation-date line; the document is dated by its `Return date`.
+
+| Block | Fields — and defaults |
+|---|---|
+| Header | `Supplier` (…) · **`Purchase order`** greyed · **`Complaint`** greyed · `Contact` · `Purchaser` |
+| `Invoicing` | `Payment terms` |
+| `Delivery` | **`Return date` `7-10-2026`** (today) · **`Return reason`** dropdown · **`Drop-off` ☐** · `Delivery address` greyed until drop-off is ticked · **`Pick-up`** (…) |
+| Right | `Purchase order type` `Materials`, greyed · `Printed` / `Mailed` / `Faxed` greyed · Summary (Materials · Options · Surcharges · excl. · VAT · incl. · `Total weight` `0 Kg`) |
+| Panels | `Workorders` · `Lines` (0) · `Surcharges` · `Invoice lines` · **`Complaints`** · `Logistics` · `Texts` · `Documents` (0) · `PDF Files` |
+| Toolbar | `Make final · Print… · Send… · Show company · Show purchase order · Show complaint` |
+
+🔑 **A purchase return hangs off a purchase order and, optionally, a
+complaint** — both fields greyed on a blank form, so they are filled by
+raising the return *from* the order or complaint, not typed. It has its own
+`Workorders` (the warehouse picks the metal to send back), `Surcharges` and
+`Invoice lines` (the credit), and the supplier either collects (`Pick-up`)
+or we deliver (`Drop-off`).
+
+✅ **Our schema already matches both** — `PurchaseRequests` has `deadline`,
+`isOverlength`, `deliveryAddressUuid`, `arrangeTransport`;
+`PurchaseReturnOrders` has `complaintRef`, `returnDate`, `returnReason`,
+`isDropOff`, `pickupAddress`, `purchaseOrderUuid`. Two defaults differ —
+queued as PLANNED-CODE-CHANGES-7 §18.

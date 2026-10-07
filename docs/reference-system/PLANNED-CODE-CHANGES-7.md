@@ -273,3 +273,17 @@ the reservation; (3) only the return leg (`ex_works_processor` receipt)
 consumes the reserved lot and creates the processed one. Add a worklist for
 lots still reserved to an invoiced processing order — the reference has none,
 and this coil has sat there for twenty months.
+
+## 18. 🟢 Two defaults on a new purchase request
+
+**What was found (A6).** A blank `Purchase request` opens with `Purchase
+order type` `Materials`, `Overlength` ☑, `Delivery address` our own yard
+(`Bolderweg 10, Almere`) and `Deadline` = creation date + 1 day.
+
+**What is different.** `purchase-requests/validation.ts` defaults
+`purchaseOrderType` to `undefined`, `isOverlength` to `false` and
+`deadline` to `""`.
+
+**What to build.** Default the three to the reference's values, and the
+delivery address to the company's own warehouse address. A purchase return
+already defaults `returnDate` to today, as the reference does.
