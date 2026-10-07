@@ -44,7 +44,6 @@ import {
   PURCHASE_ORDER_STATUS_LABELS,
   PURCHASE_RETURN_ORDER_REASON_LABELS,
   RECEIPT_STATUS_LABELS,
-  RETURN_ORDER_STATUS_LABELS,
   STOCK_STATUS_LABELS,
 } from "@/lib/labels";
 
@@ -593,7 +592,7 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
                           value={line.returnOrderStatus}
                           label={
                             line.returnOrderStatus
-                              ? RETURN_ORDER_STATUS_LABELS[
+                              ? PURCHASE_ORDER_STATUS_LABELS[
                                   line.returnOrderStatus
                                 ]
                               : null

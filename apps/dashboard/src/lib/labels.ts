@@ -1466,10 +1466,14 @@ export const PURCHASE_ORDER_TYPE_LABELS: Record<PurchaseOrderType, string> = {
 export const PURCHASE_ORDER_STATUS_LABELS: Record<PurchaseOrderStatus, string> =
   {
     provisional: "Provisional",
-    open: "Open",
-    confirmed: "Confirmed",
-    pre_notified: "Pre-notified",
-    completed: "Completed",
+    released: "Released",
+    checked: "Checked",
+    in_progress: "In progress",
+    partially_received: "Partially received",
+    received: "Received",
+    delivered: "Delivered",
+    invoiced: "Invoiced",
+    expired: "Expired",
     cancelled: "Cancelled",
   };
 

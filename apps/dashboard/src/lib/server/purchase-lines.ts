@@ -17,6 +17,7 @@ import {
   generateUuid,
   isWithinTolerance,
   moneyString,
+  purchaseOrderStatusFromLines,
   receiptStatusAfterUnloading,
   tolerancePercent,
 } from "@/lib/helpers";
@@ -190,6 +191,7 @@ export const refreshPurchaseLineStatus = async (
 ): Promise<void> => {
   const [line] = await tx
     .select({
+      purchaseOrderUuid: PurchaseOrderItems.purchaseOrderUuid,
       quantity: PurchaseOrderItems.quantity,
       received: PurchaseOrderItems.qtyReceived,
       status: PurchaseOrderItems.status,
@@ -237,14 +239,51 @@ export const refreshPurchaseLineStatus = async (
     closed: line.closedAt !== null,
   });
 
-  if (next === line.status) {
+  if (next !== line.status) {
+    await tx
+      .update(PurchaseOrderItems)
+      .set({ status: next })
+      .where(eq(PurchaseOrderItems.uuid, purchaseOrderItemUuid));
+  }
+
+  await refreshPurchaseOrderStatus(tx, line.purchaseOrderUuid);
+};
+
+/**
+ * Re-derive a purchase order header's status from its lines. Called by
+ * `refreshPurchaseLineStatus` after every line move, and after any action that
+ * moves all of an order's lines at once.
+ */
+export const refreshPurchaseOrderStatus = async (
+  tx: PurchaseLineWriter,
+  purchaseOrderUuid: string,
+): Promise<void> => {
+  const [order] = await tx
+    .select({ status: PurchaseOrders.status })
+    .from(PurchaseOrders)
+    .where(eq(PurchaseOrders.uuid, purchaseOrderUuid))
+    .limit(1);
+
+  if (!order) {
     return;
   }
 
-  await tx
-    .update(PurchaseOrderItems)
-    .set({ status: next })
-    .where(eq(PurchaseOrderItems.uuid, purchaseOrderItemUuid));
+  const lines = await tx
+    .select({ status: PurchaseOrderItems.status })
+    .from(PurchaseOrderItems)
+    .where(eq(PurchaseOrderItems.purchaseOrderUuid, purchaseOrderUuid));
+
+  const next = purchaseOrderStatusFromLines(
+    order.status,
+    lines.map((row) => row.status),
+  );
+
+  if (next !== order.status) {
+    await tx
+      .update(PurchaseOrders)
+      .set({ status: next })
+      .where(eq(PurchaseOrders.uuid, purchaseOrderUuid));
+  }
 };
 
 /**

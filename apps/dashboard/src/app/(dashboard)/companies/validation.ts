@@ -609,7 +609,7 @@ export type PurchaseOrderDialogValues = z.infer<
 >;
 
 export const DEFAULT_PURCHASE_ORDER: PurchaseOrderDialogValues = {
-  status: "open",
+  status: "released",
   purchaseOrderType: "",
   forOrder: "",
   orderDate: "",

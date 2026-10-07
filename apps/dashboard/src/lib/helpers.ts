@@ -82,7 +82,6 @@ import {
   revenueGroups,
   RevenueGroupKind,
   ReturnOrderReason,
-  ReturnOrderStatus,
   SalesRepresentative,
   SfnCounterpartyRole,
   StockMode,
@@ -9036,9 +9035,9 @@ export const canEditPurchaseRequestLines = (
  * terms behind it are frozen.
  */
 export const isPurchaseReturnOrderEditable = (
-  status: ReturnOrderStatus | null,
+  status: PurchaseOrderStatus | null,
 ): boolean =>
-  status !== "received" && status !== "credited" && status !== "cancelled";
+  status !== "delivered" && status !== "invoiced" && status !== "cancelled";
 
 // ---------------------------------------------------------------------------
 // Charts
@@ -10070,6 +10069,60 @@ export const receptionActions = (
     splitReason:
       "Splitting a reception is not reachable from the order. The reference greys it whatever the reception's status, so the gate is on the order — see H13.",
   };
+};
+
+/**
+ * A purchase order header's status, read off its lines.
+ *
+ * The header reads its **least-advanced live line**. Proved on two orders,
+ * 7-10-2026: `404102` (lines Expired ×4, Received ×18, Invoiced ×8,
+ * Released ×4) says `Released`; `402401` (Invoiced ×6, In progress ×1) says
+ * `In progress`.
+ *
+ * - Lapsed and cancelled lines do not hold the header back. If nothing else
+ *   is left, an all-lapsed order is `expired`.
+ * - A provisional line on a final order is a draft line being typed; it does
+ *   not drag the order back to provisional.
+ * - A provisional or cancelled header is frozen — making it final, or calling
+ *   it off, is an act, not a consequence of its lines.
+ * - The two imported sales words a purchase line can still carry,
+ *   `partially_delivered` and `completed`, read as their purchase twins.
+ */
+export const purchaseOrderStatusFromLines = (
+  current: PurchaseOrderStatus,
+  lineStatuses: readonly (OrderLineStatus | null)[],
+): PurchaseOrderStatus => {
+  if (current === "provisional" || current === "cancelled") {
+    return current;
+  }
+  const step: Partial<Record<OrderLineStatus, number>> = {
+    released: 1,
+    checked: 2,
+    in_progress: 3,
+    partially_received: 4,
+    partially_delivered: 4,
+    received: 5,
+    partially_invoiced: 5,
+    invoiced: 6,
+    completed: 6,
+  };
+  const ladder: readonly PurchaseOrderStatus[] = [
+    "released",
+    "released",
+    "checked",
+    "in_progress",
+    "partially_received",
+    "received",
+    "invoiced",
+  ];
+  const live = lineStatuses
+    .map((status) => (status ? step[status] : undefined))
+    .filter((value): value is number => value !== undefined);
+  if (live.length === 0) {
+    const lapsed = lineStatuses.some((status) => status === "expired");
+    return lapsed ? "expired" : current;
+  }
+  return ladder[Math.min(...live)] ?? current;
 };
 
 /**

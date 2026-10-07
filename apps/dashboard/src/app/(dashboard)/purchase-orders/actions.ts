@@ -353,6 +353,14 @@ const PURCHASE_ORDER_FILTERS = {
   amount: numberRangeFilter(PurchaseOrders.amount),
 };
 
+// 🔑 An expired order drops out of the purchase overviews, as on the
+// reference — `400142` was findable only from its supplier's record. Asking
+// for a status by name brings it back.
+const purchaseOrderScope = (query: TableQuery) =>
+  query.filters.status && query.filters.status.length > 0
+    ? []
+    : [ne(PurchaseOrders.status, "expired")];
+
 /**
  * The rows one view of the purchase orders overview selects, as a window onto
  * them. Shared by the page and the export.
@@ -375,6 +383,7 @@ const purchaseOrderRows =
           query,
           search: PURCHASE_ORDER_SEARCH,
           filters: PURCHASE_ORDER_FILTERS,
+          scope: purchaseOrderScope(query),
         }),
       )
       .orderBy(
@@ -408,6 +417,7 @@ export const getPurchaseOrders = async (
       query,
       search: PURCHASE_ORDER_SEARCH,
       filters: PURCHASE_ORDER_FILTERS,
+      scope: purchaseOrderScope(query),
     });
 
     return await runPaged(query, {
@@ -993,7 +1003,7 @@ export const makePurchaseOrderFinal = async (
     await db.transaction(async (tx) => {
       await tx
         .update(PurchaseOrders)
-        .set({ status: "open" })
+        .set({ status: "released" })
         .where(eq(PurchaseOrders.uuid, uuid));
 
       // The lines follow the header out of provisional, and the order is now
@@ -1063,9 +1073,10 @@ export const preNotifyPurchaseOrder = async (
     }
 
     await db.transaction(async (tx) => {
+      // A stamp, not a rung: the order keeps its place on the ladder.
       await tx
         .update(PurchaseOrders)
-        .set({ status: "pre_notified" })
+        .set({ preNotifiedAt: new Date() })
         .where(eq(PurchaseOrders.uuid, uuid));
 
       await tx
@@ -1124,9 +1135,10 @@ export const confirmPurchaseOrder = async (
     }
 
     await db.transaction(async (tx) => {
+      // A stamp, not a rung: the order keeps its place on the ladder.
       await tx
         .update(PurchaseOrders)
-        .set({ status: "confirmed" })
+        .set({ confirmedAt: new Date() })
         .where(eq(PurchaseOrders.uuid, uuid));
 
       await tx

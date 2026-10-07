@@ -18,9 +18,9 @@ import {
   contractTierUnits,
   invoicePaymentTerms,
   invoiceSurchargeDescriptions,
+  purchaseOrderStatuses,
   purchaseOrderTypes,
   purchaseReturnOrderReasons,
-  returnOrderStatuses,
   transportModes,
   warehouseTransportRegions,
 } from "../../lib/enums";
@@ -43,7 +43,12 @@ export const PurchaseReturnOrders = mysqlTable(
     contactUuid: char("contact_uuid", { length: 36 }),
     purchaser: varchar("purchaser", { length: 255 }),
     purchaseOrderType: mysqlEnum("purchase_order_type", purchaseOrderTypes),
-    status: mysqlEnum("status", returnOrderStatuses).default("open"),
+    // 🔴 The purchase ladder, not the sales return's. A purchase return is
+    // never `received` — its goods are *delivered* back to the supplier: the
+    // three in the reference (`IR950008`, `IR950030`, `IR950033`) all end in
+    // `Delivered`, and `Par. return` opens a new one as `Provisional`
+    // (7-10-2026). After that the supplier's credit note makes it `invoiced`.
+    status: mysqlEnum("status", purchaseOrderStatuses).default("provisional"),
     isPrinted: boolean("is_printed").default(false),
     isMailed: boolean("is_mailed").default(false),
     isFaxed: boolean("is_faxed").default(false),

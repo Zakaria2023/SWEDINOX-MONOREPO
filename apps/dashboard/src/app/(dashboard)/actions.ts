@@ -13,7 +13,10 @@ import {
 } from "@/db/schema/purchase-orders";
 import { Quotes } from "@/db/schema/quotes";
 import { Stock } from "@/db/schema/stock";
-import { AgeingBucket } from "@/lib/enums";
+import {
+  AgeingBucket,
+  openPurchaseOrderStatuses,
+} from "@/lib/enums";
 import {
   daysOverdue,
   describeError,
@@ -46,7 +49,7 @@ const LIVE_ORDER_STATUSES: Array<NonNullable<SelectOrders["status"]>> = [
 
 const LIVE_PURCHASE_STATUSES: Array<
   NonNullable<SelectPurchaseOrders["status"]>
-> = ["open", "confirmed", "pre_notified"];
+> = [...openPurchaseOrderStatuses];
 
 const LIVE_COMPLAINT_STATUSES: Array<NonNullable<SelectComplaints["status"]>> =
   ["new", "in_progress", "on_hold"];

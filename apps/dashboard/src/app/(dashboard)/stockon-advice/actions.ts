@@ -21,7 +21,7 @@ import {
   SelectPurchaseOrders,
 } from "@/db/schema/purchase-orders";
 import { Stock } from "@/db/schema/stock";
-import { leadTimeMethods, LeadTimeMethod } from "@/lib/enums";
+import { leadTimeMethods, LeadTimeMethod, openPurchaseOrderStatuses } from "@/lib/enums";
 import { exportRows } from "@/lib/server/excel";
 import {
   amountForWeight,
@@ -51,11 +51,7 @@ import { redirect } from "next/navigation";
 // What counts as still coming. A cancelled or completed order brings nothing,
 // and a provisional one is not an order yet — it is a draft somebody may still
 // throw away, so counting it would suppress the advice that produced it.
-const OPEN_PURCHASE_ORDER_STATUSES = [
-  "open",
-  "confirmed",
-  "pre_notified",
-] as const;
+const OPEN_PURCHASE_ORDER_STATUSES = openPurchaseOrderStatuses;
 
 // Receptions the goods actually arrived on, which is what a realised lead time
 // has to be measured against.

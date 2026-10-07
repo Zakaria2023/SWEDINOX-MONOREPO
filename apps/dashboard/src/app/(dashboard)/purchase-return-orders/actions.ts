@@ -420,8 +420,8 @@ export const dispatchPurchaseReturnOrder = async (
       return { error: "Purchase return order not found." };
     }
     if (
-      returnOrder.status === "received" ||
-      returnOrder.status === "credited"
+      returnOrder.status === "delivered" ||
+      returnOrder.status === "invoiced"
     ) {
       return { error: "These goods have already been sent back." };
     }
@@ -447,11 +447,11 @@ export const dispatchPurchaseReturnOrder = async (
     await db.transaction(async (tx) => {
       const [claimed] = await tx
         .update(PurchaseReturnOrders)
-        .set({ status: "received", returnDate: new Date() })
+        .set({ status: "delivered", returnDate: new Date() })
         .where(
           and(
             eq(PurchaseReturnOrders.uuid, uuid),
-            inArray(PurchaseReturnOrders.status, ["open", "in_progress"]),
+            inArray(PurchaseReturnOrders.status, ["provisional", "released"]),
           ),
         );
 
@@ -598,10 +598,10 @@ export const creditPurchaseReturnOrder = async (
     if (!returnOrder) {
       return { error: "Purchase return order not found." };
     }
-    if (returnOrder.status === "credited") {
+    if (returnOrder.status === "invoiced") {
       return { error: "This return has already been credited." };
     }
-    if (returnOrder.status !== "received") {
+    if (returnOrder.status !== "delivered") {
       return {
         error: "Send the goods back before booking the supplier's credit note.",
       };
@@ -678,11 +678,11 @@ export const creditPurchaseReturnOrder = async (
     await db.transaction(async (tx) => {
       const [claimed] = await tx
         .update(PurchaseReturnOrders)
-        .set({ status: "credited" })
+        .set({ status: "invoiced" })
         .where(
           and(
             eq(PurchaseReturnOrders.uuid, uuid),
-            eq(PurchaseReturnOrders.status, "received"),
+            eq(PurchaseReturnOrders.status, "delivered"),
           ),
         );
 

@@ -434,7 +434,8 @@ export const convertPurchaseRequestToOrder = async (
         deliveryYear: request.deliveryYear,
         deliveryRemark: request.deliveryRemark,
         orderDate: todayDateString(),
-        status: "open",
+        // Ordered outright from the request, so final at once: released.
+        status: "released",
       });
 
       for (const [index, item] of items.entries()) {

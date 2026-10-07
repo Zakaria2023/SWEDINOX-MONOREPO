@@ -1381,7 +1381,7 @@ export const useCompanySubmit = ({
     if (!order) return;
     setEditingPurchaseOrderIndex(index);
     purchaseOrderForm.reset({
-      status: order.status ?? "open",
+      status: order.status ?? "released",
       purchaseOrderType: order.purchaseOrderType ?? "",
       forOrder: order.forOrder ?? "",
       orderDate: order.orderDate ?? "",

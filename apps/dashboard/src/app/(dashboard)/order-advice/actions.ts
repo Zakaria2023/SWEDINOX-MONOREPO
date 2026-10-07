@@ -1,5 +1,6 @@
 "use server";
 
+import { openPurchaseOrderStatuses } from "@/lib/enums";
 import {
   convertKgToUnit,
   describeError,
@@ -470,11 +471,7 @@ const orderAdviceRows =
         .where(
           and(
             inArray(PurchaseOrderItems.productUuid, productUuids),
-            inArray(PurchaseOrders.status, [
-              "open",
-              "confirmed",
-              "pre_notified",
-            ]),
+            inArray(PurchaseOrders.status, [...openPurchaseOrderStatuses]),
           ),
         )
         .groupBy(PurchaseOrderItems.productUuid);

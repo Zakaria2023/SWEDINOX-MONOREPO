@@ -1,5 +1,6 @@
 "use server";
 
+import { openPurchaseOrderStatuses } from "@/lib/enums";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { db } from "@/db";
 import { Products } from "@/db/schema/products";
@@ -110,7 +111,7 @@ export const getPurchaseOrdersToBeReceived = async (): Promise<
       )
       .where(
         and(
-          inArray(PurchaseOrders.status, ["open", "confirmed", "pre_notified"]),
+          inArray(PurchaseOrders.status, [...openPurchaseOrderStatuses]),
           sql`${PurchaseOrderItems.quantity} - ${PurchaseOrderItems.qtyReceived} > 0`,
         ),
       )
@@ -144,7 +145,7 @@ const RECEIVABLE_LINE_COLUMNS = {
 };
 
 // Only orders that are still in flight have outstanding lines to receive.
-const OPEN_STATUSES = ["open", "confirmed", "pre_notified"] as const;
+const OPEN_STATUSES = openPurchaseOrderStatuses;
 
 // Books one line's outstanding quantity as received: a PurchaseLineReceivals
 // row plus setting the line's received quantity to full. Shared by the

@@ -1761,18 +1761,68 @@ export const purchaseOrderTypes = [
 
 export type PurchaseOrderType = (typeof purchaseOrderTypes)[number];
 
-// An order converted from a quote lands here: it exists, but nobody has made
-// it final yet, so nothing can be received against it.
+/**
+ * Where a purchase order header stands — the reference's own list.
+ *
+ * 🔴 Replaced 7-10-2026. The old list (`provisional · open · confirmed ·
+ * pre_notified · completed · cancelled`) had four words the reference never
+ * prints on a purchase order. Grouping `Purchase orders and quotes` on
+ * `Status` over 2024–2026 gives exactly nine:
+ *
+ *   Checked · Delivered · Expired · In progress · Invoiced ·
+ *   Partially received · Provisional · Received · Released
+ *
+ * It is the line ladder, rolled up: the header reads its least-advanced live
+ * line (`purchaseOrderStatusFromLines`). `404102` has lines Expired, Received,
+ * Invoiced and Released and its header says `Released`; `402401` has six
+ * Invoiced and one In progress and says `In progress`.
+ *
+ * - `provisional` — converted from a quote, not yet made final; nothing can
+ *   be received against it.
+ * - `delivered` — a **purchase return** whose goods have gone back to the
+ *   supplier (`IR950008`, `IR950030`, `IR950033`). Never an order's state.
+ * - `expired` — every line lapsed (`400142`, € 0, 0 kg). An expired order
+ *   drops out of both purchase overviews and is still listed on its
+ *   supplier's company record.
+ * - `cancelled` — ours. The reference deletes instead; this app keeps the
+ *   record.
+ *
+ * `Confirm` and `Pre-notify` are **not** states: they are buttons whose effect
+ * is stamped on the header (`confirmedAt`, `preNotifiedAt`) while the order
+ * keeps climbing the ladder.
+ */
 export const purchaseOrderStatuses = [
   "provisional",
-  "open",
-  "confirmed",
-  "pre_notified",
-  "completed",
+  "released",
+  "checked",
+  "in_progress",
+  "partially_received",
+  "received",
+  "delivered",
+  "invoiced",
+  "expired",
   "cancelled",
 ] as const satisfies readonly string[];
 
 export type PurchaseOrderStatus = (typeof purchaseOrderStatuses)[number];
+
+/**
+ * The headers still expecting goods — what `Purchase orders to be received`,
+ * order advice and StockOn count as "on order".
+ */
+export const openPurchaseOrderStatuses = [
+  "released",
+  "checked",
+  "in_progress",
+  "partially_received",
+] as const satisfies readonly PurchaseOrderStatus[];
+
+/** Headers whose goods are all in or gone — off the "current" lists. */
+export const closedPurchaseOrderStatuses = [
+  "invoiced",
+  "expired",
+  "cancelled",
+] as const satisfies readonly PurchaseOrderStatus[];
 
 // How money actually moved. "Offset" is settlement without cash — a credit
 // note or a counter-invoice netted against this one.

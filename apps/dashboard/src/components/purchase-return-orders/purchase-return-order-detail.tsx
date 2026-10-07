@@ -32,8 +32,8 @@ import {
 } from "@/lib/helpers";
 import {
   INVOICE_PAYMENT_TERM_LABELS,
+  PURCHASE_ORDER_STATUS_LABELS,
   PURCHASE_RETURN_ORDER_REASON_LABELS,
-  RETURN_ORDER_STATUS_LABELS,
 } from "@/lib/labels";
 
 type Props = {
@@ -49,8 +49,9 @@ export const PurchaseReturnOrderDetailView = ({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | undefined>();
 
-  const isDispatched = returnOrder.status === "received";
-  const isCredited = returnOrder.status === "credited";
+  // A purchase return is delivered back, then invoiced by the credit note.
+  const isDispatched = returnOrder.status === "delivered";
+  const isCredited = returnOrder.status === "invoiced";
   const isCancelled = returnOrder.status === "cancelled";
 
   const returnedValue = returnOrder.items.reduce(
@@ -93,7 +94,7 @@ export const PurchaseReturnOrderDetailView = ({
             label="Status"
             value={
               returnOrder.status
-                ? RETURN_ORDER_STATUS_LABELS[returnOrder.status]
+                ? PURCHASE_ORDER_STATUS_LABELS[returnOrder.status]
                 : null
             }
           />

@@ -100,8 +100,13 @@ export const PurchaseOrders = mysqlTable(
 
     // ── Summary / listing fields ────────────────────────────────────────────
     status: mysqlEnum("status", purchaseOrderStatuses)
-      .default("open")
+      .default("released")
       .notNull(),
+    // `Confirm` and `Pre-notify` are stamps, not rungs — the reference's
+    // header ladder has neither word (7-10-2026). They record when the
+    // supplier acknowledged the order and when it advised the delivery.
+    confirmedAt: timestamp("confirmed_at"),
+    preNotifiedAt: timestamp("pre_notified_at"),
     forOrder: varchar("for_order", { length: 255 }),
     orderDate: date("order_date", { mode: "string" }),
     amount: decimal("amount", { precision: 15, scale: 2 })

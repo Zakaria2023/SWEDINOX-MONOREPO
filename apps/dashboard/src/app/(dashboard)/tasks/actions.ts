@@ -15,7 +15,7 @@ import {
   FINANCIAL_RELEASE_ROLES,
   requireAuth,
 } from "@/lib/auth";
-import { WorkListKey, workListKeys } from "@/lib/enums";
+import { WorkListKey, workListKeys, closedPurchaseOrderStatuses } from "@/lib/enums";
 import { describeError, todayDateString } from "@/lib/helpers";
 import {
   and,
@@ -159,7 +159,7 @@ export const getWorkLists = async (): Promise<WorkListRow[]> => {
           and(
             sql`${PurchaseOrderItems.qtyReceived} < ${PurchaseOrderItems.quantity}`,
             sql`${PurchaseOrders.deliveryDate} < CURDATE()`,
-            notInArray(PurchaseOrders.status, ["completed", "cancelled"]),
+            notInArray(PurchaseOrders.status, [...closedPurchaseOrderStatuses]),
           ),
         ),
     customer_contracts_expiring: () =>

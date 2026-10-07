@@ -18,6 +18,7 @@ import {
   purchaseOrderStatuses,
   purchaseOrderTypes,
   purchaseQuoteStatuses,
+  openPurchaseOrderStatuses,
 } from "@/lib/enums";
 import { describeError, personInitials } from "@/lib/helpers";
 import { getClerkUsersForSelect } from "@/lib/server/clerk";
@@ -178,7 +179,7 @@ const AgentCompany = alias(Companies, "agent_company");
 
 // A document nobody has released is not owed to anybody yet, so it is not
 // "still to be sent" — it is still being written.
-const UNSENT_ORDER_STATUSES = ["open", "confirmed", "pre_notified"] as const;
+const UNSENT_ORDER_STATUSES = openPurchaseOrderStatuses;
 const UNSENT_QUOTE_STATUSES = ["open", "received"] as const;
 
 const searchCondition = (
@@ -223,7 +224,8 @@ const orderConditions = (query: TableQuery): Array<SQL | undefined> => {
             .map((value) => sql`${value}`),
           sql`, `,
         )})`
-      : undefined,
+      : // An expired order is off this screen unless asked for by name.
+        sql`${PurchaseOrders.status} <> 'expired'`,
     query.filters.orderType?.[0] &&
     (purchaseOrderTypes as readonly string[]).includes(
       query.filters.orderType[0],

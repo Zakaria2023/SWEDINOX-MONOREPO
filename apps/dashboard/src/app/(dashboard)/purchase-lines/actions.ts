@@ -1,6 +1,6 @@
 "use server";
 import { describeError, personInitials } from "@/lib/helpers";
-import { purchaseSourceTypes } from "@/lib/enums";
+import { purchaseSourceTypes, closedPurchaseOrderStatuses } from "@/lib/enums";
 
 import { db } from "@/db";
 import {
@@ -25,6 +25,7 @@ import {
   eq,
   getTableColumns,
   isNull,
+  ne,
   notInArray,
   or,
   sql,
@@ -267,7 +268,7 @@ const PURCHASE_LINE_FILTERS = {
               "cancelled",
             ]),
           ),
-          notInArray(PurchaseOrders.status, ["completed", "cancelled"]),
+          notInArray(PurchaseOrders.status, [...closedPurchaseOrderStatuses]),
         )
       : undefined,
 };
@@ -314,6 +315,9 @@ const purchaseLineRows =
           query,
           search: PURCHASE_LINE_SEARCH,
           filters: PURCHASE_LINE_FILTERS,
+          // An expired order's lines are off this screen, as on the
+          // reference; they stay on the supplier's company record.
+          scope: [ne(PurchaseOrders.status, "expired")],
         }),
       )
       .orderBy(
@@ -375,6 +379,9 @@ export const getPurchaseLines = async (
           query,
           search: PURCHASE_LINE_SEARCH,
           filters: PURCHASE_LINE_FILTERS,
+          // An expired order's lines are off this screen, as on the
+          // reference; they stay on the supplier's company record.
+          scope: [ne(PurchaseOrders.status, "expired")],
         }),
       );
 
