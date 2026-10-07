@@ -607,3 +607,42 @@ full.
   list is longer than six and is still not fully read. It is a different list
   from the lot's, which is why one table carries both and keys them by which of
   `stockUuid` / `productUuid` is set.
+
+
+---
+
+## `Corrigeren voorraad` on a **kilo** lot, 7-10-2026
+
+Reopened from the product record's `Voorraad` panel on **`SCA` Aluminum
+scrap** at location `SC` — a lot stocked in kilograms. The same dialog as §2,
+with two differences:
+
+**1. A block §2 did not show, at the top — `Hoeveelheid in
+magazijnopdrachten en reserveringen`:**
+
+| | | | |
+|---|---|---|---|
+| `Nieuw` | 0 | `Niet gereserveerd` | 0 |
+| `Vrijgegeven` | 0 | `Gereserveerd` | 0 |
+| `Klaar` | 0 | **`Beschikbaar`** | **89,055375** |
+
+So before correcting, the dialog says how much of the lot is tied up in work
+orders (new / released / ready) and in reservations — and what is free. A
+correction is made against `Beschikbaar`.
+
+**2. The quantity half shrinks to the unit.** `Huidige hoeveelheid` **89,055375
+Kilogram**, `Nieuwe hoeveelheid` prefilled the same, then `Reden`,
+`Zaagopdracht`, `Categorie` `Standaard` and `Voorraadmutatie omschrijving` —
+**no `Dikte`, `Kwaliteit` or four weight fields.** A kilo lot's quantity *is*
+its weight, so there is nothing separate to correct. `OK` greyed until a
+`Reden` is chosen, as on a piece lot.
+
+⚠️ **Six decimals of kilos.** The scrap lot stands at 89,055375 kg — more
+precision than any weighbridge; it is what repeated part-consumptions in kilos
+leave behind. Our `Stock` quantity columns must hold at least that.
+
+Cancelled with `Annuleren`.
+
+**J8, the article-level button:** the product toolbar's `…voor voorraad`
+button (left of `Kopieer artikel(groep)en…`) was **greyed** on this product,
+so `Correct products and stock` could not be pressed here.
