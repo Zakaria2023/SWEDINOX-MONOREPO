@@ -14,7 +14,7 @@ import { Input } from "@/components/shadcn/input";
 import { Select } from "@/components/shadcn/select";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
 import { ProductSearchField } from "@/components/ui/product-search-field";
-import { purchasingUnits } from "@/lib/enums";
+import { purchaseSourceTypes, purchasingUnits } from "@/lib/enums";
 import {
   amountForWeight,
   enumOptions,
@@ -22,16 +22,26 @@ import {
   formatNumber,
   runningMeters,
 } from "@/lib/helpers";
-import { PURCHASING_UNIT_LABELS } from "@/lib/labels";
+import {
+  ORDER_SOURCE_TYPE_LABELS,
+  PURCHASING_UNIT_LABELS,
+} from "@/lib/labels";
 import { Plus, X } from "lucide-react";
 
 const priceUnitOptions = enumOptions(purchasingUnits, PURCHASING_UNIT_LABELS);
+// Blank is a real choice: "whatever the header's CD tick implies".
+const sourceTypeOptions = enumOptions(
+  purchaseSourceTypes,
+  ORDER_SOURCE_TYPE_LABELS,
+  "From the order",
+);
 
-const EMPTY_ITEM = {
+const EMPTY_ITEM: PurchaseOrderFormValues["items"][number] = {
   productUuid: "",
   quantity: "",
   netPrice: "",
   priceUnit: "",
+  sourceType: "",
   productLabel: "",
   qualityCode: "",
   lengthMm: "",
@@ -256,6 +266,25 @@ const PurchaseOrderLine = ({ index, onRemove }: LineProps) => {
                 value={unitField.value || ""}
                 options={priceUnitOptions}
                 onValueChange={unitField.onChange}
+              />
+            )}
+          />
+        </div>
+
+        {/* The reference's `Line type` — `Stk` · `CD` · `EXW`. Grouping its
+            purchase-lines grid showed all three, and only the first two can
+            be read off the header, so the third has to be said here. */}
+        <div>
+          <FormLabel htmlFor={`items.${index}.sourceType`}>Line type</FormLabel>
+          <Controller
+            control={control}
+            name={`items.${index}.sourceType`}
+            render={({ field: typeField }) => (
+              <Select
+                id={`items.${index}.sourceType`}
+                value={typeField.value || ""}
+                options={sourceTypeOptions}
+                onValueChange={typeField.onChange}
               />
             )}
           />

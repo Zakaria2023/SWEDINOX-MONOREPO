@@ -34,6 +34,7 @@ import {
 import {
   CE_STANDARD_LABELS,
   ORDER_LINE_STATUS_LABELS,
+  ORDER_SOURCE_TYPE_LABELS,
   PURCHASE_ORDER_TYPE_LABELS,
   STOCK_UNIT_LABELS,
 } from "@/lib/labels";
@@ -253,7 +254,11 @@ export const PurchaseLinesTable = ({ page, filters }: Props) => {
           </TableCell>
         );
       case "lineType":
-        return <TableCell key={key}>{row.lineType}</TableCell>;
+        return (
+          <TableCell key={key}>
+            {ORDER_SOURCE_TYPE_LABELS[row.lineType]}
+          </TableCell>
+        );
       case "qtyStillToReceive":
         return (
           <TableCell key={key} className="text-right">

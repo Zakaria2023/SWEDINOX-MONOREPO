@@ -761,6 +761,35 @@ export type OrderType = (typeof orderTypes)[number];
  * `Stk+CD` is a real third value, on 31 of 1.970 lines: a line filled partly
  * from stock and partly by buying in.
  *
+ * 🔑 **And `EXW` is a fourth, proved 7-10-2026** by grouping `Purchase lines`
+ * on `Line type` over 2024–2025: three groups, `CD` · `EXW` · `Stk`. It had
+ * shown once before, on a single sales line, and been written off as thin.
+ * The same three show up as the three **minimum profit margins** on every
+ * product (`Stock · Ex works · Cross Docking`) and as the three columns of the
+ * reference's `REVENUEGROUP_BUDGET` (`STOCK · FACTORY · CROSSDOCK`). So this
+ * is not a line label: it is a **mode of the trade**, and three things key on
+ * it — the margin floor, the budget split, and whether the metal ever touches
+ * our shelf.
+ *
+ *   Stk   supplier → our warehouse → customer
+ *   CD    supplier → our lorry → customer   (`Pick up/Drop-off CD-purchases`)
+ *   EXW   see below — one row, and it is not what the name suggests
+ *
+ * ⚠️ **The only `EXW` purchase line in 21 months is a toll-processing return,
+ * not a mill delivery.** Order `400143/10`, 15-1-2025: one 3000×1500×5 plate,
+ * 177 kg, from Decomecc N.V. — a `LOON (E)` company, i.e. a contract
+ * processor — at **€ 0,05 per tonne**, `Received` with `Qty ordered 0` and
+ * `Qty confirmed 0` (never sent, never acknowledged, yet arrived), carrying an
+ * **internal** certificate (`INtern`, `NVT`) and booked to `3000 Stock` at
+ * € 0,01. Its purchase-order type reads `Ex works Pro…`, a value our
+ * `purchaseOrderTypes` does not hold. So on the buying side `EXW` is how metal
+ * that was already ours comes back from a processor's works. Whether the
+ * selling side's single `EXW` line is its mirror is still open.
+ *
+ * ⚠️ Either way `ex_works` is somebody else's works, not ours. A customer
+ * collecting at our dock is `Pick-up`, a separate boolean — orders-and-quotes.md
+ * counts 307 `Normal` pick-up orders against one `Ex works` one.
+ *
  * 🚫 Both revenue screens also show an unlabelled group carrying `Price
  * differences` (94.091 kg at a 68 % margin). That is where price corrections
  * land, not a way of selling steel, so it is not a member here.
@@ -773,9 +802,23 @@ export const orderSourceTypes = [
   "stock",
   "stock_and_cross_dock",
   "cross_dock",
+  "ex_works",
 ] as const satisfies readonly string[];
 
 export type OrderSourceType = (typeof orderSourceTypes)[number];
+
+/**
+ * The values a **purchase** line can take. `Stk+CD` is absent on purpose: it
+ * is a sales line filled from two sources, and a purchase line has one.
+ * The 7-10-2026 grouping of the purchase-lines grid showed exactly these three.
+ */
+export const purchaseSourceTypes = [
+  "stock",
+  "cross_dock",
+  "ex_works",
+] as const satisfies readonly OrderSourceType[];
+
+export type PurchaseSourceType = (typeof purchaseSourceTypes)[number];
 
 /**
  * What kind of demand is holding a lot.

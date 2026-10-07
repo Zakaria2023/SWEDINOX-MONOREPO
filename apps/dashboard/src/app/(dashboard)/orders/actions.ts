@@ -673,7 +673,15 @@ export const createOrder = async (
           widthMm: lineWidthMm,
           thicknessMm: lineThicknessMm,
           priceUnit: product?.priceUnit,
-          minProfitMargin: minimumMarginFor(product, fields.isPickup ?? false),
+          // ⚠️ Pick-up read as ex works is an assumption carried over from
+          // before the line types were counted. The reference's `Pick-up` is
+          // a separate boolean (307 pick-up orders against one `Ex works`), so
+          // this likely over-applies the ex-works floor; it stays until the
+          // sales line carries its own type.
+          minProfitMargin: minimumMarginFor(
+            product,
+            fields.isPickup ? "ex_works" : "stock",
+          ),
         });
 
         const orderItemUuid = generateUuid();

@@ -40,12 +40,13 @@ import {
   SelectPurchaseReturnOrders,
 } from "@/db/schema/purchase-return-orders";
 import { mailDocument, sendPurchaseOrderEmail } from "@/emails/documents";
-import { purchaseOrderStatuses } from "@/lib/enums";
+import { PurchaseSourceType, purchaseOrderStatuses } from "@/lib/enums";
 import {
   amountForWeight,
   articlePieceWeightKg,
   describeError,
   generateUuid,
+  purchaseSourceTypeFor,
   isWeightPriceUnit,
   moneyString,
   receptionActions,
@@ -109,6 +110,8 @@ export type PurchaseOrderItemInput = {
   /** Agreed purchase price per unit — what the received lot is valued at. */
   netPrice: string;
   priceUnit?: string;
+  /** The reference's `Line type`; blank follows the header's CD tick. */
+  sourceType?: PurchaseSourceType | "";
   /**
    * 🔑 Carried off the article the stock dialog handed back, not typed.
    *
@@ -646,6 +649,9 @@ export const createPurchaseOrder = async (
           quantity: item.quantity,
           qtyPlanned: item.quantity,
           lineNumber: index + 1,
+          sourceType:
+            item.sourceType ||
+            purchaseSourceTypeFor(fields.pickupDropoffCdPurchases),
           qualityCode: item.qualityCode?.trim() || null,
           lengthMm: intOrNull(item.lengthMm),
           widthMm: intOrNull(item.widthMm),

@@ -5,6 +5,7 @@ import {
   invoicePaymentTerms,
   orderWeightTypes,
   purchaseOrderTypes,
+  purchaseSourceTypes,
 } from "@/lib/enums";
 import { todayDateString, currentYear } from "@/lib/helpers";
 
@@ -19,6 +20,10 @@ export const purchaseOrderItemSchema = z.object({
     .min(1, "Purchase price is required")
     .refine((value) => Number(value) >= 0, "Purchase price cannot be negative"),
   priceUnit: z.string().optional(),
+  // The reference's `Line type`. Blank means "whatever the header implies" —
+  // `CD` under a `Pick up/Drop-off CD-purchases` tick, `Stk` otherwise — so a
+  // buyer only touches this to say `EXW`, which no header tick can say.
+  sourceType: z.enum(purchaseSourceTypes).or(z.literal("")).optional(),
 
   // 🔑 Carried off the chosen article, not typed.
   //
@@ -117,6 +122,7 @@ export const DEFAULT_PURCHASE_ORDER: PurchaseOrderFormValues = {
       quantity: "",
       netPrice: "",
       priceUnit: "",
+      sourceType: "",
       productLabel: "",
       qualityCode: "",
       lengthMm: "",

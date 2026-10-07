@@ -316,7 +316,8 @@ const priceQuoteLines = async ({
       widthMm,
       thicknessMm,
       priceUnit: product.priceUnit,
-      minProfitMargin: minimumMarginFor(product, isPickup),
+      // Same carried-over assumption as on orders: pick-up read as ex works.
+      minProfitMargin: minimumMarginFor(product, isPickup ? "ex_works" : "stock"),
     });
 
     rows.push({

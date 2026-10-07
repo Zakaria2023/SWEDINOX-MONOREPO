@@ -121,6 +121,7 @@ import {
   WorkorderPrintMethod,
   WorkorderReleaseMethod,
   WorkorderSlipType,
+  PurchaseSourceType,
 } from "./enums";
 import {
   CONTACT_SALUTATION_LABELS,
@@ -8075,6 +8076,19 @@ export const toFormString = (
  * screens treats "unset" as a real choice, so the blank is the default rather
  * than an omission.
  */
+/**
+ * The line type a purchase order header implies for its lines.
+ *
+ * `Pick up/Drop-off CD-purchases` ticked on the header is the buying end of a
+ * cross-dock — our lorry collects at the supplier and drops at the customer —
+ * so a line raised under it is `CD` unless the buyer says otherwise. Nothing on
+ * the header says `EXW`; that is chosen on the line, which is why this returns
+ * a default rather than the answer.
+ */
+export const purchaseSourceTypeFor = (
+  pickupDropoffCdPurchases: boolean | null | undefined,
+): PurchaseSourceType => (pickupDropoffCdPurchases ? "cross_dock" : "stock");
+
 export const enumOptions = <T extends string>(
   values: readonly T[],
   labels: Record<T, string>,

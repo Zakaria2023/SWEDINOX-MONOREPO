@@ -1,6 +1,8 @@
 import { CompanyOption } from "@/app/(dashboard)/companies/actions";
 import { ProductOption } from "@/app/(dashboard)/products/actions";
+import { purchaseSourceTypes } from "@/lib/enums";
 import { companyOptionLabel } from "@/lib/helpers";
+import { ORDER_SOURCE_TYPE_LABELS } from "@/lib/labels";
 import { ClerkUserOption } from "@/lib/server/clerk";
 import { TableFilterControl } from "@/lib/table-query";
 
@@ -41,6 +43,16 @@ export const purchaseLineFilters = (
     options: products.map((product) => ({
       value: product.uuid,
       label: `${product.productCode} — ${product.name}`,
+    })),
+  },
+  {
+    key: "lineType",
+    kind: "select",
+    label: "Line type",
+    placeholder: "All line types",
+    options: purchaseSourceTypes.map((type) => ({
+      value: type,
+      label: ORDER_SOURCE_TYPE_LABELS[type],
     })),
   },
   { key: "orderDate", kind: "dateRange", label: "Order date" },

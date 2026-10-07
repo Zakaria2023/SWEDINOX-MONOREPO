@@ -892,6 +892,7 @@ export const ORDER_SOURCE_TYPE_LABELS: Record<OrderSourceType, string> = {
   stock: "Stk",
   stock_and_cross_dock: "Stk+CD",
   cross_dock: "CD",
+  ex_works: "EXW",
 };
 
 export const RESERVATION_TYPE_LABELS: Record<ReservationType, string> = {

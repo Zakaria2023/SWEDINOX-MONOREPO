@@ -11,7 +11,11 @@ import {
   timestamp,
   varchar,
 } from "drizzle-orm/mysql-core";
-import { orderLineStatuses, stockUnits } from "../../lib/enums";
+import {
+  orderLineStatuses,
+  purchaseSourceTypes,
+  stockUnits,
+} from "../../lib/enums";
 import { PurchaseOrders } from "./purchase-orders";
 import { Products } from "./products";
 
@@ -30,6 +34,16 @@ export const PurchaseOrderItems = mysqlTable(
     lineNumber: int("line_number"),
     status: mysqlEnum("status", orderLineStatuses).default("in_progress"),
     purchaser: varchar("purchaser", { length: 255 }),
+    // The reference's `Line type` on a purchase line — where the metal goes
+    // once the supplier hands it over. 🔴 Until 7-10-2026 the purchase-lines
+    // overview *computed* this from the order header's `Pick up/Drop-off
+    // CD-purchases` tick, which can only ever say `Stk` or `CD`; grouping the
+    // reference's grid showed a third group, `EXW`, that no tick produces. So
+    // it is a column, and the tick is only its default — see
+    // `purchaseSourceTypeFor`.
+    sourceType: mysqlEnum("source_type", purchaseSourceTypes)
+      .default("stock")
+      .notNull(),
 
     // ── Physical attributes ───────────────────────────────────────────────────
     unit: mysqlEnum("unit", stockUnits).default("st"),

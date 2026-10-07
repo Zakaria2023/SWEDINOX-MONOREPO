@@ -1,5 +1,6 @@
 "use server";
 import { describeError, personInitials } from "@/lib/helpers";
+import { purchaseSourceTypes } from "@/lib/enums";
 
 import { db } from "@/db";
 import {
@@ -30,6 +31,7 @@ import {
 } from "drizzle-orm";
 import {
   dateRangeFilter,
+  enumFilter,
   numberRangeFilter,
   relationFilter,
   tableOrderBy,
@@ -80,8 +82,8 @@ export type PurchaseLineItem = Omit<
   purchaserInitials: string | null;
   /** What kind of buying this is: materials, processing, customer materials. */
   orderType: SelectPurchaseOrders["purchaseOrderType"];
-  /** Stock or cross-docked straight through to a customer. */
-  lineType: string;
+  /** The reference's `Line type` — `Stk` · `CD` · `EXW`, read off the line. */
+  lineType: SelectPurchaseOrderItems["sourceType"];
   /** The root of the product hierarchy, and the group the product sits in. */
   mainGroup: SelectProductGroups["name"] | null;
   subgroup: SelectProductGroups["name"] | null;
@@ -213,9 +215,10 @@ const purchaseLineContext = {
     ORDER BY ${CompanyAddresses.id} LIMIT 1
   )`,
   orderType: PurchaseOrders.purchaseOrderType,
-  // Cross-docking is agreed on the order: goods that never touch our shelves go
-  // straight through, which is what "CD" means here.
-  lineType: sql<string>`CASE WHEN ${PurchaseOrders.pickupDropoffCdPurchases} = 1 THEN 'CD' ELSE 'Stk' END`,
+  // 🔴 Was a CASE on the header's `Pick up/Drop-off CD-purchases` tick, which
+  // can only say `Stk` or `CD`; the reference's grid groups into three. The
+  // tick is now the line's default at creation, and the line is the truth.
+  lineType: PurchaseOrderItems.sourceType,
   mainGroup: sql<
     SelectProductGroups["name"] | null
   >`COALESCE(${Root.name}, ${Grandparent.name}, ${Parent.name}, ${ProductGroups.name})`,
@@ -248,6 +251,7 @@ const PURCHASE_LINE_FILTERS = {
   supplier: relationFilter(PurchaseOrders.supplierUuid),
   purchaser: relationFilter(PurchaseOrders.purchaser),
   product: relationFilter(PurchaseOrderItems.productUuid),
+  lineType: enumFilter(PurchaseOrderItems.sourceType, purchaseSourceTypes),
   orderDate: dateRangeFilter(PurchaseOrders.orderDate),
   quantity: numberRangeFilter(PurchaseOrderItems.quantity),
   // The reference's "Only current purchasing lines": still to arrive or to be

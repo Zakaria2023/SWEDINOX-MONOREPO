@@ -9,6 +9,7 @@ import { Contracts, SelectContracts } from "@/db/schema/contracts";
 import { ProductFspHistory } from "@/db/schema/product-details";
 import { ProductGroups } from "@/db/schema/product-groups";
 import { Products, SelectProducts } from "@/db/schema/products";
+import { OrderSourceType } from "@/lib/enums";
 import {
   applyPriceDiscounts,
   resolveTierDiscount,
@@ -64,6 +65,7 @@ export type PricedProduct = {
   thickness: string | null;
   minProfitMarginStock: string | null;
   minProfitMarginExWorks: string | null;
+  minProfitMarginCrossDocking: string | null;
 };
 
 /**
@@ -121,6 +123,7 @@ export const loadSalesPricingContext = async (
         thickness: Products.thickness,
         minProfitMarginStock: ProductGroups.minProfitMarginStock,
         minProfitMarginExWorks: ProductGroups.minProfitMarginExWorks,
+        minProfitMarginCrossDocking: ProductGroups.minProfitMarginCrossDocking,
       })
       .from(Products)
       .leftJoin(
@@ -301,16 +304,25 @@ export const resolveLineNetPrice = (
 };
 
 /**
- * The margin floor a line is held to. A pick-up line is sold ex works, so it is
- * measured against the ex-works floor; anything delivered from stock is held to
- * the stock floor.
+ * The margin floor a line is held to — one of the product's three, picked by
+ * the line's mode. The reference keeps exactly three (`Stock · Ex works ·
+ * Cross Docking`), and 7-10-2026's grouping of the purchase-lines grid showed
+ * they are the three line types `Stk` · `EXW` · `CD`, so the floor is keyed on
+ * the type and nothing else. A mixed `Stk+CD` line is held to the cross-dock
+ * floor, the lower of its two halves' — a floor is a floor.
+ *
+ * ⚠️ Callers still derive the mode from `isPickup`, which is an assumption
+ * this function no longer makes for them. See the call sites.
  */
 export const minimumMarginFor = (
   product: PricedProduct | undefined,
-  isPickup: boolean,
-): number =>
-  Number(
-    (isPickup
+  sourceType: OrderSourceType,
+): number => {
+  const floor =
+    sourceType === "ex_works"
       ? product?.minProfitMarginExWorks
-      : product?.minProfitMarginStock) ?? 0,
-  );
+      : sourceType === "stock"
+        ? product?.minProfitMarginStock
+        : product?.minProfitMarginCrossDocking;
+  return Number(floor ?? 0);
+};

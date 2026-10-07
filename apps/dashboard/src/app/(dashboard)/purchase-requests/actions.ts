@@ -28,6 +28,7 @@ import {
   canEditPurchaseRequestLines,
   describeError,
   generateUuid,
+  purchaseSourceTypeFor,
   isPurchaseRequestEditable,
   todayDateString,
 } from "@/lib/helpers";
@@ -452,6 +453,7 @@ export const convertPurchaseRequestToOrder = async (
           quantity,
           qtyPlanned: quantity,
           lineNumber: item.lineNumber ?? index + 1,
+          sourceType: purchaseSourceTypeFor(request.pickupDropoffCdPurchases),
           unit: item.unit,
           kgPurchased: item.kg,
           lengthMm: item.lengthMm,

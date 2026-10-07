@@ -3,6 +3,7 @@ import { dateCell, ExportColumn, numberCell, textCell } from "@/lib/excel";
 import {
   CE_STANDARD_LABELS,
   ORDER_LINE_STATUS_LABELS,
+  ORDER_SOURCE_TYPE_LABELS,
   PURCHASE_ORDER_TYPE_LABELS,
   STOCK_UNIT_LABELS,
 } from "@/lib/labels";
@@ -286,7 +287,7 @@ export const PURCHASE_LINE_COLUMNS: Array<
     key: "lineType",
     label: "Line type",
     defaultVisible: false,
-    value: (row) => textCell(row.lineType),
+    value: (row) => textCell(ORDER_SOURCE_TYPE_LABELS[row.lineType]),
   },
   {
     key: "qtyStillToReceive",
