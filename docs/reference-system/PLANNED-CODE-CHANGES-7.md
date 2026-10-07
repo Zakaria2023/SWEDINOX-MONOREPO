@@ -348,3 +348,14 @@ stock-value correction writes a movement. If it is wanted, build it as a
 toolbar action on `Stock on location` (selection, preview grid, apply) — a
 valuation change, so it must log who and when. Decide with K3 (FSP
 revaluation is on that list).
+
+## 22. 🟢 Kilo lots need more than three decimals
+
+**What was found.** Scrap lot `SCA` stands at **89,055375 kg** in the
+reference's correction dialog. Ours: `Stock.quantity` is `decimal(15,3)` and
+`Stock.quantityKg` `decimal(15,2)`, so the same lot would read 89,055 /
+89,06 and every part-consumption would round.
+
+**What to build.** Widen both to scale 6 (hand-ALTER, never `--force`; a
+widening loses nothing). Display still rounds to the unit's own decimals
+(`Aantal decimalen gewicht` on the product — `1` on this one).
