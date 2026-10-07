@@ -2,6 +2,7 @@
 
 import { db } from "@/db";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
+import { CompanyAddresses } from "@/db/schema/company-addresses";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
 import {
   InsertPurchaseReturnOrders,
@@ -94,6 +95,13 @@ export type PurchaseReturnOrderListItem = SelectPurchaseReturnOrders & {
 // Which received line is going back, and how much of it.
 export type PurchaseReturnOrderItemInput = {
   purchaseOrderItemUuid: string;
+  /**
+   * The lot going back. A line received in three parcels has three lots, and
+   * the reference's return picker offers each parcel on its own row
+   * (`Create Purchase Return order lines`, 7-10-2026). Without it the line's
+   * first lot is taken.
+   */
+  stockUuid?: string;
   returnQty: string;
   returnReason?: PurchaseReturnOrderReason | null;
 };
@@ -115,7 +123,12 @@ export type ReturnablePurchaseLine = {
   netPrice: SelectPurchaseOrderItems["netPrice"];
   priceUnit: SelectPurchaseOrderItems["priceUnit"];
   stockUuid: SelectStock["uuid"] | null;
-  // Quantity − reserved on that lot: what can physically leave today.
+  // The parcel's own identity, as the reference's picker prints it: the heat
+  // it came in under and the day it arrived.
+  charge: SelectStock["charge"] | null;
+  receiptDate: SelectStock["receiptDate"] | null;
+  // Quantity − reserved on that lot − already on an open return: what can
+  // physically leave today.
   availableQuantity: string;
 };
 
@@ -163,15 +176,23 @@ export const getPurchaseReturnOrders = async (): Promise<
 };
 
 /**
- * Received purchase lines that could go back to the supplier.
+ * The lots that could go back to a supplier — one row per parcel received.
  *
- * A line only appears once goods actually arrived — the receipt is what created
- * the stock lot, and without a lot there is nothing to send back and no
- * valuation to reverse. What is already on another return is netted off, so the
- * same delivery can't be returned twice.
+ * 🔴 Rewritten 7-10-2026. This used to reach the lot through a purchase
+ * *invoice* line, matched on product alone — a leftover from when invoicing
+ * created stock. Since the unloading work order became what creates a lot,
+ * goods that had arrived but were not yet billed could not be returned at
+ * all, though the reference returns them (404102's 8-9 delivery went back
+ * before it was invoiced). Now: every lot whose `purchaseOrderItemUuid` is a
+ * received line of this supplier, optionally of one order.
+ *
+ * What may go is what is on the shelf and unreserved, less whatever already
+ * sits on a return that has not left yet — a return that has gone has already
+ * taken its quantity off the lot.
  */
 export const getReturnablePurchaseLines = async (
   supplierUuid: string,
+  purchaseOrderUuid?: string,
 ): Promise<ReturnablePurchaseLine[]> => {
   const rows = await db
     .select({
@@ -191,32 +212,34 @@ export const getReturnablePurchaseLines = async (
       stockUuid: Stock.uuid,
       stockQuantity: Stock.quantity,
       stockReserved: Stock.reservedQuantity,
+      charge: Stock.charge,
+      receiptDate: Stock.receiptDate,
     })
-    .from(PurchaseOrderItems)
+    .from(Stock)
+    .innerJoin(
+      PurchaseOrderItems,
+      eq(Stock.purchaseOrderItemUuid, PurchaseOrderItems.uuid),
+    )
     .innerJoin(
       PurchaseOrders,
       eq(PurchaseOrderItems.purchaseOrderUuid, PurchaseOrders.uuid),
     )
-    .innerJoin(
-      PurchaseInvoiceItems,
-      eq(PurchaseInvoiceItems.productUuid, PurchaseOrderItems.productUuid),
-    )
-    .innerJoin(Stock, eq(PurchaseInvoiceItems.stockUuid, Stock.uuid))
     .leftJoin(Products, eq(PurchaseOrderItems.productUuid, Products.uuid))
     .where(
       and(
         eq(PurchaseOrders.supplierUuid, supplierUuid),
-        eq(Stock.purchaseOrderItemUuid, PurchaseOrderItems.uuid),
+        purchaseOrderUuid
+          ? eq(PurchaseOrders.uuid, purchaseOrderUuid)
+          : undefined,
         sql`${PurchaseOrderItems.qtyReceived} > 0`,
       ),
     )
-    .orderBy(desc(PurchaseOrderItems.createdAt));
+    .orderBy(desc(Stock.receiptDate), PurchaseOrderItems.lineNumber);
 
-  // Everything already sitting on a return, so a line can't be sent back twice.
-  const returned = await db
+  // What is already on a return that has not gone yet, per lot.
+  const pending = await db
     .select({
-      purchaseOrderItemUuid:
-        PurchaseReturnOrderItems.originalPurchaseOrderItemUuid,
+      stockUuid: PurchaseReturnOrderItems.stockUuid,
       quantity: sql<string>`COALESCE(SUM(${PurchaseReturnOrderItems.returnQty}), 0)`,
     })
     .from(PurchaseReturnOrderItems)
@@ -227,22 +250,17 @@ export const getReturnablePurchaseLines = async (
         PurchaseReturnOrders.uuid,
       ),
     )
-    .where(sql`${PurchaseReturnOrders.status} <> 'cancelled'`)
-    .groupBy(PurchaseReturnOrderItems.originalPurchaseOrderItemUuid);
+    .where(inArray(PurchaseReturnOrders.status, ["provisional", "released"]))
+    .groupBy(PurchaseReturnOrderItems.stockUuid);
 
-  const returnedByLine = new Map(
-    returned.map((row) => [row.purchaseOrderItemUuid, Number(row.quantity)]),
+  const pendingByLot = new Map(
+    pending.map((row) => [row.stockUuid, Number(row.quantity)]),
   );
 
   return rows.flatMap((row) => {
-    const alreadyReturned = returnedByLine.get(row.purchaseOrderItemUuid) ?? 0;
     const onShelf =
       Number(row.stockQuantity ?? 0) - Number(row.stockReserved ?? 0);
-    // Goods already sold on can't be sent back, however much was received.
-    const available = Math.min(
-      Number(row.receivedQuantity ?? 0) - alreadyReturned,
-      onShelf,
-    );
+    const available = onShelf - (pendingByLot.get(row.stockUuid) ?? 0);
 
     if (available <= 0) {
       return [];
@@ -264,13 +282,78 @@ export const getReturnablePurchaseLines = async (
         netPrice: row.netPrice,
         priceUnit: row.priceUnit,
         stockUuid: row.stockUuid,
+        charge: row.charge,
+        receiptDate: row.receiptDate,
         availableQuantity: available.toFixed(3),
       },
     ];
   });
 };
 
-/** The Summary panel on the document, rolled up from its lines and surcharges. */
+type ReturnLineWriter = Pick<typeof db, "select" | "insert">;
+
+type ReturnLinesToInsert = {
+  purchaseReturnOrderUuid: string;
+  lines: Array<{
+    line: ReturnablePurchaseLine;
+    returnQty: number;
+    returnReason: PurchaseReturnOrderReason | null;
+  }>;
+  returnDate: Date | string | null;
+  /** The number the first new line takes; lines are numbered after it. */
+  firstLineNumber: number;
+};
+
+/**
+ * Write return lines against the lots they take back. Shared by creating a
+ * return with its lines and by adding lines to a provisional one.
+ */
+const insertPurchaseReturnLines = async (
+  tx: ReturnLineWriter,
+  { purchaseReturnOrderUuid, lines, returnDate, firstLineNumber }: ReturnLinesToInsert,
+): Promise<void> => {
+  for (const [index, { line, returnQty, returnReason }] of lines.entries()) {
+    const netPrice = Number(line.netPrice ?? 0);
+
+    // Only part of a line usually goes back, so the weight returned is the
+    // line's weight scaled to the quantity going with it. Money follows
+    // the weight, because the price is struck per tonne.
+    const plannedQty = Number(line.plannedQuantity ?? 0);
+    const returnedWeightKg =
+      plannedQty > 0
+        ? Number(line.kgPurchased ?? 0) * (returnQty / plannedQty)
+        : 0;
+
+    await tx.insert(PurchaseReturnOrderItems).values({
+      uuid: generateUuid(),
+      purchaseReturnOrderUuid,
+      productUuid: line.productUuid,
+      originalPurchaseOrderUuid: line.purchaseOrderUuid,
+      originalPurchaseOrderLine: line.lineNumber,
+      originalPurchaseOrderItemUuid: line.purchaseOrderItemUuid,
+      stockUuid: line.stockUuid,
+      lineNumber: firstLineNumber + index,
+      reference:
+        line.purchaseOrderId != null ? String(line.purchaseOrderId) : null,
+      unit: line.unit,
+      quantity: line.receivedQuantity,
+      returnQty: returnQty.toFixed(3),
+      returnReason,
+      netPrice: netPrice.toFixed(4),
+      priceUnit: line.priceUnit,
+      weightKg: returnedWeightKg.toFixed(2),
+      amount: moneyString(
+        amountForWeight(netPrice, line.priceUnit, returnedWeightKg, {
+          quantity: returnQty,
+        }),
+      ),
+      returnDate: returnDate
+        ? toDateString(new Date(returnDate))
+        : todayDateString(),
+    });
+  }
+};
+
 const buildPurchaseReturnSummary = async (
   tx: Pick<typeof db, "select">,
   purchaseReturnOrderUuid: string,
@@ -854,12 +937,15 @@ export const createPurchaseReturnOrder = async (
     // Resolve what is going back before writing anything: the line has to be
     // one this supplier actually delivered, and still on the shelf.
     const returnable = await getReturnablePurchaseLines(fields.supplierUuid);
-    const returnableByUuid = new Map(
-      returnable.map((line) => [line.purchaseOrderItemUuid, line]),
-    );
+    const resolveLot = (item: PurchaseReturnOrderItemInput) =>
+      returnable.find((line) =>
+        item.stockUuid
+          ? line.stockUuid === item.stockUuid
+          : line.purchaseOrderItemUuid === item.purchaseOrderItemUuid,
+      );
 
     for (const item of items) {
-      const line = returnableByUuid.get(item.purchaseOrderItemUuid);
+      const line = resolveLot(item);
       if (!line) {
         return {
           error:
@@ -890,52 +976,23 @@ export const createPurchaseReturnOrder = async (
 
       // Lines were previously dropped here, exactly as they were on the sales
       // side — which is why a purchase return could never move stock or money.
-      for (const [index, item] of items.entries()) {
-        const line = returnableByUuid.get(item.purchaseOrderItemUuid);
-        if (!line) {
-          continue;
-        }
-
-        const returnQty = Number(item.returnQty);
-        const netPrice = Number(line.netPrice ?? 0);
-
-        // Only part of a line usually goes back, so the weight returned is the
-        // line's weight scaled to the quantity going with it. Money follows
-        // the weight, because the price is struck per tonne.
-        const plannedQty = Number(line.plannedQuantity ?? 0);
-        const returnedWeightKg =
-          plannedQty > 0
-            ? Number(line.kgPurchased ?? 0) * (returnQty / plannedQty)
-            : 0;
-
-        await tx.insert(PurchaseReturnOrderItems).values({
-          uuid: generateUuid(),
-          purchaseReturnOrderUuid: uuid,
-          productUuid: line.productUuid,
-          originalPurchaseOrderUuid: line.purchaseOrderUuid,
-          originalPurchaseOrderLine: line.lineNumber,
-          originalPurchaseOrderItemUuid: line.purchaseOrderItemUuid,
-          stockUuid: line.stockUuid,
-          lineNumber: index + 1,
-          reference:
-            line.purchaseOrderId != null ? String(line.purchaseOrderId) : null,
-          unit: line.unit,
-          quantity: line.receivedQuantity,
-          returnQty: returnQty.toFixed(3),
-          returnReason: item.returnReason ?? fields.returnReason ?? null,
-          netPrice: netPrice.toFixed(4),
-          priceUnit: line.priceUnit,
-          weightKg: returnedWeightKg.toFixed(2),
-          amount: moneyString(
-            amountForWeight(netPrice, line.priceUnit, returnedWeightKg, {
-              quantity: returnQty,
-            }),
-          ),
-          returnDate: fields.returnDate
-            ? toDateString(new Date(fields.returnDate))
-            : todayDateString(),
-        });
-      }
+      await insertPurchaseReturnLines(tx, {
+        purchaseReturnOrderUuid: uuid,
+        lines: items.flatMap((item) => {
+          const line = resolveLot(item);
+          return line
+            ? [
+                {
+                  line,
+                  returnQty: Number(item.returnQty),
+                  returnReason: item.returnReason ?? fields.returnReason ?? null,
+                },
+              ]
+            : [];
+        }),
+        returnDate: fields.returnDate ?? null,
+        firstLineNumber: 1,
+      });
 
       if (extras.surcharges.length > 0) {
         await tx.insert(PurchaseReturnOrderSurcharges).values(
@@ -973,6 +1030,233 @@ export const createPurchaseReturnOrder = async (
         error instanceof Error
           ? error.message
           : "Failed to create purchase return order",
+    };
+  }
+};
+
+/**
+ * `Par. return` on a purchase order: open a provisional return against it.
+ *
+ * 🔑 Watched on `404102`, 7-10-2026. The button does not open a form — it
+ * saves the return at once, `Provisional`, next in its own series, already
+ * linked to the order, and with **no lines**. What it fills in:
+ *
+ * - the order's supplier, contact, payment terms and type
+ * - **purchaser = whoever pressed it** (not the order's buyer)
+ * - **return date = tomorrow**
+ * - **pick-up = our yard** (the order's own delivery address) and delivery =
+ *   the supplier's address
+ *
+ * Lines are added afterwards from `Create Purchase Return order lines`, one
+ * per parcel received (`addPurchaseReturnLines`).
+ *
+ * ⚠️ Not built: the reference also raises a **complaint** alongside (`40412`).
+ * `complaintRef` stays empty until the purchase-side complaint is modelled.
+ */
+export const startPurchaseReturnFromOrder = async (
+  purchaseOrderUuid: string,
+): Promise<PurchaseReturnOrderActionResult> => {
+  const uuid = generateUuid();
+  try {
+    const user = await currentUser();
+    if (!user?.id) {
+      return { error: "User not authenticated" };
+    }
+
+    const [order] = await db
+      .select({
+        id: PurchaseOrders.id,
+        supplierUuid: PurchaseOrders.supplierUuid,
+        contactUuid: PurchaseOrders.contactUuid,
+        paymentTerms: PurchaseOrders.paymentTerms,
+        purchaseOrderType: PurchaseOrders.purchaseOrderType,
+        deliveryAddressUuid: PurchaseOrders.deliveryAddressUuid,
+        supplierAddressUuid: PurchaseOrders.supplierAddressUuid,
+        status: PurchaseOrders.status,
+      })
+      .from(PurchaseOrders)
+      .where(eq(PurchaseOrders.uuid, purchaseOrderUuid))
+      .limit(1);
+
+    if (!order) {
+      return { error: "Purchase order not found." };
+    }
+    if (!order.supplierUuid) {
+      return { error: "This purchase order names no supplier to return to." };
+    }
+    if (order.status === "cancelled") {
+      return { error: "A cancelled purchase order cannot be returned against." };
+    }
+
+    const returnable = await getReturnablePurchaseLines(
+      order.supplierUuid,
+      purchaseOrderUuid,
+    );
+    if (returnable.length === 0) {
+      return {
+        error:
+          "Nothing received on this order is still on the shelf to send back.",
+      };
+    }
+
+    // Pick-up is our yard: the address the order delivered to.
+    const [yard] = order.deliveryAddressUuid
+      ? await db
+          .select({
+            streetAndNo: CompanyAddresses.streetAndNo,
+            postalCode: CompanyAddresses.postalCode,
+            city: CompanyAddresses.city,
+          })
+          .from(CompanyAddresses)
+          .where(eq(CompanyAddresses.uuid, order.deliveryAddressUuid))
+          .limit(1)
+      : [];
+    const pickupAddress = yard
+      ? [yard.streetAndNo, [yard.postalCode, yard.city].filter(Boolean).join(" ")]
+          .filter(Boolean)
+          .join(", ") || null
+      : null;
+
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    await db.insert(PurchaseReturnOrders).values({
+      uuid,
+      supplierUuid: order.supplierUuid,
+      purchaseOrderUuid,
+      purchaseOrderReference: String(order.id),
+      contactUuid: order.contactUuid,
+      purchaser: user.id,
+      paymentTerms: order.paymentTerms,
+      purchaseOrderType: order.purchaseOrderType,
+      status: "provisional",
+      returnDate: tomorrow,
+      isDropOff: false,
+      deliveryAddressUuid: order.supplierAddressUuid,
+      pickupAddress,
+    });
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to start the purchase return",
+    };
+  }
+
+  revalidatePath("/purchase-return-orders");
+  revalidatePath(`/purchase-orders/${purchaseOrderUuid}`);
+  redirect(`/purchase-return-orders/${uuid}`);
+};
+
+/** The lots a provisional return could still take, for its line picker. */
+export const getReturnableLotsForReturn = async (
+  purchaseReturnOrderUuid: string,
+): Promise<ReturnablePurchaseLine[]> => {
+  const [returnOrder] = await db
+    .select({
+      supplierUuid: PurchaseReturnOrders.supplierUuid,
+      purchaseOrderUuid: PurchaseReturnOrders.purchaseOrderUuid,
+    })
+    .from(PurchaseReturnOrders)
+    .where(eq(PurchaseReturnOrders.uuid, purchaseReturnOrderUuid))
+    .limit(1);
+
+  if (!returnOrder?.supplierUuid) {
+    return [];
+  }
+  return getReturnablePurchaseLines(
+    returnOrder.supplierUuid,
+    returnOrder.purchaseOrderUuid ?? undefined,
+  );
+};
+
+/**
+ * `Lines → New` on a provisional return — the reference's `Create Purchase
+ * Return order lines`: tick the parcels going back, each a lot of its own.
+ */
+export const addPurchaseReturnLines = async (
+  purchaseReturnOrderUuid: string,
+  items: Array<{ stockUuid: string; returnQty: string }>,
+): Promise<PurchaseReturnOrderActionResult> => {
+  try {
+    if (items.length === 0) {
+      return { error: "Tick at least one parcel to send back." };
+    }
+
+    const [returnOrder] = await db
+      .select({
+        status: PurchaseReturnOrders.status,
+        returnDate: PurchaseReturnOrders.returnDate,
+        returnReason: PurchaseReturnOrders.returnReason,
+      })
+      .from(PurchaseReturnOrders)
+      .where(eq(PurchaseReturnOrders.uuid, purchaseReturnOrderUuid))
+      .limit(1);
+
+    if (!returnOrder) {
+      return { error: "Purchase return order not found." };
+    }
+    if (!isPurchaseReturnOrderEditable(returnOrder.status)) {
+      return { error: "Lines can only be added before the goods have gone." };
+    }
+
+    const returnable = await getReturnableLotsForReturn(purchaseReturnOrderUuid);
+    const byLot = new Map(returnable.map((line) => [line.stockUuid, line]));
+
+    const lines: ReturnLinesToInsert["lines"] = [];
+    for (const item of items) {
+      const line = byLot.get(item.stockUuid);
+      if (!line) {
+        return {
+          error:
+            "One of the ticked parcels is no longer available to send back — refresh and try again.",
+        };
+      }
+      const returnQty = Number(item.returnQty);
+      if (!(returnQty > 0)) {
+        return { error: "Every ticked parcel needs a quantity." };
+      }
+      if (returnQty > Number(line.availableQuantity)) {
+        return {
+          error: `Cannot return more than is still available (${Number(line.availableQuantity).toFixed(3)}).`,
+        };
+      }
+      lines.push({ line, returnQty, returnReason: returnOrder.returnReason });
+    }
+
+    const [{ last }] = await db
+      .select({
+        last: sql<number>`COALESCE(MAX(${PurchaseReturnOrderItems.lineNumber}), 0)`,
+      })
+      .from(PurchaseReturnOrderItems)
+      .where(
+        eq(
+          PurchaseReturnOrderItems.purchaseReturnOrderUuid,
+          purchaseReturnOrderUuid,
+        ),
+      );
+
+    await db.transaction(async (tx) => {
+      await insertPurchaseReturnLines(tx, {
+        purchaseReturnOrderUuid,
+        lines,
+        returnDate: returnOrder.returnDate,
+        firstLineNumber: Number(last) + 1,
+      });
+
+      await tx
+        .update(PurchaseReturnOrders)
+        .set(await buildPurchaseReturnSummary(tx, purchaseReturnOrderUuid))
+        .where(eq(PurchaseReturnOrders.uuid, purchaseReturnOrderUuid));
+    });
+
+    revalidatePath(`/purchase-return-orders/${purchaseReturnOrderUuid}`);
+    return { success: true, purchaseReturnOrderUuid };
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error ? error.message : "Failed to add return lines",
     };
   }
 };

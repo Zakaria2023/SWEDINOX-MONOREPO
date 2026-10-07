@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { PackageX, ReceiptText } from "lucide-react";
+import { PackageX, Plus, ReceiptText } from "lucide-react";
 import {
   creditPurchaseReturnOrder,
   dispatchPurchaseReturnOrder,
@@ -17,6 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { ReturnLinesPickerDialog } from "@/components/purchase-return-orders/return-lines-picker-dialog";
 import { CollapsibleSection } from "@/components/ui/collapsible-section";
 import { DetailField } from "@/components/ui/detail-field";
 import { FormError } from "@/components/ui/form-error";
@@ -48,6 +49,7 @@ export const PurchaseReturnOrderDetailView = ({
 }: Props) => {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | undefined>();
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
 
   // A purchase return is delivered back, then invoiced by the credit note.
   const isDispatched = returnOrder.status === "delivered";
@@ -209,6 +211,24 @@ export const PurchaseReturnOrderDetailView = ({
             {formatMoney(returnedValue)}
           </span>
         </div>
+        {/* `New` on the reference's return line grid opens a picker of the
+            parcels received, not a blank row. */}
+        {isPurchaseReturnOrderEditable(returnOrder.status) && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setIsPickerOpen(true)}
+          >
+            <Plus className="size-4" />
+            New
+          </Button>
+        )}
+        <ReturnLinesPickerDialog
+          purchaseReturnOrderUuid={returnOrder.uuid}
+          open={isPickerOpen}
+          onOpenChange={setIsPickerOpen}
+        />
         <div>
           <Table>
             <TableHeader>

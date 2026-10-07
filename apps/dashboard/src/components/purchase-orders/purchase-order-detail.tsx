@@ -2,12 +2,13 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { Warehouse } from "lucide-react";
+import { Undo2, Warehouse } from "lucide-react";
 import {
   cancelPurchaseOrder,
   createUnloadingWorkOrder,
   PurchaseOrderDetail,
 } from "@/app/(dashboard)/purchase-orders/actions";
+import { startPurchaseReturnFromOrder } from "@/app/(dashboard)/purchase-return-orders/actions";
 import { Button } from "@/components/shadcn/button";
 import {
   Table,
@@ -64,6 +65,23 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
   const [selectedLineUuid, setSelectedLineUuid] = useState<string | null>(null);
 
   const canCancel = purchaseOrder.status !== "cancelled";
+  // `Par. return` wakes as soon as anything on the order has arrived — it was
+  // live on `404102` with lines still `Received` and greyed on an order whose
+  // every line was invoiced and gone (7-10-2026). The server re-checks that
+  // something received is still on the shelf.
+  const canPartReturn =
+    canCancel &&
+    purchaseOrder.items.some((item) => Number(item.qtyReceived ?? 0) > 0);
+
+  const handlePartReturn = () => {
+    setError(undefined);
+    startTransition(async () => {
+      const result = await startPurchaseReturnFromOrder(purchaseOrder.uuid);
+      if (result.error) {
+        setError(result.error);
+      }
+    });
+  };
 
   // `Workorder` on the reference's own toolbar. Reporting the unloading it
   // raises is what creates the stock lot — not the invoice.
@@ -106,6 +124,15 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
           >
             <Warehouse className="me-1.5 size-4" />
             {isPending ? "Raising…" : "Workorder"}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handlePartReturn}
+            disabled={isPending || !canPartReturn}
+          >
+            <Undo2 className="me-1.5 size-4" />
+            Par. return
           </Button>
           <Button
             variant="outline"
