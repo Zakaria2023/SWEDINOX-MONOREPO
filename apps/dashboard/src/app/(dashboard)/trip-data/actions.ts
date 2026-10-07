@@ -1,56 +1,171 @@
 "use server";
 
-import { describeError } from "@/lib/helpers";
+import { TRIP_DATA_COLUMNS } from "@/app/(dashboard)/trip-data/columns";
 import { db } from "@/db";
 import {
-  SelectTransportTrips,
-  TransportTrips,
-} from "@/db/schema/transport-trips";
-import { desc, eq } from "drizzle-orm";
+  SelectTransportWorkOrders,
+  TransportWorkOrderLines,
+  TransportWorkOrders,
+} from "@/db/schema/transport-work-orders";
+import { describeError } from "@/lib/helpers";
+import { exportRows } from "@/lib/server/excel";
+import {
+  Paged,
+  parseTableQuery,
+  SearchParams,
+  TableQuery,
+} from "@/lib/table-query";
+import { desc, eq, sql } from "drizzle-orm";
 
-export type TripDataListItem = SelectTransportTrips;
+// The two shipping methods that name no haulier: the customer collected, or
+// the trip lapsed. On those the reference's second `Vehicle` is blank.
+const NO_CARRIER_METHODS = new Set(["AFHAAL", "VERVALLEN ORDERS"]);
 
-export type TripDataDetail = SelectTransportTrips & {
-  /** Average load per stop, or null when the trip records no stops. */
+export type TripDataRow = {
+  uuid: SelectTransportWorkOrders["uuid"];
+  tripNumber: SelectTransportWorkOrders["tripNumber"];
+  tripDate: SelectTransportWorkOrders["date"];
+  year: number | null;
+  month: number | null;
+  /** The shipping method — a haulier lane, a pick-up, or a lapsed trip. */
+  vehicle: SelectTransportWorkOrders["vehicle"];
+  /** The haulier that actually ran it; blank when nobody hauled anything. */
+  carrier: SelectTransportWorkOrders["vehicle"];
+  status: SelectTransportWorkOrders["status"];
+  stops: number;
+  orders: number;
+  kg: number;
+  colli: number;
   kgPerStop: number | null;
-  /** Average colli per stop, or null when the trip records no stops. */
+  ordersPerStop: number | null;
   colliPerStop: number | null;
 };
 
-export const getTripData = async (): Promise<TripDataListItem[]> => {
+/**
+ * One row per trip, read from the transport work orders — the `6xxxxx` series
+ * the stock ledger names as the cause of a customer delivery.
+ *
+ * It used to read a `TransportTrips` table that nothing in the app writes, so
+ * the screen could only ever show what had been imported into it.
+ *
+ * A stop is a destination (customer and postcode); `Orders` counts the
+ * distinct orders riding on the trip. The per-stop figures round the way the
+ * reference rounds them: kilos to the nearest whole kilo, orders and colli
+ * truncated — exact on 437, 438 and 438 of its 438 trips.
+ */
+const tripRows = async (query: TableQuery): Promise<TripDataRow[]> => {
+  const rows = await db
+    .select({
+      uuid: TransportWorkOrders.uuid,
+      tripNumber: TransportWorkOrders.tripNumber,
+      tripDate: TransportWorkOrders.date,
+      vehicle: TransportWorkOrders.vehicle,
+      status: TransportWorkOrders.status,
+      stops: sql<number>`COUNT(DISTINCT CONCAT_WS('|',
+        ${TransportWorkOrderLines.destinationCompanyUuid},
+        ${TransportWorkOrderLines.postalCode}))`.mapWith(Number),
+      orders: sql<number>`COUNT(DISTINCT ${TransportWorkOrderLines.orderNumber})`.mapWith(
+        Number,
+      ),
+      kg: sql<number>`COALESCE(SUM(COALESCE(NULLIF(${TransportWorkOrderLines.kgActual}, 0), ${TransportWorkOrderLines.kgPlanned})), 0)`.mapWith(
+        Number,
+      ),
+      colli: sql<number>`COALESCE(SUM(${TransportWorkOrderLines.colli}), 0)`.mapWith(
+        Number,
+      ),
+    })
+    .from(TransportWorkOrders)
+    .leftJoin(
+      TransportWorkOrderLines,
+      eq(TransportWorkOrderLines.workOrderUuid, TransportWorkOrders.uuid),
+    )
+    .groupBy(
+      TransportWorkOrders.uuid,
+      TransportWorkOrders.tripNumber,
+      TransportWorkOrders.date,
+      TransportWorkOrders.vehicle,
+      TransportWorkOrders.status,
+    )
+    .orderBy(desc(TransportWorkOrders.date), desc(TransportWorkOrders.id));
+
+  const all = rows.map((row): TripDataRow => {
+    const [year, month] = (row.tripDate ?? "").split("-").map(Number);
+    const method = (row.vehicle ?? "").trim().toUpperCase();
+    return {
+      ...row,
+      year: Number.isFinite(year) ? year : null,
+      month: Number.isFinite(month) ? month : null,
+      carrier: NO_CARRIER_METHODS.has(method) ? null : row.vehicle,
+      kgPerStop: row.stops > 0 ? Math.round(row.kg / row.stops) : null,
+      ordersPerStop: row.stops > 0 ? Math.floor(row.orders / row.stops) : null,
+      colliPerStop: row.stops > 0 ? Math.floor(row.colli / row.stops) : null,
+    };
+  });
+
+  const term = query.q?.toLowerCase() ?? null;
+  const years = query.filters.year ?? [];
+  const months = query.filters.month ?? [];
+
+  return all.filter((row) => {
+    if (
+      term &&
+      !`${row.tripNumber ?? ""} ${row.vehicle ?? ""}`
+        .toLowerCase()
+        .includes(term)
+    ) {
+      return false;
+    }
+    if (years.length > 0 && !years.includes(String(row.year))) {
+      return false;
+    }
+    if (months.length > 0 && !months.includes(String(row.month))) {
+      return false;
+    }
+    return true;
+  });
+};
+
+export const getTripData = async (
+  query: TableQuery,
+): Promise<Paged<TripDataRow>> => {
   try {
-    return await db
-      .select()
-      .from(TransportTrips)
-      .orderBy(desc(TransportTrips.tripDate));
+    const rows = await tripRows(query);
+    const start = (query.page - 1) * query.pageSize;
+
+    return {
+      rows: rows.slice(start, start + query.pageSize),
+      total: rows.length,
+      page: query.page,
+      pageSize: query.pageSize,
+    };
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch trip data"));
   }
 };
 
-/**
- * One transport trip, with the per-stop averages derived rather than stored — a
- * trip with no stops recorded has no average to report rather than a division by
- * zero.
- */
-export const getTripDataDetail = async (
-  uuid: string,
-): Promise<TripDataDetail | null> => {
-  const [row] = await db
-    .select()
-    .from(TransportTrips)
-    .where(eq(TransportTrips.uuid, uuid))
-    .limit(1);
+export const exportTripData = async (
+  params: SearchParams,
+  columnKeys: string[],
+): Promise<string> => {
+  const rows = await tripRows(parseTableQuery(params));
 
-  if (!row) {
-    return null;
-  }
+  return exportRows({
+    name: "Trip data",
+    columns: TRIP_DATA_COLUMNS,
+    columnKeys,
+    rows: (limit, offset) =>
+      Promise.resolve(rows.slice(offset, offset + limit)),
+  });
+};
 
-  const stops = row.stops ?? 0;
+/** The years trips were dated in, for the period filter. */
+export const getTripYears = async (): Promise<number[]> => {
+  const rows = await db
+    .selectDistinct({ year: sql<number>`YEAR(${TransportWorkOrders.date})` })
+    .from(TransportWorkOrders);
 
-  return {
-    ...row,
-    kgPerStop: stops > 0 ? Number(row.kg ?? 0) / stops : null,
-    colliPerStop: stops > 0 ? (row.colli ?? 0) / stops : null,
-  };
+  return rows
+    .map((row) => Number(row.year))
+    .filter((year) => Number.isFinite(year) && year > 0)
+    .sort((a, b) => b - a);
 };
