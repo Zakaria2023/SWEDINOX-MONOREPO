@@ -3,6 +3,8 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import {
+  OrderCallOffAddressOption,
+  OrderCallOffRow,
   OrderInvoiceLineRow,
   OrderLinePanels,
   OrderWorkOrders,
@@ -25,6 +27,7 @@ import {
   OrderCommunicationPanel,
   OrderCompetitorsPanel,
 } from "@/components/orders/panels/order-communication-panel";
+import { OrderCallOffsPanel } from "@/components/orders/panels/order-call-offs-panel";
 import { OrderWorkOrdersPanel } from "@/components/orders/panels/order-work-orders-panel";
 import { Button } from "@/components/shadcn/button";
 import {
@@ -41,6 +44,7 @@ import { FormError } from "@/components/ui/form-error";
 import { QuoteSummaryPanel } from "@/components/quotes/quote-summary";
 import {
   cn,
+  formatDateColumn,
   formatMoney,
   formatPercent,
   orderSummaryFromSnapshot,
@@ -55,6 +59,12 @@ type Props = {
   invoiceLines: OrderInvoiceLineRow[];
   /** Null only when the order has no lines at all to select from. */
   linePanels: OrderLinePanels | null;
+  /** Only on a `Call-off` order. */
+  callOffs: {
+    rows: OrderCallOffRow[];
+    addresses: OrderCallOffAddressOption[];
+    userNames: Record<string, string>;
+  } | null;
 };
 
 export const OrderDetailView = ({
@@ -64,6 +74,7 @@ export const OrderDetailView = ({
   linePanels,
   communications,
   competitors,
+  callOffs,
 }: Props) => {
   const [isPending, startTransition] = useTransition();
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
@@ -138,6 +149,17 @@ export const OrderDetailView = ({
           </p>
           <p className="text-sm">{order.customerRef ?? "—"}</p>
         </div>
+        {order.orderType === "call_off" && (
+          <div>
+            <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+              Call-off period
+            </p>
+            <p className="text-sm">
+              {formatDateColumn(order.callOffPeriodFrom)} up to and including{" "}
+              {formatDateColumn(order.callOffPeriodTo)}
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="space-y-3">
@@ -250,6 +272,14 @@ export const OrderDetailView = ({
       {/* Scoped to the ORDER, unlike everything above. */}
       <div className="space-y-3">
         <h2 className="border-b pb-2 text-base font-semibold">Order</h2>
+        {callOffs && (
+          <OrderCallOffsPanel
+            orderUuid={order.uuid}
+            rows={callOffs.rows}
+            addresses={callOffs.addresses}
+            userNames={callOffs.userNames}
+          />
+        )}
         <OrderWorkOrdersPanel workOrders={workOrders} />
         <OrderCommunicationPanel rows={communications} />
         <OrderCompetitorsPanel rows={competitors} />

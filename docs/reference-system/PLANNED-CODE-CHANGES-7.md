@@ -230,6 +230,8 @@ The header carries a `Call-off period` window.
 already exists in our schema; if it does, compare columns; if not, this is a
 table of its own, not fields on the order.
 
+**✅ Built 7-10-2026.** `OrderCallOffs` (customer reference, delivery address, `Rush`, `IsSend`, last modified by/at) and `Orders.callOffPeriodFrom/To`. A `Call-off` order shows the period in its header and a `Call-offs` panel with `New · Delete · Change` acting on the selected row; `Days in system` is computed. Not built: `Print call-off`, `Send…` and the `Keuzehulp` button — nothing captured says what they produce.
+
 ## 15. 🟡 Purchase returns end in `delivered`, and point at their order by reference
 
 **What was found.** `Purchase orders and quotes` → `Delivered` holds three
@@ -359,3 +361,5 @@ reference's correction dialog. Ours: `Stock.quantity` is `decimal(15,3)` and
 **What to build.** Widen both to scale 6 (hand-ALTER, never `--force`; a
 widening loses nothing). Display still rounds to the unit's own decimals
 (`Aantal decimalen gewicht` on the product — `1` on this one).
+
+**✅ Built 7-10-2026.** Columns widened, and every write to `Stock.quantity`, `reservedQuantity`, `quantityKg` and `StockMovements.quantity` now goes through `STOCK_QUANTITY_SCALE` (6) in `lib/helpers.ts` instead of rounding to three. Reservation, freight and order-line quantities keep their own three decimals.

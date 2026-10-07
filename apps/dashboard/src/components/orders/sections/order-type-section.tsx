@@ -1,11 +1,13 @@
 "use client";
 
 import { OrderFormValues } from "@/app/(dashboard)/orders/validation";
+import { DatePicker } from "@/components/shadcn/date-picker";
 import { Input } from "@/components/shadcn/input";
 import { SelectOption } from "@/components/shadcn/select";
 import { FormCheckboxCard } from "@/components/ui/form-checkbox-card";
+import { FormLabel } from "@/components/ui/form-field";
 import { FormSelectField } from "@/components/ui/form-select-field";
-import { Controller, useFormContext } from "react-hook-form";
+import { Controller, useFormContext, useWatch } from "react-hook-form";
 
 type Props = {
   isConsignment: boolean;
@@ -19,6 +21,7 @@ export const OrderTypeSection = ({
   weightTypeOptions,
 }: Props) => {
   const { register, control } = useFormContext<OrderFormValues>();
+  const orderType = useWatch({ control, name: "orderType" });
 
   return (
     <section className="space-y-4">
@@ -120,6 +123,39 @@ export const OrderTypeSection = ({
           label="Order type"
           options={orderTypeOptions}
         />
+
+        {orderType === "call_off" && (
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <FormLabel htmlFor="callOffPeriodFrom">Call-off period</FormLabel>
+              <Controller
+                control={control}
+                name="callOffPeriodFrom"
+                render={({ field }) => (
+                  <DatePicker
+                    id="callOffPeriodFrom"
+                    value={field.value ?? ""}
+                    onChange={field.onChange}
+                  />
+                )}
+              />
+            </div>
+            <div>
+              <FormLabel htmlFor="callOffPeriodTo">up to and including</FormLabel>
+              <Controller
+                control={control}
+                name="callOffPeriodTo"
+                render={({ field }) => (
+                  <DatePicker
+                    id="callOffPeriodTo"
+                    value={field.value ?? ""}
+                    onChange={field.onChange}
+                  />
+                )}
+              />
+            </div>
+          </div>
+        )}
 
         <FormSelectField
           control={control}

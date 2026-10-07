@@ -327,6 +327,22 @@ export const generateUuid = () => crypto.randomUUID();
 /**
  * Returns the singular or plural form based on a count.
  */
+/**
+ * An address on one line — `Tannenbergstr. 173, D-73230 Kirchheim unter Teck`
+ * — or an empty string when nothing is filled in.
+ */
+export const formatAddressLine = (address: {
+  streetAndNo: string | null;
+  postalCode: string | null;
+  city: string | null;
+}): string =>
+  [
+    address.streetAndNo,
+    [address.postalCode, address.city].filter(Boolean).join(" "),
+  ]
+    .filter(Boolean)
+    .join(", ");
+
 export const pluralize = (
   count: number,
   singular: string,

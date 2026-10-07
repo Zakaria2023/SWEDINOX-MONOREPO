@@ -282,6 +282,14 @@ export const useOrderSubmit = ({ companies }: UseOrderSubmitParams) => {
           isInternalProduction: values.isInternalProduction,
           isCustomerMaterial: values.isCustomerMaterial,
           orderType: values.orderType,
+          callOffPeriodFrom:
+            values.orderType === "call_off" && values.callOffPeriodFrom
+              ? new Date(values.callOffPeriodFrom)
+              : null,
+          callOffPeriodTo:
+            values.orderType === "call_off" && values.callOffPeriodTo
+              ? new Date(values.callOffPeriodTo)
+              : null,
           weightType: values.weightType || null,
           isOverlength: values.isOverlength,
           isPrinted: values.isPrinted,

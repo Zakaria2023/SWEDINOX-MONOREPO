@@ -1,6 +1,6 @@
 "use server";
 
-import { and, desc, eq, getTableColumns, ne } from "drizzle-orm";
+import { and, asc, desc, eq, getTableColumns, ne } from "drizzle-orm";
 import { alias } from "drizzle-orm/mysql-core";
 import { db } from "@/db";
 import { Communications, SelectCommunications } from "@/db/schema/communications";
@@ -9,7 +9,15 @@ import {
   CompanyCompetitors,
   SelectCompanyCompetitors,
 } from "@/db/schema/company-competitors";
+import {
+  CompanyAddresses,
+  SelectCompanyAddresses,
+} from "@/db/schema/company-addresses";
 import { InvoiceItems, SelectInvoiceItems } from "@/db/schema/invoice-items";
+import {
+  OrderCallOffs,
+  SelectOrderCallOffs,
+} from "@/db/schema/order-call-offs";
 import { Invoices, SelectInvoices } from "@/db/schema/invoices";
 import { OrderItems, SelectOrderItems } from "@/db/schema/order-items";
 import { Orders, SelectOrders } from "@/db/schema/orders";
@@ -36,8 +44,15 @@ import {
   WarehouseWorkOrders,
 } from "@/db/schema/warehouse-work-orders";
 import { SelectWarehouses, Warehouses } from "@/db/schema/warehouses";
+import { callOffSchema, CallOffValues } from "@/app/(dashboard)/orders/[uuid]/validation";
 import { requireAuth } from "@/lib/auth";
-import { daysInSystem, priceCascade, PriceCascade } from "@/lib/helpers";
+import { revalidatePath } from "next/cache";
+import {
+  daysInSystem,
+  generateUuid,
+  priceCascade,
+  PriceCascade,
+} from "@/lib/helpers";
 
 // The reference caps each of these panels rather than paging them — a seller
 // glancing at "what did this customer buy before" wants the last handful, not
@@ -181,6 +196,27 @@ export type OrderLinePanels = {
   previousOrders: OrderLinePreviousOrderRow[];
   previousQuotes: OrderLinePreviousQuoteRow[];
 };
+
+/** One row of the `Call-offs` panel on a `Call-off` order. */
+export type OrderCallOffRow = SelectOrderCallOffs & {
+  addressStreet: SelectCompanyAddresses["streetAndNo"] | null;
+  addressPostalCode: SelectCompanyAddresses["postalCode"] | null;
+  addressCity: SelectCompanyAddresses["city"] | null;
+};
+
+/** A delivery address of the order's customer, for the call-off dialog. */
+export type OrderCallOffAddressOption = Pick<
+  SelectCompanyAddresses,
+  "uuid" | "streetAndNo" | "postalCode" | "city"
+>;
+
+/** `callOffUuid` null is `New`; set, it is `Change`. */
+export type SaveOrderCallOffInput = CallOffValues & {
+  orderUuid: SelectOrderCallOffs["orderUuid"];
+  callOffUuid: SelectOrderCallOffs["uuid"] | null;
+};
+
+export type OrderCallOffResult = { success?: boolean; error?: string };
 
 const toNumber = (value: string | number | null): number =>
   value === null ? 0 : Number(value);
@@ -590,4 +626,130 @@ export const getOrderCompetitors = async (
     .from(CompanyCompetitors)
     .where(eq(CompanyCompetitors.companyUuid, order.companyUuid))
     .orderBy(desc(CompanyCompetitors.revenueSharePercent));
+};
+
+/**
+ * The `Call-offs` panel: every call-off against the order, oldest first, with
+ * the address it goes to.
+ */
+export const getOrderCallOffs = async (
+  orderUuid: string,
+): Promise<OrderCallOffRow[]> => {
+  await requireAuth();
+  return db
+    .select({
+      ...getTableColumns(OrderCallOffs),
+      addressStreet: CompanyAddresses.streetAndNo,
+      addressPostalCode: CompanyAddresses.postalCode,
+      addressCity: CompanyAddresses.city,
+    })
+    .from(OrderCallOffs)
+    .leftJoin(
+      CompanyAddresses,
+      eq(CompanyAddresses.uuid, OrderCallOffs.deliveryAddressUuid),
+    )
+    .where(eq(OrderCallOffs.orderUuid, orderUuid))
+    .orderBy(asc(OrderCallOffs.createdAt), asc(OrderCallOffs.id));
+};
+
+/** The customer's addresses a call-off can be delivered to. */
+export const getOrderCallOffAddresses = async (
+  orderUuid: string,
+): Promise<OrderCallOffAddressOption[]> => {
+  await requireAuth();
+  return db
+    .select({
+      uuid: CompanyAddresses.uuid,
+      streetAndNo: CompanyAddresses.streetAndNo,
+      postalCode: CompanyAddresses.postalCode,
+      city: CompanyAddresses.city,
+    })
+    .from(CompanyAddresses)
+    .innerJoin(Orders, eq(Orders.companyUuid, CompanyAddresses.companyUuid))
+    .where(eq(Orders.uuid, orderUuid))
+    .orderBy(asc(CompanyAddresses.city));
+};
+
+/**
+ * Only a `Call-off` order takes call-offs, and not once it is cancelled — the
+ * reference shows the panel on `100785`, whose order type is `Call-off`.
+ */
+const assertCallOffOrder = async (orderUuid: string): Promise<string | null> => {
+  const [order] = await db
+    .select({ orderType: Orders.orderType, status: Orders.status })
+    .from(Orders)
+    .where(eq(Orders.uuid, orderUuid))
+    .limit(1);
+  if (!order) {
+    return "Order not found.";
+  }
+  if (order.orderType !== "call_off") {
+    return "Only a call-off order has call-offs.";
+  }
+  if (order.status === "cancelled") {
+    return "The order is cancelled.";
+  }
+  return null;
+};
+
+/** `New` and `Change` in the `Call-offs` panel. */
+export const saveOrderCallOff = async (
+  _prevState: OrderCallOffResult,
+  input: SaveOrderCallOffInput,
+): Promise<OrderCallOffResult> => {
+  const userId = await requireAuth();
+  const parsed = callOffSchema.safeParse(input);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid call-off." };
+  }
+  const refusal = await assertCallOffOrder(input.orderUuid);
+  if (refusal) {
+    return { error: refusal };
+  }
+  const values = {
+    customerRef: parsed.data.customerRef.trim() || null,
+    deliveryAddressUuid: parsed.data.deliveryAddressUuid || null,
+    isRush: parsed.data.isRush,
+    isSent: parsed.data.isSent,
+    modifiedByUserId: userId,
+  };
+  if (input.callOffUuid) {
+    const [updated] = await db
+      .update(OrderCallOffs)
+      .set(values)
+      .where(
+        and(
+          eq(OrderCallOffs.uuid, input.callOffUuid),
+          eq(OrderCallOffs.orderUuid, input.orderUuid),
+        ),
+      );
+    if (updated.affectedRows === 0) {
+      return { error: "Call-off not found." };
+    }
+  } else {
+    await db.insert(OrderCallOffs).values({
+      uuid: generateUuid(),
+      orderUuid: input.orderUuid,
+      ...values,
+    });
+  }
+  revalidatePath(`/orders/${input.orderUuid}`);
+  return { success: true };
+};
+
+export const deleteOrderCallOff = async (
+  callOffUuid: string,
+): Promise<OrderCallOffResult> => {
+  await requireAuth();
+  const [callOff] = await db
+    .select({ orderUuid: OrderCallOffs.orderUuid })
+    .from(OrderCallOffs)
+    .where(eq(OrderCallOffs.uuid, callOffUuid))
+    .limit(1);
+  if (!callOff) {
+    return { error: "Call-off not found." };
+  }
+  await db.delete(OrderCallOffs).where(eq(OrderCallOffs.uuid, callOffUuid));
+  revalidatePath(`/orders/${callOff.orderUuid}`);
+  return {};
 };

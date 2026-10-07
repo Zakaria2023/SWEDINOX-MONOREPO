@@ -61,6 +61,11 @@ export const Orders = mysqlTable(
     // line's sourcing — `OrderItems.sourceType` — rolled up. The reference uses
     // one header for two fields.
     orderType: mysqlEnum("order_type", orderTypes).default("normal").notNull(),
+    // The window a `Call-off` order's call-offs fall in — `17-2-2025 t/m
+    // 17-2-2025` on `100785` (7-10-2026). The call-offs themselves are rows of
+    // `OrderCallOffs`.
+    callOffPeriodFrom: date("call_off_period_from"),
+    callOffPeriodTo: date("call_off_period_to"),
     isPickup: boolean("is_pickup").default(false),
     isIncidental: boolean("is_incidental").default(false),
     isConsignment: boolean("is_consignment").default(false),

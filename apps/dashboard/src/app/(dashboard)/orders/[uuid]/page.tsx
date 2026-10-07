@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import {
+  getOrderCallOffAddresses,
+  getOrderCallOffs,
   getOrderInvoiceLines,
   getOrderLinePanels,
   getOrderCommunications,
@@ -11,6 +13,7 @@ import {
 import { getOrderDetail } from "@/app/(dashboard)/orders/actions";
 import { OrderDetailView } from "@/components/orders/order-detail";
 import { PageHeading } from "@/components/layout/page-heading";
+import { getClerkUserNames } from "@/lib/server/clerk";
 
 type Props = {
   params: Promise<{ uuid: string }>;
@@ -43,6 +46,14 @@ const OrderDetailPage = async ({ params, searchParams }: Props) => {
     : null;
   const communications = await getOrderCommunications(uuid);
   const competitors = await getOrderCompetitors(uuid);
+  const callOffs =
+    order.orderType === "call_off"
+      ? {
+          rows: await getOrderCallOffs(uuid),
+          addresses: await getOrderCallOffAddresses(uuid),
+          userNames: await getClerkUserNames(),
+        }
+      : null;
 
   return (
     <div className="space-y-4">
@@ -63,6 +74,7 @@ const OrderDetailPage = async ({ params, searchParams }: Props) => {
         linePanels={linePanels}
         communications={communications}
         competitors={competitors}
+        callOffs={callOffs}
       />
     </div>
   );
