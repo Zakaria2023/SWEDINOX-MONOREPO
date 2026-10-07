@@ -137,7 +137,8 @@ export const PurchaseReturnOrderForm = ({
 
             <div>
               <FormLabel htmlFor="complaintRef">Complaint</FormLabel>
-              <Input id="complaintRef" {...register("complaintRef")} />
+              {/* Greyed in the reference: `Par. return` raises the complaint. */}
+              <Input id="complaintRef" readOnly {...register("complaintRef")} />
             </div>
 
             <FormSelectField

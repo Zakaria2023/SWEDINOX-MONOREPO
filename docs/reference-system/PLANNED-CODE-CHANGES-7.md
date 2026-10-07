@@ -338,6 +338,8 @@ greyed while any line is not yet received.
 3. Gate the two buttons as the reference does: partial return when any line
    is `received`; full return only when all are.
 
+**✅ Built 7-10-2026.** `Par. return` saves the provisional return with these defaults and, in the same transaction, a `Complaints` row (`purchase_order` type, the supplier, the order's contact, status `new`) linked by `PurchaseReturnOrders.complaintUuid`; `complaintRef` carries its number and is read-only on the form. Lines are picked per received lot (`ReturnLinesPickerDialog`). Not built: the full `Return` button.
+
 ## 21. 🟢 Bulk APP revaluation (`Change APP…`)
 
 **What was found (J8).** `Change APP…` selects lots by APP group / article

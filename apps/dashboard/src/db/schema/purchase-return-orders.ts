@@ -40,6 +40,9 @@ export const PurchaseReturnOrders = mysqlTable(
     purchaseOrderUuid: char("purchase_order_uuid", { length: 36 }),
     purchaseOrderReference: varchar("purchase_order_reference", { length: 255 }),
     complaintRef: varchar("complaint_ref", { length: 255 }),
+    // The complaint `Par. return` raises with the return — `40412` beside
+    // `950034` (7-10-2026). `complaintRef` carries its number for display.
+    complaintUuid: char("complaint_uuid", { length: 36 }),
     contactUuid: char("contact_uuid", { length: 36 }),
     purchaser: varchar("purchaser", { length: 255 }),
     purchaseOrderType: mysqlEnum("purchase_order_type", purchaseOrderTypes),

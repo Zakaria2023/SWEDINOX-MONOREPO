@@ -105,6 +105,21 @@ export const PurchaseReturnOrderDetailView = ({
             value={returnOrder.originalPurchaseOrderId}
           />
           <DetailField
+            label="Complaint"
+            value={
+              returnOrder.complaintUuid ? (
+                <Link
+                  href={`/complaints/${returnOrder.complaintUuid}`}
+                  className="underline-offset-2 hover:underline"
+                >
+                  {returnOrder.complaintRef ?? "Show complaint"}
+                </Link>
+              ) : (
+                returnOrder.complaintRef
+              )
+            }
+          />
+          <DetailField
             label="Return date"
             value={formatDateColumn(returnOrder.returnDate)}
           />

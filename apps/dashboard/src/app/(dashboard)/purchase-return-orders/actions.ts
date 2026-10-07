@@ -3,6 +3,7 @@
 import { db } from "@/db";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { CompanyAddresses } from "@/db/schema/company-addresses";
+import { Complaints } from "@/db/schema/complaints";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
 import {
   InsertPurchaseReturnOrders,
@@ -1053,8 +1054,8 @@ export const createPurchaseReturnOrder = async (
  * Lines are added afterwards from `Create Purchase Return order lines`, one
  * per parcel received (`addPurchaseReturnLines`).
  *
- * ⚠️ Not built: the reference also raises a **complaint** alongside (`40412`).
- * `complaintRef` stays empty until the purchase-side complaint is modelled.
+ * - **a new complaint**, against the purchase order and the supplier, linked
+ *   to the return (`40412` beside `950034`) — every return opens one
  */
 export const startPurchaseReturnFromOrder = async (
   purchaseOrderUuid: string,
@@ -1123,20 +1124,57 @@ export const startPurchaseReturnFromOrder = async (
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    await db.insert(PurchaseReturnOrders).values({
-      uuid,
-      supplierUuid: order.supplierUuid,
-      purchaseOrderUuid,
-      purchaseOrderReference: String(order.id),
-      contactUuid: order.contactUuid,
-      purchaser: user.id,
-      paymentTerms: order.paymentTerms,
-      purchaseOrderType: order.purchaseOrderType,
-      status: "provisional",
-      returnDate: tomorrow,
-      isDropOff: false,
-      deliveryAddressUuid: order.supplierAddressUuid,
-      pickupAddress,
+    const supplierUuid = order.supplierUuid;
+    const assignedByName =
+      user.fullName ||
+      [user.firstName, user.lastName].filter(Boolean).join(" ") ||
+      user.username ||
+      "";
+
+    await db.transaction(async (tx) => {
+      const complaintUuid = generateUuid();
+      await tx.insert(Complaints).values({
+        uuid: complaintUuid,
+        companyUuid: supplierUuid,
+        contactUuid: order.contactUuid,
+        complaintType: "purchase_order",
+        purchaseOrderUuid,
+        reportDate: new Date(),
+        status: "new",
+        statusHistory: [
+          {
+            status: "new",
+            statusDate: new Date().toISOString(),
+            assignedByUserId: user.id,
+            assignedByName,
+          },
+        ],
+        createdByUserId: user.id,
+        modifiedByUserId: user.id,
+      });
+      const [complaint] = await tx
+        .select({ id: Complaints.id })
+        .from(Complaints)
+        .where(eq(Complaints.uuid, complaintUuid))
+        .limit(1);
+
+      await tx.insert(PurchaseReturnOrders).values({
+        uuid,
+        supplierUuid,
+        purchaseOrderUuid,
+        purchaseOrderReference: String(order.id),
+        complaintUuid,
+        complaintRef: complaint ? String(complaint.id) : null,
+        contactUuid: order.contactUuid,
+        purchaser: user.id,
+        paymentTerms: order.paymentTerms,
+        purchaseOrderType: order.purchaseOrderType,
+        status: "provisional",
+        returnDate: tomorrow,
+        isDropOff: false,
+        deliveryAddressUuid: order.supplierAddressUuid,
+        pickupAddress,
+      });
     });
   } catch (error) {
     return {
@@ -1148,6 +1186,7 @@ export const startPurchaseReturnFromOrder = async (
   }
 
   revalidatePath("/purchase-return-orders");
+  revalidatePath("/complaints");
   revalidatePath(`/purchase-orders/${purchaseOrderUuid}`);
   redirect(`/purchase-return-orders/${uuid}`);
 };
