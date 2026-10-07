@@ -1,257 +1,381 @@
-import { CustomerRevenueRow } from "@/app/(dashboard)/customer-revenue/actions";
+import type {
+  CustomerRevenueFigures,
+  CustomerRevenueRow,
+} from "@/app/(dashboard)/customer-revenue/actions";
 import {
   dateCell,
+  ExportCellValue,
   ExportColumn,
   numberCell,
   textCell,
   yesNoCell,
 } from "@/lib/excel";
-import {
-  customerGroupLabel,
-  monthLabel,
-  salesRepresentativeLabel,
-} from "@/lib/helpers";
+import { customerGroupLabel, salesRepresentativeLabel } from "@/lib/helpers";
+import { COMPANY_CLASSIFICATION_LABELS } from "@/lib/labels";
 
 /**
- * Customer revenue as a sheet.
+ * Customer revenue — all 75 columns of the reference's C8 (1 724 rows,
+ * docs/reference-system/customers-and-prospects.md Part 10), in its order.
+ * One row per customer for one `Year` / `Month`.
  *
- * The reference's screen is 75 columns wide and most of them hold nothing.
- * What is carried here is everything of its that is alive:
+ * Three periods sit side by side, each split into material, options and
+ * surcharges:
  *
- * - the three-way revenue split — material, options, surcharges — each with its
- *   profit, which is the same split the revenue-group screen makes into rows;
- * - the CRM counters it maintains: last order, last call, last visit, and the
- *   calls and visits this year;
- * - `Active`, the archive flag, and `Point of attention`, which is the
- *   company's own remark.
+ * - **`… this year`** is the selected month only — proved on May 2025, exact on
+ *   90 of 90 customers.
+ * - **`… last year`** is the same month a year earlier. `0` on every reference
+ *   row, correctly: that database starts on 7-1-2025.
+ * - **`… last month`** is the month before. `0` on every reference row too,
+ *   which the data does not explain (April 2025 holds 2 116 324.53) — its
+ *   statistics are batch-built and the batch had stopped. Ours is computed
+ *   from the invoices, so it shows the real figure.
  *
- * What is left out, and why:
- *
- * - **Every target and potential** — `Target year revenue`, `Target this year`,
- *   `Target last month`, `Potential annual revenue`, `Potential annual sales`,
- *   `Target annual sales` — is `0` on all 1 724 of its rows. So are
- *   `Visit frequency`, `Call frequency`, `Employees`, `Classification`,
- *   `Latest visit report`, `Competitors (Revenue share)` and the three
- *   `Purchase organization` columns. `Region number` is `0`, the eighth screen
- *   to show it dead, and `Customer group code` is `0` on 1 723 rows.
- * - **The ten `… last year` columns** are `0` on every row, correctly: the
- *   first invoice in that database is 7-1-2025, so there is no year to compare
- *   with.
- * - **The ten `… last month` columns** are `0` on every row and the data does
- *   not explain it — April 2025 holds 2 116 324.53 of revenue that should have
- *   appeared. Either the column means something other than the month before, or
- *   it is broken. Copying a column nobody can explain would be copying a bug.
- * - `Trend` compares with last year, so it is `0` for the same reason.
+ * Reasoned rather than captured, because the reference holds nothing in them:
+ * `Trend` (the change against the same month last year), `Target this year`
+ * and `Target last month` (a twelfth of the annual target), `Latest visit
+ * report` (the newest report's text) and `Competitors (Revenue share)` (each
+ * firm with its share). `Region number` and `Customer group code` are `0` on
+ * every reference row and have no source here; they print blank.
  */
 
 export type CustomerRevenueColumnKey =
+  | "representative"
+  | "customerGroupCode"
+  | "customerGroup"
   | "customerCode"
   | "customerName"
   | "city"
   | "country"
-  | "region"
-  | "representative"
-  | "accountManager"
-  | "customerGroup"
-  | "active"
-  | "year"
-  | "month"
-  | "materialRevenue"
-  | "optionsRevenue"
-  | "surchargesRevenue"
-  | "revenue"
-  | "materialProfit"
-  | "optionsProfit"
-  | "surchargesProfit"
-  | "profit"
-  | "profitMargin"
-  | "weightKg"
+  | "revenueLastYear"
+  | "kgLastYear"
+  | "profitLastYear"
+  | "marginLastYear"
   | "invoices"
-  | "invoiceLines"
+  | "kgThisYear"
+  | "profitThisYear"
+  | "marginThisYear"
+  | "trend"
+  | "revenueLastMonth"
+  | "kgLastMonth"
+  | "profitLastMonth"
+  | "marginLastMonth"
+  | "targetYearRevenue"
+  | "classification"
+  | "visitsThisYear"
+  | "targetThisYear"
+  | "targetLastMonth"
+  | "purchaseOrgCode"
+  | "purchaseOrgName"
+  | "memberNumberPurchaseOrg"
+  | "year"
+  | "potentialAnnualRevenue"
+  | "accountManager"
+  | "regionNumber"
+  | "region"
+  | "materialRevenueLastYear"
+  | "optionsRevenueLastYear"
+  | "surchargesRevenueLastYear"
+  | "materialProfitLastYear"
+  | "optionsProfitLastYear"
+  | "surchargesProfitLastYear"
+  | "materialMarginLastYear"
+  | "optionsMarginLastYear"
+  | "surchargesMarginLastYear"
+  | "materialRevenueThisYear"
+  | "optionsRevenueThisYear"
+  | "surchargesRevenueThisYear"
+  | "materialProfitThisYear"
+  | "optionsProfitThisYear"
+  | "surchargesProfitThisYear"
+  | "materialMarginThisYear"
+  | "optionsMarginThisYear"
+  | "surchargesMarginThisYear"
+  | "materialRevenueLastMonth"
+  | "optionsRevenueLastMonth"
+  | "surchargesRevenueLastMonth"
+  | "materialProfitLastMonth"
+  | "optionsProfitLastMonth"
+  | "surchargesProfitLastMonth"
+  | "materialMarginLastMonth"
+  | "optionsMarginLastMonth"
+  | "surchargesMarginLastMonth"
   | "lastOrderDate"
   | "lastCallDate"
   | "lastVisitDate"
+  | "latestVisitReport"
+  | "pointOfAttention"
+  | "visitFrequency"
   | "calledThisYear"
-  | "visitsThisYear"
-  | "pointOfAttention";
+  | "callFrequency"
+  | "employees"
+  | "active"
+  | "competitors"
+  | "targetAnnualSales"
+  | "potentialAnnualSales"
+  | "invoiceLines"
+  | "revenueThisYear";
 
-export const CUSTOMER_REVENUE_COLUMNS: Array<
-  ExportColumn<CustomerRevenueRow, CustomerRevenueColumnKey>
-> = [
-  {
-    key: "customerCode",
-    label: "Customer code",
-    defaultVisible: true,
-    value: (row) => numberCell(row.customerCode),
-  },
-  {
-    key: "customerName",
-    label: "Customer",
-    defaultVisible: true,
-    value: (row) => textCell(row.customerName),
-  },
-  {
-    key: "city",
-    label: "City",
-    defaultVisible: true,
-    value: (row) => textCell(row.city),
-  },
-  {
-    key: "country",
-    label: "Country",
-    defaultVisible: true,
-    value: (row) => textCell(row.country),
-  },
-  {
-    key: "region",
-    label: "Region",
-    defaultVisible: true,
-    value: (row) => textCell(row.region),
-  },
-  {
-    key: "representative",
-    label: "Representative",
-    defaultVisible: true,
-    value: (row) => textCell(salesRepresentativeLabel(row.representative)),
-  },
-  {
-    key: "accountManager",
-    label: "Account manager",
-    defaultVisible: true,
-    value: (row) => textCell(salesRepresentativeLabel(row.accountManager)),
-  },
-  {
-    key: "customerGroup",
-    label: "Customer group",
-    defaultVisible: true,
-    value: (row) => textCell(customerGroupLabel(row.customerGroup)),
-  },
-  {
-    key: "active",
-    label: "Active",
-    defaultVisible: true,
-    value: (row) => yesNoCell(row.active),
-  },
-  {
-    key: "year",
-    label: "Year",
-    defaultVisible: true,
-    value: (row) => numberCell(row.year),
-  },
-  {
-    key: "month",
-    label: "Month",
-    defaultVisible: true,
-    value: (row) => textCell(monthLabel(row.month)),
-  },
-  {
-    key: "materialRevenue",
-    label: "Revenue of material",
-    defaultVisible: true,
-    value: (row) => numberCell(row.materialRevenue),
-  },
-  {
-    key: "optionsRevenue",
-    label: "Revenue options",
-    defaultVisible: true,
-    value: (row) => numberCell(row.optionsRevenue),
-  },
-  {
-    key: "surchargesRevenue",
-    label: "Revenue surcharges",
-    defaultVisible: true,
-    value: (row) => numberCell(row.surchargesRevenue),
-  },
-  {
-    key: "revenue",
-    label: "Revenue",
-    defaultVisible: true,
-    value: (row) => numberCell(row.revenue),
-  },
-  {
-    key: "materialProfit",
-    label: "Profit of material",
-    defaultVisible: true,
-    value: (row) => numberCell(row.materialProfit),
-  },
-  {
-    key: "optionsProfit",
-    label: "Profit options",
-    defaultVisible: true,
-    value: (row) => numberCell(row.optionsProfit),
-  },
-  {
-    key: "surchargesProfit",
-    label: "Profit surcharges",
-    defaultVisible: true,
-    value: (row) => numberCell(row.surchargesProfit),
-  },
-  {
-    key: "profit",
-    label: "Profit",
-    defaultVisible: true,
-    value: (row) => numberCell(row.profit),
-  },
-  {
-    key: "profitMargin",
-    label: "Profit margin",
-    defaultVisible: true,
-    value: (row) => numberCell(row.profitMargin),
-  },
-  {
-    // Whole kilos, the way the reference prints them.
-    key: "weightKg",
-    label: "Kg.",
-    defaultVisible: true,
-    value: (row) => numberCell(row.weightKg),
-  },
-  {
-    key: "invoices",
-    label: "#Invoices",
-    defaultVisible: true,
-    value: (row) => numberCell(row.invoices),
-  },
-  {
-    // Order lines only: the reference does not count surcharge lines here.
-    key: "invoiceLines",
-    label: "#Invoice lines",
-    defaultVisible: true,
-    value: (row) => numberCell(row.invoiceLines),
-  },
-  {
-    key: "lastOrderDate",
-    label: "Last order date",
-    defaultVisible: true,
-    value: (row) => dateCell(row.lastOrderDate),
-  },
-  {
-    key: "lastCallDate",
-    label: "Last call date",
-    defaultVisible: true,
-    value: (row) => dateCell(row.lastCallDate),
-  },
-  {
-    key: "lastVisitDate",
-    label: "Last visit date",
-    defaultVisible: true,
-    value: (row) => dateCell(row.lastVisitDate),
-  },
-  {
-    key: "calledThisYear",
-    label: "Called this year",
-    defaultVisible: true,
-    value: (row) => numberCell(row.calledThisYear),
-  },
-  {
-    key: "visitsThisYear",
-    label: "Visits this year",
-    defaultVisible: true,
-    value: (row) => numberCell(row.visitsThisYear),
-  },
-  {
-    key: "pointOfAttention",
-    label: "Point of attention",
-    defaultVisible: false,
-    value: (row) => textCell(row.pointOfAttention),
-  },
+type Column = ExportColumn<CustomerRevenueRow, CustomerRevenueColumnKey>;
+
+type Figure = keyof CustomerRevenueFigures;
+
+const column = (
+  key: CustomerRevenueColumnKey,
+  label: string,
+  defaultVisible: boolean,
+  value: (row: CustomerRevenueRow) => ExportCellValue,
+): Column => ({ key, label, defaultVisible, value });
+
+const thisPeriod = (
+  key: CustomerRevenueColumnKey,
+  label: string,
+  figure: Figure,
+  defaultVisible = true,
+): Column =>
+  column(key, label, defaultVisible, (row) =>
+    numberCell(row.thisPeriod[figure]),
+  );
+
+const lastYear = (
+  key: CustomerRevenueColumnKey,
+  label: string,
+  figure: Figure,
+): Column =>
+  column(key, label, false, (row) => numberCell(row.lastYear[figure]));
+
+const lastMonth = (
+  key: CustomerRevenueColumnKey,
+  label: string,
+  figure: Figure,
+): Column =>
+  column(key, label, false, (row) => numberCell(row.lastMonth[figure]));
+
+const monthlyShare = (annual: string | null): ExportCellValue =>
+  annual === null ? null : numberCell(Number(annual) / 12);
+
+export const CUSTOMER_REVENUE_COLUMNS: Column[] = [
+  column("representative", "Representative", true, (row) =>
+    textCell(salesRepresentativeLabel(row.representative)),
+  ),
+  column("customerGroupCode", "Customer group code", false, () => null),
+  column("customerGroup", "Customer group", true, (row) =>
+    textCell(customerGroupLabel(row.customerGroup)),
+  ),
+  column("customerCode", "Customer code", true, (row) =>
+    numberCell(row.customerCode),
+  ),
+  column("customerName", "Customer", true, (row) => textCell(row.customerName)),
+  column("city", "City", true, (row) => textCell(row.city)),
+  column("country", "Country", true, (row) => textCell(row.country)),
+  lastYear("revenueLastYear", "Revenue last year", "revenue"),
+  lastYear("kgLastYear", "Kg. previous year", "weightKg"),
+  lastYear("profitLastYear", "Profit last year", "profit"),
+  lastYear("marginLastYear", "Profit margin last year", "profitMargin"),
+  thisPeriod("invoices", "#Invoices (selection period)", "invoices"),
+  thisPeriod("kgThisYear", "Kg. this year", "weightKg"),
+  thisPeriod("profitThisYear", "Profit this year", "profit"),
+  thisPeriod("marginThisYear", "Profit margin this year", "profitMargin"),
+  column("trend", "Trend", false, (row) => numberCell(row.trend)),
+  lastMonth("revenueLastMonth", "Revenue last month", "revenue"),
+  lastMonth("kgLastMonth", "Kg. last month", "weightKg"),
+  lastMonth("profitLastMonth", "Profit last month", "profit"),
+  lastMonth("marginLastMonth", "Profit margin last month", "profitMargin"),
+  column("targetYearRevenue", "Target year revenue", false, (row) =>
+    numberCell(row.targetAnnualRevenue),
+  ),
+  column("classification", "Classification", false, (row) =>
+    row.classification
+      ? COMPANY_CLASSIFICATION_LABELS[row.classification]
+      : null,
+  ),
+  column("visitsThisYear", "Visits this year", true, (row) =>
+    numberCell(row.visitsThisYear),
+  ),
+  column("targetThisYear", "Target this year", false, (row) =>
+    monthlyShare(row.targetAnnualRevenue),
+  ),
+  column("targetLastMonth", "Target last month", false, (row) =>
+    monthlyShare(row.targetAnnualRevenue),
+  ),
+  column("purchaseOrgCode", "Purchase organization code", false, (row) =>
+    numberCell(row.purchaseOrgCode),
+  ),
+  column("purchaseOrgName", "Purchase organization name", false, (row) =>
+    textCell(row.purchaseOrgName),
+  ),
+  column(
+    "memberNumberPurchaseOrg",
+    "Mem. no. Purchase organization",
+    false,
+    (row) => textCell(row.memberNumberPurchaseOrg),
+  ),
+  column("year", "This year", true, (row) => numberCell(row.year)),
+  column("potentialAnnualRevenue", "Potential annual revenue", false, (row) =>
+    numberCell(row.potentialAnnualRevenue),
+  ),
+  column("accountManager", "Account manager", true, (row) =>
+    textCell(salesRepresentativeLabel(row.accountManager)),
+  ),
+  column("regionNumber", "Region number", false, () => null),
+  column("region", "Region", true, (row) => textCell(row.region)),
+  lastYear(
+    "materialRevenueLastYear",
+    "Revenue of material last year",
+    "materialRevenue",
+  ),
+  lastYear("optionsRevenueLastYear", "Revenue options last year", "optionsRevenue"),
+  lastYear(
+    "surchargesRevenueLastYear",
+    "Revenue surcharges last year",
+    "surchargesRevenue",
+  ),
+  lastYear("materialProfitLastYear", "Profit material last year", "materialProfit"),
+  lastYear("optionsProfitLastYear", "Profit options last year", "optionsProfit"),
+  lastYear(
+    "surchargesProfitLastYear",
+    "Profit surcharges last year",
+    "surchargesProfit",
+  ),
+  lastYear(
+    "materialMarginLastYear",
+    "Profit margin material last year",
+    "materialMargin",
+  ),
+  lastYear(
+    "optionsMarginLastYear",
+    "Profit margin options last year",
+    "optionsMargin",
+  ),
+  lastYear(
+    "surchargesMarginLastYear",
+    "Profit margin for surcharges last year",
+    "surchargesMargin",
+  ),
+  thisPeriod(
+    "materialRevenueThisYear",
+    "Revenue of material this year",
+    "materialRevenue",
+  ),
+  thisPeriod(
+    "optionsRevenueThisYear",
+    "Revenue options this year",
+    "optionsRevenue",
+  ),
+  thisPeriod(
+    "surchargesRevenueThisYear",
+    "Revenue surcharges this year",
+    "surchargesRevenue",
+  ),
+  thisPeriod(
+    "materialProfitThisYear",
+    "Profit material this year",
+    "materialProfit",
+  ),
+  thisPeriod(
+    "optionsProfitThisYear",
+    "Profit options this year",
+    "optionsProfit",
+    false,
+  ),
+  thisPeriod(
+    "surchargesProfitThisYear",
+    "Profit surcharges this year",
+    "surchargesProfit",
+  ),
+  thisPeriod(
+    "materialMarginThisYear",
+    "Profit margin material this year",
+    "materialMargin",
+  ),
+  thisPeriod(
+    "optionsMarginThisYear",
+    "Profit margin options this year",
+    "optionsMargin",
+    false,
+  ),
+  // `Profit margin for allowances this year` there — a translation slip: it
+  // is profit ÷ revenue of surcharges, 30 of 30.
+  thisPeriod(
+    "surchargesMarginThisYear",
+    "Profit margin for surcharges this year",
+    "surchargesMargin",
+  ),
+  lastMonth(
+    "materialRevenueLastMonth",
+    "Revenue of material last month",
+    "materialRevenue",
+  ),
+  lastMonth(
+    "optionsRevenueLastMonth",
+    "Revenue options last month",
+    "optionsRevenue",
+  ),
+  lastMonth(
+    "surchargesRevenueLastMonth",
+    "Revenue surcharges last month",
+    "surchargesRevenue",
+  ),
+  lastMonth(
+    "materialProfitLastMonth",
+    "Profit material last month",
+    "materialProfit",
+  ),
+  lastMonth("optionsProfitLastMonth", "Profit options last month", "optionsProfit"),
+  lastMonth(
+    "surchargesProfitLastMonth",
+    "Profit surcharges last month",
+    "surchargesProfit",
+  ),
+  lastMonth(
+    "materialMarginLastMonth",
+    "Profit margin material last month",
+    "materialMargin",
+  ),
+  lastMonth(
+    "optionsMarginLastMonth",
+    "Profit margin options last month",
+    "optionsMargin",
+  ),
+  lastMonth(
+    "surchargesMarginLastMonth",
+    "Profit margin for surcharges last month",
+    "surchargesMargin",
+  ),
+  column("lastOrderDate", "Last order date", true, (row) =>
+    dateCell(row.lastOrderDate),
+  ),
+  column("lastCallDate", "Last call date", true, (row) =>
+    dateCell(row.lastCallDate),
+  ),
+  column("lastVisitDate", "Last visit date", true, (row) =>
+    dateCell(row.lastVisitDate),
+  ),
+  column("latestVisitReport", "Latest visit report", false, (row) =>
+    textCell(row.latestVisitReport),
+  ),
+  column("pointOfAttention", "Point of attention", false, (row) =>
+    textCell(row.pointOfAttention),
+  ),
+  column("visitFrequency", "Visit frequency", false, (row) =>
+    numberCell(row.visitFrequency),
+  ),
+  column("calledThisYear", "Called this year", true, (row) =>
+    numberCell(row.calledThisYear),
+  ),
+  column("callFrequency", "Call frequency", false, (row) =>
+    numberCell(row.callFrequency),
+  ),
+  column("employees", "Employees", false, (row) => numberCell(row.employees)),
+  column("active", "Active", true, (row) => yesNoCell(row.active)),
+  column("competitors", "Competitors (Revenue share)", false, (row) =>
+    textCell(row.competitors),
+  ),
+  column("targetAnnualSales", "Target annual sales", false, (row) =>
+    numberCell(row.targetAnnualSales),
+  ),
+  column("potentialAnnualSales", "Potential annual sales", false, (row) =>
+    numberCell(row.potentialAnnualSales),
+  ),
+  thisPeriod("invoiceLines", "#Invoice lines (selection period)", "invoiceLines"),
+  thisPeriod("revenueThisYear", "Revenue this year", "revenue"),
 ];

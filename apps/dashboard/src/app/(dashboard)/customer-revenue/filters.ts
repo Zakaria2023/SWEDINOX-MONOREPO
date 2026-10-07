@@ -5,8 +5,8 @@ import { TableFilterControl } from "@/lib/table-query";
 
 /**
  * The reference reads its period off a `Year` / `Month` pair, and its
- * "this year" columns then hold that one month. The same pair is offered here,
- * as a filter over rows that already say which month they are.
+ * "this year" columns then hold that one month. Left blank, both fall back to
+ * the latest month anything was invoiced in.
  */
 export const customerRevenueFilters = (
   years: number[],
@@ -15,7 +15,7 @@ export const customerRevenueFilters = (
     key: "year",
     kind: "select",
     label: "Year",
-    placeholder: "All years",
+    placeholder: "Latest invoiced year",
     options: years.map((year) => ({
       value: String(year),
       label: String(year),
@@ -25,7 +25,7 @@ export const customerRevenueFilters = (
     key: "month",
     kind: "select",
     label: "Month",
-    placeholder: "All months",
+    placeholder: "Latest invoiced month",
     options: MONTH_LABELS.map((label, index) => ({
       value: String(index + 1),
       label,
