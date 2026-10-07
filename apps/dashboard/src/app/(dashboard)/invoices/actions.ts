@@ -11,6 +11,7 @@ import {
   SelectInvoices,
   SelectInvoiceSurcharges,
 } from "@/db";
+import { refreshOrderStatusForLine } from "@/lib/server/order-status";
 import {
   CompanyAddresses,
   SelectCompanyAddresses,
@@ -723,6 +724,7 @@ export const createInvoice = async (
               eq(OrderItems.invoicedQuantity, claim.previousInvoiced),
             ),
           );
+        await refreshOrderStatusForLine(tx, claim.orderItemUuid);
 
         if (itemUpdateResult.affectedRows === 0) {
           throw new Error(
@@ -920,6 +922,7 @@ export const cancelInvoice = async (
                   : "partially_invoiced",
           })
           .where(eq(OrderItems.uuid, item.orderItemUuid));
+        await refreshOrderStatusForLine(tx, item.orderItemUuid);
       }
     });
 

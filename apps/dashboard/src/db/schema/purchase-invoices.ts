@@ -81,8 +81,12 @@ export const PurchaseInvoices = mysqlTable(
     // that audit line under the title: "Invoice status was last changed by
     // Raymond Wattez on 22-1-2025 at 12:08."
     status: mysqlEnum("status", purchaseInvoiceStatuses)
-      .default("new")
+      .default("provisional")
       .notNull(),
+    // The accounting period the invoice is booked in — the month of its
+    // fiscal-period date. `0` until it is made final: the reference shows
+    // `0` on every provisional invoice and the period on every released one.
+    bookingPeriod: int("booking_period").default(0).notNull(),
     statusChangedByUserId: varchar("status_changed_by_user_id", { length: 255 }),
     statusChangedAt: timestamp("status_changed_at"),
 

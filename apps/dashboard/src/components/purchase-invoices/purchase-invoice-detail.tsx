@@ -4,7 +4,6 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import {
   cancelPurchaseInvoice,
-  finalisePurchaseInvoice,
   PurchaseInvoiceDetail,
   releasePurchaseInvoice,
   setPurchaseInvoiceBlocked,
@@ -36,7 +35,7 @@ import {
   PURCHASE_INVOICE_BLOCK_REASON_LABELS,
   PURCHASE_INVOICE_STATUS_LABELS,
 } from "@/lib/labels";
-import { Ban, Check, Lock, ShieldCheck } from "lucide-react";
+import { Ban, Check, ShieldCheck } from "lucide-react";
 
 const blockReasonOptions = enumOptions(
   purchaseInvoiceBlockReasons,
@@ -73,8 +72,9 @@ export const PurchaseInvoiceDetailView = ({ purchaseInvoice }: Props) => {
     .reduce((sum, m) => sum + Number(m.quantity), 0);
   const netReceived = totalReceived - totalReversed;
 
-  const isFinal = purchaseInvoice.status === "final";
-  const isClosed = isFinal || purchaseInvoice.cancelled;
+  // Booked: the details are fixed, a hold and a cancellation are not.
+  const isBooked = purchaseInvoice.status === "released";
+  const isClosed = purchaseInvoice.cancelled;
 
   return (
     <div className="space-y-6">
@@ -145,7 +145,7 @@ export const PurchaseInvoiceDetailView = ({ purchaseInvoice }: Props) => {
           />
           <DetailField
             label="Booking period"
-            value={purchaseInvoice.bookingPeriod}
+            value={String(purchaseInvoice.bookingPeriod)}
           />
           <DetailField
             label="Payment terms"
@@ -295,24 +295,15 @@ export const PurchaseInvoiceDetailView = ({ purchaseInvoice }: Props) => {
             Edit details
           </Button>
 
-          {purchaseInvoice.status === "new" && (
+          {/* The reference's `Final`: books the invoice and releases it
+              for payment, in one press. */}
+          {purchaseInvoice.status === "provisional" && (
             <Button
               type="button"
               onClick={() => run(() => releasePurchaseInvoice(purchaseInvoice.uuid))}
               disabled={isPending}
             >
               <ShieldCheck className="mr-1.5 size-4" />
-              Release for payment
-            </Button>
-          )}
-
-          {purchaseInvoice.status === "released" && (
-            <Button
-              type="button"
-              onClick={() => run(() => finalisePurchaseInvoice(purchaseInvoice.uuid))}
-              disabled={isPending}
-            >
-              <Lock className="mr-1.5 size-4" />
               Final
             </Button>
           )}
@@ -369,9 +360,11 @@ export const PurchaseInvoiceDetailView = ({ purchaseInvoice }: Props) => {
         </div>
       )}
 
-      {isFinal && (
+      {isBooked && !purchaseInvoice.cancelled && (
         <p className="text-sm text-muted-foreground">
-          This invoice is final: it can no longer be edited, held or cancelled.
+          This invoice is booked in period {purchaseInvoice.bookingPeriod}: its
+          details can no longer be edited. It can still be held, released from
+          a hold, or cancelled.
         </p>
       )}
 

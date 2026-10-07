@@ -49,9 +49,8 @@ import { alias } from "drizzle-orm/mysql-core";
 
 // How a status reads in an error message.
 const PURCHASE_INVOICE_STATUS_WORDS: Record<PurchaseInvoiceStatus, string> = {
-  new: "new",
+  provisional: "provisional",
   released: "released",
-  final: "final",
 };
 import {
   fiscalPeriodDate,
@@ -173,8 +172,6 @@ export type PurchaseInvoiceListItem = SelectPurchaseInvoices & {
   vatAmount: number;
   /** Its lines' weights, so a tonne price can be checked without opening them. */
   weightKg: number;
-  /** The period it posts in, on whichever date its fiscal basis names. */
-  bookingPeriod: string | null;
 };
 
 export type PurchaseInvoiceHeaderEdit = Pick<
@@ -218,7 +215,6 @@ export type PurchaseInvoiceDetail = SelectPurchaseInvoices & {
   bankCountry: string | null;
   vatAmount: number;
   weightKg: number;
-  bookingPeriod: string | null;
   /** Who last moved the status, resolved from the Clerk user id. */
   statusChangedByName: string | null;
   items: PurchaseInvoiceItemDetail[];
@@ -245,14 +241,6 @@ const invoiceWeightSql = sql<number>`(
     ON ${PurchaseOrderItems.uuid} = ${PurchaseInvoiceItems.purchaseOrderItemUuid}
   WHERE ${PurchaseInvoiceItems.purchaseInvoiceUuid} = ${PurchaseInvoices.uuid}
 )`;
-
-// The accounting period, on whichever date the invoice's fiscal basis names —
-// derived, exactly as the reference derives its "Booking period" column.
-const bookingPeriodSql = sql<string | null>`DATE_FORMAT(
-  CASE WHEN ${PurchaseInvoices.basisForFiscalPeriod} = 'document_date'
-    THEN ${PurchaseInvoices.invoiceDate}
-    ELSE COALESCE(${PurchaseInvoices.bookingDate}, ${PurchaseInvoices.invoiceDate})
-  END, '%Y-%m')`;
 
 const PURCHASE_INVOICE_SEARCH = [
   PurchaseInvoices.invoiceNumberSupplier,
@@ -326,7 +314,6 @@ const purchaseInvoiceRows =
         vatNumber: Companies.vatNumber,
         supplierIban: Companies.iban,
         weightKg: invoiceWeightSql.mapWith(Number),
-        bookingPeriod: bookingPeriodSql,
       })
       .from(PurchaseInvoices)
       .leftJoin(Companies, eq(PurchaseInvoices.companyUuid, Companies.uuid))
@@ -631,7 +618,8 @@ export const createPurchaseInvoice = async (
           fields.invoiceDate ??
           new Date(`${todayDateString()}T00:00:00`),
         iban: supplier?.iban ?? null,
-        status: "new",
+        status: "provisional",
+        bookingPeriod: 0,
         statusChangedByUserId: userId,
         statusChangedAt: new Date(),
         materials: moneyString(summary.materials),
@@ -843,8 +831,11 @@ export const updatePurchaseInvoice = async (
     if (invoice.cancelled) {
       return { error: "Cannot edit a cancelled purchase invoice." };
     }
-    if (invoice.status === "final") {
-      return { error: "A final purchase invoice can no longer be changed." };
+    if (invoice.status === "released") {
+      return {
+        error:
+          "This invoice is booked. Its details can no longer be changed — cancel it and enter it again.",
+      };
     }
 
     // Fill in the due date from the payment term when it wasn't set explicitly.
@@ -936,7 +927,6 @@ export const getPurchaseInvoiceDetail = async (
       vatNumber: Companies.vatNumber,
       supplierIban: Companies.iban,
       weightKg: invoiceWeightSql.mapWith(Number),
-      bookingPeriod: bookingPeriodSql,
     })
     .from(PurchaseInvoices)
     .leftJoin(Companies, eq(PurchaseInvoices.companyUuid, Companies.uuid))
@@ -1017,8 +1007,8 @@ export const getPurchaseInvoiceDetail = async (
  * Moves an invoice's status, recording who did it and when — the audit line the
  * reference prints under the document's title.
  *
- * `new` → `released` approves it for payment; `released` → `final` closes it,
- * after which it can be neither edited nor cancelled.
+ * `provisional` → `released` is the only move: the reference's `Final` button.
+ * It books the invoice into the period of its fiscal-period date.
  */
 const movePurchaseInvoiceStatus = async (
   uuid: string,
@@ -1036,6 +1026,9 @@ const movePurchaseInvoiceStatus = async (
       .select({
         status: PurchaseInvoices.status,
         cancelled: PurchaseInvoices.cancelled,
+        basisForFiscalPeriod: PurchaseInvoices.basisForFiscalPeriod,
+        bookingDate: PurchaseInvoices.bookingDate,
+        invoiceDate: PurchaseInvoices.invoiceDate,
       })
       .from(PurchaseInvoices)
       .where(eq(PurchaseInvoices.uuid, uuid))
@@ -1053,10 +1046,22 @@ const movePurchaseInvoiceStatus = async (
       };
     }
 
+    // Booking is what releasing does: the period is the month of the date the
+    // invoice's fiscal basis points at — booking date, or the document date.
+    const periodDate = fiscalPeriodDate(invoice.basisForFiscalPeriod, {
+      bookingDate: invoice.bookingDate,
+      documentDate: invoice.invoiceDate,
+    });
+    const bookingPeriod =
+      to === "released" && periodDate
+        ? new Date(periodDate).getMonth() + 1
+        : 0;
+
     await db
       .update(PurchaseInvoices)
       .set({
         status: to,
+        bookingPeriod,
         statusChangedByUserId: userId,
         statusChangedAt: new Date(),
       })
@@ -1075,17 +1080,14 @@ const movePurchaseInvoiceStatus = async (
   }
 };
 
-/** Approve the invoice for payment. */
+/**
+ * The reference's `Final`: book the invoice and approve it for payment.
+ * Its details are fixed from here on.
+ */
 export const releasePurchaseInvoice = async (
   uuid: string,
 ): Promise<PurchaseInvoiceActionResult> =>
-  movePurchaseInvoiceStatus(uuid, "new", "released");
-
-/** Close the invoice: no more edits, no cancelling. */
-export const finalisePurchaseInvoice = async (
-  uuid: string,
-): Promise<PurchaseInvoiceActionResult> =>
-  movePurchaseInvoiceStatus(uuid, "released", "final");
+  movePurchaseInvoiceStatus(uuid, "provisional", "released");
 
 /**
  * Hold an invoice back from payment, or let it go — the reference's `Unblock`
@@ -1116,10 +1118,6 @@ export const setPurchaseInvoiceBlocked = async (
     if (invoice.cancelled) {
       return { error: "This purchase invoice is cancelled." };
     }
-    if (invoice.status === "final") {
-      return { error: "A final purchase invoice can no longer be changed." };
-    }
-
     await db
       .update(PurchaseInvoices)
       .set({ blocked, blockReason: blocked ? blockReason : null })
@@ -1154,9 +1152,6 @@ export const cancelPurchaseInvoice = async (
 
     if (invoice.cancelled) {
       return { error: "This purchase invoice is already cancelled." };
-    }
-    if (invoice.status === "final") {
-      return { error: "A final purchase invoice can no longer be cancelled." };
     }
 
     const items = await db

@@ -1,6 +1,7 @@
 "use server";
 
 import { db } from "@/db";
+import { refreshOrderStatusForLine } from "@/lib/server/order-status";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { OrderItems } from "@/db/schema/order-items";
 import {
@@ -2128,6 +2129,7 @@ export const reportWarehouseWorkOrderLineCompletion = async (
                 deliveredQty >= owed ? "completed" : "partially_delivered",
             })
             .where(eq(OrderItems.uuid, line.orderItemUuid));
+          await refreshOrderStatusForLine(tx, line.orderItemUuid);
         }
       }
 

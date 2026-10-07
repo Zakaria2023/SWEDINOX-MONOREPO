@@ -118,7 +118,7 @@ export const PurchaseInvoicesTable = ({ page, filters }: Props) => {
       case "bookingPeriod":
         return (
           <TableCell key={key} className="whitespace-nowrap">
-            {inv.bookingPeriod ?? "—"}
+            {inv.bookingPeriod}
           </TableCell>
         );
       case "vatAmount":

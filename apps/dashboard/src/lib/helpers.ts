@@ -10072,6 +10072,72 @@ export const receptionActions = (
 };
 
 /**
+ * A sales order header's status, read off its lines' `lineStatus`.
+ *
+ * Unlike the purchase header, invoicing and delivering **outrank** the earlier
+ * rungs rather than waiting for the slowest line: the reference has 22 headers
+ * at `Partially invoiced` and 17 at `Partially delivered`, which a
+ * least-advanced rule could never produce.
+ *
+ * - every live line invoiced → `invoiced`; some → `partially_invoiced`
+ * - every live line delivered → `delivered`; some → `partially_delivered`
+ *   (a line reads `completed` once all of it is out of the door)
+ * - otherwise the earliest of `released` · `checked` · `in_progress`
+ *
+ * Cancelled and expired lines do not count; an order whose every line lapsed
+ * is `expired`. A provisional, cancelled, completed or converted header is not
+ * moved by its lines.
+ */
+export const orderStatusFromLines = (
+  current: OrderStatus,
+  lineStatuses: readonly (OrderLineStatus | null)[],
+): OrderStatus => {
+  const frozen: readonly OrderStatus[] = [
+    "provisional",
+    "cancelled",
+    "completed",
+    "converted",
+  ];
+  if (frozen.includes(current)) {
+    return current;
+  }
+  const live = lineStatuses.filter(
+    (status): status is OrderLineStatus =>
+      status !== null && status !== "cancelled" && status !== "expired",
+  );
+  if (live.length === 0) {
+    return lineStatuses.some((status) => status === "expired")
+      ? "expired"
+      : current;
+  }
+  const invoiced = (status: OrderLineStatus) => status === "invoiced";
+  const billing = (status: OrderLineStatus) =>
+    status === "invoiced" || status === "partially_invoiced";
+  const delivered = (status: OrderLineStatus) =>
+    status === "completed" || billing(status);
+  const delivering = (status: OrderLineStatus) =>
+    delivered(status) || status === "partially_delivered";
+
+  if (live.every(invoiced)) {
+    return "invoiced";
+  }
+  if (live.some(billing)) {
+    return "partially_invoiced";
+  }
+  if (live.every(delivered)) {
+    return "delivered";
+  }
+  if (live.some(delivering)) {
+    return "partially_delivered";
+  }
+  const early: readonly OrderStatus[] = ["released", "checked", "in_progress"];
+  const reached = live
+    .map((status) => early.indexOf(status as OrderStatus))
+    .filter((index) => index >= 0);
+  return reached.length > 0 ? (early[Math.min(...reached)] ?? current) : current;
+};
+
+/**
  * A purchase order header's status, read off its lines.
  *
  * The header reads its **least-advanced live line**. Proved on two orders,

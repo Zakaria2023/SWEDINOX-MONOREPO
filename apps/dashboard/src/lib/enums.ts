@@ -1471,9 +1471,16 @@ export const orderStatuses = [
   "checked",
   "in_progress",
   "partially_delivered",
+  // Orders only: everything delivered, nothing invoiced yet — `O105922`, four
+  // lines out of the door and not billed (7-10-2026). A rung of its own, not
+  // `Completed`, which the reference groups separately.
+  "delivered",
   "partially_invoiced",
   "invoiced",
   "completed",
+  // Quotes only, terminal: the quote became an order. `Q300013` reads
+  // `Converted` with `O106623` in `Converted from/to` (7-10-2026).
+  "converted",
   // Return orders only — goods are back, not yet credited.
   "received",
   // Terminal, and not only on quotes: the `Previous orders` panel of order
@@ -2180,16 +2187,23 @@ export type PurchaseInvoiceBlockReason =
 /**
  * Where a supplier invoice stands, and what may still be done to it.
  *
- * `new` is keyed but not approved; `released` is approved for payment — the
- * status the reference's captured invoice carries; `final` is closed by the
- * reference's own `Final` button, after which nothing may be edited or
- * cancelled. Cancelling is a flag of its own, as the reference keeps blocking
- * separate from status.
+ * 🔴 Corrected 7-10-2026. Grouping the reference's `Purchase invoices` on
+ * `Status` over its whole series (from `600000`, January 2025) gives exactly
+ * two values: `Provisional` and `Released`. The old `new` was never its word,
+ * and the `final` we had invented for its `Final` button was never on any
+ * invoice — the button is the invoice's `Make final`, and what it produces is
+ * `Released`.
+ *
+ * - `provisional` — keyed, not yet booked: `Booking period` reads `0`.
+ * - `released` — booked into a period (`Booking period` `1` on the January
+ *   rows) and approved for payment. Its details are fixed; it can still be
+ *   held, released from a hold, or cancelled.
+ *
+ * Cancelling and blocking are flags of their own, as on the reference.
  */
 export const purchaseInvoiceStatuses = [
-  "new",
+  "provisional",
   "released",
-  "final",
 ] as const satisfies readonly string[];
 
 export type PurchaseInvoiceStatus = (typeof purchaseInvoiceStatuses)[number];

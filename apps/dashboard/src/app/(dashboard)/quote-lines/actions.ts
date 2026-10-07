@@ -359,7 +359,12 @@ export const convertQuoteToOrder = async (
         ourReference: quote.ourReference,
         seller: quote.seller,
         projectUuid: quote.projectUuid,
-        priceDate: quote.priceDate,
+        // 🔑 The order is priced as of the day it was offered: `O106623`
+        // carries price date 23-4-2026, the date of quote `Q300013`, though it
+        // was created on the 24th (G4, 7-10-2026).
+        priceDate: quote.priceDate ?? quote.quoteDate,
+        // Carried over, as on the reference — `Telephone` on both.
+        orderMethod: quote.requestMethod,
         deliveryTerms: quote.deliveryTerms,
         deliveryAddressUuid: quote.deliveryAddressUuid,
         billingAddressUuid: quote.billingAddressUuid,
@@ -482,6 +487,13 @@ export const convertQuoteToOrder = async (
         .update(QuoteItems)
         .set({ convertedToOrderUuid: orderUuid, status: "released" })
         .where(eq(QuoteItems.quoteUuid, quoteUuid));
+
+      // The quote's own life ends here: `Converted`, a terminal rung of its
+      // own, beside `Expired`.
+      await tx
+        .update(Quotes)
+        .set({ status: "converted" })
+        .where(eq(Quotes.uuid, quoteUuid));
 
       const summary = await buildOrderSummary(tx, orderUuid, quote.companyUuid);
 

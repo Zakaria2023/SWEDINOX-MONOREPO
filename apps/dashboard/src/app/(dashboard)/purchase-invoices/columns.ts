@@ -133,7 +133,8 @@ export const PURCHASE_INVOICE_COLUMNS: Array<
     key: "bookingPeriod",
     label: "Booking period",
     defaultVisible: false,
-    value: (row) => textCell(row.bookingPeriod),
+    // `0` until the invoice is made final, then the period it is booked in.
+    value: (row) => textCell(String(row.bookingPeriod)),
   },
   {
     key: "invoiceTotal",

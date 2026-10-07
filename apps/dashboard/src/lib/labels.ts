@@ -1306,9 +1306,11 @@ export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
   checked: "Checked",
   in_progress: "In progress",
   partially_delivered: "Partially delivered",
+  delivered: "Delivered",
   partially_invoiced: "Partially invoiced",
   invoiced: "Invoiced",
   completed: "Completed",
+  converted: "Converted",
   received: "Received",
   expired: "Expired",
   cancelled: "Cancelled",
@@ -1825,9 +1827,8 @@ export const PURCHASE_INVOICE_STATUS_LABELS: Record<
   PurchaseInvoiceStatus,
   string
 > = {
-  new: "New",
+  provisional: "Provisional",
   released: "Released",
-  final: "Final",
 };
 
 export const PURCHASE_INVOICE_BLOCK_REASON_LABELS: Record<
