@@ -426,7 +426,7 @@ screenshots only: open it, and photograph **every tab and every panel expanded**
 | **G7** | **One trip** — bill of lading `300813` against trip number `600249` | Two numbers, two documents, one delivery, and the pair is unexplained. 438 trips are captured and not one has been opened |
 | ~~**G8**~~ | ~~One production batch, every tab~~ | ✅ **7-10-2026 — none exists;** `Production batches` is empty from `1-1-2024` |
 | ~~**G9**~~ | ~~**One remnant lot** — read its `Supplier`~~ | ✅ **7-10-2026, from `stock-mutations.tsv`, no screen needed:** the original mill. 184 of 184 offcuts with an internal charge share it with their parent and carry its supplier, charge and purchase order → [stock-mutations.md](stock-mutations.md) *G9* |
-| **G10** | **One `Bewerker` lot** — any lot at an external-processor location | All 36 are blocked. Which screen set that, and can it be lifted by hand? |
+| ~~**G10**~~ | ~~**One `Bewerker` lot**~~ | ✅ **7-10-2026:** blocked by location type, not per lot; the coil is reserved `Definitive` to processing order `IO400366/10`, which was **invoiced in Feb 2025** — the reservation outlives the invoice → [purchase-lines.md](purchase/purchase-lines.md) *G10* |
 | **G11** | An order from the **`29xxxx`** series | ⚠️ **half answered by B1** — it is a **sales return order** (`R290000`–`R290051`, 43 of them), negative revenue and weight, in the same grid as the orders. Still worth opening **one** to see its lines |
 | ~~**G12**~~ | ~~One customer company, **`Debtor`** panel fully expanded~~ | ✅ **Mercainox, 14-9-2026** → [credit-and-blocking.md](credit-and-blocking.md) — credit space exact on the record; `Credit limit insurance` is a **policy number**; **no overdue-days setting on the customer**, so it is system-wide (A1) |
 

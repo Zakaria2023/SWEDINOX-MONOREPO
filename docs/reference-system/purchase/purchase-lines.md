@@ -581,3 +581,38 @@ quotes`. It was found on Decomecc's company record, `Purchase orders` panel
 (company-detail.md *Decomecc*). Its type is `Processing`, as predicted. Its
 lines and workorders are still unread: from that panel, select `400142` →
 `Show`.
+
+
+### ✅ G10 — what holds a lot at the processor, 7-10-2026
+
+`Stock on location`, `Find` `Bewerkers`: **seven lots**, every one `Location
+type` `Bewerker` and `Blocked` ☑ — `CK304L0050` and `CW304L0060` coils
+(`999999`), `PK304L150` ×2, `PK304150315`, `PK30415021`, a second
+`CK304L0050` at 3000 mm. Five are fully reserved, two not at all. The row's
+context menu offers `Show Product · Change APP… · Toon reserveringen…`.
+
+`Toon reserveringen…` on the first coil opens **`Reserveringen Bewerkers Coil
+Cold-rolled 304L`**, toolbar `Order · Verwijder`:
+
+| Type | Status | Hoeveelheid | Eenheid | Order/Regel | Bedrijf | Datum | Gewijzigd |
+|---|---|---|---|---|---|---|---|
+| `Purchase` | `Definitive` | 1 | ST | **`IO400366/10`** | Decomecc N.V. | **12-2-2025** | — |
+
+🔑🔑 **The coil is reserved to a processing order that is already
+`Invoiced`.** `400366` (Decomecc, `Processing`, 11-2-2025, € 1.364,40,
+11 370 kg — company-detail.md *Decomecc*) was billed long ago, and the
+reservation binding the coil to it is still `Definitive` twenty months
+later. So **invoicing a processing order does not release its reservation,
+and does not bring the metal home**: the lot stays at `Bewerkers`, blocked,
+until somebody books the return leg (the `Ex works Processor` order, as
+`400143` did for `400142`). Nothing has, for this one.
+
+✅ **Why a `Bewerker` lot is blocked** is the location type, as
+stock-lot-model already recorded — every lot at that location is blocked,
+reserved or not. No dialog sets it per lot.
+
+⚠️ `reversation.tsv` (mid-2025) listed a `CK304L0050` reserved to
+**`400142/10`**. `400142` has since expired and that reservation is gone; the
+coil seen today is reserved to `400366/10`. Whether it is the same coil moved
+from one processing order to the next, or a second one, is not settled from
+this view.

@@ -260,3 +260,16 @@ the mill) and the receipt / purchase-order link from the consumed lot — never
 a fresh internal charge. Add a harness check: every remnant's internal charge
 equals its parent's. ⚠️ Value: the reference books 121 of 191 offcuts at
 € 0; decide deliberately whether ours splits the cost by kilos instead.
+
+## 17. 🟡 A processing reservation outlives the processing invoice
+
+**What was found (G10).** A coil at `Bewerkers` is reserved `Definitive` to
+`IO400366/10`, a `Processing` order invoiced in February 2025.
+
+**What to build.** In our H9 model, keep the three steps separate: (1) the
+processing order reserves the lot and moves it to the processor's location,
+blocked; (2) the processing invoice is money only — it must **not** release
+the reservation; (3) only the return leg (`ex_works_processor` receipt)
+consumes the reserved lot and creates the processed one. Add a worklist for
+lots still reserved to an invoiced processing order — the reference has none,
+and this coil has sat there for twenty months.
