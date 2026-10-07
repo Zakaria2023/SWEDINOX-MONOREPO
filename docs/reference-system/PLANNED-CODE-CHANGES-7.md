@@ -335,3 +335,16 @@ greyed while any line is not yet received.
    picker opens on the latest delivery note and offers `All receipts`.
 3. Gate the two buttons as the reference does: partial return when any line
    is `received`; full return only when all are.
+
+## 21. 🟢 Bulk APP revaluation (`Change APP…`)
+
+**What was found (J8).** `Change APP…` selects lots by APP group / article
+group / quality / stock category / options / dimension ranges, shows each
+one's value before and after a new APP, and applies it in one go. Opened from
+a lot, it acts on that lot only.
+
+**What to check.** Whether ours can change a lot's APP at all, and whether a
+stock-value correction writes a movement. If it is wanted, build it as a
+toolbar action on `Stock on location` (selection, preview grid, apply) — a
+valuation change, so it must log who and when. Decide with K3 (FSP
+revaluation is on that list).

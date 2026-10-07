@@ -417,3 +417,44 @@ went back and was re-ordered. Not proved from these screens — why those
 receipts are still offered after a return is open.
 
 Cancelled; nothing added to `950034`.
+
+
+---
+
+## ✅ J8 — `Change APP…`, 7-10-2026, and K5 answered
+
+Right-click on a lot in `Stock on location` → **`Change APP…`**. The dialog
+that opens is in Dutch, and **its price block is headed `Gip`**:
+
+| Block | Fields |
+|---|---|
+| `Artikel` (selection, greyed when opened from one lot) | `Gipgroep` · `Naam` · `Artikelgroep` · `Kwaliteit` · `Voorraadcategorie` · `Opties` · `Lengte` / `T/m` · `Breedte` / `T/m` · `Dikte` / `T/m` · **`Check`** |
+| **`Gip`** | **`Huidig`** `€ 0,00` *One hund…* · **`Nieuw`** `€ 0,00` *One hund…* (editable) · **`Wijzig`** (greyed until a new value is typed) |
+| Grid | `Artikel · Lengte · Breedte · Dikte (mm) · Voorraad… · Kwaliteit · Opties · Opmerking · Hvh Eh · Hvh · Gewicht · Totale len… · Waarde · Nieuwe w…`, with totals |
+| Footer | `Sluit` |
+
+The one row: `2009100`, 1273 × 1100 × 1, `S235`, `1 ST`, **11,2024 kg**,
+total length 1,273 m, **`Waarde` € 0,00 → `Nieuwe waarde` € 0,00**.
+
+🔑🔑 **K5: `Gip` is APP.** The toolbar button says `Change APP…` and the
+dialog it opens calls the same price `Gip` — *Gemiddelde inkoopprijs*,
+average purchase price. Every `Gip` in the reference (`Gipgroep` on stock,
+`Gip → Artikelgroep` on the product, `GIP groepen` under `Financiën`) is the
+APP grouping.
+
+🔑 **What the button does:** it **revalues stock in bulk by APP**. The
+`Artikel` block selects lots — by APP group, article group, quality, stock
+category, options and dimension ranges — `Check` lists them, `Nieuw` takes a
+new APP, and the grid shows each lot's value before and after (`Waarde` →
+`Nieuwe waarde`); `Wijzig` applies it. Opened from a single lot, the
+selection is fixed to that lot and greyed.
+
+The APP is quoted per *One hund…* — the unit caption is cut off; most
+likely **per hundred kilos**. ⚠️ Not confirmed.
+
+✅ **It ties back to G9.** `2009100` 1273 × 1100 is the same piece the
+stock-mutations export books as a `Rest production` offcut at **€ 0** (work
+order `300513`). This dialog shows it still carries APP € 0 and value
+€ 0,00 — the offcut valuation gap, seen on the live lot.
+
+Cancelled with `Sluit`; nothing changed.
