@@ -3,6 +3,7 @@
 import { describeError } from "@/lib/helpers";
 import { db } from "@/db";
 import { InvoiceItems } from "@/db/schema/invoice-items";
+import { OrderItems } from "@/db/schema/order-items";
 import { Products } from "@/db/schema/products";
 import {
   RevenueGroups,
@@ -36,6 +37,14 @@ export type RevenueVsBudgetRow = {
   profitMarginBudget: number;
   avgSalesPrice: number;
   avgSalesPriceBudget: number;
+  // The same revenue split three ways, as the budget is held: out of stock,
+  // cross-docked, ex works (the reference's `FACTORY`). Sums, not columns.
+  revenueStock: number;
+  revenueStockBudget: number;
+  revenueCrossDock: number;
+  revenueCrossDockBudget: number;
+  revenueFactory: number;
+  revenueFactoryBudget: number;
 };
 
 type Bucket = Omit<
@@ -73,9 +82,17 @@ export const getRevenueVsBudget = async ({
         weight: sql<string>`COALESCE(SUM(${InvoiceItems.weightKg}), 0)`,
         revenue: sql<string>`COALESCE(SUM(${InvoiceItems.amount}), 0)`,
         cost: sql<string>`COALESCE(SUM(${InvoiceItems.costAmount}), 0)`,
+        // 🔑 Split by the order line's type so each budget column meets its
+        // own actual (PLANNED-CODE-CHANGES-5 §S8 had to leave this out — the
+        // lines had no type until 7-10-2026). A mixed `Stk+CD` line counts as
+        // cross-dock, the same choice its margin floor makes.
+        revenueStock: sql<string>`COALESCE(SUM(CASE WHEN ${OrderItems.sourceType} = 'stock' THEN ${InvoiceItems.amount} ELSE 0 END), 0)`,
+        revenueCrossDock: sql<string>`COALESCE(SUM(CASE WHEN ${OrderItems.sourceType} IN ('cross_dock', 'stock_and_cross_dock') THEN ${InvoiceItems.amount} ELSE 0 END), 0)`,
+        revenueFactory: sql<string>`COALESCE(SUM(CASE WHEN ${OrderItems.sourceType} = 'ex_works' THEN ${InvoiceItems.amount} ELSE 0 END), 0)`,
       })
       .from(InvoiceItems)
       .innerJoin(Invoices, eq(InvoiceItems.invoiceUuid, Invoices.uuid))
+      .leftJoin(OrderItems, eq(InvoiceItems.orderItemUuid, OrderItems.uuid))
       .innerJoin(Products, eq(InvoiceItems.productUuid, Products.uuid))
       .leftJoin(
         RevenueGroups,
@@ -107,6 +124,9 @@ export const getRevenueVsBudget = async ({
           ${RevenueBudgets.revenueCrossDock} * ${RevenueBudgets.profitPercentageCrossDock} / 100 +
           ${RevenueBudgets.revenueFactory} * ${RevenueBudgets.profitPercentageFactory} / 100
         ), 0)`,
+        revenueStockBudget: sql<string>`COALESCE(SUM(${RevenueBudgets.revenueStock}), 0)`,
+        revenueCrossDockBudget: sql<string>`COALESCE(SUM(${RevenueBudgets.revenueCrossDock}), 0)`,
+        revenueFactoryBudget: sql<string>`COALESCE(SUM(${RevenueBudgets.revenueFactory}), 0)`,
       })
       .from(RevenueBudgets)
       .leftJoin(
@@ -152,6 +172,12 @@ export const getRevenueVsBudget = async ({
         revenueBudget: 0,
         profit: 0,
         profitBudget: 0,
+        revenueStock: 0,
+        revenueStockBudget: 0,
+        revenueCrossDock: 0,
+        revenueCrossDockBudget: 0,
+        revenueFactory: 0,
+        revenueFactoryBudget: 0,
       };
       buckets.set(key, bucket);
       return bucket;
@@ -162,6 +188,9 @@ export const getRevenueVsBudget = async ({
       bucket.weight += Number(row.weight);
       bucket.revenue += Number(row.revenue);
       bucket.profit += Number(row.revenue) - Number(row.cost);
+      bucket.revenueStock += Number(row.revenueStock);
+      bucket.revenueCrossDock += Number(row.revenueCrossDock);
+      bucket.revenueFactory += Number(row.revenueFactory);
     }
 
     for (const row of budgets) {
@@ -169,6 +198,9 @@ export const getRevenueVsBudget = async ({
       bucket.weightBudget += Number(row.weightBudget);
       bucket.revenueBudget += Number(row.revenueBudget);
       bucket.profitBudget += Number(row.profitBudget);
+      bucket.revenueStockBudget += Number(row.revenueStockBudget);
+      bucket.revenueCrossDockBudget += Number(row.revenueCrossDockBudget);
+      bucket.revenueFactoryBudget += Number(row.revenueFactoryBudget);
     }
 
     return [...buckets.values()]

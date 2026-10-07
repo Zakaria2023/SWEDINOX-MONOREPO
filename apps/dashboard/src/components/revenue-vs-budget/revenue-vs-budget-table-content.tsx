@@ -21,7 +21,7 @@ type Props = {
 
 export const RevenueVsBudgetTable = ({ rows, view }: Props) => {
   const byMonth = view === "month";
-  const columnCount = byMonth ? 11 : 12;
+  const columnCount = byMonth ? 17 : 18;
 
   return (
     <div className="space-y-4">
@@ -55,6 +55,13 @@ export const RevenueVsBudgetTable = ({ rows, view }: Props) => {
             <TableHead className="text-right">
               Avg. Sales Price/Kg Budget
             </TableHead>
+            {/* The budget's own three columns, each against its actual. */}
+            <TableHead className="text-right">Revenue Stk</TableHead>
+            <TableHead className="text-right">Budget Stk</TableHead>
+            <TableHead className="text-right">Revenue CD</TableHead>
+            <TableHead className="text-right">Budget CD</TableHead>
+            <TableHead className="text-right">Revenue EXW</TableHead>
+            <TableHead className="text-right">Budget EXW</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -113,6 +120,24 @@ export const RevenueVsBudgetTable = ({ rows, view }: Props) => {
                 </TableCell>
                 <TableCell className="text-right whitespace-nowrap">
                   {formatMoney(row.avgSalesPriceBudget)}
+                </TableCell>
+                <TableCell className="text-right whitespace-nowrap">
+                  {formatMoney(row.revenueStock)}
+                </TableCell>
+                <TableCell className="text-right whitespace-nowrap">
+                  {formatMoney(row.revenueStockBudget)}
+                </TableCell>
+                <TableCell className="text-right whitespace-nowrap">
+                  {formatMoney(row.revenueCrossDock)}
+                </TableCell>
+                <TableCell className="text-right whitespace-nowrap">
+                  {formatMoney(row.revenueCrossDockBudget)}
+                </TableCell>
+                <TableCell className="text-right whitespace-nowrap">
+                  {formatMoney(row.revenueFactory)}
+                </TableCell>
+                <TableCell className="text-right whitespace-nowrap">
+                  {formatMoney(row.revenueFactoryBudget)}
                 </TableCell>
               </TableRow>
             ))
