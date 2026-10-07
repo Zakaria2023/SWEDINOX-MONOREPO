@@ -26,7 +26,7 @@ system to find out.
 > [order-detail.md](order-detail.md) — a sales order, and the four price bases ·
 > [customer-stock.md](customer-stock.md) — whose metal is in the rack ·
 > [credit-and-blocking.md](credit-and-blocking.md) — creditspace, and 3 holds ·
-> [order-types.md](order-types.md) — Stk vs CD ·
+> [order-types.md](order-types.md) — Stk vs CD vs EXW ·
 > [finance-screens.md](finance-screens.md) · [contracts.md](contracts.md) ·
 > [PLANNED-CODE-CHANGES-2.md](PLANNED-CODE-CHANGES-2.md) — **queued, none applied** ·
 > [fsp.md](fsp.md) — the price stock is carried at ·

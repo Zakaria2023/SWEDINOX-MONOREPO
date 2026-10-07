@@ -1,0 +1,124 @@
+# Planned code changes — from the line-type grouping, 7-10-2026
+
+**Source:** Step 6 of the capture runsheet — `Purchase lines` grouped on
+`Line type`, then the one `EXW` row read across its full width. Written up in
+[purchase/purchase-lines.md](purchase/purchase-lines.md) *Step 6 answered* and
+[order-types.md](order-types.md).
+
+Record used: purchase order **`400143/10`** (Decomecc N.V., batch `25AATY`).
+
+> **Why this file exists.** Swedinox asked on 7-10-2026 for the code to stop
+> after commit `067f4cbe` and for everything the capture still asks of the code
+> to be written down instead. This is that list. Nothing below is built.
+
+**Ordering is by cost of being wrong.** 1–2 are wrong stock. 3–5 are a wrong
+floor. 6–8 are missing fields.
+
+---
+
+## 1. 🔴 A `CD` or `EXW` purchase line must not put a lot on our shelf
+
+**What was found.** `Line type` is a mode of the trade: `Stk` lands in our
+warehouse, `CD` goes supplier → our lorry → customer, `EXW` never comes near
+us. Our receipt chain writes a `Stock` row and an `in` movement for **every**
+reception, whatever the line's type.
+
+**What is wrong.** A cross-docked parcel shows up as stock we can sell, and
+the next order advice counts it.
+
+**What to build.** In the receipt chain, branch on
+`PurchaseOrderItems.sourceType` at the moment a reception is made final:
+
+- `stock` — exactly as today.
+- `cross_dock` — no shelf lot. The parcel still needs a weight, a charge, a
+  certificate and a ledger line (`3170 Goods to be received` → cost of sales,
+  not `3000 Stock`), and `CD deliveries in progress` needs the row until the
+  sales line it covers is delivered.
+- `ex_works` — see 2 before deciding; the one real row *did* go to stock.
+
+**Before building.** ⚠️ Not captured. What the reference does on `Make final`
+for a `CD` line has never been watched. Flow **H1** was watched on a `Stk`
+line only. Do the capture first: find a `CD` line in `Purchase receivals`
+and read its reception, its lot (if any) and its journal lines.
+
+## 2. 🔴 `EXW` on a purchase line is a toll-processing return, and the code has no such thing
+
+**What was found.** The only `EXW` purchase line in 21 months: € 0,05/TN,
+`Qty ordered 0`, `Qty confirmed 0`, `Received`, internal certificate, booked
+to `3000 Stock` at € 0,01. It is our own plate coming back from a processor.
+Its purchase-order type reads `Ex works Pro…`.
+
+**What is wrong.** We treat it as a purchase at € 0,05/TN. That lot's cost is
+a cent; every sale from it reports a ~100 % margin, and the stock valuation
+is short by the coil it was cut from.
+
+**What to build.** Nothing until Step 6c (the order header) and H9 (external
+processing) are captured. The likely shape: the return leg of an external
+processing work order books the processed item in **at the cost of the metal
+that went out plus the processing invoice**, and the nominal purchase order is
+the reference's carrier for that, not a price.
+
+**Also pending.** `purchaseOrderTypes` gains whatever `Ex works Pro…` turns
+out to be in full (`Ex works Processing`? `… Production`?). Fourth value;
+label; where the order form offers it.
+
+## 3. 🟡 `minimumMarginFor` callers still read pick-up as ex works
+
+**What was found.** The three minimum margins on a product are the three line
+types. `minimumMarginFor` is now keyed on the type (`067f4cbe`). But sales
+lines never carry a type — `OrderItems.sourceType` is written by nothing, so
+it is `stock` on all 194 rows — and the two callers (`orders/actions.ts`,
+`quotes/actions.ts`) still map `isPickup → "ex_works"`.
+
+**What is wrong.** `Pick-up` is a separate boolean in the reference (307
+`Normal` pick-up orders against one `Ex works` one), so 307 orders are held to
+the ex-works floor that only one should be.
+
+**What to build.** A `Type` on the sales line (`Stk` · `Stk+CD` · `CD` ·
+`EXW`), set in the order and quote line editors, defaulting to `stock`; then
+the callers pass `item.sourceType` and the `isPickup` mapping goes. The
+client-side copy of the same pick in `quote-lines-editor.tsx` (lines ~247–250)
+goes with it.
+
+## 4. 🟡 Nothing ever sets a sales line to `cross_dock`
+
+**What was found.** `OrderItems.purchaseOrderItemUuid` exists for the
+cross-dock link and `CD deliveries in progress` reads it, but no action writes
+either it or `sourceType = "cross_dock"`.
+
+**What to build.** When a purchase line is raised *for* a sales line (the
+`For order` field on the purchase order header), set the sales line's
+`sourceType` to `cross_dock` (or `stock_and_cross_dock` if it already holds a
+reservation) and point `purchaseOrderItemUuid` at the new line. Capture
+first: what the reference does on the sales line when a CD purchase is raised
+against it.
+
+## 5. 🟡 Revenue-vs-budget actuals can now split three ways
+
+**What was found.** PLANNED-CODE-CHANGES-5 §S8 noted *"our order lines have no
+factory source type, so the report's actuals do not split by type"*. They do
+now (`ex_works`).
+
+**What to build.** Split the actuals in `revenue-vs-budget/actions.ts` on
+`OrderItems.sourceType` → `revenueStock` / `revenueCrossDock` /
+`revenueFactory`, so the three budget columns are compared against three
+actuals instead of one total. Worthless until 3 and 4 give the lines a type.
+
+## 6. 🟢 Counts for `CD` and `Stk`
+
+The grid's group headers carry no counts, so the sizes of the two big groups
+are unknown. Either expand each and read the row count off the status bar, or
+take the purchase-lines export (`Toon in Excel`) and count there. Decides
+whether 1 is a rare edge or a third of the buying.
+
+## 7. 🟢 `Line type` on the purchase order detail
+
+The reference's order-detail line grid prints `Type` per line
+(purchase-order-detail.md). Ours stores it now and shows it only on the
+`Purchase lines` overview; the detail page's line grid should carry it too.
+
+## 8. 🟢 Lines cannot be edited after creation
+
+`updatePurchaseOrder` takes the header only, so a line's type can be set once,
+at creation. The reference allows it on a `Provisional` order. Out of scope
+until line editing exists at all.

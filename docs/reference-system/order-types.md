@@ -109,3 +109,40 @@ Both fields, since they are both real:
 ⚠️ Not to be confused with our own `OrderItems.lineType`, which holds
 `material` and is a different axis — the reference keeps options and surcharges
 in separate tables rather than in a column.
+
+
+---
+
+## 🔴 A fourth value, and a name for the axis — 7-10-2026
+
+Grouping `Purchase lines` on `Line type` over 2024–2026 gave **`CD` · `EXW` ·
+`Stk`**. `EXW` had shown once before, on one sales line (order-lines.md §8), and
+been written off as thin. It is a member.
+
+**And the same three names appear in two other places**, which says what this
+axis *is*:
+
+| Where | The three |
+|---|---|
+| `Line type`, purchase and sales lines | `Stk` · `CD` · `EXW` |
+| Product → `Minimum profit margins` | `Stock` · `Cross Docking` · `Ex works` |
+| `REVENUEGROUP_BUDGET` (B17) | `STOCK` · `CROSSDOCK` · `FACTORY` |
+
+So the line type picks the margin floor and the budget column. It is a mode of
+the trade, and `FACTORY` ≡ `Ex works` ≡ `EXW`.
+
+⚠️ **But the one `EXW` purchase line is not a mill delivery.** It is a
+toll-processing return at € 0,05/TN from Decomecc, never ordered, with an
+internal certificate — see
+[purchase/purchase-lines.md](purchase/purchase-lines.md) *Step 6 answered*. On
+the buying side `EXW` is how metal that was already ours comes back from
+somebody else's works. What `Ex works` means on the selling side, and in the
+margin and budget tables, is **still open** — Step 6c reads order `400143`'s
+header.
+
+`Stk+CD` did **not** appear on purchase lines, as expected: it is a sales line
+filled from two sources, and a purchase line has one.
+
+Built 7-10-2026: `ex_works` in `orderSourceTypes`; `purchaseSourceTypes` as the
+purchase-side subset; `PurchaseOrderItems.sourceType`; `minimumMarginFor` keyed
+on the type.

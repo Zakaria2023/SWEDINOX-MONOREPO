@@ -407,3 +407,93 @@ each.
 
 Do not treat the list as complete until the `Only current purchasing lines`
 question above is settled.
+
+
+---
+
+## ✅ Step 6 answered, 7-10-2026 — `Line type`, grouped
+
+`Purchase lines`, creation date `1-1-2024` → `7-10-2026`, `Only current
+purchasing lines` **off**, grouped on `Line type`. Three groups, collapsed:
+
+```
+⊞ Line type: CD
+⊞ Line type: EXW
+⊞ Line type: Stk
+```
+
+🔴 **Three, not two.** The hypothesis above (`Stk` or `CD`, derived from the
+header's `Pick up/Drop-off CD-purchases` tick) was how our overview computed
+the column — and a tick can only ever produce two values. `EXW` is a third that
+no header field can say, so **the line type is a property of the line**, and
+that is how it is now stored (`PurchaseOrderItems.sourceType`, 7-10-2026).
+
+⚠️ As before on this grid, **the group headers carry no counts.** `CD` and `Stk`
+were left collapsed, so their sizes are unknown. `EXW` was opened: **one row**.
+
+### The one `EXW` line, read across the full width
+
+| Column | Value |
+|---|---|
+| `Purchase order type` *(first column — the document kind)* | `Purchase order` |
+| `No.` / `Line` | **`400143`** / `10` |
+| `Product code` / `Product` | `CK304L0050` — `Coil Cold-rolled 304L` |
+| `Supplier` / `Company code` / `Country` | **`Decomecc N.V.`** / `11046` / `Belgium` |
+| `Status` | **`Received`** |
+| `Receipt date` / `Date Created` | `15-1-2025` / `14-1-2025` |
+| `Qty(p) (Pur.U.)` / `Purchase U.` / `Kg(pur)` | `1` / `ST` / `177` |
+| `Qty(a) (Pur.U.)` / `Kg(a)` | **`1`** / **`177`** |
+| `Qty ordered` / `Qty confirmed` | **`0`** / **`0`** |
+| `Reserved` (Pur.U. / kg) / `Available` (Pur.U. / kg) | `0` / `0` / `0` / `0` |
+| `Revenue group number` / `Revenue group` | `1000` / `SS 304` |
+| `Length` / `Width` / `Thickness` | `3000` / `1500` / `5` |
+| `Net Purchase Price` / `PriceU` | **`€ 0,05`** / `TN` |
+| `Amount(p)` / `Amount yet to…` | **`€ 0,01`** / `€ 0,00` |
+| `Qty still to b…` / `Kg. still to be…` | `0` / `0` |
+| `Purchase ord…` *(second column — the order's type)* | **`Ex works Pro…`** (truncated) |
+| `Initials purch…` / `Purchaser` | `BV` / `Benno Vos` |
+| `Main group` / `Subgroup` | `Stainless Steel` / `Coil Cold-rolled 304L` |
+| `Current gros…` / `Gross pri…` | `€ 0,00` / `TN` |
+| `Margin (€ per gro…` | **`€ -0,05`** |
+| `Quality Code` | `304L2B` |
+| `CE standard` · `Deadline/Valid until` · `DoP` · `Stock Category` · `Purchase Refere…` · `Onze referentie` · `Options` | all blank |
+
+🔑 **This is not a purchase.** Four things on the row say so, and the exports
+say the rest:
+
+- **€ 0,05 per tonne.** 177 kg of 304L for one cent. A nominal price, there so
+  that the receipt can post *something*.
+- **`Qty ordered 0`, `Qty confirmed 0`, yet `Received`.** The order was never
+  sent to the supplier and never acknowledged — and the goods arrived anyway.
+- **Decomecc N.V. is a `LOON (E)` company** in `c2-customer-overview.tsv` —
+  *loonwerk*, contract processing — not a mill.
+- **The certificate is internal.** `e2-certificates-received.tsv` lists
+  `IO400143/10` with certificate `INtern`, type `NVT` (n.v.t., not applicable);
+  `e1-batches.tsv` shows it became batch **`25AATY`** on `2025-02-10`.
+- **It was booked to stock at € 0,01.** `joumual-entires.tsv`: `Inslag
+  inkooporder · Decomecc N.V. · 0.01 → 3000 Stock / 3170 Goods to be received`.
+
+So the one `EXW` purchase line in 21 months is **our own metal coming back
+from a processor's works**, booked in as a receipt against a nominal order so
+that it gets a lot, a batch and a ledger line. The dimensions fit: 3000 × 1500
+× 5 mm × 7 900 kg/m³ = 177,75 kg — a plate cut from the coil the code names,
+weighed at 177. That is the external-processing return leg (**H9**), seen from
+the purchase side.
+
+⚠️ **`Ex works Pro…` is a purchase-order type we do not hold.** Ours are
+`Materials` · `Processing` · `Customer Materials`. The full caption is cut off
+in the grid — Step 6c (open order `400143`) is to read it.
+
+⚠️ **Open:** whether the selling side's single `EXW` line (order-lines.md §8)
+is the mirror of this — the processed plate going out — or something else.
+
+### What was built on it, 7-10-2026 (commit `067f4cbe`)
+
+- `PurchaseOrderItems.sourceType` — `stock` · `cross_dock` · `ex_works`
+  (`purchaseSourceTypes`, a subset of `orderSourceTypes`, which gained
+  `ex_works`). The overview reads it; the header tick is only the default a new
+  line gets (`purchaseSourceTypeFor`); the line editor offers all three with a
+  blank meaning "from the order"; the overview gained a `Line type` filter.
+- `minimumMarginFor` is keyed on the type, and reads the cross-dock floor
+  nothing had ever read. See [PLANNED-CODE-CHANGES-7.md](../PLANNED-CODE-CHANGES-7.md)
+  for what this row still asks of the code.
