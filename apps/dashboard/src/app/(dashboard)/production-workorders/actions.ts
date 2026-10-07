@@ -1152,6 +1152,11 @@ export const reportProductionCutCompletion = async (
                 quantityKg: kg,
                 locationUuid: remainder.toLocationUuid ?? null,
                 template: isRemnant ? template : null,
+                // ⚠️ A deliberate departure. The reference books 121 of its
+                // 191 offcuts at € 0 (G9), leaving the whole cost on what was
+                // cut out — so a later sale from the offcut reports a margin
+                // of ~100 %. Ours splits the run's cost by kilos instead, so
+                // the offcut carries its share and both margins stay honest.
                 value: isRemnant
                   ? balance.remnantCost * (remnantKg > 0 ? kg / remnantKg : 0)
                   : 0,

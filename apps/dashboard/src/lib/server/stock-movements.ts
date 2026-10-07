@@ -521,6 +521,14 @@ export const applyProductionConsume = async (
  * The charge is inherited, not minted. Steel is traceable to the heat it was
  * poured from, and cutting a plate does not change which heat it came out of —
  * a certificate follows the material through the machine.
+ *
+ * 🔑 **Proved on the reference's own ledger (G9, 7-10-2026):** all 184
+ * `Rest production` offcuts with an internal charge share it with the lot they
+ * were cut from, and carry that lot's supplier, heat and purchase order on the
+ * mutation row itself. So the lot copies every attribute of its template, and
+ * the `in` movement is stamped with the template's origin exactly as a
+ * consumption is — an offcut with no mill on its mutation would break the
+ * chain the reference keeps.
  */
 export const applyProductionOutput = async (
   tx: Transaction,
@@ -570,6 +578,7 @@ export const applyProductionOutput = async (
     type: "in",
     reason: params.reason,
     quantity: quantity.toFixed(3),
+    ...lotOrigin(template ?? {}),
     orderUuid: params.orderUuid,
     productionWorkOrderLineUuid: params.productionWorkOrderLineUuid,
     createdByUserId: params.userId,
