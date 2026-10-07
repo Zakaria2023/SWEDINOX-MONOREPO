@@ -142,7 +142,10 @@ terminal, and the overview filter must offer it. `delivered` is order-side,
 between `partially_delivered` and `partially_invoiced`: set when the last
 line's delivery completes and no invoice exists yet. Where `completed` then
 sits — after `invoiced`, as today — stays unless the rows say otherwise.
-Confirm with the expanded groups before building.
+✅ Confirmed 7-10-2026 from the expanded groups: `Converted` is quotes
+only (`Q300013` → `O106623`), `Delivered` is orders only (`O105922`, 4 lines,
+nothing invoiced), and `Completed` is a separate group, so both are new
+rungs rather than renamings.
 
 ## 10. 🟡 `purchaseInvoiceStatuses` starts with a word the reference does not use
 
@@ -151,5 +154,8 @@ Confirm with the expanded groups before building.
 `final`.
 
 **What to build.** Rename `new` → `provisional` (hand-ALTER the enum, never
-`--force`; backfill `new` → `provisional`). Keep `final` only if the wider
-window shows it; otherwise drop it and whatever code moves an invoice to it.
+`--force`; backfill `new` → `provisional`). ✅ The wider window (from 2020)
+showed nothing more — the series starts at `600000` in January 2025 — so
+**drop `final`** and whatever moves an invoice to it. 🔑 Add `bookingPeriod`
+(int): `0` while provisional, set to the period on release — the reference
+shows `0`/`1`, and that pair is what the status means.

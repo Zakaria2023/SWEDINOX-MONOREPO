@@ -325,3 +325,43 @@ screens is to be read off the rows. Requested.
 
 Our `orderStatuses` holds neither. Queued as
 [PLANNED-CODE-CHANGES-7.md](PLANNED-CODE-CHANGES-7.md) §9.
+
+
+### ✅ The two new groups opened, 7-10-2026
+
+**`Converted` — quotes only.** Two rows, both `Q`:
+
+| Created | Quote | Converted from/to | Lines | Kg | Revenue | Profit | Customer | Quote date | Valid u/i | Order method |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 23-4-2026 11:30–12:00 | `Q300013` | **`O106623`** | 6 | 1 334 | € 4.134,46 | € 989,22 (23,90 %) | Pustjens Metaalbewerking BV | 24-4-2026 | 27-4-2026 | Telephone |
+| 23-4-2026 13:00–13:30 | `Q300014` | **`O106616`** | 5 | 38 | € 210,63 | € 97,27 (46,20 %) | Metaalketen Noord-Oost B.V. | 23-4-2026 | 26-4-2026 | Telephone |
+
+So `Converted` is the third quote-only terminus beside `Expired` (and
+`Released` for a live one), and `Converted from/to` is the link: on the quote
+it holds the order number. Both carry `Send` ☑ and `Must be sent` ☑,
+`Consignment` ☐, `Deliberately not sent` ☐, `Pick-up` ☐, `Incidental` ☐,
+`Reference` `24/4` / `23/4`, `Order type` `Normal`, `Representative` `Hego`.
+
+**`Delivered` — orders only.** One row: `O105922`, created 27-2-2026, seller
+Cherice van Ro…, 4 lines, 4 904 kg, revenue € 9.906,08, profit **€ −168,88
+(−1,70 %)**, Tamegainox LdA, delivery date 26-5-2026, customer `13214`, `Send`
+☑, `Must be sent` ☑, `Order method` blank. Everything delivered, nothing
+invoiced — a real rung between `Partially delivered` and `Partially
+invoiced`, and not the same thing as `Completed`, which has its own group.
+
+**`Provisional` spans the three series** in one group: `O104076`
+(20-10-2025, 0 lines, € 15,00, Lootens Belgie BV, `E-Mail`, reference
+`202512196`), `Q300007` (24-11-2025, 12 lines, 33 706 kg, € 34.401,34 at
+92,50 %, UAB Metalinox, `Send` ☐) and **`R290157`** (14-1-2026, 0 lines,
+€ 0,00, Groku Kampen BV, `Pick-up` ☑) — the return series is `R29xxxx`.
+
+⚠️ Below `Provisional` the grid was still not scrolled; `Received` and
+`Released` are expected there and remain unconfirmed on the live grid.
+
+🔑 **J7 in passing:** the grid carries two columns, `Classification code` and
+`Classification`, and both are **blank on all six rows** seen. Not closed —
+six rows — but it leans the same way `Order method` went.
+
+⚠️ **The data runs to April 2026.** `Q300013` was created 23-4-2026 with a
+delivery date of 29-4-2026, on a database once described as frozen in
+mid-May 2025. See K10.

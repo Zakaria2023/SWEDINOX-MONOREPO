@@ -177,3 +177,34 @@ on every other document — and `final` has not been seen on any invoice since
 2024. Whether `Final` (or anything else) exists on older invoices is requested
 over a wider window. Queued as
 [PLANNED-CODE-CHANGES-7.md](../PLANNED-CODE-CHANGES-7.md) §10.
+
+
+### ✅ Widened to `1-1-2020`, 7-10-2026 — still two, and now final
+
+Same two groups. The `Released` group's first row is invoice **`600000`**,
+dated 22-1-2025 — the series starts there, so there is no older invoice for a
+wider window to find. **`Provisional` and `Released` are the whole list.**
+`Final` does not exist.
+
+The three `Provisional` rows, read across:
+
+| Created | Invoice date | No. | Expiry | Creditor | Supplier's no. | Supplier | Amount | VAT | Terms | Booking period |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 8-12-2025 | 1-12-2025 | `601550` | 1-12-2025 | 51173 | 12121 | ITALCOM SRL (I) | € 0,00 | € 0,00 | `V` Prepayment | **0** |
+| 11-2-2026 | 11-2-2026 | `601850` | 13-3-2026 | 50742 | x | Fisher Edelstaal (NL) | € 187,07 | € 0,00 | `30` | **0** |
+| 13-4-2026 | 16-12-2025 | `602217` | 15-1-2026 | 50638 | 20250762A | H. Schrijver Constructiebed… (NL) | € 726,00 | € 126,00 | `30` | **0** |
+
+🔑 **`Booking period` is `0` on every `Provisional` row and `1` on every
+`Released` row.** Provisional means *not yet booked into a period*; release is
+the booking. That is the behaviour the status carries, and it is why there is
+no third rung: once booked, an invoice is simply released.
+
+Columns to the right, for the record: `Credit restriction` (€ 0,00 on all),
+`Payment terms code` (`V` · `30` · `118` · `14` · `102`) beside the `Payment
+terms` text (`Prepayment`, `Within 30 days from d…`, `Within 14 days -3.0%…`,
+`Within 8 days -1%, 3…`), `Weight` (kg, `0` on all three provisional), `IBAN`,
+`Bank Country`, `Booking peri…`.
+
+Also seen: `602217` was *created* 13-4-2026 for an invoice *dated*
+16-12-2025, four months late — `Creation date` and `Invoice date` are two
+columns for a reason.
