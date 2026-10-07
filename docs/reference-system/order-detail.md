@@ -423,3 +423,51 @@ Worth writing down so it is not assumed later:
   proof.
 - **`Production workorders` is empty here**, so the order → cut → order chain is
   still unseen. That is **G8** and **H10**.
+
+
+---
+
+## A call-off order, 7-10-2026 — `100785`, Allva Edelstahl GmbH
+
+Opened from `Blocked deliveries`. Header: *"Order 100785, Allva Edelstahl
+GmbH … - Partially invoiced, Printed, Mailed"*; *"Creation date: 13-2-2025 -
+Delivery planned: 25-4-2025 - Delivered: 23-5-2025"*.
+
+| Field | Value |
+|---|---|
+| `Customer` | `10579` Allva Edelstahl GmbH · `Contact` Benjamin Fellermair |
+| `Customer ref.` | `B111349` · `Leave custome…` ☐ |
+| `Order method` | `Telephone` · `Seller` Marco Borsboom · `Price date` 13-2-2025 |
+| `Project` / `Order category` | `-leeg-` / `-leeg-` · `Handling blocked` ☐ |
+| Order type | `Pick-up` ☐ · `Incidental` ☐ · `Consignment with a duration` ☐ greyed · `Internal production/processing` ☐ greyed · `Klant materiaal` ☐ greyed · **`Call-off`** · `-leeg-` · `Overlengte` ☑ greyed |
+| `Delivery terms` | `(CPT) Carriage paid to` · address Tannenbergstr. 173, D-73230 Kirchheim unter Teck |
+| **`Call-off period`** | `17-2-2025` t/m `17-2-2025` · a **`Keuzehulp`** button |
+| Summary | Materials € 24.356,07, **profit € 24.356,07 (100 %)**, same w.r.t. replacement price · avg kilo price € 2,55 · total weight 9 551,5 kg · theor. 9 551,2 kg |
+| Toolbar | `Print… · Send… · Return` (greyed) `· Par. return · Show company · PAC · Cancel · Optimize · Copy · Workorder · Invoice` |
+
+**`Call-offs` panel** — `New · Delete · Change · Print call-off · Send…`;
+grid `Customer reference · Delivery address · Rush · Call-off last modified by
+· Call-off last … · IsSend · Days in system`. Two rows, both `B111349` to the
+same address, `Rush` ☐, `IsSend` ☐, modified by Richard van Slooten on
+24-4-2025 and 22-5-2025. So a call-off is a **child record of the order** with
+its own reference, address and rush flag, and the order's `Call-off period`
+is the window they fall in.
+
+`Order lines`, 4: line `10` `Stk` 26-5-2025 `Partially inv…` `PK304L150`
+Cold-rolled plate 304L 1,5 mm `2nd choice` `304L2B` 1 002 ST 1500 × 220 ×
+1,5 — 3 893,6 kg, 1 503 m, **€ 2.550,00 / TN**; line `20` `Stk` 25-4-2025
+`Invoiced` 254 ST 1500 × 180 — 807,6 kg, 381 m, same price.
+
+**Line 10's `Revenue+Profit`:** *"CURRENT APP: € 0,00 · Profit w.r.t. CURRENT
+APP: € 9.928,68 (100,00 %)"*. Revenue € 9.928,68 against **APP, FSP,
+replacement price and LIP all € 0,00**, so every profit column reads 100 %.
+`Pricing`: `Transfer price setting to order line` ☐, `Transfer pricing
+determination to o…` ☑, every build-up figure € 0,00 and one option row
+`ShearCut` at € 0,00 / ST — while the line itself carries € 2.550 / TN. ✅ As
+order-detail.md already records: with the first box unticked the line's price
+is typed and the panel is not its source.
+
+🔑 **A 100 % margin in the reference means "no cost known", not "free
+metal".** Second-choice plate with no APP, FSP, replacement or LIP price
+reports its whole revenue as profit. Our margin code would do the same on a
+lot valued at zero; the reference does not guard against it either.

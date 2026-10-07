@@ -159,3 +159,64 @@ showed nothing more — the series starts at `600000` in January 2025 — so
 **drop `final`** and whatever moves an invoice to it. 🔑 Add `bookingPeriod`
 (int): `0` while provisional, set to the period on release — the reference
 shows `0`/`1`, and that pair is what the status means.
+
+## 11. 🔴 `purchaseOrderStatuses` does not match the reference
+
+**What was found.** Decomecc's `Purchase orders` panel, 7-10-2026: `Expired`,
+`Received`, `Invoiced`, `In progress` on seven orders. Earlier slices showed
+`Invoiced` and `Received`. Ours: `provisional · open · confirmed ·
+pre_notified · completed · cancelled` — none of the four seen, and
+`open` / `confirmed` / `pre_notified` / `completed` never seen on a purchase
+order header at all.
+
+**What is wrong.** 39 call sites read these values. A received order shows as
+`open`, an invoiced one as `completed`, and an expired one does not exist, so
+nothing ever ages out.
+
+**What to build — capture first.** Group `Purchase orders and quotes` on
+`Status` (the J6 move) to get the whole header list, then map: probably the
+same ladder as the lines (`orderLineStatuses` already holds `provisional ·
+released · checked · in_progress · partially_received · received ·
+invoiced · expired`), rolled up from them. ⚠️ `pre_notified` and `confirmed`
+may be flags on the header (the reference prints `Printed`, `Mailed`,
+`Confirm`, `Pre-notify` as buttons and ticks) rather than rungs — keep them
+as booleans if so.
+
+🔑 **An expired purchase order disappears from both purchase overviews.**
+Whatever filter `Purchase lines` and `Purchase orders and quotes` run, ours
+must hide `expired` by default too, and the company record's panel must
+still list it.
+
+## 12. 🟢 `Journal code` is display-only
+
+**What was found.** Greyed on the creditor and debtor panels of every company
+tried (Vergeest `0`/`0`, Decomecc `0`/`11`). It is set by the ledger.
+
+**What to build.** Nothing new — `Companies.journalCode` stays an `int`,
+shown read-only on both panels, never a picker. Remove any editable input for
+it if one exists.
+
+## 13. 🟢 Parking orders — reservation holders at € 0
+
+**What was found.** `Hego Reserveringen` holds stock on € 0 `Provisional`
+sales orders whose `Customer reference` names the real party; eight of eleven
+have since `Expired` at 0 kg. Their profit reads −100 % (cost with no
+revenue).
+
+**What to build.** Nothing structural: an order, its reservations and
+`expired` already cover it. Two small things: (a) the overview's margin
+column should not flag a € 0 provisional order as a loss — the reference
+does, at −100 %, and it reads as noise; (b) `orderStatuses` already holds
+`expired`, but nothing moves an order to it. When the reservation ages out —
+the reference's rule is not captured — the order should expire.
+
+## 14. 🟢 Call-offs are child records of the order
+
+**What was found.** Order `100785`'s `Call-offs` panel: rows with their own
+customer reference, delivery address, `Rush` and `IsSend`, a last-modified
+user and date, and buttons `New · Delete · Change · Print call-off · Send…`.
+The header carries a `Call-off period` window.
+
+**What to check before building.** Whether `OrderCallOffs` (or equivalent)
+already exists in our schema; if it does, compare columns; if not, this is a
+table of its own, not fields on the order.

@@ -230,3 +230,137 @@ with `Calculate VAT` ☑, `Payment term changeable in purchase orders` ☑ and
 non-supplier carries, not a chosen value — the dropdown's list has to be
 read on a company with `Supplier` ☑, or on this company's `Debtor` panel,
 where it was `11`. Requested.
+
+
+### Vergeest's `Debtor` panel, 7-10-2026
+
+| Field | Value |
+|---|---|
+| `Debtor number` | `12539` — the first search code, as on every company |
+| `IBAN` / `BIC` | `NL87RABO0121591093` / `RABONL2U` |
+| `Calculate VAT if applicable` · `Reminder` | ☑ ☑, greyed |
+| `Collect invoices in collection-mandate` · `Different contracts` | ☐ ☐ |
+| `Purchase org.` | `-leeg-` + `Show` · `Mem. no. Pur.Org.` blank |
+| **`Credit limit insurance`** | **`0010822904`** — a policy number, leading zeros kept |
+| `Insurance valid until` | `31-12-9999` |
+| `Credit limit uninsured` | `€ 0` |
+| `Open orders` / `Open entrees` (excl. BTW) | `€ 0,00` / **`€ 1.377,50`** |
+| `Oldest invoice date open entrees` / `Oldest due date` | `11-9-2026` / `11-10-2026` |
+| `Payment terms` | `Within 30 days from date of invoice` · `Different payment terms ex works` blank |
+| **`Journal code`** | **`0`, greyed** |
+| `VAT no` / `C of C number` | `NL810737413B01` / `10041394` |
+| `Currency` | `Euro` |
+| `Blocked by` | ☐, with the text box reading *"Allianz limiet akkoord voor € 25K./13-12-2024. Limietverhoging naar € 50K akkoord./27-01-2025."* |
+
+✅ **`Open entrees` reconciles to one invoice.** € 1.377,50 is exactly the
+excl.-VAT amount of `508220`, the only invoice on the `Invoices` panel with
+anything outstanding; its date (11-9-2026) and expiry (11-10-2026) are the two
+`Oldest …` dates. So open entrees is the excl.-VAT sum of unpaid invoices, and
+the two dates are the min over the same set — as credit-and-blocking.md has it.
+
+🔑 **The insured credit-limit amount is not on this panel for this login.**
+The panel shows the policy number and the uninsured limit, and no insured
+amount at all. system-info.md's security table has `Debtor → Kredietlimiet`
+(insured) **hidden** for two of the four profiles, which is the likely reason.
+The history of that limit — € 25K approved 13-12-2024, raised to € 50K on
+27-01-2025 — survives only as **hand-typed text in the `Blocked by` box**,
+which is a free-text memo field whether or not the block is ticked.
+
+### `Decomecc N.V.` (`11046`), 7-10-2026 — a processor, read in full
+
+Roles: **`Customer` ☑ · `Supplier` ☑ · `Processor` ☑**, the other six ☐.
+Created 26-9-2024. Search codes: blank, `21835`, `DECOMECC`. Main language
+Dutch.
+
+Its panels add three the customer record lacked: **`Purchase requests`**
+(*"0 open purchase requests, 0 Kg"*), **`Purchase quotes`** (*"0 open purchase
+quote(s); € 0,00; 0 Kg"*), **`Purchase orders`** (*"1 open purchase order(s);
+€ 2.632,96; 15304,2 Kg"*) — then `Inkoopregels` and `Customer stock`. The
+`Orders` panel (sales) is empty.
+
+`Purchase orders` grid — `Status · Order no · Purchase type · For order ·
+Order date · Delivery date · Amount · Weight (kg) · Copied from · Internal ref
+· Printed · Mailed · Handle tran… · Pick up/Dro… · Inkoper · Purchaser i… ·
+Re…`:
+
+| Status | No. | Type | Ordered | Delivery | Amount | Kg | Handle transport | Purchaser |
+|---|---|---|---|---|---|---|---|---|
+| **`Expired`** | **`400142`** | `Processing` | 14-1-2025 | 16-1-2026 | € 0,00 | 0 | ☑ | Benno Vos |
+| `Received` | `400143` | `Ex works Pro…` | 14-1-2025 | 15-1-2025 | € 0,01 | 177 | ☑ | Benno Vos |
+| `Invoiced` | `400192` | `Processing` | 17-1-2025 | 10-2-2025 | € 1.161,45 | 9 940 | ☑ | Benno Vos |
+| `Invoiced` | `400196` | `Processing` | 17-1-2025 | 10-2-2025 | € 1.692,90 | 9 956 | ☑ | Benno Vos |
+| **`Expired`** | `400359` | `Materials` | 10-2-2025 | 11-2-2025 | € 0,00 | 0 | ☐ | INAD |
+| `Invoiced` | `400366` | `Processing` | 11-2-2025 | 11-2-2025 | € 1.364,40 | 11 370 | ☑ | Benno Vos |
+| **`In progress`** | `402401` | `Processing` | 14-11-2025 | 14-9-2026 | € 2.632,96 | 15 304,2 | ☑ | Marco Borsboom |
+
+🔑 **`400142` is `Expired` — that is why no search found it.** It is the
+outgoing leg of the `400143` pair (purchase-lines.md *Step 6c*) and it ended
+at € 0,00 / 0 kg. The journal postings of € 1.324,16 and € 1.261,10 against
+it were each reversed, so the processing was never billed on it. An expired
+purchase order drops out of `Purchase lines` and `Purchase orders and quotes`
+alike; it is reachable from its supplier's company record and nowhere else
+yet found.
+
+🔴 **Four purchase-order statuses on one grid, three of which we do not
+hold.** `Expired`, `Received`, `Invoiced`, `In progress`. Ours is
+`provisional · open · confirmed · pre_notified · completed · cancelled`.
+Queued as [PLANNED-CODE-CHANGES-7.md](PLANNED-CODE-CHANGES-7.md) §11.
+
+🔑 **A processor's work is ordered as `Processing` and carries tonnage.**
+`400192` / `400196` / `400366` are 9,9–11,4 t each at € 1.161–1.693 — about
+€ 0,12–0,17 per kilo, a processing rate, not a metal price. `Handle transport`
+☑ on every one: we move the metal there ourselves.
+
+**`Creditor`:** `50982` · IBAN `BE42235005290754` · BIC `GEBABEBB` · Bank
+`Fortis Bank` · City `AMSTERDAM` *(sic — a Belgian bank, a Belgian company, a
+Dutch city)* · Country `Belgium` · terms `Within 30 days from date of invoice`
+· `EUR` · **`Journal code 0`, greyed** · VAT `BE0455164877` · `Payment term
+changeable in purchase orders` ☑ and `Collect invoices in payment order` ☑,
+greyed · open orders / entrees € 0,00 · a **`Bijwerken`** (refresh) button
+under the open-entrees block, which the customer's creditor panel lacked.
+
+**`Debtor`:** `11527` · same IBAN and BIC · terms `Within 30 days from date of
+invoice` · **`Journal code 11`, greyed** · `Currency` **`-leeg-`** (the
+creditor side says `EUR`).
+
+✅ **`Journal code` closes: it cannot be opened, on either panel, on any
+company tried.** Creditor `0` / debtor `11` on Decomecc, `0` / `0` on
+Vergeest — greyed every time. The dropdown is display-only in this login;
+the values arrive from the ledger (AFAS). J7 is finished.
+
+### `Hego Reserveringen` (`11584`), 7-10-2026 — the parking customer
+
+`Hego Reserveringen, Bolderweg 10, ALMERE, 036 549 2222`. Roles: **`Customer`
+☑ · `Supplier` ☑ · `Processor` ☑ — and `Internal` ☐.** Created 26-9-2024.
+Search codes `13158`, `22975`, `HEGO2`. **Main language `English`.**
+
+So it is not flagged as internal, though it is: it is a company record at
+Hego's own address, used as a customer to hold stock. The `Orders` panel says
+*"3 in progress; the last one is from 7-9-2026"*:
+
+| No. | Status | Ordered | Delivery | Kg | Profit% | Customer reference |
+|---|---|---|---|---|---|---|
+| `108123` | Provisional | 7-9-2026 | 8-9-2026 | 22 510 | −100 | `PROJECT ORDER/ PRIME+2ND` |
+| `107916` | Expired | 24-8-2026 | 8-9-2026 | 22 510 | −100 | `PROJECT ORDER PRIME/2ND` |
+| `107910` | Provisional | 21-8-2026 | 25-8-2026 | 66 950 | −100 | `PROJECT- PRIME/2ND/SCRAP` |
+| `107831` | Expired | 14-8-2026 | 27-8-2026 | 0 | 0 | `furkans order to romania` |
+| `107198` | Expired | 16-6-2026 | 25-6-2026 | 0 | 0 | |
+| `106778` | Expired | 7-5-2026 | 11-5-2026 | 0 | 0 | `INOXPRIME SERVICES MATERIAL` |
+| `106669` | Expired | 30-4-2026 | 1-5-2026 | 0 | 0 | |
+| `105318` | Provisional | 20-1-2026 | 18-5-2026 | 3 497,3 | −100 | `Vincent Laser Material` |
+| `103792` | Expired | 1-10-2025 | 31-10-2025 | 0 | 0 | |
+| `100766` | Expired, **Blocked ☑** | 11-2-2025 | 31-3-2025 | 0 | 0 | `onbekend of order door Aperam geleve…` |
+| `100643` | Expired | 4-2-2025 | 5-2-2025 | 0 | 0 | |
+
+All `Normal`, all € 0,00, none consignment.
+
+🔑 **The customer reference names the real party.** `Vincent Laser Material`,
+`INOXPRIME SERVICES MATERIAL`, `furkans order to romania`, `PROJECT ORDER
+PRIME/2ND` — each order holds stock **for** somebody who has not ordered yet,
+or for a project. A provisional € 0 order reserves the lots; when the real
+order comes, the reservation moves or the parking order expires. That is why
+eight of eleven are `Expired` with 0 kg: the stock was released and the
+order left to age out.
+
+🔑 **`Expired` is an order status, not only a quote and line status** — eight
+whole sales orders carry it here.

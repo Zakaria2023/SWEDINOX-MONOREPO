@@ -571,3 +571,13 @@ Processor` order that books the result back (`400143`). Stock-lot-model's
 
 Still to read off the order itself: its type (expected `Processing`), its
 line, and its `Workorders` panels.
+
+
+### ✅ Why `400142` could not be found, 7-10-2026
+
+It is **`Expired`** — € 0,00, 0 kg, delivery date 16-1-2026 — and an expired
+purchase order is shown on neither `Purchase lines` nor `Purchase orders and
+quotes`. It was found on Decomecc's company record, `Purchase orders` panel
+(company-detail.md *Decomecc*). Its type is `Processing`, as predicted. Its
+lines and workorders are still unread: from that panel, select `400142` →
+`Show`.
