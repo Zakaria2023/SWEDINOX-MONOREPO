@@ -308,3 +308,70 @@ queued as PLANNED-CODE-CHANGES-7 §18.
 `Transport damage` · `Incorrect delivery address` — seven, plus a clear
 button. ✅ **Identical, value for value and in order, to our
 `purchaseReturnOrderReasons`.** Nothing to change.
+
+
+---
+
+## ✅ J8 — `Par. return` pressed, 7-10-2026, on purchase order `404102`
+
+**Where the return buttons wake.** On `401466` (every line `Invoiced`)
+`Return`, `Par. return`, `Confirm` and `Pre-notify` are all greyed. On
+**`404102`** — Albko Metallhandel, header `Released`, 31 lines: 4
+`Expired`, 18 `Received`, 8 `Invoiced`, 4 `Released` — **`Par. return` is
+live, `Return` is greyed**, and `Confirm`, `Pre-notify`, `Workorder`,
+`Options…` are live. So a partial return needs at least one line still
+`Received`; a full return evidently needs every line received, which this
+order is not.
+
+**What `Par. return` does: it creates the return at once.** No dialog — the
+tab opens already saved (no `*`), headed *"Purchase return order 950034,
+Albko Metallhandel GmbH & Co. KG … - Provisional"*:
+
+| Field | Filled with |
+|---|---|
+| number | **`950034`** — the next in the `IR950xxx` series after `IR950033` |
+| `Supplier` | `13684` Albko Metallhandel GmbH Co. KG |
+| **`Purchase order`** | **`404102`**, greyed |
+| **`Complaint`** | **`40412`**, greyed — **a complaint is raised with the return** |
+| `Contact` | Joris Hezemans — the order's contact |
+| **`Purchaser`** | **Ayam Kalash — the user who pressed the button**, not the order's buyer (Arian Bloks) |
+| `Payment terms` | `Within 30 days from date of invoice` — the order's |
+| **`Return date`** | **`8-10-2026` — tomorrow** |
+| `Return reason` | blank |
+| `Drop-off` | ☐ |
+| `Delivery address` | **`Am Rennfeuer 2, D-27777, Ganderkesee`** — the supplier's, greyed |
+| `Pick-up` | **`Bolderweg 10, 1332AT, Almere`** — our yard |
+| `Purchase order type` | `Materials`, greyed |
+| Summary | all € 0,00, `0 Kg` |
+| Toolbar | `Make final` live; `Print… · Send… · Show company · Show purchase order · Show complaint` greyed until final |
+| `Lines` | **0** — the line selected on the order was *not* copied |
+
+Lines grid columns: `Code · Order line · Product · Description · Qty(p) ·
+Qty(a) · U · Length · Delivery date · Kg(p) · Kg(a) · Gross Pri… · U · Line
+Discount · U · Group Disco… · U · Amount · Status`. **`Order line` is the
+link from each return line back to the purchase line it returns.**
+
+🔑🔑 **What this settles about returns:**
+
+- A purchase return is **raised from its order**, never typed from blank —
+  that is why `Purchase order` and `Complaint` are greyed on `Nieuw →
+  Purchase return order`.
+- **Every return opens a complaint.** `Complaint 40412` exists the moment the
+  return does; the `Complaints` panel and `Show complaint` button hang off it.
+- Direction is fixed: **pick-up at our yard, delivery to the supplier**.
+- It starts empty and **`Provisional`**; lines are added afterwards, each
+  pointing at an order line.
+
+⚠️ **Test-data left behind on HEGO TEST:** provisional return `950034` and
+complaint `40412`, both against `404102`. Not made final. A blank line `320`
+was also added to `404102` by pressing `New` on the order's own grid and
+removed again.
+
+**Also seen on `404102`:** lines `10`–`40` carry **`For line` `O107757/10`
+… `/40`** — purchase lines raised *for* sales order lines — and are
+`Expired` at `Qty(p) 0`; the lines that actually arrived (`50`–`210`,
+26-8-2026) have no `For line`. The header's `Reference` reads `107757 EU
++3.1 - 2026-402702 +402703`. `New` on the order's line grid adds an
+inline row — code `320`, the next ten; status `Provisional`; delivery date
+the order's (`10-9-2026`); category `Standaard`; product picked through the
+cell's `…` button.

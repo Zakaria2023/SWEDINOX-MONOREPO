@@ -313,3 +313,22 @@ have. Sixteen real lines would be wrong in ours today.
    closed, `invoiced >= received` makes it `invoiced`. `partially_invoiced`
    stays for the sales side only.
 4. Harness check: no closed purchase line keeps an open reception.
+
+## 20. 🟡 `Par. return` creates a provisional return and a complaint in one step
+
+**What was found (J8).** On a purchase order with lines still `Received`,
+`Par. return` immediately saves a `Provisional` purchase return — next number
+in its series, linked to the order, with a **new complaint** linked to it,
+purchaser = the current user, return date = tomorrow, delivery address = the
+supplier's, pick-up = our yard — and no lines. Lines are added afterwards,
+each pointing at an order line (`Order line`). `Return` (whole order) stays
+greyed while any line is not yet received.
+
+**What to check and build.**
+1. Our purchase-return creation: does it start from a purchase order and
+   fill these defaults? Does it open a complaint? (Grep `complaintRef` —
+   ours is a free-text `varchar`; the reference issues a complaint number.)
+2. Return lines must reference a purchase order line, and only `received`
+   lines of that order may be picked.
+3. Gate the two buttons as the reference does: partial return when any line
+   is `received`; full return only when all are.
