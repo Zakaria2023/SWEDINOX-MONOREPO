@@ -1409,6 +1409,15 @@ export const remainingToInvoice = (
  */
 export const QUANTITY_EPSILON = 0.0005;
 
+/**
+ * Lot and ledger quantities (`Stock.quantity`, `reservedQuantity`,
+ * `quantityKg`, `StockMovements.quantity`) are stored to six decimals. A
+ * scrap lot stands at 89,055375 kg in the reference (7-10-2026); rounding
+ * every part-consumption to three would drift it. Display still rounds to
+ * the unit's own decimals.
+ */
+export const STOCK_QUANTITY_SCALE = 6;
+
 // ---------------------------------------------------------------------------
 // Ageing
 //

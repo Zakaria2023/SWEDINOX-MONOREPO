@@ -22,9 +22,11 @@ import {
   stockCorrectionReasonRules,
   todayDateString,
   unitCostString,
+  STOCK_QUANTITY_SCALE,
 } from "@/lib/helpers";
 import { carryLotBatches, registerBatchForLot } from "@/lib/server/batches";
 import { and, eq, ne } from "drizzle-orm";
+
 
 // The Drizzle transaction handle passed into db.transaction(async (tx) => ...).
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -258,7 +260,7 @@ export const applyMove = async (
       .update(Stock)
       .set({
         locationUuid: params.toLocationUuid,
-        reservedQuantity: arrivingReserved.toFixed(3),
+        reservedQuantity: arrivingReserved.toFixed(STOCK_QUANTITY_SCALE),
       })
       .where(
         and(eq(Stock.uuid, source.uuid), eq(Stock.quantity, source.quantity)),
@@ -278,10 +280,10 @@ export const applyMove = async (
   const [updated] = await tx
     .update(Stock)
     .set({
-      quantity: remainingQuantity.toFixed(3),
+      quantity: remainingQuantity.toFixed(STOCK_QUANTITY_SCALE),
       reservedQuantity: (
         Number(source.reservedQuantity ?? 0) - carried
-      ).toFixed(3),
+      ).toFixed(STOCK_QUANTITY_SCALE),
       valuationEuro: moneyString(remainingValue),
       // Taking part of a bundle breaks its banding, and nothing puts that back.
       unopened: false,
@@ -340,10 +342,12 @@ export const applyMove = async (
     await tx
       .update(Stock)
       .set({
-        quantity: (Number(destination.quantity) + quantity).toFixed(3),
+        quantity: (Number(destination.quantity) + quantity).toFixed(
+          STOCK_QUANTITY_SCALE,
+        ),
         reservedQuantity: (
           Number(destination.reservedQuantity ?? 0) + arrivingReserved
-        ).toFixed(3),
+        ).toFixed(STOCK_QUANTITY_SCALE),
         valuationEuro: moneyString(
           Number(destination.valuationEuro ?? 0) + valueMoved,
         ),
@@ -368,8 +372,8 @@ export const applyMove = async (
       uuid: destinationUuid,
       locationUuid: params.toLocationUuid,
       status: "pending",
-      quantity: quantity.toFixed(3),
-      reservedQuantity: arrivingReserved.toFixed(3),
+      quantity: quantity.toFixed(STOCK_QUANTITY_SCALE),
+      reservedQuantity: arrivingReserved.toFixed(STOCK_QUANTITY_SCALE),
       valuationEuro: moneyString(valueMoved),
       // The part that travelled came out of a bundle somebody cut open, so it
       // is not an intact one either.
@@ -410,7 +414,7 @@ export const applyMove = async (
       stockUuid: source.uuid,
       type: "out",
       reason: params.reason,
-      quantity: quantity.toFixed(3),
+      quantity: quantity.toFixed(STOCK_QUANTITY_SCALE),
       orderUuid: params.orderUuid,
       warehouseWorkOrderLineUuid: params.warehouseWorkOrderLineUuid,
       createdByUserId: params.userId,
@@ -421,7 +425,7 @@ export const applyMove = async (
       stockUuid: destinationUuid,
       type: "in",
       reason: params.reason,
-      quantity: quantity.toFixed(3),
+      quantity: quantity.toFixed(STOCK_QUANTITY_SCALE),
       orderUuid: params.orderUuid,
       warehouseWorkOrderLineUuid: params.warehouseWorkOrderLineUuid,
       createdByUserId: params.userId,
@@ -475,10 +479,10 @@ export const applyProductionConsume = async (
   const [updated] = await tx
     .update(Stock)
     .set({
-      quantity: remainingQuantity.toFixed(3),
+      quantity: remainingQuantity.toFixed(STOCK_QUANTITY_SCALE),
       reservedQuantity: (
         Number(source.reservedQuantity ?? 0) - released
-      ).toFixed(3),
+      ).toFixed(STOCK_QUANTITY_SCALE),
       valuationEuro: moneyString(remainingValue),
       // Issuing part of a bundle breaks its banding for good.
       unopened: false,
@@ -499,7 +503,7 @@ export const applyProductionConsume = async (
     stockUuid: source.uuid,
     type: "out",
     reason: "production_input",
-    quantity: quantity.toFixed(3),
+    quantity: quantity.toFixed(STOCK_QUANTITY_SCALE),
     ...lotOrigin(source),
     orderUuid: params.orderUuid,
     productionWorkOrderLineUuid: params.productionWorkOrderLineUuid,
@@ -556,9 +560,11 @@ export const applyProductionOutput = async (
     productUuid: params.productUuid,
     locationUuid: params.locationUuid,
     status: "pending",
-    quantity: quantity.toFixed(3),
-    reservedQuantity: params.reserved ? quantity.toFixed(3) : "0.000",
-    quantityKg: params.quantityKg.toFixed(2),
+    quantity: quantity.toFixed(STOCK_QUANTITY_SCALE),
+    reservedQuantity: params.reserved
+      ? quantity.toFixed(STOCK_QUANTITY_SCALE)
+      : "0.000",
+    quantityKg: params.quantityKg.toFixed(STOCK_QUANTITY_SCALE),
     charge: normaliseCharge(params.charge),
     internalCharge: normaliseCharge(params.internalCharge),
     remark: params.remark,
@@ -577,7 +583,7 @@ export const applyProductionOutput = async (
     stockUuid,
     type: "in",
     reason: params.reason,
-    quantity: quantity.toFixed(3),
+    quantity: quantity.toFixed(STOCK_QUANTITY_SCALE),
     ...lotOrigin(template ?? {}),
     orderUuid: params.orderUuid,
     productionWorkOrderLineUuid: params.productionWorkOrderLineUuid,
@@ -732,8 +738,8 @@ export const applyStockCorrection = async (
   const [updated] = await tx
     .update(Stock)
     .set({
-      quantity: nextQuantity.toFixed(3),
-      quantityKg: nextKg.toFixed(2),
+      quantity: nextQuantity.toFixed(STOCK_QUANTITY_SCALE),
+      quantityKg: nextKg.toFixed(STOCK_QUANTITY_SCALE),
       valuationEuro: moneyString(nextValue),
       stockCategory: params.attributes?.stock_category
         ? String(params.attributes.stock_category)
@@ -794,7 +800,7 @@ export const applyStockCorrection = async (
       type: quantityDelta < 0 || kgDelta < 0 ? "out" : "in",
       reason: rules.movementReason,
       correctionReason: reason,
-      quantity: Math.abs(quantityDelta).toFixed(3),
+      quantity: Math.abs(quantityDelta).toFixed(STOCK_QUANTITY_SCALE),
       quantityKg: Math.abs(kgDelta).toFixed(2),
       valueEur: moneyString(Math.abs(nextValue - previousValue)),
       note: params.description,
@@ -948,9 +954,9 @@ export const applyStockSplit = async (
   const [updated] = await tx
     .update(Stock)
     .set({
-      quantity: remainingQuantity.toFixed(3),
-      reservedQuantity: remainingReservation.toFixed(3),
-      quantityKg: remainingTheoretical.toFixed(2),
+      quantity: remainingQuantity.toFixed(STOCK_QUANTITY_SCALE),
+      reservedQuantity: remainingReservation.toFixed(STOCK_QUANTITY_SCALE),
+      quantityKg: remainingTheoretical.toFixed(STOCK_QUANTITY_SCALE),
       weighedWeightKg:
         remainingWeighed === null ? null : remainingWeighed.toFixed(3),
       // The gross and net figures described a bundle that no longer exists as
@@ -992,9 +998,9 @@ export const applyStockSplit = async (
     uuid: splitUuid,
     locationUuid: params.toLocationUuid ?? source.locationUuid,
     status: "pending",
-    quantity: quantity.toFixed(3),
-    reservedQuantity: carriedReservation.toFixed(3),
-    quantityKg: splitTheoretical.toFixed(2),
+    quantity: quantity.toFixed(STOCK_QUANTITY_SCALE),
+    reservedQuantity: carriedReservation.toFixed(STOCK_QUANTITY_SCALE),
+    quantityKg: splitTheoretical.toFixed(STOCK_QUANTITY_SCALE),
     weighedWeightKg: splitWeighed === null ? null : splitWeighed.toFixed(3),
     grossWeightKg: null,
     netWeightKg: null,
@@ -1130,8 +1136,10 @@ export const applyStockTransfer = async (
     const [updated] = await tx
       .update(Stock)
       .set({
-        quantity: remainingQuantity.toFixed(3),
-        quantityKg: (previousTheoretical - movedTheoretical).toFixed(2),
+        quantity: remainingQuantity.toFixed(STOCK_QUANTITY_SCALE),
+        quantityKg: (previousTheoretical - movedTheoretical).toFixed(
+          STOCK_QUANTITY_SCALE,
+        ),
         valuationEuro: moneyString(remainingValue),
         unopened: false,
       })
@@ -1159,10 +1167,10 @@ export const applyStockTransfer = async (
       productUuid: params.toProductUuid,
       locationUuid: params.toLocationUuid ?? source.locationUuid,
       status: "pending",
-      quantity: quantity.toFixed(3),
+      quantity: quantity.toFixed(STOCK_QUANTITY_SCALE),
       // Nothing transferred carries a claim — see the guard above.
       reservedQuantity: "0.000",
-      quantityKg: movedTheoretical.toFixed(2),
+      quantityKg: movedTheoretical.toFixed(STOCK_QUANTITY_SCALE),
       // Two articles cannot both be the bundle that was weighed, and the part
       // that changed identity was never weighed as this article at all.
       weighedWeightKg: null,
@@ -1185,7 +1193,7 @@ export const applyStockTransfer = async (
       stockUuid: source.uuid,
       type: "out",
       reason: "stock_transfer_out",
-      quantity: quantity.toFixed(3),
+      quantity: quantity.toFixed(STOCK_QUANTITY_SCALE),
       quantityKg: movedTheoretical.toFixed(2),
       valueEur: moneyString(valueMoved),
       note: params.description,
@@ -1197,7 +1205,7 @@ export const applyStockTransfer = async (
       stockUuid: destinationUuid,
       type: "in",
       reason: "stock_transfer_in",
-      quantity: quantity.toFixed(3),
+      quantity: quantity.toFixed(STOCK_QUANTITY_SCALE),
       quantityKg: movedTheoretical.toFixed(2),
       valueEur: moneyString(valueMoved),
       note: params.description,

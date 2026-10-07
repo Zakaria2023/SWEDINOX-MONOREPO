@@ -50,6 +50,7 @@ import {
   LotWeights,
   lotWeights,
   normaliseCharge,
+  STOCK_QUANTITY_SCALE,
 } from "@/lib/helpers";
 import { stockStatuses } from "@/lib/enums";
 import {
@@ -736,7 +737,7 @@ export const deleteLotReservation = async (
         );
         await tx
           .update(Stock)
-          .set({ reservedQuantity: released.toFixed(3) })
+          .set({ reservedQuantity: released.toFixed(STOCK_QUANTITY_SCALE) })
           .where(eq(Stock.uuid, reservation.stockUuid));
       }
 

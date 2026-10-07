@@ -51,6 +51,7 @@ import {
   roundToCents,
   todayDateString,
   unitCostString,
+  STOCK_QUANTITY_SCALE,
 } from "@/lib/helpers";
 import {
   buildInventoryMovementEntry,
@@ -938,7 +939,9 @@ export const receiveReturnOrder = async (
         }
 
         const returned = returnedQty;
-        const nextQuantity = (Number(stockRow.quantity) + returned).toFixed(3);
+        const nextQuantity = (Number(stockRow.quantity) + returned).toFixed(
+          STOCK_QUANTITY_SCALE,
+        );
 
         // Goods coming back have to bring their value with them. Adding the
         // quantity alone put material on the shelf worth nothing, so every

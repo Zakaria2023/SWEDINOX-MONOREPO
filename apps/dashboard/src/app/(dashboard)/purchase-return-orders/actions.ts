@@ -48,6 +48,7 @@ import {
   summarisePurchaseInvoice,
   toDateString,
   todayDateString,
+  STOCK_QUANTITY_SCALE,
 } from "@/lib/helpers";
 import { recordFreightMovement } from "@/lib/server/freight";
 import {
@@ -571,7 +572,9 @@ export const dispatchPurchaseReturnOrder = async (
           );
         }
 
-        const nextQuantity = (Number(stockRow.quantity) - returned).toFixed(3);
+        const nextQuantity = (Number(stockRow.quantity) - returned).toFixed(
+          STOCK_QUANTITY_SCALE,
+        );
 
         // Material leaving for the supplier takes its value with it. Reducing
         // the quantity alone left the rest of the lot carrying the value of

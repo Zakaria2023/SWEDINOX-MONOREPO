@@ -17,6 +17,7 @@ import {
   moneyString,
   restateLotValue,
   todayDateString,
+  STOCK_QUANTITY_SCALE,
 } from "@/lib/helpers";
 import { DELIVERY_COLUMNS } from "@/app/(dashboard)/deliveries/columns";
 import { deliveryStatuses, orderLineStatuses } from "@/lib/enums";
@@ -622,10 +623,10 @@ export const deliverOrderItem = async (
       if (stockRow) {
         const nextQuantity = (
           Number(stockRow.quantity) - Number(orderItem.quantity)
-        ).toFixed(3);
+        ).toFixed(STOCK_QUANTITY_SCALE);
         const nextReserved = (
           Number(stockRow.reservedQuantity) - Number(orderItem.quantity)
-        ).toFixed(3);
+        ).toFixed(STOCK_QUANTITY_SCALE);
 
         const previousValue = Number(stockRow.valuationEuro ?? 0);
         const nextValue = restateLotValue({

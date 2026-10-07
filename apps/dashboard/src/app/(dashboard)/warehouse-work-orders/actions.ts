@@ -53,6 +53,7 @@ import {
   toDecimalQuantity,
   unitCostString,
   WAREHOUSE_WORK_ORDER_TYPE_META,
+  STOCK_QUANTITY_SCALE,
 } from "@/lib/helpers";
 import {
   STOCK_MOVEMENT_REASON_LABELS,
@@ -1110,10 +1111,10 @@ const applyIssue = async (
   const [updated] = await tx
     .update(Stock)
     .set({
-      quantity: remainingQuantity.toFixed(3),
+      quantity: remainingQuantity.toFixed(STOCK_QUANTITY_SCALE),
       reservedQuantity: (
         Number(source.reservedQuantity ?? 0) - released
-      ).toFixed(3),
+      ).toFixed(STOCK_QUANTITY_SCALE),
       valuationEuro: moneyString(remainingValue),
       status: remainingQuantity > 0 ? "pending" : "received",
     })
@@ -1131,7 +1132,7 @@ const applyIssue = async (
     stockUuid: source.uuid,
     type: "out",
     reason: params.reason,
-    quantity: quantity.toFixed(3),
+    quantity: quantity.toFixed(STOCK_QUANTITY_SCALE),
     // Origin travels with the metal: the reference names the supplier and the
     // purchase order on outbound rows too.
     ...lotOrigin(source),
@@ -1259,8 +1260,8 @@ const applyReturnReceipt = async (
     // charged.
     orderItemUuid: returnLine.originalOrderItemUuid,
     locationUuid: params.toLocationUuid,
-    quantity: quantity.toFixed(3),
-    quantityKg: weightKg.toFixed(2),
+    quantity: quantity.toFixed(STOCK_QUANTITY_SCALE),
+    quantityKg: weightKg.toFixed(STOCK_QUANTITY_SCALE),
     status: "pending",
     charge: normaliseCharge(params.charge),
     internalCharge: normaliseCharge(params.internalCharge),
@@ -1284,7 +1285,7 @@ const applyReturnReceipt = async (
     stockUuid,
     type: "in",
     reason: "sales_return",
-    quantity: quantity.toFixed(3),
+    quantity: quantity.toFixed(STOCK_QUANTITY_SCALE),
     quantityKg: weightKg.toFixed(2),
     valueEur: moneyString(value),
     orderUuid: originalLine?.orderUuid ?? null,
@@ -1583,8 +1584,8 @@ const applyReceipt = async (
     purchaseOrderItemUuid: purchaseLine.uuid,
     supplierUuid: params.companyUuid,
     locationUuid: params.toLocationUuid,
-    quantity: quantity.toFixed(3),
-    quantityKg: weightKg.toFixed(2),
+    quantity: quantity.toFixed(STOCK_QUANTITY_SCALE),
+    quantityKg: weightKg.toFixed(STOCK_QUANTITY_SCALE),
     status: "pending",
     // Folded through the sentinels: `nvt`, `ntv` and `-` are all how somebody
     // wrote "no heat number", and a lot must not end up traceable to a heat

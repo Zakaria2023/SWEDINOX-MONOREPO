@@ -26,6 +26,7 @@ import {
   quoteLineFinancials,
   resolveOrderTypeLabel,
   sortLotsForDispatch,
+  STOCK_QUANTITY_SCALE,
 } from "@/lib/helpers";
 import { buildOrderSummary } from "@/app/(dashboard)/orders/actions";
 import { checkCredit } from "@/lib/server/credit-control";
@@ -401,7 +402,7 @@ export const convertQuoteToOrder = async (
         const quantity = allocation.quantity.toFixed(3);
         const nextReserved = (
           Number(allocation.stock.reservedQuantity) + allocation.quantity
-        ).toFixed(3);
+        ).toFixed(STOCK_QUANTITY_SCALE);
 
         // Guard: only reserve while the free quantity checked above is still
         // there, so a concurrent order can't oversell the lot.

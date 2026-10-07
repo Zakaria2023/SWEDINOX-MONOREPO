@@ -52,6 +52,7 @@ import {
   toDateString,
   todayDateString,
   unloadingRequirements,
+  STOCK_QUANTITY_SCALE,
 } from "@/lib/helpers";
 import {
   mailDocument,
@@ -587,7 +588,7 @@ export const createOrder = async (
         if (holdsStock) {
           const nextReserved = (
             Number(stockRow.reservedQuantity) + Number(item.quantity)
-          ).toFixed(3);
+          ).toFixed(STOCK_QUANTITY_SCALE);
 
           // Guard: only reserve if the free quantity we validated above is
           // still there — a concurrent reservation/consumption can't cause
@@ -925,7 +926,7 @@ export const cancelOrder = async (uuid: string): Promise<OrderActionResult> => {
         const releasedReserved = Math.max(
           0,
           Number(stockRow.reservedQuantity) - Number(item.quantity),
-        ).toFixed(3);
+        ).toFixed(STOCK_QUANTITY_SCALE);
 
         await tx
           .update(Stock)
