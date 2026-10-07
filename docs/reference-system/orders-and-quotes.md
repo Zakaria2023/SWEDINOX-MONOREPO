@@ -365,3 +365,48 @@ six rows — but it leans the same way `Order method` went.
 ⚠️ **The data runs to April 2026.** `Q300013` was created 23-4-2026 with a
 delivery date of 29-4-2026, on a database once described as frozen in
 mid-May 2025. See K10.
+
+
+### ✅ Below `Provisional`, and `Classification code` — 7-10-2026
+
+**`Released` is the last group.** Four rows: `O100131`, `O100133`, `O100391`
+(all Marco Borsboom, January 2025, 0 lines, € 0,00) and `O103593` (Furkan
+Sadir, 17-9-2025, 3 lines, 5 912 kg, € 13.994,03 at 58,20 %, SZK Fast
+Transport). **No `Received` group** in 2024–2026 — it would sit between
+`Provisional` and `Released` — so the live grid's list is eleven:
+`Checked · Completed · Converted · Delivered · Expired · In progress ·
+Invoiced · Partially delivered · Partially invoiced · Provisional ·
+Released`. `Received` stays a return-only rung known from the export, not
+disproved, just absent from this window.
+
+**`Classification code` grouped: one group, blank, holding every row.** The
+column is never filled. J7's `Orders and quotes` dropdown is closed the way
+`Order method` closed. The second column, `Classification`, is blank on every
+row seen too.
+
+🔑 **The order series starts at `O100000` on 31-12-2024** — the first rows of
+the blank group — exactly as purchase invoices start at `600000` in January
+2025. The database begins at the turn of 2025.
+
+### 🔑 `Hego Reserveringen` — stock parked on € 0 orders
+
+The expanded `Provisional` group (14 rows) holds an internal customer,
+**`Hego Reserveringen`**, carrying real lines and tonnage at zero revenue:
+
+| Order | Created | Seller | Lines | Kg | Revenue | Profit |
+|---|---|---|---|---|---|---|
+| `O105318` | 20-1-2026 | Hego | 10 | 3 497 | € 0,00 | **€ −3.561,07** (−100 %) |
+| `O107910` | 21-8-2026 | Hego | 8 | 66 950 | € 0,00 | **€ −136.591,11** |
+| `O108123` | 7-9-2026 | Furkan Sadir | 1 | 22 510 | € 0,00 | **€ −42.079,16** |
+
+Profit at −100 % is the cost of the reserved lots with nothing against it:
+these orders exist to *hold* stock, not to sell it — the same mechanism as a
+customer order's reservation, pointed at an in-house customer. `O108300`
+(INAD, 3 925 kg, € −8.554,51) looks the same. The export (to mid-2025) held
+one such order (`O100643`, 72 kg); the practice grew in 2026. Who
+`Hego Reserveringen` is — `Internal` ☑? — is requested.
+
+Also in that group: `Q300026` (Benno Vos, 3 lines, **60 096 kg**,
+€ 182.691,84 at 100,00 % — a quote with no cost yet), `R290237` (a second
+return in the `R29xxxx` series), and `Time frame` on every row — the
+half-hour slot the document was created in (`14:00 - 14:30`).

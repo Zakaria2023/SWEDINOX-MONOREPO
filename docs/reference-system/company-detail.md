@@ -182,3 +182,51 @@ Dutch for VAT and needs translating.
 3. **`Journal code`** — `0` on the creditor and `11` on the debtor. The list
    behind it is unread.
    → *In the old system:* open either dropdown.
+
+
+---
+
+## ✅ A customer record read, 7-10-2026 — `Vergeest Metaaltechniek Wijchen B.V.` (`13680`)
+
+Opened from `Orders and Quotes` with `Show Company`. The nine role boxes
+read **`Customer` ☑** and the other eight ☐ — `Prospect`, `Supplier`,
+`Processor`, `Transporter`, `Agent`, `Purchasing org.`, `Other`, `Internal`.
+Created 16-12-2024. `Search codes`: **`12539`** (= its debtor number), blank,
+`Vergeest`. `Main language` Dutch · `Sister affiliate` `-leeg-` · `Work panel
+color` `-leeg-`.
+
+Panels, top to bottom: `Addresses` (one, headed **`5. Factuur, Bezoek,
+Correspondentie, Af…`** — the address *number* then the roles it serves) ·
+`Contacts` (five cards, each headed by its roles: `Boekhouding`, `Inkoop,
+Verkoop`, `Boekhouding`, `Inkoop`, `Inkoop, Verkoop`) · `Remarks` · `Quotes`
+· `Orders` (header: *"0 in progress; the last one is from 10-9-2026"*; grid
+`Order type · Order no · Blocked · Status · Order date · Delivery date ·
+Amount (excl. VAT) · Weight (kg) · Customer reference · Project · Consignment
+· Profit% · Days in system`) · `Quote- and order lines` · `Invoices` (grid
+`Invoice no · Order · Invoice date · Expiration · Bedrag ex · Amount in ·
+Credit res · Status · Outstanding · Printed · Print date · Mailed · E-mail
+date · E-mail address · Change date · Days in system`; every status `Sent`,
+every row `Mailed` ☑ and `Printed` ☐) · `Counter Orders` · `Documents`
+(`0 Documents`) · `Visit reports` · `Communication` · `Communication
+settings` · `Contracts` · `Creditor` · `Debtor` · `Invoicing` · `Sales`
+(`Customer group:` blank).
+
+🔑 **Invoice `507740` has no `Order`.** € 8.527,10 excl., dated 6-8-2026,
+sent and paid, with the `Order` cell empty — an invoice that was not raised
+from a sales order. Everything else on the grid carries its `O` number.
+
+⚠️ **`Contracts` says `0 contracts` and lists two.** `PACKAGING …` and
+`PALLET COSTS`, both `Surcharges`, `Customer` role, 16-12-2024 →
+`31-12-9999`, `Preference 0`, `Website sorting 10`, `660` days in system.
+The header count evidently excludes surcharge contracts — or counts only
+price contracts. Two rows, one zero: the number is not the row count.
+
+**`Creditor` on a company that is not a supplier is read-only.** `Payment
+terms: To be determined`, `Currency EUR`, **`Journal code 0`** — all greyed,
+with `Calculate VAT` ☑, `Payment term changeable in purchase orders` ☑ and
+`Collect invoices in payment order` ☑ greyed too; bank fields empty;
+`Open orders` / `Open entries` € 0,00; `Oldest due date open entries`
+`1-1-0001`. So the `0` seen earlier on this panel is the placeholder a
+non-supplier carries, not a chosen value — the dropdown's list has to be
+read on a company with `Supplier` ☑, or on this company's `Debtor` panel,
+where it was `11`. Requested.
