@@ -12,21 +12,22 @@ import {
   salesRepresentativeLabel,
   timeFrameOf,
 } from "@/lib/helpers";
-import { ORDER_METHOD_LABELS } from "@/lib/labels";
+import {
+  COMPANY_CLASSIFICATION_LABELS,
+  ORDER_METHOD_LABELS,
+} from "@/lib/labels";
 
 /**
  * The sales document header as a sheet, in the reference's column order.
  *
- * Seven of its forty are blank on **every one of 2 091 rows**, so they are not
- * carried: `Pick-up slip`, `Converted from/to`, `Last follow-up`, `Last
+ * All forty, in the reference's order. Seven are blank on **every one of 2 091
+ * rows** there — `Pick-up slip`, `Converted from/to`, `Last follow-up`, `Last
  * follow-up reason`, `Internal Text`, `Classification code` and
- * `Classification`. Two more, `Decision date` and `Last follow-up date`, are
- * `0` on every row including the six quotes — the quote follow-up machinery is
- * modelled there and has never been used — but a decision date is a real field
- * on our quotes, so it is kept.
+ * `Classification` — and are carried anyway, hidden by default: a column that
+ * is missing is work a reader has to go elsewhere for. The follow-up and
+ * internal-text columns have no field behind them here and read blank.
  *
- * `Affiliate company details` is one constant, the owning legal entity, and is
- * left out for the same reason it is everywhere else.
+ * `Affiliate company details` is the branch's own legal name, from Settings.
  *
  * ⚠️ `Converted from/to` being blank says the feature is unused, **not** that
  * quote-to-order conversion is absent from the product. Only six quotes exist
@@ -65,7 +66,15 @@ export type OrderOrQuoteColumnKey =
   | "ourReference"
   | "reference"
   | "isPickup"
-  | "isIncidental";
+  | "isIncidental"
+  | "pickupSlip"
+  | "lastFollowUpDate"
+  | "lastFollowUp"
+  | "lastFollowUpReason"
+  | "internalText"
+  | "affiliateName"
+  | "classificationCode"
+  | "classification";
 
 const initialsOf = (name: string | null): string | null => {
   if (!name) {
@@ -130,6 +139,12 @@ export const ORDER_OR_QUOTE_COLUMNS: Array<
     label: "Status",
     defaultVisible: true,
     value: (row) => textCell(salesDocumentStatusLabel(row.status)),
+  },
+  {
+    key: "pickupSlip",
+    label: "Pick-up slip",
+    defaultVisible: false,
+    value: () => null,
   },
   {
     key: "convertedFromTo",
@@ -216,6 +231,30 @@ export const ORDER_OR_QUOTE_COLUMNS: Array<
     value: (row) => dateCell(row.decisionDate),
   },
   {
+    key: "lastFollowUpDate",
+    label: "Last follow-up date",
+    defaultVisible: false,
+    value: () => null,
+  },
+  {
+    key: "lastFollowUp",
+    label: "Last follow-up",
+    defaultVisible: false,
+    value: () => null,
+  },
+  {
+    key: "lastFollowUpReason",
+    label: "Last follow-up reason",
+    defaultVisible: false,
+    value: () => null,
+  },
+  {
+    key: "internalText",
+    label: "Internal Text",
+    defaultVisible: false,
+    value: () => null,
+  },
+  {
     key: "isConsignment",
     label: "Consignment",
     defaultVisible: false,
@@ -265,6 +304,25 @@ export const ORDER_OR_QUOTE_COLUMNS: Array<
     label: "Valid u/i",
     defaultVisible: false,
     value: (row) => dateCell(row.validUntil),
+  },
+  {
+    key: "affiliateName",
+    label: "Affiliate company details",
+    defaultVisible: false,
+    value: (row) => textCell(row.affiliateName),
+  },
+  {
+    key: "classificationCode",
+    label: "Classification code",
+    defaultVisible: false,
+    value: (row) => textCell(row.classification),
+  },
+  {
+    key: "classification",
+    label: "Classification",
+    defaultVisible: false,
+    value: (row) =>
+      row.classification ? COMPANY_CLASSIFICATION_LABELS[row.classification] : null,
   },
   {
     key: "ourReference",

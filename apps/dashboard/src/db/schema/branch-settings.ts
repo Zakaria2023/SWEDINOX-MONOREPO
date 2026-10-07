@@ -15,6 +15,11 @@ export const BranchSettings = mysqlTable("BranchSettings", {
   // (question K1); 30 is the assumption `OVERDUE_POST_BLOCK_DAYS` shipped with.
   overduePostBlockDays: int("overdue_post_block_days").default(30).notNull(),
 
+  // The branch's own legal name — the reference's `Affiliate company details`
+  // column, one constant on every sales and purchase document
+  // (`HEGO TEST Stainless Steel & Aluminium` there).
+  affiliateName: varchar("affiliate_name", { length: 255 }),
+
   updatedByUserId: varchar("updated_by_user_id", { length: 255 }),
   updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
 });

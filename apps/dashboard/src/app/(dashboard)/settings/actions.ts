@@ -43,6 +43,7 @@ export const updateBranchSettings = async (
     return { error: parsed.error.issues[0]?.message ?? "Invalid settings" };
   }
   const { overduePostBlockDays } = parsed.data;
+  const affiliateName = parsed.data.affiliateName.trim() || null;
 
   try {
     await db.transaction(async (tx) => {
@@ -53,11 +54,20 @@ export const updateBranchSettings = async (
         .values({
           id: BRANCH_SETTINGS_ID,
           overduePostBlockDays,
+          affiliateName,
           updatedByUserId: userId,
         })
         .onDuplicateKeyUpdate({
-          set: { overduePostBlockDays, updatedByUserId: userId },
+          set: { overduePostBlockDays, affiliateName, updatedByUserId: userId },
         });
+
+      if (before.affiliateName !== affiliateName) {
+        await writeSystemLog(tx, {
+          category: "settings_changed",
+          message: `Affiliate name changed from ${before.affiliateName ?? "(none)"} to ${affiliateName ?? "(none)"}`,
+          userId,
+        });
+      }
 
       if (before.overduePostBlockDays !== overduePostBlockDays) {
         await writeSystemLog(tx, {

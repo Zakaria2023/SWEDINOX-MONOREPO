@@ -33,7 +33,10 @@ export const BranchSettingsForm = ({ settings, canEdit, userNames }: Props) => {
     formState: { errors },
   } = useForm<BranchSettingsFormValues>({
     resolver: zodResolver(branchSettingsSchema),
-    defaultValues: { overduePostBlockDays: settings.overduePostBlockDays },
+    defaultValues: {
+      overduePostBlockDays: settings.overduePostBlockDays,
+      affiliateName: settings.affiliateName ?? "",
+    },
   });
 
   const onSubmit = handleSubmit((values) => {
@@ -50,6 +53,26 @@ export const BranchSettingsForm = ({ settings, canEdit, userNames }: Props) => {
       {state.success ? (
         <p className="text-sm text-green-700">Settings saved.</p>
       ) : null}
+
+      <section className="space-y-4">
+        <h2 className="border-b pb-2 text-lg font-semibold text-foreground">
+          Branch details
+        </h2>
+        <div className="space-y-2">
+          <FormLabel htmlFor="affiliateName">Affiliate name</FormLabel>
+          <Input
+            id="affiliateName"
+            className="max-w-md"
+            {...register("affiliateName")}
+            disabled={disabled}
+          />
+          <FormFieldError message={errors.affiliateName?.message} />
+          <p className="text-sm text-muted-foreground">
+            This company&rsquo;s own legal name. The overviews print it in
+            their &ldquo;Affiliate company details&rdquo; column.
+          </p>
+        </div>
+      </section>
 
       <section className="space-y-4">
         <h2 className="border-b pb-2 text-lg font-semibold text-foreground">

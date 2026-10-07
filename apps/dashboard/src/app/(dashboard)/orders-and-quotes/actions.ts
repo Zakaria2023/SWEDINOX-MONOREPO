@@ -1,7 +1,8 @@
 "use server";
 
 import { db } from "@/db";
-import { Companies } from "@/db/schema/companies";
+import { Companies, SelectCompanies } from "@/db/schema/companies";
+import { SelectBranchSettings } from "@/db/schema/branch-settings";
 import { CounterOrders } from "@/db/schema/counter-orders";
 import { OrderItems } from "@/db/schema/order-items";
 import { Orders } from "@/db/schema/orders";
@@ -12,9 +13,9 @@ import { ReturnOrders } from "@/db/schema/return-orders";
 import {
   describeError,
   documentProfitMarginPercent,
-  resolveOrderTypeLabel,
 } from "@/lib/helpers";
-import { SALES_DOCUMENT_KIND_PREFIXES } from "@/lib/labels";
+import { ORDER_TYPE_LABELS, SALES_DOCUMENT_KIND_PREFIXES } from "@/lib/labels";
+import { getBranchSettings } from "@/lib/server/branch-settings";
 import { SalesDocumentKind } from "@/lib/enums";
 import { exportRows } from "@/lib/server/excel";
 import {
@@ -77,6 +78,9 @@ export type OrderOrQuoteRow = {
   isPickup: boolean;
   isIncidental: boolean;
   isConsignment: boolean;
+  classification: SelectCompanies["classification"] | null;
+  /** The branch's own legal name, from the settings. */
+  affiliateName: SelectBranchSettings["affiliateName"];
 };
 
 const asDateString = (value: Date | string | null): string | null => {
@@ -111,6 +115,7 @@ const documentCodeFor = (kind: SalesDocumentKind, id: number): string =>
 
 const allDocuments = async (): Promise<OrderOrQuoteRow[]> => {
   try {
+    const { affiliateName } = await getBranchSettings(db);
     // Sequential rather than concurrent: this database caps connections, and
     // four large reads at once is how that cap gets hit.
     const [orderRows, quoteRows, returnRows, counterRows] = [
@@ -127,6 +132,7 @@ const allDocuments = async (): Promise<OrderOrQuoteRow[]> => {
           companyUuid: Companies.uuid,
           customerCode: Companies.id,
           representative: Companies.representative,
+          classification: Companies.classification,
           orderMethod: Orders.orderMethod,
           ourReference: Orders.ourReference,
           mustBeSent: Orders.mustBeSent,
@@ -135,6 +141,7 @@ const allDocuments = async (): Promise<OrderOrQuoteRow[]> => {
           isMailed: Orders.isMailed,
           isFaxed: Orders.isFaxed,
           isPickup: Orders.isPickup,
+          headerOrderType: Orders.orderType,
           isIncidental: Orders.isIncidental,
           isConsignment: Orders.isConsignment,
           isInternalProduction: Orders.isInternalProduction,
@@ -170,6 +177,7 @@ const allDocuments = async (): Promise<OrderOrQuoteRow[]> => {
           companyUuid: Companies.uuid,
           customerCode: Companies.id,
           representative: Companies.representative,
+          classification: Companies.classification,
           orderMethod: Quotes.requestMethod,
           ourReference: Quotes.ourReference,
           mustBeSent: Quotes.mustBeSent,
@@ -207,6 +215,7 @@ const allDocuments = async (): Promise<OrderOrQuoteRow[]> => {
           companyUuid: Companies.uuid,
           customerCode: Companies.id,
           representative: Companies.representative,
+          classification: Companies.classification,
           ourReference: ReturnOrders.ourReference,
           mustBeSent: ReturnOrders.mustBeSent,
           deliberatelyNotSent: ReturnOrders.deliberatelyNotSent,
@@ -246,6 +255,7 @@ const allDocuments = async (): Promise<OrderOrQuoteRow[]> => {
           companyUuid: Companies.uuid,
           customerCode: Companies.id,
           representative: Companies.representative,
+          classification: Companies.classification,
           orderMethod: CounterOrders.orderMethod,
           ourReference: CounterOrders.ourReference,
           mustBeSent: CounterOrders.mustBeSent,
@@ -276,13 +286,9 @@ const allDocuments = async (): Promise<OrderOrQuoteRow[]> => {
         deliveryDate: asDateString(row.deliveryDate),
         lineCount: Number(row.lineCount),
         status: row.status,
-        orderType: resolveOrderTypeLabel({
-          isPickup: row.isPickup ?? false,
-          isIncidental: row.isIncidental ?? false,
-          isConsignment: row.isConsignment ?? false,
-          isInternalProduction: row.isInternalProduction ?? false,
-          isCustomerMaterial: row.isCustomerMaterial ?? false,
-        }),
+        // The header's own dropdown — `Normal` 2 069, `Call-off` 16, `Rush` 5 on
+        // the reference's 2 091 — not the pick-up and consignment ticks.
+        orderType: ORDER_TYPE_LABELS[row.headerOrderType],
         customerName: row.companyName,
         reference: row.customerRef,
         weightKg: Number(row.weightKg ?? 0),
@@ -298,6 +304,8 @@ const allDocuments = async (): Promise<OrderOrQuoteRow[]> => {
         customerCode: row.customerCode,
         companyUuid: row.companyUuid,
         representative: row.representative,
+        classification: row.classification,
+        affiliateName,
         mustBeSent: row.mustBeSent,
         deliberatelyNotSent: row.deliberatelyNotSent,
         alreadySent: Boolean(row.isPrinted || row.isMailed || row.isFaxed),
@@ -325,13 +333,7 @@ const allDocuments = async (): Promise<OrderOrQuoteRow[]> => {
         deliveryDate: asDateString(row.deliveryDate),
         lineCount: Number(row.lineCount),
         status: row.status,
-        orderType: resolveOrderTypeLabel({
-          isPickup: row.isPickup ?? false,
-          isIncidental: row.isIncidental ?? false,
-          isConsignment: row.isConsignment ?? false,
-          isInternalProduction: row.isInternalProduction ?? false,
-          isCustomerMaterial: row.isCustomerMaterial ?? false,
-        }),
+        orderType: ORDER_TYPE_LABELS.normal,
         customerName: row.companyName,
         reference: row.customerRef,
         weightKg: Number(row.weightKg ?? 0),
@@ -348,6 +350,8 @@ const allDocuments = async (): Promise<OrderOrQuoteRow[]> => {
         customerCode: row.customerCode,
         companyUuid: row.companyUuid,
         representative: row.representative,
+        classification: row.classification,
+        affiliateName,
         mustBeSent: row.mustBeSent,
         deliberatelyNotSent: row.deliberatelyNotSent,
         alreadySent: Boolean(row.isPrinted || row.isMailed || row.isFaxed),
@@ -399,6 +403,8 @@ const allDocuments = async (): Promise<OrderOrQuoteRow[]> => {
         customerCode: row.customerCode,
         companyUuid: row.companyUuid,
         representative: row.representative,
+        classification: row.classification,
+        affiliateName,
         mustBeSent: row.mustBeSent,
         deliberatelyNotSent: row.deliberatelyNotSent,
         alreadySent: Boolean(row.isPrinted || row.isMailed || row.isFaxed),
@@ -441,6 +447,8 @@ const allDocuments = async (): Promise<OrderOrQuoteRow[]> => {
         customerCode: row.customerCode,
         companyUuid: row.companyUuid,
         representative: row.representative,
+        classification: row.classification,
+        affiliateName,
         mustBeSent: row.mustBeSent,
         deliberatelyNotSent: row.deliberatelyNotSent,
         alreadySent: Boolean(row.isPrinted || row.isMailed || row.isFaxed),

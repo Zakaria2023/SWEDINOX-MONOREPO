@@ -9,7 +9,7 @@ type SettingsReader = Pick<typeof db, "select">;
 
 export type BranchSettingsValues = Pick<
   SelectBranchSettings,
-  "overduePostBlockDays" | "updatedByUserId" | "updatedAt"
+  "overduePostBlockDays" | "affiliateName" | "updatedByUserId" | "updatedAt"
 >;
 
 /** The one settings row. */
@@ -25,6 +25,7 @@ export const getBranchSettings = async (
   const [row] = await tx
     .select({
       overduePostBlockDays: BranchSettings.overduePostBlockDays,
+      affiliateName: BranchSettings.affiliateName,
       updatedByUserId: BranchSettings.updatedByUserId,
       updatedAt: BranchSettings.updatedAt,
     })
@@ -35,6 +36,7 @@ export const getBranchSettings = async (
   return (
     row ?? {
       overduePostBlockDays: OVERDUE_POST_BLOCK_DAYS,
+      affiliateName: null,
       updatedByUserId: null,
       updatedAt: new Date(0),
     }
