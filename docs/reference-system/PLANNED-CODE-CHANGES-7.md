@@ -58,9 +58,16 @@ processing work order books the processed item in **at the cost of the metal
 that went out plus the processing invoice**, and the nominal purchase order is
 the reference's carrier for that, not a price.
 
-**Also pending.** `purchaseOrderTypes` gains whatever `Ex works Pro…` turns
-out to be in full (`Ex works Processing`? `… Production`?). Fourth value;
-label; where the order form offers it.
+**Also pending.** `purchaseOrderTypes` gains **`ex_works_processor`** —
+the full caption is `Ex works Processor` (Step 6c, 7-10-2026). Fourth value;
+label `Ex works Processor`; offered on the order form. 🔑 The header also
+showed what makes such an order: its `Purchase reference` and its line's
+`For line` both point at the *processing* order (`IO400142`) it returns
+against, and its delivery address is the processor's own. So the shape is a
+purchase order **raised against a line of another purchase order**, with the
+supplier's address as the delivery address — `PurchaseOrders.forOrder` and
+`PurchaseOrderItems` need a `forPurchaseOrderItemUuid` to carry it. Step 6d
+(open `400142`) first.
 
 ## 3. 🟡 `minimumMarginFor` callers still read pick-up as ex works
 

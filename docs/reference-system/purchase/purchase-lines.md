@@ -497,3 +497,47 @@ is the mirror of this — the processed plate going out — or something else.
 - `minimumMarginFor` is keyed on the type, and reads the cross-dock floor
   nothing had ever read. See [PLANNED-CODE-CHANGES-7.md](../PLANNED-CODE-CHANGES-7.md)
   for what this row still asks of the code.
+
+
+### ✅ Step 6c, 7-10-2026 — order `400143` opened
+
+Header: `Purchase order 400143, Decomecc N.V., Tel: 0032 89 61 15 46, Fax:
+0032 8961 1519 - Received, Printed`.
+
+| Field | Value |
+|---|---|
+| `Creation date` | `14-1-2025` |
+| `Supplier` | `11046` Decomecc N.V. · `Agent` `-leeg-` · `Contact` Sige Geerkens · `Purchaser` Benno Vos |
+| `Order category` | `-leeg-` |
+| `Reference` | blank |
+| **`Purchase reference`** | **`IO400142`** — the order number *before* this one |
+| **`Purchase order type`** | **`Ex works Processor`** — the full caption behind `Ex works Pro…` |
+| second type dropdown | `-leeg-` |
+| `Overlength` | ☑ greyed · `Printed` ☑ · `Mailed` / `Faxed` / `StaalWeb` / `Do not print prices` ☐ |
+| `Payment terms` | `Within 30 days from date of invoice` |
+| `Delivery terms` | **`(FCA) Free carrier`** |
+| **`Delivery address`** | **`Bilzerweg 8, B-3600, GENK (CENTRUM)`** — **Decomecc's own address** |
+| `Date` ⦿ `15-1-2025` · `Week` `3` / `2025` | |
+| Summary | Materials `€ 0,01` · Options `€ 0,00` · Surcharges `€ 0,00` · excl. VAT `€ 0,01` · VAT `€ 0,00` · incl. `€ 0,01` · **Total weight `177 Kg`** |
+| Toolbar | `Return` · `Par. return` · `Pre-notify` · `Report completion…` greyed; `Confirm` · `Copy` · `Show company` live |
+| Panels | `Workorders` → `Warehouse workorders` · `Production workorders` · `Transport workorders` (collapsed) |
+
+Line, `1 line`: `Code 10` · **`For line` `IO400142/`** · `15-1-2025` ·
+`Received` · `CK304L0050` `Coil Cold-rolled 304L 5 mm` · Category `Standaard`
+· Quality `304L2B` · `3000 mm` × `1500 mm` × `5 mm` · `1 ST` · `177` kg ·
+`M1(p) 3` · `€ 0,05 TN`.
+
+🔑🔑 **Two fields settle what this is.** The delivery address is the
+*processor's* premises — the plate was received while standing at Decomecc,
+free carrier, and never came to our dock. And both `Purchase reference` and
+the line's `For line` point at **`IO400142`**, the order raised the day before.
+So `400143` exists *for* a line of `400142`: one order sent the coil out for
+processing, the other books the processed plate back at a nominal cent, ex
+works at the processor. **`Ex works Processor` is the return leg of external
+processing (H9)**, and `EXW` is its line type.
+
+⚠️ `Pick up/Drop-off CD-purchases` is not on this header's `Delivery` block;
+it lives in the Logistics section, which was not scrolled to. Not needed — the
+address says enough.
+
+**Step 6d** opens `400142` to read the outgoing leg.
