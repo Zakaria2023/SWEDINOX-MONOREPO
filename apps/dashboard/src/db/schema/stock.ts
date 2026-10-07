@@ -29,11 +29,15 @@ export const Stock = mysqlTable(
     purchaseOrderUuid: char("purchase_order_uuid", { length: 36 }),
     purchaseOrderItemUuid: char("purchase_order_item_uuid", { length: 36 }),
 
-    quantity: decimal("quantity", { precision: 15, scale: 3 }).notNull(),
+    // Scale 6, not 3: a lot stocked in kilos is drawn down a few kilos at a
+    // time and keeps the remainder to the gram and below — scrap lot `SCA`
+    // stands at 89,055375 kg in the reference's correction dialog (7-10-2026).
+    // Display still rounds to the product's own `Aantal decimalen gewicht`.
+    quantity: decimal("quantity", { precision: 18, scale: 6 }).notNull(),
     // How much of `quantity` is earmarked by open sales order reservations —
     // available to sell/invoice is always `quantity - reservedQuantity`.
-    reservedQuantity: decimal("reserved_quantity", { precision: 15, scale: 3 })
-      .default("0.000")
+    reservedQuantity: decimal("reserved_quantity", { precision: 18, scale: 6 })
+      .default("0.000000")
       .notNull(),
     status: mysqlEnum("status", stockStatuses).default("pending").notNull(),
 
@@ -100,8 +104,8 @@ export const Stock = mysqlTable(
 
     // ── Physical attributes (as shown on "Stock on location") ─────────────────
     unit: mysqlEnum("unit", stockUnits).default("kg"),
-    quantityKg: decimal("quantity_kg", { precision: 15, scale: 2 }).default(
-      "0.00",
+    quantityKg: decimal("quantity_kg", { precision: 18, scale: 6 }).default(
+      "0.000000",
     ),
     // 🔴 The other three weights, added 5-10-2026 off `Corrigeren voorraad`.
     //

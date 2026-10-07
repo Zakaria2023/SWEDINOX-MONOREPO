@@ -37,7 +37,8 @@ export const StockMovements = mysqlTable(
 
     type: mysqlEnum("type", stockMovementTypes).notNull(),
     reason: mysqlEnum("reason", stockMovementReasons).notNull(),
-    quantity: decimal("quantity", { precision: 15, scale: 3 }).notNull(),
+    // As wide as `Stock.quantity`, so a lot and its ledger always agree.
+    quantity: decimal("quantity", { precision: 18, scale: 6 }).notNull(),
     // The same movement measured the other two ways the reference reports it.
     // Its `Stock mutations` and `Control stock increase` exports both print
     // `MutationQty` three times — in the lot's own stock unit, in kilos and in
