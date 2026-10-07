@@ -652,3 +652,25 @@ no `Partially invoiced` (purchase-orders-and-quotes.md *Status grouped*).
 Kilos agree with pieces on most rows (`Kg(a)` short by roughly the same
 percentage), and run *over* on a few (`401508/30` 236 of 237 pieces but
 10 245 of 10 047 kg) — the weighbridge, not the count, decides the kilos.
+
+
+### Line statuses across all 16 084 lines, and where returns sit — 7-10-2026
+
+From the same Excel: `Invoiced` 14 985 · `Received` 499 · `Released` 425 ·
+`In progress` 118 · `Checked` 20 · **`Delivered` 19** · `Provisional` 15 ·
+`Expired` 2 · `Partially received` 1.
+
+🔑 **The 19 `Delivered` lines are exactly the three purchase returns'
+lines** — `IR950008` (1) + `IR950030` (1) + `IR950033` (17) = 19. Return
+lines are purchase lines, in the same grid, ending in `Delivered`.
+
+🔑 **The returned orders were already invoiced.** `402598/10` (returned on
+`IR950008`) and `403492/10` (on `IR950030`) are both `Invoiced`; `404102`
+(on `IR950033`) is a mix — 18 lines `Received`, 8 `Invoiced`, 4 `Released`.
+So goods are sent back after the supplier has billed them.
+
+⚠️ **Yet `Return` and `Par. return` are greyed on `401466`**, a fully
+`Invoiced` order (J8, 7-10-2026 — `Confirm` and `Pre-notify` greyed beside
+them, `Show company` live). Invoicing alone is therefore not what greys
+them; either a return is raised from somewhere else (the lot, or a
+complaint), or the buttons wake on lines still `Received`.
