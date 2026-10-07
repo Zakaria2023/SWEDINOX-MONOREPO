@@ -161,3 +161,19 @@ distinct value with counts, and note whether a blocked invoice shows as a status
 or carries a separate block flag.
 
 Questions 1, 2, 3 and 7 of the original seven are answered above.
+
+
+---
+
+## ✅ Step 7, 7-10-2026 — `Status` grouped
+
+`Purchase invoices`, invoice date `1-1-2024` → `7-10-2026`, `Weergave`
+`-leeg-`, grouped on `Status`: **two groups**, `Provisional` and `Released`.
+No counts on the headers.
+
+Our `purchaseInvoiceStatuses` is `new` · `released` · `final`. `new` is not a
+word the reference uses — the first rung is **`Provisional`**, the same word as
+on every other document — and `final` has not been seen on any invoice since
+2024. Whether `Final` (or anything else) exists on older invoices is requested
+over a wider window. Queued as
+[PLANNED-CODE-CHANGES-7.md](../PLANNED-CODE-CHANGES-7.md) §10.

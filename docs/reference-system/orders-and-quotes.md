@@ -294,3 +294,34 @@ The four reads also run one after another now rather than through a
 `Promise.all`; four large queries at once is how the connection cap gets hit.
 
 Verified live, 24/24.
+
+
+---
+
+## ✅ Step 7, 7-10-2026 — `Status` grouped on the live grid
+
+`Orders and Quotes`, creation date `1-1-2024` → `7-10-2026`, `Weergave`
+`-leeg-`, grouped on `Status`. Groups as shown, alphabetical, **no counts on
+the headers**:
+
+```
+Checked · Completed · Converted · Delivered · Expired · In progress ·
+Invoiced · Partially delivered · Partially invoiced · Provisional
+```
+
+⚠️ The list very likely continues below `Provisional` — `Released` alone was
+195 rows in the export §2 was built from — and the screen was not scrolled.
+Requested.
+
+🔴 **Two values the export never showed: `Converted` and `Delivered`.** §2's
+ten came from 2 091 exported rows; the live grid over a shorter window has two
+more. `Converted` is presumably a quote that became an order (the grid has a
+`Converted from/to` column), which would make it the third quote-only terminus
+beside `Expired`. `Delivered` sits between `Partially delivered` and
+`Partially invoiced` on the ladder — fully delivered, nothing invoiced yet —
+which is what §7 of order-lines.md records as `Completed` on a *line*. Whether
+header `Delivered` and header `Completed` are two rungs or one word on two
+screens is to be read off the rows. Requested.
+
+Our `orderStatuses` holds neither. Queued as
+[PLANNED-CODE-CHANGES-7.md](PLANNED-CODE-CHANGES-7.md) §9.

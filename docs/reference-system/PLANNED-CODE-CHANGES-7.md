@@ -129,3 +129,27 @@ The reference's order-detail line grid prints `Type` per line
 `updatePurchaseOrder` takes the header only, so a line's type can be set once,
 at creation. The reference allows it on a `Provisional` order. Out of scope
 until line editing exists at all.
+
+## 9. 🟡 `orderStatuses` lacks `converted` and `delivered`
+
+**What was found.** Grouping `Orders and Quotes` on `Status` over 2024–2026
+(Step 7) shows `Converted` and `Delivered`, neither in the export-derived
+ten-value list nor in our enum.
+
+**What to build.** Add both. `converted` is quote-side: set on the quote when
+`Convert to order` runs (today the quote is presumably left at `released`),
+terminal, and the overview filter must offer it. `delivered` is order-side,
+between `partially_delivered` and `partially_invoiced`: set when the last
+line's delivery completes and no invoice exists yet. Where `completed` then
+sits — after `invoiced`, as today — stays unless the rows say otherwise.
+Confirm with the expanded groups before building.
+
+## 10. 🟡 `purchaseInvoiceStatuses` starts with a word the reference does not use
+
+**What was found.** `Purchase invoices` grouped on `Status` since 2024:
+`Provisional` and `Released`, nothing else. Ours: `new` · `released` ·
+`final`.
+
+**What to build.** Rename `new` → `provisional` (hand-ALTER the enum, never
+`--force`; backfill `new` → `provisional`). Keep `final` only if the wider
+window shows it; otherwise drop it and whatever code moves an invoice to it.
