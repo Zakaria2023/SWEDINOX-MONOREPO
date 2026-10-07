@@ -76,6 +76,14 @@ export const PurchaseOrderItems = mysqlTable(
     reservedQty: decimal("reserved_qty", { precision: 15, scale: 3 }).default(
       "0.000",
     ),
+    // 🔑 A short line closed by hand. The reference closes a line that arrived
+    // short rather than leaving it open for a remainder that will never come:
+    // of the 23 lines received short since 2024, 22 are `Received` or
+    // `Invoiced` and one is `Partially received` (J4, 7-10-2026). Sixteen are
+    // inside the 5 % unloading tolerance and close by themselves; the other
+    // six — `401616/50` at 6 of 17 — were closed by somebody, and this is who.
+    closedAt: timestamp("closed_at"),
+    closedByUserId: varchar("closed_by_user_id", { length: 255 }),
     // ── The two weights ───────────────────────────────────────────────────────
     //
     // 🔴 A purchase line is billed on the weighed kilos, not the theoretical

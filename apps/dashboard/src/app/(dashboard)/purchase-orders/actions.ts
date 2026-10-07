@@ -71,6 +71,7 @@ import {
 import { exportRows } from "@/lib/server/excel";
 import { nextWorkOrderNumber } from "@/lib/server/work-order-numbers";
 import {
+  refreshPurchaseLineStatus,
   refreshPurchaseOrderTotals,
   syncPurchaseLineReceipts,
   syncPurchaseLineReceiptDates,
@@ -195,6 +196,11 @@ export type PurchaseOrderItemDetail = {
   netPrice: SelectPurchaseOrderItems["netPrice"];
   priceUnit: SelectPurchaseOrderItems["priceUnit"];
   amount: SelectPurchaseOrderItems["amount"];
+  // What has arrived, what kind of line it is, and whether a buyer has closed
+  // it short. The reference prints `Qty(a)` and `Type` on every line.
+  qtyReceived: SelectPurchaseOrderItems["qtyReceived"];
+  sourceType: SelectPurchaseOrderItems["sourceType"];
+  closedAt: SelectPurchaseOrderItems["closedAt"];
   stockUuid: string | null;
   stockQuantity: string | null;
   stockStatus: SelectStock["status"] | null;
@@ -747,6 +753,9 @@ export const getPurchaseOrderDetail = async (
       netPrice: PurchaseOrderItems.netPrice,
       priceUnit: PurchaseOrderItems.priceUnit,
       amount: PurchaseOrderItems.amount,
+      qtyReceived: PurchaseOrderItems.qtyReceived,
+      sourceType: PurchaseOrderItems.sourceType,
+      closedAt: PurchaseOrderItems.closedAt,
       stockValuationPrice: Stock.valuationPrice,
       stockUuid: Stock.uuid,
       stockQuantity: Stock.quantity,
@@ -1569,5 +1578,95 @@ export const deleteReception = async (
     };
   } catch (error) {
     return { error: describeError(error, "Failed to delete the reception") };
+  }
+};
+
+/**
+ * Close a purchase line that arrived short — the remainder is not coming.
+ *
+ * 🔑 The reference does this rather than leave the line open: `401616/50` was
+ * closed and invoiced at 6 plates of 17, and five more lines between 8 % and
+ * 22 % short went the same way (J4, 7-10-2026). A line inside the unloading
+ * tolerance closes by itself; this is for the rest.
+ *
+ * What it does: stamps who closed the line and when, lapses every reception
+ * still waiting for goods to `expired` — the state the reference gives a
+ * reception that was never fulfilled — and re-derives the line's status, which
+ * now reads `Received` (or `Invoiced`, if what arrived is already billed).
+ *
+ * Refused when nothing has arrived: a line with nothing received is not short,
+ * it is not delivered, and the way out of that is cancelling it.
+ */
+export const closePurchaseLine = async (
+  purchaseOrderItemUuid: string,
+): Promise<PurchaseOrderActionResult> => {
+  try {
+    const user = await currentUser();
+    if (!user?.id) {
+      return { error: "User not authenticated" };
+    }
+
+    const [line] = await db
+      .select({
+        purchaseOrderUuid: PurchaseOrderItems.purchaseOrderUuid,
+        quantity: PurchaseOrderItems.quantity,
+        received: PurchaseOrderItems.qtyReceived,
+        status: PurchaseOrderItems.status,
+        closedAt: PurchaseOrderItems.closedAt,
+      })
+      .from(PurchaseOrderItems)
+      .where(eq(PurchaseOrderItems.uuid, purchaseOrderItemUuid))
+      .limit(1);
+
+    if (!line) {
+      return { error: "Purchase line not found." };
+    }
+    if (line.closedAt !== null) {
+      return { error: "This line is already closed." };
+    }
+    if (Number(line.received ?? 0) <= 0) {
+      return {
+        error:
+          "Nothing has arrived on this line, so there is nothing to close it at. Cancel the line instead.",
+      };
+    }
+    if (Number(line.received ?? 0) >= Number(line.quantity)) {
+      return { error: "Everything ordered has arrived; the line closes by itself." };
+    }
+    if (line.status !== "partially_received") {
+      return {
+        error: "Only a line that is partially received can be closed short.",
+      };
+    }
+
+    await db.transaction(async (tx) => {
+      await tx
+        .update(PurchaseOrderItems)
+        .set({ closedAt: new Date(), closedByUserId: user.id })
+        .where(eq(PurchaseOrderItems.uuid, purchaseOrderItemUuid));
+
+      await tx
+        .update(PurchaseLineReceivals)
+        .set({ receiptStatus: "expired" })
+        .where(
+          and(
+            eq(PurchaseLineReceivals.purchaseOrderItemUuid, purchaseOrderItemUuid),
+            inArray(PurchaseLineReceivals.receiptStatus, [
+              "new",
+              "released",
+              "workorders_created",
+            ]),
+          ),
+        );
+
+      await refreshPurchaseLineStatus(tx, purchaseOrderItemUuid);
+    });
+
+    revalidatePath(`/purchase-orders/${line.purchaseOrderUuid}`);
+    revalidatePath("/purchase-lines");
+    revalidatePath("/purchase-receivals");
+    return { success: true, purchaseOrderUuid: line.purchaseOrderUuid };
+  } catch (error) {
+    return { error: describeError(error, "Failed to close the purchase line") };
   }
 };

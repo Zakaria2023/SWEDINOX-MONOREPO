@@ -1047,6 +1047,20 @@ export type ReceptionActions = {
   readonly splitReason: string;
 };
 
+/** The fields of a purchase line its toolbar decides on. */
+export type PurchaseLineActionInput = {
+  readonly lineStatus: OrderLineStatus | null;
+  readonly orderedQuantity: string;
+  readonly qtyReceived: string | null;
+  readonly closedAt: Date | null;
+};
+
+export type PurchaseLineActions = {
+  readonly canClose: boolean;
+  /** Always a sentence — why the button is awake, or why it is not. */
+  readonly closeReason: string;
+};
+
 type PaymentTermMeta = {
   netDays: number | null;
   endOfMonth: boolean;
@@ -10055,6 +10069,49 @@ export const receptionActions = (
     canSplit: false,
     splitReason:
       "Splitting a reception is not reachable from the order. The reference greys it whatever the reception's status, so the gate is on the order — see H13.",
+  };
+};
+
+/**
+ * What a buyer may do to the selected purchase line.
+ *
+ * `Close line` is for a line that arrived short and whose remainder is not
+ * coming — the reference closes those (`401616/50` at 6 of 17, J4 7-10-2026).
+ * It is only offered on a line still `Partially received`: one inside the
+ * unloading tolerance has already closed itself, one with nothing received is
+ * undelivered rather than short, and a line already closed stays closed. The
+ * server action re-checks every one of these.
+ */
+export const purchaseLineActions = (
+  line: PurchaseLineActionInput | null,
+): PurchaseLineActions => {
+  if (!line) {
+    return { canClose: false, closeReason: "Select a line to act on it." };
+  }
+  if (line.closedAt !== null) {
+    return {
+      canClose: false,
+      closeReason: "This line was closed short by hand.",
+    };
+  }
+  const received = Number(line.qtyReceived ?? 0);
+  if (received <= 0) {
+    return {
+      canClose: false,
+      closeReason:
+        "Nothing has arrived on this line, so it cannot be closed short.",
+    };
+  }
+  if (line.lineStatus !== "partially_received") {
+    return {
+      canClose: false,
+      closeReason:
+        "Only a line still waiting for part of its goods can be closed short.",
+    };
+  }
+  return {
+    canClose: true,
+    closeReason: `${received} of ${Number(line.orderedQuantity)} arrived and the rest is outside the unloading tolerance. Close the line if the remainder is not coming.`,
   };
 };
 

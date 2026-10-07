@@ -9,13 +9,16 @@ import {
 } from "@/db/schema/purchase-line-receivals";
 import { PurchaseOrderItems } from "@/db/schema/purchase-order-items";
 import { PurchaseOrders } from "@/db/schema/purchase-orders";
+import { Products } from "@/db/schema/products";
 import { OrderLineStatus, ReceiptStatus } from "@/lib/enums";
 import {
   amountForWeight,
   billingWeightKg,
   generateUuid,
+  isWithinTolerance,
   moneyString,
   receiptStatusAfterUnloading,
+  tolerancePercent,
 } from "@/lib/helpers";
 import { and, asc, eq, inArray, lt, sql } from "drizzle-orm";
 
@@ -73,12 +76,64 @@ type PurchaseLinePosition = {
   current: OrderLineStatus | null;
   /** True only when an invoice was cancelled, the one event that moves a line back. */
   allowStepBack: boolean;
+  /**
+   * The product's unloading tolerance for this line's unit, in percent, or
+   * `null` when the product leaves the cell blank.
+   */
+  unloadingTolerance: number | null;
+  /** Closed by hand at whatever arrived — the remainder is not coming. */
+  closed: boolean;
+};
+
+type PurchaseLineCompletion = Pick<
+  PurchaseLinePosition,
+  "quantity" | "received" | "unloadingTolerance" | "closed"
+>;
+
+/**
+ * Whether everything that is coming has come.
+ *
+ * 🔴 Not `received >= quantity`. That rule left every short delivery open
+ * forever: a line of 81 plates that arrives 80 sat at `Partially received`
+ * waiting for one that nobody had ordered again. The reference closes it —
+ * 22 of the 23 short lines since 2024 are `Received` or `Invoiced`, sixteen of
+ * them inside the product's 5 % unloading tolerance (J4, 7-10-2026).
+ *
+ * So a line is complete when what arrived is within the unloading tolerance of
+ * what was ordered, or when a buyer has closed it. Only a shortfall counts —
+ * an over-delivery is complete too. A blank tolerance is no slack at all here:
+ * blank means "no rule" for the report, but completing a line is a decision,
+ * and without a rule it is the buyer's to make by hand.
+ */
+const purchaseLineIsComplete = ({
+  quantity,
+  received,
+  unloadingTolerance,
+  closed,
+}: PurchaseLineCompletion): boolean => {
+  if (closed) {
+    return true;
+  }
+  if (quantity <= 0 || received <= 0) {
+    return false;
+  }
+  if (received >= quantity) {
+    return true;
+  }
+  return isWithinTolerance(quantity, received, unloadingTolerance ?? 0);
 };
 
 /**
  * Where a purchase line stands, read off what has arrived and what has been
  * invoiced. The reference walks a line Released → Partially received →
  * Received → Invoiced, and invoicing outranks receiving.
+ *
+ * 🔑 **Invoiced is measured against what arrived, not what was ordered.** A
+ * purchase is billed on its weighed goods (`402532`), so a line that arrived
+ * short and was billed for all of it is invoiced, full stop. There is no
+ * `Partially invoiced` on a purchase line: none of the reference's 16 084
+ * lines carries it, and its purchase header ladder has no such rung. A line
+ * billed for part of what arrived simply keeps its receipt status.
  */
 const purchaseLineStatusFor = ({
   quantity,
@@ -86,15 +141,23 @@ const purchaseLineStatusFor = ({
   invoiced,
   current,
   allowStepBack,
+  unloadingTolerance,
+  closed,
 }: PurchaseLinePosition): OrderLineStatus | null => {
   if (current !== null && FROZEN_STATUSES.includes(current)) {
     return current;
   }
+  const complete = purchaseLineIsComplete({
+    quantity,
+    received,
+    unloadingTolerance,
+    closed,
+  });
   if (quantity > 0 && invoiced >= quantity) {
     return "invoiced";
   }
-  if (invoiced > 0) {
-    return "partially_invoiced";
+  if (complete && received > 0 && invoiced >= received) {
+    return "invoiced";
   }
   if (
     !allowStepBack &&
@@ -103,7 +166,7 @@ const purchaseLineStatusFor = ({
   ) {
     return current;
   }
-  if (quantity > 0 && received >= quantity) {
+  if (complete) {
     return "received";
   }
   if (received > 0) {
@@ -130,8 +193,13 @@ export const refreshPurchaseLineStatus = async (
       quantity: PurchaseOrderItems.quantity,
       received: PurchaseOrderItems.qtyReceived,
       status: PurchaseOrderItems.status,
+      unit: PurchaseOrderItems.unit,
+      closedAt: PurchaseOrderItems.closedAt,
+      toleranceQty: Products.toleranceUnloadingQty,
+      toleranceKg: Products.toleranceUnloadingKg,
     })
     .from(PurchaseOrderItems)
+    .leftJoin(Products, eq(PurchaseOrderItems.productUuid, Products.uuid))
     .where(eq(PurchaseOrderItems.uuid, purchaseOrderItemUuid))
     .limit(1);
 
@@ -161,6 +229,12 @@ export const refreshPurchaseLineStatus = async (
     invoiced: Number(invoiced?.quantity ?? 0),
     current: line.status,
     allowStepBack,
+    // A kilo line is held to the kilo tolerance, every other line to the
+    // piece tolerance — the two columns of the reference's `Unloading wo` row.
+    unloadingTolerance: tolerancePercent(
+      line.unit === "kg" ? line.toleranceKg : line.toleranceQty,
+    ),
+    closed: line.closedAt !== null,
   });
 
   if (next === line.status) {

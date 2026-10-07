@@ -17,6 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { PurchaseLineToolbar } from "@/components/purchase-orders/purchase-line-toolbar";
 import { ReceptionToolbar } from "@/components/purchase-orders/reception-toolbar";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { CollapsibleSection } from "@/components/ui/collapsible-section";
@@ -39,6 +40,7 @@ import {
   CONTRACT_TYPE_LABELS,
   CONTRACTABLE_ROLE_LABELS,
   ORDER_LINE_STATUS_LABELS,
+  ORDER_SOURCE_TYPE_LABELS,
   PURCHASE_ORDER_STATUS_LABELS,
   PURCHASE_RETURN_ORDER_REASON_LABELS,
   RECEIPT_STATUS_LABELS,
@@ -60,6 +62,7 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
   const [selectedReceiptUuid, setSelectedReceiptUuid] = useState<string | null>(
     null,
   );
+  const [selectedLineUuid, setSelectedLineUuid] = useState<string | null>(null);
 
   const canCancel = purchaseOrder.status !== "cancelled";
 
@@ -185,6 +188,15 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
 
       <div className="space-y-3">
         <h2 className="border-b pb-2 text-base font-semibold">Lines</h2>
+        {canCancel && (
+          <PurchaseLineToolbar
+            selected={
+              purchaseOrder.items.find(
+                (item) => item.uuid === selectedLineUuid,
+              ) ?? null
+            }
+          />
+        )}
         <div>
           <Table>
             <TableHeader>
@@ -194,6 +206,8 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
                   `M1(p)` · `Net Price` · `U`. */}
               <TableRow>
                 <TableHead className="text-right">Code</TableHead>
+                {/* `Type` on the reference's grid: `Stk` · `CD` · `EXW`. */}
+                <TableHead>Type</TableHead>
                 <TableHead>Delivery date</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Product</TableHead>
@@ -202,6 +216,7 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
                 <TableHead className="text-right">Width</TableHead>
                 <TableHead className="text-right">Thickness</TableHead>
                 <TableHead className="text-right">Qty (p)</TableHead>
+                <TableHead className="text-right">Qty (a)</TableHead>
                 <TableHead>U</TableHead>
                 <TableHead className="text-right">Kg (p)</TableHead>
                 <TableHead className="text-right">M1 (p)</TableHead>
@@ -217,7 +232,7 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
               {purchaseOrder.items.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={18}
+                    colSpan={20}
                     className="h-24 text-center text-muted-foreground"
                   >
                     No lines on this order.
@@ -225,10 +240,18 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
                 </TableRow>
               ) : (
                 purchaseOrder.items.map((item) => (
-                  <TableRow key={item.uuid}>
+                  <TableRow
+                    key={item.uuid}
+                    onClick={() => setSelectedLineUuid(item.uuid)}
+                    className={cn(
+                      "cursor-pointer",
+                      item.uuid === selectedLineUuid && "bg-accent",
+                    )}
+                  >
                     <TableCell className="text-right tabular-nums">
                       {item.lineNumber === null ? "—" : item.lineNumber * 10}
                     </TableCell>
+                    <TableCell>{ORDER_SOURCE_TYPE_LABELS[item.sourceType]}</TableCell>
                     <TableCell>{formatDateColumn(item.receiptDate)}</TableCell>
                     <TableCell>
                       <StatusBadge
@@ -257,6 +280,16 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {item.orderedQuantity}
+                    </TableCell>
+                    {/* What arrived. A line closed short reads its closing
+                        figure here and `Received` beside it. */}
+                    <TableCell className="text-right tabular-nums">
+                      {formatNumber(Number(item.qtyReceived ?? 0))}
+                      {item.closedAt && (
+                        <span className="ms-1 text-xs text-muted-foreground">
+                          (closed)
+                        </span>
+                      )}
                     </TableCell>
                     <TableCell>{orDash(item.unit ? item.unit.toUpperCase() : null)}</TableCell>
                     {/* 🔑 The weighed weight where a lorry has been, the
