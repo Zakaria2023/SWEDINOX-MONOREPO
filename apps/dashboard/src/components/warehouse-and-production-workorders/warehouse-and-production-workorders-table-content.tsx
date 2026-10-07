@@ -1,121 +1,58 @@
 "use client";
 
-import { CombinedWorkOrderLine } from "@/app/(dashboard)/warehouse-and-production-workorders/actions";
+import Link from "next/link";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/shadcn/table";
+  CombinedWorkOrderLine,
+  exportWarehouseAndProductionWorkOrders,
+} from "@/app/(dashboard)/warehouse-and-production-workorders/actions";
 import {
-  cn,
-  formatDateColumn,
-  formatNumber,
-  formatPercent,
-  orDash,
-} from "@/lib/helpers";
-import { TRIP_STATUS_LABELS, WORK_ORDER_STATUS_LABELS } from "@/lib/labels";
-
-// The list merges two kinds of work order, and the warehouse ladder is not the
-// trip one — so a status is looked up in both vocabularies. They agree on the
-// one value they share, "new".
-const STATUS_LABELS: Record<string, string> = {
-  ...TRIP_STATUS_LABELS,
-  ...WORK_ORDER_STATUS_LABELS,
-};
-import { TableExportButton } from "@/components/ui/table-export-button";
+  COMBINED_WORK_ORDER_COLUMNS,
+  CombinedWorkOrderColumnKey,
+} from "@/app/(dashboard)/warehouse-and-production-workorders/columns";
+import { OverviewTable } from "@/components/ui/overview-table";
+import { Paged, TableFilterControl } from "@/lib/table-query";
 
 type Props = {
-  rows: CombinedWorkOrderLine[];
+  page: Paged<CombinedWorkOrderLine>;
+  filters: TableFilterControl[];
 };
 
-export const WarehouseAndProductionWorkOrdersTable = ({ rows }: Props) => (
-  <div>
-    <div className="space-y-4">
-      <div className="flex justify-end">
-        <TableExportButton
-          tableId="warehouse-and-production-workorders-table"
-          fileName="warehouse-and-production-workorders"
-          sheetName="Warehouse- and production workorders"
-        />
-      </div>
-      <Table id="warehouse-and-production-workorders-table">
-        <TableHeader>
-          <TableRow>
-            <TableHead className="text-right">Workorder #</TableHead>
-            <TableHead className="text-right">Line #</TableHead>
-            <TableHead>Warehouse</TableHead>
-            <TableHead className="text-right">Qty(p)</TableHead>
-            <TableHead className="text-right">Qty(a)</TableHead>
-            <TableHead>QtyU</TableHead>
-            <TableHead className="text-right">Kg(p)</TableHead>
-            <TableHead className="text-right">Kg(a)</TableHead>
-            <TableHead className="text-right">Weight deviation</TableHead>
-            <TableHead>Workorder type</TableHead>
-            <TableHead>Workorder date</TableHead>
-            <TableHead>Workorder status</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {rows.length === 0 ? (
-            <TableRow>
-              <TableCell
-                colSpan={12}
-                className="h-24 text-center text-muted-foreground"
-              >
-                No workorder lines found.
-              </TableCell>
-            </TableRow>
-          ) : (
-            rows.map((row) => (
-              <TableRow key={row.uuid}>
-                <TableCell className="text-right font-medium tabular-nums">
-                  {row.workOrderNumber}
-                </TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {row.lineNumber}
-                </TableCell>
-                <TableCell>{orDash(row.warehouseName)}</TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {formatNumber(row.qtyPlanned)}
-                </TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {formatNumber(row.qtyActual)}
-                </TableCell>
-                <TableCell>{orDash(row.qtyUnit)}</TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {formatNumber(row.kgPlanned)}
-                </TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {formatNumber(row.kgActual)}
-                </TableCell>
-                <TableCell
-                  className={cn(
-                    "text-right tabular-nums",
-                    // Any deviation is worth noticing. The column is a
-                    // magnitude, so a line that came in heavy flags the same as
-                    // one that came in short — which is how the reference
-                    // prints them.
-                    row.weightDeviation > 0 && "text-destructive",
-                  )}
-                >
-                  {formatPercent(row.weightDeviation)}
-                </TableCell>
-                <TableCell>{row.workOrderType}</TableCell>
-                <TableCell>{formatDateColumn(row.workOrderDate)}</TableCell>
-                <TableCell>
-                  {row.workOrderStatus
-                    ? (STATUS_LABELS[row.workOrderStatus] ??
-                      row.workOrderStatus)
-                    : "—"}
-                </TableCell>
-              </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
-    </div>
-  </div>
+const SORTABLE: Partial<Record<CombinedWorkOrderColumnKey, string>> = {
+  workOrderDate: "workOrderDate",
+  workOrderNumber: "workOrderNumber",
+  releasedAt: "releasedAt",
+  workOrderStatus: "workOrderStatus",
+};
+
+export const WarehouseAndProductionWorkOrdersTable = ({
+  page,
+  filters,
+}: Props) => (
+  <OverviewTable
+    page={page}
+    filters={filters}
+    columns={COMBINED_WORK_ORDER_COLUMNS}
+    sortable={SORTABLE}
+    rowKey={(row) => `${row.kind}:${row.uuid}`}
+    renderCell={(row, key) =>
+      key === "workOrderNumber" ? (
+        <Link
+          href={
+            row.kind === "warehouse"
+              ? `/warehouse-work-orders/${row.workOrderUuid}`
+              : `/production-workorders/${row.workOrderUuid}`
+          }
+          className="font-medium underline-offset-4 hover:underline"
+        >
+          {row.workOrderNumber}
+        </Link>
+      ) : undefined
+    }
+    exportAction={exportWarehouseAndProductionWorkOrders}
+    fileName="warehouse-and-production-workorders"
+    searchPlaceholder="Search product, company or work order…"
+    emptyText="No work order lines."
+    singular="line"
+    plural="lines"
+  />
 );

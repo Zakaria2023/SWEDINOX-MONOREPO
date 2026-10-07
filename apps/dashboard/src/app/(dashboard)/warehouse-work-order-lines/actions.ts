@@ -35,7 +35,7 @@ import {
 } from "@/db/schema/warehouse-work-orders";
 import { WAREHOUSE_WORK_ORDER_LINE_COLUMNS } from "@/app/(dashboard)/warehouse-work-order-lines/columns";
 import { warehouseWorkOrderTypes, workOrderStatuses } from "@/lib/enums";
-import { describeError } from "@/lib/helpers";
+import { describeError, timestampFromDriver } from "@/lib/helpers";
 import { getClerkUserNames } from "@/lib/server/clerk";
 import { exportRows } from "@/lib/server/excel";
 import {
@@ -252,7 +252,7 @@ const lineRows =
     const nameOf = (id: string | null) => (id ? (names[id] ?? null) : null);
     return rows.map((row) => ({
       ...row,
-      reportedAt: row.reportedAt ? new Date(row.reportedAt) : null,
+      reportedAt: timestampFromDriver(row.reportedAt),
       createdByName: nameOf(row.workOrderCreatedByUserId),
       modifiedByName: nameOf(row.modifiedByUserId),
     }));

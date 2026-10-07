@@ -331,6 +331,27 @@ export const generateUuid = () => crypto.randomUUID();
  * An address on one line — `Tannenbergstr. 173, D-73230 Kirchheim unter Teck`
  * — or an empty string when nothing is filled in.
  */
+/**
+ * A timestamp read through raw SQL, as a `Date`.
+ *
+ * Drizzle's own timestamp columns are parsed as UTC, because the database
+ * stores them that way; a value selected through `sql` skips that mapping and
+ * arrives as bare text (`2026-10-04 13:07:25`), which `new Date` would read as
+ * local time — three hours early in Almere in summer.
+ */
+export const timestampFromDriver = (
+  value: Date | string | null | undefined,
+): Date | null => {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+  if (value instanceof Date) {
+    return value;
+  }
+  const parsed = new Date(`${value.replace(" ", "T")}Z`);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
 export const formatAddressLine = (address: {
   streetAndNo: string | null;
   postalCode: string | null;
