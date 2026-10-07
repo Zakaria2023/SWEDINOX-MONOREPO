@@ -52,6 +52,11 @@ import {
 } from "@/lib/server/ledger";
 import { currentUser } from "@clerk/nextjs/server";
 import { InvoiceItems } from "@/db/schema/invoice-items";
+import {
+  ProductionWorkOrderLines,
+  ProductionWorkOrders,
+} from "@/db/schema/production-work-orders";
+import { WarehouseWorkOrderLines } from "@/db/schema/warehouse-work-orders";
 import { Invoices, SelectInvoices } from "@/db/schema/invoices";
 import {
   TransportWorkOrderLines,
@@ -106,6 +111,14 @@ export type DeliveryLineItem = SelectOrderItems & {
   theoreticalWeight: SelectProducts["theoreticalWeight"] | null;
   theoreticalWeightUnit: SelectProducts["weightUnit"] | null;
   stockProduct: SelectProducts["stockProduct"] | null;
+  stockProductSince: SelectProducts["stockProductSince"] | null;
+  // Computed from the work orders and trips behind the line.
+  lastProductionWorkOrder: number | null;
+  plannedDeliveryQty: number;
+  readyQty: number;
+  deliveredQty: number;
+  transportDate: string | null;
+  deliveredOn: string | null;
 };
 
 const lineColumns = {
@@ -122,6 +135,39 @@ const lineColumns = {
   theoreticalWeight: Products.theoreticalWeight,
   theoreticalWeightUnit: Products.weightUnit,
   stockProduct: Products.stockProduct,
+  stockProductSince: Products.stockProductSince,
+  // `Last Prod. Wo.` — the newest production run this line went through.
+  lastProductionWorkOrder: sql<number | null>`(
+    SELECT MAX(pwo.number) FROM ${ProductionWorkOrderLines} pwl
+    JOIN ${ProductionWorkOrders} pwo ON pwo.uuid = pwl.work_order_uuid
+    WHERE pwl.order_item_uuid = ${OrderItems.uuid}
+  )`,
+  // `Planned Delivery` · `Ready` · `Delivered`: how much is on a lorry, how
+  // much has been picked for it, and how much has gone.
+  plannedDeliveryQty: sql<number>`(
+    SELECT COALESCE(SUM(twl.qty_planned), 0) FROM ${TransportWorkOrderLines} twl
+    WHERE twl.order_item_uuid = ${OrderItems.uuid}
+  )`.mapWith(Number),
+  readyQty: sql<number>`(
+    SELECT COALESCE(SUM(wl.qty_actual), 0) FROM ${WarehouseWorkOrderLines} wl
+    WHERE wl.order_item_uuid = ${OrderItems.uuid} AND wl.status = 'approved'
+  )`.mapWith(Number),
+  deliveredQty: sql<number>`(
+    SELECT COALESCE(SUM(twl.qty_actual), 0) FROM ${TransportWorkOrderLines} twl
+    WHERE twl.order_item_uuid = ${OrderItems.uuid}
+  )`.mapWith(Number),
+  transportDate: sql<string | null>`(
+    SELECT two.date FROM ${TransportWorkOrderLines} twl
+    JOIN ${TransportWorkOrders} two ON two.uuid = twl.work_order_uuid
+    WHERE twl.order_item_uuid = ${OrderItems.uuid}
+    ORDER BY twl.id DESC LIMIT 1
+  )`,
+  // `Delivery date (a)`: the day the trip carrying it was completed.
+  deliveredOn: sql<string | null>`(
+    SELECT MAX(two.date) FROM ${TransportWorkOrderLines} twl
+    JOIN ${TransportWorkOrders} two ON two.uuid = twl.work_order_uuid
+    WHERE twl.order_item_uuid = ${OrderItems.uuid} AND two.status = 'completed'
+  )`,
   // The lorry. A transport-blocked line is never on one -- the reference has
   // zero exceptions in 6 134 rows -- so this is empty exactly where the
   // blocking flag is set.

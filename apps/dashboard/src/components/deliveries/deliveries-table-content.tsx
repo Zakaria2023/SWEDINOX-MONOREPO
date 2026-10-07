@@ -22,6 +22,7 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
+import { ExportValueCell } from "@/components/ui/export-value-cell";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { PagedTableExportButton } from "@/components/ui/table-export-button";
 import { TablePagination } from "@/components/ui/table-pagination";
@@ -60,7 +61,6 @@ const SORTABLE: Partial<Record<ColumnKey, string>> = {
 
 const NUMBER_KEYS = new Set<ColumnKey>([
   "orderId",
-  "lineNumber",
   "lengthMm",
   "widthMm",
   "qtyPlanned",
@@ -121,6 +121,20 @@ export const DeliveriesTable = ({ page, userNames, filters }: Props) => {
   const visibleColumns = ALL_COLUMNS.filter((col) => columnVisibility[col.key]);
 
   const renderCell = (row: DeliveryLineItem, key: ColumnKey) => {
+    // The line number opens the order line, the canonical line screen.
+    if (key === "lineNumber") {
+      return (
+        <TableCell key={key} className="font-medium">
+          <Link
+            href={`/order-lines/${row.uuid}`}
+            className="text-primary hover:underline"
+          >
+            {row.lineNumber ?? "View line"}
+          </Link>
+        </TableCell>
+      );
+    }
+
     if (NUMBER_KEYS.has(key)) {
       const value = row[key as keyof DeliveryLineItem];
       return (
@@ -139,17 +153,6 @@ export const DeliveriesTable = ({ page, userNames, filters }: Props) => {
     }
 
     switch (key) {
-      case "orderCategory":
-        return (
-          <TableCell key={key} className="font-medium">
-            <Link
-              href={`/order-lines/${row.uuid}`}
-              className="text-primary hover:underline"
-            >
-              {row.orderCategory ?? "View line"}
-            </Link>
-          </TableCell>
-        );
       case "lineStatus":
         return (
           <TableCell key={key}>
@@ -219,12 +222,6 @@ export const DeliveriesTable = ({ page, userNames, filters }: Props) => {
         return (
           <TableCell key={key}>{formatDateValue(row.deliveryDate)}</TableCell>
         );
-      case "deliveryDateActual":
-        return (
-          <TableCell key={key}>
-            {formatDateValue(row.reservationDate)}
-          </TableCell>
-        );
       case "blockingReason":
         return (
           <TableCell key={key} className="text-muted-foreground">
@@ -243,6 +240,12 @@ export const DeliveriesTable = ({ page, userNames, filters }: Props) => {
         return (
           <TableCell key={key}>{formatDateValue(row.updatedAt)}</TableCell>
         );
+      default: {
+        const column = DELIVERY_COLUMNS.find((col) => col.key === key);
+        return (
+          <ExportValueCell key={key} value={column ? column.value(row) : null} />
+        );
+      }
     }
   };
 
