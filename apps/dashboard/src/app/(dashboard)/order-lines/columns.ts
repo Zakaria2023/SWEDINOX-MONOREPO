@@ -6,7 +6,11 @@ import {
   textCell,
   yesNoCell,
 } from "@/lib/excel";
-import { ORDER_SOURCE_TYPE_LABELS, ORDER_TYPE_LABELS } from "@/lib/labels";
+import {
+  COMPANY_CLASSIFICATION_LABELS,
+  ORDER_SOURCE_TYPE_LABELS,
+  ORDER_TYPE_LABELS,
+} from "@/lib/labels";
 import {
   orderLineStatusLabel,
   salesRepresentativeLabel,
@@ -83,7 +87,15 @@ export type OrderLineColumnKey =
   | "qualityCode"
   | "stockCategory"
   | "country"
-  | "destinationCountry";
+  | "destinationCountry"
+  | "fsp"
+  | "priceMinusFsp"
+  | "replacementPrice"
+  | "priceMinusReplacement"
+  | "marginVsReplacement"
+  | "affiliateName"
+  | "classification"
+  | "classificationCode";
 
 export const orderLineColumns = (
   userNames: Record<string, string>,
@@ -214,6 +226,12 @@ export const orderLineColumns = (
     value: (row) => numberCell(row.costPrice),
   },
   {
+    key: "fsp",
+    label: "FSP",
+    defaultVisible: false,
+    value: (row) => row.fsp,
+  },
+  {
     key: "amount",
     label: "Amount",
     defaultVisible: true,
@@ -283,6 +301,19 @@ export const orderLineColumns = (
     value: (row) => textCell(row.productPriceUnit),
   },
   {
+    key: "classification",
+    label: "Classification",
+    defaultVisible: false,
+    value: (row) =>
+      row.classification ? COMPANY_CLASSIFICATION_LABELS[row.classification] : null,
+  },
+  {
+    key: "classificationCode",
+    label: "Classification code",
+    defaultVisible: false,
+    value: (row) => textCell(row.classification),
+  },
+  {
     key: "averagePurchasePrice",
     label: "APP",
     defaultVisible: false,
@@ -307,10 +338,34 @@ export const orderLineColumns = (
     value: (row) => numberCell(row.marginVsApp),
   },
   {
+    key: "priceMinusFsp",
+    label: "Price -/- FSP",
+    defaultVisible: false,
+    value: (row) => numberCell(row.priceMinusFsp),
+  },
+  {
     key: "deliveries",
     label: "#Deliveries",
     defaultVisible: false,
     value: (row) => numberCell(row.deliveries),
+  },
+  {
+    key: "replacementPrice",
+    label: "Replacement price",
+    defaultVisible: false,
+    value: (row) => numberCell(row.replacementPrice),
+  },
+  {
+    key: "priceMinusReplacement",
+    label: "Price -/- Replacement price",
+    defaultVisible: false,
+    value: (row) => numberCell(row.priceMinusReplacement),
+  },
+  {
+    key: "marginVsReplacement",
+    label: "Profit margin w.r.t. replacement price",
+    defaultVisible: false,
+    value: (row) => numberCell(row.marginVsReplacement),
   },
   {
     // The ORDER's own type, which is not the line's supply route. The
@@ -360,6 +415,12 @@ export const orderLineColumns = (
     label: "Region",
     defaultVisible: false,
     value: (row) => textCell(row.region),
+  },
+  {
+    key: "affiliateName",
+    label: "Affiliate company details",
+    defaultVisible: false,
+    value: (row) => textCell(row.affiliateName),
   },
   {
     key: "qualityCode",

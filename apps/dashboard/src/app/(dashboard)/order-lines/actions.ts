@@ -39,6 +39,8 @@ import {
   TableQuery,
 } from "@/lib/table-query";
 import { CompanyAddresses } from "@/db/schema/company-addresses";
+import { BranchSettings } from "@/db/schema/branch-settings";
+import { ProductFspHistory } from "@/db/schema/product-details";
 import { RevenueGroups } from "@/db/schema/revenue-groups";
 import { WarehouseWorkOrderLines } from "@/db/schema/warehouse-work-orders";
 import { count, desc, eq, getTableColumns, sql } from "drizzle-orm";
@@ -120,6 +122,15 @@ export type OrderLineRow = {
   marginVsApp: number;
   /** The cost converted into the product's unit before subtracting. */
   priceMinusCost: number;
+  /** The product's FSP on the order's price date, from the dated history. */
+  fsp: number | null;
+  replacementPrice: SelectOrderItems["replacementPrice"];
+  priceMinusFsp: number;
+  priceMinusReplacement: number;
+  marginVsReplacement: number;
+  classification: SelectCompanies["classification"] | null;
+  /** The branch's own legal name, from the settings. */
+  affiliateName: string | null;
 };
 
 export type OrderLineDetail = SelectOrderItems & {
@@ -237,6 +248,19 @@ const orderLineRows =
         commercialShortfall: OrderItems.commercialShortfall,
         isConsignment: Orders.isConsignment,
         orderType: Orders.orderType,
+        replacementPrice: OrderItems.replacementPrice,
+        classification: Companies.classification,
+        fsp: sql<string | null>`(
+          SELECT ${ProductFspHistory.fsp} FROM ${ProductFspHistory}
+          WHERE ${ProductFspHistory.productUuid} = ${OrderItems.productUuid}
+            AND ${ProductFspHistory.startDate} <= COALESCE(${Orders.priceDate}, CURDATE())
+            AND (${ProductFspHistory.endDate} IS NULL
+              OR ${ProductFspHistory.endDate} >= COALESCE(${Orders.priceDate}, CURDATE()))
+          ORDER BY ${ProductFspHistory.startDate} DESC LIMIT 1
+        )`,
+        affiliateName: sql<string | null>`(
+          SELECT ${BranchSettings.affiliateName} FROM ${BranchSettings} LIMIT 1
+        )`,
         city: lineVisiting.city,
         country: lineVisiting.country,
         destinationCountry: lineDelivery.country,
@@ -305,6 +329,8 @@ const orderLineRows =
         measure,
       );
       const app = costs.get(row.productUuid)?.averagePurchasePrice ?? 0;
+      const fsp = row.fsp === null ? null : Number(row.fsp);
+      const replacement = Number(row.replacementPrice ?? 0);
       return {
         uuid: row.uuid,
         createdAt: row.createdAt ? row.createdAt.toISOString() : null,
@@ -355,6 +381,16 @@ const orderLineRows =
           priceInProductUnit,
           priceInProductUnit - app,
         ),
+        fsp,
+        replacementPrice: row.replacementPrice,
+        priceMinusFsp: priceInProductUnit - (fsp ?? 0),
+        priceMinusReplacement: priceInProductUnit - replacement,
+        marginVsReplacement: documentProfitMarginPercent(
+          priceInProductUnit,
+          priceInProductUnit - replacement,
+        ),
+        classification: row.classification,
+        affiliateName: row.affiliateName,
         // The cost converted into the product's unit first -- the reference
         // does not, and subtracts euros per piece from euros per tonne.
         priceMinusCost:

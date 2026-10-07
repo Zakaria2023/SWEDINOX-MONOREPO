@@ -19,6 +19,7 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
+import { ExportValueCell } from "@/components/ui/export-value-cell";
 import { PagedTableExportButton } from "@/components/ui/table-export-button";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { TableToolbar } from "@/components/ui/table-toolbar";
@@ -83,7 +84,8 @@ const initialsOf = (name: string): string | null => {
 };
 
 export const OrderLinesTable = ({ page, filters, userNames }: Props) => {
-  const allColumns = selectorColumns(orderLineColumns(userNames));
+  const columns = orderLineColumns(userNames);
+  const allColumns = selectorColumns(columns);
   const [columnVisibility, setColumnVisibility] = useState<
     Record<ColumnKey, boolean>
   >(buildColumnVisibility(allColumns));
@@ -242,6 +244,12 @@ export const OrderLinesTable = ({ page, filters, userNames }: Props) => {
         return (
           <TableCell key={key}>{orDash(row.destinationCountry)}</TableCell>
         );
+      default: {
+        const column = columns.find((col) => col.key === key);
+        return (
+          <ExportValueCell key={key} value={column ? column.value(row) : null} />
+        );
+      }
     }
   };
 

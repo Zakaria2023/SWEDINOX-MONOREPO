@@ -10,6 +10,10 @@ import {
 } from "@/db/schema/company-addresses";
 import { Contracts } from "@/db/schema/contracts";
 import { FollowUps, SelectFollowUps } from "@/db/schema/follow-ups";
+import {
+  BranchSettings,
+  SelectBranchSettings,
+} from "@/db/schema/branch-settings";
 import { OrderItems } from "@/db/schema/order-items";
 import { Orders, SelectOrders } from "@/db/schema/orders";
 import { Products, SelectProducts } from "@/db/schema/products";
@@ -68,6 +72,8 @@ export type QuoteLineRow = SelectQuoteItems & {
   lastFollowUpDate: SelectFollowUps["date"] | null;
   lastFollowUp: SelectFollowUps["text"] | null;
   lastFollowUpBy: SelectFollowUps["by"] | null;
+  /** The branch's own legal name, from the settings. */
+  affiliateName: SelectBranchSettings["affiliateName"];
   // Composed from the quote header's independent order-type flags.
   orderType: string;
   // Derived from the quote date so the overview can group by period.
@@ -164,6 +170,9 @@ const selectQuoteLines = async (where?: SQL): Promise<QuoteLineRow[]> => {
       lastFollowUpDate,
       lastFollowUp: lastFollowUpText,
       lastFollowUpBy,
+      affiliateName: sql<string | null>`(
+        SELECT ${BranchSettings.affiliateName} FROM ${BranchSettings} LIMIT 1
+      )`,
       quoteMonth: month,
       quoteYear: year,
     })
@@ -204,6 +213,7 @@ const selectQuoteLines = async (where?: SQL): Promise<QuoteLineRow[]> => {
     lastFollowUpDate: rest.lastFollowUpDate,
     lastFollowUp: rest.lastFollowUp,
     lastFollowUpBy: rest.lastFollowUpBy,
+    affiliateName: rest.affiliateName,
     orderType: resolveOrderTypeLabel(rest),
     quoteMonth: rest.quoteMonth === null ? null : Number(rest.quoteMonth),
     quoteYear: rest.quoteYear === null ? null : Number(rest.quoteYear),

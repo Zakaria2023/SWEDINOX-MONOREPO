@@ -1,5 +1,11 @@
 import { InvoiceLineItem } from "@/app/(dashboard)/invoice-lines/actions";
-import { dateCell, ExportColumn, numberCell, textCell } from "@/lib/excel";
+import {
+  dateCell,
+  ExportColumn,
+  numberCell,
+  textCell,
+  yesNoCell,
+} from "@/lib/excel";
 import {
   absoluteProfitMarginPercent,
   customerGroupLabel,
@@ -68,7 +74,10 @@ export type InvoiceLineColumnKey =
   | "profitLine"
   | "profitMarginLine"
   | "customerGroup"
-  | "lineType";
+  | "lineType"
+  | "regionNumber"
+  | "memberSfn"
+  | "affiliateName";
 
 const initialsOf = (name: string | null): string | null => {
   if (!name) {
@@ -148,7 +157,7 @@ export const INVOICE_LINE_COLUMNS: Array<
     // `Order type` on this screen is the line's sourcing, Stk or CD -- not the
     // order's own type. The reference uses one header for both fields.
     key: "sourceType",
-    label: "Order type (supply)",
+    label: "Order type",
     defaultVisible: true,
     value: (row) =>
       textCell(
@@ -236,6 +245,14 @@ export const INVOICE_LINE_COLUMNS: Array<
     label: "Width (mm)",
     defaultVisible: true,
     value: (row) => numberCell(row.widthMm),
+  },
+  {
+    key: "regionNumber",
+    label: "Region number",
+    defaultVisible: false,
+    // `0` on all 5 650 reference lines: the number lives on the customer and is
+    // never carried down onto the invoice.
+    value: () => null,
   },
   {
     key: "region",
@@ -326,6 +343,13 @@ export const INVOICE_LINE_COLUMNS: Array<
     value: (row) => textCell(row.vatNumber),
   },
   {
+    key: "memberSfn",
+    label: "Member SFN",
+    defaultVisible: false,
+    // `False` on all 5 650 — switched off there, and nothing here sets it.
+    value: () => yesNoCell(false),
+  },
+  {
     key: "weightKg",
     label: "Weight (kg)",
     defaultVisible: true,
@@ -365,6 +389,12 @@ export const INVOICE_LINE_COLUMNS: Array<
     label: "Customer group",
     defaultVisible: false,
     value: (row) => textCell(customerGroupLabel(row.customerGroup)),
+  },
+  {
+    key: "affiliateName",
+    label: "Affiliate company details",
+    defaultVisible: false,
+    value: (row) => textCell(row.affiliateName),
   },
   {
     key: "lineType",

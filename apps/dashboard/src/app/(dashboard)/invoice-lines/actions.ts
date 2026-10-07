@@ -36,6 +36,10 @@ import {
   SearchParams,
   TableQuery,
 } from "@/lib/table-query";
+import {
+  BranchSettings,
+  SelectBranchSettings,
+} from "@/db/schema/branch-settings";
 import { and, eq, getTableColumns, isNotNull, sql } from "drizzle-orm";
 
 /**
@@ -70,6 +74,8 @@ export type InvoiceLineItem = {
   vatNumber: SelectCompanies["vatNumber"] | null;
   representative: SelectCompanies["representative"] | null;
   region: SelectCompanies["region"] | null;
+  /** The branch's own legal name, from the settings. */
+  affiliateName: SelectBranchSettings["affiliateName"];
   city: SelectCompanyAddresses["city"] | null;
   country: SelectCompanyAddresses["country"] | null;
   /** The Clerk id the line stores, and the name Clerk holds for it. */
@@ -184,6 +190,9 @@ const orderLineRows = async (query: TableQuery): Promise<InvoiceLineItem[]> => {
       vatNumber: Companies.vatNumber,
       representative: Companies.representative,
       region: Companies.region,
+      affiliateName: sql<string | null>`(
+        SELECT ${BranchSettings.affiliateName} FROM ${BranchSettings} LIMIT 1
+      )`,
       city: visiting.city,
       country: visiting.country,
       seller: OrderItems.seller,
@@ -262,6 +271,9 @@ const surchargeLineRows = async (
       vatNumber: Companies.vatNumber,
       representative: Companies.representative,
       region: Companies.region,
+      affiliateName: sql<string | null>`(
+        SELECT ${BranchSettings.affiliateName} FROM ${BranchSettings} LIMIT 1
+      )`,
       city: visiting.city,
       country: visiting.country,
       unit: InvoiceSurcharges.unit,
@@ -308,6 +320,7 @@ const surchargeLineRows = async (
     vatNumber: row.vatNumber,
     representative: row.representative,
     region: row.region,
+    affiliateName: row.affiliateName,
     city: row.city,
     country: row.country,
     seller: null,

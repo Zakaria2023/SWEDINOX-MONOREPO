@@ -53,8 +53,8 @@ export const QuoteLinesTable = ({ page, userNames }: Props) => (
             <TableHead className="text-right">Quote</TableHead>
             <TableHead>Our reference</TableHead>
             <TableHead>Quote date</TableHead>
-            <TableHead className="text-right">Month</TableHead>
-            <TableHead className="text-right">Year</TableHead>
+            <TableHead className="text-right">Month (Quote date)</TableHead>
+            <TableHead className="text-right">Year (Quote date)</TableHead>
             <TableHead>Order type</TableHead>
             <TableHead className="text-right">Customer code</TableHead>
             <TableHead>Customer</TableHead>
@@ -66,13 +66,13 @@ export const QuoteLinesTable = ({ page, userNames }: Props) => (
             <TableHead>Representative</TableHead>
             <TableHead>Last follow-up date</TableHead>
             <TableHead>Last follow-up</TableHead>
-            <TableHead>Last follow-up by</TableHead>
+            <TableHead>Last follow-up reason</TableHead>
             <TableHead className="text-right">Quote line</TableHead>
             <TableHead>Creation date</TableHead>
             <TableHead>Delivery date</TableHead>
             <TableHead>Line type</TableHead>
             <TableHead>Status</TableHead>
-            <TableHead className="text-right">Quantity</TableHead>
+            <TableHead className="text-right">Quantity (QtyU)</TableHead>
             <TableHead>QtyU</TableHead>
             <TableHead>Product code</TableHead>
             <TableHead>Description</TableHead>
@@ -83,17 +83,17 @@ export const QuoteLinesTable = ({ page, userNames }: Props) => (
             <TableHead>PriceU</TableHead>
             <TableHead className="text-right">Group discount</TableHead>
             <TableHead className="text-right">Line discount</TableHead>
-            <TableHead className="text-right">Net price</TableHead>
+            <TableHead className="text-right">Net price (PriceU)</TableHead>
             <TableHead className="text-right">Amount</TableHead>
             <TableHead className="text-right">Cost price</TableHead>
             <TableHead className="text-right">Profit</TableHead>
             <TableHead className="text-right">Profit margin</TableHead>
-            <TableHead className="text-right">Revenue group code</TableHead>
+            <TableHead className="text-right">Revenue group number</TableHead>
             <TableHead>Revenue group</TableHead>
             <TableHead>Expiration reason</TableHead>
             <TableHead>Converted to</TableHead>
             <TableHead>Consignment</TableHead>
-            <TableHead>Affiliate company</TableHead>
+            <TableHead>Affiliate company details</TableHead>
             <TableHead>Customer group</TableHead>
             <TableHead>Reference</TableHead>
           </TableRow>
@@ -158,7 +158,9 @@ export const QuoteLinesTable = ({ page, userNames }: Props) => (
                     {row.lastFollowUp ?? "—"}
                   </span>
                 </TableCell>
-                <TableCell>{row.lastFollowUpBy ?? "—"}</TableCell>
+                {/* A follow-up records who and what, not why: the reason the
+                    reference carries has no field here. */}
+                <TableCell>—</TableCell>
                 <TableCell className="text-right">
                   {row.lineNumber ?? "—"}
                 </TableCell>
@@ -232,7 +234,9 @@ export const QuoteLinesTable = ({ page, userNames }: Props) => (
                     : "—"}
                 </TableCell>
                 <TableCell>{row.isConsignment ? "Yes" : "No"}</TableCell>
-                <TableCell>{row.affiliateCompany ?? "—"}</TableCell>
+                <TableCell>
+                  {row.affiliateCompany ?? row.affiliateName ?? "—"}
+                </TableCell>
                 <TableCell>
                   {row.customerGroup
                     ? CUSTOMER_GROUP_LABELS[row.customerGroup]
