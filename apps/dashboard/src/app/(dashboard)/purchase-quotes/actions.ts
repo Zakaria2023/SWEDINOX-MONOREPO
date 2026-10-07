@@ -15,7 +15,10 @@ import {
   SelectPurchaseQuoteItems,
 } from "@/db/schema/purchase-quote-items";
 import { PurchaseOrderItems } from "@/db/schema/purchase-order-items";
-import { PurchaseOrders } from "@/db/schema/purchase-orders";
+import {
+  PurchaseOrders,
+  SelectPurchaseOrders,
+} from "@/db/schema/purchase-orders";
 import { PurchaseRequests } from "@/db/schema/purchase-requests";
 import { RevenueGroups, SelectRevenueGroups } from "@/db/schema/revenue-groups";
 import { resolveCompanyType } from "@/app/(dashboard)/companies/actions";
@@ -164,6 +167,8 @@ export type PurchaseQuoteItemDetail = SelectPurchaseQuoteItems & {
 
 export type PurchaseQuoteDetail = SelectPurchaseQuotes & {
   companyName: SelectCompanies["companyName"] | null;
+  /** The purchase order this quote was awarded as, once it has been. */
+  orderUuid: SelectPurchaseOrders["uuid"] | null;
   items: PurchaseQuoteItemDetail[];
 };
 
@@ -573,6 +578,11 @@ export const getPurchaseQuoteDetail = async (
     .select({
       ...getTableColumns(PurchaseQuotes),
       companyName: Companies.companyName,
+      orderUuid: sql<string | null>`(
+        SELECT ${PurchaseOrders.uuid} FROM ${PurchaseOrders}
+        WHERE ${PurchaseOrders.purchaseQuoteUuid} = ${PurchaseQuotes.uuid}
+        ORDER BY ${PurchaseOrders.id} DESC LIMIT 1
+      )`,
     })
     .from(PurchaseQuotes)
     .leftJoin(Companies, eq(PurchaseQuotes.companyUuid, Companies.uuid))

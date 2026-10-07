@@ -21,6 +21,7 @@ import { ReturnLinesPickerDialog } from "@/components/purchase-return-orders/ret
 import { CollapsibleSection } from "@/components/ui/collapsible-section";
 import { DetailField } from "@/components/ui/detail-field";
 import { FormError } from "@/components/ui/form-error";
+import { RelatedRecordsBar } from "@/components/ui/related-records-bar";
 import {
   formatDateColumn,
   formatMoney,
@@ -78,6 +79,29 @@ export const PurchaseReturnOrderDetailView = ({
   return (
     <div className="space-y-6">
       {error && <FormError>{error}</FormError>}
+
+      {/* `Show company · Show purchase order · Show complaint` on the
+          reference's return toolbar. */}
+      <RelatedRecordsBar
+        records={[
+          {
+            label: "Show company",
+            href: `/companies/${returnOrder.supplierUuid}`,
+          },
+          {
+            label: "Show purchase order",
+            href: returnOrder.purchaseOrderUuid
+              ? `/purchase-orders/${returnOrder.purchaseOrderUuid}`
+              : null,
+          },
+          {
+            label: "Show complaint",
+            href: returnOrder.complaintUuid
+              ? `/complaints/${returnOrder.complaintUuid}`
+              : null,
+          },
+        ]}
+      />
 
       <section className="space-y-4">
         <h2 className="border-b pb-2 text-base font-semibold">

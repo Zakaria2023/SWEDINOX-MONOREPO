@@ -485,6 +485,8 @@ const filteredDocuments = async (
   const kinds = query.filters.kind ?? [];
   const statuses = query.filters.status ?? [];
   const send = query.filters.stillToSend ?? [];
+  // Set by the company screen's `Orders and Quotes` button.
+  const companies = query.filters.company ?? [];
 
   return all.filter((row) => {
     if (
@@ -496,6 +498,9 @@ const filteredDocuments = async (
       return false;
     }
     if (kinds.length > 0 && !kinds.includes(row.kind)) {
+      return false;
+    }
+    if (companies.length > 0 && !companies.includes(row.companyUuid ?? "")) {
       return false;
     }
     if (statuses.length > 0 && !statuses.includes(row.status ?? "")) {

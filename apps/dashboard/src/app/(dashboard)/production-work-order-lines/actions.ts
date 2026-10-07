@@ -74,6 +74,8 @@ const LINE_FILTERS = {
   status: enumFilter(ProductionWorkOrderLines.status, workOrderStatuses),
   machine: relationFilter(ProductionWorkOrders.machineUuid),
   workOrderDate: dateRangeFilter(ProductionWorkOrders.plannedDate),
+  // Set by the company screen's `Production workorders` button.
+  company: relationFilter(ProductionWorkOrderLines.companyUuid),
 };
 
 const lineRows =

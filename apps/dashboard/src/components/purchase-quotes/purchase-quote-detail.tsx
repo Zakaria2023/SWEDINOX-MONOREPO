@@ -20,6 +20,7 @@ import {
 } from "@/components/shadcn/table";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FormError } from "@/components/ui/form-error";
+import { RelatedRecordsBar } from "@/components/ui/related-records-bar";
 import { PurchaseQuoteStatus } from "@/lib/enums";
 import { formatMoney, isPurchaseQuoteEditable } from "@/lib/helpers";
 import {
@@ -97,6 +98,20 @@ export const PurchaseQuoteDetailView = ({ quote }: Props) => {
   return (
     <div className="space-y-6">
       {error && <FormError>{error}</FormError>}
+
+      {/* `Show company · Show order` on the reference's quote toolbar. */}
+      <RelatedRecordsBar
+        records={[
+          {
+            label: "Show company",
+            href: quote.companyUuid ? `/companies/${quote.companyUuid}` : null,
+          },
+          {
+            label: "Show order",
+            href: quote.orderUuid ? `/purchase-orders/${quote.orderUuid}` : null,
+          },
+        ]}
+      />
 
       <div className="grid grid-cols-2 gap-4 rounded-lg border p-4 sm:grid-cols-4">
         <div>

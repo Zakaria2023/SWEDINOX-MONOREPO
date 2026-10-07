@@ -34,9 +34,13 @@ export type TransportWorkOrderLineDetail = TransportWorkOrderLineItem & {
   catalogProductCode: SelectProducts["productCode"] | null;
 };
 
-export const getTransportWorkOrderLines = async (): Promise<
-  TransportWorkOrderLineItem[]
-> => {
+/**
+ * Every transport line, newest first. `companyUuid` narrows it to one
+ * destination — the company screen's `Transport workorders` button.
+ */
+export const getTransportWorkOrderLines = async (
+  companyUuid?: string,
+): Promise<TransportWorkOrderLineItem[]> => {
   try {
     return await db
       .select({
@@ -59,6 +63,11 @@ export const getTransportWorkOrderLines = async (): Promise<
       .leftJoin(
         Products,
         eq(TransportWorkOrderLines.productUuid, Products.uuid),
+      )
+      .where(
+        companyUuid
+          ? eq(TransportWorkOrderLines.destinationCompanyUuid, companyUuid)
+          : undefined,
       )
       .orderBy(desc(TransportWorkOrderLines.createdAt));
   } catch (error) {

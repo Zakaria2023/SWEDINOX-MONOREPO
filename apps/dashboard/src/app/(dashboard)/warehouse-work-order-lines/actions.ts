@@ -128,6 +128,8 @@ const LINE_FILTERS = {
   status: enumFilter(WarehouseWorkOrderLines.status, workOrderStatuses),
   section: relationFilter(WarehouseWorkOrders.warehouseUuid),
   workOrderDate: dateRangeFilter(WarehouseWorkOrders.plannedDate),
+  // Set by the company screen's `Warehouse workorders` button.
+  company: relationFilter(WarehouseWorkOrderLines.companyUuid),
 };
 
 /**

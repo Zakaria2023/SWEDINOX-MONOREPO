@@ -2,6 +2,7 @@ import { getCompanyDetail } from "@/app/(dashboard)/companies/actions";
 import { getInvoicesByCompanyUuid } from "@/app/(dashboard)/invoices/actions";
 import { CompanyDetailView } from "@/components/companies/company-detail";
 import { PageHeading } from "@/components/layout/page-heading";
+import { RelatedRecordsBar } from "@/components/ui/related-records-bar";
 import { getClerkUserNames } from "@/lib/server/clerk";
 import { ChevronLeft, Pencil } from "lucide-react";
 import Link from "next/link";
@@ -47,6 +48,35 @@ const CompanyDetailPage = async ({ params }: Props) => {
           Edit
         </Link>
       </div>
+      {/* The company toolbar's related overviews: `Purchase lines ·
+          Warehouse workorders · Orders and Quotes · Production workorders ·
+          Transport workorders`, each narrowed to this company. */}
+      <RelatedRecordsBar
+        records={[
+          {
+            label: "Purchase lines",
+            href: company.roles?.includes("supplier")
+              ? `/purchase-lines?supplier=${uuid}`
+              : null,
+          },
+          {
+            label: "Warehouse workorders",
+            href: `/warehouse-work-order-lines?company=${uuid}`,
+          },
+          {
+            label: "Orders and Quotes",
+            href: `/orders-and-quotes?company=${uuid}`,
+          },
+          {
+            label: "Production workorders",
+            href: `/production-work-order-lines?company=${uuid}`,
+          },
+          {
+            label: "Transport workorders",
+            href: `/transport-workorders?company=${uuid}`,
+          },
+        ]}
+      />
       <CompanyDetailView
         company={company}
         invoices={invoices}

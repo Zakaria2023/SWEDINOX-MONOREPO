@@ -21,6 +21,7 @@ import {
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DetailField } from "@/components/ui/detail-field";
 import { FormError } from "@/components/ui/form-error";
+import { RelatedRecordsBar } from "@/components/ui/related-records-bar";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { PurchaseInvoiceBlockReason, purchaseInvoiceBlockReasons } from "@/lib/enums";
 import {
@@ -76,9 +77,34 @@ export const PurchaseInvoiceDetailView = ({ purchaseInvoice }: Props) => {
   const isBooked = purchaseInvoice.status === "released";
   const isClosed = purchaseInvoice.cancelled;
 
+  const invoicedOrders = new Set(
+    purchaseInvoice.items
+      .map((item) => item.purchaseOrderUuid)
+      .filter((orderUuid): orderUuid is string => orderUuid !== null),
+  );
+  const invoicedOrderUuid =
+    invoicedOrders.size === 1 ? [...invoicedOrders][0] : null;
+
   return (
     <div className="space-y-6">
       {error && <FormError>{error}</FormError>}
+
+      {/* `Show company · Show purchase order` on the reference's toolbar.
+          An invoice billing lines of more than one order names none. */}
+      <RelatedRecordsBar
+        records={[
+          {
+            label: "Show company",
+            href: purchaseInvoice.companyUuid
+              ? `/companies/${purchaseInvoice.companyUuid}`
+              : null,
+          },
+          {
+            label: "Show purchase order",
+            href: invoicedOrderUuid ? `/purchase-orders/${invoicedOrderUuid}` : null,
+          },
+        ]}
+      />
 
       <div className="flex flex-wrap items-center gap-3">
         <StatusBadge

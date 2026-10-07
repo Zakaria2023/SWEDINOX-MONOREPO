@@ -193,6 +193,7 @@ export type PurchaseInvoiceItemDetail = SelectPurchaseInvoiceItems & {
   productCode: SelectProducts["productCode"] | null;
   productName: SelectProducts["name"] | null;
   purchaseOrderId: SelectPurchaseOrders["id"] | null;
+  purchaseOrderUuid: SelectPurchaseOrders["uuid"] | null;
   lineNumber: SelectPurchaseOrderItems["lineNumber"] | null;
   unit: SelectPurchaseOrderItems["unit"] | null;
   lengthMm: SelectPurchaseOrderItems["lengthMm"] | null;
@@ -952,6 +953,7 @@ export const getPurchaseInvoiceDetail = async (
       productCode: Products.productCode,
       productName: Products.name,
       purchaseOrderId: PurchaseOrders.id,
+      purchaseOrderUuid: PurchaseOrders.uuid,
       lineNumber: PurchaseOrderItems.lineNumber,
       unit: PurchaseOrderItems.unit,
       lengthMm: PurchaseOrderItems.lengthMm,
