@@ -68,38 +68,44 @@ export const ADDRESS_COLUMNS: Array<
   ExportColumn<AddressListItem, AddressColumnKey>
 > = [
   {
-    key: "id",
-    label: "Code",
-    defaultVisible: true,
-    value: (row) => row.CompanyAddresses.id,
-  },
-  {
     key: "companyCode",
-    label: "Company Code",
+    label: "Code",
     defaultVisible: true,
     value: (row) => row.Companies?.id ?? null,
   },
   {
     key: "companyName",
-    label: "Company Name",
+    label: "Company name",
     defaultVisible: true,
     value: (row) => textCell(row.Companies?.companyName),
   },
   {
     key: "altName",
-    label: "Alt Name",
+    label: "Alternative name",
     defaultVisible: true,
     value: (row) => textCell(row.CompanyAddresses.altName),
   },
   {
+    key: "poBox",
+    label: "Is PO Box",
+    defaultVisible: false,
+    value: (row) => yesNoCell(row.CompanyAddresses.poBox),
+  },
+  {
     key: "streetAndNo",
-    label: "Street & No.",
+    label: "Street + No",
     defaultVisible: true,
     value: (row) => textCell(row.CompanyAddresses.streetAndNo),
   },
   {
+    key: "house",
+    label: "Addition",
+    defaultVisible: false,
+    value: (row) => textCell(row.CompanyAddresses.house),
+  },
+  {
     key: "postalCode",
-    label: "Postal Code",
+    label: "Postal code",
     defaultVisible: true,
     value: (row) => textCell(row.CompanyAddresses.postalCode),
   },
@@ -116,36 +122,6 @@ export const ADDRESS_COLUMNS: Array<
     value: (row) => textCell(row.CompanyAddresses.region),
   },
   {
-    key: "country",
-    label: "Country",
-    defaultVisible: true,
-    value: (row) => textCell(row.CompanyAddresses.country),
-  },
-  {
-    key: "house",
-    label: "House",
-    defaultVisible: false,
-    value: (row) => textCell(row.CompanyAddresses.house),
-  },
-  {
-    key: "poBox",
-    label: "PO Box",
-    defaultVisible: false,
-    value: (row) => yesNoCell(row.CompanyAddresses.poBox),
-  },
-  {
-    key: "gln",
-    label: "GLN",
-    defaultVisible: true,
-    value: (row) => textCell(row.CompanyAddresses.gln),
-  },
-  {
-    key: "peppolId",
-    label: "Peppol ID",
-    defaultVisible: true,
-    value: (row) => textCell(row.CompanyAddresses.peppolId),
-  },
-  {
     key: "telephone",
     label: "Telephone",
     defaultVisible: false,
@@ -159,7 +135,7 @@ export const ADDRESS_COLUMNS: Array<
   },
   {
     key: "email",
-    label: "Email",
+    label: "E-mail",
     defaultVisible: false,
     value: (row) => textCell(row.CompanyAddresses.email),
   },
@@ -170,22 +146,22 @@ export const ADDRESS_COLUMNS: Array<
     value: (row) => textCell(row.CompanyAddresses.website),
   },
   {
+    key: "sequenceNumber",
+    label: "Sequence number",
+    defaultVisible: false,
+    value: (row) => numberCell(row.CompanyAddresses.sequenceNumber),
+  },
+  {
     key: "billingAttention",
-    label: "Billing Attention",
+    label: "Invoice attention1",
     defaultVisible: false,
     value: (row) => textCell(row.CompanyAddresses.billingAttention),
   },
   {
     key: "billingAttentionAdditional",
-    label: "Billing Attention 2",
+    label: "Invoice attention2",
     defaultVisible: false,
     value: (row) => textCell(row.CompanyAddresses.billingAttentionAdditional),
-  },
-  {
-    key: "sequenceNumber",
-    label: "Sequence No.",
-    defaultVisible: false,
-    value: (row) => numberCell(row.CompanyAddresses.sequenceNumber),
   },
   {
     // The reference prints this string too, and gets it wrong: on 2 913 of its
@@ -202,6 +178,83 @@ export const ADDRESS_COLUMNS: Array<
           .map((category) => ADDRESS_CATEGORY_LABELS[category])
           .join(", "),
       ),
+  },
+  {
+    key: "unloadingStartTime",
+    label: "Start time Unloading",
+    defaultVisible: false,
+    value: (row) => textCell(row.CompanyAddresses.unloadingStartTime),
+  },
+  {
+    key: "unloadingEndTime",
+    label: "End time Unloading",
+    defaultVisible: false,
+    value: (row) => textCell(row.CompanyAddresses.unloadingEndTime),
+  },
+  {
+    key: "maxLength",
+    label: "Maximum Length",
+    defaultVisible: false,
+    value: (row) => numberCell(row.CompanyAddresses.maxLength),
+  },
+  {
+    key: "maxBundleWeight",
+    label: "Maximum Bundle Weight",
+    defaultVisible: false,
+    value: (row) => numberCell(row.CompanyAddresses.maxBundleWeight),
+  },
+  {
+    key: "needCrane",
+    label: "Crane",
+    defaultVisible: false,
+    value: (row) => yesNoCell(row.CompanyAddresses.needCrane),
+  },
+  {
+    key: "bundleSeparately",
+    label: "Separate Bundling",
+    defaultVisible: false,
+    value: (row) => yesNoCell(row.CompanyAddresses.bundleSeparately),
+  },
+  {
+    key: "addressComplete",
+    label: "Address Complete",
+    defaultVisible: true,
+    value: (row) => yesNoCell(row.CompanyAddresses.addressComplete),
+  },
+  {
+    key: "canopyRequired",
+    label: "Canopy",
+    defaultVisible: false,
+    value: (row) => yesNoCell(row.CompanyAddresses.canopyRequired),
+  },
+  {
+    // The reference carries these as two separate ticks. They are never both
+    // on one row there, which is why one column holds them here — these two
+    // are that one column, read the way its screen reads it.
+    key: "forkliftUnloading",
+    label: "Forklift Unloading",
+    defaultVisible: false,
+    value: (row) =>
+      yesNoCell(row.CompanyAddresses.availableAt === "forklift_unloading"),
+  },
+  {
+    key: "craneUnloading",
+    label: "Crane Unloading",
+    defaultVisible: false,
+    value: (row) =>
+      yesNoCell(row.CompanyAddresses.availableAt === "crane_unloading"),
+  },
+  {
+    key: "loadingInstructions",
+    label: "Loading instructions",
+    defaultVisible: false,
+    value: (row) => textCell(row.CompanyAddresses.loadingInstructions),
+  },
+  {
+    key: "gln",
+    label: "GLN",
+    defaultVisible: true,
+    value: (row) => textCell(row.CompanyAddresses.gln),
   },
   {
     key: "isBillingAddress",
@@ -231,28 +284,22 @@ export const ADDRESS_COLUMNS: Array<
       yesNoCell(row.CompanyAddresses.category.includes("delivery")),
   },
   {
-    key: "addressComplete",
-    label: "Address Complete",
+    key: "id",
+    label: "Address #",
     defaultVisible: true,
-    value: (row) => yesNoCell(row.CompanyAddresses.addressComplete),
+    value: (row) => row.CompanyAddresses.id,
   },
   {
-    key: "needCrane",
-    label: "Need Crane",
-    defaultVisible: false,
-    value: (row) => yesNoCell(row.CompanyAddresses.needCrane),
+    key: "country",
+    label: "Country",
+    defaultVisible: true,
+    value: (row) => textCell(row.CompanyAddresses.country),
   },
   {
-    key: "canopyRequired",
-    label: "Canopy Required",
-    defaultVisible: false,
-    value: (row) => yesNoCell(row.CompanyAddresses.canopyRequired),
-  },
-  {
-    key: "bundleSeparately",
-    label: "Bundle Separately",
-    defaultVisible: false,
-    value: (row) => yesNoCell(row.CompanyAddresses.bundleSeparately),
+    key: "peppolId",
+    label: "Peppol ID",
+    defaultVisible: true,
+    value: (row) => textCell(row.CompanyAddresses.peppolId),
   },
   {
     key: "specialTransport",
@@ -270,61 +317,14 @@ export const ADDRESS_COLUMNS: Array<
     },
   },
   {
-    // The reference carries these as two separate ticks. They are never both
-    // on one row there, which is why one column holds them here — these two
-    // are that one column, read the way its screen reads it.
-    key: "forkliftUnloading",
-    label: "Forklift Unloading",
-    defaultVisible: false,
-    value: (row) =>
-      yesNoCell(row.CompanyAddresses.availableAt === "forklift_unloading"),
-  },
-  {
-    key: "craneUnloading",
-    label: "Crane Unloading",
-    defaultVisible: false,
-    value: (row) =>
-      yesNoCell(row.CompanyAddresses.availableAt === "crane_unloading"),
-  },
-  {
-    key: "unloadingStartTime",
-    label: "Unloading Start",
-    defaultVisible: false,
-    value: (row) => textCell(row.CompanyAddresses.unloadingStartTime),
-  },
-  {
-    key: "unloadingEndTime",
-    label: "Unloading End",
-    defaultVisible: false,
-    value: (row) => textCell(row.CompanyAddresses.unloadingEndTime),
-  },
-  {
-    key: "maxLength",
-    label: "Max Length (mm)",
-    defaultVisible: false,
-    value: (row) => numberCell(row.CompanyAddresses.maxLength),
-  },
-  {
-    key: "maxBundleWeight",
-    label: "Max Bundle Weight (kg)",
-    defaultVisible: false,
-    value: (row) => numberCell(row.CompanyAddresses.maxBundleWeight),
-  },
-  {
-    key: "loadingInstructions",
-    label: "Loading Instructions",
-    defaultVisible: false,
-    value: (row) => textCell(row.CompanyAddresses.loadingInstructions),
-  },
-  {
     key: "createdAt",
-    label: "Created At",
+    label: "Created on",
     defaultVisible: false,
     value: (row) => dateCell(row.CompanyAddresses.createdAt),
   },
   {
     key: "updatedAt",
-    label: "Updated At",
+    label: "Modified on",
     defaultVisible: false,
     value: (row) => dateCell(row.CompanyAddresses.updatedAt),
   },
