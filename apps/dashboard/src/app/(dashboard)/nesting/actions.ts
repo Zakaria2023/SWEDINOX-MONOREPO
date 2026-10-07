@@ -1,23 +1,32 @@
 "use server";
 
-import { describeError, describeOrderType } from "@/lib/helpers";
+import { describeError } from "@/lib/helpers";
 import { db } from "@/db";
 import { Nesting, SelectNesting } from "@/db/schema/nesting";
 import { OrderItems, SelectOrderItems } from "@/db/schema/order-items";
 import { Orders, SelectOrders } from "@/db/schema/orders";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { Products, SelectProducts } from "@/db/schema/products";
+import { NESTING_COLUMNS } from "@/app/(dashboard)/nesting/columns";
+import { exportRows } from "@/lib/server/excel";
+import {
+  Paged,
+  parseTableQuery,
+  SearchParams,
+  TableQuery,
+} from "@/lib/table-query";
 import { desc, eq, getTableColumns, SQL } from "drizzle-orm";
 
 export type NestingListItem = SelectNesting & {
   orderId: SelectOrders["id"] | null;
   orderUuid: SelectOrders["uuid"] | null;
-  orderType: string; // composed from the order's type flags
+  orderType: SelectOrders["orderType"] | null;
   companyName: SelectCompanies["companyName"] | null;
   companyUuid: SelectCompanies["uuid"] | null;
   productUuid: SelectProducts["uuid"] | null;
   lineNumber: SelectOrderItems["lineNumber"] | null;
   lineType: SelectOrderItems["lineType"] | null;
+  sourceType: SelectOrderItems["sourceType"] | null;
   lineStatus: SelectOrderItems["lineStatus"] | null;
   orderLineDeliveryDate: SelectOrderItems["deliveryDate"] | null;
   isPickup: SelectOrderItems["isPickup"] | null;
@@ -48,6 +57,8 @@ const selectNesting = async (where?: SQL): Promise<NestingListItem[]> => {
       productUuid: Products.uuid,
       lineNumber: OrderItems.lineNumber,
       lineType: OrderItems.lineType,
+      sourceType: OrderItems.sourceType,
+      orderType: Orders.orderType,
       lineStatus: OrderItems.lineStatus,
       orderLineDeliveryDate: OrderItems.deliveryDate,
       isPickup: OrderItems.isPickup,
@@ -63,13 +74,6 @@ const selectNesting = async (where?: SQL): Promise<NestingListItem[]> => {
       productName: Products.name,
       theoreticalWeight: Products.theoreticalWeight,
       theoreticalWeightUnit: Products.weightUnit,
-      // Raw order-type flags — composed into `orderType` below.
-      orderIsPickup: Orders.isPickup,
-      orderIsIncidental: Orders.isIncidental,
-      orderIsConsignment: Orders.isConsignment,
-      orderIsInternalProduction: Orders.isInternalProduction,
-      orderIsCustomerMaterial: Orders.isCustomerMaterial,
-      orderIsOverlength: Orders.isOverlength,
     })
     .from(Nesting)
     .leftJoin(OrderItems, eq(Nesting.orderItemUuid, OrderItems.uuid))
@@ -81,37 +85,55 @@ const selectNesting = async (where?: SQL): Promise<NestingListItem[]> => {
     desc(Nesting.productionStartingDate),
   );
 
-  return rows.map((row) => {
-    const {
-      orderIsPickup,
-      orderIsIncidental,
-      orderIsConsignment,
-      orderIsInternalProduction,
-      orderIsCustomerMaterial,
-      orderIsOverlength,
-      ...rest
-    } = row;
-
-    return {
-      ...rest,
-      orderType: describeOrderType({
-        isPickup: orderIsPickup,
-        isIncidental: orderIsIncidental,
-        isConsignment: orderIsConsignment,
-        isInternalProduction: orderIsInternalProduction,
-        isCustomerMaterial: orderIsCustomerMaterial,
-        isOverlength: orderIsOverlength,
-      }),
-    };
-  });
+  // The header's own type — Normal on all ten reference rows — not the
+  // pick-up and consignment ticks it used to be composed from.
+  return rows;
 };
 
-export const getNesting = async (): Promise<NestingListItem[]> => {
+const nestingRows = async (query: TableQuery): Promise<NestingListItem[]> => {
+  const rows = await selectNesting();
+  const term = query.q?.toLowerCase() ?? null;
+
+  return term
+    ? rows.filter((row) =>
+        [row.orderId, row.companyName, row.productCode, row.nest]
+          .map((value) => String(value ?? "").toLowerCase())
+          .some((value) => value.includes(term)),
+      )
+    : rows;
+};
+
+export const getNesting = async (
+  query: TableQuery,
+): Promise<Paged<NestingListItem>> => {
   try {
-    return await selectNesting();
+    const rows = await nestingRows(query);
+    const start = (query.page - 1) * query.pageSize;
+
+    return {
+      rows: rows.slice(start, start + query.pageSize),
+      total: rows.length,
+      page: query.page,
+      pageSize: query.pageSize,
+    };
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch nesting"));
   }
+};
+
+export const exportNesting = async (
+  params: SearchParams,
+  columnKeys: string[],
+): Promise<string> => {
+  const rows = await nestingRows(parseTableQuery(params));
+
+  return exportRows({
+    name: "Nesting",
+    columns: NESTING_COLUMNS,
+    columnKeys,
+    rows: (limit, offset) =>
+      Promise.resolve(rows.slice(offset, offset + limit)),
+  });
 };
 
 /**

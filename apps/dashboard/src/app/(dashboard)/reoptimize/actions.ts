@@ -1,6 +1,6 @@
 "use server";
 
-import { describeError, describeOrderType } from "@/lib/helpers";
+import { describeError } from "@/lib/helpers";
 import { db } from "@/db";
 import { Reoptimize, SelectReoptimize } from "@/db/schema/reoptimize";
 import { OrderItems, SelectOrderItems } from "@/db/schema/order-items";
@@ -12,7 +12,7 @@ import { desc, eq, getTableColumns, SQL } from "drizzle-orm";
 export type ReoptimizeListItem = SelectReoptimize & {
   orderId: SelectOrders["id"] | null;
   orderUuid: SelectOrders["uuid"] | null;
-  orderType: string; // composed from the order's type flags
+  orderType: SelectOrders["orderType"] | null;
   companyName: SelectCompanies["companyName"] | null;
   companyUuid: SelectCompanies["uuid"] | null;
   productUuid: SelectProducts["uuid"] | null;
@@ -63,13 +63,9 @@ const selectReoptimize = async (where?: SQL): Promise<ReoptimizeListItem[]> => {
       productName: Products.name,
       theoreticalWeight: Products.theoreticalWeight,
       theoreticalWeightUnit: Products.weightUnit,
-      // Raw order-type flags — composed into `orderType` below.
-      orderIsPickup: Orders.isPickup,
-      orderIsIncidental: Orders.isIncidental,
-      orderIsConsignment: Orders.isConsignment,
-      orderIsInternalProduction: Orders.isInternalProduction,
-      orderIsCustomerMaterial: Orders.isCustomerMaterial,
-      orderIsOverlength: Orders.isOverlength,
+      // The header's own type (Normal / Call-off / Rush), not the pick-up and
+      // consignment ticks it used to be composed from.
+      orderType: Orders.orderType,
     })
     .from(Reoptimize)
     .leftJoin(OrderItems, eq(Reoptimize.orderItemUuid, OrderItems.uuid))
@@ -81,29 +77,7 @@ const selectReoptimize = async (where?: SQL): Promise<ReoptimizeListItem[]> => {
     desc(Reoptimize.productionStartingDate),
   );
 
-  return rows.map((row) => {
-    const {
-      orderIsPickup,
-      orderIsIncidental,
-      orderIsConsignment,
-      orderIsInternalProduction,
-      orderIsCustomerMaterial,
-      orderIsOverlength,
-      ...rest
-    } = row;
-
-    return {
-      ...rest,
-      orderType: describeOrderType({
-        isPickup: orderIsPickup,
-        isIncidental: orderIsIncidental,
-        isConsignment: orderIsConsignment,
-        isInternalProduction: orderIsInternalProduction,
-        isCustomerMaterial: orderIsCustomerMaterial,
-        isOverlength: orderIsOverlength,
-      }),
-    };
-  });
+  return rows;
 };
 
 export const getReoptimize = async (): Promise<ReoptimizeListItem[]> => {

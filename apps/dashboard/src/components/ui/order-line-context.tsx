@@ -1,8 +1,12 @@
 import Link from "next/link";
 import { DetailField } from "@/components/ui/detail-field";
-import { OrderLineStatus, StockUnit } from "@/lib/enums";
+import { OrderLineStatus, OrderType, StockUnit } from "@/lib/enums";
 import { formatDateColumn, yesNo } from "@/lib/helpers";
-import { ORDER_LINE_STATUS_LABELS, STOCK_UNIT_LABELS } from "@/lib/labels";
+import {
+  ORDER_LINE_STATUS_LABELS,
+  ORDER_TYPE_LABELS,
+  STOCK_UNIT_LABELS,
+} from "@/lib/labels";
 
 /**
  * The order line a production/logistics planning row hangs off. Declared
@@ -13,7 +17,7 @@ import { ORDER_LINE_STATUS_LABELS, STOCK_UNIT_LABELS } from "@/lib/labels";
 export type OrderLineContextRow = {
   orderId: number | null;
   orderUuid: string | null;
-  orderType: string;
+  orderType: OrderType | null;
   companyName: string | null;
   companyUuid: string | null;
   productUuid: string | null;
@@ -59,7 +63,10 @@ export const OrderLineContext = ({ line }: Props) => (
           <p className="text-sm">—</p>
         )}
       </div>
-      <DetailField label="Order type" value={line.orderType} />
+      <DetailField
+        label="Order type"
+        value={line.orderType ? ORDER_TYPE_LABELS[line.orderType] : null}
+      />
       <div>
         <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
           Customer

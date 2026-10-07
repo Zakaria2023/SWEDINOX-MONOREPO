@@ -14,6 +14,7 @@ import {
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
   ORDER_LINE_STATUS_LABELS,
+  ORDER_TYPE_LABELS,
   SALES_UNIT_LABELS,
   STOCK_UNIT_LABELS,
 } from "@/lib/labels";
@@ -134,7 +135,7 @@ export const ReoptimizeTable = ({ rows }: Props) => (
                   )}
                 </TableCell>
                 <TableCell className="whitespace-nowrap">
-                  {row.orderType}
+                  {row.orderType ? ORDER_TYPE_LABELS[row.orderType] : "—"}
                 </TableCell>
                 <TableCell className="text-right">
                   <Link
