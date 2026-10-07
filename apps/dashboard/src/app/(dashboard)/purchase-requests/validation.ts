@@ -126,3 +126,25 @@ export const DEFAULT_PURCHASE_REQUEST: PurchaseRequestFormValues = {
 
   items: [DEFAULT_PURCHASE_REQUEST_ITEM],
 };
+
+/**
+ * `Purchase order` on the request's toolbar: order outright from one supplier
+ * at prices already agreed, skipping the quote round.
+ */
+export const purchaseRequestOrderSchema = z.object({
+  requestUuid: z.string().min(1, "Purchase request is required"),
+  supplierUuid: z.string().min(1, "Choose the supplier to order from"),
+  prices: z.array(
+    z.object({
+      purchaseRequestItemUuid: z.string().min(1),
+      netPrice: z
+        .string()
+        .trim()
+        .refine((value) => Number(value) > 0, "Enter the agreed net price"),
+    }),
+  ),
+});
+
+export type PurchaseRequestOrderFormValues = z.infer<
+  typeof purchaseRequestOrderSchema
+>;

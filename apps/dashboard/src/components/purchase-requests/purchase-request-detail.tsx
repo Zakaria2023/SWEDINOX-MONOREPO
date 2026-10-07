@@ -8,6 +8,7 @@ import {
 } from "@/app/(dashboard)/purchase-requests/actions";
 import { CompanyOption } from "@/app/(dashboard)/companies/actions";
 import { Button } from "@/components/shadcn/button";
+import { PurchaseRequestOrderForm } from "@/components/purchase-requests/purchase-request-order-form";
 import {
   Table,
   TableBody,
@@ -326,6 +327,14 @@ export const PurchaseRequestDetailView = ({
               : `Request ${selected.length || ""} quote${selected.length === 1 ? "" : "s"}`}
           </Button>
         </div>
+      )}
+
+      {/* ── Or order outright ──────────────────────────────────────────── */}
+      {!isClosed && (
+        <PurchaseRequestOrderForm
+          request={request}
+          supplierOptions={supplierOptions}
+        />
       )}
     </div>
   );

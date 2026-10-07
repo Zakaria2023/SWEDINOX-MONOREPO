@@ -24,6 +24,10 @@ import { Products, SelectProducts } from "@/db/schema/products";
 import { resolveCompanyType } from "@/app/(dashboard)/companies/actions";
 import { syncPurchaseLineReceiptDates } from "@/lib/server/purchase-lines";
 import {
+  PurchaseRequestOrderFormValues,
+  purchaseRequestOrderSchema,
+} from "@/app/(dashboard)/purchase-requests/validation";
+import {
   amountForWeight,
   canEditPurchaseRequestLines,
   describeError,
@@ -336,11 +340,15 @@ export const getOrderLinesNeedingMaterial = async (): Promise<
  * carries none: it is the question, and this is someone answering it directly.
  */
 export const convertPurchaseRequestToOrder = async (
-  requestUuid: string,
-  supplierUuid: string,
-  prices: { purchaseRequestItemUuid: string; netPrice: string }[] = [],
+  _prevState: PurchaseRequestActionResult,
+  data: PurchaseRequestOrderFormValues,
 ): Promise<PurchaseRequestActionResult> => {
   const orderUuid = generateUuid();
+  const parsed = purchaseRequestOrderSchema.safeParse(data);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
+  }
+  const { requestUuid, supplierUuid, prices } = parsed.data;
   try {
     const [request] = await db
       .select()
@@ -486,11 +494,6 @@ export const convertPurchaseRequestToOrder = async (
     revalidatePath("/purchase-requests");
     revalidatePath(`/purchase-requests/${requestUuid}`);
     revalidatePath("/purchase-orders");
-    return {
-      success: true,
-      purchaseRequestUuid: requestUuid,
-      purchaseOrderUuid: orderUuid,
-    };
   } catch (error) {
     return {
       error:
@@ -499,6 +502,7 @@ export const convertPurchaseRequestToOrder = async (
           : "Failed to turn this request into a purchase order",
     };
   }
+  redirect(`/purchase-orders/${orderUuid}`);
 };
 
 // Fans a request out to the suppliers being asked: one quote each, carrying the
