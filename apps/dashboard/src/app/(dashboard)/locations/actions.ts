@@ -6,8 +6,10 @@ import {
   SelectWarehouses,
   Warehouses,
 } from "@/db/schema/warehouses";
+import { Products, SelectProducts } from "@/db/schema/products";
+import { ProductPreferredLocations } from "@/db/schema/product-details";
 import { describeError, generateUuid } from "@/lib/helpers";
-import { and, asc, desc, eq, isNotNull } from "drizzle-orm";
+import { and, asc, desc, eq, getTableColumns, isNotNull, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/mysql-core";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -32,6 +34,24 @@ export type LocationActionResult = {
 
 export type LocationOption = Pick<SelectWarehouses, "uuid" | "name">;
 
+/**
+ * One row of `Locations` — the reference's 11 columns (1 940 locations,
+ * exports/locations.tsv) on top of the location's own settings.
+ */
+export type LocationListItem = SelectWarehouses & {
+  subsectionName: SelectWarehouses["name"] | null;
+  warehouseName: SelectWarehouses["name"] | null;
+  // Computed from the products that prefer this location: one product names
+  // itself, several read `Multiple products` as the reference's `Meerdere
+  // artikelen` does.
+  preferredCount: number;
+  preferredProductCode: SelectProducts["productCode"] | null;
+  preferredProductName: SelectProducts["name"] | null;
+  preferredLength: SelectProducts["length"] | null;
+  preferredWidth: SelectProducts["widthDiameter"] | null;
+  restockLocationName: SelectWarehouses["name"] | null;
+};
+
 /** Locations as a picker needs them — identity only. */
 export const getLocationsForSelect = async (): Promise<LocationOption[]> =>
   db
@@ -42,11 +62,47 @@ export const getLocationsForSelect = async (): Promise<LocationOption[]> =>
     )
     .orderBy(asc(Warehouses.name));
 
-export const getLocations = async (): Promise<SelectWarehouses[]> => {
+export const getLocations = async (): Promise<LocationListItem[]> => {
+  const Subsection = alias(Warehouses, "subsection");
+  const Warehouse = alias(Warehouses, "warehouse");
+  const Restock = alias(Warehouses, "restock");
+  // The first product to prefer the location stands for it.
+  const firstPreference = sql`(
+    SELECT ${ProductPreferredLocations.uuid} FROM ${ProductPreferredLocations}
+    WHERE ${ProductPreferredLocations.locationUuid} = ${Warehouses.uuid}
+    ORDER BY ${ProductPreferredLocations.preference}, ${ProductPreferredLocations.id}
+    LIMIT 1
+  )`;
   try {
     return await db
-      .select()
+      .select({
+        ...getTableColumns(Warehouses),
+        subsectionName: Subsection.name,
+        warehouseName: sql<
+          string | null
+        >`COALESCE(${Warehouse.name}, ${Subsection.name})`,
+        preferredCount: sql<number>`(
+          SELECT COUNT(*) FROM ${ProductPreferredLocations}
+          WHERE ${ProductPreferredLocations.locationUuid} = ${Warehouses.uuid}
+        )`.mapWith(Number),
+        preferredProductCode: Products.productCode,
+        preferredProductName: Products.name,
+        preferredLength: Products.length,
+        preferredWidth: Products.widthDiameter,
+        restockLocationName: Restock.name,
+      })
       .from(Warehouses)
+      .leftJoin(Subsection, eq(Warehouses.parentUuid, Subsection.uuid))
+      .leftJoin(Warehouse, eq(Subsection.parentUuid, Warehouse.uuid))
+      .leftJoin(
+        ProductPreferredLocations,
+        eq(ProductPreferredLocations.uuid, firstPreference),
+      )
+      .leftJoin(Products, eq(ProductPreferredLocations.productUuid, Products.uuid))
+      .leftJoin(
+        Restock,
+        eq(ProductPreferredLocations.restockLocationUuid, Restock.uuid),
+      )
       .where(
         and(isNotNull(Warehouses.parentUuid), eq(Warehouses.type, "location")),
       )

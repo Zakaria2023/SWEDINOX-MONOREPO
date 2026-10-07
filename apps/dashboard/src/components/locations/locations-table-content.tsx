@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { SelectWarehouses } from "@/db";
+import { LocationListItem } from "@/app/(dashboard)/locations/actions";
 import {
   Table,
   TableBody,
@@ -33,7 +33,10 @@ import { TableNewLink } from "@/components/ui/table-new-link";
 type ColumnKey =
   | "id"
   | "name"
+  | "subsectionName"
+  | "warehouseName"
   | "pickingSequence"
+  | "sortOrder"
   | "locationType"
   | "sellable"
   | "pickable"
@@ -42,7 +45,12 @@ type ColumnKey =
   | "blocked"
   | "blockReason"
   | "blockedForOptimization"
-  | "limitedDimensions";
+  | "limitedDimensions"
+  | "preferredProduct"
+  | "preferredProductName"
+  | "preferredLength"
+  | "preferredWidth"
+  | "restockLocation";
 
 const ALL_COLUMNS: Array<{
   defaultVisible: boolean;
@@ -50,9 +58,14 @@ const ALL_COLUMNS: Array<{
   label: string;
 }> = [
   { key: "id", label: "Code", defaultVisible: true },
-  { key: "name", label: "Name", defaultVisible: true },
-  { key: "pickingSequence", label: "Picking Sequence", defaultVisible: true },
-  { key: "locationType", label: "Location Type", defaultVisible: true },
+  // The reference's 11, in its order, translated from its Dutch headings.
+  { key: "name", label: "Location name", defaultVisible: true },
+  { key: "subsectionName", label: "Subsection name", defaultVisible: true },
+  { key: "warehouseName", label: "Warehouse name", defaultVisible: true },
+  { key: "pickingSequence", label: "Picking sequence", defaultVisible: true },
+  // `1` on 1 911 of 1 940 reference locations and kept nowhere here.
+  { key: "sortOrder", label: "Sort order", defaultVisible: false },
+  { key: "locationType", label: "Location type", defaultVisible: true },
   // What the type means. Derived from it, not stored: a pick face is walked to
   // and sellable, a scrap heap is neither.
   { key: "sellable", label: "Sellable", defaultVisible: true },
@@ -71,10 +84,27 @@ const ALL_COLUMNS: Array<{
     label: "Limited Dimensions",
     defaultVisible: false,
   },
+  {
+    key: "preferredProduct",
+    label: "Preferred location product code",
+    defaultVisible: true,
+  },
+  {
+    key: "preferredProductName",
+    label: "Product description",
+    defaultVisible: false,
+  },
+  { key: "preferredLength", label: "Length", defaultVisible: false },
+  { key: "preferredWidth", label: "Width", defaultVisible: false },
+  {
+    key: "restockLocation",
+    label: "Replenishment location",
+    defaultVisible: false,
+  },
 ];
 
 type Props = {
-  locations: SelectWarehouses[];
+  locations: LocationListItem[];
 };
 
 export const LocationsTable = ({ locations }: Props) => {
@@ -93,7 +123,7 @@ export const LocationsTable = ({ locations }: Props) => {
     (column) => columnVisibility[column.key],
   );
 
-  const renderCell = (location: SelectWarehouses, key: ColumnKey) => {
+  const renderCell = (location: LocationListItem, key: ColumnKey) => {
     switch (key) {
       case "id":
         return (
@@ -111,6 +141,48 @@ export const LocationsTable = ({ locations }: Props) => {
               {location.name}
             </Link>
           </TableCell>
+        );
+      case "subsectionName":
+        return <TableCell key={key}>{location.subsectionName ?? "—"}</TableCell>;
+      case "warehouseName":
+        return <TableCell key={key}>{location.warehouseName ?? "—"}</TableCell>;
+      case "sortOrder":
+        return <TableCell key={key}>—</TableCell>;
+      case "preferredProduct":
+        return (
+          <TableCell key={key}>
+            {location.preferredCount > 1
+              ? "Multiple products"
+              : (location.preferredProductCode ?? "—")}
+          </TableCell>
+        );
+      case "preferredProductName":
+        return (
+          <TableCell key={key}>
+            {location.preferredCount === 1
+              ? (location.preferredProductName ?? "—")
+              : "—"}
+          </TableCell>
+        );
+      case "preferredLength":
+        return (
+          <TableCell key={key}>
+            {location.preferredCount === 1
+              ? (location.preferredLength ?? "—")
+              : "—"}
+          </TableCell>
+        );
+      case "preferredWidth":
+        return (
+          <TableCell key={key}>
+            {location.preferredCount === 1
+              ? (location.preferredWidth ?? "—")
+              : "—"}
+          </TableCell>
+        );
+      case "restockLocation":
+        return (
+          <TableCell key={key}>{location.restockLocationName ?? "—"}</TableCell>
         );
       case "pickingSequence":
         return (
