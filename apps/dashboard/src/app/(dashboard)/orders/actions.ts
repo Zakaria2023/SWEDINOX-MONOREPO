@@ -1225,6 +1225,7 @@ export const makeOrderFinal = async (
       const workOrderUuid = generateUuid();
 
       await tx.insert(WarehouseWorkOrders).values({
+        createdByUserId: userId,
         uuid: workOrderUuid,
         number,
         warehouseUuid,
@@ -1239,6 +1240,7 @@ export const makeOrderFinal = async (
 
       for (const [index, item] of items.entries()) {
         await tx.insert(WarehouseWorkOrderLines).values({
+          modifiedByUserId: userId,
           uuid: generateUuid(),
           workOrderUuid,
           lineNumber: item.lineNumber ?? index + 1,

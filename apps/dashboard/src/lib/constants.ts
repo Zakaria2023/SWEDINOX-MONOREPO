@@ -298,7 +298,7 @@ const VIEW_GROUPS: NavGroup[] = [
         href: "/warehouse-and-production-workorders",
       },
       { label: "Receipts", href: "/receipts" },
-      { label: "Warehouse workorders", href: "/warehouse-work-orders" },
+      { label: "Warehouse workorders", href: "/warehouse-work-order-lines" },
       { label: "Production workorders", href: "/production-workorders" },
       { label: "Production batches", href: "/production-batches" },
       { label: "Transport workorders", href: "/transport-workorders" },

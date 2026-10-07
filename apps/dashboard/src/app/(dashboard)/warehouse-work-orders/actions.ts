@@ -798,6 +798,7 @@ export const addWarehouseWorkOrderLine = async (
   input: AddWorkOrderLineInput,
 ): Promise<WarehouseWorkOrderActionResult> => {
   try {
+    const userId = (await currentUser())?.id ?? null;
     const [workOrder] = await db
       .select()
       .from(WarehouseWorkOrders)
@@ -859,6 +860,7 @@ export const addWarehouseWorkOrderLine = async (
     }
 
     await db.insert(WarehouseWorkOrderLines).values({
+      modifiedByUserId: userId,
       uuid: generateUuid(),
       workOrderUuid: input.workOrderUuid,
       lineNumber: input.lineNumber ?? null,
@@ -2096,6 +2098,7 @@ export const reportWarehouseWorkOrderLineCompletion = async (
         .update(WarehouseWorkOrderLines)
         .set({
           status: approveManually ? "ready" : "approved",
+          modifiedByUserId: userId,
           qtyActual: qtyActual.toFixed(3),
           kgActual: kgActual.toFixed(2),
           charge: reportedIdentities[0]?.charge ?? line.charge,
@@ -2212,7 +2215,7 @@ export const approveWarehouseWorkOrderLine = async (
     await db.transaction(async (tx) => {
       const [result] = await tx
         .update(WarehouseWorkOrderLines)
-        .set({ status: "approved" })
+        .set({ status: "approved", modifiedByUserId: user.id })
         .where(
           and(
             eq(WarehouseWorkOrderLines.uuid, lineUuid),

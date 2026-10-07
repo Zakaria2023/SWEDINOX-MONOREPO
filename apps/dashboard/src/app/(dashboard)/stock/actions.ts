@@ -896,6 +896,7 @@ export const relocateStockLot = async (
       const workOrderUuid = generateUuid();
 
       await tx.insert(WarehouseWorkOrders).values({
+        createdByUserId: userId,
         uuid: workOrderUuid,
         number,
         warehouseUuid,
@@ -905,6 +906,7 @@ export const relocateStockLot = async (
       });
 
       await tx.insert(WarehouseWorkOrderLines).values({
+        modifiedByUserId: userId,
         uuid: generateUuid(),
         workOrderUuid,
         lineNumber: 10,

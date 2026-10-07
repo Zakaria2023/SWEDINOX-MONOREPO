@@ -1191,6 +1191,7 @@ export const createUnloadingWorkOrder = async (
   purchaseOrderUuid: string,
 ): Promise<PurchaseOrderActionResult> => {
   try {
+    const userId = (await currentUser())?.id ?? null;
     const [order] = await db
       .select({
         id: PurchaseOrders.id,
@@ -1278,6 +1279,7 @@ export const createUnloadingWorkOrder = async (
       const number = await nextWorkOrderNumber(tx);
 
       await tx.insert(WarehouseWorkOrders).values({
+        createdByUserId: userId,
         uuid: workOrderUuid,
         number,
         warehouseUuid,
@@ -1298,6 +1300,7 @@ export const createUnloadingWorkOrder = async (
           quantity > 0 ? (kgPurchased * stillDue) / quantity : kgPurchased;
 
         await tx.insert(WarehouseWorkOrderLines).values({
+          modifiedByUserId: userId,
           uuid: generateUuid(),
           workOrderUuid,
           lineNumber: line.lineNumber ?? index + 1,

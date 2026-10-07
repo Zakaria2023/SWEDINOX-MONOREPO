@@ -73,6 +73,10 @@ export const WarehouseWorkOrders = mysqlTable(
     releasedAt: timestamp("released_at"),
     stockLabelsPrinted: boolean("stock_labels_printed").notNull().default(true),
 
+    // `Created by` on the reference's `Warehouse workorders` overview — filled
+    // on 11 560 of 11 625 rows. Clerk user id.
+    createdByUserId: varchar("created_by_user_id", { length: 255 }),
+
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
   },
@@ -170,6 +174,9 @@ export const WarehouseWorkOrderLines = mysqlTable(
     priority: int("priority"),
     rush: boolean("rush").notNull().default(false),
     options: varchar("options", { length: 255 }),
+    // `Modified by` on the same overview: whoever last released, reported or
+    // approved the line. Clerk user id.
+    modifiedByUserId: varchar("modified_by_user_id", { length: 255 }),
     qualityCode: varchar("quality_code", { length: 100 }),
     quality: varchar("quality", { length: 100 }),
     createdAt: timestamp("created_at").defaultNow().notNull(),
