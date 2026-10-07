@@ -1,113 +1,57 @@
 "use client";
 
-import { StockOnLocationItem } from "@/app/(dashboard)/stock-on-location/actions";
+import Link from "next/link";
+import { exportStockOnLocation } from "@/app/(dashboard)/stock-on-location/actions";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/shadcn/table";
-import { STOCK_UNIT_LABELS } from "@/lib/labels";
-import { formatLengthMm, formatMoney, formatNumber } from "@/lib/helpers";
-import { TableExportButton } from "@/components/ui/table-export-button";
+  STOCK_LOT_COLUMNS,
+  StockLotColumnKey,
+} from "@/app/(dashboard)/stock-on-location/columns";
+import { OverviewTable } from "@/components/ui/overview-table";
+import type { StockLotOverviewRow } from "@/lib/server/stock-lot-overview";
+import { Paged, TableFilterControl } from "@/lib/table-query";
 
 type Props = {
-  stock: StockOnLocationItem[];
+  page: Paged<StockLotOverviewRow>;
+  filters: TableFilterControl[];
 };
 
-export const StockOnLocationTable = ({ stock }: Props) => (
-  <div>
-    <div className="space-y-4">
-      <div className="flex justify-end">
-        <TableExportButton
-          tableId="stock-on-location-table"
-          fileName="stock-on-location"
-          sheetName="Stock on location"
-        />
-      </div>
-      <Table id="stock-on-location-table">
-        <TableHeader>
-          <TableRow>
-            <TableHead>Location</TableHead>
-            <TableHead className="text-center">Blocked</TableHead>
-            <TableHead>Product code</TableHead>
-            <TableHead>Quality</TableHead>
-            <TableHead>Stock category</TableHead>
-            <TableHead>Options</TableHead>
-            <TableHead className="text-right">Length</TableHead>
-            <TableHead className="text-right">Width</TableHead>
-            <TableHead className="text-right">Thickness</TableHead>
-            <TableHead className="text-right">Stock (StkU)</TableHead>
-            <TableHead className="text-right">Reserved</TableHead>
-            <TableHead className="text-right">Available</TableHead>
-            <TableHead>StkU</TableHead>
-            <TableHead className="text-right">Stock (Kg)</TableHead>
-            <TableHead>Charge</TableHead>
-            <TableHead>Bundle</TableHead>
-            <TableHead>Internal charge</TableHead>
-            <TableHead>Supplier</TableHead>
-            <TableHead>Receipt date</TableHead>
-            <TableHead className="text-right">Stock (€)</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {stock.length === 0 ? (
-            <TableRow>
-              <TableCell
-                colSpan={20}
-                className="h-24 text-center text-muted-foreground"
-              >
-                No stock on location found.
-              </TableCell>
-            </TableRow>
-          ) : (
-            stock.map((row) => (
-              <TableRow key={row.uuid}>
-                <TableCell>{row.locationName ?? "—"}</TableCell>
-                <TableCell className="text-center">
-                  {row.blocked ? "Yes" : ""}
-                </TableCell>
-                <TableCell className="font-medium">
-                  {row.productCode ?? "—"}
-                </TableCell>
-                <TableCell>{row.quality ?? "—"}</TableCell>
-                <TableCell>{row.stockCategory ?? "—"}</TableCell>
-                <TableCell>{row.options ?? "—"}</TableCell>
-                <TableCell className="text-right">
-                  {formatLengthMm(row.lengthMm)}
-                </TableCell>
-                <TableCell className="text-right">
-                  {row.widthMm ?? "—"}
-                </TableCell>
-                <TableCell className="text-right">
-                  {row.thicknessMm ?? "—"}
-                </TableCell>
-                <TableCell className="text-right">{row.quantity}</TableCell>
-                <TableCell className="text-right">
-                  {row.reservedQuantity}
-                </TableCell>
-                <TableCell className="text-right">
-                  {formatNumber(row.available)}
-                </TableCell>
-                <TableCell>
-                  {row.unit ? STOCK_UNIT_LABELS[row.unit] : "—"}
-                </TableCell>
-                <TableCell className="text-right">{row.quantityKg}</TableCell>
-                <TableCell>{row.charge ?? "—"}</TableCell>
-                <TableCell>{row.bundle ?? "—"}</TableCell>
-                <TableCell>{row.internalCharge ?? "—"}</TableCell>
-                <TableCell>{row.supplierName ?? "—"}</TableCell>
-                <TableCell>{row.receiptDate ?? "—"}</TableCell>
-                <TableCell className="text-right whitespace-nowrap">
-                  {formatMoney(row.stockValue)}
-                </TableCell>
-              </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
-    </div>
-  </div>
+export const STOCK_LOT_SORTABLE: Partial<Record<StockLotColumnKey, string>> = {
+  productCode: "productCode",
+  location: "location",
+  quantity: "quantity",
+  quantityKg: "quantityKg",
+  receiptDate: "receiptDate",
+  createdAt: "createdAt",
+  updatedAt: "updatedAt",
+};
+
+/** The product code opens the lot, as `Show product` does in the reference. */
+export const renderStockLotCell = (
+  row: StockLotOverviewRow,
+  key: StockLotColumnKey,
+) =>
+  key === "productCode" ? (
+    <Link
+      href={`/stock/${row.uuid}`}
+      className="font-medium underline-offset-4 hover:underline"
+    >
+      {row.productCode ?? "—"}
+    </Link>
+  ) : undefined;
+
+export const StockOnLocationTable = ({ page, filters }: Props) => (
+  <OverviewTable
+    page={page}
+    filters={filters}
+    columns={STOCK_LOT_COLUMNS}
+    sortable={STOCK_LOT_SORTABLE}
+    rowKey={(row) => row.uuid}
+    renderCell={renderStockLotCell}
+    exportAction={exportStockOnLocation}
+    fileName="stock-on-location"
+    searchPlaceholder="Search product, charge or bundle…"
+    emptyText="No stock on location found."
+    singular="lot"
+    plural="lots"
+  />
 );

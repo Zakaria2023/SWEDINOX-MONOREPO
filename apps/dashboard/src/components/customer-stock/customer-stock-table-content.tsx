@@ -1,116 +1,33 @@
 "use client";
 
-import Link from "next/link";
-import { CustomerStockItem } from "@/app/(dashboard)/customer-stock/actions";
+import { exportCustomerStock } from "@/app/(dashboard)/customer-stock/actions";
+import { CUSTOMER_STOCK_LOT_COLUMNS } from "@/app/(dashboard)/stock-on-location/columns";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/shadcn/table";
-import { STOCK_UNIT_LABELS } from "@/lib/labels";
-import { TableExportButton } from "@/components/ui/table-export-button";
+  renderStockLotCell,
+  STOCK_LOT_SORTABLE,
+} from "@/components/stock-on-location/stock-on-location-table-content";
+import { OverviewTable } from "@/components/ui/overview-table";
+import type { StockLotOverviewRow } from "@/lib/server/stock-lot-overview";
+import { Paged, TableFilterControl } from "@/lib/table-query";
 
 type Props = {
-  stock: CustomerStockItem[];
+  page: Paged<StockLotOverviewRow>;
+  filters: TableFilterControl[];
 };
 
-export const CustomerStockTable = ({ stock }: Props) => (
-  <div>
-    <div className="space-y-4">
-      <div className="flex justify-end">
-        <TableExportButton
-          tableId="customer-stock-table"
-          fileName="customer-stock"
-          sheetName="Customer stock on location"
-        />
-      </div>
-      <Table id="customer-stock-table">
-        <TableHeader>
-          <TableRow>
-            <TableHead>Owner</TableHead>
-            <TableHead>Location</TableHead>
-            <TableHead>Product code</TableHead>
-            <TableHead>Quality</TableHead>
-            <TableHead>Stock category</TableHead>
-            <TableHead className="text-right">Length</TableHead>
-            <TableHead className="text-right">Width</TableHead>
-            <TableHead className="text-right">Thickness</TableHead>
-            <TableHead className="text-right">Stock (StkU)</TableHead>
-            <TableHead className="text-right">Available</TableHead>
-            <TableHead>StkU</TableHead>
-            <TableHead className="text-right">Stock (Kg)</TableHead>
-            <TableHead>Charge</TableHead>
-            <TableHead>Supplier</TableHead>
-            <TableHead className="text-right">Valuation price</TableHead>
-            <TableHead className="text-right">Stock (€)</TableHead>
-            <TableHead>Remark</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {stock.length === 0 ? (
-            <TableRow>
-              <TableCell
-                colSpan={17}
-                className="h-24 text-center text-muted-foreground"
-              >
-                No customer stock found.
-              </TableCell>
-            </TableRow>
-          ) : (
-            stock.map((row) => {
-              const available = (
-                Number(row.quantity) - Number(row.reservedQuantity)
-              ).toFixed(3);
-
-              return (
-                <TableRow key={row.uuid}>
-                  <TableCell className="font-medium">
-                    <Link
-                      href={`/stock/${row.uuid}`}
-                      className="text-primary hover:underline"
-                    >
-                      {row.ownerName ?? "Stock lot"}
-                    </Link>
-                  </TableCell>
-                  <TableCell>{row.locationName ?? "—"}</TableCell>
-                  <TableCell>{row.productCode ?? "—"}</TableCell>
-                  <TableCell>{row.quality ?? "—"}</TableCell>
-                  <TableCell>{row.stockCategory ?? "—"}</TableCell>
-                  <TableCell className="text-right">
-                    {row.lengthMm ?? "—"}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {row.widthMm ?? "—"}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {row.thicknessMm ?? "—"}
-                  </TableCell>
-                  <TableCell className="text-right">{row.quantity}</TableCell>
-                  <TableCell className="text-right">{available}</TableCell>
-                  <TableCell>
-                    {row.unit ? STOCK_UNIT_LABELS[row.unit] : "—"}
-                  </TableCell>
-                  <TableCell className="text-right">{row.quantityKg}</TableCell>
-                  <TableCell>{row.charge ?? "—"}</TableCell>
-                  <TableCell>{row.supplierName ?? "—"}</TableCell>
-                  <TableCell className="text-right whitespace-nowrap">
-                    € {row.valuationPrice}
-                  </TableCell>
-                  <TableCell className="text-right whitespace-nowrap">
-                    € {row.valuationEuro}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {row.remark ?? "—"}
-                  </TableCell>
-                </TableRow>
-              );
-            })
-          )}
-        </TableBody>
-      </Table>
-    </div>
-  </div>
+export const CustomerStockTable = ({ page, filters }: Props) => (
+  <OverviewTable
+    page={page}
+    filters={filters}
+    columns={CUSTOMER_STOCK_LOT_COLUMNS}
+    sortable={STOCK_LOT_SORTABLE}
+    rowKey={(row) => row.uuid}
+    renderCell={renderStockLotCell}
+    exportAction={exportCustomerStock}
+    fileName="customer-stock-on-location"
+    searchPlaceholder="Search product, charge or bundle…"
+    emptyText="No customer stock on location."
+    singular="lot"
+    plural="lots"
+  />
 );
