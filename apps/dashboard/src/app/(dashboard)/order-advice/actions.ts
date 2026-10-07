@@ -190,6 +190,9 @@ export type OrderAdviceRow = {
   consumptionLastYearKg: number;
   avgMonthlyConsumptionLast3Months: number | null;
   avgMonthlyConsumptionPreviousYear: number | null;
+  avgMonthlyConsumptionPreviousYearKg: number;
+  /** The average the min/max factors run on, to one decimal. */
+  avgMonthlyConsumptionLastYear: number | null;
   avgMonthlyConsumptionLast2Years: number | null;
   avgMonthlyConsumptionLast2YearsKg: number;
   avgMonthlyConsumptionLast3Years: number | null;
@@ -894,6 +897,9 @@ const orderAdviceRows =
             ),
             12,
           ),
+          avgMonthlyConsumptionPreviousYearKg:
+            (consumption?.previousYearKg ?? 0) / 12,
+          avgMonthlyConsumptionLastYear,
           avgMonthlyConsumptionLast2Years: oneDecimal(
             demandInPurchaseUnit(
               consumption?.last2YearsQty ?? 0,

@@ -90,7 +90,9 @@ export type OrderAdviceColumnKey =
   | "adviceQtyRounded"
   | "replacementPrice"
   | "amount"
-  | "turnoverRate";
+  | "turnoverRate"
+  | "avgMonthlyConsumptionLastYear"
+  | "avgMonthlyConsumptionPreviousYearKg";
 
 export const ORDER_ADVICE_COLUMNS: Array<
   ExportColumn<OrderAdviceRow, OrderAdviceColumnKey>
@@ -345,13 +347,13 @@ export const ORDER_ADVICE_COLUMNS: Array<
   },
   {
     key: "minStockFixedValue",
-    label: "Min. Stk. Fixed value",
+    label: "Min. Stk. Fixed value (Pur.U.)",
     defaultVisible: false,
     value: (row) => numberCell(row.minStockFixedValue),
   },
   {
     key: "minStockFactor",
-    label: "Min. Stk. Factor",
+    label: "Min. Stk. Factor Avg.Mon.Cons.",
     defaultVisible: false,
     value: (row) => numberCell(row.minStockFactor),
   },
@@ -363,13 +365,13 @@ export const ORDER_ADVICE_COLUMNS: Array<
   },
   {
     key: "maxStockFixedValue",
-    label: "Max. Stock Fixed value",
+    label: "Max. Stock Fixed value (Pur.U.)",
     defaultVisible: false,
     value: (row) => numberCell(row.maxStockFixedValue),
   },
   {
     key: "maxStockFactor",
-    label: "Max. Stock Factor",
+    label: "Max. Stock Factor Avg.Month.Consumption",
     defaultVisible: false,
     value: (row) => numberCell(row.maxStockFactor),
   },
@@ -447,7 +449,7 @@ export const ORDER_ADVICE_COLUMNS: Array<
   // ── Demand ─────────────────────────────────────────────────────────────
   {
     key: "consumptionPreviousMonth",
-    label: "Consumption previous month (Pur.U.)",
+    label: "Consumption previous month",
     defaultVisible: false,
     value: (row) => numberCell(row.consumptionPreviousMonth),
   },
@@ -477,15 +479,27 @@ export const ORDER_ADVICE_COLUMNS: Array<
   },
   {
     key: "avgMonthlyConsumptionLast3Months",
-    label: "Avg. Monthly consumption last 3 months",
+    label: "Avg. Monthly consumption last 3 months (Pur.U.)",
     defaultVisible: false,
     value: (row) => numberCell(row.avgMonthlyConsumptionLast3Months),
+  },
+  {
+    key: "avgMonthlyConsumptionLastYear",
+    label: "Avg. Monthly consumption last year (Pur.U.)",
+    defaultVisible: false,
+    value: (row) => numberCell(row.avgMonthlyConsumptionLastYear),
   },
   {
     key: "avgMonthlyConsumptionPreviousYear",
     label: "Avg. Monthly consumption previous year",
     defaultVisible: false,
     value: (row) => numberCell(row.avgMonthlyConsumptionPreviousYear),
+  },
+  {
+    key: "avgMonthlyConsumptionPreviousYearKg",
+    label: "Avg. Monthly consumption previous year (Kg)",
+    defaultVisible: false,
+    value: (row) => numberCell(row.avgMonthlyConsumptionPreviousYearKg),
   },
   {
     key: "avgMonthlyConsumptionLast2Years",

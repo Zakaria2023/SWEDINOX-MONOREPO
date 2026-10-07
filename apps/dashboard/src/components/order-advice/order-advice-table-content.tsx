@@ -19,6 +19,7 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { ColumnSelector } from "@/components/ui/column-selector";
+import { ExportValueCell } from "@/components/ui/export-value-cell";
 import { PagedTableExportButton } from "@/components/ui/table-export-button";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { TableSortHeader } from "@/components/ui/table-sort-header";
@@ -240,6 +241,12 @@ export const OrderAdviceTable = ({ page, filters }: Props) => {
             {orDash(row[key])}
           </TableCell>
         );
+      default: {
+        const column = ORDER_ADVICE_COLUMNS.find((col) => col.key === key);
+        return (
+          <ExportValueCell key={key} value={column ? column.value(row) : null} />
+        );
+      }
     }
   };
 
