@@ -1,15 +1,32 @@
 "use server";
 
-import { Paged, TableQuery } from "@/lib/table-query";
+import {
+  Paged,
+  parseTableQuery,
+  SearchParams,
+  TableQuery,
+} from "@/lib/table-query";
 
 import { db } from "@/db";
 import {
   OrderItemOptions,
   SelectOrderItemOptions,
 } from "@/db/schema/order-item-options";
-import { OrderItems } from "@/db/schema/order-items";
-import { Orders } from "@/db/schema/orders";
-import { Products } from "@/db/schema/products";
+import { OrderItems, SelectOrderItems } from "@/db/schema/order-items";
+import { Orders, SelectOrders } from "@/db/schema/orders";
+import { Products, SelectProducts } from "@/db/schema/products";
+import { Companies, SelectCompanies } from "@/db/schema/companies";
+import { CompanyAddresses } from "@/db/schema/company-addresses";
+import { OPTION_LINE_COLUMNS } from "@/app/(dashboard)/options/columns";
+import { orderLineStatuses, orderTypes } from "@/lib/enums";
+import { exportRows } from "@/lib/server/excel";
+import {
+  enumFilter,
+  relationFilter,
+  runPaged,
+  tableOrderBy,
+  tableWhere,
+} from "@/lib/server/table-query";
 import { buildOrderSummary } from "@/app/(dashboard)/orders/actions";
 import { RevenueGroups, SelectRevenueGroups } from "@/db/schema/revenue-groups";
 import {
@@ -22,12 +39,10 @@ import {
   generateUuid,
   moneyString,
   optionAmount,
-  profitMarginPercent,
   todayDateString,
 } from "@/lib/helpers";
 import {
   and,
-  asc,
   count,
   desc,
   eq,
@@ -35,24 +50,49 @@ import {
   inArray,
   isNull,
   lte,
+  getTableColumns,
   or,
   sql,
 } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
-// One row per option, revenue group and line status — the "invoiced per option"
-// view of the legacy overview, which groups by option code.
-export type OptionRevenueRow = {
-  optionCode: SelectSalesOptions["code"];
-  optionName: SelectSalesOptions["name"];
+/** The customer's own city — its visiting address. */
+const visiting = db
+  .select({
+    companyUuid: CompanyAddresses.companyUuid,
+    city: sql<string | null>`MIN(${CompanyAddresses.city})`.as("option_city"),
+  })
+  .from(CompanyAddresses)
+  .where(sql`JSON_CONTAINS(${CompanyAddresses.category}, '"visit"')`)
+  .groupBy(CompanyAddresses.companyUuid)
+  .as("option_visiting");
+
+/**
+ * One row of `Options`: one option charged on one order line — the
+ * reference's grain, 2 890 rows × 31 columns
+ * (docs/reference-system/sales-options-and-calloff.md).
+ */
+export type OptionLineRow = SelectOrderItemOptions & {
+  optionCode: SelectSalesOptions["code"] | null;
+  optionName: SelectSalesOptions["name"] | null;
   revenueGroupNumber: SelectRevenueGroups["number"] | null;
   revenueGroupName: SelectRevenueGroups["name"] | null;
-  lineStatus: SelectOrderItemOptions["lineStatus"];
-  weightKg: number;
-  revenue: number;
-  profit: number;
-  profitMargin: number;
-  lineCount: number;
+  orderId: SelectOrders["id"] | null;
+  ourReference: SelectOrders["ourReference"] | null;
+  customerRef: SelectOrders["customerRef"] | null;
+  orderType: SelectOrders["orderType"] | null;
+  isConsignment: SelectOrders["isConsignment"] | null;
+  lineNumber: SelectOrderItems["lineNumber"] | null;
+  sourceType: SelectOrderItems["sourceType"] | null;
+  lengthMm: SelectOrderItems["lengthMm"] | null;
+  widthMm: SelectOrderItems["widthMm"] | null;
+  deliveryDate: SelectOrderItems["deliveryDate"] | null;
+  productCode: SelectProducts["productCode"] | null;
+  productName: SelectProducts["name"] | null;
+  customerCode: SelectCompanies["id"] | null;
+  customerName: SelectCompanies["companyName"] | null;
+  representative: SelectCompanies["representative"] | null;
+  city: string | null;
 };
 
 export type GenerateOptionChargesResult = {
@@ -61,61 +101,81 @@ export type GenerateOptionChargesResult = {
   createdCharges?: number;
 };
 
-const allOptionRevenue = async (): Promise<OptionRevenueRow[]> => {
-  try {
-    const rows = await db
+const OPTION_SEARCH = [
+  Products.productCode,
+  Companies.companyName,
+  SalesOptions.code,
+  SalesOptions.name,
+  Orders.customerRef,
+] as const;
+
+const OPTION_SORTABLE = {
+  order: Orders.id,
+  createdAt: OrderItemOptions.createdAt,
+  optionCode: SalesOptions.code,
+  customer: Companies.companyName,
+  amount: OrderItemOptions.amount,
+  deliveryDate: OrderItems.deliveryDate,
+};
+
+const OPTION_FILTERS = {
+  lineStatus: enumFilter(OrderItemOptions.lineStatus, orderLineStatuses),
+  option: relationFilter(OrderItemOptions.optionUuid),
+  revenueGroup: relationFilter(OrderItemOptions.revenueGroupUuid),
+  orderType: enumFilter(Orders.orderType, orderTypes),
+};
+
+const optionLineRows =
+  (query: TableQuery) =>
+  (limit: number, offset: number): Promise<OptionLineRow[]> =>
+    db
       .select({
+        ...getTableColumns(OrderItemOptions),
         optionCode: SalesOptions.code,
         optionName: SalesOptions.name,
         revenueGroupNumber: RevenueGroups.number,
         revenueGroupName: RevenueGroups.name,
-        lineStatus: OrderItemOptions.lineStatus,
-        weightKg: sql<string>`COALESCE(SUM(${OrderItemOptions.weightKg}), 0)`,
-        revenue: sql<string>`COALESCE(SUM(${OrderItemOptions.amount}), 0)`,
-        profit: sql<string>`COALESCE(SUM(${OrderItemOptions.profit}), 0)`,
-        lineCount: count(OrderItemOptions.uuid),
+        orderId: Orders.id,
+        ourReference: Orders.ourReference,
+        customerRef: Orders.customerRef,
+        orderType: Orders.orderType,
+        isConsignment: Orders.isConsignment,
+        lineNumber: OrderItems.lineNumber,
+        sourceType: OrderItems.sourceType,
+        lengthMm: OrderItems.lengthMm,
+        widthMm: OrderItems.widthMm,
+        deliveryDate: OrderItems.deliveryDate,
+        productCode: Products.productCode,
+        productName: Products.name,
+        customerCode: Companies.id,
+        customerName: Companies.companyName,
+        representative: Companies.representative,
+        city: visiting.city,
       })
       .from(OrderItemOptions)
-      .innerJoin(
-        SalesOptions,
-        eq(OrderItemOptions.optionUuid, SalesOptions.uuid),
-      )
+      .leftJoin(SalesOptions, eq(OrderItemOptions.optionUuid, SalesOptions.uuid))
       .leftJoin(
         RevenueGroups,
         eq(OrderItemOptions.revenueGroupUuid, RevenueGroups.uuid),
       )
-      .groupBy(
-        SalesOptions.code,
-        SalesOptions.name,
-        RevenueGroups.number,
-        RevenueGroups.name,
-        OrderItemOptions.lineStatus,
+      .leftJoin(OrderItems, eq(OrderItemOptions.orderItemUuid, OrderItems.uuid))
+      .leftJoin(Orders, eq(OrderItemOptions.orderUuid, Orders.uuid))
+      .leftJoin(Products, eq(OrderItems.productUuid, Products.uuid))
+      .leftJoin(Companies, eq(Orders.companyUuid, Companies.uuid))
+      .leftJoin(visiting, eq(visiting.companyUuid, Companies.uuid))
+      .where(
+        tableWhere({ query, search: OPTION_SEARCH, filters: OPTION_FILTERS }),
       )
       .orderBy(
-        asc(SalesOptions.code),
-        desc(sql`SUM(${OrderItemOptions.amount})`),
-      );
-
-    return rows.map((row) => {
-      const revenue = Number(row.revenue ?? 0);
-      const profit = Number(row.profit ?? 0);
-      return {
-        optionCode: row.optionCode,
-        optionName: row.optionName,
-        revenueGroupNumber: row.revenueGroupNumber,
-        revenueGroupName: row.revenueGroupName,
-        lineStatus: row.lineStatus,
-        weightKg: Number(row.weightKg ?? 0),
-        revenue,
-        profit,
-        profitMargin: profitMarginPercent(revenue, profit),
-        lineCount: Number(row.lineCount ?? 0),
-      };
-    });
-  } catch (error) {
-    throw new Error(describeError(error, "Failed to fetch option revenue"));
-  }
-};
+        ...tableOrderBy(
+          OPTION_SORTABLE,
+          query,
+          [desc(OrderItemOptions.createdAt)],
+          OrderItemOptions.id,
+        ),
+      )
+      .limit(limit)
+      .offset(offset);
 
 // Books the priced options onto the order lines that don't carry them yet.
 //
@@ -295,32 +355,50 @@ export const generateOptionCharges =
     }
   };
 
-/**
- * One page of the list.
- *
- * The rows are read in full and then sliced, because this screen is built from
- * more than one query and the grain is settled in code rather than in SQL.
- * What it stops is the screen rendering every row it has ever had.
- */
-export const getOptionRevenue = async (
+/** One page of `Options`, searched, filtered and sorted in SQL. */
+export const getOptionLines = async (
   query: TableQuery,
-): Promise<Paged<OptionRevenueRow>> => {
-  const rows = await allOptionRevenue();
-  const term = query.q?.toLowerCase() ?? null;
-  const matched = term
-    ? rows.filter((row) =>
-        Object.values(row as Record<string, unknown>).some(
-          (value) =>
-            typeof value === "string" && value.toLowerCase().includes(term),
-        ),
-      )
-    : rows;
-  const start = (query.page - 1) * query.pageSize;
-
-  return {
-    rows: matched.slice(start, start + query.pageSize),
-    total: matched.length,
-    page: query.page,
-    pageSize: query.pageSize,
-  };
+): Promise<Paged<OptionLineRow>> => {
+  try {
+    const where = tableWhere({
+      query,
+      search: OPTION_SEARCH,
+      filters: OPTION_FILTERS,
+    });
+    return await runPaged(query, {
+      rows: optionLineRows(query),
+      count: async () => {
+        const [row] = await db
+          .select({ value: count() })
+          .from(OrderItemOptions)
+          .leftJoin(
+            SalesOptions,
+            eq(OrderItemOptions.optionUuid, SalesOptions.uuid),
+          )
+          .leftJoin(
+            OrderItems,
+            eq(OrderItemOptions.orderItemUuid, OrderItems.uuid),
+          )
+          .leftJoin(Orders, eq(OrderItemOptions.orderUuid, Orders.uuid))
+          .leftJoin(Products, eq(OrderItems.productUuid, Products.uuid))
+          .leftJoin(Companies, eq(Orders.companyUuid, Companies.uuid))
+          .where(where);
+        return Number(row?.value ?? 0);
+      },
+    });
+  } catch (error) {
+    throw new Error(describeError(error, "Failed to fetch options"));
+  }
 };
+
+/** Every option line the current view matches, as a workbook. */
+export const exportOptionLines = async (
+  params: SearchParams,
+  columnKeys: string[],
+): Promise<string> =>
+  exportRows({
+    name: "Options",
+    columns: OPTION_LINE_COLUMNS,
+    columnKeys,
+    rows: optionLineRows(parseTableQuery(params)),
+  });
