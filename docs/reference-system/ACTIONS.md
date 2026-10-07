@@ -375,3 +375,45 @@ removed again.
 inline row — code `320`, the next ten; status `Provisional`; delivery date
 the order's (`10-9-2026`); category `Standaard`; product picked through the
 cell's `…` button.
+
+
+### `Lines → New` on the return — `Create Purchase Return order lines`, 7-10-2026
+
+A picker, not a blank row. Title **`Create Purchase Return order lines`**,
+buttons **`All receipts` · `OK`** (greyed until a row is ticked) **·
+`Cancel`**. Columns:
+
+`Is Sele…` ☐ · `Line num…` · `Receipt date` · **`Bill of lad…`** · `Qty` ·
+`U` · `Product` · `Length` · `Width` · **`Charge`**
+
+| Line | Receipt date | Bill of lading | Qty | Width | Charge |
+|---|---|---|---|---|---|
+| 220 | 8-9-2026 | `060523` | 1 ST | 350 | `25036/122` |
+| 220 | 8-9-2026 | `060523` | 2 ST | 350 | `25036/122` |
+| 230 | 8-9-2026 | `060523` | 2 ST | 300 | `25036/122` (×3 rows) |
+| 240 | 8-9-2026 | `060523` | 2 / 2 / 1 ST | 175 | `25036/122` |
+| 250 | 8-9-2026 | `060523` | 3 ST | 150 | **`25020/292`** |
+| 250 | 8-9-2026 | `060523` | 1 ST | 150 | `25036/122` |
+
+All `Aluminium coils A…`, length `999999`.
+
+🔑🔑 **A return line is picked per *receipt*, not per order line.** Line
+`220` appears twice and `230` three times — one row for each parcel that
+came in against it, each with its quantity, the **bill of lading** it
+arrived on and its **charge** (heat number). Line `250` holds two heats.
+So what goes back is a specific parcel of a specific heat on a specific
+delivery note, which is what a supplier needs to credit it.
+
+🔑 **The default list is one delivery, not the whole order.** Every row is
+bill of lading `060523` of 8-9-2026 — lines 220–250, the ones invoiced that
+day — though the order's `Received` lines 50–210 (26-8-2026) are also
+returnable. **`All receipts`** widens it. So the dialog opens on the latest
+delivery, which is the usual one to send back.
+
+⚠️ Context for that delivery: `IR950033` (17 lines, −8 752 kg, 8-9-2026)
+returned against this same order, and lines 260–290, ordered for
+10-9-2026, repeat 220–250's widths and quantities. Likely: the 8-9 delivery
+went back and was re-ordered. Not proved from these screens — why those
+receipts are still offered after a return is open.
+
+Cancelled; nothing added to `950034`.

@@ -328,7 +328,10 @@ greyed while any line is not yet received.
 1. Our purchase-return creation: does it start from a purchase order and
    fill these defaults? Does it open a complaint? (Grep `complaintRef` —
    ours is a free-text `varchar`; the reference issues a complaint number.)
-2. Return lines must reference a purchase order line, and only `received`
-   lines of that order may be picked.
+2. Return lines are picked **per receipt** — each row a reception/lot with
+   its quantity, bill of lading and charge (`Create Purchase Return order
+   lines`, 7-10-2026). Store the return line against the
+   `PurchaseLineReceivals` row (and its lot), not only the order line. The
+   picker opens on the latest delivery note and offers `All receipts`.
 3. Gate the two buttons as the reference does: partial return when any line
    is `received`; full return only when all are.
