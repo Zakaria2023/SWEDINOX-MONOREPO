@@ -284,3 +284,42 @@ and nowhere else. Do not build a type off the prefix.
 - `General ledger account# Stock` = `3000` on every row — the same account the
   lot carries.
 - `MutationQty` comes in **four units at once**: `StkU`, `Kg`, `€` and `M1`.
+
+
+---
+
+## ✅ G9 answered from this export, 7-10-2026 — an offcut keeps its parent's identity
+
+The 191 `Productie Rest production` rows are the offcuts. Read across:
+
+| | Rows |
+|---|---|
+| carry an `Internal charge` | 184 of 191 |
+| …and that internal charge also appears on the parent's other rows (a `Conversion`, an `Origin of production`, a `Levering To customer`) | **184 of 184** |
+| carry the parent's `Purchase order` (`IO100020`, `IO100049`, …) | 184 of 191 |
+| carry a `Charge` (heat number) | 105 of 191 |
+| `Supplier` blank | 7 of 191 |
+
+Four traced examples — offcut against a sibling row with the same internal
+charge:
+
+| Internal charge | Offcut | Sibling | Supplier on both | PO on both |
+|---|---|---|---|---|
+| `12BBFJ` | PC304L250 1000 × 310 | `Conversion` PK304L25021 2000 × 1000 | Outokumpu Stainles Oy | `IO100020` |
+| `18AJAI` | PC304200 1000 × 360 | `Origin of production` 1000 × 60 | Trinox Metal Sanayi | `IO100049` |
+| `18BAIB` | PCSA10500010 1000 × 869 | `Levering To customer` 130 × 50 | Henan Foshan Aluminium | `IO100041` |
+| `19DIGE` | PC316L100 1500 × 1219 | `Levering To customer` 178 × 45 | Dacapo Stainless, charge `ZC820` | `IO100028` |
+
+🔑🔑 **The offcut's `Supplier` is the original mill, not us.** It inherits
+the parent lot's internal charge, charge, purchase order and supplier, so a
+remnant traces back to the heat it was cut from — certificate and all. The
+seven blanks are offcuts of lots that had no supplier to begin with.
+
+⚠️ **121 of the 191 offcuts carry `MutationQty (€) = 0`** — the piece enters
+stock with kilos but no value on the mutation (46 200 kg in all, € 83.684
+across the 70 that do carry one). So the cost of a cut is not reliably split
+between the output and the offcut; often the whole cost stays with what was
+cut out. Worth checking against H10 when a cut is watched.
+
+⚠️ No offcut's work order also shows a `Productie Consumed` row in this
+export, so the parent is linked by internal charge, not by work order.

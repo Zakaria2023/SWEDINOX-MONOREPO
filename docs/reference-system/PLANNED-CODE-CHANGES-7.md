@@ -246,3 +246,17 @@ sales-return one, and show them in the purchase-orders overview with negative
 weight and amount, numbered in their own series. `purchaseOrderUuid` /
 `purchaseOrderReference` already exist for the link — make sure the overview
 shows the reference.
+
+## 16. 🔴 An offcut must inherit its parent lot's identity
+
+**What was found (G9, from `stock-mutations.tsv`).** All 184 offcuts with an
+internal charge share it with the lot they were cut from, and carry that
+lot's supplier, charge and purchase order. The certificate chain survives a
+saw cut.
+
+**What to build.** When a cut reports a remnant, the new `Stock` row copies
+`internalCharge`, `charge`, `plateNumber`, `supplierUuid` (or whatever holds
+the mill) and the receipt / purchase-order link from the consumed lot — never
+a fresh internal charge. Add a harness check: every remnant's internal charge
+equals its parent's. ⚠️ Value: the reference books 121 of 191 offcuts at
+€ 0; decide deliberately whether ours splits the cost by kilos instead.
