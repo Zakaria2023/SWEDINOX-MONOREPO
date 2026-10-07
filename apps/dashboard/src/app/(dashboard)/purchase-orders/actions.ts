@@ -1041,6 +1041,64 @@ export const makePurchaseOrderFinal = async (
 };
 
 /**
+ * `Send…` — mail the order to the supplier again. Making the order final
+ * already sends it once; this is for the supplier who lost it or a changed
+ * order. A send that reaches nobody is an error, not a silent success, and
+ * every attempt is logged.
+ */
+export const sendPurchaseOrder = async (
+  uuid: string,
+): Promise<PurchaseOrderActionResult> => {
+  try {
+    const [order] = await db
+      .select({
+        status: PurchaseOrders.status,
+        id: PurchaseOrders.id,
+        supplierUuid: PurchaseOrders.supplierUuid,
+      })
+      .from(PurchaseOrders)
+      .where(eq(PurchaseOrders.uuid, uuid))
+      .limit(1);
+
+    if (!order) {
+      return { error: "Purchase order not found." };
+    }
+    if (order.status === "provisional") {
+      return { error: "Make the purchase order final before sending it." };
+    }
+
+    const result = await sendPurchaseOrderEmail(uuid);
+    const user = await currentUser();
+    // Logged to `Communications` like every other send, delivered or not.
+    await mailDocument(
+      () => Promise.resolve(result),
+      `Purchase order ${order.id}`,
+      {
+        documentType: "purchase_order",
+        documentUuid: uuid,
+        companyUuid: order.supplierUuid,
+        userId: user?.id ?? null,
+      },
+    );
+
+    if (result.sent === 0) {
+      return {
+        error:
+          "Nothing was sent: the supplier has no e-mail address on the order's contact or the company.",
+      };
+    }
+
+    revalidatePath(`/purchase-orders/${uuid}`);
+    return { success: true, purchaseOrderUuid: uuid };
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error ? error.message : "Failed to send purchase order",
+    };
+  }
+};
+
+/**
  * `Pre-notify` — the supplier has advised when the goods are coming.
  *
  * Stamps the advised date on every reception of the order that has not arrived

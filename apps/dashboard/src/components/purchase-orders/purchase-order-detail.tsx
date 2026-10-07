@@ -2,13 +2,22 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { BadgeCheck, Building2, CalendarClock, CheckCircle2, Undo2, Warehouse } from "lucide-react";
+import {
+  BadgeCheck,
+  Building2,
+  CalendarClock,
+  CheckCircle2,
+  Mail,
+  Undo2,
+  Warehouse,
+} from "lucide-react";
 import {
   cancelPurchaseOrder,
   confirmPurchaseOrder,
   createUnloadingWorkOrder,
   makePurchaseOrderFinal,
   PurchaseOrderDetail,
+  sendPurchaseOrder,
 } from "@/app/(dashboard)/purchase-orders/actions";
 import { PreNotifyDialog } from "@/components/purchase-orders/pre-notify-dialog";
 import { startPurchaseReturnFromOrder } from "@/app/(dashboard)/purchase-return-orders/actions";
@@ -149,6 +158,15 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
           <Button
             type="button"
             variant="outline"
+            onClick={() => runAction(() => sendPurchaseOrder(purchaseOrder.uuid))}
+            disabled={isPending || isProvisional}
+          >
+            <Mail className="me-1.5 size-4" />
+            Send…
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
             onClick={handlePartReturn}
             disabled={isPending || !canPartReturn}
           >
@@ -283,6 +301,12 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
           <p className="text-sm">
             {formatDateColumn(purchaseOrder.preNotifiedAt)}
           </p>
+        </div>
+        <div>
+          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+            Mailed
+          </p>
+          <p className="text-sm">{purchaseOrder.isMailed ? "Yes" : "No"}</p>
         </div>
       </div>
 
