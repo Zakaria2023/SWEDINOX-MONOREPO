@@ -16,6 +16,7 @@ import { PurchaseQuotes } from "@/db/schema/purchase-quotes";
 import { PurchaseOrderItems } from "@/db/schema/purchase-order-items";
 import { PurchaseOrders } from "@/db/schema/purchase-orders";
 import { OrderItems, SelectOrderItems } from "@/db/schema/order-items";
+import { coverSalesLineWithPurchase } from "@/lib/server/cross-dock";
 import { Orders, SelectOrders } from "@/db/schema/orders";
 import { mailDocument, sendPurchaseOrderEmail } from "@/emails/documents";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
@@ -454,15 +455,19 @@ export const convertPurchaseRequestToOrder = async (
 
         const netPrice = Number(priceByItem.get(item.uuid) ?? 0);
         const quantity = item.quantity ?? "0.000";
+        const purchaseOrderItemUuid = generateUuid();
 
         await tx.insert(PurchaseOrderItems).values({
-          uuid: generateUuid(),
+          uuid: purchaseOrderItemUuid,
           purchaseOrderUuid: orderUuid,
           productUuid,
           quantity,
           qtyPlanned: quantity,
           lineNumber: item.lineNumber ?? index + 1,
-          sourceType: purchaseSourceTypeFor(request.pickupDropoffCdPurchases),
+          sourceType: purchaseSourceTypeFor(
+            request.pickupDropoffCdPurchases,
+            Boolean(item.forOrderItemUuid),
+          ),
           unit: item.unit,
           kgPurchased: item.kg,
           lengthMm: item.lengthMm,
@@ -479,6 +484,17 @@ export const convertPurchaseRequestToOrder = async (
             2,
           ),
         });
+
+        // The request's `For line`, carried onto the sale: this purchase line
+        // now covers that sales line, which is what `CD deliveries in
+        // progress` reads and what the receipt will reserve against.
+        if (item.forOrderItemUuid) {
+          await coverSalesLineWithPurchase(
+            tx,
+            item.forOrderItemUuid,
+            purchaseOrderItemUuid,
+          );
+        }
       }
 
       await syncPurchaseLineReceiptDates(tx, orderUuid);
@@ -622,6 +638,7 @@ export const convertPurchaseRequestToQuotes = async (
             thicknessMm: item.thicknessMm,
             purchaser: request.purchaser,
             ourReference: request.ourReference,
+            forOrderItemUuid: item.forOrderItemUuid,
             // netPrice and amount stay at zero: that is the supplier's answer,
             // not ours to fill in.
           });

@@ -69,6 +69,7 @@ import {
   ne,
   sql,
 } from "drizzle-orm";
+import { coverSalesLineWithPurchase } from "@/lib/server/cross-dock";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -864,13 +865,18 @@ export const convertPurchaseQuoteToOrder = async (
           throw new Error("A quote line lost its product while ordering.");
         }
 
+        const purchaseOrderItemUuid = generateUuid();
+
         await tx.insert(PurchaseOrderItems).values({
-          uuid: generateUuid(),
+          uuid: purchaseOrderItemUuid,
           purchaseOrderUuid: orderUuid,
           productUuid,
           lineNumber: item.lineNumber,
           status: "provisional",
-          sourceType: purchaseSourceTypeFor(quote.pickupDropoffCdPurchases),
+          sourceType: purchaseSourceTypeFor(
+            quote.pickupDropoffCdPurchases,
+            Boolean(item.forOrderItemUuid),
+          ),
           quantity: item.quantity ?? "0.000",
           qtyPlanned: item.quantity ?? "0.000",
           unit: item.unit,
@@ -887,6 +893,15 @@ export const convertPurchaseQuoteToOrder = async (
           priceUnit: item.priceUnit,
           amount: item.amount,
         });
+
+        // The request's `For line`, kept through the quote (C4).
+        if (item.forOrderItemUuid) {
+          await coverSalesLineWithPurchase(
+            tx,
+            item.forOrderItemUuid,
+            purchaseOrderItemUuid,
+          );
+        }
       }
 
       await syncPurchaseLineReceiptDates(tx, orderUuid);

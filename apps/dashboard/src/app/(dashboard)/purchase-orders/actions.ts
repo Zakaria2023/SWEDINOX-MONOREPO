@@ -210,6 +210,13 @@ export type PurchaseOrderItemDetail = {
   // price, but a lot received before purchase lines carried one reads zero —
   // which is precisely what needs correcting rather than hiding.
   stockValuationPrice: SelectStock["valuationPrice"] | null;
+  // 🔑 `For line`, the second column of the reference's grid: the line this
+  // purchase line was bought for. A sales line reads `O108183/10` (a `CD`
+  // purchase, 404299); another purchase line reads `IO400142/10` (the
+  // `Ex works Processor` return leg, 400143). Composed, so a plain string.
+  forLine: string | null;
+  // Where `For line` opens — the reference's tooltip reads `Open linked order`.
+  forLineHref: string | null;
 };
 
 // A goods receipt booked against this order — the "Product Receipt Documents"
@@ -772,6 +779,25 @@ export const getPurchaseOrderDetail = async (
       stockUuid: Stock.uuid,
       stockQuantity: Stock.quantity,
       stockStatus: Stock.status,
+      forLine: sql<string | null>`COALESCE(
+        (SELECT CONCAT('O', o.id, '/', oi.line_number)
+           FROM OrderItems oi JOIN Orders o ON o.uuid = oi.order_uuid
+          WHERE oi.purchase_order_item_uuid = ${PurchaseOrderItems.uuid}
+          ORDER BY oi.line_number LIMIT 1),
+        (SELECT CONCAT('IO', po2.id, '/', poi2.line_number * 10)
+           FROM PurchaseOrderItems poi2
+           JOIN PurchaseOrders po2 ON po2.uuid = poi2.purchase_order_uuid
+          WHERE poi2.uuid = ${PurchaseOrderItems.forPurchaseOrderItemUuid}
+          LIMIT 1))`,
+      forLineHref: sql<string | null>`COALESCE(
+        (SELECT CONCAT('/orders/', oi.order_uuid)
+           FROM OrderItems oi
+          WHERE oi.purchase_order_item_uuid = ${PurchaseOrderItems.uuid}
+          ORDER BY oi.line_number LIMIT 1),
+        (SELECT CONCAT('/purchase-orders/', poi2.purchase_order_uuid)
+           FROM PurchaseOrderItems poi2
+          WHERE poi2.uuid = ${PurchaseOrderItems.forPurchaseOrderItemUuid}
+          LIMIT 1))`,
     })
     .from(PurchaseOrderItems)
     .innerJoin(Products, eq(PurchaseOrderItems.productUuid, Products.uuid))

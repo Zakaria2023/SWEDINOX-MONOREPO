@@ -8161,17 +8161,23 @@ export const toFormString = (
  * than an omission.
  */
 /**
- * The line type a purchase order header implies for its lines.
+ * The line type a new purchase line defaults to.
  *
- * `Pick up/Drop-off CD-purchases` ticked on the header is the buying end of a
- * cross-dock — our lorry collects at the supplier and drops at the customer —
- * so a line raised under it is `CD` unless the buyer says otherwise. Nothing on
- * the header says `EXW`; that is chosen on the line, which is why this returns
- * a default rather than the answer.
+ * 🔴 Captured 8-10-2026 on purchase order `404299`: a `CD` line with
+ * `Pick up/Drop-off CD-purchases` **unticked**, delivered to our own yard,
+ * unloaded like any receipt, and raised `For line` `O108183/10`. So `CD` is not
+ * the header's tickbox — it is **bought for a named sales line**. The tickbox
+ * still defaults a line to `CD` (collect at the supplier, drop at the
+ * customer), but a line with a sales line behind it is `CD` either way.
+ *
+ * Nothing on the header says `EXW`; that is chosen on the line, which is why
+ * this returns a default rather than the answer.
  */
 export const purchaseSourceTypeFor = (
   pickupDropoffCdPurchases: boolean | null | undefined,
-): PurchaseSourceType => (pickupDropoffCdPurchases ? "cross_dock" : "stock");
+  boughtForSalesLine = false,
+): PurchaseSourceType =>
+  boughtForSalesLine || pickupDropoffCdPurchases ? "cross_dock" : "stock";
 
 export const enumOptions = <T extends string>(
   values: readonly T[],

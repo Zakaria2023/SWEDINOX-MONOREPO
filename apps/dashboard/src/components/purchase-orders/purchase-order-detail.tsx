@@ -330,6 +330,7 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
                   `M1(p)` · `Net Price` · `U`. */}
               <TableRow>
                 <TableHead className="text-right">Code</TableHead>
+                <TableHead>For line</TableHead>
                 {/* `Type` on the reference's grid: `Stk` · `CD` · `EXW`. */}
                 <TableHead>Type</TableHead>
                 <TableHead>Delivery date</TableHead>
@@ -356,7 +357,7 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
               {purchaseOrder.items.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={20}
+                    colSpan={21}
                     className="h-24 text-center text-muted-foreground"
                   >
                     No lines on this order.
@@ -374,6 +375,20 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
                   >
                     <TableCell className="text-right tabular-nums">
                       {item.lineNumber === null ? "—" : item.lineNumber * 10}
+                    </TableCell>
+                    <TableCell>
+                      {item.forLine && item.forLineHref ? (
+                        <Link
+                          href={item.forLineHref}
+                          title="Open linked order"
+                          className="underline-offset-4 hover:underline"
+                          onClick={(event) => event.stopPropagation()}
+                        >
+                          {item.forLine}
+                        </Link>
+                      ) : (
+                        orDash(item.forLine)
+                      )}
                     </TableCell>
                     <TableCell>{ORDER_SOURCE_TYPE_LABELS[item.sourceType]}</TableCell>
                     <TableCell>{formatDateColumn(item.receiptDate)}</TableCell>

@@ -28,6 +28,10 @@ export const PurchaseQuoteItems = mysqlTable(
     purchaseQuoteUuid: char("purchase_quote_uuid", { length: 36 }).notNull(),
     productUuid: char("product_uuid", { length: 36 }),
     revenueGroupUuid: char("revenue_group_uuid", { length: 36 }),
+    // The sales line this quote line is buying for — the request's `For
+    // line`, kept through the quote so the order it becomes is still `CD`
+    // and still covers that sale (PLANNED-CODE-CHANGES-8 C4).
+    forOrderItemUuid: char("for_order_item_uuid", { length: 36 }),
 
     lineNumber: int("line_number"),
     status: mysqlEnum("status", orderLineStatuses).default("in_progress"),
