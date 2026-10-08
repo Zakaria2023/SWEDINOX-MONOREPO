@@ -24,6 +24,7 @@ capture that proves it. Items are added as each capture lands.
 | C16 | `Confirm` takes a confirmation number, date and confirmed delivery date per line | `404299` J8 | 📋 ready |
 | C17 | `Pre-notify` takes a bill of lading, date and pre-notification code per reception | `404299` J8 | 📋 ready |
 | C18 | `Return` / `Par. return` are greyed on a received, mailed order | `404299` J8 | 🟡 rule to confirm |
+| C19 | `Product Receipt Documents` panel: attach a certificate / DoP to a purchase order | `404299` J8 | 📋 ready |
 | — | ~~Item 1 of -7: a `CD` line must not create a lot~~ | `404299` | ❎ withdrawn |
 
 ---
@@ -717,6 +718,49 @@ reserved. ⚠️ So the likely rule is that **a return needs unreserved received
 stock to send back**, but one order cannot prove it. Ours enables
 `Par. return` on any non-provisional order. Not changed until a second order
 settles it.
+
+### C19 · `Product Receipt Documents`, the certificate attach path (H11)
+
+The last panel on the purchase order, under `Previous orders`.
+
+- **Toolbar:** `New` · `Delete` · `Toon` (show, greyed until a row has a
+  document) · `View`.
+- **Columns:** `Soort` · `Producent` · `Certificaattype` · `Code` ·
+  `Document` · `Order regel` · `Ontvangst regel`.
+- **`Soort` is a dropdown of three: `DoP` · `Certificate` · `Other`.** DoP is
+  the Declaration of Performance (CE marking for construction steel).
+  `Certificaattype` defaults to `-leeg-`.
+- Empty on `404299`.
+
+**What it settles:** the certificate is stored **as a document on the purchase
+order**, tied to an order line (`Order regel`) and a reception line
+(`Ontvangst regel`). It is not attached to the batch screen. That is H11's
+question, *"is the certificate stored in the system, or a filename?"*: it is a
+document row with a file (`Document` / `Toon`). It also explains why the
+batches export's `Filename` was empty on every row: the file lives here, not on
+the batch.
+
+**Ours:** `BatchCertificates` holds a certificate per batch with
+`documentCertificate` (the 3.1 / 2.2 kind), `documentCode`, `producer`,
+`purchaseOrderItemUuid` and a `documents` JSON of uploaded files. The shape
+is close, but it hangs off the batch, there is no `Soort` (DoP / Certificate
+/ Other), and there is no panel on the purchase order to add one.
+
+**Change:**
+
+1. Add `kind` (`dop` · `certificate` · `other`, a new enum in `lib/enums.ts`)
+   and a nullable `purchase_line_receival_uuid` to `BatchCertificates`, and
+   allow `batchUuid` to be null so a document can exist before its batch.
+   A new enum column with a default plus NOT NULL → NULL is a plain push.
+2. A **`Product receipt documents`** panel at the bottom of the purchase order
+   detail, with the seven columns and `New` · `Delete` · `Show`, uploading
+   through the existing `/api/documents/upload` route (R2), never a new
+   handler.
+3. When the reception becomes a lot, the document's batch is filled in, so
+   `Certificates received` / `to be linked` keep reading the same table.
+
+⚠️ `Certificaattype`'s list was not opened. It is probably the 3.1 / 2.2 /
+`INtern` / `NVT` set already in `certificaatOptions`. One click settles it.
 
 ## C9 · The offcut comes back as a scrap line
 
