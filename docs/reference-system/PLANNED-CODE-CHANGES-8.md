@@ -25,6 +25,7 @@ capture that proves it. Items are added as each capture lands.
 | C17 | `Pre-notify` takes a bill of lading, date and pre-notification code per reception | `404299` J8 | 📋 ready |
 | C18 | `Return` / `Par. return` are greyed on a received, mailed order | `404299` J8 | 🟡 rule to confirm |
 | C19 | `Product Receipt Documents` panel: attach a certificate / DoP to a purchase order | `404299` J8 | 📋 ready |
+| C20 | A € 0 return closes as `Invoiced` without producing a credit invoice | `290247` H12 | 🟡 decide |
 | — | ~~Item 1 of -7: a `CD` line must not create a lot~~ | `404299` | ❎ withdrawn |
 
 ---
@@ -802,6 +803,44 @@ row, nothing in the test data uses consignment at all.
 **No change planned.** `Stock.ownerCompanyUuid` stays as the model for
 customer-owned stock (K2), and supplier consignment is not built until
 someone says it is a real process.
+
+## C20 · H12 — the € 0 return that was "invoiced" with no invoice
+
+**Return order `290247`** (opened 8-10-2026 18:16), the one captured on
+29-9-2026 (-6 item 25):
+
+| What | Read |
+|---|---|
+| Header | Mercainox Componentes Industriais `12368`, **`Invoiced`**, created 29-9-2026, sales Adrie Noom, contact Rogerio Neves |
+| Links | **`Sales order` empty · `Complaint` empty** · `Customer ref.` empty |
+| Reception | return date 29-9-2026, **`Pick-up` ☑**, pick-up at Mercainox (Rua A no 365), delivery to Bolderweg 10 |
+| Reason | **`Wrong quantity`** |
+| Summary | everything **€ 0,00**, 35,4 kg |
+| Toolbar | `Print…` · `Send…` · `Show company` live. `Show order` · `Show complaint` · `Workorder` · **`Invoice` greyed** |
+| Line 10 | `Order line` **0** · `Invoiced` · `PK304L1003…` cold-rolled plate · 1 / 1 ST · 3000 × 1500 · 35,4 / 35,4 kg · **gross price € 0,00 / TN** · discounts 0 |
+
+**The credit note does not exist.** `Overviews → Sales → Invoices`, from
+1-1-2024, search `Mercainox`, newest first: the latest is **`508204`, Debit,
+11-9-2026**, and every row is `Debit`. Nothing is dated on or after 29-9-2026.
+So `Invoice` on a € 0 return set the return and its line to `Invoiced`
+**without writing an invoice**. That is H12's open half: "does the credit price
+from the original invoice?" It does not. A return carries no price unless
+someone types one, and at € 0 the system skips the document.
+
+**Ours:** a return credits through `invoices/actions.ts` and the credit is
+valued at the return's cost (the receipt side values the returned lot at what
+it cost to go out, by design, see `applyReceipt`).
+
+**Change, to decide:** two readings, and neither is captured as a rule.
+
+- (a) Copy the reference: a return whose total is € 0 can be closed as
+  `invoiced` with no credit document, for a paper-only correction of quantity.
+- (b) Keep ours: always write the credit document, even at € 0, so every
+  `Invoiced` status points at an invoice number.
+
+Recommended: **(b)**. An `Invoiced` status with no invoice behind it is
+exactly the kind of state nobody can audit later, and a € 0 credit costs
+nothing to keep. Recorded for decision, not built.
 
 ## C9 · The offcut comes back as a scrap line
 
