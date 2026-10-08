@@ -3,6 +3,7 @@
 import {
   correctStockLot,
   SawOrderRow,
+  simulateStockCorrection,
   StockLotDialogData,
 } from "@/app/(dashboard)/stock/actions";
 import {
@@ -22,6 +23,7 @@ import {
 } from "@/components/shadcn/dialog";
 import { Input } from "@/components/shadcn/input";
 import { Select } from "@/components/shadcn/select";
+import { StockCorrectionSimulationPane } from "@/components/stock/stock-correction-simulation";
 import { StockLotLedger } from "@/components/stock/stock-lot-ledger";
 import { FormError } from "@/components/ui/form-error";
 import { FormFieldError, FormLabel } from "@/components/ui/form-field";
@@ -77,6 +79,11 @@ export const StockCorrectionDialog = ({
 }: Props) => {
   const { lot, ledger } = data;
   const [state, dispatch, isPending] = useActionState(correctStockLot, {});
+  // `Simuleer` — the same correction, run and rolled back.
+  const [simulation, simulate, isSimulating] = useActionState(
+    simulateStockCorrection,
+    {},
+  );
 
   const defaults: StockCorrectionFormValues = {
     stockUuid: lot.uuid,
@@ -126,7 +133,14 @@ export const StockCorrectionDialog = ({
     });
   });
 
+  const onSimulate = handleSubmit((values) => {
+    startTransition(() => {
+      simulate({ ...values, stockUuid: lot.uuid });
+    });
+  });
+
   const unit = lot.unit ? STOCK_UNIT_LABELS[lot.unit] : "";
+  const busy = isPending || isSimulating;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -425,6 +439,8 @@ export const StockCorrectionDialog = ({
               ) : null}
             </div>
 
+            <StockCorrectionSimulationPane simulation={simulation} unit={unit} />
+            <FormError>{simulation.error}</FormError>
             <FormError>{state.error}</FormError>
           </DialogBody>
 
@@ -433,7 +449,7 @@ export const StockCorrectionDialog = ({
               type="button"
               variant="outline"
               onClick={() => reset(defaults)}
-              disabled={isPending}
+              disabled={busy}
             >
               Reset
             </Button>
@@ -441,16 +457,24 @@ export const StockCorrectionDialog = ({
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              disabled={isPending}
+              disabled={busy}
             >
               Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onSimulate}
+              disabled={busy || (!correctQuantity && !correctCharacteristics)}
+            >
+              {isSimulating ? "Simulating…" : "Simulate"}
             </Button>
             {/* Greyed until something is actually being corrected, the way the
                 reference greys `OK` until the form is legal. */}
             <Button
               type="submit"
               disabled={
-                isPending || (!correctQuantity && !correctCharacteristics)
+                busy || (!correctQuantity && !correctCharacteristics)
               }
             >
               {isPending ? "Correcting…" : "OK"}

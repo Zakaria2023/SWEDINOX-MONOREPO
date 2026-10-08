@@ -95,6 +95,8 @@ type StockCorrectionOutcome = {
   /** How many rows went into the ledger — the reference writes none. */
   movements: number;
   attributeChanges: StockAttributeChange[];
+  /** The ledger rows themselves, which is what a simulation shows. */
+  rows: InsertStockMovements[];
 };
 
 type ApplyStockSplitParams = {
@@ -834,7 +836,7 @@ export const applyStockCorrection = async (
 
   await tx.insert(StockMovements).values(rows);
 
-  return { movements: rows.length, attributeChanges: changes };
+  return { movements: rows.length, attributeChanges: changes, rows };
 };
 
 /**

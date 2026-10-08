@@ -64,6 +64,7 @@ import {
   applyStockTransfer,
 } from "@/lib/server/stock-movements";
 import { registerBatchForLot } from "@/lib/server/batches";
+import { dryRun } from "@/lib/server/dry-run";
 import { nextWorkOrderNumber } from "@/lib/server/work-order-numbers";
 import {
   BatchRegistrationFormValues,
@@ -205,6 +206,32 @@ export type StockCorrectionResult = {
   success?: boolean;
   /** How many ledger rows the correction wrote, for the confirmation. */
   movements?: number;
+};
+
+/** One ledger row a simulated correction would write. */
+export type StockCorrectionPreviewRow = Pick<
+  SelectStockMovements,
+  | "type"
+  | "reason"
+  | "attribute"
+  | "valueBefore"
+  | "valueAfter"
+  | "quantity"
+  | "quantityKg"
+  | "valueEur"
+>;
+
+export type StockLotFigures = Pick<
+  SelectStock,
+  "quantity" | "quantityKg" | "valuationEuro"
+>;
+
+export type StockCorrectionSimulation = {
+  error?: string;
+  /** Set once a simulation has run — the rows it would write. */
+  rows?: StockCorrectionPreviewRow[];
+  before?: StockLotFigures;
+  after?: StockLotFigures;
 };
 
 const STOCK_SEARCH = [
@@ -360,6 +387,71 @@ export const getStockDetail = async (
 };
 
 /**
+ * The parameters both `OK` and `Simulate` hand to `applyStockCorrection`, so
+ * the simulation cannot drift from the real correction.
+ */
+const stockCorrectionParams = (
+  lot: SelectStock,
+  values: StockCorrectionFormValues,
+  userId: string,
+): Parameters<typeof applyStockCorrection>[1] => ({
+  source: lot,
+  reason: values.reason,
+  description: values.description?.trim() || null,
+  quantity: values.correctQuantity ? Number(values.quantity) : undefined,
+  quantityKg:
+    values.correctQuantity && values.quantityKg
+      ? Number(values.quantityKg)
+      : undefined,
+  // 🔴 The two halves are not the two halves we had.
+  //
+  // We put category, quality and the dimensions under the
+  // *characteristics* tickbox. The reference puts them under the
+  // **quantity** one, beside `Nieuwe hoeveelheid`, and leaves exactly one
+  // field under characteristics: `Voorraad opmerking`. So a dialog that
+  // greys the grade when you only wanted to fix the count was greying the
+  // wrong half.
+  //
+  // The four weights sit with the quantity too, which is the arrangement
+  // that makes sense of it: the quantity half is "what and how much this
+  // metal is", the characteristics half is "what somebody wrote about it".
+  attributes: {
+    ...(values.correctQuantity
+      ? {
+          stock_category: values.stockCategory,
+          quality: values.quality,
+          length_mm: values.lengthMm,
+          width_mm: values.widthMm,
+          thickness_mm: values.thicknessMm,
+          weighed_weight_kg: values.weighedWeightKg,
+          gross_weight_kg: values.grossWeightKg,
+          net_weight_kg: values.netWeightKg,
+        }
+      : {}),
+    ...(values.correctCharacteristics ? { remark: values.remark } : {}),
+  },
+  sawOrderUuid: values.sawOrderUuid?.trim() || null,
+  userId,
+});
+
+const readStockLot = async (
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  stockUuid: string,
+): Promise<SelectStock> => {
+  const [lot] = await tx
+    .select()
+    .from(Stock)
+    .where(eq(Stock.uuid, stockUuid))
+    .limit(1);
+
+  if (!lot) {
+    throw new Error("Stock lot not found");
+  }
+
+  return lot;
+};
+
+/**
  * `Correction…` on a lot.
  *
  * 🔴 The whole of item 26b lives under this: the reference changed lot `404763`
@@ -383,55 +475,11 @@ export const correctStockLot = async (
 
   try {
     const movements = await db.transaction(async (tx) => {
-      const [lot] = await tx
-        .select()
-        .from(Stock)
-        .where(eq(Stock.uuid, values.stockUuid))
-        .limit(1);
-
-      if (!lot) {
-        throw new Error("Stock lot not found");
-      }
-
-      const outcome = await applyStockCorrection(tx, {
-        source: lot,
-        reason: values.reason,
-        description: values.description?.trim() || null,
-        quantity: values.correctQuantity ? Number(values.quantity) : undefined,
-        quantityKg:
-          values.correctQuantity && values.quantityKg
-            ? Number(values.quantityKg)
-            : undefined,
-        // 🔴 The two halves are not the two halves we had.
-        //
-        // We put category, quality and the dimensions under the
-        // *characteristics* tickbox. The reference puts them under the
-        // **quantity** one, beside `Nieuwe hoeveelheid`, and leaves exactly one
-        // field under characteristics: `Voorraad opmerking`. So a dialog that
-        // greys the grade when you only wanted to fix the count was greying the
-        // wrong half.
-        //
-        // The four weights sit with the quantity too, which is the arrangement
-        // that makes sense of it: the quantity half is "what and how much this
-        // metal is", the characteristics half is "what somebody wrote about it".
-        attributes: {
-          ...(values.correctQuantity
-            ? {
-                stock_category: values.stockCategory,
-                quality: values.quality,
-                length_mm: values.lengthMm,
-                width_mm: values.widthMm,
-                thickness_mm: values.thicknessMm,
-                weighed_weight_kg: values.weighedWeightKg,
-                gross_weight_kg: values.grossWeightKg,
-                net_weight_kg: values.netWeightKg,
-              }
-            : {}),
-          ...(values.correctCharacteristics ? { remark: values.remark } : {}),
-        },
-        sawOrderUuid: values.sawOrderUuid?.trim() || null,
-        userId,
-      });
+      const lot = await readStockLot(tx, values.stockUuid);
+      const outcome = await applyStockCorrection(
+        tx,
+        stockCorrectionParams(lot, values, userId),
+      );
 
       return outcome.movements;
     });
@@ -444,6 +492,61 @@ export const correctStockLot = async (
     return { success: true, movements };
   } catch (error) {
     return { error: describeError(error, "Failed to correct the stock lot") };
+  }
+};
+
+/**
+ * `Simulate` beside `OK` on the correction — the reference's `Simuleer`
+ * (PLANNED-CODE-CHANGES-6 §28b). The real correction, run and rolled back, so
+ * what it shows is exactly what `OK` would write: the ledger rows and the lot's
+ * quantity, kilos and value before and after.
+ */
+export const simulateStockCorrection = async (
+  _prevState: StockCorrectionSimulation,
+  input: StockCorrectionFormValues,
+): Promise<StockCorrectionSimulation> => {
+  const userId = await requireAuth();
+
+  const parsed = stockCorrectionSchema.safeParse(input);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid correction" };
+  }
+  const values = parsed.data;
+
+  const figures = (row: SelectStock): StockLotFigures => ({
+    quantity: row.quantity,
+    quantityKg: row.quantityKg,
+    valuationEuro: row.valuationEuro,
+  });
+
+  try {
+    return await dryRun(async (tx) => {
+      const lot = await readStockLot(tx, values.stockUuid);
+      const outcome = await applyStockCorrection(
+        tx,
+        stockCorrectionParams(lot, values, userId),
+      );
+      const after = await readStockLot(tx, values.stockUuid);
+
+      return {
+        rows: outcome.rows.map((row) => ({
+          type: row.type,
+          reason: row.reason,
+          attribute: row.attribute ?? null,
+          valueBefore: row.valueBefore ?? null,
+          valueAfter: row.valueAfter ?? null,
+          quantity: row.quantity ?? null,
+          quantityKg: row.quantityKg ?? null,
+          valueEur: row.valueEur ?? null,
+        })),
+        before: figures(lot),
+        after: figures(after),
+      };
+    });
+  } catch (error) {
+    return {
+      error: describeError(error, "Failed to simulate the correction"),
+    };
   }
 };
 
