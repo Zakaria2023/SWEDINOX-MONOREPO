@@ -122,3 +122,11 @@ out at the processor when the export was taken.
   are the same population.** They do not overlap in the two exports seen.
 - **What triggers the outbound leg.** No column ties it to a sales order or a
   production plan, so why a particular lot was sent out is still unknown.
+  ✅ **Answered 8-10-2026 on purchase order `400066`** (Helaxa BVBA, type
+  `Processing`): the outbound leg is a **`Supplies` row on the processor's
+  purchase order**. The lot is picked and shipped on a bill of lading like a
+  sale, and the processed metal comes back as the order's own lines: 900 kg
+  coil plus **234 kg `SC304` scrap**, exactly the 1 134 kg sent. It comes back
+  with the same heat number, and the order is worth only its option
+  (`Decoilen` € 110/TN on the 900 kg received). See
+  [PLANNED-CODE-CHANGES-8.md](PLANNED-CODE-CHANGES-8.md) C8–C10.

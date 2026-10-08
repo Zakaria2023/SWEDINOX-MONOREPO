@@ -13,7 +13,9 @@ capture that proves it. Items are added as each capture lands.
 | C5 | `For line` column on the purchase order's Lines grid | `404299` screenshot | 📋 ready |
 | C6 | A CD receipt is put on the loading location, not a rack | lot `404744` at `Laad` | 🟡 default to confirm |
 | C7 | Purchase lines gain the status `Delivered` | `Purchase lines` grouped on `Status` | 🟡 meaning to confirm |
-| C8 | A processing purchase order lists the material we send out (`Supplies`) | `400066` | ⏸ more screenshots coming |
+| C8 | A processing purchase order lists the material we send out (`Supplies`) | `400066` | 📋 ready, two details open |
+| C9 | The processor's offcut comes back as a scrap line, and the kilos close | `400066` line 20 | 📋 ready |
+| C10 | A processing order's value is its options, charged on the weight received | `400066` | 📋 ready |
 | — | ~~Item 1 of -7: a `CD` line must not create a lot~~ | `404299` | ❎ withdrawn |
 
 ---
@@ -255,20 +257,99 @@ What it settles:
    lading `300070` and reads `Delivered`, so it goes through the same transport
    chain as a sale. `Arrange transport` is ticked.
 5. **Slitting, not just decoiling:** 130 mm went out and 105 mm came back.
-   25/130 of 1 134 kg is 218 kg, close to the 234 kg gap. Line 2 is probably the
-   25 mm strip. ⚠️ To be read.
+
+### Line 20 — the third batch
+
+| Code | Delivery date | Status | Product | Category | Quality | L × W × T | Qty(p) | U | Kg(p) | Net price | Amount | Kg(a) |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 10 | 31-1-2025 | `Received` | `CK3040015` coil 304 1,5 mm | Standaard | `3042B` | 999999 × 105 × 1,5 | 1 | ST | 900 | € 0,00/TN | € 0,00 | **900** |
+| 20 | 31-1-2025 | `Received` | **`SC304` Stainless steel scrap** | Standaard | `3042B` | 0 × 0 × 0 | 234 | **KG** | 234 | € 0,00/TN | € 0,00 | **234** |
+
+**The kilos close exactly: 900 + 234 = 1 134**, the `Kg(a)` of the supply. The
+25 mm strip cut off does not vanish as a loss. It comes back as a **second
+purchase line on a scrap article**, counted in kilos, at € 0. Both lines are
+`Received`, and the header's `Total weight` 1 134 kg is the sum.
+
+The three work order panels were still collapsed in the last screenshot, so
+which work orders the order raised (the picking of the supply, the unloading
+of both lines) is still open.
 
 **Ours:** nothing. A processing purchase order has lines and receptions only,
 and the material sent out is not recorded against it.
 (external-processing.md modelled the out-leg from movements alone.)
 
-**Change:** planned once the header, lines, full `Supplies` row and work order
-panels of `400066` are in.
+**Change (C8):**
+
+1. **New table `PurchaseOrderSupplies`**, one row per lot handed to the
+   processor: `purchase_order_uuid`, `stock_uuid` (the lot that goes out),
+   `product_uuid`, planned and actual qty / kg / M1, `delivery_date`, `status`
+   (`deliveryStatuses`), the outbound transport or warehouse work order line,
+   and `blocked`. A new table, so a plain `pnpm db:push`.
+2. **A `Supplies` panel on the purchase order**, shown when the type is
+   `Processing`, with the reference's columns in its order (`Blocked · Delivery
+   date · Product · Length · Width · Thickness · Kg(p) · Options · Qty(p) · U ·
+   Picked · Qty(a) · Kg(a) · Bill of lading · Status · Code · Charge · Purchase
+   order · Receipt date · M1(p) · M1(a)`). `New` opens the **stock search
+   dialog** on source `stock`, since it picks a lot we hold. Never a dropdown.
+3. **Sending it out is a delivery.** Making the order final raises the picking
+   and transport for each supply. The issue writes the
+   `external_processing_issue` movement the control list already reads, so
+   `Control Stock increase ext. processing` gets its outbound leg from a real
+   document instead of an inferred one.
+4. **The header's `Sawing workorder with one delivery`** flag, and the summary
+   line under it (`1 ST of CK3040015 … 741 M1 1531 KG`), built from the
+   supplies.
+5. **The received processed lot carries the supplied lot's `charge`** (heat):
+   `70120 3` out, `70120 3` back. Ours must not ask for a new heat number on a
+   processing receipt; it defaults from the supply.
+
+⚠️ Two details still open, neither blocking: which work orders the order raises
+(the collapsed panels), and what the received lot is **valued** at. The export
+says a processing round trip loses about a quarter of book value (median
+0,759). That is valuation (finance), so it is recorded, not planned.
+
+## C9 · The offcut comes back as a scrap line
+
+**Change:** a processing order's lines may include a **scrap article** in `KG`
+(`SC304`). Receiving it books a scrap lot. The order shows a **kilo balance**:
+supplied `Kg(a)` against the sum of the lines' `Kg(a)`, so 1 134 against
+900 + 234, and flags a gap. This is the same check as the production cut's
+kilo balance (H10), on the outside processor.
+
+## C10 · A processing order is worth its options
+
+**Now:** our purchase order value is the sum of its lines.
+
+**Change:** on a `Processing` order the metal lines carry € 0,00 and the value
+is the `Options` rows, each **priced on the weight received**: € 110,00/TN ×
+0,900 t = **€ 99,00**, not on the 1 134 kg sent. Summary reads `Materials € 0,00
+· Options € 99,00`, as on `400066`. Until the reception is in, the option
+amount uses the planned kilos.
 
 ---
 
-## Still to come today
+## Where 8-10-2026 stopped
 
-As each capture lands it gets a section here: H13 `Split`, H9 external
-processing, H10 saw cut, J1 consignment, H12 credit note, G3/G7/H4 transport,
-J8 buttons, and the two extras (`Quote- and order lines`, `C. Kg` / `C. ST`).
+The reference was closed at 17:01 after `400066`. Done today: item 1 (CD
+receipt, except one screenshot), C7's status list, and most of item 3 (H9) by
+way of `400066`.
+
+**Next time, in this order:**
+
+1. `O108183` line 10: `Line type` and `Reservations` (unblocks C3).
+2. `Status: Delivered` on Purchase lines: read the order numbers (settles C7).
+3. `400066`: expand the three Workorders panels (closes C8's open detail).
+4. **H13 `Split`:** `Overviews → Purchase → Purchase receivals`, date from
+   `1-1-2024`, sort on `Kg(a)`, a `0` row whose receipt status is `Released`,
+   then `New`, then `Workorders created`. Note greyed or not for each.
+5. Then items 4 to 8 of the capture list (H10 saw cut, J1 consignment, H12
+   credit note, G3/G7/H4 transport, J8 buttons) and the two extras.
+
+---
+
+## Still to come
+
+As each capture lands it gets a section here: H13 `Split`, the rest of H9 (the
+`Ex works Processor` return leg on `400142`/`400143`), H10 saw cut, J1
+consignment, H12 credit note, G3/G7/H4 transport, J8 buttons, and the two
+extras (`Quote- and order lines`, `C. Kg` / `C. ST`).
