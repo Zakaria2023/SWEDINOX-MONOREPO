@@ -790,9 +790,12 @@ consignment. The test order of that number (from a quote with `Consignatie`
 ticked, `Provisional`) **no longer exists**, so the test copy has been
 refreshed or renumbered since.
 
-So J1 cannot be finished on `401154`. The other two test orders (`401156`,
-`401157`) are the last chance. If they are real orders too, consignment goes
-to [MANAGER-QUESTIONS.md](MANAGER-QUESTIONS.md) question 5, which already asks
+So J1 cannot be finished on `401154`. ⏹ **`401156` is a real order too**
+(Aperam Stainless Belgium `10627`, `Materials`, `Invoiced · Printed · Mailed`,
+created 2-6-2025, reference `I25E5414`, one coil `CK304L0020` 304L 2 mm ×
+1 545, 2 850 kg at € 1 960/TN). The test numbers have been reused by real
+orders, so **J1 is closed as not capturable** and consignment moves to
+[MANAGER-QUESTIONS.md](MANAGER-QUESTIONS.md) question 5, which already asks
 what `Consignatie` changes. With C15's `C. Kg` / `C. ST` reading 0 on every
 row, nothing in the test data uses consignment at all.
 

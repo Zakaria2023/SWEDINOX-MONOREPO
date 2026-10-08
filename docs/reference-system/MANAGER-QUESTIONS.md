@@ -99,6 +99,14 @@ the flag lives somewhere on the order nobody has looked at yet.
 reference cannot even carry the flag onto an order, consignment purchasing may
 not be a real process here — worth knowing before modelling it.
 
+⏹ **8-10-2026: no longer testable by clicking.** The three test orders
+`401154`, `401156` (and so presumably `401157`) now open as real, invoiced
+orders from Terninox and Aperam: the test copy was refreshed and the numbers
+reused. The stock search's `C. Kg` / `C. ST` read 0 on every row checked. So a
+person has to say whether consignment is a real process at Swedinox, and if
+so, what ticking `Consignatie` on a purchase quote should do to the order and
+the stock.
+
 ⚠️ **Could not be tested.** Two orders were built with `Consignatie` ticked
 on the quote (`401156` and `401157`); neither could be received, because a
 reception cannot be filled in by hand — see question 3. Until goods can be
