@@ -7,6 +7,7 @@ import {
   ProductDetail,
 } from "@/app/(dashboard)/products/actions";
 import { Button } from "@/components/shadcn/button";
+import { ProductControlPanels } from "@/components/products/product-control-panels";
 import { RelatedRecordsBar } from "@/components/ui/related-records-bar";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FormError } from "@/components/ui/form-error";
@@ -350,6 +351,9 @@ export const ProductDetailView = ({ product }: Props) => {
           />
         </div>
       </section>
+
+      {/* ── The control settings the editor holds ──────────────────────── */}
+      <ProductControlPanels product={product} />
 
       {/* ── Everything else, collapsed ──────────────────────────────────── */}
       <ProductPanels product={product} />
