@@ -881,6 +881,23 @@ for the complaint's product at `weight` kg and `amount` €, then link it back
 and set the complaint to `done`. A complaint whose qty is 0 never touches
 stock.
 
+## G7 · Trip `600249` on `Trip data`, 8-10-2026 18:25
+
+`Trip data` is a **report with no record behind it**: the toolbar has no
+`Show`, and double-clicking opens nothing. Its only buttons jump elsewhere
+(`Order lines` · `Orders and Quotes` · `Stock on location` · `Afhalen` · `Hego
+Prod - Lossen`).
+
+| Year | Month | Trip | Trip date | Vehicle | Stops | Orders | Kg | Colli | Kg/stop | Orders/stop | Colli/stop | Km | Hours | Cost | Driver |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 2025 | 3 | 600249 | 21-3-2025 | ADO NL | 17 | 18 | 26 429,40 | 62 | 1 555,00 | 1 | 3 | 0 | 0 | € 0,00 | — |
+
+**Checks ours, no change.** Kg/stop 26 429,4 / 17 = 1 554,7, shown **rounded**
+to 1 555. Orders/stop 18 / 17 = 1,06 → **1**, and colli/stop 62 / 17 = 3,6 →
+**3**, both **floored**. That is exactly what `trip-data/actions.ts` does since
+f6a6d45a. Km, hours, costs and driver are empty, as on all 438 trips. Ours
+having no trip detail page (removed in f6a6d45a) is also right.
+
 ## C9 · The offcut comes back as a scrap line
 
 **Change:** a processing order's lines may include a **scrap article** in `KG`
