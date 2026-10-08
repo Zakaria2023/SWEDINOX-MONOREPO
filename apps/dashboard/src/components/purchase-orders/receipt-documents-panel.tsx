@@ -118,7 +118,7 @@ export const ReceiptDocumentsPanel = ({
   return (
     <CollapsibleSection
       title="Product receipt documents"
-      summary={pluralize(documents.length, "document")}
+      summary={`${documents.length} ${pluralize(documents.length, "document")}`}
     >
       <div className="space-y-3 p-3">
         <div className="flex flex-wrap gap-2">

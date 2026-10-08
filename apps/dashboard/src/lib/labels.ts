@@ -5,6 +5,7 @@ import {
   AvailableAt,
   CeStandard,
   CertificaatOption,
+  PurchaseOrderSupplyStatus,
   ReceiptDocumentKind,
   CommunicationChannel,
   CommunicationSettingDocumentType,
@@ -917,6 +918,15 @@ export const RECEIPT_DOCUMENT_KIND_LABELS: Record<ReceiptDocumentKind, string> =
     certificate: "Certificate",
     other: "Other",
   };
+
+export const PURCHASE_ORDER_SUPPLY_STATUS_LABELS: Record<
+  PurchaseOrderSupplyStatus,
+  string
+> = {
+  new: "New",
+  workorders_created: "Workorders created",
+  delivered: "Delivered",
+};
 
 export const CERTIFICAAT_LABELS: Record<CertificaatOption, string> = {
   en10204_2_1: "2.1 Certificate (EN10204-2.1)",

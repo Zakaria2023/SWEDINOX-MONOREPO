@@ -8,6 +8,7 @@ import {
   purchaseOrderTypes,
   purchaseSourceTypes,
   receiptDocumentKinds,
+  stockOptions,
 } from "@/lib/enums";
 import { todayDateString, currentYear } from "@/lib/helpers";
 
@@ -304,3 +305,34 @@ export const receiptDocumentSchema = z.object({
 });
 
 export type ReceiptDocumentFormValues = z.infer<typeof receiptDocumentSchema>;
+
+/** `New` on `Supplies` (C8): a lot handed to the processor, and how much of it. */
+export const purchaseOrderSupplySchema = z.object({
+  purchaseOrderUuid: z.string().min(1, "Purchase order is required"),
+  stockUuid: z.string().min(1, "Choose the lot to supply"),
+  quantity: z
+    .string()
+    .min(1, "Enter how much of the lot goes out")
+    .refine((value) => Number(value) > 0, "Enter how much of the lot goes out"),
+  deliveryDate: z.string().optional(),
+});
+
+export type PurchaseOrderSupplyFormValues = z.infer<
+  typeof purchaseOrderSupplySchema
+>;
+
+/** `New` on a purchase line's `Options` (C10): the processing step bought. */
+export const purchaseOrderOptionSchema = z.object({
+  purchaseOrderUuid: z.string().min(1, "Purchase order is required"),
+  purchaseOrderItemUuid: z.string().min(1, "Choose the line"),
+  option: z.enum(stockOptions),
+  quantity: z.string().optional(),
+  grossPrice: z.string().min(1, "Enter the price"),
+  per: z.string().min(1, "Choose what the price is per"),
+  discountPercent: z.string().optional(),
+  referenceFactor: z.string().optional(),
+});
+
+export type PurchaseOrderOptionFormValues = z.infer<
+  typeof purchaseOrderOptionSchema
+>;

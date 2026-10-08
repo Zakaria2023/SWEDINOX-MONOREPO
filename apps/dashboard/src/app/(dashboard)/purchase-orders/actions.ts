@@ -29,6 +29,20 @@ import {
   BatchCertificates,
   SelectBatchCertificates,
 } from "@/db/schema/batch-certificates";
+import {
+  PurchaseOrderSupplies,
+  SelectPurchaseOrderSupplies,
+} from "@/db/schema/purchase-order-supplies";
+import {
+  PurchaseOrderItemOptions,
+  SelectPurchaseOrderItemOptions,
+} from "@/db/schema/purchase-order-item-options";
+import { applyReceipt } from "@/lib/server/receipts";
+import {
+  markSuppliesPicking,
+  restatePurchaseLineOptions,
+  restatePurchaseOrderAmount,
+} from "@/lib/server/external-processing";
 import { Contracts, SelectContracts } from "@/db/schema/contracts";
 import { Products, SelectProducts } from "@/db/schema/products";
 import {
@@ -86,6 +100,10 @@ import {
   confirmPurchaseOrderSchema,
   PreNotifyFormValues,
   preNotifySchema,
+  PurchaseOrderOptionFormValues,
+  purchaseOrderOptionSchema,
+  PurchaseOrderSupplyFormValues,
+  purchaseOrderSupplySchema,
   ReceiptDocumentFormValues,
   receiptDocumentSchema,
   ReceptionBatchSettingsFormValues,
@@ -110,6 +128,11 @@ import {
 } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { alias } from "drizzle-orm/mysql-core";
+
+// The purchase order a supplied lot was bought on, joined beside the order
+// supplying it.
+const LotOrder = alias(PurchaseOrders, "lot_purchase_order");
 
 export type PurchaseOrderFields = Omit<
   InsertPurchaseOrders,
@@ -300,6 +323,54 @@ export type PurchaseOrderReceiptDocumentRow = {
   receptionLine: SelectPurchaseLineReceivals["lineNumber"] | null;
 };
 
+// A row of `Supplies` on a `Processing` order (C8): the lot going out, and
+// that lot's own identity — `Code` · `Charge` · `Purchase order` · `Receipt
+// date` — read through it.
+export type PurchaseOrderSupplyRow = Pick<
+  SelectPurchaseOrderSupplies,
+  | "uuid"
+  | "stockUuid"
+  | "blocked"
+  | "deliveryDate"
+  | "lengthMm"
+  | "widthMm"
+  | "thicknessMm"
+  | "options"
+  | "qtyPlanned"
+  | "kgPlanned"
+  | "m1Planned"
+  | "qtyPicked"
+  | "qtyActual"
+  | "kgActual"
+  | "m1Actual"
+  | "billOfLading"
+  | "status"
+> & {
+  productCode: SelectProducts["productCode"] | null;
+  productName: SelectProducts["name"] | null;
+  unit: SelectStock["unit"] | null;
+  charge: SelectStock["charge"] | null;
+  lotPurchaseOrderId: SelectPurchaseOrders["id"] | null;
+  lotReceiptDate: SelectStock["receiptDate"] | null;
+};
+
+// A purchase line's option (C10).
+export type PurchaseOrderOptionRow = Pick<
+  SelectPurchaseOrderItemOptions,
+  | "uuid"
+  | "purchaseOrderItemUuid"
+  | "sortOrder"
+  | "option"
+  | "quantity"
+  | "unit"
+  | "grossPrice"
+  | "per"
+  | "discountPercent"
+  | "referenceFactor"
+  | "netPrice"
+  | "amount"
+>;
+
 // A line of this order the supplier is being asked to take back.
 export type PurchaseOrderReturnLine = {
   uuid: SelectPurchaseReturnOrderItems["uuid"];
@@ -325,6 +396,8 @@ export type PurchaseOrderDetail = SelectPurchaseOrders & {
   // What has actually arrived against this order.
   receipts: PurchaseReceiptDocument[];
   receiptDocuments: PurchaseOrderReceiptDocumentRow[];
+  supplies: PurchaseOrderSupplyRow[];
+  options: PurchaseOrderOptionRow[];
   // Agreements attached to this order — the schema has carried the link since
   // contracts existed and no screen followed it.
   contracts: SelectContracts[];
@@ -973,12 +1046,66 @@ export const getPurchaseOrderDetail = async (
     .where(eq(BatchCertificates.purchaseOrderUuid, uuid))
     .orderBy(asc(BatchCertificates.createdAt));
 
+  const supplies = await db
+    .select({
+      uuid: PurchaseOrderSupplies.uuid,
+      stockUuid: PurchaseOrderSupplies.stockUuid,
+      blocked: PurchaseOrderSupplies.blocked,
+      deliveryDate: PurchaseOrderSupplies.deliveryDate,
+      lengthMm: PurchaseOrderSupplies.lengthMm,
+      widthMm: PurchaseOrderSupplies.widthMm,
+      thicknessMm: PurchaseOrderSupplies.thicknessMm,
+      options: PurchaseOrderSupplies.options,
+      qtyPlanned: PurchaseOrderSupplies.qtyPlanned,
+      kgPlanned: PurchaseOrderSupplies.kgPlanned,
+      m1Planned: PurchaseOrderSupplies.m1Planned,
+      qtyPicked: PurchaseOrderSupplies.qtyPicked,
+      qtyActual: PurchaseOrderSupplies.qtyActual,
+      kgActual: PurchaseOrderSupplies.kgActual,
+      m1Actual: PurchaseOrderSupplies.m1Actual,
+      billOfLading: PurchaseOrderSupplies.billOfLading,
+      status: PurchaseOrderSupplies.status,
+      productCode: Products.productCode,
+      productName: Products.name,
+      unit: Stock.unit,
+      charge: Stock.charge,
+      lotPurchaseOrderId: LotOrder.id,
+      lotReceiptDate: Stock.receiptDate,
+    })
+    .from(PurchaseOrderSupplies)
+    .leftJoin(Products, eq(PurchaseOrderSupplies.productUuid, Products.uuid))
+    .leftJoin(Stock, eq(PurchaseOrderSupplies.stockUuid, Stock.uuid))
+    .leftJoin(LotOrder, eq(Stock.purchaseOrderUuid, LotOrder.uuid))
+    .where(eq(PurchaseOrderSupplies.purchaseOrderUuid, uuid))
+    .orderBy(asc(PurchaseOrderSupplies.id));
+
+  const options = await db
+    .select({
+      uuid: PurchaseOrderItemOptions.uuid,
+      purchaseOrderItemUuid: PurchaseOrderItemOptions.purchaseOrderItemUuid,
+      sortOrder: PurchaseOrderItemOptions.sortOrder,
+      option: PurchaseOrderItemOptions.option,
+      quantity: PurchaseOrderItemOptions.quantity,
+      unit: PurchaseOrderItemOptions.unit,
+      grossPrice: PurchaseOrderItemOptions.grossPrice,
+      per: PurchaseOrderItemOptions.per,
+      discountPercent: PurchaseOrderItemOptions.discountPercent,
+      referenceFactor: PurchaseOrderItemOptions.referenceFactor,
+      netPrice: PurchaseOrderItemOptions.netPrice,
+      amount: PurchaseOrderItemOptions.amount,
+    })
+    .from(PurchaseOrderItemOptions)
+    .where(eq(PurchaseOrderItemOptions.purchaseOrderUuid, uuid))
+    .orderBy(asc(PurchaseOrderItemOptions.sortOrder));
+
   return {
     ...order,
     agentName: agent?.companyName ?? null,
     items,
     receipts,
     receiptDocuments,
+    supplies,
+    options,
     contracts,
     returnLines,
     communication,
@@ -1449,6 +1576,18 @@ export const createUnloadingWorkOrder = async (
     const workOrderUuid = generateUuid();
 
     const outcome = await db.transaction(async (tx) => {
+      // 🔑 A `Processing` order's supplies go out before anything comes back
+      // (C8): `400066` raised picking `300253` for the coil, then unloading
+      // `301583` for what returned. So the picking is raised here first, for
+      // every supply not yet on a work order.
+      const pickedSupplies = await raiseSupplyPicking(tx, {
+        purchaseOrderUuid,
+        orderId: order.id,
+        supplierUuid: order.supplierUuid,
+        deliveryDate: order.deliveryDate,
+        userId,
+      });
+
       const lines = await tx
         .select({
           uuid: PurchaseOrderItems.uuid,
@@ -1480,6 +1619,9 @@ export const createUnloadingWorkOrder = async (
       );
 
       if (outstanding.length === 0) {
+        if (pickedSupplies > 0) {
+          return { number: null };
+        }
         return {
           error:
             "Every line on this order has already been received, so there is nothing to unload.",
@@ -1998,5 +2140,409 @@ export const deletePurchaseOrderReceiptDocument = async (
       error:
         error instanceof Error ? error.message : "Failed to delete the document",
     };
+  }
+};
+
+/**
+ * Raise the picking that sends a `Processing` order's new supplies out (C8):
+ * one line per supply, from where the lot stands to the loading bay — the
+ * reference's `315201` took the coil from `5G` to `Laad`. Returns how many
+ * supplies were put on it.
+ */
+const raiseSupplyPicking = async (
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  order: {
+    purchaseOrderUuid: string;
+    orderId: number;
+    supplierUuid: string;
+    deliveryDate: Date | null;
+    userId: string | null;
+  },
+): Promise<number> => {
+  const supplies = await tx
+    .select({
+      uuid: PurchaseOrderSupplies.uuid,
+      stockUuid: PurchaseOrderSupplies.stockUuid,
+      productUuid: PurchaseOrderSupplies.productUuid,
+      qtyPlanned: PurchaseOrderSupplies.qtyPlanned,
+      kgPlanned: PurchaseOrderSupplies.kgPlanned,
+      lengthMm: PurchaseOrderSupplies.lengthMm,
+      widthMm: PurchaseOrderSupplies.widthMm,
+      thicknessMm: PurchaseOrderSupplies.thicknessMm,
+      locationUuid: Stock.locationUuid,
+      charge: Stock.charge,
+      internalCharge: Stock.internalCharge,
+      internalBatch: Stock.internalBatch,
+      quality: Stock.quality,
+      productCode: Products.productCode,
+    })
+    .from(PurchaseOrderSupplies)
+    .innerJoin(Stock, eq(PurchaseOrderSupplies.stockUuid, Stock.uuid))
+    .leftJoin(Products, eq(PurchaseOrderSupplies.productUuid, Products.uuid))
+    .where(
+      and(
+        eq(PurchaseOrderSupplies.purchaseOrderUuid, order.purchaseOrderUuid),
+        eq(PurchaseOrderSupplies.status, "new"),
+      ),
+    );
+
+  const first = supplies[0];
+  if (!first) {
+    return 0;
+  }
+
+  const [loadingBay] = await tx
+    .select({ uuid: Warehouses.uuid })
+    .from(Warehouses)
+    .where(inArray(Warehouses.locationType, ["load", "collection"]))
+    .orderBy(sql`FIELD(${Warehouses.locationType}, 'load', 'collection')`)
+    .limit(1);
+  if (!loadingBay) {
+    throw new Error(
+      "No loading location exists to pick the supplies to. Give a location the `Load` type first.",
+    );
+  }
+
+  const warehouseUuid =
+    (first.locationUuid
+      ? await rootWarehouseOfLocation(tx, first.locationUuid)
+      : null) ?? loadingBay.uuid;
+  const number = await nextWorkOrderNumber(tx);
+  const workOrderUuid = generateUuid();
+
+  await tx.insert(WarehouseWorkOrders).values({
+    createdByUserId: order.userId,
+    uuid: workOrderUuid,
+    number,
+    warehouseUuid,
+    type: "picking",
+    plannedDate: order.deliveryDate
+      ? toDateString(order.deliveryDate)
+      : todayDateString(),
+    status: "new",
+  });
+
+  for (const [index, supply] of supplies.entries()) {
+    await tx.insert(WarehouseWorkOrderLines).values({
+      modifiedByUserId: order.userId,
+      uuid: generateUuid(),
+      workOrderUuid,
+      lineNumber: index + 1,
+      purchaseOrderSupplyUuid: supply.uuid,
+      orderNumber: String(order.orderId),
+      companyUuid: order.supplierUuid,
+      stockUuid: supply.stockUuid,
+      productUuid: supply.productUuid,
+      productCode: supply.productCode,
+      fromLocationUuid: supply.locationUuid,
+      toLocationUuid: loadingBay.uuid,
+      length: supply.lengthMm,
+      width: supply.widthMm,
+      thickness: supply.thicknessMm ? Number(supply.thicknessMm) : null,
+      qtyPlanned: supply.qtyPlanned,
+      kgPlanned: supply.kgPlanned,
+      charge: supply.charge,
+      internalCharge: supply.internalCharge,
+      internalBatch: supply.internalBatch,
+      quality: supply.quality,
+      status: "new",
+    });
+  }
+
+  await markSuppliesPicking(
+    tx,
+    supplies.map((supply) => supply.uuid),
+  );
+  return supplies.length;
+};
+
+/**
+ * `New` on `Supplies` (C8): hand a lot to the processor. Only a `Processing`
+ * order supplies anything. The lot is held for the order from now on, so it
+ * cannot be sold while it waits to go out — the reference's coil on
+ * `Bewerkers` read reserved `Definitive` to its processing order.
+ */
+export const addPurchaseOrderSupply = async (
+  _prevState: PurchaseOrderActionResult,
+  data: PurchaseOrderSupplyFormValues,
+): Promise<PurchaseOrderActionResult> => {
+  await requireAuth();
+  const parsed = purchaseOrderSupplySchema.safeParse(data);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
+  }
+  const values = parsed.data;
+  const quantity = Number(values.quantity);
+
+  try {
+    await db.transaction(async (tx) => {
+      const [order] = await tx
+        .select({
+          purchaseOrderType: PurchaseOrders.purchaseOrderType,
+          status: PurchaseOrders.status,
+        })
+        .from(PurchaseOrders)
+        .where(eq(PurchaseOrders.uuid, values.purchaseOrderUuid))
+        .limit(1);
+      if (!order) {
+        throw new Error("Purchase order not found.");
+      }
+      if (order.purchaseOrderType !== "processing") {
+        throw new Error("Only a processing order supplies material.");
+      }
+      if (order.status === "cancelled") {
+        throw new Error("A cancelled purchase order supplies nothing.");
+      }
+
+      const [lot] = await tx
+        .select()
+        .from(Stock)
+        .where(eq(Stock.uuid, values.stockUuid))
+        .limit(1);
+      if (!lot) {
+        throw new Error("Stock lot not found.");
+      }
+      const free = Number(lot.quantity) - Number(lot.reservedQuantity ?? 0);
+      if (quantity > free) {
+        throw new Error(
+          `Only ${free} of this lot is free to supply — the rest is reserved.`,
+        );
+      }
+      const kg =
+        Number(lot.quantity) > 0
+          ? (Number(lot.quantityKg ?? 0) * quantity) / Number(lot.quantity)
+          : 0;
+
+      await tx.insert(PurchaseOrderSupplies).values({
+        uuid: generateUuid(),
+        purchaseOrderUuid: values.purchaseOrderUuid,
+        stockUuid: lot.uuid,
+        productUuid: lot.productUuid,
+        deliveryDate: values.deliveryDate || null,
+        lengthMm: lot.lengthMm,
+        widthMm: lot.widthMm,
+        thicknessMm: lot.thicknessMm,
+        qtyPlanned: quantity.toFixed(3),
+        kgPlanned: kg.toFixed(2),
+        m1Planned: ((Number(lot.lengthMm ?? 0) / 1000) * quantity).toFixed(3),
+        status: "new",
+      });
+
+      const [held] = await tx
+        .update(Stock)
+        .set({
+          reservedQuantity: sql`${Stock.reservedQuantity} + ${quantity.toFixed(3)}`,
+        })
+        .where(
+          and(
+            eq(Stock.uuid, lot.uuid),
+            eq(Stock.reservedQuantity, lot.reservedQuantity ?? "0"),
+          ),
+        );
+      if (held.affectedRows === 0) {
+        throw new Error("The lot changed meanwhile — please try again.");
+      }
+    });
+
+    revalidatePath(`/purchase-orders/${values.purchaseOrderUuid}`);
+    return { success: true, purchaseOrderUuid: values.purchaseOrderUuid };
+  } catch (error) {
+    return { error: describeError(error, "Failed to add the supply") };
+  }
+};
+
+/** `Delete` on `Supplies` — only before it is on a work order. */
+export const deletePurchaseOrderSupply = async (
+  supplyUuid: string,
+  purchaseOrderUuid: string,
+): Promise<PurchaseOrderActionResult> => {
+  await requireAuth();
+  try {
+    await db.transaction(async (tx) => {
+      const [supply] = await tx
+        .select()
+        .from(PurchaseOrderSupplies)
+        .where(eq(PurchaseOrderSupplies.uuid, supplyUuid))
+        .limit(1);
+      if (!supply) {
+        throw new Error("Supply not found.");
+      }
+      if (supply.status !== "new") {
+        throw new Error(
+          "This supply is already on a work order, so it cannot be deleted.",
+        );
+      }
+      await tx
+        .update(Stock)
+        .set({
+          reservedQuantity: sql`GREATEST(${Stock.reservedQuantity} - ${supply.qtyPlanned ?? "0"}, 0)`,
+        })
+        .where(eq(Stock.uuid, supply.stockUuid));
+      await tx
+        .delete(PurchaseOrderSupplies)
+        .where(eq(PurchaseOrderSupplies.uuid, supplyUuid));
+    });
+    revalidatePath(`/purchase-orders/${purchaseOrderUuid}`);
+    return { success: true, purchaseOrderUuid };
+  } catch (error) {
+    return { error: describeError(error, "Failed to delete the supply") };
+  }
+};
+
+/** `New` on a line's `Options` (C10). */
+export const addPurchaseOrderOption = async (
+  _prevState: PurchaseOrderActionResult,
+  data: PurchaseOrderOptionFormValues,
+): Promise<PurchaseOrderActionResult> => {
+  await requireAuth();
+  const parsed = purchaseOrderOptionSchema.safeParse(data);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
+  }
+  const values = parsed.data;
+
+  try {
+    await db.transaction(async (tx) => {
+      const [last] = await tx
+        .select({
+          sortOrder: sql<number>`COALESCE(MAX(${PurchaseOrderItemOptions.sortOrder}), 0)`,
+        })
+        .from(PurchaseOrderItemOptions)
+        .where(
+          eq(
+            PurchaseOrderItemOptions.purchaseOrderItemUuid,
+            values.purchaseOrderItemUuid,
+          ),
+        );
+      await tx.insert(PurchaseOrderItemOptions).values({
+        uuid: generateUuid(),
+        purchaseOrderUuid: values.purchaseOrderUuid,
+        purchaseOrderItemUuid: values.purchaseOrderItemUuid,
+        sortOrder: Number(last?.sortOrder ?? 0) + 10,
+        option: values.option,
+        quantity: Number(values.quantity || 1).toFixed(3),
+        grossPrice: Number(values.grossPrice).toFixed(4),
+        per: values.per,
+        discountPercent: Number(values.discountPercent || 0).toFixed(2),
+        referenceFactor: Number(values.referenceFactor || 1).toFixed(4),
+      });
+      await restatePurchaseLineOptions(tx, values.purchaseOrderItemUuid);
+    });
+    revalidatePath(`/purchase-orders/${values.purchaseOrderUuid}`);
+    return { success: true, purchaseOrderUuid: values.purchaseOrderUuid };
+  } catch (error) {
+    return { error: describeError(error, "Failed to add the option") };
+  }
+};
+
+/** `Delete` on a line's `Options`. */
+export const deletePurchaseOrderOption = async (
+  optionUuid: string,
+  purchaseOrderUuid: string,
+): Promise<PurchaseOrderActionResult> => {
+  await requireAuth();
+  try {
+    await db.transaction(async (tx) => {
+      await tx
+        .delete(PurchaseOrderItemOptions)
+        .where(eq(PurchaseOrderItemOptions.uuid, optionUuid));
+      await restatePurchaseOrderAmount(tx, purchaseOrderUuid);
+    });
+    revalidatePath(`/purchase-orders/${purchaseOrderUuid}`);
+    return { success: true, purchaseOrderUuid };
+  } catch (error) {
+    return { error: describeError(error, "Failed to delete the option") };
+  }
+};
+
+/**
+ * `Report completion…` on an `Ex works Processor` order (C12, captured on
+ * 400143 8-10-2026): book the metal in **where it lies**, at the processor, with
+ * no unloading work order — `400143` had none, a bill of lading reading
+ * `INtern`, and its lot landed on `Bewerkers`, blocked because a processor's
+ * location is not sellable.
+ */
+export const reportExWorksProcessorReceipt = async (
+  purchaseOrderUuid: string,
+): Promise<PurchaseOrderActionResult> => {
+  const userId = await requireAuth();
+  try {
+    await db.transaction(async (tx) => {
+      const [order] = await tx
+        .select({
+          id: PurchaseOrders.id,
+          status: PurchaseOrders.status,
+          purchaseOrderType: PurchaseOrders.purchaseOrderType,
+          supplierUuid: PurchaseOrders.supplierUuid,
+        })
+        .from(PurchaseOrders)
+        .where(eq(PurchaseOrders.uuid, purchaseOrderUuid))
+        .limit(1);
+      if (!order) {
+        throw new Error("Purchase order not found.");
+      }
+      if (order.purchaseOrderType !== "ex_works_processor") {
+        throw new Error(
+          "Only an Ex works Processor order is reported complete this way — other orders are unloaded.",
+        );
+      }
+      if (order.status === "provisional" || order.status === "cancelled") {
+        throw new Error("Make the order final before reporting it complete.");
+      }
+
+      const [atProcessor] = await tx
+        .select({ uuid: Warehouses.uuid })
+        .from(Warehouses)
+        .where(eq(Warehouses.locationType, "processing"))
+        .limit(1);
+      if (!atProcessor) {
+        throw new Error(
+          "No processor location exists. Give a location the `Processing` type (the reference's `Bewerkers`) first.",
+        );
+      }
+
+      const lines = await tx
+        .select()
+        .from(PurchaseOrderItems)
+        .where(eq(PurchaseOrderItems.purchaseOrderUuid, purchaseOrderUuid));
+      const outstanding = lines.filter(
+        (line) =>
+          line.status !== "cancelled" &&
+          Number(line.quantity) - Number(line.qtyReceived ?? 0) > 0,
+      );
+      if (outstanding.length === 0) {
+        throw new Error("Everything on this order has already been booked in.");
+      }
+
+      for (const line of outstanding) {
+        await applyReceipt(tx, {
+          productUuid: line.productUuid,
+          quantity: Number(line.quantity) - Number(line.qtyReceived ?? 0),
+          toLocationUuid: atProcessor.uuid,
+          purchaseOrderItemUuid: line.uuid,
+          returnOrderItemUuid: null,
+          charge: null,
+          internalCharge: null,
+          internalBatch: null,
+          weighedKg: null,
+          userId,
+          companyUuid: order.supplierUuid,
+          documentNo: String(order.id),
+          warehouseWorkOrderLineUuid: null,
+        });
+      }
+
+      // Nothing travelled: the bill of lading reads `INtern`.
+      await tx
+        .update(PurchaseLineReceivals)
+        .set({ billOfLading: "INtern" })
+        .where(eq(PurchaseLineReceivals.purchaseOrderUuid, purchaseOrderUuid));
+    });
+
+    revalidatePath(`/purchase-orders/${purchaseOrderUuid}`);
+    revalidatePath("/stock-on-location");
+    return { success: true, purchaseOrderUuid };
+  } catch (error) {
+    return { error: describeError(error, "Failed to report the order complete") };
   }
 };

@@ -1,8 +1,12 @@
-
 import { db } from "@/db";
 import { OrderItems } from "@/db/schema/order-items";
 import { BatchCertificates } from "@/db/schema/batch-certificates";
 import { reserveReceiptToCoveredSalesLines } from "@/lib/server/cross-dock";
+import {
+  processingOrderOf,
+  restatePurchaseLineOptions,
+  suppliedIdentityOf,
+} from "@/lib/server/external-processing";
 import { ReturnOrderItems, SelectReturnOrderItems } from "@/db/schema/return-order-items";
 import { Products } from "@/db/schema/products";
 import { PurchaseOrderItems } from "@/db/schema/purchase-order-items";
@@ -358,7 +362,26 @@ export const applyReceipt = async (
   // € 5.298,75 / € 2.119,50, and every one of them divides out to exactly
   // € 2.000,00 per tonne, the price on the line. The running balance closed on
   // it too: € 35.311,54 → € 56.506,54.
-  const value = roundToCents(pricePerUnit * measure);
+  // 🔑 The processed metal coming back on a `Processing` order (C13). Its line
+  // is struck at € 0,00 — `400066` and `402401` both — because the order buys
+  // a processing step, not metal. So the lot is not valued at the line's
+  // price: it carries the value of what went out, shared by weight across
+  // everything that comes back (coil and scrap: 900 + 234 = 1 134 kg on
+  // `400066`), and it keeps the supplied lot's heat and mill purchase order.
+  const processing = await processingOrderOf(tx, purchaseLine.purchaseOrderUuid);
+  const supplied = processing
+    ? await suppliedIdentityOf(tx, purchaseLine.purchaseOrderUuid)
+    : null;
+  const value = supplied
+    ? roundToCents(
+        supplied.kgOut > 0
+          ? (supplied.valueOut * weightKg) / supplied.kgOut
+          : 0,
+      )
+    : roundToCents(pricePerUnit * measure);
+  const movementReason = supplied
+    ? ("external_processing_return" as const)
+    : ("warehouse_receipt" as const);
 
   // ⚠️ The LOT is valued differently, and we cannot yet reproduce it.
   //
@@ -444,9 +467,12 @@ export const applyReceipt = async (
   await tx.insert(Stock).values({
     uuid: stockUuid,
     productUuid: params.productUuid,
-    purchaseOrderUuid: purchaseLine.purchaseOrderUuid,
+    // Where the metal was bought: the mill's order for processed metal, the
+    // line's own order otherwise (C13).
+    purchaseOrderUuid:
+      supplied?.purchaseOrderUuid ?? purchaseLine.purchaseOrderUuid,
     purchaseOrderItemUuid: purchaseLine.uuid,
-    supplierUuid: params.companyUuid,
+    supplierUuid: supplied?.supplierUuid ?? params.companyUuid,
     locationUuid: params.toLocationUuid,
     quantity: quantity.toFixed(STOCK_QUANTITY_SCALE),
     quantityKg: weightKg.toFixed(STOCK_QUANTITY_SCALE),
@@ -454,10 +480,10 @@ export const applyReceipt = async (
     // Folded through the sentinels: `nvt`, `ntv` and `-` are all how somebody
     // wrote "no heat number", and a lot must not end up traceable to a heat
     // called "ntv".
-    charge: normaliseCharge(params.charge),
+    charge: supplied?.charge ?? normaliseCharge(params.charge),
     internalCharge,
     internalBatch,
-    receiptDate: todayDateString(),
+    receiptDate: supplied?.receiptDate ?? todayDateString(),
     valuationPrice: unitCostString(unitCost),
     valuationEuro: moneyString(value),
   });
@@ -478,6 +504,9 @@ export const applyReceipt = async (
     kg: weightKg,
     date: todayDateString(),
   });
+
+  // An option on the line is priced on the weight that came back (C10).
+  await restatePurchaseLineOptions(tx, purchaseLine.uuid);
 
   // And it is where the batch is born: the reference writes a Batches row for
   // every receipt, carrying the heat and internal charge the lot now holds.
@@ -521,8 +550,10 @@ export const applyReceipt = async (
     productUuid: params.productUuid,
     stockUuid,
     type: "in",
-    reason: "warehouse_receipt",
+    reason: movementReason,
     quantity: quantity.toFixed(3),
+    quantityKg: weightKg.toFixed(2),
+    valueEur: moneyString(value),
     purchaseOrderUuid: purchaseLine.purchaseOrderUuid,
     warehouseWorkOrderLineUuid: params.warehouseWorkOrderLineUuid,
     createdByUserId: params.userId,
@@ -532,7 +563,7 @@ export const applyReceipt = async (
     productUuid: params.productUuid,
     quantity: quantity.toFixed(3),
     type: "in",
-    reason: "warehouse_receipt",
+    reason: movementReason,
     purchaseOrderUuid: purchaseLine.purchaseOrderUuid,
     supplierUuid: params.companyUuid,
     valuationPrice: unitCostString(unitCost),
@@ -544,11 +575,16 @@ export const applyReceipt = async (
       buildInventoryMovementEntry({
         bookingDate: todayDateString(),
         documentNo: params.documentNo,
-        description: "Warehouse — Warehouse Receipt",
+        description: supplied
+          ? "Warehouse — Returned from Processor"
+          : "Warehouse — Warehouse Receipt",
         companyUuid: params.companyUuid,
         debCreditor: null,
         inventoryValue: value,
-        counterAccount: LEDGER_ACCOUNTS.goodsReceivedNotInvoiced,
+        // The way back in clears what the way out parked at the processor.
+        counterAccount: supplied
+          ? LEDGER_ACCOUNTS.stockAtProcessor
+          : LEDGER_ACCOUNTS.goodsReceivedNotInvoiced,
         reference: `Stock lot ${stockUuid}`,
         userId: params.userId,
       }),

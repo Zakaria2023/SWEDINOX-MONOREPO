@@ -148,6 +148,13 @@ export const LEDGER_ACCOUNTS = {
    */
   goodsReturnedNotCredited: "3100",
   /**
+   * Our metal at an outside processor (C8). The reference books both legs of
+   * external processing here — all 483 rows of its `Control Stock increase
+   * ext. processing` export read `3100` — so the value leaves inventory on the
+   * way out and comes back on the way in.
+   */
+  stockAtProcessor: "3100",
+  /**
    * Goods that have shipped but not been billed yet — still ours in
    * accounting terms, no longer ours physically. A negative balance is the
    * mirror: goods a customer sent back that we have not credited yet.

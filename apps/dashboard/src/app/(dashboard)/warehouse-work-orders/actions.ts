@@ -50,6 +50,7 @@ import {
 } from "@/lib/labels";
 import { recordFreightMovement } from "@/lib/server/freight";
 import { applyReceipt } from "@/lib/server/receipts";
+import { markSupplyDelivered } from "@/lib/server/external-processing";
 import { applyMove } from "@/lib/server/stock-movements";
 import { breachedTolerance, ToleranceKind } from "@/lib/server/tolerances";
 import { getWorkOrderLineDetail, LineDetail } from "@/lib/server/work-order-line-detail";
@@ -1051,7 +1052,7 @@ const applyIssue = async (
   params: {
     source: SelectStock;
     quantity: number;
-    reason: "warehouse_issue" | "warehouse_scrapped";
+    reason: "warehouse_issue" | "warehouse_scrapped" | "external_processing_issue";
     userId: string;
     orderUuid: string | null;
     companyUuid: string | null;
@@ -1064,7 +1065,7 @@ const applyIssue = async (
    */
     warehouseWorkOrderLineUuid: string | null;
   },
-): Promise<void> => {
+): Promise<number> => {
   const { source, quantity } = params;
   const previousQuantity = Number(source.quantity);
 
@@ -1142,12 +1143,16 @@ const applyIssue = async (
         counterAccount:
           params.reason === "warehouse_issue"
             ? LEDGER_ACCOUNTS.goodsDeliveredNotInvoiced
-            : LEDGER_ACCOUNTS.inventoryDifferences,
+            : params.reason === "external_processing_issue"
+              ? LEDGER_ACCOUNTS.stockAtProcessor
+              : LEDGER_ACCOUNTS.inventoryDifferences,
         reference: `Stock lot ${source.uuid}`,
         userId: params.userId,
       }),
     );
   }
+
+  return valueRemoved;
 };
 
 /**
@@ -1481,7 +1486,35 @@ export const reportWarehouseWorkOrderLineCompletion = async (
               );
             }
 
-            if (meta.stockEffect === "move") {
+            if (line.purchaseOrderSupplyUuid) {
+              // 🔑 A supply to a processor (C8): picking it sends the lot out.
+              // `315201` took the coil from `5G` to `Laad` and the lorry took
+              // it to Decomecc; here the lot leaves stock on the report, into
+              // 3100, and the supply reads `Delivered`.
+              const sentKg =
+                Number(source.quantity) > 0
+                  ? (Number(source.quantityKg ?? 0) * quantity) /
+                    Number(source.quantity)
+                  : 0;
+              const valueSent = await applyIssue(tx, {
+                source,
+                quantity,
+                reason: "external_processing_issue",
+                userId,
+                orderUuid,
+                companyUuid: line.companyUuid,
+                documentNo,
+                warehouseWorkOrderLineUuid: input.lineUuid,
+              });
+              await markSupplyDelivered(tx, line.purchaseOrderSupplyUuid, {
+                quantity,
+                kg:
+                  pick.kgActual === null || pick.kgActual === undefined
+                    ? sentKg
+                    : Number(pick.kgActual),
+                value: valueSent,
+              });
+            } else if (meta.stockEffect === "move") {
               const toLocationUuid = pick.toLocationUuid ?? line.toLocationUuid;
               if (!toLocationUuid) {
                 throw new Error("A move needs a destination location.");

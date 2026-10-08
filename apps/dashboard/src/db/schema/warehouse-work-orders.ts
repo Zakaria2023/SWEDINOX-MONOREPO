@@ -149,6 +149,13 @@ export const WarehouseWorkOrderLines = mysqlTable(
     // reported.
     returnOrderItemUuid: char("return_order_item_uuid", { length: 36 }),
 
+    // 🔑 And the third thing a line can be about: a lot going out to a
+    // processor (C8). The picking for a `Processing` order's supply moves the
+    // lot to the loading bay; reporting it sends the lot out.
+    purchaseOrderSupplyUuid: char("purchase_order_supply_uuid", {
+      length: 36,
+    }),
+
     status: mysqlEnum("status", workOrderStatuses)
       .notNull()
       .default("new"),

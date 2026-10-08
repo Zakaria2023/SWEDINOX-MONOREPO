@@ -14,12 +14,17 @@ import {
 import {
   cancelPurchaseOrder,
   createUnloadingWorkOrder,
+  reportExWorksProcessorReceipt,
   makePurchaseOrderFinal,
   PurchaseOrderDetail,
   sendPurchaseOrder,
 } from "@/app/(dashboard)/purchase-orders/actions";
 import { ConfirmPurchaseOrderDialog } from "@/components/purchase-orders/confirm-purchase-order-dialog";
 import { PreNotifyDialog } from "@/components/purchase-orders/pre-notify-dialog";
+import {
+  PurchaseOrderOptionsPanel,
+  PurchaseOrderSuppliesPanel,
+} from "@/components/purchase-orders/purchase-order-processing-panels";
 import { ReceiptDocumentsPanel } from "@/components/purchase-orders/receipt-documents-panel";
 import { startPurchaseReturnFromOrder } from "@/app/(dashboard)/purchase-return-orders/actions";
 import { Button } from "@/components/shadcn/button";
@@ -105,6 +110,20 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
     setError(undefined);
     startTransition(async () => {
       const result = await startPurchaseReturnFromOrder(purchaseOrder.uuid);
+      if (result.error) {
+        setError(result.error);
+      }
+    });
+  };
+
+  // `Report completion…` where an `Ex works Processor` order has `Workorder`
+  // (C12, 400143): the metal is booked in where it lies, at the processor.
+  const isExWorksProcessor =
+    purchaseOrder.purchaseOrderType === "ex_works_processor";
+  const handleReportExWorks = () => {
+    setError(undefined);
+    startTransition(async () => {
+      const result = await reportExWorksProcessorReceipt(purchaseOrder.uuid);
       if (result.error) {
         setError(result.error);
       }
@@ -204,14 +223,25 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
               Show company
             </Button>
           )}
-          <Button
-            type="button"
-            onClick={handleRaiseUnloading}
-            disabled={isPending}
-          >
-            <Warehouse className="me-1.5 size-4" />
-            {isPending ? "Raising…" : "Workorder"}
-          </Button>
+          {isExWorksProcessor ? (
+            <Button
+              type="button"
+              onClick={handleReportExWorks}
+              disabled={isPending || isProvisional}
+            >
+              <Warehouse className="me-1.5 size-4" />
+              {isPending ? "Reporting…" : "Report completion…"}
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              onClick={handleRaiseUnloading}
+              disabled={isPending}
+            >
+              <Warehouse className="me-1.5 size-4" />
+              {isPending ? "Raising…" : "Workorder"}
+            </Button>
+          )}
           <Button
             variant="outline"
             render={
@@ -822,6 +852,21 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
 
         {/* The reference's last panel on the order, under `Previous orders`:
             where a certificate or DoP is stored (C19). */}
+        {/* A processing order buys a step, not metal: the lots it sends out
+            (C8) and the options it pays for (C10). */}
+        {purchaseOrder.purchaseOrderType === "processing" && (
+          <PurchaseOrderSuppliesPanel
+            purchaseOrderUuid={purchaseOrder.uuid}
+            supplies={purchaseOrder.supplies}
+            receipts={purchaseOrder.receipts}
+          />
+        )}
+        <PurchaseOrderOptionsPanel
+          purchaseOrderUuid={purchaseOrder.uuid}
+          options={purchaseOrder.options}
+          items={purchaseOrder.items}
+        />
+
         <ReceiptDocumentsPanel
           purchaseOrderUuid={purchaseOrder.uuid}
           documents={purchaseOrder.receiptDocuments}

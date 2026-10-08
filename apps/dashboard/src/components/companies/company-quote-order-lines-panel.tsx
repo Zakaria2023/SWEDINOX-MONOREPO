@@ -272,7 +272,7 @@ export const CompanyQuoteOrderLinesPanel = ({ lines }: Props) => {
   return (
     <CollapsibleSection
       title="Quote- and order lines"
-      summary={`${pluralize(lines.filter((line) => line.isOpen).length, "open line")}; ${formatNumber(
+      summary={`${lines.filter((line) => line.isOpen).length} ${pluralize(lines.filter((line) => line.isOpen).length, "open line")}; ${formatNumber(
         lines
           .filter((line) => line.isOpen)
           .reduce((total, line) => total + Number(line.kg ?? 0), 0),

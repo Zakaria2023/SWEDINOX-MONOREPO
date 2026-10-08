@@ -488,6 +488,21 @@ export const receiptDocumentKinds = [
 
 export type ReceiptDocumentKind = (typeof receiptDocumentKinds)[number];
 
+/**
+ * Where a supply on a processing order has got to (C8). `new` until a picking
+ * is raised for it, `workorders_created` while it is being picked, and
+ * `delivered` once it has gone out to the processor — the status the
+ * reference's `Supplies` panel read on both `400066` and `402401`.
+ */
+export const purchaseOrderSupplyStatuses = [
+  "new",
+  "workorders_created",
+  "delivered",
+] as const satisfies readonly string[];
+
+export type PurchaseOrderSupplyStatus =
+  (typeof purchaseOrderSupplyStatuses)[number];
+
 export const stockModes = [
   "multiplier",
   "fixed_value",
