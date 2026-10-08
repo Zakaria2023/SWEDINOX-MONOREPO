@@ -932,6 +932,40 @@ module, the scanner app, or an import. Moved to
 [MANAGER-QUESTIONS.md](MANAGER-QUESTIONS.md) question 12. **No change**: ours
 keeps transport read-only until someone says where trips come from.
 
+## H10 · Reporting a production cut — what the evening found
+
+**Where reporting happens.** Not on the `Production workorders` overview
+(toolbar `Show Product` / `Show Order` only, no double-click), and not on the
+sales order's `Production workorders` panel (`New` · `Delete` · `Show
+product`). It happens on the **work panel** (top menu `Logistiek`): a tree
+`Dag / Optie (Machine) / Opdracht / Regel` with view `Decoilen`, filters
+`Datum` · `Optie` · `Machine` · `Status` · `Naar`, and the toolbar `Alles
+Selecteren` · `Details` · `Vrijgeven` · **`Gereedmelden…`** · `Goedkeuren` ·
+`Annuleren` · `Verpakken` · `Afdrukken` · `Klantlabel`. Bottom tabs `Voorraad`
+· `Order` · `Opties` · `Teksten`. Columns: Extra opties · Status ·
+Artikelcode · Order · Dikte · Hvh(p) · Hvh(w) · Eh(p) · Eh(w) · Kg(p) · Kg(w) ·
+Vorig · Van · Naar · Bedrijf · Leveren op · Afhaal · Spoed · Prioriteit ·
+Charge · Specificatie · Voorraadcategorie · Interne partij · Interne charge ·
+Partij · Kwaliteitscode · Kwaliteit.
+
+**Two statuses only.** Grouping the overview on `Status` gave `Approved` and
+`Released`. A line that is fully reported (`Hvh(w)` = `Hvh(p)`, `Kg(w)` =
+`Kg(p)`) can still read `Released`, as on `303496` lines 1/4/6, so reporting
+does not move the status by itself here.
+
+**Machines in use:** `Slijpen/Foliën` (grinding / foil), `Knip` (shear),
+`Laser 1`, `Decoiler`. No saw (`Zaag`) appears among the open orders, which
+fits sawing planning being unused (K3).
+
+🔑 **A rule:** pressing `Gereedmelden…` on a line whose **fetch work order**
+(`aanhaalopdracht`) was already reported gives *"De aanhaalopdracht is al
+gereedgemeld. Deze opdracht kan niet meer met behulp van de dialoog
+gereedgemeld worden."* ("The fetch work order is already reported. This work
+order can no longer be reported with the dialog.") So a production line and
+the warehouse fetch that feeds it are reported together. Once the fetch is
+reported, the production line is closed through it, not through this
+dialog. Ours reports the two independently. ⚠️ To confirm what closes it then.
+
 ## C9 · The offcut comes back as a scrap line
 
 **Change:** a processing order's lines may include a **scrap article** in `KG`
