@@ -986,6 +986,22 @@ amount uses the planned kilos.
 
 ---
 
+## ▶ Resume here (end of 8-10-2026, 18:45)
+
+Done: items 1, 2 (→ manager Q11), 3, 5 (→ manager Q5), 6, 7 (H4 → manager
+Q12), 8, extras A and B. Planned: **C1–C20**, none built. Code stays on hold
+until the user says go.
+
+**One thing left, item 4 (H10):** the `Gereedmelden…` dialog itself.
+
+1. Top menu `Logistiek` → the production work panel (view `Decoilen`).
+2. Select a **line** with `Hvh(w)` 0 and `Kg(w)` 0, preferably laser
+   `327247` line 1 (2 mm 304L, H. Schrijver).
+3. `Gereedmelden…` → 📸 the dialog → **Cancel**.
+4. The last attempt ended in an error that was not captured. If it errors
+   again, 📸 the message and move H10 to MANAGER-QUESTIONS.md. The list is then
+   empty.
+
 ## Where 8-10-2026 stopped
 
 The reference was closed at 17:01 after `400066`. Done today: item 1 (CD
