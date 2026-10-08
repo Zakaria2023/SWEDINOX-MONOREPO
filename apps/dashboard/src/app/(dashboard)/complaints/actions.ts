@@ -24,6 +24,11 @@ import { Quotes } from "@/db/schema/quotes";
 import { ReturnOrderItems } from "@/db/schema/return-order-items";
 import { ReturnOrders, SelectReturnOrders } from "@/db/schema/return-orders";
 import { Stock } from "@/db/schema/stock";
+import { InvoiceItems } from "@/db/schema/invoice-items";
+import { Invoices } from "@/db/schema/invoices";
+import { JournalEntries } from "@/db/schema/journal-entries";
+import { mailDocument, sendInvoiceEmail } from "@/emails/documents";
+import { buildSalesJournalEntry } from "@/lib/server/ledger";
 import { SelectWarehouses, Warehouses } from "@/db/schema/warehouses";
 import { requireAuth } from "@/lib/auth";
 import {
@@ -41,6 +46,7 @@ import {
   complaintSolutionReturnsGoods,
   describeError,
   generateUuid,
+  getInvoiceVatRatePercent,
   moneyString,
   returnReasonForComplaintCategory,
   todayDateString,
@@ -983,5 +989,168 @@ export const createComplaint = async (
       error:
         error instanceof Error ? error.message : "Failed to create complaint",
     };
+  }
+};
+
+/**
+ * `Credit` on a complaint: hand the customer money back with no goods coming
+ * back (C20).
+ *
+ * Complaint `40055` (J. op den Velde Staal, 8-4-2025): 360 kg billed, 288 kg
+ * delivered — `Qty` 0, `Weight` 72 kg, `Amount` € 200,16 (72 × € 2,78),
+ * credited on invoice `501210`, and no return order raised. So the credit
+ * note is struck on the complaint's own figures against the order's invoice,
+ * one line on the complaint's product, quantity 0, and stock is not touched.
+ */
+export const creditComplaint = async (
+  complaintUuid: string,
+): Promise<ComplaintActionResult> => {
+  const userId = await requireAuth();
+  const creditNoteUuid = generateUuid();
+
+  try {
+    const [complaint] = await db
+      .select()
+      .from(Complaints)
+      .where(eq(Complaints.uuid, complaintUuid))
+      .limit(1);
+
+    if (!complaint) {
+      return { error: "Complaint not found." };
+    }
+    const amount = Number(complaint.amount ?? 0);
+    if (amount <= 0) {
+      return { error: "Enter the amount to credit on the complaint first." };
+    }
+    if (complaint.returnOrderUuid) {
+      return {
+        error:
+          "This complaint already has a return order — credit the return instead.",
+      };
+    }
+    if (!complaint.orderUuid) {
+      return {
+        error: "Link the complaint to the order it is about before crediting it.",
+      };
+    }
+
+    // The invoice the complaint is about: the order's newest live invoice,
+    // on the complaint's product where it names one.
+    const [source] = await db
+      .select({
+        invoiceUuid: Invoices.uuid,
+        debtorNo: Invoices.debtorNo,
+        paymentTerms: Invoices.paymentTerms,
+        vatScenario: Invoices.vatScenario,
+        orderItemUuid: InvoiceItems.orderItemUuid,
+        productUuid: InvoiceItems.productUuid,
+      })
+      .from(InvoiceItems)
+      .innerJoin(Invoices, eq(InvoiceItems.invoiceUuid, Invoices.uuid))
+      .innerJoin(OrderItems, eq(InvoiceItems.orderItemUuid, OrderItems.uuid))
+      .where(
+        and(
+          eq(OrderItems.orderUuid, complaint.orderUuid),
+          eq(Invoices.cancelled, false),
+          eq(Invoices.documentType, "invoice"),
+          ...(complaint.productUuid
+            ? [eq(InvoiceItems.productUuid, complaint.productUuid)]
+            : []),
+        ),
+      )
+      .orderBy(desc(Invoices.invoiceDate))
+      .limit(1);
+
+    if (!source) {
+      return {
+        error:
+          "The complaint's order has not been invoiced, so there is nothing to credit against.",
+      };
+    }
+
+    const weightKg = Number(complaint.weight ?? 0);
+    const vatRate = getInvoiceVatRatePercent(source.vatScenario ?? null);
+    const vatAmount = amount * (vatRate / 100);
+    const inclVat = amount + vatAmount;
+
+    await db.transaction(async (tx) => {
+      await tx.insert(Invoices).values({
+        uuid: creditNoteUuid,
+        documentType: "credit_note",
+        creditsInvoiceUuid: source.invoiceUuid,
+        companyUuid: complaint.companyUuid,
+        debtorNo: source.debtorNo,
+        invoiceDate: new Date(),
+        expirationDate: new Date(),
+        paymentTerms: source.paymentTerms,
+        vatScenario: source.vatScenario,
+        invoiceAmountExclVat: moneyString(-amount),
+        invoiceAmountInclVat: moneyString(-inclVat),
+        creditRestriction: "0.00",
+        invoiceTotal: moneyString(-inclVat),
+        outstanding: moneyString(-inclVat),
+        materialsRevenue: moneyString(-amount),
+        surchargesRevenue: "0.00",
+        totalWeightKg: moneyString(-weightKg),
+        explanation: `Credit note for complaint ${complaint.id}`,
+      });
+
+      const [inserted] = await tx
+        .select({ id: Invoices.id })
+        .from(Invoices)
+        .where(eq(Invoices.uuid, creditNoteUuid))
+        .limit(1);
+
+      // Money only: revenue comes off, cost does not — nothing came back.
+      await tx.insert(JournalEntries).values(
+        buildSalesJournalEntry({
+          invoiceUuid: creditNoteUuid,
+          invoiceId: inserted?.id ?? null,
+          companyUuid: complaint.companyUuid,
+          debCreditor: source.debtorNo,
+          invoiceDate: new Date(),
+          amountExclVat: -amount,
+          vatAmount: -vatAmount,
+          costOfSales: 0,
+          userId,
+          description: "Credit note",
+        }),
+      );
+
+      await tx.insert(InvoiceItems).values({
+        uuid: generateUuid(),
+        invoiceUuid: creditNoteUuid,
+        orderItemUuid: source.orderItemUuid,
+        productUuid: complaint.productUuid ?? source.productUuid,
+        // `Qty` 0 on the complaint: no goods are being handed back.
+        quantity: "0.000",
+        netPrice: "0.00",
+        amount: moneyString(-amount),
+        costPrice: "0.0000",
+        costAmount: "0.00",
+        profit: moneyString(-amount),
+        revenueProducts: moneyString(-amount),
+        profitProducts: moneyString(-amount),
+        profitMargin: "0.00",
+        weightKg: (-weightKg).toFixed(2),
+      });
+
+      await tx
+        .update(Complaints)
+        .set({ status: "done", modifiedByUserId: userId })
+        .where(eq(Complaints.uuid, complaintUuid));
+    });
+
+    await mailDocument(
+      () => sendInvoiceEmail(creditNoteUuid),
+      `Credit note ${creditNoteUuid}`,
+    );
+
+    revalidatePath(`/complaints/${complaintUuid}`);
+    revalidatePath("/complaints");
+    revalidatePath("/invoices");
+    return { success: true, complaintUuid };
+  } catch (error) {
+    return { error: describeError(error, "Failed to credit the complaint") };
   }
 };

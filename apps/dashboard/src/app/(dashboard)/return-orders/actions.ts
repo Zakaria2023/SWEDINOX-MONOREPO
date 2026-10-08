@@ -1075,6 +1075,27 @@ export const creditReturnOrder = async (
 
     const creditable = items.filter((item) => !!item.originalOrderItemUuid);
     if (creditable.length === 0) {
+      // 🔴 A return that names no sale and carries no value closes without a
+      // credit note. Return order `290247` (Mercainox, 29-9-2026): no sales
+      // order, no complaint, every line € 0,00 — `Invoice` set it and its line
+      // to `Invoiced`, and no credit invoice exists for it (the customer's
+      // newest invoice is a debit of 11-9-2026). A paper correction of
+      // quantity, done (C20).
+      const value = items.reduce(
+        (sum, item) => sum + Math.abs(Number(item.amount ?? 0)),
+        0,
+      );
+      if (value === 0) {
+        await db
+          .update(ReturnOrders)
+          .set({ status: "credited" })
+          .where(
+            and(eq(ReturnOrders.uuid, uuid), eq(ReturnOrders.status, "received")),
+          );
+        revalidatePath("/return-orders");
+        revalidatePath(`/return-orders/${uuid}`);
+        return { success: true, returnOrderUuid: uuid };
+      }
       return {
         error:
           "None of these lines point at an invoiced order line, so there is nothing to credit.",

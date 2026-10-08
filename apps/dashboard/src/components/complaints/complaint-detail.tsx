@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { PackageCheck } from "lucide-react";
+import { HandCoins, PackageCheck } from "lucide-react";
 import {
   ComplaintDetail,
   ComplaintOrderLine,
   convertComplaintToReturnOrder,
+  creditComplaint,
   deleteComplaint,
 } from "@/app/(dashboard)/complaints/actions";
 import { ComplaintLinesPanel } from "./complaint-lines-panel";
@@ -88,6 +89,20 @@ export const ComplaintDetailView = ({
     setError(undefined);
     startTransition(async () => {
       const result = await convertComplaintToReturnOrder(complaint.uuid);
+      if (result.error) {
+        setError(result.error);
+      }
+    });
+  };
+
+  // `Credit`: money back with no goods coming back (C20, complaint `40055`).
+  const canCredit =
+    Number(complaint.amount ?? 0) > 0 && !hasReturn && complaint.status !== "done";
+
+  const handleCredit = () => {
+    setError(undefined);
+    startTransition(async () => {
+      const result = await creditComplaint(complaint.uuid);
       if (result.error) {
         setError(result.error);
       }
@@ -297,6 +312,15 @@ export const ComplaintDetailView = ({
         >
           <PackageCheck className="size-4" />
           {hasReturn ? "Return order raised" : "Raise return order"}
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={handleCredit}
+          disabled={isPending || !canCredit}
+        >
+          <HandCoins className="size-4" />
+          Credit {formatMoney(Number(complaint.amount ?? 0))}
         </Button>
 
         <p className="text-sm text-muted-foreground">
