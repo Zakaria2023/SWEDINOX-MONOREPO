@@ -664,6 +664,16 @@ can be sent, confirmed or worked on half-edited. Ours edits on a separate
 page, so the detail screen's toolbar never sees a half-edited record. No
 change, but any in-place panel editing we add (C19) must keep this rule.
 
+**The rest of J8, closed the same evening:**
+
+- `Correct products and stock` was already opened on 2-10-2026 (ACTIONS.md:
+  it corrects a product's length / stock unit, with `Simuleer`).
+- **`Show Word File`** on the company (Outokumpu Stainless Oy) **opens an
+  empty Word document**. Nothing is merged into it, so it is a blank letter
+  for the company, and no template is configured. **Not built**: ours has no
+  Word integration, and an empty file is not worth one. Declined, like K3.
+- `Change APP…` is finance and out of scope.
+
 ### C16 · `Confirm purchase order 404299`
 
 - **Header, "Copy these values into the selected order lines below":**
