@@ -20,6 +20,7 @@ capture that proves it. Items are added as each capture lands.
 | C12 | `Ex works Processor`: book in metal where it lies, at the processor, without an unloading | `400143` | 📋 ready |
 | C13 | A processed receipt carries the supplied lot's heat **and original purchase order** | `402401` | 📋 ready |
 | C14 | `Quote- and order lines` panel on the company screen | Decomecc, extra A | 📋 ready |
+| C15 | Stock search: `C. Kg` / `C. ST`, `Order hvh.` and the lot footer | `Voorraad` on `PK316L150315`, extra B | 📋 ready |
 | — | ~~Item 1 of -7: a `CD` line must not create a lot~~ | `404299` | ❎ withdrawn |
 
 ---
@@ -587,6 +588,63 @@ none). Same sequential, 100-row query as the other panels.
 **Files:** `companies/actions.ts` (`getCompanyRelatedRecords`),
 `components/companies/company-related-panels.tsx`.
 
+## C15 · The stock search, read in full (extra B)
+
+**Captured 8-10-2026 17:55**: the `Voorraad` window opened from `New` on the
+lines of quote `300007`, product `PK316L150315`, with `Met marges zoeken` ☑
+5 % on all three dimensions and `Alleen artikelen met technische voorraad` ☑.
+The filter bar reads `TotalPhysicalStock ≠ 0`.
+
+**`C. Kg` / `C. ST` (the question):** **0 on all five article rows**, and
+hovering the header shows only `C. Kg` again: the system does not say what C
+stands for. Nothing on this product is consigned, and the window's other
+columns already cover technical, reserved and available stock in both pieces
+and kilos. That leaves **consignment** (`Consignatie`, the location seen in
+H1.2's location tree) as the only reading that fits. ⚠️ Not proved; a product
+with consignment stock would show it.
+
+**Upper grid, in order:** Artikel · Kwaliteit · Vrd. cat. · Opties · Lengte ·
+Breedte · Dikte · Technisch · Gereserveerd · Beschikbaar · `Kg (techn.)` ·
+`Kg (geres.)` · `Kg (besch.)` · Totale lengte · C. Kg · C. ST. Ours has all of
+these except the last two.
+
+**Lot grid, in order:** **`Order hvh.`** · Lengte · Breedte · Dikte · Technisch
+· Gereserveerd · Beschikbaar · `Ongeopend` · `Kg (besch.)` · Opties ·
+Opmerking · Kwaliteit · `GIP` · `Inkoopprijs` · Interne partij · Vrd. cat.
+Tabs `Voorraad` · `Inkoop` · `Interne productie`.
+
+- **`Order hvh.`** (order quantity) is the first column, white (editable), 0
+  on every lot: the quantity to take from that lot for this line, typed in the
+  grid.
+- **No location or product column.** Those sit in a **footer under the grid**
+  for the selected lot: `Charge 446108 · Interne charg 25AFWS · Locatie 2C2 ·
+  Inkoop 22-8-2025 / IO401559 / Aperam Service Solution Germany`, plus the
+  lot's remark in red (`Shorter`).
+- **A fully reserved lot is shown in red**: lot `404744`, 41 ST, 41 reserved,
+  0 available, GIP 3050 / TN.
+- `GIP` reads like `2900 / TN` and `Inkoopprijs` like `2650 / TN`, or `0 /`
+  when there is no purchase price.
+- Buttons: `Gebruik geselecteerde artikel` (between the grids), and `Reset
+  dialoog` · `Standaard instellingen` · `Reserveringen…` · `Annuleer` along the
+  bottom.
+
+**Ours** (`components/orders/stock-search-dialog.tsx`): the upper grid matches
+apart from C. Kg / C. ST. The lot grid matches in substance: `Unopened`, red
+when available ≤ 0, `APP` = GIP, `Purchase` = Inkoopprijs. It differs in
+layout: ours puts `Location` and `Product` in the grid and has no footer and
+no `Order hvh.` column.
+
+**Change:**
+
+1. Add `C. Kg` and `C. ST` at the end of the upper grid, **hidden by
+   default**. They print 0, with a comment that they are consignment stock,
+   which we do not track.
+2. Add the **selected-lot footer** (charge · internal charge · location ·
+   purchase date / order / supplier · remark).
+3. ⚠️ `Order hvh.` (typing a quantity per lot inside the dialog) is a change
+   to how a line takes its stock. Recorded here, decided separately; ours
+   asks the quantity on the line.
+
 ## C9 · The offcut comes back as a scrap line
 
 **Change:** a processing order's lines may include a **scrap article** in `KG`
@@ -627,5 +685,5 @@ way of `400066`.
 ## Still to come
 
 As each capture lands it gets a section here: H10 saw cut, J1
-consignment, H12 credit note, G3/G7/H4 transport, J8 buttons, and the two
-extras (`Quote- and order lines`, `C. Kg` / `C. ST`).
+consignment, H12 credit note, G3/G7/H4 transport and J8 buttons. Both extras
+are done (C14, C15).
