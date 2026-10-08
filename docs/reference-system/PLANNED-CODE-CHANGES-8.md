@@ -12,6 +12,7 @@ capture that proves it. Items are added as each capture lands.
 | C4 | Purchase quote lines keep the request's `For line` | follows from C1 | 📋 ready |
 | C5 | `For line` column on the purchase order's Lines grid | `404299` screenshot | 📋 ready |
 | C6 | A CD receipt is put on the loading location, not a rack | lot `404744` at `Laad` | 🟡 default to confirm |
+| C7 | Purchase lines gain the status `Delivered` | `Purchase lines` grouped on `Status` | 🟡 meaning to confirm |
 | — | ~~Item 1 of -7: a `CD` line must not create a lot~~ | `404299` | ❎ withdrawn |
 
 ---
@@ -170,6 +171,26 @@ warehouseman can still change it.
 🟡 **Not yet proved as a default.** One lot cannot tell a default from a
 warehouseman's choice. Settled by the next CD unloading we watch (item 1, step
 10 of the capture list), by reading what `To` offers before it is touched.
+
+## C7 · `Delivered` is a purchase-line status
+
+**Seen 8-10-2026:** `Purchase lines`, creation date from `1-1-2024`, grouped on
+`Status`, shows **nine** groups: `Checked` · **`Delivered`** · `Expired` ·
+`In progress` · `Invoiced` · `Partially received` · `Provisional` · `Received` ·
+`Released`. ANSWERED.md listed seven, without `Delivered` and `Expired`.
+
+**Ours:** purchase lines share `orderLineStatuses` with sales lines. That list
+has `expired` but not `delivered`. Its nearest word, `completed`, is the sales
+side's "delivered, not invoiced".
+
+**Likely meaning:** -7 §15 found that purchase *returns* end in `Delivered`, so
+these are probably the return lines (`IR95xxxx`) on the same screen. ⚠️ Not
+proven. One look settles it: expand `Status: Delivered` and read the order
+numbers.
+
+**Change, once confirmed:** add `delivered` to the purchase line's status set
+(a hand-ALTER of the enum first, then a normal `pnpm db:push`), and set it where
+a purchase return line is delivered.
 
 ---
 
