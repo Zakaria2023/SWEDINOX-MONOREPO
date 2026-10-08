@@ -21,6 +21,9 @@ capture that proves it. Items are added as each capture lands.
 | C13 | A processed receipt carries the supplied lot's heat **and original purchase order** | `402401` | 📋 ready |
 | C14 | `Quote- and order lines` panel on the company screen | Decomecc, extra A | 📋 ready |
 | C15 | Stock search: `C. Kg` / `C. ST`, `Order hvh.` and the lot footer | `Voorraad` on `PK316L150315`, extra B | 📋 ready |
+| C16 | `Confirm` takes a confirmation number, date and confirmed delivery date per line | `404299` J8 | 📋 ready |
+| C17 | `Pre-notify` takes a bill of lading, date and pre-notification code per reception | `404299` J8 | 📋 ready |
+| C18 | `Return` / `Par. return` are greyed on a received, mailed order | `404299` J8 | 🟡 rule to confirm |
 | — | ~~Item 1 of -7: a `CD` line must not create a lot~~ | `404299` | ❎ withdrawn |
 
 ---
@@ -644,6 +647,76 @@ no `Order hvh.` column.
 3. ⚠️ `Order hvh.` (typing a quantity per lot inside the dialog) is a change
    to how a line takes its stock. Recorded here, decided separately; ours
    asks the quantity on the line.
+
+## J8 · Buttons on `404299` (`Received · Printed · Mailed`), 8-10-2026 18:00
+
+**Toolbar:** `Print…` · `Send…` · ~~`Return`~~ · ~~`Par. return`~~ · `Confirm` ·
+`Pre-notify` · `Show company` · `Copy` · `Workorder` · `Options…`. **`Return`
+and `Par. return` are greyed** on a received order. `Workorder` opened only a
+loading spinner (no dialog came up).
+
+### C16 · `Confirm purchase order 404299`
+
+- **Header, "Copy these values into the selected order lines below":**
+  `Confirmation number` · `Confirmation date` (defaults to **today**) ·
+  `Confirmed delivery date` · `Document supplier` (a `…` picker).
+- **`Change confirmation` ☐** block, greyed until ticked: `Confirmation
+  number` · `Confirmation date` · `Confirmed delivery date` dropdowns, which
+  re-pick an existing confirmation.
+- **Grid, one row per order line with a tick:** Qty · U · Kg · Product ·
+  Dim. (mm) · Thickness · Gross price · U · Line discount % · Group discount %
+  · Net price · Conf. No. · Delivery date · Prod. Sup. · Order · Doc. Supplier
+  · Doc. code. The gross price shows in red (€ 3 050,00).
+- `All select` · **`OK` greyed until a line is ticked** · `Cancel`.
+
+**Ours:** `confirmPurchaseOrder(uuid)` only stamps `confirmedAt` on the order
+and its lines. There is no dialog, no number and no date.
+
+**Change:** a `Confirm` dialog with the four header fields, line ticks and
+`All select`. On OK, write the confirmation number, confirmation date and
+confirmed delivery date onto each ticked line, and the document supplier onto
+the order. The confirmed delivery date becomes the line's expected date, the
+way pre-notify's date does for receptions. Line columns `confirmationNumber`,
+`confirmationDate` and `confirmedDeliveryDate` are new and nullable, so a
+plain `pnpm db:push`.
+
+### C17 · `Pre-notify purchase order 404299`
+
+- **Header, "Copy these values into the selected receipts below":** `Bill of
+  lading number` · `Pre-notified delivery date` · `Pre-notification code` ·
+  `Confirmation number` · `Confirmation date` · `Document Supplier`.
+- **`Change pre-notify` ☐** block: `Bill of lading number` and `Pre-notified
+  delivery date` dropdowns plus **`Take over`**, which re-picks an earlier
+  pre-notification.
+- **Grid, one row per open reception** (empty here, since everything has
+  arrived): It. · For line · Qty1 · U1 · Kg1 · M1 · Charge · Batch number ·
+  #Bundle · Product · Length1 · Width · Bill of lading · Delivery … · Qty2 ·
+  U2 · Length2 · Delivery d… · Conf. No. · Prd. Sup. · Product code · Order ·
+  P… · EDI Consign… · EDI Charge · EDI Deliver… · Doc. supplier · Doc. code.
+- `All select` · **`Pre-notify in stock unit (if receipt for stock)` ☑** ·
+  `OK` · `Cancel`.
+
+**Ours:** the dialog built on 7-10-2026 asks one date and writes it to every
+open reception.
+
+**Change:** add `Bill of lading number`, `Pre-notification code`,
+`Confirmation number`, `Confirmation date` and `Document supplier` to the
+header, and a reception grid with ticks and `All select`, so a pre-notice can
+cover some receptions and not others. The bill of lading is what H1.1 saw on
+the reception (`324234`) and what the `Receipts` panel shows. The charge,
+batch and bundle columns let the supplier's dispatch note be typed in ahead of
+the lorry. `Pre-notify in stock unit` stays ticked, and the quantity is
+entered in the stock unit.
+
+### C18 · `Return` greyed on a received order
+
+`404299` is `Received`, and its 41 plates went straight to the customer's sales
+line (C3). `Return` and `Par. return` are both greyed. On `404102`, where
+`Par. return` was captured working (ACTIONS.md), the order was not fully
+reserved. ⚠️ So the likely rule is that **a return needs unreserved received
+stock to send back**, but one order cannot prove it. Ours enables
+`Par. return` on any non-provisional order. Not changed until a second order
+settles it.
 
 ## C9 · The offcut comes back as a scrap line
 
