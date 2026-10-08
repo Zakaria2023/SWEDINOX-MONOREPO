@@ -474,6 +474,20 @@ export const certificaatOptions = [
 
 export type CertificaatOption = (typeof certificaatOptions)[number];
 
+/**
+ * `Soort` on a purchase order's `Product Receipt Documents` (C19, captured on
+ * 404299 8-10-2026): a Declaration of Performance, a mill certificate, or
+ * anything else the supplier sent. The kind decides which certificate screens
+ * read the row — only a `certificate` is chased by `Certificates to be linked`.
+ */
+export const receiptDocumentKinds = [
+  "dop",
+  "certificate",
+  "other",
+] as const satisfies readonly string[];
+
+export type ReceiptDocumentKind = (typeof receiptDocumentKinds)[number];
+
 export const stockModes = [
   "multiplier",
   "fixed_value",

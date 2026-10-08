@@ -5,6 +5,7 @@ import {
   AvailableAt,
   CeStandard,
   CertificaatOption,
+  ReceiptDocumentKind,
   CommunicationChannel,
   CommunicationSettingDocumentType,
   CountStockBasis,
@@ -909,6 +910,13 @@ export const VAT_CODE_LABELS: Record<VatCode, string> = {
   vat_high_21: "VAT High 21%",
   vat_middle_12: "VAT Middle 12%",
 };
+
+export const RECEIPT_DOCUMENT_KIND_LABELS: Record<ReceiptDocumentKind, string> =
+  {
+    dop: "DoP",
+    certificate: "Certificate",
+    other: "Other",
+  };
 
 export const CERTIFICAAT_LABELS: Record<CertificaatOption, string> = {
   en10204_2_1: "2.1 Certificate (EN10204-2.1)",

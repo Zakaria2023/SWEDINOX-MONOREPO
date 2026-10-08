@@ -25,6 +25,10 @@ import {
 } from "@/db/schema/communication-settings";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
 import { Batches } from "@/db/schema/batches";
+import {
+  BatchCertificates,
+  SelectBatchCertificates,
+} from "@/db/schema/batch-certificates";
 import { Contracts, SelectContracts } from "@/db/schema/contracts";
 import { Products, SelectProducts } from "@/db/schema/products";
 import {
@@ -82,12 +86,15 @@ import {
   confirmPurchaseOrderSchema,
   PreNotifyFormValues,
   preNotifySchema,
+  ReceiptDocumentFormValues,
+  receiptDocumentSchema,
   ReceptionBatchSettingsFormValues,
   receptionBatchSettingsSchema,
   ReceptionChargeFormValues,
   receptionChargeSchema,
 } from "@/app/(dashboard)/purchase-orders/validation";
 import { currentUser } from "@clerk/nextjs/server";
+import { requireAuth } from "@/lib/auth";
 import {
   and,
   asc,
@@ -280,6 +287,19 @@ export type PurchaseReceiptDocument = {
   lengthMm: SelectPurchaseLineReceivals["lengthMm"];
 };
 
+// A row of `Product Receipt Documents` (C19): a DoP, certificate or other
+// document the supplier sent, on the order, tied to a line and a reception.
+export type PurchaseOrderReceiptDocumentRow = {
+  uuid: SelectBatchCertificates["uuid"];
+  kind: SelectBatchCertificates["kind"];
+  producer: SelectBatchCertificates["producer"];
+  documentCertificate: SelectBatchCertificates["documentCertificate"];
+  documentCode: SelectBatchCertificates["documentCode"];
+  documents: SelectBatchCertificates["documents"];
+  orderLine: SelectPurchaseOrderItems["lineNumber"] | null;
+  receptionLine: SelectPurchaseLineReceivals["lineNumber"] | null;
+};
+
 // A line of this order the supplier is being asked to take back.
 export type PurchaseOrderReturnLine = {
   uuid: SelectPurchaseReturnOrderItems["uuid"];
@@ -304,6 +324,7 @@ export type PurchaseOrderDetail = SelectPurchaseOrders & {
   items: PurchaseOrderItemDetail[];
   // What has actually arrived against this order.
   receipts: PurchaseReceiptDocument[];
+  receiptDocuments: PurchaseOrderReceiptDocumentRow[];
   // Agreements attached to this order — the schema has carried the link since
   // contracts existed and no screen followed it.
   contracts: SelectContracts[];
@@ -924,11 +945,40 @@ export const getPurchaseOrderDetail = async (
       : [],
   ]);
 
+  // `Product Receipt Documents` (C19), read after the others rather than
+  // beside them — the connection ceiling.
+  const receiptDocuments = await db
+    .select({
+      uuid: BatchCertificates.uuid,
+      kind: BatchCertificates.kind,
+      producer: BatchCertificates.producer,
+      documentCertificate: BatchCertificates.documentCertificate,
+      documentCode: BatchCertificates.documentCode,
+      documents: BatchCertificates.documents,
+      orderLine: PurchaseOrderItems.lineNumber,
+      receptionLine: PurchaseLineReceivals.lineNumber,
+    })
+    .from(BatchCertificates)
+    .leftJoin(
+      PurchaseOrderItems,
+      eq(BatchCertificates.purchaseOrderItemUuid, PurchaseOrderItems.uuid),
+    )
+    .leftJoin(
+      PurchaseLineReceivals,
+      eq(
+        BatchCertificates.purchaseLineReceivalUuid,
+        PurchaseLineReceivals.uuid,
+      ),
+    )
+    .where(eq(BatchCertificates.purchaseOrderUuid, uuid))
+    .orderBy(asc(BatchCertificates.createdAt));
+
   return {
     ...order,
     agentName: agent?.companyName ?? null,
     items,
     receipts,
+    receiptDocuments,
     contracts,
     returnLines,
     communication,
@@ -1879,5 +1929,74 @@ export const closePurchaseLine = async (
     return { success: true, purchaseOrderUuid: line.purchaseOrderUuid };
   } catch (error) {
     return { error: describeError(error, "Failed to close the purchase line") };
+  }
+};
+
+/**
+ * `New` on `Product Receipt Documents` (C19): a DoP, certificate or other
+ * document, stored as a document row on the order and tied to a line and,
+ * where given, a reception. It has no batch until the goods arrive; the
+ * receipt fills that in, so `Certificates received` reads the same row.
+ */
+export const addPurchaseOrderReceiptDocument = async (
+  _prevState: PurchaseOrderActionResult,
+  data: ReceiptDocumentFormValues,
+): Promise<PurchaseOrderActionResult> => {
+  await requireAuth();
+  const parsed = receiptDocumentSchema.safeParse(data);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
+  }
+  const values = parsed.data;
+
+  try {
+    await db.insert(BatchCertificates).values({
+      uuid: generateUuid(),
+      batchUuid: null,
+      kind: values.kind,
+      purchaseOrderUuid: values.purchaseOrderUuid,
+      purchaseOrderItemUuid: values.purchaseOrderItemUuid || null,
+      purchaseLineReceivalUuid: values.purchaseLineReceivalUuid || null,
+      producer: values.producer?.trim() || null,
+      documentCertificate: values.documentCertificate || null,
+      documentCode: values.documentCode?.trim() || null,
+      fileName: values.documents[0]?.fileName ?? null,
+      documents: values.documents,
+      receivedDate: todayDateString(),
+    });
+
+    revalidatePath(`/purchase-orders/${values.purchaseOrderUuid}`);
+    revalidatePath("/certificates-received");
+    return { success: true, purchaseOrderUuid: values.purchaseOrderUuid };
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error ? error.message : "Failed to add the document",
+    };
+  }
+};
+
+/** `Delete` on `Product Receipt Documents`. */
+export const deletePurchaseOrderReceiptDocument = async (
+  documentUuid: string,
+  purchaseOrderUuid: string,
+): Promise<PurchaseOrderActionResult> => {
+  await requireAuth();
+  try {
+    await db
+      .delete(BatchCertificates)
+      .where(
+        and(
+          eq(BatchCertificates.uuid, documentUuid),
+          eq(BatchCertificates.purchaseOrderUuid, purchaseOrderUuid),
+        ),
+      );
+    revalidatePath(`/purchase-orders/${purchaseOrderUuid}`);
+    return { success: true, purchaseOrderUuid };
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error ? error.message : "Failed to delete the document",
+    };
   }
 };

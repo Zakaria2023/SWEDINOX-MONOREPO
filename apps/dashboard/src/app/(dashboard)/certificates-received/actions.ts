@@ -312,16 +312,19 @@ export const markCertificateReceived = async (
         .where(eq(BatchCertificates.uuid, certificateUuid));
 
       // The batch overview prints the certificate alongside the goods, so keep
-      // the two in step.
-      await tx
-        .update(Batches)
-        .set({
-          documentCode: trimmedCode,
-          fileName: trimmedFileName,
-          documentCertificate: certificate.documentCertificate,
-          mandatoryIgnoreDocument: false,
-        })
-        .where(eq(Batches.uuid, certificate.batchUuid));
+      // the two in step — once there is a batch: a document entered on the
+      // purchase order before the goods arrived has none yet (C19).
+      if (certificate.batchUuid) {
+        await tx
+          .update(Batches)
+          .set({
+            documentCode: trimmedCode,
+            fileName: trimmedFileName,
+            documentCertificate: certificate.documentCertificate,
+            mandatoryIgnoreDocument: false,
+          })
+          .where(eq(Batches.uuid, certificate.batchUuid));
+      }
     });
 
     revalidatePath("/certificates-received");

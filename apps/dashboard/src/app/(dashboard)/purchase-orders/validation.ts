@@ -1,11 +1,13 @@
 import { z } from "zod";
 import {
+  certificaatOptions,
   deliveryTerms,
   deliveryTypes,
   invoicePaymentTerms,
   orderWeightTypes,
   purchaseOrderTypes,
   purchaseSourceTypes,
+  receiptDocumentKinds,
 } from "@/lib/enums";
 import { todayDateString, currentYear } from "@/lib/helpers";
 
@@ -281,3 +283,24 @@ export const confirmPurchaseOrderSchema = z.object({
 export type ConfirmPurchaseOrderFormValues = z.infer<
   typeof confirmPurchaseOrderSchema
 >;
+
+/**
+ * A row of `Product Receipt Documents` (C19): `Soort` · `Producent` ·
+ * `Certificaattype` · `Code` · `Document` · `Order regel` · `Ontvangst regel`.
+ */
+export const receiptDocumentSchema = z.object({
+  purchaseOrderUuid: z.string().min(1, "Purchase order is required"),
+  kind: z.enum(receiptDocumentKinds),
+  producer: z.string().optional(),
+  documentCertificate: z
+    .union([z.enum(certificaatOptions), z.literal("")])
+    .optional(),
+  documentCode: z.string().optional(),
+  purchaseOrderItemUuid: z.string().optional(),
+  purchaseLineReceivalUuid: z.string().optional(),
+  documents: z
+    .array(z.object({ id: z.string(), fileName: z.string() }))
+    .min(1, "Attach the document"),
+});
+
+export type ReceiptDocumentFormValues = z.infer<typeof receiptDocumentSchema>;

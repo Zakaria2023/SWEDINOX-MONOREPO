@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { refreshOrderStatusForLine } from "@/lib/server/order-status";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { OrderItems } from "@/db/schema/order-items";
+import { BatchCertificates } from "@/db/schema/batch-certificates";
 import { reserveReceiptToCoveredSalesLines } from "@/lib/server/cross-dock";
 import {
   ReturnOrderItems,
@@ -1620,10 +1621,29 @@ const applyReceipt = async (
 
   // And it is where the batch is born: the reference writes a Batches row for
   // every receipt, carrying the heat and internal charge the lot now holds.
-  await registerBatchForLot(tx, stockUuid, {
+  const batchUuid = await registerBatchForLot(tx, stockUuid, {
     purchaseLineReceivalUuid: receivalUuid,
     date: todayDateString(),
   });
+
+  // The documents the supplier sent ahead — entered on the order's `Product
+  // Receipt Documents` before there was a batch to hang them on (C19) — now
+  // have one: those for this reception, or for the line with no reception.
+  if (batchUuid) {
+    await tx
+      .update(BatchCertificates)
+      .set({ batchUuid })
+      .where(
+        and(
+          isNull(BatchCertificates.batchUuid),
+          eq(BatchCertificates.purchaseOrderItemUuid, purchaseLine.uuid),
+          or(
+            isNull(BatchCertificates.purchaseLineReceivalUuid),
+            eq(BatchCertificates.purchaseLineReceivalUuid, receivalUuid ?? ""),
+          ),
+        ),
+      );
+  }
 
   // 🔴 Goods bought for a sale arrive already sold. Lot `404744` was born
   // reserved 41 of 41 to `O108183/10`, the line `404299` was raised for

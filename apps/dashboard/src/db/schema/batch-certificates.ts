@@ -12,7 +12,7 @@ import {
   timestamp,
   varchar,
 } from "drizzle-orm/mysql-core";
-import { certificaatOptions } from "../../lib/enums";
+import { certificaatOptions, receiptDocumentKinds } from "../../lib/enums";
 import { Batches } from "./batches";
 import { PurchaseOrders } from "./purchase-orders";
 import { PurchaseOrderItems } from "./purchase-order-items";
@@ -26,7 +26,17 @@ export const BatchCertificates = mysqlTable(
     id: int("id").primaryKey().autoincrement(),
     uuid: char("uuid", { length: 36 }).notNull().unique(),
 
-    batchUuid: char("batch_uuid", { length: 36 }).notNull(),
+    // 🔴 Null until the goods arrive: a document entered on the purchase
+    // order's `Product Receipt Documents` panel (C19) exists before the batch
+    // it certifies. The receipt fills it in.
+    batchUuid: char("batch_uuid", { length: 36 }),
+    // `Soort` — DoP, Certificate or Other.
+    kind: mysqlEnum("kind", receiptDocumentKinds).default("certificate"),
+    // `Ontvangst regel`: the reception the document belongs to, when it is
+    // tied to one rather than to the whole line.
+    purchaseLineReceivalUuid: char("purchase_line_receival_uuid", {
+      length: 36,
+    }),
     purchaseOrderUuid: char("purchase_order_uuid", { length: 36 }),
     purchaseOrderItemUuid: char("purchase_order_item_uuid", { length: 36 }),
 

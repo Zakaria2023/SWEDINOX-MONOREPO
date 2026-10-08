@@ -20,6 +20,7 @@ import {
 } from "@/app/(dashboard)/purchase-orders/actions";
 import { ConfirmPurchaseOrderDialog } from "@/components/purchase-orders/confirm-purchase-order-dialog";
 import { PreNotifyDialog } from "@/components/purchase-orders/pre-notify-dialog";
+import { ReceiptDocumentsPanel } from "@/components/purchase-orders/receipt-documents-panel";
 import { startPurchaseReturnFromOrder } from "@/app/(dashboard)/purchase-return-orders/actions";
 import { Button } from "@/components/shadcn/button";
 import {
@@ -818,6 +819,15 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
             </div>
           )}
         </CollapsibleSection>
+
+        {/* The reference's last panel on the order, under `Previous orders`:
+            where a certificate or DoP is stored (C19). */}
+        <ReceiptDocumentsPanel
+          purchaseOrderUuid={purchaseOrder.uuid}
+          documents={purchaseOrder.receiptDocuments}
+          items={purchaseOrder.items}
+          receipts={purchaseOrder.receipts}
+        />
       </div>
 
       <PreNotifyDialog
