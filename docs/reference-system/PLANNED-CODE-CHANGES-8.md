@@ -215,8 +215,9 @@ kilos negated, status taken from the return header (`delivered` is already in
 |---|---|---|
 | `400066` (line in `Status: Released`) | `Kg(a)` **900**, `Qty(a)` 1, charge `70120 3`, internal charge `23EFFF`, pre-announced 31-1-2025, by `RVS` | greyed |
 
-⚠️ Not yet the test asked for: the reception already carries actual figures. A
-reception reading `Kg(a)` 0 is still to be tried.
+⏹ **Stopped chasing, 8-10-2026, by request.** Moved to
+[MANAGER-QUESTIONS.md](MANAGER-QUESTIONS.md) question 11: a person who splits
+receptions has to say when it is enabled and what it asks.
 
 ## C8 · `Supplies` — what we send to a processor (H9, first look)
 
@@ -368,9 +369,7 @@ way of `400066`.
 1. `O108183` line 10: `Line type` and `Reservations` (unblocks C3).
 2. ~~`Status: Delivered` on Purchase lines~~ ✅ done 17:21: purchase returns.
 3. ~~`400066` Workorders panels~~ ✅ done 17:21: picking out, one unloading back.
-4. **H13 `Split`:** `Overviews → Purchase → Purchase receivals`, date from
-   `1-1-2024`, sort on `Kg(a)`, a `0` row whose receipt status is `Released`,
-   then `New`, then `Workorders created`. Note greyed or not for each.
+4. ~~H13 `Split`~~ ⏹ moved to MANAGER-QUESTIONS.md question 11.
 5. Then items 4 to 8 of the capture list (H10 saw cut, J1 consignment, H12
    credit note, G3/G7/H4 transport, J8 buttons) and the two extras.
 
@@ -378,7 +377,7 @@ way of `400066`.
 
 ## Still to come
 
-As each capture lands it gets a section here: H13 `Split`, the rest of H9 (the
+As each capture lands it gets a section here: the rest of H9 (the
 `Ex works Processor` return leg on `400142`/`400143`), H10 saw cut, J1
 consignment, H12 credit note, G3/G7/H4 transport, J8 buttons, and the two
 extras (`Quote- and order lines`, `C. Kg` / `C. ST`).

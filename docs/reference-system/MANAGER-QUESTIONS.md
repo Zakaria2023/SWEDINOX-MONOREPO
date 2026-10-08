@@ -168,3 +168,29 @@ master has a `Purchase returns` panel, which is the return order's overview.
 that becomes an order — a step before the quote. A return order sends goods back
 to a supplier, which has to reverse stock and money. Neither is in scope, and
 neither should be until someone says they are used.
+
+## Receptions — the `Split` button (H13)
+
+Stopped chasing by clicking on 8-10-2026. Every attempt since 4-10-2026 found
+`Split` **greyed**: on a released order with an open reception, and on
+`400066`, whose reception already carried 900 kg. What turns it on was never
+found, so this needs a person who uses it.
+
+We know what a split *produces*: one purchase line showing several reception
+rows on `Purchase receivals`, differing only in `Kg(p)`, `Kg(a)`, `Delivery
+date (a)` and `Receipt status`, and summing back to the line (101 of 107 lines).
+We have never seen the dialog.
+
+**11. When do you split a reception, and what do you type?**
+- In which state must the reception be for `Split` to work: provisional order,
+  released, work order created, or part-arrived?
+- Is a split entered as a **weight**, a **quantity**, or a **date** (a second
+  delivery planned for later)?
+- Does it ask anything else, such as a new pre-announced date or a second bill
+  of lading?
+
+*Why it matters:* ours divides a reception by a weight and shares the quantity
+out in proportion. That interface is a guess built from the result. If the
+reference splits by quantity or by date, our dialog asks the wrong question.
+Until this is answered, ours stays as it is and is **not** tested against the
+reference.
