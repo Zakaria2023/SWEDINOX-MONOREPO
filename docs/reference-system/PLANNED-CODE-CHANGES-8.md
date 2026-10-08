@@ -898,6 +898,25 @@ to 1 555. Orders/stop 18 / 17 = 1,06 → **1**, and colli/stop 62 / 17 = 3,6 →
 f6a6d45a. Km, hours, costs and driver are empty, as on all 438 trips. Ours
 having no trip detail page (removed in f6a6d45a) is also right.
 
+## G3 · A "delivery" is an order line, not a document
+
+`Sales → Deliveries` (scheduled delivery date from 1-1-2024), 8-10-2026 18:26:
+one row per **order line** (Customer · Order · Order type · Pick-up ·
+Seller · Commercial / Financially / Transport blocked · Line · **Line type** ·
+Line status · Product code · Product · Length …). The toolbar offers only
+`Show Product` · `Show Company` · `Show Order`, and there is **no delivery
+record to open**. Searching the bill of lading `300813` finds nothing on it.
+
+**So G3 is answered:** there is no delivery document between the order line
+and the stock movement. A delivery is the order line's own delivery state plus
+the transport / picking work order that moved it, which is what ours models.
+**No change.**
+
+Also seen: order **`101974`** (247 Watersnijden, the "delivery waiting" record
+picked for H4 in FLOWS.md) is now **`Invoiced`** on every line, lines 10 and 20
+`CD`. It is no longer waiting, so H4 needs another row from `Deliveries to be
+arranged`.
+
 ## C9 · The offcut comes back as a scrap line
 
 **Change:** a processing order's lines may include a **scrap article** in `KG`
