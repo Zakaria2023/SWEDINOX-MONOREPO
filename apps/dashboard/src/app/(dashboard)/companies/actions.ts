@@ -11,7 +11,11 @@ import {
   InsertCompanyAddresses,
 } from "@/db/schema/company-addresses";
 import { Contacts, InsertContacts, SelectContacts } from "@/db/schema/contacts";
-import { Contracts, InsertContracts } from "@/db/schema/contracts";
+import {
+  Contracts,
+  InsertContracts,
+  SelectContracts,
+} from "@/db/schema/contracts";
 import {
   CustomerProjects,
   InsertCustomerProjects,
@@ -35,7 +39,24 @@ import {
   PurchaseOrders,
   SelectPurchaseOrders,
 } from "@/db/schema/purchase-orders";
-import { InsertQuotes, Quotes } from "@/db/schema/quotes";
+import { InsertQuotes, Quotes, SelectQuotes } from "@/db/schema/quotes";
+import { Orders, SelectOrders } from "@/db/schema/orders";
+import {
+  PurchaseQuotes,
+  SelectPurchaseQuotes,
+} from "@/db/schema/purchase-quotes";
+import {
+  PurchaseInvoices,
+  SelectPurchaseInvoices,
+} from "@/db/schema/purchase-invoices";
+import {
+  PurchaseReturnOrders,
+  SelectPurchaseReturnOrders,
+} from "@/db/schema/purchase-return-orders";
+import {
+  Communications,
+  SelectCommunications,
+} from "@/db/schema/communications";
 import {
   FollowUps,
   InsertFollowUps,
@@ -263,6 +284,102 @@ export type ContactOption = Pick<
   SelectContacts,
   "uuid" | "id" | "companyUuid" | "firstName" | "lastName"
 >;
+
+/**
+ * The document panels the reference stacks under a company — `Contacts`,
+ * `Quotes`, `Orders`, `Contracts`, `Purchase quotes`, `Purchase invoices`,
+ * `Purchase returns`, `Communication` — newest first.
+ */
+export type CompanyRelatedRecords = {
+  contacts: Pick<
+    SelectContacts,
+    | "uuid"
+    | "firstName"
+    | "lastName"
+    | "email"
+    | "telephone"
+    | "mobile"
+    | "categories"
+  >[];
+  orders: Pick<
+    SelectOrders,
+    | "uuid"
+    | "id"
+    | "orderType"
+    | "status"
+    | "createdAt"
+    | "deliveryDate"
+    | "totalExclVat"
+    | "totalWeightKg"
+    | "customerRef"
+    | "handlingBlocked"
+    | "isConsignment"
+  >[];
+  quotes: Pick<
+    SelectQuotes,
+    | "uuid"
+    | "id"
+    | "status"
+    | "quoteDate"
+    | "validUntil"
+    | "totalExclVat"
+    | "totalWeightKg"
+    | "customerRef"
+  >[];
+  contracts: Pick<
+    SelectContracts,
+    | "uuid"
+    | "code"
+    | "description"
+    | "contractType"
+    | "role"
+    | "startingDate"
+    | "endDate"
+  >[];
+  purchaseQuotes: Pick<
+    SelectPurchaseQuotes,
+    | "uuid"
+    | "id"
+    | "status"
+    | "quoteDate"
+    | "validUntil"
+    | "totalExclVat"
+    | "totalWeightKg"
+    | "reference"
+  >[];
+  purchaseInvoices: Pick<
+    SelectPurchaseInvoices,
+    | "uuid"
+    | "id"
+    | "documentType"
+    | "invoiceDate"
+    | "invoiceNumberSupplier"
+    | "invoiceTotal"
+    | "outstanding"
+    | "status"
+  >[];
+  purchaseReturns: Pick<
+    SelectPurchaseReturnOrders,
+    | "uuid"
+    | "id"
+    | "status"
+    | "returnDate"
+    | "returnReason"
+    | "totalExclVat"
+    | "totalWeightKg"
+  >[];
+  communications: Pick<
+    SelectCommunications,
+    | "uuid"
+    | "sentAt"
+    | "documentLabel"
+    | "channel"
+    | "recipient"
+    | "subject"
+    | "deliveredCount"
+    | "failedCount"
+  >[];
+};
 
 export const updateCompanyDocuments = async (
   companyUuid: string,
@@ -780,5 +897,160 @@ export const createCompany = async (
       error:
         error instanceof Error ? error.message : "Failed to create company",
     };
+  }
+};
+
+// Enough to read a relationship from the company screen; the overviews hold
+// the rest.
+const RELATED_RECORD_LIMIT = 100;
+
+/**
+ * Every document panel under a company, read one after another — this
+ * database caps connections.
+ */
+export const getCompanyRelatedRecords = async (
+  companyUuid: string,
+): Promise<CompanyRelatedRecords> => {
+  try {
+    const contacts = await db
+      .select({
+        uuid: Contacts.uuid,
+        firstName: Contacts.firstName,
+        lastName: Contacts.lastName,
+        email: Contacts.email,
+        telephone: Contacts.telephone,
+        mobile: Contacts.mobile,
+        categories: Contacts.categories,
+      })
+      .from(Contacts)
+      .where(eq(Contacts.companyUuid, companyUuid))
+      .orderBy(asc(Contacts.sequenceNumber), asc(Contacts.id));
+
+    const orders = await db
+      .select({
+        uuid: Orders.uuid,
+        id: Orders.id,
+        orderType: Orders.orderType,
+        status: Orders.status,
+        createdAt: Orders.createdAt,
+        deliveryDate: Orders.deliveryDate,
+        totalExclVat: Orders.totalExclVat,
+        totalWeightKg: Orders.totalWeightKg,
+        customerRef: Orders.customerRef,
+        handlingBlocked: Orders.handlingBlocked,
+        isConsignment: Orders.isConsignment,
+      })
+      .from(Orders)
+      .where(eq(Orders.companyUuid, companyUuid))
+      .orderBy(desc(Orders.id))
+      .limit(RELATED_RECORD_LIMIT);
+
+    const quotes = await db
+      .select({
+        uuid: Quotes.uuid,
+        id: Quotes.id,
+        status: Quotes.status,
+        quoteDate: Quotes.quoteDate,
+        validUntil: Quotes.validUntil,
+        totalExclVat: Quotes.totalExclVat,
+        totalWeightKg: Quotes.totalWeightKg,
+        customerRef: Quotes.customerRef,
+      })
+      .from(Quotes)
+      .where(eq(Quotes.companyUuid, companyUuid))
+      .orderBy(desc(Quotes.id))
+      .limit(RELATED_RECORD_LIMIT);
+
+    const contracts = await db
+      .select({
+        uuid: Contracts.uuid,
+        code: Contracts.code,
+        description: Contracts.description,
+        contractType: Contracts.contractType,
+        role: Contracts.role,
+        startingDate: Contracts.startingDate,
+        endDate: Contracts.endDate,
+      })
+      .from(Contracts)
+      .where(eq(Contracts.companyUuid, companyUuid))
+      .orderBy(asc(Contracts.code));
+
+    const purchaseQuotes = await db
+      .select({
+        uuid: PurchaseQuotes.uuid,
+        id: PurchaseQuotes.id,
+        status: PurchaseQuotes.status,
+        quoteDate: PurchaseQuotes.quoteDate,
+        validUntil: PurchaseQuotes.validUntil,
+        totalExclVat: PurchaseQuotes.totalExclVat,
+        totalWeightKg: PurchaseQuotes.totalWeightKg,
+        reference: PurchaseQuotes.reference,
+      })
+      .from(PurchaseQuotes)
+      .where(eq(PurchaseQuotes.companyUuid, companyUuid))
+      .orderBy(desc(PurchaseQuotes.id))
+      .limit(RELATED_RECORD_LIMIT);
+
+    const purchaseInvoices = await db
+      .select({
+        uuid: PurchaseInvoices.uuid,
+        id: PurchaseInvoices.id,
+        documentType: PurchaseInvoices.documentType,
+        invoiceDate: PurchaseInvoices.invoiceDate,
+        invoiceNumberSupplier: PurchaseInvoices.invoiceNumberSupplier,
+        invoiceTotal: PurchaseInvoices.invoiceTotal,
+        outstanding: PurchaseInvoices.outstanding,
+        status: PurchaseInvoices.status,
+      })
+      .from(PurchaseInvoices)
+      .where(eq(PurchaseInvoices.companyUuid, companyUuid))
+      .orderBy(desc(PurchaseInvoices.id))
+      .limit(RELATED_RECORD_LIMIT);
+
+    const purchaseReturns = await db
+      .select({
+        uuid: PurchaseReturnOrders.uuid,
+        id: PurchaseReturnOrders.id,
+        status: PurchaseReturnOrders.status,
+        returnDate: PurchaseReturnOrders.returnDate,
+        returnReason: PurchaseReturnOrders.returnReason,
+        totalExclVat: PurchaseReturnOrders.totalExclVat,
+        totalWeightKg: PurchaseReturnOrders.totalWeightKg,
+      })
+      .from(PurchaseReturnOrders)
+      .where(eq(PurchaseReturnOrders.supplierUuid, companyUuid))
+      .orderBy(desc(PurchaseReturnOrders.id))
+      .limit(RELATED_RECORD_LIMIT);
+
+    const communications = await db
+      .select({
+        uuid: Communications.uuid,
+        sentAt: Communications.sentAt,
+        documentLabel: Communications.documentLabel,
+        channel: Communications.channel,
+        recipient: Communications.recipient,
+        subject: Communications.subject,
+        deliveredCount: Communications.deliveredCount,
+        failedCount: Communications.failedCount,
+      })
+      .from(Communications)
+      .where(eq(Communications.companyUuid, companyUuid))
+      .orderBy(desc(Communications.id))
+      .limit(RELATED_RECORD_LIMIT);
+
+    return {
+      contacts,
+      orders,
+      quotes,
+      contracts,
+      purchaseQuotes,
+      purchaseInvoices,
+      purchaseReturns,
+      communications,
+    };
+  } catch (error) {
+    throw new Error(
+      describeError(error, "Failed to fetch the company's documents"),
+    );
   }
 };

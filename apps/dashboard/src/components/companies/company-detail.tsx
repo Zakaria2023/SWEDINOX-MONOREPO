@@ -430,6 +430,8 @@ export const CompanyDetailView = ({ company, invoices, userNames }: Props) => {
         </h2>
         <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Field label="Debtor number" value={company.debtorNumber} />
+          {/* The payables twin the reference's `Creditor` panel leads with. */}
+          <Field label="Creditor number" value={company.creditorNumber} />
           <Field label="Debtor company" value={company.debtorCompanyName} />
           {/* The reference panel's summary line: both limits together, and
               the room left against them. Excl. VAT, as the credit rule weighs. */}

@@ -1,6 +1,10 @@
-import { getCompanyDetail } from "@/app/(dashboard)/companies/actions";
+import {
+  getCompanyDetail,
+  getCompanyRelatedRecords,
+} from "@/app/(dashboard)/companies/actions";
 import { getInvoicesByCompanyUuid } from "@/app/(dashboard)/invoices/actions";
 import { CompanyDetailView } from "@/components/companies/company-detail";
+import { CompanyRelatedPanels } from "@/components/companies/company-related-panels";
 import { PageHeading } from "@/components/layout/page-heading";
 import { RelatedRecordsBar } from "@/components/ui/related-records-bar";
 import { getClerkUserNames } from "@/lib/server/clerk";
@@ -26,6 +30,7 @@ const CompanyDetailPage = async ({ params }: Props) => {
     ? await getInvoicesByCompanyUuid(uuid)
     : undefined;
   const userNames = await getClerkUserNames();
+  const related = await getCompanyRelatedRecords(uuid);
 
   return (
     <div className="space-y-4">
@@ -82,6 +87,7 @@ const CompanyDetailPage = async ({ params }: Props) => {
         invoices={invoices}
         userNames={userNames}
       />
+      <CompanyRelatedPanels records={related} />
     </div>
   );
 };
