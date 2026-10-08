@@ -12,8 +12,8 @@ capture that proves it. Items are added as each capture lands.
 | C4 | Purchase quote lines keep the request's `For line` | follows from C1 | 📋 ready |
 | C5 | `For line` column on the purchase order's Lines grid | `404299` screenshot | 📋 ready |
 | C6 | A CD receipt is put on the loading location, not a rack | lot `404744` at `Laad` | 🟡 default to confirm |
-| C7 | Purchase lines gain the status `Delivered` | `Purchase lines` grouped on `Status` | 🟡 meaning to confirm |
-| C8 | A processing purchase order lists the material we send out (`Supplies`) | `400066` | 📋 ready, two details open |
+| C7 | Purchase return lines appear on `Purchase lines`, negative, as `Delivered` | `Status: Delivered` group | 📋 ready |
+| C8 | A processing purchase order lists the material we send out (`Supplies`) | `400066` | 📋 ready, valuation open |
 | C9 | The processor's offcut comes back as a scrap line, and the kilos close | `400066` line 20 | 📋 ready |
 | C10 | A processing order's value is its options, charged on the weight received | `400066` | 📋 ready |
 | — | ~~Item 1 of -7: a `CD` line must not create a lot~~ | `404299` | ❎ withdrawn |
@@ -191,9 +191,23 @@ these are probably the return lines (`IR95xxxx`) on the same screen. ⚠️ Not
 proven. One look settles it: expand `Status: Delivered` and read the order
 numbers.
 
-**Change, once confirmed:** add `delivered` to the purchase line's status set
-(a hand-ALTER of the enum first, then a normal `pnpm db:push`), and set it where
-a purchase return line is delivered.
+✅ **Confirmed 8-10-2026.** Expanding `Status: Delivered`: every row is
+**negative** (`Qty(p)` −1 / −2 / −8 ST, `Kg(pur)` and `Kg(a)` −172 … −1 568),
+mostly company `13684` (Albko Metallhandel, the supplier of return `IR950034`),
+`Aluminium` group `1500`, € 5 090,00/TN. With such a row selected the toolbar's
+`Show Purchase order` reads **`Show Purchase return`**. So these are
+**purchase return lines**, shown on the same screen as purchase lines, signed
+negative, in status `Delivered` (-7 §15).
+
+**Ours:** `Purchase lines` reads `PurchaseOrderItems` only. Return lines live in
+`PurchaseReturnOrderItems`, have no status of their own, and do not appear.
+
+**Change:** `Purchase lines` unions in purchase return lines, quantities and
+kilos negated, status taken from the return header (`delivered` is already in
+`purchaseOrderStatuses`, so **no enum change**). The toolbar button becomes
+`Show Purchase return` for those rows and opens `/purchase-return-orders/…`.
+
+**File:** `purchase-lines/actions.ts`, and the overview's toolbar.
 
 ## H13 · `Split` — attempts
 
@@ -303,8 +317,23 @@ and the material sent out is not recorded against it.
    `70120 3` out, `70120 3` back. Ours must not ask for a new heat number on a
    processing receipt; it defaults from the supply.
 
-⚠️ Two details still open, neither blocking: which work orders the order raises
-(the collapsed panels), and what the received lot is **valued** at. The export
+✅ **The work orders, 8-10-2026** (`Warehouse workorders` panel of `400066`):
+
+| Item | Work order | Line | Date | Type | Status | Product | Width | Qty | Kg(p) | Kg(a) |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 10 | **`300253`** | 1 | 9-1-2025 | **`Picking`** | Approved | `CK3040015` | 130 | 1 ST | 1 134 | 1 134 |
+| 10 | **`301583`** | 2 | 31-1-2025 | **`Unloading`** | Approved | `CK3040015` | 105 | 1 ST | 900 | 900 |
+| 20 | `301583` | 5 | 31-1-2025 | `Unloading` | Approved | `SC304` | 0 | 234 KG | 234 | 234 |
+
+So the out-leg is an ordinary **picking** work order against the supply, and
+the in-leg is **one unloading work order with a line per purchase line**:
+metal and scrap together. Both are approved like any other. Our warehouse work
+order already has `picking` and `unloading`. What is missing is the purchase
+order raising the picking for its supplies (C8 point 3). The `Transport
+workorders` panel was not opened; the bill of lading `300070` on the supply
+says one exists.
+
+⚠️ One detail still open, not blocking: what the received lot is **valued** at. The export
 says a processing round trip loses about a quarter of book value (median
 0,759). That is valuation (finance), so it is recorded, not planned.
 
