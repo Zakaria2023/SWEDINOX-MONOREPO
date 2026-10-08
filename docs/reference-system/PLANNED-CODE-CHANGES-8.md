@@ -11,6 +11,7 @@ capture that proves it. Items are added as each capture lands.
 | C3 | A receipt reserves the new lot to the line it was bought for | `404299` lot `404744` | ⏸ waits on `O108183/10` |
 | C4 | Purchase quote lines keep the request's `For line` | follows from C1 | 📋 ready |
 | C5 | `For line` column on the purchase order's Lines grid | `404299` screenshot | 📋 ready |
+| C6 | A CD receipt is put on the loading location, not a rack | lot `404744` at `Laad` | 🟡 default to confirm |
 | — | ~~Item 1 of -7: a `CD` line must not create a lot~~ | `404299` | ❎ withdrawn |
 
 ---
@@ -29,6 +30,41 @@ lines` (creation date from `1-1-2024`, view `-leeg-`).
 | Warehouse work order | `327345`, **`Unloading`**, `Approved`, 41 ST / 2 184 kg planned and actual |
 | Reception | `Kg(a)` 2 184, `Qty(a)` 41, pre-announced 21-9-2026, pre-reported by `RVS`, charge `91138`, internal charge `26AQVM` |
 | Stock panel | lot **`404744`**, 41 ST, **`Kg Reserved` 2 172, `Available` 0 ST**, batch `T015431501` |
+
+### The lot itself — `Stock on location`, product `PK316L150315`
+
+The last of 18 rows, read across five screenshots (view `-leeg-`):
+
+| Column | Lot `404744` | The other 17 lots of the product |
+|---|---|---|
+| `Stock (Stk.U.)` / `Reserved` | **41 / 41** | 0 reserved, apart from one lot at 6 / 6 |
+| `Location` / `Location type` | **`Laad` / `Laad`** | racks `2A5`, `2B1`, `8A` … all type `Pick` |
+| `Blocked` | ☐ | ☐ |
+| `Stock (Kg)` | 2 172 | |
+| `Stk-general ledger account` | **`3000 Stock`** | `3000 Stock` |
+| `Valuation price` / `PriceU` | **€ 3 050,00 / TN**, the price on the purchase line | € 2 900,00 · 3 034,01 · 3 200,80 · 3 510,00 · 3 858,60 · 4 640,58 |
+| `Stock (€)` | € 6 626,09 (= 3 050 × 2,1725 t) | |
+| `Charge` / `Purchase order` / `Receipt date` | `91138` / `IO404299` / 21-9-2026 | |
+| `Internal charge` / `Bundle` | `26AQVM` / `404744` | |
+| `Available (StkU)` | **0** | |
+| `Stock category` / `Created on` | 2nd choice / 21-09-2026 15:58:38 | |
+
+Three things this settles beyond the reservation:
+
+1. **The ledger is `3000 Stock`**, not `3170 Goods to be received`. The
+   withdrawn -7 §1 guessed a CD parcel would bypass the stock account; it does
+   not. Ours books a receipt to stock too, so **no change**.
+2. **The lot is valued at the price paid** (€ 3 050,00/TN on the line), not at a
+   carried product price. Ours values a receipt at the paid price
+   (`applyReceipt`), so **no change**. ⚠️ H1.2 found lot `389823`–`389827`
+   valued at a carried 2 058,8151 instead of the 2 000,00 paid, and here several
+   older lots share € 3 034,01 across different purchase orders. So the likely
+   rule is "a CD lot is valued at its own purchase price, a stock lot at the
+   carried APP". That is a valuation question (finance, out of scope); recorded
+   only.
+3. **The lot sits on `Laad`, the loading location**, while every other lot of
+   the product is on a `Pick` rack. That is the cross-dock: received and put
+   straight onto the bay for the customer's lorry. See C6.
 
 **What it means:** `CD` is not "the goods skip our warehouse". It is **bought
 for a named sales line**. The goods come into the yard, are unloaded and
@@ -69,6 +105,9 @@ Nothing anywhere writes `OrderItems.purchaseOrderItemUuid` (-7 §4).
 **File:** `purchase-requests/actions.ts`.
 
 ## C3 · A receipt reserves the lot to the line it was bought for
+
+✅ **Confirmed twice**: the order's `Stock` panel and `Stock on location` both
+read lot `404744` as 41 reserved of 41.
 
 **Now:** `applyReceipt` (`warehouse-work-orders/actions.ts`) creates the lot
 **unreserved**. The reference reserved lot `404744` in full (41 of 41) to
@@ -115,6 +154,22 @@ Status · Product …`, with `O108183/10` in `For line`. Ours has no such column
 
 **Files:** `purchase-orders/actions.ts` (the detail query),
 `components/purchase-orders/purchase-order-detail.tsx`.
+
+## C6 · A CD receipt lands on the loading location
+
+**Now:** the unloading report puts the lot wherever the dialog's `To` says
+(H1.2 saw it default to `Ontvangst`). Nothing treats a CD line differently.
+
+**Seen:** lot `404744` is on `Laad` (type `Laad`, our `load`), staged for the
+lorry, while the product's 17 other lots are on `Pick` racks.
+
+**Change, once confirmed:** when the unloading line is a `CD` purchase line, the
+report dialog's `To` defaults to the warehouse's loading location. The
+warehouseman can still change it.
+
+🟡 **Not yet proved as a default.** One lot cannot tell a default from a
+warehouseman's choice. Settled by the next CD unloading we watch (item 1, step
+10 of the capture list), by reading what `To` offers before it is touched.
 
 ---
 
