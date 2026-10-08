@@ -396,6 +396,9 @@ palette. [see](purchase/purchase-lines.md)
   Order `400253` has line 40 `Partially received` beside line 50 `Released`.
 - **`Line type` is `Stk` or `CD`** — for stock, or a direct delivery matching
   the order header's `Pick up/Drop-off CD-purchases` checkbox.
+  🔴 **Corrected 8-10-2026:** purchase order `404299` is `CD` with that box
+  **unticked**, received into our own yard. `CD` = bought `For line` a named
+  sales line — see [PLANNED-CODE-CHANGES-7.md](PLANNED-CODE-CHANGES-7.md) §1.
 - **`Receipt date` is planned, and often overdue** — rows dated 29-4-2025 still
   read `Released` with the system date at 7-9-2026.
 - **`Company code` is the supplier's code** (`10631` = Aperam Service), not a

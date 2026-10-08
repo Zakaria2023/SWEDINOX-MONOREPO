@@ -16,7 +16,49 @@ floor. 6–8 are missing fields.
 
 ---
 
-## 1. 🔴 A `CD` or `EXW` purchase line must not put a lot on our shelf
+## 1. ~~🔴 A `CD` or `EXW` purchase line must not put a lot on our shelf~~ ❎ **WITHDRAWN 8-10-2026 — the capture said the opposite**
+
+> **Captured 8-10-2026 on purchase order `404299`** (Outokumpu Stainless Oy,
+> `Materials`, `Received · Printed · Mailed`), picked from the `Line type: CD`
+> group of `Purchase lines`:
+>
+> - Line `10`, `PK316L150315` 2nd choice, 41 ST / 2 172,5 kg, **`For line`
+>   `O108183/10`**.
+> - `Pick up/Drop-off CD-purchases` **unticked**; `Arrange transport` unticked;
+>   delivery address **`Bolderweg 10, 1332AT, Almere` — our own yard**.
+> - An ordinary **`Unloading`** work order `327345`, `Approved`, 41 / 2 184 kg.
+> - Reception: charge `91138`, internal charge `26AQVM`, pre-announced
+>   21-9-2026, pre-reported by `RVS`.
+> - The order's `Stock` panel: **lot `404744`, 41 ST, `Kg Reserved` 2 172,
+>   `Available` 0** — on the shelf, and wholly reserved the moment it landed.
+>
+> **So `CD` does not mean "never touches our warehouse".** It means **bought for
+> a named sales line**: the goods come into the yard, are received like any
+> stock, and arrive already reserved to the line they were bought for. Our
+> receipt chain writing a lot for every reception is **right**, and the branch
+> below is not built.
+>
+> **What the capture does change:**
+>
+> 1. 📋 **Planned — [PLANNED-CODE-CHANGES-8.md](PLANNED-CODE-CHANGES-8.md) C1/C2** — the line type is not the header's tickbox.
+>    `purchaseSourceTypeFor` made a line `CD` only when `Pick up/Drop-off
+>    CD-purchases` was ticked; `404299` is `CD` with it unticked. A line bought
+>    for a sales line should be `CD` whatever the tickbox says, and ordering a
+>    request directly should carry its `For line` onto the sale
+>    (`OrderItems.purchaseOrderItemUuid`).
+> 2. 🔴 **Planned, C3 — the receipt must reserve to the `For line`.** Ours creates the
+>    lot unreserved. The reference reserves it to `O108183/10` at the moment of
+>    receipt (H1.2 showed the same: the report dialog pre-fills a `For order
+>    line` per bundle). ⚠️ **Our model cannot yet express the sale before the
+>    lot**: `OrderItems.stockUuid` is `notNull`, so a sales line has to be cut
+>    from a lot that already exists, and a CD sale is made before the goods are
+>    bought. Waiting on one screenshot — `O108183` line 10, its `Line type` and
+>    `Reservations` — before that model changes.
+> 3. 🟡 `CD` is still where the margin floor and budget column split, so the
+>    rule in 1 also moves those.
+
+*The original entry, kept for the record:*
+
 
 **What was found.** `Line type` is a mode of the trade: `Stk` lands in our
 warehouse, `CD` goes supplier → our lorry → customer, `EXW` never comes near
