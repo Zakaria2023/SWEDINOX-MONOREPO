@@ -224,6 +224,40 @@ like a sale. The in-leg is the order's own reception. Length `999999` is the
 coil sentinel. ⚠️ 1 134 kg went out and 900 kg came back. Is the 234 kg the
 decoiling loss, or is part of it still to come? Open.
 
+### `400066` in full — second batch of screenshots
+
+| What | Read |
+|---|---|
+| Header | **Helaxa BVBA** `11604`, `Received · Printed`, created 8-1-2025, purchaser Marco Borsboom |
+| `Purchase order type` | **`Processing`** |
+| 🔑 `Sawing workorder with one delivery` | ☑ (greyed), and under it, as text: **`1 ST of CK3040015 Coil Cold-rolled 304 130 x 1,50 MM 741 M1 1531 KG`**, the material handed over |
+| Delivery | `(FCA) Free carrier`, delivery address **our yard** (Bolderweg 10, Almere), **`Arrange transport` ☑**, `Pick up/Drop-off CD-purchases` ☐, supplier address **`GOSSELIN CONTAINER TERMINAL (G.C.T.)`, Belcrown…**, date 31-1-2025 |
+| Summary | Materials **€ 0,00** · Options **€ 99,00** · Surcharges € 0,00 · total weight 1 134 kg |
+| Lines (2) | line 10: `CK3040015` Coil cold-rolled 304 1,5 mm, `Standaard`, `3042B`, **999999 × 105 × 1,5**, 1 ST, **Kg(p) 900**, M1(p) 727,934, **net price € 0,00 / TN**, `Received`. Line 2 not yet seen |
+| `Supplies`, scrolled right | `Bill of lading` 300070 · **`Status` `Delivered`** · `Code` `CK3040015` · **`Charge` `70120 3`** · **`Purchase order` `IO100020`** · `Receipt date` 18-12-2024 · `M1(p)` 741 · `M1(a)` 0 |
+| Reception | charge **`70120 3`**, internal charge `23EFFF`, 900 kg / 1 piece |
+
+What it settles:
+
+1. **What marks a processing order** (H9's first question): `Purchase order
+   type` = `Processing`. Its metal lines are priced at **€ 0,00**: the
+   order pays only for the `Options` row (`Decoilen`, € 110/TN).
+2. **The option is charged on what came back.** € 110,00/TN × 0,900 t =
+   **€ 99,00**, the order's whole value. The 1 134 kg that went out is not
+   the basis.
+3. **The processed metal keeps its heat.** The coil supplied carries charge
+   `70120 3` and purchase order `IO100020` (its original mill purchase,
+   received 18-12-2024). The reception of the processed coil carries the same
+   charge `70120 3`. This is the certificate chain through a processor. It is
+   also -7 §16 (an offcut inherits its parent's identity) seen on the processing
+   side.
+4. **The out-leg is a delivery.** The supply was picked, shipped on bill of
+   lading `300070` and reads `Delivered`, so it goes through the same transport
+   chain as a sale. `Arrange transport` is ticked.
+5. **Slitting, not just decoiling:** 130 mm went out and 105 mm came back.
+   25/130 of 1 134 kg is 218 kg, close to the 234 kg gap. Line 2 is probably the
+   25 mm strip. ⚠️ To be read.
+
 **Ours:** nothing. A processing purchase order has lines and receptions only,
 and the material sent out is not recorded against it.
 (external-processing.md modelled the out-leg from movements alone.)
