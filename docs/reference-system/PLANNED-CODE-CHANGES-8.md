@@ -366,8 +366,8 @@ way of `400066`.
 **Next time, in this order:**
 
 1. `O108183` line 10: `Line type` and `Reservations` (unblocks C3).
-2. `Status: Delivered` on Purchase lines: read the order numbers (settles C7).
-3. `400066`: expand the three Workorders panels (closes C8's open detail).
+2. ~~`Status: Delivered` on Purchase lines~~ ✅ done 17:21: purchase returns.
+3. ~~`400066` Workorders panels~~ ✅ done 17:21: picking out, one unloading back.
 4. **H13 `Split`:** `Overviews → Purchase → Purchase receivals`, date from
    `1-1-2024`, sort on `Kg(a)`, a `0` row whose receipt status is `Released`,
    then `New`, then `Workorders created`. Note greyed or not for each.
