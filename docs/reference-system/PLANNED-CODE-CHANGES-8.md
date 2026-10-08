@@ -558,13 +558,27 @@ lines, so this is the panel's shape only). It sits between `Orders` and
   `Qty` · `QtyU` · `Length` · `Width` · `Dikte` · `Voorraadcategorie` · `Kg` ·
   `Gross price` · `Net price` · `PriceU` · `Reference` · `Days in system`.
 
+**The three views** (the `View` dropdown), captured the same evening:
+
+| View | Columns, in order | Filter |
+|---|---|---|
+| `Standaard` | the 20 above | none |
+| `Vrijgegeven` (released) | Delivery date · Order · Line · Product · Length · Width · Qty · QtyU · kwaliteit · Kg · Gross price · Net price · PriceU · Order date · Dikte · **Customer** · Voorraadcategorie · Status · **Contract code** · **Invoice no.** · Reference · Product code · Days in system | a filter on `Status` (the column carries the filter mark; its value is not shown) |
+| `Openstaand` (open) | Order date · Delivery date · Order · Line · Status · Product code · Product · Qty · QtyU · kwaliteit · Length · Width · Kg · Gross price · Net price · PriceU · Dikte · Reference · Voorraadcategorie · Days in system | **`Status ≠ Invoiced And Status ≠ Expired`**, shown in the filter bar |
+
+So the panel has **23 columns**: the 20 of `Standaard` plus `Customer`,
+`Contract code` and `Invoice no.`
+
 **Ours:** the company screen got its document panels on 7-10-2026
 (`company-related-panels.tsx`). This one was left out because its columns had
 never been seen.
 
 **Change:** a ninth panel, quote lines and order lines of this company
-together, newest first, with the 20 columns above in that order (labels in
-English: Quality, Thickness, Stock category). The four buttons sit in a
+together, newest first, carrying all **23 columns**: the `Standaard` 20 in
+their order, shown, then `Customer`, `Contract code` and `Invoice no.`,
+hidden by default (labels in English: Quality, Thickness, Stock category). A
+view selector above it offers `Standard` (everything), `Released` (status
+`released`) and **`Open`** (status not `invoiced` and not `expired`). The four buttons sit in a
 toolbar above the grid and act on the selected row: `Show` opens the quote or
 order, `Show contract` the line's contract (greyed when none), `Show product`
 the product, `Show invoice` the invoice the line was billed on (greyed when
