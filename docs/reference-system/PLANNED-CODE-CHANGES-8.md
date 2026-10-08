@@ -13,6 +13,7 @@ capture that proves it. Items are added as each capture lands.
 | C5 | `For line` column on the purchase order's Lines grid | `404299` screenshot | 📋 ready |
 | C6 | A CD receipt is put on the loading location, not a rack | lot `404744` at `Laad` | 🟡 default to confirm |
 | C7 | Purchase lines gain the status `Delivered` | `Purchase lines` grouped on `Status` | 🟡 meaning to confirm |
+| C8 | A processing purchase order lists the material we send out (`Supplies`) | `400066` | ⏸ more screenshots coming |
 | — | ~~Item 1 of -7: a `CD` line must not create a lot~~ | `404299` | ❎ withdrawn |
 
 ---
@@ -191,6 +192,44 @@ numbers.
 **Change, once confirmed:** add `delivered` to the purchase line's status set
 (a hand-ALTER of the enum first, then a normal `pnpm db:push`), and set it where
 a purchase return line is delivered.
+
+## H13 · `Split` — attempts
+
+| Order | Reception | `Split` |
+|---|---|---|
+| `400066` (line in `Status: Released`) | `Kg(a)` **900**, `Qty(a)` 1, charge `70120 3`, internal charge `23EFFF`, pre-announced 31-1-2025, by `RVS` | greyed |
+
+⚠️ Not yet the test asked for: the reception already carries actual figures. A
+reception reading `Kg(a)` 0 is still to be tried.
+
+## C8 · `Supplies` — what we send to a processor (H9, first look)
+
+**Seen 8-10-2026 on purchase order `400066`** (supplier `Hela…`), found while
+looking for H13:
+
+- **`Options`** panel: one row, `Decoilen`, Qty 1 ST, gross € 110,00 per TN,
+  discount 0 %, amount € 99,00, reference factor 1, net € 110,00. The order
+  buys a **processing step**, priced per tonne, not metal.
+- **`Receipts`**: one reception, 900 kg / 1 piece back.
+- 🔑 **`Supplies`** panel (`1 supply`), toolbar `New` · `Delete` (greyed) ·
+  `Show purchase order` (greyed) · `Show product`. Columns `Blocked · Delivery
+  date · Product · Length · Width · Thickness · Kg(p) · Options · Qty(p) · U ·
+  Picked · Qty(a) · Kg(a) · Bill of lading · Sta…`. Row: ☐ · 14-1-2025 ·
+  `Coil Cold-rolled 304 1,5 mm` · 999999 · 130 · 1,50 · **1 531** · — · 1 · ST ·
+  1 · 1 · **1 134** · **`300070`** · `Del…`.
+
+**What it means:** the out-leg of external processing is a **supply on the
+processor's purchase order**: our coil, picked and shipped on a bill of lading
+like a sale. The in-leg is the order's own reception. Length `999999` is the
+coil sentinel. ⚠️ 1 134 kg went out and 900 kg came back. Is the 234 kg the
+decoiling loss, or is part of it still to come? Open.
+
+**Ours:** nothing. A processing purchase order has lines and receptions only,
+and the material sent out is not recorded against it.
+(external-processing.md modelled the out-leg from movements alone.)
+
+**Change:** planned once the header, lines, full `Supplies` row and work order
+panels of `400066` are in.
 
 ---
 
