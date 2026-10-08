@@ -13,12 +13,12 @@ import {
 } from "lucide-react";
 import {
   cancelPurchaseOrder,
-  confirmPurchaseOrder,
   createUnloadingWorkOrder,
   makePurchaseOrderFinal,
   PurchaseOrderDetail,
   sendPurchaseOrder,
 } from "@/app/(dashboard)/purchase-orders/actions";
+import { ConfirmPurchaseOrderDialog } from "@/components/purchase-orders/confirm-purchase-order-dialog";
 import { PreNotifyDialog } from "@/components/purchase-orders/pre-notify-dialog";
 import { startPurchaseReturnFromOrder } from "@/app/(dashboard)/purchase-return-orders/actions";
 import { Button } from "@/components/shadcn/button";
@@ -67,6 +67,7 @@ type Props = {
 export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
   const [isPending, startTransition] = useTransition();
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [isConfirmLinesOpen, setIsConfirmLinesOpen] = useState(false);
   const [isPreNotifyOpen, setIsPreNotifyOpen] = useState(false);
   const [raised, setRaised] = useState(false);
   const [error, setError] = useState<string | undefined>();
@@ -176,9 +177,7 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
           <Button
             type="button"
             variant="outline"
-            onClick={() =>
-              runAction(() => confirmPurchaseOrder(purchaseOrder.uuid))
-            }
+            onClick={() => setIsConfirmLinesOpen(true)}
             disabled={isPending || isProvisional}
           >
             <CheckCircle2 className="me-1.5 size-4" />
@@ -823,8 +822,17 @@ export const PurchaseOrderDetailView = ({ purchaseOrder }: Props) => {
 
       <PreNotifyDialog
         purchaseOrderUuid={purchaseOrder.uuid}
+        purchaseOrderId={purchaseOrder.id}
+        receipts={purchaseOrder.receipts}
         open={isPreNotifyOpen}
         onOpenChange={setIsPreNotifyOpen}
+      />
+      <ConfirmPurchaseOrderDialog
+        purchaseOrderUuid={purchaseOrder.uuid}
+        purchaseOrderId={purchaseOrder.id}
+        items={purchaseOrder.items}
+        open={isConfirmLinesOpen}
+        onOpenChange={setIsConfirmLinesOpen}
       />
       <ConfirmDialog
         open={isConfirmOpen}

@@ -78,6 +78,8 @@ import {
 } from "@/lib/server/purchase-lines";
 import { PURCHASE_ORDER_COLUMNS } from "@/app/(dashboard)/purchase-orders/columns";
 import {
+  ConfirmPurchaseOrderFormValues,
+  confirmPurchaseOrderSchema,
   PreNotifyFormValues,
   preNotifySchema,
   ReceptionBatchSettingsFormValues,
@@ -217,6 +219,14 @@ export type PurchaseOrderItemDetail = {
   forLine: string | null;
   // Where `For line` opens — the reference's tooltip reads `Open linked order`.
   forLineHref: string | null;
+  // `Conf. No.` and the rest of what `Confirm` wrote on the line (C16).
+  confirmationNumber: SelectPurchaseOrderItems["confirmationNumber"];
+  confirmationDate: SelectPurchaseOrderItems["confirmationDate"];
+  confirmedDeliveryDate: SelectPurchaseOrderItems["confirmedDeliveryDate"];
+  documentSupplier: SelectPurchaseOrderItems["documentSupplier"];
+  grossPrice: SelectPurchaseOrderItems["grossPrice"];
+  lineDiscountPercent: SelectPurchaseOrderItems["lineDiscountPercent"];
+  groupDiscountPercent: SelectPurchaseOrderItems["groupDiscountPercent"];
 };
 
 // A goods receipt booked against this order — the "Product Receipt Documents"
@@ -260,6 +270,14 @@ export type PurchaseReceiptDocument = {
   // make somebody trust that they selected the right row.
   widthMm: SelectPurchaseOrderItems["widthMm"] | null;
   thicknessMm: SelectPurchaseOrderItems["thicknessMm"] | null;
+
+  // What `Pre-notify` wrote on the reception (C17).
+  billOfLading: SelectPurchaseLineReceivals["billOfLading"];
+  preNotifyCode: SelectPurchaseLineReceivals["preNotifyCode"];
+  preAnnouncedDeliveryDate: SelectPurchaseLineReceivals["preAnnouncedDeliveryDate"];
+  confirmationNumber: SelectPurchaseLineReceivals["confirmationNumber"];
+  documentSupplier: SelectPurchaseLineReceivals["documentSupplier"];
+  lengthMm: SelectPurchaseLineReceivals["lengthMm"];
 };
 
 // A line of this order the supplier is being asked to take back.
@@ -779,6 +797,13 @@ export const getPurchaseOrderDetail = async (
       stockUuid: Stock.uuid,
       stockQuantity: Stock.quantity,
       stockStatus: Stock.status,
+      confirmationNumber: PurchaseOrderItems.confirmationNumber,
+      confirmationDate: PurchaseOrderItems.confirmationDate,
+      confirmedDeliveryDate: PurchaseOrderItems.confirmedDeliveryDate,
+      documentSupplier: PurchaseOrderItems.documentSupplier,
+      grossPrice: PurchaseOrderItems.grossPrice,
+      lineDiscountPercent: PurchaseOrderItems.lineDiscountPercent,
+      groupDiscountPercent: PurchaseOrderItems.groupDiscountPercent,
       forLine: sql<string | null>`COALESCE(
         (SELECT CONCAT('O', o.id, '/', oi.line_number)
            FROM OrderItems oi JOIN Orders o ON o.uuid = oi.order_uuid
@@ -841,6 +866,12 @@ export const getPurchaseOrderDetail = async (
           PurchaseLineReceivals.documentObligationWaived,
         widthMm: PurchaseOrderItems.widthMm,
         thicknessMm: PurchaseOrderItems.thicknessMm,
+        billOfLading: PurchaseLineReceivals.billOfLading,
+        preNotifyCode: PurchaseLineReceivals.preNotifyCode,
+        preAnnouncedDeliveryDate: PurchaseLineReceivals.preAnnouncedDeliveryDate,
+        confirmationNumber: PurchaseLineReceivals.confirmationNumber,
+        documentSupplier: PurchaseLineReceivals.documentSupplier,
+        lengthMm: PurchaseLineReceivals.lengthMm,
       })
       .from(PurchaseLineReceivals)
       .leftJoin(Products, eq(PurchaseLineReceivals.productUuid, Products.uuid))
@@ -1141,7 +1172,16 @@ export const preNotifyPurchaseOrder = async (
     if (!parsed.success) {
       return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
     }
-    const { purchaseOrderUuid: uuid, advisedDate } = parsed.data;
+    const {
+      purchaseOrderUuid: uuid,
+      advisedDate,
+      billOfLading,
+      preNotifyCode,
+      confirmationNumber,
+      confirmationDate,
+      documentSupplier,
+      receivalUuids,
+    } = parsed.data;
 
     const [order] = await db
       .select({ status: PurchaseOrders.status })
@@ -1168,12 +1208,28 @@ export const preNotifyPurchaseOrder = async (
         .set({ preNotifiedAt: new Date() })
         .where(eq(PurchaseOrders.uuid, uuid));
 
+      // Only the receipts ticked in the dialog, and never one that has
+      // already arrived: pre-advising the past would be nonsense.
       await tx
         .update(PurchaseLineReceivals)
-        .set({ preAnnouncedDeliveryDate: advisedDate })
+        .set({
+          preAnnouncedDeliveryDate: advisedDate,
+          ...(billOfLading?.trim() ? { billOfLading: billOfLading.trim() } : {}),
+          ...(preNotifyCode?.trim()
+            ? { preNotifyCode: preNotifyCode.trim() }
+            : {}),
+          ...(confirmationNumber?.trim()
+            ? { confirmationNumber: confirmationNumber.trim() }
+            : {}),
+          ...(confirmationDate ? { confirmationDate } : {}),
+          ...(documentSupplier?.trim()
+            ? { documentSupplier: documentSupplier.trim() }
+            : {}),
+        })
         .where(
           and(
             eq(PurchaseLineReceivals.purchaseOrderUuid, uuid),
+            inArray(PurchaseLineReceivals.uuid, receivalUuids),
             eq(PurchaseLineReceivals.kgActual, "0.00"),
           ),
         );
@@ -1202,9 +1258,23 @@ export const preNotifyPurchaseOrder = async (
  * rather than a receipt.
  */
 export const confirmPurchaseOrder = async (
-  uuid: string,
+  _prevState: PurchaseOrderActionResult,
+  data: ConfirmPurchaseOrderFormValues,
 ): Promise<PurchaseOrderActionResult> => {
   try {
+    const parsed = confirmPurchaseOrderSchema.safeParse(data);
+    if (!parsed.success) {
+      return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
+    }
+    const {
+      purchaseOrderUuid: uuid,
+      confirmationNumber,
+      confirmationDate,
+      confirmedDeliveryDate,
+      documentSupplier,
+      lineUuids,
+    } = parsed.data;
+
     const [order] = await db
       .select({ status: PurchaseOrders.status })
       .from(PurchaseOrders)
@@ -1227,13 +1297,32 @@ export const confirmPurchaseOrder = async (
       // A stamp, not a rung: the order keeps its place on the ladder.
       await tx
         .update(PurchaseOrders)
-        .set({ confirmedAt: new Date() })
+        .set({
+          confirmedAt: new Date(),
+          confirmationReference: confirmationNumber?.trim() || null,
+          confirmationDate,
+        })
         .where(eq(PurchaseOrders.uuid, uuid));
 
+      // "Copy these values into the selected order lines below" (C16). A
+      // confirmed delivery date becomes the date the line is expected.
       await tx
         .update(PurchaseOrderItems)
-        .set({ qtyConfirmed: sql`${PurchaseOrderItems.qtyPlanned}` })
-        .where(eq(PurchaseOrderItems.purchaseOrderUuid, uuid));
+        .set({
+          qtyConfirmed: sql`${PurchaseOrderItems.qtyPlanned}`,
+          confirmationNumber: confirmationNumber?.trim() || null,
+          confirmationDate,
+          documentSupplier: documentSupplier?.trim() || null,
+          ...(confirmedDeliveryDate
+            ? { confirmedDeliveryDate, receiptDate: confirmedDeliveryDate }
+            : {}),
+        })
+        .where(
+          and(
+            eq(PurchaseOrderItems.purchaseOrderUuid, uuid),
+            inArray(PurchaseOrderItems.uuid, lineUuids),
+          ),
+        );
     });
 
     revalidatePath("/purchase-orders");

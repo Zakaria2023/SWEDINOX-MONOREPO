@@ -104,6 +104,11 @@ export const PurchaseLineReceivals = mysqlTable(
     preReportedBy: varchar("pre_reported_by", { length: 20 }),
     preNotifyCode: varchar("pre_notify_code", { length: 60 }),
     billOfLading: varchar("bill_of_lading", { length: 60 }),
+    // The rest of what `Pre-notify` copies onto the ticked receptions (C17):
+    // the confirmation it answers and the supplier's document.
+    confirmationNumber: varchar("confirmation_number", { length: 100 }),
+    confirmationDate: date("confirmation_date", { mode: "string" }),
+    documentSupplier: varchar("document_supplier", { length: 255 }),
 
     receiptDate: date("receipt_date", { mode: "string" }),
     // Stamped when the supplier pre-advises a delivery, which is what the

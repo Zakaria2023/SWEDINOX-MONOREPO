@@ -72,6 +72,14 @@ export const PurchaseOrderItems = mysqlTable(
     qtyConfirmed: decimal("qty_confirmed", { precision: 15, scale: 3 }).default(
       "0.000",
     ),
+    // 🔑 What `Confirm purchase order` copies onto each ticked line (C16,
+    // captured on 404299 8-10-2026): the supplier's confirmation number and
+    // date, the delivery date they confirmed, and their document. Per line,
+    // because one order can be confirmed in parts.
+    confirmationNumber: varchar("confirmation_number", { length: 100 }),
+    confirmationDate: date("confirmation_date", { mode: "string" }),
+    confirmedDeliveryDate: date("confirmed_delivery_date", { mode: "string" }),
+    documentSupplier: varchar("document_supplier", { length: 255 }),
 
     reservedQty: decimal("reserved_qty", { precision: 15, scale: 3 }).default(
       "0.000",

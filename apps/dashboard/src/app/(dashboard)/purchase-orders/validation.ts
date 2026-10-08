@@ -246,9 +246,38 @@ export type ReceptionBatchSettingsFormValues = z.infer<
  */
 export const preNotifySchema = z.object({
   purchaseOrderUuid: z.string().min(1, "Purchase order is required"),
+  // "Copy these values into the selected receipts below" — the reference's
+  // header (C17, captured on 404299 8-10-2026).
+  billOfLading: z.string().optional(),
   advisedDate: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Enter the advised delivery date"),
+  preNotifyCode: z.string().optional(),
+  confirmationNumber: z.string().optional(),
+  confirmationDate: z.string().optional(),
+  documentSupplier: z.string().optional(),
+  receivalUuids: z.array(z.string()).min(1, "Tick the receipts to pre-notify"),
+  // `Pre-notify in stock unit (if receipt for stock)`, ticked by default.
+  inStockUnit: z.boolean(),
 });
 
 export type PreNotifyFormValues = z.infer<typeof preNotifySchema>;
+
+/**
+ * `Confirm purchase order` (C16): the supplier's confirmation, copied onto the
+ * order lines that are ticked. `OK` is greyed until one is.
+ */
+export const confirmPurchaseOrderSchema = z.object({
+  purchaseOrderUuid: z.string().min(1, "Purchase order is required"),
+  confirmationNumber: z.string().optional(),
+  confirmationDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Enter the confirmation date"),
+  confirmedDeliveryDate: z.string().optional(),
+  documentSupplier: z.string().optional(),
+  lineUuids: z.array(z.string()).min(1, "Tick the lines to confirm"),
+});
+
+export type ConfirmPurchaseOrderFormValues = z.infer<
+  typeof confirmPurchaseOrderSchema
+>;
