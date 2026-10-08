@@ -85,6 +85,9 @@ and read its reception, its lot (if any) and its journal lines.
 
 ## 2. 🔴 `EXW` on a purchase line is a toll-processing return, and the code has no such thing
 
+> ❎ **Withdrawn 8-10-2026 — `400143` confirmed it** (C12 in -8): `EXW` books
+> metal in at the processor, blocked at `Bewerkers`, with no unloading.
+>
 > ⚠️ **Challenged 8-10-2026 by `400142`** (see
 > [PLANNED-CODE-CHANGES-8.md](PLANNED-CODE-CHANGES-8.md), *`400142` — the
 > Decomecc pair*): the `400143` coil is **supplied to** processing on
@@ -317,6 +320,12 @@ equals its parent's. ⚠️ Value: the reference books 121 of 191 offcuts at
 € 0; decide deliberately whether ours splits the cost by kilos instead.
 
 ## 17. 🟡 A processing reservation outlives the processing invoice
+
+> 🔑 **Seen again 8-10-2026** on `400143`'s `Stock` panel: an 11 380 kg coil
+> (`IO100032`, Acerinox, charge `3MME`) at `Bewerkers`, blocked, **reserved 1 of
+> 1**, beside `400366` (Processing, Decomecc, 11 370 kg, invoiced 11-2-2025).
+> `402401` line 70 is the same shape on the order side: one 255 kg plate still
+> `In progress` ten months after its siblings were invoiced.
 
 **What was found (G10).** A coil at `Bewerkers` is reserved `Definitive` to
 `IO400366/10`, a `Processing` order invoiced in February 2025.

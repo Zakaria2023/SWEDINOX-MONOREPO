@@ -17,6 +17,8 @@ capture that proves it. Items are added as each capture lands.
 | C9 | The processor's offcut comes back as a scrap line, and the kilos close | `400066` line 20 | 📋 ready |
 | C10 | A processing order's value is its options, charged on the weight received | `400066` | 📋 ready |
 | C11 | A CD sales line is costed at its purchase line's price | `O108183/10` | 📋 ready |
+| C12 | `Ex works Processor`: book in metal where it lies, at the processor, without an unloading | `400143` | 📋 ready |
+| C13 | A processed receipt carries the supplied lot's heat **and original purchase order** | `402401` | 📋 ready |
 | — | ~~Item 1 of -7: a `CD` line must not create a lot~~ | `404299` | ❎ withdrawn |
 
 ---
@@ -437,9 +439,110 @@ order drops out of `Purchase lines`). That panel's grid also showed a
 
 So **`EXW` on a purchase line = metal that is already ours, or becomes ours, at
 somebody else's works**, booked in where it lies. That fits the margin table's
-`Ex works` and the budget's `FACTORY`. ⚠️ One pair, and the processing never
-ran. `400143` itself (its `For line`, `Purchase reference`, where its lot was
-put) is the next screenshot and confirms or breaks this.
+`Ex works` and the budget's `FACTORY`.
+
+### `400143` — confirmed, 8-10-2026 17:37
+
+| What | Read |
+|---|---|
+| Header | Decomecc N.V., **`Received · Printed`**, created 14-1-2025, contact Sige Geerkens, purchaser Benno Vos |
+| `Purchase order type` | **`Ex works Processor`** |
+| 🔑 `Purchase reference` | **`IO400142`**, printed under `Order category` |
+| Delivery | `(FCA) Free carrier`, delivery address **`Bilzerweg 8, B-3600, GENK`** (Decomecc), date 15-1-2025 |
+| Summary | Materials **€ 0,01**, total weight 177 kg |
+| Toolbar | **`Report completion…`** where a normal order has `Workorder` (greyed here, already received) |
+| Warehouse workorders | **empty**: received with no unloading work order |
+| Line 10 | **`For line` `IO400142/…`**, with the tooltip **`Open linked order`** · 15-1-2025 · `Received` · `CK304L0050` coil 304L 5 mm · `Standaard` · `304L2B` · **3000** × 1500 × 5 · 1 ST · 177 kg · M1 3 · **€ 0,05/TN** · amount € 0,01 · Kg(a) 177 |
+| Options | none |
+| Reception | `Received` · delivery 10-2-2025 · pre-notified ✓ · **bill of lading `INtern`** · 177 kg / 1 piece · pre-announced 15-1-2025 · charge `NVT` · internal charge **`25AATY`** |
+| `Stock` panel | lot `386458`: **location `Bewerkers`, type `Bewerker`, `Blocked` ☑**, 1 ST / 177 kg, **available 1 ST**, quality `304L`, charge `NVT`, `IO400143`, receipt 10-2-2025, supplier Decomecc, internal charge `25AATY` |
+| …and beside it | a second lot at `Bewerkers`, blocked: coil 999999 × 1500, **1 ST / 11 380 kg, reserved 1 ST**, available 0, charge `3MME`, `IO100032`, Acerinox, received 21-10-2024, internal charge `23BAHH` |
+
+**What it settles:**
+
+1. **`Ex works Processor` books metal in where it lies.** The delivery
+   address is the processor's, the bill of lading is `INtern`, no unloading
+   work order exists, and the lot lands on the processor location
+   **`Bewerkers`, blocked**. That is the 36-lots-all-blocked finding (G10)
+   explained: a lot at a processor is blocked because it is there.
+2. **It is raised `For line` a processing order's line**, and the header
+   repeats that order as `Purchase reference`. So the two orders point at
+   each other: `400143` → `400142/…`, and `400142`'s supply →
+   `IO400143`.
+3. **The lot is a 3 m piece of a 1 500 mm coil** (177 kg = 3 × 1,5 × 0,005 ×
+   7 870), sitting at Decomecc: the tail of an earlier job. `400142` was to
+   turn it into `PK304L500` plate of the same 3000 × 1500 × 5. It expired, and
+   the lot is **still at `Bewerkers`, available, twenty months on**.
+4. **The 11 380 kg coil beside it is -7 §17 / G10.** It is reserved, blocked,
+   at the processor, bought in October 2024. `400366` (Processing, Decomecc,
+   **11 370 kg**, invoiced 11-2-2025) is almost certainly the order holding it.
+   The processing invoice went out and the reservation stayed.
+
+**Change (C12):**
+
+- `Ex works Processor` (`ex_works_processor`, already queued in -7 §2) is a
+  purchase order type whose lines are `EXW` and whose receipt **skips the
+  unloading**. `Report completion…` books the reception straight onto the
+  processor's location, blocked, at the line's nominal price.
+- A line can be raised `For line` **another purchase order's line**
+  (`PurchaseOrderItems.forPurchaseOrderItemUuid`, already in the schema), and
+  the header shows that order as `Purchase reference`. `For line` opens the
+  linked order.
+- -7 §2's "toll-processing return" reading is **withdrawn**: `EXW` is
+  booking-in at the processor, not the processed goods coming back.
+
+### `402401` — a live processing order, 8-10-2026 17:39
+
+| What | Read |
+|---|---|
+| Header | Decomecc N.V., **`In progress · Printed · Mailed`**, created 14-11-2025, contact Elke Verheijen, purchaser Marco Borsboom, type **`Processing`** |
+| `Sawing workorder with one delivery` | ☑ — `1 ST of CK316L0040 Coil Cold-rolled 316L 2050 x 3,96 MM 230 M1 14670 KG` |
+| Delivery | `(FCA)`, delivery address **our yard** (Bolderweg 10, Almere), `Arrange transport` ☑, supplier address Genk, date 14-9-2026 |
+| Summary | Materials **€ 0,00** · Options **€ 1 871,98** · **Surcharges € 760,98** · total € 2 632,96 · 15 304,2 kg |
+| Supply | 5-12-2025 · coil 316L 999999 × 2050 × 3,96 · **14 670 kg** · picked 1 · bill of lading **`303347`** · `Delivered` · `CK316L0040` · charge **`539002`** · purchase order **`IO402399`** · receipt 28-11-2025 · M1 230 / 0 |
+| Picking work order | `315201`, 1-12-2025, `Picking`, Approved, 1 ST / 14 670 kg, **from `5G` to `Laad`**, finished 3-12-2025, charge `539002`, `IO402399` |
+| Unloading work order | `316082`, 15-12-2025, `Unloading`, Approved, one line per purchase line, `PK316L400` 4000 × 2050, to **`Ontvangst`**, **charge `539002`, purchase order `IO402399`, receipt 28-11-2025**, `2nd choice`, `EN 1.4404 2E` |
+| Lines (7) | 10–60 · 15-12-2025 · **`Invoiced`** · `PK316L400` plate 316L 4 mm · 2nd choice · `316L2E` · 4000 × 2050 × 3,96 · 9 / 10 / 10 / 11 / 10 / 8 ST · € 0,00 · **Kg(p)** 2 294,2 / 2 549,1 / 2 549,1 / 2 804,1 / 2 549,2 / 2 039,3 · **Kg(a)** 2 294,2 / 2 608 / 2 608 / 2 874,1 / 2 583,9 / 2 081 |
+| Line 70 | 14-9-2026 · **`In progress`** · `Standaard` · 1 ST · 255 kg, nothing received |
+| Reception (line 10) | `Invoiced` · 15-12-2025 · pre-notified ✓ · **bill of lading `402401`** (the order's own number) · 9 / 2 294,2 kg · pre-reported by `FJ` · charge `539002` · internal charge **`25AIVK`** |
+
+**What it adds to C8–C10:**
+
+1. **The whole cycle, on a live order.** Picking `315201` takes the coil from
+   rack `5G` to `Laad`. Transport on bill of lading `303347` takes it to
+   Decomecc. One unloading `316082` brings 58 plates back to `Ontvangst`, one
+   line per purchase line. C8's shape holds.
+2. 🔑 **The processed plates carry the coil's heat `539002` *and* its original
+   purchase order `IO402399` with its receipt date 28-11-2025**, not
+   `IO402401`. A lot's `Purchase order` is where the metal was *bought*, not
+   where it was last processed. The certificate chain survives processing.
+   They do take a new internal charge (`25AIVK`). → **C13.**
+3. **Each line is invoiced on its own.** Six lines are `Invoiced` and line 70
+   is still `In progress`, ten months later, for one plate of 255 kg. The
+   order stays open on a remainder that will probably never come. This is the
+   same pattern as -7 §17, and the worklist proposed there would catch it.
+4. **Surcharges exist on a processing order** (€ 760,98), beside the options.
+   What they are is not visible here; `Pricing` was not opened.
+5. ⚠️ **`Kg(a)` came back heavier than the coil went out**: 15 049,2 kg on
+   lines 10–60 against 14 670 kg supplied. `Kg(p)` runs at the measured
+   3,96 mm, and the `Kg(a)` of a 10-plate line (2 608) is exactly 10 × 4 ×
+   2,05 × **0,004** × 7 950, the **nominal 4 mm**. So the unloading weighed
+   nothing: it booked theoretical weight at nominal thickness, overstating
+   the plates by ~1 %. Recorded as an observation. Ours weighs a receipt from
+   the line's planned kilos or the scale (`applyReceipt`), which would not
+   repeat it.
+
+## C13 · Processed metal keeps where it was bought
+
+**Change:** when an unloading receives the output of a `Processing` order,
+the new lot takes the **supplied lot's** `charge`, `purchaseOrderUuid`,
+`purchaseOrderItemUuid` and `receiptDate`, not the processing order's. It
+takes a new internal charge of its own. Without this, every processed plate
+would trace back to a processor's € 0 order instead of the mill's
+certificate.
+
+**File:** `applyReceipt` in `warehouse-work-orders/actions.ts`, reading the
+supply (C8) of the processing order the purchase line belongs to.
 
 ## C9 · The offcut comes back as a scrap line
 
@@ -480,7 +583,6 @@ way of `400066`.
 
 ## Still to come
 
-As each capture lands it gets a section here: the rest of H9 (the
-`Ex works Processor` return leg on `400142`/`400143`), H10 saw cut, J1
+As each capture lands it gets a section here: H10 saw cut, J1
 consignment, H12 credit note, G3/G7/H4 transport, J8 buttons, and the two
 extras (`Quote- and order lines`, `C. Kg` / `C. ST`).
