@@ -35,6 +35,7 @@ import {
   CE_STANDARD_LABELS,
   ORDER_LINE_STATUS_LABELS,
   ORDER_SOURCE_TYPE_LABELS,
+  PURCHASE_ORDER_STATUS_LABELS,
   PURCHASE_ORDER_TYPE_LABELS,
   STOCK_UNIT_LABELS,
 } from "@/lib/labels";
@@ -86,12 +87,23 @@ export const PurchaseLinesTable = ({ page, filters }: Props) => {
       case "purchaseOrderId":
         return (
           <TableCell key={key} className="text-right font-medium">
-            <Link
-              href={`/purchase-lines/${row.uuid}`}
-              className="text-primary hover:underline"
-            >
-              {row.purchaseOrderId ?? `#${row.id}`}
-            </Link>
+            {/* A return line opens its return — the reference's
+                `Show Purchase return`. */}
+            {row.returnOrderUuid ? (
+              <Link
+                href={`/purchase-return-orders/${row.returnOrderUuid}`}
+                className="text-primary hover:underline"
+              >
+                IR{row.returnOrderId}
+              </Link>
+            ) : (
+              <Link
+                href={`/purchase-lines/${row.uuid}`}
+                className="text-primary hover:underline"
+              >
+                {row.purchaseOrderId ?? `#${row.id}`}
+              </Link>
+            )}
           </TableCell>
         );
       case "lineNumber":
@@ -103,10 +115,17 @@ export const PurchaseLinesTable = ({ page, filters }: Props) => {
       case "status":
         return (
           <TableCell key={key}>
-            <StatusBadge
-              value={row.status}
-              label={row.status ? ORDER_LINE_STATUS_LABELS[row.status] : null}
-            />
+            {row.returnStatus ? (
+              <StatusBadge
+                value={row.returnStatus}
+                label={PURCHASE_ORDER_STATUS_LABELS[row.returnStatus]}
+              />
+            ) : (
+              <StatusBadge
+                value={row.status}
+                label={row.status ? ORDER_LINE_STATUS_LABELS[row.status] : null}
+              />
+            )}
           </TableCell>
         );
       case "supplierName":

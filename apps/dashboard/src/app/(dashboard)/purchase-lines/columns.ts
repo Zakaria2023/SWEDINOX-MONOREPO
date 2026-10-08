@@ -4,6 +4,7 @@ import {
   CE_STANDARD_LABELS,
   ORDER_LINE_STATUS_LABELS,
   ORDER_SOURCE_TYPE_LABELS,
+  PURCHASE_ORDER_STATUS_LABELS,
   PURCHASE_ORDER_TYPE_LABELS,
   STOCK_UNIT_LABELS,
 } from "@/lib/labels";
@@ -78,7 +79,10 @@ export const PURCHASE_LINE_COLUMNS: Array<
     key: "purchaseOrderId",
     label: "Purchase order",
     defaultVisible: true,
-    value: (row) => row.purchaseOrderId ?? `#${row.id}`,
+    value: (row) =>
+      row.returnOrderId !== null
+        ? `IR${row.returnOrderId}`
+        : (row.purchaseOrderId ?? `#${row.id}`),
   },
   {
     key: "lineNumber",
@@ -90,7 +94,12 @@ export const PURCHASE_LINE_COLUMNS: Array<
     key: "status",
     label: "Status",
     defaultVisible: true,
-    value: (row) => (row.status ? ORDER_LINE_STATUS_LABELS[row.status] : null),
+    value: (row) =>
+      row.returnStatus
+        ? PURCHASE_ORDER_STATUS_LABELS[row.returnStatus]
+        : row.status
+          ? ORDER_LINE_STATUS_LABELS[row.status]
+          : null,
   },
   {
     key: "supplierName",

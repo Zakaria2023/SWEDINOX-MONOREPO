@@ -47,6 +47,11 @@ import {
 } from "@/lib/table-query";
 import { exportRows } from "@/lib/server/excel";
 import { PURCHASE_LINE_COLUMNS } from "@/app/(dashboard)/purchase-lines/columns";
+import { PurchaseReturnOrderItems } from "@/db/schema/purchase-return-order-items";
+import {
+  PurchaseReturnOrders,
+  SelectPurchaseReturnOrders,
+} from "@/db/schema/purchase-return-orders";
 
 export type PurchaseLineItem = Omit<
   SelectPurchaseOrderItems,
@@ -97,6 +102,15 @@ export type PurchaseLineItem = Omit<
   /** The construction-products pair: the standard and its declaration. */
   ceStandard: SelectProducts["ce"] | null;
   dop: SelectProducts["classificationPerformance"] | null;
+
+  // ── A purchase return line, shown on the same grid ───────────────────────
+  // 🔴 `Status: Delivered` on the reference's `Purchase lines` is the return
+  // lines (8-10-2026): negative quantities and kilos, mostly Albko
+  // Metallhandel's `IR950034`, and the toolbar's `Show Purchase order` reads
+  // `Show Purchase return` on them. Null on an ordinary purchase line.
+  returnOrderUuid: SelectPurchaseReturnOrders["uuid"] | null;
+  returnOrderId: SelectPurchaseReturnOrders["id"] | null;
+  returnStatus: SelectPurchaseReturnOrders["status"] | null;
 };
 
 export type PurchaseLineDetail = PurchaseLineItem & {
@@ -342,8 +356,137 @@ const purchaseLineRows =
         (orderPurchaserId
           ? (nameById.get(orderPurchaserId) ?? orderPurchaserId)
           : null);
-      return { ...row, purchaser, purchaserInitials: personInitials(purchaser) };
+      return {
+        ...row,
+        purchaser,
+        purchaserInitials: personInitials(purchaser),
+        returnOrderUuid: null,
+        returnOrderId: null,
+        returnStatus: null,
+      };
     });
+  };
+
+/**
+ * The purchase return lines the view matches, signed negative the way the
+ * reference prints them, and read through the purchase line each one sends
+ * back so every context column (supplier, group, line type) is that line's.
+ * There are few of them (three `IR95xxxx` returns in 2026), so they are read
+ * whole and lead the first page.
+ */
+const purchaseReturnLineRows = async (
+  query: TableQuery,
+): Promise<PurchaseLineItem[]> => {
+  const rows = await db
+    .select({
+      ...getTableColumns(PurchaseOrderItems),
+      ...purchaseLineDerived,
+      purchaseOrderId: PurchaseOrders.id,
+      orderDate: PurchaseOrders.orderDate,
+      supplierName: Companies.companyName,
+      productCode: Products.productCode,
+      productName: Products.name,
+      ...purchaseLineContext,
+      returnLineUuid: PurchaseReturnOrderItems.uuid,
+      returnLineNumber: PurchaseReturnOrderItems.lineNumber,
+      returnQty: PurchaseReturnOrderItems.returnQty,
+      returnKg: PurchaseReturnOrderItems.weightKg,
+      returnAmount: PurchaseReturnOrderItems.amount,
+      returnCreatedAt: PurchaseReturnOrderItems.createdAt,
+      returnOrderUuid: PurchaseReturnOrders.uuid,
+      returnOrderId: PurchaseReturnOrders.id,
+      returnStatus: PurchaseReturnOrders.status,
+    })
+    .from(PurchaseReturnOrderItems)
+    .innerJoin(
+      PurchaseReturnOrders,
+      eq(
+        PurchaseReturnOrderItems.purchaseReturnOrderUuid,
+        PurchaseReturnOrders.uuid,
+      ),
+    )
+    .innerJoin(
+      PurchaseOrderItems,
+      eq(
+        PurchaseReturnOrderItems.originalPurchaseOrderItemUuid,
+        PurchaseOrderItems.uuid,
+      ),
+    )
+    .leftJoin(
+      PurchaseOrders,
+      eq(PurchaseOrderItems.purchaseOrderUuid, PurchaseOrders.uuid),
+    )
+    .leftJoin(Companies, eq(PurchaseReturnOrders.supplierUuid, Companies.uuid))
+    .leftJoin(Products, eq(PurchaseOrderItems.productUuid, Products.uuid))
+    .leftJoin(ProductGroups, eq(Products.productGroupUuid, ProductGroups.uuid))
+    .leftJoin(Parent, eq(ProductGroups.parentUuid, Parent.uuid))
+    .leftJoin(Grandparent, eq(Parent.parentUuid, Grandparent.uuid))
+    .leftJoin(Root, eq(Grandparent.parentUuid, Root.uuid))
+    .leftJoin(RevenueGroups, eq(Products.revenueGroupUuid, RevenueGroups.uuid))
+    .where(
+      tableWhere({
+        query,
+        search: PURCHASE_LINE_SEARCH,
+        filters: PURCHASE_LINE_FILTERS,
+        scope: [ne(PurchaseReturnOrders.status, "cancelled")],
+      }),
+    )
+    .orderBy(desc(PurchaseReturnOrderItems.createdAt));
+
+  return rows.map(
+    ({
+      returnLineUuid,
+      returnLineNumber,
+      returnQty,
+      returnKg,
+      returnAmount,
+      returnCreatedAt,
+      ...row
+    }) => {
+      const qty = -Math.abs(Number(returnQty ?? 0));
+      const kg = -Math.abs(Number(returnKg ?? 0));
+      return {
+        ...row,
+        uuid: returnLineUuid,
+        lineNumber: returnLineNumber,
+        createdAt: returnCreatedAt,
+        quantity: qty.toFixed(3),
+        qtyPlanned: qty.toFixed(3),
+        qtyReceived: qty.toFixed(3),
+        kgPurchased: kg.toFixed(2),
+        kgActual: kg,
+        amount: -Math.abs(Number(returnAmount ?? 0)),
+        // A return is not inbound, so nothing about it is still to come.
+        kgStillToReceive: 0,
+        amountYetToBeReceived: 0,
+        availableQty: 0,
+        availableKg: 0,
+        qtyStillToReceive: 0,
+        reservedKg: 0,
+        purchaserInitials: personInitials(row.purchaser),
+      };
+    },
+  );
+};
+
+/**
+ * Purchase lines and purchase return lines as one paged list: the returns
+ * first, then the lines in the view's own order.
+ */
+const purchaseLineAndReturnRows =
+  (query: TableQuery) =>
+  async (limit: number, offset: number): Promise<PurchaseLineItem[]> => {
+    const returns = await purchaseReturnLineRows(query);
+    const pageReturns = returns.slice(offset, offset + limit);
+    const lineLimit = limit - pageReturns.length;
+    const lines =
+      lineLimit > 0
+        ? await purchaseLineRows(query)(
+            lineLimit,
+            Math.max(0, offset - returns.length),
+          )
+        : [];
+    return [...pageReturns, ...lines];
   };
 
 /** Every purchase line the current view matches, as a workbook. */
@@ -355,7 +498,7 @@ export const exportPurchaseLines = async (
     name: "Purchase Lines",
     columns: PURCHASE_LINE_COLUMNS,
     columnKeys,
-    rows: purchaseLineRows(parseTableQuery(params)),
+    rows: purchaseLineAndReturnRows(parseTableQuery(params)),
   });
 
 export const getPurchaseLines = async (
@@ -363,7 +506,8 @@ export const getPurchaseLines = async (
 ): Promise<Paged<PurchaseLineItem>> => {
   try {
     const { limit, offset } = tablePage(query);
-    const rows = await purchaseLineRows(query)(limit, offset);
+    const rows = await purchaseLineAndReturnRows(query)(limit, offset);
+    const returnCount = (await purchaseReturnLineRows(query)).length;
 
     const [totalRow] = await db
       .select({ value: count() })
@@ -387,7 +531,7 @@ export const getPurchaseLines = async (
 
     return {
       rows,
-      total: Number(totalRow?.value ?? 0),
+      total: Number(totalRow?.value ?? 0) + returnCount,
       page: query.page,
       pageSize: query.pageSize,
     };
@@ -450,7 +594,14 @@ export const getPurchaseLineDetail = async (
         ? (nameById.get(orderPurchaserId) ?? orderPurchaserId)
         : null);
 
-    return { ...line, purchaser, purchaserInitials: personInitials(purchaser) };
+    return {
+      ...line,
+      purchaser,
+      purchaserInitials: personInitials(purchaser),
+      returnOrderUuid: null,
+      returnOrderId: null,
+      returnStatus: null,
+    };
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch purchase line"));
   }
