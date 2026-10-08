@@ -395,6 +395,52 @@ says one exists.
 says a processing round trip loses about a quarter of book value (median
 0,759). That is valuation (finance), so it is recorded, not planned.
 
+### `400142` — the Decomecc pair, captured 8-10-2026 17:35
+
+Reached through company `DECOMECC` → `Purchase orders` panel (an `Expired`
+order drops out of `Purchase lines`). That panel's grid also showed a
+`Reference` column (`400142` = **`Coil 5 mm`**, `400196` = `loonwerk`) and
+`Days in system` (632 for both `400142` and `400143`).
+
+| What | Read |
+|---|---|
+| Header | Decomecc N.V. `11046`, **`Expired · Printed`**, created 14-1-2025, contact Elke Verheijen, purchaser Benno Vos, reference `Coil 5 mm` |
+| `Purchase order type` | **`Processing`** |
+| `Sawing workorder with one delivery` | ☑, text **`1 ST of CK304L0050 Coil Cold-rolled 304L 1500 x 5,00 MM 3 M1 177 KG`** |
+| Delivery | **`(EXW) Ex works`**, delivery address **`Decomecc NV, Bilzerweg 8, B-3600, Genk`** (the processor's own), `Arrange transport` ☑, date 16-1-2026 |
+| Summary | everything € 0,00, total weight **0 kg** |
+| Lines (1) | 10 · 16-1-2026 · **`Expired`** · `PK304L500` Cold-rolled plate 304L 5 mm · 3000 × 1500 × 5 · **`Qty(p)` 0** · M1 0 · € 0,00/TN |
+| Warehouse workorders | **empty** |
+| Receipts (1) | `Kg(a)` 0 · `Qty(a)` 0 · pre-announced 16-1-2026 · charge `NVT` · **internal charge `25AATY`** |
+| Supplies (1) | 10-2-2025 · `Coil Cold-rolled 304L 5 mm` · 999999 × 1500 × 5,00 · Kg(p) 177 · 1 ST · picked 1 · Qty(a) 1 · Kg(a) 177 · **bill of lading `INtern`** · **`Delivered`** · code `CK304L0050` · charge `NVT` · **purchase order `IO400143`** · receipt date 10-2-2025 · M1 3 / 3 |
+
+`Show purchase order` on the `Supplies` toolbar is **live** here (greyed on
+`400066`). It opens the order the supplied lot was bought on, `IO400143`.
+
+**What it means, against what -7 §2 assumed:**
+
+- -7 §2 read the one `EXW` purchase line (`400143/10`, € 0,05/TN, 177 kg) as
+  *"our own plate coming back from a processor"*, the **return** leg.
+- `400142` shows the coil bought on `400143` being **supplied to** Decomecc
+  on a `Processing` order, to be cut into `PK304L500` plate. So `400143` is
+  not the return: it **booked into our stock a 177 kg coil already lying at
+  Decomecc**, at a nominal price. `400142` then sent that coil into
+  processing. The bill of lading reads `INtern`: nothing travelled, because
+  the coil was already there.
+- The processing **never happened**: `Qty(p)` was set to 0, no work order, the
+  reception still 0 kg, the order `Expired`. company-detail.md had already
+  found its two journal postings reversed.
+- The reception was pre-filled with internal charge **`25AATY`**, the same
+  internal charge as the lot `400143` created. The processed output was
+  going to keep the input's identity. This is the same as `400066`, where the
+  heat number carried through.
+
+So **`EXW` on a purchase line = metal that is already ours, or becomes ours, at
+somebody else's works**, booked in where it lies. That fits the margin table's
+`Ex works` and the budget's `FACTORY`. ⚠️ One pair, and the processing never
+ran. `400143` itself (its `For line`, `Purchase reference`, where its lot was
+put) is the next screenshot and confirms or breaks this.
+
 ## C9 · The offcut comes back as a scrap line
 
 **Change:** a processing order's lines may include a **scrap article** in `KG`

@@ -85,6 +85,13 @@ and read its reception, its lot (if any) and its journal lines.
 
 ## 2. 🔴 `EXW` on a purchase line is a toll-processing return, and the code has no such thing
 
+> ⚠️ **Challenged 8-10-2026 by `400142`** (see
+> [PLANNED-CODE-CHANGES-8.md](PLANNED-CODE-CHANGES-8.md), *`400142` — the
+> Decomecc pair*): the `400143` coil is **supplied to** processing on
+> `400142`, not returned from it. `EXW` looks like *metal booked into stock
+> where it already lies, at a processor*. Confirm on `400143` before building
+> anything below.
+
 **What was found.** The only `EXW` purchase line in 21 months: € 0,05/TN,
 `Qty ordered 0`, `Qty confirmed 0`, `Received`, internal certificate, booked
 to `3000 Stock` at € 0,01. It is our own plate coming back from a processor.
