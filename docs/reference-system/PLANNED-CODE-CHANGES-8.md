@@ -917,6 +917,21 @@ picked for H4 in FLOWS.md) is now **`Invoiced`** on every line, lines 10 and 20
 `CD`. It is no longer waiting, so H4 needs another row from `Deliveries to be
 arranged`.
 
+## H4 · Planning a trip — no screen does it
+
+`Deliveries to be arranged without…` (8-10-2026 18:30) lists one line:
+Henk van den Bergh, order `108298` / 10, 23-9-2026, 10 ST `PC304060`, length
+50. Toolbar `Show Product` · `Show Order` · `Order lines` · `Orders and
+Quotes` · `Stock on location` · `Afhalen`, and right-click offers only `Show
+Product` · `Show Order`. **No button anywhere creates a trip or a transport
+work order.** `Trip data` is a read-only report (G7), and `Deliveries` is a
+line grid (G3).
+
+So trips are made **outside the screens reachable here**: by a planning
+module, the scanner app, or an import. Moved to
+[MANAGER-QUESTIONS.md](MANAGER-QUESTIONS.md) question 12. **No change**: ours
+keeps transport read-only until someone says where trips come from.
+
 ## C9 · The offcut comes back as a scrap line
 
 **Change:** a processing order's lines may include a **scrap article** in `KG`

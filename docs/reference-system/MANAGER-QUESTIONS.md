@@ -202,3 +202,22 @@ out in proportion. That interface is a guess built from the result. If the
 reference splits by quantity or by date, our dialog asks the wrong question.
 Until this is answered, ours stays as it is and is **not** tested against the
 reference.
+
+## Transport — where is a trip made? (H4)
+
+**12. Where does Swedinox plan a trip?**
+On 8-10-2026 every transport screen was opened: `Trip data` is a read-only
+report (trip `600249`: 17 stops, 18 orders, 26 429 kg, driver / km / cost all
+empty), `Deliveries` lists order lines with only `Show` buttons, and
+`Deliveries to be arranged without…` (one line, order `108298`) has no
+trip, plan or transport-work-order button, not even on right-click.
+
+- Is a trip planned in another program (a route planner, the scanner app, a
+  carrier portal) and imported?
+- Who assigns the trip number (`6xxxxx`) and the bill of lading (`3xxxxx`)?
+- Are driver, km, hours and cost ever filled in? They are empty on all 438
+  trips.
+
+*Why it matters:* our transport side is read-only. If trips come from outside,
+we need an import, not a planning screen. If the costs are never filled, those
+columns stay blank on purpose.
