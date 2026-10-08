@@ -19,6 +19,7 @@ capture that proves it. Items are added as each capture lands.
 | C11 | A CD sales line is costed at its purchase line's price | `O108183/10` | 📋 ready |
 | C12 | `Ex works Processor`: book in metal where it lies, at the processor, without an unloading | `400143` | 📋 ready |
 | C13 | A processed receipt carries the supplied lot's heat **and original purchase order** | `402401` | 📋 ready |
+| C14 | `Quote- and order lines` panel on the company screen | Decomecc, extra A | 📋 ready |
 | — | ~~Item 1 of -7: a `CD` line must not create a lot~~ | `404299` | ❎ withdrawn |
 
 ---
@@ -543,6 +544,34 @@ certificate.
 
 **File:** `applyReceipt` in `warehouse-work-orders/actions.ts`, reading the
 supply (C8) of the processing order the purchase line belongs to.
+
+## C14 · `Quote- and order lines` on the company
+
+**Captured 8-10-2026 on Decomecc N.V.** (empty there: Decomecc has no sales
+lines, so this is the panel's shape only). It sits between `Orders` and
+`Purchase requests`.
+
+- **Toolbar:** `Show` · `Show contract` · `Show product` · `Show invoice` (all
+  act on the selected row), then `View: Standaard`.
+- **Columns, in order:** `Order date` (sorted descending) · `Delivery date` ·
+  `Status` · `Order` · `Line` · `Product code` · `Product` · `kwaliteit` ·
+  `Qty` · `QtyU` · `Length` · `Width` · `Dikte` · `Voorraadcategorie` · `Kg` ·
+  `Gross price` · `Net price` · `PriceU` · `Reference` · `Days in system`.
+
+**Ours:** the company screen got its document panels on 7-10-2026
+(`company-related-panels.tsx`). This one was left out because its columns had
+never been seen.
+
+**Change:** a ninth panel, quote lines and order lines of this company
+together, newest first, with the 20 columns above in that order (labels in
+English: Quality, Thickness, Stock category). The four buttons sit in a
+toolbar above the grid and act on the selected row: `Show` opens the quote or
+order, `Show contract` the line's contract (greyed when none), `Show product`
+the product, `Show invoice` the invoice the line was billed on (greyed when
+none). Same sequential, 100-row query as the other panels.
+
+**Files:** `companies/actions.ts` (`getCompanyRelatedRecords`),
+`components/companies/company-related-panels.tsx`.
 
 ## C9 · The offcut comes back as a scrap line
 
