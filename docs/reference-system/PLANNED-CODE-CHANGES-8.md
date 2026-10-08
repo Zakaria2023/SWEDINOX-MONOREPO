@@ -656,6 +656,14 @@ no `Order hvh.` column.
 and `Par. return` are greyed** on a received order. `Workorder` opened only a
 loading spinner (no dialog came up).
 
+🔑 **An unsaved edit greys the document toolbar.** Adding an (empty) row to
+`Product Receipt Documents` turned `Print…` · `Send…` · `Confirm` ·
+`Pre-notify` · `Copy` · `Workorder` grey; only `Show company` and
+`Options…` stayed live, until the change was saved or discarded. So nothing
+can be sent, confirmed or worked on half-edited. Ours edits on a separate
+page, so the detail screen's toolbar never sees a half-edited record. No
+change, but any in-place panel editing we add (C19) must keep this rule.
+
 ### C16 · `Confirm purchase order 404299`
 
 - **Header, "Copy these values into the selected order lines below":**
