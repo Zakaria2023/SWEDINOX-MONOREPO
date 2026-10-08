@@ -22,7 +22,8 @@ import {
   SelectCustomerProjects,
 } from "@/db/schema/customer-projects";
 import { Industries, SelectIndustries } from "@/db/schema/industries";
-import { InsertProducts, Products } from "@/db/schema/products";
+import { InsertProducts, Products, SelectProducts } from "@/db/schema/products";
+import { ORDER_LINE_STATUS_LABELS } from "@/lib/labels";
 import { InsertTexts, Texts } from "@/db/schema/texts";
 import {
   CounterOrders,
@@ -41,6 +42,11 @@ import {
 } from "@/db/schema/purchase-orders";
 import { InsertQuotes, Quotes, SelectQuotes } from "@/db/schema/quotes";
 import { Orders, SelectOrders } from "@/db/schema/orders";
+import { OrderItems, SelectOrderItems } from "@/db/schema/order-items";
+import { QuoteItems } from "@/db/schema/quote-items";
+import { SelectStock, Stock } from "@/db/schema/stock";
+import { Invoices } from "@/db/schema/invoices";
+import { InvoiceItems } from "@/db/schema/invoice-items";
 import {
   PurchaseQuotes,
   SelectPurchaseQuotes,
@@ -368,6 +374,7 @@ export type CompanyRelatedRecords = {
     | "totalExclVat"
     | "totalWeightKg"
   >[];
+  quoteAndOrderLines: CompanyQuoteOrderLine[];
   communications: Pick<
     SelectCommunications,
     | "uuid"
@@ -379,6 +386,49 @@ export type CompanyRelatedRecords = {
     | "deliveredCount"
     | "failedCount"
   >[];
+};
+
+/**
+ * One row of the company's `Quote- and order lines` panel (C14, captured on
+ * Decomecc 8-10-2026): quote lines and order lines together, newest first,
+ * with the 20 `Standaard` columns plus `Customer`, `Contract code` and
+ * `Invoice no.` from the `Vrijgegeven` view.
+ */
+export type CompanyQuoteOrderLine = {
+  kind: "quote" | "order";
+  uuid: SelectOrderItems["uuid"];
+  documentUuid: SelectOrders["uuid"];
+  documentId: SelectOrders["id"];
+  orderDate: SelectOrders["createdAt"];
+  deliveryDate: SelectOrderItems["deliveryDate"] | null;
+  /** The line's status, labelled — order and quote lines use different sets. */
+  status: string | null;
+  /** Open, for the `Openstaand` view: not invoiced and not expired. */
+  isOpen: boolean;
+  /** Released, for the `Vrijgegeven` view. */
+  isReleased: boolean;
+  lineNumber: SelectOrderItems["lineNumber"];
+  productUuid: SelectOrderItems["productUuid"] | null;
+  productCode: SelectProducts["productCode"] | null;
+  productName: SelectProducts["name"] | null;
+  quality: SelectStock["quality"] | null;
+  stockCategory: SelectStock["stockCategory"] | null;
+  quantity: string | null;
+  unit: SelectOrderItems["unit"] | null;
+  lengthMm: SelectOrderItems["lengthMm"] | null;
+  widthMm: SelectOrderItems["widthMm"] | null;
+  thicknessMm: string | null;
+  kg: string | null;
+  grossPrice: string | null;
+  netPrice: string | null;
+  priceUnit: string | null;
+  reference: string | null;
+  daysInSystem: number;
+  customer: SelectCompanies["companyName"] | null;
+  contractUuid: SelectContracts["uuid"] | null;
+  contractCode: SelectContracts["code"] | null;
+  invoiceUuid: string | null;
+  invoiceNo: number | null;
 };
 
 export const updateCompanyDocuments = async (
@@ -1038,6 +1088,124 @@ export const getCompanyRelatedRecords = async (
       .orderBy(desc(Communications.id))
       .limit(RELATED_RECORD_LIMIT);
 
+    // `Quote- and order lines` (C14): both kinds of line, read one after the
+    // other rather than together (the connection ceiling), then merged.
+    const [company] = await db
+      .select({ companyName: Companies.companyName })
+      .from(Companies)
+      .where(eq(Companies.uuid, companyUuid))
+      .limit(1);
+
+    const orderLines = await db
+      .select({
+        uuid: OrderItems.uuid,
+        documentUuid: Orders.uuid,
+        documentId: Orders.id,
+        orderDate: Orders.createdAt,
+        deliveryDate: OrderItems.deliveryDate,
+        lineStatus: OrderItems.lineStatus,
+        lineNumber: OrderItems.lineNumber,
+        productUuid: OrderItems.productUuid,
+        productCode: Products.productCode,
+        productName: Products.name,
+        quality: Stock.quality,
+        stockCategory: Stock.stockCategory,
+        quantity: OrderItems.quantity,
+        unit: OrderItems.unit,
+        lengthMm: OrderItems.lengthMm,
+        widthMm: OrderItems.widthMm,
+        thicknessMm: OrderItems.thicknessMm,
+        kg: OrderItems.kgPlanned,
+        grossPrice: OrderItems.grossPrice,
+        netPrice: OrderItems.netPrice,
+        priceUnit: OrderItems.priceUnit,
+        reference: Orders.customerRef,
+        daysInSystem: sql<number>`DATEDIFF(NOW(), ${OrderItems.createdAt})`,
+        contractUuid: sql<string | null>`(SELECT ${Contracts.uuid} FROM ${Contracts} WHERE ${Contracts.orderUuid} = ${Orders.uuid} ORDER BY ${Contracts.code} LIMIT 1)`,
+        contractCode: sql<string | null>`(SELECT ${Contracts.code} FROM ${Contracts} WHERE ${Contracts.orderUuid} = ${Orders.uuid} ORDER BY ${Contracts.code} LIMIT 1)`,
+        invoiceUuid: sql<string | null>`(SELECT ${InvoiceItems.invoiceUuid} FROM ${InvoiceItems} WHERE ${InvoiceItems.orderItemUuid} = ${OrderItems.uuid} LIMIT 1)`,
+        invoiceNo: sql<number | null>`(SELECT ${Invoices.id} FROM ${Invoices} JOIN ${InvoiceItems} ON ${InvoiceItems.invoiceUuid} = ${Invoices.uuid} WHERE ${InvoiceItems.orderItemUuid} = ${OrderItems.uuid} LIMIT 1)`,
+      })
+      .from(OrderItems)
+      .innerJoin(Orders, eq(OrderItems.orderUuid, Orders.uuid))
+      .leftJoin(Products, eq(OrderItems.productUuid, Products.uuid))
+      .leftJoin(Stock, eq(OrderItems.stockUuid, Stock.uuid))
+      .where(eq(Orders.companyUuid, companyUuid))
+      .orderBy(desc(Orders.createdAt), asc(OrderItems.lineNumber))
+      .limit(RELATED_RECORD_LIMIT);
+
+    const quoteLines = await db
+      .select({
+        uuid: QuoteItems.uuid,
+        documentUuid: Quotes.uuid,
+        documentId: Quotes.id,
+        orderDate: Quotes.createdAt,
+        deliveryDate: QuoteItems.deliveryDate,
+        lineStatus: QuoteItems.status,
+        lineNumber: QuoteItems.lineNumber,
+        productUuid: QuoteItems.productUuid,
+        productCode: Products.productCode,
+        productName: Products.name,
+        quantity: QuoteItems.quantity,
+        unit: QuoteItems.unit,
+        lengthMm: QuoteItems.lengthMm,
+        widthMm: QuoteItems.widthMm,
+        thicknessMm: QuoteItems.thicknessMm,
+        kg: QuoteItems.weightKg,
+        grossPrice: QuoteItems.grossPrice,
+        netPrice: QuoteItems.netPrice,
+        priceUnit: QuoteItems.priceUnit,
+        reference: QuoteItems.reference,
+        daysInSystem: sql<number>`DATEDIFF(NOW(), ${QuoteItems.createdAt})`,
+      })
+      .from(QuoteItems)
+      .innerJoin(Quotes, eq(QuoteItems.quoteUuid, Quotes.uuid))
+      .leftJoin(Products, eq(QuoteItems.productUuid, Products.uuid))
+      .where(eq(Quotes.companyUuid, companyUuid))
+      .orderBy(desc(Quotes.createdAt), asc(QuoteItems.lineNumber))
+      .limit(RELATED_RECORD_LIMIT);
+
+    const quoteAndOrderLines: CompanyQuoteOrderLine[] = [
+      ...orderLines.map(({ lineStatus, ...line }) => ({
+        ...line,
+        kind: "order" as const,
+        status: lineStatus ? ORDER_LINE_STATUS_LABELS[lineStatus] : null,
+        isOpen:
+          lineStatus !== "invoiced" &&
+          lineStatus !== "expired" &&
+          lineStatus !== "cancelled",
+        isReleased: lineStatus === "released",
+        thicknessMm: line.thicknessMm === null ? null : String(line.thicknessMm),
+        customer: company?.companyName ?? null,
+        invoiceNo: line.invoiceNo === null ? null : Number(line.invoiceNo),
+        daysInSystem: Number(line.daysInSystem ?? 0),
+      })),
+      ...quoteLines.map(({ lineStatus, ...line }) => ({
+        ...line,
+        kind: "quote" as const,
+        status: lineStatus ? ORDER_LINE_STATUS_LABELS[lineStatus] : null,
+        isOpen:
+          lineStatus !== "invoiced" &&
+          lineStatus !== "expired" &&
+          lineStatus !== "cancelled",
+        isReleased: lineStatus === "released",
+        quality: null,
+        stockCategory: null,
+        thicknessMm: line.thicknessMm === null ? null : String(line.thicknessMm),
+        customer: company?.companyName ?? null,
+        contractUuid: null,
+        contractCode: null,
+        invoiceUuid: null,
+        invoiceNo: null,
+        daysInSystem: Number(line.daysInSystem ?? 0),
+      })),
+    ]
+      .sort(
+        (a, b) =>
+          new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime(),
+      )
+      .slice(0, RELATED_RECORD_LIMIT);
+
     return {
       contacts,
       orders,
@@ -1046,6 +1214,7 @@ export const getCompanyRelatedRecords = async (
       purchaseQuotes,
       purchaseInvoices,
       purchaseReturns,
+      quoteAndOrderLines,
       communications,
     };
   } catch (error) {

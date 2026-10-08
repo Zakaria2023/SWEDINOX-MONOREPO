@@ -11,6 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { CompanyQuoteOrderLinesPanel } from "@/components/companies/company-quote-order-lines-panel";
 import { CollapsibleSection } from "@/components/ui/collapsible-section";
 import {
   formatDateColumn,
@@ -196,6 +197,8 @@ export const CompanyRelatedPanels = ({ records }: Props) => {
           </TableBody>
         </Table>
       </CollapsibleSection>
+
+      <CompanyQuoteOrderLinesPanel lines={records.quoteAndOrderLines} />
 
       <CollapsibleSection
         title="Contracts"
