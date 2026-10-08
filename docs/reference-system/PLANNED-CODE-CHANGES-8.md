@@ -8,7 +8,7 @@ capture that proves it. Items are added as each capture lands.
 |---|---|---|---|
 | C1 | A purchase line bought for a sales line is `CD` | `404299` | 📋 ready |
 | C2 | Ordering a request directly carries its `For line` onto the sale | `404299` | 📋 ready |
-| C3 | A receipt reserves the new lot to the line it was bought for | `404299` lot `404744` | ⏸ waits on `O108183/10` |
+| C3 | A CD sales line exists before its lot; the receipt gives it one and reserves it | `404299` + `O108183/10` | 📋 ready — touches the sales spine |
 | C4 | Purchase quote lines keep the request's `For line` | follows from C1 | 📋 ready |
 | C5 | `For line` column on the purchase order's Lines grid | `404299` screenshot | 📋 ready |
 | C6 | A CD receipt is put on the loading location, not a rack | lot `404744` at `Laad` | 🟡 default to confirm |
@@ -16,6 +16,7 @@ capture that proves it. Items are added as each capture lands.
 | C8 | A processing purchase order lists the material we send out (`Supplies`) | `400066` | 📋 ready, valuation open |
 | C9 | The processor's offcut comes back as a scrap line, and the kilos close | `400066` line 20 | 📋 ready |
 | C10 | A processing order's value is its options, charged on the weight received | `400066` | 📋 ready |
+| C11 | A CD sales line is costed at its purchase line's price | `O108183/10` | 📋 ready |
 | — | ~~Item 1 of -7: a `CD` line must not create a lot~~ | `404299` | ❎ withdrawn |
 
 ---
@@ -110,6 +111,27 @@ Nothing anywhere writes `OrderItems.purchaseOrderItemUuid` (-7 §4).
 
 ## C3 · A receipt reserves the lot to the line it was bought for
 
+### The sales side — `O108183`, captured 8-10-2026 17:28
+
+| What | Read |
+|---|---|
+| Header | **UAB Metalinox** `12402`, `In progress · Printed · Mailed`, created **11-9-2026**, delivery planned 2-10-2026, seller Marco Borsboom |
+| Order type | `Normal`, `Weighed`; `Pick-up` ☐; `(FCA) Free carrier` to Taikos ave. 106 K, Kaunas (LT) |
+| Summary | revenue € 7 169,25, profit **€ 508,05 (7,1 %)**, 2 172,5 kg, avg kilo price € 3,30 |
+| Line 10 | **`Type` `CD`** (a dropdown on the line) · delivery 2-10-2026 · `In progress` · `PK316L150315` 2nd choice `316L2B` · 41 ST · 3000 × 1500 × 1,5 · Kg(p) 2 172,5 · M1 123 · net € 3 300,00/TN · amount € 7 169,25 · **`Purchase price` € 3 050,00** · **`Costs` € 6 661,20** · profit 7,09 % / € 508,05 |
+
+**The order of events.** The sales order and purchase order `404299` were
+**both created on 11-9-2026**. The lot was created on **21-9-2026** at
+15:58:38. So for ten days **the sales line existed with no lot behind it**,
+held only by the purchase line raised `For line` it. When the goods came in,
+the lot was born reserved to it: 41 of 41.
+
+**The sales line's `Type` is `CD`.** It is the reference's `Line type` on the
+sales side, a dropdown on the order line, matching the purchase line's `CD`.
+(-7 §4 asked what the reference does to the sales line. It reads `CD`.
+Whether the seller picks it or the purchase sets it cannot be told from a
+finished order; ours lets the seller pick it already.)
+
 ✅ **Confirmed twice**: the order's `Stock` panel and `Stock on location` both
 read lot `404744` as 41 reserved of 41.
 
@@ -122,18 +144,53 @@ other side: the report dialog pre-fills a `For order line` per bundle.
 covers. Reserve the lot to them, up to its quantity, with a `Reservations` row
 and `Stock.reservedQuantity`, in the same transaction.
 
-⏸ **Blocked on our data model.** `OrderItems.stockUuid` is `notNull`, so in our
-app a sales line can only be cut from a lot that already exists. A CD sale is
-made **before** the goods are bought. This needs one more screenshot first:
+✅ **Unblocked by `O108183`.** A CD sales line is real for days before any lot
+exists, so our model has to allow it.
 
-> Sales order **`O108183`**, line **10**, scrolled right so `Line type` shows,
-> plus its **`Reservations`** panel.
+**Change, in three parts:**
 
-That tells us what the sales line holds before the goods arrive, and so whether
-`stockUuid` becomes nullable or the sale holds something else until receipt.
-This is the one change on this page that touches the sales spine (picking,
-invoicing, call-offs all read `stockUuid`), so it gets its own plan once the
-screenshot is in.
+1. **`OrderItems.stockUuid` becomes nullable.** It is null only while a `CD`
+   line waits for its goods, and then `purchaseOrderItemUuid` must be set: a
+   sales line is held either by a lot or by a purchase line, never by nothing.
+   NOT NULL → NULL loses no data, so it is a plain `pnpm db:push`.
+2. **Entering a CD line.** On the order form, a line typed `CD` is entered
+   from the stock search dialog's **`catalogue`** source (the article, not a
+   lot), reserves nothing, and is costed per C11. Raising the purchase line for
+   it (from the request `For line`, C2, or directly) sets
+   `purchaseOrderItemUuid`.
+3. **The receipt closes the loop** (`applyReceipt`). After writing the lot,
+   find the sales lines this purchase line covers that have no lot yet. Give
+   each one the lot (`stockUuid`), write a `Reservations` row (`sale`,
+   `definitive`, the line's quantity and kilos), and raise
+   `Stock.reservedQuantity`, up to what arrived, all in the same transaction.
+   Lot `404744`: 41 arrived, 41 reserved, 0 available.
+
+**What else reads `OrderItems.stockUuid`, and must cope with null** (11 reads
+across 8 files, found 8-10-2026): `orders/actions.ts`, `order-lines/actions.ts`,
+`warehouse-work-orders/actions.ts` (picking), `charges/actions.ts`,
+`complaints/actions.ts`, `return-orders/actions.ts`,
+`purchase-return-orders/actions.ts`, `sending-certificates/actions.ts`.
+Picking a CD line before its lot exists is refused with a message naming the
+purchase line it waits on. The rest show the line without a lot.
+
+## C11 · A CD sales line is costed at its purchase line
+
+**Seen on `O108183/10`:** `Purchase price` **€ 3 050,00**, the net price on
+`404299/10`. `Costs` **€ 6 661,20** = 3 050 × **2,184 t**, the weight
+*unloaded* (work order `327345`, `Kg(a)` 2 184), not the 2 172,5 sold. Profit
+€ 7 169,25 − € 6 661,20 = **€ 508,05 (7,09 %)**, to the cent. The `w.r.t.
+Repl. price` column reads 100 %, so this product has no replacement price.
+
+**Ours:** a sales line's cost comes from the lot it is cut from. A CD line has
+no lot until receipt, and then the lot's valuation price (€ 3 050,00, the
+price paid, see the lot table above) is the same figure.
+
+**Change:** while a CD line has no lot, its cost price is its purchase line's
+net price, so the order shows a margin from the moment it is entered. On
+receipt, the line takes the lot and its cost stays the same. ⚠️ The reference
+costs it on the **unloaded** kilos (2 184), not the sold kilos. Ours costs on
+the sold weight. Recorded as a difference to decide, not a change: it moves
+margin by 0,5 % on this line.
 
 ## C4 · Purchase quote lines keep the request's `For line`
 
@@ -366,7 +423,7 @@ way of `400066`.
 
 **Next time, in this order:**
 
-1. `O108183` line 10: `Line type` and `Reservations` (unblocks C3).
+1. ~~`O108183` line 10~~ ✅ done 17:28: `Type` `CD`, sale made before the lot; C3 unblocked, C11 added.
 2. ~~`Status: Delivered` on Purchase lines~~ ✅ done 17:21: purchase returns.
 3. ~~`400066` Workorders panels~~ ✅ done 17:21: picking out, one unloading back.
 4. ~~H13 `Split`~~ ⏹ moved to MANAGER-QUESTIONS.md question 11.

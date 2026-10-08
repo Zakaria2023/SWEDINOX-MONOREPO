@@ -131,6 +131,10 @@ goes with it.
 
 ## 4. 🟡 Nothing ever sets a sales line to `cross_dock`
 
+> ✅ **Captured 8-10-2026 on `O108183/10`:** the sales line's `Type` reads
+> **`CD`**, and it existed ten days before its lot. The change is now
+> [PLANNED-CODE-CHANGES-8.md](PLANNED-CODE-CHANGES-8.md) C2 + C3.
+
 **What was found.** `OrderItems.purchaseOrderItemUuid` exists for the
 cross-dock link and `CD deliveries in progress` reads it, but no action writes
 either it or `sourceType = "cross_dock"`.
