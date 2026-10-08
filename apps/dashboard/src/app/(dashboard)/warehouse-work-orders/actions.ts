@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { refreshOrderStatusForLine } from "@/lib/server/order-status";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
 import { OrderItems } from "@/db/schema/order-items";
+import { reserveReceiptToCoveredSalesLines } from "@/lib/server/cross-dock";
 import {
   ReturnOrderItems,
   SelectReturnOrderItems,
@@ -1623,6 +1624,17 @@ const applyReceipt = async (
     purchaseLineReceivalUuid: receivalUuid,
     date: todayDateString(),
   });
+
+  // 🔴 Goods bought for a sale arrive already sold. Lot `404744` was born
+  // reserved 41 of 41 to `O108183/10`, the line `404299` was raised for
+  // (C3, 8-10-2026), so the `CD` lines this purchase line covers take the lot
+  // now, and their cost becomes what was paid for it (C11).
+  await reserveReceiptToCoveredSalesLines(
+    tx,
+    purchaseLine.uuid,
+    { stockUuid, quantity, value, unit: purchaseLine.unit },
+    null,
+  );
 
   await tx.insert(StockMovements).values({
     uuid: generateUuid(),

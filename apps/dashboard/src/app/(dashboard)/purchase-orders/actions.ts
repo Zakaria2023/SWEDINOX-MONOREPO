@@ -1324,6 +1324,7 @@ export const createUnloadingWorkOrder = async (
           qtyReceived: PurchaseOrderItems.qtyReceived,
           kgPurchased: PurchaseOrderItems.kgPurchased,
           status: PurchaseOrderItems.status,
+          sourceType: PurchaseOrderItems.sourceType,
         })
         .from(PurchaseOrderItems)
         .innerJoin(Products, eq(PurchaseOrderItems.productUuid, Products.uuid))
@@ -1365,6 +1366,20 @@ export const createUnloadingWorkOrder = async (
       const warehouseUuid =
         (await rootWarehouseOfLocation(tx, goodsIn.uuid)) ?? goodsIn.uuid;
 
+      // 🔑 A `CD` parcel is unloaded straight onto the loading bay. Lot
+      // `404744`, bought for `O108183/10`, sat on `Laad` (type `Laad`) while
+      // every other lot of the article was on a `Pick` rack (C6, 8-10-2026):
+      // it was received only to go out again on the customer's lorry.
+      const [loadingBay] = outstanding.some(
+        (line) => line.sourceType === "cross_dock",
+      )
+        ? await tx
+            .select({ uuid: Warehouses.uuid })
+            .from(Warehouses)
+            .where(eq(Warehouses.locationType, "load"))
+            .limit(1)
+        : [];
+
       const number = await nextWorkOrderNumber(tx);
 
       await tx.insert(WarehouseWorkOrders).values({
@@ -1400,7 +1415,10 @@ export const createUnloadingWorkOrder = async (
           productCode: line.productCode,
           // An unloading comes from outside the building, so it has no `from`.
           fromLocationUuid: null,
-          toLocationUuid: goodsIn.uuid,
+          toLocationUuid:
+            line.sourceType === "cross_dock" && loadingBay
+              ? loadingBay.uuid
+              : goodsIn.uuid,
           length: line.lengthMm,
           width: line.widthMm,
           thickness: line.thicknessMm ? Number(line.thicknessMm) : null,

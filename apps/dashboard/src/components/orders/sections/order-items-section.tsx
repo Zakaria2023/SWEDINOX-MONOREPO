@@ -35,8 +35,11 @@ export const OrderItemsSection = ({
     control,
     register,
     setValue,
+    watch,
     formState: { errors },
   } = useFormContext<OrderFormValues>();
+
+  const lines = watch("items") ?? [];
 
   // Which line the search window was opened for, or null when it is shut.
   const [searchingLine, setSearchingLine] = useState<number | null>(null);
@@ -61,21 +64,34 @@ export const OrderItemsSection = ({
           >
             <div>
               <FormLabel htmlFor={`items.${index}.stockUuid`} required>
-                Stock Item
+                {lines[index]?.sourceType === "cross_dock"
+                  ? "Article to buy"
+                  : "Stock Item"}
               </FormLabel>
-              <Controller
-                control={control}
-                name={`items.${index}.stockUuid`}
-                render={({ field: stockField }) => (
-                  <Select
-                    id={`items.${index}.stockUuid`}
-                    value={stockField.value || ""}
-                    options={stockOptions}
-                    onValueChange={stockField.onChange}
-                    invalid={!!errors.items?.[index]?.stockUuid}
-                  />
-                )}
-              />
+              {/* A `CD` line has no lot yet — it names the article that will
+                  be bought for it, chosen in the search window. */}
+              {lines[index]?.sourceType === "cross_dock" ? (
+                <Input
+                  id={`items.${index}.stockUuid`}
+                  value={lines[index]?.productLabel ?? ""}
+                  placeholder="Search the catalogue"
+                  readOnly
+                />
+              ) : (
+                <Controller
+                  control={control}
+                  name={`items.${index}.stockUuid`}
+                  render={({ field: stockField }) => (
+                    <Select
+                      id={`items.${index}.stockUuid`}
+                      value={stockField.value || ""}
+                      options={stockOptions}
+                      onValueChange={stockField.onChange}
+                      invalid={!!errors.items?.[index]?.stockUuid}
+                    />
+                  )}
+                />
+              )}
               <FormFieldError
                 message={errors.items?.[index]?.stockUuid?.message}
               />
@@ -107,7 +123,14 @@ export const OrderItemsSection = ({
                       value: type,
                       label: ORDER_SOURCE_TYPE_LABELS[type],
                     }))}
-                    onValueChange={typeField.onChange}
+                    onValueChange={(next) => {
+                      typeField.onChange(next);
+                      // Switching between a lot and an article starts the
+                      // line's product over.
+                      setValue(`items.${index}.stockUuid`, "");
+                      setValue(`items.${index}.productUuid`, "");
+                      setValue(`items.${index}.productLabel`, "");
+                    }}
                   />
                 )}
               />
@@ -145,7 +168,13 @@ export const OrderItemsSection = ({
         variant="outline"
         size="sm"
         onClick={() =>
-          appendItem({ stockUuid: "", quantity: "", sourceType: "stock" })
+          appendItem({
+            stockUuid: "",
+            productUuid: "",
+            productLabel: "",
+            quantity: "",
+            sourceType: "stock",
+          })
         }
       >
         <Plus className="mr-1 size-3.5" /> Add product
@@ -159,8 +188,36 @@ export const OrderItemsSection = ({
       <StockSearchDialog
         open={searchingLine !== null}
         onOpenChange={(open) => setSearchingLine(open ? searchingLine : null)}
+        // A `CD` line buys its metal, so it searches the catalogue like any
+        // buying document, and takes the article rather than a lot.
+        sources={
+          searchingLine !== null &&
+          lines[searchingLine]?.sourceType === "cross_dock"
+            ? ["catalogue"]
+            : undefined
+        }
+        productOnly={
+          searchingLine !== null &&
+          lines[searchingLine]?.sourceType === "cross_dock"
+        }
         onChoose={(choice) => {
           if (searchingLine === null) {
+            return;
+          }
+          if (lines[searchingLine]?.sourceType === "cross_dock") {
+            const variant =
+              choice.kind === "variant" ? choice.variant : choice.lot;
+            setValue(`items.${searchingLine}.stockUuid`, "");
+            setValue(`items.${searchingLine}.productUuid`, variant.productUuid, {
+              shouldValidate: true,
+            });
+            setValue(
+              `items.${searchingLine}.productLabel`,
+              [variant.productCode, variant.productName]
+                .filter(Boolean)
+                .join(" — "),
+            );
+            setSearchingLine(null);
             return;
           }
           if (choice.lot) {

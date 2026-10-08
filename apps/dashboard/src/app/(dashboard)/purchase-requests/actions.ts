@@ -493,6 +493,10 @@ export const convertPurchaseRequestToOrder = async (
             tx,
             item.forOrderItemUuid,
             purchaseOrderItemUuid,
+            {
+              amount: amountForWeight(netPrice, null, Number(item.kg ?? 0)),
+              quantity: Number(quantity),
+            },
           );
         }
       }

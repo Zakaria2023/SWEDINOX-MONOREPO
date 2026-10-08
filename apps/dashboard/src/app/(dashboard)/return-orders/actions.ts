@@ -963,7 +963,7 @@ export const receiveReturnOrder = async (
           })
           .where(
             and(
-              eq(Stock.uuid, orderItem.stockUuid),
+              eq(Stock.uuid, stockRow.uuid),
               eq(Stock.quantity, stockRow.quantity),
             ),
           );
@@ -977,7 +977,7 @@ export const receiveReturnOrder = async (
         await tx.insert(StockMovements).values({
           uuid: generateUuid(),
           productUuid: orderItem.productUuid,
-          stockUuid: orderItem.stockUuid,
+          stockUuid: stockRow.uuid,
           type: "in",
           reason: "sales_return",
           quantity: item.returnQty ?? "0.000",

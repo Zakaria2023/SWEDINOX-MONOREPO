@@ -33,7 +33,11 @@ export const OrderItems = mysqlTable(
     uuid: char("uuid", { length: 36 }).notNull().unique(),
 
     orderUuid: char("order_uuid", { length: 36 }).notNull(),
-    stockUuid: char("stock_uuid", { length: 36 }).notNull(),
+    // The lot this line is cut from. 🔴 Null while a `CD` line waits for the
+    // goods bought for it: sales order `O108183` existed ten days before lot
+    // `404744` did (8-10-2026). A line with no lot is held by its purchase
+    // line (`purchaseOrderItemUuid`) instead, and the receipt fills this in.
+    stockUuid: char("stock_uuid", { length: 36 }),
     productUuid: char("product_uuid", { length: 36 }).notNull(),
 
     // Amount reserved from stockUuid — never changes after creation. Released

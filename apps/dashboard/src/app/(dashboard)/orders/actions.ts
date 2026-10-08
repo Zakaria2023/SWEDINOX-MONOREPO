@@ -113,7 +113,10 @@ export type OrderFields = Omit<
 >;
 
 export type OrderItemInput = {
-  stockUuid: string;
+  /** The lot the line is cut from. Absent on a `CD` line (C3). */
+  stockUuid?: string | null;
+  /** The article a `CD` line will buy, when it names no lot. */
+  productUuid?: string | null;
   quantity: string;
   /** The line's `Type`; `stock` when not given. */
   sourceType?: OrderSourceType;
@@ -477,10 +480,33 @@ export const createOrder = async (
         fields.vehicleWithCrane || unloading.needsVehicleWithCrane,
     };
 
+    // 🔴 Two kinds of line. One cut from a lot on the shelf, and one — `CD` —
+    // that names the article to be bought for it and has no lot yet (C3,
+    // captured on `O108183` / `404299`, 8-10-2026).
+    const lotItems = items.flatMap((item) =>
+      item.stockUuid ? [{ ...item, stockUuid: item.stockUuid }] : [],
+    );
+    const crossDockItems = items.flatMap((item) =>
+      !item.stockUuid && item.productUuid
+        ? [{ ...item, productUuid: item.productUuid }]
+        : [],
+    );
+    if (lotItems.length + crossDockItems.length !== items.length) {
+      return {
+        error:
+          "Every line needs a stock lot — or, for a CD line, the article to be bought.",
+      };
+    }
+    if (crossDockItems.some((item) => item.sourceType !== "cross_dock")) {
+      return {
+        error: "Only a CD line can be entered without a stock lot.",
+      };
+    }
+
     // Validate stock availability before opening the transaction.
     const stockByUuid = new Map<string, SelectStock>();
-    if (items.length > 0) {
-      const stockUuids = items.map((item) => item.stockUuid);
+    if (lotItems.length > 0) {
+      const stockUuids = lotItems.map((item) => item.stockUuid);
       const stockRows = await db
         .select()
         .from(Stock)
@@ -489,7 +515,7 @@ export const createOrder = async (
         stockByUuid.set(row.uuid, row);
       }
 
-      for (const item of items) {
+      for (const item of lotItems) {
         const stockRow = stockByUuid.get(item.stockUuid);
         if (!stockRow) {
           return {
@@ -520,12 +546,13 @@ export const createOrder = async (
     const pricingContext = await loadSalesPricingContext(
       extras.contractUuids[0] ?? null,
       [
-        ...new Set(
-          items.flatMap((item) => {
+        ...new Set([
+          ...lotItems.flatMap((item) => {
             const stockRow = stockByUuid.get(item.stockUuid);
             return stockRow ? [stockRow.productUuid] : [];
           }),
-        ),
+          ...crossDockItems.map((item) => item.productUuid),
+        ]),
       ],
     );
 
@@ -541,7 +568,7 @@ export const createOrder = async (
     const reserveByProduct = new Map<string, boolean>();
     const reservableProductUuids = [
       ...new Set(
-        items.flatMap((item) => {
+        lotItems.flatMap((item) => {
           const stockRow = stockByUuid.get(item.stockUuid);
           return stockRow ? [stockRow.productUuid] : [];
         }),
@@ -572,7 +599,7 @@ export const createOrder = async (
 
       // Only items whose stock lot still exists become order lines; the line
       // number counts those, not the raw submitted rows.
-      const reservableItems = items.flatMap((item) => {
+      const reservableItems = lotItems.flatMap((item) => {
         const stockRow = stockByUuid.get(item.stockUuid);
         return stockRow ? [{ item, stockRow }] : [];
       });
@@ -738,12 +765,100 @@ export const createOrder = async (
         lineTotals.weightKg += financials.weightKg;
       }
 
+      // 🔴 The `CD` lines: sold before the metal is bought. No lot, no
+      // reservation — the line is held by the purchase line raised for it, and
+      // the receipt of that purchase gives it its lot (C3). Until a purchase
+      // covers it, it is costed at the article's replacement price; once one
+      // does, at the purchase price (C11).
+      for (const [offset, item] of crossDockItems.entries()) {
+        const quantity = Number(item.quantity);
+        const product = pricingContext.productByUuid.get(item.productUuid);
+        if (!product) {
+          throw new Error("A CD line names an article that could not be found.");
+        }
+        const { grossPrice, groupDiscount, lineDiscount, netPrice } =
+          resolveLineNetPrice(pricingContext, item.productUuid, quantity);
+        const lineLengthMm = Number(product.length ?? 0);
+        const lineWidthMm = Number(product.widthDiameter ?? 0);
+        const lineThicknessMm = Number(product.thickness ?? 0);
+
+        const financials = quoteLineFinancials({
+          netPrice,
+          quantity,
+          purchasePrice: Number(product.replacementPrice ?? 0),
+          replacementPrice: Number(product.replacementPrice ?? 0),
+          fspPrice: product.fsp ?? 0,
+          theoreticalWeight:
+            lotPieceWeightKg(
+              {
+                weightTheoretical: product.weightTheoretical,
+                theoreticalWeight: product.theoreticalWeight,
+                weightUnit: product.weightUnit,
+                lengthMm: lineLengthMm,
+                widthMm: lineWidthMm,
+                thicknessMm: lineThicknessMm,
+              },
+              {
+                lengthMm: lineLengthMm,
+                widthMm: lineWidthMm,
+                thicknessMm: lineThicknessMm,
+              },
+            ) ?? 0,
+          tradeWeight:
+            pieceWeightForBasis(
+              {
+                weightTrade: product.weightTrade,
+                weightGerman: product.weightGerman,
+              },
+              fields.weightType,
+            ) ?? undefined,
+          lengthMm: lineLengthMm,
+          widthMm: lineWidthMm,
+          thicknessMm: lineThicknessMm,
+          priceUnit: product.priceUnit,
+          minProfitMargin: minimumMarginFor(product, "cross_dock"),
+        });
+
+        await tx.insert(OrderItems).values({
+          uuid: generateUuid(),
+          orderUuid: uuid,
+          stockUuid: null,
+          productUuid: item.productUuid,
+          quantity: item.quantity,
+          sourceType: "cross_dock",
+          qtyPlanned: item.quantity,
+          qtyReserved: "0.000",
+          kgPlanned: financials.weightKg.toFixed(2),
+          lineNumber: reservableItems.length + offset + 1,
+          status: "reserved",
+
+          grossPrice: moneyString(grossPrice),
+          priceUnit: product.priceUnit ?? null,
+          groupDiscount: moneyString(groupDiscount),
+          lineDiscount: moneyString(lineDiscount),
+          netPrice: moneyString(netPrice),
+          amount: moneyString(financials.amount),
+
+          costPrice: financials.costPrice.toFixed(4),
+          costAmount: moneyString(financials.costAmount),
+          replacementPrice: moneyString(Number(product.replacementPrice ?? 0)),
+          profit: moneyString(financials.profit),
+          profitMargin: financials.profitMargin.toFixed(2),
+          profitReplPrice: moneyString(financials.profitReplPrice),
+          profitFsp: moneyString(financials.profitFsp),
+          profitTooLow: financials.profitTooLow,
+        });
+
+        lineTotals.goodsValue += financials.amount;
+        lineTotals.weightKg += financials.weightKg;
+      }
+
       if (extras.surcharges.length > 0) {
         await tx.insert(OrderSurcharges).values(
           resolveSurchargeAmounts(extras.surcharges, {
             goodsValue: lineTotals.goodsValue,
             weightKg: lineTotals.weightKg,
-            lineCount: reservableItems.length,
+            lineCount: reservableItems.length + crossDockItems.length,
           }).map((surcharge) => ({
             ...surcharge,
             uuid: generateUuid(),
@@ -913,10 +1028,16 @@ export const cancelOrder = async (uuid: string): Promise<OrderActionResult> => {
           .set({ status: "cancelled" })
           .where(eq(OrderItems.uuid, item.uuid));
 
+        // A `CD` line still waiting for its goods holds no lot to release.
+        const lotUuid = item.stockUuid;
+        if (!lotUuid) {
+          continue;
+        }
+
         const [stockRow] = await tx
           .select()
           .from(Stock)
-          .where(eq(Stock.uuid, item.stockUuid))
+          .where(eq(Stock.uuid, lotUuid))
           .limit(1);
 
         if (!stockRow) {
@@ -931,7 +1052,7 @@ export const cancelOrder = async (uuid: string): Promise<OrderActionResult> => {
         await tx
           .update(Stock)
           .set({ reservedQuantity: releasedReserved })
-          .where(eq(Stock.uuid, item.stockUuid));
+          .where(eq(Stock.uuid, lotUuid));
 
         // A cancelled line releases its claim as well as its quantity. The
         // reference's panel offers `Delete` and no status for a lapsed
@@ -1181,88 +1302,98 @@ export const makeOrderFinal = async (
         throw new Error("An order with no lines has nothing to make final.");
       }
 
-      // Where the picked metal is staged.
-      //
-      // The reference uses exactly three destinations for a picking, and this
-      // is their order of preference because it is their order of frequency
-      // across its own 3 936 picking rows: `Laad` 3 420, `Afhaal` 287,
-      // `Afroep` 39. Order 102191's picking went to `Laad`.
-      //
-      // The fallback is not ceremony. Our warehouse tree has no `load` location
-      // at all — six rows, four `pick`, one `call_off`, one `collection` — so
-      // insisting on one would refuse every order ever made final.
-      const [loadLocation] = await tx
-        .select({ uuid: Warehouses.uuid })
-        .from(Warehouses)
-        .where(
-          inArray(Warehouses.locationType, ["load", "collection", "call_off"]),
-        )
-        .orderBy(
-          sql`FIELD(${Warehouses.locationType}, 'load', 'collection', 'call_off')`,
-        )
-        .limit(1);
+      // 🔴 Only lines cut from a lot are picked. A `CD` line still waiting for
+      // the goods bought for it has nothing on a shelf yet; its lot is
+      // unloaded straight onto the loading bay when it comes (C3/C6), which
+      // is where a picking would have taken it anyway.
+      const pickable = items.filter((item) => item.stockUuid);
+      const pickingNumber =
+        pickable.length > 0 ? await nextWorkOrderNumber(tx) : null;
 
-      if (!loadLocation) {
-        throw new Error(
-          "No loading, collection or call-off location exists, so there is nowhere to pick this order to. Add one on the warehouses screen first.",
-        );
-      }
+      if (pickingNumber !== null) {
+        // Where the picked metal is staged.
+        //
+        // The reference uses exactly three destinations for a picking, and this
+        // is their order of preference because it is their order of frequency
+        // across its own 3 936 picking rows: `Laad` 3 420, `Afhaal` 287,
+        // `Afroep` 39. Order 102191's picking went to `Laad`.
+        //
+        // The fallback is not ceremony. Our warehouse tree has no `load` location
+        // at all — six rows, four `pick`, one `call_off`, one `collection` — so
+        // insisting on one would refuse every order ever made final.
+        const [loadLocation] = await tx
+          .select({ uuid: Warehouses.uuid })
+          .from(Warehouses)
+          .where(
+            inArray(Warehouses.locationType, ["load", "collection", "call_off"]),
+          )
+          .orderBy(
+            sql`FIELD(${Warehouses.locationType}, 'load', 'collection', 'call_off')`,
+          )
+          .limit(1);
 
-      const firstLocation = items.find(
-        (item) => item.locationUuid,
-      )?.locationUuid;
-      const warehouseUuid = firstLocation
-        ? await rootWarehouseOf(tx, firstLocation)
-        : null;
+        if (!loadLocation) {
+          throw new Error(
+            "No loading, collection or call-off location exists, so there is nowhere to pick this order to. Add one on the warehouses screen first.",
+          );
+        }
 
-      if (!warehouseUuid) {
-        throw new Error(
-          "The lots on this order do not sit in any warehouse, so no picking can be planned.",
-        );
-      }
+        const firstLocation = pickable.find(
+          (item) => item.locationUuid,
+        )?.locationUuid;
+        const warehouseUuid = firstLocation
+          ? await rootWarehouseOf(tx, firstLocation)
+          : null;
 
-      const number = await nextWorkOrderNumber(tx);
-      const workOrderUuid = generateUuid();
+        if (!warehouseUuid) {
+          throw new Error(
+            "The lots on this order do not sit in any warehouse, so no picking can be planned.",
+          );
+        }
 
-      await tx.insert(WarehouseWorkOrders).values({
-        createdByUserId: userId,
-        uuid: workOrderUuid,
-        number,
-        warehouseUuid,
-        type: "picking",
-        // `Orders.deliveryDate` is a Date, the work order's planned date a
-        // string, so the conversion is explicit rather than left to Drizzle.
-        plannedDate: order.deliveryDate
-          ? toDateString(order.deliveryDate)
-          : todayDateString(),
-        status: "new",
-      });
+        const number = pickingNumber;
+        const workOrderUuid = generateUuid();
 
-      for (const [index, item] of items.entries()) {
-        await tx.insert(WarehouseWorkOrderLines).values({
-          modifiedByUserId: userId,
-          uuid: generateUuid(),
-          workOrderUuid,
-          lineNumber: item.lineNumber ?? index + 1,
-          orderItemUuid: item.uuid,
-          orderNumber: String(order.id),
-          companyUuid: order.companyUuid,
-          stockUuid: item.stockUuid,
-          productUuid: item.productUuid,
-          productCode: item.productCode,
-          fromLocationUuid: item.locationUuid,
-          toLocationUuid: loadLocation.uuid,
-          length: item.lengthMm,
-          width: item.widthMm,
-          thickness: item.thicknessMm ? Number(item.thicknessMm) : null,
-          qtyPlanned: item.quantity,
-          kgPlanned: item.kgPlanned,
-          charge: item.charge,
-          internalCharge: item.internalCharge,
-          internalBatch: item.internalBatch,
-          quality: item.quality,
+        await tx.insert(WarehouseWorkOrders).values({
+          createdByUserId: userId,
+          uuid: workOrderUuid,
+          number,
+          warehouseUuid,
+          type: "picking",
+          // `Orders.deliveryDate` is a Date, the work order's planned date a
+          // string, so the conversion is explicit rather than left to Drizzle.
+          plannedDate: order.deliveryDate
+            ? toDateString(order.deliveryDate)
+            : todayDateString(),
           status: "new",
         });
+
+        for (const [index, item] of pickable.entries()) {
+          await tx.insert(WarehouseWorkOrderLines).values({
+            modifiedByUserId: userId,
+            uuid: generateUuid(),
+            workOrderUuid,
+            lineNumber: item.lineNumber ?? index + 1,
+            orderItemUuid: item.uuid,
+            orderNumber: String(order.id),
+            companyUuid: order.companyUuid,
+            stockUuid: item.stockUuid,
+            productUuid: item.productUuid,
+            productCode: item.productCode,
+            fromLocationUuid: item.locationUuid,
+            toLocationUuid: loadLocation.uuid,
+            length: item.lengthMm,
+            width: item.widthMm,
+            thickness: item.thicknessMm ? Number(item.thicknessMm) : null,
+            qtyPlanned: item.quantity,
+            kgPlanned: item.kgPlanned,
+            charge: item.charge,
+            internalCharge: item.internalCharge,
+            internalBatch: item.internalBatch,
+            quality: item.quality,
+            status: "new",
+          });
+        }
       }
 
       const transportUuid = generateUuid();
@@ -1299,7 +1430,11 @@ export const makeOrderFinal = async (
 
       await writeSystemLog(tx, {
         category: "order_made_final",
-        message: `Order ${order.id} made final — warehouse work order ${number} and a transport work order raised`,
+        message: `Order ${order.id} made final — ${
+          pickingNumber === null
+            ? "no picking (its CD lines wait for their goods)"
+            : `warehouse work order ${pickingNumber}`
+        } and a transport work order raised`,
         orderUuid,
         userId,
       });

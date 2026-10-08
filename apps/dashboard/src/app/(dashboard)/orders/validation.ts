@@ -12,13 +12,30 @@ import {
 import { currentYear, todayDateString } from "@/lib/helpers";
 import { z } from "zod";
 
-export const orderItemSchema = z.object({
-  stockUuid: z.string().min(1, "Stock item is required"),
-  quantity: z.string().min(1, "Quantity is required"),
-  // The reference's line `Type` — `Stk` unless the line is cross-docked or
-  // sold ex works. It picks the margin floor the line is held to.
-  sourceType: z.enum(orderSourceTypes).optional(),
-});
+export const orderItemSchema = z
+  .object({
+    stockUuid: z.string().optional(),
+    // 🔴 A `CD` line names the article to be bought, not a lot: sales order
+    // `O108183` was entered ten days before the lot it was sold from existed
+    // (8-10-2026). The receipt of the purchase gives the line its lot.
+    productUuid: z.string().optional(),
+    // What the chosen article reads as, for the form only.
+    productLabel: z.string().optional(),
+    quantity: z.string().min(1, "Quantity is required"),
+    // The reference's line `Type` — `Stk` unless the line is cross-docked or
+    // sold ex works. It picks the margin floor the line is held to.
+    sourceType: z.enum(orderSourceTypes).optional(),
+  })
+  .refine(
+    (item) =>
+      Boolean(item.stockUuid) ||
+      (item.sourceType === "cross_dock" && Boolean(item.productUuid)),
+    {
+      message:
+        "Choose a stock lot — or, for a CD line, the article to be bought",
+      path: ["stockUuid"],
+    },
+  );
 
 export const orderSurchargeSchema = z.object({
   description: z

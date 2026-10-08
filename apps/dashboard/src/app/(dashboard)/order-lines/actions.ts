@@ -495,7 +495,9 @@ export const getOrderLineDetail = async (
       return null;
     }
 
-    const [stock] = await db
+    const lotUuid = line.stockUuid;
+    const [stock] = lotUuid
+      ? await db
       .select({
         uuid: Stock.uuid,
         status: Stock.status,
@@ -507,8 +509,9 @@ export const getOrderLineDetail = async (
         valuationPrice: Stock.valuationPrice,
       })
       .from(Stock)
-      .where(eq(Stock.uuid, line.stockUuid))
-      .limit(1);
+      .where(eq(Stock.uuid, lotUuid))
+      .limit(1)
+      : [];
 
     return {
       ...line,

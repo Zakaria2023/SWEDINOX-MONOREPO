@@ -900,6 +900,10 @@ export const convertPurchaseQuoteToOrder = async (
             tx,
             item.forOrderItemUuid,
             purchaseOrderItemUuid,
+            {
+              amount: Number(item.amount ?? 0),
+              quantity: Number(item.quantity ?? 0),
+            },
           );
         }
       }

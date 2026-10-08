@@ -660,10 +660,19 @@ export const deliverOrderItem = async (
         );
       }
 
+      // A `CD` line has no lot until the goods bought for it arrive (C3), and
+      // there is nothing to put on a lorry before then.
+      const lotUuid = orderItem.stockUuid;
+      if (!lotUuid) {
+        throw new Error(
+          "This line is still waiting for the goods bought for it — it can be delivered once they have been received.",
+        );
+      }
+
       const [stockRow] = await tx
         .select()
         .from(Stock)
-        .where(eq(Stock.uuid, orderItem.stockUuid))
+        .where(eq(Stock.uuid, lotUuid))
         .limit(1);
 
       if (stockRow) {
@@ -696,7 +705,7 @@ export const deliverOrderItem = async (
           })
           .where(
             and(
-              eq(Stock.uuid, orderItem.stockUuid),
+              eq(Stock.uuid, lotUuid),
               eq(Stock.quantity, stockRow.quantity),
               eq(Stock.reservedQuantity, stockRow.reservedQuantity),
             ),
@@ -718,7 +727,7 @@ export const deliverOrderItem = async (
         await tx.insert(StockMovements).values({
           uuid: generateUuid(),
           productUuid: orderItem.productUuid,
-          stockUuid: orderItem.stockUuid,
+          stockUuid: lotUuid,
           type: "out",
           reason: "sale_consumption",
           quantity: orderItem.quantity,
