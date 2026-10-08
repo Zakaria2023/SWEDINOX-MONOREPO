@@ -281,7 +281,7 @@ Each is a few clicks and each closes a real gap.
 
 ### J1 — Consignment stock, finish it
 
-Order `401154` exists, `Provisional`, reception created. Three clicks:
+⚠️ **8-10-2026: `401154` is now a real Terninox order (invoiced), so the test order is gone.** Try `401156` / `401157`; otherwise this is manager question 5. ~~Order `401154` exists, `Provisional`, reception created.~~ Three clicks:
 press **`Make final`** → fill `Kg(a)` = `314` / `Qty(a)` = `10` on the reception
 → read that lot's **`Stock (€)`** on `Stock on location`.
 

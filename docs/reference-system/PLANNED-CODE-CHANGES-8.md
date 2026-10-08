@@ -780,6 +780,26 @@ is close, but it hangs off the batch, there is no `Soort` (DoP / Certificate
 ⚠️ `Certificaattype`'s list was not opened. It is probably the 3.1 / 2.2 /
 `INtern` / `NVT` set already in `certificaatOptions`. One click settles it.
 
+## J1 · Consignment — the test order is gone
+
+**8-10-2026 18:10:** purchase order `401154` now opens as a **real order**:
+Terninox S.p.A. `13249`, `Materials`, `Invoiced · Printed · Mailed`, created
+30-5-2025, one coil `CK3210015` 321 1,5 mm × 1 272, 1 178 kg at € 1 950/TN,
+unloading `307281` approved, reception invoiced. Nothing on it says
+consignment. The test order of that number (from a quote with `Consignatie`
+ticked, `Provisional`) **no longer exists**, so the test copy has been
+refreshed or renumbered since.
+
+So J1 cannot be finished on `401154`. The other two test orders (`401156`,
+`401157`) are the last chance. If they are real orders too, consignment goes
+to [MANAGER-QUESTIONS.md](MANAGER-QUESTIONS.md) question 5, which already asks
+what `Consignatie` changes. With C15's `C. Kg` / `C. ST` reading 0 on every
+row, nothing in the test data uses consignment at all.
+
+**No change planned.** `Stock.ownerCompanyUuid` stays as the model for
+customer-owned stock (K2), and supplier consignment is not built until
+someone says it is a real process.
+
 ## C9 · The offcut comes back as a scrap line
 
 **Change:** a processing order's lines may include a **scrap article** in `KG`
