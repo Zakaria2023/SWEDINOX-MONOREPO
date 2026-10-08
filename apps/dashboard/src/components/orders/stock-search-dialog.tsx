@@ -459,6 +459,13 @@ export const StockSearchDialog = ({
                         <TableHead className="text-right">Kg (r.)</TableHead>
                         <TableHead className="text-right">Kg (a.)</TableHead>
                         <TableHead className="text-right">Total len.</TableHead>
+                        {/* `C. Kg` / `C. ST`: 0 on every row the reference
+                            showed (8-10-2026, `PK316L150315`), and the header
+                            names itself no further. Read as consignment
+                            stock, which is not tracked here, so they print 0
+                            as the reference does. */}
+                        <TableHead className="text-right">C. Kg</TableHead>
+                        <TableHead className="text-right">C. ST</TableHead>
                       </>
                     )}
                   </TableRow>
@@ -527,13 +534,19 @@ export const StockSearchDialog = ({
                           <TableCell className="text-right tabular-nums">
                             {formatNumber(variant.totalLengthM)}
                           </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            0
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            0
+                          </TableCell>
                         </>
                       )}
                     </TableRow>
                   ))}
                   {variants.length === 0 && hasSearched && !isPending && (
                     <TableRow>
-                      <TableCell colSpan={14} className="text-muted-foreground">
+                      <TableCell colSpan={16} className="text-muted-foreground">
                         Nothing matches. Widen the margin, or clear a dimension.
                       </TableCell>
                     </TableRow>
@@ -709,6 +722,13 @@ export const StockSearchDialog = ({
                       .join(" / ") || "—"}
                   </dd>
                 </div>
+                {/* The lot's remark, in red under the grid as the reference
+                    prints it (`Shorter`). */}
+                {chosenLot.remark && (
+                  <div className="col-span-full">
+                    <dd className="text-destructive">{chosenLot.remark}</dd>
+                  </div>
+                )}
               </dl>
             )}
             {truncated && (
