@@ -1,31 +1,32 @@
 # Planned code changes — from the 8-10-2026 capture day
 
-**Nothing on this page is built yet.** Code changes are on hold by request; this
-page is the list of what will change once they are allowed, each tied to the
-capture that proves it. Items are added as each capture lands.
+✅ **Built 8-10-2026 evening** (the user lifted the hold: "exactly like the
+system"). Every row below except C18 is in the code, `pnpm build` green. The
+two open choices were settled the reference's way: C11 costs a CD line on the
+weight unloaded, and C20 closes a € 0 return as credited with no credit note.
 
 | # | Change | Proved by | State |
 |---|---|---|---|
-| C1 | A purchase line bought for a sales line is `CD` | `404299` | 📋 ready |
-| C2 | Ordering a request directly carries its `For line` onto the sale | `404299` | 📋 ready |
-| C3 | A CD sales line exists before its lot; the receipt gives it one and reserves it | `404299` + `O108183/10` | 📋 ready — touches the sales spine |
-| C4 | Purchase quote lines keep the request's `For line` | follows from C1 | 📋 ready |
-| C5 | `For line` column on the purchase order's Lines grid | `404299` screenshot | 📋 ready |
-| C6 | A CD receipt is put on the loading location, not a rack | lot `404744` at `Laad` | 🟡 default to confirm |
-| C7 | Purchase return lines appear on `Purchase lines`, negative, as `Delivered` | `Status: Delivered` group | 📋 ready |
-| C8 | A processing purchase order lists the material we send out (`Supplies`) | `400066` | 📋 ready, valuation open |
-| C9 | The processor's offcut comes back as a scrap line, and the kilos close | `400066` line 20 | 📋 ready |
-| C10 | A processing order's value is its options, charged on the weight received | `400066` | 📋 ready |
-| C11 | A CD sales line is costed at its purchase line's price | `O108183/10` | 📋 ready |
-| C12 | `Ex works Processor`: book in metal where it lies, at the processor, without an unloading | `400143` | 📋 ready |
-| C13 | A processed receipt carries the supplied lot's heat **and original purchase order** | `402401` | 📋 ready |
-| C14 | `Quote- and order lines` panel on the company screen | Decomecc, extra A | 📋 ready |
-| C15 | Stock search: `C. Kg` / `C. ST`, `Order hvh.` and the lot footer | `Voorraad` on `PK316L150315`, extra B | 📋 ready |
-| C16 | `Confirm` takes a confirmation number, date and confirmed delivery date per line | `404299` J8 | 📋 ready |
-| C17 | `Pre-notify` takes a bill of lading, date and pre-notification code per reception | `404299` J8 | 📋 ready |
-| C18 | `Return` / `Par. return` are greyed on a received, mailed order | `404299` J8 | 🟡 rule to confirm |
-| C19 | `Product Receipt Documents` panel: attach a certificate / DoP to a purchase order | `404299` J8 | 📋 ready |
-| C20 | Returns and credits: € 0 return closes with no invoice; a complaint credits money with no goods back | `290247` + `K40055` H12 | 🟡 decide (a/b), credit route ready |
+| C1 | A purchase line bought for a sales line is `CD` | `404299` | ✅ built `316af0bf` |
+| C2 | Ordering a request directly carries its `For line` onto the sale | `404299` | ✅ built `316af0bf` |
+| C3 | A CD sales line exists before its lot; the receipt gives it one and reserves it | `404299` + `O108183/10` | ✅ built `901cc665` |
+| C4 | Purchase quote lines keep the request's `For line` | follows from C1 | ✅ built `316af0bf` |
+| C5 | `For line` column on the purchase order's Lines grid | `404299` screenshot | ✅ built `316af0bf` |
+| C6 | A CD receipt is put on the loading location, not a rack | lot `404744` at `Laad` | ✅ built `901cc665` |
+| C7 | Purchase return lines appear on `Purchase lines`, negative, as `Delivered` | `Status: Delivered` group | ✅ built `b000182a` |
+| C8 | A processing purchase order lists the material we send out (`Supplies`) | `400066` | ✅ built `fcb2af69` |
+| C9 | The processor's offcut comes back as a scrap line, and the kilos close | `400066` line 20 | ✅ built `fcb2af69` |
+| C10 | A processing order's value is its options, charged on the weight received | `400066` | ✅ built `fcb2af69` |
+| C11 | A CD sales line is costed at its purchase line's price | `O108183/10` | ✅ built `901cc665` |
+| C12 | `Ex works Processor`: book in metal where it lies, at the processor, without an unloading | `400143` | ✅ built `fcb2af69` |
+| C13 | A processed receipt carries the supplied lot's heat **and original purchase order** | `402401` | ✅ built `fcb2af69` |
+| C14 | `Quote- and order lines` panel on the company screen | Decomecc, extra A | ✅ built `d0491f79` |
+| C15 | Stock search: `C. Kg` / `C. ST`, `Order hvh.` and the lot footer | `Voorraad` on `PK316L150315`, extra B | ✅ built `83f09f34` |
+| C16 | `Confirm` takes a confirmation number, date and confirmed delivery date per line | `404299` J8 | ✅ built `36b22568` |
+| C17 | `Pre-notify` takes a bill of lading, date and pre-notification code per reception | `404299` J8 | ✅ built `36b22568` |
+| C18 | `Return` / `Par. return` are greyed on a received, mailed order | `404299` J8 | ⏸ not built — one order cannot prove the rule |
+| C19 | `Product Receipt Documents` panel: attach a certificate / DoP to a purchase order | `404299` J8 | ✅ built `e18a5363` |
+| C20 | Returns and credits: € 0 return closes with no invoice; a complaint credits money with no goods back | `290247` + `K40055` H12 | ✅ built `da2923d4` |
 | — | ~~Item 1 of -7: a `CD` line must not create a lot~~ | `404299` | ❎ withdrawn |
 
 ---
