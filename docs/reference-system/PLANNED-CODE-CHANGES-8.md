@@ -25,7 +25,7 @@ capture that proves it. Items are added as each capture lands.
 | C17 | `Pre-notify` takes a bill of lading, date and pre-notification code per reception | `404299` J8 | 📋 ready |
 | C18 | `Return` / `Par. return` are greyed on a received, mailed order | `404299` J8 | 🟡 rule to confirm |
 | C19 | `Product Receipt Documents` panel: attach a certificate / DoP to a purchase order | `404299` J8 | 📋 ready |
-| C20 | A € 0 return closes as `Invoiced` without producing a credit invoice | `290247` H12 | 🟡 decide |
+| C20 | Returns and credits: € 0 return closes with no invoice; a complaint credits money with no goods back | `290247` + `K40055` H12 | 🟡 decide (a/b), credit route ready |
 | — | ~~Item 1 of -7: a `CD` line must not create a lot~~ | `404299` | ❎ withdrawn |
 
 ---
@@ -841,6 +841,45 @@ it cost to go out, by design, see `applyReceipt`).
 Recommended: **(b)**. An `Invoiced` status with no invoice behind it is
 exactly the kind of state nobody can audit later, and a € 0 credit costs
 nothing to keep. Recorded for decision, not built.
+
+### The complaint side — `K40055`, 8-10-2026 18:21
+
+Found by searching `40055` without the `K` (the number column holds digits
+only).
+
+| What | Read |
+|---|---|
+| Header | Complaint **40055**, J. op den Velde Staal B.V. `13402`, customer group `HANDELAAR`, account mgr / representative `Hego`. Recorded by Adrie Noom 08-04-2025 14:43, last changed by Sharif Pasaribu 09-04-2025 |
+| Type / report / category | `General` · `E-Mail` · **`Wrong quantity`** |
+| Description | *"platen 3000 x 1000 x 2,0 mm. 6 stuks, gewicht is 288 kg. Er is gefactureerd 360 kg. Prijs 2,78 p/kg. Crediteren 200,16 Euro. Order: 101365 / faktuur 501210"* |
+| Product block | `PK30420031` cold-rolled plate 304 3000×1000×2 · **`Qty` 0** · **`Amount` € 200,16** · **`Weight` 72 kg** |
+| Cause / explanation | `Production`: plates supplied at 3000 × 1000 × 2,0, cut from production order 3000 × 1250 × 2,0, so the kilos are lower than the plates put in |
+| Status | `Done` (Handling panel), result `1` |
+| Toolbar | `Show company` · `Show product` · `Order lines` · `Orders and Quotes` · `Stock on location` · `Afhalen` · `Hego Prod - Lossen` · `Hego Prod - Picken` · `Lossen`. **No `Return` / `Credit` button** |
+| Panels | `Workorders` · `Handling` · `Status history` · `Documents` |
+
+**What it settles (H12's last question):** **crediting does not require the
+goods to come back.** This complaint is a pure money correction: **`Qty` 0**,
+**72 kg** = 360 billed − 288 delivered, **€ 200,16** = 72 × € 2,78. No return
+order was raised from it. The complaint cannot raise one (no button), and the
+credit was made against invoice `501210` directly. So there are two routes:
+
+- **goods back:** a return order (`290247`), which unloads stock and can be €
+  0;
+- **money only:** a complaint carrying qty 0, the kilos and the amount to
+  credit, credited on the original invoice.
+
+**Ours:** `Complaints` already carries `qty`, `qtyUnit`, `amount` and
+`weight`, and links to an order, invoice side and return order. The
+**money-only** route is the open part: nothing raises a credit invoice from a
+complaint's amount. The return route already exists (`Par. return` makes a
+return + complaint in one step, -7 §20).
+
+**Change (part of C20):** on a complaint with `amount` > 0 and no return order,
+offer **`Credit`**: a credit invoice on the complaint's order invoice, one line
+for the complaint's product at `weight` kg and `amount` €, then link it back
+and set the complaint to `done`. A complaint whose qty is 0 never touches
+stock.
 
 ## C9 · The offcut comes back as a scrap line
 
