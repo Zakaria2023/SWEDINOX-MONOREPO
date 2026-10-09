@@ -270,32 +270,88 @@ export const PreNotifyDialog = ({
                 >
                   Take over
                 </Button>
+                <div>
+                  <FormLabel htmlFor="takeOverDate">
+                    Pre-notified delivery date
+                  </FormLabel>
+                  <Input
+                    id="takeOverDate"
+                    readOnly
+                    disabled={!changing}
+                    value={
+                      takeOverFrom
+                        ? formatDateColumn(
+                            openReceipts.find(
+                              (receipt) => receipt.billOfLading === takeOverFrom,
+                            )?.preAnnouncedDeliveryDate ?? null,
+                          )
+                        : ""
+                    }
+                  />
+                </div>
               </div>
             </div>
 
+            {/* `Options` on the reference opens the line's options; they are
+                kept on the order's Options panel here. */}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled
+              title="Options are added on the order's Options panel"
+            >
+              Options
+            </Button>
+
+            <div className="overflow-x-auto">
             <Table>
+              {/* 🔴 The reference's grid, column for column: It. · For line ·
+                  Qty1 · U1 · Kg1 · M1 · Charge · Batch number · #Bundle ·
+                  Product · Length1 · Width · Thickness · Bill of lading ·
+                  Delivery date · Qty2 · U2 · Length2 · Delivery date (actual)
+                  · Conf. No. · Prd. Sup. · Product code · Order · EDI
+                  Consignment · EDI Charge · EDI Delivery date · Doc. supplier
+                  · Doc. code. The 1-figures are what was ordered, the
+                  2-figures what has been pre-notified so far. */}
               <TableHeader>
                 <TableRow>
                   <TableHead />
-                  <TableHead className="text-right">Line</TableHead>
-                  <TableHead className="text-right">Qty</TableHead>
-                  <TableHead>U</TableHead>
-                  <TableHead className="text-right">Kg</TableHead>
+                  <TableHead className="text-right">It.</TableHead>
+                  <TableHead>For line</TableHead>
+                  <TableHead className="text-right">Qty1</TableHead>
+                  <TableHead>U1</TableHead>
+                  <TableHead className="text-right">Kg1</TableHead>
+                  <TableHead className="text-right">M1</TableHead>
                   <TableHead>Charge</TableHead>
+                  <TableHead>Batch number</TableHead>
+                  <TableHead className="text-right">#Bundle</TableHead>
                   <TableHead>Product</TableHead>
-                  <TableHead className="text-right">Length</TableHead>
+                  <TableHead className="text-right">Length1</TableHead>
                   <TableHead className="text-right">Width</TableHead>
+                  <TableHead className="text-right">Thickness</TableHead>
                   <TableHead>Bill of lading</TableHead>
                   <TableHead>Delivery date</TableHead>
+                  <TableHead className="text-right">Qty2</TableHead>
+                  <TableHead>U2</TableHead>
+                  <TableHead className="text-right">Length2</TableHead>
+                  <TableHead>Delivery date (actual)</TableHead>
                   <TableHead>Conf. No.</TableHead>
+                  <TableHead>Prd. sup.</TableHead>
+                  <TableHead>Product code</TableHead>
+                  <TableHead className="text-right">Order</TableHead>
+                  <TableHead>EDI Consignment</TableHead>
+                  <TableHead>EDI Charge</TableHead>
+                  <TableHead>EDI Delivery date</TableHead>
                   <TableHead>Doc. supplier</TableHead>
+                  <TableHead>Doc. code</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {openReceipts.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={13}
+                      colSpan={29}
                       className="h-16 text-center text-muted-foreground"
                     >
                       Every reception has arrived — there is nothing left to
@@ -315,21 +371,33 @@ export const PreNotifyDialog = ({
                         />
                       </TableCell>
                       <TableCell className="text-right tabular-nums">
-                        {orDash(receipt.lineNumber)}
+                        {receipt.lineNumber === null ? "—" : receipt.lineNumber * 10}
+                      </TableCell>
+                      <TableCell>
+                        —
                       </TableCell>
                       <TableCell className="text-right tabular-nums">
                         {formatNumber(Number(receipt.qtyPlanned ?? 0))}
                       </TableCell>
                       <TableCell>
-                        {orDash(
-                          receipt.unit ? receipt.unit.toUpperCase() : null,
-                        )}
+                        {orDash(receipt.unit ? receipt.unit.toUpperCase() : null)}
                       </TableCell>
                       <TableCell className="text-right tabular-nums">
                         {formatNumber(Number(receipt.kgPlanned ?? 0))}
                       </TableCell>
-                      <TableCell>{orDash(receipt.charge)}</TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatNumber((Number(receipt.qtyPlanned ?? 0) * Number(receipt.lengthMm ?? 0)) / 1000)}
+                      </TableCell>
                       <TableCell>
+                        {orDash(receipt.charge)}
+                      </TableCell>
+                      <TableCell>
+                        {orDash(receipt.plateNumber)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        0
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
                         {[receipt.productCode, receipt.productName]
                           .filter(Boolean)
                           .join(" — ")}
@@ -340,22 +408,60 @@ export const PreNotifyDialog = ({
                       <TableCell className="text-right tabular-nums">
                         {orDash(receipt.widthMm)}
                       </TableCell>
-                      <TableCell>{orDash(receipt.billOfLading)}</TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {receipt.thicknessMm === null ? "—" : formatNumber(Number(receipt.thicknessMm))}
+                      </TableCell>
                       <TableCell>
-                        {formatDateColumn(
-                          receipt.preAnnouncedDeliveryDate ??
-                            receipt.receiptDate,
-                        )}
+                        {orDash(receipt.billOfLading)}
+                      </TableCell>
+                      <TableCell>
+                        {formatDateColumn(receipt.preAnnouncedDeliveryDate ?? receipt.receiptDate)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatNumber(Number(receipt.qtyActual ?? 0))}
+                      </TableCell>
+                      <TableCell>
+                        {Number(receipt.qtyActual ?? 0) > 0 && receipt.unit ? receipt.unit.toUpperCase() : ""}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {orDash(receipt.lengthMm)}
+                      </TableCell>
+                      <TableCell>
+                        {formatDateColumn(receipt.deliveryDateActual)}
                       </TableCell>
                       <TableCell>
                         {orDash(receipt.confirmationNumber)}
                       </TableCell>
-                      <TableCell>{orDash(receipt.documentSupplier)}</TableCell>
+                      <TableCell>
+                        —
+                      </TableCell>
+                      <TableCell>
+                        {orDash(receipt.productCode)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {purchaseOrderId}
+                      </TableCell>
+                      <TableCell>
+                        {orDash(receipt.ediBillOfLading)}
+                      </TableCell>
+                      <TableCell>
+                        {orDash(receipt.ediCharge)}
+                      </TableCell>
+                      <TableCell>
+                        {formatDateColumn(receipt.ediDeliveryDate)}
+                      </TableCell>
+                      <TableCell>
+                        {orDash(receipt.documentSupplier)}
+                      </TableCell>
+                      <TableCell>
+                        —
+                      </TableCell>
                     </TableRow>
                   ))
                 )}
               </TableBody>
             </Table>
+            </div>
             <FormFieldError message={errors.receivalUuids?.message} />
             <FormError>{state.error}</FormError>
           </DialogBody>

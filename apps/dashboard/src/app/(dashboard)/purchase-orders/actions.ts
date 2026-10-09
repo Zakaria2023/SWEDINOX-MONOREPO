@@ -1559,6 +1559,28 @@ export const preNotifyPurchaseOrder = async (
         );
     });
 
+    // 🔑 Pre-notify raises the unloading by itself: the reception on 404355
+    // read `Workorders created` the moment OK was pressed (9-10-2026). A
+    // delivery that has been called ahead is one the floor must expect, so the
+    // slip exists from here — unless one already does.
+    const [stillWaiting] = await db
+      .select({ uuid: PurchaseLineReceivals.uuid })
+      .from(PurchaseLineReceivals)
+      .where(
+        and(
+          eq(PurchaseLineReceivals.purchaseOrderUuid, uuid),
+          inArray(PurchaseLineReceivals.uuid, receivalUuids),
+          inArray(PurchaseLineReceivals.receiptStatus, ["new", "released"]),
+        ),
+      )
+      .limit(1);
+    if (stillWaiting) {
+      const raised = await createUnloadingWorkOrder(uuid);
+      if (raised.error) {
+        return { error: raised.error };
+      }
+    }
+
     revalidatePath("/purchase-orders");
     revalidatePath(`/purchase-orders/${uuid}`);
     revalidatePath("/purchase-receivals");

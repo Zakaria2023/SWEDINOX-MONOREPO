@@ -618,8 +618,20 @@ export const PurchaseOrderDetailView = ({
                       <TableCell>
                         {formatDateColumn(receipt.deliveryDatePlanned ?? receipt.receiptDate)}
                       </TableCell>
-                      <TableCell>
-                        {formatDateColumn(receipt.deliveryDateActual)}
+                      {/* Red ✗ `Do not c…` until the supplier calls the delivery
+                          ahead, green ✓ `Pre-notified` after (404355, 9-10-2026);
+                          the date itself once a lorry has been. */}
+                      <TableCell className="whitespace-nowrap">
+                        {receipt.deliveryDateActual ? (
+                          formatDateColumn(receipt.deliveryDateActual)
+                        ) : receipt.billOfLading ||
+                          receipt.preNotifyCode ||
+                          (receipt.receiptStatus !== "new" &&
+                            receipt.receiptStatus !== "released") ? (
+                          <span className="text-primary">✓ Pre-notified</span>
+                        ) : (
+                          <span className="text-destructive">✗ Not pre-notified</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         {orDash(receipt.billOfLading)}
