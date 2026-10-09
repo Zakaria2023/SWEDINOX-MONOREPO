@@ -2,6 +2,10 @@
 
 import { db } from "@/db";
 import { Companies, SelectCompanies } from "@/db/schema/companies";
+import {
+  CompanyAddresses,
+  SelectCompanyAddresses,
+} from "@/db/schema/company-addresses";
 import { Complaints, SelectComplaints } from "@/db/schema/complaints";
 import { Contacts, SelectContacts } from "@/db/schema/contacts";
 import { FollowUps, SelectFollowUps } from "@/db/schema/follow-ups";
@@ -56,7 +60,15 @@ import {
 } from "@/lib/table-query";
 import { QUOTE_COLUMNS } from "@/app/(dashboard)/quotes/columns";
 import { exportRows } from "@/lib/server/excel";
-import { and, count, desc, eq, getTableColumns, isNotNull } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  getTableColumns,
+  isNotNull,
+} from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -134,6 +146,10 @@ export type QuoteDetail = SelectQuotes & {
   // The customer's competitors, as free text on the company — the reference's
   // `Competitors` is a company column, not a contact's.
   competitors: SelectCompanies["competitors"];
+  // The banner's `Tel` and `Fax` are the customer's, off its first address
+  // that carries a telephone.
+  companyTelephone: SelectCompanyAddresses["telephone"] | null;
+  companyFax: SelectCompanyAddresses["fax"] | null;
 };
 
 // One priced quote line, ready to insert. The price is derived, never supplied
@@ -605,6 +621,23 @@ export const getQuoteDetail = async (
         .limit(1),
     ]);
 
+  // Sequential rather than in the fan-out above: this database caps
+  // connections.
+  const [address] = await db
+    .select({
+      telephone: CompanyAddresses.telephone,
+      fax: CompanyAddresses.fax,
+    })
+    .from(CompanyAddresses)
+    .where(
+      and(
+        eq(CompanyAddresses.companyUuid, quote.companyUuid),
+        isNotNull(CompanyAddresses.telephone),
+      ),
+    )
+    .orderBy(asc(CompanyAddresses.sequenceNumber), asc(CompanyAddresses.id))
+    .limit(1);
+
   return {
     ...quote,
     items,
@@ -613,6 +646,8 @@ export const getQuoteDetail = async (
     complaints,
     followUps,
     competitors: company?.competitors || null,
+    companyTelephone: address?.telephone ?? null,
+    companyFax: address?.fax ?? null,
   };
 };
 
@@ -628,13 +663,22 @@ export const updateQuote = async (
 ): Promise<QuoteActionResult> => {
   try {
     const [existing] = await db
-      .select({ uuid: Quotes.uuid })
+      .select({
+        uuid: Quotes.uuid,
+        status: Quotes.status,
+        expired: Quotes.expired,
+      })
       .from(Quotes)
       .where(eq(Quotes.uuid, uuid))
       .limit(1);
 
     if (!existing) {
       return { error: "Quote not found." };
+    }
+
+    // An expired quote's header is read-only in the reference (#395).
+    if (existing.status === "expired" || existing.expired) {
+      return { error: "Cannot edit: this quote has expired." };
     }
 
     // A line that has already become an order line is no longer the quote's to

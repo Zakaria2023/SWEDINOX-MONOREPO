@@ -5,6 +5,7 @@ import { getQuoteDetail } from "@/app/(dashboard)/quotes/actions";
 import { PageHeading } from "@/components/layout/page-heading";
 import { QuoteDetailView } from "@/components/quotes/quote-detail";
 import { getClerkUserNames } from "@/lib/server/clerk";
+import { ORDER_STATUS_LABELS } from "@/lib/labels";
 
 type Props = {
   params: Promise<{ uuid: string }>;
@@ -23,6 +24,25 @@ const QuoteDetailPage = async ({ params }: Props) => {
 
   const userNames = await getClerkUserNames();
 
+  // The reference's banner: `Quote 300009, Stappert Intramet S.A., Tel: 4275
+  // 8211, Fax: 4275 8290 - Expired, Printed, Mailed` (#395).
+  const heading = [
+    `Quote ${quote.id}`,
+    quote.companyName,
+    `Tel: ${quote.companyTelephone ?? "-"}`,
+    `Fax: ${quote.companyFax ?? "-"}`,
+  ]
+    .filter(Boolean)
+    .join(", ");
+  const state = [
+    ORDER_STATUS_LABELS[quote.status],
+    quote.isPrinted && "Printed",
+    quote.isMailed && "Mailed",
+    quote.isFaxed && "Faxed",
+  ]
+    .filter(Boolean)
+    .join(", ");
+
   return (
     <div className="space-y-4">
       <div>
@@ -34,7 +54,7 @@ const QuoteDetailPage = async ({ params }: Props) => {
           Quotes
         </Link>
       </div>
-      <PageHeading title={`Quote #${quote.id}`} />
+      <PageHeading title={`${heading} - ${state}`} />
       <QuoteDetailView quote={quote}  userNames={userNames} />
     </div>
   );

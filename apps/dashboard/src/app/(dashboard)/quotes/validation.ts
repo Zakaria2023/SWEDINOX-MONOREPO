@@ -10,7 +10,7 @@ import {
   stockUnits,
   orderSourceTypes,
 } from "@/lib/enums";
-import { todayDateString, currentYear } from "@/lib/helpers";
+import { addLeadTime, todayDateString, currentYear } from "@/lib/helpers";
 
 // A line the salesperson adds to the quote. Only the product and a positive
 // quantity are required; the price is resolved on the server, so it is not
@@ -137,8 +137,10 @@ export const DEFAULT_QUOTE: QuoteFormValues = {
   contractUuid: "",
   priceDate: todayDateString(),
   decisionDate: "",
-  quoteDate: todayDateString(),
-  validityPeriodDays: "",
+  // Blank until the quote is finalized (#392): a provisional quote has no
+  // quote date, and so no Valid u/i, yet.
+  quoteDate: "",
+  validityPeriodDays: "3",
   validUntil: "",
   handlingBlocked: false,
 
@@ -150,7 +152,7 @@ export const DEFAULT_QUOTE: QuoteFormValues = {
   isInternalProduction: false,
   isCustomerMaterial: false,
   weightType: undefined,
-  isOverlength: false,
+  isOverlength: true,
   isPrinted: false,
   isMailed: false,
   isFaxed: false,
@@ -169,7 +171,8 @@ export const DEFAULT_QUOTE: QuoteFormValues = {
   deliveryTerms: undefined,
   deliveryAddressUuid: "",
   deliveryType: "date",
-  deliveryDate: todayDateString(),
+  // Today + 2 working days, as the reference's new quote opens (#392).
+  deliveryDate: addLeadTime(todayDateString(), 2, "working_days") ?? "",
   deliveryWeek: "",
   deliveryYear: String(currentYear()),
   deliveryRemark: "",

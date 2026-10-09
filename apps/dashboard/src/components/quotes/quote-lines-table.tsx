@@ -56,13 +56,14 @@ export const QuoteLinesTable = ({ items }: Props) => (
           <TableHead className="text-right">Profit amount</TableHead>
           <TableHead>Reference</TableHead>
           <TableHead>Profit too low</TableHead>
+          <TableHead className="text-right">Width</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {items.length === 0 ? (
           <TableRow>
             <TableCell
-              colSpan={23}
+              colSpan={24}
               className="h-24 text-center text-muted-foreground"
             >
               No lines on this quote.
@@ -137,6 +138,9 @@ export const QuoteLinesTable = ({ items }: Props) => (
                 ) : (
                   "No"
                 )}
+              </TableCell>
+              <TableCell className="text-right tabular-nums">
+                {orDash(item.widthMm)}
               </TableCell>
             </TableRow>
           ))

@@ -18,6 +18,7 @@ import { ProductSearchField } from "@/components/ui/product-search-field";
 import { stockUnits, OrderSourceType, orderSourceTypes } from "@/lib/enums";
 import {
   marginFloorFor,
+  formatDateColumn,
   formatMoney,
   formatNumber,
   formatPercent,
@@ -29,9 +30,22 @@ import {
   PRODUCT_QUALITY_STANDARD_LABELS,
   STOCK_UNIT_LABELS,
 } from "@/lib/labels";
-import { AlertTriangle, Plus, Trash2 } from "lucide-react";
+import { AlertTriangle, Plus, X } from "lucide-react";
 import { useState } from "react";
-import { Control, useFieldArray } from "react-hook-form";
+import { Control, useFieldArray, useWatch } from "react-hook-form";
+
+// The rest of the reference's line toolbar (#396-398). None of these exist in
+// this app yet, so they are shown greyed rather than left out.
+const UNBUILT_LINE_ACTIONS = [
+  "Cutting specification",
+  "Price calculation",
+  "Order",
+  "New product...",
+  "Purchase request",
+  "Show order",
+  "Counter order",
+  "Relocate",
+];
 
 type Props = {
   control: Control<QuoteFormValues>;
@@ -74,7 +88,21 @@ export const QuoteLinesEditor = ({ control, products }: Props) => {
   const { fields, append, remove } = useFieldArray({ control, name: "items" });
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
   const [error, setError] = useState<string | null>(null);
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  // A line takes the header's delivery date and customer reference when it is
+  // saved, so the grid shows those until then.
+  const [deliveryDate, customerRef] = useWatch({
+    control,
+    name: ["deliveryDate", "customerRef"],
+  });
 
+  const deleteSelectedLine = () => {
+    if (selectedIndex === null) {
+      return;
+    }
+    remove(selectedIndex);
+    setSelectedIndex(null);
+  };
 
   const addLine = () => {
     if (!draft.productUuid) {
@@ -197,7 +225,7 @@ export const QuoteLinesEditor = ({ control, products }: Props) => {
             }
           />
         </div>
-        <div className="col-span-2 lg:col-span-5">
+        <div className="col-span-2 lg:col-span-6">
           <FormLabel htmlFor="line-options">Options</FormLabel>
           <Input
             id="line-options"
@@ -207,15 +235,40 @@ export const QuoteLinesEditor = ({ control, products }: Props) => {
             }
           />
         </div>
-        <div className="flex items-end">
-          <Button type="button" onClick={addLine} className="w-full">
-            <Plus className="mr-1.5 size-4" />
-            New
-          </Button>
-        </div>
       </div>
 
       {error && <p className="text-xs text-destructive">{error}</p>}
+
+      {/* The reference's line toolbar: it acts on the selected line, never a
+          button per row (#396-398). */}
+      <div className="flex flex-wrap gap-2">
+        <Button type="button" size="sm" onClick={addLine}>
+          <Plus className="mr-1.5 size-4" />
+          New
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={deleteSelectedLine}
+          disabled={selectedIndex === null}
+        >
+          <X className="mr-1.5 size-4 text-destructive" />
+          Delete
+        </Button>
+        {UNBUILT_LINE_ACTIONS.map((label) => (
+          <Button
+            key={label}
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled
+            title="Not built yet"
+          >
+            {label}
+          </Button>
+        ))}
+      </div>
 
       {fields.length > 0 && (
         <div>
@@ -224,7 +277,10 @@ export const QuoteLinesEditor = ({ control, products }: Props) => {
               <TableRow>
                 <TableHead>Code</TableHead>
                 <TableHead>Type</TableHead>
+                <TableHead>Delivery date</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead>Product</TableHead>
+                <TableHead>Description</TableHead>
                 <TableHead>Category</TableHead>
                 <TableHead>Quality</TableHead>
                 <TableHead className="text-right">Qty(p)</TableHead>
@@ -234,12 +290,15 @@ export const QuoteLinesEditor = ({ control, products }: Props) => {
                 <TableHead className="text-right">Kg(p)</TableHead>
                 <TableHead className="text-right">M1(p)</TableHead>
                 <TableHead className="text-right">Net Price</TableHead>
+                <TableHead>U</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
                 <TableHead className="text-right">Purchase pr.</TableHead>
                 <TableHead className="text-right">Costs</TableHead>
                 <TableHead className="text-right">Profit</TableHead>
                 <TableHead className="text-right">Profit amount</TableHead>
-                <TableHead />
+                <TableHead>Reference</TableHead>
+                <TableHead>Profit too low</TableHead>
+                <TableHead className="text-right">Width</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -275,13 +334,27 @@ export const QuoteLinesEditor = ({ control, products }: Props) => {
                 });
 
                 return (
-                  <TableRow key={field.id}>
+                  <TableRow
+                    key={field.id}
+                    data-state={
+                      selectedIndex === index ? "selected" : undefined
+                    }
+                    aria-selected={selectedIndex === index}
+                    className="cursor-pointer"
+                    onClick={() => setSelectedIndex(index)}
+                  >
                     <TableCell className="font-medium">
                       {product?.productCode ?? "—"}
                     </TableCell>
                     <TableCell>
                       {ORDER_SOURCE_TYPE_LABELS[field.sourceType ?? "stock"]}
                     </TableCell>
+                    <TableCell>
+                      {formatDateColumn(deliveryDate || null)}
+                    </TableCell>
+                    {/* A line has no status until it is saved. */}
+                    <TableCell>—</TableCell>
+                    <TableCell>{product?.name ?? "—"}</TableCell>
                     <TableCell>{product?.name ?? "—"}</TableCell>
                     <TableCell>{product?.productGroupName ?? "—"}</TableCell>
                     <TableCell>
@@ -310,6 +383,9 @@ export const QuoteLinesEditor = ({ control, products }: Props) => {
                     <TableCell className="text-right tabular-nums">
                       {formatMoney(line.netPrice)}
                     </TableCell>
+                    <TableCell>
+                      {product?.priceUnit?.toUpperCase() ?? "—"}
+                    </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {formatMoney(line.amount)}
                     </TableCell>
@@ -337,16 +413,19 @@ export const QuoteLinesEditor = ({ control, products }: Props) => {
                     <TableCell className="text-right tabular-nums">
                       {formatMoney(line.profit)}
                     </TableCell>
+                    <TableCell>{customerRef || "—"}</TableCell>
                     <TableCell>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => remove(index)}
-                        aria-label={`Delete line ${index + 1}`}
-                      >
-                        <Trash2 className="size-4 text-destructive" />
-                      </Button>
+                      {line.profitTooLow ? (
+                        <span className="inline-flex items-center gap-1 text-destructive">
+                          <AlertTriangle className="size-3.5" />
+                          Yes
+                        </span>
+                      ) : (
+                        "No"
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {field.widthMm || "—"}
                     </TableCell>
                   </TableRow>
                 );

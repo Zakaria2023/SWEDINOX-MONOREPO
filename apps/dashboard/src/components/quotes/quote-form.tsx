@@ -10,7 +10,7 @@ import { QuoteFormValues } from "@/app/(dashboard)/quotes/validation";
 import { DatePicker } from "@/components/shadcn/date-picker";
 import { Input } from "@/components/shadcn/input";
 import { Textarea } from "@/components/shadcn/textarea";
-import { Select } from "@/components/shadcn/select";
+import { SearchSelect } from "@/components/shadcn/search-select";
 import { DocumentUploader } from "@/components/document-uploader";
 import { QuoteLinesEditor } from "@/components/quotes/quote-lines-editor";
 import { QuoteSummaryPanel } from "@/components/quotes/quote-summary";
@@ -29,6 +29,8 @@ type Props = {
   /** Set when editing an existing quote; omitted when creating one. */
   quoteUuid?: string;
   defaultValues?: QuoteFormValues;
+  /** The signed-in user; a new quote's Seller starts as them. */
+  defaultSeller?: string;
 };
 
 export const QuoteForm = ({
@@ -38,6 +40,7 @@ export const QuoteForm = ({
   products,
   quoteUuid,
   defaultValues,
+  defaultSeller,
 }: Props) => {
   const {
     form,
@@ -57,6 +60,8 @@ export const QuoteForm = ({
     requestMethodOptions,
     deliveryTermOptions,
     weightTypeOptions,
+    consignmentDurationOptions,
+    consignmentDurationUnitOptions,
     paymentTermOptions,
     isLoadingCompanyData,
     handleCompanyChange,
@@ -67,6 +72,7 @@ export const QuoteForm = ({
     products,
     quoteUuid,
     defaultValues,
+    defaultSeller,
   });
 
   const {
@@ -95,11 +101,13 @@ export const QuoteForm = ({
                 </span>
               )}
             </FormLabel>
+            {/* The reference's Customer is a code you type and search (#391),
+                not a list of every company. */}
             <Controller
               control={control}
               name="companyUuid"
               render={({ field }) => (
-                <Select
+                <SearchSelect
                   id="companyUuid"
                   value={field.value || ""}
                   options={companyOptions}
@@ -198,6 +206,8 @@ export const QuoteForm = ({
             />
           </div>
 
+          {/* Quote date and Valid u/i are greyed: they are set when the quote
+              is finalized, not typed (#392, #396). */}
           <div>
             <FormLabel htmlFor="quoteDate">Quote date</FormLabel>
             <Controller
@@ -208,6 +218,7 @@ export const QuoteForm = ({
                   id="quoteDate"
                   value={field.value ?? ""}
                   onChange={field.onChange}
+                  disabled
                 />
               )}
             />
@@ -235,6 +246,7 @@ export const QuoteForm = ({
                   id="validUntil"
                   value={field.value ?? ""}
                   onChange={field.onChange}
+                  disabled
                 />
               )}
             />
@@ -282,6 +294,7 @@ export const QuoteForm = ({
               />
             )}
           />
+          {/* Set by the system, not the salesperson (#392). */}
           <Controller
             control={control}
             name="isInternalProduction"
@@ -290,6 +303,8 @@ export const QuoteForm = ({
                 label="Internal production / processing"
                 checked={field.value}
                 active={field.value}
+                disabled
+                className="cursor-not-allowed opacity-60"
                 onChange={(e) => field.onChange(e.target.checked)}
               />
             )}
@@ -320,13 +335,14 @@ export const QuoteForm = ({
           />
         </div>
 
-        {/* Consignment row */}
-        <div className="flex items-center gap-4">
+        {/* Consignment row: "with a duration of [..] u/i [..]", greyed until
+            the box is ticked (#392). */}
+        <div className="flex items-end gap-4">
           <Controller
             control={control}
             name="isConsignment"
             render={({ field }) => (
-              <label className="flex cursor-pointer items-center gap-2 text-sm">
+              <label className="flex cursor-pointer items-center gap-2 pb-2 text-sm">
                 <input
                   type="checkbox"
                   checked={field.value}
@@ -336,23 +352,28 @@ export const QuoteForm = ({
               </label>
             )}
           />
-          {isConsignment && (
-            <>
-              <Input
-                className="w-32"
-                placeholder="e.g. Normal"
-                {...register("consignmentDuration")}
-              />
-              <div>
-                <FormLabel htmlFor="consignmentDurationUnit">u/i</FormLabel>
-                <Input
-                  id="consignmentDurationUnit"
-                  className="w-32"
-                  {...register("consignmentDurationUnit")}
-                />
-              </div>
-            </>
-          )}
+          <div className="w-32">
+            <FormSelectField
+              control={control}
+              id="consignmentDuration"
+              name="consignmentDuration"
+              label="Duration"
+              options={consignmentDurationOptions}
+              emptyValue=""
+              disabled={!isConsignment}
+            />
+          </div>
+          <div className="w-40">
+            <FormSelectField
+              control={control}
+              id="consignmentDurationUnit"
+              name="consignmentDurationUnit"
+              label="u/i"
+              options={consignmentDurationUnitOptions}
+              emptyValue=""
+              disabled={!isConsignment}
+            />
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
@@ -365,19 +386,39 @@ export const QuoteForm = ({
             emptyValue=""
           />
 
+          {/* Printed / Mailed / Faxed record what the system sent, so they
+              are read-only (#392). */}
           <div className="flex items-end gap-6 pb-1">
-            <label className="flex cursor-pointer items-center gap-2 text-sm">
-              <input type="checkbox" {...register("isPrinted")} />
-              Printed
-            </label>
-            <label className="flex cursor-pointer items-center gap-2 text-sm">
-              <input type="checkbox" {...register("isMailed")} />
-              Mailed
-            </label>
-            <label className="flex cursor-pointer items-center gap-2 text-sm">
-              <input type="checkbox" {...register("isFaxed")} />
-              Faxed
-            </label>
+            <Controller
+              control={control}
+              name="isPrinted"
+              render={({ field }) => (
+                <label className="flex cursor-not-allowed items-center gap-2 text-sm text-muted-foreground">
+                  <input type="checkbox" checked={field.value} disabled readOnly />
+                  Printed
+                </label>
+              )}
+            />
+            <Controller
+              control={control}
+              name="isMailed"
+              render={({ field }) => (
+                <label className="flex cursor-not-allowed items-center gap-2 text-sm text-muted-foreground">
+                  <input type="checkbox" checked={field.value} disabled readOnly />
+                  Mailed
+                </label>
+              )}
+            />
+            <Controller
+              control={control}
+              name="isFaxed"
+              render={({ field }) => (
+                <label className="flex cursor-not-allowed items-center gap-2 text-sm text-muted-foreground">
+                  <input type="checkbox" checked={field.value} disabled readOnly />
+                  Faxed
+                </label>
+              )}
+            />
           </div>
         </div>
       </section>

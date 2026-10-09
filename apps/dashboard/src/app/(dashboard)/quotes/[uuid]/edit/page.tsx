@@ -1,6 +1,6 @@
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getCompaniesForSelect } from "@/app/(dashboard)/companies/actions";
 import { getContractsForProjects } from "@/app/(dashboard)/contracts/actions";
 import { getProductsForPricing } from "@/app/(dashboard)/products/actions";
@@ -29,6 +29,12 @@ const EditQuotePage = async ({ params }: Props) => {
 
   if (!quote) {
     notFound();
+  }
+
+  // An expired quote's header is read-only (#395), so there is no edit
+  // screen to open.
+  if (quote.status === "expired" || quote.expired) {
+    redirect(`/quotes/${uuid}`);
   }
 
   return (

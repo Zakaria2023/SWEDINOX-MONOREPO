@@ -19,6 +19,8 @@ import { SelectOption } from "@/components/shadcn/select";
 import {
   DeliveryTerm,
   deliveryTerms,
+  DeliveryTimeUnit,
+  deliveryTimeUnits,
   InvoicePaymentTerm,
   invoicePaymentTerms,
   OrderMethod,
@@ -33,13 +35,19 @@ import {
   previewQuoteLine,
   productPieceWeightKg,
 } from "@/lib/helpers";
-import { DELIVERY_TERM_LABELS, INVOICE_PAYMENT_TERM_LABELS, ORDER_METHOD_LABELS, ORDER_WEIGHT_TYPE_LABELS } from "@/lib/labels";
+import { DELIVERY_TERM_LABELS, DELIVERY_TIME_UNIT_LABELS, INVOICE_PAYMENT_TERM_LABELS, ORDER_METHOD_LABELS, ORDER_WEIGHT_TYPE_LABELS } from "@/lib/labels";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { createQuote, QuoteActionResult, updateQuote } from "./actions";
 import { DEFAULT_QUOTE, QuoteFormValues, quoteSchema } from "./validation";
+
+// The amounts the consignment's `duration of [..]` dropdown offers; its unit
+// sits in the `u/i [..]` dropdown beside it (#392).
+const CONSIGNMENT_DURATION_VALUES = Array.from({ length: 52 }, (_, i) =>
+  String(i + 1),
+);
 
 type UseQuoteSubmitParams = {
   companies: CompanyOption[];
@@ -48,6 +56,8 @@ type UseQuoteSubmitParams = {
   /** The quote being edited. Omitted when creating a new one. */
   quoteUuid?: string;
   defaultValues?: QuoteFormValues;
+  /** The signed-in user, who a new quote's Seller starts as (#392). */
+  defaultSeller?: string;
 };
 
 /**
@@ -70,6 +80,11 @@ const makeOptions = <T extends string>(
   ...values.map((v) => ({ value: v, label: labels[v] })),
 ];
 
+// The reference's Customer field is a code, so the code leads the label and
+// typing either the code or the name finds the company.
+const companyLabel = (c: CompanyOption) =>
+  [c.searchCode1, c.companyName].filter(Boolean).join(" — ") || c.uuid;
+
 const addressLabel = (a: AddressOption) =>
   [a.altName, a.streetAndNo, a.postalCode, a.city].filter(Boolean).join(", ") ||
   a.uuid;
@@ -80,6 +95,7 @@ export const useQuoteSubmit = ({
   products,
   quoteUuid,
   defaultValues,
+  defaultSeller,
 }: UseQuoteSubmitParams) => {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -91,11 +107,15 @@ export const useQuoteSubmit = ({
 
   const form = useForm<QuoteFormValues>({
     resolver: zodResolver(quoteSchema),
-    defaultValues: defaultValues ?? DEFAULT_QUOTE,
+    defaultValues: defaultValues ?? {
+      ...DEFAULT_QUOTE,
+      seller: defaultSeller ?? "",
+    },
   });
 
   const isPickup = form.watch("isPickup");
   const isConsignment = form.watch("isConsignment");
+  const consignmentDuration = form.watch("consignmentDuration");
   const deliveryType = form.watch("deliveryType");
   const items = form.watch("items");
   const surcharges = form.watch("surcharges");
@@ -157,7 +177,7 @@ export const useQuoteSubmit = ({
     emptyOpt,
     ...customerCompanies.map((c) => ({
       value: c.uuid,
-      label: c.companyName ?? c.searchCode1 ?? c.uuid,
+      label: companyLabel(c),
     })),
   ];
 
@@ -203,6 +223,24 @@ export const useQuoteSubmit = ({
   const weightTypeOptions = makeOptions(
     orderWeightTypes,
     ORDER_WEIGHT_TYPE_LABELS as Record<OrderWeightType, string>,
+  );
+
+  // A value saved before these were dropdowns is kept on offer, so opening an
+  // old quote does not silently blank it.
+  const consignmentDurationValues =
+    consignmentDuration &&
+    !CONSIGNMENT_DURATION_VALUES.includes(consignmentDuration)
+      ? [consignmentDuration, ...CONSIGNMENT_DURATION_VALUES]
+      : CONSIGNMENT_DURATION_VALUES;
+
+  const consignmentDurationOptions: SelectOption[] = [
+    emptyOpt,
+    ...consignmentDurationValues.map((v) => ({ value: v, label: v })),
+  ];
+
+  const consignmentDurationUnitOptions = makeOptions(
+    deliveryTimeUnits,
+    DELIVERY_TIME_UNIT_LABELS as Record<DeliveryTimeUnit, string>,
   );
 
   const paymentTermOptions = makeOptions(
@@ -386,6 +424,8 @@ export const useQuoteSubmit = ({
     requestMethodOptions,
     deliveryTermOptions,
     weightTypeOptions,
+    consignmentDurationOptions,
+    consignmentDurationUnitOptions,
     paymentTermOptions,
     isLoadingCompanyData,
     handleCompanyChange,

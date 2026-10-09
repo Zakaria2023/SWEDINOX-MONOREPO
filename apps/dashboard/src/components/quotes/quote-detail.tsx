@@ -48,6 +48,14 @@ type FieldProps = {
   value: string | number | null | undefined;
 };
 
+type ToolbarAction = {
+  label: string;
+  /** Whether the reference offers it for the quote's status. */
+  live: boolean;
+  /** Where it goes; omitted for an action this app does not have yet. */
+  href?: string | null;
+};
+
 const Field = ({ label, value }: FieldProps) => (
   <div>
     <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
@@ -85,9 +93,84 @@ export const QuoteDetailView = ({ quote, userNames }: Props) => {
     quote.isOverlength && "Overlength",
   ].filter((flag): flag is string => Boolean(flag));
 
+  // The reference's window toolbar, greyed by status (#395-397): a provisional
+  // quote can be finalized, printed, copied and repriced; an expired one only
+  // printed, copied and its company opened.
+  const isProvisional = quote.status === "provisional";
+  const isExpired = quote.status === "expired" || Boolean(quote.expired);
+  const isReleased = quote.status === "released";
+  const convertedOrderUuid =
+    quote.items.find((item) => item.convertedToOrderUuid)
+      ?.convertedToOrderUuid ?? null;
+  const toolbarActions: ToolbarAction[] = [
+    { label: "Finalize", live: isProvisional },
+    { label: "Print...", live: true },
+    { label: "Send...", live: isReleased },
+    { label: "Order", live: isReleased },
+    {
+      label: "Show company",
+      live: true,
+      href: `/companies/${quote.companyUuid}`,
+    },
+    {
+      label: "Show order",
+      live: convertedOrderUuid !== null,
+      href: convertedOrderUuid ? `/orders/${convertedOrderUuid}` : null,
+    },
+    { label: "Copy", live: true },
+    { label: "Options...", live: !isExpired },
+    { label: "Prices...", live: !isExpired },
+    { label: "Counter order", live: isReleased },
+  ];
+
   return (
     <div className="space-y-6">
       {error && <FormError>{error}</FormError>}
+
+      <div className="flex flex-wrap gap-2">
+        {toolbarActions.map((action) =>
+          action.live && action.href ? (
+            <Button
+              key={action.label}
+              variant="outline"
+              size="sm"
+              render={<Link href={action.href} />}
+            >
+              {action.label}
+            </Button>
+          ) : (
+            <Button
+              key={action.label}
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled
+              title={action.href === undefined ? "Not built yet" : undefined}
+            >
+              {action.label}
+            </Button>
+          ),
+        )}
+        {/* An expired quote's header is read-only (#395). */}
+        {!isExpired && (
+          <Button
+            variant="outline"
+            size="sm"
+            render={<Link href={`/quotes/${quote.uuid}/edit`} />}
+          >
+            Edit Quote
+          </Button>
+        )}
+        <Button
+          type="button"
+          variant="destructive"
+          size="sm"
+          onClick={() => setIsConfirmOpen(true)}
+          disabled={isPending}
+        >
+          Delete Quote
+        </Button>
+      </div>
 
       {/* ── Quote ───────────────────────────────────────────────────────── */}
       <section className="space-y-4">
@@ -538,23 +621,6 @@ export const QuoteDetailView = ({ quote, userNames }: Props) => {
             </ul>
           )}
         </CollapsibleSection>
-      </div>
-
-      <div className="flex gap-2">
-        <Button
-          variant="outline"
-          render={<Link href={`/quotes/${quote.uuid}/edit`} />}
-        >
-          Edit Quote
-        </Button>
-        <Button
-          type="button"
-          variant="destructive"
-          onClick={() => setIsConfirmOpen(true)}
-          disabled={isPending}
-        >
-          Delete Quote
-        </Button>
       </div>
 
       <ConfirmDialog
