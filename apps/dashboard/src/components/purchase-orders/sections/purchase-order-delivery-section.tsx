@@ -15,6 +15,8 @@ type Props = {
   supplierAddressOptions: SelectOption[];
   yardAddress: YardDeliveryAddress | null;
   handleDeliveryDateChange: (date: string) => void;
+  /** The date block is greyed once a line exists, as the reference greys it. */
+  locked: boolean;
 };
 
 export const PurchaseOrderDeliverySection = ({
@@ -23,12 +25,13 @@ export const PurchaseOrderDeliverySection = ({
   supplierAddressOptions,
   yardAddress,
   handleDeliveryDateChange,
+  locked,
 }: Props) => {
   const { register, control } = useFormContext<PurchaseOrderFormValues>();
 
   return (
     <section className="space-y-4">
-      <h2 className="border-b pb-2 text-base font-semibold">Delivery</h2>
+      <h2 className="text-sm font-semibold">Delivery</h2>
 
       <div className="grid grid-cols-2 gap-4">
         <FormSelectField
@@ -117,6 +120,7 @@ export const PurchaseOrderDeliverySection = ({
                   <input
                     type="radio"
                     value="date"
+                    disabled={locked}
                     checked={field.value === "date"}
                     onChange={() => field.onChange("date")}
                   />
@@ -132,7 +136,7 @@ export const PurchaseOrderDeliverySection = ({
                         id="deliveryDate"
                         value={dateField.value ?? ""}
                         onChange={handleDeliveryDateChange}
-                        disabled={field.value !== "date"}
+                        disabled={locked || field.value !== "date"}
                         className="w-48"
                       />
                     )}
@@ -153,6 +157,7 @@ export const PurchaseOrderDeliverySection = ({
                   <input
                     type="radio"
                     value="week"
+                    disabled={locked}
                     checked={field.value === "week"}
                     onChange={() => field.onChange("week")}
                   />
@@ -166,7 +171,7 @@ export const PurchaseOrderDeliverySection = ({
                     min={1}
                     max={53}
                     className="w-20"
-                    disabled={field.value !== "week"}
+                    disabled={locked || field.value !== "week"}
                     {...register("deliveryWeek")}
                   />
                 </div>
@@ -176,7 +181,7 @@ export const PurchaseOrderDeliverySection = ({
                     id="deliveryYear"
                     type="number"
                     className="w-28"
-                    disabled={field.value !== "week"}
+                    disabled={locked || field.value !== "week"}
                     {...register("deliveryYear")}
                   />
                 </div>

@@ -35,6 +35,7 @@ import {
   DeliveryType,
   DiscountUnit,
   FeaturesQuality,
+  featuresQualities,
   InvoicePaymentTerm,
   InvoiceDocumentType,
   InvoiceVatScenario,
@@ -3788,6 +3789,33 @@ const FINISHES_LONGEST_FIRST = [...MATERIAL_FINISHES].sort(
  * from. `316L2B` is 316L in a 2B finish; `C45+QT` is C45 quenched and tempered;
  * `4510Ti BA` is the same with a space the code happens to carry.
  */
+/**
+ * The quality an article is, read off its name or code when its record does
+ * not say — which, after the catalogue import, is every record: 0 of 5 626
+ * products carry `featuresQuality`, while the reference fills `304L` on a line
+ * the moment `PK304L20021` is picked.
+ *
+ * The name is tried first, as whole words (`Cold-rolled plate 304L`); then the
+ * code, taking the longest known quality that appears in it (`PK304L20021` →
+ * `304L`, not `304`). A quality is only ever one of the known list, so a code
+ * that happens to contain digits yields nothing rather than a guess.
+ */
+export const inferArticleQuality = (
+  productCode: string | null | undefined,
+  productName: string | null | undefined,
+): FeaturesQuality | null => {
+  const byLength = [...featuresQualities].sort((a, b) => b.length - a.length);
+  const words = (productName ?? "").toUpperCase().split(/[^A-Z0-9+/.-]+/);
+  const fromName = byLength.find((quality) =>
+    words.includes(quality.toUpperCase()),
+  );
+  if (fromName) {
+    return fromName;
+  }
+  const code = (productCode ?? "").toUpperCase();
+  return byLength.find((quality) => code.includes(quality.toUpperCase())) ?? null;
+};
+
 export const materialGradeMeta = (
   grade: FeaturesQuality | string | null | undefined,
 ): MaterialGradeMeta | null => {
@@ -10768,6 +10796,9 @@ export const articlePieceWeightKg = (
     weightTheoretical?: string | number | null;
     theoreticalWeight?: string | number | null;
     weightUnit?: SalesUnit | null;
+    /** For reading the grade off the name or code when the record is blank. */
+    productCode?: string | null;
+    productName?: string | null;
   },
   override?: {
     lengthMm?: string | number | null;
@@ -10798,10 +10829,20 @@ export const articlePieceWeightKg = (
   const measurable = length > 0 && length !== COIL_LENGTH_SENTINEL;
 
   if (measurable) {
+    // The catalogue import left every article without a shape or a grade,
+    // while the reference weighs `PK304L20021` at 31,4 kg a piece the moment
+    // it is picked. An article with a length, a width and a thickness is a
+    // plate, and its grade is in its name or code.
+    const shape =
+      product.dimensionShape ??
+      (widthDiameter > 0 && thickness > 0 ? "sheet" : null);
+    const grade =
+      product.featuresQuality ||
+      inferArticleQuality(product.productCode, product.productName);
     const derived = deriveArticleWeights(
-      product.dimensionShape,
+      shape,
       { length, widthDiameter, thickness },
-      product.featuresQuality,
+      grade,
       Number(product.densityKgDm3 ?? 0) || null,
     );
     if (

@@ -62,7 +62,11 @@ import {
   SelectPurchaseReturnOrders,
 } from "@/db/schema/purchase-return-orders";
 import { mailDocument, sendPurchaseOrderEmail } from "@/emails/documents";
-import { PurchaseSourceType, purchaseOrderStatuses } from "@/lib/enums";
+import {
+  PurchaseSourceType,
+  purchaseOrderStatuses,
+  stockUnits,
+} from "@/lib/enums";
 import {
   amountForWeight,
   articlePieceWeightKg,
@@ -151,6 +155,8 @@ export type PurchaseOrderItemInput = {
   priceUnit?: string;
   /** The reference's `Line type`; blank follows the header's CD tick. */
   sourceType?: PurchaseSourceType | "";
+  /** The article's counting unit — the line's `U`; blank keeps the default. */
+  unit?: string;
   /**
    * 🔑 Carried off the article the stock dialog handed back, not typed.
    *
@@ -888,12 +894,18 @@ export const createPurchaseOrder = async (
           return value && Number.isFinite(parsed) ? Math.round(parsed) : null;
         };
 
+        // The article's own counting unit, when it is one a line can hold;
+        // otherwise the column's default.
+        const lineUnit = (item.unit ?? "").toLowerCase();
+        const unit = stockUnits.find((candidate) => candidate === lineUnit);
+
         await tx.insert(PurchaseOrderItems).values({
           uuid: generateUuid(),
           purchaseOrderUuid: uuid,
           productUuid: item.productUuid,
           quantity: item.quantity,
           qtyPlanned: item.quantity,
+          unit,
           lineNumber: index + 1,
           sourceType:
             item.sourceType ||

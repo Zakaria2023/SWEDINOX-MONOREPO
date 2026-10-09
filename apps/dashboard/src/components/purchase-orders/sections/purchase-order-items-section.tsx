@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   Controller,
   useFormContext,
@@ -11,30 +12,64 @@ import {
 import { PurchaseOrderFormValues } from "@/app/(dashboard)/purchase-orders/validation";
 import { Button } from "@/components/shadcn/button";
 import { Input } from "@/components/shadcn/input";
-import { Select } from "@/components/shadcn/select";
-import { FormFieldError, FormLabel } from "@/components/ui/form-field";
+import { Select, SelectOption } from "@/components/shadcn/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/shadcn/table";
+import { FormFieldError } from "@/components/ui/form-field";
 import { ProductSearchField } from "@/components/ui/product-search-field";
-import { purchaseSourceTypes, purchasingUnits } from "@/lib/enums";
+import {
+  featuresQualities,
+  purchaseSourceTypes,
+  purchasingUnits,
+} from "@/lib/enums";
 import {
   amountForWeight,
+  cn,
   enumOptions,
+  formatDateValue,
   formatMoney,
   formatNumber,
   runningMeters,
 } from "@/lib/helpers";
 import {
+  FEATURES_QUALITY_LABELS,
   ORDER_SOURCE_TYPE_LABELS,
-  PURCHASING_UNIT_LABELS,
 } from "@/lib/labels";
-import { Plus, X } from "lucide-react";
+import { BellRing, Calculator, Plus, Scissors, X } from "lucide-react";
 
-const priceUnitOptions = enumOptions(purchasingUnits, PURCHASING_UNIT_LABELS);
+// The reference's `U` column prints the code — `TN`, `ST` — not a word.
+const priceUnitOptions: SelectOption[] = [
+  { value: "", label: "—" },
+  ...purchasingUnits.map((unit) => ({ value: unit, label: unit })),
+];
 // Blank is a real choice: "whatever the header's CD tick implies".
 const sourceTypeOptions = enumOptions(
   purchaseSourceTypes,
   ORDER_SOURCE_TYPE_LABELS,
   "From the order",
 );
+// The reference's Quality dropdown: the code with its EN designation beside
+// it — `304L | EN 1.4307`.
+const qualityOptions: SelectOption[] = [
+  { value: "", label: "—", description: "" },
+  ...featuresQualities.map((quality) => ({
+    value: quality,
+    label: quality,
+    description: FEATURES_QUALITY_LABELS[quality],
+  })),
+];
+
+// The reference's Lines toolbar: `New · Delete · Sawing specifications ·
+// Calculate · Pre-notify`, then the option shortcuts `DUPK320 · NG · K320 ·
+// BF · F · L · K · LSR`. Only New and Delete do anything before the order
+// exists.
+const OPTION_SHORTCUTS = ["DUPK320", "NG", "K320", "BF", "F", "L", "K", "LSR"];
 
 const EMPTY_ITEM: PurchaseOrderFormValues["items"][number] = {
   productUuid: "",
@@ -43,6 +78,8 @@ const EMPTY_ITEM: PurchaseOrderFormValues["items"][number] = {
   priceUnit: "",
   sourceType: "",
   productLabel: "",
+  description: "",
+  unit: "",
   qualityCode: "",
   lengthMm: "",
   widthMm: "",
@@ -58,20 +95,24 @@ type Props = {
 
 type LineProps = {
   index: number;
-  onRemove: () => void;
+  selected: boolean;
+  onSelect: () => void;
 };
 
+const cell = "h-8 w-20 px-2 text-right tabular-nums";
+
 /**
- * One line of the order, carrying the columns the reference's own line grid
- * carries: `Quality` · `Length` · `Width` · `Thickness` · `Qty(p)` · `Kg(p)` ·
- * `M1(p)` · `Net Price` · `U`.
+ * One row of the reference's Lines grid: `Code · For line · Delivery date ·
+ * Status · Product · Description · Category · Quality · Length · Width ·
+ * Thick. · Qty(p) · U · Kg(p) · M1(p) · Net Price · U · Amount · Kg(a)`, and
+ * our `Type` (`Stk` · `CD` · `EXW`) at the end.
  *
  * 🔑 `Kg(p)`, `M1(p)` and the amount are **computed here and shown as you
  * type**, never typed. That is what the reference does — its `Net Price` is a
  * result rather than something anyone enters — and it is the only way a buyer
  * can tell a € 606,02 line from a € 0,00 one before saving it.
  */
-const PurchaseOrderLine = ({ index, onRemove }: LineProps) => {
+const PurchaseOrderLineRow = ({ index, selected, onSelect }: LineProps) => {
   const {
     control,
     register,
@@ -81,6 +122,10 @@ const PurchaseOrderLine = ({ index, onRemove }: LineProps) => {
   } = useFormContext<PurchaseOrderFormValues>();
 
   const line = useWatch({ control, name: `items.${index}` });
+  // The reference's new row reads `10 · 12-10-2026 · Provisional · Standaard`
+  // before a product is chosen: the code counts in tens, the date is the
+  // header's, and a line starts provisional in the standard category.
+  const headerDeliveryDate = useWatch({ control, name: "deliveryDate" });
   const lineErrors = errors.items?.[index];
 
   const quantity = Number(line?.quantity ?? 0);
@@ -108,13 +153,27 @@ const PurchaseOrderLine = ({ index, onRemove }: LineProps) => {
   // between a buyer noticing and an invoice noticing.
   const unweighable = !!line?.productUuid && pieceWeightKg <= 0;
 
+  const problems = [
+    lineErrors?.productUuid?.message,
+    lineErrors?.quantity?.message,
+    lineErrors?.netPrice?.message,
+  ].filter(Boolean);
+
   return (
-    <div className="space-y-3 rounded-lg border p-3">
-      <div className="grid grid-cols-[1fr_120px_32px] items-start gap-3">
-        <div>
-          <FormLabel htmlFor={`items.${index}.productUuid`} required>
-            Product
-          </FormLabel>
+    <>
+      <TableRow
+        onClick={onSelect}
+        className={cn("cursor-pointer", selected && "bg-muted")}
+      >
+        <TableCell className="text-right tabular-nums">
+          {(index + 1) * 10}
+        </TableCell>
+        <TableCell />
+        <TableCell className="whitespace-nowrap">
+          {formatDateValue(headerDeliveryDate || null)}
+        </TableCell>
+        <TableCell>Provisional</TableCell>
+        <TableCell className="min-w-56">
           {/* 🔴 The stock search dialog, never a dropdown — and it searches the
               whole catalogue, because the point of raising a purchase order is
               that the metal is not on the shelf. Scoping this to the supplier's
@@ -134,25 +193,28 @@ const PurchaseOrderLine = ({ index, onRemove }: LineProps) => {
                   // The article's own measurements travel onto the line, so the
                   // receival behind it can check what arrives against what was
                   // ordered — and so the buyer can see them.
+                  const mm = (value: number | string | null) =>
+                    value === null || Number(value) <= 0
+                      ? ""
+                      : String(Number(value));
+                  const size = [choice.lengthMm, choice.widthMm, choice.thicknessMm]
+                    .map(mm)
+                    .filter(Boolean)
+                    .join("x");
+                  setValue(`items.${index}.productLabel`, choice.productCode ?? "");
+                  // `Cold-rolled plate 304L  2000x1000x2mm`: the reference's
+                  // Description is the name with the size appended.
                   setValue(
-                    `items.${index}.productLabel`,
-                    [choice.productCode, choice.productName]
+                    `items.${index}.description`,
+                    [choice.productName, size ? `${size}mm` : null]
                       .filter(Boolean)
-                      .join(" — "),
+                      .join("  "),
                   );
+                  setValue(`items.${index}.unit`, choice.unit ?? "");
                   setValue(`items.${index}.qualityCode`, choice.quality ?? "");
-                  setValue(
-                    `items.${index}.lengthMm`,
-                    choice.lengthMm === null ? "" : String(choice.lengthMm),
-                  );
-                  setValue(
-                    `items.${index}.widthMm`,
-                    choice.widthMm === null ? "" : String(choice.widthMm),
-                  );
-                  setValue(
-                    `items.${index}.thicknessMm`,
-                    choice.thicknessMm ?? "",
-                  );
+                  setValue(`items.${index}.lengthMm`, mm(choice.lengthMm));
+                  setValue(`items.${index}.widthMm`, mm(choice.widthMm));
+                  setValue(`items.${index}.thicknessMm`, mm(choice.thicknessMm));
                   setValue(
                     `items.${index}.pieceWeightKg`,
                     choice.pieceWeightKg === null
@@ -172,91 +234,89 @@ const PurchaseOrderLine = ({ index, onRemove }: LineProps) => {
               />
             )}
           />
-          <FormFieldError message={lineErrors?.productUuid?.message} />
-        </div>
-
-        <div>
-          <FormLabel htmlFor={`items.${index}.qualityCode`}>Quality</FormLabel>
-          <Input
-            id={`items.${index}.qualityCode`}
-            {...register(`items.${index}.qualityCode`)}
+        </TableCell>
+        <TableCell className="min-w-48 whitespace-nowrap">
+          {line?.description || ""}
+        </TableCell>
+        <TableCell>Standaard</TableCell>
+        <TableCell className="min-w-36">
+          <Controller
+            control={control}
+            name={`items.${index}.qualityCode`}
+            render={({ field }) => (
+              <Select
+                id={`items.${index}.qualityCode`}
+                value={field.value || ""}
+                options={qualityOptions}
+                columnHeaders={{ left: "Code", right: "EN" }}
+                onValueChange={field.onChange}
+                className="h-8"
+              />
+            )}
           />
-        </div>
-
-        <button
-          type="button"
-          onClick={onRemove}
-          aria-label="Remove line"
-          className="mt-6 flex size-8 items-center justify-center text-muted-foreground hover:text-destructive"
-        >
-          <X className="size-4" />
-        </button>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
-        <div>
-          <FormLabel htmlFor={`items.${index}.lengthMm`}>Length (mm)</FormLabel>
+        </TableCell>
+        <TableCell>
           <Input
-            id={`items.${index}.lengthMm`}
             type="number"
             min="0"
+            aria-label="Length (mm)"
+            className={cell}
             {...register(`items.${index}.lengthMm`)}
           />
-        </div>
-        <div>
-          <FormLabel htmlFor={`items.${index}.widthMm`}>Width (mm)</FormLabel>
+        </TableCell>
+        <TableCell>
           <Input
-            id={`items.${index}.widthMm`}
             type="number"
             min="0"
+            aria-label="Width (mm)"
+            className={cell}
             {...register(`items.${index}.widthMm`)}
           />
-        </div>
-        <div>
-          <FormLabel htmlFor={`items.${index}.thicknessMm`}>
-            Thickness (mm)
-          </FormLabel>
+        </TableCell>
+        <TableCell>
           <Input
-            id={`items.${index}.thicknessMm`}
             type="number"
             step="0.01"
             min="0"
+            aria-label="Thickness (mm)"
+            className={cell}
             {...register(`items.${index}.thicknessMm`)}
           />
-        </div>
-
-        <div>
-          <FormLabel htmlFor={`items.${index}.quantity`} required>
-            Qty (p)
-          </FormLabel>
+        </TableCell>
+        <TableCell>
           <Input
-            id={`items.${index}.quantity`}
             type="number"
             step="0.001"
             min="0"
+            placeholder="0"
+            aria-label="Qty (p)"
+            aria-invalid={!!lineErrors?.quantity}
+            className={cell}
             {...register(`items.${index}.quantity`)}
           />
-          <FormFieldError message={lineErrors?.quantity?.message} />
-        </div>
-
-        {/* The lot received against this line is valued at this price, so it
-            decides the margin of every sales order drawn from it. */}
-        <div>
-          <FormLabel htmlFor={`items.${index}.netPrice`} required>
-            Purchase price
-          </FormLabel>
+        </TableCell>
+        <TableCell>{(line?.unit ?? "").toUpperCase()}</TableCell>
+        <TableCell className="text-right tabular-nums">
+          {weightKg > 0 ? formatNumber(weightKg) : ""}
+        </TableCell>
+        <TableCell className="text-right tabular-nums">
+          {formatNumber(metres)}
+        </TableCell>
+        <TableCell>
+          {/* The lot received against this line is valued at this price, so it
+              decides the margin of every sales order drawn from it. */}
           <Input
-            id={`items.${index}.netPrice`}
             type="number"
             step="0.0001"
             min="0"
+            placeholder="0,00"
+            aria-label="Net price"
+            aria-invalid={!!lineErrors?.netPrice}
+            className={cn(cell, "w-24")}
             {...register(`items.${index}.netPrice`)}
           />
-          <FormFieldError message={lineErrors?.netPrice?.message} />
-        </div>
-
-        <div>
-          <FormLabel htmlFor={`items.${index}.priceUnit`}>Per</FormLabel>
+        </TableCell>
+        <TableCell className="min-w-20">
           <Controller
             control={control}
             name={`items.${index}.priceUnit`}
@@ -266,16 +326,19 @@ const PurchaseOrderLine = ({ index, onRemove }: LineProps) => {
                 value={unitField.value || ""}
                 options={priceUnitOptions}
                 onValueChange={unitField.onChange}
+                className="h-8"
               />
             )}
           />
-        </div>
-
+        </TableCell>
+        <TableCell className="text-right tabular-nums whitespace-nowrap">
+          {formatMoney(amount)}
+        </TableCell>
+        <TableCell />
         {/* The reference's `Line type` — `Stk` · `CD` · `EXW`. Grouping its
             purchase-lines grid showed all three, and only the first two can
             be read off the header, so the third has to be said here. */}
-        <div>
-          <FormLabel htmlFor={`items.${index}.sourceType`}>Line type</FormLabel>
+        <TableCell className="min-w-36">
           <Controller
             control={control}
             name={`items.${index}.sourceType`}
@@ -285,47 +348,30 @@ const PurchaseOrderLine = ({ index, onRemove }: LineProps) => {
                 value={typeField.value || ""}
                 options={sourceTypeOptions}
                 onValueChange={typeField.onChange}
+                className="h-8"
               />
             )}
           />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-3 gap-3 border-t pt-3 text-sm">
-        <div>
-          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-            Kg (p)
-          </p>
-          <p className="tabular-nums">
-            {weightKg > 0 ? formatNumber(weightKg) : "—"}
-          </p>
-        </div>
-        <div>
-          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-            M1 (p)
-          </p>
-          <p className="tabular-nums">
-            {metres > 0 ? formatNumber(metres) : "—"}
-          </p>
-        </div>
-        <div>
-          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-            Amount
-          </p>
-          <p className="tabular-nums">
-            {amount > 0 ? formatMoney(amount) : "—"}
-          </p>
-        </div>
-      </div>
-
-      {unweighable && (
-        <p className="text-sm text-destructive">
-          This article has no dimensions or density on its product record, so it
-          cannot be weighed — a price per tonne or per kilo against it comes to
-          € 0,00. Give the product its dimensions, or price this line per piece.
-        </p>
+        </TableCell>
+      </TableRow>
+      {(problems.length > 0 || unweighable) && (
+        <TableRow className="hover:bg-transparent">
+          <TableCell colSpan={20} className="py-1 text-destructive">
+            {problems.map((problem) => (
+              <FormFieldError key={problem} message={problem} />
+            ))}
+            {unweighable && (
+              <p className="text-sm">
+                This article has no dimensions or density on its product
+                record, so it cannot be weighed — a price per tonne or per kilo
+                against it comes to € 0,00. Give the product its dimensions, or
+                price this line per piece.
+              </p>
+            )}
+          </TableCell>
+        </TableRow>
       )}
-    </div>
+    </>
   );
 };
 
@@ -337,40 +383,138 @@ export const PurchaseOrderItemsSection = ({
   const {
     formState: { errors },
   } = useFormContext<PurchaseOrderFormValues>();
+  const [selected, setSelected] = useState<number | null>(null);
+
+  const addLine = () => {
+    appendItem(EMPTY_ITEM);
+    setSelected(itemFields.length);
+  };
+
+  const deleteLine = () => {
+    if (selected === null) {
+      return;
+    }
+    removeItem(selected);
+    setSelected(null);
+  };
 
   return (
-    <section className="space-y-4">
+    <section className="space-y-3">
       <div className="border-b pb-2">
-        <h2 className="text-base font-semibold">Lines</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Pick an article and it brings its quality and dimensions with it. Kg,
-          M1 and the amount are worked out from them — a price per tonne is
-          charged on the weight, never on the piece count.
-        </p>
+        <h2 className="text-base font-semibold">
+          Lines{" "}
+          <span className="text-sm font-normal text-muted-foreground">
+            {itemFields.length} {itemFields.length === 1 ? "line" : "lines"}
+          </span>
+        </h2>
       </div>
 
       {errors.items?.root && (
         <FormFieldError message={errors.items.root.message} />
       )}
 
-      <div className="space-y-3">
-        {itemFields.map((field, index) => (
-          <PurchaseOrderLine
-            key={field.id}
-            index={index}
-            onRemove={() => removeItem(index)}
-          />
+      {/* The reference's toolbar strip above the grid. */}
+      <div className="flex flex-wrap items-center gap-1 rounded-lg border bg-muted/30 px-2 py-1">
+        <Button type="button" variant="ghost" size="sm" onClick={addLine}>
+          <Plus className="size-3.5 text-primary" /> New
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          disabled={selected === null}
+          onClick={deleteLine}
+        >
+          <X className="size-3.5 text-destructive" /> Delete
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          disabled
+          title="Save the order first"
+        >
+          <Scissors className="size-3.5" /> Sawing specifications
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          disabled
+          title="Save the order first"
+        >
+          <Calculator className="size-3.5" /> Calculate
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          disabled
+          title="Save the order first"
+        >
+          <BellRing className="size-3.5" /> Pre-notify
+        </Button>
+        <span className="mx-1 h-5 border-l" />
+        {OPTION_SHORTCUTS.map((option) => (
+          <Button
+            key={option}
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled
+            className="h-7 px-2 text-xs"
+            title="Options are added to a saved order's lines"
+          >
+            {option}
+          </Button>
         ))}
       </div>
 
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        onClick={() => appendItem(EMPTY_ITEM)}
-      >
-        <Plus className="mr-1 size-3.5" /> Add line
-      </Button>
+      <div className="overflow-x-auto rounded-lg border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="text-right">Code</TableHead>
+              <TableHead>For line</TableHead>
+              <TableHead>Delivery date</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Product</TableHead>
+              <TableHead>Description</TableHead>
+              <TableHead>Category</TableHead>
+              <TableHead>Quality</TableHead>
+              <TableHead className="text-right">Length</TableHead>
+              <TableHead className="text-right">Width</TableHead>
+              <TableHead className="text-right">Thick.</TableHead>
+              <TableHead className="text-right">Qty (p)</TableHead>
+              <TableHead>U</TableHead>
+              <TableHead className="text-right">Kg (p)</TableHead>
+              <TableHead className="text-right">M1 (p)</TableHead>
+              <TableHead className="text-right">Net price</TableHead>
+              <TableHead>U</TableHead>
+              <TableHead className="text-right">Amount</TableHead>
+              <TableHead className="text-right">Kg (a)</TableHead>
+              <TableHead>Type</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {itemFields.map((field, index) => (
+              <PurchaseOrderLineRow
+                key={field.id}
+                index={index}
+                selected={selected === index}
+                onSelect={() => setSelected(index)}
+              />
+            ))}
+            {itemFields.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={20} className="text-muted-foreground">
+                  No lines. Press New to add one.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
     </section>
   );
 };

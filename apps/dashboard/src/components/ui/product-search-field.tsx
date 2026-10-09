@@ -33,6 +33,8 @@ export type ProductChoice = {
   pieceWeightKg: number | null;
   /** The article's own purchase unit — the reference's `Per`, usually `TN`. */
   purchasingUnit: string | null;
+  /** What the article is counted in — the line's `U`, `ST` for a plate. */
+  unit: string | null;
 };
 
 type Props = {
@@ -126,6 +128,9 @@ export const ProductSearchField = ({
             thicknessMm: row.thicknessMm,
             pieceWeightKg: row.pieceWeightKg,
             purchasingUnit: row.purchasingUnit,
+            // The article's own unit, not the lot's: a plate stocked by the
+            // kilo is still ordered by the piece.
+            unit: row.articleUnit ?? row.unit,
           });
           setOpen(false);
         }}

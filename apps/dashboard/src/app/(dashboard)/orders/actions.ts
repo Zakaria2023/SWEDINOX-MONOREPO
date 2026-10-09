@@ -61,8 +61,11 @@ import {
 import { checkCredit } from "@/lib/server/credit-control";
 import {
   findSellableStock,
+  findStockWindow,
   StockSearchFilters,
   StockSearchResult,
+  StockWindowFilters,
+  StockWindowResult,
 } from "@/lib/server/stock-search";
 import { exportRows } from "@/lib/server/excel";
 import { writeSystemLog } from "@/lib/server/system-log";
@@ -1538,4 +1541,12 @@ export const searchSellableStock = async (
 ): Promise<StockSearchResult> => {
   await requireAuth();
   return findSellableStock(filters);
+};
+
+/** The `Stock` window: the article grid and the chosen tab's lots. */
+export const searchStockWindow = async (
+  filters: StockWindowFilters,
+): Promise<StockWindowResult> => {
+  await requireAuth();
+  return findStockWindow(filters);
 };

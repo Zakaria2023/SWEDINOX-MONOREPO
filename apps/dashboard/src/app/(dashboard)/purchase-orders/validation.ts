@@ -35,6 +35,10 @@ export const purchaseOrderItemSchema = z.object({
   // what size it ordered cannot check what turned up against it. The stock
   // search dialog hands these over when somebody picks the product.
   productLabel: z.string().optional(),
+  /** The reference's Description: the name with the size appended. */
+  description: z.string().optional(),
+  /** The article's counting unit — the line's `U`, `ST` for a plate. */
+  unit: z.string().optional(),
   qualityCode: z.string().optional(),
   lengthMm: z.string().optional(),
   widthMm: z.string().optional(),
@@ -119,21 +123,8 @@ export const DEFAULT_PURCHASE_ORDER: PurchaseOrderFormValues = {
   ourReference: "",
   orderCategory: "",
 
-  items: [
-    {
-      productUuid: "",
-      quantity: "",
-      netPrice: "",
-      priceUnit: "",
-      sourceType: "",
-      productLabel: "",
-      qualityCode: "",
-      lengthMm: "",
-      widthMm: "",
-      thicknessMm: "",
-      pieceWeightKg: "",
-    },
-  ],
+  // `0 lines` on a blank order; `New` adds the first one (9-10-2026).
+  items: [],
 
   // A blank form in the reference reads `Materials`, weight type `-leeg-` and
   // `Overlength` ticked (9-10-2026).

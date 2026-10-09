@@ -9,6 +9,7 @@ import { Stock } from "@/db/schema/stock";
 import { Warehouses } from "@/db/schema/warehouses";
 import {
   articlePieceWeightKg,
+  inferArticleQuality,
   NON_SELLABLE_LOCATION_TYPES,
   toDateString,
 } from "@/lib/helpers";
@@ -75,11 +76,32 @@ export type StockSearchFilters = {
   productCode?: string | null;
   searchCode?: string | null;
   quality?: string | null;
+  /**
+   * `From` of each dimension. Alone it means "about this size" and the margin
+   * is applied either side of it; with a `To` it is the bottom of a range.
+   */
   lengthMm?: number | null;
   widthMm?: number | null;
   thicknessMm?: number | null;
+  /** `Until and incl.` of each dimension — the reference's `Tot en met`. */
+  lengthMmTo?: number | null;
+  widthMmTo?: number | null;
+  thicknessMmTo?: number | null;
   /** The reference offers 5 % per dimension and defaults to it. */
   marginPercent?: number | null;
+  /** A dimension's own margin, when it differs from the one above. */
+  lengthMarginPercent?: number | null;
+  widthMarginPercent?: number | null;
+  thicknessMarginPercent?: number | null;
+  /** The reference's `Productgroep` dropdown. */
+  productGroupUuid?: string | null;
+  /**
+   * The reference's `Bewerking` dropdown: the processing the metal carries.
+   * Matched on what a lot or an incoming line says it has; the article list
+   * keeps its options as a list whose shape the reference never showed us
+   * filtering on, so a catalogue row is not narrowed by it.
+   */
+  option?: string | null;
   /**
    * 🔴 The reference's `Only products with available stock`, and it does **not**
    * mean what it says. It was ticked on 29-9-2026 while two of the four rows
@@ -117,6 +139,10 @@ export type StockSearchVariant = {
   pieceWeightKg: number | null;
   /** The article's own purchase unit, which a buying line's `Per` defaults to. */
   purchasingUnit: string | null;
+  /** What the quantities are counted in — the reference prints `300 ST`. */
+  unit: string | null;
+  /** The article's own counting unit — what a new line is ordered in. */
+  articleUnit: string | null;
   technical: number;
   reserved: number;
   available: number;
@@ -148,6 +174,10 @@ export type StockSearchLot = {
   quantity: number;
   reserved: number;
   available: number;
+  /** The lot's own unit, printed beside every quantity. */
+  unit: string | null;
+  /** The article's own counting unit — what a new line is ordered in. */
+  articleUnit: string | null;
   quantityKg: number;
   /** One piece's weight, so a line can show `Kg(p)` the moment it is picked. */
   pieceWeightKg: number | null;
@@ -187,14 +217,30 @@ const withinMargin = (
   column: MySqlColumn,
   value: number | null | undefined,
   marginPercent: number,
+  to?: number | null,
 ): SQL | undefined => {
-  if (!value || value <= 0) {
+  const from = value && value > 0 ? value : null;
+  const until = to && to > 0 ? to : null;
+  if (from === null && until === null) {
     return undefined;
   }
-  const slack = (value * marginPercent) / 100;
+  // `From` alone is "about this size", so the margin sits either side of it;
+  // a range stretches by its margin at both ends — `From 2000 To 3000` at 5 %
+  // takes 1900 to 3150.
+  if (from !== null && until === null) {
+    const slack = (from * marginPercent) / 100;
+    return and(
+      gte(column, String(from - slack)),
+      lte(column, String(from + slack)),
+    );
+  }
   return and(
-    gte(column, String(value - slack)),
-    lte(column, String(value + slack)),
+    from === null
+      ? undefined
+      : gte(column, String(from - (from * marginPercent) / 100)),
+    until === null
+      ? undefined
+      : lte(column, String(until + (until * marginPercent) / 100)),
   );
 };
 
@@ -202,6 +248,9 @@ export const findSellableStock = async (
   filters: StockSearchFilters,
 ): Promise<StockSearchResult> => {
   const margin = filters.marginPercent ?? 5;
+  const lengthMargin = filters.lengthMarginPercent ?? margin;
+  const widthMargin = filters.widthMarginPercent ?? margin;
+  const thicknessMargin = filters.thicknessMarginPercent ?? margin;
   const source = filters.source ?? "stock";
 
   const text = (value: string | null | undefined) =>
@@ -210,6 +259,8 @@ export const findSellableStock = async (
   const productCode = text(filters.productCode);
   const searchCode = text(filters.searchCode);
   const quality = text(filters.quality);
+  const option = text(filters.option);
+  const productGroup = filters.productGroupUuid || null;
 
   // Neither box or both boxes means everything, which is how the reference
   // opens: a 2nd-choice lot is a normal candidate until somebody says otherwise.
@@ -244,8 +295,15 @@ export const findSellableStock = async (
         lengthMm: Stock.lengthMm,
         widthMm: Stock.widthMm,
         thicknessMm: Stock.thicknessMm,
+        // The article's own, for a lot that was booked in without saying.
+        articleQuality: Products.featuresQuality,
+        articleLength: Products.length,
+        articleWidth: Products.widthDiameter,
+        articleThickness: Products.thickness,
         quantity: Stock.quantity,
         reserved: Stock.reservedQuantity,
+        unit: Stock.unit,
+        articleUnit: Products.stockUnit,
         quantityKg: Stock.quantityKg,
         valuationPrice: Stock.valuationPrice,
         purchasingUnit: Products.purchasingUnit,
@@ -278,9 +336,28 @@ export const findSellableStock = async (
           productCode ? like(Products.productCode, productCode) : undefined,
           searchCode ? like(Products.searchCode1, searchCode) : undefined,
           quality ? like(Stock.quality, quality) : undefined,
-          withinMargin(Stock.lengthMm, filters.lengthMm, margin),
-          withinMargin(Stock.widthMm, filters.widthMm, margin),
-          withinMargin(Stock.thicknessMm, filters.thicknessMm, margin),
+          option ? like(Stock.options, option) : undefined,
+          productGroup
+            ? eq(Products.productGroupUuid, productGroup)
+            : undefined,
+          withinMargin(
+            Stock.lengthMm,
+            filters.lengthMm,
+            lengthMargin,
+            filters.lengthMmTo,
+          ),
+          withinMargin(
+            Stock.widthMm,
+            filters.widthMm,
+            widthMargin,
+            filters.widthMmTo,
+          ),
+          withinMargin(
+            Stock.thicknessMm,
+            filters.thicknessMm,
+            thicknessMargin,
+            filters.thicknessMmTo,
+          ),
           filters.onlyWithPhysicalStock === false
             ? undefined
             : ne(Stock.quantity, "0"),
@@ -293,8 +370,27 @@ export const findSellableStock = async (
     return rows.map((row) => {
       const quantity = Number(row.quantity ?? 0);
       const quantityKg = Number(row.quantityKg ?? 0);
+      const {
+        articleQuality,
+        articleLength,
+        articleWidth,
+        articleThickness,
+        ...lot
+      } = row;
+      const mm = (value: string | null) =>
+        value === null ? null : Math.round(Number(value));
       return {
-        ...row,
+        ...lot,
+        // A lot that was booked in without its own quality or size is still
+        // the article it is: the reference's grid prints `304L2B` and
+        // `2000 × 1000 × 2` off the article where the lot says nothing.
+        quality:
+          lot.quality ??
+          articleQuality ??
+          inferArticleQuality(lot.productCode, lot.productName),
+        lengthMm: lot.lengthMm ?? mm(articleLength),
+        widthMm: lot.widthMm ?? mm(articleWidth),
+        thicknessMm: lot.thicknessMm ?? articleThickness,
         quantity,
         reserved: Number(row.reserved ?? 0),
         available: quantity - Number(row.reserved ?? 0),
@@ -327,6 +423,8 @@ export const findSellableStock = async (
         widthMm: PurchaseOrderItems.widthMm,
         thicknessMm: PurchaseOrderItems.thicknessMm,
         quantity: outstanding,
+        unit: PurchaseOrderItems.unit,
+        articleUnit: Products.stockUnit,
         quantityKg: PurchaseOrderItems.kgPurchased,
         valuationPrice: PurchaseOrderItems.netPrice,
         purchaseOrderId: PurchaseOrders.id,
@@ -349,12 +447,27 @@ export const findSellableStock = async (
           productCode ? like(Products.productCode, productCode) : undefined,
           searchCode ? like(Products.searchCode1, searchCode) : undefined,
           quality ? like(PurchaseOrderItems.qualityCode, quality) : undefined,
-          withinMargin(PurchaseOrderItems.lengthMm, filters.lengthMm, margin),
-          withinMargin(PurchaseOrderItems.widthMm, filters.widthMm, margin),
+          option ? like(PurchaseOrderItems.options, option) : undefined,
+          productGroup
+            ? eq(Products.productGroupUuid, productGroup)
+            : undefined,
+          withinMargin(
+            PurchaseOrderItems.lengthMm,
+            filters.lengthMm,
+            lengthMargin,
+            filters.lengthMmTo,
+          ),
+          withinMargin(
+            PurchaseOrderItems.widthMm,
+            filters.widthMm,
+            widthMargin,
+            filters.widthMmTo,
+          ),
           withinMargin(
             PurchaseOrderItems.thicknessMm,
             filters.thicknessMm,
-            margin,
+            thicknessMargin,
+            filters.thicknessMmTo,
           ),
         ),
       )
@@ -367,7 +480,8 @@ export const findSellableStock = async (
       productCode: row.productCode,
       productName: row.productName,
       locationName: null,
-      quality: row.quality,
+      quality:
+        row.quality ?? inferArticleQuality(row.productCode, row.productName),
       charge: null,
       internalCharge: null,
       internalBatch: null,
@@ -383,6 +497,8 @@ export const findSellableStock = async (
       // reading it back from here would count the same commitment twice.
       reserved: 0,
       available: Number(row.quantity ?? 0),
+      unit: row.unit,
+      articleUnit: row.articleUnit,
       quantityKg: Number(row.quantityKg ?? 0),
       // The line it is coming in on already states its weight; one piece is
       // that weight over the pieces still outstanding.
@@ -434,6 +550,7 @@ export const findSellableStock = async (
         theoreticalWeight: Products.theoreticalWeight,
         weightUnit: Products.weightUnit,
         purchasingUnit: Products.purchasingUnit,
+        stockUnit: Products.stockUnit,
       })
       .from(Products)
       .where(
@@ -441,9 +558,27 @@ export const findSellableStock = async (
           productCode ? like(Products.productCode, productCode) : undefined,
           searchCode ? like(Products.searchCode1, searchCode) : undefined,
           quality ? like(Products.featuresQuality, quality) : undefined,
-          withinMargin(Products.length, filters.lengthMm, margin),
-          withinMargin(Products.widthDiameter, filters.widthMm, margin),
-          withinMargin(Products.thickness, filters.thicknessMm, margin),
+          productGroup
+            ? eq(Products.productGroupUuid, productGroup)
+            : undefined,
+          withinMargin(
+            Products.length,
+            filters.lengthMm,
+            lengthMargin,
+            filters.lengthMmTo,
+          ),
+          withinMargin(
+            Products.widthDiameter,
+            filters.widthMm,
+            widthMargin,
+            filters.widthMmTo,
+          ),
+          withinMargin(
+            Products.thickness,
+            filters.thicknessMm,
+            thicknessMargin,
+            filters.thicknessMmTo,
+          ),
         ),
       )
       .orderBy(asc(Products.productCode))
@@ -455,7 +590,8 @@ export const findSellableStock = async (
       productCode: row.productCode,
       productName: row.productName,
       locationName: null,
-      quality: row.quality,
+      quality:
+        row.quality ?? inferArticleQuality(row.productCode, row.productName),
       charge: null,
       internalCharge: null,
       internalBatch: null,
@@ -468,6 +604,8 @@ export const findSellableStock = async (
       quantity: 0,
       reserved: 0,
       available: 0,
+      unit: row.stockUnit,
+      articleUnit: row.stockUnit,
       quantityKg: 0,
       pieceWeightKg: articlePieceWeightKg(row),
       purchasingUnit: row.purchasingUnit,
@@ -529,6 +667,8 @@ export const findSellableStock = async (
       thicknessMm: lot.thicknessMm,
       pieceWeightKg: lot.pieceWeightKg,
       purchasingUnit: lot.purchasingUnit,
+      unit: lot.unit,
+      articleUnit: lot.articleUnit,
       technical: lot.quantity,
       reserved: lot.reserved,
       available: lot.available,
@@ -551,5 +691,77 @@ export const findSellableStock = async (
     ),
     lots,
     truncated,
+  };
+};
+
+/**
+ * The lower grid's tabs — the reference's `Voorraad` · `Inkoop` · `Interne
+ * productie`. The third has never been seen holding anything and nothing here
+ * produces rows for it yet, so it is offered and empty.
+ */
+export type StockWindowTab = "stock" | "purchase" | "internal_production";
+
+export type StockWindowFilters = StockSearchFilters & {
+  tab: StockWindowTab;
+  /**
+   * The reference's `Alleen artikelen met technische voorraad`, unticked by
+   * default: the article grid lists the catalogue, on the shelf or not, until
+   * somebody narrows it to what is physically there.
+   */
+  onlyWithTechnicalStock?: boolean;
+};
+
+export type StockWindowResult = {
+  /** One row per article — or per article and quality where lots exist. */
+  articles: StockSearchVariant[];
+  /** The lots of the chosen tab, behind the articles above. */
+  lots: StockSearchLot[];
+  truncated: boolean;
+};
+
+/**
+ * The `Voorraad` window as the reference draws it (captured 9-10-2026 from a
+ * purchase order, and 21-9-2026 from a sales order — it is one window): the
+ * article list above, grouped by quality where the shelf holds the article in
+ * several, and the chosen tab's lots below. Two reads rather than one join,
+ * because the article grid is the catalogue and the lot grid is whichever
+ * supply the tab names; this database caps connections, so they run in turn.
+ */
+export const findStockWindow = async (
+  filters: StockWindowFilters,
+): Promise<StockWindowResult> => {
+  const articles = await findSellableStock({
+    ...filters,
+    source: "catalogue",
+    onlyWithPhysicalStock: false,
+  });
+  const supply =
+    filters.tab === "internal_production"
+      ? { variants: [], lots: [], truncated: false }
+      : await findSellableStock({
+          ...filters,
+          source: filters.tab,
+          onlyWithPhysicalStock: filters.tab === "stock",
+        });
+
+  // An article the tab holds is shown with that supply's figures, one row per
+  // quality and category; an article it does not hold is one row of zeros.
+  const held = new Set(supply.variants.map((variant) => variant.productUuid));
+  const rows = [
+    ...supply.variants,
+    ...articles.variants.filter((variant) => !held.has(variant.productUuid)),
+  ];
+  const kept = filters.onlyWithTechnicalStock
+    ? rows.filter((row) => row.technical > 0)
+    : rows;
+
+  return {
+    articles: kept.sort(
+      (a, b) =>
+        b.available - a.available ||
+        (a.productCode ?? "").localeCompare(b.productCode ?? ""),
+    ),
+    lots: supply.lots,
+    truncated: articles.truncated || supply.truncated,
   };
 };

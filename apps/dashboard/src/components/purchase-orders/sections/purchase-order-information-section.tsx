@@ -16,8 +16,14 @@ type Props = {
   isLoadingSupplierData: boolean;
   handleSupplierChange: (uuid: string) => void;
   handleAgentChange: (uuid: string) => void;
+  /** Greyed once a line exists, as the reference greys it. */
+  locked: boolean;
 };
 
+/**
+ * The reference's header, left block: `Supplier · Agent · Contact + Reference
+ * · Purchaser · Order category`, in that order.
+ */
 export const PurchaseOrderInformationSection = ({
   supplierOptions,
   agentOptions,
@@ -26,6 +32,7 @@ export const PurchaseOrderInformationSection = ({
   isLoadingSupplierData,
   handleSupplierChange,
   handleAgentChange,
+  locked,
 }: Props) => {
   const {
     register,
@@ -34,86 +41,76 @@ export const PurchaseOrderInformationSection = ({
   } = useFormContext<PurchaseOrderFormValues>();
 
   return (
-    <section className="space-y-4">
-      <h2 className="border-b pb-2 text-base font-semibold">
-        Purchase Order Information
-      </h2>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <FormLabel htmlFor="supplierUuid" required>
-            Supplier
-            {isLoadingSupplierData && (
-              <span className="ml-2 text-xs font-normal text-muted-foreground">
-                Loading...
-              </span>
-            )}
-          </FormLabel>
-          <Controller
-            control={control}
-            name="supplierUuid"
-            render={({ field }) => (
-              <SearchSelect
-                id="supplierUuid"
-                value={field.value || ""}
-                options={supplierOptions}
-                onValueChange={handleSupplierChange}
-                invalid={!!errors.supplierUuid}
-              />
-            )}
-          />
-          <FormFieldError message={errors.supplierUuid?.message} />
-        </div>
-
-        <div>
-          <FormLabel htmlFor="agentUuid">Agent</FormLabel>
-          <Controller
-            control={control}
-            name="agentUuid"
-            render={({ field }) => (
-              <SearchSelect
-                id="agentUuid"
-                value={field.value || ""}
-                options={agentOptions}
-                onValueChange={handleAgentChange}
-              />
-            )}
-          />
-        </div>
-
-        <FormSelectField
+    <section className="grid grid-cols-2 gap-x-6 gap-y-3">
+      <div>
+        <FormLabel htmlFor="supplierUuid" required>
+          Supplier
+          {isLoadingSupplierData && (
+            <span className="ml-2 text-xs font-normal text-muted-foreground">
+              Loading...
+            </span>
+          )}
+        </FormLabel>
+        <Controller
           control={control}
-          id="contactUuid"
-          name="contactUuid"
-          label="Contact"
-          options={contactOptions}
-          emptyValue=""
-          disabled={contactOptions.length <= 1}
+          name="supplierUuid"
+          render={({ field }) => (
+            <SearchSelect
+              id="supplierUuid"
+              value={field.value || ""}
+              options={supplierOptions}
+              onValueChange={handleSupplierChange}
+              invalid={!!errors.supplierUuid}
+              disabled={locked}
+            />
+          )}
         />
+        <FormFieldError message={errors.supplierUuid?.message} />
+      </div>
 
-        <FormSelectField
+      <div>
+        <FormLabel htmlFor="agentUuid">Agent</FormLabel>
+        <Controller
           control={control}
-          id="purchaser"
-          name="purchaser"
-          label="Purchaser"
-          options={purchaserOptions}
-          emptyValue=""
+          name="agentUuid"
+          render={({ field }) => (
+            <SearchSelect
+              id="agentUuid"
+              value={field.value || ""}
+              options={agentOptions}
+              onValueChange={handleAgentChange}
+            />
+          )}
         />
+      </div>
 
-        <div>
-          <FormLabel htmlFor="reference">Reference</FormLabel>
-          <Input id="reference" {...register("reference")} />
-        </div>
+      <FormSelectField
+        control={control}
+        id="contactUuid"
+        name="contactUuid"
+        label="Contact"
+        options={contactOptions}
+        emptyValue=""
+        disabled={contactOptions.length <= 1}
+      />
 
-        <div>
-          <FormLabel htmlFor="ourReference">Our reference</FormLabel>
-          <Input id="ourReference" {...register("ourReference")} />
-        </div>
+      <div>
+        <FormLabel htmlFor="reference">Reference</FormLabel>
+        <Input id="reference" {...register("reference")} />
+      </div>
 
-        <div>
-          <FormLabel htmlFor="orderCategory">Order Category</FormLabel>
-          <Input id="orderCategory" {...register("orderCategory")} />
-        </div>
+      <FormSelectField
+        control={control}
+        id="purchaser"
+        name="purchaser"
+        label="Purchaser"
+        options={purchaserOptions}
+        emptyValue=""
+      />
+
+      <div>
+        <FormLabel htmlFor="orderCategory">Order category</FormLabel>
+        <Input id="orderCategory" {...register("orderCategory")} />
       </div>
     </section>
   );

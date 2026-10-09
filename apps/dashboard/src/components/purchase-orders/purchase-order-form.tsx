@@ -5,6 +5,7 @@ import { usePurchaseOrderSubmit } from "@/app/(dashboard)/purchase-orders/use-pu
 import { YardDeliveryAddress } from "@/app/(dashboard)/purchase-orders/actions";
 import { PurchaseOrderFormValues } from "@/app/(dashboard)/purchase-orders/validation";
 import { CompanyOption } from "@/app/(dashboard)/companies/actions";
+import { CollapsibleSection } from "@/components/ui/collapsible-section";
 import { FormActions } from "@/components/ui/form-actions";
 import { FormError } from "@/components/ui/form-error";
 import { PurchaseOrderInformationSection } from "./sections/purchase-order-information-section";
@@ -13,6 +14,12 @@ import { PurchaseOrderTypeSection } from "./sections/purchase-order-type-section
 import { PurchaseOrderFinancesSection } from "./sections/purchase-order-finances-section";
 import { PurchaseOrderDeliverySection } from "./sections/purchase-order-delivery-section";
 import { PurchaseOrderLogisticsSection } from "./sections/purchase-order-logistics-section";
+import {
+  NEW_ORDER_PANELS_AFTER_LOGISTICS,
+  NEW_ORDER_PANELS_BEFORE_LOGISTICS,
+  NewOrderPanel,
+  PurchaseOrderNewPanels,
+} from "./purchase-order-new-panels";
 import { PurchaseOrderRemarksSection } from "./sections/purchase-order-remarks-section";
 import {
   amountForWeight,
@@ -20,9 +27,41 @@ import {
   formatMoney,
   formatNumber,
   todayDateString,
+  VAT_CODE_RATE,
 } from "@/lib/helpers";
 import { PURCHASE_ORDER_STATUS_LABELS } from "@/lib/labels";
 import { ClerkUserOption } from "@/lib/server/clerk";
+
+// The reference's `Workorders` block — three grids, empty on a new order.
+const WORK_ORDER_PANELS: NewOrderPanel[] = [
+  {
+    title: "Warehouse workorders",
+    columns: [
+      "Number",
+      "Planned",
+      "Type",
+      "Warehouse",
+      "Status",
+      "Lines",
+      "Qty planned",
+      "Qty actual",
+      "Kg planned",
+      "Kg actual",
+      "Created",
+    ],
+    empty: "None — raised once the order is saved and released.",
+  },
+  {
+    title: "Production workorders",
+    columns: ["Number", "Machine", "Option", "Planned date", "Status"],
+    empty: "None — raised once the order is saved and released.",
+  },
+  {
+    title: "Transport workorders",
+    columns: ["Trip", "Date", "Vehicle", "Status", "Bill of lading"],
+    empty: "None — raised once the order is saved and released.",
+  },
+];
 
 type Props = {
   companies: CompanyOption[];
@@ -39,8 +78,10 @@ type SummaryProps = {
  * The reference's `Summary` block, live while the order is typed: `Materials`
  * · `Options` · `Surcharges` · `Tot. excl. VAT` · `VAT` · `Tot. incl. VAT` ·
  * `Total weight`. Options and surcharges are added to a saved order, so here
- * they read € 0,00; VAT is not struck on a purchase order (the supplier's
- * invoice does that), which is why the reference prints € 0,00 for it.
+ * they read € 0,00.
+ *
+ * VAT is struck at the standard rate: 10 plates at € 2.500/TN came to
+ * € 785,00, VAT € 164,85, € 949,85 in all (404355, 9-10-2026).
  */
 const PurchaseOrderSummary = ({ items }: SummaryProps) => {
   const totals = items.reduce(
@@ -62,23 +103,29 @@ const PurchaseOrderSummary = ({ items }: SummaryProps) => {
     },
     { materials: 0, weightKg: 0 },
   );
+  const vat = (totals.materials * VAT_CODE_RATE.vat_high_21) / 100;
 
-  const rows: Array<[string, string]> = [
+  const rows: Array<[string, string, boolean?]> = [
     ["Materials", formatMoney(totals.materials)],
     ["Options", formatMoney(0)],
-    ["Surcharges", formatMoney(0)],
+    ["Surcharges", formatMoney(0), true],
     ["Tot. excl. VAT", formatMoney(totals.materials)],
-    ["VAT", formatMoney(0)],
-    ["Tot. incl. VAT", formatMoney(totals.materials)],
+    ["VAT", formatMoney(vat), true],
+    ["Tot. incl. VAT", formatMoney(totals.materials + vat)],
     ["Total weight", `${formatNumber(totals.weightKg)} Kg`],
   ];
 
   return (
     <section className="space-y-2">
-      <h2 className="border-b pb-2 text-base font-semibold">Summary</h2>
-      <dl className="grid max-w-sm grid-cols-[1fr_auto] gap-x-6 gap-y-1 text-sm">
-        {rows.map(([label, value]) => (
-          <div key={label} className="contents">
+      <h2 className="text-sm font-semibold">Summary</h2>
+      <dl className="grid grid-cols-[1fr_auto] gap-x-6 gap-y-1 text-sm">
+        <dt />
+        <dd className="text-right text-xs text-muted-foreground">Revenue</dd>
+        {rows.map(([label, value, rule]) => (
+          <div
+            key={label}
+            className={rule ? "contents *:border-b *:pb-1" : "contents"}
+          >
             <dt className="text-muted-foreground">{label}</dt>
             <dd className="text-right tabular-nums">{value}</dd>
           </div>
@@ -126,6 +173,11 @@ export const PurchaseOrderForm = ({
   });
 
   const items = useWatch({ control: form.control, name: "items" });
+  // Once a line exists the reference greys the supplier, the order type, the
+  // weight type, Overlength and the delivery date (404355, 9-10-2026): a line
+  // was priced and weighed on them, so they are no longer the header's to
+  // change.
+  const locked = itemFields.length > 0;
 
   // The reference's banner: `Purchase order 404355, Holland Stainless Int,
   // Tel: 06 5065 6338, Fax: - Provisional`. The number is handed out on save
@@ -142,44 +194,60 @@ export const PurchaseOrderForm = ({
 
   return (
     <FormProvider {...form}>
-      <form onSubmit={onSubmit} className="space-y-8">
+      <form onSubmit={onSubmit} className="space-y-6">
         <FormError>{state.error}</FormError>
 
-        <div className="space-y-1">
-          <h1 className="text-lg font-semibold">
-            {banner} - {PURCHASE_ORDER_STATUS_LABELS.provisional}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Creation date: {formatDateValue(todayDateString())}
-          </p>
-        </div>
+        {/* The reference's header: the document on the left, its type and
+            summary on the right. */}
+        <section className="space-y-4 rounded-lg border p-4">
+          <div className="space-y-1">
+            <h1 className="text-lg font-semibold">
+              {banner} - {PURCHASE_ORDER_STATUS_LABELS.provisional}
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Creation date: {formatDateValue(todayDateString())}
+            </p>
+          </div>
 
-        <PurchaseOrderInformationSection
-          supplierOptions={supplierOptions}
-          agentOptions={agentOptions}
-          contactOptions={contactOptions}
-          purchaserOptions={purchaserOptions}
-          isLoadingSupplierData={isLoadingSupplierData}
-          handleSupplierChange={handleSupplierChange}
-          handleAgentChange={handleAgentChange}
-        />
+          <div className="grid gap-x-10 gap-y-6 lg:grid-cols-[3fr_2fr]">
+            <div className="space-y-6">
+              <PurchaseOrderInformationSection
+                supplierOptions={supplierOptions}
+                agentOptions={agentOptions}
+                contactOptions={contactOptions}
+                purchaserOptions={purchaserOptions}
+                isLoadingSupplierData={isLoadingSupplierData}
+                handleSupplierChange={handleSupplierChange}
+                handleAgentChange={handleAgentChange}
+                locked={locked}
+              />
+              <PurchaseOrderFinancesSection
+                paymentTermOptions={paymentTermOptions}
+              />
+              <PurchaseOrderDeliverySection
+                arrangeTransport={arrangeTransport}
+                deliveryTermOptions={deliveryTermOptions}
+                supplierAddressOptions={supplierAddressOptions}
+                yardAddress={yardAddress}
+                handleDeliveryDateChange={handleDeliveryDateChange}
+                locked={locked}
+              />
+            </div>
+            <div className="space-y-8">
+              <PurchaseOrderTypeSection
+                purchaseOrderTypeOptions={purchaseOrderTypeOptions}
+                weightTypeOptions={weightTypeOptions}
+                locked={locked}
+              />
+              <PurchaseOrderSummary items={items ?? []} />
+            </div>
+          </div>
+        </section>
 
-        <PurchaseOrderTypeSection
-          purchaseOrderTypeOptions={purchaseOrderTypeOptions}
-          weightTypeOptions={weightTypeOptions}
-        />
-
-        <PurchaseOrderFinancesSection paymentTermOptions={paymentTermOptions} />
-
-        <PurchaseOrderDeliverySection
-          arrangeTransport={arrangeTransport}
-          deliveryTermOptions={deliveryTermOptions}
-          supplierAddressOptions={supplierAddressOptions}
-          yardAddress={yardAddress}
-          handleDeliveryDateChange={handleDeliveryDateChange}
-        />
-
-        <PurchaseOrderSummary items={items ?? []} />
+        <section className="space-y-2">
+          <h2 className="border-b pb-2 text-base font-semibold">Workorders</h2>
+          <PurchaseOrderNewPanels panels={WORK_ORDER_PANELS} />
+        </section>
 
         <PurchaseOrderItemsSection
           itemFields={itemFields}
@@ -187,7 +255,17 @@ export const PurchaseOrderForm = ({
           removeItem={removeItem}
         />
 
-        <PurchaseOrderLogisticsSection />
+        {/* Everything the reference stacks under the lines, in its order, empty
+            and with its actions greyed until the order exists. */}
+        <div className="space-y-2">
+          <PurchaseOrderNewPanels panels={NEW_ORDER_PANELS_BEFORE_LOGISTICS} />
+          <CollapsibleSection title="Logistics">
+            <div className="p-3">
+              <PurchaseOrderLogisticsSection />
+            </div>
+          </CollapsibleSection>
+          <PurchaseOrderNewPanels panels={NEW_ORDER_PANELS_AFTER_LOGISTICS} />
+        </div>
 
         <PurchaseOrderRemarksSection />
 

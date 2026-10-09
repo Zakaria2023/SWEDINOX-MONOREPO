@@ -4,75 +4,74 @@ import { Controller, useFormContext } from "react-hook-form";
 import { PurchaseOrderFormValues } from "@/app/(dashboard)/purchase-orders/validation";
 import { SelectOption } from "@/components/shadcn/select";
 import { FormSelectField } from "@/components/ui/form-select-field";
-import { FormCheckboxCard } from "@/components/ui/form-checkbox-card";
 
 type Props = {
   purchaseOrderTypeOptions: SelectOption[];
   weightTypeOptions: SelectOption[];
+  /** Greyed once a line exists, as the reference greys them. */
+  locked: boolean;
 };
 
+/**
+ * The reference's header, right block: `Purchase order type` — the type, the
+ * weight type, `Overlength`, the four sent-stamps and `Do not print prices`.
+ */
 export const PurchaseOrderTypeSection = ({
   purchaseOrderTypeOptions,
   weightTypeOptions,
+  locked,
 }: Props) => {
   const { register, control } = useFormContext<PurchaseOrderFormValues>();
 
   return (
-    <section className="space-y-4">
-      <h2 className="border-b pb-2 text-base font-semibold">
-        Purchase Order Type
-      </h2>
+    <section className="space-y-3">
+      <h2 className="text-sm font-semibold">Purchase order type</h2>
 
-      <div className="grid grid-cols-2 gap-4">
-        <FormSelectField
-          control={control}
-          id="purchaseOrderType"
-          name="purchaseOrderType"
-          label="Type"
-          options={purchaseOrderTypeOptions}
-          emptyValue=""
-        />
+      <FormSelectField
+        control={control}
+        id="purchaseOrderType"
+        name="purchaseOrderType"
+        label="Type"
+        options={purchaseOrderTypeOptions}
+        emptyValue=""
+        disabled={locked}
+      />
 
-        <FormSelectField
-          control={control}
-          id="weightType"
-          name="weightType"
-          label="Weight type"
-          options={weightTypeOptions}
-          emptyValue=""
-        />
-      </div>
+      <FormSelectField
+        control={control}
+        id="weightType"
+        name="weightType"
+        label="Weight type"
+        options={weightTypeOptions}
+        emptyValue=""
+        disabled={locked}
+      />
 
-      <div className="flex flex-wrap gap-4">
-        <Controller
-          control={control}
-          name="isOverlength"
-          render={({ field }) => (
-            <FormCheckboxCard
-              label="Overlength"
+      <Controller
+        control={control}
+        name="isOverlength"
+        render={({ field }) => (
+          <label
+            className={
+              locked
+                ? "flex items-center gap-2 text-sm text-muted-foreground"
+                : "flex cursor-pointer items-center gap-2 text-sm"
+            }
+          >
+            <input
+              type="checkbox"
+              disabled={locked}
               checked={field.value}
-              active={field.value}
               onChange={(e) => field.onChange(e.target.checked)}
             />
-          )}
-        />
-        <Controller
-          control={control}
-          name="doNotPrintPrices"
-          render={({ field }) => (
-            <FormCheckboxCard
-              label="Do not print prices"
-              checked={field.value}
-              active={field.value}
-              onChange={(e) => field.onChange(e.target.checked)}
-            />
-          )}
-        />
-      </div>
+            Overlength
+          </label>
+        )}
+      />
 
       {/* Stamps, not choices: the reference greys all four on a new order —
           printing, mailing and sending set them, nobody ticks them. */}
-      <div className="flex gap-6 text-muted-foreground">
+      <div className="space-y-1.5 border-t pt-3 text-muted-foreground">
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" disabled {...register("isPrinted")} />
           Printed
@@ -94,6 +93,11 @@ export const PurchaseOrderTypeSection = ({
           Message sent via StaalWeb
         </label>
       </div>
+
+      <label className="flex cursor-pointer items-center gap-2 text-sm">
+        <input type="checkbox" {...register("doNotPrintPrices")} />
+        Do not print prices
+      </label>
     </section>
   );
 };
