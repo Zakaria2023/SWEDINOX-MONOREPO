@@ -544,25 +544,48 @@ export const PurchaseOrderDetailView = ({
                   ) ?? null
                 }
               />
+              {/* 🔴 The reference's Receipts grid, column for column (404355,
+                  9-10-2026): Status · Delivery date · Delivery date (actual)
+                  · Bill of lading · Product · Length · Width · Thickness ·
+                  Kg(p) · Qty(p) · U(p) · Kg(a) · Qty(a) · U(a) · Transfer
+                  address · Transfer qty · Pre-announced delivery · Pre-notify
+                  code · Pre-reported by · Charge · Internal charge · Sheet
+                  number · EDI Charge · EDI Bundles · EDI Bill of lading · EDI
+                  Delivery date — then ours: Line · Line status · Confirmed ·
+                  Documents · Purchaser. */}
+              <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-right">Line</TableHead>
-                    <TableHead>Receipt date</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Delivery date</TableHead>
+                    <TableHead>Delivery date (actual)</TableHead>
+                    <TableHead>Bill of lading</TableHead>
                     <TableHead>Product</TableHead>
-                    <TableHead>Line status</TableHead>
-                    <TableHead>Receipt status</TableHead>
-                    <TableHead className="text-right">Qty (p)</TableHead>
-                    <TableHead className="text-right">Qty (a)</TableHead>
-                    <TableHead>U</TableHead>
+                    <TableHead className="text-right">Length</TableHead>
+                    <TableHead className="text-right">Width</TableHead>
+                    <TableHead className="text-right">Thickness</TableHead>
                     <TableHead className="text-right">Kg (p)</TableHead>
+                    <TableHead className="text-right">Qty (p)</TableHead>
+                    <TableHead>U (p)</TableHead>
                     <TableHead className="text-right">Kg (a)</TableHead>
-                    <TableHead className="text-right">Confirmed</TableHead>
-                    {/* The lot identity the reception carries. Held since the
-                        receipt chain was built and never shown, so a reception
-                        that knew its heat number looked like one that did not. */}
+                    <TableHead className="text-right">Qty (a)</TableHead>
+                    <TableHead>U (a)</TableHead>
+                    <TableHead>Transfer address</TableHead>
+                    <TableHead className="text-right">Transfer qty</TableHead>
+                    <TableHead>Pre-announced delivery</TableHead>
+                    <TableHead>Pre-notify code</TableHead>
+                    <TableHead>Pre-reported by</TableHead>
                     <TableHead>Charge</TableHead>
                     <TableHead>Internal charge</TableHead>
+                    <TableHead>Sheet number</TableHead>
+                    <TableHead>EDI Charge</TableHead>
+                    <TableHead className="text-right">EDI Bundles</TableHead>
+                    <TableHead>EDI Bill of lading</TableHead>
+                    <TableHead>EDI Delivery date</TableHead>
+                    <TableHead className="text-right">Line</TableHead>
+                    <TableHead>Line status</TableHead>
+                    <TableHead className="text-right">Confirmed</TableHead>
                     <TableHead>Documents</TableHead>
                     <TableHead>Purchaser</TableHead>
                   </TableRow>
@@ -577,16 +600,107 @@ export const PurchaseOrderDetailView = ({
                         receipt.uuid === selectedReceiptUuid && "bg-accent",
                       )}
                     >
-                      <TableCell className="text-right tabular-nums">
-                        {orDash(receipt.lineNumber)}
+                      {/* A badge with its proper label, as every other status
+                          on this screen carries. */}
+                      <TableCell>
+                        <StatusBadge
+                          value={receipt.receiptStatus}
+                          label={
+                            receipt.receiptStatus
+                              ? RECEIPT_STATUS_LABELS[receipt.receiptStatus]
+                              : null
+                          }
+                        />
                       </TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        {formatDateColumn(receipt.receiptDate)}
+                      {/* Planned off the order, actual off the lorry; the
+                          reference reads `1-1-0001` for an actual that has
+                          not happened, which prints here as a dash. */}
+                      <TableCell>
+                        {formatDateColumn(receipt.deliveryDatePlanned ?? receipt.receiptDate)}
                       </TableCell>
-                      <TableCell className="font-medium">
+                      <TableCell>
+                        {formatDateColumn(receipt.deliveryDateActual)}
+                      </TableCell>
+                      <TableCell>
+                        {orDash(receipt.billOfLading)}
+                      </TableCell>
+                      <TableCell className="font-medium whitespace-nowrap">
                         {[receipt.productCode, receipt.productName]
                           .filter(Boolean)
                           .join(" — ") || "—"}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {orDash(receipt.lengthMm)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {orDash(receipt.widthMm)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {receipt.thicknessMm === null ? "—" : formatNumber(Number(receipt.thicknessMm))}
+                      </TableCell>
+                      {/* What this reception expects, carried off the line it
+                          belongs to. Nothing has arrived until a lorry does, so
+                          `Kg(a)` beside it is 0 by design rather than by
+                          omission. */}
+                      <TableCell className="text-right tabular-nums">
+                        {formatNumber(Number(receipt.kgPlanned ?? 0))}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatNumber(Number(receipt.qtyPlanned ?? 0))}
+                      </TableCell>
+                      <TableCell>
+                        {orDash(receipt.unit ? receipt.unit.toUpperCase() : null)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatNumber(Number(receipt.kgActual ?? 0))}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatNumber(Number(receipt.qtyActual ?? 0))}
+                      </TableCell>
+                      <TableCell>
+                        {Number(receipt.qtyActual ?? 0) > 0 && receipt.unit ? receipt.unit.toUpperCase() : ""}
+                      </TableCell>
+                      {/* Transfers between affiliates are not made here; the two
+                          columns print as the reference prints them on an order
+                          that has none. */}
+                      <TableCell>
+                        
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        0
+                      </TableCell>
+                      <TableCell>
+                        {formatDateColumn(receipt.preAnnouncedDeliveryDate)}
+                      </TableCell>
+                      <TableCell>
+                        {orDash(receipt.preNotifyCode)}
+                      </TableCell>
+                      <TableCell>
+                        {orDash(receipt.preReportedBy)}
+                      </TableCell>
+                      <TableCell>
+                        {orDash(receipt.charge)}
+                      </TableCell>
+                      <TableCell>
+                        {orDash(receipt.internalCharge)}
+                      </TableCell>
+                      <TableCell>
+                        {orDash(receipt.sheetNumber)}
+                      </TableCell>
+                      <TableCell>
+                        {orDash(receipt.ediCharge)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {orDash(receipt.ediBundles)}
+                      </TableCell>
+                      <TableCell>
+                        {orDash(receipt.ediBillOfLading)}
+                      </TableCell>
+                      <TableCell>
+                        {formatDateColumn(receipt.ediDeliveryDate)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {orDash(receipt.lineNumber)}
                       </TableCell>
                       <TableCell>
                         <StatusBadge
@@ -598,45 +712,9 @@ export const PurchaseOrderDetailView = ({
                           }
                         />
                       </TableCell>
-                      {/* A badge with its proper label, as every other status
-                          on this screen carries — the raw enum value was
-                          printing through as `received`. */}
-                      <TableCell>
-                        <StatusBadge
-                          value={receipt.receiptStatus}
-                          label={
-                            receipt.receiptStatus
-                              ? RECEIPT_STATUS_LABELS[receipt.receiptStatus]
-                              : null
-                          }
-                        />
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {formatNumber(Number(receipt.qtyPlanned ?? 0))}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {formatNumber(Number(receipt.qtyActual ?? 0))}
-                      </TableCell>
-                      <TableCell>
-                        {orDash(
-                          receipt.unit ? receipt.unit.toUpperCase() : null,
-                        )}
-                      </TableCell>
-                      {/* What this reception expects, carried off the line it
-                          belongs to. Nothing has arrived until a lorry does, so
-                          `Kg(a)` beside it is 0 by design rather than by
-                          omission. */}
-                      <TableCell className="text-right tabular-nums">
-                        {formatNumber(Number(receipt.kgPlanned ?? 0))}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {formatNumber(Number(receipt.kgActual ?? 0))}
-                      </TableCell>
                       <TableCell className="text-right tabular-nums">
                         {formatNumber(Number(receipt.receivedQty ?? 0))}
                       </TableCell>
-                      <TableCell>{orDash(receipt.charge)}</TableCell>
-                      <TableCell>{orDash(receipt.internalCharge)}</TableCell>
                       {/* Set by `Batch registration` and by nothing else.
                           Worth a column because a waived reception quietly
                           disappears from the screens that chase paperwork. */}
@@ -645,11 +723,14 @@ export const PurchaseOrderDetailView = ({
                           ? "Obligation waived"
                           : "Required"}
                       </TableCell>
-                      <TableCell>{orDash(receipt.purchaser)}</TableCell>
+                      <TableCell>
+                        {orDash(receipt.purchaser)}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
+              </div>
             </div>
           )}
         </CollapsibleSection>

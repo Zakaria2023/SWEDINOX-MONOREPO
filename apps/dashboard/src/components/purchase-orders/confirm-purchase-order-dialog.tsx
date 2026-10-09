@@ -226,8 +226,46 @@ export const ConfirmPurchaseOrderDialog = ({
                     onValueChange={pickExisting}
                   />
                 </div>
+                {/* The chosen confirmation's own dates, read back as the
+                    reference shows them beside the picker. */}
+                <div>
+                  <FormLabel htmlFor="existingConfirmationDate">
+                    Confirmation date
+                  </FormLabel>
+                  <Input
+                    id="existingConfirmationDate"
+                    readOnly
+                    disabled={!changing}
+                    value={changing ? (watch("confirmationDate") ?? "") : ""}
+                  />
+                </div>
+                <div>
+                  <FormLabel htmlFor="existingConfirmedDeliveryDate">
+                    Confirmed delivery date
+                  </FormLabel>
+                  <Input
+                    id="existingConfirmedDeliveryDate"
+                    readOnly
+                    disabled={!changing}
+                    value={
+                      changing ? (watch("confirmedDeliveryDate") ?? "") : ""
+                    }
+                  />
+                </div>
               </div>
             </div>
+
+            {/* `Options` on the reference opens the line's options; they
+                are kept on the order's Options panel here. */}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled
+              title="Options are added on the order's Options panel"
+            >
+              Options
+            </Button>
 
             <Table>
               <TableHeader>
@@ -245,7 +283,12 @@ export const ConfirmPurchaseOrderDialog = ({
                   <TableHead className="text-right">Net price</TableHead>
                   <TableHead>Conf. No.</TableHead>
                   <TableHead>Delivery date</TableHead>
+                  {/* `Prod.Sup.` and `Doc. code` were empty on every line
+                      the reference showed; printed as it prints them. */}
+                  <TableHead>Prod. sup.</TableHead>
+                  <TableHead className="text-right">Order</TableHead>
                   <TableHead>Doc. supplier</TableHead>
+                  <TableHead>Doc. code</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -302,7 +345,12 @@ export const ConfirmPurchaseOrderDialog = ({
                         item.confirmedDeliveryDate ?? item.receiptDate,
                       )}
                     </TableCell>
+                    <TableCell>—</TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {purchaseOrderId}
+                    </TableCell>
                     <TableCell>{orDash(item.documentSupplier)}</TableCell>
+                    <TableCell>—</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

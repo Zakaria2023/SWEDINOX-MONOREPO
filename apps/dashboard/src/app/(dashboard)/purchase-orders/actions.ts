@@ -75,6 +75,7 @@ import {
   purchaseSourceTypeFor,
   isWeightPriceUnit,
   moneyString,
+  isoWeekOf,
   receptionActions,
   toDateString,
   todayDateString,
@@ -318,6 +319,17 @@ export type PurchaseReceiptDocument = {
   confirmationNumber: SelectPurchaseLineReceivals["confirmationNumber"];
   documentSupplier: SelectPurchaseLineReceivals["documentSupplier"];
   lengthMm: SelectPurchaseLineReceivals["lengthMm"];
+  // The rest of the reference's Receipts grid (404355, 9-10-2026): the two
+  // delivery dates, who called the delivery ahead, the mill's sheet number
+  // and the four EDI columns.
+  deliveryDatePlanned: SelectPurchaseLineReceivals["deliveryDatePlanned"];
+  deliveryDateActual: SelectPurchaseLineReceivals["deliveryDateActual"];
+  preReportedBy: SelectPurchaseLineReceivals["preReportedBy"];
+  sheetNumber: SelectPurchaseLineReceivals["sheetNumber"];
+  ediCharge: SelectPurchaseLineReceivals["ediCharge"];
+  ediBundles: SelectPurchaseLineReceivals["ediBundles"];
+  ediBillOfLading: SelectPurchaseLineReceivals["ediBillOfLading"];
+  ediDeliveryDate: SelectPurchaseLineReceivals["ediDeliveryDate"];
 };
 
 // A row of `Product Receipt Documents` (C19): a DoP, certificate or other
@@ -1092,6 +1104,14 @@ export const getPurchaseOrderDetail = async (
         confirmationNumber: PurchaseLineReceivals.confirmationNumber,
         documentSupplier: PurchaseLineReceivals.documentSupplier,
         lengthMm: PurchaseLineReceivals.lengthMm,
+        deliveryDatePlanned: PurchaseLineReceivals.deliveryDatePlanned,
+        deliveryDateActual: PurchaseLineReceivals.deliveryDateActual,
+        preReportedBy: PurchaseLineReceivals.preReportedBy,
+        sheetNumber: PurchaseLineReceivals.sheetNumber,
+        ediCharge: PurchaseLineReceivals.ediCharge,
+        ediBundles: PurchaseLineReceivals.ediBundles,
+        ediBillOfLading: PurchaseLineReceivals.ediBillOfLading,
+        ediDeliveryDate: PurchaseLineReceivals.ediDeliveryDate,
       })
       .from(PurchaseLineReceivals)
       .leftJoin(Products, eq(PurchaseLineReceivals.productUuid, Products.uuid))
@@ -1617,9 +1637,7 @@ export const confirmPurchaseOrder = async (
           confirmationNumber: confirmationNumber?.trim() || null,
           confirmationDate,
           documentSupplier: documentSupplier?.trim() || null,
-          ...(confirmedDeliveryDate
-            ? { confirmedDeliveryDate, receiptDate: confirmedDeliveryDate }
-            : {}),
+          ...(confirmedDeliveryDate ? { confirmedDeliveryDate } : {}),
         })
         .where(
           and(
@@ -1627,6 +1645,36 @@ export const confirmPurchaseOrder = async (
             inArray(PurchaseOrderItems.uuid, lineUuids),
           ),
         );
+
+      // 🔑 Where the confirmed date lands, watched on 404355 (9-10-2026,
+      // HSI-1001 for 14-10): the header's Date moved to it, and so did the
+      // reception's Delivery date and Pre-announced delivery — while the
+      // line kept its own 12-10-2026. The line says what was asked for; the
+      // header and the reception say when it is now coming.
+      if (confirmedDeliveryDate) {
+        await tx
+          .update(PurchaseOrders)
+          .set({
+            deliveryDate: new Date(confirmedDeliveryDate),
+            deliveryWeek: isoWeekOf(confirmedDeliveryDate),
+            deliveryYear: Number(confirmedDeliveryDate.slice(0, 4)),
+          })
+          .where(eq(PurchaseOrders.uuid, uuid));
+        await tx
+          .update(PurchaseLineReceivals)
+          .set({
+            receiptDate: confirmedDeliveryDate,
+            deliveryDatePlanned: confirmedDeliveryDate,
+            preAnnouncedDeliveryDate: confirmedDeliveryDate,
+          })
+          .where(
+            and(
+              eq(PurchaseLineReceivals.purchaseOrderUuid, uuid),
+              inArray(PurchaseLineReceivals.purchaseOrderItemUuid, lineUuids),
+              inArray(PurchaseLineReceivals.receiptStatus, ["new", "released"]),
+            ),
+          );
+      }
     });
 
     revalidatePath("/purchase-orders");
