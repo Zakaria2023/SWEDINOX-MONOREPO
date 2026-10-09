@@ -378,6 +378,22 @@ export const buildColumnVisibility = <K extends string>(
     columns.map((col) => [col.key, col.defaultVisible]),
   ) as Record<K, boolean>;
 
+/**
+ * A page of overview rows split into the groups the reference's grid shows —
+ * every distinct value once, in the order it first appears, with its rows.
+ */
+export const groupRowsBy = <T>(
+  rows: readonly T[],
+  keyOf: (row: T) => string,
+): Array<{ key: string; rows: T[] }> => {
+  const groups = new Map<string, T[]>();
+  for (const row of rows) {
+    const key = keyOf(row);
+    groups.set(key, [...(groups.get(key) ?? []), row]);
+  }
+  return [...groups].map(([key, groupRows]) => ({ key, rows: groupRows }));
+};
+
 export const formatRevenue = (value: string | number | null) => {
   if (!value) return "€ 0,00";
   return new Intl.NumberFormat("nl-NL", {
@@ -2555,6 +2571,19 @@ export const computeMinimumStock = (
   averageMonthlyConsumption: number,
 ): number =>
   mode === "fixed_value" ? value : value * averageMonthlyConsumption;
+
+/**
+ * One stock limit as the reference's `Voorraadbeleid` bar words it — `1 maal
+ * het gem. maandverbruik` for a multiple, or the fixed figure in kilos.
+ */
+export const describeStockLimit = (
+  mode: StockMode | null,
+  multiplier: string | number | null,
+  fixedValue: string | number | null,
+): string =>
+  mode === "fixed_value"
+    ? `${Number(fixedValue ?? 0)} kg`
+    : `${Number(multiplier ?? 0)} × the avg. monthly use`;
 
 /**
  * Resolves the lead time to use given the configured method: a manual value, or
@@ -7865,7 +7894,7 @@ export const purchaseOrderStatusLabel = (
  * knew the order ladder.
  */
 export const documentStatusLabel = (
-  kind: "Order" | "Quote",
+  kind: "Order" | "Quote" | "Return",
   value: string | null | undefined,
 ): string => {
   if (!value) {

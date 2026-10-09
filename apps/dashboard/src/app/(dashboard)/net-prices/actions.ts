@@ -18,6 +18,7 @@ import { ContractableRole, NetPriceSide } from "@/lib/enums";
 import { describeError, generateUuid, moneyString } from "@/lib/helpers";
 import { exportRows } from "@/lib/server/excel";
 import {
+  numberRangeFilter,
   relationFilter,
   runPaged,
   tableOrderBy,
@@ -114,6 +115,8 @@ const NET_PRICE_FILTERS = {
   contract: relationFilter(ContractNetPrices.contractUuid),
   company: relationFilter(Contracts.companyUuid),
   product: relationFilter(ContractNetPrices.productUuid),
+  // The reference's "Company code" from/to.
+  companyCode: numberRangeFilter(Companies.id),
   // Prices in force during the period, the way the reference's "Contract valid
   // between" reads: a row counts when its own window overlaps the range.
   validBetween: (values: string[]) => {
@@ -141,6 +144,7 @@ export type NetPriceRow = SelectContractNetPrices & {
   contractRole: SelectContracts["role"] | null;
   companyCode: SelectCompanies["id"] | null;
   companyName: SelectCompanies["companyName"] | null;
+  companyUuid: SelectContracts["companyUuid"] | null;
   productCode: SelectProducts["productCode"] | null;
   oldProductCode: SelectProducts["oldProductCode"] | null;
   productName: SelectProducts["name"] | null;
@@ -203,6 +207,7 @@ const netPriceRows =
         contractRole: Contracts.role,
         companyCode: Companies.id,
         companyName: Companies.companyName,
+        companyUuid: Contracts.companyUuid,
         productCode: Products.productCode,
         oldProductCode: Products.oldProductCode,
         productName: Products.name,
@@ -245,6 +250,7 @@ const netPriceRows =
       contractRole: row.contractRole,
       companyCode: row.companyCode,
       companyName: row.companyName,
+      companyUuid: row.companyUuid,
       productCode: row.productCode,
       oldProductCode: row.oldProductCode,
       productName: row.productName,
@@ -312,6 +318,7 @@ export const getNetPriceDetail = async (
         contractRole: Contracts.role,
         companyCode: Companies.id,
         companyName: Companies.companyName,
+        companyUuid: Contracts.companyUuid,
         productCode: Products.productCode,
         oldProductCode: Products.oldProductCode,
         productName: Products.name,
@@ -345,6 +352,7 @@ export const getNetPriceDetail = async (
       contractRole: found.contractRole,
       companyCode: found.companyCode,
       companyName: found.companyName,
+      companyUuid: found.companyUuid,
       productCode: found.productCode,
       oldProductCode: found.oldProductCode,
       productName: found.productName,

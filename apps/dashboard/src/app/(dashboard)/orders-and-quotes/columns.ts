@@ -99,13 +99,13 @@ export const ORDER_OR_QUOTE_COLUMNS: Array<
   {
     key: "year",
     label: "Year (Creation Date)",
-    defaultVisible: false,
+    defaultVisible: true,
     value: (row) => numberCell(row.createdAt.getFullYear()),
   },
   {
     key: "month",
     label: "Month (Creation Date)",
-    defaultVisible: false,
+    defaultVisible: true,
     value: (row) => textCell(monthLabel(row.createdAt.getMonth() + 1)),
   },
   {
@@ -113,7 +113,7 @@ export const ORDER_OR_QUOTE_COLUMNS: Array<
     // the reference reproduces on all 2 091 of its rows.
     key: "timeFrame",
     label: "Time frame",
-    defaultVisible: false,
+    defaultVisible: true,
     value: (row) => textCell(timeFrameOf(row.createdAt)),
   },
   {
@@ -125,7 +125,7 @@ export const ORDER_OR_QUOTE_COLUMNS: Array<
   {
     key: "sellerInitials",
     label: "Initials",
-    defaultVisible: false,
+    defaultVisible: true,
     value: (row) => textCell(initialsOf(row.seller)),
   },
   {
@@ -143,13 +143,13 @@ export const ORDER_OR_QUOTE_COLUMNS: Array<
   {
     key: "pickupSlip",
     label: "Pick-up slip",
-    defaultVisible: false,
+    defaultVisible: true,
     value: () => null,
   },
   {
     key: "convertedFromTo",
     label: "Converted from/to",
-    defaultVisible: false,
+    defaultVisible: true,
     value: (row) => textCell(row.convertedFromTo),
   },
   {
@@ -215,49 +215,49 @@ export const ORDER_OR_QUOTE_COLUMNS: Array<
   {
     key: "expirationReason",
     label: "Expiration reason",
-    defaultVisible: false,
+    defaultVisible: true,
     value: (row) => textCell(row.expirationReason),
   },
   {
     key: "quoteDate",
     label: "Quote date",
-    defaultVisible: false,
+    defaultVisible: true,
     value: (row) => dateCell(row.quoteDate),
   },
   {
     key: "decisionDate",
     label: "Decision date",
-    defaultVisible: false,
+    defaultVisible: true,
     value: (row) => dateCell(row.decisionDate),
   },
   {
     key: "lastFollowUpDate",
     label: "Last follow-up date",
-    defaultVisible: false,
+    defaultVisible: true,
     value: () => null,
   },
   {
     key: "lastFollowUp",
     label: "Last follow-up",
-    defaultVisible: false,
+    defaultVisible: true,
     value: () => null,
   },
   {
     key: "lastFollowUpReason",
     label: "Last follow-up reason",
-    defaultVisible: false,
+    defaultVisible: true,
     value: () => null,
   },
   {
     key: "internalText",
     label: "Internal Text",
-    defaultVisible: false,
+    defaultVisible: true,
     value: () => null,
   },
   {
     key: "isConsignment",
     label: "Consignment",
-    defaultVisible: false,
+    defaultVisible: true,
     value: (row) => yesNoCell(row.isConsignment),
   },
   {
@@ -284,13 +284,13 @@ export const ORDER_OR_QUOTE_COLUMNS: Array<
   {
     key: "deliberatelyNotSent",
     label: "Deliberately not sent",
-    defaultVisible: false,
+    defaultVisible: true,
     value: (row) => yesNoCell(row.deliberatelyNotSent),
   },
   {
     key: "mustBeSent",
     label: "Must be sent",
-    defaultVisible: false,
+    defaultVisible: true,
     value: (row) => yesNoCell(row.mustBeSent),
   },
   {
@@ -302,32 +302,32 @@ export const ORDER_OR_QUOTE_COLUMNS: Array<
   {
     key: "validUntil",
     label: "Valid u/i",
-    defaultVisible: false,
+    defaultVisible: true,
     value: (row) => dateCell(row.validUntil),
   },
   {
     key: "affiliateName",
     label: "Affiliate company details",
-    defaultVisible: false,
+    defaultVisible: true,
     value: (row) => textCell(row.affiliateName),
   },
   {
     key: "classificationCode",
     label: "Classification code",
-    defaultVisible: false,
+    defaultVisible: true,
     value: (row) => textCell(row.classification),
   },
   {
     key: "classification",
     label: "Classification",
-    defaultVisible: false,
+    defaultVisible: true,
     value: (row) =>
       row.classification ? COMPANY_CLASSIFICATION_LABELS[row.classification] : null,
   },
   {
     key: "ourReference",
     label: "Our reference",
-    defaultVisible: false,
+    defaultVisible: true,
     value: (row) => textCell(row.ourReference),
   },
   {
@@ -339,13 +339,13 @@ export const ORDER_OR_QUOTE_COLUMNS: Array<
   {
     key: "isPickup",
     label: "Pick-up",
-    defaultVisible: false,
+    defaultVisible: true,
     value: (row) => yesNoCell(row.isPickup),
   },
   {
     key: "isIncidental",
     label: "Incidental",
-    defaultVisible: false,
+    defaultVisible: true,
     value: (row) => yesNoCell(row.isIncidental),
   },
 ];

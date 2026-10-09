@@ -20,16 +20,23 @@ import {
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { PagedTableExportButton } from "@/components/ui/table-export-button";
+import { TableGroupRow } from "@/components/ui/table-group-row";
 import { TablePagination } from "@/components/ui/table-pagination";
+import {
+  TableRowActionItem,
+  TableRowToolbar,
+} from "@/components/ui/table-row-toolbar";
 import { TableSortHeader } from "@/components/ui/table-sort-header";
 import { TableToolbar } from "@/components/ui/table-toolbar";
 import { selectorColumns } from "@/lib/excel";
 import {
   buildColumnVisibility,
+  cn,
   formatDateColumn,
   formatLengthMm,
   formatMoney,
   formatNumber,
+  groupRowsBy,
 } from "@/lib/helpers";
 import {
   CE_STANDARD_LABELS,
@@ -40,7 +47,8 @@ import {
   STOCK_UNIT_LABELS,
 } from "@/lib/labels";
 import { Paged, TableFilterControl } from "@/lib/table-query";
-import { useState } from "react";
+import { Building2, FileText, Package } from "lucide-react";
+import { Fragment, useState } from "react";
 
 type ColumnKey = PurchaseLineColumnKey;
 
@@ -67,6 +75,48 @@ export const PurchaseLinesTable = ({ page, filters }: Props) => {
   const [columnVisibility, setColumnVisibility] = useState<
     Record<ColumnKey, boolean>
   >(buildColumnVisibility(ALL_COLUMNS));
+  // The reference acts on a selected row from a toolbar at the top, so the
+  // grid has to remember which row that is.
+  const [selectedUuid, setSelectedUuid] = useState<string | null>(null);
+
+  const selected = page.rows.find((row) => row.uuid === selectedUuid) ?? null;
+  const selectedNumber =
+    selected && selected.returnOrderId !== null
+      ? `IR${selected.returnOrderId}`
+      : (selected?.purchaseOrderId ?? "—");
+
+  const purchaseOrderAction: TableRowActionItem = selected?.returnOrderUuid
+    ? {
+        label: "Show Purchase return",
+        icon: <FileText className="size-4" />,
+        href: `/purchase-return-orders/${selected.returnOrderUuid}`,
+      }
+    : {
+        label: "Show Purchase order",
+        icon: <FileText className="size-4" />,
+        href: selected?.purchaseOrderUuid
+          ? `/purchase-orders/${selected.purchaseOrderUuid}`
+          : null,
+      };
+
+  const rowActions: TableRowActionItem[] = [
+    {
+      label: "Show Product",
+      icon: <Package className="size-4" />,
+      href: selected?.productUuid ? `/products/${selected.productUuid}` : null,
+    },
+    {
+      label: "Show Company",
+      icon: <Building2 className="size-4" />,
+      href: selected?.supplierUuid ? `/companies/${selected.supplierUuid}` : null,
+    },
+    purchaseOrderAction,
+  ];
+
+  // The reference groups this screen by Line type — Stk, CD, EXW.
+  const groups = groupRowsBy(page.rows, (row) =>
+    ORDER_SOURCE_TYPE_LABELS[row.lineType],
+  );
 
   const toggleColumn = (key: string) =>
     setColumnVisibility((prev) => ({
@@ -360,6 +410,15 @@ export const PurchaseLinesTable = ({ page, filters }: Props) => {
         />
       </TableToolbar>
 
+      <TableRowToolbar
+        actions={rowActions}
+        selectedLabel={
+          selected
+            ? `${selectedNumber} line ${selected.lineNumber ?? "—"}`
+            : null
+        }
+      />
+
       {page.rows.length === 0 ? (
         <div className="flex flex-col items-center gap-1 rounded-lg border border-dashed px-6 py-10 text-center">
           <p className="font-medium">No purchase lines match this view</p>
@@ -386,10 +445,27 @@ export const PurchaseLinesTable = ({ page, filters }: Props) => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {page.rows.map((row) => (
-                <TableRow key={row.uuid}>
-                  {visibleColumns.map((col) => renderCell(row, col.key))}
-                </TableRow>
+              {groups.map((group) => (
+                <Fragment key={group.key}>
+                  <TableGroupRow
+                    label="Line type"
+                    value={group.key}
+                    count={group.rows.length}
+                    colSpan={visibleColumns.length}
+                  />
+                  {group.rows.map((row) => (
+                    <TableRow
+                      key={row.uuid}
+                      onClick={() => setSelectedUuid(row.uuid)}
+                      className={cn(
+                        "cursor-pointer",
+                        row.uuid === selectedUuid && "bg-muted",
+                      )}
+                    >
+                      {visibleColumns.map((col) => renderCell(row, col.key))}
+                    </TableRow>
+                  ))}
+                </Fragment>
               ))}
             </TableBody>
           </Table>

@@ -277,6 +277,92 @@ export const DOMAIN_TERMS: Record<string, DomainTerm> = {
     ar: "ابحث عن Charge أو أمر شراء أو منتج أو مورد…",
   },
 
+  // ── Quote: an offer, never a citation ─────────────────────────────────────
+  // 🔴 The translator read `quote` as quoting somebody's words: `Open quotes`
+  // came out as `Open citaten` and `اقتباسات مفتوحة` (screenshot 281), `Order/
+  // Quote` as `Bevel/Citaat`, `Quotes` in Arabic as `الكمية` ("quantity"). The
+  // reference's Dutch is `Offerte` throughout (`Order/Offerte`); the Arabic
+  // for a priced offer is `عرض سعر`, plural `عروض أسعار`.
+  Quote: { nl: "Offerte", ar: "عرض سعر" },
+  Quotes: { nl: "Offertes", ar: "عروض الأسعار" },
+  Quoted: { nl: "Geoffreerd", ar: "مُسعَّر" },
+  "Add Quote": { nl: "Offerte toevoegen", ar: "إضافة عرض سعر" },
+  "Create Quote": { nl: "Offerte maken", ar: "إنشاء عرض سعر" },
+  "Creating quotes...": {
+    nl: "Offertes aanmaken...",
+    ar: "جارٍ إنشاء عروض الأسعار...",
+  },
+  "Delete quote": { nl: "Offerte verwijderen", ar: "حذف عرض السعر" },
+  "Delete Quote": { nl: "Offerte verwijderen", ar: "حذف عرض السعر" },
+  "Edit quote": { nl: "Offerte bewerken", ar: "تعديل عرض السعر" },
+  "Edit Quote": { nl: "Offerte bewerken", ar: "تعديل عرض السعر" },
+  "New Quote": { nl: "Nieuwe offerte", ar: "عرض سعر جديد" },
+  "Save Quote": { nl: "Offerte opslaan", ar: "حفظ عرض السعر" },
+  "Sales Quote": { nl: "Verkoopofferte", ar: "عرض سعر بيع" },
+  "Open quotes": { nl: "Open offertes", ar: "عروض أسعار مفتوحة" },
+  "Outstanding Quotes": { nl: "Openstaande offertes", ar: "عروض أسعار معلقة" },
+  "Previous quotes": { nl: "Vorige offertes", ar: "عروض الأسعار السابقة" },
+  "Quotes only": { nl: "Alleen offertes", ar: "عروض الأسعار فقط" },
+  "Order/Quote": { nl: "Order/Offerte", ar: "أمر/عرض سعر" },
+  "Order/quote": { nl: "Order/offerte", ar: "أمر/عرض سعر" },
+  "Pick a quote…": { nl: "Kies een offerte…", ar: "اختر عرض سعر…" },
+  "Quote date": { nl: "Offertedatum", ar: "تاريخ عرض السعر" },
+  "Quote line": { nl: "Offerteregel", ar: "سطر عرض السعر" },
+  "Quote lines": { nl: "Offerteregels", ar: "أسطر عرض السعر" },
+  "Quote No": { nl: "Offertenr.", ar: "رقم عرض السعر" },
+  "quote number": { nl: "offertenummer", ar: "رقم عرض السعر" },
+  "Quote value": { nl: "Offertewaarde", ar: "قيمة عرض السعر" },
+  "Remove quote": { nl: "Offerte verwijderen", ar: "إزالة عرض السعر" },
+  "Purchase quote": { nl: "Inkoopofferte", ar: "عرض سعر شراء" },
+  "Purchase quotes": { nl: "Inkoopoffertes", ar: "عروض أسعار الشراء" },
+  "Edit Purchase Quote ${quote.quoteNumber}": {
+    nl: "Inkoopofferte ${quote.quoteNumber} bewerken",
+    ar: "تعديل عرض سعر الشراء ${quote.quoteNumber}",
+  },
+  "Quote ${row.id}": { nl: "Offerte ${row.id}", ar: "عرض سعر ${row.id}" },
+  "Quote — ${PURCHASE_QUOTE_STATUS_LABELS[status]}": {
+    nl: "Offerte — ${PURCHASE_QUOTE_STATUS_LABELS[status]}",
+    ar: "عرض سعر — ${PURCHASE_QUOTE_STATUS_LABELS[status]}",
+  },
+  "Quote line ${item.lineNumber} has no product.": {
+    nl: "Offerteregel ${item.lineNumber} heeft geen product.",
+    ar: "سطر عرض السعر ${item.lineNumber} بلا منتج.",
+  },
+  "the quote from ${toDateInput(deleteTarget.quoteDate)}": {
+    nl: "de offerte van ${toDateInput(deleteTarget.quoteDate)}",
+    ar: "عرض السعر بتاريخ ${toDateInput(deleteTarget.quoteDate)}",
+  },
+  "Search product, supplier or quote no…": {
+    nl: "Zoek product, leverancier of offertenr.…",
+    ar: "ابحث عن منتج أو مورد أو رقم عرض سعر…",
+  },
+  "Invalid quote data — check the fields and try again": {
+    nl: "Ongeldige offertegegevens — controleer de velden en probeer het opnieuw",
+    ar: "بيانات عرض السعر غير صالحة — تحقق من الحقول وحاول مرة أخرى",
+  },
+  "Order converted from a quote and held by the credit rule — ${credit.reason}":
+    {
+      nl: "Order omgezet uit een offerte en aangehouden door de kredietregel — ${credit.reason}",
+      ar: "أمر محوّل من عرض سعر ومحتجز بقاعدة الائتمان — ${credit.reason}",
+    },
+  "The quote is closed as incorrectly entered. It can no longer be priced, edited or turned into a purchase order.":
+    {
+      nl: "De offerte wordt gesloten als onjuist ingevoerd. Ze kan niet langer worden geprijsd, bewerkt of omgezet in een inkooporder.",
+      ar: "يُغلق عرض السعر لأنه أُدخل بشكل غير صحيح. لم يعد من الممكن تسعيره أو تعديله أو تحويله إلى أمر شراء.",
+    },
+  "This quote still has unpriced lines — record the supplier": {
+    nl: "Deze offerte heeft nog regels zonder prijs — leg de leverancier vast",
+    ar: "لا يزال عرض السعر هذا يحتوي على أسطر بلا سعر — سجّل المورد",
+  },
+  "Cannot delete: this product is used on stock, orders or quotes. Block it for sales and purchasing instead.":
+    {
+      ar: "لا يمكن الحذف: هذا المنتج مستخدم في المخزون أو الأوامر أو عروض الأسعار. احظره للبيع والشراء بدلاً من ذلك.",
+    },
+  "This removes the product and its price structures, suppliers and locations. Products used on stock, orders or quotes cannot be deleted.":
+    {
+      ar: "يؤدي هذا إلى حذف المنتج وهياكل أسعاره وموردّيه ومواقعه. لا يمكن حذف المنتجات المستخدمة في المخزون أو الأوامر أو عروض الأسعار.",
+    },
+
   // ── Two messages that lost their second half ─────────────────────────────
   // The instruction is the useful part of these, and both languages dropped it.
   "Invalid counter order data — check the fields and try again": {

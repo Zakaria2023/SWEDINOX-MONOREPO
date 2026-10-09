@@ -122,6 +122,8 @@ export type InvoiceWithCompany = SelectInvoices & {
   country: SelectCompanyAddresses["country"] | null;
   /** The order this invoice bills, when its lines all name one. */
   orderId: number | null;
+  /** The same order's uuid, for the overview's `Show Order`. */
+  orderUuid: string | null;
   /** The branch's own legal name, from the settings. */
   affiliateName: SelectBranchSettings["affiliateName"];
 };
@@ -255,6 +257,13 @@ const invoiceRows =
         // invoice that bills two orders cannot name one, so both read empty.
         orderId: sql<number | null>`(
           SELECT CASE WHEN COUNT(DISTINCT o.id) = 1 THEN MIN(o.id) END
+          FROM ${InvoiceItems} ii
+          JOIN ${OrderItems} oi ON oi.uuid = ii.order_item_uuid
+          JOIN ${Orders} o ON o.uuid = oi.order_uuid
+          WHERE ii.invoice_uuid = ${Invoices.uuid}
+        )`,
+        orderUuid: sql<string | null>`(
+          SELECT CASE WHEN COUNT(DISTINCT o.uuid) = 1 THEN MIN(o.uuid) END
           FROM ${InvoiceItems} ii
           JOIN ${OrderItems} oi ON oi.uuid = ii.order_item_uuid
           JOIN ${Orders} o ON o.uuid = oi.order_uuid

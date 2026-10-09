@@ -116,18 +116,18 @@ export const DELIVERY_COLUMNS: Column[] = [
   column("seller", "Seller", true, (row) => textCell(row.seller)),
   // Three blocking flags live on the line and they are near mutually
   // exclusive — only 4 of the reference's 6 134 rows carry two at once.
-  column("commercialBlock", "Commercial blocked", false, (row) =>
+  column("commercialBlock", "Commercial blocked", true, (row) =>
     yesNoCell(row.commercialBlock),
   ),
-  column("financialBlock", "Financially blocked", false, (row) =>
+  column("financialBlock", "Financially blocked", true, (row) =>
     yesNoCell(row.financialBlock),
   ),
   // A transport-blocked line is never on a trip: zero exceptions in 6 134 rows.
-  column("transportBlock", "Transport blockage", false, (row) =>
+  column("transportBlock", "Transport blockage", true, (row) =>
     yesNoCell(row.transportBlock),
   ),
   column("lineNumber", "Line", true, (row) => numberCell(row.lineNumber)),
-  column("lineType", "Line type", false, (row) =>
+  column("lineType", "Line type", true, (row) =>
     textCell(row.sourceType ? ORDER_SOURCE_TYPE_LABELS[row.sourceType] : null),
   ),
   column("lineStatus", "Line status", true, (row) =>

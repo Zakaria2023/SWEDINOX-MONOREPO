@@ -13,6 +13,7 @@ import { ReturnOrders } from "@/db/schema/return-orders";
 import {
   describeError,
   documentProfitMarginPercent,
+  salesDocumentStatusLabel,
 } from "@/lib/helpers";
 import { ORDER_TYPE_LABELS, SALES_DOCUMENT_KIND_PREFIXES } from "@/lib/labels";
 import { getBranchSettings } from "@/lib/server/branch-settings";
@@ -482,13 +483,24 @@ const filteredDocuments = async (
   const all = await allDocuments();
 
   const term = query.q?.toLowerCase() ?? null;
+  // The reference's own filter on this screen, carried as "from..to".
+  const [createdFrom = "", createdTo = ""] = (
+    query.filters.createdAt?.[0] ?? ""
+  ).split("..");
   const kinds = query.filters.kind ?? [];
   const statuses = query.filters.status ?? [];
   const send = query.filters.stillToSend ?? [];
   // Set by the company screen's `Orders and Quotes` button.
   const companies = query.filters.company ?? [];
 
-  return all.filter((row) => {
+  const matching = all.filter((row) => {
+    const created = asDateString(row.createdAt) ?? "";
+    if (createdFrom && created < createdFrom) {
+      return false;
+    }
+    if (createdTo && created > createdTo) {
+      return false;
+    }
     if (
       term &&
       !`${row.documentCode} ${row.customerName ?? ""} ${row.reference ?? ""}`
@@ -514,6 +526,15 @@ const filteredDocuments = async (
     }
     return true;
   });
+
+  // The reference groups this screen by Status, so a page holds whole groups,
+  // alphabetically, before it is ordered within them — newest first, as the
+  // four reads already are.
+  return matching.sort((a, b) =>
+    (salesDocumentStatusLabel(a.status) ?? "").localeCompare(
+      salesDocumentStatusLabel(b.status) ?? "",
+    ),
+  );
 };
 
 export const getOrdersAndQuotes = async (

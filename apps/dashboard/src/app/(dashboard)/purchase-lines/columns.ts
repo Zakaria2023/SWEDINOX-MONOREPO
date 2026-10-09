@@ -70,14 +70,16 @@ export const PURCHASE_LINE_COLUMNS: Array<
   ExportColumn<PurchaseLineItem, PurchaseLineColumnKey>
 > = [
   {
-    key: "createdAt",
-    label: "Date created",
+    // The reference prints the document kind on every row of this screen, and
+    // every row of it is a purchase order line.
+    key: "documentKind",
+    label: "Purchase order type",
     defaultVisible: true,
-    value: (row) => dateCell(row.createdAt),
+    value: () => textCell("Purchase order"),
   },
   {
     key: "purchaseOrderId",
-    label: "Purchase order",
+    label: "No.",
     defaultVisible: true,
     value: (row) =>
       row.returnOrderId !== null
@@ -89,23 +91,6 @@ export const PURCHASE_LINE_COLUMNS: Array<
     label: "Line",
     defaultVisible: true,
     value: (row) => numberCell(row.lineNumber),
-  },
-  {
-    key: "status",
-    label: "Status",
-    defaultVisible: true,
-    value: (row) =>
-      row.returnStatus
-        ? PURCHASE_ORDER_STATUS_LABELS[row.returnStatus]
-        : row.status
-          ? ORDER_LINE_STATUS_LABELS[row.status]
-          : null,
-  },
-  {
-    key: "supplierName",
-    label: "Supplier",
-    defaultVisible: true,
-    value: (row) => textCell(row.supplierName),
   },
   {
     key: "productCode",
@@ -120,22 +105,75 @@ export const PURCHASE_LINE_COLUMNS: Array<
     value: (row) => textCell(row.productName),
   },
   {
-    key: "qualityCode",
-    label: "Quality",
+    key: "supplierName",
+    label: "Supplier",
     defaultVisible: true,
-    value: (row) => textCell(row.qualityCode),
+    value: (row) => textCell(row.supplierName),
   },
   {
-    key: "stockCategory",
-    label: "Stock category",
+    key: "status",
+    label: "Status",
     defaultVisible: true,
-    value: (row) => textCell(row.stockCategory),
+    value: (row) =>
+      row.returnStatus
+        ? PURCHASE_ORDER_STATUS_LABELS[row.returnStatus]
+        : row.status
+          ? ORDER_LINE_STATUS_LABELS[row.status]
+          : null,
   },
   {
-    key: "options",
-    label: "Options",
+    key: "receiptDate",
+    label: "Receipt date",
     defaultVisible: true,
-    value: (row) => textCell(row.options),
+    value: (row) => dateCell(row.receiptDate),
+  },
+  {
+    key: "qtyPlanned",
+    label: "Qty(p) (Pur.U.)",
+    defaultVisible: true,
+    value: (row) => numberCell(row.qtyPlanned),
+  },
+  {
+    key: "unit",
+    label: "Purchase U.",
+    defaultVisible: true,
+    value: (row) => (row.unit ? STOCK_UNIT_LABELS[row.unit] : null),
+  },
+  {
+    key: "kgPurchased",
+    label: "Kg(pur)",
+    defaultVisible: true,
+    value: (row) => numberCell(row.kgPurchased),
+  },
+  {
+    key: "reservedQty",
+    label: "Reserved (Pur.U.)",
+    defaultVisible: true,
+    value: (row) => numberCell(row.reservedQty),
+  },
+  {
+    key: "reservedKg",
+    label: "Reserved (kg)",
+    defaultVisible: true,
+    value: (row) => numberCell(row.reservedKg),
+  },
+  {
+    key: "companyCode",
+    label: "Company code",
+    defaultVisible: true,
+    value: (row) => textCell(row.companyCode),
+  },
+  {
+    key: "revenueGroupNumber",
+    label: "Revenue group number",
+    defaultVisible: true,
+    value: (row) => numberCell(row.revenueGroupNumber),
+  },
+  {
+    key: "revenueGroupName",
+    label: "Revenue group",
+    defaultVisible: true,
+    value: (row) => textCell(row.revenueGroupName),
   },
   {
     key: "lengthMm",
@@ -147,81 +185,15 @@ export const PURCHASE_LINE_COLUMNS: Array<
   },
   {
     key: "widthMm",
-    label: "Width",
+    label: "Width (mm)",
     defaultVisible: true,
     value: (row) => numberCell(row.widthMm),
-  },
-  {
-    key: "qtyPlanned",
-    label: "Qty(p)",
-    defaultVisible: true,
-    value: (row) => numberCell(row.qtyPlanned),
-  },
-  {
-    key: "unit",
-    label: "U",
-    defaultVisible: true,
-    value: (row) => (row.unit ? STOCK_UNIT_LABELS[row.unit] : null),
-  },
-  {
-    key: "reservedQty",
-    label: "Reserved",
-    defaultVisible: true,
-    value: (row) => numberCell(row.reservedQty),
-  },
-  {
-    key: "kgPurchased",
-    label: "Kg(pur)",
-    defaultVisible: true,
-    value: (row) => numberCell(row.kgPurchased),
-  },
-  {
-    key: "qtyOrdered",
-    label: "Qty ordered",
-    defaultVisible: true,
-    value: (row) => numberCell(row.qtyOrdered),
-  },
-  {
-    key: "qtyConfirmed",
-    label: "Qty confirmed",
-    defaultVisible: true,
-    value: (row) => numberCell(row.qtyConfirmed),
-  },
-  {
-    key: "qtyReceived",
-    label: "Qty(a) (Pur.U.)",
-    defaultVisible: true,
-    value: (row) => numberCell(row.qtyReceived),
   },
   {
     key: "kgActual",
     label: "Kg(a)",
     defaultVisible: true,
     value: (row) => numberCell(row.kgActual),
-  },
-  {
-    key: "kgStillToReceive",
-    label: "Kg. still to be received",
-    defaultVisible: true,
-    value: (row) => numberCell(row.kgStillToReceive),
-  },
-  {
-    key: "availableQty",
-    label: "Available (Pur.U.)",
-    defaultVisible: true,
-    value: (row) => numberCell(row.availableQty),
-  },
-  {
-    key: "availableKg",
-    label: "Available (kg)",
-    defaultVisible: false,
-    value: (row) => numberCell(row.availableKg),
-  },
-  {
-    key: "thicknessMm",
-    label: "Thickness",
-    defaultVisible: false,
-    value: (row) => numberCell(row.thicknessMm),
   },
   {
     key: "netPrice",
@@ -242,16 +214,59 @@ export const PURCHASE_LINE_COLUMNS: Array<
     value: (row) => numberCell(row.amount),
   },
   {
+    key: "qtyReceived",
+    label: "Qty(a) (Pur.U.)",
+    defaultVisible: true,
+    value: (row) => numberCell(row.qtyReceived),
+  },
+  {
+    key: "qtyOrdered",
+    label: "Qty ordered",
+    defaultVisible: false,
+    value: (row) => numberCell(row.qtyOrdered),
+  },
+  {
+    key: "qtyConfirmed",
+    label: "Qty confirmed",
+    defaultVisible: false,
+    value: (row) => numberCell(row.qtyConfirmed),
+  },
+  {
     key: "amountYetToBeReceived",
     label: "Amount yet to be received",
     defaultVisible: true,
     value: (row) => numberCell(row.amountYetToBeReceived),
   },
   {
-    key: "receiptDate",
-    label: "Receipt date",
+    key: "qtyStillToReceive",
+    label: "Qty still to be received",
     defaultVisible: true,
-    value: (row) => dateCell(row.receiptDate),
+    value: (row) => numberCell(row.qtyStillToReceive),
+  },
+  {
+    key: "kgStillToReceive",
+    label: "Kg. still to be received",
+    defaultVisible: true,
+    value: (row) => numberCell(row.kgStillToReceive),
+  },
+  {
+    key: "orderType",
+    label: "Purchase order type (materials)",
+    defaultVisible: true,
+    value: (row) =>
+      textCell(row.orderType ? PURCHASE_ORDER_TYPE_LABELS[row.orderType] : null),
+  },
+  {
+    key: "lineType",
+    label: "Line type",
+    defaultVisible: true,
+    value: (row) => textCell(ORDER_SOURCE_TYPE_LABELS[row.lineType]),
+  },
+  {
+    key: "purchaserInitials",
+    label: "Initials purchaser",
+    defaultVisible: true,
+    value: (row) => textCell(row.purchaserInitials),
   },
   {
     key: "purchaser",
@@ -260,60 +275,21 @@ export const PURCHASE_LINE_COLUMNS: Array<
     value: (row) => textCell(row.purchaser),
   },
   {
-    key: "purchaserInitials",
-    label: "Initials purchaser",
-    defaultVisible: false,
-    value: (row) => textCell(row.purchaserInitials),
+    key: "mainGroup",
+    label: "Main group",
+    defaultVisible: true,
+    value: (row) => textCell(row.mainGroup),
   },
   {
-    // The reference prints the document kind on every row of this screen, and
-    // every row of it is a purchase order line.
-    key: "documentKind",
-    label: "Purchase order type",
-    defaultVisible: false,
-    value: () => textCell("Purchase order"),
-  },
-  {
-    key: "companyCode",
-    label: "Company code",
-    defaultVisible: false,
-    value: (row) => textCell(row.companyCode),
-  },
-  {
-    key: "country",
-    label: "Country",
-    defaultVisible: false,
-    value: (row) => textCell(row.country),
-  },
-  {
-    key: "orderType",
-    label: "Purchase order type (materials)",
-    defaultVisible: false,
-    value: (row) =>
-      textCell(row.orderType ? PURCHASE_ORDER_TYPE_LABELS[row.orderType] : null),
-  },
-  {
-    key: "lineType",
-    label: "Line type",
-    defaultVisible: false,
-    value: (row) => textCell(ORDER_SOURCE_TYPE_LABELS[row.lineType]),
-  },
-  {
-    key: "qtyStillToReceive",
-    label: "Qty still to be received",
-    defaultVisible: false,
-    value: (row) => numberCell(row.qtyStillToReceive),
-  },
-  {
-    key: "reservedKg",
-    label: "Reserved (kg)",
-    defaultVisible: false,
-    value: (row) => numberCell(row.reservedKg),
+    key: "subgroup",
+    label: "Subgroup",
+    defaultVisible: true,
+    value: (row) => textCell(row.subgroup),
   },
   {
     key: "grossPrice",
     label: "Current gross price",
-    defaultVisible: false,
+    defaultVisible: true,
     value: (row) => numberCell(Number(row.grossPrice ?? 0)),
   },
   {
@@ -321,70 +297,94 @@ export const PURCHASE_LINE_COLUMNS: Array<
     // the same unit as the net one.
     key: "grossPriceUnit",
     label: "Gross price U",
-    defaultVisible: false,
+    defaultVisible: true,
     value: (row) => textCell(row.priceUnit),
   },
   {
     key: "margin",
     label: "Margin (€ per gross unit)",
-    defaultVisible: false,
+    defaultVisible: true,
     value: (row) => numberCell(row.margin),
-  },
-  {
-    key: "mainGroup",
-    label: "Main group",
-    defaultVisible: false,
-    value: (row) => textCell(row.mainGroup),
-  },
-  {
-    key: "subgroup",
-    label: "Subgroup",
-    defaultVisible: false,
-    value: (row) => textCell(row.subgroup),
-  },
-  {
-    key: "revenueGroupNumber",
-    label: "Revenue group number",
-    defaultVisible: false,
-    value: (row) => numberCell(row.revenueGroupNumber),
-  },
-  {
-    key: "revenueGroupName",
-    label: "Revenue group",
-    defaultVisible: false,
-    value: (row) => textCell(row.revenueGroupName),
-  },
-  {
-    key: "purchaseReference",
-    label: "Purchase Reference",
-    defaultVisible: false,
-    value: (row) => textCell(row.purchaseReference),
-  },
-  {
-    key: "ourReference",
-    label: "Our reference",
-    defaultVisible: false,
-    value: (row) => textCell(row.ourReference),
   },
   {
     key: "ceStandard",
     label: "CE standard",
-    defaultVisible: false,
+    defaultVisible: true,
     value: (row) =>
       textCell(row.ceStandard ? CE_STANDARD_LABELS[row.ceStandard] : null),
-  },
-  {
-    // The Declaration of Performance that pairs with the CE standard.
-    key: "dop",
-    label: "DoP",
-    defaultVisible: false,
-    value: (row) => textCell(row.dop),
   },
   {
     // The date the line is due by, which the order sets for all of its lines.
     key: "deadline",
     label: "Deadline/Valid until",
-    defaultVisible: false,
+    defaultVisible: true,
     value: (row) => dateCell(row.deadline),
+  },
+  {
+    // The Declaration of Performance that pairs with the CE standard.
+    key: "dop",
+    label: "DoP",
+    defaultVisible: true,
+    value: (row) => textCell(row.dop),
+  },
+  {
+    key: "thicknessMm",
+    label: "Thickness",
+    defaultVisible: true,
+    value: (row) => numberCell(row.thicknessMm),
+  },
+  {
+    key: "stockCategory",
+    label: "Stock Category",
+    defaultVisible: false,
+    value: (row) => textCell(row.stockCategory),
+  },
+  {
+    key: "qualityCode",
+    label: "Quality Code",
+    defaultVisible: false,
+    value: (row) => textCell(row.qualityCode),
+  },
+  {
+    key: "purchaseReference",
+    label: "Purchase Reference",
+    defaultVisible: true,
+    value: (row) => textCell(row.purchaseReference),
+  },
+  {
+    key: "ourReference",
+    label: "Our reference",
+    defaultVisible: true,
+    value: (row) => textCell(row.ourReference),
+  },
+  {
+    key: "createdAt",
+    label: "Date Created",
+    defaultVisible: false,
+    value: (row) => dateCell(row.createdAt),
+  },
+  {
+    key: "options",
+    label: "Options",
+    defaultVisible: false,
+    value: (row) => textCell(row.options),
+  },
+  {
+    key: "country",
+    label: "Country",
+    defaultVisible: true,
+    value: (row) => textCell(row.country),
+  },
+  {
+    key: "availableQty",
+    label: "Available (Pur.U.)",
+    defaultVisible: true,
+    value: (row) => numberCell(row.availableQty),
+  },
+  {
+    key: "availableKg",
+    label: "Available (kg)",
+    defaultVisible: true,
+    value: (row) => numberCell(row.availableKg),
   },
 ];

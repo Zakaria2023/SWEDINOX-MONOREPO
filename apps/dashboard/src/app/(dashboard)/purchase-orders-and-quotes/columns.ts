@@ -66,32 +66,33 @@ export const PURCHASE_ORDER_QUOTE_COLUMNS: Array<
   },
   {
     key: "year",
-    label: "Year",
-    defaultVisible: false,
+    label: "Year (Creation date)",
+    defaultVisible: true,
     value: (row) => numberCell(row.year),
   },
   {
     key: "month",
     label: "Month",
-    defaultVisible: false,
+    defaultVisible: true,
     value: (row) => numberCell(row.month),
   },
   {
     key: "timeFrame",
     label: "Time frame",
-    defaultVisible: false,
+    defaultVisible: true,
     value: (row) => textCell(row.timeFrame),
   },
   {
     key: "number",
-    label: "Number",
+    label: "Purchase order",
     defaultVisible: true,
-    value: (row) => numberCell(row.number),
+    value: (row) =>
+      row.kind === "Return" ? `IR${row.number}` : numberCell(row.number),
   },
   {
     key: "purchaserInitials",
     label: "Initials",
-    defaultVisible: false,
+    defaultVisible: true,
     value: (row) => textCell(row.purchaserInitials),
   },
   {
@@ -103,7 +104,7 @@ export const PURCHASE_ORDER_QUOTE_COLUMNS: Array<
   {
     key: "status",
     label: "Status",
-    defaultVisible: true,
+    defaultVisible: false,
     value: (row) => textCell(documentStatusLabel(row.kind, row.status)),
   },
   {
@@ -139,7 +140,7 @@ export const PURCHASE_ORDER_QUOTE_COLUMNS: Array<
   {
     key: "customerCode",
     label: "Customer code",
-    defaultVisible: false,
+    defaultVisible: true,
     value: (row) => textCell(row.customerCode),
   },
   {
@@ -149,22 +150,25 @@ export const PURCHASE_ORDER_QUOTE_COLUMNS: Array<
     value: (row) => dateCell(row.deliveryDate),
   },
   {
-    key: "kind",
+    // The reference's "Order type" is the purchase order type — Materials,
+    // Processing, Customer materials — not whether the row is an order or a
+    // quote; that is this screen's own "Document" column.
+    key: "orderType",
     label: "Order type",
     defaultVisible: true,
-    value: (row) => textCell(row.kind),
-  },
-  {
-    key: "orderType",
-    label: "Purchase type",
-    defaultVisible: false,
     value: (row) =>
       textCell(row.orderType ? PURCHASE_ORDER_TYPE_LABELS[row.orderType] : null),
   },
   {
+    key: "kind",
+    label: "Document",
+    defaultVisible: false,
+    value: (row) => textCell(row.kind),
+  },
+  {
     key: "expirationReason",
     label: "Expiration reason",
-    defaultVisible: false,
+    defaultVisible: true,
     value: (row) =>
       textCell(
         row.expirationReason
@@ -175,31 +179,31 @@ export const PURCHASE_ORDER_QUOTE_COLUMNS: Array<
   {
     key: "quoteDate",
     label: "Quote date",
-    defaultVisible: false,
+    defaultVisible: true,
     value: (row) => dateCell(row.quoteDate),
   },
   {
     key: "internalText",
     label: "Internal text",
-    defaultVisible: false,
+    defaultVisible: true,
     value: (row) => textCell(row.internalText),
   },
   {
     key: "consignment",
     label: "Consignment",
-    defaultVisible: false,
+    defaultVisible: true,
     value: (row) => (row.consignment === null ? null : yesNoCell(row.consignment)),
   },
   {
     key: "sent",
-    label: "Sent",
-    defaultVisible: false,
+    label: "Send",
+    defaultVisible: true,
     value: (row) => yesNoCell(row.sent),
   },
   {
     key: "mustBeSent",
     label: "Must be sent",
-    defaultVisible: false,
+    defaultVisible: true,
     value: (row) => yesNoCell(row.mustBeSent),
   },
   {
@@ -211,25 +215,25 @@ export const PURCHASE_ORDER_QUOTE_COLUMNS: Array<
   {
     key: "deliberatelyNotSent",
     label: "Deliberately not sent",
-    defaultVisible: false,
+    defaultVisible: true,
     value: (row) => yesNoCell(row.deliberatelyNotSent),
   },
   {
     key: "validUntil",
     label: "Valid u/i",
-    defaultVisible: false,
+    defaultVisible: true,
     value: (row) => dateCell(row.validUntil),
   },
   {
     key: "affiliateCompany",
     label: "Affiliate company",
-    defaultVisible: false,
+    defaultVisible: true,
     value: (row) => textCell(row.affiliateCompany),
   },
   {
     key: "classificationCode",
     label: "Classification code",
-    defaultVisible: false,
+    defaultVisible: true,
     value: (row) => textCell(row.classificationCode),
   },
   {
@@ -240,7 +244,7 @@ export const PURCHASE_ORDER_QUOTE_COLUMNS: Array<
     // here, and it stops being a repetition the moment the lookup lands.
     key: "classification",
     label: "Classification",
-    defaultVisible: false,
+    defaultVisible: true,
     value: (row) => textCell(row.classificationCode),
   },
   {

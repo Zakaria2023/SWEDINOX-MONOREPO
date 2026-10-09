@@ -7,6 +7,7 @@ import { TableFilterControl } from "@/lib/table-query";
  * The second is the one the screen is worked from: what is still to go out.
  */
 export const ORDER_OR_QUOTE_FILTER_CONTROLS: TableFilterControl[] = [
+  { key: "createdAt", kind: "dateRange", label: "Creation date" },
   {
     key: "kind",
     kind: "select",

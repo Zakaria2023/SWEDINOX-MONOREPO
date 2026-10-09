@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { Building2, FileText, Package } from "lucide-react";
 import {
   DeliveryLineItem,
   deliverOrderItem,
@@ -26,11 +27,16 @@ import { ExportValueCell } from "@/components/ui/export-value-cell";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { PagedTableExportButton } from "@/components/ui/table-export-button";
 import { TablePagination } from "@/components/ui/table-pagination";
+import {
+  TableRowActionItem,
+  TableRowToolbar,
+} from "@/components/ui/table-row-toolbar";
 import { TableSortHeader } from "@/components/ui/table-sort-header";
 import { TableToolbar } from "@/components/ui/table-toolbar";
 import { selectorColumns } from "@/lib/excel";
 import {
   buildColumnVisibility,
+  cn,
   formatDateValue,
   orDash,
   userName,
@@ -111,6 +117,29 @@ export const DeliveriesTable = ({ page, userNames, filters }: Props) => {
   const [columnVisibility, setColumnVisibility] = useState<
     Record<ColumnKey, boolean>
   >(buildColumnVisibility(ALL_COLUMNS));
+  // The reference acts on a selected row from a toolbar at the top, so the
+  // grid has to remember which row that is.
+  const [selectedUuid, setSelectedUuid] = useState<string | null>(null);
+
+  const selected = page.rows.find((row) => row.uuid === selectedUuid) ?? null;
+
+  const rowActions: TableRowActionItem[] = [
+    {
+      label: "Show Product",
+      icon: <Package className="size-4" />,
+      href: selected ? `/products/${selected.productUuid}` : null,
+    },
+    {
+      label: "Show Company",
+      icon: <Building2 className="size-4" />,
+      href: selected?.companyUuid ? `/companies/${selected.companyUuid}` : null,
+    },
+    {
+      label: "Show Order",
+      icon: <FileText className="size-4" />,
+      href: selected ? `/orders/${selected.orderUuid}` : null,
+    },
+  ];
 
   const toggleColumn = (key: string) =>
     setColumnVisibility((prev) => ({
@@ -270,6 +299,20 @@ export const DeliveriesTable = ({ page, userNames, filters }: Props) => {
         />
       </TableToolbar>
 
+      <div className="flex flex-wrap items-start gap-2">
+        <TableRowToolbar
+          actions={rowActions}
+          selectedLabel={
+            selected
+              ? `${selected.orderId ?? "—"} line ${selected.lineNumber ?? "—"}`
+              : null
+          }
+        />
+        {selected?.status === "reserved" ? (
+          <DeliverButton key={selected.uuid} orderItemUuid={selected.uuid} />
+        ) : null}
+      </div>
+
       {page.rows.length === 0 ? (
         <div className="flex flex-col items-center gap-1 rounded-lg border border-dashed px-6 py-10 text-center">
           <p className="font-medium">No deliverable lines</p>
@@ -298,20 +341,19 @@ export const DeliveriesTable = ({ page, userNames, filters }: Props) => {
                     }
                     return <TableHead key={col.key}>{col.label}</TableHead>;
                   })}
-                  <TableHead className="text-right">Deliver</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {page.rows.map((row) => (
-                  <TableRow key={row.uuid}>
+                  <TableRow
+                    key={row.uuid}
+                    onClick={() => setSelectedUuid(row.uuid)}
+                    className={cn(
+                      "cursor-pointer",
+                      row.uuid === selectedUuid && "bg-muted",
+                    )}
+                  >
                     {visibleColumns.map((col) => renderCell(row, col.key))}
-                    <TableCell className="text-right">
-                      {row.status === "reserved" ? (
-                        <DeliverButton orderItemUuid={row.uuid} />
-                      ) : (
-                        "—"
-                      )}
-                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

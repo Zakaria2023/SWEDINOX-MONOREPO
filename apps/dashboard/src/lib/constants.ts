@@ -135,7 +135,12 @@ const ACTION_ITEMS: NavItem[] = [
   { label: "Warehouse subsection", href: "/warehouse-sub-sections" },
 ];
 
-/** The reference system's `Overviews` tree, group for group. */
+/**
+ * The reference system's `Overviews` tree, group for group, in its order:
+ * Purchase · Customers · Companies · Suppliers · Logistics · System info ·
+ * Sales. The groups its tree did not show on the screens captured (Finance,
+ * Batch registration, Other) follow after them.
+ */
 const VIEW_GROUPS: NavGroup[] = [
   {
     key: "purchase",
@@ -154,7 +159,6 @@ const VIEW_GROUPS: NavGroup[] = [
       { label: "Purchase invoices", href: "/purchase-invoices" },
       { label: "Net prices", href: "/net-prices" },
       { label: "StockOn advice", href: "/stockon-advice" },
-      { label: "Purchase receivals", href: "/purchase-receivals" },
       {
         label: "Purchase orders and quotes",
         href: "/purchase-orders-and-quotes",
@@ -211,7 +215,130 @@ const VIEW_GROUPS: NavGroup[] = [
       { label: "Visit reports", href: "/visit-reports" },
       { label: "Inactive companies", href: "/inactive-companies" },
       { label: "Texts", href: "/texts" },
+    ],
+  },
+  {
+    key: "suppliers",
+    label: "Suppliers",
+    icon: ContactRound,
+    items: [
+      {
+        label: "Supplier revenue per revenue group",
+        href: "/supplier-revenue-per-revenue-group",
+      },
+      { label: "Supplier revenue", href: "/supplier-revenue" },
+      { label: "Contracts per supplier", href: "/contracts-per-supplier" },
+      { label: "Suppliers", href: "/suppliers" },
+      {
+        label: "Contact persons suppliers",
+        href: "/contact-persons-suppliers",
+      },
+    ],
+  },
+  {
+    key: "logistics",
+    label: "Logistics",
+    icon: Warehouse,
+    items: [
+      { label: "Deviations in count lists", href: "/count-list-deviations" },
+      { label: "Products", href: "/products" },
+      {
+        label: "Warehouse- and production workorders",
+        href: "/warehouse-and-production-workorders",
+      },
+      { label: "Receipts", href: "/receipts" },
+      // Ours, not in the reference's tree: the receipt lines behind Receipts.
+      { label: "Purchase receivals", href: "/purchase-receivals" },
+      { label: "Warehouse workorders", href: "/warehouse-work-order-lines" },
+      { label: "Production workorders", href: "/production-work-order-lines" },
+      { label: "Production batches", href: "/production-batches" },
+      { label: "Transport workorders", href: "/transport-workorders" },
+      { label: "Trip data", href: "/trip-data" },
+      { label: "Reservations", href: "/reservations" },
+      { label: "Stock", href: "/stock" },
+      { label: "Stock on location", href: "/stock-on-location" },
+      { label: "Customer stock on location", href: "/customer-stock" },
+      { label: "Locations", href: "/locations" },
+      { label: "Stock history", href: "/stock-history" },
+      { label: "Stock mutations", href: "/stock-movements" },
+      { label: "Freight movement", href: "/freight-movements" },
+      { label: "Freight flow (SFN)", href: "/freight-flow" },
+      { label: "Pick statistic", href: "/pick-statistics" },
+      { label: "Machines", href: "/machines" },
+      { label: "Blocked deliveries", href: "/blocked-deliveries" },
+      {
+        label: "Deliveries to be arranged without stock reservation",
+        href: "/deliveries-to-arrange",
+      },
+      { label: "Sawing layouts", href: "/sawing-layouts" },
+      { label: "Warehouse capacity", href: "/warehouse-capacity" },
+      { label: "Production capacity", href: "/production-capacity" },
+      {
+        label: "Production capacity details",
+        href: "/production-capacity-details",
+      },
+      { label: "Capacity checks", href: "/capacity-checks" },
+      { label: "Time registration", href: "/time-registration" },
+      { label: "(Re)optimize", href: "/reoptimize" },
+      { label: "Nesting", href: "/nesting" },
+      {
+        label: "Transport status adjustments",
+        href: "/transport-status-adjustments",
+      },
+    ],
+  },
+  {
+    key: "system-info",
+    label: "System info",
+    icon: Settings,
+    items: [
+      { label: "Errors", href: "/system-log" },
+      { label: "Open work panels", href: "/open-work-panels" },
+      { label: "Settings", href: "/settings" },
       { label: "Communication settings", href: "/communication-settings" },
+    ],
+  },
+  {
+    key: "sales",
+    label: "Sales",
+    icon: PackageCheck,
+    items: [
+      { label: "Orders and Quotes", href: "/orders-and-quotes" },
+      { label: "Order lines", href: "/order-lines" },
+      {
+        label: "Order lines capacity overflow",
+        href: "/order-lines-capacity-overflow",
+      },
+      { label: "Options", href: "/options" },
+      {
+        label: "Order lines still to be called",
+        href: "/order-lines-still-to-be-called",
+      },
+      {
+        label: "Orders still to be called",
+        href: "/orders-still-to-be-called",
+      },
+      { label: "Quote lines", href: "/quote-lines" },
+      { label: "Invoice lines", href: "/invoice-lines" },
+      { label: "Deliveries", href: "/deliveries" },
+      { label: "Charges", href: "/charges" },
+      { label: "Contracts", href: "/contracts" },
+      { label: "Contract groups", href: "/contract-groups" },
+      { label: "Product prices", href: "/product-prices" },
+      {
+        label: "Option prices per product",
+        href: "/option-prices-per-product",
+      },
+      { label: "Net prices", href: "/net-prices" },
+      {
+        label: "SFN statistics Product-Market combinations",
+        href: "/sfn-statistics-product-market",
+      },
+      { label: "Revenue w.r.t. Budget", href: "/revenue-vs-budget" },
+      { label: "Revenue budgets", href: "/revenue-budgets" },
+      { label: "Revenue per product", href: "/revenue-per-product" },
+      { label: "Invoices", href: "/invoices" },
+      { label: "Return lines", href: "/return-lines" },
     ],
   },
   {
@@ -269,117 +396,6 @@ const VIEW_GROUPS: NavGroup[] = [
     ],
   },
   {
-    key: "suppliers",
-    label: "Suppliers",
-    icon: ContactRound,
-    items: [
-      {
-        label: "Supplier revenue per revenue group",
-        href: "/supplier-revenue-per-revenue-group",
-      },
-      { label: "Supplier revenue", href: "/supplier-revenue" },
-      { label: "Contracts per supplier", href: "/contracts-per-supplier" },
-      { label: "Suppliers", href: "/suppliers" },
-      {
-        label: "Contact persons suppliers",
-        href: "/contact-persons-suppliers",
-      },
-    ],
-  },
-  {
-    key: "logistics",
-    label: "Logistics",
-    icon: Warehouse,
-    items: [
-      { label: "Deviations in count lists", href: "/count-list-deviations" },
-      { label: "Products", href: "/products" },
-      {
-        label: "Warehouse- and production workorders",
-        href: "/warehouse-and-production-workorders",
-      },
-      { label: "Receipts", href: "/receipts" },
-      { label: "Warehouse workorders", href: "/warehouse-work-order-lines" },
-      { label: "Production workorders", href: "/production-work-order-lines" },
-      { label: "Production batches", href: "/production-batches" },
-      { label: "Transport workorders", href: "/transport-workorders" },
-      { label: "Trip data", href: "/trip-data" },
-      { label: "Reservations", href: "/reservations" },
-      { label: "Stock", href: "/stock" },
-      { label: "Stock on location", href: "/stock-on-location" },
-      { label: "Customer stock on location", href: "/customer-stock" },
-      { label: "Locations", href: "/locations" },
-      { label: "Stock history", href: "/stock-history" },
-      { label: "Stock mutations", href: "/stock-movements" },
-      { label: "Freight movement", href: "/freight-movements" },
-      { label: "Revenue per product", href: "/revenue-per-product" },
-      { label: "Freight flow (SFN)", href: "/freight-flow" },
-      { label: "Pick statistic", href: "/pick-statistics" },
-      { label: "Machines", href: "/machines" },
-      { label: "Blocked deliveries", href: "/blocked-deliveries" },
-      {
-        label: "Deliveries to be arranged without stock reservation",
-        href: "/deliveries-to-arrange",
-      },
-      { label: "Sawing layouts", href: "/sawing-layouts" },
-      { label: "Warehouse capacity", href: "/warehouse-capacity" },
-      { label: "Production capacity", href: "/production-capacity" },
-      {
-        label: "Production capacity details",
-        href: "/production-capacity-details",
-      },
-      { label: "Capacity checks", href: "/capacity-checks" },
-      { label: "Time registration", href: "/time-registration" },
-      { label: "(Re)optimize", href: "/reoptimize" },
-      { label: "Nesting", href: "/nesting" },
-      {
-        label: "Transport status adjustments",
-        href: "/transport-status-adjustments",
-      },
-    ],
-  },
-  {
-    key: "sales",
-    label: "Sales",
-    icon: PackageCheck,
-    items: [
-      { label: "Orders and Quotes", href: "/orders-and-quotes" },
-      { label: "Order lines", href: "/order-lines" },
-      {
-        label: "Order lines capacity overflow",
-        href: "/order-lines-capacity-overflow",
-      },
-      { label: "Options", href: "/options" },
-      {
-        label: "Order lines still to be called",
-        href: "/order-lines-still-to-be-called",
-      },
-      {
-        label: "Orders still to be called",
-        href: "/orders-still-to-be-called",
-      },
-      { label: "Quote lines", href: "/quote-lines" },
-      { label: "Invoice lines", href: "/invoice-lines" },
-      { label: "Deliveries", href: "/deliveries" },
-      { label: "Charges", href: "/charges" },
-      { label: "Contracts", href: "/contracts" },
-      { label: "Contract groups", href: "/contract-groups" },
-      { label: "Product prices", href: "/product-prices" },
-      {
-        label: "Option prices per product",
-        href: "/option-prices-per-product",
-      },
-      { label: "Net prices", href: "/net-prices" },
-      {
-        label: "SFN statistics Product-Market combinations",
-        href: "/sfn-statistics-product-market",
-      },
-      { label: "Revenue w.r.t. Budget", href: "/revenue-vs-budget" },
-      { label: "Revenue budgets", href: "/revenue-budgets" },
-      { label: "Invoices", href: "/invoices" },
-      { label: "Return lines", href: "/return-lines" },
-    ],
-  },
-  {
     key: "batch-registration",
     label: "Batch registration",
     icon: BadgeCheck,
@@ -410,16 +426,6 @@ const VIEW_GROUPS: NavGroup[] = [
         label: "SigmaNest blocked orders",
         href: "/sigmanest-blocked-orders",
       },
-    ],
-  },
-  {
-    key: "system-info",
-    label: "System info",
-    icon: Settings,
-    items: [
-      { label: "Errors", href: "/system-log" },
-      { label: "Open work panels", href: "/open-work-panels" },
-      { label: "Settings", href: "/settings" },
     ],
   },
 ];

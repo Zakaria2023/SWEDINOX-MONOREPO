@@ -21,12 +21,18 @@ import { ColumnSelector } from "@/components/ui/column-selector";
 import { PagedTableExportButton } from "@/components/ui/table-export-button";
 import { TableNewLink } from "@/components/ui/table-new-link";
 import { TablePagination } from "@/components/ui/table-pagination";
+import {
+  TableRowActionItem,
+  TableRowToolbar,
+} from "@/components/ui/table-row-toolbar";
 import { TableSortHeader } from "@/components/ui/table-sort-header";
 import { TableToolbar } from "@/components/ui/table-toolbar";
 import { selectorColumns } from "@/lib/excel";
 import { Paged, TableFilterControl } from "@/lib/table-query";
 import {
   buildColumnVisibility,
+  cn,
+  formatDateColumn,
   formatMoney,
   formatNumber,
 } from "@/lib/helpers";
@@ -35,6 +41,7 @@ import {
   PURCHASE_INVOICE_BLOCK_REASON_LABELS,
   PURCHASE_INVOICE_STATUS_LABELS,
 } from "@/lib/labels";
+import { Building2, FileText } from "lucide-react";
 import { useState } from "react";
 
 type ColumnKey = PurchaseInvoiceColumnKey;
@@ -62,6 +69,24 @@ export const PurchaseInvoicesTable = ({ page, filters }: Props) => {
   const [columnVisibility, setColumnVisibility] = useState<
     Record<ColumnKey, boolean>
   >(buildColumnVisibility(ALL_COLUMNS));
+  // The reference acts on a selected row from a toolbar at the top, so the
+  // grid has to remember which row that is.
+  const [selectedUuid, setSelectedUuid] = useState<string | null>(null);
+
+  const selected = page.rows.find((row) => row.uuid === selectedUuid) ?? null;
+
+  const rowActions: TableRowActionItem[] = [
+    {
+      label: "Show Company",
+      icon: <Building2 className="size-4" />,
+      href: selected?.companyUuid ? `/companies/${selected.companyUuid}` : null,
+    },
+    {
+      label: "Show Purchase invoice",
+      icon: <FileText className="size-4" />,
+      href: selected ? `/purchase-invoices/${selected.uuid}` : null,
+    },
+  ];
 
   const toggleColumn = (key: string) =>
     setColumnVisibility((prev) => ({
@@ -187,13 +212,13 @@ export const PurchaseInvoicesTable = ({ page, filters }: Props) => {
       case "invoiceDate":
         return (
           <TableCell key={key} className="whitespace-nowrap">
-            {inv.invoiceDate?.toLocaleDateString() ?? "—"}
+            {formatDateColumn(inv.invoiceDate)}
           </TableCell>
         );
       case "expirationDate":
         return (
           <TableCell key={key} className="whitespace-nowrap">
-            {inv.expirationDate?.toLocaleDateString() ?? "—"}
+            {formatDateColumn(inv.expirationDate)}
           </TableCell>
         );
       case "invoiceTotal":
@@ -257,6 +282,11 @@ export const PurchaseInvoicesTable = ({ page, filters }: Props) => {
         </TableNewLink>
       </TableToolbar>
 
+      <TableRowToolbar
+        actions={rowActions}
+        selectedLabel={selected ? String(selected.id) : null}
+      />
+
       <div>
         <Table>
           <TableHeader>
@@ -285,7 +315,14 @@ export const PurchaseInvoicesTable = ({ page, filters }: Props) => {
               </TableRow>
             ) : (
               page.rows.map((inv) => (
-                <TableRow key={inv.uuid}>
+                <TableRow
+                  key={inv.uuid}
+                  onClick={() => setSelectedUuid(inv.uuid)}
+                  className={cn(
+                    "cursor-pointer",
+                    inv.uuid === selectedUuid && "bg-muted",
+                  )}
+                >
                   {visibleColumns.map((col) => renderCell(inv, col.key))}
                 </TableRow>
               ))

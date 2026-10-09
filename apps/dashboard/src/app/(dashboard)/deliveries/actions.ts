@@ -213,6 +213,13 @@ const lineColumns = {
 // Everything that is not cancelled — the deliverable lines.
 const DELIVERABLE = ne(OrderItems.status, "cancelled");
 
+// Held back by a commercial, financial or transport block.
+const BLOCKED = or(
+  eq(OrderItems.commercialBlock, true),
+  eq(OrderItems.financialBlock, true),
+  eq(OrderItems.transportBlock, true),
+);
+
 const DELIVERY_SEARCH = [
   Companies.companyName,
   Products.productCode,
@@ -335,26 +342,70 @@ export const exportDeliveries = async (
     rows: deliveryRows(parseTableQuery(params)),
   });
 
-// Lines held back by a commercial, financial or transport block.
-export const getBlockedDeliveries = async (): Promise<DeliveryLineItem[]> => {
+// Lines held back by a commercial, financial or transport block, searched,
+// filtered and paged on the server. Sorted by customer, as the reference is.
+export const getBlockedDeliveries = async (
+  query: TableQuery,
+): Promise<Paged<DeliveryLineItem>> => {
+  const where = tableWhere({
+    query,
+    search: DELIVERY_SEARCH,
+    filters: DELIVERY_FILTERS,
+    scope: [BLOCKED],
+  });
+
   try {
-    return await db
-      .select(lineColumns)
-      .from(OrderItems)
-      .leftJoin(Orders, eq(OrderItems.orderUuid, Orders.uuid))
-      .leftJoin(Companies, eq(Orders.companyUuid, Companies.uuid))
-      .leftJoin(Products, eq(OrderItems.productUuid, Products.uuid))
-      .where(
-        or(
-          eq(OrderItems.commercialBlock, true),
-          eq(OrderItems.financialBlock, true),
-          eq(OrderItems.transportBlock, true),
-        ),
-      )
-      .orderBy(desc(OrderItems.createdAt));
+    return await runPaged(query, {
+      rows: (limit, offset) =>
+        db
+          .select(lineColumns)
+          .from(OrderItems)
+          .leftJoin(Orders, eq(OrderItems.orderUuid, Orders.uuid))
+          .leftJoin(Companies, eq(Orders.companyUuid, Companies.uuid))
+          .leftJoin(Products, eq(OrderItems.productUuid, Products.uuid))
+          .where(where)
+          .orderBy(
+            ...tableOrderBy(
+              DELIVERY_SORTABLE,
+              query,
+              [asc(Companies.companyName), asc(Orders.id)],
+              OrderItems.id,
+            ),
+          )
+          .limit(limit)
+          .offset(offset),
+      count: async () => {
+        const [row] = await db
+          .select({ value: count() })
+          .from(OrderItems)
+          .leftJoin(Orders, eq(OrderItems.orderUuid, Orders.uuid))
+          .leftJoin(Companies, eq(Orders.companyUuid, Companies.uuid))
+          .leftJoin(Products, eq(OrderItems.productUuid, Products.uuid))
+          .where(where);
+        return Number(row?.value ?? 0);
+      },
+    });
   } catch (error) {
     throw new Error(describeError(error, "Failed to fetch blocked deliveries"));
   }
+};
+
+/** The customers that have a blocked line, for that screen's filter. */
+export const getBlockedDeliveryCustomers = async (): Promise<
+  Array<{ uuid: string; name: string }>
+> => {
+  const rows = await db
+    .selectDistinct({
+      uuid: Companies.uuid,
+      name: Companies.companyName,
+    })
+    .from(OrderItems)
+    .innerJoin(Orders, eq(OrderItems.orderUuid, Orders.uuid))
+    .innerJoin(Companies, eq(Orders.companyUuid, Companies.uuid))
+    .where(BLOCKED)
+    .orderBy(asc(Companies.companyName));
+
+  return rows.filter((row) => Boolean(row.name));
 };
 
 /**

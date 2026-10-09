@@ -12,6 +12,10 @@ import {
 import { PagedTableExportButton } from "@/components/ui/table-export-button";
 import { TableNewLink } from "@/components/ui/table-new-link";
 import { TablePagination } from "@/components/ui/table-pagination";
+import {
+  TableRowActionItem,
+  TableRowToolbar,
+} from "@/components/ui/table-row-toolbar";
 import { TableSortHeader } from "@/components/ui/table-sort-header";
 import { TableToolbar } from "@/components/ui/table-toolbar";
 import { selectorColumns } from "@/lib/excel";
@@ -28,6 +32,7 @@ import { ColumnSelector } from "@/components/ui/column-selector";
 import { ExportValueCell } from "@/components/ui/export-value-cell";
 import {
   buildColumnVisibility,
+  cn,
   formatDateValue,
   invoiceReference,
 } from "@/lib/helpers";
@@ -36,6 +41,7 @@ import {
   INVOICE_PAYMENT_TERM_LABELS,
   INVOICE_VAT_SCENARIO_LABELS,
 } from "@/lib/labels";
+import { Building2, FileText, Receipt } from "lucide-react";
 import { useState } from "react";
 
 type ColumnKey = InvoiceColumnKey;
@@ -65,6 +71,29 @@ export const InvoicesTable = ({ page, filters }: Props) => {
   const [columnVisibility, setColumnVisibility] = useState<
     Record<ColumnKey, boolean>
   >(buildColumnVisibility(ALL_COLUMNS));
+  // The reference acts on a selected row from a toolbar at the top, so the
+  // grid has to remember which row that is.
+  const [selectedUuid, setSelectedUuid] = useState<string | null>(null);
+
+  const selected = page.rows.find((row) => row.uuid === selectedUuid) ?? null;
+
+  const rowActions: TableRowActionItem[] = [
+    {
+      label: "Show Company",
+      icon: <Building2 className="size-4" />,
+      href: selected?.companyUuid ? `/companies/${selected.companyUuid}` : null,
+    },
+    {
+      label: "Show Order",
+      icon: <FileText className="size-4" />,
+      href: selected?.orderUuid ? `/orders/${selected.orderUuid}` : null,
+    },
+    {
+      label: "Show Invoice",
+      icon: <Receipt className="size-4" />,
+      href: selected ? `/invoices/${selected.uuid}` : null,
+    },
+  ];
 
   const toggleColumn = (key: string) =>
     setColumnVisibility((prev) => ({
@@ -281,6 +310,11 @@ export const InvoicesTable = ({ page, filters }: Props) => {
         <TableNewLink href="/invoices/add">New Invoice</TableNewLink>
       </TableToolbar>
 
+      <TableRowToolbar
+        actions={rowActions}
+        selectedLabel={selected ? String(selected.id) : null}
+      />
+
       <div>
         <Table>
           <TableHeader>
@@ -309,7 +343,14 @@ export const InvoicesTable = ({ page, filters }: Props) => {
               </TableRow>
             ) : (
               page.rows.map((inv) => (
-                <TableRow key={inv.uuid}>
+                <TableRow
+                  key={inv.uuid}
+                  onClick={() => setSelectedUuid(inv.uuid)}
+                  className={cn(
+                    "cursor-pointer",
+                    inv.uuid === selectedUuid && "bg-muted",
+                  )}
+                >
                   {visibleColumns.map((col) => renderCell(inv, col.key))}
                 </TableRow>
               ))

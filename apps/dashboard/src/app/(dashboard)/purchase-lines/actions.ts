@@ -20,6 +20,7 @@ import { getClerkUsersForSelect } from "@/lib/server/clerk";
 import { alias } from "drizzle-orm/mysql-core";
 import {
   and,
+  asc,
   count,
   desc,
   eq,
@@ -62,6 +63,7 @@ export type PurchaseLineItem = Omit<
   purchaseOrderId: SelectPurchaseOrders["id"] | null;
   orderDate: SelectPurchaseOrders["orderDate"] | null;
   supplierName: SelectCompanies["companyName"] | null;
+  supplierUuid: SelectCompanies["uuid"] | null;
   productCode: SelectProducts["productCode"] | null;
   productName: SelectProducts["name"] | null;
   /** Weight actually booked in against the line, summed over its receivals. */
@@ -114,7 +116,6 @@ export type PurchaseLineItem = Omit<
 };
 
 export type PurchaseLineDetail = PurchaseLineItem & {
-  supplierUuid: SelectCompanies["uuid"] | null;
   purchaseOrderStatus: SelectPurchaseOrders["status"] | null;
   purchaseOrderReference: SelectPurchaseOrders["reference"] | null;
 };
@@ -267,12 +268,14 @@ const PURCHASE_LINE_FILTERS = {
   purchaser: relationFilter(PurchaseOrders.purchaser),
   product: relationFilter(PurchaseOrderItems.productUuid),
   lineType: enumFilter(PurchaseOrderItems.sourceType, purchaseSourceTypes),
-  orderDate: dateRangeFilter(PurchaseOrders.orderDate),
+  createdAt: dateRangeFilter(PurchaseOrderItems.createdAt),
+  // The reference's "No." — the purchase order number — as a from/to range.
+  number: numberRangeFilter(PurchaseOrders.id),
   quantity: numberRangeFilter(PurchaseOrderItems.quantity),
   // The reference's "Only current purchasing lines": still to arrive or to be
   // invoiced, on an order that has been neither completed nor called off.
   lines: (values: string[]) =>
-    values[0] === "current"
+    values[0] === "true"
       ? and(
           or(
             isNull(PurchaseOrderItems.status),
@@ -305,6 +308,7 @@ const purchaseLineRows =
         purchaseOrderId: PurchaseOrders.id,
         orderDate: PurchaseOrders.orderDate,
         supplierName: Companies.companyName,
+        supplierUuid: Companies.uuid,
         productCode: Products.productCode,
         productName: Products.name,
         // The buyer is recorded on the order header as a Clerk user id.
@@ -335,6 +339,9 @@ const purchaseLineRows =
         }),
       )
       .orderBy(
+        // The reference groups this screen by Line type, so a page holds
+        // whole groups before it is ordered within them.
+        asc(PurchaseOrderItems.sourceType),
         ...tableOrderBy(
           PURCHASE_LINE_SORTABLE,
           query,
@@ -384,6 +391,7 @@ const purchaseReturnLineRows = async (
       purchaseOrderId: PurchaseOrders.id,
       orderDate: PurchaseOrders.orderDate,
       supplierName: Companies.companyName,
+      supplierUuid: Companies.uuid,
       productCode: Products.productCode,
       productName: Products.name,
       ...purchaseLineContext,

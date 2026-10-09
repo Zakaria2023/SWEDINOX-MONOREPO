@@ -12,7 +12,11 @@ import { TableFilterControl } from "@/lib/table-query";
 export const deliveryFilters = (
   customers: Array<{ uuid: string; name: string }>,
 ): TableFilterControl[] => [
-  { key: "deliveryDate", kind: "dateRange", label: "Delivery date" },
+  {
+    key: "deliveryDate",
+    kind: "dateRange",
+    label: "Scheduled delivery date",
+  },
   {
     key: "deliveryStatus",
     kind: "select",

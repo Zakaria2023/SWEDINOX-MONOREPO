@@ -45,24 +45,6 @@ export const NET_PRICE_COLUMNS: Array<
     value: (row) => textCell(row.contractCode),
   },
   {
-    key: "contractDescription",
-    label: "Contract",
-    defaultVisible: true,
-    value: (row) => textCell(row.contractDescription),
-  },
-  {
-    key: "companyCode",
-    label: "Company code",
-    defaultVisible: true,
-    value: (row) => numberCell(row.companyCode),
-  },
-  {
-    key: "companyName",
-    label: "Company",
-    defaultVisible: true,
-    value: (row) => textCell(row.companyName),
-  },
-  {
     key: "productCode",
     label: "Product code",
     defaultVisible: true,
@@ -169,5 +151,23 @@ export const NET_PRICE_COLUMNS: Array<
     label: "FromQtyU",
     defaultVisible: true,
     value: (row) => textCell(row.fromQtyUnit),
+  },
+  {
+    key: "contractDescription",
+    label: "Contract",
+    defaultVisible: false,
+    value: (row) => textCell(row.contractDescription),
+  },
+  {
+    key: "companyCode",
+    label: "Company code",
+    defaultVisible: false,
+    value: (row) => numberCell(row.companyCode),
+  },
+  {
+    key: "companyName",
+    label: "Company",
+    defaultVisible: false,
+    value: (row) => textCell(row.companyName),
   },
 ];

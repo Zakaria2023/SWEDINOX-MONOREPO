@@ -1892,6 +1892,13 @@ export const purchaseRequestStatuses = [
 
 export type PurchaseRequestStatus = (typeof purchaseRequestStatuses)[number];
 
+/** Requests still waiting on a decision — the company panel's "open" count. */
+export const openPurchaseRequestStatuses = [
+  "draft",
+  "sent",
+  "quoted",
+] as const satisfies readonly PurchaseRequestStatus[];
+
 // Where a supplier's quote has got to. "lost" is set on the siblings when
 // another quote against the same request is awarded, so the comparison screen
 // shows that a decision was taken rather than leaving every quote open forever.
@@ -1904,6 +1911,12 @@ export const purchaseQuoteStatuses = [
 ] as const satisfies readonly string[];
 
 export type PurchaseQuoteStatus = (typeof purchaseQuoteStatuses)[number];
+
+/** Quotes not yet awarded, lost or expired — the company panel's "open" count. */
+export const openPurchaseQuoteStatuses = [
+  "open",
+  "received",
+] as const satisfies readonly PurchaseQuoteStatus[];
 
 // Why a purchase quote was expired. `incorrectly_entered` is the reference's
 // own reason, chosen by a buyer; `validity_expired` is set by the system once

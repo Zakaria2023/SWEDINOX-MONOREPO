@@ -33,6 +33,12 @@ export const netPriceFilters = (
     })),
   },
   {
+    key: "validBetween",
+    kind: "dateRange",
+    label: "Contract valid between",
+  },
+  { key: "companyCode", kind: "numberRange", label: "Company code" },
+  {
     key: "company",
     kind: "select",
     label: "Company",
@@ -52,5 +58,4 @@ export const netPriceFilters = (
       label: `${product.productCode} — ${product.name}`,
     })),
   },
-  { key: "validBetween", kind: "dateRange", label: "Valid between" },
 ];

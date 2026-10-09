@@ -71,7 +71,9 @@ export type TableFilterControl =
       placeholder?: string;
     }
   | { key: string; kind: "dateRange"; label: string }
-  | { key: string; kind: "numberRange"; label: string };
+  | { key: string; kind: "numberRange"; label: string }
+  // A yes-or-nothing switch: ticked writes "true", unticked clears the key.
+  | { key: string; kind: "checkbox"; label: string };
 
 /** The two ends of a range filter, which the URL carries as "from..to". */
 export const parseRangeValue = (

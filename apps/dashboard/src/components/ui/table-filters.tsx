@@ -1,5 +1,6 @@
 "use client";
 
+import { Checkbox } from "@/components/shadcn/checkbox";
 import { DatePicker } from "@/components/shadcn/date-picker";
 import { Input } from "@/components/shadcn/input";
 import { Select } from "@/components/shadcn/select";
@@ -130,12 +131,38 @@ const NumberRangeFilter = ({ control }: FilterProps) => {
   );
 };
 
+// Unticked clears the key rather than writing "false": the switch narrows the
+// view when it is on and says nothing when it is off.
+const CheckboxFilter = ({ control }: FilterProps) => {
+  const { value, setParams, isPending } = useTableQuery();
+
+  return (
+    <label
+      htmlFor={`filter-${control.key}`}
+      className="flex h-8 items-center gap-2 text-sm"
+    >
+      <Checkbox
+        id={`filter-${control.key}`}
+        checked={value(control.key) === "true"}
+        disabled={isPending}
+        onChange={(event) =>
+          setParams({ [control.key]: event.target.checked ? "true" : null })
+        }
+      />
+      {control.label}
+    </label>
+  );
+};
+
 export const TableFilter = ({ control }: FilterProps) => {
   if (control.kind === "select") {
     return <SelectFilter control={control} />;
   }
   if (control.kind === "dateRange") {
     return <DateRangeFilter control={control} />;
+  }
+  if (control.kind === "checkbox") {
+    return <CheckboxFilter control={control} />;
   }
   return <NumberRangeFilter control={control} />;
 };

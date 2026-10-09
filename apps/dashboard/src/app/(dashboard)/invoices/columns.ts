@@ -116,7 +116,7 @@ export const INVOICE_COLUMNS: Array<
   {
     key: "streetAndNo",
     label: "Street + No",
-    defaultVisible: false,
+    defaultVisible: true,
     value: (row) => textCell(row.streetAndNo),
   },
   {
@@ -129,7 +129,7 @@ export const INVOICE_COLUMNS: Array<
     // The Dutch chamber-of-commerce registration.
     key: "cocNumber",
     label: "C. of C. no.",
-    defaultVisible: false,
+    defaultVisible: true,
     value: (row) => textCell(row.cocNumber),
   },
   {
@@ -154,13 +154,13 @@ export const INVOICE_COLUMNS: Array<
   {
     key: "creditRestriction",
     label: "Credit restriction",
-    defaultVisible: false,
+    defaultVisible: true,
     value: (row) => numberCell(row.creditRestriction),
   },
   {
     key: "paymentTermsCode",
     label: "Payment terms code",
-    defaultVisible: false,
+    defaultVisible: true,
     value: (row) => textCell(row.paymentTerms),
   },
   {

@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { Building2, FileText } from "lucide-react";
+import { Fragment, useState } from "react";
 import {
   exportOrdersAndQuotes,
   OrderOrQuoteRow,
@@ -21,12 +22,19 @@ import {
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { ExportValueCell } from "@/components/ui/export-value-cell";
 import { PagedTableExportButton } from "@/components/ui/table-export-button";
+import { TableGroupRow } from "@/components/ui/table-group-row";
 import { TablePagination } from "@/components/ui/table-pagination";
+import {
+  TableRowActionItem,
+  TableRowToolbar,
+} from "@/components/ui/table-row-toolbar";
 import { TableToolbar } from "@/components/ui/table-toolbar";
 import { selectorColumns } from "@/lib/excel";
 import {
   buildColumnVisibility,
+  cn,
   formatDateValue,
+  groupRowsBy,
   monthLabel,
   orDash,
   salesDocumentStatusLabel,
@@ -34,7 +42,10 @@ import {
   timeFrameOf,
   userName,
 } from "@/lib/helpers";
-import { ORDER_METHOD_LABELS } from "@/lib/labels";
+import {
+  ORDER_METHOD_LABELS,
+  SALES_DOCUMENT_KIND_LABELS,
+} from "@/lib/labels";
 import { Paged, TableFilterControl } from "@/lib/table-query";
 
 type ColumnKey = OrderOrQuoteColumnKey;
@@ -48,12 +59,7 @@ type Props = {
 
 const ALL_COLUMNS = selectorColumns(ORDER_OR_QUOTE_COLUMNS);
 
-const MONEY_KEYS = new Set<ColumnKey>([
-  "weightKg",
-  "revenue",
-  "profit",
-  "profitMargin",
-]);
+const MONEY_KEYS = new Set<ColumnKey>(["revenue", "profit"]);
 
 const YES_NO_KEYS = new Set<ColumnKey>([
   "isConsignment",
@@ -85,6 +91,34 @@ export const OrdersAndQuotesTable = ({ page, userNames, filters }: Props) => {
   const [columnVisibility, setColumnVisibility] = useState<
     Record<ColumnKey, boolean>
   >(buildColumnVisibility(ALL_COLUMNS));
+  // Four series share this grid, so the selection is keyed on the kind too.
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+
+  const selected =
+    page.rows.find((row) => `${row.kind}-${row.uuid}` === selectedKey) ?? null;
+
+  // The open button names what the selected row is, as on the reference:
+  // `Show Order`, `Show Quote`.
+  const rowActions: TableRowActionItem[] = [
+    {
+      label: "Show Company",
+      icon: <Building2 className="size-4" />,
+      href: selected?.companyUuid ? `/companies/${selected.companyUuid}` : null,
+    },
+    {
+      label: selected
+        ? `Show ${SALES_DOCUMENT_KIND_LABELS[selected.kind]}`
+        : "Show",
+      icon: <FileText className="size-4" />,
+      href: selected?.href ?? null,
+    },
+  ];
+
+  // The reference groups this screen by Status.
+  const groups = groupRowsBy(
+    page.rows,
+    (row) => salesDocumentStatusLabel(row.status) ?? "—",
+  );
 
   const toggleColumn = (key: string) =>
     setColumnVisibility((prev) => ({
@@ -98,9 +132,7 @@ export const OrdersAndQuotesTable = ({ page, userNames, filters }: Props) => {
     if (MONEY_KEYS.has(key)) {
       return (
         <TableCell key={key} className="text-right tabular-nums">
-          {decimal(
-            row[key as "weightKg" | "revenue" | "profit" | "profitMargin"],
-          )}
+          {decimal(row[key as "revenue" | "profit"])}
         </TableCell>
       );
     }
@@ -114,6 +146,19 @@ export const OrdersAndQuotesTable = ({ page, userNames, filters }: Props) => {
     }
 
     switch (key) {
+      // Whole kilos, as the reference prints them: 3204, -35.
+      case "weightKg":
+        return (
+          <TableCell key={key} className="text-right tabular-nums">
+            {Math.round(row.weightKg).toLocaleString("en-US")}
+          </TableCell>
+        );
+      case "profitMargin":
+        return (
+          <TableCell key={key} className="text-right tabular-nums">
+            {decimal(row.profitMargin)} %
+          </TableCell>
+        );
       case "createdAt":
         return (
           <TableCell key={key}>{formatDateValue(row.createdAt)}</TableCell>
@@ -259,6 +304,11 @@ export const OrdersAndQuotesTable = ({ page, userNames, filters }: Props) => {
         />
       </TableToolbar>
 
+      <TableRowToolbar
+        actions={rowActions}
+        selectedLabel={selected?.documentCode ?? null}
+      />
+
       {page.rows.length === 0 ? (
         <div className="flex flex-col items-center gap-1 rounded-lg border border-dashed px-6 py-10 text-center">
           <p className="font-medium">No sales documents</p>
@@ -280,10 +330,30 @@ export const OrdersAndQuotesTable = ({ page, userNames, filters }: Props) => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {page.rows.map((row) => (
-                  <TableRow key={`${row.kind}-${row.uuid}`}>
-                    {visibleColumns.map((col) => renderCell(row, col.key))}
-                  </TableRow>
+                {groups.map((group) => (
+                  <Fragment key={group.key}>
+                    <TableGroupRow
+                      label="Status"
+                      value={group.key}
+                      count={group.rows.length}
+                      colSpan={visibleColumns.length}
+                    />
+                    {group.rows.map((row) => (
+                      <TableRow
+                        key={`${row.kind}-${row.uuid}`}
+                        onClick={() =>
+                          setSelectedKey(`${row.kind}-${row.uuid}`)
+                        }
+                        className={cn(
+                          "cursor-pointer",
+                          `${row.kind}-${row.uuid}` === selectedKey &&
+                            "bg-muted",
+                        )}
+                      >
+                        {visibleColumns.map((col) => renderCell(row, col.key))}
+                      </TableRow>
+                    ))}
+                  </Fragment>
                 ))}
               </TableBody>
             </Table>

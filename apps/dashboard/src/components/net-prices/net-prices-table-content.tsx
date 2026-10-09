@@ -22,17 +22,23 @@ import { ColumnSelector } from "@/components/ui/column-selector";
 import { PagedTableExportButton } from "@/components/ui/table-export-button";
 import { TableNewLink } from "@/components/ui/table-new-link";
 import { TablePagination } from "@/components/ui/table-pagination";
+import {
+  TableRowActionItem,
+  TableRowToolbar,
+} from "@/components/ui/table-row-toolbar";
 import { TableSortHeader } from "@/components/ui/table-sort-header";
 import { TableToolbar } from "@/components/ui/table-toolbar";
 import { selectorColumns } from "@/lib/excel";
 import {
   buildColumnVisibility,
+  cn,
   formatDateColumn,
   formatMoney,
   formatNumber,
   formatPercent,
 } from "@/lib/helpers";
 import { Paged, TableFilterControl } from "@/lib/table-query";
+import { Building2, FileSignature, Package } from "lucide-react";
 import { useState } from "react";
 
 type ColumnKey = NetPriceColumnKey;
@@ -58,6 +64,29 @@ export const NetPricesTable = ({ page, filters }: Props) => {
   const [columnVisibility, setColumnVisibility] = useState<
     Record<ColumnKey, boolean>
   >(buildColumnVisibility(ALL_COLUMNS));
+  // The reference acts on a selected row from a toolbar at the top, so the
+  // grid has to remember which row that is.
+  const [selectedUuid, setSelectedUuid] = useState<string | null>(null);
+
+  const selected = page.rows.find((row) => row.uuid === selectedUuid) ?? null;
+
+  const rowActions: TableRowActionItem[] = [
+    {
+      label: "Show Product",
+      icon: <Package className="size-4" />,
+      href: selected ? `/products/${selected.productUuid}` : null,
+    },
+    {
+      label: "Show Company",
+      icon: <Building2 className="size-4" />,
+      href: selected?.companyUuid ? `/companies/${selected.companyUuid}` : null,
+    },
+    {
+      label: "Show Contract",
+      icon: <FileSignature className="size-4" />,
+      href: selected ? `/contracts/${selected.contractUuid}` : null,
+    },
+  ];
 
   const toggleColumn = (key: string) =>
     setColumnVisibility((prev) => ({
@@ -195,6 +224,15 @@ export const NetPricesTable = ({ page, filters }: Props) => {
         <TableNewLink href="/net-prices/new">New net price</TableNewLink>
       </TableToolbar>
 
+      <TableRowToolbar
+        actions={rowActions}
+        selectedLabel={
+          selected
+            ? `${selected.contractCode ?? "—"} · ${selected.productCode ?? "—"}`
+            : null
+        }
+      />
+
       <Table>
         <TableHeader>
           <TableRow>
@@ -222,7 +260,14 @@ export const NetPricesTable = ({ page, filters }: Props) => {
             </TableRow>
           ) : (
             page.rows.map((row) => (
-              <TableRow key={row.uuid}>
+              <TableRow
+                key={row.uuid}
+                onClick={() => setSelectedUuid(row.uuid)}
+                className={cn(
+                  "cursor-pointer",
+                  row.uuid === selectedUuid && "bg-muted",
+                )}
+              >
                 {visibleColumns.map((col) => renderCell(row, col.key))}
               </TableRow>
             ))

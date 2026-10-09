@@ -11,13 +11,11 @@ export const purchaseLineFilters = (
   purchasers: ClerkUserOption[],
   products: ProductOption[],
 ): TableFilterControl[] => [
-  {
-    key: "lines",
-    kind: "select",
-    label: "Lines",
-    placeholder: "All lines",
-    options: [{ value: "current", label: "Only current purchasing lines" }],
-  },
+  // The reference's two filters on this screen: the line's creation date and
+  // a tick for the lines still in play.
+  { key: "createdAt", kind: "dateRange", label: "Creation date" },
+  { key: "lines", kind: "checkbox", label: "Only current purchasing lines" },
+  { key: "number", kind: "numberRange", label: "No." },
   {
     key: "supplier",
     kind: "select",
@@ -55,6 +53,5 @@ export const purchaseLineFilters = (
       label: ORDER_SOURCE_TYPE_LABELS[type],
     })),
   },
-  { key: "orderDate", kind: "dateRange", label: "Order date" },
   { key: "quantity", kind: "numberRange", label: "Quantity" },
 ];

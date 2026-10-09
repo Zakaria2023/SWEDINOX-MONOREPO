@@ -14,13 +14,19 @@ import {
   PurchaseQuotes,
   SelectPurchaseQuotes,
 } from "@/db/schema/purchase-quotes";
+import { PurchaseReturnOrderItems } from "@/db/schema/purchase-return-order-items";
+import { PurchaseReturnOrders } from "@/db/schema/purchase-return-orders";
 import {
   purchaseOrderStatuses,
   purchaseOrderTypes,
   purchaseQuoteStatuses,
   openPurchaseOrderStatuses,
 } from "@/lib/enums";
-import { describeError, personInitials } from "@/lib/helpers";
+import {
+  describeError,
+  documentStatusLabel,
+  personInitials,
+} from "@/lib/helpers";
 import { getClerkUsersForSelect } from "@/lib/server/clerk";
 import { exportRows } from "@/lib/server/excel";
 import {
@@ -38,6 +44,10 @@ import { alias } from "drizzle-orm/mysql-core";
 // reaching the supplier.
 const ORDER = "Order";
 const QUOTE = "Quote";
+// A purchase return sits in the same list on the reference (`IR950008`,
+// `IR950030`, `IR950033` under `Delivered`), its weight and money signed
+// negative because the goods go back.
+const RETURN = "Return";
 
 // The money on a line is the net price times the line's weight in the unit the
 // price is struck in — a tonne price divides by a thousand. Rolled up from the
@@ -84,6 +94,23 @@ const quoteLineCountSql = sql<number>`(
   WHERE ${PurchaseQuoteItems.purchaseQuoteUuid} = ${PurchaseQuotes.uuid}
 )`;
 
+const returnRevenueSql = sql<number>`(
+  SELECT -ABS(COALESCE(SUM(${PurchaseReturnOrderItems.amount}), 0))
+  FROM ${PurchaseReturnOrderItems}
+  WHERE ${PurchaseReturnOrderItems.purchaseReturnOrderUuid} = ${PurchaseReturnOrders.uuid}
+)`;
+
+const returnWeightSql = sql<number>`(
+  SELECT -ABS(COALESCE(SUM(${PurchaseReturnOrderItems.weightKg}), 0))
+  FROM ${PurchaseReturnOrderItems}
+  WHERE ${PurchaseReturnOrderItems.purchaseReturnOrderUuid} = ${PurchaseReturnOrders.uuid}
+)`;
+
+const returnLineCountSql = sql<number>`(
+  SELECT COUNT(*) FROM ${PurchaseReturnOrderItems}
+  WHERE ${PurchaseReturnOrderItems.purchaseReturnOrderUuid} = ${PurchaseReturnOrders.uuid}
+)`;
+
 // The document's own date, not the day the row was inserted. Every order in the
 // database was imported inside two months while the orders themselves span
 // twenty, so reading createdAt here made the whole screen report one date.
@@ -95,8 +122,12 @@ const quoteDateSql = sql<
   string | null
 >`COALESCE(${PurchaseQuotes.quoteDate}, DATE(${PurchaseQuotes.createdAt}))`;
 
+const returnDateSql = sql<
+  string | null
+>`DATE(${PurchaseReturnOrders.createdAt})`;
+
 export type PurchaseOrderQuoteRow = {
-  kind: typeof ORDER | typeof QUOTE;
+  kind: typeof ORDER | typeof QUOTE | typeof RETURN;
   uuid: SelectPurchaseOrders["uuid"];
   /** "Purchase order/Requests" — the document's own number. */
   number: SelectPurchaseOrders["id"];
@@ -176,6 +207,7 @@ type RawRow = Omit<
 
 const DeliveryAddressCompany = alias(Companies, "delivery_address_company");
 const AgentCompany = alias(Companies, "agent_company");
+const SourcePurchaseOrders = alias(PurchaseOrders, "source_purchase_order");
 
 // A document nobody has released is not owed to anybody yet, so it is not
 // "still to be sent" — it is still being written.
@@ -271,6 +303,40 @@ const quoteConditions = (query: TableQuery): Array<SQL | undefined> => {
       sql`COALESCE(${Companies.companyName}, '')`,
       sql`COALESCE(${PurchaseQuotes.reference}, '')`,
       sql`COALESCE(${PurchaseQuotes.ourReference}, '')`,
+    ]),
+  ];
+};
+
+const returnConditions = (query: TableQuery): Array<SQL | undefined> => {
+  const [from, to] = rangeOf(query.filters.creationDate);
+  return [
+    kindWanted(query, RETURN) ? undefined : sql`1 = 0`,
+    from ? sql`${returnDateSql} >= ${from}` : undefined,
+    to ? sql`${returnDateSql} <= ${to}` : undefined,
+    query.filters.supplier?.[0]
+      ? eq(PurchaseReturnOrders.supplierUuid, query.filters.supplier[0])
+      : undefined,
+    // A return walks the purchase order's own ladder.
+    query.filters.status && query.filters.status.length > 0
+      ? sql`${PurchaseReturnOrders.status} IN (${sql.join(
+          query.filters.status
+            .filter((value) =>
+              (purchaseOrderStatuses as readonly string[]).includes(value),
+            )
+            .map((value) => sql`${value}`),
+          sql`, `,
+        )})`
+      : sql`${PurchaseReturnOrders.status} NOT IN ('expired', 'cancelled')`,
+    query.filters.orderType?.[0] &&
+    (purchaseOrderTypes as readonly string[]).includes(
+      query.filters.orderType[0],
+    )
+      ? sql`${PurchaseReturnOrders.purchaseOrderType} = ${query.filters.orderType[0]}`
+      : undefined,
+    searchCondition(query, [
+      sql`CAST(${PurchaseReturnOrders.id} AS CHAR)`,
+      sql`COALESCE(${Companies.companyName}, '')`,
+      sql`COALESCE(${PurchaseReturnOrders.purchaseOrderReference}, '')`,
     ]),
   ];
 };
@@ -403,6 +469,60 @@ const quoteQuery = (query: TableQuery) =>
     )
     .where(and(...quoteConditions(query)));
 
+const returnQuery = (query: TableQuery) =>
+  db
+    .select({
+      kind: sql<typeof RETURN>`${RETURN}`,
+      uuid: PurchaseReturnOrders.uuid,
+      number: PurchaseReturnOrders.id,
+      creationDate: returnDateSql,
+      purchaserId: PurchaseReturnOrders.purchaser,
+      status: sql<string | null>`${PurchaseReturnOrders.status}`,
+      convertedUuid: sql<string | null>`NULL`,
+      convertedNumber: sql<number | null>`NULL`,
+      lines: returnLineCountSql,
+      weightKg: returnWeightSql,
+      revenue: returnRevenueSql,
+      supplierUuid: PurchaseReturnOrders.supplierUuid,
+      supplierName: Companies.companyName,
+      supplierCode: Companies.searchCode1,
+      customerCode: sql<string | null>`NULL`,
+      deliveryDate: PurchaseReturnOrders.returnDate,
+      orderType: PurchaseReturnOrders.purchaseOrderType,
+      expirationReason: sql<null>`NULL`,
+      quoteDate: sql<null>`NULL`,
+      validUntil: sql<null>`NULL`,
+      internalText: sql<null>`NULL`,
+      consignment: sql<boolean | null>`NULL`,
+      isPrinted: PurchaseReturnOrders.isPrinted,
+      isMailed: PurchaseReturnOrders.isMailed,
+      isFaxed: PurchaseReturnOrders.isFaxed,
+      sentViaStaalWeb: sql<boolean | null>`NULL`,
+      deliberatelyNotSent: sql<boolean | null>`NULL`,
+      isLive: sql<boolean>`${PurchaseReturnOrders.status} IN (${sql.join(
+        UNSENT_ORDER_STATUSES.map((status) => sql`${status}`),
+        sql`, `,
+      )})`,
+      // The affiliate the goods were bought through, read off the order the
+      // return sends them back against.
+      affiliateCompany: AgentCompany.companyName,
+      classificationCode: SourcePurchaseOrders.orderCategory,
+      // The reference's Reference on a return row is the purchase order it
+      // returns against — `402598`, `403492`, `404102` (8-10-2026).
+      reference: sql<
+        string | null
+      >`COALESCE(CAST(${SourcePurchaseOrders.id} AS CHAR), ${PurchaseReturnOrders.purchaseOrderReference})`,
+      ourReference: sql<string | null>`NULL`,
+    })
+    .from(PurchaseReturnOrders)
+    .leftJoin(Companies, eq(PurchaseReturnOrders.supplierUuid, Companies.uuid))
+    .leftJoin(
+      SourcePurchaseOrders,
+      eq(PurchaseReturnOrders.purchaseOrderUuid, SourcePurchaseOrders.uuid),
+    )
+    .leftJoin(AgentCompany, eq(SourcePurchaseOrders.agentUuid, AgentCompany.uuid))
+    .where(and(...returnConditions(query)));
+
 // How the document reached the supplier. The reference keeps a method column
 // beside the sent flags; ours reads the flags themselves, which is the same
 // answer arrived at from the record rather than from a second field nobody
@@ -466,11 +586,16 @@ const purchaseOrderQuoteRows = async (
 ): Promise<PurchaseOrderQuoteRow[]> => {
   const orders = (await orderQuery(query)) as RawRow[];
   const quotes = (await quoteQuery(query)) as RawRow[];
+  const returns = (await returnQuery(query)) as RawRow[];
 
   const users = await getClerkUsersForSelect();
   const nameById = new Map(users.map((user) => [user.value, user.label]));
 
-  const rows: PurchaseOrderQuoteRow[] = [...orders, ...quotes].map((row) => {
+  const rows: PurchaseOrderQuoteRow[] = [
+    ...orders,
+    ...quotes,
+    ...returns,
+  ].map((row) => {
     const purchaser = row.purchaserId
       ? (nameById.get(row.purchaserId) ?? row.purchaserId)
       : null;
@@ -523,10 +648,18 @@ const purchaseOrderQuoteRows = async (
   const sign = query.dir === "desc" ? -1 : 1;
 
   return rows.sort((left, right) => {
+    // The reference groups this screen by Status, so a page holds whole
+    // groups, alphabetically, before it is ordered within them.
+    const group = documentStatusLabel(left.kind, left.status).localeCompare(
+      documentStatusLabel(right.kind, right.status),
+    );
+    if (group !== 0) {
+      return group;
+    }
     const ordered = accessor
       ? sign * compareValues(accessor(left), accessor(right))
-      : // Newest first, which is how a buyer reads a list of what is running.
-        compareValues(right.creationDate, left.creationDate);
+      : // Oldest first, on creation date — the reference's own default order.
+        compareValues(left.creationDate, right.creationDate);
     return ordered !== 0
       ? ordered
       : left.kind.localeCompare(right.kind) || right.number - left.number;

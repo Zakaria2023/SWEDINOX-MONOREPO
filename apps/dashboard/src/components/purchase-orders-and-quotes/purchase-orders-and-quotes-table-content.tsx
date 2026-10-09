@@ -21,23 +21,31 @@ import { BooleanFlag } from "@/components/ui/boolean-flag";
 import { ColumnSelector } from "@/components/ui/column-selector";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { PagedTableExportButton } from "@/components/ui/table-export-button";
+import { TableGroupRow } from "@/components/ui/table-group-row";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { TableSortHeader } from "@/components/ui/table-sort-header";
+import {
+  TableRowActionItem,
+  TableRowToolbar,
+} from "@/components/ui/table-row-toolbar";
 import { TableToolbar } from "@/components/ui/table-toolbar";
 import { selectorColumns } from "@/lib/excel";
 import {
   buildColumnVisibility,
+  cn,
   documentStatusLabel,
   formatDateColumn,
   formatMoney,
   formatNumber,
+  groupRowsBy,
 } from "@/lib/helpers";
 import {
   PURCHASE_ORDER_TYPE_LABELS,
   PURCHASE_QUOTE_EXPIRATION_REASON_LABELS,
 } from "@/lib/labels";
 import { Paged, TableFilterControl } from "@/lib/table-query";
-import { useState } from "react";
+import { Building2, FileText } from "lucide-react";
+import { Fragment, useState } from "react";
 
 type ColumnKey = PurchaseOrderQuoteColumnKey;
 
@@ -64,15 +72,54 @@ const SORTABLE: Partial<Record<ColumnKey, string>> = {
 
 // Where a row lives: the two kinds are separate records with separate screens,
 // which is exactly what this list exists to hide until you click.
-const documentHref = (row: PurchaseOrderQuoteRow) =>
-  row.kind === "Quote"
-    ? `/purchase-quotes/${row.uuid}`
+const documentHref = (row: PurchaseOrderQuoteRow) => {
+  if (row.kind === "Quote") {
+    return `/purchase-quotes/${row.uuid}`;
+  }
+  return row.kind === "Return"
+    ? `/purchase-return-orders/${row.uuid}`
     : `/purchase-orders/${row.uuid}`;
+};
+
+// What the toolbar's open button says for the selected row, as on the
+// reference: `Show Purchase return` on a return.
+const SHOW_DOCUMENT_LABELS: Record<PurchaseOrderQuoteRow["kind"], string> = {
+  Order: "Show Purchase order",
+  Quote: "Show Purchase quote",
+  Return: "Show Purchase return",
+};
+
+const documentNumber = (row: PurchaseOrderQuoteRow) =>
+  row.kind === "Return" ? `IR${row.number}` : String(row.number);
 
 export const PurchaseOrdersAndQuotesTable = ({ page, filters }: Props) => {
   const [columnVisibility, setColumnVisibility] = useState<
     Record<ColumnKey, boolean>
   >(buildColumnVisibility(ALL_COLUMNS));
+  // An order and a quote are separate records, so the selection is keyed on
+  // the kind as well as the uuid.
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+
+  const selected =
+    page.rows.find((row) => `${row.kind}-${row.uuid}` === selectedKey) ?? null;
+
+  const rowActions: TableRowActionItem[] = [
+    {
+      label: "Show Company",
+      icon: <Building2 className="size-4" />,
+      href: selected?.supplierUuid ? `/companies/${selected.supplierUuid}` : null,
+    },
+    {
+      label: SHOW_DOCUMENT_LABELS[selected?.kind ?? "Order"],
+      icon: <FileText className="size-4" />,
+      href: selected ? documentHref(selected) : null,
+    },
+  ];
+
+  // The reference groups this screen by Status.
+  const groups = groupRowsBy(page.rows, (row) =>
+    documentStatusLabel(row.kind, row.status),
+  );
 
   const toggleColumn = (key: string) =>
     setColumnVisibility((prev) => ({
@@ -115,7 +162,7 @@ export const PurchaseOrdersAndQuotesTable = ({ page, filters }: Props) => {
               href={documentHref(row)}
               className="text-primary hover:underline"
             >
-              {row.number}
+              {documentNumber(row)}
             </Link>
           </TableCell>
         );
@@ -304,6 +351,13 @@ export const PurchaseOrdersAndQuotesTable = ({ page, filters }: Props) => {
         />
       </TableToolbar>
 
+      <TableRowToolbar
+        actions={rowActions}
+        selectedLabel={
+          selected ? `${selected.kind} ${documentNumber(selected)}` : null
+        }
+      />
+
       {page.rows.length === 0 ? (
         emptyState
       ) : (
@@ -324,10 +378,28 @@ export const PurchaseOrdersAndQuotesTable = ({ page, filters }: Props) => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {page.rows.map((row) => (
-                <TableRow key={`${row.kind}-${row.uuid}`}>
-                  {visibleColumns.map((col) => renderCell(row, col.key))}
-                </TableRow>
+              {groups.map((group) => (
+                <Fragment key={group.key}>
+                  <TableGroupRow
+                    label="Status"
+                    value={group.key}
+                    count={group.rows.length}
+                    colSpan={visibleColumns.length}
+                  />
+                  {group.rows.map((row) => (
+                    <TableRow
+                      key={`${row.kind}-${row.uuid}`}
+                      onClick={() => setSelectedKey(`${row.kind}-${row.uuid}`)}
+                      className={cn(
+                        "cursor-pointer",
+                        `${row.kind}-${row.uuid}` === selectedKey &&
+                          "bg-muted",
+                      )}
+                    >
+                      {visibleColumns.map((col) => renderCell(row, col.key))}
+                    </TableRow>
+                  ))}
+                </Fragment>
               ))}
             </TableBody>
           </Table>

@@ -25,6 +25,7 @@ export const purchaseOrderQuoteFilters = (
     options: [
       { value: "Order", label: "Orders only" },
       { value: "Quote", label: "Quotes only" },
+      { value: "Return", label: "Returns only" },
     ],
   },
   {
@@ -49,7 +50,7 @@ export const purchaseOrderQuoteFilters = (
   {
     key: "orderType",
     kind: "select",
-    label: "Purchase type",
+    label: "Order type",
     placeholder: "All types",
     options: purchaseOrderTypes.map((type) => ({
       value: type,
